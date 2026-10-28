@@ -4,7 +4,7 @@ const http = require('http');
 
 function createMockDaemon({ port = 0 } = {}) {
   const state = { power: true, input: 'airplay', volume: 30, mute: false, bt_pairing: false,
-    loudness: true, loudness_level: 5, playing: false, title: '', artist: '' };
+    loudness: true, loudness_level: 5, playing: false, paused: false, title: '', artist: '' };
   const calls = [];
   const server = http.createServer((req, res) => {
     let buf = '';
@@ -19,6 +19,16 @@ function createMockDaemon({ port = 0 } = {}) {
       else if (p === '/api/input') { if (!['airplay', 'bt', 'aux', 'usb'].includes(body.input)) return fail(res, 'ukjent kilde'); state.input = body.input; }
       else if (p === '/api/volume') { if (body.volume !== undefined) state.volume = clamp(body.volume); if (body.delta !== undefined) state.volume = clamp(state.volume + body.delta); if (state.volume > 0) state.mute = false; }
       else if (p === '/api/mute') state.mute = !!body.mute;
+      else if (p === '/api/transport') {
+        const a = body.action;
+        if (!['play', 'pause', 'playpause', 'next', 'previous', 'stop'].includes(a)) return fail(res, 'ukjent handling');
+        if (!['airplay', 'bt'].includes(state.input)) { res.writeHead(409, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'ingen avspilling på denne kilden' })); }
+        if (a === 'play') { state.playing = true; state.paused = false; }
+        else if (a === 'pause') { state.playing = false; state.paused = true; }
+        else if (a === 'playpause') { state.playing = !state.playing; state.paused = !state.playing; }
+        else if (a === 'stop') { state.playing = false; state.paused = false; }
+        else { state.title = a === 'next' ? 'Neste låt' : 'Forrige låt'; state.playing = true; }
+      }
       else if (p === '/api/bt') state.bt_pairing = !!body.pairing;
       else if (p === '/api/loudness') { if (body.on !== undefined) state.loudness = !!body.on; if (body.level !== undefined) state.loudness_level = Math.max(0, Math.min(10, body.level)); }
       else { res.writeHead(404); return res.end('{}'); }

@@ -7,11 +7,17 @@ const POLL_MS = 5000;
 
 class PultforsterkerDevice extends Homey.Device {
   async onInit() {
+    for (const cap of ['speaker_prev', 'speaker_next']) {   // eldre enheter: legg til nye capabilities
+      if (!this.hasCapability(cap)) await this.addCapability(cap).catch(this.error);
+    }
     this.registerCapabilityListener('onoff', (on) => this.setPower(on));
     this.registerCapabilityListener('volume_set', (v) => this.setVolume(Math.round(v * 100)));
     this.registerCapabilityListener('volume_mute', (m) => this.setMute(m));
     this.registerCapabilityListener('ki_input', (i) => this.setInput(i));
     this.registerCapabilityListener('ki_loudness', (on) => this.setLoudness(on, undefined));
+    this.registerCapabilityListener('speaker_playing', (play) => this.transport(play ? 'play' : 'pause'));
+    this.registerCapabilityListener('speaker_next', () => this.transport('next'));
+    this.registerCapabilityListener('speaker_prev', () => this.transport('previous'));
     this.registerCapabilityListener('ki_loudness_level', (lvl) => this.setLoudness(undefined, Math.round(lvl)));
 
     // Følg IP-endringer fra mDNS
@@ -108,6 +114,7 @@ class PultforsterkerDevice extends Homey.Device {
     const body = {}; if (on !== undefined) body.on = !!on; if (level !== undefined) body.level = level;
     await this.apply(await this.request('POST', '/loudness', body));
   }
+  async transport(action) { await this.apply(await this.request('POST', '/transport', { action })); }
   async setInput(i) { await this.apply(await this.request('POST', '/input', { input: i })); }
 
   async togglePower() {

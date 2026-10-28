@@ -19,12 +19,14 @@ API:
   POST /api/loudness {"on":bool, "level":0-10}
   POST /api/mute   {"mute":bool}
   POST /api/bt     {"pairing":true}   (gjør Pi-en synlig 2 min)
+  POST /api/transport {"action":"play|pause|playpause|next|previous|stop"}  (AirPlay/Bluetooth)
 """
 import asyncio
 import json
 import math
 import threading
 import os
+import re
 import socket
 import subprocess
 import time
@@ -263,7 +265,7 @@ def read_status():
             st = json.load(fh)
     except Exception:
         st = {}
-    return {**state, "playing": bool(st.get("playing")), "title": st.get("title", ""), "artist": st.get("artist", ""),
+    return {**state, "playing": bool(st.get("playing")), "paused": bool(st.get("paused")), "source": st.get("source", ""), "title": st.get("title", ""), "artist": st.get("artist", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": socket.gethostname()}
 
@@ -377,8 +379,51 @@ async def h_volume(r):
     set_volume(state["volume"] + int(b["delta"]) if "delta" in b else int(b.get("volume", state["volume"]))); return j()
 async def h_mute(r): set_mute((await r.json()).get("mute", True)); return j()
 async def h_bt(r): bt_pairing((await r.json()).get("pairing", True)); return j()
+async def h_transport(r):
+    a = (await r.json()).get("action", "")
+    if a not in TRANSPORT:
+        return web.json_response({"error": f"action må være en av {sorted(TRANSPORT)}"}, status=400)
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, transport, a)
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=409)
+    await asyncio.sleep(0.6)   # la metadata rekke å oppdatere seg
+    return j()
 async def h_loudness(r):
     b = await r.json(); set_loudness(b.get("on"), b.get("level")); return j()
+
+
+# ---------- avspillingskontroll (AirPlay via Shairport Sync D-Bus, Bluetooth via BlueZ AVRCP) ----------
+TRANSPORT = {"play", "pause", "playpause", "next", "previous", "stop"}
+SPS = ("org.gnome.ShairportSync", "/org/gnome/ShairportSync", "org.gnome.ShairportSync.RemoteControl")
+SPS_CMD = {"play": "Play", "pause": "Pause", "playpause": "PlayPause", "next": "Next", "previous": "Previous", "stop": "Stop"}
+BT_CMD = {"play": "Play", "pause": "Pause", "next": "Next", "previous": "Previous", "stop": "Stop"}
+
+
+def _busctl(*args):
+    r = subprocess.run(["busctl", "--system", *args], capture_output=True, text=True, timeout=4)
+    if r.returncode != 0:
+        raise RuntimeError((r.stderr or r.stdout).strip() or "busctl feilet")
+    return r.stdout
+
+
+def _bt_player():
+    out = _busctl("tree", "--list", "org.bluez")
+    players = [l.strip() for l in out.splitlines() if re.search(r"/dev_[0-9A-F_]+/player\d+$", l.strip())]
+    if not players:
+        raise RuntimeError("ingen Bluetooth-enhet med avspillingskontroll tilkoblet")
+    return players[0]
+
+
+def transport(action):
+    st = read_status()
+    src = st.get("source") or ("bt" if state["input"] == "bt" else "airplay")
+    if src == "bt" or state["input"] == "bt":
+        if action == "playpause":
+            action = "pause" if st.get("playing") else "play"
+        _busctl("call", "org.bluez", _bt_player(), "org.bluez.MediaPlayer1", BT_CMD[action])
+    else:
+        _busctl("call", SPS[0], SPS[1], SPS[2], SPS_CMD[action])
 
 
 def _local_ip():
@@ -420,7 +465,7 @@ def main():
     app = web.Application()
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness)])
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

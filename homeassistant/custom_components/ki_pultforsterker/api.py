@@ -50,3 +50,7 @@ class KiAmpApi:
         if level is not None:
             body["level"] = level
         return await self._req("POST", "/loudness", body)
+
+    async def transport(self, action: str) -> dict[str, Any]:
+        """play | pause | playpause | next | previous | stop (AirPlay/Bluetooth)."""
+        return await self._req("POST", "/transport", {"action": action})

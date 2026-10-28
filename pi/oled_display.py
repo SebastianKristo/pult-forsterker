@@ -40,7 +40,7 @@ try:
 except Exception as e:   # ingen OLED koblet til: kjør videre som metadata-tjeneste (AirPlay/BT → API, HA, Homey)
     print("OLED ikke funnet – kjører uten skjerm:", e, flush=True)
     device = None
-track = {"playing": False, "title": "", "artist": "", "duration": 0, "position": 0, "pos_t": 0.0, "bt_device": "", "source": ""}
+track = {"paused": False, "playing": False, "title": "", "artist": "", "duration": 0, "position": 0, "pos_t": 0.0, "bt_device": "", "source": ""}
 boot_until = time.time() + 1.6
 scroll_x = 0.0
 
@@ -71,9 +71,11 @@ def airplay_thread():
                     elif t == "core" and c == "astm":
                         try: track["duration"] = int.from_bytes(base64.b64decode(m.group(4)), "big") / 1000
                         except Exception: pass
-                    elif t == "ssnc" and c in ("pbeg", "prsm"): track["playing"] = True; track["source"] = "airplay"
-                    elif t == "ssnc" and c in ("pend", "pfls"):
-                        track.update(playing=False, title="", artist="", duration=0, position=0)
+                    elif t == "ssnc" and c in ("pbeg", "prsm"): track.update(playing=True, paused=False, source="airplay")
+                    elif t == "ssnc" and c == "pfls":   # pause/flush – behold tittelen
+                        track.update(playing=False, paused=True)
+                    elif t == "ssnc" and c == "pend":
+                        track.update(playing=False, paused=False, title="", artist="", duration=0, position=0)
                     elif t == "ssnc" and c == "prgr":
                         try:
                             s, cur, e = (int(x) for x in data.split("/")); track["position"] = (cur - s) / 44100; track["duration"] = (e - s) / 44100; track["pos_t"] = time.time()
@@ -99,9 +101,10 @@ def bt_thread():
                 found = True
                 dev = ifs.get("org.bluez.Device1", {})
                 tr = mp.get("Track", {})
-                playing = str(mp.get("Status", "")) == "playing"
+                status = str(mp.get("Status", ""))
+                playing = status == "playing"
                 if playing or track["source"] == "bt":
-                    track.update(source="bt", playing=playing, title=str(tr.get("Title", "")), artist=str(tr.get("Artist", "")),
+                    track.update(source="bt", playing=playing, paused=status == "paused", title=str(tr.get("Title", "")), artist=str(tr.get("Artist", "")),
                                  duration=int(tr.get("Duration", 0)) / 1000, position=int(mp.get("Position", 0)) / 1000, pos_t=time.time())
                 track["bt_device"] = str(dev.get("Alias", "")) if dev else track["bt_device"]
             if not found:
@@ -117,7 +120,7 @@ def write_status():
     try:
         tmp = STATUS_FILE + ".tmp"
         with open(tmp, "w") as fh:
-            json.dump({k: track[k] for k in ("playing", "title", "artist", "duration", "position", "bt_device")}, fh)
+            json.dump({k: track[k] for k in ("playing", "paused", "source", "title", "artist", "duration", "position", "bt_device")}, fh)
         os.replace(tmp, STATUS_FILE)
     except Exception:
         pass

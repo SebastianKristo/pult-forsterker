@@ -36,7 +36,7 @@ sudo apt-get -y install --no-install-recommends \
   build-essential git autoconf automake libtool pkg-config \
   libpopt-dev libconfig-dev libasound2-dev avahi-daemon libavahi-client-dev \
   libssl-dev libsoxr-dev libplist-dev libsodium-dev libavutil-dev libavcodec-dev \
-  libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils libplist-utils \
+  libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils libplist-utils libglib2.0-dev \
   bluez bluez-alsa-utils python3-dbus \
   python3-pip python3-pil python3-smbus i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl
 
@@ -61,9 +61,10 @@ sudo systemctl enable --now nqptp
 cd /tmp && rm -rf shairport-sync && git clone https://github.com/mikebrady/shairport-sync.git
 cd shairport-sync && autoreconf -fi
 ./configure --sysconfdir=/etc --with-alsa --with-soxr --with-avahi --with-ssl=openssl \
-            --with-systemd --with-airplay-2 --with-metadata --with-pipe
+            --with-systemd --with-airplay-2 --with-metadata --with-pipe --with-dbus-interface
 make -j"$(nproc)" && sudo make install
 sudo install -m 644 "$SRC/shairport-sync.conf" /etc/shairport-sync.conf
+sudo systemctl reload dbus 2>/dev/null || true   # D-Bus-policy fra make install
 id shairport-sync >/dev/null 2>&1 || sudo useradd -r -M -g audio -s /usr/sbin/nologin shairport-sync
 sudo install -m 644 "$SRC/shairport-sync.service" /etc/systemd/system/shairport-sync.service   # 5.x legger ikke inn unit selv
 sudo systemctl daemon-reload && sudo systemctl enable --now shairport-sync

@@ -27,6 +27,7 @@ class Device {
   }
   registerCapabilityListener(cap, fn) { this._listeners[cap] = fn; }
   hasCapability(c) { return this._caps.includes(c); }
+  async addCapability(c) { this._caps.push(c); }
   async setCapabilityValue(c, v) { this._values[c] = v; }
   getCapabilityValue(c) { return this._values[c]; }
   getData() { return this._data; }

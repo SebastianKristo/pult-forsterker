@@ -139,6 +139,7 @@ curl -X POST localhost:8765/api/mute     -d '{"mute":true}'
 curl -X POST localhost:8765/api/loudness -d '{"on":true,"level":6}'
 curl -X POST localhost:8765/api/power    -d '{"on":false}'      # standby
 curl -X POST localhost:8765/api/toggle
+curl -X POST localhost:8765/api/transport -d '{"action":"next"}'   # play | pause | playpause | next | previous | stop (AirPlay/Bluetooth)
 ```
 
 Logg mens du tester: `journalctl -u ki-amp -f` (Ctrl-C for å avslutte).

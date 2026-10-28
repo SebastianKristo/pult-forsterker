@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -39,7 +39,9 @@
         "onoff",
         "volume_set",
         "volume_mute",
+        "speaker_prev",
         "speaker_playing",
+        "speaker_next",
         "speaker_track",
         "speaker_artist",
         "ki_input",
@@ -48,7 +50,7 @@
       ],
       "capabilitiesOptions": {
         "speaker_playing": {
-          "setable": false
+          "setable": true
         },
         "speaker_track": {
           "title": {
@@ -517,6 +519,76 @@
               "en": "Level (dB)",
               "no": "Nivå (dB)"
             }
+          }
+        ]
+      },
+      {
+        "id": "ki_transport",
+        "title": {
+          "en": "Playback: [[action]]",
+          "no": "Avspilling: [[action]]"
+        },
+        "titleFormatted": {
+          "en": "Playback: [[action]]",
+          "no": "Avspilling: [[action]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          },
+          {
+            "type": "dropdown",
+            "name": "action",
+            "title": {
+              "en": "Action",
+              "no": "Handling"
+            },
+            "values": [
+              {
+                "id": "playpause",
+                "label": {
+                  "en": "Play/pause",
+                  "no": "Spill/pause"
+                }
+              },
+              {
+                "id": "play",
+                "label": {
+                  "en": "Play",
+                  "no": "Spill"
+                }
+              },
+              {
+                "id": "pause",
+                "label": {
+                  "en": "Pause",
+                  "no": "Pause"
+                }
+              },
+              {
+                "id": "next",
+                "label": {
+                  "en": "Next track",
+                  "no": "Neste spor"
+                }
+              },
+              {
+                "id": "previous",
+                "label": {
+                  "en": "Previous track",
+                  "no": "Forrige spor"
+                }
+              },
+              {
+                "id": "stop",
+                "label": {
+                  "en": "Stop",
+                  "no": "Stopp"
+                }
+              }
+            ]
           }
         ]
       }

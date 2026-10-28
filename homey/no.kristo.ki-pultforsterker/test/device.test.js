@@ -7,7 +7,7 @@ const Homey = require('homey');
 const Device = require('../drivers/pultforsterker/device');
 const App = require('../app');
 
-const CAPS = ['onoff', 'speaker_playing', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
+const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
 let daemon, port;
 before(async () => { daemon = createMockDaemon(); port = await daemon.start(); });
 after(async () => { await daemon.stop(); });
@@ -16,7 +16,7 @@ function makeDevice(homey) {
   const d = new Device({ homey, settings: { host: '127.0.0.1', port }, capabilities: CAPS });
   return d;
 }
-beforeEach(() => { Object.assign(daemon.state, { power: true, input: 'airplay', volume: 30, mute: false, loudness: true, loudness_level: 5, playing: false, title: '', artist: '' }); daemon.calls.length = 0; });
+beforeEach(() => { Object.assign(daemon.state, { power: true, input: 'airplay', volume: 30, mute: false, loudness: true, loudness_level: 5, playing: false, paused: false, title: '', artist: '' }); daemon.calls.length = 0; });
 
 test('onInit henter status og setter capabilities', async () => {
   const d = makeDevice(); await d.onInit(); d.onDeleted();
@@ -92,4 +92,23 @@ test('mDNS-oppdagelse oppdaterer host i settings', async () => {
   result.emit('addressChanged', { address: '10.69.1.51' });
   await new Promise((r) => setImmediate(r));
   assert.equal(d.getSettings().host, '10.69.1.51');
+});
+
+test('avspillingskontroll: spill/pause, neste, forrige og flytkort', async () => {
+  const homey = new Homey.HomeyCtx(); const app = new App({ homey }); await app.onInit();
+  const d = makeDevice(homey); await d.onInit(); d.onDeleted();
+  await d.triggerCapability('speaker_playing', true);
+  assert.deepEqual(daemon.calls.at(-1).body, { action: 'play' }); assert.equal(d.getCapabilityValue('speaker_playing'), true);
+  await d.triggerCapability('speaker_playing', false); assert.equal(daemon.state.paused, true);
+  await d.triggerCapability('speaker_next', true); assert.equal(daemon.state.title, 'Neste låt');
+  await d.triggerCapability('speaker_prev', true); assert.equal(daemon.state.title, 'Forrige låt');
+  await homey.flow.cards.ki_transport.run({ device: d, action: 'playpause' }); assert.equal(daemon.calls.at(-1).body.action, 'playpause');
+  daemon.state.input = 'aux';
+  await assert.rejects(d.triggerCapability('speaker_next', true), /ingen avspilling/);
+});
+
+test('eldre enhet uten neste/forrige får capabilities lagt til', async () => {
+  const d = new Device({ settings: { host: '127.0.0.1', port }, capabilities: CAPS.filter((c) => !['speaker_prev', 'speaker_next'].includes(c)) });
+  await d.onInit(); d.onDeleted();
+  assert.ok(d.hasCapability('speaker_next') && d.hasCapability('speaker_prev'));
 });

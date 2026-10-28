@@ -31,10 +31,21 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
         | MediaPlayerEntityFeature.VOLUME_SET | MediaPlayerEntityFeature.VOLUME_STEP
         | MediaPlayerEntityFeature.VOLUME_MUTE | MediaPlayerEntityFeature.SELECT_SOURCE
     )
+    _TRANSPORT = (
+        MediaPlayerEntityFeature.PLAY | MediaPlayerEntityFeature.PAUSE | MediaPlayerEntityFeature.STOP
+        | MediaPlayerEntityFeature.NEXT_TRACK | MediaPlayerEntityFeature.PREVIOUS_TRACK
+    )
     _attr_source_list = list(SOURCES.values())
 
     def __init__(self, c) -> None:
         super().__init__(c, "amp")
+
+    @property
+    def supported_features(self) -> MediaPlayerEntityFeature:
+        # avspillingskontroll bare for AirPlay og Bluetooth (AUX/USB styres fra kilden)
+        if self.d.get("input") in ("airplay", "bt"):
+            return self._attr_supported_features | self._TRANSPORT
+        return self._attr_supported_features
 
     @property
     def d(self) -> dict:
@@ -45,7 +56,9 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
         if not self.d.get("power"):
             return MediaPlayerState.OFF
         if self.d.get("input") in ("airplay", "bt"):
-            return MediaPlayerState.PLAYING if self.d.get("playing") else MediaPlayerState.IDLE
+            if self.d.get("playing"):
+                return MediaPlayerState.PLAYING
+            return MediaPlayerState.PAUSED if self.d.get("paused") else MediaPlayerState.IDLE
         return MediaPlayerState.ON
 
     @property
@@ -100,3 +113,24 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
 
     async def async_mute_volume(self, mute: bool) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_mute(mute))
+
+    async def _transport(self, action: str) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.transport(action))
+
+    async def async_media_play(self) -> None:
+        await self._transport("play")
+
+    async def async_media_pause(self) -> None:
+        await self._transport("pause")
+
+    async def async_media_play_pause(self) -> None:
+        await self._transport("playpause")
+
+    async def async_media_stop(self) -> None:
+        await self._transport("stop")
+
+    async def async_media_next_track(self) -> None:
+        await self._transport("next")
+
+    async def async_media_previous_track(self) -> None:
+        await self._transport("previous")
