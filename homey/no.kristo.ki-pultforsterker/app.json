@@ -120,9 +120,10 @@
       "conditions": [
         [
           {
-            "field": "txt.id",
+            "field": "txt.type",
             "match": {
-              "type": "string"
+              "type": "string",
+              "value": "pultforsterker"
             }
           }
         ]
@@ -229,7 +230,11 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           }
         ]
       },
@@ -243,7 +248,11 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           }
         ]
       },
@@ -267,7 +276,11 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           }
         ]
       }
@@ -283,7 +296,11 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           }
         ]
       },
@@ -301,7 +318,11 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           },
           {
             "type": "dropdown",
@@ -335,7 +356,11 @@
                   "no": "USB"
                 }
               }
-            ]
+            ],
+            "title": {
+              "en": "Source",
+              "no": "Kilde"
+            }
           }
         ]
       }
@@ -351,7 +376,11 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           }
         ]
       },
@@ -369,7 +398,11 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           },
           {
             "type": "dropdown",
@@ -403,7 +436,11 @@
                   "no": "USB"
                 }
               }
-            ]
+            ],
+            "title": {
+              "en": "Source",
+              "no": "Kilde"
+            }
           }
         ]
       },
@@ -417,7 +454,11 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           }
         ]
       },
@@ -435,7 +476,11 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           },
           {
             "type": "dropdown",
@@ -455,7 +500,11 @@
                   "no": "av"
                 }
               }
-            ]
+            ],
+            "title": {
+              "en": "Loudness",
+              "no": "Loudness"
+            }
           },
           {
             "type": "range",
@@ -463,10 +512,15 @@
             "min": 0,
             "max": 10,
             "step": 1,
-            "label": "dB"
+            "label": "dB",
+            "title": {
+              "en": "Level (dB)",
+              "no": "Nivå (dB)"
+            }
           }
         ]
       }
     ]
-  }
+  },
+  "support": "mailto:sebastian@kristo.no"
 }

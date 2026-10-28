@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Lager Homey-bildene (app + driver) og enhetsikonet fra forsterkerens front i designfargene."""
 import cairosvg, os
-W, H = 1000, 700
-def amp_svg(bg="#1b1c20"):
+def amp_svg(W=1000, H=700, bg="#1b1c20"):
     # frontplate 188x46 skalert; knapper/knott/OLED som på frontplaten
-    s = 4.4
-    def X(x): return 500 + x * s
-    def Y(y): return 350 + y * s
+    s = W / 227
+    def X(x): return W / 2 + x * s
+    def Y(y): return H / 2 + y * s
     btn = lambda cx, cy, r, led: (f'<circle cx="{X(cx)}" cy="{Y(cy)}" r="{r*s}" fill="#1d1d20"/>'
         f'<circle cx="{X(cx)}" cy="{Y(cy)}" r="{(r-1.5)*s}" fill="none" stroke="{"#ffffff" if led else "#2a2a2e"}" stroke-width="{0.9*s}"/>'
         f'<circle cx="{X(cx)}" cy="{Y(cy)}" r="{(r-2.6)*s}" fill="#252528"/>')
@@ -51,11 +50,11 @@ def amp_svg(bg="#1b1c20"):
     g.append('</svg>')
     return "\n".join(g)
 
-svg = amp_svg()
 os.makedirs("assets/images", exist_ok=True); os.makedirs("drivers/pultforsterker/assets/images", exist_ok=True)
-for d in ("assets/images", "drivers/pultforsterker/assets/images"):
-    for name, w in (("small", 250), ("large", 500), ("xlarge", 1000)):
-        cairosvg.svg2png(bytestring=svg.encode(), write_to=f"{d}/{name}.png", output_width=w, output_height=int(w * 0.7))
+for name, w in (("small", 250), ("large", 500), ("xlarge", 1000)):   # app: 250x175 / 500x350 / 1000x700
+    cairosvg.svg2png(bytestring=amp_svg().encode(), write_to=f"assets/images/{name}.png", output_width=w, output_height=int(w * 0.7))
+for name, w in (("small", 75), ("large", 500), ("xlarge", 1000)):    # driver: kvadratisk 75 / 500 / 1000
+    cairosvg.svg2png(bytestring=amp_svg(1000, 1000).encode(), write_to=f"drivers/pultforsterker/assets/images/{name}.png", output_width=w, output_height=w)
 
 # Enhetsikon (monokrom silhuett, Homey fargelegger den selv): front med skjerm, knapper og knott
 icon = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">

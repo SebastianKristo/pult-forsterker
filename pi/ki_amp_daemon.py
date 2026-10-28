@@ -385,7 +385,7 @@ def start_mdns():
         from zeroconf import ServiceInfo, Zeroconf
         info = ServiceInfo("_kipultamp._tcp.local.", f"{NAME}._kipultamp._tcp.local.",
                            addresses=[socket.inet_aton(_local_ip())], port=PORT,
-                           properties={"id": socket.gethostname(), "version": VERSION, "name": NAME},
+                           properties={"id": socket.gethostname(), "version": VERSION, "name": NAME, "type": "pultforsterker"},
                            server=f"{socket.gethostname()}.local.")
         zc = Zeroconf(); zc.register_service(info); return zc
     except Exception as e:
