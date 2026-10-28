@@ -8,6 +8,8 @@ Requires=nqptp.service
 ExecStart=/usr/local/bin/shairport-sync --log-to-syslog
 User=shairport-sync
 Group=audio
+RuntimeDirectory=shairport-sync
+RuntimeDirectoryMode=0755
 Restart=on-failure
 RestartSec=3
 

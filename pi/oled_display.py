@@ -25,7 +25,7 @@ from luma.core.render import canvas
 from luma.oled.device import ssd1309
 from PIL import ImageFont
 
-PIPE = "/tmp/shairport-sync-metadata"
+PIPE = "/run/shairport-sync/metadata"   # ikke /tmp: fs.protected_fifos hindrer root i å åpne en annen brukers FIFO der
 CTRL_FILE = "/run/pultamp_ctrl.json"
 STATUS_FILE = "/run/pultamp_status.json"
 FONT_B = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
@@ -35,7 +35,11 @@ f_tag, f_title, f_sub, f_small, f_vol, f_num = F(FONT_B, 7), F(FONT_B, 11), F(FO
 LABELS = {"airplay": "AIR", "bt": "BT", "aux": "AUX", "usb": "USB"}
 SRC_TEXT = {"aux": ("Analog inngang", "3,5 mm jack"), "usb": ("USB-lyd", "PC"), "airplay": ("AirPlay", "Venter på enhet …"), "bt": ("Bluetooth", "")}
 
-device = ssd1309(i2c(port=1, address=0x3C), gpio_RST=4)
+try:
+    device = ssd1309(i2c(port=1, address=0x3C), gpio_RST=4)
+except Exception as e:   # ingen OLED koblet til: kjør videre som metadata-tjeneste (AirPlay/BT → API, HA, Homey)
+    print("OLED ikke funnet – kjører uten skjerm:", e, flush=True)
+    device = None
 track = {"playing": False, "title": "", "artist": "", "duration": 0, "position": 0, "pos_t": 0.0, "bt_device": "", "source": ""}
 boot_until = time.time() + 1.6
 scroll_x = 0.0
@@ -241,6 +245,8 @@ def main():
     while True:
         c = read_ctrl()
         write_status()
+        if device is None:
+            time.sleep(0.5); continue
         if not c.get("power", True):
             if was_on:
                 device.hide(); was_on = False
