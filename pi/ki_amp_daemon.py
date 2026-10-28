@@ -43,6 +43,7 @@ MAX_TAP = max(10, min(99, int(os.environ.get("KI_AMP_MAX_TAP", "85"))))
 DSP_WS = os.environ.get("KI_AMP_DSP_WS", "ws://127.0.0.1:1234")   # CamillaDSP (loudness + digitalt volum for AirPlay/BT/USB)
 DSP_CAPTURE = os.environ.get("KI_AMP_DSP_CAPTURE", "hw:Loopback,1")
 DSP_PLAYBACK = os.environ.get("KI_AMP_DSP_PLAYBACK", "hw:sndrpihifiberry")
+DSP_FILE = os.environ.get("KI_AMP_DSP_FILE", "/etc/camilladsp/config.yml")
 DSP_FORMAT = os.environ.get("KI_AMP_DSP_FORMAT", "S32LE")   # S16LE for Pi-ens 3,5 mm-utgang (testmodus)
 
 # ---------- GPIO (BCM) ----------
@@ -178,19 +179,26 @@ class Dsp:
             import websocket
         except Exception as e:
             print("CamillaDSP-styring av (python3-websocket mangler):", e); return
+        self._ev.set()   # skyv oppsett og volum ved oppstart
         while True:
             self._ev.wait(); self._ev.clear()
+            cfg = dsp_config()
+            try:   # samme oppsett på disk, så CamillaDSP starter riktig etter omstart/krasj
+                if not os.path.exists(DSP_FILE) or open(DSP_FILE).read() != cfg:
+                    with open(DSP_FILE + ".tmp", "w") as fh: fh.write(cfg)
+                    os.replace(DSP_FILE + ".tmp", DSP_FILE)
+            except Exception as e:
+                print("CamillaDSP-fil:", e)
             try:
                 ws = websocket.create_connection(DSP_WS, timeout=2)
-                cfg = dsp_config()
                 if cfg != self._last_cfg:
                     self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg
                 db = vol_db(state["volume"]) if state["input"] != "aux" else 0.0
                 self._send(ws, {"SetVolume": db})
                 self._send(ws, {"SetMute": bool(state["mute"]) or not state["power"]})
                 ws.close()
-            except Exception as e:
-                print("CamillaDSP:", e); time.sleep(1)
+            except Exception as e:   # CamillaDSP ikke klar ennå – prøv igjen
+                print("CamillaDSP:", e, flush=True); self._last_cfg = None; time.sleep(2); self._ev.set()
 
 
 dsp = Dsp()
