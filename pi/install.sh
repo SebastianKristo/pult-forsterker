@@ -61,9 +61,11 @@ sudo systemctl enable --now nqptp
 B="$(mktemp -d)" && cd "$B" && git clone https://github.com/mikebrady/shairport-sync.git
 cd shairport-sync && autoreconf -fi
 ./configure --sysconfdir=/etc --with-alsa --with-soxr --with-avahi --with-ssl=openssl \
-            --with-systemd --with-airplay-2 --with-metadata --with-pipe --with-dbus-interface
+            --with-airplay-2 --with-metadata --with-pipe --with-dbus-interface
 make -j"$(nproc)" && sudo make install
 sudo install -m 644 "$SRC/shairport-sync.conf" /etc/shairport-sync.conf
+sudo install -m 644 "$SRC/shairport-sync-dbus.conf" /etc/dbus-1/system.d/shairport-sync-dbus.conf
+sudo systemctl reload dbus 2>/dev/null || true
 sudo systemctl reload dbus 2>/dev/null || true   # D-Bus-policy fra make install
 id shairport-sync >/dev/null 2>&1 || sudo useradd -r -M -g audio -s /usr/sbin/nologin shairport-sync
 sudo install -m 644 "$SRC/shairport-sync.service" /etc/systemd/system/shairport-sync.service   # 5.x legger ikke inn unit selv

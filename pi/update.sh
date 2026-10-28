@@ -11,6 +11,8 @@ for u in ki-amp.service oled-display.service camilladsp.service shairport-sync.s
   sudo install -m 644 "$SRC/$u" /etc/systemd/system/$u
 done
 sudo install -m 644 "$SRC/shairport-sync.conf" /etc/shairport-sync.conf
+sudo install -m 644 "$SRC/shairport-sync-dbus.conf" /etc/dbus-1/system.d/shairport-sync-dbus.conf
+sudo systemctl reload dbus 2>/dev/null || true
 # nye nøkler i ki-amp.env legges til uten å røre dine verdier
 while IFS= read -r line; do
   k="${line%%=*}"; [[ "$line" =~ ^KI_AMP_[A-Z_]+= ]] || continue
@@ -23,7 +25,7 @@ if ! shairport-sync -V 2>&1 | grep -qi dbus; then
   B="$(mktemp -d)" && cd "$B" && git clone -q https://github.com/mikebrady/shairport-sync.git && cd shairport-sync
   autoreconf -fi >/dev/null 2>&1
   ./configure -q --sysconfdir=/etc --with-alsa --with-soxr --with-avahi --with-ssl=openssl \
-    --with-systemd --with-airplay-2 --with-metadata --with-pipe --with-dbus-interface
+    --with-airplay-2 --with-metadata --with-pipe --with-dbus-interface
   make -s -j"$(nproc)" && sudo make -s install
   sudo systemctl reload dbus || true
   cd "$SRC"
