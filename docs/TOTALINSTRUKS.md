@@ -69,7 +69,7 @@ git clone https://github.com/SebastianKristo/pult-forsterker.git
 cd pult-forsterker/pi
 ```
 
-Senere oppdateringer: `cd ~/pult-forsterker && git pull && bash pi/install.sh` (skriptet er trygt å kjøre flere ganger).
+Senere oppdateringer: `cd ~/pult-forsterker && git pull && bash pi/update.sh` (raskt, beholder innstillingene dine).
 
 ---
 
@@ -178,16 +178,17 @@ journalctl -u ki-amp -f # trykk på knappene – du skal se "input airplay", "vo
 
 ## 7. Home Assistant
 
-1. Kopier integrasjonen (fra PC-en, eller via Samba/SSH-tillegget i HA):
-   ```bash
-   # PC – HA over SSH-tillegget (bytt host)
-   scp -r homeassistant/custom_components/ki_pultforsterker root@homeassistant.local:/config/custom_components/
-   ```
+1. Installer integrasjonen.
+
+   **Med HACS (anbefalt – får oppdateringer automatisk):**
+   HACS → ⋮ → *Custom repositories* → `https://github.com/SebastianKristo/pult-forsterker`, type **Integration** → *Add*. Søk «Pultforsterker» → *Download* → start HA på nytt.
+   
+   **Uten HACS:** kopier `custom_components/ki_pultforsterker` (i roten av repoet) til `<config>/custom_components/`.
 2. Legg pakken i `packages/` (du bruker allerede packages-oppsett):
    ```bash
    scp pi/ki_pultforsterker_package.yaml root@homeassistant.local:/config/packages/ki_pultforsterker.yaml
    ```
-3. Start HA på nytt. **Innstillinger → Enheter og tjenester → Oppdaget → KI Pultforsterker → Konfigurer** (mDNS `_kipultamp._tcp`). Dukker den ikke opp: *+ Legg til integrasjon → KI Pultforsterker* og skriv IP + port 8765.
+3. Start HA på nytt. **Innstillinger → Enheter og tjenester → Oppdaget → Pultforsterker → Konfigurer** (mDNS `_kipultamp._tcp`). Dukker den ikke opp: *+ Legg til integrasjon → Pultforsterker* og skriv IP + port 8765.
 4. Entiteter: `media_player.ki_pultforsterker` (kilde, volum, mute, på/av), `switch.ki_pultforsterker_strom`, `switch.ki_pultforsterker_loudness`, `number.ki_pultforsterker_loudness_styrke`, `sensor.ki_pultforsterker_kilde/tittel/artist`, `binary_sensor.ki_pultforsterker_spiller`, `button.ki_pultforsterker_start_bluetooth_parring`. Pakken gir `input_boolean.ki_pultforsterker_auto_av`, `input_number.ki_pultforsterker_av_etter_min`, automasjonene «KI Pultforsterker – på ved AirPlay» / «– av etter stillhet» og TTS-skriptet.
 5. Kort til dashbordet – eksempel med vanlig `media-control` (legg stil som per-kort override, ikke i button_card_templates):
    ```yaml
@@ -196,6 +197,17 @@ journalctl -u ki-amp -f # trykk på knappene – du skal se "input airplay", "vo
    ```
 
 **Sjekk:** media_player viser kilde og volum, og volumslideren i HA flytter tallet i `curl …/api/status`. ✅
+
+---
+
+## 7b. Music Assistant
+
+Forsterkeren er en Squeezelite-spiller. I Music Assistant: *Innstillinger → Leverandører → + → Squeezelite (Slimproto)*; spilleren **Pultforsterker** dukker opp av seg selv. Se `homeassistant/README.md` for detaljer.
+
+```bash
+systemctl is-active ki-squeezelite
+journalctl -u ki-squeezelite -n 20   # «connected to <MA-IP>»
+```
 
 ---
 
@@ -278,7 +290,7 @@ Første gang: mål 5 V på J6 og at hovedkortet trekker < 0,2 A i standby på 24
 |---|---|---|
 | Knapper, volum, API, loudness-logikk | `pi/ki_amp_daemon.py` | `sudo install -m755 ki_amp_daemon.py /usr/local/bin/ && sudo systemctl restart ki-amp` |
 | Skjermbildene på OLED | `pi/oled_display.py` | `sudo install -m755 oled_display.py /usr/local/bin/ && sudo systemctl restart oled-display` |
-| HA-integrasjon | `homeassistant/custom_components/ki_pultforsterker/` | kopier, restart HA |
+| HA-integrasjon | `custom_components/ki_pultforsterker/` | kopier, restart HA |
 | Homey-app | `homey/no.kristo.ki-pultforsterker/` | `homey app install` |
 | Kabinett | `kabinett/tools/build_stl.py` (`VARIANT=pcb python3 build_stl.py`) | print STL fra `kabinett/stl/` |
 | Hovedkort | `pcb/build_board.py` → `pcb/export.py` | Gerber/BOM/CPL i `pcb/produksjon/` |

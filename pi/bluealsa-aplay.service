@@ -1,10 +1,10 @@
 [Unit]
-Description=KI Pultforsterker – Bluetooth A2DP-mottak -> DAC
+Description=Pultforsterker – Bluetooth A2DP-mottak -> dmix -> CamillaDSP
 After=bluetooth.service bluealsa.service
 Requires=bluealsa.service
 
 [Service]
-ExecStart=/usr/bin/bluealsa-aplay --pcm=default --profile-a2dp 00:00:00:00:00:00
+ExecStart=/usr/bin/bluealsa-aplay --pcm=default --profile-a2dp
 Restart=always
 RestartSec=3
 

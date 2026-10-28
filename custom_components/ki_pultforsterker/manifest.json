@@ -2,13 +2,14 @@
   "domain": "ki_pultforsterker",
   "name": "Pultforsterker",
   "codeowners": [
-    "@sebastian"
+    "@SebastianKristo"
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://claude.ai/artifact/76NoZ9XKqwQdgHGsWfWxuX",
+  "documentation": "https://github.com/SebastianKristo/pult-forsterker/blob/main/homeassistant/README.md",
   "integration_type": "device",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/SebastianKristo/pult-forsterker/issues",
   "requirements": [],
   "version": "2.2.0",
   "zeroconf": [

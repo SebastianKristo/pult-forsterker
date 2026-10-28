@@ -93,13 +93,18 @@ def bt_thread():
     while True:
         try:
             om = dbus.Interface(bus.get_object("org.bluez", "/"), "org.freedesktop.DBus.ObjectManager")
+            objs = om.GetManagedObjects()
+            for path, ifs in objs.items():   # stol på parrede enheter, så de kobler til igjen av seg selv
+                d1 = ifs.get("org.bluez.Device1")
+                if d1 and d1.get("Paired") and not d1.get("Trusted"):
+                    dbus.Interface(bus.get_object("org.bluez", path), "org.freedesktop.DBus.Properties").Set("org.bluez.Device1", "Trusted", dbus.Boolean(True))
             found = False
-            for path, ifs in om.GetManagedObjects().items():
+            for path, ifs in objs.items():
                 mp = ifs.get("org.bluez.MediaPlayer1")
                 if mp is None:
                     continue
                 found = True
-                dev = ifs.get("org.bluez.Device1", {})
+                dev = objs.get(str(mp.get("Device", path.rsplit("/", 1)[0])), {}).get("org.bluez.Device1", {})
                 tr = mp.get("Track", {})
                 status = str(mp.get("Status", ""))
                 playing = status == "playing"

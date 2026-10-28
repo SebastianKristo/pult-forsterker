@@ -224,7 +224,9 @@ def apply_power():
     apply_input()
     apply_volume()
     # OLED av i standby håndteres av oled_display.py via ctrl-filen
-    subprocess.run(["systemctl", "start" if state["power"] else "stop", "shairport-sync", "bluealsa-aplay", "ki-usb-audio"],
+    units = [u for u in ("shairport-sync", "bluealsa-aplay", "ki-usb-audio", "ki-squeezelite")   # bare tjenester som er slått på
+             if subprocess.run(["systemctl", "is-enabled", "--quiet", u], check=False).returncode == 0]
+    subprocess.run(["systemctl", "start" if state["power"] else "stop", *units],
                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
@@ -303,9 +305,8 @@ def bt_pairing(on=True):
     global _pairing_until
     state["bt_pairing"] = bool(on)
     _pairing_until = time.time() + 120 if on else 0
-    cmd = ["bluetoothctl"]
-    script = "discoverable on\npairable on\n" if on else "discoverable off\n"
-    subprocess.run(cmd, input=script, text=True, check=False, stdout=subprocess.DEVNULL)
+    for args in ([["power", "on"], ["pairable", "on"], ["discoverable", "on"]] if on else [["discoverable", "off"]]):
+        subprocess.run(["bluetoothctl", *args], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
     changed()
 
 

@@ -61,7 +61,7 @@ Kassen `kabinett/stl/v2_body_pcb.stl` + `v2_lid_pcb.stl` (200 × **165** × 48) 
 2. **Print** `kabinett/stl/v2_frontplate.stl` først (prøv knappene i den), så `v2_body.stl` og `v2_lid.stl`. Skal forsterkeren stå på pulten i stedet for å henge under: bruk `v2_lid_frittstaende.stl` (uten ører) og lim på gummiføtter. Parametrene står i `kabinett/scad/pultforsterker_v2.scad`.
 3. **Pi:** Raspberry Pi OS Lite 64-bit, vertsnavn `pultamp`, SSH + Wi-Fi på. Kopier `pi/` til Pi-en og kjør `bash install.sh` (20–30 min), deretter `sudo reboot`.
 4. **Bygg** etter [bildeveiledningen](docs/KI_Pultforsterker_Bildeveiledning.pdf) (LEGO-stil, steg 0–16) – tabellene står i [byggeveiledningen](docs/KI_Pultforsterker_Byggeveiledning.pdf).
-5. **Home Assistant:** kopier `homeassistant/custom_components/ki_pultforsterker` til `config/custom_components/`, start HA på nytt – forsterkeren dukker opp under *Oppdagede enheter*. Valgfritt: `pi/ki_pultforsterker_package.yaml` i `packages/`.
+5. **Home Assistant:** kopier `custom_components/ki_pultforsterker` til `config/custom_components/`, start HA på nytt – forsterkeren dukker opp under *Oppdagede enheter*. Valgfritt: `pi/ki_pultforsterker_package.yaml` i `packages/`.
 6. **Homey:** `cd homey/no.kristo.ki-pultforsterker && npm i && homey app install`.
 
 ## Programvare på Pi-en

@@ -69,15 +69,15 @@ id shairport-sync >/dev/null 2>&1 || sudo useradd -r -M -g audio -s /usr/sbin/no
 sudo install -m 644 "$SRC/shairport-sync.service" /etc/systemd/system/shairport-sync.service   # 5.x legger ikke inn unit selv
 sudo systemctl daemon-reload && sudo systemctl enable --now shairport-sync
 
-echo "== 6/9  Bluetooth A2DP-mottak (bluealsa)"
-sudo sed -i 's/^#\?Class = .*/Class = 0x200414/; s/^#\?DiscoverableTimeout = .*/DiscoverableTimeout = 120/' /etc/bluetooth/main.conf
-grep -q '^Class' /etc/bluetooth/main.conf || printf '[General]\nClass = 0x200414\nDiscoverableTimeout = 120\n' | sudo tee -a /etc/bluetooth/main.conf
-sudo mkdir -p /etc/systemd/system/bluealsa.service.d
-printf '[Service]\nExecStart=\nExecStart=/usr/bin/bluealsa -p a2dp-sink\n' | sudo tee /etc/systemd/system/bluealsa.service.d/override.conf
-sudo install -m 644 "$SRC/bluealsa-aplay.service" /etc/systemd/system/bluealsa-aplay.service
+echo "== 6/9  Bluetooth A2DP-mottak (bluealsa + parring uten PIN)"
 sudo hostnamectl set-hostname pultamp 2>/dev/null || true
-printf 'system-alias Pultforsterker\nagent NoInputNoOutput\ndefault-agent\npairable on\n' | sudo bluetoothctl >/dev/null 2>&1 || true
-sudo systemctl enable --now bluealsa bluealsa-aplay
+bash "$SRC/ki-bluetooth-setup.sh"
+
+echo "== 6b    Music Assistant (Squeezelite / Slimproto)"
+sudo apt-get -y install --no-install-recommends squeezelite >/dev/null
+sudo systemctl disable --now squeezelite 2>/dev/null || true      # Debians egen tjeneste – vi bruker ki-squeezelite
+sudo install -m 644 "$SRC/ki-squeezelite.service" /etc/systemd/system/ki-squeezelite.service
+sudo systemctl daemon-reload && sudo systemctl enable --now ki-squeezelite
 
 echo "== 7/9  USB-lyd (Pi-en blir et USB-lydkort for PC-en via USB-C bak)"
 sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
