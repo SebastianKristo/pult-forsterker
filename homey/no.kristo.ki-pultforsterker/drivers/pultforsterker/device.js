@@ -1,0 +1,109 @@
+'use strict';
+
+const Homey = require('homey');
+const http = require('http');
+
+const POLL_MS = 5000;
+
+class PultforsterkerDevice extends Homey.Device {
+  async onInit() {
+    this.registerCapabilityListener('onoff', (on) => this.setPower(on));
+    this.registerCapabilityListener('volume_set', (v) => this.setVolume(Math.round(v * 100)));
+    this.registerCapabilityListener('volume_mute', (m) => this.setMute(m));
+    this.registerCapabilityListener('ki_input', (i) => this.setInput(i));
+
+    // Følg IP-endringer fra mDNS
+    try {
+      const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
+      if (result) {
+        this.onDiscoveryAvailable(result);
+        result.on('addressChanged', (r) => this.onDiscoveryAddressChanged(r));
+      }
+    } catch (e) { /* manuell IP i settings brukes */ }
+
+    this._wasPlaying = null;
+    this._lastInput = null;
+    await this.poll();
+    this._timer = this.homey.setInterval(() => this.poll().catch((e) => this.error(e)), POLL_MS);
+  }
+
+  onDiscoveryAvailable(result) { this.setSettings({ host: result.address }).catch(() => {}); }
+  onDiscoveryAddressChanged(result) { this.setSettings({ host: result.address }).catch(() => {}); }
+
+  onDeleted() { if (this._timer) this.homey.clearInterval(this._timer); }
+
+  base() {
+    const { host, port } = this.getSettings();
+    return { host, port: port || 8765 };
+  }
+
+  request(method, path, body) {
+    const { host, port } = this.base();
+    return new Promise((resolve, reject) => {
+      const data = body ? JSON.stringify(body) : null;
+      const req = http.request({ host, port, path: `/api${path}`, method, timeout: 4000,
+        headers: data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {} },
+      (res) => {
+        let buf = '';
+        res.on('data', (c) => { buf += c; });
+        res.on('end', () => {
+          try { resolve(JSON.parse(buf)); } catch (e) { reject(new Error(`Ugyldig svar: ${buf}`)); }
+        });
+      });
+      req.on('error', reject);
+      req.on('timeout', () => req.destroy(new Error('Tidsavbrudd')));
+      if (data) req.write(data);
+      req.end();
+    });
+  }
+
+  async poll() {
+    let st;
+    try {
+      st = await this.request('GET', '/status');
+    } catch (e) {
+      if (this.getAvailable()) await this.setUnavailable(this.homey.__('unavailable') || 'Ingen kontakt');
+      return;
+    }
+    if (!this.getAvailable()) await this.setAvailable();
+    await this.apply(st);
+  }
+
+  async apply(st) {
+    await this.setCapabilityValue('onoff', !!st.power).catch(this.error);
+    await this.setCapabilityValue('speaker_playing', !!st.playing).catch(this.error);
+    await this.setCapabilityValue('speaker_track', st.title || '').catch(this.error);
+    await this.setCapabilityValue('speaker_artist', st.artist || '').catch(this.error);
+    await this.setCapabilityValue('volume_set', (st.volume || 0) / 100).catch(this.error);
+    await this.setCapabilityValue('volume_mute', !!st.mute).catch(this.error);
+    await this.setCapabilityValue('ki_input', st.input || 'airplay').catch(this.error);
+
+    if (this._lastInput !== null && this._lastInput !== st.input) {
+      await this.homey.flow.getDeviceTriggerCard('ki_input_changed').trigger(this, { input: st.input }).catch(this.error);
+    }
+    this._lastInput = st.input;
+
+    if (this._wasPlaying !== null && this._wasPlaying !== !!st.playing) {
+      const card = this.homey.flow.getDeviceTriggerCard(st.playing ? 'ki_started_playing' : 'ki_stopped_playing');
+      await card.trigger(this, st.playing ? { title: st.title || '', artist: st.artist || '' } : {}).catch(this.error);
+    }
+    this._wasPlaying = !!st.playing;
+  }
+
+  async setPower(on) {
+    const st = await this.request('POST', '/power', { on: !!on });
+    await this.apply(st);
+  }
+
+  async setVolume(v) { await this.apply(await this.request('POST', '/volume', { volume: v })); }
+  async setMute(m) { await this.apply(await this.request('POST', '/mute', { mute: !!m })); }
+  async btPair() { await this.apply(await this.request('POST', '/bt', { pairing: true })); }
+  async setInput(i) { await this.apply(await this.request('POST', '/input', { input: i })); }
+
+  async togglePower() {
+    const st = await this.request('POST', '/toggle');
+    await this.apply(st);
+  }
+}
+
+module.exports = PultforsterkerDevice;

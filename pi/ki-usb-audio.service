@@ -1,0 +1,13 @@
+[Unit]
+Description=KI Pultforsterker – USB-lyd (Pi som USB-lydkort for PC) -> DAC
+After=sound.target
+
+[Service]
+ExecStartPre=/sbin/modprobe g_audio c_srate=48000 c_ssize=2 c_chmask=3 p_chmask=0
+ExecStart=/usr/bin/alsaloop -C hw:UAC2Gadget -P default -r 48000 -t 50000 -S 0
+ExecStopPost=/sbin/rmmod g_audio
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

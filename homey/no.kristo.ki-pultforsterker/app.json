@@ -1,0 +1,397 @@
+{
+  "id": "no.kristo.ki-pultforsterker",
+  "version": "2.0.0",
+  "compatibility": ">=12.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "KI Pultforsterker",
+    "no": "KI Pultforsterker"
+  },
+  "description": {
+    "en": "Control the desk amplifier: power, input (AirPlay/Bluetooth/AUX/USB), volume, now playing",
+    "no": "Styr pultforsterkeren: strøm, kilde (AirPlay/Bluetooth/AUX/USB), volum, spiller nå"
+  },
+  "category": [
+    "music"
+  ],
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png"
+  },
+  "author": {
+    "name": "Sebastian Kristo",
+    "email": "sebastian@kristo.no"
+  },
+  "brandColor": "#1f6feb",
+  "drivers": [
+    {
+      "id": "pultforsterker",
+      "name": {
+        "en": "Pultforsterker",
+        "no": "Pultforsterker"
+      },
+      "class": "amplifier",
+      "capabilities": [
+        "onoff",
+        "volume_set",
+        "volume_mute",
+        "speaker_playing",
+        "speaker_track",
+        "speaker_artist",
+        "ki_input"
+      ],
+      "capabilitiesOptions": {
+        "speaker_playing": {
+          "setable": false
+        },
+        "speaker_track": {
+          "title": {
+            "en": "Title",
+            "no": "Tittel"
+          }
+        },
+        "speaker_artist": {
+          "title": {
+            "en": "Artist",
+            "no": "Artist"
+          }
+        }
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "kipultamp",
+      "images": {
+        "small": "/drivers/pultforsterker/assets/images/small.png",
+        "large": "/drivers/pultforsterker/assets/images/large.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "host",
+          "type": "text",
+          "label": {
+            "en": "IP address",
+            "no": "IP-adresse"
+          },
+          "value": ""
+        },
+        {
+          "id": "port",
+          "type": "number",
+          "label": {
+            "en": "Port",
+            "no": "Port"
+          },
+          "value": 8765
+        }
+      ]
+    }
+  ],
+  "discovery": {
+    "kipultamp": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "kipultamp",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.id}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.id",
+            "match": {
+              "type": "string"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  "capabilities": {
+    "ki_input": {
+      "type": "enum",
+      "title": {
+        "en": "Input",
+        "no": "Kilde"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "icon": "/assets/source.svg",
+      "values": [
+        {
+          "id": "airplay",
+          "title": {
+            "en": "AirPlay",
+            "no": "AirPlay"
+          }
+        },
+        {
+          "id": "bt",
+          "title": {
+            "en": "Bluetooth",
+            "no": "Bluetooth"
+          }
+        },
+        {
+          "id": "aux",
+          "title": {
+            "en": "AUX",
+            "no": "AUX"
+          }
+        },
+        {
+          "id": "usb",
+          "title": {
+            "en": "USB",
+            "no": "USB"
+          }
+        }
+      ]
+    }
+  },
+  "flow": {
+    "triggers": [
+      {
+        "id": "ki_started_playing",
+        "title": {
+          "en": "Started playing",
+          "no": "Begynte å spille"
+        },
+        "tokens": [
+          {
+            "name": "title",
+            "type": "string",
+            "title": {
+              "en": "Title",
+              "no": "Tittel"
+            }
+          },
+          {
+            "name": "artist",
+            "type": "string",
+            "title": {
+              "en": "Artist",
+              "no": "Artist"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          }
+        ]
+      },
+      {
+        "id": "ki_stopped_playing",
+        "title": {
+          "en": "Stopped playing",
+          "no": "Sluttet å spille"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          }
+        ]
+      },
+      {
+        "id": "ki_input_changed",
+        "title": {
+          "en": "Input changed",
+          "no": "Kilde endret"
+        },
+        "tokens": [
+          {
+            "name": "input",
+            "type": "string",
+            "title": {
+              "en": "Input",
+              "no": "Kilde"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "ki_is_playing",
+        "title": {
+          "en": "Is !{{playing|not playing}}",
+          "no": "Spiller !{{|ikke}}"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          }
+        ]
+      },
+      {
+        "id": "ki_input_is",
+        "title": {
+          "en": "Input !{{is|is not}}",
+          "no": "Kilde !{{er|er ikke}}"
+        },
+        "titleFormatted": {
+          "en": "Input !{{is|is not}} [[input]]",
+          "no": "Kilde !{{er|er ikke}} [[input]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          },
+          {
+            "type": "dropdown",
+            "name": "input",
+            "values": [
+              {
+                "id": "airplay",
+                "label": {
+                  "en": "AirPlay",
+                  "no": "AirPlay"
+                }
+              },
+              {
+                "id": "bt",
+                "label": {
+                  "en": "Bluetooth",
+                  "no": "Bluetooth"
+                }
+              },
+              {
+                "id": "aux",
+                "label": {
+                  "en": "AUX",
+                  "no": "AUX"
+                }
+              },
+              {
+                "id": "usb",
+                "label": {
+                  "en": "USB",
+                  "no": "USB"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "ki_toggle",
+        "title": {
+          "en": "Toggle power",
+          "no": "Veksle strøm"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          }
+        ]
+      },
+      {
+        "id": "ki_set_input",
+        "title": {
+          "en": "Select input",
+          "no": "Velg kilde"
+        },
+        "titleFormatted": {
+          "en": "Select input [[input]]",
+          "no": "Velg kilde [[input]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          },
+          {
+            "type": "dropdown",
+            "name": "input",
+            "values": [
+              {
+                "id": "airplay",
+                "label": {
+                  "en": "AirPlay",
+                  "no": "AirPlay"
+                }
+              },
+              {
+                "id": "bt",
+                "label": {
+                  "en": "Bluetooth",
+                  "no": "Bluetooth"
+                }
+              },
+              {
+                "id": "aux",
+                "label": {
+                  "en": "AUX",
+                  "no": "AUX"
+                }
+              },
+              {
+                "id": "usb",
+                "label": {
+                  "en": "USB",
+                  "no": "USB"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ki_bt_pair",
+        "title": {
+          "en": "Start Bluetooth pairing",
+          "no": "Start Bluetooth-parring"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          }
+        ]
+      }
+    ]
+  }
+}

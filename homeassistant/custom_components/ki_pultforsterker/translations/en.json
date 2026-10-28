@@ -1,0 +1,65 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "KI Pultforsterker",
+        "description": "Skriv inn IP-adressen til Pi-en i forsterkeren.",
+        "data": {
+          "host": "IP-adresse",
+          "port": "Port"
+        }
+      },
+      "confirm": {
+        "title": "Legg til {name}?",
+        "description": "Fant {name} på {host}."
+      }
+    },
+    "error": {
+      "cannot_connect": "Fikk ikke kontakt med forsterkeren."
+    },
+    "abort": {
+      "already_configured": "Forsterkeren er allerede lagt til.",
+      "cannot_connect": "Fikk ikke kontakt med forsterkeren."
+    }
+  },
+  "entity": {
+    "switch": {
+      "power": {
+        "name": "Strøm"
+      }
+    },
+    "sensor": {
+      "source": {
+        "name": "Kilde",
+        "state": {
+          "airplay": "AirPlay",
+          "bt": "Bluetooth",
+          "aux": "AUX",
+          "usb": "USB"
+        }
+      },
+      "title": {
+        "name": "Tittel"
+      },
+      "artist": {
+        "name": "Artist"
+      }
+    },
+    "binary_sensor": {
+      "playing": {
+        "name": "Spiller"
+      }
+    },
+    "media_player": {
+      "amp": {
+        "name": "Forsterker"
+      }
+    },
+    "button": {
+      "bt_pair": {
+        "name": "Start Bluetooth-parring"
+      }
+    }
+  }
+}

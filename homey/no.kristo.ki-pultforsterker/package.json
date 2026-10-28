@@ -1,0 +1,14 @@
+{
+  "name": "no.kristo.ki-pultforsterker",
+  "version": "1.0.0",
+  "main": "app.js",
+  "private": true,
+  "scripts": {
+    "install-dev": "homey app install",
+    "run": "homey app run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "homey": "^3.0.0"
+  }
+}

@@ -1,0 +1,67 @@
+# KI Pultforsterker – Home Assistant package
+# Legges i packages/ki_pultforsterker.yaml. Entitetene kommer fra custom-integrasjonen
+# ki_pultforsterker (HTTP/mDNS). Krever at integrasjonen er satt opp først.
+
+input_boolean:
+  ki_pultforsterker_auto_av:
+    name: KI Pultforsterker – slå av automatisk
+    icon: mdi:power-sleep
+    initial: true
+
+input_number:
+  ki_pultforsterker_av_etter_min:
+    name: KI Pultforsterker – av etter (min)
+    min: 5
+    max: 120
+    step: 5
+    initial: 30
+    unit_of_measurement: min
+    icon: mdi:timer-outline
+
+automation:
+  - id: ki_pultforsterker_paa_ved_airplay
+    alias: KI Pultforsterker – på ved avspilling
+    trigger:
+      - platform: state
+        entity_id: media_player.ki_pultforsterker
+        to: playing
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.ki_pultforsterker_strom
+
+  - id: ki_pultforsterker_av_ved_stillhet
+    alias: KI Pultforsterker – av etter stillhet
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.ki_pultforsterker_spiller
+        to: "off"
+        for:
+          minutes: "{{ states('input_number.ki_pultforsterker_av_etter_min') | int }}"
+    condition:
+      - condition: state
+        entity_id: input_boolean.ki_pultforsterker_auto_av
+        state: "on"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.ki_pultforsterker_strom
+
+script:
+  ki_pultforsterker_si:
+    alias: KI Pultforsterker – si melding (TTS)
+    fields:
+      melding:
+        description: Tekst som skal leses opp
+        example: Middagen er klar
+    sequence:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.ki_pultforsterker_strom
+      - delay: "00:00:02"
+      - service: tts.speak
+        target:
+          entity_id: tts.google_translate_no_no
+        data:
+          media_player_entity_id: media_player.ki_pultforsterker
+          message: "{{ melding }}"

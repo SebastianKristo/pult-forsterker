@@ -1,0 +1,17 @@
+{
+  "domain": "ki_pultforsterker",
+  "name": "KI Pultforsterker",
+  "codeowners": [
+    "@sebastian"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://claude.ai/artifact/76NoZ9XKqwQdgHGsWfWxuX",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "requirements": [],
+  "version": "2.0.0",
+  "zeroconf": [
+    "_kipultamp._tcp.local."
+  ]
+}

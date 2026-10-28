@@ -1,0 +1,279 @@
+<title>KI Pultforsterker 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-height 3D stage, slim toolbar, floating info card; dark-first studio look matching the product */
+:root{--bg:#1b1c20;--panel:#26272c;--fg:#ecebe6;--muted:#a3a29d;--line:#3a3b41;--accent:#e8562a;--font:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#efeeea;--panel:#ffffff;--fg:#1b1c20;--muted:#5d5c58;--line:#d6d4ce;--accent:#d4471c;color-scheme:light}}
+:root[data-theme="light"]{--bg:#efeeea;--panel:#ffffff;--fg:#1b1c20;--muted:#5d5c58;--line:#d6d4ce;--accent:#d4471c;color-scheme:light}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding-block:9px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:15px;margin:0;font-weight:600}
+h1 small{color:var(--muted);font-weight:400;margin-left:8px;font-family:var(--mono);font-size:12px}
+.grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.grp+.grp{margin-left:auto}
+button{font:inherit;font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer;user-select:none;-webkit-user-select:none}
+button:hover,button:focus-visible{border-color:var(--accent);outline:none}
+button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#stage{flex:1;position:relative;min-height:0}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#info{position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:16px;max-width:min(360px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+#info b{display:block;font-size:14px;margin-bottom:4px}
+#info p{margin:0;font-size:13px;line-height:1.45;color:var(--muted)}
+#info code{font-family:var(--mono);font-size:12px;color:var(--fg)}
+#hint{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:12px;font-size:12px;color:var(--muted);font-family:var(--mono);text-align:right;line-height:1.5}
+#vol{position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+#vol b{display:block;font-size:22px;color:var(--fg);font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+<header>
+  <h1>KI Pultforsterker <small>200 × 120 × 48 mm · v2</small></h1>
+  <div class="grp"><button id="vFront" class="on">Front</button><button id="vBack">Bak</button><button id="vTop">Ovenfra</button><button id="tLid">Åpne kassen</button></div>
+  <div class="grp"><button id="tMains" class="on">Hovedbryter på</button><button id="tStby" class="on" title="Trykk: standby/på · hold 3 s: omstart">På</button><button id="tMute">Mute av</button><button id="tBt" class="on">Bluetooth: tilkoblet</button><button id="tPlay" class="on">❚❚ Pause</button></div>
+</header>
+<div id="stage">
+  <div id="hint">dra i luften = roter · hjul/klyp = zoom<br>klikk knapper · dra volumknotten sidelengs<br>hold AIRPLAY 2 s = Bluetooth · hold POWER 3 s = omstart</div>
+  <div id="info"><b>Ferdig produkt</b><p>Alt på fronten virker som på den ekte: knappene velger kilde, knotten styrer volum (trykk = mute), POWER setter i standby. Åpne kassen for å se hvor kortene sitter.</p></div>
+  <div id="vol">VOLUM<b id="volv">42</b></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const stage=document.getElementById('stage'), $=id=>document.getElementById(id);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputEncoding=THREE.sRGBEncoding;stage.prepend(renderer.domElement);
+const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(32,1,1,3000);
+scene.add(new THREE.HemisphereLight(0xffffff,0x3a3a3e,0.85));
+const key=new THREE.DirectionalLight(0xffffff,0.9);key.position.set(120,220,200);scene.add(key);
+const fill=new THREE.DirectionalLight(0xffffff,0.35);fill.position.set(-150,80,-220);scene.add(fill);
+const std=(c,r=0.7,m=0.1,extra={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:r,metalness:m},extra));
+const M={shell:std(0x2c2d30,0.75,0.1),plate:std(0x37383c,0.6,0.2),btn:std(0x1d1d20,0.28,0.45),cap:std(0x252528,0.35,0.4),
+ acrylic:new THREE.MeshPhysicalMaterial({color:0x060708,roughness:0.12,metalness:0,opacity:0.92,transparent:true}),
+ knob:std(0x18181a,0.3,0.7),alu:std(0xb8b8bc,0.35,0.8),gold:std(0xc9a227,0.35,0.9),red:std(0xa3261d,0.5,0.2),dark:std(0x141415,0.5,0.1),
+ pcbG:std(0x1f6b3a,0.7),pcbB:std(0x1d3f7a,0.7),pcbR:std(0x7a1d1d,0.7),pcbK:std(0x202020,0.7),pcbP:std(0x4a2a6b,0.7),white:std(0xffffff,0.6)};
+
+const parts=[], root=new THREE.Group(); scene.add(root);
+function add(mesh,name,desc,group,hit){mesh.userData={name,desc,hit};(group||root).add(mesh);if(name)parts.push(mesh);return mesh;}
+function rrect(w,h,r){const s=new THREE.Shape();s.moveTo(-w/2+r,-h/2);s.lineTo(w/2-r,-h/2);s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r);s.lineTo(w/2,h/2-r);s.quadraticCurveTo(w/2,h/2,w/2-r,h/2);s.lineTo(-w/2+r,h/2);s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r);s.lineTo(-w/2,-h/2+r);s.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2);return s;}
+function box(w,h,d,mat,x,y,z,name,desc,group,hit){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);return add(m,name,desc,group,hit);}
+function cyl(r,len,mat,x,y,z,axis,name,desc,group,hit,r2){const m=new THREE.Mesh(new THREE.CylinderGeometry(r2==null?r:r2,r,len,48),mat);if(axis==='z')m.rotation.x=Math.PI/2;m.position.set(x,y,z);return add(m,name,desc,group,hit);}
+function textTex(text,w,h,col,weight,fit){const c=document.createElement('canvas');c.width=512;c.height=Math.round(512*h/w);const g=c.getContext('2d');g.fillStyle=col;let fs=Math.round(c.height*0.62);g.font=`${weight||500} ${fs}px "Helvetica Neue",Helvetica,Arial,sans-serif`;g.textAlign='center';g.textBaseline='middle';if(!fit&&'letterSpacing' in g)g.letterSpacing=`${Math.round(c.height*0.14)}px`;while(fit&&g.measureText(text).width>c.width*0.92&&fs>8){fs-=2;g.font=`${weight||500} ${fs}px "Helvetica Neue",Helvetica,Arial,sans-serif`;}g.fillText(text,c.width/2,c.height/2);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;return t;}
+function label(text,w,h,x,y,z,rotY){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTex(text,w,h,'#a3a29d'),transparent:true,depthWrite:false}));m.position.set(x,y,z);if(rotY)m.rotation.y=rotY;root.add(m);return m;}
+
+// ---------- Kasse, lokk, frontplate (x bredde, y opp, z dybde; front = +z) ----------
+const bodyG=new THREE.ExtrudeGeometry(rrect(200,120,6),{depth:48,bevelEnabled:false});bodyG.rotateX(-Math.PI/2);
+const bodyWall=new THREE.Group();root.add(bodyWall);
+// skall som "boks med åpning opp": gulv + fire vegger (så innsiden synes når lokket løftes)
+box(200,2.5,120,M.shell,0,1.25,0,'Kasse','3D-printet kasse 200 × 120 × 48 mm, vegg 2,7 mm, gulv 2,5 mm. Fire skruetårn med M3-varmeinnsats i hjørnene. Fil: <code>v2_body.stl</code>.',bodyWall);
+box(200,48,2.7,M.shell,0,24,60-1.35,null,null,bodyWall);box(200,48,2.7,M.shell,0,24,-60+1.35,null,null,bodyWall);
+box(2.7,48,120,M.shell,100-1.35,24,0,null,null,bodyWall);box(2.7,48,120,M.shell,-100+1.35,24,0,null,null,bodyWall);
+for(const sx of[-1,1])for(const sz of[-1,1]){const t=cyl(4,45.5,M.shell,sx*90,2.5+45.5/2,sz*50,'y','Skruetårn','Ø8 tårn med M3-varmeinnsats øverst. Lokket skrus hit med M3 × 8.',bodyWall);cyl(2.2,4,M.gold,sx*90,46,sz*50,'y',null,null,bodyWall);}
+for(const sx of[-1,1])for(const sz of[-1,1])cyl(5,1.5,M.dark,sx*85,-0.75,sz*45,'y',null,null,bodyWall);
+const lid=new THREE.Group();root.add(lid);
+const lidG=new THREE.ExtrudeGeometry(rrect(200,120,6),{depth:3,bevelEnabled:false});lidG.rotateX(-Math.PI/2);
+add(new THREE.Mesh(lidG,M.plate),'Lokk','Lokk 200 × 120 × 3 mm med fire ører. Skrus i pultens underside med 4 × 25 mm treskruer; kassen henger i lokket med fire M3 × 8. Fil: <code>v2_lid.stl</code>.',lid);
+for(const sx of[-1,1])for(const sz of[-1,1])box(14,3,10,M.plate,sx*107,1.5,sz*35,'Lokkøre','Fire ører med slisse for treskrue mot pulten.',lid);
+for(const sx of[-1,1])for(const sz of[-1,1])cyl(1.7,0.4,M.dark,sx*90,3.1,sz*50,'y','Lokkskrue','M3 × 8 senkskrue ned i varmeinnsatsen.',lid);
+lid.position.y=48;
+const fp=add(new THREE.Mesh(new THREE.ExtrudeGeometry(rrect(188,46,3),{depth:2,bevelEnabled:false}),M.plate),'Frontplate','Frontplate 188 × 46 × 2 mm, festes med 4 × M3 senkskruer i kassens frontvegg. Fil: <code>v2_frontplate.stl</code>.');fp.position.set(0,24,60);
+const FZ=62;
+for(const sx of[-1,1])for(const sy of[-1,1])cyl(1.6,0.6,M.dark,sx*88,24+sy*17,FZ+0.2,'z','Frontskrue','M3 senkskrue inn i frontveggen.');
+
+// ---------- OLED ----------
+box(70,38,1.6,M.acrylic,-30,24,FZ+0.3,'OLED-vindu','Røykfarget akryl 70 × 38 × 2 mm i forsenkning i frontplaten. Bak sitter 2,42" SSD1309 OLED (128 × 64, hvit).');
+const cvs=document.createElement('canvas');cvs.width=512;cvs.height=256;const tex=new THREE.CanvasTexture(cvs);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=8;
+const scr=add(new THREE.Mesh(new THREE.PlaneGeometry(55,27.5),new THREE.MeshBasicMaterial({map:tex,toneMapped:false})),'OLED-skjerm','Synlig område 55 × 27,5 mm. Kildefelt øverst, tittel/artist, fremdrift eller nivåmeter, VOL-segmenter. Tegnes 1:1 etter designet (128 × 64).');scr.position.set(-30,24,FZ+1.15);
+box(60.5,37,1.4,M.dark,-30,24,60-2.7-0.7,null,null);box(70,40,1.6,M.pcbB,-30,24,60-2.7-2.2,'H  OLED-kort','2,42" OLED-modul på fire M2-avstandsstykker (6 mm) mot innsiden av frontveggen. 7 ledninger: VCC, GND, SDA, SCL, RES, DC→GND, CS→GND.');
+
+// ---------- Knapper ----------
+const INP=[['AIRPLAY',20,8.5,'Velger AirPlay 2 (Shairport Sync). Hold 2 s: Bluetooth av/på. 12 mm metallknapp, hvit LED-ring, GPIO 5.'],['BT',37,8.5,'Velger Bluetooth A2DP. GPIO 6. Ringen pulserer under parring.'],['AUX',20,-8.5,'Velger 3,5 mm AUX bak (relé 1+2 bytter til analog inngang). GPIO 12.'],['USB',37,-8.5,'Velger USB-lyd fra PC (Pi som UAC2-lydkort «UAC2 Gadget»). GPIO 13.']];
+function metalButton(x,y,rh,rc,name,desc){const g=new THREE.Group();g.position.set(x,y,FZ);root.add(g);
+ const fl=new THREE.Mesh(new THREE.CylinderGeometry(rh,rh-0.3,1.6,64),M.btn);fl.rotation.x=Math.PI/2;fl.position.z=0.8;g.add(fl);add(fl,name,desc,g,'btn');
+ const led=std(0x18181a,0.3,0,{emissive:0x000000});const ring=new THREE.Mesh(new THREE.CylinderGeometry(rc+0.55,rc+0.55,0.35,64),led);ring.rotation.x=Math.PI/2;ring.position.z=1.65;g.add(ring);add(ring,name,desc,g,'btn');
+ const cap=new THREE.Mesh(new THREE.CylinderGeometry(rc,rc-0.2,1.2,64),M.cap);cap.rotation.x=Math.PI/2;cap.position.z=2.1;g.add(cap);add(cap,name,desc,g,'btn');
+ cyl(rc+1,18,M.btn,x,y,FZ-11,'z',null,null);
+ return {g,led};}
+const inBtns=INP.map(([n,x,dz,d],i)=>{const b=metalButton(x,24+dz,7,5,n+'-knapp',d);b.g.userData.idx=i;b.g.children.forEach(c=>c.userData.idx=i);return b;});
+INP.forEach(([n,x,dz])=>label(n,12,2.1,x,24+dz-8.4,FZ+0.05));
+const pwrBtn=metalButton(-80,24,9.5,6.6,'POWER-knapp','16 mm metallknapp med LED-ring og strømsymbol. Kort trykk: standby/på. Hold 3 s: omstart. GPIO 16; ringen PWM-dimmes i standby.');pwrBtn.g.children.forEach(c=>c.userData.idx=-1);
+{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.strokeStyle='#fff';g.lineWidth=22;g.lineCap='round';g.beginPath();g.arc(128,138,70,-Math.PI/2+0.75,-Math.PI/2-0.75+2*Math.PI);g.stroke();g.beginPath();g.moveTo(128,40);g.lineTo(128,128);g.stroke();
+ var symMat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,toneMapped:false});const s=new THREE.Mesh(new THREE.PlaneGeometry(7,7),symMat);s.position.z=2.72;pwrBtn.g.add(s);}
+label('POWER',14,2.1,-80,24-12.6,FZ+0.05);
+// Knott (lathe-profil fra designet) + encoder
+const knob=new THREE.Group();knob.position.set(70,24,FZ);root.add(knob);
+const kProf=[new THREE.Vector2(0,0.8),new THREE.Vector2(16.4,0.8),new THREE.Vector2(17,1.4),new THREE.Vector2(17,16.2),new THREE.Vector2(16.5,17.3),new THREE.Vector2(15.4,17.8),new THREE.Vector2(0,17.6)];
+const kb=new THREE.Mesh(new THREE.LatheGeometry(kProf,96),M.knob);kb.rotation.x=Math.PI/2;knob.add(kb);add(kb,'Volumknott','Aluminiumsknott 30 × 17 mm på KY-040 encoder (D-aksel). Vri = volum 0–100, trykk = mute. Dra knotten sidelengs her.',knob,'knob');
+const km=new THREE.Mesh(new THREE.BoxGeometry(1.2,5.5,0.4),std(0xeeeeee,0.5));km.position.set(0,10,17.75);knob.add(km);add(km,'Volumknott','Hvit markør på knotten.',knob,'knob');
+label('VOL · PUSH MUTE',30,2.6,70,24-20.6,FZ+0.05);
+box(26,26,1.6,M.pcbG,70,24,60-2.7-6,'Encoder KY-040','KY-040 rotasjonsencoder i utsparing på innsiden av frontveggen, aksel gjennom hullet (Ø7,4). CLK/DT/SW → GPIO 23/24/25.');
+
+// ---------- Bakvegg (z = -60) ----------
+const BZ=-60;
+const rocker=new THREE.Group();rocker.position.set(76,24,BZ);root.add(rocker);
+const rf=box(21,15,2.4,M.dark,0,0,-1.2,'KCD1 hovedbryter','Vippebryter KCD1 15 × 21 mm bryter 24 V inn. Hull 19,4 × 13 mm. Klikk for å slå hovedstrømmen av/på.',rocker,'mains');
+const vipp=box(17,11,3,M.dark,0,0,-2.4,'KCD1 hovedbryter','Vippebryter KCD1. Klikk for å slå av/på.',rocker,'mains');
+box(0.8,3.2,0.2,M.alu,0,3,-1.55,null,null,vipp);
+label('POWER',16,2.6,76,12,BZ-0.05,Math.PI);
+cyl(7,1.6,M.alu,54,24,BZ-0.8,'z','DC-inngang','DC-099 5,5 × 2,1 mm for 24 V / 4 A adapter. Hull Ø11,4.');cyl(3.2,1.8,M.dark,54,24,BZ-1.2,'z',null,null);
+label('DC 24V',16,2.6,54,12,BZ-0.05,Math.PI);
+box(8.6,2.8,0.6,M.alu,36,24,BZ-0.3,'USB-C','Panelmontert USB-C hunn (kabel til Pi-ens micro-USB). PC-en ser forsterkeren som lydkortet «UAC2 Gadget». Hull 9,6 × 3,8 + 2 × Ø2,7 (c/c 17).');
+for(const s of[-1,1])cyl(1.3,0.6,M.alu,36+s*8.5,24,BZ-0.3,'z',null,null);label('USB',10,2.6,36,12,BZ-0.05,Math.PI);
+cyl(4.6,1.4,M.alu,20,24,BZ-0.7,'z','AUX 3,5 mm','PJ392 stereo minijack for PC/Mac. Hull Ø6,4.');cyl(1.8,1.6,M.dark,20,24,BZ-1,'z',null,null);label('AUX',10,2.6,20,12,BZ-0.05,Math.PI);
+[[-30,M.red,'Høyre +'],[-45,M.dark,'Høyre −'],[-65,M.red,'Venstre +'],[-80,M.dark,'Venstre −']].forEach(([x,mat,n])=>{cyl(5,3,mat,x,24,BZ-1.5,'z','Høyttalerterminal '+n,'4 mm bananterminal, maks 50 W per kanal (XH-M562). Høyre ved x −30/−45, venstre ved x −65/−80.');cyl(4.6,7,mat,x,24,BZ-6.5,'z',null,null);});
+label('R  +  −',18,2.6,-37.5,12,BZ-0.05,Math.PI);label('L  +  −',18,2.6,-72.5,12,BZ-0.05,Math.PI);
+
+// ---------- Innmat (synlig når kassen åpnes) ----------
+const inner=new THREE.Group();root.add(inner);
+function boardLabel(text,x,y,z,w){const h=Math.max(6,w*0.22);const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTex(text,w,h,'#ffffff',600,true),transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(x,y,z);inner.add(m);}
+function pcb(x,zp,w,d,h,mat,tag,name,desc,extra){const m=box(w,h,d,mat,x,2.5+h/2,-zp,tag+'  '+name,desc,inner);boardLabel(tag+' · '+name,x,2.5+h+15,-zp,Math.max(w,24));if(extra)extra(m);return m;}
+pcb(55,15,72,57,1.6,M.pcbB,'A','Forsterker XH-M562','TPA3116D2 2 × 50 W, 24 V. 2 × M3 × 6 i stolpene. Pinnelisten (IN/SP/VCC) mot bakveggen.',m=>{box(18,9,18,M.pcbK,55,2.5+1.6+4.5,-15+10,null,null,inner);box(8,12,8,M.pcbK,40,2.5+1.6+6,-15-15,null,null,inner);box(8,12,8,M.pcbK,70,2.5+1.6+6,-15-15,null,null,inner);});
+pcb(-55,22,65,30,1.6,M.pcbG,'B','Pi Zero 2 W','Raspberry Pi Zero 2 W, 4 × M2,5 × 6 i stolpene. Micro-USB-portene mot bakveggen, SD-kortet mot sideveggen. Shairport Sync, bluealsa, USB-gadget-lyd.',m=>{box(12,3,12,M.pcbK,-55,2.5+1.6+1.5,-22,null,null,inner);box(50,2.5,2.5,M.dark,-55,2.5+1.6+1.25,-22+12,null,null,inner);});
+pcb(-55,-8,32,17,1.6,M.pcbP,'C','DAC PCM5102A','I2S-DAC (hifiberry-dac overlay). VHB-tape foran Pi-en, pinnene mot Pi-en.');
+pcb(-85,45,20,11,1.6,M.pcbK,'D','Buck 24→5 V','DC-DC step-down satt til 5,0 V for Pi, relé- og MOSFET-kort. VHB-tape i hjørnet ved DC-099.');
+pcb(0,42,75,28,1.6,M.pcbR,'E','Relékort 4-ch','5 V optokoblet relékort. Relé 1+2 bytter DAC/AUX L+R, relé 3 bryter 24 V til forsterkeren. GPIO 22 / 27.',m=>{for(let i=0;i<4;i++)box(15,12,10,M.pcbK,-28+i*18,2.5+1.6+6,-42,null,null,inner);});
+pcb(55,-38,60,28,1.6,M.pcbK,'F','MOSFET-kort × 2','To 4-kanals optokoblede MOSFET-moduler (jumper 3.3V), stablet med nylon-avstandsstykker. Driver de fem LED-ringene (GPIO 7/8/9/10, POWER-ring GPIO 11 PWM).',m=>{box(60,1.6,28,M.pcbK,55,2.5+1.6+8,38,null,null,inner);});
+pcb(5,-3,22,12,1.6,M.pcbG,'G','X9C103S × 2','To digitale potensiometre (10 kΩ, 100 trinn) i lydveien L/R. INC/UD/CS på GPIO 26/14/15.');
+// ledninger (forenklet)
+function wire(pts,col,r){const c=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p)));const m=new THREE.Mesh(new THREE.TubeGeometry(c,24,r||0.6,8,false),std(col,0.6));inner.add(m);}
+wire([[54,24,-58],[70,20,-50],[76,24,-58]],0xc0392b);wire([[70,14,-48],[20,8,-44],[0,6,-42]],0xc0392b);wire([[-20,5,-42],[-70,5,-30],[-85,4,-45]],0xc0392b);
+wire([[-30,24,-58],[-20,8,-45],[55,6,-30]],0xc0392b);wire([[-45,24,-58],[-25,8,-45],[60,6,-30]],0x222222);wire([[-65,24,-58],[-30,8,-45],[65,6,-30]],0xc0392b);wire([[-80,24,-58],[-35,8,-45],[70,6,-30]],0x222222);
+wire([[20,24,-58],[10,8,-45],[5,5,-20],[5,5,3]],0x777777);wire([[-55,6,8],[-20,6,0],[5,5,3]],0x777777);wire([[5,5,3],[40,6,-5],[55,6,-15]],0x777777);
+wire([[-55,8,-20],[-50,12,-10],[-55,6,8]],0xd9b300,0.4);wire([[-50,8,-20],[-45,16,20],[-30,8,56]],0xd9b300,0.4);wire([[-40,8,-20],[0,14,20],[30,10,40],[20,20,55]],0x3f7fd9,0.4);wire([[-40,8,-20],[20,14,30],[55,8,38]],0x3f7fd9,0.4);
+wire([[36,24,-58],[0,10,-30],[-45,8,-22]],0x202020,1);
+
+// ---------- Kamera / interaksjon ----------
+let theta=-0.55,phi=1.15,dist=420,target=new THREE.Vector3(0,24,0);
+function place(){cam.position.set(target.x+dist*Math.sin(phi)*Math.sin(theta),target.y+dist*Math.cos(phi),target.z+dist*Math.sin(phi)*Math.cos(theta));cam.lookAt(target);}
+const c=renderer.domElement, ray=new THREE.Raycaster(), mouse=new THREE.Vector2(), info=$('info');
+function hitAt(e){const r=c.getBoundingClientRect();mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(mouse,cam);return ray.intersectObjects(parts,false)[0];}
+let mode=null,lx=0,ly=0,moved=0,downHit=null,volAcc=0;
+c.addEventListener('pointerdown',e=>{c.setPointerCapture(e.pointerId);lx=e.clientX;ly=e.clientY;moved=0;downHit=hitAt(e);const h=downHit&&downHit.object.userData.hit;
+ if(h==='knob'){mode='knob';volAcc=0;}
+ else if(h==='btn'){mode='btn';const i=downHit.object.userData.idx;if(i===-1)pDown();else if(i===0)holdDown();else{press(inBtns[i].g,0.8);}}
+ else mode='orbit';});
+c.addEventListener('pointermove',e=>{const dx=e.clientX-lx,dy=e.clientY-ly;moved+=Math.abs(dx)+Math.abs(dy);lx=e.clientX;ly=e.clientY;
+ if(mode==='orbit'){theta-=dx*0.008;phi=Math.max(0.15,Math.min(2.6,phi-dy*0.008));}
+ else if(mode==='knob'){volAcc+=dx*0.35;const st=Math.trunc(volAcc);if(st){volAcc-=st;S.vol=Math.max(0,Math.min(100,S.vol+st));if(S.muted&&st)S.muted=false;sync();}}});
+c.addEventListener('pointerup',e=>{if(mode==='btn'){const i=downHit.object.userData.idx;if(i===-1)pUp();else if(i===0)holdUp();else if(i>0)selectInput(i);}
+ else if(mode==='knob'&&moved<4){S.muted=!S.muted;press(knob,1.5);sync();}
+ else if(mode==='orbit'&&moved<4&&downHit){const u=downHit.object.userData;if(u.hit==='mains'){S.power=!S.power;sync();}info.innerHTML='<b>'+u.name+'</b><p>'+u.desc+'</p>';}
+ if(downHit&&mode!=='orbit')info.innerHTML='<b>'+downHit.object.userData.name+'</b><p>'+downHit.object.userData.desc+'</p>';mode=null;downHit=null;});
+c.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(150,Math.min(900,dist*(1+e.deltaY*0.001)));},{passive:false});
+let pinch=null;c.addEventListener('touchmove',e=>{if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(pinch)dist=Math.max(150,Math.min(900,dist*pinch/d));pinch=d;}},{passive:true});
+c.addEventListener('touchend',()=>{pinch=null;});
+
+// ---------- OLED UI (tegnes 1:1 etter designet, 128×64) ----------
+const INPUTS=[{key:'AIR',name:'AirPlay',title:'Midnight City',sub:'M83 · iPhone',len:243},{key:'BT',name:'Bluetooth',title:'Teardrop',sub:'Massive Attack',len:330},{key:'AUX',name:'AUX',title:'Analog inngang',sub:'3,5 mm jack'},{key:'USB',name:'USB',title:'USB-lyd',sub:'PC · 48 kHz'}];
+const S={input:0,vol:42,power:true,open:false,playing:true,muted:false,standby:false,bt:'connected',btDev:'iPhone',hold:0,ov:null,pHold:0,boot:0};
+const T0=performance.now()-102000, mmss=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+function draw(){
+  const g=cvs.getContext('2d'); g.setTransform(1,0,0,1,0,0); g.fillStyle='#000'; g.fillRect(0,0,512,256);
+  if(S.power&&(!S.standby||S.pHold>0)){
+    const now=(performance.now()-T0)/1000;
+    g.scale(4,4); const W='#eef6ff', D='#7d8a94', O='#2a3036', F='"Helvetica Neue",Arial,sans-serif';
+    g.textBaseline='middle'; const ovT=S.ov?(performance.now()-S.ov.t0)/1000:0;
+    const btIcon=(cx,cy,s,col)=>{g.strokeStyle=col;g.lineWidth=1.3;g.lineJoin='round';g.beginPath();g.moveTo(cx-s*0.55,cy-s*0.45);g.lineTo(cx+s*0.5,cy+s*0.5);g.lineTo(cx,cy+s);g.lineTo(cx,cy-s);g.lineTo(cx+s*0.5,cy-s*0.5);g.lineTo(cx-s*0.55,cy+s*0.45);g.stroke();};
+    const pwrIcon=(cx,cy,r,col)=>{g.strokeStyle=col;g.lineWidth=1.4;g.lineCap='round';g.beginPath();g.arc(cx,cy,r,-Math.PI/2+0.7,-Math.PI/2-0.7+2*Math.PI);g.stroke();g.beginPath();g.moveTo(cx,cy-r-1.5);g.lineTo(cx,cy-1);g.stroke();g.lineCap='butt';};
+    if(S.pHold>0){const t=S.pHold;
+      g.strokeStyle=O;g.lineWidth=2;g.beginPath();g.arc(64,22,11,0,Math.PI*2);g.stroke();
+      g.strokeStyle=W;g.beginPath();g.arc(64,22,11,-Math.PI/2,-Math.PI/2+Math.PI*2*t);g.stroke();
+      g.strokeStyle=W;g.lineWidth=1.4;g.beginPath();g.arc(64,22,5,-Math.PI*0.25,Math.PI*1.35);g.stroke();
+      g.fillStyle=W;g.beginPath();g.moveTo(68.5,14.5);g.lineTo(69.5,19.5);g.lineTo(64.5,18.5);g.fill();
+      g.font=`bold 9px ${F}`;g.textAlign='center';g.fillText('Hold for omstart',64,44);
+      g.fillStyle=D;g.font=`6px ${F}`;g.fillText('Slipp for å avbryte',64,54);g.textAlign='left';tex.needsUpdate=true;return;}
+    if(S.boot){const bt=(performance.now()-S.boot.t0)/1000;g.textAlign='center';
+      if(S.boot.type==='restart'&&bt<1.2){g.fillStyle=W;g.font=`bold 10px ${F}`;g.fillText('Starter på nytt …',64,30);g.fillStyle=D;g.font=`6px ${F}`;g.fillText('Lagrer innstillinger',64,42);}
+      else{const k=Math.min(1,(bt-(S.boot.type==='restart'?1.2:0))/1.6);pwrIcon(64,20,7,W);
+        g.fillStyle=W;g.font=`bold 9px ${F}`;if('letterSpacing' in g)g.letterSpacing='1.5px';g.fillText('PULTFORSTERKER',64,40);if('letterSpacing' in g)g.letterSpacing='0px';
+        g.fillStyle=O;g.fillRect(34,50,60,2);g.fillStyle=W;g.fillRect(34,50,60*Math.max(0,k),2);
+        g.fillStyle=D;g.font=`5.5px ${F}`;g.fillText(k<0.5?'Starter AirPlay':(k<0.9?'Starter Bluetooth':'Klar'),64,58);}
+      g.textAlign='left';tex.needsUpdate=true;return;}
+    if(S.hold>0){btIcon(64,20,7,W);g.fillStyle=W;g.font=`bold 9px ${F}`;g.textAlign='center';
+      g.fillText(S.bt==='off'?'Slå på Bluetooth':'Slå av Bluetooth',64,38);g.fillStyle=D;g.font=`6px ${F}`;g.fillText('Hold AIRPLAY …',64,47);g.textAlign='left';
+      g.fillStyle=O;g.fillRect(24,54,80,2.5);g.fillStyle=W;g.fillRect(24,54,80*S.hold,2.5);tex.needsUpdate=true;return;}
+    if(S.ov){g.textAlign='center';
+      if(S.ov.type==='pairing'){for(let k=0;k<3;k++){const r=((ovT*10+k*7)%21);g.strokeStyle=`rgba(238,246,255,${Math.max(0,1-r/21)})`;g.lineWidth=0.8;g.beginPath();g.arc(64,19,6+r,0,Math.PI*2);g.stroke();}
+        btIcon(64,19,6.5,W);g.fillStyle=W;g.font=`bold 10px ${F}`;g.fillText('Parring'+'.'.repeat(1+Math.floor(ovT*2)%3),64,41);
+        g.fillStyle=D;g.font=`6.5px ${F}`;g.fillText('Synlig som «Pultforsterker»',64,52);g.font=`5.5px ${F}`;g.fillText('Hold AIRPLAY for å avbryte',64,60);}
+      else if(S.ov.type==='connected'){btIcon(64,17,6.5,W);g.strokeStyle=W;g.lineWidth=1.4;g.beginPath();g.moveTo(72,20);g.lineTo(75,23);g.lineTo(81,15);g.stroke();
+        g.fillStyle=W;g.font=`bold 10px ${F}`;g.fillText('Tilkoblet',64,37);g.fillStyle=D;g.font=`7px ${F}`;g.fillText(S.btDev,64,48);}
+      else if(S.ov.type==='bt_off'){btIcon(64,19,6.5,D);g.strokeStyle=W;g.lineWidth=1.4;g.beginPath();g.moveTo(54,9);g.lineTo(74,29);g.stroke();
+        g.fillStyle=W;g.font=`bold 10px ${F}`;g.fillText('Bluetooth av',64,41);g.fillStyle=D;g.font=`6px ${F}`;g.fillText('Hold AIRPLAY for å slå på',64,52);}
+      else if(S.ov.type==='bt_needed'){btIcon(64,19,6.5,D);g.fillStyle=W;g.font=`bold 9px ${F}`;g.fillText('Bluetooth er av',64,40);g.fillStyle=D;g.font=`6px ${F}`;g.fillText('Hold AIRPLAY i 2 s for å slå på',64,51);}
+      g.textAlign='left';tex.needsUpdate=true;return;}
+    g.font=`bold 6.5px ${F}`;let x=2;INPUTS.forEach((it,i)=>{const w=g.measureText(it.key).width+7;const off=it.key==='BT'&&S.bt==='off';
+      if(i===S.input){g.fillStyle=W;g.fillRect(x,1,w,9.5);g.fillStyle='#000';}else{g.strokeStyle=off?O:D;g.lineWidth=0.6;if(off)g.setLineDash([1.2,1.2]);g.strokeRect(x+0.3,1.3,w-0.6,8.9);g.setLineDash([]);g.fillStyle=off?'#3d454c':D;}
+      g.fillText(it.key,x+3.5,6);if(it.key==='BT'&&S.bt==='connected'&&i!==S.input){g.fillStyle=W;g.fillRect(x+w-2.6,2.6,1.4,1.4);}x+=w+2.5;});
+    const it=INPUTS[S.input];
+    g.save();g.beginPath();g.rect(0,14,128,14);g.clip();g.fillStyle=W;g.font=`bold 11px ${F}`;const tw=g.measureText(it.title).width;const off=tw>124?((now*14)%(tw+30)):0;
+    g.fillText(it.title,2-off,21);if(tw>124)g.fillText(it.title,2-off+tw+30,21);g.restore();
+    g.fillStyle=D;g.font=`7px ${F}`;g.fillText(it.sub,2,31);
+    if(it.len){const t=S.playing?(now%it.len):102;g.fillStyle=W;
+      if(S.playing){g.beginPath();g.moveTo(2,37.5);g.lineTo(7,40.5);g.lineTo(2,43.5);g.fill();}else{g.fillRect(2,37.5,1.8,6);g.fillRect(5,37.5,1.8,6);}
+      const px=11,pw=86;g.fillStyle=O;g.fillRect(px,40,pw,1.4);g.fillStyle=W;g.fillRect(px,40,pw*t/it.len,1.4);g.fillRect(px+pw*t/it.len-1,38.7,2,4);
+      g.font=`6px ${F}`;g.textAlign='right';g.fillText(mmss(t),126,40.8);g.textAlign='left';}
+    else{for(let i=0;i<22;i++){const v=0.35+0.65*Math.abs(Math.sin(now*3.1+i*0.7)*Math.sin(now*1.7+i*0.31));g.fillStyle=W;const h=1+v*6;g.fillRect(2+i*5.6,44-h,4,h);}}
+    if(S.muted){g.fillStyle=W;g.fillRect(2,50,4,5);g.beginPath();g.moveTo(6,50);g.lineTo(10,47);g.lineTo(10,58);g.lineTo(6,55);g.fill();
+      g.strokeStyle=W;g.lineWidth=1.2;g.beginPath();g.moveTo(13,49.5);g.lineTo(19,55.5);g.moveTo(19,49.5);g.lineTo(13,55.5);g.stroke();
+      g.font=`bold 12px ${F}`;g.textAlign='right';g.fillText('MUTE',126,53.5);g.textAlign='left';g.fillStyle=D;g.font=`6px ${F}`;g.fillText('vol '+S.vol,26,53.5);}
+    else{g.fillStyle=D;g.font=`bold 6px ${F}`;g.fillText('VOL',2,55.5);const segs=24,bx=17,sw=84/segs,on=Math.round(S.vol/100*segs);
+      for(let i=0;i<segs;i++){g.fillStyle=i<on?W:O;const h=3+i*0.25;g.fillRect(bx+i*sw,59-h,sw-1,h);}
+      g.fillStyle=W;g.font=`bold 12px ${F}`;g.textAlign='right';g.fillText(String(S.vol),126,54.5);g.textAlign='left';}
+  }
+  tex.needsUpdate=true;
+}
+const setLed=(m,on,k=1)=>{m.emissive.set(on?0xffffff:0);m.emissiveIntensity=on?1.8*k:0;m.color.set(on?(k<0.5?0x4a4a4a:0xffffff):0x18181a);};
+const press=(g,amt)=>{g.position.z-=amt;setTimeout(()=>g.position.z+=amt,160);};
+function sync(){
+  draw();knob.rotation.z=-((S.vol/100)*270-135)*Math.PI/180;
+  vipp.rotation.x=S.power?-0.2:0.2;
+  const sb=S.power&&S.standby;setLed(pwrBtn.led,S.power,sb?0.12:1);symMat.color.set(S.power?(sb?0x3a3a3a:0xffffff):0x1a1a1a);
+  const pulse=S.bt==='pairing'?(0.5+0.5*Math.sin(performance.now()/180)):1;
+  inBtns.forEach((b,i)=>setLed(b.led,S.power&&!S.standby&&(i===S.input||(i===1&&S.bt==='pairing')),i===1&&S.bt==='pairing'?pulse:1));
+  $('tStby').textContent=S.standby?'Standby':'På';$('tStby').classList.toggle('on',S.power&&!S.standby);
+  $('tBt').textContent=S.bt==='off'?'Bluetooth: av':(S.bt==='pairing'?'Bluetooth: parrer …':'Bluetooth: tilkoblet');$('tBt').classList.toggle('on',S.bt!=='off');
+  $('tMute').textContent=S.muted?'Mute på':'Mute av';$('tMute').classList.toggle('on',S.muted);
+  $('tMains').textContent=S.power?'Hovedbryter på':'Hovedbryter av';$('tMains').classList.toggle('on',S.power);
+  $('tLid').textContent=S.open?'Lukk kassen':'Åpne kassen';$('tLid').classList.toggle('on',S.open);
+  $('tPlay').textContent=S.playing?'❚❚ Pause':'▶ Spill';$('tPlay').classList.toggle('on',S.playing);
+  $('volv').textContent=S.muted?'MUTE':S.vol;
+}
+let ovTimer=null;const showOv=(type,ms)=>{S.ov={type,t0:performance.now()};clearTimeout(ovTimer);if(ms)ovTimer=setTimeout(()=>{S.ov=null;sync();},ms);sync();};
+function btOn(){S.bt='pairing';showOv('pairing');ovTimer=setTimeout(()=>{if(S.bt!=='pairing')return;S.bt='connected';S.input=1;showOv('connected',2200);},6000);}
+function btOff(){S.bt='off';if(S.input===1)S.input=0;showOv('bt_off',2200);}
+function selectInput(i){if(!S.power||S.standby)return;if(i===1&&S.bt==='off'){showOv('bt_needed',2200);return;}if(i===1&&S.bt==='pairing')return;S.ov=null;S.input=i;sync();}
+let holdT=0,holdStart=0,held=false;
+function holdDown(){if(!S.power||S.standby)return;held=false;holdStart=performance.now();inBtns[0].g.position.z-=0.8;
+  const step=()=>{const t=(performance.now()-holdStart)/2000;if(t>0.15)S.hold=Math.min(1,t);if(t>=1){S.hold=0;held=true;clearTimeout(holdT);holdT=0;(S.bt==='off')?btOn():btOff();return;}draw();holdT=setTimeout(step,30);};holdT=setTimeout(step,30);}
+function holdUp(){if(!holdStart)return;inBtns[0].g.position.z+=0.8;clearTimeout(holdT);holdT=0;const wasHold=held,wasShown=S.hold>0;holdStart=0;S.hold=0;if(!wasHold&&!wasShown){S.ov=null;S.input=0;}sync();}
+let pT=0,pStart=0,pLong=false,bootTimer=null;
+function boot(type){S.boot={type,t0:performance.now()};S.ov=null;clearTimeout(bootTimer);bootTimer=setTimeout(()=>{S.boot=0;sync();},type==='restart'?3000:1800);sync();}
+function pDown(){if(!S.power)return;pLong=false;pStart=performance.now();pwrBtn.g.position.z-=0.8;
+  const step=()=>{const t=(performance.now()-pStart)/3000;if(t>0.17)S.pHold=Math.min(1,t);if(t>=1){S.pHold=0;pLong=true;clearTimeout(pT);pT=0;S.standby=false;boot('restart');return;}draw();pT=setTimeout(step,30);};pT=setTimeout(step,30);}
+function pUp(){if(!pStart)return;pwrBtn.g.position.z+=0.8;clearTimeout(pT);pT=0;const wasLong=pLong,wasShown=S.pHold>0;pStart=0;S.pHold=0;
+  if(!wasLong&&!wasShown){S.standby=!S.standby;if(!S.standby)boot('start');else{S.boot=0;clearTimeout(bootTimer);}}sync();}
+setInterval(()=>{if(S.power&&(!S.standby||S.boot)&&!holdT&&!pT){draw();if(S.bt==='pairing')sync();}},100);
+
+// toolbar
+const views={vFront:[-0.55,1.15],vBack:[Math.PI-0.5,1.2],vTop:[0,0.2]};let anim=null;
+function setView(id){for(const k in views)$(k).classList.toggle('on',k===id);anim={t0:performance.now(),a0:[theta,phi],a1:views[id]};}
+for(const k in views)$(k).onclick=()=>setView(k);
+$('tLid').onclick=()=>{S.open=!S.open;if(S.open)setView('vTop');sync();};
+$('tMains').onclick=()=>{S.power=!S.power;sync();};
+$('tStby').onpointerdown=e=>{e.preventDefault();pDown();};$('tStby').onpointerup=pUp;$('tStby').onpointerleave=()=>{if(pStart)pUp();};
+$('tMute').onclick=()=>{S.muted=!S.muted;press(knob,1.5);sync();};
+$('tBt').onclick=()=>{(S.bt==='off')?btOn():btOff();};
+$('tPlay').onclick=()=>{S.playing=!S.playing;sync();};
+
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(t){requestAnimationFrame(loop);
+ if(anim){const k=reduce?1:Math.min(1,(t-anim.t0)/600),e=k<.5?2*k*k:-1+(4-2*k)*k;theta=anim.a0[0]+(anim.a1[0]-anim.a0[0])*e;phi=anim.a0[1]+(anim.a1[1]-anim.a0[1])*e;if(k>=1)anim=null;}
+ const k2=reduce?1:0.12;lid.position.y+=((S.open?48+30:48)-lid.position.y)*k2;lid.position.z+=((S.open?-200:0)-lid.position.z)*k2;
+ if(S.bt==='pairing')sync();
+ place();renderer.render(scene,cam);}
+if(document.fonts)document.fonts.ready.then(draw);
+sync();requestAnimationFrame(loop);
+})();
+</script>
