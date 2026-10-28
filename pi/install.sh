@@ -10,6 +10,7 @@ if [ "$OUT" = headphones ]; then PB_CARD=Headphones; PB_DEV="plughw:Headphones";
 
 echo "== 1/9  Oppdaterer systemet"
 sudo apt-get update && sudo apt-get -y full-upgrade
+sudo timedatectl set-timezone Europe/Oslo 2>/dev/null || true
 
 echo "== 2/9  config.txt: I2S-DAC, I2C, USB-gadget (dwc2), serial console av"
 CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
@@ -33,7 +34,7 @@ sudo apt-get -y install --no-install-recommends \
   build-essential git autoconf automake libtool pkg-config \
   libpopt-dev libconfig-dev libasound2-dev avahi-daemon libavahi-client-dev \
   libssl-dev libsoxr-dev libplist-dev libsodium-dev libavutil-dev libavcodec-dev \
-  libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils \
+  libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils libplist-utils \
   bluez bluez-alsa-utils python3-dbus \
   python3-pip python3-pil python3-smbus i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl
 
