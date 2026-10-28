@@ -7,7 +7,7 @@ const Homey = require('homey');
 const Device = require('../drivers/pultforsterker/device');
 const App = require('../app');
 
-const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
+const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'ki_voice', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
 let daemon, port;
 before(async () => { daemon = createMockDaemon(); port = await daemon.start(); });
 after(async () => { await daemon.stop(); });
@@ -16,7 +16,7 @@ function makeDevice(homey) {
   const d = new Device({ homey, settings: { host: '127.0.0.1', port }, capabilities: CAPS });
   return d;
 }
-beforeEach(() => { Object.assign(daemon.state, { power: true, input: 'airplay', volume: 30, mute: false, loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', title: '', artist: '' }); daemon.calls.length = 0; });
+beforeEach(() => { Object.assign(daemon.state, { power: true, input: 'airplay', volume: 30, mute: false, loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', voice: true, title: '', artist: '' }); daemon.calls.length = 0; });
 
 test('onInit henter status og setter capabilities', async () => {
   const d = makeDevice(); await d.onInit(); d.onDeleted();
@@ -123,4 +123,11 @@ test('albumbilde: oppdateres når cover-ID endrer seg og strømmes fra /api/cove
   out.on('data', (c) => chunks.push(c));
   await d.albumArt.streamFn(out);
   assert.equal(Buffer.concat(chunks).toString('hex'), '89504e470d0a1a0a');
+});
+
+test('talemeldinger av/på', async () => {
+  const d = makeDevice(); await d.onInit(); d.onDeleted();
+  assert.equal(d.getCapabilityValue('ki_voice'), true);
+  await d.triggerCapability('ki_voice', false);
+  assert.deepEqual(daemon.calls.at(-1).body, { on: false }); assert.equal(d.getCapabilityValue('ki_voice'), false);
 });

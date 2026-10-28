@@ -19,6 +19,7 @@ API:
   POST /api/loudness {"on":bool, "level":0-10}
   POST /api/mute   {"mute":bool}
   POST /api/bt     {"pairing":true}   (gjør Pi-en synlig 2 min)
+  POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay, jpg/png)
   POST /api/transport {"action":"play|pause|playpause|next|previous|stop"}  (AirPlay/Bluetooth)
 """
@@ -72,7 +73,7 @@ BTN_POWER = 16
 
 INPUTS = ["airplay", "bt", "aux", "usb"]
 state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False,
-         "loudness": True, "loudness_level": 5}   # loudness 0-10 (dB bassløft ved lavt volum)
+         "loudness": True, "loudness_level": 5, "voice": True}   # loudness 0-10 (dB bassløft ved lavt volum)
 _x9c_pos = None
 _pairing_until = 0.0
 
@@ -141,6 +142,74 @@ def apply_volume():
         x9c_step(-100); _x9c_pos = 0
     x9c_step(target - _x9c_pos); _x9c_pos = target
     dsp.update()
+
+
+# ---------- Talemeldinger (piper → espeak-ng som reserve), spilles gjennom dmix/CamillaDSP ----------
+PHRASES = {
+    "bt_pairing": "Bluetooth-paring. Velg Pultforsterker på telefonen.",
+    "bt_pairing_timeout": "Ingen enhet koblet til. Paring avsluttet.",
+    "bt_connected": "Koblet til {name}.",
+    "bt_disconnected": "Bluetooth frakoblet.",
+    "input_airplay": "AirPlay.",
+    "input_bt": "Bluetooth.",
+    "input_aux": "AUX.",
+    "input_usb": "USB.",
+    "power_on": "Pultforsterker er klar.",
+}
+TTS_DIR = "/var/cache/ki-amp/tts"
+PIPER_VOICE = os.environ.get("KI_AMP_PIPER_VOICE", "/opt/piper/no_NO-talesyntese-medium.onnx")
+
+
+class Voice:
+    def __init__(self):
+        self._q = []; self._ev = threading.Event()
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def say(self, key, delay=0.0, **kw):
+        if not state.get("voice", True) or not state["power"] or key not in PHRASES:
+            return
+        self._q.append((time.time() + delay, PHRASES[key].format(**kw))); self._ev.set()
+
+    def _wav(self, text):
+        import hashlib
+        os.makedirs(TTS_DIR, exist_ok=True)
+        path = os.path.join(TTS_DIR, hashlib.sha1(text.encode()).hexdigest()[:16] + ".wav")
+        if not os.path.exists(path):
+            piper = subprocess.run(["sh", "-c", "command -v piper"], capture_output=True, text=True).stdout.strip()
+            if piper and os.path.exists(PIPER_VOICE):
+                subprocess.run([piper, "--model", PIPER_VOICE, "--output_file", path], input=text, text=True,
+                               capture_output=True, timeout=30)
+            if not os.path.exists(path):
+                subprocess.run(["espeak-ng", "-v", "nb", "-s", "150", "-w", path, text], capture_output=True, timeout=15)
+        return path if os.path.exists(path) else None
+
+    def warm(self):   # lag faste fraser på forhånd, så første melding kommer uten forsinkelse
+        for k, t in PHRASES.items():
+            if "{" not in t:
+                try: self._wav(t)
+                except Exception: pass
+
+    def _run(self):
+        threading.Thread(target=self.warm, daemon=True).start()
+        while True:
+            self._ev.wait(); self._ev.clear()
+            while self._q:
+                t, text = self._q.pop(0)
+                if t > time.time():
+                    time.sleep(t - time.time())
+                try:
+                    wav = self._wav(text)
+                    if wav and state.get("voice", True):
+                        subprocess.run(["aplay", "-q", "-D", "default", wav], timeout=20, check=False)
+                except Exception as e:
+                    print("Talemelding:", e, flush=True)
+
+
+voice = Voice()
+
+
+def set_voice(on):
+    state["voice"] = bool(on); changed()
 
 
 # ---------- CamillaDSP (loudness + digitalt volum) ----------
@@ -219,15 +288,16 @@ def apply_input():
 
 
 def apply_power():
-    if not HW:
-        return
-    relay_amp.value = state["power"]
-    led_power.value = 1.0 if state["power"] else 0.1
-    apply_input()
-    apply_volume()
+    if HW:
+        relay_amp.value = state["power"]
+        led_power.value = 1.0 if state["power"] else 0.1
+        apply_input()
+    apply_volume()   # mute i CamillaDSP + PGA2311 i standby
     # OLED av i standby håndteres av oled_display.py via ctrl-filen
     units = [u for u in ("shairport-sync", "bluealsa-aplay", "ki-usb-audio", "ki-squeezelite")   # bare tjenester som er slått på
              if subprocess.run(["systemctl", "is-enabled", "--quiet", u], check=False).returncode == 0]
+    if not state["power"]:   # stopp det som spiller pent før tjenestene tas ned
+        _pause_others("")
     subprocess.run(["systemctl", "start" if state["power"] else "stop", *units],
                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -236,7 +306,7 @@ def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level")}, fh)
+            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice")}, fh)
     except Exception:
         pass
 
@@ -276,15 +346,20 @@ def read_status():
 
 # ---------- handlinger ----------
 def set_power(on):
+    was = state["power"]
     state["power"] = bool(on); apply_power(); changed()
+    if state["power"] and not was:
+        voice.say("power_on", delay=2.5)   # vent til tjenestene er oppe igjen
 
 
-def set_input(inp):
+def set_input(inp, announce=True):
     if inp in INPUTS:
         prev = state["input"]
         state["input"] = inp; apply_input(); apply_volume(); changed()
         if prev != inp:
             threading.Thread(target=_pause_others, args=(inp,), daemon=True).start()
+            if announce:
+                voice.say("input_" + inp)
 
 
 def _pause_others(inp):
@@ -320,10 +395,18 @@ def set_mute(m):
     state["mute"] = bool(m); apply_volume(); changed()
 
 
-def bt_pairing(on=True):
-    global _pairing_until
+_pairing_known = ""
+
+
+def bt_pairing(on=True, reason=""):
+    global _pairing_until, _pairing_known
+    if on and not state["bt_pairing"]:
+        voice.say("bt_pairing")
+    elif not on and state["bt_pairing"] and reason == "timeout":
+        voice.say("bt_pairing_timeout")
     state["bt_pairing"] = bool(on)
     _pairing_until = time.time() + 120 if on else 0
+    _pairing_known = read_status().get("bt_device", "") if on else ""
     for args in ([["power", "on"], ["pairable", "on"], ["discoverable", "on"]] if on else [["discoverable", "off"]]):
         subprocess.run(["bluetoothctl", *args], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
     changed()
@@ -374,8 +457,11 @@ async def pairing_task():
     import math
     while True:
         if state["bt_pairing"]:
-            if time.time() > _pairing_until or read_status().get("bt_device"):
-                bt_pairing(False); apply_input()
+            dev = read_status().get("bt_device", "")
+            if time.time() > _pairing_until:
+                bt_pairing(False, "timeout"); apply_input()
+            elif dev and dev != _pairing_known:   # en ny enhet koblet til
+                bt_pairing(False, "connected"); apply_input()
             elif HW:
                 leds["bt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 > 0.5
         await asyncio.sleep(0.05)
@@ -399,6 +485,15 @@ async def h_volume(r):
     set_volume(state["volume"] + int(b["delta"]) if "delta" in b else int(b.get("volume", state["volume"]))); return j()
 async def h_mute(r): set_mute((await r.json()).get("mute", True)); return j()
 async def h_bt(r): bt_pairing((await r.json()).get("pairing", True)); return j()
+async def h_voice(r):
+    b = await r.json()
+    if "on" in b:
+        set_voice(b["on"])
+    if b.get("say"):   # test: {"say":"bt_pairing"}
+        voice.say(b["say"])
+    return j()
+
+
 async def h_cover(_r):
     try:
         with open(COVER_FILE, "rb") as fh:
@@ -409,17 +504,28 @@ async def h_cover(_r):
     return web.Response(body=img, content_type=ctype, headers={"Cache-Control": "max-age=3600"})
 
 
+AUTO_INPUT = os.environ.get("KI_AMP_AUTO_INPUT", "1") == "1"
+
+
 def follow_source():
     """Bytt kilde automatisk når AirPlay eller Bluetooth begynner å spille (som en vanlig forsterker med auto-input)."""
     last = (None, False)
+    last_dev = None
     while True:
         time.sleep(1)
         try:
             st = read_status()
+            dev = st.get("bt_device", "")
+            if last_dev is not None and dev != last_dev and state["power"]:
+                if dev:
+                    voice.say("bt_connected", name=dev)
+                else:
+                    voice.say("bt_disconnected")
+            last_dev = dev
             cur = (st.get("source"), bool(st.get("playing")))
-            if cur != last and cur[1] and cur[0] in ("airplay", "bt") and state["power"] and state["input"] != cur[0]:
+            if AUTO_INPUT and cur != last and cur[1] and cur[0] in ("airplay", "bt") and state["power"] and state["input"] != cur[0]:
                 print("Auto-kilde:", cur[0], flush=True)
-                set_input(cur[0])
+                set_input(cur[0], announce=False)
             last = cur
         except Exception as e:
             print("Auto-kilde:", e, flush=True)
@@ -508,12 +614,11 @@ async def on_cleanup(app):
 def main():
     load_state()
     apply_power(); changed()
-    if os.environ.get("KI_AMP_AUTO_INPUT", "1") == "1":
-        threading.Thread(target=follow_source, daemon=True).start()
+    threading.Thread(target=follow_source, daemon=True).start()   # auto-kilde (kan slås av) + BT-talemeldinger
     app = web.Application()
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover)])
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

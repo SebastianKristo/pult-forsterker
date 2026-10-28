@@ -4,7 +4,7 @@ const http = require('http');
 
 function createMockDaemon({ port = 0 } = {}) {
   const state = { power: true, input: 'airplay', volume: 30, mute: false, bt_pairing: false,
-    loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', title: '', artist: '' };
+    loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', voice: true, title: '', artist: '' };
   const calls = [];
   const server = http.createServer((req, res) => {
     let buf = '';
@@ -33,6 +33,7 @@ function createMockDaemon({ port = 0 } = {}) {
         else if (a === 'stop') { state.playing = false; state.paused = false; }
         else { state.title = a === 'next' ? 'Neste låt' : 'Forrige låt'; state.playing = true; }
       }
+      else if (p === '/api/voice') { if (body.on !== undefined) state.voice = !!body.on; }
       else if (p === '/api/bt') state.bt_pairing = !!body.pairing;
       else if (p === '/api/loudness') { if (body.on !== undefined) state.loudness = !!body.on; if (body.level !== undefined) state.loudness_level = Math.max(0, Math.min(10, body.level)); }
       else { res.writeHead(404); return res.end('{}'); }

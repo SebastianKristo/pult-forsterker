@@ -7,7 +7,7 @@ const POLL_MS = 5000;
 
 class PultforsterkerDevice extends Homey.Device {
   async onInit() {
-    for (const cap of ['speaker_prev', 'speaker_next']) {   // eldre enheter: legg til nye capabilities
+    for (const cap of ['speaker_prev', 'speaker_next', 'ki_voice']) {   // eldre enheter: legg til nye capabilities
       if (!this.hasCapability(cap)) await this.addCapability(cap).catch(this.error);
     }
     this.registerCapabilityListener('onoff', (on) => this.setPower(on));
@@ -16,6 +16,7 @@ class PultforsterkerDevice extends Homey.Device {
     this.registerCapabilityListener('ki_input', (i) => this.setInput(i));
     this.registerCapabilityListener('ki_loudness', (on) => this.setLoudness(on, undefined));
     this.registerCapabilityListener('speaker_playing', (play) => this.transport(play ? 'play' : 'pause'));
+    this.registerCapabilityListener('ki_voice', (on) => this.request('POST', '/voice', { on: !!on }).then((st) => this.apply(st)));
     this.registerCapabilityListener('speaker_next', () => this.transport('next'));
     this.registerCapabilityListener('speaker_prev', () => this.transport('previous'));
     this.registerCapabilityListener('ki_loudness_level', (lvl) => this.setLoudness(undefined, Math.round(lvl)));
@@ -103,6 +104,7 @@ class PultforsterkerDevice extends Homey.Device {
     await this.setCapabilityValue('volume_set', (st.volume || 0) / 100).catch(this.error);
     await this.setCapabilityValue('volume_mute', !!st.mute).catch(this.error);
     await this.setCapabilityValue('ki_input', st.input || 'airplay').catch(this.error);
+    if (this.hasCapability('ki_voice')) await this.setCapabilityValue('ki_voice', st.voice !== false).catch(this.error);
     if (this.hasCapability('ki_loudness')) await this.setCapabilityValue('ki_loudness', !!st.loudness).catch(this.error);
     if (this.hasCapability('ki_loudness_level')) await this.setCapabilityValue('ki_loudness_level', Number(st.loudness_level ?? 0)).catch(this.error);
 

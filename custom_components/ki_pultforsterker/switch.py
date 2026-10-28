@@ -12,7 +12,7 @@ from .entity import KiAmpEntity
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c)])
+    add([KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c)])
 
 
 class KiAmpPowerSwitch(KiAmpEntity, SwitchEntity):
@@ -50,3 +50,22 @@ class KiAmpLoudnessSwitch(KiAmpEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_loudness(on=False))
+
+
+class KiAmpVoiceSwitch(KiAmpEntity, SwitchEntity):
+    """Talemeldinger fra forsterkeren: Bluetooth-paring, tilkoblet/frakoblet, kildebytte."""
+    _attr_translation_key = "voice"
+    _attr_icon = "mdi:account-voice"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "voice")
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.data.get("voice", True))
+
+    async def async_turn_on(self, **kwargs) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_voice(True))
+
+    async def async_turn_off(self, **kwargs) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_voice(False))

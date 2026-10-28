@@ -58,3 +58,7 @@ class KiAmpApi:
     async def transport(self, action: str) -> dict[str, Any]:
         """play | pause | playpause | next | previous | stop (AirPlay/Bluetooth)."""
         return await self._req("POST", "/transport", {"action": action})
+
+    async def set_voice(self, on: bool) -> dict[str, Any]:
+        """Talemeldinger («Bluetooth-paring …») av/på."""
+        return await self._req("POST", "/voice", {"on": on})

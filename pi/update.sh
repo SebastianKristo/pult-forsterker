@@ -36,6 +36,9 @@ fi
 echo "== Bluetooth"
 bash "$SRC/ki-bluetooth-setup.sh"
 
+echo "== Talemeldinger"
+bash "$SRC/ki-voice-setup.sh"
+
 echo "== Music Assistant (Squeezelite)"
 command -v squeezelite >/dev/null || sudo apt-get -y install --no-install-recommends squeezelite >/dev/null
 sudo systemctl disable --now squeezelite 2>/dev/null || true
