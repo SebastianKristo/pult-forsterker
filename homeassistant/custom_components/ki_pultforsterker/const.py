@@ -1,4 +1,4 @@
-"""Konstanter for KI Pultforsterker."""
+"""Konstanter for Pultforsterker."""
 DOMAIN = "ki_pultforsterker"
 DEFAULT_PORT = 8765
 SCAN_INTERVAL_S = 5

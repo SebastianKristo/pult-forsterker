@@ -4,7 +4,7 @@ const Homey = require('homey');
 
 class KiPultforsterkerApp extends Homey.App {
   async onInit() {
-    this.log('KI Pultforsterker-appen starter');
+    this.log('Pultforsterker-appen starter');
 
     this.homey.flow.getConditionCard('ki_is_playing')
       .registerRunListener(async ({ device }) => device.getCapabilityValue('speaker_playing') === true);

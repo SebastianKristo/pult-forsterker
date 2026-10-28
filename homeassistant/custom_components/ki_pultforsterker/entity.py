@@ -18,7 +18,7 @@ class KiAmpEntity(CoordinatorEntity[KiAmpCoordinator]):
         self._attr_unique_id = f"{uid}_{key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, uid)},
-            name="KI Pultforsterker",
+            name="Pultforsterker",
             manufacturer="Sebastian / KI",
             model="TPA3116D2 + Pi Zero 2 W",
             sw_version=coordinator.data.get("version"),

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""KI Pultforsterker v2 – OLED 2,42" SSD1309 128x64 (I2C 0x3C, RES på GPIO 4).
+"""Pultforsterker v2 – OLED 2,42" SSD1309 128x64 (I2C 0x3C, RES på GPIO 4).
 
 Layout etter design_handoff (hovedskjerm):
   y 1–10   : fire felt AIR / BT / AUX / USB (aktiv = fylt), BT stiplet når BT er av

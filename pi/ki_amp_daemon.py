@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""KI Pultforsterker v2 – daemon på Raspberry Pi Zero 2 W.
+"""Pultforsterker v2 – daemon på Raspberry Pi Zero 2 W.
 
 Innganger: airplay | bt | aux | usb
   airplay/bt/usb kommer alle fra Pi-ens DAC (PCM5102A); aux er 3,5 mm bak.
@@ -47,7 +47,7 @@ DSP_FORMAT = os.environ.get("KI_AMP_DSP_FORMAT", "S32LE")   # S16LE for Pi-ens 3
 
 # ---------- GPIO (BCM) ----------
 # KI_AMP_BOARD=modules : modulbygget (XH-M562, X9C103S, relékort) – standard
-# KI_AMP_BOARD=main    : KI Pultforsterker hovedkort rev A (PGA2311 på SPI0, TPA3116 SDZ, relé på kortet)
+# KI_AMP_BOARD=main    : Pultforsterker hovedkort rev A (PGA2311 på SPI0, TPA3116 SDZ, relé på kortet)
 BOARD = os.environ.get("KI_AMP_BOARD", "modules")
 PIN_RELAY_AMP = 27      # modules: relé 3 (24 V til forsterker)   main: TPA3116 SDZ (høy = på)
 PIN_RELAY_AUX = 22      # relé: lav = DAC, høy = AUX (begge)
