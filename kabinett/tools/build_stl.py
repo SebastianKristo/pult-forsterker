@@ -38,15 +38,17 @@ if VARIANT == "pi4":
     post_x = (-24.0, -39.0, -59.0, -74.0)
     vent_n = 20
 if VARIANT == "pcb":
-    # KI hovedkort rev A (150 x 100) bak + Raspberry Pi 4 foran. Samme bakvegg som Pi 4-varianten.
-    D = 195.0
-    tower_xy = (90.0, 87.0)
-    pi_holes, pi_pos = (58.0, 49.0), (-28.0, -45.0)        # Pi 4 foran, porter mot høyre
+    # KI hovedkort rev A (150 x 100) stablet over Raspberry Pi 4: Pi-en ligger på gulvet (6 mm stolper) med
+    # USB/Ethernet-portene mot venstre utenfor kortet, hovedkortet 25 mm over på Ø8-stolper. 40-pin flatkabel (10 cm)
+    # fra J5 ned til Pi-en. Bakveggen som Pi 4-varianten, 26 mm fra bakvegg til kortets bakkant (plass til DC-099/KCD1/RJ45).
+    D = 165.0
+    tower_xy = (90.0, 72.0)
+    pi_holes, pi_pos = (58.0, 49.0), (-40.5, 18.0)         # Pi 4 under kortet, porter mot venstre
     amp_pos = None                                          # ingen forsterkermodul
-    pcb_holes, pcb_pos = (142.0, 92.0), (0.0, 36.8)         # hovedkortets 4 x M3 (kortets bakkant 8 mm fra bakveggen)
+    pcb_holes, pcb_pos, pcb_post_h = (142.0, 92.0), (3.0, 3.8), 25.0
     kcd1_x, dc_x, rj45_x, usbc_x, aux_x = 86.0, 68.0, 44.0, 14.0, -6.0
     post_x = (-24.0, -39.0, -59.0, -74.0)
-    vent_n = 28
+    vent_n = 24
 else:
     pcb_holes = pcb_pos = None
 SEG = 64
@@ -121,8 +123,8 @@ def body():
             m -= cube(2.4, 60, floor_t + 2, pcb_pos[0] + 5 + i * 5, pcb_pos[1] - 30, -1)
         for x in (-1, 1):
             for y in (-1, 1):
-                m += (cyl(7, floor_t + 6) - cyl(2.6, floor_t + 7)).translate([pcb_pos[0] + x * pcb_holes[0] / 2, pcb_pos[1] + y * pcb_holes[1] / 2, 0])
-    if VARIANT == "pi4":   # luftespor i gulvet under Pi 4
+                m += (cyl(8, floor_t + pcb_post_h) - cyl(2.6, floor_t + pcb_post_h + 1)).translate([pcb_pos[0] + x * pcb_holes[0] / 2, pcb_pos[1] + y * pcb_holes[1] / 2, 0])
+    if VARIANT in ("pi4", "pcb"):   # luftespor i gulvet under Pi 4
         for i in range(12):
             m -= cube(2.4, 44, floor_t + 2, pi_pos[0] - 33 + i * 6, pi_pos[1] - 22, -1)
     for sx in (-1, 1):
