@@ -20,7 +20,7 @@ done < "$SRC/ki-amp.env"
 echo "== Shairport Sync med fjernkontroll (D-Bus)"
 if ! shairport-sync -V 2>&1 | grep -qi dbus; then
   sudo apt-get -y install --no-install-recommends libglib2.0-dev >/dev/null
-  cd /tmp && rm -rf shairport-sync && git clone -q https://github.com/mikebrady/shairport-sync.git && cd shairport-sync
+  B="$(mktemp -d)" && cd "$B" && git clone -q https://github.com/mikebrady/shairport-sync.git && cd shairport-sync
   autoreconf -fi >/dev/null 2>&1
   ./configure -q --sysconfdir=/etc --with-alsa --with-soxr --with-avahi --with-ssl=openssl \
     --with-systemd --with-airplay-2 --with-metadata --with-pipe --with-dbus-interface

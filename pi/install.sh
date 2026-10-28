@@ -55,10 +55,10 @@ sudo install -m 644 "$SRC/camilladsp.service" /etc/systemd/system/camilladsp.ser
 sudo systemctl daemon-reload && sudo systemctl enable --now camilladsp
 
 echo "== 5/9  NQPTP + Shairport Sync (AirPlay 2)"
-cd /tmp && rm -rf nqptp && git clone https://github.com/mikebrady/nqptp.git
+B="$(mktemp -d)" && cd "$B" && git clone https://github.com/mikebrady/nqptp.git
 cd nqptp && autoreconf -fi && ./configure --with-systemd-startup && make -j"$(nproc)" && sudo make install
 sudo systemctl enable --now nqptp
-cd /tmp && rm -rf shairport-sync && git clone https://github.com/mikebrady/shairport-sync.git
+B="$(mktemp -d)" && cd "$B" && git clone https://github.com/mikebrady/shairport-sync.git
 cd shairport-sync && autoreconf -fi
 ./configure --sysconfdir=/etc --with-alsa --with-soxr --with-avahi --with-ssl=openssl \
             --with-systemd --with-airplay-2 --with-metadata --with-pipe --with-dbus-interface
