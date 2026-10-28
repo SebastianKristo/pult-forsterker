@@ -9,6 +9,7 @@ DIY stereoforsterker (2 × 50 W) som henger under pulten. AirPlay 2, Bluetooth, 
 | **Kabinett** | 3D-printet, 200 × 120 × 48 mm, tre deler (kasse, lokk, frontplate) |
 | **Hjerne** | Raspberry Pi Zero 2 W + PCM5102A I2S-DAC |
 | **Forsterker** | XH-M562 (TPA3116D2) 2 × 50 W, 24 V |
+| **Høyttalere** | 2 × 6 Ω, 5–40 W. Ved 24 V gir TPA3116 ca. 35–40 W i 6 Ω ved full utstyring – `KI_AMP_MAX_TAP=85` i `ki-amp.env` holder det under 40 W |
 | **Innganger** | AirPlay 2 (Shairport Sync), Bluetooth A2DP (bluealsa), AUX 3,5 mm (relé), USB-C (Pi som UAC2-lydkort) |
 | **Volum** | 2 × X9C103S digitalpot i lydveien, styrt av KY-040 encoder |
 | **Skjerm** | 2,42" SSD1309 OLED 128 × 64, I2C |

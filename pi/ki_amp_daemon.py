@@ -35,6 +35,8 @@ STATUS_FILE = "/run/pultamp_status.json"   # spor-metadata fra oled_display.py /
 CTRL_FILE = "/run/pultamp_ctrl.json"       # til oled_display.py
 STATE_FILE = "/var/lib/ki-amp/state.json"
 RELAY_ACTIVE_LOW = os.environ.get("RELAY_ACTIVE_LOW", "1") == "1"
+# Maks X9C-trinn (0-99) ved volum 100 %. 6 ohm / 40 W-høyttalere på 24 V: 85 holder forsterkeren under 40 W.
+MAX_TAP = max(10, min(99, int(os.environ.get("KI_AMP_MAX_TAP", "85"))))
 
 # ---------- GPIO (BCM) ----------
 PIN_RELAY_AMP = 27      # relé: 24 V til forsterkerkortet
@@ -80,7 +82,7 @@ def x9c_step(n):
 
 def apply_volume():
     global _x9c_pos
-    target = 0 if (state["mute"] or not state["power"]) else round(state["volume"] * 99 / 100)
+    target = 0 if (state["mute"] or not state["power"]) else round(state["volume"] * MAX_TAP / 100)
     if _x9c_pos is None:
         x9c_step(-100); _x9c_pos = 0
     x9c_step(target - _x9c_pos); _x9c_pos = target
