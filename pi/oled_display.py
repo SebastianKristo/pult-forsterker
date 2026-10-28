@@ -22,7 +22,7 @@ import time
 
 from luma.core.interface.serial import i2c
 from luma.core.render import canvas
-from luma.oled.device import ssd1309
+from luma.oled.device import ssd1306, ssd1309
 from PIL import ImageFont
 
 PIPE = "/run/shairport-sync/metadata"   # ikke /tmp: fs.protected_fifos hindrer root i å åpne en annen brukers FIFO der
@@ -36,8 +36,14 @@ f_tag, f_title, f_sub, f_small, f_vol, f_num = F(FONT_B, 7), F(FONT_B, 11), F(FO
 LABELS = {"radio": "RAD", "airplay": "AIR", "bt": "BT", "aux": "AUX", "usb": "USB"}
 SRC_TEXT = {"radio": ("Radio", "Velg kanal 1–6"), "aux": ("Analog inngang", "3,5 mm jack"), "usb": ("USB-lyd", "PC"), "airplay": ("AirPlay", "Venter på enhet …"), "bt": ("Bluetooth", "")}
 
+# KI_AMP_OLED: ssd1309_128x64 (2,42", standard) | ssd1306_128x32 (0,91") | ssd1306_128x64 (0,96")
+OLED = os.environ.get("KI_AMP_OLED", "ssd1309_128x64")
 try:
-    device = ssd1309(i2c(port=1, address=0x3C), gpio_RST=4)
+    if OLED.startswith("ssd1306"):
+        device = ssd1306(i2c(port=1, address=int(os.environ.get("KI_AMP_OLED_ADDR", "0x3C"), 16)), width=128,
+                         height=32 if OLED.endswith("x32") else 64)
+    else:
+        device = ssd1309(i2c(port=1, address=0x3C), gpio_RST=4)
 except Exception as e:   # ingen OLED koblet til: kjør videre som metadata-tjeneste (AirPlay/BT → API, HA, Homey)
     print("OLED ikke funnet – kjører uten skjerm:", e, flush=True)
     device = None
@@ -353,8 +359,87 @@ def draw_boot(draw):
     dim_text(draw, (64 - draw.textlength(s, font=f_small) / 2, 55), s, f_small)
 
 
+SMALL = device is not None and device.height == 32 or OLED.endswith("x32")
+if SMALL:
+    import oled_small as small
+
+
+def render(draw, c):
+    if SMALL:
+        if time.time() < boot_until:
+            small.boot(draw, 1 - max(0, boot_until - time.time()) / 1.6)
+        elif not small.overlay(draw, c, track, time.time()):
+            small.main_screen(draw, c, track, pos_now)
+        return
+    if time.time() < boot_until:
+        draw_boot(draw)
+    elif not draw_overlay(draw, c):
+        draw_main(draw, c)
+
+
+# ---------- demo: alle skjermbilder etter tur, uten daemon (python3 oled_display.py --demo) ----------
+DEMO_PRESETS = [{"n": 1, "title": "NRK P1"}, {"n": 2, "title": "NRK P3"}, {"n": 3, "title": "P4 Lyden av Norge"},
+                {"n": 4, "title": "Radio Norge"}, {"n": 5, "title": ""}, {"n": 6, "title": ""}]
+
+
+def demo_frame(t):
+    """Returnerer (navn, ctrl, track-oppdatering) for tidspunkt t (sekunder) i en 48 s løkke."""
+    t %= 48
+    c = {"power": True, "input": "airplay", "volume": 42, "mute": False, "bt_pairing": False, "presets": DEMO_PRESETS,
+         "preset": 2, "lyrion": True}
+    tr = {"playing": True, "paused": False, "title": "Midnight City – Extended Version", "artist": "M83",
+          "duration": 243, "position": 61 + t, "pos_t": time.time(), "bt_device": ""}
+    if t < 2:
+        return "oppstart", c, tr, True
+    if t < 7:
+        return "AirPlay spiller", c, tr, False
+    if t < 11:
+        c["volume"] = int(42 + 30 * math.sin((t - 7) / 4 * math.pi)); return "volum", c, tr, False
+    if t < 13:
+        c["mute"] = True; return "mute", c, tr, False
+    if t < 15:
+        c["input"] = "bt"; tr.update(playing=False, title=""); return "kildebytte BT", c, tr, False
+    if t < 20:
+        c.update(input="bt", bt_pairing=True); tr.update(playing=False, title=""); return "BT-parring", c, tr, False
+    if t < 25:
+        c["input"] = "bt"; tr.update(bt_device="Sebastian sin iPhone", title="Teardrop", artist="Massive Attack",
+                                     duration=330, position=12 + (t - 20)); return "BT tilkoblet / spiller", c, tr, False
+    if t < 31:
+        c["input"] = "radio"; c["radio"] = {"mode": "play", "station": "NRK P3", "song": "Flowers", "artist": "Miley Cyrus"}
+        c["station"] = "NRK P3"; return "Radio", c, tr, False
+    if t < 38:
+        c["input"] = "radio"; c["menu"] = {"idx": 1 + int((t - 31) / 1.2) % 6}
+        c["radio"] = {"mode": "play", "station": "NRK P3"}; return "kanalmeny", c, tr, False
+    if t < 43:
+        c["input"] = "aux"; return "AUX (nivåmeter)", c, tr, False
+    c["input"] = "usb"; return "USB", c, tr, False
+
+
+def demo():
+    global boot_until
+    t0 = time.time(); last = None
+    while True:
+        t = time.time() - t0
+        name, c, tr, booting = demo_frame(t)
+        track.update(tr)
+        if booting and last != name:
+            boot_until = time.time() + 1.6
+        if name != last:
+            print("Demo:", name, flush=True); last = name
+        with canvas(device) as draw:
+            if not booting:
+                boot_until = 0
+            render(draw, c)
+        time.sleep(0.08)
+
+
 def main():
     global boot_until
+    import sys
+    if "--demo" in sys.argv:
+        if device is None:
+            print("Fant ingen skjerm – sjekk koblingene og i2cdetect -y 1"); return
+        demo(); return
     threading.Thread(target=airplay_thread, daemon=True).start()
     threading.Thread(target=bt_thread, daemon=True).start()
     threading.Thread(target=art_thread, daemon=True).start()
@@ -371,10 +456,7 @@ def main():
         if not was_on:
             device.show(); was_on = True; boot_until = time.time() + 1.6
         with canvas(device) as draw:
-            if time.time() < boot_until:
-                draw_boot(draw)
-            elif not draw_overlay(draw, c):
-                draw_main(draw, c)
+            render(draw, c)
         time.sleep(0.1)
 
 

@@ -176,6 +176,29 @@ journalctl -u ki-amp -f # trykk på knappene – du skal se "input airplay", "vo
 
 ---
 
+### Testskjerm 0,91" OLED (128 × 32, SSD1306)
+
+Alle skjermbildene fra prosjektet finnes også i en utgave for den lille 0,91"-skjermen: hovedbilde med kilde, play/pause, tid, rullende tittel, artist, volum og fremdrift; nivåmeter for AUX/USB; radio med kanal; overlegg for volum, mute, kildebytte, Bluetooth-parring og -tilkobling; kanalmeny og oppstart.
+
+| Skjerm | Pi-pinne (fysisk) | GPIO |
+|---|---|---|
+| GND | 6 | – |
+| VCC | 1 (3,3 V) | – |
+| SCL | 5 | GPIO 3 |
+| SDA | 3 | GPIO 2 |
+
+```bash
+sudo sed -i 's/^KI_AMP_OLED=.*/KI_AMP_OLED=ssd1306_128x32/' /etc/ki-amp.env
+grep -q '^KI_AMP_OLED' /etc/ki-amp.env || echo KI_AMP_OLED=ssd1306_128x32 | sudo tee -a /etc/ki-amp.env
+i2cdetect -y 1                                   # skal vise 3c
+sudo systemctl stop oled-display
+sudo KI_AMP_OLED=ssd1306_128x32 python3 /usr/local/bin/oled_display.py --demo   # alle skjermbilder etter tur (Ctrl-C)
+sudo systemctl start oled-display                # ekte visning fra AirPlay/BT/radio
+```
+Viser `i2cdetect` `3d` i stedet for `3c`, legg til `KI_AMP_OLED_ADDR=0x3D` i `/etc/ki-amp.env`.
+
+---
+
 ## 7. Home Assistant
 
 1. Installer integrasjonen.

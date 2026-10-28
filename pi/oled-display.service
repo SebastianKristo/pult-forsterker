@@ -4,6 +4,8 @@ After=shairport-sync.service
 Wants=shairport-sync.service
 
 [Service]
+EnvironmentFile=-/etc/ki-amp.env
+WorkingDirectory=/usr/local/bin
 ExecStart=/usr/bin/python3 /usr/local/bin/oled_display.py
 Restart=always
 RestartSec=3

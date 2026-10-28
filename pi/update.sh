@@ -5,7 +5,7 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
 
 echo "== Programmer og tjenester"
-sudo install -m 755 "$SRC/ki_amp_daemon.py" "$SRC/oled_display.py" /usr/local/bin/
+sudo install -m 755 "$SRC/ki_amp_daemon.py" "$SRC/oled_display.py" "$SRC/oled_small.py" /usr/local/bin/
 sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
 for u in ki-amp.service oled-display.service camilladsp.service shairport-sync.service ki-usb-audio.service ki-squeezelite.service; do
   sudo install -m 644 "$SRC/$u" /etc/systemd/system/$u

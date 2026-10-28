@@ -92,6 +92,7 @@ sudo systemctl enable ki-usb-audio
 echo "== 8/9  OLED (SSD1309 2,42\")"
 sudo pip3 install --break-system-packages luma.oled
 sudo install -m 755 "$SRC/oled_display.py" /usr/local/bin/oled_display.py
+sudo install -m 644 "$SRC/oled_small.py" /usr/local/bin/oled_small.py
 sudo install -m 644 "$SRC/oled-display.service" /etc/systemd/system/oled-display.service
 
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
