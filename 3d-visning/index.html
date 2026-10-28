@@ -28,8 +28,8 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 <header>
-  <h1>KI Pultforsterker <small>200 × 120 × 48 mm · v2</small></h1>
-  <div class="grp"><button id="vFront" class="on">Front</button><button id="vBack">Bak</button><button id="vTop">Ovenfra</button><button id="tLid">Åpne kassen</button><button id="tMount" class="on">Under pult</button></div>
+  <h1>KI Pultforsterker <small id="dims">200 × 120 × 48 mm · v2</small></h1>
+  <div class="grp"><button id="vFront" class="on">Front</button><button id="vBack">Bak</button><button id="vTop">Ovenfra</button><button id="tLid">Åpne kassen</button><button id="tMount" class="on">Under pult</button><button id="tVar">Modulbygg</button></div>
   <div class="grp"><button id="tMains" class="on">Hovedbryter på</button><button id="tStby" class="on" title="Trykk: standby/på · hold 3 s: omstart">På</button><button id="tMute">Mute av</button><button id="tBt" class="on">Bluetooth: tilkoblet</button><button id="tPlay" class="on">❚❚ Pause</button></div>
 </header>
 <div id="stage">
@@ -38,6 +38,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
   <div id="vol">VOLUM<b id="volv">42</b></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 (function(){
 const stage=document.getElementById('stage'), $=id=>document.getElementById(id);
@@ -52,29 +53,31 @@ const M={shell:std(0x2c2d30,0.75,0.1),plate:std(0x37383c,0.6,0.2),btn:std(0x1d1d
  knob:std(0x18181a,0.3,0.7),alu:std(0xb8b8bc,0.35,0.8),gold:std(0xc9a227,0.35,0.9),red:std(0xa3261d,0.5,0.2),dark:std(0x141415,0.5,0.1),
  pcbG:std(0x1f6b3a,0.7),pcbB:std(0x1d3f7a,0.7),pcbR:std(0x7a1d1d,0.7),pcbK:std(0x202020,0.7),pcbP:std(0x4a2a6b,0.7),white:std(0xffffff,0.6)};
 
-const parts=[], root=new THREE.Group(); scene.add(root);
-function add(mesh,name,desc,group,hit){mesh.userData={name,desc,hit};(group||root).add(mesh);if(name)parts.push(mesh);return mesh;}
+const parts=[], root=new THREE.Group(); scene.add(root); let DG=root;
+function add(mesh,name,desc,group,hit){mesh.userData={name,desc,hit};(group||DG).add(mesh);if(name)parts.push(mesh);return mesh;}
 function rrect(w,h,r){const s=new THREE.Shape();s.moveTo(-w/2+r,-h/2);s.lineTo(w/2-r,-h/2);s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r);s.lineTo(w/2,h/2-r);s.quadraticCurveTo(w/2,h/2,w/2-r,h/2);s.lineTo(-w/2+r,h/2);s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r);s.lineTo(-w/2,-h/2+r);s.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2);return s;}
 function box(w,h,d,mat,x,y,z,name,desc,group,hit){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);return add(m,name,desc,group,hit);}
 function cyl(r,len,mat,x,y,z,axis,name,desc,group,hit,r2){const m=new THREE.Mesh(new THREE.CylinderGeometry(r2==null?r:r2,r,len,48),mat);if(axis==='z')m.rotation.x=Math.PI/2;m.position.set(x,y,z);return add(m,name,desc,group,hit);}
 function textTex(text,w,h,col,weight,fit){const c=document.createElement('canvas');c.width=512;c.height=Math.round(512*h/w);const g=c.getContext('2d');g.fillStyle=col;let fs=Math.round(c.height*0.62);g.font=`${weight||500} ${fs}px "Helvetica Neue",Helvetica,Arial,sans-serif`;g.textAlign='center';g.textBaseline='middle';if(!fit&&'letterSpacing' in g)g.letterSpacing=`${Math.round(c.height*0.14)}px`;while(fit&&g.measureText(text).width>c.width*0.92&&fs>8){fs-=2;g.font=`${weight||500} ${fs}px "Helvetica Neue",Helvetica,Arial,sans-serif`;}g.fillText(text,c.width/2,c.height/2);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;return t;}
-function label(text,w,h,x,y,z,rotY){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTex(text,w,h,'#a3a29d'),transparent:true,depthWrite:false}));m.position.set(x,y,z);if(rotY)m.rotation.y=rotY;root.add(m);return m;}
+function label(text,w,h,x,y,z,rotY){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTex(text,w,h,'#a3a29d'),transparent:true,depthWrite:false}));m.position.set(x,y,z);if(rotY)m.rotation.y=rotY;DG.add(m);return m;}
 
-// ---------- Kasse, lokk, frontplate (x bredde, y opp, z dybde; front = +z) ----------
-const bodyG=new THREE.ExtrudeGeometry(rrect(200,120,6),{depth:48,bevelEnabled:false});bodyG.rotateX(-Math.PI/2);
-const bodyWall=new THREE.Group();root.add(bodyWall);
-// skall som "boks med åpning opp": gulv + fire vegger (så innsiden synes når lokket løftes)
-box(200,2.5,120,M.shell,0,1.25,0,'Kasse','3D-printet kasse 200 × 120 × 48 mm, vegg 2,7 mm, gulv 2,5 mm. Fire skruetårn med M3-varmeinnsats i hjørnene. Fil: <code>v2_body.stl</code>.',bodyWall);
-box(200,48,2.7,M.shell,0,24,60-1.35,null,null,bodyWall);box(200,48,2.7,M.shell,0,24,-60+1.35,null,null,bodyWall);
-box(2.7,48,120,M.shell,100-1.35,24,0,null,null,bodyWall);box(2.7,48,120,M.shell,-100+1.35,24,0,null,null,bodyWall);
-for(const sx of[-1,1])for(const sz of[-1,1]){const t=cyl(4,45.5,M.shell,sx*90,2.5+45.5/2,sz*50,'y','Skruetårn','Ø8 tårn med M3-varmeinnsats øverst. Lokket skrus hit med M3 × 8.',bodyWall);cyl(2.2,4,M.gold,sx*90,46,sz*50,'y',null,null,bodyWall);}
-const feet=new THREE.Group();root.add(feet);for(const sx of[-1,1])for(const sz of[-1,1])cyl(5,1.5,M.dark,sx*85,-0.75,sz*45,'y','Gummifot','Selvklebende gummiføtter – brukes når forsterkeren står på pulten i stedet for å henge under.',feet);
-const lid=new THREE.Group();root.add(lid);
-const lidG=new THREE.ExtrudeGeometry(rrect(200,120,6),{depth:3,bevelEnabled:false});lidG.rotateX(-Math.PI/2);
-add(new THREE.Mesh(lidG,M.plate),'Lokk','Lokk 200 × 120 × 3 mm med fire ører. Skrus i pultens underside med 4 × 25 mm treskruer; kassen henger i lokket med fire M3 × 8. Fil: <code>v2_lid.stl</code>.',lid);
-const ears=new THREE.Group();lid.add(ears);for(const sx of[-1,1])for(const sz of[-1,1])box(14,3,10,M.plate,sx*107,1.5,sz*35,'Lokkøre','Fire ører med slisse for treskrue mot pulten. Utelates i frittstående utgave (print lokket uten ører).',ears);
-for(const sx of[-1,1])for(const sz of[-1,1])cyl(1.7,0.4,M.dark,sx*90,3.1,sz*50,'y','Lokkskrue','M3 × 8 senkskrue ned i varmeinnsatsen.',lid);
-lid.position.y=48;
+// ---------- Kasse, lokk (bygges per variant: modulbygg D=120, hovedkort D=195) ----------
+function buildShell(D,TX,TZ,stl){const g=new THREE.Group();root.add(g);DG=g;const hd=D/2;
+ const bodyWall=new THREE.Group();g.add(bodyWall);
+ box(200,2.5,D,M.shell,0,1.25,0,'Kasse',`3D-printet kasse 200 × ${D} × 48 mm, vegg 2,7 mm, gulv 2,5 mm. Fire skruetårn med M3-varmeinnsats i hjørnene. Fil: <code>${stl.body}</code>.`,bodyWall);
+ box(200,48,2.7,M.shell,0,24,hd-1.35,null,null,bodyWall);box(200,48,2.7,M.shell,0,24,-hd+1.35,null,null,bodyWall);
+ box(2.7,48,D,M.shell,100-1.35,24,0,null,null,bodyWall);box(2.7,48,D,M.shell,-100+1.35,24,0,null,null,bodyWall);
+ for(const sx of[-1,1])for(const sz of[-1,1]){cyl(4,45.5,M.shell,sx*TX,2.5+45.5/2,sz*TZ,'y','Skruetårn','Ø8 tårn med M3-varmeinnsats øverst. Lokket skrus hit med M3 × 8.',bodyWall);cyl(2.2,4,M.gold,sx*TX,46,sz*TZ,'y',null,null,bodyWall);}
+ const feet=new THREE.Group();g.add(feet);for(const sx of[-1,1])for(const sz of[-1,1])cyl(5,1.5,M.dark,sx*85,-0.75,sz*(hd-15),'y','Gummifot','Selvklebende gummiføtter – brukes når forsterkeren står på pulten i stedet for å henge under.',feet);
+ const lid=new THREE.Group();g.add(lid);
+ const lidG=new THREE.ExtrudeGeometry(rrect(200,D,6),{depth:3,bevelEnabled:false});lidG.rotateX(-Math.PI/2);
+ add(new THREE.Mesh(lidG,M.plate),'Lokk',`Lokk 200 × ${D} × 3 mm med fire ører. Skrus i pultens underside med 4 × 25 mm treskruer; kassen henger i lokket med fire M3 × 8. Fil: <code>${stl.lid}</code> (frittstående: <code>${stl.lidF}</code>).`,lid);
+ const ears=new THREE.Group();lid.add(ears);for(const sx of[-1,1])for(const sz of[-1,1])box(14,3,10,M.plate,sx*107,1.5,sz*(hd-25),'Lokkøre','Fire ører med slisse for treskrue mot pulten. Utelates i frittstående utgave (print lokket uten ører).',ears);
+ for(const sx of[-1,1])for(const sz of[-1,1])cyl(1.7,0.4,M.dark,sx*TX,3.1,sz*TZ,'y','Lokkskrue','M3 × 8 senkskrue ned i varmeinnsatsen.',lid);
+ lid.position.y=48;DG=root;return {g,lid,ears,feet,D};}
+const shells={mod:buildShell(120,90,50,{body:'v2_body.stl',lid:'v2_lid.stl',lidF:'v2_lid_frittstaende.stl'}),pcb:buildShell(195,90,87,{body:'v2_body_pcb.stl',lid:'v2_lid_pcb.stl',lidF:'v2_lid_frittstaende_pcb.stl'})};
+// ---------- Front (felles, flyttes i z etter variant) ----------
+const front=new THREE.Group();root.add(front);DG=front;
 const fp=add(new THREE.Mesh(new THREE.ExtrudeGeometry(rrect(188,46,3),{depth:2,bevelEnabled:false}),M.plate),'Frontplate','Frontplate 188 × 46 × 2 mm, festes med 4 × M3 senkskruer i kassens frontvegg. Fil: <code>v2_frontplate.stl</code>.');fp.position.set(0,24,60);
 const FZ=62;
 for(const sx of[-1,1])for(const sy of[-1,1])cyl(1.6,0.6,M.dark,sx*88,24+sy*17,FZ+0.2,'z','Frontskrue','M3 senkskrue inn i frontveggen.');
@@ -87,7 +90,7 @@ box(60.5,37,1.4,M.dark,-30,24,60-2.7-0.7,null,null);box(70,40,1.6,M.pcbB,-30,24,
 
 // ---------- Knapper ----------
 const INP=[['AIRPLAY',20,8.5,'Velger AirPlay 2 (Shairport Sync). Hold 2 s: Bluetooth av/på. 12 mm metallknapp, hvit LED-ring, GPIO 5.'],['BT',37,8.5,'Velger Bluetooth A2DP. GPIO 6. Ringen pulserer under parring.'],['AUX',20,-8.5,'Velger 3,5 mm AUX bak (relé 1+2 bytter til analog inngang). GPIO 12.'],['USB',37,-8.5,'Velger USB-lyd fra PC (Pi som UAC2-lydkort «UAC2 Gadget»). GPIO 13.']];
-function metalButton(x,y,rh,rc,name,desc){const g=new THREE.Group();g.position.set(x,y,FZ);root.add(g);
+function metalButton(x,y,rh,rc,name,desc){const g=new THREE.Group();g.position.set(x,y,FZ);DG.add(g);
  const fl=new THREE.Mesh(new THREE.CylinderGeometry(rh,rh-0.3,1.6,64),M.btn);fl.rotation.x=Math.PI/2;fl.position.z=0.8;g.add(fl);add(fl,name,desc,g,'btn');
  const led=std(0x18181a,0.3,0,{emissive:0x000000});const ring=new THREE.Mesh(new THREE.CylinderGeometry(rc+0.55,rc+0.55,0.35,64),led);ring.rotation.x=Math.PI/2;ring.position.z=1.65;g.add(ring);add(ring,name,desc,g,'btn');
  const cap=new THREE.Mesh(new THREE.CylinderGeometry(rc,rc-0.2,1.2,64),M.cap);cap.rotation.x=Math.PI/2;cap.position.z=2.1;g.add(cap);add(cap,name,desc,g,'btn');
@@ -100,31 +103,37 @@ const pwrBtn=metalButton(-80,24,9.5,6.6,'POWER-knapp','16 mm metallknapp med LED
  var symMat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,toneMapped:false});const s=new THREE.Mesh(new THREE.PlaneGeometry(7,7),symMat);s.position.z=2.72;pwrBtn.g.add(s);}
 label('POWER',14,2.1,-80,24-12.6,FZ+0.05);
 // Knott (lathe-profil fra designet) + encoder
-const knob=new THREE.Group();knob.position.set(70,24,FZ);root.add(knob);
+const knob=new THREE.Group();knob.position.set(70,24,FZ);DG.add(knob);
 const kProf=[new THREE.Vector2(0,0.8),new THREE.Vector2(16.4,0.8),new THREE.Vector2(17,1.4),new THREE.Vector2(17,16.2),new THREE.Vector2(16.5,17.3),new THREE.Vector2(15.4,17.8),new THREE.Vector2(0,17.6)];
 const kb=new THREE.Mesh(new THREE.LatheGeometry(kProf,96),M.knob);kb.rotation.x=Math.PI/2;knob.add(kb);add(kb,'Volumknott','Aluminiumsknott 30 × 17 mm på KY-040 encoder (D-aksel). Vri = volum 0–100, trykk = mute. Dra knotten sidelengs her.',knob,'knob');
 const km=new THREE.Mesh(new THREE.BoxGeometry(1.2,5.5,0.4),std(0xeeeeee,0.5));km.position.set(0,10,17.75);knob.add(km);add(km,'Volumknott','Hvit markør på knotten.',knob,'knob');
 label('VOL · PUSH MUTE',30,2.6,70,24-20.6,FZ+0.05);
 box(26,26,1.6,M.pcbG,70,24,60-2.7-6,'Encoder KY-040','KY-040 rotasjonsencoder i utsparing på innsiden av frontveggen, aksel gjennom hullet (Ø7,4). CLK/DT/SW → GPIO 23/24/25.');
 
-// ---------- Bakvegg (z = -60) ----------
-const BZ=-60;
-const rocker=new THREE.Group();rocker.position.set(76,24,BZ);root.add(rocker);
-const rf=box(21,15,2.4,M.dark,0,0,-1.2,'KCD1 hovedbryter','Vippebryter KCD1 15 × 21 mm bryter 24 V inn. Hull 19,4 × 13 mm. Klikk for å slå hovedstrømmen av/på.',rocker,'mains');
-const vipp=box(17,11,3,M.dark,0,0,-2.4,'KCD1 hovedbryter','Vippebryter KCD1. Klikk for å slå av/på.',rocker,'mains');
-box(0.8,3.2,0.2,M.alu,0,3,-1.55,null,null,vipp);
-label('POWER',16,2.6,76,12,BZ-0.05,Math.PI);
-cyl(7,1.6,M.alu,54,24,BZ-0.8,'z','DC-inngang','DC-099 5,5 × 2,1 mm for 24 V / 4 A adapter. Hull Ø11,4.');cyl(3.2,1.8,M.dark,54,24,BZ-1.2,'z',null,null);
-label('DC 24V',16,2.6,54,12,BZ-0.05,Math.PI);
-box(8.6,2.8,0.6,M.alu,36,24,BZ-0.3,'USB-C','Panelmontert USB-C hunn (kabel til Pi-ens micro-USB). PC-en ser forsterkeren som lydkortet «UAC2 Gadget». Hull 9,6 × 3,8 + 2 × Ø2,7 (c/c 17).');
-for(const s of[-1,1])cyl(1.3,0.6,M.alu,36+s*8.5,24,BZ-0.3,'z',null,null);label('USB',10,2.6,36,12,BZ-0.05,Math.PI);
-cyl(4.6,1.4,M.alu,20,24,BZ-0.7,'z','AUX 3,5 mm','PJ392 stereo minijack for PC/Mac. Hull Ø6,4.');cyl(1.8,1.6,M.dark,20,24,BZ-1,'z',null,null);label('AUX',10,2.6,20,12,BZ-0.05,Math.PI);
-[[-30,M.red,'Høyre +'],[-45,M.dark,'Høyre −'],[-65,M.red,'Venstre +'],[-80,M.dark,'Venstre −']].forEach(([x,mat,n])=>{cyl(5,3,mat,x,24,BZ-1.5,'z','Høyttalerterminal '+n,'4 mm bananterminal, maks 50 W per kanal (XH-M562). Høyre ved x −30/−45, venstre ved x −65/−80.');cyl(4.6,7,mat,x,24,BZ-6.5,'z',null,null);});
-label('R  +  −',18,2.6,-37.5,12,BZ-0.05,Math.PI);label('L  +  −',18,2.6,-72.5,12,BZ-0.05,Math.PI);
+DG=root;
+// ---------- Bakvegg (bygges per variant; lokal z = 0 ved bakveggens ytterside) ----------
+function buildRear(L){const g=new THREE.Group();root.add(g);DG=g;const BZ=0;
+ const rocker=new THREE.Group();rocker.position.set(L.kcd1,24,BZ);g.add(rocker);
+ box(21,15,2.4,M.dark,0,0,-1.2,'KCD1 hovedbryter','Vippebryter KCD1 15 × 21 mm bryter 24 V inn. Hull 19,4 × 13 mm. Klikk for å slå hovedstrømmen av/på.',rocker,'mains');
+ const vipp=box(17,11,3,M.dark,0,0,-2.4,'KCD1 hovedbryter','Vippebryter KCD1. Klikk for å slå av/på.',rocker,'mains');
+ box(0.8,3.2,0.2,M.alu,0,3,-1.55,null,null,vipp);
+ label('POWER',16,2.6,L.kcd1,12,BZ-0.05,Math.PI);
+ cyl(7,1.6,M.alu,L.dc,24,BZ-0.8,'z','DC-inngang','DC-099 5,5 × 2,1 mm for 24 V / 4 A adapter. Hull Ø11,4.');cyl(3.2,1.8,M.dark,L.dc,24,BZ-1.2,'z',null,null);
+ label('DC 24V',16,2.6,L.dc,12,BZ-0.05,Math.PI);
+ if(L.rj45!=null){box(17,15.6,1.2,M.dark,L.rj45,24,BZ-0.6,'Ethernet','Panelmontert RJ45-forlenger (30 cm) fra Pi 4 sin Ethernet-port. Hull 17 × 15,6 + 2 × Ø3,3 (slisse 25–27 mm).');box(11,8,2,std(0x0b0b0c,0.3),L.rj45,22.5,BZ-1,null,null);
+  for(const sx of[-1,1])cyl(1.6,0.6,M.alu,L.rj45+sx*13,24,BZ-0.3,'z',null,null);label('ETH',10,2.6,L.rj45,12,BZ-0.05,Math.PI);}
+ box(8.6,2.8,0.6,M.alu,L.usbc,24,BZ-0.3,'USB-C','Panelmontert USB-C hunn (kabel til Pi-en). PC-en ser forsterkeren som lydkortet «Pultforsterker». Hull 9,6 × 3,8 + 2 × Ø2,7 (c/c 17).');
+ for(const sx of[-1,1])cyl(1.3,0.6,M.alu,L.usbc+sx*8.5,24,BZ-0.3,'z',null,null);label('USB',10,2.6,L.usbc,12,BZ-0.05,Math.PI);
+ cyl(4.6,1.4,M.alu,L.aux,24,BZ-0.7,'z','AUX 3,5 mm','PJ392 stereo minijack for PC/Mac. Hull Ø6,4.');cyl(1.8,1.6,M.dark,L.aux,24,BZ-1,'z',null,null);label('AUX',10,2.6,L.aux,12,BZ-0.05,Math.PI);
+ [[L.post[0],M.red,'Høyre +'],[L.post[1],M.dark,'Høyre −'],[L.post[2],M.red,'Venstre +'],[L.post[3],M.dark,'Venstre −']].forEach(([x,mat,n])=>{cyl(5,3,mat,x,24,BZ-1.5,'z','Høyttalerterminal '+n,'4 mm bananterminal, maks 50 W per kanal (6 Ω, 5–40 W høyttalere).');cyl(4.6,7,mat,x,24,BZ-6.5,'z',null,null);});
+ label('R  +  −',18,2.6,(L.post[0]+L.post[1])/2,12,BZ-0.05,Math.PI);label('L  +  −',18,2.6,(L.post[2]+L.post[3])/2,12,BZ-0.05,Math.PI);
+ DG=root;return {g,vipp};}
+const rears={mod:buildRear({kcd1:76,dc:54,rj45:null,usbc:36,aux:20,post:[-30,-45,-65,-80]}),pcb:buildRear({kcd1:86,dc:68,rj45:44,usbc:14,aux:-6,post:[-24,-39,-59,-74]})};
+rears.mod.g.position.z=-60;rears.pcb.g.position.z=-97.5;
 
-// ---------- Innmat (synlig når kassen åpnes) ----------
+// ---------- Innmat modulbygg (synlig når kassen åpnes) ----------
 const inner=new THREE.Group();root.add(inner);
-function boardLabel(text,x,y,z,w){const h=Math.max(6,w*0.22);const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTex(text,w,h,'#ffffff',600,true),transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(x,y,z);inner.add(m);}
+function boardLabel(text,x,y,z,w,grp){const h=Math.max(6,w*0.22);const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTex(text,w,h,'#ffffff',600,true),transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(x,y,z);(grp||inner).add(m);}
 function pcb(x,zp,w,d,h,mat,tag,name,desc,extra){const m=box(w,h,d,mat,x,2.5+h/2,-zp,tag+'  '+name,desc,inner);boardLabel(tag+' · '+name,x,2.5+h+15,-zp,Math.max(w,24));if(extra)extra(m);return m;}
 pcb(55,15,72,57,1.6,M.pcbB,'A','Forsterker XH-M562','TPA3116D2 2 × 50 W, 24 V. 2 × M3 × 6 i stolpene. Pinnelisten (IN/SP/VCC) mot bakveggen.',m=>{box(18,9,18,M.pcbK,55,2.5+1.6+4.5,-15+10,null,null,inner);box(8,12,8,M.pcbK,40,2.5+1.6+6,-15-15,null,null,inner);box(8,12,8,M.pcbK,70,2.5+1.6+6,-15-15,null,null,inner);});
 pcb(-55,22,65,30,1.6,M.pcbG,'B','Pi Zero 2 W','Raspberry Pi Zero 2 W, 4 × M2,5 × 6 i stolpene. Micro-USB-portene mot bakveggen, SD-kortet mot sideveggen. Shairport Sync, bluealsa, USB-gadget-lyd.',m=>{box(12,3,12,M.pcbK,-55,2.5+1.6+1.5,-22,null,null,inner);box(50,2.5,2.5,M.dark,-55,2.5+1.6+1.25,-22+12,null,null,inner);});
@@ -140,6 +149,49 @@ wire([[-30,24,-58],[-20,8,-45],[55,6,-30]],0xc0392b);wire([[-45,24,-58],[-25,8,-
 wire([[20,24,-58],[10,8,-45],[5,5,-20],[5,5,3]],0x777777);wire([[-55,6,8],[-20,6,0],[5,5,3]],0x777777);wire([[5,5,3],[40,6,-5],[55,6,-15]],0x777777);
 wire([[-55,8,-20],[-50,12,-10],[-55,6,8]],0xd9b300,0.4);wire([[-50,8,-20],[-45,16,20],[-30,8,56]],0xd9b300,0.4);wire([[-40,8,-20],[0,14,20],[30,10,40],[20,20,55]],0x3f7fd9,0.4);wire([[-40,8,-20],[20,14,30],[55,8,38]],0x3f7fd9,0.4);
 wire([[36,24,-58],[0,10,-30],[-45,8,-22]],0x202020,1);
+
+
+// ---------- Innmat hovedkort-variant: ekte kortmodell (KiCad-geometri, GLB) + Raspberry Pi 4 ----------
+const innerPcb=new THREE.Group();root.add(innerPcb);innerPcb.visible=false;
+const REF={J1:['J1 · 24 V inn','Skruterminal 5,08 mm. 24 V fra DC-099 via KCD1-bryteren (18 AWG).'],J2:['J2 · SPK L','Skruterminal til venstre høyttalerterminaler (+ / −).'],J3:['J3 · SPK R','Skruterminal til høyre høyttalerterminaler (+ / −).'],J4:['J4 · AUX','JST XH 3-pin: L, R, GND fra PJ392-minijacken bak.'],J5:['J5 · Raspberry Pi 40-pin','2×20 header – 40-leders flatkabel til Pi 4. I2S, SPI0, I2C, GPIO for knapper/LED/relé/SDZ.'],J6:['J6 · 5 V → Pi','Skruterminal 5 V / 5 A fra buck-en til Pi 4 (header pinne 2/6, 18 AWG).'],J7:['J7 · KNAPPER','JST XH 6-pin: AIR, BT, AUX, USB, POWER, GND til frontknappene.'],J8:['J8 · ENCODER','JST XH 5-pin: CLK, DT, SW, 3V3, GND til KY-040.'],J9:['J9 · OLED','JST XH 5-pin: 3V3, GND, SDA, SCL, RES til 2,42" OLED.'],J10:['J10 · LED-RINGER','JST XH 6-pin: 5 V + fem lavside-utganger (AO3400) til LED-ringene.'],F1:['F1 · Sikring 5 A','5×20 mm sikringsholder (THT) rett etter 24 V-terminalen.'],C1:['C1 · 2200 µF / 35 V','Bulk-elektrolytt på 24 V-skinnen (THT, loddes selv).'],U1:['U1 · TPS54560','Buck 24 → 5 V / 5 A, 400 kHz. Forsyner Pi 4, relé, LED-ringer, PGA2311.'],L1:['L1 · 10 µH','Spole for 5 V-bucken.'],U2:['U2 · AMS1117-3.3','LDO 3,3 V til DAC, OLED og pull-ups.'],U3:['U3 · ICL7660','Ladepumpe −5 V til PGA2311.'],U4:['U4 · PCM5102A','I2S-DAC (hifiberry-dac). 100 Ω + 2,2 nF ut.'],K1:['K1 · G6K-2P-Y','DPDT signalrelé: NC = DAC, NO = AUX. GPIO 22 via AO3400.'],U5:['U5 · PGA2311','Volumkontroll ±5 V, 0,5 dB-trinn, SPI0 fra Pi.'],U6:['U6 · TPA3116D2','Klasse D 2 × 50 W, 26 dB, BD-modus. SDZ = GPIO 27 (standby).'],L2:['L2–L5 · 10 µH','Utgangsfilter per høyttalerutgang (10 µH + 680 nF + snubber).'],L3:['L2–L5 · 10 µH','Utgangsfilter per høyttalerutgang.'],L4:['L2–L5 · 10 µH','Utgangsfilter per høyttalerutgang.'],L5:['L2–L5 · 10 µH','Utgangsfilter per høyttalerutgang.'],D1:['D1 · SMBJ33A','TVS-diode over 24 V inn.']};
+const boardDesc='KI hovedkort rev A, 150 × 100 mm, 2 lag. Modellen er bygget direkte fra KiCad-filen: hver komponent står med sin egen 3D-modell nøyaktig der den er plassert på kortet (<code>pcb/ki_pultforsterker_main.kicad_pcb</code>). Klikk en komponent for detaljer.';
+const boardHolder=new THREE.Group();innerPcb.add(boardHolder);
+{ // fire M3-stolper (hull 142 × 92 rundt (0, 36,8))
+ for(const sx of[-1,1])for(const sz of[-1,1]){cyl(3.5,6,M.shell,sx*71,2.5+3,-36.8+sz*46,'y','PCB-stolpe','Ø7 stolpe 6 mm med M3-varmeinnsats. Hovedkortet skrus fast med 4 × M3 × 6.',innerPcb);cyl(1.6,0.4,M.dark,sx*71,2.5+6+1.6+0.2,-36.8+sz*46,'y',null,null,innerPcb);}
+ const ph=new THREE.Mesh(new THREE.BoxGeometry(150,1,100),new THREE.MeshBasicMaterial({color:0x1f6b3a,transparent:true,opacity:0.3}));ph.position.set(0,9,-36.8);boardHolder.add(ph);
+ new THREE.GLTFLoader().load('board.json',g=>{boardHolder.remove(ph);const o=g.scene;o.rotation.x=-Math.PI/2;o.position.set(-75,8.5,13.2);
+  o.traverse(n=>{if(n.isMesh){const ref=(n.name||'').split('_')[0];const d=REF[ref];n.userData={name:d?d[0]:(ref?ref+' · hovedkort':'Hovedkort rev A'),desc:(d?d[1]+'<br><br>':'')+boardDesc};parts.push(n);if(n.material){n.material.roughness=Math.min(0.9,n.material.roughness??0.7);n.material.metalness=0;}}});
+  boardHolder.add(o);},null,e=>{ph.material.opacity=0.8;console.warn('board.json',e);});
+ boardLabel('Hovedkort rev A · 150 × 100',0,26,-36.8,60,innerPcb);
+}
+// Raspberry Pi 4 B (85 × 56, hull 58 × 49 rundt (−28, −45) i planet → porter mot høyre)
+{const PX=-18,PZ=45,PY=2.5+6;
+ for(const sx of[-1,1])for(const sz of[-1,1])cyl(3,6,M.shell,-28+sx*29,2.5+3,PZ+sz*24.5,'y','Pi-stolpe','M2,5-stolpe 6 mm for Raspberry Pi 4.',innerPcb);
+ const pi=box(85,1.6,56,M.pcbG,PX,PY+0.8,PZ,'Raspberry Pi 4 B 4 GB','Kjører Shairport Sync (AirPlay 2), bluealsa, USB-gadget-lyd, CamillaDSP og KI-daemonen. Ethernet og USB-C trekkes ut bak med panelforlengere. 40-pinners flatkabel til hovedkortet (J5), 5 V inn på header pinne 2/6 fra J6.',innerPcb);
+ const k=(w,h,d,x,z,mat,n,desc)=>box(w,h,d,mat||M.alu,PX+x,PY+1.6+h/2,PZ+z,n,desc,innerPcb);
+ k(15,2.2,15,-10,0,M.pcbK,'BCM2711','SoC med kjøleribbe (kjøleribbesett).');k(10,1.5,10,-25,-8,M.pcbK,'LPDDR4','4 GB RAM');
+ k(13.5,15.5,17,42.5-7,-18,M.alu,'USB 3.0 × 2','Blå USB 3.0-porter (stablet).');k(13.5,15.5,17,42.5-7,0,M.alu,'USB 2.0 × 2','USB 2.0-porter (stablet).');k(16,13.5,21,42.5-8,19,M.dark,'Ethernet','Gigabit Ethernet → RJ45-forlenger til bakveggen.');
+ k(50.5,8.5,5,-9.5,-25.5,M.dark,'GPIO 40-pin','2×20 header – flatkabel til hovedkortets J5.');
+ k(9,3.2,7.5,-31,25,M.alu,'USB-C strøm','Brukes ikke – 5 V kommer på header fra J6. (USB-gadget går via egen kabel fra USB-C til bakpanelet.)');k(11.5,3,7,-15,26,M.alu,'micro-HDMI 0','');k(11.5,3,7,-1.5,26,M.alu,'micro-HDMI 1','');k(7,6,7,12,25,M.dark,'3,5 mm AV','');
+ k(14,2,12,-42,8,M.dark,'microSD','Raspberry Pi OS Lite 64-bit på microSD.');
+ boardLabel('Raspberry Pi 4 B · 4 GB',PX,PY+22,PZ,60,innerPcb);
+}
+// ledninger hovedkort-variant (bakvegg z = −97,5; kort bakkant z = −86,8; forside z = +97,5)
+{const w=(pts,col,r)=>{const c=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p)));innerPcb.add(new THREE.Mesh(new THREE.TubeGeometry(c,32,r||0.6,8,false),std(col,0.6)));};
+ const BY=10.1, BZ=-86.8, bx=x=>x-75, bz=y=>-y+13.2; // kort-koordinater (KiCad x, GLB y) -> kabinett
+ w([[68,24,-96],[80,22,-92],[86,24,-96]],0xc0392b,0.8);w([[86,20,-94],[10,18,-93],[bx(14),16,-91],[bx(14),BY+2,BZ]],0xc0392b,0.8);w([[68,20,-94],[0,16,-93],[bx(19),14,-91],[bx(19),BY+2,BZ]],0x222222,0.8);
+ [[-24,108,0xc0392b],[-39,113,0x222222],[-59,134,0xc0392b],[-74,139,0x222222]].forEach(([px,jx,col])=>w([[px,24,-94],[px,18,-90],[bx(jx),BY+6,BZ-3],[bx(jx),BY+2,BZ]],col,0.8));
+ w([[-6,24,-96],[-6,16,-90],[bx(122),BY+8,BZ-2],[bx(122),BY+4,BZ]],0x777777,0.7);
+ // 40-leders flatkabel J5 -> Pi
+ {const sh=new THREE.Shape();sh.moveTo(-26,0);sh.lineTo(26,0);sh.lineTo(26,1.2);sh.lineTo(-26,1.2);const path=new THREE.CatmullRomCurve3([new THREE.Vector3(bx(7),BY+10,bz(40)),new THREE.Vector3(bx(7)-8,BY+22,bz(40)+10),new THREE.Vector3(-45,22,30),new THREE.Vector3(-27.5,19.1,19)]);
+  const rb=new THREE.Mesh(new THREE.TubeGeometry(path,40,0.8,6,false),std(0x9aa0a6,0.7));innerPcb.add(rb);
+  for(let i=-2;i<=2;i++){const p2=new THREE.CatmullRomCurve3(path.points.map(v=>v.clone().add(new THREE.Vector3(0,0,i*2))));innerPcb.add(new THREE.Mesh(new THREE.TubeGeometry(p2,40,0.9,6,false),std(0x9aa0a6,0.7)));}}
+ w([[bx(62),BY+2,bz(94)],[-30,16,20],[-49,12,19]],0xc0392b,0.8);w([[bx(67),BY+2,bz(94)],[-32,15,22],[-47,12,47-28+2]],0x222222,0.8);
+ // JST til fronten (knapper, encoder, OLED, LED-ringer)
+ w([[bx(24),BY+2,bz(94)],[-50,10,60],[-20,22,92]],0xffffff,0.5);w([[bx(44),BY+2,bz(94)],[0,10,60],[70,20,92]],0xd9b300,0.5);w([[bx(84),BY+2,bz(94)],[20,12,60],[-30,30,92]],0x3f7fd9,0.5);w([[bx(118),BY+2,bz(94)],[50,10,60],[30,20,92]],0xffffff,0.5);
+ // RJ45- og USB-C-forlengere fra Pi til bakveggen
+ w([[25,14,64],[60,12,0],[44,20,-94]],0x3a3a3c,1.6);w([[-49,10,70],[-60,6,0],[14,20,-94]],0x202020,1);
+}
 
 // ---------- Kamera / interaksjon ----------
 let theta=-0.55,phi=1.15,dist=420,target=new THREE.Vector3(0,24,0);
@@ -158,13 +210,13 @@ c.addEventListener('pointerup',e=>{if(mode==='btn'){const i=downHit.object.userD
  else if(mode==='knob'&&moved<4){S.muted=!S.muted;press(knob,1.5);sync();}
  else if(mode==='orbit'&&moved<4&&downHit){const u=downHit.object.userData;if(u.hit==='mains'){S.power=!S.power;sync();}info.innerHTML='<b>'+u.name+'</b><p>'+u.desc+'</p>';}
  if(downHit&&mode!=='orbit')info.innerHTML='<b>'+downHit.object.userData.name+'</b><p>'+downHit.object.userData.desc+'</p>';mode=null;downHit=null;});
-c.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(150,Math.min(900,dist*(1+e.deltaY*0.001)));},{passive:false});
+c.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(60,Math.min(900,dist*(1+e.deltaY*0.001)));},{passive:false});
 let pinch=null;c.addEventListener('touchmove',e=>{if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(pinch)dist=Math.max(150,Math.min(900,dist*pinch/d));pinch=d;}},{passive:true});
 c.addEventListener('touchend',()=>{pinch=null;});
 
 // ---------- OLED UI (tegnes 1:1 etter designet, 128×64) ----------
 const INPUTS=[{key:'AIR',name:'AirPlay',title:'Midnight City',sub:'M83 · iPhone',len:243},{key:'BT',name:'Bluetooth',title:'Teardrop',sub:'Massive Attack',len:330},{key:'AUX',name:'AUX',title:'Analog inngang',sub:'3,5 mm jack'},{key:'USB',name:'USB',title:'USB-lyd',sub:'PC · 48 kHz'}];
-const S={input:0,vol:42,power:true,open:false,mount:true,playing:true,muted:false,standby:false,bt:'connected',btDev:'iPhone',hold:0,ov:null,pHold:0,boot:0};
+const S={variant:'mod',input:0,vol:42,power:true,open:false,mount:true,playing:true,muted:false,standby:false,bt:'connected',btDev:'iPhone',hold:0,ov:null,pHold:0,boot:0};
 const T0=performance.now()-102000, mmss=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
 function draw(){
   const g=cvs.getContext('2d'); g.setTransform(1,0,0,1,0,0); g.fillStyle='#000'; g.fillRect(0,0,512,256);
@@ -226,7 +278,7 @@ const setLed=(m,on,k=1)=>{m.emissive.set(on?0xffffff:0);m.emissiveIntensity=on?1
 const press=(g,amt)=>{g.position.z-=amt;setTimeout(()=>g.position.z+=amt,160);};
 function sync(){
   draw();knob.rotation.z=-((S.vol/100)*270-135)*Math.PI/180;
-  vipp.rotation.x=S.power?-0.2:0.2;
+  cur().vipp.rotation.x=S.power?-0.2:0.2;
   const sb=S.power&&S.standby;setLed(pwrBtn.led,S.power,sb?0.12:1);symMat.color.set(S.power?(sb?0x3a3a3a:0xffffff):0x1a1a1a);
   const pulse=S.bt==='pairing'?(0.5+0.5*Math.sin(performance.now()/180)):1;
   inBtns.forEach((b,i)=>setLed(b.led,S.power&&!S.standby&&(i===S.input||(i===1&&S.bt==='pairing')),i===1&&S.bt==='pairing'?pulse:1));
@@ -236,9 +288,12 @@ function sync(){
   $('tMains').textContent=S.power?'Hovedbryter på':'Hovedbryter av';$('tMains').classList.toggle('on',S.power);
   $('tLid').textContent=S.open?'Lukk kassen':'Åpne kassen';$('tLid').classList.toggle('on',S.open);
   $('tPlay').textContent=S.playing?'❚❚ Pause':'▶ Spill';$('tPlay').classList.toggle('on',S.playing);
-  ears.visible=S.mount;feet.visible=!S.mount;$('tMount').textContent=S.mount?'Under pult':'Frittstående';$('tMount').classList.toggle('on',S.mount);
+  const sh=shells[S.variant];sh.ears.visible=S.mount;sh.feet.visible=!S.mount;$('tMount').textContent=S.mount?'Under pult':'Frittstående';$('tMount').classList.toggle('on',S.mount);
   $('volv').textContent=S.muted?'MUTE':S.vol;
+  const pcbV=S.variant==='pcb';for(const k in shells){shells[k].g.visible=k===S.variant;rears[k].g.visible=k===S.variant;}inner.visible=!pcbV;innerPcb.visible=pcbV;
+  front.position.z=(shells[S.variant].D-120)/2;$('tVar').textContent=pcbV?'Hovedkort (PCB)':'Modulbygg';$('tVar').classList.toggle('on',pcbV);$('dims').textContent=`200 × ${shells[S.variant].D} × 48 mm · v2`;
 }
+function cur(){return {vipp:rears[S.variant].vipp,lid:shells[S.variant].lid};}
 let ovTimer=null;const showOv=(type,ms)=>{S.ov={type,t0:performance.now()};clearTimeout(ovTimer);if(ms)ovTimer=setTimeout(()=>{S.ov=null;sync();},ms);sync();};
 function btOn(){S.bt='pairing';showOv('pairing');ovTimer=setTimeout(()=>{if(S.bt!=='pairing')return;S.bt='connected';S.input=1;showOv('connected',2200);},6000);}
 function btOff(){S.bt='off';if(S.input===1)S.input=0;showOv('bt_off',2200);}
@@ -260,6 +315,7 @@ const views={vFront:[-0.55,1.15],vBack:[Math.PI-0.5,1.2],vTop:[0,0.2]};let anim=
 function setView(id){for(const k in views)$(k).classList.toggle('on',k===id);anim={t0:performance.now(),a0:[theta,phi],a1:views[id]};}
 for(const k in views)$(k).onclick=()=>setView(k);
 $('tMount').onclick=function(){S.mount=!S.mount;sync();};
+$('tVar').onclick=()=>{S.variant=S.variant==='pcb'?'mod':'pcb';if(S.variant==='pcb'&&!S.open){S.open=true;setView('vTop');}info.innerHTML=S.variant==='pcb'?'<b>Hovedkort-variant</b><p>Kasse 200 × 195 × 48 mm. Alle modulene er erstattet av ett kort (150 × 100 mm) og en Raspberry Pi 4. Kortet vises med nøyaktig KiCad-geometri – klikk komponentene.</p>':'<b>Modulbygg</b><p>Kasse 200 × 120 × 48 mm med ferdige moduler (XH-M562, Pi Zero 2 W, DAC, relé- og MOSFET-kort).</p>';sync();};
 $('tLid').onclick=()=>{S.open=!S.open;if(S.open)setView('vTop');sync();};
 $('tMains').onclick=()=>{S.power=!S.power;sync();};
 $('tStby').onpointerdown=e=>{e.preventDefault();pDown();};$('tStby').onpointerup=pUp;$('tStby').onpointerleave=()=>{if(pStart)pUp();};
@@ -272,7 +328,7 @@ addEventListener('resize',resize);resize();
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function loop(t){requestAnimationFrame(loop);
  if(anim){const k=reduce?1:Math.min(1,(t-anim.t0)/600),e=k<.5?2*k*k:-1+(4-2*k)*k;theta=anim.a0[0]+(anim.a1[0]-anim.a0[0])*e;phi=anim.a0[1]+(anim.a1[1]-anim.a0[1])*e;if(k>=1)anim=null;}
- const k2=reduce?1:0.12;lid.position.y+=((S.open?48+30:48)-lid.position.y)*k2;lid.position.z+=((S.open?-200:0)-lid.position.z)*k2;
+ const k2=reduce?1:0.12;for(const k in shells){const lid=shells[k].lid;lid.position.y+=((S.open?48+30:48)-lid.position.y)*k2;lid.position.z+=((S.open?-(shells[k].D+80):0)-lid.position.z)*k2;}
  if(S.bt==='pairing')sync();
  place();renderer.render(scene,cam);}
 if(document.fonts)document.fonts.ready.then(draw);

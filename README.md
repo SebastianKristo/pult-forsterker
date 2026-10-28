@@ -139,3 +139,8 @@ Renderne i `docs/` bruker disse fargene med noe sterkere lys så antrasitten les
 ## Lisens
 
 MIT – se [LICENSE](LICENSE).
+
+
+## 3D-modell av hovedkortet
+
+`pcb/export_3d.py` bygger `pcb/produksjon/ki_pultforsterker_main.glb` direkte fra KiCad-filen med de offisielle 3D-modellene (kicad-packages3d) og teksturer fra kobber/loddemaske/silketrykk. Samme modell ligger i `3d-visning/board.json` og vises i den interaktive 3D-visningen (knappen «Hovedkort (PCB)»). Lokal visning: `cd 3d-visning && python3 -m http.server`.
