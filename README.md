@@ -44,6 +44,12 @@ Samme programvare og GPIO-skjema, men kassen er 15 mm dypere (200 × 135 × 48) 
 
 ![Pi 4-plan](docs/bilder/guide_04_inni_pi4.png)
 
+## Variant: med hovedkortet (PCB rev A)
+
+Kassen `kabinett/stl/v2_body_pcb.stl` + `v2_lid_pcb.stl` (200 × **195** × 48) har fire M3-stolper for hovedkortet (150 × 100) bak og Pi 4 foran. Bakveggen er lik Pi 4-varianten; panelkontaktene (KCD1, DC-099, RJ45, USB-C, AUX, terminaler) kobles med korte ledninger til kortets skruterminaler og JST-plugger. Bygg: `VARIANT=pcb python3 build_stl.py`.
+
+![PCB-plan](docs/bilder/guide_04_inni_pcb.png)
+
 ## Kom i gang
 
 1. **Deler** – se delelisten i [docs/byggeveiledning.md](docs/byggeveiledning.md) og `docs/KI_Pultforsterker_Bildeveiledning.pdf`.

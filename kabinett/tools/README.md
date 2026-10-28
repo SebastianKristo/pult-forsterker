@@ -4,7 +4,7 @@ Alle skript kjøres fra `kabinett/tools/`. Krever Python 3 med `manifold3d`, `nu
 
 | Skript | Lager | Kjør |
 |---|---|---|
-| `build_stl.py` | `../stl/v2_body.stl`, `v2_frontplate.stl`, `v2_lid.stl`, `v2_lid_frittstaende.stl` fra parametrene i `../scad/pultforsterker_v2.scad` (uten OpenSCAD, via manifold3d). `VARIANT=pi4` gir `*_pi4.stl` (200 × 135, Pi 4-layout) | `python3 build_stl.py` |
+| `build_stl.py` | `../stl/v2_body.stl`, `v2_frontplate.stl`, `v2_lid.stl`, `v2_lid_frittstaende.stl` fra parametrene i `../scad/pultforsterker_v2.scad` (uten OpenSCAD, via manifold3d). `VARIANT=pi4` gir `*_pi4.stl` (200 × 135, Pi 4-layout), `VARIANT=pcb` gir `*_pcb.stl` (200 × 195, hovedkort + Pi 4) | `python3 build_stl.py` |
 | `render_plan_pi4.py` | `guide_04_inni_pi4.png` – plantegning for Pi 4-varianten | `python3 render_plan_pi4.py` |
 | `render_guide.py` | `guide_01_deler.png` – eksplodert 3D-visning av de tre delene | `python3 render_guide.py` (trenger STL-ene i samme mappe) |
 | `render_panels.py` | `guide_02_bak.png`, `guide_03_front.png` – 2D-oppriss med nummererte hull og mål | `python3 render_panels.py` |

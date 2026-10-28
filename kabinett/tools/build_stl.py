@@ -37,6 +37,18 @@ if VARIANT == "pi4":
     kcd1_x, dc_x, rj45_x, usbc_x, aux_x = 86.0, 68.0, 44.0, 14.0, -6.0
     post_x = (-24.0, -39.0, -59.0, -74.0)
     vent_n = 20
+if VARIANT == "pcb":
+    # KI hovedkort rev A (150 x 100) bak + Raspberry Pi 4 foran. Samme bakvegg som Pi 4-varianten.
+    D = 195.0
+    tower_xy = (90.0, 87.0)
+    pi_holes, pi_pos = (58.0, 49.0), (-28.0, -45.0)        # Pi 4 foran, porter mot høyre
+    amp_pos = None                                          # ingen forsterkermodul
+    pcb_holes, pcb_pos = (142.0, 92.0), (0.0, 36.8)         # hovedkortets 4 x M3 (kortets bakkant 8 mm fra bakveggen)
+    kcd1_x, dc_x, rj45_x, usbc_x, aux_x = 86.0, 68.0, 44.0, 14.0, -6.0
+    post_x = (-24.0, -39.0, -59.0, -74.0)
+    vent_n = 28
+else:
+    pcb_holes = pcb_pos = None
 SEG = 64
 
 
@@ -101,8 +113,15 @@ def body():
         for i in range(vent_n):
             m -= cube(wall + 2, vent_w, vent_h, s * (W / 2 - wall / 2) - (wall + 2) / 2,
                       -((vent_n - 1) * vent_gap) / 2 + i * vent_gap, floor_t + 12)
-    for i in range(10):
-        m -= cube(2.4, 50, floor_t + 2, amp_pos[0] - 27 + i * 6, amp_pos[1] - 25, -1)
+    if amp_pos is not None:
+        for i in range(10):
+            m -= cube(2.4, 50, floor_t + 2, amp_pos[0] - 27 + i * 6, amp_pos[1] - 25, -1)
+    if pcb_pos is not None:   # luftespor under hovedkortet (forsterkerdelen) og stolper
+        for i in range(14):
+            m -= cube(2.4, 60, floor_t + 2, pcb_pos[0] + 5 + i * 5, pcb_pos[1] - 30, -1)
+        for x in (-1, 1):
+            for y in (-1, 1):
+                m += (cyl(7, floor_t + 6) - cyl(2.6, floor_t + 7)).translate([pcb_pos[0] + x * pcb_holes[0] / 2, pcb_pos[1] + y * pcb_holes[1] / 2, 0])
     if VARIANT == "pi4":   # luftespor i gulvet under Pi 4
         for i in range(12):
             m -= cube(2.4, 44, floor_t + 2, pi_pos[0] - 33 + i * 6, pi_pos[1] - 22, -1)
@@ -113,7 +132,8 @@ def body():
             m += tower.translate([sx * tower_xy[0], sy * tower_xy[1], 0])
     for x in (-1, 1):
         for y in (-1, 1):
-            m += (cyl(6, floor_t + 5) - cyl(2.6, floor_t + 6)).translate([amp_pos[0] + x * amp_holes[0] / 2, amp_pos[1] + y * amp_holes[1] / 2, 0])
+            if amp_pos is not None:
+                m += (cyl(6, floor_t + 5) - cyl(2.6, floor_t + 6)).translate([amp_pos[0] + x * amp_holes[0] / 2, amp_pos[1] + y * amp_holes[1] / 2, 0])
             m += (cyl(5.5, floor_t + 4) - cyl(2.2, floor_t + 5)).translate([pi_pos[0] + x * pi_holes[0] / 2, pi_pos[1] + y * pi_holes[1] / 2, 0])
     return m
 
@@ -176,7 +196,7 @@ def write_stl(man, path):
 
 if __name__ == "__main__":
     here = os.path.dirname(os.path.abspath(__file__))
-    sfx = "" if VARIANT == "zero" else "_pi4"
+    sfx = {"zero": "", "pi4": "_pi4", "pcb": "_pcb"}[VARIANT]
     write_stl(body(), os.path.join(here, f"v2_body{sfx}.stl"))
     if VARIANT == "zero":
         write_stl(frontplate(), os.path.join(here, "v2_frontplate.stl"))   # frontplaten er lik for begge
