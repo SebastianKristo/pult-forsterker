@@ -45,14 +45,24 @@ DSP_CAPTURE = os.environ.get("KI_AMP_DSP_CAPTURE", "hw:Loopback,1")
 DSP_PLAYBACK = os.environ.get("KI_AMP_DSP_PLAYBACK", "hw:sndrpihifiberry")
 
 # ---------- GPIO (BCM) ----------
-PIN_RELAY_AMP = 27      # relé: 24 V til forsterkerkortet
-PIN_RELAY_AUX = 22      # relé 1+2: lav = DAC, høy = AUX
-PIN_X9C_INC, PIN_X9C_UD, PIN_X9C_CS = 26, 14, 15   # serial console må være av
+# KI_AMP_BOARD=modules : modulbygget (XH-M562, X9C103S, relékort) – standard
+# KI_AMP_BOARD=main    : KI Pultforsterker hovedkort rev A (PGA2311 på SPI0, TPA3116 SDZ, relé på kortet)
+BOARD = os.environ.get("KI_AMP_BOARD", "modules")
+PIN_RELAY_AMP = 27      # modules: relé 3 (24 V til forsterker)   main: TPA3116 SDZ (høy = på)
+PIN_RELAY_AUX = 22      # relé: lav = DAC, høy = AUX (begge)
+PIN_X9C_INC, PIN_X9C_UD, PIN_X9C_CS = 26, 14, 15   # modules (serial console må være av)
 ENC = (23, 24, 25)      # CLK, DT, SW
-BTN = {"airplay": 5, "bt": 6, "aux": 12, "usb": 13}
+if BOARD == "main":
+    BTN = {"airplay": 5, "bt": 6, "aux": 14, "usb": 15}
+    LED = {"airplay": 7, "bt": 9, "aux": 17, "usb": 20}
+    LED_POWER = 12      # PWM0
+    PIN_DAC_XSMT = 26
+else:
+    BTN = {"airplay": 5, "bt": 6, "aux": 12, "usb": 13}
+    LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
+    LED_POWER = 11      # PWM
+    PIN_DAC_XSMT = None
 BTN_POWER = 16
-LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
-LED_POWER = 11          # PWM
 
 INPUTS = ["airplay", "bt", "aux", "usb"]
 state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False,
@@ -64,11 +74,18 @@ _pairing_until = 0.0
 try:
     from gpiozero import Button, DigitalOutputDevice, OutputDevice, PWMLED, RotaryEncoder, LED as GLED
     HW = True
-    relay_amp = OutputDevice(PIN_RELAY_AMP, active_high=not RELAY_ACTIVE_LOW, initial_value=True)
-    relay_aux = OutputDevice(PIN_RELAY_AUX, active_high=not RELAY_ACTIVE_LOW, initial_value=False)
-    x_inc = DigitalOutputDevice(PIN_X9C_INC, initial_value=True)
-    x_ud = DigitalOutputDevice(PIN_X9C_UD, initial_value=False)
-    x_cs = DigitalOutputDevice(PIN_X9C_CS, initial_value=True)
+    if BOARD == "main":
+        relay_amp = OutputDevice(PIN_RELAY_AMP, active_high=True, initial_value=True)      # SDZ: høy = forsterker på
+        relay_aux = OutputDevice(PIN_RELAY_AUX, active_high=True, initial_value=False)     # MOSFET -> relé: høy = AUX
+        dac_xsmt = OutputDevice(PIN_DAC_XSMT, active_high=True, initial_value=True)
+        import spidev
+        pga = spidev.SpiDev(); pga.open(0, 0); pga.max_speed_hz = 1000000; pga.mode = 0
+    else:
+        relay_amp = OutputDevice(PIN_RELAY_AMP, active_high=not RELAY_ACTIVE_LOW, initial_value=True)
+        relay_aux = OutputDevice(PIN_RELAY_AUX, active_high=not RELAY_ACTIVE_LOW, initial_value=False)
+        x_inc = DigitalOutputDevice(PIN_X9C_INC, initial_value=True)
+        x_ud = DigitalOutputDevice(PIN_X9C_UD, initial_value=False)
+        x_cs = DigitalOutputDevice(PIN_X9C_CS, initial_value=True)
     leds = {k: GLED(v) for k, v in LED.items()}
     led_power = PWMLED(LED_POWER, frequency=400)
 except Exception as e:
@@ -87,9 +104,27 @@ def x9c_step(n):
     x_cs.on()
 
 
+def vol_db(v):
+    return -80.0 if v <= 0 else max(-60.0, 40.0 * math.log10(v / 100.0))
+
+
+def pga_write(gain_code):
+    """PGA2311: 16 bit (høyre, venstre). 0 = mute, 255 = +31,5 dB; 192 = 0 dB; 0,5 dB per trinn."""
+    if HW and BOARD == "main":
+        pga.xfer2([gain_code & 0xFF, gain_code & 0xFF])
+
+
 def apply_volume():
-    """AUX: volum i X9C (analogt). AirPlay/BT/USB: X9C fast på MAX_TAP, volum + loudness digitalt i CamillaDSP."""
+    """AUX: analogt volum (X9C på modulbygget, PGA2311 på hovedkortet). AirPlay/BT/USB: analogt på fast nivå, volum + loudness i CamillaDSP."""
     global _x9c_pos
+    if BOARD == "main":
+        if state["mute"] or not state["power"]:
+            pga_write(0)
+        elif state["input"] == "aux":
+            pga_write(0 if state["volume"] <= 0 else max(1, min(192, round(192 + 2 * vol_db(state["volume"])))))   # 0 dB ved 100 %
+        else:
+            pga_write(192 - 2 * round((99 - MAX_TAP) / 99 * 12))   # MAX_TAP 85 -> ca. -1,7 dB
+        dsp.update(); return
     if state["mute"] or not state["power"]:
         target = 0
     elif state["input"] == "aux":
@@ -103,10 +138,6 @@ def apply_volume():
 
 
 # ---------- CamillaDSP (loudness + digitalt volum) ----------
-def vol_db(v):
-    return -80.0 if v <= 0 else max(-60.0, 40.0 * math.log10(v / 100.0))
-
-
 def dsp_config():
     lvl = state["loudness_level"] if state["loudness"] else 0
     return f"""devices:

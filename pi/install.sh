@@ -10,7 +10,7 @@ sudo apt-get update && sudo apt-get -y full-upgrade
 echo "== 2/9  config.txt: I2S-DAC, I2C, USB-gadget (dwc2), serial console av"
 CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
 sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
-for line in 'dtoverlay=hifiberry-dac' 'dtparam=i2c_arm=on' 'dtoverlay=dwc2,dr_mode=peripheral' 'enable_uart=0'; do
+for line in 'dtoverlay=hifiberry-dac' 'dtparam=i2c_arm=on' 'dtparam=spi=on' 'dtoverlay=dwc2,dr_mode=peripheral' 'enable_uart=0'; do
   grep -qxF "$line" "$CFG" || echo "$line" | sudo tee -a "$CFG"
 done
 sudo sed -i 's/ console=serial0,115200//' /boot/firmware/cmdline.txt 2>/dev/null || true
@@ -24,7 +24,7 @@ sudo apt-get -y install --no-install-recommends \
   libssl-dev libsoxr-dev libplist-dev libsodium-dev libavutil-dev libavcodec-dev \
   libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils \
   bluez bluez-alsa-utils python3-dbus \
-  python3-pip python3-pil python3-smbus i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket curl
+  python3-pip python3-pil python3-smbus i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl
 
 echo "== 4/9  ALSA dmix → loopback → CamillaDSP (loudness + digitalt volum) → DAC"
 sudo install -m 644 "$SRC/asound.conf" /etc/asound.conf
