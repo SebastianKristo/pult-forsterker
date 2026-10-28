@@ -370,12 +370,17 @@ def changed():
     write_ctrl(); save_state()
 
 
-def read_status():
+def read_raw():
+    """AirPlay/Bluetooth-metadata fra oled_display.py, uavhengig av valgt kilde."""
     try:
         with open(STATUS_FILE) as fh:
-            st = json.load(fh)
+            return json.load(fh)
     except Exception:
-        st = {}
+        return {}
+
+
+def read_status():
+    st = read_raw()
     if state["input"] == "radio":   # metadata fra Lyrion
         r = lyr.info
         st = {"playing": r.get("mode") == "play", "paused": r.get("mode") == "pause", "source": "radio",
@@ -634,7 +639,7 @@ def follow_source():
     while True:
         time.sleep(1)
         try:
-            st = read_status()
+            st = read_raw()          # rå AirPlay/BT-status – også når Radio er valgt
             dev = st.get("bt_device", "")
             if last_dev is not None and dev != last_dev and state["power"]:
                 if dev:
