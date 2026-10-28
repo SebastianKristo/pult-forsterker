@@ -1,5 +1,8 @@
 # KI Pultforsterker
 
+
+**Start her: [docs/TOTALINSTRUKS.md](docs/TOTALINSTRUKS.md)** – alt fra SD-kort til Home Assistant/Homey, med alle kommandoer.
+
 DIY stereoforsterker (2 × 50 W) som henger under pulten. AirPlay 2, Bluetooth, AUX og USB-lyd fra PC/Mac, OLED-skjerm, fem LED-knapper og volumknott. Styres også fra **Home Assistant** og **Homey**.
 
 ![Front](docs/bilder/render_front.png)

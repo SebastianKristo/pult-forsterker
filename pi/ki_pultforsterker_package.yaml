@@ -1,6 +1,6 @@
 # KI Pultforsterker – Home Assistant package
-# Legges i packages/ki_pultforsterker.yaml. Entitetene switch/sensor kommer fra MQTT Discovery
-# (ki_amp_mqtt.py på Pi-en); AirPlay-avspilling kommer fra Apple TV-integrasjonen som
+# Legges i packages/ki_pultforsterker.yaml. Entitetene kommer fra custom_components/ki_pultforsterker
+# (HTTP-API på Pi-en, port 8765); AirPlay-avspilling kan i tillegg komme fra Apple TV-integrasjonen som
 # oppdager «Pultforsterker» automatisk (media_player.pultforsterker).
 
 input_boolean:
