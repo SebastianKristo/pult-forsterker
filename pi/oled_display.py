@@ -33,8 +33,8 @@ FONT_B = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_R = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 F = lambda p, s: ImageFont.truetype(p, s)
 f_tag, f_title, f_sub, f_small, f_vol, f_num = F(FONT_B, 7), F(FONT_B, 11), F(FONT_R, 8), F(FONT_R, 7), F(FONT_B, 7), F(FONT_B, 12)
-LABELS = {"airplay": "AIR", "bt": "BT", "aux": "AUX", "usb": "USB"}
-SRC_TEXT = {"aux": ("Analog inngang", "3,5 mm jack"), "usb": ("USB-lyd", "PC"), "airplay": ("AirPlay", "Venter på enhet …"), "bt": ("Bluetooth", "")}
+LABELS = {"radio": "RAD", "airplay": "AIR", "bt": "BT", "aux": "AUX", "usb": "USB"}
+SRC_TEXT = {"radio": ("Radio", "Velg kanal 1–6"), "aux": ("Analog inngang", "3,5 mm jack"), "usb": ("USB-lyd", "PC"), "airplay": ("AirPlay", "Venter på enhet …"), "bt": ("Bluetooth", "")}
 
 try:
     device = ssd1309(i2c(port=1, address=0x3C), gpio_RST=4)
@@ -80,6 +80,8 @@ def airplay_thread():
                                 with open(COVER_FILE + ".tmp", "wb") as fh: fh.write(img)
                                 os.replace(COVER_FILE + ".tmp", COVER_FILE)
                                 import hashlib; track["cover"] = hashlib.sha1(img).hexdigest()[:12]
+                                track["cover_key"] = (track["artist"], track["title"])
+                                print("Albumbilde fra AirPlay", len(img), "byte", flush=True)
                             else:
                                 track["cover"] = ""
                         except Exception: pass
@@ -98,6 +100,42 @@ def airplay_thread():
                     buf = buf[buf.rfind("</item>") + 7:]
                 elif len(buf) > 4_000_000:   # albumbilder kan være store – kast bare ved åpenbart søppel
                     buf = ""
+
+
+# ---------- albumbilde: AirPlay sender det selv (PICT); ellers (Bluetooth, AirPlay uten bilde) slås det opp i iTunes ----------
+def art_thread():
+    import hashlib
+    import urllib.parse
+    import urllib.request
+    last, since, tried = None, 0.0, set()
+    while True:
+        time.sleep(1)
+        key = (track["artist"], track["title"]) if track["title"] else None
+        if key != last:
+            last, since = key, time.time()
+            if track.get("cover_key") != key:
+                track["cover"] = ""          # ikke vis forrige låts bilde
+            continue
+        if not key or track.get("cover_key") == key or key in tried or time.time() - since < 3:
+            continue
+        tried.add(key)
+        try:
+            q = urllib.parse.urlencode({"term": f"{key[0]} {key[1]}".strip(), "entity": "song", "limit": 1, "country": "NO"})
+            with urllib.request.urlopen("https://itunes.apple.com/search?" + q, timeout=6) as r:
+                res = json.loads(r.read()).get("results", [])
+            if not res:
+                print("Albumbilde: ingen treff for", key, flush=True); continue
+            url = res[0].get("artworkUrl100", "").replace("100x100bb", "600x600bb")
+            with urllib.request.urlopen(url, timeout=6) as r:
+                img = r.read()
+            if (track["artist"], track["title"]) != key:
+                continue
+            with open(COVER_FILE + ".tmp", "wb") as fh: fh.write(img)
+            os.replace(COVER_FILE + ".tmp", COVER_FILE)
+            track["cover"] = hashlib.sha1(img).hexdigest()[:12]; track["cover_key"] = key
+            print("Albumbilde fra iTunes:", key, flush=True)
+        except Exception as e:
+            print("Albumbilde:", e, flush=True)
 
 
 # ---------- Bluetooth-metadata (BlueZ MediaPlayer1) ----------
@@ -126,7 +164,7 @@ def bt_thread():
                 status = str(mp.get("Status", ""))
                 playing = status == "playing"
                 if playing or track["source"] == "bt":
-                    track.update(source="bt", cover="", playing=playing, paused=status == "paused", title=str(tr.get("Title", "")), artist=str(tr.get("Artist", "")), album=str(tr.get("Album", "")),
+                    track.update(source="bt", playing=playing, paused=status == "paused", title=str(tr.get("Title", "")), artist=str(tr.get("Artist", "")), album=str(tr.get("Album", "")),
                                  duration=int(tr.get("Duration", 0)) / 1000, position=int(mp.get("Position", 0)) / 1000, pos_t=time.time())
                 track["bt_device"] = str(dev.get("Alias", "")) if dev else track["bt_device"]
             if not found:
@@ -182,22 +220,29 @@ def draw_main(draw, c):
     inp = c.get("input", "airplay"); bt_on = c.get("bt_on", True) or c.get("bt_pairing")
     # inngangsfelter
     x = 2
-    for k in ("airplay", "bt", "aux", "usb"):
-        w = draw.textlength(LABELS[k], font=f_tag) + 7
+    keys = ("radio", "airplay", "bt", "aux", "usb") if c.get("lyrion") or inp == "radio" else ("airplay", "bt", "aux", "usb")
+    pad = 5 if len(keys) == 5 else 7
+    for k in keys:
+        w = draw.textlength(LABELS[k], font=f_tag) + pad
         if k == inp:
-            draw.rectangle((x, 1, x + w, 10), fill=255); draw.text((x + 3.5, 1), LABELS[k], font=f_tag, fill=0)
+            draw.rectangle((x, 1, x + w, 10), fill=255); draw.text((x + pad / 2, 1), LABELS[k], font=f_tag, fill=0)
         else:
             if k == "bt" and not bt_on:
                 for xx in range(int(x), int(x + w), 3): draw.point((xx, 1), 255); draw.point((xx, 10), 255)
             else:
                 draw.rectangle((x, 1, x + w, 10), outline=255)
-            dim_text(draw, (x + 3.5, 1), LABELS[k], f_tag)
+            dim_text(draw, (x + pad / 2, 1), LABELS[k], f_tag)
         if k == "bt" and track["bt_device"] and inp != "bt":
             draw.rectangle((x + w - 3, 2, x + w - 2, 3), fill=255)
         x += w + 2.5
     # tittel + undertekst
     has_meta = inp in ("airplay", "bt") and track["playing"] and track["title"]
     title, sub = (track["title"], track["artist"]) if has_meta else SRC_TEXT.get(inp, ("", ""))
+    if inp == "radio":
+        r = c.get("radio") or {}
+        if r.get("station"):
+            title = r["station"]
+            sub = " – ".join(x for x in (r.get("artist"), r.get("song")) if x) or (f"Kanal {c['preset']}" if c.get("preset") else "Radio")
     if inp == "bt" and not has_meta:
         sub = track["bt_device"] or "Ingen enhet tilkoblet"
     tw = draw.textlength(title, font=f_title)
@@ -209,7 +254,19 @@ def draw_main(draw, c):
     draw.rectangle((0, 11, 127, 13), fill=0); draw.rectangle((0, 28, 127, 29), fill=0)
     dim_text(draw, (2, 29), sub, f_sub)
     # rad 3
-    if inp in ("airplay", "bt"):
+    if inp == "radio" and (c.get("radio") or {}).get("station"):
+        playing = (c.get("radio") or {}).get("mode") == "play"
+        if playing:
+            draw.polygon([(2, 37.5), (7, 40.5), (2, 43.5)], fill=255)
+        else:
+            draw.rectangle((2, 37.5, 3.8, 43.5), fill=255); draw.rectangle((5, 37.5, 6.8, 43.5), fill=255)
+        x = 14
+        for i in range(6):   # kanal 1–6, aktiv fylt
+            on = c.get("preset") == i + 1
+            draw.rectangle((x, 37, x + 12, 44), fill=255 if on else 0, outline=255)
+            draw.text((x + 4, 36.5), str(i + 1), font=f_small, fill=0 if on else 255)
+            x += 15
+    elif inp in ("airplay", "bt"):
         if track["playing"]:
             draw.polygon([(2, 37.5), (7, 40.5), (2, 43.5)], fill=255)
         else:
@@ -268,6 +325,7 @@ def main():
     global boot_until
     threading.Thread(target=airplay_thread, daemon=True).start()
     threading.Thread(target=bt_thread, daemon=True).start()
+    threading.Thread(target=art_thread, daemon=True).start()
     was_on = True
     while True:
         c = read_ctrl()

@@ -211,6 +211,20 @@ journalctl -u ki-squeezelite -n 20   # «connected to <MA-IP>»
 
 ---
 
+## 7c. Radio med Lyrion
+
+```bash
+sudo sed -i 's/^KI_AMP_LMS_SERVER=.*/KI_AMP_LMS_SERVER=10.69.1.x/' /etc/ki-amp.env   # IP til Lyrion
+sudo systemctl restart ki-squeezelite ki-amp
+curl -s localhost:8765/api/presets; echo                 # kanal 1–6 (fra Lyrion-favorittene)
+curl -s -X POST localhost:8765/api/preset -d '{"n":1}'; echo   # spill kanal 1
+curl -s -X POST localhost:8765/api/preset -d '{"n":4,"save":true}'; echo   # lagre det som spiller som kanal 4
+```
+
+Se `homeassistant/README.md` → Radio (Lyrion) for HA og Homey.
+
+---
+
 ## 8. Homey
 
 ```bash

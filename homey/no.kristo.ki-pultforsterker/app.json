@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -48,6 +48,7 @@
         "speaker_duration",
         "speaker_album",
         "ki_input",
+        "ki_preset",
         "ki_loudness",
         "ki_loudness_level",
         "ki_voice"
@@ -155,6 +156,13 @@
       "icon": "/assets/icon.svg",
       "values": [
         {
+          "id": "radio",
+          "title": {
+            "en": "Radio",
+            "no": "Radio"
+          }
+        },
+        {
           "id": "airplay",
           "title": {
             "en": "AirPlay",
@@ -221,6 +229,61 @@
       "setable": true,
       "uiComponent": "toggle",
       "icon": "/assets/icon.svg"
+    },
+    "ki_preset": {
+      "type": "enum",
+      "title": {
+        "en": "Radio station",
+        "no": "Radiokanal"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "icon": "/assets/icon.svg",
+      "values": [
+        {
+          "id": "1",
+          "title": {
+            "en": "Station 1",
+            "no": "Kanal 1"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "Station 2",
+            "no": "Kanal 2"
+          }
+        },
+        {
+          "id": "3",
+          "title": {
+            "en": "Station 3",
+            "no": "Kanal 3"
+          }
+        },
+        {
+          "id": "4",
+          "title": {
+            "en": "Station 4",
+            "no": "Kanal 4"
+          }
+        },
+        {
+          "id": "5",
+          "title": {
+            "en": "Station 5",
+            "no": "Kanal 5"
+          }
+        },
+        {
+          "id": "6",
+          "title": {
+            "en": "Station 6",
+            "no": "Kanal 6"
+          }
+        }
+      ]
     }
   },
   "flow": {
@@ -352,6 +415,13 @@
             "name": "input",
             "values": [
               {
+                "id": "radio",
+                "label": {
+                  "en": "Radio",
+                  "no": "Radio"
+                }
+              },
+              {
                 "id": "airplay",
                 "label": {
                   "en": "AirPlay",
@@ -431,6 +501,13 @@
             "type": "dropdown",
             "name": "input",
             "values": [
+              {
+                "id": "radio",
+                "label": {
+                  "en": "Radio",
+                  "no": "Radio"
+                }
+              },
               {
                 "id": "airplay",
                 "label": {
@@ -607,6 +684,114 @@
                 "label": {
                   "en": "Stop",
                   "no": "Stopp"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ki_play_preset",
+        "title": {
+          "en": "Play radio station",
+          "no": "Spill radiokanal"
+        },
+        "titleFormatted": {
+          "en": "Play radio station [[preset]]",
+          "no": "Spill radiokanal [[preset]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "preset",
+            "title": {
+              "en": "Station",
+              "no": "Kanal"
+            },
+            "placeholder": {
+              "en": "NRK P1",
+              "no": "NRK P1"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_save_preset",
+        "title": {
+          "en": "Save current radio station",
+          "no": "Lagre radiokanalen som spiller"
+        },
+        "titleFormatted": {
+          "en": "Save current station as [[n]]",
+          "no": "Lagre kanalen som spiller som [[n]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "n",
+            "title": {
+              "en": "Number",
+              "no": "Plass"
+            },
+            "values": [
+              {
+                "id": "1",
+                "label": {
+                  "en": "1",
+                  "no": "1"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "2",
+                  "no": "2"
+                }
+              },
+              {
+                "id": "3",
+                "label": {
+                  "en": "3",
+                  "no": "3"
+                }
+              },
+              {
+                "id": "4",
+                "label": {
+                  "en": "4",
+                  "no": "4"
+                }
+              },
+              {
+                "id": "5",
+                "label": {
+                  "en": "5",
+                  "no": "5"
+                }
+              },
+              {
+                "id": "6",
+                "label": {
+                  "en": "6",
+                  "no": "6"
                 }
               }
             ]

@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 from .entity import KiAmpEntity
 
-SOURCES = {"airplay": "AirPlay", "bt": "Bluetooth", "aux": "AUX", "usb": "USB"}
+SOURCES = {"radio": "Radio", "airplay": "AirPlay", "bt": "Bluetooth", "aux": "AUX", "usb": "USB"}
 SOURCES_REV = {v: k for k, v in SOURCES.items()}
 
 
@@ -45,8 +45,8 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
         # avspillingskontroll bare for AirPlay og Bluetooth (AUX/USB styres fra kilden)
-        if self.d.get("input") in ("airplay", "bt"):
-            return self._attr_supported_features | self._TRANSPORT
+        if self.d.get("input") in ("airplay", "bt", "radio"):
+            return self._attr_supported_features | self._TRANSPORT | MediaPlayerEntityFeature.PLAY_MEDIA
         return self._attr_supported_features
 
     @property
@@ -57,7 +57,7 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
     def state(self) -> MediaPlayerState:
         if not self.d.get("power"):
             return MediaPlayerState.OFF
-        if self.d.get("input") in ("airplay", "bt"):
+        if self.d.get("input") in ("airplay", "bt", "radio"):
             if self.d.get("playing"):
                 return MediaPlayerState.PLAYING
             return MediaPlayerState.PAUSED if self.d.get("paused") else MediaPlayerState.IDLE
@@ -164,3 +164,12 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
 
     async def async_media_previous_track(self) -> None:
         await self._transport("previous")
+
+    @property
+    def media_channel(self) -> str | None:
+        return self.d.get("station") or None if self.d.get("input") == "radio" else None
+
+    async def async_play_media(self, media_type: str, media_id: str, **kwargs) -> None:
+        """media_player.play_media med media_content_type «preset» (eller «channel») og id 1–6."""
+        n = int(str(media_id).strip())
+        self.coordinator.async_set_updated_data(await self.coordinator.api.play_preset(n))

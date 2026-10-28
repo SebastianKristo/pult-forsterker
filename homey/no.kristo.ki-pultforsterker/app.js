@@ -19,6 +19,13 @@ class KiPultforsterkerApp extends Homey.App {
       .registerRunListener(async ({ device, input }) => device.setInput(input));
     this.homey.flow.getActionCard('ki_transport')
       .registerRunListener(async ({ device, action }) => device.transport(action));
+    const play = this.homey.flow.getActionCard('ki_play_preset');
+    play.registerRunListener(async ({ device, preset }) => device.playPreset(Number(preset.id)));
+    play.registerArgumentAutocompleteListener('preset', async (query, { device }) => device.presetList()
+      .map((p) => ({ id: String(p.n), name: `${p.n}. ${p.title}` }))
+      .filter((r) => r.name.toLowerCase().includes((query || '').toLowerCase())));
+    this.homey.flow.getActionCard('ki_save_preset')
+      .registerRunListener(async ({ device, n }) => device.savePreset(Number(n)));
     this.homey.flow.getActionCard('ki_set_loudness')
       .registerRunListener(async ({ device, on, level }) => device.setLoudness(on === 'on', level));
   }

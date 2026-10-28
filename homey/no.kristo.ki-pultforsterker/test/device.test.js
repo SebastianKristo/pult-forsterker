@@ -7,7 +7,7 @@ const Homey = require('homey');
 const Device = require('../drivers/pultforsterker/device');
 const App = require('../app');
 
-const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'ki_voice', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
+const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'ki_voice', 'ki_preset', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
 let daemon, port;
 before(async () => { daemon = createMockDaemon(); port = await daemon.start(); });
 after(async () => { await daemon.stop(); });
@@ -16,7 +16,7 @@ function makeDevice(homey) {
   const d = new Device({ homey, settings: { host: '127.0.0.1', port }, capabilities: CAPS });
   return d;
 }
-beforeEach(() => { Object.assign(daemon.state, { power: true, input: 'airplay', volume: 30, mute: false, loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', voice: true, title: '', artist: '' }); daemon.calls.length = 0; });
+beforeEach(() => { Object.assign(daemon.state, { power: true, input: 'airplay', volume: 30, mute: false, loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', voice: true, preset: 0, title: '', artist: '' }); daemon.calls.length = 0; });
 
 test('onInit henter status og setter capabilities', async () => {
   const d = makeDevice(); await d.onInit(); d.onDeleted();
@@ -139,4 +139,17 @@ test('vises som høyttaler med album, varighet og posisjon', async () => {
   assert.equal(d.getCapabilityValue('speaker_album'), 'Hurry Up, We\'re Dreaming');
   assert.equal(d.getCapabilityValue('speaker_duration'), 243);
   assert.equal(d.getCapabilityValue('speaker_position'), 62);
+});
+
+test('radio: kanal fra picker og flytkort med autocomplete, lagre kanal', async () => {
+  const homey = new Homey.HomeyCtx(); const app = new App({ homey }); await app.onInit();
+  const d = makeDevice(homey); await d.onInit(); d.onDeleted();
+  await d.triggerCapability('ki_preset', '2');
+  assert.deepEqual(daemon.calls.at(-1).body, { n: 2 }); assert.equal(d.getCapabilityValue('ki_input'), 'radio'); assert.equal(d.getCapabilityValue('ki_preset'), '2');
+  const ac = await homey.flow.cards.ki_play_preset.autocomplete('p1', { device: d });
+  assert.deepEqual(ac, [{ id: '1', name: '1. NRK P1' }]);
+  await homey.flow.cards.ki_play_preset.run({ device: d, preset: { id: '1' } }); assert.equal(daemon.state.preset, 1);
+  await assert.rejects(d.playPreset(4), /ikke lagret/);
+  daemon.state.title = 'P13'; await homey.flow.cards.ki_save_preset.run({ device: d, n: '4' });
+  assert.equal(daemon.state.presets[3].title, 'P13');
 });

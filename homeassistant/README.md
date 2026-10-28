@@ -28,3 +28,19 @@ Pi-en kjører **Squeezelite** (`ki-squeezelite.service`), så forsterkeren dukke
 Alternativt finner MAs **AirPlay**-leverandør forsterkeren direkte (Shairport Sync), men Squeezelite er stabilere for MA.
 
 Finner ikke MA spilleren automatisk (annet VLAN): sett `KI_AMP_MA_SERVER=<ip til MA>` i `/etc/ki-amp.env` og `sudo systemctl restart ki-squeezelite`.
+
+## Radio (Lyrion)
+
+Har du Lyrion Music Server, blir forsterkeren en radiospiller:
+
+1. Sett `KI_AMP_LMS_SERVER=<IP til Lyrion>` i `/etc/ki-amp.env` (tom = finn automatisk) og `sudo systemctl restart ki-squeezelite ki-amp`. Spilleren «Pultforsterker» dukker opp i Lyrion.
+2. Kanal 1–6 hentes automatisk fra de seks første radiofavorittene i Lyrion første gang. Lagre en ny kanal: spill den i Lyrion og bruk «Lagre kanal» (API `{"n":3,"save":true}`, Homey-flytkort, eller hold favorittknappen 2 s på Radio Retro).
+3. I HA: kilden **Radio** på mediespilleren, `select.pultforsterker_radiokanal`, knappene **Radio 1–6** (navnet følger stasjonen), og `media_player.play_media` med `media_content_type: preset`, `media_content_id: "3"`.
+4. Stasjonsbildet (eller albumbildet når stasjonen sender låtinfo) vises som bilde på mediespilleren. ◀◀/▶▶ bytter kanal.
+
+```yaml
+# eksempel: KI Morgenradio
+action: media_player.play_media
+target: { entity_id: media_player.pultforsterker }
+data: { media_content_type: preset, media_content_id: "1" }
+```

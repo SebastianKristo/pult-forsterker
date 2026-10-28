@@ -5,6 +5,7 @@ const EventEmitter = require('events');
 class Card {
   constructor(id) { this.id = id; this.triggered = []; this.listener = null; }
   registerRunListener(fn) { this.listener = fn; return this; }
+  registerArgumentAutocompleteListener(arg, fn) { this.autocomplete = fn; return this; }
   async trigger(device, tokens) { this.triggered.push({ device, tokens }); }
   async run(args) { return this.listener(args); }
 }

@@ -4,7 +4,7 @@ const http = require('http');
 
 function createMockDaemon({ port = 0 } = {}) {
   const state = { power: true, input: 'airplay', volume: 30, mute: false, bt_pairing: false,
-    loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', voice: true, title: '', artist: '' };
+    loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', voice: true, preset: 0, presets: [{ n: 1, title: 'NRK P1' }, { n: 2, title: 'NRK P3' }, { n: 3, title: '' }, { n: 4, title: '' }, { n: 5, title: '' }, { n: 6, title: '' }], title: '', artist: '' };
   const calls = [];
   const server = http.createServer((req, res) => {
     let buf = '';
@@ -32,6 +32,12 @@ function createMockDaemon({ port = 0 } = {}) {
         else if (a === 'playpause') { state.playing = !state.playing; state.paused = !state.playing; }
         else if (a === 'stop') { state.playing = false; state.paused = false; }
         else { state.title = a === 'next' ? 'Neste låt' : 'Forrige låt'; state.playing = true; }
+      }
+      else if (p === '/api/preset') {
+        const t = (state.presets[body.n - 1] || {}).title;
+        if (!t && !body.save) { res.writeHead(409, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: `radiokanal ${body.n} er ikke lagret` })); }
+        if (body.save) state.presets[body.n - 1].title = state.title || 'Lagret';
+        state.input = 'radio'; state.preset = body.n; state.playing = true; state.title = state.presets[body.n - 1].title;
       }
       else if (p === '/api/voice') { if (body.on !== undefined) state.voice = !!body.on; }
       else if (p === '/api/bt') state.bt_pairing = !!body.pairing;

@@ -20,7 +20,7 @@ class KiAmpEntity(CoordinatorEntity[KiAmpCoordinator]):
             identifiers={(DOMAIN, uid)},
             name="Pultforsterker",
             manufacturer="Sebastian / KI",
-            model="TPA3116D2 + Pi Zero 2 W",
+            model="Raspberry Pi + CamillaDSP",
             sw_version=coordinator.data.get("version"),
             configuration_url=f"http://{coordinator.entry.data['host']}:{coordinator.entry.data['port']}/api/status",
         )

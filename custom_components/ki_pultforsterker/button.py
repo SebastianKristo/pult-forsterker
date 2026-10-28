@@ -11,7 +11,8 @@ from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
-    add([KiAmpPairButton(hass.data[DOMAIN][entry.entry_id])])
+    c = hass.data[DOMAIN][entry.entry_id]
+    add([KiAmpPairButton(c)] + [KiAmpPresetButton(c, n) for n in range(1, 7)])
 
 
 class KiAmpPairButton(KiAmpEntity, ButtonEntity):
@@ -23,3 +24,26 @@ class KiAmpPairButton(KiAmpEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_bt_pairing(True))
+
+
+class KiAmpPresetButton(KiAmpEntity, ButtonEntity):
+    """Radiokanal 1–6 – navnet følger stasjonen som er lagret på plassen."""
+    _attr_icon = "mdi:radio"
+
+    def __init__(self, c, n: int) -> None:
+        super().__init__(c, f"preset_{n}")
+        self._n = n
+
+    @property
+    def name(self) -> str:
+        presets = self.coordinator.data.get("presets") or []
+        title = presets[self._n - 1].get("title") if len(presets) >= self._n else ""
+        return f"Radio {self._n}" + (f": {title}" if title else "")
+
+    @property
+    def available(self) -> bool:
+        presets = self.coordinator.data.get("presets") or []
+        return super().available and len(presets) >= self._n and bool(presets[self._n - 1].get("title"))
+
+    async def async_press(self) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.play_preset(self._n))
