@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -51,7 +51,8 @@
         "ki_preset",
         "ki_loudness",
         "ki_loudness_level",
-        "ki_voice"
+        "ki_voice",
+        "ki_auto_input"
       ],
       "capabilitiesOptions": {
         "speaker_playing": {
@@ -284,6 +285,17 @@
           }
         }
       ]
+    },
+    "ki_auto_input": {
+      "type": "boolean",
+      "title": {
+        "en": "Automatic source switching",
+        "no": "Automatisk kildebytte"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "/assets/icon.svg"
     }
   },
   "flow": {

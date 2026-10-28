@@ -8,7 +8,7 @@ const POLL_MS = 5000;
 class PultforsterkerDevice extends Homey.Device {
   async onInit() {
     if (this.getClass() !== 'speaker') await this.setClass('speaker').catch(this.error);   // gir «spiller nå»-visning med albumbilde
-    for (const cap of ['speaker_prev', 'speaker_next', 'speaker_album', 'speaker_duration', 'speaker_position', 'ki_voice', 'ki_preset']) {   // eldre enheter: legg til nye capabilities
+    for (const cap of ['speaker_prev', 'speaker_next', 'speaker_album', 'speaker_duration', 'speaker_position', 'ki_voice', 'ki_preset', 'ki_auto_input']) {   // eldre enheter: legg til nye capabilities
       if (!this.hasCapability(cap)) await this.addCapability(cap).catch(this.error);
     }
     this.registerCapabilityListener('onoff', (on) => this.setPower(on));
@@ -18,6 +18,7 @@ class PultforsterkerDevice extends Homey.Device {
     this.registerCapabilityListener('ki_loudness', (on) => this.setLoudness(on, undefined));
     this.registerCapabilityListener('speaker_playing', (play) => this.transport(play ? 'play' : 'pause'));
     this.registerCapabilityListener('ki_voice', (on) => this.request('POST', '/voice', { on: !!on }).then((st) => this.apply(st)));
+    this.registerCapabilityListener('ki_auto_input', (on) => this.request('POST', '/auto_input', { on: !!on }).then((st) => this.apply(st)));
     this.registerCapabilityListener('ki_preset', (n) => this.playPreset(Number(n)));
     this.registerCapabilityListener('speaker_next', () => this.transport('next'));
     this.registerCapabilityListener('speaker_prev', () => this.transport('previous'));
@@ -111,6 +112,7 @@ class PultforsterkerDevice extends Homey.Device {
     await this.setCapabilityValue('ki_input', st.input || 'airplay').catch(this.error);
     if (this.hasCapability('ki_preset') && st.preset) await this.setCapabilityValue('ki_preset', String(st.preset)).catch(this.error);
     this._presets = st.presets || [];
+    if (this.hasCapability('ki_auto_input')) await this.setCapabilityValue('ki_auto_input', st.auto_input !== false).catch(this.error);
     if (this.hasCapability('ki_voice')) await this.setCapabilityValue('ki_voice', st.voice !== false).catch(this.error);
     if (this.hasCapability('ki_loudness')) await this.setCapabilityValue('ki_loudness', !!st.loudness).catch(this.error);
     if (this.hasCapability('ki_loudness_level')) await this.setCapabilityValue('ki_loudness_level', Number(st.loudness_level ?? 0)).catch(this.error);

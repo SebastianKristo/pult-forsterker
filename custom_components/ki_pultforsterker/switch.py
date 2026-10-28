@@ -12,7 +12,7 @@ from .entity import KiAmpEntity
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c)])
+    add([KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c), KiAmpAutoInputSwitch(c)])
 
 
 class KiAmpPowerSwitch(KiAmpEntity, SwitchEntity):
@@ -69,3 +69,22 @@ class KiAmpVoiceSwitch(KiAmpEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_voice(False))
+
+
+class KiAmpAutoInputSwitch(KiAmpEntity, SwitchEntity):
+    """Bytt kilde automatisk når AirPlay, Bluetooth eller Radio begynner å spille (den andre settes på pause)."""
+    _attr_translation_key = "auto_input"
+    _attr_icon = "mdi:swap-horizontal-circle"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "auto_input")
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.data.get("auto_input", True))
+
+    async def async_turn_on(self, **kwargs) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_auto_input(True))
+
+    async def async_turn_off(self, **kwargs) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_auto_input(False))

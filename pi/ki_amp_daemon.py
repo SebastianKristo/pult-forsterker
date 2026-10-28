@@ -19,6 +19,7 @@ API:
   POST /api/loudness {"on":bool, "level":0-10}
   POST /api/mute   {"mute":bool}
   POST /api/bt     {"pairing":true}   (gjør Pi-en synlig 2 min)
+  POST /api/auto_input {"on":bool} (bytt kilde automatisk når AirPlay/BT/Radio begynner å spille)
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay, jpg/png)
   POST /api/transport {"action":"play|pause|playpause|next|previous|stop"}  (AirPlay/Bluetooth/Radio)
@@ -91,7 +92,8 @@ INPUTS = ["radio", "airplay", "bt", "aux", "usb"]
 CYCLE = ["radio", "airplay", "bt", "usb"] if BOARD == "radio" else INPUTS   # SOURCE-knappen
 state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False,
          "loudness": True, "loudness_level": 5, "voice": True,
-         "presets": [None] * 6, "preset": 0}   # radiokanaler 1–6: {"title","url","icon"}; preset = aktiv (1–6, 0 = ingen)   # loudness 0-10 (dB bassløft ved lavt volum)
+         "presets": [None] * 6, "preset": 0,
+         "auto_input": os.environ.get("KI_AMP_AUTO_INPUT", "1") == "1"}   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
 _pairing_until = 0.0
 menu = {"open": False, "idx": 1, "until": 0.0}   # kanalmeny på OLED (hold volumknotten 1 s i radio)
@@ -342,7 +344,7 @@ def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset")}, fh)
+            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input")}, fh)
     except Exception:
         pass
 
@@ -629,7 +631,6 @@ async def h_cover(_r):
     return web.Response(body=img, content_type=ctype, headers={"Cache-Control": "max-age=3600"})
 
 
-AUTO_INPUT = os.environ.get("KI_AMP_AUTO_INPUT", "1") == "1"
 
 
 def follow_source():
@@ -650,7 +651,7 @@ def follow_source():
             cur = (st.get("source"), bool(st.get("playing")))
             if lyr.info.get("mode") == "play" and state["input"] != "radio" and not st.get("playing"):
                 cur = ("radio", True)
-            if AUTO_INPUT and cur != last and cur[1] and cur[0] in ("airplay", "bt", "radio") and state["power"] and state["input"] != cur[0]:
+            if state["auto_input"] and cur != last and cur[1] and cur[0] in ("airplay", "bt", "radio") and state["power"] and state["input"] != cur[0]:
                 print("Auto-kilde:", cur[0], flush=True)
                 set_input(cur[0], announce=False)
             last = cur
@@ -855,6 +856,10 @@ def save_preset(n):
     voice.say("radio_saved", n=n)
 
 
+async def h_auto_input(r):
+    state["auto_input"] = bool((await r.json()).get("on", True)); changed(); return j()
+
+
 async def h_menu(r):
     b = await r.json()
     a = b.get("action")
@@ -977,7 +982,7 @@ def main():
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
-                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu)])
+                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

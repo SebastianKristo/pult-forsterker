@@ -4,7 +4,7 @@ const http = require('http');
 
 function createMockDaemon({ port = 0 } = {}) {
   const state = { power: true, input: 'airplay', volume: 30, mute: false, bt_pairing: false,
-    loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', voice: true, preset: 0, presets: [{ n: 1, title: 'NRK P1' }, { n: 2, title: 'NRK P3' }, { n: 3, title: '' }, { n: 4, title: '' }, { n: 5, title: '' }, { n: 6, title: '' }], title: '', artist: '' };
+    loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', voice: true, auto_input: true, preset: 0, presets: [{ n: 1, title: 'NRK P1' }, { n: 2, title: 'NRK P3' }, { n: 3, title: '' }, { n: 4, title: '' }, { n: 5, title: '' }, { n: 6, title: '' }], title: '', artist: '' };
   const calls = [];
   const server = http.createServer((req, res) => {
     let buf = '';
@@ -39,6 +39,7 @@ function createMockDaemon({ port = 0 } = {}) {
         if (body.save) state.presets[body.n - 1].title = state.title || 'Lagret';
         state.input = 'radio'; state.preset = body.n; state.playing = true; state.title = state.presets[body.n - 1].title;
       }
+      else if (p === '/api/auto_input') { state.auto_input = !!body.on; }
       else if (p === '/api/voice') { if (body.on !== undefined) state.voice = !!body.on; }
       else if (p === '/api/bt') state.bt_pairing = !!body.pairing;
       else if (p === '/api/loudness') { if (body.on !== undefined) state.loudness = !!body.on; if (body.level !== undefined) state.loudness_level = Math.max(0, Math.min(10, body.level)); }

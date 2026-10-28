@@ -59,6 +59,10 @@ class KiAmpApi:
         """play | pause | playpause | next | previous | stop (AirPlay/Bluetooth)."""
         return await self._req("POST", "/transport", {"action": action})
 
+    async def set_auto_input(self, on: bool) -> dict[str, Any]:
+        """Automatisk kildebytte når AirPlay/Bluetooth/Radio begynner å spille."""
+        return await self._req("POST", "/auto_input", {"on": on})
+
     async def set_voice(self, on: bool) -> dict[str, Any]:
         """Talemeldinger («Bluetooth-paring …») av/på."""
         return await self._req("POST", "/voice", {"on": on})
