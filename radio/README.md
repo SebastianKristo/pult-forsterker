@@ -45,11 +45,11 @@ Interaktiv modell: `3d/index.html` (åpnes via `python3 -m http.server` i `radio
 
 | Del | GPIO |
 |---|---|
-| TFT (SPI0) | MOSI 10, SCLK 11, CS 8, DC 25, RST 24, LED (bakgrunnslys) 18 |
+| TFT (SPI0) | MOSI 10, SCLK 11, CS 8, DC 25, LED (bakgrunnslys) 18. RST til 3,3 V, MISO ikke koblet |
 | Favoritt 1–6 | 5, 6, 13, 19, 26, 16 |
 | SOURCE / ◀◀ / ▶▶ | 20, 21, 12 |
 | EC11 A / B / trykk | 17, 27, 22 |
-| LED 1–6 (330 Ω) | 0, 1, 7, 9, 14, 15 |
+| LED 1–6 (330 Ω) | 2, 4, 7, 14, 15, 24 |
 | POWER-knapp / LED-ring (2N2222A) | 3 (vekker også Pi-en fra halt) / 23 |
 | Lyd | 3,5 mm tupp (venstre) → PAM8406 LIN, hylse → GND. Høyttaler på LOUT+ / LOUT− (aldri GND) |
 
