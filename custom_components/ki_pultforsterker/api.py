@@ -25,6 +25,10 @@ class KiAmpApi:
         except (aiohttp.ClientError, TimeoutError) as err:
             raise KiAmpError(str(err)) from err
 
+    @property
+    def base(self) -> str:
+        return self._base
+
     async def status(self) -> dict[str, Any]:
         return await self._req("GET", "/status")
 

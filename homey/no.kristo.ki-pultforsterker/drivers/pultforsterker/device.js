@@ -29,6 +29,22 @@ class PultforsterkerDevice extends Homey.Device {
       }
     } catch (e) { /* manuell IP i settings brukes */ }
 
+    // Albumbilde (AirPlay) – hentes fra Pi-en når cover-ID endrer seg
+    this._cover = null;
+    try {
+      this._image = await this.homey.images.createImage();
+      this._image.setStream(async (stream) => {
+        const { host, port } = this.base();
+        await new Promise((resolve, reject) => {
+          http.get({ host, port, path: '/api/cover', timeout: 4000 }, (res) => {
+            if (res.statusCode !== 200) { res.resume(); return reject(new Error('Ingen albumbilde')); }
+            res.pipe(stream); res.on('end', resolve);
+          }).on('error', reject);
+        });
+      });
+      await this.setAlbumArtImage(this._image);
+    } catch (e) { this.error('Albumbilde', e); }
+
     this._wasPlaying = null;
     this._lastInput = null;
     await this.poll();
@@ -89,6 +105,11 @@ class PultforsterkerDevice extends Homey.Device {
     await this.setCapabilityValue('ki_input', st.input || 'airplay').catch(this.error);
     if (this.hasCapability('ki_loudness')) await this.setCapabilityValue('ki_loudness', !!st.loudness).catch(this.error);
     if (this.hasCapability('ki_loudness_level')) await this.setCapabilityValue('ki_loudness_level', Number(st.loudness_level ?? 0)).catch(this.error);
+
+    if (this._image && (st.cover || '') !== this._cover) {
+      this._cover = st.cover || '';
+      await this._image.update().catch(() => {});
+    }
 
     if (this._lastInput !== null && this._lastInput !== st.input) {
       await this.homey.flow.getDeviceTriggerCard('ki_input_changed').trigger(this, { input: st.input }).catch(this.error);

@@ -15,8 +15,13 @@ class Flow {
   getConditionCard(id) { return this._get(id); }
   getActionCard(id) { return this._get(id); }
 }
+class Image {
+  constructor() { this.updates = 0; this.streamFn = null; }
+  setStream(fn) { this.streamFn = fn; }
+  async update() { this.updates += 1; }
+}
 class HomeyCtx {
-  constructor() { this.flow = new Flow(); this.setInterval = setInterval; this.clearInterval = clearInterval; this.__ = (k) => k; }
+  constructor() { this.images = { createImage: async () => new Image() }; this.flow = new Flow(); this.setInterval = setInterval; this.clearInterval = clearInterval; this.__ = (k) => k; }
 }
 
 class Device {
@@ -28,6 +33,7 @@ class Device {
   registerCapabilityListener(cap, fn) { this._listeners[cap] = fn; }
   hasCapability(c) { return this._caps.includes(c); }
   async addCapability(c) { this._caps.push(c); }
+  async setAlbumArtImage(img) { this.albumArt = img; }
   async setCapabilityValue(c, v) { this._values[c] = v; }
   getCapabilityValue(c) { return this._values[c]; }
   getData() { return this._data; }

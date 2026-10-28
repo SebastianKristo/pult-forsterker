@@ -4,7 +4,7 @@ const http = require('http');
 
 function createMockDaemon({ port = 0 } = {}) {
   const state = { power: true, input: 'airplay', volume: 30, mute: false, bt_pairing: false,
-    loudness: true, loudness_level: 5, playing: false, paused: false, title: '', artist: '' };
+    loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', title: '', artist: '' };
   const calls = [];
   const server = http.createServer((req, res) => {
     let buf = '';
@@ -13,6 +13,10 @@ function createMockDaemon({ port = 0 } = {}) {
       const body = buf ? JSON.parse(buf) : {};
       calls.push({ method: req.method, path: req.url, body });
       const p = req.url;
+      if (req.method === 'GET' && p === '/api/cover') {
+        if (!state.cover) { res.writeHead(404); return res.end(); }
+        res.writeHead(200, { 'Content-Type': 'image/png' }); return res.end(Buffer.from('89504e470d0a1a0a', 'hex'));
+      }
       if (req.method === 'GET' && p === '/api/status') { /* bare status */ }
       else if (p === '/api/power') state.power = !!body.on;
       else if (p === '/api/toggle') state.power = !state.power;

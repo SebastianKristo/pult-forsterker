@@ -16,7 +16,7 @@ function makeDevice(homey) {
   const d = new Device({ homey, settings: { host: '127.0.0.1', port }, capabilities: CAPS });
   return d;
 }
-beforeEach(() => { Object.assign(daemon.state, { power: true, input: 'airplay', volume: 30, mute: false, loudness: true, loudness_level: 5, playing: false, paused: false, title: '', artist: '' }); daemon.calls.length = 0; });
+beforeEach(() => { Object.assign(daemon.state, { power: true, input: 'airplay', volume: 30, mute: false, loudness: true, loudness_level: 5, playing: false, paused: false, cover: '', title: '', artist: '' }); daemon.calls.length = 0; });
 
 test('onInit henter status og setter capabilities', async () => {
   const d = makeDevice(); await d.onInit(); d.onDeleted();
@@ -111,4 +111,16 @@ test('eldre enhet uten neste/forrige får capabilities lagt til', async () => {
   const d = new Device({ settings: { host: '127.0.0.1', port }, capabilities: CAPS.filter((c) => !['speaker_prev', 'speaker_next'].includes(c)) });
   await d.onInit(); d.onDeleted();
   assert.ok(d.hasCapability('speaker_next') && d.hasCapability('speaker_prev'));
+});
+
+test('albumbilde: oppdateres når cover-ID endrer seg og strømmes fra /api/cover', async () => {
+  const d = makeDevice(); await d.onInit(); d.onDeleted();
+  assert.ok(d.albumArt, 'albumbilde satt på enheten');
+  const before = d.albumArt.updates;
+  daemon.state.cover = 'abc123'; await d.poll(); assert.equal(d.albumArt.updates, before + 1);
+  await d.poll(); assert.equal(d.albumArt.updates, before + 1);   // samme bilde – ingen ny henting
+  const { PassThrough } = require('stream'); const out = new PassThrough(); const chunks = [];
+  out.on('data', (c) => chunks.push(c));
+  await d.albumArt.streamFn(out);
+  assert.equal(Buffer.concat(chunks).toString('hex'), '89504e470d0a1a0a');
 });

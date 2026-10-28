@@ -19,6 +19,7 @@ API:
   POST /api/loudness {"on":bool, "level":0-10}
   POST /api/mute   {"mute":bool}
   POST /api/bt     {"pairing":true}   (gjør Pi-en synlig 2 min)
+  GET  /api/cover  (albumbilde fra AirPlay, jpg/png)
   POST /api/transport {"action":"play|pause|playpause|next|previous|stop"}  (AirPlay/Bluetooth)
 """
 import asyncio
@@ -36,7 +37,8 @@ from aiohttp import web
 PORT = int(os.environ.get("KI_AMP_PORT", "8765"))
 NAME = os.environ.get("KI_AMP_NAME", "Pultforsterker")
 VERSION = "2.0"
-STATUS_FILE = "/run/pultamp_status.json"   # spor-metadata fra oled_display.py / bt
+STATUS_FILE = "/run/pultamp_status.json"
+COVER_FILE = "/run/pultamp_cover"   # spor-metadata fra oled_display.py / bt
 CTRL_FILE = "/run/pultamp_ctrl.json"       # til oled_display.py
 STATE_FILE = "/var/lib/ki-amp/state.json"
 RELAY_ACTIVE_LOW = os.environ.get("RELAY_ACTIVE_LOW", "1") == "1"
@@ -267,7 +269,7 @@ def read_status():
             st = json.load(fh)
     except Exception:
         st = {}
-    return {**state, "playing": bool(st.get("playing")), "paused": bool(st.get("paused")), "source": st.get("source", ""), "title": st.get("title", ""), "artist": st.get("artist", ""),
+    return {**state, "playing": bool(st.get("playing")), "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": st.get("cover", ""), "title": st.get("title", ""), "artist": st.get("artist", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": socket.gethostname()}
 
@@ -279,7 +281,24 @@ def set_power(on):
 
 def set_input(inp):
     if inp in INPUTS:
+        prev = state["input"]
         state["input"] = inp; apply_input(); apply_volume(); changed()
+        if prev != inp:
+            threading.Thread(target=_pause_others, args=(inp,), daemon=True).start()
+
+
+def _pause_others(inp):
+    """Som en ekte inngangsvelger: stopp AirPlay/Bluetooth som spiller på en annen kilde enn den valgte."""
+    st = read_status()
+    if not st.get("playing") or st.get("source") in ("", inp):
+        return
+    try:
+        if st.get("source") == "bt":
+            _busctl("call", "org.bluez", _bt_player(), "org.bluez.MediaPlayer1", "Pause")
+        elif st.get("source") == "airplay":
+            _busctl("call", SPS[0], SPS[1], SPS[2], "Pause")
+    except Exception as e:
+        print("Pause annen kilde:", e, flush=True)
 
 
 def set_loudness(on=None, level=None):
@@ -380,6 +399,32 @@ async def h_volume(r):
     set_volume(state["volume"] + int(b["delta"]) if "delta" in b else int(b.get("volume", state["volume"]))); return j()
 async def h_mute(r): set_mute((await r.json()).get("mute", True)); return j()
 async def h_bt(r): bt_pairing((await r.json()).get("pairing", True)); return j()
+async def h_cover(_r):
+    try:
+        with open(COVER_FILE, "rb") as fh:
+            img = fh.read()
+    except OSError:
+        return web.Response(status=404)
+    ctype = "image/png" if img[:8] == b"\x89PNG\r\n\x1a\n" else "image/jpeg"
+    return web.Response(body=img, content_type=ctype, headers={"Cache-Control": "max-age=3600"})
+
+
+def follow_source():
+    """Bytt kilde automatisk når AirPlay eller Bluetooth begynner å spille (som en vanlig forsterker med auto-input)."""
+    last = (None, False)
+    while True:
+        time.sleep(1)
+        try:
+            st = read_status()
+            cur = (st.get("source"), bool(st.get("playing")))
+            if cur != last and cur[1] and cur[0] in ("airplay", "bt") and state["power"] and state["input"] != cur[0]:
+                print("Auto-kilde:", cur[0], flush=True)
+                set_input(cur[0])
+            last = cur
+        except Exception as e:
+            print("Auto-kilde:", e, flush=True)
+
+
 async def h_transport(r):
     a = (await r.json()).get("action", "")
     if a not in TRANSPORT:
@@ -463,10 +508,12 @@ async def on_cleanup(app):
 def main():
     load_state()
     apply_power(); changed()
+    if os.environ.get("KI_AMP_AUTO_INPUT", "1") == "1":
+        threading.Thread(target=follow_source, daemon=True).start()
     app = web.Application()
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport)])
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

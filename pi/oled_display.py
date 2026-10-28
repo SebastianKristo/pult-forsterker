@@ -28,6 +28,7 @@ from PIL import ImageFont
 PIPE = "/run/shairport-sync/metadata"   # ikke /tmp: fs.protected_fifos hindrer root i å åpne en annen brukers FIFO der
 CTRL_FILE = "/run/pultamp_ctrl.json"
 STATUS_FILE = "/run/pultamp_status.json"
+COVER_FILE = "/run/pultamp_cover"   # albumbilde fra AirPlay (jpg/png), serveres av ki_amp_daemon på /api/cover
 FONT_B = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_R = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 F = lambda p, s: ImageFont.truetype(p, s)
@@ -40,7 +41,7 @@ try:
 except Exception as e:   # ingen OLED koblet til: kjør videre som metadata-tjeneste (AirPlay/BT → API, HA, Homey)
     print("OLED ikke funnet – kjører uten skjerm:", e, flush=True)
     device = None
-track = {"paused": False, "playing": False, "title": "", "artist": "", "duration": 0, "position": 0, "pos_t": 0.0, "bt_device": "", "source": ""}
+track = {"cover": "", "paused": False, "playing": False, "title": "", "artist": "", "duration": 0, "position": 0, "pos_t": 0.0, "bt_device": "", "source": ""}
 boot_until = time.time() + 1.6
 scroll_x = 0.0
 
@@ -71,16 +72,31 @@ def airplay_thread():
                     elif t == "core" and c == "astm":
                         try: track["duration"] = int.from_bytes(base64.b64decode(m.group(4)), "big") / 1000
                         except Exception: pass
+                    elif t == "ssnc" and c == "PICT":   # albumbilde
+                        try:
+                            img = base64.b64decode(m.group(4) or "")
+                            if img:
+                                with open(COVER_FILE + ".tmp", "wb") as fh: fh.write(img)
+                                os.replace(COVER_FILE + ".tmp", COVER_FILE)
+                                import hashlib; track["cover"] = hashlib.sha1(img).hexdigest()[:12]
+                            else:
+                                track["cover"] = ""
+                        except Exception: pass
+                    elif t == "ssnc" and c == "mdst":   # ny metadata-sekvens (nytt spor) – bildet kommer etterpå
+                        pass
                     elif t == "ssnc" and c in ("pbeg", "prsm"): track.update(playing=True, paused=False, source="airplay")
                     elif t == "ssnc" and c == "pfls":   # pause/flush – behold tittelen
                         track.update(playing=False, paused=True)
                     elif t == "ssnc" and c == "pend":
-                        track.update(playing=False, paused=False, title="", artist="", duration=0, position=0)
+                        track.update(playing=False, paused=False, title="", artist="", duration=0, position=0, cover="")
                     elif t == "ssnc" and c == "prgr":
                         try:
                             s, cur, e = (int(x) for x in data.split("/")); track["position"] = (cur - s) / 44100; track["duration"] = (e - s) / 44100; track["pos_t"] = time.time()
                         except Exception: pass
-                buf = buf[buf.rfind("</item>") + 7:] if "</item>" in buf else buf[-4096:]
+                if "</item>" in buf:
+                    buf = buf[buf.rfind("</item>") + 7:]
+                elif len(buf) > 4_000_000:   # albumbilder kan være store – kast bare ved åpenbart søppel
+                    buf = ""
 
 
 # ---------- Bluetooth-metadata (BlueZ MediaPlayer1) ----------
@@ -109,7 +125,7 @@ def bt_thread():
                 status = str(mp.get("Status", ""))
                 playing = status == "playing"
                 if playing or track["source"] == "bt":
-                    track.update(source="bt", playing=playing, paused=status == "paused", title=str(tr.get("Title", "")), artist=str(tr.get("Artist", "")),
+                    track.update(source="bt", cover="", playing=playing, paused=status == "paused", title=str(tr.get("Title", "")), artist=str(tr.get("Artist", "")),
                                  duration=int(tr.get("Duration", 0)) / 1000, position=int(mp.get("Position", 0)) / 1000, pos_t=time.time())
                 track["bt_device"] = str(dev.get("Alias", "")) if dev else track["bt_device"]
             if not found:
@@ -125,7 +141,9 @@ def write_status():
     try:
         tmp = STATUS_FILE + ".tmp"
         with open(tmp, "w") as fh:
-            json.dump({k: track[k] for k in ("playing", "paused", "source", "title", "artist", "duration", "position", "bt_device")}, fh)
+            out = {k: track[k] for k in ("playing", "paused", "source", "title", "artist", "duration", "bt_device", "cover")}
+            out["position"] = round(pos_now(), 1)
+            json.dump(out, fh)
         os.replace(tmp, STATUS_FILE)
     except Exception:
         pass

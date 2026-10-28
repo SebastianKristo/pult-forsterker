@@ -10,6 +10,7 @@ from homeassistant.components.media_player import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .entity import KiAmpEntity
@@ -39,6 +40,7 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
 
     def __init__(self, c) -> None:
         super().__init__(c, "amp")
+        self._fetched_at = dt_util.utcnow()
 
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
@@ -87,7 +89,31 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
 
     @property
     def media_position(self) -> int | None:
-        return int(self.d.get("position") or 0) if self.d.get("playing") else None
+        if self.d.get("playing") or self.d.get("paused"):
+            return int(self.d.get("position") or 0)
+        return None
+
+    @property
+    def media_position_updated_at(self):
+        # posisjonen i status er beregnet på Pi-en i det øyeblikket den ble hentet
+        return self._fetched_at
+
+    @property
+    def media_image_url(self) -> str | None:
+        cover = self.d.get("cover")
+        return f"{self.coordinator.api.base}/cover?{cover}" if cover else None
+
+    @property
+    def media_image_remotely_accessible(self) -> bool:
+        return False   # HA henter bildet fra Pi-en og viser det via sin egen proxy
+
+    @property
+    def media_image_hash(self) -> str | None:
+        return self.d.get("cover") or None
+
+    def _handle_coordinator_update(self) -> None:
+        self._fetched_at = dt_util.utcnow()
+        super()._handle_coordinator_update()
 
     @property
     def extra_state_attributes(self) -> dict:
