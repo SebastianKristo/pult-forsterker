@@ -38,6 +38,12 @@ design-referanse/   Opprinnelig designpakke (front, OLED-layout, oppførsel, far
 | Ferrittklips Ø 5–7 mm × 2 | på høyttalerledningene – klasse D-støy mot Pi-ens Wi-Fi | [Søk](https://www.aliexpress.com/w/wholesale-ferrite-clip-core-cable.html) |
 | 40-pinners header (hvis Pi-en er uten) · Dupont crimp-sett | header til Pi Zero; egne ledninger i riktig lengde | [Header](https://www.aliexpress.com/w/wholesale-40-pin-header-raspberry-pi-zero.html) · [Dupont](https://www.aliexpress.com/w/wholesale-dupont-connector-kit-crimp.html) |
 
+## Variant: Raspberry Pi 4 B med Ethernet
+
+Samme programvare og GPIO-skjema, men kassen er 15 mm dypere (200 × 135 × 48) og innmaten er flyttet: Pi 4 til høyre med portene mot venstre, forsterkeren til venstre ved terminalene, RJ45-panelforlenger bak. Filer: `kabinett/stl/v2_body_pi4.stl`, `v2_lid_pi4.stl` / `v2_lid_frittstaende_pi4.stl` (frontplaten er felles). Bygg selv med `VARIANT=pi4 python3 build_stl.py`. Endrede deler: buck 5 V **5 A**, USB-C-flens med **USB-C hann** i enden, RJ45 panelforlenger, kjøleribber. 5 V til Pi 4 i 18 AWG på header-pinne 2/4 + 6.
+
+![Pi 4-plan](docs/bilder/guide_04_inni_pi4.png)
+
 ## Kom i gang
 
 1. **Deler** – se delelisten i [docs/byggeveiledning.md](docs/byggeveiledning.md) og `docs/KI_Pultforsterker_Bildeveiledning.pdf`.

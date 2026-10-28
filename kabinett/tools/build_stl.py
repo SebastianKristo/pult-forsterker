@@ -24,6 +24,19 @@ tower_d, tower_xy, insert_d = 8.0, (90.0, 50.0), 4.0
 amp_holes, amp_pos = (50.0, 42.0), (55.0, 15.0)
 pi_holes, pi_pos = (58.0, 23.0), (-55.0, 20.0)
 vent_n, vent_w, vent_gap, vent_h = 16, 2.4, 3.6, 24.0
+rj45, rj45_x, rj45_pitch, rj45_screw = (17.0, 15.0), None, 25.0, 3.2   # None = ingen RJ45 (Pi Zero)
+
+VARIANT = os.environ.get("VARIANT", "zero")
+if VARIANT == "pi4":
+    # Raspberry Pi 4 B med Ethernet: 15 mm dypere kasse, Pi-en til høyre med portene mot venstre,
+    # forsterkeren til venstre rett ved terminalene, RJ45-panelforlenger bak.
+    D = 135.0
+    tower_xy = (90.0, 57.0)
+    pi_holes, pi_pos = (58.0, 49.0), (53.0, -10.0)
+    amp_pos = (-58.0, 24.0)
+    kcd1_x, dc_x, rj45_x, usbc_x, aux_x = 86.0, 68.0, 44.0, 14.0, -6.0
+    post_x = (-24.0, -39.0, -59.0, -74.0)
+    vent_n = 20
 SEG = 64
 
 
@@ -79,12 +92,19 @@ def body():
     m -= hole_back(aux_d, aux_x, fz)
     for x in post_x:
         m -= hole_back(post_d, x, fz)
+    if rj45_x is not None:
+        m -= slot_back(rj45, rj45_x, fz)
+        for s in (-1, 1):
+            m -= hole_back(rj45_screw, rj45_x + s * rj45_pitch / 2, fz)
     for s in (-1, 1):
         for i in range(vent_n):
             m -= cube(wall + 2, vent_w, vent_h, s * (W / 2 - wall / 2) - (wall + 2) / 2,
                       -((vent_n - 1) * vent_gap) / 2 + i * vent_gap, floor_t + 12)
     for i in range(10):
         m -= cube(2.4, 50, floor_t + 2, amp_pos[0] - 27 + i * 6, amp_pos[1] - 25, -1)
+    if VARIANT == "pi4":   # luftespor i gulvet under Pi 4
+        for i in range(12):
+            m -= cube(2.4, 44, floor_t + 2, pi_pos[0] - 33 + i * 6, pi_pos[1] - 22, -1)
     for sx in (-1, 1):
         for sy in (-1, 1):
             tower = cyl(tower_d, H) + cube(tower_d, 1, H, -tower_d / 2, 0, 0)
@@ -155,7 +175,9 @@ def write_stl(man, path):
 
 if __name__ == "__main__":
     here = os.path.dirname(os.path.abspath(__file__))
-    write_stl(body(), os.path.join(here, "v2_body.stl"))
-    write_stl(frontplate(), os.path.join(here, "v2_frontplate.stl"))
-    write_stl(lid(), os.path.join(here, "v2_lid.stl"))
-    write_stl(lid(ears=False), os.path.join(here, "v2_lid_frittstaende.stl"))
+    sfx = "" if VARIANT == "zero" else "_pi4"
+    write_stl(body(), os.path.join(here, f"v2_body{sfx}.stl"))
+    if VARIANT == "zero":
+        write_stl(frontplate(), os.path.join(here, "v2_frontplate.stl"))   # frontplaten er lik for begge
+    write_stl(lid(), os.path.join(here, f"v2_lid{sfx}.stl"))
+    write_stl(lid(ears=False), os.path.join(here, f"v2_lid_frittstaende{sfx}.stl"))
