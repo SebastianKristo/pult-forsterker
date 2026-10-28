@@ -1,0 +1,15 @@
+[Unit]
+Description=Shairport Sync – AirPlay 2 (Pultforsterker)
+After=network-online.target sound.target avahi-daemon.service nqptp.service
+Wants=network-online.target avahi-daemon.service
+Requires=nqptp.service
+
+[Service]
+ExecStart=/usr/local/bin/shairport-sync --log-to-syslog
+User=shairport-sync
+Group=audio
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

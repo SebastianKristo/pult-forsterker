@@ -62,7 +62,9 @@ cd shairport-sync && autoreconf -fi
             --with-systemd --with-airplay-2 --with-metadata --with-pipe
 make -j"$(nproc)" && sudo make install
 sudo install -m 644 "$SRC/shairport-sync.conf" /etc/shairport-sync.conf
-sudo systemctl enable --now shairport-sync
+id shairport-sync >/dev/null 2>&1 || sudo useradd -r -M -g audio -s /usr/sbin/nologin shairport-sync
+sudo install -m 644 "$SRC/shairport-sync.service" /etc/systemd/system/shairport-sync.service   # 5.x legger ikke inn unit selv
+sudo systemctl daemon-reload && sudo systemctl enable --now shairport-sync
 
 echo "== 6/9  Bluetooth A2DP-mottak (bluealsa)"
 sudo sed -i 's/^#\?Class = .*/Class = 0x200414/; s/^#\?DiscoverableTimeout = .*/DiscoverableTimeout = 120/' /etc/bluetooth/main.conf
