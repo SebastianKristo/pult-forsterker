@@ -153,7 +153,10 @@ filters:
     parameters: {{fader: Main, reference_level: -10.0, high_boost: {lvl * 0.5:.1f}, low_boost: {float(lvl):.1f}, attenuate_mid: false}}
 pipeline:
   - type: Filter
-    channels: [0, 1]
+    channel: 0
+    names: [loud]
+  - type: Filter
+    channel: 1
     names: [loud]
 """
 

@@ -17,16 +17,18 @@ CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
 if [ "$OUT" = headphones ]; then
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
   sudo sed -i 's/^dtoverlay=hifiberry-dac/#dtoverlay=hifiberry-dac/' "$CFG"
-  LINES='dtparam=i2c_arm=on dtparam=spi=on dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
+  LINES='dtparam=i2c_arm=on dtoverlay=spi0-1cs dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
 else
   sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
-  LINES='dtoverlay=hifiberry-dac dtparam=i2c_arm=on dtparam=spi=on dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
+  LINES='dtoverlay=hifiberry-dac dtparam=i2c_arm=on dtoverlay=spi0-1cs dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
 fi
 for line in $LINES; do
+  grep -qxF "#$line" "$CFG" && { echo "  hopper over $line (kommentert ut for hånd)"; continue; }
   grep -qxF "$line" "$CFG" || echo "$line" | sudo tee -a "$CFG"
 done
 sudo sed -i 's/ console=serial0,115200//' /boot/firmware/cmdline.txt 2>/dev/null || true
 grep -q '^dwc2' /etc/modules || echo dwc2 | sudo tee -a /etc/modules
+grep -q '^i2c-dev' /etc/modules || echo i2c-dev | sudo tee -a /etc/modules   # /dev/i2c-1 for OLED
 sudo raspi-config nonint do_serial_hw 1 2>/dev/null || true   # frigjør GPIO 14/15 til X9C
 
 echo "== 3/9  Pakker"

@@ -5,7 +5,7 @@ Wants=network-online.target avahi-daemon.service
 Requires=nqptp.service
 
 [Service]
-ExecStart=/usr/local/bin/shairport-sync --log-to-syslog
+ExecStart=/usr/local/bin/shairport-sync
 User=shairport-sync
 Group=audio
 RuntimeDirectory=shairport-sync

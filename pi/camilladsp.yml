@@ -9,7 +9,10 @@ filters:
   loud:
     type: Loudness
     parameters: {fader: Main, reference_level: -10.0, high_boost: 2.5, low_boost: 5.0, attenuate_mid: false}
-pipeline:
+pipeline:            # CamillaDSP 2.x: ett Filter-steg per kanal
   - type: Filter
-    channels: [0, 1]
+    channel: 0
+    names: [loud]
+  - type: Filter
+    channel: 1
     names: [loud]
