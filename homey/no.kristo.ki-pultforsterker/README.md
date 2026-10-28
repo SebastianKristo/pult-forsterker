@@ -13,4 +13,4 @@ Krav: Pi-en i forsterkeren kjører `ki_amp_daemon.py` (port 8765) på samme nett
 
 Legg til enhet: Enheter → + → KI Pultforsterker → forsterkeren dukker opp via mDNS. Finner den ikke, sett IP under enhetens innstillinger.
 
-Bildene i `assets/images/` og `drivers/pultforsterker/assets/images/` er plassholdere laget av `make_icons.py`; bytt dem gjerne.
+Bildene (forsterkerens front i designfargene) og enhetsikonet `icon.svg` lages av `make_icons.py` (trenger `pip install cairosvg`).

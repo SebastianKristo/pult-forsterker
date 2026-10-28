@@ -139,7 +139,7 @@
       "getable": true,
       "setable": true,
       "uiComponent": "picker",
-      "icon": "/assets/source.svg",
+      "icon": "/assets/icon.svg",
       "values": [
         {
           "id": "airplay",
@@ -180,7 +180,7 @@
       "getable": true,
       "setable": true,
       "uiComponent": "toggle",
-      "icon": "/assets/source.svg"
+      "icon": "/assets/icon.svg"
     },
     "ki_loudness_level": {
       "type": "number",
