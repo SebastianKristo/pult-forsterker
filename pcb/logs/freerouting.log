@@ -72,3 +72,6 @@ java.lang.NullPointerException: Cannot invoke "app.freerouting.management.Segmen
 2026-10-28 15:35:05.349 [main] WARN  Wiring.read_wire_scope: wire corner outside board at 'OUTNL'
 2026-10-28 15:35:05.350 [main] WARN  Wiring.read_wire_scope: wire corner outside board at 'LED_USB_G'
 2026-10-28 15:35:05.350 [main] WARN  Wiring.read_wire_scope: wire corner outside board at 'LED_USB_G'
+2026-10-28 16:04:59.642 [main] INFO  Freerouting v1.9.0 (build-date: 2023-10-30)
+2026-10-28 16:04:59.700 [main] INFO  Settings were loaded from freerouting.json
+2026-10-28 16:05:00.746 [main] INFO  Opening 'board.dsn'...
