@@ -81,8 +81,8 @@ part("R14", R_, R0603, "10k", "C25804", 112, 73, 0, "MUTE pull-up")
 
 # --- forsterker TPA3116D2 (x 60–135, y 18–48) ---
 part("U6", SO, "HTSSOP-32-1EP_6.1x11mm_P0.65mm_EP5.2x11mm_Mask4.11x4.36mm_ThermalVias", "TPA3116D2DAD", "C101108", 84, 34, 0, "Klasse D 2x50 W")
-part("C32", C_, C0805, "220n/50V", "C45790", 100, 39, 90, "BSNL"); part("C33", C_, C0805, "220n/50V", "C45790", 100, 35.5, 90, "BSPL")
-part("C34", C_, C0805, "220n/50V", "C45790", 100, 32, 90, "BSNR"); part("C35", C_, C0805, "220n/50V", "C45790", 100, 28.5, 90, "BSPR")
+part("C32", C_, C0805, "220n/50V", "C45790", 98, 36.9, 0, "BSNL"); part("C33", C_, C0805, "220n/50V", "C45790", 94, 34.3, 0, "BSPL")
+part("C34", C_, C0805, "220n/50V", "C45790", 98, 33.0, 0, "BSNR"); part("C35", C_, C0805, "220n/50V", "C45790", 94, 30.4, 0, "BSPR")
 part("C36", C_, C0603, "100n/50V", "C14663", 92, 27, 0, "PVCC HF"); part("C37", C_, C0805, "1u/50V", "C28323", 96, 27, 0, "PVCC"); part("C38", C_, C0603, "100n/50V", "C14663", 92, 41, 0, "PVCC HF"); part("C39", C_, C0805, "1u/50V", "C28323", 96, 41, 0, "PVCC")
 part("C40", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 86, 17, 0, "PVCC bulk"); part("C41", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 100, 17, 0, "PVCC bulk")
 part("C42", C_, C0805, "1u/50V", "C28323", 73, 40, 0, "AVCC"); part("C43", C_, C0805, "10u/50V", "C96446", 73, 42.6, 0, "AVCC bulk")
@@ -196,7 +196,7 @@ def build():
     board = pcbnew.BOARD()
     ds = board.GetDesignSettings()
     ds.SetCopperLayerCount(2)
-    ds.m_TrackMinWidth = pcbnew.FromMM(0.2); ds.m_ViasMinSize = pcbnew.FromMM(0.5); ds.m_MinClearance = pcbnew.FromMM(0.15)
+    ds.m_TrackMinWidth = pcbnew.FromMM(0.2); ds.m_ViasMinSize = pcbnew.FromMM(0.5); ds.m_MinClearance = pcbnew.FromMM(0.127)
     # omriss
     for (x0, y0, x1, y1) in [(0, 0, BW, 0), (BW, 0, BW, BH), (BW, BH, 0, BH), (0, BH, 0, 0)]:
         s = pcbnew.PCB_SHAPE(board); s.SetShape(pcbnew.SHAPE_T_SEGMENT); s.SetStart(MM(x0, y0)); s.SetEnd(MM(x1, y1))
@@ -248,7 +248,7 @@ def build():
     try:
         ncs = ds.m_NetSettings.m_NetClasses
         default = ds.m_NetSettings.m_DefaultNetClass
-        default.SetTrackWidth(pcbnew.FromMM(0.3)); default.SetClearance(pcbnew.FromMM(0.2)); default.SetViaDiameter(pcbnew.FromMM(0.8)); default.SetViaDrill(pcbnew.FromMM(0.4))
+        default.SetTrackWidth(pcbnew.FromMM(0.25)); default.SetClearance(pcbnew.FromMM(0.15)); default.SetViaDiameter(pcbnew.FromMM(0.8)); default.SetViaDrill(pcbnew.FromMM(0.4))
         for cname, w in [("Power", 2.0), ("Power5V", 1.2), ("Out", 1.5), ("Mid", 0.5)]:
             nc = pcbnew.NETCLASS(cname); nc.SetTrackWidth(pcbnew.FromMM(w)); nc.SetClearance(pcbnew.FromMM(0.3 if w >= 1.2 else 0.2))
             nc.SetViaDiameter(pcbnew.FromMM(1.2 if w >= 1.2 else 0.8)); nc.SetViaDrill(pcbnew.FromMM(0.6 if w >= 1.2 else 0.4))
