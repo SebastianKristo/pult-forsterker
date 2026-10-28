@@ -29,7 +29,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 </style>
 <header>
   <h1>KI Pultforsterker <small id="dims">200 × 120 × 48 mm · v2</small></h1>
-  <div class="grp"><button id="vFront" class="on">Front</button><button id="vBack">Bak</button><button id="vTop">Ovenfra</button><button id="tLid">Åpne kassen</button><button id="tMount" class="on">Under pult</button><button id="tVar">Modulbygg</button></div>
+  <div class="grp"><button id="vFront" class="on">Front</button><button id="vBack">Bak</button><button id="vTop">Ovenfra</button><button id="tLid">Åpne kassen</button><button id="tMount" class="on">Under pult</button><button id="tVar">Modulbygg</button><button id="tLift" hidden>Løft kortet</button></div>
   <div class="grp"><button id="tMains" class="on">Hovedbryter på</button><button id="tStby" class="on" title="Trykk: standby/på · hold 3 s: omstart">På</button><button id="tMute">Mute av</button><button id="tBt" class="on">Bluetooth: tilkoblet</button><button id="tPlay" class="on">❚❚ Pause</button></div>
 </header>
 <div id="stage">
@@ -164,7 +164,7 @@ const BX0=3, BZ0=-3.8, BY0=2.5+25, BTOP=BY0+1.6; const bx=x=>x-75+BX0, bz=y=>-y+
  new THREE.GLTFLoader().load('board.json',g=>{boardHolder.remove(ph);const o=g.scene;o.rotation.x=-Math.PI/2;o.position.set(bx(0),BY0,bz(0));
   o.traverse(n=>{if(n.isMesh){const ref=(n.name||'').split('_')[0];const d=REF[ref];n.userData={name:d?d[0]:(ref?ref+' · hovedkort':'Hovedkort rev A'),desc:(d?d[1]+'<br><br>':'')+boardDesc};parts.push(n);if(n.material){n.material.roughness=Math.min(0.9,n.material.roughness??0.7);n.material.metalness=0;}}});
   boardHolder.add(o);},null,e=>{ph.material.opacity=0.8;console.warn('board.json',e);});
- boardLabel('Hovedkort rev A · 150 × 100',BX0,BTOP+16,BZ0,60,innerPcb);
+ boardLabel('Hovedkort rev A · 150 × 100',BX0,BTOP+16,BZ0,60,boardHolder);
 }
 // Raspberry Pi 4 B under kortet (85 × 56, hull 58 × 49 rundt (−40,5, −18) → porter mot venstre, utenfor kortet)
 const PY=2.5+6;
@@ -218,7 +218,7 @@ c.addEventListener('touchend',()=>{pinch=null;});
 
 // ---------- OLED UI (tegnes 1:1 etter designet, 128×64) ----------
 const INPUTS=[{key:'AIR',name:'AirPlay',title:'Midnight City',sub:'M83 · iPhone',len:243},{key:'BT',name:'Bluetooth',title:'Teardrop',sub:'Massive Attack',len:330},{key:'AUX',name:'AUX',title:'Analog inngang',sub:'3,5 mm jack'},{key:'USB',name:'USB',title:'USB-lyd',sub:'PC · 48 kHz'}];
-const S={variant:'mod',input:0,vol:42,power:true,open:false,mount:true,playing:true,muted:false,standby:false,bt:'connected',btDev:'iPhone',hold:0,ov:null,pHold:0,boot:0};
+const S={variant:'mod',lift:false,input:0,vol:42,power:true,open:false,mount:true,playing:true,muted:false,standby:false,bt:'connected',btDev:'iPhone',hold:0,ov:null,pHold:0,boot:0};
 const T0=performance.now()-102000, mmss=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
 function draw(){
   const g=cvs.getContext('2d'); g.setTransform(1,0,0,1,0,0); g.fillStyle='#000'; g.fillRect(0,0,512,256);
@@ -293,7 +293,7 @@ function sync(){
   const sh=shells[S.variant];sh.ears.visible=S.mount;sh.feet.visible=!S.mount;$('tMount').textContent=S.mount?'Under pult':'Frittstående';$('tMount').classList.toggle('on',S.mount);
   $('volv').textContent=S.muted?'MUTE':S.vol;
   const pcbV=S.variant==='pcb';for(const k in shells){shells[k].g.visible=k===S.variant;rears[k].g.visible=k===S.variant;}inner.visible=!pcbV;innerPcb.visible=pcbV;
-  front.position.z=(shells[S.variant].D-120)/2;$('tVar').textContent=pcbV?'Hovedkort (PCB)':'Modulbygg';$('tVar').classList.toggle('on',pcbV);$('dims').textContent=`200 × ${shells[S.variant].D} × 48 mm · v2`;
+  front.position.z=(shells[S.variant].D-120)/2;$('tVar').textContent=pcbV?'Hovedkort (PCB)':'Modulbygg';$('tVar').classList.toggle('on',pcbV);$('dims').textContent=`200 × ${shells[S.variant].D} × 48 mm · v2`;$('tLift').hidden=!pcbV;$('tLift').textContent=S.lift?'Senk kortet':'Løft kortet';$('tLift').classList.toggle('on',S.lift);
 }
 function cur(){return {vipp:rears[S.variant].vipp,lid:shells[S.variant].lid};}
 let ovTimer=null;const showOv=(type,ms)=>{S.ov={type,t0:performance.now()};clearTimeout(ovTimer);if(ms)ovTimer=setTimeout(()=>{S.ov=null;sync();},ms);sync();};
@@ -317,6 +317,7 @@ const views={vFront:[-0.55,1.15],vBack:[Math.PI-0.5,1.2],vTop:[0,0.2]};let anim=
 function setView(id){for(const k in views)$(k).classList.toggle('on',k===id);anim={t0:performance.now(),a0:[theta,phi],a1:views[id]};}
 for(const k in views)$(k).onclick=()=>setView(k);
 $('tMount').onclick=function(){S.mount=!S.mount;sync();};
+$('tLift').onclick=()=>{S.lift=!S.lift;if(S.lift&&!S.open){S.open=true;}sync();};
 $('tVar').onclick=()=>{S.variant=S.variant==='pcb'?'mod':'pcb';if(S.variant==='pcb'&&!S.open){S.open=true;setView('vTop');}info.innerHTML=S.variant==='pcb'?'<b>Hovedkort-variant</b><p>Kasse 200 × 165 × 48 mm. Alle modulene er erstattet av ett kort (150 × 100 mm) som ligger stablet over Raspberry Pi 4 (40-pin flatkabel). Kortet vises med nøyaktig KiCad-geometri – klikk komponentene.</p>':'<b>Modulbygg</b><p>Kasse 200 × 120 × 48 mm med ferdige moduler (XH-M562, Pi Zero 2 W, DAC, relé- og MOSFET-kort).</p>';sync();};
 $('tLid').onclick=()=>{S.open=!S.open;if(S.open)setView('vTop');sync();};
 $('tMains').onclick=()=>{S.power=!S.power;sync();};
@@ -332,6 +333,7 @@ function loop(t){requestAnimationFrame(loop);
  if(anim){const k=reduce?1:Math.min(1,(t-anim.t0)/600),e=k<.5?2*k*k:-1+(4-2*k)*k;theta=anim.a0[0]+(anim.a1[0]-anim.a0[0])*e;phi=anim.a0[1]+(anim.a1[1]-anim.a0[1])*e;if(k>=1)anim=null;}
  const k2=reduce?1:0.12;for(const k in shells){const lid=shells[k].lid;lid.position.y+=((S.open?48+30:48)-lid.position.y)*k2;lid.position.z+=((S.open?-(shells[k].D+80):0)-lid.position.z)*k2;}
  if(S.bt==='pairing')sync();
+ boardHolder.position.y+=((S.lift?70:0)-boardHolder.position.y)*k2;
  place();renderer.render(scene,cam);}
 if(document.fonts)document.fonts.ready.then(draw);
 sync();requestAnimationFrame(loop);
