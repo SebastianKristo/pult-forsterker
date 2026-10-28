@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import proj3d
 
-SHELL, FRONT, INK, ACCENT = "#5a5c62", "#6c6e74", "#111", "#e8562a"
+SHELL, FRONT, INK, ACCENT = "#2c2d30", "#37383c", "#111", "#e8562a"
 
 
 def load(p):
@@ -16,14 +16,14 @@ def load(p):
     return np.frombuffer(d[84:], dtype=[("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")], count=n)["v"]
 
 
-def shade(v, light=(0.4, -0.6, 0.7), base=(0.36, 0.37, 0.40)):
+def shade(v, light=(0.4, -0.6, 0.7), base=(0.17, 0.18, 0.19)):
     n = np.cross(v[:, 1] - v[:, 0], v[:, 2] - v[:, 0]); n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-9)
-    l = np.asarray(light) / np.linalg.norm(light); k = 0.45 + 0.55 * np.clip(n @ l, 0, 1)
+    l = np.asarray(light) / np.linalg.norm(light); k = 0.85 + 1.6 * np.clip(n @ l, 0, 1)
     return np.clip(np.outer(k, base), 0, 1)
 
 
-def mesh(ax, v, base=(0.36, 0.37, 0.40), alpha=1.0, lw=0.05):
-    ax.add_collection3d(Poly3DCollection(v, facecolors=shade(v, base=base), edgecolor="#2a2b2f", linewidth=lw, alpha=alpha))
+def mesh(ax, v, base=(0.17, 0.18, 0.19), alpha=1.0, lw=0.05):
+    ax.add_collection3d(Poly3DCollection(v, facecolors=shade(v, base=base), edgecolor="none", linewidth=0, alpha=alpha))
 
 
 def label(ax, xyz, text, dxy=(30, 18), size=9):
@@ -42,9 +42,9 @@ fz = 24
 
 # ---------- 1. Deler (eksplodert) ----------
 fig = plt.figure(figsize=(11, 7)); ax = fig.add_subplot(projection="3d")
-mesh(ax, body); mesh(ax, lid + np.array([0, 0, 75]), base=(0.42, 0.43, 0.46))
+mesh(ax, body); mesh(ax, lid + np.array([0, 0, 75]), base=(0.17, 0.18, 0.19))
 fr = front.copy(); fr = np.stack([fr[:, :, 0], -fr[:, :, 2] - 60 - 60, fr[:, :, 1] + fz], axis=2)
-mesh(ax, fr, base=(0.47, 0.48, 0.51))
+mesh(ax, fr, base=(0.22, 0.22, 0.24))
 setup(ax, 28, -55, 135)
 label(ax, (0, 0, 100), "Lokk (v2_lid.stl) – skrus i pulten", (-60, 30))
 label(ax, (90, 50, 48), "4 skruetårn med M3-innsats", (40, 30))
@@ -63,7 +63,7 @@ fig.savefig("guide_02_bak.png", dpi=110, bbox_inches="tight"); plt.close(fig)
 # ---------- 3. Front ----------
 fig = plt.figure(figsize=(11, 5)); ax = fig.add_subplot(projection="3d")
 fr = np.stack([front[:, :, 0], -front[:, :, 2] - 62, front[:, :, 1] + fz], axis=2)
-mesh(ax, body); mesh(ax, fr, base=(0.47, 0.48, 0.51)); setup(ax, 8, -90, 125)
+mesh(ax, body); mesh(ax, fr, base=(0.22, 0.22, 0.24)); setup(ax, 8, -90, 125)
 for x, z, t, d in [(-80, fz, "1  POWER 16 mm", (-20, 60)), (-30, fz, "2  OLED 2,42\" bak akryl", (0, -60)),
                    (20, fz + 8.5, "3  AIRPLAY", (-10, 70)), (37, fz + 8.5, "4  BT", (30, 70)),
                    (20, fz - 8.5, "5  AUX", (-10, -70)), (37, fz - 8.5, "6  USB", (30, -70)), (70, fz, "7  Volum / mute", (30, 60))]:

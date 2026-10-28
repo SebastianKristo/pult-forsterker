@@ -82,6 +82,8 @@ function arrow(from,to){const d=new THREE.Vector3(...to).sub(new THREE.Vector3(.
 const cam=new THREE.PerspectiveCamera(28,W/H,1,3000);
 window.renderStep=function(n,view){
  arrows.clear();
+ if(n===0){for(const g of PARTS){const st=g.userData.step;g.visible=(st===1||st===7||st===16);const o=st===7?[0,0,45]:(st===16?[0,55,0]:[0,0,0]);g.position.set(...o);g.traverse(m=>{if(m.isMesh){if(m.userData.orig===undefined)m.userData.orig=m.material;m.material=m.userData.orig;}});}
+  const v=view||{theta:-0.6,phi:1.05,dist:520,target:[0,24,0]};const t=new THREE.Vector3(...v.target);cam.position.set(t.x+v.dist*Math.sin(v.phi)*Math.sin(v.theta),t.y+v.dist*Math.cos(v.phi),t.z+v.dist*Math.sin(v.phi)*Math.cos(v.theta));cam.lookAt(t);renderer.render(scene,cam);return;}
  for(const g of PARTS){const s=g.userData.step;g.visible=s<=n;const o=g.userData.offset;const isNew=s===n;
   g.position.set(isNew?o[0]:0,isNew?o[1]:0,isNew?o[2]:0);
   g.traverse(m=>{if(m.isMesh){if(m.userData.orig===undefined)m.userData.orig=m.material;m.material=(m.geometry.type==='TubeGeometry'&&s<n)?M.dimw:m.userData.orig;}});
@@ -95,7 +97,7 @@ window.renderStep=function(n,view){
 </script></body></html>`;
 
 const VIEWS={front:{theta:-0.6,phi:1.05,dist:520,target:[0,24,0]},back:{theta:Math.PI-0.6,phi:1.05,dist:520,target:[0,24,0]},top:{theta:-0.25,phi:0.35,dist:520,target:[0,24,0]},wire:{theta:-0.2,phi:0.3,dist:430,target:[0,20,0]},frontclose:{theta:-0.45,phi:1.2,dist:380,target:[0,24,30]},backclose:{theta:Math.PI-0.5,phi:1.15,dist:380,target:[0,24,-30]}};
-const STEPS=[[1,'front'],[2,'top'],[3,'backclose'],[4,'backclose'],[5,'backclose'],[6,'top'],[7,'frontclose'],[8,'frontclose'],[9,'frontclose'],[10,'top'],[11,'top'],[12,'wire'],[13,'wire'],[14,'wire'],[15,'wire'],[16,'front']];
+const STEPS=[[0,'front'],[1,'front'],[2,'top'],[3,'backclose'],[4,'backclose'],[5,'backclose'],[6,'top'],[7,'frontclose'],[8,'frontclose'],[9,'frontclose'],[10,'top'],[11,'top'],[12,'wire'],[13,'wire'],[14,'wire'],[15,'wire'],[16,'front']];
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});const p=await b.newPage({viewport:{width:1400,height:1000}});const errs=[];p.on('pageerror',e=>errs.push(e.message));
  await p.setContent(PAGE);await p.waitForTimeout(500);
  for(const[n,v]of STEPS){await p.evaluate(([n,v])=>window.renderStep(n,v),[n,VIEWS[v]]);await p.waitForTimeout(100);await p.screenshot({path:path.join(OUT,`step_${String(n).padStart(2,'0')}.png`)});}

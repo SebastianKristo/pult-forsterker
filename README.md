@@ -95,7 +95,19 @@ Se [kabinett/tools/README.md](kabinett/tools/README.md): STL fra SCAD-parametren
 
 ## Farger
 
-Kasse/lokk `#2C2D30` (matt PLA «Charcoal/Anthracite»), frontplate `#37383C`, knapper `#1D1D20`, knott `#18181A`, OLED-vindu røykfarget akryl, etiketter `#A3A29D`. OLED: hvit `#EEF6FF`, dempet `#7D8A94`, spor `#2A3036`.
+| Del | Farge |
+|---|---|
+| Kasse og lokk (matt PLA – «Charcoal», «Anthracite», «Dark Grey») | `#2C2D30` |
+| Frontplate (samme filament; lysere i modellen pga. lyset) | `#37383C` |
+| Inngangsknapper og POWER (svartoksidert metall, hvit LED-ring) | `#1D1D20` |
+| Volumknott (svart anodisert aluminium) | `#18181A` |
+| OLED-vindu (røykfarget/grå akryl) | `#060708` |
+| Etiketter front/bak | `#A3A29D` |
+| OLED tekst / dempet / spor / bakgrunn | `#EEF6FF` / `#7D8A94` / `#2A3036` / `#000000` |
+| LED-ringer | hvit; POWER dimmet til ca. 10 % i standby |
+| Høyttalerterminaler + / − | `#A3261D` / `#141415` |
+
+Renderne i `docs/` bruker disse fargene med noe sterkere lys så antrasitten leses på papir.
 
 ## Lisens
 
