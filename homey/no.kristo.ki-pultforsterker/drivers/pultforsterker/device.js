@@ -49,7 +49,9 @@ class PultforsterkerDevice extends Homey.Device {
         let buf = '';
         res.on('data', (c) => { buf += c; });
         res.on('end', () => {
-          try { resolve(JSON.parse(buf)); } catch (e) { reject(new Error(`Ugyldig svar: ${buf}`)); }
+          let json; try { json = JSON.parse(buf); } catch (e) { return reject(new Error(`Ugyldig svar: ${buf}`)); }
+          if (res.statusCode >= 400) return reject(new Error(json.error || `HTTP ${res.statusCode}`));
+          resolve(json);
         });
       });
       req.on('error', reject);

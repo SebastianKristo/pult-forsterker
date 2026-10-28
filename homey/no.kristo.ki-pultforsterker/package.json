@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "install-dev": "homey app install",
-    "run": "homey app run"
+    "run": "homey app run",
+    "test": "NODE_PATH=test/stubs node --test test/*.test.js",
+    "mock": "node test/mock-daemon.js"
   },
   "dependencies": {},
   "devDependencies": {
