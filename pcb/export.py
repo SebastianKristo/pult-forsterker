@@ -45,8 +45,8 @@ if os.path.exists(SES) and "--no-ses" not in sys.argv:
 
 # Bredere strøm-/høyttalerspor der de ikke er inntil fine pads (Freerouting ruter med smal bredde ved IC-ene)
 WIDEN = {"VIN24": 2.0, "24V_IN": 2.0, "SPK_LN": 1.5, "SPK_LP": 1.5, "SPK_RN": 1.5, "SPK_RP": 1.5, "OUTNL": 1.2, "OUTPL": 1.2, "OUTNR": 1.2, "OUTPR": 1.2, "5V": 1.0, "BUCK_SW": 1.2}
-fine_pads = [pd.GetPosition() for fp in board.GetFootprints() if fp.GetReference() in ("U6", "U1", "U4", "U5") for pd in fp.Pads()]
-def near_fine(pt, r=pcbnew.FromMM(2.5)):
+fine_pads = [pd.GetPosition() for fp in board.GetFootprints() for pd in fp.Pads() if min(pd.GetSize().x, pd.GetSize().y) < pcbnew.FromMM(1.3)]
+def near_fine(pt, r=pcbnew.FromMM(1.6)):
     return any(abs(pt.x - q.x) < r and abs(pt.y - q.y) < r for q in fine_pads)
 n_w = 0
 for t in board.GetTracks():

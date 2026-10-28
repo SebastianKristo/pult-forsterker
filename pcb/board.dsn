@@ -2082,8 +2082,8 @@
         (use_via Via[0-1]_1200:600_um)
       )
       (rule
-        (width 600)
-        (clearance 200.1)
+        (width 500)
+        (clearance 150.1)
       )
     )
     (class Power VIN24 24V_IN
@@ -2091,8 +2091,8 @@
         (use_via Via[0-1]_1200:600_um)
       )
       (rule
-        (width 1000)
-        (clearance 200.1)
+        (width 600)
+        (clearance 150.1)
       )
     )
     (class Power5V 5V
@@ -2100,8 +2100,8 @@
         (use_via Via[0-1]_1200:600_um)
       )
       (rule
-        (width 800)
-        (clearance 200.1)
+        (width 600)
+        (clearance 150.1)
       )
     )
   )
