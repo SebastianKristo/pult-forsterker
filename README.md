@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/bilder/logo.png" width="520" alt="KI Pultforsterker"></p>
+
 # KI Pultforsterker
 
 
