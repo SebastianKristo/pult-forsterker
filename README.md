@@ -11,7 +11,8 @@ DIY stereoforsterker (2 × 50 W) som henger under pulten. AirPlay 2, Bluetooth, 
 | **Forsterker** | XH-M562 (TPA3116D2) 2 × 50 W, 24 V |
 | **Høyttalere** | 2 × 6 Ω, 5–40 W. Ved 24 V gir TPA3116 ca. 35–40 W i 6 Ω ved full utstyring – `KI_AMP_MAX_TAP=85` i `ki-amp.env` holder det under 40 W |
 | **Innganger** | AirPlay 2 (Shairport Sync), Bluetooth A2DP (bluealsa), AUX 3,5 mm (relé), USB-C (Pi som UAC2-lydkort) |
-| **Volum** | 2 × X9C103S digitalpot i lydveien, styrt av KY-040 encoder |
+| **Volum** | AirPlay/BT/USB: digitalt i CamillaDSP (X9C fast på taket). AUX: 2 × X9C103S digitalpot. Alt styrt av KY-040 encoder |
+| **Loudness** | CamillaDSP Loudness-filter (bass +0–10 dB, diskant halvparten) som avtar mot full styrke. Av/på og styrke fra API, HA og Homey. Gjelder ikke AUX (analog vei utenom Pi-en) |
 | **Skjerm** | 2,42" SSD1309 OLED 128 × 64, I2C |
 | **Integrasjoner** | Home Assistant custom-integrasjon (mDNS-oppdagelse) · Homey SDK3-app |
 
@@ -43,10 +44,11 @@ design-referanse/   Opprinnelig designpakke (front, OLED-layout, oppførsel, far
 | `ki_amp_daemon.py` | Hoveddaemon: knapper, encoder, LED-ringer, reléer, X9C-volum, HTTP-API (port 8765), mDNS `_kipultamp._tcp`, tilstand i `/var/lib/ki-amp/state.json` |
 | `oled_display.py` | Tegner OLED-grensesnittet (luma.oled, SSD1309) etter `design-referanse/DESIGN.md` |
 | `install.sh` | Setter opp config.txt (hifiberry-dac, I2C, dwc2, serial av), bygger Shairport Sync + NQPTP, bluealsa, USB-gadget-lyd, systemd-tjenester |
-| `asound.conf` | ALSA dmix – deler DAC-en mellom AirPlay, Bluetooth og USB |
+| `asound.conf` | ALSA dmix → snd-aloop loopback. CamillaDSP leser loopbacken og skriver til DAC-en |
+| `camilladsp.yml` / `camilladsp.service` | CamillaDSP v2: Loudness-filter + digitalt volum, styres live av daemonen over websocket (port 1234) |
 | `shairport-sync.conf` | AirPlay 2, metadata-pipe til OLED |
 | `ki-amp.env` | Navn, port, relé-polaritet (kopieres til `/etc/ki-amp.env`) |
-| `*.service` | systemd: `ki-amp`, `oled-display`, `ki-usb-audio`, `bluealsa-aplay` |
+| `*.service` | systemd: `camilladsp`, `ki-amp`, `oled-display`, `ki-usb-audio`, `bluealsa-aplay` |
 
 ### HTTP-API
 
@@ -58,6 +60,7 @@ POST /api/input   {"input":"airplay|bt|aux|usb"}
 POST /api/volume  {"volume":0-100}
 POST /api/mute    {"mute":true}
 POST /api/bt      {"pairing":true}
+POST /api/loudness {"on":true,"level":0-10}
 ```
 
 ### GPIO (BCM)

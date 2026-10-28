@@ -24,10 +24,21 @@ sudo apt-get -y install --no-install-recommends \
   libssl-dev libsoxr-dev libplist-dev libsodium-dev libavutil-dev libavcodec-dev \
   libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils \
   bluez bluez-alsa-utils python3-dbus \
-  python3-pip python3-pil python3-smbus i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero
+  python3-pip python3-pil python3-smbus i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket curl
 
-echo "== 4/9  ALSA dmix (deler DAC-en mellom AirPlay, Bluetooth og USB)"
+echo "== 4/9  ALSA dmix → loopback → CamillaDSP (loudness + digitalt volum) → DAC"
 sudo install -m 644 "$SRC/asound.conf" /etc/asound.conf
+echo snd-aloop | sudo tee /etc/modules-load.d/aloop.conf >/dev/null
+echo 'options snd-aloop index=5 pcm_substreams=1' | sudo tee /etc/modprobe.d/aloop.conf >/dev/null
+sudo modprobe snd-aloop index=5 pcm_substreams=1 || true
+CDSP_VER=v2.0.3
+cd /tmp && rm -f camilladsp.tar.gz && curl -L -o camilladsp.tar.gz \
+  "https://github.com/HEnquist/camilladsp/releases/download/${CDSP_VER}/camilladsp-linux-aarch64.tar.gz"
+sudo tar -xzf camilladsp.tar.gz -C /usr/local/bin camilladsp && sudo chmod 755 /usr/local/bin/camilladsp
+sudo mkdir -p /etc/camilladsp
+[ -f /etc/camilladsp/config.yml ] || sudo install -m 644 "$SRC/camilladsp.yml" /etc/camilladsp/config.yml
+sudo install -m 644 "$SRC/camilladsp.service" /etc/systemd/system/camilladsp.service
+sudo systemctl daemon-reload && sudo systemctl enable --now camilladsp
 
 echo "== 5/9  NQPTP + Shairport Sync (AirPlay 2)"
 cd /tmp && rm -rf nqptp && git clone https://github.com/mikebrady/nqptp.git

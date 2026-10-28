@@ -17,6 +17,8 @@ class KiPultforsterkerApp extends Homey.App {
       .registerRunListener(async ({ device }) => device.btPair());
     this.homey.flow.getActionCard('ki_set_input')
       .registerRunListener(async ({ device, input }) => device.setInput(input));
+    this.homey.flow.getActionCard('ki_set_loudness')
+      .registerRunListener(async ({ device, on, level }) => device.setLoudness(on === 'on', level));
   }
 }
 

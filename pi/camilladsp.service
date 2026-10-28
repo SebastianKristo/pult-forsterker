@@ -1,0 +1,14 @@
+[Unit]
+Description=CamillaDSP (loudness + digitalt volum for KI Pultforsterker)
+After=sound.target
+Before=ki-amp.service shairport-sync.service bluealsa-aplay.service ki-usb-audio.service
+
+[Service]
+ExecStart=/usr/local/bin/camilladsp -p 1234 -a 127.0.0.1 -o /var/log/camilladsp.log /etc/camilladsp/config.yml
+Restart=always
+RestartSec=3
+User=root
+Nice=-10
+
+[Install]
+WantedBy=multi-user.target

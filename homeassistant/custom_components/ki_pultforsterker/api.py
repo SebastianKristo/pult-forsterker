@@ -42,3 +42,11 @@ class KiAmpApi:
 
     async def set_bt_pairing(self, on: bool = True) -> dict[str, Any]:
         return await self._req("POST", "/bt", {"pairing": on})
+
+    async def set_loudness(self, on: bool | None = None, level: int | None = None) -> dict[str, Any]:
+        body: dict[str, Any] = {}
+        if on is not None:
+            body["on"] = on
+        if level is not None:
+            body["level"] = level
+        return await self._req("POST", "/loudness", body)

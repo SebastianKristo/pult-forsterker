@@ -27,6 +27,9 @@
     "switch": {
       "power": {
         "name": "Strøm"
+      },
+      "loudness": {
+        "name": "Loudness"
       }
     },
     "sensor": {
@@ -59,6 +62,11 @@
     "button": {
       "bt_pair": {
         "name": "Start Bluetooth-parring"
+      }
+    },
+    "number": {
+      "loudness_level": {
+        "name": "Loudness level"
       }
     }
   }

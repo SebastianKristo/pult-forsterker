@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -42,7 +42,9 @@
         "speaker_playing",
         "speaker_track",
         "speaker_artist",
-        "ki_input"
+        "ki_input",
+        "ki_loudness",
+        "ki_loudness_level"
       ],
       "capabilitiesOptions": {
         "speaker_playing": {
@@ -168,6 +170,33 @@
           }
         }
       ]
+    },
+    "ki_loudness": {
+      "type": "boolean",
+      "title": {
+        "en": "Loudness",
+        "no": "Loudness"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "/assets/source.svg"
+    },
+    "ki_loudness_level": {
+      "type": "number",
+      "title": {
+        "en": "Loudness level",
+        "no": "Loudness-styrke"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "units": {
+        "en": "dB"
+      }
     }
   },
   "flow": {
@@ -389,6 +418,52 @@
             "type": "device",
             "name": "device",
             "filter": "driver_id=pultforsterker"
+          }
+        ]
+      },
+      {
+        "id": "ki_set_loudness",
+        "title": {
+          "en": "Set loudness",
+          "no": "Sett loudness"
+        },
+        "titleFormatted": {
+          "en": "Loudness [[on]] at level [[level]]",
+          "no": "Loudness [[on]] på styrke [[level]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          },
+          {
+            "type": "dropdown",
+            "name": "on",
+            "values": [
+              {
+                "id": "on",
+                "title": {
+                  "en": "on",
+                  "no": "på"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "off",
+                  "no": "av"
+                }
+              }
+            ]
+          },
+          {
+            "type": "range",
+            "name": "level",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "label": "dB"
           }
         ]
       }

@@ -11,6 +11,8 @@ class PultforsterkerDevice extends Homey.Device {
     this.registerCapabilityListener('volume_set', (v) => this.setVolume(Math.round(v * 100)));
     this.registerCapabilityListener('volume_mute', (m) => this.setMute(m));
     this.registerCapabilityListener('ki_input', (i) => this.setInput(i));
+    this.registerCapabilityListener('ki_loudness', (on) => this.setLoudness(on, undefined));
+    this.registerCapabilityListener('ki_loudness_level', (lvl) => this.setLoudness(undefined, Math.round(lvl)));
 
     // Følg IP-endringer fra mDNS
     try {
@@ -77,6 +79,8 @@ class PultforsterkerDevice extends Homey.Device {
     await this.setCapabilityValue('volume_set', (st.volume || 0) / 100).catch(this.error);
     await this.setCapabilityValue('volume_mute', !!st.mute).catch(this.error);
     await this.setCapabilityValue('ki_input', st.input || 'airplay').catch(this.error);
+    if (this.hasCapability('ki_loudness')) await this.setCapabilityValue('ki_loudness', !!st.loudness).catch(this.error);
+    if (this.hasCapability('ki_loudness_level')) await this.setCapabilityValue('ki_loudness_level', Number(st.loudness_level ?? 0)).catch(this.error);
 
     if (this._lastInput !== null && this._lastInput !== st.input) {
       await this.homey.flow.getDeviceTriggerCard('ki_input_changed').trigger(this, { input: st.input }).catch(this.error);
@@ -98,6 +102,10 @@ class PultforsterkerDevice extends Homey.Device {
   async setVolume(v) { await this.apply(await this.request('POST', '/volume', { volume: v })); }
   async setMute(m) { await this.apply(await this.request('POST', '/mute', { mute: !!m })); }
   async btPair() { await this.apply(await this.request('POST', '/bt', { pairing: true })); }
+  async setLoudness(on, level) {
+    const body = {}; if (on !== undefined) body.on = !!on; if (level !== undefined) body.level = level;
+    await this.apply(await this.request('POST', '/loudness', body));
+  }
   async setInput(i) { await this.apply(await this.request('POST', '/input', { input: i })); }
 
   async togglePower() {

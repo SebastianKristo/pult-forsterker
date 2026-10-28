@@ -208,6 +208,9 @@ def draw_main(draw, c):
             draw.rectangle((x0, 59 - h, x0 + step - 1, 59), fill=255 if i < on else 0, outline=255 if i < on else None)
             if i >= on: draw.point((x0 + 1, 59), 255)
         draw.text((126 - draw.textlength(str(vol), font=f_num), 47), str(vol), font=f_num, fill=255)
+    # loudness-indikator: liten "LD" under kildefeltene til høyre (vises bare når aktiv og på digital kilde)
+    if c.get("loudness") and c.get("input") != "aux":
+        dim_text(draw, (113, 12), "LD", f_small)
 
 
 def draw_overlay(draw, c):

@@ -1,6 +1,7 @@
 # KI Pultforsterker – Home Assistant package
-# Legges i packages/ki_pultforsterker.yaml. Entitetene kommer fra custom-integrasjonen
-# ki_pultforsterker (HTTP/mDNS). Krever at integrasjonen er satt opp først.
+# Legges i packages/ki_pultforsterker.yaml. Entitetene switch/sensor kommer fra MQTT Discovery
+# (ki_amp_mqtt.py på Pi-en); AirPlay-avspilling kommer fra Apple TV-integrasjonen som
+# oppdager «Pultforsterker» automatisk (media_player.pultforsterker).
 
 input_boolean:
   ki_pultforsterker_auto_av:
@@ -20,10 +21,10 @@ input_number:
 
 automation:
   - id: ki_pultforsterker_paa_ved_airplay
-    alias: KI Pultforsterker – på ved avspilling
+    alias: KI Pultforsterker – på ved AirPlay
     trigger:
       - platform: state
-        entity_id: media_player.ki_pultforsterker
+        entity_id: media_player.pultforsterker
         to: playing
     action:
       - service: switch.turn_on
@@ -63,5 +64,5 @@ script:
         target:
           entity_id: tts.google_translate_no_no
         data:
-          media_player_entity_id: media_player.ki_pultforsterker
+          media_player_entity_id: media_player.pultforsterker
           message: "{{ melding }}"

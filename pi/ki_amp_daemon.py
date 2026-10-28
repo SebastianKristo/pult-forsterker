@@ -16,11 +16,14 @@ API:
   POST /api/power  {"on":bool}   POST /api/toggle
   POST /api/input  {"input":"airplay|bt|aux|usb"}
   POST /api/volume {"volume":0-100} | {"delta":±n}
+  POST /api/loudness {"on":bool, "level":0-10}
   POST /api/mute   {"mute":bool}
   POST /api/bt     {"pairing":true}   (gjør Pi-en synlig 2 min)
 """
 import asyncio
 import json
+import math
+import threading
 import os
 import socket
 import subprocess
@@ -37,6 +40,9 @@ STATE_FILE = "/var/lib/ki-amp/state.json"
 RELAY_ACTIVE_LOW = os.environ.get("RELAY_ACTIVE_LOW", "1") == "1"
 # Maks X9C-trinn (0-99) ved volum 100 %. 6 ohm / 40 W-høyttalere på 24 V: 85 holder forsterkeren under 40 W.
 MAX_TAP = max(10, min(99, int(os.environ.get("KI_AMP_MAX_TAP", "85"))))
+DSP_WS = os.environ.get("KI_AMP_DSP_WS", "ws://127.0.0.1:1234")   # CamillaDSP (loudness + digitalt volum for AirPlay/BT/USB)
+DSP_CAPTURE = os.environ.get("KI_AMP_DSP_CAPTURE", "hw:Loopback,1")
+DSP_PLAYBACK = os.environ.get("KI_AMP_DSP_PLAYBACK", "hw:sndrpihifiberry")
 
 # ---------- GPIO (BCM) ----------
 PIN_RELAY_AMP = 27      # relé: 24 V til forsterkerkortet
@@ -49,7 +55,8 @@ LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
 LED_POWER = 11          # PWM
 
 INPUTS = ["airplay", "bt", "aux", "usb"]
-state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False}
+state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False,
+         "loudness": True, "loudness_level": 5}   # loudness 0-10 (dB bassløft ved lavt volum)
 _x9c_pos = None
 _pairing_until = 0.0
 
@@ -81,11 +88,77 @@ def x9c_step(n):
 
 
 def apply_volume():
+    """AUX: volum i X9C (analogt). AirPlay/BT/USB: X9C fast på MAX_TAP, volum + loudness digitalt i CamillaDSP."""
     global _x9c_pos
-    target = 0 if (state["mute"] or not state["power"]) else round(state["volume"] * MAX_TAP / 100)
+    if state["mute"] or not state["power"]:
+        target = 0
+    elif state["input"] == "aux":
+        target = round(state["volume"] * MAX_TAP / 100)
+    else:
+        target = MAX_TAP
     if _x9c_pos is None:
         x9c_step(-100); _x9c_pos = 0
     x9c_step(target - _x9c_pos); _x9c_pos = target
+    dsp.update()
+
+
+# ---------- CamillaDSP (loudness + digitalt volum) ----------
+def vol_db(v):
+    return -80.0 if v <= 0 else max(-60.0, 40.0 * math.log10(v / 100.0))
+
+
+def dsp_config():
+    lvl = state["loudness_level"] if state["loudness"] else 0
+    return f"""devices:
+  samplerate: 44100
+  chunksize: 1024
+  queuelimit: 4
+  capture: {{type: Alsa, channels: 2, device: "{DSP_CAPTURE}", format: S32LE}}
+  playback: {{type: Alsa, channels: 2, device: "{DSP_PLAYBACK}", format: S32LE}}
+filters:
+  loud:
+    type: Loudness
+    parameters: {{fader: Main, reference_level: -10.0, high_boost: {lvl * 0.5:.1f}, low_boost: {float(lvl):.1f}, attenuate_mid: false}}
+pipeline:
+  - type: Filter
+    channels: [0, 1]
+    names: [loud]
+"""
+
+
+class Dsp:
+    """Egen tråd som holder CamillaDSP oppdatert via websocket (python3-websocket)."""
+    def __init__(self):
+        self._ev = threading.Event(); self._last_cfg = None
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def update(self):
+        self._ev.set()
+
+    def _send(self, ws, cmd):
+        ws.send(json.dumps(cmd)); return json.loads(ws.recv())
+
+    def _run(self):
+        try:
+            import websocket
+        except Exception as e:
+            print("CamillaDSP-styring av (python3-websocket mangler):", e); return
+        while True:
+            self._ev.wait(); self._ev.clear()
+            try:
+                ws = websocket.create_connection(DSP_WS, timeout=2)
+                cfg = dsp_config()
+                if cfg != self._last_cfg:
+                    self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg
+                db = vol_db(state["volume"]) if state["input"] != "aux" else 0.0
+                self._send(ws, {"SetVolume": db})
+                self._send(ws, {"SetMute": bool(state["mute"]) or not state["power"]})
+                ws.close()
+            except Exception as e:
+                print("CamillaDSP:", e); time.sleep(1)
+
+
+dsp = Dsp()
 
 
 def apply_input():
@@ -114,7 +187,7 @@ def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute")}, fh)
+            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level")}, fh)
     except Exception:
         pass
 
@@ -159,7 +232,15 @@ def set_power(on):
 
 def set_input(inp):
     if inp in INPUTS:
-        state["input"] = inp; apply_input(); changed()
+        state["input"] = inp; apply_input(); apply_volume(); changed()
+
+
+def set_loudness(on=None, level=None):
+    if on is not None:
+        state["loudness"] = bool(on)
+    if level is not None:
+        state["loudness_level"] = max(0, min(10, int(level)))
+    apply_volume(); changed()
 
 
 def set_volume(v):
@@ -253,6 +334,8 @@ async def h_volume(r):
     set_volume(state["volume"] + int(b["delta"]) if "delta" in b else int(b.get("volume", state["volume"]))); return j()
 async def h_mute(r): set_mute((await r.json()).get("mute", True)); return j()
 async def h_bt(r): bt_pairing((await r.json()).get("pairing", True)); return j()
+async def h_loudness(r):
+    b = await r.json(); set_loudness(b.get("on"), b.get("level")); return j()
 
 
 def _local_ip():
@@ -294,7 +377,7 @@ def main():
     app = web.Application()
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt)])
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 
