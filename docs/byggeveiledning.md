@@ -124,6 +124,10 @@ Tre grupper, i denne rekkefølgen: **24 V**, så **5 V**, så **signal**. Hold 2
 
 Aldri koble SPL− og SPR− sammen eller til jord – forsterkeren er bro-koblet.
 
+**Beskyttelse på 24 V (deler 28–30):** sett **sikringsholderen med 5 A** i den røde ledningen rett etter DC-099 (før KCD1). Lodd **2200 µF / 35 V-kondensatoren** rett på forsterkerens VCC/GND-terminal – minuspolen (stripen) til GND, så kort bein som mulig. Klem en **ferrittklips** rundt hvert høyttalerpar like innenfor terminalene.
+
+**USB-isolator (del 27):** kuttes inn på USB-C-kabelen innvendig: USB-C-flens → isolatorens inngang, isolatorens utgang → Pi-ens USB-port. Isolatoren må ha egen 5 V på Pi-siden (jumper/terminal på kortet) – ta den fra buck OUT. Bruker du heller ground-loop-isolator på AUX, settes den mellom PC-en og AUX-kontakten utenfor kassen.
+
 **5 V (22 AWG)** – slå på hovedbryteren med adapteren tilkoblet og **mål 5,0 V på buck OUT** før du går videre. Slik av igjen.
 
 | Fra buck OUT+ / OUT− | Til |

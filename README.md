@@ -28,6 +28,16 @@ docs/               Byggeveiledning (PDF + markdown), bildeveiledning (PDF), all
 design-referanse/   Opprinnelig designpakke (front, OLED-layout, oppførsel, farger)
 ```
 
+## Beskyttelse og støy (anbefalte tilleggsdeler)
+
+| Del | Hvorfor | AliExpress |
+|---|---|---|
+| USB-isolator ADuM3160/4160 (eller ground-loop-isolator 3,5 mm) | PC og forsterker deler jord via USB-C/AUX → brum/«mus-pip». Settes innvendig mellom USB-C-flensen og Pi-en | [USB-isolator](https://www.aliexpress.com/w/wholesale-ADUM3160-USB-isolator.html) · [3,5 mm](https://www.aliexpress.com/w/wholesale-ground-loop-isolator-3.5mm.html) |
+| Elektrolyttkondensator 2200 µF / 35 V | buffer på 24 V ved forsterkerens VCC – basstopper, hindrer at 5 V-skinnen pumper | [Søk](https://www.aliexpress.com/w/wholesale-2200uF-35V-electrolytic-capacitor.html) |
+| Inline sikringsholder + 5 A | rett etter DC-099 – sikringen ryker, ikke ledningen | [Søk](https://www.aliexpress.com/w/wholesale-inline-fuse-holder-5x20-5A.html) |
+| Ferrittklips Ø 5–7 mm × 2 | på høyttalerledningene – klasse D-støy mot Pi-ens Wi-Fi | [Søk](https://www.aliexpress.com/w/wholesale-ferrite-clip-core-cable.html) |
+| 40-pinners header (hvis Pi-en er uten) · Dupont crimp-sett | header til Pi Zero; egne ledninger i riktig lengde | [Header](https://www.aliexpress.com/w/wholesale-40-pin-header-raspberry-pi-zero.html) · [Dupont](https://www.aliexpress.com/w/wholesale-dupont-connector-kit-crimp.html) |
+
 ## Kom i gang
 
 1. **Deler** – se delelisten i [docs/byggeveiledning.md](docs/byggeveiledning.md) og `docs/KI_Pultforsterker_Bildeveiledning.pdf`.
