@@ -55,15 +55,21 @@ def airplay_thread():
     while True:
         if not os.path.exists(PIPE):
             time.sleep(1); continue
-        with open(PIPE, "r", errors="replace") as fh:
+        # Rå fil-deskriptor + os.read: gir det som ligger i pipen med en gang. (Tekst-read(4096) venter til
+        # 4096 tegn har kommet, så metadata for en ny låt ble liggende til neste låt – «henger på forrige».)
+        fd = os.open(PIPE, os.O_RDONLY | os.O_NONBLOCK)
+        try:
             while True:
-                r, _, _ = select.select([fh], [], [], 1.0)
+                r, _, _ = select.select([fd], [], [], 1.0)
                 if not r:
                     continue
-                chunk = fh.read(4096)
-                if not chunk:
-                    break
-                buf += chunk
+                try:
+                    raw = os.read(fd, 65536)
+                except BlockingIOError:
+                    continue
+                if not raw:
+                    time.sleep(0.2); continue     # ingen skriver akkurat nå (Shairport startet på nytt) – vent
+                buf += raw.decode("utf-8", "replace")
                 for m in item_re.finditer(buf):
                     t, c = bytes.fromhex(m.group(1)).decode("ascii", "replace"), bytes.fromhex(m.group(2)).decode("ascii", "replace")
                     data = base64.b64decode(m.group(4)).decode("utf-8", "replace") if m.group(4) else ""
@@ -85,8 +91,8 @@ def airplay_thread():
                             else:
                                 track["cover"] = ""
                         except Exception: pass
-                    elif t == "ssnc" and c == "mdst":   # ny metadata-sekvens (nytt spor) – bildet kommer etterpå
-                        pass
+                    elif t == "ssnc" and c == "mdst":   # ny metadata-sekvens (nytt spor): tøm gamle felt
+                        track.update(title="", artist="", album="")
                     elif t == "ssnc" and c in ("pbeg", "prsm"): track.update(playing=True, paused=False, source="airplay")
                     elif t == "ssnc" and c == "pfls":   # pause/flush – behold tittelen
                         track.update(playing=False, paused=True)
@@ -100,6 +106,8 @@ def airplay_thread():
                     buf = buf[buf.rfind("</item>") + 7:]
                 elif len(buf) > 4_000_000:   # albumbilder kan være store – kast bare ved åpenbart søppel
                     buf = ""
+        finally:
+            os.close(fd)
 
 
 # ---------- albumbilde: AirPlay sender det selv (PICT); ellers (Bluetooth, AirPlay uten bilde) slås det opp i iTunes ----------
