@@ -36,7 +36,7 @@ part("J3", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "SPK R", "C8465",
 part("J4", "Connector_JST", "JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical", "AUX", "C144395", 122, 6, 0, "AUX fra PJ392: L, R, GND")
 
 # --- buck TPS54560 (x 8–48, y 18–48) ---
-part("U1", SO, "HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm_ThermalVias", "TPS54560BDDA", "C83010", 22, 30, 0, "Buck 60 V 5 A")
+part("U1", SO, "HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm", "TPS54560BDDA", "C83010", 22, 30, 0, "Buck 60 V 5 A")
 part("C2", C_, C1210, "4.7u/50V", "C76838", 12, 22, 0, "Cin"); part("C3", C_, C1210, "4.7u/50V", "C76838", 12, 26, 0, "Cin")
 part("C4", C_, C0603, "100n/50V", "C14663", 12, 30, 0, "Cin HF")
 part("C5", C_, C0603, "100n", "C14663", 30, 24, 90, "Boot")

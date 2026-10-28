@@ -6,7 +6,7 @@ C1,2200u/35V,CP_Radial_D13.0mm_P5.00mm,C5779,"Bulk elektrolytt (THT, loddes selv
 J2,SPK L,TerminalBlock_bornier-2_P5.08mm,C8465,Høyttaler venstre + / -
 J3,SPK R,TerminalBlock_bornier-2_P5.08mm,C8465,Høyttaler høyre + / -
 J4,AUX,JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical,C144395,"AUX fra PJ392: L, R, GND"
-U1,TPS54560BDDA,HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm_ThermalVias,C83010,Buck 60 V 5 A
+U1,TPS54560BDDA,HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm,C83010,Buck 60 V 5 A
 C2,4.7u/50V,C_1210_3225Metric,C76838,Cin
 C3,4.7u/50V,C_1210_3225Metric,C76838,Cin
 C4,100n/50V,C_0603_1608Metric,C14663,Cin HF
