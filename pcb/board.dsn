@@ -2107,5 +2107,10 @@
     )
   )
   (wiring
+    (wire (path F.Cu 300 876500 -362750 905000 -362000) (net OUTNL) (type fix))
+    (wire (path B.Cu 250 95400 -857200 125000 -857200 125000 -986000 1325000 -986000 1325000 -816000 1231750 -816000) (net LED_USB_G) (type fix))
+    (wire (path F.Cu 250 1231750 -816000 1231750 -800000) (net LED_USB_G) (type fix))
+    (via "Via[0-1]_800:400_um" 905000 -362000 (net OUTNL) (type fix))
+    (via "Via[0-1]_800:400_um" 1231750 -816000 (net LED_USB_G) (type fix))
   )
 )

@@ -57,3 +57,18 @@ java.lang.NullPointerException: Cannot invoke "app.freerouting.management.Segmen
 2026-10-28 15:27:54.064 [main] INFO  Freerouting v1.9.0 (build-date: 2023-10-30)
 2026-10-28 15:27:54.117 [main] INFO  Settings were loaded from freerouting.json
 2026-10-28 15:27:55.151 [main] INFO  Opening 'board.dsn'...
+2026-10-28 15:28:17.195 [Thread-23] INFO  Starting auto-routing...
+2026-10-28 15:29:26.360 [Thread-23] WARN  There were only 18.15 changes in the last 20 passes, so it's very likely that autorouter can't improve the result much further. It is recommended to stop it and finish the board manually.
+2026-10-28 15:29:56.711 [Thread-23] WARN  There were only 6.65 changes in the last 40 passes, so it's very likely that autorouter can't improve the result much further. It is recommended to stop it and finish the board manually.
+2026-10-28 15:30:26.769 [Thread-23] WARN  There were only 3.23 changes in the last 60 passes, so it's very likely that autorouter can't improve the result much further. It is recommended to stop it and finish the board manually.
+2026-10-28 15:30:56.776 [Thread-23] WARN  There were only 2.00 changes in the last 80 passes, so it's very likely that autorouter can't improve the result much further. It is recommended to stop it and finish the board manually.
+2026-10-28 15:31:17.031 [Thread-23] INFO  Auto-routing was completed in 2 minute(s) 59.83 seconds.
+2026-10-28 15:31:17.136 [Thread-23] INFO  Starting route optimization on 1 thread...
+2026-10-28 15:31:37.672 [Thread-23] INFO  Route optimization was completed in 20.54 seconds.
+2026-10-28 15:31:37.694 [Thread-23] INFO  Saving 'board.ses'...
+2026-10-28 15:35:03.449 [main] INFO  Freerouting v1.9.0 (build-date: 2023-10-30)
+2026-10-28 15:35:03.500 [main] INFO  Settings were loaded from freerouting.json
+2026-10-28 15:35:04.539 [main] INFO  Opening 'board.dsn'...
+2026-10-28 15:35:05.349 [main] WARN  Wiring.read_wire_scope: wire corner outside board at 'OUTNL'
+2026-10-28 15:35:05.350 [main] WARN  Wiring.read_wire_scope: wire corner outside board at 'LED_USB_G'
+2026-10-28 15:35:05.350 [main] WARN  Wiring.read_wire_scope: wire corner outside board at 'LED_USB_G'
