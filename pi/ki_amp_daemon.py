@@ -43,6 +43,7 @@ MAX_TAP = max(10, min(99, int(os.environ.get("KI_AMP_MAX_TAP", "85"))))
 DSP_WS = os.environ.get("KI_AMP_DSP_WS", "ws://127.0.0.1:1234")   # CamillaDSP (loudness + digitalt volum for AirPlay/BT/USB)
 DSP_CAPTURE = os.environ.get("KI_AMP_DSP_CAPTURE", "hw:Loopback,1")
 DSP_PLAYBACK = os.environ.get("KI_AMP_DSP_PLAYBACK", "hw:sndrpihifiberry")
+DSP_FORMAT = os.environ.get("KI_AMP_DSP_FORMAT", "S32LE")   # S16LE for Pi-ens 3,5 mm-utgang (testmodus)
 
 # ---------- GPIO (BCM) ----------
 # KI_AMP_BOARD=modules : modulbygget (XH-M562, X9C103S, relékort) – standard
@@ -145,7 +146,7 @@ def dsp_config():
   chunksize: 1024
   queuelimit: 4
   capture: {{type: Alsa, channels: 2, device: "{DSP_CAPTURE}", format: S32LE}}
-  playback: {{type: Alsa, channels: 2, device: "{DSP_PLAYBACK}", format: S32LE}}
+  playback: {{type: Alsa, channels: 2, device: "{DSP_PLAYBACK}", format: {DSP_FORMAT}}}
 filters:
   loud:
     type: Loudness

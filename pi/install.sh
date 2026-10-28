@@ -3,14 +3,25 @@
 # Kjør som vanlig bruker:  bash install.sh
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
+# KI_AMP_OUT=dac        : I2S-DAC / hovedkort (standard)
+# KI_AMP_OUT=headphones : TEST uten hovedkort – lyd ut på Pi 4 sin 3,5 mm-kontakt (bcm2835 Headphones, 16 bit)
+OUT="${KI_AMP_OUT:-dac}"
+if [ "$OUT" = headphones ]; then PB_CARD=Headphones; PB_DEV="plughw:Headphones"; PB_FMT=S16LE; else PB_CARD=sndrpihifiberry; PB_DEV="hw:sndrpihifiberry"; PB_FMT=S32LE; fi
 
 echo "== 1/9  Oppdaterer systemet"
 sudo apt-get update && sudo apt-get -y full-upgrade
 
 echo "== 2/9  config.txt: I2S-DAC, I2C, USB-gadget (dwc2), serial console av"
 CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
-sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
-for line in 'dtoverlay=hifiberry-dac' 'dtparam=i2c_arm=on' 'dtparam=spi=on' 'dtoverlay=dwc2,dr_mode=peripheral' 'enable_uart=0'; do
+if [ "$OUT" = headphones ]; then
+  grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
+  sudo sed -i 's/^dtoverlay=hifiberry-dac/#dtoverlay=hifiberry-dac/' "$CFG"
+  LINES='dtparam=i2c_arm=on dtparam=spi=on dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
+else
+  sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
+  LINES='dtoverlay=hifiberry-dac dtparam=i2c_arm=on dtparam=spi=on dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
+fi
+for line in $LINES; do
   grep -qxF "$line" "$CFG" || echo "$line" | sudo tee -a "$CFG"
 done
 sudo sed -i 's/ console=serial0,115200//' /boot/firmware/cmdline.txt 2>/dev/null || true
@@ -27,7 +38,7 @@ sudo apt-get -y install --no-install-recommends \
   python3-pip python3-pil python3-smbus i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl
 
 echo "== 4/9  ALSA dmix → loopback → CamillaDSP (loudness + digitalt volum) → DAC"
-sudo install -m 644 "$SRC/asound.conf" /etc/asound.conf
+sed "s/sndrpihifiberry/$PB_CARD/g" "$SRC/asound.conf" | sudo tee /etc/asound.conf >/dev/null
 echo snd-aloop | sudo tee /etc/modules-load.d/aloop.conf >/dev/null
 echo 'options snd-aloop index=5 pcm_substreams=1' | sudo tee /etc/modprobe.d/aloop.conf >/dev/null
 sudo modprobe snd-aloop index=5 pcm_substreams=1 || true
@@ -36,7 +47,7 @@ cd /tmp && rm -f camilladsp.tar.gz && curl -L -o camilladsp.tar.gz \
   "https://github.com/HEnquist/camilladsp/releases/download/${CDSP_VER}/camilladsp-linux-aarch64.tar.gz"
 sudo tar -xzf camilladsp.tar.gz -C /usr/local/bin camilladsp && sudo chmod 755 /usr/local/bin/camilladsp
 sudo mkdir -p /etc/camilladsp
-[ -f /etc/camilladsp/config.yml ] || sudo install -m 644 "$SRC/camilladsp.yml" /etc/camilladsp/config.yml
+sed -e "s#hw:sndrpihifiberry#$PB_DEV#" -e "/playback:/s/S32LE/$PB_FMT/" "$SRC/camilladsp.yml" | sudo tee /etc/camilladsp/config.yml >/dev/null
 sudo install -m 644 "$SRC/camilladsp.service" /etc/systemd/system/camilladsp.service
 sudo systemctl daemon-reload && sudo systemctl enable --now camilladsp
 
@@ -76,6 +87,11 @@ echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
 sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service
 [ -f /etc/ki-amp.env ] || sudo install -m 600 "$SRC/ki-amp.env" /etc/ki-amp.env
+if [ "$OUT" = headphones ]; then
+  sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e '/^KI_AMP_DSP_FORMAT=/d' /etc/ki-amp.env
+  echo "KI_AMP_DSP_FORMAT=$PB_FMT" | sudo tee -a /etc/ki-amp.env >/dev/null
+  echo "== TESTMODUS: lyd ut på 3,5 mm-kontakten. Sett volum på jacken: amixer -c Headphones sset Headphone 100%"
+fi
 sudo systemctl daemon-reload
 sudo systemctl enable --now oled-display ki-amp
 
