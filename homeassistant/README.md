@@ -21,13 +21,6 @@ HA henter ikoner for integrasjoner fra [home-assistant/brands](https://github.co
 
 Inntil PR-en er inne viser HA standard-ikonet. Entitetene har allerede egne `mdi:`-ikoner (speaker, knob, loudness).
 
-## Music Assistant
-
-Pi-en kjører **Squeezelite** (`ki-squeezelite.service`), så forsterkeren dukker opp i Music Assistant som spiller «Pultforsterker» via MAs innebygde Slimproto-leverandør (*Innstillinger → Leverandører → + → Squeezelite (Slimproto)*). Det gir gapless, synkronisering med andre MA-spillere og MAs egen kø/metadata. Lyden går gjennom samme kjede (dmix → CamillaDSP), så loudness og volum fra forsterkeren gjelder også her.
-
-Alternativt finner MAs **AirPlay**-leverandør forsterkeren direkte (Shairport Sync), men Squeezelite er stabilere for MA.
-
-Finner ikke MA spilleren automatisk (annet VLAN): sett `KI_AMP_MA_SERVER=<ip til MA>` i `/etc/ki-amp.env` og `sudo systemctl restart ki-squeezelite`.
 
 ## Radio (Lyrion)
 

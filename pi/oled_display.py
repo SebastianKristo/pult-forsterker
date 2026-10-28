@@ -302,6 +302,30 @@ def draw_main(draw, c):
 
 
 def draw_overlay(draw, c):
+    m = c.get("menu")
+    if m:   # kanalmeny: vri = velg, trykk = spill, hold = lagre
+        presets = c.get("presets") or []
+        draw.text((2, 0), "RADIOKANALER", font=f_tag, fill=255)
+        draw.text((126 - draw.textlength("vri · trykk", font=f_small), 0), "vri · trykk", font=f_small, fill=255)
+        idx = m.get("idx", 1)
+        first = min(max(1, idx - 1), 4)          # vis 3 av 6 rader, valgt rad i midten
+        for row, n in enumerate(range(first, first + 3)):
+            y = 12 + row * 14
+            p = presets[n - 1] if n - 1 < len(presets) else None
+            name = (p or {}).get("title") or "– tom –"
+            sel = n == idx
+            if sel:
+                draw.rectangle((0, y - 1, 127, y + 11), fill=255)
+            col = 0 if sel else 255
+            draw.text((3, y), str(n), font=f_title, fill=col)
+            if sel or p:
+                draw.text((15, y + 1), name[:20], font=f_sub, fill=col)
+            else:
+                dim_text(draw, (15, y + 1), name, f_sub)
+            if n == c.get("preset") and c.get("input") == "radio":
+                draw.polygon([(120, y + 2), (125, y + 5), (120, y + 8)], fill=col)
+        draw.text((2, 55), "hold = lagre det som spiller her", font=f_small, fill=255)
+        return True
     if c.get("bt_pairing"):
         t = time.time(); r = 6 + (t * 10) % 21
         draw.ellipse((64 - r, 19 - r, 64 + r, 19 + r), outline=255)

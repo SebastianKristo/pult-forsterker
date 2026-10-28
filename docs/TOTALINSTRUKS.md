@@ -200,28 +200,42 @@ journalctl -u ki-amp -f # trykk på knappene – du skal se "input airplay", "vo
 
 ---
 
-## 7b. Music Assistant
+## 7b. Radio med Lyrion
 
-Forsterkeren er en Squeezelite-spiller. I Music Assistant: *Innstillinger → Leverandører → + → Squeezelite (Slimproto)*; spilleren **Pultforsterker** dukker opp av seg selv. Se `homeassistant/README.md` for detaljer.
+**I Lyrion** (web-UI, port 9000):
+1. *Innstillinger → Plugins*: slå på **Radio Browser** (eller TuneIn) og gjerne **Material Skin**. Start Lyrion på nytt.
+2. Finn kanalene (Radio → Radio Browser → søk «NRK P1» osv.), og legg hver til i **Favoritter** (★ / «Legg til i favoritter»). De seks første radiofavorittene blir kanal 1–6 på forsterkeren.
+3. Brannmur/VLAN: Pi-en må nå Lyrion på TCP 3483 (lyd), UDP 3483 (oppdagelse) og TCP 9000 (styring).
 
-```bash
-systemctl is-active ki-squeezelite
-journalctl -u ki-squeezelite -n 20   # «connected to <MA-IP>»
-```
-
----
-
-## 7c. Radio med Lyrion
-
+**På Pi-en:**
 ```bash
 sudo sed -i 's/^KI_AMP_LMS_SERVER=.*/KI_AMP_LMS_SERVER=10.69.1.x/' /etc/ki-amp.env   # IP til Lyrion
 sudo systemctl restart ki-squeezelite ki-amp
-curl -s localhost:8765/api/presets; echo                 # kanal 1–6 (fra Lyrion-favorittene)
-curl -s -X POST localhost:8765/api/preset -d '{"n":1}'; echo   # spill kanal 1
-curl -s -X POST localhost:8765/api/preset -d '{"n":4,"save":true}'; echo   # lagre det som spiller som kanal 4
+journalctl -u ki-amp -n 20 | grep -i lyrion        # «Lyrion tilkoblet» + «Radiokanaler hentet …»
+curl -s localhost:8765/api/presets; echo
 ```
+Spilleren **Pultforsterker** dukker opp i Lyrion. Under *Innstillinger → Spiller → Pultforsterker → Lyd* kan volumkontroll stå som den er – forsterkeren holder Lyrion på 100 og styrer volumet selv.
 
-Se `homeassistant/README.md` → Radio (Lyrion) for HA og Homey.
+**Fra forsterkeren (OLED + knapper):**
+| Gjør | Resultat |
+|---|---|
+| Trykk **AIRPLAY** når AirPlay er valgt | Bytter til **Radio** (trykk igjen = tilbake til AirPlay) |
+| **Hold volumknotten 1 s** | Kanalmenyen åpnes på skjermen (kanal 1–6) |
+| Vri i menyen | Velg kanal |
+| Trykk i menyen | Spill kanalen |
+| Hold i menyen 1 s | Lagre stasjonen som spiller nå på valgt plass |
+| Ingenting i 6 s | Menyen lukkes |
+| Utenfor menyen | Vri = volum, trykk = mute (som før) |
+
+Hovedskjermen viser stasjonen som tittel, låt/artist under og kanal 1–6 med den aktive fylt.
+
+**Fra API / HA / Homey:**
+```bash
+curl -s -X POST localhost:8765/api/preset -d '{"n":1}'; echo              # spill kanal 1
+curl -s -X POST localhost:8765/api/preset -d '{"n":4,"save":true}'; echo  # lagre det som spiller som kanal 4
+curl -s -X POST localhost:8765/api/presets -d '{"import":true}'; echo     # hent favorittene på nytt
+curl -s -X POST localhost:8765/api/transport -d '{"action":"next"}'; echo # neste kanal
+```
 
 ---
 

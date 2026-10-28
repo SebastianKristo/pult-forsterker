@@ -94,6 +94,8 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "presets": [None] * 6, "preset": 0}   # radiokanaler 1–6: {"title","url","icon"}; preset = aktiv (1–6, 0 = ingen)   # loudness 0-10 (dB bassløft ved lavt volum)
 _x9c_pos = None
 _pairing_until = 0.0
+menu = {"open": False, "idx": 1, "until": 0.0}   # kanalmeny på OLED (hold volumknotten 1 s i radio)
+MENU_S = 6.0
 
 # ---------- maskinvare ----------
 try:
@@ -182,6 +184,7 @@ PHRASES = {
     "input_radio": "Radio.",
     "radio_preset": "{name}.",
     "radio_saved": "Lagret som kanal {n}.",
+    "radio_empty": "Kanal {n} er tom. Hold knappen for å lagre.",
     "power_on": "Pultforsterker er klar.",
 }
 TTS_DIR = "/var/cache/ki-amp/tts"
@@ -356,7 +359,8 @@ def write_ctrl():
     try:
         tmp = CTRL_FILE + ".tmp"
         with open(tmp, "w") as fh:
-            json.dump({**state, "lyrion": lyr.connected, "radio": lyr.info if state["input"] == "radio" else {}}, fh)
+            json.dump({**state, "lyrion": lyr.connected, "radio": lyr.info if state["input"] == "radio" else {},
+                       "menu": dict(menu) if menu["open"] else None}, fh)
         os.replace(tmp, CTRL_FILE)
     except Exception:
         pass
@@ -467,6 +471,39 @@ def _safe(fn, *a):
 _power_press_t = 0.0
 
 
+def menu_open():
+    if not lyr.connected:
+        return
+    menu.update(open=True, idx=state["preset"] or 1, until=time.time() + MENU_S); write_ctrl()
+
+
+def menu_close():
+    menu["open"] = False; write_ctrl()
+
+
+def menu_step(d):
+    menu["idx"] = (menu["idx"] - 1 + d) % 6 + 1; menu["until"] = time.time() + MENU_S; write_ctrl()
+
+
+def menu_pick():
+    n = menu["idx"]; menu_close()
+    if state["presets"][n - 1]:
+        _safe(play_preset, n)
+    else:
+        voice.say("radio_empty", n=n)
+
+
+def menu_save():
+    n = menu["idx"]; menu_close(); _safe(save_preset, n)
+
+
+async def menu_task():
+    while True:
+        if menu["open"] and time.time() > menu["until"]:
+            menu_close()
+        await asyncio.sleep(0.3)
+
+
 def setup_buttons():
     if not HW:
         return []
@@ -487,7 +524,8 @@ def setup_buttons():
     for name, pin in BTN.items():
         b = Button(pin, pull_up=True, bounce_time=0.05, hold_time=2.0)
         if name == "airplay":
-            b.when_released = lambda b=b: (set_input("airplay") if not b.was_held else None)
+            # kort trykk: AirPlay; trykk igjen mens AirPlay er valgt = Radio (Lyrion), og tilbake
+            b.when_released = lambda b=b: (set_input("radio" if state["input"] == "airplay" and lyr.connected else "airplay") if not b.was_held else None)
             b.when_held = lambda: bt_pairing(not state["bt_pairing"])   # hold AIRPLAY 2 s = BT-parring av/på
         else:
             b.when_pressed = lambda n=name: set_input(n)
@@ -507,11 +545,29 @@ def setup_buttons():
     p.when_held = lambda: (save_state(), subprocess.run(["systemctl", "reboot"], check=False))
     objs.append(p)
     vol = RotaryEncoder(ENC[0], ENC[1], max_steps=0, wrap=False)
-    vol.when_rotated_clockwise = lambda: set_volume(state["volume"] + 2)
-    vol.when_rotated_counter_clockwise = lambda: set_volume(state["volume"] - 2)
+    vol.when_rotated_clockwise = lambda: menu_step(1) if menu["open"] else set_volume(state["volume"] + 2)
+    vol.when_rotated_counter_clockwise = lambda: menu_step(-1) if menu["open"] else set_volume(state["volume"] - 2)
     objs.append(vol)
-    sw = Button(ENC[2], pull_up=True, bounce_time=0.05)
-    sw.when_pressed = lambda: set_mute(not state["mute"])
+    sw = Button(ENC[2], pull_up=True, bounce_time=0.05, hold_time=1.0)
+
+    def sw_released():
+        if sw.was_held:
+            return
+        if menu["open"]:
+            menu_pick()                      # trykk i menyen = spill kanalen
+        else:
+            set_mute(not state["mute"])      # ellers mute som før
+
+    def sw_held():
+        if menu["open"]:
+            menu_save()                      # hold i menyen = lagre det som spiller på plassen
+        elif state["input"] == "radio" or lyr.connected:
+            if state["input"] != "radio":
+                set_input("radio")
+            menu_open()                      # hold 1 s = kanalmeny
+
+    sw.when_released = sw_released
+    sw.when_held = sw_held
     objs.append(sw)
     return objs
 
@@ -794,6 +850,14 @@ def save_preset(n):
     voice.say("radio_saved", n=n)
 
 
+async def h_menu(r):
+    b = await r.json()
+    a = b.get("action")
+    {"open": menu_open, "close": menu_close, "pick": menu_pick, "save": menu_save,
+     "up": lambda: menu_step(-1), "down": lambda: menu_step(1)}.get(a, lambda: None)()
+    return web.json_response({"menu": menu})
+
+
 async def h_presets(_r):
     return web.json_response({"presets": state["presets"], "active": state["preset"], "lyrion": lyr.connected})
 
@@ -892,6 +956,7 @@ async def on_startup(app):
     app["zc"] = start_mdns()
     app["btn"] = setup_buttons()
     app["pair"] = asyncio.create_task(pairing_task())
+    app["menu"] = asyncio.create_task(menu_task())
 
 
 async def on_cleanup(app):
@@ -907,7 +972,7 @@ def main():
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
-                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set)])
+                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

@@ -75,7 +75,7 @@ echo "== 6/9  Bluetooth A2DP-mottak (bluealsa + parring uten PIN)"
 sudo hostnamectl set-hostname pultamp 2>/dev/null || true
 bash "$SRC/ki-bluetooth-setup.sh"
 
-echo "== 6b    Music Assistant (Squeezelite / Slimproto)"
+echo "== 6b    Lyrion-radio (Squeezelite)"
 sudo apt-get -y install --no-install-recommends squeezelite >/dev/null
 sudo systemctl disable --now squeezelite 2>/dev/null || true      # Debians egen tjeneste – vi bruker ki-squeezelite
 sudo install -m 644 "$SRC/ki-squeezelite.service" /etc/systemd/system/ki-squeezelite.service
