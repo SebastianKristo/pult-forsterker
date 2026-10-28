@@ -1,0 +1,67 @@
+<meta charset="utf-8">
+<title>Radio Retro 3D</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* Studio-oppsett som pultforsterkerens 3D-visning: full scene, smal verktøylinje, infokort */
+:root{--bg:#1b1c20;--panel:#26272c;--fg:#ecebe6;--muted:#a3a29d;--line:#3a3b41;--accent:#e8562a;color-scheme:dark}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#efeeea;--panel:#fff;--fg:#1b1c20;--muted:#5d5c58;--line:#d6d4ce;--accent:#d4471c;color-scheme:light}}
+:root[data-theme="light"]{--bg:#efeeea;--panel:#fff;--fg:#1b1c20;--muted:#5d5c58;--line:#d6d4ce;--accent:#d4471c;color-scheme:light}
+html,body{height:100%}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:15px;margin:0;font-weight:600}h1 small{color:var(--muted);font-weight:400;margin-left:6px;font-size:12px}
+.grp{display:flex;flex-wrap:wrap;gap:6px}
+button{font:inherit;font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#stage{flex:1;position:relative;min-height:0}canvas{display:block;width:100%;height:100%;touch-action:none}
+#info{position:absolute;left:16px;bottom:16px;max-width:min(380px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+#info b{display:block;margin-bottom:4px}#info p{margin:0;color:var(--muted);font-size:13px}
+#load{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted)}
+</style>
+<header>
+  <h1>Radio Retro <small>244 × 104 × 155 mm · Raspberry Pi 4 · mono</small></h1>
+  <div class="grp" id="parts"></div>
+  <div class="grp" id="themes"></div>
+</header>
+<div id="stage"><div id="load">Laster modellen …</div>
+  <div id="info"><b>Printbare deler</b><p>Faceplate, grill, bakplate, skillevegg, Pi-brett, 9 tastehetter, volumknott, bein og klemmer – bygget fra handoffen og tilpasset delene du har kjøpt. Klikk en del for detaljer.</p></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+(function(){
+const stage=document.getElementById('stage');
+const r=new THREE.WebGLRenderer({antialias:true,alpha:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.outputEncoding=THREE.sRGBEncoding;stage.prepend(r.domElement);
+const s=new THREE.Scene(),cam=new THREE.PerspectiveCamera(30,1,1,5000);cam.up.set(0,0,1);
+s.add(new THREE.HemisphereLight(0xffffff,0x444444,0.85));const k=new THREE.DirectionalLight(0xffffff,0.6);k.position.set(-200,-400,300);s.add(k);const f=new THREE.DirectionalLight(0xffffff,0.25);f.position.set(250,300,120);s.add(f);
+const GROUPS={Skall:['skall'],Grill:['grill'],Faceplate:['faceplate','tast','knott'],Bak:['bakplate'],Innmat:['skillevegg','pi_brett','pi4','hullkort','tft','pam8406','hoyttaler']};
+const vis={Skall:true,Grill:true,Faceplate:true,Bak:true,Innmat:true};
+const THEMES={Sennep:{skall:'#D9A21B',grill:'#DCCBA0',faceplate:'#5B4636',tast:'#EFE6D0'},Mint:{skall:'#9FCFBF',grill:'#F1EAD8',faceplate:'#3E3A36',tast:'#F4EFE2'},'Kirsebær':{skall:'#A3262A',grill:'#E7DCC4',faceplate:'#2B2523',tast:'#EFE7D6'},Sort:{skall:'#222224',grill:'#9A9893',faceplate:'#121213',tast:'#D9D7D1'}};
+const INFO={skall:['Skall (ditt)','Deep Shell fra 3MF-filen, uendret. POWER-knappen (12 mm) sitter i hullet i toppen.'],
+ grill:['Grill','Kuppel 10 mm, 1,6 mm vegg, Ø3,2 hull i heksmønster. Fire magnetstolper (6 × 2). Print kuppelen opp med trestøtte under.'],
+ faceplate:['Faceplate','3 mm + 6 mm krage. Lomme forfra for røykfarget akryl 64 × 50 × 2, ramme bak for TFT-glasset og fire klemmestolper, stolper for hullkortet (12 mm), hylser for 2 mm akrylstav over LED-ene, Ø72 høyttalerhull med styrelister og klemmestolper, Ø7,4 for EC11.'],
+ tast:['Tastehetter','10,4 × 6,2 mm, stikker 1,5 mm ut, krage bak holder dem på plass. Stamme for 6 × 6 × 7 mm brytere. Tall/ikon gravert 0,5 mm.'],
+ knott:['Volumknott','Ø28 × 16, riflet, hull Ø5,85 for EC11 Plum-aksel (trykkpasning). Print toppen ned, 100 % fyll.'],
+ bakplate:['Bakplate','2,7 mm i bakåpningen. KCD1, DC 5,5 × 2,1, USB-C (panel), 14 ventilasjonsspalter, 4 × M3 i ringen. Tekst gravert bak.'],
+ skillevegg:['Skillevegg','Flyttet til x −4…−1,6 så TFT-kortet får plass. Hakk for POWER-knappen, kabelhull Ø10, to M3 for Pi-brettet.'],
+ pi_brett:['Pi-brett','Ligger i bunnen på to ribber som følger skallet. Pi 4 på 4 mm M2,5-stolper, jack/USB-C mot fronten under tastene.'],
+ pi4:['Raspberry Pi 4','Lyd ut på 3,5 mm til PAM8406.'],hullkort:['Hullkort','88 × 31 mm (fra 7 × 9 cm), 9 brytere og 6 LED, 12 mm bak faceplaten.'],
+ tft:['2,8" TFT','Rødt SPI-kort 86 × 50, pinneraden mot venstre.'],pam8406:['PAM8406','Festes med VHB på skilleveggen. Høyttaler på LOUT+/LOUT−.'],hoyttaler:['3" høyttaler','AUIN 78 mm kvadratisk, 4 Ω 5 W, holdt av fire klemmer.'],
+ bein:['Bein','Ø8 → Ø5,2, 24 mm, 8° utover, M3-varmeinnsats i toppen.']};
+let root=null;const meshes=[];
+const pr=document.getElementById('parts');for(const g in GROUPS){const b=document.createElement('button');b.textContent=g;b.className='on';b.onclick=()=>{vis[g]=!vis[g];b.classList.toggle('on',vis[g]);apply();};pr.appendChild(b);}
+const th=document.getElementById('themes');let cur='Sennep';for(const t in THEMES){const b=document.createElement('button');b.textContent=t;if(t===cur)b.className='on';b.onclick=()=>{cur=t;[...th.children].forEach(x=>x.classList.toggle('on',x===b));apply();};th.appendChild(b);}
+function key(n){for(const k in INFO)if(n.startsWith(k))return k;return null;}
+function apply(){if(!root)return;meshes.forEach(m=>{const n=m.userData.n;let show=true;for(const g in GROUPS)if(GROUPS[g].some(p=>n.startsWith(p)))show=vis[g];m.visible=show;
+ for(const p of ['skall','grill','faceplate','tast']){if(n.startsWith(p)){if(m.material.vertexColors){m.material.vertexColors=false;m.material.needsUpdate=true;}m.material.color.set(THEMES[cur][p]).convertSRGBToLinear();}}});}
+new THREE.GLTFLoader().load('radio.json',g=>{root=g.scene;root.traverse(o=>{if(o.isMesh){let n=o.name||'';let p=o;while(p&&!key(n)&&p.parent){p=p.parent;n=p.name||n;}o.userData.n=n||o.name;o.material=o.material.clone();o.material.side=THREE.DoubleSide;o.material.metalness=0;o.material.roughness=0.75;meshes.push(o);}});s.add(root);document.getElementById('load').remove();apply();});
+let th0=-0.45,ph=1.2,dist=620,tgt=new THREE.Vector3(0,0,0);
+function place(){cam.position.set(tgt.x+dist*Math.sin(ph)*Math.sin(th0),tgt.y-dist*Math.sin(ph)*Math.cos(th0),tgt.z+dist*Math.cos(ph));cam.lookAt(tgt);}
+const c=r.domElement,ray=new THREE.Raycaster(),mv=new THREE.Vector2(),info=document.getElementById('info');let drag=false,lx=0,ly=0,moved=0;
+c.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;moved=0;c.setPointerCapture(e.pointerId);});
+c.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-lx,dy=e.clientY-ly;moved+=Math.abs(dx)+Math.abs(dy);lx=e.clientX;ly=e.clientY;th0-=dx*0.008;ph=Math.max(0.1,Math.min(2.9,ph-dy*0.008));});
+c.addEventListener('pointerup',e=>{drag=false;if(moved<4){const b=c.getBoundingClientRect();mv.set((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1);ray.setFromCamera(mv,cam);const h=ray.intersectObjects(meshes.filter(m=>m.visible),false)[0];if(h){const k=key(h.object.userData.n);if(k)info.innerHTML='<b>'+INFO[k][0]+'</b><p>'+INFO[k][1]+'</p>';}}});
+c.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(150,Math.min(1500,dist*(1+e.deltaY*0.001)));},{passive:false});
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}addEventListener('resize',resize);resize();
+(function loop(){requestAnimationFrame(loop);place();r.render(s,cam);})();
+})();
+</script>
