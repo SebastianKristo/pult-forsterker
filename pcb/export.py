@@ -39,9 +39,15 @@ if os.path.exists(SES) and "--no-ses" not in sys.argv:
     nets = {m.group(2): int(m.group(1)) for m in _re.finditer(r'\(net (\d+) "([^"]*)"\)', pcb_txt)}
     body = ses_to_sexpr(SES, nets)
     # manuelle spor der Freerouting ga opp
-    MANUAL = [
-    ]   # faste spor ligger i board.dsn (type fix) og kommer tilbake i SES
-    MANUAL_VIAS = []
+    MANUAL = [   # samme som de faste sporene i board.dsn (Freerouting skriver dem ikke tilbake i SES)
+        ("OUTNL", "F.Cu", 0.3, [(87.65, 36.275), (90.5, 36.2)]),
+        ("LED_USB_G", "B.Cu", 0.25, [(9.54, 85.72), (12.5, 85.72), (12.5, 98.6), (132.5, 98.6), (132.5, 81.6), (123.175, 81.6)]),
+        ("LED_USB_G", "F.Cu", 0.25, [(123.175, 81.6), (123.175, 80.0)]),
+        ("OUTPR", "F.Cu", 0.4, [(103.54, 28.5), (103.54, 26.4)]),
+        ("OUTPR", "B.Cu", 0.6, [(103.54, 26.4), (127.0, 26.4), (127.0, 41.3)]),
+        ("OUTPR", "F.Cu", 0.6, [(127.0, 41.3), (127.05, 43.0)]),
+    ]
+    MANUAL_VIAS = [("LED_USB_G", (123.175, 81.6)), ("OUTPR", (103.54, 26.4)), ("OUTPR", (127.0, 41.3))]
     for n, layer, w, pts in MANUAL:
         for a, b2 in zip(pts, pts[1:]):
             body += f'\n  (segment (start {a[0]:.4f} {a[1]:.4f}) (end {b2[0]:.4f} {b2[1]:.4f}) (width {w}) (layer "{layer}") (net {nets[n]}))'
