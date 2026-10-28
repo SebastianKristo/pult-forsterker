@@ -29,7 +29,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 </style>
 <header>
   <h1>KI Pultforsterker <small>200 × 120 × 48 mm · v2</small></h1>
-  <div class="grp"><button id="vFront" class="on">Front</button><button id="vBack">Bak</button><button id="vTop">Ovenfra</button><button id="tLid">Åpne kassen</button></div>
+  <div class="grp"><button id="vFront" class="on">Front</button><button id="vBack">Bak</button><button id="vTop">Ovenfra</button><button id="tLid">Åpne kassen</button><button id="tMount" class="on">Under pult</button></div>
   <div class="grp"><button id="tMains" class="on">Hovedbryter på</button><button id="tStby" class="on" title="Trykk: standby/på · hold 3 s: omstart">På</button><button id="tMute">Mute av</button><button id="tBt" class="on">Bluetooth: tilkoblet</button><button id="tPlay" class="on">❚❚ Pause</button></div>
 </header>
 <div id="stage">
@@ -68,11 +68,11 @@ box(200,2.5,120,M.shell,0,1.25,0,'Kasse','3D-printet kasse 200 × 120 × 48 mm, 
 box(200,48,2.7,M.shell,0,24,60-1.35,null,null,bodyWall);box(200,48,2.7,M.shell,0,24,-60+1.35,null,null,bodyWall);
 box(2.7,48,120,M.shell,100-1.35,24,0,null,null,bodyWall);box(2.7,48,120,M.shell,-100+1.35,24,0,null,null,bodyWall);
 for(const sx of[-1,1])for(const sz of[-1,1]){const t=cyl(4,45.5,M.shell,sx*90,2.5+45.5/2,sz*50,'y','Skruetårn','Ø8 tårn med M3-varmeinnsats øverst. Lokket skrus hit med M3 × 8.',bodyWall);cyl(2.2,4,M.gold,sx*90,46,sz*50,'y',null,null,bodyWall);}
-for(const sx of[-1,1])for(const sz of[-1,1])cyl(5,1.5,M.dark,sx*85,-0.75,sz*45,'y',null,null,bodyWall);
+const feet=new THREE.Group();root.add(feet);for(const sx of[-1,1])for(const sz of[-1,1])cyl(5,1.5,M.dark,sx*85,-0.75,sz*45,'y','Gummifot','Selvklebende gummiføtter – brukes når forsterkeren står på pulten i stedet for å henge under.',feet);
 const lid=new THREE.Group();root.add(lid);
 const lidG=new THREE.ExtrudeGeometry(rrect(200,120,6),{depth:3,bevelEnabled:false});lidG.rotateX(-Math.PI/2);
 add(new THREE.Mesh(lidG,M.plate),'Lokk','Lokk 200 × 120 × 3 mm med fire ører. Skrus i pultens underside med 4 × 25 mm treskruer; kassen henger i lokket med fire M3 × 8. Fil: <code>v2_lid.stl</code>.',lid);
-for(const sx of[-1,1])for(const sz of[-1,1])box(14,3,10,M.plate,sx*107,1.5,sz*35,'Lokkøre','Fire ører med slisse for treskrue mot pulten.',lid);
+const ears=new THREE.Group();lid.add(ears);for(const sx of[-1,1])for(const sz of[-1,1])box(14,3,10,M.plate,sx*107,1.5,sz*35,'Lokkøre','Fire ører med slisse for treskrue mot pulten. Utelates i frittstående utgave (print lokket uten ører).',ears);
 for(const sx of[-1,1])for(const sz of[-1,1])cyl(1.7,0.4,M.dark,sx*90,3.1,sz*50,'y','Lokkskrue','M3 × 8 senkskrue ned i varmeinnsatsen.',lid);
 lid.position.y=48;
 const fp=add(new THREE.Mesh(new THREE.ExtrudeGeometry(rrect(188,46,3),{depth:2,bevelEnabled:false}),M.plate),'Frontplate','Frontplate 188 × 46 × 2 mm, festes med 4 × M3 senkskruer i kassens frontvegg. Fil: <code>v2_frontplate.stl</code>.');fp.position.set(0,24,60);
@@ -164,7 +164,7 @@ c.addEventListener('touchend',()=>{pinch=null;});
 
 // ---------- OLED UI (tegnes 1:1 etter designet, 128×64) ----------
 const INPUTS=[{key:'AIR',name:'AirPlay',title:'Midnight City',sub:'M83 · iPhone',len:243},{key:'BT',name:'Bluetooth',title:'Teardrop',sub:'Massive Attack',len:330},{key:'AUX',name:'AUX',title:'Analog inngang',sub:'3,5 mm jack'},{key:'USB',name:'USB',title:'USB-lyd',sub:'PC · 48 kHz'}];
-const S={input:0,vol:42,power:true,open:false,playing:true,muted:false,standby:false,bt:'connected',btDev:'iPhone',hold:0,ov:null,pHold:0,boot:0};
+const S={input:0,vol:42,power:true,open:false,mount:true,playing:true,muted:false,standby:false,bt:'connected',btDev:'iPhone',hold:0,ov:null,pHold:0,boot:0};
 const T0=performance.now()-102000, mmss=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
 function draw(){
   const g=cvs.getContext('2d'); g.setTransform(1,0,0,1,0,0); g.fillStyle='#000'; g.fillRect(0,0,512,256);
@@ -236,6 +236,7 @@ function sync(){
   $('tMains').textContent=S.power?'Hovedbryter på':'Hovedbryter av';$('tMains').classList.toggle('on',S.power);
   $('tLid').textContent=S.open?'Lukk kassen':'Åpne kassen';$('tLid').classList.toggle('on',S.open);
   $('tPlay').textContent=S.playing?'❚❚ Pause':'▶ Spill';$('tPlay').classList.toggle('on',S.playing);
+  ears.visible=S.mount;feet.visible=!S.mount;$('tMount').textContent=S.mount?'Under pult':'Frittstående';$('tMount').classList.toggle('on',S.mount);
   $('volv').textContent=S.muted?'MUTE':S.vol;
 }
 let ovTimer=null;const showOv=(type,ms)=>{S.ov={type,t0:performance.now()};clearTimeout(ovTimer);if(ms)ovTimer=setTimeout(()=>{S.ov=null;sync();},ms);sync();};
@@ -258,6 +259,7 @@ setInterval(()=>{if(S.power&&(!S.standby||S.boot)&&!holdT&&!pT){draw();if(S.bt==
 const views={vFront:[-0.55,1.15],vBack:[Math.PI-0.5,1.2],vTop:[0,0.2]};let anim=null;
 function setView(id){for(const k in views)$(k).classList.toggle('on',k===id);anim={t0:performance.now(),a0:[theta,phi],a1:views[id]};}
 for(const k in views)$(k).onclick=()=>setView(k);
+$('tMount').onclick=function(){S.mount=!S.mount;sync();};
 $('tLid').onclick=()=>{S.open=!S.open;if(S.open)setView('vTop');sync();};
 $('tMains').onclick=()=>{S.power=!S.power;sync();};
 $('tStby').onpointerdown=e=>{e.preventDefault();pDown();};$('tStby').onpointerup=pUp;$('tStby').onpointerleave=()=>{if(pStart)pUp();};

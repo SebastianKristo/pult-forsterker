@@ -114,13 +114,14 @@ def frontplate():
     return m
 
 
-def lid():
+def lid(ears=True):
     ear_w, ear_l, ear_slot, ear_screw = 22.0, 19.0, 10.0, 4.6
     m = rrect(W, D, r_out, lid_t)
     m += rrect(W - 2 * wall - 2 * clear, D - 2 * wall - 2 * clear, r_out - wall, lip).translate([0, 0, -lip])
     for sx in (-1, 1):
         for sy in (-1, 1):
-            m += rrect(ear_l, ear_w, 3, lid_t).translate([sx * 108.5, sy * 40, 0])
+            if ears:
+                m += rrect(ear_l, ear_w, 3, lid_t).translate([sx * 108.5, sy * 40, 0])
     for sx in (-1, 1):
         for sy in (-1, 1):
             px, py = sx * tower_xy[0], sy * tower_xy[1]
@@ -128,7 +129,8 @@ def lid():
             m -= Manifold.cylinder(1.7, 1.7, 3.2, SEG).translate([px, py, lid_t - 1.6])
             slot = Manifold.hull(cyl(ear_screw, lid_t + 2).translate([-ear_slot / 2 + ear_screw / 2, 0, 0]) +
                                  cyl(ear_screw, lid_t + 2).translate([ear_slot / 2 - ear_screw / 2, 0, 0]))
-            m -= slot.translate([sx * 110, sy * 40, -1])
+            if ears:
+                m -= slot.translate([sx * 110, sy * 40, -1])
     m -= cube(30, 13, lip + 1.7, 0, D / 2 - 6.5, -lip - 1, True)
     return m
 
@@ -156,3 +158,4 @@ if __name__ == "__main__":
     write_stl(body(), os.path.join(here, "v2_body.stl"))
     write_stl(frontplate(), os.path.join(here, "v2_frontplate.stl"))
     write_stl(lid(), os.path.join(here, "v2_lid.stl"))
+    write_stl(lid(ears=False), os.path.join(here, "v2_lid_frittstaende.stl"))

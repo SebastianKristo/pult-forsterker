@@ -29,7 +29,7 @@ design-referanse/   Opprinnelig designpakke (front, OLED-layout, oppførsel, far
 ## Kom i gang
 
 1. **Deler** – se delelisten i [docs/byggeveiledning.md](docs/byggeveiledning.md) og `docs/KI_Pultforsterker_Bildeveiledning.pdf`.
-2. **Print** `kabinett/stl/v2_frontplate.stl` først (prøv knappene i den), så `v2_body.stl` og `v2_lid.stl`. Parametrene står i `kabinett/scad/pultforsterker_v2.scad`.
+2. **Print** `kabinett/stl/v2_frontplate.stl` først (prøv knappene i den), så `v2_body.stl` og `v2_lid.stl`. Skal forsterkeren stå på pulten i stedet for å henge under: bruk `v2_lid_frittstaende.stl` (uten ører) og lim på gummiføtter. Parametrene står i `kabinett/scad/pultforsterker_v2.scad`.
 3. **Pi:** Raspberry Pi OS Lite 64-bit, vertsnavn `pultamp`, SSH + Wi-Fi på. Kopier `pi/` til Pi-en og kjør `bash install.sh` (20–30 min), deretter `sudo reboot`.
 4. **Bygg** etter [bildeveiledningen](docs/KI_Pultforsterker_Bildeveiledning.pdf) (LEGO-stil, steg 0–16) – tabellene står i [byggeveiledningen](docs/KI_Pultforsterker_Byggeveiledning.pdf).
 5. **Home Assistant:** kopier `homeassistant/custom_components/ki_pultforsterker` til `config/custom_components/`, start HA på nytt – forsterkeren dukker opp under *Oppdagede enheter*. Valgfritt: `pi/ki_pultforsterker_package.yaml` i `packages/`.
@@ -85,7 +85,7 @@ Serial console må være av (GPIO 14/15 brukes av X9C) – `install.sh` gjør de
 
 ## Interaktiv 3D-modell
 
-`3d-visning/index.html` er en selvstendig side (three.js fra CDN). Åpne den i en nettleser: roter, åpne kassen, trykk på knappene, dra i volumknotten – skjermen tegnes 1:1 etter designet.
+`3d-visning/index.html` er en selvstendig side (three.js fra CDN). Åpne den i en nettleser: roter, åpne kassen, bytt mellom «Under pult» og «Frittstående», trykk på knappene, dra i volumknotten – skjermen tegnes 1:1 etter designet.
 
 ![Åpen kasse](docs/bilder/render_aapen.png)
 
