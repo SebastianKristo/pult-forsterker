@@ -7,7 +7,8 @@ const POLL_MS = 5000;
 
 class PultforsterkerDevice extends Homey.Device {
   async onInit() {
-    for (const cap of ['speaker_prev', 'speaker_next', 'ki_voice']) {   // eldre enheter: legg til nye capabilities
+    if (this.getClass() !== 'speaker') await this.setClass('speaker').catch(this.error);   // gir «spiller nå»-visning med albumbilde
+    for (const cap of ['speaker_prev', 'speaker_next', 'speaker_album', 'speaker_duration', 'speaker_position', 'ki_voice']) {   // eldre enheter: legg til nye capabilities
       if (!this.hasCapability(cap)) await this.addCapability(cap).catch(this.error);
     }
     this.registerCapabilityListener('onoff', (on) => this.setPower(on));
@@ -101,6 +102,9 @@ class PultforsterkerDevice extends Homey.Device {
     await this.setCapabilityValue('speaker_playing', !!st.playing).catch(this.error);
     await this.setCapabilityValue('speaker_track', st.title || '').catch(this.error);
     await this.setCapabilityValue('speaker_artist', st.artist || '').catch(this.error);
+    if (this.hasCapability('speaker_album')) await this.setCapabilityValue('speaker_album', st.album || '').catch(this.error);
+    if (this.hasCapability('speaker_duration')) await this.setCapabilityValue('speaker_duration', Math.round(st.duration || 0)).catch(this.error);
+    if (this.hasCapability('speaker_position')) await this.setCapabilityValue('speaker_position', Math.round(st.position || 0)).catch(this.error);
     await this.setCapabilityValue('volume_set', (st.volume || 0) / 100).catch(this.error);
     await this.setCapabilityValue('volume_mute', !!st.mute).catch(this.error);
     await this.setCapabilityValue('ki_input', st.input || 'airplay').catch(this.error);

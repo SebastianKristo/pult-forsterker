@@ -34,6 +34,8 @@ class Device {
   hasCapability(c) { return this._caps.includes(c); }
   async addCapability(c) { this._caps.push(c); }
   async setAlbumArtImage(img) { this.albumArt = img; }
+  getClass() { return this._class || 'amplifier'; }
+  async setClass(c) { this._class = c; }
   async setCapabilityValue(c, v) { this._values[c] = v; }
   getCapabilityValue(c) { return this._values[c]; }
   getData() { return this._data; }

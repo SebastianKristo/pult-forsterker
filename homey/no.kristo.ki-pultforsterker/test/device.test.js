@@ -131,3 +131,12 @@ test('talemeldinger av/på', async () => {
   await d.triggerCapability('ki_voice', false);
   assert.deepEqual(daemon.calls.at(-1).body, { on: false }); assert.equal(d.getCapabilityValue('ki_voice'), false);
 });
+
+test('vises som høyttaler med album, varighet og posisjon', async () => {
+  const d = makeDevice(); Object.assign(daemon.state, { playing: true, title: 'Midnight City', artist: 'M83', album: 'Hurry Up, We\'re Dreaming', duration: 243.4, position: 61.7 });
+  await d.onInit(); d.onDeleted();
+  assert.equal(d.getClass(), 'speaker');
+  assert.equal(d.getCapabilityValue('speaker_album'), 'Hurry Up, We\'re Dreaming');
+  assert.equal(d.getCapabilityValue('speaker_duration'), 243);
+  assert.equal(d.getCapabilityValue('speaker_position'), 62);
+});

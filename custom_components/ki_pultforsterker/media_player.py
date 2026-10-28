@@ -84,6 +84,10 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
         return self.d.get("artist") or None
 
     @property
+    def media_album_name(self) -> str | None:
+        return self.d.get("album") or None
+
+    @property
     def media_duration(self) -> int | None:
         return int(self.d.get("duration") or 0) or None
 
