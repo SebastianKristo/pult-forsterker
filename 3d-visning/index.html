@@ -43,10 +43,10 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 const stage=document.getElementById('stage'), $=id=>document.getElementById(id);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputEncoding=THREE.sRGBEncoding;stage.prepend(renderer.domElement);
 const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(32,1,1,3000);
-scene.add(new THREE.HemisphereLight(0xffffff,0x3a3a3e,0.85));
-const key=new THREE.DirectionalLight(0xffffff,0.9);key.position.set(120,220,200);scene.add(key);
+scene.add(new THREE.HemisphereLight(0xffffff,0x3a3a3e,1.0));
+const key=new THREE.DirectionalLight(0xffffff,1.1);key.position.set(120,220,200);scene.add(key);
 const fill=new THREE.DirectionalLight(0xffffff,0.35);fill.position.set(-150,80,-220);scene.add(fill);
-const std=(c,r=0.7,m=0.1,extra={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:r,metalness:m},extra));
+const std=(c,r=0.7,m=0.1,extra={})=>{const mt=new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:r,metalness:m},extra));mt.color.convertSRGBToLinear();return mt;};
 const M={shell:std(0x2c2d30,0.75,0.1),plate:std(0x37383c,0.6,0.2),btn:std(0x1d1d20,0.28,0.45),cap:std(0x252528,0.35,0.4),
  acrylic:new THREE.MeshPhysicalMaterial({color:0x060708,roughness:0.12,metalness:0,opacity:0.92,transparent:true}),
  knob:std(0x18181a,0.3,0.7),alu:std(0xb8b8bc,0.35,0.8),gold:std(0xc9a227,0.35,0.9),red:std(0xa3261d,0.5,0.2),dark:std(0x141415,0.5,0.1),
