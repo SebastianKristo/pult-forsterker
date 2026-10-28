@@ -24,7 +24,7 @@ tower_d, tower_xy, insert_d = 8.0, (90.0, 50.0), 4.0
 amp_holes, amp_pos = (50.0, 42.0), (55.0, 15.0)
 pi_holes, pi_pos = (58.0, 23.0), (-55.0, 20.0)
 vent_n, vent_w, vent_gap, vent_h = 16, 2.4, 3.6, 24.0
-rj45, rj45_x, rj45_pitch, rj45_screw = (17.0, 15.0), None, 25.0, 3.2   # None = ingen RJ45 (Pi Zero)
+rj45, rj45_x, rj45_pitch, rj45_screw = (17.0, 15.6), None, 26.0, 3.3   # None = ingen RJ45 (Pi Zero); skruer som slisser 25–27 mm
 
 VARIANT = os.environ.get("VARIANT", "zero")
 if VARIANT == "pi4":
@@ -94,8 +94,9 @@ def body():
         m -= hole_back(post_d, x, fz)
     if rj45_x is not None:
         m -= slot_back(rj45, rj45_x, fz)
-        for s in (-1, 1):
-            m -= hole_back(rj45_screw, rj45_x + s * rj45_pitch / 2, fz)
+        for s in (-1, 1):   # sliss 2 mm lang: passer skrueavstand 25–27 mm
+            for dx in (-1.0, -0.5, 0.0, 0.5, 1.0):
+                m -= hole_back(rj45_screw, rj45_x + s * rj45_pitch / 2 + dx, fz)
     for s in (-1, 1):
         for i in range(vent_n):
             m -= cube(wall + 2, vent_w, vent_h, s * (W / 2 - wall / 2) - (wall + 2) / 2,
