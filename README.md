@@ -32,7 +32,7 @@ design-referanse/   Opprinnelig designpakke (front, OLED-layout, oppførsel, far
 
 | Del | Hvorfor | AliExpress |
 |---|---|---|
-| USB-isolator ADuM3160/4160 (eller ground-loop-isolator 3,5 mm) | PC og forsterker deler jord via USB-C/AUX → brum/«mus-pip». Settes innvendig mellom USB-C-flensen og Pi-en | [USB-isolator](https://www.aliexpress.com/w/wholesale-ADUM3160-USB-isolator.html) · [3,5 mm](https://www.aliexpress.com/w/wholesale-ground-loop-isolator-3.5mm.html) |
+| USB-isolator ADuM3160/4160 (eller ground-loop-isolator 3,5 mm) | PC og forsterker deler jord via USB-C/AUX → brum/«mus-pip». Settes ved PC-en: PC → isolator → kabel → forsterkerens USB-C. Isolatoren er full speed; USB-gadgeten kjører derfor full speed (`ki-usb-gadget.sh`) | [USB-isolator](https://www.aliexpress.com/w/wholesale-ADUM3160-USB-isolator.html) · [3,5 mm](https://www.aliexpress.com/w/wholesale-ground-loop-isolator-3.5mm.html) |
 | Elektrolyttkondensator 2200 µF / 35 V | buffer på 24 V ved forsterkerens VCC – basstopper, hindrer at 5 V-skinnen pumper | [Søk](https://www.aliexpress.com/w/wholesale-2200uF-35V-electrolytic-capacitor.html) |
 | Inline sikringsholder + 5 A | rett etter DC-099 – sikringen ryker, ikke ledningen | [Søk](https://www.aliexpress.com/w/wholesale-inline-fuse-holder-5x20-5A.html) |
 | Ferrittklips Ø 5–7 mm × 2 | på høyttalerledningene – klasse D-støy mot Pi-ens Wi-Fi | [Søk](https://www.aliexpress.com/w/wholesale-ferrite-clip-core-cable.html) |
@@ -58,6 +58,7 @@ design-referanse/   Opprinnelig designpakke (front, OLED-layout, oppførsel, far
 | `camilladsp.yml` / `camilladsp.service` | CamillaDSP v2: Loudness-filter + digitalt volum, styres live av daemonen over websocket (port 1234) |
 | `shairport-sync.conf` | AirPlay 2, metadata-pipe til OLED |
 | `ki-amp.env` | Navn, port, relé-polaritet (kopieres til `/etc/ki-amp.env`) |
+| `ki-usb-gadget.sh` | Setter opp Pi-en som USB-lydkort «Pultforsterker» via configfs, full speed (virker gjennom ADuM-isolator) |
 | `*.service` | systemd: `camilladsp`, `ki-amp`, `oled-display`, `ki-usb-audio`, `bluealsa-aplay` |
 
 ### HTTP-API

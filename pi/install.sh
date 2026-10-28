@@ -63,6 +63,7 @@ printf 'system-alias Pultforsterker\nagent NoInputNoOutput\ndefault-agent\npaira
 sudo systemctl enable --now bluealsa bluealsa-aplay
 
 echo "== 7/9  USB-lyd (Pi-en blir et USB-lydkort for PC-en via USB-C bak)"
+sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
 sudo install -m 644 "$SRC/ki-usb-audio.service" /etc/systemd/system/ki-usb-audio.service
 sudo systemctl enable ki-usb-audio
 
