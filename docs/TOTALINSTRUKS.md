@@ -106,7 +106,7 @@ curl -s http://localhost:8765/api/status ; echo
 #  → {"power": true, "input": "airplay", "volume": 30, ...}
 ```
 
-Testmodus A: sett jack-volumet én gang: `amixer -c Headphones sset Headphone 100%`. ✅
+Testmodus A: sett jack-volumet én gang: `amixer -c Headphones sset PCM 100%`. ✅
 
 ---
 

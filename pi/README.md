@@ -22,7 +22,7 @@ Lyd ut på Pi 4 sin 3,5 mm-kontakt i stedet for DAC-en (alt annet – AirPlay, B
 
 ```bash
 KI_AMP_OUT=headphones bash install.sh
-amixer -c Headphones sset Headphone 100%
+amixer -c Headphones sset PCM 100%
 ```
 
 Koble 3,5 mm → AUX på en aktiv høyttaler/forsterker. Knapper/encoder/OLED kan kobles rett på Pi-ens header med Dupont (samme GPIO som modulbygget), eller styres fra Home Assistant/Homey/`curl`. Når hovedkortet kommer: kjør `bash install.sh` på nytt (uten `KI_AMP_OUT`) og sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env`.
