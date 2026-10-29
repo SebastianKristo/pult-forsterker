@@ -490,9 +490,31 @@ def read_status():
 USBSW_PULSE = os.environ.get("KI_AMP_USBSW_PULSE", "").strip()
 USBSW_SENSE = os.environ.get("KI_AMP_USBSW_SENSE", "").strip()
 USBSW_SENSE_PC1 = os.environ.get("KI_AMP_USBSW_SENSE_PC1", "low").strip().lower()   # low | high
-USBSW_FRONT = os.environ.get("KI_AMP_USBSW_FRONT", "0") == "1"   # 1 = AIRPLAY-knappen blir PC 1/2, BT-knappen blir AIRPLAY/BT
+USBSW_FRONT = os.environ.get("KI_AMP_USBSW_FRONT", "0") == "1"
+# opto = via PC817 (GPIO høy = trykk). direct = ledningen fra knappen rett på GPIO: pinnen står åpen (inngang uten pull)
+# og trekkes til 0 V under trykket. Bare trygt når knappens «varme» side er 3,3 V eller lavere (mål først!).
+USBSW_MODE = os.environ.get("KI_AMP_USBSW_MODE", "opto").strip().lower()   # 1 = AIRPLAY-knappen blir PC 1/2, BT-knappen blir AIRPLAY/BT
 _usbsw_n = [n.strip() for n in os.environ.get("KI_AMP_USBSW_NAMES", "").split(",") if n.strip()]
 USBSW_NAMES = (_usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):])[:2]   # f.eks. KI_AMP_USBSW_NAMES=MacBook,Jobb-PC
+
+
+class _OpenDrain:
+    """Direkte kobling til knappen: høyimpedans i ro, 0 V under trykk (som en åpen kollektor)."""
+    def __init__(self, pin):
+        self.pin, self.ok = pin, False
+        try:
+            import lgpio
+            self.lg = lgpio; self.h = lgpio.gpiochip_open(0)
+            lgpio.gpio_claim_input(self.h, pin, lgpio.SET_PULL_NONE)
+            self.ok = True
+        except Exception as e:
+            print(f"USB-switch: GPIO {pin} ikke tilgjengelig (direkte):", e, flush=True)
+
+    def on(self):    # trekk knappen til 0 V
+        self.lg.gpio_free(self.h, self.pin); self.lg.gpio_claim_output(self.h, self.pin, 0)
+
+    def off(self):   # slipp: tilbake til åpen inngang
+        self.lg.gpio_free(self.h, self.pin); self.lg.gpio_claim_input(self.h, self.pin, self.lg.SET_PULL_NONE)
 
 
 class UsbSwitch:
@@ -507,7 +529,12 @@ class UsbSwitch:
     def start(self):
         if not (HW and USBSW_PULSE):
             return
-        self.pulse = _mk(DigitalOutputDevice, int(USBSW_PULSE), initial_value=False)
+        if USBSW_MODE == "direct":
+            self.pulse = _OpenDrain(int(USBSW_PULSE))
+            if not self.pulse.ok:
+                self.pulse = None; return
+        else:
+            self.pulse = _mk(DigitalOutputDevice, int(USBSW_PULSE), initial_value=False)
         if USBSW_SENSE:
             from gpiozero import DigitalInputDevice
             self.sense = _mk(DigitalInputDevice, int(USBSW_SENSE), pull_up=True, bounce_time=0.05)
@@ -516,7 +543,7 @@ class UsbSwitch:
                 self._update()
         state["usbsw"] = self.enabled; state["usb_pc_names"] = USBSW_NAMES
         print(f"USB-switch: puls GPIO {USBSW_PULSE}, avlesning {'GPIO ' + USBSW_SENSE if self.sense else 'av'} "
-              f"(PC 1 = {USBSW_SENSE_PC1}), aktiv {USBSW_NAMES[state['usb_pc'] - 1]}", flush=True)
+              f"(PC 1 = {USBSW_SENSE_PC1}), modus {USBSW_MODE}, aktiv {USBSW_NAMES[state['usb_pc'] - 1]}", flush=True)
 
     def read(self):
         """1 eller 2 fra LED-avlesningen, None uten avlesning. is_active = pinnen er lav (optokobleren leder)."""
