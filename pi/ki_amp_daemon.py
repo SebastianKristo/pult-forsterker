@@ -618,12 +618,17 @@ def pot_thread(pin, invert=False):
         h = lgpio.gpiochip_open(0)
     except Exception as e:
         print("Potensiometer av (lgpio):", e, flush=True); return
+    def _free():
+        try:
+            lgpio.gpio_free(h, pin)
+        except Exception:
+            pass   # ikke tatt ennå (første runde)
     lo, hi, avg, last = None, None, None, None
     print(f"Potensiometer på GPIO {pin} (RC) – vri helt rundt én gang for kalibrering", flush=True)
     while True:
         try:
-            lgpio.gpio_free(h, pin); lgpio.gpio_claim_output(h, pin, 0); time.sleep(0.02)   # tøm kondensatoren
-            lgpio.gpio_free(h, pin); lgpio.gpio_claim_input(h, pin)
+            _free(); lgpio.gpio_claim_output(h, pin, 0); time.sleep(0.02)   # tøm kondensatoren
+            _free(); lgpio.gpio_claim_input(h, pin)
             t0 = time.perf_counter()
             while lgpio.gpio_read(h, pin) == 0 and time.perf_counter() - t0 < 0.25:
                 pass

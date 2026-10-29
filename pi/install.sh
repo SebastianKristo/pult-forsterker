@@ -23,12 +23,15 @@ else
   LINES='dtoverlay=hifiberry-dac dtparam=i2c_arm=on dtoverlay=spi0-1cs dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
 fi
 for line in $LINES; do
-  grep -qxF "#$line" "$CFG" && { echo "  hopper over $line (kommentert ut for hånd)"; continue; }
+  # bare dwc2 respekteres hvis den er kommentert ut for hånd – Pi OS leverer «#dtparam=i2c_arm=on» som standard
+  case "$line" in dtoverlay=dwc2*) grep -qxF "#$line" "$CFG" && { echo "  hopper over $line (kommentert ut for hånd)"; continue; } ;; esac
   grep -qxF "$line" "$CFG" || echo "$line" | sudo tee -a "$CFG"
 done
 sudo sed -i 's/ console=serial0,115200//' /boot/firmware/cmdline.txt 2>/dev/null || true
-grep -q '^dwc2' /etc/modules || echo dwc2 | sudo tee -a /etc/modules
-grep -q '^i2c-dev' /etc/modules || echo i2c-dev | sudo tee -a /etc/modules   # /dev/i2c-1 for OLED
+# /etc/modules leses ikke lenger på Debian 13 – bruk modules-load.d
+printf 'dwc2\ni2c-dev\n' | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
+sudo raspi-config nonint do_i2c 0 2>/dev/null || true   # /dev/i2c-1 for OLED
+sudo modprobe i2c-dev 2>/dev/null || true
 sudo raspi-config nonint do_serial_hw 1 2>/dev/null || true   # frigjør GPIO 14/15 til X9C
 
 echo "== 3/9  Pakker"
