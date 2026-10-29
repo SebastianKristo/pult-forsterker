@@ -1,0 +1,447 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1720" height="1120" viewBox="0 0 1720 1120" font-family="Helvetica, Arial, sans-serif">
+<rect width="1720" height="1120" fill="#f4f2ec"/>
+<text x="30" y="44" font-size="26" font-weight="700" fill="#1b1c20">Pultforsterker – testbenk på breadboard</text>
+<text x="30" y="70" font-size="15" fill="#555">Raspberry Pi 4 · KI_AMP_BOARD=test · KI_AMP_POT=rc:24 · koble med strømmen av · pinne 1 = hjørnet nærmest SD-kortet</text>
+<rect x="278" y="126" width="80" height="732" rx="8" fill="#1f6b3a"/>
+<text x="318.0" y="114" font-size="15" font-weight="700" text-anchor="middle">Pi 4 GPIO-header</text>
+<rect x="289" y="139" width="22" height="22" rx="3" fill="#c0392b" stroke="#0b3d20"/>
+<text x="300" y="154" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">1</text>
+<text x="268" y="149" font-size="11.5" text-anchor="end" fill="#333">3V3</text>
+<text x="268" y="162" font-size="11" font-weight="700" text-anchor="end" fill="#333">→ +skinne</text>
+<rect x="325" y="139" width="22" height="22" rx="3" fill="#c0392b" stroke="#0b3d20"/>
+<text x="336" y="154" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">2</text>
+<text x="368" y="149" font-size="11.5" fill="#333">5V</text>
+<text x="368" y="162" font-size="11" font-weight="700" fill="#333">ikke bruk</text>
+<rect x="289" y="175" width="22" height="22" rx="3" fill="#16a085" stroke="#0b3d20"/>
+<text x="300" y="190" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">3</text>
+<text x="268" y="185" font-size="11.5" text-anchor="end" fill="#333">GPIO2 SDA</text>
+<text x="268" y="198" font-size="11" font-weight="700" text-anchor="end" fill="#16a085">OLED SDA</text>
+<rect x="325" y="175" width="22" height="22" rx="3" fill="#c0392b" stroke="#0b3d20"/>
+<text x="336" y="190" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">4</text>
+<text x="368" y="185" font-size="11.5" fill="#333">5V</text>
+<text x="368" y="198" font-size="11" font-weight="700" fill="#333">ikke bruk</text>
+<rect x="289" y="211" width="22" height="22" rx="3" fill="#5d6d7e" stroke="#0b3d20"/>
+<text x="300" y="226" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">5</text>
+<text x="268" y="221" font-size="11.5" text-anchor="end" fill="#333">GPIO3 SCL</text>
+<text x="268" y="234" font-size="11" font-weight="700" text-anchor="end" fill="#5d6d7e">OLED SCK</text>
+<rect x="325" y="211" width="22" height="22" rx="3" fill="#222" stroke="#0b3d20"/>
+<text x="336" y="226" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">6</text>
+<text x="368" y="221" font-size="11.5" fill="#333">GND</text>
+<text x="368" y="234" font-size="11" font-weight="700" fill="#333">→ –skinne</text>
+<rect x="289" y="247" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="300" y="262" font-size="10" font-weight="700" text-anchor="middle" fill="#333">7</text>
+<rect x="325" y="247" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="336" y="262" font-size="10" font-weight="700" text-anchor="middle" fill="#333">8</text>
+<rect x="289" y="283" width="22" height="22" rx="3" fill="#222" stroke="#0b3d20"/>
+<text x="300" y="298" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">9</text>
+<text x="268" y="293" font-size="11.5" text-anchor="end" fill="#333">GND</text>
+<rect x="325" y="283" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="336" y="298" font-size="10" font-weight="700" text-anchor="middle" fill="#333">10</text>
+<rect x="289" y="319" width="22" height="22" rx="3" fill="#777" stroke="#0b3d20"/>
+<text x="300" y="334" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">11</text>
+<text x="268" y="329" font-size="11.5" text-anchor="end" fill="#333">GPIO17</text>
+<text x="268" y="342" font-size="11" font-weight="700" text-anchor="end" fill="#777">encoder CLK</text>
+<rect x="325" y="319" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="336" y="334" font-size="10" font-weight="700" text-anchor="middle" fill="#333">12</text>
+<rect x="289" y="355" width="22" height="22" rx="3" fill="#777" stroke="#0b3d20"/>
+<text x="300" y="370" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">13</text>
+<text x="268" y="365" font-size="11.5" text-anchor="end" fill="#333">GPIO27</text>
+<text x="268" y="378" font-size="11" font-weight="700" text-anchor="end" fill="#777">encoder DT</text>
+<rect x="325" y="355" width="22" height="22" rx="3" fill="#222" stroke="#0b3d20"/>
+<text x="336" y="370" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">14</text>
+<text x="368" y="365" font-size="11.5" fill="#333">GND</text>
+<rect x="289" y="391" width="22" height="22" rx="3" fill="#777" stroke="#0b3d20"/>
+<text x="300" y="406" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">15</text>
+<text x="268" y="401" font-size="11.5" text-anchor="end" fill="#333">GPIO22</text>
+<text x="268" y="414" font-size="11" font-weight="700" text-anchor="end" fill="#777">encoder SW</text>
+<rect x="325" y="391" width="22" height="22" rx="3" fill="#e67e22" stroke="#0b3d20"/>
+<text x="336" y="406" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">16</text>
+<text x="368" y="401" font-size="11.5" fill="#333">GPIO23</text>
+<text x="368" y="414" font-size="11" font-weight="700" fill="#e67e22">LED POWER</text>
+<rect x="289" y="427" width="22" height="22" rx="3" fill="#c0392b" stroke="#0b3d20"/>
+<text x="300" y="442" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">17</text>
+<text x="268" y="437" font-size="11.5" text-anchor="end" fill="#333">3V3</text>
+<text x="268" y="450" font-size="11" font-weight="700" text-anchor="end" fill="#999">(reserve)</text>
+<rect x="325" y="427" width="22" height="22" rx="3" fill="#d35400" stroke="#0b3d20"/>
+<text x="336" y="442" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">18</text>
+<text x="368" y="437" font-size="11.5" fill="#333">GPIO24</text>
+<text x="368" y="450" font-size="11" font-weight="700" fill="#d35400">POTMETER</text>
+<rect x="289" y="463" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="300" y="478" font-size="10" font-weight="700" text-anchor="middle" fill="#333">19</text>
+<rect x="325" y="463" width="22" height="22" rx="3" fill="#222" stroke="#0b3d20"/>
+<text x="336" y="478" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">20</text>
+<text x="368" y="473" font-size="11.5" fill="#333">GND</text>
+<rect x="289" y="499" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="300" y="514" font-size="10" font-weight="700" text-anchor="middle" fill="#333">21</text>
+<rect x="325" y="499" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="336" y="514" font-size="10" font-weight="700" text-anchor="middle" fill="#333">22</text>
+<rect x="289" y="535" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="300" y="550" font-size="10" font-weight="700" text-anchor="middle" fill="#333">23</text>
+<rect x="325" y="535" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="336" y="550" font-size="10" font-weight="700" text-anchor="middle" fill="#333">24</text>
+<rect x="289" y="571" width="22" height="22" rx="3" fill="#222" stroke="#0b3d20"/>
+<text x="300" y="586" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">25</text>
+<text x="268" y="581" font-size="11.5" text-anchor="end" fill="#333">GND</text>
+<rect x="325" y="571" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="336" y="586" font-size="10" font-weight="700" text-anchor="middle" fill="#333">26</text>
+<rect x="289" y="607" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="300" y="622" font-size="10" font-weight="700" text-anchor="middle" fill="#333">27</text>
+<rect x="325" y="607" width="22" height="22" rx="3" fill="#e8e6df" stroke="#0b3d20"/>
+<text x="336" y="622" font-size="10" font-weight="700" text-anchor="middle" fill="#333">28</text>
+<rect x="289" y="643" width="22" height="22" rx="3" fill="#e0a800" stroke="#0b3d20"/>
+<text x="300" y="658" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">29</text>
+<text x="268" y="653" font-size="11.5" text-anchor="end" fill="#333">GPIO5</text>
+<text x="268" y="666" font-size="11" font-weight="700" text-anchor="end" fill="#e0a800">knapp AIRPLAY</text>
+<rect x="325" y="643" width="22" height="22" rx="3" fill="#222" stroke="#0b3d20"/>
+<text x="336" y="658" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">30</text>
+<text x="368" y="653" font-size="11.5" fill="#333">GND</text>
+<rect x="289" y="679" width="22" height="22" rx="3" fill="#2e86de" stroke="#0b3d20"/>
+<text x="300" y="694" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">31</text>
+<text x="268" y="689" font-size="11.5" text-anchor="end" fill="#333">GPIO6</text>
+<text x="268" y="702" font-size="11" font-weight="700" text-anchor="end" fill="#2e86de">knapp BT</text>
+<rect x="325" y="679" width="22" height="22" rx="3" fill="#8e44ad" stroke="#0b3d20"/>
+<text x="336" y="694" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">32</text>
+<text x="368" y="689" font-size="11.5" fill="#333">GPIO12</text>
+<text x="368" y="702" font-size="11" font-weight="700" fill="#8e44ad">LED USB</text>
+<rect x="289" y="715" width="22" height="22" rx="3" fill="#27ae60" stroke="#0b3d20"/>
+<text x="300" y="730" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">33</text>
+<text x="268" y="725" font-size="11.5" text-anchor="end" fill="#333">GPIO13</text>
+<text x="268" y="738" font-size="11" font-weight="700" text-anchor="end" fill="#27ae60">knapp AUX</text>
+<rect x="325" y="715" width="22" height="22" rx="3" fill="#222" stroke="#0b3d20"/>
+<text x="336" y="730" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">34</text>
+<text x="368" y="725" font-size="11.5" fill="#333">GND</text>
+<rect x="289" y="751" width="22" height="22" rx="3" fill="#8e44ad" stroke="#0b3d20"/>
+<text x="300" y="766" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">35</text>
+<text x="268" y="761" font-size="11.5" text-anchor="end" fill="#333">GPIO19</text>
+<text x="268" y="774" font-size="11" font-weight="700" text-anchor="end" fill="#8e44ad">knapp USB</text>
+<rect x="325" y="751" width="22" height="22" rx="3" fill="#e0a800" stroke="#0b3d20"/>
+<text x="336" y="766" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">36</text>
+<text x="368" y="761" font-size="11.5" fill="#333">GPIO16</text>
+<text x="368" y="774" font-size="11" font-weight="700" fill="#e0a800">LED AIRPLAY</text>
+<rect x="289" y="787" width="22" height="22" rx="3" fill="#e67e22" stroke="#0b3d20"/>
+<text x="300" y="802" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">37</text>
+<text x="268" y="797" font-size="11.5" text-anchor="end" fill="#333">GPIO26</text>
+<text x="268" y="810" font-size="11" font-weight="700" text-anchor="end" fill="#e67e22">knapp POWER</text>
+<rect x="325" y="787" width="22" height="22" rx="3" fill="#2e86de" stroke="#0b3d20"/>
+<text x="336" y="802" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">38</text>
+<text x="368" y="797" font-size="11.5" fill="#333">GPIO20</text>
+<text x="368" y="810" font-size="11" font-weight="700" fill="#2e86de">LED BT</text>
+<rect x="289" y="823" width="22" height="22" rx="3" fill="#222" stroke="#0b3d20"/>
+<text x="300" y="838" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">39</text>
+<text x="268" y="833" font-size="11.5" text-anchor="end" fill="#333">GND</text>
+<text x="268" y="846" font-size="11" font-weight="700" text-anchor="end" fill="#333">→ –skinne</text>
+<rect x="325" y="823" width="22" height="22" rx="3" fill="#27ae60" stroke="#0b3d20"/>
+<text x="336" y="838" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">40</text>
+<text x="368" y="833" font-size="11.5" fill="#333">GPIO21</text>
+<text x="368" y="846" font-size="11" font-weight="700" fill="#27ae60">LED AUX</text>
+<rect x="540" y="130" width="1150" height="700" rx="12" fill="#fff" stroke="#c9c6bd" stroke-width="2"/>
+<line x1="560" y1="158" x2="1670" y2="158" stroke="#c0392b" stroke-width="3"/>
+<circle cx="572.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="591.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="611.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="630.8" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="650.4" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="670.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="689.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="709.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="728.8" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="748.4" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="768.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="787.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="807.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="826.8" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="846.4000000000001" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="866.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="885.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="905.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="924.8" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="944.4000000000001" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="964.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="983.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1003.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1022.8" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1042.4" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1062.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1081.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1101.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1120.8000000000002" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1140.4" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1160.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1179.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1199.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1218.8000000000002" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1238.4" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1258.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1277.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1297.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1316.8000000000002" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1336.4" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1356.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1375.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1395.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1414.8000000000002" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1434.4" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1454.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1473.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1493.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1512.8000000000002" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1532.4" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1552.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1571.6" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1591.2" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1610.8000000000002" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1630.4" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1650.0" cy="167" r="2.3" fill="#bbb"/>
+<circle cx="1669.6000000000001" cy="167" r="2.3" fill="#bbb"/>
+<text x="1666" y="153" font-size="12" font-weight="700" text-anchor="end" fill="#c0392b">+ 3,3 V</text>
+<line x1="560" y1="186" x2="1670" y2="186" stroke="#1f4fa0" stroke-width="3"/>
+<circle cx="572.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="591.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="611.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="630.8" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="650.4" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="670.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="689.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="709.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="728.8" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="748.4" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="768.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="787.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="807.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="826.8" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="846.4000000000001" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="866.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="885.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="905.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="924.8" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="944.4000000000001" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="964.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="983.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1003.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1022.8" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1042.4" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1062.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1081.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1101.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1120.8000000000002" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1140.4" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1160.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1179.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1199.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1218.8000000000002" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1238.4" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1258.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1277.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1297.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1316.8000000000002" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1336.4" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1356.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1375.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1395.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1414.8000000000002" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1434.4" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1454.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1473.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1493.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1512.8000000000002" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1532.4" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1552.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1571.6" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1591.2" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1610.8000000000002" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1630.4" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1650.0" cy="195" r="2.3" fill="#bbb"/>
+<circle cx="1669.6000000000001" cy="195" r="2.3" fill="#bbb"/>
+<text x="1666" y="181" font-size="12" font-weight="700" text-anchor="end" fill="#1f4fa0">– GND</text>
+<line x1="560" y1="800" x2="1670" y2="800" stroke="#1f4fa0" stroke-width="3"/>
+<circle cx="572.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="591.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="611.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="630.8" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="650.4" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="670.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="689.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="709.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="728.8" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="748.4" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="768.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="787.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="807.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="826.8" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="846.4000000000001" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="866.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="885.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="905.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="924.8" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="944.4000000000001" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="964.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="983.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1003.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1022.8" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1042.4" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1062.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1081.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1101.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1120.8000000000002" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1140.4" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1160.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1179.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1199.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1218.8000000000002" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1238.4" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1258.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1277.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1297.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1316.8000000000002" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1336.4" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1356.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1375.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1395.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1414.8000000000002" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1434.4" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1454.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1473.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1493.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1512.8000000000002" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1532.4" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1552.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1571.6" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1591.2" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1610.8000000000002" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1630.4" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1650.0" cy="809" r="2.3" fill="#bbb"/>
+<circle cx="1669.6000000000001" cy="809" r="2.3" fill="#bbb"/>
+<text x="1666" y="795" font-size="12" font-weight="700" text-anchor="end" fill="#1f4fa0">– GND</text>
+<rect x="560" y="553" width="1110" height="14" fill="#eceae4"/>
+<polyline points="590,167 590,110" fill="none" stroke="#c0392b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="590" cy="167" r="5" fill="#c0392b"/>
+<rect x="527.9" y="99" width="124.2" height="22" rx="11" fill="#c0392b"/>
+<text x="590.0" y="114.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi pinne 1 (3V3)</text>
+<polyline points="750,195 750,110" fill="none" stroke="#1f4fa0" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="750" cy="195" r="5" fill="#1f4fa0"/>
+<rect x="687.9" y="99" width="124.2" height="22" rx="11" fill="#1f4fa0"/>
+<text x="750.0" y="114.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi pinne 6 (GND)</text>
+<polyline points="590,809 590,860" fill="none" stroke="#1f4fa0" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="590" cy="809" r="5" fill="#1f4fa0"/>
+<rect x="524.3" y="849" width="131.4" height="22" rx="11" fill="#1f4fa0"/>
+<text x="590.0" y="864.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi pinne 39 (GND)</text>
+<rect x="580" y="240" width="170" height="64" rx="6" fill="#1d3f7a"/><rect x="592" y="250" width="146" height="30" fill="#000"/>
+<text x="665" y="270" font-size="12" fill="#cfe6ff" text-anchor="middle">0,91" OLED 128×32</text>
+<rect x="609" y="288" width="10" height="12" fill="#c9a227"/><text x="614" y="316" font-size="11" font-weight="700" text-anchor="middle">GND</text>
+<rect x="643" y="288" width="10" height="12" fill="#c9a227"/><text x="648" y="316" font-size="11" font-weight="700" text-anchor="middle">VCC</text>
+<rect x="677" y="288" width="10" height="12" fill="#c9a227"/><text x="682" y="316" font-size="11" font-weight="700" text-anchor="middle">SCK</text>
+<rect x="711" y="288" width="10" height="12" fill="#c9a227"/><text x="716" y="316" font-size="11" font-weight="700" text-anchor="middle">SDA</text>
+<polyline points="614,288 614,195" fill="none" stroke="#1f4fa0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="614" cy="195" r="5" fill="#1f4fa0"/>
+<polyline points="648,288 648,280 640,270 640,167" fill="none" stroke="#c0392b" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="640" cy="167" r="5" fill="#c0392b"/>
+<polyline points="682,300 682,350" fill="none" stroke="#5d6d7e" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="663.1" y="353" width="37.8" height="22" rx="11" fill="#5d6d7e"/>
+<text x="682.0" y="368.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 5</text>
+<polyline points="716,300 716,350" fill="none" stroke="#16a085" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="709.1" y="381" width="37.8" height="22" rx="11" fill="#16a085"/>
+<text x="728.0" y="396.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 3</text>
+<polyline points="716,350 728,380" fill="none" stroke="#16a085" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="820" y="540" width="40" height="40" rx="4" fill="#333"/><circle cx="840" cy="560" r="11" fill="#111" stroke="#888"/>
+<text x="840" y="530" font-size="14" font-weight="700" text-anchor="middle">AIRPLAY</text>
+<polyline points="825,576 825,630" fill="none" stroke="#e0a800" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="802.5" y="633" width="45.0" height="22" rx="11" fill="#e0a800"/>
+<text x="825.0" y="648.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 29</text>
+<polyline points="855,576 855,809" fill="none" stroke="#1f4fa0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="855" cy="809" r="5" fill="#1f4fa0"/>
+<circle cx="840" cy="390" r="11" fill="#e0a800" stroke="#333" stroke-width="1.5"/><text x="856" y="382" font-size="10" fill="#555">+</text>
+<polyline points="840,379 840,340" fill="none" stroke="#e0a800" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="817.5" y="317" width="45.0" height="22" rx="11" fill="#e0a800"/>
+<text x="840.0" y="332.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 36</text>
+<polyline points="840,401 840,414" fill="none" stroke="#666" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="835" y="414" width="10" height="34" rx="2" fill="#d9c7a1" stroke="#8a7a55"/><text x="849" y="436" font-size="10" fill="#555">330 Ω</text>
+<polyline points="840,448 840,462 874,462 874,195" fill="none" stroke="#1f4fa0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="874" cy="195" r="5" fill="#1f4fa0"/>
+<rect x="940" y="540" width="40" height="40" rx="4" fill="#333"/><circle cx="960" cy="560" r="11" fill="#111" stroke="#888"/>
+<text x="960" y="530" font-size="14" font-weight="700" text-anchor="middle">BT</text>
+<polyline points="945,576 945,630" fill="none" stroke="#2e86de" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="922.5" y="633" width="45.0" height="22" rx="11" fill="#2e86de"/>
+<text x="945.0" y="648.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 31</text>
+<polyline points="975,576 975,809" fill="none" stroke="#1f4fa0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="975" cy="809" r="5" fill="#1f4fa0"/>
+<circle cx="960" cy="390" r="11" fill="#2e86de" stroke="#333" stroke-width="1.5"/><text x="976" y="382" font-size="10" fill="#555">+</text>
+<polyline points="960,379 960,340" fill="none" stroke="#2e86de" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="937.5" y="317" width="45.0" height="22" rx="11" fill="#2e86de"/>
+<text x="960.0" y="332.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 38</text>
+<polyline points="960,401 960,414" fill="none" stroke="#666" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="955" y="414" width="10" height="34" rx="2" fill="#d9c7a1" stroke="#8a7a55"/><text x="969" y="436" font-size="10" fill="#555">330 Ω</text>
+<polyline points="960,448 960,462 994,462 994,195" fill="none" stroke="#1f4fa0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="994" cy="195" r="5" fill="#1f4fa0"/>
+<rect x="1060" y="540" width="40" height="40" rx="4" fill="#333"/><circle cx="1080" cy="560" r="11" fill="#111" stroke="#888"/>
+<text x="1080" y="530" font-size="14" font-weight="700" text-anchor="middle">AUX</text>
+<polyline points="1065,576 1065,630" fill="none" stroke="#27ae60" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1042.5" y="633" width="45.0" height="22" rx="11" fill="#27ae60"/>
+<text x="1065.0" y="648.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 33</text>
+<polyline points="1095,576 1095,809" fill="none" stroke="#1f4fa0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1095" cy="809" r="5" fill="#1f4fa0"/>
+<circle cx="1080" cy="390" r="11" fill="#27ae60" stroke="#333" stroke-width="1.5"/><text x="1096" y="382" font-size="10" fill="#555">+</text>
+<polyline points="1080,379 1080,340" fill="none" stroke="#27ae60" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1057.5" y="317" width="45.0" height="22" rx="11" fill="#27ae60"/>
+<text x="1080.0" y="332.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 40</text>
+<polyline points="1080,401 1080,414" fill="none" stroke="#666" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1075" y="414" width="10" height="34" rx="2" fill="#d9c7a1" stroke="#8a7a55"/><text x="1089" y="436" font-size="10" fill="#555">330 Ω</text>
+<polyline points="1080,448 1080,462 1114,462 1114,195" fill="none" stroke="#1f4fa0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1114" cy="195" r="5" fill="#1f4fa0"/>
+<rect x="1180" y="540" width="40" height="40" rx="4" fill="#333"/><circle cx="1200" cy="560" r="11" fill="#111" stroke="#888"/>
+<text x="1200" y="530" font-size="14" font-weight="700" text-anchor="middle">USB</text>
+<polyline points="1185,576 1185,630" fill="none" stroke="#8e44ad" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1162.5" y="633" width="45.0" height="22" rx="11" fill="#8e44ad"/>
+<text x="1185.0" y="648.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 35</text>
+<polyline points="1215,576 1215,809" fill="none" stroke="#1f4fa0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1215" cy="809" r="5" fill="#1f4fa0"/>
+<circle cx="1200" cy="390" r="11" fill="#8e44ad" stroke="#333" stroke-width="1.5"/><text x="1216" y="382" font-size="10" fill="#555">+</text>
+<polyline points="1200,379 1200,340" fill="none" stroke="#8e44ad" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1177.5" y="317" width="45.0" height="22" rx="11" fill="#8e44ad"/>
+<text x="1200.0" y="332.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 32</text>
+<polyline points="1200,401 1200,414" fill="none" stroke="#666" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1195" y="414" width="10" height="34" rx="2" fill="#d9c7a1" stroke="#8a7a55"/><text x="1209" y="436" font-size="10" fill="#555">330 Ω</text>
+<polyline points="1200,448 1200,462 1234,462 1234,195" fill="none" stroke="#1f4fa0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1234" cy="195" r="5" fill="#1f4fa0"/>
+<rect x="1300" y="540" width="40" height="40" rx="4" fill="#333"/><circle cx="1320" cy="560" r="11" fill="#111" stroke="#888"/>
+<text x="1320" y="530" font-size="14" font-weight="700" text-anchor="middle">POWER</text>
+<polyline points="1305,576 1305,630" fill="none" stroke="#e67e22" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1282.5" y="633" width="45.0" height="22" rx="11" fill="#e67e22"/>
+<text x="1305.0" y="648.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 37</text>
+<polyline points="1335,576 1335,809" fill="none" stroke="#1f4fa0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1335" cy="809" r="5" fill="#1f4fa0"/>
+<circle cx="1320" cy="390" r="11" fill="#e67e22" stroke="#333" stroke-width="1.5"/><text x="1336" y="382" font-size="10" fill="#555">+</text>
+<polyline points="1320,379 1320,340" fill="none" stroke="#e67e22" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1297.5" y="317" width="45.0" height="22" rx="11" fill="#e67e22"/>
+<text x="1320.0" y="332.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 16</text>
+<polyline points="1320,401 1320,414" fill="none" stroke="#666" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1315" y="414" width="10" height="34" rx="2" fill="#d9c7a1" stroke="#8a7a55"/><text x="1329" y="436" font-size="10" fill="#555">330 Ω</text>
+<polyline points="1320,448 1320,462 1354,462 1354,195" fill="none" stroke="#1f4fa0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1354" cy="195" r="5" fill="#1f4fa0"/>
+<text x="1520" y="274" font-size="15" font-weight="700" text-anchor="middle">Potmeter = volum</text>
+<rect x="1472" y="288" width="96" height="70" rx="6" fill="#1d4fa0"/><circle cx="1520" cy="322" r="22" fill="#2c3e50" stroke="#95a5a6" stroke-width="3"/>
+<rect x="1488" y="358" width="8" height="12" fill="#c9a227"/><text x="1492" y="384" font-size="11" font-weight="700" text-anchor="middle">GND</text>
+<rect x="1516" y="358" width="8" height="12" fill="#c9a227"/><text x="1520" y="384" font-size="11" font-weight="700" text-anchor="middle">VCC</text>
+<rect x="1544" y="358" width="8" height="12" fill="#c9a227"/><text x="1548" y="384" font-size="11" font-weight="700" text-anchor="middle">OUT</text>
+<text x="1492" y="398" font-size="10" text-anchor="middle" fill="#c0392b">ikke koblet</text>
+<polyline points="1520,358 1520,348 1590,348 1590,167" fill="none" stroke="#c0392b" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1590" cy="167" r="5" fill="#c0392b"/>
+<polyline points="1548,370 1548,450" fill="none" stroke="#d35400" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1548" cy="450" r="5" fill="#d35400"/>
+<text x="1558" y="444" font-size="11" fill="#555">felles rad</text>
+<polyline points="1548,450 1608,450 1608,490" fill="none" stroke="#d35400" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1596" y="490" width="24" height="36" rx="5" fill="#2c3e50"/><text x="1608" y="512" font-size="9" fill="#fff" text-anchor="middle">C</text>
+<text x="1624" y="502" font-size="11" fill="#333">1–10 µF</text><text x="1624" y="516" font-size="11" fill="#333">(– til GND)</text>
+<polyline points="1608,526 1608,809" fill="none" stroke="#1f4fa0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1608" cy="809" r="5" fill="#1f4fa0"/>
+<polyline points="1548,450 1518,450" fill="none" stroke="#d35400" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1488" y="444" width="30" height="12" rx="2" fill="#d9c7a1" stroke="#8a7a55"/><text x="1503" y="438" font-size="11" text-anchor="middle">220 Ω</text>
+<polyline points="1488,450 1458,450 1458,560" fill="none" stroke="#d35400" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1403.1" y="563" width="109.8" height="22" rx="11" fill="#d35400"/>
+<text x="1458.0" y="578.5" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">Pi 18 (GPIO24)</text>
+<text x="30" y="930" font-size="14" fill="#333">• Merkelappene «Pi N» = fysisk pinne på headeren til venstre. Bruk hunn–hann-jumpere fra Pi-en til brettet.</text>
+<text x="30" y="952" font-size="14" fill="#333">• Knapp: ett bein til GPIO, det andre til GND (Pi-en har intern pull-up). LED: langt bein til GPIO, kort bein via 330 Ω til GND.</text>
+<text x="30" y="974" font-size="14" fill="#333">• Knapper med innebygd LED-ring: ringens + til LED-pinnen, – til GND (motstanden sitter i knappen).</text>
+<text x="30" y="996" font-size="14" fill="#333">• OLED: VCC på 3,3 V – aldri 5 V. SCK = SCL.</text>
+<text x="30" y="1018" font-size="14" fill="#333">• Potmeter: Pi-en har ingen analog inngang, så den måler hvor fort kondensatoren lades. Vri helt rundt én gang etter start (kalibrering).</text>
+<text x="30" y="1040" font-size="14" fill="#333">• Encoder (valgfri): CLK pinne 11, DT 13, SW 15, + til 3,3 V, GND til GND.</text>
+</svg>

@@ -609,6 +609,40 @@ def setup_buttons():
     return objs
 
 
+# ---------- potensiometer som volumknapp (test uten ADC: RC-tidsmåling) ----------
+# KI_AMP_POT=rc:24  -> pot (VCC→3,3 V, OUT→node), node→kondensator→GND, node→220 Ω→GPIO 24
+# Pi-en har ingen analog inngang, så vi lader kondensatoren gjennom poten og måler tiden til GPIO-en leser «høy».
+def pot_thread(pin, invert=False):
+    try:
+        import lgpio
+        h = lgpio.gpiochip_open(0)
+    except Exception as e:
+        print("Potensiometer av (lgpio):", e, flush=True); return
+    lo, hi, avg, last = None, None, None, None
+    print(f"Potensiometer på GPIO {pin} (RC) – vri helt rundt én gang for kalibrering", flush=True)
+    while True:
+        try:
+            lgpio.gpio_free(h, pin); lgpio.gpio_claim_output(h, pin, 0); time.sleep(0.02)   # tøm kondensatoren
+            lgpio.gpio_free(h, pin); lgpio.gpio_claim_input(h, pin)
+            t0 = time.perf_counter()
+            while lgpio.gpio_read(h, pin) == 0 and time.perf_counter() - t0 < 0.25:
+                pass
+            t = time.perf_counter() - t0
+            avg = t if avg is None else avg * 0.7 + t * 0.3
+            lo = avg if lo is None else min(lo, avg); hi = avg if hi is None else max(hi, avg)
+            if hi - lo > 0.0005:
+                v = round(100 * (1 - (avg - lo) / (hi - lo)))                # lav tid (lav motstand) = høyt volum
+                if invert:
+                    v = 100 - v
+                if last is None or abs(v - last) >= 2:
+                    if last is not None:
+                        set_volume(v)
+                    last = v
+        except Exception as e:
+            print("Potensiometer:", e, flush=True); time.sleep(1)
+        time.sleep(0.05)
+
+
 async def pairing_task():
     """BT-LED pulserer under parring, og parring slås av etter 2 min eller når en enhet kobler til."""
     import math
@@ -1008,6 +1042,10 @@ def main():
     load_state()
     apply_power(); changed()
     threading.Thread(target=follow_source, daemon=True).start()   # auto-kilde (kan slås av) + BT-talemeldinger
+    pot = os.environ.get("KI_AMP_POT", "")
+    if pot.startswith("rc:"):   # rc:24 eller rc:24:inv (snu retningen)
+        parts = pot.split(":")
+        threading.Thread(target=pot_thread, args=(int(parts[1]), len(parts) > 2 and parts[2] == "inv"), daemon=True).start()
     app = web.Application()
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),

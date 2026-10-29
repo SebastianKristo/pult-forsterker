@@ -206,6 +206,28 @@ journalctl -u ki-amp -f                                           # trykk på kn
 **AirPlay / Bluetooth / Radio:** som før; hold AIRPLAY 2 s for parring.
 **AUX:** knappen bytter kilde og skjermbilde, men Pi-en har ingen analog inngang – lyd på AUX krever hovedkortet (eller et USB-lydkort med linjeinngang).
 
+![Testbenk på breadboard](bilder/testbenk_breadboard.png)
+
+### Volum med et lite potmeter (Arduino-modul)
+
+Pi-en har ingen analog inngang, så daemonen måler hvor lang tid det tar å lade en kondensator gjennom potmeteret (RC-måling). Det holder fint for testing. Skal det være helt stødig, bruk en ADS1115 eller encoderen.
+
+| Potmeter-modul | Kobles til |
+|---|---|
+| VCC | 3,3 V-skinnen (Pi pinne 1) |
+| OUT | en felles rad på brettet |
+| GND | **ikke koblet** |
+| Felles rad → kondensator 1–10 µF (− til GND) | GND-skinnen. 100 nF går også, men gir mer støy. |
+| Felles rad → 220 Ω | Pi pinne 18 (GPIO 24) |
+
+```bash
+grep -q '^KI_AMP_POT' /etc/ki-amp.env || echo KI_AMP_POT= | sudo tee -a /etc/ki-amp.env
+sudo sed -i 's/^KI_AMP_POT=.*/KI_AMP_POT=rc:24/' /etc/ki-amp.env
+sudo systemctl restart ki-amp
+journalctl -u ki-amp -f        # «Potensiometer på GPIO 24 (RC) …»
+```
+Vri potmeteret helt fra min til maks én gang etter hver oppstart, så lærer den ytterpunktene. Går volumet feil vei: `KI_AMP_POT=rc:24:inv`. Skru av igjen med `KI_AMP_POT=`.
+
 ### Testskjerm 0,91" OLED (128 × 32, SSD1306)
 
 Alle skjermbildene fra prosjektet finnes også i en utgave for den lille 0,91"-skjermen: hovedbilde med kilde, play/pause, tid, rullende tittel, artist, volum og fremdrift; nivåmeter for AUX/USB; radio med kanal; overlegg for volum, mute, kildebytte, Bluetooth-parring og -tilkobling; kanalmeny og oppstart.
