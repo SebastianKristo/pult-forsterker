@@ -633,6 +633,8 @@ def pot_thread(pin, invert=False):
             while lgpio.gpio_read(h, pin) == 0 and time.perf_counter() - t0 < 0.25:
                 pass
             t = time.perf_counter() - t0
+            if t >= 0.25 or t < 0.00002:   # ikke koblet til (pinnen henger lav/høy) – ikke rør volumet
+                time.sleep(0.5); continue
             avg = t if avg is None else avg * 0.7 + t * 0.3
             lo = avg if lo is None else min(lo, avg); hi = avg if hi is None else max(hi, avg)
             if hi - lo > 0.0005:
