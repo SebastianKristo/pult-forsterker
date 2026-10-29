@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -52,7 +52,8 @@
         "ki_loudness",
         "ki_loudness_level",
         "ki_voice",
-        "ki_auto_input"
+        "ki_auto_input",
+        "ki_mix"
       ],
       "capabilitiesOptions": {
         "speaker_playing": {
@@ -291,6 +292,21 @@
       "title": {
         "en": "Automatic source switching",
         "no": "Automatisk kildebytte"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_mix": {
+      "type": "boolean",
+      "title": {
+        "en": "Mix digital sources",
+        "no": "Miks digitale kilder"
+      },
+      "desc": {
+        "en": "AirPlay, Bluetooth, USB and Radio can play at the same time",
+        "no": "AirPlay, Bluetooth, USB og Radio kan spille samtidig"
       },
       "getable": true,
       "setable": true,

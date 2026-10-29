@@ -12,7 +12,7 @@ from .entity import KiAmpEntity
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c), KiAmpAutoInputSwitch(c)])
+    add([KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c), KiAmpAutoInputSwitch(c), KiAmpMixSwitch(c)])
 
 
 class KiAmpPowerSwitch(KiAmpEntity, SwitchEntity):
@@ -88,3 +88,22 @@ class KiAmpAutoInputSwitch(KiAmpEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_auto_input(False))
+
+
+class KiAmpMixSwitch(KiAmpEntity, SwitchEntity):
+    """Miks digitale kilder: AirPlay, Bluetooth, USB og Radio kan spille samtidig (AUX er alltid alene)."""
+    _attr_translation_key = "mix"
+    _attr_icon = "mdi:call-merge"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "mix")
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.data.get("mix", False))
+
+    async def async_turn_on(self, **kwargs) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_mix(True))
+
+    async def async_turn_off(self, **kwargs) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_mix(False))

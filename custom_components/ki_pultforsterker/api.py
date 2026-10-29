@@ -63,6 +63,10 @@ class KiAmpApi:
         """Automatisk kildebytte når AirPlay/Bluetooth/Radio begynner å spille."""
         return await self._req("POST", "/auto_input", {"on": on})
 
+    async def set_mix(self, on: bool) -> dict[str, Any]:
+        """Miks digitale kilder (AirPlay, Bluetooth, USB og Radio spiller samtidig)."""
+        return await self._req("POST", "/mix", {"on": on})
+
     async def set_voice(self, on: bool) -> dict[str, Any]:
         """Talemeldinger («Bluetooth-paring …») av/på."""
         return await self._req("POST", "/voice", {"on": on})

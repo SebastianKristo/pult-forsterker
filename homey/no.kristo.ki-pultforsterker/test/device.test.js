@@ -7,7 +7,7 @@ const Homey = require('homey');
 const Device = require('../drivers/pultforsterker/device');
 const App = require('../app');
 
-const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'ki_voice', 'ki_preset', 'ki_auto_input', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
+const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'ki_voice', 'ki_preset', 'ki_auto_input', 'ki_mix', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
 let daemon, port;
 before(async () => { daemon = createMockDaemon(); port = await daemon.start(); });
 after(async () => { await daemon.stop(); });
@@ -160,4 +160,12 @@ test('automatisk kildebytte av/på', async () => {
   await d.triggerCapability('ki_auto_input', false);
   assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/auto_input', body: { on: false } });
   assert.equal(d.getCapabilityValue('ki_auto_input'), false);
+});
+
+test('miks digitale kilder av/på', async () => {
+  const d = makeDevice(); await d.onInit(); d.onDeleted();
+  assert.equal(d.getCapabilityValue('ki_mix'), false);
+  await d.triggerCapability('ki_mix', true);
+  assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/mix', body: { on: true } });
+  assert.equal(d.getCapabilityValue('ki_mix'), true);
 });
