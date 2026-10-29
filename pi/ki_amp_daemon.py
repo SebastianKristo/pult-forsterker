@@ -20,6 +20,7 @@ API:
   POST /api/mute   {"mute":bool}
   POST /api/bt     {"pairing":true}   (gjør Pi-en synlig 2 min)
   POST /api/auto_input {"on":bool} (bytt kilde automatisk når AirPlay/BT/Radio begynner å spille)
+  POST /api/usbsw {"pc":1|2} | {"toggle":true} (USB-delingsswitch: hvilken PC tastatur/mus/disk/USB-lyd følger)
   POST /api/mix {"on":bool} (miks digitale kilder: AirPlay, Bluetooth, USB og Radio kan spille samtidig)
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay, jpg/png)
@@ -101,7 +102,8 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "loudness": True, "loudness_level": 5, "voice": True,
          "presets": [None] * 6, "preset": 0,
          "auto_input": os.environ.get("KI_AMP_AUTO_INPUT", "1") == "1",
-         "mix": os.environ.get("KI_AMP_MIX", "0") == "1"}   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
+         "mix": os.environ.get("KI_AMP_MIX", "0") == "1",
+         "usb_pc": 1}   # usb_pc: aktiv PC på USB-delingsswitchen (Ugreen), 1 eller 2   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
 _pairing_until = 0.0
 menu = {"open": False, "idx": 1, "until": 0.0}   # kanalmeny på OLED (hold volumknotten 1 s i radio)
@@ -383,7 +385,7 @@ def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix")}, fh)
+            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc")}, fh)
     except Exception:
         pass
 
@@ -434,6 +436,74 @@ def read_status():
     return {**state, **extra, "playing": bool(st.get("playing")), "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": st.get("cover", ""), "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"]}
+
+
+# ---------- USB-delingsswitch (Ugreen 2 PC → 4 USB) ----------
+# Knappen på switchen trykkes via optokobler (PC817) fra USBSW_PULSE. Hvilken PC som er valgt leses fra switchens
+# PC 1-LED via en PC817 til USBSW_SENSE (intern pull-up). USBSW_SENSE_PC1 sier hvilket nivå som betyr PC 1.
+USBSW_PULSE = os.environ.get("KI_AMP_USBSW_PULSE", "").strip()
+USBSW_SENSE = os.environ.get("KI_AMP_USBSW_SENSE", "").strip()
+USBSW_SENSE_PC1 = os.environ.get("KI_AMP_USBSW_SENSE_PC1", "low").strip().lower()   # low | high
+_usbsw_n = [n.strip() for n in os.environ.get("KI_AMP_USBSW_NAMES", "").split(",") if n.strip()]
+USBSW_NAMES = (_usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):])[:2]   # f.eks. KI_AMP_USBSW_NAMES=MacBook,Jobb-PC
+
+
+class UsbSwitch:
+    def __init__(self):
+        self.pulse = self.sense = None
+        self.lock = threading.Lock()
+
+    @property
+    def enabled(self):
+        return self.pulse is not None
+
+    def start(self):
+        if not (HW and USBSW_PULSE):
+            return
+        self.pulse = _mk(DigitalOutputDevice, int(USBSW_PULSE), initial_value=False)
+        if USBSW_SENSE:
+            from gpiozero import DigitalInputDevice
+            self.sense = _mk(DigitalInputDevice, int(USBSW_SENSE), pull_up=True, bounce_time=0.05)
+            if self.sense:
+                self.sense.when_activated = self.sense.when_deactivated = lambda: _safe(self._update)
+                self._update()
+        state["usbsw"] = self.enabled; state["usb_pc_names"] = USBSW_NAMES
+        print(f"USB-switch: puls GPIO {USBSW_PULSE}, avlesning {'GPIO ' + USBSW_SENSE if self.sense else 'av'} "
+              f"(PC 1 = {USBSW_SENSE_PC1}), aktiv {USBSW_NAMES[state['usb_pc'] - 1]}", flush=True)
+
+    def read(self):
+        """1 eller 2 fra LED-avlesningen, None uten avlesning. is_active = pinnen er lav (optokobleren leder)."""
+        if not self.sense:
+            return None
+        low = bool(self.sense.is_active)
+        return 1 if low == (USBSW_SENSE_PC1 == "low") else 2
+
+    def _update(self):
+        pc = self.read()
+        if pc and pc != state["usb_pc"]:
+            state["usb_pc"] = pc; changed()
+            print("USB-switch:", USBSW_NAMES[pc - 1], flush=True)
+
+    def _press(self):
+        self.pulse.on(); time.sleep(0.15); self.pulse.off(); time.sleep(0.5)   # som et trykk; switchen trenger litt tid
+
+    def set(self, pc):
+        if not self.enabled:
+            raise RuntimeError("USB-switch er ikke satt opp (KI_AMP_USBSW_PULSE)")
+        with self.lock:
+            cur = self.read() or state["usb_pc"]
+            if cur == pc:
+                return
+            self._press()
+            if self.sense and self.read() != pc:   # prøv én gang til hvis den ikke byttet
+                self._press()
+            state["usb_pc"] = self.read() or pc; changed()
+
+    def toggle(self):
+        self.set(2 if (self.read() or state["usb_pc"]) == 1 else 1)
+
+
+usbsw = UsbSwitch()
 
 
 # ---------- handlinger ----------
@@ -960,6 +1030,21 @@ async def h_auto_input(r):
     state["auto_input"] = bool((await r.json()).get("on", True)); changed(); return j()
 
 
+async def h_usbsw(r):
+    b = await r.json()
+    try:
+        if b.get("toggle"):
+            await asyncio.get_running_loop().run_in_executor(None, usbsw.toggle)
+        else:
+            pc = int(b.get("pc", 0))
+            if pc not in (1, 2):
+                return web.json_response({"error": "pc må være 1 eller 2"}, status=400)
+            await asyncio.get_running_loop().run_in_executor(None, usbsw.set, pc)
+    except RuntimeError as e:
+        return web.json_response({"error": str(e)}, status=409)
+    return j()
+
+
 async def h_mix(r):
     on = bool((await r.json()).get("on", False))
     if on != state["mix"]:
@@ -1085,6 +1170,8 @@ async def on_cleanup(app):
 
 def main():
     load_state()
+    state["usbsw"], state["usb_pc_names"] = False, USBSW_NAMES
+    usbsw.start()
     apply_power(); changed()
     threading.Thread(target=follow_source, daemon=True).start()   # auto-kilde (kan slås av) + BT-talemeldinger
     pot = os.environ.get("KI_AMP_POT", "")
@@ -1095,7 +1182,7 @@ def main():
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
-                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix)])
+                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

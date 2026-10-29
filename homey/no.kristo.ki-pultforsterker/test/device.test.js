@@ -169,3 +169,17 @@ test('miks digitale kilder av/på', async () => {
   assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/mix', body: { on: true } });
   assert.equal(d.getCapabilityValue('ki_mix'), true);
 });
+
+test('USB-switch vises bare når den er satt opp, og bytter PC', async () => {
+  const d = makeDevice(); await d.onInit(); d.onDeleted();
+  assert.equal(d.hasCapability('ki_usb_pc'), false);
+  daemon.state.usbsw = true; await d.poll();
+  assert.equal(d.hasCapability('ki_usb_pc'), true);
+  assert.equal(d.getCapabilityValue('ki_usb_pc'), '1');
+  await d.triggerCapability('ki_usb_pc', '2');
+  assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/usbsw', body: { pc: 2 } });
+  assert.equal(d.getCapabilityValue('ki_usb_pc'), '2');
+  await d.setUsbPc('toggle'); assert.equal(d.getCapabilityValue('ki_usb_pc'), '1');
+  daemon.state.usbsw = false; await d.poll();
+  assert.equal(d.hasCapability('ki_usb_pc'), false);
+});

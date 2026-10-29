@@ -405,3 +405,19 @@ Daemonen kjører også på en vanlig PC uten GPIO (`python3 ki_amp_daemon.py` �
 - **Talemeldinger** («Bluetooth pairing», «AirPlay», «Preset three» …) er ferdiginnspilt med en engelsk AI-stemme (Kokoro, *af_heart*) og ligger i `pi/sounds/`. De installeres til `/usr/local/share/ki-amp/sounds`. Norsk Piper-stemme i stedet: `KI_AMP_VOICE_LANG=no` i `/etc/ki-amp.env`. Nye meldinger lages på en PC med `python3 pi/make_sounds.py <mappe med kokoro-v1.0.onnx og voices-v1.0.bin>`.
 - **AirPlay-volum:** volumet på iPhone/Mac blir forsterkerens volum (Shairport sender fullt nivå, `ignore_volume_control = "yes"`).
 - **Lyrion-volum:** spilleren settes til «fast utnivå 100 %», og glideren i Lyrion speiler forsterkerens volum begge veier.
+
+## USB-switch (Ugreen 2 PC → 4 USB)
+
+Pi-en trykker knappen på switchen via en PC817 og kan lese hvilken PC som er valgt fra PC 1-lampen via en PC817 til.
+
+![USB-switch: knapp via PC817](bilder/usbswitch_knapp.png)
+
+```bash
+sudo sed -i 's/^KI_AMP_USBSW_PULSE=.*/KI_AMP_USBSW_PULSE=25/' /etc/ki-amp.env      # knappen (pinne 22)
+sudo sed -i 's/^KI_AMP_USBSW_SENSE=.*/KI_AMP_USBSW_SENSE=4/' /etc/ki-amp.env       # PC 1-lampen (pinne 7), valgfri
+sudo sed -i 's/^KI_AMP_USBSW_SENSE_PC1=.*/KI_AMP_USBSW_SENSE_PC1=low/' /etc/ki-amp.env   # low eller high: hvilket nivå er PC 1
+sudo sed -i 's/^KI_AMP_USBSW_NAMES=.*/KI_AMP_USBSW_NAMES=MacBook,Jobb-PC/' /etc/ki-amp.env
+sudo systemctl restart ki-amp
+curl -X POST localhost:8765/api/usbsw -d '{"toggle":true}'
+```
+Viser HA/Homey feil PC, bytt `KI_AMP_USBSW_SENSE_PC1` mellom `low` og `high`. I Home Assistant heter velgeren «USB-switch», i Homey dukker «USB-switch» og flytkortet «Bytt USB-switch til …» opp når `KI_AMP_USBSW_PULSE` er satt.

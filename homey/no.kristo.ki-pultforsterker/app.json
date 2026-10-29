@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -311,6 +311,33 @@
       "getable": true,
       "setable": true,
       "uiComponent": "toggle",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_usb_pc": {
+      "type": "enum",
+      "title": {
+        "en": "USB switch",
+        "no": "USB-switch"
+      },
+      "values": [
+        {
+          "id": "1",
+          "title": {
+            "en": "PC 1",
+            "no": "PC 1"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "PC 2",
+            "no": "PC 2"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
       "icon": "/assets/icon.svg"
     }
   },
@@ -820,6 +847,59 @@
                 "label": {
                   "en": "6",
                   "no": "6"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ki_usb_pc",
+        "title": {
+          "en": "Switch USB to [[pc]]",
+          "no": "Bytt USB-switch til [[pc]]"
+        },
+        "titleFormatted": {
+          "en": "Switch USB to [[pc]]",
+          "no": "Bytt USB-switch til [[pc]]"
+        },
+        "hint": {
+          "en": "Keyboard, mouse, disk and the USB sound card move to the chosen PC.",
+          "no": "Tastatur, mus, disk og USB-lydkortet flyttes til valgt PC."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          },
+          {
+            "type": "dropdown",
+            "name": "pc",
+            "title": {
+              "en": "PC",
+              "no": "PC"
+            },
+            "values": [
+              {
+                "id": "1",
+                "label": {
+                  "en": "PC 1",
+                  "no": "PC 1"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "PC 2",
+                  "no": "PC 2"
+                }
+              },
+              {
+                "id": "toggle",
+                "label": {
+                  "en": "The other PC",
+                  "no": "Den andre PC-en"
                 }
               }
             ]

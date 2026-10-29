@@ -11,7 +11,8 @@ from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
-    add([KiAmpPresetSelect(hass.data[DOMAIN][entry.entry_id])])
+    c = hass.data[DOMAIN][entry.entry_id]
+    add([KiAmpPresetSelect(c), KiAmpUsbPcSelect(c)])
 
 
 class KiAmpPresetSelect(KiAmpEntity, SelectEntity):
@@ -39,3 +40,29 @@ class KiAmpPresetSelect(KiAmpEntity, SelectEntity):
         n = next((n for n, label in self._labels() if label == option), None)
         if n:
             self.coordinator.async_set_updated_data(await self.coordinator.api.play_preset(n))
+
+
+class KiAmpUsbPcSelect(KiAmpEntity, SelectEntity):
+    """Hvilken PC USB-delingsswitchen (tastatur, mus, disk og USB-lyd) er koblet til."""
+    _attr_translation_key = "usb_pc"
+    _attr_icon = "mdi:usb-port"
+
+    def __init__(self, c) -> None:
+        super().__init__(c, "usb_pc")
+
+    @property
+    def available(self) -> bool:
+        return super().available and bool(self.coordinator.data.get("usbsw"))
+
+    @property
+    def options(self) -> list[str]:
+        return list(self.coordinator.data.get("usb_pc_names") or ["PC 1", "PC 2"])
+
+    @property
+    def current_option(self) -> str | None:
+        names, pc = self.options, self.coordinator.data.get("usb_pc", 1)
+        return names[pc - 1] if 1 <= pc <= len(names) else None
+
+    async def async_select_option(self, option: str) -> None:
+        if option in self.options:
+            self.coordinator.async_set_updated_data(await self.coordinator.api.set_usb_pc(self.options.index(option) + 1))
