@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -52,6 +52,7 @@
         "ki_loudness",
         "ki_loudness_level",
         "ki_voice",
+        "ki_voice_profile",
         "ki_auto_input",
         "ki_mix"
       ],
@@ -332,6 +333,40 @@
           "title": {
             "en": "PC 2",
             "no": "PC 2"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_voice_profile": {
+      "type": "enum",
+      "title": {
+        "en": "Voice",
+        "no": "Talestemme"
+      },
+      "values": [
+        {
+          "id": "en",
+          "title": {
+            "en": "English (AI)",
+            "no": "Engelsk (AI)"
+          }
+        },
+        {
+          "id": "no",
+          "title": {
+            "en": "Norwegian",
+            "no": "Norsk"
+          }
+        },
+        {
+          "id": "trondersk",
+          "title": {
+            "en": "Trøndersk (Norwegian dialect)",
+            "no": "Trøndersk"
           }
         }
       ],

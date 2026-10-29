@@ -63,6 +63,10 @@ class KiAmpApi:
         """Automatisk kildebytte når AirPlay/Bluetooth/Radio begynner å spille."""
         return await self._req("POST", "/auto_input", {"on": on})
 
+    async def set_voice_profile(self, profile: str) -> dict[str, Any]:
+        """Stemmeprofil for talemeldingene: en | no | trondersk."""
+        return await self._req("POST", "/voice", {"profile": profile})
+
     async def set_usb_pc(self, pc: int) -> dict[str, Any]:
         """USB-delingsswitch: velg PC 1 eller 2 (tastatur, mus, disk og USB-lyd følger med)."""
         return await self._req("POST", "/usbsw", {"pc": pc})

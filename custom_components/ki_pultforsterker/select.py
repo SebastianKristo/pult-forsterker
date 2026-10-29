@@ -12,7 +12,7 @@ from .entity import KiAmpEntity
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpPresetSelect(c), KiAmpUsbPcSelect(c)])
+    add([KiAmpPresetSelect(c), KiAmpUsbPcSelect(c), KiAmpVoiceProfileSelect(c)])
 
 
 class KiAmpPresetSelect(KiAmpEntity, SelectEntity):
@@ -66,3 +66,29 @@ class KiAmpUsbPcSelect(KiAmpEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         if option in self.options:
             self.coordinator.async_set_updated_data(await self.coordinator.api.set_usb_pc(self.options.index(option) + 1))
+
+
+class KiAmpVoiceProfileSelect(KiAmpEntity, SelectEntity):
+    """Stemmeprofil for talemeldingene (engelsk AI-stemme, norsk, trøndersk)."""
+    _attr_translation_key = "voice_profile"
+    _attr_icon = "mdi:account-voice"
+    _DEFAULT = {"en": "English (AI)", "no": "Norsk", "trondersk": "Trøndersk"}
+
+    def __init__(self, c) -> None:
+        super().__init__(c, "voice_profile")
+
+    def _profiles(self) -> dict[str, str]:
+        return self.coordinator.data.get("voice_profiles") or self._DEFAULT
+
+    @property
+    def options(self) -> list[str]:
+        return list(self._profiles().values())
+
+    @property
+    def current_option(self) -> str | None:
+        return self._profiles().get(self.coordinator.data.get("voice_profile", "en"))
+
+    async def async_select_option(self, option: str) -> None:
+        key = next((k for k, v in self._profiles().items() if v == option), None)
+        if key:
+            self.coordinator.async_set_updated_data(await self.coordinator.api.set_voice_profile(key))

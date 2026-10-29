@@ -7,7 +7,7 @@ const Homey = require('homey');
 const Device = require('../drivers/pultforsterker/device');
 const App = require('../app');
 
-const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'ki_voice', 'ki_preset', 'ki_auto_input', 'ki_mix', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
+const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'ki_voice', 'ki_preset', 'ki_auto_input', 'ki_mix', 'ki_voice_profile', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
 let daemon, port;
 before(async () => { daemon = createMockDaemon(); port = await daemon.start(); });
 after(async () => { await daemon.stop(); });
@@ -182,4 +182,12 @@ test('USB-switch vises bare når den er satt opp, og bytter PC', async () => {
   await d.setUsbPc('toggle'); assert.equal(d.getCapabilityValue('ki_usb_pc'), '1');
   daemon.state.usbsw = false; await d.poll();
   assert.equal(d.hasCapability('ki_usb_pc'), false);
+});
+
+test('stemmeprofil kan byttes til trøndersk', async () => {
+  const d = makeDevice(); await d.onInit(); d.onDeleted();
+  assert.equal(d.getCapabilityValue('ki_voice_profile'), 'en');
+  await d.triggerCapability('ki_voice_profile', 'trondersk');
+  assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/voice', body: { profile: 'trondersk' } });
+  assert.equal(d.getCapabilityValue('ki_voice_profile'), 'trondersk');
 });

@@ -21,6 +21,7 @@ API:
   POST /api/bt     {"pairing":true}   (gjør Pi-en synlig 2 min)
   POST /api/auto_input {"on":bool} (bytt kilde automatisk når AirPlay/BT/Radio begynner å spille)
   POST /api/usbsw {"pc":1|2} | {"toggle":true} (USB-delingsswitch: hvilken PC tastatur/mus/disk/USB-lyd følger)
+  POST /api/voice {"on":bool} | {"profile":"en"|"no"|"trondersk"} (stemmeprofil for talemeldingene)
   POST /api/mix {"on":bool} (miks digitale kilder: AirPlay, Bluetooth, USB og Radio kan spille samtidig)
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay, jpg/png)
@@ -220,9 +221,32 @@ PHRASES = {
     "mix_on": "Miks på.",
     "mix_off": "Miks av.",
 }
-# Ferdiginnspilte meldinger (engelsk AI-stemme, laget med pi/make_sounds.py). KI_AMP_VOICE_LANG=no gir norsk Piper i stedet.
+# Trøndersk: samme norske Piper-stemme (mann), men replikkene skrevet på trøndersk. Lages på Pi-en og caches.
+PHRASES_TR = {
+    "bt_pairing": "Blåtann-paring. Finn Pultforsterker på telefon'n, du.",
+    "bt_pairing_timeout": "Ingen kobla sæ te. Æ gir opp å lete, æ.",
+    "bt_connected": "No e æ kobla te {name}.",
+    "bt_disconnected": "Blåtann e kobla fra.",
+    "input_airplay": "Ærplei.",
+    "input_bt": "Blåtann.",
+    "input_aux": "Auks.",
+    "input_usb": "U S B.",
+    "input_radio": "Radio.",
+    "radio_preset": "{name}.",
+    "radio_saved": "Lagra på kanal {n}, ja.",
+    "radio_empty": "Kanal {n} e tom, du. Hold inne knappen for å lagre.",
+    "power_on": "Hei hei! No e æ klar, du.",
+    "usb_pc": "U S B over te {name}.",
+    "mix_on": "Miksing på.",
+    "mix_off": "Miksing av.",
+}
+# Stemmeprofiler: en = ferdiginnspilt engelsk AI-stemme (pi/sounds, laget med make_sounds.py),
+# no = norsk Piper (bokmål), trondersk = norsk Piper med trønderske replikker. Velges i HA/Homey eller /api/voice.
+VOICE_PROFILES = {"en": "English (AI)", "no": "Norsk", "trondersk": "Trøndersk"}
+PROFILE_PHRASES = {"no": PHRASES, "trondersk": PHRASES_TR}
 SOUNDS_DIR = os.environ.get("KI_AMP_SOUNDS", "/usr/local/share/ki-amp/sounds")
-VOICE_LANG = os.environ.get("KI_AMP_VOICE_LANG", "en")
+_vp = os.environ.get("KI_AMP_VOICE_PROFILE", "").strip() or os.environ.get("KI_AMP_VOICE_LANG", "en").strip()
+state["voice_profile"] = _vp if _vp in VOICE_PROFILES else "en"
 TTS_DIR = "/var/cache/ki-amp/tts"
 PIPER_VOICE = os.environ.get("KI_AMP_PIPER_VOICE", "/opt/piper/no_NO-talesyntese-medium.onnx")
 
@@ -235,12 +259,14 @@ class Voice:
     def say(self, key, delay=0.0, **kw):
         if not state.get("voice", True) or not state["power"] or key not in PHRASES:
             return
-        if VOICE_LANG != "no":   # ferdig WAV: radio_preset_3.wav, radio_saved_3.wav … eller bt_pairing.wav
+        prof = state.get("voice_profile", "en")
+        if prof == "en":   # ferdig WAV: radio_preset_3.wav, radio_saved_3.wav … eller bt_pairing.wav
             for name in ([f"{key}_{kw['n']}"] if "n" in kw else []) + [key]:
                 f = os.path.join(SOUNDS_DIR, name + ".wav")
                 if os.path.exists(f):
                     self._q.append((time.time() + delay, f)); self._ev.set(); return
-        self._q.append((time.time() + delay, PHRASES[key].format(**kw))); self._ev.set()
+        table = PROFILE_PHRASES.get(prof, PHRASES)
+        self._q.append((time.time() + delay, table.get(key, PHRASES[key]).format(**kw))); self._ev.set()
 
     def _wav(self, text):
         import hashlib
@@ -255,16 +281,21 @@ class Voice:
                 subprocess.run(["espeak-ng", "-v", "nb", "-s", "150", "-w", path, text], capture_output=True, timeout=15)
         return path if os.path.exists(path) else None
 
-    def warm(self):   # lag faste fraser på forhånd, så første melding kommer uten forsinkelse
-        if VOICE_LANG != "no" and os.path.isdir(SOUNDS_DIR):
+    def warm(self, prof=None):   # lag faste fraser på forhånd, så første melding kommer uten forsinkelse
+        prof = prof or state.get("voice_profile", "en")
+        if prof == "en" and os.path.isdir(SOUNDS_DIR):
             return   # ferdiginnspilt
-        for k, t in PHRASES.items():
+        table = PROFILE_PHRASES.get(prof, PHRASES)
+        for k, t in table.items():
             if "{" not in t:
                 try: self._wav(t)
                 except Exception: pass
+        for n in range(1, 7):   # kanal 1–6 også
+            for k in ("radio_saved", "radio_empty"):
+                try: self._wav(table[k].format(n=n))
+                except Exception: pass
 
     def _run(self):
-        threading.Thread(target=self.warm, daemon=True).start()
         while True:
             self._ev.wait(); self._ev.clear()
             while self._q:
@@ -284,6 +315,15 @@ voice = Voice()
 
 def set_voice(on):
     state["voice"] = bool(on); changed()
+
+
+def set_voice_profile(prof):
+    if prof not in VOICE_PROFILES:
+        raise ValueError(f"profil må være en av {list(VOICE_PROFILES)}")
+    state["voice_profile"] = prof; changed()
+    def _hello():   # lag lydene for profilen, og si hei i den nye stemmen
+        voice.warm(prof); voice.say("power_on")
+    threading.Thread(target=_hello, daemon=True).start()
 
 
 # ---------- CamillaDSP (loudness + digitalt volum) ----------
@@ -391,7 +431,7 @@ def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc")}, fh)
+            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile")}, fh)
     except Exception:
         pass
 
@@ -799,6 +839,11 @@ async def h_voice(r):
     b = await r.json()
     if "on" in b:
         set_voice(b["on"])
+    if b.get("profile"):   # {"profile": "en" | "no" | "trondersk"}
+        try:
+            set_voice_profile(b["profile"])
+        except ValueError as e:
+            return web.json_response({"error": str(e)}, status=400)
     if b.get("say"):   # test: {"say":"bt_pairing"}
         voice.say(b["say"])
     return j()
@@ -1192,6 +1237,10 @@ async def on_cleanup(app):
 def main():
     load_state()
     state["usbsw"], state["usb_pc_names"] = False, USBSW_NAMES
+    state["voice_profiles"] = VOICE_PROFILES
+    if state.get("voice_profile") not in VOICE_PROFILES:
+        state["voice_profile"] = "en"
+    threading.Thread(target=voice.warm, daemon=True).start()   # etter load_state: riktig profil
     usbsw.start()
     apply_power(); changed()
     threading.Thread(target=follow_source, daemon=True).start()   # auto-kilde (kan slås av) + BT-talemeldinger

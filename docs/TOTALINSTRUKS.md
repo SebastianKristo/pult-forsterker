@@ -403,6 +403,7 @@ Daemonen kjører også på en vanlig PC uten GPIO (`python3 ki_amp_daemon.py` �
 ## Talemeldinger og volum
 
 - **Talemeldinger** («Bluetooth pairing», «AirPlay», «Preset three» …) er ferdiginnspilt med en engelsk AI-stemme (Kokoro, *af_heart*) og ligger i `pi/sounds/`. De installeres til `/usr/local/share/ki-amp/sounds`. Norsk Piper-stemme i stedet: `KI_AMP_VOICE_LANG=no` i `/etc/ki-amp.env`. Nye meldinger lages på en PC med `python3 pi/make_sounds.py <mappe med kokoro-v1.0.onnx og voices-v1.0.bin>`.
+- **Stemmeprofiler:** `en` (ferdiginnspilt engelsk AI-stemme), `no` (norsk Piper, bokmål) og `trondersk` (samme norske mannsstemme, replikkene på trøndersk: «Hei hei! No e æ klar, du.»). Velg i Home Assistant («Talestemme»), Homey («Talestemme») eller `curl -X POST localhost:8765/api/voice -d '{"profile":"trondersk"}'`. Standard ved oppstart: `KI_AMP_VOICE_PROFILE` i `/etc/ki-amp.env`. Norsk og trøndersk lages av Piper på Pi-en første gang (noen sekunder) og caches.
 - **AirPlay-volum:** volumet på iPhone/Mac blir forsterkerens volum (Shairport sender fullt nivå, `ignore_volume_control = "yes"`).
 - **Lyrion-volum:** spilleren settes til «fast utnivå 100 %», og glideren i Lyrion speiler forsterkerens volum begge veier.
 
