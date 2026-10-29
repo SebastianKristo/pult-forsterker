@@ -1,0 +1,62 @@
+<meta charset="utf-8">
+<title>Pultforsterker USB-switch</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* Studio-oppsett som pultforsterkerens 3D-visning: full scene, smal verktøylinje, infokort */
+:root{--bg:#1b1c20;--panel:#26272c;--fg:#ecebe6;--muted:#a3a29d;--line:#3a3b41;--accent:#e8562a;color-scheme:dark}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#efeeea;--panel:#fff;--fg:#1b1c20;--muted:#5d5c58;--line:#d6d4ce;--accent:#d4471c;color-scheme:light}}
+:root[data-theme="light"]{--bg:#efeeea;--panel:#fff;--fg:#1b1c20;--muted:#5d5c58;--line:#d6d4ce;--accent:#d4471c;color-scheme:light}
+html,body{height:100%}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:15px;margin:0;font-weight:600}h1 small{color:var(--muted);font-weight:400;margin-left:6px;font-size:12px}
+.grp{display:flex;flex-wrap:wrap;gap:6px}
+button{font:inherit;font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#stage{flex:1;position:relative;min-height:0}canvas{display:block;width:100%;height:100%;touch-action:none}
+#info{position:absolute;left:16px;bottom:16px;max-width:min(380px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+#info b{display:block;margin-bottom:4px}#info p{margin:0;color:var(--muted);font-size:13px}
+#load{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted)}
+</style>
+<header>
+  <h1>Pultforsterker v2 <small>215 × 160 × 48 mm · USB-switch · testfront</small></h1>
+  <div class="grp" id="parts"></div>
+  <div class="grp" id="themes"></div>
+</header>
+<div id="stage"><div id="load">Laster modellen …</div>
+  <div id="info"><b>USB-switch-varianten</b><p>Ugreen-switchen ligger mot venstre vegg med USB-A ut gjennom vinduet, hovedkortet står 25 mm over Pi 4. Testfronten tar 0,91" OLED, 12 × 12-knapper med hette og 5 mm LED-er. Klikk en del for detaljer.</p></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+(function(){
+const stage=document.getElementById('stage');
+const r=new THREE.WebGLRenderer({antialias:true,alpha:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.outputEncoding=THREE.sRGBEncoding;stage.prepend(r.domElement);
+const s=new THREE.Scene(),cam=new THREE.PerspectiveCamera(30,1,1,5000);cam.up.set(0,0,1);
+s.add(new THREE.HemisphereLight(0xffffff,0x444444,0.85));const k=new THREE.DirectionalLight(0xffffff,0.6);k.position.set(-200,-400,300);s.add(k);const f=new THREE.DirectionalLight(0xffffff,0.25);f.position.set(250,300,120);s.add(f);
+const GROUPS={Kasse:['kasse'],Lokk:['lokk'],Testfront:['testfront','tact','led','oled'],'Ekte front':['frontplate_ekte'],Innmat:['ugreen','pi4','hovedkort']};
+const vis={Kasse:true,Lokk:false,Testfront:true,'Ekte front':false,Innmat:true};
+const THEMES={Antrasitt:{kasse:'#2c2d30',lokk:'#2c2d30',testfront:'#37383c',frontplate_ekte:'#37383c'},Hvit:{kasse:'#e9e7e1',lokk:'#e9e7e1',testfront:'#d8d6d0',frontplate_ekte:'#d8d6d0'}};
+const INFO={kasse:['Kasse 215 × 160 × 48','Vindu 70 × 9 mm i venstre vegg for Ugreen sine 4 USB-A, skinner som holder switchen, 2 × USB-B bak (PC 1/PC 2), stolper 25 mm for hovedkortet og 4 mm for Pi 4, luftespor i høyre vegg og gulvet.'],
+ lokk:['Lokk','Samme som før, bare bredere. Variant med pultører i v2_lid_usbsw.stl.'],
+ testfront:['Testfront (10 mm)','0,91" OLED i lomme bak (pinnene mot høyre), 12 × 12-knapper med hette i lommer bak, 5 mm LED over/under hver knapp med spor for beina, Ø22-åpning rundt encoder/potmeter i veggen. Print forsiden ned.'],
+ frontplate_ekte:['Ekte frontplate','2,42" OLED-vindu med akrylforsenkning, 4 × 12 mm metallknapper, 16 mm POWER, EC11.'],
+ tact:['12 × 12 tact-knapp','Settes inn bakfra, hetten klikkes på forfra.'],led:['5 mm LED','Krage bak, beina bøyes inn i sporet til knapphullet.'],oled:['0,91" OLED','128 × 32, I2C. Pinnene mot høyre.'],
+ ugreen:['Ugreen USB-switch','100 × 53 × 16 mm, 2 PC → 4 USB. Mål din før du printer.'],pi4:['Raspberry Pi 4','Under hovedkortet, portene mot høyre – RJ45- og USB-plugger får plass under kortet.'],hovedkort:['Hovedkort 150 × 100','På Ø8-stolper 25 mm over gulvet.']};
+let root=null;const meshes=[];
+const pr=document.getElementById('parts');for(const g in GROUPS){const b=document.createElement('button');b.textContent=g;b.className=vis[g]?'on':'';b.onclick=()=>{vis[g]=!vis[g];b.classList.toggle('on',vis[g]);apply();};pr.appendChild(b);}
+const th=document.getElementById('themes');let cur='Antrasitt';for(const t in THEMES){const b=document.createElement('button');b.textContent=t;if(t===cur)b.className='on';b.onclick=()=>{cur=t;[...th.children].forEach(x=>x.classList.toggle('on',x===b));apply();};th.appendChild(b);}
+function key(n){for(const k in INFO)if(n.startsWith(k))return k;return null;}
+function apply(){if(!root)return;meshes.forEach(m=>{const n=m.userData.n;let show=true;for(const g in GROUPS)if(GROUPS[g].some(p=>n.startsWith(p)))show=vis[g];m.visible=show;
+ for(const p of ['kasse','lokk','testfront','frontplate_ekte']){if(n.startsWith(p)){if(m.material.vertexColors){m.material.vertexColors=false;m.material.needsUpdate=true;}m.material.color.set(THEMES[cur][p]).convertSRGBToLinear();}}});}
+new THREE.GLTFLoader().load('usbsw.json',g=>{root=g.scene;root.traverse(o=>{if(o.isMesh){let n=o.name||'';let p=o;while(p&&!key(n)&&p.parent){p=p.parent;n=p.name||n;}o.userData.n=n||o.name;o.material=o.material.clone();o.material.side=THREE.DoubleSide;o.material.metalness=0;o.material.roughness=0.75;meshes.push(o);}});s.add(root);document.getElementById('load').remove();apply();});
+let th0=-0.5,ph=1.05,dist=560,tgt=new THREE.Vector3(0,0,24);
+function place(){cam.position.set(tgt.x+dist*Math.sin(ph)*Math.sin(th0),tgt.y-dist*Math.sin(ph)*Math.cos(th0),tgt.z+dist*Math.cos(ph));cam.lookAt(tgt);}
+const c=r.domElement,ray=new THREE.Raycaster(),mv=new THREE.Vector2(),info=document.getElementById('info');let drag=false,lx=0,ly=0,moved=0;
+c.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;moved=0;c.setPointerCapture(e.pointerId);});
+c.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-lx,dy=e.clientY-ly;moved+=Math.abs(dx)+Math.abs(dy);lx=e.clientX;ly=e.clientY;th0-=dx*0.008;ph=Math.max(0.1,Math.min(2.9,ph-dy*0.008));});
+c.addEventListener('pointerup',e=>{drag=false;if(moved<4){const b=c.getBoundingClientRect();mv.set((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1);ray.setFromCamera(mv,cam);const h=ray.intersectObjects(meshes.filter(m=>m.visible),false)[0];if(h){const k=key(h.object.userData.n);if(k)info.innerHTML='<b>'+INFO[k][0]+'</b><p>'+INFO[k][1]+'</p>';}}});
+c.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(150,Math.min(1500,dist*(1+e.deltaY*0.001)));},{passive:false});
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}addEventListener('resize',resize);resize();
+(function loop(){requestAnimationFrame(loop);place();r.render(s,cam);})();
+})();
+</script>

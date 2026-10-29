@@ -52,6 +52,7 @@ if VARIANT == "pcb":
 else:
     pcb_holes = pcb_pos = None
 SEG = 64
+vent_sides = (-1, 1)   # luftespor i venstre (−1) og høyre (+1) sidevegg
 
 
 def rr_cs(w, d, r):
@@ -111,7 +112,7 @@ def body():
         for s in (-1, 1):   # sliss 2 mm lang: passer skrueavstand 25–27 mm
             for dx in (-1.0, -0.5, 0.0, 0.5, 1.0):
                 m -= hole_back(rj45_screw, rj45_x + s * rj45_pitch / 2 + dx, fz)
-    for s in (-1, 1):
+    for s in vent_sides:
         for i in range(vent_n):
             m -= cube(wall + 2, vent_w, vent_h, s * (W / 2 - wall / 2) - (wall + 2) / 2,
                       -((vent_n - 1) * vent_gap) / 2 + i * vent_gap, floor_t + 12)
@@ -164,7 +165,7 @@ def lid(ears=True):
     for sx in (-1, 1):
         for sy in (-1, 1):
             if ears:
-                m += rrect(ear_l, ear_w, 3, lid_t).translate([sx * 108.5, sy * 40, 0])
+                m += rrect(ear_l, ear_w, 3, lid_t).translate([sx * (W / 2 + 8.5), sy * 40, 0])
     for sx in (-1, 1):
         for sy in (-1, 1):
             px, py = sx * tower_xy[0], sy * tower_xy[1]
@@ -173,7 +174,7 @@ def lid(ears=True):
             slot = Manifold.hull(cyl(ear_screw, lid_t + 2).translate([-ear_slot / 2 + ear_screw / 2, 0, 0]) +
                                  cyl(ear_screw, lid_t + 2).translate([ear_slot / 2 - ear_screw / 2, 0, 0]))
             if ears:
-                m -= slot.translate([sx * 110, sy * 40, -1])
+                m -= slot.translate([sx * (W / 2 + 10), sy * 40, -1])
     m -= cube(30, 13, lip + 1.7, 0, D / 2 - 6.5, -lip - 1, True)
     return m
 
