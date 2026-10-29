@@ -503,6 +503,24 @@ def _safe(fn, *a):
 _power_press_t = 0.0
 
 
+def _hold_btn(b, short, held):
+    """Kort trykk = short(), hold = held(). gpiozero har ingen «was_held», så vi holder styr på det selv.
+    Alt kjøres via _safe – et unntak i en knapp-callback dreper ellers lgpio-tråden og alle knappene slutter å virke."""
+    st = {"held": False}   # gpiozero tillater ikke nye attributter på Button
+
+    def _p():
+        st["held"] = False
+
+    def _h():
+        st["held"] = True
+        _safe(held)
+
+    def _r():
+        if not st["held"]:
+            _safe(short)
+    b.when_pressed, b.when_held, b.when_released = _p, _h, _r
+
+
 def menu_open():
     if not lyr.connected:
         return
@@ -545,11 +563,10 @@ def setup_buttons():
             b = _mk(Button, pin, pull_up=True, bounce_time=0.05, hold_time=2.0)
             if not b:
                 continue
-            b.when_released = lambda b=b, n=i + 1: (_safe(play_preset, n) if not b.was_held else None)
-            b.when_held = lambda n=i + 1: _safe(save_preset, n)
+            _hold_btn(b, lambda n=i + 1: play_preset(n), lambda n=i + 1: save_preset(n))
             objs.append(b)
         src = _mk(Button, RADIO_BTN["source"], pull_up=True, bounce_time=0.05) or _Dummy()
-        src.when_pressed = lambda: set_input(CYCLE[(CYCLE.index(state["input"]) + 1) % len(CYCLE)] if state["input"] in CYCLE else CYCLE[0])
+        src.when_pressed = lambda: _safe(lambda: set_input(CYCLE[(CYCLE.index(state["input"]) + 1) % len(CYCLE)] if state["input"] in CYCLE else CYCLE[0]))
         objs.append(src)
         for k, act in (("prev", "previous"), ("next", "next")):
             b = _mk(Button, RADIO_BTN[k], pull_up=True, bounce_time=0.05) or _Dummy()
@@ -561,34 +578,22 @@ def setup_buttons():
             continue
         if name == "airplay":
             # kort trykk: AirPlay; trykk igjen mens AirPlay er valgt = Radio (Lyrion), og tilbake
-            b.when_released = lambda b=b: (set_input("radio" if state["input"] == "airplay" and lyr.connected else "airplay") if not b.was_held else None)
-            b.when_held = lambda: bt_pairing(not state["bt_pairing"])   # hold AIRPLAY 2 s = BT-parring av/på
+            _hold_btn(b, lambda: set_input("radio" if state["input"] == "airplay" and lyr.connected else "airplay"),
+                      lambda: bt_pairing(not state["bt_pairing"]))   # hold AIRPLAY 2 s = BT-parring av/på
         else:
-            b.when_pressed = lambda n=name: set_input(n)
+            b.when_pressed = lambda n=name: _safe(set_input, n)
         objs.append(b)
     p = _mk(Button, BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0) or _Dummy()
-
-    def on_pressed():
-        global _power_press_t
-        _power_press_t = time.time()
-
-    def on_released():
-        if not getattr(p, "was_held", False) and time.time() - _power_press_t < 0.5:
-            set_power(not state["power"])
-
-    p.when_pressed = on_pressed
-    p.when_released = on_released
-    p.when_held = lambda: (save_state(), subprocess.run(["systemctl", "reboot"], check=False))
+    _hold_btn(p, lambda: set_power(not state["power"]),
+              lambda: (save_state(), subprocess.run(["systemctl", "reboot"], check=False)))   # hold 3 s = omstart
     objs.append(p)
     vol = _mk(RotaryEncoder, ENC[0], ENC[1], max_steps=0, wrap=False) or _Dummy()
-    vol.when_rotated_clockwise = lambda: menu_step(1) if menu["open"] else set_volume(state["volume"] + 2)
-    vol.when_rotated_counter_clockwise = lambda: menu_step(-1) if menu["open"] else set_volume(state["volume"] - 2)
+    vol.when_rotated_clockwise = lambda: _safe(lambda: menu_step(1) if menu["open"] else set_volume(state["volume"] + 2))
+    vol.when_rotated_counter_clockwise = lambda: _safe(lambda: menu_step(-1) if menu["open"] else set_volume(state["volume"] - 2))
     objs.append(vol)
     sw = _mk(Button, ENC[2], pull_up=True, bounce_time=0.05, hold_time=1.0) or _Dummy()
 
     def sw_released():
-        if getattr(sw, "was_held", False):
-            return
         if menu["open"]:
             menu_pick()                      # trykk i menyen = spill kanalen
         else:
@@ -602,8 +607,7 @@ def setup_buttons():
                 set_input("radio")
             menu_open()                      # hold 1 s = kanalmeny
 
-    sw.when_released = sw_released
-    sw.when_held = sw_held
+    _hold_btn(sw, sw_released, sw_held)
     objs.append(sw)
     print(f"Knapper klare ({BOARD}): " + ", ".join(f"{n}=GPIO{p}" for n, p in BTN.items()) + f", power=GPIO{BTN_POWER}, encoder={ENC}", flush=True)
     return objs
