@@ -81,12 +81,18 @@ elif BOARD == "radio":   # Radio Retro: Pi 4 + 3,5 mm + PAM8406, 6 favoritter, S
     FAV_BTN = [5, 6, 13, 19, 26, 16]
     FAV_LED = [2, 4, 7, 14, 15, 24]
     RADIO_BTN = {"source": 20, "prev": 21, "next": 12}
+elif BOARD == "test":   # testbenk: Pi 4 alene, lyd på 3,5 mm, knapper/LED rett på headeren (unngår I2C, SPI, UART)
+    BTN = {"airplay": 5, "bt": 6, "aux": 13, "usb": 19}
+    LED = {"airplay": 16, "bt": 20, "aux": 21, "usb": 12}
+    LED_POWER = 23
+    PIN_DAC_XSMT = None
+    ENC = (17, 27, 22)
 else:
     BTN = {"airplay": 5, "bt": 6, "aux": 12, "usb": 13}
     LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
     LED_POWER = 11      # PWM
     PIN_DAC_XSMT = None
-BTN_POWER = 3 if BOARD == "radio" else 16
+BTN_POWER = {"radio": 3, "test": 26}.get(BOARD, 16)
 
 INPUTS = ["radio", "airplay", "bt", "aux", "usb"]
 CYCLE = ["radio", "airplay", "bt", "usb"] if BOARD == "radio" else INPUTS   # SOURCE-knappen
@@ -100,35 +106,53 @@ menu = {"open": False, "idx": 1, "until": 0.0}   # kanalmeny på OLED (hold volu
 MENU_S = 6.0
 
 # ---------- maskinvare ----------
+class _Dummy:
+    value = False
+
+
+def _mk(cls, *a, **k):
+    """Lag én GPIO-enhet; feiler den (pinne opptatt, ikke koblet), fortsetter resten likevel."""
+    try:
+        return cls(*a, **k)
+    except Exception as e:
+        print(f"GPIO {a[0] if a else ''} ikke tilgjengelig ({cls.__name__}): {e}", flush=True)
+        return None
+
+
 try:
     from gpiozero import Button, DigitalOutputDevice, OutputDevice, PWMLED, RotaryEncoder, LED as GLED
     HW = True
-    class _Dummy:
-        value = False
-    if BOARD == "radio":
-        relay_amp, relay_aux = _Dummy(), _Dummy()
-        fav_leds = [GLED(p) for p in FAV_LED]
-    elif BOARD == "main":
-        relay_amp = OutputDevice(PIN_RELAY_AMP, active_high=True, initial_value=True)      # SDZ: høy = forsterker på
-        relay_aux = OutputDevice(PIN_RELAY_AUX, active_high=True, initial_value=False)     # MOSFET -> relé: høy = AUX
-        dac_xsmt = OutputDevice(PIN_DAC_XSMT, active_high=True, initial_value=True)
-        import spidev
-        pga = spidev.SpiDev(); pga.open(0, 0); pga.max_speed_hz = 1000000; pga.mode = 0
-    else:
-        relay_amp = OutputDevice(PIN_RELAY_AMP, active_high=not RELAY_ACTIVE_LOW, initial_value=True)
-        relay_aux = OutputDevice(PIN_RELAY_AUX, active_high=not RELAY_ACTIVE_LOW, initial_value=False)
-        x_inc = DigitalOutputDevice(PIN_X9C_INC, initial_value=True)
-        x_ud = DigitalOutputDevice(PIN_X9C_UD, initial_value=False)
-        x_cs = DigitalOutputDevice(PIN_X9C_CS, initial_value=True)
-    leds = {k: GLED(v) for k, v in LED.items()}
-    led_power = PWMLED(LED_POWER, frequency=400)
 except Exception as e:
     print("Kjører uten GPIO:", e)
     HW = False
 
+relay_amp = relay_aux = _Dummy()
+led_power = None
+leds, fav_leds = {}, []
+if HW:
+    if BOARD == "radio":
+        fav_leds = [l for l in (_mk(GLED, p) for p in FAV_LED) if l]
+    elif BOARD == "main":
+        relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=True, initial_value=True) or _Dummy()      # SDZ: høy = forsterker på
+        relay_aux = _mk(OutputDevice, PIN_RELAY_AUX, active_high=True, initial_value=False) or _Dummy()     # MOSFET -> relé: høy = AUX
+        dac_xsmt = _mk(OutputDevice, PIN_DAC_XSMT, active_high=True, initial_value=True)
+        try:
+            import spidev
+            pga = spidev.SpiDev(); pga.open(0, 0); pga.max_speed_hz = 1000000; pga.mode = 0
+        except Exception as e:
+            print("PGA2311 (SPI) ikke tilgjengelig:", e, flush=True); pga = None
+    elif BOARD == "modules":
+        relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=not RELAY_ACTIVE_LOW, initial_value=True) or _Dummy()
+        relay_aux = _mk(OutputDevice, PIN_RELAY_AUX, active_high=not RELAY_ACTIVE_LOW, initial_value=False) or _Dummy()
+        x_inc = _mk(DigitalOutputDevice, PIN_X9C_INC, initial_value=True)
+        x_ud = _mk(DigitalOutputDevice, PIN_X9C_UD, initial_value=False)
+        x_cs = _mk(DigitalOutputDevice, PIN_X9C_CS, initial_value=True)
+    leds = {k: l for k, l in ((k, _mk(GLED, v)) for k, v in LED.items()) if l}
+    led_power = _mk(PWMLED, LED_POWER, frequency=400)
+
 
 def x9c_step(n):
-    if not HW or n == 0:
+    if not HW or n == 0 or BOARD != "modules" or not (x_inc and x_ud and x_cs):
         return
     x_ud.value = n > 0
     x_cs.off(); time.sleep(5e-6)
@@ -144,14 +168,14 @@ def vol_db(v):
 
 def pga_write(gain_code):
     """PGA2311: 16 bit (høyre, venstre). 0 = mute, 255 = +31,5 dB; 192 = 0 dB; 0,5 dB per trinn."""
-    if HW and BOARD == "main":
+    if HW and BOARD == "main" and pga:
         pga.xfer2([gain_code & 0xFF, gain_code & 0xFF])
 
 
 def apply_volume():
     """AUX: analogt volum (X9C på modulbygget, PGA2311 på hovedkortet). AirPlay/BT/USB: analogt på fast nivå, volum + loudness i CamillaDSP."""
     global _x9c_pos
-    if BOARD == "radio":   # bare digitalt volum (CamillaDSP) – forsterkeren har fast forsterkning
+    if BOARD in ("radio", "test"):   # bare digitalt volum (CamillaDSP)
         dsp.update(); return
     if BOARD == "main":
         if state["mute"] or not state["power"]:
@@ -326,7 +350,8 @@ def apply_input():
 def apply_power():
     if HW:
         relay_amp.value = state["power"]
-        led_power.value = 1.0 if state["power"] else 0.1
+        if led_power:
+            led_power.value = 1.0 if state["power"] else 0.1
         apply_input()
     apply_volume()   # mute i CamillaDSP + PGA2311 i standby
     # OLED av i standby håndteres av oled_display.py via ctrl-filen
@@ -517,19 +542,23 @@ def setup_buttons():
     objs = []
     if BOARD == "radio":
         for i, pin in enumerate(FAV_BTN):   # kort trykk = spill kanal, hold 2 s = lagre det som spiller
-            b = Button(pin, pull_up=True, bounce_time=0.05, hold_time=2.0)
+            b = _mk(Button, pin, pull_up=True, bounce_time=0.05, hold_time=2.0)
+            if not b:
+                continue
             b.when_released = lambda b=b, n=i + 1: (_safe(play_preset, n) if not b.was_held else None)
             b.when_held = lambda n=i + 1: _safe(save_preset, n)
             objs.append(b)
-        src = Button(RADIO_BTN["source"], pull_up=True, bounce_time=0.05)
+        src = _mk(Button, RADIO_BTN["source"], pull_up=True, bounce_time=0.05) or _Dummy()
         src.when_pressed = lambda: set_input(CYCLE[(CYCLE.index(state["input"]) + 1) % len(CYCLE)] if state["input"] in CYCLE else CYCLE[0])
         objs.append(src)
         for k, act in (("prev", "previous"), ("next", "next")):
-            b = Button(RADIO_BTN[k], pull_up=True, bounce_time=0.05)
+            b = _mk(Button, RADIO_BTN[k], pull_up=True, bounce_time=0.05) or _Dummy()
             b.when_pressed = lambda a=act: _safe(transport, a)
             objs.append(b)
     for name, pin in BTN.items():
-        b = Button(pin, pull_up=True, bounce_time=0.05, hold_time=2.0)
+        b = _mk(Button, pin, pull_up=True, bounce_time=0.05, hold_time=2.0)
+        if not b:
+            continue
         if name == "airplay":
             # kort trykk: AirPlay; trykk igjen mens AirPlay er valgt = Radio (Lyrion), og tilbake
             b.when_released = lambda b=b: (set_input("radio" if state["input"] == "airplay" and lyr.connected else "airplay") if not b.was_held else None)
@@ -537,28 +566,28 @@ def setup_buttons():
         else:
             b.when_pressed = lambda n=name: set_input(n)
         objs.append(b)
-    p = Button(BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0)
+    p = _mk(Button, BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0) or _Dummy()
 
     def on_pressed():
         global _power_press_t
         _power_press_t = time.time()
 
     def on_released():
-        if not p.was_held and time.time() - _power_press_t < 0.5:
+        if not getattr(p, "was_held", False) and time.time() - _power_press_t < 0.5:
             set_power(not state["power"])
 
     p.when_pressed = on_pressed
     p.when_released = on_released
     p.when_held = lambda: (save_state(), subprocess.run(["systemctl", "reboot"], check=False))
     objs.append(p)
-    vol = RotaryEncoder(ENC[0], ENC[1], max_steps=0, wrap=False)
+    vol = _mk(RotaryEncoder, ENC[0], ENC[1], max_steps=0, wrap=False) or _Dummy()
     vol.when_rotated_clockwise = lambda: menu_step(1) if menu["open"] else set_volume(state["volume"] + 2)
     vol.when_rotated_counter_clockwise = lambda: menu_step(-1) if menu["open"] else set_volume(state["volume"] - 2)
     objs.append(vol)
-    sw = Button(ENC[2], pull_up=True, bounce_time=0.05, hold_time=1.0)
+    sw = _mk(Button, ENC[2], pull_up=True, bounce_time=0.05, hold_time=1.0) or _Dummy()
 
     def sw_released():
-        if sw.was_held:
+        if getattr(sw, "was_held", False):
             return
         if menu["open"]:
             menu_pick()                      # trykk i menyen = spill kanalen
@@ -576,6 +605,7 @@ def setup_buttons():
     sw.when_released = sw_released
     sw.when_held = sw_held
     objs.append(sw)
+    print(f"Knapper klare ({BOARD}): " + ", ".join(f"{n}=GPIO{p}" for n, p in BTN.items()) + f", power=GPIO{BTN_POWER}, encoder={ENC}", flush=True)
     return objs
 
 
@@ -589,7 +619,7 @@ async def pairing_task():
                 bt_pairing(False, "timeout"); apply_input()
             elif dev and dev != _pairing_known:   # en ny enhet koblet til
                 bt_pairing(False, "connected"); apply_input()
-            elif HW:
+            elif HW and "bt" in leds:
                 leds["bt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 > 0.5
         await asyncio.sleep(0.05)
 

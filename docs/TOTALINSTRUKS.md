@@ -176,6 +176,36 @@ journalctl -u ki-amp -f # trykk på knappene – du skal se "input airplay", "vo
 
 ---
 
+### Testbenk: knapper, LED, OLED og lyd på en løs Pi 4
+
+`KI_AMP_BOARD=test` (settes automatisk av `KI_AMP_OUT=headphones bash install.sh`) bruker pinner som ikke krasjer med I2C, SPI eller UART. Knappene kobles mellom GPIO og GND (intern pull-up). 12 mm-knappenes LED-ring (3–6 V) kan gå rett fra GPIO til GND for testing – den lyser svakere på 3,3 V, men viser at alt virker.
+
+| Funksjon | GPIO | Fysisk pinne | Andre bein |
+|---|---|---|---|
+| AIRPLAY-knapp (trykk = AirPlay, trykk igjen = Radio, hold 2 s = BT-parring) | 5 | 29 | GND 30 |
+| BT-knapp | 6 | 31 | GND 34 |
+| AUX-knapp | 13 | 33 | GND 34 |
+| USB-knapp | 19 | 35 | GND 39 |
+| POWER-knapp (trykk = standby, hold 3 s = omstart) | 26 | 37 | GND 39 |
+| LED AIRPLAY / BT / AUX / USB (+) | 16 / 20 / 21 / 12 | 36 / 38 / 40 / 32 | LED − til GND |
+| LED POWER (+) | 23 | 16 | LED − til GND 14 |
+| Encoder CLK / DT / SW (valgfritt) | 17 / 27 / 22 | 11 / 13 / 15 | + til 3,3 V (17), GND (20) |
+| OLED 0,91" GND / VCC / SCK / SDA | – / – / 3 / 2 | 6 / 1 / 5 / 3 | |
+
+**Koble alltid med strømmen av.** VCC på OLED-en skal på pinne 1 (3,3 V).
+
+```bash
+sudo sed -i 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=test/' /etc/ki-amp.env
+sudo systemctl restart ki-amp
+journalctl -u ki-amp -n 20 --no-pager | grep -E "Knapper|GPIO"   # «Knapper klare (test): …»
+journalctl -u ki-amp -f                                           # trykk på knappene og se at kilden bytter
+```
+
+**Lyd ut:** 3,5 mm-jacken på Pi-en → aktiv høyttaler.
+**Lyd inn via USB-C:** Mac → USB-C på Pi-en (Mac-en gir også strøm, trekk ut laderen). Mac: Systeminnstillinger → Lyd → Utdata → *Pultforsterker*. Trykk USB-knappen.
+**AirPlay / Bluetooth / Radio:** som før; hold AIRPLAY 2 s for parring.
+**AUX:** knappen bytter kilde og skjermbilde, men Pi-en har ingen analog inngang – lyd på AUX krever hovedkortet (eller et USB-lydkort med linjeinngang).
+
 ### Testskjerm 0,91" OLED (128 × 32, SSD1306)
 
 Alle skjermbildene fra prosjektet finnes også i en utgave for den lille 0,91"-skjermen: hovedbilde med kilde, play/pause, tid, rullende tittel, artist, volum og fremdrift; nivåmeter for AUX/USB; radio med kanal; overlegg for volum, mute, kildebytte, Bluetooth-parring og -tilkobling; kanalmeny og oppstart.

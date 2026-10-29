@@ -102,6 +102,7 @@ sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service
 if [ "$OUT" = headphones ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e '/^KI_AMP_DSP_FORMAT=/d' /etc/ki-amp.env
   echo "KI_AMP_DSP_FORMAT=$PB_FMT" | sudo tee -a /etc/ki-amp.env >/dev/null
+  sudo sed -i 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=test/' /etc/ki-amp.env      # testbenk-pinner (knapper/LED rett på Pi-en)
   echo "== TESTMODUS: lyd ut på 3,5 mm-kontakten. Sett volum på jacken: amixer -c Headphones sset Headphone 100%"
 fi
 sudo systemctl daemon-reload
