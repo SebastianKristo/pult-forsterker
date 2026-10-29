@@ -379,7 +379,48 @@ if SMALL:
     import oled_small as small
 
 
+# ---------- nettverk: IP vises etter oppstart og når forbindelsen kommer/går ----------
+NET = {"ip": None, "show_until": 0.0}
+
+
+def _ip_now():
+    import socket
+    try:   # kabelen ute og ikke Wi-Fi heller → ingen nett, selv om adressen fortsatt står på eth0
+        up = lambda i: open(f"/sys/class/net/{i}/operstate").read().strip() == "up"
+        if os.path.exists("/sys/class/net/eth0") and not up("eth0") and not (os.path.exists("/sys/class/net/wlan0") and up("wlan0")):
+            return ""
+    except Exception:
+        pass
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(("10.255.255.255", 1)); ip = s.getsockname()[0]; s.close()
+        return "" if ip.startswith("127.") else ip
+    except Exception:
+        return ""
+
+
+def net_thread():
+    while True:
+        ip = _ip_now()
+        if ip != NET["ip"]:
+            if NET["ip"] is not None:          # endret etter oppstart: vis i 5 s
+                NET["show_until"] = time.time() + 5
+            print("Nettverk:", ip or "ingen", flush=True)
+            NET["ip"] = ip
+        time.sleep(3)
+
+
+def draw_ip(draw, w, h):
+    ip = NET["ip"]
+    big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 11 if h <= 32 else 13)
+    sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 8 if h <= 32 else 9)
+    head, line = ("NETTVERK", ip) if ip else ("INGEN NETTVERK", "sjekk kabelen")
+    draw.text(((w - draw.textlength(head, font=sm)) / 2, 2 if h <= 32 else 14), head, font=sm, fill=255)
+    draw.text(((w - draw.textlength(line, font=big)) / 2, 14 if h <= 32 else 30), line, font=big, fill=255)
+
+
 def render(draw, c):
+    if not (time.time() < boot_until) and (time.time() < NET["show_until"]):
+        draw_ip(draw, device.width if device else 128, device.height if device else 64); return
     if SMALL:
         if time.time() < boot_until:
             small.boot(draw, 1 - max(0, boot_until - time.time()) / 1.6)
@@ -455,6 +496,8 @@ def main():
         if device is None:
             print("Fant ingen skjerm – sjekk koblingene og i2cdetect -y 1"); return
         demo(); return
+    NET["show_until"] = boot_until + 4          # vis IP-adressen 4 s etter oppstartsbildet
+    threading.Thread(target=net_thread, daemon=True).start()
     threading.Thread(target=airplay_thread, daemon=True).start()
     threading.Thread(target=bt_thread, daemon=True).start()
     threading.Thread(target=art_thread, daemon=True).start()
@@ -469,7 +512,7 @@ def main():
                 device.hide(); was_on = False
             time.sleep(0.2); continue
         if not was_on:
-            device.show(); was_on = True; boot_until = time.time() + 1.6
+            device.show(); was_on = True; boot_until = time.time() + 1.6; NET["show_until"] = boot_until + 4
         with canvas(device) as draw:
             render(draw, c)
         time.sleep(0.1)
