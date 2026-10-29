@@ -214,7 +214,12 @@ PHRASES = {
     "radio_saved": "Lagret som kanal {n}.",
     "radio_empty": "Kanal {n} er tom. Hold knappen for å lagre.",
     "power_on": "Pultforsterker er klar.",
+    "mix_on": "Miks på.",
+    "mix_off": "Miks av.",
 }
+# Ferdiginnspilte meldinger (engelsk AI-stemme, laget med pi/make_sounds.py). KI_AMP_VOICE_LANG=no gir norsk Piper i stedet.
+SOUNDS_DIR = os.environ.get("KI_AMP_SOUNDS", "/usr/local/share/ki-amp/sounds")
+VOICE_LANG = os.environ.get("KI_AMP_VOICE_LANG", "en")
 TTS_DIR = "/var/cache/ki-amp/tts"
 PIPER_VOICE = os.environ.get("KI_AMP_PIPER_VOICE", "/opt/piper/no_NO-talesyntese-medium.onnx")
 
@@ -227,6 +232,11 @@ class Voice:
     def say(self, key, delay=0.0, **kw):
         if not state.get("voice", True) or not state["power"] or key not in PHRASES:
             return
+        if VOICE_LANG != "no":   # ferdig WAV: radio_preset_3.wav, radio_saved_3.wav … eller bt_pairing.wav
+            for name in ([f"{key}_{kw['n']}"] if "n" in kw else []) + [key]:
+                f = os.path.join(SOUNDS_DIR, name + ".wav")
+                if os.path.exists(f):
+                    self._q.append((time.time() + delay, f)); self._ev.set(); return
         self._q.append((time.time() + delay, PHRASES[key].format(**kw))); self._ev.set()
 
     def _wav(self, text):
@@ -243,6 +253,8 @@ class Voice:
         return path if os.path.exists(path) else None
 
     def warm(self):   # lag faste fraser på forhånd, så første melding kommer uten forsinkelse
+        if VOICE_LANG != "no" and os.path.isdir(SOUNDS_DIR):
+            return   # ferdiginnspilt
         for k, t in PHRASES.items():
             if "{" not in t:
                 try: self._wav(t)
@@ -257,7 +269,7 @@ class Voice:
                 if t > time.time():
                     time.sleep(t - time.time())
                 try:
-                    wav = self._wav(text)
+                    wav = text if text.endswith(".wav") and os.path.exists(text) else self._wav(text)
                     if wav and state.get("voice", True):
                         subprocess.run(["aplay", "-q", "-D", "default", wav], timeout=20, check=False)
                 except Exception as e:
@@ -687,6 +699,8 @@ async def h_input(r):
     set_input(inp); return j()
 async def h_volume(r):
     b = await r.json()
+    if b.get("source") == "airplay" and not (state["input"] == "airplay" or state["auto_input"]):
+        return j()   # AirPlay-volum skal ikke styre en annen valgt kilde
     set_volume(state["volume"] + int(b["delta"]) if "delta" in b else int(b.get("volume", state["volume"]))); return j()
 async def h_mute(r): set_mute((await r.json()).get("mute", True)); return j()
 async def h_bt(r): bt_pairing((await r.json()).get("pairing", True)); return j()
@@ -869,16 +883,24 @@ class Lyrion:
                     self.host = None
 
     def _sync_volume(self, r):
-        """Lyrion-volumet holdes på 100 (volumet ligger i CamillaDSP). Endrer noen det i Lyrion, tar vi det over."""
+        """Volumet ligger i CamillaDSP. Lyrion settes til «fast utnivå» (Squeezelite får alltid 100 %), men glideren i
+        Lyrion speiler forsterkerens volum: endres den i Lyrion, tar vi det over – endres det her, flyttes glideren."""
         v = r.get("mixer volume")
         if v is None:
             return
-        v = int(float(v))
-        if self._vol_ok and v != 100 and v > 0 and state["input"] == "radio":
-            set_volume(v)
-        if v != 100:
-            self.rpc(["mixer", "volume", 100])
-        self._vol_ok = True
+        v = abs(int(float(v)))   # negativt = mutet i Lyrion
+        if not self._vol_ok:
+            self.rpc(["playerpref", "digitalVolumeControl", "0"])   # «Output level is fixed at 100%»
+            self._vol_ok = True; self._lms_vol = None
+        if self._lms_vol is not None and v != self._lms_vol:      # noen dro i glideren i Lyrion
+            self._lms_vol = v
+            if state["input"] == "radio":
+                set_volume(v)
+        elif v != state["volume"]:                                # vårt volum er endret – vis det i Lyrion
+            self.rpc(["mixer", "volume", state["volume"]])
+            self._lms_vol = state["volume"]
+        else:
+            self._lms_vol = v
 
     def _fetch_art(self):
         art = self.info.get("art", "")
@@ -913,7 +935,7 @@ def play_preset(n, announce=True):
     set_input("radio", announce=False)
     apply_input(); changed()
     if announce:
-        voice.say("radio_preset", name=p.get("title") or f"kanal {n}")
+        voice.say("radio_preset", n=n, name=p.get("title") or f"kanal {n}")
 
 
 def step_preset(d):
@@ -939,7 +961,10 @@ async def h_auto_input(r):
 
 
 async def h_mix(r):
-    state["mix"] = bool((await r.json()).get("on", False)); changed(); return j()
+    on = bool((await r.json()).get("on", False))
+    if on != state["mix"]:
+        voice.say("mix_on" if on else "mix_off")
+    state["mix"] = on; changed(); return j()
 
 
 async def h_menu(r):

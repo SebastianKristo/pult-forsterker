@@ -93,6 +93,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now ki-squeezelite
 
 echo "== Talemeldinger"
 bash "$SRC/ki-voice-setup.sh"
+sudo mkdir -p /usr/local/share/ki-amp/sounds && sudo install -m 644 "$SRC"/sounds/*.wav /usr/local/share/ki-amp/sounds/   # ferdiginnspilte talemeldinger
 
 echo "== 7/9  USB-lyd (Pi-en blir et USB-lydkort for PC-en via USB-C bak)"
 sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh

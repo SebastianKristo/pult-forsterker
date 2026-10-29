@@ -104,6 +104,11 @@ def airplay_thread():
                         track.update(playing=False, paused=True)
                     elif t == "ssnc" and c == "pend":
                         track.update(playing=False, paused=False, title="", artist="", album="", duration=0, position=0, cover="")
+                    elif t == "ssnc" and c == "pvol":   # volum fra iPhone/Mac: «airplay_volume,…» −30…0 dB, −144 = mute
+                        try:
+                            av = float(data.split(",")[0])
+                            threading.Thread(target=_post_volume, args=(0 if av <= -30 else round(100 * (av + 30) / 30),), daemon=True).start()
+                        except Exception: pass
                     elif t == "ssnc" and c == "prgr":
                         try:
                             s, cur, e = (int(x) for x in data.split("/")); track["position"] = (cur - s) / 44100; track["duration"] = (e - s) / 44100; track["pos_t"] = time.time()
@@ -188,6 +193,16 @@ def bt_thread():
         except Exception:
             pass
         time.sleep(1)
+
+
+def _post_volume(v):
+    """AirPlay-volumet blir forsterkerens volum (som en vanlig AirPlay-høyttaler)."""
+    import urllib.request
+    try:
+        urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{os.environ.get('KI_AMP_PORT', '8765')}/api/volume",
+                               data=json.dumps({"volume": v, "source": "airplay"}).encode(), method="POST"), timeout=2).read()
+    except Exception as e:
+        print("AirPlay-volum:", e, flush=True)
 
 
 def write_status():
