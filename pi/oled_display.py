@@ -418,7 +418,44 @@ def draw_ip(draw, w, h):
     draw.text(((w - draw.textlength(line, font=big)) / 2, 14 if h <= 32 else 30), line, font=big, fill=255)
 
 
+USBOV = {"pc": None, "until": 0.0}
+
+
+def usb_icon(draw, cx, cy, s):
+    """Enkelt USB-symbol: stamme, pil opp, sirkel nede, to grener."""
+    draw.line((cx, cy - s, cx, cy + s), fill=255)
+    draw.polygon([(cx, cy - s - 2), (cx - 2, cy - s + 1), (cx + 2, cy - s + 1)], fill=255)
+    draw.ellipse((cx - 2, cy + s - 1, cx + 2, cy + s + 3), fill=255)
+    draw.line((cx, cy + 2, cx - s * 0.6, cy - 1, cx - s * 0.6, cy - s * 0.4), fill=255)
+    draw.rectangle((cx - s * 0.6 - 1, cy - s * 0.4 - 2, cx - s * 0.6 + 1, cy - s * 0.4), fill=255)
+    draw.line((cx, cy + 4, cx + s * 0.6, cy + 1, cx + s * 0.6, cy - s * 0.3), fill=255)
+    draw.ellipse((cx + s * 0.6 - 1.5, cy - s * 0.3 - 3, cx + s * 0.6 + 1.5, cy - s * 0.3), fill=255)
+
+
+def draw_usbsw(draw, w, h, name):
+    big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 11 if h <= 32 else 12)
+    sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 7 if h <= 32 else 8)
+    head = "USB → " + name
+    if h <= 32:
+        usb_icon(draw, 9, 15, 8)
+        draw.text((22, 3), head, font=big, fill=255)
+        draw.text((22, 19), "alt på USB fulgte med", font=sm, fill=255)
+    else:
+        usb_icon(draw, 64, 15, 9)
+        draw.text(((w - draw.textlength(head, font=big)) / 2, 30), head, font=big, fill=255)
+        t = next(x for x in ("Tastatur, disk og lyd fulgte med", "Alt på USB fulgte med") if draw.textlength(x, font=sm) <= w - 4)
+        draw.text(((w - draw.textlength(t, font=sm)) / 2, 47), t, font=sm, fill=255)
+
+
 def render(draw, c):
+    if c.get("usbsw"):   # overlegg i 2,2 s når USB-switchen bytter PC
+        pc = c.get("usb_pc")
+        if USBOV["pc"] is not None and pc != USBOV["pc"]:
+            USBOV["until"] = time.time() + 2.2
+        USBOV["pc"] = pc
+        if time.time() < USBOV["until"]:
+            names = c.get("usb_pc_names") or ["PC 1", "PC 2"]
+            draw_usbsw(draw, device.width if device else 128, device.height if device else 64, names[(pc or 1) - 1]); return
     if not (time.time() < boot_until) and (time.time() < NET["show_until"]):
         draw_ip(draw, device.width if device else 128, device.height if device else 64); return
     if SMALL:

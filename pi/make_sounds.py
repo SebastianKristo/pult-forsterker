@@ -22,6 +22,8 @@ PHRASES = {
     "power_on": "Ready to play.",
     "mix_on": "Mixing on.",
     "mix_off": "Mixing off.",
+    "usb_pc_1": "USB switched to computer one.",
+    "usb_pc_2": "USB switched to computer two.",
 }
 for i, w in enumerate(NUM, 1):
     PHRASES[f"radio_preset_{i}"] = f"Preset {w}."
@@ -32,7 +34,10 @@ model = sys.argv[1] if len(sys.argv) > 1 else "."
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sounds")
 os.makedirs(out, exist_ok=True)
 k = Kokoro(os.path.join(model, "kokoro-v1.0.onnx"), os.path.join(model, "voices-v1.0.bin"))
+only = os.environ.get("ONLY", "")
 for key, text in PHRASES.items():
+    if only and key not in only.split(","):
+        continue
     s, sr = k.create(text, voice=VOICE, speed=SPEED, lang=LANG)
     with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
         sf.write(tmp.name, s, sr)

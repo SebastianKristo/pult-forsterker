@@ -420,4 +420,5 @@ sudo sed -i 's/^KI_AMP_USBSW_NAMES=.*/KI_AMP_USBSW_NAMES=MacBook,Jobb-PC/' /etc/
 sudo systemctl restart ki-amp
 curl -X POST localhost:8765/api/usbsw -d '{"toggle":true}'
 ```
+Ved hvert bytte viser skjermen «USB → <navn>» i 2 s og stemmen sier «USB switched to computer one/two». Med `KI_AMP_USBSW_FRONT=1` blir AIRPLAY-knappen «PC 1/2» (kort trykk bytter PC) og BT-knappen «AIRPLAY/BT» (kort trykk AirPlay → BT → Radio, hold 2 s = BT-parring).
 Viser HA/Homey feil PC, bytt `KI_AMP_USBSW_SENSE_PC1` mellom `low` og `high`. I Home Assistant heter velgeren «USB-switch», i Homey dukker «USB-switch» og flytkortet «Bytt USB-switch til …» opp når `KI_AMP_USBSW_PULSE` er satt.

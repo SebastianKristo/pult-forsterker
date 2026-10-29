@@ -216,6 +216,7 @@ PHRASES = {
     "radio_saved": "Lagret som kanal {n}.",
     "radio_empty": "Kanal {n} er tom. Hold knappen for å lagre.",
     "power_on": "Pultforsterker er klar.",
+    "usb_pc": "USB til {name}.",
     "mix_on": "Miks på.",
     "mix_off": "Miks av.",
 }
@@ -356,6 +357,11 @@ def apply_input():
     relay_aux.value = state["input"] == "aux"
     for k, led in leds.items():
         led.value = state["power"] and k == state["input"]
+    if USBSW_FRONT and usbsw.enabled:   # PC 1/2-ringen lyser alltid når den er på, AIRPLAY/BT-ringen for AirPlay, BT og Radio
+        if "airplay" in leds:
+            leds["airplay"].value = state["power"]
+        if "bt" in leds:
+            leds["bt"].value = state["power"] and state["input"] in ("airplay", "bt", "radio")
     if BOARD == "radio":
         for i, led in enumerate(fav_leds):
             led.value = state["power"] and state["input"] == "radio" and state["preset"] == i + 1
@@ -444,6 +450,7 @@ def read_status():
 USBSW_PULSE = os.environ.get("KI_AMP_USBSW_PULSE", "").strip()
 USBSW_SENSE = os.environ.get("KI_AMP_USBSW_SENSE", "").strip()
 USBSW_SENSE_PC1 = os.environ.get("KI_AMP_USBSW_SENSE_PC1", "low").strip().lower()   # low | high
+USBSW_FRONT = os.environ.get("KI_AMP_USBSW_FRONT", "0") == "1"   # 1 = AIRPLAY-knappen blir PC 1/2, BT-knappen blir AIRPLAY/BT
 _usbsw_n = [n.strip() for n in os.environ.get("KI_AMP_USBSW_NAMES", "").split(",") if n.strip()]
 USBSW_NAMES = (_usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):])[:2]   # f.eks. KI_AMP_USBSW_NAMES=MacBook,Jobb-PC
 
@@ -482,6 +489,7 @@ class UsbSwitch:
         pc = self.read()
         if pc and pc != state["usb_pc"]:
             state["usb_pc"] = pc; changed()
+            voice.say("usb_pc", n=pc, name=USBSW_NAMES[pc - 1])
             print("USB-switch:", USBSW_NAMES[pc - 1], flush=True)
 
     def _press(self):
@@ -497,7 +505,10 @@ class UsbSwitch:
             self._press()
             if self.sense and self.read() != pc:   # prøv én gang til hvis den ikke byttet
                 self._press()
-            state["usb_pc"] = self.read() or pc; changed()
+            new = self.read() or pc
+            if new != state["usb_pc"]:
+                voice.say("usb_pc", n=new, name=USBSW_NAMES[new - 1])
+            state["usb_pc"] = new; changed()
 
     def toggle(self):
         self.set(2 if (self.read() or state["usb_pc"]) == 1 else 1)
@@ -661,7 +672,17 @@ def setup_buttons():
         b = _mk(Button, pin, pull_up=True, bounce_time=0.05, hold_time=2.0)
         if not b:
             continue
-        if name == "airplay":
+        if USBSW_FRONT and usbsw.enabled and name == "airplay":
+            # USB-switch montert: knappen oppe til venstre er «PC 1/2» (kort trykk bytter PC)
+            b.when_pressed = lambda: _safe(usbsw.toggle)
+        elif USBSW_FRONT and usbsw.enabled and name == "bt":
+            # «AIRPLAY/BT»: kort trykk AirPlay → BT (hvis tilkoblet) → Radio (hvis Lyrion) → AirPlay, hold 2 s = BT-parring
+            def _cycle():
+                order = ["airplay"] + (["bt"] if read_raw().get("bt_device") else []) + (["radio"] if lyr.connected else [])
+                cur = state["input"]
+                set_input(order[(order.index(cur) + 1) % len(order)] if cur in order else "airplay")
+            _hold_btn(b, _cycle, lambda: bt_pairing(not state["bt_pairing"]))
+        elif name == "airplay":
             # kort trykk: AirPlay; trykk igjen mens AirPlay er valgt = Radio (Lyrion), og tilbake
             _hold_btn(b, lambda: set_input("radio" if state["input"] == "airplay" and lyr.connected else "airplay"),
                       lambda: bt_pairing(not state["bt_pairing"]))   # hold AIRPLAY 2 s = BT-parring av/på
