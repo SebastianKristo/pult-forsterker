@@ -72,7 +72,14 @@ sudo install -m 644 "$SRC/shairport-sync.service" /etc/systemd/system/shairport-
 sudo systemctl daemon-reload && sudo systemctl enable --now shairport-sync
 
 echo "== 6/9  Bluetooth A2DP-mottak (bluealsa + parring uten PIN)"
+OLDHOST=$(hostname)
 sudo hostnamectl set-hostname pultamp 2>/dev/null || true
+# /etc/hosts må kjenne det nye navnet, ellers klager sudo «unable to resolve host»
+if grep -q "^127.0.1.1" /etc/hosts; then
+  sudo sed -i "s/^127.0.1.1.*/127.0.1.1\tpultamp/" /etc/hosts 2>/dev/null
+else
+  echo -e "127.0.1.1\tpultamp" | sudo tee -a /etc/hosts >/dev/null 2>&1
+fi
 bash "$SRC/ki-bluetooth-setup.sh"
 
 echo "== 6b    Lyrion-radio (Squeezelite)"
