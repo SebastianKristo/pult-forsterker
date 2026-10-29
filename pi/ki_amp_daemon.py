@@ -1032,13 +1032,15 @@ def start_mdns():
                            addresses=[socket.inet_aton(_local_ip())], port=PORT,
                            properties={"id": socket.gethostname(), "version": VERSION, "name": NAME, "type": "pultforsterker"},
                            server=f"{socket.gethostname()}.local.")
-        zc = Zeroconf(); zc.register_service(info); return zc
+        zc = Zeroconf(); zc.register_service(info)
+        print(f"mDNS: {NAME}._kipultamp._tcp på {_local_ip()}:{PORT}", flush=True); return zc
     except Exception as e:
-        print("mDNS ikke startet:", e); return None
+        print("mDNS ikke startet:", repr(e), flush=True); return None
 
 
 async def on_startup(app):
-    app["zc"] = start_mdns()
+    # zeroconf sin synkrone API kan ikke kalles fra aiohttp-løkka (gir EventLoopBlocked etter 10 s) – kjør i egen tråd
+    app["zc"] = await asyncio.get_running_loop().run_in_executor(None, start_mdns)
     app["btn"] = setup_buttons()
     app["pair"] = asyncio.create_task(pairing_task())
     app["menu"] = asyncio.create_task(menu_task())
@@ -1046,7 +1048,7 @@ async def on_startup(app):
 
 async def on_cleanup(app):
     if app.get("zc"):
-        app["zc"].close()
+        await asyncio.get_running_loop().run_in_executor(None, app["zc"].close)
 
 
 def main():
