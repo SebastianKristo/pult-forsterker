@@ -66,6 +66,8 @@ for (ref, pad), (vx, vy) in getattr(_bb, "FIXED_GND_VIP", {}).items():
         v = pcbnew.PCB_VIA(board); v.SetPosition(pcbnew.VECTOR2I(pcbnew.FromMM(vx), pcbnew.FromMM(vy))); v.SetWidth(pcbnew.FromMM(0.45)); v.SetDrill(pcbnew.FromMM(0.2)); v.SetNet(gn_); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
         print("via-i-pad:", ref, pad)
 
+for t in [t for t in board.GetTracks() if t.GetClass() == "PCB_TRACK" and (t.GetEnd() - t.GetStart()).EuclideanNorm() < pcbnew.FromMM(0.05)]:
+    board.Remove(t)   # mikroskopiske restsegmenter fra Freerouting («track dangling»)
 # Bredere strøm-/høyttalerspor der de ikke er inntil små pads (Freerouting ruter smalt ved IC-ene)
 WIDEN = {"5V_USB": 0.6, "VIN24": 1.5, "24V_IN": 1.5, "SPK_LN": 1.2, "SPK_LP": 1.2, "SPK_RN": 1.2, "SPK_RP": 1.2, "OUTNL": 1.0, "OUTPL": 1.0, "OUTNR": 1.0, "OUTPR": 1.0, "5V": 0.9, "BUCK_SW": 1.0}
 fine_pads = [pd.GetPosition() for fp in board.GetFootprints() for pd in fp.Pads() if min(pd.GetSize().x, pd.GetSize().y) < pcbnew.FromMM(1.3)]
