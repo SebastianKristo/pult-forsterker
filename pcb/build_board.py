@@ -343,7 +343,11 @@ for i, (dp, dm) in enumerate(((11, 10), (9, 8), (7, 6), (5, 4))):
 POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP": 2.0, "VIN24": 2.0, "24V_IN": 2.0, "5V": 1.2, "BUCK_SW": 1.5, "OUTNL": 1.5, "OUTPL": 1.5, "OUTNR": 1.5, "OUTPR": 1.5,
               "SPK_LN": 1.5, "SPK_LP": 1.5, "SPK_RN": 1.5, "SPK_RP": 1.5, "3V3": 0.5, "VNEG": 0.4}
 
-FIXED_GND_STUBS = {("U8", "5"): (34.4, 64.3), ("U8", "10"): (31.6, 59.8)}   # (ref, pad) -> via-posisjon
+FIXED_GND_STUBS = {("U8", "5"): (34.4, 64.3), ("U8", "10"): (31.6, 59.8), ("U5", "5"): (158.0, 68.45)}   # (ref, pad) -> via-posisjon
+# låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
+FIXED_TRACKS = [("USB_SEL", "F.Cu", 0.2, [(32.431, 62.2), (31.5, 62.3)]),
+                ("USB_UP_DP", "F.Cu", 0.2, [(32.6, 62.769), (32.6, 63.3), (31.4, 64.3)])]
+FIXED_VIAS = [("USB_SEL", (31.5, 62.3)), ("USB_UP_DP", (31.4, 64.3))]
 FIXED_GND_VIP = {("U4", "3"): (102.6, 60.375), ("U10", "12"): (136.35, 59.35), ("C27", "2"): (152.775, 70.0)}   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet
@@ -436,6 +440,11 @@ def build():
         pd = next(p for p in fps[ref].Pads() if p.GetNumber() == pad)
         tr = pcbnew.PCB_TRACK(board); tr.SetStart(pd.GetPosition()); tr.SetEnd(MM(vx, vy)); tr.SetWidth(pcbnew.FromMM(0.2)); tr.SetLayer(pcbnew.F_Cu); tr.SetNet(gnd); tr.SetLocked(True); board.Add(tr)
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
+    for netn, layer, w, pts in FIXED_TRACKS:
+        for p0, p1 in zip(pts, pts[1:]):
+            tr = pcbnew.PCB_TRACK(board); tr.SetStart(MM(*p0)); tr.SetEnd(MM(*p1)); tr.SetWidth(pcbnew.FromMM(w)); tr.SetLayer(board.GetLayerID(layer)); tr.SetNet(nets[netn]); tr.SetLocked(True); board.Add(tr)
+    for netn, (vx, vy) in FIXED_VIAS:
+        v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(nets[netn]); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     for (ref, pad), (vx, vy) in FIXED_GND_VIP.items():
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.45)); v.SetDrill(pcbnew.FromMM(0.2)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     pcbnew.SaveBoard(OUT, board)
