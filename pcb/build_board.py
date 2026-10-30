@@ -369,10 +369,11 @@ POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP":
 
 FIXED_GND_STUBS = {("U5", "5"): (158.0, 68.45)}   # (ref, pad) -> via-posisjon
 # låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
-FIXED_TRACKS = [("GND", "F.Cu", 0.2, [(131.75, 46.438), (131.75, 45.3)]), ("GND", "F.Cu", 0.2, [(132.25, 46.438), (132.25, 45.3)]),
+FIXED_TRACKS = [("AMP_RINN", "F.Cu", 0.2, [(120.35, 31.725), (118.6, 31.725)]),   # TPA3116 pinne 5 ble stengt inne av nabosporene
+                ("GND", "F.Cu", 0.2, [(131.75, 46.438), (131.75, 45.3)]), ("GND", "F.Cu", 0.2, [(132.25, 46.438), (132.25, 45.3)]),
                 ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),
                 ("USB3_DP", "F.Cu", 0.2, [(30.675, 49.6), (30.675, 53.8)])]   # FE1.1s pinne 7 ut nedover mellom nabosporene
-FIXED_VIAS = [("USB3_DP", (30.675, 53.8))]
+FIXED_VIAS = [("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725))]
 FIXED_GND_VIP = {("U4", "3"): (102.6, 60.375), ("U4", "9"): (102.6, 64.275), ("U10", "12"): (136.35, 59.35), ("C27", "2"): (152.775, 70.0), ("U13", "17"): (132.0, 45.0), ("C63", "2"): (78.0, 85.225)}   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet

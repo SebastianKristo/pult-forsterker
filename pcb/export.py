@@ -54,6 +54,7 @@ if os.path.exists(SES) and "--no-ses" not in sys.argv:
     open(PCB, "w").write(pcb_txt)
 board = pcbnew.LoadBoard(PCB)
 _ds = board.GetDesignSettings(); _ds.m_ViasMinSize = pcbnew.FromMM(0.5); _ds.m_MinThroughDrill = pcbnew.FromMM(0.3)   # standard JLCPCB-via 0,3 mm hull
+_ds.GetNetClasses().GetDefaultPtr().SetClearance(pcbnew.FromMM(0.14))   # Freerouting ruter med 0,15; avrunding gir 0,148 – JLCPCB-minimum er 0,127
 # Fiks for allerede rutet kort: U4 pinne 3 (GND) fikk stubb som krysset pinne 2 – erstatt med via-i-pad ytterst på paden
 import build_board as _bb
 for (ref, pad), (vx, vy) in getattr(_bb, "FIXED_GND_VIP", {}).items():
