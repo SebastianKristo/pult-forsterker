@@ -343,14 +343,15 @@ for i, (dp, dm) in enumerate(((11, 10), (9, 8), (7, 6), (5, 4))):
 POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP": 2.0, "VIN24": 2.0, "24V_IN": 2.0, "5V": 1.2, "BUCK_SW": 1.5, "OUTNL": 1.5, "OUTPL": 1.5, "OUTNR": 1.5, "OUTPR": 1.5,
               "SPK_LN": 1.5, "SPK_LP": 1.5, "SPK_RN": 1.5, "SPK_RP": 1.5, "3V3": 0.5, "VNEG": 0.4}
 
-FIXED_GND_STUBS = {("U8", "5"): (34.4, 64.3), ("U8", "10"): (31.6, 59.8), ("U4", "3"): (101.4, 59.0)}   # (ref, pad) -> via-posisjon
+FIXED_GND_STUBS = {("U8", "5"): (34.4, 64.3), ("U8", "10"): (31.6, 59.8)}   # (ref, pad) -> via-posisjon
+FIXED_GND_VIP = {("U4", "3"): (102.6, 60.375), ("U10", "12"): (136.35, 59.35), ("C27", "2"): (152.775, 70.0)}   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet
 def build():
     board = pcbnew.BOARD()
     ds = board.GetDesignSettings()
     ds.SetCopperLayerCount(2)
-    ds.m_TrackMinWidth = pcbnew.FromMM(0.2); ds.m_ViasMinSize = pcbnew.FromMM(0.5); ds.m_MinClearance = pcbnew.FromMM(0.127)
+    ds.m_TrackMinWidth = pcbnew.FromMM(0.2); ds.m_ViasMinSize = pcbnew.FromMM(0.45); ds.m_MinThroughDrill = pcbnew.FromMM(0.2); ds.m_MinClearance = pcbnew.FromMM(0.127)
     # omriss
     for (x0, y0, x1, y1) in [(0, 0, BW, 0), (BW, 0, BW, BH), (BW, BH, 0, BH), (0, BH, 0, 0)]:
         s = pcbnew.PCB_SHAPE(board); s.SetShape(pcbnew.SHAPE_T_SEGMENT); s.SetStart(MM(x0, y0)); s.SetEnd(MM(x1, y1))
@@ -435,6 +436,8 @@ def build():
         pd = next(p for p in fps[ref].Pads() if p.GetNumber() == pad)
         tr = pcbnew.PCB_TRACK(board); tr.SetStart(pd.GetPosition()); tr.SetEnd(MM(vx, vy)); tr.SetWidth(pcbnew.FromMM(0.2)); tr.SetLayer(pcbnew.F_Cu); tr.SetNet(gnd); tr.SetLocked(True); board.Add(tr)
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
+    for (ref, pad), (vx, vy) in FIXED_GND_VIP.items():
+        v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.45)); v.SetDrill(pcbnew.FromMM(0.2)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     pcbnew.SaveBoard(OUT, board)
     print("Lagret", OUT, "deler:", len(P), "nett:", len(N))
     with open(os.path.join(HERE, "bom.csv"), "w", newline="") as fh:

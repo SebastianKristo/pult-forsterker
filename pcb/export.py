@@ -51,6 +51,20 @@ if os.path.exists(SES) and "--no-ses" not in sys.argv:
     pcb_txt = pcb_txt[:-1] + body + "\n)\n"
     open(PCB, "w").write(pcb_txt)
 board = pcbnew.LoadBoard(PCB)
+_ds = board.GetDesignSettings(); _ds.m_ViasMinSize = pcbnew.FromMM(0.45); _ds.m_MinThroughDrill = pcbnew.FromMM(0.2)   # JLCPCB: via 0,45/0,2 tillatt
+# Fiks for allerede rutet kort: U4 pinne 3 (GND) fikk stubb som krysset pinne 2 – erstatt med via-i-pad ytterst på paden
+import build_board as _bb
+for (ref, pad), (vx, vy) in getattr(_bb, "FIXED_GND_VIP", {}).items():
+    fp_ = board.FindFootprintByReference(ref); pd_ = next(p for p in fp_.Pads() if p.GetNumber() == pad)
+    for t in list(board.GetTracks()):
+        if t.GetNetname() == "GND" and t.IsLocked() and t.GetClass() == "PCB_TRACK" and (t.GetStart() - pd_.GetPosition()).EuclideanNorm() < pcbnew.FromMM(0.05):
+            end = t.GetEnd(); board.Remove(t)
+            for v in list(board.GetTracks()):
+                if v.GetClass() == "PCB_VIA" and (v.GetPosition() - end).EuclideanNorm() < pcbnew.FromMM(0.05): board.Remove(v)
+    if not any(v.GetClass() == "PCB_VIA" and (v.GetPosition() - pcbnew.VECTOR2I(pcbnew.FromMM(vx), pcbnew.FromMM(vy))).EuclideanNorm() < pcbnew.FromMM(0.05) for v in board.GetTracks()):
+        gn_ = board.FindNet("GND")
+        v = pcbnew.PCB_VIA(board); v.SetPosition(pcbnew.VECTOR2I(pcbnew.FromMM(vx), pcbnew.FromMM(vy))); v.SetWidth(pcbnew.FromMM(0.45)); v.SetDrill(pcbnew.FromMM(0.2)); v.SetNet(gn_); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
+        print("via-i-pad:", ref, pad)
 
 # Bredere strøm-/høyttalerspor der de ikke er inntil små pads (Freerouting ruter smalt ved IC-ene)
 WIDEN = {"5V_USB": 0.6, "VIN24": 1.5, "24V_IN": 1.5, "SPK_LN": 1.2, "SPK_LP": 1.2, "SPK_RN": 1.2, "SPK_RP": 1.2, "OUTNL": 1.0, "OUTPL": 1.0, "OUTNR": 1.0, "OUTPR": 1.0, "5V": 0.9, "BUCK_SW": 1.0}
@@ -163,6 +177,7 @@ def _clear(p, r_track=0.55, r_pad=1.3, r_via=0.8):
         if t.GetClass() == "PCB_VIA":
             if (t.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(r_via): return False
         elif pcbnew.SEG(t.GetStart(), t.GetEnd()).Distance(p) < pcbnew.FromMM(r_track) + t.GetWidth() // 2: return False
+    if any((pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(1.7 if pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH else 1.1) for fp in board.GetFootprints() for pd in fp.Pads()): return False
     return not any((pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(r_pad) for pd in _pads_ng)
 pf, pb = _zone_poly(pcbnew.F_Cu), _zone_poly(pcbnew.B_Cu)
 grid = 0
@@ -240,19 +255,24 @@ for ref, num in sorted(_pad_unconnected_gnd(board) | _island_gnd_pads(board)):
     c = fp.GetPosition(); pp = pd.GetPosition()
     a0 = _mm.atan2(pp.y - c.y, pp.x - c.x)
     done = False
-    for dist, da in [(d_, a_) for d_ in (1.2, 1.6, 2.0, 2.5, 3.0, 3.6) for a_ in (0, 0.5, -0.5, 1.0, -1.0, 1.57, -1.57, 2.2, -2.2)]:
+    for dist, da in [(d_, a_) for d_ in (1.2, 1.6, 2.0, 2.5, 3.0, 3.6, 4.4, 5.2) for a_ in (0, 0.5, -0.5, 1.0, -1.0, 1.57, -1.57, 2.2, -2.2, 2.7, -2.7, 3.14)]:
         if done: break
         q = pcbnew.VECTOR2I(int(pp.x + _mm.cos(a0 + da) * pcbnew.FromMM(dist)), int(pp.y + _mm.sin(a0 + da) * pcbnew.FromMM(dist)))
         clash = any((t.GetPosition() - q).EuclideanNorm() < pcbnew.FromMM(0.7) for t in board.GetTracks() if t.GetClass() == "PCB_VIA")
         clash = clash or any(pcbnew.SEG(t.GetStart(), t.GetEnd()).Distance(q) < pcbnew.FromMM(0.45) + t.GetWidth() // 2 for t in board.GetTracks() if t.GetClass() == "PCB_TRACK" and t.GetNetname() != "GND")
         clash = clash or any(p2.GetNetname() != "GND" and (p2.GetPosition() - q).EuclideanNorm() < pcbnew.FromMM(0.9) for f2 in board.GetFootprints() for p2 in f2.Pads())
         segq = pcbnew.SEG(pp, q)
-        clash = clash or any(p2.GetNetname() != "GND" and segq.Distance(p2.GetPosition()) < pcbnew.FromMM(0.55) for f2 in board.GetFootprints() for p2 in f2.Pads())
-        clash = clash or any(t.GetClass() == "PCB_TRACK" and t.GetNetname() != "GND" and t.GetLayer() == pd.GetLayer() and segq.Distance(t.GetStart()) < pcbnew.FromMM(0.4) for t in board.GetTracks())
+        segshape = pcbnew.SHAPE_SEGMENT(pp, q, pcbnew.FromMM(0.2))
+        clash = clash or any(p2.GetNetname() != "GND" and p2.GetEffectiveShape(pd.GetLayer()).Collide(segshape, pcbnew.FromMM(0.25)) for f2 in board.GetFootprints() for p2 in f2.Pads())
+        clash = clash or any(t.GetClass() == "PCB_TRACK" and t.GetNetname() != "GND" and t.GetLayer() == pd.GetLayer()
+                             and segq.Distance(pcbnew.SEG(t.GetStart(), t.GetEnd())) < pcbnew.FromMM(0.3) + t.GetWidth() // 2 for t in board.GetTracks())
+        clash = clash or any((t.GetPosition() - q).EuclideanNorm() < pcbnew.FromMM(0.8) for t in board.GetTracks() if t.GetClass() == "PCB_VIA")
+        clash = clash or any((p2.GetPosition() - q).EuclideanNorm() < pcbnew.FromMM(1.0) for f2 in board.GetFootprints() for p2 in f2.Pads())
         if not clash:
             tr = pcbnew.PCB_TRACK(board); tr.SetStart(pp); tr.SetEnd(q); tr.SetWidth(pcbnew.FromMM(0.2)); tr.SetLayer(pd.GetLayer()); tr.SetNet(gnd_net); board.Add(tr)
             v = pcbnew.PCB_VIA(board); v.SetPosition(q); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd_net); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); board.Add(v)
             n_stitch += 1; print("GND-stubb:", ref, num); done = True
+    if not done: print("GND-stubb FEILET:", ref, num)
 filler.Fill(board.Zones())
 print("stitching-vias:", n_stitch)
 pcbnew.SaveBoard(PCB, board)
