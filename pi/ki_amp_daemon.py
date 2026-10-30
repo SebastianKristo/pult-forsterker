@@ -982,7 +982,9 @@ def setup_buttons():
         elif name == "usb" and BOARD == "main":
             # USB-knappen: første trykk velger USB-lyd, hvert trykk etterpå bytter USB-huben mellom PC 1 og PC 2 (lyden følger PC-en)
             def _usb():
-                if state["input"] != "usb":
+                if not state["power"] and usbsw.enabled:   # standby: knappen bytter bare PC (huben har strøm, lyset er av)
+                    usbsw.toggle()
+                elif state["input"] != "usb":
                     set_input("usb")
                 elif usbsw.enabled:
                     usbsw.toggle()
