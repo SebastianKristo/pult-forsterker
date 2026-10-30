@@ -24,6 +24,8 @@ def ses_to_sexpr(path, nets):
             layer, width = w.group(1), int(w.group(2)) * k
             pts = [float(v) * k for v in w.group(3).split()]
             for q in range(0, len(pts) - 2, 2):
+                if abs(pts[q] - pts[q+2]) < 0.05 and abs(pts[q+1] - pts[q+3]) < 0.05:
+                    continue   # mikroskopiske restsegmenter fra Freerouting («track dangling»)
                 out.append(f'  (segment (start {pts[q]:.4f} {-pts[q+1]:.4f}) (end {pts[q+2]:.4f} {-pts[q+3]:.4f}) (width {width:.3f}) (layer "{layer}") (net {code}))'); n_t += 1
         for v in re.finditer(r'\(via "([^"]+)" (-?\d+) (-?\d+)', body):
             d = vias[v.group(1)] * k; drill = int(v.group(1).split("_")[1].split(":")[1]) / 1000
@@ -66,8 +68,46 @@ for (ref, pad), (vx, vy) in getattr(_bb, "FIXED_GND_VIP", {}).items():
         v = pcbnew.PCB_VIA(board); v.SetPosition(pcbnew.VECTOR2I(pcbnew.FromMM(vx), pcbnew.FromMM(vy))); v.SetWidth(pcbnew.FromMM(0.45)); v.SetDrill(pcbnew.FromMM(0.2)); v.SetNet(gn_); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
         print("via-i-pad:", ref, pad)
 
-for t in [t for t in board.GetTracks() if t.GetClass() == "PCB_TRACK" and (t.GetEnd() - t.GetStart()).EuclideanNorm() < pcbnew.FromMM(0.05)]:
-    board.Remove(t)   # mikroskopiske restsegmenter fra Freerouting («track dangling»)
+# Fjern løse ender: låste hjelpespor/vias (USB_SEL, USB3_DP …) som Freerouting ikke brukte, og rester som henger i løse luften.
+# Gjøres på tekstnivå (regex på segment/via-linjene) – pcbnew/SWIG tåler ikke board.Remove() godt her.
+def _prune_dangling_text(path, board):
+    import re as _re2
+    txt = open(path).read()
+    gnd = board.FindNet("GND").GetNetCode()
+    pads = [(pd, pcbnew.VECTOR2I(pd.GetPosition().x, pd.GetPosition().y)) for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() != "GND"]
+    seg_re = _re2.compile(r'^\s*\(segment(?: locked)? \(start ([-\d.]+) ([-\d.]+)\) \(end ([-\d.]+) ([-\d.]+)\) \(width ([-\d.]+)\)(?: \(locked yes\))? \(layer "([^"]+)"\) \(net (\d+)\).*$', _re2.M)
+    via_re = _re2.compile(r'^\s*\(via(?: locked)? \(at ([-\d.]+) ([-\d.]+)\) \(size ([-\d.]+)\) \(drill [-\d.]+\)(?: \(locked yes\))? \(layers "F\.Cu" "B\.Cu"\)(?: \(free yes\))? \(net (\d+)\).*$', _re2.M)
+    # «berører» = innenfor sporbredden/via-størrelsen: Freerouting skjøter spor med overlapp, ikke alltid eksakt i endepunktene
+    def near(a, b, tol): return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 < tol * tol
+    def on_seg(p, a, b, tol):
+        ax, ay = a; bx, by = b; px, py = p; dx, dy = bx - ax, by - ay; L2 = dx * dx + dy * dy
+        t = 0 if L2 == 0 else max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / L2))
+        return (px - (ax + t * dx)) ** 2 + (py - (ay + t * dy)) ** 2 < tol * tol
+    def pad_hit(p, layer):
+        v = pcbnew.VECTOR2I(pcbnew.FromMM(p[0]), pcbnew.FromMM(p[1]))
+        return any(pd.IsOnLayer(layer) and pd.HitTest(v) for pd, _ in pads)
+    removed = 0
+    for _ in range(8):
+        segs = [(m, (float(m.group(1)), float(m.group(2))), (float(m.group(3)), float(m.group(4))), m.group(6), float(m.group(5))) for m in seg_re.finditer(txt) if int(m.group(7)) != gnd]
+        vias = [(m, (float(m.group(1)), float(m.group(2))), float(m.group(3))) for m in via_re.finditer(txt) if int(m.group(4)) != gnd]
+        LAY = {"F.Cu": pcbnew.F_Cu, "B.Cu": pcbnew.B_Cu}
+        def touched(p, layer, me):
+            if pad_hit(p, LAY[layer]): return True
+            if any(near(vp, p, vs / 2 + 0.01) for _, vp, vs in vias): return True
+            return any(m is not me and l == layer and on_seg(p, a, b, w / 2 + 0.01) for m, a, b, l, w in segs)
+        gone = [m for m, a, b, l, _ in segs if not (touched(a, l, m) and touched(b, l, m))]
+        for m, vp, vs in vias:
+            ok = sum(1 for l in ("F.Cu", "B.Cu") if any(l2 == l and on_seg(vp, a, b, vs / 2 + w / 2) for _, a, b, l2, w in segs) or pad_hit(vp, LAY[l]))
+            if ok < 2: gone.append(m)
+        if not gone: break
+        spans = sorted(((m.start(), m.end()) for m in gone), reverse=True)
+        for a, b in spans:
+            txt = txt[:a] + txt[b:]
+        removed += len(gone)
+    open(path, "w").write(txt)
+    print("fjernet løse spor/vias:", removed)
+    return pcbnew.LoadBoard(path)
+board = _prune_dangling_text(PCB, board)
 # Bredere strøm-/høyttalerspor der de ikke er inntil små pads (Freerouting ruter smalt ved IC-ene)
 WIDEN = {"5V_USB": 0.6, "VIN24": 1.5, "24V_IN": 1.5, "SPK_LN": 1.2, "SPK_LP": 1.2, "SPK_RN": 1.2, "SPK_RP": 1.2, "OUTNL": 1.0, "OUTPL": 1.0, "OUTNR": 1.0, "OUTPR": 1.0, "5V": 0.9, "BUCK_SW": 1.0}
 fine_pads = [pd.GetPosition() for fp in board.GetFootprints() for pd in fp.Pads() if min(pd.GetSize().x, pd.GetSize().y) < pcbnew.FromMM(1.3)]
