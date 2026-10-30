@@ -5,9 +5,16 @@ import os, subprocess, sys
 import pcbnew
 HERE = os.path.dirname(os.path.abspath(__file__))
 PCB = os.path.join(HERE, "ki_pultforsterker_main.kicad_pcb")
+# --continue: behold sporene som alt er rutet (fra forrige export.py) og la Freerouting fullføre resten
+if "--continue" in sys.argv:
+    routed = pcbnew.LoadBoard(os.path.join(HERE, "ki_pultforsterker_main.kicad_pcb"))
+    for z in list(routed.Zones()): routed.Remove(z)
+    for t in list(routed.GetTracks()):   # stitching-vias/stubber fra export.py lages på nytt etterpå
+        if t.GetNetname() == "GND" and not t.IsLocked(): routed.Remove(t)
+    pcbnew.ExportSpecctraDSN(routed, os.path.join(HERE, "board.dsn"))
 subprocess.run([sys.executable, os.path.join(HERE, "build_board.py")], check=True)
 board = pcbnew.LoadBoard(PCB)
-pcbnew.ExportSpecctraDSN(board, os.path.join(HERE, "board.dsn"))
+if "--continue" not in sys.argv: pcbnew.ExportSpecctraDSN(board, os.path.join(HERE, "board.dsn"))
 jar = os.environ.get("FREEROUTING", os.path.expanduser("~/freerouting.jar"))
 mp = sys.argv[sys.argv.index("-mp") + 1] if "-mp" in sys.argv else "40"
 os.makedirs(os.path.join(HERE, "logs"), exist_ok=True)
