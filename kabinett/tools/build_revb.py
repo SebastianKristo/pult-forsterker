@@ -2,7 +2,7 @@
 """KI Pultforsterker v2 – kabinett for hovedkort rev B (180 × 100, USB-switch, AUX 1/2, TFT eller OLED).
 
 Lager (i ../stl/):
-  v2_body_revb.stl             kasse 215 × 160 × 48: kortet flush mot høyre vegg (4 × USB-A ut gjennom veggen), Pi 4 under kortet
+  v2_body_revb.stl             kasse 215 × 160 × 48: kortet flush mot venstre vegg (4 × USB-A ut gjennom veggen), Pi 4 under kortet
   v2_lid_revb.stl / v2_lid_frittstaende_revb.stl
   v2_frontplate_revb.stl       frontplate (2,42" OLED-vindu, 4 × 12 mm knapper, 16 mm POWER, encoder)
   v2_frontplate_revb_tft.stl   frontplate med vindu for 2,8" TFT (aktivt område 57,6 × 43,2) i stedet for OLED
@@ -23,18 +23,18 @@ HW, HD = b.W / 2, b.D / 2
 IW = HW - b.wall
 b.tower_xy = (HW - 10, HD - 10)
 b.fp_w = b.W - 12
-b.vent_sides = (-1,)                                # luftespor bare i venstre vegg (USB-A i høyre)
+b.vent_sides = (1,)                                 # luftespor bare i høyre vegg (USB-A i venstre)
 b.vent_n = 26
 
-# hovedkort 180 × 100, hull (4,4)-(176,96) -> mønster 172 × 92, flush mot høyre innervegg
+# hovedkort 180 × 100, hull (4,4)-(176,96) -> mønster 172 × 92, flush mot venstre innervegg (USB-A ut der)
 PCB_W, PCB_D = 180.0, 100.0
-PCB_X1 = IW - 0.3
-PCB_X0 = PCB_X1 - PCB_W
+PCB_X0 = -IW + 0.3
+PCB_X1 = PCB_X0 + PCB_W
 PCB_Y0 = -HD + b.wall + 29.0                        # 29 mm til bakveggen for panelkontaktene
 b.pcb_holes, b.pcb_post_h = (172.0, 92.0), 25.0
 b.pcb_pos = (PCB_X0 + 90.0, PCB_Y0 + 50.0)
-# Pi 4 under kortet, portene mot +x (pluggene får plass under kortet), SD-kortet mot venstre
-PI_X0 = PCB_X0 + 5.0
+# Pi 4 under kortet, portene mot +x (pluggene får plass under kortet), SD-kortet mot venstre (over USB-blokken)
+PI_X0 = PCB_X0 + 45.0
 b.pi_holes = (58.0, 49.0)
 b.pi_pos = (PI_X0 + 3.5 + 29.0, b.pcb_pos[1] - 8.0)
 b.amp_pos = None
@@ -68,8 +68,8 @@ def body_revb():
         m -= b.slot_back(b.usbc, x, b.fz)
         for s in (-1, 1):
             m -= b.hole_back(b.usbc_screw, x + s * b.usbc_pitch / 2, b.fz)
-    for y in USB_Y:   # ett vindu per USB-A (14,4 × 8)
-        m -= b.cube(b.wall + 2, 14.8, USB_Z1 - USB_Z0, HW - b.wall - 1, y - 7.4, USB_Z0)
+    for y in USB_Y:   # ett vindu per USB-A (14,4 × 8) i venstre vegg
+        m -= b.cube(b.wall + 2, 14.8, USB_Z1 - USB_Z0, -HW - 1, y - 7.4, USB_Z0)
     return m
 
 

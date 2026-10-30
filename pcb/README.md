@@ -24,7 +24,7 @@ MCP23017, per-kilde-nivå, TFT) er skrevet, men kan bare testes på et ferdig ko
 | **USB-kodek AUX 2** | PCM2900C, 12 MHz-krystall, bus-powered fra en USB-port på Pi-en (J19) | Inngang 10k/4,7k-deler, 4,7 µF. Vises som «USB Audio CODEC» |
 | Volum | PGA2311 (±5 V), bit-banget SPI fra GPIO 0/1/16, 5 V via ferritt + 10 µF | fast nivå; volum og nivå per kilde gjøres digitalt |
 | Forsterker | TPA3116D2DAD, 26 dB, 400 kHz, 10 µH + 680 nF + snubber per utgang | **Kjøleflaten er på toppen**: ingen loddepasta under, kjøleribbe 20 × 20 limes på. SDZ fra GPIO 22 |
-| **USB-switch** | FE1.1s 4-ports hub + TS3USB221 2:1-mux. 2 × USB-C (PC 1/PC 2) på kortet, 4 × USB-A i høyre kant, polyfuse 2 A | Mux-valg fra MCP23017 GPB4 (lav = PC 1). CC-pinnene har 5,1 k, så USB-C–USB-C-kabel virker |
+| **USB-switch** | FE1.1s 4-ports hub + TS3USB221 2:1-mux. 2 × USB-C (PC 1/PC 2) på kortet, 4 × USB-A i venstre kant, polyfuse 2 A | Mux-valg fra MCP23017 GPB4 (lav = PC 1). CC-pinnene har 5,1 k, så USB-C–USB-C-kabel virker |
 | I/O-ekspander | MCP23017 (I2C 0x20), INT → GPIO 14 | GPA0-4 knapper AIR/BT/AUX/USB/PWR, GPB0-3 LED-ringer, GPB4 USB-mux, 4 ledige på «EXP» |
 | LED-ringer | 5 × AO3400 low-side | POWER-ring på GPIO 12 (PWM) |
 | TFT | 14-pinners header (standard 2,8" ILI9341/ST7789V-modul med XPT2046) | SPI0 CE0 = TFT, CE1 = touch, DC 5, RST 6, IRQ 17, baklys GPIO 13 (PWM) via AO3400 + AO3401 |
@@ -59,7 +59,7 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 | J10 | JST XH 6 | 5V_SW, AIR−, BT−, AUX−, USB−, POWER− (LED-ringer) |
 | J11 / J12 | USB-C på kortet | PC 1 / PC 2 → panelmontert USB-C bak med 15 cm kabel |
 | J13 | 1×14 header 2,54 | TFT: VCC GND CS RST DC MOSI SCK LED MISO T_CLK T_CS T_DIN T_DO T_IRQ (samme rekkefølge som modulen) |
-| J15–J18 | USB-A | 4 × USB-A ut gjennom høyre vegg |
+| J15–J18 | USB-A | 4 × USB-A ut gjennom venstre vegg |
 | J19 | JST XH 4 | 5V, D−, D+, GND fra en USB-A-port på Pi-en (USB-kodeken) |
 | J21 | JST XH 2 | strømknapp bak (momentan), GND |
 | J22 | JST XH 6 | EXP: MCP GPA5, GPA6, GPA7, GPB5, 3V3, GND (ledige) |

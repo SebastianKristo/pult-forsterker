@@ -335,7 +335,7 @@ Homey-appen → *Enheter → + → KI Pultforsterker* → forsterkeren finnes vi
 
 Når kortet er montert i kassen (`kabinett/stl/v2_body_revb.stl`, se `pcb/README.md` for kontaktene):
 
-1. Pi 4 på gulvet under kortet (portene mot høyre), hovedkortet 25 mm over på stolpene, flush mot høyre vegg så USB-A-portene
+1. Pi 4 på gulvet under kortet (portene mot høyre), hovedkortet 25 mm over på stolpene, flush mot venstre vegg så USB-A-portene
    stikker ut. 40-pin flatkabel (10 cm) J5 → Pi (rød stripe mot pinne 1 begge steder), 5 V fra **J6** til Pi header pinne 2 (5 V)
    og 6 (GND) med 18 AWG. **Ikke** USB-C-strøm i Pi-en samtidig.
 2. JST: J7 knapper, J10 LED-ringer, J8 encoder, J9 OLED (eller J13 TFT med 14-pinners flatkabel), J4 AUX 1, J20 AUX 2, J21 strømknapp
