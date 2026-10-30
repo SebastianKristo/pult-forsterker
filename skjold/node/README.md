@@ -71,9 +71,9 @@ AIR/BT: trykk = bytt AirPlay/Blåtann, hold 2 s = paring. ◀◀/▶▶: forrige
 Første trykk når velkomsthilsenen vises lukker den og gjør ingenting annet.
 
 ## Må bekreftes
-1. Encoder-trykk: prototypen sier pause/spill, oppgaven sier demp (`encoder.SW.keycode`).
-2. Strøm i skjermens LED-pinne (trengs Q1?), og at modulen tåler 3,3 V på VCC.
-3. ST7735-variant: `h_offset`/`v_offset`/`bgr` – se fargestripene i selvtesten.
-4. EC11 20/20 eller 30/15 (`steps_per_period`).
-5. Hvilken ende av skjerm-PCB-en loddeøyene sitter på (påvirker lengdene litt; alle er ≤ 15 cm).
-6. LED-ringens variant (3–6 V) og farge.
+Bekreftet: encoder-trykk = pause/spill; skjermmodulen er 3,3 V; EC11 er 5-pinners, 20 posisjoner (20/20), 15 mm halvflat aksel.
+
+1. Strøm i skjermens LED-pinne (trengs Q1?).
+2. ST7735-variant: `h_offset`/`v_offset`/`bgr` – se fargestripene i selvtesten.
+3. Hvilken ende av skjerm-PCB-en loddeøyene sitter på (påvirker lengdene litt; alle er ≤ 15 cm).
+4. LED-ringens variant (3–6 V) og farge.

@@ -48,7 +48,7 @@
         "pin": 17,
         "nett": "3V3",
         "farge": "rod",
-        "beskrivelse": "3,3 V til skjermen [bekreft at modulen godtar 3,3 V på VCC; de fleste har J1-bro for 3,3 V]"
+        "beskrivelse": "3,3 V til skjermen (modulen er spesifisert for 3,3 V – bekreftet)"
       },
       "GND": {
         "gpio": null,
@@ -111,7 +111,7 @@
     }
   },
   "encoder": {
-    "type": "EC11 med trykk, 20 mm halvflat aksel",
+    "type": "EC11 med trykk, 5 pinner, 20 posisjoner, 15 mm halvflat aksel",
     "A": {
       "gpio": 17,
       "pin": 11,
@@ -135,7 +135,7 @@
       "farge": "bla",
       "keycode": 164,
       "key": "KEY_PLAYPAUSE",
-      "_merknad": "[bekreft] Prototypen (Skjold Node OS.dc.html) sier trykk = pause/spill, oppgaven sier trykk = demp. KEY_MUTE er 113."
+      "_merknad": "Bekreftet: trykk = pause/spill (som i prototypen)."
     },
     "pull_up": true,
     "aktiv_lav": true,
@@ -143,7 +143,7 @@
     "detenter_per_omdreining": 20,
     "pulser_per_omdreining": 20,
     "steps_per_period": 1,
-    "_merknad": "[bekreft] EC11 finnes som 20 detenter/20 pulser (vanligst, 1 full periode per hakk) og 30 detenter/15 pulser (halv periode per hakk → steps_per_period=2).",
+    "_merknad": "Bekreftet: EC11 med 20 posisjoner (20 detenter/20 pulser, 1 full periode per hakk). Ved 30/15-variant: steps_per_period=2.",
     "hold_innstillinger_s": 3.0
   },
   "knapper": {

@@ -333,7 +333,7 @@
             },
             {
               "id": "N5",
-              "name": "Encoder EC11 m/ trykk, 20 mm aksel",
+              "name": "Encoder EC11 m/ trykk, 15 mm halvflat aksel",
               "qty": 1,
               "note": ""
             },
@@ -1891,7 +1891,7 @@
       ],
       "tips": [
         "SW sin andre pinne loddes til C med en 15 mm bro.",
-        "Trykk = pause/spill eller demp: [bekreft]"
+        "Trykk = pause/spill."
       ],
       "warn": ""
     },
@@ -1964,7 +1964,7 @@
         }
       ],
       "tips": [
-        "Mål at modulen godtar 3,3 V på VCC. [bekreft]"
+        "Modulen går på 3,3 V. Aldri 5 V på VCC."
       ],
       "warn": ""
     },
