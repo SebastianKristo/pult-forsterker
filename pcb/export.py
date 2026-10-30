@@ -152,6 +152,108 @@ for rnd_ in range(3):
     n_stitch += added
     filler.Fill(board.Zones())
     if not added: break
+# Rutenett med stitching-vias (hver 7 mm der begge sonene har kobber og det er fritt) – binder F.Cu- og B.Cu-planet sammen
+def _zone_poly(layer):
+    z = [zz for zz in board.Zones() if zz.GetLayer() == layer][0]
+    return z.GetFilledPolysList(layer)
+_tracks_ng = [t for t in board.GetTracks() if t.GetNetname() != "GND" or t.GetClass() == "PCB_VIA"]
+_pads_ng = [pd for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() != "GND"]
+def _clear(p, r_track=0.55, r_pad=1.3, r_via=0.8):
+    for t in _tracks_ng:
+        if t.GetClass() == "PCB_VIA":
+            if (t.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(r_via): return False
+        elif pcbnew.SEG(t.GetStart(), t.GetEnd()).Distance(p) < pcbnew.FromMM(r_track) + t.GetWidth() // 2: return False
+    return not any((pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(r_pad) for pd in _pads_ng)
+pf, pb = _zone_poly(pcbnew.F_Cu), _zone_poly(pcbnew.B_Cu)
+grid = 0
+for gx in range(6, 175, 7):
+    for gy in range(6, 95, 7):
+        p = pcbnew.VECTOR2I(pcbnew.FromMM(gx), pcbnew.FromMM(gy))
+        if pf.Contains(p) and pb.Contains(p) and _clear(p):
+            v = pcbnew.PCB_VIA(board); v.SetPosition(p); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd_net)
+            v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); board.Add(v); grid += 1
+print("rutenett-vias:", grid); n_stitch += grid
+filler.Fill(board.Zones())
+# Andre runde med mindre via (0,6/0,3) og lavere krav til klaring for øyene som fortsatt står alene
+def _free_point2(poly, board):
+    bb = poly.BBox(); import random
+    rnd = random.Random(2)
+    cands = [(bb.GetLeft() + rnd.random() * bb.GetWidth(), bb.GetTop() + rnd.random() * bb.GetHeight()) for _ in range(1500)]
+    items = [t for t in board.GetTracks() if t.GetNetname() != "GND"]
+    pads = [pd for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() != "GND"]
+    for x, y in cands:
+        p = pcbnew.VECTOR2I(int(x), int(y))
+        if not poly.Contains(p): continue
+        if any(not poly.Contains(pcbnew.VECTOR2I(int(x + dx), int(y + dy))) for dx, dy in ((350000, 0), (-350000, 0), (0, 350000), (0, -350000))): continue
+        bad = False
+        for t in items:
+            if t.GetClass() == "PCB_VIA":
+                if (t.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(0.7): bad = True; break
+            elif t.GetLayer() in (pcbnew.F_Cu, pcbnew.B_Cu):
+                if pcbnew.SEG(t.GetStart(), t.GetEnd()).Distance(p) < pcbnew.FromMM(0.5) + t.GetWidth() // 2: bad = True; break
+        if bad: continue
+        if any((pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(1.2) for pd in pads): continue
+        return p
+    return None
+
+for rnd_, layer in ((0, pcbnew.F_Cu), (1, pcbnew.F_Cu), (2, pcbnew.B_Cu), (3, pcbnew.B_Cu)):
+    z = [zz for zz in board.Zones() if zz.GetLayer() == layer][0]
+    polys = z.GetFilledPolysList(layer); added = 0
+    for i in range(polys.OutlineCount()):
+        poly = pcbnew.SHAPE_POLY_SET(); poly.AddOutline(polys.Outline(i))
+        has = any(poly.Contains(t.GetPosition()) for t in board.GetTracks() if t.GetClass() == "PCB_VIA" and t.GetNetname() == "GND")
+        has = has or any(poly.Contains(pd.GetPosition()) for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() == "GND" and pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH)
+        if has: continue
+        p = _free_point2(poly, board)
+        if p is None: continue
+        v = pcbnew.PCB_VIA(board); v.SetPosition(p); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd_net)
+        v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); board.Add(v); added += 1
+    n_stitch += added; filler.Fill(board.Zones())
+# GND-pads på små SMD-pakker som sonen ikke når: kort spor ut fra paden + via
+def _pad_unconnected_gnd(board):
+    rep = os.path.join(OUT, "drc_tmp.txt"); pcbnew.WriteDRCReport(board, rep, pcbnew.EDA_UNITS_MILLIMETRES, True)
+    import re as _r
+    out = set()
+    for blk in _r.split(r"\n(?=\[)", open(rep).read()):
+        if not blk.startswith("[unconnected_items]"): continue
+        for m in _r.finditer(r"Pad (\w+) \[GND\] of (\w+) on", blk):
+            out.add((m.group(2), m.group(1)))
+    return out
+def _island_gnd_pads(board):
+    out = set()
+    for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
+        polys = _zone_poly(layer)
+        for i in range(polys.OutlineCount()):
+            p = pcbnew.SHAPE_POLY_SET(); p.AddOutline(polys.Outline(i))
+            if any(p.Contains(t.GetPosition()) for t in board.GetTracks() if t.GetClass() == "PCB_VIA" and t.GetNetname() == "GND"): continue
+            if any(p.Contains(pd.GetPosition()) for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() == "GND" and pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH): continue
+            for fp in board.GetFootprints():
+                for pd in fp.Pads():
+                    if pd.GetNetname() == "GND" and pd.GetAttribute() != pcbnew.PAD_ATTRIB_PTH and p.Contains(pd.GetPosition()):
+                        out.add((fp.GetReference(), pd.GetNumber()))
+    return out
+for ref, num in sorted(_pad_unconnected_gnd(board) | _island_gnd_pads(board)):
+    fp = board.FindFootprintByReference(ref)
+    pd = next((p for p in fp.Pads() if p.GetNumber() == num), None)
+    if pd is None: continue
+    import math as _mm
+    c = fp.GetPosition(); pp = pd.GetPosition()
+    a0 = _mm.atan2(pp.y - c.y, pp.x - c.x)
+    done = False
+    for dist, da in [(d_, a_) for d_ in (1.2, 1.6, 2.0, 2.5, 3.0, 3.6) for a_ in (0, 0.5, -0.5, 1.0, -1.0, 1.57, -1.57, 2.2, -2.2)]:
+        if done: break
+        q = pcbnew.VECTOR2I(int(pp.x + _mm.cos(a0 + da) * pcbnew.FromMM(dist)), int(pp.y + _mm.sin(a0 + da) * pcbnew.FromMM(dist)))
+        clash = any((t.GetPosition() - q).EuclideanNorm() < pcbnew.FromMM(0.7) for t in board.GetTracks() if t.GetClass() == "PCB_VIA")
+        clash = clash or any(pcbnew.SEG(t.GetStart(), t.GetEnd()).Distance(q) < pcbnew.FromMM(0.45) + t.GetWidth() // 2 for t in board.GetTracks() if t.GetClass() == "PCB_TRACK" and t.GetNetname() != "GND")
+        clash = clash or any(p2.GetNetname() != "GND" and (p2.GetPosition() - q).EuclideanNorm() < pcbnew.FromMM(0.9) for f2 in board.GetFootprints() for p2 in f2.Pads())
+        segq = pcbnew.SEG(pp, q)
+        clash = clash or any(p2.GetNetname() != "GND" and segq.Distance(p2.GetPosition()) < pcbnew.FromMM(0.55) for f2 in board.GetFootprints() for p2 in f2.Pads())
+        clash = clash or any(t.GetClass() == "PCB_TRACK" and t.GetNetname() != "GND" and t.GetLayer() == pd.GetLayer() and segq.Distance(t.GetStart()) < pcbnew.FromMM(0.4) for t in board.GetTracks())
+        if not clash:
+            tr = pcbnew.PCB_TRACK(board); tr.SetStart(pp); tr.SetEnd(q); tr.SetWidth(pcbnew.FromMM(0.2)); tr.SetLayer(pd.GetLayer()); tr.SetNet(gnd_net); board.Add(tr)
+            v = pcbnew.PCB_VIA(board); v.SetPosition(q); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd_net); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); board.Add(v)
+            n_stitch += 1; print("GND-stubb:", ref, num); done = True
+filler.Fill(board.Zones())
 print("stitching-vias:", n_stitch)
 pcbnew.SaveBoard(PCB, board)
 

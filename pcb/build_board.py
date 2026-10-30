@@ -343,6 +343,8 @@ for i, (dp, dm) in enumerate(((11, 10), (9, 8), (7, 6), (5, 4))):
 POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP": 2.0, "VIN24": 2.0, "24V_IN": 2.0, "5V": 1.2, "BUCK_SW": 1.5, "OUTNL": 1.5, "OUTPL": 1.5, "OUTNR": 1.5, "OUTPR": 1.5,
               "SPK_LN": 1.5, "SPK_LP": 1.5, "SPK_RN": 1.5, "SPK_RP": 1.5, "3V3": 0.5, "VNEG": 0.4}
 
+FIXED_GND_STUBS = {("U8", "5"): (34.4, 64.3), ("U8", "10"): (31.6, 59.8), ("U4", "3"): (101.4, 59.0)}   # (ref, pad) -> via-posisjon
+
 # ---------------------------------------------------------------- bygg kortet
 def build():
     board = pcbnew.BOARD()
@@ -427,6 +429,12 @@ def build():
                       ("24V IN", 54, 12), ("SPK L", 148, 12), ("Pi 40", 54, 90)]:
         t = pcbnew.PCB_TEXT(board); t.SetText(txt); t.SetPosition(MM(x, y)); t.SetLayer(pcbnew.F_SilkS)
         t.SetTextSize(pcbnew.VECTOR2I(pcbnew.FromMM(1.0), pcbnew.FromMM(1.0))); board.Add(t)
+    # faste GND-stubber for små SMD-pads som jordplanet ikke når (låst, så Freerouting ruter rundt dem)
+    gnd = nets[GND]
+    for (ref, pad), (vx, vy) in FIXED_GND_STUBS.items():
+        pd = next(p for p in fps[ref].Pads() if p.GetNumber() == pad)
+        tr = pcbnew.PCB_TRACK(board); tr.SetStart(pd.GetPosition()); tr.SetEnd(MM(vx, vy)); tr.SetWidth(pcbnew.FromMM(0.2)); tr.SetLayer(pcbnew.F_Cu); tr.SetNet(gnd); tr.SetLocked(True); board.Add(tr)
+        v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     pcbnew.SaveBoard(OUT, board)
     print("Lagret", OUT, "deler:", len(P), "nett:", len(N))
     with open(os.path.join(HERE, "bom.csv"), "w", newline="") as fh:
