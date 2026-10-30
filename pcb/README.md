@@ -14,7 +14,7 @@ MCP23017, per-kilde-nivå, TFT) er skrevet, men kan bare testes på et ferdig ko
 
 | Blokk | Krets | Merknad |
 |---|---|---|
-| 24 V inn | skruterminal → sikring 5 A (5×20, THT) → TVS SMBJ33A → 2 × 1000 µF Ø10 (THT, maks 16 mm høye – kassen er 48 mm) | KCD1 hovedbryter i serie utenfor kortet |
+| 24 V inn | skruterminal → sikring 5 A (5×20, THT) → reverspolaritets-FET → TVS SMBJ28A → 2 × 1000 µF Ø10 (THT, maks 16 mm høye – kassen er 48 mm) | KCD1 hovedbryter i serie utenfor kortet |
 | 5 V / 5 A (alltid) | TPS54560 buck, 400 kHz, 10 µH, 3 × 47 µF, satt til 5,2 V (56k/10,2k) mot fall i flatkabel/terminal | Pi 4 («5V PI»), USB-hub, relé-spole |
 | **Smart relé** | SRD-05VDC-SL-C (24 V → forsterker) + AO3401 P-MOSFET (5 V → 5V_SW) fra GPIO 27 via AO3400 | 5V_SW: LED-ringer, PGA2311 (±5 V), ADC-analog, hodetelefonforsterker, TFT-baklys. Av = helt stille og mørkt. Knapp bak på GPIO 15 |
 | 3,3 V (alltid) | AMS1117-3.3 | MCP23017, pull-ups, encoder, **DAC, ADC-digital, oscillator, OLED og TFT-logikk** (Pi-ens I2C/SPI/I2S må aldri drive inn i strømløse kretser; skjermen slukkes i programvare) |
@@ -28,7 +28,7 @@ MCP23017, per-kilde-nivå, TFT) er skrevet, men kan bare testes på et ferdig ko
 | **USB-switch** | FE1.1s 4-ports hub + TS3USB221 2:1-mux (OE = GND). 2 × USB-C (PC 1/PC 2) på kortet, 4 × USB-A i venstre kant, polyfuse 2 A | Mux-valg fra MCP23017 GPB4 (S lav = PC 1). CC-pinnene har 5,1 k, så USB-C–USB-C-kabel virker. Huben og muxen går på alltid-5 V |
 | I/O-ekspander | MCP23017 (I2C 0x20), INT → GPIO 14 | GPA0-4 knapper AIR/BT/AUX/USB/PWR, GPA5 jack-deteksjon, GPA6 HP-EN, GPB0-3 LED-ringer, GPB4 USB-mux, GPA7/GPB5 ledige på «EXP» |
 | LED-ringer | 5 × AO3400 low-side | POWER-ring på GPIO 12 (PWM) |
-| **Hodetelefoner** | TPA6132A2 (DirectPath, −6 dB) etter PGA2311, 1 µF inn, 5V_SW. EN fra MCP23017 GPA6; jack-bryteren (DET) via 10 k til GPA5, 10 k pulldown på OUTL gir sikker «lav» uten plugg | 3,5 mm PJ-392 i fronten under POWER (J23). Ved innplugging dempes TPA3116 (SDZ) – kan slås av i HA/Homey |
+| **Hodetelefoner** | TPA6132A2 (DirectPath, +6 dB) etter PGA2311, 1 µF inn, alltid-på 5 V (EN kommer fra alltid-på MCP, og må aldri være høyere enn VDD). EN fra MCP23017 GPA6; jack-bryteren (DET) via 10 k til GPA5, 10 k pulldown på OUTL gir sikker «lav» uten plugg | 3,5 mm PJ-392 i fronten under POWER (J23). Ved innplugging dempes TPA3116 (SDZ) – kan slås av i HA/Homey |
 | TFT | 14-pinners header (standard 2,4"/2,8" ILI9341/ST7789V-modul med XPT2046) | SPI0 CE0 (GPIO 8) = TFT, CE1 (GPIO 7) = touch med 10 k pull-up, DC 5, RST 6, IRQ 17, baklys GPIO 13 (PWM) via AO3400 + AO3401 fra 3V3_SW |
 
 ## GPIO-kart (hovedkort rev B)
@@ -40,7 +40,7 @@ MCP23017, per-kilde-nivå, TFT) er skrevet, men kan bare testes på et ferdig ko
 | 5, 6, 13 | TFT DC, RST, baklys (PWM) | 23, 24, 25 | encoder CLK, DT, SW |
 | 7, 8 | SPI0 CE1 touch, CE0 TFT | 26 | DAC XSMT |
 | 0, 1 (header 27/28) | PGA2311 SDI, SCLK (ID-EEPROM-pinnene – ingen HAT-EEPROM på kortet) | 16 | PGA2311 CS |
-| 9, 10, 11 | SPI0 MISO, MOSI, SCLK (TFT + touch) | 27 | strømrelé + 5V_SW |
+| 9, 10, 11 | SPI0 MISO (bare touch – TFT-ens SDO er ikke koblet), MOSI, SCLK | 27 | strømrelé + 5V_SW |
 | 12 | POWER-ring (PWM) | | |
 | 14 | MCP23017 INT | 15 | strømknapp bak |
 | 17 | touch IRQ | | |
@@ -61,7 +61,7 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 | J9 | JST XH 5 | 3V3_SW, GND, SDA, SCL, RES (OLED) |
 | J10 | JST XH 6 | 5V_SW, AIR−, BT−, AUX−, USB−, POWER− (LED-ringer) |
 | J11 / J12 | USB-C på kortet | PC 1 / PC 2 → panelmontert USB-C bak med 15 cm kabel |
-| J13 | 1×14 header 2,54 | TFT: VCC GND CS RST DC MOSI SCK LED MISO T_CLK T_CS T_DIN T_DO T_IRQ (samme rekkefølge som modulen) |
+| J13 | 1×14 header 2,54 | TFT: VCC GND CS RST DC MOSI SCK LED (MISO ikke koblet) T_CLK T_CS T_DIN T_DO T_IRQ (samme rekkefølge som modulen) |
 | J15–J18 | USB-A | 4 × USB-A ut gjennom venstre vegg |
 | J19 | JST XH 4 | 5V, D−, D+, GND fra en USB-A-port på Pi-en (USB-kodeken) |
 | J21 | JST XH 2 | strømknapp bak (momentan), GND |
@@ -86,7 +86,8 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
    FE1.1s (C6706491), PCM2900C (C180425), TS3USB221RSER (C130085), MCP23017 (C506653), SRD-05VDC (C35449), TPA6132A2 (C69901),
    12,288 MHz-oscillator (C437124, lite lager – reserve C70567). **Les beskrivelsen JLCPCB viser per linje** – disse koden er ikke
    verifisert mot lager: USB-A Molex 67643 (C2765194), polyfuse 1812 (C545213), SRP1245A (C135446), 12 × 12-spoler (C182272),
-   220 µF SMD (C134754), SS56 (C32569), sikringsklips (C70283), headere (C50982/C50981), skruterminal (C8465), ferritt (C18305).
+   220 µF SMD (C134754), SS56 (C32569), sikringsklips (C70283), headere (C50982/C50981), skruterminal (C8465), ferritt (C18305), 330 k 0603 (C23171).
+   **Uten LCSC-kode (velg i BOM-verktøyet):** D1 SMBJ28A (TVS 28 V, SMB), Q11 P-MOSFET TO-252 (≥ −40 V, ≥ 10 A, f.eks. AOD4185/SUD50P04), D5 zener 12 V SOD-123, C1/C110 1000 µF 35 V Ø10.
    Alle IC-ene er «extended parts» (engangsgebyr per type).
 4. Festehull: H1–H4 M3 (stolper i kassen), H5–H8 M2,5 (Raspberry Pi 4 under kortet).
 5. THT-deler loddes selv etter levering: J1–J3, J6 (skruterminaler), J4/J7–J10/J19–J22 (JST), J5, J13 (headere), F1 (sikringsklips),
@@ -111,7 +112,7 @@ DAC (PCM5102A, 48 kHz) gir analog lyd videre.
 
 **Analog vei etter DAC:** DAC → 100 Ω/2,2 nF → 10 µF kobling → **PGA2311** (fast 0 dB-nivå; mutes ved standby) → to grener:
 1. **TPA3116D2** klasse D, 26 dB, 2 × 50 W i 4–8 Ω → 10 µH/680 nF-filter → J2/J3 → høyttalerpoler bak.
-2. **TPA6132A2** hodetelefonforsterker (−6 dB) → J23 → 3,5 mm i fronten. EN styres av MCP GPA6 (på bare når plugg står i).
+2. **TPA6132A2** hodetelefonforsterker (+6 dB) → J23 → 3,5 mm i fronten. EN styres av MCP GPA6 (på bare når plugg står i).
 
 **Utganger**
 
@@ -137,7 +138,7 @@ DAC (PCM5102A, 48 kHz) gir analog lyd videre.
 | Volum | PGA2311 på fast nivå; hovedvolum og loudness i CamillaDSP, nivå per kilde i ALSA softvol |
 | API/integrasjoner | daemon på port 8765 (`/api/status`, `/api/power`, `/api/input`, `/api/volume`, `/api/level`, `/api/mix`, `/api/usbsw`, `/api/hp_automute`, `/api/voice` …), HA-integrasjon 2.11, Homey-app 2.12 |
 
-**Strømforsyning:** 19–24 V DC inn → KCD1 → 5 A sikring → TVS 33 V → 2 × 1000 µF → (a) relé → 24V_AMP til TPA3116, (b) TPS54560 buck → 5 V/5 A
+**Strømforsyning:** 19–24 V DC inn → KCD1 → 5 A sikring → reverspolaritets-FET → TVS 28 V → 2 × 1000 µF → (a) relé → 24V_AMP til TPA3116, (b) TPS54560 buck → 5 V/5 A
 (Pi, hub, relé-spole, Q8) → AMS1117 → 3,3 V (alltid). 5V_SW (bak Q8) → AMS1117 → 3V3_SW (TFT-baklys), LM2662 → −5 V og ferritt → 5VA
 for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 
@@ -146,7 +147,7 @@ for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 | Fare | Vern på kortet | Merknad |
 |---|---|---|
 | Feil polaritet på 24 V | **P-MOSFET Q11** i pluss-linjen etter sikringen (body-dioden leder ved riktig polaritet, FET-en slår på; feil vei = brudd). Zener 12 V + 100 k beskytter gaten | Kortet tåler reversert adapter uten skade. DC-kontakten er senter-pluss |
-| Overspenning/transienter på 24 V | TVS SMBJ33A etter FET-en, 2 × 1000 µF | Klemmer ved ca. 53 V; TPA3116 abs. maks 30 V, bucken 60 V. Bruk en adapter på 19–24 V |
+| Overspenning/transienter på 24 V | TVS SMBJ28A etter FET-en, 2 × 1000 µF | Står av ved 28 V, klemmer ved ca. 45 V; TPA3116 abs. maks 30 V, bucken 60 V. Bruk en adapter på 19–24 V – 28 V-adapter går ikke |
 | Overstrøm 24 V | Sikring 5 A treg (5 × 20) | Full styrke på begge kanaler + Pi 3 A ≈ 5,5 A kortvarig; normal bruk < 1 A. Er sikringen plagsom: 6,3 A T |
 | Kortslutning på høyttalerutgang / mot kassen | TPA3116 har intern kortslutnings-, DC- og overtemperaturbeskyttelse (FAULT) | Utgangene ligger på ca. 12 V DC mot GND (BD-modus) – høyttalerpolene **må** være isolert fra den metalliske kassen (isolerende krage/krympestrømpe) |
 | Kortslutning på hodetelefonutgang | TPA6132A2 har kortslutningsvern | |
@@ -161,6 +162,8 @@ for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 
 **Ikke med (vurdert):** inrush-begrenser på 24 V (2 × 1000 µF gir kort inrush som adapteren tåler), separat sikring på 5 V til Pi (bucken begrenser), relé-kontaktvern (24 V DC 4,7 A er innenfor 10 A/30 VDC).
 
+**Alltid-på vs. svitsjet (regel: ingen logikk fra alltid-på-siden skal drive inn i en strømløs krets):** PGA2311 VD+/ZCEN, TPA6132A2 VDD/G0/G1, MCP23017, DAC, ADC-digital, OLED og TFT-logikk går på alltid-på 5 V/3,3 V. 5V_SW: PGA2311 VA+ (og −5 V), ADC-analog, LED-ringer, TFT-bakgrunnslys. SDZ til TPA3116 går via 1 k og holdes lav i standby. Bucken slår på ved ca. 9 V inn (330 k/51 k på EN) så EN tåler en TVS-klemming.
+
 **Første oppstart – sjekkliste:** (1) uten Pi og uten høyttalere: 24 V på J1 → mål 5,2 V på J6, 3,3 V på J22 pinne 5, 0 V på LED-ringkontakten J10 pinne 1 (5V_SW av). (2) Relé: brudd mellom K1 pinne 1 og 3 uten spole. (3) Sett i Pi, start; slå på fra HA → 5V_SW 5 V, −5 V på C16, 24V_AMP på C40. (4) Høyttalere på, volum 15 %.
 
 ## Kjente kompromisser i rev B
@@ -174,5 +177,5 @@ for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
   før første gang: uten strøm på spolen skal det være brudd mellom pinne 1 og 3. Er det kortslutning, er NO/NC byttet – flytt 24 V-inn til pinne 4 med en jumper.
 - TPS54560-kompensasjon (13,3 k/3,3 n/47 p) gir ca. 24 kHz crossover med 10 µH/3 × 47 µF – stabil, men TI-eksempelet bruker 16,9 k/4,7 n. Ikke målt.
 - Ingen fiducialer på kortet; JLCPCB krever det ikke, men sjekk pinne-1-rotasjon på SOT-23/SOIC/QFN i CPL-forhåndsvisningen.
-- TPA6132A2 går på fast −6 dB; høyttalervolumet og hodetelefonvolumet følger hverandre (samme PGA2311/CamillaDSP-volum).
+- TPA6132A2 går på fast +6 dB; høyttalervolumet og hodetelefonvolumet følger hverandre (samme PGA2311/CamillaDSP-volum).
 - PCM2900C: 1,5 kΩ pull-up på D+ til VCCCI er lagt til i tillegg til eventuell intern – sjekk at enumerasjon virker.

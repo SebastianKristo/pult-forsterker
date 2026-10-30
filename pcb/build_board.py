@@ -12,8 +12,8 @@ Rev B (alt digitalt gjennom Pi-en, ingen analog AUX-vei):
     ferritt + 10 µF foran PGA2311 VA+.
 
 GPIO-kart (BCM): I2C 2/3 (OLED, MCP23017) · 4 OLED RES · 14 MCP INT · 15 knapp bak · 17 touch IRQ · I2S 18 BCK, 19 LRCK, 21 DAC, 20 ADC
-  · 27 strømrelé · 22 TPA SDZ · 23/24/25 encoder · SPI0 10/9/11, CE0 8 PGA2311, CE1 7 TFT · 5 TFT DC · 6 TFT RST · 13 TFT BL (PWM)
-  · 16 touch CS · 12 POWER-ring (PWM) · 26 DAC XSMT.   MCP23017 0x20: GPA0-4 knapper AIR/BT/AUX/USB/PWR, GPB0-3 LED-ringer, GPB4 USB-mux.
+  · 27 strømrelé · 22 TPA SDZ · 23/24/25 encoder · SPI0 10/9/11, CE0 8 TFT CS, CE1 7 touch CS · 5 TFT DC · 6 TFT RST · 13 TFT BL (PWM)
+  · 0/1/16 PGA2311 SDI/SCLK/CS (bit-bang) · 12 POWER-ring (PWM) · 26 DAC XSMT.   MCP23017 0x20: GPA0-4 knapper BT/RADIO/AUX/USB/PWR, GPA5 jack-det, GPA6 HP-EN, GPB0-3 LED-ringer, GPB4 USB-mux.
 
 Koordinater i mm, origo øverst til venstre på kortet, y nedover. Bakkant = y 0 (mot bakveggen).
 """
@@ -39,7 +39,7 @@ R1206 = "R_1206_3216Metric"
 # --- bakkant: kontakter (y ~ 6) ---
 part("J1", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "24V IN", "C8465", 14, 6, 0, "24 V inn fra DC-099 via KCD1 (skruterminal 5,08)")
 part("F1", "Fuse", "Fuseholder_Clip-5x20mm_Keystone_3512P_Inline_P23.62x7.27mm_D1.02x2.41x1.02x1.57mm_Horizontal", "5A 5x20", "C70283", 38, 7, 0, "Sikringsholder 5x20 (klips, THT) + sikring 5 A")
-part("D1", "Diode_SMD", "D_SMB", "SMBJ33A", "C173526", 50, 14, 0, "TVS 33 V")
+part("D1", "Diode_SMD", "D_SMB", "SMBJ28A", "", 50, 14, 0, "TVS 28 V standoff, klemmer ~45 V (LCSC-kode sjekkes i BOM-verktøyet)")
 part("Q11", TO, "TO-252-2", "P-MOSFET 60V 20A (AOD409)", "", 24, 16, 0, "Polvendingsvern i 24 V-linjen (D = inn, S = ut, G mot GND) – velg TO-252 P-kanal ≥ 60 V i JLC-verktøyet")
 part("D5", "Diode_SMD", "D_SOD-123", "BZT52C12 12V", "", 12, 14, 0, "Zener gate-source Q11"); part("R79", R_, R0603, "100k", "C25803", 12, 17, 0, "Gate Q11 mot GND")
 part("C1", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "1000u/35V h<=16", "", 94, 7, 0, "Bulk elektrolytt Ø10 × maks 16 mm (THT, loddes selv)"); part("C110", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "1000u/35V h<=16", "", 72, 6.3, 0, "Bulk elektrolytt nr. 2 (Ø10 × maks 16 mm)")
@@ -57,7 +57,7 @@ part("U1", SO, "HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm", "TPS54560DDAR", "C319
 part("C2", C_, C1210, "4.7u/50V", "C76838", 12, 22, 0, "Cin"); part("C3", C_, C1210, "4.7u/50V", "C76838", 12, 26, 0, "Cin")
 part("C4", C_, C0603, "100n/50V", "C14663", 12, 30, 0, "Cin HF")
 part("C5", C_, C0603, "100n", "C14663", 30, 24, 90, "Boot")
-part("R1", R_, R0603, "150k", "C25800", 14, 36, 0, "EN divider"); part("R2", R_, R0603, "51k", "C23184", 14, 39, 0, "EN divider")
+part("R1", R_, R0603, "330k", "C23171", 14, 36, 0, "EN divider (UVLO ~9 V)"); part("R2", R_, R0603, "51k", "C23184", 14, 39, 0, "EN divider")
 part("R3", R_, R0603, "243k", "C22999", 14, 42, 0, "RT 400 kHz")
 part("R4", R_, R0603, "56k", "C23206", 30, 36, 0, "FB top (5,2 V ut)"); part("R5", R_, R0603, "10.2k", "C25744", 30, 39, 0, "FB bottom")
 part("R6", R_, R0603, "13.3k", "C22791", 30, 42, 0, "Comp R"); part("C6", C_, C0603, "3.3n", "C1613", 30, 45, 0, "Comp C"); part("C7", C_, C0603, "47p", "C1671", 34, 45, 0, "Comp Cp")
@@ -149,7 +149,7 @@ part("C97", C_, C0805, "4.7u", "C1779", 134, 83, 0, "AUX2 L kobling"); part("C98
 part("J7", "Connector_JST", "JST_XH_B6B-XH-A_1x06_P2.50mm_Vertical", "KNAPPER", "C144397", 12, 94, 0, "AIR BT AUX USB PWR GND (til MCP23017)")
 part("J8", "Connector_JST", "JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical", "ENCODER", "C144396", 31.5, 94, 0, "CLK DT SW 3V3 GND")
 part("J21", "Connector_JST", "JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical", "PWR BAK", "C158012", 48.5, 94, 0, "Strømknapp bak (GPIO 15, GND)")
-part("J9", "Connector_JST", "JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical", "OLED", "C144396", 70, 94, 0, "3V3_SW GND SDA SCL RES")
+part("J9", "Connector_JST", "JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical", "OLED", "C144396", 70, 94, 0, "3V3 GND SDA SCL RES")
 part("J13", "Connector_PinHeader_2.54mm", "PinHeader_1x14_P2.54mm_Vertical", "TFT", "C50981", 85, 94, 90, "2,8\" SPI TFT ILI9341/ST7789V + XPT2046: VCC GND CS RST DC MOSI SCK LED MISO T_CLK T_CS T_DIN T_DO T_IRQ")
 part("Q9", TO, "SOT-23-3", "AO3400A", "C20917", 46, 77, 0, "TFT-baklys (fra GPIO 13 PWM)"); part("Q10", TO, "SOT-23-3", "AO3401A", "C15127", 52, 77, 0, "TFT-baklys høyside 3V3_SW")
 part("R71", R_, R0603, "100", "C22775", 42, 78, 0, "Gate Q9"); part("R72", R_, R0603, "100k", "C25803", 46, 80, 0, "Pulldown Q9"); part("R73", R_, R0603, "10k", "C25804", 52, 80, 0, "Q10 gate"); part("R74", R_, R0603, "100k", "C25803", 56, 80, 0, "Q10 gate pull-up")
@@ -177,7 +177,7 @@ part("C106", C_, C0603, "1u", "C15849", 87.5, 47.6, 0, "INR+ til GND"); part("C1
 part("J23", "Connector_JST", "JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical", "HODETLF", "C144395", 16, 94, 0, "3,5 mm-jack i fronten (PJ392 med bryter): L, R, GND, DET")
 part("C108", C_, C0603, "100n", "C14663", 16, 89, 0, "Debounce jack-deteksjon")
 part("R76", R_, R0603, "10k", "C25804", 12, 86, 0, "HP OUTL pulldown (jack-deteksjon)"); part("R77", R_, R0603, "10k", "C25804", 24, 88, 0, "Serie til MCP GPA5 (vern)")
-part("R78", R_, R0603, "10k", "C25804", 108, 89, 0, "Pull-up touch-CS (GPIO 16 har pull-down ved oppstart)")
+part("R78", R_, R0603, "10k", "C25804", 108, 89, 0, "Pull-up touch-CS (GPIO 7/CE1 flyter til SPI er oppe)")
 
 # --- USB-delingsswitch (x 140–180): 2 × USB-C inn (til panelkontakter bak med korte kabler), mux, hub, 4 × USB-A ut i høyre kant ---
 part("U7", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "FE1.1s", "C6706491", 149, 46, 90, "USB 2.0 4-ports hub")
@@ -247,12 +247,12 @@ net("BUCK_BOOT", ("U1", 1), ("C5", 1)); net("BUCK_SW", ("U1", 8), ("C5", 2), ("L
 net("BUCK_EN", ("U1", 3), ("R1", 2), ("R2", 1)); net("BUCK_RT", ("U1", 4), ("R3", 1))
 net("BUCK_FB", ("U1", 5), ("R4", 2), ("R5", 1)); net("BUCK_COMP", ("U1", 6), ("R6", 1), ("C7", 1)); net("BUCK_COMPC", ("R6", 2), ("C6", 1))
 # 5 V (alltid): Pi, hub, relé-spole, Q8-kilde
-net("5V", ("L1", 2), ("R4", 1), ("C8", 1), ("C9", 1), ("C10", 1), ("C11", 1), ("U2", 3), ("C12", 1), ("J6", 1), ("J5", 2), ("J5", 4),
+net("5V", ("U5", 4), ("U5", 1), ("C27", 1), ("L1", 2), ("R4", 1), ("C8", 1), ("C9", 1), ("C10", 1), ("C11", 1), ("U2", 3), ("C12", 1), ("J6", 1), ("J5", 2), ("J5", 4),
     ("U7", 20), ("U7", 18), ("C68", 1), ("F2", 1), ("C72", 1), ("K1", 5), ("D4", 1), ("Q8", 2), ("R55", 1))
 # smart relé: GPIO 27 -> Q7 -> relé + Q8 (5V_SW)
 net("PWR_G", ("J5", 13), ("R52", 1)); net("PWR_GATE", ("R52", 2), ("Q7", 1), ("R53", 1)); net(GND, ("Q7", 2), ("R53", 2))
 net("RLY_LOW", ("Q7", 3), ("K1", 2), ("D4", 2), ("R54", 1)); net("Q8_GATE", ("R54", 2), ("Q8", 1), ("R55", 2))
-net("5V_SW", ("Q8", 3), ("U3", 8), ("U3", 1), ("C109", 1), ("U5", 4), ("U5", 1), ("C27", 1), ("R14", 1), ("J10", 1), ("FB1", 1), ("U9", 3), ("C75", 1), ("U10", 3), ("C80", 1), ("C81", 1))
+net("5V_SW", ("Q8", 3), ("U3", 8), ("U3", 1), ("C109", 1), ("R14", 1), ("J10", 1), ("FB1", 1), ("U9", 3), ("C75", 1), ("U10", 3), ("C80", 1), ("C81", 1))
 net("5VA", ("FB1", 2), ("U5", 12), ("C28", 1), ("C30", 1))
 # 3,3 V alltid (U2): MCP23017, pull-ups, encoder, hub-mux via VD33
 net(GND, ("U2", 1), ("C12", 2), ("C13", 2), ("C14", 2))
@@ -288,7 +288,7 @@ net(GND, ("J8", 5), ("C62", 2), ("C63", 2), ("C64", 2))
 # SPI0: PGA2311 (CE0) og TFT (CE1) + touch
 # SPI0 (GPIO 10/9/11) deles av TFT (CE0 = GPIO 8, header 24) og touch (CE1 = GPIO 7, header 26) – som fbtft/ads7846-overlayene i install.sh
 net("SPI_MOSI", ("J5", 19), ("J13", 6), ("J13", 12)); net("SPI_SCLK", ("J5", 23), ("J13", 7), ("J13", 10))
-net("SPI_MISO", ("J5", 21), ("J13", 9), ("J13", 13)); net("TFT_CS", ("J5", 24), ("J13", 3)); net("TFT_DC", ("J5", 29), ("J13", 5)); net("TFT_RST", ("J5", 31), ("J13", 4))
+net("SPI_MISO", ("J5", 21), ("J13", 13));   # bare touch (XPT2046) på MISO – ILI9341 SDO slipper ikke bussen net("TFT_CS", ("J5", 24), ("J13", 3)); net("TFT_DC", ("J5", 29), ("J13", 5)); net("TFT_RST", ("J5", 31), ("J13", 4))
 net("TOUCH_CS", ("J5", 26), ("J13", 11), ("R78", 2)); net("TOUCH_IRQ", ("J5", 11), ("J13", 14)); net(GND, ("J13", 2))
 # PGA2311 bit-banges fra GPIO 0 (header 27, SDI), GPIO 1 (header 28, SCLK) og GPIO 16 (header 36, CS) – som ki_amp_daemon.py
 net("PGA_SDI", ("J5", 27), ("U5", 3)); net("PGA_SCLK", ("J5", 28), ("U5", 6)); net("PGA_CS", ("J5", 36), ("U5", 2))
@@ -351,7 +351,7 @@ net("HP_INL", ("C104", 2), ("U13", 1)); net("HP_INR", ("C107", 2), ("U13", 4))
 net("HP_INLP", ("U13", 2), ("C105", 1)); net("HP_INRP", ("U13", 3), ("C106", 1))
 net("HP_OUTL", ("U13", 16), ("J23", 1), ("R76", 1)); net("HP_OUTR", ("U13", 5), ("J23", 2))
 net("HP_VSS", ("U13", 8), ("C102", 1)); net("HP_CPP", ("U13", 11), ("C103", 1)); net("HP_CPN", ("U13", 9), ("C103", 2)); net("HP_VDD", ("U13", 12), ("C101", 1))
-net("5V_SW", ("U13", 14), ("U13", 6), ("U13", 7), ("C100", 1)); net("EXP_A6", ("U13", 13)); net("HP_DET", ("J23", 4), ("C108", 1), ("R77", 1)); net("EXP_A5", ("R77", 2))
+net("5V", ("U13", 14), ("U13", 6), ("U13", 7), ("C100", 1)); net("EXP_A6", ("U13", 13)); net("HP_DET", ("J23", 4), ("C108", 1), ("R77", 1)); net("EXP_A5", ("R77", 2))
 net(GND, ("U13", 10), ("U13", 15), ("U13", 17), ("C100", 2), ("C101", 2), ("C102", 2), ("C105", 2), ("C106", 2), ("J23", 3), ("C108", 2), ("R76", 2))
 # USB-delingsswitch
 net("5V_USB", ("F2", 2), ("C71", 1), *[(f"J{15+i}", 1) for i in range(4)], *[(f"D{6+i}", 5) for i in range(4)]); net(GND, ("C71", 2), ("C72", 2), *[(f"D{6+i}", 2) for i in range(6)])

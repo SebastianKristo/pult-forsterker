@@ -15,7 +15,10 @@ if "--continue" in sys.argv:
     nets = {m.group(2): int(m.group(1)) for m in re.finditer(r'\(net (\d+) "([^"]*)"\)', pcb_txt)}
     body = ns["ses_to_sexpr"](os.path.join(HERE, "board.ses"), nets)
     # GND-ruting (stubber/vias fra export.py) hopper vi over – de lages på nytt
-    body = "\n".join(l for l in body.split("\n") if f"(net {nets['GND']})" not in l)
+    # --skip NET,NET: nett som har endret seg siden forrige ruting – rutes på nytt
+    skip = ["GND"] + (sys.argv[sys.argv.index("--skip") + 1].split(",") if "--skip" in sys.argv else [])
+    tags = {f"(net {nets[n]})" for n in skip if n in nets}
+    body = "\n".join(l for l in body.split("\n") if not any(t in l for t in tags))
     pcb_txt = pcb_txt.rstrip()[:-1] + body + "\n)\n"
     open(PCB, "w").write(pcb_txt)
 board = pcbnew.LoadBoard(PCB)
