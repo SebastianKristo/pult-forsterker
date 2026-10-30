@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="site/skjold_site_data.js"></script>
+</helmet>
+<nav style="position:sticky;top:0;z-index:50;background:rgba(0,0,0,.74);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(255,255,255,.08);color:#f5f5f2;font-family:'IBM Plex Sans',system-ui,sans-serif">
+  <div style="max-width:1080px;margin:0 auto;padding:0 22px;height:52px;display:flex;align-items:center;gap:26px">
+    <a href="Skjold%20Nettside.dc.html" style="display:flex;align-items:center;gap:8px;color:#f5f5f2;text-decoration:none;flex:none">
+      <div style="display:flex;gap:2px;align-items:flex-start;height:16px"><div style="width:3px;height:8px;border-radius:2px;background:#f5f5f2"></div><div style="width:3px;height:12px;border-radius:2px;background:#f5f5f2"></div><div style="width:3px;height:16px;border-radius:2px;background:#f5f5f2"></div><div style="width:3px;height:12px;border-radius:2px;background:#f5f5f2"></div><div style="width:3px;height:8px;border-radius:2px;background:#f5f5f2"></div></div>
+      <div style="font-family:Sora,sans-serif;font-weight:600;letter-spacing:3px;font-size:14px">SKJOLD</div>
+    </a>
+    <div style="display:flex;gap:22px;font-size:12.5px;flex:1;overflow-x:auto;white-space:nowrap;scrollbar-width:none">
+      <sc-for list="{{ links }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="color:{{ n.c }};text-decoration:none">{{ n.label }}</a></sc-for>
+    </div>
+    <div style="display:flex;gap:2px;background:#1c1c1e;border-radius:99px;padding:2px;flex:none">
+      <div style="padding:4px 10px;border-radius:99px;font-size:12px;cursor:pointer;background:{{ noBg }};color:{{ noFg }}" onClick="{{ setNo }}">NO</div>
+      <div style="padding:4px 10px;border-radius:99px;font-size:12px;cursor:pointer;background:{{ enBg }};color:{{ enFg }}" onClick="{{ setEn }}">EN</div>
+    </div>
+  </div>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;52px&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state={l:'no',ok:!!window.SKJOLD_SITE};
+  componentDidMount(){ const go=()=>{ if(!window.SKJOLD_SITE){ this.to=setTimeout(go,50); return; } this.setState({ok:true,l:window.SKJOLD_SITE.lang()}); }; go(); this.onL=()=>this.setState({l:window.SKJOLD_SITE.lang()}); window.addEventListener('skjold-lang',this.onL); }
+  componentWillUnmount(){ clearTimeout(this.to); window.removeEventListener('skjold-lang',this.onL); }
+  renderVals(){ const S=window.SKJOLD_SITE, l=this.state.l, a=this.props.active??'';
+    const links=S?S.pages.slice(1).map(([f,lab])=>({href:S.P(f),label:S.tr(lab,l),c:f===a?'#f5f5f2':'#a8a8a3'})):[];
+    return { links, noBg:l==='no'?'#f5f5f2':'transparent', noFg:l==='no'?'#000':'#c9c9c4', enBg:l==='en'?'#f5f5f2':'transparent', enFg:l==='en'?'#000':'#c9c9c4',
+      setNo:()=>S&&S.setLang('no'), setEn:()=>S&&S.setLang('en') }; }
+}
+</script>
+</body>
+</html>

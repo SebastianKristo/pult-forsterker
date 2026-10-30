@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./skjold_settings.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9e7e2;font-family:Sora,-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#d9a441;text-decoration:none}a:hover{color:#f0c46a}
+button,input{font:inherit;color:inherit}
+input[type=range]{accent-color:#d9a441}
+input::placeholder{color:#55554f}
+html,body{scrollbar-width:none}
+::-webkit-scrollbar{display:none;width:0;height:0}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 12px;box-sizing:border-box">
+  <div style="width:370px;height:780px;border-radius:{{ P.outer }};background:#0b0b0c;padding:10px;box-sizing:border-box;box-shadow:0 30px 70px rgba(0,0,0,.25);flex-shrink:0">
+    <div style="width:100%;height:100%;border-radius:{{ P.inner }};background:#0b0b0c;overflow:hidden;display:flex;flex-direction:column;color:#f2f2ee">
+      <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:12px;font-weight:600;flex-shrink:0">
+        <span>{{ P.time }}</span>
+        <div style="width:{{ P.notch }};height:24px;border-radius:12px;background:#000"></div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">{{ P.icons }}</span>
+      </div>
+
+      <sc-if value="{{ onboard }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;display:flex;flex-direction:column;padding:8px 20px 18px;gap:16px;min-height:0;overflow:auto;scrollbar-width:none;color-scheme:dark">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.12em;color:#8b8b86">{{ obLabel }}</span>
+            <sc-if value="{{ obCanBack }}" hint-placeholder-val="{{ false }}"><button onClick="{{ obBack }}" style="border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:6px 0">Tilbake</button></sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px">
+            <sc-for list="{{ obDots }}" as="d" hint-placeholder-count="5"><div style="height:3px;border-radius:2px;background:{{ d.c }}"></div></sc-for>
+          </div>
+          <h1 style="margin:0;font-size:{{ P.h1 }};font-weight:600;line-height:1.15;text-align:{{ P.align }}">{{ obTitle }}</h1>
+          <p style="margin:0;font-size:13px;color:#a9a9a3;line-height:1.5;text-align:{{ P.align }}">{{ obText }}</p>
+
+          <sc-if value="{{ ob0 }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ pickDevice }}" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:{{ P.card }};background:#1c170d;border:1px solid #d9a441;cursor:pointer;text-align:left">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f2f2ee" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 7.5h18a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM4.5 9.8h5v3.4h-5zM11.6 10.3a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M13.8 10.3a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M11.6 13.7a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M13.8 13.7a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M16.4 12a2.3 2.3 0 1 0 4.6 0a2.3 2.3 0 1 0-4.6 0M18.7 10.2v1.2M3.5 16.5v1M20.5 16.5v1"></path></svg>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font-size:14px">Skjold S1</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b8b86">SKJ-S1-0001 · Blåtann · ikke satt opp</span></div>
+              <span style="font-size:12px;color:#f0c46a;white-space:nowrap;flex-shrink:0">Sett opp</span>
+            </button>
+            <button onClick="{{ pickNode }}" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:{{ P.card }};background:#141415;border:1px solid #2e2e30;cursor:pointer;text-align:left">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c9c9c4" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 6h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 18H4a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 4 6zM19.5 8h2v2.6h-2zM19.5 11.4h2v2.6h-2zM19.5 14.6h2v2h-2zM5 7.8h9M8 18v1.2M11.5 18v1.2M6.2 11.2h4.6v4.6H6.2zM15.2 15.3a.5.5 0 1 0 1 0a.5.5 0 1 0-1 0"></path></svg>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font-size:14px">Skjold Node</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b8b86">Raspberry Pi 4 · bare utgang · ikke satt opp</span></div>
+              <span style="font-size:12px;color:#f0c46a;white-space:nowrap;flex-shrink:0">Sett opp</span>
+            </button>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#8b8b86;padding:4px 2px"><div style="width:8px;height:8px;border-radius:50%;background:{{ pulse }}"></div>Leter etter flere …</div>
+            <button onClick="{{ obScan }}" style="margin-top:auto;height:50px;border-radius:{{ P.btn }};border:1px solid #2e2e30;background:transparent;font-size:14px;cursor:pointer">Skann QR-kode på skjermen</button>
+          </sc-if>
+
+          <sc-if value="{{ obScanView }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;border-radius:{{ P.card }};background:#151517;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+              <div style="width:190px;height:190px;position:relative">
+                <div style="position:absolute;left:0;top:0;width:34px;height:34px;border-left:3px solid #d9a441;border-top:3px solid #d9a441;border-radius:14px 0 0 0"></div>
+                <div style="position:absolute;right:0;top:0;width:34px;height:34px;border-right:3px solid #d9a441;border-top:3px solid #d9a441;border-radius:0 14px 0 0"></div>
+                <div style="position:absolute;left:0;bottom:0;width:34px;height:34px;border-left:3px solid #d9a441;border-bottom:3px solid #d9a441;border-radius:0 0 0 14px"></div>
+                <div style="position:absolute;right:0;bottom:0;width:34px;height:34px;border-right:3px solid #d9a441;border-bottom:3px solid #d9a441;border-radius:0 0 14px 0"></div>
+                <div style="position:absolute;left:12px;right:12px;top:{{ scanLine }};height:2px;background:#d9a441;box-shadow:0 0 12px #d9a441"></div>
+              </div>
+              <span style="font-size:13px;color:#c9c9c4">{{ scanText }}</span>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ob1 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;border-radius:{{ P.card }};background:#141415;border:1px solid #242426">
+              <sc-for list="{{ nets }}" as="n" hint-placeholder-count="3">
+                <button onClick="{{ n.pick }}" style="display:flex;justify-content:space-between;align-items:center;min-height:50px;padding:0 14px;border:none;border-top:1px solid {{ n.line }};background:{{ n.bg }};cursor:pointer;font-size:14px"><span>{{ n.ssid }}</span><span style="font-size:12px;color:#f0c46a">{{ n.mark }}</span></button>
+              </sc-for>
+            </div>
+            <input type="password" value="{{ pw }}" onChange="{{ setPw }}" placeholder="Passord" style="height:48px;padding:0 14px;border-radius:{{ P.field }};border:1px solid #2e2e30;background:#141415;font-size:16px;outline:none">
+          </sc-if>
+
+          <sc-if value="{{ ob2 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="5">
+                <button onClick="{{ r.pick }}" style="height:40px;padding:0 15px;border-radius:999px;border:1px solid {{ r.bd }};background:{{ r.bg }};color:{{ r.fg }};font-size:13px;cursor:pointer;white-space:nowrap">{{ r.label }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ob3 }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ skipTest }}" style="align-self:flex-start;border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:0">Hopp over høyttalertest</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <sc-for list="{{ sides }}" as="sd" hint-placeholder-count="2">
+                <button onClick="{{ sd.pick }}" style="height:150px;border-radius:{{ P.card }};border:1px solid {{ sd.bd }};background:{{ sd.bg }};cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+                  <span style="font-size:42px;font-weight:300;line-height:1">{{ sd.k }}</span><span style="font-size:12px;color:{{ sd.fg }}">{{ sd.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ob4 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="height:6px;border-radius:3px;background:#242426;overflow:hidden"><div style="height:100%;width:{{ updPct }};background:#d9a441"></div></div>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b8b86">{{ updLabel }}</span>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ obShowNext }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ obNext }}" style="margin-top:auto;height:52px;border-radius:{{ P.btn }};border:none;background:{{ obNextBg }};color:#0b0b0c;font-size:15px;font-weight:600;cursor:pointer">{{ obNextLabel }}</button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ app }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ full }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:flex;flex-direction:column;min-height:0;background:{{ fullBg }}">
+            <div style="display:flex;justify-content:center;padding:4px 0 2px"><button onClick="{{ closeFull }}" aria-label="Lukk" style="width:56px;height:24px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><div style="width:40px;height:5px;border-radius:3px;background:rgba(242,242,238,.45)"></div></button></div>
+            <div style="flex:1;overflow:auto;scrollbar-width:none;padding:6px 20px 14px;display:flex;flex-direction:column;gap:16px;min-height:0">
+
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ inputs }}" as="in" hint-placeholder-count="5">
+                <button onClick="{{ in.pick }}" style="padding:8px 12px;border-radius:999px;border:1px solid {{ in.bd }};background:{{ in.bg }};color:{{ in.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ in.label }}</button>
+              </sc-for>
+            </div>
+            <div style="aspect-ratio:1;border-radius:{{ P.card }};background:{{ art.bg }};position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:22px;box-sizing:border-box">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.12em;color:{{ art.ink }};opacity:.8">{{ art.kicker }}</span>
+                <sc-if value="{{ art.live }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.1em;padding:3px 6px;border-radius:4px;background:#e05a4a;color:#fff">DIREKTE</span></sc-if>
+              </div>
+              <span style="font-size:{{ art.size }};font-weight:600;line-height:1.02;color:{{ art.ink }};text-wrap:balance">{{ art.big }}</span>
+              <div style="display:flex;align-items:flex-end;gap:3px;height:22px">
+                <sc-for list="{{ viz }}" as="v" hint-placeholder-count="12"><div style="width:4px;height:{{ v.h }};background:{{ art.ink }};border-radius:2px;opacity:{{ v.o }}"></div></sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ isRadio }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px">
+                <sc-for list="{{ stChips }}" as="c" hint-placeholder-count="6">
+                  <button onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:{{ P.chip }};border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;opacity:.7">{{ c.n }}</span>{{ c.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;color:#8b8b86">{{ np.st }}</span>
+              <span style="font-size:22px;font-weight:600">{{ np.t }}</span>
+              <span style="font-size:13px;color:#8b8b86">{{ np.s }}</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:26px">
+              <button onClick="{{ prevTrack }}" aria-label="Forrige" style="width:48px;height:48px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#f2f2ee">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="5" width="2.4" height="14" rx="1"></rect><path d="M20 5.8v12.4a1 1 0 0 1-1.55.83L9.3 12.83a1 1 0 0 1 0-1.66l9.15-6.2A1 1 0 0 1 20 5.8z"></path></svg>
+              </button>
+              <button onClick="{{ togglePlay }}" aria-label="{{ playLabel }}" style="width:68px;height:68px;border-radius:50%;border:none;background:#f2f2ee;color:#0b0b0c;cursor:pointer;display:flex;align-items:center;justify-content:center">
+                <sc-if value="{{ playing }}" hint-placeholder-val="{{ true }}"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1.2"></rect><rect x="14" y="4.5" width="4" height="15" rx="1.2"></rect></svg></sc-if>
+                <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6a1 1 0 0 0 1.52.85l10.6-6.8a1 1 0 0 0 0-1.7L9.52 4.35A1 1 0 0 0 8 5.2z"></path></svg></sc-if>
+              </button>
+              <button onClick="{{ nextTrack }}" aria-label="Neste" style="width:48px;height:48px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#f2f2ee">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="17.6" y="5" width="2.4" height="14" rx="1"></rect><path d="M4 5.8v12.4a1 1 0 0 0 1.55.83l9.15-6.2a1 1 0 0 0 0-1.66l-9.15-6.2A1 1 0 0 0 4 5.8z"></path></svg>
+              </button>
+            </div>
+            <div style="display:grid;grid-template-columns:auto minmax(0,1fr) 2.5ch;gap:12px;align-items:center">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b8b86">VOL</span>
+              <input type="range" min="0" max="100" value="{{ vol }}" onChange="{{ setVol }}" style="width:100%">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right">{{ vol }}</span>
+            </div>
+          
+              <div style="display:flex;justify-content:center;margin-top:auto"><button onClick="{{ goRoomsFull }}" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(242,242,238,.2);background:rgba(0,0,0,.25);font-size:13px;cursor:pointer;white-space:nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg>{{ groupName }}</button></div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ notFull }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ hasTitle }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:6px 20px 8px;display:flex;align-items:center;justify-content:{{ P.titleJ }};gap:10px;flex-shrink:0">
+          <span style="font-size:{{ P.h1 }};font-weight:600">{{ tabTitle }}</span>
+        </div>
+        </sc-if>
+        <div style="flex:1;overflow:auto;scrollbar-width:none;color-scheme:dark;padding:4px 20px 16px;display:flex;flex-direction:column;gap:16px;min-height:0">
+
+          <sc-if value="{{ tHome }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:9px"><div style="display:flex;align-items:flex-end;gap:2px;height:16px"><div style="width:2.5px;height:8px;background:#f2f2ee;border-radius:2px"></div><div style="width:2.5px;height:12px;background:#f2f2ee;border-radius:2px"></div><div style="width:2.5px;height:16px;background:#f2f2ee;border-radius:2px"></div><div style="width:2.5px;height:12px;background:#f2f2ee;border-radius:2px"></div><div style="width:2.5px;height:8px;background:#f2f2ee;border-radius:2px"></div></div><span style="font-weight:600;font-size:15px;letter-spacing:0.12em">SKJOLD</span></div>
+              <button onClick="{{ goRooms }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;background:#141415;font-size:12px;cursor:pointer;white-space:nowrap"><div style="width:6px;height:6px;border-radius:50%;background:#6fcf7f"></div>{{ sysSummary }}</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font-size:17px;font-weight:600">Nylig spilt</span>
+              <div style="display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px">
+                <sc-for list="{{ recent }}" as="rc" hint-placeholder-count="5">
+                  <button onClick="{{ rc.pick }}" style="display:flex;flex-direction:column;gap:6px;width:118px;flex-shrink:0;border:none;background:none;padding:0;cursor:pointer;text-align:left">
+                    <div style="width:118px;height:118px;border-radius:{{ rc.radius }};background:{{ rc.bg }};display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;color:{{ rc.ink }};font-size:14px;font-weight:600;line-height:1.05">{{ rc.big }}</div>
+                    <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rc.title }}</span>
+                    <span style="font-size:11px;color:#8b8b86">{{ rc.kind }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font-size:17px;font-weight:600">Kilder</span>
+              <div style="display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px">
+                <sc-for list="{{ services }}" as="sv" hint-placeholder-count="5">
+                  <button onClick="{{ sv.pick }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;border:none;background:none;padding:0;cursor:pointer;flex-shrink:0">
+                    <div style="width:64px;height:64px;border-radius:50%;background:{{ sv.bg }};border:1px solid {{ sv.bd }};color:{{ sv.fg }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">{{ sv.mono }}</div>
+                    <span style="font-size:11px;color:#c9c9c4">{{ sv.label }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:17px;font-weight:600">Radiofavoritter</span><button onClick="{{ openRadio }}" style="border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:0">Administrer</button></div>
+              <div style="display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px">
+                <sc-for list="{{ favTiles }}" as="ft" hint-placeholder-count="6">
+                  <button onClick="{{ ft.pick }}" style="display:flex;flex-direction:column;gap:6px;width:96px;flex-shrink:0;border:none;background:none;padding:0;cursor:pointer;text-align:left">
+                    <div style="width:96px;height:96px;border-radius:12px;background:{{ ft.bg }};display:flex;flex-direction:column;justify-content:space-between;padding:9px;box-sizing:border-box;color:{{ ft.ink }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;opacity:.8">{{ ft.n }}</span><span style="font-size:13px;font-weight:600;line-height:1.05">{{ ft.name }}</span></div>
+                    <span style="font-size:11px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ft.genre }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tRooms }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onClick="{{ grpAll }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ grpAllBd }};background:{{ grpAllBg }};font-size:13px;cursor:pointer;white-space:nowrap">Alle rom</button>
+              <button onClick="{{ grpNone }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid #2e2e30;background:#141415;font-size:13px;cursor:pointer;white-space:nowrap">Bare {{ activeName }}</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-if value="{{ hasGroup }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:14px;background:#111112;border:1px solid #242426">
+                  <span style="font-size:12px;color:#8b8b86">Gruppe · {{ groupCount }} spillere synkronisert</span>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;border-radius:10px;background:#0b0b0c">
+                    <sc-for list="{{ grpModes }}" as="gm" hint-placeholder-count="2"><button onClick="{{ gm.pick }}" style="height:44px;border-radius:8px;border:none;background:{{ gm.bg }};color:{{ gm.fg }};font-size:13px;font-weight:600;cursor:pointer">{{ gm.label }}</button></sc-for>
+                  </div>
+                  <span style="font-size:12px;color:#8b8b86;line-height:1.45;text-wrap:pretty">{{ grpModeHint }}</span>
+                </div>
+              </sc-if>
+              <sc-for list="{{ roomCards }}" as="rm" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:44px minmax(0,1fr) 32px;gap:12px;align-items:center;padding:12px;border-radius:{{ P.card }};background:{{ rm.bg }};border:1px solid {{ rm.bd }}">
+                  <button onClick="{{ rm.select }}" style="width:44px;height:44px;border-radius:10px;background:#1f1f21;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#c9c9c4;padding:0">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ rm.icon }}"></path></svg>
+                  </button>
+                  <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+                    <button onClick="{{ rm.select }}" style="border:none;background:none;padding:0;cursor:pointer;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+                      <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:15px">{{ rm.name }}</span><span style="font-size:11px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rm.sub }}</span></span>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c9c9c4">{{ rm.vol }}</span>
+                    </button>
+                    <input type="range" min="0" max="100" value="{{ rm.vol }}" onChange="{{ rm.setVol }}" style="width:100%">
+                  </div>
+                  <button onClick="{{ rm.toggle }}" aria-label="Med i gruppen" style="width:28px;height:28px;border-radius:50%;border:1.5px solid {{ rm.ckBd }};background:{{ rm.ckBg }};color:#0b0b0c;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">{{ rm.ck }}</button>
+                  <sc-if value="{{ rm.showRoles }}" hint-placeholder-val="{{ false }}">
+                    <div style="grid-column:1 / -1;display:flex;gap:5px;flex-wrap:wrap">
+                      <sc-for list="{{ rm.roles }}" as="ro" hint-placeholder-count="6"><button onClick="{{ ro.pick }}" style="height:30px;padding:0 10px;border-radius:8px;border:1px solid {{ ro.bd }};background:{{ ro.bg }};color:{{ ro.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ ro.label }}</button></sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <button onClick="{{ addDevice }}" style="height:46px;border-radius:{{ P.btn }};border:1px dashed #5a4420;background:transparent;color:#f0c46a;font-size:13px;cursor:pointer">+ Legg til Skjold S1 eller Skjold Node</button>
+            <span style="font-size:11px;color:#8b8b86;text-wrap:pretty">Rom med hake spiller det samme, synkronisert av Lyrion. Trykk på et rom for å styre det.</span>
+          </sc-if>
+
+          <sc-if value="{{ tSound }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:11px;color:#8b8b86">Profil for</span>
+              <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px">
+                <sc-for list="{{ eqSrcs }}" as="es" hint-placeholder-count="6">
+                  <button onClick="{{ es.pick }}" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:{{ P.chip }};border:1px solid {{ es.bd }};background:{{ es.bg }};color:{{ es.fg }};font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0"><span>{{ es.label }}</span><div style="width:6px;height:6px;border-radius:50%;background:{{ es.dot }}"></div></button>
+                </sc-for>
+              </div>
+              <span style="font-size:11px;color:#8b8b86">{{ eqActiveText }}</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ presets }}" as="pr" hint-placeholder-count="5">
+                <button onClick="{{ pr.pick }}" style="padding:7px 12px;border-radius:999px;border:1px solid {{ pr.bd }};background:{{ pr.bg }};color:{{ pr.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ pr.label }}</button>
+              </sc-for>
+            </div>
+            <div style="border-radius:{{ P.card }};background:#141415;border:1px solid #242426;padding:14px 10px 12px;display:flex;flex-direction:column;gap:6px">
+              <svg viewBox="0 0 300 90" style="width:100%;height:80px;display:block">
+                <line x1="0" y1="45" x2="300" y2="45" stroke="#2a2a28" stroke-width="1"></line>
+                <path d="{{ eqArea }}" fill="rgba(217,164,65,0.14)"></path>
+                <path d="{{ eqPath }}" fill="none" stroke="#d9a441" stroke-width="2"></path>
+              </svg>
+              <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));justify-items:center">
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="5">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">{{ b.val }}</span>
+                    <input type="range" style="writing-mode:vertical-lr;direction:rtl;width:28px;height:150px;margin:0" min="-12" max="12" step="1" value="{{ b.v }}" onChange="{{ b.set }}">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b8b86">{{ b.f }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;border-radius:{{ P.card }};background:#141415;border:1px solid #242426">
+              <sc-for list="{{ tone }}" as="tn" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:72px minmax(0,1fr) 52px;gap:10px;align-items:center;padding:12px 14px;border-top:1px solid {{ tn.line }}">
+                  <span style="font-size:13px">{{ tn.n }}</span>
+                  <input type="range" min="{{ tn.min }}" max="{{ tn.max }}" value="{{ tn.v }}" onChange="{{ tn.set }}" style="width:100%">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right">{{ tn.val }}</span>
+                </div>
+              </sc-for>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-top:1px solid #242426">
+                <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px">Loudness</span><span style="font-size:11px;color:#8b8b86">Mer bass og diskant ved lavt volum</span></div>
+                <button onClick="{{ toggleLoud }}" style="width:46px;height:28px;border-radius:999px;border:none;background:{{ loudTrk }};position:relative;cursor:pointer;padding:0"><div style="position:absolute;top:3px;left:{{ loudKnob }};width:22px;height:22px;border-radius:50%;background:#f2f2ee"></div></button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tRadio }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ notAdding }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:12px;color:#8b8b86">{{ radioCount }}</span>
+                <button onClick="{{ toggleEdit }}" style="border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:4px 0">{{ editLabel }}</button>
+              </div>
+              <div style="display:flex;flex-direction:column;border-radius:{{ P.card }};background:#141415;border:1px solid #242426">
+                <sc-for list="{{ stations }}" as="s" hint-placeholder-count="6">
+                  <div style="display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:58px;padding:0 12px;border-top:1px solid {{ s.line }};background:{{ s.bg }}">
+                    <div style="width:38px;height:38px;border-radius:8px;background:{{ s.artBg }};color:{{ s.artInk }};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;text-align:center;line-height:1">{{ s.abbr }}</div>
+                    <button onClick="{{ s.pick }}" style="border:none;background:none;cursor:pointer;text-align:left;padding:8px 0;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{{ s.name }}</span><span style="font-size:11px;color:#8b8b86">{{ s.genre }}</span></button>
+                    <sc-if value="{{ s.view }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:11px;color:#f0c46a">{{ s.mark }}</span>
+                        <button onClick="{{ s.fav }}" aria-label="Favoritt på radioknappen" style="width:32px;height:32px;border-radius:8px;border:none;background:transparent;color:{{ s.starFg }};cursor:pointer;font-size:15px;padding:0">★</button>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ s.edit }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;align-items:center;gap:4px">
+                        <button onClick="{{ s.up }}" aria-label="Flytt opp" style="width:30px;height:30px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ s.upFg }};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"></path></svg></button>
+                        <button onClick="{{ s.down }}" aria-label="Flytt ned" style="width:30px;height:30px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ s.downFg }};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+                        <button onClick="{{ s.remove }}" aria-label="Fjern" style="width:30px;height:30px;border-radius:8px;border:1px solid #4a2522;background:#1b1b1c;color:#ff8a7a;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <button onClick="{{ openAdd }}" style="height:46px;border-radius:{{ P.btn }};border:1px dashed {{ addBd }};background:transparent;color:{{ addFg }};font-size:13px;cursor:pointer">{{ addLabel }}</button>
+              <span style="font-size:11px;color:#8b8b86;text-wrap:pretty">Rekkefølgen er den samme som på radioknappen. ★ spilles når du holder radioknappen inne.</span>
+            </sc-if>
+            <sc-if value="{{ adding }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ closeAdd }}" style="align-self:flex-start;display:flex;align-items:center;gap:4px;border:none;background:none;color:#d9a441;font-size:14px;cursor:pointer;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Favoritter</button>
+              <input value="{{ q }}" onChange="{{ setQ }}" placeholder="Søk etter kanal" style="height:44px;padding:0 14px;border-radius:{{ P.field }};border:1px solid #2e2e30;background:#141415;font-size:15px;outline:none">
+              <div style="display:flex;flex-direction:column;border-radius:{{ P.card }};background:#141415;border:1px solid #242426">
+                <sc-for list="{{ catalog }}" as="c" hint-placeholder-count="8">
+                  <div style="display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:52px;padding:0 12px;border-top:1px solid {{ c.line }}">
+                    <div style="width:34px;height:34px;border-radius:7px;background:{{ c.artBg }};color:{{ c.artInk }};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;line-height:1;text-align:center">{{ c.abbr }}</div>
+                    <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{{ c.name }}</span><span style="font-size:11px;color:#8b8b86">{{ c.genre }}</span></span>
+                    <button onClick="{{ c.add }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid {{ c.bd }};background:transparent;color:{{ c.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <sc-if value="{{ tSet }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ setTop }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px">
+                <sc-for list="{{ devChips }}" as="dc" hint-placeholder-count="3">
+                  <button onClick="{{ dc.pick }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 12px;border-radius:12px;border:1px solid {{ dc.bd }};background:{{ dc.bg }};cursor:pointer;flex-shrink:0;text-align:left"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c9c9c4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ dc.icon }}"></path></svg><span style="font-size:13px;color:{{ dc.fg }};white-space:nowrap">{{ dc.name }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#8b8b86;white-space:nowrap">{{ dc.type }}</span></button>
+                </sc-for>
+              </div>
+              <span style="font-size:11px;color:#8b8b86">{{ devHw }}</span>
+              <div style="display:flex;flex-direction:column;border-radius:{{ P.card }};background:#141415;border:1px solid #242426">
+                <sc-for list="{{ setCats }}" as="sc" hint-placeholder-count="8">
+                  <button onClick="{{ sc.pick }}" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-height:58px;padding:8px 14px;border:none;border-top:1px solid {{ sc.line }};background:transparent;cursor:pointer;text-align:left">
+                    <span style="display:flex;align-items:center;gap:12px;min-width:0">
+                      <span style="width:32px;height:32px;border-radius:8px;background:{{ sc.tile }};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#f2f2ee">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ sc.icon }}"></path></svg>
+                      </span>
+                      <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{{ sc.n }}</span><span style="font-size:11px;color:#8b8b86">{{ sc.sub }}</span></span>
+                    </span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ setDetail }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ setBack }}" style="align-self:flex-start;display:flex;align-items:center;gap:4px;border:none;background:none;color:#d9a441;font-size:14px;cursor:pointer;padding:0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Innstillinger
+              </button>
+
+<sc-if value="{{ isUpd }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="background:#141415;border:1px solid #242426;border-radius:{{ P.card }};padding:18px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:#8b8b86">Installert</span><span style="font-size:22px;font-weight:600">Skjold {{ u.version }}</span></div>
+        <a href="{{ u.repoUrl }}" target="_blank" style="font-size:12px;white-space:nowrap">github.com/{{ u.repo }} ↗</a>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <sc-for list="{{ u.channels }}" as="ch" hint-placeholder-count="2"><button onClick="{{ ch.pick }}" style="height:32px;padding:0 12px;border-radius:{{ P.btn }};border:1px solid {{ ch.bd }};background:{{ ch.bg }};color:{{ ch.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ ch.label }}</button></sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="font-size:13px">Installer automatisk om natten</span><button onClick="{{ u.toggleAuto }}" style="width:46px;height:28px;border-radius:999px;border:none;background:{{ u.autoTrk }};position:relative;cursor:pointer;padding:0;flex-shrink:0"><div style="position:absolute;top:3px;left:{{ u.autoKnob }};width:22px;height:22px;border-radius:50%;background:#f2f2ee"></div></button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px">Demo: la neste oppdatering feile</span><span style="font-size:11px;color:#8b8b86">Viser automatisk gjenoppretting</span></span><button onClick="{{ u.toggleFail }}" style="width:46px;height:28px;border-radius:999px;border:none;background:{{ u.failTrk }};position:relative;cursor:pointer;padding:0;flex-shrink:0"><div style="position:absolute;top:3px;left:{{ u.failKnob }};width:22px;height:22px;border-radius:50%;background:#f2f2ee"></div></button></div>
+      <sc-if value="{{ u.idle }}" hint-placeholder-val="{{ true }}"><button onClick="{{ u.check }}" style="height:42px;border-radius:{{ P.btn }};border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;cursor:pointer">{{ u.checkLabel }}</button></sc-if>
+      <sc-if value="{{ u.hasMsg }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:8px;background:{{ u.msgBg }};border:1px solid {{ u.msgBd }};font-size:13px;color:{{ u.msgFg }};line-height:1.45">{{ u.msg }}</div></sc-if>
+    </div>
+    <sc-if value="{{ u.hasRel }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#1c170d;border:1px solid #5a4420;border-radius:{{ P.card }};padding:18px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:16px;font-weight:600">{{ u.rel.name }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c9b48a">{{ u.rel.tag }} · {{ u.rel.date }} · {{ u.rel.size }}</span></div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <sc-for list="{{ u.rel.noteList }}" as="nt" hint-placeholder-count="3"><span style="font-size:13px;color:#e8dcc4;line-height:1.45">· {{ nt.t }}</span></sc-for>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <sc-if value="{{ u.idle }}" hint-placeholder-val="{{ true }}"><button onClick="{{ u.install }}" style="height:40px;padding:0 16px;border-radius:{{ P.btn }};border:none;background:#d9a441;color:#0b0b0c;font-size:13px;font-weight:600;cursor:pointer">Installer {{ u.rel.tag }}</button></sc-if>
+          <a href="{{ u.rel.url }}" target="_blank" style="font-size:12px">Se på GitHub ↗</a>
+        </div>
+        <span style="font-size:11px;color:#c9b48a">Det tas automatisk backup før installering. Hvis forsterkeren ikke starter etterpå, gjenopprettes forrige versjon.</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ u.busy }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#141415;border:1px solid #242426;border-radius:{{ P.card }};padding:18px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;gap:10px"><span style="font-size:13px">{{ u.step }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b8b86">{{ u.pctLabel }}</span></div>
+        <div style="height:6px;border-radius:3px;background:#242426;overflow:hidden"><div style="height:100%;width:{{ u.pct }};background:#d9a441"></div></div>
+        <span style="font-size:11px;color:#8b8b86">Ikke slå av forsterkeren.</span>
+      </div>
+    </sc-if>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="font-size:14px;font-weight:600">Backup</span><sc-if value="{{ u.idle }}" hint-placeholder-val="{{ true }}"><button onClick="{{ u.backup }}" style="border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:4px 0">Ta backup nå</button></sc-if></div>
+    <div style="background:#141415;border:1px solid #242426;border-radius:{{ P.card }};display:flex;flex-direction:column">
+      <sc-for list="{{ u.backups }}" as="bk" hint-placeholder-count="3">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px 14px;border-top:1px solid {{ bk.line }}">
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{{ bk.ver }} {{ bk.cur }}</span><span style="font-size:11px;color:#8b8b86">{{ bk.date }} · {{ bk.kind }}</span></span>
+          <sc-if value="{{ bk.can }}" hint-placeholder-val="{{ true }}"><button onClick="{{ bk.restore }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ bk.bd }};background:#1b1b1c;color:{{ bk.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ bk.label }}</button></sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ u.hasLog }}" hint-placeholder-val="{{ false }}">
+      <span style="font-size:14px;font-weight:600">Historikk</span>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ u.log }}" as="lg" hint-placeholder-count="2"><div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;font-size:12px;line-height:1.4"><span style="font-family:'IBM Plex Mono',monospace;color:#8b8b86">{{ lg.date }}</span><span style="color:{{ lg.fg }}">{{ lg.text }}</span></div></sc-for>
+      </div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<sc-if value="{{ hasClocks }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:14px;font-weight:600">Klokkestil i standby</span><button onClick="{{ previewClock }}" style="border:none;background:none;color:#d9a441;font-size:12px;cursor:pointer;padding:0">Vis på forsterkeren</button></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax({{ clockMin }},1fr));gap:10px">
+      <sc-for list="{{ clocks }}" as="ck" hint-placeholder-count="6">
+        <button onClick="{{ ck.pick }}" style="display:flex;flex-direction:column;gap:8px;padding:8px;border-radius:{{ P.card }};border:1px solid {{ ck.bd }};background:{{ ck.bg }};cursor:pointer;text-align:left">
+          <canvas ref="{{ ck.ref }}" width="256" height="128" style="width:100%;aspect-ratio:2/1;background:#000;border-radius:6px;display:block"></canvas>
+          <span style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:{{ ck.fg }};padding:0 2px"><span>{{ ck.label }}</span><span>{{ ck.mark }}</span></span>
+        </button>
+      </sc-for>
+    </div>
+    <span style="font-size:11px;color:#8b8b86">Vises dempet på skjermen og flytter seg litt hvert minutt for å unngå innbrenning.</span>
+  </div>
+</sc-if>
+              <sc-if value="{{ notUpd }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;border-radius:{{ P.card }};background:#141415;border:1px solid #242426">
+                <sc-for list="{{ setItems }}" as="it" hint-placeholder-count="5">
+                  <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-top:1px solid {{ it.line }}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:30px">
+                      <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{{ it.n }}</span><sc-if value="{{ it.hasHint }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8b8b86;text-wrap:pretty">{{ it.hint }}</span></sc-if></span>
+                      <sc-if value="{{ it.isBool }}" hint-placeholder-val="{{ false }}"><button onClick="{{ it.toggle }}" style="width:46px;height:28px;border-radius:999px;border:none;background:{{ it.trk }};position:relative;cursor:pointer;padding:0;flex-shrink:0"><div style="position:absolute;top:3px;left:{{ it.knob }};width:22px;height:22px;border-radius:50%;background:#f2f2ee"></div></button></sc-if>
+                      <sc-if value="{{ it.isNum }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                          <button onClick="{{ it.dec }}" style="width:32px;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;cursor:pointer">−</button>
+                          <span style="min-width:52px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px">{{ it.val }}</span>
+                          <button onClick="{{ it.inc }}" style="width:32px;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;cursor:pointer">+</button>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ it.isOpt }}" hint-placeholder-val="{{ false }}"><button onClick="{{ it.expand }}" style="border:none;background:none;color:#8b8b86;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0;padding:0">{{ it.val }} {{ it.chev }}</button></sc-if>
+                      <sc-if value="{{ it.isInfo }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c9c9c4;text-align:right">{{ it.val }}</span></sc-if>
+                      <sc-if value="{{ it.isAct }}" hint-placeholder-val="{{ false }}"><button onClick="{{ it.act }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ it.actBd }};background:#1b1b1c;color:{{ it.actFg }};font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0">{{ it.actLabel }}</button></sc-if>
+                      <sc-if value="{{ it.isStr }}" hint-placeholder-val="{{ false }}"><input value="{{ it.val }}" onChange="{{ it.setStr }}" placeholder="{{ it.ph }}" maxlength="14" style="height:34px;width:130px;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none;flex-shrink:0"></sc-if>
+                      <sc-if value="{{ it.isEq }}" hint-placeholder-val="{{ false }}"><button onClick="{{ it.goEq }}" style="border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:0">Åpne ›</button></sc-if>
+                    </div>
+                    <sc-if value="{{ it.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <sc-for list="{{ it.opts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" style="height:34px;padding:0 12px;border-radius:{{ P.chip }};border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ o.label }}</button></sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              </sc-if>
+            </sc-if>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ hasMini }}" hint-placeholder-val="{{ true }}">
+          <div style="margin:0 10px 8px;border-radius:14px;background:#1b1b1d;border:1px solid #2a2a2c;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 8px 8px 8px;flex-shrink:0">
+            <button onClick="{{ openFull }}" style="width:44px;height:44px;border-radius:8px;border:none;background:{{ art.bg }};cursor:pointer;padding:0"></button>
+            <button onClick="{{ openFull }}" style="border:none;background:none;cursor:pointer;text-align:left;padding:0;display:flex;flex-direction:column;gap:1px;min-width:0">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#8b8b86;white-space:nowrap">{{ groupName }}</span>
+              <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ np.t }}</span>
+              <span style="font-size:11px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ np.s }}</span>
+            </button>
+            <button onClick="{{ togglePlay }}" aria-label="Spill/pause" style="width:40px;height:40px;border-radius:50%;border:none;background:transparent;color:#f2f2ee;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+              <sc-if value="{{ playing }}" hint-placeholder-val="{{ true }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1.2"></rect><rect x="14" y="4.5" width="4" height="15" rx="1.2"></rect></svg></sc-if>
+              <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6a1 1 0 0 0 1.52.85l10.6-6.8a1 1 0 0 0 0-1.7L9.52 4.35A1 1 0 0 0 8 5.2z"></path></svg></sc-if>
+            </button>
+          </div>
+        </sc-if>
+        <div style="height:{{ P.tabH }};border-top:1px solid {{ P.tabLine }};display:grid;grid-template-columns:repeat(4,1fr);flex-shrink:0;background:{{ P.tabBg }};padding:4px 6px 0">
+          <button onClick="{{ tab0.pick }}" style="border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ tab0.fg }};padding:0">
+            <div style="width:{{ P.pillW }};height:30px;border-radius:15px;background:{{ tab0.pill }};display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"></path></svg></div>
+            <span style="font-size:10.5px;font-weight:{{ tab0.fw }}">Hjem</span>
+          </button>
+          <button onClick="{{ tab1.pick }}" style="border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ tab1.fg }};padding:0">
+            <div style="width:{{ P.pillW }};height:30px;border-radius:15px;background:{{ tab1.pill }};display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3"></path><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="9" r="2"></circle><circle cx="19" cy="15" r="2"></circle></svg></div>
+            <span style="font-size:10.5px;font-weight:{{ tab1.fw }}">Lyd</span>
+          </button>
+          <button onClick="{{ tab2.pick }}" style="border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ tab2.fg }};padding:0">
+            <div style="width:{{ P.pillW }};height:30px;border-radius:15px;background:{{ tab2.pill }};display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg></div>
+            <span style="font-size:10.5px;font-weight:{{ tab2.fw }}">Rom</span>
+          </button>
+          <button onClick="{{ tab3.pick }}" style="border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ tab3.fg }};padding:0">
+            <div style="width:{{ P.pillW }};height:30px;border-radius:15px;background:{{ tab3.pill }};display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></div>
+            <span style="font-size:10.5px;font-weight:{{ tab3.fw }}">Innstillinger</span>
+          </button>
+        </div>
+        </sc-if>
+      </sc-if>
+
+      <div style="height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{ navBg }}">
+        <div style="width:{{ P.bar }};height:4px;border-radius:2px;background:#f2f2ee;opacity:.6"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;platform&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ios&quot;,&quot;android&quot;],&quot;default&quot;:&quot;ios&quot;,&quot;tsType&quot;:&quot;'ios'|'android'&quot;}}">
+class Component extends DCLogic {
+  state = { full: false, sub: '', sys: null, setDev: 'stue', obType: 's1', radio: null, rEdit: false, rAdd: false, q: '', setCat: -1, openK: '', confirm: '', eqP: null, eqSrc: null, st: null, sset: null, mode: 'onboard', ob: 0, scan: false, scanT: 0, net: 0, pw: '', room: 'Stue', tested: {}, obUpd: 0, tab: 0, input: 0, playing: true, trk: 0, vol: 42, preset: 0, eq: [0, 0, 0, 0, 0], bass: 0, treb: 0, bal: 0, loud: true, station: 1, fav: 2, t: 0, set: { voice: false, clock: true, auto: 1, led: 0 } };
+  componentDidMount() { if (window.SKJOLD) { this.offLogos = window.SKJOLD.onLogos(() => this.setState({ logoTick: Date.now() })); window.SKJOLD.fetchLogos(window.SKJOLD.CATALOG.map(c => c[0]).concat(window.SKJOLD.loadRadio().map(r => r[0]))); } this.bc = 'BroadcastChannel' in window ? new BroadcastChannel('skjold-s1') : null; if (this.bc) { this.bc.onmessage = e => { const m = e.data || {}; if (m.type === 'state') this.setState({ st: m }); if (m.type === 'eqSync' && window.SKJOLD) this.setState({ eqP: window.SKJOLD.loadEq() }); if (m.type === 'radioSync' && window.SKJOLD) this.setState({ radio: window.SKJOLD.loadRadio() }); }; this.bc.postMessage({ type: 'hello' }); }
+    window.addEventListener('storage', ev => { const K = window.SKJOLD; if (!K) return; if (ev.key === 'skjold-eq') this.setState({ eqP: K.loadEq() }); if (ev.key === 'skjold-upd') this.setState({ upd: K.loadUpd() }); if (ev.key === 'skjold-names') this.setState({ names: K.loadNames() }); if (ev.key === 'skjold-radio') this.setState({ radio: K.loadRadio() }); }); this.tick = setInterval(() => this.setState(s => ({ t: s.t + 1 })), 140); this.clkI = setInterval(() => this.drawClocks(), 1000); }
+  componentWillUnmount() { if (this.offLogos) this.offLogos(); clearInterval(this.clkI); if (this.stopJob) this.stopJob(); clearTimeout(this.chkT); clearInterval(this.tick); clearInterval(this.updI); clearTimeout(this.scanTO); if (this.bc) this.bc.close(); }
+  post(m) { if (this.bc) this.bc.postMessage(m); }
+  PRE = [['Flat', [0, 0, 0, 0, 0]], ['Bass+', [6, 3, 0, 0, 1]], ['Vokal', [-2, 0, 3, 2, 0]], ['Kveld', [3, 1, -1, -2, -3]], ['Podkast', [-4, 0, 4, 3, -1]]];
+  TR = [['Midnight City', 'M83'], ['Intro', 'The xx'], ['Breathe', 'Télépopmusik']];
+  ST = [['NRK P1', 'Distriktsprogram'], ['NRK P2', 'Kultur og samfunn'], ['NRK P3', 'Pop og humor'], ['P4 Norge', 'Hits'], ['Radio Norge', 'Pop og rock'], ['NRK Klassisk', 'Klassisk musikk']];
+updVals() {
+    const K = window.SKJOLD, A = '#d9a441', U = (this.state.upd && this.state.upd.backups) ? this.state.upd : K.loadUpd(), J = this.state.job, busy = !!(J && !J.done), chk = this.state.checking;
+    const setU = n => { K.saveUpd(n); this.setState({ upd: n }); if (this.bc) this.bc.postMessage({ type: 'updSync', version: n.version }); };
+    const rel = U.latest, sel = b => ({ bd: b ? A : '#2e2e30', bg: b ? '#2a2112' : '#1b1b1c', fg: b ? '#f0c46a' : '#f2f2ee' });
+    const msg = J && J.done ? (J.failed ? { t: 'Oppdateringen feilet ved oppstart. Forrige versjon (' + J.upd.version + ') er gjenopprettet automatisk, og alt virker som før.', bad: true } : { t: 'Ferdig. Skjold ' + J.upd.version + ' kjører nå.' }) : this.state.updMsg ? { t: this.state.updMsg } : null;
+    const conf = this.state.restoreConf;
+    return { version: U.version, repo: U.repo, repoUrl: 'https://github.com/' + U.repo + '/releases',
+      channels: ['Stabil', 'Beta'].map((label, i) => ({ label, ...sel(U.channel === i), pick: () => setU({ ...U, channel: i, latest: null }) })),
+      autoTrk: U.auto ? A : '#3a3a37', autoKnob: U.auto ? '21px' : '3px', toggleAuto: () => setU({ ...U, auto: !U.auto }),
+      failTrk: U.failNext ? '#e05a4a' : '#3a3a37', failKnob: U.failNext ? '21px' : '3px', toggleFail: () => setU({ ...U, failNext: !U.failNext }),
+      idle: !busy && !chk, busy, checkLabel: chk ? 'Sjekker GitHub …' : 'Se etter oppdatering',
+      check: () => { this.setState({ checking: true, job: null, updMsg: '' }); clearTimeout(this.chkT); this.chkT = setTimeout(() => { const r = K.findRelease(U); setU({ ...U, latest: r, checkedAt: K.now() }); this.setState({ checking: false, updMsg: r ? '' : 'Du har siste versjon (' + U.version + '). Sjekket ' + K.now() + '.' }); }, 1100); },
+      hasMsg: !!msg && !busy, msg: msg ? msg.t : '', msgBg: msg && msg.bad ? '#2a1412' : '#16201a', msgBd: msg && msg.bad ? '#5a2620' : '#2a4a33', msgFg: msg && msg.bad ? '#ff9a8a' : '#9be0a8',
+      hasRel: !!rel && !busy, rel: rel ? { ...rel, url: 'https://github.com/' + U.repo + '/releases/tag/' + rel.tag, noteList: rel.notes.map(t => ({ t })) } : { noteList: [] },
+      install: () => { if (this.stopJob) this.stopJob(); this.setState({ updMsg: '' }); this.stopJob = K.runJob('update', U, st => { this.setState({ job: st }); if (st.done) { this.setState({ upd: st.upd }); if (this.bc) this.bc.postMessage({ type: 'updSync', version: st.upd.version }); } }); },
+      step: J && !J.done ? J.step : '', pct: (J && !J.done ? J.pct : 0) + '%', pctLabel: (J && !J.done ? J.pct : 0) + ' %',
+      backup: () => { setU(K.backupNow(U)); this.setState({ updMsg: 'Backup av ' + U.version + ' er lagret.', job: null }); },
+      backups: U.backups.map((b, i) => { const c = conf === b.id, cur = b.ver === U.version; return { ver: b.ver, date: b.date, kind: b.kind, cur: cur ? '· installert' : '', line: i ? '#242426' : 'transparent', can: !busy && !cur, label: c ? 'Trykk igjen' : 'Gjenopprett', bd: c ? '#e05a4a' : '#2e2e30', fg: c ? '#ff8a7a' : '#f2f2ee',
+        restore: () => { if (!c) return this.setState({ restoreConf: b.id }); this.setState({ restoreConf: '', updMsg: '' }); if (this.stopJob) this.stopJob(); this.stopJob = K.runJob(b, U, st => { this.setState({ job: st.done ? { done: true, failed: false, upd: st.upd } : st }); if (st.done) { this.setState({ upd: st.upd, updMsg: 'Backup ' + b.ver + ' er gjenopprettet.' , job: null }); if (this.bc) this.bc.postMessage({ type: 'updSync', version: st.upd.version }); } }); } }; }),
+      hasLog: U.log.length > 0, log: U.log.map(l => ({ ...l, fg: l.bad ? '#ff9a8a' : '#c9c9c4' })) };
+  }
+drawClocks() { const K = window.SKJOLD; if (!K || !this.cv) return; const set = this.curSet ? this.curSet() : {}; this.cv.forEach((c, i) => { if (!c) return; const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height); K.drawClock(g, c.width, c.height, i, new Date(), { still: true, color: (set.clockStyle || 0) === i ? '#e8e8e2' : '#8b8b86' }); }); }
+  clockVals(set, send) { const K = window.SKJOLD, A = '#d9a441'; this.cv = this.cv || []; return K.CLOCKS.map((label, i) => { const on = (set.clockStyle || 0) === i; return { label, mark: on ? '✓' : '', bd: on ? A : '#242426', bg: on ? '#1c170d' : '#141415', fg: on ? '#f0c46a' : '#c9c9c4', pick: () => { send(i); setTimeout(() => this.drawClocks(), 0); }, ref: el => { this.cv[i] = el; if (el) this.drawClocks(); } }; }); }
+  goOb(ob) { this.setState({ ob }); this.post({ type: 'setup', step: [1, 2, 3, 4, 6][ob] || 0, name: this.state.room });
+    if (ob === 4) { clearInterval(this.updI); this.setState({ obUpd: 0 }); this.updI = setInterval(() => this.setState(s => { const u = Math.min(100, (s.obUpd || 0) + 5); if (u >= 100) clearInterval(this.updI); this.post({ type: 'setup', step: 6, upd: u }); return { obUpd: u }; }), 110); } }
+  curve(eq) { const xs = [15, 82.5, 150, 217.5, 285], ys = eq.map(v => 45 - v * 3.2); let d = 'M0 ' + ys[0].toFixed(1) + ' L' + xs[0] + ' ' + ys[0].toFixed(1);
+    for (let i = 0; i < 4; i++) { const mx = (xs[i] + xs[i + 1]) / 2; d += ' C' + mx + ' ' + ys[i].toFixed(1) + ' ' + mx + ' ' + ys[i + 1].toFixed(1) + ' ' + xs[i + 1] + ' ' + ys[i + 1].toFixed(1); }
+    d += ' L300 ' + ys[4].toFixed(1); return { line: d, area: d + ' L300 45 L0 45 Z' }; }
+  renderVals() {
+    const K = window.SKJOLD;
+    const S = this.state, A = '#d9a441', android = (this.props.platform ?? 'ios') === 'android';
+    const P = android ? { outer: '38px', inner: '30px', card: '18px', btn: '999px', field: '6px', time: '09:41', icons: '▾ ▮▮', notch: '12px', h1: '22px', align: 'center', titleJ: 'center', tabH: '76px', bar: '90px', chip: '8px', pillW: '60px', tabBg: '#141416', tabLine: 'transparent' }
+                      : { outer: '52px', inner: '44px', card: '14px', btn: '14px', field: '12px', time: '9:41', icons: '5G ▮▮▮', notch: '96px', h1: '28px', align: 'left', titleJ: 'flex-start', tabH: '70px', bar: '120px', chip: '999px', pillW: '30px', tabBg: 'rgba(18,18,19,0.94)', tabLine: '#232325' };
+    const sel = b => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
+    const OB = [['Legg til forsterker', 'Slå på forsterkeren. Den dukker opp her via Blåtann.'], ['Koble til Wi-Fi', 'Sendes kryptert over Blåtann. Godta på forsterkeren med volumknappen.'], ['Hvor står den?', 'Navnet vises i AirPlay, Blåtann og Lyrion.'], ['Test høyttalerne', 'Trykk på en side og hør etter.'], ['Programvare', 'Installerer siste versjon.']];
+    const nets = ['Hjemme', 'Hjemme-5G', 'Telenor-8F2A'].map((ssid, i) => ({ ssid, mark: S.net === i ? '✓' : '', line: i ? '#242426' : 'transparent', bg: S.net === i ? '#1c170d' : 'transparent', pick: () => this.setState({ net: i }) }));
+    const rooms = ['Stue', 'Kontor', 'Soverom', 'Kjøkken', 'Verksted'].map(label => ({ label, ...sel(S.room === label), pick: () => this.setState({ room: label }) }));
+    const sides = [['L', 'Venstre'], ['R', 'Høyre']].map(([k, label]) => ({ k, label: S.tested[k] ? 'Spilt av' : label, ...sel(S.tested[k]), pick: () => { this.setState(s => ({ tested: { ...s.tested, [k]: true } })); this.post({ type: 'setupTest', ch: k }); } }));
+    const okOb = [true, S.pw.length >= 8, true, S.tested.L && S.tested.R, (S.obUpd || 0) >= 100][S.ob];
+    const obNext = () => { if (!okOb) return; if (S.ob < 4) this.goOb(S.ob + 1); else { if (K && S.obType === 'node') { const n = K.loadSys(); if (!n.rooms.some(r => r.name === S.room)) { n.rooms.push({ id: 'r' + Date.now(), name: S.room, type: 'node', hw: 'Raspberry Pi 4 · HDMI', vol: 30, group: null, np: null }); K.saveSys(n); this.setState({ sys: n }); } } this.setState({ mode: 'app', tab: S.obType === 'node' ? 2 : 0 }); this.post({ type: 'setup', step: 7, name: S.room }); setTimeout(() => this.post({ type: 'setup', step: 8 }), 3000); } };
+    const SYS0 = S.sys || (K ? K.loadSys() : null), actType0 = SYS0 ? ((SYS0.rooms.find(r => r.id === SYS0.active) || SYS0.rooms[0] || {}).type || 's1') : 's1', allowed = K ? K.DEVTYPES[actType0].inputs : null;
+    const inputs = ['AirPlay', 'Blåtann', 'AUX', 'Radio', 'USB'].map((label, i) => ({ label, ...sel(S.input === i), pick: () => { this.setState({ input: i }); if (i < 2) this.post({ type: 'wl', v: i ? 'bt' : 'air' }); else this.post({ type: 'input', i: i - 1 }); } })).filter(x => !allowed || allowed.includes(x.label));
+    const RL0 = S.radio || (K ? K.loadRadio() : this.ST), st0 = RL0[Math.min(S.station, RL0.length - 1)], npR = K ? K.nowPlaying(st0[0]) : ['', ''];
+    const np = S.input === 3 ? { st: 'Radio · ' + st0[0], t: npR[0], s: npR[1] } : S.input === 2 ? { st: 'AUX', t: (S.names || (K ? K.loadNames() : {})).nAux1 || 'AUX 1', s: '3,5 mm · analog' } : S.input === 4 ? { st: 'USB-lyd', t: (S.names || (K ? K.loadNames() : {})).nUsb1 || 'PC', s: 'USB-C «PC 1» · 48 kHz · 24 bit' } : { st: S.input ? 'Blåtann · iPhone' : 'AirPlay · iPhone', t: this.TR[S.trk][0], s: this.TR[S.trk][1] };
+    const EQP = S.eqP || (K ? K.loadEq() : null); const actSrc = S.st && S.st.hp ? 'hp' : ['air', 'bt', 'aux', 'radio', 'usb'][S.input]; const es = S.eqSrc || actSrc; const prof = EQP ? EQP[es] : { eq: S.eq, preset: S.preset, loud: S.loud };
+    const setProf = p => { if (!K) return; const n = { ...EQP, [es]: { ...prof, ...p } }; K.saveEq(n); this.setState({ eqP: n }); this.post({ type: 'eqSync', src: es, prof: n[es] }); };
+    const setEq = (i, v) => { const eq = prof.eq.slice(); eq[i] = v; setProf({ eq, preset: -1 }); };
+    const viz = Array.from({ length: 12 }, (_, i) => { const e = prof.eq[Math.min(4, Math.floor(i / 2.4))], a = S.playing ? 0.35 + 0.55 * Math.abs(Math.sin(S.t * 0.45 + i * 0.9) * Math.sin(S.t * 0.21 + i)) : 0.06; return { h: Math.max(4, Math.min(100, a * 100 + e * 2.5)) + '%', o: S.playing ? 1 : 0.35 }; });
+        const bands = ['60', '250', '1k', '4k', '12k'].map((f, i) => ({ f, v: prof.eq[i], val: (prof.eq[i] > 0 ? '+' : '') + prof.eq[i], set: e => setEq(i, +e.target.value) }));
+    const PRE = K ? K.EQ.presets : this.PRE; const presets = [...PRE.map(([label, eq], i) => ({ label, ...sel(prof.preset === i), pick: () => setProf({ preset: i, eq: eq.slice() }) })), ...(prof.preset < 0 ? [{ label: 'Egendefinert', ...sel(true), pick: () => {} }] : [])];
+    const c = this.curve(prof.eq), dB = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) + ' dB';
+    const SS = S.sset || (S.st && S.st.set) || (K ? { ...K.DEF } : {}); const setS = (k, v) => { this.setState({ sset: { ...SS, [k]: v } }); this.post({ type: 'set', k, v }); };
+    const tone = [['Bass', 'bass', -6, 6, dB], ['Diskant', 'treb', -6, 6, dB], ['Balanse', 'bal', -5, 5, v => v === 0 ? 'Midt' : (v < 0 ? 'V ' : 'H ') + Math.abs(v)]].map(([n, k, min, max, f], i) => ({ n, min, max, v: SS[k] || 0, val: f(SS[k] || 0), line: i ? '#242426' : 'transparent', set: e => setS(k, +e.target.value) }));
+    const ESRC = K ? K.EQ.sources : [];
+    const eqSrcs = ESRC.map(([k, label]) => ({ label, ...sel(es === k), dot: actSrc === k ? '#6fcf7f' : 'transparent', pick: () => this.setState({ eqSrc: k }) }));
+    const srcName = k => (ESRC.find(x => x[0] === k) || ['', ''])[1];
+    const eqActiveText = es === actSrc ? 'Aktiv nå · følger inngangen automatisk' : 'Aktiv nå er ' + srcName(actSrc) + ' · du redigerer ' + srcName(es);
+    const CICON = { eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
+    const CTILE = { eq: '#3a2e17', lyd: '#2a3340', tilkobling: '#22314a', radio: '#3d2a2a', stemme: '#2f2a40', skjerm: '#2a3a33', strom: '#40362a', system: '#333335' };
+    const SYS = S.sys || (K ? K.loadSys() : { rooms: [], active: 'stue' }); const setSys = n => { if (!K) return; K.saveSys(n); this.setState({ sys: n }); this.post({ type: 'sysSync' }); };
+    const devRoom = SYS.rooms.find(r => r.id === S.setDev) || SYS.rooms[0] || { type: 's1', name: 'Stue', hw: '' };
+    const CATS = K ? K.catsFor(devRoom.type) : [];
+    const setCats = CATS.map((c, i) => ({ n: c.n, sub: c.sub, icon: CICON[c.id] || '', tile: CTILE[c.id] || '#333', line: i ? '#242426' : 'transparent', pick: () => this.setState({ setCat: i, openK: '', confirm: '' }) }));
+    const info = d => d.val || (d.key === 'btDev' ? ((S.st && S.st.btDev) || ['Sebastians iPhone', 'MacBook Pro']).join(', ') || 'Ingen' : d.key === 'lyrion' ? (S.st && S.st.err === 1 ? 'Frakoblet' : 'Tilkoblet') : '');
+    const NM = S.names || (K ? K.loadNames() : {});
+    const setItems = S.setCat < 0 || !CATS[S.setCat] ? [] : CATS[S.setCat].items.filter(d => d.kind !== 'update' && d.kind !== 'clocks').map((d, i) => { const v = SS[d.k], open = S.openK === d.k && d.kind === 'opt', c = S.confirm === d.id;
+      return { n: d.n, hint: d.hint || '', hasHint: !!d.hint, line: i ? '#242426' : 'transparent', isBool: d.kind === 'bool', isNum: d.kind === 'num', isOpt: d.kind === 'opt', isInfo: d.kind === 'info', isAct: d.kind === 'act', isEq: d.kind === 'eq', isStr: d.kind === 'str', ph: d.ph || '', setStr: e => { const v = e.target.value.slice(0, 14); this.setState({ names: K.saveName(d.k, v) }); this.post({ type: 'set', k: d.k, v }); }, open,
+        val: d.kind === 'str' ? NM[d.k] : d.kind === 'num' ? K.fmt[d.f](v || 0) : d.kind === 'opt' ? d.list[v || 0] : d.kind === 'info' ? info(d) : '', chev: open ? '⌃' : '›',
+        trk: v ? A : '#3a3a37', knob: v ? '21px' : '3px', toggle: () => setS(d.k, !v), dec: () => setS(d.k, Math.max(d.mn, (v || 0) - 1)), inc: () => setS(d.k, Math.min(d.mx, (v || 0) + 1)),
+        expand: () => this.setState({ openK: open ? '' : d.k }), opts: (d.list || []).map((label, j) => ({ label, ...sel((v || 0) === j), pick: () => { setS(d.k, j); this.setState({ openK: '' }); } })),
+        actLabel: d.id === 'btPair' && S.btPairT && Date.now() - S.btPairT < 120000 ? 'Synlig · ' + Math.ceil((120000 - (Date.now() - S.btPairT)) / 1000) + ' s' : c ? 'Trykk igjen' : d.label, actBd: c ? '#e05a4a' : '#2e2e30', actFg: c ? '#ff8a7a' : '#f2f2ee',
+        act: () => { if (!c && !d.safe) return this.setState({ confirm: d.id }); this.setState({ confirm: '' }); if (d.id === 'btPair') { this.setState({ btPairT: Date.now() }); this.post({ type: 'btPair', room: devRoom.id }); return; } if (d.id === 'openRadio') { this.setState({ tab: 0, sub: 'radio' }); return; } if (d.id === 'setup') { this.setState({ mode: 'onboard', ob: 0, tested: {}, pw: '', obUpd: 0 }); this.post({ type: 'setup', step: 0 }); return; } this.post({ type: d.id }); },
+        goEq: () => this.setState({ tab: 1 }) }; });
+    const RL = S.radio || (K ? K.loadRadio() : this.ST), stIdx = Math.min(S.station, RL.length - 1);
+    const setRL = l => { if (!K) return; K.saveRadio(l); this.setState({ radio: l, station: Math.min(S.station, l.length - 1) }); this.post({ type: 'presets', list: l.map(p => [p[0], p[1], K.nowPlaying(p[0])]) }); this.post({ type: 'radioSync' }); };
+    const abbr = n => n.replace(/^NRK /, '').replace('Radio ', '').split(' ').map(w => w.slice(0, 4)).join(' ').slice(0, 7);
+    const artOf = n => K ? K.art(n) : { bg: '#222', ink: '#fff' };
+    const stations = RL.map(([name, genre], i) => { const a = artOf(name); return { name, genre, abbr: abbr(name), artBg: a.bg, artInk: a.ink, view: !S.rEdit, edit: S.rEdit, mark: S.input === 3 && stIdx === i ? 'Spiller' : '', starFg: S.fav === i ? '#f0c46a' : '#3a3a37', line: i ? '#242426' : 'transparent', bg: S.input === 3 && stIdx === i ? '#1c170d' : 'transparent',
+      pick: () => { this.setState({ station: i, input: 3 }); this.post({ type: 'input', i: 2 }); this.post({ type: 'src', v: i }); }, fav: () => { this.setState({ fav: i }); this.post({ type: 'set', k: 'hold', v: i }); },
+      up: () => { if (!i) return; const l = RL.slice(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; setRL(l); }, down: () => { if (i === RL.length - 1) return; const l = RL.slice(); [l[i + 1], l[i]] = [l[i], l[i + 1]]; setRL(l); },
+      remove: () => { if (RL.length <= 1) return; setRL(RL.filter((_, j) => j !== i)); }, upFg: i ? '#f2f2ee' : '#3a3a37', downFg: i < RL.length - 1 ? '#f2f2ee' : '#3a3a37' }; });
+    const MAXR = K ? K.MAXRADIO : 6, full = RL.length >= MAXR, ql = S.q.trim().toLowerCase();
+    const catalog = (K ? K.CATALOG : []).filter(([n, g]) => !ql || (n + ' ' + g).toLowerCase().includes(ql)).map(([name, genre], i) => { const a = artOf(name), has = RL.some(p => p[0] === name); return { name, genre, abbr: abbr(name), artBg: a.bg, artInk: a.ink, line: i ? '#242426' : 'transparent', label: has ? 'Lagt til' : full ? 'Fullt' : 'Legg til', bd: has || full ? '#2e2e30' : A, fg: has || full ? '#8b8b86' : '#f0c46a', add: () => { if (has || full) return; setRL([...RL, [name, genre]]); } }; });
+    const stChips = RL.map(([name], i) => ({ n: String(i + 1), label: name, ...sel(stIdx === i), pick: () => { this.setState({ station: i }); this.post({ type: 'src', v: i }); } }));
+    const SR = [['Talebeskjed ved bytte', 'voice'], ['Klokke i standby', 'clock'], ['Auto-standby', 'auto', ['Av', '20 min', '60 min']], ['LED-ringer', 'led', ['Høy', 'Middels', 'Lav', 'Av']], ['Favoritt på radioknappen', 'fav', this.ST.map(s => s[0])]];
+    const setRows = SR.map(([n, k, list], i) => { const cur = k === 'fav' ? S.fav : S.set[k]; return { n, line: i ? '#242426' : 'transparent', isBool: !list, isVal: !!list, val: list ? list[cur] : '', trk: cur ? A : '#3a3a37', knob: cur ? '21px' : '3px',
+      toggle: () => { this.setState(s => ({ set: { ...s.set, [k]: !s.set[k] } })); this.post({ type: 'set', k, v: !cur }); },
+      cycle: () => { const v = (cur + 1) % list.length; if (k === 'fav') { this.setState({ fav: v }); this.post({ type: 'set', k: 'hold', v }); } else { this.setState(s => ({ set: { ...s.set, [k]: v } })); this.post({ type: 'set', k, v }); } } }; });
+    const tabs = [0, 1, 2, 3].map(i => ({ fg: S.tab === i ? (android ? '#f2f2ee' : '#f0c46a') : '#8b8b86', fw: S.tab === i ? 600 : 400, pill: android && S.tab === i ? '#3a2e17' : 'transparent', pick: () => this.setState({ tab: i, sub: '', setCat: i === 3 ? -1 : S.setCat }) }));
+    const scanY = 12 + (Math.sin(S.t * 0.35) * 0.5 + 0.5) * 160;
+    const artK = S.input === 3 ? st0[0] : np.t, aa = K ? K.art(artK) : { bg: '#222', ink: '#fff' };
+    const art = { bg: aa.bg, ink: aa.ink, live: S.input === 3, kicker: S.input === 3 ? 'RADIO · ' + st0[1].toUpperCase() : S.input === 2 ? 'AUX' : S.input === 4 ? 'USB-LYD' : np.s.toUpperCase(), big: S.input === 3 ? st0[0] : np.t, size: (S.input === 3 ? st0[0] : np.t).length > 14 ? '30px' : '40px' };
+    const actRoom = SYS.rooms.find(r => r.id === SYS.active) || SYS.rooms[0] || { name: S.room };
+    const groupName = K && SYS.rooms.length ? K.groupLabel(SYS, actRoom.id) : S.room;
+    const ICON = { s1: 'M4 6h16v12H4zM7 10h4v4H7zM15 11.5h2M15 14h2', node: 'M7 3h10v18H7zM12 7h.01M12 16.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z' };
+    const gid = actRoom.group, gMembers = gid ? SYS.rooms.filter(r => r.group === gid) : [], gMode = (gid && SYS.modes && SYS.modes[gid]) || 'sync', surr = gMembers.length > 1 && gMode === 'surround';
+    const grpVals = { hasGroup: gMembers.length > 1, groupCount: String(gMembers.length), grpModeHint: surr ? 'Spillerne deler ett lydbilde i samme rom. Velg plassering for hver høyttaler. Tidsforsinkelse justeres automatisk.' : 'Samme musikk i alle rommene, synkronisert ned til millisekunder. Volum styres per rom.',
+      grpModes: [['sync', 'Samme musikk'], ['surround', 'Surround']].map(([m, label]) => ({ label, bg: gMode === m ? '#2a2112' : 'transparent', fg: gMode === m ? '#f0c46a' : '#c9c9c4', pick: () => K && setSys(K.setGroupMode(SYS, gid, m)) })) };
+    const roomCards = SYS.rooms.map(r => { const isA = r.id === actRoom.id, inG = isA || (actRoom.group && r.group === actRoom.group);
+      const npR2 = r.np ? r.np[0] + ' · ' + r.np[1] : inG ? np.t + ' · ' + np.s : 'Ingenting spiller';
+      return { name: r.name, sub: (K ? K.DEVTYPES[r.type].n : '') + ' · ' + npR2, vol: String(isA ? S.vol : r.vol), icon: K ? K.DEVTYPES[r.type].icon : '', bg: isA ? '#1c170d' : '#141415', bd: isA ? '#5a4420' : '#242426', ck: inG ? '✓' : '', ckBd: inG ? A : '#55554f', ckBg: inG ? A : 'transparent',
+        showRoles: !!(surr && inG && K), roles: K ? K.ROLES.map((label, j) => { const on = (r.role || 0) === j; return { label, bd: on ? A : '#2e2e30', bg: on ? '#2a2112' : '#141415', fg: on ? '#f0c46a' : '#c9c9c4', pick: () => setSys(K.setRole(SYS, r.id, j)) }; }) : [],
+        select: () => setSys({ ...SYS, active: r.id }), toggle: () => K && setSys(K.toggleInGroup(SYS, actRoom.id, r.id)),
+        setVol: e => { const v = +e.target.value; if (isA) { this.setState({ vol: v }); this.post({ type: 'vol', v }); } setSys({ ...SYS, rooms: SYS.rooms.map(x => x.id === r.id ? { ...x, vol: v } : x) }); } }; });
+    const allG = SYS.rooms.length > 1 && SYS.rooms.every(r => r.group && r.group === SYS.rooms[0].group);
+    const RLh = S.radio || (K ? K.loadRadio() : []);
+    const playStation = i => { this.setState({ station: i, input: 3, full: true }); this.post({ type: 'input', i: 2 }); this.post({ type: 'src', v: i }); };
+    const recent = [...this.TR.slice(0, 2).map((t, i) => ({ t, i, kind: 'AirPlay · låt' })), ...RLh.slice(0, 2).map((p, i) => ({ st: p, i, kind: 'Radio · kanal' })), { t: this.TR[2], i: 2, kind: 'Blåtann · låt' }].map(x => { const key = x.st ? x.st[0] : x.t[0], a = K ? K.art(key) : { bg: '#222', ink: '#fff' };
+      return { title: x.st ? x.st[0] : x.t[0], kind: x.kind, big: x.st ? x.st[0] : x.t[1], bg: a.bg, ink: a.ink, radius: x.st ? '50%' : '10px', pick: () => x.st ? playStation(x.i) : this.setState({ input: x.kind.startsWith('Blå') ? 1 : 0, trk: x.i, full: true }) }; });
+    const services = [['Radio', 'R', '#3d2a2a', () => this.setState({ sub: 'radio' })], ['AirPlay', 'AP', '#1f2a3a', () => this.setState({ input: 0, full: true })], ['Blåtann', 'BT', '#22314a', () => this.setState({ input: 1, full: true })], ['Spotify', 'S', '#1d3a26', () => this.setState({ full: true })], ['Lyrion', 'L', '#2a2a2c', () => window.open('http://192.168.1.42:9000/', '_blank')], ['AUX', 'AUX', '#2a2a2c', () => this.setState({ input: 2, full: true })]].filter(x => actRoom.type !== 'node' || x[0] !== 'AUX').map(([label, mono, bg, pick]) => { const lg = K ? K.brandBg({ Spotify: 'spotify', Lyrion: 'lyrion', AirPlay: 'airplay', 'Blåtann': 'bluetooth' }[label]) : ''; return { label, mono: lg ? '' : mono, bg: lg || bg, bd: '#2e2e30', fg: '#f2f2ee', pick: label === 'Blåtann' && actRoom.type === 'node' ? () => { const ci = K.catsFor('node').findIndex(c => c.id === 'tilkobling'); this.setState({ tab: 3, setDev: actRoom.id, setCat: ci }); } : pick }; });
+    const favTiles = RLh.map((p, i) => { const a = K ? K.art(p[0]) : { bg: '#222', ink: '#fff' }; return { n: String(i + 1), name: p[0], genre: p[1], bg: a.bg, ink: a.ink, pick: () => playStation(i) }; });
+    const devChips = SYS.rooms.map(r => ({ icon: K ? K.DEVTYPES[r.type].icon : '', name: r.name, type: K ? K.DEVTYPES[r.type].n : '', ...sel(r.id === devRoom.id), pick: () => this.setState({ setDev: r.id, setCat: -1 }) }));
+    return {
+      full: S.full, notFull: !S.full, fullBg: 'linear-gradient(180deg, rgba(11,11,12,0.25) 0%, #0b0b0c 70%), ' + art.bg, closeFull: () => this.setState({ full: false }), openFull: () => this.setState({ full: true }), goRoomsFull: () => this.setState({ full: false, tab: 2 }), hasMini: S.mode === 'app' && !S.full,
+      groupName, sysSummary: groupName, goRooms: () => this.setState({ tab: 2 }), recent, services, favTiles, openRadio: () => this.setState({ sub: 'radio' }),
+      ...grpVals, roomCards, activeName: actRoom.name, grpAll: () => K && setSys(K.groupAll(SYS)), grpNone: () => setSys({ ...SYS, rooms: SYS.rooms.map(r => ({ ...r, group: null })) }), grpAllBd: allG ? A : '#2e2e30', grpAllBg: allG ? '#1c170d' : '#141415',
+      addDevice: () => this.setState({ mode: 'onboard', ob: 0, tested: {}, pw: '', obUpd: 0, scan: false }), devChips, devHw: devRoom.hw + (devRoom.type === 'node' ? ' · ingen skjerm eller knapper' : ''),
+      pickNode: () => { this.setState({ obType: 'node' }); this.goOb(1); },
+      hasClocks: !!(S.setCat >= 0 && CATS[S.setCat] && CATS[S.setCat].id === 'skjerm'), clockMin: '130px', clocks: K ? (this.curSet = () => SS, this.clockVals(SS, v => setS('clockStyle', v))) : [], previewClock: () => this.post({ type: 'previewClock' }),
+      isUpd: !!(S.setCat >= 0 && CATS[S.setCat] && CATS[S.setCat].id === 'oppdatering'), notUpd: !(S.setCat >= 0 && CATS[S.setCat] && CATS[S.setCat].id === 'oppdatering'), u: K ? this.updVals() : {},
+      art, isRadio: S.input === 3, stChips, catalog, adding: S.rAdd, notAdding: !S.rAdd, q: S.q, setQ: e => this.setState({ q: e.target.value }), openAdd: () => { if (!full) this.setState({ rAdd: true, q: '' }); }, closeAdd: () => this.setState({ rAdd: false }),
+      addLabel: full ? 'Maks ' + MAXR + ' favoritter · fjern én for å legge til' : '+ Legg til kanal', addBd: full ? '#2e2e30' : '#5a4420', addFg: full ? '#8b8b86' : '#f0c46a', radioCount: RL.length + ' av ' + MAXR + ' favoritter', editLabel: S.rEdit ? 'Ferdig' : 'Endre rekkefølge', toggleEdit: () => this.setState({ rEdit: !S.rEdit }),
+      skipTest: () => this.goOb(4),
+      P, onboard: S.mode === 'onboard', app: S.mode === 'app', navBg: S.mode === 'app' ? '#0f0f10' : '#0b0b0c',
+      obLabel: 'OPPSETT · ' + (S.ob + 1) + ' AV 5', obDots: [0, 1, 2, 3, 4].map(i => ({ c: i <= S.ob ? A : '#2a2a28' })), obTitle: S.scan ? 'Skann QR-koden' : OB[S.ob][0], obText: S.scan ? 'Hold kameraet mot skjermen på forsterkeren.' : OB[S.ob][1],
+      obCanBack: S.ob > 0 || S.scan, obBack: () => S.scan ? (clearTimeout(this.scanTO), this.setState({ scan: false })) : this.goOb(S.ob - 1),
+      ob0: S.ob === 0 && !S.scan, obScanView: S.scan, ob1: S.ob === 1, ob2: S.ob === 2, ob3: S.ob === 3, ob4: S.ob === 4,
+      pickDevice: () => { this.setState({ obType: 's1' }); this.goOb(1); }, obScan: () => { this.setState({ scan: true, scanT: S.t }); this.scanTO = setTimeout(() => { this.setState({ scan: false }); this.goOb(1); }, 2200); },
+      scanLine: scanY + 'px', scanText: S.t - S.scanT > 10 ? 'Fant Skjold-Oppsett-0001 …' : 'Leter etter QR-kode …', pulse: S.t % 6 < 3 ? '#d9a441' : '#3a3a37',
+      nets, pw: S.pw, setPw: e => this.setState({ pw: e.target.value }), rooms, sides, updPct: (S.obUpd || 0) + '%', updLabel: (S.obUpd || 0) >= 100 ? '1.4.2 installert' : '1.4.1 → 1.4.2 · ' + (S.obUpd || 0) + ' %',
+      obShowNext: !(S.ob === 0) && !S.scan, obNext, obNextLabel: S.ob === 1 ? 'Koble til' : S.ob === 4 ? ((S.obUpd || 0) >= 100 ? 'Ferdig' : 'Oppdaterer …') : 'Neste', obNextBg: okOb ? A : '#3a3a37',
+      tabTitle: S.tab === 0 ? (S.sub === 'radio' ? 'Radio' : '') : S.tab === 2 ? 'Ditt system' : S.tab === 3 && S.setCat >= 0 && CATS[S.setCat] ? CATS[S.setCat].n : ['', 'Lyd', '', 'Innstillinger'][S.tab], hasTitle: !(S.tab === 0 && !S.sub), tHome: S.tab === 0 && !S.sub, tSound: S.tab === 1, tRadio: S.tab === 0 && S.sub === 'radio', tRooms: S.tab === 2, tSet: S.tab === 3,
+      inputs, np, viz, playLabel: S.playing ? 'Pause' : 'Spill', togglePlay: () => { this.setState({ playing: !S.playing }); this.post({ type: 'pause' }); }, nextTrack: () => { this.setState({ trk: (S.trk + 1) % 3 }); this.post({ type: 'next' }); },
+      vol: S.vol, setVol: e => { const v = +e.target.value; this.setState({ vol: v }); this.post({ type: 'vol', v }); },
+      presets, bands, eqPath: c.line, eqArea: c.area, tone, loudTrk: prof.loud ? A : '#3a3a37', loudKnob: prof.loud ? '21px' : '3px', toggleLoud: () => setProf({ loud: !prof.loud }),
+      tab0: tabs[0], tab1: tabs[1], tab2: tabs[2], tab3: tabs[3], playing: S.playing, paused: !S.playing, prevTrack: () => this.setState({ trk: (S.trk + 2) % 3 }),
+      eqSrcs, eqActiveText, setCats, setItems, setTop: S.setCat < 0, setDetail: S.setCat >= 0, setBack: () => this.setState({ setCat: -1, openK: '' }),
+      stations, setRows, restart: () => this.setState({ mode: 'onboard', ob: 0, tested: {}, pw: '', obUpd: 0 }), tabs
+    };
+  }
+}
+</script>
+</body>
+</html>

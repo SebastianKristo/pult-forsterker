@@ -1,0 +1,12 @@
+[Unit]
+Description=Skjold S1 første oppstart (hotspot + captive portal)
+After=NetworkManager.service
+ConditionPathExists=!/etc/skjold/setup-done
+
+[Service]
+Type=simple
+ExecStart=/opt/skjold/venv/bin/python -m skjold.setup
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Skjold – Om</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="site/skjold_site_data.js"></script>
+<script src="site/skjold_site_fx.js"></script>
+<script src="./image-slot.js"></script>
+<style>html{scroll-behavior:smooth}body{margin:0;background:#000;color:#f5f5f2;font-family:"IBM Plex Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:inherit;text-decoration:none}a:hover{opacity:.8}*{box-sizing:border-box}</style>
+</helmet>
+<div style="min-height:100vh">
+  <dc-import name="Skjold Nav" active="Om" hint-size="100%,52px" style="position:sticky;top:0;z-index:50;display:block"></dc-import>
+  <section style="padding:120px 22px;background:#f5f4f0;color:#1d1d1b">
+    <div style="max-width:760px;margin:0 auto">
+      <div data-reveal="0" style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.1em;color:#7a776d">{{ t.storyK }}</div>
+      <h1 data-reveal="60" style="margin:12px 0 0;font-family:Sora,sans-serif;font-weight:600;font-size:clamp(40px,6vw,68px);line-height:1.04;letter-spacing:-.02em">{{ t.storyH }}</h1>
+      <p data-reveal="120" style="margin:28px 0 0;font-size:21px;line-height:1.6;color:#3a3935;text-wrap:pretty">Skriv baktanken din her: hvorfor du laget Skjold, hvem den er for, og hva den skal være.</p>
+      <div data-reveal="180" style="margin-top:36px;display:flex;align-items:center;gap:14px">
+        <div style="width:60px;height:60px;border-radius:30px;overflow:hidden;flex:none"><image-slot id="foto-sebastian" shape="circle" placeholder="Foto"></image-slot></div>
+        <div><div style="font-weight:600;font-size:16px">Sebastian Kristo Jemtland</div><div style="font-size:14px;color:#7a776d">{{ t.role }}</div></div>
+      </div>
+    </div>
+  </section>
+  <section style="padding:110px 22px;background:#0b0b0c">
+    <div style="max-width:1080px;margin:0 auto">
+      <div data-reveal="0" style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.1em;color:#8b8b86">{{ t.histK }}</div>
+      <h2 data-reveal="60" style="margin:12px 0 0;font-family:Sora,sans-serif;font-weight:600;font-size:clamp(34px,5vw,56px);line-height:1.05;letter-spacing:-.02em;max-width:760px;text-wrap:balance">{{ t.histH }}</h2>
+      <div style="margin-top:50px;display:flex;flex-direction:column">
+        <sc-for list="{{ hist }}" as="h" hint-placeholder-count="7">
+          <div data-reveal="0" style="display:grid;grid-template-columns:64px minmax(0,1fr);gap:20px">
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <div style="width:38px;height:38px;border-radius:19px;border:1.5px solid {{ h.c }};display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:13px;color:{{ h.c }};flex:none">{{ h.n }}</div>
+              <div style="width:1.5px;flex:1;background:#26262a;min-height:26px"></div>
+            </div>
+            <div style="padding:6px 0 38px">
+              <div style="font-family:Sora,sans-serif;font-size:22px;font-weight:600">{{ h.h }}</div>
+              <div style="margin-top:6px;font-size:15.5px;line-height:1.55;color:#a8a8a3;max-width:680px;text-wrap:pretty">{{ h.p }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+  <section style="padding:0 12px 12px;background:#0b0b0c;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px">
+    <div data-reveal="0" style="background:#e9e9ec;border-radius:28px;overflow:hidden"><img src="renders/04-s1.png" alt="Skjold S1" style="display:block;width:100%"></div>
+    <div data-reveal="100" style="background:#ecebe7;border-radius:28px;overflow:hidden"><img src="renders/03-node.png" alt="Skjold Node" style="display:block;width:100%"></div>
+  </section>
+  <footer style="padding:40px 22px 60px;background:#000;border-top:1px solid #1c1c1e">
+    <div style="max-width:1080px;margin:0 auto;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:13px;color:#8b8b86"><div>{{ t.footer }}</div><div style="font-family:'IBM Plex Mono',monospace">skjold.smarthjemexperten.no</div></div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state={l:'no'};
+  componentDidMount(){ const go=()=>{ if(!window.SKJOLD_SITE||!window.SKJOLD_FX){ this.to=setTimeout(go,50); return; } this.setState({l:window.SKJOLD_SITE.lang()}); window.SKJOLD_FX.init(); }; go(); this.onL=()=>this.setState({l:window.SKJOLD_SITE.lang()}); window.addEventListener('skjold-lang',this.onL); }
+  componentWillUnmount(){ clearTimeout(this.to); window.removeEventListener('skjold-lang',this.onL); }
+  renderVals(){ const S=window.SKJOLD_SITE; if(!S) return {}; const l=this.state.l;
+    return { t:S.ui[l], hist:S.tr(S.hist,l).map(([c,h,p],i)=>({c,h,p,n:String(i+1).padStart(2,'0')})) }; }
+}
+</script>
+</body>
+</html>

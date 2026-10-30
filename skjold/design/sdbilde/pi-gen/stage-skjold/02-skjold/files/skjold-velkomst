@@ -1,0 +1,25 @@
+#!/bin/bash
+# skjold-velkomst — viser en velkomsthilsen én gang ved neste oppstart. Hilsenen må trykkes vekk.
+# Bruk (over SSH):
+#   sudo skjold-velkomst "Gratulerer med dagen" "Pappa"   # aktiver
+#   sudo skjold-velkomst --status                          # vis status
+#   sudo skjold-velkomst --av                              # deaktiver
+#   sudo skjold-velkomst --vis                             # vis nå (test), uten å bruke opp hilsenen
+set -e
+F=/var/lib/skjold/velkomst.json
+install -d -m 755 /var/lib/skjold
+case "$1" in
+  --status) [ -f "$F" ] && cat "$F" || echo '{"aktiv": false}'; exit 0 ;;
+  --av)     rm -f "$F"; echo "Velkomst deaktivert."; exit 0 ;;
+  --vis)    [ -f "$F" ] || { echo "Ingen velkomst er aktivert."; exit 1; }
+            systemctl kill -s USR1 skjold-ui; echo "Viser velkomst på skjermen."; exit 0 ;;
+esac
+TITLE="${1:-Gratulerer med dagen}"; NAME="${2:-Pappa}"
+python3 - "$F" "$TITLE" "$NAME" << 'PY'
+import json, sys
+f, title, name = sys.argv[1:4]
+json.dump({"aktiv": True, "tittel": title, "navn": name, "hint": "Trykk en knapp for å starte"}, open(f, "w"), ensure_ascii=False)
+PY
+chmod 644 "$F"
+echo "Velkomst aktivert: «$TITLE» / «$NAME»."
+echo "Den vises én gang neste gang Skjold får strøm. Du kan slå av og pakke den ned nå:  sudo poweroff"

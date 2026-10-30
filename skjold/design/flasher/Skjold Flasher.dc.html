@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#1e1e20;color:#f2f2ee;font-family:Sora,-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#d9a441;text-decoration:none}a:hover{color:#f0c46a}
+button,input{font:inherit;color:inherit}
+input::placeholder{color:#55554f}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 16px;box-sizing:border-box">
+  <div style="width:100%;max-width:780px;background:#0f0f10;border:1px solid #2a2a2c;border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden;display:flex;flex-direction:column">
+    <div style="height:40px;display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:1px solid #1f1f21;background:#151516">
+      <div style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></div>
+      <div style="width:12px;height:12px;border-radius:50%;background:#febc2e"></div>
+      <div style="width:12px;height:12px;border-radius:50%;background:#28c840"></div>
+      <div style="flex:1;text-align:center;font-size:12px;color:#8b8b86;margin-right:52px">Skjold Flasher</div>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);min-height:460px">
+      <aside style="border-right:1px solid #1f1f21;padding:24px 20px;display:flex;flex-direction:column;gap:22px;background:#121213">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;align-items:flex-end;gap:2px;height:18px">
+            <div style="width:2.5px;height:9px;background:#f2f2ee;border-radius:2px"></div>
+            <div style="width:2.5px;height:13px;background:#f2f2ee;border-radius:2px"></div>
+            <div style="width:2.5px;height:18px;background:#f2f2ee;border-radius:2px"></div>
+            <div style="width:2.5px;height:13px;background:#f2f2ee;border-radius:2px"></div>
+            <div style="width:2.5px;height:9px;background:#f2f2ee;border-radius:2px"></div>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font-weight:600;font-size:14px;letter-spacing:0.1em">SKJOLD</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b8b86">FLASHER 1.0</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <sc-for list="{{ steps }}" as="st" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:{{ st.bg }}">
+              <div style="width:20px;height:20px;border-radius:50%;border:1px solid {{ st.ring }};display:flex;align-items:center;justify-content:center;font-size:10px;color:{{ st.ring }};flex-shrink:0">{{ st.mark }}</div>
+              <span style="font-size:13px;color:{{ st.fg }}">{{ st.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6a6a65">
+          <span>skjold-s1-2026-10-30.img.xz</span>
+          <span>1,1 GB · SHA-256 verifisert</span>
+        </div>
+      </aside>
+
+      <main style="padding:28px 30px;display:flex;flex-direction:column;gap:18px;min-width:0">
+        <sc-if value="{{ p0 }}" hint-placeholder-val="{{ true }}">
+          <h1 style="margin:0;font-size:22px;font-weight:600">Velg SD-kort</h1>
+          <p style="margin:0;font-size:13px;color:#a9a9a3">Bare flyttbare disker vises. Alt på kortet blir slettet.</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:12px;color:#a9a9a3">Enhet</span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+              <sc-for list="{{ devs }}" as="dv" hint-placeholder-count="3">
+                <button onClick="{{ dv.pick }}" style="display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:10px;border:1px solid {{ dv.bd }};background:{{ dv.bg }};cursor:pointer;text-align:left"><span style="font-size:13px">{{ dv.name }}</span><span style="font-size:11px;color:#8b8b86">{{ dv.sub }}</span></button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ drives }}" as="d" hint-placeholder-count="2">
+              <button onClick="{{ d.pick }}" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;border-radius:10px;border:1px solid {{ d.bd }};background:{{ d.bg }};cursor:pointer;text-align:left">
+                <div style="width:22px;height:28px;border:1.5px solid #8b8b86;border-radius:2px 7px 2px 2px"></div>
+                <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                  <span style="font-size:14px">{{ d.name }}</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86">{{ d.path }}</span>
+                </div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c9c9c4">{{ d.size }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ p1 }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0;font-size:22px;font-weight:600">Forhåndsinnstill</h1>
+          <p style="margin:0;font-size:13px;color:#a9a9a3;text-wrap:pretty">Valgfritt. Fyller du inn dette, kobler forsterkeren seg rett til Wi-Fi ved første oppstart, og oppsettet på telefonen hoppes over.</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:10px;background:#151516;border:1px solid #242426">
+            <span style="font-size:14px">Forhåndsinnstill Wi-Fi og navn</span>
+            <button onClick="{{ togglePre }}" style="width:44px;height:26px;border-radius:999px;border:none;background:{{ preTrk }};position:relative;cursor:pointer;padding:0">
+              <div style="position:absolute;top:3px;left:{{ preKnob }};width:20px;height:20px;border-radius:50%;background:#f2f2ee"></div>
+            </button>
+          </div>
+          <sc-if value="{{ pre }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">Wi-Fi-navn</span><input value="{{ ssid }}" onChange="{{ setSsid }}" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#151516;outline:none"></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">Passord</span><input type="password" value="{{ pw }}" onChange="{{ setPw }}" placeholder="Minst 8 tegn" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#151516;outline:none"></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">Navn / rom</span><input value="{{ name }}" onChange="{{ setName }}" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#151516;outline:none"></label>
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">Språk</span>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <sc-for list="{{ langs }}" as="l" hint-placeholder-count="4">
+                    <button onClick="{{ l.pick }}" style="height:40px;padding:0 10px;border-radius:8px;border:1px solid {{ l.bd }};background:{{ l.bg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ l.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ p2 }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0;font-size:22px;font-weight:600">{{ flashTitle }}</h1>
+          <p style="margin:0;font-size:13px;color:#a9a9a3">{{ flashSub }}</p>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+            <div style="height:8px;border-radius:4px;background:#242426;overflow:hidden"><div style="height:100%;width:{{ pct }};background:#d9a441"></div></div>
+            <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b8b86"><span>{{ pctLabel }}</span><span>{{ eta }}</span></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ p3 }}" hint-placeholder-val="{{ false }}">
+          <div style="width:48px;height:48px;border-radius:50%;border:1.5px solid #d9a441;display:flex;align-items:center;justify-content:center;color:#d9a441;font-size:22px">✓</div>
+          <h1 style="margin:0;font-size:22px;font-weight:600">SD-kortet er klart</h1>
+          <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:14px;color:#c9c9c4;line-height:1.5">
+            <li>Ta ut kortet og sett det i Raspberry Pi-en i forsterkeren.</li>
+            <li>Koble til strøm og slå på hovedbryteren bak.</li>
+            <li>{{ doneHint }}</li>
+          </ol>
+          <a href="Skjold Oppsett.dc.html" style="font-size:13px">Se oppsettet på telefonen</a>
+        </sc-if>
+
+        <div style="margin-top:auto;display:flex;justify-content:flex-end;gap:10px">
+          <sc-if value="{{ canBack }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ back }}" style="height:40px;padding:0 16px;border-radius:8px;border:1px solid #2e2e30;background:transparent;font-size:13px;cursor:pointer">Tilbake</button>
+          </sc-if>
+          <button onClick="{{ next }}" style="height:40px;padding:0 20px;border-radius:8px;border:none;background:{{ nextBg }};color:#0b0b0c;font-size:13px;font-weight:600;cursor:pointer">{{ nextLabel }}</button>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { dev: 0, p: 0, drive: -1, pre: true, ssid: 'Hjemme', pw: '', name: 'Stue', lang: 0, pct: 0, phase: 'write' };
+  DRIVES = [['SanDisk Extreme 32 GB', '/dev/disk4 · USB-kortleser', '31,9 GB'], ['Kingston Canvas Go! 64 GB', '/dev/disk5 · innebygd kortleser', '63,9 GB']];
+  componentWillUnmount() { clearInterval(this.t); }
+  flash() { this.setState({ p: 2, pct: 0, phase: 'write' }); clearInterval(this.t);
+    this.t = setInterval(() => this.setState(s => { let pct = s.pct + (s.phase === 'write' ? 2.2 : 4), phase = s.phase;
+      if (pct >= 100 && phase === 'write') { pct = 0; phase = 'verify'; } else if (pct >= 100) { clearInterval(this.t); return { pct: 100, phase: 'done', p: 3 }; } return { pct, phase }; }), 90); }
+  renderVals() {
+    const S = this.state, A = '#d9a441', sel = b => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#151516' });
+    const steps = ['Velg SD-kort', 'Forhåndsinnstill', 'Skriv og verifiser', 'Ferdig'].map((label, i) => ({ label, mark: i < S.p ? '✓' : String(i + 1), ring: i <= S.p ? A : '#3a3a37', fg: i === S.p ? '#f2f2ee' : i < S.p ? '#c9c9c4' : '#6a6a65', bg: i === S.p ? '#1a1a1b' : 'transparent' }));
+    const drives = this.DRIVES.map(([name, path, size], i) => ({ name, path, size, ...sel(S.drive === i), pick: () => this.setState({ drive: i }) }));
+    const langs = ['Norsk', 'English', 'Svenska', 'Dansk'].map((label, i) => ({ label, ...sel(S.lang === i), pick: () => this.setState({ lang: i }) }));
+    const ok = [S.drive >= 0, !S.pre || (S.ssid.trim() && S.pw.length >= 8 && S.name.trim()), false, true][S.p];
+    const w = S.phase === 'write', mbTotal = 3800, done = Math.round(S.pct / 100 * mbTotal);
+    const DEVS = [['Skjold S1', 'Forsterker · Raspberry Pi 4'], ['Skjold Node · Pi 4', 'Bare lydutgang · 3,5 mm, HDMI, USB eller I²S'], ['Skjold Node · Pi 3B', 'Bare lydutgang · 3,5 mm, HDMI, USB eller I²S']];
+    const devs = DEVS.map(([name, sub], i) => ({ name, sub, ...sel(S.dev === i), pick: () => this.setState({ dev: i }) }));
+    return {
+      devs, drives, langs, p0: S.p === 0, p1: S.p === 1, p2: S.p === 2, p3: S.p === 3,
+      pre: S.pre, togglePre: () => this.setState({ pre: !S.pre }), preTrk: S.pre ? A : '#3a3a37', preKnob: S.pre ? '21px' : '3px',
+      ssid: S.ssid, pw: S.pw, name: S.name, setSsid: e => this.setState({ ssid: e.target.value }), setPw: e => this.setState({ pw: e.target.value }), setName: e => this.setState({ name: e.target.value }),
+      flashTitle: w ? 'Skriver til SD-kortet' : 'Verifiserer', flashSub: w ? 'Ikke ta ut kortet. ' + (S.pre ? 'Wi-Fi og navn legges i skjold-setup.json etterpå.' : '') : 'Leser tilbake og sammenligner med SHA-256.',
+      pct: S.pct + '%', pctLabel: (w ? done + ' / ' + mbTotal + ' MB' : Math.round(S.pct) + ' %'), eta: w ? 'ca. ' + Math.max(1, Math.round((100 - S.pct) / 2.2 * 0.09 * 8)) + ' s igjen' : '',
+      doneHint: S.pre ? '«' + S.name + '» kobler seg til ' + S.ssid + ' av seg selv. Skjermen viser IP-adressen når den er klar.' : 'Skjermen viser en QR-kode. Skann den med telefonen for å sette opp Wi-Fi og navn.',
+      canBack: S.p === 1, back: () => this.setState({ p: 0 }),
+      next: () => { if (!ok && S.p !== 3) return; if (S.p === 0) this.setState({ p: 1 }); else if (S.p === 1) this.flash(); else if (S.p === 3) this.setState({ p: 0, drive: -1, pct: 0, phase: 'write' }); },
+      nextLabel: ['Neste', 'Skriv til kortet', 'Skriver …', 'Flash et kort til'][S.p], nextBg: ok || S.p === 3 ? A : '#3a3a37'
+    };
+  }
+}
+</script>
+</body>
+</html>

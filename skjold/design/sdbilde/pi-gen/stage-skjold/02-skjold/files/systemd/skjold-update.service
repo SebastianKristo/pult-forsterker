@@ -1,0 +1,10 @@
+[Unit]
+Description=Skjold S1 – Programvareoppdatering
+After=network.target sound.target
+
+[Service]
+ExecStart=/opt/skjold/venv/bin/python -m skjold.update
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

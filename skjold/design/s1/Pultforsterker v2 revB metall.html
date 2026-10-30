@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<title>Skjold S1 – CNC og platemetall</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js",
+    "three/addons/loaders/STLLoader.js": "https://unpkg.com/three@0.184.0/examples/jsm/loaders/STLLoader.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+  html,body{margin:0;height:100%;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;color:#1d1d1c}
+  three-d-stage:not(:defined){visibility:hidden}
+  three-d-stage{display:block;width:100vw;height:100vh}
+  #panel{position:fixed;top:16px;left:16px;width:264px;max-height:calc(100vh - 32px);overflow-y:auto;overflow-x:hidden;box-sizing:border-box;background:rgba(255,255,255,.88);backdrop-filter:blur(8px);border:1px solid rgba(20,20,19,.12);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;font-size:12px;z-index:5}
+  #panel h1{font-size:13px;margin:0;font-weight:600}
+  .sub{font-size:10px;color:#6b6a66;margin-top:-8px}
+  .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b6a66;margin-bottom:6px}
+  .row{display:flex;gap:6px;flex-wrap:wrap}
+  .row button{flex:1;appearance:none;border:1px solid rgba(20,20,19,.18);background:#fff;border-radius:6px;padding:6px 8px;font:inherit;font-size:11px;cursor:pointer;color:#1d1d1c;white-space:nowrap}
+  .row button.on{background:#1d1d1f;color:#fff;border-color:#1d1d1f}
+  .row button{border-radius:980px!important;padding:6px 10px!important}
+  ul{margin:0;padding-left:16px;line-height:1.5;color:#3a3936;text-wrap:pretty}
+  .dl{display:flex;flex-direction:column;gap:4px}
+  a{color:#1d1d1c;font-size:11px} a:hover{color:#000}
+</style>
+</head>
+<body>
+<script id="cleanMode">if(/[?&]clean/.test(location.search)){document.documentElement.classList.add("clean");}</script><style>.clean #panel,.clean #tip{display:none!important}</style>
+<three-d-stage name="pultforsterker_revb_metall" background="#e9e9ec"></three-d-stage>
+<div id="panel">
+  <h1>Skjold S1 · rev C · 190 mm</h1>
+  <div class="sub">190 × 160 × 48 mm · USB-C stablet bak · frontplate printes</div>
+  <div style="display:none"><div class="lbl">Form (CNC / platemetall)</div><div class="row"><button data-form="rund">Avrundet R9</button><button data-form="rett">Rette kanter</button></div></div>
+  <div style="display:none"><div class="lbl">Overflate (JLC) · <span id="surfInfo" style="text-transform:none;letter-spacing:0"></span></div><div class="row" id="surfs"></div><div class="row" id="cols" style="margin-top:8px;gap:6px"></div></div>
+  <div style="display:none"><div class="lbl">Kasse</div><div class="row"><button data-v="print">Print (gml. 215)</button><button data-v="cnc">CNC</button><button data-v="plate">Platemetall</button></div></div>
+  <div style="display:none"><div class="lbl">Montering</div><div class="row"><button data-l="fritt">Frittstående</button><button data-l="pult">Pultfeste (printet brakett)</button></div></div>
+  <div style="display:none"><div class="lbl">Skjermglass (akryl 2 mm)</div><div class="row"><button data-ac="royk">Røyksort</button><button data-ac="klar">Klar</button></div></div>
+  <div style="display:none"><div class="lbl">Frontplate materiale <span id="fcolName" style="text-transform:none;letter-spacing:0"></span></div><div class="row"><button data-fm="print">Print PETG khaki</button><button data-fm="alu">Alu eloksert</button></div><div class="row" id="fcolRow" style="margin-top:8px;gap:6px"></div></div>
+  <div style="display:none"><div class="lbl">Frontplate (print)</div><div class="row"><button data-f="oled">OLED</button><button data-f="tft">TFT</button></div></div>
+  <div><div class="lbl">Valgt utførelse</div><ul style="margin:0;padding-left:16px;line-height:1.6">
+    <li>Platemetall 1,5 mm alu 5052, avrundet R9</li>
+    <li>Perleblåst + eloksert, sort</li>
+    <li>Frontplate alu 3 mm, eloksert champagne</li>
+    <li>OLED 2,42″ bak røyksort akryl 2 mm</li>
+    <li>Frittstående, gummiføtter</li></ul></div>
+  <div><div class="lbl">Bruk · klikk knappene · hold AirPlay·BT = paring · scroll volum</div><div class="row" id="inputs"></div>
+    <div class="row" style="margin-top:6px"><button id="pwr">På</button><button id="mute">Mute</button><button id="main">Hovedbryter på</button><button id="welcome" title="Som: sudo skjold-velkomst &quot;Gratulerer med dagen&quot; &quot;Pappa&quot;, deretter strøm på">Velkomst (SSH) + strøm på</button></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="range" id="vol" min="0" max="100" style="flex:1;accent-color:#1d1d1c"><span id="volv" style="width:30px;text-align:right;font-variant-numeric:tabular-nums">42</span></div></div>
+  <div><div class="lbl">Visning</div><div class="row"><button id="open">Åpne lokk</button><button id="explode">Sprengt</button></div><div class="row" style="margin-top:6px"><button id="xray">Gjennomsiktig</button><button id="flip">Vis undersiden</button></div></div>
+  <div><div class="lbl" id="specT">Spesifikasjon</div><ul id="spec"></ul></div>
+  <div><div class="lbl">Filer</div><div class="dl" id="files"></div></div>
+</div>
+<div id="tip" style="position:fixed;display:none;pointer-events:none;z-index:9;background:#1d1d1c;color:#fff;font-size:11px;padding:5px 8px;border-radius:5px;max-width:260px"></div>
+<script src="three-d-stage.js"></script>
+<script type="module" src="pultforsterker_revb_metall.js"></script>
+</body>
+</html>

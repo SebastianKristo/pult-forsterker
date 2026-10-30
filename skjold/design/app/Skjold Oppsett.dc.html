@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0b0c;color:#f2f2ee;font-family:Sora,-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#d9a441;text-decoration:none}a:hover{color:#f0c46a}
+button,input{font:inherit;color:inherit}
+input::placeholder{color:#55554f}
+</style>
+</helmet>
+<div style="min-height:100vh;box-sizing:border-box;display:flex;justify-content:center;align-items:{{ shellAlign }};gap:56px;padding:{{ shellPad }}">
+<sc-if value="{{ wide }}" hint-placeholder-val="{{ false }}">
+  <aside style="flex:0 0 280px;display:flex;flex-direction:column;gap:28px;padding-top:8px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:flex;align-items:flex-end;gap:2px;height:22px">
+        <div style="width:3px;height:11px;background:#f2f2ee;border-radius:2px"></div>
+        <div style="width:3px;height:16px;background:#f2f2ee;border-radius:2px"></div>
+        <div style="width:3px;height:21px;background:#f2f2ee;border-radius:2px"></div>
+        <div style="width:3px;height:16px;background:#f2f2ee;border-radius:2px"></div>
+        <div style="width:3px;height:11px;background:#f2f2ee;border-radius:2px"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:17px">Oppsett av Skjold S1</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86">skjold-oppsett.local</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ railSteps }}" as="rs" hint-placeholder-count="8">
+        <div style="display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:center;height:42px;padding:0 10px;border-radius:10px;background:{{ rs.bg }}">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid {{ rs.bd }};background:{{ rs.dotBg }};color:{{ rs.dotFg }};display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;box-sizing:border-box">{{ rs.mark }}</span>
+          <span style="font-size:14px;color:{{ rs.fg }}">{{ rs.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <span style="font-size:12px;color:#8b8b86;line-height:1.55;text-wrap:pretty">Skjermen på forsterkeren viser samme steg som her. Du kan bytte mellom telefon og PC underveis.</span>
+  </aside>
+</sc-if>
+<div style="flex:1 1 auto;max-width:{{ colMax }};min-height:{{ colMinH }};padding:{{ colPad }};box-sizing:border-box;display:flex;flex-direction:column;gap:22px;background:{{ colBg }};border:1px solid {{ colBd }};border-radius:24px">
+
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:flex-end;gap:2px;height:16px">
+        <div style="width:2.5px;height:8px;background:#f2f2ee;border-radius:2px"></div>
+        <div style="width:2.5px;height:12px;background:#f2f2ee;border-radius:2px"></div>
+        <div style="width:2.5px;height:16px;background:#f2f2ee;border-radius:2px"></div>
+        <div style="width:2.5px;height:12px;background:#f2f2ee;border-radius:2px"></div>
+        <div style="width:2.5px;height:8px;background:#f2f2ee;border-radius:2px"></div>
+      </div>
+      <span style="font-weight:600;font-size:14px;letter-spacing:0.1em">SKJOLD</span>
+    </div>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86">{{ stepLabel }}</span>
+  </header>
+
+  <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px">
+    <sc-for list="{{ dots }}" as="d" hint-placeholder-count="6">
+      <div style="height:3px;border-radius:2px;background:{{ d.c }}"></div>
+    </sc-for>
+  </div>
+
+  <main style="flex:1;display:flex;flex-direction:column;gap:18px">
+
+    <sc-if value="{{ s0 }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:14px;padding-top:24px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;color:#8b8b86">FANT SKJOLD S1 · SKJ-S1-0001</div>
+        <h1 style="margin:0;font-size:32px;font-weight:600;line-height:1.1;text-wrap:pretty">Velkommen til Skjold</h1>
+        <p style="margin:0;font-size:15px;line-height:1.55;color:#a9a9a3;text-wrap:pretty">Vi kobler forsterkeren til Wi-Fi, gir den et navn og tester høyttalerne. Det tar rundt to minutter. Skjermen på forsterkeren viser hvor langt du har kommet.</p>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ s1 }}" hint-placeholder-val="{{ false }}">
+      <h1 style="margin:0;font-size:26px;font-weight:600">Velg språk</h1>
+      <p style="margin:0;font-size:14px;color:#a9a9a3">Brukes på skjermen og for talebeskjeder.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ langs }}" as="l" hint-placeholder-count="4">
+          <button onClick="{{ l.pick }}" style="display:flex;justify-content:space-between;align-items:center;min-height:52px;padding:0 16px;border-radius:12px;border:1px solid {{ l.bd }};background:{{ l.bg }};font-size:15px;cursor:pointer;text-align:left">
+            <span>{{ l.label }}</span><span style="color:#d9a441">{{ l.mark }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ s2 }}" hint-placeholder-val="{{ false }}">
+      <h1 style="margin:0;font-size:26px;font-weight:600">Koble til Wi-Fi</h1>
+      <p style="margin:0;font-size:14px;color:#a9a9a3">Velg nettet hjemme. Forsterkeren bytter fra oppsettnettet når den er koblet til.</p>
+      <div style="display:flex;flex-direction:column;background:#141415;border:1px solid #242426;border-radius:12px">
+        <sc-for list="{{ nets }}" as="n" hint-placeholder-count="4">
+          <button onClick="{{ n.pick }}" style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;min-height:52px;padding:0 16px;border:none;border-top:1px solid {{ n.line }};background:{{ n.bg }};cursor:pointer;text-align:left">
+            <span style="font-size:15px">{{ n.ssid }}</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86">{{ n.sec }}</span>
+            <div style="display:flex;align-items:flex-end;gap:2px;height:12px">
+              <div style="width:3px;height:4px;border-radius:1px;background:{{ n.b1 }}"></div>
+              <div style="width:3px;height:8px;border-radius:1px;background:{{ n.b2 }}"></div>
+              <div style="width:3px;height:12px;border-radius:1px;background:{{ n.b3 }}"></div>
+            </div>
+          </button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ netPicked }}" hint-placeholder-val="{{ false }}">
+        <label style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:13px;color:#a9a9a3">Passord for {{ netName }}</span>
+          <input type="password" value="{{ pw }}" onChange="{{ setPw }}" placeholder="Wi-Fi-passord" style="height:50px;padding:0 14px;border-radius:12px;border:1px solid #2e2e30;background:#141415;font-size:16px;outline:none">
+        </label>
+      </sc-if>
+      <sc-if value="{{ wifiBusy }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:14px;color:#d9a441">Kobler til {{ netName }} …</div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ s3 }}" hint-placeholder-val="{{ false }}">
+      <h1 style="margin:0;font-size:26px;font-weight:600">Hvor står den?</h1>
+      <p style="margin:0;font-size:14px;color:#a9a9a3">Navnet vises i AirPlay, Blåtann og Lyrion.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="6">
+          <button onClick="{{ r.pick }}" style="height:42px;padding:0 16px;border-radius:999px;border:1px solid {{ r.bd }};background:{{ r.bg }};color:{{ r.fg }};font-size:14px;cursor:pointer;white-space:nowrap">{{ r.label }}</button>
+        </sc-for>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-size:13px;color:#a9a9a3">Eller skriv et eget navn</span>
+        <input value="{{ name }}" onChange="{{ setName }}" style="height:50px;padding:0 14px;border-radius:12px;border:1px solid #2e2e30;background:#141415;font-size:16px;outline:none">
+      </label>
+    </sc-if>
+
+    <sc-if value="{{ s4 }}" hint-placeholder-val="{{ false }}">
+      <h1 style="margin:0;font-size:26px;font-weight:600">Test høyttalerne</h1>
+      <p style="margin:0;font-size:14px;color:#a9a9a3;text-wrap:pretty">Trykk på en side. Du skal høre en stemme fra den høyttaleren. Bytt ledningene på polene bak hvis lyden kommer fra feil side.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <sc-for list="{{ sides }}" as="sd" hint-placeholder-count="2">
+          <button onClick="{{ sd.pick }}" style="aspect-ratio:1/1.1;border-radius:16px;border:1px solid {{ sd.bd }};background:{{ sd.bg }};cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+            <span style="font-size:44px;font-weight:300;line-height:1">{{ sd.k }}</span>
+            <span style="font-size:13px;color:{{ sd.fg }}">{{ sd.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <button onClick="{{ skipTest }}" style="align-self:flex-start;border:none;background:none;color:#d9a441;font-size:14px;cursor:pointer;padding:4px 0">Hopp over høyttalertest</button>
+      <sc-if value="{{ testedBoth }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:8px">
+          <button onClick="{{ swapNo }}" style="flex:1;height:46px;border-radius:12px;border:1px solid {{ okBd }};background:#141415;font-size:14px;cursor:pointer">Riktig side</button>
+          <button onClick="{{ swapYes }}" style="flex:1;height:46px;border-radius:12px;border:1px solid {{ swBd }};background:#141415;font-size:14px;cursor:pointer">Feil side – bytt i programvaren</button>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ s5 }}" hint-placeholder-val="{{ false }}">
+      <h1 style="margin:0;font-size:26px;font-weight:600">Lyrion</h1>
+      <p style="margin:0;font-size:14px;color:#a9a9a3;text-wrap:pretty">Lyrion styrer radio og favoritter. Du kan bruke serveren som er innebygd i forsterkeren, eller en du har fra før.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ servers }}" as="sv" hint-placeholder-count="2">
+          <button onClick="{{ sv.pick }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 16px;border-radius:12px;border:1px solid {{ sv.bd }};background:{{ sv.bg }};cursor:pointer;text-align:left">
+            <span style="font-size:15px">{{ sv.label }}</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86">{{ sv.sub }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ s6 }}" hint-placeholder-val="{{ false }}">
+      <h1 style="margin:0;font-size:26px;font-weight:600">Programvare</h1>
+      <p style="margin:0;font-size:14px;color:#a9a9a3">{{ updText }}</p>
+      <div style="height:6px;border-radius:3px;background:#242426;overflow:hidden">
+        <div style="height:100%;width:{{ updPct }};background:#d9a441;transition:width .25s"></div>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b8b86">1.4.1 → 1.4.2</div>
+    </sc-if>
+
+    <sc-if value="{{ s7 }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:14px;padding-top:24px">
+        <div style="width:52px;height:52px;border-radius:50%;border:1.5px solid #d9a441;display:flex;align-items:center;justify-content:center;color:#d9a441;font-size:24px">✓</div>
+        <h1 style="margin:0;font-size:30px;font-weight:600;line-height:1.1">{{ name }} er klar</h1>
+        <p style="margin:0;font-size:15px;line-height:1.55;color:#a9a9a3;text-wrap:pretty">Velg «{{ name }}» i AirPlay, eller trykk på radioknappen. Innstillinger finner du på adressen under, eller ved å holde volumknappen inne i 3 sekunder.</p>
+        <div style="padding:14px 16px;border-radius:12px;background:#141415;border:1px solid #242426;display:flex;flex-direction:column;gap:6px">
+          <a href="Skjold S1 Web.dc.html" style="font-family:'IBM Plex Mono',monospace;font-size:14px">http://{{ host }}.local</a>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b8b86">192.168.1.42</span>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+
+  <div style="display:flex;gap:10px">
+    <sc-if value="{{ canBack }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ back }}" style="height:52px;padding:0 20px;border-radius:14px;border:1px solid #2e2e30;background:transparent;font-size:15px;cursor:pointer">Tilbake</button>
+    </sc-if>
+    <button onClick="{{ next }}" style="flex:1;height:52px;border-radius:14px;border:none;background:{{ nextBg }};color:#0b0b0c;font-size:15px;font-weight:600;cursor:pointer">{{ nextLabel }}</button>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { step: 0, lang: 0, net: -1, pw: '', wifiBusy: false, room: 0, name: 'Stue', tested: {}, swap: null, server: 0, upd: 0 };
+  componentDidMount() { this.onRs = () => this.setState({ vw: window.innerWidth }); window.addEventListener('resize', this.onRs); this.onRs(); this.bc = 'BroadcastChannel' in window ? new BroadcastChannel('skjold-s1') : null; this.post({ type: 'setup', step: 0 }); }
+  componentWillUnmount() { window.removeEventListener('resize', this.onRs); clearInterval(this.updI); clearTimeout(this.wT); if (this.bc) this.bc.close(); }
+  post(m) { if (this.bc) this.bc.postMessage(m); }
+  go(step) { this.setState({ step }); this.post({ type: 'setup', step, name: this.state.name, ssid: this.state.net >= 0 ? this.NETS[this.state.net][0] : '' });
+    if (step === 6 && this.state.upd < 100) { clearInterval(this.updI); this.updI = setInterval(() => this.setState(s => { const u = Math.min(100, s.upd + 4); if (u >= 100) clearInterval(this.updI); this.post({ type: 'setup', step: 6, upd: u }); return { upd: u }; }), 120); } }
+  NETS = [['Hjemme', 'WPA2', 3], ['Hjemme-5G', 'WPA3', 3], ['Telenor-8F2A', 'WPA2', 2], ['Naboen', 'WPA2', 1]];
+  ROOMS = ['Stue', 'Kontor', 'Soverom', 'Kjøkken', 'Verksted', 'Skjold S1'];
+  renderVals() { const S = this.state, A = '#d9a441', b = this.baseVals(), wide = (S.vw || 1200) >= 900;
+    const STEPS = ['Velkommen', 'Språk', 'Wi-Fi', 'Navn og rom', 'Test høyttalerne', 'Musikkserver', 'Oppdatering', 'Ferdig'];
+    const railSteps = STEPS.map((label, i) => { const done = i < S.step, cur = i === S.step; return { label, mark: done ? '✓' : String(i + 1), bg: cur ? '#1c170d' : 'transparent', fg: cur ? '#f0c46a' : done ? '#c9c9c4' : '#6a6a65', bd: done || cur ? A : '#2e2e30', dotBg: done ? A : 'transparent', dotFg: done ? '#0b0b0c' : cur ? '#f0c46a' : '#6a6a65' }; });
+    return { ...b, wide, railSteps, shellAlign: wide ? 'center' : 'stretch', shellPad: wide ? '48px 40px' : '0', colMax: wide ? '600px' : '440px', colMinH: wide ? '640px' : '100vh', colPad: wide ? '36px 40px' : '20px 20px 28px', colBg: wide ? '#111112' : 'transparent', colBd: wide ? '#242426' : 'transparent' }; }
+  baseVals() {
+    const S = this.state, A = '#d9a441', sel = b => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
+    const dots = [1, 2, 3, 4, 5, 6].map(i => ({ c: i <= S.step ? A : '#2a2a28' }));
+    const langs = ['Norsk', 'English', 'Svenska', 'Dansk'].map((label, i) => ({ label, mark: S.lang === i ? '✓' : '', ...sel(S.lang === i), pick: () => { this.setState({ lang: i }); this.post({ type: 'set', k: 'lang', v: i }); } }));
+    const nets = this.NETS.map(([ssid, sec, q], i) => ({ ssid, sec, line: i ? '#242426' : 'transparent', bg: S.net === i ? '#1c170d' : 'transparent', b1: '#f2f2ee', b2: q > 1 ? '#f2f2ee' : '#3a3a37', b3: q > 2 ? '#f2f2ee' : '#3a3a37', pick: () => this.setState({ net: i, pw: '' }) }));
+    const rooms = this.ROOMS.map(label => ({ label, ...sel(S.name === label), pick: () => this.setState({ name: label }) }));
+    const sides = [['L', 'Venstre'], ['R', 'Høyre']].map(([k, label]) => { const t = S.tested[k]; return { k, label: t ? 'Spilt av · trykk igjen' : label, ...sel(t), pick: () => { this.setState(s => ({ tested: { ...s.tested, [k]: true } })); this.post({ type: 'setupTest', ch: k }); } }; });
+    const servers = [['Innebygd i forsterkeren', 'Anbefalt · kjører på Raspberry Pi'], ['Lyrion på NAS (192.168.1.10)', 'Funnet på nettverket · v9.0.0']].map(([label, sub], i) => ({ label, sub, ...sel(S.server === i), pick: () => this.setState({ server: i }) }));
+    const canNext = [true, true, S.net >= 0 && S.pw.length >= 8 && !S.wifiBusy, S.name.trim().length > 0, !!((S.tested.L && S.tested.R && S.swap !== null) || S.skipped), true, S.upd >= 100, true][S.step];
+    const labels = ['Start oppsett', 'Neste', S.wifiBusy ? 'Kobler til …' : 'Koble til', 'Neste', 'Neste', 'Neste', S.upd >= 100 ? 'Neste' : 'Oppdaterer …', 'Åpne innstillinger'];
+    const next = () => {
+      if (!canNext) return;
+      if (S.step === 2) { this.setState({ wifiBusy: true }); this.post({ type: 'setup', step: 2, connecting: true, ssid: this.NETS[S.net][0] }); this.wT = setTimeout(() => { this.setState({ wifiBusy: false }); this.go(3); }, 1800); return; }
+      if (S.step === 3) this.post({ type: 'set', k: 'name', v: Math.max(0, ['Skjold S1', 'Stue', 'Kontor', 'Soverom'].indexOf(S.name)) });
+      if (S.step === 7) { this.post({ type: 'setup', step: 8 }); location.href = 'Skjold S1 Web.dc.html'; return; }
+      this.go(S.step + 1);
+    };
+    return {
+      stepLabel: S.step === 0 ? 'OPPSETT' : S.step === 7 ? 'FERDIG' : 'STEG ' + S.step + ' AV 6', dots,
+      s0: S.step === 0, s1: S.step === 1, s2: S.step === 2, s3: S.step === 3, s4: S.step === 4, s5: S.step === 5, s6: S.step === 6, s7: S.step === 7,
+      langs, nets, netPicked: S.net >= 0 && !S.wifiBusy, netName: S.net >= 0 ? this.NETS[S.net][0] : '', pw: S.pw, setPw: e => this.setState({ pw: e.target.value }), wifiBusy: S.wifiBusy,
+      rooms, name: S.name, setName: e => this.setState({ name: e.target.value }), host: S.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'skjold',
+      sides, testedBoth: !!(S.tested.L && S.tested.R), swapNo: () => this.setState({ swap: false }), swapYes: () => this.setState({ swap: true }), okBd: S.swap === false ? A : '#2e2e30', swBd: S.swap === true ? A : '#2e2e30',
+      skipTest: () => { this.setState({ skipped: true }); this.go(5); }, servers, updPct: S.upd + '%', updText: S.upd >= 100 ? 'Forsterkeren har siste versjon.' : 'Laster ned og installerer siste versjon. Ikke slå av forsterkeren.',
+      canBack: S.step > 0 && S.step < 7 && !S.wifiBusy, back: () => this.go(S.step - 1), next, nextLabel: labels[S.step], nextBg: canNext ? A : '#3a3a37'
+    };
+  }
+}
+</script>
+</body>
+</html>

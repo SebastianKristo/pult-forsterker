@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="site/skjold_site_data.js"></script>
+</helmet>
+<section id="interesse" data-screen-label="Interest" style="padding:110px 22px;background:#f5f4f0;color:#1d1d1b;font-family:'IBM Plex Sans',system-ui,sans-serif">
+  <div style="max-width:640px;margin:0 auto">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.1em;color:#7a776d">{{ c.k }}</div>
+    <h2 style="margin:12px 0 0;font-family:Sora,sans-serif;font-weight:600;font-size:clamp(34px,5vw,56px);line-height:1.05;letter-spacing:-.02em">{{ c.h }}</h2>
+    <p style="margin:16px 0 0;font-size:18px;line-height:1.5;color:#55534c;text-wrap:pretty">{{ c.p }}</p>
+    <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top:34px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#7a776d">{{ c.name }}<input value="{{ name }}" onChange="{{ onName }}" autocomplete="name" style="height:48px;border-radius:12px;border:1px solid #d9d6cc;background:#fff;padding:0 14px;font:inherit;font-size:16px;color:#1d1d1b;outline:none"></label>
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#7a776d">{{ c.email }}<input type="email" value="{{ email }}" onChange="{{ onEmail }}" autocomplete="email" style="height:48px;border-radius:12px;border:1px solid #d9d6cc;background:#fff;padding:0 14px;font:inherit;font-size:16px;color:#1d1d1b;outline:none"></label>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#7a776d">{{ c.which }}
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <sc-for list="{{ prodOpts }}" as="o" hint-placeholder-count="3"><div onClick="{{ o.pick }}" style="padding:10px 18px;border-radius:99px;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-size:15px;cursor:pointer;white-space:nowrap">{{ o.label }}</div></sc-for>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <sc-for list="{{ kindOpts }}" as="o" hint-placeholder-count="2"><div onClick="{{ o.pick }}" style="padding:10px 18px;border-radius:99px;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-size:15px;cursor:pointer;white-space:nowrap">{{ o.label }}</div></sc-for>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#7a776d">{{ c.msg }}<textarea value="{{ msg }}" onChange="{{ onMsg }}" rows="3" style="border-radius:12px;border:1px solid #d9d6cc;background:#fff;padding:12px 14px;font:inherit;font-size:16px;color:#1d1d1b;outline:none;resize:vertical"></textarea></label>
+        <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#b4442f">{{ errTxt }}</div></sc-if>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:4px">
+          <div onClick="{{ submit }}" style="padding:13px 26px;border-radius:99px;background:#1d1d1b;color:#fff;font-size:16px;font-weight:500;cursor:pointer;white-space:nowrap;opacity:{{ btnOp }}">{{ btnTxt }}</div>
+          <div style="font-size:13px;color:#7a776d">{{ c.privacy }}</div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:34px;padding:26px;border-radius:20px;background:#fff;display:flex;align-items:center;gap:16px">
+        <div style="width:44px;height:44px;border-radius:22px;background:#1d1d1b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none">✓</div>
+        <div style="font-family:Sora,sans-serif;font-size:20px;font-weight:600">{{ c.thanks }}</div>
+      </div>
+    </sc-if>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;760px&quot;},&quot;product&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;S1&quot;,&quot;Node&quot;,&quot;Begge&quot;],&quot;default&quot;:&quot;S1&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;endpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;/api/interesse&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state={l:'no',name:'',email:'',prod:null,kind:'done',msg:'',status:'idle'};
+  componentDidMount(){ const go=()=>{ if(!window.SKJOLD_SITE){ this.to=setTimeout(go,50); return; } this.setState({l:window.SKJOLD_SITE.lang(),prod:this.state.prod||this.props.product||'S1'}); }; go(); this.onL=()=>this.setState({l:window.SKJOLD_SITE.lang()}); window.addEventListener('skjold-lang',this.onL); }
+  componentWillUnmount(){ clearTimeout(this.to); window.removeEventListener('skjold-lang',this.onL); }
+  async submit(){ const s=this.state; if(s.status==='sending') return;
+    if(!s.name.trim()||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.email.trim())){ this.setState({status:'bad'}); return; }
+    this.setState({status:'sending'});
+    const body={navn:s.name.trim(),epost:s.email.trim(),produkt:s.prod,type:s.kind,melding:s.msg.trim(),spraak:s.l,side:location.pathname,tid:new Date().toISOString()};
+    try{ const r=await fetch(this.props.endpoint||'/api/interesse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!r.ok) throw 0; this.setState({status:'sent'}); }
+    catch(e){ this.setState({status:'err'}); } }
+  renderVals(){ const S=window.SKJOLD_SITE; if(!S) return {showForm:true,sent:false}; const l=this.state.l, c=S.tr(S.interest,l), st=this.state;
+    const opt=(v,label,cur,key)=>{ const on=v===cur; return {label,bd:on?'#1d1d1b':'#d9d6cc',bg:on?'#1d1d1b':'#fff',fg:on?'#fff':'#1d1d1b',pick:()=>this.setState({[key]:v})}; };
+    return { c, name:st.name, email:st.email, msg:st.msg,
+      onName:e=>this.setState({name:e.target.value,status:st.status==='bad'?'idle':st.status}), onEmail:e=>this.setState({email:e.target.value,status:st.status==='bad'?'idle':st.status}), onMsg:e=>this.setState({msg:e.target.value}),
+      prodOpts:[opt('S1','Skjold S1',st.prod,'prod'),opt('Node','Skjold Node',st.prod,'prod'),opt('Begge',c.both,st.prod,'prod')],
+      kindOpts:[opt('done',c.done,st.kind,'kind'),opt('kit',c.kit,st.kind,'kind')],
+      showForm:st.status!=='sent', sent:st.status==='sent', hasErr:st.status==='err'||st.status==='bad', errTxt:st.status==='bad'?c.bad:c.err,
+      btnTxt:st.status==='sending'?c.sending:c.send, btnOp:st.status==='sending'?'0.6':'1', submit:()=>this.submit() }; }
+}
+</script>
+</body>
+</html>
