@@ -356,7 +356,46 @@ def _via_in_overlap(frags, minor, main):
                 p = _free_point2(poly, board)
                 if p is not None: return p
     return None
-n_bridge = 0
+def _seg_clear(layer, a, b_, w):
+    """Kan et GND-spor (bredde w) gå fra a til b_ på laget uten å komme nær andre nett?"""
+    seg = pcbnew.SEG(a, b_); hw = pcbnew.FromMM(w / 2); cl = pcbnew.FromMM(0.16)
+    for t in board.GetTracks():
+        if t.GetNetname() == "GND": continue
+        if t.GetClass() == "PCB_VIA":
+            if seg.Distance(t.GetPosition()) < t.GetWidth() // 2 + hw + cl: return False
+        elif t.GetLayer() == layer and seg.Distance(pcbnew.SEG(t.GetStart(), t.GetEnd())) < t.GetWidth() // 2 + hw + cl: return False
+    shp = pcbnew.SHAPE_SEGMENT(a, b_, 2 * hw)
+    for fp in board.GetFootprints():
+        for pd in fp.Pads():
+            if pd.GetNetname() == "GND": continue
+            if (pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH or pd.IsOnLayer(layer)) and pd.GetEffectiveShape(layer).Collide(shp, cl): return False
+    return True
+def _track_bridge(frags, minor, main):
+    """Kort GND-spor fra en isolert del til hovedplanet på samme lag (prøver nærmeste punktpar på omrissene)."""
+    cands = []
+    for i in minor:
+        li, pi = frags[i]
+        for j in main:
+            lj, pj = frags[j]
+            if lj != li: continue
+            if pi.BBox().GetSizeMax() and pi.BBox().Distance(pj.BBox()) > pcbnew.FromMM(8): continue
+            oi, oj = pi.Outline(0), pj.Outline(0)
+            for a in range(oi.PointCount()):
+                pa = oi.CPoint(a)
+                for c in range(oj.PointCount()):
+                    pc = oj.CPoint(c); d = (pa - pc).EuclideanNorm()
+                    if d < pcbnew.FromMM(8): cands.append((d, li, pcbnew.VECTOR2I(pa), pcbnew.VECTOR2I(pc)))
+    cands.sort(key=lambda x: x[0])
+    for d, layer, pa, pc in cands[:400]:
+        # trekk endene 0,3 mm inn i hvert kobberfelt så sporet garantert overlapper
+        v = pc - pa; n = v.EuclideanNorm() or 1
+        ia = pcbnew.VECTOR2I(int(pa.x - v.x * 300000 / n), int(pa.y - v.y * 300000 / n)); ic = pcbnew.VECTOR2I(int(pc.x + v.x * 300000 / n), int(pc.y + v.y * 300000 / n))
+        for w in (0.3, 0.2):
+            if _seg_clear(layer, ia, ic, w):
+                tr = pcbnew.PCB_TRACK(board); tr.SetStart(ia); tr.SetEnd(ic); tr.SetWidth(pcbnew.FromMM(w)); tr.SetLayer(layer); tr.SetNet(gnd_net); board.Add(tr)
+                return True
+    return False
+n_bridge = 0; n_tbridge = 0
 for _ in range(40):
     frags, comps = _gnd_components()
     if len(comps) <= 1: break
@@ -365,6 +404,11 @@ for _ in range(40):
         p = _via_in_overlap(frags, minor, comps[0])
         if p is not None: break
     if p is None:
+        done_t = False
+        for minor in comps[1:]:
+            if _track_bridge(frags, minor, comps[0]): done_t = True; break
+        if done_t:
+            n_tbridge += 1; filler.Fill(board.Zones()); continue
         # Rest-deler uten GND-pads er bare kobberrester: fjern de (ulåste) stitching-viaene i dem, så KiCad fjerner øyene ved fylling
         smd_gnd = [pd.GetPosition() for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() == "GND"]
         dropped = 0; stuck = []
@@ -387,7 +431,7 @@ for _ in range(40):
 else:
     print("FEIL: jordplanet fortsatt delt etter 40 bro-vias")
 n_stitch += n_bridge
-print("bro-vias mellom jordplan-deler:", n_bridge, "-> deler:", len(_gnd_components()[1]))
+print("bro-vias mellom jordplan-deler:", n_bridge, "bro-spor:", n_tbridge, "-> deler:", len(_gnd_components()[1]))
 print("stitching-vias:", n_stitch)
 _rest = sorted(_island_gnd_pads(board))
 if _rest: print("FEIL: GND-pads uten forbindelse til jordplanet:", _rest)

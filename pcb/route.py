@@ -16,12 +16,17 @@ if "--continue" in sys.argv:
     body = ns["ses_to_sexpr"](os.path.join(HERE, "board.ses"), nets)
     # GND-ruting (stubber/vias fra export.py) hopper vi over – de lages på nytt
     # --skip NET,NET: nett som har endret seg siden forrige ruting – rutes på nytt
-    skip = ["GND"] + (sys.argv[sys.argv.index("--skip") + 1].split(",") if "--skip" in sys.argv else [])
+    skip = ([] if "--route-gnd" in sys.argv else ["GND"]) + (sys.argv[sys.argv.index("--skip") + 1].split(",") if "--skip" in sys.argv else [])
     tags = {f"(net {nets[n]})" for n in skip if n in nets}
     body = "\n".join(l for l in body.split("\n") if not any(t in l for t in tags))
     pcb_txt = pcb_txt.rstrip()[:-1] + body + "\n)\n"
     open(PCB, "w").write(pcb_txt)
 board = pcbnew.LoadBoard(PCB)
+if "--route-gnd" in sys.argv:
+    # Uten GND-sonene i DSN-en ruter Freerouting GND som et vanlig nett (spor til hver GND-pad). Sonene kommer tilbake i export.py,
+    # så planet ligger oppå – men ingen GND-pad kan havne på en isolert øy.
+    for z in [zz for zz in board.Zones() if zz.GetNetname() == "GND"]:
+        board.Remove(z)
 pcbnew.ExportSpecctraDSN(board, os.path.join(HERE, "board.dsn"))
 jar = os.environ.get("FREEROUTING", os.path.expanduser("~/freerouting.jar"))
 mp = sys.argv[sys.argv.index("-mp") + 1] if "-mp" in sys.argv else "40"
