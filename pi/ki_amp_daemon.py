@@ -25,6 +25,7 @@ API:
   POST /api/voice {"on":bool} | {"profile":"en"|"no"|"trondersk"} (stemmeprofil for talemeldingene)
   POST /api/level {"source":"airplay|bt|usb|radio|aux|aux2","level":0-100} (nivå per kilde, brukes i miks)
   POST /api/mix {"on":bool} (miks digitale kilder: AirPlay, Bluetooth, USB og Radio kan spille samtidig)
+  GET/POST /api/settings  innstillingsmodellen til app/web (samme nøkler som skjold_settings.js); POST = delvis oppdatering
   POST /api/hp_automute {"on":bool} (demp høyttalerne når hodetelefoner er plugget i fronten; status har "headphones")
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay, jpg/png)
@@ -121,7 +122,8 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "last_wireless": "airplay",   # sist brukte trådløse kilde (airplay/bt) – «BT»-knappen på hovedkortet
          "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
          "overtemp": False,     # NTC på kjøleribben over ~75 °C (MCP GPA7) – TPA3116 dempes til den er under ~50 °C
-         "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100}}   # nivå per kilde (miks)
+         "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100},   # nivå per kilde (miks)
+         "settings": {}}   # innstillingsmodellen fra appen/web (skjold_settings.js) – se SETTINGS_DEF
 LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD == "main" else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
 _pairing_until = 0.0
@@ -592,11 +594,72 @@ def apply_power():
                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+# ---------- innstillinger (app/web, samme nøkler som skjold_settings.js) ----------
+SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "lvlAux": 0, "lvlUsb": 0,
+                "name": 0, "nAux1": "AUX 1", "nAux2": "AUX 2", "nUsb1": "PC 1", "nUsb2": "PC 2", "hold": 2,
+                "voice": True, "lang": 0, "vv": 1, "dim": 1, "off": 1, "clock": True, "clockStyle": 0, "led": 0, "auto": 1, "wake": True,
+                "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [6, 3, 0, 0, 1]), ("radio", 2, [-2, 0, 3, 2, 0]),
+                                                                                     ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [3, 1, -1, -2, -3]))}}
+VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
+SETTINGS_APPLIED = {"voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake"}   # resten lagres og vises, men styrer ingenting ennå
+
+
+def settings():
+    s_ = dict(SETTINGS_DEF); s_["eq"] = {k: dict(v) for k, v in SETTINGS_DEF["eq"].items()}
+    cur = state.get("settings") or {}
+    for k, v in cur.items():
+        if k == "eq" and isinstance(v, dict):
+            for src, prof in v.items():
+                if src in s_["eq"] and isinstance(prof, dict): s_["eq"][src].update(prof)
+        elif k in s_: s_[k] = v
+    return s_
+
+
+def apply_settings(changed_keys=()):
+    s_ = settings()
+    global USBSW_NAMES
+    env_names = _usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):]   # KI_AMP_USBSW_NAMES er standard til brukeren setter navn i appen
+    USBSW_NAMES = [str(s_["nUsb1"] if s_["nUsb1"] != SETTINGS_DEF["nUsb1"] else env_names[0])[:16],
+                   str(s_["nUsb2"] if s_["nUsb2"] != SETTINGS_DEF["nUsb2"] else env_names[1])[:16]]
+    if "voice" in changed_keys: state["voice"] = bool(s_["voice"])
+    if "lang" in changed_keys and LANG_PROFILE.get(int(s_["lang"]) if str(s_["lang"]).isdigit() else -1):
+        state["voice_profile"] = LANG_PROFILE[int(s_["lang"])]
+    vmax = VMAX[int(s_["vmax"])] if str(s_["vmax"]).isdigit() and int(s_["vmax"]) < len(VMAX) else 100
+    if state["volume"] > vmax:
+        state["volume"] = vmax; apply_volume()
+
+
+def update_settings(patch):
+    cur = state.setdefault("settings", {})
+    for k, v in patch.items():
+        if k not in SETTINGS_DEF: continue
+        if k == "eq":
+            if not isinstance(v, dict): continue
+            eq = cur.setdefault("eq", {})
+            for src, prof in v.items():
+                if src in SETTINGS_DEF["eq"] and isinstance(prof, dict):
+                    cl = {kk: prof[kk] for kk in ("preset", "eq", "loud") if kk in prof}
+                    if "eq" in cl and not (isinstance(cl["eq"], list) and len(cl["eq"]) == 5): cl.pop("eq")
+                    eq.setdefault(src, {}).update(cl)
+        else:
+            cur[k] = v
+    apply_settings(set(patch)); changed()
+
+
+async def h_settings_get(_r): return web.json_response({"settings": settings(), "applied": sorted(SETTINGS_APPLIED), "schema_version": 1})
+
+
+async def h_settings_post(r):
+    body = await r.json()
+    if not isinstance(body, dict): return web.json_response({"error": "forventer et objekt med nøkler"}, status=400)
+    update_settings(body); return await h_settings_get(r)
+
+
 def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute")}, fh)
+            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute", "settings")}, fh)
     except Exception:
         pass
 
@@ -1552,7 +1615,10 @@ def main():
     if state.get("voice_profile") not in VOICE_PROFILES:
         state["voice_profile"] = "en"
     threading.Thread(target=voice.warm, daemon=True).start()   # etter load_state: riktig profil
+    apply_settings()   # navn på USB-switch, maksvolum osv. fra lagrede innstillinger
     usbsw.start()
+    if settings()["vstart"] and str(settings()["vstart"]).isdigit() and VSTART[int(settings()["vstart"])]:
+        state["volume"] = VSTART[int(settings()["vstart"])]   # startvolum
     apply_power(); changed()
     threading.Thread(target=follow_source, daemon=True).start()   # auto-kilde (kan slås av) + BT-talemeldinger
     pot = os.environ.get("KI_AMP_POT", "")
@@ -1563,7 +1629,8 @@ def main():
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
-                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute)])
+                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
+                    web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post)])
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
     webdir = os.environ.get("KI_AMP_WEBAPP", "")
     for cand in ([webdir] if webdir else []) + ["/usr/local/share/ki-amp/webapp", os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")]:
