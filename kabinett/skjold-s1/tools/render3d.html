@@ -112,11 +112,12 @@ const BY = BD / 2;
 function cyl(x, z, r, h, mat, hollow = 0) { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 48), mat); c.position.set(x, BY + h / 2, z); scene.add(c);
   if (hollow) { const o = new THREE.Mesh(new THREE.CylinderGeometry(hollow, hollow, h + 0.2, 32), DARK); o.position.set(x, BY + h / 2 + 0.1, z); scene.add(o); } }
 function box(x, z, w, h, d, mat) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, d, h), mat); b.position.set(x, BY + d / 2, z); scene.add(b); }
-[-84, -54].forEach(x => { cyl(x, 24, 5.5, 12, RED, 1.6); }); [-70, -40].forEach(x => { cyl(x, 24, 5.5, 12, BLK, 1.6); });   // høyttalerpoler + / -
-[-26, -14].forEach(x => cyl(x, 24, 4.0, 1.5, NICKEL, 1.8));                                                              // AUX 2 / AUX 1
-[34, 24, 14].forEach(z => box(6, z, 9.6, 3.8, 0.6, DARK));                                                                // USB-C ×3
-box(34, 13.5, 17, 15.6, 0.6, DARK); cyl(34, 34, 5.7, 0.6, DARK); cyl(52, 40, 1.7, 0.4, NICKEL);                            // RJ45, DC, GND
-box(70, 24, 19.4, 13, 0.8, DARK); box(70, 24, 16, 10, 2.2, BTN);                                                           // KCD1 vippebryter
+[-82.8, -63.8, -44.8, -25.8].forEach(x => cyl(x, 24, 9.5, 3, DARK));                                                      // isolasjonsringer Ø19 på polene
+[-82.8, -44.8].forEach(x => { cyl(x, 24, 5.5, 14, RED, 1.6); }); [-63.8, -25.8].forEach(x => { cyl(x, 24, 5.5, 14, BLK, 1.6); });   // høyttalerpoler L+ L- R+ R-
+[-11, -1].forEach(x => cyl(x, 24, 4.0, 1.5, NICKEL, 1.8));                                                               // AUX 2 / AUX 1
+[34, 24, 14].forEach(z => { box(15, z, 9.6, 3.8, 0.6, DARK); cyl(5.5, z, 1.35, 0.4, NICKEL); cyl(24.5, z, 1.35, 0.4, NICKEL); }); // USB-C ×3 + skruer
+box(44, 13.5, 17, 15.6, 0.6, DARK); cyl(44, 34, 5.7, 0.6, DARK); cyl(62, 40, 1.7, 0.4, NICKEL);                            // RJ45, DC, GND
+box(78, 24, 19.4, 13, 0.8, DARK); box(78, 24, 16, 10, 2.2, BTN);                                                           // KCD1 vippebryter
 
 // ---------- bord og lys ----------
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshStandardMaterial({ color: 0x2a2724, roughness: 0.9, metalness: 0 }));

@@ -12,7 +12,7 @@ resten av repoet, gjelder repoet – de tidligere valgene står:
 | Printet frontplate (PETG khaki, sort innlegg) | **Aluminium 3 mm**, sort eloksert med lasergravert tekst, som kassen (`skjold_s1_frontplate_alu*.dxf`) |
 | Raspberry Pi Zero 2 W | **Pi 4** under hovedkortet (H5–H8, 20 mm avstandsstykker) |
 | Termoblokk fra forsterkerbrikken ned til bunnplaten | TPA3116D2**DAD** har kjøleflaten på **toppen**: kjøleribbe 20 × 20 limes på. Hullene for termoblokken er fjernet, luftespaltene i bunnen går helt gjennom |
-| SMA-antenne + én AUX bak | **To AUX** (J4/J20 på kortet): hullene på −26 og −14 bak er AUX 2 og AUX 1 (begge Ø6,4) |
+| SMA-antenne + én AUX bak | **To AUX** (J4/J20 på kortet): hullene på −11 og −1 bak er AUX 2 og AUX 1 (begge Ø6,4). Høyttalerpolene er flyttet til −82,8/−63,8/−44,8/−25,8 med Ø8,5 hull (M8-poler med Ø19 isolasjonsring, isolert fra kassen) |
 | «Service»-USB-C bak | USB-C-forlenger fra en av Pi-ens USB-porter (samme kontakt som i den printede kassen) |
 | Knapper AIRPLAY·BT / AUX / RADIO / USB | **BT** (AirPlay + Bluetooth) og **RADIO** oppe, **AUX** og **USB** nede – daemonen er lagt om slik (J7 knapp 1 = BT, knapp 2 = RADIO) |
 | Skjerm-UI og knappelogikk i `pultforsterker_revb_metall.js` | Pi-programvaren i `pi/` (daemon, `oled_display.py`, `tft_screen.py`) |

@@ -14,13 +14,13 @@ const REVB={
     ...[[-83,7],[-83,41],[83,7],[83,41],[12,8.5],[12,39.5]].map(([x,z])=>({...c(x,z,2.6),screw:'front'})), // 2 extra in the middle stiffen the plate+panel sandwich // front plate screws (from inside)
   ],
   back:[
-    r(70,24,19.4,13),                       // rocker switch
-    r(34,13.5,17,15.6), s(21,13.5,5.3,3.3), s(47,13.5,5.3,3.3), // RJ45 panel mount + ear slots
-    c(34,34,11.4),                          // DC
-    c(52,40,3.4),                           // chassis ground stud M3 (star point next to DC)
-    ...[-84,-70,-54,-40].map(x=>c(x,24,6.4)),                    // binding posts L+ L- R+ R-
-    c(-26,24,6.4), c(-14,24,6.4),                                // AUX 2, AUX 1 (3,5 mm PJ-392) – kortet har to AUX-innganger (J20/J4)
-    ...[34,24,14].flatMap(z=>[r(6,z,9.6,3.8), c(-3.5,z,2.7), c(15.5,z,2.7)]), // USB-C ×3 stacked (PC 1, PC 2, Pi service/USB-lyd)
+    r(78,24,19.4,13),                       // rocker switch
+    r(44,13.5,17,15.6), s(31,13.5,5.3,3.3), s(57,13.5,5.3,3.3), // RJ45 panel mount + ear slots
+    c(44,34,11.4),                          // DC
+    c(62,40,3.4),                           // chassis ground stud M3 (star point next to DC)
+    ...[-82.8,-63.8,-44.8,-25.8].map(x=>c(x,24,8.5)),              // binding posts L+ L- R+ R-: M8 thread, Ø19 insulator rings -> 19 mm pitch, insulated from the chassis
+    c(-11,24,6.4), c(-1,24,6.4),                                 // AUX 2, AUX 1 (3,5 mm PJ-392) – kortet har to AUX-innganger (J20/J4)
+    ...[34,24,14].flatMap(z=>[r(15,z,9.6,3.8), c(5.5,z,2.7), c(24.5,z,2.7)]), // USB-C ×3 stacked (PC 1, PC 2, Pi service/USB-lyd)
   ],
   left:[-32.1,-14.6,2.9,20.4].map(y=>r(y,32.6,14.8,8)),          // 4× USB-A (Ugreen)
   right:Array.from({length:26},(_,i)=>r(+(-43.8+3.6*i).toFixed(1),26.5,2.4,24)), // vent slots

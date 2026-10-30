@@ -1,55 +1,45 @@
 #!/usr/bin/env python3
-"""Tilpasser designpakkens merkefil for bakpanelet (../marking/skjold_s1_merking_bakpanel.dxf) til kortet rev B:
-hullet merket «BT» (SMA i designet) er AUX 2, og «AUX» er AUX 1, og all tekst gjøres mindre (versalhøyde CAP mm, som på fronten). Skriver ../marking/skjold_s1_merking_bakpanel_revb.dxf + .png.
-Sett bakfra (x speilvendt i forhold til kassen), som originalen."""
+"""Lasermerking for bakpanelet, generert fra samme posisjoner som revb_features.js (kortet rev B: to AUX, ingen SMA).
+Erstatter designpakkens skjold_s1_merking_bakpanel.dxf (som har gamle posisjoner). Sett bakfra: x_view = −kasse-x, y = z.
+Skriver ../marking/skjold_s1_merking_bakpanel_revb.dxf + .png. Lag: OUTLINE, HOLES (til plassering), MARKING (graveres)."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from dxfkit import TypefaceFont, HELV_BOLD, read_dxf_polys, dxf, preview   # noqa: E402
+from dxfkit import TypefaceFont, HELV_BOLD, HELV_REG, rrect, circle, dxf, preview   # noqa: E402
 
 M = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "marking")
-polys = read_dxf_polys(os.path.join(M, "skjold_s1_merking_bakpanel.dxf"))
-# fjern tekstene over AUX (x 11–17) og BT (x 24–28) – begge ligger på y 32,5–34,6
-def drop(p):
-    xs = [q[0] for q in p]; ys = [q[1] for q in p]
-    return 32 < min(ys) and max(ys) < 35 and ((11 < min(xs) and max(xs) < 17) or (24 < min(xs) and max(xs) < 28))
-layers = {}
-for lay, p in polys:
-    if lay == "MARKING" and drop(p):
-        continue
-    layers.setdefault(lay, []).append(p)
-CAP = 1.6   # minste teksthøyde lasermerking klarer
+CAP = 1.6          # versalhøyde (minste lasermerking klarer)
+bold, reg = TypefaceFont(HELV_BOLD), TypefaceFont(HELV_REG)
+V = lambda x: -x   # kasse-x -> sett bakfra
 
+# geometri fra revb_features.js (kasse-x, z)
+POSTS = [(-82.8, "L +"), (-63.8, "L -"), (-44.8, "R +"), (-25.8, "R -")]
+AUX = [(-11, "AUX 2"), (-1, "AUX 1")]
+USBC_X, USBC_Z = 15, (34, 24, 14); USBC_LBL = ("PC 1", "PC 2", "SERV")
+RJ45, DC, GND, ROCKER = (44, 13.5), (44, 34), (62, 40), (78, 24)
 
-def clusters(polys, gap=1.6):
-    """Grupper polygoner som hører til samme tekst (nær hverandre i x, overlappende i y)."""
-    boxes = [(min(q[0] for q in p), max(q[0] for q in p), min(q[1] for q in p), max(q[1] for q in p), p) for p in polys]
-    boxes.sort(key=lambda b: b[0]); groups = []
-    for b in boxes:
-        for g in groups:
-            if b[0] - g["x1"] < gap and b[2] < g["y1"] + 0.6 and b[3] > g["y0"] - 0.6:
-                g["x1"] = max(g["x1"], b[1]); g["y0"] = min(g["y0"], b[2]); g["y1"] = max(g["y1"], b[3]); g["p"].append(b[4]); break
-        else:
-            groups.append({"x0": b[0], "x1": b[1], "y0": b[2], "y1": b[3], "p": [b[4]]})
-    return groups
+outline = [rrect(0, 24.0, 186.6, 41.8, 7.3)]   # panelets flate del: x ±93,3, z 4,5 … 46,3
+holes = [circle(V(x), 24, 4.25) for x, _ in POSTS] + [circle(V(x), 24, 3.2) for x, _ in AUX]
+for z in USBC_Z:
+    holes += [rrect(V(USBC_X), z, 9.6, 3.8, 1.9), circle(V(USBC_X - 9.5), z, 1.35), circle(V(USBC_X + 9.5), z, 1.35)]
+holes += [rrect(V(RJ45[0]), RJ45[1], 17, 15.6, 0.5), rrect(V(RJ45[0] - 13), RJ45[1], 5.3, 3.3, 1.6), rrect(V(RJ45[0] + 13), RJ45[1], 5.3, 3.3, 1.6),
+          circle(V(DC[0]), DC[1], 5.7), circle(V(GND[0]), GND[1], 1.7), rrect(V(ROCKER[0]), ROCKER[1], 19.4, 13, 0.5)]
 
+mark = []
+def T(font, txt, x, y, cap=CAP, tracking=0.1):
+    polys, _ = font.text(txt, cap, x, y, tracking=tracking); mark.extend(polys)
 
-def shrink(polys, cap):
-    """Skaler hver tekstgruppe om sitt eget senter slik at versalhøyden blir cap (nederste linje beholdes)."""
-    out = []
-    for g in clusters(polys):
-        h = g["y1"] - g["y0"]; k = cap / h if h > cap else 1.0
-        cx, y0 = (g["x0"] + g["x1"]) / 2, g["y0"]
-        for p in g["p"]:
-            out.append([(cx + (x - cx) * k, y0 + (y - y0) * k) for x, y in p])
-    return out
+for x, lbl in POSTS: T(bold, lbl, V(x), 36.3)                     # over polene (ring Ø19 -> topp z 33,5)
+T(bold, "L", V(-73.3), 42.5, cap=2.2); T(bold, "R", V(-35.3), 42.5, cap=2.2)
+for x, lbl in AUX: T(bold, lbl, V(x), 31.6)                       # over 3,5 mm-jackene (mutter Ø8 -> topp 28)
+T(bold, "USB-C", V(USBC_X), 40.5)
+for z, lbl in zip(USBC_Z, USBC_LBL): T(bold, lbl, V(USBC_X + 9.5 + 7.5), z)   # til venstre for hver kontakt (bakfra)
+T(bold, "LAN", V(RJ45[0]), 24.6)                                  # mellom RJ45 (topp 21,3) og DC (bunn 28,3)
+T(bold, "DC 19-24 V", V(DC[0]), 42.0)                             # over DC (topp 39,7)
+T(bold, "GND", V(GND[0]), 44.3)                                   # over jordpunktet
+T(bold, "I / O", V(ROCKER[0]), 33.6)                              # over vippebryteren (topp 30,5)
 
-
-layers["MARKING"] = shrink(layers["MARKING"], CAP)
-font = TypefaceFont(HELV_BOLD)
-for t, x in (("AUX 1", 14.0), ("AUX 2", 26.0)):
-    new, _ = font.text(t, CAP, x, 32.6 + CAP / 2, tracking=0.1); layers["MARKING"] += new
-order = [("OUTLINE", layers.get("OUTLINE", [])), ("HOLES", layers.get("HOLES", [])), ("MARKING", layers["MARKING"])]
+layers = [("OUTLINE", outline), ("HOLES", holes), ("MARKING", mark)]
 with open(os.path.join(M, "skjold_s1_merking_bakpanel_revb.dxf"), "w") as fh:
-    fh.write(dxf(order))
-preview(os.path.join(M, "skjold_s1_merking_bakpanel_revb.png"), (190.6, 48), order)
+    fh.write(dxf(layers))
+preview(os.path.join(M, "skjold_s1_merking_bakpanel_revb.png"), (186.6, 41.8), layers)
 print("skrev skjold_s1_merking_bakpanel_revb.dxf/.png")

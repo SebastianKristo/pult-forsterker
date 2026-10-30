@@ -48,13 +48,13 @@ Endre i de filene og generer på nytt (siste avsnitt) – ikke i STEP/DXF-filene
 
 | Del | Senter | Hull |
 |---|---|---|
-| KCD1 vippebryter | (70, 24) | 19,4 × 13 |
-| RJ45 panelkontakt | (34, 13,5) | 17 × 15,6 + to avlange skruehull 5,3 × 3,3 ved (21, 13,5) og (47, 13,5) |
-| DC 5,5/2,5 | (34, 34) | Ø11,4 |
-| Jordpunkt M3 | (52, 40) | Ø3,4 |
-| Høyttalerpoler L+ L− R+ R− | (−84, 24) (−70, 24) (−54, 24) (−40, 24) | Ø6,4 |
-| AUX 2 / AUX 1 (PJ-392) | (−26, 24) (−14, 24) | Ø6,4 |
-| USB-C panelkontakt PC 1 / PC 2 / Pi | (6, 34) (6, 24) (6, 14) | 9,6 × 3,8 + skruehull Ø2,7 ved x −3,5 og 15,5 |
+| KCD1 vippebryter | (78, 24) | 19,4 × 13 |
+| RJ45 panelkontakt | (44, 13,5) | 17 × 15,6 + to avlange skruehull 5,3 × 3,3 ved (31, 13,5) og (57, 13,5) |
+| DC 5,5/2,5 | (44, 34) | Ø11,4 |
+| Jordpunkt M3 | (62, 40) | Ø3,4 |
+| Høyttalerpoler L+ L− R+ R− (M8-gjenge, Ø19 isolasjonsring) | (−82,8, 24) (−63,8, 24) (−44,8, 24) (−25,8, 24) | **Ø8,5** – 19 mm deling så ringene (Ø19) ikke berører hverandre; polen skal være isolert fra chassiset: isolasjonsring på begge sider av platen, eller krympestrømpe/elektrikerteip rundt gjengen gjennom hullet. Mål med ohmmeter at ingen pol har kontakt med kassen før første påslag |
+| AUX 2 / AUX 1 (PJ-392) | (−11, 24) (−1, 24) | Ø6,4 |
+| USB-C panelkontakt PC 1 / PC 2 / Pi | (15, 34) (15, 24) (15, 14) | 9,6 × 3,8 + skruehull Ø2,7 ved x 5,5 og 24,5 |
 
 **Venstre side (y, z) – ingen merking:** 4 × USB-A-vindu 14,8 × 8 ved y −32,1 / −14,6 / 2,9 / 20,4, z 32,6 (= kortets USB-A, hus 13,1 × 5,6 bak vinduet).
 **Høyre side:** 26 luftespalter 2,4 × 24 ved z 26,5, y fra −43,8 med 3,6 mm deling.
@@ -92,7 +92,7 @@ Front: avstanden fra frontpanelets innside (y −78,5) til kortets forkant (y �
 | RJ45 panelkontakt | flens 25 × 22 | ~30 mm | |
 | DC 5,5/2,5 | mutter Ø14 | ~25 mm | |
 | KCD1 vippebryter | ramme 21 × 15 | 25 mm | |
-| Høyttalerpoler (4 mm) | Ø11 × 20 utvendig | gjenge Ø6 × 20 + mutter | |
+| Høyttalerpoler (4 mm, isolerte) | knott Ø11–12 × 20 + isolasjonsring Ø19 × 3 utvendig | gjenge M8 × 20 + isolasjonsring innvendig + mutter | isolert fra chassiset |
 
 ## 5. Innmaten – plassering og høyder
 
