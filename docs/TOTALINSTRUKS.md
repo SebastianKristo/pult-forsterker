@@ -366,10 +366,11 @@ LED-ringer, skjerm, volumkrets og ADC (GPIO 27). Pi-en, USB-switchen og nettverk
 HA/Homey/AirPlay. **Miks:** med «Miks digitale kilder» på spiller AUX 1, AUX 2, USB, AirPlay, Bluetooth og radio samtidig, hvert
 med eget nivå («Nivå AUX 1» osv. i HA/Homey, `POST /api/level`). **TFT-touch:** faner øverst = kilde, nederst = forrige/spill/neste
 og volum −/+. Treffer trykkene feil, juster `KI_AMP_TOUCH_CAL=xmin,xmax,ymin,ymax[,swap]` i `/etc/ki-amp.env`.
-**Knappene foran (aluminiumsfronten):** oppe «BT» og «RADIO», nede «AUX» og «USB». BT-knappen velger trådløst (sist brukte av
-AirPlay/Bluetooth), trykk igjen veksler AirPlay ↔ Bluetooth når en BT-enhet er tilkoblet, hold 2 s = BT-parring. RADIO velger
-radio, neste trykk går til neste favoritt, hold åpner kanalmenyen. AUX veksler AUX 1/AUX 2. LED-ringen på BT lyser for AirPlay og
-Bluetooth, RADIO-ringen for radio.
+**Knappene foran (aluminiumsfronten):** oppe «BT» og «RADIO», nede «AUX» og «USB». **BT** veksler Bluetooth ↔ AirPlay (fra en
+annen kilde: sist brukte av de to); hold 2 s mens Bluetooth er valgt = BT-parring. **RADIO** velger radio, neste trykk går til
+neste favoritt, hold åpner kanalmenyen. **AUX** veksler AUX 1 (Mac) / AUX 2 (PC). **USB** velger USB-lyd, og hvert trykk etterpå
+bytter USB-huben mellom PC 1 og PC 2 (tastatur, mus og USB-lyd følger med; stemmen sier hvilken). LED-ringen på BT lyser for
+AirPlay og Bluetooth, RADIO-ringen for radio.
 **Hodetelefoner:** 3,5 mm-jacken under POWER-knappen drives av en egen hodetelefonforsterker (TPA6132A2) etter volumkretsen, så
 volumknotten og HA/Homey-volumet gjelder også der. Plugger du i, dempes høyttalerne automatisk og stemmen sier «Headphones»;
 plugg ut gir høyttalerne tilbake. Auto-dempingen kan slås av («Auto-demping ved hodetelefoner» i HA/Homey eller

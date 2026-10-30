@@ -955,16 +955,16 @@ def setup_buttons():
                 set_input(order[(order.index(cur) + 1) % len(order)] if cur in order else "airplay")
             _hold_btn(b, _cycle, lambda: bt_pairing(not state["bt_pairing"]))
         elif name == "airplay" and BOARD == "main":
-            # hovedkortet: knappen oppe til venstre heter «BT» og dekker AirPlay + Bluetooth. Kort trykk: trådløst (sist brukte);
-            # trykk igjen veksler AirPlay ↔ Bluetooth (BT bare hvis en enhet er tilkoblet). Hold 2 s = BT-parring av/på.
+            # hovedkortet: knappen oppe til venstre heter «BT». Kort trykk veksler Bluetooth ↔ AirPlay (fra en annen kilde: sist brukte
+            # trådløse). Hold 2 s mens Bluetooth er valgt = BT-parring av/på.
             def _wireless():
-                if state["input"] not in ("airplay", "bt"):
-                    set_input(state.get("last_wireless", "airplay"))
-                elif state["input"] == "airplay" and read_raw().get("bt_device"):
+                if state["input"] == "bt":
+                    set_input("airplay")
+                elif state["input"] == "airplay":
                     set_input("bt")
                 else:
-                    set_input("airplay")
-            _hold_btn(b, _wireless, lambda: bt_pairing(not state["bt_pairing"]))
+                    set_input(state.get("last_wireless", "bt"))
+            _hold_btn(b, _wireless, lambda: bt_pairing(not state["bt_pairing"]) if state["input"] == "bt" else None)
         elif name == "bt" and BOARD == "main":
             # knappen oppe til høyre heter «RADIO»: første trykk velger radio, neste trykk går til neste favoritt (menyen vises)
             def _radio():
@@ -979,6 +979,14 @@ def setup_buttons():
                       lambda: bt_pairing(not state["bt_pairing"]))   # hold AIRPLAY 2 s = BT-parring av/på
         elif name == "aux" and BOARD == "main":
             b.when_pressed = lambda: _safe(set_input, "aux2" if state["input"] == "aux" else "aux")   # AUX-knappen veksler AUX 1 / AUX 2
+        elif name == "usb" and BOARD == "main":
+            # USB-knappen: første trykk velger USB-lyd, hvert trykk etterpå bytter USB-huben mellom PC 1 og PC 2 (lyden følger PC-en)
+            def _usb():
+                if state["input"] != "usb":
+                    set_input("usb")
+                elif usbsw.enabled:
+                    usbsw.toggle()
+            b.when_pressed = lambda: _safe(_usb)
         else:
             b.when_pressed = lambda n=name: _safe(set_input, n)
         objs.append(b)
