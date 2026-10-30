@@ -196,8 +196,8 @@ for i, y in enumerate((16.2, 33.7, 51.2, 68.7)):
     part(f"J{15+i}", "Connector_USB", "USB_A_Molex_67643_Horizontal", f"USB{i+1}", "C2765194", 167.3, y, 90, f"USB-A ut {i+1} (høyre kant)")
     part(f"D{6+i}", TO, "SOT-23-6", "USBLC6-2SC6", "C7519", 160.5, y + (4.8 if i == 0 else 0), 0, f"ESD-vern USB-A {i+1}")   # D6 flyttet unna Pi-hullet H5
 part("D10", TO, "SOT-23-6", "USBLC6-2SC6", "C7519", 138, 78, 0, "ESD-vern USB-C PC 1"); part("D11", TO, "SOT-23-6", "USBLC6-2SC6", "C7519", 138, 88, 0, "ESD-vern USB-C PC 2")
-part("F2", "Fuse", "Fuse_1812_4532Metric", "2A PTC", "C545213", 143, 72, 90, "Polyfuse 5 V til USB-portene")
-part("C71", C_, C1206, "10u", "C13585", 143, 78, 90, "5V_USB"); part("C72", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 146, 16, 0, "5V_USB bulk")
+part("F2", "Fuse", "Fuse_1812_4532Metric", "2A PTC", "C545213", 139.5, 72, 90, "Polyfuse 5 V til USB-portene")
+part("C71", C_, C1206, "10u", "C13585", 139.5, 78, 90, "5V_USB"); part("C72", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 146, 16, 0, "5V_USB bulk")
 for i, (x, y) in enumerate([(4, 4), (176, 4), (4, 96), (176, 96)]):
     part(f"H{i+1}", "MountingHole", "MountingHole_3.2mm_M3", "M3", "", x, y, 0, "Festehull M3 (stolper i kassen)")
 # Raspberry Pi 4 skrus fast under kortet med 4 × M2,5-avstandsstykker (20 mm): Pi-ens hullmønster 58 × 49, kortet 85 × 56 med

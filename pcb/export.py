@@ -220,7 +220,11 @@ def _clear(p, r_track=0.55, r_pad=1.3, r_via=0.8):
         if t.GetClass() == "PCB_VIA":
             if (t.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(r_via): return False
         elif pcbnew.SEG(t.GetStart(), t.GetEnd()).Distance(p) < pcbnew.FromMM(r_track) + t.GetWidth() // 2: return False
-    if any((pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(1.7 if pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH else 1.1) for fp in board.GetFootprints() for pd in fp.Pads()): return False
+    for fp in board.GetFootprints():
+        for pd in fp.Pads():
+            if (pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(1.7 if pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH else 1.1): return False
+            bb = pcbnew.BOX2I(pd.GetBoundingBox()); bb.Inflate(pcbnew.FromMM(0.9))   # store pads (TO-252-tab o.l.): klaring fra kanten
+            if bb.Contains(p): return False
     return not any((pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(r_pad) for pd in _pads_ng)
 pf, pb = _zone_poly(pcbnew.F_Cu), _zone_poly(pcbnew.B_Cu)
 grid = 0
