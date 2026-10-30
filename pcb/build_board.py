@@ -390,7 +390,7 @@ FIXED_GND_STUBS = {("U5", "5"): (158.0, 68.45), ("U8", "5"): (34.0, 63.6), ("U8"
 # låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
 FIXED_TRACKS = [("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
     ("PC2_DP", "F.Cu", 0.2, [(32.6, 62.7685), (32.2, 63.7)]), ("PC2_DM", "F.Cu", 0.2, [(33.0, 62.7685), (33.1, 64.2)]),
-    ("PC2_DM", "B.Cu", 0.2, [(33.1, 64.2), (32.3, 65.6), (32.3, 85.0), (29.25, 85.0)]),   # U8 pinne 4 -> under J12 -> A7/B7
+    ("PC2_DM", "B.Cu", 0.2, [(33.1, 64.2), (31.9, 65.6), (31.9, 85.0), (29.25, 85.0)]),   # x 31,9: klaring til NPTH-hullene i J11/J12 (x 32,89)   # U8 pinne 4 -> under J12 -> A7/B7
     ("PC2_DM", "F.Cu", 0.2, [(29.25, 85.0), (29.25, 81.955), (29.25, 80.978), (30.25, 80.978), (30.25, 81.955)]),   # TS3USB221 pinne 3/4 (0,4 mm pitch): ut til vias
     ("CODEC_VINR", "F.Cu", 0.25, [(150.4, 87.575), (148.9, 87.575)]), ("CODEC_VINR", "B.Cu", 0.25, [(148.9, 87.575), (148.9, 88.9), (155.0, 88.9)]),   # PCM2900C pinne 13 -> C98
     ("CODEC_VINR", "F.Cu", 0.25, [(155.0, 88.9), (155.0, 89.54), (160.0, 89.54), (161.0, 89.3), (170.95, 89.3), (170.95, 88.0)]),

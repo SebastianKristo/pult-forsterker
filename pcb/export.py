@@ -123,6 +123,24 @@ for t in list(board.GetTracks()):
         for (x0, y0, x1, y1, ly) in GND_CLEAR:
             if board.GetLayerName(t.GetLayer()) == ly and (x0 <= sx <= x1 and y0 <= sy <= y1 or x0 <= ex <= x1 and y0 <= ey <= y1):
                 board.Remove(t); break
+# GND-spor (rutet som nett) som kolliderer med andre nett (typisk låste spor/vias lagt til etter rutingen) fjernes – planet tar over
+def _drop_colliding_gnd():
+    import re as _r
+    removed = 0
+    for _ in range(4):
+        rep = os.path.join(OUT, "drc_tmp.txt"); pcbnew.WriteDRCReport(board, rep, pcbnew.EDA_UNITS_MILLIMETRES, True)
+        pts = []
+        for blk in _r.split(r"\n(?=\[)", open(rep).read()):
+            if not blk.startswith("[clearance]") and not blk.startswith("[hole_clearance]"): continue
+            pts += [(float(a), float(b_)) for a, b_ in _r.findall(r"@\(([-\d.]+) mm, ([-\d.]+) mm\): Track \[GND\]", blk)]
+        if not pts: break
+        gone = [t for t in board.GetTracks() if t.GetClass() == "PCB_TRACK" and t.GetNetname() == "GND" and not t.IsLocked()
+                and any(seg_contains(t, x, y, 0.3) for x, y in pts)]
+        print("  GND-kollisjoner:", len(pts), "spor å fjerne:", len(gone))
+        if not gone: break
+        for t in gone: board.Remove(t)
+        removed += len(gone)
+    return removed
 for t in board.GetTracks():
     if t.GetClass() != "PCB_TRACK": continue
     w = WIDEN.get(t.GetNetname())
@@ -145,6 +163,7 @@ def seg_contains(t, x, y, tol=0.6):
     s_, e_ = t.GetStart(), t.GetEnd(); sx, sy, ex, ey = pcbnew.ToMM(s_.x), pcbnew.ToMM(s_.y), pcbnew.ToMM(e_.x), pcbnew.ToMM(e_.y)
     L = _m.hypot(ex - sx, ey - sy) or 1e-9; u = max(0, min(1, ((x - sx) * (ex - sx) + (y - sy) * (ey - sy)) / L / L))
     return _m.hypot(sx + u * (ex - sx) - x, sy + u * (ey - sy) - y) < tol
+print("GND-spor som kolliderte, fjernet:", _drop_colliding_gnd())
 for rnd in range(6):
     bad = [(x, y, n) for typ, pts in drc_items(board) if typ in ("clearance", "hole_clearance", "solder_mask_bridge") for (x, y, n) in pts if n in WIDEN]
     if not bad: break
@@ -463,6 +482,10 @@ def _prune_dangling_board():
         for t in gone: board.Remove(t)
         removed += len(gone)
     return removed
+print("GND-spor som kolliderte (sluttkontroll), fjernet:", _drop_colliding_gnd())
+filler.Fill(board.Zones())
+_fr, _cm = _gnd_components()
+if len(_cm) > 1: print("FEIL: jordplanet delt etter fjerning av GND-spor:", len(_cm))
 print("løse sporender fjernet:", _prune_dangling_board())
 filler.Fill(board.Zones())
 pcbnew.SaveBoard(PCB, board)
