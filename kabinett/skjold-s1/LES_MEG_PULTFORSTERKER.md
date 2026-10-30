@@ -27,6 +27,12 @@ Filer: `platemetall/skjold_s1_avrundet/` (STEP av hele kassen + DXF-flatmønstre
 - PEM-innsatser: CLS-M3-1 ×10, FHS-M3-8 ×4 (listet i `LES_MEG.md`).
 - Velg `..._avrundet.step` for OLED eller `..._avrundet_tft.step` for 2,8" TFT (bare skjermhullet i fronten er forskjellig).
 - USB-A-vinduene i venstre vegg, RJ45/DC bak og hodetelefonhullet (Ø6,2 ved (−76, 8)) er med.
+- **Lasergravering under kassen:** `platemetall/skjold_s1_avrundet/skjold_s1_bunn_gravering.dxf` lastes opp som egen fil
+  under «Surface Treatment → Laser engraving/marking» for bunnplaten. Lag `ENGRAVE` graveres (logo, SKJOLD · STREAMING
+  AMPLIFIER, Skjold S1, «Designet av Sebastian Kristo Jemtland i Norge», 19–24 V ⎓ 3 A · Modell S1 · serienummer); lag `REF`
+  er bunnplatens omriss og hull bare til plassering. Tegningen er sett fra undersiden (utsiden) av bunnplaten med fronten
+  nederst, så teksten leses rett når kassen snus. Forhåndsvisning: `skjold_s1_bunn_gravering.png`. Nytt serienummer:
+  `python3 tools/gravering.py SKJ-S1-0002`.
 
 ### Frontplate – PCBWay 3D-print (eller egen printer)
 - **PCBWay (ett materiale):** `print/skjold_s1_frontplate_oled_khaki.stl` (eller `_tft_khaki.stl`). Teksten
@@ -46,5 +52,6 @@ J19–J21) som i `pcb/README.md` og TOTALINSTRUKS §9.
 ```bash
 cd kabinett/skjold-s1/tools && npm install
 node run.mjs .. all          # cnc + platemetall + print (eller: sheet | cnc | print)
+python3 gravering.py         # graverings-DXF for bunnen (fonter fra npm: @fontsource/sora, @fontsource/ibm-plex-mono)
 ```
 Geometri endres bare i `revb_features.js`, tekst på frontplaten i `cad/generate_print.js`. STEP-generatorene skal melde `bad 0`.

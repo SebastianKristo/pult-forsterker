@@ -22,7 +22,7 @@ Lagene i DXF-filene heter CUT (kuttelinjer) og BEND (bøyelinjer).
   - Panelene og skinnene har standard R1,5.
 - **K-faktor:** 0,44. Flatmønstrene er beregnet med den. La gjerne verkstedet bruke sin egen K-faktor ut fra STEP-filen.
 - **Overflate:** pulverlakk eller eloksering, sort eller den fargen du ønsker.
-- **Lasermerking:** logo og produktmerking under kassen. Den legges som en egen DXF under «Surface Treatment».
+- **Lasermerking:** logo og produktmerking under kassen: `skjold_s1_bunn_gravering.dxf` (lag ENGRAVE), legges som egen DXF under «Surface Treatment». Se `skjold_s1_bunn_gravering.png`.
 - **Innpressede gjengedeler (PEM):**
   - CLS-M3-1 (hull Ø4,2): 4 stk i panelflensene og 6 stk i bunnplaten
   - FHS-M3-8 (hull Ø3,0): 4 stk i sideveggene på omslaget, for skinnene. De ligger plant og synes ikke utenfra.

@@ -48,7 +48,7 @@ for(const DK of ['oled','tft']){ const SFX=DK==='oled'?'':'_tft';
   for(const sx of [1,-1]){ const xo=sx*(HW-T), xi=sx*(HW-T-1.5), xe=sx*(HW-T-11.5);
     const pts=[[RAILZ[0],xo],[RAILZ[1],xo],[RAILZ[1],xe],[RAILZ[1]-1.5,xe],[RAILZ[1]-1.5,xi],[RAILZ[0],xi]]; const poly=sx>0?pts.slice().reverse():pts;
     const loop=poly.map((p,i)=>({t:'L',a:p,b:poly[(i+1)%poly.length]})); const fixed=sx>0?loop:loop; doc.prism('skinne_'+(sx>0?'hoyre':'venstre'),FY,fixed,[],-68,68); }
-  out['platemetall/skjold_s1_platemetall_avrundet'+SFX+'.step']=doc.text(); log(DK,'round sheet bad',doc.bad);
+  out['platemetall/skjold_s1_avrundet/skjold_s1_platemetall_avrundet'+SFX+'.step']=doc.text(); log(DK,'round sheet bad',doc.bad);
 }
 // ---------- DXF flat patterns ----------
 { // wrap: s along the neutral fibre, 0 = top centre
@@ -60,19 +60,19 @@ for(const DK of ['oled','tft']){ const SFX=DK==='oled'?'':'_tft';
   STUD.forEach(y=>{ d.loop(circ(sideS(12),y,1.5)); d.loop(circ(-sideS(12),y,1.5)); });
   FS.forEach(([x,y])=>d.loop(circ(Math.sign(x)*(s4+(HW-RB-Math.abs(x))),y,1.7)));
   [s1+BAw/2,s3+BAw/2].forEach(s=>[s,-s].forEach(x=>d.line([x,-HD],[x,HD],'BEND')));
-  out['platemetall/skjold_s1_omslag_flatmonster.dxf']=d.text(); log('wrap flat',(2*s5).toFixed(2),'x',D); }
+  out['platemetall/skjold_s1_avrundet/skjold_s1_omslag_flatmonster.dxf']=d.text(); log('wrap flat',(2*s5).toFixed(2),'x',D); }
 for(const [nm,feats,map,dk] of [['front_oled',null,id,'oled'],['front_tft',null,id,'tft'],['bak',REVB.back,neg,null]]){
   const d=DXF(), fl=PZ-BAp-7, fpts=[[FLX,fl],[FLX,PZ],[PW,PZ],[PW,PTOP],[-PW,PTOP],[-PW,PZ],[-FLX,PZ],[-FLX,fl]];
   d.loop(fpoly(fpts,[0,0,PR,PR,PR,PR,0,0]));
   const fs=feats||REVB.front.map((f,i)=>i===0?{t:'r',x:REVB.dispX,y:24,w:REVB.dispCut[dk][0],h:REVB.dispCut[dk][1],r:REVB.dispCut[dk][2]}:f);
   fs.forEach(f=>d.loop(hole(f,map,0,f.screw?3.4:undefined)));
   [-(HW-RB-6),HW-RB-6].forEach(x=>d.loop(circ(x,PZ-BAp-3.5,2.1))); d.line([-FLX,PZ-BAp/2],[FLX,PZ-BAp/2],'BEND');
-  out['platemetall/skjold_s1_panel_'+nm+'_flatmonster.dxf']=d.text(); }
+  out['platemetall/skjold_s1_avrundet/skjold_s1_panel_'+nm+'_flatmonster.dxf']=d.text(); }
 { const d=DXF(); d.loop(rrect(HW-RB,HD-RO-7-1.8,1)); REVB.bottom.slice(1).forEach(f=>d.loop(hole(f))); FS.filter(([,y])=>Math.abs(y)<70).forEach(([x,y])=>d.loop(circ(x,y,2.1)));
-  out['platemetall/skjold_s1_bunnplate.dxf']=d.text(); }
+  out['platemetall/skjold_s1_avrundet/skjold_s1_bunnplate.dxf']=d.text(); }
 { const d=DXF(), w=6+11.5-BAp*0; d.loop(rrect(68,(6+11.5)/2,0,0,0)); d.line([-68,-(6+11.5)/2+6],[68,-(6+11.5)/2+6],'BEND');
   STUD.forEach(y=>d.loop(circ(y,-(6+11.5)/2+3,1.7))); [[-44.3],[47.7]].forEach(([y])=>d.loop(circ(y,(6+11.5)/2-4.8,1.7)));
-  out['platemetall/skjold_s1_skinne_x2.dxf']=d.text(); }
+  out['platemetall/skjold_s1_avrundet/skjold_s1_skinne_x2.dxf']=d.text(); }
 for(const [k,v] of Object.entries(out)) await saveFile(k,v);
 log(Object.keys(out).length+' filer');
 })();
