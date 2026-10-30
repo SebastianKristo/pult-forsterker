@@ -151,8 +151,9 @@ for rnd in range(6):
     fixed = 0
     for t in board.GetTracks():
         if t.GetClass() != "PCB_TRACK" or t.GetNetname() not in WIDEN: continue
-        if any(seg_contains(t, x, y) for (x, y, n) in bad if n == t.GetNetname()) and t.GetWidth() > pcbnew.FromMM(0.26):
-            t.SetWidth(pcbnew.FromMM(0.5 if t.GetWidth() > pcbnew.FromMM(0.61) else 0.25)); fixed += 1
+        ow = orig_w.get(id(t), pcbnew.FromMM(0.2))
+        if any(seg_contains(t, x, y) for (x, y, n) in bad if n == t.GetNetname()) and t.GetWidth() > ow + pcbnew.FromMM(0.01):
+            t.SetWidth(pcbnew.FromMM(0.5) if t.GetWidth() > pcbnew.FromMM(0.61) else ow); fixed += 1   # tilbake til rutet bredde, ikke 0,25
     print(f"runde {rnd}: {len(bad)} DRC-punkter, {fixed} spor smalnet")
 
 for fp in board.GetFootprints():
