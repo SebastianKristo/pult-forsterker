@@ -116,6 +116,7 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "mix": os.environ.get("KI_AMP_MIX", "0") == "1",
          "usb_pc": 1,   # usb_pc: aktiv PC på USB-delingsswitchen, 1 eller 2
          "headphones": False,   # hodetelefoner i front-jacken (hovedkortet)
+         "last_wireless": "airplay",   # sist brukte trådløse kilde (airplay/bt) – «BT»-knappen på hovedkortet
          "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
          "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100}}   # nivå per kilde (miks)
 LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD == "main" else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
@@ -486,9 +487,11 @@ def apply_input():
     if not HW:
         return
     if BOARD == "main":
-        if mcp:
+        if mcp:   # ringene: «BT» (AirPlay + Bluetooth), «RADIO», AUX (1 og 2), USB
+            lit = {"airplay": state["input"] in ("airplay", "bt"), "bt": state["input"] == "radio",
+                   "aux": state["input"] in ("aux", "aux2"), "usb": state["input"] == "usb"}
             for k, bit in MCP_LED.items():
-                mcp.set_b(bit, bool(state["power"] and (k == state["input"] or (k == "aux" and state["input"] == "aux2"))))
+                mcp.set_b(bit, bool(state["power"] and lit[k]))
     else:
         relay_aux.value = state["input"] == "aux"
     for k, led in leds.items():
@@ -743,7 +746,10 @@ def set_power(on):
 def set_input(inp, announce=True):
     if inp in INPUTS:
         prev = state["input"]
-        state["input"] = inp; apply_input(); apply_volume(); changed()
+        state["input"] = inp
+        if inp in ("airplay", "bt"):
+            state["last_wireless"] = inp   # «BT»-knappen på hovedkortet går tilbake til den sist brukte trådløse kilden
+        apply_input(); apply_volume(); changed()
         if prev != inp:
             if not (state["mix"] and inp != "aux"):   # miks: la AirPlay/BT/USB/Radio spille videre oppå hverandre
                 threading.Thread(target=_pause_others, args=(inp,), daemon=True).start()
@@ -948,6 +954,25 @@ def setup_buttons():
                 cur = state["input"]
                 set_input(order[(order.index(cur) + 1) % len(order)] if cur in order else "airplay")
             _hold_btn(b, _cycle, lambda: bt_pairing(not state["bt_pairing"]))
+        elif name == "airplay" and BOARD == "main":
+            # hovedkortet: knappen oppe til venstre heter «BT» og dekker AirPlay + Bluetooth. Kort trykk: trådløst (sist brukte);
+            # trykk igjen veksler AirPlay ↔ Bluetooth (BT bare hvis en enhet er tilkoblet). Hold 2 s = BT-parring av/på.
+            def _wireless():
+                if state["input"] not in ("airplay", "bt"):
+                    set_input(state.get("last_wireless", "airplay"))
+                elif state["input"] == "airplay" and read_raw().get("bt_device"):
+                    set_input("bt")
+                else:
+                    set_input("airplay")
+            _hold_btn(b, _wireless, lambda: bt_pairing(not state["bt_pairing"]))
+        elif name == "bt" and BOARD == "main":
+            # knappen oppe til høyre heter «RADIO»: første trykk velger radio, neste trykk går til neste favoritt (menyen vises)
+            def _radio():
+                if state["input"] != "radio":
+                    set_input("radio")
+                else:
+                    step_preset(1)
+            _hold_btn(b, _radio, menu_open)
         elif name == "airplay":
             # kort trykk: AirPlay; trykk igjen mens AirPlay er valgt = Radio (Lyrion), og tilbake
             _hold_btn(b, lambda: set_input("radio" if state["input"] == "airplay" and lyr.connected else "airplay"),

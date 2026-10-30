@@ -55,7 +55,7 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 | J4 / J20 | JST XH 3 | AUX 1 / AUX 2: L, R, GND (fra PJ392 bak) |
 | J5 | 2×20 header | Raspberry Pi 40-pin (flatkabel 5–10 cm). Pi-en skrus under kortet i H5–H8 (M2,5, 20 mm avstandsstykker), portene mot høyre |
 | J6 | skruterminal 5,08 | 5 V, GND → Pi 4 header pinne 2/6 (18 AWG) |
-| J7 | JST XH 6 | AIR, BT, AUX, USB, POWER, GND (bryterne) |
+| J7 | JST XH 6 | knapp 1 «BT» (AirPlay + Bluetooth), knapp 2 «RADIO», AUX, USB, POWER, GND (bryterne) |
 | J8 | JST XH 5 | CLK, DT, SW, 3V3, GND (encoder) |
 | J9 | JST XH 5 | 3V3_SW, GND, SDA, SCL, RES (OLED) |
 | J10 | JST XH 6 | 5V_SW, AIR−, BT−, AUX−, USB−, POWER− (LED-ringer) |
