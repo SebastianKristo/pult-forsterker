@@ -1,0 +1,42 @@
+{
+  "name": "skjold-flasher",
+  "productName": "Skjold Flasher",
+  "version": "1.0.0",
+  "description": "Skriver Skjold SD-bildet til et SD-kort, med forhåndsinnstilt Wi-Fi, navn og SSH.",
+  "author": "Sebastian Kristo Jemtland <sebastian@kristo.no>",
+  "license": "MIT",
+  "private": true,
+  "main": "dist/main/main.js",
+  "homepage": "https://github.com/SebastianKristo/pult-forsterker",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SebastianKristo/pult-forsterker.git"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && node scripts/copy-static.js",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron . --dev",
+    "test": "npm run build && node dist/test/crypt.test.js",
+    "screenshot": "npm run build && electron scripts/screenshot.js",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:linux": "npm run build && electron-builder --linux --publish never",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "etcher-sdk": "^10.2.18",
+    "qrcode": "^1.5.4",
+    "sudo-prompt": "^9.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/qrcode": "^1.5.5",
+    "electron": "^45.2.0",
+    "electron-builder": "^26.18.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
