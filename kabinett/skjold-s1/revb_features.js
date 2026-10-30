@@ -9,7 +9,8 @@ const REVB={
     c(-76,24,16.4),                         // power (16 mm)
     c(22,15.5,12.4), c(38,15.5,12.4), c(22,32.5,12.4), c(38,32.5,12.4), // input buttons (12 mm)
     c(66,24,7.4),                           // volume encoder (knob Ø30)
-    {...c(-76,8,10.6),hp:true}, // PJ-392 (nickel): sits in the 3 mm aluminium front plate (Ø6.4); the wall hole is Ø10.6 so the nut fits inside it behind the plate                           // 3.5 mm headphone jack (under power)
+    {...c(-76,8,8.6),hp:true,slot:true,thread:'M6x0.5',tapDrill:5.5,jackThreadLen:4.4,jackBodyD:8.0,nutD:8.0,nutT:1.8,panelClear:8.6}, // PJ-392 (GVMRZ): screwed into a tapped M6×0.5 hole in the 3 mm alu plate, flush, Loctite 222.
+                                          // Body Ø8 passes the 1.5 mm panel through a Ø8.6 clearance that is an OPEN SLOT down through the bend and flange (R1 corners): a round hole here would sit 0.8 mm from the bend line.                           // 3.5 mm headphone jack (under power)
     ...[[-83,7],[-83,41],[83,7],[83,41],[12,8.5],[12,39.5]].map(([x,z])=>({...c(x,z,2.6),screw:'front'})), // 2 extra in the middle stiffen the plate+panel sandwich // front plate screws (from inside)
   ],
   back:[

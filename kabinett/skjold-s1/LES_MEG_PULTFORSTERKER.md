@@ -32,8 +32,14 @@ Filer: `platemetall/skjold_s1_avrundet/` (STEP av hele kassen + DXF-flatmønstre
 - USB-A-vinduene i venstre vegg, RJ45/DC bak og hodetelefonhullet (Ø6,2 ved (−76, 8)) er med.
 - **Lasermerking på kassen** (designpakkens filer i `marking/`, lag MARKING, én DXF per flate, tegnet på den ferdige flaten):
   `skjold_s1_merking_bunnplate.dxf` (logo, Skjold S1, designer, 19–24 V DC 3 A, serienr. – sett fra undersiden),
-  `skjold_s1_merking_bakpanel_revb.dxf` (bakpanelet med AUX 1/AUX 2 i stedet for designets BT/AUX; originalen ligger ved siden av),
-  `skjold_s1_merking_venstre_side.dxf` (USB 1–4). Se `marking/LES_MEG.md`. Serienummeret SKJ-S1-0001 er en plassholder.
+  `skjold_s1_merking_bakpanel_revb.dxf` (bakpanelet med AUX 1/AUX 2 i stedet for designets BT/AUX, all tekst 1,6 mm; originalen
+  ligger ved siden av). **Venstre side merkes ikke** (USB-portene står uten tekst; `skjold_s1_merking_venstre_side.dxf` brukes ikke).
+  Se `marking/LES_MEG.md`. Serienummeret SKJ-S1-0001 er en plassholder.
+- **Hodetelefonkontakten** (PJ-392, M6×0,5-hals, gjengelengde 4,4 mm) skrus rett inn i frontplaten: platen har et gjenget hull
+  (gjengebor Ø5,5 i kuttefilen, gjenges M6×0,5 etter elokseringen – eller be om maskering av hullet). Kontakten skrus inn bakfra til
+  den ligger plant med forsiden, låses med Loctite 222; ingen mutter foran. Huset Ø8 går gjennom et **åpent spor Ø8,6 med R1** i
+  frontpanelet, ned gjennom bøyen og flensen (et rundt hull ville ligget 0,8 mm fra bøylinjen). Klaring til POWER-knappens mutter: 3,1 mm.
+  Bruk myke ledninger (5–6 cm) fra loddeørene, de ender i tilfeldig retning etter innskruing.
 
 ### Frontplate – PCBWay Sheet Metal, aluminium (valgt)
 Filer i `platemetall/skjold_s1_avrundet/`:
@@ -44,8 +50,7 @@ Filer i `platemetall/skjold_s1_avrundet/`:
   marking». Forhåndsvisning: `skjold_s1_frontplate_alu.png`.
 - Overflate: **bead blast + anodized, black** – samme som kassen.
 - Innpressede deler: **6 × FH-M3-8 selvklinkende studs** fra baksiden (hull Ø3,0). De går gjennom Ø3,4-hullene i frontpanelet og
-  festes med M3-mutter innenfra – ingen synlige skruer. Studsene og hodetelefonjacken sitter i platen; frontpanelet har Ø10,6 ved
-  jacken så mutteren får plass bak platen.
+  festes med M3-mutter innenfra – ingen synlige skruer. Hodetelefonkontakten skrus i gjenget hull i platen (se over).
 - Akryl: røyksort 2 mm, skjæres til 61,6 × 37,6 (R1,3) og limes inn i vinduet fra baksiden, 1 mm forsenket (`print/pultforsterker_v2_revb_akryl_skjermglass_*_2mm.dxf` kan brukes som utgangspunkt, trekk fra 0,2 mm).
 - Generer på nytt: `python3 tools/frontplate_metall.py` (tekst/posisjoner øverst i filen).
 

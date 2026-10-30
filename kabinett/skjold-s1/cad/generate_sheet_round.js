@@ -11,6 +11,11 @@ const RI=1.5, RO=3, BAp=Math.PI/2*(RI+K*T);                    // panel bend
 const BAw=Math.PI/2*(RB-T+K*T);                                // wrap bend (R9 outer)
 const FS=[-73.5,-60,0,60,73.5].flatMap(y=>[[-(HW-RB-6),y],[HW-RB-6,y]]); // flange screws (M3 from below)
 const STUD=[[-50],[50]].map(([y])=>y), RAILZ=[9.5,15.5];
+// hodetelefonkontakten: åpent spor (panelClear bredt, R1) fra bunnkanten opp til senter + radius – ingen hullkant nær bøylinjen
+const HPs=REVB.front.find(f=>f.hp&&f.slot), hw=HPs?HPs.panelClear/2:0, zt=HPs?HPs.y+hw:0;
+const notch=(pts,rads,yb)=>{ if(!HPs) return [pts,rads]; const i=pts.findIndex(p=>p[0]===-pts[0][0]&&p[1]===yb); const out=[],ro=[];
+  pts.forEach((p,k)=>{ out.push(p); ro.push(rads[k]); if(k===i){ out.push([HPs.x-hw,yb],[HPs.x-hw,zt],[HPs.x+hw,zt],[HPs.x+hw,yb]); ro.push(0,1,1,0); } }); return [out,ro]; };
+
 const d=Math.PI/180, P=(c,r,a)=>[c[0]+r*Math.cos(a),c[1]+r*Math.sin(a)];
 const out={};
 // --- wrap cross-section (x,z), CCW, outer then inner
@@ -34,9 +39,9 @@ for(const DK of ['oled','tft']){ const SFX=DK==='oled'?'':'_tft';
     S.cap(FF,HD,[S.bound(FF,loop,HD,true,true)],true); S.cap(FF,-HD,[S.bound(FF,loop,-HD,false,true)],false); S.done(); }
   // 2/3 panels (front with display cut-out per module, back) + bottom flange
   const front=REVB.front.map((f,i)=>i===0?{t:'r',x:REVB.dispX,y:24,w:REVB.dispCut[DK][0],h:REVB.dispCut[DK][1],r:REVB.dispCut[DK][2]}:f);
-  const pOut=fpoly([[PW,PZ],[PW,PTOP],[-PW,PTOP],[-PW,PZ]],[PR,PR,PR,PR]);
+  const pOut=HPs?fpoly(...notch([[PW,PZ],[PW,PTOP],[-PW,PTOP],[-PW,PZ]],[PR,PR,PR,PR],PZ)):fpoly([[PW,PZ],[PW,PTOP],[-PW,PTOP],[-PW,PZ]],[PR,PR,PR,PR]);
   for(const [nm,Fr,feats,map,sy] of [['front',FF,front,id,-1],['bak',FB,REVB.back,neg,1]]){
-    const hs=feats.map(f=>hole(f,map,0,f.screw?3.4:undefined)); doc.prism('panel_'+nm,Fr,pOut,hs,HD-T,HD);
+    const hs=feats.filter(f=>!(f.hp&&f.slot)).map(f=>hole(f,map,0,f.screw?3.4:undefined)); doc.prism('panel_'+nm,Fr,nm==='front'?pOut:fpoly([[PW,PZ],[PW,PTOP],[-PW,PTOP],[-PW,PZ]],[PR,PR,PR,PR]),hs,HD-T,HD);
     const c=[sy*(HD-RO),PZ], sec=sy<0?[{t:'A',c,r:RO,a:P(c,RO,180*d),b:P(c,RO,270*d),ccw:true},{t:'L',a:P(c,RO,270*d),b:P(c,RI,270*d)},{t:'A',c,r:RI,a:P(c,RI,270*d),b:P(c,RI,180*d),ccw:false},{t:'L',a:P(c,RI,180*d),b:P(c,RO,180*d)}]
       :[{t:'A',c,r:RO,a:P(c,RO,270*d),b:P(c,RO,360*d),ccw:true},{t:'L',a:P(c,RO,360*d),b:P(c,RI,360*d)},{t:'A',c,r:RI,a:P(c,RI,360*d),b:P(c,RI,270*d),ccw:false},{t:'L',a:P(c,RI,270*d),b:P(c,RO,270*d)}];
     sec.forEach((s,i)=>{ s.a=i?sec[i-1].b:s.a; }); sec[0].a=sec[3].b;
@@ -63,8 +68,8 @@ for(const DK of ['oled','tft']){ const SFX=DK==='oled'?'':'_tft';
   out['platemetall/skjold_s1_avrundet/skjold_s1_omslag_flatmonster.dxf']=d.text(); log('wrap flat',(2*s5).toFixed(2),'x',D); }
 for(const [nm,feats,map,dk] of [['front_oled',null,id,'oled'],['front_tft',null,id,'tft'],['bak',REVB.back,neg,null]]){
   const d=DXF(), fl=PZ-BAp-7, fpts=[[FLX,fl],[FLX,PZ],[PW,PZ],[PW,PTOP],[-PW,PTOP],[-PW,PZ],[-FLX,PZ],[-FLX,fl]];
-  d.loop(fpoly(fpts,[0,0,PR,PR,PR,PR,0,0]));
-  const fs=feats||REVB.front.map((f,i)=>i===0?{t:'r',x:REVB.dispX,y:24,w:REVB.dispCut[dk][0],h:REVB.dispCut[dk][1],r:REVB.dispCut[dk][2]}:f);
+  if(feats||!HPs) d.loop(fpoly(fpts,[0,0,PR,PR,PR,PR,0,0])); else d.loop(fpoly(...notch(fpts,[0,0,PR,PR,PR,PR,0,0],fl)));   // front: sporet går gjennom bøy og flens
+  const fs=(feats||REVB.front.map((f,i)=>i===0?{t:'r',x:REVB.dispX,y:24,w:REVB.dispCut[dk][0],h:REVB.dispCut[dk][1],r:REVB.dispCut[dk][2]}:f)).filter(f=>!(f.hp&&f.slot));
   fs.forEach(f=>d.loop(hole(f,map,0,f.screw?3.4:undefined)));
   [-(HW-RB-6),HW-RB-6].forEach(x=>d.loop(circ(x,PZ-BAp-3.5,2.1))); d.line([-FLX,PZ-BAp/2],[FLX,PZ-BAp/2],'BEND');
   out['platemetall/skjold_s1_avrundet/skjold_s1_panel_'+nm+'_flatmonster.dxf']=d.text(); }
