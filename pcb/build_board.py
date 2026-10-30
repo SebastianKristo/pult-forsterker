@@ -369,11 +369,13 @@ POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP":
 
 FIXED_GND_STUBS = {("U8", "5"): (34.4, 64.3), ("U8", "10"): (31.6, 59.8), ("U5", "5"): (158.0, 68.45)}   # (ref, pad) -> via-posisjon
 # låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
-FIXED_TRACKS = [("USB_SEL", "F.Cu", 0.2, [(32.431, 62.2), (31.5, 62.3)]),
+FIXED_TRACKS = [("GND", "F.Cu", 0.2, [(131.75, 46.438), (131.75, 45.3)]), ("GND", "F.Cu", 0.2, [(132.25, 46.438), (132.25, 45.3)]),
+                ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),
+                ("USB_SEL", "F.Cu", 0.2, [(32.431, 62.2), (31.5, 62.3)]),
                 ("USB_UP_DP", "F.Cu", 0.2, [(32.6, 62.769), (32.6, 63.3), (31.4, 64.3)]),
                 ("USB3_DP", "F.Cu", 0.2, [(30.675, 49.6), (30.675, 53.8)])]   # FE1.1s pinne 7 ut nedover mellom nabosporene
 FIXED_VIAS = [("USB_SEL", (31.5, 62.3)), ("USB_UP_DP", (31.4, 64.3)), ("USB3_DP", (30.675, 53.8))]
-FIXED_GND_VIP = {("U4", "3"): (102.6, 60.375), ("U10", "12"): (136.35, 59.35), ("C27", "2"): (152.775, 70.0)}   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
+FIXED_GND_VIP = {("U4", "3"): (102.6, 60.375), ("U4", "9"): (102.6, 64.275), ("U10", "12"): (136.35, 59.35), ("C27", "2"): (152.775, 70.0), ("U13", "17"): (132.0, 45.0), ("C63", "2"): (78.0, 85.225)}   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet
 def build():
@@ -385,6 +387,13 @@ def build():
     for (x0, y0, x1, y1) in [(0, 0, BW, 0), (BW, 0, BW, BH), (BW, BH, 0, BH), (0, BH, 0, 0)]:
         s = pcbnew.PCB_SHAPE(board); s.SetShape(pcbnew.SHAPE_T_SEGMENT); s.SetStart(MM(x0, y0)); s.SetEnd(MM(x1, y1))
         s.SetLayer(pcbnew.Edge_Cuts); s.SetWidth(pcbnew.FromMM(0.1)); board.Add(s)
+    # sperresoner 0,5 mm langs kanten på begge lag (Freerouting holder seg unna; JLCPCB vil ha ≥ 0,3 mm kobber-til-kant)
+    EK = 0.5
+    for (x0, y0, x1, y1) in [(0, 0, BW, EK), (0, BH - EK, BW, BH), (0, 0, EK, BH), (BW - EK, 0, BW, BH)]:
+        for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
+            z = pcbnew.ZONE(board); z.SetIsRuleArea(True); z.SetDoNotAllowTracks(True); z.SetDoNotAllowVias(True); z.SetDoNotAllowCopperPour(True)
+            z.SetDoNotAllowPads(False); z.SetDoNotAllowFootprints(False); z.SetLayer(layer)
+            z.AddPolygon(pcbnew.VECTOR_VECTOR2I([MM(x0, y0), MM(x1, y0), MM(x1, y1), MM(x0, y1)])); board.Add(z)
     # nett
     nets = {}
     for name in sorted(N):
