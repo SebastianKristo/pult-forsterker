@@ -54,7 +54,7 @@ if os.path.exists(SES) and "--no-ses" not in sys.argv:
     open(PCB, "w").write(pcb_txt)
 board = pcbnew.LoadBoard(PCB)
 _ds = board.GetDesignSettings(); _ds.m_ViasMinSize = pcbnew.FromMM(0.5); _ds.m_MinThroughDrill = pcbnew.FromMM(0.3)   # standard JLCPCB-via 0,3 mm hull
-_ds.GetNetClasses().GetDefaultPtr().SetClearance(pcbnew.FromMM(0.14))   # Freerouting ruter med 0,15; avrunding gir 0,148 – JLCPCB-minimum er 0,127
+board.GetAllNetClasses()["Default"].SetClearance(pcbnew.FromMM(0.14)) if hasattr(board, "GetAllNetClasses") else _ds.m_NetSettings.m_DefaultNetClass.SetClearance(pcbnew.FromMM(0.14))   # Freerouting ruter med 0,15; avrunding gir 0,148 – JLCPCB-minimum er 0,127
 # Fiks for allerede rutet kort: U4 pinne 3 (GND) fikk stubb som krysset pinne 2 – erstatt med via-i-pad ytterst på paden
 import build_board as _bb
 for (ref, pad), (vx, vy) in getattr(_bb, "FIXED_GND_VIP", {}).items():
@@ -318,6 +318,9 @@ for ref, num in sorted(_pad_unconnected_gnd(board) | _island_gnd_pads(board)):
     if not done: print("GND-stubb FEILET:", ref, num)
 filler.Fill(board.Zones())
 print("stitching-vias:", n_stitch)
+_rest = sorted(_island_gnd_pads(board))
+if _rest: print("FEIL: GND-pads uten forbindelse til jordplanet:", _rest)
+else: print("alle GND-pads er koblet til jordplanet")
 pcbnew.SaveBoard(PCB, board)
 
 # DRC (KiCad 7: pcbnew.WriteDRCReport)

@@ -40,6 +40,8 @@ R1206 = "R_1206_3216Metric"
 part("J1", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "24V IN", "C8465", 14, 6, 0, "24 V inn fra DC-099 via KCD1 (skruterminal 5,08)")
 part("F1", "Fuse", "Fuseholder_Clip-5x20mm_Keystone_3512P_Inline_P23.62x7.27mm_D1.02x2.41x1.02x1.57mm_Horizontal", "5A 5x20", "C70283", 38, 7, 0, "Sikringsholder 5x20 (klips, THT) + sikring 5 A")
 part("D1", "Diode_SMD", "D_SMB", "SMBJ33A", "C173526", 50, 14, 0, "TVS 33 V")
+part("Q11", TO, "TO-252-2", "P-MOSFET 60V 20A (AOD409)", "", 24, 16, 0, "Polvendingsvern i 24 V-linjen (D = inn, S = ut, G mot GND) – velg TO-252 P-kanal ≥ 60 V i JLC-verktøyet")
+part("D5", "Diode_SMD", "D_SOD-123", "BZT52C12 12V", "", 12, 14, 0, "Zener gate-source Q11"); part("R79", R_, R0603, "100k", "C25803", 12, 17, 0, "Gate Q11 mot GND")
 part("C1", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "1000u/35V h<=16", "", 94, 7, 0, "Bulk elektrolytt Ø10 × maks 16 mm (THT, loddes selv)"); part("C110", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "1000u/35V h<=16", "", 72, 6.3, 0, "Bulk elektrolytt nr. 2 (Ø10 × maks 16 mm)")
 part("J2", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "SPK L", "C8465", 108, 6, 0, "Høyttaler venstre + / -")
 part("J3", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "SPK R", "C8465", 134, 6, 0, "Høyttaler høyre + / -")
@@ -192,6 +194,8 @@ part("R48", R_, R0603, "5.1k", "C23186", 160, 72, 0, "CC1 PC1"); part("R49", R_,
 part("R50", R_, R0603, "5.1k", "C23186", 160, 82, 0, "CC1 PC2"); part("R51", R_, R0603, "5.1k", "C23186", 160, 85, 0, "CC2 PC2")
 for i, y in enumerate((16.2, 33.7, 51.2, 68.7)):
     part(f"J{15+i}", "Connector_USB", "USB_A_Molex_67643_Horizontal", f"USB{i+1}", "C2765194", 167.3, y, 90, f"USB-A ut {i+1} (høyre kant)")
+    part(f"D{6+i}", TO, "SOT-23-6", "USBLC6-2SC6", "C7519", 160.5, y + (4.8 if i == 0 else 0), 0, f"ESD-vern USB-A {i+1}")   # D6 flyttet unna Pi-hullet H5
+part("D10", TO, "SOT-23-6", "USBLC6-2SC6", "C7519", 138, 78, 0, "ESD-vern USB-C PC 1"); part("D11", TO, "SOT-23-6", "USBLC6-2SC6", "C7519", 138, 88, 0, "ESD-vern USB-C PC 2")
 part("F2", "Fuse", "Fuse_1812_4532Metric", "2A PTC", "C545213", 143, 72, 90, "Polyfuse 5 V til USB-portene")
 part("C71", C_, C1206, "10u", "C13585", 143, 78, 90, "5V_USB"); part("C72", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 146, 16, 0, "5V_USB bulk")
 for i, (x, y) in enumerate([(4, 4), (176, 4), (4, 96), (176, 96)]):
@@ -233,7 +237,8 @@ def net(name, *pins):
 GND = "GND"
 # 24 V inn -> sikring -> VIN24 (buck, TVS, bulk) ; relé K1 -> 24V_AMP (forsterker)
 net("24V_IN", ("J1", 1), ("F1", 1)); net(GND, ("J1", 2))
-net("VIN24", ("F1", 2), ("D1", 1), ("C1", 1), ("C110", 1), ("C2", 1), ("C3", 1), ("C4", 1), ("U1", 2), ("R1", 1), ("K1", 3))
+net("24V_F", ("F1", 2), ("Q11", 2)); net("Q11_GATE", ("Q11", 1), ("R79", 1), ("D5", 2)); net(GND, ("R79", 2))
+net("VIN24", ("Q11", 3), ("D5", 1), ("D1", 1), ("C1", 1), ("C110", 1), ("C2", 1), ("C3", 1), ("C4", 1), ("U1", 2), ("R1", 1), ("K1", 3))
 net("24V_AMP", ("K1", 1), ("C36", 1), ("C37", 1), ("C38", 1), ("C39", 1), ("C40", 1), ("C41", 1), ("U6", 18), ("U6", 19), ("U6", 31), ("U6", 32), ("U6", 17), ("C42", 1), ("C43", 1))
 net(GND, ("D1", 2), ("C1", 2), ("C110", 2), ("C2", 2), ("C3", 2), ("C4", 2), ("U1", 7), ("U1", 9), ("R2", 2), ("R3", 2), ("R5", 2), ("C6", 2), ("C7", 2), ("D2", 2),
     ("C8", 2), ("C9", 2), ("C10", 2), ("C11", 2))
@@ -349,20 +354,20 @@ net("HP_VSS", ("U13", 8), ("C102", 1)); net("HP_CPP", ("U13", 11), ("C103", 1));
 net("5V_SW", ("U13", 14), ("C100", 1)); net("EXP_A6", ("U13", 13)); net("HP_DET", ("J23", 4), ("C108", 1), ("R77", 1)); net("EXP_A5", ("R77", 2))
 net(GND, ("U13", 6), ("U13", 7), ("U13", 10), ("U13", 15), ("U13", 17), ("C100", 2), ("C101", 2), ("C102", 2), ("C105", 2), ("C106", 2), ("J23", 3), ("C108", 2), ("R76", 2))
 # USB-delingsswitch
-net("5V_USB", ("F2", 2), ("C71", 1), *[(f"J{15+i}", 1) for i in range(4)]); net(GND, ("C71", 2), ("C72", 2))
-net("USB_VD33", ("U7", 21), ("U7", 13), ("U7", 19), ("C66", 1), ("C73", 1), ("R46", 1), ("U8", 10), ("C70", 1))
+net("5V_USB", ("F2", 2), ("C71", 1), *[(f"J{15+i}", 1) for i in range(4)], *[(f"D{6+i}", 5) for i in range(4)]); net(GND, ("C71", 2), ("C72", 2), *[(f"D{6+i}", 2) for i in range(6)])
+net("USB_VD33", ("U7", 21), ("U7", 13), ("U7", 19), ("C66", 1), ("C73", 1), ("R46", 1), ("U8", 10), ("C70", 1), ("D10", 5), ("D11", 5))
 net("USB_VD18", ("U7", 12), ("U7", 28), ("C67", 1), ("C69", 1))
 net("USB_REXT", ("U7", 14), ("R75", 1)); net("USB_RSTJ", ("U7", 17), ("U7", 26), ("R46", 2))
 net("USB_XIN", ("U7", 3), ("Y1", 1)); net("USB_XOUT", ("U7", 2), ("Y1", 3))
 net(GND, ("U7", 1), ("Y1", 2), ("Y1", 4), ("R75", 2), ("C66", 2), ("C67", 2), ("C68", 2), ("C69", 2), ("C73", 2), ("C70", 2), ("U8", 5), ("U8", 6), ("R47", 2))
 net("USB_UP_DP", ("U7", 16), ("U8", 8)); net("USB_UP_DM", ("U7", 15), ("U8", 7))
 net("USB_SEL", ("U12", 5), ("U8", 9), ("R47", 1))   # MCP GPB4: lav = PC 1, høy = PC 2
-net("PC1_DP", ("U8", 1), ("J11", "A6"), ("J11", "B6")); net("PC1_DM", ("U8", 2), ("J11", "A7"), ("J11", "B7"))
-net("PC2_DP", ("U8", 3), ("J12", "A6"), ("J12", "B6")); net("PC2_DM", ("U8", 4), ("J12", "A7"), ("J12", "B7"))
+net("PC1_DP", ("U8", 1), ("J11", "A6"), ("J11", "B6"), ("D10", 1), ("D10", 6)); net("PC1_DM", ("U8", 2), ("J11", "A7"), ("J11", "B7"), ("D10", 3), ("D10", 4))
+net("PC2_DP", ("U8", 3), ("J12", "A6"), ("J12", "B6"), ("D11", 1), ("D11", 6)); net("PC2_DM", ("U8", 4), ("J12", "A7"), ("J12", "B7"), ("D11", 3), ("D11", 4))
 net("PC1_CC1", ("J11", "A5"), ("R48", 1)); net("PC1_CC2", ("J11", "B5"), ("R49", 1)); net("PC2_CC1", ("J12", "A5"), ("R50", 1)); net("PC2_CC2", ("J12", "B5"), ("R51", 1))
 net(GND, ("R48", 2), ("R49", 2), ("R50", 2), ("R51", 2), *[(j, p) for j in ("J11", "J12") for p in ("A1", "B1", "A12", "B12", "S1")])
 for i, (dp, dm) in enumerate(((11, 10), (9, 8), (7, 6), (5, 4))):
-    net(f"USB{i+1}_DP", ("U7", dp), (f"J{15+i}", 3)); net(f"USB{i+1}_DM", ("U7", dm), (f"J{15+i}", 2)); net(GND, (f"J{15+i}", 4), (f"J{15+i}", 5))
+    net(f"USB{i+1}_DP", ("U7", dp), (f"J{15+i}", 3), (f"D{6+i}", 1), (f"D{6+i}", 6)); net(f"USB{i+1}_DM", ("U7", dm), (f"J{15+i}", 2), (f"D{6+i}", 3), (f"D{6+i}", 4)); net(GND, (f"J{15+i}", 4), (f"J{15+i}", 5))
 
 POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP": 2.0, "VIN24": 2.0, "24V_IN": 2.0, "5V": 1.2, "BUCK_SW": 1.5, "OUTNL": 1.5, "OUTPL": 1.5, "OUTNR": 1.5, "OUTPR": 1.5,
               "SPK_LN": 1.5, "SPK_LP": 1.5, "SPK_RN": 1.5, "SPK_RP": 1.5, "3V3": 0.5, "VNEG": 0.4}
@@ -370,11 +375,13 @@ POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP":
 FIXED_GND_STUBS = {("U5", "5"): (158.0, 68.45)}   # (ref, pad) -> via-posisjon
 # låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
 FIXED_TRACKS = [("AMP_RINN", "F.Cu", 0.2, [(120.35, 31.725), (118.6, 31.725)]),   # TPA3116 pinne 5 ble stengt inne av nabosporene
+                ("HP_VSS", "F.Cu", 0.2, [(132.75, 46.438), (132.75, 47.6)]), ("HP_VSS", "B.Cu", 0.25, [(132.75, 47.6), (135.5, 47.6)]),
+                ("HP_VSS", "F.Cu", 0.2, [(135.5, 47.6), (136.225, 49.0)]),   # TPA6132A2 HPVSS (pinne 8) -> C102 under CPP/CPN-sporene
                 ("GND", "F.Cu", 0.2, [(131.75, 46.438), (131.75, 45.3)]), ("GND", "F.Cu", 0.2, [(132.25, 46.438), (132.25, 45.3)]),
                 ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),
                 ("USB3_DP", "F.Cu", 0.2, [(30.675, 49.6), (30.675, 53.8)])]   # FE1.1s pinne 7 ut nedover mellom nabosporene
-FIXED_VIAS = [("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725))]
-FIXED_GND_VIP = {("U4", "3"): (102.6, 60.375), ("U4", "9"): (102.6, 64.275), ("U10", "12"): (136.35, 59.35), ("C27", "2"): (152.775, 70.0), ("U13", "17"): (132.0, 45.0), ("C63", "2"): (78.0, 85.225)}   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
+FIXED_VIAS = [("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725)), ("HP_VSS", (132.75, 47.6)), ("HP_VSS", (135.5, 47.6))]
+FIXED_GND_VIP = {("U4", "3"): (102.6, 60.375), ("U4", "9"): (102.6, 64.275), ("U10", "12"): (136.35, 59.35), ("C27", "2"): (152.775, 70.0), ("U13", "17"): (132.0, 45.0), ("C63", "2"): (78.0, 85.225), ("C60", "2"): (66.0, 85.225), ("C62", "2"): (74.0, 85.225), ("U10", "5"): (130.7, 60.65), ("U12", "10"): (63.9, 73.625)}   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet
 def build():
