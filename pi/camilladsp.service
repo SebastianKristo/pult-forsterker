@@ -1,5 +1,5 @@
 [Unit]
-Description=CamillaDSP (loudness + digitalt volum for KI Pultforsterker)
+Description=CamillaDSP (loudness + digitalt volum for Pultforsterker)
 After=sound.target
 Before=ki-amp.service shairport-sync.service bluealsa-aplay.service ki-usb-audio.service
 

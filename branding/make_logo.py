@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Logo og ikon for KI Pultforsterker (Homey-app, Home Assistant brands, README)."""
+"""Logo og ikon for Pultforsterker (Homey-app, Home Assistant brands, README)."""
 import cairosvg, os, shutil
 F = 'font-family="Helvetica Neue,Helvetica,Arial,sans-serif"'
 def mark(x, y, s, fg="#ffffff", accent="#e8562a"):

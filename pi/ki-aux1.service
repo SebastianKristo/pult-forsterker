@@ -1,5 +1,5 @@
 [Unit]
-Description=KI Pultforsterker – AUX 1 (PCM1808 I2S-ADC på hovedkortet) -> miks
+Description=Pultforsterker – AUX 1 (PCM1808 I2S-ADC på hovedkortet) -> miks
 After=sound.target
 
 [Service]

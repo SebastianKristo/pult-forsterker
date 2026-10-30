@@ -1,5 +1,5 @@
 [Unit]
-Description=KI Pultforsterker daemon (HTTP-API, mDNS, relé, valgfri MQTT)
+Description=Pultforsterker daemon (HTTP-API, mDNS, relé, valgfri MQTT)
 After=network-online.target camilladsp.service shairport-sync.service
 Wants=network-online.target
 

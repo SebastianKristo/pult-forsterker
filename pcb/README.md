@@ -1,4 +1,4 @@
-# KI Pultforsterker – hovedkort rev B
+# Pultforsterker – hovedkort rev B
 
 Ett kort (180 × 100 mm, 2 lag) som erstatter alle modulene, og som i tillegg har USB-delingsswitch, to AUX-innganger som
 digitaliseres (så alt kan mikses), «smart relé» for strømmen til forsterkerdelen, og plass til en 2,8" SPI-TFT med touch.

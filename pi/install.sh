@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# KI Pultforsterker v2 – installasjon på Raspberry Pi OS Lite (64-bit, Bookworm+)
+# Pultforsterker v2 – installasjon på Raspberry Pi OS Lite (64-bit, Bookworm+)
 # Kjør som vanlig bruker:  bash install.sh
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"

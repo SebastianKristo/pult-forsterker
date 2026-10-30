@@ -1,4 +1,4 @@
-// KI Pultforsterker hovedkort rev B: I2S med PCM5102A (DAC, slave) og PCM1808 (ADC, master 48 kHz fra 12,288 MHz).
+// Pultforsterker hovedkort rev B: I2S med PCM5102A (DAC, slave) og PCM1808 (ADC, master 48 kHz fra 12,288 MHz).
 // Pi-en er I2S-slave (bitclock/frame fra ADC-en). Lydkortet heter «pultamp»: avspilling hw:pultamp, opptak hw:pultamp.
 // Bygg: dtc -@ -I dts -O dtb -o ki-pultamp-i2s.dtbo ki-pultamp-i2s.dts  ->  /boot/firmware/overlays/, config.txt: dtoverlay=ki-pultamp-i2s
 /dts-v1/;

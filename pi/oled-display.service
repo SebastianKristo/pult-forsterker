@@ -1,5 +1,5 @@
 [Unit]
-Description=KI Pultforsterker OLED display
+Description=Pultforsterker OLED display
 After=shairport-sync.service
 Wants=shairport-sync.service
 

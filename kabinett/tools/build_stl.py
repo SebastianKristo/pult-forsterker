@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""STL for KI Pultforsterker v2 (speiler pultforsterker_v2.scad)."""
+"""STL for Pultforsterker v2 (speiler pultforsterker_v2.scad)."""
 import os
 import struct
 import numpy as np
@@ -190,7 +190,7 @@ def write_stl(man, path):
     rec = np.zeros(len(t), dtype=[("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")])
     rec["n"], rec["v"] = n, tri
     with open(path, "wb") as f:
-        f.write(b"KI Pultforsterker v2".ljust(80, b"\0"))
+        f.write(b"Pultforsterker v2".ljust(80, b"\0"))
         f.write(struct.pack("<I", len(t)))
         f.write(rec.tobytes())
     bb = man.bounding_box()

@@ -1,5 +1,5 @@
 [Unit]
-Description=KI Pultforsterker – USB-lyd (Pi som USB-lydkort for PC, full speed) -> DAC
+Description=Pultforsterker – USB-lyd (Pi som USB-lydkort for PC, full speed) -> DAC
 After=sound.target
 
 [Service]

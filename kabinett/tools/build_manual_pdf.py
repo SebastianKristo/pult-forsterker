@@ -55,16 +55,16 @@ figcaption{font-size:8.5pt;color:var(--mute);margin-top:1.5mm}
 .note{border-left:3px solid var(--acc);background:var(--soft);padding:3mm 4mm;margin:3mm 0 5mm;page-break-inside:avoid}
 """
 cover_img = base64.b64encode((KAB / "preview_v2.png").read_bytes()).decode() if (KAB/"preview_v2.png").exists() else ""
-page = f"""<!doctype html><html lang="nb"><head><meta charset="utf-8"><title>KI Pultforsterker – Byggeveiledning</title><style>{css}</style></head><body>
+page = f"""<!doctype html><html lang="nb"><head><meta charset="utf-8"><title>Pultforsterker – Byggeveiledning</title><style>{css}</style></head><body>
 <section class="cover">
- <div><div class="kicker">Byggeveiledning · v2</div><h1>KI Pultforsterker</h1>
+ <div><div class="kicker">Byggeveiledning · v2</div><h1>Pultforsterker</h1>
  <p class="sub">AirPlay 2 · Bluetooth · AUX · USB · 2 × 50 W. Fra deler i posen til ferdig forsterker under pulten, steg for steg.</p>
  {'<img src="data:image/png;base64,'+cover_img+'" alt="">' if cover_img else ''}</div>
  <div class="spec"><div><b>Kabinett</b>200 × 120 × 48 mm, 3D-printet, tre deler</div><div><b>Hjerne</b>Raspberry Pi Zero 2 W + PCM5102A</div><div><b>Forsterker</b>XH-M562 TPA3116D2, 24 V</div>
  <div><b>Styring</b>5 LED-knapper, encoder, 2,42" OLED</div><div><b>Integrasjoner</b>Home Assistant · Homey</div><div><b>Dato</b>28. oktober 2026 · Sebastian Kristo</div></div>
 </section>
 <section class="intro"><h2>Om denne veiledningen</h2>{intro_html}
-<div class="note"><strong>Slik leser du den.</strong> Hvert steg har et mål øverst. Fet tekst er handlinger; tall i bildene henviser til nummererte punkter i teksten. Mål er i millimeter fra kassens senter (x), høyde fra bunnen (z). Deleliste, koblingsskjema og kode står i hoveddokumentet «KI Pultforsterker – AirPlay + PC/Mac».</div>
+<div class="note"><strong>Slik leser du den.</strong> Hvert steg har et mål øverst. Fet tekst er handlinger; tall i bildene henviser til nummererte punkter i teksten. Mål er i millimeter fra kassens senter (x), høyde fra bunnen (z). Deleliste, koblingsskjema og kode står i hoveddokumentet «Pultforsterker – AirPlay + PC/Mac».</div>
 <h2>Innhold</h2><ol><li>Før du starter</li><li>Steg 1 – Elektronikken på bordet</li><li>Steg 2 – Print og klargjør kabinettet</li><li>Steg 3 – Bakveggen</li><li>Steg 4 – Fronten</li><li>Steg 5 – Kort og moduler inni</li><li>Steg 6 – Ledninger</li><li>Steg 7 – Test, lokk og montering</li><li>Daglig bruk og feilsøking</li></ol></section>
 {body}
 </body></html>"""
@@ -77,7 +77,7 @@ async def main():
         await pg.set_content(page); await pg.emulate_media(media="print")
         await pg.pdf(path=out_pdf, format="A4", print_background=True, display_header_footer=True,
             header_template="<div></div>",
-            footer_template='<div style="width:100%;font-family:Inter,sans-serif;font-size:7.5pt;color:#6b6a66;padding:0 16mm;display:flex;justify-content:space-between"><span>KI Pultforsterker – Byggeveiledning</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
+            footer_template='<div style="width:100%;font-family:Inter,sans-serif;font-size:7.5pt;color:#6b6a66;padding:0 16mm;display:flex;justify-content:space-between"><span>Pultforsterker – Byggeveiledning</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
             margin={"top":"18mm","bottom":"20mm","left":"16mm","right":"16mm"})
         await b.close()
 asyncio.run(main()); print("ok")

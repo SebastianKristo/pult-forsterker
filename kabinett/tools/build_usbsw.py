@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""KI Pultforsterker v2 med innebygd USB-switch (Ugreen 2 PC → 4 USB) – etter design_handoff USB_SWITCH.md,
+"""Pultforsterker v2 med innebygd USB-switch (Ugreen 2 PC → 4 USB) – etter design_handoff USB_SWITCH.md,
 tilpasset hovedkortet (150 × 100) stablet over Raspberry Pi 4.
 
 Lager (i ../stl/):

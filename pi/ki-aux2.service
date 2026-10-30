@@ -1,5 +1,5 @@
 [Unit]
-Description=KI Pultforsterker – AUX 2 (PCM2900 USB-kodek på hovedkortet) -> miks
+Description=Pultforsterker – AUX 2 (PCM2900 USB-kodek på hovedkortet) -> miks
 After=sound.target
 
 [Service]

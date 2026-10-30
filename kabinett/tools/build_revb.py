@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""KI Pultforsterker v2 – kabinett for hovedkort rev B (180 × 100, USB-switch, AUX 1/2, TFT eller OLED).
+"""Pultforsterker v2 – kabinett for hovedkort rev B (180 × 100, USB-switch, AUX 1/2, TFT eller OLED).
 
 Lager (i ../stl/):
   v2_body_revb.stl             kasse 215 × 160 × 48: kortet flush mot venstre vegg (4 × USB-A ut gjennom veggen), Pi 4 under kortet

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""KI Pultforsterker – hovedkort (rev. B). Bygger kicad_pcb med pcbnew-API-et (KiCad 7). Kortet er 180 × 100 mm.
+"""Pultforsterker – hovedkort (rev. B). Bygger kicad_pcb med pcbnew-API-et (KiCad 7). Kortet er 180 × 100 mm.
 
 Rev B (alt digitalt gjennom Pi-en, ingen analog AUX-vei):
   * AUX 1 -> PCM1808 I2S-ADC (master 256 fs fra 12,288 MHz-oscillator, Pi er I2S-slave). AUX 2 -> PCM2900C USB-kodek (kabel til en
@@ -415,7 +415,7 @@ def build():
     except Exception as e:
         print("Nettklasser:", e)
     # tekst
-    t = pcbnew.PCB_TEXT(board); t.SetText("KI Pultforsterker  rev B  2026"); t.SetPosition(MM(115, 78)); t.SetLayer(pcbnew.F_SilkS)
+    t = pcbnew.PCB_TEXT(board); t.SetText("Pultforsterker  rev B  2026"); t.SetPosition(MM(115, 78)); t.SetLayer(pcbnew.F_SilkS)
     t.SetTextSize(pcbnew.VECTOR2I(pcbnew.FromMM(1.5), pcbnew.FromMM(1.5))); board.Add(t)
     for txt, x, y in [("SPK R", 170, 12), ("KNAPPER", 50, 98.5), ("ENC", 70, 98.5), ("PWR", 84, 98.5), ("5V PI", 93, 98.5), ("OLED", 108, 98.5), ("TFT", 134, 98.5), ("LED", 162, 98.5),
                       ("AUX1", 171, 54), ("AUX2", 171, 66), ("USB PI", 171, 78), ("PC1", 37, 76), ("PC2", 37, 86), ("USB 1-4", 20, 10), ("EXP", 97, 81),

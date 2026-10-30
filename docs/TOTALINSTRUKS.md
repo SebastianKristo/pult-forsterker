@@ -1,4 +1,4 @@
-# KI Pultforsterker – totalinstruks
+# Pultforsterker – totalinstruks
 
 Alt fra tomt SD-kort til ferdig forsterker styrt fra Home Assistant og Homey. Følg kapitlene i rekkefølge; hvert kapittel ender med en sjekk som må være grønn før du går videre. Kommandoer merket **PC** kjøres på Mac/PC, resten på Pi-en over SSH.
 
@@ -264,7 +264,7 @@ Viser `i2cdetect` `3d` i stedet for `3c`, legg til `KI_AMP_OLED_ADDR=0x3D` i `/e
    scp pi/ki_pultforsterker_package.yaml root@homeassistant.local:/config/packages/ki_pultforsterker.yaml
    ```
 3. Start HA på nytt. **Innstillinger → Enheter og tjenester → Oppdaget → Pultforsterker → Konfigurer** (mDNS `_kipultamp._tcp`). Dukker den ikke opp: *+ Legg til integrasjon → Pultforsterker* og skriv IP + port 8765.
-4. Entiteter: `media_player.ki_pultforsterker` (kilde, volum, mute, på/av), `switch.ki_pultforsterker_strom`, `switch.ki_pultforsterker_loudness`, `number.ki_pultforsterker_loudness_styrke`, `sensor.ki_pultforsterker_kilde/tittel/artist`, `binary_sensor.ki_pultforsterker_spiller`, `button.ki_pultforsterker_start_bluetooth_parring`. Pakken gir `input_boolean.ki_pultforsterker_auto_av`, `input_number.ki_pultforsterker_av_etter_min`, automasjonene «KI Pultforsterker – på ved AirPlay» / «– av etter stillhet» og TTS-skriptet.
+4. Entiteter: `media_player.ki_pultforsterker` (kilde, volum, mute, på/av), `switch.ki_pultforsterker_strom`, `switch.ki_pultforsterker_loudness`, `number.ki_pultforsterker_loudness_styrke`, `sensor.ki_pultforsterker_kilde/tittel/artist`, `binary_sensor.ki_pultforsterker_spiller`, `button.ki_pultforsterker_start_bluetooth_parring`. Pakken gir `input_boolean.ki_pultforsterker_auto_av`, `input_number.ki_pultforsterker_av_etter_min`, automasjonene «Pultforsterker – på ved AirPlay» / «– av etter stillhet» og TTS-skriptet.
 5. Kort til dashbordet – eksempel med vanlig `media-control` (legg stil som per-kort override, ikke i button_card_templates):
    ```yaml
    type: media-control
@@ -325,7 +325,7 @@ npm install
 homey app install            # eller: homey app run  (live-logg i terminalen)
 ```
 
-Homey-appen → *Enheter → + → KI Pultforsterker* → forsterkeren finnes via mDNS (ellers skriv IP i enhetsinnstillingene). Flytkort: *på/av*, *velg kilde*, *sett volum*, *loudness* (`ki_set_loudness`), *start Bluetooth-parring*, og triggere på kilde/avspilling.
+Homey-appen → *Enheter → + → Pultforsterker* → forsterkeren finnes via mDNS (ellers skriv IP i enhetsinnstillingene). Flytkort: *på/av*, *velg kilde*, *sett volum*, *loudness* (`ki_set_loudness`), *start Bluetooth-parring*, og triggere på kilde/avspilling.
 
 **Sjekk:** «Sett volum 20» i en flyt endrer volumet. ✅
 

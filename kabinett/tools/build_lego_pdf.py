@@ -22,7 +22,7 @@ def step(n,title,img_path,parts,lines,extra="",cls=""):
 def closeup(p,cap,cls="close"): return f'<figure class="{cls}">{img(p)}<figcaption>{cap}</figcaption></figure>'
 
 S=[]
-S.append(f"""<section class="cover"><div><div class="kicker">Bildeveiledning · steg for steg</div><h1>KI Pultforsterker</h1>
+S.append(f"""<section class="cover"><div><div class="kicker">Bildeveiledning · steg for steg</div><h1>Pultforsterker</h1>
 <p class="sub">Fra tom kasse til ferdig forsterker under pulten. Hvert steg viser hva som settes inn, hvor det skal, og hva som loddes.</p></div>
 {img(COVER,"hero")}
 <div class="spec"><div><b>Kabinett</b>200 × 120 × 48 mm · 3 printede deler</div><div><b>Elektronikk</b>Pi Zero 2 W · PCM5102A · TPA3116D2</div><div><b>Innganger</b>AirPlay 2 · Bluetooth · AUX · USB</div></div></section>""")
@@ -126,14 +126,14 @@ ul.partlist{columns:2;column-gap:8mm;margin:0;padding:0;list-style:none;font-siz
 .muted{color:var(--mute);font-size:9pt}
 table{border-collapse:collapse;width:100%;margin:2mm 0 5mm;font-size:9.3pt}th{text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);border-bottom:1.5px solid var(--ink);padding:1.5mm 2mm}td{padding:1.6mm 2mm;border-bottom:1px solid var(--line);vertical-align:top}tr:nth-child(even) td{background:var(--soft)}
 """
-page=f'<!doctype html><html lang="nb"><head><meta charset="utf-8"><title>KI Pultforsterker – Bildeveiledning</title><style>{CSS}</style></head><body>{"".join(S)}</body></html>'
+page=f'<!doctype html><html lang="nb"><head><meta charset="utf-8"><title>Pultforsterker – Bildeveiledning</title><style>{CSS}</style></head><body>{"".join(S)}</body></html>'
 out=K/"KI_Pultforsterker_Bildeveiledning.pdf"; out.with_suffix(".html").write_text(page)
 async def main():
     from playwright.async_api import async_playwright
     async with async_playwright() as p:
         b=await p.chromium.launch(); pg=await b.new_page(); await pg.set_content(page); await pg.emulate_media(media="print")
         await pg.pdf(path=str(out),format="A4",print_background=True,display_header_footer=True,header_template="<div></div>",
-            footer_template='<div style="width:100%;font-family:Inter,sans-serif;font-size:7.5pt;color:#6b6a66;padding:0 14mm;display:flex;justify-content:space-between"><span>KI Pultforsterker – Bildeveiledning</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
+            footer_template='<div style="width:100%;font-family:Inter,sans-serif;font-size:7.5pt;color:#6b6a66;padding:0 14mm;display:flex;justify-content:space-between"><span>Pultforsterker – Bildeveiledning</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
             margin={"top":"14mm","bottom":"16mm","left":"14mm","right":"14mm"})
         await b.close()
 asyncio.run(main()); print("ok")

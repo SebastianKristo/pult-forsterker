@@ -1,4 +1,4 @@
-// KI Pultforsterker v2 – kabinett etter frontdesignet i design_handoff_pultforsterker
+// Pultforsterker v2 – kabinett etter frontdesignet i design_handoff_pultforsterker
 // Koordinater: x høyre, y bakover (front = -D/2), z opp. Boksens bunn er z=0.
 // Deler: part = "body" | "frontplate" | "lid" | "both"
 //

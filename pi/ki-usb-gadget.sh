@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# KI Pultforsterker – USB-lydkort (UAC2) via configfs. Full speed (12 Mbit) slik at en ADuM3160/4160
+# Pultforsterker – USB-lydkort (UAC2) via configfs. Full speed (12 Mbit) slik at en ADuM3160/4160
 # USB-isolator kan sitte mellom PC-en og forsterkeren. 48 kHz / 16 bit stereo = 1,5 Mbit – god margin.
 set -e
 G=/sys/kernel/config/usb_gadget/pultamp

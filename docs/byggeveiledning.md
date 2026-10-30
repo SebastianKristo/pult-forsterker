@@ -1,4 +1,4 @@
-# KI Pultforsterker – Byggeveiledning
+# Pultforsterker – Byggeveiledning
 
 Oct 28, 2026 · @Sebastian
 
@@ -199,4 +199,4 @@ MOSFET-kortenes jumper på **3.3V**; GND på signalsiden til Pi GND. LED-ringene
 | LED-ring lyser ikke | MOSFET-jumper på 3.3V, ring + på 5 V, − på OUT− |
 | Finner ikke forsterkeren i HA/Homey | `curl http://pultamp.local:8765/api/status`; samme Wi-Fi/VLAN som HA |
 
-**Interaktiv 3D-modell av det ferdige produktet:** [KI Pultforsterker 3D](https://claude.ai/artifact/RJJtac14L9A3EkNhTBcTzU) – roter, se front/bak/ovenfra, løft lokket, og klikk på knapper og kontakter for forklaring.
+**Interaktiv 3D-modell av det ferdige produktet:** [Pultforsterker 3D](https://claude.ai/artifact/RJJtac14L9A3EkNhTBcTzU) – roter, se front/bak/ovenfra, løft lokket, og klikk på knapper og kontakter for forklaring.

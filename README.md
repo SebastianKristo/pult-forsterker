@@ -1,6 +1,6 @@
-<p align="center"><img src="docs/bilder/logo.png" width="520" alt="KI Pultforsterker"></p>
+<p align="center"><img src="docs/bilder/logo.png" width="520" alt="Pultforsterker"></p>
 
-# KI Pultforsterker
+# Pultforsterker
 
 
 **Start her: [docs/TOTALINSTRUKS.md](docs/TOTALINSTRUKS.md)** – alt fra SD-kort til Home Assistant/Homey, med alle kommandoer.
