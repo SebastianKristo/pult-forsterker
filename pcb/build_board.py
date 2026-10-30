@@ -374,7 +374,10 @@ net("USB_UP_DP", ("U7", 16), ("U8", 8)); net("USB_UP_DM", ("U7", 15), ("U8", 7))
 net("USB_SEL", ("U12", 5), ("U8", 9), ("R47", 1))   # MCP GPB4: lav = PC 1, høy = PC 2
 net("PC1_DP", ("U8", 1), ("J11", "A6"), ("J11", "B6"), ("D10", 1), ("D10", 6)); net("PC1_DM", ("U8", 2), ("J11", "A7"), ("J11", "B7"), ("D10", 3), ("D10", 4))
 net("PC2_DP", ("U8", 3), ("J12", "A6"), ("J12", "B6"), ("D11", 1), ("D11", 6)); net("PC2_DM", ("U8", 4), ("J12", "A7"), ("J12", "B7"), ("D11", 3), ("D11", 4))
-net("PC1_VBUS", *[("J11", p) for p in ("A4", "B4", "A9", "B9")]); net("PC2_VBUS", *[("J12", p) for p in ("A4", "B4", "A9", "B9")])   # ikke brukt (huben går på egen 5 V)
+# VBUS-padene på USB-C er ikke i bruk (huben går på egen 5 V). A4/B9 og A9/B4 er fysisk samme pad – gi hvert par sitt nett,
+# så KiCad verken melder klaring (pads uten nett) eller krever et spor mellom dem.
+for _j, _n in (("J11", "PC1"), ("J12", "PC2")):
+    net(f"{_n}_VBUS_A", (_j, "A4"), (_j, "B9")); net(f"{_n}_VBUS_B", (_j, "A9"), (_j, "B4"))
 net("PC1_CC1", ("J11", "A5"), ("R48", 1)); net("PC1_CC2", ("J11", "B5"), ("R49", 1)); net("PC2_CC1", ("J12", "A5"), ("R50", 1)); net("PC2_CC2", ("J12", "B5"), ("R51", 1))
 net(GND, ("R48", 2), ("R49", 2), ("R50", 2), ("R51", 2), *[(j, p) for j in ("J11", "J12") for p in ("A1", "B1", "A12", "B12", "S1")])
 for i, (dp, dm) in enumerate(((11, 10), (9, 8), (7, 6), (5, 4))):

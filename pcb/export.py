@@ -365,9 +365,21 @@ for _ in range(40):
         p = _via_in_overlap(frags, minor, comps[0])
         if p is not None: break
     if p is None:
-        print("FEIL: jordplanet har", len(comps), "adskilte deler som ikke lar seg binde med via")
+        # Rest-deler uten GND-pads er bare kobberrester: fjern de (ulåste) stitching-viaene i dem, så KiCad fjerner øyene ved fylling
+        smd_gnd = [pd.GetPosition() for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() == "GND"]
+        dropped = 0; stuck = []
         for minor in comps[1:]:
-            print("   del:", [(pcbnew.LayerName(frags[i][0]), round(frags[i][1].BBox().GetLeft() / 1e6, 1), round(frags[i][1].BBox().GetTop() / 1e6, 1)) for i in minor][:4])
+            polys = [frags[i][1] for i in minor]
+            if any(pl.Contains(q) for pl in polys for q in smd_gnd):
+                stuck.append(minor); continue
+            for v in [t for t in board.GetTracks() if t.GetClass() == "PCB_VIA" and t.GetNetname() == "GND" and not t.IsLocked()]:
+                if any(pl.Contains(v.GetPosition()) for pl in polys): board.Remove(v); dropped += 1
+        filler.Fill(board.Zones())
+        print("kobberrester i jordplanet fjernet (vias):", dropped)
+        if stuck:
+            print("FEIL: jordplanet har", len(stuck), "adskilte deler med GND-pads som ikke lar seg binde med via")
+            for minor in stuck:
+                print("   del:", [(pcbnew.LayerName(frags[i][0]), round(frags[i][1].BBox().GetLeft() / 1e6, 1), round(frags[i][1].BBox().GetTop() / 1e6, 1)) for i in minor][:4])
         break
     v = pcbnew.PCB_VIA(board); v.SetPosition(p); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd_net)
     v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); board.Add(v); n_bridge += 1
