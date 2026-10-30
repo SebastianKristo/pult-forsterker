@@ -126,7 +126,7 @@ def body():
         for x in (-1, 1):
             for y in (-1, 1):
                 m += (cyl(8, floor_t + pcb_post_h) - cyl(2.6, floor_t + pcb_post_h + 1)).translate([pcb_pos[0] + x * pcb_holes[0] / 2, pcb_pos[1] + y * pcb_holes[1] / 2, 0])
-    if VARIANT in ("pi4", "pcb"):   # luftespor i gulvet under Pi 4
+    if VARIANT in ("pi4", "pcb") and pi_pos is not None:   # luftespor i gulvet under Pi 4
         for i in range(12):
             m -= cube(2.4, 44, floor_t + 2, pi_pos[0] - 33 + i * 6, pi_pos[1] - 22, -1)
     for sx in (-1, 1):
@@ -138,7 +138,8 @@ def body():
         for y in (-1, 1):
             if amp_pos is not None:
                 m += (cyl(6, floor_t + 5) - cyl(2.6, floor_t + 6)).translate([amp_pos[0] + x * amp_holes[0] / 2, amp_pos[1] + y * amp_holes[1] / 2, 0])
-            m += (cyl(5.5, floor_t + 4) - cyl(2.2, floor_t + 5)).translate([pi_pos[0] + x * pi_holes[0] / 2, pi_pos[1] + y * pi_holes[1] / 2, 0])
+            if pi_pos is not None:
+                m += (cyl(5.5, floor_t + 4) - cyl(2.2, floor_t + 5)).translate([pi_pos[0] + x * pi_holes[0] / 2, pi_pos[1] + y * pi_holes[1] / 2, 0])
     return m
 
 

@@ -51,7 +51,7 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 | J1 | skruterminal 5,08 | 24 V +, GND (fra DC-099 via KCD1) |
 | J2 / J3 | skruterminal 5,08 | SPK L + −, SPK R + − |
 | J4 / J20 | JST XH 3 | AUX 1 / AUX 2: L, R, GND (fra PJ392 bak) |
-| J5 | 2×20 header | Raspberry Pi 40-pin (flatkabel) |
+| J5 | 2×20 header | Raspberry Pi 40-pin (flatkabel 5–10 cm). Pi-en skrus under kortet i H5–H8 (M2,5, 20 mm avstandsstykker), portene mot høyre |
 | J6 | skruterminal 5,08 | 5 V, GND → Pi 4 header pinne 2/6 (18 AWG) |
 | J7 | JST XH 6 | AIR, BT, AUX, USB, POWER, GND (bryterne) |
 | J8 | JST XH 5 | CLK, DT, SW, 3V3, GND (encoder) |
@@ -79,9 +79,10 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 2. Huk av «PCB Assembly», Top side, 2 stk. Last opp BOM og CPL.
 3. Kontroller at alle LCSC-numre finnes på lager; bytt tilsvarende hvis noen er tomme (verdiene står i BOM). Sjekk spesielt
    FE1.1s (C6706491), PCM1808 (C7436), PCM2900C (C180425), TS3USB221 (C130085), MCP23017 (C506653), SRD-05VDC (C35449).
-4. THT-deler loddes selv etter levering: J1–J3, J6 (skruterminaler), J4/J7–J10/J19–J22 (JST), J5, J13 (headere), F1 (sikringsklips),
+4. Festehull: H1–H4 M3 (stolper i kassen), H5–H8 M2,5 (Raspberry Pi 4 under kortet).
+5. THT-deler loddes selv etter levering: J1–J3, J6 (skruterminaler), J4/J7–J10/J19–J22 (JST), J5, J13 (headere), F1 (sikringsklips),
    C1 (2200 µF), K1 (relé), J15–J18 (USB-A).
-5. Kjøleribbe 20 × 20 × 10 mm med termisk tape (1,5–2 mm) på toppen av TPA3116.
+6. Kjøleribbe 20 × 20 × 10 mm med termisk tape (1,5–2 mm) på toppen av TPA3116.
 
 ## Kjente kompromisser i rev B
 

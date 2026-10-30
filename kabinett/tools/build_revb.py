@@ -2,7 +2,8 @@
 """Pultforsterker v2 – kabinett for hovedkort rev B (180 × 100, USB-switch, AUX 1/2, TFT eller OLED).
 
 Lager (i ../stl/):
-  v2_body_revb.stl             kasse 215 × 160 × 48: kortet flush mot venstre vegg (4 × USB-A ut gjennom veggen), Pi 4 under kortet
+  v2_body_revb.stl             kasse 215 × 160 × 48: kortet flush mot venstre vegg (4 × USB-A ut gjennom veggen), Pi 4 skrudd under kortet
+                               på 20 mm avstandsstykker (ingen stolper i gulvet), SD-luke og luftespor i gulvet
   v2_lid_revb.stl / v2_lid_frittstaende_revb.stl
   v2_frontplate_revb.stl       frontplate (2,42" OLED-vindu, 4 × 12 mm knapper, 16 mm POWER, encoder)
   v2_frontplate_revb_tft.stl   frontplate med vindu for 2,8" TFT (aktivt område 57,6 × 43,2) i stedet for OLED
@@ -33,10 +34,10 @@ PCB_X1 = PCB_X0 + PCB_W
 PCB_Y0 = -HD + b.wall + 29.0                        # 29 mm til bakveggen for panelkontaktene
 b.pcb_holes, b.pcb_post_h = (172.0, 92.0), 25.0
 b.pcb_pos = (PCB_X0 + 90.0, PCB_Y0 + 50.0)
-# Pi 4 under kortet, portene mot +x (pluggene får plass under kortet), SD-kortet mot venstre (over USB-blokken)
-PI_X0 = PCB_X0 + 45.0
-b.pi_holes = (58.0, 49.0)
-b.pi_pos = (PI_X0 + 3.5 + 29.0, b.pcb_pos[1] - 8.0)
+# Pi 4 henger under kortet på fire 20 mm M2,5-avstandsstykker (hullene H5–H8 i kortet), portene mot +x. Ingen stolper i gulvet.
+PI_X0, PI_Y0 = PCB_X0 + 17.5, PCB_Y0 + 10.5
+b.pi_pos = None
+SD = dict(x0=PI_X0 - 10.0, x1=PI_X0 + 8.0, y=PI_Y0 + 28.0, w=16.0)   # luke i gulvet for SD-kortet
 b.amp_pos = None
 
 # bakpanel
@@ -68,6 +69,9 @@ def body_revb():
         m -= b.slot_back(b.usbc, x, b.fz)
         for s in (-1, 1):
             m -= b.hole_back(b.usbc_screw, x + s * b.usbc_pitch / 2, b.fz)
+    m -= b.cube(SD["x1"] - SD["x0"], SD["w"], b.floor_t + 2, SD["x0"], SD["y"] - SD["w"] / 2, -1)   # SD-luke
+    for i in range(10):   # luftespor i gulvet under Pi-en
+        m -= b.cube(2.4, 40, b.floor_t + 2, PI_X0 + 20 + i * 6, PI_Y0 + 8, -1)
     for y in USB_Y:   # ett vindu per USB-A (14,4 × 8) i venstre vegg
         m -= b.cube(b.wall + 2, 14.8, USB_Z1 - USB_Z0, -HW - 1, y - 7.4, USB_Z0)
     return m

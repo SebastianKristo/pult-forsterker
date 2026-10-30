@@ -184,7 +184,12 @@ for i, y in enumerate((16.2, 33.7, 51.2, 68.7)):
 part("F2", "Fuse", "Fuse_1812_4532Metric", "2A PTC", "C545213", 143, 72, 90, "Polyfuse 5 V til USB-portene")
 part("C71", C_, C1206, "10u", "C13585", 143, 78, 90, "5V_USB"); part("C72", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 146, 16, 0, "5V_USB bulk")
 for i, (x, y) in enumerate([(4, 4), (176, 4), (4, 96), (176, 96)]):
-    part(f"H{i+1}", "MountingHole", "MountingHole_3.2mm_M3", "M3", "", x, y, 0, "Festehull")
+    part(f"H{i+1}", "MountingHole", "MountingHole_3.2mm_M3", "M3", "", x, y, 0, "Festehull M3 (stolper i kassen)")
+# Raspberry Pi 4 skrus fast under kortet med 4 × M2,5-avstandsstykker (20 mm): Pi-ens hullmønster 58 × 49, kortet 85 × 56 med
+# portene mot +x (pluggene får plass under kortet). Pi-en ligger fra x 17,5 til 102,5, y 10,5 til 66,5 – SD-kortet mot venstre kant.
+PI_X0, PI_Y0 = 17.5, 10.5
+for i, (x, y) in enumerate([(PI_X0 + 3.5, PI_Y0 + 3.5), (PI_X0 + 61.5, PI_Y0 + 3.5), (PI_X0 + 3.5, PI_Y0 + 52.5), (PI_X0 + 61.5, PI_Y0 + 52.5)]):
+    part(f"H{i+5}", "MountingHole", "MountingHole_2.7mm_M2.5", "M2.5", "", x, y, 0, "Festehull M2,5 for Raspberry Pi 4 (avstandsstykke 20 mm under kortet)")
 
 # ---------------------------------------------------------------- USB-blokken til venstre: speil USB-delen (x >= 140 -> 180 - x), flytt resten 40 mm til høyre
 for p in P:
