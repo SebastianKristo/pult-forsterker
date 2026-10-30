@@ -171,7 +171,7 @@ part("C99", C_, C0603, "100n", "C14663", 74, 89, 0, "3V3_SW ved OLED")
 # --- hodetelefonforsterker TPA6132A2 (front-jack under POWER-knappen) – signal etter PGA2311, EN fra MCP GPA6, jack-deteksjon til MCP GPA5 ---
 part("U13", "Package_DFN_QFN", "Texas_RTE_WQFN-16-1EP_3x3mm_P0.5mm_EP1.2x0.8mm", "TPA6132A2RTER", "C69901", 92, 45, 0, "Hodetelefonforsterker 25 mW DirectPath (ingen utgangskondensatorer), gain +6 dB (G0=G1=VDD)")
 part("C100", C_, C0603, "2.2u", "C23630", 97, 43.8, 0, "HP VDD"); part("C101", C_, C0603, "2.2u", "C23630", 97, 46.4, 0, "HPVDD"); part("C102", C_, C0603, "1u", "C15849", 97, 49, 0, "HPVSS")
-part("C103", C_, C0603, "1u", "C15849", 94.9, 47.1, 270, "Ladepumpe CPP-CPN (rett ved pinne 9/11)")
+part("C103", C_, C0603, "1u", "C15849", 94.55, 47.1, 270, "Ladepumpe CPP-CPN (rett ved pinne 9/11)")
 part("C104", C_, C0603, "1u", "C15849", 87.5, 42.4, 0, "HP inn L (INL-)"); part("C105", C_, C0603, "1u", "C15849", 87.5, 45, 0, "INL+ til GND")
 part("C106", C_, C0603, "1u", "C15849", 87.5, 47.6, 0, "INR+ til GND"); part("C107", C_, C0603, "1u", "C15849", 83.5, 45, 0, "HP inn R (INR-)")
 part("J23", "Connector_JST", "JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical", "HODETLF", "C144395", 16, 94, 0, "3,5 mm-jack i fronten (PJ392 med bryter): L, R, GND, DET")

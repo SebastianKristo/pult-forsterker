@@ -380,6 +380,29 @@ print("stitching-vias:", n_stitch)
 _rest = sorted(_island_gnd_pads(board))
 if _rest: print("FEIL: GND-pads uten forbindelse til jordplanet:", _rest)
 else: print("alle GND-pads er koblet til jordplanet")
+# Løse sporender (etter smalning/oppdeling): fjern segmenter der en ende ikke treffer spor, via eller pad på samme lag
+def _prune_dangling_board():
+    removed = 0
+    for _ in range(6):
+        tracks = [t for t in board.GetTracks() if t.GetClass() == "PCB_TRACK"]
+        vias = [t for t in board.GetTracks() if t.GetClass() == "PCB_VIA"]
+        pads = [pd for fp in board.GetFootprints() for pd in fp.Pads()]
+        def touched(pt, layer, me):
+            for t in tracks:
+                if t is me or t.GetLayer() != layer: continue
+                if pcbnew.SEG(t.GetStart(), t.GetEnd()).Distance(pt) <= t.GetWidth() // 2: return True
+            for v in vias:
+                if (v.GetPosition() - pt).EuclideanNorm() <= v.GetWidth() // 2: return True
+            for pd in pads:
+                if pd.IsOnLayer(layer) and pd.HitTest(pt): return True
+            return False
+        gone = [t for t in tracks if t.IsLocked() is False and (not touched(t.GetStart(), t.GetLayer(), t) or not touched(t.GetEnd(), t.GetLayer(), t))]
+        if not gone: break
+        for t in gone: board.Remove(t)
+        removed += len(gone)
+    return removed
+print("løse sporender fjernet:", _prune_dangling_board())
+filler.Fill(board.Zones())
 pcbnew.SaveBoard(PCB, board)
 
 # DRC (KiCad 7: pcbnew.WriteDRCReport)
