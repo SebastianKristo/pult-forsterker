@@ -19,6 +19,8 @@ resten av repoet, gjelder repoet – de tidligere valgene står:
 
 Endringene er gjort i `revb_features.js` og `cad/generate_print.js`, og alle filer er generert på nytt.
 
+**Full mål- og kollisjonsspesifikasjon (alle hull, deler, høyder, innmaten):** `SPESIFIKASJON_KABINETT.md`.
+
 ## Hva som bestilles
 
 Alt som bestilles hos PCBWay (kasse, frontplate, gravering) ligger i `platemetall/skjold_s1_avrundet/`.
