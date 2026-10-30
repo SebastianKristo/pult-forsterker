@@ -1,7 +1,8 @@
 # Pultforsterker – hovedkort rev B
 
 Ett kort (180 × 100 mm, 2 lag) som erstatter alle modulene, og som i tillegg har USB-delingsswitch, to AUX-innganger som
-digitaliseres (så alt kan mikses), «smart relé» for strømmen til forsterkerdelen, og plass til en 2,8" SPI-TFT med touch.
+digitaliseres (så alt kan mikses), «smart relé» for strømmen til forsterkerdelen, hodetelefonutgang i fronten med
+auto-demping, og plass til en 2,8" SPI-TFT med touch.
 Raspberry Pi 4 kobles til med 40-pinners flatkabel; frontdelene med JST XH-plugger; alle bakkontakter er panelmonterte med
 korte kabler til kortet.
 
@@ -25,8 +26,9 @@ MCP23017, per-kilde-nivå, TFT) er skrevet, men kan bare testes på et ferdig ko
 | Volum | PGA2311 (±5 V), bit-banget SPI fra GPIO 0/1/16, 5 V via ferritt + 10 µF | fast nivå; volum og nivå per kilde gjøres digitalt |
 | Forsterker | TPA3116D2DAD, 26 dB, 400 kHz, 10 µH + 680 nF + snubber per utgang | **Kjøleflaten er på toppen**: ingen loddepasta under, kjøleribbe 20 × 20 limes på. SDZ fra GPIO 22 |
 | **USB-switch** | FE1.1s 4-ports hub + TS3USB221 2:1-mux. 2 × USB-C (PC 1/PC 2) på kortet, 4 × USB-A i venstre kant, polyfuse 2 A | Mux-valg fra MCP23017 GPB4 (lav = PC 1). CC-pinnene har 5,1 k, så USB-C–USB-C-kabel virker |
-| I/O-ekspander | MCP23017 (I2C 0x20), INT → GPIO 14 | GPA0-4 knapper AIR/BT/AUX/USB/PWR, GPB0-3 LED-ringer, GPB4 USB-mux, 4 ledige på «EXP» |
+| I/O-ekspander | MCP23017 (I2C 0x20), INT → GPIO 14 | GPA0-4 knapper AIR/BT/AUX/USB/PWR, GPA5 jack-deteksjon, GPA6 HP-EN, GPB0-3 LED-ringer, GPB4 USB-mux, GPA7/GPB5 ledige på «EXP» |
 | LED-ringer | 5 × AO3400 low-side | POWER-ring på GPIO 12 (PWM) |
+| **Hodetelefoner** | TPA6132A2 (DirectPath, −6 dB) etter PGA2311, 1 µF inn, 5V_SW. EN fra MCP23017 GPA6, jack-bryter til GPA5 | 3,5 mm PJ392 i fronten under POWER (J23). Ved innplugging dempes TPA3116 (SDZ) – kan slås av i HA/Homey |
 | TFT | 14-pinners header (standard 2,8" ILI9341/ST7789V-modul med XPT2046) | SPI0 CE0 = TFT, CE1 = touch, DC 5, RST 6, IRQ 17, baklys GPIO 13 (PWM) via AO3400 + AO3401 |
 
 ## GPIO-kart (hovedkort rev B)
@@ -62,7 +64,8 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 | J15–J18 | USB-A | 4 × USB-A ut gjennom venstre vegg |
 | J19 | JST XH 4 | 5V, D−, D+, GND fra en USB-A-port på Pi-en (USB-kodeken) |
 | J21 | JST XH 2 | strømknapp bak (momentan), GND |
-| J22 | JST XH 6 | EXP: MCP GPA5, GPA6, GPA7, GPB5, 3V3, GND (ledige) |
+| J22 | JST XH 6 | EXP: MCP GPA5 (= jack-deteksjon), GPA6 (= HP-EN), GPA7, GPB5, 3V3, GND |
+| J23 | JST XH 4 | Hodetelefonjack i fronten (PJ392 med bryter, under POWER): L, R, GND, DET (jackens bryterkontakt for L: ligger mot L uten plugg, åpen med plugg) |
 
 ## Filer
 
@@ -78,10 +81,11 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 1. JLCPCB → «Add gerber file» → zip-en. 2 lag, 180 × 100 mm, grønn/svart, HASL (lead free).
 2. Huk av «PCB Assembly», Top side, 2 stk. Last opp BOM og CPL.
 3. Kontroller at alle LCSC-numre finnes på lager; bytt tilsvarende hvis noen er tomme (verdiene står i BOM). Sjekk spesielt
-   FE1.1s (C6706491), PCM1808 (C7436), PCM2900C (C180425), TS3USB221 (C130085), MCP23017 (C506653), SRD-05VDC (C35449).
+   FE1.1s (C6706491), PCM1808 (C7436), PCM2900C (C180425), TS3USB221 (C130085), MCP23017 (C506653), SRD-05VDC (C35449),
+   TPA6132A2 (C69901).
 4. Festehull: H1–H4 M3 (stolper i kassen), H5–H8 M2,5 (Raspberry Pi 4 under kortet).
 5. THT-deler loddes selv etter levering: J1–J3, J6 (skruterminaler), J4/J7–J10/J19–J22 (JST), J5, J13 (headere), F1 (sikringsklips),
-   C1 (2200 µF), K1 (relé), J15–J18 (USB-A).
+   C1 (2200 µF), K1 (relé), J15–J18 (USB-A), J23 (JST).
 6. Kjøleribbe 20 × 20 × 10 mm med termisk tape (1,5–2 mm) på toppen av TPA3116.
 
 ## Kjente kompromisser i rev B
@@ -91,4 +95,5 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 - Freerouting-ruting er funksjonell, ikke optimal. Sjekk at 24 V- og høyttalersporene ikke har unødvendige vias.
 - Relé-pinner: 1–2 spole, 4 COM, 5 NO (3 NC ubrukt) etter KiCad-footprinten for SRD. Mål med multimeter før første gang.
 - TPS54560-kompensasjon er fra datablad-eksempelet; ikke målt.
+- TPA6132A2 går på fast −6 dB; høyttalervolumet og hodetelefonvolumet følger hverandre (samme PGA2311/CamillaDSP-volum).
 - PCM2900C: 1,5 kΩ pull-up på D+ til VCCCI er lagt til i tillegg til eventuell intern – sjekk at enumerasjon virker.

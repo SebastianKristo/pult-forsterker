@@ -7,7 +7,7 @@ const Homey = require('homey');
 const Device = require('../drivers/pultforsterker/device');
 const App = require('../app');
 
-const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'ki_voice', 'ki_preset', 'ki_auto_input', 'ki_mix', 'ki_voice_profile', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
+const CAPS = ['onoff', 'speaker_prev', 'speaker_playing', 'speaker_next', 'ki_voice', 'ki_preset', 'ki_auto_input', 'ki_mix', 'ki_voice_profile', 'ki_hp_automute', 'speaker_track', 'speaker_artist', 'volume_set', 'volume_mute', 'ki_input', 'ki_loudness', 'ki_loudness_level'];
 let daemon, port;
 before(async () => { daemon = createMockDaemon(); port = await daemon.start(); });
 after(async () => { await daemon.stop(); });
@@ -168,6 +168,21 @@ test('miks digitale kilder av/på', async () => {
   await d.triggerCapability('ki_mix', true);
   assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/mix', body: { on: true } });
   assert.equal(d.getCapabilityValue('ki_mix'), true);
+});
+
+test('hodetelefoner: auto-demping av/på, sensor og flytkort bare når daemonen har jack', async () => {
+  const homey = new Homey.HomeyCtx(); const d = makeDevice(homey); await d.onInit(); d.onDeleted();
+  assert.equal(d.getCapabilityValue('ki_hp_automute'), true);
+  await d.triggerCapability('ki_hp_automute', false);
+  assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/hp_automute', body: { on: false } });
+  assert.equal(d.getCapabilityValue('ki_hp_automute'), false);
+  assert.equal(d.hasCapability('ki_headphones'), false);
+  daemon.state.headphones = false; await d.poll();
+  assert.equal(d.hasCapability('ki_headphones'), true); assert.equal(d.getCapabilityValue('ki_headphones'), false);
+  daemon.state.headphones = true; await d.poll();
+  assert.equal(d.getCapabilityValue('ki_headphones'), true);
+  assert.deepEqual(homey.flow.cards.ki_headphones_changed.triggered.at(-1).tokens, { connected: true });
+  delete daemon.state.headphones;
 });
 
 test('USB-switch vises bare når den er satt opp, og bytter PC', async () => {

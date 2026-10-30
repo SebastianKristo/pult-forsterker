@@ -11,7 +11,8 @@ from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
-    add([KiAmpPlayingSensor(hass.data[DOMAIN][entry.entry_id])])
+    c = hass.data[DOMAIN][entry.entry_id]
+    add([KiAmpPlayingSensor(c), KiAmpHeadphonesSensor(c)])
 
 
 class KiAmpPlayingSensor(KiAmpEntity, BinarySensorEntity):
@@ -24,3 +25,17 @@ class KiAmpPlayingSensor(KiAmpEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         return bool(self.coordinator.data.get("playing"))
+
+
+class KiAmpHeadphonesSensor(KiAmpEntity, BinarySensorEntity):
+    """Hodetelefoner plugget i front-jacken (hovedkortet rev B)."""
+    _attr_translation_key = "headphones"
+    _attr_device_class = BinarySensorDeviceClass.PLUG
+    _attr_icon = "mdi:headphones"
+
+    def __init__(self, c) -> None:
+        super().__init__(c, "headphones")
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.data.get("headphones"))

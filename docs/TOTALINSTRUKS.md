@@ -339,7 +339,8 @@ Når kortet er montert i kassen (`kabinett/stl/v2_body_revb.stl`, se `pcb/README
    venstre – det er en luke i gulvet). Hovedkortet 25 mm over gulvet på stolpene, flush mot venstre vegg så USB-A-portene stikker ut. 40-pin flatkabel (10 cm) J5 → Pi (rød stripe mot pinne 1 begge steder), 5 V fra **J6** til Pi header pinne 2 (5 V)
    og 6 (GND) med 18 AWG. **Ikke** USB-C-strøm i Pi-en samtidig.
 2. JST: J7 knapper, J10 LED-ringer, J8 encoder, J9 OLED (eller J13 TFT med 14-pinners flatkabel), J4 AUX 1, J20 AUX 2, J21 strømknapp
-   bak, J19 ← USB-A-kabel fra en av Pi-ens USB-porter (AUX 2-kodeken). USB-C-panelkabler: J11 → «PC 1», J12 → «PC 2» bak.
+   bak, J23 hodetelefonjack i fronten (PJ392 under POWER-knappen: L, R, GND og DET = jackens bryterkontakt for L),
+   J19 ← USB-A-kabel fra en av Pi-ens USB-porter (AUX 2-kodeken). USB-C-panelkabler: J11 → «PC 1», J12 → «PC 2» bak.
    Skruterminaler: J1 24 V (via KCD1 fra DC-099), J2/J3 høyttalere. RJ45- og USB-C-forlengere fra Pi-en til bakveggen.
 3. Kjøleribbe 20 × 20 mm på toppen av TPA3116 (termisk tape).
 4. På Pi-en:
@@ -364,6 +365,11 @@ LED-ringer, skjerm, volumkrets og ADC (GPIO 27). Pi-en, USB-switchen og nettverk
 HA/Homey/AirPlay. **Miks:** med «Miks digitale kilder» på spiller AUX 1, AUX 2, USB, AirPlay, Bluetooth og radio samtidig, hvert
 med eget nivå («Nivå AUX 1» osv. i HA/Homey, `POST /api/level`). **TFT-touch:** faner øverst = kilde, nederst = forrige/spill/neste
 og volum −/+. Treffer trykkene feil, juster `KI_AMP_TOUCH_CAL=xmin,xmax,ymin,ymax[,swap]` i `/etc/ki-amp.env`.
+**Hodetelefoner:** 3,5 mm-jacken under POWER-knappen drives av en egen hodetelefonforsterker (TPA6132A2) etter volumkretsen, så
+volumknotten og HA/Homey-volumet gjelder også der. Plugger du i, dempes høyttalerne automatisk og stemmen sier «Headphones»;
+plugg ut gir høyttalerne tilbake. Auto-dempingen kan slås av («Auto-demping ved hodetelefoner» i HA/Homey eller
+`KI_AMP_HP_AUTOMUTE=0`) hvis du vil ha begge samtidig. «Hodetelefoner tilkoblet» finnes som sensor og flytkort. Oppfører
+deteksjonen seg motsatt (sier hodetelefoner når ingen står i), sett `KI_AMP_HP_DET_INV=1`.
 
 Første gang: mål 5 V på J6 og at kortet trekker < 0,2 A i standby på 24 V før du kobler høyttalerne.
 

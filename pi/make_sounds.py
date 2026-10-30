@@ -25,6 +25,8 @@ PHRASES = {
     "mix_off": "Mixing off.",
     "usb_pc_1": "USB switched to computer one.",
     "usb_pc_2": "USB switched to computer two.",
+    "headphones_on": "Headphones.",
+    "headphones_off": "Speakers.",
 }
 for i, w in enumerate(NUM, 1):
     PHRASES[f"radio_preset_{i}"] = f"Preset {w}."

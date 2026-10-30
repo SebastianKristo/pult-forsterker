@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.11.0",
+  "version": "2.12.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -495,6 +495,33 @@
       "setable": true,
       "uiComponent": "slider",
       "icon": "/assets/icon.svg"
+    },
+    "ki_headphones": {
+      "type": "boolean",
+      "title": {
+        "en": "Headphones connected",
+        "no": "Hodetelefoner tilkoblet"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "/assets/icon.svg"
+    },
+    "ki_hp_automute": {
+      "type": "boolean",
+      "title": {
+        "en": "Mute speakers with headphones",
+        "no": "Auto-demping ved hodetelefoner"
+      },
+      "desc": {
+        "en": "The speakers are muted while headphones are plugged into the front jack",
+        "no": "Høyttalerne dempes mens hodetelefoner står i front-jacken"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "/assets/icon.svg"
     }
   },
   "flow": {
@@ -566,6 +593,34 @@
             "title": {
               "en": "Input",
               "no": "Kilde"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_headphones_changed",
+        "title": {
+          "en": "Headphones plugged in or out",
+          "no": "Hodetelefoner plugget i eller ut"
+        },
+        "tokens": [
+          {
+            "name": "connected",
+            "type": "boolean",
+            "title": {
+              "en": "Connected",
+              "no": "Tilkoblet"
             }
           }
         ],
@@ -671,6 +726,24 @@
             "title": {
               "en": "Source",
               "no": "Kilde"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_headphones_connected",
+        "title": {
+          "en": "Headphones !{{are|are not}} connected",
+          "no": "Hodetelefoner !{{er|er ikke}} tilkoblet"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
             }
           }
         ]

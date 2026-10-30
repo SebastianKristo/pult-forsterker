@@ -24,6 +24,7 @@ API:
   POST /api/voice {"on":bool} | {"profile":"en"|"no"|"trondersk"} (stemmeprofil for talemeldingene)
   POST /api/level {"source":"airplay|bt|usb|radio|aux|aux2","level":0-100} (nivå per kilde, brukes i miks)
   POST /api/mix {"on":bool} (miks digitale kilder: AirPlay, Bluetooth, USB og Radio kan spille samtidig)
+  POST /api/hp_automute {"on":bool} (demp høyttalerne når hodetelefoner er plugget i fronten; status har "headphones")
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay, jpg/png)
   POST /api/transport {"action":"play|pause|playpause|next|previous|stop"}  (AirPlay/Bluetooth/Radio)
@@ -82,6 +83,7 @@ if BOARD == "main":
     PIN_MCP_INT = 14
     MCP_BTN = {"airplay": 0, "bt": 1, "aux": 2, "usb": 3}; MCP_BTN_POWER = 4
     MCP_LED = {"airplay": 0, "bt": 1, "aux": 2, "usb": 3}; MCP_USB_SEL = 4
+    MCP_HP_DET, MCP_HP_EN = 5, 6   # GPA5: hodetelefonjack (bryterkontakt, høy = plugget i), GPA6: EN til TPA6132A2
 elif BOARD == "radio":   # Radio Retro: Pi 4 + 3,5 mm + PAM8406, 6 favoritter, SOURCE/◀◀/▶▶, EC11, POWER i toppen
     BTN = {}
     LED = {}
@@ -113,6 +115,8 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "auto_input": os.environ.get("KI_AMP_AUTO_INPUT", "1") == "1",
          "mix": os.environ.get("KI_AMP_MIX", "0") == "1",
          "usb_pc": 1,   # usb_pc: aktiv PC på USB-delingsswitchen, 1 eller 2
+         "headphones": False,   # hodetelefoner i front-jacken (hovedkortet)
+         "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
          "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100}}   # nivå per kilde (miks)
 LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD == "main" else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
@@ -167,15 +171,16 @@ if HW:
 
 
 class Mcp23017:
-    """I2C I/O-ekspander på hovedkortet: GPA0-4 knapper (pull-up, aktiv lav), GPB0-3 LED-ringer, GPB4 USB-mux (0 = PC 1)."""
-    IODIRA, IODIRB, GPPUA, GPIOA, GPIOB, OLATB, GPINTENA, IOCON = 0x00, 0x01, 0x0C, 0x12, 0x13, 0x15, 0x04, 0x0A
+    """I2C I/O-ekspander på hovedkortet: GPA0-4 knapper (pull-up, aktiv lav), GPA5 jack-deteksjon, GPA6 HP-EN (ut),
+    GPB0-3 LED-ringer, GPB4 USB-mux (0 = PC 1)."""
+    IODIRA, IODIRB, GPPUA, GPIOA, GPIOB, OLATA, OLATB, GPINTENA, IOCON = 0x00, 0x01, 0x0C, 0x12, 0x13, 0x14, 0x15, 0x04, 0x0A
 
     def __init__(self, addr=0x20, bus=1):
-        self.addr, self.ok, self.olatb, self.lock = addr, False, 0, threading.Lock()
+        self.addr, self.ok, self.olata, self.olatb, self.lock = addr, False, 0, 0, threading.Lock()
         try:
             from smbus2 import SMBus
             self.bus = SMBus(bus)
-            self._w(self.IOCON, 0x00); self._w(self.IODIRA, 0xFF); self._w(self.GPPUA, 0xFF); self._w(self.GPINTENA, 0x1F)
+            self._w(self.IOCON, 0x00); self._w(self.IODIRA, 0xBF); self._w(self.GPPUA, 0xBF); self._w(self.GPINTENA, 0x3F); self._w(self.OLATA, 0x00)
             self._w(self.IODIRB, 0x00); self._w(self.OLATB, 0x00)
             self.ok = True
             print(f"MCP23017 på 0x{addr:02x} klar", flush=True)
@@ -200,6 +205,17 @@ class Mcp23017:
             self.olatb = (self.olatb | (1 << bit)) if on else (self.olatb & ~(1 << bit))
             try:
                 self._w(self.OLATB, self.olatb)
+            except Exception as e:
+                print("MCP23017:", e, flush=True)
+
+    def set_a(self, bit, on):
+        """Utgang på port A (bare GPA6 = HP-EN er satt som utgang)."""
+        if not self.ok:
+            return
+        with self.lock:
+            self.olata = (self.olata | (1 << bit)) if on else (self.olata & ~(1 << bit))
+            try:
+                self._w(self.OLATA, self.olata)
             except Exception as e:
                 print("MCP23017:", e, flush=True)
 
@@ -290,6 +306,8 @@ PHRASES = {
     "usb_pc": "USB til {name}.",
     "mix_on": "Miks på.",
     "mix_off": "Miks av.",
+    "headphones_on": "Hodetelefoner.",
+    "headphones_off": "Høyttalere.",
 }
 # Trøndersk: samme norske Piper-stemme (mann), men replikkene skrevet på trøndersk. Lages på Pi-en og caches.
 PHRASES_TR = {
@@ -310,6 +328,8 @@ PHRASES_TR = {
     "usb_pc": "U S B over te {name}.",
     "mix_on": "Miksing på.",
     "mix_off": "Miksing av.",
+    "headphones_on": "Hodetelefona, ja.",
+    "headphones_off": "Høgtalera igjen.",
 }
 # Stemmeprofiler: en = ferdiginnspilt engelsk AI-stemme (pi/sounds, laget med make_sounds.py),
 # no = norsk Piper (bokmål), trondersk = norsk Piper med trønderske replikker. Velges i HA/Homey eller /api/voice.
@@ -485,14 +505,41 @@ def apply_input():
         pass  # BT-LED pulserer under parring (se pairing_task)
 
 
+def speakers_on():
+    """TPA3116 skal være aktiv: på, og ikke dempet av hodetelefoner (auto-demping)."""
+    return state["power"] and not (state["headphones"] and state["hp_automute"])
+
+
+def apply_headphones():
+    """Hodetelefonforsterker (TPA6132A2 EN på MCP GPA6) følger jacken; høyttalerne dempes via SDZ hvis auto-demping er på."""
+    if not (HW and BOARD == "main"):
+        return
+    if mcp:
+        mcp.set_a(MCP_HP_EN, state["power"] and state["headphones"])
+    amp_sdz.value = speakers_on()
+
+
+def set_headphones(plugged):
+    if plugged == state["headphones"]:
+        return
+    state["headphones"] = plugged
+    apply_headphones(); changed()
+    voice.say("headphones_on" if plugged else "headphones_off")
+
+
+def set_hp_automute(on):
+    state["hp_automute"] = bool(on); apply_headphones(); changed()
+
+
 def apply_power():
     if HW and BOARD == "main":   # rekkefølge mot plopp: av = XSMT/SDZ lav, så strøm; på = strøm, vent, så XSMT/SDZ høy
         if state["power"]:
             relay_amp.value = True; time.sleep(0.3)
             if dac_xsmt: dac_xsmt.value = True
-            apply_volume(); time.sleep(0.2); amp_sdz.value = True
+            apply_volume(); time.sleep(0.2); apply_headphones()
         else:
             amp_sdz.value = False
+            if mcp: mcp.set_a(MCP_HP_EN, False)
             if dac_xsmt: dac_xsmt.value = False
             time.sleep(0.1); relay_amp.value = False
     elif HW:
@@ -517,7 +564,7 @@ def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels")}, fh)
+            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute")}, fh)
     except Exception:
         pass
 
@@ -582,6 +629,7 @@ USBSW_SENSE_PC1 = os.environ.get("KI_AMP_USBSW_SENSE_PC1", "low").strip().lower(
 USBSW_FRONT = os.environ.get("KI_AMP_USBSW_FRONT", "0") == "1"
 # opto = via PC817 (GPIO høy = trykk). direct = ledningen fra knappen rett på GPIO: pinnen står åpen (inngang uten pull)
 # og trekkes til 0 V under trykket. Bare trygt når knappens «varme» side er 3,3 V eller lavere (mål først!).
+HP_DET_INV = os.environ.get("KI_AMP_HP_DET_INV", "0") == "1"   # 1 hvis jacken er koblet motsatt (lav = plugget i)
 USBSW_MODE = os.environ.get("KI_AMP_USBSW_MODE", "mux" if BOARD == "main" else "opto").strip().lower()   # mux = TS3USB221 på hovedkortet (MCP GPB4)   # 1 = AIRPLAY-knappen blir PC 1/2, BT-knappen blir AIRPLAY/BT
 _usbsw_n = [n.strip() for n in os.environ.get("KI_AMP_USBSW_NAMES", "").split(",") if n.strip()]
 USBSW_NAMES = (_usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):])[:2]   # f.eks. KI_AMP_USBSW_NAMES=MacBook,Jobb-PC
@@ -863,12 +911,21 @@ def setup_buttons():
         mcp_btns["power"] = VButton(hold_time=3.0)
         bits = dict(MCP_BTN, power=MCP_BTN_POWER)
 
+        hp_last, hp_since = [state["headphones"]], [time.time()]
+
         def mcp_poll():
             while True:
                 try:
                     pressed = mcp.read_buttons(); now = time.time()
                     for name, vb in mcp_btns.items():
                         vb.update(bits[name] in pressed, now)
+                    # jack-bryteren: kontakten ligger mot OUTL (0 V) uten plugg = lav; plugg inn bryter den = pull-up = høy
+                    plugged = (MCP_HP_DET not in pressed) != HP_DET_INV
+                    if plugged == hp_last[0]:
+                        hp_since[0] = now
+                    elif now - hp_since[0] > 0.15:   # 150 ms stabilt før vi tror på det
+                        hp_last[0] = plugged; hp_since[0] = now
+                        _safe(lambda: set_headphones(plugged))
                 except Exception as e:
                     print("MCP-knapper:", e, flush=True); time.sleep(1)
                 time.sleep(0.03)
@@ -1295,6 +1352,10 @@ async def h_level(r):
     return j()
 
 
+async def h_hp_automute(r):
+    set_hp_automute(bool((await r.json()).get("on", True))); return j()
+
+
 async def h_mix(r):
     on = bool((await r.json()).get("on", False))
     if on != state["mix"]:
@@ -1436,7 +1497,7 @@ def main():
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
-                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level)])
+                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

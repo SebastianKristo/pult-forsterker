@@ -5,7 +5,7 @@ Lager (i ../stl/):
   v2_body_revb.stl             kasse 215 × 160 × 48: kortet flush mot venstre vegg (4 × USB-A ut gjennom veggen), Pi 4 skrudd under kortet
                                på 20 mm avstandsstykker (ingen stolper i gulvet), SD-luke og luftespor i gulvet
   v2_lid_revb.stl / v2_lid_frittstaende_revb.stl
-  v2_frontplate_revb.stl       frontplate (2,42" OLED-vindu, 4 × 12 mm knapper, 16 mm POWER, encoder)
+  v2_frontplate_revb.stl       frontplate (2,42" OLED-vindu, 4 × 12 mm knapper, 16 mm POWER med 3,5 mm hodetelefonjack under, encoder)
   v2_frontplate_revb_tft.stl   frontplate med vindu for 2,8" TFT (aktivt område 57,6 × 43,2) i stedet for OLED
 
 Bak (venstre → høyre): høyttalere L−/L+/R−/R+, AUX 1, AUX 2, USB-C PC 1, USB-C PC 2, USB-C (USB-lyd til Pi), RJ45, DC, KCD1.
@@ -26,6 +26,7 @@ b.tower_xy = (HW - 10, HD - 10)
 b.fp_w = b.W - 12
 b.vent_sides = (1,)                                 # luftespor bare i høyre vegg (USB-A i venstre)
 b.vent_n = 26
+b.hp_jack = True                                     # 3,5 mm hodetelefonjack under POWER-knappen (J23 på kortet)
 
 # hovedkort 180 × 100, hull (4,4)-(176,96) -> mønster 172 × 92, flush mot venstre innervegg (USB-A ut der)
 PCB_W, PCB_D = 180.0, 100.0
@@ -87,6 +88,7 @@ def frontplate_tft():
         for s in (-1, 1):
             m -= b.cyl(b.btn_d, b.fp_t + 2).translate([x, s * b.btn_dz, -1])
     m -= b.cyl(b.pwr_d, b.fp_t + 2).translate([b.pwr_x, 0, -1])
+    m -= b.cyl(b.hp_d, b.fp_t + 2).translate([b.pwr_x, b.hp_dz, -1])   # hodetelefonjack
     m -= b.cyl(b.enc_d, b.fp_t + 2).translate([b.enc_x, 0, -1])
     for sx in (-1, 1):
         for sz in (-1, 1):

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -12,7 +13,7 @@ from .entity import KiAmpEntity
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c), KiAmpAutoInputSwitch(c), KiAmpMixSwitch(c)])
+    add([KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c), KiAmpAutoInputSwitch(c), KiAmpMixSwitch(c), KiAmpHpAutomuteSwitch(c)])
 
 
 class KiAmpPowerSwitch(KiAmpEntity, SwitchEntity):
@@ -107,3 +108,23 @@ class KiAmpMixSwitch(KiAmpEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_mix(False))
+
+
+class KiAmpHpAutomuteSwitch(KiAmpEntity, SwitchEntity):
+    """Auto-demping: høyttalerne (TPA3116) dempes når hodetelefoner er plugget i front-jacken."""
+    _attr_translation_key = "hp_automute"
+    _attr_icon = "mdi:headphones-settings"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "hp_automute")
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.data.get("hp_automute", True))
+
+    async def async_turn_on(self, **kwargs) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_hp_automute(True))
+
+    async def async_turn_off(self, **kwargs) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_hp_automute(False))

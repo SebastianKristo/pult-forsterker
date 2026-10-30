@@ -39,6 +39,9 @@
       },
       "mix": {
         "name": "Miks digitale kilder"
+      },
+      "hp_automute": {
+        "name": "Auto-demping ved hodetelefoner"
       }
     },
     "sensor": {
@@ -63,6 +66,9 @@
     "binary_sensor": {
       "playing": {
         "name": "Spiller"
+      },
+      "headphones": {
+        "name": "Hodetelefoner"
       }
     },
     "media_player": {

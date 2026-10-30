@@ -39,6 +39,9 @@
       },
       "mix": {
         "name": "Mix digital sources"
+      },
+      "hp_automute": {
+        "name": "Mute speakers with headphones"
       }
     },
     "sensor": {
@@ -63,6 +66,9 @@
     "binary_sensor": {
       "playing": {
         "name": "Spiller"
+      },
+      "headphones": {
+        "name": "Headphones"
       }
     },
     "media_player": {

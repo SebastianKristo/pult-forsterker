@@ -14,6 +14,7 @@ oled_x, oled_w, oled_h = -30.0, 57.0, 30.0
 win_w, win_h, win_r, win_depth = 70.0, 38.0, 2.0, 2.2
 btn_d, btn_x, btn_dz = 12.4, (20.0, 37.0), 8.5
 pwr_d, pwr_x = 16.4, -80.0
+hp_jack, hp_d, hp_dz = False, 6.5, -14.0   # 3,5 mm hodetelefonjack (PJ392) rett under POWER-knappen (hovedkort rev B)
 enc_d, enc_x = 7.4, 70.0
 kcd1, kcd1_x = (19.4, 13.0), 76.0
 dc_d, dc_x = 11.4, 54.0
@@ -94,6 +95,8 @@ def body():
         for s in (-1, 1):
             m -= hole_y(btn_d, x, fz + s * btn_dz)
     m -= hole_y(pwr_d, pwr_x, fz)
+    if hp_jack:
+        m -= hole_y(hp_d, pwr_x, fz + hp_dz)
     m -= hole_y(enc_d, enc_x, fz)
     m -= cube(20, 1.2, 26, enc_x - 10, -D / 2 + wall - 0.01, fz - 13)
     for sx in (-1, 1):
@@ -151,6 +154,8 @@ def frontplate():
         for s in (-1, 1):
             m -= cyl(btn_d, fp_t + 2).translate([x, s * btn_dz, -1])
     m -= cyl(pwr_d, fp_t + 2).translate([pwr_x, 0, -1])
+    if hp_jack:
+        m -= cyl(hp_d, fp_t + 2).translate([pwr_x, hp_dz, -1])
     m -= cyl(enc_d, fp_t + 2).translate([enc_x, 0, -1])
     for sx in (-1, 1):
         for sz in (-1, 1):

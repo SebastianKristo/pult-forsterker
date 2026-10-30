@@ -79,6 +79,10 @@ class KiAmpApi:
         """Miks digitale kilder (AirPlay, Bluetooth, USB og Radio spiller samtidig)."""
         return await self._req("POST", "/mix", {"on": on})
 
+    async def set_hp_automute(self, on: bool) -> dict[str, Any]:
+        """Demp høyttalerne automatisk når hodetelefoner er plugget i front-jacken."""
+        return await self._req("POST", "/hp_automute", {"on": on})
+
     async def set_voice(self, on: bool) -> dict[str, Any]:
         """Talemeldinger («Bluetooth-paring …») av/på."""
         return await self._req("POST", "/voice", {"on": on})

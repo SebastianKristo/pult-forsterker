@@ -166,6 +166,15 @@ for i, x in enumerate([34, 38, 42]):
 part("R45", R_, R0603, "10k", "C25804", 46, 82, 90, "Pull-up knapp bak"); part("C65", C_, C0603, "100n", "C14663", 46, 86, 90, "Debounce knapp bak")
 part("C99", C_, C0603, "100n", "C14663", 74, 89, 0, "3V3_SW ved OLED")
 
+# --- hodetelefonforsterker TPA6132A2 (front-jack under POWER-knappen) – signal etter PGA2311, EN fra MCP GPA6, jack-deteksjon til MCP GPA5 ---
+part("U13", "Package_DFN_QFN", "Texas_RTE_WQFN-16-1EP_3x3mm_P0.5mm_EP1.2x0.8mm", "TPA6132A2RTER", "C69901", 92, 45, 0, "Hodetelefonforsterker 25 mW DirectPath (ingen utgangskondensatorer), gain -6 dB")
+part("C100", C_, C0603, "2.2u", "C23630", 97, 43.8, 0, "HP VDD"); part("C101", C_, C0603, "2.2u", "C23630", 97, 46.4, 0, "HPVDD"); part("C102", C_, C0603, "1u", "C15849", 97, 49, 0, "HPVSS")
+part("C103", C_, C0603, "1u", "C15849", 92, 49.5, 0, "Ladepumpe CPP-CPN")
+part("C104", C_, C0603, "1u", "C15849", 87.5, 42.4, 0, "HP inn L (INL-)"); part("C105", C_, C0603, "1u", "C15849", 87.5, 45, 0, "INL+ til GND")
+part("C106", C_, C0603, "1u", "C15849", 87.5, 47.6, 0, "INR+ til GND"); part("C107", C_, C0603, "1u", "C15849", 83.5, 45, 0, "HP inn R (INR-)")
+part("J23", "Connector_JST", "JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical", "HODETLF", "C144393", 16, 94, 0, "3,5 mm-jack i fronten (PJ392 med bryter): L, R, GND, DET")
+part("C108", C_, C0603, "100n", "C14663", 16, 89, 0, "Debounce jack-deteksjon")
+
 # --- USB-delingsswitch (x 140–180): 2 × USB-C inn (til panelkontakter bak med korte kabler), mux, hub, 4 × USB-A ut i høyre kant ---
 part("U7", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "FE1.1s", "C6706491", 149, 46, 90, "USB 2.0 4-ports hub")
 part("Y1", "Crystal", "Crystal_SMD_3225-4Pin_3.2x2.5mm", "12MHz", "C9002", 149, 37, 90, "Hub-krystall (lastkondensatorer innebygd)")
@@ -209,7 +218,7 @@ SILK_SHIFT = lambda x: (BW - x) if x >= 139.5 else x + 40.0
 # etterjusteringer: høyttalerterminal R innenfor kanten, frontkontaktene litt tettere, AUX 1/2 og USB-PI på høyre kant
 _fix = {"J3": (164, 6, 0), "J7": (46, 94, 0), "J8": (65.5, 94, 0), "J21": (82.5, 94, 0), "J6": (93, 94, 0), "J9": (104, 94, 0), "J13": (119, 94, 90), "J10": (157, 94, 0),
         "J4": (176, 58, 90), "J20": (176, 70, 90), "J19": (176, 84, 90), "FB1": (167, 66, 0),
-        "R67": (166, 52, 0), "R68": (166, 55, 0), "R69": (170, 52, 0), "R70": (170, 55, 0), "C93": (166, 83, 90), "C94": (170, 84, 90), "C97": (166, 88, 0), "C98": (170, 88, 0)}
+        "J23": (16, 94, 0), "C108": (16, 89, 0), "R67": (166, 52, 0), "R68": (166, 55, 0), "R69": (170, 52, 0), "R70": (170, 55, 0), "C93": (166, 83, 90), "C94": (170, 84, 90), "C97": (166, 88, 0), "C98": (170, 88, 0)}
 for p in P:
     if p["ref"] in _fix:
         p["x"], p["y"], p["rot"] = _fix[p["ref"]]
@@ -261,7 +270,7 @@ net(GND, ("U12", 10), ("U12", 15), ("U12", 16), ("U12", 17), ("C74", 2)); net("M
 for i, (nm, gpa) in enumerate([("AIR", 21), ("BT", 22), ("AUX", 23), ("USB", 24), ("PWR", 25)]):
     net(f"BTN_{nm}", ("U12", gpa), ("J7", i + 1), (f"C{57+i}", 1))
 net(GND, ("J7", 6), *[(f"C{57+i}", 2) for i in range(5)])
-net("EXP_A5", ("U12", 26), ("J22", 1)); net("EXP_A6", ("U12", 27), ("J22", 2)); net("EXP_A7", ("U12", 28), ("J22", 3)); net("EXP_B5", ("U12", 6), ("J22", 4)); net(GND, ("J22", 6))
+net("EXP_A5", ("U12", 26), ("J22", 1)); net("EXP_A6", ("U12", 27), ("J22", 2));   # A5 = jack-deteksjon, A6 = HP EN (også på J22) net("EXP_A7", ("U12", 28), ("J22", 3)); net("EXP_B5", ("U12", 6), ("J22", 4)); net(GND, ("J22", 6))
 # knapp bak -> GPIO 15
 net("BTN_BAK", ("J5", 10), ("J21", 1), ("R45", 2), ("C65", 1)); net(GND, ("J21", 2), ("C65", 2))
 # encoder -> GPIO 23/24/25
@@ -324,6 +333,14 @@ net(GND, ("C53", 2), ("C54", 2), ("C55", 2), ("C56", 2), ("C49", 2), ("C50", 2),
 net("SPK_LN", ("L2", 2), ("C49", 1), ("J2", 2)); net("SPK_LP", ("L3", 2), ("C50", 1), ("J2", 1))
 net("SPK_RN", ("L4", 2), ("C51", 1), ("J3", 2)); net("SPK_RP", ("L5", 2), ("C52", 1), ("J3", 1))
 net(GND, ("J6", 2))
+# hodetelefonforsterker: single-ended inn på INL-/INR- (1 µF), INL+/INR+ via 1 µF til GND, G0=G1=GND (-6 dB), EN fra MCP GPA6, jack-bryter til MCP GPA5
+net("VOL_OUTL", ("C104", 1)); net("VOL_OUTR", ("C107", 1))
+net("HP_INL", ("C104", 2), ("U13", 1)); net("HP_INR", ("C107", 2), ("U13", 4))
+net("HP_INLP", ("U13", 2), ("C105", 1)); net("HP_INRP", ("U13", 3), ("C106", 1))
+net("HP_OUTL", ("U13", 16), ("J23", 1)); net("HP_OUTR", ("U13", 5), ("J23", 2))
+net("HP_VSS", ("U13", 8), ("C102", 1)); net("HP_CPP", ("U13", 11), ("C103", 1)); net("HP_CPN", ("U13", 9), ("C103", 2)); net("HP_VDD", ("U13", 12), ("C101", 1))
+net("5V_SW", ("U13", 14), ("C100", 1)); net("EXP_A6", ("U13", 13)); net("EXP_A5", ("J23", 4), ("C108", 1))
+net(GND, ("U13", 6), ("U13", 7), ("U13", 10), ("U13", 15), ("U13", 17), ("C100", 2), ("C101", 2), ("C102", 2), ("C105", 2), ("C106", 2), ("J23", 3), ("C108", 2))
 # USB-delingsswitch
 net("5V_USB", ("F2", 2), ("C71", 1), *[(f"J{15+i}", 1) for i in range(4)]); net(GND, ("C71", 2), ("C72", 2))
 net("USB_VD33", ("U7", 21), ("U7", 13), ("U7", 19), ("C66", 1), ("C73", 1), ("R46", 1), ("U8", 1), ("C70", 1))

@@ -8,6 +8,8 @@ class KiPultforsterkerApp extends Homey.App {
 
     this.homey.flow.getConditionCard('ki_is_playing')
       .registerRunListener(async ({ device }) => device.getCapabilityValue('speaker_playing') === true);
+    this.homey.flow.getConditionCard('ki_headphones_connected')
+      .registerRunListener(async ({ device }) => device.getCapabilityValue('ki_headphones') === true);
     this.homey.flow.getConditionCard('ki_input_is')
       .registerRunListener(async ({ device, input }) => device.getCapabilityValue('ki_input') === input);
 
