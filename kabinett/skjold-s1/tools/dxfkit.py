@@ -159,7 +159,7 @@ def read_dxf_polys(path):
     return out
 
 
-def preview(path_png, size_wh, layers, scale=6, bg=(26, 26, 28)):
+def preview(path_png, size_wh, layers, scale=16, bg=(26, 26, 28)):
     """PNG: lag med navn ENGRAVE/MARKING fylles lyst (even-odd), resten tegnes som tynne linjer."""
     try:
         from PIL import Image, ImageDraw
