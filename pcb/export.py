@@ -102,6 +102,57 @@ for fp in board.GetFootprints():
     fp.Reference().SetLayer(pcbnew.F_Fab); fp.Reference().SetVisible(True)
 
 filler = pcbnew.ZONE_FILLER(board); filler.Fill(board.Zones())
+
+# Stitching-vias: GND-sonen på F.Cu blir delt i øyer av sporene. Sett én via i hver øy (på et fritt punkt), så alle øyene
+# henger sammen via B.Cu-sonen. Gjentas til ingen nye øyer dukker opp.
+def _free_point(poly, board, gnd):
+    """Finn et punkt inne i polygonet med ≥ 0,7 mm klaring til alle spor/pads som ikke er GND."""
+    bb = poly.BBox(); import random
+    rnd = random.Random(1)
+    cands = [(bb.Centre().x, bb.Centre().y)] + [(bb.GetLeft() + rnd.random() * bb.GetWidth(), bb.GetTop() + rnd.random() * bb.GetHeight()) for _ in range(400)]
+    items = [t for t in board.GetTracks() if t.GetNetname() != "GND"]
+    pads = [pd for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() != "GND"]
+    for x, y in cands:
+        p = pcbnew.VECTOR2I(int(x), int(y))
+        if not poly.Contains(p):
+            continue
+        if any(poly.Contains(pcbnew.VECTOR2I(int(x + dx), int(y + dy))) is False for dx, dy in ((500000, 0), (-500000, 0), (0, 500000), (0, -500000))):
+            continue
+        bad = False
+        for t in items:
+            if t.GetClass() == "PCB_VIA":
+                if (t.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(0.9): bad = True; break
+            elif t.GetLayer() in (pcbnew.F_Cu, pcbnew.B_Cu):
+                seg = pcbnew.SEG(t.GetStart(), t.GetEnd())
+                if seg.Distance(p) < pcbnew.FromMM(0.75) + t.GetWidth() // 2: bad = True; break
+        if bad: continue
+        for pd in pads:
+            if (pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(1.6): bad = True; break
+        if not bad:
+            return p
+    return None
+
+gnd_net = board.FindNet("GND")
+n_stitch = 0
+for rnd_ in range(3):
+    z = [zz for zz in board.Zones() if zz.GetLayer() == pcbnew.F_Cu][0]
+    polys = z.GetFilledPolysList(pcbnew.F_Cu)
+    added = 0
+    for i in range(polys.OutlineCount()):
+        poly = pcbnew.SHAPE_POLY_SET(); poly.AddOutline(polys.Outline(i))
+        # øyer som allerede har en via/THT-pad på GND inne i seg trenger ingen ny
+        has = any(poly.Contains(t.GetPosition()) for t in board.GetTracks() if t.GetClass() == "PCB_VIA" and t.GetNetname() == "GND")
+        has = has or any(poly.Contains(pd.GetPosition()) for fp in board.GetFootprints() for pd in fp.Pads()
+                         if pd.GetNetname() == "GND" and pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH)
+        if has: continue
+        p = _free_point(poly, board, gnd_net)
+        if p is None: continue
+        v = pcbnew.PCB_VIA(board); v.SetPosition(p); v.SetWidth(pcbnew.FromMM(0.8)); v.SetDrill(pcbnew.FromMM(0.4)); v.SetNet(gnd_net)
+        v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); board.Add(v); added += 1
+    n_stitch += added
+    filler.Fill(board.Zones())
+    if not added: break
+print("stitching-vias:", n_stitch)
 pcbnew.SaveBoard(PCB, board)
 
 # DRC (KiCad 7: pcbnew.WriteDRCReport)
