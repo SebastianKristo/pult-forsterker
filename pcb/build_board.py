@@ -40,7 +40,7 @@ R1206 = "R_1206_3216Metric"
 part("J1", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "24V IN", "C8465", 14, 6, 0, "24 V inn fra DC-099 via KCD1 (skruterminal 5,08)")
 part("F1", "Fuse", "Fuseholder_Clip-5x20mm_Keystone_3512P_Inline_P23.62x7.27mm_D1.02x2.41x1.02x1.57mm_Horizontal", "5A 5x20", "C70283", 38, 7, 0, "Sikringsholder 5x20 (klips, THT) + sikring 5 A")
 part("D1", "Diode_SMD", "D_SMB", "SMBJ33A", "C118215", 50, 14, 0, "TVS 33 V")
-part("C1", "Capacitor_THT", "CP_Radial_D13.0mm_P5.00mm", "2200u/35V", "C5779", 94, 7, 0, "Bulk elektrolytt (THT, loddes selv)")
+part("C1", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "1000u/35V h<=16", "", 94, 7, 0, "Bulk elektrolytt Ø10 × maks 16 mm (THT, loddes selv)"); part("C110", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "1000u/35V h<=16", "", 72, 6.3, 0, "Bulk elektrolytt nr. 2 (Ø10 × maks 16 mm)")
 part("J2", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "SPK L", "C8465", 108, 6, 0, "Høyttaler venstre + / -")
 part("J3", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "SPK R", "C8465", 134, 6, 0, "Høyttaler høyre + / -")
 
@@ -57,7 +57,7 @@ part("C4", C_, C0603, "100n/50V", "C14663", 12, 30, 0, "Cin HF")
 part("C5", C_, C0603, "100n", "C14663", 30, 24, 90, "Boot")
 part("R1", R_, R0603, "150k", "C25800", 14, 36, 0, "EN divider"); part("R2", R_, R0603, "51k", "C23184", 14, 39, 0, "EN divider")
 part("R3", R_, R0603, "243k", "C22999", 14, 42, 0, "RT 400 kHz")
-part("R4", R_, R0603, "53.6k", "C25798", 30, 36, 0, "FB top"); part("R5", R_, R0603, "10.2k", "C25744", 30, 39, 0, "FB bottom")
+part("R4", R_, R0603, "56k", "C23206", 30, 36, 0, "FB top (5,2 V ut)"); part("R5", R_, R0603, "10.2k", "C25744", 30, 39, 0, "FB bottom")
 part("R6", R_, R0603, "13.3k", "C22791", 30, 42, 0, "Comp R"); part("C6", C_, C0603, "3.3n", "C1588", 30, 45, 0, "Comp C"); part("C7", C_, C0603, "47p", "C1671", 34, 45, 0, "Comp Cp")
 part("L1", "Inductor_SMD", "L_Bourns_SRP1245A", "10uH 6A", "C135446", 44, 30, 0, "Buck-spole 10 µH")
 part("D2", "Diode_SMD", "D_SMB", "SS56", "C32569", 34, 20, 0, "Catch-diode 60 V 5 A")
@@ -68,7 +68,7 @@ part("C11", C_, C0603, "100n", "C14663", 54, 51, 90, "Cout HF")
 part("U2", TO, "SOT-223-3_TabPin2", "AMS1117-3.3", "C6186", 20, 56, 0, "LDO 3,3 V (alltid på: MCP23017, pull-ups)")
 part("C12", C_, C0805, "10u", "C15850", 14, 56, 90, "LDO in"); part("C13", C_, C0805, "10u", "C15850", 26, 56, 90, "LDO out"); part("C14", C_, C0603, "100n", "C14663", 28, 61, 0, "LDO out HF")
 part("U3", SO, "SOIC-8_3.9x4.9mm_P1.27mm", "LM2662MX", "C129316", 40, 56, 0, "Ladepumpe -5 V, 150 kHz (FC til V+), 200 mA")
-part("C15", C_, C0805, "10u", "C15850", 34, 62, 0, "Flykondensator"); part("C16", C_, C0805, "10u", "C15850", 46, 62, 0, "-5 V ut")
+part("C15", C_, C0805, "10u", "C15850", 34, 62, 0, "Flykondensator"); part("C109", C_, C0805, "10u", "C15850", 40, 50, 0, "LM2662 inn"); part("C16", C_, C0805, "10u", "C15850", 46, 62, 0, "-5 V ut")
 part("U9", TO, "SOT-223-3_TabPin2", "AMS1117-3.3", "C6186", 46, 68, 0, "LDO 3,3 V_SW (DAC, ADC, OLED/TFT) fra 5V_SW")
 part("C75", C_, C0805, "10u", "C15850", 52, 66, 90, "LDO_SW in"); part("C76", C_, C0805, "10u", "C15850", 52, 70, 90, "LDO_SW out")
 
@@ -174,6 +174,8 @@ part("C104", C_, C0603, "1u", "C15849", 87.5, 42.4, 0, "HP inn L (INL-)"); part(
 part("C106", C_, C0603, "1u", "C15849", 87.5, 47.6, 0, "INR+ til GND"); part("C107", C_, C0603, "1u", "C15849", 83.5, 45, 0, "HP inn R (INR-)")
 part("J23", "Connector_JST", "JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical", "HODETLF", "C144393", 16, 94, 0, "3,5 mm-jack i fronten (PJ392 med bryter): L, R, GND, DET")
 part("C108", C_, C0603, "100n", "C14663", 16, 89, 0, "Debounce jack-deteksjon")
+part("R76", R_, R0603, "10k", "C25804", 12, 86, 0, "HP OUTL pulldown (jack-deteksjon)"); part("R77", R_, R0603, "10k", "C25804", 24, 88, 0, "Serie til MCP GPA5 (vern)")
+part("R78", R_, R0603, "10k", "C25804", 108, 89, 0, "Pull-up touch-CS (GPIO 16 har pull-down ved oppstart)")
 
 # --- USB-delingsswitch (x 140–180): 2 × USB-C inn (til panelkontakter bak med korte kabler), mux, hub, 4 × USB-A ut i høyre kant ---
 part("U7", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "FE1.1s", "C6706491", 149, 46, 90, "USB 2.0 4-ports hub")
@@ -218,7 +220,7 @@ SILK_SHIFT = lambda x: (BW - x) if x >= 139.5 else x + 40.0
 # etterjusteringer: høyttalerterminal R innenfor kanten, frontkontaktene litt tettere, AUX 1/2 og USB-PI på høyre kant
 _fix = {"J3": (164, 6, 0), "J7": (46, 94, 0), "J8": (65.5, 94, 0), "J21": (82.5, 94, 0), "J6": (93, 94, 0), "J9": (104, 94, 0), "J13": (119, 94, 90), "J10": (157, 94, 0),
         "J4": (176, 58, 90), "J20": (176, 70, 90), "J19": (176, 84, 90), "FB1": (167, 66, 0),
-        "J23": (16, 94, 0), "C108": (16, 89, 0), "R67": (166, 52, 0), "R68": (166, 55, 0), "R69": (170, 52, 0), "R70": (170, 55, 0), "C93": (166, 83, 90), "C94": (170, 84, 90), "C97": (166, 88, 0), "C98": (170, 88, 0)}
+        "J23": (16, 94, 0), "C108": (16, 89, 0), "R76": (12, 86, 0), "R77": (21, 89, 0), "R78": (118.5, 89, 0), "R67": (166, 52, 0), "R68": (166, 55, 0), "R69": (170, 52, 0), "R70": (170, 55, 0), "C93": (166, 83, 90), "C94": (170, 84, 90), "C97": (166, 88, 0), "C98": (170, 88, 0)}
 for p in P:
     if p["ref"] in _fix:
         p["x"], p["y"], p["rot"] = _fix[p["ref"]]
@@ -231,9 +233,9 @@ def net(name, *pins):
 GND = "GND"
 # 24 V inn -> sikring -> VIN24 (buck, TVS, bulk) ; relé K1 -> 24V_AMP (forsterker)
 net("24V_IN", ("J1", 1), ("F1", 1)); net(GND, ("J1", 2))
-net("VIN24", ("F1", 2), ("D1", 1), ("C1", 1), ("C2", 1), ("C3", 1), ("C4", 1), ("U1", 2), ("R1", 1), ("K1", 4))
+net("VIN24", ("F1", 2), ("D1", 1), ("C1", 1), ("C110", 1), ("C2", 1), ("C3", 1), ("C4", 1), ("U1", 2), ("R1", 1), ("K1", 4))
 net("24V_AMP", ("K1", 5), ("C36", 1), ("C37", 1), ("C38", 1), ("C39", 1), ("C40", 1), ("C41", 1), ("U6", 18), ("U6", 19), ("U6", 31), ("U6", 32), ("U6", 17), ("C42", 1), ("C43", 1))
-net(GND, ("D1", 2), ("C1", 2), ("C2", 2), ("C3", 2), ("C4", 2), ("U1", 7), ("U1", 9), ("R2", 2), ("R3", 2), ("R5", 2), ("C6", 2), ("C7", 2), ("D2", 2),
+net(GND, ("D1", 2), ("C1", 2), ("C110", 2), ("C2", 2), ("C3", 2), ("C4", 2), ("U1", 7), ("U1", 9), ("R2", 2), ("R3", 2), ("R5", 2), ("C6", 2), ("C7", 2), ("D2", 2),
     ("C8", 2), ("C9", 2), ("C10", 2), ("C11", 2))
 # buck
 net("BUCK_BOOT", ("U1", 1), ("C5", 1)); net("BUCK_SW", ("U1", 8), ("C5", 2), ("L1", 1), ("D2", 1))
@@ -245,18 +247,19 @@ net("5V", ("L1", 2), ("R4", 1), ("C8", 1), ("C9", 1), ("C10", 1), ("C11", 1), ("
 # smart relé: GPIO 27 -> Q7 -> relé + Q8 (5V_SW)
 net("PWR_G", ("J5", 13), ("R52", 1)); net("PWR_GATE", ("R52", 2), ("Q7", 1), ("R53", 1)); net(GND, ("Q7", 2), ("R53", 2))
 net("RLY_LOW", ("Q7", 3), ("K1", 2), ("D4", 2), ("R54", 1)); net("Q8_GATE", ("R54", 2), ("Q8", 1), ("R55", 2))
-net("5V_SW", ("Q8", 3), ("U3", 8), ("U3", 1), ("U5", 4), ("U5", 1), ("C27", 1), ("R14", 1), ("J10", 1), ("FB1", 1), ("U9", 3), ("C75", 1), ("U10", 3), ("C80", 1), ("C81", 1))
+net("5V_SW", ("Q8", 3), ("U3", 8), ("U3", 1), ("C109", 1), ("U5", 4), ("U5", 1), ("C27", 1), ("R14", 1), ("J10", 1), ("FB1", 1), ("U9", 3), ("C75", 1), ("U10", 3), ("C80", 1), ("C81", 1))
 net("5VA", ("FB1", 2), ("U5", 12), ("C28", 1), ("C30", 1))
 # 3,3 V alltid (U2): MCP23017, pull-ups, encoder, hub-mux via VD33
 net(GND, ("U2", 1), ("C12", 2), ("C13", 2), ("C14", 2))
 net("3V3", ("U2", 2), ("C13", 1), ("C14", 1), ("J8", 4), ("R43", 1), ("R44", 1), ("U12", 9), ("R56", 1), ("C74", 1), ("R45", 1), ("J22", 5),
-    *[(f"R{40+i}", 1) for i in range(3)])
+    *[(f"R{40+i}", 1) for i in range(3)],
+    ("U4", 1), ("U4", 8), ("U4", 20), ("C20", 1), ("C21", 1), ("C22", 1), ("R7", 1),                      # DAC (alltid på: Pi-ens I2S/XSMT driver inn her)
+    ("J9", 1), ("C99", 1), ("U10", 4), ("C82", 1), ("U10", 10), ("U10", 11), ("X1", 4), ("C77", 1), ("J13", 1), ("R78", 1))   # OLED, ADC-digital, oscillator, TFT-logikk, touch-CS pull-up
 # 3,3 V_SW (U9): DAC, ADC digital, oscillator, OLED, TFT
 net(GND, ("U9", 1), ("C75", 2), ("C76", 2))
-net("3V3_SW", ("U9", 2), ("C76", 1), ("U4", 1), ("U4", 8), ("U4", 20), ("C20", 1), ("C21", 1), ("C22", 1), ("R7", 1),
-    ("J9", 1), ("C99", 1), ("U10", 4), ("C82", 1), ("U10", 10), ("U10", 11), ("X1", 4), ("C77", 1), ("J13", 1), ("Q10", 2), ("R74", 1))
+net("3V3_SW", ("U9", 2), ("C76", 1), ("Q10", 2), ("R74", 1))   # bare TFT-baklyset slås av med 5V_SW
 # -5 V
-net(GND, ("U3", 3), ("C16", 2)); net("CP_PLUS", ("U3", 2), ("C15", 1)); net("CP_MINUS", ("U3", 4), ("C15", 2))
+net(GND, ("U3", 3), ("C16", 2), ("C109", 2)); net("CP_PLUS", ("U3", 2), ("C15", 1)); net("CP_MINUS", ("U3", 4), ("C15", 2))
 net("VNEG", ("U3", 5), ("C16", 1), ("U5", 13), ("C29", 1), ("C31", 1))
 # Pi header GND
 for p in (6, 9, 14, 20, 25, 30, 34, 39):
@@ -270,7 +273,8 @@ net(GND, ("U12", 10), ("U12", 15), ("U12", 16), ("U12", 17), ("C74", 2)); net("M
 for i, (nm, gpa) in enumerate([("AIR", 21), ("BT", 22), ("AUX", 23), ("USB", 24), ("PWR", 25)]):
     net(f"BTN_{nm}", ("U12", gpa), ("J7", i + 1), (f"C{57+i}", 1))
 net(GND, ("J7", 6), *[(f"C{57+i}", 2) for i in range(5)])
-net("EXP_A5", ("U12", 26), ("J22", 1)); net("EXP_A6", ("U12", 27), ("J22", 2));   # A5 = jack-deteksjon, A6 = HP EN (også på J22) net("EXP_A7", ("U12", 28), ("J22", 3)); net("EXP_B5", ("U12", 6), ("J22", 4)); net(GND, ("J22", 6))
+# EXP: A5 = jack-deteksjon, A6 = HP EN (også på J22)
+net("EXP_A5", ("U12", 26), ("J22", 1)); net("EXP_A6", ("U12", 27), ("J22", 2)); net("EXP_A7", ("U12", 28), ("J22", 3)); net("EXP_B5", ("U12", 6), ("J22", 4)); net(GND, ("J22", 6))
 # knapp bak -> GPIO 15
 net("BTN_BAK", ("J5", 10), ("J21", 1), ("R45", 2), ("C65", 1)); net(GND, ("J21", 2), ("C65", 2))
 # encoder -> GPIO 23/24/25
@@ -280,7 +284,7 @@ net(GND, ("J8", 5), ("C62", 2), ("C63", 2), ("C64", 2))
 # SPI0 (GPIO 10/9/11) deles av TFT (CE0 = GPIO 8, header 24) og touch (CE1 = GPIO 7, header 26) – som fbtft/ads7846-overlayene i install.sh
 net("SPI_MOSI", ("J5", 19), ("J13", 6), ("J13", 12)); net("SPI_SCLK", ("J5", 23), ("J13", 7), ("J13", 10))
 net("SPI_MISO", ("J5", 21), ("J13", 9), ("J13", 13)); net("TFT_CS", ("J5", 24), ("J13", 3)); net("TFT_DC", ("J5", 29), ("J13", 5)); net("TFT_RST", ("J5", 31), ("J13", 4))
-net("TOUCH_CS", ("J5", 26), ("J13", 11)); net("TOUCH_IRQ", ("J5", 11), ("J13", 14)); net(GND, ("J13", 2))
+net("TOUCH_CS", ("J5", 26), ("J13", 11), ("R78", 2)); net("TOUCH_IRQ", ("J5", 11), ("J13", 14)); net(GND, ("J13", 2))
 # PGA2311 bit-banges fra GPIO 0 (header 27, SDI), GPIO 1 (header 28, SCLK) og GPIO 16 (header 36, CS) – som ki_amp_daemon.py
 net("PGA_SDI", ("J5", 27), ("U5", 3)); net("PGA_SCLK", ("J5", 28), ("U5", 6)); net("PGA_CS", ("J5", 36), ("U5", 2))
 net("TFT_BL_G", ("J5", 33), ("R71", 1)); net("TFT_BL_GATE", ("R71", 2), ("Q9", 1), ("R72", 1)); net(GND, ("Q9", 2), ("R72", 2))
@@ -297,8 +301,8 @@ net("AMP_SD_G", ("J5", 15), ("R19", 1)); net("DAC_XSMT", ("J5", 37), ("U4", 17),
 # I2S: PCM1808 er master (BCK/LRCK), Pi slave, DAC slave
 net("I2S_BCK", ("J5", 12), ("U4", 13), ("U10", 8)); net("I2S_LRCK", ("J5", 35), ("U4", 15), ("U10", 7)); net("I2S_DIN", ("J5", 40), ("U4", 14)); net("I2S_ADC", ("J5", 38), ("U10", 9))
 # DAC
-net("DAC_CAPP", ("U4", 2), ("C17", 1)); net("DAC_CAPM", ("U4", 4), ("C17", 2)); net("DAC_VNEG", ("U4", 5), ("C18", 1)); net("DAC_LDOO", ("U4", 18), ("C19", 1))
-net(GND, ("U4", 3), ("U4", 9), ("U4", 10), ("U4", 11), ("U4", 12), ("U4", 16), ("U4", 19), ("C18", 2), ("C19", 2), ("C20", 2), ("C21", 2), ("C22", 2), ("C23", 2), ("C24", 2))
+net("DAC_CAPP", ("U4", 2), ("C17", 1)); net("DAC_CAPM", ("U4", 4), ("C17", 2)); net("DAC_VNEG", ("U4", 5), ("C18", 1)); net("DAC_LDOO", ("U4", 10), ("C19", 1))
+net(GND, ("U4", 3), ("U4", 9), ("U4", 18), ("U4", 11), ("U4", 12), ("U4", 16), ("U4", 19), ("C18", 2), ("C19", 2), ("C20", 2), ("C21", 2), ("C22", 2), ("C23", 2), ("C24", 2))
 net("DAC_L", ("U4", 6), ("R8", 1)); net("DAC_R", ("U4", 7), ("R9", 1))
 net("DAC_L_F", ("R8", 2), ("C23", 1), ("C25", 1)); net("DAC_R_F", ("R9", 2), ("C24", 1), ("C26", 1))
 net("VOL_INL", ("C25", 2), ("R12", 1), ("U5", 16)); net("VOL_INR", ("C26", 2), ("R13", 1), ("U5", 9))
@@ -327,7 +331,7 @@ net("AMP_LINP", ("C45", 2), ("U6", 10)); net("AMP_LINN", ("C46", 1), ("U6", 11))
 net(GND, ("C46", 2), ("C48", 2), ("U6", 1), ("U6", 9), ("U6", 12), ("U6", 13), ("U6", 14), ("U6", 15), ("U6", 22), ("U6", 25), ("U6", 28), ("U6", 33),
     ("C36", 2), ("C37", 2), ("C38", 2), ("C39", 2), ("C40", 2), ("C41", 2), ("C42", 2), ("C43", 2), ("C44", 2), ("R16", 2), ("R18", 2), ("R20", 2))
 net("GVDD", ("U6", 7), ("C44", 1), ("R15", 1), ("R17", 1)); net("AMP_GAIN", ("U6", 8), ("R15", 2), ("R16", 1)); net("AMP_PLIMIT", ("U6", 6), ("R17", 2), ("R18", 1))
-net("AMP_SDZ", ("U6", 2), ("R19", 2), ("R20", 1)); net(GND, ("U6", 16))   # MUTE lav = utgangene aktive (SDZ styrer av/på)
+net("AMP_SDZ", ("U6", 2), ("R19", 2), ("R20", 1))   # pinne 1 MODSEL = GND (BD), 12 MUTE = GND, 13-15 AM = GND, 16 SYNC åpen (utgang)
 net("BSNL", ("U6", 20), ("C32", 1)); net("BSPL", ("U6", 24), ("C33", 1)); net("BSNR", ("U6", 26), ("C34", 1)); net("BSPR", ("U6", 30), ("C35", 1))
 net("OUTNL", ("U6", 21), ("C32", 2), ("L2", 1), ("R21", 1)); net("OUTPL", ("U6", 23), ("C33", 2), ("L3", 1), ("R22", 1))
 net("OUTNR", ("U6", 27), ("C34", 2), ("L4", 1), ("R23", 1)); net("OUTPR", ("U6", 29), ("C35", 2), ("L5", 1), ("R24", 1))
@@ -340,10 +344,10 @@ net(GND, ("J6", 2))
 net("VOL_OUTL", ("C104", 1)); net("VOL_OUTR", ("C107", 1))
 net("HP_INL", ("C104", 2), ("U13", 1)); net("HP_INR", ("C107", 2), ("U13", 4))
 net("HP_INLP", ("U13", 2), ("C105", 1)); net("HP_INRP", ("U13", 3), ("C106", 1))
-net("HP_OUTL", ("U13", 16), ("J23", 1)); net("HP_OUTR", ("U13", 5), ("J23", 2))
+net("HP_OUTL", ("U13", 16), ("J23", 1), ("R76", 1)); net("HP_OUTR", ("U13", 5), ("J23", 2))
 net("HP_VSS", ("U13", 8), ("C102", 1)); net("HP_CPP", ("U13", 11), ("C103", 1)); net("HP_CPN", ("U13", 9), ("C103", 2)); net("HP_VDD", ("U13", 12), ("C101", 1))
-net("5V_SW", ("U13", 14), ("C100", 1)); net("EXP_A6", ("U13", 13)); net("EXP_A5", ("J23", 4), ("C108", 1))
-net(GND, ("U13", 6), ("U13", 7), ("U13", 10), ("U13", 15), ("U13", 17), ("C100", 2), ("C101", 2), ("C102", 2), ("C105", 2), ("C106", 2), ("J23", 3), ("C108", 2))
+net("5V_SW", ("U13", 14), ("C100", 1)); net("EXP_A6", ("U13", 13)); net("HP_DET", ("J23", 4), ("C108", 1), ("R77", 1)); net("EXP_A5", ("R77", 2))
+net(GND, ("U13", 6), ("U13", 7), ("U13", 10), ("U13", 15), ("U13", 17), ("C100", 2), ("C101", 2), ("C102", 2), ("C105", 2), ("C106", 2), ("J23", 3), ("C108", 2), ("R76", 2))
 # USB-delingsswitch
 net("5V_USB", ("F2", 2), ("C71", 1), *[(f"J{15+i}", 1) for i in range(4)]); net(GND, ("C71", 2), ("C72", 2))
 net("USB_VD33", ("U7", 21), ("U7", 13), ("U7", 19), ("C66", 1), ("C73", 1), ("R46", 1), ("U8", 1), ("C70", 1))
@@ -408,7 +412,7 @@ def build():
     # ubrukte pads sjekk: alle pads på IC-er skal ha nett (unntatt NC)
     nc_ok = {("U3", "6"), ("U3", "7"), ("U7", "22"), ("U7", "23"), ("U7", "24"), ("U7", "25"), ("U7", "27"), ("K1", "3"),
              ("U11", "5"), ("U11", "6"), ("U11", "7"), ("U11", "15"), ("U11", "16"), ("U11", "25"), ("U11", "28"), ("U12", "11"), ("U12", "14"), ("U12", "19"),
-             ("U12", "7"), ("U12", "8"), ("X1", "1"), ("U5", "7"), ("U6", "3"), ("J5", "1"), ("J5", "17"), ("U1", "0")}
+             ("U12", "7"), ("U12", "8"), ("X1", "1"), ("U5", "7"), ("U6", "3"), ("U6", "16"), ("J5", "1"), ("J5", "17"), ("U1", "0")}
     for ref in ("U1", "U6"):   # termiske via-pads uten nummer -> GND
         for pd in fps[ref].Pads():
             if pd.GetNumber() == "":

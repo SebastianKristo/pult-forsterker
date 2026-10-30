@@ -105,7 +105,7 @@ Høye deler (høyde over kortets overside → topp i kasse-z). Posisjon i kasse-
 
 | Ref | Del | Fotavtrykk | Kasse-x | Kasse-y | Høyde | Topp z | Ok? |
 |---|---|---|---|---|---|---|---|
-| **C1** | 2200 µF/35 V radial | Ø13, P5 | 41,7 | 44,7 | **vanlig 20–25 mm** | 49–54 | **Nei – bruk lavprofil ≤ 15 mm (f.eks. 16 × 15 mm, krever P7,5-fotavtrykk) eller 2 × 1000 µF 10 × 12,5** |
+| C1, C110 | 2 × 1000 µF/35 V radial | Ø10, P5 | 41,7 / 19,7 | 44,7 / 45,4 | ≤ 16 (kjøp lavprofil) | ≤ 45,1 | ja (rettet fra én Ø13 × 25) |
 | K1 | relé SRD-05VDC | 19 × 15,5 | 7,7 | 31,7 | 15,7 | 44,8 | ja (1,7 mm) |
 | U6 + kjøleribbe | TPA3116 + 20 × 20 × 10 ribbe | | 31,7 | 17,7 | 1,2 + 1,5 tape + 10 | 41,8 | ja |
 | L2–L5 | 12 × 12 × 8 spoler | | 65,7 / 79,7 | 22,2 / 8,7 | 8 | 37,1 | ja |
@@ -141,7 +141,7 @@ Høye deler (høyde over kortets overside → topp i kasse-z). Posisjon i kasse-
 
 ## 6. Kjente kollisjonsrisikoer – sjekk før bestilling
 
-1. **C1 (2200 µF) er for høy** med vanlig Ø13 × 20/25-type. Velg ≤ 15 mm høy eller endre fotavtrykket på kortet.
+1. C1 er byttet til 2 × 1000 µF Ø10 (C1 + C110) – kjøp typer med høyde ≤ 16 mm.
 2. **TFT-modulkort** (50–52 mm høye) passer ikke stående bak panelet (innvendig 43,5). OLED 2,42"-modulen (38 mm) passer. Velg
    OLED, eller TFT som rent panel med FPC-adapter montert liggende.
 3. **J5-flatkabelen**: stående IDC-plugg + kabel krever ~48 mm. Bruk vinklet plugg eller bøy kabelen tett.

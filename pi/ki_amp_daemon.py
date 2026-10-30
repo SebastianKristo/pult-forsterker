@@ -181,7 +181,7 @@ class Mcp23017:
         try:
             from smbus2 import SMBus
             self.bus = SMBus(bus)
-            self._w(self.IOCON, 0x00); self._w(self.IODIRA, 0xBF); self._w(self.GPPUA, 0xBF); self._w(self.GPINTENA, 0x3F); self._w(self.OLATA, 0x00)
+            self._w(self.IOCON, 0x04); self._w(self.IODIRA, 0xBF)   # IOCON ODR: INTA open-drain (GPIO 14 er også UART TXD); self._w(self.GPPUA, 0xBF); self._w(self.GPINTENA, 0x3F); self._w(self.OLATA, 0x00)
             self._w(self.IODIRB, 0x00); self._w(self.OLATB, 0x00)
             self.ok = True
             print(f"MCP23017 på 0x{addr:02x} klar", flush=True)
