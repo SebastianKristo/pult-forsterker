@@ -8,9 +8,8 @@ PCB = os.path.join(HERE, "ki_pultforsterker_main.kicad_pcb")
 # --continue: behold sporene som alt er rutet (fra forrige export.py) og la Freerouting fullføre resten
 if "--continue" in sys.argv:
     routed = pcbnew.LoadBoard(os.path.join(HERE, "ki_pultforsterker_main.kicad_pcb"))
-    for z in list(routed.Zones()): routed.Remove(z)
-    for t in list(routed.GetTracks()):   # stitching-vias/stubber fra export.py lages på nytt etterpå
-        if t.GetNetname() == "GND" and not t.IsLocked(): routed.Remove(t)
+    for t in [t for t in routed.GetTracks() if t.GetNetname() == "GND" and not t.IsLocked()]:   # stitching/stubber lages på nytt i export.py
+        routed.Remove(t)
     pcbnew.ExportSpecctraDSN(routed, os.path.join(HERE, "board.dsn"))
 subprocess.run([sys.executable, os.path.join(HERE, "build_board.py")], check=True)
 board = pcbnew.LoadBoard(PCB)
