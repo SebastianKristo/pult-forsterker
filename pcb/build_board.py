@@ -277,9 +277,12 @@ net("BTN_BAK", ("J5", 10), ("J21", 1), ("R45", 2), ("C65", 1)); net(GND, ("J21",
 net("ENC_CLK", ("J5", 16), ("J8", 1), ("R40", 2), ("C62", 1)); net("ENC_DT", ("J5", 18), ("J8", 2), ("R41", 2), ("C63", 1)); net("ENC_SW", ("J5", 22), ("J8", 3), ("R42", 2), ("C64", 1))
 net(GND, ("J8", 5), ("C62", 2), ("C63", 2), ("C64", 2))
 # SPI0: PGA2311 (CE0) og TFT (CE1) + touch
-net("SPI_MOSI", ("J5", 19), ("U5", 3), ("J13", 6), ("J13", 12)); net("SPI_SCLK", ("J5", 23), ("U5", 6), ("J13", 7), ("J13", 10)); net("SPI_CS", ("J5", 24), ("U5", 2))
-net("SPI_MISO", ("J5", 21), ("J13", 9), ("J13", 13)); net("TFT_CS", ("J5", 26), ("J13", 3)); net("TFT_DC", ("J5", 29), ("J13", 5)); net("TFT_RST", ("J5", 31), ("J13", 4))
-net("TOUCH_CS", ("J5", 36), ("J13", 11)); net("TOUCH_IRQ", ("J5", 11), ("J13", 14)); net(GND, ("J13", 2))
+# SPI0 (GPIO 10/9/11) deles av TFT (CE0 = GPIO 8, header 24) og touch (CE1 = GPIO 7, header 26) – som fbtft/ads7846-overlayene i install.sh
+net("SPI_MOSI", ("J5", 19), ("J13", 6), ("J13", 12)); net("SPI_SCLK", ("J5", 23), ("J13", 7), ("J13", 10))
+net("SPI_MISO", ("J5", 21), ("J13", 9), ("J13", 13)); net("TFT_CS", ("J5", 24), ("J13", 3)); net("TFT_DC", ("J5", 29), ("J13", 5)); net("TFT_RST", ("J5", 31), ("J13", 4))
+net("TOUCH_CS", ("J5", 26), ("J13", 11)); net("TOUCH_IRQ", ("J5", 11), ("J13", 14)); net(GND, ("J13", 2))
+# PGA2311 bit-banges fra GPIO 0 (header 27, SDI), GPIO 1 (header 28, SCLK) og GPIO 16 (header 36, CS) – som ki_amp_daemon.py
+net("PGA_SDI", ("J5", 27), ("U5", 3)); net("PGA_SCLK", ("J5", 28), ("U5", 6)); net("PGA_CS", ("J5", 36), ("U5", 2))
 net("TFT_BL_G", ("J5", 33), ("R71", 1)); net("TFT_BL_GATE", ("R71", 2), ("Q9", 1), ("R72", 1)); net(GND, ("Q9", 2), ("R72", 2))
 net("TFT_BL_LOW", ("Q9", 3), ("R73", 1)); net("Q10_GATE", ("R73", 2), ("Q10", 1), ("R74", 2)); net("TFT_LED", ("Q10", 3), ("J13", 8))
 # LED-ringer: AIR/BT/AUX/USB fra MCP GPB0-3, POWER fra GPIO 12 (PWM)
@@ -324,7 +327,7 @@ net("AMP_LINP", ("C45", 2), ("U6", 10)); net("AMP_LINN", ("C46", 1), ("U6", 11))
 net(GND, ("C46", 2), ("C48", 2), ("U6", 1), ("U6", 9), ("U6", 12), ("U6", 13), ("U6", 14), ("U6", 15), ("U6", 22), ("U6", 25), ("U6", 28), ("U6", 33),
     ("C36", 2), ("C37", 2), ("C38", 2), ("C39", 2), ("C40", 2), ("C41", 2), ("C42", 2), ("C43", 2), ("C44", 2), ("R16", 2), ("R18", 2), ("R20", 2))
 net("GVDD", ("U6", 7), ("C44", 1), ("R15", 1), ("R17", 1)); net("AMP_GAIN", ("U6", 8), ("R15", 2), ("R16", 1)); net("AMP_PLIMIT", ("U6", 6), ("R17", 2), ("R18", 1))
-net("AMP_SDZ", ("U6", 2), ("R19", 2), ("R20", 1))
+net("AMP_SDZ", ("U6", 2), ("R19", 2), ("R20", 1)); net(GND, ("U6", 16))   # MUTE lav = utgangene aktive (SDZ styrer av/på)
 net("BSNL", ("U6", 20), ("C32", 1)); net("BSPL", ("U6", 24), ("C33", 1)); net("BSNR", ("U6", 26), ("C34", 1)); net("BSPR", ("U6", 30), ("C35", 1))
 net("OUTNL", ("U6", 21), ("C32", 2), ("L2", 1), ("R21", 1)); net("OUTPL", ("U6", 23), ("C33", 2), ("L3", 1), ("R22", 1))
 net("OUTNR", ("U6", 27), ("C34", 2), ("L4", 1), ("R23", 1)); net("OUTPR", ("U6", 29), ("C35", 2), ("L5", 1), ("R24", 1))
@@ -405,7 +408,7 @@ def build():
     # ubrukte pads sjekk: alle pads på IC-er skal ha nett (unntatt NC)
     nc_ok = {("U3", "6"), ("U3", "7"), ("U7", "22"), ("U7", "23"), ("U7", "24"), ("U7", "25"), ("U7", "27"), ("K1", "3"),
              ("U11", "5"), ("U11", "6"), ("U11", "7"), ("U11", "15"), ("U11", "16"), ("U11", "25"), ("U11", "28"), ("U12", "11"), ("U12", "14"), ("U12", "19"),
-             ("U12", "7"), ("U12", "8"), ("X1", "1"), ("U5", "7"), ("U6", "3"), ("U6", "16"), ("J5", "1"), ("J5", "17"), ("J5", "27"), ("J5", "28"), ("U1", "0")}
+             ("U12", "7"), ("U12", "8"), ("X1", "1"), ("U5", "7"), ("U6", "3"), ("J5", "1"), ("J5", "17"), ("U1", "0")}
     for ref in ("U1", "U6"):   # termiske via-pads uten nummer -> GND
         for pd in fps[ref].Pads():
             if pd.GetNumber() == "":
