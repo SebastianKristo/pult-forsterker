@@ -125,6 +125,7 @@ sudo install -m 644 "$SRC/oled-display.service" /etc/systemd/system/oled-display
 
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
+sudo mkdir -p /usr/local/share/ki-amp/webapp && sudo install -m 644 "$SRC"/webapp/* /usr/local/share/ki-amp/webapp/   # web-app (PWA) på http://<pi>:8765/
 sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service
 [ -f /etc/ki-amp.env ] || sudo install -m 600 "$SRC/ki-amp.env" /etc/ki-amp.env
 if [ "$OUT" = headphones ]; then

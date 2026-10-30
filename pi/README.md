@@ -10,6 +10,8 @@ sudo reboot
 
 Etter omstart: `aplay -l` viser `sndrpihifiberry`, `i2cdetect -y 1` viser `3c`, `curl http://pultamp.local:8765/api/status` svarer med JSON.
 
+**Web-app (fjernkontroll på mobil/Mac/PC):** åpne `http://pultamp.local:8765/` – på iPhone: Del → «Legg til på Hjem-skjerm», så får du den som egen app («Skjold S1»). Filene ligger i `pi/webapp/` og serveres av daemonen; ingen appbutikk, ingen innlogging (bare på hjemmenettet). Viser spiller-nå med cover, volum, kilder, radiokanaler (hold inne for å lagre), USB-switch, hodetelefoner, overtemperatur og innstillinger (auto-demping, auto-kilde, loudness, tale, miks med nivå per kilde, BT-paring).
+
 Logger: `journalctl -u ki-amp -f`, `journalctl -u oled-display -f`.
 
 Innstillinger i `/etc/ki-amp.env` (navn, port, `RELAY_ACTIVE_LOW`). Tilstand (volum, kilde, BT) lagres i `/var/lib/ki-amp/state.json`.

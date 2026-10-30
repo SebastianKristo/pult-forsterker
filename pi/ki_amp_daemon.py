@@ -12,6 +12,7 @@ LED-ringer: 2 x 4-kanals MOSFET-kort (3,3 V-jumper), POWER-ringen dimmes med PWM
 HTTP-API (port 8765) + mDNS for Home Assistant-integrasjonen og Homey-appen.
 
 API:
+  GET  /                 web-app (PWA) for mobil/PC – filene ligger i pi/webapp
   GET  /api/status
   POST /api/power  {"on":bool}   POST /api/toggle
   POST /api/input  {"input":"airplay|bt|aux|usb"}
@@ -648,7 +649,8 @@ def read_status():
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected}
     return {**state, **extra, "playing": bool(st.get("playing")), "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": st.get("cover", ""), "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
-            "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"]}
+            "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"],
+            "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD}
 
 
 # ---------- USB-delingsswitch (Ugreen 2 PC → 4 USB) ----------
@@ -1562,6 +1564,14 @@ def main():
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute)])
+    # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
+    webdir = os.environ.get("KI_AMP_WEBAPP", "")
+    for cand in ([webdir] if webdir else []) + ["/usr/local/share/ki-amp/webapp", os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")]:
+        if cand and os.path.isdir(cand):
+            webdir = cand; break
+    if webdir and os.path.isdir(webdir):
+        async def h_index(_r): return web.FileResponse(os.path.join(webdir, "index.html"), headers={"Cache-Control": "no-cache"})
+        app.add_routes([web.get("/", h_index), web.get("/index.html", h_index), web.static("/app", webdir)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

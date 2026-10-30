@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111113">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Skjold S1">
+<link rel="manifest" href="/app/manifest.webmanifest">
+<link rel="icon" href="/app/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/app/icon-192.png">
+<title>Skjold S1</title>
+<style>
+:root{
+  --bg:#111113; --panel:#1a1a1d; --panel2:#222226; --line:#2c2c31; --fg:#f2f2ee; --muted:#9a9a94;
+  --accent:#f2f2ee; --on:#e8e4d8; --red:#d9534f; --green:#6fbf73; --amber:#e0a84f;
+  --radius:18px; --pad:16px; --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;font-size:16px;line-height:1.35}
+body{min-height:100dvh;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(var(--safe-b) + 24px)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.app{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;align-items:center;justify-content:space-between;padding:4px 2px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{width:34px;height:34px}
+.brand h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+.brand small{display:block;color:var(--muted);font-size:12px;letter-spacing:.04em;text-transform:none;font-weight:400}
+.power{width:52px;height:52px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;transition:all .2s}
+.power svg{width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:2.2;stroke-linecap:round}
+.power.on{box-shadow:0 0 0 2px var(--on) inset,0 0 18px rgba(232,228,216,.35)}
+.power.on svg{stroke:var(--on)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)}
+.banner{display:none;align-items:center;gap:10px;background:#3a1f1f;border:1px solid #5a2a2a;color:#ffd7d5;border-radius:12px;padding:10px 14px;font-size:14px}
+.banner.show{display:flex}
+.banner.warn{background:#3a3220;border-color:#5a4a2a;color:#ffe9b8}
+/* now playing */
+.np{display:flex;gap:14px;align-items:center}
+.cover{width:88px;height:88px;border-radius:12px;background:var(--panel2);flex:none;overflow:hidden;display:grid;place-items:center}
+.cover img{width:100%;height:100%;object-fit:cover;display:block}
+.cover svg{width:34px;height:34px;stroke:var(--muted);fill:none;stroke-width:1.6}
+.np .txt{min-width:0;flex:1}
+.np .title{font-weight:600;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np .sub{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.np .src{display:inline-block;margin-top:8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+.transport{display:flex;justify-content:center;gap:10px;margin-top:14px}
+.transport button{width:56px;height:44px;border-radius:12px;background:var(--panel2);display:grid;place-items:center}
+.transport button svg{width:20px;height:20px;fill:var(--fg)}
+.transport button.play{width:72px}
+/* volume */
+.vol{display:flex;align-items:center;gap:12px}
+.vol .num{font-variant-numeric:tabular-nums;font-size:28px;font-weight:600;width:64px;text-align:right}
+.vol .pct{color:var(--muted);font-size:14px;margin-left:2px}
+.slider{flex:1;position:relative;height:44px;display:flex;align-items:center}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--on) 0 var(--p,30%),#333338 var(--p,30%) 100%);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:0;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:0}
+.volbtn{width:44px;height:44px;border-radius:50%;background:var(--panel2);font-size:22px;line-height:1;display:grid;place-items:center}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.mute{font-size:13px;color:var(--muted);padding:8px 12px;border-radius:999px;border:1px solid var(--line)}
+.mute.on{color:var(--red);border-color:var(--red)}
+/* sources */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid.two{grid-template-columns:repeat(2,1fr)}
+.grid.six{grid-template-columns:repeat(3,1fr)}
+.src-btn{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:14px 8px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s}
+.src-btn svg{width:22px;height:22px;stroke:var(--fg);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.src-btn span{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.src-btn.on{border-color:var(--on);box-shadow:0 0 0 1px var(--on) inset}
+.src-btn.on span{color:var(--fg)}
+.src-btn .ring{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;background:#3a3a40}
+.src-btn.on .ring{background:var(--on);box-shadow:0 0 8px var(--on)}
+.src-btn.playing .ring{background:var(--green);box-shadow:0 0 8px var(--green)}
+h2{margin:0 0 10px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.preset{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:left;min-height:52px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.preset b{font-size:11px;color:var(--muted);letter-spacing:.1em}
+.preset span{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preset.on{border-color:var(--on)}
+.seg{display:flex;background:var(--panel2);border-radius:12px;padding:4px;border:1px solid var(--line)}
+.seg button{flex:1;padding:10px;border-radius:9px;font-size:14px;color:var(--muted)}
+.seg button.on{background:#3a3a40;color:var(--fg)}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.toggle:first-of-type{border-top:0}
+.toggle .l{font-size:15px}
+.toggle .d{font-size:12px;color:var(--muted);margin-top:2px}
+.sw{width:50px;height:30px;border-radius:15px;background:#3a3a40;position:relative;transition:background .2s;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s}
+.sw.on{background:var(--green)}
+.sw.on::after{left:23px}
+.level{display:flex;align-items:center;gap:10px;padding:6px 0}
+.level label{width:70px;font-size:13px;color:var(--muted)}
+.level input{flex:1}
+.level .v{width:36px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums}
+.foot{color:var(--muted);font-size:12px;text-align:center;padding-top:6px}
+.foot .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:middle}
+.foot .dot.ok{background:var(--green)}
+details summary{list-style:none;cursor:pointer}
+details summary::-webkit-details-marker{display:none}
+details summary h2{display:flex;justify-content:space-between;align-items:center;margin:0}
+details[open] summary h2{margin-bottom:10px}
+.chev{transition:transform .2s}
+details[open] .chev{transform:rotate(180deg)}
+.pill{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;text-transform:none;letter-spacing:0}
+.hp{display:none;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.hp.show{display:flex}
+.hp svg{width:18px;height:18px;stroke:var(--fg);fill:none;stroke-width:1.8}
+.offline .card{opacity:.55;pointer-events:none}
+.offline header .power{pointer-events:none}
+@media (min-width:700px){body{padding-top:32px}.app{gap:16px}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3 6 10v13c0 11 8 19 18 22 10-3 18-11 18-22V10L24 3z" fill="none" stroke="#f2f2ee" stroke-width="2.4" stroke-linejoin="round"/><path d="M15 25h4l3-8 4 16 4-12 3 4h5" fill="none" stroke="#f2f2ee" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h1>Skjold S1<small id="hostname">pultforsterker</small></h1>
+    </div>
+    <button class="power" id="power" aria-label="Av/på"><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 6.7a8 8 0 1 0 11.4 0"/></svg></button>
+  </header>
+
+  <div class="banner" id="overtemp">⚠︎ Kjøleribben er for varm – høyttalerne er dempet til den er avkjølt.</div>
+  <div class="banner warn" id="pairing">Bluetooth-paring åpen i 2 minutter – finn «<span id="pairname">Skjold S1</span>» på telefonen.</div>
+
+  <section class="card">
+    <div class="np">
+      <div class="cover" id="cover"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+      <div class="txt">
+        <div class="title" id="title">Ingenting spiller</div>
+        <div class="sub" id="sub">&nbsp;</div>
+        <span class="src" id="srcpill">—</span>
+      </div>
+    </div>
+    <div class="transport" id="transport">
+      <button data-act="previous" aria-label="Forrige"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button data-act="playpause" class="play" aria-label="Spill/pause"><svg viewBox="0 0 24 24" id="playicon"><path d="M7 4v16l13-8z"/></svg></button>
+      <button data-act="next" aria-label="Neste"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="vol">
+      <button class="volbtn" id="voldown" aria-label="Lavere">−</button>
+      <div class="slider"><input type="range" id="volume" min="0" max="100" value="30" aria-label="Volum"></div>
+      <button class="volbtn" id="volup" aria-label="Høyere">+</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div><span class="num" id="volnum">30</span><span class="pct">%</span></div>
+      <div class="hp" id="hp"><svg viewBox="0 0 24 24"><path d="M4 14v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="13" width="4" height="7" rx="1.5"/><rect x="17" y="13" width="4" height="7" rx="1.5"/></svg><span id="hptxt">Hodetelefoner</span></div>
+      <button class="mute" id="mute">Demp</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Kilde</h2>
+    <div class="grid" id="sources">
+      <button class="src-btn" data-input="airplay"><i class="ring"></i><svg viewBox="0 0 24 24"><path d="M5 17a8 8 0 1 1 14 0"/><path d="M8 15a4.5 4.5 0 1 1 8 0"/><path d="M12 15l5 6H7z"/></svg><span>AirPlay</span></button>
+      <button class="src-btn" data-input="bt"><i class="ring"></i><svg viewBox="0 0 24 24"><path d="M7 7l10 10-5 4V3l5 4L7 17"/></svg><span>Bluetooth</span></button>
+      <button class="src-btn" data-input="radio"><i class="ring"></i><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M6 8l10-5"/><circle cx="8.5" cy="14" r="2.5"/><path d="M14 12h4M14 16h4"/></svg><span>Radio</span></button>
+      <button class="src-btn" data-input="aux"><i class="ring"></i><svg viewBox="0 0 24 24"><path d="M12 3v6"/><path d="M9 9h6l-1 5h-4z"/><path d="M11 14v7h2v-7"/></svg><span>AUX 1</span></button>
+      <button class="src-btn" data-input="aux2"><i class="ring"></i><svg viewBox="0 0 24 24"><path d="M12 3v6"/><path d="M9 9h6l-1 5h-4z"/><path d="M11 14v7h2v-7"/></svg><span>AUX 2</span></button>
+      <button class="src-btn" data-input="usb"><i class="ring"></i><svg viewBox="0 0 24 24"><path d="M12 2v18"/><path d="M12 20l-2 2 2 1 2-1z"/><path d="M12 7l4-2v3"/><path d="M12 11l-4-2v3"/><circle cx="16" cy="5" r="1"/><rect x="7" y="8" width="2" height="2"/></svg><span>USB</span></button>
+    </div>
+  </section>
+
+  <section class="card" id="radiocard">
+    <h2>Radiokanaler <span class="pill" id="lyrion">Lyrion</span></h2>
+    <div class="grid six" id="presets"></div>
+  </section>
+
+  <section class="card">
+    <h2>USB-switch · tastatur, mus og disk</h2>
+    <div class="seg" id="usbsw">
+      <button data-pc="1">PC 1</button>
+      <button data-pc="2">PC 2</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <details id="more">
+      <summary><h2>Innstillinger <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></h2></summary>
+      <div class="toggle"><div><div class="l">Auto-demping med hodetelefoner</div><div class="d">Høyttalerne dempes når noe plugges i fronten</div></div><button class="sw" data-key="hp_automute" data-api="/api/hp_automute"></button></div>
+      <div class="toggle"><div><div class="l">Bytt kilde automatisk</div><div class="d">Hopp til AirPlay/Bluetooth/Radio når noe begynner å spille</div></div><button class="sw" data-key="auto_input" data-api="/api/auto_input"></button></div>
+      <div class="toggle"><div><div class="l">Loudness</div><div class="d">Mer bass og diskant på lavt volum</div></div><button class="sw" data-key="loudness" data-api="/api/loudness"></button></div>
+      <div class="toggle"><div><div class="l">Talemeldinger</div><div class="d" id="voiceprofile">Norsk</div></div><button class="sw" data-key="voice" data-api="/api/voice"></button></div>
+      <div class="toggle"><div><div class="l">Miks digitale kilder</div><div class="d">AirPlay, Bluetooth, USB og Radio kan spille samtidig</div></div><button class="sw" data-key="mix" data-api="/api/mix"></button></div>
+      <div id="levels" style="margin-top:6px"></div>
+      <div class="toggle" style="border-top:1px solid var(--line);margin-top:6px"><div><div class="l">Bluetooth-paring</div><div class="d">Gjør forsterkeren synlig i 2 minutter</div></div><button class="mute" id="pairbtn">Start</button></div>
+    </details>
+  </section>
+
+  <div class="foot"><span class="dot" id="dot"></span><span id="foottxt">Kobler til …</span></div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const API = location.origin;
+  let st = null, lastCover = null, volTimer = null, volDragging = false, lastSeen = 0;
+  const NAMES = { airplay: "AirPlay", bt: "Bluetooth", radio: "Radio", aux: "AUX 1", aux2: "AUX 2", usb: "USB" };
+  const LEVEL_NAMES = { airplay: "AirPlay", bt: "Bluetooth", usb: "USB", radio: "Radio", aux: "AUX 1", aux2: "AUX 2" };
+
+  async function post(path, body) {
+    try {
+      const r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+      if (r.ok) { const s = await r.json(); if (s && s.volume !== undefined) render(s); }
+      else { const e = await r.json().catch(() => ({})); toast(e.error || ("Feil " + r.status)); }
+    } catch (e) { toast("Ingen kontakt med forsterkeren"); }
+  }
+  async function poll() {
+    try {
+      const r = await fetch(API + "/api/status", { cache: "no-store" });
+      if (r.ok) { render(await r.json()); lastSeen = Date.now(); setOnline(true); }
+      else setOnline(false);
+    } catch (e) { setOnline(false); }
+  }
+  function setOnline(ok) {
+    document.getElementById("app").classList.toggle("offline", !ok);
+    $("dot").classList.toggle("ok", ok);
+    if (!ok) $("foottxt").textContent = "Ingen kontakt med forsterkeren – prøver igjen …";
+  }
+  let toastT = null;
+  function toast(msg) { $("foottxt").textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => st && footer(st), 3000); }
+  function footer(s) { $("foottxt").textContent = `${s.name || "Pultforsterker"} · ${s.id || ""} · v${s.version || ""}` + (s.board === "main" ? " · hovedkort rev B" : ""); }
+
+  function render(s) {
+    st = s;
+    $("hostname").textContent = s.name && s.name !== "Skjold S1" ? s.name : (s.id || "pultforsterker");
+    $("power").classList.toggle("on", !!s.power);
+    $("overtemp").classList.toggle("show", !!s.overtemp);
+    $("pairing").classList.toggle("show", !!s.bt_pairing); $("pairname").textContent = s.name || "Skjold S1";
+    // now playing
+    const inp = s.input || "";
+    const playing = !!s.playing, src = s.source || inp;
+    $("title").textContent = s.title || (playing ? "Spiller" : (s.power ? "Ingenting spiller" : "Av"));
+    const sub = [s.artist, s.album].filter(Boolean).join(" · ") || (inp === "bt" && s.bt_device ? s.bt_device : "") || (inp === "radio" && s.station ? s.station : "") || " ";
+    $("sub").textContent = sub;
+    $("srcpill").textContent = NAMES[inp] || inp || "—";
+    $("playicon").innerHTML = playing ? '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>' : '<path d="M7 4v16l13-8z"/>';
+    $("transport").style.visibility = ["airplay", "bt", "radio"].includes(inp) ? "visible" : "hidden";
+    const coverKey = s.cover ? (s.cover + "|" + s.title) : "";
+    if (coverKey !== lastCover) {
+      lastCover = coverKey;
+      $("cover").innerHTML = s.cover ? `<img src="${API}/api/cover?v=${encodeURIComponent(s.cover)}" alt="">` : '<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+    }
+    // volume
+    if (!volDragging) { $("volume").value = s.volume; $("volume").style.setProperty("--p", s.volume + "%"); $("volnum").textContent = s.volume; }
+    $("mute").classList.toggle("on", !!s.mute); $("mute").textContent = s.mute ? "Dempet" : "Demp";
+    $("hp").classList.toggle("show", !!s.headphones);
+    $("hptxt").textContent = s.headphones ? (s.hp_automute ? "Hodetelefoner · høyttalere dempet" : "Hodetelefoner") : "";
+    // sources
+    document.querySelectorAll("#sources .src-btn").forEach(b => {
+      const k = b.dataset.input;
+      b.classList.toggle("on", k === inp);
+      b.classList.toggle("playing", k === inp && playing);
+      b.style.display = (s.inputs && !s.inputs.includes(k)) ? "none" : "";
+    });
+    if (s.usb_names) {
+      const names = s.usb_names;
+      document.querySelectorAll("#usbsw button").forEach((b, i) => { b.textContent = names[i] || ("PC " + (i + 1)); b.classList.toggle("on", s.usb_pc === i + 1); });
+    } else document.querySelectorAll("#usbsw button").forEach((b, i) => b.classList.toggle("on", s.usb_pc === i + 1));
+    // presets
+    const pres = s.presets || [];
+    const pr = $("presets");
+    if (pr.childElementCount !== pres.length) { pr.innerHTML = pres.map(p => `<button class="preset" data-n="${p.n}"><b>${p.n}</b><span></span></button>`).join(""); }
+    pres.forEach((p, i) => { const b = pr.children[i]; if (!b) return; b.querySelector("span").textContent = p.title || "— tom —"; b.classList.toggle("on", inp === "radio" && s.preset === p.n); });
+    $("lyrion").textContent = s.lyrion ? "Lyrion tilkoblet" : "Lyrion frakoblet";
+    $("radiocard").style.display = (s.inputs && !s.inputs.includes("radio")) ? "none" : "";
+    // toggles
+    document.querySelectorAll(".sw[data-key]").forEach(b => b.classList.toggle("on", !!s[b.dataset.key]));
+    $("voiceprofile").textContent = (s.voice_profiles && s.voice_profiles[s.voice_profile]) || "Norsk";
+    // levels
+    const lv = $("levels");
+    lv.style.display = s.mix ? "" : "none";
+    if (s.mix && s.levels) {
+      const keys = Object.keys(s.levels);
+      if (lv.childElementCount !== keys.length) lv.innerHTML = keys.map(k => `<div class="level"><label>${LEVEL_NAMES[k] || k}</label><input type="range" min="0" max="100" data-src="${k}"><span class="v"></span></div>`).join("");
+      keys.forEach((k, i) => { const row = lv.children[i], r = row.querySelector("input"); if (document.activeElement !== r) { r.value = s.levels[k]; r.style.setProperty("--p", s.levels[k] + "%"); } row.querySelector(".v").textContent = s.levels[k]; });
+    }
+    footer(s);
+  }
+
+  // events
+  $("power").onclick = () => post("/api/power", { on: !(st && st.power) });
+  $("mute").onclick = () => post("/api/mute", { mute: !(st && st.mute) });
+  $("volup").onclick = () => post("/api/volume", { delta: 2 });
+  $("voldown").onclick = () => post("/api/volume", { delta: -2 });
+  const vol = $("volume");
+  vol.addEventListener("input", () => { volDragging = true; vol.style.setProperty("--p", vol.value + "%"); $("volnum").textContent = vol.value; clearTimeout(volTimer); volTimer = setTimeout(() => post("/api/volume", { volume: +vol.value }), 120); });
+  vol.addEventListener("change", () => { volDragging = false; post("/api/volume", { volume: +vol.value }); });
+  document.querySelectorAll("#sources .src-btn").forEach(b => b.onclick = () => post("/api/input", { input: b.dataset.input }));
+  document.querySelectorAll("#transport button").forEach(b => b.onclick = () => post("/api/transport", { action: b.dataset.act }));
+  $("presets").addEventListener("click", e => { const b = e.target.closest(".preset"); if (b) post("/api/preset", { n: +b.dataset.n }); });
+  let pressT = null;
+  $("presets").addEventListener("pointerdown", e => { const b = e.target.closest(".preset"); if (!b) return; pressT = setTimeout(() => { pressT = null; if (confirm(`Lagre det som spiller nå som kanal ${b.dataset.n}?`)) post("/api/preset", { n: +b.dataset.n, save: true }); }, 700); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(ev => $("presets").addEventListener(ev, () => { clearTimeout(pressT); }));
+  document.querySelectorAll("#usbsw button").forEach(b => b.onclick = () => post("/api/usbsw", { pc: +b.dataset.pc }));
+  document.querySelectorAll(".sw[data-key]").forEach(b => b.onclick = () => post(b.dataset.api, { on: !(st && st[b.dataset.key]) }));
+  $("pairbtn").onclick = () => post("/api/bt", { pairing: true });
+  $("levels").addEventListener("input", e => { const r = e.target; if (r.dataset.src) { r.style.setProperty("--p", r.value + "%"); r.parentElement.querySelector(".v").textContent = r.value; clearTimeout(r._t); r._t = setTimeout(() => post("/api/level", { source: r.dataset.src, level: +r.value }), 150); } });
+  try { if (localStorage.getItem("skjold_more") === "1") $("more").open = true; $("more").addEventListener("toggle", () => localStorage.setItem("skjold_more", $("more").open ? "1" : "0")); } catch (e) {}
+
+  poll(); setInterval(poll, 2000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+})();
+</script>
+</body>
+</html>
