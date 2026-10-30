@@ -93,8 +93,8 @@ export const api = {
   level: (source: LevelSource, level: number) => post('/api/level', { source, level }),
   hpAutomute: (on: boolean) => post('/api/hp_automute', { on }),
   // Nytt endepunkt (legges til i daemonen): GET/POST /api/settings
-  getSettings: () => req<{ settings: Record<string, unknown>; schema_version: number }>('/api/settings'),
-  setSettings: (patch: Record<string, unknown>) => post<{ settings: Record<string, unknown>; schema_version: number }>('/api/settings', patch),
+  getSettings: () => req<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings'),
+  setSettings: (patch: Record<string, unknown>) => post<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings', patch),
   // Endepunkt som ennå ikke finnes i daemonen – brukes av oppsettet og svarer 404 i dag
   wifiScan: () => req<{ networks: { ssid: string; security?: string; signal?: number }[] }>('/api/wifi', undefined, getBase(), 8000),
   wifiConnect: (ssid: string, psk: string) => post<{ ok: boolean }>('/api/wifi', { ssid, psk }),

@@ -1,10 +1,38 @@
 import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
+import type { Plugin } from 'vite';
+
+// ki_amp_daemon.py serverer index.html på '/' men resten av mappen under '/app/'.
+// Derfor legges JS og CSS inn i index.html, så siden virker både på '/', '/app/' og i Capacitor.
+function inlineEntry(): Plugin {
+  return {
+    name: 'skjold-inline-entry',
+    apply: 'build',
+    enforce: 'post',
+    generateBundle(_o, bundle) {
+      const html = bundle['index.html'];
+      if (!html || html.type !== 'asset') return;
+      let src = String(html.source);
+      for (const [name, f] of Object.entries(bundle)) {
+        if (f.type === 'chunk' && f.isEntry) {
+          const tag = new RegExp(`<script type="module" crossorigin src="\\./${name.replace(/[.]/g, '\\.')}"></script>`);
+          src = src.replace(tag, () => `<script type="module">${f.code.replace(/<\/script/gi, '<\\/script')}</script>`);
+          delete bundle[name];
+        } else if (f.type === 'asset' && name.endsWith('.css')) {
+          const tag = new RegExp(`<link rel="stylesheet" crossorigin href="\\./${name.replace(/[.]/g, '\\.')}">`);
+          src = src.replace(tag, () => `<style>${String(f.source)}</style>`);
+          delete bundle[name];
+        }
+      }
+      html.source = src;
+    }
+  };
+}
 
 // base './' => relative asset paths, so the build works from '/', '/app/' or file://
 export default defineConfig({
   base: './',
-  plugins: [preact()],
+  plugins: [preact(), inlineEntry()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,
