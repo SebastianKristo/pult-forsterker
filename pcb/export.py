@@ -192,7 +192,7 @@ def _free_point(poly, board, gnd):
 gnd_net = board.FindNet("GND")
 n_stitch = 0
 for rnd_ in range(3):
-    z = [zz for zz in board.Zones() if zz.GetLayer() == pcbnew.F_Cu][0]
+    z = [zz for zz in board.Zones() if zz.GetLayer() == pcbnew.F_Cu and zz.GetNetname() == "GND"][0]   # ikke keepout-sonene
     polys = z.GetFilledPolysList(pcbnew.F_Cu)
     added = 0
     for i in range(polys.OutlineCount()):
@@ -211,7 +211,7 @@ for rnd_ in range(3):
     if not added: break
 # Rutenett med stitching-vias (hver 7 mm der begge sonene har kobber og det er fritt) – binder F.Cu- og B.Cu-planet sammen
 def _zone_poly(layer):
-    z = [zz for zz in board.Zones() if zz.GetLayer() == layer][0]
+    z = [zz for zz in board.Zones() if zz.GetLayer() == layer and zz.GetNetname() == "GND"][0]
     return z.GetFilledPolysList(layer)
 _tracks_ng = [t for t in board.GetTracks() if t.GetNetname() != "GND" or t.GetClass() == "PCB_VIA"]
 _pads_ng = [pd for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() != "GND"]
@@ -255,7 +255,7 @@ def _free_point2(poly, board):
     return None
 
 for rnd_, layer in ((0, pcbnew.F_Cu), (1, pcbnew.F_Cu), (2, pcbnew.B_Cu), (3, pcbnew.B_Cu)):
-    z = [zz for zz in board.Zones() if zz.GetLayer() == layer][0]
+    z = [zz for zz in board.Zones() if zz.GetLayer() == layer and zz.GetNetname() == "GND"][0]
     polys = z.GetFilledPolysList(layer); added = 0
     for i in range(polys.OutlineCount()):
         poly = pcbnew.SHAPE_POLY_SET(); poly.AddOutline(polys.Outline(i))
