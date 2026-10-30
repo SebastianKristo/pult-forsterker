@@ -58,6 +58,7 @@ STATE_FILE = "/var/lib/ki-amp/state.json"
 RELAY_ACTIVE_LOW = os.environ.get("RELAY_ACTIVE_LOW", "1") == "1"
 # Maks X9C-trinn (0-99) ved volum 100 %. 6 ohm / 40 W-høyttalere på 24 V: 85 holder forsterkeren under 40 W.
 MAX_TAP = max(10, min(99, int(os.environ.get("KI_AMP_MAX_TAP", "85"))))
+PGA_DB = max(-40, min(0, int(os.environ.get("KI_AMP_PGA_DB", "-9"))))   # hovedkortet: fast dempning i PGA2311 (dB, 0 = 2,1 Vrms inn på forsterkeren = klipping)
 DSP_WS = os.environ.get("KI_AMP_DSP_WS", "ws://127.0.0.1:1234")   # CamillaDSP (loudness + digitalt volum for AirPlay/BT/USB)
 DSP_CAPTURE = os.environ.get("KI_AMP_DSP_CAPTURE", "hw:Loopback,1")
 DSP_PLAYBACK = os.environ.get("KI_AMP_DSP_PLAYBACK", "hw:sndrpihifiberry")
@@ -273,8 +274,10 @@ def apply_volume():
     global _x9c_pos
     if BOARD in ("radio", "test"):   # bare digitalt volum (CamillaDSP)
         dsp.update(); return
-    if BOARD == "main":   # rev B: alt er digitalt – PGA2311 står fast (MAX_TAP), volum og nivåer i CamillaDSP/softvol
-        pga_write(0 if (state["mute"] or not state["power"]) else 192 - 2 * round((99 - MAX_TAP) / 99 * 12))
+    if BOARD == "main":   # rev B: alt er digitalt – PGA2311 står fast, volum og nivåer i CamillaDSP/softvol.
+        # Fast analogt nivå (KI_AMP_PGA_DB, standard -9 dB): DAC 2,1 Vrms * -9 dB = 0,74 Vrms = det TPA3116 (26 dB) klarer ved 24 V
+        # uten å klippe. Da kan ikke full digital styrke overstyre forsterkeren. Hodetelefonforsterkeren har +6 dB for å kompensere.
+        pga_write(0 if (state["mute"] or not state["power"]) else max(1, min(255, 192 + 2 * PGA_DB)))
         apply_levels(); dsp.update(); return
     if state["mute"] or not state["power"]:
         target = 0

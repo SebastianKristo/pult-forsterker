@@ -169,7 +169,7 @@ part("R45", R_, R0603, "10k", "C25804", 46, 82, 90, "Pull-up knapp bak"); part("
 part("C99", C_, C0603, "100n", "C14663", 74, 89, 0, "3V3_SW ved OLED")
 
 # --- hodetelefonforsterker TPA6132A2 (front-jack under POWER-knappen) – signal etter PGA2311, EN fra MCP GPA6, jack-deteksjon til MCP GPA5 ---
-part("U13", "Package_DFN_QFN", "Texas_RTE_WQFN-16-1EP_3x3mm_P0.5mm_EP1.2x0.8mm", "TPA6132A2RTER", "C69901", 92, 45, 0, "Hodetelefonforsterker 25 mW DirectPath (ingen utgangskondensatorer), gain -6 dB")
+part("U13", "Package_DFN_QFN", "Texas_RTE_WQFN-16-1EP_3x3mm_P0.5mm_EP1.2x0.8mm", "TPA6132A2RTER", "C69901", 92, 45, 0, "Hodetelefonforsterker 25 mW DirectPath (ingen utgangskondensatorer), gain +6 dB (G0=G1=VDD)")
 part("C100", C_, C0603, "2.2u", "C23630", 97, 43.8, 0, "HP VDD"); part("C101", C_, C0603, "2.2u", "C23630", 97, 46.4, 0, "HPVDD"); part("C102", C_, C0603, "1u", "C15849", 97, 49, 0, "HPVSS")
 part("C103", C_, C0603, "1u", "C15849", 92, 49.5, 0, "Ladepumpe CPP-CPN")
 part("C104", C_, C0603, "1u", "C15849", 87.5, 42.4, 0, "HP inn L (INL-)"); part("C105", C_, C0603, "1u", "C15849", 87.5, 45, 0, "INL+ til GND")
@@ -345,14 +345,14 @@ net(GND, ("C53", 2), ("C54", 2), ("C55", 2), ("C56", 2), ("C49", 2), ("C50", 2),
 net("SPK_LN", ("L2", 2), ("C49", 1), ("J2", 2)); net("SPK_LP", ("L3", 2), ("C50", 1), ("J2", 1))
 net("SPK_RN", ("L4", 2), ("C51", 1), ("J3", 2)); net("SPK_RP", ("L5", 2), ("C52", 1), ("J3", 1))
 net(GND, ("J6", 2))
-# hodetelefonforsterker: single-ended inn på INL-/INR- (1 µF), INL+/INR+ via 1 µF til GND, G0=G1=GND (-6 dB), EN fra MCP GPA6, jack-bryter til MCP GPA5
+# hodetelefonforsterker: single-ended inn på INL-/INR- (1 µF), INL+/INR+ via 1 µF til GND, G0=G1=VDD (+6 dB), EN fra MCP GPA6, jack-bryter til MCP GPA5
 net("VOL_OUTL", ("C104", 1)); net("VOL_OUTR", ("C107", 1))
 net("HP_INL", ("C104", 2), ("U13", 1)); net("HP_INR", ("C107", 2), ("U13", 4))
 net("HP_INLP", ("U13", 2), ("C105", 1)); net("HP_INRP", ("U13", 3), ("C106", 1))
 net("HP_OUTL", ("U13", 16), ("J23", 1), ("R76", 1)); net("HP_OUTR", ("U13", 5), ("J23", 2))
 net("HP_VSS", ("U13", 8), ("C102", 1)); net("HP_CPP", ("U13", 11), ("C103", 1)); net("HP_CPN", ("U13", 9), ("C103", 2)); net("HP_VDD", ("U13", 12), ("C101", 1))
-net("5V_SW", ("U13", 14), ("C100", 1)); net("EXP_A6", ("U13", 13)); net("HP_DET", ("J23", 4), ("C108", 1), ("R77", 1)); net("EXP_A5", ("R77", 2))
-net(GND, ("U13", 6), ("U13", 7), ("U13", 10), ("U13", 15), ("U13", 17), ("C100", 2), ("C101", 2), ("C102", 2), ("C105", 2), ("C106", 2), ("J23", 3), ("C108", 2), ("R76", 2))
+net("5V_SW", ("U13", 14), ("U13", 6), ("U13", 7), ("C100", 1)); net("EXP_A6", ("U13", 13)); net("HP_DET", ("J23", 4), ("C108", 1), ("R77", 1)); net("EXP_A5", ("R77", 2))
+net(GND, ("U13", 10), ("U13", 15), ("U13", 17), ("C100", 2), ("C101", 2), ("C102", 2), ("C105", 2), ("C106", 2), ("J23", 3), ("C108", 2), ("R76", 2))
 # USB-delingsswitch
 net("5V_USB", ("F2", 2), ("C71", 1), *[(f"J{15+i}", 1) for i in range(4)], *[(f"D{6+i}", 5) for i in range(4)]); net(GND, ("C71", 2), ("C72", 2), *[(f"D{6+i}", 2) for i in range(6)])
 net("USB_VD33", ("U7", 21), ("U7", 13), ("U7", 19), ("C66", 1), ("C73", 1), ("R46", 1), ("U8", 10), ("C70", 1), ("D10", 5), ("D11", 5))
@@ -375,12 +375,9 @@ POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP":
 FIXED_GND_STUBS = {("U5", "5"): (158.0, 68.45)}   # (ref, pad) -> via-posisjon
 # låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
 FIXED_TRACKS = [("AMP_RINN", "F.Cu", 0.2, [(120.35, 31.725), (118.6, 31.725)]),   # TPA3116 pinne 5 ble stengt inne av nabosporene
-                ("HP_VSS", "F.Cu", 0.2, [(132.75, 46.438), (132.75, 47.6)]), ("HP_VSS", "B.Cu", 0.25, [(132.75, 47.6), (135.5, 47.6)]),
-                ("HP_VSS", "F.Cu", 0.2, [(135.5, 47.6), (136.225, 49.0)]),   # TPA6132A2 HPVSS (pinne 8) -> C102 under CPP/CPN-sporene
-                ("GND", "F.Cu", 0.2, [(131.75, 46.438), (131.75, 45.3)]), ("GND", "F.Cu", 0.2, [(132.25, 46.438), (132.25, 45.3)]),
-                ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),
+                ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),   # TPA6132A2 PGND/SGND -> termisk pad
                 ("USB3_DP", "F.Cu", 0.2, [(30.675, 49.6), (30.675, 53.8)])]   # FE1.1s pinne 7 ut nedover mellom nabosporene
-FIXED_VIAS = [("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725)), ("HP_VSS", (132.75, 47.6)), ("HP_VSS", (135.5, 47.6))]
+FIXED_VIAS = [("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725))]
 FIXED_GND_VIP = {("U4", "3"): (102.6, 60.375), ("U4", "9"): (102.6, 64.275), ("U10", "12"): (136.35, 59.35), ("C27", "2"): (152.775, 70.0), ("U13", "17"): (132.0, 45.0), ("C63", "2"): (78.0, 85.225), ("C60", "2"): (66.0, 85.225), ("C62", "2"): (74.0, 85.225), ("U10", "5"): (130.7, 60.65), ("U12", "10"): (63.9, 73.625)}   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet
