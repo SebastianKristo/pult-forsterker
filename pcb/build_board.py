@@ -474,7 +474,7 @@ def build():
     try:
         ncs = ds.m_NetSettings.m_NetClasses
         default = ds.m_NetSettings.m_DefaultNetClass
-        default.SetTrackWidth(pcbnew.FromMM(0.25)); default.SetClearance(pcbnew.FromMM(0.15)); default.SetViaDiameter(pcbnew.FromMM(0.8)); default.SetViaDrill(pcbnew.FromMM(0.4))
+        default.SetTrackWidth(pcbnew.FromMM(0.2)); default.SetClearance(pcbnew.FromMM(0.15)); default.SetViaDiameter(pcbnew.FromMM(0.6)); default.SetViaDrill(pcbnew.FromMM(0.3))   # signalnett 0,2 mm / via 0,6/0,3 (JLCPCB standard) gir Freerouting plass
         for cname, w in [("Power", 2.0), ("Power5V", 1.2), ("Out", 1.5), ("Mid", 0.5)]:
             nc = pcbnew.NETCLASS(cname); nc.SetTrackWidth(pcbnew.FromMM(w)); nc.SetClearance(pcbnew.FromMM(0.3 if w >= 1.2 else 0.2))
             nc.SetViaDiameter(pcbnew.FromMM(1.2 if w >= 1.2 else 0.8)); nc.SetViaDrill(pcbnew.FromMM(0.6 if w >= 1.2 else 0.4))
