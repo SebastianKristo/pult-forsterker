@@ -97,7 +97,7 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 |---|---|---|---|
 | AirPlay 2 | nettverk → Pi (Shairport Sync) | ALSA softvol «KI AirPlay» → dmix → CamillaDSP → I2S → PCM5102A (DAC) | nivå per kilde + hovedvolum digitalt |
 | Bluetooth A2DP | Pi-ens BT → bluealsa | «KI Bluetooth» → samme vei | samme |
-| USB-lyd fra PC 1/PC 2 | USB-C bak → TS3USB221-mux (MCP GPB4 velger PC) → FE1.1s-hub → Pi (USB-gadget, Pi er lydkort for PC-en) | «KI USB» → samme vei | samme |
+| USB-lyd fra én PC | tredje USB-C bak («Pi») → forlenger rett til Pi-ens USB-C-port (Pi er USB-lydkort/UAC2-gadget). **Uavhengig av USB-switchen** – den PC-en som står i denne kontakten får USB-lyd | «KI USB» → samme vei | samme |
 | Radio (Lyrion) | nettverk → squeezelite | «KI Radio» → samme vei | samme |
 | AUX 1 (Mac) | 3,5 mm bak → J4 → 10k/10k-deler → PCM1808 ADC (I2S-master 48 kHz) → Pi (I2S inn) | alsaloop → «KI AUX1» → samme vei | samme |
 | AUX 2 (PC) | 3,5 mm bak → J20 → 10k/4,7k-deler → PCM2900C USB-kodek → Pi-ens USB (J19) | alsaloop → «KI AUX2» → samme vei | samme |
@@ -115,7 +115,7 @@ DAC (PCM5102A, 48 kHz) gir analog lyd videre.
 |---|---|---|
 | Høyttalere L/R | 4 mm poler bak (J2/J3) | 2 × 50 W, BD-modus, dempes med SDZ (GPIO 22) ved hodetelefoner/standby |
 | Hodetelefoner | 3,5 mm foran (J23) | auto-demping av høyttalerne, kan slås av i HA/Homey |
-| 4 × USB-A | venstre side (J15–J18) | tastatur/mus/disk fra den valgte PC-en; 5 V via 2 A polyfuse; **Pi-en er ikke på huben** |
+| 4 × USB-A | venstre side (J15–J18) | tastatur/mus/disk fra den valgte PC-en (USB-C PC 1/PC 2 bak → TS3USB221-mux → FE1.1s-hub); 5 V via 2 A polyfuse; **Pi-en er ikke på huben** – ingen lyd går gjennom switchen |
 | LED-ringer | J10 | AIR/BT, RADIO, AUX, USB fra MCP GPB0-3 (low-side AO3400), POWER fra GPIO 12 (PWM) |
 | Skjerm | J9 (OLED I2C) eller J13 (TFT SPI + touch) | OLED/TFT-logikk på alltid-3,3 V, TFT-baklys på 5V_SW |
 | 5 V til Pi | J6 | 5,2 V/5 A fra bucken til header-pinne 2/6 |
