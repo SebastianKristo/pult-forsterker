@@ -54,7 +54,7 @@ Endre i de filene og generer på nytt (siste avsnitt) – ikke i STEP/DXF-filene
 | Jordpunkt M3 | (62, 40) | Ø3,4 |
 | Høyttalerpoler L+ L− R+ R− (M8-gjenge, Ø19 isolasjonsring) | (−82,8, 24) (−63,8, 24) (−44,8, 24) (−25,8, 24) | **Ø8,5** – 19 mm deling så ringene (Ø19) ikke berører hverandre; polen skal være isolert fra chassiset: isolasjonsring på begge sider av platen, eller krympestrømpe/elektrikerteip rundt gjengen gjennom hullet. Mål med ohmmeter at ingen pol har kontakt med kassen før første påslag |
 | AUX 2 / AUX 1 (PJ-392) | (−11, 24) (−1, 24) | Ø6,4 |
-| USB-C panelkontakt PC 1 / PC 2 / Pi | (15, 34) (15, 24) (15, 14) | 9,6 × 3,8 + skruehull Ø2,7 ved x 5,5 og 24,5 |
+| USB-C panelkontakt PC 1 / PC 2 / Pi | (15, 34) (15, 24) (15, 14) | 9,6 × 3,8 + M3-slisser 5,4 × 3,2 ved x 5,5 og 24,5 (passer panelkontakter med 18–20 mm skruedeling) |
 
 **Venstre side (y, z) – ingen merking:** 4 × USB-A-vindu 14,8 × 8 ved y −32,1 / −14,6 / 2,9 / 20,4, z 32,6 (= kortets USB-A, hus 13,1 × 5,6 bak vinduet).
 **Høyre side:** 26 luftespalter 2,4 × 24 ved z 26,5, y fra −43,8 med 3,6 mm deling.
@@ -88,7 +88,7 @@ Front: avstanden fra frontpanelets innside (y −78,5) til kortets forkant (y �
 | OLED 2,42" SSD1309-modul | aktivt område 55 × 27,5 | modulkort ca. 60 × 38 × 2, pinnerad 7-pol nede/oppe | festes på fire M2-stolper bak panelet, glasset 1–2 mm bak akrylen |
 | TFT 2,4"/2,8" ILI9341 + XPT2046 | 2,4": aktivt 48,6 × 36,98 · 2,8": 57,6 × 43,2 | **vanlig modulkort 2,8" er 86 × 50 mm – 50 > innvendig høyde 43,5 → passer ikke stående**; 2,4"-modul 71 × 52 heller ikke | bruk bare skjermpanelet med FPC-breakout, eller monter modulkortet liggende bak panelet med panelet dreid 90° – avklares før bestilling |
 | Panelmontert PJ-392 (AUX bak) | mutter Ø8 utvendig | hus Ø8 × 12 | |
-| USB-C panelkontakter (3) | flens 20 × 10, skruer M2,5 | hus ~30 mm + kabel 15 cm til kortet | |
+| USB-C panelkontakter (3), hunn i panel → hann-hale | flens ca. 24 × 11, M3-skruer 18–20 mm deling | hus ~30 mm + hale 15–20 cm til J11/J12, 25–30 cm til Pi-en | |
 | RJ45 panelkontakt | flens 25 × 22 | ~30 mm | |
 | DC 5,5/2,5 | mutter Ø14 | ~25 mm | |
 | KCD1 vippebryter | ramme 21 × 15 | 25 mm | |
@@ -129,7 +129,7 @@ Høye deler (høyde over kortets overside → topp i kasse-z). Posisjon i kasse-
   topp z 23,5, 4 mm under hovedkortet. **SD-kortet mot venstre vegg** ved y ≈ 13, z 6: ingen luke i platemetallkassen – kortet byttes
   ved å ta av bunnplaten.
 - 40-pin flatkabel (10 cm) fra Pi-headeren (x ≈ −71 … −22, y 38,5, z 7,5–16) opp rundt kortets kant til J5. 5 V fra J6 til Pi-header pinne 2/6.
-- Pi-ens USB-C-strøminngang brukes ikke. En USB-A-port på Pi-en brukes til J19 (USB-kodek) med kort kabel, en annen til USB-C-panelkontakten «Pi/SERV» (forlenger).
+- Pi-ens USB-C-strøminngang brukes ikke. En USB-A-port på Pi-en brukes til J19 (USB-kodek) med kort kabel, USB-C-panelkontakten «SERV» går med forlenger til Pi-ens egen USB-C-port (OTG – Pi-en er USB-lydkort/UAC2-gadget).
 - Luftespaltene i bunnen (y −34 … 6) ligger under Pi-en.
 
 ### Ledninger

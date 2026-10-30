@@ -20,7 +20,7 @@ RJ45, DC, GND, ROCKER = (44, 13.5), (44, 34), (62, 40), (78, 24)
 outline = [rrect(0, 24.0, 186.6, 41.8, 7.3)]   # panelets flate del: x ±93,3, z 4,5 … 46,3
 holes = [circle(V(x), 24, 4.25) for x, _ in POSTS] + [circle(V(x), 24, 3.2) for x, _ in AUX]
 for z in USBC_Z:
-    holes += [rrect(V(USBC_X), z, 9.6, 3.8, 1.9), circle(V(USBC_X - 9.5), z, 1.35), circle(V(USBC_X + 9.5), z, 1.35)]
+    holes += [rrect(V(USBC_X), z, 9.6, 3.8, 1.9), rrect(V(USBC_X - 9.5), z, 5.4, 3.2, 1.6), rrect(V(USBC_X + 9.5), z, 5.4, 3.2, 1.6)]
 holes += [rrect(V(RJ45[0]), RJ45[1], 17, 15.6, 0.5), rrect(V(RJ45[0] - 13), RJ45[1], 5.3, 3.3, 1.6), rrect(V(RJ45[0] + 13), RJ45[1], 5.3, 3.3, 1.6),
           circle(V(DC[0]), DC[1], 5.7), circle(V(GND[0]), GND[1], 1.7), rrect(V(ROCKER[0]), ROCKER[1], 19.4, 13, 0.5)]
 

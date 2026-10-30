@@ -20,7 +20,7 @@ const REVB={
     c(62,40,3.4),                           // chassis ground stud M3 (star point next to DC)
     ...[-82.8,-63.8,-44.8,-25.8].map(x=>c(x,24,8.5)),              // binding posts L+ L- R+ R-: M8 thread, Ø19 insulator rings -> 19 mm pitch, insulated from the chassis
     c(-11,24,6.4), c(-1,24,6.4),                                 // AUX 2, AUX 1 (3,5 mm PJ-392) – kortet har to AUX-innganger (J20/J4)
-    ...[34,24,14].flatMap(z=>[r(15,z,9.6,3.8), c(5.5,z,2.7), c(24.5,z,2.7)]), // USB-C ×3 stacked (PC 1, PC 2, Pi service/USB-lyd)
+    ...[34,24,14].flatMap(z=>[r(15,z,9.6,3.8), s(5.5,z,5.4,3.2), s(24.5,z,5.4,3.2)]), // USB-C ×3 stacked (PC 1, PC 2, Pi service/USB-lyd); M3-slisser 5,4 × 3,2 så 18–20 mm skruedeling passer
   ],
   left:[-32.1,-14.6,2.9,20.4].map(y=>r(y,32.6,14.8,8)),          // 4× USB-A (Ugreen)
   right:Array.from({length:26},(_,i)=>r(+(-43.8+3.6*i).toFixed(1),26.5,2.4,24)), // vent slots
