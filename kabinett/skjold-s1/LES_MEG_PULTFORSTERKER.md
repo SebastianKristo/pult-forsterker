@@ -56,6 +56,11 @@ Kortet 180 × 100 ligger med oversiden på z 27,5 (25 mm M3-avstandsstykker på 
 gjennom venstre vegg. Pi 4 under kortet. Frontkontakter (J7, J8, J9/J13, J10, J23) og bakkontakter (J1–J4, J11, J12,
 J19–J21) som i `pcb/README.md` og TOTALINSTRUKS §9.
 
+## Render av produktet
+`render/pultforsterker_*.png` er 3D-renderinger (three.js i headless Chromium) av hele produktet med alle mål fra `revb_features.js`
+og merkingen rett fra DXF-filene: `front34`/`back34` (skrått forfra/bakfra), `front`/`back`/`left`/`bottom` (ortografisk).
+Lag på nytt: `python3 tools/render_textures.py && python3 tools/render3d.py`.
+
 ## Generere filene på nytt
 ```bash
 cd kabinett/skjold-s1/tools && npm install

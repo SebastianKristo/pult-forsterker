@@ -1,0 +1,150 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pultforsterker – render</title>
+<style>html,body{margin:0;background:#0f0f10;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+// Nøyaktig 3D-modell av Pultforsterker i Skjold S1-kassen: alle mål fra revb_features.js / LES_MEG, merking fra DXF-teksturene.
+// Kasse-koordinater: x høyre, y bakover (front = -80), z opp (0 = bunn). ?view=front34|back34|front|back|left|bottom|top
+import * as THREE from 'three';
+
+const q = new URLSearchParams(location.search), VIEW = q.get('view') || 'front34', W = +q.get('w') || 1920, H = +q.get('h') || 1080;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x111113);
+
+// ---------- materialer ----------
+const ANOD = new THREE.MeshPhysicalMaterial({ color: 0x1a1a1c, roughness: 0.52, metalness: 0.75, clearcoat: 0.08, clearcoatRoughness: 0.6 });
+const ANOD_PLATE = ANOD.clone();
+const BTN = new THREE.MeshPhysicalMaterial({ color: 0x151517, roughness: 0.35, metalness: 0.85 });
+const KNOB = new THREE.MeshPhysicalMaterial({ color: 0x2a2a2d, roughness: 0.4, metalness: 0.9 });
+const NICKEL = new THREE.MeshPhysicalMaterial({ color: 0xb8bcc0, roughness: 0.3, metalness: 1.0 });
+const GLASS = new THREE.MeshPhysicalMaterial({ color: 0x050506, roughness: 0.08, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 });
+const LED_ON = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4f4ee, emissiveIntensity: 2.2 });
+const LED_DIM = new THREE.MeshStandardMaterial({ color: 0x3a3a3c, emissive: 0x3a3a3c, emissiveIntensity: 0.15 });
+const DARK = new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.7, metalness: 0.2 });
+const RED = new THREE.MeshStandardMaterial({ color: 0x8a1c1c, roughness: 0.5 }), BLK = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.5 });
+
+const manager = new THREE.LoadingManager(); const tl = new THREE.TextureLoader(manager);
+const tex = (f) => { const t = tl.load(f); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+const markMat = (f) => new THREE.MeshStandardMaterial({ map: tex(f), transparent: true, roughness: 0.6, metalness: 0.4, polygonOffset: true, polygonOffsetFactor: -2 });
+
+// ---------- kassen: omslag med R9 langs dybden (tverrsnitt 190 × 48), 160 dyp ----------
+const BW = 190, BD = 160, BH = 48, R = 9;
+const prof = new THREE.Shape();
+prof.moveTo(-BW / 2 + R, 0); prof.lineTo(BW / 2 - R, 0); prof.absarc(BW / 2 - R, R, R, -Math.PI / 2, 0, false);
+prof.lineTo(BW / 2, BH - R); prof.absarc(BW / 2 - R, BH - R, R, 0, Math.PI / 2, false);
+prof.lineTo(-BW / 2 + R, BH); prof.absarc(-BW / 2 + R, BH - R, R, Math.PI / 2, Math.PI, false);
+prof.lineTo(-BW / 2, R); prof.absarc(-BW / 2 + R, R, R, Math.PI, 1.5 * Math.PI, false);
+const wrapGeo = new THREE.ExtrudeGeometry(prof, { depth: BD, bevelEnabled: false, curveSegments: 24 });
+// ExtrudeGeometry: form i (x, y=z), ekstrudert langs +z. Roter så ekstruderingen blir langs +y og formens y blir z.
+wrapGeo.rotateX(Math.PI / 2); wrapGeo.translate(0, BD / 2, 0);   // rotateX(90°): form-y -> z, ekstrudering z -> -y (0…-160) -> flytt til -80…+80
+const body = new THREE.Mesh(wrapGeo, ANOD); body.castShadow = body.receiveShadow = true; scene.add(body);
+
+// bakpanel (merking), venstre side (USB 1-4), bunn (logo/typeskilt) som teksturerte plan rett utenpå
+// plan med normal n og «opp» u: lookAt gir lokal x = u × n. mirror speiler teksturen i u-retning der lokal x peker mot -verdensakse.
+function facing(mesh, pos, n, upv) { mesh.position.set(...pos); mesh.up.set(...upv); mesh.lookAt(pos[0] + n[0], pos[1] + n[1], pos[2] + n[2]); return mesh; }
+function markedPlane(f, w, h, pos, n, upv, mirror = false, flipV = false) {
+  const m = markMat(f); if (mirror) { m.map.wrapS = THREE.RepeatWrapping; m.map.repeat.x = -1; } if (flipV) { m.map.wrapT = THREE.RepeatWrapping; m.map.repeat.y = -1; }
+  const p = facing(new THREE.Mesh(new THREE.PlaneGeometry(w, h), m), pos, n, upv); scene.add(p); return p;
+}
+markedPlane('../render/tex/back.png', 190.6, 48, [0, BD / 2 + 0.05, 24], [0, 1, 0], [0, 0, 1], true);     // lokal x = -verdens-x -> speil
+markedPlane('../render/tex/left.png', 160, 48, [-BW / 2 - 0.05, 0, 24], [-1, 0, 0], [0, 0, -1], true, true);   // DXF «sett fra venstre»
+markedPlane('../render/tex/bottom.png', 190, 160, [0, 0, -0.05], [0, 0, -1], [0, 1, 0], true);
+// luftespalter høyre side (26 × 2,4 × 24 ved z 26,5) og bunn
+const slotMat = DARK;
+for (let i = 0; i < 26; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.6, 2.4, 24), slotMat); s.position.set(BW / 2 - 0.2, -43.8 + 3.6 * i, 26.5); scene.add(s); }
+for (let i = 0; i < 23; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(2.4, 40, 0.6), slotMat); s.position.set(-55 + 5 * i, -14, 0.2); scene.add(s); }   // luftespalter i bunnen
+// USB-A-vinduer venstre side (14,8 × 8 ved z 32,6)
+for (const y of [-32.1, -14.6, 2.9, 20.4]) {
+  const w = new THREE.Mesh(new THREE.BoxGeometry(1.2, 14.8, 8), DARK); w.position.set(-BW / 2 - 0.3, y, 32.6); scene.add(w);
+  const tongue = new THREE.Mesh(new THREE.BoxGeometry(2, 11, 1.6), new THREE.MeshStandardMaterial({ color: 0x2255aa })); tongue.position.set(-BW / 2 - 0.4, y, 33.6); scene.add(tongue);
+}
+
+// ---------- frontplate 178 × 46 × 3 (aluminium, 3 mm utenpå frontpanelet) ----------
+const FY = -BD / 2;                       // frontpanelets flate
+const PT = 3, PY = FY - PT / 2;           // platens senter i y
+// platen som form (x, z) med hull: vindu 62 × 38 R1,5, POWER Ø16,4, 4 × Ø12,4, encoder Ø7,4, jack Ø6,4 – ekstrudert 3 mm
+function rrShape(sh, cx, cy, w, h, r) { sh.moveTo(cx - w / 2 + r, cy - h / 2); sh.lineTo(cx + w / 2 - r, cy - h / 2); sh.absarc(cx + w / 2 - r, cy - h / 2 + r, r, -Math.PI / 2, 0, false);
+  sh.lineTo(cx + w / 2, cy + h / 2 - r); sh.absarc(cx + w / 2 - r, cy + h / 2 - r, r, 0, Math.PI / 2, false); sh.lineTo(cx - w / 2 + r, cy + h / 2); sh.absarc(cx - w / 2 + r, cy + h / 2 - r, r, Math.PI / 2, Math.PI, false);
+  sh.lineTo(cx - w / 2, cy - h / 2 + r); sh.absarc(cx - w / 2 + r, cy - h / 2 + r, r, Math.PI, 1.5 * Math.PI, false); return sh; }
+const plateShape = rrShape(new THREE.Shape(), 0, 0, 178, 46, 3);
+plateShape.holes.push(rrShape(new THREE.Path(), -27, 0, 62, 38, 1.5));
+for (const [x, z, d] of [[-76, 0, 16.4], [22, 8.5, 12.4], [38, 8.5, 12.4], [22, -8.5, 12.4], [38, -8.5, 12.4], [66, 0, 7.4], [-76, -16, 6.4]]) { const h = new THREE.Path(); h.absarc(x, z, d / 2, 0, 2 * Math.PI, true); plateShape.holes.push(h); }
+const plateGeo = new THREE.ExtrudeGeometry(plateShape, { depth: PT, bevelEnabled: false, curveSegments: 32 });
+plateGeo.rotateX(Math.PI / 2); plateGeo.translate(0, FY, 24);   // ekstrudering z -> -y: platen ligger y FY … FY-3, form-y -> z
+const plate = new THREE.Mesh(plateGeo, ANOD_PLATE); plate.castShadow = plate.receiveShadow = true; scene.add(plate);
+markedPlane('../render/tex/front.png', 178, 46, [0, FY - PT - 0.05, 24], [0, -1, 0], [0, 0, 1], false);
+
+// skjermvindu 62 × 38 (R1,5) med røyksort akryl 1 mm forsenket og OLED 55 × 27,5 bak
+const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x0a0a0c, roughness: 0.05, metalness: 0.1, clearcoat: 1, transparent: true, opacity: 0.55 });
+const win = facing(new THREE.Mesh(new THREE.PlaneGeometry(61.6, 37.6), glassMat), [-27, FY - PT + 1.0, 24], [0, -1, 0], [0, 0, 1]); scene.add(win);   // akryl 1 mm forsenket
+const oledMat = new THREE.MeshBasicMaterial({ map: tex('../render/tex/oled.png') });
+const oled = facing(new THREE.Mesh(new THREE.PlaneGeometry(55, 27.5), oledMat), [-27, FY - PT + 1.4, 24], [0, -1, 0], [0, 0, 1]); scene.add(oled);
+const bezelBack = facing(new THREE.Mesh(new THREE.PlaneGeometry(62, 38), DARK), [-27, FY - PT + 1.6, 24], [0, -1, 0], [0, 0, 1]); scene.add(bezelBack);
+const oledGlow = new THREE.PointLight(0xf2f2ee, 1.5, 60, 2); oledGlow.position.set(-27, FY - 6, 24); scene.add(oledGlow);
+
+// knapper: 16 mm POWER (-76, 24) + 4 × 12 mm (22/38, 32,5/15,5), svart metall med hvit LED-ring
+function button(x, z, d, lit) {
+  const r = d / 2, h = 3.5;
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(r - 1.4, r - 1.4, h, 48), BTN); cap.position.set(x, FY - PT - h / 2, z); cap.castShadow = true; scene.add(cap);
+  const bezel = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.6, r + 0.6, 1.2, 48), BTN); bezel.position.set(x, FY - PT - 0.6, z); scene.add(bezel);
+  const ring = facing(new THREE.Mesh(new THREE.RingGeometry(r - 1.35, r - 0.75, 64), lit ? LED_ON : LED_DIM), [x, FY - PT - h - 0.05, z], [0, -1, 0], [0, 0, 1]); scene.add(ring);
+  if (lit) { const l = new THREE.PointLight(0xffffff, 0.6, 25, 2); l.position.set(x, FY - PT - 6, z); scene.add(l); }
+}
+button(-76, 24, 16, true);
+button(22, 32.5, 12, true); button(38, 32.5, 12, false); button(22, 15.5, 12, false); button(38, 15.5, 12, false);
+// power-symbol på POWER-knappen
+{ const sym = facing(new THREE.Mesh(new THREE.RingGeometry(2.2, 2.9, 48, 1, Math.PI * 0.62, Math.PI * 1.76), LED_ON), [-76, FY - PT - 3.6, 24], [0, -1, 0], [0, 0, 1]); scene.add(sym);
+  const bar = facing(new THREE.Mesh(new THREE.PlaneGeometry(0.7, 3.2), LED_ON), [-76, FY - PT - 3.6, 25.3], [0, -1, 0], [0, 0, 1]); scene.add(bar); }
+// volumknott Ø30 × 17, D-aksel, aluminium
+{ const k = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 17, 96), KNOB); k.position.set(66, FY - PT - 8.5, 24); k.castShadow = true; scene.add(k);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(15, 13.5, 0.8, 96), KNOB); top.position.set(66, FY - PT - 17.3, 24); scene.add(top);
+  const mark = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 9), new THREE.MeshStandardMaterial({ color: 0xe8e8e8 })); mark.position.set(66, FY - PT - 17.75, 24 + 8); scene.add(mark); }
+// hodetelefonjack PJ-392 (nikkel) under POWER
+{ const nut = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 1.6, 6), NICKEL); nut.position.set(-76, FY - PT - 0.8, 8); scene.add(nut);
+  const hole = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 2, 32), DARK); hole.position.set(-76, FY - PT - 1.6, 8); scene.add(hole); }
+
+// ---------- bakpanel: kontakter (kasse-x, z) ----------
+const BY = BD / 2;
+function cyl(x, z, r, h, mat, hollow = 0) { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 48), mat); c.position.set(x, BY + h / 2, z); scene.add(c);
+  if (hollow) { const o = new THREE.Mesh(new THREE.CylinderGeometry(hollow, hollow, h + 0.2, 32), DARK); o.position.set(x, BY + h / 2 + 0.1, z); scene.add(o); } }
+function box(x, z, w, h, d, mat) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, d, h), mat); b.position.set(x, BY + d / 2, z); scene.add(b); }
+[-84, -54].forEach(x => { cyl(x, 24, 5.5, 12, RED, 1.6); }); [-70, -40].forEach(x => { cyl(x, 24, 5.5, 12, BLK, 1.6); });   // høyttalerpoler + / -
+[-26, -14].forEach(x => cyl(x, 24, 4.0, 1.5, NICKEL, 1.8));                                                              // AUX 2 / AUX 1
+[34, 24, 14].forEach(z => box(6, z, 9.6, 3.8, 0.6, DARK));                                                                // USB-C ×3
+box(34, 13.5, 17, 15.6, 0.6, DARK); cyl(34, 34, 5.7, 0.6, DARK); cyl(52, 40, 1.7, 0.4, NICKEL);                            // RJ45, DC, GND
+box(70, 24, 19.4, 13, 0.8, DARK); box(70, 24, 16, 10, 2.2, BTN);                                                           // KCD1 vippebryter
+
+// ---------- bord og lys ----------
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshStandardMaterial({ color: 0x2a2724, roughness: 0.9, metalness: 0 }));
+floor.position.z = -3.5; floor.receiveShadow = true; scene.add(floor);   // gummiføtter 3,5 mm
+for (const [x, y] of [[-80, -65], [80, -65], [-80, 65], [80, 65]]) { const f = new THREE.Mesh(new THREE.CylinderGeometry(6.35, 6.35, 3.5, 32), DARK); f.rotation.x = Math.PI / 2; f.position.set(x, y, -1.75); scene.add(f); }
+scene.add(new THREE.HemisphereLight(0xdde3ee, 0x202020, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(-220, -260, 320); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = key.shadow.camera.bottom = -220; key.shadow.camera.right = key.shadow.camera.top = 220; key.shadow.camera.far = 1000; scene.add(key);
+const fill = new THREE.DirectionalLight(0xcfd8ff, 0.9); fill.position.set(260, -120, 160); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffffff, 1.2); rim.position.set(60, 300, 200); scene.add(rim);
+// enkel «studio»-refleksjon: PMREM av et rom
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+
+// ---------- kamera ----------
+let cam;
+const up = new THREE.Vector3(0, 0, 1);
+if (VIEW === 'front34') { cam = new THREE.PerspectiveCamera(28, W / H, 1, 3000); cam.position.set(-230, -330, 150); cam.up.copy(up); cam.lookAt(0, 0, 18); }
+else if (VIEW === 'back34') { cam = new THREE.PerspectiveCamera(28, W / H, 1, 3000); cam.position.set(240, 330, 150); cam.up.copy(up); cam.lookAt(0, 0, 18); }
+else {
+  const span = VIEW === 'bottom' || VIEW === 'top' ? 310 : 210, asp = W / H;
+  cam = new THREE.OrthographicCamera(-span / 2, span / 2, span / 2 / asp, -span / 2 / asp, 1, 3000); cam.up.copy(up);
+  if (VIEW === 'front') { cam.position.set(0, -800, 24); cam.lookAt(0, 0, 24); }
+  if (VIEW === 'back') { cam.position.set(0, 800, 24); cam.lookAt(0, 0, 24); }
+  if (VIEW === 'left') { cam.position.set(-800, 0, 24); cam.lookAt(0, 0, 24); }
+  if (VIEW === 'bottom') { cam.up.set(0, 1, 0); cam.position.set(0, 0, -800); cam.lookAt(0, 0, 0); }
+  if (VIEW === 'top') { cam.up.set(0, 1, 0); cam.position.set(0, 0, 800); cam.lookAt(0, 0, 0); }
+}
+let frames = 0, loaded = false; manager.onLoad = () => { loaded = true; };
+(function loop() { renderer.render(scene, cam); if (!loaded || ++frames < 3) requestAnimationFrame(loop); else document.title = 'ready'; })();
+</script>
