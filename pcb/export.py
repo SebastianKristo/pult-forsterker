@@ -53,7 +53,7 @@ if os.path.exists(SES) and "--no-ses" not in sys.argv:
     pcb_txt = pcb_txt[:-1] + body + "\n)\n"
     open(PCB, "w").write(pcb_txt)
 board = pcbnew.LoadBoard(PCB)
-_ds = board.GetDesignSettings(); _ds.m_ViasMinSize = pcbnew.FromMM(0.45); _ds.m_MinThroughDrill = pcbnew.FromMM(0.2)   # JLCPCB: via 0,45/0,2 tillatt
+_ds = board.GetDesignSettings(); _ds.m_ViasMinSize = pcbnew.FromMM(0.5); _ds.m_MinThroughDrill = pcbnew.FromMM(0.3)   # standard JLCPCB-via 0,3 mm hull
 # Fiks for allerede rutet kort: U4 pinne 3 (GND) fikk stubb som krysset pinne 2 – erstatt med via-i-pad ytterst på paden
 import build_board as _bb
 for (ref, pad), (vx, vy) in getattr(_bb, "FIXED_GND_VIP", {}).items():
@@ -65,7 +65,7 @@ for (ref, pad), (vx, vy) in getattr(_bb, "FIXED_GND_VIP", {}).items():
                 if v.GetClass() == "PCB_VIA" and (v.GetPosition() - end).EuclideanNorm() < pcbnew.FromMM(0.05): board.Remove(v)
     if not any(v.GetClass() == "PCB_VIA" and (v.GetPosition() - pcbnew.VECTOR2I(pcbnew.FromMM(vx), pcbnew.FromMM(vy))).EuclideanNorm() < pcbnew.FromMM(0.05) for v in board.GetTracks()):
         gn_ = board.FindNet("GND")
-        v = pcbnew.PCB_VIA(board); v.SetPosition(pcbnew.VECTOR2I(pcbnew.FromMM(vx), pcbnew.FromMM(vy))); v.SetWidth(pcbnew.FromMM(0.45)); v.SetDrill(pcbnew.FromMM(0.2)); v.SetNet(gn_); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
+        v = pcbnew.PCB_VIA(board); v.SetPosition(pcbnew.VECTOR2I(pcbnew.FromMM(vx), pcbnew.FromMM(vy))); v.SetWidth(pcbnew.FromMM(0.5)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gn_); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
         print("via-i-pad:", ref, pad)
 
 # Fjern løse ender: låste hjelpespor/vias (USB_SEL, USB3_DP …) som Freerouting ikke brukte, og rester som henger i løse luften.

@@ -373,7 +373,7 @@ def build():
     board = pcbnew.BOARD()
     ds = board.GetDesignSettings()
     ds.SetCopperLayerCount(2)
-    ds.m_TrackMinWidth = pcbnew.FromMM(0.2); ds.m_ViasMinSize = pcbnew.FromMM(0.45); ds.m_MinThroughDrill = pcbnew.FromMM(0.2); ds.m_MinClearance = pcbnew.FromMM(0.127)
+    ds.m_TrackMinWidth = pcbnew.FromMM(0.2); ds.m_ViasMinSize = pcbnew.FromMM(0.5); ds.m_MinThroughDrill = pcbnew.FromMM(0.3); ds.m_MinClearance = pcbnew.FromMM(0.127)
     # omriss
     for (x0, y0, x1, y1) in [(0, 0, BW, 0), (BW, 0, BW, BH), (BW, BH, 0, BH), (0, BH, 0, 0)]:
         s = pcbnew.PCB_SHAPE(board); s.SetShape(pcbnew.SHAPE_T_SEGMENT); s.SetStart(MM(x0, y0)); s.SetEnd(MM(x1, y1))
@@ -464,7 +464,7 @@ def build():
     for netn, (vx, vy) in FIXED_VIAS:
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(nets[netn]); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     for (ref, pad), (vx, vy) in FIXED_GND_VIP.items():
-        v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.45)); v.SetDrill(pcbnew.FromMM(0.2)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
+        v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.5)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     pcbnew.SaveBoard(OUT, board)
     print("Lagret", OUT, "deler:", len(P), "nett:", len(N))
     with open(os.path.join(HERE, "bom.csv"), "w", newline="") as fh:
