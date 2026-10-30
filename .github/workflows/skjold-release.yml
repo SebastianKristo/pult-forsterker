@@ -1,0 +1,149 @@
+#
+# Skjold – bygg og publiser app (Android APK, iOS IPA usignert), web-UI, Flasher (dmg/exe/AppImage) og bruksanvisning (PDF)
+#
+# Utløses av en tag på formen  skjold-v1.2.3   (git tag skjold-v1.0.0 && git push origin skjold-v1.0.0)
+# eller manuelt fra Actions-fanen («Run workflow»). Alle artefakter legges på en GitHub Release med samme navn som taggen.
+#
+# Signering: ingen sertifikater er lagt inn. APK signeres med debug-nøkkel (kan installeres direkte på Android),
+# IPA er usignert (installeres med Sideloadly/AltStore med egen Apple-ID, eller signeres i Xcode), Mac-appen er
+# usignert (høyreklikk → Åpne første gang). Se skjold/RELEASE.md.
+#
+name: Skjold release
+
+on:
+  push:
+    tags: ["skjold-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  web:
+    name: Web-UI (dist) og Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: ${{ env.NODE_VERSION }}, cache: npm, cache-dependency-path: skjold/app/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - name: Installer og bygg web
+        working-directory: skjold/app
+        run: |
+          npm ci
+          npm run build
+          cd dist && zip -r ../../../skjold-web-${GITHUB_REF_NAME}.zip . && cd ..
+      - name: Synkroniser Capacitor (Android)
+        working-directory: skjold/app
+        run: npx cap sync android
+      - name: Bygg APK (debug-signert – installerbar)
+        working-directory: skjold/app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../../skjold-app-${GITHUB_REF_NAME}.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-og-android
+          path: |
+            skjold-web-*.zip
+            skjold-app-*.apk
+
+  ios:
+    name: iOS IPA (usignert)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: ${{ env.NODE_VERSION }}, cache: npm, cache-dependency-path: skjold/app/package-lock.json }
+      - name: Installer, bygg web og synkroniser iOS
+        working-directory: skjold/app
+        run: |
+          npm ci
+          npm run build
+          npx cap sync ios
+      - name: CocoaPods
+        working-directory: skjold/app/ios/App
+        run: pod install
+      - name: Bygg .app uten signering
+        working-directory: skjold/app/ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos \
+            -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+      - name: Pakk som IPA
+        working-directory: skjold/app/ios/App
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qr ../../../../skjold-app-${GITHUB_REF_NAME}-usignert.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: skjold-app-*.ipa
+
+  flasher:
+    name: Flasher (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: ${{ env.NODE_VERSION }}, cache: npm, cache-dependency-path: skjold/flasher/package-lock.json }
+      - name: Installer og bygg installasjonsfiler
+        working-directory: skjold/flasher
+        run: |
+          npm ci
+          npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flasher-${{ matrix.os }}
+          path: |
+            skjold/flasher/release/*.dmg
+            skjold/flasher/release/*.exe
+            skjold/flasher/release/*.AppImage
+            skjold/flasher/release/*.zip
+
+  manual:
+    name: Bruksanvisning (PDF)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Render PDF med Playwright
+        working-directory: skjold/bruksanvisning
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+          python render_pdf.py
+          cp *.pdf ../../ 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bruksanvisning
+          path: "*.pdf"
+
+  release:
+    name: GitHub Release
+    needs: [web, ios, flasher, manual]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artefakter, merge-multiple: true }
+      - name: Liste
+        run: ls -la artefakter
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Skjold ${{ github.ref_name }}
+          generate_release_notes: true
+          files: artefakter/**
