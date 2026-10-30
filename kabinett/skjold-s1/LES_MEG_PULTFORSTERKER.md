@@ -39,7 +39,7 @@ Filer: `platemetall/skjold_s1_avrundet/` (STEP av hele kassen + DXF-flatmønstre
 Filer i `platemetall/skjold_s1_avrundet/`:
 - `skjold_s1_frontplate_alu.dxf` (OLED) / `skjold_s1_frontplate_alu_tft.dxf` – kuttefil, lag CUT. Flat plate 178 × 46 mm, R3, **3 mm 5052-H32**.
   Vindu 62 × 38 for skjermen, Ø16,4 POWER, 4 × Ø12,4 knapper, Ø7,4 encoder, Ø6,4 hodetelefonjack, 6 × Ø3,0 for studs.
-- `skjold_s1_frontplate_alu_merking.dxf` – lag MARKING: BT, RADIO, AUX, USB, ramme rundt vinduet og hodetelefon-ikon (ingen tekst
+- `skjold_s1_frontplate_alu_merking.dxf` – lag MARKING: BT, RADIO, AUX, USB (små, 1,8 mm), ramme rundt vinduet, hodetelefon-ikon og SKJOLD-logoen under volumknotten (ingen tekst
   ved POWER, intet navn på fronten). Sett forfra; lag OUTLINE/HOLES til plassering. Lastes opp under «Surface Treatment → laser
   marking». Forhåndsvisning: `skjold_s1_frontplate_alu.png`.
 - Overflate: **bead blast + anodized, black** – samme som kassen.
