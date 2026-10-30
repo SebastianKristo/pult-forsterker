@@ -165,6 +165,7 @@ part("R81", R_, R0603, "3.3k", "C22978", 34.5, 6.5, 90, "NTC-deler til 3V3"); pa
 part("U14", TO, "SOT-23-5", "74LVC1G14", "", 32.5, 12.3, 0, "Schmitt-inverter (SN74LVC1G14DBVR / 74LVC1G14GV) – LCSC-kode sjekkes i BOM-verktøyet")
 part("C111", C_, C0603, "100n", "C14663", 31.8, 6.5, 90, "U14 VCC")
 part("R82", R_, R0603, "100k", "C25803", 32.5, 15.0, 0, "Pull-down GPA7 (ikke «varm» hvis U14 mangler)")
+part("R83", R_, R0603, "10k", "C25804", 118.5, 92, 0, "Pull-up PGA2311 /CS (GPIO 16 har pull-down før daemonen starter)")
 for i, (nm, x) in enumerate([("AIR", 76), ("BT", 82), ("AUX", 88), ("USB", 94), ("PWR", 100)]):
     part(f"Q{i+2}", TO, "SOT-23-3", "AO3400A", "C20917", x, 84, 0, f"LED-ring {nm}")
     part(f"R{25+i}", R_, R0603, "100", "C22775", x, 80, 0, f"Gate {nm}"); part(f"R{30+i}", R_, R0603, "100k", "C25803", x - 3, 80, 90, f"Pulldown {nm}")
@@ -289,7 +290,7 @@ net(GND, ("J7", 6), *[(f"C{57+i}", 2) for i in range(5)])
 net("EXP_A5", ("U12", 26), ("J22", 1)); net("EXP_A6", ("U12", 27), ("J22", 2)); net("EXP_A7", ("U12", 28), ("J22", 3)); net("EXP_B5", ("U12", 6), ("J22", 4)); net(GND, ("J22", 6))
 # overtemperaturvakt (NTC): 3V3 - R81 - NTC - GND; node -> U14 inngang (pinne 2), utgang (pinne 4) -> EXP_A7 = MCP GPA7
 net("NTC", ("J24", 1), ("R81", 2), ("C112", 1), ("U14", 2)); net("EXP_A7", ("U14", 4), ("R82", 1)); net(GND, ("R82", 2))
-net("3V3", ("R81", 1), ("U14", 5), ("C111", 1)); net(GND, ("J24", 2), ("C112", 2), ("C111", 2), ("U14", 3))
+net("3V3", ("R81", 1), ("U14", 5), ("C111", 1), ("R83", 1)); net(GND, ("J24", 2), ("C112", 2), ("C111", 2), ("U14", 3))
 # knapp bak -> GPIO 15
 net("BTN_BAK", ("J5", 10), ("J21", 1), ("R45", 2), ("C65", 1)); net(GND, ("J21", 2), ("C65", 2))
 # encoder -> GPIO 23/24/25
@@ -298,10 +299,11 @@ net(GND, ("J8", 5), ("C62", 2), ("C63", 2), ("C64", 2))
 # SPI0: PGA2311 (CE0) og TFT (CE1) + touch
 # SPI0 (GPIO 10/9/11) deles av TFT (CE0 = GPIO 8, header 24) og touch (CE1 = GPIO 7, header 26) – som fbtft/ads7846-overlayene i install.sh
 net("SPI_MOSI", ("J5", 19), ("J13", 6), ("J13", 12)); net("SPI_SCLK", ("J5", 23), ("J13", 7), ("J13", 10))
-net("SPI_MISO", ("J5", 21), ("J13", 13));   # bare touch (XPT2046) på MISO – ILI9341 SDO slipper ikke bussen net("TFT_CS", ("J5", 24), ("J13", 3)); net("TFT_DC", ("J5", 29), ("J13", 5)); net("TFT_RST", ("J5", 31), ("J13", 4))
+net("SPI_MISO", ("J5", 21), ("J13", 13))   # bare touch (XPT2046) på MISO – ILI9341 SDO slipper ikke bussen
+net("TFT_CS", ("J5", 24), ("J13", 3)); net("TFT_DC", ("J5", 29), ("J13", 5)); net("TFT_RST", ("J5", 31), ("J13", 4))
 net("TOUCH_CS", ("J5", 26), ("J13", 11), ("R78", 2)); net("TOUCH_IRQ", ("J5", 11), ("J13", 14)); net(GND, ("J13", 2))
 # PGA2311 bit-banges fra GPIO 0 (header 27, SDI), GPIO 1 (header 28, SCLK) og GPIO 16 (header 36, CS) – som ki_amp_daemon.py
-net("PGA_SDI", ("J5", 27), ("U5", 3)); net("PGA_SCLK", ("J5", 28), ("U5", 6)); net("PGA_CS", ("J5", 36), ("U5", 2))
+net("PGA_SDI", ("J5", 27), ("U5", 3)); net("PGA_SCLK", ("J5", 28), ("U5", 6)); net("PGA_CS", ("J5", 36), ("U5", 2), ("R83", 2))
 net("TFT_BL_G", ("J5", 33), ("R71", 1)); net("TFT_BL_GATE", ("R71", 2), ("Q9", 1), ("R72", 1)); net(GND, ("Q9", 2), ("R72", 2))
 net("TFT_BL_LOW", ("Q9", 3), ("R73", 1)); net("Q10_GATE", ("R73", 2), ("Q10", 1), ("R74", 2)); net("TFT_LED", ("Q10", 3), ("J13", 8))
 # LED-ringer: AIR/BT/AUX/USB fra MCP GPB0-3, POWER fra GPIO 12 (PWM)
@@ -447,8 +449,8 @@ def build():
     # ubrukte pads sjekk: alle pads på IC-er skal ha nett (unntatt NC)
     nc_ok = {("U14", "1"), ("U3", "6"), ("U3", "7"), ("U7", "22"), ("U7", "23"), ("U7", "24"), ("U7", "25"), ("U7", "27"), ("K1", "4"),
              ("U11", "5"), ("U11", "6"), ("U11", "7"), ("U11", "15"), ("U11", "16"), ("U11", "25"), ("U11", "28"), ("U12", "11"), ("U12", "14"), ("U12", "19"),
-             ("U12", "7"), ("U12", "8"), ("U5", "7"), ("U6", "3"), ("U6", "16"), ("J5", "1"), ("J5", "17"), ("U1", "0")}
-    for ref in ("U1", "U6"):   # termiske via-pads uten nummer -> GND
+             ("U12", "7"), ("U12", "8"), ("U5", "7"), ("U6", "3"), ("U6", "16"), ("J5", "1"), ("J5", "17"), ("U1", "0"), ("J13", "9"), ("J11", "A8"), ("J11", "B8"), ("J12", "A8"), ("J12", "B8")}
+    for ref in ("U1", "U6", "U13"):   # termiske via-pads uten nummer -> GND
         for pd in fps[ref].Pads():
             if pd.GetNumber() == "":
                 pd.SetNet(nets[GND])
@@ -461,7 +463,7 @@ def build():
                 pd.SetNet(nets[GND])
     for ref, fp in fps.items():
         for pd in fp.Pads():
-            if pd.GetNetCode() <= 0 and not ref.startswith("H") and (ref, pd.GetNumber()) not in nc_ok and ref.startswith(("U", "K", "Q")):
+            if pd.GetNetCode() <= 0 and not ref.startswith("H") and (ref, pd.GetNumber()) not in nc_ok and ref.startswith(("U", "K", "Q", "J", "R", "C", "D", "L", "F")):
                 print("ADVARSEL: pad uten nett", ref, pd.GetNumber(), pd.GetPadName())
     # GND-soner på begge lag
     for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
