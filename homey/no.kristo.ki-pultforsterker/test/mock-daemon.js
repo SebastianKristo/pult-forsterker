@@ -41,6 +41,7 @@ function createMockDaemon({ port = 0 } = {}) {
       }
       else if (p === '/api/auto_input') { state.auto_input = !!body.on; }
       else if (p === '/api/mix') { state.mix = !!body.on; }
+      else if (p === '/api/level') { state.levels = state.levels || {}; state.levels[body.source] = body.level; }
       else if (p === '/api/usbsw') { state.usb_pc = body.toggle ? (state.usb_pc === 1 ? 2 : 1) : body.pc; }
       else if (p === '/api/voice') { if (body.profile) state.voice_profile = body.profile; if (body.on !== undefined) state.voice = !!body.on; }
       else if (p === '/api/bt') state.bt_pairing = !!body.pairing;

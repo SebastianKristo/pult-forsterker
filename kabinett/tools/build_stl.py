@@ -100,7 +100,8 @@ def body():
         for sz in (-1, 1):
             m -= hole_y(2.6, sx * (fp_w / 2 - 6), fz + sz * (fp_h / 2 - 6))
     m -= slot_back(kcd1, kcd1_x, fz)
-    m -= hole_back(dc_d, dc_x, fz)
+    if dc_x is not None:
+        m -= hole_back(dc_d, dc_x, fz)
     m -= slot_back(usbc, usbc_x, fz)
     for s in (-1, 1):
         m -= hole_back(usbc_screw, usbc_x + s * usbc_pitch / 2, fz)

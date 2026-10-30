@@ -22,6 +22,7 @@ API:
   POST /api/auto_input {"on":bool} (bytt kilde automatisk når AirPlay/BT/Radio begynner å spille)
   POST /api/usbsw {"pc":1|2} | {"toggle":true} (USB-delingsswitch: hvilken PC tastatur/mus/disk/USB-lyd følger)
   POST /api/voice {"on":bool} | {"profile":"en"|"no"|"trondersk"} (stemmeprofil for talemeldingene)
+  POST /api/level {"source":"airplay|bt|usb|radio|aux|aux2","level":0-100} (nivå per kilde, brukes i miks)
   POST /api/mix {"on":bool} (miks digitale kilder: AirPlay, Bluetooth, USB og Radio kan spille samtidig)
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay, jpg/png)
@@ -64,17 +65,23 @@ DSP_FORMAT = os.environ.get("KI_AMP_DSP_FORMAT", "S32LE")   # S16LE for Pi-ens 3
 
 # ---------- GPIO (BCM) ----------
 # KI_AMP_BOARD=modules : modulbygget (XH-M562, X9C103S, relékort) – standard
-# KI_AMP_BOARD=main    : Pultforsterker hovedkort rev A (PGA2311 på SPI0, TPA3116 SDZ, relé på kortet)
+# KI_AMP_BOARD=main    : Pultforsterker hovedkort rev B (PGA2311 på SPI0, knapper/LED/USB-mux via MCP23017 på I2C,
+#                        GPIO 27 = «smart relé» (24 V til forsterker + 5 V_SW), GPIO 22 = TPA3116 SDZ, AUX 1 = I2S-ADC, AUX 2 = USB-kodek)
 BOARD = os.environ.get("KI_AMP_BOARD", "modules")
-PIN_RELAY_AMP = 27      # modules: relé 3 (24 V til forsterker)   main: TPA3116 SDZ (høy = på)
-PIN_RELAY_AUX = 22      # relé: lav = DAC, høy = AUX (begge)
+PIN_RELAY_AMP = 27      # modules: relé 3 (24 V til forsterker)   main: strømrelé + 5V_SW (høy = på)
+PIN_RELAY_AUX = 22      # modules: relé lav = DAC, høy = AUX       main: TPA3116 SDZ (høy = forsterker på)
 PIN_X9C_INC, PIN_X9C_UD, PIN_X9C_CS = 26, 14, 15   # modules (serial console må være av)
 ENC = (23, 24, 25)      # CLK, DT, SW
 if BOARD == "main":
-    BTN = {"airplay": 5, "bt": 6, "aux": 14, "usb": 15}
-    LED = {"airplay": 7, "bt": 9, "aux": 17, "usb": 20}
+    BTN = {}            # knappene sitter på MCP23017 GPA0-4 (AIR, BT, AUX, USB, PWR)
+    LED = {}            # LED-ringene på MCP23017 GPB0-3
     LED_POWER = 12      # PWM0
     PIN_DAC_XSMT = 26
+    PIN_AMP_SDZ = 22
+    PIN_BTN_BAK = 15    # strømknapp bak
+    PIN_MCP_INT = 14
+    MCP_BTN = {"airplay": 0, "bt": 1, "aux": 2, "usb": 3}; MCP_BTN_POWER = 4
+    MCP_LED = {"airplay": 0, "bt": 1, "aux": 2, "usb": 3}; MCP_USB_SEL = 4
 elif BOARD == "radio":   # Radio Retro: Pi 4 + 3,5 mm + PAM8406, 6 favoritter, SOURCE/◀◀/▶▶, EC11, POWER i toppen
     BTN = {}
     LED = {}
@@ -97,14 +104,17 @@ else:
     PIN_DAC_XSMT = None
 BTN_POWER = {"radio": 3, "test": 26}.get(BOARD, 16)
 
-INPUTS = ["radio", "airplay", "bt", "aux", "usb"]
+INPUTS = ["radio", "airplay", "bt", "aux", "aux2", "usb"] if BOARD == "main" else ["radio", "airplay", "bt", "aux", "usb"]
 CYCLE = ["radio", "airplay", "bt", "usb"] if BOARD == "radio" else INPUTS   # SOURCE-knappen
+LEVEL_SOURCES = ["airplay", "bt", "usb", "radio", "aux", "aux2"]   # eget nivå per kilde (ALSA softvol «KI <kilde>» på kortet Loopback)
 state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False,
          "loudness": True, "loudness_level": 5, "voice": True,
          "presets": [None] * 6, "preset": 0,
          "auto_input": os.environ.get("KI_AMP_AUTO_INPUT", "1") == "1",
          "mix": os.environ.get("KI_AMP_MIX", "0") == "1",
-         "usb_pc": 1}   # usb_pc: aktiv PC på USB-delingsswitchen (Ugreen), 1 eller 2   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
+         "usb_pc": 1,   # usb_pc: aktiv PC på USB-delingsswitchen, 1 eller 2
+         "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100}}   # nivå per kilde (miks)
+LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD == "main" else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
 _pairing_until = 0.0
 menu = {"open": False, "idx": 1, "until": 0.0}   # kanalmeny på OLED (hold volumknotten 1 s i radio)
@@ -138,14 +148,14 @@ if HW:
     if BOARD == "radio":
         fav_leds = [l for l in (_mk(GLED, p) for p in FAV_LED) if l]
     elif BOARD == "main":
-        relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=True, initial_value=True) or _Dummy()      # SDZ: høy = forsterker på
-        relay_aux = _mk(OutputDevice, PIN_RELAY_AUX, active_high=True, initial_value=False) or _Dummy()     # MOSFET -> relé: høy = AUX
-        dac_xsmt = _mk(OutputDevice, PIN_DAC_XSMT, active_high=True, initial_value=True)
-        try:
-            import spidev
-            pga = spidev.SpiDev(); pga.open(0, 0); pga.max_speed_hz = 1000000; pga.mode = 0
-        except Exception as e:
-            print("PGA2311 (SPI) ikke tilgjengelig:", e, flush=True); pga = None
+        relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=True, initial_value=False) or _Dummy()     # strømrelé + 5V_SW
+        amp_sdz = _mk(OutputDevice, PIN_AMP_SDZ, active_high=True, initial_value=False) or _Dummy()         # TPA3116 SDZ: høy = på
+        dac_xsmt = _mk(OutputDevice, PIN_DAC_XSMT, active_high=True, initial_value=False)
+        # PGA2311 bit-banges (SPI0 er opptatt av TFT og touch): MOSI GPIO 0, SCLK GPIO 1, CS GPIO 16
+        pga_pins = (_mk(DigitalOutputDevice, 0, initial_value=False), _mk(DigitalOutputDevice, 1, initial_value=False), _mk(DigitalOutputDevice, 16, initial_value=True))
+        pga = pga_pins if all(pga_pins) else None
+        if not pga:
+            print("PGA2311 (bit-bang GPIO 0/1/16) ikke tilgjengelig", flush=True)
     elif BOARD == "modules":
         relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=not RELAY_ACTIVE_LOW, initial_value=True) or _Dummy()
         relay_aux = _mk(OutputDevice, PIN_RELAY_AUX, active_high=not RELAY_ACTIVE_LOW, initial_value=False) or _Dummy()
@@ -154,6 +164,65 @@ if HW:
         x_cs = _mk(DigitalOutputDevice, PIN_X9C_CS, initial_value=True)
     leds = {k: l for k, l in ((k, _mk(GLED, v)) for k, v in LED.items()) if l}
     led_power = _mk(PWMLED, LED_POWER, frequency=400)
+
+
+class Mcp23017:
+    """I2C I/O-ekspander på hovedkortet: GPA0-4 knapper (pull-up, aktiv lav), GPB0-3 LED-ringer, GPB4 USB-mux (0 = PC 1)."""
+    IODIRA, IODIRB, GPPUA, GPIOA, GPIOB, OLATB, GPINTENA, IOCON = 0x00, 0x01, 0x0C, 0x12, 0x13, 0x15, 0x04, 0x0A
+
+    def __init__(self, addr=0x20, bus=1):
+        self.addr, self.ok, self.olatb, self.lock = addr, False, 0, threading.Lock()
+        try:
+            from smbus2 import SMBus
+            self.bus = SMBus(bus)
+            self._w(self.IOCON, 0x00); self._w(self.IODIRA, 0xFF); self._w(self.GPPUA, 0xFF); self._w(self.GPINTENA, 0x1F)
+            self._w(self.IODIRB, 0x00); self._w(self.OLATB, 0x00)
+            self.ok = True
+            print(f"MCP23017 på 0x{addr:02x} klar", flush=True)
+        except Exception as e:
+            print("MCP23017 ikke tilgjengelig:", e, flush=True)
+
+    def _w(self, reg, val):
+        self.bus.write_byte_data(self.addr, reg, val & 0xFF)
+
+    def read_buttons(self):
+        """Sett med trykte knapper (bitnummer) – aktiv lav."""
+        if not self.ok:
+            return set()
+        with self.lock:
+            v = self.bus.read_byte_data(self.addr, self.GPIOA)
+        return {i for i in range(8) if not (v >> i) & 1}
+
+    def set_b(self, bit, on):
+        if not self.ok:
+            return
+        with self.lock:
+            self.olatb = (self.olatb | (1 << bit)) if on else (self.olatb & ~(1 << bit))
+            try:
+                self._w(self.OLATB, self.olatb)
+            except Exception as e:
+                print("MCP23017:", e, flush=True)
+
+
+class VButton:
+    """Programvareknapp med samme grensesnitt som gpiozero.Button (when_pressed/held/released) – matet fra MCP23017."""
+    def __init__(self, hold_time=2.0):
+        self.hold_time = hold_time; self.when_pressed = self.when_held = self.when_released = None
+        self._down = None; self._held = False
+
+    def update(self, pressed, now):
+        if pressed and self._down is None:
+            self._down = now; self._held = False
+            if self.when_pressed: self.when_pressed()
+        elif pressed and not self._held and now - self._down >= self.hold_time:
+            self._held = True
+            if self.when_held: self.when_held()
+        elif not pressed and self._down is not None:
+            self._down = None
+            if self.when_released: self.when_released()
+
+
+mcp = Mcp23017() if (HW and BOARD == "main") else None
 
 
 def x9c_step(n):
@@ -172,9 +241,14 @@ def vol_db(v):
 
 
 def pga_write(gain_code):
-    """PGA2311: 16 bit (høyre, venstre). 0 = mute, 255 = +31,5 dB; 192 = 0 dB; 0,5 dB per trinn."""
+    """PGA2311: 16 bit (høyre, venstre), MSB først, data leses på stigende SCLK. 0 = mute, 192 = 0 dB, 0,5 dB per trinn."""
     if HW and BOARD == "main" and pga:
-        pga.xfer2([gain_code & 0xFF, gain_code & 0xFF])
+        mosi, sclk, cs = pga
+        word = ((gain_code & 0xFF) << 8) | (gain_code & 0xFF)
+        cs.off()
+        for i in range(15, -1, -1):
+            sclk.off(); mosi.value = bool((word >> i) & 1); sclk.on()
+        sclk.off(); cs.on()
 
 
 def apply_volume():
@@ -182,14 +256,9 @@ def apply_volume():
     global _x9c_pos
     if BOARD in ("radio", "test"):   # bare digitalt volum (CamillaDSP)
         dsp.update(); return
-    if BOARD == "main":
-        if state["mute"] or not state["power"]:
-            pga_write(0)
-        elif state["input"] == "aux":
-            pga_write(0 if state["volume"] <= 0 else max(1, min(192, round(192 + 2 * vol_db(state["volume"])))))   # 0 dB ved 100 %
-        else:
-            pga_write(192 - 2 * round((99 - MAX_TAP) / 99 * 12))   # MAX_TAP 85 -> ca. -1,7 dB
-        dsp.update(); return
+    if BOARD == "main":   # rev B: alt er digitalt – PGA2311 står fast (MAX_TAP), volum og nivåer i CamillaDSP/softvol
+        pga_write(0 if (state["mute"] or not state["power"]) else 192 - 2 * round((99 - MAX_TAP) / 99 * 12))
+        apply_levels(); dsp.update(); return
     if state["mute"] or not state["power"]:
         target = 0
     elif state["input"] == "aux":
@@ -211,6 +280,7 @@ PHRASES = {
     "input_airplay": "AirPlay.",
     "input_bt": "Bluetooth.",
     "input_aux": "AUX.",
+    "input_aux2": "AUX 2.",
     "input_usb": "USB.",
     "input_radio": "Radio.",
     "radio_preset": "{name}.",
@@ -230,6 +300,7 @@ PHRASES_TR = {
     "input_airplay": "Ærplei.",
     "input_bt": "Blåtann.",
     "input_aux": "Auks.",
+    "input_aux2": "Auks to.",
     "input_usb": "U S B.",
     "input_radio": "Radio.",
     "radio_preset": "{name}.",
@@ -330,7 +401,7 @@ def set_voice_profile(prof):
 def dsp_config():
     lvl = state["loudness_level"] if state["loudness"] else 0
     return f"""devices:
-  samplerate: 44100
+  samplerate: 48000
   chunksize: 1024
   queuelimit: 4
   capture: {{type: Alsa, channels: 2, device: "{DSP_CAPTURE}", format: S32LE}}
@@ -380,7 +451,7 @@ class Dsp:
                 ws = websocket.create_connection(DSP_WS, timeout=2)
                 if cfg != self._last_cfg:
                     self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg
-                db = vol_db(state["volume"]) if state["input"] != "aux" else 0.0
+                db = vol_db(state["volume"]) if (state["input"] != "aux" or BOARD == "main") else 0.0
                 self._send(ws, {"SetVolume": db})
                 self._send(ws, {"SetMute": bool(state["mute"]) or not state["power"]})
                 ws.close()
@@ -394,7 +465,12 @@ dsp = Dsp()
 def apply_input():
     if not HW:
         return
-    relay_aux.value = state["input"] == "aux"
+    if BOARD == "main":
+        if mcp:
+            for k, bit in MCP_LED.items():
+                mcp.set_b(bit, bool(state["power"] and (k == state["input"] or (k == "aux" and state["input"] == "aux2"))))
+    else:
+        relay_aux.value = state["input"] == "aux"
     for k, led in leds.items():
         led.value = state["power"] and k == state["input"]
     if USBSW_FRONT and usbsw.enabled:   # PC 1/2-ringen lyser alltid når den er på, AIRPLAY/BT-ringen for AirPlay, BT og Radio
@@ -410,14 +486,24 @@ def apply_input():
 
 
 def apply_power():
-    if HW:
+    if HW and BOARD == "main":   # rekkefølge mot plopp: av = XSMT/SDZ lav, så strøm; på = strøm, vent, så XSMT/SDZ høy
+        if state["power"]:
+            relay_amp.value = True; time.sleep(0.3)
+            if dac_xsmt: dac_xsmt.value = True
+            apply_volume(); time.sleep(0.2); amp_sdz.value = True
+        else:
+            amp_sdz.value = False
+            if dac_xsmt: dac_xsmt.value = False
+            time.sleep(0.1); relay_amp.value = False
+    elif HW:
         relay_amp.value = state["power"]
+    if HW:
         if led_power:
             led_power.value = 1.0 if state["power"] else 0.1
         apply_input()
     apply_volume()   # mute i CamillaDSP + PGA2311 i standby
     # OLED av i standby håndteres av oled_display.py via ctrl-filen
-    units = [u for u in ("shairport-sync", "bluealsa-aplay", "ki-usb-audio", "ki-squeezelite")   # bare tjenester som er slått på
+    units = [u for u in ("shairport-sync", "bluealsa-aplay", "ki-usb-audio", "ki-squeezelite", "ki-aux1", "ki-aux2")   # bare tjenester som er slått på
              if subprocess.run(["systemctl", "is-enabled", "--quiet", u], check=False).returncode == 0]
     if not state["power"]:   # stopp det som spiller pent før tjenestene tas ned
         _pause_others("")
@@ -431,7 +517,7 @@ def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile")}, fh)
+            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels")}, fh)
     except Exception:
         pass
 
@@ -439,7 +525,10 @@ def save_state():
 def load_state():
     try:
         with open(STATE_FILE) as fh:
-            state.update({k: v for k, v in json.load(fh).items() if k in state})
+            saved = json.load(fh)
+            if isinstance(saved.get("levels"), dict):
+                state["levels"].update({k: int(v) for k, v in saved.pop("levels").items() if k in state["levels"]})
+            state.update({k: v for k, v in saved.items() if k in state})
     except Exception:
         pass
 
@@ -493,7 +582,7 @@ USBSW_SENSE_PC1 = os.environ.get("KI_AMP_USBSW_SENSE_PC1", "low").strip().lower(
 USBSW_FRONT = os.environ.get("KI_AMP_USBSW_FRONT", "0") == "1"
 # opto = via PC817 (GPIO høy = trykk). direct = ledningen fra knappen rett på GPIO: pinnen står åpen (inngang uten pull)
 # og trekkes til 0 V under trykket. Bare trygt når knappens «varme» side er 3,3 V eller lavere (mål først!).
-USBSW_MODE = os.environ.get("KI_AMP_USBSW_MODE", "opto").strip().lower()   # 1 = AIRPLAY-knappen blir PC 1/2, BT-knappen blir AIRPLAY/BT
+USBSW_MODE = os.environ.get("KI_AMP_USBSW_MODE", "mux" if BOARD == "main" else "opto").strip().lower()   # mux = TS3USB221 på hovedkortet (MCP GPB4)   # 1 = AIRPLAY-knappen blir PC 1/2, BT-knappen blir AIRPLAY/BT
 _usbsw_n = [n.strip() for n in os.environ.get("KI_AMP_USBSW_NAMES", "").split(",") if n.strip()]
 USBSW_NAMES = (_usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):])[:2]   # f.eks. KI_AMP_USBSW_NAMES=MacBook,Jobb-PC
 
@@ -527,6 +616,12 @@ class UsbSwitch:
         return self.pulse is not None
 
     def start(self):
+        if USBSW_MODE == "mux":   # hovedkortet: nivå på MCP23017 GPB4 velger PC direkte – ingen puls, ingen avlesning
+            if not mcp or not mcp.ok:
+                return
+            self.pulse = "mux"; state["usbsw"] = True; state["usb_pc_names"] = USBSW_NAMES
+            mcp.set_b(MCP_USB_SEL, state["usb_pc"] == 2)
+            print(f"USB-switch: mux på hovedkortet, aktiv {USBSW_NAMES[state['usb_pc'] - 1]}", flush=True); return
         if not (HW and USBSW_PULSE):
             return
         if USBSW_MODE == "direct":
@@ -566,6 +661,11 @@ class UsbSwitch:
         if not self.enabled:
             raise RuntimeError("USB-switch er ikke satt opp (KI_AMP_USBSW_PULSE)")
         with self.lock:
+            if self.pulse == "mux":
+                if pc != state["usb_pc"]:
+                    mcp.set_b(MCP_USB_SEL, pc == 2); state["usb_pc"] = pc; changed()
+                    voice.say("usb_pc", n=pc, name=USBSW_NAMES[pc - 1])
+                return
             cur = self.read() or state["usb_pc"]
             if cur == pc:
                 return
@@ -617,6 +717,27 @@ def _pause_others(inp):
             _busctl("call", SPS[0], SPS[1], SPS[2], "Pause")
     except Exception as e:
         print("Pause annen kilde:", e, flush=True)
+
+
+LEVEL_CTL = {"airplay": "KI AirPlay", "bt": "KI Bluetooth", "usb": "KI USB", "radio": "KI Radio", "aux": "KI AUX1", "aux2": "KI AUX2"}
+
+
+def apply_levels():
+    """Nivå per kilde via ALSA softvol (asound.conf) – bare når kontrollene finnes (hovedkortet / rev B-oppsett)."""
+    if not LEVELS_ON:
+        return
+    for src, name in LEVEL_CTL.items():
+        v = int(state["levels"].get(src, 100))
+        if not state["mix"] and src != state["input"]:   # uten miks: bare valgt kilde slipper gjennom
+            v = 0
+        subprocess.run(["amixer", "-q", "-c", "Loopback", "sset", name, f"{max(0, min(100, v))}"], check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def set_level(src, v):
+    if src not in LEVEL_SOURCES:
+        raise ValueError(f"kilde må være en av {LEVEL_SOURCES}")
+    state["levels"][src] = max(0, min(100, int(v))); apply_levels(); changed()
 
 
 def set_loudness(on=None, level=None):
@@ -735,8 +856,29 @@ def setup_buttons():
             b = _mk(Button, RADIO_BTN[k], pull_up=True, bounce_time=0.05) or _Dummy()
             b.when_pressed = lambda a=act: _safe(transport, a)
             objs.append(b)
-    for name, pin in BTN.items():
-        b = _mk(Button, pin, pull_up=True, bounce_time=0.05, hold_time=2.0)
+    mcp_btns = {}
+    if BOARD == "main" and mcp and mcp.ok:   # knappene via MCP23017 – pollet fra INT-pinnen og hvert 50 ms
+        for name, bit in MCP_BTN.items():
+            mcp_btns[name] = VButton(hold_time=2.0)
+        mcp_btns["power"] = VButton(hold_time=3.0)
+        bits = dict(MCP_BTN, power=MCP_BTN_POWER)
+
+        def mcp_poll():
+            while True:
+                try:
+                    pressed = mcp.read_buttons(); now = time.time()
+                    for name, vb in mcp_btns.items():
+                        vb.update(bits[name] in pressed, now)
+                except Exception as e:
+                    print("MCP-knapper:", e, flush=True); time.sleep(1)
+                time.sleep(0.03)
+        threading.Thread(target=mcp_poll, daemon=True).start()
+        bak = _mk(Button, PIN_BTN_BAK, pull_up=True, bounce_time=0.05)
+        if bak:
+            bak.when_pressed = lambda: _safe(lambda: set_power(not state["power"]))   # strømknappen bak
+            objs.append(bak)
+    for name, pin in (BTN.items() if not mcp_btns else [(n, None) for n in MCP_BTN]):
+        b = mcp_btns[name] if mcp_btns else _mk(Button, pin, pull_up=True, bounce_time=0.05, hold_time=2.0)
         if not b:
             continue
         if USBSW_FRONT and usbsw.enabled and name == "airplay":
@@ -753,10 +895,12 @@ def setup_buttons():
             # kort trykk: AirPlay; trykk igjen mens AirPlay er valgt = Radio (Lyrion), og tilbake
             _hold_btn(b, lambda: set_input("radio" if state["input"] == "airplay" and lyr.connected else "airplay"),
                       lambda: bt_pairing(not state["bt_pairing"]))   # hold AIRPLAY 2 s = BT-parring av/på
+        elif name == "aux" and BOARD == "main":
+            b.when_pressed = lambda: _safe(set_input, "aux2" if state["input"] == "aux" else "aux")   # AUX-knappen veksler AUX 1 / AUX 2
         else:
             b.when_pressed = lambda n=name: _safe(set_input, n)
         objs.append(b)
-    p = _mk(Button, BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0) or _Dummy()
+    p = mcp_btns["power"] if mcp_btns else (_mk(Button, BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0) or _Dummy())
     _hold_btn(p, lambda: set_power(not state["power"]),
               lambda: (save_state(), subprocess.run(["systemctl", "reboot"], check=False)))   # hold 3 s = omstart
     objs.append(p)
@@ -782,7 +926,7 @@ def setup_buttons():
 
     _hold_btn(sw, sw_released, sw_held)
     objs.append(sw)
-    print(f"Knapper klare ({BOARD}): " + ", ".join(f"{n}=GPIO{p}" for n, p in BTN.items()) + f", power=GPIO{BTN_POWER}, encoder={ENC}", flush=True)
+    print(f"Knapper klare ({BOARD}): " + (", ".join(f"{n}=GPIO{p}" for n, p in BTN.items()) + f", power=GPIO{BTN_POWER}" if not mcp_btns else "via MCP23017 + knapp bak GPIO 15") + f", encoder={ENC}", flush=True)
     return objs
 
 
@@ -892,8 +1036,12 @@ def follow_source():
     """Bytt kilde automatisk når AirPlay eller Bluetooth begynner å spille (som en vanlig forsterker med auto-input)."""
     last = (None, False)
     last_dev = None
+    tick = 0
     while True:
         time.sleep(1)
+        tick += 1
+        if LEVELS_ON and tick % 5 == 0:   # softvol-kontrollene finnes først når kilden har åpnet lyd – sett nivåene jevnlig
+            _safe(apply_levels)
         try:
             st = read_raw()          # rå AirPlay/BT-status – også når Radio er valgt
             dev = st.get("bt_device", "")
@@ -1138,6 +1286,15 @@ async def h_usbsw(r):
     return j()
 
 
+async def h_level(r):
+    b = await r.json()
+    try:
+        set_level(b.get("source", ""), int(b.get("level", 100)))
+    except (ValueError, TypeError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+    return j()
+
+
 async def h_mix(r):
     on = bool((await r.json()).get("on", False))
     if on != state["mix"]:
@@ -1279,7 +1436,7 @@ def main():
     app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
-                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw)])
+                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level)])
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

@@ -191,3 +191,13 @@ test('stemmeprofil kan byttes til trøndersk', async () => {
   assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/voice', body: { profile: 'trondersk' } });
   assert.equal(d.getCapabilityValue('ki_voice_profile'), 'trondersk');
 });
+
+test('nivå per kilde vises når daemonen har levels', async () => {
+  const d = makeDevice(); await d.onInit(); d.onDeleted();
+  assert.equal(d.hasCapability('ki_level_aux2'), false);
+  daemon.state.levels = { airplay: 100, bt: 100, usb: 100, radio: 100, aux: 80, aux2: 60 }; await d.poll();
+  assert.equal(d.getCapabilityValue('ki_level_aux2'), 60);
+  await d.triggerCapability('ki_level_aux', 50);
+  assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/level', body: { source: 'aux', level: 50 } });
+  assert.equal(d.getCapabilityValue('ki_level_aux'), 50);
+});

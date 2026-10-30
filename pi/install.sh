@@ -5,8 +5,12 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
 # KI_AMP_OUT=dac        : I2S-DAC / hovedkort (standard)
 # KI_AMP_OUT=headphones : TEST uten hovedkort – lyd ut på Pi 4 sin 3,5 mm-kontakt (bcm2835 Headphones, 16 bit)
-OUT="${KI_AMP_OUT:-dac}"
-if [ "$OUT" = headphones ]; then PB_CARD=Headphones; PB_DEV="plughw:Headphones"; PB_FMT=S16LE; else PB_CARD=sndrpihifiberry; PB_DEV="hw:sndrpihifiberry"; PB_FMT=S32LE; fi
+# KI_AMP_BOARD=main     : hovedkort rev B (PCM5102A + PCM1808 på I2S, lydkortet heter «pultamp», TFT/touch mulig)
+# KI_AMP_DISPLAY=tft    : 2,8" SPI TFT (KI_AMP_TFT=ili9341|st7789v) med touch i stedet for OLED
+OUT="${KI_AMP_OUT:-dac}"; BOARD_SEL="${KI_AMP_BOARD:-}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
+if [ "$OUT" = headphones ]; then PB_CARD=Headphones; PB_DEV="plughw:Headphones"; PB_FMT=S16LE
+elif [ "$BOARD_SEL" = main ]; then PB_CARD=pultamp; PB_DEV="hw:pultamp"; PB_FMT=S32LE
+else PB_CARD=sndrpihifiberry; PB_DEV="hw:sndrpihifiberry"; PB_FMT=S32LE; fi
 
 echo "== 1/9  Oppdaterer systemet"
 sudo apt-get update && sudo apt-get -y full-upgrade
@@ -18,6 +22,16 @@ if [ "$OUT" = headphones ]; then
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
   sudo sed -i 's/^dtoverlay=hifiberry-dac/#dtoverlay=hifiberry-dac/' "$CFG"
   LINES='dtparam=i2c_arm=on dtoverlay=spi0-1cs,no_miso dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
+elif [ "$BOARD_SEL" = main ]; then
+  sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/; s/^dtoverlay=hifiberry-dac$/#dtoverlay=hifiberry-dac/; s/^dtoverlay=spi0-1cs,no_miso$/#dtoverlay=spi0-1cs,no_miso/' "$CFG"
+  sudo apt-get -y install --no-install-recommends device-tree-compiler >/dev/null
+  dtc -@ -I dts -O dtb -o /tmp/ki-pultamp-i2s.dtbo "$SRC/ki-pultamp-i2s.dts" && sudo install -m 644 /tmp/ki-pultamp-i2s.dtbo /boot/firmware/overlays/
+  LINES='dtoverlay=ki-pultamp-i2s dtparam=i2c_arm=on dtparam=spi=on dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
+  if [ "$DISPLAY_SEL" = tft ]; then   # TFT på SPI0 CE0 (DC 5, RST 6), touch på CE1 (IRQ 17)
+    sudo sed -i '/^dtoverlay=fbtft,/d; /^dtoverlay=ads7846,/d' "$CFG"
+    echo "dtoverlay=fbtft,spi0-0,$TFT_SEL,dc_pin=5,reset_pin=6,rotate=90,speed=32000000" | sudo tee -a "$CFG"
+    echo "dtoverlay=ads7846,cs=1,penirq=17,penirq_pull=2,speed=50000,keep_vref_on=1,swapxy=1,xmin=200,xmax=3900,ymin=200,ymax=3900,pmax=255,xohms=150" | sudo tee -a "$CFG"
+  fi
 else
   sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
   LINES='dtoverlay=hifiberry-dac dtparam=i2c_arm=on dtoverlay=spi0-1cs,no_miso dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
@@ -42,7 +56,7 @@ sudo apt-get -y install --no-install-recommends \
   libssl-dev libsoxr-dev libplist-dev libsodium-dev libavutil-dev libavcodec-dev \
   libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils libplist-utils libglib2.0-dev \
   bluez bluez-alsa-utils python3-dbus \
-  python3-pip python3-pil python3-smbus i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl
+  python3-pip python3-pil python3-smbus python3-smbus2 python3-evdev python3-numpy i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl
 
 echo "== 4/9  ALSA dmix → loopback → CamillaDSP (loudness + digitalt volum) → DAC"
 sed "s/sndrpihifiberry/$PB_CARD/g" "$SRC/asound.conf" | sudo tee /etc/asound.conf >/dev/null
@@ -99,12 +113,14 @@ sudo mkdir -p /usr/local/share/ki-amp/sounds && sudo install -m 644 "$SRC"/sound
 echo "== 7/9  USB-lyd (Pi-en blir et USB-lydkort for PC-en via USB-C bak)"
 sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
 sudo install -m 644 "$SRC/ki-usb-audio.service" /etc/systemd/system/ki-usb-audio.service
+sudo install -m 644 "$SRC/ki-aux1.service" "$SRC/ki-aux2.service" /etc/systemd/system/
+if [ "$BOARD_SEL" = main ]; then sudo systemctl enable ki-aux1 ki-aux2; fi   # AUX 1 (I2S-ADC) og AUX 2 (USB-kodek) bare på hovedkortet
 sudo systemctl enable ki-usb-audio
 
 echo "== 8/9  OLED (SSD1309 2,42\")"
 sudo pip3 install --break-system-packages luma.oled
 sudo install -m 755 "$SRC/oled_display.py" /usr/local/bin/oled_display.py
-sudo install -m 644 "$SRC/oled_small.py" /usr/local/bin/oled_small.py
+sudo install -m 644 "$SRC/oled_small.py" "$SRC/tft_screen.py" /usr/local/bin/
 sudo install -m 644 "$SRC/oled-display.service" /etc/systemd/system/oled-display.service
 
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
@@ -115,6 +131,8 @@ if [ "$OUT" = headphones ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e '/^KI_AMP_DSP_FORMAT=/d' /etc/ki-amp.env
   echo "KI_AMP_DSP_FORMAT=$PB_FMT" | sudo tee -a /etc/ki-amp.env >/dev/null
   sudo sed -i 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=test/' /etc/ki-amp.env      # testbenk-pinner (knapper/LED rett på Pi-en)
+elif [ "$BOARD_SEL" = main ]; then
+  sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=main/' -e "s/^KI_AMP_DISPLAY=.*/KI_AMP_DISPLAY=$DISPLAY_SEL/" -e "s/^KI_AMP_TFT=.*/KI_AMP_TFT=$TFT_SEL/" -e 's/^KI_AMP_LEVELS=.*/KI_AMP_LEVELS=1/' /etc/ki-amp.env
   echo "== TESTMODUS: lyd ut på 3,5 mm-kontakten. Sett volum på jacken: amixer -c Headphones sset PCM 100%"
 fi
 sudo systemctl daemon-reload

@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 from .entity import KiAmpEntity
 
-SOURCES = {"radio": "Radio", "airplay": "AirPlay", "bt": "Bluetooth", "aux": "AUX", "usb": "USB"}
+SOURCES = {"radio": "Radio", "airplay": "AirPlay", "bt": "Bluetooth", "aux": "AUX 1", "aux2": "AUX 2", "usb": "USB"}
 SOURCES_REV = {v: k for k, v in SOURCES.items()}
 
 

@@ -1,0 +1,11 @@
+[Unit]
+Description=KI Pultforsterker – AUX 1 (PCM1808 I2S-ADC på hovedkortet) -> miks
+After=sound.target
+
+[Service]
+ExecStart=/usr/bin/alsaloop -C hw:pultamp -P aux1 -r 48000 -f S32_LE -t 50000 -S 0
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

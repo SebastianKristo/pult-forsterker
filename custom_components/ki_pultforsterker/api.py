@@ -71,6 +71,10 @@ class KiAmpApi:
         """USB-delingsswitch: velg PC 1 eller 2 (tastatur, mus, disk og USB-lyd følger med)."""
         return await self._req("POST", "/usbsw", {"pc": pc})
 
+    async def set_level(self, source: str, level: int) -> dict[str, Any]:
+        """Nivå per kilde (0–100) i miksen."""
+        return await self._req("POST", "/level", {"source": source, "level": level})
+
     async def set_mix(self, on: bool) -> dict[str, Any]:
         """Miks digitale kilder (AirPlay, Bluetooth, USB og Radio spiller samtidig)."""
         return await self._req("POST", "/mix", {"on": on})

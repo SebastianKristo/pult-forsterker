@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.10.0",
+  "version": "2.11.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -182,8 +182,15 @@
         {
           "id": "aux",
           "title": {
-            "en": "AUX",
-            "no": "AUX"
+            "en": "AUX 1",
+            "no": "AUX 1"
+          }
+        },
+        {
+          "id": "aux2",
+          "title": {
+            "en": "AUX 2",
+            "no": "AUX 2"
           }
         },
         {
@@ -374,6 +381,120 @@
       "setable": true,
       "uiComponent": "picker",
       "icon": "/assets/icon.svg"
+    },
+    "ki_level_airplay": {
+      "type": "number",
+      "title": {
+        "en": "Level AirPlay",
+        "no": "Nivå AirPlay"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_level_bt": {
+      "type": "number",
+      "title": {
+        "en": "Level Bluetooth",
+        "no": "Nivå Bluetooth"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_level_usb": {
+      "type": "number",
+      "title": {
+        "en": "Level USB",
+        "no": "Nivå USB"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_level_radio": {
+      "type": "number",
+      "title": {
+        "en": "Level Radio",
+        "no": "Nivå Radio"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_level_aux": {
+      "type": "number",
+      "title": {
+        "en": "Level AUX 1",
+        "no": "Nivå AUX 1"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_level_aux2": {
+      "type": "number",
+      "title": {
+        "en": "Level AUX 2",
+        "no": "Nivå AUX 2"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "icon": "/assets/icon.svg"
     }
   },
   "flow": {
@@ -528,8 +649,15 @@
               {
                 "id": "aux",
                 "label": {
-                  "en": "AUX",
-                  "no": "AUX"
+                  "en": "AUX 1",
+                  "no": "AUX 1"
+                }
+              },
+              {
+                "id": "aux2",
+                "label": {
+                  "en": "AUX 2",
+                  "no": "AUX 2"
                 }
               },
               {
@@ -615,8 +743,15 @@
               {
                 "id": "aux",
                 "label": {
-                  "en": "AUX",
-                  "no": "AUX"
+                  "en": "AUX 1",
+                  "no": "AUX 1"
+                }
+              },
+              {
+                "id": "aux2",
+                "label": {
+                  "en": "AUX 2",
+                  "no": "AUX 2"
                 }
               },
               {
@@ -938,6 +1073,90 @@
                 }
               }
             ]
+          }
+        ]
+      },
+      {
+        "id": "ki_set_level",
+        "title": {
+          "en": "Set level of [[source]] to [[level]] %",
+          "no": "Sett nivå for [[source]] til [[level]] %"
+        },
+        "titleFormatted": {
+          "en": "Set level of [[source]] to [[level]] %",
+          "no": "Sett nivå for [[source]] til [[level]] %"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker"
+          },
+          {
+            "type": "dropdown",
+            "name": "source",
+            "title": {
+              "en": "Source",
+              "no": "Kilde"
+            },
+            "values": [
+              {
+                "id": "airplay",
+                "label": {
+                  "en": "AirPlay",
+                  "no": "AirPlay"
+                }
+              },
+              {
+                "id": "bt",
+                "label": {
+                  "en": "Bluetooth",
+                  "no": "Bluetooth"
+                }
+              },
+              {
+                "id": "usb",
+                "label": {
+                  "en": "USB",
+                  "no": "USB"
+                }
+              },
+              {
+                "id": "radio",
+                "label": {
+                  "en": "Radio",
+                  "no": "Radio"
+                }
+              },
+              {
+                "id": "aux",
+                "label": {
+                  "en": "AUX 1",
+                  "no": "AUX 1"
+                }
+              },
+              {
+                "id": "aux2",
+                "label": {
+                  "en": "AUX 2",
+                  "no": "AUX 2"
+                }
+              }
+            ]
+          },
+          {
+            "type": "range",
+            "name": "level",
+            "title": {
+              "en": "Level",
+              "no": "Nivå"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "label": "%",
+            "labelMultiplier": 1,
+            "labelDecimals": 0
           }
         ]
       }

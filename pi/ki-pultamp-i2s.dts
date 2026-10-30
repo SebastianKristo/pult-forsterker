@@ -1,0 +1,49 @@
+// KI Pultforsterker hovedkort rev B: I2S med PCM5102A (DAC, slave) og PCM1808 (ADC, master 48 kHz fra 12,288 MHz).
+// Pi-en er I2S-slave (bitclock/frame fra ADC-en). Lydkortet heter «pultamp»: avspilling hw:pultamp, opptak hw:pultamp.
+// Bygg: dtc -@ -I dts -O dtb -o ki-pultamp-i2s.dtbo ki-pultamp-i2s.dts  ->  /boot/firmware/overlays/, config.txt: dtoverlay=ki-pultamp-i2s
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    fragment@0 {
+        target = <&i2s_clk_consumer>;
+        __overlay__ { status = "okay"; };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            pultamp_dac: pcm5102a-codec {
+                #sound-dai-cells = <0>;
+                compatible = "ti,pcm5102a";
+                status = "okay";
+            };
+            pultamp_adc: pcm1808-codec {
+                #sound-dai-cells = <0>;
+                compatible = "linux,spdif-dir";
+                status = "okay";
+            };
+        };
+    };
+
+    fragment@2 {
+        target = <&sound>;
+        __overlay__ {
+            compatible = "simple-audio-card";
+            simple-audio-card,name = "pultamp";
+            simple-audio-card,format = "i2s";
+            simple-audio-card,bitclock-master = <&pultamp_codec>;
+            simple-audio-card,frame-master = <&pultamp_codec>;
+            status = "okay";
+
+            simple-audio-card,cpu {
+                sound-dai = <&i2s_clk_consumer>;
+            };
+            pultamp_codec: simple-audio-card,codec {
+                sound-dai = <&pultamp_dac>, <&pultamp_adc>;
+            };
+        };
+    };
+};

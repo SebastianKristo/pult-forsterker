@@ -11,7 +11,37 @@ from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
-    add([KiAmpLoudnessLevel(hass.data[DOMAIN][entry.entry_id])])
+    c = hass.data[DOMAIN][entry.entry_id]
+    add([KiAmpLoudnessLevel(c)] + [KiAmpSourceLevel(c, src) for src in LEVEL_SOURCES])
+
+
+LEVEL_SOURCES = ("airplay", "bt", "usb", "radio", "aux", "aux2")
+
+
+class KiAmpSourceLevel(KiAmpEntity, NumberEntity):
+    """Nivå per kilde (0–100) – brukes når kildene mikses (hovedkortet)."""
+    _attr_icon = "mdi:volume-source"
+    _attr_native_min_value = 0
+    _attr_native_max_value = 100
+    _attr_native_step = 1
+    _attr_mode = NumberMode.SLIDER
+
+    def __init__(self, coordinator, src: str) -> None:
+        super().__init__(coordinator, f"level_{src}")
+        self._src = src
+        self._attr_translation_key = f"level_{src}"
+
+    @property
+    def available(self) -> bool:
+        return super().available and isinstance(self.coordinator.data.get("levels"), dict)
+
+    @property
+    def native_value(self) -> float | None:
+        v = (self.coordinator.data.get("levels") or {}).get(self._src)
+        return None if v is None else float(v)
+
+    async def async_set_native_value(self, value: float) -> None:
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_level(self._src, int(value)))
 
 
 class KiAmpLoudnessLevel(KiAmpEntity, NumberEntity):

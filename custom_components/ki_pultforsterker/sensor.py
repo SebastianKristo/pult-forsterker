@@ -18,7 +18,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEnt
 class KiAmpSourceSensor(KiAmpEntity, SensorEntity):
     _attr_translation_key = "source"
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = ["airplay", "bt", "aux", "usb"]
+    _attr_options = ["radio", "airplay", "bt", "aux", "aux2", "usb"]
     _attr_icon = "mdi:audio-input-stereo-minijack"
 
     def __init__(self, c) -> None:

@@ -4,7 +4,7 @@ After=bluetooth.service bluealsa.service
 Requires=bluealsa.service
 
 [Service]
-ExecStart=/usr/bin/bluealsa-aplay --pcm=default --profile-a2dp
+ExecStart=/usr/bin/bluealsa-aplay --pcm=bt --profile-a2dp
 Restart=always
 RestartSec=3
 

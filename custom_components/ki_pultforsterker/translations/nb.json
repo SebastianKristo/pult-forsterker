@@ -47,8 +47,10 @@
         "state": {
           "airplay": "AirPlay",
           "bt": "Bluetooth",
-          "aux": "AUX",
-          "usb": "USB"
+          "aux": "AUX 1",
+          "usb": "USB",
+          "radio": "Radio",
+          "aux2": "AUX 2"
         }
       },
       "title": {
@@ -76,6 +78,24 @@
     "number": {
       "loudness_level": {
         "name": "Loudness-styrke"
+      },
+      "level_airplay": {
+        "name": "Nivå AirPlay"
+      },
+      "level_bt": {
+        "name": "Nivå Bluetooth"
+      },
+      "level_usb": {
+        "name": "Nivå USB"
+      },
+      "level_radio": {
+        "name": "Nivå Radio"
+      },
+      "level_aux": {
+        "name": "Nivå AUX 1"
+      },
+      "level_aux2": {
+        "name": "Nivå AUX 2"
       }
     },
     "select": {

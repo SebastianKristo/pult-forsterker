@@ -33,13 +33,23 @@ FONT_B = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_R = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 F = lambda p, s: ImageFont.truetype(p, s)
 f_tag, f_title, f_sub, f_small, f_vol, f_num = F(FONT_B, 7), F(FONT_B, 11), F(FONT_R, 8), F(FONT_R, 7), F(FONT_B, 7), F(FONT_B, 12)
-LABELS = {"radio": "RAD", "airplay": "AIR", "bt": "BT", "aux": "AUX", "usb": "USB"}
-SRC_TEXT = {"radio": ("Radio", "Velg kanal 1–6"), "aux": ("Analog inngang", "3,5 mm jack"), "usb": ("USB-lyd", "PC"), "airplay": ("AirPlay", "Venter på enhet …"), "bt": ("Bluetooth", "")}
+LABELS = {"radio": "RAD", "airplay": "AIR", "bt": "BT", "aux": "AUX", "aux2": "AX2", "usb": "USB"}
+SRC_TEXT = {"radio": ("Radio", "Velg kanal 1–6"), "aux": ("AUX 1", "3,5 mm inngang 1"), "aux2": ("AUX 2", "3,5 mm inngang 2"), "usb": ("USB-lyd", "PC"), "airplay": ("AirPlay", "Venter på enhet …"), "bt": ("Bluetooth", "")}
 
 # KI_AMP_OLED: ssd1309_128x64 (2,42", standard) | ssd1306_128x32 (0,91") | ssd1306_128x64 (0,96")
+# KI_AMP_DISPLAY=tft: 2,8" SPI TFT 320x240 (ILI9341/ST7789V via fbtft, touch via ads7846) i stedet for OLED
 OLED = os.environ.get("KI_AMP_OLED", "ssd1309_128x64")
+DISPLAY = os.environ.get("KI_AMP_DISPLAY", "oled").strip().lower()
+tft = tft_fb = None
 try:
-    if OLED.startswith("ssd1306"):
+    if DISPLAY == "tft":
+        import tft_screen as tft
+        tft_fb = tft.find_fb()
+        if not tft_fb:
+            raise RuntimeError("ingen fbtft-framebuffer (sjekk dtoverlay=fbtft,... i config.txt)")
+        print("TFT:", tft_fb, flush=True)
+        device = None
+    elif OLED.startswith("ssd1306"):
         device = ssd1306(i2c(port=1, address=int(os.environ.get("KI_AMP_OLED_ADDR", "0x3C"), 16)), width=128,
                          height=32 if OLED.endswith("x32") else 64)
     else:
@@ -539,6 +549,30 @@ def main():
     threading.Thread(target=bt_thread, daemon=True).start()
     threading.Thread(target=art_thread, daemon=True).start()
     was_on = True
+    if tft_fb:   # TFT: egen løkke – baklys på GPIO 13 (PWM), touch via evdev
+        bl = None
+        try:
+            from gpiozero import PWMLED
+            bl = PWMLED(13, frequency=1000); bl.value = 1.0
+        except Exception as e:
+            print("TFT-baklys:", e, flush=True)
+        threading.Thread(target=tft.Touch(read_ctrl).run, daemon=True).start()
+        with open(tft_fb, "r+b", buffering=0) as fb:
+            while True:
+                c = read_ctrl(); write_status()
+                if not c.get("power", True):
+                    if was_on:
+                        if bl: bl.value = 0.0
+                        fb.seek(0); fb.write(bytes(tft.W * tft.H * 2)); was_on = False
+                    time.sleep(0.2); continue
+                if not was_on:
+                    was_on = True; boot_until = time.time() + 1.6; NET["show_until"] = boot_until + 4
+                    if bl: bl.value = 1.0
+                bp = 1 - max(0, boot_until - time.time()) / 1.6 if time.time() < boot_until else None
+                net = NET["ip"] if (bp is None and time.time() < NET["show_until"]) else None
+                c["inputs"] = ["radio", "airplay", "bt", "aux", "aux2", "usb"] if c.get("lyrion") else ["airplay", "bt", "aux", "aux2", "usb"]
+                fb.seek(0); fb.write(tft.to_rgb565(tft.frame(c, track, pos_now, bp, net)))
+                time.sleep(0.08)
     while True:
         c = read_ctrl()
         write_status()

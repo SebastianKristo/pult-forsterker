@@ -331,29 +331,41 @@ Homey-appen → *Enheter → + → KI Pultforsterker* → forsterkeren finnes vi
 
 ---
 
-## 9. Bytte til hovedkortet
+## 9. Bytte til hovedkortet (rev B)
 
-Når PCBWay-kortet er montert i kassen (se `docs/byggeveiledning.md` for mekanikken og `pcb/DELELISTE_MED_PCB.md` for pluggene):
+Når kortet er montert i kassen (`kabinett/stl/v2_body_revb.stl`, se `pcb/README.md` for kontaktene):
 
-1. Pi 4 på gulvet, hovedkortet 25 mm over på stolpene, 40-pin flatkabel (10 cm) J5 → Pi (rød stripe mot pinne 1 begge steder), 5 V fra **J6** til Pi header pinne 2 (5 V) og 6 (GND) med 18 AWG. **Ikke** USB-C-strøm i Pi-en samtidig.
-2. JST: J7 knapper, J10 LED-ringer, J8 encoder, J9 OLED, J4 AUX. Skruterminaler: J1 24 V (via KCD1 fra DC-099), J2/J3 høyttalere. Ethernet- og USB-C-forlengere fra Pi-en til bakveggen.
-3. På Pi-en:
+1. Pi 4 på gulvet under kortet (portene mot høyre), hovedkortet 25 mm over på stolpene, flush mot høyre vegg så USB-A-portene
+   stikker ut. 40-pin flatkabel (10 cm) J5 → Pi (rød stripe mot pinne 1 begge steder), 5 V fra **J6** til Pi header pinne 2 (5 V)
+   og 6 (GND) med 18 AWG. **Ikke** USB-C-strøm i Pi-en samtidig.
+2. JST: J7 knapper, J10 LED-ringer, J8 encoder, J9 OLED (eller J13 TFT med 14-pinners flatkabel), J4 AUX 1, J20 AUX 2, J21 strømknapp
+   bak, J19 ← USB-A-kabel fra en av Pi-ens USB-porter (AUX 2-kodeken). USB-C-panelkabler: J11 → «PC 1», J12 → «PC 2» bak.
+   Skruterminaler: J1 24 V (via KCD1 fra DC-099), J2/J3 høyttalere. RJ45- og USB-C-forlengere fra Pi-en til bakveggen.
+3. Kjøleribbe 20 × 20 mm på toppen av TPA3116 (termisk tape).
+4. På Pi-en:
    ```bash
    cd ~/pult-forsterker && git pull
-   bash pi/install.sh                      # uten KI_AMP_OUT → config.txt/ALSA tilbake til I2S-DAC
-   sudo sed -i 's/^#\?KI_AMP_BOARD=.*/KI_AMP_BOARD=main/' /etc/ki-amp.env
+   KI_AMP_BOARD=main bash pi/install.sh                 # I2S-overlay (Pi som slave), spi=on, AUX-tjenester
+   # med 2,8" TFT i stedet for OLED:
+   KI_AMP_BOARD=main KI_AMP_DISPLAY=tft KI_AMP_TFT=ili9341 bash pi/install.sh     # eller KI_AMP_TFT=st7789v
    sudo reboot
    ```
-4. Sjekk:
+5. Sjekk:
    ```bash
-   aplay -l                   # sndrpihifiberry
-   i2cdetect -y 1             # 3c (OLED)
-   journalctl -u ki-amp -n 30 # ingen "Kjører uten GPIO"-feil
+   aplay -l; arecord -l       # pultamp (DAC + ADC), «USB Audio CODEC» (AUX 2)
+   i2cdetect -y 1             # 20 (MCP23017) og 3c (OLED)
+   journalctl -u ki-amp -n 30 # «MCP23017 på 0x20 klar», «Knapper klare (main)»
+   amixer -c Loopback         # «KI AirPlay», «KI AUX1» … (nivå per kilde)
    speaker-test -c 2 -t wav -l 1   # start lavt: curl -X POST localhost:8765/api/volume -d '{"volume":15}'
-   curl -X POST localhost:8765/api/input -d '{"input":"aux"}'   # reléet klikker, AUX-lyd gjennom
    ```
 
-Første gang: mål 5 V på J6 og at hovedkortet trekker < 0,2 A i standby på 24 V før du kobler høyttalerne.
+**Smart relé:** av/på-bryteren i Home Assistant/Homey, POWER-knappen foran og knappen bak kutter 24 V til forsterkeren og 5 V til
+LED-ringer, skjerm, volumkrets og ADC (GPIO 27). Pi-en, USB-switchen og nettverket har strøm hele tiden, så den våkner fra
+HA/Homey/AirPlay. **Miks:** med «Miks digitale kilder» på spiller AUX 1, AUX 2, USB, AirPlay, Bluetooth og radio samtidig, hvert
+med eget nivå («Nivå AUX 1» osv. i HA/Homey, `POST /api/level`). **TFT-touch:** faner øverst = kilde, nederst = forrige/spill/neste
+og volum −/+. Treffer trykkene feil, juster `KI_AMP_TOUCH_CAL=xmin,xmax,ymin,ymax[,swap]` i `/etc/ki-amp.env`.
+
+Første gang: mål 5 V på J6 og at kortet trekker < 0,2 A i standby på 24 V før du kobler høyttalerne.
 
 ---
 

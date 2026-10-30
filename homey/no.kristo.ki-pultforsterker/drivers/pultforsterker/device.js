@@ -22,6 +22,9 @@ class PultforsterkerDevice extends Homey.Device {
     this.registerCapabilityListener('ki_mix', (on) => this.request('POST', '/mix', { on: !!on }).then((st) => this.apply(st)));
     this.registerCapabilityListener('ki_preset', (n) => this.playPreset(Number(n)));
     this.registerCapabilityListener('ki_usb_pc', (pc) => this.setUsbPc(pc));
+    for (const src of ['airplay', 'bt', 'usb', 'radio', 'aux', 'aux2']) {
+      this.registerCapabilityListener(`ki_level_${src}`, (v) => this.setLevel(src, Math.round(v)));
+    }
     this.registerCapabilityListener('ki_voice_profile', (p) => this.request('POST', '/voice', { profile: p }).then((st) => this.apply(st)));
     this.registerCapabilityListener('speaker_next', () => this.transport('next'));
     this.registerCapabilityListener('speaker_prev', () => this.transport('previous'));
@@ -102,6 +105,10 @@ class PultforsterkerDevice extends Homey.Device {
     await this.apply(st);
   }
 
+  async setLevel(source, level) {
+    return this.apply(await this.request('POST', '/level', { source, level }));
+  }
+
   async setUsbPc(pc) {
     const body = pc === 'toggle' ? { toggle: true } : { pc: Number(pc) };
     return this.apply(await this.request('POST', '/usbsw', body));
@@ -128,6 +135,13 @@ class PultforsterkerDevice extends Homey.Device {
     if (st.usbsw && this.hasCapability('ki_usb_pc')) await this.setCapabilityValue('ki_usb_pc', String(st.usb_pc || 1)).catch(this.error);
     if (this.hasCapability('ki_voice')) await this.setCapabilityValue('ki_voice', st.voice !== false).catch(this.error);
     if (this.hasCapability('ki_voice_profile')) await this.setCapabilityValue('ki_voice_profile', st.voice_profile || 'en').catch(this.error);
+    // Nivå per kilde – vises bare når daemonen har miks med nivåer (hovedkortet)
+    for (const src of ['airplay', 'bt', 'usb', 'radio', 'aux', 'aux2']) {
+      const cap = `ki_level_${src}`; const has = st.levels && typeof st.levels === 'object' && src in st.levels;
+      if (has && !this.hasCapability(cap)) await this.addCapability(cap).catch(this.error);
+      if (!has && this.hasCapability(cap)) await this.removeCapability(cap).catch(this.error);
+      if (has && this.hasCapability(cap)) await this.setCapabilityValue(cap, Number(st.levels[src])).catch(this.error);
+    }
     if (this.hasCapability('ki_loudness')) await this.setCapabilityValue('ki_loudness', !!st.loudness).catch(this.error);
     if (this.hasCapability('ki_loudness_level')) await this.setCapabilityValue('ki_loudness_level', Number(st.loudness_level ?? 0)).catch(this.error);
 

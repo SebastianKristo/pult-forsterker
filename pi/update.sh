@@ -11,10 +11,12 @@ echo "== Programmer og tjenester"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" "$SRC/oled_display.py" "$SRC/oled_small.py" /usr/local/bin/
 sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
 sudo mkdir -p /usr/local/share/ki-amp/sounds && sudo install -m 644 "$SRC"/sounds/*.wav /usr/local/share/ki-amp/sounds/   # ferdiginnspilte talemeldinger
-for u in ki-amp.service oled-display.service camilladsp.service shairport-sync.service ki-usb-audio.service ki-squeezelite.service; do
+sudo install -m 755 "$SRC/tft_screen.py" /usr/local/bin/tft_screen.py
+for u in ki-amp.service oled-display.service camilladsp.service shairport-sync.service ki-usb-audio.service ki-squeezelite.service ki-aux1.service ki-aux2.service; do
   sudo install -m 644 "$SRC/$u" /etc/systemd/system/$u
 done
 sudo install -m 644 "$SRC/shairport-sync.conf" /etc/shairport-sync.conf
+PB_CARD=$(sudo grep -oP "^KI_AMP_DSP_PLAYBACK=(plug)?hw:\K[^,]+" /etc/ki-amp.env || echo sndrpihifiberry); sed "s/sndrpihifiberry/$PB_CARD/g" "$SRC/asound.conf" | sudo tee /etc/asound.conf >/dev/null   # per-kilde-nivåer (softvol)
 sudo install -m 644 "$SRC/shairport-sync-dbus.conf" /etc/dbus-1/system.d/shairport-sync-dbus.conf
 sudo systemctl reload dbus 2>/dev/null || true
 # nye nøkler i ki-amp.env legges til uten å røre dine verdier

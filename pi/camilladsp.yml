@@ -1,6 +1,6 @@
 # /etc/camilladsp/config.yml – startkonfigurasjon. ki_amp_daemon.py overstyrer loudness/volum live via websocket.
 devices:
-  samplerate: 44100
+  samplerate: 48000
   chunksize: 1024
   queuelimit: 4
   capture: {type: Alsa, channels: 2, device: "hw:Loopback,1", format: S32LE}
