@@ -39,15 +39,8 @@ if os.path.exists(SES) and "--no-ses" not in sys.argv:
     nets = {m.group(2): int(m.group(1)) for m in _re.finditer(r'\(net (\d+) "([^"]*)"\)', pcb_txt)}
     body = ses_to_sexpr(SES, nets)
     # manuelle spor der Freerouting ga opp
-    MANUAL = [   # samme som de faste sporene i board.dsn (Freerouting skriver dem ikke tilbake i SES)
-        ("OUTNL", "F.Cu", 0.3, [(87.65, 36.275), (90.5, 36.2)]),
-        ("LED_USB_G", "B.Cu", 0.25, [(9.54, 85.72), (12.5, 85.72), (12.5, 98.6), (132.5, 98.6), (132.5, 81.6), (123.175, 81.6)]),
-        ("LED_USB_G", "F.Cu", 0.25, [(123.175, 81.6), (123.175, 80.0)]),
-        ("OUTPR", "F.Cu", 0.4, [(103.54, 28.5), (103.54, 26.4)]),
-        ("OUTPR", "B.Cu", 0.6, [(103.54, 26.4), (127.0, 26.4), (127.0, 41.3)]),
-        ("OUTPR", "F.Cu", 0.6, [(127.0, 41.3), (127.05, 43.0)]),
-    ]
-    MANUAL_VIAS = [("LED_USB_G", (123.175, 81.6)), ("OUTPR", (103.54, 26.4)), ("OUTPR", (127.0, 41.3))]
+    MANUAL = []   # rev B: ingen manuelle spor ennå
+    MANUAL_VIAS = []
     for n, layer, w, pts in MANUAL:
         for a, b2 in zip(pts, pts[1:]):
             body += f'\n  (segment (start {a[0]:.4f} {a[1]:.4f}) (end {b2[0]:.4f} {b2[1]:.4f}) (width {w}) (layer "{layer}") (net {nets[n]}))'
@@ -60,7 +53,7 @@ if os.path.exists(SES) and "--no-ses" not in sys.argv:
 board = pcbnew.LoadBoard(PCB)
 
 # Bredere strøm-/høyttalerspor der de ikke er inntil små pads (Freerouting ruter smalt ved IC-ene)
-WIDEN = {"VIN24": 1.5, "24V_IN": 1.5, "SPK_LN": 1.2, "SPK_LP": 1.2, "SPK_RN": 1.2, "SPK_RP": 1.2, "OUTNL": 1.0, "OUTPL": 1.0, "OUTNR": 1.0, "OUTPR": 1.0, "5V": 0.9, "BUCK_SW": 1.0}
+WIDEN = {"5V_USB": 0.6, "VIN24": 1.5, "24V_IN": 1.5, "SPK_LN": 1.2, "SPK_LP": 1.2, "SPK_RN": 1.2, "SPK_RP": 1.2, "OUTNL": 1.0, "OUTPL": 1.0, "OUTNR": 1.0, "OUTPR": 1.0, "5V": 0.9, "BUCK_SW": 1.0}
 fine_pads = [pd.GetPosition() for fp in board.GetFootprints() for pd in fp.Pads() if min(pd.GetSize().x, pd.GetSize().y) < pcbnew.FromMM(1.3)]
 def near_fine(pt, r=pcbnew.FromMM(1.8)):
     return any(abs(pt.x - q.x) < r and abs(pt.y - q.y) < r for q in fine_pads)
@@ -95,14 +88,14 @@ def seg_contains(t, x, y, tol=0.6):
     s_, e_ = t.GetStart(), t.GetEnd(); sx, sy, ex, ey = pcbnew.ToMM(s_.x), pcbnew.ToMM(s_.y), pcbnew.ToMM(e_.x), pcbnew.ToMM(e_.y)
     L = _m.hypot(ex - sx, ey - sy) or 1e-9; u = max(0, min(1, ((x - sx) * (ex - sx) + (y - sy) * (ey - sy)) / L / L))
     return _m.hypot(sx + u * (ex - sx) - x, sy + u * (ey - sy) - y) < tol
-for rnd in range(4):
+for rnd in range(6):
     bad = [(x, y, n) for typ, pts in drc_items(board) if typ in ("clearance", "hole_clearance", "solder_mask_bridge") for (x, y, n) in pts if n in WIDEN]
     if not bad: break
     fixed = 0
     for t in board.GetTracks():
         if t.GetClass() != "PCB_TRACK" or t.GetNetname() not in WIDEN: continue
-        if any(seg_contains(t, x, y) for (x, y, n) in bad if n == t.GetNetname()) and t.GetWidth() > pcbnew.FromMM(0.61):
-            t.SetWidth(pcbnew.FromMM(0.5)); fixed += 1
+        if any(seg_contains(t, x, y) for (x, y, n) in bad if n == t.GetNetname()) and t.GetWidth() > pcbnew.FromMM(0.26):
+            t.SetWidth(pcbnew.FromMM(0.5 if t.GetWidth() > pcbnew.FromMM(0.61) else 0.25)); fixed += 1
     print(f"runde {rnd}: {len(bad)} DRC-punkter, {fixed} spor smalnet")
 
 for fp in board.GetFootprints():

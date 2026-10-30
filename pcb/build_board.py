@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""KI Pultforsterker – hovedkort (rev. A). Bygger kicad_pcb med pcbnew-API-et (KiCad 7).
+"""KI Pultforsterker – hovedkort (rev. B). Bygger kicad_pcb med pcbnew-API-et (KiCad 7).
+
+Rev B: USB-delingsswitch på kortet (FE1.1s 4-ports hub + TS3USB221 2:1-mux, 2 × USB-C inn fra PC-ene, 4 × USB-A ut i høyre
+kant, valgt av Pi GPIO 13), LM2662 i stedet for ICL7660 (−5 V holder 10–12 mA, 150 kHz), ingen loddepasta under TPA3116 (DAD har
+kjøleflaten på toppen), ferritt + 10 µF foran PGA2311 VA+. Kortet er 180 × 100.
 
 Alt unntatt Raspberry Pi 4 og frontdelene: 24 V inn (sikring, TVS, bulk), TPS54560 5 V/5 A buck,
 AMS1117 3,3 V, ICL7660 -5 V, PCM5102A DAC, G6K-2P relé (DAC/AUX), PGA2311 volum, TPA3116D2 2x50 W,
@@ -14,7 +18,7 @@ from pcbnew import VECTOR2I_MM as MM
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "ki_pultforsterker_main.kicad_pcb")
 FP = "/usr/share/kicad/footprints"
-BW, BH = 150.0, 100.0          # kortstørrelse
+BW, BH = 180.0, 100.0          # kortstørrelse (rev B: 30 mm bredere, USB-blokken til høyre)
 
 # ---------------------------------------------------------------- deler
 # (ref, lib, footprint, value, lcsc, x, y, rot, beskrivelse)
@@ -52,7 +56,7 @@ part("C11", C_, C0603, "100n", "C14663", 54, 39, 90, "Cout HF")
 # --- 3,3 V og -5 V (x 8–48, y 52–64) ---
 part("U2", TO, "SOT-223-3_TabPin2", "AMS1117-3.3", "C6186", 20, 56, 0, "LDO 3,3 V")
 part("C12", C_, C0805, "10u", "C15850", 14, 56, 90, "LDO in"); part("C13", C_, C0805, "10u", "C15850", 26, 56, 90, "LDO out"); part("C14", C_, C0603, "100n", "C14663", 28, 61, 0, "LDO out HF")
-part("U3", SO, "SOIC-8_3.9x4.9mm_P1.27mm", "ICL7660", "C7439", 40, 56, 0, "Ladepumpe -5 V")
+part("U3", SO, "SOIC-8_3.9x4.9mm_P1.27mm", "LM2662MX", "C129316", 40, 56, 0, "Ladepumpe -5 V, 150 kHz (FC til V+), 200 mA")
 part("C15", C_, C0805, "10u", "C15850", 34, 62, 0, "Flykondensator"); part("C16", C_, C0805, "10u", "C15850", 46, 62, 0, "-5 V ut")
 
 # --- Pi-header (venstre kant) ---
@@ -77,6 +81,7 @@ part("R12", R_, R0603, "100k", "C25803", 108, 56, 90, "Bias L"); part("R13", R_,
 part("U5", SO, "SOIC-16W_7.5x10.3mm_P1.27mm", "PGA2311UA", "C168915", 118, 62, 90, "Volumkontroll ±5 V")
 part("C27", C_, C0603, "100n", "C14663", 112, 70, 0, "VD+"); part("C28", C_, C0603, "100n", "C14663", 124, 70, 0, "VA+"); part("C29", C_, C0603, "100n", "C14663", 124, 73, 0, "VA-")
 part("C30", C_, C0805, "10u", "C15850", 128, 70, 0, "VA+ bulk"); part("C31", C_, C0805, "10u", "C15850", 128, 74, 0, "VA- bulk")
+part("FB1", "Inductor_SMD", "L_0805_2012Metric", "600R@100MHz", "C18305", 132, 66, 0, "Ferritt 5 V -> PGA2311 VA+ (filter)")
 part("R14", R_, R0603, "10k", "C25804", 112, 73, 0, "MUTE pull-up")
 
 # --- forsterker TPA3116D2 (x 60–135, y 18–48) ---
@@ -115,7 +120,24 @@ for i, x in enumerate([44, 48, 52]):
     part(f"R{40+i}", R_, R0603, "10k", "C25804", x, 81, 90, "Pull-up encoder"); part(f"C{62+i}", C_, C0603, "100n", "C14663", x, 85, 90, "Debounce encoder")
 part("R43", R_, R0603, "4.7k", "C23162", 80, 86, 0, "I2C pull-up SDA"); part("R44", R_, R0603, "4.7k", "C23162", 80, 89, 0, "I2C pull-up SCL")
 part("C65", C_, C0603, "100n", "C14663", 88, 86, 0, "3V3 ved OLED")
-for i, (x, y) in enumerate([(4, 4), (146, 4), (4, 96), (146, 96)]):
+# --- USB-delingsswitch (x 140–180): 2 × USB-C inn (til panelkontakter bak med korte kabler), mux, hub, 4 × USB-A ut i høyre kant ---
+part("U7", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "FE1.1s", "C6706491", 149, 46, 90, "USB 2.0 4-ports hub")
+part("Y1", "Crystal", "Crystal_SMD_3225-4Pin_3.2x2.5mm", "12MHz", "C9002", 149, 37, 90, "Hub-krystall (lastkondensatorer innebygd)")
+part("C67", C_, C0805, "10u", "C15850", 141, 34, 90, "VD18_O"); part("C69", C_, C0603, "100n", "C14663", 141, 38, 90, "VD18")
+part("R45", R_, R0603, "2.7k", "C25772", 141, 42, 90, "REXT (1 %)"); part("R46", R_, R0603, "10k", "C25804", 141, 50, 90, "OVCJ/XRSTJ pull-up")
+part("C66", C_, C0805, "10u", "C15850", 141, 54, 90, "VD33_O"); part("C73", C_, C0603, "100n", "C14663", 141, 58, 90, "VD33")
+part("C68", C_, C0603, "100n", "C14663", 141, 62, 90, "VDD5")
+part("U8", "Package_DFN_QFN", "UQFN-10_1.4x1.8mm_P0.4mm", "TS3USB221", "C130085", 147, 62, 0, "USB 2:1-mux PC1/PC2 (S = GPIO 13)")
+part("C70", C_, C0603, "100n", "C14663", 144, 66, 0, "Mux VCC"); part("R47", R_, R0603, "100k", "C25803", 150, 66, 0, "S pulldown (= PC 1)")
+part("J11", "Connector_USB", "USB_C_Receptacle_HRO_TYPE-C-31-M-12", "PC1", "C2765186", 154, 90, 0, "USB-C fra PC 1 (via panelkabel)")
+part("J12", "Connector_USB", "USB_C_Receptacle_HRO_TYPE-C-31-M-12", "PC2", "C2765186", 167, 90, 0, "USB-C fra PC 2 (via panelkabel)")
+part("R48", R_, R0603, "5.1k", "C23186", 150, 82, 0, "CC1 PC1"); part("R49", R_, R0603, "5.1k", "C23186", 150, 79, 0, "CC2 PC1")
+part("R50", R_, R0603, "5.1k", "C23186", 163, 82, 0, "CC1 PC2"); part("R51", R_, R0603, "5.1k", "C23186", 163, 79, 0, "CC2 PC2")
+for i, y in enumerate((16.2, 33.7, 51.2, 68.7)):
+    part(f"J{13+i}", "Connector_USB", "USB_A_Molex_67643_Horizontal", f"USB{i+1}", "C2765194", 167.3, y, 90, f"USB-A ut {i+1} (høyre kant)")
+part("F2", "Fuse", "Fuse_1812_4532Metric", "2A PTC", "C545213", 147, 74, 90, "Polyfuse 5 V til USB-portene")
+part("C71", C_, C1206, "10u", "C13585", 151, 74, 90, "5V_USB"); part("C72", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 146, 16, 0, "5V_USB bulk")
+for i, (x, y) in enumerate([(4, 4), (176, 4), (4, 96), (176, 96)]):
     part(f"H{i+1}", "MountingHole", "MountingHole_3.2mm_M3", "M3", "", x, y, 0, "Festehull")
 
 # ---------------------------------------------------------------- netliste
@@ -135,7 +157,8 @@ net("BUCK_BOOT", ("U1", 1), ("C5", 1)); net("BUCK_SW", ("U1", 8), ("C5", 2), ("L
 net("BUCK_EN", ("U1", 3), ("R1", 2), ("R2", 1)); net("BUCK_RT", ("U1", 4), ("R3", 1))
 net("BUCK_FB", ("U1", 5), ("R4", 2), ("R5", 1)); net("BUCK_COMP", ("U1", 6), ("R6", 1), ("C7", 1)); net("BUCK_COMPC", ("R6", 2), ("C6", 1))
 net("5V", ("L1", 2), ("R4", 1), ("C8", 1), ("C9", 1), ("C10", 1), ("C11", 1), ("U2", 3), ("C12", 1), ("U3", 8), ("J6", 1), ("J5", 2), ("J5", 4),
-    ("K1", 1), ("D3", 1), ("U5", 4), ("U5", 12), ("U5", 1), ("C27", 1), ("C28", 1), ("C30", 1), ("R14", 1), ("J10", 1))
+    ("K1", 1), ("D3", 1), ("U5", 4), ("U5", 1), ("C27", 1), ("R14", 1), ("J10", 1),
+    ("U7", 20), ("U7", 18), ("C68", 1), ("F2", 1), ("C72", 1))
 # 3,3 V
 net(GND, ("U2", 1), ("C12", 2), ("C13", 2), ("C14", 2))
 net("3V3", ("U2", 2), ("C13", 1), ("C14", 1), ("U4", 1), ("U4", 8), ("U4", 20), ("C20", 1), ("C21", 1), ("C22", 1), ("R7", 1),
@@ -143,6 +166,8 @@ net("3V3", ("U2", 2), ("C13", 1), ("C14", 1), ("U4", 1), ("U4", 8), ("U4", 20), 
 # -5 V
 net(GND, ("U3", 3), ("C16", 2)); net("CP_PLUS", ("U3", 2), ("C15", 1)); net("CP_MINUS", ("U3", 4), ("C15", 2))
 net("VNEG", ("U3", 5), ("C16", 1), ("U5", 13), ("C29", 1), ("C31", 1))
+net("5V", ("U3", 1))   # LM2662 FC = V+ -> 150 kHz (utenfor hørbart)
+net("5VA", ("FB1", 2), ("U5", 12), ("C28", 1), ("C30", 1)); net("5V", ("FB1", 1))
 # Pi header GND + signaler (BCM -> fysisk pinne)
 for p in (6, 9, 14, 20, 25, 30, 34, 39):
     net(GND, ("J5", p))
@@ -187,8 +212,23 @@ net(GND, ("C53", 2), ("C54", 2), ("C55", 2), ("C56", 2), ("C49", 2), ("C50", 2),
 net("SPK_LN", ("L2", 2), ("C49", 1), ("J2", 2)); net("SPK_LP", ("L3", 2), ("C50", 1), ("J2", 1))
 net("SPK_RN", ("L4", 2), ("C51", 1), ("J3", 2)); net("SPK_RP", ("L5", 2), ("C52", 1), ("J3", 1))
 net(GND, ("J6", 2))
+# USB-delingsswitch
+net("5V_USB", ("F2", 2), ("C71", 1), *[(f"J{13+i}", 1) for i in range(4)]); net(GND, ("C71", 2), ("C72", 2))
+net("USB_VD33", ("U7", 21), ("U7", 13), ("U7", 19), ("C66", 1), ("C73", 1), ("R46", 1), ("U8", 1), ("C70", 1))
+net("USB_VD18", ("U7", 12), ("U7", 28), ("C67", 1), ("C69", 1))
+net("USB_REXT", ("U7", 14), ("R45", 1)); net("USB_RSTJ", ("U7", 17), ("U7", 26), ("R46", 2))
+net("USB_XIN", ("U7", 3), ("Y1", 1)); net("USB_XOUT", ("U7", 2), ("Y1", 3))
+net(GND, ("U7", 1), ("Y1", 2), ("Y1", 4), ("R45", 2), ("C66", 2), ("C67", 2), ("C68", 2), ("C69", 2), ("C73", 2), ("C70", 2), ("U8", 5), ("U8", 10), ("R47", 2))
+net("USB_UP_DP", ("U7", 16), ("U8", 3)); net("USB_UP_DM", ("U7", 15), ("U8", 4))
+net("USB_SEL", ("J5", 33), ("U8", 2), ("R47", 1))   # GPIO 13: lav = PC 1, høy = PC 2
+net("PC1_DP", ("U8", 6), ("J11", "A6"), ("J11", "B6")); net("PC1_DM", ("U8", 7), ("J11", "A7"), ("J11", "B7"))
+net("PC2_DP", ("U8", 8), ("J12", "A6"), ("J12", "B6")); net("PC2_DM", ("U8", 9), ("J12", "A7"), ("J12", "B7"))
+net("PC1_CC1", ("J11", "A5"), ("R48", 1)); net("PC1_CC2", ("J11", "B5"), ("R49", 1)); net("PC2_CC1", ("J12", "A5"), ("R50", 1)); net("PC2_CC2", ("J12", "B5"), ("R51", 1))
+net(GND, ("R48", 2), ("R49", 2), ("R50", 2), ("R51", 2), *[(j, p) for j in ("J11", "J12") for p in ("A1", "B1", "A12", "B12", "S1")])
+for i, (dp, dm) in enumerate(((11, 10), (9, 8), (7, 6), (5, 4))):
+    net(f"USB{i+1}_DP", ("U7", dp), (f"J{13+i}", 3)); net(f"USB{i+1}_DM", ("U7", dm), (f"J{13+i}", 2)); net(GND, (f"J{13+i}", 4), (f"J{13+i}", 5))
 
-POWER_NETS = {"VIN24": 2.0, "24V_IN": 2.0, "5V": 1.2, "BUCK_SW": 1.5, "OUTNL": 1.5, "OUTPL": 1.5, "OUTNR": 1.5, "OUTPR": 1.5,
+POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "VIN24": 2.0, "24V_IN": 2.0, "5V": 1.2, "BUCK_SW": 1.5, "OUTNL": 1.5, "OUTPL": 1.5, "OUTNR": 1.5, "OUTPR": 1.5,
               "SPK_LN": 1.5, "SPK_LP": 1.5, "SPK_RN": 1.5, "SPK_RP": 1.5, "3V3": 0.5, "VNEG": 0.4}
 
 # ---------------------------------------------------------------- bygg kortet
@@ -226,8 +266,15 @@ def build():
             if not found:
                 raise SystemExit(f"{ref} har ingen pad {pad}")
     # ubrukte pads sjekk: alle pads på IC-er skal ha nett (unntatt NC)
-    nc_ok = {("U3", "1"), ("U3", "6"), ("U3", "7"), ("U5", "7"), ("U6", "3"), ("U6", "16"), ("J5", "1"), ("J5", "17"), ("J5", "27"), ("J5", "28"), ("U1", "0")}
+    nc_ok = {("U3", "6"), ("U3", "7"), ("U7", "22"), ("U7", "23"), ("U7", "24"), ("U7", "25"), ("U7", "27"), ("U5", "7"), ("U6", "3"), ("U6", "16"), ("J5", "1"), ("J5", "17"), ("J5", "27"), ("J5", "28"), ("U1", "0")}
     for ref in ("U1", "U6"):   # termiske via-pads uten nummer -> GND
+        for pd in fps[ref].Pads():
+            if pd.GetNumber() == "":
+                pd.SetNet(nets[GND])
+    for pd in fps["U6"].Pads():   # TPA3116D2DAD har kjøleflaten på TOPPEN – ingen pasta under brikken
+        if pd.GetNumber() in ("", "33"):
+            ls = pd.GetLayerSet(); ls.RemoveLayer(pcbnew.F_Paste); pd.SetLayerSet(ls)
+    for ref in ("J11", "J12"):   # USB-C: skjermpads uten nummer -> GND
         for pd in fps[ref].Pads():
             if pd.GetNumber() == "":
                 pd.SetNet(nets[GND])
@@ -238,8 +285,8 @@ def build():
     # GND-soner på begge lag
     for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
         z = pcbnew.ZONE(board); z.SetLayer(layer); z.SetNet(nets[GND]); z.SetIsFilled(False)
-        z.SetLocalClearance(pcbnew.FromMM(0.25)); z.SetMinThickness(pcbnew.FromMM(0.25))
-        z.SetPadConnection(pcbnew.ZONE_CONNECTION_THERMAL); z.SetThermalReliefGap(pcbnew.FromMM(0.4)); z.SetThermalReliefSpokeWidth(pcbnew.FromMM(0.5))
+        z.SetLocalClearance(pcbnew.FromMM(0.2)); z.SetMinThickness(pcbnew.FromMM(0.2))
+        z.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)   # direkte tilkobling: ingen «starved thermal» ved tette IC-pads
         ol = z.Outline(); ol.NewOutline()
         for (x, y) in [(1, 1), (BW - 1, 1), (BW - 1, BH - 1), (1, BH - 1)]:
             ol.Append(pcbnew.FromMM(x), pcbnew.FromMM(y))
@@ -259,9 +306,9 @@ def build():
     except Exception as e:
         print("Nettklasser:", e)
     # tekst
-    t = pcbnew.PCB_TEXT(board); t.SetText("KI Pultforsterker  rev A  2026"); t.SetPosition(MM(75, 78)); t.SetLayer(pcbnew.F_SilkS)
+    t = pcbnew.PCB_TEXT(board); t.SetText("KI Pultforsterker  rev B  2026"); t.SetPosition(MM(75, 78)); t.SetLayer(pcbnew.F_SilkS)
     t.SetTextSize(pcbnew.VECTOR2I(pcbnew.FromMM(1.5), pcbnew.FromMM(1.5))); board.Add(t)
-    for txt, x, y in [("24V IN", 14, 12), ("SPK L", 108, 12), ("SPK R", 134, 12), ("AUX", 122, 12), ("Pi 40", 14, 90), ("KNAPPER", 24, 98.5), ("ENC", 44, 98.5), ("5V PI", 62, 98.5), ("OLED", 84, 98.5), ("LED", 118, 98.5)]:
+    for txt, x, y in [("24V IN", 14, 12), ("SPK L", 108, 12), ("SPK R", 134, 12), ("AUX", 122, 12), ("Pi 40", 14, 90), ("KNAPPER", 24, 98.5), ("ENC", 44, 98.5), ("5V PI", 62, 98.5), ("OLED", 84, 98.5), ("LED", 118, 98.5), ("PC1", 154, 98.5), ("PC2", 167, 98.5), ("USB 1-4", 160, 12)]:
         t = pcbnew.PCB_TEXT(board); t.SetText(txt); t.SetPosition(MM(x, y)); t.SetLayer(pcbnew.F_SilkS)
         t.SetTextSize(pcbnew.VECTOR2I(pcbnew.FromMM(1.0), pcbnew.FromMM(1.0))); board.Add(t)
     pcbnew.SaveBoard(OUT, board)
