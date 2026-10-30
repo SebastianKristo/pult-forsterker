@@ -17,11 +17,12 @@ CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
 if [ "$OUT" = headphones ]; then
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
   sudo sed -i 's/^dtoverlay=hifiberry-dac/#dtoverlay=hifiberry-dac/' "$CFG"
-  LINES='dtparam=i2c_arm=on dtoverlay=spi0-1cs dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
+  LINES='dtparam=i2c_arm=on dtoverlay=spi0-1cs,no_miso dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
 else
   sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
-  LINES='dtoverlay=hifiberry-dac dtparam=i2c_arm=on dtoverlay=spi0-1cs dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
+  LINES='dtoverlay=hifiberry-dac dtparam=i2c_arm=on dtoverlay=spi0-1cs,no_miso dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
 fi
+sudo sed -i 's/^dtoverlay=spi0-1cs$/dtoverlay=spi0-1cs,no_miso/' "$CFG"   # GPIO 9 (MISO) brukes til BT-LED på hovedkortet
 for line in $LINES; do
   # bare dwc2 respekteres hvis den er kommentert ut for hånd – Pi OS leverer «#dtparam=i2c_arm=on» som standard
   case "$line" in dtoverlay=dwc2*) grep -qxF "#$line" "$CFG" && { echo "  hopper over $line (kommentert ut for hånd)"; continue; } ;; esac
