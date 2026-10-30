@@ -25,7 +25,7 @@ MCP23017, per-kilde-nivå, TFT) er skrevet, men kan bare testes på et ferdig ko
 | **USB-kodek AUX 2** | PCM2900C, 12 MHz-krystall, bus-powered fra en USB-port på Pi-en (J19) | Inngang 10k/4,7k-deler, 4,7 µF. Vises som «USB Audio CODEC» |
 | Volum | PGA2311 (±5 V), bit-banget fra GPIO 0 (SDI), 1 (SCLK), 16 (CS) – header 27/28/36, 5 V via ferritt + 10 µF | fast nivå; volum og nivå per kilde gjøres digitalt |
 | Forsterker | TPA3116D2DAD, 26 dB (100k/20k), BD-modus (MODSEL = GND), 400 kHz (AM = 000), MUTE = GND, SYNC åpen, PLIMIT = GVDD, 10 µH + 680 nF + snubber per utgang | **Kjøleflaten er på toppen**: ingen loddepasta under, kjøleribbe 20 × 20 limes på. SDZ fra GPIO 22 |
-| **USB-switch** | FE1.1s 4-ports hub + TS3USB221 2:1-mux. 2 × USB-C (PC 1/PC 2) på kortet, 4 × USB-A i venstre kant, polyfuse 2 A | Mux-valg fra MCP23017 GPB4 (lav = PC 1). CC-pinnene har 5,1 k, så USB-C–USB-C-kabel virker |
+| **USB-switch** | FE1.1s 4-ports hub + TS3USB221 2:1-mux (OE = GND). 2 × USB-C (PC 1/PC 2) på kortet, 4 × USB-A i venstre kant, polyfuse 2 A | Mux-valg fra MCP23017 GPB4 (S lav = PC 1). CC-pinnene har 5,1 k, så USB-C–USB-C-kabel virker. Huben og muxen går på alltid-5 V |
 | I/O-ekspander | MCP23017 (I2C 0x20), INT → GPIO 14 | GPA0-4 knapper AIR/BT/AUX/USB/PWR, GPA5 jack-deteksjon, GPA6 HP-EN, GPB0-3 LED-ringer, GPB4 USB-mux, GPA7/GPB5 ledige på «EXP» |
 | LED-ringer | 5 × AO3400 low-side | POWER-ring på GPIO 12 (PWM) |
 | **Hodetelefoner** | TPA6132A2 (DirectPath, −6 dB) etter PGA2311, 1 µF inn, 5V_SW. EN fra MCP23017 GPA6; jack-bryteren (DET) via 10 k til GPA5, 10 k pulldown på OUTL gir sikker «lav» uten plugg | 3,5 mm PJ-392 i fronten under POWER (J23). Ved innplugging dempes TPA3116 (SDZ) – kan slås av i HA/Homey |
@@ -82,8 +82,12 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 1. JLCPCB → «Add gerber file» → zip-en. 2 lag, 180 × 100 mm, grønn/svart, HASL (lead free).
 2. Huk av «PCB Assembly», Top side, 2 stk. Last opp BOM og CPL.
 3. Kontroller at alle LCSC-numre finnes på lager; bytt tilsvarende hvis noen er tomme (verdiene står i BOM). Sjekk spesielt
-   FE1.1s (C6706491), PCM1808 (C7436), PCM2900C (C180425), TS3USB221 (C130085), MCP23017 (C506653), SRD-05VDC (C35449),
-   TPA6132A2 (C69901).
+   TPS54560DDAR (C31966), PCM5102APWR (C107671), PCM1808PWR (C55513), TPA3116D2DADR (C50144), PGA2311UA (C486061),
+   FE1.1s (C6706491), PCM2900C (C180425), TS3USB221RSER (C130085), MCP23017 (C506653), SRD-05VDC (C35449), TPA6132A2 (C69901),
+   12,288 MHz-oscillator (C437124, lite lager – reserve C70567). **Les beskrivelsen JLCPCB viser per linje** – disse koden er ikke
+   verifisert mot lager: USB-A Molex 67643 (C2765194), polyfuse 1812 (C545213), SRP1245A (C135446), 12 × 12-spoler (C182272),
+   220 µF SMD (C134754), SS56 (C32569), sikringsklips (C70283), headere (C50982/C50981), skruterminal (C8465), ferritt (C18305).
+   Alle IC-ene er «extended parts» (engangsgebyr per type).
 4. Festehull: H1–H4 M3 (stolper i kassen), H5–H8 M2,5 (Raspberry Pi 4 under kortet).
 5. THT-deler loddes selv etter levering: J1–J3, J6 (skruterminaler), J4/J7–J10/J19–J22 (JST), J5, J13 (headere), F1 (sikringsklips),
    C1 + C110 (1000 µF), K1 (relé), J15–J18 (USB-A), J23 (JST).
@@ -144,7 +148,9 @@ for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 - C1/C110: kjøp 1000 µF/35 V Ø10 med høyde ≤ 16 mm (kassen er 48 mm innvendig 43,5).
 - USB-banene er ikke impedanskontrollerte (2 lag), men korte. Full speed/high speed over få cm går normalt fint.
 - Freerouting-ruting er funksjonell, ikke optimal. Sjekk at 24 V- og høyttalersporene ikke har unødvendige vias.
-- Relé-pinner: 1–2 spole, 4 COM, 5 NO (3 NC ubrukt) etter KiCad-footprinten for SRD. Mål med multimeter før første gang.
-- TPS54560-kompensasjon er fra datablad-eksempelet; ikke målt.
+- Relé-pinner etter KiCad-footprinten for SRD: **2 og 5 = spole, 1 = COM (den forskjøvede), 3 = NO (24 V inn), 4 = NC (ubrukt)**. Mål med multimeter
+  før første gang: uten strøm på spolen skal det være brudd mellom pinne 1 og 3. Er det kortslutning, er NO/NC byttet – flytt 24 V-inn til pinne 4 med en jumper.
+- TPS54560-kompensasjon (13,3 k/3,3 n/47 p) gir ca. 24 kHz crossover med 10 µH/3 × 47 µF – stabil, men TI-eksempelet bruker 16,9 k/4,7 n. Ikke målt.
+- Ingen fiducialer på kortet; JLCPCB krever det ikke, men sjekk pinne-1-rotasjon på SOT-23/SOIC/QFN i CPL-forhåndsvisningen.
 - TPA6132A2 går på fast −6 dB; høyttalervolumet og hodetelefonvolumet følger hverandre (samme PGA2311/CamillaDSP-volum).
 - PCM2900C: 1,5 kΩ pull-up på D+ til VCCCI er lagt til i tillegg til eventuell intern – sjekk at enumerasjon virker.
