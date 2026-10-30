@@ -333,7 +333,8 @@ Homey-appen → *Enheter → + → Pultforsterker* → forsterkeren finnes via m
 
 ## 9. Bytte til hovedkortet (rev B)
 
-Når kortet er montert i kassen (`kabinett/stl/v2_body_revb.stl`, se `pcb/README.md` for kontaktene):
+Når kortet er montert i kassen (platemetall fra PCBWay: `kabinett/skjold-s1/`, se `LES_MEG_PULTFORSTERKER.md` der; den
+printede `kabinett/stl/v2_body_revb.stl` er reserve. Kontaktene står i `pcb/README.md`):
 
 1. Pi 4 skrus fast under hovedkortet med fire 20 mm M2,5-avstandsstykker i hullene H5–H8 (portene mot høyre, SD-kortet mot
    venstre – det er en luke i gulvet). Hovedkortet 25 mm over gulvet på stolpene, flush mot venstre vegg så USB-A-portene stikker ut. 40-pin flatkabel (10 cm) J5 → Pi (rød stripe mot pinne 1 begge steder), 5 V fra **J6** til Pi header pinne 2 (5 V)

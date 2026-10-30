@@ -27,7 +27,7 @@ DIY stereoforsterker (2 × 50 W) som henger under pulten. AirPlay 2, Bluetooth, 
 pi/                 Programvare til Raspberry Pi (daemon, OLED, install.sh, systemd, ALSA)
 homeassistant/      custom_components/ki_pultforsterker + eksempel-package
 homey/              Homey-app no.kristo.ki-pultforsterker
-kabinett/           OpenSCAD-kilde, ferdige STL-er, verktøy for render og veiledninger
+kabinett/           Kabinett: skjold-s1/ (platemetall + printet frontplate, PCBWay) og STL-er for den printede kassen
 docs/               Byggeveiledning (PDF + markdown), bildeveiledning (PDF), alle renders
 3d-visning/         Interaktiv 3D-modell av ferdig produkt (three.js, én HTML-fil)
 design-referanse/   Opprinnelig designpakke (front, OLED-layout, oppførsel, farger)

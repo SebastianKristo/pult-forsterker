@@ -1,0 +1,11 @@
+{
+  "name": "skjold-s1-generatorer",
+  "private": true,
+  "type": "module",
+  "description": "Kjører Skjold S1-generatorene (cad/*.js) lokalt uten nett: npm install && node run.mjs .. all",
+  "dependencies": {
+    "fflate": "0.8.2",
+    "manifold-3d": "3.0.0",
+    "three": "0.170.0"
+  }
+}
