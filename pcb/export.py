@@ -519,13 +519,13 @@ with open(os.path.join(OUT, "ki_pultforsterker_main_cpl.csv"), "w", newline="") 
     w = csv.writer(fh); w.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
     for row in csv.DictReader(open(pos)):
         ref = row["Ref"]
-        if ref in bom and bom[ref]["LCSC"]:
-            w.writerow([ref, f'{float(row["PosX"]):.3f}mm', f'{-float(row["PosY"]):.3f}mm', "Top", row["Rot"]])
+        if ref in bom and bom[ref]["Value"] != "DNP":   # også deler uten LCSC-kode – JLCPCB spør da om en del; Y som KiCad gir (negativ = samme som gerber)
+            w.writerow([ref, f'{float(row["PosX"]):.3f}mm', f'{float(row["PosY"]):.3f}mm', "Top", row["Rot"]])
 os.remove(pos)
 # BOM gruppert (JLCPCB-format: Comment, Designator, Footprint, LCSC)
 groups = {}
 for ref, r in bom.items():
-    if not r["LCSC"]: continue
+    if r["Value"] == "DNP": continue
     groups.setdefault((r["Value"], r["Footprint"], r["LCSC"]), []).append(ref)
 with open(os.path.join(OUT, "ki_pultforsterker_main_bom.csv"), "w", newline="") as fh:
     w = csv.writer(fh); w.writerow(["Comment", "Designator", "Footprint", "LCSC Part #"])

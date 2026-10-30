@@ -117,7 +117,7 @@ Høye deler (høyde over kortets overside → topp i kasse-z). Posisjon i kasse-
 | J7, J8, J9, J10, J21, J23 | JST XH stående + plugg | 2,5 mm deling | front, y −42,3 | | 7 + 8 | 44 | ja |
 | J4, J20, J19 | JST XH (høyre kant) | | 83,7 | −6,3 / −18,3 / −32,3 | 15 | 44 | ja |
 | J13 | 1 × 14 header + flatkabel | | 26,7 … 61,5 | −42,3 | 8,5 + plugg | ~45 | ja |
-| J11, J12 | USB-C på kortet | | −62,3 | −24,3 / −34,3 | 3,3 | 32,4 | kabel 15 cm til panelet |
+| J11, J12 | USB-C på kortet, **i bakkanten** (åpningen vender mot bakpanelet, 28 mm fri) | | −78,8 / −67,3 | 47,8 | 3,3 | 32,4 | panelkabelens USB-C-hann settes rett i; 15–20 cm |
 | J15–J18 | USB-A Molex, liggende | 13,1 × 5,6 | −92,3 … −76,8 | 35,5 / 18,0 / 0,5 / −17,0 | 7 | 36,1 | vindusenter z 32,6 ✓ |
 | Øvrig SMD | | | | | ≤ 2 | | |
 

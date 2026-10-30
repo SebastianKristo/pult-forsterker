@@ -57,7 +57,7 @@ part("U1", SO, "HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm", "TPS54560DDAR", "C319
 part("C2", C_, C1210, "4.7u/50V", "C76838", 12, 22, 0, "Cin"); part("C3", C_, C1210, "4.7u/50V", "C76838", 12, 26, 0, "Cin")
 part("C4", C_, C0603, "100n/50V", "C14663", 12, 30, 0, "Cin HF")
 part("C5", C_, C0603, "100n", "C14663", 30, 24, 90, "Boot")
-part("R1", R_, R0603, "330k", "C23171", 14, 36, 0, "EN divider (UVLO ~9 V)"); part("R2", R_, R0603, "51k", "C23184", 14, 39, 0, "EN divider")
+part("R1", R_, R0603, "330k", "C23137", 14, 36, 0, "EN divider (UVLO ~9 V)"); part("R2", R_, R0603, "51k", "C23184", 14, 39, 0, "EN divider")
 part("R3", R_, R0603, "243k", "C22999", 14, 42, 0, "RT 400 kHz")
 part("R4", R_, R0603, "56k", "C23206", 30, 36, 0, "FB top (5,2 V ut)"); part("R5", R_, R0603, "10.2k", "C25744", 30, 39, 0, "FB bottom")
 part("R6", R_, R0603, "13.3k", "C22791", 30, 42, 0, "Comp R"); part("C6", C_, C0603, "3.3n", "C1613", 30, 45, 0, "Comp C"); part("C7", C_, C0603, "47p", "C1671", 34, 45, 0, "Comp Cp")
@@ -112,7 +112,7 @@ part("FB1", "Inductor_SMD", "L_0805_2012Metric", "600R@100MHz", "C18305", 132, 6
 part("R14", R_, R0603, "10k", "C25804", 108, 70, 0, "MUTE pull-up")
 
 # --- forsterker TPA3116D2 (x 60–135, y 18–48) ---
-part("U6", SO, "HTSSOP-32-1EP_6.1x11mm_P0.65mm_EP5.2x11mm_Mask4.11x4.36mm_ThermalVias", "TPA3116D2DADR", "C50144", 84, 34, 0, "Klasse D 2x50 W (kjøleflate på toppen – kjøleribbe!)")
+part("U6", SO, "HTSSOP-32-1EP_6.1x11mm_P0.65mm_EP5.2x11mm_Mask4.11x4.36mm", "TPA3116D2DADR", "C50144", 84, 34, 0, "Klasse D 2x50 W (kjøleflate på toppen – kjøleribbe!)")
 part("C32", C_, C0805, "220n/50V", "C45790", 98, 36.9, 0, "BSNL"); part("C33", C_, C0805, "220n/50V", "C45790", 94, 34.3, 0, "BSPL")
 part("C34", C_, C0805, "220n/50V", "C45790", 98, 33.0, 0, "BSNR"); part("C35", C_, C0805, "220n/50V", "C45790", 94, 30.4, 0, "BSPR")
 part("C36", C_, C0603, "100n/50V", "C14663", 92, 27, 0, "PVCC HF"); part("C37", C_, C0805, "1u/50V", "C28323", 96, 27, 0, "PVCC"); part("C38", C_, C0603, "100n/50V", "C14663", 92, 41, 0, "PVCC HF"); part("C39", C_, C0805, "1u/50V", "C28323", 96, 41, 0, "PVCC")
@@ -231,7 +231,8 @@ for p in P:
 SILK_SHIFT = lambda x: (BW - x) if x >= 139.5 else x + 40.0
 # etterjusteringer: høyttalerterminal R innenfor kanten, frontkontaktene litt tettere, AUX 1/2 og USB-PI på høyre kant
 _fix = {"J3": (164, 6, 0), "J7": (46, 94, 0), "J8": (65.5, 94, 0), "J21": (82.5, 94, 0), "J6": (93, 94, 0), "J9": (104, 94, 0), "J13": (119, 94, 90), "J10": (157, 94, 0),
-        "J4": (176, 58, 90), "J20": (176, 70, 90), "J19": (176, 84, 90), "FB1": (167, 66, 0), "D10": (25, 68.5, 0), "D11": (30, 93.5, 0), "J24": (33.5, 5.5, 0), "R81": (30.0, 9.0, 0), "C112": (33.0, 9.0, 0), "U14": (39.5, 5.5, 0), "C111": (39.5, 9.0, 0), "R82": (42.5, 9.0, 0),
+        "J4": (176, 58, 90), "J20": (176, 70, 90), "J19": (176, 84, 90), "FB1": (167, 66, 0), "J11": (13.5, 3.9, 180), "J12": (25.0, 3.9, 180), "R48": (9.5, 10.0, 0), "R49": (13.0, 10.0, 0), "R50": (23.0, 10.0, 0), "R51": (16.3, 10.0, 0),
+        "J24": (45.2, 5.5, 0), "D10": (43.5, 11.5, 0), "D11": (43.5, 15.3, 0), "R81": (47.6, 11.0, 90), "C112": (47.6, 14.4, 90), "R82": (47.6, 17.8, 90), "U14": (43.5, 19.3, 0), "C111": (47.6, 21.2, 90), "R83": (150.0, 58.5, 0),
         "J23": (16, 94, 0), "C108": (16, 89, 0), "R76": (12, 86, 0), "R77": (21, 89, 0), "R78": (118.5, 89, 0), "R67": (166, 52, 0), "R68": (166, 55, 0), "R69": (170, 52, 0), "R70": (170, 55, 0), "C93": (166, 83, 90), "C94": (170, 84, 90), "C97": (166, 88, 0), "C98": (170, 88, 0)}
 for p in P:
     if p["ref"] in _fix:
@@ -289,7 +290,7 @@ net(GND, ("J7", 6), *[(f"C{57+i}", 2) for i in range(5)])
 # EXP: A5 = jack-deteksjon, A6 = HP EN (også på J22)
 net("EXP_A5", ("U12", 26), ("J22", 1)); net("EXP_A6", ("U12", 27), ("J22", 2)); net("EXP_A7", ("U12", 28), ("J22", 3)); net("EXP_B5", ("U12", 6), ("J22", 4)); net(GND, ("J22", 6))
 # overtemperaturvakt (NTC): 3V3 - R81 - NTC - GND; node -> U14 inngang (pinne 2), utgang (pinne 4) -> EXP_A7 = MCP GPA7
-net("NTC", ("J24", 1), ("R81", 2), ("C112", 1), ("U14", 2)); net("EXP_A7", ("U14", 4), ("R82", 1)); net(GND, ("R82", 2))
+net("NTC", ("J24", 1), ("R81", 2), ("C112", 1), ("U14", 2)); net("EXP_B5", ("U14", 4), ("R82", 1)); net(GND, ("R82", 2))   # GPB5 – GPA7/GPB7 kan ikke brukes som innganger (Microchip-errata)
 net("3V3", ("R81", 1), ("U14", 5), ("C111", 1), ("R83", 1)); net(GND, ("J24", 2), ("C112", 2), ("C111", 2), ("U14", 3))
 # knapp bak -> GPIO 15
 net("BTN_BAK", ("J5", 10), ("J21", 1), ("R45", 2), ("C65", 1)); net(GND, ("J21", 2), ("C65", 2))
@@ -385,15 +386,13 @@ net(GND, ("R48", 2), ("R49", 2), ("R50", 2), ("R51", 2), *[(j, p) for j in ("J11
 for i, (dp, dm) in enumerate(((11, 10), (9, 8), (7, 6), (5, 4))):
     net(f"USB{i+1}_DP", ("U7", dp), (f"J{15+i}", 3), (f"D{6+i}", 1), (f"D{6+i}", 6)); net(f"USB{i+1}_DM", ("U7", dm), (f"J{15+i}", 2), (f"D{6+i}", 3), (f"D{6+i}", 4)); net(GND, (f"J{15+i}", 4), (f"J{15+i}", 5))
 
-POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP": 2.0, "VIN24": 2.0, "24V_IN": 2.0, "5V": 1.2, "BUCK_SW": 1.5, "OUTNL": 1.5, "OUTPL": 1.5, "OUTNR": 1.5, "OUTPR": 1.5,
+POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP": 2.0, "VIN24": 2.0, "24V_IN": 2.0, "24V_F": 2.0, "5V": 1.2, "BUCK_SW": 1.5, "OUTNL": 1.5, "OUTPL": 1.5, "OUTNR": 1.5, "OUTPR": 1.5,
               "SPK_LN": 1.5, "SPK_LP": 1.5, "SPK_RN": 1.5, "SPK_RP": 1.5, "3V3": 0.5, "VNEG": 0.4}
 
-FIXED_GND_STUBS = {("U5", "5"): (158.0, 68.45), ("U8", "5"): (34.0, 63.6), ("U8", "6"): (34.6, 62.2)}   # TS3USB221: 0,4 mm pitch – for tett for via-i-pad   # (ref, pad) -> via-posisjon
+FIXED_GND_STUBS = {}   # TS3USB221: 0,4 mm pitch – for tett for via-i-pad   # (ref, pad) -> via-posisjon
 # låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
 FIXED_TRACKS = [("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
     ("PC2_DP", "F.Cu", 0.2, [(32.6, 62.7685), (32.2, 63.7)]), ("PC2_DM", "F.Cu", 0.2, [(33.0, 62.7685), (33.1, 64.2)]),
-    ("PC2_DM", "B.Cu", 0.2, [(33.1, 64.2), (31.9, 65.6), (31.9, 85.0), (29.25, 85.0)]),   # x 31,9: klaring til NPTH-hullene i J11/J12 (x 32,89)   # U8 pinne 4 -> under J12 -> A7/B7
-    ("PC2_DM", "F.Cu", 0.2, [(29.25, 85.0), (29.25, 81.955), (29.25, 80.978), (30.25, 80.978), (30.25, 81.955)]),   # TS3USB221 pinne 3/4 (0,4 mm pitch): ut til vias
     ("CODEC_VINR", "F.Cu", 0.25, [(150.4, 87.575), (148.9, 87.575)]), ("CODEC_VINR", "B.Cu", 0.25, [(148.9, 87.575), (148.9, 88.9), (155.0, 88.9)]),   # PCM2900C pinne 13 -> C98
     ("CODEC_VINR", "F.Cu", 0.25, [(155.0, 88.9), (155.0, 89.54), (160.0, 89.54), (161.0, 89.3), (170.95, 89.3), (170.95, 88.0)]),
     ("HP_CPP", "F.Cu", 0.2, [(133.438, 44.75), (133.85, 44.75), (134.05, 44.95), (134.9, 46.0)]),
@@ -402,8 +401,8 @@ FIXED_TRACKS = [("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   
     ("AMP_RINN", "F.Cu", 0.2, [(120.35, 31.725), (118.6, 31.725)]),   # TPA3116 pinne 5 ble stengt inne av nabosporene
                 ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),   # TPA6132A2 PGND/SGND -> termisk pad
                 ("USB3_DP", "F.Cu", 0.2, [(30.675, 49.6), (30.675, 53.8)])]   # FE1.1s pinne 7 ut nedover mellom nabosporene
-FIXED_VIAS = [("HP_INR", (129.4, 45.75)), ("PC2_DP", (32.2, 63.7)), ("PC2_DM", (33.1, 64.2)), ("PC2_DM", (29.25, 85.0)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725))]
-FIXED_GND_VIP = {("U4","16"):(109.4,61.675), ("C65","2"):(86.0,85.0), ("D10","2"):(23.35,68.5), ("R47","2"):(30.95,66.0), ("U11","4"):(149.85,81.725), ("U4", "3"): (102.6, 60.375), ("U4", "9"): (102.6, 64.275), ("U10", "12"): (136.35, 59.35), ("C27", "2"): (152.775, 70.0), ("U13", "17"): (132.0, 45.0), ("C63", "2"): (78.0, 85.225), ("C60", "2"): (66.0, 85.225), ("C62", "2"): (74.0, 85.225), ("U10", "5"): (130.7, 60.65), ("U12", "10"): (63.9, 73.625)}   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
+FIXED_VIAS = [("HP_INR", (129.4, 45.75)), ("PC2_DP", (32.2, 63.7)), ("PC2_DM", (33.1, 64.2)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725))]
+FIXED_GND_VIP = {}   # GND rutes nå som nett av Freerouting – ingen via-i-pad (lodder dårlig uten fylte vias)   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet
 def build():
@@ -450,6 +449,13 @@ def build():
     nc_ok = {("U14", "1"), ("U3", "6"), ("U3", "7"), ("U7", "22"), ("U7", "23"), ("U7", "24"), ("U7", "25"), ("U7", "27"), ("K1", "4"),
              ("U11", "5"), ("U11", "6"), ("U11", "7"), ("U11", "15"), ("U11", "16"), ("U11", "25"), ("U11", "28"), ("U12", "11"), ("U12", "14"), ("U12", "19"),
              ("U12", "7"), ("U12", "8"), ("U5", "7"), ("U6", "3"), ("U6", "16"), ("J5", "1"), ("J5", "17"), ("U1", "0"), ("J13", "9"), ("J11", "A8"), ("J11", "B8"), ("J12", "A8"), ("J12", "B8")}
+    for fp in fps.values():   # gjennompletterte pads: termisk avlastning så de lar seg håndlodde mot planet
+        for pd in fp.Pads():
+            if pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH:
+                pd.SetZoneConnection(pcbnew.ZONE_CONNECTION_THERMAL)
+    for ref in ("H1", "H2", "H3", "H4"):   # kassens stolper: ingen kobber rundt hullet (stjernejord bare bak)
+        for pd in fps[ref].Pads():
+            pd.SetLocalClearance(pcbnew.FromMM(1.5))
     for ref in ("U1", "U6", "U13"):   # termiske via-pads uten nummer -> GND
         for pd in fps[ref].Pads():
             if pd.GetNumber() == "":
@@ -479,13 +485,11 @@ def build():
         ncs = ds.m_NetSettings.m_NetClasses
         default = ds.m_NetSettings.m_DefaultNetClass
         default.SetTrackWidth(pcbnew.FromMM(0.2)); default.SetClearance(pcbnew.FromMM(0.15)); default.SetViaDiameter(pcbnew.FromMM(0.6)); default.SetViaDrill(pcbnew.FromMM(0.3))   # signalnett 0,2 mm / via 0,6/0,3 (JLCPCB standard) gir Freerouting plass
-        for cname, w in [("Power", 2.0), ("Power5V", 1.2), ("Out", 1.5), ("Mid", 0.5)]:
+        for cname, w in [("Power", 1.5), ("Power5V", 1.2), ("Out", 1.5), ("Mid", 0.5)]:
             nc = pcbnew.NETCLASS(cname); nc.SetTrackWidth(pcbnew.FromMM(w)); nc.SetClearance(pcbnew.FromMM(0.3 if w >= 1.2 else 0.2))
             nc.SetViaDiameter(pcbnew.FromMM(1.2 if w >= 1.2 else 0.8)); nc.SetViaDrill(pcbnew.FromMM(0.6 if w >= 1.2 else 0.4))
             ncs[cname] = nc
-        for n, w in POWER_NETS.items():
-            cname = "Power" if w >= 2.0 else ("Out" if w >= 1.5 else ("Power5V" if w >= 1.2 else "Mid"))
-            ds.m_NetSettings.m_NetClassPatternAssignments.append(pcbnew.NETCLASS_PATTERN_PAIR(n, cname)) if hasattr(pcbnew, "NETCLASS_PATTERN_PAIR") else None
+        # KiCad 7-Python har ikke m_NetClassPatternAssignments – tilordningen skrives inn i .kicad_pro etter lagring (se under)
     except Exception as e:
         print("Nettklasser:", e)
     # tekst
@@ -510,6 +514,13 @@ def build():
     for (ref, pad), (vx, vy) in FIXED_GND_VIP.items():
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.5)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     pcbnew.SaveBoard(OUT, board)
+    # nettklasse-tilordning (mønstre) i prosjektfila – LoadBoard leser den, så Freerouting får riktige bredder i DSN-en
+    import json as _json
+    pro = OUT.replace(".kicad_pcb", ".kicad_pro")
+    if os.path.exists(pro):
+        d = _json.load(open(pro)); ns_ = d.setdefault("net_settings", {})
+        ns_["netclass_patterns"] = [{"netclass": ("Power" if w >= 2.0 else ("Out" if w >= 1.5 else ("Power5V" if w >= 1.0 else "Mid"))), "pattern": n} for n, w in POWER_NETS.items()]
+        _json.dump(d, open(pro, "w"), indent=2)
     print("Lagret", OUT, "deler:", len(P), "nett:", len(N))
     with open(os.path.join(HERE, "bom.csv"), "w", newline="") as fh:
         w = csv.writer(fh); w.writerow(["Designator", "Value", "Footprint", "LCSC", "Beskrivelse"])

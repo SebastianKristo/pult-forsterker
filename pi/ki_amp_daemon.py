@@ -175,7 +175,7 @@ if HW:
 
 class Mcp23017:
     """I2C I/O-ekspander på hovedkortet: GPA0-4 knapper (pull-up, aktiv lav), GPA5 jack-deteksjon, GPA6 HP-EN (ut),
-    GPA7 overtemperatur (høy = kjøleribben > ~75 °C), GPB0-3 LED-ringer, GPB4 USB-mux (0 = PC 1)."""
+    GPB5 overtemperatur (høy = kjøleribben > ~75 °C), GPB0-3 LED-ringer, GPB4 USB-mux (0 = PC 1)."""
     IODIRA, IODIRB, GPPUA, GPIOA, GPIOB, OLATA, OLATB, GPINTENA, IOCON = 0x00, 0x01, 0x0C, 0x12, 0x13, 0x14, 0x15, 0x04, 0x0A
 
     def __init__(self, addr=0x20, bus=1):
@@ -187,7 +187,7 @@ class Mcp23017:
             self._w(self.IODIRA, 0xBF)                      # GPA6 (HP-EN) ut, resten inn
             self._w(self.GPPUA, 0x3F)                       # pull-up på knappene GPA0-4 og jack-deteksjon GPA5 (GPA7 drives av Schmitt-inverteren)
             self._w(self.GPINTENA, 0x3F); self._w(self.OLATA, 0x00)
-            self._w(self.IODIRB, 0x00); self._w(self.OLATB, 0x00)
+            self._w(self.IODIRB, 0x20); self._w(self.OLATB, 0x00)   # GPB5 = overtemperatur inn (fra 74LVC1G14), resten ut
             self.ok = True
             print(f"MCP23017 på 0x{addr:02x} klar", flush=True)
         except Exception as e:
@@ -203,6 +203,14 @@ class Mcp23017:
         with self.lock:
             v = self.bus.read_byte_data(self.addr, self.GPIOA)
         return {i for i in range(8) if not (v >> i) & 1}
+
+    def read_overtemp(self):
+        """GPB5 høy = kjøleribben er for varm (74LVC1G14-utgangen)."""
+        if not self.ok:
+            return False
+        with self.lock:
+            v = self.bus.read_byte_data(self.addr, self.GPIOB)
+        return bool((v >> MCP_OVERTEMP) & 1)
 
     def set_b(self, bit, on):
         if not self.ok:
@@ -529,7 +537,7 @@ def apply_headphones():
     amp_sdz.value = speakers_on()
 
 
-MCP_OVERTEMP = 7
+MCP_OVERTEMP = 5   # GPB5 (port B) – GPA7/GPB7 kan ikke brukes som innganger (Microchip-errata)
 
 
 def set_overtemp(hot):
@@ -946,7 +954,7 @@ def setup_buttons():
                     for name, vb in mcp_btns.items():
                         vb.update(bits[name] in pressed, now)
                     # jack-bryteren: kontakten ligger mot OUTL (0 V) uten plugg = lav; plugg inn bryter den = pull-up = høy
-                    _safe(lambda: set_overtemp(MCP_OVERTEMP not in pressed))   # GPA7 høy = for varmt
+                    _safe(lambda: set_overtemp(mcp.read_overtemp()))   # GPB5 høy = for varmt
                     plugged = (MCP_HP_DET not in pressed) != HP_DET_INV
                     if plugged == hp_last[0]:
                         hp_since[0] = now

@@ -26,8 +26,8 @@ MCP23017, per-kilde-nivå, TFT) er skrevet, men kan bare testes på et ferdig ko
 | Volum | PGA2311 (±5 V), bit-banget fra GPIO 0 (SDI), 1 (SCLK), 16 (CS) – header 27/28/36, 5 V via ferritt + 10 µF | fast nivå; volum og nivå per kilde gjøres digitalt |
 | Forsterker | TPA3116D2DAD, 26 dB (100k/20k), BD-modus (MODSEL = GND), 400 kHz (AM = 000), MUTE = GND, SYNC åpen, PLIMIT = GVDD, 10 µH + 680 nF + snubber per utgang | **Kjøleflaten er på toppen**: ingen loddepasta under, kjøleribbe 20 × 20 limes på. SDZ fra GPIO 22 |
 | **USB-switch** | FE1.1s 4-ports hub + TS3USB221 2:1-mux (OE = GND). 2 × USB-C (PC 1/PC 2) på kortet, 4 × USB-A i venstre kant, polyfuse 2 A | Mux-valg fra MCP23017 GPB4 (S lav = PC 1). CC-pinnene har 5,1 k, så USB-C–USB-C-kabel virker. Huben og muxen går på alltid-5 V |
-| I/O-ekspander | MCP23017 (I2C 0x20), INT → GPIO 14 | GPA0-4 knapper AIR/BT/AUX/USB/PWR, GPA5 jack-deteksjon, GPA6 HP-EN, GPA7 overtemperatur (NTC), GPB0-3 LED-ringer, GPB4 USB-mux, GPB5 ledig på «EXP» |
-| **Overtemperaturvakt** | NTC 10 k (B 3950) på kjøleribben → J24 → 3,3 k-deler → 74LVC1G14 Schmitt-inverter (U14) → MCP GPA7. 100 k pull-down så «kald» hvis U14 mangler | Vipper ved ca. 75 °C, tilbake ved ca. 50 °C. Daemonen demper TPA3116 (SDZ) mens den er varm og melder i loggen/`/api/state` (`overtemp`) |
+| I/O-ekspander | MCP23017 (I2C 0x20), INT → GPIO 14 | GPA0-4 knapper AIR/BT/AUX/USB/PWR, GPA5 jack-deteksjon, GPA6 HP-EN, GPB0-3 LED-ringer, GPB4 USB-mux, **GPB5 overtemperatur (NTC)**; GPA7 ligger på «EXP» men kan bare brukes som utgang (Microchip-errata: GPA7/GPB7 er ikke innganger) |
+| **Overtemperaturvakt** | NTC 10 k (B 3950) på kjøleribben → J24 → 3,3 k-deler → 74LVC1G14 Schmitt-inverter (U14) → MCP GPB5. 100 k pull-down så «kald» hvis U14 mangler | Vipper ved ca. 75 °C, tilbake ved ca. 50 °C. Daemonen demper TPA3116 (SDZ) mens den er varm og melder i loggen/`/api/state` (`overtemp`) |
 | LED-ringer | 5 × AO3400 low-side | POWER-ring på GPIO 12 (PWM) |
 | **Hodetelefoner** | TPA6132A2 (DirectPath, +6 dB) etter PGA2311, 1 µF inn, alltid-på 5 V (EN kommer fra alltid-på MCP, og må aldri være høyere enn VDD). EN fra MCP23017 GPA6; jack-bryteren (DET) via 10 k til GPA5, 10 k pulldown på OUTL gir sikker «lav» uten plugg | 3,5 mm PJ-392 i fronten under POWER (J23). Ved innplugging dempes TPA3116 (SDZ) – kan slås av i HA/Homey |
 | TFT | 14-pinners header (standard 2,4"/2,8" ILI9341/ST7789V-modul med XPT2046) | SPI0 CE0 (GPIO 8) = TFT, CE1 (GPIO 7) = touch med 10 k pull-up, DC 5, RST 6, IRQ 17, baklys GPIO 13 (PWM) via AO3400 + AO3401 fra 3V3_SW |
@@ -61,12 +61,12 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 | J8 | JST XH 5 | CLK, DT, SW, 3V3, GND (encoder) |
 | J9 | JST XH 5 | 3V3_SW, GND, SDA, SCL, RES (OLED) |
 | J10 | JST XH 6 | 5V_SW, AIR−, BT−, AUX−, USB−, POWER− (LED-ringer) |
-| J11 / J12 | USB-C på kortet | PC 1 / PC 2 → panelmontert USB-C bak med 15 cm kabel |
+| J11 / J12 | USB-C på kortet, i bakkanten (åpningen mot bakpanelet) | PC 1 / PC 2 → panelmontert USB-C bak; panelkabelens hann-plugg settes rett i, 15–20 cm |
 | J13 | 1×14 header 2,54 | TFT: VCC GND CS RST DC MOSI SCK LED (MISO ikke koblet) T_CLK T_CS T_DIN T_DO T_IRQ (samme rekkefølge som modulen) |
 | J15–J18 | USB-A | 4 × USB-A ut gjennom venstre vegg |
 | J19 | JST XH 4 | 5V, D−, D+, GND fra en USB-A-port på Pi-en (USB-kodeken) |
 | J21 | JST XH 2 | strømknapp bak (momentan), GND |
-| J22 | JST XH 6 | EXP: MCP GPA5 (= jack-deteksjon via 10 k), GPA6 (= HP-EN), GPA7 (= overtemperatur fra U14 – ikke driv den), GPB5, 3V3, GND |
+| J22 | JST XH 6 | EXP: MCP GPA5 (= jack-deteksjon via 10 k), GPA6 (= HP-EN), GPA7 (ledig, bare utgang), GPB5 (= overtemperatur fra U14 – ikke driv den), 3V3, GND |
 | J24 | JST XH 2 | NTC 10 k (B 3950) festet på kjøleribben (ikke polarisert) |
 | J23 | JST XH 4 | Hodetelefonjack i fronten (PJ392 med bryter, under POWER): L, R, GND, DET (jackens bryterkontakt for L: ligger mot L uten plugg, åpen med plugg) |
 
@@ -88,13 +88,14 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
    FE1.1s (C6706491), PCM2900C (C180425), TS3USB221RSER (C130085), MCP23017 (C506653), SRD-05VDC (C35449), TPA6132A2 (C69901),
    12,288 MHz-oscillator (C437124, lite lager – reserve C70567). **Les beskrivelsen JLCPCB viser per linje** – disse koden er ikke
    verifisert mot lager: USB-A Molex 67643 (C2765194), polyfuse 1812 (C545213), SRP1245A (C135446), 12 × 12-spoler (C182272),
-   220 µF SMD (C134754), SS56 (C32569), sikringsklips (C70283), headere (C50982/C50981), skruterminal (C8465), ferritt (C18305), 330 k 0603 (C23171).
-   **Uten LCSC-kode (velg i BOM-verktøyet):** U14 74LVC1G14 SOT-23-5 (SN74LVC1G14DBVR eller 74LVC1G14GV), D1 SMBJ28A (TVS 28 V, SMB), Q11 P-MOSFET TO-252 (≥ −40 V, ≥ 10 A, f.eks. AOD4185/SUD50P04), D5 zener 12 V SOD-123, C1/C110 1000 µF 35 V Ø10.
+   220 µF SMD (C134754), SS56 (C32569), sikringsklips (C70283), headere (C50982/C50981), skruterminal (C8465), ferritt (C18305), 330 k 0603 (C23137 – verifisert).
+   **Uten LCSC-kode (linjene ligger i BOM/CPL med tom kode – JLCPCB ber deg velge del):** U14 74LVC1G14 SOT-23-5 (SN74LVC1G14DBVR eller 74LVC1G14GV), D1 SMBJ28A (TVS 28 V, SMB), Q11 P-MOSFET TO-252 (≥ −40 V, ≥ 10 A, f.eks. AOD4185/SUD50P04), D5 zener 12 V SOD-123, C1/C110 1000 µF 35 V Ø10.
    Alle IC-ene er «extended parts» (engangsgebyr per type).
 4. Festehull: H1–H4 M3 (stolper i kassen), H5–H8 M2,5 (Raspberry Pi 4 under kortet).
 5. THT-deler loddes selv etter levering: J1–J3, J6 (skruterminaler), J4/J7–J10/J19–J22 (JST), J5, J13 (headere), F1 (sikringsklips),
    C1 + C110 (1000 µF), K1 (relé), J15–J18 (USB-A), J23 (JST).
-6. Kjøleribbe 20 × 20 × 10 mm med termisk tape (1,5–2 mm) på toppen av TPA3116. NTC-en (10 k, B 3950, glass- eller epoksyperle) limes/teipes på ribbens side med varmeledende lim eller Kapton, ledning til J24.
+6. Alle gjennompletterte pads har termisk avlastning mot jordplanet (lar seg håndlodde). Kassens fire M3-hull har kobberfri sone – kortet jordes til kassen bare via jordpunktet bak.
+7. Kjøleribbe 20 × 20 × 10 mm med termisk tape (1,5–2 mm) på toppen av TPA3116. NTC-en (10 k, B 3950, glass- eller epoksyperle) limes/teipes på ribbens side med varmeledende lim eller Kapton, ledning til J24.
 
 ## Slik virker kortet – funksjoner, innganger og utganger
 
@@ -156,7 +157,7 @@ for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 | Overstrøm USB-A | Polyfuse 2 A (F2) på 5V_USB | Hub-brikken har også OVCJ |
 | ESD på USB-kontaktene | **USBLC6-2SC6 på alle seks** (4 × USB-A, 2 × USB-C) | Viktig i metallkasse med tilgjengelige porter |
 | 5 V til Pi | Bucken strømbegrenser (~7 A) | **Aldri USB-C-strøm i Pi-en samtidig med J6** – to forsyninger i parallell uten dioder. Dette gjelder også «SERV»-kontakten bak: en PC legger 5 V på VBUS. Bruk en SERV-hale med **VBUS brutt** (klipp den røde lederen, eller en data-only-adapter) så Pi-en bare får 5 V fra J6 |
-| Overtemperatur | NTC på kjøleribben → U14 → MCP GPA7 | Daemonen demper forsterkeren over ca. 75 °C og slipper den ved ca. 50 °C. TPA3116 har i tillegg eget 150 °C-vern |
+| Overtemperatur | NTC på kjøleribben → U14 → MCP GPB5 | Daemonen demper forsterkeren over ca. 75 °C og slipper den ved ca. 50 °C. TPA3116 har i tillegg eget 150 °C-vern |
 | Overtemperatur | TPA3116 og TPS54560 har termisk nedstenging | Kjøleribben på TPA3116: 20 × 20 × 15 mm med 1 mm termisk pute mot lokket gjør kassen til kjøleribbe (lokkets innside er 46,5 mm over bunnen) |
 | Plopp/klikk i høyttalerne | Programvaren slår av SDZ og XSMT før releet, og på i motsatt rekkefølge med pause; PGA2311 mutes i standby | |
 | Klipping/for høyt nivå | PGA2311 står fast på −9 dB (`KI_AMP_PGA_DB`): full digital styrke = 0,74 Vrms inn på TPA3116 = like under klipping ved 24 V. Hodetelefonforsterkeren har +6 dB (≈ 20 mW i 32 Ω) | Volumramp fra 0 ved oppstart i programvaren |
