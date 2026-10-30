@@ -130,6 +130,9 @@ Høye deler (høyde over kortets overside → topp i kasse-z). Posisjon i kasse-
   ved å ta av bunnplaten.
 - 40-pin flatkabel (10 cm) fra Pi-headeren (x ≈ −71 … −22, y 38,5, z 7,5–16) opp rundt kortets kant til J5. 5 V fra J6 til Pi-header pinne 2/6.
 - Pi-ens USB-C-strøminngang brukes ikke. En USB-A-port på Pi-en brukes til J19 (USB-kodek) med kort kabel, USB-C-panelkontakten «SERV» går med forlenger til Pi-ens egen USB-C-port (OTG – Pi-en er USB-lydkort/UAC2-gadget).
+  **SERV-halen skal ha VBUS brutt** (rød leder klippet / data-only-adapter): PC-en legger 5 V på VBUS, og Pi-en skal bare få 5 V fra J6.
+- NTC 10 k (B 3950) på kjøleribben, 2-leder til J24 på kortet (overtemperaturvakt). Ribben er 20 × 20 × 10 på toppen av TPA3116; NTC-perlen festes på en sidefinne med varmeledende lim/Kapton.
+- DC-kontakten bak skal ha **plastisolert krage** (nylonhylse) så den ikke lager et ekstra jordpunkt mot panelet; høyttalerpolene isolert (se bakpaneltabellen).
 - Luftespaltene i bunnen (y −34 … 6) ligger under Pi-en.
 
 ### Ledninger

@@ -119,6 +119,7 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "headphones": False,   # hodetelefoner i front-jacken (hovedkortet)
          "last_wireless": "airplay",   # sist brukte trådløse kilde (airplay/bt) – «BT»-knappen på hovedkortet
          "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
+         "overtemp": False,     # NTC på kjøleribben over ~75 °C (MCP GPA7) – TPA3116 dempes til den er under ~50 °C
          "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100}}   # nivå per kilde (miks)
 LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD == "main" else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
@@ -174,7 +175,7 @@ if HW:
 
 class Mcp23017:
     """I2C I/O-ekspander på hovedkortet: GPA0-4 knapper (pull-up, aktiv lav), GPA5 jack-deteksjon, GPA6 HP-EN (ut),
-    GPB0-3 LED-ringer, GPB4 USB-mux (0 = PC 1)."""
+    GPA7 overtemperatur (høy = kjøleribben > ~75 °C), GPB0-3 LED-ringer, GPB4 USB-mux (0 = PC 1)."""
     IODIRA, IODIRB, GPPUA, GPIOA, GPIOB, OLATA, OLATB, GPINTENA, IOCON = 0x00, 0x01, 0x0C, 0x12, 0x13, 0x14, 0x15, 0x04, 0x0A
 
     def __init__(self, addr=0x20, bus=1):
@@ -182,7 +183,10 @@ class Mcp23017:
         try:
             from smbus2 import SMBus
             self.bus = SMBus(bus)
-            self._w(self.IOCON, 0x04); self._w(self.IODIRA, 0xBF)   # IOCON ODR: INTA open-drain (GPIO 14 er også UART TXD); self._w(self.GPPUA, 0xBF); self._w(self.GPINTENA, 0x3F); self._w(self.OLATA, 0x00)
+            self._w(self.IOCON, 0x04)                       # IOCON ODR: INTA open-drain (GPIO 14 er også UART TXD)
+            self._w(self.IODIRA, 0xBF)                      # GPA6 (HP-EN) ut, resten inn
+            self._w(self.GPPUA, 0x3F)                       # pull-up på knappene GPA0-4 og jack-deteksjon GPA5 (GPA7 drives av Schmitt-inverteren)
+            self._w(self.GPINTENA, 0x3F); self._w(self.OLATA, 0x00)
             self._w(self.IODIRB, 0x00); self._w(self.OLATB, 0x00)
             self.ok = True
             print(f"MCP23017 på 0x{addr:02x} klar", flush=True)
@@ -513,7 +517,7 @@ def apply_input():
 
 def speakers_on():
     """TPA3116 skal være aktiv: på, og ikke dempet av hodetelefoner (auto-demping)."""
-    return state["power"] and not (state["headphones"] and state["hp_automute"])
+    return state["power"] and not (state["headphones"] and state["hp_automute"]) and not state["overtemp"]
 
 
 def apply_headphones():
@@ -523,6 +527,19 @@ def apply_headphones():
     if mcp:
         mcp.set_a(MCP_HP_EN, state["power"] and state["headphones"])
     amp_sdz.value = speakers_on()
+
+
+MCP_OVERTEMP = 7
+
+
+def set_overtemp(hot):
+    if hot == state["overtemp"]:
+        return
+    state["overtemp"] = hot
+    print("OVERTEMPERATUR: kjøleribben er for varm – forsterkeren dempes" if hot else "Temperatur OK igjen – forsterkeren er på", flush=True)
+    if HW and BOARD == "main":
+        amp_sdz.value = speakers_on()
+    changed()
 
 
 def set_headphones(plugged):
@@ -929,6 +946,7 @@ def setup_buttons():
                     for name, vb in mcp_btns.items():
                         vb.update(bits[name] in pressed, now)
                     # jack-bryteren: kontakten ligger mot OUTL (0 V) uten plugg = lav; plugg inn bryter den = pull-up = høy
+                    _safe(lambda: set_overtemp(MCP_OVERTEMP not in pressed))   # GPA7 høy = for varmt
                     plugged = (MCP_HP_DET not in pressed) != HP_DET_INV
                     if plugged == hp_last[0]:
                         hp_since[0] = now

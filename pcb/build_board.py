@@ -158,6 +158,13 @@ part("J4", "Connector_JST", "JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical", "AUX1", "C1
 part("J20", "Connector_JST", "JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical", "AUX2", "C144394", 153, 94, 0, "AUX 2 fra PJ392 bak: L, R, GND")
 part("J19", "Connector_JST", "JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical", "USB PI", "C144395", 164.5, 96, 0, "Fra en USB-port på Pi-en: 5V D- D+ GND (kodek)")
 part("J22", "Connector_JST", "JST_XH_B6B-XH-A_1x06_P2.50mm_Vertical", "EXP", "C144397", 57, 85, 0, "Ledige MCP-pinner GPA5 GPA6 GPA7 GPB5 + 3V3 GND")
+# Overtemperaturvakt: NTC 10 k (B 3950) på kjøleribben -> 3,3 k-deler -> Schmitt-inverter -> MCP GPA7 (høy = for varmt).
+# Vipper ved ca. 75 °C, tilbake ved ca. 50 °C (hysteresen i 74LVC1G14).
+part("J24", "Connector_JST", "JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical", "NTC", "C158012", 27, 6, 0, "NTC 10 k på kjøleribben (TPA3116)")
+part("R81", R_, R0603, "3.3k", "C22978", 34.5, 6.5, 90, "NTC-deler til 3V3"); part("C112", C_, C0603, "100n", "C14663", 34.5, 9.5, 90, "NTC-filter")
+part("U14", TO, "SOT-23-5", "74LVC1G14", "", 32.5, 12.3, 0, "Schmitt-inverter (SN74LVC1G14DBVR / 74LVC1G14GV) – LCSC-kode sjekkes i BOM-verktøyet")
+part("C111", C_, C0603, "100n", "C14663", 31.8, 6.5, 90, "U14 VCC")
+part("R82", R_, R0603, "100k", "C25803", 32.5, 15.0, 0, "Pull-down GPA7 (ikke «varm» hvis U14 mangler)")
 for i, (nm, x) in enumerate([("AIR", 76), ("BT", 82), ("AUX", 88), ("USB", 94), ("PWR", 100)]):
     part(f"Q{i+2}", TO, "SOT-23-3", "AO3400A", "C20917", x, 84, 0, f"LED-ring {nm}")
     part(f"R{25+i}", R_, R0603, "100", "C22775", x, 80, 0, f"Gate {nm}"); part(f"R{30+i}", R_, R0603, "100k", "C25803", x - 3, 80, 90, f"Pulldown {nm}")
@@ -280,6 +287,9 @@ for i, (nm, gpa) in enumerate([("AIR", 21), ("BT", 22), ("AUX", 23), ("USB", 24)
 net(GND, ("J7", 6), *[(f"C{57+i}", 2) for i in range(5)])
 # EXP: A5 = jack-deteksjon, A6 = HP EN (også på J22)
 net("EXP_A5", ("U12", 26), ("J22", 1)); net("EXP_A6", ("U12", 27), ("J22", 2)); net("EXP_A7", ("U12", 28), ("J22", 3)); net("EXP_B5", ("U12", 6), ("J22", 4)); net(GND, ("J22", 6))
+# overtemperaturvakt (NTC): 3V3 - R81 - NTC - GND; node -> U14 inngang (pinne 2), utgang (pinne 4) -> EXP_A7 = MCP GPA7
+net("NTC", ("J24", 1), ("R81", 2), ("C112", 1), ("U14", 2)); net("EXP_A7", ("U14", 4), ("R82", 1)); net(GND, ("R82", 2))
+net("3V3", ("R81", 1), ("U14", 5), ("C111", 1)); net(GND, ("J24", 2), ("C112", 2), ("C111", 2), ("U14", 3))
 # knapp bak -> GPIO 15
 net("BTN_BAK", ("J5", 10), ("J21", 1), ("R45", 2), ("C65", 1)); net(GND, ("J21", 2), ("C65", 2))
 # encoder -> GPIO 23/24/25
@@ -426,7 +436,7 @@ def build():
             if not found:
                 raise SystemExit(f"{ref} har ingen pad {pad}")
     # ubrukte pads sjekk: alle pads på IC-er skal ha nett (unntatt NC)
-    nc_ok = {("U3", "6"), ("U3", "7"), ("U7", "22"), ("U7", "23"), ("U7", "24"), ("U7", "25"), ("U7", "27"), ("K1", "4"),
+    nc_ok = {("U14", "1"), ("U3", "6"), ("U3", "7"), ("U7", "22"), ("U7", "23"), ("U7", "24"), ("U7", "25"), ("U7", "27"), ("K1", "4"),
              ("U11", "5"), ("U11", "6"), ("U11", "7"), ("U11", "15"), ("U11", "16"), ("U11", "25"), ("U11", "28"), ("U12", "11"), ("U12", "14"), ("U12", "19"),
              ("U12", "7"), ("U12", "8"), ("U5", "7"), ("U6", "3"), ("U6", "16"), ("J5", "1"), ("J5", "17"), ("U1", "0")}
     for ref in ("U1", "U6"):   # termiske via-pads uten nummer -> GND

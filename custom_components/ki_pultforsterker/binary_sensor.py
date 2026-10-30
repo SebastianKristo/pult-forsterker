@@ -12,7 +12,7 @@ from .entity import KiAmpEntity
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpPlayingSensor(c), KiAmpHeadphonesSensor(c)])
+    add([KiAmpPlayingSensor(c), KiAmpHeadphonesSensor(c), KiAmpOvertempSensor(c)])
 
 
 class KiAmpPlayingSensor(KiAmpEntity, BinarySensorEntity):
@@ -39,3 +39,17 @@ class KiAmpHeadphonesSensor(KiAmpEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         return bool(self.coordinator.data.get("headphones"))
+
+
+class KiAmpOvertempSensor(KiAmpEntity, BinarySensorEntity):
+    """Kjøleribben på TPA3116 er for varm (NTC på hovedkortet) – forsterkeren dempes til den er avkjølt."""
+    _attr_translation_key = "overtemp"
+    _attr_device_class = BinarySensorDeviceClass.HEAT
+    _attr_icon = "mdi:thermometer-alert"
+
+    def __init__(self, c) -> None:
+        super().__init__(c, "overtemp")
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.data.get("overtemp"))
