@@ -141,6 +141,28 @@ DAC (PCM5102A, 48 kHz) gir analog lyd videre.
 (Pi, hub, relé-spole, Q8) → AMS1117 → 3,3 V (alltid). 5V_SW (bak Q8) → AMS1117 → 3V3_SW (TFT-baklys), LM2662 → −5 V og ferritt → 5VA
 for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 
+## Sikkerhet og vern
+
+| Fare | Vern på kortet | Merknad |
+|---|---|---|
+| Feil polaritet på 24 V | **P-MOSFET Q11** i pluss-linjen etter sikringen (body-dioden leder ved riktig polaritet, FET-en slår på; feil vei = brudd). Zener 12 V + 100 k beskytter gaten | Kortet tåler reversert adapter uten skade. DC-kontakten er senter-pluss |
+| Overspenning/transienter på 24 V | TVS SMBJ33A etter FET-en, 2 × 1000 µF | Klemmer ved ca. 53 V; TPA3116 abs. maks 30 V, bucken 60 V. Bruk en adapter på 19–24 V |
+| Overstrøm 24 V | Sikring 5 A treg (5 × 20) | Full styrke på begge kanaler + Pi 3 A ≈ 5,5 A kortvarig; normal bruk < 1 A. Er sikringen plagsom: 6,3 A T |
+| Kortslutning på høyttalerutgang / mot kassen | TPA3116 har intern kortslutnings-, DC- og overtemperaturbeskyttelse (FAULT) | Utgangene ligger på ca. 12 V DC mot GND (BD-modus) – høyttalerpolene **må** være isolert fra den metalliske kassen (isolerende krage/krympestrømpe) |
+| Kortslutning på hodetelefonutgang | TPA6132A2 har kortslutningsvern | |
+| Overstrøm USB-A | Polyfuse 2 A (F2) på 5V_USB | Hub-brikken har også OVCJ |
+| ESD på USB-kontaktene | **USBLC6-2SC6 på alle seks** (4 × USB-A, 2 × USB-C) | Viktig i metallkasse med tilgjengelige porter |
+| 5 V til Pi | Bucken strømbegrenser (~7 A) | **Aldri USB-C-strøm i Pi-en samtidig med J6** – to forsyninger i parallell uten dioder |
+| Overtemperatur | TPA3116 og TPS54560 har termisk nedstenging | Kjøleribben på TPA3116: 20 × 20 × 15 mm med 1 mm termisk pute mot lokket gjør kassen til kjøleribbe (lokkets innside er 46,5 mm over bunnen) |
+| Plopp/klikk i høyttalerne | Programvaren slår av SDZ og XSMT før releet, og på i motsatt rekkefølge med pause; PGA2311 mutes i standby | |
+| Klipping/for høyt nivå | PGA2311 står fast på −9 dB (`KI_AMP_PGA_DB`): full digital styrke = 0,74 Vrms inn på TPA3116 = like under klipping ved 24 V. Hodetelefonforsterkeren har +6 dB (≈ 20 mW i 32 Ω) | Volumramp fra 0 ved oppstart i programvaren |
+| Jordløkker/brum | Én jordsone; kassen kobles til signal-GND bare i jordpunktet bak (stjernejord) | DC-kontakten bak bør være isolert fra panelet, ellers blir dens hylse et ekstra jordpunkt. USB-isolator anbefales mellom PC og USB-C «Pi» ved brum |
+| Strømløse kretser på aktive busser | DAC, ADC-digital, OLED/TFT-logikk og MCP23017 går på alltid-3,3 V | Ingen backfeed gjennom ESD-dioder når 5V_SW er av |
+
+**Ikke med (vurdert):** inrush-begrenser på 24 V (2 × 1000 µF gir kort inrush som adapteren tåler), separat sikring på 5 V til Pi (bucken begrenser), relé-kontaktvern (24 V DC 4,7 A er innenfor 10 A/30 VDC).
+
+**Første oppstart – sjekkliste:** (1) uten Pi og uten høyttalere: 24 V på J1 → mål 5,2 V på J6, 3,3 V på J22 pinne 5, 0 V på LED-ringkontakten J10 pinne 1 (5V_SW av). (2) Relé: brudd mellom K1 pinne 1 og 3 uten spole. (3) Sett i Pi, start; slå på fra HA → 5V_SW 5 V, −5 V på C16, 24V_AMP på C40. (4) Høyttalere på, volum 15 %.
+
 ## Kjente kompromisser i rev B
 
 - Én felles GND-sone; analog, USB og klasse D deler plan.
