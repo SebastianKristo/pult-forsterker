@@ -321,6 +321,61 @@ for ref, num in sorted(_pad_unconnected_gnd(board) | _island_gnd_pads(board)):
             n_stitch += 1; print("GND-stubb:", ref, num); done = True
     if not done: print("GND-stubb FEILET:", ref, num)
 filler.Fill(board.Zones())
+
+# Sammenheng i jordplanet: alle sonefragmenter (F + B) må henge sammen via vias/PTH-pads. Fragmentgrupper som står
+# alene får en via der et fragment overlapper hovedplanet på motsatt lag.
+def _gnd_components():
+    conn = [t.GetPosition() for t in board.GetTracks() if t.GetClass() == "PCB_VIA" and t.GetNetname() == "GND"]
+    conn += [pd.GetPosition() for fp in board.GetFootprints() for pd in fp.Pads() if pd.GetNetname() == "GND" and pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH]
+    frags = []
+    for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
+        ps = _zone_poly(layer)
+        for i in range(ps.OutlineCount()):
+            poly = pcbnew.SHAPE_POLY_SET(); poly.AddOutline(ps.Outline(i)); frags.append((layer, poly))
+    par = list(range(len(frags)))
+    def f(x):
+        while par[x] != x: par[x] = par[par[x]]; x = par[x]
+        return x
+    for c in conn:
+        hit = [i for i, (_, p) in enumerate(frags) if p.Contains(c)]
+        for i in hit[1:]: par[f(i)] = f(hit[0])
+    groups = {}
+    for i in range(len(frags)): groups.setdefault(f(i), []).append(i)
+    comps = sorted(groups.values(), key=lambda l: -sum(frags[i][1].Area() for i in l))
+    return frags, comps
+def _via_in_overlap(frags, minor, main):
+    for i in minor:
+        li, pi = frags[i]
+        for j in main:
+            lj, pj = frags[j]
+            if lj == li or not pi.BBox().Intersects(pj.BBox()): continue
+            inter = pcbnew.SHAPE_POLY_SET(pi); inter.BooleanIntersection(pj, pcbnew.SHAPE_POLY_SET.PM_FAST)
+            if inter.OutlineCount() == 0: continue
+            for k in range(inter.OutlineCount()):
+                poly = pcbnew.SHAPE_POLY_SET(); poly.AddOutline(inter.Outline(k))
+                p = _free_point2(poly, board)
+                if p is not None: return p
+    return None
+n_bridge = 0
+for _ in range(40):
+    frags, comps = _gnd_components()
+    if len(comps) <= 1: break
+    p = None
+    for minor in comps[1:]:
+        p = _via_in_overlap(frags, minor, comps[0])
+        if p is not None: break
+    if p is None:
+        print("FEIL: jordplanet har", len(comps), "adskilte deler som ikke lar seg binde med via")
+        for minor in comps[1:]:
+            print("   del:", [(pcbnew.LayerName(frags[i][0]), round(frags[i][1].BBox().GetLeft() / 1e6, 1), round(frags[i][1].BBox().GetTop() / 1e6, 1)) for i in minor][:4])
+        break
+    v = pcbnew.PCB_VIA(board); v.SetPosition(p); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd_net)
+    v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); board.Add(v); n_bridge += 1
+    filler.Fill(board.Zones())
+else:
+    print("FEIL: jordplanet fortsatt delt etter 40 bro-vias")
+n_stitch += n_bridge
+print("bro-vias mellom jordplan-deler:", n_bridge, "-> deler:", len(_gnd_components()[1]))
 print("stitching-vias:", n_stitch)
 _rest = sorted(_island_gnd_pads(board))
 if _rest: print("FEIL: GND-pads uten forbindelse til jordplanet:", _rest)
