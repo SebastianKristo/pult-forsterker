@@ -339,6 +339,11 @@ def _gnd_components():
     for c in conn:
         hit = [i for i, (_, p) in enumerate(frags) if p.Contains(c)]
         for i in hit[1:]: par[f(i)] = f(hit[0])
+    # GND-spor smelter sammen med sonen på samme lag: begge endene binder fragmentene de ligger i
+    for t in board.GetTracks():
+        if t.GetClass() != "PCB_TRACK" or t.GetNetname() != "GND": continue
+        hit = [i for i, (l, p) in enumerate(frags) if l == t.GetLayer() and (p.Contains(t.GetStart()) or p.Contains(t.GetEnd()))]
+        for i in hit[1:]: par[f(i)] = f(hit[0])
     groups = {}
     for i in range(len(frags)): groups.setdefault(f(i), []).append(i)
     comps = sorted(groups.values(), key=lambda l: -sum(frags[i][1].Area() for i in l))
