@@ -178,7 +178,7 @@ def _max_width(t):
         lim = min(lim, 2 * (min(q.x, q.y, pcbnew.FromMM(180) - q.x, pcbnew.FromMM(100) - q.y) - _EDGE))
     return lim
 for t in board.GetTracks():
-    if t.GetClass() != "PCB_TRACK" or t.GetNetname() not in WIDEN or t.IsLocked(): continue
+    if t.GetClass() != "PCB_TRACK" or t.GetNetname() not in WIDEN: continue   # også låste (håndlagte 0,4-stubber utvides der det er plass)
     w = _max_width(t)
     w = int(w // pcbnew.FromMM(0.05)) * pcbnew.FromMM(0.05)   # rund ned til 0,05
     if w > t.GetWidth():
@@ -192,6 +192,7 @@ def drc_items(board):
     for blk in _r.split(r"\n(?=\[)", txt):
         m = _r.match(r"\[(\w+)\]", blk)
         if not m: continue
+        if "): Zone [" in blk: continue   # sonen fylles på nytt rundt sporene etterpå – gammel fyll skal ikke smalne strømspor
         pts = [(float(a), float(b_), n) for a, b_, n in _r.findall(r"@\(([-\d.]+) mm, ([-\d.]+) mm\): (?:Track|Via) \[(\w+)\]", blk)]
         items.append((m.group(1), pts))
     return items
@@ -202,6 +203,7 @@ def seg_contains(t, x, y, tol=0.6):
     return _m.hypot(sx + u * (ex - sx) - x, sy + u * (ey - sy) - y) < tol
 print("GND-spor som kolliderte, fjernet:", _drop_colliding_gnd())
 for rnd in range(6):
+    pcbnew.ZONE_FILLER(board).Fill(board.Zones())   # fersk sonefyll før DRC
     bad = [(x, y, n) for typ, pts in drc_items(board) if typ in ("clearance", "hole_clearance", "solder_mask_bridge", "copper_edge_clearance", "items_not_allowed") for (x, y, n) in pts if n in WIDEN]
     if not bad: break
     fixed = 0
