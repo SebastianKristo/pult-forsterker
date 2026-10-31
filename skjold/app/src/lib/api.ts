@@ -1,8 +1,8 @@
 // HTTP-klient mot ki_amp_daemon.py (port 8765). Samme origin på web, konfigurerbar vert i appen.
 import { Capacitor } from '@capacitor/core';
 
-export type InputId = 'radio' | 'airplay' | 'bt' | 'aux' | 'aux2' | 'usb';
-export const INPUT_LABEL: Record<InputId, string> = { radio: 'Radio', airplay: 'AirPlay', bt: 'Blåtann', aux: 'AUX 1', aux2: 'AUX 2', usb: 'USB' };
+export type InputId = 'radio' | 'airplay' | 'bt' | 'aux' | 'aux2' | 'usb' | 'spotify';
+export const INPUT_LABEL: Record<InputId, string> = { radio: 'Radio', airplay: 'AirPlay', bt: 'Blåtann', aux: 'AUX 1', aux2: 'AUX 2', usb: 'USB', spotify: 'Spotify' };
 export type LevelSource = 'airplay' | 'bt' | 'usb' | 'radio' | 'aux' | 'aux2';
 
 export interface Preset { n: number; title: string }

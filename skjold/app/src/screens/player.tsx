@@ -6,7 +6,7 @@ import { art } from '../lib/settings';
 import { Chip, MuteIcon, NextIcon, PlayPauseIcon, PowerIcon, PrevIcon, Slider } from '../components/ui';
 
 export const SRC_COLOR: Record<string, string> = {
-  radio: 'var(--src-radio)', bt: 'var(--src-bt)', usb: 'var(--src-bt)', airplay: 'var(--src-air)', aux: 'var(--src-aux)', aux2: 'var(--src-aux)'
+  radio: 'var(--src-radio)', bt: 'var(--src-bt)', usb: 'var(--src-bt)', airplay: 'var(--src-air)', aux: 'var(--src-aux)', aux2: 'var(--src-aux)', spotify: 'var(--src-spotify)'
 };
 
 export function nowTitle(s: Status | null): { title: string; sub: string } {
@@ -70,7 +70,7 @@ export function PowerButton({ s }: { s: Status | null }) {
   );
 }
 
-const ALL_INPUTS: InputId[] = ['airplay', 'bt', 'radio', 'aux', 'aux2', 'usb'];
+const ALL_INPUTS: InputId[] = ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
 export function InputChips({ s }: { s: Status | null }) {
   const list = s?.inputs?.length ? s.inputs : ALL_INPUTS;
   return (
