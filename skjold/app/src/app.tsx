@@ -1,11 +1,11 @@
 // Skall: telefon (App v2) under 900 px eller i Capacitor, ellers PC (S1 Web v3).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { App as CapApp } from '@capacitor/app';
-import { isNative, hostLabel, PRODUCT_SHORT } from './lib/api';
+import { isNative, hostLabel, PRODUCT_HW, PRODUCT_LABEL, PRODUCT_SHORT } from './lib/api';
 import { atRoot, closeFull, deviceName, fullPlayer, go, lastError, mode, online, openFull, playPause, product, route, status, toast, type Page } from './lib/store';
 import { ICONS } from './lib/settings';
 import { cats } from './screens/settings';
-import { Icon, Logo, PlayPauseIcon } from './components/ui';
+import { Icon, Logo, PlayPauseIcon, PRODUCT_ICON } from './components/ui';
 import { HomePage, RadioPage, RoomsPage, EqPage } from './screens/pages';
 import { SettingsPage, CategoryDetail } from './screens/settings';
 import { Art, PlayerBody, PowerButton, Transport, VolumeRow, nowTitle, subLine } from './screens/player';
@@ -132,29 +132,49 @@ function Phone() {
 const NAV: [Page, string][] = [['home', 'Hjem'], ['play', 'Spiller nå'], ['radio', 'Radio'], ['rooms', 'Rom']];
 
 function Desktop() {
-  const s = status.value, r = route.value;
+  const s = status.value, r = route.value, p = product.value;
   const t = nowTitle(s);
   const cat = r.page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
   const title = cat ? cat.n : TITLES[r.page];
+  const sideCats = cats.value.filter((c) => c.id !== 'rom');   // Rom ligger i hovedmenyen
+  const air = s?.input === 'airplay' && s.airplay_device ? 'Fra ' + s.airplay_device : '';
+  const sysRows: [string, string][] = s ? [
+    ['Kilde', inputLabel(s.input)],
+    ['Volum', String(s.volume)],
+    ...(p === 's1' ? [['Hodetelefoner', s.headphones ? 'Ja' : 'Nei'] as [string, string]] : []),
+    ['Lyrion', s.lyrion ? 'Tilkoblet' : 'Ikke funnet'],
+    ['Blåtann', s.bt_device || '–'],
+    ...(s.input === 'airplay' && s.airplay_device ? [['AirPlay', s.airplay_device] as [string, string]] : []),
+    ['Enhet', PRODUCT_LABEL[p]],
+    ['Adresse', hostLabel()],
+    ['Versjon', s.version ? 'v' + s.version : '–']
+  ] : [['Adresse', hostLabel()]];
   return (
     <div class="desktop">
       <header class="hdr">
-        <div class="row gap16"><Logo /><div class="col"><span class="name">{deviceName.value}</span><span class="sub">{hostLabel()} · v{s?.version ?? '–'}</span></div></div>
+        <div class="row gap16" style={{ minWidth: 0 }}>
+          <Logo />
+          <span class="dev-ico"><Icon d={PRODUCT_ICON[p]} size={24} sw={1.3} /></span>
+          <div class="col" style={{ minWidth: 0 }}>
+            <span class="row gap8"><span class="name ellip">{deviceName.value}</span><span class="type-badge" data-testid="type-badge">{PRODUCT_LABEL[p]}</span></span>
+            <span class="sub ellip">{PRODUCT_HW[p]}{s?.version ? ' · v' + s.version : ''}</span>
+          </div>
+        </div>
         <div class="row gap10">
-          <span class="link-pill"><i style={{ background: online.value ? 'var(--green)' : 'var(--red)' }} />{online.value ? 'Tilkoblet' : 'Frakoblet'}</span>
+          <span class="link-pill"><i style={{ background: online.value ? 'var(--green)' : 'var(--red)' }} />{online.value ? (s?.power ? 'På' : 'Standby') : 'Frakoblet'}</span>
           <PowerButton s={s} />
         </div>
       </header>
       <Offline />
       <div class="cols">
         <nav class="side">
-          {NAV.map(([id, n]) => <button key={id} class={'nv' + (r.page === id ? ' on' : '')} onClick={() => go(id)}>{n}</button>)}
+          {NAV.map(([id, n]) => <button key={id} class={'nv' + (r.page === id || (id === 'rooms' && r.page === 'settings' && r.cat === 'rom') ? ' on' : '')} onClick={() => go(id)}>{n}</button>)}
           <div class="head">INNSTILLINGER</div>
-          {cats.value.map((c) => <button key={c.id} class={'nv' + (r.page === 'settings' && r.cat === c.id ? ' on' : '')} onClick={() => go('settings', c.id)}>{c.n}</button>)}
+          {sideCats.map((c) => <button key={c.id} class={'nv' + (r.page === 'settings' && r.cat === c.id ? ' on' : '')} onClick={() => go('settings', c.id)}>{c.n}</button>)}
         </nav>
         <main class="main">
           <div class="pgh"><h1>{title}</h1>{cat && <span class="sub">{cat.sub}</span>}</div>
-          {r.page === 'home' && <><div class="player"><Art s={s} /><div class="col gap16"><div class="col gap4"><span style={{ fontSize: '24px', fontWeight: 600 }} data-testid="now-title">{t.title}</span><span class="muted">{subLine(t)}</span></div><Transport s={s} /><VolumeRow s={s} /></div></div><HomePage wide /></>}
+          {r.page === 'home' && <><div class="player"><Art s={s} /><div class="col gap16"><div class="col gap4"><span style={{ fontSize: '24px', fontWeight: 600 }} data-testid="now-title">{t.title}</span><span class="muted">{t.sub}</span>{t.album && <span class="muted" style={{ fontSize: '13px', opacity: 0.8 }} data-testid="album">{t.album}</span>}{air && <span class="muted" style={{ fontSize: '12px' }}>{air}</span>}</div><Transport s={s} /><VolumeRow s={s} /></div></div><HomePage wide /></>}
           {r.page === 'play' && <div class="player"><PlayerBody /></div>}
           {r.page === 'radio' && <RadioPage />}
           {r.page === 'rooms' && <RoomsPage />}
@@ -162,19 +182,19 @@ function Desktop() {
           {r.page === 'settings' && (cat ? <CategoryDetail cat={cat} wide /> : <SettingsPage wide />)}
         </main>
         <aside class="sys">
-          <span class="kicker">System</span>
-          <div class="col gap6" style={{ fontSize: '13px' }}>
-            <div class="row between"><span class="muted">Kilde</span><span>{s ? inputLabel(s.input) : '–'}</span></div>
-            <div class="row between"><span class="muted">Volum</span><span class="mono">{s?.volume ?? '–'}</span></div>
-            <div class="row between"><span class="muted">Hodetelefoner</span><span>{s?.headphones ? 'Ja' : 'Nei'}</span></div>
-            <div class="row between"><span class="muted">Lyrion</span><span>{s?.lyrion ? 'Tilkoblet' : 'Ikke funnet'}</span></div>
-            <div class="row between"><span class="muted">Blåtann</span><span class="ellip">{s?.bt_device || '–'}</span></div>
+          <span class="kicker">Ditt system</span>
+          <button class="sys-dev" onClick={() => go('rooms')}>
+            <span class="dev-ico"><Icon d={PRODUCT_ICON[p]} size={22} sw={1.3} /></span>
+            <span class="col" style={{ minWidth: 0 }}><span class="ellip" style={{ fontWeight: 600 }}>{deviceName.value}</span><span class="muted ellip" style={{ fontSize: '12px' }}>{PRODUCT_HW[p]}</span></span>
+          </button>
+          <div class="col gap6" style={{ fontSize: '13px' }} data-testid="sys-rows">
+            {sysRows.map(([k, v]) => <div class="row between gap8" key={k}><span class="muted">{k}</span><span class={'ellip' + (k === 'Adresse' || k === 'Volum' ? ' mono' : '')} style={k === 'Adresse' ? { fontSize: '11px', color: 'var(--muted)' } : undefined}>{v}</span></div>)}
             {s?.overtemp && <div class="banner bad"><span>Forsterkeren er for varm</span></div>}
           </div>
         </aside>
       </div>
       <div class="dock">
-        <button class="np" onClick={() => go('play')}><div class="cover" style={{ width: '46px', flexShrink: 0 }}><Art s={s} size="small" /></div><div class="col" style={{ minWidth: 0 }}><span class="ellip">{t.title}</span><span class="ellip muted" style={{ fontSize: '12px' }}>{subLine(t)}</span></div></button>
+        <button class="np" onClick={() => go('play')}><div class="cover" style={{ width: '46px', flexShrink: 0 }}><Art s={s} size="small" /></div><div class="col" style={{ minWidth: 0 }}><span class="ellip">{t.title}</span><span class="ellip muted" style={{ fontSize: '12px' }}>{air || subLine(t)}</span></div></button>
         <Transport s={s} />
         <VolumeRow s={s} />
       </div>

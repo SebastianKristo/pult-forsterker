@@ -121,7 +121,7 @@ export const CATS: Category[] = [
     bool('clock', 'Klokke i standby'), { kind: 'clocks', n: 'Klokke i standby' }, opt('led', 'LED-ringer', ['Høy', 'Middels', 'Lav', 'Av'])] },
   { id: 'strom', n: 'Strøm', sub: 'Standby og påslag', items: [
     opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay eller Blåtann vekker forsterkeren')] },
-  { id: 'rom', n: 'Rom og grupper', sub: 'Multirom – kommer', items: [] },
+  { id: 'rom', n: 'Rom', sub: 'Rom og enheter · grupper via Lyrion', items: [] },
   { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub Releases', items: [{ kind: 'update', n: 'Oppdatering' }] },
   { id: 'system', n: 'System', sub: 'Om, oppsett og tilbakestilling', items: [
     { kind: 'info', n: 'Programvare', key: 'version' }, { kind: 'info', n: 'Adresse', key: 'ip' },

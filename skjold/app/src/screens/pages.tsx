@@ -194,7 +194,7 @@ export function RoomsPage() {
         </div>
         <button class="btn primary big" onClick={() => { mode.value = 'find'; }} data-testid="add-device">+ Legg til enhet</button>
       </Section>
-      <div class="banner info"><span><strong>Kommer:</strong> grupper og synkronisert avspilling i flere rom (via Lyrion).</span></div>
+      <div class="banner info"><span>Grupper og synkronisert avspilling i flere rom settes opp i Lyrion.</span></div>
     </div>
   );
 }

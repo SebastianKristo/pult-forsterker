@@ -217,7 +217,7 @@ svg { display: block; }
 .cat-row .ico { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text); }
 
 /* ---------- Desktop shell (Web v3) ---------- */
-.desktop { max-width: 1180px; margin: 0 auto; padding: 22px 20px 130px; display: flex; flex-direction: column; gap: 22px; min-height: 100vh; }
+.desktop { margin: 0 auto; padding: 22px 20px 130px; display: flex; flex-direction: column; gap: 22px; min-height: 100vh; }
 .desktop header.hdr { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .desktop .hdr .name { font-weight: 600; font-size: 17px; }
 .desktop .hdr .sub { font-family: var(--mono); font-size: 11px; color: var(--muted); }
@@ -226,12 +226,14 @@ svg { display: block; }
 .pwr { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--card); color: var(--muted); display: flex; align-items: center; justify-content: center; padding: 0; }
 .pwr.on { border-color: var(--accent); color: var(--accent-2); }
 .desktop .cols { display: flex; gap: 24px; align-items: flex-start; }
-.desktop nav.side { flex: 0 0 230px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 22px; }
+.desktop nav.side { flex: 0 0 230px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 22px; max-height: calc(100vh - 140px); overflow-y: auto; }
 .desktop nav .head { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; color: var(--muted-2); padding: 16px 12px 6px; }
 .desktop nav .nv { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 40px; padding: 0 12px; border-radius: 8px; border: none; background: transparent; color: var(--text); font-size: 14px; text-align: left; width: 100%; }
 .desktop nav .nv:hover { background: var(--card); }
 .desktop nav .nv.on { background: var(--accent-bg); color: var(--accent-2); }
 .desktop nav .nv .badge { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.desktop .dev-ico { width: 44px; height: 44px; border-radius: 12px; background: #1f1f21; border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; color: var(--accent-2); flex-shrink: 0; }
+.desktop .sys-dev { display: flex; align-items: center; gap: 12px; border: none; background: none; padding: 0; text-align: left; color: var(--text); min-width: 0; }
 .desktop main.main { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 18px; }
 .desktop .pgh { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .desktop .pgh h1 { font-size: 26px; font-weight: 600; }
@@ -243,7 +245,7 @@ svg { display: block; }
 .desktop .grid-fav { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
 .desktop .player { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; align-items: center; }
 .desktop .player .art { max-width: 320px; width: 100%; border-radius: 12px; }
-.desktop .dock { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 1140px; z-index: 20; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px; align-items: center; padding: 10px 16px; border-radius: 16px; background: rgba(24, 24, 26, 0.96); border: 1px solid #2a2a2c; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); }
+.desktop .dock { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); z-index: 20; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px; align-items: center; padding: 10px 16px; border-radius: 16px; background: rgba(24, 24, 26, 0.96); border: 1px solid #2a2a2c; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); }
 .desktop .dock .np { display: flex; align-items: center; gap: 12px; border: none; background: none; padding: 0; text-align: left; min-width: 0; color: var(--text); }
 .desktop .dock .np .cover { width: 46px; height: 46px; border-radius: 8px; flex-shrink: 0; background-size: cover; background-position: center; }
 .desktop .dock .tbtn { width: 36px; height: 36px; }
