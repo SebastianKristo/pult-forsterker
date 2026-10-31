@@ -391,7 +391,9 @@ POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP":
 
 FIXED_GND_STUBS = {}   # TS3USB221: 0,4 mm pitch – for tett for via-i-pad   # (ref, pad) -> via-posisjon
 # låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
-FIXED_TRACKS = [("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
+FIXED_TRACKS = [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (133.3, 36.275), (134.6, 35.6), (138.3, 35.6), (138.95, 36.25), (138.95, 36.9)]),   # TPA3116 pinne 21 -> C32 (utvides i export)
+    ("5V", "F.Cu", 0.3, [(132.25, 43.5625), (132.25, 42.1), (135.8, 42.1), (136.22, 43.8)]),   # TPA6132A2 VDD (pinne 14) -> C100
+    ("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
     ("PC2_DP", "F.Cu", 0.2, [(32.6, 62.7685), (32.2, 63.7)]), ("PC2_DM", "F.Cu", 0.2, [(33.0, 62.7685), (33.1, 64.2)]),
     ("CODEC_VINR", "F.Cu", 0.25, [(150.4, 87.575), (148.9, 87.575)]), ("CODEC_VINR", "B.Cu", 0.25, [(148.9, 87.575), (148.9, 88.9), (155.0, 88.9)]),   # PCM2900C pinne 13 -> C98
     ("CODEC_VINR", "F.Cu", 0.25, [(155.0, 88.9), (155.0, 89.54), (160.0, 89.54), (161.0, 89.3), (170.95, 89.3), (170.95, 88.0)]),
@@ -485,7 +487,7 @@ def build():
         ncs = ds.m_NetSettings.m_NetClasses
         default = ds.m_NetSettings.m_DefaultNetClass
         default.SetTrackWidth(pcbnew.FromMM(0.2)); default.SetClearance(pcbnew.FromMM(0.15)); default.SetViaDiameter(pcbnew.FromMM(0.6)); default.SetViaDrill(pcbnew.FromMM(0.3))   # signalnett 0,2 mm / via 0,6/0,3 (JLCPCB standard) gir Freerouting plass
-        for cname, w in [("Power", 0.5), ("Power5V", 0.4), ("Out", 0.5), ("Mid", 0.3)]:   # rutes smalt (kommer inn på fine pads); export.py utvider til POWER_NETS-målet der det er plass
+        for cname, w in [("Power", 1.5), ("Power5V", 1.2), ("Out", 1.5), ("Mid", 0.5)]:   # rutes smalt (kommer inn på fine pads); export.py utvider til POWER_NETS-målet der det er plass
             nc = pcbnew.NETCLASS(cname); nc.SetTrackWidth(pcbnew.FromMM(w)); nc.SetClearance(pcbnew.FromMM(0.2))   # 0,2 for alle: brede nett ender også på 0,65-pitch-pads (gap 0,25)
             nc.SetViaDiameter(pcbnew.FromMM(1.2 if w >= 1.2 else 0.8)); nc.SetViaDrill(pcbnew.FromMM(0.6 if w >= 1.2 else 0.4))
             ncs[cname] = nc
@@ -508,7 +510,7 @@ def build():
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     # Halsstubber: brede nett (nettklasse ≥ 0,6 mm) som ender på fine pads (TSSOP/QFN/SOT) får en låst smal stubb (padbredde)
     # rett ut fra kretsen, så Freerouting kan koble det brede sporet til stubbenden i stedet for å måtte inn mellom pinnene.
-    wide = set()   # halsstubber avslått: strømnettene rutes smalt og utvides i export.py
+    wide = {n for n, w in POWER_NETS.items() if w >= 0.6}   # halsstubber: brede nett som ender på fine pads
     courts = {r: f.GetBoundingBox(False, False) for r, f in fps.items()}
     n_neck = 0
     for ref, fp in fps.items():

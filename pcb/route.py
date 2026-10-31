@@ -28,6 +28,22 @@ if "--route-gnd" in sys.argv:
     for z in [zz for zz in board.Zones() if zz.GetNetname() == "GND"]:
         board.Remove(z)
 pcbnew.ExportSpecctraDSN(board, os.path.join(HERE, "board.dsn"))
+if "--power-first" in sys.argv:
+    # Pass 1: bare strømnettene (POWER_NETS i build_board) i DSN-en, så de brede sporene får plass først. Resten rutes i pass 2 (--continue).
+    import re
+    sys.path.insert(0, HERE); import build_board as _bb
+    keep = set(_bb.POWER_NETS)
+    txt = open(os.path.join(HERE, "board.dsn")).read()
+    def strip_net(m):
+        name = m.group(1).strip('"')
+        return m.group(0) if name in keep else ""
+    txt = re.sub(r"\n    \(net (\S+)\n      \(pins[^)]*\)\n    \)", strip_net, txt)
+    def strip_class(m):
+        head, names = m.group(1), m.group(2).split()
+        return head + " ".join(n for n in names if n.strip('"') in keep or n == '""') + "\n      (circuit"
+    txt = re.sub(r"(\n    \(class \S+ )(.*?)\n      \(circuit", strip_class, txt, flags=re.S)
+    open(os.path.join(HERE, "board.dsn"), "w").write(txt)
+    print("pass 1: bare strømnett i DSN:", sorted(keep))
 jar = os.environ.get("FREEROUTING", os.path.expanduser("~/freerouting.jar"))
 mp = sys.argv[sys.argv.index("-mp") + 1] if "-mp" in sys.argv else "40"
 os.makedirs(os.path.join(HERE, "logs"), exist_ok=True)

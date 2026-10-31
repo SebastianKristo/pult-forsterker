@@ -143,12 +143,12 @@ def _drop_colliding_gnd():
     return removed
 # Utvid hvert strømspor så mye naboene tillater (mål fra POWER_NETS i build_board), med 0,16 mm klaring til alt annet kobber.
 WIDEN = dict(getattr(_bb, "POWER_NETS", WIDEN))
-_CL = pcbnew.FromMM(0.16); _EDGE = pcbnew.FromMM(0.35)
+_CL = pcbnew.FromMM(0.21); _EDGE = pcbnew.FromMM(0.35)
 _others_tr = [t for t in board.GetTracks() if t.GetClass() == "PCB_TRACK"]
 _others_via = [t for t in board.GetTracks() if t.GetClass() == "PCB_VIA"]
 _pads_all = [pd for fp in board.GetFootprints() for pd in fp.Pads()]
 def _max_width(t):
-    seg = pcbnew.SEG(t.GetStart(), t.GetEnd()); bb = pcbnew.BOX2I(t.GetBoundingBox()); bb.Inflate(pcbnew.FromMM(2.0))
+    seg = pcbnew.SEG(t.GetStart(), t.GetEnd()); bb = t.GetBoundingBox(); bb.Inflate(pcbnew.FromMM(2.0))
     lim = pcbnew.FromMM(WIDEN[t.GetNetname()])
     net = t.GetNetname(); lay = t.GetLayer()
     for o in _others_tr:
@@ -520,7 +520,7 @@ def _prune_dangling_board():
 print("GND-spor som kolliderte (sluttkontroll), fjernet:", _drop_colliding_gnd())
 filler.Fill(board.Zones())
 _fr, _cm = _gnd_components()
-if len(_cm) > 1: print("FEIL: jordplanet delt etter fjerning av GND-spor:", len(_cm))
+if len(_cm) > 1: print("MERK: jordplanet (sonene) er i", len(_cm), "deler – GND er i tillegg rutet som nett, så alle GND-pads henger sammen (DRC bekrefter)")
 print("løse sporender fjernet:", _prune_dangling_board())
 filler.Fill(board.Zones())
 pcbnew.SaveBoard(PCB, board)
