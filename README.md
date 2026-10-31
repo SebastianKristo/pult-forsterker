@@ -143,7 +143,11 @@ Renderne i `docs/` bruker disse fargene med noe sterkere lys så antrasitten les
 
 ## Lisens
 
-MIT – se [LICENSE](LICENSE).
+- **Programvare** (`pi/`, `skjold/app`, `skjold/os`, `skjold/flasher`, integrasjonene): MIT – se [LICENSE-MIT](LICENSE-MIT).
+- **Maskinvare, design og dokumentasjon** (`pcb/`, `kabinett/`, `skjold/design/` m.m.): CC BY-NC-SA 4.0 – bygg selv, men ikke for salg. Se [LICENSE-HARDWARE](LICENSE-HARDWARE).
+- **Nettsiden** (`skjold/nettside/`): alle rettigheter forbeholdt.
+
+Full oversikt i [LICENSE](LICENSE). Kommersiell lisens: jemtlands@proton.me
 
 
 ## 3D-modell av hovedkortet

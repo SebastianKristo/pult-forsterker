@@ -301,3 +301,7 @@ legend{padding:0;margin-bottom:6px;font-size:13px;color:var(--demp-m2)}
 .skjermbilder figcaption{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dempet-m,#7a776d);margin-top:12px;text-align:center}
 @media (min-width:860px){.skjermbilder{grid-template-columns:280px 1fr;gap:40px}}
 .bunn .kopi{font-size:12.5px;line-height:1.5;opacity:.75;margin-top:6px;max-width:760px}
+
+.integ-logo{display:block;width:40px;height:40px;margin-bottom:18px}
+.bunn .kopi a{color:inherit;text-decoration:underline}
+.lead-p{font-size:18px;line-height:1.55;max-width:620px;margin:14px 0 0}
