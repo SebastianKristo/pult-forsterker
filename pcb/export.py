@@ -526,6 +526,24 @@ filler.Fill(board.Zones())
 _fr, _cm = _gnd_components()
 if len(_cm) > 1: print("MERK: jordplanet (sonene) er i", len(_cm), "deler – GND er i tillegg rutet som nett, så alle GND-pads henger sammen (DRC bekrefter)")
 print("løse sporender fjernet:", _prune_dangling_board())
+# Siste finpuss: DRC-ens egne «dangling» (korte stubber og vias som bare brukes på ett lag) fjernes – de er uten funksjon
+def _drop_drc_dangling():
+    import re as _r
+    rep = os.path.join(OUT, "drc_tmp.txt"); pcbnew.WriteDRCReport(board, rep, pcbnew.EDA_UNITS_MILLIMETRES, True)
+    gone = 0
+    for blk in _r.split(r"\n(?=\[)", open(rep).read()):
+        if not (blk.startswith("[track_dangling]") or blk.startswith("[via_dangling]")): continue
+        for x, y, kind in _r.findall(r"@\(([-\d.]+) mm, ([-\d.]+) mm\): (Track|Via) \[", blk):
+            x, y = float(x), float(y)
+            for t in list(board.GetTracks()):
+                if (t.GetClass() == "PCB_VIA") != (kind == "Via"): continue
+                if kind == "Via" and abs(pcbnew.ToMM(t.GetPosition().x) - x) < 0.01 and abs(pcbnew.ToMM(t.GetPosition().y) - y) < 0.01:
+                    board.Remove(t); gone += 1; break
+                if kind == "Track" and not t.IsLocked() and (t.GetEnd() - t.GetStart()).EuclideanNorm() < pcbnew.FromMM(1.0) and \
+                        (abs(pcbnew.ToMM(t.GetStart().x) - x) < 0.01 and abs(pcbnew.ToMM(t.GetStart().y) - y) < 0.01 or abs(pcbnew.ToMM(t.GetEnd().x) - x) < 0.01 and abs(pcbnew.ToMM(t.GetEnd().y) - y) < 0.01):
+                    board.Remove(t); gone += 1; break
+    return gone
+print("DRC-dangling fjernet:", _drop_drc_dangling())
 filler.Fill(board.Zones())
 pcbnew.SaveBoard(PCB, board)
 
