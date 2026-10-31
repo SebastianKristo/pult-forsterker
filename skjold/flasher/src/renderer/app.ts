@@ -40,7 +40,7 @@ const S = {
   local: null as LocalImage | null,
   pre: true, ssid: '', pw: '', name: 'Stue', lang: 0, country: 'NO',
   hostname: 'skjold-stue', hostEdited: false,
-  ssh: false, user: 'skjold', userPw: '', sshKey: '',
+  ssh: false, user: 'skjold', userPw: '', sshKey: '', lms: false,
   progress: null as Progress | null,
   result: null as FlashResult | null,
 };
@@ -119,6 +119,7 @@ function page1(): string {
       ${field('country', 'Wi-Fi-land', S.country, 'maxlength="2" style="text-transform:uppercase"')}
       ${field('hostname', 'Vertsnavn', S.hostname, 'spellcheck="false"')}
     </div>` : `<div class="grid form">${field('hostname', 'Vertsnavn', S.hostname, 'spellcheck="false"')}</div>`}
+    <div class="toggle-row"><span>Installer Lyrion-server på denne enheten<br><small style="opacity:.7">Av: kobler seg til en Lyrion-server du allerede har.</small></span><button class="toggle ${S.lms ? 'on' : ''}" data-toggle="lms" aria-label="Lyrion-server"><i></i></button></div>
     <div class="toggle-row"><span>Slå på SSH</span><button class="toggle ${S.ssh ? 'on' : ''}" data-toggle="ssh" aria-label="SSH"><i></i></button></div>
     ${S.ssh ? `<div class="grid form">
       ${field('user', 'Brukernavn', S.user, 'spellcheck="false" autocomplete="off"')}
@@ -196,7 +197,7 @@ async function startFlash() {
     image: S.imgMode === 'latest' ? { kind: 'latest', release: S.release } : { kind: 'local', path: S.local!.path },
     drive: S.drive,
     setup: { device: DEVS[S.dev][0], preset: S.pre, ssid: S.ssid, wifiPassword: S.pw, country: S.country, name: S.name.trim(),
-      hostname: S.hostname, lang, ssh: S.ssh, user: S.user, userPassword: S.userPw, sshKey: S.sshKey.trim() },
+      hostname: S.hostname, lang, ssh: S.ssh, user: S.user, userPassword: S.userPw, sshKey: S.sshKey.trim(), lyrionServer: S.lms },
   };
   const r = await skjold.flash(req);
   S.result = r;
@@ -225,6 +226,7 @@ function bind() {
     else if (d.dev !== undefined) S.dev = Number(d.dev);
     else if (d.lang !== undefined) { S.lang = Number(d.lang); S.country = LANGS[S.lang][2]; }
     else if (d.toggle === 'pre') S.pre = !S.pre;
+    else if (d.toggle === 'lms') S.lms = !S.lms;
     else if (d.toggle === 'ssh') S.ssh = !S.ssh;
     else if (d.open) { skjold.open(d.open); return; }
     else if (d.img === 'latest') S.imgMode = 'latest';

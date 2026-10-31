@@ -43,4 +43,6 @@ const ud = buildBootFiles(o, 'cloudinit', 'fastsalt').find(f => f.name === 'user
 assert.ok(ud.startsWith('#cloud-config') && ud.includes('skjold-install.service'));
 assert.ok(validate({ ...o, wifiPassword: 'kort' }));
 assert.ok(validate({ ...o, userPassword: '', sshKey: '' }));
+assert.strictEqual(JSON.parse(buildBootFiles({ ...o, lyrionServer: true }, 'systemd', 'x').find(f => f.name === 'skjold-setup.json')!.content).lyrion_server, true);
+assert.ok(buildBootFiles(o, 'systemd', 'x').find(f => f.name === 'skjold-install.sh')!.content.includes('install_lyrion.sh'));
 console.log('alle tester ok');
