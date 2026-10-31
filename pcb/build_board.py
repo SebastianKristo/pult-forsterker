@@ -38,7 +38,7 @@ R1206 = "R_1206_3216Metric"
 
 # --- bakkant: kontakter (y ~ 6) ---
 part("J1", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "24V IN", "C8465", 14, 6, 0, "24 V inn fra DC-099 via KCD1 (skruterminal 5,08)")
-part("F1", "Fuse", "Fuseholder_Clip-5x20mm_Keystone_3512P_Inline_P23.62x7.27mm_D1.02x2.41x1.02x1.57mm_Horizontal", "5A 5x20 (Keystone 3512-klips)", "", 38, 7, 0, "Sikringsholder 5x20 (klips, THT) + sikring 5 A")
+part("F1", "Fuse", "Fuseholder_Clip-5x20mm_Littelfuse_111_Inline_P20.00x5.00mm_D1.05mm_Horizontal", "5A 5x20 (Littelfuse 111-klips)", "C151075", 38, 7, 0, "Sikringsholder 5x20 (klips, THT) + sikring 5 A")
 part("D1", "Diode_SMD", "D_SMB", "SMBJ28A", "C20623778", 50, 14, 0, "TVS 28 V standoff, klemmer ~45 V (LCSC-kode sjekkes i BOM-verktøyet)")
 part("Q11", TO, "TO-252-2", "AOD409", "C36220", 24, 16, 0, "Polvendingsvern i 24 V-linjen (D = inn, S = ut, G mot GND) – velg TO-252 P-kanal ≥ 60 V i JLC-verktøyet")
 part("D5", "Diode_SMD", "D_SOD-123", "BZT52C12", "C43491", 12, 14, 0, "Zener gate-source Q11"); part("R79", R_, R0603, "100k", "C25803", 12, 17, 0, "Gate Q11 mot GND")
@@ -395,8 +395,8 @@ FIXED_GND_STUBS = {}   # TS3USB221: 0,4 mm pitch – for tett for via-i-pad   # 
 # låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
 # --- Strømskinner lagt for hånd før rutingen (brede, låste). Autoruteren kobler resten til disse. ---
 POWER_SPINE = [
-    ("24V_IN", "F.Cu", 1.6, [(54, 6), (54, 2.6), (85.27, 2.6), (85.27, 7)]), ("24V_IN", "F.Cu", 1.6, [(78, 2.6), (78, 7)]),          # J1 -> begge sikringsklips
-    ("24V_F", "F.Cu", 1.6, [(94.35, 7), (94.35, 10.0), (69.0, 10.0), (66.94, 12.9), (66.94, 14.47)]), ("24V_F", "F.Cu", 1.6, [(101.62, 7), (101.62, 10.0), (94.35, 10.0)]),   # sikring -> Q11 drain
+    ("24V_IN", "F.Cu", 1.6, [(54, 6), (54, 2.6), (83, 2.6), (83, 7)]), ("24V_IN", "F.Cu", 1.6, [(78, 2.6), (78, 7)]),          # J1 -> begge sikringsklips
+    ("24V_F", "F.Cu", 1.6, [(93, 7), (93, 10.0), (69.0, 10.0), (66.94, 12.9), (66.94, 14.47)]), ("24V_F", "F.Cu", 1.6, [(98, 7), (98, 10.0), (93, 10.0)]),   # sikring -> Q11 drain
     ("VIN24", "F.Cu", 1.0, [(58.96, 18.28), (58.96, 23.2)]),                                            # Q11 source (liten pad) -> via
     ("VIN24", "B.Cu", 2.0, [(58.96, 23.2), (58.96, 21.5), (98.5, 23.0), (111.3, 23.0), (114.15, 26.05)]),             # under til reléet (K1.3)
     ("VIN24", "B.Cu", 2.0, [(111.3, 23.0), (111.3, 6.3), (112.0, 6.3)]), ("VIN24", "B.Cu", 2.0, [(111.3, 6.3), (111.3, 2.4), (134.0, 2.4), (134.0, 7.0)]),   # C110, C1
@@ -565,6 +565,9 @@ def build():
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(nets[netn]); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     for (ref, pad), (vx, vy) in FIXED_GND_VIP.items():
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.5)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
+    # F1 (Littelfuse 111-klips, C151075): KiCad-footprinten har 1,05 mm hull – klipsbena er inntil 1,17 mm → 1,3 mm hull / 2,3 mm pad
+    for pd in fps["F1"].Pads():
+        pd.SetDrillSize(pcbnew.VECTOR2I(pcbnew.FromMM(1.3), pcbnew.FromMM(1.3))); pd.SetSize(pcbnew.VECTOR2I(pcbnew.FromMM(2.3), pcbnew.FromMM(2.3)))
     # DNP-deler skal ikke få loddepasta (ellers ligger det to loddekuler uten komponent)
     for p_ in P:
         if p_["value"] == "DNP":
