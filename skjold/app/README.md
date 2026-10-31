@@ -2,8 +2,11 @@
 
 Én kodebase (Vite + Preact + TypeScript) for:
 - **Web-UI** som `ki_amp_daemon.py` serverer på `http://skjold.local:8765/` (samme origin, ingen konfig).
-- **Mobilapp** via Capacitor (`no.kristo.skjold`). Brukeren finner forsterkeren (prøver `skjold.local` / `pultamp.local`)
-  eller skriver inn adresse/IP; den lagres i `localStorage` (`skjold-host`). `?host=192.168.1.50` virker også på web.
+- **Mobilapp** via Capacitor (`no.kristo.skjold`). «Finn Skjold» (`src/lib/discover.ts`) leter med mDNS/NSD etter
+  `_kipultamp._tcp` (`@devioarts/capacitor-mdns`), prøver `skjold.local`/`skjold-node.local`/`pultamp.local` og kjente
+  enheter, og søker til slutt i /24-nettet på :8765 (telefonens nett hvis kjent, ellers vanlige hjemmenett). Android kan ikke
+  slå opp `.local`-navn, så IP-en fra mDNS/søket lagres i `localStorage` (`skjold-host`; kjente enheter i `skjold-known`).
+  Manuell IP virker alltid. `?host=192.168.1.50` virker også på web.
 
 Under 900 px (og alltid i appen) brukes telefonskallet fra `design/app/Skjold App v2`, ellers PC-skallet fra
 `design/web/Skjold S1 Web v3`. Oppsettsveiviseren følger `design/app/Skjold Oppsett`.
@@ -28,7 +31,8 @@ cd pi && PATH=/tmp/stubs:$PATH KI_AMP_BOARD=main KI_AMP_PORT=8765 KI_AMP_VOICE=0
 
 ## Struktur
 - `src/lib/api.ts` – klient for API-et (se docstring i `pi/ki_amp_daemon.py`), vertsvalg, GitHub Releases.
-- `src/lib/store.ts` – signals: status-polling (1–4 s), `act()` med optimistisk oppdatering, innstillinger (`/api/settings`, debounce 350 ms).
+- `src/lib/store.ts` – signals: `/api/events` + polling, `act()`/`playPause()`/`setVolume()` med hold, historikk-navigasjon, innstillinger (`/api/settings`, debounce 350 ms).
+- `src/lib/discover.ts` – Finn Skjold (mDNS → navn → /24-søk), kjente enheter (Rom).
 - `src/lib/settings.ts` – innstillingsmodellen portert fra `design/felles/skjold_settings.js`; `clocks.ts` – standby-klokkene.
 - `src/screens/` – `player` (omslag, transport, volum, kilder, favoritter), `pages` (Hjem, EQ, Radio, Rom), `settings`, `onboard` (Finn Skjold, Oppsett).
 - `src/app.tsx` – telefon- og PC-skall.
@@ -40,7 +44,16 @@ Endringer gjort for hånd etter generering:
 - iOS: `NSAppTransportSecurity` (arbitrary loads + local networking), `NSLocalNetworkUsageDescription`, `NSBonjourServices`.
 
 Lage på nytt: `rm -rf android ios && npm run build && npx cap add android && npx cap add ios`, og legg inn endringene over.
-`fetch` går gjennom `CapacitorHttp` i appen, så daemonen trenger ikke CORS.
+- Begge: `@capacitor/app` (Android tilbakeknapp = ett nivå tilbake via `history`), `@devioarts/capacitor-mdns`.
+- iOS `NSBonjourServices` må ha `_kipultamp._tcp`. Android: `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`.
+
+`fetch` går gjennom `CapacitorHttp` i appen. `EventSource` (`/api/events`) og `<img>` (omslag) går via webviewet, så
+daemonen sender CORS-hoder (inkl. OPTIONS-preflight og `Access-Control-Allow-Private-Network`).
+
+## Synk
+`/api/events` (SSE) sender status ved endring; uten den polles `/api/status` (1–4 s). Handlinger er optimistiske og «holdes»
+(1,5 s, spill/pause 3 s) til status er enig. Volum: maks 10 POST/s, én om gangen, siste verdi ved slipp; slideren ignorerer
+innkommende verdier mens den dras og 800 ms etter.
 
 **NB:** Capacitor 8 lager iOS-prosjektet med Swift Package Manager (`ios/App/App.xcodeproj`, `CapApp-SPM`), ikke CocoaPods.
 Release-workflowen må derfor bygge med `xcodebuild -project App.xcodeproj -scheme App …` og droppe `pod install`.

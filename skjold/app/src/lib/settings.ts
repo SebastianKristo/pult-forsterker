@@ -68,7 +68,8 @@ export type Item =
   | { kind: 'api-bool'; id: 'loudness' | 'mix' | 'autoInput' | 'hpAutomute' | 'voiceOn'; n: string; hint?: string }
   | { kind: 'api-opt'; id: 'voiceProfile' | 'usbPc' | 'loudLevel'; n: string; hint?: string }
   | { kind: 'levels'; n: string; hint?: string }
-  | { kind: 'info'; n: string; key: 'btDev' | 'lyrion' | 'version' | 'ip' | 'id' | 'board' | 'headphones' | 'btPairing' | 'inputs' }
+  | { kind: 'info'; n: string; key: 'btDev' | 'lyrion' | 'version' | 'ip' | 'id' | 'board' | 'headphones' | 'btPairing' | 'inputs' | 'output' }
+  | { kind: 'test'; n: string; hint?: string }
   | { kind: 'act'; n: string; id: 'btPair' | 'openRadio' | 'setup' | 'testVoice' | 'forget' | 'reset' | 'reboot' | 'findDevice'; label: string; safe?: boolean; hint?: string }
   | { kind: 'eq'; n: string }
   | { kind: 'clocks'; n: string }
@@ -84,6 +85,7 @@ const str = (k: StrKey, n: string, ph: string, hint?: string): Item => ({ kind: 
 export const CATS: Category[] = [
   { id: 'eq', n: 'Equalizer', sub: 'Egen profil per inngang', items: [{ kind: 'eq', n: 'Equalizer' }] },
   { id: 'lyd', n: 'Lyd', sub: 'Tone, volum og nivå', items: [
+    { kind: 'info', n: 'Lydutgang', key: 'output' },
     num('bass', 'Bass', -6, 6, 'dB'), num('treb', 'Diskant', -6, 6, 'dB'), num('bal', 'Balanse', -5, 5, 'bal'),
     { kind: 'api-bool', id: 'loudness', n: 'Loudness', hint: 'Mer bass og diskant ved lavt volum' },
     { kind: 'api-opt', id: 'loudLevel', n: 'Loudness-styrke' },
@@ -93,7 +95,8 @@ export const CATS: Category[] = [
     { kind: 'info', n: 'Hodetelefoner', key: 'headphones' },
     { kind: 'api-bool', id: 'mix', n: 'Miks digitale kilder', hint: 'AirPlay, Blåtann, USB og radio kan spille samtidig' },
     { kind: 'levels', n: 'Nivå per kilde', hint: 'Juster så kildene er like høye' },
-    num('lvlAux', 'Nivå AUX', -6, 6, 'dB', 'Juster så AUX er like høy som strømming'), num('lvlUsb', 'Nivå USB', -6, 6, 'dB')] },
+    num('lvlAux', 'Nivå AUX', -6, 6, 'dB', 'Juster så AUX er like høy som strømming'), num('lvlUsb', 'Nivå USB', -6, 6, 'dB'),
+    { kind: 'test', n: 'Test høyttalerne', hint: 'Spill en tone i venstre eller høyre høyttaler' }] },
   { id: 'tilkobling', n: 'Tilkobling', sub: 'Navn, Blåtann og USB', items: [
     opt('name', 'Enhetsnavn', NAMES, 'Navnet som vises i AirPlay og Blåtann'),
     str('nameCustom', 'Eget navn', 'Valgfritt', 'Overstyrer listen over – AirPlay, Spotify og Blåtann'),
@@ -122,7 +125,7 @@ export const CATS: Category[] = [
   { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub Releases', items: [{ kind: 'update', n: 'Oppdatering' }] },
   { id: 'system', n: 'System', sub: 'Om, oppsett og tilbakestilling', items: [
     { kind: 'info', n: 'Programvare', key: 'version' }, { kind: 'info', n: 'Adresse', key: 'ip' },
-    { kind: 'info', n: 'Lyrion', key: 'lyrion' }, { kind: 'info', n: 'Enhets-ID', key: 'id' }, { kind: 'info', n: 'Kort', key: 'board' },
+    { kind: 'info', n: 'Lyrion', key: 'lyrion' }, { kind: 'info', n: 'Enhets-ID', key: 'id' }, { kind: 'info', n: 'Type', key: 'board' },
     { kind: 'act', n: 'Kjør oppsett på nytt', id: 'setup', label: 'Start oppsett', safe: true },
     { kind: 'act', n: 'Bytt forsterker', id: 'findDevice', label: 'Finn Skjold', safe: true, hint: 'Koble appen til en annen Skjold' },
     { kind: 'act', n: 'Fabrikkinnstillinger', id: 'reset', label: 'Tilbakestill' }] }
@@ -191,4 +194,35 @@ export function mergeSettings(partial: unknown): Settings {
     }
   }
   return s;
+}
+
+/**
+ * Hva som finnes på hver enhetstype. S1 = alt. Node: skjerm og knapper, men ingen AUX/USB/hodetelefoner.
+ * Core (ren Pi): ingen skjerm, knapper, AUX/USB, hodetelefoner eller radioknapp – bare lyd, utgang og Blåtann.
+ */
+const NO_DISPLAY = new Set(['skjerm']);
+const AUX_USB = new Set(['nAux1', 'nAux2', 'nUsb1', 'nUsb2', 'usbPc', 'lvlAux', 'lvlUsb']);
+const HEADPHONES = new Set(['hpAutomute', 'headphones', 'hpOwn']);
+const BUTTONS = new Set(['hold']);
+function itemKey(it: Item): string {
+  if ('k' in it) return it.k;
+  if (it.kind === 'info') return it.key;
+  if ('id' in it) return it.id;
+  return it.kind;
+}
+export function catsFor(product: 's1' | 'node' | 'core', inputs: string[] = []): Category[] {
+  const hasAux = product === 's1' || inputs.some((i) => i === 'aux' || i === 'aux2');
+  const hasUsb = product === 's1' || inputs.includes('usb');
+  return CATS.filter((c) => !(product === 'core' && NO_DISPLAY.has(c.id))).map((c) => ({
+    ...c,
+    sub: product === 'core' && c.id === 'tilkobling' ? 'Navn og Blåtann' : c.sub,
+    items: c.items.filter((it) => {
+      const k = itemKey(it);
+      if (k === 'output') return product !== 's1';
+      if (AUX_USB.has(k)) return k.toLowerCase().includes('usb') ? hasUsb : hasAux;
+      if (HEADPHONES.has(k)) return product === 's1';
+      if (BUTTONS.has(k)) return product !== 'core';
+      return true;
+    })
+  }));
 }

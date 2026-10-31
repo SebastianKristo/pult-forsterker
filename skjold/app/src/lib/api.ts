@@ -1,5 +1,5 @@
 // HTTP-klient mot ki_amp_daemon.py (port 8765). Samme origin på web, konfigurerbar vert i appen.
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
 export type InputId = 'radio' | 'airplay' | 'bt' | 'aux' | 'aux2' | 'usb' | 'spotify';
 export const INPUT_LABEL: Record<InputId, string> = { radio: 'Radio', airplay: 'AirPlay', bt: 'Blåtann', aux: 'AUX 1', aux2: 'AUX 2', usb: 'USB', spotify: 'Spotify' };
@@ -16,11 +16,26 @@ export interface Status {
   playing: boolean; paused: boolean; source: string; cover: string; title: string; artist: string; album: string;
   duration: number; position: number; bt_device: string; name: string; version: string; id: string;
   inputs: InputId[]; board: string; lyrion: boolean; station: string;
+  /** Nyere daemon: relativ /api/cover?v=<hash> eller full URL (Spotify). */
+  cover_url?: string;
+  /** Nyere daemon: s1 | node | core (eldre: utledes fra board). */
+  product?: string;
+  airplay_device?: string;
+}
+
+export type Product = 's1' | 'node' | 'core';
+export const PRODUCT_LABEL: Record<Product, string> = { s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core' };
+export const PRODUCT_SHORT: Record<Product, string> = { s1: 'S1', node: 'Node', core: 'Core' };
+export const PRODUCT_HW: Record<Product, string> = { s1: 'Hovedkort rev B · 2 × 40 W', node: 'Raspberry Pi · 1,8″ skjerm · knapper', core: 'Raspberry Pi · bare lyd' };
+export function productOf(s: Pick<Status, 'board' | 'product'> | null | undefined): Product {
+  const p = s?.product;
+  if (p === 's1' || p === 'node' || p === 'core') return p;
+  return s?.board === 'node' ? 'node' : 's1';
 }
 
 export const isNative = Capacitor.isNativePlatform();
 const HOST_KEY = 'skjold-host';
-export const CANDIDATE_HOSTS = ['http://skjold.local:8765', 'http://pultamp.local:8765'];
+export const CANDIDATE_HOSTS = ['http://skjold.local:8765', 'http://skjold-node.local:8765', 'http://pultamp.local:8765'];
 
 /** Base URL for the API. Web build: same origin (''), unless ?host= or a stored host is set. App: stored host. */
 export function getBase(): string {
@@ -56,9 +71,11 @@ export class ApiError extends Error {
 
 async function req<T>(path: string, init?: RequestInit, base = getBase(), timeoutMs = 6000): Promise<T> {
   const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), timeoutMs);
+  let t = 0;
+  // CapacitorHttp sin fetch-erstatning bryr seg ikke om AbortSignal – tidsavbrudd med race i tillegg
+  const timeout = new Promise<never>((_, rej) => { t = window.setTimeout(() => { ctl.abort(); rej(new ApiError(0, 'Tidsavbrudd')); }, timeoutMs); });
   try {
-    const r = await fetch(base + path, { cache: 'no-store', ...init, signal: ctl.signal });
+    const r = await Promise.race([fetch(base + path, { cache: 'no-store', ...init, signal: ctl.signal }), timeout]);
     if (!r.ok) {
       let msg = r.statusText;
       try { const j = (await r.json()) as { error?: string }; if (j.error) msg = j.error; } catch { /* no body */ }
@@ -104,9 +121,35 @@ export const api = {
   forgetBt: () => post<{ ok: boolean }>('/api/bt', { forget: true })
 };
 
+/** Omslag: cover_url fra daemonen (cache-bust med bildets hash), ellers eldre «cover»-felt. */
 export function coverUrl(st: Status | null): string | null {
-  if (!st || !st.cover) return null;
+  if (!st) return null;
+  const u = st.cover_url ?? '';
+  if (/^https?:\/\//i.test(u)) return u;
+  if (u.startsWith('/')) return getBase() + u;
+  if (!st.cover) return null;
+  if (/^https?:\/\//i.test(st.cover)) return st.cover;
   return getBase() + '/api/cover?v=' + encodeURIComponent(st.cover);
+}
+
+/**
+ * Rask sjekk om det svarer en Skjold på base (brukes av søket). I appen går den rett via CapacitorHttp med korte
+ * tidsavbrudd på tilkoblingen, så et /24-søk ikke henger på adresser som ikke finnes.
+ */
+export async function probe(base: string, timeoutMs = 1500): Promise<Status | null> {
+  try {
+    if (isNative) {
+      const r = await Promise.race([
+        CapacitorHttp.request({ url: base + '/api/status', method: 'GET', connectTimeout: timeoutMs, readTimeout: timeoutMs + 500, responseType: 'json' }),
+        new Promise<null>((res) => setTimeout(() => res(null), timeoutMs + 800))
+      ]);
+      if (!r || r.status !== 200) return null;
+      const d = (typeof r.data === 'string' ? JSON.parse(r.data) : r.data) as Status;
+      return d && typeof d === 'object' && 'volume' in d && 'input' in d ? d : null;
+    }
+    const d = await req<Status>('/api/status', undefined, base, timeoutMs);
+    return d && 'volume' in d ? d : null;
+  } catch { return null; }
 }
 
 export interface Release { tag: string; name: string; date: string; notes: string[]; url: string; prerelease: boolean; size: string }

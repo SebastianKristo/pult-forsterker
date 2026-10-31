@@ -29,7 +29,13 @@ API:
   GET/POST /api/settings  innstillingsmodellen til app/web (samme nøkler som skjold_settings.js); POST = delvis oppdatering
   POST /api/hp_automute {"on":bool} (demp høyttalerne når hodetelefoner er plugget i fronten; status har "headphones")
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
-  GET  /api/cover  (albumbilde fra AirPlay, jpg/png)
+  GET  /api/cover  (albumbilde fra AirPlay/Blåtann, eller Lyrion når Radio er valgt; jpg/png, ETag = status["cover"])
+  GET  /api/events  Server-Sent Events: «data: <samme JSON som /api/status>» straks noe endrer seg (sjekkes hvert 0,25 s),
+                    ellers «: ping» hvert 15 s. Appen bruker dette i stedet for polling når det virker.
+  Status har også: "product": "s1"|"node"|"core"|… (S1 = hovedkortet, Core = node med KI_AMP_NODE_GPIO=0),
+                   "cover_url": relativ /api/cover?v=<hash> eller full https-URL (Spotify), "" uten bilde.
+  CORS: alle /api/* svarer med Access-Control-Allow-Origin (+ OPTIONS-preflight og Private Network Access),
+        så appen (capacitor://localhost, https://localhost) og andre web-UI kan bruke API-et direkte.
   POST /api/transport {"action":"play|pause|playpause|next|previous|stop"}  (AirPlay/Bluetooth/Radio)
   GET  /api/presets                       radiokanaler 1–6 (Lyrion)
   POST /api/preset  {"n":1-6}             spill kanal n  |  {"n":1-6, "save":true} lagre det som spiller nå
@@ -111,7 +117,7 @@ BOARD = os.environ.get("KI_AMP_BOARD", "modules")
 # «Pultforsterker» i ki-amp.env regnes som ikke satt).
 NAME = os.environ.get("KI_AMP_NAME", "").strip()
 if not NAME or (BOARD == "node" and NAME == "Pultforsterker"):
-    NAME = "Skjold Node" if BOARD == "node" else "Pultforsterker"
+    NAME = ("Skjold Core" if os.environ.get("KI_AMP_NODE_GPIO", "1") == "0" else "Skjold Node") if BOARD == "node" else "Pultforsterker"
 PIN_RELAY_AMP = 27      # modules: relé 3 (24 V til forsterker)   main: strømrelé + 5V_SW (høy = på)
 PIN_RELAY_AUX = 22      # modules: relé lav = DAC, høy = AUX       main: TPA3116 SDZ (høy = forsterker på)
 PIN_X9C_INC, PIN_X9C_UD, PIN_X9C_CS = 26, 14, 15   # modules (serial console må være av)
@@ -922,6 +928,12 @@ def read_raw():
         return {}
 
 
+# Etter play/pause fra appen/knappene: vis ny tilstand straks (i opptil 3 s) til kilden selv melder den, så status ikke
+# blinker tilbake mens oled_display.py/Lyrion ennå ikke har oppdatert seg.
+_transport_hint = {"playing": False, "until": 0.0, "src": ""}
+PRODUCT = {"main": "s1", "node": "node" if BOARD != "node" or NODE_GPIO else "core"}.get(BOARD, BOARD)
+
+
 def read_status():
     st = read_raw()
     raw_ap = st.get("airplay_device", "")
@@ -938,7 +950,15 @@ def read_status():
               "duration": spotify["duration"], "position": spotify["position"], "bt_device": st.get("bt_device", "")}
     extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", "")} for i, p in enumerate(state["presets"])],
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected}
-    return {**state, **extra, "playing": bool(st.get("playing")), "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": st.get("cover", ""), "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
+    playing, paused = bool(st.get("playing")), bool(st.get("paused"))
+    if _transport_hint["until"] > time.time() and _transport_hint["src"] == st.get("source", ""):
+        if playing == _transport_hint["playing"]:
+            _transport_hint["until"] = 0   # kilden har tatt igjen
+        else:
+            playing = _transport_hint["playing"]; paused = not playing
+    cover = st.get("cover", "") or ""
+    cover_url = cover if cover.startswith(("http://", "https://")) else (f"/api/cover?v={cover}" if cover else "")
+    return {**state, **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"],
             "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD,
@@ -1709,14 +1729,73 @@ async def h_voice(r):
     return j()
 
 
-async def h_cover(_r):
+async def h_cover(r):
     try:
         with open(COVER_RADIO if state["input"] == "radio" else COVER_FILE, "rb") as fh:
             img = fh.read()
     except OSError:
-        return web.Response(status=404)
+        return web.Response(status=404, headers={"Cache-Control": "no-store"})
+    etag = '"' + hashlib.sha1(img).hexdigest()[:12] + '"'
+    # ?v=<hash> fra status gir en ny URL per bilde – den kan caches lenge; uten v må nettleseren spørre hver gang
+    cache = "public, max-age=86400, immutable" if r.query.get("v") else "no-cache"
+    if r.headers.get("If-None-Match") == etag:
+        return web.Response(status=304, headers={"ETag": etag, "Cache-Control": cache})
     ctype = "image/png" if img[:8] == b"\x89PNG\r\n\x1a\n" else "image/jpeg"
-    return web.Response(body=img, content_type=ctype, headers={"Cache-Control": "max-age=3600"})
+    return web.Response(body=img, content_type=ctype, headers={"Cache-Control": cache, "ETag": etag})
+
+
+def _event_key(st):
+    """Det appen trenger å få vite straks (posisjonen teller bare ved hopp, ikke hvert sekund)."""
+    return json.dumps({k: v for k, v in st.items() if k not in ("position", "bt_pairing_left", "hold", "settings_menu", "input_seq")},
+                      sort_keys=True, default=str)
+
+
+async def h_events(r):
+    """Server-Sent Events: send status når den endrer seg. Pi Zero: én billig read_status() per 0,25 s per klient."""
+    resp = web.StreamResponse(headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache",
+                                       "X-Accel-Buffering": "no", **_cors_headers(r)})
+    await resp.prepare(r)
+    last, last_send = None, 0.0
+    try:
+        await resp.write(b"retry: 2000\n\n")
+        while True:
+            st = read_status(); key = _event_key(st); now = time.time()
+            if key != last or now - last_send > 5:   # hvert 5. s uansett (posisjon/hold)
+                await resp.write(b"data: " + json.dumps(st, default=str).encode() + b"\n\n")
+                last, last_send = key, now
+            await asyncio.sleep(0.25)
+    except (ConnectionResetError, asyncio.CancelledError, RuntimeError):
+        pass
+    return resp
+
+
+def _cors_headers(r):
+    h = {"Access-Control-Allow-Origin": r.headers.get("Origin") or "*", "Vary": "Origin",
+         "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Max-Age": "600",
+         "Access-Control-Allow-Headers": r.headers.get("Access-Control-Request-Headers") or "Content-Type"}
+    if r.headers.get("Access-Control-Request-Private-Network"):
+        h["Access-Control-Allow-Private-Network"] = "true"
+    return h
+
+
+@web.middleware
+async def cors_mw(r, handler):
+    """CORS for /api/*: appen (capacitor://localhost / https://localhost) og web-UI fra en annen vert. API-et er åpent på
+    LAN-et uansett (ingen innlogging/cookies), så origin speiles."""
+    if not r.path.startswith("/api/"):
+        return await handler(r)
+    if r.method == "OPTIONS":
+        return web.Response(status=204, headers=_cors_headers(r))
+    try:
+        resp = await handler(r)
+    except web.HTTPException as e:
+        resp = e
+    if not resp.prepared:
+        for k, v in _cors_headers(r).items():
+            resp.headers.setdefault(k, v)
+    if isinstance(resp, web.HTTPException) and not isinstance(resp, web.Response):
+        raise resp
+    return resp
 
 
 
@@ -1832,11 +1911,16 @@ async def h_transport(r):
     a = (await r.json()).get("action", "")
     if a not in TRANSPORT:
         return web.json_response({"error": f"action må være en av {sorted(TRANSPORT)}"}, status=400)
+    before = read_status()
     try:
         await asyncio.get_running_loop().run_in_executor(None, transport, a)
     except Exception as e:
         return web.json_response({"error": str(e)}, status=409)
-    await asyncio.sleep(0.6)   # la metadata rekke å oppdatere seg
+    if a in ("play", "pause", "playpause", "stop"):
+        want = (not before["playing"]) if a == "playpause" else a == "play"
+        _transport_hint.update(playing=want, until=time.time() + 3.0, src=before["source"])
+        return j()
+    await asyncio.sleep(0.6)   # neste/forrige: la metadata rekke å oppdatere seg
     return j()
 async def h_loudness(r):
     b = await r.json(); set_loudness(b.get("on"), b.get("level")); return j()
@@ -2173,7 +2257,8 @@ def start_mdns():
         from zeroconf import ServiceInfo, Zeroconf
         info = ServiceInfo("_kipultamp._tcp.local.", f"{NAME}._kipultamp._tcp.local.",
                            addresses=[socket.inet_aton(_local_ip())], port=PORT,
-                           properties={"id": socket.gethostname(), "version": VERSION, "name": NAME, "type": "pultforsterker"},
+                           properties={"id": socket.gethostname(), "version": VERSION, "name": NAME, "type": "pultforsterker",
+                                       "product": PRODUCT, "path": "/api/status"},
                            server=f"{socket.gethostname()}.local.")
         zc = Zeroconf(); zc.register_service(info)
         print(f"mDNS: {NAME}._kipultamp._tcp på {_local_ip()}:{PORT}", flush=True); return zc
@@ -2216,8 +2301,8 @@ def main():
     if pot.startswith("rc:"):   # rc:24 eller rc:24:inv (snu retningen)
         parts = pot.split(":")
         threading.Thread(target=pot_thread, args=(int(parts[1]), len(parts) > 2 and parts[2] == "inv"), daemon=True).start()
-    app = web.Application()
-    app.add_routes([web.get("/api/status", h_status), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
+    app = web.Application(middlewares=[cors_mw])
+    app.add_routes([web.get("/api/status", h_status), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),

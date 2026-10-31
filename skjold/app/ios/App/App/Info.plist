@@ -77,6 +77,7 @@
 	<string>Skjold kobler til forsterkeren på det lokale nettet.</string>
 	<key>NSBonjourServices</key>
 	<array>
+		<string>_kipultamp._tcp</string>
 		<string>_http._tcp</string>
 	</array>
 </dict>

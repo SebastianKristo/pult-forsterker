@@ -1,15 +1,16 @@
 // Skall: telefon (App v2) under 900 px eller i Capacitor, ellers PC (S1 Web v3).
-import { useEffect, useState } from 'preact/hooks';
-import { isNative, hostLabel } from './lib/api';
-import { deviceName, fullPlayer, go, lastError, mode, online, route, status, toast, type Page } from './lib/store';
-import { ICONS, CATS } from './lib/settings';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { App as CapApp } from '@capacitor/app';
+import { isNative, hostLabel, PRODUCT_SHORT } from './lib/api';
+import { atRoot, closeFull, deviceName, fullPlayer, go, lastError, mode, online, openFull, playPause, product, route, status, toast, type Page } from './lib/store';
+import { ICONS } from './lib/settings';
+import { cats } from './screens/settings';
 import { Icon, Logo, PlayPauseIcon } from './components/ui';
 import { HomePage, RadioPage, RoomsPage, EqPage } from './screens/pages';
 import { SettingsPage, CategoryDetail } from './screens/settings';
-import { Art, PlayerBody, PowerButton, Transport, VolumeRow, nowTitle } from './screens/player';
+import { Art, PlayerBody, PowerButton, Transport, VolumeRow, nowTitle, subLine } from './screens/player';
 import { FindDevice, Setup } from './screens/onboard';
-import { api } from './lib/api';
-import { act, inputLabel, showToast, settings } from './lib/store';
+import { inputLabel, showToast, settings } from './lib/store';
 import { canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer } from './lib/appUpdate';
 
 function useWide(): boolean {
@@ -25,6 +26,14 @@ function useWide(): boolean {
 
 export function App() {
   const wide = useWide();
+  useEffect(() => {   // Android tilbakeknapp/-sveip: ett nivå opp i appen, avslutt bare fra Hjem
+    if (!isNative) return;
+    const h = CapApp.addListener('backButton', () => {
+      if (mode.value !== 'app') { if (mode.value === 'setup') mode.value = 'app'; else void CapApp.minimizeApp(); return; }
+      if (atRoot()) void CapApp.minimizeApp(); else if (fullPlayer.value) closeFull(); else window.history.back();
+    });
+    return () => { void h.then((x) => x.remove()); };
+  }, []);
   useEffect(() => {   // Android: si fra én gang per oppstart hvis det finnes en nyere app på GitHub
     if (!canSelfUpdate) return;
     void (async () => {
@@ -51,7 +60,32 @@ function Offline() {
   );
 }
 
-const TABS: [Page, string, string][] = [['home', 'Hjem', ICONS.home ?? ''], ['eq', 'Lyd', ICONS.eq ?? ''], ['radio', 'Radio', ICONS.radio ?? ''], ['settings', 'Innstillinger', ICONS.settings ?? '']];
+const ROOM_ICON = 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z';
+const TABS: [Page, string, string][] = [['home', 'Hjem', ICONS.home ?? ''], ['rooms', 'Rom', ROOM_ICON], ['eq', 'Lyd', ICONS.eq ?? ''], ['radio', 'Radio', ICONS.radio ?? ''], ['settings', 'Innstillinger', ICONS.settings ?? '']];
+
+/** Fullskjermspilleren: dra ned mer enn 90 px for å lukke. */
+function FullPlayer() {
+  const [dy, setDy] = useState(0);
+  const start = useRef<{ y: number; ok: boolean } | null>(null);
+  const body = useRef<HTMLDivElement>(null);
+  const down = (e: PointerEvent) => {
+    const t = e.target as HTMLElement;
+    if (t.closest('input, select, button:not(.grab-btn)') && !t.closest('.grab')) return;   // ikke når volumet dras
+    if ((body.current?.scrollTop ?? 0) > 0 && !t.closest('.grab')) return;
+    start.current = { y: e.clientY, ok: true };
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+  };
+  const cur = useRef(0);
+  const move = (e: PointerEvent) => { if (start.current) { cur.current = Math.max(0, e.clientY - start.current.y); setDy(cur.current); } };
+  const up = () => { if (!start.current) return; start.current = null; if (cur.current > 90) closeFull(); cur.current = 0; setDy(0); };
+  return (
+    <div class="full" data-testid="full" style={{ transform: dy ? `translateY(${dy}px)` : undefined, transition: dy ? 'none' : 'transform .2s' }}
+      onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+      <div class="grab"><button class="grab-btn" aria-label="Lukk" onClick={closeFull}><i /></button></div>
+      <div class="body" ref={body}><PlayerBody /></div>
+    </div>
+  );
+}
 const TITLES: Record<Page, string> = { home: 'Hjem', play: 'Spiller nå', eq: 'Lyd', radio: 'Radio', rooms: 'Rom', settings: 'Innstillinger' };
 
 function Phone() {
@@ -79,9 +113,9 @@ function Phone() {
       <div class="bottom">
         {s && page !== 'home' && (
           <div class="mini">
-            <button class="cover" style={{ padding: 0 }} onClick={() => { fullPlayer.value = true; }}><Art s={s} size="small" /></button>
-            <button class="txt" onClick={() => { fullPlayer.value = true; }}><span class="ellip" style={{ fontSize: '13px' }}>{t.title}</span><span class="ellip muted" style={{ fontSize: '11px' }}>{t.sub}</span></button>
-            <button class="tbtn" aria-label="Spill/pause" onClick={() => act(() => api.transport('playpause'), { playing: !s.playing })}><PlayPauseIcon playing={s.playing} size={22} /></button>
+            <button class="cover" style={{ padding: 0 }} onClick={openFull}><Art s={s} size="small" /></button>
+            <button class="txt" onClick={openFull} data-testid="mini"><span class="ellip" style={{ fontSize: '13px' }}>{t.title}{t.sub && t.title !== t.sub ? <span class="muted"> · {t.sub}</span> : null}</span><span class="ellip muted" style={{ fontSize: '11px' }}>{deviceName.value} · {PRODUCT_SHORT[product.value]}</span></button>
+            <button class="tbtn" aria-label="Spill/pause" data-testid="mini-pp" onClick={playPause}><PlayPauseIcon playing={s.playing} size={22} /></button>
           </div>
         )}
         <nav class="tabs">
@@ -90,12 +124,7 @@ function Phone() {
           ))}
         </nav>
       </div>
-      {fullPlayer.value && (
-        <div class="full">
-          <div class="grab"><button aria-label="Lukk" onClick={() => { fullPlayer.value = false; }}><i /></button></div>
-          <div class="body"><PlayerBody /></div>
-        </div>
-      )}
+      {fullPlayer.value && <FullPlayer />}
     </div>
   );
 }
@@ -105,7 +134,7 @@ const NAV: [Page, string][] = [['home', 'Hjem'], ['play', 'Spiller nå'], ['radi
 function Desktop() {
   const s = status.value, r = route.value;
   const t = nowTitle(s);
-  const cat = r.page === 'settings' ? CATS.find((c) => c.id === r.cat) : undefined;
+  const cat = r.page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
   const title = cat ? cat.n : TITLES[r.page];
   return (
     <div class="desktop">
@@ -121,11 +150,11 @@ function Desktop() {
         <nav class="side">
           {NAV.map(([id, n]) => <button key={id} class={'nv' + (r.page === id ? ' on' : '')} onClick={() => go(id)}>{n}</button>)}
           <div class="head">INNSTILLINGER</div>
-          {CATS.map((c) => <button key={c.id} class={'nv' + (r.page === 'settings' && r.cat === c.id ? ' on' : '')} onClick={() => go('settings', c.id)}>{c.n}</button>)}
+          {cats.value.map((c) => <button key={c.id} class={'nv' + (r.page === 'settings' && r.cat === c.id ? ' on' : '')} onClick={() => go('settings', c.id)}>{c.n}</button>)}
         </nav>
         <main class="main">
           <div class="pgh"><h1>{title}</h1>{cat && <span class="sub">{cat.sub}</span>}</div>
-          {r.page === 'home' && <><div class="player"><Art s={s} /><div class="col gap16"><div class="col gap4"><span style={{ fontSize: '24px', fontWeight: 600 }} data-testid="now-title">{t.title}</span><span class="muted">{t.sub}</span></div><Transport s={s} /><VolumeRow s={s} /></div></div><HomePage wide /></>}
+          {r.page === 'home' && <><div class="player"><Art s={s} /><div class="col gap16"><div class="col gap4"><span style={{ fontSize: '24px', fontWeight: 600 }} data-testid="now-title">{t.title}</span><span class="muted">{subLine(t)}</span></div><Transport s={s} /><VolumeRow s={s} /></div></div><HomePage wide /></>}
           {r.page === 'play' && <div class="player"><PlayerBody /></div>}
           {r.page === 'radio' && <RadioPage />}
           {r.page === 'rooms' && <RoomsPage />}
@@ -145,7 +174,7 @@ function Desktop() {
         </aside>
       </div>
       <div class="dock">
-        <button class="np" onClick={() => go('play')}><div class="cover" style={{ width: '46px', flexShrink: 0 }}><Art s={s} size="small" /></div><div class="col" style={{ minWidth: 0 }}><span class="ellip">{t.title}</span><span class="ellip muted" style={{ fontSize: '12px' }}>{t.sub}</span></div></button>
+        <button class="np" onClick={() => go('play')}><div class="cover" style={{ width: '46px', flexShrink: 0 }}><Art s={s} size="small" /></div><div class="col" style={{ minWidth: 0 }}><span class="ellip">{t.title}</span><span class="ellip muted" style={{ fontSize: '12px' }}>{subLine(t)}</span></div></button>
         <Transport s={s} />
         <VolumeRow s={s} />
       </div>
