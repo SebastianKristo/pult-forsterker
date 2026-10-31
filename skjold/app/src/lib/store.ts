@@ -1,6 +1,6 @@
 // Global tilstand (Preact signals): status-polling, innstillinger, navigasjon.
 import { signal, computed, effect } from '@preact/signals';
-import { api, ApiError, needsHost, type Status, type InputId } from './api';
+import { api, ApiError, getBase, needsHost, productOf, type Status, type InputId } from './api';
 import { DEF, defaultEq, mergeSettings, type Settings, type EqProfiles, type EqSource } from './settings';
 
 export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings';
@@ -26,19 +26,63 @@ export function showToast(msg: string, ms = 2600): void {
   toast.value = msg; clearTimeout(toastT); toastT = window.setTimeout(() => (toast.value = ''), ms);
 }
 
+// ---------- navigasjon med historikk (Android tilbake-sveip / nettleserens tilbake går ett nivå opp i appen) ----------
+interface NavState { skjold: true; page: Page; cat?: string; full: boolean }
+const navState = (): NavState => ({ skjold: true, page: route.value.page, ...(route.value.cat ? { cat: route.value.cat } : {}), full: fullPlayer.value });
+function pushNav(): void { try { history.pushState(navState(), ''); } catch { /* ignore */ } }
 export function go(page: Page, cat?: string): void {
+  const same = route.value.page === page && route.value.cat === cat && !fullPlayer.value;
   route.value = cat ? { page, cat } : { page };
   fullPlayer.value = false;
+  if (!same) pushNav();
   if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
 }
+export function openFull(): void { if (!fullPlayer.value) { fullPlayer.value = true; pushNav(); } }
+/** Lukk fullskjermspilleren: gå tilbake i historikken hvis den ble åpnet med openFull, ellers bare lukk. */
+export function closeFull(): void {
+  if (!fullPlayer.value) return;
+  const st = history.state as NavState | null;
+  if (st?.skjold && st.full) history.back(); else fullPlayer.value = false;
+}
+/** Er vi på «rot» (Hjem uten noe åpent)? Brukes av Android-tilbakeknappen for å avslutte appen der. */
+export function atRoot(): boolean { return route.value.page === 'home' && !fullPlayer.value; }
+if (typeof window !== 'undefined') {
+  try { history.replaceState(navState(), ''); } catch { /* ignore */ }
+  window.addEventListener('popstate', (e) => {
+    const st = e.state as NavState | null;
+    if (st?.skjold) {
+      route.value = st.cat ? { page: st.page, cat: st.cat } : { page: st.page };
+      fullPlayer.value = st.full;
+    } else { route.value = { page: 'home' }; fullPlayer.value = false; }
+  });
+}
 
-// ---------- polling ----------
+// ---------- synk med forsterkeren ----------
+// Brukerens siste handling «holdes» en kort stund: status som kommer inn (polling, SSE, svar på eldre POST) og som
+// ennå ikke viser endringen, overstyres så knapper og volum ikke hopper tilbake. Holdet slippes straks status er enig.
+const holds = new Map<string, { v: unknown; until: number }>();
+export function hold(patch: Partial<Status>, ms = 1500): void {
+  const until = Date.now() + ms;
+  for (const [k, v] of Object.entries(patch)) holds.set(k, { v, until });
+  if ('playing' in patch) holds.set('paused', { v: !patch.playing, until });
+}
+/** Ta imot status fra forsterkeren (polling, /api/events eller svar på en handling). */
+export function applyStatus(incoming: Status): void {
+  const now = Date.now();
+  const s = { ...incoming } as unknown as Record<string, unknown>;
+  for (const [k, h] of holds) {
+    if (now > h.until || JSON.stringify(s[k]) === JSON.stringify(h.v)) { if (now > h.until) holds.delete(k); continue; }
+    s[k] = h.v;
+  }
+  status.value = s as unknown as Status; online.value = true; failures = 0; lastError.value = '';
+}
+
 let timer = 0, inflight = false, failures = 0;
+export const live = signal<boolean>(false);   // /api/events er tilkoblet
 export async function refresh(): Promise<void> {
   if (inflight) return; inflight = true;
   try {
-    const s = await api.status();
-    status.value = s; online.value = true; failures = 0; lastError.value = '';
+    applyStatus(await api.status());
   } catch (e) {
     failures++;
     if (failures >= 2) { online.value = false; lastError.value = e instanceof Error ? e.message : String(e); }
@@ -48,21 +92,75 @@ function schedule(): void {
   clearTimeout(timer);
   if (document.visibilityState === 'hidden') return;
   const playing = status.value?.playing;
-  timer = window.setTimeout(async () => { await refresh(); schedule(); }, online.value ? (playing ? 1000 : 2000) : 4000);
+  // Med /api/events er polling bare en sikkerhetsline
+  const ms = live.value ? 15000 : online.value ? (playing ? 1000 : 2000) : 4000;
+  timer = window.setTimeout(async () => { await refresh(); schedule(); }, ms);
 }
+
+let es: EventSource | null = null, esRetry = 0, esFails = 0;
+function connectEvents(): void {
+  clearTimeout(esRetry);
+  if (es || typeof EventSource === 'undefined' || document.visibilityState === 'hidden') return;
+  try { es = new EventSource(getBase() + '/api/events'); } catch { es = null; return; }
+  es.onopen = () => { live.value = true; esFails = 0; schedule(); };
+  es.onmessage = (e) => { try { applyStatus(JSON.parse(e.data as string) as Status); } catch { /* ignore */ } };
+  es.onerror = () => {
+    // eldre daemon (404), nett borte eller CORS: tilbake til polling, prøv igjen senere
+    es?.close(); es = null; if (live.value) { live.value = false; schedule(); }
+    esFails++; esRetry = window.setTimeout(connectEvents, Math.min(60000, 3000 * esFails));
+  };
+}
+function disconnectEvents(): void { clearTimeout(esRetry); es?.close(); es = null; live.value = false; }
+/** Ny vert valgt (Finn Skjold / Rom): koble events på nytt. */
+export function reconnect(): void { disconnectEvents(); esFails = 0; connectEvents(); void refresh(); }
+
 export function startPolling(): void {
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { void refresh(); } schedule(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { void refresh(); connectEvents(); } else disconnectEvents();
+    schedule();
+  });
+  connectEvents();
   void refresh().then(schedule);
 }
-/** Kjør en API-handling, oppdater status med svaret, og vis feil som toast. */
-export async function act(fn: () => Promise<Status>, optimistic?: Partial<Status>): Promise<void> {
-  if (optimistic && status.value) status.value = { ...status.value, ...optimistic };
-  try { status.value = await fn(); online.value = true; }
+/** Kjør en API-handling med optimistisk oppdatering (holdes til forsterkeren er enig), og vis feil som toast. */
+export async function act(fn: () => Promise<Status>, optimistic?: Partial<Status>, holdMs = 1500): Promise<void> {
+  if (optimistic && status.value) { hold(optimistic, holdMs); status.value = { ...status.value, ...optimistic }; }
+  try { applyStatus(await fn()); }
   catch (e) {
+    if (optimistic) for (const k of Object.keys(optimistic)) holds.delete(k);
     showToast(e instanceof ApiError ? 'Forsterkeren svarte: ' + e.message : 'Fikk ikke kontakt med forsterkeren');
     void refresh();
   }
 }
+
+/** Spill/pause: viser motsatt tilstand straks og holder den til kilden har fulgt etter (maks 3 s). */
+export function playPause(): void {
+  const s = status.value; if (!s) return;
+  void act(() => api.transport(s.playing ? 'pause' : 'play'), { playing: !s.playing, paused: s.playing }, 3000);
+}
+
+// Volum: maks 10 POST/s, alltid siste verdi til slutt, og bare én forespørsel om gangen (ingen utdaterte svar)
+let volWant: number | null = null, volBusy = false, volLast = 0, volT = 0;
+export function setVolume(v: number, final = false): void {
+  v = Math.max(0, Math.min(100, Math.round(v)));
+  hold({ volume: v }, 1200);
+  if (status.value) status.value = { ...status.value, volume: v };
+  volWant = v;
+  clearTimeout(volT);
+  const wait = final ? 0 : Math.max(0, 100 - (Date.now() - volLast));
+  volT = window.setTimeout(sendVolume, wait);
+}
+async function sendVolume(): Promise<void> {
+  if (volBusy || volWant === null) return;
+  const v = volWant; volWant = null; volBusy = true; volLast = Date.now();
+  try {
+    const r = await api.volume(v);
+    hold({ volume: volWant ?? v }, 800);   // 800 ms etter siste svar ignoreres eldre verdier
+    applyStatus(r);
+  } catch { showToast('Fikk ikke kontakt med forsterkeren'); }
+  finally { volBusy = false; if (volWant !== null) volT = window.setTimeout(sendVolume, Math.max(0, 100 - (Date.now() - volLast))); }
+}
+
 
 // ---------- settings ----------
 const MIGRATE_KEYS = ['nameCustom', 'updChannel', 'updAuto', 'setupDone'];
@@ -145,6 +243,8 @@ export function inputLabel(id: InputId): string {
   }
   return id;
 }
+
+export const product = computed(() => productOf(status.value));
 
 export const deviceName = computed(() => {
   const st = settings.value;

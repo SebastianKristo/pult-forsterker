@@ -16,8 +16,10 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.6.0",
     "@capacitor/ios": "^8.6.0",
+    "@devioarts/capacitor-mdns": "^0.1.0",
     "@preact/signals": "^2.11.4",
     "preact": "^10.27.0"
   },

@@ -1,7 +1,7 @@
 // Felles avspillingsdeler: omslag, transport, volum, kildevalg, radiofavoritter.
 import { useEffect, useState } from 'preact/hooks';
 import { api, coverUrl, type InputId, type Status } from '../lib/api';
-import { act, inputLabel, status, go } from '../lib/store';
+import { act, inputLabel, status, go, playPause, setVolume } from '../lib/store';
 import { art } from '../lib/settings';
 import { Chip, MuteIcon, NextIcon, PlayPauseIcon, PowerIcon, PrevIcon, Slider } from '../components/ui';
 
@@ -9,11 +9,14 @@ export const SRC_COLOR: Record<string, string> = {
   radio: 'var(--src-radio)', bt: 'var(--src-bt)', usb: 'var(--src-bt)', airplay: 'var(--src-air)', aux: 'var(--src-aux)', aux2: 'var(--src-aux)', spotify: 'var(--src-spotify)'
 };
 
-export function nowTitle(s: Status | null): { title: string; sub: string } {
+/** Én linje under tittelen der det er trangt: «Artist · Album». */
+export function subLine(t: { sub: string; album?: string }): string { return [t.sub, t.album].filter(Boolean).join(' · '); }
+
+export function nowTitle(s: Status | null): { title: string; sub: string; album?: string } {
   if (!s) return { title: 'Ikke tilkoblet', sub: '' };
   if (!s.power) return { title: 'Standby', sub: 'Trykk på av/på for å slå på' };
   const src = inputLabel(s.input);
-  if (s.title) return { title: s.title, sub: [s.artist, s.album].filter(Boolean).join(' · ') || src };
+  if (s.title) return { title: s.title, sub: s.artist || src, album: s.album || '' };
   if (s.input === 'radio' && s.station) return { title: s.station, sub: 'Radio' };
   if (s.input === 'bt' && s.bt_device) return { title: s.bt_device, sub: 'Blåtann' };
   return { title: src, sub: s.playing ? 'Spiller' : 'Klar' };
@@ -27,7 +30,7 @@ export function Art({ s, size = 'big' }: { s: Status | null; size?: 'big' | 'sma
   useEffect(() => setBad(false), [url]);
   return (
     <div class="art" style={{ background: a.bg, color: a.ink, padding: size === 'small' ? 0 : undefined }} data-testid="art">
-      {url && !bad && <img src={url} alt="" onError={() => setBad(true)} />}
+      {url && !bad && <img key={url} src={url} alt="" draggable={false} data-testid="cover" onError={() => setBad(true)} />}
       {size === 'big' && (!url || bad) && (
         <>
           <span class="kicker" style={{ color: a.ink, opacity: 0.8 }}>{s ? inputLabel(s.input) : ''}</span>
@@ -45,7 +48,7 @@ export function Transport({ s }: { s: Status | null }) {
     <div class="transport">
       <button class="tbtn" aria-label="Forrige" disabled={off} onClick={() => act(() => api.transport('previous'))}><PrevIcon /></button>
       <button class="tbtn main" aria-label={s?.playing ? 'Pause' : 'Spill'} disabled={off}
-        onClick={() => act(() => api.transport('playpause'), { playing: !s?.playing })}><PlayPauseIcon playing={!!s?.playing} /></button>
+        onClick={playPause} data-testid="playpause"><PlayPauseIcon playing={!!s?.playing} /></button>
       <button class="tbtn" aria-label="Neste" disabled={off} onClick={() => act(() => api.transport('next'))}><NextIcon /></button>
     </div>
   );
@@ -56,7 +59,7 @@ export function VolumeRow({ s }: { s: Status | null }) {
   return (
     <div class="volrow">
       <button class={'btn square' + (s?.mute ? ' danger' : '')} aria-label={s?.mute ? 'Slå på lyd' : 'Demp'} onClick={() => act(() => api.mute(!s?.mute), { mute: !s?.mute })}><MuteIcon muted={!!s?.mute} /></button>
-      <Slider value={v} label="Volum" onCommit={(nv) => act(() => api.volume(nv), { volume: nv })} />
+      <Slider value={v} label="Volum" onCommit={setVolume} />
       <span class="v" data-testid="vol">{v}</span>
       <span class="lbl">VOL</span>
     </div>
@@ -116,6 +119,8 @@ export function PlayerBody() {
       <div class="col gap4">
         <span class="ellip" style={{ fontSize: '22px', fontWeight: 600 }} data-testid="now-title">{t.title}</span>
         <span class="ellip muted">{t.sub}</span>
+        {t.album && <span class="ellip muted" style={{ fontSize: '13px', opacity: 0.8 }} data-testid="album">{t.album}</span>}
+        {s?.input === 'airplay' && s.airplay_device && <span class="ellip muted" style={{ fontSize: '11px' }}>Fra {s.airplay_device}</span>}
       </div>
       {dur > 0 && (
         <div class="col gap4">

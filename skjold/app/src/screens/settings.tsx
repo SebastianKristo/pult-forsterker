@@ -1,15 +1,18 @@
 // Innstillinger: kategoriliste + detaljside, generert fra CATS i lib/settings.ts.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, cmpVersion, fetchLatestRelease, hostLabel, isNative, type LevelSource, type Release } from '../lib/api';
-import { act, applied, go, localOnly, mode, route, setSetting, settings, settingsSource, showToast, status } from '../lib/store';
-import { CATS, CAT_TILE, ICONS, fmt, type Category, type Item } from '../lib/settings';
+import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status } from '../lib/store';
+import { computed } from '@preact/signals';
+import { CAT_TILE, ICONS, catsFor, fmt, type Category, type Item } from '../lib/settings';
+
+export const cats = computed(() => catsFor(product.value, status.value?.inputs ?? []));
 import { CLOCKS, drawClock } from '../lib/clocks';
 import { ConfirmButton, Icon, Slider, Stepper, Toggle } from '../components/ui';
 import { EqPage, RoomsPage, useMinuteTick } from './pages';
 import { AppUpdater, canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer, type AppRelease } from '../lib/appUpdate';
 
 export function SettingsPage({ wide = false }: { wide?: boolean }) {
-  const cat = CATS.find((c) => c.id === route.value.cat);
+  const cat = cats.value.find((c) => c.id === route.value.cat);
   if (!cat) return <CategoryList />;
   return (
     <div class="col gap12">
@@ -22,7 +25,7 @@ export function SettingsPage({ wide = false }: { wide?: boolean }) {
 export function CategoryList() {
   return (
     <div class="list">
-      {CATS.map((c) => (
+      {cats.value.map((c) => (
         <button key={c.id} class="cat-row" onClick={() => go('settings', c.id)}>
           <div class="row gap12">
             <span class="ico" style={{ background: CAT_TILE[c.id] }}><Icon d={ICONS[c.id] ?? ''} size={17} /></span>
@@ -122,8 +125,10 @@ function Row({ it }: { it: Item }) {
       const v: Record<typeof it.key, string> = {
         btDev: s?.bt_device || 'Ingen', lyrion: s?.lyrion ? 'Tilkoblet' : 'Ikke funnet', version: s?.version ?? '–', ip: hostLabel(),
         id: s?.id ?? '–', board: s?.board ?? '–', headphones: s?.headphones ? 'Tilkoblet' : 'Ikke tilkoblet', btPairing: s?.bt_pairing ? 'Synlig' : 'Av',
-        inputs: (s?.inputs ?? []).join(', ')
+        inputs: (s?.inputs ?? []).join(', '),
+        output: product.value === 'core' ? 'Pi-ens lydutgang (3,5 mm / HDMI / DAC)' : product.value === 'node' ? '3,5 mm' : 'Høyttalerklemmer'
       };
+      if (it.key === 'board') return <Line n={it.n}><span class="val">{({ s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core' })[product.value]} ({s?.board ?? '–'})</span></Line>;
       return <Line n={it.n}><span class="val">{v[it.key]}</span></Line>;
     }
     case 'act': {
@@ -140,6 +145,8 @@ function Row({ it }: { it: Item }) {
       if (it.id === 'findDevice' && !isNative) return null;
       return <Line n={it.n} hint={it.hint}><ConfirmButton label={it.label} safe={it.safe} onConfirm={run[it.id]} /></Line>;
     }
+    case 'test':
+      return <Line n={it.n} hint={it.hint}><SpeakerTest /></Line>;
     case 'clocks':
       return <Line n="Klokkestil" note={pending('clockStyle')} wideCtl><ClockPicker /></Line>;
     case 'update':
@@ -147,6 +154,15 @@ function Row({ it }: { it: Item }) {
     case 'eq':
       return null;
   }
+}
+
+function SpeakerTest() {
+  const [res, setRes] = useState<Record<string, string>>({});
+  const test = async (ch: 'L' | 'R') => {
+    try { await api.speakerTest(ch); setRes((r) => ({ ...r, [ch]: '✓' })); }
+    catch { setRes((r) => ({ ...r, [ch]: '–' })); showToast('Kommer: høyttalertest finnes ikke i API-et ennå'); }
+  };
+  return <>{(['L', 'R'] as const).map((ch) => <button key={ch} class="btn sm" data-testid={'test-' + ch} onClick={() => void test(ch)}>{ch === 'L' ? 'Venstre' : 'Høyre'}{res[ch] ? ' ' + res[ch] : ''}</button>)}</>;
 }
 
 function ClockCanvas({ style }: { style: number }) {

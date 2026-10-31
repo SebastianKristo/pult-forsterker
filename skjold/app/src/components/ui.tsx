@@ -53,20 +53,41 @@ export function ConfirmButton({ label, onConfirm, safe = false, danger = false, 
   );
 }
 
-/** Slider that keeps local value while dragging, commits on change (and throttled on input). */
-export function Slider({ value, min = 0, max = 100, step = 1, onCommit, className = 'range', vertical = false, label }: { value: number; min?: number; max?: number; step?: number; onCommit: (v: number) => void; className?: string; vertical?: boolean; label?: string }) {
+/**
+ * Slider som eier verdien sin mens den dras og i 800 ms etter slipp (innkommende status ignoreres da, så den ikke hopper).
+ * onCommit(v, false) mens den dras (maks hvert 100 ms), onCommit(v, true) ved slipp.
+ */
+export function Slider({ value, min = 0, max = 100, step = 1, onCommit, className = 'range', vertical = false, label }: { value: number; min?: number; max?: number; step?: number; onCommit: (v: number, final: boolean) => void; className?: string; vertical?: boolean; label?: string }) {
   const [local, setLocal] = useState(value);
   const drag = useRef(false);
+  const released = useRef(0);
   const last = useRef(0);
-  useEffect(() => { if (!drag.current) setLocal(value); }, [value]);
+  const sent = useRef<number | null>(null);
+  const relT = useRef(0);
+  const latest = useRef(value); latest.current = value;
+  useEffect(() => {
+    if (drag.current || Date.now() - released.current < 800) return;
+    setLocal(value);
+  }, [value]);
+  useEffect(() => () => clearTimeout(relT.current), []);
+  const release = (v: number) => {
+    drag.current = false; released.current = Date.now();
+    if (sent.current !== v) { sent.current = v; onCommit(v, true); }
+    clearTimeout(relT.current);
+    relT.current = window.setTimeout(() => { if (!drag.current) setLocal(latest.current); }, 850);
+  };
   return (
     <input
       type="range" min={min} max={max} step={step} value={local} class={vertical ? 'vrange' : className} aria-label={label}
-      onPointerDown={() => { drag.current = true; }}
-      onPointerUp={() => { drag.current = false; }}
-      onPointerCancel={() => { drag.current = false; }}
-      onInput={(e) => { const v = +(e.currentTarget as HTMLInputElement).value; setLocal(v); const now = Date.now(); if (now - last.current > 150) { last.current = now; onCommit(v); } }}
-      onChange={(e) => { drag.current = false; const v = +(e.currentTarget as HTMLInputElement).value; setLocal(v); onCommit(v); }}
+      onPointerDown={() => { drag.current = true; sent.current = null; }}
+      onPointerUp={(e) => release(+(e.currentTarget as HTMLInputElement).value)}
+      onPointerCancel={(e) => release(+(e.currentTarget as HTMLInputElement).value)}
+      onInput={(e) => {
+        const v = +(e.currentTarget as HTMLInputElement).value; setLocal(v);
+        const now = Date.now();
+        if (now - last.current >= 100) { last.current = now; sent.current = v; onCommit(v, false); }
+      }}
+      onChange={(e) => release(+(e.currentTarget as HTMLInputElement).value)}
     />
   );
 }
@@ -106,3 +127,6 @@ export function PowerIcon({ size = 18 }: { size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8" /><path d="M6.3 6.6a8 8 0 1 0 11.4 0" /></svg>;
 }
 export const S1_ICON = 'M3 7.5h18a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM4.5 9.8h5v3.4h-5zM11.6 10.3a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M13.8 10.3a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M11.6 13.7a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M13.8 13.7a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M16.4 12a2.3 2.3 0 1 0 4.6 0a2.3 2.3 0 1 0-4.6 0M18.7 10.2v1.2M3.5 16.5v1M20.5 16.5v1';
+export const NODE_ICON = 'M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8 6h8v5H8zM9 15.5a1 1 0 1 0 2 0a1 1 0 1 0-2 0M13 15.5a1 1 0 1 0 2 0a1 1 0 1 0-2 0';
+export const CORE_ICON = 'M5 6h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM8 9h4v4H8zM15 9h2M15 12h2M7 18v2M11 18v2M15 18v2M7 4v2M11 4v2M15 4v2';
+export const PRODUCT_ICON: Record<'s1' | 'node' | 'core', string> = { s1: S1_ICON, node: NODE_ICON, core: CORE_ICON };

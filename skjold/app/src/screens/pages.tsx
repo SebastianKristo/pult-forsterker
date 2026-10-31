@@ -1,10 +1,11 @@
 // Sider som deles av telefon- og PC-skallet.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { api, type FullPreset } from '../lib/api';
-import { act, eqActiveSource, go, setEqProfile, settings, showToast, status, applied, settingsSource } from '../lib/store';
+import { api, hostLabel, PRODUCT_HW, PRODUCT_LABEL, PRODUCT_SHORT, productOf, setBase, type FullPreset, type Product } from '../lib/api';
+import { act, deviceName, eqActiveSource, go, loadSettings, mode, online, product, reconnect, setEqProfile, settings, showToast, status, applied, settingsSource } from '../lib/store';
+import { forget, knownDevices } from '../lib/discover';
 import { EQ, eqCurve, type EqSource } from '../lib/settings';
-import { Chip, Section, Slider } from '../components/ui';
-import { Art, InputChips, PresetTiles, nowTitle, VolumeRow, Transport } from './player';
+import { Chip, Icon, PRODUCT_ICON, Section, Slider } from '../components/ui';
+import { Art, InputChips, PresetTiles, nowTitle, subLine, VolumeRow, Transport } from './player';
 
 // ---------- Hjem ----------
 export function HomePage({ wide = false }: { wide?: boolean }) {
@@ -12,11 +13,12 @@ export function HomePage({ wide = false }: { wide?: boolean }) {
   const t = nowTitle(s);
   return (
     <div class="col gap16">
+      {!wide && <DeviceCard />}
       {!wide && (
         <div class="card pad col gap12">
           <div class="row gap12">
             <div style={{ width: '64px', flexShrink: 0 }}><Art s={s} size="small" /></div>
-            <div class="col grow"><span class="ellip" style={{ fontWeight: 600, fontSize: '16px' }}>{t.title}</span><span class="ellip muted">{t.sub}</span></div>
+            <div class="col grow"><span class="ellip" style={{ fontWeight: 600, fontSize: '16px' }}>{t.title}</span><span class="ellip muted">{subLine(t)}</span></div>
           </div>
           <Transport s={s} />
           <VolumeRow s={s} />
@@ -27,6 +29,25 @@ export function HomePage({ wide = false }: { wide?: boolean }) {
         <PresetTiles cols={wide ? 6 : 3} />
       </Section>
     </div>
+  );
+}
+
+/** Hjem: aktivt rom, enhetstype og maskinvare. Trykk = Rom. */
+export function DeviceCard() {
+  const s = status.value, p = product.value;
+  return (
+    <button class="card dev-card" style={{ textAlign: 'left', color: 'var(--text)' }} onClick={() => go('rooms')} data-testid="device-card">
+      <span class="ico"><Icon d={PRODUCT_ICON[p]} size={30} sw={1.2} /></span>
+      <span class="col gap4" style={{ minWidth: 0 }}>
+        <span class="k">Aktivt rom</span>
+        <span class="n ellip">{deviceName.value}</span>
+        <span class="hw ellip">{PRODUCT_HW[p]}{s?.version ? ' · v' + s.version : ''}</span>
+      </span>
+      <span class="col gap6" style={{ alignItems: 'flex-end' }}>
+        <span class="type-badge">{PRODUCT_SHORT[p]}</span>
+        <span class="muted" style={{ fontSize: '11px' }}><i style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', marginRight: '5px', background: online.value ? 'var(--green)' : 'var(--red)' }} />{online.value ? (s?.power ? 'På' : 'Standby') : 'Frakoblet'}</span>
+      </span>
+    </button>
   );
 }
 
@@ -124,14 +145,56 @@ export function RadioPage() {
 }
 
 // ---------- Rom ----------
+const ADD: [Product, string][] = [
+  ['s1', 'Forsterker med skjerm og knapper'],
+  ['node', 'Pi med 1,8″ skjerm og knapper'],
+  ['core', 'Ren Raspberry Pi – bare lyd']
+];
 export function RoomsPage() {
   const s = status.value;
+  const cur = hostLabel();
+  const others = knownDevices().filter((d) => d.base.replace(/^https?:\/\//, '') !== cur);
+  const switchTo = async (base: string) => {
+    setBase(base); reconnect(); await loadSettings(); showToast('Byttet rom');
+  };
   return (
     <div class="col gap16">
-      <div class="banner info"><span><strong>Kommer:</strong> grupper og synkronisert avspilling i flere rom (via Lyrion). Forsterkeren har ikke API for dette ennå.</span></div>
-      <div class="list">
-        <div class="item"><div><div class="n">{s?.name || 'Skjold S1'}</div><div class="hint">{s ? (s.power ? 'Spiller · volum ' + s.volume : 'Standby') : 'Ikke tilkoblet'}</div></div><div class="ctl"><span class="val">Dette rommet</span></div></div>
-      </div>
+      <Section title="Dine rom">
+        <div class="list">
+          <div class="room-row on">
+            <span class="ico"><Icon d={PRODUCT_ICON[product.value]} size={22} sw={1.3} /></span>
+            <span class="col" style={{ minWidth: 0 }}><span class="ellip" style={{ fontWeight: 600 }}>{deviceName.value}</span>
+              <span class="muted ellip" style={{ fontSize: '12px' }}>{PRODUCT_LABEL[product.value]} · {s ? (s.power ? (s.playing ? 'Spiller' : 'På') + ' · volum ' + s.volume : 'Standby') : 'Ikke tilkoblet'}</span></span>
+            <span class="type-badge">Aktiv</span>
+          </div>
+          {others.map((d) => {
+            const p = productOf({ board: '', product: d.product ?? '' });
+            return (
+              <div class="room-row" key={d.base}>
+                <span class="ico"><Icon d={PRODUCT_ICON[p]} size={22} sw={1.3} /></span>
+                <button class="col" style={{ minWidth: 0, border: 'none', background: 'none', padding: 0, textAlign: 'left', color: 'var(--text)' }} onClick={() => void switchTo(d.base)}>
+                  <span class="ellip" style={{ fontWeight: 600 }}>{d.name}</span>
+                  <span class="muted ellip mono" style={{ fontSize: '11px' }}>{PRODUCT_SHORT[p]} · {d.base.replace(/^https?:\/\//, '')}</span>
+                </button>
+                <span class="row gap6"><button class="btn sm" onClick={() => void switchTo(d.base)}>Bytt</button><button class="btn sm" aria-label="Fjern" onClick={() => { forget(d.base); go('rooms'); showToast('Fjernet'); }}>×</button></span>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
+      <Section title="Legg til enhet">
+        <div class="add-grid">
+          {ADD.map(([p, d]) => (
+            <button key={p} class="add-card" data-testid={'add-' + p} onClick={() => { mode.value = 'find'; }}>
+              <span class="ico"><Icon d={PRODUCT_ICON[p]} size={28} sw={1.2} /></span>
+              <span class="t">{PRODUCT_LABEL[p]}</span>
+              <span class="d">{d}</span>
+            </button>
+          ))}
+        </div>
+        <button class="btn primary big" onClick={() => { mode.value = 'find'; }} data-testid="add-device">+ Legg til enhet</button>
+      </Section>
+      <div class="banner info"><span><strong>Kommer:</strong> grupper og synkronisert avspilling i flere rom (via Lyrion).</span></div>
     </div>
   );
 }
