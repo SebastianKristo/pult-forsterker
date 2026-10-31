@@ -42,8 +42,8 @@ Kortet er fryst etter ruting (commit `9ae80c2`) og de ferdige produksjonsfilene 
 - [ ] **C3. Delelisten:** les beskrivelsen JLCPCB viser per linje og sammenlign med «Comment»-kolonnen (verdi + pakke).
       Alle linjer med kode er verifisert mot lcsc.com/jlcpcb.com i granskningen, men lager endrer seg. Mangler en del,
       velg erstatning med **samme verdi, spenning og pakke**; ikke la JLCPCB «auto-velge».
-- [ ] **C4. Linjer uten kode** (JLCPCB spør): U14 = SN74LVC1G14DBVR (SOT-23-5), D1 = SMBJ28A (SMB), D5 = BZT52C12
-      (SOD-123), Q11 = P-MOSFET TO-252 ≥ 40 V ≥ 10 A (f.eks. AOD4185). Velg selv, ikke hopp over.
+- [ ] **C4. Lager.** Alle linjer har kode som var på lager 31.10.2026. Viser JLCPCB «0 JLCPCB»/«No matches» på en linje, velg erstatning med samme
+      verdi, spenning og pakke (se `GRANSKNING_REV_B.md` for alternativer, f.eks. L1 → C3221699).
 - [ ] **C5. Rotasjon/polaritet i forhåndsvisningen** («Component Placement»): kontroller pinne-1-prikken på **alle
       IC-er** (U1–U14), katodestreken på D1/D2/D4/D5–D11, og «+» på de tre store elektrolyttene C40/C41/C72 mot
       silketrykkets «+». CPL-filen har JLCPCBs vanlige rotasjonskorreksjoner (SOT-23 +180°, SOIC/TSSOP/QFN +270°,

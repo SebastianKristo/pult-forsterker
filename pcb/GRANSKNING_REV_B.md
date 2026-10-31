@@ -92,3 +92,10 @@ Etter rettelsene er kortet rutet på nytt og alle automatiske kontroller (DRC, h
 ingen via-i-pad (nærmeste via-hull 0,285 mm fra pad-kobber), min. klaring 0,144 mm (JLCPCB-grense 0,127), kobber til kant 0,74 mm,
 pasta på alle 730 SMD-pads unntatt R18 (DNP) og U6 EP (bevisst), BOM = CPL = 230 SMD-deler, 6 linjer uten kode (velges i JLC-UI).
 Flaskehalser: 24V_IN 2,0 · 24V_F 1,85 · VIN24 1,3 · 24V_AMP 1,3 (pinnestubber 0,4) · 5 V til Pi 1,5 mm.
+
+## JLCPCB-opplasting 31.10.2026
+
+JLCPCBs BOM-verktøy viste: utsolgt for U7 (C6706491), L2–L5 (C241221) og R3 (C667189); ingen treff for D5/Q11 (tom kode); «unconfirmed» for
+linjer som delte kode (100 nF, 1 µF, USB-C) og for R21–R24/U14 (JLCPCB-forslag). Rettet: U7 → C9359 (FE1.1S-BSOP28BCN, 21 000 på lager),
+L2–L5 → C3221699 (Bourns SRR1260-100M, land pattern 2,9 × 5,4 / gap 7,0 = footprinten), R3 → C100895 (243 k, 4 000), D5 → C43491, Q11 → C36220
+(AOD409), R21–R24 → C2907439, U14 → C7835 (TI SN74LVC1G14DBVR), D1 → C20623778, D2 → C4154973. BOM-en har nå én linje per kode.
