@@ -247,10 +247,18 @@ def _fix_hole_near_hole():
         if not va.IsLocked() and not vb.IsLocked(): options.append(((va, -ux * d / 2, -uy * d / 2), (vb, ux * d / 2, uy * d / 2)))
         if not va.IsLocked(): options.append(((va, -ux * d, -uy * d),))
         if not vb.IsLocked(): options.append(((vb, ux * d, uy * d),))
-        # også litt på tvers av linjen (om det er trangt langs den)
-        for sgn in (1, -1):
-            if not va.IsLocked(): options.append(((va, -ux * d - uy * 0.15 * sgn, -uy * d + ux * 0.15 * sgn),))
-            if not vb.IsLocked(): options.append(((vb, ux * d - uy * 0.15 * sgn, uy * d + ux * 0.15 * sgn),))
+        # også andre retninger (om det er trangt langs linjen): 12 retninger, så langt at avstanden blir ≥ kravet
+        for k in range(12):
+            ang = k * _mm.pi / 6
+            for v, sgn in ((va, -1), (vb, 1)):
+                if v.IsLocked(): continue
+                cx, cy = _mm.cos(ang), _mm.sin(ang)
+                # nødvendig forskyvning r slik at |p + r*c - q| >= L + d, der q er den andre viaen
+                along = (cx * ux + cy * uy) * sgn   # positiv = bort fra den andre
+                if along <= 0.2: continue
+                r = d / along
+                if r > 0.6: continue
+                options.append(((v, cx * r, cy * r),))
         ok = False
         for opt in options:
             for v, sx, sy in opt: move(v, sx, sy)
