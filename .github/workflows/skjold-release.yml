@@ -33,7 +33,7 @@ jobs:
           cache: npm
           cache-dependency-path: skjold/app/package-lock.json
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 17 }
+        with: { distribution: temurin, java-version: 21 }   # Capacitor 8 krever Java 21
       - name: Installer og bygg web
         working-directory: skjold/app
         run: |
@@ -105,6 +105,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: skjold/flasher/package-lock.json
+      - name: libudev (usb-modulen bygges fra kilde på Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev
       - name: Installer og bygg installasjonsfiler
         working-directory: skjold/flasher
         run: |
