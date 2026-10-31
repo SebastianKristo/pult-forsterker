@@ -57,8 +57,8 @@ part("U1", SO, "HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm", "TPS54560DDAR", "C319
 part("C2", C_, C1210, "4.7u/50V", "C76838", 12, 22, 0, "Cin"); part("C3", C_, C1210, "4.7u/50V", "C76838", 12, 26, 0, "Cin")
 part("C4", C_, C0603, "100n/50V", "C14663", 12, 30, 0, "Cin HF")
 part("C5", C_, C0603, "100n", "C14663", 30, 24, 90, "Boot")
-part("R1", R_, R0603, "330k", "C23137", 14, 36, 0, "EN divider (UVLO ~9 V)"); part("R2", R_, R0603, "51k", "C23184", 14, 39, 0, "EN divider")
-part("R3", R_, R0603, "243k", "C22999", 14, 42, 0, "RT 400 kHz")
+part("R1", R_, R0603, "330k", "C23137", 14, 36, 0, "EN divider (UVLO ~9 V)"); part("R2", R_, R0603, "49.9k", "C23184", 14, 39, 0, "EN divider")
+part("R3", R_, R0603, "243k", "C23351", 14, 42, 0, "RT 400 kHz")
 part("R4", R_, R0603, "56k", "C23206", 30, 36, 0, "FB top (5,2 V ut)"); part("R5", R_, R0603, "10.2k", "C25744", 30, 39, 0, "FB bottom")
 part("R6", R_, R0603, "13.3k", "C22791", 30, 42, 0, "Comp R"); part("C6", C_, C0603, "3.3n", "C1613", 30, 45, 0, "Comp C"); part("C7", C_, C0603, "47p", "C1671", 34, 45, 0, "Comp Cp")
 part("L1", "Inductor_SMD", "L_Bourns_SRP1245A", "10uH 6A", "C135446", 44, 30, 0, "Buck-spole 10 µH")
@@ -75,7 +75,7 @@ part("U9", TO, "SOT-223-3_TabPin2", "AMS1117-3.3", "C6186", 46, 68, 0, "LDO 3,3 
 part("C75", C_, C0805, "10u", "C15850", 52, 66, 90, "LDO_SW in"); part("C76", C_, C0805, "10u", "C15850", 52, 70, 90, "LDO_SW out")
 
 # --- Pi-header (venstre kant) + I2C-ekspander ---
-part("J5", "Connector_PinHeader_2.54mm", "PinHeader_2x20_P2.54mm_Vertical", "RPi 40-pin", "C50982", 7, 40, 0, "Raspberry Pi 40-pin (flatkabel)")
+part("J5", "Connector_PinHeader_2.54mm", "PinHeader_2x20_P2.54mm_Vertical", "RPi 40-pin", "C50980", 7, 40, 0, "Raspberry Pi 40-pin (flatkabel)")
 part("J6", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "5V -> PI", "C8465", 46, 43, 0, "5 V til Pi 4 (18 AWG til header pinne 2/6)")
 part("U12", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "MCP23017-E/SS", "C506653", 28, 72, 0, "I2C I/O-ekspander 0x20: knapper, LED-ringer, USB-mux")
 part("R56", R_, R0603, "10k", "C25804", 34, 78, 0, "MCP RESET pull-up"); part("C74", C_, C0603, "100n", "C14663", 38, 78, 0, "MCP VDD")
@@ -88,7 +88,7 @@ part("C19", C_, C0603, "2.2u", "C23630", 74, 56, 0, "LDOO"); part("C20", C_, C06
 part("C22", C_, C0805, "10u", "C15850", 74, 65, 0, "3V3 bulk DAC")
 part("R7", R_, R0603, "10k", "C25804", 74, 69, 0, "XSMT pull-up")
 part("R8", R_, R0603, "100", "C22775", 62, 70, 0, "DAC L serie"); part("R9", R_, R0603, "100", "C22775", 66, 70, 0, "DAC R serie")
-part("C23", C_, C0603, "2.2n", "C1594", 62, 73, 0, "DAC L LP"); part("C24", C_, C0603, "2.2n", "C1594", 66, 73, 0, "DAC R LP")
+part("C23", C_, C0603, "2.2n", "C16033", 62, 73, 0, "DAC L LP"); part("C24", C_, C0603, "2.2n", "C16033", 66, 73, 0, "DAC R LP")
 
 # --- ADC PCM1808 (AUX 1) med 12,288 MHz-oscillator (x 80–106, y 50–78) ---
 part("U10", SO, "TSSOP-14_4.4x5mm_P0.65mm", "PCM1808PWR", "C55513", 94, 60, 0, "I2S-ADC AUX 1, master 256 fs (MD1=MD0=1, FMT=0)")
@@ -119,8 +119,8 @@ part("C36", C_, C0603, "100n/50V", "C14663", 92, 27, 0, "PVCC HF"); part("C37", 
 part("C40", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 86, 20, 0, "PVCC bulk"); part("C41", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 100, 20, 0, "PVCC bulk")
 part("C42", C_, C0805, "1u/50V", "C28323", 75.5, 43.2, 0, "AVCC"); part("C43", C_, C1210, "4.7u/50V", "C76838", 75.5, 46.2, 0, "AVCC bulk")
 part("C44", C_, C0805, "1u", "C28323", 75.5, 40.6, 0, "GVDD")
-part("R15", R_, R0603, "100k", "C25803", 71, 30.2, 0, "GAIN top"); part("R16", R_, R0603, "20k", "C25765", 71, 32.8, 0, "GAIN bottom (26 dB)")
-part("R17", R_, R0603, "0", "C21189", 71, 35.4, 0, "PLIMIT -> GVDD (ingen begrensning)"); part("R18", R_, R0603, "DNP", "", 71, 38, 0, "PLIMIT til GND (valgfri)")
+part("R15", R_, R0603, "100k", "C25803", 71, 30.2, 0, "GAIN top"); part("R16", R_, R0603, "20k", "C4184", 71, 32.8, 0, "GAIN bottom (26 dB)")
+part("R17", R_, R0603, "0R", "C21189", 71, 35.4, 0, "PLIMIT -> GVDD (ingen begrensning)"); part("R18", R_, R0603, "DNP", "", 71, 38, 0, "PLIMIT til GND (valgfri)")
 part("R19", R_, R0603, "1k", "C21190", 71, 40.6, 0, "SDZ serie"); part("R20", R_, R0603, "100k", "C25803", 71, 43.2, 0, "SDZ pulldown")
 part("C45", C_, C0805, "1u", "C28323", 75.5, 35.4, 0, "LINP kobling"); part("C46", C_, C0805, "1u", "C28323", 75.5, 38, 0, "LINN til GND")
 part("C47", C_, C0805, "1u", "C28323", 75.5, 30.2, 0, "RINP kobling"); part("C48", C_, C0805, "1u", "C28323", 75.5, 32.8, 0, "RINN til GND")
@@ -136,11 +136,11 @@ part("R24", R_, R1206, "18", "C17949", 105, 28.5, 0, "Snubber PR"); part("C56", 
 # --- USB-kodek PCM2900C (AUX 2) – bus-powered fra Pi-ens USB-port (J19) ---
 part("U11", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "PCM2900CDB", "C180425", 114, 84, 0, "USB-lydkodek AUX 2 (ADC)")
 part("Y2", "Crystal", "Crystal_SMD_3225-4Pin_3.2x2.5mm", "12MHz", "C9002", 122, 79, 0, "Kodek-krystall")
-part("C87", C_, C0603, "20p", "C1653", 118, 76, 0, "XTI last"); part("C88", C_, C0603, "20p", "C1653", 126, 76, 0, "XTO last"); part("R63", R_, R0603, "1M", "C22935", 122, 75, 0, "Krystall tilbakekobling")
+part("C87", C_, C0603, "22p", "C1653", 118, 76, 0, "XTI last"); part("C88", C_, C0603, "22p", "C1653", 126, 76, 0, "XTO last"); part("R63", R_, R0603, "1M", "C22935", 122, 75, 0, "Krystall tilbakekobling")
 part("C89", C_, C0805, "10u", "C15850", 106, 80, 90, "VCCCI"); part("C90", C_, C0805, "10u", "C15850", 106, 88, 90, "VCOM")
 part("C91", C_, C0603, "1u", "C15849", 110, 75, 0, "VCCP1I"); part("C92", C_, C0603, "1u", "C15849", 114, 75, 0, "VCCP2I"); part("C93", C_, C0603, "1u", "C15849", 130, 80, 90, "VCCXI"); part("C94", C_, C0603, "1u", "C15849", 130, 84, 90, "VDDI")
 part("C95", C_, C0805, "10u", "C15850", 106, 72, 0, "VBUS"); part("C96", C_, C0603, "100n", "C14663", 110, 72, 0, "VBUS HF")
-part("R64", R_, R0603, "22", "C25092", 115, 72, 0, "D+ serie"); part("R65", R_, R0603, "22", "C25092", 119, 72, 0, "D- serie"); part("R66", R_, R0603, "1.5k", "C22843", 120, 68.5, 0, "D+ pull-up (full speed)")
+part("R64", R_, R0603, "22R", "C23345", 115, 72, 0, "D+ serie"); part("R65", R_, R0603, "22R", "C23345", 119, 72, 0, "D- serie"); part("R66", R_, R0603, "1.5k", "C22843", 120, 68.5, 0, "D+ pull-up (full speed)")
 part("R67", R_, R0603, "10k", "C25804", 134, 76, 0, "AUX2 L deler"); part("R68", R_, R0603, "4.7k", "C23162", 134, 79, 0, "AUX2 L deler GND")
 part("R69", R_, R0603, "10k", "C25804", 138, 76, 0, "AUX2 R deler"); part("R70", R_, R0603, "4.7k", "C23162", 138, 79, 0, "AUX2 R deler GND")
 part("C97", C_, C0805, "4.7u", "C1779", 134, 83, 0, "AUX2 L kobling"); part("C98", C_, C0805, "4.7u", "C1779", 138, 83, 0, "AUX2 R kobling")
@@ -191,13 +191,13 @@ part("R78", R_, R0603, "10k", "C25804", 108, 89, 0, "Pull-up touch-CS (GPIO 7/CE
 part("U7", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "FE1.1s", "C6706491", 149, 46, 90, "USB 2.0 4-ports hub")
 part("Y1", "Crystal", "Crystal_SMD_3225-4Pin_3.2x2.5mm", "12MHz", "C9002", 149, 37, 90, "Hub-krystall (lastkondensatorer innebygd)")
 part("C67", C_, C0805, "10u", "C15850", 141, 34, 90, "VD18_O"); part("C69", C_, C0603, "100n", "C14663", 141, 38, 90, "VD18")
-part("R75", R_, R0603, "2.7k", "C25772", 141, 42, 90, "REXT (1 %)"); part("R46", R_, R0603, "10k", "C25804", 141, 50, 90, "OVCJ/XRSTJ pull-up")
+part("R75", R_, R0603, "2.7k", "C13167", 141, 42, 90, "REXT (1 %)"); part("R46", R_, R0603, "10k", "C25804", 141, 50, 90, "OVCJ/XRSTJ pull-up")
 part("C66", C_, C0805, "10u", "C15850", 141, 54, 90, "VD33_O"); part("C73", C_, C0603, "100n", "C14663", 141, 58, 90, "VD33")
 part("C68", C_, C0603, "100n", "C14663", 141, 62, 90, "VDD5")
 part("U8", "Package_DFN_QFN", "UQFN-10_1.4x1.8mm_P0.4mm", "TS3USB221RSER", "C130085", 147, 62, 0, "USB 2:1-mux PC1/PC2 (S fra MCP GPB4, lav = PC 1; OE = GND)")
 part("C70", C_, C0603, "100n", "C14663", 150, 70, 0, "Mux VCC"); part("R47", R_, R0603, "100k", "C25803", 150, 66, 0, "S pulldown (= PC 1)")
-part("J11", "Connector_USB", "USB_C_Receptacle_HRO_TYPE-C-31-M-12", "PC1", "C2765186", 150, 76, 0, "USB-C fra PC 1 (via panelkabel)")
-part("J12", "Connector_USB", "USB_C_Receptacle_HRO_TYPE-C-31-M-12", "PC2", "C2765186", 150, 86, 0, "USB-C fra PC 2 (via panelkabel)")
+part("J11", "Connector_USB", "USB_C_Receptacle_HRO_TYPE-C-31-M-12", "PC1", "C165948", 150, 76, 0, "USB-C fra PC 1 (via panelkabel)")
+part("J12", "Connector_USB", "USB_C_Receptacle_HRO_TYPE-C-31-M-12", "PC2", "C165948", 150, 86, 0, "USB-C fra PC 2 (via panelkabel)")
 part("R48", R_, R0603, "5.1k", "C23186", 160, 72, 0, "CC1 PC1"); part("R49", R_, R0603, "5.1k", "C23186", 160, 75, 0, "CC2 PC1")
 part("R50", R_, R0603, "5.1k", "C23186", 160, 82, 0, "CC1 PC2"); part("R51", R_, R0603, "5.1k", "C23186", 160, 85, 0, "CC2 PC2")
 for i, y in enumerate((16.2, 33.7, 51.2, 68.7)):
@@ -561,6 +561,11 @@ def build():
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(nets[netn]); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     for (ref, pad), (vx, vy) in FIXED_GND_VIP.items():
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.5)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
+    # DNP-deler skal ikke få loddepasta (ellers ligger det to loddekuler uten komponent)
+    for p_ in P:
+        if p_["value"] == "DNP":
+            for pd in fps[p_["ref"]].Pads():
+                ls = pd.GetLayerSet(); ls.RemoveLayer(pcbnew.F_Paste); ls.RemoveLayer(pcbnew.B_Paste); pd.SetLayerSet(ls)
     pcbnew.SaveBoard(OUT, board)
     # nettklasse-tilordning (mønstre) i prosjektfila – LoadBoard leser den, så Freerouting får riktige bredder i DSN-en
     import json as _json

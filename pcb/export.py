@@ -568,26 +568,44 @@ subprocess.run(["kicad-cli", "pcb", "export", "drill", "--format", "excellon", "
 with zipfile.ZipFile(os.path.join(OUT, "ki_pultforsterker_main_gerber.zip"), "w", zipfile.ZIP_DEFLATED) as z:
     for f in sorted(os.listdir(gdir)): z.write(os.path.join(gdir, f), f)
 
-# CPL (JLCPCB/PCBWay-format: Designator, Mid X, Mid Y, Layer, Rotation)
+# CPL (JLCPCB-format: Designator, Mid X, Mid Y, Layer, Rotation) – bare SMD (THT loddes selv, de får egen liste)
 pos = os.path.join(OUT, "cpl_tmp.csv")
 subprocess.run(["kicad-cli", "pcb", "export", "pos", "--format", "csv", "--units", "mm", "--side", "front", "-o", pos, PCB], check=True)
 bom = {r["Designator"]: r for r in csv.DictReader(open(os.path.join(HERE, "bom.csv")))}
+_fp_name = {fp.GetReference(): fp.GetFPID().GetLibItemName().wx_str() for fp in board.GetFootprints()}
+_is_tht = {fp.GetReference(): any(pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH for pd in fp.Pads()) for fp in board.GetFootprints()}
+# JLCPCBs 0°-orientering avviker fra KiCads for disse pakkene (samme tabell som KiBot/JLCKicadTools bruker). Sjekk likevel pinne 1 i JLCPCB-forhåndsvisningen.
+import re as _rx
+JLC_ROT = [(r"^SOT-23", 180), (r"^SOT-223", 180), (r"^(SOIC|SSOP|TSSOP|HTSSOP|HSOP|SOP|MSOP)", 270), (r"^(QFN|WQFN|UQFN|DFN|VQFN|TQFN)", 270), (r"^CP_Elec", 180),
+           (r"^USB_C_Receptacle_HRO", 180), (r"^TO-252", 270)]
+def jlc_rot(ref, rot):
+    name = _fp_name.get(ref, "")
+    for pat, add in JLC_ROT:
+        if _rx.match(pat, name): return (rot + add) % 360
+    return rot % 360
+smd_refs = []
 with open(os.path.join(OUT, "ki_pultforsterker_main_cpl.csv"), "w", newline="") as fh:
     w = csv.writer(fh); w.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
     for row in csv.DictReader(open(pos)):
         ref = row["Ref"]
-        if ref in bom and bom[ref]["Value"] != "DNP":   # også deler uten LCSC-kode – JLCPCB spør da om en del; Y som KiCad gir (negativ = samme som gerber)
-            w.writerow([ref, f'{float(row["PosX"]):.3f}mm', f'{float(row["PosY"]):.3f}mm', "Top", row["Rot"]])
+        if ref in bom and bom[ref]["Value"] != "DNP" and not _is_tht.get(ref, False):   # også SMD uten LCSC-kode – JLCPCB spør da om en del; Y som KiCad gir (negativ = samme som gerber)
+            smd_refs.append(ref)
+            w.writerow([ref, f'{float(row["PosX"]):.3f}mm', f'{float(row["PosY"]):.3f}mm', "Top", f'{jlc_rot(ref, float(row["Rot"])):g}'])
 os.remove(pos)
-# BOM gruppert (JLCPCB-format: Comment, Designator, Footprint, LCSC)
-groups = {}
+# BOM gruppert (JLCPCB-format: Comment, Designator, Footprint, LCSC) – bare SMD
+groups = {}; tht = []
 for ref, r in bom.items():
     if r["Value"] == "DNP": continue
+    if _is_tht.get(ref, False): tht.append((ref, r["Value"], r["Footprint"], r["LCSC"])); continue
     groups.setdefault((r["Value"], r["Footprint"], r["LCSC"]), []).append(ref)
 with open(os.path.join(OUT, "ki_pultforsterker_main_bom.csv"), "w", newline="") as fh:
     w = csv.writer(fh); w.writerow(["Comment", "Designator", "Footprint", "LCSC Part #"])
     for (val, fp, lcsc), refs in sorted(groups.items(), key=lambda kv: kv[1][0]):
         w.writerow([val, ",".join(refs), fp, lcsc])
+with open(os.path.join(OUT, "ki_pultforsterker_main_tht_handlodding.csv"), "w", newline="") as fh:
+    w = csv.writer(fh); w.writerow(["Designator", "Verdi", "Footprint", "LCSC (kjøp selv)"])
+    for r in sorted(tht, key=lambda t: (t[0][0], int(_rx.sub(r"\D", "", t[0]) or 0))): w.writerow(r)
+print("CPL/BOM: SMD", len(smd_refs), "deler, THT til håndlodding:", len(tht))
 # bilder
 for layers, name in [("F.Cu,F.SilkS,F.Mask,Edge.Cuts", "top"), ("B.Cu,B.SilkS,Edge.Cuts", "bottom")]:
     subprocess.run(["kicad-cli", "pcb", "export", "svg", "--layers", layers, "--page-size-mode", "2", "--exclude-drawing-sheet", "-o", os.path.join(OUT, f"board_{name}.svg"), PCB], check=True)
