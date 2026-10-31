@@ -67,6 +67,7 @@ Felter i /api/status for skjermen (Skjold OS):
   input_seq: øker for hvert knappetrykk/-slipp og encoderhakk
   POST /api/reboot {"poweroff":bool}   omstart (eller slå av) etter 1,5 s med rebooting=true
   LED-ringer: RADIO = radio, AIR·BT = AirPlay/Bluetooth/Spotify (blinker under paring), ◀◀/▶▶ = noe spiller.
+  KI_AMP_NODE_GPIO=0 (Skjold Core, ren Raspberry Pi): ingen knapper, encoder eller LED-ringer – bare lyd og API.
   KI_AMP_NODE_BUTTONS=0 lar skjermprosessen eie knappene/encoderen (daemonen styrer da bare LED-ringene).
 """
 import asyncio
@@ -194,7 +195,8 @@ elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
     LED_POWER = None    # ingen strømknapp/strømring på Node
     PIN_DAC_XSMT = None
     ENC = tuple(NODE["enc"])
-    NODE_BUTTONS = os.environ.get("KI_AMP_NODE_BUTTONS", "1") == "1"
+    NODE_GPIO = os.environ.get("KI_AMP_NODE_GPIO", "1") == "1"   # 0 = Skjold Core: ren Pi uten knapper/encoder/LED-ringer
+    NODE_BUTTONS = NODE_GPIO and os.environ.get("KI_AMP_NODE_BUTTONS", "1") == "1"
 else:
     BTN = {"airplay": 5, "bt": 6, "aux": 12, "usb": 13}
     LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
@@ -279,7 +281,7 @@ if HW:
         x_inc = _mk(DigitalOutputDevice, PIN_X9C_INC, initial_value=True)
         x_ud = _mk(DigitalOutputDevice, PIN_X9C_UD, initial_value=False)
         x_cs = _mk(DigitalOutputDevice, PIN_X9C_CS, initial_value=True)
-    elif BOARD == "node":   # LED-ringene: programvare-PWM (3,5 mm-lyden bruker maskinvare-PWM0/1)
+    elif BOARD == "node" and NODE_GPIO:   # LED-ringene: programvare-PWM (3,5 mm-lyden bruker maskinvare-PWM0/1)
         node_leds = {k: l for k, l in ((k, _mk(PWMLED, p, active_high=NODE["led_active_high"], frequency=NODE["led_hz"]))
                                        for k, p in NODE["led"].items()) if l}
     leds = {k: l for k, l in ((k, _mk(GLED, v)) for k, v in LED.items()) if l}

@@ -92,6 +92,8 @@ export DEBIAN_FRONTEND=noninteractive
 cd "$D/pi"
 if [ "$DEVICE" = s1 ]; then
   KI_AMP_BOARD=main bash ./install.sh || { echo "install.sh feilet"; exit 1; }
+elif [ "$DEVICE" = core ]; then
+  KI_AMP_CORE=1 KI_AMP_NAME="$(get name "")" bash ./install.sh || { echo "install.sh feilet"; exit 1; }
 else
   KI_AMP_BOARD=node KI_AMP_OUT=headphones KI_AMP_NAME="$(get name "")" bash ./install.sh || { echo "install.sh feilet"; exit 1; }
   bash "$D/skjold/node/driver/installer_node.sh" || echo "ADVARSEL: installer_node.sh feilet"

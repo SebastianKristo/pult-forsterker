@@ -10,11 +10,13 @@ SRC="$(cd "$(dirname "$0")" && pwd)"
 # KI_AMP_BOARD=node     : Skjold Node (Pi 4/3B, lyd på 3,5 mm, ST7735 eies av skjermprosessen). Gir alltid KI_AMP_OUT=headphones.
 #                         Ingen OLED, USB-gadget eller AUX; vertsnavnet beholdes; config.txt-blokken legges inn av
 #                         skjold/node/driver/installer_node.sh. KI_AMP_NAME=… = navn i AirPlay/Spotify/Bluetooth/Lyrion.
+# KI_AMP_CORE=1        : Skjold Core – ren Raspberry Pi uten kasse, knapper eller skjerm (som node, men uten GPIO)
 # KI_AMP_SPOTIFY=0      : uten Spotify Connect (librespot)
 # KI_AMP_SKJOLD_OS=0    : S1 (main) beholder det gamle skjermprogrammet i stedet for Skjold OS (skjold/os)
 BOARD_SEL="${KI_AMP_BOARD:-}"; [ "$BOARD_SEL" = node ] && KI_AMP_OUT=headphones
 OUT="${KI_AMP_OUT:-dac}"; SPOTIFY="${KI_AMP_SPOTIFY:-1}"; NAME_SEL="${KI_AMP_NAME:-}"; SKJOLD_OS="${KI_AMP_SKJOLD_OS:-1}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
-[ "$BOARD_SEL" = node ] && [ -z "$NAME_SEL" ] && NAME_SEL="Skjold Node"   # Node: standardnavn i AirPlay/Spotify/Blåtann
+CORE="${KI_AMP_CORE:-0}"; [ "$CORE" = 1 ] && BOARD_SEL=node && KI_AMP_OUT=headphones && OUT=headphones && PB_CORE_NAME="Skjold Core"
+[ "$BOARD_SEL" = node ] && [ -z "$NAME_SEL" ] && NAME_SEL="${PB_CORE_NAME:-Skjold Node}"   # Node: standardnavn i AirPlay/Spotify/Blåtann
 if [ "$OUT" = headphones ]; then PB_CARD=Headphones; PB_DEV="plughw:Headphones"; PB_FMT=S16LE
 elif [ "$BOARD_SEL" = main ]; then PB_CARD=pultamp; PB_DEV="hw:pultamp"; PB_FMT=S32LE
 else PB_CARD=sndrpihifiberry; PB_DEV="hw:sndrpihifiberry"; PB_FMT=S32LE; fi
@@ -217,6 +219,8 @@ sudo systemctl daemon-reload
 OS_INST="$SRC/../skjold/os/install.sh"
 if [ "$BOARD_SEL" = node ]; then
   sudo sed -i '/^KI_AMP_DISPLAY=/d' /etc/ki-amp.env && echo "KI_AMP_DISPLAY=none" | sudo tee -a /etc/ki-amp.env >/dev/null
+  sudo sed -i '/^KI_AMP_NODE_GPIO=/d' /etc/ki-amp.env
+  [ "$CORE" = 1 ] && echo "KI_AMP_NODE_GPIO=0" | sudo tee -a /etc/ki-amp.env >/dev/null   # Core: ingen knapper/LED
   sudo systemctl enable --now oled-display ki-amp   # oled-display = bare metadata (ingen skjerm)
 elif [ "$BOARD_SEL" = main ] && [ "$SKJOLD_OS" = 1 ] && [ -f "$OS_INST" ]; then
   # S1: Skjold OS tegner skjermen (OLED 128×64 eller TFT 320×240 via fbtft); oled_display.py blir bare metadata-tjeneste
