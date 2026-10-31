@@ -1,0 +1,36 @@
+```
+Skjold / Pultforsterker – lisenser
+Copyright (c) 2026 Sebastian Kristo Jemtland
+
+Repoet har to lisenser, avhengig av hva filene er.
+
+1) PROGRAMVARE – MIT (se LICENSE)
+   pi/                      daemon, installasjon, tjenester
+   skjold/app/              web-app og mobilapp
+   skjold/os/               Skjold OS (skjerm-UI)
+   skjold/flasher/          Skjold Flasher
+   skjold/node/tools/, skjold/node/driver/
+   skjold/bruksanvisning/*.py, skjold/bruksanvisning/*.js
+   custom_components/, homeassistant/, homey/   integrasjoner
+   .github/                 byggeskript
+   og andre kildekodefiler (*.py, *.js, *.ts, *.sh) som er verktøy for å bygge programvaren
+
+2) MASKINVARE, DESIGN OG DOKUMENTASJON – CC BY-NC-SA 4.0 (se LISENS-MASKINVARE.md)
+   pcb/                     kretskort (skjema, utlegg, produksjonsfiler)
+   kabinett/, radio/, 3d-visning/   kasser, 3D-modeller, CAD-skript og renders
+   skjold/design/           designpakken (produktdesign, UI-design, nettsidedesign)
+   skjold/node/ (unntatt tools/ og driver/)   kabling og pinnevalg
+   skjold/bruksanvisning/innhold.json og øvrig innhold
+   docs/, branding/, design-referanse/
+   Du kan bygge, endre og dele for eget, ikke-kommersielt bruk med navngivelse.
+   Kommersielt salg av produktene eller avledede produkter krever skriftlig avtale.
+
+3) NETTSIDEN – alle rettigheter forbeholdt
+   skjold/nettside/: tekster, bilder og design. Koden kan leses, men innholdet kan ikke
+   gjenbrukes uten tillatelse.
+
+Navnene «Skjold», «Skjold S1» og «Skjold Node» og Skjold-logoen er ikke lisensiert under noen
+av lisensene over.
+
+Kontakt: jemtlands@proton.me
+```

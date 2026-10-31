@@ -2,7 +2,7 @@ Skjold – maskinvare, design og dokumentasjon
 Copyright (c) 2026 Sebastian Kristo Jemtland
 
 Lisensiert under Creative Commons Navngivelse-IkkeKommersiell-DelPåSammeVilkår 4.0 Internasjonal
-(CC BY-NC-SA 4.0). Gjelder filene som er listet under punkt 2 i LICENSE.
+(CC BY-NC-SA 4.0). Gjelder filene som er listet under punkt 2 i LISENS.md.
 
 Du har lov til å:
   - Dele: kopiere og videreformidle materialet i hvilket som helst medium eller format
