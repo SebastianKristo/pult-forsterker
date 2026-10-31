@@ -98,6 +98,9 @@ else
   KI_AMP_BOARD=node KI_AMP_OUT=headphones KI_AMP_NAME="$(get name "")" bash ./install.sh || { echo "install.sh feilet"; exit 1; }
   bash "$D/skjold/node/driver/installer_node.sh" || echo "ADVARSEL: installer_node.sh feilet"
 fi
+if [ "$(get lyrion_server False)" = True ]; then
+  bash "$D/pi/install_lyrion.sh" || echo "ADVARSEL: Lyrion Music Server ble ikke installert"
+fi
 touch /var/lib/skjold-installed
 systemctl disable skjold-install.service
 echo "=== $(date -Is) ferdig – starter på nytt"
@@ -132,7 +135,7 @@ function installSetupCmds(boot: string): string[] {
 }
 
 function setupJson(o: SetupOptions): string {
-  const setup: Record<string, unknown> = { version: 1, device: o.device, hostname: o.hostname, lang: o.lang, ref: INSTALL_REF };
+  const setup: Record<string, unknown> = { version: 1, device: o.device, hostname: o.hostname, lang: o.lang, ref: INSTALL_REF, lyrion_server: !!o.lyrionServer };
   if (o.preset) {
     setup.name = o.name.trim();
     setup.wifi = { ssid: o.ssid, password: o.wifiPassword, country: o.country };

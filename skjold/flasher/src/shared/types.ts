@@ -29,6 +29,7 @@ export interface SetupOptions {
   user: string;
   userPassword: string;  // klartekst – hashes med sha512crypt før det skrives
   sshKey: string;        // valgfri offentlig nøkkel (authorized_keys)
+  lyrionServer?: boolean; // installer Lyrion Music Server på enheten (ellers brukes en eksisterende server)
 }
 
 export type ImageChoice = { kind: 'latest'; release: ReleaseImage } | { kind: 'local'; path: string };
