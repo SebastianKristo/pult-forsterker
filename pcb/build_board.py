@@ -76,7 +76,7 @@ part("C75", C_, C0805, "10u", "C15850", 52, 66, 90, "LDO_SW in"); part("C76", C_
 
 # --- Pi-header (venstre kant) + I2C-ekspander ---
 part("J5", "Connector_PinHeader_2.54mm", "PinHeader_2x20_P2.54mm_Vertical", "RPi 40-pin", "C50982", 7, 40, 0, "Raspberry Pi 40-pin (flatkabel)")
-part("J6", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "5V -> PI", "C8465", 59, 94, 0, "5 V til Pi 4 (18 AWG til header pinne 2/6)")
+part("J6", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "5V -> PI", "C8465", 46, 43, 0, "5 V til Pi 4 (18 AWG til header pinne 2/6)")
 part("U12", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "MCP23017-E/SS", "C506653", 28, 72, 0, "I2C I/O-ekspander 0x20: knapper, LED-ringer, USB-mux")
 part("R56", R_, R0603, "10k", "C25804", 34, 78, 0, "MCP RESET pull-up"); part("C74", C_, C0603, "100n", "C14663", 38, 78, 0, "MCP VDD")
 part("R43", R_, R0603, "4.7k", "C23162", 38, 70, 0, "I2C pull-up SDA"); part("R44", R_, R0603, "4.7k", "C23162", 38, 73, 0, "I2C pull-up SCL")
@@ -391,7 +391,24 @@ POWER_NETS = {"5V_USB": 1.0, "5VA": 0.5, "5V_SW": 0.8, "3V3_SW": 0.5, "24V_AMP":
 
 FIXED_GND_STUBS = {}   # TS3USB221: 0,4 mm pitch – for tett for via-i-pad   # (ref, pad) -> via-posisjon
 # låste spor/vias for nett Freerouting ikke fikk til rundt TS3USB221 (pinne 2 SEL lå innestengt bak via for pinne 3)
-FIXED_TRACKS = [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (133.3, 36.275), (134.6, 35.6), (138.3, 35.6), (138.95, 36.25), (138.95, 36.9)]),   # TPA3116 pinne 21 -> C32 (utvides i export)
+# --- Strømskinner lagt for hånd før rutingen (brede, låste). Autoruteren kobler resten til disse. ---
+POWER_SPINE = [
+    ("24V_IN", "F.Cu", 1.6, [(54, 6), (54, 2.6), (85.27, 2.6), (85.27, 7)]), ("24V_IN", "F.Cu", 1.6, [(78, 2.6), (78, 7)]),          # J1 -> begge sikringsklips
+    ("24V_F", "F.Cu", 1.6, [(94.35, 7), (94.35, 10.0), (69.0, 10.0), (66.94, 12.9), (66.94, 14.47)]), ("24V_F", "F.Cu", 1.6, [(101.62, 7), (101.62, 10.0), (94.35, 10.0)]),   # sikring -> Q11 drain
+    ("VIN24", "F.Cu", 1.0, [(58.96, 18.28), (58.96, 21.5)]),                                            # Q11 source (liten pad) -> via
+    ("VIN24", "B.Cu", 2.0, [(58.96, 21.5), (98.5, 23.0), (111.3, 23.0), (114.15, 26.05)]),             # under til reléet (K1.3)
+    ("VIN24", "B.Cu", 2.0, [(111.3, 23.0), (111.3, 6.3), (112.0, 6.3)]), ("VIN24", "B.Cu", 2.0, [(111.3, 6.3), (111.3, 2.4), (134.0, 2.4), (134.0, 7.0)]),   # C110, C1
+    ("24V_AMP", "F.Cu", 2.0, [(100, 20), (121.8, 20), (121.8, 23.2), (135.8, 23.2), (135.8, 20)]),     # K1.1 -> C40 -> C41
+    ("24V_AMP", "F.Cu", 0.8, [(129.3, 23.2), (129.3, 29.45)]), ("24V_AMP", "F.Cu", 0.6, [(129.3, 29.45), (128.0, 29.45)]),   # PVCC pinne 31/32
+    ("24V_AMP", "B.Cu", 1.2, [(131.0, 23.2), (131.0, 38.2)]), ("24V_AMP", "F.Cu", 0.8, [(131.0, 38.2), (128.9, 38.2)]),        # PVCC pinne 17–19 via undersiden
+    ("24V_AMP", "F.Cu", 0.8, [(128.9, 37.4), (128.9, 39.1)]),
+    ("24V_AMP", "F.Cu", 0.4, [(127.65, 37.58), (128.9, 37.58)]), ("24V_AMP", "F.Cu", 0.4, [(127.65, 38.23), (128.9, 38.23)]), ("24V_AMP", "F.Cu", 0.4, [(127.65, 38.88), (128.9, 38.88)]),
+    ("5V", "F.Cu", 1.5, [(89.55, 30), (89.55, 34.2), (96.5, 34.2), (96.5, 52.3)]),                      # buck -> kondensatorrekke (C8–C11 står med padene 2,7 mm brede i x)
+    ("5V", "F.Cu", 0.8, [(94.0, 39.48), (96.5, 39.48)]), ("5V", "F.Cu", 0.8, [(94.0, 43.98), (96.5, 43.98)]), ("5V", "F.Cu", 0.8, [(94.0, 48.48), (96.5, 48.48)]), ("5V", "F.Cu", 0.8, [(94.0, 51.77), (96.5, 51.77)]),
+    ("5V", "F.Cu", 1.5, [(89.55, 34.2), (86.0, 34.2), (83.46, 36.8), (83.46, 43.0)]),                   # -> J6 (5 V til Pi)
+]
+POWER_SPINE_VIAS = [("VIN24", (58.96, 21.5), 1.0, 0.5), ("24V_AMP", (131.0, 23.2), 1.0, 0.5), ("24V_AMP", (131.0, 38.2), 1.0, 0.5)]
+FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (133.3, 36.275), (134.6, 35.6), (138.3, 35.6), (138.95, 36.25), (138.95, 36.9)]),   # TPA3116 pinne 21 -> C32 (utvides i export)
     ("5V", "F.Cu", 0.3, [(132.25, 43.5625), (132.25, 42.1), (135.8, 42.1), (136.22, 43.8)]),   # TPA6132A2 VDD (pinne 14) -> C100
     ("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
     ("PC2_DP", "F.Cu", 0.2, [(32.6, 62.7685), (32.2, 63.7)]), ("PC2_DM", "F.Cu", 0.2, [(33.0, 62.7685), (33.1, 64.2)]),
@@ -536,6 +553,8 @@ def build():
     for netn, layer, w, pts in FIXED_TRACKS:
         for p0, p1 in zip(pts, pts[1:]):
             tr = pcbnew.PCB_TRACK(board); tr.SetStart(MM(*p0)); tr.SetEnd(MM(*p1)); tr.SetWidth(pcbnew.FromMM(w)); tr.SetLayer(board.GetLayerID(layer)); tr.SetNet(nets[netn]); tr.SetLocked(True); board.Add(tr)
+    for netn, (vx, vy), vd, vdr in POWER_SPINE_VIAS:
+        v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(vd)); v.SetDrill(pcbnew.FromMM(vdr)); v.SetNet(nets[netn]); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     for netn, (vx, vy) in FIXED_VIAS:
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(nets[netn]); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     for (ref, pad), (vx, vy) in FIXED_GND_VIP.items():
