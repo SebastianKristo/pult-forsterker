@@ -15,11 +15,11 @@ MCP23017, per-kilde-nivå, TFT) er skrevet, men kan bare testes på et ferdig ko
 | Blokk | Krets | Merknad |
 |---|---|---|
 | 24 V inn | skruterminal → sikring 5 A (5×20, THT) → reverspolaritets-FET → TVS SMBJ28A → 2 × 1000 µF Ø10 (THT, maks 16 mm høye – kassen er 48 mm) | KCD1 hovedbryter i serie utenfor kortet |
-| 5 V / 5 A (alltid) | TPS54560 buck, 400 kHz, 10 µH, 3 × 47 µF, satt til 5,2 V (56k/10,2k) mot fall i flatkabel/terminal | Pi 4 («5V PI»), USB-hub, relé-spole |
-| **Smart relé** | SRD-05VDC-SL-C (24 V → forsterker) + AO3401 P-MOSFET (5 V → 5V_SW) fra GPIO 27 via AO3400 | 5V_SW: LED-ringer, PGA2311 (±5 V), ADC-analog, hodetelefonforsterker, TFT-baklys. Av = helt stille og mørkt. Knapp bak på GPIO 15 |
+| 5 V / 5 A (alltid) | TPS54560 buck, 400 kHz, 10 µH, 3 × 47 µF, satt til 5,06 V (33k/6,2k) | Pi 4 («5V PI»), USB-hub, relé-spole |
+| **Smart relé** | SRD-05VDC-SL-C (24 V → forsterker) + AO3401 P-MOSFET (5 V → 5V_SW) fra GPIO 27 via AO3400 | 5V_SW: LED-ringer, ADC-analog, TFT-baklys (PGA2311 og hodetelefonforsterkeren er alltid på, men mutet i standby). Av = helt stille og mørkt. Knapp bak på GPIO 15 |
 | 3,3 V (alltid) | AMS1117-3.3 | MCP23017, pull-ups, encoder, **DAC, ADC-digital, oscillator, OLED og TFT-logikk** (Pi-ens I2C/SPI/I2S må aldri drive inn i strømløse kretser; skjermen slukkes i programvare) |
 | 3,3 V_SW | AMS1117-3.3 fra 5V_SW | bare TFT-baklyset (Q9/Q10) |
-| −5 V | LM2662 (FC = V+, 150 kHz), 10 µF inn/fly/ut | PGA2311 VA− (10–12 mA) |
+| −5 V | LM2662 (FC = V+, 150 kHz) fra alltid-på 5 V, 10 µF inn/fly/ut | PGA2311 VA− (10–12 mA) |
 | DAC | PCM5102A, I2S-slave, SCK = GND (intern PLL), FLT/DEMP/FMT = GND, XSMT fra GPIO 26 | 100 Ω + 2,2 nF ut |
 | **ADC AUX 1** | PCM1808, I2S-master 256 fs fra 12,288 MHz-oscillator (48 kHz) | Pi-en er I2S-slave. Inngang 10k/10k-deler, 4,7 µF, 1 kΩ + 1 nF |
 | **USB-kodek AUX 2** | PCM2900C, 12 MHz-krystall, bus-powered fra en USB-port på Pi-en (J19) | Inngang 10k/4,7k-deler, 4,7 µF. Vises som «USB Audio CODEC» |
@@ -129,14 +129,14 @@ DAC (PCM5102A, 48 kHz) gir analog lyd videre.
 | 4 × USB-A | venstre side (J15–J18) | tastatur/mus/disk fra den valgte PC-en (USB-C PC 1/PC 2 bak → TS3USB221-mux → FE1.1s-hub); 5 V via 2 A polyfuse; **Pi-en er ikke på huben** – ingen lyd går gjennom switchen |
 | LED-ringer | J10 | AIR/BT, RADIO, AUX, USB fra MCP GPB0-3 (low-side AO3400), POWER fra GPIO 12 (PWM) |
 | Skjerm | J9 (OLED I2C) eller J13 (TFT SPI + touch) | OLED/TFT-logikk på alltid-3,3 V, TFT-baklys på 5V_SW |
-| 5 V til Pi | J6 | 5,2 V/5 A fra bucken til header-pinne 2/6 |
+| 5 V til Pi | J6 | 5,06 V/5 A fra bucken til header-pinne 2/6 |
 | Talemeldinger | gjennom DAC/høyttalere | Kokoro (en) / Piper (no, trøndersk) |
 
 **Styring**
 
 | Funksjon | Hvordan |
 |---|---|
-| Strøm («smart relé») | GPIO 27 → Q7 → relé K1 (24 V til forsterkeren) og Q8 (5V_SW). Pi, hub, MCP23017, DAC, ADC-digital og skjermlogikk har strøm alltid, så alt våkner fra HA/Homey/AirPlay. Knapp bak (GPIO 15) og POWER foran (MCP GPA4) veksler |
+| Strøm («smart relé») | GPIO 27 → Q7 → relé K1 (24 V til forsterkeren) og Q8 (5V_SW). Pi, hub, MCP23017, DAC, PGA2311, hodetelefonforsterker, ADC-digital og skjermlogikk har strøm alltid, så alt våkner fra HA/Homey/AirPlay. Knapp bak (GPIO 15) og POWER foran (MCP GPA4) veksler |
 | Knapper foran | MCP23017 GPA0-4 (BT, RADIO, AUX, USB, POWER) med 100 nF debounce; INT → GPIO 14 |
 | Encoder | GPIO 23/24/25 (volum, trykk = mute, hold = kanalmeny) |
 | USB-switch | MCP GPB4 → TS3USB221 S-pinne (lav = PC 1); fra USB-knappen, HA, Homey eller `/api/usbsw` |
@@ -171,7 +171,7 @@ for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 
 **Alltid-på vs. svitsjet (regel: ingen logikk fra alltid-på-siden skal drive inn i en strømløs krets):** PGA2311 VD+/ZCEN, TPA6132A2 VDD/G0/G1, MCP23017, DAC, ADC-digital, OLED og TFT-logikk går på alltid-på 5 V/3,3 V. 5V_SW: PGA2311 VA+ (og −5 V), ADC-analog, LED-ringer, TFT-bakgrunnslys. SDZ til TPA3116 går via 1 k og holdes lav i standby. Bucken slår på ved ca. 9 V inn (330 k/51 k på EN) så EN tåler en TVS-klemming.
 
-**Første oppstart – sjekkliste:** (1) uten Pi og uten høyttalere: 24 V på J1 → mål 5,2 V på J6, 3,3 V på J22 pinne 5, 0 V på LED-ringkontakten J10 pinne 1 (5V_SW av). (2) Relé: brudd mellom K1 pinne 1 og 3 uten spole. (3) Sett i Pi, start; slå på fra HA → 5V_SW 5 V, −5 V på C16, 24V_AMP på C40. (4) Høyttalere på, volum 15 %.
+**Første oppstart – sjekkliste:** (1) uten Pi og uten høyttalere: 24 V på J1 → mål 5,0–5,1 V på J6, 3,3 V på J22 pinne 5, 0 V på LED-ringkontakten J10 pinne 1 (5V_SW av). (2) Relé: brudd mellom K1 pinne 1 og 3 uten spole. (3) Sett i Pi, start; slå på fra HA → 5V_SW 5 V, −5 V på C16, 24V_AMP på C40. (4) Høyttalere på, volum 15 %.
 
 ## Kjente kompromisser i rev B
 
@@ -185,7 +185,9 @@ for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 - TPS54560-kompensasjon (13,3 k/3,3 n/47 p) gir ca. 24 kHz crossover med 10 µH/3 × 47 µF – stabil, men TI-eksempelet bruker 16,9 k/4,7 n. Ikke målt.
 - Ingen fiducialer på kortet; JLCPCB krever det ikke. CPL-filen har JLCPCBs rotasjonskorreksjoner (SOT-23/SOT-223/elektrolytt +180°, SOIC/SSOP/TSSOP/QFN +270°),
   men sjekk pinne-1-prikken og «+» på C40/C41/C72 i CPL-forhåndsvisningen – JLCPCB plasserer etter bildet.
-- Buck-utgangen er 5,28 V (56 k/10 k – 10,2 k finnes ikke som Basic-del). Innenfor Pi 4-kravet (4,85–5,36 V); med 10,2 k i R5 blir det 5,19 V.
+- Buck-utgangen er 5,06 V (33 k/6,2 k, begge Basic-deler) – innenfor PGA2311/PCM1808/USB-kravet (≤ 5,25 V) og Pi 4-kravet (≥ 4,75 V ved headeren).
+- PGA2311 (VD+, VA+ via FB1, VA− fra LM2662) og MUTE-pullupen går på alltid-på 5 V, ikke 5V_SW: VA+ og VD+ må følge hverandre, og DAC-en
+  (alltid på) ville ellers drive inn i en strømløs PGA i standby. Standby-stillhet gis av SDZ (TPA3116), EN (TPA6132A2) og PGA-mute i programvaren.
 - Høyttalersporene (OUT*/SPK_*) har strekninger på 0,4–0,5 mm der naborutingen ikke ga plass til mer. Bestill **2 oz kobber** – da tåler de
   full effekt uten nevneverdig oppvarming (1 oz holder til normal lytting).
 - TPA6132A2 går på fast +6 dB; høyttalervolumet og hodetelefonvolumet følger hverandre (samme PGA2311/CamillaDSP-volum).

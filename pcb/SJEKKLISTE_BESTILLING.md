@@ -65,7 +65,7 @@ Kortet er fryst etter ruting (commit `9ae80c2`) og de ferdige produksjonsfilene 
 - [ ] **E2.** Multimeter, kortet strømløst: motstand mellom `24V_IN` (J1+) og GND skal være > 10 kΩ (ikke 0),
       mellom `5V` (J6+) og GND > 1 kΩ, mellom `3V3` (J22 pinne 5) og GND > 100 Ω. 0 Ω = kortslutning, ikke sett på strøm.
 - [ ] **E3.** Relé: uten strøm skal det være **brudd** mellom K1 pinne 1 og 3.
-- [ ] **E4.** 24 V på J1 med strømbegrensning 0,5 A (labforsyning) – mål: 5,2 V på J6, 3,3 V på J22 pinne 5,
+- [ ] **E4.** 24 V på J1 med strømbegrensning 0,5 A (labforsyning) – mål: 5,0–5,1 V på J6, 3,3 V på J22 pinne 5,
       0 V på J10 pinne 1 (`5V_SW` av). Strømtrekk < 100 mA uten Pi.
 - [ ] **E5.** Først nå: Pi inn, start, slå på fra HA → `5V_SW` 5 V, −5 V på C16, 24 V på C40. Høyttalere på, volum 15 %.
 

@@ -52,7 +52,7 @@ pastemaske stemmer 100 %.
 | C40, C41, C72 | C134754 (uverifisert) | C190286 | 220 µF 50 V 10 × 10,5 SMD-elektrolytt |
 | L2–L5 | C182272 (uverifisert) | C241221 | CEC SMRH125-100M 10 µH 4 A 12 × 12 |
 | R3 | C22999 | C667189 | 243 kΩ 0,1 % 0603 |
-| R5 | C25744 (10 k 0402) | C25804 | 10 kΩ 0603 (Basic) – buck gir 5,28 V |
+| R4, R5 | C23206 / C25744 (10 k 0402) | C4216 / C4260 | 33 kΩ / 6,2 kΩ 0603 (Basic) – buck gir 5,06 V |
 | R6 | C22791 | C22797 | 13 kΩ 0603 (Basic) |
 | R16 | C25765 (0402) | C4184 | 20 kΩ 0603 (Basic) |
 | R64, R65 | C25092 (0402) | C23345 | 22 Ω 0603 (Basic) |
