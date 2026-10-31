@@ -134,10 +134,10 @@ def _drop_colliding_gnd():
         pts = []
         for blk in _r.split(r"\n(?=\[)", open(rep).read()):
             if not blk.startswith("[clearance]") and not blk.startswith("[hole_clearance]"): continue
-            pts += [(float(a), float(b_)) for a, b_ in _r.findall(r"@\(([-\d.]+) mm, ([-\d.]+) mm\): Track \[GND\]", blk)]
+            pts += [(float(a), float(b_)) for a, b_ in _r.findall(r"@\(([-\d.]+) mm, ([-\d.]+) mm\): (?:Track|Via) \[GND\]", blk)]
         if not pts: break
-        gone = [t for t in board.GetTracks() if t.GetClass() == "PCB_TRACK" and t.GetNetname() == "GND" and not t.IsLocked()
-                and any(seg_contains(t, x, y, 0.3) for x, y in pts)]
+        gone = [t for t in board.GetTracks() if t.GetNetname() == "GND" and not t.IsLocked()
+                and any(seg_contains(t, x, y, 0.3) for x, y in pts)]   # spor og (sy-)vias
         print("  GND-kollisjoner:", len(pts), "spor å fjerne:", len(gone))
         if not gone: break
         for t in gone: board.Remove(t)
@@ -182,7 +182,7 @@ for t in board.GetTracks():
     w = _max_width(t)
     w = int(w // pcbnew.FromMM(0.05)) * pcbnew.FromMM(0.05)   # rund ned til 0,05
     if w > t.GetWidth():
-        orig_w[id(t)] = t.GetWidth(); t.SetWidth(int(w)); n_w += 1
+        orig_w[t.m_Uuid.AsString()] = t.GetWidth(); t.SetWidth(int(w)); n_w += 1
 print("utvidet spor:", n_w)
 
 def drc_items(board):
@@ -207,7 +207,7 @@ for rnd in range(6):
     fixed = 0
     for t in board.GetTracks():
         if t.GetClass() != "PCB_TRACK" or t.GetNetname() not in WIDEN: continue
-        ow = orig_w.get(id(t), pcbnew.FromMM(0.2))
+        ow = orig_w.get(t.m_Uuid.AsString(), pcbnew.FromMM(0.4))   # nøkkel = UUID (id() på SWIG-proxy er ikke stabil → alt ble 0,2)
         if any(seg_contains(t, x, y) for (x, y, n) in bad if n == t.GetNetname()) and t.GetWidth() > ow + pcbnew.FromMM(0.01):
             t.SetWidth(pcbnew.FromMM(0.5) if t.GetWidth() > pcbnew.FromMM(0.61) else ow); fixed += 1   # tilbake til rutet bredde, ikke 0,25
     print(f"runde {rnd}: {len(bad)} DRC-punkter, {fixed} spor smalnet")
