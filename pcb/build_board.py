@@ -401,11 +401,12 @@ POWER_SPINE = [
     ("24V_AMP", "F.Cu", 2.0, [(100, 20), (121.8, 20), (121.8, 23.2), (135.8, 23.2), (135.8, 20)]),     # K1.1 -> C40 -> C41
     ("24V_AMP", "F.Cu", 0.8, [(129.3, 23.2), (129.3, 29.45)]), ("24V_AMP", "F.Cu", 0.6, [(129.3, 29.45), (128.0, 29.45)]),   # PVCC pinne 31/32
     ("24V_AMP", "B.Cu", 1.2, [(131.0, 23.2), (131.0, 38.2)]), ("24V_AMP", "F.Cu", 0.8, [(131.0, 38.2), (128.9, 38.2)]),        # PVCC pinne 17–19 via undersiden
-    ("24V_AMP", "F.Cu", 0.8, [(128.9, 37.4), (128.9, 39.1)]),
+    ("24V_AMP", "F.Cu", 0.5, [(128.9, 37.58), (128.9, 39.1)]),   # smalere/kortere så BSNL (pinne 20) får plass over
     ("24V_AMP", "F.Cu", 0.4, [(127.65, 37.58), (128.9, 37.58)]), ("24V_AMP", "F.Cu", 0.4, [(127.65, 38.23), (128.9, 38.23)]), ("24V_AMP", "F.Cu", 0.4, [(127.65, 38.88), (128.9, 38.88)]),
-    ("5V", "F.Cu", 1.5, [(89.55, 30), (89.55, 34.2), (96.5, 34.2), (96.5, 52.3)]),                      # buck -> kondensatorrekke (C8–C11 står med padene 2,7 mm brede i x)
+    ("5V", "F.Cu", 1.5, [(89.55, 30), (89.55, 34.2), (96.5, 34.2), (96.5, 51.77)]),                      # buck -> kondensatorrekke (C8–C11 står med padene 2,7 mm brede i x)
     ("5V", "F.Cu", 0.8, [(94.0, 39.48), (96.5, 39.48)]), ("5V", "F.Cu", 0.8, [(94.0, 43.98), (96.5, 43.98)]), ("5V", "F.Cu", 0.8, [(94.0, 48.48), (96.5, 48.48)]), ("5V", "F.Cu", 0.8, [(94.0, 51.77), (96.5, 51.77)]),
     ("5V", "F.Cu", 1.5, [(89.55, 34.2), (86.0, 34.2), (83.46, 36.8), (83.46, 43.0)]),                   # -> J6 (5 V til Pi)
+    ("5V", "B.Cu", 1.2, [(83.46, 43.0), (60.6, 43.0), (51.25, 43.0), (50.79, 42.54), (49.54, 42.54)]),   # J6 -> Pi-header J5.4 (5 V) under, matet fra samme skinne
 ]
 POWER_SPINE_VIAS = [("VIN24", (58.96, 21.5), 1.0, 0.5), ("24V_AMP", (131.0, 23.2), 1.0, 0.5), ("24V_AMP", (131.0, 38.2), 1.0, 0.5)]
 FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (133.3, 36.275), (134.6, 35.6), (138.3, 35.6), (138.95, 36.25), (138.95, 36.9)]),   # TPA3116 pinne 21 -> C32 (utvides i export)
@@ -419,7 +420,8 @@ FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (133.3, 
     ("RLY_LOW", "F.Cu", 0.25, [(101.5, 35.3), (101.138, 34.0)]),   # TPA6132A2 pinne 11 -> C103 (trangt mellom HP_VDD og HP_CPN)
     ("AMP_RINN", "F.Cu", 0.2, [(120.35, 31.725), (118.6, 31.725)]),   # TPA3116 pinne 5 ble stengt inne av nabosporene
                 ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),   # TPA6132A2 PGND/SGND -> termisk pad
-                ("USB3_DP", "F.Cu", 0.2, [(30.675, 49.6), (30.675, 53.8)])]   # FE1.1s pinne 7 ut nedover mellom nabosporene
+                ("USB3_DP", "F.Cu", 0.2, [(30.675, 49.6), (30.675, 53.8)]),
+                ("BSNL", "F.Cu", 0.3, [(127.65, 36.925), (137.05, 36.925)])]   # bootstrap N-L rett ut mellom OUTNL og PVCC-stubben   # FE1.1s pinne 7 ut nedover mellom nabosporene
 FIXED_VIAS = [("HP_INR", (129.4, 45.75)), ("PC2_DP", (32.2, 63.7)), ("PC2_DM", (33.1, 64.2)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725))]
 FIXED_GND_VIP = {}   # GND rutes nå som nett av Freerouting – ingen via-i-pad (lodder dårlig uten fylte vias)   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 

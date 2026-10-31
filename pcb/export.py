@@ -96,8 +96,10 @@ def _prune_dangling_text(path, board):
             if pad_hit(p, LAY[layer]): return True
             if any(near(vp, p, vs / 2 + 0.01) for _, vp, vs in vias): return True
             return any(m is not me and l == layer and on_seg(p, a, b, w / 2 + 0.01) for m, a, b, l, w in segs)
-        gone = [m for m, a, b, l, _ in segs if not (touched(a, l, m) and touched(b, l, m))]
+        # låste (håndlagte) spor/vias beholdes alltid – de er kortets strømskinne
+        gone = [m for m, a, b, l, _ in segs if " locked" not in m.group(0) and not (touched(a, l, m) and touched(b, l, m))]
         for m, vp, vs in vias:
+            if " locked" in m.group(0): continue
             ok = sum(1 for l in ("F.Cu", "B.Cu") if any(l2 == l and on_seg(vp, a, b, vs / 2 + w / 2) for _, a, b, l2, w in segs) or pad_hit(vp, LAY[l]))
             if ok < 2: gone.append(m)
         if not gone: break
@@ -143,7 +145,7 @@ def _drop_colliding_gnd():
     return removed
 # Utvid hvert strømspor så mye naboene tillater (mål fra POWER_NETS i build_board), med 0,16 mm klaring til alt annet kobber.
 WIDEN = dict(getattr(_bb, "POWER_NETS", WIDEN))
-_CL = pcbnew.FromMM(0.21); _EDGE = pcbnew.FromMM(0.35)
+_CL = pcbnew.FromMM(0.21); _EDGE = pcbnew.FromMM(0.55)   # 0,5 kantavstand/keepout + margin
 _others_tr = [t for t in board.GetTracks() if t.GetClass() == "PCB_TRACK"]
 _others_via = [t for t in board.GetTracks() if t.GetClass() == "PCB_VIA"]
 _pads_all = [pd for fp in board.GetFootprints() for pd in fp.Pads()]
@@ -200,7 +202,7 @@ def seg_contains(t, x, y, tol=0.6):
     return _m.hypot(sx + u * (ex - sx) - x, sy + u * (ey - sy) - y) < tol
 print("GND-spor som kolliderte, fjernet:", _drop_colliding_gnd())
 for rnd in range(6):
-    bad = [(x, y, n) for typ, pts in drc_items(board) if typ in ("clearance", "hole_clearance", "solder_mask_bridge") for (x, y, n) in pts if n in WIDEN]
+    bad = [(x, y, n) for typ, pts in drc_items(board) if typ in ("clearance", "hole_clearance", "solder_mask_bridge", "copper_edge_clearance", "items_not_allowed") for (x, y, n) in pts if n in WIDEN]
     if not bad: break
     fixed = 0
     for t in board.GetTracks():
