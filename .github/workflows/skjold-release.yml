@@ -28,7 +28,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: ${{ env.NODE_VERSION }}, cache: npm, cache-dependency-path: skjold/app/package-lock.json }
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: skjold/app/package-lock.json
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - name: Installer og bygg web
@@ -59,7 +62,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: ${{ env.NODE_VERSION }}, cache: npm, cache-dependency-path: skjold/app/package-lock.json }
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: skjold/app/package-lock.json
       - name: Installer, bygg web og synkroniser iOS
         working-directory: skjold/app
         run: |
@@ -95,7 +101,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: ${{ env.NODE_VERSION }}, cache: npm, cache-dependency-path: skjold/flasher/package-lock.json }
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: skjold/flasher/package-lock.json
       - name: Installer og bygg installasjonsfiler
         working-directory: skjold/flasher
         run: |
