@@ -5,7 +5,8 @@ import os, subprocess, sys
 import pcbnew
 HERE = os.path.dirname(os.path.abspath(__file__))
 PCB = os.path.join(HERE, "ki_pultforsterker_main.kicad_pcb")
-subprocess.run([sys.executable, os.path.join(HERE, "build_board.py")], check=True)
+_env = dict(os.environ, KI_PCB_WIDE="1" if "--power-first" in sys.argv else "0")
+subprocess.run([sys.executable, os.path.join(HERE, "build_board.py")], check=True, env=_env)
 if "--continue" in sys.argv:
     # legg inn forrige rutingresultat (board.ses) i det nybygde kortet, så Freerouting bare fullfører det som mangler
     import re

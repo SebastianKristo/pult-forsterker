@@ -487,7 +487,8 @@ def build():
         ncs = ds.m_NetSettings.m_NetClasses
         default = ds.m_NetSettings.m_DefaultNetClass
         default.SetTrackWidth(pcbnew.FromMM(0.2)); default.SetClearance(pcbnew.FromMM(0.15)); default.SetViaDiameter(pcbnew.FromMM(0.6)); default.SetViaDrill(pcbnew.FromMM(0.3))   # signalnett 0,2 mm / via 0,6/0,3 (JLCPCB standard) gir Freerouting plass
-        for cname, w in [("Power", 1.5), ("Power5V", 1.2), ("Out", 1.5), ("Mid", 0.5)]:   # rutes smalt (kommer inn på fine pads); export.py utvider til POWER_NETS-målet der det er plass
+        WIDE_PASS = os.environ.get("KI_PCB_WIDE") == "1"   # pass 1 (route.py --power-first): brede klasser + halsstubber; ellers smalt og utvidelse i export.py
+        for cname, w in ([("Power", 1.5), ("Power5V", 1.2), ("Out", 1.5), ("Mid", 0.5)] if WIDE_PASS else [("Power", 0.5), ("Power5V", 0.4), ("Out", 0.5), ("Mid", 0.3)]):   # rutes smalt (kommer inn på fine pads); export.py utvider til POWER_NETS-målet der det er plass
             nc = pcbnew.NETCLASS(cname); nc.SetTrackWidth(pcbnew.FromMM(w)); nc.SetClearance(pcbnew.FromMM(0.2))   # 0,2 for alle: brede nett ender også på 0,65-pitch-pads (gap 0,25)
             nc.SetViaDiameter(pcbnew.FromMM(1.2 if w >= 1.2 else 0.8)); nc.SetViaDrill(pcbnew.FromMM(0.6 if w >= 1.2 else 0.4))
             ncs[cname] = nc
@@ -510,7 +511,7 @@ def build():
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
     # Halsstubber: brede nett (nettklasse ≥ 0,6 mm) som ender på fine pads (TSSOP/QFN/SOT) får en låst smal stubb (padbredde)
     # rett ut fra kretsen, så Freerouting kan koble det brede sporet til stubbenden i stedet for å måtte inn mellom pinnene.
-    wide = {n for n, w in POWER_NETS.items() if w >= 0.6}   # halsstubber: brede nett som ender på fine pads
+    wide = {n for n, w in POWER_NETS.items() if w >= 0.6} if os.environ.get("KI_PCB_WIDE") == "1" else set()   # halsstubber bare i pass 1
     courts = {r: f.GetBoundingBox(False, False) for r, f in fps.items()}
     n_neck = 0
     for ref, fp in fps.items():
