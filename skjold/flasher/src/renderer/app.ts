@@ -1,11 +1,11 @@
 /* Skjold Flasher – GUI. Gjenskapt etter design/flasher/Skjold Flasher.dc.html. Ingen moduler: ett skript. */
 
 interface DriveInfo { device: string; name: string; path: string; size: number; mountpoints: string[] }
-interface ReleaseImage { tag: string; name: string; url: string; size: number; sha256?: string; publishedAt: string }
+interface ReleaseImage { tag: string; name: string; url: string; size: number; sha256?: string; publishedAt: string; base?: boolean }
 interface LocalImage { path: string; name: string; size: number }
 type Phase = 'download' | 'decompress' | 'configure' | 'authorize' | 'flashing' | 'verifying' | 'done' | 'error';
 interface Progress { phase: Phase; percent: number; bytes?: number; total?: number; speed?: number; eta?: number; message?: string }
-interface FlashResult { ok: boolean; error?: string; url?: string; qr?: string }
+interface FlashResult { ok: boolean; error?: string; url?: string; qr?: string; install?: boolean }
 interface SkjoldApi {
   listDrives(): Promise<DriveInfo[]>;
   latestImage(): Promise<ReleaseImage | null>;
@@ -83,7 +83,7 @@ function renderFooter() {
 
 function page0(): string {
   const rel = S.release ? `${esc(S.release.tag)} · ${gb(S.release.size)}`
-    : { loading: 'Henter fra GitHub …', none: 'Ingen bilde publisert ennå', error: 'Fikk ikke kontakt med GitHub', ok: '' }[S.releaseState];
+    : { loading: 'Henter bildeliste …', none: 'Ingen bilde funnet', error: 'Fikk ikke kontakt med GitHub / raspberrypi.com', ok: '' }[S.releaseState];
   const drives = S.drives.length
     ? S.drives.map(d => `<button class="card drive ${S.drive === d.device ? 'sel' : ''}" data-drive="${esc(d.device)}">
         <div class="sd"></div><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span class="t">${esc(d.name)}</span><span class="s">${esc(d.path)}</span></div>
@@ -92,7 +92,7 @@ function page0(): string {
   return `<h1>Velg SD-kort</h1>
     <p class="lead">Bare flyttbare disker vises. Alt på kortet blir slettet.</p>
     <div class="group"><span class="label">Bilde</span><div class="grid">
-      <button class="card ${S.imgMode === 'latest' ? 'sel' : ''}" data-img="latest"><span class="t">Siste Skjold-bilde</span><span class="s">${rel}</span></button>
+      <button class="card ${S.imgMode === 'latest' ? 'sel' : ''}" data-img="latest"><span class="t">${S.release?.base ? 'Raspberry Pi OS Lite 64-bit + Skjold' : 'Siste Skjold-bilde'}</span><span class="s">${rel}</span></button>
       <button class="card ${S.imgMode === 'local' ? 'sel' : ''}" data-img="local"><span class="t">Velg fil …</span><span class="s">${S.local ? esc(S.local.name) : '.img, .img.xz eller .zip'}</span></button>
     </div></div>
     <div class="group"><span class="label">Enhet</span><div class="grid">
@@ -137,7 +137,7 @@ function page2(): string {
   if (pr.phase === 'error') return `<h1>Noe gikk galt</h1><div class="err">${esc(pr.message ?? 'Ukjent feil')}</div>
     <p class="lead">Kortet kan være delvis skrevet. Prøv igjen, eller velg et annet kort.</p>`;
   const sub = {
-    download: 'Henter fra GitHub Releases' + (S.release?.sha256 ? ' og kontrollerer SHA-256.' : '.'),
+    download: (S.release?.base ? 'Henter Raspberry Pi OS Lite fra raspberrypi.com' : 'Henter fra GitHub Releases') + (S.release?.sha256 ? ' og kontrollerer SHA-256.' : '.'),
     decompress: 'Gjør bildet klart på datamaskinen før skriving.',
     configure: S.pre ? 'Wi-Fi og navn legges i skjold-setup.json.' : 'Navn og innstillinger legges på boot-partisjonen.',
     authorize: 'Datamaskinen ber om administratorpassord for å skrive til kortet.',
@@ -156,13 +156,14 @@ function page2(): string {
 
 function page3(): string {
   const r = S.result!;
+  const inst = r.install ? `<li>Første oppstart installerer Skjold fra nettet. Det tar 15–30 minutter, og Pi-en starter på nytt av seg selv${S.pre ? '' : ' (krever nettverkskabel når Wi-Fi ikke er forhåndsinnstilt)'}.</li>` : '';
   const hint = S.pre ? `«${esc(S.name)}» kobler seg til ${esc(S.ssid)} av seg selv. Skjermen viser IP-adressen når den er klar.`
     : 'Skjermen viser en QR-kode. Skann den med telefonen for å sette opp Wi-Fi og navn.';
   return `<div class="check">✓</div><h1>SD-kortet er klart</h1>
     <div class="done"><ol>
       <li>Ta ut kortet og sett det i Raspberry Pi-en i ${S.dev === 0 ? 'forsterkeren' : 'Node-en'}.</li>
       <li>${S.dev === 0 ? 'Koble til strøm og slå på hovedbryteren bak.' : 'Koble til strøm.'}</li>
-      <li>${hint}</li>
+      ${inst}<li>${hint}</li>
       ${S.pre ? '<li>Skann QR-koden med telefonen når den er klar, for å åpne Skjold.</li>' : ''}
     </ol>
     ${S.pre && r.qr ? `<div class="qr"><img src="${r.qr}" alt="QR-kode"><span>${esc(r.url ?? '')}</span></div>` : ''}</div>

@@ -13,6 +13,7 @@ export interface ReleaseImage {
   size: number;
   sha256?: string;       // fra SHA256SUMS / <asset>.sha256 hvis release har det
   publishedAt: string;
+  base?: boolean;        // true = Raspberry Pi OS Lite 64-bit; Skjold installeres ved første oppstart
 }
 
 export interface SetupOptions {
@@ -54,6 +55,7 @@ export interface FlashResult {
   ok: boolean;
   error?: string;
   url?: string;          // onboarding-URL
+  install?: boolean;     // Skjold installeres ved første oppstart (tar 15–30 min)
   qr?: string;           // data:-URL (SVG) for QR-koden
 }
 

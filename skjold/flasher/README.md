@@ -29,25 +29,31 @@ alltid (`npmRebuild`). Feilet `postinstall` (f.eks. uten tilgang til Electron-he
    ber om administratortilgang, skriver og leser tilbake (etcher-sdk, `verify: true`).
 4. **Ferdig** – instruksjoner og QR-kode til `http://<vertsnavn>.local:8765/`. Kortet løses ut.
 
-### Bildet fra GitHub
-`src/main/release.ts` leser `https://api.github.com/repos/SebastianKristo/pult-forsterker/releases`, tar nyeste
-ikke-pre-release med tag `skjold-v*` og en asset som matcher `skjold-*.img(.xz|.zip|.gz)` (pi-gen lager
-`skjold-s1-<dato>.img.xz`). Sjekksum hentes fra `<asset>.sha256` eller `SHA256SUMS` hvis release har det.
-Nedlastingen caches i brukerdata-mappen. **NB:** release-workflowen publiserer foreløpig ikke selve SD-bildet –
-til det er på plass viser appen «Ingen bilde publisert ennå» og lokal fil må brukes.
+### Hvilket bilde
+`src/main/release.ts`: finnes en release `skjold-v*` med `skjold-*.img(.xz|.zip|.gz)` (ferdig pi-gen-bilde) brukes den.
+Ellers brukes **Raspberry Pi OS Lite (64-bit)** fra Raspberry Pi sin offisielle liste
+(`downloads.raspberrypi.com/os_list_imagingutility_v4.json`, samme som Raspberry Pi Imager), med SHA-256-kontroll.
+Skjold installeres da ved første oppstart. Nedlastingen caches i brukerdata-mappen.
 
 ### Filer på boot-partisjonen
-Skrives inn i en utpakket kopi av bildet (partisjon 1, FAT, via `balena-image-fs`) *før* skriving. Da trengs ingen
-montering av kortet etterpå, og verifiseringen dekker også oppsettfilene.
+Skrives inn i en utpakket kopi av bildet (partisjon 1, FAT, via `balena-image-fs`) *før* skriving, så verifiseringen
+dekker også oppsettet. Modus velges ut fra hva som ligger på partisjonen (`src/main/image.ts`, `src/shared/bootconfig.ts`):
 
-| Fil | Leses av | Innhold |
+| Modus | Kjennetegn | Filer |
 |---|---|---|
-| `skjold-setup.json` | `skjold-setup` (se `design/sdbilde`) | `device`, `hostname`, `lang`, og ved forhåndsinnstilling `name` og `wifi {ssid,password,country}` |
-| `custom.toml` | Raspberry Pi OS Bookworm (`raspberrypi-sys-mods`, samme format som Raspberry Pi Imager) | `[system] hostname`, `[user]`/`[ssh]` (ved SSH), `[wlan]` (ved forhåndsinnstilling), `[locale]` |
-| `ssh`, `userconf.txt` | eldre Bookworm/Bullseye | SSH på, `bruker:$6$…` (sha512crypt) |
+| `skjold` | markørfila `skjold-image` (ferdig pi-gen-bilde) | `skjold-setup.json` – resten gjør `skjold-setup` |
+| `cloudinit` | `user-data`/`meta-data` finnes (Pi OS Trixie og nyere) | `skjold-setup.json`, `skjold-install.sh`, `user-data` (vertsnavn, bruker, SSH, tidssone, tastatur, runcmd), `network-config` (Wi-Fi) |
+| `systemd` | ellers (Pi OS Bookworm) | `skjold-setup.json`, `skjold-install.sh`, `firstrun.sh`, og `cmdline.txt` får `cfg80211.ieee80211_regdom=<land> systemd.run=/boot/firmware/firstrun.sh …` (fjernes av firstrun.sh) |
 
-Passord lagres aldri i klartekst for brukeren (sha512crypt, `src/shared/sha512crypt.ts`). Wi-Fi-passordet står i
-klartekst i `skjold-setup.json`/`custom.toml` slik Pi-en forventer; `skjold-setup` sletter sin fil etter bruk.
+`skjold-install.sh` installeres som `skjold-install.service` (venter på nett, prøver på nytt hvert minutt til den lykkes):
+henter `SebastianKristo/pult-forsterker` (ref `main`, se `ref` i `skjold-setup.json`) fra GitHub til `/opt/skjold/src`,
+kjører `pi/install.sh` med `KI_AMP_BOARD=main` (S1) eller `KI_AMP_OUT=headphones` + `skjold/node/driver/installer_node.sh`
+(Node), og starter på nytt. Logg: `/var/log/skjold-install.log`. Tar 15–30 min. Krever nett: forhåndsinnstill Wi-Fi
+eller bruk nettverkskabel.
+
+Brukerpassord lagres bare som sha512crypt. Wi-Fi-passordet skrives som WPA-PSK (64 hex) i `firstrun.sh`/`network-config`;
+klartekst står bare i `skjold-setup.json` (for et ferdig Skjold-bilde, som sletter fila etter bruk). Uten SSH lages en
+låst bruker `skjold` slik at Pi OS ikke stopper i brukeroppsettet.
 
 ## Rettigheter og sikkerhet
 
@@ -78,4 +84,4 @@ scripts/       copy-static.js, postinstall.js, screenshot.js
   boot-partisjon + innskriving av oppsettfilene (kontrollert med mtools/fsck.fat), `electron-builder --linux --dir`,
   skriveprosessen fra pakket app (laster etcher-sdk fra asar, avviser ukjent disk), oppstart av pakket app i Xvfb.
 - **Ikke testet:** skriving til et ekte SD-kort, rettighetsdialogene på macOS/Windows, dmg/nsis-bygg og at Pi-en
-  faktisk leser `custom.toml` i det ferdige Skjold-bildet. Gjør en full runde på hver plattform før release.
+  faktisk kjører `firstrun.sh`/cloud-init og `skjold-install.service` på en ekte Pi. Gjør en full runde på hver plattform før release.

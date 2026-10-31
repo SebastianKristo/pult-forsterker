@@ -6,9 +6,9 @@ import path from 'path';
 import QRCode from 'qrcode';
 import { listDrives } from './drives';
 import { latestImage, download } from './release';
-import { decompress, writeBootFiles } from './image';
+import { decompress, prepareBoot } from './image';
 import { eject, prepareLinuxDevice, runWriter, writeJobFile } from './elevate';
-import { buildBootFiles, hostnameFromName, onboardingUrl, validate } from '../shared/bootconfig';
+import { hostnameFromName, type InitMode, onboardingUrl, validate } from '../shared/bootconfig';
 import type { FlashProgress, FlashRequest, FlashResult, WriterMessage } from '../shared/types';
 
 let win: BrowserWindow | null = null;
@@ -45,6 +45,7 @@ async function flash(req: FlashRequest): Promise<FlashResult> {
   const work = path.join(app.getPath('userData'), 'work');
   const cache = path.join(app.getPath('userData'), 'cache');
   let prepared: string | null = null;
+  let mode: InitMode = 'skjold';
   busy = true; abort = new AbortController();
   try {
     let src: string;
@@ -58,7 +59,8 @@ async function flash(req: FlashRequest): Promise<FlashResult> {
     prepared = await decompress(src, work, pct => send({ phase: 'decompress', percent: pct }));
 
     send({ phase: 'configure', percent: 0, message: 'Skriver oppsett til boot-partisjonen' });
-    await writeBootFiles(prepared, buildBootFiles(req.setup));
+    mode = await prepareBoot(prepared, req.setup);
+    if (mode !== 'skjold') send({ phase: 'configure', percent: 100, message: 'Raspberry Pi OS Lite – Skjold installeres ved første oppstart' });
 
     send({ phase: 'authorize', percent: 0, message: 'Venter på administratortilgang' });
     if (process.platform === 'linux') await prepareLinuxDevice(req.drive);
@@ -68,7 +70,7 @@ async function flash(req: FlashRequest): Promise<FlashResult> {
     const url = onboardingUrl(req.setup.hostname);
     const qr = await QRCode.toString(url, { type: 'svg', margin: 1, color: { dark: '#0b0b0c', light: '#f2f2ee' } });
     send({ phase: 'done', percent: 100 });
-    return { ok: true, url, qr: 'data:image/svg+xml;base64,' + Buffer.from(qr).toString('base64') };
+    return { ok: true, url, install: mode !== 'skjold', qr: 'data:image/svg+xml;base64,' + Buffer.from(qr).toString('base64') };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     send({ phase: 'error', percent: 0, message });

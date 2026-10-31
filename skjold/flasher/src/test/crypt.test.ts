@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { execFileSync } from 'child_process';
 import { sha512crypt } from '../shared/sha512crypt';
-import { buildBootFiles, hostnameFromName, validate } from '../shared/bootconfig';
+import { buildBootFiles, FIRSTRUN_CMDLINE, hostnameFromName, patchCmdline, validate, wpaPsk } from '../shared/bootconfig';
 import type { SetupOptions } from '../shared/types';
 
 // Testvektorer fra Drepper sin spesifikasjon
@@ -22,16 +22,25 @@ assert.strictEqual(hostnameFromName(''), 'skjold');
 const o: SetupOptions = { device: 's1', preset: true, ssid: 'Hjemme "5G"', wifiPassword: 'hemmelig123', country: 'NO', name: 'Stue',
   hostname: 'skjold-stue', lang: 'nb', ssh: true, user: 'skjold', userPassword: 'passord1', sshKey: '' };
 assert.strictEqual(validate(o), null);
-const files = buildBootFiles(o, 'fastsalt');
-const names = files.map(f => f.name).sort();
-assert.deepStrictEqual(names, ['custom.toml', 'skjold-setup.json', 'ssh', 'userconf.txt']);
-const toml = files.find(f => f.name === 'custom.toml')!.content;
-assert.ok(toml.includes('ssid = "Hjemme \\"5G\\""'));
-assert.ok(toml.includes('hostname = "skjold-stue"'));
+const names = (m: 'skjold' | 'systemd' | 'cloudinit', x = o) => buildBootFiles(x, m, 'fastsalt').map(f => f.name).sort();
+assert.deepStrictEqual(names('skjold'), ['skjold-setup.json']);
+assert.deepStrictEqual(names('systemd'), ['firstrun.sh', 'skjold-install.sh', 'skjold-setup.json']);
+assert.deepStrictEqual(names('cloudinit'), ['network-config', 'skjold-install.sh', 'skjold-setup.json', 'user-data']);
+assert.deepStrictEqual(names('cloudinit', { ...o, preset: false }), ['skjold-install.sh', 'skjold-setup.json', 'user-data']);
+const files = buildBootFiles(o, 'systemd', 'fastsalt');
+const fr = files.find(f => f.name === 'firstrun.sh')!.content;
+assert.ok(fr.includes("HN='skjold-stue'"));
+assert.ok(fr.includes('$6$fastsalt$'));
+assert.ok(fr.includes(`psk=${wpaPsk('Hjemme "5G"', 'hemmelig123')}`));
+assert.ok(!fr.includes('hemmelig123'));
+// WPA-PSK testvektor fra IEEE 802.11i
+assert.strictEqual(wpaPsk('IEEE', 'password'), 'f42c6fc52df0ebef9ebb4b90b38a5f902e83fe1b135a70e23aed762e9710a12e');
 const json = JSON.parse(files.find(f => f.name === 'skjold-setup.json')!.content);
 assert.strictEqual(json.wifi.ssid, 'Hjemme "5G"');
-assert.ok(files.find(f => f.name === 'userconf.txt')!.content.startsWith('skjold:$6$fastsalt$'));
+assert.strictEqual(patchCmdline('console=tty1 root=PARTUUID=x rootwait\n', o),
+  'console=tty1 root=PARTUUID=x rootwait cfg80211.ieee80211_regdom=NO' + FIRSTRUN_CMDLINE + '\n');
+const ud = buildBootFiles(o, 'cloudinit', 'fastsalt').find(f => f.name === 'user-data')!.content;
+assert.ok(ud.startsWith('#cloud-config') && ud.includes('skjold-install.service'));
 assert.ok(validate({ ...o, wifiPassword: 'kort' }));
 assert.ok(validate({ ...o, userPassword: '', sshKey: '' }));
-assert.deepStrictEqual(buildBootFiles({ ...o, preset: false, ssh: false }).map(f => f.name).sort(), ['custom.toml', 'skjold-setup.json']);
 console.log('alle tester ok');

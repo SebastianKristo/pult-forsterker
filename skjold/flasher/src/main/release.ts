@@ -4,7 +4,8 @@ import path from 'path';
 import { net } from 'electron';
 import type { ReleaseImage } from '../shared/types';
 
-export const REPO = 'SebastianKristo/pult-forsterker';
+import { REPO } from '../shared/bootconfig';
+export { REPO };
 /** skjold-s1-2026-10-30.img.xz, skjold-node-….img.zip osv. (design/sdbilde: deploy/skjold-s1-<dato>.img.xz) */
 export const IMAGE_ASSET = /^skjold-.*\.img(\.xz|\.zip|\.gz)?$/i;
 
@@ -17,7 +18,37 @@ async function getText(url: string): Promise<string> {
   return r.text();
 }
 
+/** Raspberry Pi sin offisielle OS-liste (samme som Raspberry Pi Imager bruker). */
+export const RPI_OS_LIST = 'https://downloads.raspberrypi.com/os_list_imagingutility_v4.json';
+export const RPI_OS_NAME = 'Raspberry Pi OS Lite (64-bit)';
+
+interface RpiOs { name?: string; url?: string; image_download_size?: number; image_download_sha256?: string; release_date?: string; subitems?: RpiOs[] }
+
+function findOs(list: RpiOs[]): RpiOs | null {
+  for (const o of list) {
+    if (o.name === RPI_OS_NAME && o.url) return o;
+    const sub = o.subitems && findOs(o.subitems);
+    if (sub) return sub;
+  }
+  return null;
+}
+
+/** Raspberry Pi OS Lite 64-bit – grunnbildet. Skjold installeres på det ved første oppstart. */
+export async function baseImage(): Promise<ReleaseImage> {
+  const d = JSON.parse(await getText(RPI_OS_LIST)) as { os_list: RpiOs[] };
+  const o = findOs(d.os_list);
+  if (!o?.url) throw new Error(`Fant ikke «${RPI_OS_NAME}» i Raspberry Pi sin OS-liste.`);
+  return { tag: `Pi OS Lite 64-bit ${o.release_date ?? ''}`.trim(), name: o.url.split('/').pop()!, url: o.url,
+    size: o.image_download_size ?? 0, sha256: o.image_download_sha256?.toLowerCase(), publishedAt: o.release_date ?? '', base: true };
+}
+
+/** Ferdig Skjold-bilde fra GitHub Releases hvis det finnes, ellers Raspberry Pi OS Lite 64-bit. */
 export async function latestImage(): Promise<ReleaseImage | null> {
+  const skjold = await latestSkjoldImage().catch(() => null);
+  return skjold ?? baseImage();
+}
+
+export async function latestSkjoldImage(): Promise<ReleaseImage | null> {
   const list = JSON.parse(await getText(`https://api.github.com/repos/${REPO}/releases?per_page=30`)) as GhRelease[];
   const rels = list.filter(r => !r.draft && !r.prerelease && r.tag_name.startsWith('skjold-v'))
     .sort((a, b) => b.published_at.localeCompare(a.published_at));
@@ -42,7 +73,7 @@ export async function latestImage(): Promise<ReleaseImage | null> {
 export async function download(img: ReleaseImage, cacheDir: string, onProgress: (bytes: number, total: number) => void, signal: AbortSignal): Promise<string> {
   await fsp.mkdir(cacheDir, { recursive: true });
   const dest = path.join(cacheDir, path.basename(img.name));
-  const ok = await fsp.stat(dest).then(s => s.size === img.size, () => false);
+  const ok = await fsp.stat(dest).then(s => !img.size || s.size === img.size, () => false);
   if (ok && img.sha256 && (await sha256File(dest)) === img.sha256) return dest;
 
   const tmp = dest + '.part';
