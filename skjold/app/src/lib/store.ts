@@ -65,6 +65,7 @@ export async function act(fn: () => Promise<Status>, optimistic?: Partial<Status
 }
 
 // ---------- settings ----------
+const MIGRATE_KEYS = ['nameCustom', 'updChannel', 'updAuto', 'setupDone'];
 export async function loadSettings(): Promise<void> {
   try {
     const r = await api.getSettings();
@@ -73,8 +74,17 @@ export async function loadSettings(): Promise<void> {
     try { loc = JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}') as Record<string, unknown>; } catch { /* ignore */ }
     const extra: Record<string, unknown> = {};
     for (const k of missing) if (k in loc) extra[k] = loc[k];
-    settings.value = mergeSettings({ ...r.settings, ...extra }); settingsSource.value = 'api';
+    // Nøkler som tidligere bare lå i localStorage (nameCustom, updChannel, updAuto, setupDone) lagres nå i daemonen:
+    // flytt en lokal verdi dit én gang hvis daemonen fortsatt har standardverdien.
+    const migrate: Record<string, unknown> = {};
+    for (const k of MIGRATE_KEYS) {
+      if (k in r.settings && k in loc && loc[k] !== (DEF as unknown as Record<string, unknown>)[k] && r.settings[k] === (DEF as unknown as Record<string, unknown>)[k]) migrate[k] = loc[k];
+    }
+    settings.value = mergeSettings({ ...r.settings, ...extra, ...migrate }); settingsSource.value = 'api';
     applied.value = r.applied ?? []; localOnly.value = missing;
+    if (Object.keys(migrate).length) {
+      try { settings.value = mergeSettings({ ...(await api.setSettings(migrate)).settings, ...extra }); } catch { /* prøv igjen neste gang */ }
+    }
     return;
   } catch (e) {
     if (!(e instanceof ApiError && e.status === 404)) { /* nettverksfeil: prøv lokalt */ }
@@ -136,6 +146,8 @@ export function inputLabel(id: InputId): string {
 
 export const deviceName = computed(() => {
   const st = settings.value;
+  // daemonen avgjør navnet (eget navn > valg > KI_AMP_NAME) og bruker det i AirPlay/Spotify/Blåtann
+  if (settingsSource.value === 'api' && status.value?.name) return status.value.name;
   if (st.nameCustom) return st.nameCustom;
   const names = ['Skjold S1', 'Stue', 'Kontor', 'Soverom'];
   if (st.name > 0 && names[st.name]) return names[st.name] as string;

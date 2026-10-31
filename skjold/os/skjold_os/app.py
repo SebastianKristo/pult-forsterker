@@ -114,7 +114,14 @@ class Ui:
         hold = st.get("hold")   # {"key":"knob|src|radio|reboot","p":0-1,"title","sub"} eller bekreftelse {"title":"Lagret",…,"saved":n}
         if hold:
             vm.update(screen="hold", hold_p=hold.get("p", 1), hold_title=hold.get("title", ""), hold_sub=hold.get("sub", "Fortsett å holde"),
-                      vol_overlay=False); return vm
+                      vol_overlay=False)
+            if hold.get("saved") is not None:   # bekreftelse («Lagret»): hake med pop-inn, farge = kilden
+                key = (hold.get("title"), hold.get("saved"))
+                if getattr(self, "_saved_key", None) != key: self._saved_key, self._saved_t0 = key, now
+                vm.update(hold_saved=hold["saved"], saved_t=now - self._saved_t0, accent=sources.src(st.get("input")).get("c"))
+            else:
+                self._saved_key = None
+            return vm
         if st.get("bt_pairing"):
             pt = now - (self.pair_t0 or now)
             vm.update(screen="pair", pair_t=pt, pair_p=st.get("bt_pairing_left") and 1 - st["bt_pairing_left"] / PAIR_S or pt / PAIR_S)

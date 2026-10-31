@@ -57,7 +57,7 @@ export const fmt = {
 export type NumKey = 'bass' | 'treb' | 'bal' | 'lvlAux' | 'lvlUsb';
 export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto';
 export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake';
-export type StrKey = 'nAux1' | 'nAux2' | 'nUsb1' | 'nUsb2';
+export type StrKey = 'nAux1' | 'nAux2' | 'nUsb1' | 'nUsb2' | 'nameCustom';
 
 export type Item =
   | { kind: 'num'; k: NumKey; n: string; mn: number; mx: number; f: keyof typeof fmt; hint?: string }
@@ -96,6 +96,7 @@ export const CATS: Category[] = [
     num('lvlAux', 'Nivå AUX', -6, 6, 'dB', 'Juster så AUX er like høy som strømming'), num('lvlUsb', 'Nivå USB', -6, 6, 'dB')] },
   { id: 'tilkobling', n: 'Tilkobling', sub: 'Navn, Blåtann og USB', items: [
     opt('name', 'Enhetsnavn', NAMES, 'Navnet som vises i AirPlay og Blåtann'),
+    str('nameCustom', 'Eget navn', 'Valgfritt', 'Overstyrer listen over – AirPlay, Spotify og Blåtann'),
     str('nAux1', 'Navn på AUX 1', 'AUX 1', 'Vises på skjermen og i appen'), str('nAux2', 'Navn på AUX 2', 'AUX 2'),
     str('nUsb1', 'Navn på USB-C «PC 1»', 'PC', 'For eksempel Mac eller Jobb-PC'), str('nUsb2', 'Navn på USB-C «PC 2»', 'Switch'),
     { kind: 'api-opt', id: 'usbPc', n: 'USB-bryter', hint: 'Hvilken PC tastatur, mus og USB-lyd følger' },

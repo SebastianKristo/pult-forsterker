@@ -70,7 +70,7 @@ function Row({ it }: { it: Item }) {
     case 'opt':
       return (
         <Line n={it.n} hint={it.hint} note={pending(it.k)}>
-          <select class="field sm" value={st[it.k]} aria-label={it.n} data-key={it.k} onChange={(e) => setSetting(it.k, +e.currentTarget.value)}>
+          <select class="field sm" value={st[it.k]} aria-label={it.n} data-key={it.k} onChange={(e) => { setSetting(it.k, +e.currentTarget.value); if (it.k === 'name' && st.nameCustom) setSetting('nameCustom', ''); }}>
             {it.list.map((o, i) => <option key={i} value={i}>{o}</option>)}
           </select>
         </Line>
@@ -78,7 +78,7 @@ function Row({ it }: { it: Item }) {
     case 'bool':
       return <Line n={it.n} hint={it.hint} note={pending(it.k)}><Toggle on={st[it.k]} label={it.n} onChange={(v) => setSetting(it.k, v)} /></Line>;
     case 'str':
-      return <Line n={it.n} hint={it.hint} note={pending(it.k)}><input class="field sm" value={st[it.k]} placeholder={it.ph} maxLength={16} onChange={(e) => setSetting(it.k, e.currentTarget.value)} /></Line>;
+      return <Line n={it.n} hint={it.hint} note={pending(it.k)}><input class="field sm" value={st[it.k]} placeholder={it.ph} maxLength={it.k === 'nameCustom' ? 24 : 16} data-key={it.k} onChange={(e) => setSetting(it.k, e.currentTarget.value.trim())} /></Line>;
     case 'api-bool': {
       const map = {
         loudness: [!!s?.loudness, (v: boolean) => act(() => api.loudness(v), { loudness: v })],
