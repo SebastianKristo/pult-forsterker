@@ -38,7 +38,7 @@ R1206 = "R_1206_3216Metric"
 
 # --- bakkant: kontakter (y ~ 6) ---
 part("J1", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "24V IN", "C8465", 14, 6, 0, "24 V inn fra DC-099 via KCD1 (skruterminal 5,08)")
-part("F1", "Fuse", "Fuseholder_Clip-5x20mm_Keystone_3512P_Inline_P23.62x7.27mm_D1.02x2.41x1.02x1.57mm_Horizontal", "5A 5x20", "C70283", 38, 7, 0, "Sikringsholder 5x20 (klips, THT) + sikring 5 A")
+part("F1", "Fuse", "Fuseholder_Clip-5x20mm_Keystone_3512P_Inline_P23.62x7.27mm_D1.02x2.41x1.02x1.57mm_Horizontal", "5A 5x20 (Keystone 3512-klips)", "", 38, 7, 0, "Sikringsholder 5x20 (klips, THT) + sikring 5 A")
 part("D1", "Diode_SMD", "D_SMB", "SMBJ28A", "", 50, 14, 0, "TVS 28 V standoff, klemmer ~45 V (LCSC-kode sjekkes i BOM-verktøyet)")
 part("Q11", TO, "TO-252-2", "P-MOSFET 60V 20A (AOD409)", "", 24, 16, 0, "Polvendingsvern i 24 V-linjen (D = inn, S = ut, G mot GND) – velg TO-252 P-kanal ≥ 60 V i JLC-verktøyet")
 part("D5", "Diode_SMD", "D_SOD-123", "BZT52C12 12V", "", 12, 14, 0, "Zener gate-source Q11"); part("R79", R_, R0603, "100k", "C25803", 12, 17, 0, "Gate Q11 mot GND")
@@ -54,16 +54,16 @@ part("Q8", TO, "SOT-23-3", "AO3401A", "C15127", 62, 42, 0, "P-MOSFET 5 V -> 5V_S
 
 # --- buck TPS54560 (x 8–48, y 18–48) ---
 part("U1", SO, "HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm", "TPS54560DDAR", "C31966", 22, 30, 0, "Buck 60 V 5 A")
-part("C2", C_, C1210, "4.7u/50V", "C76838", 12, 22, 0, "Cin"); part("C3", C_, C1210, "4.7u/50V", "C76838", 12, 26, 0, "Cin")
+part("C2", C_, C1210, "4.7u/50V", "C170099", 12, 22, 0, "Cin"); part("C3", C_, C1210, "4.7u/50V", "C170099", 12, 26, 0, "Cin")
 part("C4", C_, C0603, "100n/50V", "C14663", 12, 30, 0, "Cin HF")
 part("C5", C_, C0603, "100n", "C14663", 30, 24, 90, "Boot")
 part("R1", R_, R0603, "330k", "C23137", 14, 36, 0, "EN divider (UVLO ~9 V)"); part("R2", R_, R0603, "49.9k", "C23184", 14, 39, 0, "EN divider")
-part("R3", R_, R0603, "243k", "C23351", 14, 42, 0, "RT 400 kHz")
-part("R4", R_, R0603, "56k", "C23206", 30, 36, 0, "FB top (5,2 V ut)"); part("R5", R_, R0603, "10.2k", "C25744", 30, 39, 0, "FB bottom")
-part("R6", R_, R0603, "13.3k", "C22791", 30, 42, 0, "Comp R"); part("C6", C_, C0603, "3.3n", "C1613", 30, 45, 0, "Comp C"); part("C7", C_, C0603, "47p", "C1671", 34, 45, 0, "Comp Cp")
-part("L1", "Inductor_SMD", "L_Bourns_SRP1245A", "10uH 6A", "C135446", 44, 30, 0, "Buck-spole 10 µH")
-part("D2", "Diode_SMD", "D_SMB", "SS56", "C32569", 34, 20, 0, "Catch-diode 60 V 5 A")
-part("C8", C_, C1210, "47u/10V", "C45783", 54, 38, 90, "Cout"); part("C9", C_, C1210, "47u/10V", "C45783", 54, 42.5, 90, "Cout"); part("C10", C_, C1210, "47u/10V", "C45783", 54, 47, 90, "Cout")
+part("R3", R_, R0603, "243k", "C667189", 14, 42, 0, "RT 400 kHz")
+part("R4", R_, R0603, "56k", "C23206", 30, 36, 0, "FB top (5,2 V ut)"); part("R5", R_, R0603, "10k", "C25804", 30, 39, 0, "FB bottom (56k/10k -> 5,28 V; 10,2k ville gitt 5,19 V men finnes ikke som Basic)")
+part("R6", R_, R0603, "13k", "C22797", 30, 42, 0, "Comp R"); part("C6", C_, C0603, "3.3n", "C1613", 30, 45, 0, "Comp C"); part("C7", C_, C0603, "47p", "C1671", 34, 45, 0, "Comp Cp")
+part("L1", "Inductor_SMD", "L_Bourns_SRP1245A", "10uH 6A SRP1245A-100M", "", 44, 30, 0, "Buck-spole 10 µH – Bourns SRP1245A-100M (søk i JLC-UI; alternativ: CEC SMRH125-100M C241221 4 A på samme fotavtrykk)")
+part("D2", "Diode_SMD", "D_SMB", "SS56 (SMB)", "", 34, 20, 0, "Catch-diode 60 V 5 A")
+part("C8", C_, C1210, "47u/16V", "C77101", 54, 38, 90, "Cout"); part("C9", C_, C1210, "47u/16V", "C77101", 54, 42.5, 90, "Cout"); part("C10", C_, C1210, "47u/16V", "C77101", 54, 47, 90, "Cout")
 part("C11", C_, C0603, "100n", "C14663", 54, 51, 90, "Cout HF")
 
 # --- 3,3 V (alltid), -5 V, 3,3 V_SW (x 8–56, y 52–72) ---
@@ -88,7 +88,7 @@ part("C19", C_, C0603, "2.2u", "C23630", 74, 56, 0, "LDOO"); part("C20", C_, C06
 part("C22", C_, C0805, "10u", "C15850", 74, 65, 0, "3V3 bulk DAC")
 part("R7", R_, R0603, "10k", "C25804", 74, 69, 0, "XSMT pull-up")
 part("R8", R_, R0603, "100", "C22775", 62, 70, 0, "DAC L serie"); part("R9", R_, R0603, "100", "C22775", 66, 70, 0, "DAC R serie")
-part("C23", C_, C0603, "2.2n", "C16033", 62, 73, 0, "DAC L LP"); part("C24", C_, C0603, "2.2n", "C16033", 66, 73, 0, "DAC R LP")
+part("C23", C_, C0603, "2.2n/50V", "C1604", 62, 73, 0, "DAC L LP"); part("C24", C_, C0603, "2.2n/50V", "C1604", 66, 73, 0, "DAC R LP")
 
 # --- ADC PCM1808 (AUX 1) med 12,288 MHz-oscillator (x 80–106, y 50–78) ---
 part("U10", SO, "TSSOP-14_4.4x5mm_P0.65mm", "PCM1808PWR", "C55513", 94, 60, 0, "I2S-ADC AUX 1, master 256 fs (MD1=MD0=1, FMT=0)")
@@ -113,25 +113,25 @@ part("R14", R_, R0603, "10k", "C25804", 108, 70, 0, "MUTE pull-up")
 
 # --- forsterker TPA3116D2 (x 60–135, y 18–48) ---
 part("U6", SO, "HTSSOP-32-1EP_6.1x11mm_P0.65mm_EP5.2x11mm_Mask4.11x4.36mm", "TPA3116D2DADR", "C50144", 84, 34, 0, "Klasse D 2x50 W (kjøleflate på toppen – kjøleribbe!)")
-part("C32", C_, C0805, "220n/50V", "C45790", 98, 36.9, 0, "BSNL"); part("C33", C_, C0805, "220n/50V", "C45790", 94, 34.3, 0, "BSPL")
-part("C34", C_, C0805, "220n/50V", "C45790", 98, 33.0, 0, "BSNR"); part("C35", C_, C0805, "220n/50V", "C45790", 94, 30.4, 0, "BSPR")
+part("C32", C_, C0805, "220n/50V", "C5378", 98, 36.9, 0, "BSNL"); part("C33", C_, C0805, "220n/50V", "C5378", 94, 34.3, 0, "BSPL")
+part("C34", C_, C0805, "220n/50V", "C5378", 98, 33.0, 0, "BSNR"); part("C35", C_, C0805, "220n/50V", "C5378", 94, 30.4, 0, "BSPR")
 part("C36", C_, C0603, "100n/50V", "C14663", 92, 27, 0, "PVCC HF"); part("C37", C_, C0805, "1u/50V", "C28323", 96, 27, 0, "PVCC"); part("C38", C_, C0603, "100n/50V", "C14663", 92, 41, 0, "PVCC HF"); part("C39", C_, C0805, "1u/50V", "C28323", 96, 41, 0, "PVCC")
-part("C40", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 86, 20, 0, "PVCC bulk"); part("C41", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 100, 20, 0, "PVCC bulk")
-part("C42", C_, C0805, "1u/50V", "C28323", 75.5, 43.2, 0, "AVCC"); part("C43", C_, C1210, "4.7u/50V", "C76838", 75.5, 46.2, 0, "AVCC bulk")
+part("C40", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/50V", "C190286", 86, 20, 0, "PVCC bulk"); part("C41", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/50V", "C190286", 100, 20, 0, "PVCC bulk")
+part("C42", C_, C0805, "1u/50V", "C28323", 75.5, 43.2, 0, "AVCC"); part("C43", C_, C1210, "4.7u/50V", "C170099", 75.5, 46.2, 0, "AVCC bulk")
 part("C44", C_, C0805, "1u", "C28323", 75.5, 40.6, 0, "GVDD")
 part("R15", R_, R0603, "100k", "C25803", 71, 30.2, 0, "GAIN top"); part("R16", R_, R0603, "20k", "C4184", 71, 32.8, 0, "GAIN bottom (26 dB)")
 part("R17", R_, R0603, "0R", "C21189", 71, 35.4, 0, "PLIMIT -> GVDD (ingen begrensning)"); part("R18", R_, R0603, "DNP", "", 71, 38, 0, "PLIMIT til GND (valgfri)")
 part("R19", R_, R0603, "1k", "C21190", 71, 40.6, 0, "SDZ serie"); part("R20", R_, R0603, "100k", "C25803", 71, 43.2, 0, "SDZ pulldown")
 part("C45", C_, C0805, "1u", "C28323", 75.5, 35.4, 0, "LINP kobling"); part("C46", C_, C0805, "1u", "C28323", 75.5, 38, 0, "LINN til GND")
 part("C47", C_, C0805, "1u", "C28323", 75.5, 30.2, 0, "RINP kobling"); part("C48", C_, C0805, "1u", "C28323", 75.5, 32.8, 0, "RINN til GND")
-part("L2", "Inductor_SMD", "L_12x12mm_H8mm", "10uH 7A", "C182272", 118, 43, 0, "Utgangsfilter OUTNL"); part("L3", "Inductor_SMD", "L_12x12mm_H8mm", "10uH 7A", "C182272", 118, 29.5, 0, "Utgangsfilter OUTPL")
-part("L4", "Inductor_SMD", "L_12x12mm_H8mm", "10uH 7A", "C182272", 132, 29.5, 0, "Utgangsfilter OUTNR"); part("L5", "Inductor_SMD", "L_12x12mm_H8mm", "10uH 7A", "C182272", 132, 43, 0, "Utgangsfilter OUTPR")
-part("C49", C_, C1206, "680n/50V", "C13594", 108, 14, 90, "Filter OUTNL"); part("C50", C_, C1206, "680n/50V", "C13594", 112, 14, 90, "Filter OUTPL")
-part("C51", C_, C1206, "680n/50V", "C13594", 124, 14, 90, "Filter OUTNR"); part("C52", C_, C1206, "680n/50V", "C13594", 128, 14, 90, "Filter OUTPR")
-part("R21", R_, R1206, "18", "C17949", 105, 39, 0, "Snubber NL"); part("C53", C_, C0603, "330p/50V", "C1664", 109.5, 39, 0, "Snubber NL")
-part("R22", R_, R1206, "18", "C17949", 105, 35.5, 0, "Snubber PL"); part("C54", C_, C0603, "330p/50V", "C1664", 109.5, 35.5, 0, "Snubber PL")
-part("R23", R_, R1206, "18", "C17949", 105, 32, 0, "Snubber NR"); part("C55", C_, C0603, "330p/50V", "C1664", 109.5, 32, 0, "Snubber NR")
-part("R24", R_, R1206, "18", "C17949", 105, 28.5, 0, "Snubber PR"); part("C56", C_, C0603, "330p/50V", "C1664", 109.5, 28.5, 0, "Snubber PR")
+part("L2", "Inductor_SMD", "L_12x12mm_H8mm", "10uH 4A", "C241221", 118, 43, 0, "Utgangsfilter OUTNL"); part("L3", "Inductor_SMD", "L_12x12mm_H8mm", "10uH 4A", "C241221", 118, 29.5, 0, "Utgangsfilter OUTPL")
+part("L4", "Inductor_SMD", "L_12x12mm_H8mm", "10uH 4A", "C241221", 132, 29.5, 0, "Utgangsfilter OUTNR"); part("L5", "Inductor_SMD", "L_12x12mm_H8mm", "10uH 4A", "C241221", 132, 43, 0, "Utgangsfilter OUTPR")
+part("C49", C_, C1206, "680n/50V", "C1881", 108, 14, 90, "Filter OUTNL"); part("C50", C_, C1206, "680n/50V", "C1881", 112, 14, 90, "Filter OUTPL")
+part("C51", C_, C1206, "680n/50V", "C1881", 124, 14, 90, "Filter OUTNR"); part("C52", C_, C1206, "680n/50V", "C1881", 128, 14, 90, "Filter OUTPR")
+part("R21", R_, R1206, "18R 1206", "", 105, 39, 0, "Snubber NL"); part("C53", C_, C0603, "330p/50V", "C1664", 109.5, 39, 0, "Snubber NL")
+part("R22", R_, R1206, "18R 1206", "", 105, 35.5, 0, "Snubber PL"); part("C54", C_, C0603, "330p/50V", "C1664", 109.5, 35.5, 0, "Snubber PL")
+part("R23", R_, R1206, "18R 1206", "", 105, 32, 0, "Snubber NR"); part("C55", C_, C0603, "330p/50V", "C1664", 109.5, 32, 0, "Snubber NR")
+part("R24", R_, R1206, "18R 1206", "", 105, 28.5, 0, "Snubber PR"); part("C56", C_, C0603, "330p/50V", "C1664", 109.5, 28.5, 0, "Snubber PR")
 
 # --- USB-kodek PCM2900C (AUX 2) – bus-powered fra Pi-ens USB-port (J19) ---
 part("U11", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "PCM2900CDB", "C180425", 114, 84, 0, "USB-lydkodek AUX 2 (ADC)")
@@ -147,9 +147,9 @@ part("C97", C_, C0805, "4.7u", "C1779", 134, 83, 0, "AUX2 L kobling"); part("C98
 
 # --- front: kontakter (y ~ 94) og LED-drivere ---
 part("J7", "Connector_JST", "JST_XH_B6B-XH-A_1x06_P2.50mm_Vertical", "KNAPPER", "C144397", 12, 94, 0, "AIR BT AUX USB PWR GND (til MCP23017)")
-part("J8", "Connector_JST", "JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical", "ENCODER", "C144396", 31.5, 94, 0, "CLK DT SW 3V3 GND")
+part("J8", "Connector_JST", "JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical", "ENCODER", "C157991", 31.5, 94, 0, "CLK DT SW 3V3 GND")
 part("J21", "Connector_JST", "JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical", "PWR BAK", "C158012", 48.5, 94, 0, "Strømknapp bak (GPIO 15, GND)")
-part("J9", "Connector_JST", "JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical", "OLED", "C144396", 70, 94, 0, "3V3 GND SDA SCL RES")
+part("J9", "Connector_JST", "JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical", "OLED", "C157991", 70, 94, 0, "3V3 GND SDA SCL RES")
 part("J13", "Connector_PinHeader_2.54mm", "PinHeader_1x14_P2.54mm_Vertical", "TFT", "C50981", 85, 94, 90, "2,8\" SPI TFT ILI9341/ST7789V + XPT2046: VCC GND CS RST DC MOSI SCK LED MISO T_CLK T_CS T_DIN T_DO T_IRQ")
 part("Q9", TO, "SOT-23-3", "AO3400A", "C20917", 46, 77, 0, "TFT-baklys (fra GPIO 13 PWM)"); part("Q10", TO, "SOT-23-3", "AO3401A", "C15127", 52, 77, 0, "TFT-baklys høyside 3V3_SW")
 part("R71", R_, R0603, "100", "C22775", 42, 78, 0, "Gate Q9"); part("R72", R_, R0603, "100k", "C25803", 46, 80, 0, "Pulldown Q9"); part("R73", R_, R0603, "10k", "C25804", 52, 80, 0, "Q10 gate"); part("R74", R_, R0603, "100k", "C25803", 56, 80, 0, "Q10 gate pull-up")
@@ -205,7 +205,7 @@ for i, y in enumerate((16.2, 33.7, 51.2, 68.7)):
     part(f"D{6+i}", TO, "SOT-23-6", "USBLC6-2SC6", "C7519", 160.5, y + (4.8 if i == 0 else 0), 0, f"ESD-vern USB-A {i+1}")   # D6 flyttet unna Pi-hullet H5
 part("D10", TO, "SOT-23-6", "USBLC6-2SC6", "C7519", 138, 78, 0, "ESD-vern USB-C PC 1"); part("D11", TO, "SOT-23-6", "USBLC6-2SC6", "C7519", 138, 88, 0, "ESD-vern USB-C PC 2")
 part("F2", "Fuse", "Fuse_1812_4532Metric", "2A PTC", "C545213", 139.5, 72, 90, "Polyfuse 5 V til USB-portene")
-part("C71", C_, C1206, "10u", "C13585", 139.5, 78, 90, "5V_USB"); part("C72", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/35V", "C134754", 146, 16, 0, "5V_USB bulk")
+part("C71", C_, C1206, "10u", "C13585", 139.5, 78, 90, "5V_USB"); part("C72", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/50V", "C190286", 146, 16, 0, "5V_USB bulk")
 for i, (x, y) in enumerate([(4, 4), (176, 4), (4, 96), (176, 96)]):
     part(f"H{i+1}", "MountingHole", "MountingHole_3.2mm_M3", "M3", "", x, y, 0, "Festehull M3 (stolper i kassen)")
 # Raspberry Pi 4 skrus fast under kortet med 4 × M2,5-avstandsstykker (20 mm): Pi-ens hullmønster 58 × 49, kortet 85 × 56 med

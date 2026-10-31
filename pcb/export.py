@@ -218,29 +218,47 @@ for rnd in range(6):
 # og sporendene som satt på viaene flyttes med. Freerouting kjenner ikke denne regelen.
 def _fix_hole_near_hole():
     import re as _r, math as _mm
-    moved = 0
-    for _ in range(3):
+    def drc_bad():
         rep = os.path.join(OUT, "drc_tmp.txt"); pcbnew.WriteDRCReport(board, rep, pcbnew.EDA_UNITS_MILLIMETRES, True)
-        pairs = []
+        n = 0; pairs = []
         for blk in _r.split(r"\n(?=\[)", open(rep).read()):
-            if not blk.startswith("[hole_near_hole]"): continue
-            m = _r.search(r"min ([-\d.]+) mm; actual ([-\d.]+) mm", blk)
-            pts = _r.findall(r"@\(([-\d.]+) mm, ([-\d.]+) mm\): Via \[", blk)
-            if m and len(pts) == 2: pairs.append((float(m.group(1)) - float(m.group(2)), [(float(x), float(y)) for x, y in pts]))
-        if not pairs: break
+            if blk.startswith("[clearance]") or blk.startswith("[hole_clearance]"): n += 1
+            if blk.startswith("[hole_near_hole]"):
+                m = _r.search(r"min ([-\d.]+) mm; actual ([-\d.]+) mm", blk)
+                pts = _r.findall(r"@\(([-\d.]+) mm, ([-\d.]+) mm\): Via \[", blk)
+                if m and len(pts) == 2: pairs.append((float(m.group(1)) - float(m.group(2)), [(float(x), float(y)) for x, y in pts]))
+        return n, pairs
+    def move(v, sx, sy):
+        old = pcbnew.VECTOR2I(v.GetPosition()); new = pcbnew.VECTOR2I(old.x + pcbnew.FromMM(sx), old.y + pcbnew.FromMM(sy))
+        for t in board.GetTracks():
+            if t.GetClass() != "PCB_TRACK" or t.GetNetCode() != v.GetNetCode(): continue
+            if t.GetStart() == old: t.SetStart(new)
+            if t.GetEnd() == old: t.SetEnd(new)
+        v.SetPosition(new)
+    moved = 0
+    base, pairs = drc_bad()
+    for need, (a, b_) in pairs:
         vias = {(round(pcbnew.ToMM(t.GetPosition().x), 4), round(pcbnew.ToMM(t.GetPosition().y), 4)): t for t in board.GetTracks() if t.GetClass() == "PCB_VIA"}
-        for need, (a, b_) in pairs:
-            va, vb = vias.get((round(a[0], 4), round(a[1], 4))), vias.get((round(b_[0], 4), round(b_[1], 4)))
-            if va is None or vb is None or va.IsLocked() or vb.IsLocked(): continue
-            dx, dy = b_[0] - a[0], b_[1] - a[1]; L = _mm.hypot(dx, dy) or 1e-9
-            sh = (need + 0.03) / 2; ux, uy = dx / L * sh, dy / L * sh
-            for v, sx, sy in ((va, -ux, -uy), (vb, ux, uy)):
-                old = pcbnew.VECTOR2I(v.GetPosition()); new = pcbnew.VECTOR2I(old.x + pcbnew.FromMM(sx), old.y + pcbnew.FromMM(sy))
-                for t in board.GetTracks():
-                    if t.GetClass() != "PCB_TRACK" or t.GetNetCode() != v.GetNetCode(): continue
-                    if t.GetStart() == old: t.SetStart(new)
-                    if t.GetEnd() == old: t.SetEnd(new)
-                v.SetPosition(new); moved += 1
+        va, vb = vias.get((round(a[0], 4), round(a[1], 4))), vias.get((round(b_[0], 4), round(b_[1], 4)))
+        if va is None or vb is None: continue
+        dx, dy = b_[0] - a[0], b_[1] - a[1]; L = _mm.hypot(dx, dy) or 1e-9; ux, uy = dx / L, dy / L
+        d = need + 0.03
+        options = []
+        if not va.IsLocked() and not vb.IsLocked(): options.append(((va, -ux * d / 2, -uy * d / 2), (vb, ux * d / 2, uy * d / 2)))
+        if not va.IsLocked(): options.append(((va, -ux * d, -uy * d),))
+        if not vb.IsLocked(): options.append(((vb, ux * d, uy * d),))
+        # også litt på tvers av linjen (om det er trangt langs den)
+        for sgn in (1, -1):
+            if not va.IsLocked(): options.append(((va, -ux * d - uy * 0.15 * sgn, -uy * d + ux * 0.15 * sgn),))
+            if not vb.IsLocked(): options.append(((vb, ux * d - uy * 0.15 * sgn, uy * d + ux * 0.15 * sgn),))
+        ok = False
+        for opt in options:
+            for v, sx, sy in opt: move(v, sx, sy)
+            n, p2 = drc_bad()
+            if n <= base and not any(set(map(tuple, pp)) & {tuple(a), tuple(b_)} for _, pp in p2): ok = True; break
+            for v, sx, sy in opt: move(v, -sx, -sy)
+        if ok: moved += len(opt); print("  hull-til-hull løst:", a, b_)
+        else: print("  hull-til-hull IKKE løst:", a, b_)
     return moved
 print("vias flyttet for hull-til-hull:", _fix_hole_near_hole())
 

@@ -83,17 +83,20 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 
 1. JLCPCB → «Add gerber file» → zip-en. 2 lag, 180 × 100 mm, grønn/svart, HASL (lead free).
 2. Huk av «PCB Assembly», Top side, 2 stk. Last opp BOM og CPL.
-3. Kontroller at alle LCSC-numre finnes på lager; bytt tilsvarende hvis noen er tomme (verdiene står i BOM). Sjekk spesielt
-   TPS54560DDAR (C31966), PCM5102APWR (C107671), PCM1808PWR (C55513), TPA3116D2DADR (C50144), PGA2311UA (C486061),
-   FE1.1s (C6706491), PCM2900C (C180425), TS3USB221RSER (C130085), MCP23017 (C506653), SRD-05VDC (C35449), TPA6132A2 (C69901),
-   12,288 MHz-oscillator (C437124, lite lager – reserve C70567). **Les beskrivelsen JLCPCB viser per linje** – disse koden er ikke
-   verifisert mot lager: USB-A Molex 67643 (C2765194), polyfuse 1812 (C545213), SRP1245A (C135446), 12 × 12-spoler (C182272),
-   220 µF SMD (C134754), SS56 (C32569), sikringsklips (C70283), headere (C50982/C50981), skruterminal (C8465), ferritt (C18305), 330 k 0603 (C23137 – verifisert).
-   **Uten LCSC-kode (linjene ligger i BOM/CPL med tom kode – JLCPCB ber deg velge del):** U14 74LVC1G14 SOT-23-5 (SN74LVC1G14DBVR eller 74LVC1G14GV), D1 SMBJ28A (TVS 28 V, SMB), Q11 P-MOSFET TO-252 (≥ −40 V, ≥ 10 A, f.eks. AOD4185/SUD50P04), D5 zener 12 V SOD-123, C1/C110 1000 µF 35 V Ø10.
+3. Kontroller at alle LCSC-numre finnes på lager; bytt tilsvarende hvis noen er tomme (verdiene står i BOM). Alle koder i BOM-en er
+   verifisert mot lcsc.com/jlcpcb.com i granskningen (se `GRANSKNING_REV_B.md`), men lager endrer seg – **les beskrivelsen JLCPCB viser
+   per linje** og sammenlign med Comment-kolonnen (verdi, spenning, pakke). IC-ene: TPS54560DDAR (C31966), PCM5102APWR (C107671),
+   PCM1808PWR (C55513), TPA3116D2DADR (C50144), PGA2311UA (C486061), FE1.1s (C6706491), PCM2900C (C180425), TS3USB221RSER (C130085),
+   MCP23017 (C506653), TPA6132A2 (C69901), 12,288 MHz-oscillator (C437124, lite lager – reserve C789111 SiTime 3225 eller C253724 KDS).
+   **Uten LCSC-kode (linjene ligger i BOM/CPL med tom kode – JLCPCB ber deg velge del):** U14 74LVC1G14 SOT-23-5 (SN74LVC1G14DBVR),
+   D1 SMBJ28A (TVS 28 V, SMB), D2 SS56 Schottky 60 V 5 A (SMB; SMA-utgaven C65009 passer også på padene), D5 zener 12 V SOD-123 (BZT52C12),
+   Q11 P-MOSFET TO-252 (≥ −40 V, ≥ 10 A, f.eks. AOD4185/SUD50P04), L1 Bourns SRP1245A-100M (10 µH, 6 A; alternativ CEC SMRH125-100M C241221),
+   R21–R24 18 Ω 1206 (snubber; søk «1206 18R» – NB: 1206W4F1800T5E er 180 Ω).
    Alle IC-ene er «extended parts» (engangsgebyr per type).
+   **THT-deler er ikke i BOM/CPL** – de står i `ki_pultforsterker_main_tht_handlodding.csv` og loddes selv (punkt 5).
 4. Festehull: H1–H4 M3 (stolper i kassen), H5–H8 M2,5 (Raspberry Pi 4 under kortet).
-5. THT-deler loddes selv etter levering: J1–J3, J6 (skruterminaler), J4/J7–J10/J19–J22 (JST), J5, J13 (headere), F1 (sikringsklips),
-   C1 + C110 (1000 µF), K1 (relé), J15–J18 (USB-A), J23 (JST).
+5. THT-deler loddes selv etter levering: J1–J3, J6 (skruterminaler), J4/J7–J10/J19–J22 (JST), J5 (2×20 **hann**-header, C50980), J13 (header), F1 (sikringsklips
+   for 5×20, f.eks. Keystone 3512 eller C3130 + sikring 5 A), C1 + C110 (1000 µF), K1 (relé), J15–J18 (USB-A), J23 (JST). Liste: `produksjon/ki_pultforsterker_main_tht_handlodding.csv`.
 6. Alle gjennompletterte pads har termisk avlastning mot jordplanet (lar seg håndlodde). Kassens fire M3-hull har kobberfri sone – kortet jordes til kassen bare via jordpunktet bak.
 7. Kjøleribbe 20 × 20 × 10 mm med termisk tape (1,5–2 mm) på toppen av TPA3116. NTC-en (10 k, B 3950, glass- eller epoksyperle) limes/teipes på ribbens side med varmeledende lim eller Kapton, ledning til J24.
 
@@ -180,6 +183,10 @@ for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 - Relé-pinner etter KiCad-footprinten for SRD: **2 og 5 = spole, 1 = COM (den forskjøvede), 3 = NO (24 V inn), 4 = NC (ubrukt)**. Mål med multimeter
   før første gang: uten strøm på spolen skal det være brudd mellom pinne 1 og 3. Er det kortslutning, er NO/NC byttet – flytt 24 V-inn til pinne 4 med en jumper.
 - TPS54560-kompensasjon (13,3 k/3,3 n/47 p) gir ca. 24 kHz crossover med 10 µH/3 × 47 µF – stabil, men TI-eksempelet bruker 16,9 k/4,7 n. Ikke målt.
-- Ingen fiducialer på kortet; JLCPCB krever det ikke, men sjekk pinne-1-rotasjon på SOT-23/SOIC/QFN i CPL-forhåndsvisningen.
+- Ingen fiducialer på kortet; JLCPCB krever det ikke. CPL-filen har JLCPCBs rotasjonskorreksjoner (SOT-23/SOT-223/elektrolytt +180°, SOIC/SSOP/TSSOP/QFN +270°),
+  men sjekk pinne-1-prikken og «+» på C40/C41/C72 i CPL-forhåndsvisningen – JLCPCB plasserer etter bildet.
+- Buck-utgangen er 5,28 V (56 k/10 k – 10,2 k finnes ikke som Basic-del). Innenfor Pi 4-kravet (4,85–5,36 V); med 10,2 k i R5 blir det 5,19 V.
+- Høyttalersporene (OUT*/SPK_*) har strekninger på 0,4–0,5 mm der naborutingen ikke ga plass til mer. Bestill **2 oz kobber** – da tåler de
+  full effekt uten nevneverdig oppvarming (1 oz holder til normal lytting).
 - TPA6132A2 går på fast +6 dB; høyttalervolumet og hodetelefonvolumet følger hverandre (samme PGA2311/CamillaDSP-volum).
 - PCM2900C: 1,5 kΩ pull-up på D+ til VCCCI er lagt til i tillegg til eventuell intern – sjekk at enumerasjon virker.
