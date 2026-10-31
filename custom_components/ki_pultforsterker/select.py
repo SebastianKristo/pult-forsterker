@@ -3,16 +3,22 @@ from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import BRIGHT_OPTIONS, DOMAIN, is_node
 from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpPresetSelect(c), KiAmpUsbPcSelect(c), KiAmpVoiceProfileSelect(c)])
+    ents = [KiAmpPresetSelect(c), KiAmpVoiceProfileSelect(c)]
+    if is_node(c.data):
+        ents.append(KiAmpBrightSelect(c))   # skjermen (ST7735) på Skjold Node
+    else:
+        ents.append(KiAmpUsbPcSelect(c))    # USB-delingsswitch finnes bare på Pultforsterker
+    add(ents)
 
 
 class KiAmpPresetSelect(KiAmpEntity, SelectEntity):
@@ -92,3 +98,27 @@ class KiAmpVoiceProfileSelect(KiAmpEntity, SelectEntity):
         key = next((k for k, v in self._profiles().items() if v == option), None)
         if key:
             self.coordinator.async_set_updated_data(await self.coordinator.api.set_voice_profile(key))
+
+
+class KiAmpBrightSelect(KiAmpEntity, SelectEntity):
+    """Lysstyrke på skjermen (settings["bright"]: 0 = auto, 1 = høy, 2 = middels, 3 = lav)."""
+    _attr_translation_key = "bright"
+    _attr_icon = "mdi:brightness-6"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_options = BRIGHT_OPTIONS
+
+    def __init__(self, c) -> None:
+        super().__init__(c, "bright")
+
+    @property
+    def current_option(self) -> str | None:
+        # status["settings"] har bare endrede nøkler – standard er 0 (auto)
+        v = (self.coordinator.data.get("settings") or {}).get("bright", 0)
+        return BRIGHT_OPTIONS[v] if isinstance(v, int) and 0 <= v < len(BRIGHT_OPTIONS) else None
+
+    async def async_select_option(self, option: str) -> None:
+        if option in BRIGHT_OPTIONS:
+            res = await self.coordinator.api.set_settings({"bright": BRIGHT_OPTIONS.index(option)})
+            if isinstance(res.get("settings"), dict):
+                self.coordinator.async_set_updated_data({**self.coordinator.data, "settings": res["settings"]})
+            await self.coordinator.async_request_refresh()

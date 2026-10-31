@@ -6,16 +6,23 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, status_inputs
 from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpLoudnessLevel(c)] + [KiAmpSourceLevel(c, src) for src in LEVEL_SOURCES])
+    add([KiAmpLoudnessLevel(c)] + [KiAmpSourceLevel(c, src) for src in level_sources(c.data)])
 
 
-LEVEL_SOURCES = ("airplay", "bt", "usb", "radio", "aux", "aux2")
+LEVEL_SOURCES = ("airplay", "bt", "usb", "radio", "aux", "aux2", "spotify")
+
+
+def level_sources(data: dict) -> list[str]:
+    """Nivåregulatorer for kildene kortet har (og som daemonen rapporterer nivå for)."""
+    levels = data.get("levels")
+    inputs = status_inputs(data)
+    return [s for s in inputs if s in LEVEL_SOURCES and (not isinstance(levels, dict) or s in levels)]
 
 
 class KiAmpSourceLevel(KiAmpEntity, NumberEntity):

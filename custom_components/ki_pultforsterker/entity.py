@@ -7,6 +7,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import KiAmpCoordinator
 from .const import DOMAIN
 
+_MODELS = {"node": "Skjold Node", "main": "Pultforsterker hovedkort", "modules": "Pultforsterker (moduler)"}
+
 
 class KiAmpEntity(CoordinatorEntity[KiAmpCoordinator]):
     _attr_has_entity_name = True
@@ -18,9 +20,9 @@ class KiAmpEntity(CoordinatorEntity[KiAmpCoordinator]):
         self._attr_unique_id = f"{uid}_{key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, uid)},
-            name="Pultforsterker",
+            name=coordinator.data.get("name") or "Pultforsterker",
             manufacturer="Sebastian / KI",
-            model="Raspberry Pi + CamillaDSP",
+            model=_MODELS.get(coordinator.data.get("board"), "Raspberry Pi + CamillaDSP"),
             sw_version=coordinator.data.get("version"),
             configuration_url=f"http://{coordinator.entry.data['host']}:{coordinator.entry.data['port']}/api/status",
         )

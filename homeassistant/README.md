@@ -9,6 +9,7 @@ HACS → ⋮ → *Custom repositories* → `https://github.com/SebastianKristo/p
 
 2. Start Home Assistant på nytt. Forsterkeren oppdages via mDNS (`_kipultamp._tcp`) og vises under *Innstillinger → Enheter → Oppdaget*. Kan også legges til manuelt med host/port.
 3. Entiteter (enhet «Pultforsterker»): `media_player.ki_pultforsterker` (kilde, volum, mute, av/på), `switch.ki_pultforsterker_strom`, `sensor.ki_pultforsterker_kilde/tittel/artist`, `binary_sensor.ki_pultforsterker_spiller`, `button.ki_pultforsterker_start_bluetooth_parring`, `switch.ki_pultforsterker_loudness`, `number.ki_pultforsterker_loudness_styrke`.
+4. Fra 2.13.0 følger kildelista (mediespiller, nivå per kilde) det kortet rapporterer i `inputs` (inkl. **Spotify**); på Skjold Node opprettes ikke AUX/USB, hodetelefon-, overtemperatur- eller USB-switch-entiteter, men en **Skjermlysstyrke**-select. Enheten får navnet fra daemonen (`name`), og det er knapper for **Start på nytt** og **Slå av** (sistnevnte er av som standard).
 4. Valgfritt: `../pi/ki_pultforsterker_package.yaml` i `packages/` gir auto-av etter stillhet og et TTS-skript (alt med «KI»-prefiks).
 
 ## Ikon og logo i Home Assistant

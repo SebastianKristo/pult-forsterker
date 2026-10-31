@@ -4,11 +4,21 @@ const Homey = require('homey');
 const http = require('http');
 
 const POLL_MS = 5000;
+// Kildene i standardrekkefølge (nøkkel → navn). Eldre daemoner uten "inputs" i status har FALLBACK_INPUTS.
+const SOURCE_LABELS = { radio: 'Radio', airplay: 'AirPlay', bt: 'Bluetooth', spotify: 'Spotify', aux: 'AUX 1', aux2: 'AUX 2', usb: 'USB' };
+const FALLBACK_INPUTS = ['radio', 'airplay', 'bt', 'aux', 'aux2', 'usb'];
+const LEVEL_SOURCES = ['airplay', 'bt', 'usb', 'radio', 'aux', 'aux2', 'spotify'];
+const NODE_BOARDS = ['node'];   // Skjold Node: ingen AUX/USB, hodetelefonjack, overtemperatur eller USB-switch
+
+function statusInputs(st) {
+  return Array.isArray(st && st.inputs) && st.inputs.length ? st.inputs.map(String) : FALLBACK_INPUTS.slice();
+}
+function isNode(st) { return !!st && NODE_BOARDS.includes(st.board); }
 
 class PultforsterkerDevice extends Homey.Device {
   async onInit() {
     if (this.getClass() !== 'speaker') await this.setClass('speaker').catch(this.error);   // gir «spiller nå»-visning med albumbilde
-    for (const cap of ['speaker_prev', 'speaker_next', 'speaker_album', 'speaker_duration', 'speaker_position', 'ki_voice', 'ki_preset', 'ki_auto_input', 'ki_mix', 'ki_voice_profile', 'ki_hp_automute']) {   // eldre enheter: legg til nye capabilities
+    for (const cap of ['speaker_prev', 'speaker_next', 'speaker_album', 'speaker_duration', 'speaker_position', 'ki_voice', 'ki_preset', 'ki_auto_input', 'ki_mix', 'ki_voice_profile']) {   // eldre enheter: legg til nye capabilities
       if (!this.hasCapability(cap)) await this.addCapability(cap).catch(this.error);
     }
     this.registerCapabilityListener('onoff', (on) => this.setPower(on));
@@ -23,9 +33,10 @@ class PultforsterkerDevice extends Homey.Device {
     this.registerCapabilityListener('ki_hp_automute', (on) => this.request('POST', '/hp_automute', { on: !!on }).then((st) => this.apply(st)));
     this.registerCapabilityListener('ki_preset', (n) => this.playPreset(Number(n)));
     this.registerCapabilityListener('ki_usb_pc', (pc) => this.setUsbPc(pc));
-    for (const src of ['airplay', 'bt', 'usb', 'radio', 'aux', 'aux2']) {
+    for (const src of LEVEL_SOURCES) {
       this.registerCapabilityListener(`ki_level_${src}`, (v) => this.setLevel(src, Math.round(v)));
     }
+    this.registerCapabilityListener('ki_bright', (b) => this.setBright(Number(b)));
     this.registerCapabilityListener('ki_voice_profile', (p) => this.request('POST', '/voice', { profile: p }).then((st) => this.apply(st)));
     this.registerCapabilityListener('speaker_next', () => this.transport('next'));
     this.registerCapabilityListener('speaker_prev', () => this.transport('previous'));
@@ -115,7 +126,33 @@ class PultforsterkerDevice extends Homey.Device {
     return this.apply(await this.request('POST', '/usbsw', body));
   }
 
+  /** Tilpass capabilities til kortet (board/inputs) – kjøres når de endrer seg. */
+  async syncBoard(st) {
+    const inputs = statusInputs(st);
+    const key = `${st.board || ''}|${inputs.join(',')}`;
+    if (key === this._boardKey) return;
+    this._boardKey = key;
+    this._inputs = inputs;
+    const node = isNode(st);
+    const want = { ki_hp_automute: !node, ki_bright: node };
+    for (const [cap, on] of Object.entries(want)) {
+      if (on && !this.hasCapability(cap)) await this.addCapability(cap).catch(this.error);
+      if (!on && this.hasCapability(cap)) await this.removeCapability(cap).catch(this.error);
+    }
+    if (node && this.hasCapability('ki_headphones')) await this.removeCapability('ki_headphones').catch(this.error);
+    // Kildevelgeren viser bare kildene kortet har
+    if (typeof this.setCapabilityOptions === 'function') {
+      const values = inputs.map((id) => ({ id, title: { en: SOURCE_LABELS[id] || id, no: SOURCE_LABELS[id] || id } }));
+      await this.setCapabilityOptions('ki_input', { values }).catch(this.error);
+    }
+  }
+
+  inputList() { return (this._inputs || FALLBACK_INPUTS).map((id) => ({ id, name: SOURCE_LABELS[id] || id })); }
+
   async apply(st) {
+    if (!st || typeof st !== 'object') return;
+    await this.syncBoard(st);
+    const node = isNode(st);
     await this.setCapabilityValue('onoff', !!st.power).catch(this.error);
     await this.setCapabilityValue('speaker_playing', !!st.playing).catch(this.error);
     await this.setCapabilityValue('speaker_track', st.title || '').catch(this.error);
@@ -132,8 +169,8 @@ class PultforsterkerDevice extends Homey.Device {
     if (this.hasCapability('ki_mix')) await this.setCapabilityValue('ki_mix', !!st.mix).catch(this.error);
     if (this.hasCapability('ki_hp_automute')) await this.setCapabilityValue('ki_hp_automute', st.hp_automute !== false).catch(this.error);
     // Hodetelefonjack (hovedkortet): vises bare når daemonen rapporterer den
-    if ('headphones' in st && !this.hasCapability('ki_headphones')) await this.addCapability('ki_headphones').catch(this.error);
-    if (this.hasCapability('ki_headphones') && 'headphones' in st) {
+    if (!node && 'headphones' in st && !this.hasCapability('ki_headphones')) await this.addCapability('ki_headphones').catch(this.error);
+    if (!node && this.hasCapability('ki_headphones') && 'headphones' in st) {
       const was = this.getCapabilityValue('ki_headphones');
       await this.setCapabilityValue('ki_headphones', !!st.headphones).catch(this.error);
       if (was !== null && was !== !!st.headphones) {
@@ -147,12 +184,15 @@ class PultforsterkerDevice extends Homey.Device {
     if (this.hasCapability('ki_voice')) await this.setCapabilityValue('ki_voice', st.voice !== false).catch(this.error);
     if (this.hasCapability('ki_voice_profile')) await this.setCapabilityValue('ki_voice_profile', st.voice_profile || 'en').catch(this.error);
     // Nivå per kilde – vises bare når daemonen har miks med nivåer (hovedkortet)
-    for (const src of ['airplay', 'bt', 'usb', 'radio', 'aux', 'aux2']) {
-      const cap = `ki_level_${src}`; const has = st.levels && typeof st.levels === 'object' && src in st.levels;
+    const inputs = statusInputs(st);
+    for (const src of LEVEL_SOURCES) {
+      const cap = `ki_level_${src}`; const has = inputs.includes(src) && st.levels && typeof st.levels === 'object' && src in st.levels;
       if (has && !this.hasCapability(cap)) await this.addCapability(cap).catch(this.error);
       if (!has && this.hasCapability(cap)) await this.removeCapability(cap).catch(this.error);
       if (has && this.hasCapability(cap)) await this.setCapabilityValue(cap, Number(st.levels[src])).catch(this.error);
     }
+    const bright = st.settings && typeof st.settings === 'object' ? (st.settings.bright ?? 0) : undefined;   // bare endrede nøkler; standard 0 = auto
+    if (this.hasCapability('ki_bright') && Number.isInteger(bright)) await this.setCapabilityValue('ki_bright', String(bright)).catch(this.error);
     if (this.hasCapability('ki_loudness')) await this.setCapabilityValue('ki_loudness', !!st.loudness).catch(this.error);
     if (this.hasCapability('ki_loudness_level')) await this.setCapabilityValue('ki_loudness_level', Number(st.loudness_level ?? 0)).catch(this.error);
 
@@ -190,6 +230,14 @@ class PultforsterkerDevice extends Homey.Device {
   async savePreset(n) { await this.apply(await this.request('POST', '/preset', { n, save: true })); }
   presetList() { return (this._presets || []).filter((p) => p.title); }
   async setInput(i) { await this.apply(await this.request('POST', '/input', { input: i })); }
+
+  async setBright(b) {
+    const res = await this.request('POST', '/settings', { bright: b });
+    if (this.hasCapability('ki_bright') && res.settings) await this.setCapabilityValue('ki_bright', String(res.settings.bright)).catch(this.error);
+  }
+
+  /** Start Pi-en på nytt (eller slå den av). Daemonen svarer med status (rebooting=true) før den går ned. */
+  async reboot(poweroff = false) { await this.apply(await this.request('POST', '/reboot', { poweroff: !!poweroff })); }
 
   async togglePower() {
     const st = await this.request('POST', '/toggle');
