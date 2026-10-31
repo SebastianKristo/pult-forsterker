@@ -1,7 +1,7 @@
 /* Skjold nettside – felles stil. Tokens fra skjold/design/README.md */
 :root{
   --svart:#000;--kort:#111113;--linje-m:#26262a;--tekst-l:#f5f5f2;--demp-l:#a8a8a3;--demp-l2:#8b8b86;
-  --flate:#f5f4f0;--studio-s1:#e9e9ec;--studio-node:#ecebe7;--tekst-m:#1d1d1b;--demp-m:#55534c;--demp-m2:#7a776d;--linje-l:#e3e0d7;
+  --flate:#0b0b0c;--studio-s1:#000;--studio-node:#000;--tekst-m:#f5f5f2;--demp-m:#a8a8a3;--demp-m2:#8b8b86;--linje-l:#26262a;--felt:#1a1a1d;--felt-l:#3a3a3f;
   --khaki:#d8cfb4;--khaki-m:#8a7f60;--radio:#e8893a;--bt:#4a8cff;--spotify:#1ed760;
   --sora:Sora,system-ui,sans-serif;--plex:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
   --ease:cubic-bezier(.2,.7,.2,1);
@@ -290,8 +290,6 @@ legend{padding:0;margin-bottom:6px;font-size:13px;color:var(--demp-m2)}
   *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}
 }
 
-/* Renders har en litt annen bakgrunnstone enn flatene; multiply skjuler kanten. */
-.p-hero img,.produkt img,.bilder img,.to-prod img,.ramme img,.bildepar img{mix-blend-mode:multiply}
 
 /* skjermbilder av app og web (Programvare) */
 .skjermbilder{display:grid;grid-template-columns:1fr;gap:28px;margin-top:40px;align-items:end}
@@ -321,3 +319,77 @@ legend{padding:0;margin-bottom:6px;font-size:13px;color:var(--demp-m2)}
 .spraak a{color:var(--demp-l);padding:14px 2px}
 .spraak a[aria-current]{color:var(--tekst-l)}
 .spraak span{opacity:.4}
+
+/* ===== Mørk profil (Apple-inspirert produktside, Skjold-tokens) ===== */
+.etikett{text-transform:uppercase;font-size:12px;letter-spacing:.14em}
+.lys .etikett{color:var(--khaki)}
+.hvit{background:#000;color:var(--tekst-l)}
+.knapp-m{background:var(--tekst-l);color:#000}
+.knapp-m:hover{opacity:.88}
+.knapp-o{border-color:rgba(245,245,242,.4);color:var(--tekst-l)}
+.knapp-o:hover{border-color:var(--tekst-l);opacity:1}
+.kommer{color:var(--khaki)}
+/* Gradient i store titler */
+.hjem-hero h1,.p-hero h1,.side-topp h1,.h1-midt{background:linear-gradient(180deg,#fff 30%,#c9c3ad 115%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.glans{background:linear-gradient(90deg,var(--khaki) 0%,#f5f5f2 55%,#a99d78 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hjem-hero h1{font-size:clamp(48px,10vw,124px);letter-spacing:-.04em}
+.h2{letter-spacing:-.03em}
+.seksjon{padding:140px 22px}
+.seksjon+.seksjon{border-top:1px solid rgba(255,255,255,.06)}
+.seksjon.hvit+.seksjon,.usb{border-top:0}
+/* Produktbilder: mørke studio-varianter, kanter tones ut mot en myk glød */
+.produkt,.p-hero,.to-prod a,.ramme,.bildepar>div{background:radial-gradient(ellipse 60% 55% at 50% 62%,#24242a 0%,#121214 60%,#0b0b0c 100%)}
+.p-hero{background:#000}
+.produkt img,.p-hero img,.to-prod img,.ramme img,.bildepar img,.bilder img{-webkit-mask-image:radial-gradient(ellipse 75% 75% at 50% 50%,#000 65%,transparent 100%);mask-image:radial-gradient(ellipse 75% 75% at 50% 50%,#000 65%,transparent 100%)}
+.produkt{color:var(--tekst-l);border:1px solid rgba(255,255,255,.06)}
+.produkt .k,.p-hero .k{color:var(--khaki)}
+.produkt .p,.p-hero p{color:var(--demp-l)}
+.produkt .mer,.kort .mer,.core-stripe .mer{color:var(--khaki)}
+.p-hero{color:var(--tekst-l)}
+.kort,.flis{border:1px solid rgba(255,255,255,.05);transition:transform .5s var(--ease),border-color .5s}
+a.kort:hover,a.flis:hover{opacity:1;border-color:rgba(216,207,180,.35);transform:translateY(-3px)}
+.core-stripe{background:linear-gradient(135deg,#17171a,#0e0e10);border:1px solid rgba(216,207,180,.18)}
+/* Sticky sekvens */
+.scrolly{color:var(--tekst-l)}
+.scrolly.s1-bg,.scrolly.node-bg{background:#111113}
+.bilder img{-webkit-mask-image:none;mask-image:none}
+.tekst p{color:var(--demp-l)}
+.prikker i{background:#3a3a3f}
+.prikker i.paa{background:var(--khaki)}
+/* Signalvei og integrasjoner */
+.ledd,.integ>div{background:var(--kort);border:1px solid rgba(255,255,255,.05)}
+.ledd-topp{color:var(--demp-l2)}
+.ledd-topp span{color:#55555a}
+.ledd li{color:var(--demp-l)}
+.ledd li::before{box-shadow:none}
+.integ .k{color:var(--khaki)}
+.integ p{color:var(--demp-l)}
+.integ .snart{opacity:.85}
+/* Skjema */
+.interesse{background:radial-gradient(ellipse 80% 60% at 50% 0%,#17171a 0%,#0b0b0c 70%)}
+.felt,legend,.send small{color:var(--demp-l)}
+.felt input,.felt textarea{background:var(--felt);border-color:var(--felt-l);color:var(--tekst-l);caret-color:var(--khaki)}
+.felt input::placeholder,.felt textarea::placeholder{color:#76767a}
+.felt input:focus-visible,.felt textarea:focus-visible{border-color:var(--bt);outline:2px solid var(--bt);outline-offset:1px}
+.pille span{background:var(--felt);border-color:var(--felt-l);color:var(--tekst-l)}
+.pille input:checked+span{background:var(--tekst-l);border-color:var(--tekst-l);color:#000}
+.feil{color:#ff8f7a}
+.send .knapp{background:var(--tekst-l);color:#000}
+.takk{background:var(--kort);border:1px solid var(--linje-m)}
+.takk b{background:var(--khaki);color:#000}
+/* Diverse lyse rester */
+.os-liste>div{border-top-color:var(--linje-m)}
+.to-prod a{border:1px solid rgba(255,255,255,.06)}
+.to-prod .mer{color:var(--khaki)}
+.spes-to h3{border-bottom-color:rgba(245,245,242,.5)}
+.historie-topp{background:radial-gradient(ellipse 70% 60% at 30% 0%,#17171a 0%,#000 70%);color:var(--tekst-l)}
+.baktanke{color:#d6d6d0}
+.person .foto{background:#1c1c1f;color:var(--khaki)}
+.bildepar{background:#000}
+.nedlast span{color:var(--khaki)}
+.skjermbilder img{border-color:var(--linje-m);box-shadow:0 30px 80px -30px rgba(216,207,180,.18)}
+.skjermbilder figcaption{color:var(--demp-l2)}
+.ramme{border:1px solid rgba(255,255,255,.06)}
+@media (max-width:520px){.seksjon{padding:96px 18px}}
+.p-hero h1{font-size:clamp(40px,7.2vw,84px);overflow-wrap:anywhere;hyphens:auto}
+.produkt .h{overflow-wrap:anywhere;hyphens:auto}
