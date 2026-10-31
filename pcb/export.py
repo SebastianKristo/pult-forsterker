@@ -696,11 +696,17 @@ groups = {}; tht = []
 for ref, r in bom.items():
     if r["Value"] == "DNP": continue
     if _is_tht.get(ref, False): tht.append((ref, r["Value"], r["Footprint"], r["LCSC"])); continue
-    groups.setdefault((r["Value"], r["Footprint"], r["LCSC"]), []).append(ref)
+    # én BOM-linje per LCSC-kode (JLCPCB krever «bekreftelse» når samme kode står på flere linjer); uten kode: per verdi+footprint
+    key = (r["LCSC"],) if r["LCSC"] else (r["Value"], r["Footprint"], "")
+    g = groups.setdefault(key, {"vals": [], "fp": r["Footprint"], "lcsc": r["LCSC"], "refs": []})
+    if r["Value"] not in g["vals"]: g["vals"].append(r["Value"])
+    g["refs"].append(ref)
+def _refsort(x): return (_rx.sub(r"\d", "", x), int(_rx.sub(r"\D", "", x) or 0))
 with open(os.path.join(OUT, "ki_pultforsterker_main_bom.csv"), "w", newline="") as fh:
     w = csv.writer(fh); w.writerow(["Comment", "Designator", "Footprint", "LCSC Part #"])
-    for (val, fp, lcsc), refs in sorted(groups.items(), key=lambda kv: kv[1][0]):
-        w.writerow([val, ",".join(refs), fp, lcsc])
+    for key, g in sorted(groups.items(), key=lambda kv: _refsort(sorted(kv[1]["refs"], key=_refsort)[0])):
+        if len(g["vals"]) > 1: print("ADVARSEL: samme LCSC-kode med ulike verdier:", g["lcsc"], g["vals"])
+        w.writerow(["/".join(g["vals"]), ",".join(sorted(g["refs"], key=_refsort)), g["fp"], g["lcsc"]])
 with open(os.path.join(OUT, "ki_pultforsterker_main_tht_handlodding.csv"), "w", newline="") as fh:
     w = csv.writer(fh); w.writerow(["Designator", "Verdi", "Footprint", "LCSC (kjøp selv)"])
     for r in sorted(tht, key=lambda t: (t[0][0], int(_rx.sub(r"\D", "", t[0]) or 0))): w.writerow(r)
