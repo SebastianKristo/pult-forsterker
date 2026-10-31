@@ -73,6 +73,7 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 ## Filer
 
 - `build_board.py` – hele kortet (deler, netliste, plassering) som Python mot pcbnew. Kjør for å regenerere `.kicad_pcb`.
+- `build_schematic.py` – lager skjemaet `ki_pultforsterker_main.kicad_sch` (ett A1-ark, delene gruppert i blokker, globale etiketter med nettnavnene) fra kortet, pluss egne symboler i `ki_pultforsterker.kicad_sym`; verifiserer netlisten pinne for pinne mot `.kicad_pcb` (må gi 0 avvik), kjører ERC og lager `produksjon/skjema.pdf`/`.svg`. Kjør `python3 build_schematic.py` for å regenerere (etter `build_board.py`/`export.py`).
 - `route.py` – eksporterer DSN og kjører Freerouting (`FREEROUTING=/sti/freerouting.jar python3 route.py`).
 - `export.py` – importerer SES, fyller GND-soner, kjører DRC, lager `produksjon/`.
 - `produksjon/ki_pultforsterker_main_gerber.zip` – last opp til JLCPCB/PCBWay (2 lag, 1,6 mm, HASL eller ENIG, 1 oz).

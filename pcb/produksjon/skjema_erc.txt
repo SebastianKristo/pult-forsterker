@@ -1,0 +1,47 @@
+ERC report (innebygd kontroll i build_schematic.py – kicad-cli 7.0.11 har ikke `sch erc`)
+Source: /home/claude/pult-forsterker/pcb/ki_pultforsterker_main.kicad_sch
+
+WARNING [pin_not_driven] nett ADC_VINL: inngang(er) uten driver: U10.13
+WARNING [pin_not_driven] nett ADC_VINR: inngang(er) uten driver: U10.14
+WARNING [pin_not_driven] nett AMP_GAIN: inngang(er) uten driver: U6.8
+WARNING [pin_not_driven] nett AMP_LINN: inngang(er) uten driver: U6.11
+WARNING [pin_not_driven] nett AMP_LINP: inngang(er) uten driver: U6.10
+WARNING [pin_not_driven] nett AMP_PLIMIT: inngang(er) uten driver: U6.6
+WARNING [pin_not_driven] nett AMP_RINN: inngang(er) uten driver: U6.5
+WARNING [pin_not_driven] nett AMP_RINP: inngang(er) uten driver: U6.4
+WARNING [pin_not_driven] nett AMP_SDZ: inngang(er) uten driver: U6.2
+WARNING [pin_not_driven] nett BUCK_EN: inngang(er) uten driver: U1.3
+WARNING [pin_not_driven] nett BUCK_FB: inngang(er) uten driver: U1.5
+WARNING [pin_not_driven] nett CODEC_VINL: inngang(er) uten driver: U11.12
+WARNING [pin_not_driven] nett CODEC_VINR: inngang(er) uten driver: U11.13
+WARNING [pin_not_driven] nett CODEC_XTI: inngang(er) uten driver: U11.21
+WARNING [pin_not_driven] nett DAC_LDOO: inngang(er) uten driver: U4.10
+WARNING [pin_not_driven] nett DAC_XSMT: inngang(er) uten driver: U4.17
+WARNING [pin_not_driven] nett HP_INL: inngang(er) uten driver: U13.1
+WARNING [pin_not_driven] nett HP_INLP: inngang(er) uten driver: U13.2
+WARNING [pin_not_driven] nett HP_INR: inngang(er) uten driver: U13.4
+WARNING [pin_not_driven] nett HP_INRP: inngang(er) uten driver: U13.3
+WARNING [pin_not_driven] nett I2S_DIN: inngang(er) uten driver: U4.14
+WARNING [pin_not_driven] nett LED_AIR_GATE: inngang(er) uten driver: Q2.1
+WARNING [pin_not_driven] nett LED_AUX_GATE: inngang(er) uten driver: Q4.1
+WARNING [pin_not_driven] nett LED_BT_GATE: inngang(er) uten driver: Q3.1
+WARNING [pin_not_driven] nett LED_PWR_GATE: inngang(er) uten driver: Q6.1
+WARNING [pin_not_driven] nett LED_USB_GATE: inngang(er) uten driver: Q5.1
+WARNING [pin_not_driven] nett MCP_RST: inngang(er) uten driver: U12.18
+WARNING [pin_not_driven] nett NTC: inngang(er) uten driver: U14.2
+WARNING [pin_not_driven] nett PGA_CS: inngang(er) uten driver: U5.2
+WARNING [pin_not_driven] nett PGA_MUTE: inngang(er) uten driver: U5.8
+WARNING [pin_not_driven] nett PGA_SCLK: inngang(er) uten driver: U5.6
+WARNING [pin_not_driven] nett PGA_SDI: inngang(er) uten driver: U5.3
+WARNING [pin_not_driven] nett PWR_GATE: inngang(er) uten driver: Q7.1
+WARNING [pin_not_driven] nett Q10_GATE: inngang(er) uten driver: Q10.1
+WARNING [pin_not_driven] nett Q11_GATE: inngang(er) uten driver: Q11.1
+WARNING [pin_not_driven] nett Q8_GATE: inngang(er) uten driver: Q8.1
+WARNING [pin_not_driven] nett SCL: inngang(er) uten driver: U12.12
+WARNING [pin_not_driven] nett TFT_BL_GATE: inngang(er) uten driver: Q9.1
+WARNING [pin_not_driven] nett USB_RSTJ: inngang(er) uten driver: U7.17, U7.26
+WARNING [pin_not_driven] nett USB_XIN: inngang(er) uten driver: U7.3
+WARNING [pin_not_driven] nett VOL_INL: inngang(er) uten driver: U5.16
+WARNING [pin_not_driven] nett VOL_INR: inngang(er) uten driver: U5.9
+
+ ** ERC messages: 42  Errors 0  Warnings 42
