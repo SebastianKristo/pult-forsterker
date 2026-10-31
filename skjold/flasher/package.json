@@ -71,7 +71,8 @@
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "identity": "-",
       "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "icon": "build/icon.icns"
     },
     "win": {
       "target": [
@@ -82,7 +83,8 @@
           ]
         }
       ],
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -99,7 +101,8 @@
         }
       ],
       "category": "Utility",
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "${productName}-${version}.${ext}",
+      "icon": "build/icon.png"
     }
   }
 }

@@ -20,6 +20,7 @@ function createWindow(): void {
     width: 880, height: 660, minWidth: 720, minHeight: 560,
     backgroundColor: '#0f0f10',
     title: 'Skjold Flasher',
+    icon: path.join(__dirname, '..', 'renderer', 'icon.png'),   // Windows/Linux (macOS bruker icon.icns fra pakken)
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     autoHideMenuBar: true,
     webPreferences: {
