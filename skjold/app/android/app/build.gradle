@@ -7,8 +7,9 @@ android {
         applicationId "no.kristo.skjold"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Settes fra release-taggen i CI (skjold-v1.2.3 -> versionName 1.2.3, versionCode 10203); må øke for at oppdatering skal godtas
+        versionCode((project.findProperty("skjoldVersionCode") ?: "1") as Integer)
+        versionName((project.findProperty("skjoldVersionName") ?: "0.0.0") as String)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +17,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Fast signeringsnøkkel (GitHub-secret SKJOLD_KEYSTORE_B64 m.fl., se skjold/RELEASE.md). Uten den lager hver CI-kjøring en ny
+    // debug-nøkkel, og Android nekter da å installere en ny versjon over den gamle.
+    def ksPath = System.getenv("SKJOLD_KEYSTORE")
+    signingConfigs {
+        skjold {
+            if (ksPath && file(ksPath).exists()) {
+                storeFile file(ksPath)
+                storePassword System.getenv("SKJOLD_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("SKJOLD_KEY_ALIAS") ?: "skjold"
+                keyPassword System.getenv("SKJOLD_KEY_PASSWORD") ?: System.getenv("SKJOLD_KEYSTORE_PASSWORD")
+            }
+        }
+    }
     buildTypes {
+        debug {
+            if (ksPath && file(ksPath).exists()) signingConfig signingConfigs.skjold
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

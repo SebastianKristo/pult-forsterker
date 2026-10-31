@@ -6,6 +6,7 @@ import { CATS, CAT_TILE, ICONS, fmt, type Category, type Item } from '../lib/set
 import { CLOCKS, drawClock } from '../lib/clocks';
 import { ConfirmButton, Icon, Slider, Stepper, Toggle } from '../components/ui';
 import { EqPage, RoomsPage, useMinuteTick } from './pages';
+import { AppUpdater, canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer, type AppRelease } from '../lib/appUpdate';
 
 export function SettingsPage({ wide = false }: { wide?: boolean }) {
   const cat = CATS.find((c) => c.id === route.value.cat);
@@ -142,7 +143,7 @@ function Row({ it }: { it: Item }) {
     case 'clocks':
       return <Line n="Klokkestil" note={pending('clockStyle')} wideCtl><ClockPicker /></Line>;
     case 'update':
-      return <UpdatePanel />;
+      return <><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}</>;
     case 'eq':
       return null;
   }
@@ -196,6 +197,55 @@ function UpdatePanel() {
             <a href={rel.url} target="_blank" rel="noreferrer">Åpne</a>
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+/** Android: last ned og installer ny versjon av selve appen fra GitHub Releases. */
+function AppUpdatePanel() {
+  const st = settings.value;
+  const [cur, setCur] = useState('');
+  const [rel, setRel] = useState<AppRelease | null | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState<number | null>(null);
+  const [err, setErr] = useState('');
+  const [needPerm, setNeedPerm] = useState(false);
+  useEffect(() => { void installedAppVersion().then(setCur); }, []);
+  const check = async () => {
+    setBusy(true); setErr('');
+    try { setRel(await fetchLatestAppRelease(st.updChannel === 1)); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  };
+  const install = async () => {
+    if (!rel) return;
+    setErr('');
+    const { allowed } = await AppUpdater.canInstall();
+    if (!allowed) { setNeedPerm(true); await AppUpdater.openInstallSettings(); return; }
+    setNeedPerm(false); setPct(0);
+    const h = await AppUpdater.addListener('progress', (e) => setPct(e.percent));
+    try { await AppUpdater.downloadAndInstall({ url: rel.apkUrl }); showToast('Følg installasjonen på skjermen'); }
+    catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    finally { void h.remove(); setPct(null); }
+  };
+  const newer = rel ? isNewer(rel, cur) : false;
+  return (
+    <>
+      <Line n="Appen på denne telefonen"><span class="val">{cur || '–'}</span></Line>
+      <div class="col gap10" style={{ padding: '12px 14px' }}>
+        <button class="btn" disabled={busy || pct !== null} onClick={check}>{busy ? 'Ser etter …' : 'Se etter ny app-versjon'}</button>
+        {err && <div class="banner bad"><span>{err}</span></div>}
+        {rel === null && <div class="banner info"><span>Ingen app-utgivelser funnet på GitHub.</span></div>}
+        {rel && (
+          <div class={'banner ' + (newer ? 'warn' : 'ok')}>
+            <span><strong>{rel.name}</strong> · {rel.date} · {rel.apkSize}<br />{newer ? `Versjon ${rel.version} er klar (du har ${cur || 'ukjent'}).` : 'Appen er oppdatert.'}</span>
+          </div>
+        )}
+        {rel && newer && (
+          <button class="btn primary" disabled={pct !== null} onClick={install}>
+            {pct !== null ? `Laster ned … ${pct} %` : `Last ned og installer ${rel.version}`}
+          </button>
+        )}
+        {needPerm && <div class="banner info"><span>Tillat «Installer ukjente apper» for Skjold i innstillingene som åpnet seg, gå tilbake og trykk på knappen igjen.</span></div>}
       </div>
     </>
   );

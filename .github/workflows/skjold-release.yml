@@ -43,11 +43,32 @@ jobs:
       - name: Synkroniser Capacitor (Android)
         working-directory: skjold/app
         run: npx cap sync android
-      - name: Bygg APK (debug-signert – installerbar)
+      - name: Versjon fra taggen
+        id: ver
+        run: |
+          # skjold-v1.2.3 -> 1.2.3 / 10203; uten tag (manuell kjøring): versjonen i package.json
+          V="${GITHUB_REF_NAME#skjold-v}"
+          if ! echo "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then V=$(node -p "require('./skjold/app/package.json').version"); fi
+          IFS=. read -r MA MI PA <<< "$V"
+          echo "name=$V" >> "$GITHUB_OUTPUT"
+          echo "code=$((MA*10000 + MI*100 + PA))" >> "$GITHUB_OUTPUT"
+      - name: Signeringsnøkkel (fast, så appen kan oppdatere seg selv)
+        env:
+          KS_B64: ${{ secrets.SKJOLD_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/skjold.jks"
+            echo "SKJOLD_KEYSTORE=$RUNNER_TEMP/skjold.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::SKJOLD_KEYSTORE_B64 mangler – APK-en signeres med en tilfeldig debug-nøkkel og kan ikke installeres over forrige versjon"
+          fi
+      - name: Bygg APK (installerbar, fast nøkkel hvis satt)
         working-directory: skjold/app/android
+        env:
+          SKJOLD_KEYSTORE_PASSWORD: ${{ secrets.SKJOLD_KEYSTORE_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon -PskjoldVersionName=${{ steps.ver.outputs.name }} -PskjoldVersionCode=${{ steps.ver.outputs.code }}
           cp app/build/outputs/apk/debug/app-debug.apk ../../../skjold-app-${GITHUB_REF_NAME}.apk
       - uses: actions/upload-artifact@v4
         with:

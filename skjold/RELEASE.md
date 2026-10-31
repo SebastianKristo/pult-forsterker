@@ -111,3 +111,22 @@ For å oppdatere web-UI-et på Pi-en: `skjold-web-<tag>.zip` pakkes ut til `/usr
 
 Workflow-en er laget slik at signering kan legges til som secrets uten å endre byggetrinnene (`CSC_LINK`/`CSC_KEY_PASSWORD`
 for electron-builder, `APPLE_ID`/`APPLE_APP_SPECIFIC_PASSWORD`/`APPLE_TEAM_ID` for notarisering, keystore for Android).
+
+## 5. Oppdatering av Android-appen fra appen selv
+
+Appen ser etter nye `skjold-v*`-utgivelser med en `.apk` på GitHub (ved oppstart og under *Innstillinger › Oppdatering*), laster
+ned APK-en og åpner Androids installasjonsdialog. Første gang ber Android om å tillate «Installer ukjente apper» for Skjold.
+
+For at en ny versjon skal kunne installeres **over** den gamle må to ting være oppfylt:
+
+1. **Samme signeringsnøkkel hver gang.** Legg nøkkelen inn som secrets i GitHub (*Settings → Secrets and variables → Actions →
+   New repository secret*):
+   - `SKJOLD_KEYSTORE_B64` – innholdet i `skjold.jks` som base64 (`base64 -i skjold.jks | pbcopy` på Mac)
+   - `SKJOLD_KEYSTORE_PASSWORD` – passordet (alias er `skjold`, samme passord på nøkkelen)
+   Ta vare på `skjold.jks` og passordet et trygt sted (passordbehandler). Mister du nøkkelen, må alle avinstallere appen én gang.
+   Uten secrets bygger workflow-en med en tilfeldig debug-nøkkel og skriver en advarsel.
+2. **Økende versjon.** Workflow-en setter versionName/versionCode fra taggen (`skjold-v1.2.3` → 1.2.3 / 10203), så hver ny tag må
+   være høyere enn den forrige.
+
+APK-er som er bygget før nøkkelen ble lagt inn (skjold-v0.1.0/0.1.1) er signert med en annen nøkkel: avinstaller dem én gang før
+første oppdatering. iOS-appen kan ikke oppdatere seg selv (Apple tillater det ikke) – der installeres ny IPA som i del 2.

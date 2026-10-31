@@ -9,7 +9,8 @@ import { SettingsPage, CategoryDetail } from './screens/settings';
 import { Art, PlayerBody, PowerButton, Transport, VolumeRow, nowTitle } from './screens/player';
 import { FindDevice, Setup } from './screens/onboard';
 import { api } from './lib/api';
-import { act, inputLabel } from './lib/store';
+import { act, inputLabel, showToast, settings } from './lib/store';
+import { canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer } from './lib/appUpdate';
 
 function useWide(): boolean {
   const q = '(min-width: 900px)';
@@ -24,6 +25,15 @@ function useWide(): boolean {
 
 export function App() {
   const wide = useWide();
+  useEffect(() => {   // Android: si fra én gang per oppstart hvis det finnes en nyere app på GitHub
+    if (!canSelfUpdate) return;
+    void (async () => {
+      try {
+        const [cur, rel] = await Promise.all([installedAppVersion(), fetchLatestAppRelease(settings.value.updChannel === 1)]);
+        if (rel && isNewer(rel, cur)) showToast(`Ny app-versjon ${rel.version} – Innstillinger › Oppdatering`, 6000);
+      } catch { /* offline – ikke noe å si fra om */ }
+    })();
+  }, []);
   let body;
   if (mode.value === 'find') body = <FindDevice />;
   else if (mode.value === 'setup') body = <Setup />;
