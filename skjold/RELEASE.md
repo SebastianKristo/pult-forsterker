@@ -77,8 +77,10 @@ For å oppdatere web-UI-et på Pi-en: `skjold-web-<tag>.zip` pakkes ut til `/usr
 ### macOS
 1. Last ned `Skjold Flasher-<ver>-arm64.dmg` (Apple Silicon) eller `-x64.dmg` (Intel).
 2. Åpne dmg-en og dra **Skjold Flasher** til Programmer.
-3. Appen er ikke notarisert av Apple. Første gang: **høyreklikk → Åpne → Åpne** (eller *Systeminnstillinger → Personvern
-   og sikkerhet → Åpne likevel*). Deretter åpnes den vanlig.
+3. Appen er ikke notarisert av Apple. Sier macOS **«Skjold Flasher.app is damaged and can't be opened»** (vanlig på Apple Silicon
+   når filen er lastet ned med en nettleser): trykk *Cancel*, åpne Terminal og kjør
+   `xattr -cr "/Applications/Skjold Flasher.app"` – det fjerner bare nettleserens karantenemerke. Ellers første gang:
+   **høyreklikk → Åpne → Åpne** (eller *Systeminnstillinger → Personvern og sikkerhet → Åpne likevel*).
 4. Appen ber om administratorpassord når den skal skrive til SD-kortet (det krever macOS).
 
 ### Windows
