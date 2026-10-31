@@ -93,12 +93,31 @@ class NodeLayout(Layout):
 
     # ---------- hold-fremdrift / «Lagret» (scrHold) ----------
     def draw_hold(self, c, vm):
+        if vm.get("hold_saved") is not None: return self.draw_saved(c, vm)
         p = vm.get("hold_p", 1.0)
         c.circle(80, 47, 15, TRACK)
         if p > 0: c.pie(80, 47, 15, -math.pi / 2, -math.pi / 2 + p * 2 * math.pi, W)
         c.circle(80, 47, 12.5, BLACK)
         c.text(80, 81, vm.get("hold_title", ""), W, "bold", 12, "ms")
         c.text(80, 91, vm.get("hold_sub", "Fortsett å holde"), DIM, "regular", 8, "ms")
+
+    def draw_saved(self, c, vm):
+        """Bekreftelse («Lagret»): fylt sirkel i kildefargen som spretter inn, så tegnes haken."""
+        t = max(0.0, vm.get("saved_t", 1.0)); acc = vm.get("accent") or W
+        k = min(1.0, t / 0.22); sc = 1 + 0.18 * math.sin(k * math.pi) if k < 1 else 1.0   # 0 → 1,18 → 1
+        r = 16 * (k if k < 1 else 1) * (sc if k >= 0.5 else 1)
+        if t > 0.22: c.circle(80, 47, 16 + 5 * min(1, (t - 0.22) / 0.35), outline=mix(acc, max(0, 1 - (t - 0.22) / 0.35)), width=1)
+        if r > 0.5: c.circle(80, 47, r, acc)
+        ink = BLACK if sum(acc[:3]) > 420 else W   # mørk hake på lyse kildefarger (AirPlay/AUX)
+        q = min(1.0, max(0.0, (t - 0.12) / 0.25))   # haken tegnes fra venstre
+        if q > 0:
+            a, b_, e = (72, 47.5), (78, 53.5), (89, 41.5)
+            if q < 0.4: pts = [a, (a[0] + (b_[0] - a[0]) * q / 0.4, a[1] + (b_[1] - a[1]) * q / 0.4)]
+            else:
+                f = (q - 0.4) / 0.6; pts = [a, b_, (b_[0] + (e[0] - b_[0]) * f, b_[1] + (e[1] - b_[1]) * f)]
+            c.line(pts, ink, 2.6, joint="curve")
+        c.text(80, 81, vm.get("hold_title", "Lagret"), W, "bold", 12, "ms")
+        c.text(80, 91, vm.get("hold_sub", ""), DIM, "regular", 8, "ms")
 
     # ---------- meny (scrSet) – brukes til daemonens radiomeny ----------
     def draw_menu(self, c, vm):

@@ -6,13 +6,16 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, is_node
 from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpPlayingSensor(c), KiAmpHeadphonesSensor(c), KiAmpOvertempSensor(c)])
+    ents = [KiAmpPlayingSensor(c)]
+    if not is_node(c.data):   # hodetelefonjack og NTC finnes bare på Pultforsterker-kortene
+        ents += [KiAmpHeadphonesSensor(c), KiAmpOvertempSensor(c)]
+    add(ents)
 
 
 class KiAmpPlayingSensor(KiAmpEntity, BinarySensorEntity):

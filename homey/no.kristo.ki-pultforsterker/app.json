@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.12.0",
+  "version": "2.13.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -177,6 +177,13 @@
           "title": {
             "en": "Bluetooth",
             "no": "Bluetooth"
+          }
+        },
+        {
+          "id": "spotify",
+          "title": {
+            "en": "Spotify",
+            "no": "Spotify"
           }
         },
         {
@@ -522,6 +529,66 @@
       "setable": true,
       "uiComponent": "toggle",
       "icon": "/assets/icon.svg"
+    },
+    "ki_level_spotify": {
+      "type": "number",
+      "title": {
+        "en": "Level Spotify",
+        "no": "Nivå Spotify"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_bright": {
+      "type": "enum",
+      "title": {
+        "en": "Display brightness",
+        "no": "Skjermlysstyrke"
+      },
+      "values": [
+        {
+          "id": "0",
+          "title": {
+            "en": "Auto",
+            "no": "Auto"
+          }
+        },
+        {
+          "id": "1",
+          "title": {
+            "en": "High",
+            "no": "Høy"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "Medium",
+            "no": "Middels"
+          }
+        },
+        {
+          "id": "3",
+          "title": {
+            "en": "Low",
+            "no": "Lav"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "icon": "/assets/icon.svg"
     }
   },
   "flow": {
@@ -702,6 +769,13 @@
                 }
               },
               {
+                "id": "spotify",
+                "label": {
+                  "en": "Spotify",
+                  "no": "Spotify"
+                }
+              },
+              {
                 "id": "aux",
                 "label": {
                   "en": "AUX 1",
@@ -811,6 +885,13 @@
                 "label": {
                   "en": "Bluetooth",
                   "no": "Bluetooth"
+                }
+              },
+              {
+                "id": "spotify",
+                "label": {
+                  "en": "Spotify",
+                  "no": "Spotify"
                 }
               },
               {
@@ -1214,6 +1295,13 @@
                   "en": "AUX 2",
                   "no": "AUX 2"
                 }
+              },
+              {
+                "id": "spotify",
+                "label": {
+                  "en": "Spotify",
+                  "no": "Spotify"
+                }
               }
             ]
           },
@@ -1230,6 +1318,112 @@
             "label": "%",
             "labelMultiplier": 1,
             "labelDecimals": 0
+          }
+        ]
+      },
+      {
+        "id": "ki_reboot",
+        "title": {
+          "en": "Restart or shut down",
+          "no": "Start på nytt eller slå av"
+        },
+        "titleFormatted": {
+          "en": "[[action]] the Pi",
+          "no": "[[action]] Pi-en"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "action",
+            "title": {
+              "en": "Action",
+              "no": "Handling"
+            },
+            "values": [
+              {
+                "id": "reboot",
+                "label": {
+                  "en": "Restart",
+                  "no": "Start på nytt"
+                }
+              },
+              {
+                "id": "poweroff",
+                "label": {
+                  "en": "Shut down",
+                  "no": "Slå av"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ki_set_bright",
+        "title": {
+          "en": "Set display brightness",
+          "no": "Sett skjermlysstyrke"
+        },
+        "titleFormatted": {
+          "en": "Set display brightness to [[bright]]",
+          "no": "Sett skjermlysstyrke til [[bright]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "bright",
+            "title": {
+              "en": "Brightness",
+              "no": "Lysstyrke"
+            },
+            "values": [
+              {
+                "id": "0",
+                "label": {
+                  "en": "Auto",
+                  "no": "Auto"
+                }
+              },
+              {
+                "id": "1",
+                "label": {
+                  "en": "High",
+                  "no": "Høy"
+                }
+              },
+              {
+                "id": "2",
+                "label": {
+                  "en": "Medium",
+                  "no": "Middels"
+                }
+              },
+              {
+                "id": "3",
+                "label": {
+                  "en": "Low",
+                  "no": "Lav"
+                }
+              }
+            ]
           }
         ]
       }

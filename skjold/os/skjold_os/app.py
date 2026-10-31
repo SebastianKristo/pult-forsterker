@@ -92,7 +92,8 @@ class Ui:
         vm = {"now": d, "now_ms": now * 1000, "clock": "%02d:%02d" % (d.hour, d.minute), "model": self.model,
               "name": (st or {}).get("name") or "Skjold " + self.model.capitalize(), "clock_style": int(se.get("clockStyle") or 0)}
         st = st or {}
-        vm.update(input=st.get("input") or "radio", volume=int(st.get("volume") or 0), mute=bool(st.get("mute")))
+        vm.update(input=st.get("input") or "radio", volume=int(st.get("volume") or 0), mute=bool(st.get("mute")),
+                  inputs=st.get("inputs"), presets=st.get("presets"), headphones=st.get("hp"))
         vm["vol_overlay"] = now - self.vol_t < VOL_SHOW_S
         # animasjoner har forrang
         if self.fx:
@@ -114,7 +115,14 @@ class Ui:
         hold = st.get("hold")   # {"key":"knob|src|radio|reboot","p":0-1,"title","sub"} eller bekreftelse {"title":"Lagret",…,"saved":n}
         if hold:
             vm.update(screen="hold", hold_p=hold.get("p", 1), hold_title=hold.get("title", ""), hold_sub=hold.get("sub", "Fortsett å holde"),
-                      vol_overlay=False); return vm
+                      vol_overlay=False)
+            if hold.get("saved") is not None:   # bekreftelse («Lagret»): hake med pop-inn, farge = kilden
+                key = (hold.get("title"), hold.get("saved"))
+                if getattr(self, "_saved_key", None) != key: self._saved_key, self._saved_t0 = key, now
+                vm.update(hold_saved=hold["saved"], saved_t=now - self._saved_t0, accent=sources.src(st.get("input")).get("c"))
+            else:
+                self._saved_key = None
+            return vm
         if st.get("bt_pairing"):
             pt = now - (self.pair_t0 or now)
             vm.update(screen="pair", pair_t=pt, pair_p=st.get("bt_pairing_left") and 1 - st["bt_pairing_left"] / PAIR_S or pt / PAIR_S)
@@ -235,7 +243,7 @@ class Ui:
         """Ved stopp/omstart: CRT-kollaps fra reboot-animasjonen, så lyset av."""
         try:
             for ms in range(0, 400, 50):
-                c = self.lay.canvas(); fx.reboot(c, ms, ms); self.sink.show(c.frame(), "stop"); time.sleep(0.05)
+                c = self.lay.canvas(); (self.lay.draw_reboot(c, {"t_ms": ms, "now_ms": ms}) if hasattr(self.lay, "draw_reboot") else fx.reboot(c, ms, ms)); self.sink.show(c.frame(), "stop"); time.sleep(0.05)
         except Exception:
             pass
         self.bl.set(0); self.bl.close(); self.sink.close()

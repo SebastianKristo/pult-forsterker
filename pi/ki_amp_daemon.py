@@ -12,7 +12,8 @@ LED-ringer: 2 x 4-kanals MOSFET-kort (3,3 V-jumper), POWER-ringen dimmes med PWM
 HTTP-API (port 8765) + mDNS for Home Assistant-integrasjonen og Homey-appen.
 
 API:
-  GET  /                 web-app (PWA) for mobil/PC – filene ligger i pi/webapp
+  GET  /                 web-app (PWA) for mobil/PC – hele mappa serveres på / (og /app/): /usr/local/share/ki-amp/webapp
+                         (skjold-web-*.zip fra siste skjold-v*-utgivelse, ellers pi/webapp; KI_AMP_WEBAPP overstyrer)
   GET  /api/status
   POST /api/power  {"on":bool}   POST /api/toggle
   POST /api/input  {"input":"airplay|bt|aux|usb"}
@@ -71,6 +72,7 @@ Felter i /api/status for skjermen (Skjold OS):
 import asyncio
 import json
 import math
+import mimetypes
 import threading
 import os
 import re
@@ -198,7 +200,7 @@ else:
     LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
     LED_POWER = 11      # PWM
     PIN_DAC_XSMT = None
-BTN_POWER = {"radio": 3, "test": 26}.get(BOARD, 16)
+BTN_POWER = {"radio": 3, "test": 26, "main": None}.get(BOARD, 16)   # main: POWER via MCP23017 (GPIO16 er PGA2311 CS) + knapp bak GPIO 15
 
 SPOTIFY_ON = os.environ.get("KI_AMP_SPOTIFY", "1") == "1"   # Spotify Connect (librespot, ki-spotify.service)
 if BOARD == "node":
@@ -619,12 +621,13 @@ def apply_input():
             lit = {"airplay": state["input"] in ("airplay", "bt"), "bt": state["input"] == "radio",
                    "aux": state["input"] in ("aux", "aux2"), "usb": state["input"] == "usb"}
             for k, bit in MCP_LED.items():
-                mcp.set_b(bit, bool(state["power"] and lit[k]))
+                mcp.set_b(bit, bool(state["power"] and lit[k] and led_scale() > 0))
     else:
         relay_aux.value = state["input"] == "aux"
+    leds_on = led_scale() > 0
     for k, led in leds.items():
-        led.value = state["power"] and k == state["input"]
-    if USBSW_FRONT and usbsw.enabled:   # PC 1/2-ringen lyser alltid når den er på, AIRPLAY/BT-ringen for AirPlay, BT og Radio
+        led.value = state["power"] and k == state["input"] and leds_on
+    if USBSW_FRONT and usbsw.enabled and leds_on:   # PC 1/2-ringen lyser alltid når den er på, AIRPLAY/BT-ringen for AirPlay, BT og Radio
         if "airplay" in leds:
             leds["airplay"].value = state["power"]
         if "bt" in leds:
@@ -633,9 +636,22 @@ def apply_input():
         apply_node_leds()
     if BOARD == "radio":
         for i, led in enumerate(fav_leds):
-            led.value = state["power"] and state["input"] == "radio" and state["preset"] == i + 1
+            led.value = state["power"] and state["input"] == "radio" and state["preset"] == i + 1 and leds_on
     if state["input"] != "bt" or not state["bt_pairing"]:
         pass  # BT-LED pulserer under parring (se pairing_task)
+
+
+LED_SCALE = [1.0, 0.45, 0.15, 0.0]   # innstilling «led» (LED-ringer): Høy, Middels, Lav, Av
+
+
+def led_scale():
+    """Lysstyrke for LED-ringene fra innstillingen «led». PWMLED (node, strøm-LED) skaleres; av/på-LED-er
+    (MCP23017 på main, gpiozero LED på modules/radio) kan ikke dimmes – de slukkes bare ved «Av»."""
+    try:
+        i = int(settings().get("led", 0))
+    except Exception:
+        i = 0
+    return LED_SCALE[i] if 0 <= i < len(LED_SCALE) else 1.0
 
 
 def apply_node_leds(playing=None):
@@ -655,7 +671,7 @@ def apply_node_leds(playing=None):
         if k == "airbt" and state["bt_pairing"]:
             continue   # pairing_task blinker den
         try:
-            led.value = want.get(k, 0.0)
+            led.value = want.get(k, 0.0) * led_scale()
         except Exception as e:
             print("LED-ring:", e, flush=True)
 
@@ -714,7 +730,7 @@ def apply_power():
         relay_amp.value = state["power"]
     if HW:
         if led_power:
-            led_power.value = 1.0 if state["power"] else 0.1
+            led_power.value = (1.0 if state["power"] else 0.1) * led_scale()
         apply_input()
     apply_volume()   # mute i CamillaDSP + PGA2311 i standby
     # OLED av i standby håndteres av oled_display.py via ctrl-filen
@@ -730,12 +746,12 @@ def apply_power():
 
 # ---------- innstillinger (app/web, samme nøkler som skjold_settings.js) ----------
 SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "lvlAux": 0, "lvlUsb": 0,
-                "name": 0, "nAux1": "AUX 1", "nAux2": "AUX 2", "nUsb1": "PC 1", "nUsb2": "PC 2", "hold": 2,
+                "name": 0, "nameCustom": "", "updChannel": 0, "updAuto": True, "setupDone": False, "nAux1": "AUX 1", "nAux2": "AUX 2", "nUsb1": "PC 1", "nUsb2": "PC 2", "hold": 2,
                 "voice": True, "lang": 0, "vv": 1, "dim": 1, "off": 1, "clock": True, "clockStyle": 0, "bright": 0, "led": 0, "auto": 1, "wake": True,
                 "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [6, 3, 0, 0, 1]), ("radio", 2, [-2, 0, 3, 2, 0]),
                                                                                      ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [3, 1, -1, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
-SETTINGS_APPLIED = {"voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
+SETTINGS_APPLIED = {"led", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
 
 
 def settings():
@@ -761,6 +777,77 @@ def apply_settings(changed_keys=()):
     vmax = VMAX[int(s_["vmax"])] if str(s_["vmax"]).isdigit() and int(s_["vmax"]) < len(VMAX) else 100
     if state["volume"] > vmax:
         state["volume"] = vmax; apply_volume()
+    if "led" in changed_keys and HW:
+        _safe(apply_input)
+        if led_power: _safe(lambda: setattr(led_power, "value", (1.0 if state["power"] else 0.1) * led_scale()))
+    if not changed_keys or {"name", "nameCustom"} & set(changed_keys):
+        apply_name(force_services=bool(changed_keys))
+
+
+# ---------- enhetsnavn (AirPlay / Spotify / Blåtann) ----------
+NAMES = ["Skjold S1", "Stue", "Kontor", "Soverom"]   # samme liste som skjold_settings.js / app settings.ts
+NAME_ENV = NAME   # KI_AMP_NAME eller kortets standard
+SHAIRPORT_CONF = os.environ.get("KI_AMP_SHAIRPORT_CONF", "/etc/shairport-sync.conf")
+SPOTIFY_DROPIN = os.environ.get("KI_AMP_SPOTIFY_DROPIN", "/etc/systemd/system/ki-spotify.service.d/ki-name.conf")
+_name_applied = [None]
+
+
+def effective_name():
+    """Eget navn (nameCustom) > valg fra listen (name, satt av brukeren) > KI_AMP_NAME > kortets standard."""
+    s_ = settings()
+    custom = re.sub(r'[\x00-\x1f"\\/;]', "", str(s_.get("nameCustom") or "")).strip()[:32]
+    if custom:
+        return custom
+    cur = state.get("settings") or {}
+    if "name" in cur:   # bare når brukeren faktisk har valgt i appen; ellers gjelder env/standard
+        try:
+            return NAMES[int(cur["name"])]
+        except Exception:
+            pass
+    return NAME_ENV
+
+
+def apply_name(force_services=False):
+    """Sett spillernavnet. Tjenestene (AirPlay, Spotify, Blåtann) endres/restartes bare når navnet faktisk endres
+    (ved oppstart kun hvis det avviker fra det installasjonen satte, dvs. KI_AMP_NAME)."""
+    global NAME
+    new = effective_name()
+    old = _name_applied[0]
+    NAME = new
+    if old == new or (old is None and new == NAME_ENV and not force_services):
+        _name_applied[0] = new; return
+    _name_applied[0] = new
+    if not HW:
+        print(f"navn: «{new}» (simulering – AirPlay/Spotify/Blåtann ikke endret)", flush=True); return
+    threading.Thread(target=_apply_name_services, args=(new,), daemon=True).start()
+
+
+def _apply_name_services(name):
+    q = dict(check=False, timeout=20, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # bare tjenester som faktisk er installert (simulering/testmaskin: ingenting skrives i /etc)
+    try:   # AirPlay: name = "…"; i general-blokken
+        if not os.path.isfile(SHAIRPORT_CONF): raise FileNotFoundError(SHAIRPORT_CONF + " finnes ikke – hopper over")
+        with open(SHAIRPORT_CONF) as fh: conf = fh.read()
+        new_conf, n = re.subn(r'^(\s*name\s*=\s*)"[^"]*";', lambda m: m.group(1) + '"' + name + '";', conf, count=1, flags=re.M)
+        if n and new_conf != conf:
+            with open(SHAIRPORT_CONF, "w") as fh: fh.write(new_conf)
+            subprocess.run(["systemctl", "try-restart", "shairport-sync"], **q)
+    except Exception as e:
+        print("navn/AirPlay:", e, flush=True)
+    try:   # Spotify: ki-spotify leser KI_AMP_NAME – drop-in overstyrer /etc/ki-amp.env
+        if not os.path.isfile("/etc/systemd/system/ki-spotify.service"): raise FileNotFoundError("ki-spotify er ikke installert – hopper over")
+        os.makedirs(os.path.dirname(SPOTIFY_DROPIN), exist_ok=True)
+        with open(SPOTIFY_DROPIN, "w") as fh:
+            fh.write('[Service]\nEnvironment="KI_AMP_NAME=%s"\n' % name.replace("%", "%%"))
+        subprocess.run(["systemctl", "daemon-reload"], **q)
+        subprocess.run(["systemctl", "try-restart", "ki-spotify"], **q)
+    except Exception as e:
+        print("navn/Spotify:", e, flush=True)
+    try:
+        subprocess.run(["bluetoothctl", "system-alias", name], **q)
+    except Exception as e:
+        print("navn/Blåtann:", e, flush=True)
+    print(f"navn: «{name}» satt for AirPlay/Spotify/Blåtann", flush=True)
 
 
 def update_settings(patch):
@@ -1380,7 +1467,7 @@ def setup_buttons():
         else:
             b.when_pressed = lambda n=name: _safe(set_input, n)
         objs.append(b)
-    p = mcp_btns["power"] if mcp_btns else (_mk(Button, BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0) or _Dummy())
+    p = mcp_btns["power"] if mcp_btns else ((BTN_POWER is not None and _mk(Button, BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0)) or _Dummy())
     _hold_btn(p, lambda: set_power(not state["power"]), lambda: system_reboot(why="POWER holdt"),   # hold 3 s = omstart
               key="reboot", info=lambda: ("Omstart", "Fortsett å holde"))
     objs.append(p)
@@ -1406,7 +1493,7 @@ def setup_buttons():
 
     _hold_btn(sw, sw_released, sw_held)
     objs.append(sw)
-    print(f"Knapper klare ({BOARD}): " + (", ".join(f"{n}=GPIO{p}" for n, p in BTN.items()) + f", power=GPIO{BTN_POWER}" if not mcp_btns else "via MCP23017 + knapp bak GPIO 15") + f", encoder={ENC}", flush=True)
+    print(f"Knapper klare ({BOARD}): " + (", ".join(f"{n}=GPIO{p}" for n, p in BTN.items()) + (f", power=GPIO{BTN_POWER}" if BTN_POWER is not None else ", power=bare knapp bak (MCP mangler)") if not mcp_btns else "via MCP23017 + knapp bak GPIO 15") + f", encoder={ENC}", flush=True)
     return objs
 
 
@@ -1580,9 +1667,9 @@ async def pairing_task():
             elif dev and dev != _pairing_known:   # en ny enhet koblet til
                 bt_pairing(False, "connected"); apply_input()
             elif HW and "airbt" in node_leds:
-                node_leds["airbt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2
+                node_leds["airbt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 * led_scale()
             elif HW and "bt" in leds:
-                leds["bt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 > 0.5
+                leds["bt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 > 0.5 and led_scale() > 0
         await asyncio.sleep(0.05)
 
 
@@ -2119,7 +2206,7 @@ def main():
     if settings()["vstart"] and str(settings()["vstart"]).isdigit() and VSTART[int(settings()["vstart"])]:
         state["volume"] = VSTART[int(settings()["vstart"])]   # startvolum
     apply_power(); changed()
-    if BOARD == "node" and HW:   # Blåtann-navnet følger spillernavnet («Skjold Node»)
+    if BOARD == "node" and HW and NAME == NAME_ENV:   # Blåtann-navnet følger spillernavnet («Skjold Node»); ellers apply_name
         threading.Thread(target=lambda: subprocess.run(["bluetoothctl", "system-alias", NAME], check=False, timeout=10,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL), daemon=True).start()
     threading.Thread(target=follow_source, daemon=True).start()   # auto-kilde (kan slås av) + BT-talemeldinger
@@ -2140,8 +2227,25 @@ def main():
         if cand and os.path.isdir(cand):
             webdir = cand; break
     if webdir and os.path.isdir(webdir):
-        async def h_index(_r): return web.FileResponse(os.path.join(webdir, "index.html"), headers={"Cache-Control": "no-cache"})
-        app.add_routes([web.get("/", h_index), web.get("/index.html", h_index), web.static("/app", webdir)])
+        root = os.path.realpath(webdir)
+        mimetypes.add_type("application/manifest+json", ".webmanifest"); mimetypes.add_type("image/svg+xml", ".svg")
+        mimetypes.add_type("text/javascript", ".js"); mimetypes.add_type("font/woff2", ".woff2")
+
+        async def h_index(_r): return web.FileResponse(os.path.join(root, "index.html"), headers={"Cache-Control": "no-cache"})
+
+        async def h_web(r):
+            """Hele web-app-mappa på '/' (icons/, manifest.webmanifest, assets/ …). Ingen sti ut av mappa."""
+            rel = r.match_info.get("path", "")
+            if rel.startswith("api/") or "\x00" in rel: raise web.HTTPNotFound()
+            full = os.path.realpath(os.path.join(root, rel))
+            if full != root and not full.startswith(root + os.sep): raise web.HTTPNotFound()
+            if os.path.isdir(full): full = os.path.join(full, "index.html")
+            if not os.path.isfile(full): raise web.HTTPNotFound()
+            ct = mimetypes.guess_type(full)[0] or "application/octet-stream"
+            cache = "no-cache" if full.endswith((".html", ".webmanifest")) or os.path.basename(full) in ("sw.js", "service-worker.js") else "max-age=3600"
+            return web.FileResponse(full, headers={"Cache-Control": cache, "Content-Type": ct})
+        app.add_routes([web.get("/", h_index), web.get("/index.html", h_index), web.static("/app", root),
+                        web.get("/{path:.+}", h_web)])   # sist: /api/* og /app/ vinner
     app.on_startup.append(on_startup); app.on_cleanup.append(on_cleanup)
     web.run_app(app, host="0.0.0.0", port=PORT, print=None)
 

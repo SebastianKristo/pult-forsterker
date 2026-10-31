@@ -93,6 +93,10 @@ def shots(layout, outdir, live_client=None):
     shot("17_standby_idle", FakeClient(st(**AIRPLAY, playing=False, paused=True)), lambda ui, ck: setattr(ui, "last_act", ck.t - 200))
     shot("18_offline", FakeClient(online=False), advance=7)
     shot("19_play_aux_idle", FakeClient(st(input="aux", inputs=["radio", "airplay", "bt", "aux", "usb"], title="", artist="", station="", playing=False)))
+    saved = {"title": "Lagret", "sub": "Favoritt 2 · P4 Norge", "saved": 2, "p": 1}
+    shot("21_lagret_pop", FakeClient(), pre=lambda c: c.status.update(hold=saved), advance=0.1)
+    shot("22_lagret", FakeClient(), pre=lambda c: c.status.update(hold=saved), advance=0.8)
+    shot("23_lagret_airplay", FakeClient(st(**AIRPLAY)), pre=lambda c: c.status.update(hold=saved), advance=0.8)
     if live_client is not None:
         live_client.poll_once(); shot("20_live_daemon", live_client)
     return out

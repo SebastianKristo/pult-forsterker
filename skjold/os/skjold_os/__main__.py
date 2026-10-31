@@ -36,10 +36,13 @@ def main(argv=None):
         client = DaemonClient(a.api, a.hz).start()
     if a.sim:
         sink = PngSink(a.sim, a.every); bl = Backlight(sk.get("bakgrunnslys", {}), sim=True)
+    elif a.layout.startswith("s1"):
+        from .display_s1 import open_s1
+        sink, bl = open_s1(a.layout)
     else:
         sink = LumaST7735(sk); bl = Backlight(sk.get("bakgrunnslys", {}))
     print("Skjold OS: layout=%s api=%s pins=%s %s" % (a.layout, a.api, src, "sim→" + a.sim if a.sim else "st7735"), flush=True)
-    Ui(client, lay, sink, bl, boot=not a.no_boot).run(max_frames=a.frames)
+    Ui(client, lay, sink, bl, model="S1" if a.layout.startswith("s1") else "NODE", boot=not a.no_boot).run(max_frames=a.frames)
     return 0
 
 

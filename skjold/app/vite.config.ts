@@ -2,8 +2,8 @@ import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
 import type { Plugin } from 'vite';
 
-// ki_amp_daemon.py serverer index.html på '/' men resten av mappen under '/app/'.
-// Derfor legges JS og CSS inn i index.html, så siden virker både på '/', '/app/' og i Capacitor.
+// ki_amp_daemon.py serverer nå hele mappen på '/' (og fortsatt under '/app/'), så inlining er ikke lenger nødvendig der,
+// men JS og CSS legges fortsatt inn i index.html: én fil å cache, og den virker også fra eldre daemoner og file://.
 function inlineEntry(): Plugin {
   return {
     name: 'skjold-inline-entry',

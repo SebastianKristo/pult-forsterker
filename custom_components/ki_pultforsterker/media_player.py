@@ -12,11 +12,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, source_label, status_inputs
 from .entity import KiAmpEntity
 
-SOURCES = {"radio": "Radio", "airplay": "AirPlay", "bt": "Bluetooth", "aux": "AUX 1", "aux2": "AUX 2", "usb": "USB"}
-SOURCES_REV = {v: k for k, v in SOURCES.items()}
+PLAYABLE = ("airplay", "bt", "radio", "spotify")   # kilder med «spiller nå» og avspillingskontroll
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
@@ -36,7 +35,6 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
         MediaPlayerEntityFeature.PLAY | MediaPlayerEntityFeature.PAUSE | MediaPlayerEntityFeature.STOP
         | MediaPlayerEntityFeature.NEXT_TRACK | MediaPlayerEntityFeature.PREVIOUS_TRACK
     )
-    _attr_source_list = list(SOURCES.values())
 
     def __init__(self, c) -> None:
         super().__init__(c, "amp")
@@ -45,7 +43,7 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
         # avspillingskontroll bare for AirPlay og Bluetooth (AUX/USB styres fra kilden)
-        if self.d.get("input") in ("airplay", "bt", "radio"):
+        if self.d.get("input") in PLAYABLE:
             return self._attr_supported_features | self._TRANSPORT | MediaPlayerEntityFeature.PLAY_MEDIA
         return self._attr_supported_features
 
@@ -57,7 +55,7 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
     def state(self) -> MediaPlayerState:
         if not self.d.get("power"):
             return MediaPlayerState.OFF
-        if self.d.get("input") in ("airplay", "bt", "radio"):
+        if self.d.get("input") in PLAYABLE:
             if self.d.get("playing"):
                 return MediaPlayerState.PLAYING
             return MediaPlayerState.PAUSED if self.d.get("paused") else MediaPlayerState.IDLE
@@ -65,7 +63,11 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
 
     @property
     def source(self) -> str:
-        return SOURCES.get(self.d.get("input"), "AirPlay")
+        return source_label(self.d.get("input") or "airplay")
+
+    @property
+    def source_list(self) -> list[str]:
+        return [source_label(i) for i in status_inputs(self.d)]
 
     @property
     def volume_level(self) -> float:
@@ -121,7 +123,9 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
 
     @property
     def extra_state_attributes(self) -> dict:
-        return {"bt_device": self.d.get("bt_device", ""), "bt_pairing": bool(self.d.get("bt_pairing"))}
+        return {"bt_device": self.d.get("bt_device", ""), "bt_pairing": bool(self.d.get("bt_pairing")),
+                "spotify_connected": bool((self.d.get("spotify") or {}).get("connected")),
+                "board": self.d.get("board", "")}
 
     async def async_turn_on(self) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_power(True))
@@ -130,7 +134,8 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_power(False))
 
     async def async_select_source(self, source: str) -> None:
-        self.coordinator.async_set_updated_data(await self.coordinator.api.set_input(SOURCES_REV[source]))
+        self.coordinator.async_set_updated_data(await self.coordinator.api.set_input(
+            next((i for i in status_inputs(self.d) if source_label(i) == source), source)))
 
     async def async_set_volume_level(self, volume: float) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_volume(round(volume * 100)))

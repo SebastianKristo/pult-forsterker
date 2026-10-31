@@ -59,3 +59,12 @@ Pinner leses fra `$SKJOLD_PINS`, `/etc/skjold/node_pins.json` eller repoets `skj
 `sudo skjold/os/install.sh` – kopierer til `/opt/skjold/os`, installerer og starter `skjold-os.service`
 (`/opt/skjold/venv/bin/python -m skjold_os`, After=ki-amp.service). Ekstra argumenter i `/etc/default/skjold-os`.
 Fra `skjold/node/driver/installer_node.sh`: `"$HER/../os/install.sh"`.
+
+## Skjold S1 (`--layout s1-oled` / `s1-tft`)
+Fra `skjold/design/s1/pultforsterker_revb_metall.js` (drawOLED0, drawTFT0, overlay()).
+- `layouts/s1_oled.py` – 128×64 SSD1309, ren 1-bit på pikselrutenettet (`MonoCanvas`: ingen supersampling,
+  DejaVu uten kantutjevning med BASIC-layout, egen 5 px pikselfont for versal-etikettene, prikkede spor).
+- `layouts/s1_tft.py` – 320×240; overleggene er de samme 128×64-tegningene skalert 2,5× fra y=40, som i designet.
+- `layouts/s1_common.py` – omstart, paring, hold/«Lagret», meny/radiomeny, kildebytte, ingen kontakt, oppstart.
+- `display_s1.py` – luma.oled ssd1309 (I²C 1, 0x3C, RST GPIO4; kontrast i stedet for bakgrunnslys) og
+  fbtft-framebuffer (RGB565), samme oppsett som `pi/oled_display.py`/`pi/tft_screen.py`.

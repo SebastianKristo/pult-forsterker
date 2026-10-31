@@ -6,7 +6,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, all_known_sources
 from .entity import KiAmpEntity
 
 
@@ -18,15 +18,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEnt
 class KiAmpSourceSensor(KiAmpEntity, SensorEntity):
     _attr_translation_key = "source"
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = ["radio", "airplay", "bt", "aux", "aux2", "usb"]
     _attr_icon = "mdi:audio-input-stereo-minijack"
 
     def __init__(self, c) -> None:
         super().__init__(c, "source")
+        # alle verdier sensoren kan rapportere (supersett, så kildebytte på daemonen aldri gir ugyldig tilstand)
+        self._attr_options = all_known_sources(c.data)
 
     @property
     def native_value(self) -> str:
-        return self.coordinator.data.get("input", "airplay")
+        v = self.coordinator.data.get("input", "airplay")
+        return v if v in self._attr_options else None
 
 
 class KiAmpTitleSensor(KiAmpEntity, SensorEntity):
