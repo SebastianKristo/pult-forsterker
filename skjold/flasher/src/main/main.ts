@@ -75,7 +75,8 @@ async function flash(req: FlashRequest): Promise<FlashResult> {
   } catch (e) {
     let message = e instanceof Error ? e.message : String(e);
     if (process.platform === 'darwin' && /EPERM|operation not permitted/i.test(message) && /\/dev\/r?disk/.test(message)) {
-      message += '\n\nmacOS stoppet tilgangen til SD-kortet. Åpne Systeminnstillinger → Personvern og sikkerhet → Full disktilgang, ' +
+      message += '\n\nKortet kan være skrivebeskyttet: skyv låsebryteren på SD-kortet/adapteren opp mot kontaktene og sett det inn igjen. ' +
+        'Hjelper ikke det: macOS stoppet tilgangen til SD-kortet. Åpne Systeminnstillinger → Personvern og sikkerhet → Full disktilgang, ' +
         'legg til «Skjold Flasher» og slå den på, avslutt appen helt (⌘Q) og prøv igjen.';
     }
     send({ phase: 'error', percent: 0, message });

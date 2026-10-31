@@ -29,6 +29,7 @@ async function main(): Promise<void> {
     // Finn disken på nytt og sjekk den igjen her, med forhøyede rettigheter – aldri systemdisker.
     const drive = (await drivelist.list()).find(d => d.device === job.device);
     if (!drive) throw new Error(`Fant ikke ${job.device}. Er kortet tatt ut?`);
+    if (drive.isReadOnly) throw new Error('Kortet er skrivebeskyttet. Skyv låsebryteren på siden av SD-kortet/adapteren opp (mot kontaktene), sett det inn igjen og prøv på nytt.');
     if (!isSafeTarget(drive)) throw new Error(`${job.device} er ikke en flyttbar disk – avbryter.`);
 
     const source = new sourceDestination.File({ path: job.image });
