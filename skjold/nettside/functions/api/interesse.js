@@ -1,6 +1,6 @@
 // Cloudflare Pages Function: /api/interesse
 // POST: lagrer en interessemelding i KV (binding INTERESSE). Tar imot JSON (fetch fra skjemaet)
-//       eller application/x-www-form-urlencoded (skjema uten JS -> 303 til /takk/ eller /takk/feil/).
+//       eller application/x-www-form-urlencoded (skjema uten JS -> 303 til /takk/ eller /takk/feil/, /en/thanks/ eller /en/thanks/error/ når lang=en).
 // GET  ?nokkel=<ADMIN_NOKKEL>: lister alle meldinger som JSON (legg til &format=csv for CSV).
 // Miljø: INTERESSE (KV, påkrevd), ADMIN_NOKKEL (hemmelig), VARSEL_WEBHOOK (valgfri, Discord/Slack/Homey).
 //
@@ -21,9 +21,17 @@ async function sha256(s) {
   return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function svar(erSkjema, ok, status, url) {
+// Språk for omdirigeringen: skjemafeltet `lang` (eller `spraak`), ellers Referer-stien (/en/...). Norsk er standard.
+function spraakFra(b, request) {
+  const v = b && typeof b === 'object' ? (b.lang || b.spraak) : '';
+  if (v === 'en') return 'en';
+  if (v) return 'no';
+  try { return new URL(request.headers.get('referer') || '').pathname.startsWith('/en/') ? 'en' : 'no'; } catch { return 'no'; }
+}
+
+function svar(erSkjema, ok, status, url, lang = 'no') {
   if (erSkjema) {
-    const dest = new URL(ok ? '/takk/' : '/takk/feil/', url);
+    const dest = new URL(lang === 'en' ? (ok ? '/en/thanks/' : '/en/thanks/error/') : (ok ? '/takk/' : '/takk/feil/'), url);
     return new Response(null, { status: 303, headers: { Location: dest.pathname, 'Cache-Control': 'no-store' } });
   }
   return Response.json(ok ? { ok: true } : { ok: false, feil: status }, { status: ok ? 200 : status, headers: { 'Cache-Control': 'no-store' } });
@@ -33,35 +41,37 @@ export async function onRequestPost({ request, env, waitUntil }) {
   const url = new URL(request.url);
   const ct = (request.headers.get('content-type') || '').toLowerCase();
   const erSkjema = ct.startsWith('application/x-www-form-urlencoded') || ct.startsWith('multipart/form-data');
+  let lang = spraakFra(null, request);
 
   const origin = request.headers.get('origin');
-  if (origin && origin !== url.origin) return svar(erSkjema, false, 403, url);
-  if (!env.INTERESSE) return svar(erSkjema, false, 503, url);
+  if (origin && origin !== url.origin) return svar(erSkjema, false, 403, url, lang);
+  if (!env.INTERESSE) return svar(erSkjema, false, 503, url, lang);
 
   const lengde = +(request.headers.get('content-length') || 0);
-  if (lengde > MAKS_BYTES) return svar(erSkjema, false, 413, url);
+  if (lengde > MAKS_BYTES) return svar(erSkjema, false, 413, url, lang);
 
   let b;
   try {
     const tekst = await request.text();
-    if (tekst.length > MAKS_BYTES) return svar(erSkjema, false, 413, url);
-    if (erSkjema && ct.startsWith('multipart/')) return svar(erSkjema, false, 415, url);
+    if (tekst.length > MAKS_BYTES) return svar(erSkjema, false, 413, url, lang);
+    if (erSkjema && ct.startsWith('multipart/')) return svar(erSkjema, false, 415, url, lang);
     b = erSkjema ? Object.fromEntries(new URLSearchParams(tekst)) : JSON.parse(tekst);
     if (!b || typeof b !== 'object' || Array.isArray(b)) throw 0;
-  } catch { return svar(erSkjema, false, 400, url); }
+    lang = spraakFra(b, request);
+  } catch { return svar(erSkjema, false, 400, url, lang); }
 
   // Honningfelt: roboter fyller det ut. Svar "ok" så de ikke prøver på nytt, men lagre ingenting.
-  if (rens(b.nettsted, 200)) return svar(erSkjema, true, 200, url);
+  if (rens(b.nettsted, 200)) return svar(erSkjema, true, 200, url, lang);
 
   const navn = rens(b.navn, 120);
   const epost = rens(b.epost, 200).toLowerCase();
-  if (!navn || !EPOST_RE.test(epost)) return svar(erSkjema, false, 422, url);
+  if (!navn || !EPOST_RE.test(epost)) return svar(erSkjema, false, 422, url, lang);
 
   // Rate-limit per IP (bare hash lagres). KV er "eventually consistent", så dette er et grovt vern.
   const ip = request.headers.get('cf-connecting-ip') || 'ukjent';
   const rlKey = 'rl:' + (await sha256(ip + ':' + (env.ADMIN_NOKKEL || 'skjold'))).slice(0, 32);
   const teller = parseInt((await env.INTERESSE.get(rlKey)) || '0', 10) || 0;
-  if (teller >= GRENSE) return svar(erSkjema, false, 429, url);
+  if (teller >= GRENSE) return svar(erSkjema, false, 429, url, lang);
   await env.INTERESSE.put(rlKey, String(teller + 1), { expirationTtl: VINDU_S });
 
   const rec = {
@@ -69,7 +79,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     produkt: PRODUKT.includes(b.produkt) ? b.produkt : 'Begge',
     type: TYPE.includes(b.type) ? b.type : 'done',
     melding: rens(b.melding, 2000),
-    spraak: b.spraak === 'en' ? 'en' : 'no',
+    spraak: lang,
     side: rens(b.side, 100),
     tid: new Date().toISOString(),
     land: request.headers.get('cf-ipcountry') || '',
@@ -83,7 +93,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     }).catch(() => {});
     if (waitUntil) waitUntil(p); else await p;
   }
-  return svar(erSkjema, true, 200, url);
+  return svar(erSkjema, true, 200, url, lang);
 }
 
 function likTid(a, b) {
