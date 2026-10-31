@@ -57,7 +57,7 @@ Kortet er fryst etter ruting (commit `9ae80c2`) og de ferdige produksjonsfilene 
       (2×20 **hann**), J13, sikringsklips F1 + 5 A-sikring 5×20, C1/C110 1000 µF/35 V Ø10 (≤ 16 mm høye), relé K1 (SRD-05VDC),
       USB-A J15–J18, 12,288 MHz-oscillator hvis JLC mangler den.
 - [ ] **D2.** Kjøleribbe 20 × 20 × 10 mm + termisk tape, NTC 10 k (B 3950) med ledning til J24, kabelsett (JST XH 3P/5P/6P,
-      USB-C panelkabler – se `kabinett/skjold-s1/`).
+      USB-C panelkabler – se `kabinett/skjold-s1/`). Flatkabel Pi→J5: **15–20 cm** (10 cm rekker ikke rundt bakkanten).
 
 ## E. Når kortene kommer – før Pi og høyttalere kobles til
 

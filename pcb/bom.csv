@@ -25,12 +25,12 @@ C5,100n,C_0603_1608Metric,C14663,Boot
 R1,330k,R_0603_1608Metric,C23137,EN divider (UVLO ~9 V)
 R2,49.9k,R_0603_1608Metric,C23184,EN divider
 R3,243k,R_0603_1608Metric,C667189,RT 400 kHz
-R4,56k,R_0603_1608Metric,C23206,"FB top (5,2 V ut)"
-R5,10k,R_0603_1608Metric,C25804,"FB bottom (56k/10k -> 5,28 V; 10,2k ville gitt 5,19 V men finnes ikke som Basic)"
+R4,33k,R_0603_1608Metric,C4216,"FB top (33k/6,2k -> 5,06 V)"
+R5,6.2k,R_0603_1608Metric,C4260,"FB bottom (5,06 V)"
 R6,13k,R_0603_1608Metric,C22797,Comp R
 C6,3.3n,C_0603_1608Metric,C1613,Comp C
 C7,47p,C_0603_1608Metric,C1671,Comp Cp
-L1,10uH 6A SRP1245A-100M,L_Bourns_SRP1245A,,Buck-spole 10 µH – Bourns SRP1245A-100M (søk i JLC-UI; alternativ: CEC SMRH125-100M C241221 4 A på samme fotavtrykk)
+L1,10uH 6A SRP1245A-100M,L_Bourns_SRP1245A,C2042471,Buck-spole 10 µH – Bourns SRP1245A-100M (søk i JLC-UI; alternativ: CEC SMRH125-100M C241221 4 A på samme fotavtrykk)
 D2,SS56 (SMB),D_SMB,,Catch-diode 60 V 5 A
 C8,47u/16V,C_1210_3225Metric,C77101,Cout
 C9,47u/16V,C_1210_3225Metric,C77101,Cout
@@ -48,7 +48,7 @@ U9,AMS1117-3.3,SOT-223-3_TabPin2,C6186,"LDO 3,3 V_SW (DAC, ADC, OLED/TFT) fra 5V
 C75,10u,C_0805_2012Metric,C15850,LDO_SW in
 C76,10u,C_0805_2012Metric,C15850,LDO_SW out
 J5,RPi 40-pin,PinHeader_2x20_P2.54mm_Vertical,C50980,Raspberry Pi 40-pin (flatkabel)
-J6,5V -> PI,TerminalBlock_bornier-2_P5.08mm,C8465,5 V til Pi 4 (18 AWG til header pinne 2/6)
+J6,5V -> PI,TerminalBlock_bornier-2_P5.08mm,C8465,"5 V til Pi 4 (18 AWG til header pinne 2/6). Står med pinnene i x = 82 – utenfor Pi-ens USB3-blokk (x 84,5–104,5 under kortet)"
 U12,MCP23017-E/SS,SSOP-28_5.3x10.2mm_P0.65mm,C506653,"I2C I/O-ekspander 0x20: knapper, LED-ringer, USB-mux"
 R56,10k,R_0603_1608Metric,C25804,MCP RESET pull-up
 C74,100n,C_0603_1608Metric,C14663,MCP VDD

@@ -87,10 +87,10 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
    verifisert mot lcsc.com/jlcpcb.com i granskningen (se `GRANSKNING_REV_B.md`), men lager endrer seg – **les beskrivelsen JLCPCB viser
    per linje** og sammenlign med Comment-kolonnen (verdi, spenning, pakke). IC-ene: TPS54560DDAR (C31966), PCM5102APWR (C107671),
    PCM1808PWR (C55513), TPA3116D2DADR (C50144), PGA2311UA (C486061), FE1.1s (C6706491), PCM2900C (C180425), TS3USB221RSER (C130085),
-   MCP23017 (C506653), TPA6132A2 (C69901), 12,288 MHz-oscillator (C437124, lite lager – reserve C789111 SiTime 3225 eller C253724 KDS).
+   MCP23017 (C506653), TPA6132A2 (C69901), 12,288 MHz-oscillator (C437124, lite lager – reserve C789111 SiTime 3225 eller C253724 KDS), L1 SRP1245A-100M (C2042471; alternativ CEC SMRH125-100M C241221 på samme pads).
    **Uten LCSC-kode (linjene ligger i BOM/CPL med tom kode – JLCPCB ber deg velge del):** U14 74LVC1G14 SOT-23-5 (SN74LVC1G14DBVR),
    D1 SMBJ28A (TVS 28 V, SMB), D2 SS56 Schottky 60 V 5 A (SMB; SMA-utgaven C65009 passer også på padene), D5 zener 12 V SOD-123 (BZT52C12),
-   Q11 P-MOSFET TO-252 (≥ −40 V, ≥ 10 A, f.eks. AOD4185/SUD50P04), L1 Bourns SRP1245A-100M (10 µH, 6 A; alternativ CEC SMRH125-100M C241221),
+   Q11 P-MOSFET TO-252 (≥ −40 V, ≥ 10 A, f.eks. AOD4185/SUD50P04),
    R21–R24 18 Ω 1206 (snubber; søk «1206 18R» – NB: 1206W4F1800T5E er 180 Ω).
    Alle IC-ene er «extended parts» (engangsgebyr per type).
    **THT-deler er ikke i BOM/CPL** – de står i `ki_pultforsterker_main_tht_handlodding.csv` og loddes selv (punkt 5).

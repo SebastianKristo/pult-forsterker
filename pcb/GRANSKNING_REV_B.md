@@ -60,7 +60,7 @@ pastemaske stemmer 100 %.
 | J5 | C50982 (hunn) | C50980 | 2 × 20 hann 2,54 mm |
 | J8, J9 | C144396 | C157991 | JST B5B-XH-A |
 | J11, J12 | C2765186 | C165948 | HRO TYPE-C-31-M-12 |
-| L1 | C135446 (PTC-sikring!) | *(tom)* | Bourns SRP1245A-100M – velges i JLC-UI (alt. C241221) |
+| L1 | C135446 (PTC-sikring!) | C2042471 | Bourns SRP1245A-100M (alt. C241221 CEC SMRH125-100M, passer på padene) |
 | D2 | C32569 (uverifisert) | *(tom)* | SS56 SMB – velges i JLC-UI (SMA-utgaven C65009 passer på padene) |
 | R21–R24 | C17949 (2,4 kΩ) | *(tom)* | 18 Ω 1206 – velges i JLC-UI |
 | F1 | C70283 (uverifisert) | *(tom)* | THT, kjøpes selv (Keystone 3512 / C3130) |
@@ -71,3 +71,19 @@ pastemaske stemmer 100 %.
 - JLCPCBs faktiske 0°-orientering per LCSC-del (varierer med produsentens tape) – derfor punkt C5 i sjekklisten.
 - Mekanisk passform av SMRH125-100M på L1-footprinten hvis SRP1245A ikke finnes (pads er 12 × 12-klassen, men ikke målt).
 - Skjema-riktighet (nettliste) – det ble gjort i de tidligere granskningene før frysen, ikke i denne.
+
+## Sluttkontroll (tre nye uavhengige granskere på de regenererte filene)
+
+| Funn | Alvor | Status |
+|---|---|---|
+| PGA2311 hadde VD+ på alltid-på 5 V, men VA+/VA− på 5V_SW: i standby 5 V differanse mellom forsyningene, og DAC-en (alltid på) driver inn i en strømløs analogdel | **kritisk** | **Rettet**: FB1 (VA+), LM2662 (VA−) og MUTE-pullup flyttet til alltid-på 5 V; PGA mutes i programvare i standby (daemonen gjorde det allerede) |
+| Buck 5,28 V > 5,25 V-grensen for PGA2311/PCM1808/USB | bør fikses | **Rettet**: 33 k/6,2 k (Basic-deler) → 5,06 V |
+| VIN24 (hele forsterkerstrømmen) gjennom én Ø0,5-via | bør fikses | **Rettet**: Ø1,3/0,75 + parallell via |
+| Ekstra 24V_AMP-via overlappet skinnen bare 0,1 mm | info | **Rettet**: skinnen forlenget over viaen |
+| J6 (5 V-terminal) sto rett over Pi-ens USB3-blokk (1–2 mm margin til metallskallet) | bør fikses | **Rettet**: J6 flyttet/rotert så pinnene står ved x = 82 (utenfor blokken, som dekker x 84,5–104,5) |
+| J5-flatkabel 10 cm er for kort (Pi-header → rundt bakkanten → J5 ≈ 115–120 mm) | bør fikses | Dokumentert: bruk 15–20 cm kabel |
+| MCP23017 INTA (push-pull) på GPIO 14 = UART TXD | bør fikses | Allerede håndtert: daemonen setter INTA open-drain, install.sh setter `enable_uart=0` |
+| Kabinett: USB-C-panelkontakter PC1/PC2 kolliderer med høyttalerpolenes muttere og med kortkant/C110; USB-A-vinduene i venstre side er speilvendt (for/bak); POWER-knapp/KCD1/12 mm-knapper har for lite dybde; stolpehøyde 25 mm gir z 28,0; 15 mm kjøleribbe treffer lokket | **kritisk for kassen, ikke for kortet** | Ikke rettet her – se `kabinett/skjold-s1/` (må rettes før kassen produseres) |
+| Alle øvrige punkter: pinne-for-pinne for alle IC-er, Pi-header, strømvei, polaritet, USB, gerber (hull-til-hull 0,52, ingen via-i-pad, alle nett sammenhengende), BOM/CPL (24 koder stikkprøvd) | – | Verifisert OK |
+
+Etter rettelsene er kortet rutet på nytt og alle automatiske kontroller (DRC, hull-til-hull, via-i-pad, flaskehals) kjørt igjen.
