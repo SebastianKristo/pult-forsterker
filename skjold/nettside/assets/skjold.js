@@ -65,7 +65,11 @@
     });
   }
 
-  // Interesseskjema: sender JSON med fetch. Uten JS poster skjemaet vanlig og får /takk/ tilbake.
+  // Interesseskjema: sender JSON med fetch. Uten JS poster skjemaet vanlig og får /takk/ (eller /en/thanks/) tilbake.
+  var en = /^en\b/i.test(root.lang || '');
+  var T = en
+    ? { bad: 'Enter a name and a valid email.', err: 'Could not send. Try again, or send an email.', sender: 'Sending …', mange: 'Too many attempts. Wait a little and try again.' }
+    : { bad: 'Skriv inn navn og en gyldig e-post.', err: 'Det gikk ikke å sende. Prøv igjen, eller send en e-post.', sender: 'Sender …', mange: 'For mange forsøk. Vent litt og prøv igjen.' };
   var form = document.querySelector('form[data-interesse]');
   if (form && window.fetch) {
     var feil = form.querySelector('.feil');
@@ -78,10 +82,10 @@
       var fd = new FormData(form);
       var body = {};
       fd.forEach(function (v, k) { body[k] = typeof v === 'string' ? v.trim() : ''; });
-      if (!body.navn || !re.test(body.epost || '')) { feil.textContent = form.getAttribute('data-bad'); return; }
+      if (!body.navn || !re.test(body.epost || '')) { feil.textContent = T.bad; return; }
       feil.textContent = '';
-      knapp.disabled = true; knapp.textContent = 'Sender …';
-      body.spraak = 'no'; body.side = location.pathname;
+      knapp.disabled = true; knapp.textContent = T.sender;
+      body.spraak = en ? 'en' : 'no'; body.lang = body.spraak; body.side = location.pathname;
       fetch(form.action, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(body) })
         .then(function (r) { if (!r.ok) throw r.status; return r.json(); })
         .then(function () {
@@ -89,10 +93,10 @@
           form.hidden = true; t.hidden = false; t.focus();
         })
         .catch(function (s) {
-          feil.textContent = s === 429 ? 'For mange forsøk. Vent litt og prøv igjen.' : form.getAttribute('data-err');
+          feil.textContent = s === 429 ? T.mange : T.err;
           knapp.disabled = false; knapp.textContent = tekst;
         });
     });
-    form.addEventListener('input', function () { if (feil.textContent && feil.textContent === form.getAttribute('data-bad')) feil.textContent = ''; });
+    form.addEventListener('input', function () { if (feil.textContent && feil.textContent === T.bad) feil.textContent = ''; });
   }
 })();

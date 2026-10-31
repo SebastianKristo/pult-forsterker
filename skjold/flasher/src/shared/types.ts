@@ -17,7 +17,7 @@ export interface ReleaseImage {
 }
 
 export interface SetupOptions {
-  device: 's1' | 'node-pi4' | 'node-pi3';
+  device: 's1' | 'node-pi4' | 'node-pi3' | 'core';
   preset: boolean;       // Wi-Fi/navn forhåndsinnstilt
   ssid: string;
   wifiPassword: string;

@@ -25,6 +25,7 @@ const DEVS: [string, string, string][] = [
   ['s1', 'Skjold S1', 'Forsterker · Raspberry Pi 4'],
   ['node-pi4', 'Skjold Node · Pi 4', 'Bare lydutgang · 3,5 mm, HDMI, USB eller I²S'],
   ['node-pi3', 'Skjold Node · Pi 3B', 'Bare lydutgang · 3,5 mm, HDMI, USB eller I²S'],
+  ['core', 'Skjold Core', 'Ren Raspberry Pi 4/3B · ingen kasse, knapper eller skjerm'],
 ];
 const STEPS = ['Velg SD-kort', 'Forhåndsinnstill', 'Skriv og verifiser', 'Ferdig'];
 
@@ -159,11 +160,12 @@ function page3(): string {
   const inst = r.install ? `<li>Første oppstart installerer Skjold fra nettet. Det tar 15–30 minutter, og Pi-en starter på nytt av seg selv${S.pre ? '' : ' (krever nettverkskabel når Wi-Fi ikke er forhåndsinnstilt)'}.</li>` : '';
   const hint = S.pre ? `«${esc(S.name)}» kobler seg til ${esc(S.ssid)} av seg selv. Skjermen viser IP-adressen når den er klar.`
     : 'Skjermen viser en QR-kode. Skann den med telefonen for å sette opp Wi-Fi og navn.';
+  const hintCore = DEVS[S.dev][0] === 'core' && !S.pre ? 'Core har ingen skjerm: koble Pi-en til ruteren med nettverkskabel, eller flash på nytt med Wi-Fi forhåndsinnstilt.' : null;
   return `<div class="check">✓</div><h1>SD-kortet er klart</h1>
     <div class="done"><ol>
-      <li>Ta ut kortet og sett det i Raspberry Pi-en i ${S.dev === 0 ? 'forsterkeren' : 'Node-en'}.</li>
+      <li>${DEVS[S.dev][0] === 'core' ? 'Ta ut kortet, sett det i Raspberry Pi-en og koble til høyttalere eller en forsterker.' : `Ta ut kortet og sett det i Raspberry Pi-en i ${S.dev === 0 ? 'forsterkeren' : 'Node-en'}.`}</li>
       <li>${S.dev === 0 ? 'Koble til strøm og slå på hovedbryteren bak.' : 'Koble til strøm.'}</li>
-      ${inst}<li>${hint}</li>
+      ${inst}<li>${hintCore ?? hint}</li>
       ${S.pre ? '<li>Skann QR-koden med telefonen når den er klar, for å åpne Skjold.</li>' : ''}
     </ol>
     ${S.pre && r.qr ? `<div class="qr"><img src="${r.qr}" alt="QR-kode"><span>${esc(r.url ?? '')}</span></div>` : ''}</div>

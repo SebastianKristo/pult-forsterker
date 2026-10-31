@@ -1,10 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://skjold.smarthjemexperten.no/</loc><lastmod>2026-10-31</lastmod></url>
-  <url><loc>https://skjold.smarthjemexperten.no/s1/</loc><lastmod>2026-10-31</lastmod></url>
-  <url><loc>https://skjold.smarthjemexperten.no/node/</loc><lastmod>2026-10-31</lastmod></url>
-  <url><loc>https://skjold.smarthjemexperten.no/programvare/</loc><lastmod>2026-10-31</lastmod></url>
-  <url><loc>https://skjold.smarthjemexperten.no/sammenlign/</loc><lastmod>2026-10-31</lastmod></url>
-  <url><loc>https://skjold.smarthjemexperten.no/stotte/</loc><lastmod>2026-10-31</lastmod></url>
-  <url><loc>https://skjold.smarthjemexperten.no/om/</loc><lastmod>2026-10-31</lastmod></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url><loc>https://skjold.smarthjemexperten.no/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/en/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/s1/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/s1/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/s1/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/s1/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/en/s1/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/s1/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/s1/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/s1/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/node/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/node/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/node/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/node/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/en/node/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/node/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/node/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/node/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/programvare/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/programvare/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/software/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/programvare/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/en/software/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/programvare/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/software/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/programvare/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/sammenlign/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/sammenlign/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/compare/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/sammenlign/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/en/compare/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/sammenlign/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/compare/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/sammenlign/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/stotte/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/stotte/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/support/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/stotte/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/en/support/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/stotte/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/support/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/stotte/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/om/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/om/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/om/"/>
+  </url>
+  <url><loc>https://skjold.smarthjemexperten.no/en/about/</loc><lastmod>2026-10-31</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/om/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/om/"/>
+  </url>
 </urlset>

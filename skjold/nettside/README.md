@@ -12,18 +12,19 @@ Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/d
 | `s1/`, `node/` | Produktsidene (hero-zoom, sticky bildesekvens, kilder, integrasjoner, spesifikasjoner) |
 | `programvare/`, `sammenlign/`, `stotte/`, `om/` | Øvrige sider |
 | `takk/`, `takk/feil/` | Svarsider for skjemaet uten JavaScript |
-| `404.html` | Feilside (Cloudflare Pages bruker den automatisk) |
+| `en/` | Engelske sider: `en/`, `en/s1/`, `en/node/`, `en/software/`, `en/compare/`, `en/support/`, `en/about/`, `en/thanks/`, `en/thanks/error/` |
+| `404.html` | Feilside på norsk og engelsk (Cloudflare Pages bruker den automatisk) |
 | `assets/skjold.css`, `assets/skjold.js` | Felles stil og oppførsel (reveal, zoom, bildesekvens, USB-demo, skjema) |
 | `assets/img/` | Renders som PNG og WebP (`<picture>`), `og.jpg` for deling |
 | `functions/api/interesse.js` | Pages Function: `POST`/`GET /api/interesse` |
 | `_headers`, `_redirects` | Sikkerhetshoder, caching og omdirigering fra de gamle `.dc.html`-navnene |
 | `sitemap.xml`, `robots.txt`, `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` | |
 
-Nav og bunntekst står i hver side. Endrer du menyen, må den endres i alle `index.html`-filene og i `404.html`.
+Nav og bunntekst står i hver side. Endrer du menyen, må den endres i alle `index.html`-filene (også under `en/`) og i `404.html`.
+
+**Språk:** norsk ligger på de vanlige adressene og engelsk under `/en/`. Hver side har `NO | EN` i menyen, som lenker til samme side på det andre språket, og har `hreflang` (`nb`, `en`, `x-default` = norsk) og `og:locale`. `sitemap.xml` lister begge språkene. Endrer du en tekst, endre den på begge språkene. Skjemaet på engelske sider sender `lang=en`, og da sender funksjonen besøkende uten JS til `/en/thanks/` eller `/en/thanks/error/`. Tekstene i `skjold.js` velges ut fra `<html lang>`.
 
 Animasjonene følger designet: reveal 0,9 s `cubic-bezier(.2,.7,.2,1)` med 28 px, hero-zoom 0,86 → 1 og sticky bildesekvens over 400vh med overtoning på 0,7 s. Med `prefers-reduced-motion: reduce`, eller uten JavaScript, vises alt uten animasjon, og bildesekvensen blir vanlige blokker.
-
-**Om-siden:** baktanke-teksten er en plassholder, merket med `<!-- PLASSHOLDER -->` i `om/index.html`. Eieren skriver den selv. Fjern klassen `plassholder` når teksten er på plass.
 
 ## Forhåndsvisning lokalt
 
@@ -73,7 +74,7 @@ Hver e-postadresse lagres som én nøkkel (`i:<epost>`). En ny innsending fra sa
 - Maks 8 KB per forespørsel, og Origin må være samme domene
 - Rate-limit: 5 innsendinger per IP per 10 min. Bare en hash av IP-en lagres, med TTL. KV er «eventually consistent», så dette er et grovt vern. Trengs mer, legg på en Cloudflare WAF rate limiting-regel for `/api/interesse`.
 - Admin-nøkkelen sammenlignes i konstant tid. CSV-eksporten nøytraliserer formler.
-- Uten JavaScript poster skjemaet vanlig og får `303` til `/takk/` eller `/takk/feil/`.
+- Uten JavaScript poster skjemaet vanlig og får `303` til `/takk/` eller `/takk/feil/` (`/en/thanks/` eller `/en/thanks/error/` når `lang=en`).
 
 ## Bilder
 
