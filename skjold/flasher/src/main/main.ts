@@ -73,7 +73,11 @@ async function flash(req: FlashRequest): Promise<FlashResult> {
     send({ phase: 'done', percent: 100 });
     return { ok: true, url, install: mode !== 'skjold', qr: 'data:image/svg+xml;base64,' + Buffer.from(qr).toString('base64') };
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
+    let message = e instanceof Error ? e.message : String(e);
+    if (process.platform === 'darwin' && /EPERM|operation not permitted/i.test(message) && /\/dev\/r?disk/.test(message)) {
+      message += '\n\nmacOS stoppet tilgangen til SD-kortet. Åpne Systeminnstillinger → Personvern og sikkerhet → Full disktilgang, ' +
+        'legg til «Skjold Flasher» og slå den på, avslutt appen helt (⌘Q) og prøv igjen.';
+    }
     send({ phase: 'error', percent: 0, message });
     return { ok: false, error: message };
   } finally {

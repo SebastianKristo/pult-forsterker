@@ -81,7 +81,9 @@ For å oppdatere web-UI-et på Pi-en: `skjold-web-<tag>.zip` pakkes ut til `/usr
    når filen er lastet ned med en nettleser): trykk *Cancel*, åpne Terminal og kjør
    `xattr -cr "/Applications/Skjold Flasher.app"` – det fjerner bare nettleserens karantenemerke. Ellers første gang:
    **høyreklikk → Åpne → Åpne** (eller *Systeminnstillinger → Personvern og sikkerhet → Åpne likevel*).
-4. Appen ber om administratorpassord når den skal skrive til SD-kortet (det krever macOS).
+4. Appen ber om administratorpassord når den skal skrive til SD-kortet (det krever macOS). Får du
+   «EPERM: operation not permitted, open '/dev/rdiskN'»: *Systeminnstillinger → Personvern og sikkerhet → Full disktilgang* →
+   legg til Skjold Flasher, slå på, avslutt appen med ⌘Q og prøv igjen.
 
 ### Windows
 1. Last ned `Skjold Flasher Setup <ver>.exe` og kjør den.
