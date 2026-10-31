@@ -200,7 +200,7 @@ else:
     LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
     LED_POWER = 11      # PWM
     PIN_DAC_XSMT = None
-BTN_POWER = {"radio": 3, "test": 26}.get(BOARD, 16)
+BTN_POWER = {"radio": 3, "test": 26, "main": None}.get(BOARD, 16)   # main: POWER via MCP23017 (GPIO16 er PGA2311 CS) + knapp bak GPIO 15
 
 SPOTIFY_ON = os.environ.get("KI_AMP_SPOTIFY", "1") == "1"   # Spotify Connect (librespot, ki-spotify.service)
 if BOARD == "node":
@@ -1467,7 +1467,7 @@ def setup_buttons():
         else:
             b.when_pressed = lambda n=name: _safe(set_input, n)
         objs.append(b)
-    p = mcp_btns["power"] if mcp_btns else (_mk(Button, BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0) or _Dummy())
+    p = mcp_btns["power"] if mcp_btns else ((BTN_POWER is not None and _mk(Button, BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0)) or _Dummy())
     _hold_btn(p, lambda: set_power(not state["power"]), lambda: system_reboot(why="POWER holdt"),   # hold 3 s = omstart
               key="reboot", info=lambda: ("Omstart", "Fortsett å holde"))
     objs.append(p)
@@ -1493,7 +1493,7 @@ def setup_buttons():
 
     _hold_btn(sw, sw_released, sw_held)
     objs.append(sw)
-    print(f"Knapper klare ({BOARD}): " + (", ".join(f"{n}=GPIO{p}" for n, p in BTN.items()) + f", power=GPIO{BTN_POWER}" if not mcp_btns else "via MCP23017 + knapp bak GPIO 15") + f", encoder={ENC}", flush=True)
+    print(f"Knapper klare ({BOARD}): " + (", ".join(f"{n}=GPIO{p}" for n, p in BTN.items()) + (f", power=GPIO{BTN_POWER}" if BTN_POWER is not None else ", power=bare knapp bak (MCP mangler)") if not mcp_btns else "via MCP23017 + knapp bak GPIO 15") + f", encoder={ENC}", flush=True)
     return objs
 
 
