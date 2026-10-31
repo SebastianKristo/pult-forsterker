@@ -141,11 +141,46 @@ def _drop_colliding_gnd():
         for t in gone: board.Remove(t)
         removed += len(gone)
     return removed
+# Utvid hvert strømspor så mye naboene tillater (mål fra POWER_NETS i build_board), med 0,16 mm klaring til alt annet kobber.
+WIDEN = dict(getattr(_bb, "POWER_NETS", WIDEN))
+_CL = pcbnew.FromMM(0.16); _EDGE = pcbnew.FromMM(0.35)
+_others_tr = [t for t in board.GetTracks() if t.GetClass() == "PCB_TRACK"]
+_others_via = [t for t in board.GetTracks() if t.GetClass() == "PCB_VIA"]
+_pads_all = [pd for fp in board.GetFootprints() for pd in fp.Pads()]
+def _max_width(t):
+    seg = pcbnew.SEG(t.GetStart(), t.GetEnd()); bb = pcbnew.BOX2I(t.GetBoundingBox()); bb.Inflate(pcbnew.FromMM(2.0))
+    lim = pcbnew.FromMM(WIDEN[t.GetNetname()])
+    net = t.GetNetname(); lay = t.GetLayer()
+    for o in _others_tr:
+        if o is t or o.GetNetname() == net or o.GetLayer() != lay or not bb.Intersects(o.GetBoundingBox()): continue
+        d = seg.Distance(pcbnew.SEG(o.GetStart(), o.GetEnd())) - o.GetWidth() // 2 - _CL
+        lim = min(lim, 2 * d)
+    for v in _others_via:
+        if v.GetNetname() == net or not bb.Contains(v.GetPosition()): continue
+        lim = min(lim, 2 * (seg.Distance(v.GetPosition()) - v.GetWidth() // 2 - _CL))
+    for pd in _pads_all:
+        if not bb.Intersects(pd.GetBoundingBox()): continue
+        if pd.GetNetname() == net:
+            # egen fin pad: ikke bredere enn paden der sporet går inn i den
+            if min(pd.GetSize().x, pd.GetSize().y) < pcbnew.FromMM(1.0) and (pd.HitTest(t.GetStart()) or pd.HitTest(t.GetEnd())):
+                lim = min(lim, max(pd.GetSize().x if pd.GetSize().x < pd.GetSize().y else pd.GetSize().y, t.GetWidth()))
+            continue
+        if not (pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH or pd.IsOnLayer(lay)): continue
+        shp = pd.GetEffectiveShape(lay)
+        d = shp.Distance(seg) if hasattr(shp, "Distance") else None
+        if d is None:
+            d = seg.Distance(pd.GetPosition()) - max(pd.GetSize().x, pd.GetSize().y) // 2
+        lim = min(lim, 2 * (d - _CL))
+    # kortkant
+    for q in (t.GetStart(), t.GetEnd()):
+        lim = min(lim, 2 * (min(q.x, q.y, pcbnew.FromMM(180) - q.x, pcbnew.FromMM(100) - q.y) - _EDGE))
+    return lim
 for t in board.GetTracks():
-    if t.GetClass() != "PCB_TRACK": continue
-    w = WIDEN.get(t.GetNetname())
-    if w and not near_fine(t.GetStart()) and not near_fine(t.GetEnd()):
-        orig_w[id(t)] = t.GetWidth(); t.SetWidth(pcbnew.FromMM(w)); n_w += 1
+    if t.GetClass() != "PCB_TRACK" or t.GetNetname() not in WIDEN or t.IsLocked(): continue
+    w = _max_width(t)
+    w = int(w // pcbnew.FromMM(0.05)) * pcbnew.FromMM(0.05)   # rund ned til 0,05
+    if w > t.GetWidth():
+        orig_w[id(t)] = t.GetWidth(); t.SetWidth(int(w)); n_w += 1
 print("utvidet spor:", n_w)
 
 def drc_items(board):
