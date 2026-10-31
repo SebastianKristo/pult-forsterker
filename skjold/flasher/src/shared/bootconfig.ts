@@ -93,7 +93,7 @@ cd "$D/pi"
 if [ "$DEVICE" = s1 ]; then
   KI_AMP_BOARD=main bash ./install.sh || { echo "install.sh feilet"; exit 1; }
 else
-  KI_AMP_OUT=headphones bash ./install.sh || { echo "install.sh feilet"; exit 1; }
+  KI_AMP_BOARD=node KI_AMP_OUT=headphones KI_AMP_NAME="$(get name "$(hostname)")" bash ./install.sh || { echo "install.sh feilet"; exit 1; }
   bash "$D/skjold/node/driver/installer_node.sh" || echo "ADVARSEL: installer_node.sh feilet"
 fi
 touch /var/lib/skjold-installed

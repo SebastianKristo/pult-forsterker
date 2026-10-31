@@ -33,7 +33,26 @@ API:
   GET  /api/presets                       radiokanaler 1–6 (Lyrion)
   POST /api/preset  {"n":1-6}             spill kanal n  |  {"n":1-6, "save":true} lagre det som spiller nå
   POST /api/presets {"import":true}       hent de 6 første favorittene fra Lyrion | {"presets":[{title,url,icon}…]}
+  POST /api/spotify {"event":"playing|paused|stopped|track_changed|session_connected|session_disconnected|volume_changed|…",
+                     "name":…, "artists":…, "album":…, "covers":…, "duration_ms":…, "position_ms":…, "user_name":…}
+                     Spotify Connect-hendelse fra librespot (--onevent /usr/local/bin/ki-spotify-event, se ki-spotify.service).
+                     «playing» bytter kilde til spotify når auto_input er på. Status: input «spotify», "spotify": {connected, playing, …}.
+  GET  /api/spotify  siste Spotify-status (samme som status["spotify"])
 Radio: Squeezelite-spilleren styres gjennom Lyrion Music Servers JSON-RPC (KI_AMP_LMS_SERVER, ellers oppdaget på nettet).
+Spotify Connect: librespot (fra raspotify-pakken) som ki-spotify.service, ut på ALSA-enheten «spotify» (softvol «KI Spotify» →
+  dmix → loopback → CamillaDSP), som de andre kildene. Spillernavn = KI_AMP_NAME. librespot har ingen fjernstyring, så
+  ◀◀/▶▶/pause virker ikke for Spotify (styres fra appen); bytte bort fra Spotify starter tjenesten på nytt for å stoppe lyden.
+
+KI_AMP_BOARD=node (Skjold Node: Pi 4/3B, lyd på 3,5 mm, 1,8" ST7735 eies av skjermprosessen):
+  Pinner leses fra /etc/skjold/node_pins.json (ellers repoets skjold/node/config/node_pins.json, ellers innebygde standardverdier).
+  Knapper til GND: RADIO GPIO5, AIR·BT GPIO6, ◀◀ GPIO13, ▶▶ GPIO26. Encoder A17/B27/SW22. LED-ringer GPIO12/16/20/21 (programvare-PWM).
+  Daemonen rører aldri GPIO23 (bakgrunnslys) eller SPI/skjermpinnene 7/8/9/10/11/24/25. Ingen strømknapp.
+  RADIO: trykk = velg radio / neste favoritt (meny), hold 1 s = spill valgt favoritt.
+  AIR·BT: trykk = bytt AirPlay ↔ Bluetooth, hold 2 s = BT-paring av/på.
+  ◀◀/▶▶: forrige/neste spor (neste/forrige favoritt i radio), hold begge 3 s = omstart.
+  Encoder: vri = volum, trykk = spill/pause, hold 3 s = «settings» (status["ui_event"] til skjermprosessen).
+  LED-ringer: RADIO = radio, AIR·BT = AirPlay/Bluetooth/Spotify (blinker under paring), ◀◀/▶▶ = noe spiller.
+  KI_AMP_NODE_BUTTONS=0 lar skjermprosessen eie knappene/encoderen (daemonen styrer da bare LED-ringene).
 """
 import asyncio
 import json
@@ -102,6 +121,60 @@ elif BOARD == "test":   # testbenk: Pi 4 alene, lyd på 3,5 mm, knapper/LED rett
     LED_POWER = 23
     PIN_DAC_XSMT = None
     ENC = (17, 27, 22)
+elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
+    NODE_FORBIDDEN = {0, 1, 2, 3, 7, 8, 9, 10, 11, 14, 15, 23, 24, 25}   # HAT-EEPROM, I²C, SPI/skjerm, UART, bakgrunnslys
+    NODE_DEFAULT = {"btn": {"radio": 5, "airbt": 6, "prev": 13, "next": 26},
+                    "hold": {"radio": 1.0, "airbt": 2.0, "prev": 3.0, "next": 3.0},
+                    "led": {"radio": 12, "airbt": 16, "prev": 20, "next": 21}, "enc": (17, 27, 22),
+                    "enc_hold": 3.0, "led_hz": 200, "led_active_high": True, "bounce": 0.05}
+
+    def _node_pins():
+        cfg = {k: (dict(v) if isinstance(v, dict) else v) for k, v in NODE_DEFAULT.items()}
+        here = os.path.dirname(os.path.abspath(__file__))
+        cands = [os.environ.get("KI_AMP_NODE_PINS", ""), "/etc/skjold/node_pins.json",
+                 os.path.join(here, "..", "skjold", "node", "config", "node_pins.json"),
+                 "/opt/skjold/src/skjold/node/config/node_pins.json"]
+        for path in cands:
+            if not path or not os.path.isfile(path):
+                continue
+            try:
+                with open(path) as fh:
+                    pj = json.load(fh)
+                for b in pj["knapper"]["liste"]:
+                    cfg["btn"][b["id"]] = int(b["gpio"])
+                    cfg["hold"][b["id"]] = float(b.get("hold_s", cfg["hold"].get(b["id"], 2.0)))
+                for l in pj.get("leds", {}).get("liste", []):
+                    cfg["led"][l["for"]] = int(l["gpio"])
+                cfg["led_hz"] = int(pj.get("leds", {}).get("pwm_hz", 200))
+                cfg["led_active_high"] = bool(pj.get("leds", {}).get("aktiv_hoy", True))
+                e = pj["encoder"]
+                cfg["enc"] = (int(e["A"]["gpio"]), int(e["B"]["gpio"]), int(e["SW"]["gpio"]))
+                cfg["enc_hold"] = float(e.get("hold_innstillinger_s", 3.0))
+                print(f"Node-pinner fra {os.path.normpath(path)}", flush=True)
+                break
+            except Exception as ex:
+                print(f"Node-pinner: kunne ikke lese {path}: {ex}", flush=True)
+        # aldri rør skjerm/SPI/bakgrunnslys eller andre reserverte pinner, og ingen dobbeltbruk
+        used = set()
+        for grp in ("btn", "led"):
+            for k, p in list(cfg[grp].items()):
+                if p in NODE_FORBIDDEN or p in used or p in cfg["enc"]:
+                    print(f"Node-pinner: GPIO{p} ({grp}/{k}) er reservert eller i bruk – hoppes over", flush=True)
+                    del cfg[grp][k]
+                else:
+                    used.add(p)
+        if any(p in NODE_FORBIDDEN for p in cfg["enc"]):
+            print(f"Node-pinner: encoder {cfg['enc']} bruker reservert pinne – bruker standard", flush=True)
+            cfg["enc"] = NODE_DEFAULT["enc"]
+        return cfg
+
+    NODE = _node_pins()
+    BTN = {}            # knappene settes opp i setup_buttons (egen logikk for Node)
+    LED = {}            # ringene er PWMLED (node_leds)
+    LED_POWER = None    # ingen strømknapp/strømring på Node
+    PIN_DAC_XSMT = None
+    ENC = tuple(NODE["enc"])
+    NODE_BUTTONS = os.environ.get("KI_AMP_NODE_BUTTONS", "1") == "1"
 else:
     BTN = {"airplay": 5, "bt": 6, "aux": 12, "usb": 13}
     LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
@@ -109,9 +182,17 @@ else:
     PIN_DAC_XSMT = None
 BTN_POWER = {"radio": 3, "test": 26}.get(BOARD, 16)
 
-INPUTS = ["radio", "airplay", "bt", "aux", "aux2", "usb"] if BOARD == "main" else ["radio", "airplay", "bt", "aux", "usb"]
+SPOTIFY_ON = os.environ.get("KI_AMP_SPOTIFY", "1") == "1"   # Spotify Connect (librespot, ki-spotify.service)
+if BOARD == "node":
+    INPUTS = ["radio", "airplay", "bt"]
+elif BOARD == "main":
+    INPUTS = ["radio", "airplay", "bt", "aux", "aux2", "usb"]
+else:
+    INPUTS = ["radio", "airplay", "bt", "aux", "usb"]
+if SPOTIFY_ON:
+    INPUTS = INPUTS + ["spotify"]
 CYCLE = ["radio", "airplay", "bt", "usb"] if BOARD == "radio" else INPUTS   # SOURCE-knappen
-LEVEL_SOURCES = ["airplay", "bt", "usb", "radio", "aux", "aux2"]   # eget nivå per kilde (ALSA softvol «KI <kilde>» på kortet Loopback)
+LEVEL_SOURCES = ["airplay", "bt", "usb", "radio", "aux", "aux2", "spotify"]   # eget nivå per kilde (ALSA softvol «KI <kilde>» på kortet Loopback)
 state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False,
          "loudness": True, "loudness_level": 5, "voice": True,
          "presets": [None] * 6, "preset": 0,
@@ -122,8 +203,11 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "last_wireless": "airplay",   # sist brukte trådløse kilde (airplay/bt) – «BT»-knappen på hovedkortet
          "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
          "overtemp": False,     # NTC på kjøleribben over ~75 °C (MCP GPA7) – TPA3116 dempes til den er under ~50 °C
-         "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100},   # nivå per kilde (miks)
-         "settings": {}}   # innstillingsmodellen fra appen/web (skjold_settings.js) – se SETTINGS_DEF
+         "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100, "spotify": 100},   # nivå per kilde (miks)
+         "ui_event": None,      # Node: {"name":"settings","t":…} når encoderen holdes 3 s (skjermprosessen viser innstillinger)
+         "settings": {}}
+spotify = {"connected": False, "playing": False, "paused": False, "title": "", "artist": "", "album": "", "cover": "",
+           "duration": 0, "position": 0, "user": "", "event": "", "t": 0.0}   # siste librespot-hendelse (POST /api/spotify)   # innstillingsmodellen fra appen/web (skjold_settings.js) – se SETTINGS_DEF
 LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD == "main" else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
 _pairing_until = 0.0
@@ -154,6 +238,7 @@ except Exception as e:
 relay_amp = relay_aux = _Dummy()
 led_power = None
 leds, fav_leds = {}, []
+node_leds = {}
 if HW:
     if BOARD == "radio":
         fav_leds = [l for l in (_mk(GLED, p) for p in FAV_LED) if l]
@@ -172,8 +257,11 @@ if HW:
         x_inc = _mk(DigitalOutputDevice, PIN_X9C_INC, initial_value=True)
         x_ud = _mk(DigitalOutputDevice, PIN_X9C_UD, initial_value=False)
         x_cs = _mk(DigitalOutputDevice, PIN_X9C_CS, initial_value=True)
+    elif BOARD == "node":   # LED-ringene: programvare-PWM (3,5 mm-lyden bruker maskinvare-PWM0/1)
+        node_leds = {k: l for k, l in ((k, _mk(PWMLED, p, active_high=NODE["led_active_high"], frequency=NODE["led_hz"]))
+                                       for k, p in NODE["led"].items()) if l}
     leds = {k: l for k, l in ((k, _mk(GLED, v)) for k, v in LED.items()) if l}
-    led_power = _mk(PWMLED, LED_POWER, frequency=400)
+    led_power = _mk(PWMLED, LED_POWER, frequency=400) if LED_POWER is not None else None
 
 
 class Mcp23017:
@@ -287,7 +375,7 @@ def pga_write(gain_code):
 def apply_volume():
     """AUX: analogt volum (X9C på modulbygget, PGA2311 på hovedkortet). AirPlay/BT/USB: analogt på fast nivå, volum + loudness i CamillaDSP."""
     global _x9c_pos
-    if BOARD in ("radio", "test"):   # bare digitalt volum (CamillaDSP)
+    if BOARD in ("radio", "test", "node"):   # bare digitalt volum (CamillaDSP)
         dsp.update(); return
     if BOARD == "main":   # rev B: alt er digitalt – PGA2311 står fast, volum og nivåer i CamillaDSP/softvol.
         # Fast analogt nivå (KI_AMP_PGA_DB, standard -9 dB): DAC 2,1 Vrms * -9 dB = 0,74 Vrms = det TPA3116 (26 dB) klarer ved 24 V
@@ -318,6 +406,7 @@ PHRASES = {
     "input_aux2": "AUX 2.",
     "input_usb": "USB.",
     "input_radio": "Radio.",
+    "input_spotify": "Spotify.",
     "radio_preset": "{name}.",
     "radio_saved": "Lagret som kanal {n}.",
     "radio_empty": "Kanal {n} er tom. Hold knappen for å lagre.",
@@ -340,6 +429,7 @@ PHRASES_TR = {
     "input_aux2": "Auks to.",
     "input_usb": "U S B.",
     "input_radio": "Radio.",
+    "input_spotify": "Spotify.",
     "radio_preset": "{name}.",
     "radio_saved": "Lagra på kanal {n}, ja.",
     "radio_empty": "Kanal {n} e tom, du. Hold inne knappen for å lagre.",
@@ -519,11 +609,35 @@ def apply_input():
             leds["airplay"].value = state["power"]
         if "bt" in leds:
             leds["bt"].value = state["power"] and state["input"] in ("airplay", "bt", "radio")
+    if BOARD == "node":
+        apply_node_leds()
     if BOARD == "radio":
         for i, led in enumerate(fav_leds):
             led.value = state["power"] and state["input"] == "radio" and state["preset"] == i + 1
     if state["input"] != "bt" or not state["bt_pairing"]:
         pass  # BT-LED pulserer under parring (se pairing_task)
+
+
+def apply_node_leds(playing=None):
+    """Node: RADIO-ringen = radio, AIR·BT-ringen = AirPlay/Bluetooth/Spotify, ◀◀/▶▶ = noe spiller (svakt ellers)."""
+    if not node_leds:
+        return
+    on = state["power"]
+    if playing is None:
+        try:
+            playing = bool(read_status().get("playing"))
+        except Exception:
+            playing = False
+    want = {"radio": 1.0 if on and state["input"] == "radio" else 0.0,
+            "airbt": 1.0 if on and state["input"] in ("airplay", "bt", "spotify") else 0.0,
+            "prev": (0.6 if playing else 0.08) if on else 0.0, "next": (0.6 if playing else 0.08) if on else 0.0}
+    for k, led in node_leds.items():
+        if k == "airbt" and state["bt_pairing"]:
+            continue   # pairing_task blinker den
+        try:
+            led.value = want.get(k, 0.0)
+        except Exception as e:
+            print("LED-ring:", e, flush=True)
 
 
 def speakers_on():
@@ -584,7 +698,7 @@ def apply_power():
         apply_input()
     apply_volume()   # mute i CamillaDSP + PGA2311 i standby
     # OLED av i standby håndteres av oled_display.py via ctrl-filen
-    units = [u for u in ("shairport-sync", "bluealsa-aplay", "ki-usb-audio", "ki-squeezelite", "ki-aux1", "ki-aux2")   # bare tjenester som er slått på
+    units = [u for u in ("shairport-sync", "bluealsa-aplay", "ki-usb-audio", "ki-squeezelite", "ki-aux1", "ki-aux2", "ki-spotify")   # bare tjenester som er slått på
              if subprocess.run(["systemctl", "is-enabled", "--quiet", u], check=False).returncode == 0]
     if not state["power"]:   # stopp det som spiller pent før tjenestene tas ned
         _pause_others("")
@@ -708,12 +822,17 @@ def read_status():
               "artist": r.get("artist") or (r.get("station", "") if r.get("song") else ""),
               "album": r.get("station", ""), "duration": r.get("duration", 0), "position": r.get("time", 0),
               "bt_device": st.get("bt_device", "")}
+    elif state["input"] == "spotify" or (spotify["playing"] and not st.get("playing")):
+        st = {"playing": spotify["playing"], "paused": spotify["paused"], "source": "spotify", "cover": spotify["cover"],
+              "title": spotify["title"], "artist": spotify["artist"], "album": spotify["album"],
+              "duration": spotify["duration"], "position": spotify["position"], "bt_device": st.get("bt_device", "")}
     extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", "")} for i, p in enumerate(state["presets"])],
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected}
     return {**state, **extra, "playing": bool(st.get("playing")), "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": st.get("cover", ""), "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"],
-            "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD}
+            "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD,
+            "spotify": dict(spotify)}
 
 
 # ---------- USB-delingsswitch (Ugreen 2 PC → 4 USB) ----------
@@ -855,6 +974,8 @@ def _pause_others(inp):
     st = read_status()
     if lyr.info.get("mode") == "play" and inp != "radio":
         lyr.cmd(["pause", "1"])
+    if spotify["playing"] and inp != "spotify" and st.get("source") != "spotify":
+        spotify_stop()   # Spotify spiller i bakgrunnen mens en annen kilde vises
     if not st.get("playing") or st.get("source") in ("", inp, "radio"):
         return
     try:
@@ -862,11 +983,14 @@ def _pause_others(inp):
             _busctl("call", "org.bluez", _bt_player(), "org.bluez.MediaPlayer1", "Pause")
         elif st.get("source") == "airplay":
             _busctl("call", SPS[0], SPS[1], SPS[2], "Pause")
+        elif st.get("source") == "spotify":
+            spotify_stop()
     except Exception as e:
         print("Pause annen kilde:", e, flush=True)
 
 
-LEVEL_CTL = {"airplay": "KI AirPlay", "bt": "KI Bluetooth", "usb": "KI USB", "radio": "KI Radio", "aux": "KI AUX1", "aux2": "KI AUX2"}
+LEVEL_CTL = {"airplay": "KI AirPlay", "bt": "KI Bluetooth", "usb": "KI USB", "radio": "KI Radio", "aux": "KI AUX1", "aux2": "KI AUX2",
+             "spotify": "KI Spotify"}
 
 
 def apply_levels():
@@ -1003,6 +1127,8 @@ def setup_buttons():
             b = _mk(Button, RADIO_BTN[k], pull_up=True, bounce_time=0.05) or _Dummy()
             b.when_pressed = lambda a=act: _safe(transport, a)
             objs.append(b)
+    if BOARD == "node":
+        return setup_node_buttons() if NODE_BUTTONS else []
     mcp_btns = {}
     if BOARD == "main" and mcp and mcp.ok:   # knappene via MCP23017 – pollet fra INT-pinnen og hvert 50 ms
         for name, bit in MCP_BTN.items():
@@ -1116,6 +1242,89 @@ def setup_buttons():
     return objs
 
 
+def setup_node_buttons():
+    """Skjold Node: RADIO, AIR·BT, ◀◀, ▶▶ (til GND, intern pull-up) + EC11. Ingen strømknapp."""
+    objs, btn = [], {}
+    for k, pin in NODE["btn"].items():
+        b = _mk(Button, pin, pull_up=True, bounce_time=NODE["bounce"], hold_time=NODE["hold"].get(k, 2.0))
+        if b:
+            btn[k] = b; objs.append(b)
+
+    def _radio_short():   # første trykk = radio, så neste favoritt (menyen på skjermen)
+        if state["input"] != "radio":
+            set_input("radio")
+            menu_open()
+        elif menu["open"]:
+            menu_step(1)
+        else:
+            menu_open(); menu_step(1)
+
+    def _radio_held():    # hold = spill favoritten som er valgt
+        if menu["open"]:
+            menu_pick()
+        elif state["preset"]:
+            play_preset(state["preset"])
+        else:
+            set_input("radio")
+
+    def _wireless():      # AirPlay ↔ Bluetooth (fra radio/Spotify: sist brukte trådløse)
+        if state["input"] == "bt":
+            set_input("airplay")
+        elif state["input"] == "airplay":
+            set_input("bt")
+        else:
+            set_input(state.get("last_wireless", "airplay"))
+
+    def _pair():
+        if not state["bt_pairing"] and state["input"] != "bt":
+            set_input("bt", announce=False)
+        bt_pairing(not state["bt_pairing"]); apply_input()
+
+    if "radio" in btn:
+        _hold_btn(btn["radio"], _radio_short, _radio_held)
+    if "airbt" in btn:
+        _hold_btn(btn["airbt"], _wireless, _pair)
+    reboot = {"done": False}
+
+    def _both_held():     # hold ◀◀ og ▶▶ samtidig = omstart
+        if all(k in btn and btn[k].is_pressed for k in ("prev", "next")) and not reboot["done"]:
+            reboot["done"] = True
+            print("◀◀ + ▶▶ holdt – starter på nytt", flush=True)
+            save_state(); subprocess.run(["systemctl", "reboot"], check=False)
+
+    def _skip(act):
+        if menu["open"] and state["input"] == "radio":
+            menu_step(1 if act == "next" else -1)
+        elif any(btn[k].is_pressed for k in ("prev", "next") if k in btn):
+            return   # den andre knappen holdes fortsatt (på vei mot «hold begge»)
+        else:
+            transport(act)
+
+    for k, act in (("prev", "previous"), ("next", "next")):
+        if k in btn:
+            _hold_btn(btn[k], lambda a=act: _skip(a), _both_held)
+    vol = _mk(RotaryEncoder, ENC[0], ENC[1], max_steps=0, wrap=False) or _Dummy()
+    vol.when_rotated_clockwise = lambda: _safe(lambda: menu_step(1) if menu["open"] else set_volume(state["volume"] + 2))
+    vol.when_rotated_counter_clockwise = lambda: _safe(lambda: menu_step(-1) if menu["open"] else set_volume(state["volume"] - 2))
+    objs.append(vol)
+    sw = _mk(Button, ENC[2], pull_up=True, bounce_time=NODE["bounce"], hold_time=NODE["enc_hold"]) or _Dummy()
+
+    def _sw_short():      # trykk = spill/pause (i radiomenyen: spill valgt)
+        if menu["open"]:
+            menu_pick()
+        else:
+            transport("playpause")
+
+    def _sw_held():       # hold 3 s = innstillinger (vises av skjermprosessen)
+        state["ui_event"] = {"name": "settings", "t": time.time()}; write_ctrl()
+
+    _hold_btn(sw, _sw_short, _sw_held)
+    objs.append(sw)
+    print("Knapper klare (node): " + ", ".join(f"{k}=GPIO{p}" for k, p in NODE["btn"].items())
+          + f", encoder={ENC}, LED-ringer=" + ", ".join(f"{k}=GPIO{p}" for k, p in NODE["led"].items()), flush=True)
+    return objs
+
+
 # ---------- potensiometer som volumknapp (test uten ADC: RC-tidsmåling) ----------
 # KI_AMP_POT=rc:24  -> pot (VCC→3,3 V, OUT→node), node→kondensator→GND, node→220 Ω→GPIO 24
 # Pi-en har ingen analog inngang, så vi lader kondensatoren gjennom poten og måler tiden til GPIO-en leser «høy».
@@ -1167,6 +1376,8 @@ async def pairing_task():
                 bt_pairing(False, "timeout"); apply_input()
             elif dev and dev != _pairing_known:   # en ny enhet koblet til
                 bt_pairing(False, "connected"); apply_input()
+            elif HW and "airbt" in node_leds:
+                node_leds["airbt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2
             elif HW and "bt" in leds:
                 leds["bt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 > 0.5
         await asyncio.sleep(0.05)
@@ -1228,6 +1439,8 @@ def follow_source():
         tick += 1
         if LEVELS_ON and tick % 5 == 0:   # softvol-kontrollene finnes først når kilden har åpnet lyd – sett nivåene jevnlig
             _safe(apply_levels)
+        if node_leds:   # ◀◀/▶▶-ringene følger «spiller nå»
+            _safe(apply_node_leds)
         try:
             st = read_raw()          # rå AirPlay/BT-status – også når Radio er valgt
             dev = st.get("bt_device", "")
@@ -1246,6 +1459,68 @@ def follow_source():
             last = cur
         except Exception as e:
             print("Auto-kilde:", e, flush=True)
+
+
+# ---------- Spotify Connect (librespot --onevent → POST /api/spotify) ----------
+def spotify_stop():
+    """librespot har ingen pause-API – start tjenesten på nytt (stopper avspillingen, enheten dukker opp igjen i appen)."""
+    if spotify["playing"]:
+        spotify.update(playing=False, paused=False)
+        subprocess.run(["systemctl", "restart", "ki-spotify"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _ms(v):
+    try:
+        return int(float(v)) // 1000
+    except (TypeError, ValueError):
+        return 0
+
+
+def spotify_event(b):
+    ev = str(b.get("event") or b.get("player_event") or "").strip().lower()
+    was = spotify["playing"]
+    spotify.update(event=ev, t=time.time())
+    if ev in ("session_connected", "session_client_changed"):
+        spotify.update(connected=True, user=b.get("user_name", spotify["user"]))
+    elif ev == "session_disconnected":
+        spotify.update(connected=False, playing=False, paused=False)
+    elif ev in ("playing", "started"):
+        spotify.update(playing=True, paused=False, connected=True)
+    elif ev == "paused":
+        spotify.update(playing=False, paused=True)
+    elif ev in ("stopped", "unavailable"):
+        spotify.update(playing=False, paused=False)
+    if b.get("name"):
+        spotify["title"] = str(b["name"])
+    if b.get("artists"):
+        spotify["artist"] = ", ".join(str(b["artists"]).split("\n"))
+    if b.get("album"):
+        spotify["album"] = str(b["album"])
+    if b.get("covers"):
+        spotify["cover"] = str(b["covers"]).split("\n")[0]
+    if b.get("duration_ms") not in (None, ""):
+        spotify["duration"] = _ms(b["duration_ms"])
+    if b.get("position_ms") not in (None, ""):
+        spotify["position"] = _ms(b["position_ms"])
+    if spotify["playing"] and not was and state["auto_input"] and state["power"] and state["input"] != "spotify" and "spotify" in INPUTS:
+        print("Auto-kilde: spotify", flush=True)
+        set_input("spotify", announce=False)
+    else:
+        apply_input(); write_ctrl()
+
+
+async def h_spotify(r):
+    try:
+        b = await r.json()
+    except Exception:
+        b = dict(await r.post())
+    if not isinstance(b, dict) or not (b.get("event") or b.get("player_event")):
+        return web.json_response({"error": "mangler event"}, status=400)
+    spotify_event(b)
+    return web.json_response(dict(spotify))
+
+
+async def h_spotify_get(_r): return web.json_response(dict(spotify))
 
 
 async def h_transport(r):
@@ -1563,6 +1838,10 @@ def transport(action):
             play_preset(state["preset"])
         return
     st = read_status()
+    if state["input"] == "spotify" or st.get("source") == "spotify":
+        if action in ("pause", "stop"):
+            spotify_stop(); return
+        raise RuntimeError("Spotify styres fra Spotify-appen (librespot har ingen fjernstyring)")
     src = st.get("source") or ("bt" if state["input"] == "bt" else "airplay")
     if src == "bt" or state["input"] == "bt":
         if action == "playpause":
@@ -1610,6 +1889,8 @@ async def on_cleanup(app):
 
 def main():
     load_state()
+    if state["input"] not in INPUTS:   # f.eks. «aux» lagret fra et annet kort
+        state["input"] = "airplay"
     state["usbsw"], state["usb_pc_names"] = False, USBSW_NAMES
     state["voice_profiles"] = VOICE_PROFILES
     if state.get("voice_profile") not in VOICE_PROFILES:
@@ -1630,7 +1911,8 @@ def main():
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
-                    web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post)])
+                    web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post),
+                    web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get)])
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
     webdir = os.environ.get("KI_AMP_WEBAPP", "")
     for cand in ([webdir] if webdir else []) + ["/usr/local/share/ki-amp/webapp", os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")]:
