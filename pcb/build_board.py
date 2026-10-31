@@ -486,7 +486,7 @@ def build():
         default = ds.m_NetSettings.m_DefaultNetClass
         default.SetTrackWidth(pcbnew.FromMM(0.2)); default.SetClearance(pcbnew.FromMM(0.15)); default.SetViaDiameter(pcbnew.FromMM(0.6)); default.SetViaDrill(pcbnew.FromMM(0.3))   # signalnett 0,2 mm / via 0,6/0,3 (JLCPCB standard) gir Freerouting plass
         for cname, w in [("Power", 1.5), ("Power5V", 1.2), ("Out", 1.5), ("Mid", 0.5)]:
-            nc = pcbnew.NETCLASS(cname); nc.SetTrackWidth(pcbnew.FromMM(w)); nc.SetClearance(pcbnew.FromMM(0.3 if w >= 1.2 else 0.2))
+            nc = pcbnew.NETCLASS(cname); nc.SetTrackWidth(pcbnew.FromMM(w)); nc.SetClearance(pcbnew.FromMM(0.2))   # 0,2 for alle: brede nett ender også på 0,65-pitch-pads (gap 0,25)
             nc.SetViaDiameter(pcbnew.FromMM(1.2 if w >= 1.2 else 0.8)); nc.SetViaDrill(pcbnew.FromMM(0.6 if w >= 1.2 else 0.4))
             ncs[cname] = nc
         # KiCad 7-Python har ikke m_NetClassPatternAssignments – tilordningen skrives inn i .kicad_pro etter lagring (se under)
@@ -506,6 +506,30 @@ def build():
         pd = next(p for p in fps[ref].Pads() if p.GetNumber() == pad)
         tr = pcbnew.PCB_TRACK(board); tr.SetStart(pd.GetPosition()); tr.SetEnd(MM(vx, vy)); tr.SetWidth(pcbnew.FromMM(0.2)); tr.SetLayer(pcbnew.F_Cu); tr.SetNet(gnd); tr.SetLocked(True); board.Add(tr)
         v = pcbnew.PCB_VIA(board); v.SetPosition(MM(vx, vy)); v.SetWidth(pcbnew.FromMM(0.6)); v.SetDrill(pcbnew.FromMM(0.3)); v.SetNet(gnd); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetLocked(True); board.Add(v)
+    # Halsstubber: brede nett (nettklasse ≥ 0,6 mm) som ender på fine pads (TSSOP/QFN/SOT) får en låst smal stubb (padbredde)
+    # rett ut fra kretsen, så Freerouting kan koble det brede sporet til stubbenden i stedet for å måtte inn mellom pinnene.
+    wide = {n for n, w in POWER_NETS.items() if w >= 0.6}
+    courts = {r: f.GetBoundingBox(False, False) for r, f in fps.items()}
+    n_neck = 0
+    for ref, fp in fps.items():
+        c = fp.GetPosition()
+        for pd in fp.Pads():
+            if pd.GetNetname() not in wide or pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH: continue
+            sz = pd.GetSize(); mn = min(sz.x, sz.y)
+            if mn >= pcbnew.FromMM(0.65): continue
+            pp = pd.GetPosition(); dx, dy = pp.x - c.x, pp.y - c.y
+            if abs(dx) >= abs(dy): d = (1 if dx > 0 else -1, 0)
+            else: d = (0, 1 if dy > 0 else -1)
+            L = 1.8
+            for ln in (1.8, 1.4, 1.0):
+                end = pcbnew.VECTOR2I(int(pp.x + d[0] * pcbnew.FromMM(ln)), int(pp.y + d[1] * pcbnew.FromMM(ln)))
+                if not any(bb.Contains(end) for r2, bb in courts.items() if r2 != ref): L = ln; break
+            else:
+                L = 0.8
+            end = pcbnew.VECTOR2I(int(pp.x + d[0] * pcbnew.FromMM(L)), int(pp.y + d[1] * pcbnew.FromMM(L)))
+            tr = pcbnew.PCB_TRACK(board); tr.SetStart(pp); tr.SetEnd(end); tr.SetWidth(int(min(mn, pcbnew.FromMM(0.4)))); tr.SetLayer(pcbnew.F_Cu)
+            tr.SetNet(pd.GetNet()); tr.SetLocked(True); board.Add(tr); n_neck += 1
+    print("halsstubber på brede nett:", n_neck)
     for netn, layer, w, pts in FIXED_TRACKS:
         for p0, p1 in zip(pts, pts[1:]):
             tr = pcbnew.PCB_TRACK(board); tr.SetStart(MM(*p0)); tr.SetEnd(MM(*p1)); tr.SetWidth(pcbnew.FromMM(w)); tr.SetLayer(board.GetLayerID(layer)); tr.SetNet(nets[netn]); tr.SetLocked(True); board.Add(tr)
