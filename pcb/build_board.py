@@ -188,7 +188,7 @@ part("R76", R_, R0603, "10k", "C25804", 12, 86, 0, "HP OUTL pulldown (jack-detek
 part("R78", R_, R0603, "10k", "C25804", 108, 89, 0, "Pull-up touch-CS (GPIO 7/CE1 flyter til SPI er oppe)")
 
 # --- USB-delingsswitch (x 140–180): 2 × USB-C inn (til panelkontakter bak med korte kabler), mux, hub, 4 × USB-A ut i høyre kant ---
-part("U7", SO, "SSOP-28_5.3x10.2mm_P0.65mm", "FE1.1s", "C9359", 149, 46, 90, "USB 2.0 4-ports hub")
+part("U7", SO, "SSOP-28_3.9x9.9mm_P0.635mm", "FE1.1s", "C9359", 149, 46, 90, "USB 2.0 4-ports hub – FE1.1S-BSOP28 er SSOP-28 150 mil (3,9 mm, 0,635 mm deling)")
 part("Y1", "Crystal", "Crystal_SMD_3225-4Pin_3.2x2.5mm", "12MHz", "C9002", 149, 37, 90, "Hub-krystall (lastkondensatorer innebygd)")
 part("C67", C_, C0805, "10u", "C15850", 141, 34, 90, "VD18_O"); part("C69", C_, C0603, "100n/50V", "C14663", 141, 38, 90, "VD18")
 part("R75", R_, R0603, "2.7k", "C13167", 141, 42, 90, "REXT (1 %)"); part("R46", R_, R0603, "10k", "C25804", 141, 50, 90, "OVCJ/XRSTJ pull-up")
@@ -321,8 +321,8 @@ net("AMP_SD_G", ("J5", 15), ("R19", 1)); net("DAC_XSMT", ("J5", 37), ("U4", 17),
 # I2S: PCM1808 er master (BCK/LRCK), Pi slave, DAC slave
 net("I2S_BCK", ("J5", 12), ("U4", 13), ("U10", 8)); net("I2S_LRCK", ("J5", 35), ("U4", 15), ("U10", 7)); net("I2S_DIN", ("J5", 40), ("U4", 14)); net("I2S_ADC", ("J5", 38), ("U10", 9))
 # DAC
-net("DAC_CAPP", ("U4", 2), ("C17", 1)); net("DAC_CAPM", ("U4", 4), ("C17", 2)); net("DAC_VNEG", ("U4", 5), ("C18", 1)); net("DAC_LDOO", ("U4", 10), ("C19", 1))
-net(GND, ("U4", 3), ("U4", 9), ("U4", 18), ("U4", 11), ("U4", 12), ("U4", 16), ("U4", 19), ("C18", 2), ("C19", 2), ("C20", 2), ("C21", 2), ("C22", 2), ("C23", 2), ("C24", 2))
+net("DAC_CAPP", ("U4", 2), ("C17", 1)); net("DAC_CAPM", ("U4", 4), ("C17", 2)); net("DAC_VNEG", ("U4", 5), ("C18", 1)); net("DAC_LDOO", ("U4", 18), ("C19", 1))   # PCM5102A pinne 18 = LDOO (TI SLAS859C), pinne 10 = DEMP
+net(GND, ("U4", 3), ("U4", 9), ("U4", 10), ("U4", 11), ("U4", 12), ("U4", 16), ("U4", 19), ("C18", 2), ("C19", 2), ("C20", 2), ("C21", 2), ("C22", 2), ("C23", 2), ("C24", 2))
 net("DAC_L", ("U4", 6), ("R8", 1)); net("DAC_R", ("U4", 7), ("R9", 1))
 net("DAC_L_F", ("R8", 2), ("C23", 1), ("C25", 1)); net("DAC_R_F", ("R9", 2), ("C24", 1), ("C26", 1))
 net("VOL_INL", ("C25", 2), ("R12", 1), ("U5", 16)); net("VOL_INR", ("C26", 2), ("R13", 1), ("U5", 9))
@@ -424,9 +424,8 @@ FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (137.05,
     ("RLY_LOW", "F.Cu", 0.25, [(101.5, 35.3), (101.138, 34.0)]),   # TPA6132A2 pinne 11 -> C103 (trangt mellom HP_VDD og HP_CPN)
     ("AMP_RINN", "F.Cu", 0.2, [(120.35, 31.725), (118.6, 31.725)]),   # TPA3116 pinne 5 ble stengt inne av nabosporene
                 ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),   # TPA6132A2 PGND/SGND -> termisk pad
-                ("USB3_DP", "F.Cu", 0.2, [(30.675, 49.6), (30.675, 53.8)]),
                 ("BSNL", "F.Cu", 0.3, [(127.65, 36.925), (136.0, 36.925), (136.0, 38.1), (138.95, 38.1), (138.95, 37.3)])]   # pinne 20 -> C32.1 (rundt under C32.2)   # FE1.1s pinne 7 ut nedover mellom nabosporene
-FIXED_VIAS = [("HP_INR", (129.4, 45.75)), ("PC2_DP", (32.2, 63.7)), ("PC2_DM", (33.1, 64.2)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725))]
+FIXED_VIAS = [("HP_INR", (129.4, 45.75)), ("PC2_DP", (32.2, 63.7)), ("PC2_DM", (33.1, 64.2)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("AMP_RINN", (118.6, 31.725))]
 FIXED_GND_VIP = {}   # GND rutes nå som nett av Freerouting – ingen via-i-pad (lodder dårlig uten fylte vias)   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet
