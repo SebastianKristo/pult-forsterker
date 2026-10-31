@@ -14,7 +14,7 @@ MCP23017, per-kilde-nivå, TFT) er skrevet, men kan bare testes på et ferdig ko
 
 | Blokk | Krets | Merknad |
 |---|---|---|
-| 24 V inn | skruterminal → sikring 5 A (5×20, THT) → reverspolaritets-FET → TVS SMBJ28A → 2 × 1000 µF Ø10 (THT, maks 16 mm høye – kassen er 48 mm) | KCD1 hovedbryter i serie utenfor kortet |
+| 24 V inn | skruterminal → sikring 5 A (5×20, THT) → reverspolaritets-FET → TVS SMBJ28A → 2 × 680–1000 µF/35 V Ø10 (THT, maks 16 mm høye) | KCD1 hovedbryter i serie utenfor kortet |
 | 5 V / 5 A (alltid) | TPS54560 buck, 400 kHz, 10 µH, 3 × 47 µF, satt til 5,06 V (33k/6,2k) | Pi 4 («5V PI»), USB-hub, relé-spole |
 | **Smart relé** | SRD-05VDC-SL-C (24 V → forsterker) + AO3401 P-MOSFET (5 V → 5V_SW) fra GPIO 27 via AO3400 | 5V_SW: LED-ringer, ADC-analog, TFT-baklys (PGA2311 og hodetelefonforsterkeren er alltid på, men mutet i standby). Av = helt stille og mørkt. Knapp bak på GPIO 15 |
 | 3,3 V (alltid) | AMS1117-3.3 | MCP23017, pull-ups, encoder, **DAC, ADC-digital, oscillator, OLED og TFT-logikk** (Pi-ens I2C/SPI/I2S må aldri drive inn i strømløse kretser; skjermen slukkes i programvare) |
@@ -55,7 +55,7 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
 | J1 | skruterminal 5,08 | 24 V +, GND (fra DC-099 via KCD1) |
 | J2 / J3 | skruterminal 5,08 | SPK L + −, SPK R + − |
 | J4 / J20 | JST XH 3 | AUX 1 / AUX 2: L, R, GND (fra PJ392 bak) |
-| J5 | 2×20 header | Raspberry Pi 40-pin (flatkabel 5–10 cm). Pi-en skrus under kortet i H5–H8 (M2,5, 20 mm avstandsstykker), portene mot høyre |
+| J5 | 2×20 header | Raspberry Pi 40-pin (flatkabel 15–20 cm). Pi-en skrus under kortet i H5–H8 (M2,5, 20 mm avstandsstykker), portene mot høyre |
 | J6 | skruterminal 5,08 | 5 V, GND → Pi 4 header pinne 2/6 (18 AWG) |
 | J7 | JST XH 6 | knapp 1 «BT» (AirPlay + Bluetooth), knapp 2 «RADIO», AUX, USB, POWER, GND (bryterne) |
 | J8 | JST XH 5 | CLK, DT, SW, 3V3, GND (encoder) |
@@ -145,9 +145,8 @@ DAC (PCM5102A, 48 kHz) gir analog lyd videre.
 | Volum | PGA2311 på fast nivå; hovedvolum og loudness i CamillaDSP, nivå per kilde i ALSA softvol |
 | API/integrasjoner | daemon på port 8765 (`/api/status`, `/api/power`, `/api/input`, `/api/volume`, `/api/level`, `/api/mix`, `/api/usbsw`, `/api/hp_automute`, `/api/voice` …), HA-integrasjon 2.11, Homey-app 2.12 |
 
-**Strømforsyning:** 19–24 V DC inn → KCD1 → 5 A sikring → reverspolaritets-FET → TVS 28 V → 2 × 1000 µF → (a) relé → 24V_AMP til TPA3116, (b) TPS54560 buck → 5 V/5 A
-(Pi, hub, relé-spole, Q8) → AMS1117 → 3,3 V (alltid). 5V_SW (bak Q8) → AMS1117 → 3V3_SW (TFT-baklys), LM2662 → −5 V og ferritt → 5VA
-for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
+**Strømforsyning:** 19–24 V DC inn → KCD1 → 5 A sikring → reverspolaritets-FET → TVS 28 V → 2 × 680–1000 µF → (a) relé → 24V_AMP til TPA3116, (b) TPS54560 buck → 5 V/5 A
+(Pi, hub, relé-spole, Q8) → AMS1117 → 3,3 V (alltid). 5V_SW (bak Q8) → AMS1117 → 3V3_SW (TFT-baklys), LED-ringer og PCM1808-analog. LM2662 → −5 V og ferritt → 5VA (PGA2311 analog) går på alltid-på 5 V.
 
 ## Sikkerhet og vern
 
@@ -170,7 +169,7 @@ for PGA2311, PCM1808-analog, TPA6132A2, LED-ringer.
 
 **Ikke med (vurdert):** inrush-begrenser på 24 V (2 × 1000 µF gir kort inrush som adapteren tåler), separat sikring på 5 V til Pi (bucken begrenser), relé-kontaktvern (24 V DC 4,7 A er innenfor 10 A/30 VDC).
 
-**Alltid-på vs. svitsjet (regel: ingen logikk fra alltid-på-siden skal drive inn i en strømløs krets):** PGA2311 VD+/ZCEN, TPA6132A2 VDD/G0/G1, MCP23017, DAC, ADC-digital, OLED og TFT-logikk går på alltid-på 5 V/3,3 V. 5V_SW: PGA2311 VA+ (og −5 V), ADC-analog, LED-ringer, TFT-bakgrunnslys. SDZ til TPA3116 går via 1 k og holdes lav i standby. Bucken slår på ved ca. 9 V inn (330 k/51 k på EN) så EN tåler en TVS-klemming.
+**Alltid-på vs. svitsjet (regel: ingen logikk fra alltid-på-siden skal drive inn i en strømløs krets):** PGA2311 VD+/ZCEN, TPA6132A2 VDD/G0/G1, MCP23017, DAC, ADC-digital, OLED og TFT-logikk går på alltid-på 5 V/3,3 V. 5V_SW: ADC-analog (PCM1808 VCC), LED-ringer, 3V3_SW/TFT-bakgrunnslys. (PGA2311 VA+/VA− er alltid på – se «Kjente kompromisser».) SDZ til TPA3116 går via 1 k og holdes lav i standby. Bucken slår på ved ca. 9 V inn (330 k/49,9 k på EN) så EN tåler en TVS-klemming.
 
 **Første oppstart – sjekkliste:** (1) uten Pi og uten høyttalere: 24 V på J1 → mål 5,0–5,1 V på J6, 3,3 V på J22 pinne 5, 0 V på LED-ringkontakten J10 pinne 1 (5V_SW av). (2) Relé: brudd mellom K1 pinne 1 og 3 uten spole. (3) Sett i Pi, start; slå på fra HA → 5V_SW 5 V, −5 V på C16, 24V_AMP på C40. (4) Høyttalere på, volum 15 %.
 
