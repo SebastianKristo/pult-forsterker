@@ -76,4 +76,4 @@ Bekreftet: encoder-trykk = pause/spill; skjermmodulen er 3,3 V; EC11 er 5-pinner
 1. Strøm i skjermens LED-pinne (trengs Q1?).
 2. ST7735-variant: `h_offset`/`v_offset`/`bgr` – se fargestripene i selvtesten.
 3. Hvilken ende av skjerm-PCB-en loddeøyene sitter på (påvirker lengdene litt; alle er ≤ 15 cm).
-4. LED-ringens variant (3–6 V) og farge.
+4. LED-ringens farge (variant 3–6 V er bekreftet).

@@ -212,7 +212,7 @@
   "leds": {
     "valgfri": true,
     "variant": "3-6V",
-    "_variant_merknad": "[bekreft] Kjøp 3–6 V-varianten (innebygd motstand for ~5 V). 12 V-varianten lyser ikke på 3,3 V og Node har ingen 12 V – ikke bruk den.",
+    "_variant_merknad": "Bekreftet: 3–6 V-varianten brukes (12 mm metall, IP65, loddeføtter). Kjøp 3–6 V-varianten (innebygd motstand for ~5 V). 12 V-varianten lyser ikke på 3,3 V og Node har ingen 12 V – ikke bruk den.",
     "drift": "direkte",
     "_drift_merknad": "'direkte' = GPIO → seriemotstand → LED+ , LED− → GND (2–5 mA, svakt lys). 'transistor_5v' = GPIO → 1 kΩ → 2N7002 gate, LED+ → 5 V (pinne 2/4) via motstand, LED− → drain (sterkere lys). Begge er tegnet i kabling_node.svg.",
     "seriemotstand_ohm_direkte": 270,
