@@ -675,8 +675,10 @@ _fp_name = {fp.GetReference(): fp.GetFPID().GetLibItemName().wx_str() for fp in 
 _is_tht = {fp.GetReference(): not any(pd.GetAttribute() == pcbnew.PAD_ATTRIB_SMD for pd in fp.Pads()) for fp in board.GetFootprints()}   # bare rene THT-deler loddes selv; USB-C (SMD + THT-ben) monteres av JLCPCB
 # JLCPCBs 0°-orientering avviker fra KiCads for disse pakkene (samme tabell som KiBot/JLCKicadTools bruker). Sjekk likevel pinne 1 i JLCPCB-forhåndsvisningen.
 import re as _rx
-JLC_ROT = [(r"^SOT-23", 180), (r"^SOT-223", 180), (r"^(SOIC|SSOP|TSSOP|HTSSOP|HSOP|SOP|MSOP)", 270), (r"^(Texas_RTE_)?(QFN|WQFN|UQFN|DFN|VQFN|TQFN)", 270), (r"^CP_Elec", 180),
-           (r"^USB_C_Receptacle_HRO", 180), (r"^TO-252", 270)]
+# Verifisert mot JLCPCBs forhåndsvisning 31.10.2026: SOT-23-3, SOT-223, SOIC/SSOP/TSSOP/HTSSOP, UQFN, USB-C, SMB, SOD-123, oscillator stemte;
+# CP_Elec (C190286) og TO-252 (AOD409 C36220) lå feil med KiBot-tabellens +180/+270 → 0 for disse.
+JLC_ROT = [(r"^SOT-23", 180), (r"^SOT-223", 180), (r"^(SOIC|SSOP|TSSOP|HTSSOP|HSOP|SOP|MSOP)", 270), (r"^(Texas_RTE_)?(QFN|WQFN|UQFN|DFN|VQFN|TQFN)", 270), (r"^CP_Elec", 0),
+           (r"^USB_C_Receptacle_HRO", 180), (r"^TO-252", 0)]
 def jlc_rot(ref, rot):
     name = _fp_name.get(ref, "")
     for pat, add in JLC_ROT:
