@@ -214,6 +214,36 @@ for rnd in range(6):
             t.SetWidth(pcbnew.FromMM(0.5) if t.GetWidth() > pcbnew.FromMM(0.61) else ow); fixed += 1   # tilbake til rutet bredde, ikke 0,25
     print(f"runde {rnd}: {len(bad)} DRC-punkter, {fixed} spor smalnet")
 
+# Hull-til-hull (JLCPCB: ≥ 0,5 mm mellom borehull): to vias som ligger for tett skyves fra hverandre langs senterlinjen,
+# og sporendene som satt på viaene flyttes med. Freerouting kjenner ikke denne regelen.
+def _fix_hole_near_hole():
+    import re as _r, math as _mm
+    moved = 0
+    for _ in range(3):
+        rep = os.path.join(OUT, "drc_tmp.txt"); pcbnew.WriteDRCReport(board, rep, pcbnew.EDA_UNITS_MILLIMETRES, True)
+        pairs = []
+        for blk in _r.split(r"\n(?=\[)", open(rep).read()):
+            if not blk.startswith("[hole_near_hole]"): continue
+            m = _r.search(r"min ([-\d.]+) mm; actual ([-\d.]+) mm", blk)
+            pts = _r.findall(r"@\(([-\d.]+) mm, ([-\d.]+) mm\): Via \[", blk)
+            if m and len(pts) == 2: pairs.append((float(m.group(1)) - float(m.group(2)), [(float(x), float(y)) for x, y in pts]))
+        if not pairs: break
+        vias = {(round(pcbnew.ToMM(t.GetPosition().x), 4), round(pcbnew.ToMM(t.GetPosition().y), 4)): t for t in board.GetTracks() if t.GetClass() == "PCB_VIA"}
+        for need, (a, b_) in pairs:
+            va, vb = vias.get((round(a[0], 4), round(a[1], 4))), vias.get((round(b_[0], 4), round(b_[1], 4)))
+            if va is None or vb is None or va.IsLocked() or vb.IsLocked(): continue
+            dx, dy = b_[0] - a[0], b_[1] - a[1]; L = _mm.hypot(dx, dy) or 1e-9
+            sh = (need + 0.03) / 2; ux, uy = dx / L * sh, dy / L * sh
+            for v, sx, sy in ((va, -ux, -uy), (vb, ux, uy)):
+                old = pcbnew.VECTOR2I(v.GetPosition()); new = pcbnew.VECTOR2I(old.x + pcbnew.FromMM(sx), old.y + pcbnew.FromMM(sy))
+                for t in board.GetTracks():
+                    if t.GetClass() != "PCB_TRACK" or t.GetNetCode() != v.GetNetCode(): continue
+                    if t.GetStart() == old: t.SetStart(new)
+                    if t.GetEnd() == old: t.SetEnd(new)
+                v.SetPosition(new); moved += 1
+    return moved
+print("vias flyttet for hull-til-hull:", _fix_hole_near_hole())
+
 for fp in board.GetFootprints():
     fp.Reference().SetLayer(pcbnew.F_Fab); fp.Reference().SetVisible(True)
 
@@ -244,10 +274,20 @@ def _free_point(poly, board, gnd):
         if bad: continue
         for pd in pads:
             if (pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(1.6): bad = True; break
-        if not bad:
+        if not bad and not _via_in_pad(p, 0.5):
             return p
     return None
 
+_all_pads = [pd for fp in board.GetFootprints() for pd in fp.Pads()]
+def _via_in_pad(p, r_mm=0.45):
+    """Sant hvis en via med radius r_mm på punkt p ville ligge inni/over en pad (uansett nett) – via-i-pad lodder dårlig."""
+    c = pcbnew.SHAPE_CIRCLE(p, pcbnew.FromMM(r_mm))
+    for pd in _all_pads:
+        bb = pd.GetBoundingBox(); bb.Inflate(pcbnew.FromMM(r_mm + 0.1))
+        if not bb.Contains(p): continue
+        for l in (pcbnew.F_Cu, pcbnew.B_Cu):
+            if (pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH or pd.IsOnLayer(l)) and pd.GetEffectiveShape(l).Collide(c, pcbnew.FromMM(0.1)): return True
+    return False
 gnd_net = board.FindNet("GND")
 n_stitch = 0
 for rnd_ in range(3):
@@ -314,6 +354,7 @@ def _free_point2(poly, board):
                 if pcbnew.SEG(t.GetStart(), t.GetEnd()).Distance(p) < pcbnew.FromMM(0.5) + t.GetWidth() // 2: bad = True; break
         if bad: continue
         if any((pd.GetPosition() - p).EuclideanNorm() < pcbnew.FromMM(1.2) for pd in pads): continue
+        if _via_in_pad(p, 0.4): continue
         return p
     return None
 
@@ -525,6 +566,9 @@ print("GND-spor som kolliderte (sluttkontroll), fjernet:", _drop_colliding_gnd()
 filler.Fill(board.Zones())
 _fr, _cm = _gnd_components()
 if len(_cm) > 1: print("MERK: jordplanet (sonene) er i", len(_cm), "deler – GND er i tillegg rutet som nett, så alle GND-pads henger sammen (DRC bekrefter)")
+_vip = [t for t in board.GetTracks() if t.GetClass() == "PCB_VIA" and t.GetNetname() == "GND" and not t.IsLocked() and _via_in_pad(t.GetPosition(), pcbnew.ToMM(t.GetWidth()) / 2)]
+for t in _vip: board.Remove(t)
+print("GND-vias inni pads fjernet:", len(_vip))
 print("løse sporender fjernet:", _prune_dangling_board())
 # Siste finpuss: DRC-ens egne «dangling» (korte stubber og vias som bare brukes på ett lag) fjernes – de er uten funksjon
 def _drop_drc_dangling():

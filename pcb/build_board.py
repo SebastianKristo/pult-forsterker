@@ -408,7 +408,7 @@ POWER_SPINE = [
     ("5V", "F.Cu", 1.5, [(89.55, 34.2), (86.0, 34.2), (83.46, 36.8), (83.46, 43.0)]),                   # -> J6 (5 V til Pi)
     ("5V", "B.Cu", 1.2, [(83.46, 43.0), (60.6, 43.0), (51.25, 43.0), (50.79, 42.54), (49.54, 42.54)]),   # J6 -> Pi-header J5.4 (5 V) under, matet fra samme skinne
 ]
-POWER_SPINE_VIAS = [("VIN24", (58.96, 21.5), 1.0, 0.5), ("24V_AMP", (131.0, 23.2), 1.0, 0.5), ("24V_AMP", (131.0, 38.2), 1.0, 0.5)]
+POWER_SPINE_VIAS = [("VIN24", (58.96, 21.5), 1.0, 0.5), ("24V_AMP", (131.0, 23.2), 1.3, 0.75), ("24V_AMP", (131.0, 24.6), 1.0, 0.5), ("24V_AMP", (131.0, 38.2), 1.3, 0.75)]   # store/doble vias: via-veggen var flaskehalsen for 24V_AMP
 FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (133.3, 36.275), (134.6, 35.6), (138.3, 35.6), (138.95, 36.25), (138.95, 36.9)]),   # TPA3116 pinne 21 -> C32 (utvides i export)
     ("5V", "F.Cu", 0.3, [(132.25, 43.5625), (132.25, 42.1), (135.8, 42.1), (136.22, 43.8)]),   # TPA6132A2 VDD (pinne 14) -> C100
     ("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
@@ -430,7 +430,7 @@ def build():
     board = pcbnew.BOARD()
     ds = board.GetDesignSettings()
     ds.SetCopperLayerCount(2)
-    ds.m_TrackMinWidth = pcbnew.FromMM(0.2); ds.m_ViasMinSize = pcbnew.FromMM(0.5); ds.m_MinThroughDrill = pcbnew.FromMM(0.3); ds.m_MinClearance = pcbnew.FromMM(0.127)
+    ds.m_TrackMinWidth = pcbnew.FromMM(0.2); ds.m_ViasMinSize = pcbnew.FromMM(0.5); ds.m_MinThroughDrill = pcbnew.FromMM(0.3); ds.m_MinClearance = pcbnew.FromMM(0.127); ds.m_HoleToHoleMin = pcbnew.FromMM(0.5)   # JLCPCB: hull-til-hull ≥ 0,5
     # omriss
     for (x0, y0, x1, y1) in [(0, 0, BW, 0), (BW, 0, BW, BH), (BW, BH, 0, BH), (0, BH, 0, 0)]:
         s = pcbnew.PCB_SHAPE(board); s.SetShape(pcbnew.SHAPE_T_SEGMENT); s.SetStart(MM(x0, y0)); s.SetEnd(MM(x1, y1))
