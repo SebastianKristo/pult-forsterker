@@ -134,7 +134,7 @@ def refkey(ref):
 FP_LIB = {
     "R_": "Resistor_SMD", "C_": "Capacitor_SMD", "CP_Elec": "Capacitor_SMD", "CP_Radial": "Capacitor_THT", "L_": "Inductor_SMD",
     "SOT-": "Package_TO_SOT_SMD", "TO-": "Package_TO_SOT_SMD", "SOIC": "Package_SO", "SSOP": "Package_SO", "TSSOP": "Package_SO",
-    "HSOP": "Package_SO", "HTSSOP": "Package_SO", "Texas_RTE": "Package_DFN_QFN", "UQFN": "Package_DFN_QFN", "JST_XH": "Connector_JST",
+    "HSOP": "Package_SO", "HTSSOP": "Package_SO", "Texas_RTE": "Package_DFN_QFN", "Texas_UQFN": "Package_DFN_QFN", "Texas_HSOP": "Package_SO", "UQFN": "Package_DFN_QFN", "JST_XH": "Connector_JST",
     "PinHeader": "Connector_PinHeader_2.54mm", "USB_": "Connector_USB", "TerminalBlock": "TerminalBlock", "Fuse": "Fuse",
     "Crystal": "Crystal", "Oscillator": "Oscillator", "D_": "Diode_SMD", "Relay": "Relay_THT",
 }
@@ -300,7 +300,7 @@ def custom_symbols():
         ("8", "V+", "power_in", "T"), ("1", "FC", "input", "L"), ("2", "CAP+", "passive", "L"), ("4", "CAP-", "passive", "L"),
         ("6", "LV", "passive", "L"), ("7", "OSC", "passive", "L"), ("5", "VOUT", "power_out", "R"), ("3", "GND", "power_in", "B")],
         keywords="charge pump inverter")
-    S["TS3USB221"] = ic("TS3USB221", "TS3USB221 USB 2.0 høyhastighets 2:1-mux, UQFN-10", "Package_DFN_QFN:UQFN-10_1.4x1.8mm_P0.4mm", [
+    S["TS3USB221"] = ic("TS3USB221", "TS3USB221 USB 2.0 høyhastighets 2:1-mux, UQFN-10", "Package_DFN_QFN:Texas_UQFN-10_1.5x2mm_P0.5mm", [
         ("10", "VCC", "power_in", "T"), ("1", "D1+", "bidirectional", "L"), ("2", "D1-", "bidirectional", "L"), ("3", "D2+", "bidirectional", "L"),
         ("4", "D2-", "bidirectional", "L"), ("9", "S", "input", "L"), ("6", "~{OE}", "input", "L"),
         ("8", "D+", "bidirectional", "R"), ("7", "D-", "bidirectional", "R"), ("5", "GND", "power_in", "B")], keywords="usb mux switch")

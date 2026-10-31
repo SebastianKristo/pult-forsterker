@@ -15,7 +15,6 @@ WARNING [pin_not_driven] nett BUCK_FB: inngang(er) uten driver: U1.5
 WARNING [pin_not_driven] nett CODEC_VINL: inngang(er) uten driver: U11.12
 WARNING [pin_not_driven] nett CODEC_VINR: inngang(er) uten driver: U11.13
 WARNING [pin_not_driven] nett CODEC_XTI: inngang(er) uten driver: U11.21
-WARNING [pin_not_driven] nett DAC_LDOO: inngang(er) uten driver: U4.10
 WARNING [pin_not_driven] nett DAC_XSMT: inngang(er) uten driver: U4.17
 WARNING [pin_not_driven] nett HP_INL: inngang(er) uten driver: U13.1
 WARNING [pin_not_driven] nett HP_INLP: inngang(er) uten driver: U13.2
@@ -44,4 +43,4 @@ WARNING [pin_not_driven] nett USB_XIN: inngang(er) uten driver: U7.3
 WARNING [pin_not_driven] nett VOL_INL: inngang(er) uten driver: U5.16
 WARNING [pin_not_driven] nett VOL_INR: inngang(er) uten driver: U5.9
 
- ** ERC messages: 42  Errors 0  Warnings 42
+ ** ERC messages: 41  Errors 0  Warnings 41
