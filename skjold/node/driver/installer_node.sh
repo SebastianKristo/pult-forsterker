@@ -29,4 +29,5 @@ install -d /etc/skjold
 install -m 0644 "$HER/config/node_pins.json" /etc/skjold/node_pins.json
 # SPI/GPIO-tilgang for tjenestebrukeren (standard i Pi OS: gruppene spi og gpio)
 id skjold >/dev/null 2>&1 && usermod -aG spi,gpio skjold || true
+bash "$HER/../os/install.sh" || echo "ADVARSEL: Skjold OS ble ikke installert" >&2
 echo "Ferdig. Start på nytt og kjør: $VENV/bin/python $HER/tools/node_selftest.py"
