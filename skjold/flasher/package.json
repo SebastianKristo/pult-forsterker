@@ -17,17 +17,21 @@
     "start": "npm run build && electron .",
     "dev": "npm run build && electron . --dev",
     "test": "npm run build && node dist/test/crypt.test.js",
-    "screenshot": "npm run build && electron scripts/screenshot.js",
+    "screenshot": "npm run build && node scripts/screenshot.js",
     "dist": "npm run build && electron-builder --publish never",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
     "dist:win": "npm run build && electron-builder --win --publish never",
     "dist:linux": "npm run build && electron-builder --linux --publish never",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "node scripts/postinstall.js",
+    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
+    "rebuild": "electron-builder install-app-deps"
   },
   "dependencies": {
     "etcher-sdk": "^10.2.18",
     "qrcode": "^1.5.4",
-    "sudo-prompt": "^9.2.1"
+    "sudo-prompt": "^9.2.1",
+    "drivelist": "^12.0.2",
+    "balena-image-fs": "^7.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -38,5 +42,61 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "build": {
+    "appId": "no.kristo.skjold.flasher",
+    "productName": "Skjold Flasher",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "!dist/test/**",
+      "!**/*.map",
+      "package.json"
+    ],
+    "npmRebuild": true,
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName} Setup ${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "artifactName": "${productName}-${version}.${ext}"
+    }
   }
 }

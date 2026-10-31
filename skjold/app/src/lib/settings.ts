@@ -43,8 +43,8 @@ export function defaultEq(): EqProfiles {
 
 export const DEF: Settings = {
   bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, lvlAux: 0, lvlUsb: 0,
-  name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC', nUsb2: 'Switch',
-  hold: 2, voice: false, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, auto: 1, wake: true,
+  name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
+  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, auto: 1, wake: true,
   updChannel: 0, updAuto: true, setupDone: false,
   eq: defaultEq()
 };

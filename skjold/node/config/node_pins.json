@@ -1,8 +1,12 @@
 {
-  "_kommentar": "Skjold Node – felles kilde for pinner. Leses av skjold-ui, tools/node_selftest.py, tools/lag_kabling.py (SVG + kabelliste) og bruksanvisningen. GPIO-numre er BCM. 'pin' er fysisk pinne på 40-pins headeren (1 = nærmest SD-kortet, oddetall i indre rad). Punkter merket '[bekreft]' må måles eller sjekkes mot den faktiske modulen.",
+  "_kommentar": "Skjold Node – felles kilde for pinner. Leses av skjold-ui, tools/node_selftest.py, tools/lag_kabling.py (kabling_node.svg + kabelliste.csv), tools/sjekk_konsistens.py og bruksanvisningen. GPIO-numre er BCM. 'pin' er fysisk pinne på 40-pins headeren (1 = nærmest SD-kortet, oddetall i indre rad). Punkter merket '[bekreft]' må måles eller sjekkes mot den faktiske modulen.",
   "schema": 1,
   "revisjon": "A · 2026-10-31",
-  "kort": ["pi4", "pi3b", "pi3bplus"],
+  "kort": [
+    "pi4",
+    "pi3b",
+    "pi3bplus"
+  ],
   "nummerering": "BCM",
   "lyd": {
     "utgang": "3.5mm_eller_hdmi",
@@ -39,38 +43,107 @@
     "bus_speed_hz": 16000000,
     "framebuffer": "diff_to_previous",
     "pinner": {
-      "VCC":   { "gpio": null, "pin": 17, "nett": "3V3",  "farge": "rod",  "beskrivelse": "3,3 V til skjermen. Modulen har egen 3,3 V-regulator-bypass; mål at modulen godtar 3,3 V på VCC [bekreft]" },
-      "GND":   { "gpio": null, "pin": 20, "nett": "GND",  "farge": "sort", "beskrivelse": "Jord" },
-      "CS":    { "gpio": 8,    "pin": 24, "nett": "SPI0 CE0",  "farge": "gul",  "beskrivelse": "Chip select, styres av spidev" },
-      "RESET": { "gpio": 24,   "pin": 18, "nett": "GPIO24",    "farge": "gul",  "beskrivelse": "Reset, luma gpio_RST=24" },
-      "A0":    { "gpio": 25,   "pin": 22, "nett": "GPIO25",    "farge": "gul",  "beskrivelse": "Data/kommando (DC), luma gpio_DC=25" },
-      "SDA":   { "gpio": 10,   "pin": 19, "nett": "SPI0 MOSI", "farge": "gul",  "beskrivelse": "SPI-data inn til skjermen" },
-      "SCK":   { "gpio": 11,   "pin": 23, "nett": "SPI0 SCLK", "farge": "gul",  "beskrivelse": "SPI-klokke" },
-      "LED":   { "gpio": 23,   "pin": 16, "nett": "GPIO23",    "farge": "oransje", "beskrivelse": "Bakgrunnslys. Programvare-PWM (gpiozero PWMLED, 500 Hz) via 2N7002 low-side. Se leds.bakgrunnslys." }
+      "VCC": {
+        "gpio": null,
+        "pin": 17,
+        "nett": "3V3",
+        "farge": "rod",
+        "beskrivelse": "3,3 V til skjermen (modulen er spesifisert for 3,3 V – bekreftet)"
+      },
+      "GND": {
+        "gpio": null,
+        "pin": 20,
+        "nett": "GND",
+        "farge": "sort",
+        "beskrivelse": "Jord"
+      },
+      "CS": {
+        "gpio": 8,
+        "pin": 24,
+        "nett": "SPI0 CE0",
+        "farge": "gul",
+        "beskrivelse": "Chip select, styres av spidev"
+      },
+      "RESET": {
+        "gpio": 24,
+        "pin": 18,
+        "nett": "GPIO24",
+        "farge": "gul",
+        "beskrivelse": "Reset, luma gpio_RST=24"
+      },
+      "A0": {
+        "gpio": 25,
+        "pin": 22,
+        "nett": "GPIO25",
+        "farge": "gul",
+        "beskrivelse": "Data/kommando (DC), luma gpio_DC=25"
+      },
+      "SDA": {
+        "gpio": 10,
+        "pin": 19,
+        "nett": "SPI0 MOSI",
+        "farge": "gul",
+        "beskrivelse": "SPI-data inn til skjermen"
+      },
+      "SCK": {
+        "gpio": 11,
+        "pin": 23,
+        "nett": "SPI0 SCLK",
+        "farge": "gul",
+        "beskrivelse": "SPI-klokke"
+      },
+      "LED": {
+        "gpio": 23,
+        "pin": 16,
+        "nett": "GPIO23",
+        "farge": "oransje",
+        "beskrivelse": "Bakgrunnslys. Programvare-PWM (gpiozero PWMLED, 500 Hz, active_high=False) via Q1 AO3401 high-side. Se skjerm.bakgrunnslys."
+      }
     },
     "bakgrunnslys": {
       "gpio": 23,
       "pin": 16,
       "pwm": "programvare",
       "pwm_hz": 500,
-      "aktiv_hoy": true,
-      "driver": "2N7002 low-side (gate ← GPIO23 via 1 kΩ, 100 kΩ gate→GND). LED+ på modulen til 3V3 (pinne 1), LED− til drain. Modulen har egen seriemotstand for bakgrunnslyset.",
-      "_merknad": "[bekreft] Mål strømmen i LED-pinnen på modulen ved 3,3 V. Er den under 10 mA kan GPIO23 drive LED-pinnen direkte (uten transistor). Typisk 1,8\"-modul trekker 20–40 mA → transistor er nødvendig. Pi-grense: 16 mA per pinne, 50 mA totalt."
+      "aktiv_hoy": false,
+      "driver": "AO3401 P-MOSFET high-side (Q1): source ← 3V3 (pinne 1), drain → LED på modulen, gate ← GPIO23 via 1 kΩ, 10 kΩ gate→source. GPIO23 lav = lys på. Low-side virker ikke: på 8-pinners moduler er LED-katoden koblet til GND på kortet.",
+      "_merknad": "[bekreft] Mål strømmen i LED-pinnen ved 3,3 V. Er den under 10 mA kan GPIO23 drive LED direkte (sett aktiv_hoy=true, dropp Q1). Typisk 20–40 mA → Q1 trengs. Pi-grense 16 mA per pinne, 50 mA totalt."
     }
   },
   "encoder": {
-    "type": "EC11 med trykk, 20 mm halvflat aksel",
-    "A":  { "gpio": 17, "pin": 11, "farge": "bla" },
-    "B":  { "gpio": 27, "pin": 13, "farge": "bla" },
-    "C":  { "gpio": null, "pin": 9, "nett": "GND", "farge": "sort", "beskrivelse": "Felles for A/B. SW sin andre pinne loddes over til C med en 15 mm bro, så én GND-ledning rekker." },
-    "SW": { "gpio": 22, "pin": 15, "farge": "bla", "keycode": 164, "key": "KEY_PLAYPAUSE", "_merknad": "[bekreft] Prototypen (Skjold Node OS.dc.html) sier trykk = pause/spill, oppgaven sier trykk = demp. KEY_MUTE er 113." },
+    "type": "EC11 med trykk, 5 pinner, 20 posisjoner, 15 mm halvflat aksel",
+    "A": {
+      "gpio": 17,
+      "pin": 11,
+      "farge": "bla"
+    },
+    "B": {
+      "gpio": 27,
+      "pin": 13,
+      "farge": "bla"
+    },
+    "C": {
+      "gpio": null,
+      "pin": 9,
+      "nett": "GND",
+      "farge": "sort",
+      "beskrivelse": "Felles for A/B. SW sin andre pinne loddes over til C med en 15 mm bro, så én GND-ledning rekker."
+    },
+    "SW": {
+      "gpio": 22,
+      "pin": 15,
+      "farge": "bla",
+      "keycode": 164,
+      "key": "KEY_PLAYPAUSE",
+      "_merknad": "Bekreftet: trykk = pause/spill (som i prototypen)."
+    },
     "pull_up": true,
     "aktiv_lav": true,
     "bounce_ms": 2,
     "detenter_per_omdreining": 20,
     "pulser_per_omdreining": 20,
     "steps_per_period": 1,
-    "_merknad": "[bekreft] EC11 finnes som 20 detenter/20 pulser (vanligst, 1 full periode per hakk) og 30 detenter/15 pulser (halv periode per hakk → steps_per_period=2).",
+    "_merknad": "Bekreftet: EC11 med 20 posisjoner (20 detenter/20 pulser, 1 full periode per hakk). Ved 30/15-variant: steps_per_period=2.",
     "hold_innstillinger_s": 3.0
   },
   "knapper": {
@@ -82,17 +155,64 @@
     "_gnd_merknad": "C-pinnene på alle fire knappene lenkes med 20 mm broer, og én sort ledning går fra RADIO (nærmest pinne 39-enden av headeren) til pinne 39.",
     "rekkefolge": "fra venstre sett fra brukeren (bruker står på +y-siden; brukers venstre = kassens +x)",
     "liste": [
-      { "id": "radio", "etikett": "RADIO",    "gpio": 5,  "pin": 29, "farge": "gronn", "keycode": 377, "key": "KEY_RADIO",        "hold_s": 1.0, "kasse_x": 30,  "kasse_y": 32.5 },
-      { "id": "airbt", "etikett": "AIR / BT", "gpio": 6,  "pin": 31, "farge": "gronn", "keycode": 237, "key": "KEY_BLUETOOTH",    "hold_s": 2.0, "kasse_x": 10,  "kasse_y": 32.5 },
-      { "id": "prev",  "etikett": "◀◀",       "gpio": 13, "pin": 33, "farge": "gronn", "keycode": 165, "key": "KEY_PREVIOUSSONG", "hold_s": 3.0, "kasse_x": -10, "kasse_y": 32.5 },
-      { "id": "next",  "etikett": "▶▶",       "gpio": 26, "pin": 37, "farge": "gronn", "keycode": 163, "key": "KEY_NEXTSONG",     "hold_s": 3.0, "kasse_x": -30, "kasse_y": 32.5 }
+      {
+        "id": "radio",
+        "etikett": "RADIO",
+        "gpio": 5,
+        "pin": 29,
+        "farge": "gronn",
+        "keycode": 377,
+        "key": "KEY_RADIO",
+        "hold_s": 1.0,
+        "kasse_x": 30,
+        "kasse_y": 32.5
+      },
+      {
+        "id": "airbt",
+        "etikett": "AIR / BT",
+        "gpio": 6,
+        "pin": 31,
+        "farge": "gronn",
+        "keycode": 237,
+        "key": "KEY_BLUETOOTH",
+        "hold_s": 2.0,
+        "kasse_x": 10,
+        "kasse_y": 32.5
+      },
+      {
+        "id": "prev",
+        "etikett": "◀◀",
+        "gpio": 13,
+        "pin": 33,
+        "farge": "gronn",
+        "keycode": 165,
+        "key": "KEY_PREVIOUSSONG",
+        "hold_s": 3.0,
+        "kasse_x": -10,
+        "kasse_y": 32.5
+      },
+      {
+        "id": "next",
+        "etikett": "▶▶",
+        "gpio": 26,
+        "pin": 37,
+        "farge": "gronn",
+        "keycode": 163,
+        "key": "KEY_NEXTSONG",
+        "hold_s": 3.0,
+        "kasse_x": -30,
+        "kasse_y": 32.5
+      }
     ],
-    "hold_begge_omstart": ["prev", "next"]
+    "hold_begge_omstart": [
+      "prev",
+      "next"
+    ]
   },
   "leds": {
     "valgfri": true,
     "variant": "3-6V",
-    "_variant_merknad": "[bekreft] Kjøp 3–6 V-varianten (innebygd motstand for ~5 V). 12 V-varianten lyser ikke på 3,3 V og Node har ingen 12 V – ikke bruk den.",
+    "_variant_merknad": "Bekreftet: 3–6 V-varianten brukes (12 mm metall, IP65, loddeføtter). Kjøp 3–6 V-varianten (innebygd motstand for ~5 V). 12 V-varianten lyser ikke på 3,3 V og Node har ingen 12 V – ikke bruk den.",
     "drift": "direkte",
     "_drift_merknad": "'direkte' = GPIO → seriemotstand → LED+ , LED− → GND (2–5 mA, svakt lys). 'transistor_5v' = GPIO → 1 kΩ → 2N7002 gate, LED+ → 5 V (pinne 2/4) via motstand, LED− → drain (sterkere lys). Begge er tegnet i kabling_node.svg.",
     "seriemotstand_ohm_direkte": 270,
@@ -103,19 +223,59 @@
     "aktiv_hoy": true,
     "gnd_pin": 34,
     "_gnd_merknad": "LED− på alle fire lenkes med 20 mm broer, én sort ledning fra RADIO til pinne 34.",
-    "pi_grense": { "per_pinne_ma": 16, "totalt_ma": 50 },
+    "pi_grense": {
+      "per_pinne_ma": 16,
+      "totalt_ma": 50
+    },
     "liste": [
-      { "for": "radio", "gpio": 12, "pin": 32, "farge": "oransje" },
-      { "for": "airbt", "gpio": 16, "pin": 36, "farge": "oransje" },
-      { "for": "prev",  "gpio": 20, "pin": 38, "farge": "oransje" },
-      { "for": "next",  "gpio": 21, "pin": 40, "farge": "oransje" }
+      {
+        "for": "radio",
+        "gpio": 12,
+        "pin": 32,
+        "farge": "oransje"
+      },
+      {
+        "for": "airbt",
+        "gpio": 16,
+        "pin": 36,
+        "farge": "oransje"
+      },
+      {
+        "for": "prev",
+        "gpio": 20,
+        "pin": 38,
+        "farge": "oransje"
+      },
+      {
+        "for": "next",
+        "gpio": 21,
+        "pin": 40,
+        "farge": "oransje"
+      }
     ],
     "_i2s_merknad": "GPIO20/21 er PCM_DIN/DOUT. Skal et I²S-lydkort brukes samtidig med LED-ringene, flytt ◀◀/▶▶-ringene (GPIO20/21) til GPIO4 (pinne 7) og GPIO7 (pinne 26, krever dtoverlay=spi0-1cs i stedet for dtparam=spi=on)."
   },
-  "gnd_pinner": [6, 9, 14, 20, 25, 30, 34, 39],
-  "3v3_pinner": [1, 17],
-  "5v_pinner": [2, 4],
-  "ledige_gpio_etter_dette": [4],
+  "gnd_pinner": [
+    6,
+    9,
+    14,
+    20,
+    25,
+    30,
+    34,
+    39
+  ],
+  "3v3_pinner": [
+    1,
+    17
+  ],
+  "5v_pinner": [
+    2,
+    4
+  ],
+  "ledige_gpio_etter_dette": [
+    4
+  ],
   "inngang": {
     "metode": "gpiozero",
     "_merknad": "skjold-ui leser knapper og encoder med gpiozero (Button/RotaryEncoder) via lgpio, som S1. Alternativet med device-tree (rotary-encoder + gpio-key → evdev) står i config/config.txt.node som 'Alternativ B'. De to kan IKKE kombineres: en GPIO som er tatt av en overlay gir 'Device or resource busy' i gpiozero."
@@ -126,7 +286,8 @@
       "dtparam=spi=on",
       "dtparam=audio=on",
       "dtparam=i2c_arm=on",
-      "gpio=23,12,16,20,21=op,dl",
+      "gpio=12,16,20,21=op,dl",
+      "gpio=23=op,dh",
       "gpio=5,6,13,17,22,26,27=ip,pu"
     ]
   },

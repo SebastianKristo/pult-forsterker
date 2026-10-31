@@ -15,6 +15,10 @@ export const mode = signal<'find' | 'setup' | 'app'>(needsHost() ? 'find' : 'app
 export const settings = signal<Settings>({ ...DEF, eq: defaultEq() });
 export const settingsSource = signal<'api' | 'local' | 'none'>('none');
 export const toast = signal<string>('');
+/** Nøkler daemonen faktisk bruker (GET /api/settings → applied). Resten lagres bare. */
+export const applied = signal<string[]>([]);
+/** Nøkler daemonen ikke kjenner (forkastes av POST) – lagres lokalt på denne enheten. */
+export const localOnly = signal<string[]>([]);
 
 const LOCAL_KEY = 'skjold-settings-local';
 let toastT = 0;
@@ -64,7 +68,13 @@ export async function act(fn: () => Promise<Status>, optimistic?: Partial<Status
 export async function loadSettings(): Promise<void> {
   try {
     const r = await api.getSettings();
-    settings.value = mergeSettings(r.settings); settingsSource.value = 'api';
+    const missing = Object.keys(DEF).filter((k) => !(k in r.settings));
+    let loc: Record<string, unknown> = {};
+    try { loc = JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}') as Record<string, unknown>; } catch { /* ignore */ }
+    const extra: Record<string, unknown> = {};
+    for (const k of missing) if (k in loc) extra[k] = loc[k];
+    settings.value = mergeSettings({ ...r.settings, ...extra }); settingsSource.value = 'api';
+    applied.value = r.applied ?? []; localOnly.value = missing;
     return;
   } catch (e) {
     if (!(e instanceof ApiError && e.status === 404)) { /* nettverksfeil: prøv lokalt */ }
@@ -83,8 +93,10 @@ export function setEqProfile(src: EqSource, patch: Partial<EqProfiles[EqSource]>
   const eq: EqProfiles = { ...settings.value.eq, [src]: { ...settings.value.eq[src], ...patch } };
   setSetting('eq', eq);
 }
+function saveLocal(): void { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(settings.value)); } catch { /* ignore */ } }
 async function flushSettings(): Promise<void> {
   const patch = pending; pending = {};
+  if (localOnly.value.some((k) => k in patch)) saveLocal();
   if (settingsSource.value === 'local') {
     try { localStorage.setItem(LOCAL_KEY, JSON.stringify(settings.value)); } catch { /* ignore */ }
     return;
@@ -92,7 +104,9 @@ async function flushSettings(): Promise<void> {
   try {
     const r = await api.setSettings(patch);
     // behold lokale endringer som kom inn mens vi lagret
-    settings.value = mergeSettings({ ...r.settings, ...pending });
+    const keep: Record<string, unknown> = {};
+    for (const k of localOnly.value) keep[k] = (settings.value as unknown as Record<string, unknown>)[k];
+    settings.value = mergeSettings({ ...r.settings, ...keep, ...pending });
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) { settingsSource.value = 'local'; try { localStorage.setItem(LOCAL_KEY, JSON.stringify(settings.value)); } catch { /* ignore */ } }
     else showToast('Innstillingen ble ikke lagret på forsterkeren');

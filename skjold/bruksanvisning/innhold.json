@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Skjold S1",
+    "title": "Skjold S1 og Node",
     "subtitle": "Byggeanvisning",
-    "version": "Rev B · 2026-10",
+    "version": "S1 rev B · Node rev A · 2026-10",
     "serial": "SKJ-S1-0001",
     "total": "",
     "lang": "nb"
@@ -11,54 +11,36 @@
     {
       "type": "cover",
       "img": "cover",
-      "lead": "Streamingforsterker med AirPlay, Blåtann, radio, AUX og USB. Følg stegene i rekkefølge. Hvert steg viser delene du trenger, hva som skal loddes, og hvor."
+      "lead": "Byggeanvisning for Skjold S1 (streamingforsterker, hovedkort rev B) og Skjold Node (nettverksspiller). Følg stegene i rekkefølge. Hvert steg viser delene, ledningene og hvor de skal."
     },
     {
       "type": "inventory",
-      "title": "Innhold",
+      "title": "Innhold · Skjold S1 (1/2)",
       "groups": [
         {
           "name": "Kasse og front",
           "parts": [
             {
               "id": "A1",
-              "name": "Omslag (topp + sider)",
+              "name": "Kasse, alu 1,5 mm (omslag + paneler)",
               "qty": 1,
-              "note": ""
+              "note": "bead blast, sort eloksert"
             },
             {
               "id": "A2",
-              "name": "Frontpanel",
+              "name": "Frontplate alu 3 mm, 178 × 46",
               "qty": 1,
-              "note": ""
+              "note": "6 × FH-M3-8 studs"
             },
             {
               "id": "A3",
-              "name": "Bakpanel",
+              "name": "Røyksort akryl 2 mm, 61,6 × 37,6",
               "qty": 1,
               "note": ""
             },
             {
               "id": "A4",
-              "name": "Bunnplate",
-              "qty": 1,
-              "note": ""
-            },
-            {
-              "id": "A5",
-              "name": "Skinne",
-              "qty": 2,
-              "note": ""
-            },
-            {
-              "id": "A6",
-              "name": "Frontplate (alu)",
-              "qty": 1,
-              "note": ""
-            },
-            {
-              "id": "A7",
-              "name": "Røykfarget akryl",
+              "name": "Kjøleribbe 20 × 20 + termisk tape",
               "qty": 1,
               "note": ""
             }
@@ -69,48 +51,107 @@
           "parts": [
             {
               "id": "E1",
-              "name": "Hovedkort rev B (TPA3116)",
+              "name": "Hovedkort rev B (SMT ferdig montert)",
               "qty": 1,
               "note": ""
             },
             {
               "id": "E2",
-              "name": "Raspberry Pi 4",
+              "name": "Raspberry Pi 4 B",
               "qty": 1,
-              "note": ""
+              "note": "+ kjøleribbesett"
             },
             {
               "id": "E3",
-              "name": "OLED-modul 2,42″",
+              "name": "OLED 2,42″ SSD1309 I²C",
               "qty": 1,
-              "note": ""
+              "note": "eller 2,8″ TFT på J13"
             },
             {
               "id": "E4",
-              "name": "EC11-enkoder + kontrollkort",
+              "name": "Encoder KY-040 + knott 30 × 17",
               "qty": 1,
               "note": ""
             },
             {
               "id": "E5",
-              "name": "USB 2.0-hub",
+              "name": "microSD-kort",
+              "qty": 1,
+              "note": "[bekreft]"
+            },
+            {
+              "id": "E6",
+              "name": "NTC 10 k, B 3950",
               "qty": 1,
               "note": ""
             }
           ]
         },
         {
+          "name": "Løse deler til hovedkortet (THT)",
+          "parts": [
+            {
+              "id": "P1",
+              "name": "Skruterminal 5,08 mm, 2-pol",
+              "qty": 4,
+              "note": "J1, J2, J3, J6"
+            },
+            {
+              "id": "P2",
+              "name": "JST XH hann-list (2–6 pol)",
+              "qty": "sett",
+              "note": "J4, J7–J10, J19–J24"
+            },
+            {
+              "id": "P3",
+              "name": "Stiftlist 2 × 20",
+              "qty": 1,
+              "note": "J5"
+            },
+            {
+              "id": "P4",
+              "name": "Sikringsklips + sikring 5 A T 5 × 20",
+              "qty": "2 + 1",
+              "note": "F1"
+            },
+            {
+              "id": "P5",
+              "name": "Elektrolytt 1000 µF 35 V Ø10, ≤ 16 mm",
+              "qty": 2,
+              "note": "C1, C110"
+            },
+            {
+              "id": "P6",
+              "name": "Relé SRD-05VDC-SL-C",
+              "qty": 1,
+              "note": "K1 på kortet"
+            },
+            {
+              "id": "P7",
+              "name": "USB-A Molex 67643",
+              "qty": 4,
+              "note": "J15–J18"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "inventory",
+      "title": "Innhold · Skjold S1 (2/2)",
+      "groups": [
+        {
           "name": "Kontakter og brytere",
           "parts": [
             {
               "id": "K1",
-              "name": "DC-kontakt DC-099 5,5/2,1",
+              "name": "DC-kontakt DC-099 5,5/2,1 m/ nylonkrage",
               "qty": 1,
               "note": ""
             },
             {
               "id": "K2",
-              "name": "Høyttalerpol",
+              "name": "Høyttalerpol M8 m/ Ø19 isolasjonsring",
               "qty": 4,
               "note": "2 røde, 2 sorte"
             },
@@ -122,38 +163,44 @@
             },
             {
               "id": "K4",
-              "name": "USB-C panelkontakt",
+              "name": "USB-C panelflens → USB-C hann",
               "qty": 3,
-              "note": ""
+              "note": "PC 1, PC 2, Pi"
             },
             {
               "id": "K5",
-              "name": "RJ45 panelkontakt",
+              "name": "RJ45 panelforlenger 30 cm",
               "qty": 1,
               "note": ""
             },
             {
               "id": "K6",
-              "name": "Vippebryter I/O",
+              "name": "Vippebryter KCD1",
               "qty": 1,
-              "note": ""
+              "note": "+ 2 flatstifthylser 4,8 mm"
             },
             {
               "id": "K7",
               "name": "Metallknapp 12 mm m/ LED-ring",
               "qty": 4,
-              "note": ""
+              "note": "BT, RADIO, AUX, USB"
             },
             {
               "id": "K8",
-              "name": "Metallbryter 16 mm m/ LED-ring",
+              "name": "Metallknapp 16 mm m/ LED-ring (POWER)",
               "qty": 1,
               "note": ""
+            },
+            {
+              "id": "K9",
+              "name": "Momentan trykknapp bak (strøm)",
+              "qty": 1,
+              "note": "[bekreft]"
             }
           ]
         },
         {
-          "name": "Kabler og småtteri",
+          "name": "Kabler",
           "parts": [
             {
               "id": "L1",
@@ -163,13 +210,13 @@
             },
             {
               "id": "L2",
-              "name": "Ledning 26 AWG, 6 farger",
-              "qty": "2 m",
+              "name": "JST XH ferdigkrimpet kabelsett 20–30 cm",
+              "qty": "sett",
               "note": ""
             },
             {
               "id": "L3",
-              "name": "Skjermet kabel 2-leder",
+              "name": "Skjermet lydkabel 2-leder",
               "qty": "0,5 m",
               "note": ""
             },
@@ -180,27 +227,178 @@
               "note": ""
             },
             {
-              "id": "S1",
-              "name": "Skrue M3 × 6 ISO 7380",
-              "qty": 12,
+              "id": "L5",
+              "name": "40-pin IDC flatkabel hunn–hunn 10 cm",
+              "qty": 1,
               "note": ""
             },
             {
-              "id": "S2",
-              "name": "Avstandsstykke M3 × 12",
-              "qty": 6,
+              "id": "L6",
+              "name": "USB-A-kabel (Pi → J19)",
+              "qty": 1,
+              "note": "[bekreft]"
+            },
+            {
+              "id": "L7",
+              "name": "Myk ledning 26 AWG",
+              "qty": "1 m",
               "note": ""
+            }
+          ]
+        },
+        {
+          "name": "Skruer og festemidler",
+          "parts": [
+            {
+              "id": "S1",
+              "name": "Skrue M3 × 6",
+              "qty": 4,
+              "note": "hovedkort på stolper"
+            },
+            {
+              "id": "S2",
+              "name": "Avstandsstykke M3 × 25",
+              "qty": 4,
+              "note": "[bekreft]"
             },
             {
               "id": "S3",
               "name": "Avstandsstykke M2,5 × 20",
               "qty": 4,
-              "note": ""
+              "note": "Pi 4"
             },
             {
               "id": "S4",
-              "name": "Tannskive M3",
-              "qty": 2,
+              "name": "Skrue M2,5 × 6",
+              "qty": 4,
+              "note": "Pi 4"
+            },
+            {
+              "id": "S5",
+              "name": "Mutter M3",
+              "qty": 6,
+              "note": "frontplatens studs"
+            },
+            {
+              "id": "S6",
+              "name": "Tannskive (DC-kontakt)",
+              "qty": 1,
+              "note": ""
+            },
+            {
+              "id": "S7",
+              "name": "Loctite 222",
+              "qty": 1,
+              "note": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "inventory",
+      "title": "Innhold · Skjold Node",
+      "groups": [
+        {
+          "name": "Kasse",
+          "parts": [
+            {
+              "id": "N1",
+              "name": "Kasse, printet (91 × 74 × 34)",
+              "qty": 1,
+              "note": "bunn"
+            },
+            {
+              "id": "N2",
+              "name": "Lokk, printet",
+              "qty": 1,
+              "note": "skjerm, knott, knapper"
+            }
+          ]
+        },
+        {
+          "name": "Elektronikk",
+          "parts": [
+            {
+              "id": "N3",
+              "name": "Raspberry Pi 4 eller 3B/3B+",
+              "qty": 1,
+              "note": ""
+            },
+            {
+              "id": "N4",
+              "name": "Skjerm 1,8″ ST7735S, 8 pinner",
+              "qty": 1,
+              "note": ""
+            },
+            {
+              "id": "N5",
+              "name": "Encoder EC11 m/ trykk, 15 mm halvflat aksel",
+              "qty": 1,
+              "note": ""
+            },
+            {
+              "id": "N6",
+              "name": "Metallknapp 12 mm, NO",
+              "qty": 4,
+              "note": "LED-ring 3–6 V valgfritt"
+            },
+            {
+              "id": "N7",
+              "name": "microSD-kort",
+              "qty": 1,
+              "note": "[bekreft]"
+            }
+          ]
+        },
+        {
+          "name": "Småkomponenter",
+          "parts": [
+            {
+              "id": "N8",
+              "name": "P-MOSFET AO3401 (Q1)",
+              "qty": 1,
+              "note": "bakgrunnslys"
+            },
+            {
+              "id": "N9",
+              "name": "Motstand 1 kΩ",
+              "qty": 1,
+              "note": ""
+            },
+            {
+              "id": "N10",
+              "name": "Motstand 10 kΩ",
+              "qty": 1,
+              "note": ""
+            },
+            {
+              "id": "N11",
+              "name": "Motstand 270 Ω",
+              "qty": 4,
+              "note": "bare med LED-ringer"
+            }
+          ]
+        },
+        {
+          "name": "Kabler",
+          "parts": [
+            {
+              "id": "N12",
+              "name": "Dupont hunn-ledning 10/15 cm",
+              "qty": 23,
+              "note": "W01–W23, kuttet"
+            },
+            {
+              "id": "N13",
+              "name": "Myk ledning 26 AWG",
+              "qty": "0,5 m",
+              "note": ""
+            },
+            {
+              "id": "L4",
+              "name": "Krympestrømpe Ø3 / Ø6 / Ø10",
+              "qty": "sett",
               "note": ""
             }
           ]
@@ -211,204 +409,519 @@
       "type": "tools",
       "title": "Verktøy",
       "tools": [
-        "Loddebolt 60 W, meisel- eller skråspiss",
+        "Loddebolt 60 W med meiselspiss",
         "Loddetinn 0,8 mm med flussmiddel",
-        "Avisoleringstang",
-        "Sidekutter",
-        "Varmepistol eller lighter for krympestrømpe",
+        "Avisoleringstang og sidekutter",
+        "Varmepistol for krympestrømpe",
         "Multimeter",
-        "Unbrako 2,0 mm",
-        "Fastnøkkel 8, 10 og 14 mm"
+        "Labbforsyning eller 24 V-adapter (19–24 V, 4 A)",
+        "Unbrako og fastnøkler til M2,5 / M3 / M8",
+        "PC med Skjold Flasher og kortleser"
       ],
-      "note": "Lodd i et godt ventilert rom. Hold strøm frakoblet til steg [fylles inn]."
+      "note": "Lodd i et godt ventilert rom. Ingen strøm før sjekksteget etter hovedkortet. Koble alltid med strømmen av."
     },
     {
       "type": "section",
       "n": 1,
-      "title": "Lodding av kontakter",
-      "sub": "Kontaktene loddes før de monteres i bakpanelet. Det er mye lettere enn å lodde i kassen.",
+      "title": "S1 · Hovedkortet",
+      "sub": "Kortet kommer med SMD-delene montert. De store delene loddes for hånd.",
       "img": "sec-1"
     },
     {
       "type": "step",
       "n": 1,
-      "title": "Strøminngang",
+      "title": "Skruterminaler og Pi-header",
       "parts": [
         {
-          "id": "K1",
-          "name": "DC-kontakt",
+          "id": "E1",
+          "name": "Hovedkort rev B",
           "qty": 1,
           "note": ""
         },
         {
-          "id": "L1",
-          "name": "18 AWG rød/sort",
-          "qty": "2 × 150 mm",
-          "note": ""
-        },
-        {
-          "id": "L4",
-          "name": "Krympestrømpe Ø6",
-          "qty": 2,
-          "note": ""
-        }
-      ],
-      "img": "step-1",
-      "wires": [
-        {
-          "from": "K1 senterpinne (+)",
-          "to": "Hovedkort J1 + [fylles inn]",
-          "color": "#c8342b",
-          "colorName": "Rød",
-          "awg": "18 AWG",
-          "len": "150 mm"
-        },
-        {
-          "from": "K1 hylse (−)",
-          "to": "Hovedkort J1 − [fylles inn]",
-          "color": "#1b1b1c",
-          "colorName": "Sort",
-          "awg": "18 AWG",
-          "len": "150 mm"
-        }
-      ],
-      "tips": [
-        "Fortinn lederne og loddeørene før du lodder dem sammen.",
-        "Tre krympestrømpen på ledningen før du lodder."
-      ],
-      "warn": "Senterpinnen er pluss. Feil polaritet kan ødelegge hovedkortet."
-    },
-    {
-      "type": "step",
-      "n": 2,
-      "title": "Høyttalerpoler",
-      "parts": [
-        {
-          "id": "K2",
-          "name": "Høyttalerpol",
+          "id": "P1",
+          "name": "Skruterminal 2-pol",
           "qty": 4,
           "note": ""
         },
         {
-          "id": "L1",
-          "name": "18 AWG rød/sort",
-          "qty": "4 × 120 mm",
+          "id": "P3",
+          "name": "Stiftlist 2 × 20",
+          "qty": 1,
           "note": ""
-        },
+        }
+      ],
+      "img": "step-1",
+      "wires": [],
+      "tips": [
+        "J1 = 24 V inn, J2 = høyttaler L, J3 = høyttaler R, J6 = 5 V til Pi.",
+        "Lodd én pinne, rett opp delen, lodd resten."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 2,
+      "title": "JST XH-lister",
+      "parts": [
         {
-          "id": "S4",
-          "name": "Tannskive M3",
-          "qty": 0,
-          "note": "ikke her"
+          "id": "P2",
+          "name": "JST XH hann-list",
+          "qty": "sett",
+          "note": ""
         }
       ],
       "img": "step-2",
-      "wires": [
-        {
-          "from": "L+ (rød, øverst)",
-          "to": "Hovedkort J13 L+ [fylles inn]",
-          "color": "#c8342b",
-          "colorName": "Rød",
-          "awg": "18 AWG",
-          "len": "120 mm"
-        },
-        {
-          "from": "L− (sort, øverst)",
-          "to": "Hovedkort J13 L− [fylles inn]",
-          "color": "#1b1b1c",
-          "colorName": "Sort",
-          "awg": "18 AWG",
-          "len": "120 mm"
-        },
-        {
-          "from": "R+ (rød, nederst)",
-          "to": "Hovedkort J13 R+ [fylles inn]",
-          "color": "#c8342b",
-          "colorName": "Rød",
-          "awg": "18 AWG",
-          "len": "120 mm"
-        },
-        {
-          "from": "R− (sort, nederst)",
-          "to": "Hovedkort J13 R− [fylles inn]",
-          "color": "#1b1b1c",
-          "colorName": "Sort",
-          "awg": "18 AWG",
-          "len": "120 mm"
-        }
-      ],
+      "wires": [],
       "tips": [
-        "Polene er isolerte. Ingen av dem skal ha kontakt med kassen."
+        "J4/J20 3-pol, J7/J10/J22 6-pol, J8/J9 5-pol, J19/J23 4-pol, J21/J24 2-pol.",
+        "Pinne 1 er firkantet pad / strek på silketrykket."
       ],
       "warn": ""
     },
     {
       "type": "step",
       "n": 3,
-      "title": "AUX 1 og AUX 2",
+      "title": "Sikring, kondensatorer og relé",
       "parts": [
         {
-          "id": "K3",
-          "name": "PJ-392",
+          "id": "P4",
+          "name": "Sikringsklips + 5 A T",
+          "qty": "2 + 1",
+          "note": ""
+        },
+        {
+          "id": "P5",
+          "name": "1000 µF 35 V",
           "qty": 2,
           "note": ""
         },
         {
-          "id": "L3",
-          "name": "Skjermet kabel 2-leder",
-          "qty": "2 × 140 mm",
-          "note": ""
-        },
-        {
-          "id": "L4",
-          "name": "Krympestrømpe Ø3",
-          "qty": 6,
+          "id": "P6",
+          "name": "Relé SRD-05VDC",
+          "qty": 1,
           "note": ""
         }
       ],
       "img": "step-3",
+      "wires": [],
+      "tips": [
+        "Maks 16 mm høye kondensatorer. Kassen er 43,5 mm innvendig."
+      ],
+      "warn": "Elektrolyttene har polaritet. Minus-stripen mot det skraverte feltet på silketrykket."
+    },
+    {
+      "type": "step",
+      "n": 4,
+      "title": "USB-A-porter",
+      "parts": [
+        {
+          "id": "P7",
+          "name": "USB-A Molex 67643",
+          "qty": 4,
+          "note": ""
+        }
+      ],
+      "img": "step-4",
+      "wires": [],
+      "tips": [
+        "Portene stikker ut gjennom venstre vegg. Hold dem plant mot kortkanten."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 5,
+      "title": "Kjøleribbe og temperaturføler",
+      "parts": [
+        {
+          "id": "A4",
+          "name": "Kjøleribbe 20 × 20",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "E6",
+          "name": "NTC 10 k",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L7",
+          "name": "26 AWG",
+          "qty": "2",
+          "note": ""
+        }
+      ],
+      "img": "step-5",
       "wires": [
         {
-          "from": "PJ-392 tupp (T)",
-          "to": "J13 AUX_L [fylles inn]",
+          "from": "NTC ben 1",
+          "to": "J24 pinne 1 (NTC)",
           "color": "#f2f2ee",
           "colorName": "Hvit",
-          "awg": "skjermet",
-          "len": "140 mm"
+          "awg": "26 AWG",
+          "len": "[fylles inn]"
         },
         {
-          "from": "PJ-392 ring (R)",
-          "to": "J13 AUX_R [fylles inn]",
-          "color": "#c8342b",
-          "colorName": "Rød",
-          "awg": "skjermet",
-          "len": "140 mm"
-        },
-        {
-          "from": "PJ-392 hylse (S)",
-          "to": "J13 GND [fylles inn]",
-          "color": "#9a9a95",
-          "colorName": "Skjerm",
-          "awg": "skjermet",
-          "len": "140 mm"
+          "from": "NTC ben 2",
+          "to": "J24 pinne 2 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "26 AWG",
+          "len": "[fylles inn]"
         }
       ],
       "tips": [
-        "Skjermen loddes bare i kontaktenden mot hovedkortet for å unngå jordsløyfe. [bekreft]"
+        "Kjøleflaten på TPA3116 er på toppen. Ribben festes med termisk tape.",
+        "NTC-en teipes på siden av ribben. Den er ikke polarisert."
       ],
       "warn": ""
     },
     {
       "type": "check",
-      "n": 4,
-      "title": "Sjekk med multimeter",
+      "n": 6,
+      "title": "Første strøm, uten Pi og høyttalere",
+      "checks": [
+        {
+          "what": "Relé K1 pinne 1 mot 3, ingen strøm",
+          "expect": "Brudd (OL). Kortslutning = NO/NC byttet"
+        },
+        {
+          "what": "24 V på J1 → spenning på J6",
+          "expect": "5,2 V"
+        },
+        {
+          "what": "J22 pinne 5 mot GND",
+          "expect": "3,3 V"
+        },
+        {
+          "what": "J10 pinne 1 mot GND",
+          "expect": "0 V (5V_SW av)"
+        },
+        {
+          "what": "Strøm fra adapteren i standby",
+          "expect": "< 0,2 A"
+        }
+      ],
+      "img": "check-6"
+    },
+    {
+      "type": "section",
+      "n": 2,
+      "title": "S1 · Bakpanelet",
+      "sub": "Kontaktene loddes med ledning før de settes i bakpanelet.",
+      "img": "sec-2"
+    },
+    {
+      "type": "step",
+      "n": 7,
+      "title": "Strøminngang og hovedbryter",
+      "parts": [
+        {
+          "id": "K1",
+          "name": "DC-099",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "K6",
+          "name": "KCD1",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L1",
+          "name": "18 AWG rød/sort",
+          "qty": "3",
+          "note": ""
+        },
+        {
+          "id": "L4",
+          "name": "Krympestrømpe Ø6",
+          "qty": 3,
+          "note": ""
+        },
+        {
+          "id": "S6",
+          "name": "Tannskive",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-7",
+      "wires": [
+        {
+          "from": "K1 senterpinne (+)",
+          "to": "K6 KCD1, inn",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "18 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "K6 KCD1, ut",
+          "to": "J1 pinne 1 (24 V +)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "18 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "K1 hylse (−)",
+          "to": "J1 pinne 2 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "18 AWG",
+          "len": "[fylles inn]"
+        }
+      ],
+      "tips": [
+        "KCD1 tar flatstifthylser 4,8 mm.",
+        "Bruk adapter 19–24 V. 28 V er for mye."
+      ],
+      "warn": "Senterpinnen er pluss. DC-kontakten må ha plastkrage, ellers blir hylsen et ekstra jordpunkt."
+    },
+    {
+      "type": "step",
+      "n": 8,
+      "title": "Høyttalerpoler",
+      "parts": [
+        {
+          "id": "K2",
+          "name": "Høyttalerpol M8",
+          "qty": 4,
+          "note": ""
+        },
+        {
+          "id": "L1",
+          "name": "18 AWG rød/sort",
+          "qty": "4",
+          "note": ""
+        }
+      ],
+      "img": "step-8",
+      "wires": [
+        {
+          "from": "L + (rød)",
+          "to": "J2 pinne 1 (SPK L+)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "18 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "L − (sort)",
+          "to": "J2 pinne 2 (SPK L−)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "18 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "R + (rød)",
+          "to": "J3 pinne 1 (SPK R+)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "18 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "R − (sort)",
+          "to": "J3 pinne 2 (SPK R−)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "18 AWG",
+          "len": "[fylles inn]"
+        }
+      ],
+      "tips": [
+        "Avisolert ledning rett i skruterminalen."
+      ],
+      "warn": "Utgangene ligger på ca. 12 V DC. Ingen pol skal ha kontakt med kassen. Bruk isolasjonsringen."
+    },
+    {
+      "type": "step",
+      "n": 9,
+      "title": "AUX 1",
+      "parts": [
+        {
+          "id": "K3",
+          "name": "PJ-392",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L3",
+          "name": "Skjermet kabel",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L2",
+          "name": "JST XH 3-pol",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L4",
+          "name": "Krympestrømpe Ø3",
+          "qty": 3,
+          "note": ""
+        }
+      ],
+      "img": "step-9",
+      "wires": [
+        {
+          "from": "PJ-392 tupp (T)",
+          "to": "J4 pinne 1 (AUX1 L)",
+          "color": "#f2f2ee",
+          "colorName": "Hvit",
+          "awg": "skjermet",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "PJ-392 ring (R)",
+          "to": "J4 pinne 2 (AUX1 R)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "skjermet",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "PJ-392 hylse (S)",
+          "to": "J4 pinne 3 (GND)",
+          "color": "#9a9a95",
+          "colorName": "Skjerm",
+          "awg": "skjermet",
+          "len": "[fylles inn]"
+        }
+      ],
+      "tips": [
+        "Hullet til høyre (−1) er AUX 1, til Mac.",
+        "Skjermen loddes i begge ender eller bare mot kortet. [bekreft]"
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 10,
+      "title": "AUX 2",
+      "parts": [
+        {
+          "id": "K3",
+          "name": "PJ-392",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L3",
+          "name": "Skjermet kabel",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L2",
+          "name": "JST XH 3-pol",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L4",
+          "name": "Krympestrømpe Ø3",
+          "qty": 3,
+          "note": ""
+        }
+      ],
+      "img": "step-10",
+      "wires": [
+        {
+          "from": "PJ-392 tupp (T)",
+          "to": "J20 pinne 1 (AUX2 L)",
+          "color": "#f2f2ee",
+          "colorName": "Hvit",
+          "awg": "skjermet",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "PJ-392 ring (R)",
+          "to": "J20 pinne 2 (AUX2 R)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "skjermet",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "PJ-392 hylse (S)",
+          "to": "J20 pinne 3 (GND)",
+          "color": "#9a9a95",
+          "colorName": "Skjerm",
+          "awg": "skjermet",
+          "len": "[fylles inn]"
+        }
+      ],
+      "tips": [
+        "Hullet på −11 er AUX 2, til PC. Det går via USB-kodeken på kortet."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 11,
+      "title": "Strømknapp bak",
+      "parts": [
+        {
+          "id": "K9",
+          "name": "Momentan trykknapp",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L2",
+          "name": "JST XH 2-pol",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-11",
+      "wires": [
+        {
+          "from": "Knapp ben 1",
+          "to": "J21 pinne 1 (GPIO 15)",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "26 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "Knapp ben 2",
+          "to": "J21 pinne 2 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "26 AWG",
+          "len": "[fylles inn]"
+        }
+      ],
+      "tips": [
+        "Hull og plassering i bakpanelet: [bekreft]"
+      ],
+      "warn": ""
+    },
+    {
+      "type": "check",
+      "n": 12,
+      "title": "Sjekk bakpanelet med multimeter",
       "checks": [
         {
           "what": "DC + mot DC −",
-          "expect": "Ingen kortslutning (> 1 kΩ)"
+          "expect": "Ingen kortslutning"
         },
         {
           "what": "Hver høyttalerpol mot kassen",
+          "expect": "Brudd (OL)"
+        },
+        {
+          "what": "DC-hylse mot kassen",
           "expect": "Brudd (OL)"
         },
         {
@@ -416,23 +929,23 @@
           "expect": "Brudd (OL)"
         },
         {
-          "what": "GND-punkt bakpanel mot kasse",
-          "expect": "< 1 Ω"
+          "what": "Jordpunkt bak mot kassen",
+          "expect": "< 1 Ω [bekreft]"
         }
       ],
-      "img": "check-4"
+      "img": "check-12"
     },
     {
       "type": "section",
-      "n": 2,
-      "title": "Front og betjening",
-      "sub": "Knapper, volumhjul, skjerm og hodetelefonkontakt.",
-      "img": "sec-2"
+      "n": 3,
+      "title": "S1 · Front og betjening",
+      "sub": "Knapper, POWER, volumhjul, skjerm og hodetelefonkontakt. Alt går til JST-plugger.",
+      "img": "sec-3"
     },
     {
       "type": "step",
-      "n": 5,
-      "title": "Knapper med LED-ring",
+      "n": 13,
+      "title": "Knapper: brytere",
       "parts": [
         {
           "id": "K7",
@@ -442,111 +955,1192 @@
         },
         {
           "id": "L2",
-          "name": "26 AWG, 4 farger",
-          "qty": "4 × 4 × 180 mm",
+          "name": "JST XH 6-pol til J7",
+          "qty": 1,
           "note": ""
         }
       ],
-      "img": "step-5",
+      "img": "step-13",
       "wires": [
         {
-          "from": "Knapp NO",
-          "to": "Kontrollkort BT / AUX / RADIO / USB [fylles inn]",
-          "color": "#2f6fd0",
-          "colorName": "Blå",
+          "from": "BT (oppe venstre)",
+          "to": "J7 pinne 1",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
           "awg": "26 AWG",
-          "len": "180 mm"
+          "len": "200–300 mm"
         },
         {
-          "from": "Knapp C",
-          "to": "Kontrollkort GND",
+          "from": "RADIO (oppe høyre)",
+          "to": "J7 pinne 2",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "AUX (nede)",
+          "to": "J7 pinne 3",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "USB (nede)",
+          "to": "J7 pinne 4",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "Andre bryterben, lenket",
+          "to": "J7 pinne 6 (GND)",
           "color": "#1b1b1c",
           "colorName": "Sort",
           "awg": "26 AWG",
-          "len": "180 mm"
-        },
-        {
-          "from": "LED +",
-          "to": "Kontrollkort LED1–4 [fylles inn]",
-          "color": "#d9a441",
-          "colorName": "Gul",
-          "awg": "26 AWG",
-          "len": "180 mm"
-        },
-        {
-          "from": "LED −",
-          "to": "Kontrollkort GND",
-          "color": "#1b1b1c",
-          "colorName": "Sort",
-          "awg": "26 AWG",
-          "len": "180 mm"
+          "len": "200–300 mm"
         }
       ],
       "tips": [
-        "Merk hver ledning med tape før du monterer knappene."
+        "Plasseringen oppe/nede, venstre/høyre: [bekreft]",
+        "Merk hver ledning med tape før montering."
       ],
       "warn": ""
     },
     {
       "type": "step",
-      "n": 6,
-      "title": "Power-bryter og volumhjul",
+      "n": 14,
+      "title": "Knapper: LED-ringer",
+      "parts": [
+        {
+          "id": "K7",
+          "name": "Metallknapp 12 mm",
+          "qty": 4,
+          "note": ""
+        },
+        {
+          "id": "L2",
+          "name": "JST XH 6-pol til J10",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-14",
+      "wires": [
+        {
+          "from": "LED + på alle fire, lenket",
+          "to": "J10 pinne 1 (5V_SW)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "BT LED −",
+          "to": "J10 pinne 2",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "RADIO LED −",
+          "to": "J10 pinne 3",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "AUX LED −",
+          "to": "J10 pinne 4",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "USB LED −",
+          "to": "J10 pinne 5",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        }
+      ],
+      "tips": [
+        "Ringene får 5 V. Bruk 3–6 V-varianten av knappene.",
+        "Rekkefølgen BT/RADIO på J10: [bekreft]"
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 15,
+      "title": "POWER-knapp",
       "parts": [
         {
           "id": "K8",
-          "name": "Metallbryter 16 mm",
+          "name": "Metallknapp 16 mm",
           "qty": 1,
           "note": ""
         },
         {
+          "id": "L7",
+          "name": "26 AWG",
+          "qty": 4,
+          "note": ""
+        }
+      ],
+      "img": "step-15",
+      "wires": [
+        {
+          "from": "Bryterben 1",
+          "to": "J7 pinne 5 (PWR)",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "Bryterben 2",
+          "to": "J7 pinne 6 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "LED +",
+          "to": "J10 pinne 1 (5V_SW)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "LED −",
+          "to": "J10 pinne 6 (POWER)",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        }
+      ],
+      "tips": [
+        "Kort trykk = standby, hold 3 s = omstart."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 16,
+      "title": "Volumhjul",
+      "parts": [
+        {
           "id": "E4",
-          "name": "EC11 + kontrollkort",
+          "name": "KY-040",
           "qty": 1,
           "note": ""
         },
         {
           "id": "L2",
-          "name": "26 AWG",
-          "qty": "6 × 180 mm",
+          "name": "JST XH 5-pol → Dupont hunn",
+          "qty": 1,
           "note": ""
         }
       ],
-      "img": "step-6",
+      "img": "step-16",
       "wires": [
         {
-          "from": "Bryter NO",
-          "to": "Kontrollkort PWR [fylles inn]",
+          "from": "KY-040 CLK",
+          "to": "J8 pinne 1 (GPIO 23)",
           "color": "#2f6fd0",
           "colorName": "Blå",
           "awg": "26 AWG",
-          "len": "180 mm"
+          "len": "200–300 mm"
         },
         {
-          "from": "Bryter LED +",
-          "to": "Kontrollkort LED_PWR [fylles inn]",
-          "color": "#d9a441",
-          "colorName": "Gul",
+          "from": "KY-040 DT",
+          "to": "J8 pinne 2 (GPIO 24)",
+          "color": "#2f6fd0",
+          "colorName": "Blå",
           "awg": "26 AWG",
-          "len": "180 mm"
+          "len": "200–300 mm"
         },
         {
-          "from": "EC11 A / B / C",
-          "to": "Loddet direkte på kontrollkortet",
-          "color": "#9a9a95",
-          "colorName": "—",
-          "awg": "—",
-          "len": "—"
+          "from": "KY-040 SW",
+          "to": "J8 pinne 3 (GPIO 25)",
+          "color": "#2f6fd0",
+          "colorName": "Blå",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "KY-040 +",
+          "to": "J8 pinne 4 (3V3)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
+        },
+        {
+          "from": "KY-040 GND",
+          "to": "J8 pinne 5 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "26 AWG",
+          "len": "200–300 mm"
         }
       ],
       "tips": [
-        "EC11 sin låsetapp kan bøyes av hvis den ikke passer i frontpanelet."
+        "Vri = volum, trykk = demp, hold = kanalmeny."
       ],
       "warn": ""
     },
     {
+      "type": "step",
+      "n": 17,
+      "title": "Skjerm (OLED)",
+      "parts": [
+        {
+          "id": "E3",
+          "name": "OLED 2,42″",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L2",
+          "name": "JST XH 5-pol → Dupont hunn",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-17",
+      "wires": [
+        {
+          "from": "OLED VCC",
+          "to": "J9 pinne 1 (3V3)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "26 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "OLED GND",
+          "to": "J9 pinne 2 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "26 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "OLED SDA",
+          "to": "J9 pinne 3 (SDA)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "26 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "OLED SCL",
+          "to": "J9 pinne 4 (SCL)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "26 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "OLED RES",
+          "to": "J9 pinne 5 (GPIO 4)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "26 AWG",
+          "len": "[fylles inn]"
+        }
+      ],
+      "tips": [
+        "OLED-ens DC og CS kobles til GND med to korte ledninger.",
+        "TFT 2,8″ i stedet: 14-pol flatkabel til J13."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 18,
+      "title": "Hodetelefonkontakt",
+      "parts": [
+        {
+          "id": "K3",
+          "name": "PJ-392",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L7",
+          "name": "Myk ledning 26 AWG",
+          "qty": "4 × 50–60 mm",
+          "note": ""
+        },
+        {
+          "id": "L2",
+          "name": "JST XH 4-pol til J23",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "S7",
+          "name": "Loctite 222",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-18",
+      "wires": [
+        {
+          "from": "PJ-392 tupp (L)",
+          "to": "J23 pinne 1 (HP L)",
+          "color": "#f2f2ee",
+          "colorName": "Hvit",
+          "awg": "26 AWG",
+          "len": "50–60 mm + XH"
+        },
+        {
+          "from": "PJ-392 ring (R)",
+          "to": "J23 pinne 2 (HP R)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "26 AWG",
+          "len": "50–60 mm + XH"
+        },
+        {
+          "from": "PJ-392 hylse",
+          "to": "J23 pinne 3 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "26 AWG",
+          "len": "50–60 mm + XH"
+        },
+        {
+          "from": "PJ-392 bryter for L",
+          "to": "J23 pinne 4 (DET) [bekreft]",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "26 AWG",
+          "len": "50–60 mm + XH"
+        }
+      ],
+      "tips": [
+        "Lodd før innskruing. Skru inn bakfra til den er plan med fronten.",
+        "Hvilket loddeøre som er bryteren: mål med multimeter. [bekreft]"
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 19,
+      "title": "Sett sammen frontplaten",
+      "parts": [
+        {
+          "id": "A2",
+          "name": "Frontplate alu",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "A3",
+          "name": "Røyksort akryl",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "S5",
+          "name": "Mutter M3",
+          "qty": 6,
+          "note": ""
+        }
+      ],
+      "img": "step-19",
+      "wires": [],
+      "tips": [
+        "Akrylen limes inn fra baksiden, 1 mm forsenket.",
+        "Studsene går gjennom frontpanelet. Mutrene skrus på innenfra."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "section",
+      "n": 4,
+      "title": "S1 · Montering i kassen",
+      "sub": "Pi 4 under hovedkortet, kortet på stolpene og alle plugger på plass.",
+      "img": "sec-4"
+    },
+    {
+      "type": "step",
+      "n": 20,
+      "title": "Pi 4 under hovedkortet",
+      "parts": [
+        {
+          "id": "E2",
+          "name": "Raspberry Pi 4",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "S3",
+          "name": "M2,5 × 20",
+          "qty": 4,
+          "note": ""
+        },
+        {
+          "id": "S4",
+          "name": "M2,5 × 6",
+          "qty": 4,
+          "note": ""
+        }
+      ],
+      "img": "step-20",
+      "wires": [],
+      "tips": [
+        "Hull H5–H8. Portene mot høyre, SD-kortet mot venstre.",
+        "Sett kjøleribbene på Pi-en først."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 21,
+      "title": "Flatkabel og 5 V til Pi",
+      "parts": [
+        {
+          "id": "L5",
+          "name": "40-pin flatkabel 10 cm",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L1",
+          "name": "18 AWG rød/sort",
+          "qty": "2",
+          "note": ""
+        }
+      ],
+      "img": "step-21",
+      "wires": [
+        {
+          "from": "J5 (2 × 20)",
+          "to": "Pi GPIO-header",
+          "color": "#9a9a95",
+          "colorName": "Flatkabel",
+          "awg": "40-pol",
+          "len": "100 mm"
+        },
+        {
+          "from": "J6 pinne 1 (5 V)",
+          "to": "Pi header pinne 2 (5 V)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "18 AWG",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "J6 pinne 2 (GND)",
+          "to": "Pi header pinne 6 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "18 AWG",
+          "len": "[fylles inn]"
+        }
+      ],
+      "tips": [
+        "Rød stripe mot pinne 1 i begge ender."
+      ],
+      "warn": "Aldri USB-C-strøm i Pi-en samtidig med J6. To forsyninger i parallell kan ødelegge Pi-en."
+    },
+    {
+      "type": "step",
+      "n": 22,
+      "title": "Hovedkortet i kassen",
+      "parts": [
+        {
+          "id": "A1",
+          "name": "Kasse",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "S2",
+          "name": "M3 × 25",
+          "qty": 4,
+          "note": ""
+        },
+        {
+          "id": "S1",
+          "name": "M3 × 6",
+          "qty": 4,
+          "note": ""
+        }
+      ],
+      "img": "step-22",
+      "wires": [],
+      "tips": [
+        "Kortet ligger flush mot venstre vegg, så USB-A stikker ut.",
+        "Kortet jordes til kassen bare i jordpunktet bak."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 23,
+      "title": "USB-C, nettverk og USB-lyd",
+      "parts": [
+        {
+          "id": "K4",
+          "name": "USB-C panelkabel",
+          "qty": 3,
+          "note": ""
+        },
+        {
+          "id": "K5",
+          "name": "RJ45-forlenger",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "L6",
+          "name": "USB-A-kabel",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-23",
+      "wires": [
+        {
+          "from": "USB-C «PC 1» bak",
+          "to": "J11 på kortet",
+          "color": "#9a9a95",
+          "colorName": "Kabel",
+          "awg": "USB-C",
+          "len": "150–200 mm"
+        },
+        {
+          "from": "USB-C «PC 2» bak",
+          "to": "J12 på kortet",
+          "color": "#9a9a95",
+          "colorName": "Kabel",
+          "awg": "USB-C",
+          "len": "150–200 mm"
+        },
+        {
+          "from": "USB-C «Pi» bak",
+          "to": "Pi 4 USB-C-port",
+          "color": "#9a9a95",
+          "colorName": "Kabel",
+          "awg": "USB-C",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "Pi USB-A-port",
+          "to": "J19 (5V, D−, D+, GND)",
+          "color": "#9a9a95",
+          "colorName": "Kabel",
+          "awg": "USB",
+          "len": "[fylles inn]"
+        },
+        {
+          "from": "RJ45 bak",
+          "to": "Pi 4 Ethernet",
+          "color": "#9a9a95",
+          "colorName": "Kabel",
+          "awg": "Cat",
+          "len": "300 mm"
+        }
+      ],
+      "tips": [],
+      "warn": "«Pi»-kabelen må ha VBUS brutt (klipp den røde lederen), ellers får Pi-en 5 V fra PC-en."
+    },
+    {
+      "type": "step",
+      "n": 24,
+      "title": "Koble til frontpluggene",
+      "parts": [
+        {
+          "id": "L2",
+          "name": "JST XH-kabler",
+          "qty": "sett",
+          "note": ""
+        }
+      ],
+      "img": "step-24",
+      "wires": [],
+      "tips": [
+        "J7 knapper, J10 LED, J8 encoder, J9 OLED, J23 hodetelefon.",
+        "J4 AUX 1, J20 AUX 2, J21 strømknapp, J24 NTC."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "check",
+      "n": 25,
+      "title": "Før lokket: strøm uten høyttalere",
+      "checks": [
+        {
+          "what": "J6 med 24 V inn",
+          "expect": "5,2 V"
+        },
+        {
+          "what": "Standbystrøm",
+          "expect": "< 0,2 A"
+        },
+        {
+          "what": "Pi starter (grønn LED blinker)",
+          "expect": "Ja"
+        },
+        {
+          "what": "Ingen ledning i klem mellom kort og kasse",
+          "expect": "OK"
+        }
+      ],
+      "img": "check-25"
+    },
+    {
+      "type": "section",
+      "n": 5,
+      "title": "S1 · Programvare og test",
+      "sub": "SD-kortet skrives med Skjold Flasher. Første gang viser skjermen en QR-kode.",
+      "img": "sec-5"
+    },
+    {
+      "type": "step",
+      "n": 26,
+      "title": "Skriv SD-kortet",
+      "parts": [
+        {
+          "id": "E5",
+          "name": "microSD-kort",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-26",
+      "wires": [],
+      "tips": [
+        "Velg Skjold S1 i Flasher og legg inn Wi-Fi og navn.",
+        "Uten Flasher: KI_AMP_BOARD=main bash pi/install.sh"
+      ],
+      "warn": ""
+    },
+    {
+      "type": "check",
+      "n": 27,
+      "title": "Test lyd og betjening",
+      "checks": [
+        {
+          "what": "i2cdetect -y 1",
+          "expect": "20 (MCP23017) og 3c (OLED)"
+        },
+        {
+          "what": "aplay -l",
+          "expect": "pultamp og USB Audio CODEC"
+        },
+        {
+          "what": "journalctl -u ki-amp",
+          "expect": "«Knapper klare (main)»"
+        },
+        {
+          "what": "Høyttalere på, volum 15 %",
+          "expect": "Lyd i L og R"
+        },
+        {
+          "what": "Hodetelefon i fronten",
+          "expect": "Høyttalerne dempes"
+        },
+        {
+          "what": "Hver knapp trykkes",
+          "expect": "Riktig kilde og LED-ring"
+        }
+      ],
+      "img": "check-27"
+    },
+    {
+      "type": "step",
+      "n": 28,
+      "title": "Lokket på",
+      "parts": [
+        {
+          "id": "A1",
+          "name": "Kasse",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-28",
+      "wires": [],
+      "tips": [
+        "Sjekk at ingen ledning ligger over kjøleribben."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "section",
+      "n": 6,
+      "title": "Node · Knapper og encoder",
+      "sub": "Alt i lokket loddes først. Pinner fra skjold/node/config/node_pins.json.",
+      "img": "sec-6"
+    },
+    {
+      "type": "step",
+      "n": 29,
+      "title": "Lodd knappene",
+      "parts": [
+        {
+          "id": "N6",
+          "name": "Metallknapp 12 mm",
+          "qty": 4,
+          "note": ""
+        },
+        {
+          "id": "N12",
+          "name": "Dupont hunn",
+          "qty": 5,
+          "note": ""
+        },
+        {
+          "id": "L4",
+          "name": "Krympestrømpe Ø3",
+          "qty": 5,
+          "note": ""
+        }
+      ],
+      "img": "step-29",
+      "wires": [
+        {
+          "from": "RADIO (venstre)",
+          "to": "Pi pinne 29 (GPIO 5)",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "Dupont",
+          "len": "100 mm"
+        },
+        {
+          "from": "AIR / BT",
+          "to": "Pi pinne 31 (GPIO 6)",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "Dupont",
+          "len": "80 mm"
+        },
+        {
+          "from": "◀◀",
+          "to": "Pi pinne 33 (GPIO 13)",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "Dupont",
+          "len": "80 mm"
+        },
+        {
+          "from": "▶▶ (høyre)",
+          "to": "Pi pinne 37 (GPIO 26)",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "Dupont 15 cm",
+          "len": "110 mm"
+        },
+        {
+          "from": "C på RADIO (C-ene lenket)",
+          "to": "Pi pinne 39 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "Dupont",
+          "len": "80 mm"
+        }
+      ],
+      "tips": [
+        "Lenk C-pinnene med 20 mm broer.",
+        "La ledningene være lange nok til at lokket kan vippes opp."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 30,
+      "title": "LED-ringer (valgfritt)",
+      "parts": [
+        {
+          "id": "N6",
+          "name": "Knapp med LED-ring",
+          "qty": 4,
+          "note": ""
+        },
+        {
+          "id": "N11",
+          "name": "270 Ω",
+          "qty": 4,
+          "note": ""
+        },
+        {
+          "id": "N12",
+          "name": "Dupont hunn",
+          "qty": 5,
+          "note": ""
+        }
+      ],
+      "img": "step-30",
+      "wires": [
+        {
+          "from": "RADIO LED + via 270 Ω",
+          "to": "Pi pinne 32 (GPIO 12)",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
+          "from": "AIR / BT LED + via 270 Ω",
+          "to": "Pi pinne 36 (GPIO 16)",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "Dupont",
+          "len": "70 mm"
+        },
+        {
+          "from": "◀◀ LED + via 270 Ω",
+          "to": "Pi pinne 38 (GPIO 20)",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
+          "from": "▶▶ LED + via 270 Ω",
+          "to": "Pi pinne 40 (GPIO 21)",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "Dupont 15 cm",
+          "len": "110 mm"
+        },
+        {
+          "from": "LED − (lenket)",
+          "to": "Pi pinne 34 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "Dupont",
+          "len": "90 mm"
+        }
+      ],
+      "tips": [
+        "Motstanden loddes på knappen, under krympestrømpe.",
+        "Blå/hvit ring: 100 Ω eller transistor. [bekreft]"
+      ],
+      "warn": "Bruk 3–6 V-ringer. 12 V-varianten lyser ikke på Pi-en."
+    },
+    {
+      "type": "step",
+      "n": 31,
+      "title": "Lodd encoderen",
+      "parts": [
+        {
+          "id": "N5",
+          "name": "EC11",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N12",
+          "name": "Dupont hunn",
+          "qty": 4,
+          "note": ""
+        }
+      ],
+      "img": "step-31",
+      "wires": [
+        {
+          "from": "EC11 A",
+          "to": "Pi pinne 11 (GPIO 17)",
+          "color": "#2f6fd0",
+          "colorName": "Blå",
+          "awg": "Dupont",
+          "len": "80 mm"
+        },
+        {
+          "from": "EC11 B",
+          "to": "Pi pinne 13 (GPIO 27)",
+          "color": "#2f6fd0",
+          "colorName": "Blå",
+          "awg": "Dupont",
+          "len": "80 mm"
+        },
+        {
+          "from": "EC11 C (felles)",
+          "to": "Pi pinne 9 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "Dupont",
+          "len": "80 mm"
+        },
+        {
+          "from": "EC11 SW",
+          "to": "Pi pinne 15 (GPIO 22)",
+          "color": "#2f6fd0",
+          "colorName": "Blå",
+          "awg": "Dupont",
+          "len": "80 mm"
+        }
+      ],
+      "tips": [
+        "SW sin andre pinne loddes til C med en 15 mm bro.",
+        "Trykk = pause/spill."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "section",
+      "n": 7,
+      "title": "Node · Skjerm og montering",
+      "sub": "Skjermen går på SPI0. Bakgrunnslyset styres med en liten transistor.",
+      "img": "sec-7"
+    },
+    {
+      "type": "step",
+      "n": 32,
+      "title": "Skjerm: strøm og styring",
+      "parts": [
+        {
+          "id": "N4",
+          "name": "ST7735S 1,8″",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N12",
+          "name": "Dupont hunn",
+          "qty": 5,
+          "note": ""
+        }
+      ],
+      "img": "step-32",
+      "wires": [
+        {
+          "from": "VCC",
+          "to": "Pi pinne 17 (3V3)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
+          "from": "GND",
+          "to": "Pi pinne 20 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
+          "from": "CS",
+          "to": "Pi pinne 24 (GPIO 8, CE0)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
+          "from": "RESET",
+          "to": "Pi pinne 18 (GPIO 24)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
+          "from": "A0 / DC",
+          "to": "Pi pinne 22 (GPIO 25)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "Dupont",
+          "len": "90 mm"
+        }
+      ],
+      "tips": [
+        "Modulen går på 3,3 V. Aldri 5 V på VCC."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 33,
+      "title": "Skjerm: SPI og bakgrunnslys",
+      "parts": [
+        {
+          "id": "N4",
+          "name": "ST7735S 1,8″",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N8",
+          "name": "AO3401 (Q1)",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N9",
+          "name": "1 kΩ",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N10",
+          "name": "10 kΩ",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N12",
+          "name": "Dupont hunn",
+          "qty": 4,
+          "note": ""
+        }
+      ],
+      "img": "step-33",
+      "wires": [
+        {
+          "from": "SDA",
+          "to": "Pi pinne 19 (GPIO 10, MOSI)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
+          "from": "SCK",
+          "to": "Pi pinne 23 (GPIO 11, SCLK)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
+          "from": "Q1 source",
+          "to": "Pi pinne 1 (3V3)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "Dupont",
+          "len": "100 mm"
+        },
+        {
+          "from": "Q1 gate via 1 kΩ",
+          "to": "Pi pinne 16 (GPIO 23)",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "Dupont",
+          "len": "100 mm"
+        },
+        {
+          "from": "Q1 drain",
+          "to": "Skjerm LED",
+          "color": "#e8742a",
+          "colorName": "Oransje",
+          "awg": "loddet",
+          "len": "15 mm"
+        }
+      ],
+      "tips": [
+        "10 kΩ mellom gate og source. Motstandene krympes inn på ledningen.",
+        "GPIO 23 lav = lys på."
+      ],
+      "warn": "Pi-en tåler 16 mA per pinne. Bakgrunnslyset går derfor via Q1."
+    },
+    {
+      "type": "step",
+      "n": 34,
+      "title": "Pi i bunnen, lokket på",
+      "parts": [
+        {
+          "id": "N1",
+          "name": "Kasse",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N2",
+          "name": "Lokk",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N3",
+          "name": "Raspberry Pi",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-34",
+      "wires": [],
+      "tips": [
+        "Sett Dupont-pluggene på headeren etter pinnenumrene. Pinne 1 er nærmest SD-kortet.",
+        "Lokket skal kunne vippes opp uten at noe løsner."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 35,
+      "title": "Skriv SD-kortet",
+      "parts": [
+        {
+          "id": "N7",
+          "name": "microSD-kort",
+          "qty": 1,
+          "note": ""
+        }
+      ],
+      "img": "step-35",
+      "wires": [],
+      "tips": [
+        "Velg Skjold Node i Flasher.",
+        "config.txt: dtparam=spi=on, dtparam=audio=on."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "check",
+      "n": 36,
+      "title": "Test Node",
+      "checks": [
+        {
+          "what": "tools/node_selftest.py",
+          "expect": "Testbilde med fargestriper"
+        },
+        {
+          "what": "Rød og blå byttet",
+          "expect": "Sett bgr=true [bekreft]"
+        },
+        {
+          "what": "Bildet forskjøvet",
+          "expect": "h_offset=2, v_offset=1 [bekreft]"
+        },
+        {
+          "what": "Hver knapp trykkes",
+          "expect": "Navnet vises på skjermen"
+        },
+        {
+          "what": "Vri encoderen",
+          "expect": "Riktig retning vises"
+        },
+        {
+          "what": "LED-ringer",
+          "expect": "Blinker én og én"
+        }
+      ],
+      "img": "check-36"
+    },
+    {
       "type": "end",
       "title": "Ferdig",
-      "body": "Sett SD-kortet i Raspberry Pi-en, koble til høyttalere og strøm, og slå på hovedbryteren bak. Skjermen viser en QR-kode. Skann den med telefonen for å fullføre oppsettet.",
+      "body": "Koble til høyttalere (S1) eller lydutgang (Node) og strøm. Skjermen viser en QR-kode første gang. Skann den med telefonen for å fullføre oppsettet i Skjold-appen.",
       "img": "end"
     }
   ]
