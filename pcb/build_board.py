@@ -53,7 +53,7 @@ part("R52", R_, R0603, "100", "C22775", 60, 38, 0, "Gate Q7"); part("R53", R_, R
 part("Q8", TO, "SOT-23-3", "AO3401A", "C15127", 62, 42, 0, "P-MOSFET 5 V -> 5V_SW"); part("R54", R_, R0603, "10k", "C25804", 66, 42, 0, "Q8 gate fra Q7"); part("R55", R_, R0603, "100k", "C25803", 62, 46, 0, "Q8 gate pull-up")
 
 # --- buck TPS54560 (x 8–48, y 18–48) ---
-part("U1", SO, "HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm", "TPS54560DDAR", "C31966", 22, 30, 0, "Buck 60 V 5 A")
+part("U1", SO, "Texas_HSOP-8-1EP_3.9x4.9mm_P1.27mm", "TPS54560DDAR", "C31966", 22, 30, 0, "Buck 60 V 5 A")
 part("C2", C_, C1210, "4.7u/50V", "C170099", 12, 22, 0, "Cin"); part("C3", C_, C1210, "4.7u/50V", "C170099", 12, 26, 0, "Cin")
 part("C4", C_, C0603, "100n/50V", "C14663", 12, 30, 0, "Cin HF")
 part("C5", C_, C0603, "100n/50V", "C14663", 30, 24, 90, "Boot")
@@ -194,7 +194,7 @@ part("C67", C_, C0805, "10u", "C15850", 141, 34, 90, "VD18_O"); part("C69", C_, 
 part("R75", R_, R0603, "2.7k", "C13167", 141, 42, 90, "REXT (1 %)"); part("R46", R_, R0603, "10k", "C25804", 141, 50, 90, "OVCJ/XRSTJ pull-up")
 part("C66", C_, C0805, "10u", "C15850", 141, 54, 90, "VD33_O"); part("C73", C_, C0603, "100n/50V", "C14663", 141, 58, 90, "VD33")
 part("C68", C_, C0603, "100n/50V", "C14663", 141, 62, 90, "VDD5")
-part("U8", "Package_DFN_QFN", "UQFN-10_1.4x1.8mm_P0.4mm", "TS3USB221RSER", "C130085", 147, 62, 0, "USB 2:1-mux PC1/PC2 (S fra MCP GPB4, lav = PC 1; OE = GND)")
+part("U8", "Package_DFN_QFN", "Texas_UQFN-10_1.5x2mm_P0.5mm", "TS3USB221RSER", "C130085", 147, 62, 0, "USB 2:1-mux PC1/PC2 (S fra MCP GPB4, lav = PC 1; OE = GND)")
 part("C70", C_, C0603, "100n/50V", "C14663", 150, 70, 0, "Mux VCC"); part("R47", R_, R0603, "100k", "C25803", 150, 66, 0, "S pulldown (= PC 1)")
 part("J11", "Connector_USB", "USB_C_Receptacle_HRO_TYPE-C-31-M-12", "USB-C 16P", "C165948", 150, 76, 0, "USB-C fra PC 1 (via panelkabel)")
 part("J12", "Connector_USB", "USB_C_Receptacle_HRO_TYPE-C-31-M-12", "USB-C 16P", "C165948", 150, 86, 0, "USB-C fra PC 2 (via panelkabel)")
@@ -416,7 +416,7 @@ FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (137.05,
                 ("OUTPL", "F.Cu", 0.4, [(127.65, 34.975), (128.6, 34.975), (129.1, 35.475), (134.3, 35.475), (134.95, 34.825), (134.95, 34.3)]),   # pinne 23 -> C33.2 under C33.1
     ("5V", "F.Cu", 0.3, [(132.25, 43.5625), (132.25, 42.1), (135.8, 42.1), (136.22, 43.8)]),   # TPA6132A2 VDD (pinne 14) -> C100
     ("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
-    ("PC2_DP", "F.Cu", 0.2, [(32.6, 62.7685), (32.2, 63.7)]), ("PC2_DM", "F.Cu", 0.2, [(33.0, 62.7685), (33.1, 64.2)]),
+
     ("CODEC_VINR", "F.Cu", 0.25, [(150.4, 87.575), (148.9, 87.575)]), ("CODEC_VINR", "B.Cu", 0.25, [(148.9, 87.575), (148.9, 88.9), (155.0, 88.9)]),   # PCM2900C pinne 13 -> C98
     ("CODEC_VINR", "F.Cu", 0.25, [(155.0, 88.9), (155.0, 89.54), (160.0, 89.54), (161.0, 89.3), (170.95, 89.3), (170.95, 88.0)]),
     ("HP_CPP", "F.Cu", 0.2, [(133.438, 44.75), (133.85, 44.75), (134.05, 44.95), (134.9, 46.0)]),
@@ -425,7 +425,7 @@ FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (137.05,
     ("AMP_RINN", "F.Cu", 0.2, [(120.35, 31.725), (118.6, 31.725)]),   # TPA3116 pinne 5 ble stengt inne av nabosporene
                 ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),   # TPA6132A2 PGND/SGND -> termisk pad
                 ("BSNL", "F.Cu", 0.3, [(127.65, 36.925), (136.0, 36.925), (136.0, 38.1), (138.95, 38.1), (138.95, 37.3)])]   # pinne 20 -> C32.1 (rundt under C32.2)   # FE1.1s pinne 7 ut nedover mellom nabosporene
-FIXED_VIAS = [("HP_INR", (129.4, 45.75)), ("PC2_DP", (32.2, 63.7)), ("PC2_DM", (33.1, 64.2)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("AMP_RINN", (118.6, 31.725))]
+FIXED_VIAS = [("HP_INR", (129.4, 45.75)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("AMP_RINN", (118.6, 31.725))]
 FIXED_GND_VIP = {}   # GND rutes nå som nett av Freerouting – ingen via-i-pad (lodder dårlig uten fylte vias)   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet
