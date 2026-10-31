@@ -222,6 +222,7 @@ def _fix_hole_near_hole():
         rep = os.path.join(OUT, "drc_tmp.txt"); pcbnew.WriteDRCReport(board, rep, pcbnew.EDA_UNITS_MILLIMETRES, True)
         n = 0; pairs = []
         for blk in _r.split(r"\n(?=\[)", open(rep).read()):
+            if "): Zone [" in blk: continue   # sonen fylles på nytt rundt den flyttede viaen etterpå
             if blk.startswith("[clearance]") or blk.startswith("[hole_clearance]"): n += 1
             if blk.startswith("[hole_near_hole]"):
                 m = _r.search(r"min ([-\d.]+) mm; actual ([-\d.]+) mm", blk)
