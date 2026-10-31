@@ -644,10 +644,10 @@ pos = os.path.join(OUT, "cpl_tmp.csv")
 subprocess.run(["kicad-cli", "pcb", "export", "pos", "--format", "csv", "--units", "mm", "--side", "front", "-o", pos, PCB], check=True)
 bom = {r["Designator"]: r for r in csv.DictReader(open(os.path.join(HERE, "bom.csv")))}
 _fp_name = {fp.GetReference(): fp.GetFPID().GetLibItemName().wx_str() for fp in board.GetFootprints()}
-_is_tht = {fp.GetReference(): any(pd.GetAttribute() == pcbnew.PAD_ATTRIB_PTH for pd in fp.Pads()) for fp in board.GetFootprints()}
+_is_tht = {fp.GetReference(): not any(pd.GetAttribute() == pcbnew.PAD_ATTRIB_SMD for pd in fp.Pads()) for fp in board.GetFootprints()}   # bare rene THT-deler loddes selv; USB-C (SMD + THT-ben) monteres av JLCPCB
 # JLCPCBs 0°-orientering avviker fra KiCads for disse pakkene (samme tabell som KiBot/JLCKicadTools bruker). Sjekk likevel pinne 1 i JLCPCB-forhåndsvisningen.
 import re as _rx
-JLC_ROT = [(r"^SOT-23", 180), (r"^SOT-223", 180), (r"^(SOIC|SSOP|TSSOP|HTSSOP|HSOP|SOP|MSOP)", 270), (r"^(QFN|WQFN|UQFN|DFN|VQFN|TQFN)", 270), (r"^CP_Elec", 180),
+JLC_ROT = [(r"^SOT-23", 180), (r"^SOT-223", 180), (r"^(SOIC|SSOP|TSSOP|HTSSOP|HSOP|SOP|MSOP)", 270), (r"^(Texas_RTE_)?(QFN|WQFN|UQFN|DFN|VQFN|TQFN)", 270), (r"^CP_Elec", 180),
            (r"^USB_C_Receptacle_HRO", 180), (r"^TO-252", 270)]
 def jlc_rot(ref, rot):
     name = _fp_name.get(ref, "")
