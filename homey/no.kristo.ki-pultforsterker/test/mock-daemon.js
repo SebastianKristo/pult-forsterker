@@ -20,7 +20,7 @@ function createMockDaemon({ port = 0 } = {}) {
       if (req.method === 'GET' && p === '/api/status') { /* bare status */ }
       else if (p === '/api/power') state.power = !!body.on;
       else if (p === '/api/toggle') state.power = !state.power;
-      else if (p === '/api/input') { if (!['airplay', 'bt', 'aux', 'usb'].includes(body.input)) return fail(res, 'ukjent kilde'); state.input = body.input; }
+      else if (p === '/api/input') { if (!(state.inputs || ['airplay', 'bt', 'aux', 'usb']).includes(body.input)) return fail(res, 'ukjent kilde'); state.input = body.input; }
       else if (p === '/api/volume') { if (body.volume !== undefined) state.volume = clamp(body.volume); if (body.delta !== undefined) state.volume = clamp(state.volume + body.delta); if (state.volume > 0) state.mute = false; }
       else if (p === '/api/mute') state.mute = !!body.mute;
       else if (p === '/api/transport') {
@@ -45,6 +45,8 @@ function createMockDaemon({ port = 0 } = {}) {
       else if (p === '/api/level') { state.levels = state.levels || {}; state.levels[body.source] = body.level; }
       else if (p === '/api/usbsw') { state.usb_pc = body.toggle ? (state.usb_pc === 1 ? 2 : 1) : body.pc; }
       else if (p === '/api/voice') { if (body.profile) state.voice_profile = body.profile; if (body.on !== undefined) state.voice = !!body.on; }
+      else if (p === '/api/reboot') { state.rebooting = true; state.poweroff = !!body.poweroff; }
+      else if (p === '/api/settings') { state.settings = { ...(state.settings || {}), ...body }; res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ settings: { bright: 0, ...state.settings } })); }
       else if (p === '/api/bt') state.bt_pairing = !!body.pairing;
       else if (p === '/api/loudness') { if (body.on !== undefined) state.loudness = !!body.on; if (body.level !== undefined) state.loudness_level = Math.max(0, Math.min(10, body.level)); }
       else { res.writeHead(404); return res.end('{}'); }

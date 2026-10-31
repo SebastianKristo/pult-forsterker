@@ -27,8 +27,11 @@ fi
 [ -f /etc/default/skjold-os ] || printf '# Ekstra argumenter, f.eks. --layout node --api http://127.0.0.1:8765\nSKJOLD_OS_ARGS=\n' > /etc/default/skjold-os
 
 install -m 0644 "$HER/skjold-os.service" /etc/systemd/system/skjold-os.service
-# den gamle OLED-tjenesten for Pultforsterker skal ikke slåss om SPI på Node
-systemctl disable --now oled-display.service 2>/dev/null || true
+# oled_display.py skal ikke tegne (Skjold OS eier skjermen), men kjøre videre som metadata-tjeneste (AirPlay/BT-metadata)
+if [ -f /etc/ki-amp.env ]; then
+  sed -i '/^KI_AMP_DISPLAY=/d' /etc/ki-amp.env && echo "KI_AMP_DISPLAY=none" >> /etc/ki-amp.env
+  systemctl try-restart oled-display.service 2>/dev/null || true
+fi
 systemctl daemon-reload
 systemctl enable skjold-os.service
 systemctl restart skjold-os.service || true

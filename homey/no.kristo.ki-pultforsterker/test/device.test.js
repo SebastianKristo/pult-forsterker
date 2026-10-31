@@ -216,3 +216,25 @@ test('nivå per kilde vises når daemonen har levels', async () => {
   assert.deepEqual(daemon.calls.at(-1), { method: 'POST', path: '/api/level', body: { source: 'aux', level: 50 } });
   assert.equal(d.getCapabilityValue('ki_level_aux'), 50);
 });
+
+test('Skjold Node: kilder fra status.inputs, ingen S1-capabilities, lysstyrke og omstart', async () => {
+  Object.assign(daemon.state, { board: 'node', inputs: ['radio', 'airplay', 'bt', 'spotify'], levels: { airplay: 100, bt: 100, radio: 100, spotify: 80, aux: 100, usb: 100 }, headphones: false, settings: {} });
+  try {
+    const homey = new Homey.HomeyCtx(); const app = new App({ homey }); await app.onInit();
+    const d = new Device({ homey, settings: { host: '127.0.0.1', port }, capabilities: [...CAPS] });
+    let opts = null; d.setCapabilityOptions = async (c, o) => { if (c === 'ki_input') opts = o; };
+    await d.onInit(); d.onDeleted();
+    assert.deepEqual(opts.values.map((v) => v.id), ['radio', 'airplay', 'bt', 'spotify']);
+    assert.equal(d.hasCapability('ki_hp_automute'), false);
+    assert.equal(d.hasCapability('ki_headphones'), false);
+    assert.equal(d.hasCapability('ki_level_aux'), false);
+    assert.equal(d.getCapabilityValue('ki_level_spotify'), 80);
+    assert.equal(d.getCapabilityValue('ki_bright'), '0');
+    await d.triggerCapability('ki_input', 'spotify'); assert.equal(daemon.state.input, 'spotify');
+    await d.triggerCapability('ki_bright', '2'); assert.equal(daemon.state.settings.bright, 2); assert.equal(d.getCapabilityValue('ki_bright'), '2');
+    await homey.flow.getActionCard('ki_reboot').run({ device: d, action: 'poweroff' });
+    assert.deepEqual(daemon.calls.at(-1).body, { poweroff: true });
+  } finally {
+    for (const k of ['board', 'inputs', 'levels', 'headphones', 'settings', 'rebooting', 'poweroff']) delete daemon.state[k];
+  }
+});

@@ -94,3 +94,11 @@ class KiAmpApi:
     async def save_preset(self, n: int) -> dict[str, Any]:
         """Lagre radiokanalen som spiller nå som kanal n."""
         return await self._req("POST", "/preset", {"n": n, "save": True})
+
+    async def reboot(self, poweroff: bool = False) -> dict[str, Any]:
+        """Start Pi-en på nytt (eller slå den av) etter ~1,5 s."""
+        return await self._req("POST", "/reboot", {"poweroff": poweroff})
+
+    async def set_settings(self, patch: dict[str, Any]) -> dict[str, Any]:
+        """Delvis oppdatering av innstillingene (samme nøkler som web-appen). Svar: {"settings": …}."""
+        return await self._req("POST", "/settings", patch)

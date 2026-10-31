@@ -7,13 +7,16 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, is_node
 from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c), KiAmpAutoInputSwitch(c), KiAmpMixSwitch(c), KiAmpHpAutomuteSwitch(c)])
+    ents = [KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c), KiAmpAutoInputSwitch(c), KiAmpMixSwitch(c)]
+    if not is_node(c.data):   # ingen hodetelefonjack på Node
+        ents.append(KiAmpHpAutomuteSwitch(c))
+    add(ents)
 
 
 class KiAmpPowerSwitch(KiAmpEntity, SwitchEntity):
