@@ -113,7 +113,7 @@ part("R14", R_, R0603, "10k", "C25804", 108, 70, 0, "MUTE pull-up")
 
 # --- forsterker TPA3116D2 (x 60–135, y 18–48) ---
 part("U6", SO, "HTSSOP-32-1EP_6.1x11mm_P0.65mm_EP5.2x11mm_Mask4.11x4.36mm", "TPA3116D2DADR", "C50144", 84, 34, 0, "Klasse D 2x50 W (kjøleflate på toppen – kjøleribbe!)")
-part("C32", C_, C0805, "220n/50V", "C5378", 98, 36.9, 0, "BSNL"); part("C33", C_, C0805, "220n/50V", "C5378", 94, 34.3, 0, "BSPL")
+part("C32", C_, C0805, "220n/50V", "C5378", 98, 36.9, 180, "BSNL (snudd: OUTNL rett inn i pad 2, BSNL rundt under)"); part("C33", C_, C0805, "220n/50V", "C5378", 94, 34.3, 0, "BSPL")
 part("C34", C_, C0805, "220n/50V", "C5378", 98, 33.0, 0, "BSNR"); part("C35", C_, C0805, "220n/50V", "C5378", 94, 30.4, 0, "BSPR")
 part("C36", C_, C0603, "100n/50V", "C14663", 92, 27, 0, "PVCC HF"); part("C37", C_, C0805, "1u/50V", "C28323", 96, 27, 0, "PVCC"); part("C38", C_, C0603, "100n/50V", "C14663", 92, 41, 0, "PVCC HF"); part("C39", C_, C0805, "1u/50V", "C28323", 96, 41, 0, "PVCC")
 part("C40", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/50V", "C190286", 86, 20, 0, "PVCC bulk"); part("C41", "Capacitor_SMD", "CP_Elec_10x10.5", "220u/50V", "C190286", 100, 20, 0, "PVCC bulk")
@@ -411,7 +411,9 @@ POWER_SPINE = [
     ("5V", "B.Cu", 1.2, [(82.0, 43.0), (60.6, 43.0), (51.25, 43.0), (50.79, 42.54), (49.54, 42.54)]),   # J6 -> Pi-header J5.4 (5 V) under, matet fra samme skinne
 ]
 POWER_SPINE_VIAS = [("VIN24", (58.96, 21.5), 1.3, 0.75), ("VIN24", (58.96, 23.2), 1.0, 0.5), ("24V_AMP", (131.0, 23.2), 1.3, 0.75), ("24V_AMP", (131.0, 24.6), 1.0, 0.5), ("24V_AMP", (131.0, 38.2), 1.3, 0.75)]   # store/doble vias: via-veggen var flaskehalsen for 24V_AMP
-FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (133.3, 36.275), (134.6, 35.6), (138.3, 35.6), (138.95, 36.25), (138.95, 36.9)]),   # TPA3116 pinne 21 -> C32 (utvides i export)
+FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (137.05, 36.275), (137.05, 36.9)]),   # TPA3116 pinne 21 -> C32.2 (utvides i export)
+                ("BSPL", "F.Cu", 0.3, [(127.65, 34.325), (133.05, 34.325)]),   # pinne 24 -> C33.1
+                ("OUTPL", "F.Cu", 0.3, [(127.65, 34.975), (128.6, 34.975), (129.1, 35.475), (134.3, 35.475), (134.95, 34.825), (134.95, 34.3)]),   # pinne 23 -> C33.2 under C33.1
     ("5V", "F.Cu", 0.3, [(132.25, 43.5625), (132.25, 42.1), (135.8, 42.1), (136.22, 43.8)]),   # TPA6132A2 VDD (pinne 14) -> C100
     ("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
     ("PC2_DP", "F.Cu", 0.2, [(32.6, 62.7685), (32.2, 63.7)]), ("PC2_DM", "F.Cu", 0.2, [(33.0, 62.7685), (33.1, 64.2)]),
@@ -423,7 +425,7 @@ FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (133.3, 
     ("AMP_RINN", "F.Cu", 0.2, [(120.35, 31.725), (118.6, 31.725)]),   # TPA3116 pinne 5 ble stengt inne av nabosporene
                 ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),   # TPA6132A2 PGND/SGND -> termisk pad
                 ("USB3_DP", "F.Cu", 0.2, [(30.675, 49.6), (30.675, 53.8)]),
-                ("BSNL", "F.Cu", 0.3, [(127.65, 36.925), (137.05, 36.925)])]   # bootstrap N-L rett ut mellom OUTNL og PVCC-stubben   # FE1.1s pinne 7 ut nedover mellom nabosporene
+                ("BSNL", "F.Cu", 0.3, [(127.65, 36.925), (136.0, 36.925), (136.0, 38.1), (138.95, 38.1), (138.95, 37.3)])]   # pinne 20 -> C32.1 (rundt under C32.2)   # FE1.1s pinne 7 ut nedover mellom nabosporene
 FIXED_VIAS = [("HP_INR", (129.4, 45.75)), ("PC2_DP", (32.2, 63.7)), ("PC2_DM", (33.1, 64.2)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("USB3_DP", (30.675, 53.8)), ("AMP_RINN", (118.6, 31.725))]
 FIXED_GND_VIP = {}   # GND rutes nå som nett av Freerouting – ingen via-i-pad (lodder dårlig uten fylte vias)   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
