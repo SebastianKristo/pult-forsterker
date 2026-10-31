@@ -291,3 +291,13 @@ legend{padding:0;margin-bottom:6px;font-size:13px;color:var(--demp-m2)}
 
 /* Renders har en litt annen bakgrunnstone enn flatene; multiply skjuler kanten. */
 .p-hero img,.produkt img,.bilder img,.to-prod img,.ramme img,.bildepar img{mix-blend-mode:multiply}
+
+/* skjermbilder av app og web (Programvare) */
+.skjermbilder{display:grid;grid-template-columns:1fr;gap:28px;margin-top:40px;align-items:end}
+.skjermbilder figure{margin:0}
+.skjermbilder img{display:block;width:100%;height:auto;border-radius:20px;border:1px solid var(--linje-lys,#e3e0d7);box-shadow:0 24px 60px -30px rgba(0,0,0,.45)}
+.skjermbilder .sb-mobil{max-width:280px;justify-self:center}
+.skjermbilder .sb-mobil img{border-radius:28px}
+.skjermbilder figcaption{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dempet-m,#7a776d);margin-top:12px;text-align:center}
+@media (min-width:860px){.skjermbilder{grid-template-columns:280px 1fr;gap:40px}}
+.bunn .kopi{font-size:12.5px;line-height:1.5;opacity:.75;margin-top:6px;max-width:760px}
