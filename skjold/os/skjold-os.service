@@ -1,0 +1,18 @@
+[Unit]
+Description=Skjold OS – skjerm-UI (ST7735 + bakgrunnslys GPIO23)
+After=ki-amp.service network.target
+Wants=ki-amp.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/skjold/os
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/default/skjold-os
+ExecStart=/opt/skjold/venv/bin/python -m skjold_os $SKJOLD_OS_ARGS
+Restart=always
+RestartSec=2
+# root: SPI/GPIO + sletter /var/lib/skjold/velkomst.json etter første trykk
+User=root
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+id,fra,til,nett,farge,lengde_mm,pluggtype,merknad
+W01,Pi pinne 1,Q1 S (source),3V3,rød,100,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent","Q1 AO3401: 10 kΩ S→G. D→TFT LED (15 mm, loddet)"
+W02,Pi pinne 9,ENC C,GND,sort,80,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",SW-pinne 2 brokobles til C (15 mm)
+W03,Pi pinne 11,ENC A,GPIO17,blå,80,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W04,Pi pinne 13,ENC B,GPIO27,blå,80,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W05,Pi pinne 15,ENC SW,GPIO22,blå,80,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W06,Pi pinne 16,Q1 G (gate),GPIO23,oransje,100,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent","1 kΩ i serie, krympet inn"
+W07,Pi pinne 17,TFT VCC,3V3,rød,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W08,Pi pinne 18,TFT RESET,GPIO24,gul,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W09,Pi pinne 19,TFT SDA,SPI0 MOSI,gul,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W10,Pi pinne 20,TFT GND,GND,sort,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W11,Pi pinne 22,TFT A0,GPIO25,gul,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W12,Pi pinne 23,TFT SCK,SPI0 SCLK,gul,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W13,Pi pinne 24,TFT CS,SPI0 CE0,gul,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W14,Pi pinne 29,KNAPP RADIO NO,GPIO5,grønn,100,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W15,Pi pinne 31,KNAPP AIR / BT NO,GPIO6,grønn,80,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W16,Pi pinne 32,LED RADIO LED+,GPIO12,oransje,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent","270 Ω i serie, krympet inn (valgfri)"
+W17,Pi pinne 33,KNAPP ◀◀ NO,GPIO13,grønn,80,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",
+W18,Pi pinne 34,LED RADIO LED−,GND,sort,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",LED− på alle 4 lenkes med 20 mm broer (valgfri)
+W19,Pi pinne 36,LED AIR / BT LED+,GPIO16,oransje,70,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent","270 Ω i serie, krympet inn (valgfri)"
+W20,Pi pinne 37,KNAPP ▶▶ NO,GPIO26,grønn,110,"Dupont hunn 15 cm, kuttet – hunn på Pi, loddet på komponent",
+W21,Pi pinne 38,LED ◀◀ LED+,GPIO20,oransje,90,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent","270 Ω i serie, krympet inn (valgfri)"
+W22,Pi pinne 39,KNAPP RADIO C,GND,sort,80,"Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent",C-pinnene på alle 4 knappene lenkes med 20 mm broer
+W23,Pi pinne 40,LED ▶▶ LED+,GPIO21,oransje,110,"Dupont hunn 15 cm, kuttet – hunn på Pi, loddet på komponent","270 Ω i serie, krympet inn (valgfri)"

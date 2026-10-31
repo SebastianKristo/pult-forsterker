@@ -31,7 +31,9 @@ enable_uart=0
 # Startnivå på pinnene før Linux er oppe, så bakgrunnslys og LED-ringer er av
 # og knappene har pull-up fra første millisekund.
 # op=utgang, dl=lav, ip=inngang, pu=pull-up
-gpio=23,12,16,20,21=op,dl
+gpio=12,16,20,21=op,dl
+# Bakgrunnslys (GPIO23) styrer en P-MOSFET: høy = av
+gpio=23=op,dh
 gpio=5,6,13,17,22,26,27=ip,pu
 
 # ---------------------------------------------------------------------------

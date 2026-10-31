@@ -66,13 +66,10 @@ jobs:
           npm ci
           npm run build
           npx cap sync ios
-      - name: CocoaPods
-        working-directory: skjold/app/ios/App
-        run: pod install
       - name: Bygg .app uten signering
         working-directory: skjold/app/ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos \
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release -sdk iphoneos \
             -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
       - name: Pakk som IPA
         working-directory: skjold/app/ios/App

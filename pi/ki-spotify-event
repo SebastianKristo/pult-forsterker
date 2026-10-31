@@ -1,0 +1,14 @@
+#!/bin/sh
+# librespot --onevent: miljøvariablene (PLAYER_EVENT, NAME, ARTISTS, ALBUM, COVERS, DURATION_MS, POSITION_MS, USER_NAME …)
+# sendes som JSON til Skjold-daemonen. Må returnere raskt og aldri feile librespot.
+python3 - <<'PY' >/dev/null 2>&1 || true
+import json, os, urllib.request
+keys = ("player_event", "track_id", "name", "artists", "album", "covers", "duration_ms", "position_ms", "volume",
+        "user_name", "connection_id", "client_name", "uri", "is_explicit", "show_name")
+b = {k: os.environ[k.upper()] for k in keys if os.environ.get(k.upper())}
+b["event"] = b.get("player_event") or os.environ.get("SESSION_EVENT", "")
+port = os.environ.get("KI_AMP_PORT", "8765")
+req = urllib.request.Request(f"http://127.0.0.1:{port}/api/spotify", data=json.dumps(b).encode(),
+                             headers={"Content-Type": "application/json"}, method="POST")
+urllib.request.urlopen(req, timeout=2).read()
+PY

@@ -2,6 +2,7 @@
 # Pultforsterker – Bluetooth A2DP-mottaker (telefon → Pi). Trygt å kjøre flere ganger.
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
+BT_NAME="${KI_AMP_NAME:-Pultforsterker}"; BT_NAME="${BT_NAME//[|\\]/}"
 sudo apt-get -y install --no-install-recommends bluez bluez-tools bluez-alsa-utils >/dev/null
 sudo rfkill unblock bluetooth || true
 
@@ -12,7 +13,7 @@ set_kv() { # seksjon nøkkel verdi
   else sudo sed -i "/^\[$1\]/a $2 = $3" "$CONF"; fi
 }
 grep -q '^\[Policy\]' "$CONF" || echo -e '\n[Policy]' | sudo tee -a "$CONF" >/dev/null
-set_kv General Name Pultforsterker
+set_kv General Name "$BT_NAME"
 set_kv General Class 0x200414
 set_kv General DiscoverableTimeout 120
 set_kv General PairableTimeout 0
@@ -49,6 +50,6 @@ sudo systemctl restart bluetooth
 sleep 2
 sudo systemctl enable --now bluealsa bluealsa-aplay ki-bt-agent
 sudo systemctl restart bluealsa bluealsa-aplay
-bluetoothctl system-alias Pultforsterker >/dev/null || true
+bluetoothctl system-alias "$BT_NAME" >/dev/null || true
 bluetoothctl pairable on >/dev/null || true
 echo "Bluetooth klar: $(bluetoothctl show | grep -E 'Name|Powered|Pairable' | tr -s ' \t' ' ' | paste -sd ',')"

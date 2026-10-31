@@ -1,0 +1,17 @@
+[Unit]
+Description=Skjold – Spotify Connect (librespot)
+After=network-online.target sound.target camilladsp.service ki-amp.service
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=-/etc/ki-amp.env
+# --device spotify: softvol «KI Spotify» → dmix → loopback → CamillaDSP (loudness/volum), som de andre kildene (asound.conf)
+# --volume-ctrl fixed: volumet styres av Skjold (encoder/app), ikke av Spotify-appen
+# --onevent: hver avspillingshendelse sendes til daemonen (POST /api/spotify) – auto-kilde og «spiller nå»
+ExecStart=/bin/sh -c 'exec /usr/bin/librespot --name "$${KI_AMP_NAME:-$$(hostname)}" --backend alsa --device spotify --format S16 --bitrate 320 --device-type speaker --volume-ctrl fixed --initial-volume 100 --cache /var/cache/ki-spotify --disable-audio-cache --onevent /usr/local/bin/ki-spotify-event'
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

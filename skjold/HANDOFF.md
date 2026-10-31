@@ -33,3 +33,12 @@ SD-bilde (`design/sdbilde/pi-gen`), nettside (`design/nettside/` → statisk + C
 - Repo-ID for GitHub Releases: `SebastianKristo/pult-forsterker`. App-ID `no.kristo.skjold`, flasher `no.kristo.skjold.flasher`.
 - Commit-trailere og `git -c user.name="Sebastian Kristo" -c user.email="sebastian@kristo.no"` som ellers i repoet.
 - Kretskortet (`pcb/`) er i **frys** etter sikkerhetsgjennomgangen; siste ruting lå til eksport/DRC – se `pcb/README.md`.
+
+## Oppdatering 2026-10-30 (økt 2)
+Alle fire påbegynte deler er fullført og pushet til `claude/great-darwin-dwe23q`:
+- `skjold/node/` – pinnevalg, SVG, kabelliste, driveroppsett, selvtest (`--dry-run`), konsistenssjekk. Baklys flyttet til GPIO23 med AO3401 høy-side.
+- `skjold/app/` – Preact-web + Capacitor (android/ios lagt til). Bygget og testet mot daemonen i simulering. Mangler i daemonen: `/api/wifi`, `/api/test`, `/api/reboot`, `/api/reset`, EQ som påvirker lyd, grupper, nøkler `nameCustom/updChannel/updAuto/setupDone`, statiske filer på `/`.
+- `skjold/bruksanvisning/` – `innhold.json` (49 sider), `valider_innhold.py`, `render_pdf.py`. 18 `[bekreft]` / 26 `[fylles inn]` (S1-lengder) åpne.
+- `skjold/flasher/` – Electron + etcher-sdk, aldri testet mot ekte SD-kort. Release-workflowen publiserer ikke SD-bilde ennå (`skjold-*.img.xz` + `SHA256SUMS`).
+- iOS-jobben i release-workflowen bruker nå `App.xcodeproj` uten CocoaPods (Capacitor 8).
+Neste: Skjold OS, SD-bilde (pi-gen), daemon-endepunktene over, nettside.

@@ -7,7 +7,13 @@ SRC="$(cd "$(dirname "$0")" && pwd)"
 # KI_AMP_OUT=headphones : TEST uten hovedkort – lyd ut på Pi 4 sin 3,5 mm-kontakt (bcm2835 Headphones, 16 bit)
 # KI_AMP_BOARD=main     : hovedkort rev B (PCM5102A + PCM1808 på I2S, lydkortet heter «pultamp», TFT/touch mulig)
 # KI_AMP_DISPLAY=tft    : 2,8" SPI TFT (KI_AMP_TFT=ili9341|st7789v) med touch i stedet for OLED
-OUT="${KI_AMP_OUT:-dac}"; BOARD_SEL="${KI_AMP_BOARD:-}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
+# KI_AMP_BOARD=node     : Skjold Node (Pi 4/3B, lyd på 3,5 mm, ST7735 eies av skjermprosessen). Gir alltid KI_AMP_OUT=headphones.
+#                         Ingen OLED, USB-gadget eller AUX; vertsnavnet beholdes; config.txt-blokken legges inn av
+#                         skjold/node/driver/installer_node.sh. KI_AMP_NAME=… = navn i AirPlay/Spotify/Bluetooth/Lyrion.
+# KI_AMP_SPOTIFY=0      : uten Spotify Connect (librespot)
+BOARD_SEL="${KI_AMP_BOARD:-}"; [ "$BOARD_SEL" = node ] && KI_AMP_OUT=headphones
+OUT="${KI_AMP_OUT:-dac}"; SPOTIFY="${KI_AMP_SPOTIFY:-1}"; NAME_SEL="${KI_AMP_NAME:-}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
+[ "$BOARD_SEL" = node ] && [ -z "$NAME_SEL" ] && NAME_SEL="Skjold Node"   # Node: standardnavn i AirPlay/Spotify/Blåtann
 if [ "$OUT" = headphones ]; then PB_CARD=Headphones; PB_DEV="plughw:Headphones"; PB_FMT=S16LE
 elif [ "$BOARD_SEL" = main ]; then PB_CARD=pultamp; PB_DEV="hw:pultamp"; PB_FMT=S32LE
 else PB_CARD=sndrpihifiberry; PB_DEV="hw:sndrpihifiberry"; PB_FMT=S32LE; fi
@@ -18,7 +24,13 @@ sudo timedatectl set-timezone Europe/Oslo 2>/dev/null || true
 
 echo "== 2/9  config.txt: I2S-DAC, I2C, USB-gadget (dwc2), serial console av"
 CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
-if [ "$OUT" = headphones ]; then
+if [ "$BOARD_SEL" = node ]; then
+  # Node: dtparam=spi/audio/i2c + gpio=… kommer fra config/config.txt.node (installer_node.sh). Ingen dwc2/spi0-1cs her –
+  # skjermen bruker dtparam=spi=on, og GPIO 7–11/23–25 eies av skjermprosessen.
+  sudo sed -i 's/^dtoverlay=hifiberry-dac/#dtoverlay=hifiberry-dac/' "$CFG"
+  grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
+  LINES='enable_uart=0'
+elif [ "$OUT" = headphones ]; then
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
   sudo sed -i 's/^dtoverlay=hifiberry-dac/#dtoverlay=hifiberry-dac/' "$CFG"
   LINES='dtparam=i2c_arm=on dtoverlay=spi0-1cs,no_miso dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
@@ -36,7 +48,7 @@ else
   sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
   LINES='dtoverlay=hifiberry-dac dtparam=i2c_arm=on dtoverlay=spi0-1cs,no_miso dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
 fi
-sudo sed -i 's/^dtoverlay=spi0-1cs$/dtoverlay=spi0-1cs,no_miso/' "$CFG"   # GPIO 9 (MISO) brukes til BT-LED på hovedkortet
+[ "$BOARD_SEL" = node ] || sudo sed -i 's/^dtoverlay=spi0-1cs$/dtoverlay=spi0-1cs,no_miso/' "$CFG"   # GPIO 9 (MISO) brukes til BT-LED på hovedkortet
 for line in $LINES; do
   # bare dwc2 respekteres hvis den er kommentert ut for hånd – Pi OS leverer «#dtparam=i2c_arm=on» som standard
   case "$line" in dtoverlay=dwc2*) grep -qxF "#$line" "$CFG" && { echo "  hopper over $line (kommentert ut for hånd)"; continue; } ;; esac
@@ -44,7 +56,7 @@ for line in $LINES; do
 done
 sudo sed -i 's/ console=serial0,115200//' /boot/firmware/cmdline.txt 2>/dev/null || true
 # /etc/modules leses ikke lenger på Debian 13 – bruk modules-load.d
-printf 'dwc2\ni2c-dev\n' | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
+if [ "$BOARD_SEL" = node ]; then printf 'i2c-dev\n'; else printf 'dwc2\ni2c-dev\n'; fi | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
 sudo raspi-config nonint do_i2c 0 2>/dev/null || true   # /dev/i2c-1 for OLED
 sudo modprobe i2c-dev 2>/dev/null || true
 sudo raspi-config nonint do_serial_hw 1 2>/dev/null || true   # frigjør GPIO 14/15 til X9C
@@ -56,7 +68,7 @@ sudo apt-get -y install --no-install-recommends \
   libssl-dev libsoxr-dev libplist-dev libsodium-dev libavutil-dev libavcodec-dev \
   libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils libplist-utils libglib2.0-dev \
   bluez bluez-alsa-utils python3-dbus \
-  python3-pip python3-pil python3-smbus python3-smbus2 python3-evdev python3-numpy i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl
+  python3-pip python3-pil python3-smbus python3-smbus2 python3-evdev python3-numpy i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl gnupg
 
 echo "== 4/9  ALSA dmix → loopback → CamillaDSP (loudness + digitalt volum) → DAC"
 sed "s/sndrpihifiberry/$PB_CARD/g" "$SRC/asound.conf" | sudo tee /etc/asound.conf >/dev/null
@@ -82,6 +94,7 @@ cd shairport-sync && autoreconf -fi
             --with-airplay-2 --with-metadata --with-pipe --with-dbus-interface
 make -j"$(nproc)" && sudo make install
 sudo install -m 644 "$SRC/shairport-sync.conf" /etc/shairport-sync.conf
+[ -n "$NAME_SEL" ] && sudo sed -i "s/^\(\s*name = \)\"[^\"]*\";/\1\"${NAME_SEL//[\"\/]/}\";/" /etc/shairport-sync.conf
 sudo install -m 644 "$SRC/shairport-sync-dbus.conf" /etc/dbus-1/system.d/shairport-sync-dbus.conf
 sudo systemctl reload dbus 2>/dev/null || true
 sudo systemctl reload dbus 2>/dev/null || true   # D-Bus-policy fra make install
@@ -91,6 +104,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now shairport-sync
 
 echo "== 6/9  Bluetooth A2DP-mottak (bluealsa + parring uten PIN)"
 OLDHOST=$(hostname)
+if [ "$BOARD_SEL" != node ]; then   # Node: vertsnavnet er valgt i Skjold Flasher – behold det
 sudo hostnamectl set-hostname pultamp 2>/dev/null || true
 # /etc/hosts må kjenne det nye navnet, ellers klager sudo «unable to resolve host»
 if grep -q "^127.0.1.1" /etc/hosts; then
@@ -98,7 +112,8 @@ if grep -q "^127.0.1.1" /etc/hosts; then
 else
   echo -e "127.0.1.1\tpultamp" | sudo tee -a /etc/hosts >/dev/null 2>&1
 fi
-bash "$SRC/ki-bluetooth-setup.sh"
+fi
+KI_AMP_NAME="$NAME_SEL" bash "$SRC/ki-bluetooth-setup.sh"
 
 echo "== 6b    Lyrion-radio (Squeezelite)"
 sudo apt-get -y install --no-install-recommends squeezelite >/dev/null
@@ -106,29 +121,61 @@ sudo systemctl disable --now squeezelite 2>/dev/null || true      # Debians egen
 sudo install -m 644 "$SRC/ki-squeezelite.service" /etc/systemd/system/ki-squeezelite.service
 sudo systemctl daemon-reload && sudo systemctl enable --now ki-squeezelite
 
+echo "== 6c    Spotify Connect (librespot fra raspotify-pakken)"
+if [ "$SPOTIFY" = 1 ]; then
+  # dtcooper/raspotify: apt-repo med ferdigbygd librespot for armhf/arm64. Vi bruker bare binærfila – egen tjeneste
+  # (ki-spotify) så lyden går samme vei som de andre kildene (ALSA «spotify» → dmix → loopback → CamillaDSP).
+  sudo install -d -m 755 /usr/share/keyrings
+  curl -fsSL https://dtcooper.github.io/raspotify/key.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/raspotify-archive-keyrings.gpg
+  echo 'deb [signed-by=/usr/share/keyrings/raspotify-archive-keyrings.gpg] https://dtcooper.github.io/raspotify raspotify main' \
+    | sudo tee /etc/apt/sources.list.d/raspotify.list >/dev/null
+  if sudo apt-get update && sudo apt-get -y install --no-install-recommends raspotify; then
+    sudo systemctl disable --now raspotify 2>/dev/null || true   # pakkens egen tjeneste – vi bruker ki-spotify
+    sudo install -m 755 "$SRC/ki-spotify-event" /usr/local/bin/ki-spotify-event
+    sudo install -m 644 "$SRC/ki-spotify.service" /etc/systemd/system/ki-spotify.service
+    sudo mkdir -p /var/cache/ki-spotify
+    sudo systemctl daemon-reload && sudo systemctl enable --now ki-spotify
+  else
+    echo "ADVARSEL: raspotify/librespot kunne ikke installeres – Spotify Connect er av"; SPOTIFY=0
+  fi
+fi
+
 echo "== Talemeldinger"
 bash "$SRC/ki-voice-setup.sh"
 sudo mkdir -p /usr/local/share/ki-amp/sounds && sudo install -m 644 "$SRC"/sounds/*.wav /usr/local/share/ki-amp/sounds/   # ferdiginnspilte talemeldinger
 
 echo "== 7/9  USB-lyd (Pi-en blir et USB-lydkort for PC-en via USB-C bak)"
+if [ "$BOARD_SEL" = node ]; then echo "  Node: hopper over USB-gadget og AUX"; else
 sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
 sudo install -m 644 "$SRC/ki-usb-audio.service" /etc/systemd/system/ki-usb-audio.service
 sudo install -m 644 "$SRC/ki-aux1.service" "$SRC/ki-aux2.service" /etc/systemd/system/
 if [ "$BOARD_SEL" = main ]; then sudo systemctl enable ki-aux1 ki-aux2; fi   # AUX 1 (I2S-ADC) og AUX 2 (USB-kodek) bare på hovedkortet
 sudo systemctl enable ki-usb-audio
+fi
 
 echo "== 8/9  OLED (SSD1309 2,42\")"
+if [ "$BOARD_SEL" = node ]; then
+  # Node: ingen OLED, men oled_display.py kjører som metadata-tjeneste (KI_AMP_DISPLAY=none): AirPlay-/Blåtann-metadata,
+  # albumbilde og AirPlay-klientnavn → /run/pultamp_status.json → daemonen → Skjold OS.
+  echo "  Node: bare metadata-tjenesten (skjermen styres av Skjold OS / installer_node.sh)"
+  sudo install -m 755 "$SRC/oled_display.py" /usr/local/bin/oled_display.py
+  sudo install -m 644 "$SRC/oled-display.service" /etc/systemd/system/oled-display.service
+else
 sudo pip3 install --break-system-packages luma.oled
 sudo install -m 755 "$SRC/oled_display.py" /usr/local/bin/oled_display.py
 sudo install -m 644 "$SRC/oled_small.py" "$SRC/tft_screen.py" /usr/local/bin/
 sudo install -m 644 "$SRC/oled-display.service" /etc/systemd/system/oled-display.service
+fi
 
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
 sudo mkdir -p /usr/local/share/ki-amp/webapp && sudo install -m 644 "$SRC"/webapp/* /usr/local/share/ki-amp/webapp/   # web-app (PWA) på http://<pi>:8765/
 sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service
 [ -f /etc/ki-amp.env ] || sudo install -m 600 "$SRC/ki-amp.env" /etc/ki-amp.env
-if [ "$OUT" = headphones ]; then
+if [ "$BOARD_SEL" = node ]; then
+  sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e '/^KI_AMP_DSP_FORMAT=/d' -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=node/' /etc/ki-amp.env
+  echo "KI_AMP_DSP_FORMAT=$PB_FMT" | sudo tee -a /etc/ki-amp.env >/dev/null
+elif [ "$OUT" = headphones ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e '/^KI_AMP_DSP_FORMAT=/d' /etc/ki-amp.env
   echo "KI_AMP_DSP_FORMAT=$PB_FMT" | sudo tee -a /etc/ki-amp.env >/dev/null
   sudo sed -i 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=test/' /etc/ki-amp.env      # testbenk-pinner (knapper/LED rett på Pi-en)
@@ -136,8 +183,15 @@ elif [ "$BOARD_SEL" = main ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=main/' -e "s/^KI_AMP_DISPLAY=.*/KI_AMP_DISPLAY=$DISPLAY_SEL/" -e "s/^KI_AMP_TFT=.*/KI_AMP_TFT=$TFT_SEL/" -e 's/^KI_AMP_LEVELS=.*/KI_AMP_LEVELS=1/' /etc/ki-amp.env
   echo "== TESTMODUS: lyd ut på 3,5 mm-kontakten. Sett volum på jacken: amixer -c Headphones sset PCM 100%"
 fi
+sudo sed -i '/^KI_AMP_SPOTIFY=/d' /etc/ki-amp.env && echo "KI_AMP_SPOTIFY=$SPOTIFY" | sudo tee -a /etc/ki-amp.env >/dev/null
+if [ -n "$NAME_SEL" ]; then sudo sed -i '/^KI_AMP_NAME=/d' /etc/ki-amp.env && echo "KI_AMP_NAME=$NAME_SEL" | sudo tee -a /etc/ki-amp.env >/dev/null; fi
 sudo systemctl daemon-reload
-sudo systemctl enable --now oled-display ki-amp
+if [ "$BOARD_SEL" = node ]; then
+  sudo sed -i '/^KI_AMP_DISPLAY=/d' /etc/ki-amp.env && echo "KI_AMP_DISPLAY=none" | sudo tee -a /etc/ki-amp.env >/dev/null
+  sudo systemctl enable --now oled-display ki-amp   # oled-display = bare metadata (ingen skjerm)
+else
+  sudo systemctl enable --now oled-display ki-amp
+fi
 
 echo
 echo "Ferdig – start på nytt (sudo reboot)."
