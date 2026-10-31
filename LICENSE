@@ -1,34 +1,21 @@
-Skjold / Pultforsterker – lisenser
-Copyright (c) 2026 Sebastian Kristo Jemtland
+MIT License
 
-Repoet har to lisenser, avhengig av hva filene er.
+Copyright (c) 2026 Sebastian Kristo
 
-1) PROGRAMVARE – MIT (se LICENSE-MIT)
-   pi/                      daemon, installasjon, tjenester
-   skjold/app/              web-app og mobilapp
-   skjold/os/               Skjold OS (skjerm-UI)
-   skjold/flasher/          Skjold Flasher
-   skjold/node/tools/, skjold/node/driver/
-   skjold/bruksanvisning/*.py, skjold/bruksanvisning/*.js
-   custom_components/, homeassistant/, homey/   integrasjoner
-   .github/                 byggeskript
-   og andre kildekodefiler (*.py, *.js, *.ts, *.sh) som er verktøy for å bygge programvaren
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-2) MASKINVARE, DESIGN OG DOKUMENTASJON – CC BY-NC-SA 4.0 (se LICENSE-HARDWARE)
-   pcb/                     kretskort (skjema, utlegg, produksjonsfiler)
-   kabinett/, radio/, 3d-visning/   kasser, 3D-modeller, CAD-skript og renders
-   skjold/design/           designpakken (produktdesign, UI-design, nettsidedesign)
-   skjold/node/ (unntatt tools/ og driver/)   kabling og pinnevalg
-   skjold/bruksanvisning/innhold.json og øvrig innhold
-   docs/, branding/, design-referanse/
-   Du kan bygge, endre og dele for eget, ikke-kommersielt bruk med navngivelse.
-   Kommersielt salg av produktene eller avledede produkter krever skriftlig avtale.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-3) NETTSIDEN – alle rettigheter forbeholdt
-   skjold/nettside/: tekster, bilder og design. Koden kan leses, men innholdet kan ikke
-   gjenbrukes uten tillatelse.
-
-Navnene «Skjold», «Skjold S1» og «Skjold Node» og Skjold-logoen er ikke lisensiert under noen
-av lisensene over.
-
-Kontakt: jemtlands@proton.me
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
