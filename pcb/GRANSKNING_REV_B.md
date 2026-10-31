@@ -87,3 +87,8 @@ pastemaske stemmer 100 %.
 | Alle øvrige punkter: pinne-for-pinne for alle IC-er, Pi-header, strømvei, polaritet, USB, gerber (hull-til-hull 0,52, ingen via-i-pad, alle nett sammenhengende), BOM/CPL (24 koder stikkprøvd) | – | Verifisert OK |
 
 Etter rettelsene er kortet rutet på nytt og alle automatiske kontroller (DRC, hull-til-hull, via-i-pad, flaskehals) kjørt igjen.
+
+**Kontroll av den nye rutingen (commit `d5abd91`), målt i gerberne:** alle 189 nett sammenhengende (ingen øyer), hull-til-hull min. 0,516 mm,
+ingen via-i-pad (nærmeste via-hull 0,285 mm fra pad-kobber), min. klaring 0,144 mm (JLCPCB-grense 0,127), kobber til kant 0,74 mm,
+pasta på alle 730 SMD-pads unntatt R18 (DNP) og U6 EP (bevisst), BOM = CPL = 230 SMD-deler, 6 linjer uten kode (velges i JLC-UI).
+Flaskehalser: 24V_IN 2,0 · 24V_F 1,85 · VIN24 1,3 · 24V_AMP 1,3 (pinnestubber 0,4) · 5 V til Pi 1,5 mm.
