@@ -11,8 +11,9 @@ SRC="$(cd "$(dirname "$0")" && pwd)"
 #                         Ingen OLED, USB-gadget eller AUX; vertsnavnet beholdes; config.txt-blokken legges inn av
 #                         skjold/node/driver/installer_node.sh. KI_AMP_NAME=… = navn i AirPlay/Spotify/Bluetooth/Lyrion.
 # KI_AMP_SPOTIFY=0      : uten Spotify Connect (librespot)
+# KI_AMP_SKJOLD_OS=0    : S1 (main) beholder det gamle skjermprogrammet i stedet for Skjold OS (skjold/os)
 BOARD_SEL="${KI_AMP_BOARD:-}"; [ "$BOARD_SEL" = node ] && KI_AMP_OUT=headphones
-OUT="${KI_AMP_OUT:-dac}"; SPOTIFY="${KI_AMP_SPOTIFY:-1}"; NAME_SEL="${KI_AMP_NAME:-}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
+OUT="${KI_AMP_OUT:-dac}"; SPOTIFY="${KI_AMP_SPOTIFY:-1}"; NAME_SEL="${KI_AMP_NAME:-}"; SKJOLD_OS="${KI_AMP_SKJOLD_OS:-1}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
 [ "$BOARD_SEL" = node ] && [ -z "$NAME_SEL" ] && NAME_SEL="Skjold Node"   # Node: standardnavn i AirPlay/Spotify/Blåtann
 if [ "$OUT" = headphones ]; then PB_CARD=Headphones; PB_DEV="plughw:Headphones"; PB_FMT=S16LE
 elif [ "$BOARD_SEL" = main ]; then PB_CARD=pultamp; PB_DEV="hw:pultamp"; PB_FMT=S32LE
@@ -213,9 +214,17 @@ fi
 sudo sed -i '/^KI_AMP_SPOTIFY=/d' /etc/ki-amp.env && echo "KI_AMP_SPOTIFY=$SPOTIFY" | sudo tee -a /etc/ki-amp.env >/dev/null
 if [ -n "$NAME_SEL" ]; then sudo sed -i '/^KI_AMP_NAME=/d' /etc/ki-amp.env && echo "KI_AMP_NAME=$NAME_SEL" | sudo tee -a /etc/ki-amp.env >/dev/null; fi
 sudo systemctl daemon-reload
+OS_INST="$SRC/../skjold/os/install.sh"
 if [ "$BOARD_SEL" = node ]; then
   sudo sed -i '/^KI_AMP_DISPLAY=/d' /etc/ki-amp.env && echo "KI_AMP_DISPLAY=none" | sudo tee -a /etc/ki-amp.env >/dev/null
   sudo systemctl enable --now oled-display ki-amp   # oled-display = bare metadata (ingen skjerm)
+elif [ "$BOARD_SEL" = main ] && [ "$SKJOLD_OS" = 1 ] && [ -f "$OS_INST" ]; then
+  # S1: Skjold OS tegner skjermen (OLED 128×64 eller TFT 320×240 via fbtft); oled_display.py blir bare metadata-tjeneste
+  echo "== Skjold OS (S1, layout s1-$DISPLAY_SEL)"
+  sudo sed -i '/^KI_AMP_DISPLAY=/d' /etc/ki-amp.env && echo "KI_AMP_DISPLAY=none" | sudo tee -a /etc/ki-amp.env >/dev/null
+  printf '# Skrevet av pi/install.sh\nSKJOLD_OS_ARGS=--layout s1-%s\n' "$DISPLAY_SEL" | sudo tee /etc/default/skjold-os >/dev/null
+  sudo systemctl enable --now oled-display ki-amp
+  sudo bash "$OS_INST" || echo "ADVARSEL: Skjold OS ble ikke installert – sett KI_AMP_DISPLAY=$DISPLAY_SEL i /etc/ki-amp.env for den gamle skjermen" >&2
 else
   sudo systemctl enable --now oled-display ki-amp
 fi
