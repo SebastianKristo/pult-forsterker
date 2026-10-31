@@ -13,6 +13,7 @@ SRC="$(cd "$(dirname "$0")" && pwd)"
 # KI_AMP_SPOTIFY=0      : uten Spotify Connect (librespot)
 BOARD_SEL="${KI_AMP_BOARD:-}"; [ "$BOARD_SEL" = node ] && KI_AMP_OUT=headphones
 OUT="${KI_AMP_OUT:-dac}"; SPOTIFY="${KI_AMP_SPOTIFY:-1}"; NAME_SEL="${KI_AMP_NAME:-}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
+[ "$BOARD_SEL" = node ] && [ -z "$NAME_SEL" ] && NAME_SEL="Skjold Node"   # Node: standardnavn i AirPlay/Spotify/Blåtann
 if [ "$OUT" = headphones ]; then PB_CARD=Headphones; PB_DEV="plughw:Headphones"; PB_FMT=S16LE
 elif [ "$BOARD_SEL" = main ]; then PB_CARD=pultamp; PB_DEV="hw:pultamp"; PB_FMT=S32LE
 else PB_CARD=sndrpihifiberry; PB_DEV="hw:sndrpihifiberry"; PB_FMT=S32LE; fi
@@ -112,7 +113,7 @@ else
   echo -e "127.0.1.1\tpultamp" | sudo tee -a /etc/hosts >/dev/null 2>&1
 fi
 fi
-bash "$SRC/ki-bluetooth-setup.sh"
+KI_AMP_NAME="$NAME_SEL" bash "$SRC/ki-bluetooth-setup.sh"
 
 echo "== 6b    Lyrion-radio (Squeezelite)"
 sudo apt-get -y install --no-install-recommends squeezelite >/dev/null
@@ -153,7 +154,13 @@ sudo systemctl enable ki-usb-audio
 fi
 
 echo "== 8/9  OLED (SSD1309 2,42\")"
-if [ "$BOARD_SEL" = node ]; then echo "  Node: hopper over OLED (skjermen styres av Skjold OS / installer_node.sh)"; else
+if [ "$BOARD_SEL" = node ]; then
+  # Node: ingen OLED, men oled_display.py kjører som metadata-tjeneste (KI_AMP_DISPLAY=none): AirPlay-/Blåtann-metadata,
+  # albumbilde og AirPlay-klientnavn → /run/pultamp_status.json → daemonen → Skjold OS.
+  echo "  Node: bare metadata-tjenesten (skjermen styres av Skjold OS / installer_node.sh)"
+  sudo install -m 755 "$SRC/oled_display.py" /usr/local/bin/oled_display.py
+  sudo install -m 644 "$SRC/oled-display.service" /etc/systemd/system/oled-display.service
+else
 sudo pip3 install --break-system-packages luma.oled
 sudo install -m 755 "$SRC/oled_display.py" /usr/local/bin/oled_display.py
 sudo install -m 644 "$SRC/oled_small.py" "$SRC/tft_screen.py" /usr/local/bin/
@@ -180,8 +187,8 @@ sudo sed -i '/^KI_AMP_SPOTIFY=/d' /etc/ki-amp.env && echo "KI_AMP_SPOTIFY=$SPOTI
 if [ -n "$NAME_SEL" ]; then sudo sed -i '/^KI_AMP_NAME=/d' /etc/ki-amp.env && echo "KI_AMP_NAME=$NAME_SEL" | sudo tee -a /etc/ki-amp.env >/dev/null; fi
 sudo systemctl daemon-reload
 if [ "$BOARD_SEL" = node ]; then
-  sudo systemctl disable --now oled-display 2>/dev/null || true
-  sudo systemctl enable --now ki-amp
+  sudo sed -i '/^KI_AMP_DISPLAY=/d' /etc/ki-amp.env && echo "KI_AMP_DISPLAY=none" | sudo tee -a /etc/ki-amp.env >/dev/null
+  sudo systemctl enable --now oled-display ki-amp   # oled-display = bare metadata (ingen skjerm)
 else
   sudo systemctl enable --now oled-display ki-amp
 fi

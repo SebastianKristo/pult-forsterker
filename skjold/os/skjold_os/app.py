@@ -11,7 +11,7 @@ OFFLINE_AFTER_S = 3.0
 SETTINGS_S = 15.0         # innstillingsoversikten lukkes selv
 DIM_AFTER = [None, 30, 60]   # settings.dim: Av / 30 s / 1 min
 OFF_AFTER = [None, 120, 300] # settings.off: Av / 2 min / 5 min
-BRIGHT = [1.0, 1.0, 0.6, 0.3]  # settings.bright (finnes ikke ennå): Auto / Høy / Middels / Lav
+BRIGHT = [1.0, 1.0, 0.6, 0.3]  # settings.bright (daemonen, /api/settings): Auto / Høy / Middels / Lav (Auto = Høy, ingen lyssensor)
 DIM_LEVEL = 0.25
 
 
@@ -44,7 +44,8 @@ class Ui:
         if st is None: return
         p = self.prev or {}
         key = (st.get("power"), st.get("input"), st.get("volume"), st.get("mute"), st.get("playing"), st.get("paused"),
-               st.get("title"), st.get("station"), st.get("preset"), st.get("bt_pairing"), json.dumps(st.get("menu")))
+               st.get("title"), st.get("station"), st.get("preset"), st.get("bt_pairing"), json.dumps(st.get("menu")),
+               st.get("input_seq"), json.dumps(st.get("settings_menu")))
         if self.prev is not None and key != self.prev_key:
             self.last_act = now
             if self.welcome and (self.fx or {}).get("k") == "welcome":   # første trykk lukker hilsenen
@@ -66,6 +67,8 @@ class Ui:
             if self._ev_t is not None or self.prev is not None:
                 if ev.get("name") == "settings": self.settings_t0 = now; self.last_act = now
             self._ev_t = ev.get("t")
+        if "settings_menu" in st:   # daemonen styrer menyen selv – ikke bruk den skrivebeskyttede oversikten
+            self.settings_t0 = 0.0
         elif self.settings_t0 and self.prev is not None and (st.get("input") != p.get("input") or st.get("bt_pairing")):
             self.settings_t0 = 0.0
         if st.get("position") != p.get("position") or st.get("title") != p.get("title"):
@@ -108,13 +111,19 @@ class Ui:
             if now - self.t_start > OFFLINE_AFTER_S or self.prev is not None:
                 vm.update(screen="offline", offline_s=int(now - (self.offline_since or now)), vol_overlay=False); return vm
             vm.update(screen="boot", t_ms=fx.BOOT); return vm   # venter på daemonen rett etter oppstart
+        hold = st.get("hold")   # {"key":"knob|src|radio|reboot","p":0-1,"title","sub"} eller bekreftelse {"title":"Lagret",…,"saved":n}
+        if hold:
+            vm.update(screen="hold", hold_p=hold.get("p", 1), hold_title=hold.get("title", ""), hold_sub=hold.get("sub", "Fortsett å holde"),
+                      vol_overlay=False); return vm
         if st.get("bt_pairing"):
             pt = now - (self.pair_t0 or now)
             vm.update(screen="pair", pair_t=pt, pair_p=st.get("bt_pairing_left") and 1 - st["bt_pairing_left"] / PAIR_S or pt / PAIR_S)
             vm["vol_overlay"] = False; return vm
-        hold = st.get("hold")   # framtidig felt fra daemonen: {"key":"knob|src|radio","p":0-1} eller {"saved":n}
-        if hold:
-            vm.update(screen="hold", hold_p=hold.get("p", 1), hold_title=hold.get("title", ""), hold_sub=hold.get("sub", "Fortsett å holde")); return vm
+        sm = st.get("settings_menu")   # navigering med encoderen (daemonen): rader + valgt indeks
+        if sm and sm.get("open"):
+            rows = sm.get("rows") or [{"n": "–"}]
+            vm.update(screen="menu", menu_head=sm.get("cat") or "INNSTILLINGER", menu_rows=rows,
+                      menu_idx=max(0, min(len(rows) - 1, int(sm.get("idx") or 0))), vol_overlay=False); return vm
         if self.settings_t0 and now - self.settings_t0 < SETTINGS_S:
             rows = self._settings_rows(st, se); n = len(rows)
             vm.update(screen="menu", menu_head="INNSTILLINGER", menu_rows=rows,
@@ -217,7 +226,7 @@ class Ui:
         while not self.stopping:
             t = time.time(); vm = self.step(); n += 1
             if max_frames and n >= max_frames: break
-            fast = vm["screen"] in ("boot", "reboot", "switch", "welcome", "pair", "offline", "menu") or vm.get("vol_overlay") \
+            fast = vm["screen"] in ("boot", "reboot", "switch", "welcome", "pair", "offline", "menu", "hold") or vm.get("vol_overlay") \
                 or (vm["screen"] == "play" and vm.get("duration"))
             time.sleep(max(0.0, 1.0 / (fps_anim if fast else fps_idle) - (time.time() - t)))
         self.shutdown()

@@ -20,9 +20,12 @@ import select
 import threading
 import time
 
-from luma.core.interface.serial import i2c
-from luma.core.render import canvas
-from luma.oled.device import ssd1306, ssd1309
+try:   # KI_AMP_DISPLAY=none (Skjold Node): ingen skjerm, bare metadata-tjeneste – luma trengs ikke
+    from luma.core.interface.serial import i2c
+    from luma.core.render import canvas
+    from luma.oled.device import ssd1306, ssd1309
+except ImportError:
+    i2c = canvas = ssd1306 = ssd1309 = None
 from PIL import ImageFont
 
 PIPE = "/run/shairport-sync/metadata"   # ikke /tmp: fs.protected_fifos hindrer root i å åpne en annen brukers FIFO der
@@ -42,7 +45,9 @@ OLED = os.environ.get("KI_AMP_OLED", "ssd1309_128x64")
 DISPLAY = os.environ.get("KI_AMP_DISPLAY", "oled").strip().lower()
 tft = tft_fb = None
 try:
-    if DISPLAY == "tft":
+    if DISPLAY == "none" or i2c is None:
+        raise RuntimeError("KI_AMP_DISPLAY=none")
+    elif DISPLAY == "tft":
         import tft_screen as tft
         tft_fb = tft.find_fb()
         if not tft_fb:
@@ -57,7 +62,7 @@ try:
 except Exception as e:   # ingen OLED koblet til: kjør videre som metadata-tjeneste (AirPlay/BT → API, HA, Homey)
     print("OLED ikke funnet – kjører uten skjerm:", e, flush=True)
     device = None
-track = {"album": "", "cover": "", "paused": False, "playing": False, "title": "", "artist": "", "duration": 0, "position": 0, "pos_t": 0.0, "bt_device": "", "source": ""}
+track = {"album": "", "cover": "", "paused": False, "playing": False, "title": "", "artist": "", "duration": 0, "position": 0, "pos_t": 0.0, "bt_device": "", "source": "", "airplay_device": ""}
 boot_until = time.time() + 1.6
 scroll_x = 0.0
 
@@ -107,6 +112,10 @@ def airplay_thread():
                             else:
                                 track["cover"] = ""
                         except Exception: pass
+                    elif t == "ssnc" and c == "snam":   # navnet på AirPlay-klienten («Sebastians iPhone»)
+                        track["airplay_device"] = data
+                    elif t == "ssnc" and c == "disc":   # klienten koblet fra
+                        track["airplay_device"] = ""
                     elif t == "ssnc" and c == "mdst":   # ny metadata-sekvens (nytt spor): tøm gamle felt
                         track.update(title="", artist="", album="")
                     elif t == "ssnc" and c in ("pbeg", "prsm"): track.update(playing=True, paused=False, source="airplay")
@@ -219,7 +228,7 @@ def write_status():
     try:
         tmp = STATUS_FILE + ".tmp"
         with open(tmp, "w") as fh:
-            out = {k: track[k] for k in ("playing", "paused", "source", "title", "artist", "album", "duration", "bt_device", "cover")}
+            out = {k: track[k] for k in ("playing", "paused", "source", "title", "artist", "album", "duration", "bt_device", "cover", "airplay_device")}
             out["position"] = round(pos_now(), 1)
             json.dump(out, fh)
         os.replace(tmp, STATUS_FILE)
