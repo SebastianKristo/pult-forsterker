@@ -598,6 +598,17 @@ for t in _vip: board.Remove(t)
 print("GND-vias inni pads fjernet:", len(_vip))
 print("løse sporender fjernet:", _prune_dangling_board())
 # Siste finpuss: DRC-ens egne «dangling» (korte stubber og vias som bare brukes på ett lag) fjernes – de er uten funksjon
+def _end_touched(me, pt):
+    """Treffer sporenden pt noe annet (spor/via/pad på samme nett og lag)?"""
+    for t in board.GetTracks():
+        if t is me or t.GetNetCode() != me.GetNetCode(): continue
+        if t.GetClass() == "PCB_VIA":
+            if (t.GetPosition() - pt).EuclideanNorm() <= t.GetWidth() // 2: return True
+        elif t.GetLayer() == me.GetLayer() and pcbnew.SEG(t.GetStart(), t.GetEnd()).Distance(pt) <= t.GetWidth() // 2: return True
+    for fp in board.GetFootprints():
+        for pd in fp.Pads():
+            if pd.GetNetCode() == me.GetNetCode() and pd.IsOnLayer(me.GetLayer()) and pd.HitTest(pt): return True
+    return False
 def _drop_drc_dangling():
     import re as _r
     rep = os.path.join(OUT, "drc_tmp.txt"); pcbnew.WriteDRCReport(board, rep, pcbnew.EDA_UNITS_MILLIMETRES, True)
@@ -612,6 +623,9 @@ def _drop_drc_dangling():
                     board.Remove(t); gone += 1; break
                 if kind == "Track" and not t.IsLocked() and (t.GetEnd() - t.GetStart()).EuclideanNorm() < pcbnew.FromMM(1.0) and \
                         (abs(pcbnew.ToMM(t.GetStart().x) - x) < 0.01 and abs(pcbnew.ToMM(t.GetStart().y) - y) < 0.01 or abs(pcbnew.ToMM(t.GetEnd().x) - x) < 0.01 and abs(pcbnew.ToMM(t.GetEnd().y) - y) < 0.01):
+                    # flere korte spor kan starte i samme punkt (en ekte stubb til en pad og en søppelstubb) – fjern bare den som har en fri ende
+                    far = t.GetEnd() if abs(pcbnew.ToMM(t.GetStart().x) - x) < 0.01 and abs(pcbnew.ToMM(t.GetStart().y) - y) < 0.01 else t.GetStart()
+                    if _end_touched(t, far): continue
                     board.Remove(t); gone += 1; break
     return gone
 print("DRC-dangling fjernet:", _drop_drc_dangling())
