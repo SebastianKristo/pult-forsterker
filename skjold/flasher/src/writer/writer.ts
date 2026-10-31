@@ -5,6 +5,7 @@
  *
  *   writer.js --job <fil.json>      { image, device, port, token }
  */
+import './patch-direct-io';   // må komme før etcher-sdk
 import { promises as fsp } from 'fs';
 import net from 'net';
 import * as drivelist from 'drivelist';
@@ -32,7 +33,7 @@ async function main(): Promise<void> {
 
     const source = new sourceDestination.File({ path: job.image });
     const dest = new sourceDestination.BlockDevice({
-      drive, write: true, direct: true,
+      drive, write: true, direct: false,   // uten O_DIRECT/NO_BUFFERING – se patch-direct-io.ts
       unmountOnSuccess: process.platform !== 'linux', // på Linux er partisjonene avmontert av pkexec-trinnet
     });
     let last = 0;
