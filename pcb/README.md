@@ -97,7 +97,7 @@ Sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env` (gjøres av `KI_AMP_BOARD=main bash
    **THT-deler er ikke i BOM/CPL** – de står i `ki_pultforsterker_main_tht_handlodding.csv` og loddes selv (punkt 5).
 4. Festehull: H1–H4 M3 (stolper i kassen), H5–H8 M2,5 (Raspberry Pi 4 under kortet).
 5. THT-deler loddes selv etter levering: J1–J3, J6 (skruterminaler), J4/J7–J10/J19–J22 (JST), J5 (2×20 **hann**-header, C50980), J13 (header), F1 (sikringsklips
-   for 5×20, f.eks. Keystone 3512 eller C3130 + sikring 5 A), C1 + C110 (1000 µF), K1 (relé), J15–J18 (USB-A), J23 (JST). Liste: `produksjon/ki_pultforsterker_main_tht_handlodding.csv`.
+   for 5×20, f.eks. Keystone 3512 eller C3130 + sikring 5 A), C1 + C110 (1000 µF), K1 (relé), J15–J18 (USB-A), J23 (JST). Liste: `produksjon/ki_pultforsterker_main_tht_handlodding.csv`; ferdig LCSC-bestilling (kode, antall, MOQ) i `produksjon/lcsc_bestilling_tht.csv` – legg den i samme sending som JLCPCB-ordren («Combine with LCSC order»). Flatkabel 2×20 15–20 cm finnes ikke på LCSC (AliExpress/Kjell).
 6. Alle gjennompletterte pads har termisk avlastning mot jordplanet (lar seg håndlodde). Kassens fire M3-hull har kobberfri sone – kortet jordes til kassen bare via jordpunktet bak.
 7. Kjøleribbe 20 × 20 × 10 mm med termisk tape (1,5–2 mm) på toppen av TPA3116. NTC-en (10 k, B 3950, glass- eller epoksyperle) limes/teipes på ribbens side med varmeledende lim eller Kapton, ledning til J24.
 
