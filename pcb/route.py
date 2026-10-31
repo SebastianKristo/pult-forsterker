@@ -42,6 +42,8 @@ if "--power-first" in sys.argv:
         head, names = m.group(1), m.group(2).split()
         return head + " ".join(n for n in names if n.strip('"') in keep or n == '""') + "\n      (circuit"
     txt = re.sub(r"(\n    \(class \S+ )(.*?)\n      \(circuit", strip_class, txt, flags=re.S)
+    # låste spor/vias for nett som ikke er med: fjern dem fra (wiring …) – Freerouting henger på ukjente nett
+    txt = re.sub(r"\n\s*\((?:wire|via) [^\n]*\(net (\S+)\)[^\n]*", lambda m: m.group(0) if m.group(1).strip('"') in keep else "", txt)
     open(os.path.join(HERE, "board.dsn"), "w").write(txt)
     print("pass 1: bare strømnett i DSN:", sorted(keep))
 jar = os.environ.get("FREEROUTING", os.path.expanduser("~/freerouting.jar"))
