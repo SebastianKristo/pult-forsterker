@@ -1,31 +1,11 @@
-"""KROK for Skjold S1. Ikke ferdig – Node er prioritert.
+"""Skjold S1: to skjermvarianter av samme kabinett (skjold/design/s1/pultforsterker_revb_metall.js).
 
-Kildene å oversette er drawOLED0 (128×64, monokrom SSD1309/SSD1306) og drawTFT0 (320×240)
-samt overlay() i skjold/design/s1/pultforsterker_revb_metall.js. Slik gjør du det:
-  1. Lag en metode draw_<screen>(c, vm) per skjerm, som i NodeLayout. ViewModel-en (app.Ui.viewmodel)
-     er den samme for alle layouter, så bare tegningen skal skrives.
-  2. fx.splash/reboot/switch_src/welcome/draw_clock er skrevet for vilkårlig w×h der designet gjør det
-     (welcome og draw_clock skalerer selv; splash/reboot/switch er Node-mål og må tilpasses).
-  3. OLED: sett MONO = True, så app-en konverterer til 1-bit og bruker luma.oled (ssd1309) i display.py.
-Inntil da arver S1-layoutene Node-tegningen skalert, så --layout s1-* gir et brukbart (men ikke riktig) bilde.
+  s1-oled  128×64 SSD1309 2,42″, monokrom (drawOLED0)  -> s1_oled.S1OledLayout, 1-bit, pikselfont
+  s1-tft   320×240 ILI9341/ST7789V (drawTFT0)          -> s1_tft.S1TftLayout, overlegg = overlay() ×2,5 fra y=40
+Felles overlegg (omstart, paring, hold/«Lagret», meny, kildebytte, ingen kontakt) ligger i s1_common.
+Maskinvare: display_s1.py (luma.oled ssd1309 på I²C 0x3C / fbtft-framebuffer).
 """
-from PIL import Image
-from .node import NodeLayout
+from .s1_oled import S1OledLayout
+from .s1_tft import S1TftLayout
 
-
-class _Scaled(NodeLayout):
-    MONO = False
-    def render(self, vm):
-        im = super().render(vm)
-        out = Image.new("RGB", (self.OUT_W, self.OUT_H))
-        k = min(self.OUT_W / 160, self.OUT_H / 128); im = im.resize((int(160 * k), int(128 * k)), Image.LANCZOS)
-        out.paste(im, ((self.OUT_W - im.width) // 2, (self.OUT_H - im.height) // 2))
-        return out.convert("1").convert("RGB") if self.MONO else out
-
-
-class S1OledLayout(_Scaled):
-    OUT_W, OUT_H, MONO, name = 128, 64, True, "s1-oled"     # TODO: drawOLED0
-
-
-class S1TftLayout(_Scaled):
-    OUT_W, OUT_H, name = 320, 240, "s1-tft"                 # TODO: drawTFT0
+__all__ = ["S1OledLayout", "S1TftLayout"]

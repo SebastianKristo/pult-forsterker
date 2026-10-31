@@ -92,7 +92,8 @@ class Ui:
         vm = {"now": d, "now_ms": now * 1000, "clock": "%02d:%02d" % (d.hour, d.minute), "model": self.model,
               "name": (st or {}).get("name") or "Skjold " + self.model.capitalize(), "clock_style": int(se.get("clockStyle") or 0)}
         st = st or {}
-        vm.update(input=st.get("input") or "radio", volume=int(st.get("volume") or 0), mute=bool(st.get("mute")))
+        vm.update(input=st.get("input") or "radio", volume=int(st.get("volume") or 0), mute=bool(st.get("mute")),
+                  inputs=st.get("inputs"), presets=st.get("presets"), headphones=st.get("hp"))
         vm["vol_overlay"] = now - self.vol_t < VOL_SHOW_S
         # animasjoner har forrang
         if self.fx:
@@ -242,7 +243,7 @@ class Ui:
         """Ved stopp/omstart: CRT-kollaps fra reboot-animasjonen, så lyset av."""
         try:
             for ms in range(0, 400, 50):
-                c = self.lay.canvas(); fx.reboot(c, ms, ms); self.sink.show(c.frame(), "stop"); time.sleep(0.05)
+                c = self.lay.canvas(); (self.lay.draw_reboot(c, {"t_ms": ms, "now_ms": ms}) if hasattr(self.lay, "draw_reboot") else fx.reboot(c, ms, ms)); self.sink.show(c.frame(), "stop"); time.sleep(0.05)
         except Exception:
             pass
         self.bl.set(0); self.bl.close(); self.sink.close()
