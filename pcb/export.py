@@ -615,6 +615,20 @@ def _drop_drc_dangling():
                     board.Remove(t); gone += 1; break
     return gone
 print("DRC-dangling fjernet:", _drop_drc_dangling())
+# To GND-vias (sy-/rutenettvias) som ligger nærmere enn 0,5 mm hull-til-hull: fjern den ene (begge er overflødige for planet)
+def _drop_close_gnd_vias():
+    import re as _r
+    rep = os.path.join(OUT, "drc_tmp.txt"); pcbnew.WriteDRCReport(board, rep, pcbnew.EDA_UNITS_MILLIMETRES, True)
+    gone = 0
+    for blk in _r.split(r"\n(?=\[)", open(rep).read()):
+        if not blk.startswith("[hole_near_hole]"): continue
+        pts = _r.findall(r"@\(([-\d.]+) mm, ([-\d.]+) mm\): Via \[GND\]", blk)
+        for x, y in pts:
+            v = next((t for t in board.GetTracks() if t.GetClass() == "PCB_VIA" and t.GetNetname() == "GND" and not t.IsLocked()
+                      and abs(pcbnew.ToMM(t.GetPosition().x) - float(x)) < 0.01 and abs(pcbnew.ToMM(t.GetPosition().y) - float(y)) < 0.01), None)
+            if v is not None: board.Remove(v); gone += 1; break
+    return gone
+print("GND-vias for tett på annet hull fjernet:", _drop_close_gnd_vias())
 filler.Fill(board.Zones())
 pcbnew.SaveBoard(PCB, board)
 
