@@ -1,6 +1,6 @@
 Designator,Value,Footprint,LCSC,Beskrivelse
 J1,24V IN,TerminalBlock_bornier-2_P5.08mm,C8465,"24 V inn fra DC-099 via KCD1 (skruterminal 5,08)"
-F1,5A 5x20 (Keystone 3512-klips),Fuseholder_Clip-5x20mm_Keystone_3512P_Inline_P23.62x7.27mm_D1.02x2.41x1.02x1.57mm_Horizontal,,"Sikringsholder 5x20 (klips, THT) + sikring 5 A"
+F1,5A 5x20 (Littelfuse 111-klips),Fuseholder_Clip-5x20mm_Littelfuse_111_Inline_P20.00x5.00mm_D1.05mm_Horizontal,C151075,"Sikringsholder 5x20 (klips, THT) + sikring 5 A"
 D1,SMBJ28A,D_SMB,C20623778,"TVS 28 V standoff, klemmer ~45 V (LCSC-kode sjekkes i BOM-verktøyet)"
 Q11,AOD409,TO-252-2,C36220,"Polvendingsvern i 24 V-linjen (D = inn, S = ut, G mot GND) – velg TO-252 P-kanal ≥ 60 V i JLC-verktøyet"
 D5,BZT52C12,D_SOD-123,C43491,Zener gate-source Q11
