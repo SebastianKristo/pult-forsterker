@@ -5,8 +5,8 @@ D1,SMBJ28A,D_SMB,C20623778,"TVS 28 V standoff, klemmer ~45 V (LCSC-kode sjekkes 
 Q11,AOD409,TO-252-2,C36220,"Polvendingsvern i 24 V-linjen (D = inn, S = ut, G mot GND) – velg TO-252 P-kanal ≥ 60 V i JLC-verktøyet"
 D5,BZT52C12,D_SOD-123,C43491,Zener gate-source Q11
 R79,100k,R_0603_1608Metric,C25803,Gate Q11 mot GND
-C1,1000u/35V h<=16,CP_Radial_D10.0mm_P5.00mm,,"Bulk elektrolytt Ø10 × maks 16 mm (THT, loddes selv)"
-C110,1000u/35V h<=16,CP_Radial_D10.0mm_P5.00mm,,Bulk elektrolytt nr. 2 (Ø10 × maks 16 mm)
+C1,680-1000u/35V 10x16,CP_Radial_D10.0mm_P5.00mm,,"Bulk elektrolytt Ø10 × maks 16 mm (THT, loddes selv)"
+C110,680-1000u/35V 10x16,CP_Radial_D10.0mm_P5.00mm,,Bulk elektrolytt nr. 2 (Ø10 × maks 16 mm)
 J2,SPK L,TerminalBlock_bornier-2_P5.08mm,C8465,Høyttaler venstre + / -
 J3,SPK R,TerminalBlock_bornier-2_P5.08mm,C8465,Høyttaler høyre + / -
 K1,SRD-05VDC-SL-C,Relay_SPDT_SANYOU_SRD_Series_Form_C,C35449,"Relé 10 A: bryter 24 V til forsterkeren (KiCad-pads: 2+5 spole, 1 COM, 3 NO, 4 NC – mål før første gang!)"
@@ -17,7 +17,7 @@ R53,100k,R_0603_1608Metric,C25803,Gate pulldown Q7
 Q8,AO3401A,SOT-23-3,C15127,P-MOSFET 5 V -> 5V_SW
 R54,10k,R_0603_1608Metric,C25804,Q8 gate fra Q7
 R55,100k,R_0603_1608Metric,C25803,Q8 gate pull-up
-U1,TPS54560DDAR,HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm,C31966,Buck 60 V 5 A
+U1,TPS54560DDAR,Texas_HSOP-8-1EP_3.9x4.9mm_P1.27mm,C31966,Buck 60 V 5 A
 C2,4.7u/50V,C_1210_3225Metric,C170099,Cin
 C3,4.7u/50V,C_1210_3225Metric,C170099,Cin
 C4,100n/50V,C_0603_1608Metric,C14663,Cin HF
@@ -224,7 +224,7 @@ C108,100n/50V,C_0603_1608Metric,C14663,Debounce jack-deteksjon
 R76,10k,R_0603_1608Metric,C25804,HP OUTL pulldown (jack-deteksjon)
 R77,10k,R_0603_1608Metric,C25804,Serie til MCP GPA5 (vern)
 R78,10k,R_0603_1608Metric,C25804,Pull-up touch-CS (GPIO 7/CE1 flyter til SPI er oppe)
-U7,FE1.1s,SSOP-28_5.3x10.2mm_P0.65mm,C9359,USB 2.0 4-ports hub
+U7,FE1.1s,SSOP-28_3.9x9.9mm_P0.635mm,C9359,"USB 2.0 4-ports hub – FE1.1S-BSOP28 er SSOP-28 150 mil (3,9 mm, 0,635 mm deling)"
 Y1,12MHz,Crystal_SMD_3225-4Pin_3.2x2.5mm,C9002,Hub-krystall (lastkondensatorer innebygd)
 C67,10u,C_0805_2012Metric,C15850,VD18_O
 C69,100n/50V,C_0603_1608Metric,C14663,VD18
@@ -233,7 +233,7 @@ R46,10k,R_0603_1608Metric,C25804,OVCJ/XRSTJ pull-up
 C66,10u,C_0805_2012Metric,C15850,VD33_O
 C73,100n/50V,C_0603_1608Metric,C14663,VD33
 C68,100n/50V,C_0603_1608Metric,C14663,VDD5
-U8,TS3USB221RSER,UQFN-10_1.4x1.8mm_P0.4mm,C130085,"USB 2:1-mux PC1/PC2 (S fra MCP GPB4, lav = PC 1; OE = GND)"
+U8,TS3USB221RSER,Texas_UQFN-10_1.5x2mm_P0.5mm,C130085,"USB 2:1-mux PC1/PC2 (S fra MCP GPB4, lav = PC 1; OE = GND)"
 C70,100n/50V,C_0603_1608Metric,C14663,Mux VCC
 R47,100k,R_0603_1608Metric,C25803,S pulldown (= PC 1)
 J11,USB-C 16P,USB_C_Receptacle_HRO_TYPE-C-31-M-12,C165948,USB-C fra PC 1 (via panelkabel)

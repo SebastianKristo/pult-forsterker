@@ -258,7 +258,7 @@ def _fix_hole_near_hole():
                 along = (cx * ux + cy * uy) * sgn   # positiv = bort fra den andre
                 if along <= 0.2: continue
                 r = d / along
-                if r > 0.6: continue
+                if r > 1.0: continue
                 options.append(((v, cx * r, cy * r),))
         ok = False
         for opt in options:
@@ -680,7 +680,7 @@ import re as _rx
 JLC_ROT = [(r"^SOT-23", 180), (r"^SOT-223", 180), (r"^(SOIC|SSOP|TSSOP|HTSSOP|HSOP|SOP|MSOP)", 270), (r"^(Texas_RTE_)?(QFN|WQFN|UQFN|DFN|VQFN|TQFN)", 270), (r"^CP_Elec", 0),
            (r"^USB_C_Receptacle_HRO", 180), (r"^TO-252", 0)]
 def jlc_rot(ref, rot):
-    name = _fp_name.get(ref, "")
+    name = _rx.sub(r"^Texas_(RTE_)?", "", _fp_name.get(ref, ""))   # TI-footprints har samme pinne-1-orientering som de generiske
     for pat, add in JLC_ROT:
         if _rx.match(pat, name): return (rot + add) % 360
     return rot % 360

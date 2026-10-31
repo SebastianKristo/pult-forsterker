@@ -42,7 +42,7 @@ part("F1", "Fuse", "Fuseholder_Clip-5x20mm_Littelfuse_111_Inline_P20.00x5.00mm_D
 part("D1", "Diode_SMD", "D_SMB", "SMBJ28A", "C20623778", 50, 14, 0, "TVS 28 V standoff, klemmer ~45 V (LCSC-kode sjekkes i BOM-verktøyet)")
 part("Q11", TO, "TO-252-2", "AOD409", "C36220", 24, 16, 0, "Polvendingsvern i 24 V-linjen (D = inn, S = ut, G mot GND) – velg TO-252 P-kanal ≥ 60 V i JLC-verktøyet")
 part("D5", "Diode_SMD", "D_SOD-123", "BZT52C12", "C43491", 12, 14, 0, "Zener gate-source Q11"); part("R79", R_, R0603, "100k", "C25803", 12, 17, 0, "Gate Q11 mot GND")
-part("C1", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "1000u/35V h<=16", "", 94, 7, 0, "Bulk elektrolytt Ø10 × maks 16 mm (THT, loddes selv)"); part("C110", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "1000u/35V h<=16", "", 72, 6.3, 0, "Bulk elektrolytt nr. 2 (Ø10 × maks 16 mm)")
+part("C1", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "680-1000u/35V 10x16", "", 94, 7, 0, "Bulk elektrolytt Ø10 × maks 16 mm (THT, loddes selv)"); part("C110", "Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm", "680-1000u/35V 10x16", "", 72, 6.3, 0, "Bulk elektrolytt nr. 2 (Ø10 × maks 16 mm)")
 part("J2", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "SPK L", "C8465", 108, 6, 0, "Høyttaler venstre + / -")
 part("J3", "TerminalBlock", "TerminalBlock_bornier-2_P5.08mm", "SPK R", "C8465", 134, 6, 0, "Høyttaler høyre + / -")
 
@@ -415,7 +415,7 @@ FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (137.05,
                 ("BSPL", "F.Cu", 0.3, [(127.65, 34.325), (133.05, 34.325)]),   # pinne 24 -> C33.1
                 ("OUTPL", "F.Cu", 0.4, [(127.65, 34.975), (128.6, 34.975), (129.1, 35.475), (134.3, 35.475), (134.95, 34.825), (134.95, 34.3)]),   # pinne 23 -> C33.2 under C33.1
     ("5V", "F.Cu", 0.3, [(132.25, 43.5625), (132.25, 42.1), (135.8, 42.1), (136.22, 43.8)]),   # TPA6132A2 VDD (pinne 14) -> C100
-    ("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.75)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
+    ("HP_INR", "F.Cu", 0.2, [(130.5625, 45.75), (129.4, 45.72)]),   # TPA6132A2 pinne 4: fast utgang til via, ellers stenges den inne
 
     ("CODEC_VINR", "F.Cu", 0.25, [(150.4, 87.575), (148.9, 87.575)]), ("CODEC_VINR", "B.Cu", 0.25, [(148.9, 87.575), (148.9, 88.9), (155.0, 88.9)]),   # PCM2900C pinne 13 -> C98
     ("CODEC_VINR", "F.Cu", 0.25, [(155.0, 88.9), (155.0, 89.54), (160.0, 89.54), (161.0, 89.3), (170.95, 89.3), (170.95, 88.0)]),
@@ -425,7 +425,7 @@ FIXED_TRACKS = POWER_SPINE + [("OUTNL", "F.Cu", 0.4, [(127.65, 36.275), (137.05,
     ("AMP_RINN", "F.Cu", 0.2, [(120.35, 31.725), (118.6, 31.725)]),   # TPA3116 pinne 5 ble stengt inne av nabosporene
                 ("GND", "F.Cu", 0.2, [(133.438, 45.25), (132.5, 45.0)]), ("GND", "F.Cu", 0.2, [(131.75, 43.562), (131.75, 44.7)]),   # TPA6132A2 PGND/SGND -> termisk pad
                 ("BSNL", "F.Cu", 0.3, [(127.65, 36.925), (136.0, 36.925), (136.0, 38.1), (138.95, 38.1), (138.95, 37.3)])]   # pinne 20 -> C32.1 (rundt under C32.2)   # FE1.1s pinne 7 ut nedover mellom nabosporene
-FIXED_VIAS = [("HP_INR", (129.4, 45.75)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("AMP_RINN", (118.6, 31.725))]
+FIXED_VIAS = [("HP_INR", (129.4, 45.72)), ("CODEC_VINR", (148.9, 87.575)), ("CODEC_VINR", (155.0, 88.9)), ("RLY_LOW", (105.3, 43.3)), ("RLY_LOW", (101.5, 35.3)), ("AMP_RINN", (118.6, 31.725))]
 FIXED_GND_VIP = {}   # GND rutes nå som nett av Freerouting – ingen via-i-pad (lodder dårlig uten fylte vias)   # via-i-pad (0,45/0,2) på GND-pinner som er omringet av signaler (PCM5102A pinne 3)
 
 # ---------------------------------------------------------------- bygg kortet

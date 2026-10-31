@@ -99,3 +99,22 @@ JLCPCBs BOM-verktøy viste: utsolgt for U7 (C6706491), L2–L5 (C241221) og R3 (
 linjer som delte kode (100 nF, 1 µF, USB-C) og for R21–R24/U14 (JLCPCB-forslag). Rettet: U7 → C9359 (FE1.1S-BSOP28BCN, 21 000 på lager),
 L2–L5 → C3221699 (Bourns SRR1260-100M, land pattern 2,9 × 5,4 / gap 7,0 = footprinten), R3 → C100895 (243 k, 4 000), D5 → C43491, Q11 → C36220
 (AOD409), R21–R24 → C2907439, U14 → C7835 (TI SN74LVC1G14DBVR), D1 → C20623778, D2 → C4154973. BOM-en har nå én linje per kode.
+
+## Pinne-for-pinne-kontroll mot datablad (31.10.2026, etter funn fra Flux)
+
+Et eksternt verktøy (Flux) fant to kritiske feil som de tidligere granskningene hadde gått glipp av; en ny, systematisk kontroll av
+alle IC-er og flerpinners deler mot produsentens pinnetabell og LCSC-pakkefelt fant én til:
+
+| Del | Feil | Rettet |
+|---|---|---|
+| U4 PCM5102A | pinne 10 (DEMP) og 18 (LDOO) byttet – LDOO var kortsluttet til GND | pinne 18 → C19 (DAC_LDOO), pinne 10 → GND |
+| U7 FE1.1s (C9359) | footprint SSOP-28 5,3 mm / 0,65 mm; delen er SSOP-28 150 mil (3,9 mm / 0,635 mm) | `SSOP-28_3.9x9.9mm_P0.635mm` |
+| U8 TS3USB221RSER | footprint onsemi UQFN-10 1,4 × 1,8 / 0,4 mm; TI RSE0010A er 1,5 × 2,0 / 0,5 mm med annen padfordeling | `Texas_UQFN-10_1.5x2mm_P0.5mm` |
+| U1 TPS54560DDA | footprint for ST-HSOP med 2,3 × 2,3 kjøleflate | `Texas_HSOP-8-1EP_3.9x4.9mm_P1.27mm` (DDA) |
+
+Alle øvrige IC-er (TPA3116D2, PGA2311, PCM1808, PCM2900C, MCP23017, TPA6132A2, LM2662, AMS1117, 74LVC1G14), AOD409/AO3400A/AO3401A,
+USBLC6, USB-C/USB-A, Pi-header, dioder og elkondensatorer: pinne for pinne OK. Ikke verifisert mot datablad: X1 (kortet tåler begge
+OE-varianter), Y1/Y2 (standard 3225-pinning antatt), K1 (måles før lodding).
+
+Kortet er rutet på nytt etter rettelsene; i gerberne: alle 189 nett sammenhengende, hull-til-hull ≥ 0,508 mm, ingen via-i-pad,
+klaring ≥ 0,143 mm, kobber–kant ≥ 0,57 mm, pasta riktig. CPL-rotasjon for de nye TI-footprintene rettet (U1/U8 270°).
