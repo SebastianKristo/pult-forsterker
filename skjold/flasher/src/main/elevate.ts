@@ -3,7 +3,7 @@ import { promises as fsp } from 'fs';
 import os from 'os';
 import path from 'path';
 import { spawn } from 'child_process';
-import sudo from 'sudo-prompt';
+import sudo from '@vscode/sudo-prompt';
 
 const NAME = 'Skjold Flasher';
 
