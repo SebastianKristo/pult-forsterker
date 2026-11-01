@@ -19,7 +19,7 @@ input[type=range]{accent-color:#d9a441}
 input::placeholder{color:#55554f}
 </style>
 </helmet>
-<div style="max-width:1180px;margin:0 auto;padding:22px 20px 130px;display:flex;flex-direction:column;gap:22px">
+<div style="max-width:none;margin:0;padding:22px clamp(20px,3vw,48px) 130px;display:flex;flex-direction:column;gap:22px">
 
   <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
     <div style="display:flex;align-items:center;gap:14px">
@@ -30,9 +30,31 @@ input::placeholder{color:#55554f}
         <div style="width:3px;height:16px;background:#f2f2ee;border-radius:2px"></div>
         <div style="width:3px;height:11px;background:#f2f2ee;border-radius:2px"></div>
       </div>
-      <div style="display:flex;flex-direction:column">
-        <span style="font-weight:600;font-size:17px">{{ deviceName }}</span>
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86">Skjold S1 · 192.168.1.42 · 1.4.2</span>
+      <div style="display:flex;flex-direction:column;position:relative">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button onClick="{{ togglePick }}" aria-label="Velg spiller" style="display:flex;align-items:center;gap:6px;border:none;background:none;padding:0;cursor:pointer;font-weight:600;font-size:17px;color:#f2f2ee">{{ deviceName }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+          <span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;border:1px solid #5a4420;background:#1c170d;color:#f0c46a;font-size:12px;font-weight:600;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="{{ devIcon }}"></path></svg>{{ devModel }}</span>
+        </div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86">{{ devHwLine }}</span>
+        <sc-if value="{{ pickOpen }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ togglePick }}" aria-label="Lukk" style="position:fixed;inset:0;z-index:40;border:none;background:transparent;cursor:default"></button>
+          <div style="position:absolute;top:calc(100% + 10px);left:0;z-index:41;width:380px;max-width:calc(100vw - 40px);background:#141415;border:1px solid #2e2e30;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden">
+            <span style="padding:12px 14px 8px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8b8b86">VELG SPILLER</span>
+            <sc-for list="{{ players }}" as="pl" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:0 8px 0 0;border-top:1px solid #242426;background:{{ pl.bg }}">
+                <button onClick="{{ pl.pick }}" style="display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:center;min-height:58px;padding:0 14px;border:none;background:transparent;cursor:pointer;text-align:left">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ pl.fg }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="{{ pl.icon }}"></path></svg>
+                  <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                    <span style="display:flex;align-items:center;gap:8px;font-size:14px;color:{{ pl.fg }}">{{ pl.name }}<span style="font-size:11px;color:#8b8b86">{{ pl.model }}</span></span>
+                    <span style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86"><div style="width:6px;height:6px;border-radius:50%;background:{{ pl.dot }}"></div>{{ pl.host }} {{ pl.here }}</span>
+                  </span>
+                </button>
+                <a href="{{ pl.url }}" target="_blank" title="Enhetens eget web-UI" style="display:flex;align-items:center;height:30px;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;font-size:11px;color:#c9c9c4;white-space:nowrap">Eget UI ↗</a>
+              </div>
+            </sc-for>
+            <span style="padding:10px 14px 12px;border-top:1px solid #242426;font-size:11px;color:#8b8b86;line-height:1.45;text-wrap:pretty">Samme side på alle adressene. «Eget UI» åpner bare den enheten, som reserve hvis noe er galt med nettverket.</span>
+          </div>
+        </sc-if>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
@@ -52,7 +74,7 @@ input::placeholder{color:#55554f}
   </sc-if>
 
   <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
-    <nav style="flex:1 1 210px;max-width:250px;display:flex;flex-direction:column;gap:2px;min-width:200px">
+    <nav style="order:1;flex:0 0 230px;display:flex;flex-direction:column;gap:2px;min-width:200px;position:sticky;top:22px">
       <sc-for list="{{ nav }}" as="nv" hint-placeholder-count="12">
         <sc-if value="{{ nv.isHead }}" hint-placeholder-val="{{ false }}">
           <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.12em;color:#6a6a65;padding:16px 12px 6px">{{ nv.label }}</div>
@@ -65,7 +87,7 @@ input::placeholder{color:#55554f}
       </sc-for>
     </nav>
 
-    <main style="flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:18px">
+    <main style="order:2;flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:18px">
       <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <h1 style="margin:0;font-size:26px;font-weight:600">{{ pageTitle }}</h1>
         <span style="font-size:12px;color:#8b8b86">{{ pageSub }}</span>
@@ -89,7 +111,7 @@ input::placeholder{color:#55554f}
           <div style="display:flex;gap:18px;flex-wrap:wrap">
             <sc-for list="{{ services }}" as="sv" hint-placeholder-count="6">
               <button onClick="{{ sv.pick }}" style="display:flex;flex-direction:column;align-items:center;gap:8px;border:none;background:none;padding:0;cursor:pointer">
-                <div style="width:84px;height:84px;border-radius:50%;background:{{ sv.bg }};border:1px solid #2e2e30;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600">{{ sv.mono }}</div>
+                <div style="width:84px;height:84px;border-radius:50%;overflow:hidden;background:{{ sv.bg }};color:{{ sv.fg }};display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:{{ sv.sz }};height:{{ sv.sz }};display:block"><path d="{{ sv.st }}"></path><path d="{{ sv.fi }}" fill="currentColor" stroke="none"></path><path d="{{ sv.fp }}" fill="currentColor" stroke="none"></path></svg></div>
                 <span style="font-size:12px;color:#c9c9c4">{{ sv.label }}</span>
               </button>
             </sc-for>
@@ -100,7 +122,7 @@ input::placeholder{color:#55554f}
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px">
             <sc-for list="{{ favTiles }}" as="ft" hint-placeholder-count="6">
               <button onClick="{{ ft.pick }}" style="display:flex;flex-direction:column;gap:6px;border:none;background:none;padding:0;cursor:pointer;text-align:left;min-width:0">
-                <div style="width:100%;aspect-ratio:1;border-radius:12px;background:{{ ft.bg }};display:flex;flex-direction:column;justify-content:space-between;padding:12px;box-sizing:border-box;color:{{ ft.ink }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;opacity:.8">{{ ft.n }}</span><span style="font-size:15px;font-weight:600;line-height:1.05">{{ ft.name }}</span></div>
+                <div style="width:100%;aspect-ratio:1;box-sizing:border-box;border-radius:12px;background:{{ ft.bg }};display:flex;flex-direction:column;justify-content:space-between;padding:12px;box-sizing:border-box;color:{{ ft.ink }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;opacity:.8">{{ ft.n }}</span><span style="font-size:15px;font-weight:600;line-height:1.05">{{ ft.name }}</span></div>
                 <span style="font-size:12px;color:#8b8b86">{{ ft.genre }}</span>
               </button>
             </sc-for>
@@ -184,9 +206,19 @@ input::placeholder{color:#55554f}
                 <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ b.val }}</span>
                 <input type="range" min="-12" max="12" step="1" value="{{ b.v }}" onChange="{{ b.set }}" style="writing-mode:vertical-lr;direction:rtl;width:30px;height:170px;margin:0">
                 <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86">{{ b.f }} Hz</span>
+                <span style="font-size:12px;color:#c9c9c4;white-space:nowrap">{{ b.name }}</span>
               </div>
             </sc-for>
           </div>
+<div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid #242426">
+  <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8b8b86">HVA BÅNDENE GJØR</span>
+  <sc-for list="{{ eqBands }}" as="b" hint-placeholder-count="5">
+    <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:baseline">
+      <span style="display:flex;gap:6px;align-items:baseline"><span style="font-size:14px;font-weight:600">{{ b.name }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b8b86">{{ b.hz }}</span></span>
+      <span style="font-size:13px;color:#a9a9a3;line-height:1.45;text-wrap:pretty">{{ b.desc }}</span>
+    </div>
+  </sc-for>
+</div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding-top:14px;border-top:1px solid #242426">
             <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px">Loudness</span><span style="font-size:12px;color:#8b8b86">Mer bass og diskant ved lavt volum</span></div>
             <button onClick="{{ eqLoud }}" style="width:48px;height:28px;border-radius:999px;border:none;background:{{ eqLoudTrk }};position:relative;cursor:pointer;padding:0;flex-shrink:0"><div style="position:absolute;top:3px;left:{{ eqLoudKnob }};width:22px;height:22px;border-radius:50%;background:#f2f2ee"></div></button>
@@ -195,39 +227,184 @@ input::placeholder{color:#55554f}
       </sc-if>
 
       <sc-if value="{{ pgRadio }}" hint-placeholder-val="{{ false }}">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start">
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#8b8b86">{{ radioCount }}</span><span style="font-size:12px;color:#8b8b86">Samme rekkefølge som radioknappen</span></div>
-            <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column">
-              <sc-for list="{{ stations }}" as="s" hint-placeholder-count="6">
-                <div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:64px;padding:0 14px;border-top:1px solid {{ s.line }};background:{{ s.bg }}">
-                  <div style="width:44px;height:44px;border-radius:9px;background:{{ s.artBg }};color:{{ s.artInk }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;line-height:1;text-align:center">{{ s.abbr }}</div>
-                  <button onClick="{{ s.play }}" style="border:none;background:none;cursor:pointer;text-align:left;padding:8px 0;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px">{{ s.n }}. {{ s.name }}</span><span style="font-size:12px;color:#8b8b86">{{ s.genre }} {{ s.playing }}</span></button>
-                  <div style="display:flex;gap:4px;align-items:center">
-                    <button onClick="{{ s.fav }}" aria-label="Favoritt på radioknappen" style="width:32px;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ s.starFg }};cursor:pointer;font-size:14px;padding:0">★</button>
-                    <button onClick="{{ s.up }}" aria-label="Flytt opp" style="width:32px;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ s.upFg }};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"></path></svg></button>
-                    <button onClick="{{ s.down }}" aria-label="Flytt ned" style="width:32px;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ s.downFg }};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
-                    <button onClick="{{ s.remove }}" aria-label="Fjern" style="width:32px;height:32px;border-radius:8px;border:1px solid #4a2522;background:#1b1b1c;color:#ff8a7a;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          <div style="display:flex;flex-direction:column;gap:22px">
+            <div style="flex-shrink:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <input value="{{ q }}" onChange="{{ setQ }}" placeholder="Søk etter kanal, by eller sjanger" style="flex:1 1 260px;max-width:560px;min-width:0;height:44px;padding:0 14px;border-radius:12px;border:1px solid #2e2e30;background:#141415;font-size:14px;outline:none">
+              <button onClick="{{ goRadioSet }}" style="height:44px;padding:0 14px;border-radius:12px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7M17 14l3 3-3 3"></path></svg>Administrer favoritter</button>
+            </div>
+            <sc-if value="{{ rSearching }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ rHasLoc }}" hint-placeholder-val="{{ false }}">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8b8b86">NORSKE KANALER</span>
+                <div style="flex-shrink:0;display:flex;flex-direction:column;border-radius:16px;background:#141415;border:1px solid #242426"><sc-for list="{{ rLoc }}" as="c" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:62px;padding:0 12px;border-top:1px solid {{ c.line }}">
+                    <button onClick="{{ c.play }}" aria-label="Spill" style="width:44px;height:44px;border-radius:8px;border:none;background:{{ c.bg }};color:{{ c.ink }};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;line-height:1;text-align:center;overflow:hidden;cursor:pointer;padding:0">{{ c.abbr }}</button>
+                    <button onClick="{{ c.play }}" style="border:none;background:none;padding:6px 0;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.genre }}</span></button>
+                    <button onClick="{{ c.fav }}" aria-label="Favoritt" style="width:36px;height:36px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ c.starFg }};font-size:16px;cursor:pointer;padding:0">{{ c.star }}</button>
+                  </div>
+                </sc-for></div>
+              </sc-if>
+              <sc-if value="{{ rBusyS }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8b8b86">Søker i Radio Browser …</span></sc-if>
+              <sc-if value="{{ rHasOnl }}" hint-placeholder-val="{{ false }}">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8b8b86">FRA HELE VERDEN · RADIO BROWSER</span>
+                <div style="flex-shrink:0;display:flex;flex-direction:column;border-radius:16px;background:#141415;border:1px solid #242426"><sc-for list="{{ rOnl }}" as="c" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:62px;padding:0 12px;border-top:1px solid {{ c.line }}">
+                    <button onClick="{{ c.play }}" aria-label="Spill" style="width:44px;height:44px;border-radius:8px;border:none;background:{{ c.bg }};color:{{ c.ink }};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;line-height:1;text-align:center;overflow:hidden;cursor:pointer;padding:0">{{ c.abbr }}</button>
+                    <button onClick="{{ c.play }}" style="border:none;background:none;padding:6px 0;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.genre }}</span></button>
+                    <button onClick="{{ c.fav }}" aria-label="Favoritt" style="width:36px;height:36px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ c.starFg }};font-size:16px;cursor:pointer;padding:0">{{ c.star }}</button>
+                  </div>
+                </sc-for></div>
+              </sc-if>
+              <sc-if value="{{ rNone }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#8b8b86">Ingen kanaler funnet. Du kan legge til en strømadresse under Administrer favoritter.</span></sc-if>
+            </sc-if>
+            <sc-if value="{{ rNotSearching }}" hint-placeholder-val="{{ true }}">
+              <div style="position:relative;flex-shrink:0;border-radius:18px;overflow:hidden;background:#141415;border:1px solid #242426">
+                <div style="position:absolute;inset:-60px;background:{{ rHero.bg }};filter:blur(50px);opacity:.5"></div>
+                <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(11,11,12,.94) 0%,rgba(11,11,12,.6) 55%,rgba(11,11,12,.25) 100%)"></div>
+                <div style="position:relative;display:flex;gap:28px;align-items:center;padding:28px;flex-wrap:wrap">
+                  <button onClick="{{ rHero.play }}" style="width:180px;height:180px;flex-shrink:0;border-radius:16px;border:none;background:{{ rHero.bg }};color:{{ rHero.ink }};box-shadow:0 18px 44px rgba(0,0,0,.55);cursor:pointer;padding:0"></button>
+                  <div style="display:flex;flex-direction:column;gap:10px;min-width:0;flex:1 1 260px">
+                    <span style="display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:#f0c46a"><div style="width:7px;height:7px;border-radius:50%;background:{{ rHero.liveBg }}"></div>{{ rHero.kicker }}</span>
+                    <span style="font-size:40px;font-weight:600;line-height:1.05">{{ rHero.name }}</span>
+                    <span style="font-size:14px;color:#c9c9c4">{{ rHero.genre }}</span>
+                    <span style="font-size:13px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rHero.now }}</span>
+                  </div>
+                  <div style="display:flex;gap:8px;flex-basis:100%;flex-wrap:wrap">
+                    <button onClick="{{ rHero.play }}" style="height:42px;padding:0 18px;border-radius:999px;border:none;background:#d9a441;color:#0b0b0c;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#0b0b0c"><path d="M8 5v14l11-7z"></path></svg>{{ rHero.playLabel }}</button>
+                    <button onClick="{{ rHero.fav }}" style="height:42px;padding:0 16px;border-radius:999px;border:1px solid #3a3a37;background:rgba(11,11,12,.4);color:{{ rHero.favFg }};font-size:14px;cursor:pointer;white-space:nowrap">{{ rHero.favLabel }}</button>
                   </div>
                 </div>
-              </sc-for>
-            </section>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#8b8b86"><span>★ spilles når du holder radioknappen inne.</span><a href="http://192.168.1.42:9000/" target="_blank">Flere kanaler i Lyrion ↗</a></div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <span style="font-size:13px;color:#8b8b86">Legg til kanal</span>
-            <input value="{{ q }}" onChange="{{ setQ }}" placeholder="Søk etter kanal eller sjanger" style="height:42px;padding:0 14px;border-radius:10px;border:1px solid #2e2e30;background:#141415;font-size:14px;outline:none">
-            <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column;max-height:520px;overflow:auto;scrollbar-width:thin;color-scheme:dark">
-              <sc-for list="{{ catalog }}" as="c" hint-placeholder-count="8">
-                <div style="display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:54px;padding:0 14px;border-top:1px solid {{ c.line }}">
-                  <div style="width:36px;height:36px;border-radius:8px;background:{{ c.artBg }};color:{{ c.artInk }};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;line-height:1;text-align:center">{{ c.abbr }}</div>
-                  <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{{ c.name }}</span><span style="font-size:12px;color:#8b8b86">{{ c.genre }}</span></span>
-                  <button onClick="{{ c.add }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ c.bd }};background:transparent;color:{{ c.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+              </div>
+              <div style="flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ rGenres }}" as="g" hint-placeholder-count="6"><button onClick="{{ g.pick }}" style="flex-shrink:0;height:36px;padding:0 15px;border-radius:8px;border:1px solid {{ g.bd }};background:{{ g.bg }};color:{{ g.fg }};font-size:13px;cursor:pointer;white-space:nowrap">{{ g.n }}</button></sc-for></div>
+              <sc-for list="{{ rShelves }}" as="sh" hint-placeholder-count="3">
+                <div style="flex-shrink:0;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;flex-direction:column;gap:2px"><sc-if value="{{ sh.hasKicker }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;color:#8b8b86">{{ sh.kicker }}</span></sc-if><span style="font-size:22px;font-weight:600">{{ sh.title }}</span></div>
+                  <div style="display:flex;gap:16px;overflow-x:auto;scrollbar-width:thin;color-scheme:dark;padding-bottom:8px"><sc-for list="{{ sh.tiles }}" as="t" hint-placeholder-count="6">
+                    <button onClick="{{ t.pick }}" style="display:flex;flex-direction:column;gap:6px;width:150px;flex-shrink:0;border:none;background:none;padding:0;cursor:pointer;text-align:left">
+                      <div style="position:relative;width:100%;aspect-ratio:1;box-sizing:border-box;border-radius:14px;background:{{ t.bg }};color:{{ t.ink }};border:1px solid #242426;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;text-align:center;line-height:1.05;padding:10px">
+                        <span style="position:absolute;left:8px;top:8px;height:18px;padding:0 6px;border-radius:4px;background:{{ t.liveBg }};color:#fff;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;display:flex;align-items:center">{{ t.live }}</span>
+                      </div>
+                      <span style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
+                      <span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.meta }}</span>
+                    </button>
+                  </sc-for></div>
                 </div>
               </sc-for>
-            </section>
+            </sc-if>
           </div>
+      </sc-if>
+
+      <sc-if value="{{ pgLib }}" hint-placeholder-val="{{ false }}">
+       <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1 1 100%;min-width:0;display:flex;flex-direction:column;gap:22px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div style="display:flex;gap:4px;padding:4px;border-radius:10px;background:#141415;border:1px solid #242426">
+              <sc-for list="{{ libTabs }}" as="lt" hint-placeholder-count="3">
+                <button onClick="{{ lt.pick }}" style="height:34px;padding:0 16px;border-radius:7px;border:none;background:{{ lt.bg }};color:{{ lt.fg }};font-size:13px;cursor:pointer;white-space:nowrap">{{ lt.n }}</button>
+              </sc-for>
+            </div>
+            <input value="{{ lq2 }}" onChange="{{ setLq2 }}" placeholder="{{ libSearchPh }}" style="height:42px;width:320px;max-width:100%;padding:0 14px;border-radius:10px;border:1px solid #2e2e30;background:#141415;font-size:14px;outline:none">
+          </div>
+
+          <sc-if value="{{ libSearching }}" hint-placeholder-val="{{ false }}">
+            <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column">
+              <sc-for list="{{ libRes }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.pick }}" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:58px;padding:0 14px;border:none;border-top:1px solid {{ t.line }};background:transparent;cursor:pointer;text-align:left">
+                  <div style="width:40px;height:40px;border-radius:6px;background:{{ t.bg }}"></div>
+                  <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;color:{{ t.fg }}">{{ t.t }}</span><span style="font-size:12px;color:#8b8b86">{{ t.s }}</span></span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b8b86">{{ t.meta }}</span>
+                </button>
+              </sc-for>
+              <sc-if value="{{ libResEmpty }}" hint-placeholder-val="{{ false }}"><span style="padding:18px;font-size:13px;color:#8b8b86">Ingen treff</span></sc-if>
+            </section>
+          </sc-if>
+
+          <sc-if value="{{ libShowInPl }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ libBack }}" style="align-self:flex-start;display:flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 8px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>{{ libBackLabel }}</button>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:14px;max-width:320px">
+                <div style="aspect-ratio:1;box-sizing:border-box;border-radius:14px;background:{{ plBg }};color:{{ plInk }};display:flex;align-items:flex-end;padding:18px;font-size:24px;font-weight:600;line-height:1.1;text-wrap:balance">{{ plName }}</div>
+                <span style="font-size:13px;color:#8b8b86">{{ plMeta }}</span>
+                <div style="display:flex;gap:8px">
+                  <button onClick="{{ plPlay }}" style="height:40px;padding:0 18px;border-radius:10px;border:none;background:#d9a441;color:#0b0b0c;font-size:14px;font-weight:600;cursor:pointer">Spill</button>
+                  <button onClick="{{ plShuffle }}" style="height:40px;padding:0 18px;border-radius:10px;border:1px solid #2e2e30;background:#1b1b1c;font-size:14px;cursor:pointer">Tilfeldig</button>
+                </div>
+              </div>
+              <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column">
+                <sc-for list="{{ plTracks }}" as="t" hint-placeholder-count="6">
+                  <button onClick="{{ t.pick }}" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:58px;padding:0 14px;border:none;border-top:1px solid {{ t.line }};background:transparent;cursor:pointer;text-align:left">
+                    <div style="width:40px;height:40px;border-radius:6px;background:{{ t.bg }}"></div>
+                    <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;color:{{ t.fg }}">{{ t.t }}</span><span style="font-size:12px;color:#8b8b86">{{ t.s }}</span></span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b8b86">{{ t.meta }}</span>
+                  </button>
+                </sc-for>
+              </section>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ libShowDisc }}" hint-placeholder-val="{{ false }}">
+            <div style="position:relative;border-radius:18px;overflow:hidden;background:#141415;border:1px solid #242426">
+              <div style="position:absolute;inset:-60px;background:{{ hero.bg }};filter:blur(56px);opacity:.55"></div>
+              <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(11,11,12,.94) 0%,rgba(11,11,12,.62) 55%,rgba(11,11,12,.25) 100%)"></div>
+              <div style="position:relative;display:flex;gap:28px;align-items:center;padding:28px;flex-wrap:wrap">
+                <button onClick="{{ hero.open }}" style="width:200px;height:200px;flex-shrink:0;border-radius:12px;border:none;background:{{ hero.bg }};color:{{ hero.ink }};box-shadow:0 22px 50px rgba(0,0,0,.55);display:flex;align-items:flex-end;padding:16px;box-sizing:border-box;font-size:19px;font-weight:600;line-height:1.05;text-align:left;cursor:pointer">{{ hero.name }}</button>
+                <div style="display:flex;flex-direction:column;gap:12px;min-width:0;flex:1 1 260px">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:#f0c46a">{{ hero.kicker }}</span>
+                  <span style="font-size:40px;font-weight:600;line-height:1.02;text-wrap:balance">{{ hero.name }}</span>
+                  <span style="font-size:14px;color:#c9c9c4">{{ hero.sub }}</span>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ hero.chips }}" as="hc" hint-placeholder-count="3"><span style="height:24px;padding:0 9px;border-radius:6px;background:rgba(255,255,255,.09);font-family:'IBM Plex Mono',monospace;font-size:11px;display:flex;align-items:center;white-space:nowrap">{{ hc.t }}</span></sc-for></div>
+                  <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+                    <button onClick="{{ hero.play }}" style="height:42px;padding:0 20px;border-radius:999px;border:none;background:#d9a441;color:#0b0b0c;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="#0b0b0c"><path d="M8 5v14l11-7z"></path></svg>Spill</button>
+                    <button onClick="{{ hero.queue }}" style="height:42px;padding:0 18px;border-radius:999px;border:1px solid #3a3a37;background:rgba(11,11,12,.4);font-size:14px;cursor:pointer">Legg i kø</button>
+                  </div>
+                </div>
+              </div>
+              <div style="position:absolute;right:20px;bottom:18px;display:flex;gap:5px"><sc-for list="{{ hero.dots }}" as="hd" hint-placeholder-count="4"><button onClick="{{ hd.pick }}" style="width:{{ hd.w }};height:6px;border-radius:3px;border:none;padding:0;background:{{ hd.c }};cursor:pointer"></button></sc-for></div>
+            </div>
+            <sc-if value="{{ hasMoods }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ moods }}" as="md" hint-placeholder-count="6"><button onClick="{{ md.pick }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid {{ md.bd }};background:{{ md.bg }};color:{{ md.fg }};font-size:13px;cursor:pointer;white-space:nowrap">{{ md.n }}</button></sc-for></div>
+            </sc-if>
+            <sc-for list="{{ shelves }}" as="sh" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;flex-direction:column;gap:2px"><sc-if value="{{ sh.hasKicker }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;color:#8b8b86">{{ sh.kicker }}</span></sc-if><span style="font-size:22px;font-weight:600">{{ sh.title }}</span></div>
+                <div style="display:flex;gap:16px;overflow-x:auto;scrollbar-width:thin;color-scheme:dark;padding-bottom:8px"><sc-for list="{{ sh.tiles }}" as="t" hint-placeholder-count="6">
+                  <button onClick="{{ t.pick }}" style="display:flex;flex-direction:column;gap:6px;width:168px;flex-shrink:0;border:none;background:none;padding:0;cursor:pointer;text-align:left">
+                    <div style="position:relative;width:100%;aspect-ratio:1;box-sizing:border-box;border-radius:{{ t.round }};background:{{ t.bg }};color:{{ t.ink }};display:flex;align-items:flex-end;padding:12px 52px 12px 12px;font-size:16px;font-weight:600;line-height:1.08">{{ t.label }}<div style="position:absolute;right:10px;bottom:10px;width:36px;height:36px;border-radius:50%;background:rgba(11,11,12,.72);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="#f2f2ee"><path d="M8 5v14l11-7z"></path></svg></div></div>
+                    <span style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
+                    <span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.meta }}</span>
+                  </button>
+                </sc-for></div>
+              </div>
+            </sc-for>
+          </sc-if>
+
+          <sc-if value="{{ libShowPl }}" hint-placeholder-val="{{ false }}">
+            <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column">
+              <sc-for list="{{ plRows }}" as="p" hint-placeholder-count="4">
+                <button onClick="{{ p.pick }}" style="display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:14px;align-items:center;min-height:68px;padding:0 14px;border:none;border-top:1px solid {{ p.line }};background:transparent;cursor:pointer;text-align:left">
+                  <div style="width:48px;height:48px;border-radius:8px;background:{{ p.bg }}"></div>
+                  <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">{{ p.name }}</span><span style="font-size:12px;color:#8b8b86">{{ p.meta }}</span></span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+                </button>
+              </sc-for>
+            </section>
+          </sc-if>
+
+          <sc-if value="{{ libShowHist }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#8b8b86">Spilt på denne forsterkeren</span><button onClick="{{ clearHist }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-size:12px;cursor:pointer;white-space:nowrap">Tøm historikk</button></div>
+            <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column">
+              <sc-for list="{{ histRows }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.pick }}" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:58px;padding:0 14px;border:none;border-top:1px solid {{ t.line }};background:transparent;cursor:pointer;text-align:left">
+                  <div style="width:40px;height:40px;border-radius:6px;background:{{ t.bg }}"></div>
+                  <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;color:{{ t.fg }}">{{ t.t }}</span><span style="font-size:12px;color:#8b8b86">{{ t.s }}</span></span>
+                  <span style="font-size:12px;color:#8b8b86;white-space:nowrap">{{ t.meta }}</span>
+                </button>
+              </sc-for>
+              <sc-if value="{{ histEmpty }}" hint-placeholder-val="{{ false }}"><span style="padding:18px;font-size:13px;color:#8b8b86">Ingen historikk</span></sc-if>
+            </section>
+          </sc-if>
         </div>
+
+       </div>
       </sc-if>
 
       <sc-if value="{{ pgInt }}" hint-placeholder-val="{{ false }}">
@@ -357,6 +534,76 @@ input::placeholder{color:#55554f}
     <span style="font-size:11px;color:#8b8b86">Vises dempet på skjermen og flytter seg litt hvert minutt for å unngå innbrenning.</span>
   </div>
 </sc-if>
+        <sc-if value="{{ isRadioSet }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:18px;font-weight:600">Favoritter</span>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#8b8b86">{{ radioCount }}</span><span style="font-size:12px;color:#8b8b86">Samme rekkefølge som radioknappen</span></div>
+            <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column">
+              <sc-for list="{{ stations }}" as="s" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:64px;padding:0 14px;border-top:1px solid {{ s.line }};background:{{ s.bg }}">
+                  <div style="width:44px;height:44px;border-radius:9px;background:{{ s.artBg }};color:{{ s.artInk }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;line-height:1;text-align:center">{{ s.abbr }}</div>
+                  <button onClick="{{ s.play }}" style="border:none;background:none;cursor:pointer;text-align:left;padding:8px 0;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px">{{ s.n }}. {{ s.name }}</span><span style="font-size:12px;color:#8b8b86">{{ s.genre }} {{ s.playing }}</span></button>
+                  <div style="display:flex;gap:4px;align-items:center">
+                    <button onClick="{{ s.fav }}" aria-label="Favoritt på radioknappen" style="width:32px;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ s.starFg }};cursor:pointer;font-size:14px;padding:0">★</button>
+                    <button onClick="{{ s.up }}" aria-label="Flytt opp" style="width:32px;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ s.upFg }};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"></path></svg></button>
+                    <button onClick="{{ s.down }}" aria-label="Flytt ned" style="width:32px;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:{{ s.downFg }};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+                    <button onClick="{{ s.remove }}" aria-label="Fjern" style="width:32px;height:32px;border-radius:8px;border:1px solid #4a2522;background:#1b1b1c;color:#ff8a7a;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+                  </div>
+                </div>
+              </sc-for>
+            </section>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#8b8b86"><span>★ spilles når du holder radioknappen inne.</span><a href="http://192.168.1.42:9000/" target="_blank">Flere kanaler i Lyrion ↗</a></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font-size:13px;color:#8b8b86">Legg til kanal</span>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:3px;border-radius:10px;background:#141415;border:1px solid #242426"><sc-for list="{{ rModes }}" as="rm" hint-placeholder-count="2"><button onClick="{{ rm.pick }}" style="height:34px;border-radius:8px;border:none;background:{{ rm.bg }};color:{{ rm.fg }};font-size:13px;font-weight:600;cursor:pointer">{{ rm.n }}</button></sc-for></div>
+            <sc-if value="{{ rSok }}" hint-placeholder-val="{{ true }}">
+            <input value="{{ q }}" onChange="{{ setQ }}" placeholder="Søk etter kanal, by eller sjanger" style="height:42px;padding:0 14px;border-radius:10px;border:1px solid #2e2e30;background:#141415;font-size:14px;outline:none">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8b8b86">NORSKE KANALER</span>
+            <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column;max-height:360px;overflow:auto;scrollbar-width:thin;color-scheme:dark">
+              <sc-for list="{{ catalog }}" as="c" hint-placeholder-count="8">
+                <div style="display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:54px;padding:0 14px;border-top:1px solid {{ c.line }}">
+                  <div style="width:36px;height:36px;border-radius:8px;background:{{ c.artBg }};color:{{ c.artInk }};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;line-height:1;text-align:center">{{ c.abbr }}</div>
+                  <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{{ c.name }}</span><span style="font-size:12px;color:#8b8b86">{{ c.genre }}</span></span>
+                  <button onClick="{{ c.add }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ c.bd }};background:transparent;color:{{ c.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+                </div>
+              </sc-for>
+            </section>
+              <sc-if value="{{ onlBusy }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8b8b86">Søker i Radio Browser …</span></sc-if>
+              <sc-if value="{{ onlHas }}" hint-placeholder-val="{{ false }}">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8b8b86">FRA RADIO BROWSER</span>
+                <div style="display:flex;flex-direction:column;border-radius:16px;background:#141415;border:1px solid #242426;flex-shrink:0">
+                <sc-for list="{{ onl }}" as="c" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:52px;padding:0 12px;border-top:1px solid {{ c.line }}">
+                    <div style="width:34px;height:34px;border-radius:7px;background:{{ c.artBg }};color:{{ c.artInk }};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;line-height:1;text-align:center;overflow:hidden">{{ c.abbr }}</div>
+                    <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="font-size:11px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.genre }}</span></span>
+                    <button onClick="{{ c.add }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid {{ c.bd }};background:transparent;color:{{ c.fg }};font-size:12px;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+                  </div>
+                </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ onlHint }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:#8b8b86;line-height:1.45;text-wrap:pretty">Skriv minst tre bokstaver for å søke blant over 50 000 kanaler fra hele verden.</span></sc-if>
+            </sc-if>
+            <sc-if value="{{ rUrl }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:10px;flex-shrink:0">
+                <input value="{{ uName }}" onChange="{{ setUName }}" placeholder="Navn, for eksempel Jazzradio" style="height:44px;padding:0 14px;border-radius:10px;border:1px solid #2e2e30;background:#141415;font-size:14px;outline:none">
+                <input value="{{ uUrl }}" onChange="{{ setUUrl }}" placeholder="https://… strømadresse" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="url" style="height:44px;padding:0 14px;border-radius:10px;border:1px solid #2e2e30;background:#141415;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none">
+                <input value="{{ uGenre }}" onChange="{{ setUGenre }}" placeholder="Sjanger (valgfritt)" style="height:44px;padding:0 14px;border-radius:10px;border:1px solid #2e2e30;background:#141415;font-size:14px;outline:none">
+                <span style="font-size:12px;color:{{ uMsgFg }};line-height:1.45;text-wrap:pretty">{{ uMsg }}</span>
+                <div style="display:flex;gap:8px">
+                  <button onClick="{{ uTestDo }}" style="height:44px;padding:0 18px;border-radius:10px;border:1px solid #2e2e30;background:#1b1b1c;font-size:14px;cursor:pointer">Test</button>
+                  <button onClick="{{ uAdd }}" style="flex:1;height:44px;border-radius:10px;border:none;background:{{ uAddBg }};color:{{ uAddFg }};font-size:14px;font-weight:600;cursor:pointer">{{ uAddLabel }}</button>
+                </div>
+                <sc-if value="{{ uHasDone }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#6fcf7f">{{ uDoneText }}</span></sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      
+          <span style="font-size:18px;font-weight:600;margin-top:8px">Knapper og oppstart</span>
+        </sc-if>
         <sc-if value="{{ notUpd }}" hint-placeholder-val="{{ true }}">
         <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column">
           <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
@@ -364,6 +611,8 @@ input::placeholder{color:#55554f}
               <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
                 <span style="font-size:15px">{{ r.n }}</span>
                 <sc-if value="{{ r.hasHint }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8b8b86;text-wrap:pretty">{{ r.hint }}</span></sc-if>
+                <sc-if value="{{ r.isLong }}" hint-placeholder-val="{{ false }}"><input type="{{ r.inType }}" value="{{ r.val }}" onChange="{{ r.set }}" placeholder="{{ r.ph }}" spellcheck="false" style="margin-top:8px;height:38px;width:100%;max-width:520px;box-sizing:border-box;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none"></sc-if>
+                <sc-if value="{{ r.isSteps }}" hint-placeholder-val="{{ false }}"><div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;max-width:620px"><sc-for list="{{ r.steps }}" as="sp" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;font-size:13px;color:#c9c9c4;line-height:1.5"><span style="font-family:'IBM Plex Mono',monospace;color:#d9a441">{{ sp.n }}</span><span style="text-wrap:pretty">{{ sp.t }}</span></div></sc-for></div></sc-if>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center">
                 <sc-if value="{{ r.isNum }}" hint-placeholder-val="{{ false }}">
@@ -383,7 +632,8 @@ input::placeholder{color:#55554f}
         </sc-if>
       </sc-if>
     </main>
-    <aside style="flex:1 1 280px;max-width:340px;min-width:260px;background:#141415;border:1px solid #242426;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px">
+    <sc-if value="{{ showSys }}" hint-placeholder-val="{{ true }}">
+    <aside style="order:3;flex:0 0 320px;min-width:260px;background:#141415;border:1px solid #242426;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px">
       <span style="font-size:17px;font-weight:600">Ditt system</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button onClick="{{ grpAll }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ grpAllBd }};background:{{ grpAllBg }};font-size:12px;cursor:pointer;white-space:nowrap">Alle rom</button>
@@ -418,8 +668,9 @@ input::placeholder{color:#55554f}
       </sc-for>
       <button onClick="{{ addDevice }}" style="height:40px;border-radius:10px;border:1px dashed #5a4420;background:transparent;color:#f0c46a;font-size:12px;cursor:pointer">+ Legg til Skjold S1 eller Node</button>
     </aside>
+    </sc-if>
   </div>
-  <div style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);width:calc(100% - 40px);max-width:1140px;box-sizing:border-box;z-index:20;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:16px;align-items:center;padding:10px 16px;border-radius:16px;background:rgba(24,24,26,0.96);border:1px solid #2a2a2c;box-shadow:0 12px 40px rgba(0,0,0,.45)">
+  <div style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);width:calc(100% - 2 * clamp(20px,3vw,48px));max-width:none;box-sizing:border-box;z-index:20;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:16px;align-items:center;padding:10px 16px;border-radius:16px;background:rgba(24,24,26,0.96);border:1px solid #2a2a2c;box-shadow:0 12px 40px rgba(0,0,0,.45)">
     <button onClick="{{ goPlay }}" style="display:flex;align-items:center;gap:12px;border:none;background:none;padding:0;cursor:pointer;text-align:left;min-width:0">
       <div style="width:46px;height:46px;border-radius:8px;background:{{ art.bg }};flex-shrink:0"></div>
       <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b8b86;white-space:nowrap">{{ groupName }}</span><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ np.title }}</span><span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ np.sub }}</span></span>
@@ -485,14 +736,105 @@ drawClocks() { const K = window.SKJOLD; if (!K || !this.cv) return; const set = 
   clockVals(set, send) { const K = window.SKJOLD, A = '#d9a441'; this.cv = this.cv || []; return K.CLOCKS.map((label, i) => { const on = (set.clockStyle || 0) === i; return { label, mark: on ? '✓' : '', bd: on ? A : '#242426', bg: on ? '#1c170d' : '#141415', fg: on ? '#f0c46a' : '#c9c9c4', pick: () => { send(i); setTimeout(() => this.drawClocks(), 0); }, ref: el => { this.cv[i] = el; if (el) this.drawClocks(); } }; }); }
   install() { clearInterval(this.ins); this.setState({ instBusy: true, instPct: 0 });
     this.ins = setInterval(() => this.setState(s => { const p = Math.min(100, s.instPct + 3); if (p >= 100) { clearInterval(this.ins); setTimeout(() => { this.setInt('spotify', { installed: true }); this.setState({ instBusy: false }); }, 300); } return { instPct: p }; }), 90); }
+  LT = [['Eple', 'Röyksopp', 'Melody A.M.', 219], ['Take On Me', 'a-ha', 'Hunting High and Low', 225], ['Runaway', 'AURORA', 'All My Demons Greeting Me as a Friend', 249], ['Strangers', 'Sigrid', 'Sucker Punch', 214], ['Firestone', 'Kygo', 'Cloud Nine', 272], ['Midnight City', 'M83', "Hurry Up, We're Dreaming", 243], ['Teardrop', 'Massive Attack', 'Mezzanine', 330], ['Intro', 'The xx', 'xx', 128], ['Breathe', 'Télépopmusik', 'Genetic World', 279], ['Poor Leno', 'Röyksopp', 'Melody A.M.', 237], ['Hunting High and Low', 'a-ha', 'Hunting High and Low', 225], ['Murder Song (5, 4, 3, 2, 1)', 'AURORA', 'All My Demons Greeting Me as a Friend', 199]];
+  LIB = {
+    ytm: { name: 'YouTube Music', tabs: ['Hjem', 'Spillelister', 'Historikk'], pls: [['Likte låter', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]], ['Supermix', [5, 0, 2, 6, 1, 4]], ['Fredagskveld', [4, 3, 1, 10]], ['Nordisk ro', [2, 11, 0, 9]]], hist: [[3, 'I dag 21:40'], [0, 'I dag 20:12'], [5, 'I går 22:05'], [1, 'I går 18:30']] },
+    nd: { name: 'Navidrome', tabs: ['Album', 'Spillelister', 'Historikk'], pls: [['Favoritter', [6, 7, 8, 5]], ['Vinyl-rips', [0, 9, 1, 10]], ['Sent på kvelden', [7, 6, 8, 2]]], hist: [[6, 'I dag 19:02'], [9, 'Mandag'], [7, 'Søndag']] }
+  };
+  openLib = id => this.setState({ page: 'lib', lib: id, libTab: 0, libPl: null, lq2: '' });
+  playLib = (list, i) => { const S = this.state, tr = list[i], L = this.LIB[S.lib]; const h = { ...(S.hist || {}) }; const cur = (h[S.lib] || L.hist.map(([k, w]) => [this.LT[k], w])).filter(x => x[0][0] !== tr[0]); h[S.lib] = [[tr, 'Nå'], ...cur].slice(0, 20);
+    const local = { ...S.local, power: true, input: 0, wl: 'air', paused: false, title: tr[0], sub: tr[1], st: L.name + ' · ' + tr[2] }; this.setState({ local, lq: list, li: i, lsvc: S.lib, hist: h, spot: false }); if (this.bc) this.bc.postMessage({ type: 'play', svc: S.lib, t: tr[0], a: tr[1] }); };
+  addQueue = list => { const S = this.state; if (!S.lq || !S.lq.length || S.lsvc !== S.lib) return this.playLib(list, 0); this.setState({ lq: [...S.lq, ...list] }); };
+  discVals(S, pls, albums, hist, art) {
+    const nd = S.lib === 'nd', LT = this.LT, play = 'M8 5v14l11-7z';
+    const feat = nd ? albums.slice(0, 5) : pls.slice(1).concat(pls.slice(0, 1)), fi = (S.libHero || 0) % feat.length, f = feat[fi], fa = art(f[0]);
+    const openF = () => this.setState({ libPl: nd ? fi : (fi + 1) % pls.length });
+    const artists = l => l.map(x => x[1]).filter((v, i, a) => a.indexOf(v) === i).slice(0, 3).join(', ');
+    const hero = { kicker: nd ? 'NYLIG LAGT TIL' : 'UTVALGT MIKS', name: f[0], sub: nd ? f[1][0][1] : artists(f[1]), bg: fa.bg, ink: fa.ink,
+      chips: (nd ? [f[1].length + ' låter', 'FLAC', '44,1 kHz'] : ['Miks', f[1].length + ' låter', 'AAC 256']).map(t => ({ t })), play: () => this.playLib(f[1], 0), queue: () => this.addQueue(f[1]), open: openF,
+      dots: feat.map((_, j) => ({ w: j === fi ? '18px' : '6px', c: j === fi ? '#d9a441' : '#3a3a37', pick: () => this.setState({ libHero: j }) })) };
+    const MOODS = ['Ny energi', 'Godfølelse', 'Avslapping', 'Trening', 'Fest', 'Fokus', 'Søvn'], mi = S.libMood, m = mi == null ? 0 : mi + 1;
+    const rot = a => a.slice(m % a.length).concat(a.slice(0, m % a.length));
+    const tr = list => (x, i) => ({ name: x[0], meta: x[1], label: '', bg: art(x[2]).bg, ink: art(x[2]).ink, round: '10px', pick: () => this.playLib(list, i) });
+    const plT = p => { const a = art(p[0]); return { name: p[0], meta: p[1].length + ' låter · ' + artists(p[1]), label: p[0], bg: a.bg, ink: a.ink, round: '10px', pick: () => this.setState({ libPl: pls.indexOf(p) }) }; };
+    const alT = al => { const a = art(al[0]); return { name: al[0], meta: al[1][0][1], label: '', bg: a.bg, ink: a.ink, round: '10px', pick: () => this.setState({ libPl: albums.indexOf(al) }) }; };
+    const again = []; hist.map(h => h[0]).concat(LT).forEach(x => { if (!again.find(y => y[0] === x[0])) again.push(x); });
+    const shelves = nd ? [{ kicker: '', title: 'Nylig lagt til', tiles: albums.map(alT) }, { kicker: '', title: 'Oppdag', tiles: albums.slice().reverse().map(alT) }, { kicker: 'FRA BIBLIOTEKET', title: 'Mest spilt', tiles: LT.slice(4, 12).map(tr(LT.slice(4, 12))) }]
+      : [{ kicker: 'SEBASTIAN', title: 'Hør på nytt', tiles: again.slice(0, 8).map(tr(again.slice(0, 8))) }, { kicker: '', title: mi == null ? 'Mikser for deg' : 'Mikser · ' + MOODS[mi], tiles: rot(pls).map(plT) }, { kicker: '', title: 'Glemte favoritter', tiles: rot(LT.slice().reverse()).slice(0, 8).map(tr(rot(LT.slice().reverse()).slice(0, 8))) }];
+    return { hero, shelves: shelves.map(s => ({ ...s, hasKicker: !!s.kicker })), hasMoods: !nd, moods: nd ? [] : MOODS.map((n, j) => ({ n, bg: mi === j ? '#f2f2ee' : '#1b1b1c', fg: mi === j ? '#0b0b0c' : '#f2f2ee', bd: mi === j ? '#f2f2ee' : '#2e2e30', pick: () => this.setState({ libMood: mi === j ? null : j }) })) };
+  }
+  setQ = v => { this.setState({ q: v, rRes: null }); clearTimeout(this.rqT); const q = v.trim(); if (q.length < 3 || !window.SKJOLD || !window.SKJOLD.searchRadio) return this.setState({ rBusy: false }); this.setState({ rBusy: true }); this.rqT = setTimeout(() => window.SKJOLD.searchRadio(q).then(r => { if (this.state.q.trim() === q) this.setState({ rRes: r, rBusy: false }); }), 400); };
+  radioAddVals(RL, setRL, full, art, abbr) {
+    const S = this.state, mode = S.rMode || 'sok', A = '#d9a441', K = window.SKJOLD;
+    const has = n => RL.some(p => p[0].toLowerCase() === n.toLowerCase());
+    const onl = (S.rRes || []).filter(s => !((K && K.CATALOG) || []).some(c => c[0].toLowerCase() === s.name.toLowerCase())).map((s, i) => { const h = has(s.name), a = art(s.name); return { name: s.name, genre: [s.genre, s.country, s.br ? s.br + ' kbps' : s.codec].filter(Boolean).join(' · '), abbr: abbr(s.name), artBg: a.bg, artInk: a.ink, line: i ? '#242426' : 'transparent', label: h ? 'Lagt til' : full ? 'Fullt' : 'Legg til', bd: h || full ? '#2e2e30' : A, fg: h || full ? '#8b8b86' : '#f0c46a', add: () => { if (!h && !full) setRL([...RL, [s.name, s.genre || 'Nettradio', s.url]]); } }; });
+    const u = (S.uUrl || '').trim(), okUrl = /^https?:\/\/\S+\.\S+/i.test(u), nm = (S.uName || '').trim(), t = S.uTest, isPl = /\.(m3u8?|pls)(\?|$)/i.test(u);
+    const msg = !u ? ['Støtter MP3, AAC, OGG, FLAC og spillelister (.m3u, .pls).', '#8b8b86'] : !okUrl ? ['Adressen må starte med http:// eller https://', '#ff8a7a'] : t === 'busy' ? ['Tester strømmen …', '#c9c9c4'] : t === 'ok' ? ['Strømmen virker.', '#6fcf7f'] : t === 'bad' ? (isPl ? ['Spilleliste. Lyrion henter strømmen fra den ved avspilling.', '#c9c9c4'] : ['Fikk ikke kontakt med strømmen. Sjekk adressen.', '#ff8a7a']) : ['Trykk Test for å sjekke at strømmen virker.', '#8b8b86'];
+    const canAdd = okUrl && nm.length > 0 && !full && !has(nm);
+    return { rSok: mode === 'sok', rUrl: mode === 'url', rModes: [['sok', 'Søk'], ['url', 'Fra URL']].map(([k, n]) => ({ n, bg: mode === k ? '#2a2a2c' : 'transparent', fg: mode === k ? '#f2f2ee' : '#8b8b86', pick: () => this.setState({ rMode: k }) })),
+      onl, onlHas: onl.length > 0, onlBusy: !!S.rBusy, onlHint: (S.q || '').trim().length < 3,
+      uName: S.uName || '', setUName: e => this.setState({ uName: e.target.value.slice(0, 40), uDone: '' }), uUrl: S.uUrl || '', setUUrl: e => this.setState({ uUrl: e.target.value, uTest: null, uDone: '' }), uGenre: S.uGenre || '', setUGenre: e => this.setState({ uGenre: e.target.value.slice(0, 30) }),
+      uMsg: msg[0], uMsgFg: msg[1], uTestDo: () => { if (!okUrl || !K) return; this.setState({ uTest: 'busy' }); K.testStream(u).then(ok => this.setState({ uTest: ok ? 'ok' : 'bad' })); },
+      uAddBg: canAdd ? A : '#242426', uAddFg: canAdd ? '#0b0b0c' : '#55554f', uAddLabel: full ? 'Fullt · fjern en favoritt først' : nm && has(nm) ? 'Finnes allerede' : 'Legg til i favoritter',
+      uAdd: () => { if (!canAdd) return; setRL([...RL, [nm, (S.uGenre || '').trim() || 'Egen strøm', u]]); this.setState({ uName: '', uUrl: '', uGenre: '', uTest: null, uDone: nm }); },
+      uDoneText: S.uDone ? '«' + S.uDone + '» er lagt til i favorittene.' : '', uHasDone: !!S.uDone };
+  }
+  radioDisc(RL, setRL, art, playFav, playAny, curName, goSet) {
+    const S = this.state, K = window.SKJOLD, CAT = K ? K.CATALOG : [], full = RL.length >= (K ? K.MAXRADIO : 50);
+    const fi = n => RL.findIndex(p => p[0] === n);
+    const GEN = [['Pop og hits', /pop|hit|mp3|ung/i], ['Nyheter og prat', /nyhet|samfunn|kultur|prat|distrikt|sport|debatt/i], ['Klassisk', /klassisk|opera/i], ['Jazz', /jazz/i], ['Rock', /rock|metal/i], ['Lokal', /lokal|distrikt|region/i]];
+    const gs = GEN.map(([n, re]) => [n, CAT.filter(c => re.test(c[1] + ' ' + c[0]))]).filter(g => g[1].length), gi = S.rGenre != null && gs[S.rGenre] ? S.rGenre : null;
+    const play = st => { const f = fi(st[0]); if (f >= 0) playFav(f); else playAny(st); };
+    const toggleFav = st => { const f = fi(st[0]); if (f >= 0) { if (RL.length > 1) setRL(RL.filter((_, j) => j !== f)); } else if (!full) setRL([...RL, st]); };
+    const tile = st => { const a = art(st[0]), on = curName === st[0]; return { name: st[0], meta: st[1], bg: a.bg, ink: a.ink, abbr: st[0].replace(/^NRK /, '').slice(0, 8), live: on ? 'DIREKTE' : '', liveBg: on ? '#e05a4a' : 'transparent', pick: () => play(st) }; };
+    const heroSt = (curName && (RL.find(p => p[0] === curName) || CAT.find(c => c[0] === curName) || (S.rTmp && S.rTmp[0] === curName ? S.rTmp : null))) || RL[0] || CAT[0];
+    const hf = fi(heroSt[0]) >= 0, ha = art(heroSt[0]), npH = K ? K.nowPlaying(heroSt[0]) : ['', ''], hl = curName === heroSt[0];
+    const shelves = gi == null ? [{ kicker: RL.length + (RL.length === 1 ? ' KANAL' : ' KANALER'), title: 'Dine favoritter', tiles: RL.map(tile) }, { kicker: '', title: 'Populære i Norge', tiles: CAT.slice(0, 14).map(tile) }, ...gs.slice(0, 2).map(([n, l]) => ({ kicker: 'SJANGER', title: n, tiles: l.map(tile) }))]
+      : [{ kicker: 'SJANGER', title: gs[gi][0], tiles: gs[gi][1].map(tile) }];
+    const q = (S.q || '').trim().toLowerCase();
+    const loc = q ? CAT.filter(c => (c[0] + ' ' + c[1]).toLowerCase().includes(q)) : [];
+    const onl = q ? (S.rRes || []).filter(s => !loc.some(c => c[0].toLowerCase() === s.name.toLowerCase())).map(s => [s.name, [s.genre, s.country, s.br ? s.br + ' kbps' : ''].filter(Boolean).join(' · ') || 'Nettradio', s.url]) : [];
+    const rrow = (st, i) => { const a = art(st[0]), f = fi(st[0]) >= 0; return { name: st[0], genre: st[1], bg: a.bg, ink: a.ink, abbr: st[0].replace(/^NRK /, '').slice(0, 5), line: i ? '#242426' : 'transparent', star: f ? '★' : '☆', starFg: f ? '#f0c46a' : '#8b8b86', play: () => play(st), fav: () => toggleFav(st) }; };
+    return { rHero: { name: heroSt[0], genre: heroSt[1], now: npH[0] + (npH[1] && npH[1] !== heroSt[0] ? ' · ' + npH[1] : ''), bg: ha.bg, ink: ha.ink, kicker: hl ? 'SPILLER NÅ' : 'FRA FAVORITTENE', liveBg: hl ? '#e05a4a' : '#3a3a37', play: () => play(heroSt), playLabel: hl ? 'Spiller' : 'Spill', favLabel: hf ? '★ I favorittene' : '☆ Legg til favoritter', favFg: hf ? '#f0c46a' : '#f2f2ee', fav: () => toggleFav(heroSt) },
+      rGenres: [{ n: 'Alle', i: null }, ...gs.map((g, i) => ({ n: g[0], i }))].map(g => { const on = gi === g.i; return { n: g.n, bg: on ? '#f2f2ee' : '#1b1b1c', fg: on ? '#0b0b0c' : '#f2f2ee', bd: on ? '#f2f2ee' : '#2e2e30', pick: () => this.setState({ rGenre: g.i }) }; }),
+      rShelves: shelves.filter(s => s.tiles.length).map(s => ({ ...s, hasKicker: !!s.kicker })), rSearching: !!q, rNotSearching: !q, rLoc: loc.map(rrow), rHasLoc: loc.length > 0, rOnl: onl.map(rrow), rHasOnl: onl.length > 0, rBusyS: !!S.rBusy, rNone: !!q && !S.rBusy && !loc.length && !onl.length && q.length >= 3, goRadioSet: goSet };
+  }
+  libVals() {
+    const S = this.state, L = this.LIB[S.lib], K = window.SKJOLD;
+    if (S.page !== 'lib' || !L) return { pgLib: false, libTabs: [], libRes: [], plTracks: [], mixTiles: [], againTiles: [], albTiles: [], plRows: [], histRows: [] };
+    const art = n => K.art(n), fmt = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    const cur = S.lq && S.lsvc === S.lib ? S.lq[S.li] : null;
+    const row = list => (x, i) => ({ t: x[0], s: x[1] + ' · ' + x[2], meta: fmt(x[3]), bg: art(x[2]).bg, fg: cur && cur[0] === x[0] ? '#f0c46a' : '#f2f2ee', line: i ? '#242426' : 'transparent', pick: () => this.playLib(list, i) });
+    const pls = L.pls.map(([n, ids]) => [n, ids.map(k => this.LT[k])]);
+    const albums = []; L.pls.flatMap(p => p[1]).forEach(k => { const a = this.LT[k][2]; if (!albums.find(x => x[0] === a)) albums.push([a, this.LT.filter(x => x[2] === a)]); });
+    const hist = (S.hist && S.hist[S.lib]) || L.hist.map(([k, w]) => [this.LT[k], w]), histList = hist.map(h => h[0]);
+    const q = (S.lq2 || '').trim().toLowerCase(), res = q ? this.LT.filter(x => (x[0] + ' ' + x[1] + ' ' + x[2]).toLowerCase().includes(q)) : [];
+    const plSrc = S.libTab === 0 && S.lib === 'nd' ? albums : pls, open = S.libPl != null ? plSrc[S.libPl] : null, top = !open && !q;
+    const tile = (p, i) => ({ name: p[0], meta: p[1].length + ' låter', bg: art(p[0]).bg, ink: art(p[0]).ink, pick: () => this.setState({ libPl: i }) });
+    return { pgLib: true, libBack: () => this.setState({ libPl: null }), libBackLabel: L.tabs[S.libTab], libSearchPh: 'Søk i ' + L.name,
+      lq2: S.lq2 || '', setLq2: e => this.setState({ lq2: e.target.value, libPl: null }), libSearching: !!q, libRes: res.map(row(res)), libResEmpty: !!q && !res.length,
+      libShowInPl: !!open && !q, plName: open ? open[0] : '', plMeta: open ? open[1].length + ' låter · ' + Math.round(open[1].reduce((a, x) => a + x[3], 0) / 60) + ' min' : '', plBg: open ? art(open[0]).bg : '#222', plInk: open ? art(open[0]).ink : '#fff',
+      plTracks: open ? open[1].map(row(open[1])) : [], plPlay: () => open && this.playLib(open[1], 0), plShuffle: () => open && this.playLib([...open[1]].sort(() => Math.random() - .5), 0),
+      libTabs: L.tabs.map((n, i) => ({ n, bg: S.libTab === i ? '#2a2a2c' : 'transparent', fg: S.libTab === i ? '#f2f2ee' : '#8b8b86', pick: () => this.setState({ libTab: i, libPl: null, lq2: '' }) })),
+      ...this.discVals(S, pls, albums, hist, art), libShowDisc: top && S.libTab === 0,
+      ...(() => { const ql = S.lq && S.lsvc ? S.lq : [], qi = S.li || 0, n = ql[qi]; return { qHas: !!n, qEmpty: !n, qNowT: n ? n[0] : '', qNowS: n ? n[1] + ' · ' + n[2] : '', qNowBg: n ? art(n[2]).bg : '#222', qMeta: n ? (ql.length - qi) + ' låter · ' + Math.round(ql.slice(qi).reduce((s, x) => s + x[3], 0) / 60) + ' min' : '',
+        qNext: ql.slice(qi + 1, qi + 21).map((x, j) => ({ t: x[0], s: x[1], meta: fmt(x[3]), bg: art(x[2]).bg, pick: () => this.setState({ li: qi + 1 + j, local: { ...S.local, title: x[0], sub: x[1] } }) })) }; })(),
+      libShowMix: top && S.libTab === 0 && S.lib === 'ytm', libShowAlb: top && S.libTab === 0 && S.lib === 'nd', libShowPl: top && S.libTab === 1, libShowHist: top && S.libTab === 2,
+      mixTiles: pls.map(tile), againTiles: hist.slice(0, 6).map((h, i) => ({ name: h[0][0], meta: h[0][1], bg: art(h[0][2]).bg, pick: () => this.playLib(histList, i) })),
+      albTiles: albums.map((a, i) => ({ name: a[0], meta: a[1][0][1], bg: art(a[0]).bg, ink: art(a[0]).ink, pick: () => this.setState({ libPl: i }) })),
+      plRows: pls.map((p, i) => ({ name: p[0], meta: p[1].length + ' låter', bg: art(p[0]).bg, line: i ? '#242426' : 'transparent', pick: () => this.setState({ libPl: i }) })),
+      histRows: hist.map((h, i) => ({ t: h[0][0], s: h[0][1], meta: h[1], bg: art(h[0][2]).bg, fg: cur && cur[0] === h[0][0] ? '#f0c46a' : '#f2f2ee', line: i ? '#242426' : 'transparent', pick: () => this.playLib(histList, i) })),
+      clearHist: () => this.setState({ hist: { ...(S.hist || {}), [S.lib]: [] } }), histEmpty: !hist.length };
+  }
   renderVals() {
     const K = window.SKJOLD; if (!K) return { nav: [], inputs: [], viz: [], srcs: [], eqSrcs: [], eqPresets: [], eqBands: [], stations: [], ints: [], intLinks: [], intRows: [], rows: [] };
-    const S0 = this.state.live && this.state.st ? this.state.st : this.state.local, set = { ...K.DEF, ...(S0.set || {}) }; this.curSet = () => set; const _u = 0, S = { ...S0, set }, I = this.state.int, A = '#d9a441';
+    const S0 = this.state.live && this.state.st ? this.state.st : this.state.local, set = { ...K.DEF, ...(S0.set || {}) }; this.curSet = () => set; const _u = 0, S = { ...S0, set }, I = { ytm: { on: true, acct: false, q: 1 }, nd: { on: true, url: 'http://192.168.1.10:4533', user: 'brukernavn', ok: false }, ...this.state.int }, A = '#d9a441';
     const on = b => ({ bd: b ? A : '#2e2e30', bg: b ? '#2a2112' : '#1b1b1c', fg: b ? '#f0c46a' : '#f2f2ee' });
     const spotOn = I.spotify.installed && I.spotify.on, page = this.state.page;
-    const NICON = { home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5', play: 'M8 5v14l11-7z', eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', int: 'M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0zM12 17v4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
-    const navItems = [['home', 'Hjem'], ['play', 'Spiller'], ['eq', 'Equalizer'], ['radio', 'Radio'], ['int', 'Integrasjoner']];
-    const nav = [{ isHead: true, isItem: false, label: 'LYTT' }, ...navItems.map(([id, label]) => ({ isItem: true, isHead: false, label, icon: NICON[id], badge: id === 'int' ? [I.spotify.installed, I.ha.mqtt, I.homey.paired].filter(Boolean).length + 1 + '' : '', badgeFg: '#8b8b86', bg: page === id ? '#1c170d' : 'transparent', fg: page === id ? '#f0c46a' : '#f2f2ee', pick: () => this.setState({ page: id }) })),
+    const NICON = { home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5', play: 'M8 5v14l11-7z', eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', ytm: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM10 8.5v7l6-3.5z', nd: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z', int: 'M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0zM12 17v4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
+    const navItems = [['home', 'Hjem'], ['play', 'Spiller'], ['radio', 'Radio'], ...(I.ytm.on ? [['ytm', 'YouTube Music']] : []), ...(I.nd.on ? [['nd', 'Navidrome']] : []), ['eq', 'Equalizer'], ['int', 'Integrasjoner']];
+    const navOn = id => id === 'ytm' || id === 'nd' ? page === 'lib' && this.state.lib === id : page === id;
+    const nav = [{ isHead: true, isItem: false, label: 'LYTT' }, ...navItems.map(([id, label]) => ({ isItem: true, isHead: false, label, icon: NICON[id], badge: id === 'int' ? [I.spotify.installed, I.ytm.acct, I.nd.ok, I.ha.mqtt, I.homey.paired].filter(Boolean).length + 1 + '' : '', badgeFg: '#8b8b86', bg: navOn(id) ? '#1c170d' : 'transparent', fg: navOn(id) ? '#f0c46a' : '#f2f2ee', pick: () => id === 'ytm' || id === 'nd' ? this.openLib(id) : this.setState({ page: id }) })),
       { isHead: true, isItem: false, label: 'INNSTILLINGER' }, ...K.catsFor(((this.state.sys || K.loadSys()).rooms.find(r => r.id === this.state.setDev) || { type: 's1' }).type).filter(c => c.id !== 'eq').map(c => ({ isItem: true, isHead: false, label: c.n, icon: NICON[c.id] || NICON.system, badge: '', badgeFg: '', bg: page === 'set' && this.state.cat === c.id ? '#1c170d' : 'transparent', fg: page === 'set' && this.state.cat === c.id ? '#f0c46a' : '#f2f2ee', pick: () => this.setState({ page: 'set', cat: c.id, confirm: '' }) }))];
     const SYSw = this.state.sys || K.loadSys(), actTypeW = (SYSw.rooms.find(r => r.id === SYSw.active) || SYSw.rooms[0]).type, allowW = [...K.DEVTYPES[actTypeW].inputs, 'Spotify'];
     const inputs = [['AirPlay', 0, 'air'], ['Blåtann', 0, 'bt'], ['AUX', 1], ['Radio', 2], ['USB', 3], ...(spotOn ? [['Spotify', -1]] : [])].map(([label, i, wl]) => ({ label, ...on(i === -1 ? this.state.spot : S.input === i && (!wl || S.wl === wl) && !this.state.spot), pick: () => { if (i === -1) return this.setState({ spot: true }); this.setState({ spot: false }); wl ? this.send({ type: 'wl', v: wl }) : this.send({ type: 'input', i }); } })).filter(x => allowW.includes(x.label));
@@ -509,24 +851,27 @@ drawClocks() { const K = window.SKJOLD; if (!K || !this.cv) return; const set = 
     const srcN = k => (K.EQ.sources.find(x => x[0] === k) || ['', ''])[1];
     const eqSrcs = K.EQ.sources.map(([k, label]) => ({ label, ...on(es === k), dot: act === k ? '#6fcf7f' : 'transparent', pick: () => this.setState({ eqSrc: k }) }));
     const eqPresets = [...K.EQ.presets.map(([label, v], i) => ({ label, ...on(prof.preset === i), pick: () => setProf({ preset: i, eq: v.slice() }) })), ...(prof.preset < 0 ? [{ label: 'Egendefinert', ...on(true), pick: () => {} }] : [])];
-    const eqBands = K.EQ.bands.map((f, i) => ({ f, v: prof.eq[i], val: (prof.eq[i] > 0 ? '+' : '') + prof.eq[i], set: e => { const eq = prof.eq.slice(); eq[i] = +e.target.value; setProf({ eq, preset: -1 }); } }));
+    const eqBands = K.EQ.bands.map((f, i) => ({ f, name: K.EQ.names[i], hz: ['60 Hz', '250 Hz', '1 kHz', '4 kHz', '12 kHz'][i], desc: K.EQ.desc[i], v: prof.eq[i], val: (prof.eq[i] > 0 ? '+' : '') + prof.eq[i], set: e => { const eq = prof.eq.slice(); eq[i] = +e.target.value; setProf({ eq, preset: -1 }); } }));
     const cv = K.curve(prof.eq, 600, 120);
     const RL = this.state.radio || K.loadRadio(), stIdx = Math.min(S.preset, RL.length - 1);
     const setRL = l => { K.saveRadio(l); this.setState({ radio: l }); if (this.bc) { this.bc.postMessage({ type: 'presets', list: l.map(p => [p[0], p[1], K.nowPlaying(p[0])]) }); this.bc.postMessage({ type: 'radioSync' }); } };
     const abbr = n => n.replace(/^NRK /, '').replace('Radio ', '').split(' ').map(w => w.slice(0, 4)).join(' ').slice(0, 7);
     const stations = RL.map(([name, genre], i) => { const a = K.art(name), here = S.input === 2 && stIdx === i; return { n: String(i + 1), name, genre, abbr: abbr(name), artBg: a.bg, artInk: a.ink, line: i ? '#242426' : 'transparent', bg: here ? '#1c170d' : 'transparent', playing: here ? '· spiller' : '', starFg: set.hold === i ? '#f0c46a' : '#55554f',
-      play: () => { this.send({ type: 'input', i: 2 }); this.send({ type: 'src', v: i }); }, fav: () => this.send({ type: 'set', k: 'hold', v: i }),
+      play: () => { this.setState({ rTmp: null }); this.send({ type: 'input', i: 2 }); this.send({ type: 'src', v: i }); }, fav: () => this.send({ type: 'set', k: 'hold', v: i }),
       up: () => { if (!i) return; const l = RL.slice(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; setRL(l); }, down: () => { if (i === RL.length - 1) return; const l = RL.slice(); [l[i + 1], l[i]] = [l[i], l[i + 1]]; setRL(l); },
       remove: () => { if (RL.length > 1) setRL(RL.filter((_, j) => j !== i)); }, upFg: i ? '#f2f2ee' : '#3a3a37', downFg: i < RL.length - 1 ? '#f2f2ee' : '#3a3a37' }; });
     const full = RL.length >= K.MAXRADIO, ql = this.state.q.trim().toLowerCase();
     const catalog = K.CATALOG.filter(([n, g]) => !ql || (n + ' ' + g).toLowerCase().includes(ql)).map(([name, genre], i) => { const a = K.art(name), has = RL.some(p => p[0] === name); return { name, genre, abbr: abbr(name), artBg: a.bg, artInk: a.ink, line: i ? '#242426' : 'transparent', label: has ? 'Lagt til' : full ? 'Fullt' : 'Legg til', bd: has || full ? '#2e2e30' : A, fg: has || full ? '#8b8b86' : '#f0c46a', add: () => { if (!has && !full) setRL([...RL, [name, genre]]); } }; });
-    const stName = RL[stIdx][0], aa = K.art(S.input === 2 ? stName : np.title || 'x');
-    const art = { bg: aa.bg, ink: aa.ink, live: S.input === 2 && !this.state.spot, kicker: this.state.spot ? 'SPOTIFY' : S.input === 2 ? 'RADIO · ' + RL[stIdx][1].toUpperCase() : S.input === 1 ? 'AUX' : S.input === 3 ? 'USB-LYD' : (np.sub || '').toUpperCase(), big: S.input === 2 && !this.state.spot ? stName : np.title, size: ((S.input === 2 ? stName : np.title) || '').length > 16 ? '28px' : '38px' };
+    const stT = this.state.rTmp, stName = stT ? stT[0] : RL[stIdx][0], aa = K.art(S.input === 2 ? stName : np.title || 'x');
+    const art = { bg: aa.bg, ink: aa.ink, live: S.input === 2 && !this.state.spot, kicker: this.state.spot ? 'SPOTIFY' : S.input === 2 ? 'RADIO · ' + (stT ? stT[1] : RL[stIdx][1]).toUpperCase() : S.input === 1 ? 'AUX' : S.input === 3 ? 'USB-LYD' : (np.sub || '').toUpperCase(), big: S.input === 2 && !this.state.spot ? stName : np.title, size: ((S.input === 2 ? stName : np.title) || '').length > 16 ? '28px' : '38px' };
     // integrations
     const host = (K.NAMES[set.name] || 'skjold').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const INT = [
       { id: 'lyrion', name: 'Lyrion', mono: 'L', tile: '#f2f2ee', status: I.lyrion.ext ? 'Ekstern server' : 'Innebygd · kjører', ok: true, desc: 'Radio, favoritter og musikkbibliotek. Styrer også flere rom samtidig.' },
       { id: 'spotify', name: 'Spotify Connect', mono: 'S', tile: '#6fcf7f', status: I.spotify.installed ? (I.spotify.on ? 'Installert · på' : 'Installert · av') : 'Ikke installert', ok: I.spotify.installed && I.spotify.on, desc: 'Spill fra Spotify-appen rett til forsterkeren. Krever Spotify Premium.' },
+      { id: 'ytmusic', name: 'YouTube Music', mono: 'YT', tile: '#e86a6a', status: I.ytm.acct ? (I.ytm.on ? 'Innlogget · på' : 'Innlogget · av') : 'Ikke innlogget', ok: I.ytm.acct && I.ytm.on, desc: 'Spillelister, mikser og historikk fra Google-kontoen din. Via Lyrion-tillegget.' },
+      { id: 'navidrome', name: 'Navidrome', mono: 'N', tile: '#7fa8e8', status: I.nd.ok ? (I.nd.on ? 'Tilkoblet · på' : 'Tilkoblet · av') : 'Ikke tilkoblet', ok: I.nd.ok && I.nd.on, desc: 'Ditt eget musikkbibliotek på hjemmenettet, i FLAC. Bruker Subsonic-API.' },
+      { id: 'upnp', name: 'UPnP/DLNA', mono: 'DL', tile: '#ffffff', status: (I.upnp || {}).on === false ? 'Av' : 'På · venter', ok: (I.upnp || {}).on !== false, desc: 'Ta imot lyd fra Android-apper, PC og NAS. Forsterkeren vises som en vanlig DLNA-høyttaler.' },
       { id: 'ha', name: 'Home Assistant', mono: 'HA', tile: '#7fb7e8', status: I.ha.mqtt ? 'MQTT tilkoblet' : 'Via Lyrion', ok: true, desc: 'Styr volum, inngang og av/på fra automasjoner og dashbord.' },
       { id: 'homey', name: 'Homey', mono: 'H', tile: '#e8c77f', status: I.homey.paired ? 'Paret' : 'Ikke paret', ok: I.homey.paired, desc: 'Bruk forsterkeren i Homey Flows, for eksempel radio når du kommer hjem.' },
       { id: 'api', name: 'Lokalt API', mono: '{ }', tile: '#c9c9c4', status: 'Aktivt', ok: true, desc: 'REST og WebSocket for egne skript og andre systemer.' }];
@@ -543,6 +888,24 @@ drawClocks() { const K = window.SKJOLD; if (!K || !this.cv) return; const set = 
       if (I.spotify.installed) intRows = [row('Spotify Connect', 'bool', { hint: 'Vises som egen inngang', ...tg(I.spotify.on, () => this.setInt('spotify', { on: !I.spotify.on })) }), row('Navn i Spotify', 'input', { val: I.spotify.name, ph: 'Stue', set: e => this.setInt('spotify', { name: e.target.value }) }),
         row('Lydkvalitet', 'opt', { opts: ['96 kbps', '160 kbps', '320 kbps'].map((l, i) => ({ label: l, ...on(I.spotify.br === i), pick: () => this.setInt('spotify', { br: i }) })) }), row('Volumnormalisering', 'bool', { ...tg(I.spotify.norm, () => this.setInt('spotify', { norm: !I.spotify.norm })) }),
         row('Versjon', 'text', { val: 'librespot 0.6.0' }), row('Avinstaller', 'act', { actLabel: 'Avinstaller', act: () => this.setInt('spotify', { installed: false }) })]; }
+    if (sel === 'ytmusic') { intLinks = [{ label: 'Åpne YouTube Music', href: 'https://music.youtube.com/' }];
+      intRows = [row('YouTube Music', 'bool', { hint: 'Vises i menyen og under Kilder', ...tg(I.ytm.on, () => this.setInt('ytm', { on: !I.ytm.on })) }),
+        row('Innlogging', 'act', { hint: I.ytm.acct ? 'Innlogget med cookie' + ((K.loadNames().ytmUser || '') ? ' · ' + K.loadNames().ytmUser : '') : 'Krever Premium. Logges inn med en cookie fra nettleseren, slik Music Assistant gjør.', actLabel: I.ytm.acct ? 'Endre' : 'Sett opp', act: () => this.setState({ page: 'set', cat: 'tjenester', confirm: '' }) }),
+        row('PO-token-tjeneste', 'text', { val: 'Innebygd · kjører' }),
+        row('Lydkvalitet', 'opt', { opts: ['Normal', 'Høy · 256 kbps'].map((l, i) => ({ label: l, ...on(I.ytm.q === i), pick: () => this.setInt('ytm', { q: i }) })) }),
+        row('Bibliotek', 'act', { actLabel: 'Åpne', act: () => this.openLib('ytm') })]; }
+    if (sel === 'navidrome') { intLinks = [{ label: 'Åpne Navidrome', href: I.nd.url }];
+      intRows = [row('Navidrome', 'bool', { hint: 'Vises i menyen og under Kilder', ...tg(I.nd.on, () => this.setInt('nd', { on: !I.nd.on })) }),
+        row('Server', 'input', { val: I.nd.url, ph: 'http://192.168.1.10:4533', set: e => this.setInt('nd', { url: e.target.value, ok: false }) }),
+        row('Brukernavn', 'input', { val: I.nd.user, ph: 'brukernavn', set: e => this.setInt('nd', { user: e.target.value, ok: false }) }),
+        row(I.nd.ok ? 'Tilkoblet · 1 284 album' : 'Test tilkobling', 'act', { hint: 'Passordet lagres kryptert på forsterkeren', actLabel: I.nd.ok ? 'Test igjen' : 'Test', act: () => this.setInt('nd', { ok: true }) }),
+        row('Bibliotek', 'act', { actLabel: 'Åpne', act: () => this.openLib('nd') })]; }
+    if (sel === 'upnp') { const U = { on: true, name: '', hq: true, ...(I.upnp || {}) };
+      intRows = [row('UPnP/DLNA-mottaker', 'bool', { hint: 'Programvaren er upmpdcli. Lyden går via Lyrion, så rom kan grupperes som vanlig.', ...tg(U.on, () => this.setInt('upnp', { on: !U.on })) }),
+        row('Navn på nettverket', 'input', { val: U.name || ('Skjold ' + (SYSw.rooms.find(r => r.id === SYSw.active) || SYSw.rooms[0]).name), ph: 'Skjold Stue', set: e => this.setInt('upnp', { name: e.target.value.slice(0, 30) }) }),
+        row('Format', 'text', { val: 'FLAC, WAV, ALAC, MP3, AAC og OGG · opptil 24 bit / 192 kHz' }),
+        row('Kompatible apper', 'text', { val: 'BubbleUPnP, Hi-Fi Cast, foobar2000, Plex, Jellyfin, Windows «Cast til enhet»' }),
+        row('Gapless avspilling', 'bool', { hint: 'Ingen pause mellom låter på album', ...tg(U.hq, () => this.setInt('upnp', { hq: !U.hq })) })]; }
     const SYSh = this.state.sys || K.loadSys();
     if (sel === 'ha') { intLinks = [{ label: 'Legg til i Home Assistant', href: 'https://my.home-assistant.io/redirect/config_flow_start/?domain=squeezebox' }, { label: 'Åpne Home Assistant', href: 'http://' + I.ha.host + ':8123/' }];
       intRows = [row('Via Lyrion (anbefalt)', 'text', { hint: 'Home Assistant finner forsterkeren selv med Squeezebox-integrasjonen.', val: 'Klar' }), row('MQTT', 'bool', { hint: 'Gir også inngang, EQ-profil og hodetelefonstatus som egne entiteter', ...tg(I.ha.mqtt, () => this.setInt('ha', { mqtt: !I.ha.mqtt })) }),
@@ -559,15 +922,16 @@ drawClocks() { const K = window.SKJOLD; if (!K || !this.cv) return; const set = 
     const devRoom = SYS.rooms.find(r => r.id === this.state.setDev) || SYS.rooms[0]; const DCATS = K.catsFor(devRoom.type);
     const catDef = DCATS.find(c => c.id === this.state.cat) || DCATS[1];
     const NM = this.state.names || K.loadNames();
+    const yc = (NM.ytmCookie || '').trim(); const yr = !yc ? ['Lim inn cookien først', '#ff8a7a'] : !yc.includes('__Secure-3PAPISID') ? ['Mangler __Secure-3PAPISID · hent på nytt', '#ff8a7a'] : ['Innlogget · Premium', '#6fcf7f'];
     const rows = catDef.items.filter(d => d.kind !== 'eq' && d.kind !== 'update' && d.kind !== 'clocks').map((d, i) => {
-      const r = { n: d.n, hint: d.hint || '', hasHint: !!d.hint, line: i ? '#242426' : 'transparent', isNum: d.kind === 'num', isOpt: d.kind === 'opt', isBool: d.kind === 'bool', isAct: d.kind === 'act', isText: d.kind === 'info', isStr: d.kind === 'str', val: '', opts: [] };
-      if (d.kind === 'str') { r.val = NM[d.k]; r.ph = d.ph; r.set = e => { const v = e.target.value.slice(0, 14); this.setState({ names: K.saveName(d.k, v) }); if (this.bc) { this.bc.postMessage({ type: 'set', k: d.k, v }); this.bc.postMessage({ type: 'namesSync' }); } }; }
+      const r = { n: d.n, hint: d.hint || '', hasHint: !!d.hint, line: i ? '#242426' : 'transparent', isNum: d.kind === 'num', isOpt: d.kind === 'opt', isBool: d.kind === 'bool', isAct: d.kind === 'act', isText: d.kind === 'info', isStr: d.kind === 'str' && !d.long, isLong: !!d.long, inType: d.secret ? 'password' : 'text', isSteps: d.kind === 'steps', steps: (d.steps || []).map((t, j) => ({ n: String(j + 1), t })), val: '', opts: [] };
+      if (d.kind === 'str') { r.val = NM[d.k] || ''; r.ph = d.ph; r.set = e => { const v = e.target.value.slice(0, d.max || 14); if (d.k === 'ytmCookie') this.setState({ ytmT: 0 }); this.setState({ names: K.saveName(d.k, v) }); if (this.bc) { this.bc.postMessage({ type: 'set', k: d.k, v }); this.bc.postMessage({ type: 'namesSync' }); } }; }
       if (d.kind === 'num') { const v = set[d.k] || 0; r.val = K.fmt[d.f](v); r.dec = () => this.send({ type: 'set', k: d.k, v: Math.max(d.mn, v - 1) }); r.inc = () => this.send({ type: 'set', k: d.k, v: Math.min(d.mx, v + 1) }); }
       if (d.kind === 'opt') r.opts = d.list.map((l, j) => ({ label: l, ...on((set[d.k] || 0) === j), pick: () => this.send({ type: 'set', k: d.k, v: j }) }));
       if (d.kind === 'bool') { const b = !!set[d.k]; Object.assign(r, tg(b, () => this.send({ type: 'set', k: d.k, v: !b }))); }
       if (d.kind === 'info') r.val = d.val || (d.key === 'btDev' ? (S.btDev.length ? S.btDev.join(', ') : 'Ingen') : d.key === 'lyrion' ? (S.err === 1 ? 'Frakoblet' : 'Tilkoblet') : '');
-      if (d.kind === 'act') { const c = this.state.confirm === d.id; r.actLabel = d.id === 'btPair' && this.state.btPairT && Date.now() - this.state.btPairT < 120000 ? 'Synlig for Blåtann · ' + Math.ceil((120000 - (Date.now() - this.state.btPairT)) / 1000) + ' s' : c ? 'Trykk igjen for å bekrefte' : d.label; r.actBd = c ? '#e05a4a' : '#2e2e30'; r.actFg = c ? '#ff8a7a' : '#f2f2ee';
-        r.act = () => { if (!c && !d.safe) return this.setState({ confirm: d.id }); this.setState({ confirm: '' }); if (d.id === 'btPair') { this.setState({ btPairT: Date.now() }); if (this.bc) this.bc.postMessage({ type: 'btPair', room: devRoom.id }); return; } if (d.id === 'openRadio') { this.setState({ page: 'radio' }); return; } if (d.id === 'setup') { if (this.bc) this.bc.postMessage({ type: 'setup', step: -1 }); location.href = 'Skjold Oppsett.dc.html'; return; } this.send({ type: d.id }); }; }
+      if (d.kind === 'act') { const c = this.state.confirm === d.id; r.actLabel = d.id === 'ytmTest' && this.state.ytmT ? yr[0] : d.id === 'btPair' && this.state.btPairT && Date.now() - this.state.btPairT < 120000 ? 'Synlig for Blåtann · ' + Math.ceil((120000 - (Date.now() - this.state.btPairT)) / 1000) + ' s' : c ? 'Trykk igjen for å bekrefte' : d.label; r.actBd = c ? '#e05a4a' : '#2e2e30'; r.actFg = d.id === 'ytmTest' && this.state.ytmT ? yr[1] : c ? '#ff8a7a' : '#f2f2ee';
+        r.act = () => { if (!c && !d.safe) return this.setState({ confirm: d.id }); this.setState({ confirm: '' }); if (d.id === 'ytmTest') { const ok = yr[1] === '#6fcf7f'; this.setState({ ytmT: Date.now() }); this.setInt('ytm', { acct: ok }); return; } if (d.id === 'btPair') { this.setState({ btPairT: Date.now() }); if (this.bc) this.bc.postMessage({ type: 'btPair', room: devRoom.id }); return; } if (d.id === 'openRadio') { this.setState({ page: 'radio' }); return; } if (d.id === 'setup') { if (this.bc) this.bc.postMessage({ type: 'setup', step: -1 }); location.href = 'Skjold Oppsett.dc.html'; return; } this.send({ type: d.id }); }; }
       return r; });
     const ERR = [null, ['Lyrion ikke tilgjengelig', 'Prøver igjen om 10 s'], ['Ingen Wi-Fi', 'Radio og AirPlay er utilgjengelig'], ['Overoppheting', 'Volum redusert til 60']][S.err || 0];
     const actRoom = SYS.rooms.find(r => r.id === SYS.active) || SYS.rooms[0], groupName = K.groupLabel(SYS, actRoom.id);
@@ -580,22 +944,27 @@ drawClocks() { const K = window.SKJOLD; if (!K || !this.cv) return; const set = 
         showRoles: !!(surr && inG), roles: K.ROLES.map((label, j) => { const on = (r.role || 0) === j; return { label, bd: on ? A : '#2e2e30', bg: on ? '#2a2112' : '#141415', fg: on ? '#f0c46a' : '#c9c9c4', pick: () => setSys(K.setRole(SYS, r.id, j)) }; }),
         select: () => setSys({ ...SYS, active: r.id }), toggle: () => setSys(K.toggleInGroup(SYS, actRoom.id, r.id)), setVol: e => { const v = +e.target.value; if (isA) this.send({ type: 'vol', v }); setSys({ ...SYS, rooms: SYS.rooms.map(x => x.id === r.id ? { ...x, vol: v } : x) }); } }; });
     const allG = SYS.rooms.length > 1 && SYS.rooms.every(r => r.group && r.group === SYS.rooms[0].group);
-    const playSt = i => { this.send({ type: 'input', i: 2 }); this.send({ type: 'src', v: i }); this.setState({ page: 'play', spot: false }); };
+    const playSt = i => { this.setState({ rTmp: null }); this.send({ type: 'input', i: 2 }); this.send({ type: 'src', v: i }); this.setState({ page: 'play', spot: false }); };
     const TR = [['Midnight City', 'M83'], ['Intro', 'The xx'], ['Teardrop', 'Massive Attack']];
     const recent = [...TR.slice(0, 2).map((t, i) => ({ t, kind: 'AirPlay · låt', go: () => { this.send({ type: 'wl', v: 'air' }); this.setState({ page: 'play', spot: false }); } })), ...RL.slice(0, 3).map((p, i) => ({ st: p, kind: 'Radio · kanal', go: () => playSt(i) })), { t: TR[2], kind: 'Blåtann · låt', go: () => { this.send({ type: 'wl', v: 'bt' }); this.setState({ page: 'play', spot: false }); } }].map(x => { const key = x.st ? x.st[0] : x.t[0], a = K.art(key); return { title: key, kind: x.kind, big: x.st ? x.st[0] : x.t[1], bg: a.bg, ink: a.ink, radius: x.st ? '50%' : '10px', pick: x.go }; });
-    const services = [['Radio', 'R', '#3d2a2a', () => this.setState({ page: 'radio' })], ['AirPlay', 'AP', '#1f2a3a', () => { this.send({ type: 'wl', v: 'air' }); this.setState({ page: 'play', spot: false }); }], ['Blåtann', 'BT', '#22314a', () => { this.send({ type: 'wl', v: 'bt' }); this.setState({ page: 'play', spot: false }); }], ['Spotify', 'S', '#1d3a26', () => this.setState(I.spotify.installed ? { page: 'play', spot: true } : { page: 'int', intSel: 'spotify' })], ['Lyrion', 'L', '#2a2a2c', () => window.open('http://192.168.1.42:9000/', '_blank')], ['AUX', 'AUX', '#2a2a2c', () => { this.send({ type: 'input', i: 1 }); this.setState({ page: 'play', spot: false }); }]].map(([label, mono, bg, pick]) => { const lg = K.brandBg({ Spotify: 'spotify', Lyrion: 'lyrion', AirPlay: 'airplay', 'Blåtann': 'bluetooth' }[label]); return { label, mono: lg ? '' : mono, bg: lg || bg, pick }; });
+    const services = [['Radio', 'R', '#3d2a2a', () => this.setState({ page: 'radio' })], ['AirPlay', 'AP', '#1f2a3a', () => { this.send({ type: 'wl', v: 'air' }); this.setState({ page: 'play', spot: false }); }], ['Blåtann', 'BT', '#22314a', () => { this.send({ type: 'wl', v: 'bt' }); this.setState({ page: 'play', spot: false }); }], ['Spotify', 'S', '#1d3a26', () => this.setState(I.spotify.installed ? { page: 'play', spot: true } : { page: 'int', intSel: 'spotify' })], ['UPnP/DLNA', 'DL', '#ffffff', () => this.setState({ page: 'int', intSel: 'upnp' })], ...(I.ytm.on ? [['YouTube Music', 'YT', '#3a1f1f', () => this.openLib('ytm')]] : []), ...(I.nd.on ? [['Navidrome', 'N', '#1f2a3a', () => this.openLib('nd')]] : []), ['Lyrion', 'L', '#2a2a2c', () => window.open('http://192.168.1.42:9000/', '_blank')], ['AUX', 'AUX', '#2a2a2c', () => { this.send({ type: 'input', i: 1 }); this.setState({ page: 'play', spot: false }); }]].map(([label, mono, bg, pick]) => ({ label, ...K.srcIcon(label), pick }));
     const favTiles = RL.map((p, i) => { const a = K.art(p[0]); return { n: String(i + 1), name: p[0], genre: p[1], bg: a.bg, ink: a.ink, pick: () => playSt(i) }; });
     const devChips = SYS.rooms.map(r => ({ icon: K.DEVTYPES[r.type].icon, name: r.name, type: K.DEVTYPES[r.type].n, ...on(r.id === devRoom.id), pick: () => this.setState({ setDev: r.id, cat: K.catsFor(r.type).some(c => c.id === this.state.cat) ? this.state.cat : 'lyd' }) }));
-    const titles = { home: ['Hjem', groupName], play: ['Spiller', ''], eq: ['Equalizer', 'Egen profil per inngang og for hodetelefoner'], radio: ['Radio', 'Favoritter fra Lyrion'], int: ['Integrasjoner', 'Lyrion, Spotify, Home Assistant, Homey og API'], set: [catDef.n, 'Endringer lagres på forsterkeren med en gang'] };
+    const hostOf = r => K.slug(r.name).replace(/_/g, '-') + '-skjold.local', ipOf = r => '192.168.1.' + (42 + SYS.rooms.indexOf(r));
+    const titles = { home: ['Hjem', groupName], play: ['Spiller', ''], eq: ['Equalizer', 'Egen profil per inngang og for hodetelefoner'], radio: ['Radio', 'Norske kanaler og over 50 000 fra hele verden'], int: ['Integrasjoner', 'Lyrion, Spotify, UPnP/DLNA, YouTube Music, Navidrome, Home Assistant, Homey og API'], lib: [this.state.lib === 'nd' ? 'Navidrome' : 'YouTube Music', this.state.lib === 'nd' ? 'Eget bibliotek · ' + I.nd.url.replace(/^https?:\/\//, '') : 'Mikser, spillelister og historikk'], set: [catDef.n, 'Endringer lagres på forsterkeren med en gang'] };
     return {
-      deviceName: K.NAMES[set.name] || 'Skjold S1', linkColor: this.state.live ? '#6fcf7f' : '#8b8b86', linkText: this.state.live ? 'Tilkoblet' : 'Demo', power: () => this.send({ type: 'power' }), pwrBd: S.power ? A : '#2e2e30', pwrFg: S.power ? '#f0c46a' : '#8b8b86',
+      ...this.libVals(),
+      devModel: K.DEVTYPES[actRoom.type].n, devIcon: K.DEVTYPES[actRoom.type].icon, devHwLine: hostOf(actRoom) + ' · ' + ipOf(actRoom) + ' · 1.4.2' + (actRoom.id === SYS.rooms[0].id ? '' : ' · via ' + hostOf(SYS.rooms[0])),
+      pickOpen: !!this.state.pickOpen, togglePick: () => this.setState({ pickOpen: !this.state.pickOpen }),
+      players: SYS.rooms.map((r, i) => { const a = r.id === actRoom.id; return { name: r.name, model: K.DEVTYPES[r.type].n, icon: K.DEVTYPES[r.type].icon, host: hostOf(r), url: 'http://' + hostOf(r) + '/?solo=1', here: i === 0 ? '· denne' : '', dot: r.off ? '#e05a4a' : '#6fcf7f', bg: a ? '#1c170d' : 'transparent', fg: a ? '#f0c46a' : '#f2f2ee', pick: () => { setSys({ ...SYS, active: r.id }); this.setState({ pickOpen: false, setDev: r.id, cat: K.catsFor(r.type).some(c => c.id === this.state.cat) ? this.state.cat : 'lyd' }); } }; }),
+      deviceName: actRoom.name || K.NAMES[set.name] || 'Skjold S1', linkColor: this.state.live ? '#6fcf7f' : '#8b8b86', linkText: this.state.live ? 'Tilkoblet' : 'Demo', power: () => this.send({ type: 'power' }), pwrBd: S.power ? A : '#2e2e30', pwrFg: S.power ? '#f0c46a' : '#8b8b86',
       hasErr: !!ERR, errTitle: ERR ? ERR[0] : '', errSub: ERR ? ERR[1] : '', nav, pageTitle: titles[page][0], pageSub: titles[page][1],
-      pgHome: page === 'home', pgPlay: page === 'play', pgEq: page === 'eq', pgRadio: page === 'radio', pgInt: page === 'int', pgSet: page === 'set',
+      showSys: page !== 'lib', isRadioSet: page === 'set' && catDef.id === 'radio', ...this.radioDisc(RL, setRL, K.art, playSt, st => { this.setState({ rTmp: st, page: 'play', spot: false }); this.send({ type: 'input', i: 2 }); }, S.input === 2 && !this.state.spot ? stName : '', () => this.setState({ page: 'set', cat: 'radio', confirm: '' })), pgHome: page === 'home', pgPlay: page === 'play', pgEq: page === 'eq', pgRadio: page === 'radio', pgInt: page === 'int', pgSet: page === 'set',
       inputs, srcs, hasSrc: srcs.length > 0, np, viz, canPlay: !this.state.spot && (S.input === 0 || S.input === 2), playing: !S.paused, paused: !!S.paused,
       prev: () => this.send({ type: 'prev' }), pause: () => this.send({ type: 'pause' }), next: () => this.send({ type: 'next' }),
       vol: S.vol, maxVol: S.maxVol, volLabel: S.muted ? '—' : String(S.vol), setVol: e => this.send({ type: 'vol', v: +e.target.value }), mute: () => this.send({ type: 'mute' }), muteBd: S.muted ? A : '#2e2e30', muteBg: S.muted ? '#2a2112' : '#1b1b1c',
       eqSrcs, eqPresets, eqBands, eqPath: cv.line, eqArea: cv.area, eqActiveText: es === act ? 'Aktiv nå · følger inngangen automatisk' : 'Aktiv nå er ' + srcN(act) + ' · du redigerer ' + srcN(es), eqLoud: () => setProf({ loud: !prof.loud }), eqLoudTrk: prof.loud ? A : '#3a3a37', eqLoudKnob: prof.loud ? '23px' : '3px',
-      stations, catalog, q: this.state.q, setQ: e => this.setState({ q: e.target.value }), radioCount: RL.length + ' av ' + K.MAXRADIO + ' favoritter', art, ints, intTitle: cur.name, intLinks, intRows, intInstall, installing: this.state.instBusy, canInstall: !this.state.instBusy, installPct: this.state.instPct + '%',
+      stations, catalog, ...this.radioAddVals(RL, setRL, full, K.art, abbr), q: this.state.q, setQ: e => this.setQ(e.target.value), radioCount: RL.length + (RL.length === 1 ? ' favoritt' : ' favoritter'), art, ints, intTitle: cur.name, intLinks, intRows, intInstall, installing: this.state.instBusy, canInstall: !this.state.instBusy, installPct: this.state.instPct + '%',
       installText: 'Spotify Connect installeres som librespot på Raspberry Pi-en. Forsterkeren dukker opp i Spotify-appen som «' + I.spotify.name + '». Krever Spotify Premium.',
       installLog: this.state.instPct < 35 ? 'Laster ned librespot 0.6.0 …' : this.state.instPct < 75 ? 'Installerer og setter opp lydutgang …' : 'Starter tjenesten …', installLabel: 'Installer Spotify Connect', install: () => this.install(),
       recent, services, favTiles, goRadio: () => this.setState({ page: 'radio' }), goPlay: () => this.setState({ page: 'play' }), ...grpVals, roomCards, groupName, activeName: actRoom.name, grpAll: () => setSys(K.groupAll(SYS)), grpNone: () => setSys({ ...SYS, rooms: SYS.rooms.map(r => ({ ...r, group: null })) }), grpAllBd: allG ? A : '#2e2e30', grpAllBg: allG ? '#2a2112' : '#1b1b1c',

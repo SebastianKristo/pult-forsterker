@@ -56,8 +56,21 @@ input::placeholder{color:#55554f}
 
       <main style="padding:28px 30px;display:flex;flex-direction:column;gap:18px;min-width:0">
         <sc-if value="{{ p0 }}" hint-placeholder-val="{{ true }}">
-          <h1 style="margin:0;font-size:22px;font-weight:600">Velg SD-kort</h1>
-          <p style="margin:0;font-size:13px;color:#a9a9a3">Bare flyttbare disker vises. Alt på kortet blir slettet.</p>
+          <h1 style="margin:0;font-size:22px;font-weight:600">Velg lagring</h1>
+          <p style="margin:0;font-size:13px;color:#a9a9a3">Bare flyttbare disker vises. Alt på disken blir slettet.</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:12px;color:#a9a9a3">Start fra</span>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:3px;border-radius:10px;background:#151516;border:1px solid #242426;max-width:360px">
+              <sc-for list="{{ media }}" as="m" hint-placeholder-count="2"><button onClick="{{ m.pick }}" style="height:36px;border-radius:8px;border:none;background:{{ m.bg }};color:{{ m.fg }};font-size:13px;font-weight:600;cursor:pointer">{{ m.label }}</button></sc-for>
+            </div>
+            <sc-if value="{{ isUsb }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:10px;background:#151516;border:1px solid #242426;font-size:12px;color:#c9c9c4;line-height:1.5;text-wrap:pretty">
+                <span style="font-size:13px;color:#f2f2ee">Start fra USB</span>
+                <span>{{ usbHint }}</span>
+                <span style="color:#8b8b86">Ta ut SD-kortet, ellers starter Pi-en fra det først. En USB-SSD er raskere og tåler mer skriving enn et SD-kort.</span>
+              </div>
+            </sc-if>
+          </div>
           <div style="display:flex;flex-direction:column;gap:8px">
             <span style="font-size:12px;color:#a9a9a3">Enhet</span>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
@@ -68,31 +81,59 @@ input::placeholder{color:#55554f}
           </div>
           <div style="display:flex;flex-direction:column;gap:8px">
             <sc-for list="{{ drives }}" as="d" hint-placeholder-count="2">
-              <button onClick="{{ d.pick }}" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;border-radius:10px;border:1px solid {{ d.bd }};background:{{ d.bg }};cursor:pointer;text-align:left">
-                <div style="width:22px;height:28px;border:1.5px solid #8b8b86;border-radius:2px 7px 2px 2px"></div>
+              <button onClick="{{ d.pick }}" style="display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;border-radius:10px;border:1px solid {{ d.bd }};background:{{ d.bg }};cursor:{{ d.cur }};text-align:left;opacity:{{ d.op }}">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="{{ d.icon }}"></path></svg>
                 <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
-                  <span style="font-size:14px">{{ d.name }}</span>
+                  <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px">{{ d.name }}<sc-if value="{{ d.wp }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:999px;border:1px solid #5a2620;background:#2a1412;color:#ff9a8a;font-size:11px;white-space:nowrap"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg>Skrivebeskyttet</span></sc-if></span>
                   <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86">{{ d.path }}</span>
+                  <sc-if value="{{ d.wp }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#ff9a8a;text-wrap:pretty">{{ d.wpHint }}</span></sc-if>
                 </div>
                 <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c9c9c4">{{ d.size }}</span>
               </button>
             </sc-for>
+            <sc-if value="{{ noDrives }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#8b8b86">Fant ingen {{ mediaWord }}. Sett den inn, så dukker den opp her.</span></sc-if>
           </div>
         </sc-if>
 
         <sc-if value="{{ p1 }}" hint-placeholder-val="{{ false }}">
           <h1 style="margin:0;font-size:22px;font-weight:600">Forhåndsinnstill</h1>
-          <p style="margin:0;font-size:13px;color:#a9a9a3;text-wrap:pretty">Valgfritt. Fyller du inn dette, kobler forsterkeren seg rett til Wi-Fi ved første oppstart, og oppsettet på telefonen hoppes over.</p>
+          <p style="margin:0;font-size:13px;color:#a9a9a3;text-wrap:pretty">Valgfritt. Fyller du inn dette, kobler forsterkeren seg rett til nettverket ved første oppstart, og oppsettet på telefonen hoppes over.</p>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:10px;background:#151516;border:1px solid #242426">
-            <span style="font-size:14px">Forhåndsinnstill Wi-Fi og navn</span>
+            <span style="font-size:14px">Forhåndsinnstill nettverk og navn</span>
             <button onClick="{{ togglePre }}" style="width:44px;height:26px;border-radius:999px;border:none;background:{{ preTrk }};position:relative;cursor:pointer;padding:0">
               <div style="position:absolute;top:3px;left:{{ preKnob }};width:20px;height:20px;border-radius:50%;background:#f2f2ee"></div>
             </button>
           </div>
           <sc-if value="{{ pre }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:12px;color:#a9a9a3">Nettverk</span>
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:520px">
+                <sc-for list="{{ nets }}" as="n" hint-placeholder-count="2">
+                  <button onClick="{{ n.pick }}" style="display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:center;padding:12px 14px;border-radius:10px;border:1px solid {{ n.bd }};background:{{ n.bg }};cursor:pointer;text-align:left">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c9c9c4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg>
+                    <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px">{{ n.label }}</span><span style="font-size:11px;color:#8b8b86">{{ n.sub }}</span></span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ isEth }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:10px;background:#151516;border:1px solid #242426">
+                <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px">Fast IP-adresse</span><span style="font-size:12px;color:#8b8b86">Av: ruteren deler ut adresse automatisk (DHCP)</span></span>
+                <button onClick="{{ toggleStatic }}" style="width:44px;height:26px;border-radius:999px;border:none;background:{{ stTrk }};position:relative;cursor:pointer;padding:0;flex-shrink:0"><div style="position:absolute;top:3px;left:{{ stKnob }};width:20px;height:20px;border-radius:50%;background:#f2f2ee"></div></button>
+              </div>
+              <sc-if value="{{ isStatic }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+                  <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">IP-adresse</span><input value="{{ ip }}" onChange="{{ setIp }}" placeholder="192.168.1.50/24" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid {{ ipBd }};background:#151516;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none"></label>
+                  <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">Ruter</span><input value="{{ gw }}" onChange="{{ setGw }}" placeholder="192.168.1.1" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#151516;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none"></label>
+                  <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">DNS</span><input value="{{ dns }}" onChange="{{ setDns }}" placeholder="1.1.1.1" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#151516;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none"></label>
+                </div>
+              </sc-if>
+            </sc-if>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+              <sc-if value="{{ isWifi }}" hint-placeholder-val="{{ true }}">
               <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">Wi-Fi-navn</span><input value="{{ ssid }}" onChange="{{ setSsid }}" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#151516;outline:none"></label>
               <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">Passord</span><input type="password" value="{{ pw }}" onChange="{{ setPw }}" placeholder="Minst 8 tegn" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#151516;outline:none"></label>
+              </sc-if>
               <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">Navn / rom</span><input value="{{ name }}" onChange="{{ setName }}" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid #2e2e30;background:#151516;outline:none"></label>
               <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#a9a9a3">Språk</span>
                 <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -116,9 +157,10 @@ input::placeholder{color:#55554f}
 
         <sc-if value="{{ p3 }}" hint-placeholder-val="{{ false }}">
           <div style="width:48px;height:48px;border-radius:50%;border:1.5px solid #d9a441;display:flex;align-items:center;justify-content:center;color:#d9a441;font-size:22px">✓</div>
-          <h1 style="margin:0;font-size:22px;font-weight:600">SD-kortet er klart</h1>
+          <h1 style="margin:0;font-size:22px;font-weight:600">{{ doneTitle }}</h1>
           <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:14px;color:#c9c9c4;line-height:1.5">
-            <li>Ta ut kortet og sett det i Raspberry Pi-en i forsterkeren.</li>
+            <li>{{ doneStep1 }}</li>
+            <sc-if value="{{ isEthDone }}" hint-placeholder-val="{{ false }}"><li>Koble en nettverkskabel fra ruteren til Ethernet-porten.</li></sc-if>
             <li>Koble til strøm og slå på hovedbryteren bak.</li>
             <li>{{ doneHint }}</li>
           </ol>
@@ -138,31 +180,40 @@ input::placeholder{color:#55554f}
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { dev: 0, p: 0, drive: -1, pre: true, ssid: 'Hjemme', pw: '', name: 'Stue', lang: 0, pct: 0, phase: 'write' };
-  DRIVES = [['SanDisk Extreme 32 GB', '/dev/disk4 · USB-kortleser', '31,9 GB'], ['Kingston Canvas Go! 64 GB', '/dev/disk5 · innebygd kortleser', '63,9 GB']];
+  state = { media: 'sd', net: 'wifi', stat: false, ip: '', gw: '', dns: '', dev: 0, p: 0, drive: -1, pre: true, ssid: 'Hjemme', pw: '', name: 'Stue', lang: 0, pct: 0, phase: 'write' };
+  DRIVES = [['SanDisk Extreme 32 GB', '/dev/disk4 · USB-kortleser', '31,9 GB', 'sd', false], ['Kingston Canvas Go! 64 GB', '/dev/disk5 · innebygd kortleser', '63,9 GB', 'sd', true], ['Samsung BAR Plus 64 GB', '/dev/disk6 · USB 3.1', '64,1 GB', 'usb', false], ['Samsung T7 500 GB (SSD)', '/dev/disk7 · USB-C', '500,1 GB', 'usb', false], ['Kanguru FlashTrust 16 GB', '/dev/disk8 · USB 3.0', '16,0 GB', 'usb', true]];
   componentWillUnmount() { clearInterval(this.t); }
   flash() { this.setState({ p: 2, pct: 0, phase: 'write' }); clearInterval(this.t);
     this.t = setInterval(() => this.setState(s => { let pct = s.pct + (s.phase === 'write' ? 2.2 : 4), phase = s.phase;
       if (pct >= 100 && phase === 'write') { pct = 0; phase = 'verify'; } else if (pct >= 100) { clearInterval(this.t); return { pct: 100, phase: 'done', p: 3 }; } return { pct, phase }; }), 90); }
   renderVals() {
     const S = this.state, A = '#d9a441', sel = b => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#151516' });
-    const steps = ['Velg SD-kort', 'Forhåndsinnstill', 'Skriv og verifiser', 'Ferdig'].map((label, i) => ({ label, mark: i < S.p ? '✓' : String(i + 1), ring: i <= S.p ? A : '#3a3a37', fg: i === S.p ? '#f2f2ee' : i < S.p ? '#c9c9c4' : '#6a6a65', bg: i === S.p ? '#1a1a1b' : 'transparent' }));
-    const drives = this.DRIVES.map(([name, path, size], i) => ({ name, path, size, ...sel(S.drive === i), pick: () => this.setState({ drive: i }) }));
+    const steps = ['Velg lagring', 'Forhåndsinnstill', 'Skriv og verifiser', 'Ferdig'].map((label, i) => ({ label, mark: i < S.p ? '✓' : String(i + 1), ring: i <= S.p ? A : '#3a3a37', fg: i === S.p ? '#f2f2ee' : i < S.p ? '#c9c9c4' : '#6a6a65', bg: i === S.p ? '#1a1a1b' : 'transparent' }));
+    const usb = S.media === 'usb', IC = { sd: 'M7 3h7l4 4v14H7zM10 3v3M12.5 3v3', usb: 'M8 9h8v12H8zM9.5 3h5v6h-5zM11 5.5h.01M13 5.5h.01' };
+    const drives = this.DRIVES.map(([name, path, size, type, wp], i) => ({ name, path, size, type, wp, i })).filter(d => d.type === S.media).map(d => ({ ...d, icon: IC[d.type], ...sel(S.drive === d.i && !d.wp), op: d.wp ? 0.75 : 1, cur: d.wp ? 'not-allowed' : 'pointer',
+      wpHint: d.type === 'sd' ? 'Låsen på siden av kortet står på «Lock». Ta ut kortet, skyv låsen opp og sett det inn igjen.' : 'Pinnen har en skrivebeskyttelse-bryter. Slå den av, eller velg en annen disk.', pick: () => { if (!d.wp) this.setState({ drive: d.i }); } }));
+    const media = [['sd', 'SD-kort'], ['usb', 'USB-pinne eller SSD']].map(([k, label]) => ({ label, bg: S.media === k ? '#2a2a2c' : 'transparent', fg: S.media === k ? '#f2f2ee' : '#8b8b86', pick: () => this.setState({ media: k, drive: -1 }) }));
+    const usbHint = [' Raspberry Pi 4 starter fra USB når det ikke står noe SD-kort i. Pi-er kjøpt før 2020 trenger en nyere bootloader: start én gang fra et Skjold-SD-kort, så oppdateres den automatisk.', ' Pi 4 starter fra USB når det ikke står noe SD-kort i. Pi-er kjøpt før 2020 trenger én oppstart fra et Skjold-SD-kort først, så oppdateres bootloaderen.', ' Pi 3B må først starte én gang fra et Skjold-SD-kort. Da slås USB-oppstart på permanent. Pi 3B+ starter fra USB uten dette.'][S.dev] || '';
+    const ipOk = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(S.ip.trim());
+    const nets = [['wifi', 'Wi-Fi', 'Trådløst', 'M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0M12 19h.01'], ['eth', 'Ethernet', 'Kabel · mest stabilt', 'M4 5h16v10H4zM8 15v4h8v-4M8 9v2M11 9v2M14 9v2M17 9v2']].map(([k, label, sub, icon]) => ({ label, sub, icon, ...sel(S.net === k), pick: () => this.setState({ net: k }) }));
     const langs = ['Norsk', 'English', 'Svenska', 'Dansk'].map((label, i) => ({ label, ...sel(S.lang === i), pick: () => this.setState({ lang: i }) }));
-    const ok = [S.drive >= 0, !S.pre || (S.ssid.trim() && S.pw.length >= 8 && S.name.trim()), false, true][S.p];
+    const ok = [S.drive >= 0 && this.DRIVES[S.drive][3] === S.media && !this.DRIVES[S.drive][4], !S.pre || (S.name.trim() && (S.net === 'eth' ? (!S.stat || ipOk) : (S.ssid.trim() && S.pw.length >= 8))), false, true][S.p];
     const w = S.phase === 'write', mbTotal = 3800, done = Math.round(S.pct / 100 * mbTotal);
     const DEVS = [['Skjold S1', 'Forsterker · Raspberry Pi 4'], ['Skjold Node · Pi 4', 'Bare lydutgang · 3,5 mm, HDMI, USB eller I²S'], ['Skjold Node · Pi 3B', 'Bare lydutgang · 3,5 mm, HDMI, USB eller I²S']];
     const devs = DEVS.map(([name, sub], i) => ({ name, sub, ...sel(S.dev === i), pick: () => this.setState({ dev: i }) }));
     return {
-      devs, drives, langs, p0: S.p === 0, p1: S.p === 1, p2: S.p === 2, p3: S.p === 3,
+      devs, drives, langs, media, isUsb: usb, usbHint: usbHint.trim(), noDrives: !drives.length, mediaWord: usb ? 'USB-disk' : 'SD-kort',
+      nets, isEth: S.net === 'eth', isWifi: S.net !== 'eth', isStatic: S.stat, toggleStatic: () => this.setState({ stat: !S.stat }), stTrk: S.stat ? A : '#3a3a37', stKnob: S.stat ? '21px' : '3px',
+      ip: S.ip, gw: S.gw, dns: S.dns, setIp: e => this.setState({ ip: e.target.value }), setGw: e => this.setState({ gw: e.target.value }), setDns: e => this.setState({ dns: e.target.value }), ipBd: S.ip && !ipOk ? '#e05a4a' : '#2e2e30',
+      doneTitle: usb ? 'USB-disken er klar' : 'SD-kortet er klart', doneStep1: usb ? 'Ta ut SD-kortet fra Raspberry Pi-en hvis det står et der, og koble USB-disken til en blå USB 3-port.' : 'Ta ut kortet og sett det i Raspberry Pi-en i forsterkeren.', isEthDone: S.pre && S.net === 'eth', p0: S.p === 0, p1: S.p === 1, p2: S.p === 2, p3: S.p === 3,
       pre: S.pre, togglePre: () => this.setState({ pre: !S.pre }), preTrk: S.pre ? A : '#3a3a37', preKnob: S.pre ? '21px' : '3px',
       ssid: S.ssid, pw: S.pw, name: S.name, setSsid: e => this.setState({ ssid: e.target.value }), setPw: e => this.setState({ pw: e.target.value }), setName: e => this.setState({ name: e.target.value }),
-      flashTitle: w ? 'Skriver til SD-kortet' : 'Verifiserer', flashSub: w ? 'Ikke ta ut kortet. ' + (S.pre ? 'Wi-Fi og navn legges i skjold-setup.json etterpå.' : '') : 'Leser tilbake og sammenligner med SHA-256.',
+      flashTitle: w ? (usb ? 'Skriver til USB-disken' : 'Skriver til SD-kortet') : 'Verifiserer', flashSub: w ? (usb ? 'Ikke ta ut disken. ' : 'Ikke ta ut kortet. ') + (S.pre ? 'Nettverk og navn legges i skjold-setup.json etterpå.' : '') : 'Leser tilbake og sammenligner med SHA-256.',
       pct: S.pct + '%', pctLabel: (w ? done + ' / ' + mbTotal + ' MB' : Math.round(S.pct) + ' %'), eta: w ? 'ca. ' + Math.max(1, Math.round((100 - S.pct) / 2.2 * 0.09 * 8)) + ' s igjen' : '',
-      doneHint: S.pre ? '«' + S.name + '» kobler seg til ' + S.ssid + ' av seg selv. Skjermen viser IP-adressen når den er klar.' : 'Skjermen viser en QR-kode. Skann den med telefonen for å sette opp Wi-Fi og navn.',
+      doneHint: S.pre ? '«' + S.name + '» kobler seg til ' + (S.net === 'eth' ? 'nettverket via kabel' + (S.stat && ipOk ? ' på ' + S.ip.split('/')[0] : '') : S.ssid) + ' av seg selv. Skjermen viser IP-adressen når den er klar.' : 'Skjermen viser en QR-kode. Skann den med telefonen for å sette opp Wi-Fi og navn.',
       canBack: S.p === 1, back: () => this.setState({ p: 0 }),
       next: () => { if (!ok && S.p !== 3) return; if (S.p === 0) this.setState({ p: 1 }); else if (S.p === 1) this.flash(); else if (S.p === 3) this.setState({ p: 0, drive: -1, pct: 0, phase: 'write' }); },
-      nextLabel: ['Neste', 'Skriv til kortet', 'Skriver …', 'Flash et kort til'][S.p], nextBg: ok || S.p === 3 ? A : '#3a3a37'
+      nextLabel: ['Neste', usb ? 'Skriv til USB-disken' : 'Skriv til kortet', 'Skriver …', usb ? 'Flash en disk til' : 'Flash et kort til'][S.p], nextBg: ok || S.p === 3 ? A : '#3a3a37'
     };
   }
 }
