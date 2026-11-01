@@ -2,7 +2,7 @@
   "meta": {
     "title": "Skjold S1 og Node",
     "subtitle": "Byggeanvisning",
-    "version": "S1 rev B · Node rev A · 2026-10",
+    "version": "S1 rev B · Node rev C · 2026-10",
     "serial": "SKJ-S1-0001",
     "total": "",
     "lang": "nb"
@@ -310,9 +310,9 @@
             },
             {
               "id": "N2",
-              "name": "Lokk, printet",
+              "name": "Lokk for OLED, printet",
               "qty": 1,
-              "note": "skjerm, knott, knapper"
+              "note": "OLED, knott, knapper"
             }
           ]
         },
@@ -327,19 +327,25 @@
             },
             {
               "id": "N4",
-              "name": "Skjerm 1,8″ ST7735S, 8 pinner",
+              "name": "OLED 0,91″ SSD1306 128 × 32, I²C, 4 pinner",
               "qty": 1,
-              "note": ""
+              "note": "adresse 0x3C"
             },
             {
               "id": "N5",
-              "name": "Encoder EC11 m/ trykk, 15 mm halvflat aksel",
+              "name": "Potmeter 10 kΩ lineært (B10K)",
               "qty": 1,
-              "note": ""
+              "note": "volum, i knotthullet"
+            },
+            {
+              "id": "N8",
+              "name": "ADS1115 ADC-modul, I²C",
+              "qty": 1,
+              "note": "ADDR→GND = 0x48"
             },
             {
               "id": "N6",
-              "name": "Metallknapp 12 mm, NO",
+              "name": "Trykknapp 12 mm, NO",
               "qty": 4,
               "note": "LED-ring 3–6 V valgfritt"
             },
@@ -355,26 +361,8 @@
           "name": "Småkomponenter",
           "parts": [
             {
-              "id": "N8",
-              "name": "P-MOSFET AO3401 (Q1)",
-              "qty": 1,
-              "note": "bakgrunnslys"
-            },
-            {
               "id": "N9",
-              "name": "Motstand 1 kΩ",
-              "qty": 1,
-              "note": ""
-            },
-            {
-              "id": "N10",
-              "name": "Motstand 10 kΩ",
-              "qty": 1,
-              "note": ""
-            },
-            {
-              "id": "N11",
-              "name": "Motstand 270 Ω",
+              "name": "Motstand 330 Ω",
               "qty": 4,
               "note": "bare med LED-ringer"
             }
@@ -386,14 +374,14 @@
             {
               "id": "N12",
               "name": "Dupont hunn-ledning 10/15 cm",
-              "qty": 23,
-              "note": "W01–W23, kuttet"
+              "qty": 16,
+              "note": "W01–W16, kuttet"
             },
             {
               "id": "N13",
               "name": "Myk ledning 26 AWG",
               "qty": "0,5 m",
-              "note": ""
+              "note": "W17–W21, broer"
             },
             {
               "id": "L4",
@@ -1686,7 +1674,7 @@
     {
       "type": "section",
       "n": 6,
-      "title": "Node · Knapper og encoder",
+      "title": "Node · Knapper og volum",
       "sub": "Alt i lokket loddes først. Pinner fra skjold/node/config/node_pins.json.",
       "img": "sec-6"
     },
@@ -1697,7 +1685,7 @@
       "parts": [
         {
           "id": "N6",
-          "name": "Metallknapp 12 mm",
+          "name": "Trykknapp 12 mm",
           "qty": 4,
           "note": ""
         },
@@ -1718,50 +1706,50 @@
       "wires": [
         {
           "from": "RADIO (venstre)",
-          "to": "Pi pinne 29 (GPIO 5)",
-          "color": "#3a9a4c",
-          "colorName": "Grønn",
-          "awg": "Dupont",
-          "len": "100 mm"
-        },
-        {
-          "from": "AIR / BT",
-          "to": "Pi pinne 31 (GPIO 6)",
-          "color": "#3a9a4c",
-          "colorName": "Grønn",
-          "awg": "Dupont",
-          "len": "80 mm"
-        },
-        {
-          "from": "◀◀",
-          "to": "Pi pinne 33 (GPIO 13)",
-          "color": "#3a9a4c",
-          "colorName": "Grønn",
-          "awg": "Dupont",
-          "len": "80 mm"
-        },
-        {
-          "from": "▶▶ (høyre)",
-          "to": "Pi pinne 37 (GPIO 26)",
+          "to": "Pi pinne 16 (GPIO 23)",
           "color": "#3a9a4c",
           "colorName": "Grønn",
           "awg": "Dupont 15 cm",
           "len": "110 mm"
         },
         {
+          "from": "AIR / BT",
+          "to": "Pi pinne 18 (GPIO 24)",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
+          "from": "◀◀",
+          "to": "Pi pinne 22 (GPIO 25)",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "Dupont",
+          "len": "70 mm"
+        },
+        {
+          "from": "▶▶ (høyre)",
+          "to": "Pi pinne 26 (GPIO 7)",
+          "color": "#3a9a4c",
+          "colorName": "Grønn",
+          "awg": "Dupont",
+          "len": "90 mm"
+        },
+        {
           "from": "C på RADIO (C-ene lenket)",
-          "to": "Pi pinne 39 (GND)",
+          "to": "Pi pinne 30 (GND)",
           "color": "#1b1b1c",
           "colorName": "Sort",
           "awg": "Dupont",
-          "len": "80 mm"
+          "len": "100 mm"
         }
       ],
       "tips": [
         "Lenk C-pinnene med 20 mm broer.",
-        "La ledningene være lange nok til at lokket kan vippes opp."
+        "▶▶ holdt 1 s = spill/pause. ◀◀ + ▶▶ holdt 3 s = omstart."
       ],
-      "warn": ""
+      "warn": "GPIO 7 er SPI CE1. SPI skal være av (Flasher ordner det)."
     },
     {
       "type": "step",
@@ -1775,8 +1763,8 @@
           "note": ""
         },
         {
-          "id": "N11",
-          "name": "270 Ω",
+          "id": "N9",
+          "name": "330 Ω",
           "qty": 4,
           "note": ""
         },
@@ -1790,7 +1778,7 @@
       "img": "step-30",
       "wires": [
         {
-          "from": "RADIO LED + via 270 Ω",
+          "from": "RADIO LED + via 330 Ω",
           "to": "Pi pinne 32 (GPIO 12)",
           "color": "#e8742a",
           "colorName": "Oransje",
@@ -1798,7 +1786,7 @@
           "len": "90 mm"
         },
         {
-          "from": "AIR / BT LED + via 270 Ω",
+          "from": "AIR / BT LED + via 330 Ω",
           "to": "Pi pinne 36 (GPIO 16)",
           "color": "#e8742a",
           "colorName": "Oransje",
@@ -1806,7 +1794,7 @@
           "len": "70 mm"
         },
         {
-          "from": "◀◀ LED + via 270 Ω",
+          "from": "◀◀ LED + via 330 Ω",
           "to": "Pi pinne 38 (GPIO 20)",
           "color": "#e8742a",
           "colorName": "Oransje",
@@ -1814,7 +1802,7 @@
           "len": "90 mm"
         },
         {
-          "from": "▶▶ LED + via 270 Ω",
+          "from": "▶▶ LED + via 330 Ω",
           "to": "Pi pinne 40 (GPIO 21)",
           "color": "#e8742a",
           "colorName": "Oransje",
@@ -1832,66 +1820,72 @@
       ],
       "tips": [
         "Motstanden loddes på knappen, under krympestrømpe.",
-        "Blå/hvit ring: 100 Ω eller transistor. [bekreft]"
+        "GPIO 20/21 kan ikke brukes samtidig med et I²S-lydkort."
       ],
       "warn": "Bruk 3–6 V-ringer. 12 V-varianten lyser ikke på Pi-en."
     },
     {
       "type": "step",
       "n": 31,
-      "title": "Lodd encoderen",
+      "title": "Potmeter til ADS1115",
       "parts": [
         {
           "id": "N5",
-          "name": "EC11",
+          "name": "Potmeter B10K",
           "qty": 1,
           "note": ""
         },
         {
-          "id": "N12",
-          "name": "Dupont hunn",
-          "qty": 4,
+          "id": "N8",
+          "name": "ADS1115",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N13",
+          "name": "Myk ledning",
+          "qty": "15 cm",
           "note": ""
         }
       ],
       "img": "step-31",
       "wires": [
         {
-          "from": "EC11 A",
-          "to": "Pi pinne 11 (GPIO 17)",
-          "color": "#2f6fd0",
-          "colorName": "Blå",
-          "awg": "Dupont",
-          "len": "80 mm"
-        },
-        {
-          "from": "EC11 B",
-          "to": "Pi pinne 13 (GPIO 27)",
-          "color": "#2f6fd0",
-          "colorName": "Blå",
-          "awg": "Dupont",
-          "len": "80 mm"
-        },
-        {
-          "from": "EC11 C (felles)",
-          "to": "Pi pinne 9 (GND)",
+          "from": "Potmeter pinne 1",
+          "to": "ADS1115 GND",
           "color": "#1b1b1c",
           "colorName": "Sort",
-          "awg": "Dupont",
-          "len": "80 mm"
+          "awg": "26 AWG",
+          "len": "40 mm"
         },
         {
-          "from": "EC11 SW",
-          "to": "Pi pinne 15 (GPIO 22)",
+          "from": "Potmeter pinne 2 (midten)",
+          "to": "ADS1115 A0",
           "color": "#2f6fd0",
           "colorName": "Blå",
-          "awg": "Dupont",
-          "len": "80 mm"
+          "awg": "26 AWG",
+          "len": "40 mm"
+        },
+        {
+          "from": "Potmeter pinne 3",
+          "to": "ADS1115 VDD",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "26 AWG",
+          "len": "40 mm"
+        },
+        {
+          "from": "ADS1115 ADDR",
+          "to": "ADS1115 GND (bro)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "loddet",
+          "len": "bro"
         }
       ],
       "tips": [
-        "SW sin andre pinne loddes til C med en 15 mm bro.",
-        "Trykk = pause/spill."
+        "Med klokka = høyere volum. Feil vei: bytt pinne 1 og 3.",
+        "Fest ADS1115 under lokket ved knotten med dobbeltsidig tape."
       ],
       "warn": ""
     },
@@ -1899,101 +1893,17 @@
       "type": "section",
       "n": 7,
       "title": "Node · Skjerm og montering",
-      "sub": "Skjermen går på SPI0. Bakgrunnslyset styres med en liten transistor.",
+      "sub": "OLED-en og ADS1115 deler I²C-bussen (GPIO 2/3).",
       "img": "sec-7"
     },
     {
       "type": "step",
       "n": 32,
-      "title": "Skjerm: strøm og styring",
+      "title": "OLED: strøm og I²C",
       "parts": [
         {
           "id": "N4",
-          "name": "ST7735S 1,8″",
-          "qty": 1,
-          "note": ""
-        },
-        {
-          "id": "N12",
-          "name": "Dupont hunn",
-          "qty": 5,
-          "note": ""
-        }
-      ],
-      "img": "step-32",
-      "wires": [
-        {
-          "from": "VCC",
-          "to": "Pi pinne 17 (3V3)",
-          "color": "#c8342b",
-          "colorName": "Rød",
-          "awg": "Dupont",
-          "len": "90 mm"
-        },
-        {
-          "from": "GND",
-          "to": "Pi pinne 20 (GND)",
-          "color": "#1b1b1c",
-          "colorName": "Sort",
-          "awg": "Dupont",
-          "len": "90 mm"
-        },
-        {
-          "from": "CS",
-          "to": "Pi pinne 24 (GPIO 8, CE0)",
-          "color": "#e3b23c",
-          "colorName": "Gul",
-          "awg": "Dupont",
-          "len": "90 mm"
-        },
-        {
-          "from": "RESET",
-          "to": "Pi pinne 18 (GPIO 24)",
-          "color": "#e3b23c",
-          "colorName": "Gul",
-          "awg": "Dupont",
-          "len": "90 mm"
-        },
-        {
-          "from": "A0 / DC",
-          "to": "Pi pinne 22 (GPIO 25)",
-          "color": "#e3b23c",
-          "colorName": "Gul",
-          "awg": "Dupont",
-          "len": "90 mm"
-        }
-      ],
-      "tips": [
-        "Modulen går på 3,3 V. Aldri 5 V på VCC."
-      ],
-      "warn": ""
-    },
-    {
-      "type": "step",
-      "n": 33,
-      "title": "Skjerm: SPI og bakgrunnslys",
-      "parts": [
-        {
-          "id": "N4",
-          "name": "ST7735S 1,8″",
-          "qty": 1,
-          "note": ""
-        },
-        {
-          "id": "N8",
-          "name": "AO3401 (Q1)",
-          "qty": 1,
-          "note": ""
-        },
-        {
-          "id": "N9",
-          "name": "1 kΩ",
-          "qty": 1,
-          "note": ""
-        },
-        {
-          "id": "N10",
-          "name": "10 kΩ",
+          "name": "OLED 0,91″",
           "qty": 1,
           "note": ""
         },
@@ -2004,54 +1914,111 @@
           "note": ""
         }
       ],
+      "img": "step-32",
+      "wires": [
+        {
+          "from": "OLED VCC",
+          "to": "Pi pinne 1 (3V3)",
+          "color": "#c8342b",
+          "colorName": "Rød",
+          "awg": "Dupont 15 cm",
+          "len": "110 mm"
+        },
+        {
+          "from": "OLED SDA",
+          "to": "Pi pinne 3 (GPIO 2, SDA)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "Dupont 15 cm",
+          "len": "110 mm"
+        },
+        {
+          "from": "OLED SCL",
+          "to": "Pi pinne 5 (GPIO 3, SCL)",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "Dupont 15 cm",
+          "len": "110 mm"
+        },
+        {
+          "from": "OLED GND",
+          "to": "Pi pinne 9 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
+          "awg": "Dupont",
+          "len": "100 mm"
+        }
+      ],
+      "tips": [
+        "Bruk 3,3 V, ikke 5 V.",
+        "Glasset ned i rammen, holdes av 2 klemmer."
+      ],
+      "warn": ""
+    },
+    {
+      "type": "step",
+      "n": 33,
+      "title": "ADS1115 på bussen",
+      "parts": [
+        {
+          "id": "N8",
+          "name": "ADS1115",
+          "qty": 1,
+          "note": ""
+        },
+        {
+          "id": "N12",
+          "name": "Dupont hunn",
+          "qty": 2,
+          "note": ""
+        },
+        {
+          "id": "N13",
+          "name": "Myk ledning",
+          "qty": "10 cm",
+          "note": ""
+        }
+      ],
       "img": "step-33",
       "wires": [
         {
-          "from": "SDA",
-          "to": "Pi pinne 19 (GPIO 10, MOSI)",
-          "color": "#e3b23c",
-          "colorName": "Gul",
-          "awg": "Dupont",
-          "len": "90 mm"
-        },
-        {
-          "from": "SCK",
-          "to": "Pi pinne 23 (GPIO 11, SCLK)",
-          "color": "#e3b23c",
-          "colorName": "Gul",
-          "awg": "Dupont",
-          "len": "90 mm"
-        },
-        {
-          "from": "Q1 source",
-          "to": "Pi pinne 1 (3V3)",
+          "from": "ADS1115 VDD",
+          "to": "Pi pinne 17 (3V3)",
           "color": "#c8342b",
           "colorName": "Rød",
           "awg": "Dupont",
           "len": "100 mm"
         },
         {
-          "from": "Q1 gate via 1 kΩ",
-          "to": "Pi pinne 16 (GPIO 23)",
-          "color": "#e8742a",
-          "colorName": "Oransje",
+          "from": "ADS1115 GND",
+          "to": "Pi pinne 25 (GND)",
+          "color": "#1b1b1c",
+          "colorName": "Sort",
           "awg": "Dupont",
           "len": "100 mm"
         },
         {
-          "from": "Q1 drain",
-          "to": "Skjerm LED",
-          "color": "#e8742a",
-          "colorName": "Oransje",
-          "awg": "loddet",
-          "len": "15 mm"
+          "from": "ADS1115 SDA",
+          "to": "OLED SDA",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "26 AWG",
+          "len": "50 mm"
+        },
+        {
+          "from": "ADS1115 SCL",
+          "to": "OLED SCL",
+          "color": "#e3b23c",
+          "colorName": "Gul",
+          "awg": "26 AWG",
+          "len": "50 mm"
         }
       ],
       "tips": [
-        "10 kΩ mellom gate og source. Motstandene krympes inn på ledningen.",
-        "GPIO 23 lav = lys på."
+        "SDA/SCL loddes på OLED-pinnene sammen med ledningene fra Pi-en.",
+        "i2cdetect -y 1 viser 3c og 48."
       ],
-      "warn": "Pi-en tåler 16 mA per pinne. Bakgrunnslyset går derfor via Q1."
+      "warn": ""
     },
     {
       "type": "step",
@@ -2101,7 +2068,7 @@
       "wires": [],
       "tips": [
         "Velg Skjold Node i Flasher.",
-        "config.txt: dtparam=spi=on, dtparam=audio=on."
+        "config.txt: dtparam=i2c_arm=on, dtparam=spi=off, dtparam=audio=on."
       ],
       "warn": ""
     },
@@ -2111,24 +2078,24 @@
       "title": "Test Node",
       "checks": [
         {
+          "what": "i2cdetect -y 1",
+          "expect": "3c (OLED) og 48 (ADS1115)"
+        },
+        {
           "what": "tools/node_selftest.py",
-          "expect": "Testbilde med fargestriper"
+          "expect": "Testbilde med hel kant på OLED-en"
         },
         {
-          "what": "Rød og blå byttet",
-          "expect": "Sett bgr=true [bekreft]"
-        },
-        {
-          "what": "Bildet forskjøvet",
-          "expect": "h_offset=2, v_offset=1 [bekreft]"
+          "what": "Bildet opp-ned",
+          "expect": "Sett skjerm.rotate=0 [bekreft]"
         },
         {
           "what": "Hver knapp trykkes",
           "expect": "Navnet vises på skjermen"
         },
         {
-          "what": "Vri encoderen",
-          "expect": "Riktig retning vises"
+          "what": "Vri potmeteret",
+          "expect": "0 helt mot venstre, 100 helt mot høyre"
         },
         {
           "what": "LED-ringer",

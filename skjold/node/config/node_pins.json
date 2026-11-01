@@ -1,7 +1,7 @@
 {
-  "_kommentar": "Skjold Node – felles kilde for pinner. Leses av skjold-ui, tools/node_selftest.py, tools/lag_kabling.py (kabling_node.svg + kabelliste.csv), tools/sjekk_konsistens.py og bruksanvisningen. GPIO-numre er BCM. 'pin' er fysisk pinne på 40-pins headeren (1 = nærmest SD-kortet, oddetall i indre rad). Punkter merket '[bekreft]' må måles eller sjekkes mot den faktiske modulen.",
-  "schema": 1,
-  "revisjon": "A · 2026-10-31",
+  "_kommentar": "Skjold Node (OLED-utgave) – felles kilde for pinner. Leses av ki_amp_daemon.py (KI_AMP_BOARD=node), Skjold OS (skjold/os), tools/node_selftest.py, tools/lag_kabling.py (kabling_node.svg + kabelliste.csv), tools/sjekk_konsistens.py og bruksanvisningen. GPIO-numre er BCM. 'pin' er fysisk pinne på 40-pins headeren (1 = nærmest SD-kortet, oddetall i indre rad). Punkter merket '[bekreft]' må måles eller sjekkes mot den faktiske modulen.",
+  "schema": 2,
+  "revisjon": "C · 2026-11-01 · OLED 128×32 + ADS1115-potmeter",
   "kort": [
     "pi4",
     "pi3b",
@@ -11,155 +11,162 @@
   "lyd": {
     "utgang": "3.5mm_eller_hdmi",
     "dtparam_audio": "on",
-    "merknad": "Analog 3,5 mm bruker PWM0/PWM1 internt. Maskinvare-PWM på GPIO12/13/18/19 er derfor opptatt. All dimming i Node er programvare-PWM (gpiozero). GPIO18–21 (I²S) holdes ledige slik at et I²S-kort kan velges som lydutgang senere [bekreft om Node skal støtte I²S]."
+    "merknad": "Analog 3,5 mm bruker PWM0/PWM1 internt. Maskinvare-PWM på GPIO12/13/18/19 er derfor opptatt. LED-ringene dimmes med programvare-PWM (gpiozero). GPIO18/19 holdes ledige. GPIO20/21 (PCM_DIN/DOUT) brukes av LED-ringene ◀◀/▶▶ – et I²S-lydkort kan ikke brukes samtidig uten å flytte dem."
   },
   "reserverte_gpio": {
     "0": "ID_SD (HAT-EEPROM) – aldri bruk",
     "1": "ID_SC (HAT-EEPROM) – aldri bruk",
-    "2": "I²C SDA – brukes av skjold-setup til å finne S1-knappekortet, holdes ledig",
-    "3": "I²C SCL – som over",
-    "14": "UART TXD – seriekonsoll/Blåtann-rute på Pi 3/4, holdes ledig",
-    "15": "UART RXD – som over",
-    "7": "SPI0 CE1 – tas av spidev når dtparam=spi=on, ikke bruk som GPIO",
-    "9": "SPI0 MISO – tas av SPI-driveren, ikke bruk som GPIO (skjermen har ingen MISO)",
-    "18": "PCM_CLK (I²S) – reservert for eventuelt I²S-lydkort",
+    "2": "I²C1 SDA – OLED + ADS1115 (delt buss, eies av kjernen, ikke GPIO)",
+    "3": "I²C1 SCL – som over",
+    "14": "UART TXD – holdes ledig",
+    "15": "UART RXD – holdes ledig",
+    "18": "PCM_CLK (I²S) – reservert",
     "19": "PCM_FS (I²S) – reservert",
-    "20": "PCM_DIN (I²S) – reservert, men brukt av valgfri LED-ring ▶▶ (se leds)",
-    "21": "PCM_DOUT (I²S) – reservert, men brukt av valgfri LED-ring ◀◀ (se leds)"
+    "20": "PCM_DIN (I²S) – brukt av LED-ring ◀◀ (kolliderer med I²S-kort)",
+    "21": "PCM_DOUT (I²S) – brukt av LED-ring ▶▶ (kolliderer med I²S-kort)",
+    "7": "SPI0 CE1 – brukt som knapp ▶▶. SPI må derfor være AV (ingen dtparam=spi=on)"
+  },
+  "i2c": {
+    "buss": 1,
+    "sda": {
+      "gpio": 2,
+      "pin": 3
+    },
+    "scl": {
+      "gpio": 3,
+      "pin": 5
+    },
+    "baudrate": 400000,
+    "_merknad": "Begge modulene har egne pull-up-motstander (typisk 4,7–10 kΩ) til 3V3; Pi-en har i tillegg 1,8 kΩ. Ingen ekstra motstander. Bussen deles: Skjold OS skriver til OLED-en (0x3C), daemonen leser ADS1115 (0x48). Ingen av dem tar bussen eksklusivt."
   },
   "skjerm": {
-    "driver": "luma.lcd",
-    "kontroller": "st7735",
-    "modul": "1,8\" ST7735S 128×160, 8 pinner, liggende 160×128",
-    "width": 160,
-    "height": 128,
+    "driver": "luma.oled",
+    "kontroller": "ssd1306",
+    "modul": "0,91\" SSD1306 OLED 128×32, I²C, 4 pinner",
+    "grensesnitt": "i2c",
+    "i2c_port": 1,
+    "adresse": "0x3C",
+    "width": 128,
+    "height": 32,
     "rotate": 2,
-    "bgr": false,
-    "h_offset": 0,
-    "v_offset": 0,
-    "_offset_merknad": "[bekreft] Noen ST7735S-moduler ('green tab') trenger h_offset=2, v_offset=1. Noen moduler viser rødt og blått byttet – sett bgr=true. Kjør node_selftest.py og se på fargestripene.",
-    "spi_port": 0,
-    "spi_device": 0,
-    "bus_speed_hz": 16000000,
-    "framebuffer": "diff_to_previous",
+    "_rotate_merknad": "Skjermen står opp-ned i lokket (som TFT-en i rev B), derfor rotate=2 (180°). [bekreft] på ferdig montert kasse.",
+    "kontrast": 255,
+    "kontrast_dimmet": 16,
     "pinner": {
       "VCC": {
         "gpio": null,
-        "pin": 17,
+        "pin": 1,
         "nett": "3V3",
         "farge": "rod",
-        "beskrivelse": "3,3 V til skjermen (modulen er spesifisert for 3,3 V – bekreftet)"
+        "beskrivelse": "3,3 V (modulen tåler 3,3–5 V; bruk 3,3 V så I²C-nivåene er 3,3 V)"
       },
       "GND": {
         "gpio": null,
-        "pin": 20,
+        "pin": 9,
         "nett": "GND",
         "farge": "sort",
         "beskrivelse": "Jord"
       },
-      "CS": {
-        "gpio": 8,
-        "pin": 24,
-        "nett": "SPI0 CE0",
-        "farge": "gul",
-        "beskrivelse": "Chip select, styres av spidev"
-      },
-      "RESET": {
-        "gpio": 24,
-        "pin": 18,
-        "nett": "GPIO24",
-        "farge": "gul",
-        "beskrivelse": "Reset, luma gpio_RST=24"
-      },
-      "A0": {
-        "gpio": 25,
-        "pin": 22,
-        "nett": "GPIO25",
-        "farge": "gul",
-        "beskrivelse": "Data/kommando (DC), luma gpio_DC=25"
-      },
       "SDA": {
-        "gpio": 10,
-        "pin": 19,
-        "nett": "SPI0 MOSI",
+        "gpio": 2,
+        "pin": 3,
+        "nett": "I²C1 SDA",
         "farge": "gul",
-        "beskrivelse": "SPI-data inn til skjermen"
+        "beskrivelse": "I²C-data (delt med ADS1115)"
       },
-      "SCK": {
-        "gpio": 11,
-        "pin": 23,
-        "nett": "SPI0 SCLK",
+      "SCL": {
+        "gpio": 3,
+        "pin": 5,
+        "nett": "I²C1 SCL",
         "farge": "gul",
-        "beskrivelse": "SPI-klokke"
-      },
-      "LED": {
-        "gpio": 23,
-        "pin": 16,
-        "nett": "GPIO23",
-        "farge": "oransje",
-        "beskrivelse": "Bakgrunnslys. Programvare-PWM (gpiozero PWMLED, 500 Hz, active_high=False) via Q1 AO3401 high-side. Se skjerm.bakgrunnslys."
+        "beskrivelse": "I²C-klokke (delt med ADS1115)"
       }
-    },
-    "bakgrunnslys": {
-      "gpio": 23,
-      "pin": 16,
-      "pwm": "programvare",
-      "pwm_hz": 500,
-      "aktiv_hoy": false,
-      "driver": "AO3401 P-MOSFET high-side (Q1): source ← 3V3 (pinne 1), drain → LED på modulen, gate ← GPIO23 via 1 kΩ, 10 kΩ gate→source. GPIO23 lav = lys på. Low-side virker ikke: på 8-pinners moduler er LED-katoden koblet til GND på kortet.",
-      "_merknad": "[bekreft] Mål strømmen i LED-pinnen ved 3,3 V. Er den under 10 mA kan GPIO23 drive LED direkte (sett aktiv_hoy=true, dropp Q1). Typisk 20–40 mA → Q1 trengs. Pi-grense 16 mA per pinne, 50 mA totalt."
     }
   },
-  "encoder": {
-    "type": "EC11 med trykk, 5 pinner, 20 posisjoner, 15 mm halvflat aksel",
-    "A": {
-      "gpio": 17,
-      "pin": 11,
-      "farge": "bla"
+  "adc": {
+    "type": "ADS1115 16-bit ADC-modul",
+    "i2c_port": 1,
+    "adresse": "0x48",
+    "_adresse_merknad": "ADDR er broet til GND på modulen → 0x48.",
+    "kanal": 0,
+    "gain_v": 4.096,
+    "data_rate_sps": 128,
+    "modus": "kontinuerlig",
+    "pinner": {
+      "VDD": {
+        "gpio": null,
+        "pin": 17,
+        "nett": "3V3",
+        "farge": "rod",
+        "beskrivelse": "3,3 V fra Pi pinne 17 (egen 3V3-pinne, ikke delt med OLED)"
+      },
+      "GND": {
+        "gpio": null,
+        "pin": 25,
+        "nett": "GND",
+        "farge": "sort",
+        "beskrivelse": "Jord"
+      },
+      "SDA": {
+        "gpio": 2,
+        "fra": "OLED SDA",
+        "nett": "I²C1 SDA",
+        "farge": "gul",
+        "beskrivelse": "Kjedes fra OLED-ens SDA-pinne (samme buss)"
+      },
+      "SCL": {
+        "gpio": 3,
+        "fra": "OLED SCL",
+        "nett": "I²C1 SCL",
+        "farge": "gul",
+        "beskrivelse": "Kjedes fra OLED-ens SCL-pinne"
+      }
+    }
+  },
+  "potmeter": {
+    "type": "10 kΩ lineært (B10K), 3 pinner",
+    "funksjon": "volum",
+    "adc_kanal": 0,
+    "vref_v": 3.3,
+    "pinner": {
+      "1": {
+        "til": "ADS1115 GND",
+        "nett": "GND",
+        "farge": "sort"
+      },
+      "2": {
+        "til": "ADS1115 A0",
+        "nett": "A0",
+        "farge": "bla",
+        "beskrivelse": "glidekontakt (wiper)"
+      },
+      "3": {
+        "til": "ADS1115 VDD",
+        "nett": "3V3",
+        "farge": "rod"
+      }
     },
-    "B": {
-      "gpio": 27,
-      "pin": 13,
-      "farge": "bla"
-    },
-    "C": {
-      "gpio": null,
-      "pin": 9,
-      "nett": "GND",
-      "farge": "sort",
-      "beskrivelse": "Felles for A/B. SW sin andre pinne loddes over til C med en 15 mm bro, så én GND-ledning rekker."
-    },
-    "SW": {
-      "gpio": 22,
-      "pin": 15,
-      "farge": "bla",
-      "keycode": 164,
-      "key": "KEY_PLAYPAUSE",
-      "_merknad": "Bekreftet: trykk = pause/spill (som i prototypen)."
-    },
-    "pull_up": true,
-    "aktiv_lav": true,
-    "bounce_ms": 2,
-    "detenter_per_omdreining": 20,
-    "pulser_per_omdreining": 20,
-    "steps_per_period": 1,
-    "_merknad": "Bekreftet: EC11 med 20 posisjoner (20 detenter/20 pulser, 1 full periode per hakk). Ved 30/15-variant: steps_per_period=2.",
-    "hold_innstillinger_s": 3.0
+    "poll_hz": 20,
+    "glatting": 0.35,
+    "hysterese": 2,
+    "dodsone_pct": 1.5,
+    "inverter": false,
+    "_merknad": "0 V = volum 0, 3,3 V = volum 100 (med klokka = høyere med pinne 1 på GND). Daemonen setter volum bare når knotten faktisk flyttes (hysterese ±2), så volum fra app/AirPlay overstyres ikke av en knott som står stille. Snur retningen feil: sett inverter=true eller bytt pinne 1 og 3."
   },
   "knapper": {
-    "type": "12 mm metall-trykknapp, momentan NO, med LED-ring 3–6 V",
+    "type": "12 mm metall-trykknapp (eller 12×12 taktil), momentan NO, med LED-ring 3–6 V",
     "pull_up": true,
     "aktiv_lav": true,
     "bounce_ms": 5,
-    "gnd_pin": 39,
-    "_gnd_merknad": "C-pinnene på alle fire knappene lenkes med 20 mm broer, og én sort ledning går fra RADIO (nærmest pinne 39-enden av headeren) til pinne 39.",
+    "gnd_pin": 30,
+    "_gnd_merknad": "C-pinnene på alle fire knappene lenkes med 20 mm broer, og én sort ledning går fra RADIO til pinne 30.",
     "rekkefolge": "fra venstre sett fra brukeren (bruker står på +y-siden; brukers venstre = kassens +x)",
     "liste": [
       {
         "id": "radio",
         "etikett": "RADIO",
-        "gpio": 5,
-        "pin": 29,
+        "gpio": 23,
+        "pin": 16,
         "farge": "gronn",
         "keycode": 377,
         "key": "KEY_RADIO",
@@ -170,8 +177,8 @@
       {
         "id": "airbt",
         "etikett": "AIR / BT",
-        "gpio": 6,
-        "pin": 31,
+        "gpio": 24,
+        "pin": 18,
         "farge": "gronn",
         "keycode": 237,
         "key": "KEY_BLUETOOTH",
@@ -182,8 +189,8 @@
       {
         "id": "prev",
         "etikett": "◀◀",
-        "gpio": 13,
-        "pin": 33,
+        "gpio": 25,
+        "pin": 22,
         "farge": "gronn",
         "keycode": 165,
         "key": "KEY_PREVIOUSSONG",
@@ -194,12 +201,12 @@
       {
         "id": "next",
         "etikett": "▶▶",
-        "gpio": 26,
-        "pin": 37,
+        "gpio": 7,
+        "pin": 26,
         "farge": "gronn",
         "keycode": 163,
         "key": "KEY_NEXTSONG",
-        "hold_s": 3.0,
+        "hold_s": 1.0,
         "kasse_x": -30,
         "kasse_y": 32.5
       }
@@ -207,17 +214,17 @@
     "hold_begge_omstart": [
       "prev",
       "next"
-    ]
+    ],
+    "hold_begge_s": 3.0,
+    "_hold_merknad": "Ingen encoder lenger: ▶▶ hold 1 s = spill/pause, ◀◀ hold 3 s = innstillinger, ◀◀+▶▶ hold 3 s = omstart, AIR/BT hold 2 s = Blåtann-paring, RADIO trykk = radio/neste favoritt, hold 1 s = spill valgt favoritt."
   },
   "leds": {
     "valgfri": true,
     "variant": "3-6V",
-    "_variant_merknad": "Bekreftet: 3–6 V-varianten brukes (12 mm metall, IP65, loddeføtter). Kjøp 3–6 V-varianten (innebygd motstand for ~5 V). 12 V-varianten lyser ikke på 3,3 V og Node har ingen 12 V – ikke bruk den.",
+    "_variant_merknad": "3–6 V-varianten (innebygd motstand for ~5 V). 12 V-varianten lyser ikke på 3,3 V.",
     "drift": "direkte",
-    "_drift_merknad": "'direkte' = GPIO → seriemotstand → LED+ , LED− → GND (2–5 mA, svakt lys). 'transistor_5v' = GPIO → 1 kΩ → 2N7002 gate, LED+ → 5 V (pinne 2/4) via motstand, LED− → drain (sterkere lys). Begge er tegnet i kabling_node.svg.",
-    "seriemotstand_ohm_direkte": 270,
-    "_motstand_merknad": "270 Ω gir ≤ 4,8 mA ved Vf 2,0 V (rød/gul/grønn ring) selv om ringens interne motstand skulle være 0. Blå/hvit ring (Vf ≈ 3,0 V) får bare ~1 mA ved 3,3 V – bruk 100 Ω eller transistor_5v for de.",
-    "seriemotstand_ohm_5v": 100,
+    "seriemotstand_ohm_direkte": 330,
+    "_motstand_merknad": "GPIO → 330 Ω → LED+, LED− → GND. ≤ 4 mA per ring ved Vf 2,0 V. Pi-grense 16 mA per pinne, 50 mA totalt.",
     "pwm": "programvare",
     "pwm_hz": 200,
     "aktiv_hoy": true,
@@ -253,7 +260,7 @@
         "farge": "oransje"
       }
     ],
-    "_i2s_merknad": "GPIO20/21 er PCM_DIN/DOUT. Skal et I²S-lydkort brukes samtidig med LED-ringene, flytt ◀◀/▶▶-ringene (GPIO20/21) til GPIO4 (pinne 7) og GPIO7 (pinne 26, krever dtoverlay=spi0-1cs i stedet for dtparam=spi=on)."
+    "_i2s_merknad": "GPIO20/21 er PCM_DIN/DOUT. Skal et I²S-lydkort brukes, må ◀◀/▶▶-ringene flyttes (f.eks. til GPIO5/6, pinne 29/31)."
   },
   "gnd_pinner": [
     6,
@@ -274,21 +281,32 @@
     4
   ],
   "ledige_gpio_etter_dette": [
-    4
+    4,
+    5,
+    6,
+    8,
+    9,
+    10,
+    11,
+    13,
+    17,
+    22,
+    26,
+    27
   ],
   "inngang": {
     "metode": "gpiozero",
-    "_merknad": "skjold-ui leser knapper og encoder med gpiozero (Button/RotaryEncoder) via lgpio, som S1. Alternativet med device-tree (rotary-encoder + gpio-key → evdev) står i config/config.txt.node som 'Alternativ B'. De to kan IKKE kombineres: en GPIO som er tatt av en overlay gir 'Device or resource busy' i gpiozero."
+    "_merknad": "ki_amp_daemon.py (KI_AMP_BOARD=node) leser knappene med gpiozero (lgpio) og potmeteret via ADS1115 (smbus2). Ingen device-tree-knapper (gpio-key) – en GPIO tatt av en overlay gir 'Device or resource busy' i gpiozero."
   },
   "config_txt": {
     "fil": "config/config.txt.node",
     "pakrevd": [
-      "dtparam=spi=on",
-      "dtparam=audio=on",
       "dtparam=i2c_arm=on",
+      "dtparam=i2c_arm_baudrate=400000",
+      "dtparam=spi=off",
+      "dtparam=audio=on",
       "gpio=12,16,20,21=op,dl",
-      "gpio=23=op,dh",
-      "gpio=5,6,13,17,22,26,27=ip,pu"
+      "gpio=7,23,24,25=ip,pu"
     ]
   },
   "fargekoder": {
@@ -297,7 +315,6 @@
     "gul": "#e3b23c",
     "bla": "#2f6fd0",
     "gronn": "#3a9a4c",
-    "oransje": "#e8742a",
-    "morkrod_5v": "#8a1c14"
+    "oransje": "#e8742a"
   }
 }

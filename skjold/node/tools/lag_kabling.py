@@ -23,10 +23,9 @@ SLAKK = 60
 def header_xyz(pin):
     return (-35.4 + ((pin - 1) // 2) * 2.54, 23.3 if pin % 2 else 25.8, 18.0)
 
-SKJERM_XYZ = (-9.0, 6.0, 28.0)      # loddeøyene på skjerm-PCB [bekreft hvilken ende]
-Q1_XYZ = (-4.0, 0.0, 26.0)           # transistor krympet inn ved skjermen
-ENC = PINS["encoder"]
-ENC_XYZ = (-27.0, 7.0, 24.0)
+SKJERM_XYZ = (2.0, 0.0, 28.0)       # loddeøyene på OLED-modulen (4 pinner i x0-enden, se cad/generate_node_oled_lokk.js)
+ADC_XYZ = (-18.0, -6.0, 24.0)        # ADS1115 festet med tape under lokket ved potmeteret [bekreft plassering]
+POT_XYZ = (-27.0, 7.0, 24.0)         # potmeteret i det gamle encoderhullet
 KNAPP_XYZ = {k["id"]: (k["kasse_x"], k["kasse_y"], 17.0) for k in PINS["knapper"]["liste"]}
 
 
@@ -35,7 +34,9 @@ def lengde(a, b):
     return int(math.ceil((d + SLAKK) / 10.0) * 10)
 
 
-def plugg(l):
+def plugg(l, pi=True):
+    if not pi:
+        return "Loddet i begge ender (ledning %d mm)" % l
     if l <= 100:
         return "Dupont hunn 10 cm, kuttet – hunn på Pi, loddet på komponent"
     if l <= 150:
@@ -44,34 +45,37 @@ def plugg(l):
 
 
 # --- ledningsliste ---------------------------------------------------------
-# (id, pi-pinne, komponent, terminal, nett, farge, xyz, merknad)
+# (id, fra, komponent, terminal, nett, farge, xyz, merknad). fra = Pi-pinne (int) eller en annen komponents terminal
 ledninger = []
-sk = PINS["skjerm"]["pinner"]
-def add(pin, komp, term, nett, farge, xyz, merk=""):
-    ledninger.append(dict(pin=pin, komp=komp, term=term, nett=nett, farge=farge, xyz=xyz, merk=merk))
+sk = PINS["skjerm"]["pinner"]; ad = PINS["adc"]["pinner"]; po = PINS["potmeter"]["pinner"]
+def add(pin, komp, term, nett, farge, xyz, merk="", fra=None, fra_xyz=None):
+    ledninger.append(dict(pin=pin, komp=komp, term=term, nett=nett, farge=farge, xyz=xyz, merk=merk, fra=fra, fra_xyz=fra_xyz))
 
-add(sk["VCC"]["pin"], "TFT", "VCC", "3V3", "rod", SKJERM_XYZ)
-add(sk["GND"]["pin"], "TFT", "GND", "GND", "sort", SKJERM_XYZ)
-for t in ["SCK", "SDA", "CS", "A0", "RESET"]:
-    add(sk[t]["pin"], "TFT", t, sk[t]["nett"], "gul", SKJERM_XYZ)
-add(1, "Q1", "S (source)", "3V3", "rod", Q1_XYZ, "Q1 AO3401: 10 kΩ S→G. D→TFT LED (15 mm, loddet)")
-add(sk["LED"]["pin"], "Q1", "G (gate)", "GPIO%d" % sk["LED"]["gpio"], "oransje", Q1_XYZ, "1 kΩ i serie, krympet inn")
-for t in ["A", "B", "SW"]:
-    add(ENC[t]["pin"], "ENC", t, "GPIO%d" % ENC[t]["gpio"], "bla", ENC_XYZ)
-add(ENC["C"]["pin"], "ENC", "C", "GND", "sort", ENC_XYZ, "SW-pinne 2 brokobles til C (15 mm)")
+for t in ["VCC", "GND", "SDA", "SCL"]:
+    add(sk[t]["pin"], "OLED", t, sk[t]["nett"], sk[t]["farge"], SKJERM_XYZ)
+for t in ["VDD", "GND"]:
+    add(ad[t]["pin"], "ADS1115", t, ad[t]["nett"], ad[t]["farge"], ADC_XYZ, "ADDR broet til GND på modulen (0x48)" if t == "GND" else "")
+for t in ["SDA", "SCL"]:
+    add(None, "ADS1115", t, ad[t]["nett"], ad[t]["farge"], ADC_XYZ, "kjedet: loddes på OLED-ens %s sammen med ledningen fra Pi-en" % t,
+        fra=ad[t]["fra"], fra_xyz=SKJERM_XYZ)
+for n in ["1", "2", "3"]:
+    komp, term = po[n]["til"].split(" ", 1)
+    add(None, "POT", "pinne %s" % n, po[n]["nett"], po[n]["farge"], POT_XYZ,
+        "glidekontakt" if n == "2" else "", fra="%s %s" % (komp, term), fra_xyz=ADC_XYZ)
 for k in PINS["knapper"]["liste"]:
     add(k["pin"], "KNAPP " + k["etikett"], "NO", "GPIO%d" % k["gpio"], "gronn", KNAPP_XYZ[k["id"]])
 add(PINS["knapper"]["gnd_pin"], "KNAPP RADIO", "C", "GND", "sort", KNAPP_XYZ["radio"], "C-pinnene på alle 4 knappene lenkes med 20 mm broer")
 navn = {k["id"]: k["etikett"] for k in PINS["knapper"]["liste"]}
 r = PINS["leds"]["seriemotstand_ohm_direkte"]
 for l in PINS["leds"]["liste"]:
-    add(l["pin"], "LED " + navn[l["for"]], "LED+", "GPIO%d" % l["gpio"], "oransje", KNAPP_XYZ[l["for"]], "%d Ω i serie, krympet inn (valgfri)" % r)
-add(PINS["leds"]["gnd_pin"], "LED RADIO", "LED−", "GND", "sort", KNAPP_XYZ["radio"], "LED− på alle 4 lenkes med 20 mm broer (valgfri)")
+    add(l["pin"], "LED " + navn[l["for"]], "LED+", "GPIO%d" % l["gpio"], "oransje", KNAPP_XYZ[l["for"]], "%d Ω i serie, krympet inn" % r)
+add(PINS["leds"]["gnd_pin"], "LED RADIO", "LED−", "GND", "sort", KNAPP_XYZ["radio"], "LED− på alle 4 lenkes med 20 mm broer")
 
-ledninger.sort(key=lambda w: w["pin"])
+ledninger.sort(key=lambda w: (w["pin"] is None, w["pin"] or 0))
 for i, w in enumerate(ledninger, 1):
     w["id"] = "W%02d" % i
-    w["mm"] = lengde(header_xyz(w["pin"]), w["xyz"])
+    w["mm"] = lengde(header_xyz(w["pin"]) if w["pin"] else w["fra_xyz"], w["xyz"]) if w["pin"] else \
+        int(math.ceil((math.dist(w["fra_xyz"], w["xyz"]) + 20) / 10.0) * 10)   # lokk–lokk: bare 20 mm slakk
 
 FARGENAVN = {"rod": "rød", "sort": "sort", "gul": "gul", "bla": "blå", "gronn": "grønn", "oransje": "oransje"}
 
@@ -79,8 +83,8 @@ with open(os.path.join(ROT, "kabelliste.csv"), "w", newline="", encoding="utf-8"
     cw = csv.writer(f)
     cw.writerow(["id", "fra", "til", "nett", "farge", "lengde_mm", "pluggtype", "merknad"])
     for w in ledninger:
-        cw.writerow([w["id"], "Pi pinne %d" % w["pin"], "%s %s" % (w["komp"], w["term"]), w["nett"],
-                     FARGENAVN[w["farge"]], w["mm"], plugg(w["mm"]), w["merk"]])
+        cw.writerow([w["id"], "Pi pinne %d" % w["pin"] if w["pin"] else w["fra"], "%s %s" % (w["komp"], w["term"]), w["nett"],
+                     FARGENAVN[w["farge"]], w["mm"], plugg(w["mm"], bool(w["pin"])), w["merk"]])
 
 # --- SVG -----------------------------------------------------------------
 PIN_NAVN = {1: "3V3", 2: "5V", 3: "GPIO2", 4: "5V", 5: "GPIO3", 7: "GPIO4", 8: "GPIO14", 10: "GPIO15", 11: "GPIO17",
@@ -99,7 +103,7 @@ out = []
 o = out.append
 o('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" width="%d" height="%d" font-family="Helvetica, Arial, sans-serif">' % (W, H, W, H))
 o('<rect width="100%" height="100%" fill="#ffffff"/>')
-o('<text x="24" y="38" font-size="22" font-weight="bold">Skjold Node – kabling (rev %s)</text>' % escape(PINS["revisjon"]))
+o('<text x="24" y="38" font-size="22" font-weight="bold">Skjold Node OLED – kabling (rev %s)</text>' % escape(PINS["revisjon"]))
 o('<text x="24" y="60" font-size="12" fill="#555">Generert fra config/node_pins.json av tools/lag_kabling.py. BCM-numre. Pi sett ovenfra, pinne 1 nærmest SD-kortet. Alle innganger: intern pull-up, aktiv lav.</text>')
 
 # header
@@ -127,28 +131,32 @@ def boks(navn, x, y, w, h, terms, side):
         pos[t] = (tx, ty)
     komp_bokser[navn] = pos
 
-# venstre side (oddetallspinner): encoder + knapper
-boks("ENC", 120, 170, 120, 120, ["C", "A", "B", "SW"], "R")
+# venstre side (oddetallspinner): OLED, ADS1115, potmeter
+boks("OLED", 120, 96, 130, 106, ["VCC", "GND", "SDA", "SCL"], "R")
+boks("ADS1115", 120, 236, 130, 150, ["VDD", "GND", "SDA", "SCL", "A0", "ADDR→GND"], "R")
+boks("POT", 120, 420, 130, 84, ["pinne 1", "pinne 2", "pinne 3"], "R")
+# høyre side (partallspinner): knapper og LED-ringer
 for i, k in enumerate(PINS["knapper"]["liste"]):
-    boks("KNAPP " + k["etikett"], 120, 400 + i * 90 if False else 380 + i * 82, 120, 62, ["NO", "C"] if k["id"] == "radio" else ["NO"], "R")
-# høyre side: Q1, TFT, LED-ringer
-boks("Q1", 860, 92, 110, 66, ["S (source)", "G (gate)"], "L")
-boks("TFT", 860, 190, 130, 172, ["VCC", "GND", "SCK", "SDA", "CS", "A0", "RESET", "LED ← Q1 D"], "L")
+    boks("KNAPP " + k["etikett"], 860, 300 + i * 62, 130, 58 if k["id"] == "radio" else 40, ["NO", "C"] if k["id"] == "radio" else ["NO"], "L")
 for i, l in enumerate(PINS["leds"]["liste"]):
     n = "LED " + navn[l["for"]]
-    boks(n, 860, 420 + i * 72, 130, 58 if l["for"] == "radio" else 40, ["LED+", "LED−"] if l["for"] == "radio" else ["LED+"], "L")
-
-# Q1 drain → TFT LED (kort bro)
-q, t = komp_bokser["Q1"], komp_bokser["TFT"]
-o('<path d="M970,125 H1010 V%d H990" fill="none" stroke="%s" stroke-width="3"/>' % (t["LED ← Q1 D"][1], FARGE["oransje"]))
-o('<text x="1014" y="140" font-size="10">D → LED</text>')
-o('<text x="1014" y="153" font-size="10">(bro 15 mm)</text>')
-o('<text x="1000" y="104" font-size="10" text-anchor="middle">AO3401</text>')
-o('<text x="1000" y="115" font-size="9" text-anchor="middle" fill="#555">10k S–G</text>')
+    boks(n, 860, 560 + i * 54 + (18 if i else 0), 130, 58 if l["for"] == "radio" else 40, ["LED+", "LED−"] if l["for"] == "radio" else ["LED+"], "L")
+# kjeder lokk–lokk (OLED → ADS1115 → POT), tegnet som egne løp til venstre for boksene
+TERM_ALIAS = {"ADS1115 A0": ("ADS1115", "A0"), "ADS1115 GND": ("ADS1115", "GND"), "ADS1115 VDD": ("ADS1115", "VDD"),
+              "OLED SDA": ("OLED", "SDA"), "OLED SCL": ("OLED", "SCL")}
+o('<text x="185" y="410" font-size="9" fill="#555" text-anchor="middle">B10K: med klokka = høyere</text>')
 
 lane_l, lane_r, lane_gap, bunn = 0, 0, 0, 0
+lane_k = 0
 for w in ledninger:
     pin = w["pin"]
+    if not pin:   # lokk–lokk-kjede: fra én komponentterminal til en annen (begge på venstre side)
+        x0, y0 = komp_bokser[TERM_ALIAS[w["fra"]][0]][TERM_ALIAS[w["fra"]][1]]
+        x1, y1 = komp_bokser[w["komp"]][w["term"]]
+        lx = 270 + lane_k * 12; lane_k += 1
+        o('<path d="M%d,%d H%d V%d H%d" fill="none" stroke="%s" stroke-width="3" stroke-linejoin="round" stroke-dasharray="7 3"/>' % (x0, y0, lx, y1, x1, FARGE[w["farge"]]))
+        o('<text x="%d" y="%d" font-size="9" font-weight="bold" fill="#000" %s>%s · %d mm</text>' % (x1 + 8, y1 + 12, 'stroke="#fff" stroke-width="3" paint-order="stroke"', w["id"], w["mm"]))
+        continue
     x0, y0 = px(pin), py(pin)
     x1, y1 = komp_bokser[w["komp"]][w["term"]]
     c = FARGE[w["farge"]]
@@ -186,12 +194,12 @@ for pin in range(1, 41):
 
 # forklaring
 ly = 800
-for i, (k, t) in enumerate([("rod", "3V3"), ("sort", "GND"), ("gul", "SPI / skjerm"), ("bla", "encoder"), ("gronn", "knapper"), ("oransje", "LED / bakgrunnslys")]):
+for i, (k, t) in enumerate([("rod", "3V3"), ("sort", "GND"), ("gul", "I²C (SDA/SCL)"), ("bla", "potmeter → A0"), ("gronn", "knapper"), ("oransje", "LED-ringer")]):
     x = 24 + i * 150
     o('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="4"/>' % (x, ly, x + 30, ly, FARGE[k]))
     o('<text x="%d" y="%d" font-size="11">%s</text>' % (x + 36, ly + 4, t))
-o('<text x="24" y="830" font-size="11" fill="#333">Knapper og LED-ringer: C/LED− lenkes med 20 mm broer mellom knappene; én GND-ledning fra RADIO. LED-ringer er valgfrie (3–6 V-variant, %d Ω i serie). Encoder: SW pinne 2 broes til C.</text>' % r)
-o('<text x="24" y="848" font-size="11" fill="#333">Lengder = 3D-avstand Pi→lokk + %d mm slakk for å vippe lokket. Ingen ledninger på GPIO2/3 (I²C), 14/15 (UART), 18/19 (reservert I²S).</text>' % SLAKK)
+o('<text x="24" y="830" font-size="11" fill="#333">Stiplet = loddet lokk–lokk (OLED → ADS1115 → potmeter). Knapper: C lenkes med 20 mm broer, én GND fra RADIO. LED-ringer: %d Ω i serie, LED− lenkes. SPI er AV (GPIO7 = knapp ▶▶).</text>' % r)
+o('<text x="24" y="848" font-size="11" fill="#333">Lengder = 3D-avstand Pi→lokk + %d mm slakk for å vippe lokket. Ingen ledninger på GPIO14/15 (UART) eller 18/19 (I²S). GPIO20/21 (LED ◀◀/▶▶) kolliderer med I²S-kort.</text>' % SLAKK)
 o('</svg>')
 open(os.path.join(ROT, "kabling_node.svg"), "w", encoding="utf-8").write("\n".join(out) + "\n")
 print("skrev kabling_node.svg og kabelliste.csv (%d ledninger)" % len(ledninger))

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 880" width="1180" height="880" font-family="Helvetica, Arial, sans-serif">
 <rect width="100%" height="100%" fill="#ffffff"/>
-<text x="24" y="38" font-size="22" font-weight="bold">Skjold Node – kabling (rev A · 2026-10-31)</text>
+<text x="24" y="38" font-size="22" font-weight="bold">Skjold Node OLED – kabling (rev C · 2026-11-01 · OLED 128×32 + ADS1115-potmeter)</text>
 <text x="24" y="60" font-size="12" fill="#555">Generert fra config/node_pins.json av tools/lag_kabling.py. BCM-numre. Pi sett ovenfra, pinne 1 nærmest SD-kortet. Alle innganger: intern pull-up, aktiv lav.</text>
 <rect x="454" y="92" width="102" height="530" rx="6" fill="#20232a"/>
 <text x="505" y="84" font-size="12" text-anchor="middle" font-weight="bold">Pi 40-pins header</text>
@@ -8,11 +8,11 @@
 <text x="491" y="113" font-size="8" fill="#fff" text-anchor="middle">1</text>
 <circle cx="540" cy="110" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="113" font-size="8" fill="#fff" text-anchor="middle">2</text>
-<circle cx="470" cy="136" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="136" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="139" font-size="8" fill="#fff" text-anchor="middle">3</text>
 <circle cx="540" cy="136" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="139" font-size="8" fill="#fff" text-anchor="middle">4</text>
-<circle cx="470" cy="162" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="162" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="165" font-size="8" fill="#fff" text-anchor="middle">5</text>
 <circle cx="540" cy="162" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="165" font-size="8" fill="#fff" text-anchor="middle">6</text>
@@ -24,15 +24,15 @@
 <text x="491" y="217" font-size="8" fill="#fff" text-anchor="middle">9</text>
 <circle cx="540" cy="214" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="217" font-size="8" fill="#fff" text-anchor="middle">10</text>
-<circle cx="470" cy="240" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="240" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="243" font-size="8" fill="#fff" text-anchor="middle">11</text>
 <circle cx="540" cy="240" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="243" font-size="8" fill="#fff" text-anchor="middle">12</text>
-<circle cx="470" cy="266" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="266" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="269" font-size="8" fill="#fff" text-anchor="middle">13</text>
 <circle cx="540" cy="266" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="269" font-size="8" fill="#fff" text-anchor="middle">14</text>
-<circle cx="470" cy="292" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="292" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="295" font-size="8" fill="#fff" text-anchor="middle">15</text>
 <circle cx="540" cy="292" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="295" font-size="8" fill="#fff" text-anchor="middle">16</text>
@@ -40,35 +40,35 @@
 <text x="491" y="321" font-size="8" fill="#fff" text-anchor="middle">17</text>
 <circle cx="540" cy="318" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="321" font-size="8" fill="#fff" text-anchor="middle">18</text>
-<circle cx="470" cy="344" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="344" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="347" font-size="8" fill="#fff" text-anchor="middle">19</text>
-<circle cx="540" cy="344" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="540" cy="344" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="347" font-size="8" fill="#fff" text-anchor="middle">20</text>
 <circle cx="470" cy="370" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="373" font-size="8" fill="#fff" text-anchor="middle">21</text>
 <circle cx="540" cy="370" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="373" font-size="8" fill="#fff" text-anchor="middle">22</text>
-<circle cx="470" cy="396" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="396" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="399" font-size="8" fill="#fff" text-anchor="middle">23</text>
-<circle cx="540" cy="396" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="540" cy="396" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="399" font-size="8" fill="#fff" text-anchor="middle">24</text>
-<circle cx="470" cy="422" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="422" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="425" font-size="8" fill="#fff" text-anchor="middle">25</text>
-<circle cx="540" cy="422" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
+<circle cx="540" cy="422" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="425" font-size="8" fill="#fff" text-anchor="middle">26</text>
 <circle cx="470" cy="448" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="451" font-size="8" fill="#fff" text-anchor="middle">27</text>
 <circle cx="540" cy="448" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="451" font-size="8" fill="#fff" text-anchor="middle">28</text>
-<circle cx="470" cy="474" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="474" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="477" font-size="8" fill="#fff" text-anchor="middle">29</text>
-<circle cx="540" cy="474" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
+<circle cx="540" cy="474" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="477" font-size="8" fill="#fff" text-anchor="middle">30</text>
-<circle cx="470" cy="500" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="500" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="503" font-size="8" fill="#fff" text-anchor="middle">31</text>
 <circle cx="540" cy="500" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="503" font-size="8" fill="#fff" text-anchor="middle">32</text>
-<circle cx="470" cy="526" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="526" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="529" font-size="8" fill="#fff" text-anchor="middle">33</text>
 <circle cx="540" cy="526" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="529" font-size="8" fill="#fff" text-anchor="middle">34</text>
@@ -76,145 +76,133 @@
 <text x="491" y="555" font-size="8" fill="#fff" text-anchor="middle">35</text>
 <circle cx="540" cy="552" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="555" font-size="8" fill="#fff" text-anchor="middle">36</text>
-<circle cx="470" cy="578" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="578" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="581" font-size="8" fill="#fff" text-anchor="middle">37</text>
 <circle cx="540" cy="578" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="581" font-size="8" fill="#fff" text-anchor="middle">38</text>
-<circle cx="470" cy="604" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
+<circle cx="470" cy="604" r="6" fill="#6b6f78" stroke="#000" stroke-width="0.8"/>
 <text x="491" y="607" font-size="8" fill="#fff" text-anchor="middle">39</text>
 <circle cx="540" cy="604" r="6" fill="#d4af37" stroke="#000" stroke-width="0.8"/>
 <text x="519" y="607" font-size="8" fill="#fff" text-anchor="middle">40</text>
-<rect x="120" y="170" width="120" height="120" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="180" y="186" font-size="12" font-weight="bold" text-anchor="middle">ENC</text>
-<circle cx="240" cy="202" r="4" fill="#fff" stroke="#333"/>
-<text x="232" y="205" font-size="10" text-anchor="end">C</text>
-<circle cx="240" cy="224" r="4" fill="#fff" stroke="#333"/>
-<text x="232" y="227" font-size="10" text-anchor="end">A</text>
-<circle cx="240" cy="246" r="4" fill="#fff" stroke="#333"/>
-<text x="232" y="249" font-size="10" text-anchor="end">B</text>
-<circle cx="240" cy="268" r="4" fill="#fff" stroke="#333"/>
-<text x="232" y="271" font-size="10" text-anchor="end">SW</text>
-<rect x="120" y="380" width="120" height="62" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="180" y="396" font-size="12" font-weight="bold" text-anchor="middle">KNAPP RADIO</text>
-<circle cx="240" cy="412" r="4" fill="#fff" stroke="#333"/>
-<text x="232" y="415" font-size="10" text-anchor="end">NO</text>
-<circle cx="240" cy="434" r="4" fill="#fff" stroke="#333"/>
-<text x="232" y="437" font-size="10" text-anchor="end">C</text>
-<rect x="120" y="462" width="120" height="62" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="180" y="478" font-size="12" font-weight="bold" text-anchor="middle">KNAPP AIR / BT</text>
-<circle cx="240" cy="494" r="4" fill="#fff" stroke="#333"/>
-<text x="232" y="497" font-size="10" text-anchor="end">NO</text>
-<rect x="120" y="544" width="120" height="62" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="180" y="560" font-size="12" font-weight="bold" text-anchor="middle">KNAPP ◀◀</text>
-<circle cx="240" cy="576" r="4" fill="#fff" stroke="#333"/>
-<text x="232" y="579" font-size="10" text-anchor="end">NO</text>
-<rect x="120" y="626" width="120" height="62" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="180" y="642" font-size="12" font-weight="bold" text-anchor="middle">KNAPP ▶▶</text>
-<circle cx="240" cy="658" r="4" fill="#fff" stroke="#333"/>
-<text x="232" y="661" font-size="10" text-anchor="end">NO</text>
-<rect x="860" y="92" width="110" height="66" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="915" y="108" font-size="12" font-weight="bold" text-anchor="middle">Q1</text>
-<circle cx="860" cy="124" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="127" font-size="10" text-anchor="start">S (source)</text>
-<circle cx="860" cy="146" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="149" font-size="10" text-anchor="start">G (gate)</text>
-<rect x="860" y="190" width="130" height="172" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="925" y="206" font-size="12" font-weight="bold" text-anchor="middle">TFT</text>
-<circle cx="860" cy="222" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="225" font-size="10" text-anchor="start">VCC</text>
-<circle cx="860" cy="244" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="247" font-size="10" text-anchor="start">GND</text>
-<circle cx="860" cy="266" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="269" font-size="10" text-anchor="start">SCK</text>
-<circle cx="860" cy="288" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="291" font-size="10" text-anchor="start">SDA</text>
-<circle cx="860" cy="310" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="313" font-size="10" text-anchor="start">CS</text>
+<rect x="120" y="96" width="130" height="106" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="185" y="112" font-size="12" font-weight="bold" text-anchor="middle">OLED</text>
+<circle cx="250" cy="128" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="131" font-size="10" text-anchor="end">VCC</text>
+<circle cx="250" cy="150" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="153" font-size="10" text-anchor="end">GND</text>
+<circle cx="250" cy="172" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="175" font-size="10" text-anchor="end">SDA</text>
+<circle cx="250" cy="194" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="197" font-size="10" text-anchor="end">SCL</text>
+<rect x="120" y="236" width="130" height="150" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="185" y="252" font-size="12" font-weight="bold" text-anchor="middle">ADS1115</text>
+<circle cx="250" cy="268" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="271" font-size="10" text-anchor="end">VDD</text>
+<circle cx="250" cy="290" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="293" font-size="10" text-anchor="end">GND</text>
+<circle cx="250" cy="312" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="315" font-size="10" text-anchor="end">SDA</text>
+<circle cx="250" cy="334" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="337" font-size="10" text-anchor="end">SCL</text>
+<circle cx="250" cy="356" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="359" font-size="10" text-anchor="end">A0</text>
+<circle cx="250" cy="378" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="381" font-size="10" text-anchor="end">ADDR→GND</text>
+<rect x="120" y="420" width="130" height="84" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="185" y="436" font-size="12" font-weight="bold" text-anchor="middle">POT</text>
+<circle cx="250" cy="452" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="455" font-size="10" text-anchor="end">pinne 1</text>
+<circle cx="250" cy="474" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="477" font-size="10" text-anchor="end">pinne 2</text>
+<circle cx="250" cy="496" r="4" fill="#fff" stroke="#333"/>
+<text x="242" y="499" font-size="10" text-anchor="end">pinne 3</text>
+<rect x="860" y="300" width="130" height="58" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="925" y="316" font-size="12" font-weight="bold" text-anchor="middle">KNAPP RADIO</text>
 <circle cx="860" cy="332" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="335" font-size="10" text-anchor="start">A0</text>
+<text x="868" y="335" font-size="10" text-anchor="start">NO</text>
 <circle cx="860" cy="354" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="357" font-size="10" text-anchor="start">RESET</text>
-<circle cx="860" cy="376" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="379" font-size="10" text-anchor="start">LED ← Q1 D</text>
-<rect x="860" y="420" width="130" height="58" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="925" y="436" font-size="12" font-weight="bold" text-anchor="middle">LED RADIO</text>
-<circle cx="860" cy="452" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="455" font-size="10" text-anchor="start">LED+</text>
-<circle cx="860" cy="474" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="477" font-size="10" text-anchor="start">LED−</text>
-<rect x="860" y="492" width="130" height="40" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="925" y="508" font-size="12" font-weight="bold" text-anchor="middle">LED AIR / BT</text>
-<circle cx="860" cy="524" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="527" font-size="10" text-anchor="start">LED+</text>
-<rect x="860" y="564" width="130" height="40" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="925" y="580" font-size="12" font-weight="bold" text-anchor="middle">LED ◀◀</text>
-<circle cx="860" cy="596" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="599" font-size="10" text-anchor="start">LED+</text>
-<rect x="860" y="636" width="130" height="40" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
-<text x="925" y="652" font-size="12" font-weight="bold" text-anchor="middle">LED ▶▶</text>
-<circle cx="860" cy="668" r="4" fill="#fff" stroke="#333"/>
-<text x="868" y="671" font-size="10" text-anchor="start">LED+</text>
-<path d="M970,125 H1010 V376 H990" fill="none" stroke="#e8742a" stroke-width="3"/>
-<text x="1014" y="140" font-size="10">D → LED</text>
-<text x="1014" y="153" font-size="10">(bro 15 mm)</text>
-<text x="1000" y="104" font-size="10" text-anchor="middle">AO3401</text>
-<text x="1000" y="115" font-size="9" text-anchor="middle" fill="#555">10k S–G</text>
-<path d="M470,110 H484 V644 H800 V124 H860" fill="none" stroke="#c8342b" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="120" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W01 · 100 mm</text>
-<path d="M470,214 H420 V202 H240" fill="none" stroke="#1b1b1c" stroke-width="3" stroke-linejoin="round"/>
-<text x="416" y="198" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W02 · 80 mm</text>
-<path d="M470,240 H409 V224 H240" fill="none" stroke="#2f6fd0" stroke-width="3" stroke-linejoin="round"/>
-<text x="405" y="220" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W03 · 80 mm</text>
-<path d="M470,266 H398 V246 H240" fill="none" stroke="#2f6fd0" stroke-width="3" stroke-linejoin="round"/>
-<text x="394" y="242" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W04 · 80 mm</text>
-<path d="M470,292 H387 V268 H240" fill="none" stroke="#2f6fd0" stroke-width="3" stroke-linejoin="round"/>
-<text x="383" y="264" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W05 · 80 mm</text>
-<path d="M540,292 H620 V146 H860" fill="none" stroke="#e8742a" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="142" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W06 · 100 mm</text>
-<rect x="809" y="142" width="22" height="9" fill="#fff" stroke="#000"/>
-<text x="846" y="154" font-size="8" text-anchor="middle">1kΩ</text>
-<path d="M470,318 H493 V654 H788 V222 H860" fill="none" stroke="#c8342b" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="218" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W07 · 90 mm</text>
-<path d="M540,318 H633 V354 H860" fill="none" stroke="#e3b23c" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="350" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W08 · 90 mm</text>
-<path d="M470,344 H502 V664 H776 V288 H860" fill="none" stroke="#e3b23c" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="284" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W09 · 90 mm</text>
-<path d="M540,344 H646 V244 H860" fill="none" stroke="#1b1b1c" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="240" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W10 · 90 mm</text>
-<path d="M540,370 H659 V332 H860" fill="none" stroke="#e3b23c" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="328" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W11 · 90 mm</text>
-<path d="M470,396 H511 V674 H764 V266 H860" fill="none" stroke="#e3b23c" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="262" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W12 · 90 mm</text>
-<path d="M540,396 H672 V310 H860" fill="none" stroke="#e3b23c" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="306" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W13 · 90 mm</text>
-<path d="M470,474 H376 V412 H240" fill="none" stroke="#3a9a4c" stroke-width="3" stroke-linejoin="round"/>
-<text x="372" y="408" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W14 · 100 mm</text>
-<path d="M470,500 H365 V494 H240" fill="none" stroke="#3a9a4c" stroke-width="3" stroke-linejoin="round"/>
-<text x="361" y="490" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W15 · 80 mm</text>
-<path d="M540,500 H685 V452 H860" fill="none" stroke="#e8742a" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="448" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W16 · 90 mm</text>
-<rect x="809" y="448" width="22" height="9" fill="#fff" stroke="#000"/>
-<text x="846" y="460" font-size="8" text-anchor="middle">270Ω</text>
-<path d="M470,526 H354 V576 H240" fill="none" stroke="#3a9a4c" stroke-width="3" stroke-linejoin="round"/>
-<text x="350" y="572" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W17 · 80 mm</text>
-<path d="M540,526 H698 V474 H860" fill="none" stroke="#1b1b1c" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="470" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W18 · 90 mm</text>
-<path d="M540,552 H711 V524 H860" fill="none" stroke="#e8742a" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="520" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W19 · 70 mm</text>
-<rect x="809" y="520" width="22" height="9" fill="#fff" stroke="#000"/>
-<text x="846" y="532" font-size="8" text-anchor="middle">270Ω</text>
-<path d="M470,578 H343 V658 H240" fill="none" stroke="#3a9a4c" stroke-width="3" stroke-linejoin="round"/>
-<text x="339" y="654" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W20 · 110 mm</text>
-<path d="M540,578 H724 V596 H860" fill="none" stroke="#e8742a" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="592" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W21 · 90 mm</text>
-<rect x="809" y="592" width="22" height="9" fill="#fff" stroke="#000"/>
-<text x="846" y="604" font-size="8" text-anchor="middle">270Ω</text>
-<path d="M470,604 H332 V434 H240" fill="none" stroke="#1b1b1c" stroke-width="3" stroke-linejoin="round"/>
-<text x="328" y="430" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W22 · 80 mm</text>
-<path d="M540,604 H737 V668 H860" fill="none" stroke="#e8742a" stroke-width="3" stroke-linejoin="round"/>
-<text x="854" y="664" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W23 · 110 mm</text>
-<rect x="809" y="664" width="22" height="9" fill="#fff" stroke="#000"/>
-<text x="846" y="676" font-size="8" text-anchor="middle">270Ω</text>
+<text x="868" y="357" font-size="10" text-anchor="start">C</text>
+<rect x="860" y="362" width="130" height="40" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="925" y="378" font-size="12" font-weight="bold" text-anchor="middle">KNAPP AIR / BT</text>
+<circle cx="860" cy="394" r="4" fill="#fff" stroke="#333"/>
+<text x="868" y="397" font-size="10" text-anchor="start">NO</text>
+<rect x="860" y="424" width="130" height="40" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="925" y="440" font-size="12" font-weight="bold" text-anchor="middle">KNAPP ◀◀</text>
+<circle cx="860" cy="456" r="4" fill="#fff" stroke="#333"/>
+<text x="868" y="459" font-size="10" text-anchor="start">NO</text>
+<rect x="860" y="486" width="130" height="40" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="925" y="502" font-size="12" font-weight="bold" text-anchor="middle">KNAPP ▶▶</text>
+<circle cx="860" cy="518" r="4" fill="#fff" stroke="#333"/>
+<text x="868" y="521" font-size="10" text-anchor="start">NO</text>
+<rect x="860" y="560" width="130" height="58" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="925" y="576" font-size="12" font-weight="bold" text-anchor="middle">LED RADIO</text>
+<circle cx="860" cy="592" r="4" fill="#fff" stroke="#333"/>
+<text x="868" y="595" font-size="10" text-anchor="start">LED+</text>
+<circle cx="860" cy="614" r="4" fill="#fff" stroke="#333"/>
+<text x="868" y="617" font-size="10" text-anchor="start">LED−</text>
+<rect x="860" y="632" width="130" height="40" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="925" y="648" font-size="12" font-weight="bold" text-anchor="middle">LED AIR / BT</text>
+<circle cx="860" cy="664" r="4" fill="#fff" stroke="#333"/>
+<text x="868" y="667" font-size="10" text-anchor="start">LED+</text>
+<rect x="860" y="686" width="130" height="40" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="925" y="702" font-size="12" font-weight="bold" text-anchor="middle">LED ◀◀</text>
+<circle cx="860" cy="718" r="4" fill="#fff" stroke="#333"/>
+<text x="868" y="721" font-size="10" text-anchor="start">LED+</text>
+<rect x="860" y="740" width="130" height="40" rx="6" fill="#f4f1ea" stroke="#333" stroke-width="1.2"/>
+<text x="925" y="756" font-size="12" font-weight="bold" text-anchor="middle">LED ▶▶</text>
+<circle cx="860" cy="772" r="4" fill="#fff" stroke="#333"/>
+<text x="868" y="775" font-size="10" text-anchor="start">LED+</text>
+<text x="185" y="410" font-size="9" fill="#555" text-anchor="middle">B10K: med klokka = høyere</text>
+<path d="M470,110 H420 V128 H250" fill="none" stroke="#c8342b" stroke-width="3" stroke-linejoin="round"/>
+<text x="416" y="124" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W01 · 110 mm</text>
+<path d="M470,136 H409 V172 H250" fill="none" stroke="#e3b23c" stroke-width="3" stroke-linejoin="round"/>
+<text x="405" y="168" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W02 · 110 mm</text>
+<path d="M470,162 H398 V194 H250" fill="none" stroke="#e3b23c" stroke-width="3" stroke-linejoin="round"/>
+<text x="394" y="190" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W03 · 110 mm</text>
+<path d="M470,214 H387 V150 H250" fill="none" stroke="#1b1b1c" stroke-width="3" stroke-linejoin="round"/>
+<text x="383" y="146" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W04 · 100 mm</text>
+<path d="M540,292 H620 V332 H860" fill="none" stroke="#3a9a4c" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="328" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W05 · 110 mm</text>
+<path d="M470,318 H376 V268 H250" fill="none" stroke="#c8342b" stroke-width="3" stroke-linejoin="round"/>
+<text x="372" y="264" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W06 · 100 mm</text>
+<path d="M540,318 H633 V394 H860" fill="none" stroke="#3a9a4c" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="390" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W07 · 90 mm</text>
+<path d="M540,370 H646 V456 H860" fill="none" stroke="#3a9a4c" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="452" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W08 · 70 mm</text>
+<path d="M470,422 H365 V290 H250" fill="none" stroke="#1b1b1c" stroke-width="3" stroke-linejoin="round"/>
+<text x="361" y="286" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W09 · 100 mm</text>
+<path d="M540,422 H659 V518 H860" fill="none" stroke="#3a9a4c" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="514" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W10 · 90 mm</text>
+<path d="M540,474 H672 V354 H860" fill="none" stroke="#1b1b1c" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="350" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W11 · 100 mm</text>
+<path d="M540,500 H685 V592 H860" fill="none" stroke="#e8742a" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="588" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W12 · 90 mm</text>
+<rect x="809" y="588" width="22" height="9" fill="#fff" stroke="#000"/>
+<text x="846" y="600" font-size="8" text-anchor="middle">330Ω</text>
+<path d="M540,526 H698 V614 H860" fill="none" stroke="#1b1b1c" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="610" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W13 · 90 mm</text>
+<path d="M540,552 H711 V664 H860" fill="none" stroke="#e8742a" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="660" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W14 · 70 mm</text>
+<rect x="809" y="660" width="22" height="9" fill="#fff" stroke="#000"/>
+<text x="846" y="672" font-size="8" text-anchor="middle">330Ω</text>
+<path d="M540,578 H724 V718 H860" fill="none" stroke="#e8742a" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="714" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W15 · 90 mm</text>
+<rect x="809" y="714" width="22" height="9" fill="#fff" stroke="#000"/>
+<text x="846" y="726" font-size="8" text-anchor="middle">330Ω</text>
+<path d="M540,604 H737 V772 H860" fill="none" stroke="#e8742a" stroke-width="3" stroke-linejoin="round"/>
+<text x="854" y="768" font-size="9" font-weight="bold" text-anchor="end" fill="#000">W16 · 110 mm</text>
+<rect x="809" y="768" width="22" height="9" fill="#fff" stroke="#000"/>
+<text x="846" y="780" font-size="8" text-anchor="middle">330Ω</text>
+<path d="M250,172 H270 V312 H250" fill="none" stroke="#e3b23c" stroke-width="3" stroke-linejoin="round" stroke-dasharray="7 3"/>
+<text x="258" y="324" font-size="9" font-weight="bold" fill="#000" stroke="#fff" stroke-width="3" paint-order="stroke">W17 · 50 mm</text>
+<path d="M250,194 H282 V334 H250" fill="none" stroke="#e3b23c" stroke-width="3" stroke-linejoin="round" stroke-dasharray="7 3"/>
+<text x="258" y="346" font-size="9" font-weight="bold" fill="#000" stroke="#fff" stroke-width="3" paint-order="stroke">W18 · 50 mm</text>
+<path d="M250,290 H294 V452 H250" fill="none" stroke="#1b1b1c" stroke-width="3" stroke-linejoin="round" stroke-dasharray="7 3"/>
+<text x="258" y="464" font-size="9" font-weight="bold" fill="#000" stroke="#fff" stroke-width="3" paint-order="stroke">W19 · 40 mm</text>
+<path d="M250,356 H306 V474 H250" fill="none" stroke="#2f6fd0" stroke-width="3" stroke-linejoin="round" stroke-dasharray="7 3"/>
+<text x="258" y="486" font-size="9" font-weight="bold" fill="#000" stroke="#fff" stroke-width="3" paint-order="stroke">W20 · 40 mm</text>
+<path d="M250,268 H318 V496 H250" fill="none" stroke="#c8342b" stroke-width="3" stroke-linejoin="round" stroke-dasharray="7 3"/>
+<text x="258" y="508" font-size="9" font-weight="bold" fill="#000" stroke="#fff" stroke-width="3" paint-order="stroke">W21 · 40 mm</text>
 <text x="450" y="113" font-size="10" text-anchor="end" fill="#333" stroke="#fff" stroke-width="3" paint-order="stroke">3V3</text>
 <text x="560" y="113" font-size="10" fill="#333" stroke="#fff" stroke-width="3" paint-order="stroke">5V</text>
 <text x="450" y="139" font-size="10" text-anchor="end" fill="#333" stroke="#fff" stroke-width="3" paint-order="stroke">GPIO2</text>
@@ -260,13 +248,13 @@
 <line x1="174" y1="800" x2="204" y2="800" stroke="#1b1b1c" stroke-width="4"/>
 <text x="210" y="804" font-size="11">GND</text>
 <line x1="324" y1="800" x2="354" y2="800" stroke="#e3b23c" stroke-width="4"/>
-<text x="360" y="804" font-size="11">SPI / skjerm</text>
+<text x="360" y="804" font-size="11">I²C (SDA/SCL)</text>
 <line x1="474" y1="800" x2="504" y2="800" stroke="#2f6fd0" stroke-width="4"/>
-<text x="510" y="804" font-size="11">encoder</text>
+<text x="510" y="804" font-size="11">potmeter → A0</text>
 <line x1="624" y1="800" x2="654" y2="800" stroke="#3a9a4c" stroke-width="4"/>
 <text x="660" y="804" font-size="11">knapper</text>
 <line x1="774" y1="800" x2="804" y2="800" stroke="#e8742a" stroke-width="4"/>
-<text x="810" y="804" font-size="11">LED / bakgrunnslys</text>
-<text x="24" y="830" font-size="11" fill="#333">Knapper og LED-ringer: C/LED− lenkes med 20 mm broer mellom knappene; én GND-ledning fra RADIO. LED-ringer er valgfrie (3–6 V-variant, 270 Ω i serie). Encoder: SW pinne 2 broes til C.</text>
-<text x="24" y="848" font-size="11" fill="#333">Lengder = 3D-avstand Pi→lokk + 60 mm slakk for å vippe lokket. Ingen ledninger på GPIO2/3 (I²C), 14/15 (UART), 18/19 (reservert I²S).</text>
+<text x="810" y="804" font-size="11">LED-ringer</text>
+<text x="24" y="830" font-size="11" fill="#333">Stiplet = loddet lokk–lokk (OLED → ADS1115 → potmeter). Knapper: C lenkes med 20 mm broer, én GND fra RADIO. LED-ringer: 330 Ω i serie, LED− lenkes. SPI er AV (GPIO7 = knapp ▶▶).</text>
+<text x="24" y="848" font-size="11" fill="#333">Lengder = 3D-avstand Pi→lokk + 60 mm slakk for å vippe lokket. Ingen ledninger på GPIO14/15 (UART) eller 18/19 (I²S). GPIO20/21 (LED ◀◀/▶▶) kolliderer med I²S-kort.</text>
 </svg>

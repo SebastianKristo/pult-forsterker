@@ -1,14 +1,16 @@
 # Skjold OS
 
-Skjerm-UI-et på Skjold Node (1,8″ ST7735S, 160 × 128, liggende). Gjenskapt fra
+Skjerm-UI-et på Skjold Node. Standard (rev C): 0,91″ SSD1306 OLED 128 × 32 på I²C (`--layout node-oled32`,
+`layouts/node_oled32.py`, fra `skjold/design/node/Skjold Node kasse OLED.html`). Den gamle 1,8″ ST7735S, 160 × 128
+(`--layout node`) beholdes. Gjenskapt fra
 `skjold/design/node/Skjold Node OS.dc.html`, `node_fx.js`, `felles/skjold_welcome.js` og
 klokkestilene i `felles/skjold_settings.js`.
 
 ## Ansvarsdeling
 | Hvem | Eier |
 |---|---|
-| `pi/ki_amp_daemon.py` (`KI_AMP_BOARD=node`) | knapper, encoder, LED-ringer (GPIO 5,6,12,13,16,17,20,21,22,26,27), lyd, API på 127.0.0.1:8765 |
-| Skjold OS (`skjold-os.service`) | SPI-skjermen (CE0, DC=GPIO25, RST=GPIO24) og bakgrunnslyset GPIO23 (aktiv lav via Q1) |
+| `pi/ki_amp_daemon.py` (`KI_AMP_BOARD=node`) | knapper (GPIO 23,24,25,7), LED-ringer (12,16,20,21), potmeter via ADS1115 (I²C 0x48), lyd, API på 127.0.0.1:8765 |
+| Skjold OS (`skjold-os.service`) | OLED-en (I²C 1, 0x3C; lysstyrke = kontrast). Rev A/B: SPI-skjermen og bakgrunnslyset GPIO23 |
 
 Skjold OS rører ingen knappe-/LED-pinner. Den poller `GET /api/status` (8 Hz) og `GET /api/settings` (~hvert 3. s),
 og `GET /api/cover` når `status.cover` endres.
@@ -51,7 +53,7 @@ python3 -m skjold_os                       # maskinvare (systemd gjør dette)
 python3 -m skjold_os --sim /tmp/ui         # mot daemonen, rammer → /tmp/ui/latest.png (--every N for sekvens)
 python3 -m skjold_os --sim /tmp/ui --demo  # uten daemon: sykler gjennom alle tilstandene
 python3 -m skjold_os --shots /tmp/shots    # nøkkelskjermene som PNG (+ @4x), pluss live hvis daemonen svarer
-  --api http://127.0.0.1:8799  --layout node|s1-oled|s1-tft  --no-boot
+  --api http://127.0.0.1:8799  --layout node-oled32|node|s1-oled|s1-tft  --no-boot   (standard: node-oled32)
 ```
 Pinner leses fra `$SKJOLD_PINS`, `/etc/skjold/node_pins.json` eller repoets `skjold/node/config/node_pins.json`.
 
