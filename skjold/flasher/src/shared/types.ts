@@ -4,6 +4,16 @@ export interface DriveInfo {
   path: string;          // vist tekst: enhet · buss
   size: number;
   mountpoints: string[];
+  media: MediaKind;      // SD-kort (kortleser) eller USB-pinne/SSD
+  readOnly: boolean;     // skrivebeskyttet (låsebryter på SD-kort/USB-pinne)
+}
+
+export type MediaKind = 'sd' | 'usb';
+
+export interface StaticIp {
+  ip: string;            // 192.168.1.50/24 (prefiks valgfritt, standard /24)
+  gw: string;            // ruter, valgfri
+  dns: string;           // én eller flere adresser skilt med komma/mellomrom, valgfri
 }
 
 export interface ReleaseImage {
@@ -29,7 +39,10 @@ export interface SetupOptions {
   user: string;
   userPassword: string;  // klartekst – hashes med sha512crypt før det skrives
   sshKey: string;        // valgfri offentlig nøkkel (authorized_keys)
-  lyrionServer?: boolean; // installer Lyrion Music Server på enheten (ellers brukes en eksisterende server)
+  lyrionServer?: boolean;
+  net?: 'wifi' | 'eth';  // nettverk ved forhåndsinnstilling (standard wifi)
+  staticIp?: StaticIp | null; // bare for eth; null = DHCP
+  media?: MediaKind;     // det som skrives til (påvirker bare tekst) // installer Lyrion Music Server på enheten (ellers brukes en eksisterende server)
 }
 
 export type ImageChoice = { kind: 'latest'; release: ReleaseImage } | { kind: 'local'; path: string };

@@ -33,7 +33,7 @@ function createWindow(): void {
   win.webContents.on('will-navigate', e => e.preventDefault());
   win.on('close', e => {
     if (busy && dialog.showMessageBoxSync(win!, { type: 'warning', buttons: ['Avbryt', 'Lukk likevel'], defaultId: 0,
-      message: 'Kortet skrives nå. Lukker du, blir kortet ubrukelig til det skrives på nytt.' }) === 0) e.preventDefault();
+      message: 'Disken skrives nå. Lukker du, blir den ubrukelig til den skrives på nytt.' }) === 0) e.preventDefault();
   });
   if (process.argv.includes('--dev')) win.webContents.openDevTools({ mode: 'detach' });
 }
@@ -43,6 +43,10 @@ const send = (p: FlashProgress) => win?.webContents.send('flash:progress', p);
 async function flash(req: FlashRequest): Promise<FlashResult> {
   const err = validate(req.setup);
   if (err) return { ok: false, error: err };
+  const target = (await listDrives().catch(() => [])).find(d => d.device === req.drive);
+  if (target?.readOnly) return { ok: false, error: target.media === 'sd'
+    ? 'Kortet er skrivebeskyttet. Låsen på siden av kortet står på «Lock». Ta ut kortet, skyv låsen opp og sett det inn igjen.'
+    : 'Disken er skrivebeskyttet. Slå av bryteren for skrivebeskyttelse på pinnen, eller velg en annen disk.' };
   const work = path.join(app.getPath('userData'), 'work');
   const cache = path.join(app.getPath('userData'), 'cache');
   let prepared: string | null = null;

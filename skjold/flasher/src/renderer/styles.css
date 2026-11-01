@@ -78,3 +78,18 @@ ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 
 .btn.primary { border: none; background: var(--accent); color: var(--ink); font-weight: 600; }
 .btn.primary:disabled { background: var(--off); cursor: default; }
 .btn[hidden] { display: none; }
+.seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 10px; background: var(--field); border: 1px solid #242426; max-width: 360px; }
+.seg button { height: 36px; border-radius: 8px; border: none; background: transparent; color: var(--mute2); font-size: 13px; font-weight: 600; cursor: pointer; }
+.seg button.on { background: var(--line2); color: var(--fg); }
+.infobox { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 10px; background: var(--field); border: 1px solid #242426; font-size: 12px; color: var(--fg2); line-height: 1.5; text-wrap: pretty; }
+.infobox .h { font-size: 13px; color: var(--fg); } .infobox .m { color: var(--mute2); }
+.drive .t { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.drive.wp { opacity: .75; cursor: not-allowed; }
+.badge { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 999px; border: 1px solid #5a2620; background: #2a1412; color: #ff9a8a; font-size: 11px; white-space: nowrap; }
+.wphint { font-size: 12px; color: #ff9a8a; text-wrap: pretty; }
+.nets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 520px; }
+.card.net { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: center; }
+.toggle-row small { font-size: 12px; color: var(--mute2); }
+.grid.ipf { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.ipf .inp { font-family: var(--mono); font-size: 13px; }
+.inp.bad, .inp.bad:focus { border-color: #e05a4a; }

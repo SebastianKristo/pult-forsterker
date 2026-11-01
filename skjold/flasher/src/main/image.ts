@@ -4,7 +4,7 @@ import { promisify } from 'util';
 import type * as Fs from 'fs';
 import { sourceDestination, multiWrite } from 'etcher-sdk';
 import { interact } from 'balena-image-fs';
-import { buildBootFiles, patchCmdline, type InitMode } from '../shared/bootconfig';
+import { buildBootFiles, patchCmdline, patchConfigTxt, type InitMode } from '../shared/bootconfig';
 import type { SetupOptions } from '../shared/types';
 
 /**
@@ -48,6 +48,12 @@ export async function prepareBoot(imagePath: string, o: SetupOptions): Promise<I
       throw new Error('Fant ikke boot-partisjonen (config.txt) i bildet. Er dette et Raspberry Pi-bilde?');
     const mode: InitMode = has('skjold-image') ? 'skjold' : has('user-data') || has('meta-data') ? 'cloudinit' : 'systemd';
     for (const f of buildBootFiles(o, mode)) await writeFile('/' + f.name, f.content);
+    const cfgName = entries.find(e => e.toLowerCase() === 'config.txt');
+    if (cfgName) {
+      const cfg = (await readFile('/' + cfgName)).toString('utf8');
+      const patched = patchConfigTxt(cfg, o);
+      if (patched !== cfg) await writeFile('/' + cfgName, patched);
+    }
     if (mode === 'systemd') {
       const name = entries.find(e => e.toLowerCase() === 'cmdline.txt');
       if (!name) throw new Error('Fant ikke cmdline.txt i bildet.');
