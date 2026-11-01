@@ -37,7 +37,7 @@ class Ui:
         self.pos = (0.0, t); self.offline_since = None
         self._cover_key = None; self._cover_img = None
         self.last_frame = None; self.stopping = False
-        self.settings_t0 = 0.0; self._ev_t = None
+        self.settings_t0 = 0.0; self._ev_t = None; self.title_t0 = t
 
     # ---------- hendelser fra status ----------
     def _ingest(self, st, now):
@@ -71,6 +71,8 @@ class Ui:
             self.settings_t0 = 0.0
         elif self.settings_t0 and self.prev is not None and (st.get("input") != p.get("input") or st.get("bt_pairing")):
             self.settings_t0 = 0.0
+        if st.get("title") != p.get("title") or st.get("station") != p.get("station") or st.get("input") != p.get("input"):
+            self.title_t0 = now   # rulletekst starter fra begynnelsen
         if st.get("position") != p.get("position") or st.get("title") != p.get("title"):
             self.pos = (float(st.get("position") or 0), now)
         self.prev = st
@@ -153,7 +155,7 @@ class Ui:
         vm.update(screen="play", **self._nowplaying(st, now, cover)); return vm
 
     def _settings_rows(self, st, se):
-        """Skrivebeskyttet innstillingsoversikt (encoder holdt 3 s). Navigering kommer når daemonen sender den."""
+        """Skrivebeskyttet innstillingsoversikt (Node: ◀◀ holdt 3 s; eldre: encoder). Navigering kommer når daemonen sender den."""
         opt = lambda k, o: o[se.get(k)] if isinstance(se.get(k), int) and 0 <= se.get(k) < len(o) else "–"
         return [{"n": "Maks volum", "icon": "♪", "v": opt("vmax", ["100 %", "90 %", "80 %"])},
                 {"n": "Talebeskjed", "icon": "♪", "v": "På" if se.get("voice", st.get("voice")) else "Av"},
@@ -176,7 +178,8 @@ class Ui:
 
     def _nowplaying(self, st, now, cover):
         i = st.get("input") or "radio"; s = sources.src(i); title = st.get("title") or ""; artist = st.get("artist") or ""
-        out = {"paused": bool(st.get("paused")), "cover": self._cover(cover), "duration": float(st.get("duration") or 0)}
+        out = {"paused": bool(st.get("paused")), "cover": self._cover(cover), "duration": float(st.get("duration") or 0),
+               "scroll_t0": self.title_t0}
         pos, t0 = self.pos
         out["position"] = min(out["duration"], pos + (now - t0 if st.get("playing") and not st.get("paused") else 0))
         if i == "radio":
@@ -235,7 +238,7 @@ class Ui:
             t = time.time(); vm = self.step(); n += 1
             if max_frames and n >= max_frames: break
             fast = vm["screen"] in ("boot", "reboot", "switch", "welcome", "pair", "offline", "menu", "hold") or vm.get("vol_overlay") \
-                or (vm["screen"] == "play" and vm.get("duration"))
+                or (vm["screen"] == "play" and vm.get("duration")) or vm.get("anim")
             time.sleep(max(0.0, 1.0 / (fps_anim if fast else fps_idle) - (time.time() - t)))
         self.shutdown()
 

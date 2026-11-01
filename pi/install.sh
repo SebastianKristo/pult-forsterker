@@ -7,8 +7,8 @@ SRC="$(cd "$(dirname "$0")" && pwd)"
 # KI_AMP_OUT=headphones : TEST uten hovedkort – lyd ut på Pi 4 sin 3,5 mm-kontakt (bcm2835 Headphones, 16 bit)
 # KI_AMP_BOARD=main     : hovedkort rev B (PCM5102A + PCM1808 på I2S, lydkortet heter «pultamp», TFT/touch mulig)
 # KI_AMP_DISPLAY=tft    : 2,8" SPI TFT (KI_AMP_TFT=ili9341|st7789v) med touch i stedet for OLED
-# KI_AMP_BOARD=node     : Skjold Node (Pi 4/3B, lyd på 3,5 mm, ST7735 eies av skjermprosessen). Gir alltid KI_AMP_OUT=headphones.
-#                         Ingen OLED, USB-gadget eller AUX; vertsnavnet beholdes; config.txt-blokken legges inn av
+# KI_AMP_BOARD=node     : Skjold Node (Pi 4/3B, lyd på 3,5 mm, OLED 128×32 på I²C eies av Skjold OS, potmeter via ADS1115). Gir alltid KI_AMP_OUT=headphones.
+#                         Ingen S1-skjermprogram, USB-gadget eller AUX; vertsnavnet beholdes; config.txt-blokken legges inn av
 #                         skjold/node/driver/installer_node.sh. KI_AMP_NAME=… = navn i AirPlay/Spotify/Bluetooth/Lyrion.
 # KI_AMP_CORE=1        : Skjold Core – ren Raspberry Pi uten kasse, knapper eller skjerm (som node, men uten GPIO)
 # KI_AMP_SPOTIFY=0      : uten Spotify Connect (librespot)
@@ -28,10 +28,15 @@ sudo timedatectl set-timezone Europe/Oslo 2>/dev/null || true
 echo "== 2/9  config.txt: I2S-DAC, I2C, USB-gadget (dwc2), serial console av"
 CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
 if [ "$BOARD_SEL" = node ]; then
-  # Node: dtparam=spi/audio/i2c + gpio=… kommer fra config/config.txt.node (installer_node.sh). Ingen dwc2/spi0-1cs her –
-  # skjermen bruker dtparam=spi=on, og GPIO 7–11/23–25 eies av skjermprosessen.
+  # Node (OLED-utgave): dtparam=i2c/spi/audio + gpio=… kommer fra skjold/node/config/config.txt.node (installer_node.sh).
+  # Ingen dwc2/spi0-1cs her – SPI skal være AV (GPIO7 = SPI0 CE1 er knappen ▶▶). OLED + ADS1115 ligger på I²C1 (GPIO2/3).
   sudo sed -i 's/^dtoverlay=hifiberry-dac/#dtoverlay=hifiberry-dac/' "$CFG"
+  sudo sed -i -E '/^dtparam=spi=on$/d; /^dtoverlay=spi0-1cs/d' "$CFG"
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
+  grep -qxF 'dtparam=i2c_arm=on' "$CFG" || echo 'dtparam=i2c_arm=on' | sudo tee -a "$CFG"
+  if [ "$CORE" != 1 ] && command -v raspi-config >/dev/null 2>&1; then sudo raspi-config nonint do_i2c 0 || true; fi
+  # daemonen (system-python) leser potmeteret via ADS1115 med smbus2
+  sudo apt-get -y install --no-install-recommends python3-smbus2 i2c-tools >/dev/null || true
   LINES='enable_uart=0'
 elif [ "$OUT" = headphones ]; then
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
@@ -221,6 +226,8 @@ if [ "$BOARD_SEL" = node ]; then
   sudo sed -i '/^KI_AMP_DISPLAY=/d' /etc/ki-amp.env && echo "KI_AMP_DISPLAY=none" | sudo tee -a /etc/ki-amp.env >/dev/null
   sudo sed -i '/^KI_AMP_NODE_GPIO=/d' /etc/ki-amp.env
   [ "$CORE" = 1 ] && echo "KI_AMP_NODE_GPIO=0" | sudo tee -a /etc/ki-amp.env >/dev/null   # Core: ingen knapper/LED
+  # Skjold OS på Node: SSD1306 128×32 (luma.oled + smbus2 i /opt/skjold/venv installeres av skjold/node/driver/installer_node.sh)
+  [ "$CORE" = 1 ] || printf '# Skrevet av pi/install.sh\nSKJOLD_OS_ARGS=--layout node-oled32\n' | sudo tee /etc/default/skjold-os >/dev/null
   sudo systemctl enable --now oled-display ki-amp   # oled-display = bare metadata (ingen skjerm)
 elif [ "$BOARD_SEL" = main ] && [ "$SKJOLD_OS" = 1 ] && [ -f "$OS_INST" ]; then
   # S1: Skjold OS tegner skjermen (OLED 128×64 eller TFT 320×240 via fbtft); oled_display.py blir bare metadata-tjeneste

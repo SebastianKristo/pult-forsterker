@@ -67,16 +67,18 @@ Spotify Connect: librespot (fra raspotify-pakken) som ki-spotify.service, ut på
   ◀◀/▶▶ virker ikke for Spotify (styres fra appen); pause/spill-pause og bytte bort fra Spotify starter tjenesten på nytt
   for å stoppe lyden. Volum fra Spotify-appen (volume_changed) settes som daemonvolum når Spotify er valgt.
 
-KI_AMP_BOARD=node (Skjold Node: Pi 4/3B, lyd på 3,5 mm, 1,8" ST7735 eies av skjermprosessen):
-  Pinner leses fra /etc/skjold/node_pins.json (ellers repoets skjold/node/config/node_pins.json, ellers innebygde standardverdier).
-  Knapper til GND: RADIO GPIO5, AIR·BT GPIO6, ◀◀ GPIO13, ▶▶ GPIO26. Encoder A17/B27/SW22. LED-ringer GPIO12/16/20/21 (programvare-PWM).
-  Daemonen rører aldri GPIO23 (bakgrunnslys) eller SPI/skjermpinnene 7/8/9/10/11/24/25. Ingen strømknapp.
+KI_AMP_BOARD=node (Skjold Node, OLED-utgave: Pi 4/3B, lyd på 3,5 mm, 0,91" SSD1306 128×32 på I²C eies av Skjold OS):
+  Pinner leses fra /etc/skjold/node_pins.json (schema 2; ellers repoets skjold/node/config/node_pins.json, ellers innebygde standardverdier).
+  Knapper til GND: RADIO GPIO23, AIR·BT GPIO24, ◀◀ GPIO25, ▶▶ GPIO7. LED-ringer GPIO12/16/20/21 (programvare-PWM).
+  Volum: 10 kΩ potmeter på ADS1115 A0 (I²C1 0x48), lest med smbus2 ~20 Hz. Volumet settes bare når knotten flyttes
+  (glatting + hysterese ±2), så volum fra app/AirPlay står til knotten vris igjen («soft takeover»). Mangler ADS1115,
+  fortsetter alt annet (nytt forsøk hvert 10. s). I²C deles med OLED-en (Skjold OS) – daemonen tar aldri bussen eksklusivt.
+  Daemonen rører aldri GPIO0/1 (HAT-EEPROM), 2/3 (I²C), 14/15 (UART) eller 18/19 (I²S). SPI er av (GPIO7 = knapp).
   RADIO: trykk = velg radio / neste favoritt (meny), hold 1 s = spill valgt favoritt.
   AIR·BT: trykk = bytt AirPlay ↔ Bluetooth, hold 2 s = BT-paring av/på.
-  ◀◀/▶▶: forrige/neste spor (neste/forrige favoritt i radio), hold begge 3 s = omstart.
-  Encoder: vri = volum, trykk = spill/pause, hold 3 s = innstillingsmenyen (status["settings_menu"], og ui_event for eldre
-  skjermprosesser). I menyen: vri = flytt, trykk = endre verdi (samme vei som POST /api/settings), hold 3 s / 20 s uten
-  aktivitet / «Lukk» = ut. Volumet rører seg ikke mens menyen er åpen.
+  ◀◀/▶▶: forrige/neste spor (neste/forrige favoritt i radio). ▶▶ hold 1 s = spill/pause.
+  ◀◀ hold 3 s = innstillingsmenyen (status["settings_menu"], og ui_event for eldre skjermprosesser): ◀◀/▶▶ = flytt,
+  RADIO = endre verdi, AIR·BT = lukk; 20 s uten aktivitet / «Lukk» / ◀◀ hold 3 s = ut. Hold ◀◀ + ▶▶ 3 s = omstart.
   Standardnavn «Skjold Node» (KI_AMP_NAME overstyrer).
 Felter i /api/status for skjermen (Skjold OS):
   rebooting: true          ~1,5 s før daemonen kjører systemctl reboot/poweroff (hold ◀◀+▶▶, hold POWER, POST /api/reboot)
@@ -86,14 +88,15 @@ Felter i /api/status for skjermen (Skjold OS):
   menu: radiomenyen {"open","idx"(1–6),"until"} | null
   bt_pairing_left: sekunder igjen av BT-paringen (0 når av)
   airplay_device: navnet på AirPlay-klienten (Shairport-metadata «snam» via oled_display.py), "" når ingen
-  input_seq: øker for hvert knappetrykk/-slipp og encoderhakk
+  input_seq: øker for hvert knappetrykk/-slipp, encoderhakk og potmeterflytt
   POST /api/reboot {"poweroff":bool}   omstart (eller slå av) etter 1,5 s med rebooting=true
   GET  /api/wifi                        {"networks":[{ssid,signal,security:"open|wpa2|wpa3",active}]} (nmcli; 503 uten NetworkManager)
   POST /api/wifi {"ssid","psk"?,"hidden"?}  koble til Wi-Fi med nmcli (appens oppsett, trinn 2)
   POST /api/test {"channel":"L"|"R"}   kort 440 Hz-tone i venstre/høyre høyttaler (oppsett trinn 3b / Innstillinger → Lyd)
   LED-ringer: RADIO = radio, AIR·BT = AirPlay/Bluetooth/Spotify (blinker under paring), ◀◀/▶▶ = noe spiller.
-  KI_AMP_NODE_GPIO=0 (Skjold Core, ren Raspberry Pi): ingen knapper, encoder eller LED-ringer – bare lyd og API.
-  KI_AMP_NODE_BUTTONS=0 lar skjermprosessen eie knappene/encoderen (daemonen styrer da bare LED-ringene).
+  KI_AMP_NODE_GPIO=0 (Skjold Core, ren Raspberry Pi): ingen knapper, potmeter eller LED-ringer – bare lyd og API.
+  KI_AMP_NODE_BUTTONS=0 lar skjermprosessen eie knappene (daemonen styrer da bare LED-ringene).
+  KI_AMP_NODE_POT=0 slår av potmeteret (ADS1115).
 """
 import asyncio
 import json
@@ -168,11 +171,13 @@ elif BOARD == "test":   # testbenk: Pi 4 alene, lyd på 3,5 mm, knapper/LED rett
     PIN_DAC_XSMT = None
     ENC = (17, 27, 22)
 elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
-    NODE_FORBIDDEN = {0, 1, 2, 3, 7, 8, 9, 10, 11, 14, 15, 23, 24, 25}   # HAT-EEPROM, I²C, SPI/skjerm, UART, bakgrunnslys
-    NODE_DEFAULT = {"btn": {"radio": 5, "airbt": 6, "prev": 13, "next": 26},
-                    "hold": {"radio": 1.0, "airbt": 2.0, "prev": 3.0, "next": 3.0},
-                    "led": {"radio": 12, "airbt": 16, "prev": 20, "next": 21}, "enc": (17, 27, 22),
-                    "enc_hold": 3.0, "led_hz": 200, "led_active_high": True, "bounce": 0.05}
+    NODE_FORBIDDEN = {0, 1, 2, 3, 14, 15, 18, 19}   # HAT-EEPROM, I²C (OLED + ADS1115), UART, I²S-klokker
+    NODE_DEFAULT = {"btn": {"radio": 23, "airbt": 24, "prev": 25, "next": 7},
+                    "hold": {"radio": 1.0, "airbt": 2.0, "prev": 3.0, "next": 1.0},
+                    "led": {"radio": 12, "airbt": 16, "prev": 20, "next": 21},
+                    "both_hold": 3.0, "led_hz": 200, "led_active_high": True, "bounce": 0.05,
+                    "adc": {"port": 1, "addr": 0x48, "ch": 0, "gain": 4.096},
+                    "pot": {"vref": 3.3, "hz": 20.0, "alpha": 0.35, "hyst": 2, "dead": 1.5, "invert": False}}
 
     def _node_pins():
         cfg = {k: (dict(v) if isinstance(v, dict) else v) for k, v in NODE_DEFAULT.items()}
@@ -186,32 +191,36 @@ elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
             try:
                 with open(path) as fh:
                     pj = json.load(fh)
+                if int(pj.get("schema", 1)) < 2:   # rev A/B (ST7735 + encoder): andre pinner – bruk standardverdiene
+                    print(f"Node-pinner: {path} er schema {pj.get('schema', 1)} (gammel TFT/encoder-Node) – hoppes over", flush=True)
+                    continue
                 for b in pj["knapper"]["liste"]:
                     cfg["btn"][b["id"]] = int(b["gpio"])
                     cfg["hold"][b["id"]] = float(b.get("hold_s", cfg["hold"].get(b["id"], 2.0)))
+                cfg["both_hold"] = float(pj["knapper"].get("hold_begge_s", cfg["both_hold"]))
+                cfg["bounce"] = max(0.005, float(pj["knapper"].get("bounce_ms", 50)) / 1000)
                 for l in pj.get("leds", {}).get("liste", []):
                     cfg["led"][l["for"]] = int(l["gpio"])
                 cfg["led_hz"] = int(pj.get("leds", {}).get("pwm_hz", 200))
                 cfg["led_active_high"] = bool(pj.get("leds", {}).get("aktiv_hoy", True))
-                e = pj["encoder"]
-                cfg["enc"] = (int(e["A"]["gpio"]), int(e["B"]["gpio"]), int(e["SW"]["gpio"]))
-                cfg["enc_hold"] = float(e.get("hold_innstillinger_s", 3.0))
+                a, po = pj.get("adc") or {}, pj.get("potmeter") or {}
+                cfg["adc"].update(port=int(a.get("i2c_port", 1)), addr=int(str(a.get("adresse", "0x48")), 16),
+                                  ch=int(po.get("adc_kanal", a.get("kanal", 0))), gain=float(a.get("gain_v", 4.096)))
+                cfg["pot"].update(vref=float(po.get("vref_v", 3.3)), hz=float(po.get("poll_hz", 20)), alpha=float(po.get("glatting", 0.35)),
+                                  hyst=float(po.get("hysterese", 2)), dead=float(po.get("dodsone_pct", 1.5)), invert=bool(po.get("inverter", False)))
                 print(f"Node-pinner fra {os.path.normpath(path)}", flush=True)
                 break
             except Exception as ex:
                 print(f"Node-pinner: kunne ikke lese {path}: {ex}", flush=True)
-        # aldri rør skjerm/SPI/bakgrunnslys eller andre reserverte pinner, og ingen dobbeltbruk
+        # aldri rør I²C/UART/HAT-EEPROM/I²S-pinner, og ingen dobbeltbruk
         used = set()
         for grp in ("btn", "led"):
             for k, p in list(cfg[grp].items()):
-                if p in NODE_FORBIDDEN or p in used or p in cfg["enc"]:
+                if p in NODE_FORBIDDEN or p in used:
                     print(f"Node-pinner: GPIO{p} ({grp}/{k}) er reservert eller i bruk – hoppes over", flush=True)
                     del cfg[grp][k]
                 else:
                     used.add(p)
-        if any(p in NODE_FORBIDDEN for p in cfg["enc"]):
-            print(f"Node-pinner: encoder {cfg['enc']} bruker reservert pinne – bruker standard", flush=True)
-            cfg["enc"] = NODE_DEFAULT["enc"]
         return cfg
 
     NODE = _node_pins()
@@ -219,8 +228,8 @@ elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
     LED = {}            # ringene er PWMLED (node_leds)
     LED_POWER = None    # ingen strømknapp/strømring på Node
     PIN_DAC_XSMT = None
-    ENC = tuple(NODE["enc"])
-    NODE_GPIO = os.environ.get("KI_AMP_NODE_GPIO", "1") == "1"   # 0 = Skjold Core: ren Pi uten knapper/encoder/LED-ringer
+    ENC = None          # ingen encoder på OLED-Noden – volum fra potmeteret (ADS1115)
+    NODE_GPIO = os.environ.get("KI_AMP_NODE_GPIO", "1") == "1"   # 0 = Skjold Core: ren Pi uten knapper/potmeter/LED-ringer
     NODE_BUTTONS = NODE_GPIO and os.environ.get("KI_AMP_NODE_BUTTONS", "1") == "1"
 else:
     BTN = {"airplay": 5, "bt": 6, "aux": 12, "usb": 13}
@@ -251,9 +260,9 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
          "overtemp": False,     # NTC på kjøleribben over ~75 °C (MCP GPA7) – TPA3116 dempes til den er under ~50 °C
          "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100, "spotify": 100},   # nivå per kilde (miks)
-         "ui_event": None,      # Node: {"name":"settings","t":…} når encoderen holdes 3 s (skjermprosessen viser innstillinger)
+         "ui_event": None,      # Node: {"name":"settings","t":…} når ◀◀ holdes 3 s (skjermprosessen viser innstillinger)
          "rebooting": False,    # settes ~1,5 s før daemonen starter omstart/slår av (skjermen viser omstart-animasjonen)
-         "input_seq": 0,        # teller som øker for hver knapp-/encoderhendelse
+         "input_seq": 0,        # teller som øker for hver knapp-/potmeterhendelse
          "settings": {}}
 spotify = {"connected": False, "playing": False, "paused": False, "title": "", "artist": "", "album": "", "cover": "",
            "duration": 0, "position": 0, "user": "", "event": "", "t": 0.0}   # siste librespot-hendelse (POST /api/spotify)   # innstillingsmodellen fra appen/web (skjold_settings.js) – se SETTINGS_DEF
@@ -1433,7 +1442,7 @@ async def h_test(r):
     return web.json_response({"ok": True, "channel": ch})
 
 
-# ---------- innstillingsmeny på Node (encoder holdt 3 s) ----------
+# ---------- innstillingsmeny på Node (◀◀ holdt 3 s) ----------
 # (nøkkel, navn, ikon, valg) – nøklene er de samme som i /api/settings (skjold_settings.js). Valg: liste = indeks,
 # bool = På/Av, None = bare visning. «auto_input» er en tilstand, ikke en innstilling (samme som POST /api/auto_input).
 SMENU_ITEMS = [("bright", "Lysstyrke", "▣", ["Auto", "Høy", "Middels", "Lav"]),
@@ -1640,15 +1649,17 @@ def setup_buttons():
 
 
 def setup_node_buttons():
-    """Skjold Node: RADIO, AIR·BT, ◀◀, ▶▶ (til GND, intern pull-up) + EC11. Ingen strømknapp."""
+    """Skjold Node: RADIO, AIR·BT, ◀◀, ▶▶ (til GND, intern pull-up). Ingen encoder (volum = potmeter, node_pot_thread)."""
     objs, btn = [], {}
     for k, pin in NODE["btn"].items():
         b = _mk(Button, pin, pull_up=True, bounce_time=NODE["bounce"], hold_time=NODE["hold"].get(k, 2.0))
         if b:
             btn[k] = b; objs.append(b)
 
-    def _radio_short():   # første trykk = radio, så neste favoritt (menyen på skjermen)
-        if state["input"] != "radio":
+    def _radio_short():   # første trykk = radio, så neste favoritt (menyen på skjermen); i innstillingene: endre verdi
+        if smenu["open"]:
+            smenu_press()
+        elif state["input"] != "radio":
             set_input("radio")
             menu_open()
         elif menu["open"]:
@@ -1666,8 +1677,10 @@ def setup_node_buttons():
         else:
             set_input("radio")
 
-    def _wireless():      # AirPlay ↔ Bluetooth (fra radio/Spotify: sist brukte trådløse)
-        if state["input"] == "bt":
+    def _wireless():      # AirPlay ↔ Bluetooth (fra radio/Spotify: sist brukte trådløse); i innstillingene: lukk
+        if smenu["open"]:
+            smenu_close()
+        elif state["input"] == "bt":
             set_input("airplay")
         elif state["input"] == "airplay":
             set_input("bt")
@@ -1697,48 +1710,49 @@ def setup_node_buttons():
         _hold_btn(btn["airbt"], _wireless, _pair, key="src",
                   info=lambda: ("Stopp paring", "Fortsett å holde") if state["bt_pairing"] else ("Blåtann-paring", "Fortsett å holde"))
 
-    def _both_held():     # hold ◀◀ og ▶▶ samtidig = omstart
-        if all(k in btn and btn[k].is_pressed for k in ("prev", "next")):
+    # ◀◀ + ▶▶ holdt samtidig = omstart (egen tidtaker fra den andre knappen trykkes). Mens begge er/var nede
+    # undertrykkes de vanlige trykk-/hold-handlingene til begge er sluppet.
+    both = {"on": False, "ending": False, "timer": None}
+
+    def _both_pressed():
+        return all(k in btn and btn[k].is_pressed for k in ("prev", "next"))
+
+    def _both_fire():
+        if _both_pressed():
             system_reboot(why="◀◀ + ▶▶ holdt")
 
-    def _both_track():    # fremdrift for «hold begge» regnes fra da den andre knappen ble trykket
-        if all(k in btn and btn[k].is_pressed for k in ("prev", "next")):
-            _press.setdefault("reboot", {"t0": time.time(), "dur": float(NODE["hold"].get("next", 3.0)),
-                                         "info": lambda: ("Omstart", "Hold begge")})
-        else:
-            _press.pop("reboot", None)
+    def _both_track():    # on_change for ◀◀ og ▶▶ (trykk og slipp)
+        n = sum(1 for k in ("prev", "next") if k in btn and btn[k].is_pressed)
+        if n == 2:
+            both.update(on=True, ending=False)
+            if both["timer"] is None:
+                _press["reboot"] = {"t0": time.time(), "dur": NODE["both_hold"], "info": lambda: ("Omstart", "Hold begge")}
+                both["timer"] = threading.Timer(NODE["both_hold"], lambda: _safe(_both_fire)); both["timer"].daemon = True
+                both["timer"].start()
+            return
+        if both["timer"] is not None:
+            both["timer"].cancel(); both["timer"] = None
+        _press.pop("reboot", None)
+        if n == 0 and both["on"]:
+            both["ending"] = True          # siste slipp: handlingene for dette slippet er fortsatt undertrykt
+        elif n == 1 and both["ending"]:
+            both.update(on=False, ending=False)   # nytt enkelttrykk etter «hold begge»
 
     def _skip(act):
+        if both["on"]:
+            return
         if state["bt_pairing"] and act == "previous":   # ◀◀ avbryter paringen (som skjermen sier)
             bt_pairing(False); apply_input()
         elif smenu["open"]:
             smenu_step(1 if act == "next" else -1)
         elif menu["open"] and state["input"] == "radio":
             menu_step(1 if act == "next" else -1)
-        elif any(btn[k].is_pressed for k in ("prev", "next") if k in btn):
-            return   # den andre knappen holdes fortsatt (på vei mot «hold begge»)
         else:
             transport(act)
 
-    for k, act in (("prev", "previous"), ("next", "next")):
-        if k in btn:
-            _hold_btn(btn[k], lambda a=act: _skip(a), _both_held, on_change=_both_track)
-
-    def _enc(d):          # vri: innstillingsmeny > radiomeny > volum
-        input_event()
-        if smenu["open"]:
-            smenu_step(d)
-        elif menu["open"]:
-            menu_step(d)
-        else:
-            set_volume(state["volume"] + 2 * d)
-    vol = _mk(RotaryEncoder, ENC[0], ENC[1], max_steps=0, wrap=False) or _Dummy()
-    vol.when_rotated_clockwise = lambda: _safe(_enc, 1)
-    vol.when_rotated_counter_clockwise = lambda: _safe(_enc, -1)
-    objs.append(vol)
-    sw = _mk(Button, ENC[2], pull_up=True, bounce_time=NODE["bounce"], hold_time=NODE["enc_hold"]) or _Dummy()
-
-    def _sw_short():      # trykk = spill/pause (i radiomenyen: spill valgt, i innstillingene: endre verdi)
+    def _next_held():     # ▶▶ hold 1 s = spill/pause (i radiomenyen: spill valgt, i innstillingene: endre verdi)
+        if both["on"] or _both_pressed():
+            return
         if smenu["open"]:
             smenu_press()
         elif menu["open"]:
@@ -1746,15 +1760,122 @@ def setup_node_buttons():
         else:
             transport("playpause")
 
-    def _sw_held():       # hold 3 s = innstillinger av/på
+    def _prev_held():     # ◀◀ hold 3 s = innstillinger av/på
+        if both["on"] or _both_pressed():
+            return
         smenu_close() if smenu["open"] else smenu_open()
 
-    _hold_btn(sw, _sw_short, _sw_held, key="knob",
-              info=lambda: ("Lukk innstillinger", "Fortsett å holde") if smenu["open"] else ("Innstillinger", "Fortsett å holde"))
-    objs.append(sw)
+    if "prev" in btn:
+        _hold_btn(btn["prev"], lambda: _skip("previous"), _prev_held, key="settings", on_change=_both_track,
+                  info=lambda: None if both["on"] else (("Lukk innstillinger", "Fortsett å holde") if smenu["open"] else ("Innstillinger", "Fortsett å holde")))
+    if "next" in btn:
+        _hold_btn(btn["next"], lambda: _skip("next"), _next_held, key="play", on_change=_both_track,
+                  info=lambda: None if both["on"] else (("Endre", "Fortsett å holde") if smenu["open"] else
+                                                       ("Spill valgt", "Fortsett å holde") if menu["open"] else
+                                                       ("Spill / pause", "Fortsett å holde")))
     print("Knapper klare (node): " + ", ".join(f"{k}=GPIO{p}" for k, p in NODE["btn"].items())
-          + f", encoder={ENC}, LED-ringer=" + ", ".join(f"{k}=GPIO{p}" for k, p in NODE["led"].items()), flush=True)
+          + ", LED-ringer=" + ", ".join(f"{k}=GPIO{p}" for k, p in NODE["led"].items()), flush=True)
     return objs
+
+
+# ---------- Node: potmeter (volum) via ADS1115 på I²C ----------
+class Ads1115:
+    """ADS1115 med smbus2, kontinuerlig modus (enkeltkanal mot GND). Åpner /dev/i2c-N delt (ingen eksklusiv lås)
+    – Skjold OS skriver til OLED-en (0x3C) på samme buss. Hver lesing er én I²C-transaksjon i kjernen."""
+    PGA = {6.144: 0, 4.096: 1, 2.048: 2, 1.024: 3, 0.512: 4, 0.256: 5}
+
+    def __init__(self, port=1, addr=0x48, ch=0, gain=4.096, bus=None):
+        self.addr, self.gain = addr, gain
+        if bus is None:
+            from smbus2 import SMBus
+            bus = SMBus(port)
+        self.bus = bus
+        # OS=0 | MUX=1xx (AINch mot GND) | PGA | MODE=0 (kontinuerlig) | DR=100 (128 SPS) | COMP_QUE=11 (av)
+        cfg = ((4 + (ch & 3)) << 12) | (self.PGA.get(gain, 1) << 9) | (0 << 8) | (4 << 5) | 3
+        self.cfg = [(cfg >> 8) & 0xFF, cfg & 0xFF]
+        self.configure()
+
+    def configure(self):
+        self.bus.write_i2c_block_data(self.addr, 0x01, self.cfg)
+
+    def volts(self):
+        hi, lo = self.bus.read_i2c_block_data(self.addr, 0x00, 2)
+        raw = (hi << 8) | lo
+        if raw >= 0x8000:
+            raw -= 0x10000
+        return raw * self.gain / 32768.0
+
+    def close(self):
+        try:
+            self.bus.close()
+        except Exception:
+            pass
+
+
+class PotVolume:
+    """Spenning → volum 0–100 med glatting, dødsone i endene og hysterese. update() returnerer et nytt volum
+    bare når knotten faktisk er flyttet minst «hyst» fra der den sist satte volumet («soft takeover»: volum fra
+    app/AirPlay står til knotten vris igjen; da tar knotten over med sin egen posisjon). Første måling setter
+    ikke volumet (startvolumet/lagret volum beholdes til knotten flyttes)."""
+
+    def __init__(self, vref=3.3, alpha=0.35, hyst=2, dead=1.5, invert=False):
+        self.vref, self.alpha, self.hyst, self.dead, self.invert = vref, alpha, hyst, dead, invert
+        self.avg = None; self.anchor = None
+
+    def percent(self, v):
+        p = max(0.0, min(1.0, v / self.vref)) * 100.0
+        if self.invert:
+            p = 100.0 - p
+        d = self.dead   # dødsone i endene så 0 og 100 nås sikkert
+        return max(0.0, min(100.0, (p - d) * 100.0 / (100.0 - 2 * d)))
+
+    def update(self, v):
+        p = self.percent(v)
+        self.avg = p if self.avg is None else self.avg + self.alpha * (p - self.avg)
+        pos = int(round(self.avg))
+        if self.anchor is None:
+            self.anchor = pos; return None
+        if abs(pos - self.anchor) >= self.hyst or (pos in (0, 100) and pos != self.anchor):
+            self.anchor = pos; return pos
+        return None
+
+
+def node_pot_thread(make_adc=None, stop=None):
+    """Poller ADS1115 (~20 Hz). Mangler den (ikke koblet / feil adresse), prøver vi igjen hvert 10. s uten å stoppe noe annet."""
+    a, pc = NODE["adc"], NODE["pot"]
+    make_adc = make_adc or (lambda: Ads1115(a["port"], a["addr"], a["ch"], a["gain"]))
+    pot = PotVolume(pc["vref"], pc["alpha"], pc["hyst"], pc["dead"], pc["invert"])
+    adc, warned, errs, period = None, False, 0, 1.0 / max(1.0, pc["hz"])
+    while not (stop and stop.is_set()):
+        if adc is None:
+            try:
+                adc = make_adc(); adc.volts()
+                print(f"Potmeter: ADS1115 på I²C {a['port']} 0x{a['addr']:02x} kanal A{a['ch']}", flush=True)
+                warned, errs = False, 0; pot.avg = pot.anchor = None
+            except Exception as e:
+                if adc is not None:
+                    adc.close()
+                adc = None
+                if not warned:
+                    print(f"Potmeter: fant ikke ADS1115 (0x{a['addr']:02x}): {e} – volum bare fra app/API, prøver igjen", flush=True)
+                    warned = True
+                (stop.wait(10) if stop else time.sleep(10)); continue
+        try:
+            v = adc.volts(); errs = 0
+            new = pot.update(v)
+            if new is not None and new != state["volume"]:
+                input_event(); _safe(set_volume, new)
+        except Exception as e:
+            errs += 1
+            if errs >= 10:   # modulen forsvant (løs ledning) – start på nytt
+                print(f"Potmeter: ADS1115 svarer ikke ({e}) – prøver igjen", flush=True)
+                adc.close(); adc = None; warned = False
+            elif errs == 3:
+                try:
+                    adc.configure()   # f.eks. strømbrudd på modulen: konfigurasjonen er tapt
+                except Exception:
+                    pass
+        (stop.wait(period) if stop else time.sleep(period))
 
 
 # ---------- potensiometer som volumknapp (test uten ADC: RC-tidsmåling) ----------
@@ -2679,6 +2800,8 @@ def main():
         threading.Thread(target=lambda: subprocess.run(["bluetoothctl", "system-alias", NAME], check=False, timeout=10,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL), daemon=True).start()
     threading.Thread(target=follow_source, daemon=True).start()   # auto-kilde (kan slås av) + BT-talemeldinger
+    if BOARD == "node" and NODE_GPIO and HW and os.environ.get("KI_AMP_NODE_POT", "1") == "1":
+        threading.Thread(target=node_pot_thread, daemon=True).start()   # volum fra potmeteret (ADS1115)
     pot = os.environ.get("KI_AMP_POT", "")
     if pot.startswith("rc:"):   # rc:24 eller rc:24:inv (snu retningen)
         parts = pot.split(":")

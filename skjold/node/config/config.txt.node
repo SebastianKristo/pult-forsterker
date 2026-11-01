@@ -1,69 +1,34 @@
 # ---------------------------------------------------------------------------
-# Skjold Node – tillegg til /boot/firmware/config.txt
-# Legges inn av pi-gen (stage-skjold) eller av skjold-setup når Node-modus
-# oppdages. Pinnene står i config/node_pins.json – endre der først.
+# Skjold Node (OLED-utgave, rev C) – tillegg til /boot/firmware/config.txt
+# Legges inn av driver/installer_node.sh (pi-gen stage-skjold / Skjold Flasher).
+# Pinnene står i config/node_pins.json – endre der først.
 # ---------------------------------------------------------------------------
 
 [all]
-# SPI0 til skjermen (ST7735S). spidev0.0 = CE0 (GPIO8). CE1 (GPIO7) og MISO
-# (GPIO9) blir også tatt av driveren – de er derfor ikke brukt til noe annet.
-dtparam=spi=on
-
-# I²C holdes på: skjold-setup bruker den til å skille S1 (knappekort på I²C)
-# fra Node (ingenting på I²C). GPIO2/3 er derfor ikke brukt i Node.
+# I²C1 (GPIO2/3, pinne 3/5): 0,91" SSD1306 OLED på 0x3C og ADS1115 (potmeter) på 0x48.
+# 400 kHz gir ~25 bilder/s på 128×32 uten å stresse ADS1115 (tåler 400 kHz fast mode).
 dtparam=i2c_arm=on
+dtparam=i2c_arm_baudrate=400000
 
-# Lyd: innebygd 3,5 mm / HDMI. NB: analog lyd bruker PWM0/PWM1 internt, så
-# maskinvare-PWM på GPIO12/13/18/19 er IKKE tilgjengelig. Bakgrunnslys og
-# LED-ringer dimmes med programvare-PWM (gpiozero). Ikke legg til
-# dtoverlay=pwm eller pwm-2chan – det slår av analog lyd.
+# SPI AV: GPIO7 (SPI0 CE1) er knappen ▶▶. Med dtparam=spi=on tar spidev pinnen,
+# og knappen gir "Device or resource busy". Node har ingen SPI-enheter lenger.
+dtparam=spi=off
+
+# Lyd: innebygd 3,5 mm / HDMI. Analog lyd bruker PWM0/PWM1 internt, så
+# maskinvare-PWM på GPIO12/13/18/19 er IKKE tilgjengelig. LED-ringene dimmes med
+# programvare-PWM (gpiozero). Ikke legg til dtoverlay=pwm/pwm-2chan.
 dtparam=audio=on
-# Velges I²S-kort som lydutgang i appen, bytter skjold-setup linjen over til
-#   dtparam=audio=off
-#   dtoverlay=hifiberry-dacplus-std   (eller tilsvarende)
-# GPIO18/19 er holdt ledige for det. GPIO20/21 brukes av LED-ring ◀◀/▶▶ og må
-# flyttes hvis I²S skal brukes (se node_pins.json → leds._i2s_merknad).
+# NB: GPIO20/21 (I²S PCM_DIN/DOUT) brukes av LED-ringene ◀◀/▶▶. Et I²S-lydkort
+# kan ikke brukes uten å flytte dem (se node_pins.json → leds._i2s_merknad).
 
-# Seriekonsoll av: GPIO14/15 er ikke brukt, men det sparer oppstartstid og
-# gjør at ingen tilfeldig HAT/kabel på pinne 8/10 åpner et skall.
+# Seriekonsoll av (GPIO14/15 ledige, raskere oppstart).
 enable_uart=0
 
-# Startnivå på pinnene før Linux er oppe, så bakgrunnslys og LED-ringer er av
-# og knappene har pull-up fra første millisekund.
+# Startnivå før Linux er oppe: LED-ringene av, knappene med pull-up.
 # op=utgang, dl=lav, ip=inngang, pu=pull-up
 gpio=12,16,20,21=op,dl
-# Bakgrunnslys (GPIO23) styrer en P-MOSFET: høy = av
-gpio=23=op,dh
-gpio=5,6,13,17,22,26,27=ip,pu
+gpio=7,23,24,25=ip,pu
 
-# ---------------------------------------------------------------------------
-# Alternativ A (VALGT): knapper og encoder leses av skjold-ui med gpiozero.
-# Ingen flere linjer trengs. Samme kode som S1, og node_selftest.py bruker
-# dette.
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Alternativ B (IKKE aktivert): device tree → Linux input-enheter (evdev).
-# Fjern '#' foran linjene under hvis skjold-ui skal lese /dev/input i stedet.
-# ADVARSEL: da er pinnene opptatt i kjernen, og gpiozero/node_selftest.py får
-# "Device or resource busy" på dem. Velg én av A og B, aldri begge.
-#
-# Encoder (EC11, 20 hakk = 20 fulle perioder per omdreining → steps-per-period=1)
-# dtoverlay=rotary-encoder,pin_a=17,pin_b=27,relative_axis=1,steps-per-period=1
-# Encoder-trykk → KEY_PLAYPAUSE (164). Bytt til 113 (KEY_MUTE) hvis trykk skal dempe.
-# dtoverlay=gpio-key,gpio=22,active_low=1,gpio_pull=up,keycode=164,label=VOLUM
-# Knapper (aktive lave, intern pull-up)
-# dtoverlay=gpio-key,gpio=5,active_low=1,gpio_pull=up,keycode=377,label=RADIO
-# dtoverlay=gpio-key,gpio=6,active_low=1,gpio_pull=up,keycode=237,label=AIR_BT
-# dtoverlay=gpio-key,gpio=13,active_low=1,gpio_pull=up,keycode=165,label=FORRIGE
-# dtoverlay=gpio-key,gpio=26,active_low=1,gpio_pull=up,keycode=163,label=NESTE
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Skjerm: IKKE fbtft. Skjermen drives av luma.lcd fra Python (st7735,
-# rotate=2) over spidev0.0 med gpio_DC=25 og gpio_RST=24. Begrunnelse i
-# skjold/node/README.md. Hvis noen likevel vil ha kjernekonsoll på skjermen
-# for feilsøking, er den ekvivalente overlay-linjen (bruk aldri samtidig med
-# skjold-ui):
-# dtoverlay=fbtft,spi0-0,st7735r,dc_pin=25,reset_pin=24,led_pin=23,rotate=270,speed=16000000,width=128,height=160
-# ---------------------------------------------------------------------------
+# Knappene leses av ki_amp_daemon.py med gpiozero. IKKE legg til gpio-key-
+# overlays for de samme pinnene (gir "Device or resource busy").
+# Skjermen drives av Skjold OS med luma.oled (ssd1306, I²C 1, 0x3C) – ingen overlay.

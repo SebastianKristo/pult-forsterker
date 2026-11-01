@@ -31,7 +31,7 @@ class LumaSSD1309:
 
 class OledContrast:
     """Samme grensesnitt som display.Backlight: set(0–1). 0 = hide() (panelet av), ellers kontrast."""
-    def __init__(self, sink): self.sink, self.level = sink, None
+    def __init__(self, sink, full=255): self.sink, self.level, self.full = sink, None, full
 
     def set(self, v):
         v = round(max(0.0, min(1.0, v)), 3)
@@ -40,7 +40,7 @@ class OledContrast:
         if d is None: return
         try:
             if v <= 0: d.hide()
-            else: d.show(); d.contrast(max(1, int(255 * v)))
+            else: d.show(); d.contrast(max(1, int(self.full * v)))
         except Exception: pass
 
     def close(self): self.set(0)

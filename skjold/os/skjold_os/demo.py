@@ -97,6 +97,17 @@ def shots(layout, outdir, live_client=None):
     shot("21_lagret_pop", FakeClient(), pre=lambda c: c.status.update(hold=saved), advance=0.1)
     shot("22_lagret", FakeClient(), pre=lambda c: c.status.update(hold=saved), advance=0.8)
     shot("23_lagret_airplay", FakeClient(st(**AIRPLAY)), pre=lambda c: c.status.update(hold=saved), advance=0.8)
+    shot("24_hold_progress", FakeClient(), pre=lambda c: c.status.update(hold={"key": "settings", "p": 0.6, "title": "Innstillinger", "sub": "Fortsett å holde"}))
+    smenu = {"open": True, "cat": "INNSTILLINGER", "idx": 1, "rows": [{"k": "bright", "n": "Lysstyrke", "icon": "▣", "v": "Auto"},
+             {"k": "vmax", "n": "Maks volum", "icon": "♪", "v": "90 %"}, {"k": "voice", "n": "Talebeskjed", "icon": "♪", "v": "På"}]}
+    shot("25_settings_menu", FakeClient(st(settings_menu=smenu)))
+    long_t = dict(AIRPLAY, title="Midnight City (Eric Prydz Private Remix) – Extended", artist="M83")
+    shot("26_play_long_title_start", FakeClient(st(**long_t)), pre=lambda c: None, advance=0.5)
+    shot("27_play_long_title_scrolled", FakeClient(st(**long_t)), pre=lambda c: None, advance=4.0)
+    shot("28_welcome_setup", FakeClient(), lambda ui, ck: (setattr(ui, "welcome", {"hint": "Åpne Skjold-appen"}),
+                                                              setattr(ui, "fx", {"k": "welcome", "t0": ck.t - 1.0})))
+    shot("29_reboot_hold", FakeClient(), pre=lambda c: c.status.update(hold={"key": "reboot", "p": 0.35, "title": "Omstart", "sub": "Hold begge"}))
+    shot("30_play_radio_paused", FakeClient(st(paused=True)))
     if live_client is not None:
         live_client.poll_once(); shot("20_live_daemon", live_client)
     return out

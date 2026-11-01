@@ -1,4 +1,4 @@
-"""python -m skjold_os [--sim DIR] [--demo] [--shots DIR] [--layout node] [--api URL]"""
+"""python -m skjold_os [--sim DIR] [--demo] [--shots DIR] [--layout node-oled32|node|s1-oled|s1-tft] [--api URL]"""
 import argparse, os, sys
 
 
@@ -9,7 +9,8 @@ def main(argv=None):
     ap.add_argument("--frames", type=int, default=0, help="stopp etter N rammer (test)")
     ap.add_argument("--demo", action="store_true", help="falsk daemon som sykler gjennom tilstandene")
     ap.add_argument("--shots", metavar="DIR", help="render nøkkelskjermene til DIR og avslutt")
-    ap.add_argument("--layout", default=os.environ.get("SKJOLD_LAYOUT", "node"), choices=["node", "s1-oled", "s1-tft"])
+    ap.add_argument("--layout", default=os.environ.get("SKJOLD_LAYOUT", "node-oled32"), choices=["node-oled32", "node", "s1-oled", "s1-tft"],
+                    help="node-oled32 = Skjold Node med 0,91\" SSD1306 128×32 (standard), node = gammel 1,8\" ST7735")
     ap.add_argument("--api", default=os.environ.get("SKJOLD_API", "http://127.0.0.1:%s" % os.environ.get("KI_AMP_PORT", "8765")))
     ap.add_argument("--hz", type=float, default=8.0, help="poll-frekvens mot /api/status")
     ap.add_argument("--no-boot", action="store_true", help="hopp over oppstartsanimasjonen")
@@ -29,6 +30,8 @@ def main(argv=None):
         print("\n".join(out)); return 0
 
     sk, src = config.screen_cfg()
+    if a.layout == "node-oled32" and sk.get("kontroller") != "ssd1306": sk = dict(config.DEFAULT_OLED)
+    if a.layout == "node" and sk.get("kontroller") == "ssd1306": sk = dict(config.DEFAULT_SCREEN)   # gammel TFT-Node, nye pinner
     if a.demo:
         from .demo import DemoClient
         client = DemoClient()
@@ -36,12 +39,16 @@ def main(argv=None):
         client = DaemonClient(a.api, a.hz).start()
     if a.sim:
         sink = PngSink(a.sim, a.every); bl = Backlight(sk.get("bakgrunnslys", {}), sim=True)
+    elif a.layout == "node-oled32":
+        from .display import LumaSSD1306
+        from .display_s1 import OledContrast
+        sink = LumaSSD1306(sk); bl = OledContrast(sink, sk.get("kontrast", 255))
     elif a.layout.startswith("s1"):
         from .display_s1 import open_s1
         sink, bl = open_s1(a.layout)
     else:
         sink = LumaST7735(sk); bl = Backlight(sk.get("bakgrunnslys", {}))
-    print("Skjold OS: layout=%s api=%s pins=%s %s" % (a.layout, a.api, src, "sim→" + a.sim if a.sim else "st7735"), flush=True)
+    print("Skjold OS: layout=%s api=%s pins=%s %s" % (a.layout, a.api, src, "sim→" + a.sim if a.sim else ("ssd1306 i2c" if a.layout == "node-oled32" else "st7735" if a.layout == "node" else a.layout)), flush=True)
     Ui(client, lay, sink, bl, model="S1" if a.layout.startswith("s1") else "NODE", boot=not a.no_boot).run(max_frames=a.frames)
     return 0
 

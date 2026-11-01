@@ -1,5 +1,26 @@
-"""Utganger: ST7735 via luma.lcd (Node) eller PNG-filer (--sim). Pluss bakgrunnslyset (GPIO23, aktiv lav)."""
+"""Utganger: SSD1306 128×32 via luma.oled (Node, OLED-utgave), ST7735 via luma.lcd (Node rev A/B) eller PNG-filer
+(--sim). Pluss bakgrunnslyset for ST7735 (GPIO23, aktiv lav). OLED-en har ingen bakgrunnslys: display_s1.OledContrast."""
 import os, time
+
+
+class LumaSSD1306:
+    """0,91″ SSD1306 på I²C (port/adresse/rotasjon fra node_pins.json → skjerm). luma åpner /dev/i2c-1 delt –
+    ki-amp leser ADS1115 (0x48) på samme buss samtidig, hver overføring er én atomisk I²C-transaksjon i kjernen."""
+    def __init__(self, sk):
+        from luma.core.interface.serial import i2c
+        from luma.oled.device import ssd1306
+        addr = sk.get("adresse", "0x3C"); addr = int(addr, 16) if isinstance(addr, str) else int(addr)
+        self.dev = ssd1306(i2c(port=int(sk.get("i2c_port", 1)), address=addr), width=int(sk.get("width", 128)),
+                           height=int(sk.get("height", 32)), rotate=int(sk.get("rotate", 2)))
+
+    def show(self, img, tag=""):
+        im = img.convert("L").point(lambda v: 255 if v > 64 else 0).convert("1")
+        if im.size != self.dev.size: im = im.resize(self.dev.size)
+        self.dev.display(im)
+
+    def close(self):
+        try: self.dev.hide(); self.dev.cleanup()
+        except Exception: pass
 
 
 class LumaST7735:
