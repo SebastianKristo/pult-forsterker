@@ -1,8 +1,7 @@
 // Sider som deles av telefon- og PC-skallet: Hjem, Lyd (EQ) og Rom (etter Skjold App v2 / S1 Web v3).
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { api, getBase, PRODUCT_HW, PRODUCT_LABEL, productOf, setBase, type InputId, type Status } from '../lib/api';
-import { act, deviceName, eqActiveSource, go, inputLabel, loadSettings, mode, online, openFull, product, reconnect, recent, setEqProfile, setSetting, setVolume, settings, showToast, status } from '../lib/store';
-import { knownDevices } from '../lib/discover';
+import { api, PRODUCT_HW, PRODUCT_LABEL, type InputId } from '../lib/api';
+import { act, deviceName, eqActiveSource, go, inputLabel, online, openFull, product, recent, setEqProfile, setSetting, settings, status } from '../lib/store';
 import { art, EQ, EQ_DESC, EQ_HZ, EQ_NAMES, fmt, type EqSource } from '../lib/settings';
 import { Chip, PRODUCT_ICON, Section, Slider, SrcCircle, Toggle } from '../components/ui';
 import { InputChips } from './player';
@@ -161,6 +160,7 @@ export function EqPage() {
               <Slider vertical min={-12} max={12} value={prof.eq[i] ?? 0} label={b + ' Hz'}
                 onCommit={(v) => { const eq = [...prof.eq]; eq[i] = v; setEqProfile(src, { eq, preset: -1 }); }} />
               <span class="f">{b}</span>
+              <span style="font-size:10px;color:#c9c9c4;white-space:nowrap">{EQ_NAMES[i]}</span>
             </div>
           ))}
         </div>
@@ -184,77 +184,6 @@ export function EqPage() {
           <Toggle on={prof.loud} label="Loudness" onChange={(v) => setEqProfile(src, { loud: v })} />
         </div>
       </div>
-    </div>
-  );
-}
-
-// ---------- Rom ----------
-interface Room { base: string; name: string; product: 's1' | 'node' | 'core'; st: Status | null; active: boolean }
-const NO_SYNC = 'Grupper krever synkronisering via Lyrion, som forsterkeren ikke støtter ennå';
-
-export function RoomsPage({ wide = false }: { wide?: boolean }) {
-  const s = status.value;
-  const cur = getBase();
-  const [others, setOthers] = useState<Record<string, Status | null>>({});
-  const known = knownDevices().filter((d) => d.base !== cur && d.base.replace(/^https?:\/\//, '') !== location.host);
-  const knownKey = known.map((d) => d.base).join(',');
-  useEffect(() => {
-    let stop = false;
-    const poll = async () => {
-      const res: Record<string, Status | null> = {};
-      await Promise.all(known.map(async (d) => { try { res[d.base] = await api.statusAt(d.base, 2500); } catch { res[d.base] = null; } }));
-      if (!stop) setOthers(res);
-    };
-    void poll(); const t = window.setInterval(poll, 5000);
-    return () => { stop = true; clearInterval(t); };
-  }, [knownKey]);
-  const rooms: Room[] = [
-    { base: cur, name: deviceName.value, product: product.value, st: s, active: true },
-    ...known.map((d) => { const st = others[d.base] ?? null; return { base: d.base, name: st?.name || d.name, product: productOf(st ?? { board: '', product: d.product ?? '' }), st, active: false }; })
-  ];
-  const switchTo = async (base: string) => { setBase(base); reconnect(); await loadSettings(); showToast('Byttet rom'); };
-  const setVolAt = async (base: string, v: number) => {
-    try { const r = await fetch(base + '/api/volume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: v }) }); if (r.ok) { const st = (await r.json()) as Status; setOthers((o) => ({ ...o, [base]: st })); } }
-    catch { showToast('Fikk ikke kontakt med ' + base.replace(/^https?:\/\//, '')); }
-  };
-  const np = (st: Status | null) => {
-    if (!st) return 'Ikke tilkoblet';
-    if (!st.power) return 'Standby';
-    if (!st.playing) return 'Ingenting spiller';
-    if (st.input === 'radio') return st.radio_now?.name || st.station || 'Radio';
-    return st.title ? st.title + (st.artist ? ' · ' + st.artist : '') : inputLabel(st.input);
-  };
-  return (
-    <div class={'rooms' + (wide ? ' wide' : '')}>
-      <div class="row" style={{ gap: '8px', flexWrap: 'wrap' }}>
-        <button class="gpill" onClick={() => showToast(NO_SYNC)}>Alle rom</button>
-        <button class="gpill" onClick={() => showToast(NO_SYNC)}>Bare {deviceName.value}</button>
-      </div>
-      <div class="col gap8">
-        {rooms.map((r) => (
-          <div key={r.base || 'cur'} class={'room-card' + (r.active ? ' on' : '')}>
-            <button class="ico" onClick={() => !r.active && void switchTo(r.base)} aria-label={'Styr ' + r.name}>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d={PRODUCT_ICON[r.product]} /></svg>
-            </button>
-            <div class="col" style={{ gap: '6px', minWidth: 0 }}>
-              <button class="hd" onClick={() => !r.active && void switchTo(r.base)}>
-                <span class="col" style={{ gap: '1px', minWidth: 0 }}><span class="n">{r.name}</span><span class="sub">{PRODUCT_LABEL[r.product]} · {np(r.st)}</span></span>
-                <span class="vol">{r.st?.volume ?? '–'}</span>
-              </button>
-              <Slider value={r.st?.volume ?? 0} label={'Volum ' + r.name} onCommit={(v, fin) => { if (r.active) setVolume(v, fin); else if (fin) void setVolAt(r.base, v); }} />
-            </div>
-            <button class={'ck' + (r.active ? ' on' : '')} aria-label="Med i gruppen" onClick={() => { if (!r.active) showToast(NO_SYNC); }}>{r.active ? '✓' : ''}</button>
-          </div>
-        ))}
-      </div>
-      {wide ? <button class="add-dashed" onClick={() => { mode.value = 'find'; }}>+ Legg til Skjold S1 eller Node</button> : (
-        <button class="add-dev" onClick={() => { mode.value = 'find'; }} data-testid="add-device">
-          <div class="plus"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg></div>
-          <div class="col" style={{ gap: '3px', minWidth: 0 }}><span class="t">Legg til enhet</span><span class="d">Skjold S1, Node eller Core</span></div>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-        </button>
-      )}
-      {!wide && <span class="lbl11" style={{ textWrap: 'pretty' }}>Rom med hake spiller det samme, synkronisert av Lyrion. Trykk på et rom for å styre det.</span>}
     </div>
   );
 }

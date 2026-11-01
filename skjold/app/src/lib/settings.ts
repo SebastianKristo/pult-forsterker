@@ -13,7 +13,7 @@ export interface Settings {
   hold: number;
   voice: boolean; lang: number; vv: number;
   dim: number; off: number; clock: boolean; clockStyle: number; led: number;
-  auto: number; wake: boolean; spEn: boolean; upnpEn: boolean;
+  auto: number; wake: boolean; spEn: boolean; upnpEn: boolean; castEn: boolean; ytmEn: boolean; ndEn: boolean;
   updChannel: number; updAuto: boolean;
   setupDone: boolean;
   eq: EqProfiles;
@@ -47,7 +47,7 @@ export function defaultEq(): EqProfiles {
 export const DEF: Settings = {
   bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, lvlAux: 0, lvlUsb: 0,
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
-  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, auto: 1, wake: true, spEn: true, upnpEn: false,
+  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false,
   updChannel: 0, updAuto: true, setupDone: false,
   eq: defaultEq()
 };
@@ -59,7 +59,9 @@ export const fmt = {
 
 export type NumKey = 'bass' | 'treb' | 'bal' | 'lvlAux' | 'lvlUsb';
 export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto';
-export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn';
+export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn' | 'castEn' | 'ytmEn' | 'ndEn';
+/** Lagres bare på denne telefonen (innlogginger til musikktjenester sendes ikke til forsterkeren). */
+export type LocalKey = 'ytmUser' | 'ytmCookie' | 'ndUrl' | 'ndUser' | 'ndPass';
 export type StrKey = 'nAux1' | 'nAux2' | 'nUsb1' | 'nUsb2' | 'nameCustom';
 
 export type Item =
@@ -71,7 +73,10 @@ export type Item =
   | { kind: 'api-bool'; id: 'loudness' | 'mix' | 'autoInput' | 'hpAutomute' | 'voiceOn'; n: string; hint?: string }
   | { kind: 'api-opt'; id: 'voiceProfile' | 'usbPc' | 'loudLevel'; n: string; hint?: string }
   | { kind: 'levels'; n: string; hint?: string }
-  | { kind: 'info'; n: string; key: 'btDev' | 'lyrion' | 'version' | 'ip' | 'id' | 'board' | 'headphones' | 'btPairing' | 'inputs' | 'output' | 'netName' }
+  | { kind: 'info'; n: string; key: 'btDev' | 'lyrion' | 'version' | 'ip' | 'id' | 'board' | 'headphones' | 'btPairing' | 'inputs' | 'output' | 'netName' | 'poToken'; hint?: string }
+  | { kind: 'local'; k: LocalKey; n: string; ph: string; hint?: string; long?: boolean; secret?: boolean }
+  | { kind: 'steps'; n: string; steps: string[] }
+  | { kind: 'svc'; id: 'ytmTest' | 'ndTest'; n: string; label: string }
   | { kind: 'test'; n: string; hint?: string }
   | { kind: 'act'; n: string; id: 'btPair' | 'setup' | 'testVoice' | 'forget' | 'reset' | 'reboot' | 'findDevice'; label: string; safe?: boolean; hint?: string }
   | { kind: 'eq'; n: string }
@@ -110,13 +115,25 @@ export const CATS: Category[] = [
     { kind: 'info', n: 'Tilkoblet Blåtann-enhet', key: 'btDev' },
     { kind: 'act', n: 'Blåtann-paring', id: 'btPair', label: 'Start paring', safe: true, hint: 'Gjør forsterkeren synlig for Blåtann i 2 minutter' },
     { kind: 'act', n: 'Glem alle Blåtann-enheter', id: 'forget', label: 'Glem alle' }] },
-  { id: 'radio', n: 'Radio', sub: 'Lyrion-favoritter', items: [
+  { id: 'radio', n: 'Radio', sub: 'Favoritter, knapper og oppstart', items: [
     opt('hold', 'Hold radioknappen', [], 'Kanalen som spilles når du holder radioknappen inne'),
     { kind: 'info', n: 'Lyrion', key: 'lyrion' }] },
-  { id: 'tjenester', n: 'Musikktjenester', sub: 'Spotify og UPnP/DLNA', items: [
+  { id: 'tjenester', n: 'Musikktjenester', sub: 'Spotify, UPnP/DLNA, YouTube Music, Navidrome', items: [
     bool('spEn', 'Spotify Connect', 'Vises som høyttaler i Spotify-appen'),
     bool('upnpEn', 'UPnP/DLNA-mottaker', 'Vises som høyttaler i apper som BubbleUPnP, foobar2000, Plex og «Cast til enhet» i Windows'),
-    { kind: 'info', n: 'Navn på nettverket', key: 'netName' }] },
+    { kind: 'info', n: 'Navn på nettverket', key: 'netName', hint: 'Samme navn som i AirPlay. Endres under Tilkobling.' },
+    bool('castEn', 'Chromecast', 'Vises som Cast-høyttaler via Music Assistant. Ikke tilkoblet ennå.'),
+    bool('ytmEn', 'YouTube Music', 'Via Music Assistant. Krever YouTube Music Premium. Gratiskontoer virker ikke.'),
+    { kind: 'local', k: 'ytmUser', n: 'Google-konto', ph: 'navn@gmail.com', hint: 'Gmail-adressen, eller den 21-sifrede ID-en for en merkekonto', long: true },
+    { kind: 'local', k: 'ytmCookie', n: 'Innloggings-cookie', ph: 'Lim inn Cookie-verdien', hint: 'Google tillater ikke vanlig innlogging for andre apper. Cookien må hentes på nytt når den utløper.', long: true, secret: true },
+    { kind: 'steps', n: 'Slik henter du cookien', steps: ['Åpne music.youtube.com i et privat vindu (inkognito) på en datamaskin og logg inn.', 'Åpne utviklerverktøyene og velg fanen Nettverk (Network).', 'Skriv /browse i filterfeltet. Åpne en av spillelistene dine.', 'Klikk på forespørselen som dukker opp. Under Request Headers kopierer du hele verdien til Cookie, uten mellomrom foran eller bak.', 'Lukk det private vinduet med en gang, uten å logge ut. Lim inn verdien over.'] },
+    { kind: 'info', n: 'PO-token-tjeneste', key: 'poToken', hint: 'Bekrefter overfor Google at avspillingen kommer fra en ekte YouTube-klient' },
+    { kind: 'svc', id: 'ytmTest', n: 'Test innlogging', label: 'Test' },
+    bool('ndEn', 'Navidrome', 'Eget musikkbibliotek via Subsonic-API'),
+    { kind: 'local', k: 'ndUrl', n: 'Navidrome-server', ph: 'http://192.168.1.10:4533', hint: 'Adressen til Navidrome-serveren på hjemmenettet' },
+    { kind: 'local', k: 'ndUser', n: 'Brukernavn', ph: 'brukernavn' },
+    { kind: 'local', k: 'ndPass', n: 'Passord', ph: 'passord', hint: 'Lagres bare på denne telefonen', secret: true },
+    { kind: 'svc', id: 'ndTest', n: 'Test Navidrome', label: 'Test tilkobling' }] },
   { id: 'stemme', n: 'Stemme', sub: 'Talebeskjeder', items: [
     { kind: 'api-bool', id: 'voiceOn', n: 'Talebeskjed ved bytte' },
     { kind: 'api-opt', id: 'voiceProfile', n: 'Stemme' },
@@ -127,7 +144,7 @@ export const CATS: Category[] = [
     bool('clock', 'Klokke i standby'), { kind: 'clocks', n: 'Klokke i standby' }, opt('led', 'LED-ringer', ['Høy', 'Middels', 'Lav', 'Av'])] },
   { id: 'strom', n: 'Strøm', sub: 'Standby og påslag', items: [
     opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay eller Blåtann vekker forsterkeren')] },
-  { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub Releases', items: [{ kind: 'update', n: 'Oppdatering' }] },
+  { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub, backup og gjenoppretting', items: [{ kind: 'update', n: 'Oppdatering' }] },
   { id: 'system', n: 'System', sub: 'Om, oppsett og tilbakestilling', items: [
     { kind: 'info', n: 'Programvare', key: 'version' }, { kind: 'info', n: 'Adresse', key: 'ip' },
     { kind: 'info', n: 'Lyrion', key: 'lyrion' }, { kind: 'info', n: 'Enhets-ID', key: 'id' }, { kind: 'info', n: 'Type', key: 'board' },
@@ -137,6 +154,7 @@ export const CATS: Category[] = [
 ];
 
 export const ICONS: Record<string, string> = {
+  tjenester: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
   home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5',
   play: 'M8 5v14l11-7z',
   eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4',
@@ -153,8 +171,9 @@ export const ICONS: Record<string, string> = {
 };
 
 export const CAT_TILE: Record<string, string> = {
+  tjenester: '#2a3a2e',
   eq: '#3a2e17', lyd: '#2a3340', tilkobling: '#22314a', radio: '#3d2a2a', stemme: '#2f2a40', skjerm: '#2a3a33',
-  strom: '#40362a', rom: '#2a3a33', oppdatering: '#3a2e17', system: '#333335'
+  strom: '#40362a', rom: '#2a3a33', oppdatering: '#333', system: '#333335'
 };
 
 /** Bezier curve through the five EQ bands – same geometry as the design file. */

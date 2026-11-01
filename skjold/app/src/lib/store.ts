@@ -3,7 +3,7 @@ import { signal, computed, effect } from '@preact/signals';
 import { api, ApiError, getBase, needsHost, productOf, type Status, type InputId } from './api';
 import { DEF, defaultEq, mergeSettings, type Settings, type EqProfiles, type EqSource } from './settings';
 
-export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings';
+export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib';
 export interface Route { page: Page; cat?: string }
 
 export const status = signal<Status | null>(null);
@@ -11,7 +11,14 @@ export const online = signal<boolean>(false);
 export const lastError = signal<string>('');
 export const route = signal<Route>({ page: 'home' });
 export const fullPlayer = signal<boolean>(false);          // telefon: fullskjerm-spiller
-export const mode = signal<'find' | 'setup' | 'app'>(typeof location !== 'undefined' && location.hash === '#finn' ? 'find' : typeof location !== 'undefined' && location.hash === '#oppsett' ? 'setup' : needsHost() ? 'find' : 'app');
+const hash = typeof location !== 'undefined' ? location.hash : '';
+const welcomed = (() => { try { return localStorage.getItem('skjold-welcomed') === '1'; } catch { return true; } })();
+/** welcome = intro + velkomstside (første start i appen), find = oppsett 1, setup = oppsett 2–4, app = appen. */
+export const mode = signal<'welcome' | 'find' | 'setup' | 'app'>(hash === '#velkommen' ? 'welcome' : hash === '#finn' ? 'find' : hash === '#oppsett' ? 'setup' : needsHost() ? (welcomed ? 'find' : 'welcome') : 'app');
+export function leaveWelcome(): void { try { localStorage.setItem('skjold-welcomed', '1'); } catch { /* ignore */ } mode.value = needsHost() || hash === '#velkommen' ? 'find' : 'app'; }
+/** Fullskjermspilleren: køen vises i stedet for omslaget / kildevalget er åpent. */
+export const queueOpen = signal(false);
+export const srcOpen = signal(false);
 export const settings = signal<Settings>({ ...DEF, eq: defaultEq() });
 export const settingsSource = signal<'api' | 'local' | 'none'>('none');
 export const toast = signal<string>('');
