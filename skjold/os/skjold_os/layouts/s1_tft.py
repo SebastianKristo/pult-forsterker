@@ -95,6 +95,8 @@ class S1TftLayout(Layout):
             c.text(308, 194, "−" + fmt(vm["duration"] - vm["position"]), TDM, "regular", 10, "rm")
         elif vm["input"] == "radio":
             n = len(vm.get("presets") or []) or 6; x = 12
+            if n > 12:   # opptil 50 favoritter: tekst i stedet for prikker som ikke får plass
+                c.text(12, 189, "%d/%d" % ((vm.get("preset_idx") or 0) + 1, n), TDM, "regular", 10, "lm"); n = 0
             for i in range(n):
                 on = i == vm.get("preset_idx"); w = 20 if on else 6
                 c.rrect(x, 186, w, 6, 3, ACC if on else SEG); x += w + 6

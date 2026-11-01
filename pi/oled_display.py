@@ -356,7 +356,7 @@ def draw_overlay(draw, c):
         draw.text((2, 0), "RADIOKANALER", font=f_tag, fill=255)
         draw.text((126 - draw.textlength("vri · trykk", font=f_small), 0), "vri · trykk", font=f_small, fill=255)
         idx = m.get("idx", 1)
-        first = min(max(1, idx - 1), 4)          # vis 3 av 6 rader, valgt rad i midten
+        first = min(max(1, idx - 1), max(1, len(presets) - 2))   # vis 3 rader, valgt rad i midten (6–50 plasser)
         for row, n in enumerate(range(first, first + 3)):
             y = 12 + row * 14
             p = presets[n - 1] if n - 1 < len(presets) else None
