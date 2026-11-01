@@ -23,6 +23,8 @@ Filene i denne pakken er **designreferanser laget i HTML**. Det er prototyper so
 ## Detaljnivå
 **High-fidelity.** Farger, typografi, avstander, animasjoner og knappeoppførsel er endelige.
 
+**Krav: mobilappen (`app/Skjold App v2.dc.html`) og web-UI-et (`web/Skjold S1 Web v3.dc.html`) skal bygges piksel-identisk med designfilene.** Samme størrelser, avstander, radier, farger, skrifter, ikoner, tekster og rekkefølge. Ikke bruk standardkomponenter fra rammeverket (Material, Cupertino, Bootstrap e.l.) som endrer utseendet. Ikke «forbedre», forenkle eller legg til noe. Sammenlign skjermbilder side om side ved samme bredde (app: 390 px, web: 1280 px) før hver skjerm regnes som ferdig. Ved tvil er designfilen fasit.
+
 ## Mapper
 | Mappe | Innhold | Hovedfil |
 |---|---|---|

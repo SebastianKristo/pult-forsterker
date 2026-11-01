@@ -37,9 +37,25 @@ API:
   CORS: alle /api/* svarer med Access-Control-Allow-Origin (+ OPTIONS-preflight og Private Network Access),
         så appen (capacitor://localhost, https://localhost) og andre web-UI kan bruke API-et direkte.
   POST /api/transport {"action":"play|pause|playpause|next|previous|stop"}  (AirPlay/Bluetooth/Radio)
-  GET  /api/presets                       radiokanaler 1–6 (Lyrion)
-  POST /api/preset  {"n":1-6}             spill kanal n  |  {"n":1-6, "save":true} lagre det som spiller nå
-  POST /api/presets {"import":true}       hent de 6 første favorittene fra Lyrion | {"presets":[{title,url,icon}…]}
+  Radiofavoritter: inntil 50 (PRESETS_MAX). state["presets"] har alltid minst 6 plasser (None = tom plass, de 6 første
+  er «knappeplassene» på S1/radiokortet) og vokser når flere legges til. Hver favoritt: {title,url,icon,genre}.
+  GET  /api/presets                       {"presets":[{n,title,url,icon,image,genre}|null…], "items":[bare fylte],
+                                           "count","max":50,"active","lyrion"}
+  POST /api/preset  {"n":1-50}            spill kanal n  |  {"n":…, "save":true} lagre det som spiller nå på plass n
+  POST /api/presets {"import":true}       hent favorittene (inntil 50) fra Lyrion | {"presets":[{title,url,icon}…]} erstatt alle
+  POST /api/presets {"title","url","genre"?,"image"?}   legg til favoritt (første tomme plass, ellers bakerst).
+                                          201 {"ok":true,"n":…, ...GET-svaret}; 400 ved manglende url eller fullt (50)
+  PUT|POST /api/presets/order {"order":[n…]}   ny rekkefølge (gamle plassnumre, 1-basert; utelatte havner bakerst)
+  DELETE /api/presets/{n}                 slett favoritt n (resten rykker opp)
+  POST /api/presets/{n}/play              spill favoritt n (som POST /api/preset {"n":n})
+  GET  /api/radio/search?q=…              {"q","norway":[st…],"world":[st…],"offline":bool} fra Radio Browser (cache 10 min)
+  GET  /api/radio/browse                  {"shelves":[{"id","title","items":[st…]}…],"offline":bool}
+                                          id: popular_no, pop, news, classical, jazz, rock, local
+         st = {"id"(stationuuid),"name","genre","url"(url_resolved),"image"(favicon),"country"(kode),"codec","bitrate"}
+  POST /api/radio/play {"url","title","image"?,"genre"?}   spill en kanal som ikke er favoritt (via Lyrion)
+  Status: "presets" = [{n,title}…] (alle plasser), "presets_count" (antall fylte), "presets_max" (50),
+          "radio_now": {"name","genre","now","image","url","n"(favoritt-nr, 0 = ikke favoritt),"playing"} | null
+  KI_AMP_RADIOBROWSER=<base-URL> overstyrer Radio Browser-speilene (test).
   POST /api/spotify {"event":"playing|paused|stopped|track_changed|session_connected|session_disconnected|volume_changed|…",
                      "name":…, "artists":…, "album":…, "covers":…, "duration_ms":…, "position_ms":…, "user_name":…}
                      Spotify Connect-hendelse fra librespot (--onevent /usr/local/bin/ki-spotify-event, se ki-spotify.service).
@@ -902,6 +918,10 @@ def load_state():
             state.update({k: v for k, v in saved.items() if k in state})
     except Exception:
         pass
+    try:
+        state["presets"] = norm_presets(state["presets"] if isinstance(state["presets"], list) else [])
+    except Exception:
+        state["presets"] = [None] * 6
 
 
 def write_ctrl():
@@ -949,6 +969,7 @@ def read_status():
               "title": spotify["title"], "artist": spotify["artist"], "album": spotify["album"],
               "duration": spotify["duration"], "position": spotify["position"], "bt_device": st.get("bt_device", "")}
     extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", "")} for i, p in enumerate(state["presets"])],
+             "presets_count": sum(1 for p in state["presets"] if p), "presets_max": PRESETS_MAX, "radio_now": radio_now(),
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected}
     playing, paused = bool(st.get("playing")), bool(st.get("paused"))
     if _transport_hint["until"] > time.time() and _transport_hint["src"] == st.get("source", ""):
@@ -961,6 +982,7 @@ def read_status():
     return {**state, **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"],
+            "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"],
             "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD,
             "spotify": dict(spotify), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
@@ -1228,12 +1250,12 @@ def menu_close():
 
 
 def menu_step(d):
-    menu["idx"] = (menu["idx"] - 1 + d) % 6 + 1; menu["until"] = time.time() + MENU_S; write_ctrl()
+    menu["idx"] = (menu["idx"] - 1 + d) % len(state["presets"]) + 1; menu["until"] = time.time() + MENU_S; write_ctrl()
 
 
 def menu_pick():
     n = menu["idx"]; menu_close()
-    if state["presets"][n - 1]:
+    if n <= len(state["presets"]) and state["presets"][n - 1]:
         _safe(play_preset, n)
     else:
         voice.say("radio_empty", n=n)
@@ -1537,7 +1559,7 @@ def setup_node_buttons():
             menu_open(); menu_step(1)
 
     def _radio_held():    # hold = spill favoritten som er valgt (tom plass i menyen + radio spiller = lagre der)
-        if menu["open"] and not state["presets"][menu["idx"] - 1] and state["input"] == "radio" and lyr.info.get("url"):
+        if menu["open"] and menu["idx"] <= len(state["presets"]) and not state["presets"][menu["idx"] - 1] and state["input"] == "radio" and lyr.info.get("url"):
             menu_save()
         elif menu["open"]:
             menu_pick()
@@ -1561,13 +1583,13 @@ def setup_node_buttons():
 
     def _radio_info():
         if menu["open"]:
-            n = menu["idx"]; p = state["presets"][n - 1]
+            n = menu["idx"]; p = state["presets"][n - 1] if n <= len(state["presets"]) else None
             if p:
                 return (f"Spill favoritt {n}", p.get("title") or f"Kanal {n}")
             if state["input"] == "radio" and lyr.info.get("url"):
                 return (f"Lagre på plass {n}", lyr.info.get("station") or "Det som spiller nå")
             return None
-        if state["preset"] and state["presets"][state["preset"] - 1]:
+        if 0 < state["preset"] <= len(state["presets"]) and state["presets"][state["preset"] - 1]:
             return (f"Spill favoritt {state['preset']}", state["presets"][state["preset"] - 1].get("title", ""))
         return None
 
@@ -1771,7 +1793,7 @@ async def h_events(r):
 
 def _cors_headers(r):
     h = {"Access-Control-Allow-Origin": r.headers.get("Origin") or "*", "Vary": "Origin",
-         "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Max-Age": "600",
+         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS", "Access-Control-Max-Age": "600",
          "Access-Control-Allow-Headers": r.headers.get("Access-Control-Request-Headers") or "Content-Type"}
     if r.headers.get("Access-Control-Request-Private-Network"):
         h["Access-Control-Allow-Private-Network"] = "true"
@@ -1994,7 +2016,7 @@ class Lyrion:
         return path if path.startswith("http") else f"http://{self.host}:{self.port}/{path.lstrip('/')}"
 
     def favorites(self):
-        r = self.rpc(["favorites", "items", 0, 100, "want_url:1"], player=False)
+        r = self.rpc(["favorites", "items", 0, 200, "want_url:1"], player=False)
         out = []
         for it in r.get("loop_loop", []):
             if int(it.get("isaudio", 0)) and it.get("url"):
@@ -2028,9 +2050,9 @@ class Lyrion:
                 self._sync_volume(r)
                 self._fetch_art()
                 if not any(state["presets"]):
-                    favs = self.favorites()[:6]
+                    favs = self.favorites()[:PRESETS_MAX]
                     if favs:
-                        state["presets"] = favs + [None] * (6 - len(favs)); changed()
+                        state["presets"] = norm_presets(favs); changed()
                         print("Radiokanaler hentet fra Lyrion-favoritter:", [f["title"] for f in favs], flush=True)
                 if state["input"] == "radio":
                     write_ctrl()
@@ -2084,14 +2106,73 @@ class Lyrion:
 lyr = Lyrion()
 
 
+PRESETS_MIN, PRESETS_MAX = 6, 50
+radio_tmp = {}   # kanal spilt via /api/radio/play (ikke favoritt): {title,url,icon,genre}
+
+
+def norm_presets(lst=None):
+    """Minst 6 plasser, maks 50 fylte; tomme plasser bak de 6 første fjernes."""
+    lst = [p if isinstance(p, dict) and p.get("url") else None for p in (state["presets"] if lst is None else lst)]
+    head, tail = lst[:PRESETS_MIN], [p for p in lst[PRESETS_MIN:] if p]
+    head += [None] * (PRESETS_MIN - len(head))
+    out = head + tail
+    while sum(1 for p in out if p) > PRESETS_MAX:
+        out.pop(max(i for i, p in enumerate(out) if p))
+    return out + [None] * (PRESETS_MIN - len(out))
+
+
+def preset_out(i, p):
+    if not p:
+        return None
+    return {"n": i + 1, "title": p.get("title", ""), "url": p.get("url", ""), "icon": p.get("icon", ""),
+            "image": p.get("icon", "") or p.get("image", ""), "genre": p.get("genre", "")}
+
+
+def presets_payload():
+    out = [preset_out(i, p) for i, p in enumerate(state["presets"])]
+    return {"presets": out, "items": [p for p in out if p], "count": sum(1 for p in out if p), "max": PRESETS_MAX,
+            "active": state["preset"], "lyrion": lyr.connected}
+
+
+def radio_now():
+    if state["input"] != "radio":
+        return None
+    i = lyr.info; url = i.get("url", "")
+    n = state["preset"] if state["preset"] and 0 < state["preset"] <= len(state["presets"]) and (state["presets"][state["preset"] - 1] or {}).get("url") == url else 0
+    p = state["presets"][n - 1] if n else (radio_tmp if radio_tmp.get("url") == url else {})
+    if not p and url:
+        p = next((x for x in state["presets"] if x and x.get("url") == url), {})
+    name = (p or {}).get("title") or i.get("station", "")
+    if not name and not url:
+        return None
+    now = " – ".join(x for x in (i.get("artist", ""), i.get("song", "")) if x)
+    return {"name": name, "genre": (p or {}).get("genre", ""), "now": now, "image": (p or {}).get("icon", "") or i.get("art", ""),
+            "url": url, "n": n, "playing": i.get("mode") == "play"}
+
+
+def play_url(url, title="", image="", genre=""):
+    """Spill en vilkårlig strøm via Lyrion (kanal som ikke er favoritt)."""
+    if not url or not str(url).startswith(("http://", "https://")):
+        raise ValueError("url må være http(s)")
+    if not state["power"]:
+        set_power(True)
+    lyr.rpc(["playlist", "play", url, title or ""])
+    radio_tmp.clear(); radio_tmp.update(title=title or "", url=url, icon=image or "", genre=genre or "")
+    lyr.info = {**lyr.info, "mode": "play", "station": title or "", "song": "", "artist": "", "url": url, "art": image or ""}
+    n = next((k + 1 for k, p in enumerate(state["presets"]) if p and p.get("url") == url), 0)
+    state["preset"] = n
+    set_input("radio", announce=False)
+    apply_input(); changed()
+
+
 def play_preset(n, announce=True):
-    p = state["presets"][n - 1] if 1 <= n <= 6 else None
+    p = state["presets"][n - 1] if 1 <= n <= len(state["presets"]) else None
     if not p:
         raise RuntimeError(f"radiokanal {n} er ikke lagret")
     if not state["power"]:
         set_power(True)
     lyr.rpc(["playlist", "play", p["url"], p.get("title", "")])
-    lyr.info = {**lyr.info, "mode": "play", "station": p.get("title", ""), "song": "", "artist": "", "url": p["url"]}
+    lyr.info = {**lyr.info, "mode": "play", "station": p.get("title", ""), "song": "", "artist": "", "url": p["url"], "art": p.get("icon", "")}
     state["preset"] = n
     set_input("radio", announce=False)
     apply_input(); changed()
@@ -2112,7 +2193,13 @@ def save_preset(n):
     i = lyr.info
     if not i.get("url"):
         raise RuntimeError("ingen radiokanal spiller nå")
-    state["presets"][n - 1] = {"title": i.get("station") or i.get("song") or f"Kanal {n}", "url": i["url"], "icon": i.get("art", "")}
+    if not 1 <= n <= PRESETS_MAX:
+        raise RuntimeError(f"plass må være 1–{PRESETS_MAX}")
+    if n > len(state["presets"]):
+        state["presets"] = state["presets"] + [None] * (n - len(state["presets"]))
+    g = radio_tmp.get("genre", "") if radio_tmp.get("url") == i["url"] else ""
+    state["presets"][n - 1] = {"title": i.get("station") or i.get("song") or f"Kanal {n}", "url": i["url"], "icon": i.get("art", ""), "genre": g}
+    state["presets"] = norm_presets(); n = min(n, len(state["presets"]))
     state["preset"] = n
     toast("Lagret", f"{state['presets'][n - 1]['title']} på plass {n}", saved=n)
     apply_input(); changed()
@@ -2167,14 +2254,18 @@ async def h_menu(r):
 
 
 async def h_presets(_r):
-    return web.json_response({"presets": state["presets"], "active": state["preset"], "lyrion": lyr.connected})
+    return web.json_response(presets_payload())
 
 
 async def h_preset(r):
     b = await r.json()
-    n = int(b.get("n", 0))
-    if not 1 <= n <= 6:
-        return web.json_response({"error": "n må være 1–6"}, status=400)
+    try:
+        n = int(b.get("n", 0))
+    except (TypeError, ValueError):
+        n = 0
+    lim = PRESETS_MAX if b.get("save") else len(state["presets"])
+    if not 1 <= n <= lim:
+        return web.json_response({"error": f"n må være 1–{lim}"}, status=400)
     try:
         fn = save_preset if b.get("save") else play_preset
         await asyncio.get_running_loop().run_in_executor(None, fn, n)
@@ -2189,13 +2280,206 @@ async def h_presets_set(r):
     try:
         if b.get("import"):
             favs = await asyncio.get_running_loop().run_in_executor(None, lyr.favorites)
-            state["presets"] = (favs[:6] + [None] * 6)[:6]
+            state["presets"] = norm_presets(favs[:PRESETS_MAX])
         elif isinstance(b.get("presets"), list):
-            state["presets"] = ([p if p and p.get("url") else None for p in b["presets"]] + [None] * 6)[:6]
+            if sum(1 for p in b["presets"] if isinstance(p, dict) and p.get("url")) > PRESETS_MAX:
+                return web.json_response({"error": f"maks {PRESETS_MAX} favoritter"}, status=400)
+            state["presets"] = norm_presets(b["presets"])
+        elif b.get("url") or b.get("title"):
+            url = str(b.get("url") or "").strip()
+            if not url.startswith(("http://", "https://")):
+                return web.json_response({"error": "url må være http(s)"}, status=400)
+            if sum(1 for p in state["presets"] if p) >= PRESETS_MAX:
+                return web.json_response({"error": f"maks {PRESETS_MAX} favoritter"}, status=400)
+            item = {"title": str(b.get("title") or url)[:120], "url": url,
+                    "icon": str(b.get("image") or b.get("icon") or ""), "genre": str(b.get("genre") or "")[:60]}
+            lst = list(state["presets"])
+            k = next((i for i, p in enumerate(lst) if not p), None)
+            if k is None:
+                lst.append(item); k = len(lst) - 1
+            else:
+                lst[k] = item
+            state["presets"] = norm_presets(lst); changed()
+            return web.json_response({"ok": True, "n": k + 1, **presets_payload()}, status=201)
+        else:
+            return web.json_response({"error": "ukjent forespørsel"}, status=400)
     except Exception as e:
         return web.json_response({"error": str(e)}, status=409)
+    if state["preset"] > len(state["presets"]) or (state["preset"] and not state["presets"][state["preset"] - 1]):
+        state["preset"] = 0
     changed()
-    return web.json_response({"presets": state["presets"], "active": state["preset"]})
+    return web.json_response(presets_payload())
+
+
+def _remap_active(old_lst):
+    """Etter rekkefølge/sletting: finn aktiv favoritt igjen ut fra URL."""
+    cur = old_lst[state["preset"] - 1] if 0 < state["preset"] <= len(old_lst) else None
+    state["preset"] = next((i + 1 for i, p in enumerate(state["presets"]) if p and cur and p.get("url") == cur.get("url")), 0)
+
+
+async def h_presets_order(r):
+    try:
+        b = await r.json(); order = [int(x) for x in b.get("order", [])]
+    except Exception:
+        return web.json_response({"error": "order må være en liste med plassnumre"}, status=400)
+    old = list(state["presets"])
+    if any(not 1 <= n <= len(old) for n in order) or len(set(order)) != len(order):
+        return web.json_response({"error": f"ugyldig order (1–{len(old)}, ingen duplikater)"}, status=400)
+    picked = [old[n - 1] for n in order if old[n - 1]]
+    rest = [p for i, p in enumerate(old) if p and (i + 1) not in order]
+    state["presets"] = norm_presets(picked + rest)
+    _remap_active(old); changed()
+    return web.json_response(presets_payload())
+
+
+def _n_of(r):
+    try:
+        n = int(r.match_info["n"])
+    except (KeyError, ValueError):
+        n = 0
+    return n if 1 <= n <= len(state["presets"]) else 0
+
+
+async def h_preset_delete(r):
+    n = _n_of(r)
+    if not n or not state["presets"][n - 1]:
+        return web.json_response({"error": "finnes ikke"}, status=404)
+    old = list(state["presets"]); lst = list(old); lst.pop(n - 1)
+    state["presets"] = norm_presets([p for p in lst if p])
+    _remap_active(old); changed()
+    return web.json_response(presets_payload())
+
+
+async def h_preset_play(r):
+    n = _n_of(r)
+    if not n or not state["presets"][n - 1]:
+        return web.json_response({"error": "finnes ikke"}, status=404)
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, play_preset, n)
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=409)
+    return j()
+
+
+# ---------- Radio Browser (søk/utforsk) ----------
+RB_MIRRORS = [m for m in os.environ.get("KI_AMP_RADIOBROWSER", "").split(",") if m] or \
+    ["https://de1.api.radio-browser.info", "https://de2.api.radio-browser.info", "https://fi1.api.radio-browser.info",
+     "https://all.api.radio-browser.info"]
+RB_CACHE_S = 600
+_rb_cache = {}
+_rb_good = [0]
+RB_GENRES = [("pop", "Pop og hits", "pop"), ("news", "Nyheter og prat", "news"), ("classical", "Klassisk", "classical"),
+             ("jazz", "Jazz", "jazz"), ("rock", "Rock", "rock"), ("local", "Lokal", "local")]
+_RB_LABEL = {"pop": "Pop og hits", "hits": "Pop og hits", "top 40": "Pop og hits", "news": "Nyheter og prat", "talk": "Nyheter og prat",
+             "classical": "Klassisk", "jazz": "Jazz", "rock": "Rock", "local": "Lokal"}
+
+
+class RBOffline(Exception):
+    pass
+
+
+def rb_get(path, params):
+    """GET mot Radio Browser med speil-fallback, timeout og 10 min cache. Kaster RBOffline når alle feiler."""
+    import urllib.parse
+    key = path + "?" + urllib.parse.urlencode(sorted(params.items()))
+    hit = _rb_cache.get(key)
+    if hit and time.time() - hit[0] < RB_CACHE_S:
+        return hit[1]
+    err = None
+    for k in range(len(RB_MIRRORS)):
+        base = RB_MIRRORS[(_rb_good[0] + k) % len(RB_MIRRORS)]
+        try:
+            req = urllib.request.Request(base.rstrip("/") + key, headers={"User-Agent": f"Skjold/2.0", "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8", "replace"))
+            _rb_good[0] = (_rb_good[0] + k) % len(RB_MIRRORS)
+            _rb_cache[key] = (time.time(), data)
+            if len(_rb_cache) > 200:
+                for kk in sorted(_rb_cache, key=lambda x: _rb_cache[x][0])[:50]:
+                    _rb_cache.pop(kk, None)
+            return data
+        except Exception as e:
+            err = e
+    if hit:
+        return hit[1]   # gammel cache er bedre enn ingenting
+    raise RBOffline(str(err))
+
+
+def rb_station(s):
+    tags = [t.strip() for t in (s.get("tags") or "").split(",") if t.strip()]
+    genre = next((_RB_LABEL[t.lower()] for t in tags if t.lower() in _RB_LABEL), "") or ", ".join(tags[:2]).title()
+    return {"id": s.get("stationuuid", ""), "name": (s.get("name") or "").strip(), "genre": genre,
+            "url": s.get("url_resolved") or s.get("url") or "", "image": s.get("favicon") or "",
+            "country": s.get("countrycode") or "", "codec": s.get("codec") or "", "bitrate": int(s.get("bitrate") or 0)}
+
+
+def rb_list(params, limit=20):
+    base = {"hidebroken": "true", "order": "clickcount", "reverse": "true", "limit": str(limit)}
+    out, seen = [], set()
+    for s in rb_get("/json/stations/search", {**base, **params}) or []:
+        st = rb_station(s)
+        if st["name"] and st["url"].startswith(("http://", "https://")) and st["url"] not in seen:
+            seen.add(st["url"]); out.append(st)
+    return out
+
+
+def radio_search(q):
+    try:
+        no = rb_list({"name": q, "countrycode": "NO"}, 20)
+        urls = {s["url"] for s in no}
+        world = [s for s in rb_list({"name": q}, 30) if s["url"] not in urls and s["country"] != "NO"][:20]
+        return {"q": q, "norway": no, "world": world, "offline": False}
+    except RBOffline as e:
+        return {"q": q, "norway": [], "world": [], "offline": True, "error": str(e)}
+
+
+def radio_browse():
+    from concurrent.futures import ThreadPoolExecutor
+    jobs = [("popular_no", "Populære i Norge", {"countrycode": "NO"})] + \
+           [(gid, title, {"countrycode": "NO", "tag": tag}) for gid, title, tag in RB_GENRES]
+    offline = [False]
+
+    def run(job):
+        gid, title, params = job
+        try:
+            items = rb_list(params, 20)
+            if len(items) < 4 and gid != "popular_no":   # for få norske: fyll på fra hele verden
+                urls = {s["url"] for s in items}
+                items += [s for s in rb_list({"tag": params["tag"]}, 20) if s["url"] not in urls]
+            return {"id": gid, "title": title, "items": items[:20]}
+        except RBOffline:
+            offline[0] = True
+            return {"id": gid, "title": title, "items": []}
+    with ThreadPoolExecutor(4) as ex:
+        shelves = list(ex.map(run, jobs))
+    return {"shelves": shelves, "offline": offline[0]}
+
+
+async def h_radio_search(r):
+    q = (r.query.get("q") or "").strip()
+    if not q:
+        return web.json_response({"q": "", "norway": [], "world": [], "offline": False})
+    return web.json_response(await asyncio.get_running_loop().run_in_executor(None, radio_search, q[:80]))
+
+
+async def h_radio_browse(_r):
+    return web.json_response(await asyncio.get_running_loop().run_in_executor(None, radio_browse))
+
+
+async def h_radio_play(r):
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    url = str(b.get("url") or "").strip()
+    if not url.startswith(("http://", "https://")):
+        return web.json_response({"error": "url må være http(s)"}, status=400)
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, play_url, url, str(b.get("title") or ""),
+                                                         str(b.get("image") or ""), str(b.get("genre") or ""))
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=409)
+    return j()
 
 
 # ---------- avspillingskontroll (AirPlay via Shairport Sync D-Bus, Bluetooth via BlueZ AVRCP) ----------
@@ -2305,7 +2589,10 @@ def main():
     app.add_routes([web.get("/api/status", h_status), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
-                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
+                    web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
+                    web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
+                    web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
+                    web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
                     web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post),
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.post("/api/reboot", h_reboot)])
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)

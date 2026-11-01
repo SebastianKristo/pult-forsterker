@@ -21,7 +21,15 @@ export interface Status {
   /** Nyere daemon: s1 | node | core (eldre: utledes fra board). */
   product?: string;
   airplay_device?: string;
+  presets_count?: number; presets_max?: number;
+  radio_now?: RadioNow | null;
 }
+
+export interface RadioNow { name: string; genre?: string; now?: string; image?: string; url?: string; n?: number | null; playing?: boolean }
+export interface Fav { n: number; title: string; url: string; genre?: string; image?: string; icon?: string }
+export interface Station { id?: string; name: string; genre?: string; url: string; image?: string; country?: string; codec?: string; bitrate?: number }
+export interface PresetsResp { presets: (Fav | null)[]; items?: Fav[]; count?: number; max?: number; active: number; lyrion: boolean }
+export interface Shelf { id: string; title: string; items: Station[] }
 
 export type Product = 's1' | 'node' | 'core';
 export const PRODUCT_LABEL: Record<Product, string> = { s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core' };
@@ -99,7 +107,14 @@ export const api = {
   loudness: (on?: boolean, level?: number) => post('/api/loudness', { ...(on !== undefined ? { on } : {}), ...(level !== undefined ? { level } : {}) }),
   transport: (action: 'play' | 'pause' | 'playpause' | 'next' | 'previous' | 'stop') => post('/api/transport', { action }),
   voice: (b: { on?: boolean; profile?: string; say?: string }) => post('/api/voice', b),
-  presets: () => req<{ presets: (FullPreset | null)[]; active: number; lyrion: boolean }>('/api/presets'),
+  presets: () => req<PresetsResp>('/api/presets'),
+  addPreset: (b: { title: string; url: string; genre?: string; image?: string }) => post<PresetsResp>('/api/presets', b),
+  orderPresets: (order: number[]) => post<PresetsResp>('/api/presets/order', { order }),
+  deletePreset: (n: number) => req<PresetsResp>('/api/presets/' + n, { method: 'DELETE' }),
+  playFav: (n: number) => post('/api/presets/' + n + '/play', {}),
+  radioSearch: (q: string) => req<{ norway: Station[]; world: Station[]; offline?: boolean }>('/api/radio/search?q=' + encodeURIComponent(q), undefined, getBase(), 12000),
+  radioBrowse: () => req<{ shelves: Shelf[]; offline?: boolean }>('/api/radio/browse', undefined, getBase(), 12000),
+  radioPlay: (b: { url: string; title: string; image?: string; genre?: string }) => post('/api/radio/play', b),
   playPreset: (n: number) => post('/api/preset', { n }),
   savePreset: (n: number) => post('/api/preset', { n, save: true }),
   setPresets: (presets: (FullPreset | null)[]) => post<{ presets: (FullPreset | null)[]; active: number }>('/api/presets', { presets }),

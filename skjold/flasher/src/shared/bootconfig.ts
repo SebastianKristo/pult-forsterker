@@ -10,7 +10,7 @@
  * skjold/node/driver/installer_node.sh (Node), og starter på nytt.
  */
 import { pbkdf2Sync } from 'crypto';
-import type { SetupOptions } from './types';
+import type { SetupOptions, StaticIp } from './types';
 import { sha512crypt } from './sha512crypt';
 
 export const LANG_LOCALE: Record<SetupOptions['lang'], { keymap: string; timezone: string; country: string }> = {
@@ -38,11 +38,48 @@ export function onboardingUrl(hostname: string): string {
   return `http://${hostname}.local:8765/`;
 }
 
+/** Gyldig IPv4-adresse (fire oktetter 0–255, uten ledende nuller). */
+export function isIPv4(s: string): boolean {
+  const p = s.trim().split('.');
+  return p.length === 4 && p.every(x => /^(0|[1-9]\d{0,2})$/.test(x) && Number(x) <= 255);
+}
+
+/** «192.168.1.50/24» eller «192.168.1.50» (→ /24). null hvis ugyldig. */
+export function parseCidr(s: string): { ip: string; prefix: number } | null {
+  const m = /^\s*([0-9.]+)(?:\/(\d{1,2}))?\s*$/.exec(s);
+  if (!m || !isIPv4(m[1])) return null;
+  const prefix = m[2] === undefined ? 24 : Number(m[2]);
+  if (prefix < 1 || prefix > 32) return null;
+  const first = Number(m[1].split('.')[0]);
+  if (first === 0 || first === 127 || first >= 224) return null;
+  return { ip: m[1], prefix };
+}
+
+export function dnsList(s: string): string[] {
+  return s.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
+}
+
+/** Feilmelding for fast IP, eller null når feltene er gyldige. */
+export function validateStatic(st: StaticIp): string | null {
+  if (!parseCidr(st.ip)) return 'Ugyldig IP-adresse. Skriv f.eks. 192.168.1.50/24.';
+  if (st.gw.trim() && !isIPv4(st.gw)) return 'Ugyldig ruteradresse. Skriv f.eks. 192.168.1.1.';
+  if (dnsList(st.dns).some(d => !isIPv4(d))) return 'Ugyldig DNS-adresse. Skriv f.eks. 1.1.1.1.';
+  return null;
+}
+
+const isEth = (o: SetupOptions) => o.preset && o.net === 'eth';
+const isWifi = (o: SetupOptions) => o.preset && o.net !== 'eth';
+const staticOf = (o: SetupOptions) => (isEth(o) && o.staticIp ? o.staticIp : null);
+
 export function validate(o: SetupOptions): string | null {
   if (!isValidHostname(o.hostname)) return 'Ugyldig vertsnavn (bare a–z, 0–9 og bindestrek).';
   if (o.preset) {
-    if (!o.ssid.trim() || Buffer.byteLength(o.ssid, 'utf8') > 32) return 'Wi-Fi-navnet må være 1–32 byte.';
-    if (o.wifiPassword.length < 8 || o.wifiPassword.length > 63) return 'Wi-Fi-passordet må være 8–63 tegn.';
+    if (isWifi(o)) {
+      if (!o.ssid.trim() || Buffer.byteLength(o.ssid, 'utf8') > 32) return 'Wi-Fi-navnet må være 1–32 byte.';
+      if (o.wifiPassword.length < 8 || o.wifiPassword.length > 63) return 'Wi-Fi-passordet må være 8–63 tegn.';
+    }
+    const st = staticOf(o);
+    if (st) { const e = validateStatic(st); if (e) return e; }
     if (!o.name.trim()) return 'Skriv inn et navn eller rom.';
     if (!/^[A-Z]{2}$/.test(o.country)) return 'Landkode må være to bokstaver (f.eks. NO).';
   }
@@ -138,9 +175,45 @@ function setupJson(o: SetupOptions): string {
   const setup: Record<string, unknown> = { version: 1, device: o.device, hostname: o.hostname, lang: o.lang, ref: INSTALL_REF, lyrion_server: !!o.lyrionServer };
   if (o.preset) {
     setup.name = o.name.trim();
-    setup.wifi = { ssid: o.ssid, password: o.wifiPassword, country: o.country };
+    const st = staticOf(o);
+    setup.net = isEth(o) ? 'eth' : 'wifi';
+    setup.ssid = isWifi(o) ? o.ssid : '';
+    setup.psk = isWifi(o) ? o.wifiPassword : '';
+    setup.static = st ? { ip: cidrString(st.ip), gw: st.gw.trim(), dns: dnsList(st.dns).join(',') } : null;
+    if (isWifi(o)) setup.wifi = { ssid: o.ssid, password: o.wifiPassword, country: o.country }; // eldre skjold-setup
   }
   return JSON.stringify(setup, null, 2) + '\n';
+}
+
+function cidrString(ip: string): string {
+  const c = parseCidr(ip)!;
+  return `${c.ip}/${c.prefix}`;
+}
+function staticDns(st: StaticIp): string[] {
+  const d = dnsList(st.dns);
+  return d.length ? d : st.gw.trim() ? [st.gw.trim()] : [];
+}
+
+/** NetworkManager-keyfile for kablet nett med fast IPv4 (systemd/firstrun-modus). */
+export function ethKeyfile(st: StaticIp): string {
+  const gw = st.gw.trim();
+  const dns = staticDns(st);
+  return ['[connection]', 'id=skjold-eth', 'type=ethernet', 'interface-name=eth0', 'autoconnect=true', 'autoconnect-priority=10', '',
+    '[ethernet]', '', '[ipv4]', 'method=manual', `address1=${cidrString(st.ip)}${gw ? ',' + gw : ''}`,
+    ...(dns.length ? [`dns=${dns.join(';')};`] : []), '', '[ipv6]', 'method=auto', ''].join('\n');
+}
+
+/** cloud-init network-config (v2) for kablet nett: fast IP eller DHCP. */
+export function ethNetworkConfig(st: StaticIp | null): string {
+  const L = ['# Skrevet av Skjold Flasher', 'network:', '  version: 2', '  renderer: NetworkManager', '  ethernets:', '    eth0:'];
+  if (!st) L.push('      dhcp4: true', '      optional: true');
+  else {
+    L.push('      dhcp4: false', '      optional: true', '      addresses:', `        - ${yq(cidrString(st.ip))}`);
+    if (st.gw.trim()) L.push('      routes:', '        - to: default', `          via: ${yq(st.gw.trim())}`);
+    const dns = staticDns(st);
+    if (dns.length) L.push('      nameservers:', '        addresses:', ...dns.map(d => `          - ${yq(d)}`));
+  }
+  return L.join('\n') + '\n';
 }
 
 /** Brukerens passord-hash. Uten SSH-passord lages en låst bruker (ingen innlogging med passord). */
@@ -179,7 +252,12 @@ function firstrun(o: SetupOptions, salt?: string): string {
       `echo ${sq(o.sshKey.trim())} >"$H/.ssh/authorized_keys"`, 'chown "$U:$U" "$H/.ssh/authorized_keys"; chmod 600 "$H/.ssh/authorized_keys"');
     if (!o.userPassword) L.push("printf 'PasswordAuthentication no\\n' >/etc/ssh/sshd_config.d/skjold.conf");
   }
-  if (o.preset) {
+  const st = staticOf(o);
+  if (st) L.push(
+    'install -d /etc/NetworkManager/system-connections',
+    `printf '%s' ${sq(ethKeyfile(st))} >/etc/NetworkManager/system-connections/skjold-eth.nmconnection`,
+    'chmod 600 /etc/NetworkManager/system-connections/skjold-eth.nmconnection');
+  if (isWifi(o)) {
     const ssidBytes = [...Buffer.from(o.ssid, 'utf8')].join(';') + ';';
     const conn = ['[connection]', 'id=skjold-wifi', 'type=wifi', 'autoconnect=true', '', '[wifi]', 'mode=infrastructure', `ssid=${ssidBytes}`, '',
       '[wifi-security]', 'key-mgmt=wpa-psk', `psk=${wpaPsk(o.ssid, o.wifiPassword)}`, '', '[ipv4]', 'method=auto', '', '[ipv6]', 'method=auto', ''].join('\n');
@@ -223,7 +301,8 @@ function cloudInit(o: SetupOptions, salt?: string): BootFile[] {
     'systemctl start --no-block skjold-install.service'];
   for (const c of cmds) ud.push(`  - ${yq(c)}`);
   const files: BootFile[] = [{ name: 'user-data', content: ud.join('\n') + '\n' }];
-  if (o.preset) {
+  if (isEth(o)) files.push({ name: 'network-config', content: ethNetworkConfig(staticOf(o)) });
+  else if (o.preset) {
     files.push({ name: 'network-config', content: [
       '# Skrevet av Skjold Flasher', 'network:', '  version: 2', '  wifis:', '    renderer: NetworkManager', '    wlan0:',
       '      dhcp4: true', `      regulatory-domain: ${yq(o.country)}`, '      optional: true', '      access-points:',
@@ -244,6 +323,19 @@ export function buildBootFiles(o: SetupOptions, mode: InitMode, salt?: string): 
 /** Ny cmdline.txt i systemd-modus: én linje, regdom før systemd.run (som firstrun.sh kutter bort). */
 export function patchCmdline(cmdline: string, o: SetupOptions): string {
   let c = cmdline.replace(/\r?\n/g, ' ').trim().replace(/ systemd\.run.*$/, '').replace(/ cfg80211\.ieee80211_regdom=\S+/, '');
-  if (o.preset) c += ` cfg80211.ieee80211_regdom=${o.country}`;
+  if (isWifi(o)) c += ` cfg80211.ieee80211_regdom=${o.country}`;
   return c + FIRSTRUN_CMDLINE + '\n';
+}
+
+/**
+ * Pi 3B kan ikke starte fra USB før OTP-biten er satt. Et SD-kort for Pi 3 (Node Pi 3B / Core) får derfor
+ * `program_usb_boot_mode=1` under [pi3] i config.txt: første oppstart fra kortet slår på USB-oppstart for godt.
+ * Pi 3B+ har biten satt fra fabrikk, og [pi3]-filteret gjør at Pi 4 ignorerer linja.
+ */
+export function needsUsbBootOtp(o: SetupOptions): boolean {
+  return (o.device === 'node-pi3' || o.device === 'core') && o.media !== 'usb';
+}
+export function patchConfigTxt(cfg: string, o: SetupOptions): string {
+  if (!needsUsbBootOtp(o) || /^\s*program_usb_boot_mode\s*=\s*1/m.test(cfg)) return cfg;
+  return cfg.replace(/\s*$/, '\n') + '\n# Skjold Flasher: slår på USB-oppstart på Pi 3B (engangs OTP-bit)\n[pi3]\nprogram_usb_boot_mode=1\n[all]\n';
 }

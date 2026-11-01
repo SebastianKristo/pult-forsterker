@@ -13,12 +13,15 @@ export interface Settings {
   hold: number;
   voice: boolean; lang: number; vv: number;
   dim: number; off: number; clock: boolean; clockStyle: number; led: number;
-  auto: number; wake: boolean;
+  auto: number; wake: boolean; spEn: boolean; upnpEn: boolean;
   updChannel: number; updAuto: boolean;
   setupDone: boolean;
   eq: EqProfiles;
 }
 
+export const EQ_NAMES = ['Dypbass', 'Bass', 'Mellomtone', 'Presens', 'Luft'];
+export const EQ_HZ = ['60 Hz', '250 Hz', '1 kHz', '4 kHz', '12 kHz'];
+export const EQ_DESC = ['Trommer, bassgitar og dunk. Mye her kan gi rumling.', 'Fylde og varme. For mye gjør lyden grøtete.', 'Stemmer og de fleste instrumenter.', 'Klarhet i tale og vokal. For mye blir skarpt.', 'Cymbaler, glans og romfølelse.'];
 export const NAMES = ['Skjold S1', 'Stue', 'Kontor', 'Soverom'];
 export const LANGS = ['Norsk', 'English', 'Svenska', 'Dansk'];
 
@@ -44,7 +47,7 @@ export function defaultEq(): EqProfiles {
 export const DEF: Settings = {
   bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, lvlAux: 0, lvlUsb: 0,
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
-  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, auto: 1, wake: true,
+  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, auto: 1, wake: true, spEn: true, upnpEn: false,
   updChannel: 0, updAuto: true, setupDone: false,
   eq: defaultEq()
 };
@@ -56,7 +59,7 @@ export const fmt = {
 
 export type NumKey = 'bass' | 'treb' | 'bal' | 'lvlAux' | 'lvlUsb';
 export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto';
-export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake';
+export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn';
 export type StrKey = 'nAux1' | 'nAux2' | 'nUsb1' | 'nUsb2' | 'nameCustom';
 
 export type Item =
@@ -68,9 +71,9 @@ export type Item =
   | { kind: 'api-bool'; id: 'loudness' | 'mix' | 'autoInput' | 'hpAutomute' | 'voiceOn'; n: string; hint?: string }
   | { kind: 'api-opt'; id: 'voiceProfile' | 'usbPc' | 'loudLevel'; n: string; hint?: string }
   | { kind: 'levels'; n: string; hint?: string }
-  | { kind: 'info'; n: string; key: 'btDev' | 'lyrion' | 'version' | 'ip' | 'id' | 'board' | 'headphones' | 'btPairing' | 'inputs' | 'output' }
+  | { kind: 'info'; n: string; key: 'btDev' | 'lyrion' | 'version' | 'ip' | 'id' | 'board' | 'headphones' | 'btPairing' | 'inputs' | 'output' | 'netName' }
   | { kind: 'test'; n: string; hint?: string }
-  | { kind: 'act'; n: string; id: 'btPair' | 'openRadio' | 'setup' | 'testVoice' | 'forget' | 'reset' | 'reboot' | 'findDevice'; label: string; safe?: boolean; hint?: string }
+  | { kind: 'act'; n: string; id: 'btPair' | 'setup' | 'testVoice' | 'forget' | 'reset' | 'reboot' | 'findDevice'; label: string; safe?: boolean; hint?: string }
   | { kind: 'eq'; n: string }
   | { kind: 'clocks'; n: string }
   | { kind: 'update'; n: string };
@@ -97,7 +100,7 @@ export const CATS: Category[] = [
     { kind: 'levels', n: 'Nivå per kilde', hint: 'Juster så kildene er like høye' },
     num('lvlAux', 'Nivå AUX', -6, 6, 'dB', 'Juster så AUX er like høy som strømming'), num('lvlUsb', 'Nivå USB', -6, 6, 'dB'),
     { kind: 'test', n: 'Test høyttalerne', hint: 'Spill en tone i venstre eller høyre høyttaler' }] },
-  { id: 'tilkobling', n: 'Tilkobling', sub: 'Navn, Blåtann og USB', items: [
+  { id: 'tilkobling', n: 'Tilkobling', sub: 'Navn og Blåtann', items: [
     opt('name', 'Enhetsnavn', NAMES, 'Navnet som vises i AirPlay og Blåtann'),
     str('nameCustom', 'Eget navn', 'Valgfritt', 'Overstyrer listen over – AirPlay, Spotify og Blåtann'),
     str('nAux1', 'Navn på AUX 1', 'AUX 1', 'Vises på skjermen og i appen'), str('nAux2', 'Navn på AUX 2', 'AUX 2'),
@@ -107,10 +110,13 @@ export const CATS: Category[] = [
     { kind: 'info', n: 'Tilkoblet Blåtann-enhet', key: 'btDev' },
     { kind: 'act', n: 'Blåtann-paring', id: 'btPair', label: 'Start paring', safe: true, hint: 'Gjør forsterkeren synlig for Blåtann i 2 minutter' },
     { kind: 'act', n: 'Glem alle Blåtann-enheter', id: 'forget', label: 'Glem alle' }] },
-  { id: 'radio', n: 'Radio', sub: 'Favoritter 1–6 fra Lyrion', items: [
-    opt('hold', 'Hold radioknappen', ['1', '2', '3', '4', '5', '6'], 'Favoritten som spilles når du holder radioknappen inne'),
-    { kind: 'info', n: 'Lyrion', key: 'lyrion' },
-    { kind: 'act', n: 'Administrer favoritter', id: 'openRadio', label: 'Åpne', safe: true }] },
+  { id: 'radio', n: 'Radio', sub: 'Lyrion-favoritter', items: [
+    opt('hold', 'Hold radioknappen', [], 'Kanalen som spilles når du holder radioknappen inne'),
+    { kind: 'info', n: 'Lyrion', key: 'lyrion' }] },
+  { id: 'tjenester', n: 'Musikktjenester', sub: 'Spotify og UPnP/DLNA', items: [
+    bool('spEn', 'Spotify Connect', 'Vises som høyttaler i Spotify-appen'),
+    bool('upnpEn', 'UPnP/DLNA-mottaker', 'Vises som høyttaler i apper som BubbleUPnP, foobar2000, Plex og «Cast til enhet» i Windows'),
+    { kind: 'info', n: 'Navn på nettverket', key: 'netName' }] },
   { id: 'stemme', n: 'Stemme', sub: 'Talebeskjeder', items: [
     { kind: 'api-bool', id: 'voiceOn', n: 'Talebeskjed ved bytte' },
     { kind: 'api-opt', id: 'voiceProfile', n: 'Stemme' },
@@ -121,7 +127,6 @@ export const CATS: Category[] = [
     bool('clock', 'Klokke i standby'), { kind: 'clocks', n: 'Klokke i standby' }, opt('led', 'LED-ringer', ['Høy', 'Middels', 'Lav', 'Av'])] },
   { id: 'strom', n: 'Strøm', sub: 'Standby og påslag', items: [
     opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay eller Blåtann vekker forsterkeren')] },
-  { id: 'rom', n: 'Rom', sub: 'Rom og enheter · grupper via Lyrion', items: [] },
   { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub Releases', items: [{ kind: 'update', n: 'Oppdatering' }] },
   { id: 'system', n: 'System', sub: 'Om, oppsett og tilbakestilling', items: [
     { kind: 'info', n: 'Programvare', key: 'version' }, { kind: 'info', n: 'Adresse', key: 'ip' },
@@ -167,7 +172,11 @@ export function eqCurve(eq: number[], w: number, h: number): { line: string; are
 }
 
 /** Deterministic placeholder artwork for a title/station (used when there is no cover image). */
-export function art(key: string): { bg: string; ink: string } {
+export function art(key: string, image?: string): { bg: string; ink: string; logo?: string } {
+  if (image && /^(https?:)?\/\//i.test(image)) {
+    const u = image.replace(/"/g, ''), nrk = /static\.nrk\.no/.test(u);
+    return { bg: 'url("' + u + '") center / ' + (nrk ? '72% auto' : 'cover') + ' no-repeat, ' + (nrk ? '#121214' : '#f4f2ee'), ink: 'transparent', logo: u };
+  }
   let h = 0;
   for (const c of key) h = (h * 31 + c.charCodeAt(0)) % 360;
   return {

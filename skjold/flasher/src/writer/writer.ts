@@ -10,7 +10,7 @@ import { promises as fsp } from 'fs';
 import net from 'net';
 import * as drivelist from 'drivelist';
 import { sourceDestination, multiWrite } from 'etcher-sdk';
-import { isSafeTarget } from '../shared/drivefilter';
+import { isSafeTarget, mediaKind } from '../shared/drivefilter';
 import type { WriterJob, WriterMessage } from '../shared/types';
 
 async function main(): Promise<void> {
@@ -29,7 +29,9 @@ async function main(): Promise<void> {
     // Finn disken på nytt og sjekk den igjen her, med forhøyede rettigheter – aldri systemdisker.
     const drive = (await drivelist.list()).find(d => d.device === job.device);
     if (!drive) throw new Error(`Fant ikke ${job.device}. Er kortet tatt ut?`);
-    if (drive.isReadOnly) throw new Error('Kortet er skrivebeskyttet. Skyv låsebryteren på siden av SD-kortet/adapteren opp (mot kontaktene), sett det inn igjen og prøv på nytt.');
+    if (drive.isReadOnly) throw new Error(mediaKind(drive) === 'sd'
+      ? 'Kortet er skrivebeskyttet. Skyv låsebryteren på siden av SD-kortet/adapteren opp (mot kontaktene), sett det inn igjen og prøv på nytt.'
+      : 'Disken er skrivebeskyttet. Slå av bryteren for skrivebeskyttelse på pinnen, eller velg en annen disk.');
     if (!isSafeTarget(drive)) throw new Error(`${job.device} er ikke en flyttbar disk – avbryter.`);
 
     const source = new sourceDestination.File({ path: job.image });

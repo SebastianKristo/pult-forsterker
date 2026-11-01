@@ -11,7 +11,7 @@ export const online = signal<boolean>(false);
 export const lastError = signal<string>('');
 export const route = signal<Route>({ page: 'home' });
 export const fullPlayer = signal<boolean>(false);          // telefon: fullskjerm-spiller
-export const mode = signal<'find' | 'setup' | 'app'>(needsHost() ? 'find' : 'app');
+export const mode = signal<'find' | 'setup' | 'app'>(typeof location !== 'undefined' && location.hash === '#finn' ? 'find' : typeof location !== 'undefined' && location.hash === '#oppsett' ? 'setup' : needsHost() ? 'find' : 'app');
 export const settings = signal<Settings>({ ...DEF, eq: defaultEq() });
 export const settingsSource = signal<'api' | 'local' | 'none'>('none');
 export const toast = signal<string>('');
@@ -259,3 +259,24 @@ export const deviceName = computed(() => {
 // Lagre siste kjente status i sessionStorage, så første render ikke blinker
 effect(() => { const s = status.value; if (s) { try { sessionStorage.setItem('skjold-last', JSON.stringify(s)); } catch { /* ignore */ } } });
 try { const j = sessionStorage.getItem('skjold-last'); if (j && !status.value) status.value = JSON.parse(j) as Status; } catch { /* ignore */ }
+
+// ---------- Nylig spilt (lagres på denne enheten, fra det forsterkeren faktisk har spilt) ----------
+export interface Recent { key: string; title: string; big: string; kind: string; input: InputId; station: boolean; image?: string; url?: string }
+const RECENT_KEY = 'skjold-recent';
+export const recent = signal<Recent[]>((() => { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') as Recent[]; } catch { return []; } })());
+effect(() => {
+  const s = status.value;
+  if (!s || !s.power || !s.playing) return;
+  let r: Recent | null = null;
+  if (s.input === 'radio') {
+    const name = s.radio_now?.name || s.station;
+    if (name) r = { key: 'radio:' + name, title: name, big: name, kind: 'Radio · kanal', input: 'radio', station: true, ...(s.radio_now?.image ? { image: s.radio_now.image } : {}), ...(s.radio_now?.url ? { url: s.radio_now.url } : {}) };
+  } else if (s.title) {
+    r = { key: s.input + ':' + s.title + ':' + s.artist, title: s.title, big: s.artist || s.title, kind: inputLabel(s.input) + ' · låt', input: s.input, station: false };
+  }
+  if (!r || recent.peek()[0]?.key === r.key) return;
+  const next = [r, ...recent.peek().filter((x) => x.key !== r!.key)].slice(0, 12);
+  recent.value = next;
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+});
+export function eqActiveProfile(): number[] { return settings.value.eq[eqActiveSource.value]?.eq ?? [0, 0, 0, 0, 0]; }
