@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="no"><head><meta charset="utf-8"><title>Skjold Node – kasse, taktile knapper</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+html,body{margin:0;height:100%;background:#ecebe7;font-family:"IBM Plex Sans",system-ui,sans-serif;color:#1d1d1b}
+a{color:#1d1d1b}a:hover{color:#6b6a64}
+three-d-stage:not(:defined){visibility:hidden}
+three-d-stage{display:block;width:100vw;height:100vh}
+@media (max-height:700px){#ui{top:12px;left:12px;gap:6px;max-width:300px}#ui p{font-size:12px}#ui button{padding:5px 9px;font-size:12px}}
+#ui{position:fixed;z-index:10;left:20px;top:20px;display:flex;flex-direction:column;gap:10px;max-width:340px}
+#ui h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.02em}
+#ui p{margin:0;font-size:13px;line-height:1.45;color:#4a4944}
+#ui .row{display:flex;gap:6px;flex-wrap:wrap}
+#ui button{font:inherit;font-size:13px;padding:7px 12px;border:1px solid #c9c7c0;background:#fff;border-radius:6px;cursor:pointer;white-space:nowrap}
+#ui button.on{background:#1d1d1b;color:#fff;border-color:#1d1d1b}
+</style></head><body>
+<script id="cleanMode">if(/[?&]clean/.test(location.search)){document.documentElement.classList.add("clean");}</script><style>.clean #ui{display:none!important}</style>
+<three-d-stage name="skjold_node" background="#ecebe7"></three-d-stage>
+<div id="ui">
+  <h1>Skjold Node · taktile knapper</h1>
+  <p>Lokk for 4 × 12 × 12 mm taktile brytere med runde hetter. En knappeholder under lokket holder bryterne. Hetten stikker 1,5 mm opp gjennom lokket, og kanten nederst holder den på plass. <a href="./Skjold Node kasse.html">Original med metallknapper</a></p>
+  <p>Egen bunn for Pi 4 og for Pi 3B/3B+. Hver har tilpassede åpninger bare der portene sitter. Lokket er felles. Klikk på knappene i modellen: RADIO, AIR / BT, ◀◀ og ▶▶. Klikk på volumknappen for pause, og rull over den for volum.</p>
+  <div class="row">
+    <button id="b4" class="on">Raspberry Pi 4</button>
+    <button id="b3">Raspberry Pi 3B/3B+</button>
+  </div>
+  <p>Bunn</p><div class="row" id="cBase"></div>
+  <p>Lokk</p><div class="row" id="cLid"></div>
+  <div class="row lid">
+    <button id="bClosed" class="on">Lukket</button>
+    <button id="bOpen">Lokk løftet</button>
+    <button id="bNoLid">Uten lokk</button>
+    <button id="bReboot">Start på nytt</button>
+    <button id="bWelcome">Velkomst (SSH)</button>
+  </div>
+</div>
+<script src="./three-d-stage.js"></script>
+<script src="./node_fx.js"></script>
+<script src="../skjold_welcome.js"></script>
+<script type="module">
+const stage=document.querySelector('three-d-stage');
+const {THREE}=await stage.ready;
+const P=await (await fetch('./params_taktil.json')).json();
+async function loadSTL(url){const b=await (await fetch(url)).arrayBuffer(),dv=new DataView(b),n=dv.getUint32(80,true),pos=new Float32Array(n*9);
+  for(let i=0;i<n;i++)for(let j=0;j<9;j++)pos[i*9+j]=dv.getFloat32(84+i*50+12+j*4,true);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.computeVertexNormals();return g;}
+const M=(name,color,r=.6,m=0)=>Object.assign(new THREE.MeshStandardMaterial({color,roughness:r,metalness:m}),{name});
+const mat={petg:M('petg_sort','#2b2b2c',.75),knob:M('knott_sort','#1f1f20',.55),pcb:M('pcb_gronn','#1f6b3a',.6),metal:M('metall','#b9bcc0',.35,.3),
+  glass:M('tft_glass','#0b0d12',.15),blue:M('tft_pcb','#1e4fa8',.6),cap:M('knapp','#d9d6cc',.5),lcd:new THREE.MeshBasicMaterial({name:'lcd_bilde',toneMapped:false})};
+
+const SC={fx:{k:'boot',t0:performance.now()},src:0,preset:1,trk:[0,0,0],vol:42,play:true,volT:0,srcT:0};
+const PRE=[['NRK P1','Nyheter','NRK Dagsnytt'],['NRK P3','Dance The Way I Feel','Ofenbach'],['P4','Flowers','Miley Cyrus'],['Radio Norge','Mr. Brightside','The Killers'],['NRK Klassisk','Clair de lune','Claude Debussy'],['NRK Jazz','So What','Miles Davis']];
+const TRK={1:[['Midnight City','M83'],['Intro','The xx'],['Breathe','Télépopmusik']],2:[['Teardrop','Massive Attack'],['Angel','Massive Attack'],['Unfinished Sympathy','Massive Attack']]};
+const SRCS=[['RADIO','#e8893a','#8a3b12'],['AIRPLAY','#9aa0ab','#22252c'],['BLÅTANN','#4a8cff','#1a2f66']];
+const LK=6,LC=document.createElement('canvas'); LC.width=160*LK; LC.height=128*LK; const LG=LC.getContext('2d'); const LT=new THREE.CanvasTexture(LC); LT.colorSpace=THREE.SRGBColorSpace; LT.anisotropy=8; LT.center.set(.5,.5); LT.rotation=Math.PI; mat.lcd.map=LT;
+function fit(g,t,w){ while(g.measureText(t).width>w&&t.length>2) t=t.slice(0,-2)+'…'; return t; }
+function drawScreen(){ const g=LG, F='"Helvetica Neue",Arial,sans-serif', now=performance.now(), S=SRCS[SC.src]; g.setTransform(LK,0,0,LK,0,0); g.textAlign='left'; g.globalAlpha=1;
+  g.fillStyle='#000'; g.fillRect(0,0,160,128);
+  if(SC.fx&&SC.fx.k==='welcome'){ window.SKJOLD_WELCOME&&window.SKJOLD_WELCOME.draw(g,160,128,now-SC.fx.t0); LT.needsUpdate=true; return; }
+  if(SC.fx){ const X=window.SKJOLD_NODE_FX, ms=now-SC.fx.t0; const live=SC.fx.k==='boot'?X.splash(g,ms):SC.fx.k==='reboot'?X.reboot(g,ms,now):X.switchSrc(g,ms,SC.fx.from,SC.fx.to); if(!live){ SC.fx=SC.fx.k==='reboot'?{k:'boot',t0:now}:SC.fx.k==='boot'&&SC.welcome?{k:'welcome',t0:now}:null; } LT.needsUpdate=true; if(SC.fx) return; g.setTransform(LK,0,0,LK,0,0); g.fillStyle='#000'; g.fillRect(0,0,160,128); }
+  if(false){ SRCS.forEach((x,i)=>{ const on=i===SC.src, sz=on?34:22, cx=80+(i-SC.src)*40; g.fillStyle=on?x[1]:'#1c1c1b'; g.beginPath(); g.roundRect(cx-sz/2,46-sz/2,sz,sz,7); g.fill(); g.fillStyle=on?'#fff':'#6b6a64'; g.font='bold '+(on?16:10)+'px '+F; g.textAlign='center'; g.fillText(['◉','▲','ᛒ'][i],cx,46+(on?6:4)); });
+    g.fillStyle='#f2f2ee'; g.font='bold 9px '+F; g.fillText(S[0],80,86); g.textAlign='left'; LT.needsUpdate=true; return; }
+  const d=new Date(); g.fillStyle=S[1]; g.beginPath(); g.arc(10.5,11,2.5,0,7); g.fill(); g.fillStyle='#8b8b86'; g.font='bold 7px '+F; g.fillText(S[0],16,13.5); g.textAlign='right'; g.fillText(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),152,13.5); g.textAlign='left';
+  let kick,title,sub,art; if(SC.src===0){ const p=PRE[SC.preset]; kick=p[0].toUpperCase(); title=p[1]; sub=p[2]; art=String(SC.preset+1); } else { const t=TRK[SC.src][SC.trk[SC.src]]; kick=SC.src===1?'SEBASTIANS IPHONE':'BLÅTANN · IPHONE'; title=t[0]; sub=t[1]; art=t[0][0]; }
+  const gr=g.createLinearGradient(8,24,66,82); gr.addColorStop(0,S[1]); gr.addColorStop(1,S[2]); g.fillStyle=gr; g.beginPath(); g.roundRect(8,24,58,58,6); g.fill();
+  g.fillStyle='rgba(255,255,255,.92)'; g.font='bold 17px '+F; g.fillText(art,13,77);
+  if(!SC.play){ g.fillStyle='rgba(0,0,0,.6)'; g.beginPath(); g.arc(37,53,14,0,7); g.fill(); g.fillStyle='#fff'; g.fillRect(32.5,48,3,10); g.fillRect(38.5,48,3,10); }
+  g.fillStyle=S[1]; g.font='bold 7px '+F; g.fillText(fit(g,kick,78),74,31); g.fillStyle='#f2f2ee'; g.font='bold 13px '+F; const wds=title.split(' '); let l1='',l2=''; for(const w of wds){ if(!l2&&g.measureText((l1+' '+w).trim()).width<=78) l1=(l1+' '+w).trim(); else l2=(l2+' '+w).trim(); } g.fillText(l1,74,45); if(l2) g.fillText(fit(g,l2,78),74,59); g.fillStyle='#b4b4ae'; g.font='9px '+F; g.fillText(fit(g,sub,78),74,l2?72:58);
+  if(now-SC.volT<1500){ g.fillStyle='#f2f2ee'; g.font='bold 9px '+F; g.fillText(SC.vol?String(SC.vol):'AV',8,121); g.fillStyle='#2a2a28'; g.beginPath(); g.roundRect(30,114.5,122,5,2.5); g.fill(); g.fillStyle='#f2f2ee'; g.beginPath(); g.roundRect(30,114.5,Math.max(5,122*SC.vol/100),5,2.5); g.fill(); }
+  else if(SC.src===0){ for(let i=0;i<6;i++){ g.fillStyle=i===SC.preset?S[1]:'#3a3a38'; const x=53+i*8+(i>SC.preset?8:0); g.beginPath(); g.roundRect(x,114,i===SC.preset?12:4,4,2); g.fill(); } }
+  else { g.fillStyle='#2a2a28'; g.fillRect(8,113,144,3); g.fillStyle='#f2f2ee'; g.fillRect(8,113,144*((now/60000)%1),3); }
+  LT.needsUpdate=true; }
+let lastDraw=0; (function tick(t){ requestAnimationFrame(tick); if(document.hidden) return; const fast=SC.fx||performance.now()-SC.volT<1600; if(!fast&&t-lastDraw<250) return; if(fast&&t-lastDraw<33) return; lastDraw=t; drawScreen(); })(0);
+// all child geometry in mm, z-up; root converts to m, y-up
+const root=new THREE.Group();root.name='skjold_node';root.scale.setScalar(0.001);root.rotation.set(-Math.PI/2,0,Math.PI);
+const add=(g,m,name,par=root)=>{const o=new THREE.Mesh(g,m);o.name=name;o.castShadow=o.receiveShadow=true;par.add(o);return o;};
+const box=(name,m,w,d,h,x,y,z,par)=>{const o=add(new THREE.BoxGeometry(w,d,h),m,name,par);o.position.set(x,y,z+h/2);return o;};
+const cylZ=(name,m,r,h,x,y,z,par,seg=40)=>{const o=add(new THREE.CylinderGeometry(r,r,h,seg),m,name,par);o.rotation.x=Math.PI/2;o.position.set(x,y,z+h/2);return o;};
+const bx=x=>-42.5+x,by=y=>-28+y,zP=P.zPt-1.4;
+const V={};
+for(const v of ['pi4','pi3']){
+  const g=new THREE.Group();g.name='variant_'+v;root.add(g);V[v]=g;
+  add(await loadSTL('./assembly/base_'+v+'.stl'),mat.petg,'bunn_'+v,g);
+  const pi=new THREE.Group();pi.name=v==='pi4'?'raspberry_pi_4':'raspberry_pi_3';g.add(pi);
+  box('pi_pcb',mat.pcb,85,56,1.4,0,0,zP,pi);
+  const usbY=v==='pi4'?[9,27]:[29,47], ethY=v==='pi4'?45.75:10.25;
+  usbY.forEach((y,i)=>box('usb_'+i,mat.metal,17.5,13.1,16,bx(77.3),by(y),P.zPt,pi));
+  box('ethernet',mat.metal,21,16,13.5,bx(76),by(ethY),P.zPt,pi);
+  if(v==='pi4'){box('usb_c',mat.metal,9,7.5,3.3,bx(11.2),by(3.2),P.zPt,pi);[26,39.5].forEach((x,i)=>box('micro_hdmi_'+i,mat.metal,6.5,7.5,3,bx(x),by(3.2),P.zPt,pi));}
+  else{box('micro_usb',mat.metal,8,5.5,3,bx(10.6),by(2.5),P.zPt,pi);box('hdmi',mat.metal,15,11.5,6,bx(32),by(5.5),P.zPt,pi);}
+  cylZ('lydjack',mat.knob,3,12,bx(53.5),by(6),P.zPt,pi);
+  box('soc',mat.metal,15,15,2.4,bx(v==='pi4'?29:22),by(32),P.zPt,pi);box('gpio',mat.knob,51,5,8.5,bx(32.5),by(51.5),P.zPt,pi);
+}
+V.pi3.visible=false;
+const lidG=new THREE.Group();lidG.name='lokk_gruppe';root.add(lidG);
+mat.lid=M('petg_lokk','#d8cfb4',.8);
+add(await loadSTL('./assembly_taktil/lid.stl'),mat.lid,'lokk',lidG);
+add(await loadSTL('./assembly/clamp.stl'),mat.petg,'skjermklemmer',lidG);
+add(await loadSTL('./assembly_taktil/carrier.stl'),mat.petg,'knappeholder',lidG);
+add(await loadSTL('./assembly/knob.stl'),mat.knob,'volumknapp',lidG);
+const zT=P.P.zTop,S=P.S;
+box('tft_glass',mat.glass,S.glass[0],S.glass[1],S.gt,S.gx,0,zT-S.gt-0.2,lidG);
+box('tft_bilde',mat.lcd,S.act[0],S.act[1],0.05,S.gx,0,zT-0.15,lidG);
+box('tft_pcb',mat.blue,S.pcb[0],S.pcb[1],S.pt,(S.x0+S.x0+S.pcb[0])/2,0,zT-S.gt-S.pt-0.2,lidG);
+cylZ('encoder_aksel',mat.metal,3,10,P.knob[0],P.knob[1],zT-8,lidG);box('encoder_hus',mat.metal,12,12,6.5,P.knob[0],P.knob[1],zT-6.5,lidG);
+{ const T=P.T,z0=P.zSw,zc=P.P.zTop+P.P.lid+T.rise-T.capH, capM=M('hette_hvit','#ecebe6',.45), swM=M('bryter_hus','#151515',.6);
+  P.btns.forEach((b,i)=>{ box('bryter_hus_'+(i+1),swM,T.body,T.body,T.bh,b.x,b.y,z0,lidG); box('bryter_plate_'+(i+1),mat.metal,T.body,T.body,0.3,b.x,b.y,z0+T.bh,lidG);
+    cylZ('bryter_stamme_'+(i+1),swM,1.9,zc-z0-T.bh,b.x,b.y,z0+T.bh,lidG,24); [-1,1].forEach(s=>[-2.5,2.5].forEach(dy=>box('bein',mat.metal,0.7,0.9,3.5,b.x+s*6.25,b.y+dy,z0-3.5,lidG)));
+    const g2=new THREE.Group(); g2.name='knapp_'+(i+1); lidG.add(g2); const hs=add(new THREE.CylinderGeometry(T.skirt/2,T.skirt/2,1.5,48),capM,'hette_kant_'+(i+1),g2); hs.rotation.x=Math.PI/2; hs.position.set(b.x,b.y,zc+0.75);
+    const ht=add(new THREE.CylinderGeometry(T.capTop/2,T.capTop/2,T.capH-1.5,48),capM,'knapp_'+(i+1)+'_topp',g2); ht.rotation.x=Math.PI/2; ht.position.set(b.x,b.y,zc+1.5+(T.capH-1.5)/2); }); }
+const ink=M('innlegg_sort','#161617',.7);
+add(await loadSTL('./assembly_taktil/lid_inlay.stl'),ink,'lokk_logo',lidG);add(await loadSTL('./assembly/knob_line.stl'),M('knott_strek','#f2f2ee',.5),'knott_strek',lidG);
+for(const v of ['pi4','pi3']) add(await loadSTL('./assembly/base_inlay.stl'),ink,'bunn_logo',V[v]);
+stage.setObject(root);
+const capG=[1,2,3,4].map(i=>root.getObjectByName('knapp_'+i)), caps=capG.map(gp=>gp.children[1]), knobM=[root.getObjectByName('volumknapp')];
+const ray=new THREE.Raycaster(), ptr=new THREE.Vector2(); let downXY=null;
+const hit=e=>{ const r=stage.getBoundingClientRect(); ptr.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1); ray.setFromCamera(ptr,stage._camera); const h=ray.intersectObjects([...caps,...knobM],false)[0]; return h&&h.object; };
+const press=o=>{ const p=o.parent; p.position.z=-0.25; setTimeout(()=>p.position.z=0,140); };
+stage.addEventListener('pointerdown',e=>{downXY=[e.clientX,e.clientY];});
+stage.addEventListener('pointerup',e=>{ if(!downXY||Math.hypot(e.clientX-downXY[0],e.clientY-downXY[1])>5) return; const o=hit(e); if(!o) return;
+  if(SC.fx&&SC.fx.k==='welcome'){ SC.fx=null; SC.welcome=false; if(o!==knobM[0]) press(o); return; } if(SC.fx&&SC.fx.k!=='switch'){ return; } if(o===caps[0]){ if(SC.src!==0){ SC.fx={k:'switch',t0:performance.now(),from:SC.src,to:0}; SC.src=0; } else SC.preset=(SC.preset+1)%6; press(o); }
+  else if(o===caps[1]){ const f=SC.src; SC.src=SC.src===1?2:1; SC.fx={k:'switch',t0:performance.now(),from:f,to:SC.src}; SC.play=true; press(o); }
+  else if(o===caps[2]||o===caps[3]){ const d=o===caps[2]?-1:1; if(SC.src===0) SC.preset=(SC.preset+d+6)%6; else SC.trk[SC.src]=(SC.trk[SC.src]+d+3)%3; press(o); }
+  else { SC.play=!SC.play; }
+  drawScreen(); });
+stage.addEventListener('wheel',e=>{ const o=hit(e); if(o!==knobM[0]) return; e.preventDefault(); e.stopPropagation(); SC.vol=Math.max(0,Math.min(100,SC.vol+(e.deltaY<0?3:-3))); SC.volT=performance.now(); knobM[0].parent&&0; drawScreen(); },{capture:true,passive:false});
+stage.addEventListener('pointermove',e=>{ stage.style.cursor=hit(e)?'pointer':''; });
+const set=(lift,vis,id)=>{lidG.position.z=lift;lidG.visible=vis;document.querySelectorAll('#ui .lid button').forEach(b=>b.classList.toggle('on',b.id===id));};
+const pick=v=>{V.pi4.visible=v==='pi4';V.pi3.visible=v==='pi3';b4.classList.toggle('on',v==='pi4');b3.classList.toggle('on',v==='pi3');};
+b4.onclick=()=>pick('pi4');b3.onclick=()=>pick('pi3');
+const COLS=[['Sort','#2b2b2c'],['Light Khaki','#d8cfb4'],['Hvit','#ecebe6'],['Grå','#8d8f92'],['Skogsgrønn','#3f5b45'],['Terrakotta','#b8644a']];
+[['cBase',mat.petg,0],['cLid',mat.lid,1]].forEach(([id,m,def])=>{const el=document.getElementById(id);COLS.forEach(([n,c],i)=>{const b=document.createElement('button');b.textContent=n;b.style.borderLeft='14px solid '+c;if(i===def)b.classList.add('on');b.onclick=()=>{m.color.set(c);el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));};el.appendChild(b);});});
+bWelcome.onclick=()=>{SC.welcome=true;SC.fx={k:'boot',t0:performance.now()};};
+bReboot.onclick=()=>{SC.fx={k:'reboot',t0:performance.now()};};
+bClosed.onclick=()=>set(0,true,'bClosed');bOpen.onclick=()=>set(45,true,'bOpen');bNoLid.onclick=()=>set(0,false,'bNoLid');
+</script>
+</body></html>
