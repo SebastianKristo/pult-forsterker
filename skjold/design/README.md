@@ -38,6 +38,9 @@ Filene i denne pakken er **designreferanser laget i HTML**. Det er prototyper so
 | `sdbilde/` | pi-gen-stage, systemd-tjenester, `skjold-velkomst` SSH-kommando | `README.md` |
 | `bruksanvisning/` | LEGO-stil mal + innhold som JSON | `MAL_FOR_CLAUDE.md`, `innhold.json` |
 
+## ⚠ Start her for app og web
+Les `app/OPPGAVE_APP_SYNK.md` først. Den forrige appen ble bygget etter gamle bilder og mangler det meste. Fasitbildene ligger nå i `app/fasit/v3/`, og de gamle er flyttet til `_utdatert/`.
+
 ## Oppgaver for Claude Code, i rekkefølge
 1. **Node-kabling:** følg `node/OPPGAVE_KABLING_NODE.md`. Det gir SVG-skjema, kabelliste, `node_pins.json`, driveroppsett og testskript.
 2. **Skjold OS:** gjenskap UI-et fra `node/Skjold Node OS.dc.html` (160 × 128) og `s1/pultforsterker_revb_metall.js`:

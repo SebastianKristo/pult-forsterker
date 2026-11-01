@@ -88,6 +88,9 @@ Felter i /api/status for skjermen (Skjold OS):
   airplay_device: navnet på AirPlay-klienten (Shairport-metadata «snam» via oled_display.py), "" når ingen
   input_seq: øker for hvert knappetrykk/-slipp og encoderhakk
   POST /api/reboot {"poweroff":bool}   omstart (eller slå av) etter 1,5 s med rebooting=true
+  GET  /api/wifi                        {"networks":[{ssid,signal,security:"open|wpa2|wpa3",active}]} (nmcli; 503 uten NetworkManager)
+  POST /api/wifi {"ssid","psk"?,"hidden"?}  koble til Wi-Fi med nmcli (appens oppsett, trinn 2)
+  POST /api/test {"channel":"L"|"R"}   kort 440 Hz-tone i venstre/høyre høyttaler (oppsett trinn 3b / Innstillinger → Lyd)
   LED-ringer: RADIO = radio, AIR·BT = AirPlay/Bluetooth/Spotify (blinker under paring), ◀◀/▶▶ = noe spiller.
   KI_AMP_NODE_GPIO=0 (Skjold Core, ren Raspberry Pi): ingen knapper, encoder eller LED-ringer – bare lyd og API.
   KI_AMP_NODE_BUTTONS=0 lar skjermprosessen eie knappene/encoderen (daemonen styrer da bare LED-ringene).
@@ -1333,6 +1336,101 @@ async def h_reboot(r):
         b = {}
     system_reboot(bool((b or {}).get("poweroff")), "API")
     return j()
+
+
+# ---------- Wi-Fi i oppsettet (appen) og høyttalertest ----------
+def _nm_fields(line):
+    """nmcli -t skiller felt med ':' og escaper ':' i verdier som '\\:'."""
+    out, cur, esc = [], "", False
+    for ch in line:
+        if esc: cur += ch; esc = False
+        elif ch == "\\": esc = True
+        elif ch == ":": out.append(cur); cur = ""
+        else: cur += ch
+    out.append(cur)
+    return out
+
+
+def _wifi_scan():
+    r = subprocess.run(["nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "auto"],
+                       capture_output=True, text=True, timeout=20)
+    if r.returncode:
+        raise RuntimeError((r.stderr or r.stdout or "nmcli feilet").strip()[:200])
+    nets = {}
+    for line in r.stdout.splitlines():
+        f = _nm_fields(line)
+        if len(f) < 4 or not f[1].strip(): continue
+        sec = f[3].upper()
+        n = {"ssid": f[1], "signal": int(f[2] or 0) if f[2].isdigit() else 0, "active": f[0].strip() == "*",
+             "security": "open" if not sec.strip() or sec.strip() == "--" else "wpa3" if "SAE" in sec or "WPA3" in sec else "wpa2"}
+        old = nets.get(n["ssid"])
+        if not old or n["active"] or (n["signal"] > old["signal"] and not old["active"]): nets[n["ssid"]] = n
+    return sorted(nets.values(), key=lambda n: (not n["active"], -n["signal"]))
+
+
+async def h_wifi_get(_r):
+    """GET /api/wifi → {"networks":[{ssid,signal 0-100,security open|wpa2|wpa3,active}]} via NetworkManager (nmcli)."""
+    try:
+        return web.json_response({"networks": await asyncio.to_thread(_wifi_scan)})
+    except FileNotFoundError:
+        return web.json_response({"error": "nmcli finnes ikke på denne enheten", "networks": []}, status=503)
+    except Exception as e:
+        return web.json_response({"error": str(e), "networks": []}, status=503)
+
+
+async def h_wifi_post(r):
+    """POST /api/wifi {"ssid","psk"?,"hidden"?:bool,"security"?:"wpa2|wpa3|open"} → kobler til med nmcli."""
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    ssid, psk = str((b or {}).get("ssid") or "").strip(), str((b or {}).get("psk") or "")
+    if not ssid or len(ssid) > 32: return web.json_response({"error": "mangler gyldig ssid"}, status=400)
+    if psk and not 8 <= len(psk) <= 63: return web.json_response({"error": "passordet må ha 8–63 tegn"}, status=400)
+    cmd = ["nmcli", "device", "wifi", "connect", ssid] + (["password", psk] if psk else []) + (["hidden", "yes"] if b.get("hidden") else [])
+    try:
+        res = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=45)
+    except FileNotFoundError:
+        return web.json_response({"error": "nmcli finnes ikke på denne enheten"}, status=503)
+    except subprocess.TimeoutExpired:
+        return web.json_response({"error": "tidsavbrudd"}, status=504)
+    if res.returncode:
+        return web.json_response({"error": (res.stderr or res.stdout or "kunne ikke koble til").strip()[:200]}, status=400)
+    return web.json_response({"ok": True, "ssid": ssid})
+
+
+def _test_tone(channel):
+    import wave, struct
+    path = f"/tmp/skjold-test-{channel}.wav"
+    if not os.path.exists(path):
+        rate, n = 44100, int(44100 * 0.8)
+        with wave.open(path, "wb") as w:
+            w.setnchannels(2); w.setsampwidth(2); w.setframerate(rate)
+            fr = bytearray()
+            for i in range(n):
+                env = min(1.0, i / 2000, (n - i) / 2000)
+                v = int(9000 * env * math.sin(2 * math.pi * 440 * i / rate))
+                fr += struct.pack("<hh", v if channel == "L" else 0, v if channel == "R" else 0)
+            w.writeframes(bytes(fr))
+    subprocess.run(["aplay", "-q", "-D", "default", path], timeout=10, check=False,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+async def h_test(r):
+    """POST /api/test {"channel":"L"|"R"} → kort 440 Hz-tone i venstre eller høyre høyttaler (aplay)."""
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    ch = str((b or {}).get("channel") or "").upper()
+    if ch not in ("L", "R"): return web.json_response({"error": "channel må være L eller R"}, status=400)
+    try:
+        await asyncio.to_thread(_test_tone, ch)
+    except FileNotFoundError:
+        return web.json_response({"error": "aplay finnes ikke på denne enheten"}, status=503)
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+    return web.json_response({"ok": True, "channel": ch})
 
 
 # ---------- innstillingsmeny på Node (encoder holdt 3 s) ----------
@@ -2594,7 +2692,8 @@ def main():
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
                     web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
                     web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post),
-                    web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.post("/api/reboot", h_reboot)])
+                    web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.post("/api/reboot", h_reboot),
+                    web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test)])
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
     webdir = os.environ.get("KI_AMP_WEBAPP", "")
     for cand in ([webdir] if webdir else []) + ["/usr/local/share/ki-amp/webapp", os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")]:

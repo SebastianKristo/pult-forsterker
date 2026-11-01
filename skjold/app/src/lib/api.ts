@@ -127,9 +127,9 @@ export const api = {
   // Nytt endepunkt (legges til i daemonen): GET/POST /api/settings
   getSettings: () => req<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings'),
   setSettings: (patch: Record<string, unknown>) => post<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings', patch),
-  // Endepunkt som ennå ikke finnes i daemonen – brukes av oppsettet og svarer 404 i dag
-  wifiScan: () => req<{ networks: { ssid: string; security?: string; signal?: number }[] }>('/api/wifi', undefined, getBase(), 8000),
-  wifiConnect: (ssid: string, psk: string) => post<{ ok: boolean }>('/api/wifi', { ssid, psk }),
+  // Oppsett: Wi-Fi via NetworkManager (nmcli) og høyttalertest (aplay) – nyere daemon; eldre svarer 404
+  wifiScan: () => req<{ networks: { ssid: string; security?: string; signal?: number; active?: boolean }[] }>('/api/wifi', undefined, getBase(), 25000),
+  wifiConnect: (ssid: string, psk: string, hidden = false) => req<{ ok: boolean }>('/api/wifi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid, psk, hidden }) }, getBase(), 50000),
   speakerTest: (channel: 'L' | 'R') => post<{ ok: boolean }>('/api/test', { channel }),
   reboot: () => post<{ ok: boolean }>('/api/reboot', {}),
   factoryReset: () => post<{ ok: boolean }>('/api/reset', {}),

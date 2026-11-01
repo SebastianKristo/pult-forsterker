@@ -393,7 +393,7 @@ html, body { height: 100%; }
 .pchip.on { border-color: #d9a441; background: #1c170d; color: #f0c46a; }
 .pchip i { width: 6px; height: 6px; border-radius: 50%; }
 .eq-card { border-radius: 14px; background: #141415; border: 1px solid #242426; padding: 14px 10px 12px; display: flex; flex-direction: column; gap: 6px; }
-.eq-what { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid #242426; margin-top: 6px; }
+.eq-what { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid #242426; }
 .eq-what .w { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: baseline; }
 .eq-what .nm { font-size: 12px; font-weight: 600; }
 .eq-what .hz { font-family: var(--mono); font-size: 10px; color: #8b8b86; }
@@ -564,3 +564,24 @@ html, body { height: 100%; }
 .desktop .dock .dvol .range { max-width: 180px; }
 .type-badge { gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; letter-spacing: 0; }
 .col > .r-q { flex: 0 0 auto; }
+
+/* Intro (Skjold App v2 · introView) */
+@keyframes skjBar{0%{transform:scaleY(0);opacity:0}60%{opacity:1}100%{transform:scaleY(1);opacity:1}}
+@keyframes skjBarInk{0%,70%{background:#d9a441}100%{background:#f2f2ee}}
+@keyframes skjWord{0%{opacity:0;letter-spacing:.9em;filter:blur(8px)}100%{opacity:1;letter-spacing:.24em;filter:blur(0)}}
+@keyframes skjLine{0%{transform:scaleX(0);opacity:0}100%{transform:scaleX(1);opacity:1}}
+@keyframes skjFade{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
+@keyframes skjGlow{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
+@keyframes skjSky{0%{opacity:0;transform:translateX(-8%)}100%{opacity:.55;transform:translateX(4%)}}
+@keyframes skjBolt{0%{stroke-dashoffset:1;opacity:1}35%{stroke-dashoffset:0;opacity:1}55%{opacity:.2}62%{opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes skjFlash{0%{opacity:0}12%{opacity:.75}30%{opacity:.1}38%{opacity:.5}100%{opacity:0}}
+@keyframes skjShake{0%,100%{transform:none}20%{transform:translate(-2px,1px)}40%{transform:translate(2px,-1px)}60%{transform:translate(-1px,0)}}
+@keyframes skjRise{0%{opacity:0;transform:translateY(24px)}100%{opacity:1;transform:none}}
+@keyframes skjOut{0%{opacity:1}100%{opacity:0;transform:scale(1.04)}}
+/* Skall for skjermer som er portert 1:1 fra designfilen (inline-stiler) */
+.dshell { height: 100dvh; display: flex; flex-direction: column; padding-top: var(--sat); padding-bottom: var(--sab); background: #0b0b0c; color: #f2f2ee; overflow: hidden; position: relative; }
+.dshell input::placeholder { color: #55554f; }
+.dshell button { color: #f2f2ee; }
+.dsc::-webkit-scrollbar { display: none; }
+.range.white { accent-color: #f2f2ee; }
+@media (min-width: 900px) { .dshell { max-width: 440px; margin: 0 auto; border-left: 1px solid #1b1b1c; border-right: 1px solid #1b1b1c; } }

@@ -32,7 +32,7 @@
       { kind: 'act', n: 'Blåtann-paring', id: 'btPair', label: 'Start paring', safe: true, dev: ['node', 'core'], hint: 'Enheten har ingen knapp. Gjør den synlig for Blåtann i 2 minutter herfra.' },
       { ...bool('btAuto', 'Blåtann alltid synlig', 'Kan pares uten å starte paring først. Mindre sikkert.'), dev: ['node', 'core'] },
       { kind: 'act', n: 'Glem alle Blåtann-enheter', id: 'forget', label: 'Glem alle' }] },
-    { id: 'radio', n: 'Radio', sub: 'Lyrion-favoritter', items: [
+    { id: 'radio', n: 'Radio', sub: 'Favoritter, knapper og oppstart', items: [
       { ...opt('hold', 'Hold radioknappen', PRESETS_RADIO, 'Kanalen som spilles når du holder radioknappen inne'), dev: 's1' },
       { ...opt('nodeStart', 'Kanal ved oppstart', ['Ingen', ...PRESETS_RADIO], 'Enheten har ingen knapper. Velg om den skal starte en radiokanal når den slås på.'), dev: ['node', 'core'] }] },
     { id: 'tjenester', n: 'Musikktjenester', sub: 'Spotify, UPnP/DLNA, YouTube Music, Navidrome', items: [

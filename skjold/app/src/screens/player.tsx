@@ -1,11 +1,9 @@
 // Felles avspillingsdeler: omslag, transport, volum, kildevalg, radiofavoritter.
 import { useEffect, useState } from 'preact/hooks';
 import { api, coverUrl, type InputId, type Status } from '../lib/api';
-import { act, closeFull, deviceName, eqActiveProfile, inputLabel, openFull, product, status, go, playPause, setVolume } from '../lib/store';
-import { PRODUCT_LABEL } from '../lib/api';
+import { act, inputLabel, status, playPause, setVolume } from '../lib/store';
 import { art } from '../lib/settings';
 import { Chip, MuteIcon, NextIcon, PlayPauseIcon, PowerIcon, PrevIcon, Slider } from '../components/ui';
-import { useTick } from './pages';
 
 export const SRC_COLOR: Record<string, string> = {
   radio: 'var(--src-radio)', bt: 'var(--src-bt)', usb: 'var(--src-bt)', airplay: 'var(--src-air)', aux: 'var(--src-aux)', aux2: 'var(--src-aux)', spotify: 'var(--src-spotify)'
@@ -106,86 +104,6 @@ export function sourceLine(s: Status | null): string {
   if (s.input === 'bt' && s.bt_device) return src + ' · ' + s.bt_device;
   if (s.input === 'radio') return src + (s.radio_now?.name || s.station ? ' · ' + (s.radio_now?.name || s.station) : '');
   return src;
-}
-
-const ROOMS_ICON = 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z';
-
-/** Fullskjermspilleren på telefon (fasit/04-spiller.png). */
-export function PhoneFullBody() {
-  const s = status.value;
-  const t = nowTitle(s);
-  const a = artFor(s);
-  const tick = useTick(s?.playing ? 450 : 0);
-  const eq = eqActiveProfile();
-  const live = s?.input === 'radio';
-  const big = live ? (s?.radio_now?.name || s?.station || t.title) : t.title;
-  const kicker = live ? 'RADIO' + (s?.radio_now?.genre ? ' · ' + s.radio_now.genre.toUpperCase() : '') : (t.sub || '').toUpperCase();
-  const viz = Array.from({ length: 12 }, (_, i) => {
-    const e = eq[Math.min(4, Math.floor(i / 2.4))] ?? 0;
-    const v = s?.playing ? 0.35 + 0.55 * Math.abs(Math.sin(tick * 0.45 + i * 0.9) * Math.sin(tick * 0.21 + i)) : 0.06;
-    return Math.max(4, Math.min(100, v * 100 + e * 2.5));
-  });
-  const list = s?.inputs?.length ? s.inputs : ALL_INPUTS;
-  const dur = s?.duration ?? 0, pos = s?.position ?? 0;
-  const off = !s || !s.power || s.input === 'aux' || s.input === 'aux2';
-  return (
-    <>
-      <div class="fp-chips">
-        {list.map((id) => <button key={id} class={'fp-chip' + (s?.input === id ? ' on' : '')} onClick={() => act(() => api.input(id), { input: id })}>{inputLabel(id)}</button>)}
-      </div>
-      <div class="fp-art" style={{ background: a.bg }} data-testid="art">
-        {!a.img && <>
-          <div class="row between" style={{ alignItems: 'flex-start', gap: '10px' }}>
-            <span class="k" style={{ color: a.ink }}>{kicker}</span>
-            {live && s?.playing && <span class="live">DIREKTE</span>}
-          </div>
-          <span class="big" style={{ color: a.ink, fontSize: big.length > 14 ? '30px' : '40px' }}>{big}</span>
-          <div class="viz">{viz.map((h, i) => <i key={i} style={{ height: h + '%', background: a.ink, opacity: s?.playing ? 1 : 0.35 }} />)}</div>
-        </>}
-      </div>
-      <div class="col" style={{ gap: '2px', marginTop: 'auto' }}>
-        <span class="fp-src">{sourceLine(s)}</span>
-        <span class="fp-t ellip" data-testid="now-title">{t.title}</span>
-        <span class="fp-s ellip">{t.album ? subLine(t) : t.sub}</span>
-      </div>
-      {dur > 0 && (
-        <div class="col" style={{ gap: '6px' }}>
-          <div class="fp-bar"><i style={{ width: Math.min(100, (pos / dur) * 100) + '%' }} /></div>
-          <div class="row between mono" style={{ fontSize: '10px', color: 'rgba(242,242,238,.6)' }}><span>{mmss(pos)}</span><span>−{mmss(dur - pos)}</span></div>
-        </div>
-      )}
-      <div class="fp-transport">
-        <button class="fp-b" aria-label="Forrige" disabled={off} onClick={() => act(() => api.transport('previous'))}><PrevIcon size={30} /></button>
-        <button class="fp-b main" aria-label={s?.playing ? 'Pause' : 'Spill'} disabled={off} onClick={playPause} data-testid="playpause"><PlayPauseIcon playing={!!s?.playing} size={30} /></button>
-        <button class="fp-b" aria-label="Neste" disabled={off} onClick={() => act(() => api.transport('next'))}><NextIcon size={30} /></button>
-      </div>
-      <div class="fp-vol">
-        <span class="lbl">VOL</span>
-        <Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} />
-        <span class="v" data-testid="vol">{s?.volume ?? 0}</span>
-      </div>
-      <button class="fp-room" onClick={() => { closeFull(); go('rooms'); }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={ROOMS_ICON} /></svg>
-        <span class="ellip">{deviceName.value}</span>
-      </button>
-    </>
-  );
-}
-
-/** Minispiller over fanelinjen. */
-export function MiniPlayer() {
-  const s = status.value; const t = nowTitle(s); const a = artFor(s);
-  return (
-    <div class="mini">
-      <button class="cover" style={{ background: a.bg }} onClick={openFull} aria-label="Åpne spilleren" />
-      <button class="txt" onClick={openFull} data-testid="mini">
-        <span class="l1">{deviceName.value} · {PRODUCT_LABEL[product.value]}</span>
-        <span class="l2">{t.title}</span>
-        <span class="l3">{t.album ? subLine(t) : t.sub}</span>
-      </button>
-      <button class="pp" aria-label="Spill/pause" data-testid="mini-pp" onClick={playPause}><PlayPauseIcon playing={!!s?.playing} size={22} /></button>
-    </div>
-  );
 }
 
 /** Spiller-kort med alt: brukes i fullskjermspilleren (telefon) og på «Spiller nå» (PC). */
