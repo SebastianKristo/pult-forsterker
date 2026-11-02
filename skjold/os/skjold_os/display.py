@@ -13,6 +13,8 @@ class LumaSSD1306:
         self.dev = ssd1306(i2c(port=int(sk.get("i2c_port", 1)), address=addr), width=int(sk.get("width", 128)),
                            height=int(sk.get("height", 32)), rotate=int(sk.get("rotate", 2)))
 
+        try: self.dev.command(0xD5, 0xF0)   # høyeste interne klokke → høyere oppdateringsfrekvens, mindre synlig flimring
+        except Exception: pass
         self.prev = None   # forrige sides bytes per side (8 rader) – bare endrede sider/kolonner sendes
 
     def show(self, img, tag=""):
