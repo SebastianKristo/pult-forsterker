@@ -40,7 +40,7 @@ class OledContrast:
         if d is None: return
         try:
             if v <= 0: d.hide()
-            else: d.show(); d.contrast(max(1, int(self.full * v)))
+            else: d.show(); d.contrast(max(1, int(self.full * (0.4 + 0.6 * v))))   # OLED: under ~40 % kontrast flimrer panelet og blir for mørkt
         except Exception: pass
 
     def close(self): self.set(0)
