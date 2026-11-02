@@ -1,6 +1,6 @@
 // Intro-animasjon og velkomstside (Skjold App v2: introView, heroView, sc-if welcome). Portert 1:1 fra designfilen.
 import { useEffect, useState } from 'preact/hooks';
-import { leaveWelcome } from '../lib/store';
+import { leaveWelcome, mode } from '../lib/store';
 
 const an = (n: string, d: number, s: number, e?: string) => n + ' ' + d + 's ' + (e || 'cubic-bezier(.2,.7,.2,1)') + ' ' + s + 's both';
 
@@ -64,7 +64,8 @@ export function Welcome() {
           <h1 style="margin:0;font-size:28px;font-weight:600;line-height:1.15">Musikk i hvert rom</h1>
           <p style="margin:0;font-size:13px;color:#a9a9a3;line-height:1.5;text-wrap:pretty">Appen styrer Skjold S1 og Skjold Node. Velg kilde, juster lyden og samle rommene til ett system.</p>
         </div>
-        <button onClick={leaveWelcome} style="margin-top:auto;height:52px;flex-shrink:0;border-radius:14px;border:none;background:#d9a441;color:#0b0b0c;font-size:15px;font-weight:600;cursor:pointer">Kom i gang</button>
+        <button onClick={leaveWelcome} style="margin-top:auto;height:52px;flex-shrink:0;border-radius:14px;border:none;background:#d9a441;color:#0b0b0c;font-size:15px;font-weight:600;cursor:pointer">Legg til Skjold-enhet</button>
+        <button onClick={() => { leaveWelcome(); mode.value = 'app'; }} style="height:36px;flex-shrink:0;border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer">Hopp over og gå til appen</button>
       </div>
     </div>
   );
