@@ -74,6 +74,8 @@ struct SettingsView: View {
         appSection
     }
 
+    @State private var showLyrion = UserDefaults.standard.bool(forKey: "skjold-show-lyrion-players")
+
     /// App-level settings (not stored on the amplifier): choice of tab bar design.
     private var appSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -87,6 +89,21 @@ struct SettingsView: View {
                 HStack(spacing: 10) {
                     styleOption("glass", "Liquid Glass")
                     styleOption("classic", "Klassisk")
+                }
+            }
+            .padding(14)
+            .skBox(.card, .line)
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Vis andre Lyrion-spillere").sora(14)
+                    Text("Ta med spillere som ikke er Skjold (for eksempel max2play eller TV-bokser) under Rom.").sora(11, .regular, .muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                SKToggle(on: showLyrion) {
+                    showLyrion.toggle()
+                    UserDefaults.standard.set(showLyrion, forKey: "skjold-show-lyrion-players")
+                    m.rebuildRooms()
                 }
             }
             .padding(14)

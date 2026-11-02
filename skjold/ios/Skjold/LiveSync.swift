@@ -486,7 +486,7 @@ extension AppModel {
             let st = k.host == activeHost ? (link == .offline ? nil : dev) : devStats[k.host]
             let id = (st?.id).flatMap { $0.isEmpty ? nil : $0 } ?? k.id
             let p = st?.product ?? k.product
-            let type = ["s1", "node", "core"].contains(p) ? p : "s1"
+            let type = ["s1", "node", "core", "touch"].contains(p) ? p : "s1"
             var r = Room(id: id, name: st?.name ?? k.name, type: type, hw: Self.hw(type, st), vol: st?.volume ?? 0, host: k.host)
             var pid = (st?.lyrionPlayer ?? "").lowercased()
             if pid.isEmpty || pid == "00:00:00:00:00:01" {
@@ -497,7 +497,9 @@ extension AppModel {
             else if k.host != activeHost, let st, st.playing, !st.title.isEmpty { r.np = [st.title, st.artist.isEmpty ? st.name : st.artist] }
             if !rooms.contains(where: { $0.id == r.id }) { rooms.append(r) }
         }
-        for p in lyPlayers where !used.contains(p.id.lowercased()) {
+        // Andre Lyrion-spillere (max2play, TV-bokser …) er ikke Skjold-enheter – bare med når brukeren ber om det.
+        let others = UserDefaults.standard.bool(forKey: "skjold-show-lyrion-players")
+        for p in lyPlayers where others && !used.contains(p.id.lowercased()) {
             var r = Room(id: p.id, name: p.name, type: "node", hw: (p.model.isEmpty ? "Lyrion-spiller" : p.model) + " · Lyrion",
                          vol: lyStats[p.id]?.volume ?? 0, pid: p.id)
             if !p.connected { r.np = ["Frakoblet", "Lyrion"] }
