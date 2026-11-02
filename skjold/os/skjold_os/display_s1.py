@@ -40,7 +40,7 @@ class OledContrast:
         if d is None: return
         try:
             if v <= 0: d.hide()
-            else: d.show(); d.contrast(max(1, int(self.full * (0.85 + 0.15 * v))))   # OLED: lav kontrast gir svakt, ujevnt lys – dimming er bare et lite trinn
+            else: d.show(); d.contrast(self.full)   # OLED: alltid full kontrast (lavere ga svakt lys); 0 = av
         except Exception: pass
 
     def close(self): self.set(0)
