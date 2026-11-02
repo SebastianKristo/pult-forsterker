@@ -2167,9 +2167,22 @@ class RcGpio:
         self.p = Device.pin_factory.pin(pin); self.kind = "gpiozero"
         self.p.function = "input"; self.p.pull = "floating"
 
+    def _claim(self, out):
+        """lgpio: samme håndtak kan ta pinnen på nytt i annen modus – uten gpio_free (feilet free én gang, ble pinnen
+        stående ufrigjort/frigjort og hver måling etterpå ga «GPIO not allocated»)."""
+        lg = self.lg
+        try:
+            lg.gpio_claim_output(self.h, self.pin, 0) if out else lg.gpio_claim_input(self.h, self.pin, lg.SET_PULL_NONE)
+        except lg.error:
+            try:
+                lg.gpio_free(self.h, self.pin)
+            except lg.error:
+                pass
+            lg.gpio_claim_output(self.h, self.pin, 0) if out else lg.gpio_claim_input(self.h, self.pin, lg.SET_PULL_NONE)
+
     def low(self):
         if self.kind == "lgpio":
-            self.lg.gpio_free(self.h, self.pin); self.lg.gpio_claim_output(self.h, self.pin, 0)
+            self._claim(True)
         elif self.kind == "RPi.GPIO":
             self.G.setup(self.pin, self.G.OUT, initial=self.G.LOW)
         else:
@@ -2177,7 +2190,7 @@ class RcGpio:
 
     def release(self):
         if self.kind == "lgpio":
-            self.lg.gpio_free(self.h, self.pin); self.lg.gpio_claim_input(self.h, self.pin, self.lg.SET_PULL_NONE)
+            self._claim(False)
         elif self.kind == "RPi.GPIO":
             self.G.setup(self.pin, self.G.IN, pull_up_down=self.G.PUD_OFF)
         else:
