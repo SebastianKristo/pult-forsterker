@@ -318,7 +318,9 @@ final class AppModel {
             guard await self.connect(host) else { Haptics.error(); return }
             Haptics.success()
             // Allerede satt opp (setupDone i daemonen, eller lagt til før): rett inn i appen, uten Wi-Fi/rom-stegene.
-            if wasKnown || (await self.deviceSetupDone(host)) { self.enterApp() } else { self.goOb(1) }
+            var ready = wasKnown
+            if !ready { ready = await self.deviceSetupDone(host) }
+            if ready { self.enterApp() } else { self.goOb(1) }
         }
     }
 
@@ -766,7 +768,10 @@ final class AppModel {
                 if p >= 100 { p = 0; i += 1 }
                 if let f = failAt, i == f, p > 40 { done(true); return }
                 if i >= steps.count { done(false); return }
-                self.job = Job(step: steps[i], pct: Int((Double(i) + Double(p) / 100) / Double(steps.count) * 100 + 0.5))
+                let done: Double = Double(i) + Double(p) / 100.0
+                let frac: Double = done / Double(steps.count)
+                let pct: Int = Int(frac * 100.0 + 0.5)
+                self.job = Job(step: steps[i], pct: pct)
             }
         }
     }
