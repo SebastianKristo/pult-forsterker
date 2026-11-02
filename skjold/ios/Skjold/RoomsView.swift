@@ -212,6 +212,7 @@ private struct RoomTile: View {
     let room: Room
     let act: Room
     @State private var dragStart: Int? = nil
+    @State private var scrollLock = false
 
     var body: some View {
         let isA = room.id == act.id
@@ -276,9 +277,14 @@ private struct RoomTile: View {
                 withAnimation(.snappy) { m.setSys(n) }
             }
             .simultaneousGesture(
-                DragGesture(minimumDistance: 12)
+                DragGesture(minimumDistance: 24)
                     .onChanged { d in
-                        guard abs(d.translation.width) > abs(d.translation.height) || dragStart != nil else { return }
+                        // Rulling vinner: bare et tydelig sidelengs drag (minst dobbelt så bredt som høyt) styrer volumet,
+                        // og et drag som begynte loddrett låses som rulling til fingeren slippes.
+                        if dragStart == nil {
+                            if scrollLock { return }
+                            if abs(d.translation.height) * 2 > abs(d.translation.width) { scrollLock = true; return }
+                        }
                         let start = dragStart ?? vol
                         if dragStart == nil { dragStart = vol }
                         let v = max(0, min(100, start + Int(d.translation.width / g.size.width * 100)))
@@ -287,7 +293,7 @@ private struct RoomTile: View {
                             setVolume(v, isA: isA)
                         }
                     }
-                    .onEnded { _ in dragStart = nil }
+                    .onEnded { _ in dragStart = nil; scrollLock = false }
             )
         }
         .frame(height: 150)
