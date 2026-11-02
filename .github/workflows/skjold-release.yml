@@ -78,7 +78,7 @@ jobs:
             skjold-app-*.apk
 
   ios:
-    name: iOS IPA (usignert)
+    name: iOS IPA (gammel web-app, usignert)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -108,6 +108,31 @@ jobs:
         with:
           name: ios
           path: skjold-app-*.ipa
+
+  ios-native:
+    name: iOS-app (SwiftUI, usignert)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Velg nyeste Xcode (prosjektet bruker Xcode 27-formatet og iOS 26-SDK)
+        run: |
+          X="$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"; echo "Bruker $X"
+          sudo xcode-select -s "$X/Contents/Developer"; xcodebuild -version
+      - name: Bygg .app uten signering
+        working-directory: skjold/ios
+        run: |
+          xcodebuild -project Skjold.xcodeproj -scheme Skjold -configuration Release -sdk iphoneos \
+            -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM=""
+      - name: Pakk som IPA
+        working-directory: skjold/ios
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/Skjold.app Payload/
+          zip -qr ../../skjold-ios-${GITHUB_REF_NAME}-usignert.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-native
+          path: skjold-ios-*.ipa
 
   flasher:
     name: Flasher (${{ matrix.os }})
@@ -164,7 +189,7 @@ jobs:
 
   release:
     name: GitHub Release
-    needs: [web, ios, flasher, manual]
+    needs: [web, ios, ios-native, flasher, manual]
     # iOS-jobben får av og til ingen macOS-maskin hos GitHub og blir avbrutt – releasen publiseres likevel
     # så lenge web/Android, Flasher og PDF gikk gjennom (IPA mangler da bare i den utgivelsen).
     if: >-

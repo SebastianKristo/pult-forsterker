@@ -39,7 +39,7 @@ export function playNd(list: NdSong[], i: number): void {
   hist.value = { ...hist.value, nd: [{ s, at: Date.now() }, ...h].slice(0, 30) }; saveHist();
   const image = ndCover(s.coverArt, 600);
   void act(async () => {
-    try { return await api.radioPlay({ url: ndStream(s.id), title: s.title + (s.artist ? ' – ' + s.artist : ''), ...(image ? { image } : {}), genre: 'Navidrome' }); }
+    try { return await api.radioPlay({ url: ndStream(s.id), title: s.title + (s.artist ? ' – ' + s.artist : ''), ...(image ? { image } : {}), genre: 'Navidrome', track: s.title, artist: s.artist, album: s.album, duration: s.duration, source: 'Navidrome' }); }
     catch (e) { if (e instanceof ApiError && e.status === 404) throw new ApiError(404, 'forsterkeren kan ikke spille strømmer direkte ennå'); throw e; }
   }, { input: 'radio', station: s.title });
 }

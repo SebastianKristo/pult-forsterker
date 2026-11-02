@@ -1192,6 +1192,7 @@ def read_status():
     extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", "")} for i, p in enumerate(state["presets"])],
              "presets_count": sum(1 for p in state["presets"] if p), "presets_max": PRESETS_MAX, "radio_now": radio_now(),
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected,
+             "source_label": (last_play.get("source") or "") if state["input"] == "radio" and last_play.get("source") and lyr.info.get("url") == last_play.get("url") else "",
              "lyrion_server": f"{lyr.host}:{lyr.port}" if lyr.host else "", "lyrion_player": lyr.player}
     playing, paused = bool(st.get("playing")), bool(st.get("paused"))
     if _transport_hint["until"] > time.time() and _transport_hint["src"] == st.get("source", ""):
@@ -1204,7 +1205,7 @@ def read_status():
     return {**state, **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"],
-            "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"], "lyrion_server": extra["lyrion_server"], "lyrion_player": extra["lyrion_player"],
+            "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"], "source_label": extra["source_label"], "lyrion_server": extra["lyrion_server"], "lyrion_player": extra["lyrion_player"],
             "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD,
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
@@ -2794,11 +2795,15 @@ class Lyrion:
                 # Lyrion har ofte verken kanalnavn eller bilde for strømmer uten ICY-data, og rapporterer gjerne en
                 # omdirigert adresse – bruk navnet/bildet vi selv startet med (favoritt, søk, Navidrome).
                 same = lp and (loop.get("url", "") == lp["url"] or time.time() - lp["t"] < 3600)
-                if same and not (station or loop.get("album")):
+                if same and lp.get("source"):   # låt fra et bibliotek (Navidrome): vår metadata er riktigere
+                    song, artist, station = lp.get("track") or lp.get("title", ""), lp.get("artist", ""), lp.get("album", "")
+                    if lp.get("art"): art = lp["art"]
+                    if lp.get("duration") and not float(r.get("duration", 0) or 0): r["duration"] = lp["duration"]
+                if same and not (station or loop.get("album")) and not lp.get("source"):
                     station = lp.get("title", "")
                 if same and not art and lp.get("art"):
                     art = lp["art"]
-                self.info = {"mode": r.get("mode", "stop"), "station": station or loop.get("album", ""), "song": song,
+                self.info = {"mode": r.get("mode", "stop"), "station": station if same and lp.get("source") else (station or loop.get("album", "")), "song": song,
                              "artist": artist, "url": lp["url"] if same and lp else loop.get("url", ""), "art": self.url(art),
                              "duration": float(r.get("duration", 0) or 0), "time": float(r.get("time", 0) or 0)}
                 if not self.connected:
@@ -2969,7 +2974,7 @@ def _diag_stream(url):
         print("  Lyrion-status feilet:", repr(e), flush=True)
 
 
-def play_url(url, title="", image="", genre=""):
+def play_url(url, title="", image="", genre="", meta=None):
     """Spill en vilkårlig strøm via Lyrion (kanal som ikke er favoritt)."""
     if not url or not str(url).startswith(("http://", "https://")):
         raise ValueError("url må være http(s)")
@@ -2983,7 +2988,7 @@ def play_url(url, title="", image="", genre=""):
     threading.Thread(target=_diag_stream, args=(url,), daemon=True).start()
     radio_tmp.clear(); radio_tmp.update(title=title or "", url=url, icon=image or "", genre=genre or "")
     lyr.info = {**lyr.info, "mode": "play", "station": title or "", "song": "", "artist": "", "url": url, "art": image or ""}
-    last_play.clear(); last_play.update(url=url, title=title or "", art=image or "", t=time.time())
+    last_play.clear(); last_play.update(url=url, title=title or "", art=image or "", t=time.time(), **(meta or {}))
     n = next((k + 1 for k, p in enumerate(state["presets"]) if p and p.get("url") == url), 0)
     state["preset"] = n
     set_input("radio", announce=False)
@@ -3301,8 +3306,10 @@ async def h_radio_play(r):
     if not url.startswith(("http://", "https://")):
         return web.json_response({"error": "url må være http(s)"}, status=400)
     try:
-        await asyncio.get_running_loop().run_in_executor(None, play_url, url, str(b.get("title") or ""),
-                                                         str(b.get("image") or ""), str(b.get("genre") or ""))
+        meta = {"track": str(b.get("track") or ""), "artist": str(b.get("artist") or ""), "album": str(b.get("album") or ""),
+                "duration": float(b.get("duration") or 0), "source": str(b.get("source") or "")}
+        await asyncio.get_running_loop().run_in_executor(None, lambda: play_url(url, str(b.get("title") or ""),
+                                                         str(b.get("image") or ""), str(b.get("genre") or ""), meta))
     except Exception as e:
         print("radio/play feilet:", repr(e), flush=True)
         return web.json_response({"error": str(e)}, status=409)
