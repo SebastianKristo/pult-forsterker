@@ -5,10 +5,10 @@
 **Med HACS (anbefalt – får oppdateringer automatisk):**
 HACS → ⋮ → *Custom repositories* → `https://github.com/SebastianKristo/pult-forsterker`, type **Integration** → *Add*. Søk «Skjold» (tidligere «Pultforsterker») → *Download* → start HA på nytt.
 
-**Uten HACS:** kopier `custom_components/ki_pultforsterker` (i roten av repoet) til `<config>/custom_components/`.
+**Uten HACS:** kopier `custom_components/skjold` (i roten av repoet) til `<config>/custom_components/`.
 
 2. Start Home Assistant på nytt. Forsterkeren oppdages via mDNS (`_kipultamp._tcp`) og vises under *Innstillinger → Enheter → Oppdaget*. Kan også legges til manuelt med host/port.
-3. Entiteter (enhet «Pultforsterker»): `media_player.ki_pultforsterker` (kilde, volum, mute, av/på), `switch.ki_pultforsterker_strom`, `sensor.ki_pultforsterker_kilde/tittel/artist`, `binary_sensor.ki_pultforsterker_spiller`, `button.ki_pultforsterker_start_bluetooth_parring`, `switch.ki_pultforsterker_loudness`, `number.ki_pultforsterker_loudness_styrke`.
+3. Entiteter (enhet «Pultforsterker»): `media_player.skjold_s1` (kilde, volum, mute, av/på), `switch.skjold_s1_strom`, `sensor.skjold_s1_kilde/tittel/artist`, `binary_sensor.skjold_s1_spiller`, `button.skjold_s1_start_bluetooth_parring`, `switch.skjold_s1_loudness`, `number.skjold_s1_loudness_styrke`.
 4. Fra 2.13.0 følger kildelista (mediespiller, nivå per kilde) det kortet rapporterer i `inputs` (inkl. **Spotify**); på Skjold Node opprettes ikke AUX/USB, hodetelefon-, overtemperatur- eller USB-switch-entiteter, men en **Skjermlysstyrke**-select. Enheten får navnet fra daemonen (`name`), og det er knapper for **Start på nytt** og **Slå av** (sistnevnte er av som standard).
 5. Fra 2.14.0 støttes alle tre produktene – enheten heter **Skjold S1**, **Skjold Node** eller **Skjold Core** (modell i enhetsregisteret, produsent «Skjold», fra `product` i `/api/status`):
 
@@ -25,9 +25,9 @@ HACS → ⋮ → *Custom repositories* → `https://github.com/SebastianKristo/p
 
 ## Ikon og logo i Home Assistant
 
-HA henter ikoner for integrasjoner fra [home-assistant/brands](https://github.com/home-assistant/brands) – de kan ikke ligge i selve integrasjonen. Filene ligger klare i `brands/ki_pultforsterker/` (`icon.png` 256, `icon@2x.png` 512, `logo.png`, `logo@2x.png`). For å få dem inn:
+HA henter ikoner for integrasjoner fra [home-assistant/brands](https://github.com/home-assistant/brands) – de kan ikke ligge i selve integrasjonen. Filene ligger klare i `brands/skjold/` (`icon.png` 256, `icon@2x.png` 512, `logo.png`, `logo@2x.png`). For å få dem inn:
 
-1. Fork `home-assistant/brands`, kopier mappen til `custom_integrations/ki_pultforsterker/`.
+1. Fork `home-assistant/brands`, kopier mappen til `custom_integrations/skjold/`.
 2. Lag en pull request (de merges vanligvis innen noen dager).
 3. Etterpå viser HA ikonet automatisk under *Enheter og tjenester* og i enhetsvisningen (ingen endring i integrasjonen).
 
