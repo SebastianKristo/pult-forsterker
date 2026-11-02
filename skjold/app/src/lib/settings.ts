@@ -13,11 +13,19 @@ export interface Settings {
   hold: number;
   voice: boolean; lang: number; vv: number;
   dim: number; off: number; clock: boolean; clockStyle: number; led: number;
+  /** LED-ringer: opplevd lysstyrke 0–100 % (daemonen bruker gamma 2,2). «led» holdes i takt av daemonen. */
+  ledLevel: number;
+  /** LED-modus: 'press' = lyser ved trykk og toner ut, 'always' = aktiv kilde lyser, 'off' = av. */
+  ledMode: LedMode;
   auto: number; wake: boolean; spEn: boolean; upnpEn: boolean; castEn: boolean; ytmEn: boolean; ndEn: boolean;
   updChannel: number; updAuto: boolean;
   setupDone: boolean;
   eq: EqProfiles;
 }
+
+export type LedMode = 'press' | 'always' | 'off';
+export const LED_MODES: LedMode[] = ['press', 'always', 'off'];
+export const LED_MODE_NAMES = ['Ved trykk', 'Alltid', 'Av'];
 
 export const EQ_NAMES = ['Dypbass', 'Bass', 'Mellomtone', 'Presens', 'Luft'];
 export const EQ_HZ = ['60 Hz', '250 Hz', '1 kHz', '4 kHz', '12 kHz'];
@@ -47,7 +55,7 @@ export function defaultEq(): EqProfiles {
 export const DEF: Settings = {
   bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, lvlAux: 0, lvlUsb: 0,
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
-  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false,
+  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false,
   updChannel: 0, updAuto: true, setupDone: false,
   eq: defaultEq()
 };
@@ -68,6 +76,8 @@ export type Item =
   | { kind: 'num'; k: NumKey; n: string; mn: number; mx: number; f: keyof typeof fmt; hint?: string }
   | { kind: 'opt'; k: OptKey; n: string; list: string[]; hint?: string }
   | { kind: 'bool'; k: BoolKey; n: string; hint?: string }
+  | { kind: 'range'; k: 'ledLevel'; n: string; mn: number; mx: number; step: number; unit: string; hint?: string }
+  | { kind: 'ledMode'; k: 'ledMode'; n: string; hint?: string }
   | { kind: 'str'; k: StrKey; n: string; ph: string; hint?: string }
   // API-styrte rader (leses fra /api/status, skrives med egne endepunkt)
   | { kind: 'api-bool'; id: 'loudness' | 'mix' | 'autoInput' | 'hpAutomute' | 'voiceOn'; n: string; hint?: string }
@@ -141,7 +151,9 @@ export const CATS: Category[] = [
     { kind: 'act', n: 'Test stemme', id: 'testVoice', label: 'Spill av', safe: true }] },
   { id: 'skjerm', n: 'Skjerm og lys', sub: 'Dimming, klokke, LED', items: [
     opt('dim', 'Dimme skjermen etter', ['Av', '30 s', '1 min']), opt('off', 'Slukk skjermen etter', ['Av', '2 min', '5 min'], 'Beskytter OLED-skjermen mot innbrenning'),
-    bool('clock', 'Klokke i standby'), { kind: 'clocks', n: 'Klokke i standby' }, opt('led', 'LED-ringer', ['Høy', 'Middels', 'Lav', 'Av'])] },
+    bool('clock', 'Klokke i standby'), { kind: 'clocks', n: 'Klokke i standby' },
+    { kind: 'range', k: 'ledLevel', n: 'LED-lysstyrke', mn: 0, mx: 100, step: 5, unit: ' %', hint: 'Lysstyrken på LED-ringene rundt knappene' },
+    { kind: 'ledMode', k: 'ledMode', n: 'LED-modus', hint: 'Ved trykk: ringen lyser når du trykker og toner ut. Alltid: aktiv kilde lyser.' }] },
   { id: 'strom', n: 'Strøm', sub: 'Standby og påslag', items: [
     opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay eller Blåtann vekker forsterkeren')] },
   { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub, backup og gjenoppretting', items: [{ kind: 'update', n: 'Oppdatering' }] },
@@ -210,6 +222,7 @@ export function mergeSettings(partial: unknown): Settings {
   for (const k of Object.keys(DEF) as (keyof Settings)[]) {
     if (k === 'eq') continue;
     const v = p[k];
+    if (k === 'ledMode') { if (typeof v === 'string' && (LED_MODES as string[]).includes(v)) s.ledMode = v as LedMode; else if (typeof v === 'number' && LED_MODES[v]) s.ledMode = LED_MODES[v] as LedMode; continue; }
     if (v !== undefined && typeof v === typeof DEF[k]) (s as unknown as Record<string, unknown>)[k] = v;
   }
   const eq = p['eq'];
@@ -221,6 +234,7 @@ export function mergeSettings(partial: unknown): Settings {
       }
     }
   }
+  if (p['ledLevel'] === undefined && typeof p['led'] === 'number') s.ledLevel = [100, 60, 30, 0][p['led'] as number] ?? 100;   // eldre daemon
   return s;
 }
 
@@ -231,7 +245,8 @@ export function mergeSettings(partial: unknown): Settings {
 const NO_DISPLAY = new Set(['skjerm']);
 const AUX_USB = new Set(['nAux1', 'nAux2', 'nUsb1', 'nUsb2', 'usbPc', 'lvlAux', 'lvlUsb']);
 const HEADPHONES = new Set(['hpAutomute', 'headphones', 'hpOwn']);
-const BUTTONS = new Set(['hold']);
+const BUTTONS = new Set(['hold', 'ledLevel']);
+const NODE_ONLY = new Set(['ledMode']);
 function itemKey(it: Item): string {
   if ('k' in it) return it.k;
   if (it.kind === 'info') return it.key;
@@ -250,6 +265,7 @@ export function catsFor(product: 's1' | 'node' | 'core', inputs: string[] = []):
       if (AUX_USB.has(k)) return k.toLowerCase().includes('usb') ? hasUsb : hasAux;
       if (HEADPHONES.has(k)) return product === 's1';
       if (BUTTONS.has(k)) return product !== 'core';
+      if (NODE_ONLY.has(k)) return product === 'node';
       return true;
     })
   }));

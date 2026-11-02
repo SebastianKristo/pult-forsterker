@@ -1,0 +1,18 @@
+[Unit]
+Description=Skjold Node – oppstartsskjerm og LED-jag (før Skjold OS er klar)
+DefaultDependencies=no
+After=local-fs.target systemd-modules-load.service
+Wants=systemd-modules-load.service
+Before=sysinit.target shutdown.target
+Conflicts=shutdown.target
+ConditionPathExists=/opt/skjold/early/skjold_early.py
+
+[Service]
+Type=simple
+# system-python (ikke venv): bare standardbiblioteket + python3-lgpio – starter på under ett sekund
+ExecStart=/usr/bin/python3 /opt/skjold/early/skjold_early.py
+TimeoutStopSec=3
+Restart=no
+
+[Install]
+WantedBy=sysinit.target

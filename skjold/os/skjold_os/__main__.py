@@ -49,7 +49,13 @@ def main(argv=None):
     else:
         sink = LumaST7735(sk); bl = Backlight(sk.get("bakgrunnslys", {}))
     print("Skjold OS: layout=%s api=%s pins=%s %s" % (a.layout, a.api, src, "sim→" + a.sim if a.sim else ("ssd1306 i2c" if a.layout == "node-oled32" else "st7735" if a.layout == "node" else a.layout)), flush=True)
-    Ui(client, lay, sink, bl, model="S1" if a.layout.startswith("s1") else "NODE", boot=not a.no_boot).run(max_frames=a.frames)
+    real = not (a.sim or a.demo)
+    if real:   # overta skjermen fra skjold-early.service og mål oppstartstiden når daemonen svarer
+        from . import bootinfo
+        bootinfo.mark_display()
+    Ui(client, lay, sink, bl, model="S1" if a.layout.startswith("s1") else "NODE", boot=not a.no_boot,
+       on_ready=bootinfo.mark_ready if real else None,
+       boot_info=(lambda: (bootinfo.uptime(), bootinfo.estimate())) if real and bootinfo.uptime() < 600 else None).run(max_frames=a.frames)
     return 0
 
 

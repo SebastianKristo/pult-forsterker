@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, cmpVersion, fetchLatestRelease, hostLabel, isNative, REPO, type LevelSource, type Release } from '../lib/api';
 import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status } from '../lib/store';
 import { computed } from '@preact/signals';
-import { CAT_TILE, ICONS, catsFor, fmt, type Category, type Item } from '../lib/settings';
+import { CAT_TILE, ICONS, LED_MODES, LED_MODE_NAMES, catsFor, fmt, type Category, type Item } from '../lib/settings';
 
 export const cats = computed(() => catsFor(product.value, status.value?.inputs ?? []));
 import { CLOCKS, drawClock } from '../lib/clocks';
@@ -113,6 +113,14 @@ function Row({ it, i }: { it: Item; i: number }) {
       return <Opt i={i} n={it.n} hint={it.hint} note={pending(it.k)} list={list} value={value}
         onPick={(v) => { if (it.k === 'hold') { const f = favs.value[v]; if (f) setSetting('hold', f.n - 1); } else setSetting(it.k, v); if (it.k === 'name' && st.nameCustom) setSetting('nameCustom', ''); }} />;
     }
+    case 'range':
+      return <Line i={i} n={it.n} hint={it.hint} note={pending(it.k)} below={
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 5ch;gap:10px;align-items:center">
+          <Slider value={st[it.k]} min={it.mn} max={it.mx} step={it.step} label={it.n} onCommit={(v) => setSetting(it.k, Math.round(v))} />
+          <span style={VAL}>{st[it.k]}{it.unit}</span></div>} />;
+    case 'ledMode':
+      return <Opt i={i} n={it.n} hint={it.hint} note={pending(it.k)} list={LED_MODE_NAMES} value={Math.max(0, LED_MODES.indexOf(st.ledMode))}
+        onPick={(v) => setSetting('ledMode', LED_MODES[v] ?? 'press')} />;
     case 'bool':
       return <Line i={i} n={it.n} hint={it.hint} note={pending(it.k)}><Toggle on={st[it.k]} label={it.n} onChange={(v) => setSetting(it.k, v)} /></Line>;
     case 'str':
