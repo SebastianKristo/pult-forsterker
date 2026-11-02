@@ -12,7 +12,7 @@ from .. import fx
 from ..gfx import W, BLACK
 
 # faner i designet: INPUTS = AIR (AirPlay · BT), AUX, RADIO, USB
-TAB = {"airplay": "AIR", "bt": "AIR", "spotify": "AIR", "aux": "AUX", "aux2": "AUX", "radio": "RADIO", "usb": "USB"}
+TAB = {"airplay": "AIR", "bt": "AIR", "spotify": "AIR", "plex": "AIR", "aux": "AUX", "aux2": "AUX", "radio": "RADIO", "usb": "USB"}
 DEFAULT_TABS = ["AIR", "AUX", "RADIO", "USB"]
 
 SPK_MUTE = ["..#.....", ".##.#.#.", "###..#..", ".##.#.#.", "..#....."]

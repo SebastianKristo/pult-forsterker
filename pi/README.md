@@ -30,3 +30,19 @@ amixer -c Headphones sset PCM 100%
 Koble 3,5 mm → AUX på en aktiv høyttaler/forsterker. Knapper/encoder/OLED kan kobles rett på Pi-ens header med Dupont (samme GPIO som modulbygget), eller styres fra Home Assistant/Homey/`curl`. Når hovedkortet kommer: kjør `bash install.sh` på nytt (uten `KI_AMP_OUT`) og sett `KI_AMP_BOARD=main` i `/etc/ki-amp.env`.
 
 Merk: USB-gadget-lyd på Pi 4 går over USB-C-porten (den eneste OTG-porten). Da må Pi-en få strøm fra PC-ens USB-port (holder på en USB 3-port for en headless Pi 4) eller via 5 V på header pinne 2/6.
+
+## Plex (valgfritt)
+
+Pi-en kan bli en Plex-spiller som dukker opp som høyttaler i Plexamp-appen. Lyden går samme vei som de andre
+kildene (ALSA «plex» → softvol «KI Plex» → CamillaDSP), og Skjold bytter automatisk til kilden **Plex** når noe spilles.
+
+```bash
+cd ~/pult-forsterker && git pull
+bash pi/update.sh               # ny daemon + /etc/asound.conf med «plex»
+bash pi/install_plex.sh         # Plexamp headless (krever Plex Pass); logg inn med kode fra https://plex.tv/claim
+# alternativ uten Node.js:  KI_PLEX_PLAYER=caldera bash pi/install_plex.sh   (Caldera Music headless)
+```
+
+Ny installasjon: legg til `KI_AMP_PLEX=1` foran `bash install.sh`. Etter innlogging: åpne `http://<pi>:32500`,
+velg musikkbiblioteket og **Audio Device = default**. Spilleren kjører som `ki-plex.service` (bruker `ki-plex`).
+Daemonen leser «spiller nå» fra spillerens lokale API på :32500 og sender play/pause/neste/forrige dit.

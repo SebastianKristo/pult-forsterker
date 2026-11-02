@@ -6,7 +6,7 @@ import { art } from '../lib/settings';
 import { Chip, MuteIcon, NextIcon, PlayPauseIcon, PowerIcon, PrevIcon, Slider } from '../components/ui';
 
 export const SRC_COLOR: Record<string, string> = {
-  radio: 'var(--src-radio)', bt: 'var(--src-bt)', usb: 'var(--src-bt)', airplay: 'var(--src-air)', aux: 'var(--src-aux)', aux2: 'var(--src-aux)', spotify: 'var(--src-spotify)'
+  radio: 'var(--src-radio)', bt: 'var(--src-bt)', usb: 'var(--src-bt)', airplay: 'var(--src-air)', aux: 'var(--src-aux)', aux2: 'var(--src-aux)', spotify: 'var(--src-spotify)', plex: 'var(--src-plex)'
 };
 
 /** Én linje under tittelen der det er trangt: «Artist · Album». */

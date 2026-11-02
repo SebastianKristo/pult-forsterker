@@ -56,6 +56,7 @@ export function HomePhone() {
     ...(inputs.includes('airplay') ? [['AirPlay', () => pick('airplay')] as Svc] : []),
     ...(inputs.includes('bt') ? [['Blåtann', () => pick('bt')] as Svc] : []),
     ['Spotify', () => (inputs.includes('spotify') ? pick('spotify') : go('settings', 'tjenester'))],
+    ...(inputs.includes('plex') ? [['Plex', () => pick('plex')] as Svc] : []),
     ['UPnP/DLNA', () => go('settings', 'tjenester')],
     ['YT Music', () => go('lib', 'ytm')],
     ['Navidrome', () => go('lib', 'nd')],
@@ -153,7 +154,7 @@ function PP({ playing, size }: { playing: boolean; size: number }) {
 
 // ---------- fullskjermspiller ----------
 const ALL_INPUTS: InputId[] = ['airplay', 'bt', 'aux', 'radio', 'usb', 'spotify'];
-const SRC_NAME: Record<InputId, string> = { airplay: 'AirPlay', bt: 'Blåtann', aux: 'AUX', aux2: 'AUX 2', radio: 'Radio', usb: 'USB-lyd', spotify: 'Spotify' };
+const SRC_NAME: Record<InputId, string> = { airplay: 'AirPlay', bt: 'Blåtann', aux: 'AUX', aux2: 'AUX 2', radio: 'Radio', usb: 'USB-lyd', spotify: 'Spotify', plex: 'Plex' };
 /** Spiller forsterkeren Navidrome-låten appen sendte? */
 function ndNow(s: Status | null) {
   if (lsvc.value !== 'nd' || !s || s.input !== 'radio') return null;
@@ -183,7 +184,7 @@ export function FullSheet() {
   const a = ndImg ? { bg: 'url("' + ndImg.replace(/"/g, '') + '") center / cover no-repeat, ' + art(nd!.album).bg, ink: art(nd!.album).ink, img: ndImg } : a0;
   const viz = Array.from({ length: 12 }, (_, i) => { const e = eq[Math.min(4, Math.floor(i / 2.4))] ?? 0, v = s?.playing ? 0.35 + 0.55 * Math.abs(Math.sin(tick * 0.45 + i * 0.9) * Math.sin(tick * 0.21 + i)) : 0.06; return { h: Math.max(4, Math.min(100, v * 100 + e * 2.5)), o: s?.playing ? 1 : 0.35 }; });
   const dur = nd ? nd.duration : s?.duration ?? 0, pos = Math.min(s?.position ?? 0, dur || 0);
-  const quality = live ? 'DIREKTE' : nd ? [nd.suffix?.toUpperCase(), nd.samplingRate ? (nd.samplingRate / 1000).toString().replace('.', ',') + ' kHz' : nd.bitRate ? nd.bitRate + ' kbps' : ''].filter(Boolean).join(' · ') : input === 'airplay' ? 'ALAC · 44,1 kHz' : input === 'aux' || input === 'aux2' ? 'ANALOG' : input === 'usb' ? 'USB-LYD' : input === 'spotify' ? 'OGG VORBIS' : '';
+  const quality = live ? 'DIREKTE' : nd ? [nd.suffix?.toUpperCase(), nd.samplingRate ? (nd.samplingRate / 1000).toString().replace('.', ',') + ' kHz' : nd.bitRate ? nd.bitRate + ' kbps' : ''].filter(Boolean).join(' · ') : input === 'airplay' ? 'ALAC · 44,1 kHz' : input === 'aux' || input === 'aux2' ? 'ANALOG' : input === 'usb' ? 'USB-LYD' : input === 'spotify' ? 'OGG VORBIS' : input === 'plex' ? 'PLEXAMP' : '';
   const srcName = nd ? 'Navidrome' : SRC_NAME[input] ?? 'AirPlay';
   const list = s?.inputs?.length ? s.inputs : ALL_INPUTS;
   const off = !s || !s.power || ext;

@@ -187,6 +187,13 @@
           }
         },
         {
+          "id": "plex",
+          "title": {
+            "en": "Plex",
+            "no": "Plex"
+          }
+        },
+        {
           "id": "aux",
           "title": {
             "en": "AUX 1",
@@ -549,6 +556,25 @@
       "uiComponent": "slider",
       "icon": "/assets/icon.svg"
     },
+    "ki_level_plex": {
+      "type": "number",
+      "title": {
+        "en": "Level Plex",
+        "no": "Nivå Plex"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "icon": "/assets/icon.svg"
+    },
     "ki_bright": {
       "type": "enum",
       "title": {
@@ -776,6 +802,13 @@
                 }
               },
               {
+                "id": "plex",
+                "label": {
+                  "en": "Plex",
+                  "no": "Plex"
+                }
+              },
+              {
                 "id": "aux",
                 "label": {
                   "en": "AUX 1",
@@ -892,6 +925,13 @@
                 "label": {
                   "en": "Spotify",
                   "no": "Spotify"
+                }
+              },
+              {
+                "id": "plex",
+                "label": {
+                  "en": "Plex",
+                  "no": "Plex"
                 }
               },
               {
@@ -1301,6 +1341,13 @@
                 "label": {
                   "en": "Spotify",
                   "no": "Spotify"
+                }
+              },
+              {
+                "id": "plex",
+                "label": {
+                  "en": "Plex",
+                  "no": "Plex"
                 }
               }
             ]

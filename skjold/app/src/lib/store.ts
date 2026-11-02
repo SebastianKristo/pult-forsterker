@@ -233,7 +233,7 @@ export const eqActiveSource = computed<EqSource>(() => {
   const s = status.value;
   if (!s) return 'air';
   if (s.headphones) return 'hp';
-  const m: Record<InputId, EqSource> = { airplay: 'air', bt: 'bt', radio: 'radio', aux: 'aux', aux2: 'aux', usb: 'usb', spotify: 'air' };
+  const m: Record<InputId, EqSource> = { airplay: 'air', bt: 'bt', radio: 'radio', aux: 'aux', aux2: 'aux', usb: 'usb', spotify: 'air', plex: 'air' };
   return m[s.input] ?? 'air';
 });
 
@@ -247,6 +247,7 @@ export function inputLabel(id: InputId): string {
     case 'bt': return 'Blåtann';
     case 'radio': return 'Radio';
     case 'spotify': return 'Spotify';
+    case 'plex': return 'Plex';
   }
   return id;
 }

@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN, source_label, status_inputs
 from .entity import KiAmpEntity
 
-PLAYABLE = ("airplay", "bt", "radio", "spotify")   # kilder med «spiller nå» og avspillingskontroll
+PLAYABLE = ("airplay", "bt", "radio", "spotify", "plex")   # kilder med «spiller nå» og avspillingskontroll
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:

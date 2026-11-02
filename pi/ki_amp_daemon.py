@@ -61,6 +61,7 @@ API:
                      Spotify Connect-hendelse fra librespot (--onevent /usr/local/bin/ki-spotify-event, se ki-spotify.service).
                      «playing» bytter kilde til spotify når auto_input er på. Status: input «spotify», "spotify": {connected, playing, …}.
   GET  /api/spotify  siste Spotify-status (samme som status["spotify"])
+  GET  /api/plex     siste Plex-status (samme som status["plex"]): {available, playing, paused, title, artist, album, …}
 Radio: Squeezelite-spilleren styres gjennom Lyrion Music Servers JSON-RPC (KI_AMP_LMS_SERVER, ellers oppdaget på nettet).
 Spotify Connect: librespot (fra raspotify-pakken) som ki-spotify.service, ut på ALSA-enheten «spotify» (softvol «KI Spotify» →
   dmix → loopback → CamillaDSP), som de andre kildene. Spillernavn = KI_AMP_NAME. librespot har ingen fjernstyring, så
@@ -249,6 +250,7 @@ else:
 BTN_POWER = {"radio": 3, "test": 26, "main": None}.get(BOARD, 16)   # main: POWER via MCP23017 (GPIO16 er PGA2311 CS) + knapp bak GPIO 15
 
 SPOTIFY_ON = os.environ.get("KI_AMP_SPOTIFY", "1") == "1"   # Spotify Connect (librespot, ki-spotify.service)
+PLEX_ON = os.environ.get("KI_AMP_PLEX", "0") == "1"           # Plex-spiller (Plexamp headless / Caldera Music, ki-plex.service)
 if BOARD == "node":
     INPUTS = ["radio", "airplay", "bt"]
 elif BOARD == "main":
@@ -257,8 +259,10 @@ else:
     INPUTS = ["radio", "airplay", "bt", "aux", "usb"]
 if SPOTIFY_ON:
     INPUTS = INPUTS + ["spotify"]
+if PLEX_ON:
+    INPUTS = INPUTS + ["plex"]
 CYCLE = ["radio", "airplay", "bt", "usb"] if BOARD == "radio" else INPUTS   # SOURCE-knappen
-LEVEL_SOURCES = ["airplay", "bt", "usb", "radio", "aux", "aux2", "spotify"]   # eget nivå per kilde (ALSA softvol «KI <kilde>» på kortet Loopback)
+LEVEL_SOURCES = ["airplay", "bt", "usb", "radio", "aux", "aux2", "spotify", "plex"]   # eget nivå per kilde (ALSA softvol «KI <kilde>» på kortet Loopback)
 state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False,
          "loudness": True, "loudness_level": 5, "voice": True,
          "presets": [None] * 6, "preset": 0,
@@ -269,13 +273,15 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "last_wireless": "airplay",   # sist brukte trådløse kilde (airplay/bt) – «BT»-knappen på hovedkortet
          "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
          "overtemp": False,     # NTC på kjøleribben over ~75 °C (MCP GPA7) – TPA3116 dempes til den er under ~50 °C
-         "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100, "spotify": 100},   # nivå per kilde (miks)
+         "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100, "spotify": 100, "plex": 100},   # nivå per kilde (miks)
          "ui_event": None,      # Node: {"name":"settings","t":…} når ◀◀ holdes 3 s (skjermprosessen viser innstillinger)
          "rebooting": False,    # settes ~1,5 s før daemonen starter omstart/slår av (skjermen viser omstart-animasjonen)
          "input_seq": 0,        # teller som øker for hver knapp-/potmeterhendelse
          "settings": {}}
 spotify = {"connected": False, "playing": False, "paused": False, "title": "", "artist": "", "album": "", "cover": "",
-           "duration": 0, "position": 0, "user": "", "event": "", "t": 0.0}   # siste librespot-hendelse (POST /api/spotify)   # innstillingsmodellen fra appen/web (skjold_settings.js) – se SETTINGS_DEF
+           "duration": 0, "position": 0, "user": "", "event": "", "t": 0.0}
+plex = {"available": False, "playing": False, "paused": False, "title": "", "artist": "", "album": "", "cover": "",
+        "duration": 0, "position": 0, "t": 0.0}   # Plex-spilleren (pollet fra :32500, se plex_thread)   # siste librespot-hendelse (POST /api/spotify)   # innstillingsmodellen fra appen/web (skjold_settings.js) – se SETTINGS_DEF
 LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD == "main" else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
 _pairing_until = 0.0
@@ -475,6 +481,7 @@ PHRASES = {
     "input_usb": "USB.",
     "input_radio": "Radio.",
     "input_spotify": "Spotify.",
+    "input_plex": "Pleks.",
     "radio_preset": "{name}.",
     "radio_saved": "Lagret som kanal {n}.",
     "radio_empty": "Kanal {n} er tom. Hold knappen for å lagre.",
@@ -498,6 +505,7 @@ PHRASES_TR = {
     "input_usb": "U S B.",
     "input_radio": "Radio.",
     "input_spotify": "Spotify.",
+    "input_plex": "Pleks.",
     "radio_preset": "{name}.",
     "radio_saved": "Lagra på kanal {n}, ja.",
     "radio_empty": "Kanal {n} e tom, du. Hold inne knappen for å lagre.",
@@ -711,7 +719,7 @@ def apply_node_leds(playing=None):
         except Exception:
             playing = False
     want = {"radio": 1.0 if on and state["input"] == "radio" else 0.0,
-            "airbt": 1.0 if on and state["input"] in ("airplay", "bt", "spotify") else 0.0,
+            "airbt": 1.0 if on and state["input"] in ("airplay", "bt", "spotify", "plex") else 0.0,
             "prev": (0.6 if playing else 0.08) if on else 0.0, "next": (0.6 if playing else 0.08) if on else 0.0}
     for k, led in node_leds.items():
         if k == "airbt" and state["bt_pairing"]:
@@ -780,7 +788,7 @@ def apply_power():
         apply_input()
     apply_volume()   # mute i CamillaDSP + PGA2311 i standby
     # OLED av i standby håndteres av oled_display.py via ctrl-filen
-    units = [u for u in ("shairport-sync", "bluealsa-aplay", "ki-usb-audio", "ki-squeezelite", "ki-aux1", "ki-aux2", "ki-spotify")   # bare tjenester som er slått på
+    units = [u for u in ("shairport-sync", "bluealsa-aplay", "ki-usb-audio", "ki-squeezelite", "ki-aux1", "ki-aux2", "ki-spotify", "ki-plex")   # bare tjenester som er slått på
              if subprocess.run(["systemctl", "is-enabled", "--quiet", u], check=False).returncode == 0]
     if not state["power"]:   # stopp det som spiller pent før tjenestene tas ned
         _pause_others("")
@@ -990,6 +998,10 @@ def read_status():
         st = {"playing": spotify["playing"], "paused": spotify["paused"], "source": "spotify", "cover": spotify["cover"],
               "title": spotify["title"], "artist": spotify["artist"], "album": spotify["album"],
               "duration": spotify["duration"], "position": spotify["position"], "bt_device": st.get("bt_device", "")}
+    elif state["input"] == "plex" or (plex["playing"] and not st.get("playing")):
+        st = {"playing": plex["playing"], "paused": plex["paused"], "source": "plex", "cover": plex["cover"],
+              "title": plex["title"], "artist": plex["artist"], "album": plex["album"],
+              "duration": plex["duration"], "position": plex["position"], "bt_device": st.get("bt_device", "")}
     extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", "")} for i, p in enumerate(state["presets"])],
              "presets_count": sum(1 for p in state["presets"] if p), "presets_max": PRESETS_MAX, "radio_now": radio_now(),
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected}
@@ -1006,7 +1018,7 @@ def read_status():
             "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"],
             "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"],
             "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD,
-            "spotify": dict(spotify), "airplay_device": raw_ap or "",
+            "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
             "menu": dict(menu) if menu["open"] else None, "hold": hold_status(), "settings_menu": smenu_status()}
 
@@ -1152,6 +1164,8 @@ def _pause_others(inp):
         lyr.cmd(["pause", "1"])
     if spotify["playing"] and inp != "spotify" and st.get("source") != "spotify":
         spotify_stop()   # Spotify spiller i bakgrunnen mens en annen kilde vises
+    if plex["playing"] and inp != "plex" and st.get("source") != "plex":
+        plex_cmd("pause")
     if not st.get("playing") or st.get("source") in ("", inp, "radio"):
         return
     try:
@@ -1161,12 +1175,14 @@ def _pause_others(inp):
             _busctl("call", SPS[0], SPS[1], SPS[2], "Pause")
         elif st.get("source") == "spotify":
             spotify_stop()
+        elif st.get("source") == "plex":
+            plex_cmd("pause")
     except Exception as e:
         print("Pause annen kilde:", e, flush=True)
 
 
 LEVEL_CTL = {"airplay": "KI AirPlay", "bt": "KI Bluetooth", "usb": "KI USB", "radio": "KI Radio", "aux": "KI AUX1", "aux2": "KI AUX2",
-             "spotify": "KI Spotify"}
+             "spotify": "KI Spotify", "plex": "KI Plex"}
 
 
 def apply_levels():
@@ -2338,6 +2354,125 @@ async def h_spotify(r):
 async def h_spotify_get(_r): return web.json_response(dict(spotify))
 
 
+# ---------- Plex (Plexamp headless / Caldera Music som ki-plex.service, lyd ut på ALSA «plex» → softvol «KI Plex») ----------
+# Spilleren styres fra Plexamp-appen (den dukker opp som «cast»-mål). Daemonen leser tilstanden fra spillerens lokale
+# Plex-companion-API på :32500 (/player/timeline/poll) og sender play/pause/neste/forrige dit. Svarer ikke API-et
+# (eldre/nyere spiller), ser daemonen i stedet om tjenestens prosesser har en ALSA-avspillingsenhet åpen.
+PLEX_PORT = int(os.environ.get("KI_AMP_PLEX_PORT", "32500"))
+PLEX_USER = os.environ.get("KI_AMP_PLEX_USER", "ki-plex")
+PLEX_CMD = {"play": "play", "pause": "pause", "playpause": None, "stop": "stop", "next": "skipNext", "previous": "skipPrevious"}
+_plex_cid = [0]
+
+
+def _plex_get(path, timeout=2.0):
+    _plex_cid[0] += 1
+    sep = "&" if "?" in path else "?"
+    req = urllib.request.Request(f"http://127.0.0.1:{PLEX_PORT}{path}{sep}type=music&commandID={_plex_cid[0]}",
+                                 headers={"X-Plex-Client-Identifier": "skjold-" + socket.gethostname(),
+                                          "X-Plex-Device-Name": "Skjold", "Accept": "application/xml"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
+def plex_cmd(action):
+    """Send play/pause/neste/forrige til Plex-spilleren. True hvis den svarte."""
+    if action == "playpause":
+        action = "pause" if plex["playing"] else "play"
+    cmd = PLEX_CMD.get(action)
+    if not cmd:
+        return False
+    try:
+        _plex_get(f"/player/playback/{cmd}")
+        return True
+    except Exception as e:
+        print("Plex:", e, flush=True)
+        return False
+
+
+def _plex_timeline():
+    """Musikk-tidslinjen fra :32500 som dict, eller None hvis API-et ikke svarer."""
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(_plex_get("/player/timeline/poll?wait=0&includeMetadata=1"))
+    except Exception:
+        return None
+    tl = next((t for t in root.iter("Timeline") if t.get("type") == "music"), None)
+    if tl is None:
+        return {"state": "stopped"}
+    out = {"state": tl.get("state", "stopped"), "time": int(tl.get("time") or 0) // 1000,
+           "duration": int(tl.get("duration") or 0) // 1000}
+    tr = next(iter(tl.iter("Track")), None)
+    if tr is not None:
+        out.update(title=tr.get("title", ""), artist=tr.get("originalTitle") or tr.get("grandparentTitle", ""),
+                   album=tr.get("parentTitle", ""))
+        if not out["duration"]:
+            out["duration"] = int(tr.get("duration") or 0) // 1000
+        thumb = tr.get("thumb") or tr.get("parentThumb") or ""
+        addr, port, proto = tl.get("address"), tl.get("port"), tl.get("protocol") or "http"
+        if thumb.startswith(("http://", "https://")):
+            out["cover"] = thumb
+        elif thumb and addr and port:
+            tok = tl.get("token") or ""
+            out["cover"] = f"{proto}://{addr}:{port}{thumb}" + (f"?X-Plex-Token={tok}" if tok else "")
+    return out
+
+
+def _plex_pcm_open():
+    """Har en prosess som kjører som ki-plex en ALSA-avspillingsenhet åpen? (reserve når API-et ikke svarer)"""
+    try:
+        import pwd
+        uid = pwd.getpwnam(PLEX_USER).pw_uid
+    except Exception:
+        return False
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            if os.stat(f"/proc/{pid}").st_uid != uid:
+                continue
+            for fd in os.listdir(f"/proc/{pid}/fd"):
+                if re.match(r"/dev/snd/pcmC\d+D\d+p$", os.readlink(f"/proc/{pid}/fd/{fd}")):
+                    return True
+        except OSError:
+            continue
+    return False
+
+
+def plex_thread():
+    while True:
+        time.sleep(1.5)
+        try:
+            if not state["power"]:
+                continue
+            was = plex["playing"]
+            tl = _plex_timeline()
+            if tl is None:
+                on = _plex_pcm_open()
+                plex.update(available=False, playing=on, paused=False, t=time.time())
+                if not on:
+                    plex.update(title="", artist="", album="", cover="", duration=0, position=0)
+            else:
+                st = tl["state"]
+                plex.update(available=True, playing=st == "playing", paused=st == "paused", t=time.time(),
+                            position=tl.get("time", 0), duration=tl.get("duration", 0))
+                if st == "stopped":
+                    plex.update(title="", artist="", album="", cover="")
+                else:
+                    for k in ("title", "artist", "album", "cover"):
+                        if k in tl:
+                            plex[k] = tl[k]
+            if plex["playing"] and not was and state["auto_input"] and state["input"] != "plex" and "plex" in INPUTS:
+                print("Auto-kilde: plex", flush=True)
+                set_input("plex", announce=False)
+            elif plex["playing"] != was:
+                apply_input(); write_ctrl()
+        except Exception as e:
+            print("Plex-tråd:", e, flush=True)
+
+
+async def h_plex_get(_r): return web.json_response(dict(plex))
+
+
 async def h_transport(r):
     a = (await r.json()).get("action", "")
     if a not in TRANSPORT:
@@ -2926,6 +3061,12 @@ def transport(action):
         if action in ("pause", "stop") or (action == "playpause" and spotify["playing"]):
             spotify_stop(); return
         raise RuntimeError("Spotify styres fra Spotify-appen (librespot har ingen fjernstyring)")
+    if state["input"] == "plex" or st.get("source") == "plex":
+        if not plex_cmd(action):
+            raise RuntimeError("Plex-spilleren svarer ikke – styr den fra Plexamp-appen")
+        plex.update(playing=action in ("play", "next", "previous") or (action == "playpause" and not plex["playing"]),
+                    paused=action in ("pause",) or (action == "playpause" and plex["playing"]))
+        return
     src = st.get("source") or ("bt" if state["input"] == "bt" else "airplay")
     if src == "bt" or state["input"] == "bt":
         if action == "playpause":
@@ -2990,6 +3131,8 @@ def main():
         threading.Thread(target=lambda: subprocess.run(["bluetoothctl", "system-alias", NAME], check=False, timeout=10,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL), daemon=True).start()
     threading.Thread(target=follow_source, daemon=True).start()   # auto-kilde (kan slås av) + BT-talemeldinger
+    if PLEX_ON:
+        threading.Thread(target=plex_thread, daemon=True).start()   # Plex: «spiller nå» + auto-kilde
     if BOARD == "node" and NODE_GPIO and HW and os.environ.get("KI_AMP_NODE_POT", "1") == "1":
         threading.Thread(target=node_pot_thread, daemon=True).start()   # volum fra potmeteret (ADS1115 eller RC)
     pot = os.environ.get("KI_AMP_POT", "")
@@ -3005,7 +3148,7 @@ def main():
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
                     web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
                     web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post),
-                    web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.post("/api/reboot", h_reboot),
+                    web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
                     web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test)])
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
     webdir = os.environ.get("KI_AMP_WEBAPP", "")

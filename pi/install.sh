@@ -12,6 +12,7 @@ SRC="$(cd "$(dirname "$0")" && pwd)"
 #                         skjold/node/driver/installer_node.sh. KI_AMP_NAME=… = navn i AirPlay/Spotify/Bluetooth/Lyrion.
 # KI_AMP_CORE=1        : Skjold Core – ren Raspberry Pi uten kasse, knapper eller skjerm (som node, men uten GPIO)
 # KI_AMP_SPOTIFY=0      : uten Spotify Connect (librespot)
+# KI_AMP_PLEX=1         : med Plex-spiller (Plexamp headless, krever Plex Pass) – se pi/install_plex.sh. KI_PLEX_PLAYER=caldera = Caldera Music
 # KI_AMP_SKJOLD_OS=0    : S1 (main) beholder det gamle skjermprogrammet i stedet for Skjold OS (skjold/os)
 BOARD_SEL="${KI_AMP_BOARD:-}"; [ "$BOARD_SEL" = node ] && KI_AMP_OUT=headphones
 OUT="${KI_AMP_OUT:-dac}"; SPOTIFY="${KI_AMP_SPOTIFY:-1}"; NAME_SEL="${KI_AMP_NAME:-}"; SKJOLD_OS="${KI_AMP_SKJOLD_OS:-1}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
@@ -238,6 +239,11 @@ elif [ "$BOARD_SEL" = main ] && [ "$SKJOLD_OS" = 1 ] && [ -f "$OS_INST" ]; then
   sudo bash "$OS_INST" || echo "ADVARSEL: Skjold OS ble ikke installert – sett KI_AMP_DISPLAY=$DISPLAY_SEL i /etc/ki-amp.env for den gamle skjermen" >&2
 else
   sudo systemctl enable --now oled-display ki-amp
+fi
+
+if [ "${KI_AMP_PLEX:-0}" = 1 ]; then
+  echo "== Plex-spiller"
+  KI_AMP_NAME="$NAME_SEL" bash "$SRC/install_plex.sh" || echo "ADVARSEL: Plex-spilleren ble ikke installert – prøv igjen med bash pi/install_plex.sh" >&2
 fi
 
 echo

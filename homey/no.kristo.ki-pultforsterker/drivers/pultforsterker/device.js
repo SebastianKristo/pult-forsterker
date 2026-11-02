@@ -5,9 +5,9 @@ const http = require('http');
 
 const POLL_MS = 5000;
 // Kildene i standardrekkefølge (nøkkel → navn). Eldre daemoner uten "inputs" i status har FALLBACK_INPUTS.
-const SOURCE_LABELS = { radio: 'Radio', airplay: 'AirPlay', bt: 'Bluetooth', spotify: 'Spotify', aux: 'AUX 1', aux2: 'AUX 2', usb: 'USB' };
+const SOURCE_LABELS = { radio: 'Radio', airplay: 'AirPlay', bt: 'Bluetooth', spotify: 'Spotify', plex: 'Plex', aux: 'AUX 1', aux2: 'AUX 2', usb: 'USB' };
 const FALLBACK_INPUTS = ['radio', 'airplay', 'bt', 'aux', 'aux2', 'usb'];
-const LEVEL_SOURCES = ['airplay', 'bt', 'usb', 'radio', 'aux', 'aux2', 'spotify'];
+const LEVEL_SOURCES = ['airplay', 'bt', 'usb', 'radio', 'aux', 'aux2', 'spotify', 'plex'];
 const NODE_BOARDS = ['node'];   // Skjold Node: ingen AUX/USB, hodetelefonjack, overtemperatur eller USB-switch
 
 function statusInputs(st) {

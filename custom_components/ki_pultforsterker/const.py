@@ -8,7 +8,7 @@ CONF_PORT = "port"
 
 # Kildenavn (nøkkel i API-et → visningsnavn). Rekkefølgen er standardrekkefølgen.
 SOURCE_LABELS = {
-    "radio": "Radio", "airplay": "AirPlay", "bt": "Bluetooth", "spotify": "Spotify",
+    "radio": "Radio", "airplay": "AirPlay", "bt": "Bluetooth", "spotify": "Spotify", "plex": "Plex",
     "aux": "AUX 1", "aux2": "AUX 2", "usb": "USB",
 }
 # Eldre daemoner (uten "inputs" i status) hadde alltid disse.

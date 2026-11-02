@@ -10,6 +10,8 @@ SOURCES = {
                 "art": ("#4a8cff", "#1a2f66")},
     "spotify": {"k": "SPOTIFY", "n": "Spotify", "c": hexc("#1ed760"), "ico": "spotify", "sub": "Spotify Connect",
                 "art": ("#1ed760", "#0b5c2a")},
+    "plex":    {"k": "PLEX",    "n": "Plex",    "c": hexc("#e5a00d"), "ico": "plex",    "sub": "Plexamp",
+                "art": ("#e5a00d", "#5c3f05")},
     "aux":     {"k": "AUX",     "n": "AUX",     "c": hexc("#d8cfb4"), "ico": "aux",     "sub": "Linjeinngang",
                 "art": ("#d8cfb4", "#5c5540")},
     "aux2":    {"k": "AUX 2",   "n": "AUX 2",   "c": hexc("#d8cfb4"), "ico": "aux",     "sub": "Linjeinngang",
@@ -17,7 +19,7 @@ SOURCES = {
     "usb":     {"k": "USB",     "n": "USB",     "c": hexc("#4a8cff"), "ico": "usb",     "sub": "USB-lyd fra PC",
                 "art": ("#4a8cff", "#1a2f66")},
 }
-ORDER = ["radio", "airplay", "bt", "spotify", "aux", "aux2", "usb"]   # design: RADIO, AIRPLAY, BLÅTANN først
+ORDER = ["radio", "airplay", "bt", "spotify", "plex", "aux", "aux2", "usb"]   # design: RADIO, AIRPLAY, BLÅTANN først
 
 def src(key):
     return SOURCES.get(key) or {"k": (key or "?").upper(), "n": key or "?", "c": hexc("#f2f2ee"), "ico": "aux",

@@ -15,7 +15,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEnt
     add([KiAmpLoudnessLevel(c)] + [KiAmpSourceLevel(c, src) for src in level_sources(c.data)])
 
 
-LEVEL_SOURCES = ("airplay", "bt", "usb", "radio", "aux", "aux2", "spotify")
+LEVEL_SOURCES = ("airplay", "bt", "usb", "radio", "aux", "aux2", "spotify", "plex")
 
 
 def level_sources(data: dict) -> list[str]:

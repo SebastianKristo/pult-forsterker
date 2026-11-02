@@ -11,7 +11,7 @@ import { favs, favsLoaded, loadFavs, playFav } from '../lib/radio';
 export const nbHw = (s: string) => s.replace(/ (×|W\b|kHz|mm)/g, ' $1').replace(/(\d) ×/g, '$1 ×');
 
 // ---------- Hjem ----------
-const SRC_ORDER: [InputId, string][] = [['radio', 'Radio'], ['airplay', 'AirPlay'], ['bt', 'Blåtann'], ['spotify', 'Spotify'], ['aux', 'AUX'], ['aux2', 'AUX'], ['usb', 'USB']];
+const SRC_ORDER: [InputId, string][] = [['radio', 'Radio'], ['airplay', 'AirPlay'], ['bt', 'Blåtann'], ['spotify', 'Spotify'], ['plex', 'Plex'], ['aux', 'AUX'], ['aux2', 'AUX'], ['usb', 'USB']];
 
 export function HomePage({ wide = false }: { wide?: boolean }) {
   const s = status.value;

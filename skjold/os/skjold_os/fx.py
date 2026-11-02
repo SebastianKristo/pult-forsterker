@@ -35,7 +35,11 @@ def ico_usb(c, x, y, k, col):
     c.line([P(0, 4), P(-4.5, 0), P(-4.5, -2.5)], col, 1.2 * k); c.circle(x - 4.5 * k, y - 3 * k, 1.3 * k, col)
     c.line([P(0, 2), P(4.5, -1.5), P(4.5, -3)], col, 1.2 * k); c.rect(x + 3.2 * k, y - 5.5 * k, 2.6 * k, 2.6 * k, col)
 
-ICONS = {"air": ico_air, "bt": ico_bt, "radio": ico_radio, "spotify": ico_spotify, "aux": ico_aux, "usb": ico_usb}
+def ico_plex(c, x, y, k, col):   # chevron
+    P = lambda px, py: (x + px * k, y + py * k)
+    c.poly([P(-5, -8), P(0, -8), P(5, 0), P(0, 8), P(-5, 8), P(0, 0)], col)
+
+ICONS = {"plex": ico_plex, "air": ico_air, "bt": ico_bt, "radio": ico_radio, "spotify": ico_spotify, "aux": ico_aux, "usb": ico_usb}
 
 def icon(c, key, x, y, k, col): ICONS.get(sources.src(key)["ico"], ico_aux)(c, x, y, k, col)
 
