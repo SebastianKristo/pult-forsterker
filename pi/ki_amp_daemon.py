@@ -2782,8 +2782,16 @@ class Lyrion:
                 if song == station:
                     song = ""
                 art = loop.get("artwork_url") or (f"music/{loop['coverid']}/cover.jpg" if loop.get("coverid") else "")
+                lp = last_play if last_play.get("url") else {}
+                # Lyrion har ofte verken kanalnavn eller bilde for strømmer uten ICY-data, og rapporterer gjerne en
+                # omdirigert adresse – bruk navnet/bildet vi selv startet med (favoritt, søk, Navidrome).
+                same = lp and (loop.get("url", "") == lp["url"] or time.time() - lp["t"] < 3600)
+                if same and not (station or loop.get("album")):
+                    station = lp.get("title", "")
+                if same and not art and lp.get("art"):
+                    art = lp["art"]
                 self.info = {"mode": r.get("mode", "stop"), "station": station or loop.get("album", ""), "song": song,
-                             "artist": artist, "url": loop.get("url", ""), "art": self.url(art),
+                             "artist": artist, "url": lp["url"] if same and lp else loop.get("url", ""), "art": self.url(art),
                              "duration": float(r.get("duration", 0) or 0), "time": float(r.get("time", 0) or 0)}
                 if not self.connected:
                     print("Lyrion tilkoblet, spiller", self.player, flush=True)
@@ -2848,6 +2856,7 @@ lyr = Lyrion()
 
 
 PRESETS_MIN, PRESETS_MAX = 6, 50
+last_play = {}   # siste strøm Skjold startet selv: {url,title,art,t} – fyller inn når Lyrion mangler metadata
 radio_tmp = {}   # kanal spilt via /api/radio/play (ikke favoritt): {title,url,icon,genre}
 
 
@@ -2922,6 +2931,7 @@ def play_url(url, title="", image="", genre=""):
     threading.Thread(target=_diag_stream, args=(url,), daemon=True).start()
     radio_tmp.clear(); radio_tmp.update(title=title or "", url=url, icon=image or "", genre=genre or "")
     lyr.info = {**lyr.info, "mode": "play", "station": title or "", "song": "", "artist": "", "url": url, "art": image or ""}
+    last_play.clear(); last_play.update(url=url, title=title or "", art=image or "", t=time.time())
     n = next((k + 1 for k, p in enumerate(state["presets"]) if p and p.get("url") == url), 0)
     state["preset"] = n
     set_input("radio", announce=False)
@@ -2936,6 +2946,7 @@ def play_preset(n, announce=True):
         set_power(True)
     lyr.rpc(["playlist", "play", p["url"], p.get("title", "")])
     lyr.info = {**lyr.info, "mode": "play", "station": p.get("title", ""), "song": "", "artist": "", "url": p["url"], "art": p.get("icon", "")}
+    last_play.clear(); last_play.update(url=p["url"], title=p.get("title", ""), art=p.get("icon", ""), t=time.time())
     state["preset"] = n
     set_input("radio", announce=False)
     apply_input(); changed()
