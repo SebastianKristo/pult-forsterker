@@ -6,6 +6,7 @@
 
 [all]
 # I²C1 (GPIO2/3, pinne 3/5): 0,91" SSD1306 OLED på 0x3C og ADS1115 (potmeter) på 0x48.
+# Uten ADS1115 leses potmeteret med RC-tidsmåling på GPIO17 (se under).
 # 400 kHz gir ~25 bilder/s på 128×32 uten å stresse ADS1115 (tåler 400 kHz fast mode).
 dtparam=i2c_arm=on
 dtparam=i2c_arm_baudrate=400000
@@ -28,6 +29,9 @@ enable_uart=0
 # op=utgang, dl=lav, ip=inngang, pu=pull-up
 gpio=12,16,20,21=op,dl
 gpio=7,23,24,25=ip,pu
+# RC-potmeter (variant uten ADS1115): GPIO17 (pinne 11) inngang UTEN pull –
+# en intern pull ville lade kondensatoren og gi feil ladetid. pn = ingen pull.
+gpio=17=ip,pn
 
 # Knappene leses av ki_amp_daemon.py med gpiozero. IKKE legg til gpio-key-
 # overlays for de samme pinnene (gir "Device or resource busy").

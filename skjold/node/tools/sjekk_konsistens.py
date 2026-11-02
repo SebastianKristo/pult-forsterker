@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sjekker at node_pins.json (schema 2, OLED + ADS1115), kabelliste.csv, kabling_node.svg og config.txt.node stemmer overens.
+"""Sjekker at node_pins.json (schema 2, OLED + ADS1115 eller RC-potmeter), kabelliste.csv, kabling_node.svg og config.txt.node stemmer overens.
 Kjør fra skjold/node/: python3 tools/sjekk_konsistens.py   (exit 1 ved feil)"""
 import csv, json, os, re, sys
 import xml.etree.ElementTree as ET
@@ -33,6 +33,21 @@ f(P["knapper"]["gnd_pin"], None, "KNAPP GND")
 for l in P["leds"]["liste"]:
     f(l["pin"], l["gpio"], "LED " + l["for"])
 f(P["leds"]["gnd_pin"], None, "LED GND")
+# RC-potmeter (variant uten ADS1115): 3V3-pinnen kan deles med ADS1115 VDD (bare én variant monteres)
+PO = P["potmeter"]
+if PO.get("metode", "auto") not in ("auto", "ads1115", "rc"): feil.append("potmeter.metode må være auto|ads1115|rc")
+RC = PO.get("rc")
+if not RC: feil.append("potmeter.rc mangler")
+else:
+    rp = RC["pinner"]
+    if rp["RC"]["gpio"] != RC["gpio"] or rp["RC"]["pin"] != RC["pin"]: feil.append("potmeter.rc gpio/pin avviker fra pinner.RC")
+    f(RC["pin"], RC["gpio"], "RC-POT node")
+    f(rp["GND"]["pin"], None, "RC-POT GND")
+    if rp["3V3"]["pin"] not in (1, 17): feil.append("RC-POT 3V3 på pinne %d, som ikke er 3V3" % rp["3V3"]["pin"])
+    if rp["3V3"]["pin"] in forv and not forv[rp["3V3"]["pin"]].endswith(("VDD", "VCC")): feil.append("RC-POT 3V3-pinnen er brukt til noe annet")
+    if RC["gpio"] in {0, 1, 2, 3, 14, 15, 18, 19}: feil.append("RC-POT på reservert GPIO%d" % RC["gpio"])
+    if not 1e-7 <= float(RC["kondensator_f"]) <= 1e-5: feil.append("kondensator_f utenfor 100 nF–10 µF")
+    if RC["gpio"] in P["ledige_gpio_etter_dette"]: feil.append("GPIO%d står som ledig men brukes av RC-potmeteret" % RC["gpio"])
 for pin, hva in forv.items():
     if hva.endswith("GND") and pin not in GND: feil.append("%s på pinne %d, som ikke er GND" % (hva, pin))
     if hva.endswith(("VCC", "VDD")) and pin not in (1, 17): feil.append("%s på pinne %d, som ikke er 3V3" % (hva, pin))
@@ -70,12 +85,16 @@ inn = sorted(k["gpio"] for k in P["knapper"]["liste"])
 ut = sorted(l["gpio"] for l in P["leds"]["liste"])
 cfg_inn = sorted(int(x) for l in aktive if l.endswith("=ip,pu") for x in l[5:].split("=")[0].split(","))
 cfg_ut = sorted(int(x) for l in aktive if re.search(r"=op,d[lh]$", l) for x in l[5:].split("=")[0].split(","))
+if RC:
+    cfg_pn = sorted(int(x) for l in aktive if re.search(r"=ip,(pn|np)$", l) for x in l[5:].split("=")[0].split(","))
+    if cfg_pn != [RC["gpio"]]: feil.append("config.txt.node: RC-GPIO%d skal være gpio=%d=ip,pn (ingen pull), fant %s" % (RC["gpio"], RC["gpio"], cfg_pn))
 if inn != cfg_inn: feil.append("config gpio inn %s != json %s" % (cfg_inn, inn))
 if ut != cfg_ut: feil.append("config gpio ut %s != json %s" % (cfg_ut, ut))
 if any(l.startswith("dtoverlay=") for l in aktive): feil.append("config.txt.node har aktiv dtoverlay (knapper/skjerm skal ikke ha overlay)")
 if "dtparam=spi=on" in aktive or "dtparam=spi=off" not in aktive:
     feil.append("SPI må være AV (GPIO7 = SPI0 CE1 er knappen ▶▶)")
-for t in ("ADS1115 SDA", "ADS1115 SCL", "POT pinne 1", "POT pinne 2", "POT pinne 3"):
+for t in ("ADS1115 SDA", "ADS1115 SCL", "POT pinne 1", "POT pinne 2", "POT pinne 3",
+          "RC-KOBLING 1 kΩ → node", "RC-KOBLING node RC (GPIO%d)" % (RC or {}).get("gpio", 17), "RC-KOBLING C− (GND)"):
     if not any(r["til"] == t for r in rader): feil.append("CSV mangler ledning til %s" % t)
 
 if feil:

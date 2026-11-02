@@ -1,7 +1,7 @@
 {
   "_kommentar": "Skjold Node (OLED-utgave) – felles kilde for pinner. Leses av ki_amp_daemon.py (KI_AMP_BOARD=node), Skjold OS (skjold/os), tools/node_selftest.py, tools/lag_kabling.py (kabling_node.svg + kabelliste.csv), tools/sjekk_konsistens.py og bruksanvisningen. GPIO-numre er BCM. 'pin' er fysisk pinne på 40-pins headeren (1 = nærmest SD-kortet, oddetall i indre rad). Punkter merket '[bekreft]' må måles eller sjekkes mot den faktiske modulen.",
   "schema": 2,
-  "revisjon": "C · 2026-11-01 · OLED 128×32 + ADS1115-potmeter",
+  "revisjon": "C · 2026-11-02 · OLED 128×32 + potmeter (ADS1115 eller RC på GPIO17)",
   "kort": [
     "pi4",
     "pi3b",
@@ -125,6 +125,8 @@
   },
   "potmeter": {
     "type": "10 kΩ lineært (B10K), 3 pinner",
+    "metode": "auto",
+    "_metode_merknad": "auto = ADS1115 hvis den svarer på 0x48 ved oppstart (mest nøyaktig), ellers RC-tidsmåling på GPIO17 (bare én kondensator og én 1 kΩ-motstand). ads1115 / rc tvinger metoden. Daemonen logger hvilken metode som er aktiv.",
     "funksjon": "volum",
     "adc_kanal": 0,
     "vref_v": 3.3,
@@ -151,7 +153,43 @@
     "hysterese": 2,
     "dodsone_pct": 1.5,
     "inverter": false,
-    "_merknad": "0 V = volum 0, 3,3 V = volum 100 (med klokka = høyere med pinne 1 på GND). Daemonen setter volum bare når knotten faktisk flyttes (hysterese ±2), så volum fra app/AirPlay overstyres ikke av en knott som står stille. Snur retningen feil: sett inverter=true eller bytt pinne 1 og 3."
+    "_merknad": "0 V = volum 0, 3,3 V = volum 100 (med klokka = høyere med pinne 1 på GND). Daemonen setter volum bare når knotten faktisk flyttes (hysterese ±2), så volum fra app/AirPlay overstyres ikke av en knott som står stille. Snur retningen feil: sett inverter=true eller bytt pinne 1 og 3.",
+    "rc": {
+      "_kommentar": "RC-variant UTEN ADS1115: 3V3 → pot pinne 3, glider (pinne 2) → 1 kΩ → node RC, node RC → 220 Ω → GPIO17 (pinne 11; motstanden verner pinnen når kondensatoren tømmes), node RC → kondensator → GND. Pot pinne 1 kobles ikke. Ladetiden til GPIO17 leser høy (~1,3–1,6 V) er proporsjonal med motstanden glider–pinne 3 (+1 kΩ). Median av 5 målinger, ~10 Hz; endepunktene kalibreres selv (vri knotten helt rundt én gang) og lagres i /var/lib/ki-amp/node_pot_rc.json.",
+      "gpio": 17,
+      "pin": 11,
+      "kondensator_f": 1e-06,
+      "_kondensator_merknad": "1 µF anbefalt (keramisk/film). 100 nF–10 µF virker; endre verdien her (påvirker tidsavbrudd og pollesteg, kalibreringen nullstilles). Elektrolytt (f.eks. 10 µF): + til node RC, − til GND.",
+      "seriemotstand_ohm": 1000,
+      "pinnemotstand_ohm": 220,
+      "pot_ohm": 10000,
+      "prover": 5,
+      "poll_hz": 10,
+      "pinner": {
+        "3V3": {
+          "pin": 17,
+          "nett": "3V3",
+          "farge": "rod",
+          "til": "POT pinne 3",
+          "beskrivelse": "3,3 V (samme pinne som ADS1115 VDD i ADS-varianten – bare én av variantene monteres)"
+        },
+        "RC": {
+          "gpio": 17,
+          "pin": 11,
+          "nett": "GPIO17",
+          "farge": "bla",
+          "til": "node RC",
+          "beskrivelse": "node RC: 1 kΩ fra glidekontakten + kondensator +"
+        },
+        "GND": {
+          "pin": 39,
+          "nett": "GND",
+          "farge": "sort",
+          "til": "kondensator −",
+          "beskrivelse": "Jord for kondensatoren"
+        }
+      }
+    }
   },
   "knapper": {
     "type": "12 mm metall-trykknapp (eller 12×12 taktil), momentan NO, med LED-ring 3–6 V",
@@ -289,14 +327,13 @@
     10,
     11,
     13,
-    17,
     22,
     26,
     27
   ],
   "inngang": {
     "metode": "gpiozero",
-    "_merknad": "ki_amp_daemon.py (KI_AMP_BOARD=node) leser knappene med gpiozero (lgpio) og potmeteret via ADS1115 (smbus2). Ingen device-tree-knapper (gpio-key) – en GPIO tatt av en overlay gir 'Device or resource busy' i gpiozero."
+    "_merknad": "ki_amp_daemon.py (KI_AMP_BOARD=node) leser knappene med gpiozero (lgpio) og potmeteret via ADS1115 (smbus2) eller RC-tidsmåling på GPIO17 (lgpio). Ingen device-tree-knapper (gpio-key) – en GPIO tatt av en overlay gir 'Device or resource busy' i gpiozero."
   },
   "config_txt": {
     "fil": "config/config.txt.node",
@@ -306,7 +343,8 @@
       "dtparam=spi=off",
       "dtparam=audio=on",
       "gpio=12,16,20,21=op,dl",
-      "gpio=7,23,24,25=ip,pu"
+      "gpio=7,23,24,25=ip,pu",
+      "gpio=17=ip,pn"
     ]
   },
   "fargekoder": {

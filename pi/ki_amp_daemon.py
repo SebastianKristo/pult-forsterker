@@ -72,7 +72,9 @@ KI_AMP_BOARD=node (Skjold Node, OLED-utgave: Pi 4/3B, lyd på 3,5 mm, 0,91" SSD1
   Knapper til GND: RADIO GPIO23, AIR·BT GPIO24, ◀◀ GPIO25, ▶▶ GPIO7. LED-ringer GPIO12/16/20/21 (programvare-PWM).
   Volum: 10 kΩ potmeter på ADS1115 A0 (I²C1 0x48), lest med smbus2 ~20 Hz. Volumet settes bare når knotten flyttes
   (glatting + hysterese ±2), så volum fra app/AirPlay står til knotten vris igjen («soft takeover»). Mangler ADS1115,
-  fortsetter alt annet (nytt forsøk hvert 10. s). I²C deles med OLED-en (Skjold OS) – daemonen tar aldri bussen eksklusivt.
+  fortsetter alt annet (nytt forsøk hvert 10. s). Uten ADS1115 (potmeter.metode "auto"|"rc"): RC-tidsmåling på GPIO17 –
+  3V3 → pot pinne 3, glider → 1 kΩ → node → GPIO17, node → kondensator (1 µF; 100 nF–10 µF) → GND. Ladetiden ∝ motstand,
+  median av 5 målinger ~10 Hz, selvkalibrerende endepunkter (lagres i /var/lib/ki-amp/node_pot_rc.json). I²C deles med OLED-en (Skjold OS) – daemonen tar aldri bussen eksklusivt.
   Daemonen rører aldri GPIO0/1 (HAT-EEPROM), 2/3 (I²C), 14/15 (UART) eller 18/19 (I²S). SPI er av (GPIO7 = knapp).
   RADIO: trykk = velg radio / neste favoritt (meny), hold 1 s = spill valgt favoritt.
   AIR·BT: trykk = bytt AirPlay ↔ Bluetooth, hold 2 s = BT-paring av/på.
@@ -96,7 +98,7 @@ Felter i /api/status for skjermen (Skjold OS):
   LED-ringer: RADIO = radio, AIR·BT = AirPlay/Bluetooth/Spotify (blinker under paring), ◀◀/▶▶ = noe spiller.
   KI_AMP_NODE_GPIO=0 (Skjold Core, ren Raspberry Pi): ingen knapper, potmeter eller LED-ringer – bare lyd og API.
   KI_AMP_NODE_BUTTONS=0 lar skjermprosessen eie knappene (daemonen styrer da bare LED-ringene).
-  KI_AMP_NODE_POT=0 slår av potmeteret (ADS1115).
+  KI_AMP_NODE_POT=0 slår av potmeteret (ADS1115 og RC).
 """
 import asyncio
 import json
@@ -177,7 +179,8 @@ elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
                     "led": {"radio": 12, "airbt": 16, "prev": 20, "next": 21},
                     "both_hold": 3.0, "led_hz": 200, "led_active_high": True, "bounce": 0.05,
                     "adc": {"port": 1, "addr": 0x48, "ch": 0, "gain": 4.096},
-                    "pot": {"vref": 3.3, "hz": 20.0, "alpha": 0.35, "hyst": 2, "dead": 1.5, "invert": False}}
+                    "pot": {"vref": 3.3, "hz": 20.0, "alpha": 0.35, "hyst": 2, "dead": 1.5, "invert": False, "metode": "auto"},
+                    "rc": {"gpio": 17, "c": 1e-6, "r_ser": 1000.0, "r_pot": 10000.0, "n": 5, "hz": 10.0}}
 
     def _node_pins():
         cfg = {k: (dict(v) if isinstance(v, dict) else v) for k, v in NODE_DEFAULT.items()}
@@ -207,7 +210,11 @@ elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
                 cfg["adc"].update(port=int(a.get("i2c_port", 1)), addr=int(str(a.get("adresse", "0x48")), 16),
                                   ch=int(po.get("adc_kanal", a.get("kanal", 0))), gain=float(a.get("gain_v", 4.096)))
                 cfg["pot"].update(vref=float(po.get("vref_v", 3.3)), hz=float(po.get("poll_hz", 20)), alpha=float(po.get("glatting", 0.35)),
-                                  hyst=float(po.get("hysterese", 2)), dead=float(po.get("dodsone_pct", 1.5)), invert=bool(po.get("inverter", False)))
+                                  hyst=float(po.get("hysterese", 2)), dead=float(po.get("dodsone_pct", 1.5)), invert=bool(po.get("inverter", False)),
+                                  metode=str(po.get("metode", "auto")).lower())
+                rc = po.get("rc") or {}
+                cfg["rc"].update({k: t(rc[j]) for k, j, t in (("gpio", "gpio", int), ("c", "kondensator_f", float), ("r_ser", "seriemotstand_ohm", float),
+                                                              ("r_pot", "pot_ohm", float), ("n", "prover", int), ("hz", "poll_hz", float)) if j in rc})
                 print(f"Node-pinner fra {os.path.normpath(path)}", flush=True)
                 break
             except Exception as ex:
@@ -221,6 +228,9 @@ elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
                     del cfg[grp][k]
                 else:
                     used.add(p)
+        if cfg["rc"]["gpio"] in NODE_FORBIDDEN or cfg["rc"]["gpio"] in used:
+            print(f"Node-pinner: RC-potmeter GPIO{cfg['rc']['gpio']} er reservert eller i bruk – RC-måling av", flush=True)
+            cfg["rc"]["gpio"] = None
         return cfg
 
     NODE = _node_pins()
@@ -1840,10 +1850,22 @@ class PotVolume:
         return None
 
 
-def node_pot_thread(make_adc=None, stop=None):
-    """Poller ADS1115 (~20 Hz). Mangler den (ikke koblet / feil adresse), prøver vi igjen hvert 10. s uten å stoppe noe annet."""
+def node_pot_thread(make_adc=None, stop=None, make_rc=None):
+    """Velger metode (potmeter.metode: ads1115 | rc | auto). auto: ADS1115 hvis den svarer ved oppstart, ellers RC på GPIO17.
+    ADS1115: poller ~20 Hz. Mangler den (ikke koblet / feil adresse), prøver vi igjen hvert 10. s uten å stoppe noe annet."""
     a, pc = NODE["adc"], NODE["pot"]
     make_adc = make_adc or (lambda: Ads1115(a["port"], a["addr"], a["ch"], a["gain"]))
+    metode = pc.get("metode", "auto")
+    if metode not in ("ads1115", "rc"):
+        try:
+            d = make_adc(); d.volts(); d.close(); metode = "ads1115"
+        except Exception as e:
+            metode = "rc" if NODE["rc"].get("gpio") is not None else "ads1115"
+            print(f"Potmeter: ADS1115 ikke funnet ({e})", flush=True)
+    print(f"Potmeter-metode: {'ADS1115 (I²C, mest nøyaktig)' if metode == 'ads1115' else 'RC-tidsmåling på GPIO%s' % NODE['rc'].get('gpio')}"
+          f" (potmeter.metode={pc.get('metode', 'auto')})", flush=True)
+    if metode == "rc":
+        return node_rc_thread(make_rc=make_rc, stop=stop)
     pot = PotVolume(pc["vref"], pc["alpha"], pc["hyst"], pc["dead"], pc["invert"])
     adc, warned, errs, period = None, False, 0, 1.0 / max(1.0, pc["hz"])
     while not (stop and stop.is_set()):
@@ -1876,6 +1898,174 @@ def node_pot_thread(make_adc=None, stop=None):
                 except Exception:
                     pass
         (stop.wait(period) if stop else time.sleep(period))
+
+
+# ---------- Node: potmeter uten ADC – RC-tidsmåling på én GPIO ----------
+# 3V3 → pot pinne 3, glider (pinne 2) → 1 kΩ → node RC → GPIO17; node RC → kondensator → GND (pinne 1 ikke koblet).
+# Måling: GPIO lav (tømmer kondensatoren), så inngang uten pull og tid til den leser høy (~1,3–1,6 V på BCM2711).
+# t = R·C·ln(3,3/(3,3−Vth)) der R = 1 kΩ + motstanden mellom glider og pinne 3 – altså lineær i knottens posisjon.
+RC_CAL_FILE = os.path.join(os.path.dirname(STATE_FILE), "node_pot_rc.json")
+
+
+class RcGpio:
+    """Rask lavnivå-tilgang til én pinne: lgpio (foretrukket), ellers RPi.GPIO, ellers gpiozero-pinneobjekt (function-bytte)."""
+
+    def __init__(self, pin):
+        self.pin, self.kind = pin, None
+        try:
+            import lgpio
+            self.lg, self.h = lgpio, lgpio.gpiochip_open(0); self.kind = "lgpio"
+            self.lg.gpio_claim_input(self.h, pin, lgpio.SET_PULL_NONE); return
+        except Exception:
+            pass
+        try:
+            import RPi.GPIO as G
+            G.setwarnings(False); G.setmode(G.BCM); G.setup(pin, G.IN, pull_up_down=G.PUD_OFF)
+            self.G, self.kind = G, "RPi.GPIO"; return
+        except Exception:
+            pass
+        from gpiozero import Device
+        if Device.pin_factory is None:
+            Device.pin_factory = Device._default_pin_factory()
+        self.p = Device.pin_factory.pin(pin); self.kind = "gpiozero"
+        self.p.function = "input"; self.p.pull = "floating"
+
+    def low(self):
+        if self.kind == "lgpio":
+            self.lg.gpio_free(self.h, self.pin); self.lg.gpio_claim_output(self.h, self.pin, 0)
+        elif self.kind == "RPi.GPIO":
+            self.G.setup(self.pin, self.G.OUT, initial=self.G.LOW)
+        else:
+            self.p.function = "output"; self.p.state = 0
+
+    def release(self):
+        if self.kind == "lgpio":
+            self.lg.gpio_free(self.h, self.pin); self.lg.gpio_claim_input(self.h, self.pin, self.lg.SET_PULL_NONE)
+        elif self.kind == "RPi.GPIO":
+            self.G.setup(self.pin, self.G.IN, pull_up_down=self.G.PUD_OFF)
+        else:
+            self.p.function = "input"; self.p.pull = "floating"
+
+    def read(self):
+        if self.kind == "lgpio":
+            return self.lg.gpio_read(self.h, self.pin) == 1
+        if self.kind == "RPi.GPIO":
+            return bool(self.G.input(self.pin))
+        return bool(self.p.state)
+
+    def close(self):
+        try:
+            self.release()
+            if self.kind == "lgpio":
+                self.lg.gpio_free(self.h, self.pin); self.lg.gpiochip_close(self.h)
+        except Exception:
+            pass
+
+
+class RcPot:
+    """Ladetid → posisjon 0–1. sample(): én måling (s) eller None ved tidsavbrudd. reading(): median av n.
+    Endepunktene læres fra observerte ytterpunkter (lo/hi) og lagres; før knotten er vridd et stykke brukes teorien.
+    Polling sover i små steg (τ_max/250) (lav CPU); bare for C < ~180 nF (målingen < 1 ms) spinner vi."""
+    VTH_LN = 0.6   # ln(3,3/(3,3−1,5)) ≈ 0,55; litt romslig – bare startgjetning, kalibreringen tar over
+
+    def __init__(self, io, c=1e-6, r_ser=1000.0, r_pot=10000.0, n=5, cal=None, clock=time.perf_counter, sleep=time.sleep):
+        self.io, self.c, self.r_ser, self.r_pot, self.n, self.clock, self.sleep = io, c, r_ser, r_pot, max(1, n), clock, sleep
+        self.tau_max = (r_ser + r_pot) * c
+        self.timeout = 4.0 * self.tau_max + 0.002
+        self.discharge = max(0.001, 5 * c * 220.0)   # tømmes via 220 Ω vernemotstand GPIO17 → node RC (begrenser strømmen inn i pinnen)
+        self.step = self.tau_max / 250
+        self.t_lo = self.VTH_LN * r_ser * c; self.t_hi = self.VTH_LN * (r_ser + r_pot) * c   # teori
+        cal = cal or {}
+        self.lo, self.hi = cal.get("t_min"), cal.get("t_max")
+        if cal.get("c") not in (None, c):
+            self.lo = self.hi = None   # annen kondensator – kalibrer på nytt
+        self.dirty = False
+
+    def sample(self):
+        io = self.io
+        io.low(); self.sleep(self.discharge); io.release()
+        t0 = self.clock()
+        while not io.read():
+            if self.clock() - t0 > self.timeout:
+                return None
+            if self.tau_max >= 2e-3:   # bare under ~180 nF er hele målingen så kort (< 1 ms) at vi spinner
+                self.sleep(self.step)
+        return self.clock() - t0
+
+    def reading(self):
+        s = [self.sample() for _ in range(self.n)]
+        ok = sorted(x for x in s if x is not None)
+        if len(ok) * 2 <= len(s):
+            return None
+        return ok[len(ok) // 2]
+
+    def learn(self, t):
+        if self.lo is None or t < self.lo:
+            self.lo = t; self.dirty = True
+        if self.hi is None or t > self.hi:
+            self.hi = t; self.dirty = True
+
+    def calibrated(self):
+        return self.lo is not None and self.hi is not None and self.hi - self.lo >= 0.5 * (self.t_hi - self.t_lo)
+
+    def frac(self, t):
+        """0 = knotten helt mot klokka (lang tid, høy motstand), 1 = helt med klokka (kort tid)."""
+        lo, hi = (self.lo, self.hi) if self.calibrated() else (self.t_lo, self.t_hi)
+        return max(0.0, min(1.0, 1.0 - (t - lo) / (hi - lo)))
+
+    def cal(self):
+        return {"t_min": self.lo, "t_max": self.hi, "c": self.c}
+
+
+def node_rc_thread(make_rc=None, stop=None, cal_file=None):
+    """RC-potmeteret i egen tråd (~10 Hz). Gjenbruker PotVolume (glatting, dødsone, hysterese, settes bare ved flytt)."""
+    rc, pc = NODE["rc"], NODE["pot"]
+    cal_file = cal_file or RC_CAL_FILE
+    cal = {}
+    try:
+        with open(cal_file) as fh:
+            cal = json.load(fh)
+    except Exception:
+        pass
+    _w = (lambda s: stop.wait(s)) if stop else time.sleep
+    try:
+        meter = make_rc(cal) if make_rc else RcPot(RcGpio(rc["gpio"]), rc["c"], rc["r_ser"], rc["r_pot"], rc["n"], cal)
+    except Exception as e:
+        print(f"Potmeter (RC): GPIO{rc.get('gpio')} utilgjengelig: {e} – volum bare fra app/API", flush=True); return
+    print(f"Potmeter (RC): GPIO{rc.get('gpio')} via {getattr(meter.io, 'kind', '?')}, C={meter.c * 1e6:g} µF, τ_max={meter.tau_max * 1000:.1f} ms"
+          + ("" if meter.calibrated() else " – vri knotten helt rundt én gang for kalibrering"), flush=True)
+    pot = PotVolume(pc["vref"], pc["alpha"], pc["hyst"], pc["dead"], pc["invert"])
+    period, warned, saved = 1.0 / max(1.0, rc["hz"]), False, time.monotonic()
+    while not (stop and stop.is_set()):
+        t0 = time.monotonic()
+        try:
+            t = meter.reading()
+        except Exception as e:
+            print("Potmeter (RC):", e, flush=True); _w(2); continue
+        if t is None:   # ikke koblet / feil kondensator – rør ikke volumet
+            if not warned:
+                print(f"Potmeter (RC): ingen ladetid på GPIO{rc.get('gpio')} (ikke koblet?) – prøver igjen", flush=True); warned = True
+            pot.avg = pot.anchor = None; _w(2); continue
+        if warned:
+            print("Potmeter (RC): måler igjen", flush=True); warned = False
+        meter.learn(t)
+        new = pot.update(meter.frac(t) * pc["vref"])
+        if new is not None and new != state["volume"]:
+            input_event(); _safe(set_volume, new)
+        if meter.dirty and time.monotonic() - saved > 30:
+            try:
+                os.makedirs(os.path.dirname(cal_file), exist_ok=True)
+                with open(cal_file + ".tmp", "w") as fh:
+                    json.dump(meter.cal(), fh)
+                os.replace(cal_file + ".tmp", cal_file); meter.dirty = False
+            except Exception:
+                pass
+            saved = time.monotonic()
+        _w(max(0.01, period - (time.monotonic() - t0)))
+    try:
+        meter.io.close()
+    except Exception:
+        pass
 
 
 # ---------- potensiometer som volumknapp (test uten ADC: RC-tidsmåling) ----------
@@ -2801,7 +2991,7 @@ def main():
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL), daemon=True).start()
     threading.Thread(target=follow_source, daemon=True).start()   # auto-kilde (kan slås av) + BT-talemeldinger
     if BOARD == "node" and NODE_GPIO and HW and os.environ.get("KI_AMP_NODE_POT", "1") == "1":
-        threading.Thread(target=node_pot_thread, daemon=True).start()   # volum fra potmeteret (ADS1115)
+        threading.Thread(target=node_pot_thread, daemon=True).start()   # volum fra potmeteret (ADS1115 eller RC)
     pot = os.environ.get("KI_AMP_POT", "")
     if pot.startswith("rc:"):   # rc:24 eller rc:24:inv (snu retningen)
         parts = pot.split(":")
