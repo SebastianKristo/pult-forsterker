@@ -2900,6 +2900,48 @@ def radio_now():
             "url": url, "n": n, "playing": i.get("mode") == "play"}
 
 
+PROXIED = {}   # id -> opprinnelig strøm-URL (Navidrome o.l.), servert til Lyrion via /api/stream/<id>.mp3
+
+
+def proxied_url(url):
+    """Strømmer med innlogging i adressen (Navidrome/Subsonic) går via Skjold: Lyrion trenger da bare å nå Pi-en,
+    og adressen er en ren …/<id>.mp3 som Lyrion kjenner igjen som lyd."""
+    import hashlib as _h
+    sid = _h.sha1(url.encode()).hexdigest()[:16]
+    PROXIED[sid] = url
+    while len(PROXIED) > 200: PROXIED.pop(next(iter(PROXIED)))
+    return f"http://{_local_ip()}:{PORT}/api/stream/{sid}.mp3"
+
+
+async def h_stream(r):
+    sid = r.match_info["sid"].split(".")[0]
+    url = PROXIED.get(sid)
+    if not url:
+        return web.Response(status=404)
+    import aiohttp as _a
+    hdr = {"User-Agent": "Skjold"}
+    if r.headers.get("Range"): hdr["Range"] = r.headers["Range"]
+    try:
+        sess = _a.ClientSession(timeout=_a.ClientTimeout(total=None, sock_connect=8, sock_read=60))
+        up = await sess.get(url, headers=hdr)
+    except Exception as e:
+        print("strøm-proxy: kunne ikke hente", url.split("?")[0], repr(e), flush=True)
+        await sess.close(); return web.Response(status=502)
+    out = web.StreamResponse(status=up.status, headers={k: v for k, v in up.headers.items()
+                                                        if k in ("Content-Type", "Content-Length", "Content-Range", "Accept-Ranges")})
+    if "Content-Type" not in out.headers: out.content_type = "audio/mpeg"
+    try:
+        await out.prepare(r)
+        async for chunk in up.content.iter_chunked(32768):
+            await out.write(chunk)
+        await out.write_eof()
+    except (ConnectionResetError, asyncio.CancelledError):
+        pass
+    finally:
+        up.release(); await sess.close()
+    return out
+
+
 def _diag_stream(url):
     """Feilsøking: kan Pi-en hente strømmen selv, og hva sier Lyrion etter et par sekunder?"""
     base = url.split("?")[0]
@@ -2926,7 +2968,9 @@ def play_url(url, title="", image="", genre=""):
     if not state["power"]:
         set_power(True)
     print(f"Spiller strøm via Lyrion: {title or '?'} ({url.split('?')[0]})", flush=True)
-    r = lyr.rpc(["playlist", "play", url, title or ""])
+    lyr_url = proxied_url(url) if "/rest/stream" in url else url
+    if lyr_url != url: print("  via Skjold:", lyr_url, flush=True)
+    r = lyr.rpc(["playlist", "play", lyr_url, title or ""])
     print("  Lyrion svarte:", r, flush=True)
     threading.Thread(target=_diag_stream, args=(url,), daemon=True).start()
     radio_tmp.clear(); radio_tmp.update(title=title or "", url=url, icon=image or "", genre=genre or "")
@@ -3400,7 +3444,7 @@ def main():
     app = web.Application(middlewares=[cors_mw])
     app.add_routes([web.get("/api/status", h_status), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
