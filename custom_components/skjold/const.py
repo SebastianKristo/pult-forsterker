@@ -1,6 +1,6 @@
 """Konstanter for Pultforsterker."""
 from __future__ import annotations
-DOMAIN = "ki_pultforsterker"
+DOMAIN = "skjold"
 DEFAULT_PORT = 8765
 SCAN_INTERVAL_S = 5
 CONF_HOST = "host"

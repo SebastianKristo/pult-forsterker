@@ -5,7 +5,7 @@ Installeres som utvikler-app (ikke i App Store):
 ```bash
 npm install -g homey          # Homey CLI
 homey login
-cd no.kristo.ki-pultforsterker
+cd no.kristo.skjold
 homey app install             # eller `homey app run` for live-logg
 ```
 

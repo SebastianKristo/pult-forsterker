@@ -258,7 +258,7 @@ Viser `i2cdetect` `3d` i stedet for `3c`, legg til `KI_AMP_OLED_ADDR=0x3D` i `/e
    **Med HACS (anbefalt – får oppdateringer automatisk):**
    HACS → ⋮ → *Custom repositories* → `https://github.com/SebastianKristo/pult-forsterker`, type **Integration** → *Add*. Søk «Pultforsterker» → *Download* → start HA på nytt.
    
-   **Uten HACS:** kopier `custom_components/ki_pultforsterker` (i roten av repoet) til `<config>/custom_components/`.
+   **Uten HACS:** kopier `custom_components/skjold` (i roten av repoet) til `<config>/custom_components/`.
 2. Legg pakken i `packages/` (du bruker allerede packages-oppsett):
    ```bash
    scp pi/ki_pultforsterker_package.yaml root@homeassistant.local:/config/packages/ki_pultforsterker.yaml
@@ -320,7 +320,7 @@ curl -s -X POST localhost:8765/api/transport -d '{"action":"next"}'; echo # nest
 # PC
 npm install -g homey
 homey login
-cd homey/no.kristo.ki-pultforsterker
+cd homey/no.kristo.skjold
 npm install
 homey app install            # eller: homey app run  (live-logg i terminalen)
 ```
@@ -417,8 +417,8 @@ Første gang: mål 5 V på J6 og at kortet trekker < 0,2 A i standby på 24 V f�
 |---|---|---|
 | Knapper, volum, API, loudness-logikk | `pi/ki_amp_daemon.py` | `sudo install -m755 ki_amp_daemon.py /usr/local/bin/ && sudo systemctl restart ki-amp` |
 | Skjermbildene på OLED | `pi/oled_display.py` | `sudo install -m755 oled_display.py /usr/local/bin/ && sudo systemctl restart oled-display` |
-| HA-integrasjon | `custom_components/ki_pultforsterker/` | kopier, restart HA |
-| Homey-app | `homey/no.kristo.ki-pultforsterker/` | `homey app install` |
+| HA-integrasjon | `custom_components/skjold/` | kopier, restart HA |
+| Homey-app | `homey/no.kristo.skjold/` | `homey app install` |
 | Kabinett | `kabinett/tools/build_stl.py` (`VARIANT=pcb python3 build_stl.py`) | print STL fra `kabinett/stl/` |
 | Hovedkort | `pcb/build_board.py` → `pcb/export.py` | Gerber/BOM/CPL i `pcb/produksjon/` |
 
