@@ -113,4 +113,6 @@ export async function ndSearch(q: string): Promise<NdSong[]> {
   return arr(r.searchResult3?.song).map(song);
 }
 export const ndCover = (id?: string, size = 300): string => (id && ndConfigured() ? ndUrl('getCoverArt', { id, size }) : '');
-export const ndStream = (id: string): string => ndUrl('stream', { id });
+// Lyrion/squeezelite spiller ikke alle formater (f.eks. ALAC/opus) og gjetter type fra adressen:
+// be Navidrome omkode til MP3 320 og la adressen slutte på .mp3.
+export const ndStream = (id: string): string => ndUrl('stream', { id, format: 'mp3', maxBitRate: 320 }).replace('&f=json', '') + '&_=.mp3';

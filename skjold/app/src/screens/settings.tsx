@@ -124,10 +124,10 @@ function Row({ it, i }: { it: Item; i: number }) {
     case 'bool':
       return <Line i={i} n={it.n} hint={it.hint} note={pending(it.k)}><Toggle on={st[it.k]} label={it.n} onChange={(v) => setSetting(it.k, v)} /></Line>;
     case 'str':
-      return <Line i={i} n={it.n} hint={it.hint} note={pending(it.k)}><input value={st[it.k]} placeholder={it.ph} maxLength={it.k === 'nameCustom' ? 24 : 14} data-key={it.k} onChange={(e) => setSetting(it.k, e.currentTarget.value.trim())} style="height:34px;width:130px;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none;flex-shrink:0" /></Line>;
+      return <Line i={i} n={it.n} hint={it.hint} note={pending(it.k)}><DraftInput value={st[it.k]} placeholder={it.ph} maxLength={it.k === 'nameCustom' ? 24 : 14} data-key={it.k} onCommit={(v) => setSetting(it.k, v.trim())} style="height:34px;width:130px;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none;flex-shrink:0" /></Line>;
     case 'local': {
       const v = getLocal(it.k);
-      const inp = (w: string) => <input type={it.secret ? 'password' : 'text'} value={v} placeholder={it.ph} autoCapitalize="off" autoCorrect="off" spellcheck={false} data-key={it.k} onChange={(e) => setLocal(it.k, e.currentTarget.value)} style={`height:${it.long ? 40 : 34}px;width:${w};box-sizing:border-box;padding:0 ${it.long ? 12 : 10}px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none;flex-shrink:0`} />;
+      const inp = (w: string) => <DraftInput type={it.secret ? 'password' : 'text'} value={v} placeholder={it.ph} autoCapitalize="off" autoCorrect="off" spellcheck={false} data-key={it.k} onCommit={(x) => setLocal(it.k, x)} style={`height:${it.long ? 40 : 34}px;width:${w};box-sizing:border-box;padding:0 ${it.long ? 12 : 10}px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none;flex-shrink:0`} />;
       return it.long ? <Line i={i} n={it.n} hint={it.hint} below={inp('100%')} /> : <Line i={i} n={it.n} hint={it.hint}>{inp('130px')}</Line>;
     }
     case 'steps':
@@ -368,4 +368,18 @@ function AppUpdatePanel() {
       </div>
     </div>
   );
+}
+
+
+/** Tekstfelt som beholder det brukeren skriver: statusoppdateringer (SSE) skriver ikke over feltet mens det har fokus. */
+function DraftInput({ value, onCommit, ...rest }: { value: string; onCommit: (v: string) => void } & Record<string, unknown>) {
+  const [draft, setDraft] = useState(value ?? '');
+  const focused = useRef(false);
+  useEffect(() => { if (!focused.current) setDraft(value ?? ''); }, [value]);
+  const commit = (v: string) => { if (v !== (value ?? '')) onCommit(v); };
+  return <input {...rest} value={draft}
+    onFocus={() => { focused.current = true; }}
+    onInput={(e) => setDraft(e.currentTarget.value)}
+    onBlur={(e) => { focused.current = false; commit(e.currentTarget.value); }}
+    onKeyDown={(e) => { if (e.key === 'Enter') { commit(e.currentTarget.value); e.currentTarget.blur(); } }} />;
 }
