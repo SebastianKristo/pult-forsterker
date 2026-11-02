@@ -18,6 +18,7 @@ final class AppModel {
     // MARK: Onboarding
     var ob = 0
     var scan = false
+    var camOK = false   // kameratilgang gitt – QR-skanneren vises først da
     var scanFound = false
     var net = 0
     var netManual = false
@@ -291,12 +292,33 @@ final class AppModel {
 
     func pickDevice(_ type: String) { obType = type; goOb(1) }
 
+    /// GET /api/settings → setupDone.
+    func deviceSetupDone(_ host: String) async -> Bool {
+        guard let d = await DeviceLink.shared.get("/api/settings", on: DeviceLink.normHost(host)),
+              let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return false }
+        let se = (j["settings"] as? [String: Any]) ?? j
+        return (se["setupDone"] as? Bool) == true
+    }
+
+    /// Hopp over oppsettet for en forsterker som allerede er satt opp.
+    func enterApp() {
+        scan = false
+        mode = .app
+        tab = obType == "node" ? 2 : 0
+        UserDefaults.standard.set(true, forKey: "skjold-setup-done")
+        startLive()
+    }
+
     /// A real device in «Finn forsterker» (Bonjour or QR): connect, then continue the setup against it.
     func pickFound(_ host: String, type: String) {
         obType = type
         Task { [weak self] in
             guard let self else { return }
-            if await self.connect(host) { Haptics.success(); self.goOb(1) } else { Haptics.error() }
+            let wasKnown = self.known.contains { $0.host == DeviceLink.normHost(host) }
+            guard await self.connect(host) else { Haptics.error(); return }
+            Haptics.success()
+            // Allerede satt opp (setupDone i daemonen, eller lagt til før): rett inn i appen, uten Wi-Fi/rom-stegene.
+            if wasKnown || (await self.deviceSetupDone(host)) { self.enterApp() } else { self.goOb(1) }
         }
     }
 
@@ -334,7 +356,18 @@ final class AppModel {
     func startScan(simulated: Bool) {
         scan = true
         scanFound = false
-        guard simulated else { return }
+        obErr = ""
+        if !simulated {
+            Task { [weak self] in
+                guard await QRScannerView.requestAccess() else {
+                    self?.scan = false
+                    self?.obErr = "Skjold har ikke tilgang til kameraet. Slå det på i Innstillinger → Skjold → Kamera."
+                    Haptics.error(); return
+                }
+                self?.camOK = true
+            }
+            return
+        }
         run("scan") { [weak self] in
             try? await Task.sleep(for: .seconds(1.4))
             guard let self, self.scan else { return }
