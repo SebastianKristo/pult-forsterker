@@ -195,11 +195,11 @@ jobs:
   release:
     name: GitHub Release
     needs: [web, ios, ios-native, flasher, manual]
-    # iOS-jobben får av og til ingen macOS-maskin hos GitHub og blir avbrutt – releasen publiseres likevel
-    # så lenge web/Android, Flasher og PDF gikk gjennom (IPA mangler da bare i den utgivelsen).
+    # macOS-jobbene (iOS og Flasher for Mac) blir ofte avbrutt uten maskin (eller når macOS-minuttene er brukt opp) –
+    # releasen publiseres likevel når web/Android og PDF gikk gjennom; filene som ble bygget kommer med.
     if: >-
       always() && startsWith(github.ref, 'refs/tags/') &&
-      needs.web.result == 'success' && needs.flasher.result == 'success' && needs.manual.result == 'success'
+      needs.web.result == 'success' && needs.manual.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
