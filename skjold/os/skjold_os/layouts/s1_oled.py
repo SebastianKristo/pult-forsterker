@@ -77,6 +77,20 @@ class S1OledLayout(Layout):
         if t > 3 and int((t - 3) * 1.5) % 2 == 0:
             hint = "TRYKK EN KNAPP"; hw = pix_w(hint); c.rect(64 - hw // 2 - 2, 55, hw + 4, 9, BLACK); pix_text(c, 64, 62, hint, W, "m")
 
+    def draw_setup(self, c, vm):
+        """Ikke satt opp: QR-kode (adressen) til venstre, kort forklaring til høyre. Hvit stillesone rundt koden."""
+        from .. import qr
+        c.clear(); m = vm.get("qr"); url = vm.get("qr_url") or ""
+        x = 2
+        if m:
+            mod = max(1, 60 // (len(m) + 4)); side = (len(m) + 4) * mod
+            x = qr.draw(c, m, 1, (64 - side) // 2, mod, BLACK, W) + 5
+        for i, line in enumerate(("SKANN MED", "SKJOLD-", "APPEN")):
+            pix_text(c, x, 12 + i * 9, pix_fit(line, 127 - x), W)
+        ip = url.replace("http://", "").split(":")[0]
+        pix_text(c, x, 46, pix_fit(ip or "VENTER PÅ NETT", 127 - x), W)
+        pix_text(c, x, 56, pix_fit("KNAPP: HOPP", 127 - x), W)
+
     def draw_pair(self, c, vm): draw_pair(c, vm["pair_t"], vm["pair_p"], vm["name"])
     def draw_hold(self, c, vm): draw_hold(c, vm)
     def draw_menu(self, c, vm): draw_menu(c, vm)
