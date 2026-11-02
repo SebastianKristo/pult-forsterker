@@ -17,6 +17,7 @@ Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/d
 | `assets/skjold.css`, `assets/skjold.js` | Felles stil og oppførsel (reveal, zoom, bildesekvens, USB-demo, skjema) |
 | `assets/img/` | Renders som PNG og WebP (`<picture>`), `og.jpg` for deling |
 | `functions/api/interesse.js` | Pages Function: `POST`/`GET /api/interesse` |
+| `admin/`, `functions/api/admin/[[path]].js` | Visuell editor og API-et bak den (se «Redigere nettsiden») |
 | `_headers`, `_redirects` | Sikkerhetshoder, caching og omdirigering fra de gamle `.dc.html`-navnene |
 | `sitemap.xml`, `robots.txt`, `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` | |
 
@@ -75,6 +76,38 @@ Hver e-postadresse lagres som én nøkkel (`i:<epost>`). En ny innsending fra sa
 - Rate-limit: 5 innsendinger per IP per 10 min. Bare en hash av IP-en lagres, med TTL. KV er «eventually consistent», så dette er et grovt vern. Trengs mer, legg på en Cloudflare WAF rate limiting-regel for `/api/interesse`.
 - Admin-nøkkelen sammenlignes i konstant tid. CSV-eksporten nøytraliserer formler.
 - Uten JavaScript poster skjemaet vanlig og får `303` til `/takk/` eller `/takk/feil/` (`/en/thanks/` eller `/en/thanks/error/` når `lang=en`).
+
+## Redigere nettsiden
+
+Nettsiden kan redigeres i nettleseren på **https://skjold.smarthjemexperten.no/admin/** – også fra mobilen. Klikk på en tekst for å skrive i den (fet, kursiv og lenker), klikk på et bilde for å bytte det eller endre alt-teksten, og bruk den oransje blokkrammen til å flytte (↑ ↓), kopiere eller slette seksjoner, fliser, kilder, rader og produktkort. «Sideinfo» endrer tittel, beskrivelse og delingsbilde. «HTML»-fanen viser kildekoden for avanserte endringer, og «+ Ny side» lager en kopi av en eksisterende side. Angre/gjør om: Ctrl+Z / Ctrl+Shift+Z.
+
+**«Lagre og publiser»** lagrer siden som en commit på `main` i GitHub. Da kjører `.github/workflows/nettside.yml`, og siden er oppdatert om ca. ett minutt. Opplastede bilder committes med en gang til `assets/img/opplastet/` (de vises i editoren med en gang, men på nettsiden først når siden er publisert). Editoren endrer bare det du faktisk har endret – resten av filen lagres tegn for tegn som før – så historikken i Git viser nøyaktig hva som ble endret.
+
+### Oppsett (én gang)
+
+1. **GitHub-token:** github.com → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token.
+   - Repository access: *Only select repositories* → `SebastianKristo/pult-forsterker`
+   - Permissions → Repository permissions → **Contents: Read and write** (Metadata: Read følger med)
+   - Sett en utløpsdato du husker, og lag et nytt token når det går ut.
+2. **Cloudflare:** Workers & Pages → `skjold` → Settings → Variables and Secrets → Add (Production):
+   - `GITHUB_TOKEN` (type *Secret*) = tokenet fra punkt 1
+   - `ADMIN_NOKKEL` (Secret) finnes fra før – det er dette passordet du logger inn med
+   - Valgfritt: `GITHUB_REPO` (standard `SebastianKristo/pult-forsterker`), `GITHUB_BRANCH` (standard `main`), `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` (standard Sebastian Kristo Jemtland &lt;sebastian@kristo.no&gt;)
+   - Publiser på nytt (eller vent til neste push) så funksjonen får de nye verdiene.
+3. Åpne https://skjold.smarthjemexperten.no/admin/ og logg inn med `ADMIN_NOKKEL`.
+
+### Hvordan det virker
+
+| Fil | Rolle |
+|---|---|
+| `admin/index.html`, `admin/editor.js`, `admin/editor.css` | Editoren. Siden vises i en iframe (skript slått av), og bare endrede elementer skrives på nytt ved lagring. |
+| `functions/api/admin/[[path]].js` | API: `GET pages`, `GET page?path=`, `POST page`, `POST upload`, `POST new`, `GET ping`. Leser og skriver via GitHub Contents API. |
+
+- Innlogging: `Authorization: Bearer <ADMIN_NOKKEL>`, sammenlignet i konstant tid. Etter 10 feil forsøk fra samme IP på 15 min blokkeres IP-en (telles i KV `INTERESSE`, nøkkel `arl:<hash>`).
+- Bare `.html`-filer under `skjold/nettside` kan endres (ikke `admin/` eller `functions/`, ingen `..`). Bilder: PNG, JPG, WebP, GIF eller AVIF, maks 5 MB, sjekket på filinnholdet (SVG er ikke tillatt).
+- Har noen andre endret filen siden du åpnet den (f.eks. en commit fra PC-en), avvises lagringen med beskjed om å laste siden på nytt, i stedet for å overskrive.
+- `/admin/` har `noindex` (meta og `X-Robots-Tag`), `Cache-Control: no-store`, er stengt i `robots.txt` og står ikke i `sitemap.xml`. Det er ingen lenke til den fra nettsiden.
+- Nøkkelen lagres bare i fanen (sessionStorage), eller i nettleseren hvis du krysser av for «Husk meg».
 
 ## Bilder
 
