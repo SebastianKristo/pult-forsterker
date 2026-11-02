@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Skjold – legg til med IP",
-        "description": "Fant du ikke Skjold S1, Skjold Node eller Skjold Core automatisk? Skriv inn IP-adressen (se Skjold-appen eller ruteren). Porten er 8765 hvis du ikke har endret den.",
+        "description": "Fant du ikke Skjold S1, Node, Touch eller Core automatisk? Skriv inn IP-adressen (se Skjold-appen eller ruteren). Porten er 8765 hvis du ikke har endret den.",
         "data": {
           "host": "IP-adresse",
           "port": "Port"
@@ -16,7 +16,7 @@
       },
       "manual": {
         "title": "Skjold – legg til med IP",
-        "description": "Fant du ikke Skjold S1, Skjold Node eller Skjold Core automatisk? Skriv inn IP-adressen (se Skjold-appen eller ruteren). Porten er 8765 hvis du ikke har endret den.",
+        "description": "Fant du ikke Skjold S1, Node, Touch eller Core automatisk? Skriv inn IP-adressen (se Skjold-appen eller ruteren). Porten er 8765 hvis du ikke har endret den.",
         "data": {
           "host": "IP-adresse",
           "port": "Port"

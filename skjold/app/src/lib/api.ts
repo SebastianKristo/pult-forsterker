@@ -31,13 +31,13 @@ export interface Station { id?: string; name: string; genre?: string; url: strin
 export interface PresetsResp { presets: (Fav | null)[]; items?: Fav[]; count?: number; max?: number; active: number; lyrion: boolean }
 export interface Shelf { id: string; title: string; items: Station[] }
 
-export type Product = 's1' | 'node' | 'core';
-export const PRODUCT_LABEL: Record<Product, string> = { s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core' };
-export const PRODUCT_SHORT: Record<Product, string> = { s1: 'S1', node: 'Node', core: 'Core' };
-export const PRODUCT_HW: Record<Product, string> = { s1: 'Hovedkort rev B · 2 × 40 W', node: 'Raspberry Pi · 1,8″ skjerm · knapper', core: 'Raspberry Pi · bare lyd' };
+export type Product = 's1' | 'node' | 'core' | 'touch';
+export const PRODUCT_LABEL: Record<Product, string> = { s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core', touch: 'Skjold Touch' };
+export const PRODUCT_SHORT: Record<Product, string> = { s1: 'S1', node: 'Node', core: 'Core', touch: 'Touch' };
+export const PRODUCT_HW: Record<Product, string> = { s1: 'Hovedkort rev B · 2 × 40 W', node: 'Raspberry Pi · 1,8″ skjerm · knapper', core: 'Raspberry Pi · bare lyd', touch: 'Raspberry Pi · 7″ berøringsskjerm · RCA' };
 export function productOf(s: Pick<Status, 'board' | 'product'> | null | undefined): Product {
   const p = s?.product;
-  if (p === 's1' || p === 'node' || p === 'core') return p;
+  if (p === 's1' || p === 'node' || p === 'core' || p === 'touch') return p;
   return s?.board === 'node' ? 'node' : 's1';
 }
 

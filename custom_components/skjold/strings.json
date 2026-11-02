@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Skjold – add by IP",
-        "description": "Skjold S1, Skjold Node or Skjold Core not found automatically? Enter its IP address (see the Skjold app or your router). The port is 8765 unless you changed it.",
+        "description": "Skjold S1, Node, Touch or Core not found automatically? Enter its IP address (see the Skjold app or your router). The port is 8765 unless you changed it.",
         "data": {
           "host": "IP address",
           "port": "Port"
@@ -16,7 +16,7 @@
       },
       "manual": {
         "title": "Skjold – add by IP",
-        "description": "Skjold S1, Skjold Node or Skjold Core not found automatically? Enter its IP address (see the Skjold app or your router). The port is 8765 unless you changed it.",
+        "description": "Skjold S1, Node, Touch or Core not found automatically? Enter its IP address (see the Skjold app or your router). The port is 8765 unless you changed it.",
         "data": {
           "host": "IP address",
           "port": "Port"

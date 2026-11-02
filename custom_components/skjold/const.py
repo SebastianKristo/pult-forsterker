@@ -16,7 +16,7 @@ FALLBACK_INPUTS = ["radio", "airplay", "bt", "aux", "aux2", "usb"]
 # Kort uten AUX/USB, hodetelefonjack, overtemperatur og USB-switch (Skjold Node).
 NODE_BOARDS = ("node",)
 # Produkter (status["product"]): Skjold S1 (hovedkortet), Skjold Node (knapper/potmeter/LED/OLED), Skjold Core (ren Pi).
-PRODUCT_MODELS = {"s1": "Skjold S1", "node": "Skjold Node", "core": "Skjold Core"}
+PRODUCT_MODELS = {"s1": "Skjold S1", "node": "Skjold Node", "core": "Skjold Core", "touch": "Skjold Touch"}
 MANUFACTURER = "Skjold"
 LED_MODES = ["press", "always", "off"]   # settings["ledMode"]: ved trykk / alltid / av
 PRESETS_MAX = 50
@@ -46,12 +46,12 @@ def product(data: dict | None) -> str:
 
 
 def is_node(data: dict | None) -> bool:
-    """Node-kortfamilien (Skjold Node og Skjold Core): ingen AUX/USB, hodetelefoner, overtemperatur eller USB-switch."""
-    return product(data) in ("node", "core")
+    """Node-kortfamilien (Skjold Node, Core og Touch): ingen AUX/USB, hodetelefoner, overtemperatur eller USB-switch."""
+    return product(data) in ("node", "core", "touch")
 
 
 def has_display(data: dict | None) -> bool:
-    return product(data) in ("s1", "node")
+    return product(data) in ("s1", "node", "touch")
 
 
 def has_leds(data: dict | None) -> bool:

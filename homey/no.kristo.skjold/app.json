@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.15.0",
+  "version": "2.16.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -11,8 +11,8 @@
     "no": "Skjold"
   },
   "description": {
-    "en": "Control Skjold S1, Skjold Node and Skjold Core: power, source, volume, radio favourites and now playing",
-    "no": "Styr Skjold S1, Skjold Node og Skjold Core: strøm, kilde, volum, radiofavoritter og spiller nå"
+    "en": "Control Skjold S1, Node, Touch and Core: power, source, volume, radio favourites and now playing",
+    "no": "Styr Skjold S1, Node, Touch og Core: strøm, kilde, volum, radiofavoritter og spiller nå"
   },
   "category": [
     "music"
@@ -205,6 +205,117 @@
         "small": "/drivers/node/assets/images/small.png",
         "large": "/drivers/node/assets/images/large.png",
         "xlarge": "/drivers/node/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "prev": "start",
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "host",
+          "type": "text",
+          "label": {
+            "en": "IP address",
+            "no": "IP-adresse"
+          },
+          "value": ""
+        },
+        {
+          "id": "port",
+          "type": "number",
+          "label": {
+            "en": "Port",
+            "no": "Port"
+          },
+          "value": 8765
+        }
+      ]
+    },
+    {
+      "id": "touch",
+      "name": {
+        "en": "Skjold Touch",
+        "no": "Skjold Touch"
+      },
+      "class": "speaker",
+      "capabilities": [
+        "onoff",
+        "volume_set",
+        "volume_mute",
+        "speaker_prev",
+        "speaker_playing",
+        "speaker_next",
+        "speaker_track",
+        "speaker_artist",
+        "speaker_position",
+        "speaker_duration",
+        "speaker_album",
+        "ki_input",
+        "ki_preset",
+        "ki_loudness",
+        "ki_loudness_level",
+        "ki_voice",
+        "ki_voice_profile",
+        "ki_auto_input",
+        "ki_mix",
+        "ki_bright"
+      ],
+      "capabilitiesOptions": {
+        "speaker_playing": {
+          "setable": true
+        },
+        "speaker_track": {
+          "title": {
+            "en": "Title",
+            "no": "Tittel"
+          }
+        },
+        "speaker_artist": {
+          "title": {
+            "en": "Artist",
+            "no": "Artist"
+          }
+        },
+        "speaker_position": {
+          "setable": false
+        },
+        "speaker_duration": {
+          "setable": false
+        },
+        "ki_bright": {
+          "title": {
+            "en": "Screen brightness",
+            "no": "Skjermlysstyrke"
+          }
+        }
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "kipultamp",
+      "images": {
+        "small": "/drivers/touch/assets/images/small.png",
+        "large": "/drivers/touch/assets/images/large.png",
+        "xlarge": "/drivers/touch/assets/images/xlarge.png"
       },
       "pair": [
         {
@@ -1024,7 +1135,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1042,7 +1153,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1070,7 +1181,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1118,7 +1229,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1140,7 +1251,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1244,7 +1355,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1266,7 +1377,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1350,7 +1461,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1372,7 +1483,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1430,7 +1541,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core"
+            "filter": "driver_id=pultforsterker|s1|node|core|touch"
           },
           {
             "type": "dropdown",
@@ -1500,7 +1611,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1534,7 +1645,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1969,7 +2080,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core"
+            "filter": "driver_id=pultforsterker|s1|node|core|touch"
           },
           {
             "type": "dropdown",
@@ -2067,7 +2178,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node|core",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -2113,7 +2224,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker|s1|node",
+            "filter": "driver_id=pultforsterker|s1|node|touch",
             "title": {
               "en": "Device",
               "no": "Enhet"

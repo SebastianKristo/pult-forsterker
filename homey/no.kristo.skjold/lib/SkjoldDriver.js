@@ -5,7 +5,7 @@ const http = require('http');
 const { productOf } = require('./SkjoldDevice');
 
 const DEFAULT_PORT = 8765;
-const NAMES = { s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core' };
+const NAMES = { s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core', touch: 'Skjold Touch' };
 
 /** GET http://host:port/api/status (timeout 4 s). */
 function fetchStatus(host, port, timeout = 4000) {

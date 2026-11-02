@@ -171,9 +171,9 @@ function Row({ it, i }: { it: Item; i: number }) {
     case 'info': {
       const v: Record<typeof it.key, string> = {
         btDev: s?.bt_device || 'Ingen', lyrion: s?.lyrion ? 'Tilkoblet' : 'Ikke funnet', version: s?.version ?? '–', ip: hostLabel(),
-        id: s?.id ?? '–', board: ({ s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core' })[product.value] + ' (' + (s?.board ?? '–') + ')', headphones: s?.headphones ? 'Tilkoblet' : 'Ikke tilkoblet', btPairing: s?.bt_pairing ? 'Synlig' : 'Av',
+        id: s?.id ?? '–', board: ({ s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core', touch: 'Skjold Touch' })[product.value] + ' (' + (s?.board ?? '–') + ')', headphones: s?.headphones ? 'Tilkoblet' : 'Ikke tilkoblet', btPairing: s?.bt_pairing ? 'Synlig' : 'Av',
         inputs: (s?.inputs ?? []).join(', '), netName: 'Skjold · ' + (s?.name ?? 'romnavn'), poToken: 'Ikke tilkoblet',
-        output: product.value === 'core' ? 'Pi-ens lydutgang (3,5 mm / HDMI / DAC)' : product.value === 'node' ? '3,5 mm' : 'Høyttalerklemmer'
+        output: product.value === 'core' ? 'Pi-ens lydutgang (3,5 mm / HDMI / DAC)' : product.value === 'node' ? '3,5 mm' : product.value === 'touch' ? 'RCA og 3,5 mm (PCM5122)' : 'Høyttalerklemmer'
       };
       return <Line i={i} n={it.n} hint={it.hint}><span style={VAL}>{v[it.key]}</span></Line>;
     }

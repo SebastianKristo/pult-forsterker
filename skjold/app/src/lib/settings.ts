@@ -253,7 +253,7 @@ function itemKey(it: Item): string {
   if ('id' in it) return it.id;
   return it.kind;
 }
-export function catsFor(product: 's1' | 'node' | 'core', inputs: string[] = []): Category[] {
+export function catsFor(product: 's1' | 'node' | 'core' | 'touch', inputs: string[] = []): Category[] {
   const hasAux = product === 's1' || inputs.some((i) => i === 'aux' || i === 'aux2');
   const hasUsb = product === 's1' || inputs.includes('usb');
   return CATS.filter((c) => !(product === 'core' && NO_DISPLAY.has(c.id))).map((c) => ({

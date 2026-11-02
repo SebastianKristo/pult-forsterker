@@ -129,7 +129,8 @@ export function PowerIcon({ size = 18 }: { size?: number }) {
 export const S1_ICON = 'M3 7.5h18a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM4.5 9.8h5v3.4h-5zM11.6 10.3a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M13.8 10.3a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M11.6 13.7a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M13.8 13.7a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M16.4 12a2.3 2.3 0 1 0 4.6 0a2.3 2.3 0 1 0-4.6 0M18.7 10.2v1.2M3.5 16.5v1M20.5 16.5v1';
 export const NODE_ICON = 'M4 6h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 18H4a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 4 6zM19.5 8h2v2.6h-2zM19.5 11.4h2v2.6h-2zM19.5 14.6h2v2h-2zM5 7.8h9M8 18v1.2M11.5 18v1.2M6.2 11.2h4.6v4.6H6.2zM15.2 15.3a.5.5 0 1 0 1 0a.5.5 0 1 0-1 0';
 export const CORE_ICON = 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 8h8v8H8zM12 4V2M12 22v-2M4 12H2M22 12h-2M10 11h4M10 13h4';
-export const PRODUCT_ICON: Record<'s1' | 'node' | 'core', string> = { s1: S1_ICON, node: NODE_ICON, core: CORE_ICON };
+const TOUCH_ICON = 'M3 5h18a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM5 7h6v6H5zM13 8h6M13 10.5h4M8 17l-1.5 3h11L16 17';
+export const PRODUCT_ICON: Record<'s1' | 'node' | 'core' | 'touch', string> = { s1: S1_ICON, node: NODE_ICON, core: CORE_ICON, touch: TOUCH_ICON };
 
 export { SRC_ICON } from '../lib/srcicons';
 import { SRC_ICON } from '../lib/srcicons';
