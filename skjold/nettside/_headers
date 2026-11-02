@@ -27,3 +27,11 @@
 
 /README.md
   X-Robots-Tag: noindex
+
+/admin/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/api/admin/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
