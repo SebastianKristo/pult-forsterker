@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="skjold_bg">#FF0B0B0C</color>
+    <color name="skjold_icon_bg">#FF121214</color>
+    <style name="Theme.Skjold" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/skjold_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
