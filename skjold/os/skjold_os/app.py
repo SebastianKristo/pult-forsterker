@@ -1,7 +1,8 @@
 """Tilstandsmaskinen: daemon-status + lokale tidtakere -> ViewModel -> layout -> skjerm/bakgrunnslys."""
 import datetime, io, json, os, signal, time
 from PIL import Image
-from . import fx, sources
+from . import fx, sources, qr
+PORT = int(os.environ.get("KI_AMP_PORT", "8765"))
 
 WELCOME_FILE = os.environ.get("SKJOLD_WELCOME_FILE", "/var/lib/skjold/velkomst.json")
 CLOCK_AFTER_S = 120          # design: «Etter 2 min på pause viser skjermen standby-klokke»
@@ -125,6 +126,13 @@ class Ui:
             if self.boot_info:
                 up, est = self.boot_info(); vm.update(boot_left=max(0, int(round(est - up))), boot_p=min(0.97, up / est) if est else 0)
             return vm
+        # Ikke satt opp ennå og ingen har rørt den siden oppstart: QR-kode med adressen (S1-skjermene)
+        if (se or {}).get("setupDone") is False and self.last_act == self.t_start and not st.get("playing") \
+                and hasattr(self.lay, "draw_setup"):
+            if not getattr(self, "_qr", None) or now - self._qr[0] > 30:
+                ip = qr.local_ip(); url = "http://%s:%d" % (ip, PORT) if ip else ""
+                self._qr = (now, url, qr.matrix(url) if url else None)
+            vm.update(screen="setup", qr_url=self._qr[1], qr=self._qr[2], vol_overlay=False); return vm
         hold = st.get("hold")   # {"key":"knob|src|radio|reboot","p":0-1,"title","sub"} eller bekreftelse {"title":"Lagret",…,"saved":n}
         if hold:
             vm.update(screen="hold", hold_p=hold.get("p", 1), hold_title=hold.get("title", ""), hold_sub=hold.get("sub", "Fortsett å holde"),
@@ -215,7 +223,7 @@ class Ui:
     def backlight_for(self, vm, se):
         if vm["screen"] == "off": return 0.0
         b = BRIGHT[int(se.get("bright") or 0)] if isinstance(se.get("bright"), int) and se.get("bright") < len(BRIGHT) else 1.0
-        if vm["screen"] in ("boot", "reboot", "switch", "welcome", "pair", "menu", "hold", "offline"): return b
+        if vm["screen"] in ("boot", "reboot", "switch", "welcome", "pair", "menu", "hold", "offline", "setup"): return b
         idle = self.clock() - self.last_act
         off = OFF_AFTER[se.get("off")] if isinstance(se.get("off"), int) and 0 <= se.get("off") < 3 else None
         dim = DIM_AFTER[se.get("dim")] if isinstance(se.get("dim"), int) and 0 <= se.get("dim") < 3 else None
@@ -248,7 +256,7 @@ class Ui:
         while not self.stopping:
             t = time.time(); vm = self.step(); n += 1
             if max_frames and n >= max_frames: break
-            fast = vm["screen"] in ("boot", "reboot", "switch", "welcome", "pair", "offline", "menu", "hold") or vm.get("vol_overlay") \
+            fast = vm["screen"] in ("boot", "reboot", "switch", "welcome", "pair", "offline", "menu", "hold", "setup") or vm.get("vol_overlay") \
                 or (vm["screen"] == "play" and vm.get("duration")) or vm.get("anim")
             time.sleep(max(0.0, 1.0 / (fps_anim if fast else fps_idle) - (time.time() - t)))
         self.shutdown()

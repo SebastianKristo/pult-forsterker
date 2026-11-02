@@ -17,6 +17,8 @@ if [ ! -x "$VENV/bin/python" ]; then
 fi
 # eldre venv (ST7735-Node) mangler luma.oled
 "$VENV/bin/python" -c "import luma.oled" 2>/dev/null || "$VENV/bin/pip" install --no-cache-dir "luma.oled==3.14.0" "smbus2>=0.4.3" || true
+# QR-koden på S1-skjermen under oppsett (ren Python)
+"$VENV/bin/python" -c "import qrcode" 2>/dev/null || "$VENV/bin/pip" install --no-cache-dir "qrcode>=7.4" || apt-get install -y --no-install-recommends python3-qrcode || true
 dpkg -s fonts-dejavu-core >/dev/null 2>&1 || apt-get install -y --no-install-recommends fonts-dejavu-core || true
 
 install -d "$DEST" /var/lib/skjold

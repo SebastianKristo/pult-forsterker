@@ -54,6 +54,20 @@ class S1TftLayout(Layout):
         w = vm.get("welcome") or {}
         fx.welcome(c, vm["t_ms"], w.get("tittel") or "Gratulerer med dagen", w.get("navn") or "Pappa",
                    w.get("hint") or "Trykk en knapp for å starte")
+    def draw_setup(self, c, vm):
+        """Ikke satt opp: QR-kode med adressen + forklaring (Skjold-appen → Skann QR-kode på skjermen)."""
+        from .. import qr
+        c.clear(); m = vm.get("qr"); url = vm.get("qr_url") or ""
+        x = 16
+        if m:
+            mod = max(2, 200 // (len(m) + 4)); side = (len(m) + 4) * mod
+            x = 12 + qr.draw(c, m, 12, (240 - side) // 2, mod, BLACK, TW) + 16
+        c.text(x, 60, "Sett opp", TW, "bold", 20, "ls")
+        c.text(x, 86, "Skann koden med", TDM, "regular", 12, "ls")
+        c.text(x, 102, "Skjold-appen", TDM, "regular", 12, "ls")
+        c.text(x, 140, url.replace("http://", "") or "Venter på nett …", ACC, "bold", 11, "ls")
+        c.text(x, 200, "Knapp: hopp over", TDM, "regular", 10, "ls")
+
     def draw_clock(self, c, vm): fx.draw_clock(c, vm.get("clock_style", 0) % 6, vm["now"], still=False)   # drawClock(g,320,240,…)
 
     # ---------- spiller nå (drawTFT0) ----------
