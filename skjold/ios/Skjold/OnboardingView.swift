@@ -64,14 +64,14 @@ private struct FindStep: View {
         Group {
             if browser.devices.isEmpty {
                 // nothing on the network: the design's two cards, which continue in demo mode
-                deviceCard(name: "Skjold S1", meta: "Demo · ingen enhet funnet ennå", icon: SK.dev("s1").icon, selected: true) { m.pickDevice("s1") }
-                deviceCard(name: "Skjold Node", meta: "Demo · ingen enhet funnet ennå", icon: SK.dev("node").icon, selected: false) { m.pickDevice("node") }
+                deviceCard(name: "Skjold S1", meta: "Demo · ingen enhet funnet ennå", icon: SK.dev("s1").icon, selected: true, action: "Sett opp") { m.pickDevice("s1") }
+                deviceCard(name: "Skjold Node", meta: "Demo · ingen enhet funnet ennå", icon: SK.dev("node").icon, selected: false, action: "Sett opp") { m.pickDevice("node") }
             } else {
                 ForEach(Array(browser.devices.enumerated()), id: \.element.id) { i, d in
                     let type = Self.type(d)
                     let set = m.known.contains { $0.host == d.host }
                     deviceCard(name: SK.dev(type).n, meta: d.name + " · " + (d.host.map { $0 + (set ? " · lagt til" : "") } ?? "kobler til …"),
-                               icon: SK.dev(type).icon, selected: i == 0) {
+                               icon: SK.dev(type).icon, selected: i == 0, action: set ? "Åpne" : "Koble til") {
                         if let h = d.host { m.pickFound(h, type: type) } else { Haptics.warning() }
                     }
                 }
@@ -84,6 +84,7 @@ private struct FindStep: View {
                 }
                 .padding(.vertical, 4).padding(.horizontal, 2)
             }
+            if !m.obErr.isEmpty { Text(m.obErr).sora(12, .regular, .danger, lineHeight: 1.45).fixedSize(horizontal: false, vertical: true) }
             Spacer(minLength: 0)
             SKButton(title: "Skann QR-kode på skjermen", kind: .secondary, height: 50, size: 14) {
                 m.startScan(simulated: !QRScannerView.isAvailable)
@@ -98,7 +99,7 @@ private struct FindStep: View {
         return d.name.localizedCaseInsensitiveContains("node") ? "node" : "s1"
     }
 
-    private func deviceCard(name: String, meta: String, icon: String, selected: Bool, action: @escaping () -> Void) -> some View {
+    private func deviceCard(name: String, meta: String, icon: String, selected: Bool, action label: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 SKIcon(d: icon, size: 40, stroke: 1.1, color: selected ? .ink : .ink2)
@@ -107,7 +108,7 @@ private struct FindStep: View {
                     Text(meta).mono(10).fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Text("Sett opp").sora(12, .regular, .accent2).fixedSize()
+                Text(label).sora(12, .regular, .accent2).fixedSize()
             }
             .padding(14)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(selected ? Color.selBg : .card))
@@ -125,7 +126,7 @@ private struct ScanStep: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(hex: 0x151517))
-            if QRScannerView.isAvailable {
+            if QRScannerView.isAvailable && m.camOK {
                 QRScannerView { m.qrFound($0) }
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }

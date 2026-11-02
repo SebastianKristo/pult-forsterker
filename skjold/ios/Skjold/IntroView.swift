@@ -54,6 +54,7 @@ struct IntroView: View {
                 }
                 .frame(width: g.size.width, height: g.size.height)
             }
+            .ignoresSafeArea()   // GeometryReader får hele skjermen – ellers ble status- og hjem-feltet stående i bakgrunnsfargen
             .opacity(1 - out)
             .scaleEffect(1 + 0.04 * out)
         }
