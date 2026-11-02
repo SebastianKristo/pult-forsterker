@@ -38,14 +38,14 @@ Inntil PR-en er inne viser HA standard-ikonet. Entitetene har allerede egne `mdi
 
 Har du Lyrion Music Server, blir forsterkeren en radiospiller:
 
-1. Sett `KI_AMP_LMS_SERVER=<IP til Lyrion>` i `/etc/ki-amp.env` (tom = finn automatisk) og `sudo systemctl restart ki-squeezelite ki-amp`. Spilleren «Pultforsterker» dukker opp i Lyrion.
+1. Sett `KI_AMP_LMS_SERVER=<IP til Lyrion>` i `/etc/ki-amp.env` (tom = finn automatisk) og `sudo systemctl restart ki-squeezelite ki-amp`. Spilleren dukker opp i Lyrion med enhetens navn (for eksempel «Skjold S1»).
 2. Kanal 1–6 hentes automatisk fra de seks første radiofavorittene i Lyrion første gang. Lagre en ny kanal: spill den i Lyrion og bruk «Lagre kanal» (API `{"n":3,"save":true}`, Homey-flytkort, eller hold favorittknappen 2 s på Radio Retro).
-3. I HA: kilden **Radio** på mediespilleren, `select.pultforsterker_radiokanal`, knappene **Radio 1–6** (navnet følger stasjonen), og `media_player.play_media` med `media_content_type: preset`, `media_content_id: "3"`.
+3. I HA: kilden **Radio** på mediespilleren, `select.skjold_s1_radiokanal`, knappene **Radio 1–6** (navnet følger stasjonen), og `media_player.play_media` med `media_content_type: preset`, `media_content_id: "3"`.
 4. Stasjonsbildet (eller albumbildet når stasjonen sender låtinfo) vises som bilde på mediespilleren. ◀◀/▶▶ bytter kanal.
 
 ```yaml
 # eksempel: KI Morgenradio
 action: media_player.play_media
-target: { entity_id: media_player.pultforsterker }
+target: { entity_id: media_player.skjold_s1 }
 data: { media_content_type: preset, media_content_id: "1" }
 ```
