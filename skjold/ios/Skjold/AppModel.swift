@@ -300,6 +300,13 @@ final class AppModel {
         return (se["setupDone"] as? Bool) == true
     }
 
+    /// Brukeren hopper over oppsettet: rett inn i appen. Uten lagrede enheter er appen i demomodus til en enhet legges til.
+    func skipSetup() {
+        Haptics.tap()
+        welcome = false
+        enterApp()
+    }
+
     /// Hopp over oppsettet for en forsterker som allerede er satt opp.
     func enterApp() {
         scan = false

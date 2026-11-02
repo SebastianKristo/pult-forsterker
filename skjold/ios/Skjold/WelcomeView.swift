@@ -17,7 +17,10 @@ struct WelcomeView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
-            SKButton(title: "Kom i gang") { m.welcome = false }
+            SKButton(title: "Legg til Skjold-enhet") { m.welcome = false }
+            SKLinkButton(title: "Hopp over og gå til appen") { m.skipSetup() }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 2)
         }
         .padding(.top, 8).padding(.horizontal, 20).padding(.bottom, 18)
     }

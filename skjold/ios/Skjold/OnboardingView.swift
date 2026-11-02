@@ -89,6 +89,10 @@ private struct FindStep: View {
             SKButton(title: "Skann QR-kode på skjermen", kind: .secondary, height: 50, size: 14) {
                 m.startScan(simulated: !QRScannerView.isAvailable)
             }
+            // Hopp over oppsettet: rett inn i appen (Skjold-enheter kan legges til senere under Rom → Legg til enhet)
+            SKLinkButton(title: "Hopp over – legg til enhet senere") { m.skipSetup() }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
         }
     }
 
