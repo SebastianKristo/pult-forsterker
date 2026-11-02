@@ -1827,7 +1827,7 @@
     {
       "type": "step",
       "n": 31,
-      "title": "Potmeter til ADS1115",
+      "title": "Potmeter (ADS1115 eller RC)",
       "parts": [
         {
           "id": "N5",
@@ -1884,10 +1884,10 @@
         }
       ],
       "tips": [
-        "Med klokka = høyere volum. Feil vei: bytt pinne 1 og 3.",
-        "Fest ADS1115 under lokket ved knotten med dobbeltsidig tape."
+        "ADS1115 (ledningene over) er mest nøyaktig. Fest den under lokket med dobbeltsidig tape. Med klokka = høyere volum; feil vei: bytt pinne 1 og 3.",
+        "Uten ADS1115 (RC-variant): Pi pinne 17 (3V3) → potmeter pinne 3, pinne 2 → 1 kΩ → Pi pinne 11 (GPIO17); fra samme punkt kondensator 1 µF → Pi pinne 39 (GND). Pinne 1 kobles ikke. Vri knotten helt rundt én gang – den kalibrerer seg selv."
       ],
-      "warn": ""
+      "warn": "RC-variant med elektrolytt (f.eks. 10 µF): + mot GPIO17-siden, − mot GND. Monter bare én av variantene."
     },
     {
       "type": "section",

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Skjold Node (OLED-utgave) – selvtest av OLED, ADS1115/potmeter, knapper og LED-ringer.
+"""Skjold Node (OLED-utgave) – selvtest av OLED, potmeter (ADS1115 eller RC på GPIO17), knapper og LED-ringer.
 
 På Pi:      sudo systemctl stop ki-amp skjold-os     (de eier knappene og skjermen)
             /opt/skjold/venv/bin/python tools/node_selftest.py      (Ctrl+C avslutter)
 Uten Pi:    python3 tools/node_selftest.py --dry-run  (simulerer hendelser, lagrer skjermbilder som PNG)
 
 Leser alle pinner fra config/node_pins.json (schema 2). Krever på Pi: python3-gpiozero, python3-lgpio,
-luma.oled, smbus2 og Pillow (installeres av driver/installer_node.sh). i2cdetect -y 1 skal vise 3c og 48.
+luma.oled, smbus2 og Pillow (installeres av driver/installer_node.sh). i2cdetect -y 1 skal vise 3c og 48
+(48 mangler i RC-varianten: da måles potmeteret med ladetiden til en kondensator på GPIO17 – potmeter.metode/rc).
 """
 import argparse, json, os, sys, time
 
@@ -92,6 +93,47 @@ class FalskAdc:
     def volt(self): return self.v
 
 
+class RcPot:
+    """RC-variant: GPIO lav (tøm C), så inngang uten pull og tid til høy. Median av 5, selvkalibrerende endepunkter.
+    les() gir et «volt»-tall 0–vref så resten av selvtesten er lik for begge metodene. io: lgpio-pinne eller FalskRcPinne."""
+    def __init__(self, io):
+        rc = POT["rc"]; self.io, self.c = io, rc["kondensator_f"]
+        self.tau = (rc["seriemotstand_ohm"] + rc["pot_ohm"]) * self.c
+        self.lo = self.hi = None; self.t = 0.0
+    def maal(self):
+        self.io.lav(); time.sleep(max(0.001, 5 * self.c * 100)); self.io.slipp(); t0 = time.perf_counter()
+        while not self.io.les():
+            if time.perf_counter() - t0 > 4 * self.tau + 0.002: return None
+            if self.tau >= 2e-3: time.sleep(self.tau / 250)
+        return time.perf_counter() - t0
+    def volt(self):
+        s = sorted(x for x in (self.maal() for _ in range(POT["rc"]["prover"])) if x is not None)
+        if len(s) < 3: raise IOError("ingen ladetid på GPIO%d – sjekk 1 kΩ, kondensator og GND" % POT["rc"]["gpio"])
+        t = self.t = s[len(s) // 2]
+        self.lo = t if self.lo is None else min(self.lo, t); self.hi = t if self.hi is None else max(self.hi, t)
+        lo, hi = (self.lo, self.hi) if self.hi - self.lo > 0.25 * self.tau else (0.6 * self.tau / 11, 0.6 * self.tau)
+        return max(0.0, min(1.0, 1 - (t - lo) / (hi - lo))) * POT["vref_v"]
+
+
+class LgpioRcPinne:
+    def __init__(self, gpio):
+        import lgpio
+        self.lg, self.g, self.h = lgpio, gpio, lgpio.gpiochip_open(0); lgpio.gpio_claim_input(self.h, gpio, lgpio.SET_PULL_NONE)
+    def lav(self): self.lg.gpio_free(self.h, self.g); self.lg.gpio_claim_output(self.h, self.g, 0)
+    def slipp(self): self.lg.gpio_free(self.h, self.g); self.lg.gpio_claim_input(self.h, self.g, self.lg.SET_PULL_NONE)
+    def les(self): return self.lg.gpio_read(self.h, self.g) == 1
+
+
+class FalskRcPinne:
+    """Simulert RC-node: høy etter t = 0,55·(1 kΩ + R)·C, der R = motstanden glider–pinne 3 (0–10 kΩ)."""
+    def __init__(self): self.r, self.t0 = 10000.0, None
+    def lav(self): self.t0 = None
+    def slipp(self): self.t0 = time.perf_counter()
+    def les(self):
+        rc = POT["rc"]
+        return time.perf_counter() - self.t0 >= 0.55 * (rc["seriemotstand_ohm"] + self.r) * rc["kondensator_f"]
+
+
 def pot_prosent(v):
     p = max(0.0, min(1.0, v / POT["vref_v"])) * 100
     return round(100 - p if POT.get("inverter") else p)
@@ -139,7 +181,10 @@ def main():
     print("1) Testbilde – sjekk at kanten er hel og teksten står rett vei (pil nede til venstre).")
     skjerm.vis(testbilde(), "testbilde")
 
-    if a.sim:
+    metode = POT.get("metode", "auto")
+    if a.sim and metode == "rc":
+        adc = RcPot(FalskRcPinne()); print("2) [sim] RC-potmeter på GPIO%d" % POT["rc"]["gpio"])
+    elif a.sim:
         adc = FalskAdc()
     else:
         try:
@@ -147,6 +192,13 @@ def main():
             print("2) ADS1115 funnet på %s." % ADC["adresse"])
         except Exception as e:
             adc = None; print("2) ADS1115 (%s) svarer ikke: %s – sjekk VDD/GND/SDA/SCL og ADDR→GND." % (ADC["adresse"], e))
+        if metode == "rc" or (adc is None and metode == "auto"):
+            try:
+                adc = RcPot(LgpioRcPinne(POT["rc"]["gpio"])); adc.volt()
+                print("2) RC-potmeter på GPIO%d (pinne %d), C = %g µF – vri helt rundt for kalibrering. ADS1115 er mer nøyaktig."
+                      % (POT["rc"]["gpio"], POT["rc"]["pin"], POT["rc"]["kondensator_f"] * 1e6))
+            except Exception as e:
+                adc = None; print("2) RC-potmeter på GPIO%d svarer ikke: %s" % (POT["rc"]["gpio"], e))
 
     if gz:
         leds = [] if a.ingen_led else [gz.PWMLED(l["gpio"], frequency=LEDS["pwm_hz"]) for l in LEDS["liste"]]
@@ -181,10 +233,17 @@ def main():
         if adc is None: return
         v = adc.volt(); p = pot_prosent(v)
         if abs(p - tilstand["volum"]) >= POT["hysterese"]:
-            tilstand["volum"] = p; hendelse("Pot %.2f V = %d" % (v, p))
+            tilstand["volum"] = p
+            hendelse(("Pot RC %.2f ms = %d" % (adc.t * 1000, p)) if isinstance(adc, RcPot) else ("Pot %.2f V = %d" % (v, p)))
 
     if a.sim:
         simuler(gz, knapper, hendelse, adc, les_pot)
+        if not isinstance(adc, RcPot):   # simuler også RC-varianten (knotten vris helt rundt, så tilbake til midten)
+            print("5) [sim] RC-potmeter på GPIO%d (pinne %d), C = %g µF:" % (POT["rc"]["gpio"], POT["rc"]["pin"], POT["rc"]["kondensator_f"] * 1e6))
+            adc = RcPot(FalskRcPinne()); n0 = len(logg)
+            for r in (10000, 0, 10000, 5000, 5050, 0):   # 5050 Ω er under hysteresen
+                adc.io.r = r; les_pot()
+            if len(logg) - n0 < 3: sys.exit("FEIL: RC-simuleringen ga for få hendelser")
         print("Simulering ferdig: %d hendelser registrert." % len(logg))
         forventet = len(KN["liste"]) + 2
         if len(logg) < forventet:
@@ -193,7 +252,7 @@ def main():
         return
     try:
         while True:
-            les_pot(); time.sleep(1.0 / POT["poll_hz"])
+            les_pot(); time.sleep(1.0 / (POT["rc"]["poll_hz"] if isinstance(adc, RcPot) else POT["poll_hz"]))
     except KeyboardInterrupt:
         pass
 

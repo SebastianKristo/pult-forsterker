@@ -26,6 +26,7 @@ def header_xyz(pin):
 SKJERM_XYZ = (2.0, 0.0, 28.0)       # loddeøyene på OLED-modulen (4 pinner i x0-enden, se cad/generate_node_oled_lokk.js)
 ADC_XYZ = (-18.0, -6.0, 24.0)        # ADS1115 festet med tape under lokket ved potmeteret [bekreft plassering]
 POT_XYZ = (-27.0, 7.0, 24.0)         # potmeteret i det gamle encoderhullet
+RC_XYZ = (-24.0, 2.0, 24.0)          # RC-variant: 1 kΩ + kondensator loddet rett på potmeterets pinner
 KNAPP_XYZ = {k["id"]: (k["kasse_x"], k["kasse_y"], 17.0) for k in PINS["knapper"]["liste"]}
 
 
@@ -62,6 +63,15 @@ for n in ["1", "2", "3"]:
     komp, term = po[n]["til"].split(" ", 1)
     add(None, "POT", "pinne %s" % n, po[n]["nett"], po[n]["farge"], POT_XYZ,
         "glidekontakt" if n == "2" else "", fra="%s %s" % (komp, term), fra_xyz=ADC_XYZ)
+# RC-variant (uten ADS1115): én GPIO + 1 kΩ + kondensator. Monteres I STEDET FOR ADS1115-ledningene.
+rc = PINS["potmeter"]["rc"]; rp = rc["pinner"]; cuf = rc["kondensator_f"] * 1e6
+RCV = "RC-variant (uten ADS1115): "
+add(rp["3V3"]["pin"], "POT", "pinne 3", "3V3", rp["3V3"]["farge"], POT_XYZ, RCV + "3V3 rett til pot pinne 3 (pinne 1 kobles ikke)")
+add(rp["RC"]["pin"], "RC-KOBLING", "node RC (GPIO%d)" % rc["gpio"], rp["RC"]["nett"], rp["RC"]["farge"], RC_XYZ,
+    RCV + "node RC = 1 kΩ-enden + kondensator + (%g µF; 10 µF elektrolytt: + her)" % cuf)
+add(rp["GND"]["pin"], "RC-KOBLING", "C− (GND)", "GND", rp["GND"]["farge"], RC_XYZ, RCV + "kondensatorens − til GND")
+add(None, "RC-KOBLING", "1 kΩ → node", "glider", "bla", RC_XYZ, RCV + "%d Ω fra glidekontakten til node RC" % rc["seriemotstand_ohm"],
+    fra="POT pinne 2", fra_xyz=POT_XYZ)
 for k in PINS["knapper"]["liste"]:
     add(k["pin"], "KNAPP " + k["etikett"], "NO", "GPIO%d" % k["gpio"], "gronn", KNAPP_XYZ[k["id"]])
 add(PINS["knapper"]["gnd_pin"], "KNAPP RADIO", "C", "GND", "sort", KNAPP_XYZ["radio"], "C-pinnene på alle 4 knappene lenkes med 20 mm broer")
@@ -94,7 +104,7 @@ PIN_NAVN = {1: "3V3", 2: "5V", 3: "GPIO2", 4: "5V", 5: "GPIO3", 7: "GPIO4", 8: "
 for g in PINS["gnd_pinner"]:
     PIN_NAVN[g] = "GND"
 
-W, H = 1180, 880
+W, H = 1180, 890
 OX, EX, Y0, DY = 470, 540, 110, 26  # oddetall-kolonne, partall-kolonne
 def py(pin): return Y0 + ((pin - 1) // 2) * DY
 def px(pin): return OX if pin % 2 else EX
@@ -135,6 +145,10 @@ def boks(navn, x, y, w, h, terms, side):
 boks("OLED", 120, 96, 130, 106, ["VCC", "GND", "SDA", "SCL"], "R")
 boks("ADS1115", 120, 236, 130, 150, ["VDD", "GND", "SDA", "SCL", "A0", "ADDR→GND"], "R")
 boks("POT", 120, 420, 130, 84, ["pinne 1", "pinne 2", "pinne 3"], "R")
+boks("RC-KOBLING", 120, 560, 130, 100, ["1 kΩ → node", "node RC (GPIO%d)" % rc["gpio"], "C− (GND)"], "R")
+o('<text x="185" y="676" font-size="9" fill="#555" text-anchor="middle">RC-variant uten ADS1115:</text>')
+o('<text x="185" y="688" font-size="9" fill="#555" text-anchor="middle">node RC → kondensator %g µF → GND</text>' % cuf)
+o('<text x="185" y="700" font-size="9" fill="#555" text-anchor="middle">(elektrolytt: + på node RC)</text>')
 # høyre side (partallspinner): knapper og LED-ringer
 for i, k in enumerate(PINS["knapper"]["liste"]):
     boks("KNAPP " + k["etikett"], 860, 300 + i * 62, 130, 58 if k["id"] == "radio" else 40, ["NO", "C"] if k["id"] == "radio" else ["NO"], "L")
@@ -143,7 +157,7 @@ for i, l in enumerate(PINS["leds"]["liste"]):
     boks(n, 860, 560 + i * 54 + (18 if i else 0), 130, 58 if l["for"] == "radio" else 40, ["LED+", "LED−"] if l["for"] == "radio" else ["LED+"], "L")
 # kjeder lokk–lokk (OLED → ADS1115 → POT), tegnet som egne løp til venstre for boksene
 TERM_ALIAS = {"ADS1115 A0": ("ADS1115", "A0"), "ADS1115 GND": ("ADS1115", "GND"), "ADS1115 VDD": ("ADS1115", "VDD"),
-              "OLED SDA": ("OLED", "SDA"), "OLED SCL": ("OLED", "SCL")}
+              "OLED SDA": ("OLED", "SDA"), "POT pinne 2": ("POT", "pinne 2"), "OLED SCL": ("OLED", "SCL")}
 o('<text x="185" y="410" font-size="9" fill="#555" text-anchor="middle">B10K: med klokka = høyere</text>')
 
 lane_l, lane_r, lane_gap, bunn = 0, 0, 0, 0
@@ -194,11 +208,12 @@ for pin in range(1, 41):
 
 # forklaring
 ly = 800
-for i, (k, t) in enumerate([("rod", "3V3"), ("sort", "GND"), ("gul", "I²C (SDA/SCL)"), ("bla", "potmeter → A0"), ("gronn", "knapper"), ("oransje", "LED-ringer")]):
+for i, (k, t) in enumerate([("rod", "3V3"), ("sort", "GND"), ("gul", "I²C (SDA/SCL)"), ("bla", "potmeter → A0 / RC"), ("gronn", "knapper"), ("oransje", "LED-ringer")]):
     x = 24 + i * 150
     o('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="4"/>' % (x, ly, x + 30, ly, FARGE[k]))
     o('<text x="%d" y="%d" font-size="11">%s</text>' % (x + 36, ly + 4, t))
 o('<text x="24" y="830" font-size="11" fill="#333">Stiplet = loddet lokk–lokk (OLED → ADS1115 → potmeter). Knapper: C lenkes med 20 mm broer, én GND fra RADIO. LED-ringer: %d Ω i serie, LED− lenkes. SPI er AV (GPIO7 = knapp ▶▶).</text>' % r)
+o('<text x="24" y="866" font-size="11" fill="#333">Potmeter: ENTEN ADS1115 (mest nøyaktig) ELLER RC-variant (merknad «RC-variant» i kabellisten): 3V3 → pot 3, pot 2 → 1 kΩ → node RC → GPIO%d, node RC → C → GND.</text>' % rc["gpio"])
 o('<text x="24" y="848" font-size="11" fill="#333">Lengder = 3D-avstand Pi→lokk + %d mm slakk for å vippe lokket. Ingen ledninger på GPIO14/15 (UART) eller 18/19 (I²S). GPIO20/21 (LED ◀◀/▶▶) kolliderer med I²S-kort.</text>' % SLAKK)
 o('</svg>')
 open(os.path.join(ROT, "kabling_node.svg"), "w", encoding="utf-8").write("\n".join(out) + "\n")

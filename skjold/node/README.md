@@ -5,20 +5,20 @@ Kassen: `skjold/design/node/Skjold Node kasse OLED.html` / `… OLED taktil.html
 
 | Fil | Hva |
 |---|---|
-| `config/node_pins.json` | Pinner, I²C-adresser, ADS1115/potmeter, holdetider, LED-drift. Leses av ki_amp_daemon.py (`KI_AMP_BOARD=node`), Skjold OS, selvtesten og bruksanvisningen. |
+| `config/node_pins.json` | Pinner, I²C-adresser, ADS1115/potmeter (`potmeter.metode`, `potmeter.rc`), holdetider, LED-drift. Leses av ki_amp_daemon.py (`KI_AMP_BOARD=node`), Skjold OS, selvtesten og bruksanvisningen. |
 | `config/config.txt.node` | Tillegg til `/boot/firmware/config.txt`: I²C på (400 kHz), **SPI av**, 3,5 mm-lyd, startnivå på pinnene. |
-| `kabling_node.svg` | Koblingsskjema: header, OLED, ADS1115, potmeter, 4 knapper, 4 LED-ringer. Fargekodet. |
+| `kabling_node.svg` | Koblingsskjema: header, OLED, ADS1115, potmeter (+ RC-variant: 1 kΩ + kondensator), 4 knapper, 4 LED-ringer. Fargekodet. |
 | `kabelliste.csv` | Ledning for ledning: fra, til, nett, farge, lengde, pluggtype. |
 | `driver/installer_node.sh` | config-blokken, I²C (`raspi-config nonint do_i2c 0`), i2c-tools, gpiozero/lgpio, luma.oled + smbus2, `SKJOLD_OS_ARGS=--layout node-oled32`, Skjold OS. |
 | `tools/lag_kabling.py` | Lager SVG + CSV fra json. Kjør etter hver pinneendring. |
 | `tools/sjekk_konsistens.py` | Sjekker json mot csv, svg og config.txt (BCM→pinne, GND/3V3, reserverte GPIO, SPI av). |
-| `tools/node_selftest.py` | Testbilde på OLED-en, live potmeter via ADS1115, knapper, blinker LED-ringene. `--dry-run` uten Pi. |
+| `tools/node_selftest.py` | Testbilde på OLED-en, live potmeter via ADS1115 eller RC (GPIO17), knapper, blinker LED-ringene. `--dry-run` uten Pi. |
 
 ```sh
 python3 tools/lag_kabling.py && python3 tools/sjekk_konsistens.py
 python3 tools/node_selftest.py --dry-run --ut /tmp/st     # PNG-er av skjermbildene (×4)
 sudo ./driver/installer_node.sh && sudo reboot              # på Pi-en
-i2cdetect -y 1                                              # skal vise 3c (OLED) og 48 (ADS1115)
+i2cdetect -y 1                                              # skal vise 3c (OLED) og 48 (ADS1115; mangler i RC-varianten)
 sudo systemctl stop ki-amp skjold-os && /opt/skjold/venv/bin/python tools/node_selftest.py
 ```
 
@@ -33,6 +33,9 @@ sudo systemctl stop ki-amp skjold-os && /opt/skjold/venv/bin/python tools/node_s
 | ADS1115 GND (ADDR broet til GND → 0x48) | GND | 25 | sort |
 | ADS1115 SDA / SCL | kjedet fra OLED-ens SDA / SCL | – | gul |
 | Potmeter B10K pinne 1 / 2 (glider) / 3 | ADS GND / ADS A0 / ADS VDD | – | sort / blå / rød |
+| *RC-variant (i stedet for ADS1115):* pot pinne 3 | 3V3 | 17 | rød |
+| *RC-variant:* node RC (pot pinne 2 → 1 kΩ → node; node → 220 Ω → GPIO17) | GPIO17 | 11 | blå |
+| *RC-variant:* kondensator − (+ på node RC) | GND | 39 | sort |
 | Knapp RADIO | GPIO23 | 16 | grønn |
 | Knapp AIR / BT | GPIO24 | 18 | grønn |
 | Knapp ◀◀ forrige | GPIO25 | 22 | grønn |
@@ -61,6 +64,18 @@ Volumet settes **bare når knotten flyttes**: volum fra appen/AirPlay står til 
 fra sin egen posisjon («soft takeover»). Første måling etter oppstart rører ikke volumet. Mangler ADS1115, virker alt annet
 (nytt forsøk hvert 10. s). Feil retning: sett `potmeter.inverter=true` eller bytt pinne 1 og 3.
 
+To måter å koble potmeteret på – `potmeter.metode` i `node_pins.json`: `"auto"` (standard: ADS1115 hvis den svarer på 0x48
+ved oppstart, ellers RC), `"ads1115"` eller `"rc"`. Daemonen logger hvilken som er aktiv (`journalctl -u ki-amp | grep Potmeter`).
+
+| | ADS1115 (anbefalt, **mest nøyaktig**) | RC-variant (bare én motstand og én kondensator) |
+|---|---|---|
+| Kobling | som over | Pi pinne 17 (3V3) → pot pinne 3 · pot pinne 2 (glider) → **1 kΩ** → node RC · node RC → Pi pinne 11 (**GPIO17**) · node RC → **kondensator** → Pi pinne 39 (GND) · pot pinne 1 kobles ikke |
+| Kondensator | – | 1 µF anbefalt (100 nF–10 µF virker, sett `potmeter.rc.kondensator_f`). Elektrolytt (f.eks. 10 µF): **+ på node RC, − på GND** |
+| Måling | 16-bit spenning, ~20 Hz | GPIO17 lav (tømmer C), så inngang uten pull (`gpio=17=ip,pn`) og tid til den leser høy (~1,4 V). Tiden ∝ 1 kΩ + motstanden glider–pinne 3. Median av 5, ~10 Hz, lgpio (ellers RPi.GPIO/gpiozero), egen tråd, ~4 % CPU |
+| Kalibrering | ingen | Selvkalibrerende: vri knotten helt rundt én gang. Endepunktene lagres i `/var/lib/ki-amp/node_pot_rc.json` (slett filen for å kalibrere på nytt) |
+
+Glatting, dødsone, hysterese og «bare når knotten flyttes» er felles for begge.
+
 ## LED-ringer
 Bruk 3–6 V-varianten (innebygd motstand for ca. 5 V). 12 V-varianten lyser ikke på 3,3 V. GPIO → 330 Ω → LED+, LED− → GND:
 under 4 mA per ring (rød/grønn/gul). Pi-grense 16 mA per pinne, 50 mA totalt.
@@ -87,4 +102,5 @@ Lysstyrke/dimming = OLED-kontrast. Den gamle ST7735-layouten finnes fortsatt (`-
 1. `rotate=2` (skjermen opp-ned i lokket) – se testbildet (pil nede til venstre).
 2. Potmeterets retning (med klokka = høyere) og at 0/100 nås i endestoppene.
 3. At SSD1306-modulen har pull-ups og tåler 400 kHz (de fleste gjør det; ellers `dtparam=i2c_arm_baudrate=100000`).
-4. Plassering av ADS1115-modulen under lokket (lengdene W17–W21 er anslått).
+4. Plassering av ADS1115-modulen under lokket (lengdene på lokk–lokk-ledningene W20–W25 er anslått).
+5. RC-varianten: at GPIO17 leser høy ved ~1,3–1,6 V og at 0/100 nås etter én runde (kalibrering).
