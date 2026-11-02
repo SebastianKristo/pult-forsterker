@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --acc: #d9a441; --ink: #f4f1ea; --mut: rgba(244,241,234,.62); }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: var(--homey-font-family, -apple-system, system-ui, sans-serif); color: var(--ink); }
+  .card { position: relative; overflow: hidden; border-radius: var(--homey-border-radius-default, 16px); height: 180px; background: #121214; padding: 14px; display: flex; gap: 14px; }
+  .bg { position: absolute; inset: -30px; background-size: cover; background-position: center; filter: blur(28px) saturate(1.3) brightness(.45); transform: scale(1.1); transition: background-image .4s; }
+  .bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,10,12,.55), rgba(10,10,12,.25)); }
+  .art { position: relative; flex: none; width: 152px; height: 152px; border-radius: 12px; background: #232326 center/cover no-repeat; box-shadow: 0 10px 28px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+  .art svg { width: 54px; height: 54px; opacity: .5; }
+  .col { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .top { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acc); }
+  .off .dot { background: #6b6a66; }
+  .name { margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
+  .t { margin-top: 10px; font-size: 18px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a { margin-top: 3px; font-size: 13px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ctl { margin-top: auto; display: flex; align-items: center; gap: 10px; }
+  button { border: 0; background: none; color: var(--ink); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  button:active { transform: scale(.94); }
+  .pp { width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: #111; }
+  .sk { width: 34px; height: 34px; }
+  .vol { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 40px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--acc) var(--p,40%), rgba(255,255,255,.18) var(--p,40%)); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+  .v { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--mut); width: 24px; text-align: right; }
+  .err { position: relative; margin: auto; text-align: center; color: var(--mut); font-size: 13px; }
+  @media (max-width: 300px) { .art { width: 110px; height: 110px; } .card { height: 140px; } .t { font-size: 15px; } }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="bg" id="bg"></div>
+  <div class="art" id="art"><svg viewBox="0 0 42 46" fill="#f4f1ea"><rect x="1" y="2" width="4.6" height="22" rx="2.3"/><rect x="9" y="2" width="4.6" height="33" rx="2.3"/><rect x="18.7" y="2" width="4.6" height="42" rx="2.3"/><rect x="28.4" y="2" width="4.6" height="33" rx="2.3"/><rect x="36.4" y="2" width="4.6" height="22" rx="2.3"/></svg></div>
+  <div class="col">
+    <div class="top" id="top"><span class="dot"></span><span id="src">–</span><span class="name" id="name"></span></div>
+    <div class="t" id="title">Skjold</div>
+    <div class="a" id="artist"></div>
+    <div class="ctl">
+      <button class="sk" data-a="prev" aria-label="Forrige"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button class="pp" data-a="toggle" aria-label="Spill/pause" id="pp"></button>
+      <button class="sk" data-a="next" aria-label="Neste"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      <div class="vol"><input type="range" min="0" max="100" id="vol"><span class="v" id="vv">0</span></div>
+    </div>
+  </div>
+</div>
+<script>
+const PLAY = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>';
+const PAUSE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+const $ = (id) => document.getElementById(id);
+let device = null, dragging = false, timer = null;
+
+function render(s) {
+  $('card').classList.toggle('off', !s.power);
+  $('src').textContent = s.power ? (s.inputLabel || '–') : 'Standby';
+  $('name').textContent = s.name;
+  $('title').textContent = s.title || (s.power ? s.inputLabel : 'Skjold er av');
+  $('artist').textContent = s.artist || s.album || '';
+  const img = s.cover || s.image;
+  $('art').style.backgroundImage = img ? `url("${img}")` : '';
+  $('art').querySelector('svg').style.display = img ? 'none' : '';
+  $('bg').style.backgroundImage = img ? `url("${img}")` : 'radial-gradient(circle at 30% 40%, #3a2f1c, #121214)';
+  $('pp').innerHTML = s.playing ? PAUSE : PLAY;
+  if (!dragging) { $('vol').value = s.volume; $('vol').style.setProperty('--p', s.volume + '%'); $('vv').textContent = s.mute ? '–' : s.volume; }
+}
+async function load() {
+  try { render(await Homey.api('GET', '/state?device=' + encodeURIComponent(device || ''))); }
+  catch (e) { document.body.innerHTML = '<div class="card"><div class="err">' + (e.message || e) + '</div></div>'; }
+}
+async function act(body) {
+  try { render(await Homey.api('POST', '/action', { device, ...body })); } catch (e) { Homey.alert && Homey.alert(e.message || String(e)); }
+}
+function onHomeyReady(Homey) {
+  window.Homey = Homey;
+  const st = Homey.getSettings() || {};
+  device = st.device && st.device.id;
+  document.querySelectorAll('button[data-a]').forEach((b) => b.addEventListener('click', () => act({ type: b.dataset.a })));
+  const v = $('vol');
+  v.addEventListener('input', () => { dragging = true; v.style.setProperty('--p', v.value + '%'); $('vv').textContent = v.value; });
+  v.addEventListener('change', () => { dragging = false; act({ type: 'volume', value: Number(v.value) }); });
+  load(); timer = setInterval(load, 3000);
+  Homey.ready({ height: document.querySelector('.card').offsetHeight });
+}
+</script>
+</body>
+</html>

@@ -40,6 +40,27 @@ class KiPultforsterkerApp extends Homey.App {
       .registerRunListener(async ({ device, level, mode }) => device.setLed(Math.round(level), mode));
     this.homey.flow.getActionCard('ki_set_loudness')
       .registerRunListener(async ({ device, on, level }) => device.setLoudness(on === 'on', level));
+
+    // Dashbord-widgets: velg Skjold-enhet
+    for (const id of ['nowplaying', 'favorites']) {
+      try {
+        this.homey.dashboards.getWidget(id).registerSettingAutocompleteListener('device', async (query) => this.skjoldDevices()
+          .map((d) => ({ id: d.getData().id, name: d.getName(), description: { s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core' }[d.product(d._last)] || 'Skjold' }))
+          .filter((r) => r.name.toLowerCase().includes((query || '').toLowerCase())));
+      } catch (e) { this.error('widget', id, e); }
+    }
+  }
+
+  skjoldDevices() {
+    return Object.values(this.homey.drivers.getDrivers()).flatMap((dr) => dr.getDevices());
+  }
+
+  /** Enheten en widget viser: valgt i innstillingene, ellers den første. */
+  widgetDevice(id) {
+    const all = this.skjoldDevices();
+    const d = (id && all.find((x) => x.getData().id === id)) || all[0];
+    if (!d) throw new Error('Ingen Skjold-enhet er lagt til');
+    return d;
   }
 }
 

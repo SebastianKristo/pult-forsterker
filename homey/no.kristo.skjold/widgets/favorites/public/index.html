@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --acc: #d9a441; --ink: #f4f1ea; --mut: rgba(244,241,234,.6); }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: var(--homey-font-family, -apple-system, system-ui, sans-serif); color: var(--ink); }
+  .card { border-radius: var(--homey-border-radius-default, 16px); background: #121214; padding: 14px; }
+  .hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+  .hd b { font-size: 15px; font-weight: 600; }
+  .hd span { margin-left: auto; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
+  button { border: 0; padding: 0; background: none; color: var(--ink); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
+  button:active { transform: scale(.96); }
+  .sq { position: relative; aspect-ratio: 1; border-radius: 12px; background: #232326 center/cover no-repeat; overflow: hidden; display: flex; align-items: flex-end; padding: 8px; font-size: 12px; font-weight: 600; line-height: 1.1; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+  .sq .n { position: absolute; top: 7px; left: 8px; font-size: 10px; opacity: .75; font-variant-numeric: tabular-nums; }
+  .on .sq { box-shadow: inset 0 0 0 2px var(--acc); }
+  .on .sq::after { content: ''; position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 8px var(--acc); }
+  .k { display: block; margin-top: 5px; font-size: 11px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty { color: var(--mut); font-size: 13px; padding: 10px 0; }
+</style>
+</head>
+<body>
+<div class="card"><div class="hd"><b>Radiofavoritter</b><span id="name"></span></div><div class="grid" id="grid"></div></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const PAL = ['#2b3a4a', '#4a2b3a', '#2b4a3a', '#4a3f2b', '#3a2b4a', '#2b4a4a'];
+let device = null, sig = '';
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function render(s) {
+  $('name').textContent = s.name;
+  const now = s.input === 'radio' && s.playing ? s.preset : 0;
+  const key = JSON.stringify([s.presets, now]);
+  if (key === sig) return; sig = key;
+  if (!s.presets.length) { $('grid').innerHTML = '<div class="empty">Ingen radiofavoritter ennå – legg dem til i Skjold-appen.</div>'; }
+  else $('grid').innerHTML = s.presets.map((p) => {
+    const img = p.image && /^https:/.test(p.image) ? `background-image:url('${esc(p.image)}')` : `background:${PAL[p.n % PAL.length]}`;
+    return `<button data-n="${p.n}" class="${p.n === now ? 'on' : ''}"><div class="sq" style="${img}"><span class="n">${p.n}</span>${p.image ? '' : esc(p.title)}</div><span class="k">${esc(p.genre || p.title)}</span></button>`;
+  }).join('');
+  $('grid').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => act(Number(b.dataset.n))));
+  Homey.ready({ height: document.querySelector('.card').offsetHeight });
+}
+async function load() {
+  try { render(await Homey.api('GET', '/state?device=' + encodeURIComponent(device || ''))); }
+  catch (e) { $('grid').innerHTML = '<div class="empty">' + esc(e.message || e) + '</div>'; Homey.ready({ height: 120 }); }
+}
+async function act(n) {
+  try { render(await Homey.api('POST', '/action', { device, type: 'preset', n })); } catch (e) { Homey.alert && Homey.alert(e.message || String(e)); }
+}
+function onHomeyReady(Homey) {
+  window.Homey = Homey;
+  const st = Homey.getSettings() || {};
+  device = st.device && st.device.id;
+  load(); setInterval(load, 5000);
+}
+</script>
+</body>
+</html>
