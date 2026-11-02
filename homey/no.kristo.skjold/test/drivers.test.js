@@ -104,11 +104,11 @@ test('paring: manuell IP validerer /api/status og produktet', async () => {
   assert.equal((await s1.emit('manual', { host: '127.0.0.1', port: ports.old })).store.product, 's1');   // eldre daemon = S1
 });
 
-test('app.json: tre produktdrivere med egen paring, gammel driver deprecated, flytkort filtrert', () => {
+test('app.json: fire produktdrivere med egen paring, gammel driver deprecated, flytkort filtrert', () => {
   const ids = appJson.drivers.map((d) => d.id);
-  assert.deepEqual(ids, ['s1', 'node', 'core', 'pultforsterker']);
+  assert.deepEqual(ids, ['s1', 'node', 'touch', 'core', 'pultforsterker']);
   assert.equal(appJson.drivers.find((d) => d.id === 'pultforsterker').deprecated, true);
-  for (const id of ['s1', 'node', 'core']) {
+  for (const id of ['s1', 'node', 'touch', 'core']) {
     const d = appJson.drivers.find((x) => x.id === id);
     assert.deepEqual(d.pair.map((v) => v.id), ['start', 'list_devices', 'add_devices']);
     assert.ok(require('fs').existsSync(`${__dirname}/../drivers/${id}/pair/start.html`));
@@ -118,5 +118,6 @@ test('app.json: tre produktdrivere med egen paring, gammel driver deprecated, fl
   const card = (id) => Object.values(appJson.flow).flat().find((c) => c.id === id).args[0].filter;
   assert.equal(card('ki_set_led'), 'driver_id=pultforsterker|node');
   assert.equal(card('ki_usb_pc'), 'driver_id=pultforsterker|s1');
-  assert.equal(card('ki_toggle'), 'driver_id=pultforsterker|s1|node|core');
+  assert.equal(card('ki_toggle'), 'driver_id=pultforsterker|s1|node|core|touch');
+  assert.equal(card('ki_set_bright'), 'driver_id=pultforsterker|s1|node|touch');
 });

@@ -9,13 +9,14 @@ const SOURCE_LABELS = { radio: 'Radio', airplay: 'AirPlay', bt: 'Bluetooth', spo
 const FALLBACK_INPUTS = ['radio', 'airplay', 'bt', 'aux', 'aux2', 'usb'];
 const LEVEL_SOURCES = ['airplay', 'bt', 'usb', 'radio', 'aux', 'aux2', 'spotify', 'plex'];
 const NODE_BOARDS = ['node'];   // Skjold Node/Core: ingen AUX/USB, hodetelefonjack, overtemperatur eller USB-switch
-const PRODUCTS = ['s1', 'node', 'core'];
+const PRODUCTS = ['s1', 'node', 'core', 'touch'];
 const LED_MODES = ['press', 'always', 'off'];
 // Hvilke produktspesifikke capabilities hvert produkt har (resten er felles eller styres av status, f.eks. usbsw/levels).
 const PRODUCT_CAPS = {
   s1: { ki_hp_automute: true, ki_bright: true, ki_led_level: false, ki_led_mode: false },
   node: { ki_hp_automute: false, ki_bright: true, ki_led_level: true, ki_led_mode: true },
   core: { ki_hp_automute: false, ki_bright: false, ki_led_level: false, ki_led_mode: false },
+  touch: { ki_hp_automute: false, ki_bright: true, ki_led_level: false, ki_led_mode: false },
 };
 
 function statusInputs(st) {
