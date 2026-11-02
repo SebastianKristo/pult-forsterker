@@ -517,6 +517,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val groupName: String get() = if (sys.rooms.isEmpty()) room else sys.groupLabel(actRoom.id)
     val actModel: String get() = SK.dev(actRoom.type).n
 
+    @JvmName("updateSys")
     fun setSys(n: SystemState) {
         val old = sys
         sys = n
@@ -621,6 +622,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         trk = (trk + 2) % 3; pos = 0
     }
 
+    @JvmName("updateVol")
     fun setVol(v: Int) {
         vol = v
         if (live) liveVolume(v) else post(mapOf("type" to "vol", "v" to v))
@@ -692,6 +694,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Name of the station currently playing ("" if radio is not the input). */
     val curRadioName: String get() = if (input == 3) curRadio.name else ""
 
+    @JvmName("updateQ")
     fun setQ(v: String) {
         q = v; rRes = null
         val t = v.trim()
