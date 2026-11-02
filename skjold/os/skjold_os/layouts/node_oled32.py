@@ -218,12 +218,17 @@ class NodeOled32Layout(Layout):
             i = first + r
             if i >= n: break
             it = rows[i]; y = 8 + r * 12; on = i == idx
-            if on: c.rect(0, y, 128, 12, W)
-            fg = BLACK if on else W
+            # Valgt rad: tynn ramme + pil, ikke helfylt stripe – mange tente piksler trekker ned spenningen til
+            # OLED-modulen så hele skjermen blir svakere (særlig på 3,3 V).
+            if on:
+                c.d.rectangle([0, y, 127, y + 11], outline=W)
+                c.d.polygon([(3, y + 3), (3, y + 8), (6, y + 5.5)], fill=W)
+            fg = W
             name = it.get("n", "")
             if head == "RADIO" and it.get("icon"): name = "%s  %s" % (it["icon"], name)
             v = str(it.get("v", "")); vw = c.text_w(v, "regular", 8) if v else 0
-            txt(c, 3, y + 9, txt_fit(c, name, "bold" if on else "regular", 8, 122 - vw - (6 if v else 0)), fg, "bold" if on else "regular", 8)
+            x0 = 10 if on else 3
+            txt(c, x0, y + 9, txt_fit(c, name, "bold" if on else "regular", 8, 122 - x0 + 3 - vw - (6 if v else 0)), fg, "bold" if on else "regular", 8)
             if v: txt(c, 125, y + 9, v, fg, "regular", 8, "rs")
 
     # ---------- standby-klokke ----------
