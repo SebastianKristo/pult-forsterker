@@ -63,6 +63,7 @@ icon = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
  M790 420 a80 80 0 1 0 0.1 0 z M160 440 a40 40 0 1 0 0.1 0 z"/>
 <path fill-rule="evenodd" d="M790 438 a62 62 0 1 0 0.1 0 z M784 448 h12 v26 h-12 z"/>
 </svg>'''
-open("assets/icon.svg", "w").write(icon)
+# app-ikonet er Skjold-logoen (assets/icon.svg), ikke generert her
+# open("assets/icon.svg", "w").write(icon)
 open("drivers/pultforsterker/assets/icon.svg", "w").write(icon)
 print("ok")

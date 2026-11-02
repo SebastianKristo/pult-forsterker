@@ -25,7 +25,7 @@ HACS → ⋮ → *Custom repositories* → `https://github.com/SebastianKristo/p
 
 ## Ikon og logo i Home Assistant
 
-HA henter ikoner for integrasjoner fra [home-assistant/brands](https://github.com/home-assistant/brands) – de kan ikke ligge i selve integrasjonen. Filene ligger klare i `brands/skjold/` (`icon.png` 256, `icon@2x.png` 512, `logo.png`, `logo@2x.png`). For å få dem inn:
+Skjold-logoen ligger i `custom_components/skjold/brand/` (`icon.png`, `icon@2x.png`, `logo.png`, `dark_logo.png` …), og nyere Home Assistant-versjoner viser den direkte. For eldre versjoner ligger samme filer i `brands/skjold/`, klare for [home-assistant/brands](https://github.com/home-assistant/brands):
 
 1. Fork `home-assistant/brands`, kopier mappen til `custom_integrations/skjold/`.
 2. Lag en pull request (de merges vanligvis innen noen dager).
