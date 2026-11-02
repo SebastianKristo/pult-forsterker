@@ -2891,6 +2891,25 @@ def radio_now():
             "url": url, "n": n, "playing": i.get("mode") == "play"}
 
 
+def _diag_stream(url):
+    """Feilsøking: kan Pi-en hente strømmen selv, og hva sier Lyrion etter et par sekunder?"""
+    base = url.split("?")[0]
+    try:
+        req = urllib.request.Request(url, headers={"Range": "bytes=0-4095", "User-Agent": "Skjold"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            head = r.read(4096)
+            print(f"  Strømtest {base}: HTTP {r.status}, {r.headers.get('Content-Type')}, {len(head)} byte, start={head[:4]!r}", flush=True)
+    except Exception as e:
+        print(f"  Strømtest {base}: FEIL {e!r}", flush=True)
+    time.sleep(3)
+    try:
+        st = lyr.rpc(["status", "-", 1, "tags:aluo"])
+        pl = (st.get("playlist_loop") or [{}])[0]
+        print(f"  Lyrion etter 3 s: mode={st.get('mode')} tid={st.get('time')} låt={pl.get('title')!r} type={pl.get('type')!r} feil={st.get('error') or st.get('player_connected')}", flush=True)
+    except Exception as e:
+        print("  Lyrion-status feilet:", repr(e), flush=True)
+
+
 def play_url(url, title="", image="", genre=""):
     """Spill en vilkårlig strøm via Lyrion (kanal som ikke er favoritt)."""
     if not url or not str(url).startswith(("http://", "https://")):
@@ -2900,6 +2919,7 @@ def play_url(url, title="", image="", genre=""):
     print(f"Spiller strøm via Lyrion: {title or '?'} ({url.split('?')[0]})", flush=True)
     r = lyr.rpc(["playlist", "play", url, title or ""])
     print("  Lyrion svarte:", r, flush=True)
+    threading.Thread(target=_diag_stream, args=(url,), daemon=True).start()
     radio_tmp.clear(); radio_tmp.update(title=title or "", url=url, icon=image or "", genre=genre or "")
     lyr.info = {**lyr.info, "mode": "play", "station": title or "", "song": "", "artist": "", "url": url, "art": image or ""}
     n = next((k + 1 for k, p in enumerate(state["presets"]) if p and p.get("url") == url), 0)
