@@ -142,7 +142,7 @@ export function coverUrl(st: Status | null): string | null {
   const u = st.cover_url ?? '';
   if (/^https?:\/\//i.test(u)) return u;
   if (u.startsWith('/')) return getBase() + u;
-  if (!st.cover) return null;
+  if (!st.cover) { const im = st.input === 'radio' ? st.radio_now?.image ?? '' : ''; return /^https?:\/\//i.test(im) ? im : null; }   // kanallogo når Lyrion ikke har bilde
   if (/^https?:\/\//i.test(st.cover)) return st.cover;
   return getBase() + '/api/cover?v=' + encodeURIComponent(st.cover);
 }

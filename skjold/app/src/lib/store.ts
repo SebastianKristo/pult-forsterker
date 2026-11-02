@@ -1,6 +1,6 @@
 // Global tilstand (Preact signals): status-polling, innstillinger, navigasjon.
 import { signal, computed, effect } from '@preact/signals';
-import { api, ApiError, getBase, needsHost, productOf, type Status, type InputId } from './api';
+import { api, ApiError, coverUrl, getBase, needsHost, productOf, type Status, type InputId } from './api';
 import { DEF, defaultEq, mergeSettings, type Settings, type EqProfiles, type EqSource } from './settings';
 
 export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib';
@@ -278,13 +278,19 @@ effect(() => {
   const s = status.value;
   if (!s || !s.power || !s.playing) return;
   let r: Recent | null = null;
-  if (s.input === 'radio') {
+  // Bilde: kanalens logo, ellers coveret Skjold viser nå (Lyrion/Navidrome/AirPlay – /api/cover?v=<hash> endrer seg ikke)
+  const cov = s.radio_now?.image || coverUrl(s) || '';
+  if (s.input === 'radio' && s.source_label && s.title) {   // låt fra et bibliotek (Navidrome) spilt via Lyrion
+    r = { key: 'lib:' + s.title + ':' + s.artist, title: s.title, big: s.artist || s.title, kind: s.source_label + ' · låt', input: 'radio', station: false, ...(cov ? { image: cov } : {}) };
+  } else if (s.input === 'radio') {
     const name = s.radio_now?.name || s.station;
-    if (name) r = { key: 'radio:' + name, title: name, big: name, kind: 'Radio · kanal', input: 'radio', station: true, ...(s.radio_now?.image ? { image: s.radio_now.image } : {}), ...(s.radio_now?.url ? { url: s.radio_now.url } : {}) };
+    if (name) r = { key: 'radio:' + name, title: name, big: name, kind: 'Radio · kanal', input: 'radio', station: true, ...(cov ? { image: cov } : {}), ...(s.radio_now?.url ? { url: s.radio_now.url } : {}) };
   } else if (s.title) {
-    r = { key: s.input + ':' + s.title + ':' + s.artist, title: s.title, big: s.artist || s.title, kind: inputLabel(s.input) + ' · låt', input: s.input, station: false };
+    r = { key: s.input + ':' + s.title + ':' + s.artist, title: s.title, big: s.artist || s.title, kind: inputLabel(s.input) + ' · låt', input: s.input, station: false, ...(cov ? { image: cov } : {}) };
   }
-  if (!r || recent.peek()[0]?.key === r.key) return;
+  if (!r) return;
+  const top = recent.peek()[0];
+  if (top?.key === r.key && (top.image || !r.image)) return;   // samme som sist – men fyll inn bildet når det kommer
   const next = [r, ...recent.peek().filter((x) => x.key !== r!.key)].slice(0, 12);
   recent.value = next;
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
