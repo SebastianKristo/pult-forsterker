@@ -42,7 +42,9 @@ export function go(page: Page, cat?: string): void {
   route.value = cat ? { page, cat } : { page };
   fullPlayer.value = false;
   if (!same) pushNav();
-  if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
+  // Telefon: ny side starter øverst. PC: sidemenyen står fast, så siden skal ikke hoppe til toppen ved hvert klikk
+  // (og aldri når man blir på samme side, f.eks. ved valg i innstillingene).
+  if (!same && typeof window !== 'undefined' && window.innerWidth < 900) window.scrollTo({ top: 0 });
 }
 export function openFull(): void { if (!fullPlayer.value) { fullPlayer.value = true; pushNav(); } }
 /** Lukk fullskjermspilleren: gå tilbake i historikken hvis den ble åpnet med openFull, ellers bare lukk. */
