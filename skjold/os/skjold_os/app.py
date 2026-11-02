@@ -25,9 +25,10 @@ def read_welcome():
 
 
 class Ui:
-    def __init__(self, client, layout, sink, backlight, model="NODE", boot=True, clock=time.time):
+    def __init__(self, client, layout, sink, backlight, model="NODE", boot=True, clock=time.time, on_ready=None, boot_info=None):
         self.cl, self.lay, self.sink, self.bl, self.model = client, layout, sink, backlight, model
         self.clock = clock
+        self.on_ready, self.boot_info = on_ready, boot_info   # bootinfo.mark_ready / (oppetid, estimat) – bare på ekte maskinvare
         t = self.clock()
         self.t_start = t
         self.fx = {"k": "boot", "t0": t} if boot else None
@@ -88,7 +89,12 @@ class Ui:
     # ---------- ViewModel ----------
     def viewmodel(self):
         now = self.clock(); online, st, se, cover = self.cl.snapshot()
-        if online: self.offline_since = None; self._ingest(st, now)
+        if online:
+            self.offline_since = None; self._ingest(st, now)
+            if self.on_ready:
+                cb, self.on_ready = self.on_ready, None
+                try: cb()
+                except Exception as e: print("on_ready:", e, flush=True)
         elif self.offline_since is None: self.offline_since = now
         d = datetime.datetime.fromtimestamp(now)
         vm = {"now": d, "now_ms": now * 1000, "clock": "%02d:%02d" % (d.hour, d.minute), "model": self.model,
@@ -100,12 +106,14 @@ class Ui:
         # animasjoner har forrang
         if self.fx:
             t_ms = (now - self.fx["t0"]) * 1000; k = self.fx["k"]
-            alive = {"boot": t_ms < fx.BOOT, "reboot": t_ms < fx.RB, "switch": t_ms < fx.SW, "welcome": True}[k]
+            alive = {"boot": t_ms < fx.BOOT, "reboot": t_ms < fx.RB or bool(st.get("rebooting")), "switch": t_ms < fx.SW, "welcome": True}[k]
             if not alive:
                 self.fx = {"k": "boot", "t0": now} if k == "reboot" else \
                           {"k": "welcome", "t0": now} if k == "boot" and self.welcome else None
                 return self.viewmodel()
             vm.update(screen=k, t_ms=t_ms, welcome=self.welcome)
+            if k == "reboot":
+                vm.update(poweroff=bool(st.get("poweroff")), boot_s=int(st.get("boot_s") or 45))
             if k == "switch":
                 vm.update(ring=self.fx["ring"], sw_from=self.fx["from"], sw_to=self.fx["to"], sw_sub=self._src_sub(st))
             vm["vol_overlay"] = vm["vol_overlay"] and k == "switch"
@@ -113,7 +121,10 @@ class Ui:
         if not online and (self.prev is None or now - (self.offline_since or now) > OFFLINE_AFTER_S):
             if now - self.t_start > OFFLINE_AFTER_S or self.prev is not None:
                 vm.update(screen="offline", offline_s=int(now - (self.offline_since or now)), vol_overlay=False); return vm
-            vm.update(screen="boot", t_ms=fx.BOOT); return vm   # venter på daemonen rett etter oppstart
+            vm.update(screen="boot", t_ms=fx.BOOT)   # venter på daemonen rett etter oppstart
+            if self.boot_info:
+                up, est = self.boot_info(); vm.update(boot_left=max(0, int(round(est - up))), boot_p=min(0.97, up / est) if est else 0)
+            return vm
         hold = st.get("hold")   # {"key":"knob|src|radio|reboot","p":0-1,"title","sub"} eller bekreftelse {"title":"Lagret",…,"saved":n}
         if hold:
             vm.update(screen="hold", hold_p=hold.get("p", 1), hold_title=hold.get("title", ""), hold_sub=hold.get("sub", "Fortsett å holde"),
@@ -243,7 +254,19 @@ class Ui:
         self.shutdown()
 
     def shutdown(self):
-        """Ved stopp/omstart: CRT-kollaps fra reboot-animasjonen, så lyset av."""
+        """Ved stopp: CRT-kollaps fra reboot-animasjonen, så lyset av. Ved omstart/slå av (rebooting fra daemonen):
+        behold «Starter på nytt / Slår av»-bildet på skjermen."""
+        p = self.prev or {}
+        if p.get("rebooting") and getattr(self.lay, "name", "") == "node-oled32":
+            try:
+                c = self.lay.canvas(); self.lay.draw_reboot(c, {"t_ms": 99_000, "now_ms": 0, "poweroff": bool(p.get("poweroff")),
+                                                                 "boot_s": int(p.get("boot_s") or 45)})
+                self.sink.show(c.frame(), "stop")
+                try: self.sink.close(keep=True)
+                except TypeError: self.sink.close()
+                return
+            except Exception:
+                pass
         try:
             for ms in range(0, 400, 50):
                 c = self.lay.canvas(); (self.lay.draw_reboot(c, {"t_ms": ms, "now_ms": ms}) if hasattr(self.lay, "draw_reboot") else fx.reboot(c, ms, ms)); self.sink.show(c.frame(), "stop"); time.sleep(0.05)

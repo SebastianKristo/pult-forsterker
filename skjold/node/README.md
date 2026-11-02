@@ -54,7 +54,7 @@ I²C-adresser: OLED SSD1306 **0x3C**, ADS1115 **0x48**. Begge modulene har egne 
   må de to ringene flyttes (f.eks. til GPIO5/6, pinne 29/31) og `node_pins.json` oppdateres. GPIO18/19 holdes ledige.
 - **I²C deles:** Skjold OS skriver til OLED-en (luma.oled), ki-amp leser ADS1115 (smbus2). Ingen av dem låser bussen;
   hver overføring er én atomisk transaksjon i kjernen. Ikke legg til `dtoverlay=i2c-gpio` eller andre drivere på 0x3C/0x48.
-- 3,5 mm-lyden bruker PWM0/1 internt, så LED-ringene dimmes med programvare-PWM (gpiozero). Ikke legg til `dtoverlay=pwm`.
+- 3,5 mm-lyden bruker PWM0/1 internt, så LED-ringene dimmes med lgpio-PWM (tx_pwm, 1 kHz) via gpiozero. Ikke legg til `dtoverlay=pwm`.
 - Samme pinner på Pi 4, 3B og 3B+. Blåtann/Wi-Fi bruker ingen header-pinner. UART (14/15) og HAT-EEPROM (0/1) er ledige.
 
 ## Potmeter (volum)
@@ -80,6 +80,42 @@ Glatting, dødsone, hysterese og «bare når knotten flyttes» er felles for beg
 Bruk 3–6 V-varianten (innebygd motstand for ca. 5 V). 12 V-varianten lyser ikke på 3,3 V. GPIO → 330 Ω → LED+, LED− → GND:
 under 4 mA per ring (rød/grønn/gul). Pi-grense 16 mA per pinne, 50 mA totalt.
 
+**Tips – blå ringer:** blå LED-er har Vf ≈ 2,8–3,0 V. Med 3,3 V og 330 Ω blir strømmen bare (3,3 − 3,0) / 330 ≈ **0,9 mA** –
+svakt, ujevnt mellom ringene og flimrete nær terskelen. Bytt til **68–100 Ω**:
+
+| Motstand | Vf 3,0 V | Vf 2,8 V |
+|---|---|---|
+| 100 Ω | 3,0 mA | 5,0 mA |
+| 82 Ω | 3,7 mA | 6,1 mA |
+| 68 Ω | 4,4 mA | 7,4 mA |
+
+Hold deg **≤ 8 mA per pinne** (fire ringer ≤ 32 mA, godt under Pi-ens 50 mA). Har ringen egen innebygd motstand, regn den med.
+
+Lysstyrken styres med **LED-lysstyrke 0–100 %** (`ledLevel`) i appen (Skjerm og lys) eller innstillingsmenyen på Node.
+Den går gjennom gamma 2,2 (opplevd lysstyrke, så 50 % ser ut som halvparten) og PWM på 1 kHz via lgpio (`tx_pwm`,
+gpiozero `LGPIOFactory`) – ingen synlig flimring. Maskinvare-PWM er opptatt av 3,5 mm-lyden. Den gamle innstillingen
+`led` (Høy/Middels/Lav/Av) virker fortsatt og blir 100/60/30/0 %.
+
+**LED-modus** (`ledMode`): *Ved trykk* (standard) – ringene er mørke, knappen du trykker lyser fullt og toner ut over
+1,2 s, og ringen til ny kilde gløder kort ved kildebytte. *Alltid* – aktiv kilde lyser (som før). *Av*. I «Ved trykk» og
+«Alltid» vises fortsatt: AIR·BT pulserer under paring, og ringen til knappen du holder blir sterkere med hold-fremdriften.
+Ved omstart/slå av toner ringene ut én etter én.
+
+## Oppstart og avslutning (`early/`)
+| Fil | Hva |
+|---|---|
+| `early/skjold_early.py` | Bare standardbibliotek (rå SSD1306 via /dev/i2c-1, innebygd 5×7-font, lgpio for LED-ene). `--final` = sluttbilde, `--sim DIR` = PNG-rammer |
+| `early/skjold-early.service` | Starter like etter kjernen (`DefaultDependencies=no`, `WantedBy=sysinit.target`): «SKJOLD · Strøm på» → «Starter… ca. N s» + fremdrift, LED-jag |
+| `early/skjold-shutdown.service` | `ExecStop` helt til slutt ved avslåing: «Slått av – trygt å trekke ut strømmen» (ved omstart: «Starter på nytt · tilbake om ca. N s»), LED-ene av |
+| `early/install_early.sh` | Installerer og slår på begge (kalles av `driver/installer_node.sh` og `pi/install.sh`) |
+
+Overlevering: Skjold OS lager `/run/skjold/os-display` når den tar skjermen (skjold-early slutter å tegne) og
+`/run/skjold/os-ready` når daemonen svarer. Daemonen sender SIGUSR1 til skjold-early før den tar LED-pinnene og fortsetter
+jaget selv til `os-ready`. Oppstartstiden (sekunder fra kjernen til `os-ready`) lagres som glidende snitt i
+`/var/lib/skjold/boot_time` og brukes til «ca. N s» både ved oppstart og omstart. Standard før første måling: 45 s.
+Ved omstart/slå av viser Skjold OS «Starter på nytt · tilbake om ca. N s» / «Slår av · trygt å trekke ut om 5 s», og
+bildet blir stående til skjold-shutdown tegner sluttbildet. OLED-en holder bildet så lenge Pi-en gir 3,3 V etter halt.
+
 ## Oppførsel (ki_amp_daemon.py, `KI_AMP_BOARD=node`)
 | Knapp | Trykk | Hold |
 |---|---|---|
@@ -91,7 +127,7 @@ under 4 mA per ring (rød/grønn/gul). Pi-grense 16 mA per pinne, 50 mA totalt.
 | ◀◀ + ▶▶ | – | 3 s: omstart |
 
 I innstillingene: ◀◀/▶▶ = flytt, RADIO = endre verdi, AIR·BT = lukk (lukkes også etter 20 s). LED-ringer: RADIO = radio,
-AIR·BT = AirPlay/Blåtann/Spotify (pulserer under paring), ◀◀/▶▶ = noe spiller. Første trykk når velkomsthilsenen vises lukker den.
+AIR·BT = AirPlay/Blåtann/Spotify (pulserer under paring), ◀◀/▶▶ = noe spiller (gjelder LED-modus «Alltid»; se LED-ringer). Første trykk når velkomsthilsenen vises lukker den.
 
 ## Skjerm (Skjold OS, `--layout node-oled32`)
 SSD1306 128×32 via luma.oled (I²C 1, 0x3C, rotate=2 fordi skjermen står opp-ned i lokket), 1-bit. Topplinje: kilde (+ «II»

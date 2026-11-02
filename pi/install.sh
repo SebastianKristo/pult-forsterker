@@ -230,6 +230,11 @@ if [ "$BOARD_SEL" = node ]; then
   # Skjold OS på Node: SSD1306 128×32 (luma.oled + smbus2 i /opt/skjold/venv installeres av skjold/node/driver/installer_node.sh)
   [ "$CORE" = 1 ] || printf '# Skrevet av pi/install.sh\nSKJOLD_OS_ARGS=--layout node-oled32\n' | sudo tee /etc/default/skjold-os >/dev/null
   sudo systemctl enable --now oled-display ki-amp   # oled-display = bare metadata (ingen skjerm)
+  # Node med skjerm: oppstartsskjerm/LED-jag (skjold-early) og «Slått av – trygt å trekke ut» (skjold-shutdown)
+  EARLY_INST="$SRC/../skjold/node/early/install_early.sh"
+  if [ "$CORE" != 1 ] && [ -f "$EARLY_INST" ]; then sudo bash "$EARLY_INST" || echo "ADVARSEL: skjold-early ble ikke installert" >&2; fi
+  # oppdater Skjold OS hvis den allerede er installert (første gang: skjold/node/driver/installer_node.sh)
+  if [ "$CORE" != 1 ] && [ -d /opt/skjold/os ] && [ -f "$OS_INST" ]; then sudo bash "$OS_INST" || echo "ADVARSEL: Skjold OS ble ikke oppdatert" >&2; fi
 elif [ "$BOARD_SEL" = main ] && [ "$SKJOLD_OS" = 1 ] && [ -f "$OS_INST" ]; then
   # S1: Skjold OS tegner skjermen (OLED 128×64 eller TFT 320×240 via fbtft); oled_display.py blir bare metadata-tjeneste
   echo "== Skjold OS (S1, layout s1-$DISPLAY_SEL)"

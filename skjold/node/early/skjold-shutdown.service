@@ -1,0 +1,18 @@
+[Unit]
+Description=Skjold Node – «Slått av – trygt å trekke ut» på OLED-en helt til slutt
+# Startes tidlig (sysinit) og stoppes derfor sent: etter ki-amp, skjold-os og nesten alt annet.
+DefaultDependencies=no
+After=local-fs.target systemd-modules-load.service
+Before=sysinit.target shutdown.target
+Conflicts=shutdown.target
+ConditionPathExists=/opt/skjold/early/skjold_early.py
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/bin/python3 /opt/skjold/early/skjold_early.py --final
+TimeoutStopSec=5
+
+[Install]
+WantedBy=sysinit.target

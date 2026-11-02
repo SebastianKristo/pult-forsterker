@@ -116,17 +116,31 @@ class NodeOled32Layout(Layout):
         _bars(c, 30, 4, k, min(1.0, t * 1.0) if t < 1 else 1.0)
         if t < 0.45: return
         c.text(58, 17, "SKJOLD", W, "bold", 12, "ls")
+        if vm.get("boot_left") is not None:   # rett etter strøm på: venter på daemonen (estimat fra målt oppstartstid)
+            pix_text(c, 59, 26, "CA. %d S" % vm["boot_left"] if vm["boot_left"] else "SNART KLAR", W)
+            c.rect(30, 31, max(1, int(97 * vm.get("boot_p", 0))), 1, W); return
         pix_text(c, 59, 26, "N O D E" if vm.get("model", "NODE") == "NODE" else vm.get("model", ""), W)
 
     def draw_reboot(self, c, vm):
+        """Omstart: «Starter på nytt» + «TILBAKE OM CA. N S» (N = målt oppstartstid). Slå av: «Slår av» + nedtelling
+        til «TRYGT Å TREKKE UT STRØMMEN» (skjold-shutdown.service tegner det samme helt til slutt)."""
         t = vm["t_ms"]; c.clear()
         if t < 380:   # CRT-kollaps
             u = t / 380; h = max(1, int(round(14 * (1 - u * u)))); w = 124 * (1 if u < 0.7 else 1 - (u - 0.7) / 0.3)
             c.rect(int(64 - w / 2), 16 - h // 2, max(1, int(w)), h, W); return
-        txt(c, 64, 14, "Starter på nytt", W, "bold", 9, "ms")
+        if vm.get("poweroff"):
+            left = max(0, 5 - int((t - 380) / 1000))
+            txt(c, 64, 12, "Slår av", W, "bold", 9, "ms")
+            pix_text(c, 64, 22, "TRYGT Å TREKKE UT OM %d S" % left if left else "TRYGT Å TREKKE UT", W, "m")
+            if not left: pix_text(c, 64, 30, "STRØMMEN", W, "m"); return
+            p = min(1.0, (t - 380) / 5000.0)
+            for i in range(14, 114, 2): c.d.point((i, 29), fill=W)
+            c.rect(14, 28, max(1, int(100 * (1 - p))), 2, W); return
+        txt(c, 64, 12, "Starter på nytt", W, "bold", 9, "ms")
+        pix_text(c, 64, 22, "TILBAKE OM CA. %d S" % int(vm.get("boot_s") or 45), W, "m")
         p = ((t - 380) / 1800.0) % 1
-        for i in range(34, 94, 2): c.d.point((i, 23), fill=W)
-        c.rect(34, 22, max(1, int(60 * p)), 2, W)
+        for i in range(34, 94, 2): c.d.point((i, 29), fill=W)
+        c.rect(34, 28, max(1, int(60 * p)), 2, W)
 
     def draw_switch(self, c, vm):
         """Kildebytte: navnet glir inn fra siden der den nye kilden ligger i ringen, prikker for posisjonen."""

@@ -178,7 +178,7 @@ elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
     NODE_DEFAULT = {"btn": {"radio": 23, "airbt": 24, "prev": 25, "next": 7},
                     "hold": {"radio": 1.0, "airbt": 2.0, "prev": 3.0, "next": 1.0},
                     "led": {"radio": 12, "airbt": 16, "prev": 20, "next": 21},
-                    "both_hold": 3.0, "led_hz": 200, "led_active_high": True, "bounce": 0.05,
+                    "both_hold": 3.0, "led_hz": 1000, "led_active_high": True, "bounce": 0.05,
                     "adc": {"port": 1, "addr": 0x48, "ch": 0, "gain": 4.096},
                     "pot": {"vref": 3.3, "hz": 20.0, "alpha": 0.35, "hyst": 2, "dead": 1.5, "invert": False, "metode": "auto"},
                     "rc": {"gpio": 17, "c": 1e-6, "r_ser": 1000.0, "r_pot": 10000.0, "n": 5, "hz": 10.0}}
@@ -205,7 +205,7 @@ elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
                 cfg["bounce"] = max(0.005, float(pj["knapper"].get("bounce_ms", 50)) / 1000)
                 for l in pj.get("leds", {}).get("liste", []):
                     cfg["led"][l["for"]] = int(l["gpio"])
-                cfg["led_hz"] = int(pj.get("leds", {}).get("pwm_hz", 200))
+                cfg["led_hz"] = max(100, int(pj.get("leds", {}).get("pwm_hz", 1000)))
                 cfg["led_active_high"] = bool(pj.get("leds", {}).get("aktiv_hoy", True))
                 a, po = pj.get("adc") or {}, pj.get("potmeter") or {}
                 cfg["adc"].update(port=int(a.get("i2c_port", 1)), addr=int(str(a.get("adresse", "0x48")), 16),
@@ -275,6 +275,8 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "overtemp": False,     # NTC på kjøleribben over ~75 °C (MCP GPA7) – TPA3116 dempes til den er under ~50 °C
          "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100, "spotify": 100, "plex": 100},   # nivå per kilde (miks)
          "ui_event": None,      # Node: {"name":"settings","t":…} når ◀◀ holdes 3 s (skjermprosessen viser innstillinger)
+         "poweroff": False,     # sammen med rebooting: true = slår av (ikke omstart)
+         "boot_s": 45,          # siste målte oppstartstid (s, glidende snitt i /var/lib/skjold/boot_time) – «tilbake om ca. N s»
          "rebooting": False,    # settes ~1,5 s før daemonen starter omstart/slår av (skjermen viser omstart-animasjonen)
          "input_seq": 0,        # teller som øker for hver knapp-/potmeterhendelse
          "settings": {}}
@@ -302,9 +304,45 @@ def _mk(cls, *a, **k):
         return None
 
 
+EARLY_DIR = os.environ.get("SKJOLD_RUN_DIR", "/run/skjold")   # skjold-early.service (skjold/os/skjold_early.py)
+BOOT_TIME_FILE = os.environ.get("SKJOLD_BOOT_TIME", "/var/lib/skjold/boot_time")
+
+
+def _release_early_leds(wait=1.0):
+    """skjold-early.service kjører LED-jaget fra like etter kjernen. Be den slippe pinnene (SIGUSR1) før vi tar dem."""
+    try:
+        with open(os.path.join(EARLY_DIR, "early.pid")) as fh:
+            pid = int(fh.read().strip() or 0)
+        os.kill(pid, 10)   # SIGUSR1
+    except Exception:
+        return
+    t_end = time.time() + wait
+    while time.time() < t_end and not os.path.exists(os.path.join(EARLY_DIR, "early-leds-free")):
+        time.sleep(0.02)
+
+
+def read_boot_time(default=45):
+    """Glidende snitt av oppstartstiden (skrives av Skjold OS når den har kontakt med daemonen)."""
+    try:
+        with open(BOOT_TIME_FILE) as fh:
+            raw = fh.read().strip()
+        v = json.loads(raw)
+        v = v.get("avg") if isinstance(v, dict) else v
+        return max(5, min(600, int(round(float(v)))))
+    except Exception:
+        return default
+
+
 try:
     from gpiozero import Button, DigitalOutputDevice, OutputDevice, PWMLED, RotaryEncoder, LED as GLED
     HW = True
+    if BOARD == "node" and not os.environ.get("GPIOZERO_PIN_FACTORY"):
+        try:   # lgpio: tidsstyrt PWM (tx_pwm) i lgpio-biblioteket – jevnere enn gpiozero sin Python-tråd ved 1 kHz
+            from gpiozero import Device
+            from gpiozero.pins.lgpio import LGPIOFactory
+            Device.pin_factory = LGPIOFactory()
+        except Exception as e:
+            print("lgpio-fabrikk ikke tilgjengelig (LED-PWM blir gpiozero-standard):", e, flush=True)
 except Exception as e:
     print("Kjører uten GPIO:", e)
     HW = False
@@ -331,7 +369,8 @@ if HW:
         x_inc = _mk(DigitalOutputDevice, PIN_X9C_INC, initial_value=True)
         x_ud = _mk(DigitalOutputDevice, PIN_X9C_UD, initial_value=False)
         x_cs = _mk(DigitalOutputDevice, PIN_X9C_CS, initial_value=True)
-    elif BOARD == "node" and NODE_GPIO:   # LED-ringene: programvare-PWM (3,5 mm-lyden bruker maskinvare-PWM0/1)
+    elif BOARD == "node" and NODE_GPIO:   # LED-ringene: lgpio tx_pwm ≥ 1 kHz (3,5 mm-lyden bruker maskinvare-PWM0/1)
+        _release_early_leds()
         node_leds = {k: l for k, l in ((k, _mk(PWMLED, p, active_high=NODE["led_active_high"], frequency=NODE["led_hz"]))
                                        for k, p in NODE["led"].items()) if l}
     leds = {k: l for k, l in ((k, _mk(GLED, v)) for k, v in LED.items()) if l}
@@ -695,21 +734,64 @@ def apply_input():
         pass  # BT-LED pulserer under parring (se pairing_task)
 
 
-LED_SCALE = [1.0, 0.45, 0.15, 0.0]   # innstilling «led» (LED-ringer): Høy, Middels, Lav, Av
+LED_LEVELS = [100, 60, 30, 0]   # gamle «led» (Høy, Middels, Lav, Av) → ledLevel i %
+LED_GAMMA = 2.2                 # opplevd lysstyrke → PWM-andel (øyet er logaritmisk: 50 % opplevd ≈ 22 % duty)
+LED_MODES = ["press", "always", "off"]   # ledMode: Ved trykk / Alltid / Av (appen kan også sende indeks 0–2)
+
+
+def led_level():
+    """Opplevd LED-lysstyrke 0–1 fra «ledLevel» (0–100). Eldre oppsett med bare «led» får nivået fra listen."""
+    cur = state.get("settings") or {}
+    try:
+        if "ledLevel" in cur and cur["ledLevel"] is not None:
+            return max(0.0, min(1.0, float(cur["ledLevel"]) / 100.0))
+        i = int(cur.get("led", 0))
+        return LED_LEVELS[i] / 100.0 if 0 <= i < len(LED_LEVELS) else 1.0
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def led_duty(b):
+    """Opplevd lysstyrke 0–1 → PWM-andel (gamma)."""
+    b = max(0.0, min(1.0, float(b)))
+    return b ** LED_GAMMA
+
+
+def led_mode():
+    v = (state.get("settings") or {}).get("ledMode", "press")
+    if isinstance(v, int) and not isinstance(v, bool):
+        return LED_MODES[v] if 0 <= v < len(LED_MODES) else "press"
+    return v if v in LED_MODES else "press"
 
 
 def led_scale():
-    """Lysstyrke for LED-ringene fra innstillingen «led». PWMLED (node, strøm-LED) skaleres; av/på-LED-er
-    (MCP23017 på main, gpiozero LED på modules/radio) kan ikke dimmes – de slukkes bare ved «Av»."""
-    try:
-        i = int(settings().get("led", 0))
-    except Exception:
-        i = 0
-    return LED_SCALE[i] if 0 <= i < len(LED_SCALE) else 1.0
+    """PWM-andel for full ring ved valgt lysstyrke. PWMLED (node, strøm-LED) skaleres; av/på-LED-er
+    (MCP23017 på main, gpiozero LED på modules/radio) kan ikke dimmes – de slukkes bare ved 0 %."""
+    return led_duty(led_level())
+
+
+# ---------- Node: LED-ringene (egen tråd, ~50 Hz under animasjoner) ----------
+# Alle verdier her er OPPLEVD lysstyrke 0–1; ganges med ledLevel og gjøres om til PWM-andel med gamma til slutt.
+LED_FLASH_S = 1.2     # «Ved trykk»: ringen lyser fullt og toner ut over 1,2 s
+LED_GLOW_S, LED_GLOW = 1.6, 0.55   # «Ved trykk»: ringen til ny kilde gløder kort når kilden byttes
+LED_RINGS = ("radio", "airbt", "prev", "next")
+LED_RING_OF_HOLD = {"radio": ("radio",), "src": ("airbt",), "settings": ("prev",), "play": ("next",), "reboot": ("prev", "next")}
+_led_fx = {"flash": {}, "glow": (None, 0.0), "last_input": None, "base": {}, "reboot_t0": 0.0, "sent": {}}
+_led_wake = threading.Event()
+
+
+def _input_ring(inp):
+    return "radio" if inp == "radio" else "airbt" if inp in ("airplay", "bt", "spotify", "plex") else None
+
+
+def node_led_flash(ring):
+    """Knappetrykk: ringen lyser opp (i modus «press» og «always»)."""
+    _led_fx["flash"][ring] = time.time(); _led_wake.set()
 
 
 def apply_node_leds(playing=None):
-    """Node: RADIO-ringen = radio, AIR·BT-ringen = AirPlay/Bluetooth/Spotify, ◀◀/▶▶ = noe spiller (svakt ellers)."""
+    """Node: grunnlyset for modus «Alltid» (RADIO = radio, AIR·BT = AirPlay/Blåtann/Spotify, ◀◀/▶▶ = noe spiller,
+    svakt ellers). Selve skrivingen til pinnene gjør node_led_tick (trykk-blink, glød, paring, hold, omstart)."""
     if not node_leds:
         return
     on = state["power"]
@@ -718,16 +800,94 @@ def apply_node_leds(playing=None):
             playing = bool(read_status().get("playing"))
         except Exception:
             playing = False
-    want = {"radio": 1.0 if on and state["input"] == "radio" else 0.0,
-            "airbt": 1.0 if on and state["input"] in ("airplay", "bt", "spotify", "plex") else 0.0,
-            "prev": (0.6 if playing else 0.08) if on else 0.0, "next": (0.6 if playing else 0.08) if on else 0.0}
+    ring = _input_ring(state["input"])
+    _led_fx["base"] = {"radio": 1.0 if on and ring == "radio" else 0.0, "airbt": 1.0 if on and ring == "airbt" else 0.0,
+                       "prev": (0.75 if playing else 0.3) if on else 0.0, "next": (0.75 if playing else 0.3) if on else 0.0}
+    if _led_fx["last_input"] is not None and state["input"] != _led_fx["last_input"] and ring:
+        _led_fx["glow"] = (ring, time.time())
+    _led_fx["last_input"] = state["input"]
+    node_led_tick()
+
+
+def node_led_targets(now=None):
+    """→ (opplevd lysstyrke per ring 0–1 før ledLevel, animasjon pågår?)."""
+    now = time.time() if now is None else now
+    out = {k: 0.0 for k in LED_RINGS}
+    mode = led_mode()
+    if state.get("rebooting"):   # omstart/slå av: alle opp, så toner de ut én etter én
+        t = now - (_led_fx["reboot_t0"] or now)
+        for i, k in enumerate(LED_RINGS):
+            out[k] = 0.0 if mode == "off" else max(0.0, 1.0 - max(0.0, t - 0.25 - i * 0.18) / 0.7)
+        return out, t < 2.5
+    early = os.path.exists(os.path.join(EARLY_DIR, "early-leds-free")) and not os.path.exists(os.path.join(EARLY_DIR, "os-ready"))
+    if early and mode != "off" and _uptime() < 180:   # fortsatt oppstart: fortsett jaget fra skjold-early til Skjold OS er klar
+        ph = (now * 1.6) % len(LED_RINGS)
+        for i, k in enumerate(LED_RINGS):
+            d = (ph - i) % len(LED_RINGS)
+            out[k] = max(0.0, 1.0 - d / 1.6)
+        return out, True
+    if mode == "off":
+        return out, False
+    anim = False
+    if mode == "always":
+        out.update({k: v for k, v in _led_fx["base"].items() if k in out})
+    for k, t in list(_led_fx["flash"].items()):
+        u = (now - t) / LED_FLASH_S
+        if u >= 1:
+            _led_fx["flash"].pop(k, None); continue
+        out[k] = max(out[k], (1 - u) ** 1.5); anim = True
+    g, t = _led_fx["glow"]
+    if g and mode == "press":
+        u = (now - t) / LED_GLOW_S
+        if u < 1:
+            out[g] = max(out[g], LED_GLOW * (min(1.0, u * 6) if u < 0.17 else (1 - u) / 0.83)); anim = True
+        else:
+            _led_fx["glow"] = (None, 0.0)
+    for key, h in list(_press.items()):   # hold: ringen følger fremdriften
+        el = now - h["t0"]
+        if el < HOLD_SHOW_S:
+            anim = True; continue
+        p = min(1.0, el / max(0.1, h["dur"]))
+        for k in LED_RING_OF_HOLD.get(key, ()):
+            out[k] = max(out[k], 0.15 + 0.85 * p)
+        anim = True
+    if state["bt_pairing"]:
+        out["airbt"] = (math.sin(now * 2 * math.pi * 1.1) + 1) / 2; anim = True
+    return out, anim
+
+
+def _uptime():
+    try:
+        with open("/proc/uptime") as fh:
+            return float(fh.read().split()[0])
+    except Exception:
+        return 1e9
+
+
+def node_led_tick(now=None):
+    """Skriv ringene (bare de som har endret seg). Returnerer True mens noe animeres."""
+    if not node_leds:
+        return False
+    tgt, anim = node_led_targets(now)
+    lvl = led_level()
     for k, led in node_leds.items():
-        if k == "airbt" and state["bt_pairing"]:
-            continue   # pairing_task blinker den
+        d = round(led_duty(tgt.get(k, 0.0) * lvl), 4)
+        if _led_fx["sent"].get(k) == d:
+            continue
         try:
-            led.value = want.get(k, 0.0) * led_scale()
+            led.value = d; _led_fx["sent"][k] = d
         except Exception as e:
             print("LED-ring:", e, flush=True)
+    return anim
+
+
+def node_led_thread(stop=None):
+    while not (stop and stop.is_set()):
+        try:
+            anim = node_led_tick()
+        except Exception as e:
+            print("LED-tråd:", e, flush=True); anim = False
+        _led_wake.wait(0.02 if anim else 0.25); _led_wake.clear()
 
 
 def speakers_on():
@@ -801,11 +961,11 @@ def apply_power():
 # ---------- innstillinger (app/web, samme nøkler som skjold_settings.js) ----------
 SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "lvlAux": 0, "lvlUsb": 0,
                 "name": 0, "nameCustom": "", "updChannel": 0, "updAuto": True, "setupDone": False, "nAux1": "AUX 1", "nAux2": "AUX 2", "nUsb1": "PC 1", "nUsb2": "PC 2", "hold": 2,
-                "voice": True, "lang": 0, "vv": 1, "dim": 1, "off": 1, "clock": True, "clockStyle": 0, "bright": 0, "led": 0, "auto": 1, "wake": True,
+                "voice": True, "lang": 0, "vv": 1, "dim": 1, "off": 1, "clock": True, "clockStyle": 0, "bright": 0, "led": 0, "ledLevel": 100, "ledMode": "press", "auto": 1, "wake": True,
                 "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [6, 3, 0, 0, 1]), ("radio", 2, [-2, 0, 3, 2, 0]),
                                                                                      ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [3, 1, -1, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
-SETTINGS_APPLIED = {"led", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
+SETTINGS_APPLIED = {"led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
 
 
 def settings():
@@ -816,6 +976,9 @@ def settings():
             for src, prof in v.items():
                 if src in s_["eq"] and isinstance(prof, dict): s_["eq"][src].update(prof)
         elif k in s_: s_[k] = v
+    if "ledLevel" not in cur or cur.get("ledLevel") is None:   # eldre oppsett: bare «led»
+        s_["ledLevel"] = int(round(led_level() * 100))
+    s_["ledMode"] = led_mode()
     return s_
 
 
@@ -831,7 +994,7 @@ def apply_settings(changed_keys=()):
     vmax = VMAX[int(s_["vmax"])] if str(s_["vmax"]).isdigit() and int(s_["vmax"]) < len(VMAX) else 100
     if state["volume"] > vmax:
         state["volume"] = vmax; apply_volume()
-    if "led" in changed_keys and HW:
+    if {"led", "ledLevel", "ledMode"} & set(changed_keys) and HW:
         _safe(apply_input)
         if led_power: _safe(lambda: setattr(led_power, "value", (1.0 if state["power"] else 0.1) * led_scale()))
     if not changed_keys or {"name", "nameCustom"} & set(changed_keys):
@@ -904,8 +1067,27 @@ def _apply_name_services(name):
     print(f"navn: «{name}» satt for AirPlay/Spotify/Blåtann", flush=True)
 
 
+def _norm_led_patch(patch, cur):
+    """«led» (Høy/Middels/Lav/Av) og «ledLevel» (0–100) holdes i takt; «ledMode» godtar navn eller indeks."""
+    patch = dict(patch)
+    if "ledLevel" in patch:
+        try: patch["ledLevel"] = max(0, min(100, int(round(float(patch["ledLevel"])))))
+        except (TypeError, ValueError): patch.pop("ledLevel")
+    if "led" in patch and "ledLevel" not in patch:
+        try: patch["ledLevel"] = LED_LEVELS[max(0, min(3, int(patch["led"])))]
+        except (TypeError, ValueError): pass
+    elif "ledLevel" in patch and "led" not in patch:
+        v = patch["ledLevel"]; patch["led"] = 0 if v >= 80 else 1 if v >= 45 else 2 if v > 0 else 3
+    if "ledMode" in patch:
+        m = patch["ledMode"]
+        if isinstance(m, int) and not isinstance(m, bool) and 0 <= m < len(LED_MODES): patch["ledMode"] = LED_MODES[m]
+        elif m not in LED_MODES: patch.pop("ledMode")
+    return patch
+
+
 def update_settings(patch):
     cur = state.setdefault("settings", {})
+    patch = _norm_led_patch(patch, cur)
     for k, v in patch.items():
         if k not in SETTINGS_DEF: continue
         if k == "eq":
@@ -1250,7 +1432,7 @@ def _safe(fn, *a):
 _power_press_t = 0.0
 
 
-def _hold_btn(b, short, held, key=None, info=None, on_change=None):
+def _hold_btn(b, short, held, key=None, info=None, on_change=None, ring=None):
     """Kort trykk = short(), hold = held(). gpiozero har ingen «was_held», så vi holder styr på det selv.
     Alt kjøres via _safe – et unntak i en knapp-callback dreper ellers lgpio-tråden og alle knappene slutter å virke.
     key/info: fremdrift i status["hold"] mens knappen holdes (info() → (tittel, undertekst) eller None = ingen hold-handling).
@@ -1259,6 +1441,7 @@ def _hold_btn(b, short, held, key=None, info=None, on_change=None):
 
     def _p():
         st["held"] = False; input_event()
+        if ring: node_led_flash(ring)
         if key:
             _press[key] = {"t0": time.time(), "dur": float(getattr(b, "hold_time", 2.0) or 2.0), "info": info}
         if on_change: _safe(on_change)
@@ -1352,7 +1535,8 @@ def system_reboot(poweroff=False, why=""):
     """Omstart/slå av: status["rebooting"]=true skrives ut først, så skjermen rekker omstart-animasjonen."""
     if state.get("rebooting"):
         return
-    state["rebooting"] = True; _press.clear()
+    state["rebooting"] = True; state["poweroff"] = bool(poweroff); state["boot_s"] = read_boot_time(); _press.clear()
+    _led_fx["reboot_t0"] = time.time(); _led_wake.set()
     print(f"{why or 'Omstart'} – {'slår av' if poweroff else 'starter på nytt'} om {REBOOT_DELAY} s", flush=True)
     save_state(); write_ctrl()
 
@@ -1480,7 +1664,8 @@ SMENU_ITEMS = [("bright", "Lysstyrke", "▣", ["Auto", "Høy", "Middels", "Lav"]
                ("clockStyle", "Klokkestil", "▣", ["Node", "Stor", "Analog", "Ord", "Linje", "Dato"]),
                ("dim", "Dimme etter", "▣", ["Av", "30 s", "1 min"]),
                ("off", "Slukk etter", "▣", ["Av", "2 min", "5 min"]),
-               ("led", "LED-ringer", "○", ["Høy", "Middels", "Lav", "Av"]),
+               ("ledLevel", "LED-lysstyrke", "○", ["100 %", "75 %", "50 %", "25 %", "10 %", "0 %"]),
+               ("ledMode", "LED-modus", "○", ["Ved trykk", "Alltid", "Av"]),
                ("auto_input", "Auto-kilde", "⇄", bool),
                ("_name", "Navn", "i", None), ("_lyrion", "Lyrion", "◠", None), ("_version", "Programvare", "i", None),
                ("_close", "Lukk", "×", None)]
@@ -1494,6 +1679,8 @@ def _smenu_value(k, kind):
     if k == "_version": return VERSION
     if k == "_close": return ""
     v = state["auto_input"] if k == "auto_input" else settings().get(k)
+    if k == "ledLevel": return "%d %%" % round(led_level() * 100)
+    if k == "ledMode": return kind[LED_MODES.index(led_mode())]
     if kind is bool: return "På" if v else "Av"
     try: return kind[int(v)]
     except (TypeError, ValueError, IndexError): return str(v)
@@ -1531,6 +1718,11 @@ def smenu_press():
     if k == "auto_input":
         state["auto_input"] = not state["auto_input"]; changed(); return
     cur = settings().get(k)
+    if k == "ledLevel":   # 100 → 75 → 50 → 25 → 10 → 0 → 100 (nærmeste trinn under nåverdien)
+        steps = [100, 75, 50, 25, 10, 0]; now_ = round(led_level() * 100)
+        update_settings({k: next((s_ for s_ in steps if s_ < now_), 100)}); return
+    if k == "ledMode":
+        update_settings({k: LED_MODES[(LED_MODES.index(led_mode()) + 1) % len(LED_MODES)]}); return
     if kind is bool:
         new = not cur
     else:
@@ -1731,9 +1923,9 @@ def setup_node_buttons():
         return None
 
     if "radio" in btn:
-        _hold_btn(btn["radio"], _radio_short, _radio_held, key="radio", info=_radio_info)
+        _hold_btn(btn["radio"], _radio_short, _radio_held, key="radio", info=_radio_info, ring="radio")
     if "airbt" in btn:
-        _hold_btn(btn["airbt"], _wireless, _pair, key="src",
+        _hold_btn(btn["airbt"], _wireless, _pair, key="src", ring="airbt",
                   info=lambda: ("Stopp paring", "Fortsett å holde") if state["bt_pairing"] else ("Blåtann-paring", "Fortsett å holde"))
 
     # ◀◀ + ▶▶ holdt samtidig = omstart (egen tidtaker fra den andre knappen trykkes). Mens begge er/var nede
@@ -1792,10 +1984,10 @@ def setup_node_buttons():
         smenu_close() if smenu["open"] else smenu_open()
 
     if "prev" in btn:
-        _hold_btn(btn["prev"], lambda: _skip("previous"), _prev_held, key="settings", on_change=_both_track,
+        _hold_btn(btn["prev"], lambda: _skip("previous"), _prev_held, key="settings", on_change=_both_track, ring="prev",
                   info=lambda: None if both["on"] else (("Lukk innstillinger", "Fortsett å holde") if smenu["open"] else ("Innstillinger", "Fortsett å holde")))
     if "next" in btn:
-        _hold_btn(btn["next"], lambda: _skip("next"), _next_held, key="play", on_change=_both_track,
+        _hold_btn(btn["next"], lambda: _skip("next"), _next_held, key="play", on_change=_both_track, ring="next",
                   info=lambda: None if both["on"] else (("Endre", "Fortsett å holde") if smenu["open"] else
                                                        ("Spill valgt", "Fortsett å holde") if menu["open"] else
                                                        ("Spill / pause", "Fortsett å holde")))
@@ -2136,7 +2328,7 @@ async def pairing_task():
             elif dev and dev != _pairing_known:   # en ny enhet koblet til
                 bt_pairing(False, "connected"); apply_input()
             elif HW and "airbt" in node_leds:
-                node_leds["airbt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 * led_scale()
+                _led_wake.set()   # node_led_thread pulserer AIR·BT-ringen
             elif HW and "bt" in leds:
                 leds["bt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 > 0.5 and led_scale() > 0
         await asyncio.sleep(0.05)
@@ -3106,6 +3298,8 @@ async def on_startup(app):
     app["btn"] = setup_buttons()
     app["pair"] = asyncio.create_task(pairing_task())
     app["menu"] = asyncio.create_task(menu_task())
+    if node_leds:
+        apply_node_leds(); threading.Thread(target=node_led_thread, daemon=True, name="node-led").start()
 
 
 async def on_cleanup(app):
@@ -3115,6 +3309,7 @@ async def on_cleanup(app):
 
 def main():
     load_state()
+    state["boot_s"] = read_boot_time()
     if state["input"] not in INPUTS:   # f.eks. «aux» lagret fra et annet kort
         state["input"] = "airplay"
     state["usbsw"], state["usb_pc_names"] = False, USBSW_NAMES

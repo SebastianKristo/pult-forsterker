@@ -18,8 +18,12 @@ class LumaSSD1306:
         if im.size != self.dev.size: im = im.resize(self.dev.size)
         self.dev.display(im)
 
-    def close(self):
-        try: self.dev.hide(); self.dev.cleanup()
+    def close(self, keep=False):
+        """keep=True: la siste bilde stå (omstart/slå av – skjold-shutdown tegner sluttbildet etterpå)."""
+        try:
+            if keep: self.dev.persist = True
+            else: self.dev.hide()
+            self.dev.cleanup()
         except Exception: pass
 
 

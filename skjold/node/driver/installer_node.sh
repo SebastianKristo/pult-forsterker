@@ -7,6 +7,7 @@
 # - installerer gpiozero/lgpio/smbus2/i2c-tools (apt) og luma.oled + smbus2 (pip i /opt/skjold/venv)
 # - kopierer node_pins.json til /etc/skjold/node_pins.json
 # - setter Skjold OS-layouten node-oled32 i /etc/default/skjold-os og installerer Skjold OS
+# - installerer skjold-early.service (oppstartsskjerm + LED-jag) og skjold-shutdown.service («Slått av – trygt å trekke ut»)
 set -euo pipefail
 HER="$(cd "$(dirname "$0")/.." && pwd)"
 CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
@@ -46,5 +47,6 @@ else
   printf '# Skrevet av skjold/node/driver/installer_node.sh\nSKJOLD_OS_ARGS=--layout node-oled32\n' > /etc/default/skjold-os
 fi
 bash "$HER/../os/install.sh" || echo "ADVARSEL: Skjold OS ble ikke installert" >&2
+bash "$HER/early/install_early.sh" || echo "ADVARSEL: skjold-early/skjold-shutdown ble ikke installert" >&2   # oppstarts-/avslutningsskjerm + LED-jag
 echo "Ferdig. Start på nytt og sjekk: i2cdetect -y 1  (skal vise 3c og 48)"
 echo "Selvtest: sudo systemctl stop ki-amp skjold-os && $VENV/bin/python $HER/tools/node_selftest.py"

@@ -108,6 +108,10 @@ def shots(layout, outdir, live_client=None):
                                                               setattr(ui, "fx", {"k": "welcome", "t0": ck.t - 1.0})))
     shot("29_reboot_hold", FakeClient(), pre=lambda c: c.status.update(hold={"key": "reboot", "p": 0.35, "title": "Omstart", "sub": "Hold begge"}))
     shot("30_play_radio_paused", FakeClient(st(paused=True)))
+    shot("31_reboot_tilbake_om", FakeClient(st(rebooting=True, boot_s=38)), fx_at("reboot", 1200))
+    shot("32_poweroff_nedtelling", FakeClient(st(rebooting=True, poweroff=True, boot_s=38)), fx_at("reboot", 1600))
+    shot("33_poweroff_trygt", FakeClient(st(rebooting=True, poweroff=True, boot_s=38)), fx_at("reboot", 6000))
+    shot("34_boot_venter_estimat", FakeClient(online=False), lambda ui, ck: setattr(ui, "boot_info", lambda: (24.0, 38.0)))
     if live_client is not None:
         live_client.poll_once(); shot("20_live_daemon", live_client)
     return out
