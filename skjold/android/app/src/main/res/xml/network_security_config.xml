@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The amplifier (port 8765), Lyrion (9000), Navidrome and Plex live on the home network over plain http,
+     like NSAllowsLocalNetworking on iOS. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
