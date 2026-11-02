@@ -1124,6 +1124,91 @@ def update_settings(patch):
     apply_settings(set(patch)); changed()
 
 
+# ---------- fjernstyring (Cloudflare Tunnel) – web-UI-et på denne enheten via f.eks. skjold-styring.smarthjemexperten.no ----------
+# Enheten der fjernstyring slås på er «master»: tunnelen går hit. Tokenet lagres bare i REMOTE_FILE (0600), aldri i status.
+REMOTE_FILE = os.path.join(os.path.dirname(STATE_FILE), "remote.json")
+_remote_job = {"busy": False, "log": ""}
+
+
+def _remote_cfg():
+    try:
+        with open(REMOTE_FILE) as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+
+def remote_status():
+    cfg = _remote_cfg()
+    active = subprocess.run(["systemctl", "is-active", "--quiet", "cloudflared"]).returncode == 0 if HW else bool(cfg.get("enabled"))
+    import shutil
+    return {"enabled": bool(cfg.get("enabled")), "host": cfg.get("host", ""), "master": bool(cfg.get("enabled")), "active": active,
+            "installed": bool(shutil.which("cloudflared")) or not HW, "busy": _remote_job["busy"], "log": _remote_job["log"][-600:],
+            "has_token": bool(cfg.get("token"))}
+
+
+def _remote_run(enable, token, host):
+    _remote_job.update(busy=True, log="")
+    def log(t):
+        _remote_job["log"] += t.rstrip() + "\n"; print("Fjernstyring:", t.rstrip(), flush=True)
+    try:
+        cfg = _remote_cfg()
+        if host: cfg["host"] = host.strip().removeprefix("https://").strip("/")
+        if token: cfg["token"] = token.strip()
+        if not HW:
+            cfg["enabled"] = enable; log("simulering – ingen endring"); return
+        q = dict(capture_output=True, text=True, timeout=300)
+        if enable:
+            if not cfg.get("token"):
+                log("Mangler tunnel-token fra Cloudflare."); return
+            import shutil
+            if not shutil.which("cloudflared"):
+                log("Installerer cloudflared …")
+                cmds = ["mkdir -p --mode=0755 /usr/share/keyrings",
+                        "curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg -o /usr/share/keyrings/cloudflare-main.gpg",
+                        "echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' > /etc/apt/sources.list.d/cloudflared.list",
+                        "apt-get update -qq", "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq cloudflared"]
+                for c in cmds:
+                    r = subprocess.run(["sh", "-c", c], **q)
+                    if r.returncode != 0:
+                        log(f"Feilet: {c}\n{(r.stderr or r.stdout)[-300:]}"); return
+            subprocess.run(["cloudflared", "service", "uninstall"], **q)
+            r = subprocess.run(["cloudflared", "service", "install", cfg["token"]], **q)
+            if r.returncode != 0:
+                log("cloudflared service install feilet:\n" + (r.stderr or r.stdout)[-400:]); return
+            subprocess.run(["systemctl", "enable", "--now", "cloudflared"], **q)
+            cfg["enabled"] = True; log("Fjernstyring er på" + (f": https://{cfg['host']}" if cfg.get("host") else "") + ".")
+        else:
+            subprocess.run(["cloudflared", "service", "uninstall"], **q)
+            cfg["enabled"] = False; log("Fjernstyring er av.")
+    except Exception as e:
+        log(f"Feil: {e!r}")
+    finally:
+        try:
+            os.makedirs(os.path.dirname(REMOTE_FILE), exist_ok=True)
+            fd = os.open(REMOTE_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w") as fh: json.dump(cfg, fh)
+        except Exception:
+            pass
+        _remote_job["busy"] = False; changed()
+
+
+async def h_remote_get(_r):
+    return web.json_response(remote_status())
+
+
+async def h_remote_post(r):
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    if _remote_job["busy"]:
+        return web.json_response({"error": "holder på – vent litt"}, status=409)
+    threading.Thread(target=_remote_run, args=(bool(b.get("enable", True)), str(b.get("token") or ""), str(b.get("host") or "")), daemon=True).start()
+    await asyncio.sleep(0.2)
+    return web.json_response(remote_status())
+
+
 async def h_settings_get(_r): return web.json_response({"settings": settings(), "applied": sorted(SETTINGS_APPLIED), "schema_version": 1})
 
 
@@ -3495,7 +3580,7 @@ def main():
     app = web.Application(middlewares=[cors_mw])
     app.add_routes([web.get("/api/status", h_status), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

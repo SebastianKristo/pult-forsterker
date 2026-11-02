@@ -94,7 +94,10 @@ async function req<T>(path: string, init?: RequestInit, base = getBase(), timeou
 }
 const post = <T = Status>(path: string, body: unknown) => req<T>(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
 
+export interface RemoteStatus { enabled: boolean; host: string; master: boolean; active: boolean; installed: boolean; busy: boolean; log: string; has_token: boolean }
 export const api = {
+  remote: () => req<RemoteStatus>('/api/remote'),
+  setRemote: (b: { enable: boolean; token?: string; host?: string }) => post<RemoteStatus>('/api/remote', b),
   status: () => req<Status>('/api/status'),
   statusAt: (base: string, timeoutMs = 2500) => req<Status>('/api/status', undefined, base, timeoutMs),
   power: (on: boolean) => post('/api/power', { on }),

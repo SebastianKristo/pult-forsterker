@@ -1,6 +1,6 @@
 // Innstillinger: kategoriliste + detaljside, generert fra CATS i lib/settings.ts.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { api, cmpVersion, fetchLatestRelease, hostLabel, isNative, REPO, type LevelSource, type Release } from '../lib/api';
+import { api, type RemoteStatus, cmpVersion, fetchLatestRelease, hostLabel, isNative, REPO, type LevelSource, type Release } from '../lib/api';
 import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status } from '../lib/store';
 import { computed } from '@preact/signals';
 import { CAT_TILE, ICONS, LED_MODES, LED_MODE_NAMES, catsFor, fmt, type Category, type Item } from '../lib/settings';
@@ -65,6 +65,7 @@ export function CategoryList() {
 
 export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) {
   if (cat.id === 'oppdatering') return <><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}</>;
+  if (cat.id === 'fjernstyring') return <RemotePanel />;
   const items = cat.items.filter((it) => it.kind !== 'clocks' && it.kind !== 'update');
   const hasClocks = cat.items.some((it) => it.kind === 'clocks');
   return (
@@ -382,4 +383,42 @@ function DraftInput({ value, onCommit, ...rest }: { value: string; onCommit: (v:
     onInput={(e) => setDraft(e.currentTarget.value)}
     onBlur={(e) => { focused.current = false; commit(e.currentTarget.value); }}
     onKeyDown={(e) => { if (e.key === 'Enter') { commit(e.currentTarget.value); e.currentTarget.blur(); } }} />;
+}
+
+
+/** Fjernstyring: Cloudflare Tunnel til denne enheten (master). Token fra Cloudflare Zero Trust → Tunnels. */
+function RemotePanel() {
+  const [st, setSt] = useState<RemoteStatus | null>(null);
+  const [host, setHost] = useState('skjold-styring.smarthjemexperten.no');
+  const [token, setToken] = useState('');
+  const [err, setErr] = useState('');
+  const load = async () => { try { const r = await api.remote(); setSt(r); if (r.host) setHost(r.host); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
+  useEffect(() => { void load(); }, []);
+  useEffect(() => { if (!st?.busy) return; const t = setInterval(load, 1500); return () => clearInterval(t); }, [st?.busy]);
+  const send = async (enable: boolean) => {
+    setErr('');
+    try { setSt(await api.setRemote({ enable, host, ...(token ? { token } : {}) })); setToken(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+  };
+  const box = 'display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;border:1px solid #242426;background:#121214';
+  const fld = 'height:40px;padding:0 12px;border-radius:10px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none;width:100%;box-sizing:border-box';
+  const on = !!st?.enabled;
+  return (
+    <div class="col gap16">
+      <div style={box}>
+        <div class="row between" style={{ alignItems: 'center' }}>
+          <span style="font-size:15px;font-weight:600">{on ? 'Fjernstyring er på' : 'Fjernstyring er av'}</span>
+          <span style={`font-size:12px;color:${st?.active ? '#3ecf6e' : '#8b8b86'}`}>{st ? (st.busy ? 'Jobber …' : st.active ? '● Tilkoblet Cloudflare' : '○ Ikke tilkoblet') : '…'}</span>
+        </div>
+        <p style="margin:0;font-size:12px;color:#a9a9a3;line-height:1.5">Denne enheten blir <b>master</b>: nettadressen under går hit, og du får det samme web-UI-et hjemmefra. Lag en tunnel i Cloudflare Zero Trust → Networks → Tunnels med offentlig vertsnavn → <span class="mono">http://localhost:8765</span>, og beskytt adressen med Cloudflare Access (bare din e-post).</p>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#8b8b86">Nettadresse<input value={host} onInput={(e) => setHost(e.currentTarget.value)} style={fld} autoCapitalize="off" spellcheck={false} /></label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#8b8b86">Tunnel-token {st?.has_token ? '(lagret – fyll inn bare for å bytte)' : ''}<input type="password" value={token} onInput={(e) => setToken(e.currentTarget.value)} placeholder="eyJh…" style={fld} autoCapitalize="off" spellcheck={false} /></label>
+        <div class="row gap10">
+          <button disabled={st?.busy} onClick={() => void send(true)} style="height:40px;padding:0 16px;border-radius:10px;border:none;background:#d9a441;color:#0b0b0c;font-weight:600;cursor:pointer">{on ? 'Oppdater' : 'Slå på fjernstyring'}</button>
+          {on && <button disabled={st?.busy} onClick={() => void send(false)} style="height:40px;padding:0 16px;border-radius:10px;border:1px solid #2e2e30;background:transparent;color:#f2f2ee;cursor:pointer">Slå av</button>}
+          {on && st?.host && <a href={'https://' + st.host} target="_blank" rel="noreferrer" style="align-self:center;font-size:13px;color:#d9a441">Åpne {st.host} ›</a>}
+        </div>
+        {(st?.log || err) && <pre style="margin:0;white-space:pre-wrap;font-size:11px;color:#c9c9c4;background:#0b0b0c;border-radius:10px;padding:10px">{err || st?.log}</pre>}
+      </div>
+    </div>
+  );
 }
