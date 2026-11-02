@@ -1036,6 +1036,8 @@ def apply_name(force_services=False):
     if old == new or (old is None and new == NAME_ENV and not force_services):
         _name_applied[0] = new; return
     _name_applied[0] = new
+    if HW and os.path.exists(AVAHI_SVC):
+        threading.Thread(target=start_mdns_avahi, daemon=True).start()   # nytt navn i mDNS-annonsen
     if not HW:
         print(f"navn: «{new}» (simulering – AirPlay/Spotify/Blåtann ikke endret)", flush=True); return
     threading.Thread(target=_apply_name_services, args=(new,), daemon=True).start()
@@ -3281,7 +3283,31 @@ def _local_ip():
         s.close()
 
 
+AVAHI_SVC = "/etc/avahi/services/skjold.service"
+
+
+def start_mdns_avahi():
+    """Annonser via avahi-daemon (kjører allerede for AirPlay). To mDNS-svarere på samme maskin (avahi + python-zeroconf)
+    gjør at spørringer fra Home Assistant/Homey ofte ikke blir besvart – derfor avahi når den finnes."""
+    if not os.path.isdir(os.path.dirname(AVAHI_SVC)) or subprocess.run(["systemctl", "is-active", "--quiet", "avahi-daemon"]).returncode != 0:
+        return False
+    from xml.sax.saxutils import escape
+    txt = {"id": socket.gethostname(), "version": VERSION, "name": NAME, "type": "pultforsterker", "product": PRODUCT, "path": "/api/status"}
+    rec = "".join(f"<txt-record>{escape(k)}={escape(str(v))}</txt-record>" for k, v in txt.items())
+    xml = ('<?xml version="1.0" standalone=\'no\'?>\n<!DOCTYPE service-group SYSTEM "avahi-service.dtd">\n'
+           f'<service-group><name>{escape(NAME)}</name><service><type>_kipultamp._tcp</type><port>{PORT}</port>{rec}</service></service-group>\n')
+    try:
+        old = open(AVAHI_SVC).read() if os.path.exists(AVAHI_SVC) else ""
+        if old != xml:
+            open(AVAHI_SVC, "w").write(xml)   # avahi leser mappen på nytt av seg selv (inotify)
+        print(f"mDNS (avahi): {NAME}._kipultamp._tcp port {PORT}", flush=True); return True
+    except Exception as e:
+        print("avahi-tjeneste ikke skrevet:", repr(e), flush=True); return False
+
+
 def start_mdns():
+    if start_mdns_avahi():
+        return None
     try:
         from zeroconf import ServiceInfo, Zeroconf
         info = ServiceInfo("_kipultamp._tcp.local.", f"{NAME}._kipultamp._tcp.local.",
