@@ -13,10 +13,30 @@ class LumaSSD1306:
         self.dev = ssd1306(i2c(port=int(sk.get("i2c_port", 1)), address=addr), width=int(sk.get("width", 128)),
                            height=int(sk.get("height", 32)), rotate=int(sk.get("rotate", 2)))
 
+        self.prev = None   # forrige sides bytes per side (8 rader) – bare endrede sider/kolonner sendes
+
     def show(self, img, tag=""):
         im = img.convert("L").point(lambda v: 255 if v > 64 else 0).convert("1")
         if im.size != self.dev.size: im = im.resize(self.dev.size)
-        self.dev.display(im)
+        try: self._partial(im)
+        except Exception: self.prev = None; self.dev.display(im)
+
+    def _partial(self, im):
+        """Rullende tekst flimret: hele bildet (512 byte) over I²C for hver ramme. Her sendes bare de sidene og
+        kolonnene som er endret siden forrige ramme, med SSD1306-ens kolonne-/sideadressering (0x21/0x22)."""
+        im = self.dev.preprocess(im)
+        w, h = im.size; px = im.load(); pages = h // 8
+        cur = [bytes(sum((1 << b) for b in range(8) if px[x, p * 8 + b]) for x in range(w)) for p in range(pages)]
+        prev, self.prev = self.prev, cur
+        for p in range(pages):
+            if prev is not None and prev[p] == cur[p]: continue
+            x0, x1 = 0, w - 1
+            if prev is not None:
+                while x0 < w and prev[p][x0] == cur[p][x0]: x0 += 1
+                while x1 > x0 and prev[p][x1] == cur[p][x1]: x1 -= 1
+            self.dev.command(0x21, x0, x1)        # kolonneområde
+            self.dev.command(0x22, p, p)          # én side
+            self.dev.data(list(cur[p][x0:x1 + 1]))
 
     def close(self, keep=False):
         """keep=True: la siste bilde stå (omstart/slå av – skjold-shutdown tegner sluttbildet etterpå)."""
