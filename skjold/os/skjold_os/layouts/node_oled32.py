@@ -17,7 +17,7 @@ from .s1_common import MonoCanvas, txt, txt_fit, pix_text, pix_fit, pix_w, check
 from .. import fx, sources
 from ..gfx import W, BLACK
 
-SCROLL_PX_S = 22      # rulletekst: piksler per sekund
+SCROLL_PX_S = 20      # rulletekst: piksler per sekund – lik app.run(fps_anim=20), så teksten flytter nøyaktig 1 px per bilde (22 ga ujevne hopp som så ut som flimring)
 SCROLL_WAIT = 1.6     # pause i starten av hver runde (s)
 SCROLL_GAP = 28       # mellomrom før teksten kommer igjen (px)
 
