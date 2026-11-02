@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, source_label, status_inputs
+from .const import DOMAIN, PRESETS_MAX, product, source_label, status_inputs
 from .entity import KiAmpEntity
 
 PLAYABLE = ("airplay", "bt", "radio", "spotify", "plex")   # kilder med «spiller nå» og avspillingskontroll
@@ -125,7 +125,8 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
     def extra_state_attributes(self) -> dict:
         return {"bt_device": self.d.get("bt_device", ""), "bt_pairing": bool(self.d.get("bt_pairing")),
                 "spotify_connected": bool((self.d.get("spotify") or {}).get("connected")),
-                "board": self.d.get("board", "")}
+                "board": self.d.get("board", ""), "product": product(self.d),
+                "radio_now": self.d.get("radio_now")}
 
     async def async_turn_on(self) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_power(True))
@@ -172,9 +173,13 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
 
     @property
     def media_channel(self) -> str | None:
-        return self.d.get("station") or None if self.d.get("input") == "radio" else None
+        if self.d.get("input") != "radio":
+            return None
+        return self.d.get("station") or (self.d.get("radio_now") or {}).get("name") or None
 
     async def async_play_media(self, media_type: str, media_id: str, **kwargs) -> None:
-        """media_player.play_media med media_content_type «preset» (eller «channel») og id 1–6."""
+        """media_player.play_media med media_content_type «preset» (eller «channel») og id 1–50."""
         n = int(str(media_id).strip())
+        if not 1 <= n <= PRESETS_MAX:
+            raise ValueError(f"radiofavoritt må være 1–{PRESETS_MAX}")
         self.coordinator.async_set_updated_data(await self.coordinator.api.play_preset(n))

@@ -3,30 +3,38 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Pultforsterker",
-        "description": "Skriv inn IP-adressen til Pi-en i forsterkeren.",
+        "title": "Skjold – add by IP",
+        "description": "Skjold S1, Skjold Node or Skjold Core not found automatically? Enter its IP address (see the Skjold app or your router). The port is 8765 unless you changed it.",
         "data": {
-          "host": "IP-adresse",
+          "host": "IP address",
           "port": "Port"
         }
       },
       "confirm": {
-        "title": "Legg til {name}?",
-        "description": "Fant {name} på {host}."
+        "title": "Add {name}?",
+        "description": "Found {name} at {host}."
+      },
+      "manual": {
+        "title": "Skjold – add by IP",
+        "description": "Skjold S1, Skjold Node or Skjold Core not found automatically? Enter its IP address (see the Skjold app or your router). The port is 8765 unless you changed it.",
+        "data": {
+          "host": "IP address",
+          "port": "Port"
+        }
       }
     },
     "error": {
-      "cannot_connect": "Fikk ikke kontakt med forsterkeren."
+      "cannot_connect": "Could not connect to the Skjold device (check IP and port)."
     },
     "abort": {
-      "already_configured": "Forsterkeren er allerede lagt til.",
-      "cannot_connect": "Fikk ikke kontakt med forsterkeren."
+      "already_configured": "The device is already configured.",
+      "cannot_connect": "Could not connect to the Skjold device (check IP and port)."
     }
   },
   "entity": {
     "switch": {
       "power": {
-        "name": "Strøm"
+        "name": "Power"
       },
       "loudness": {
         "name": "Loudness"
@@ -46,7 +54,7 @@
     },
     "sensor": {
       "source": {
-        "name": "Kilde",
+        "name": "Source",
         "state": {
           "airplay": "AirPlay",
           "bt": "Bluetooth",
@@ -54,11 +62,12 @@
           "usb": "USB",
           "radio": "Radio",
           "aux2": "AUX 2",
-          "spotify": "Spotify"
+          "spotify": "Spotify",
+          "plex": "Plex"
         }
       },
       "title": {
-        "name": "Tittel"
+        "name": "Title"
       },
       "artist": {
         "name": "Artist"
@@ -66,7 +75,7 @@
     },
     "binary_sensor": {
       "playing": {
-        "name": "Spiller"
+        "name": "Playing"
       },
       "headphones": {
         "name": "Headphones"
@@ -77,12 +86,12 @@
     },
     "media_player": {
       "amp": {
-        "name": "Forsterker"
+        "name": "Amplifier"
       }
     },
     "button": {
       "bt_pair": {
-        "name": "Start Bluetooth-parring"
+        "name": "Start Bluetooth pairing"
       },
       "reboot": {
         "name": "Restart"
@@ -118,11 +127,14 @@
       },
       "level_plex": {
         "name": "Level Plex"
+      },
+      "led_level": {
+        "name": "LED brightness"
       }
     },
     "select": {
       "preset": {
-        "name": "Radio station"
+        "name": "Radio favourite"
       },
       "usb_pc": {
         "name": "USB switch"
@@ -137,6 +149,14 @@
           "high": "High",
           "medium": "Medium",
           "low": "Low"
+        }
+      },
+      "led_mode": {
+        "name": "LED mode",
+        "state": {
+          "press": "On press",
+          "always": "Always",
+          "off": "Off"
         }
       }
     }

@@ -87,8 +87,12 @@ class KiAmpApi:
         """Talemeldinger («Bluetooth-paring …») av/på."""
         return await self._req("POST", "/voice", {"on": on})
 
+    async def presets(self) -> dict[str, Any]:
+        """Radiofavorittene (inntil 50): {"presets":[…|null], "items":[bare fylte], "count", "max", "active"}."""
+        return await self._req("GET", "/presets")
+
     async def play_preset(self, n: int) -> dict[str, Any]:
-        """Spill radiokanal 1–6 (Lyrion)."""
+        """Spill radiofavoritt 1–50 (Lyrion)."""
         return await self._req("POST", "/preset", {"n": n})
 
     async def save_preset(self, n: int) -> dict[str, Any]:

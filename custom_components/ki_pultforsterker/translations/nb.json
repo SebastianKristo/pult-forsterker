@@ -3,8 +3,8 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Pultforsterker",
-        "description": "Skriv inn IP-adressen til Pi-en i forsterkeren.",
+        "title": "Skjold – legg til med IP",
+        "description": "Fant du ikke Skjold S1, Skjold Node eller Skjold Core automatisk? Skriv inn IP-adressen (se Skjold-appen eller ruteren). Porten er 8765 hvis du ikke har endret den.",
         "data": {
           "host": "IP-adresse",
           "port": "Port"
@@ -13,14 +13,22 @@
       "confirm": {
         "title": "Legg til {name}?",
         "description": "Fant {name} på {host}."
+      },
+      "manual": {
+        "title": "Skjold – legg til med IP",
+        "description": "Fant du ikke Skjold S1, Skjold Node eller Skjold Core automatisk? Skriv inn IP-adressen (se Skjold-appen eller ruteren). Porten er 8765 hvis du ikke har endret den.",
+        "data": {
+          "host": "IP-adresse",
+          "port": "Port"
+        }
       }
     },
     "error": {
-      "cannot_connect": "Fikk ikke kontakt med forsterkeren."
+      "cannot_connect": "Fikk ikke kontakt med Skjold-enheten (sjekk IP og port)."
     },
     "abort": {
-      "already_configured": "Forsterkeren er allerede lagt til.",
-      "cannot_connect": "Fikk ikke kontakt med forsterkeren."
+      "already_configured": "Enheten er allerede lagt til.",
+      "cannot_connect": "Fikk ikke kontakt med Skjold-enheten (sjekk IP og port)."
     }
   },
   "entity": {
@@ -54,7 +62,8 @@
           "usb": "USB",
           "radio": "Radio",
           "aux2": "AUX 2",
-          "spotify": "Spotify"
+          "spotify": "Spotify",
+          "plex": "Plex"
         }
       },
       "title": {
@@ -118,11 +127,14 @@
       },
       "level_plex": {
         "name": "Nivå Plex"
+      },
+      "led_level": {
+        "name": "LED-lysstyrke"
       }
     },
     "select": {
       "preset": {
-        "name": "Radiokanal"
+        "name": "Radiofavoritt"
       },
       "usb_pc": {
         "name": "USB-switch"
@@ -137,6 +149,14 @@
           "high": "Høy",
           "medium": "Middels",
           "low": "Lav"
+        }
+      },
+      "led_mode": {
+        "name": "LED-modus",
+        "state": {
+          "press": "Ved trykk",
+          "always": "Alltid",
+          "off": "Av"
         }
       }
     }

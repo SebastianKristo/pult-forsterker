@@ -1,18 +1,18 @@
 {
   "id": "no.kristo.ki-pultforsterker",
-  "version": "2.13.0",
+  "version": "2.14.0",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
     "local"
   ],
   "name": {
-    "en": "Pultforsterker",
-    "no": "Pultforsterker"
+    "en": "Skjold",
+    "no": "Skjold"
   },
   "description": {
-    "en": "Control the desk amplifier: power, input (AirPlay/Bluetooth/AUX/USB), volume, now playing",
-    "no": "Styr pultforsterkeren: strøm, kilde (AirPlay/Bluetooth/AUX/USB), volum, spiller nå"
+    "en": "Control Skjold S1, Skjold Node and Skjold Core: power, source, volume, radio favourites and now playing",
+    "no": "Styr Skjold S1, Skjold Node og Skjold Core: strøm, kilde, volum, radiofavoritter og spiller nå"
   },
   "category": [
     "music"
@@ -29,10 +29,333 @@
   "brandColor": "#2c2d30",
   "drivers": [
     {
+      "id": "s1",
+      "name": {
+        "en": "Skjold S1",
+        "no": "Skjold S1"
+      },
+      "class": "speaker",
+      "capabilities": [
+        "onoff",
+        "volume_set",
+        "volume_mute",
+        "speaker_prev",
+        "speaker_playing",
+        "speaker_next",
+        "speaker_track",
+        "speaker_artist",
+        "speaker_position",
+        "speaker_duration",
+        "speaker_album",
+        "ki_input",
+        "ki_preset",
+        "ki_loudness",
+        "ki_loudness_level",
+        "ki_voice",
+        "ki_voice_profile",
+        "ki_auto_input",
+        "ki_mix",
+        "ki_hp_automute",
+        "ki_bright"
+      ],
+      "capabilitiesOptions": {
+        "speaker_playing": {
+          "setable": true
+        },
+        "speaker_track": {
+          "title": {
+            "en": "Title",
+            "no": "Tittel"
+          }
+        },
+        "speaker_artist": {
+          "title": {
+            "en": "Artist",
+            "no": "Artist"
+          }
+        },
+        "speaker_position": {
+          "setable": false
+        },
+        "speaker_duration": {
+          "setable": false
+        }
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "kipultamp",
+      "images": {
+        "small": "/drivers/s1/assets/images/small.png",
+        "large": "/drivers/s1/assets/images/large.png",
+        "xlarge": "/drivers/s1/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "prev": "start",
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "host",
+          "type": "text",
+          "label": {
+            "en": "IP address",
+            "no": "IP-adresse"
+          },
+          "value": ""
+        },
+        {
+          "id": "port",
+          "type": "number",
+          "label": {
+            "en": "Port",
+            "no": "Port"
+          },
+          "value": 8765
+        }
+      ]
+    },
+    {
+      "id": "node",
+      "name": {
+        "en": "Skjold Node",
+        "no": "Skjold Node"
+      },
+      "class": "speaker",
+      "capabilities": [
+        "onoff",
+        "volume_set",
+        "volume_mute",
+        "speaker_prev",
+        "speaker_playing",
+        "speaker_next",
+        "speaker_track",
+        "speaker_artist",
+        "speaker_position",
+        "speaker_duration",
+        "speaker_album",
+        "ki_input",
+        "ki_preset",
+        "ki_loudness",
+        "ki_loudness_level",
+        "ki_voice",
+        "ki_voice_profile",
+        "ki_auto_input",
+        "ki_mix",
+        "ki_bright",
+        "ki_led_level",
+        "ki_led_mode"
+      ],
+      "capabilitiesOptions": {
+        "speaker_playing": {
+          "setable": true
+        },
+        "speaker_track": {
+          "title": {
+            "en": "Title",
+            "no": "Tittel"
+          }
+        },
+        "speaker_artist": {
+          "title": {
+            "en": "Artist",
+            "no": "Artist"
+          }
+        },
+        "speaker_position": {
+          "setable": false
+        },
+        "speaker_duration": {
+          "setable": false
+        },
+        "ki_bright": {
+          "title": {
+            "en": "OLED brightness",
+            "no": "OLED-lysstyrke"
+          }
+        }
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "kipultamp",
+      "images": {
+        "small": "/drivers/node/assets/images/small.png",
+        "large": "/drivers/node/assets/images/large.png",
+        "xlarge": "/drivers/node/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "prev": "start",
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "host",
+          "type": "text",
+          "label": {
+            "en": "IP address",
+            "no": "IP-adresse"
+          },
+          "value": ""
+        },
+        {
+          "id": "port",
+          "type": "number",
+          "label": {
+            "en": "Port",
+            "no": "Port"
+          },
+          "value": 8765
+        }
+      ]
+    },
+    {
+      "id": "core",
+      "name": {
+        "en": "Skjold Core",
+        "no": "Skjold Core"
+      },
+      "class": "speaker",
+      "capabilities": [
+        "onoff",
+        "volume_set",
+        "volume_mute",
+        "speaker_prev",
+        "speaker_playing",
+        "speaker_next",
+        "speaker_track",
+        "speaker_artist",
+        "speaker_position",
+        "speaker_duration",
+        "speaker_album",
+        "ki_input",
+        "ki_preset",
+        "ki_loudness",
+        "ki_loudness_level",
+        "ki_voice",
+        "ki_voice_profile",
+        "ki_auto_input",
+        "ki_mix"
+      ],
+      "capabilitiesOptions": {
+        "speaker_playing": {
+          "setable": true
+        },
+        "speaker_track": {
+          "title": {
+            "en": "Title",
+            "no": "Tittel"
+          }
+        },
+        "speaker_artist": {
+          "title": {
+            "en": "Artist",
+            "no": "Artist"
+          }
+        },
+        "speaker_position": {
+          "setable": false
+        },
+        "speaker_duration": {
+          "setable": false
+        }
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "kipultamp",
+      "images": {
+        "small": "/drivers/core/assets/images/small.png",
+        "large": "/drivers/core/assets/images/large.png",
+        "xlarge": "/drivers/core/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "prev": "start",
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "host",
+          "type": "text",
+          "label": {
+            "en": "IP address",
+            "no": "IP-adresse"
+          },
+          "value": ""
+        },
+        {
+          "id": "port",
+          "type": "number",
+          "label": {
+            "en": "Port",
+            "no": "Port"
+          },
+          "value": 8765
+        }
+      ]
+    },
+    {
       "id": "pultforsterker",
       "name": {
-        "en": "Pultforsterker",
-        "no": "Pultforsterker"
+        "en": "Pultforsterker (legacy)",
+        "no": "Pultforsterker (gammel)"
       },
       "class": "speaker",
       "capabilities": [
@@ -88,7 +411,8 @@
       "discovery": "kipultamp",
       "images": {
         "small": "/drivers/pultforsterker/assets/images/small.png",
-        "large": "/drivers/pultforsterker/assets/images/large.png"
+        "large": "/drivers/pultforsterker/assets/images/large.png",
+        "xlarge": "/drivers/pultforsterker/assets/images/xlarge.png"
       },
       "pair": [
         {
@@ -122,7 +446,8 @@
           },
           "value": 8765
         }
-      ]
+      ],
+      "deprecated": true
     }
   ],
   "discovery": {
@@ -257,8 +582,8 @@
     "ki_preset": {
       "type": "enum",
       "title": {
-        "en": "Radio station",
-        "no": "Radiokanal"
+        "en": "Radio favourite",
+        "no": "Radiofavoritt"
       },
       "getable": true,
       "setable": true,
@@ -615,6 +940,58 @@
       "setable": true,
       "uiComponent": "picker",
       "icon": "/assets/icon.svg"
+    },
+    "ki_led_level": {
+      "type": "number",
+      "title": {
+        "en": "LED brightness",
+        "no": "LED-lysstyrke"
+      },
+      "getable": true,
+      "setable": true,
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "uiComponent": "slider",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_led_mode": {
+      "type": "enum",
+      "title": {
+        "en": "LED mode",
+        "no": "LED-modus"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "icon": "/assets/icon.svg",
+      "values": [
+        {
+          "id": "press",
+          "title": {
+            "en": "On press",
+            "no": "Ved trykk"
+          }
+        },
+        {
+          "id": "always",
+          "title": {
+            "en": "Always",
+            "no": "Alltid"
+          }
+        },
+        {
+          "id": "off",
+          "title": {
+            "en": "Off",
+            "no": "Av"
+          }
+        }
+      ]
     }
   },
   "flow": {
@@ -647,7 +1024,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -665,7 +1042,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -693,7 +1070,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -721,7 +1098,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -741,7 +1118,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -763,7 +1140,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -847,7 +1224,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -867,7 +1244,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -889,7 +1266,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -973,7 +1350,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -995,7 +1372,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1053,7 +1430,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker|s1|node|core"
           },
           {
             "type": "dropdown",
@@ -1123,7 +1500,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1157,7 +1534,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1212,6 +1589,314 @@
                   "en": "6",
                   "no": "6"
                 }
+              },
+              {
+                "id": "7",
+                "label": {
+                  "en": "7",
+                  "no": "7"
+                }
+              },
+              {
+                "id": "8",
+                "label": {
+                  "en": "8",
+                  "no": "8"
+                }
+              },
+              {
+                "id": "9",
+                "label": {
+                  "en": "9",
+                  "no": "9"
+                }
+              },
+              {
+                "id": "10",
+                "label": {
+                  "en": "10",
+                  "no": "10"
+                }
+              },
+              {
+                "id": "11",
+                "label": {
+                  "en": "11",
+                  "no": "11"
+                }
+              },
+              {
+                "id": "12",
+                "label": {
+                  "en": "12",
+                  "no": "12"
+                }
+              },
+              {
+                "id": "13",
+                "label": {
+                  "en": "13",
+                  "no": "13"
+                }
+              },
+              {
+                "id": "14",
+                "label": {
+                  "en": "14",
+                  "no": "14"
+                }
+              },
+              {
+                "id": "15",
+                "label": {
+                  "en": "15",
+                  "no": "15"
+                }
+              },
+              {
+                "id": "16",
+                "label": {
+                  "en": "16",
+                  "no": "16"
+                }
+              },
+              {
+                "id": "17",
+                "label": {
+                  "en": "17",
+                  "no": "17"
+                }
+              },
+              {
+                "id": "18",
+                "label": {
+                  "en": "18",
+                  "no": "18"
+                }
+              },
+              {
+                "id": "19",
+                "label": {
+                  "en": "19",
+                  "no": "19"
+                }
+              },
+              {
+                "id": "20",
+                "label": {
+                  "en": "20",
+                  "no": "20"
+                }
+              },
+              {
+                "id": "21",
+                "label": {
+                  "en": "21",
+                  "no": "21"
+                }
+              },
+              {
+                "id": "22",
+                "label": {
+                  "en": "22",
+                  "no": "22"
+                }
+              },
+              {
+                "id": "23",
+                "label": {
+                  "en": "23",
+                  "no": "23"
+                }
+              },
+              {
+                "id": "24",
+                "label": {
+                  "en": "24",
+                  "no": "24"
+                }
+              },
+              {
+                "id": "25",
+                "label": {
+                  "en": "25",
+                  "no": "25"
+                }
+              },
+              {
+                "id": "26",
+                "label": {
+                  "en": "26",
+                  "no": "26"
+                }
+              },
+              {
+                "id": "27",
+                "label": {
+                  "en": "27",
+                  "no": "27"
+                }
+              },
+              {
+                "id": "28",
+                "label": {
+                  "en": "28",
+                  "no": "28"
+                }
+              },
+              {
+                "id": "29",
+                "label": {
+                  "en": "29",
+                  "no": "29"
+                }
+              },
+              {
+                "id": "30",
+                "label": {
+                  "en": "30",
+                  "no": "30"
+                }
+              },
+              {
+                "id": "31",
+                "label": {
+                  "en": "31",
+                  "no": "31"
+                }
+              },
+              {
+                "id": "32",
+                "label": {
+                  "en": "32",
+                  "no": "32"
+                }
+              },
+              {
+                "id": "33",
+                "label": {
+                  "en": "33",
+                  "no": "33"
+                }
+              },
+              {
+                "id": "34",
+                "label": {
+                  "en": "34",
+                  "no": "34"
+                }
+              },
+              {
+                "id": "35",
+                "label": {
+                  "en": "35",
+                  "no": "35"
+                }
+              },
+              {
+                "id": "36",
+                "label": {
+                  "en": "36",
+                  "no": "36"
+                }
+              },
+              {
+                "id": "37",
+                "label": {
+                  "en": "37",
+                  "no": "37"
+                }
+              },
+              {
+                "id": "38",
+                "label": {
+                  "en": "38",
+                  "no": "38"
+                }
+              },
+              {
+                "id": "39",
+                "label": {
+                  "en": "39",
+                  "no": "39"
+                }
+              },
+              {
+                "id": "40",
+                "label": {
+                  "en": "40",
+                  "no": "40"
+                }
+              },
+              {
+                "id": "41",
+                "label": {
+                  "en": "41",
+                  "no": "41"
+                }
+              },
+              {
+                "id": "42",
+                "label": {
+                  "en": "42",
+                  "no": "42"
+                }
+              },
+              {
+                "id": "43",
+                "label": {
+                  "en": "43",
+                  "no": "43"
+                }
+              },
+              {
+                "id": "44",
+                "label": {
+                  "en": "44",
+                  "no": "44"
+                }
+              },
+              {
+                "id": "45",
+                "label": {
+                  "en": "45",
+                  "no": "45"
+                }
+              },
+              {
+                "id": "46",
+                "label": {
+                  "en": "46",
+                  "no": "46"
+                }
+              },
+              {
+                "id": "47",
+                "label": {
+                  "en": "47",
+                  "no": "47"
+                }
+              },
+              {
+                "id": "48",
+                "label": {
+                  "en": "48",
+                  "no": "48"
+                }
+              },
+              {
+                "id": "49",
+                "label": {
+                  "en": "49",
+                  "no": "49"
+                }
+              },
+              {
+                "id": "50",
+                "label": {
+                  "en": "50",
+                  "no": "50"
+                }
               }
             ]
           }
@@ -1235,7 +1920,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker|s1"
           },
           {
             "type": "dropdown",
@@ -1284,7 +1969,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker"
+            "filter": "driver_id=pultforsterker|s1|node|core"
           },
           {
             "type": "dropdown",
@@ -1382,7 +2067,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node|core",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1428,7 +2113,7 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=pultforsterker",
+            "filter": "driver_id=pultforsterker|s1|node",
             "title": {
               "en": "Device",
               "no": "Enhet"
@@ -1468,6 +2153,68 @@
                 "label": {
                   "en": "Low",
                   "no": "Lav"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ki_set_led",
+        "title": {
+          "en": "Set LED rings",
+          "no": "Sett LED-ringer"
+        },
+        "titleFormatted": {
+          "en": "Set LED brightness to [[level]] % and mode to [[mode]]",
+          "no": "Sett LED-lysstyrke til [[level]] % og modus til [[mode]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker|node"
+          },
+          {
+            "type": "range",
+            "name": "level",
+            "min": 0,
+            "max": 100,
+            "step": 5,
+            "label": "%",
+            "labelDecimals": 0,
+            "title": {
+              "en": "Brightness",
+              "no": "Lysstyrke"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "title": {
+              "en": "Mode",
+              "no": "Modus"
+            },
+            "values": [
+              {
+                "id": "press",
+                "title": {
+                  "en": "On press",
+                  "no": "Ved trykk"
+                }
+              },
+              {
+                "id": "always",
+                "title": {
+                  "en": "Always",
+                  "no": "Alltid"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "Off",
+                  "no": "Av"
                 }
               }
             ]

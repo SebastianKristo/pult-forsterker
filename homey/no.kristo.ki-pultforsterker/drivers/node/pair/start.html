@@ -1,0 +1,47 @@
+<!-- Skjold: velg automatisk søk (mDNS) eller skriv inn IP-adressen. Driveren validerer /api/status og produktet. -->
+<style>
+  .sk-wrap { padding: 4px 0; }
+  .sk-wrap p { margin: 0 0 16px; }
+  .sk-row { display: flex; gap: 8px; }
+  .sk-row .homey-form-group:first-child { flex: 1; }
+  .sk-row .homey-form-group:last-child { width: 96px; }
+  #sk-error { color: var(--homey-color-danger, #e5484d); min-height: 1.4em; margin: 8px 0; }
+</style>
+<div class="sk-wrap">
+  <p data-i18n="pair.intro"></p>
+  <button class="homey-button-primary-full" id="sk-search" data-i18n="pair.search"></button>
+  <h2 class="homey-title" style="margin-top:24px" data-i18n="pair.manual"></h2>
+  <form id="sk-form" class="homey-form" onsubmit="return false">
+    <div class="sk-row">
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="sk-host" data-i18n="pair.host"></label>
+        <input class="homey-form-input" id="sk-host" type="text" inputmode="decimal" placeholder="192.168.1.50" autocomplete="off" />
+      </div>
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="sk-port" data-i18n="pair.port"></label>
+        <input class="homey-form-input" id="sk-port" type="number" value="8765" min="1" max="65535" />
+      </div>
+    </div>
+    <div id="sk-error"></div>
+    <button class="homey-button-secondary-full" id="sk-add" type="submit" data-i18n="pair.add"></button>
+  </form>
+</div>
+<script type="application/javascript">
+  (function () {
+    var add = document.getElementById('sk-add');
+    var err = document.getElementById('sk-error');
+    document.getElementById('sk-search').addEventListener('click', function () { Homey.showView('list_devices'); });
+    document.getElementById('sk-form').addEventListener('submit', function () {
+      var host = document.getElementById('sk-host').value.trim();
+      var port = Number(document.getElementById('sk-port').value) || 8765;
+      err.textContent = '';
+      if (!host) { err.textContent = Homey.__('pair.no_host'); return; }
+      add.disabled = true; add.classList.add('is-loading');
+      Homey.emit('manual', { host: host, port: port })
+        .then(function (device) { return Homey.createDevice(device); })
+        .then(function () { Homey.done(); })
+        .catch(function (e) { err.textContent = (e && e.message) || String(e); })
+        .then(function () { add.disabled = false; add.classList.remove('is-loading'); });
+    });
+  })();
+</script>

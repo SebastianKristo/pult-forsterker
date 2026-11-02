@@ -15,6 +15,11 @@ SOURCE_LABELS = {
 FALLBACK_INPUTS = ["radio", "airplay", "bt", "aux", "aux2", "usb"]
 # Kort uten AUX/USB, hodetelefonjack, overtemperatur og USB-switch (Skjold Node).
 NODE_BOARDS = ("node",)
+# Produkter (status["product"]): Skjold S1 (hovedkortet), Skjold Node (knapper/potmeter/LED/OLED), Skjold Core (ren Pi).
+PRODUCT_MODELS = {"s1": "Skjold S1", "node": "Skjold Node", "core": "Skjold Core"}
+MANUFACTURER = "Skjold"
+LED_MODES = ["press", "always", "off"]   # settings["ledMode"]: ved trykk / alltid / av
+PRESETS_MAX = 50
 # Lysstyrke på skjermen (settings["bright"], indeks) – samme som innstillingsmenyen på Node.
 BRIGHT_OPTIONS = ["auto", "high", "medium", "low"]
 
@@ -31,8 +36,33 @@ def source_label(key: str) -> str:
     return SOURCE_LABELS.get(key, key.capitalize())
 
 
+def product(data: dict | None) -> str:
+    """s1 | node | core. Eldre daemoner uten "product": board=node → node, ellers s1."""
+    d = data or {}
+    p = d.get("product")
+    if p in PRODUCT_MODELS:
+        return p
+    return "node" if d.get("board") in NODE_BOARDS else "s1"
+
+
 def is_node(data: dict | None) -> bool:
-    return (data or {}).get("board") in NODE_BOARDS
+    """Node-kortfamilien (Skjold Node og Skjold Core): ingen AUX/USB, hodetelefoner, overtemperatur eller USB-switch."""
+    return product(data) in ("node", "core")
+
+
+def has_display(data: dict | None) -> bool:
+    return product(data) in ("s1", "node")
+
+
+def has_leds(data: dict | None) -> bool:
+    """LED-ringer med ledLevel/ledMode i innstillingene (Skjold Node)."""
+    return product(data) == "node"
+
+
+def setting(data: dict | None, key: str, default):
+    """status["settings"] har bare endrede nøkler – ellers standardverdien."""
+    v = ((data or {}).get("settings") or {}).get(key)
+    return default if v is None else v
 
 
 def all_known_sources(data: dict | None) -> list[str]:

@@ -6,13 +6,18 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, status_inputs
+from homeassistant.const import EntityCategory
+
+from .const import DOMAIN, has_leds, setting, status_inputs
 from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
-    add([KiAmpLoudnessLevel(c)] + [KiAmpSourceLevel(c, src) for src in level_sources(c.data)])
+    ents = [KiAmpLoudnessLevel(c)] + [KiAmpSourceLevel(c, src) for src in level_sources(c.data)]
+    if has_leds(c.data):   # LED-ringene på Skjold Node
+        ents.append(KiAmpLedLevel(c))
+    add(ents)
 
 
 LEVEL_SOURCES = ("airplay", "bt", "usb", "radio", "aux", "aux2", "spotify", "plex")
@@ -70,3 +75,32 @@ class KiAmpLoudnessLevel(KiAmpEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_loudness(level=int(value)))
+
+
+class KiAmpLedLevel(KiAmpEntity, NumberEntity):
+    """Lysstyrke på LED-ringene (settings["ledLevel"], 0–100 %)."""
+    _attr_translation_key = "led_level"
+    _attr_icon = "mdi:led-variant-on"
+    _attr_native_min_value = 0
+    _attr_native_max_value = 100
+    _attr_native_step = 5
+    _attr_native_unit_of_measurement = "%"
+    _attr_mode = NumberMode.SLIDER
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "led_level")
+
+    @property
+    def native_value(self) -> float | None:
+        v = setting(self.coordinator.data, "ledLevel", 100)
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    async def async_set_native_value(self, value: float) -> None:
+        res = await self.coordinator.api.set_settings({"ledLevel": int(round(value))})
+        if isinstance(res.get("settings"), dict):
+            self.coordinator.async_set_updated_data({**self.coordinator.data, "settings": res["settings"]})
+        await self.coordinator.async_request_refresh()
