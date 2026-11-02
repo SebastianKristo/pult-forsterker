@@ -1027,6 +1027,15 @@ def effective_name():
     return NAME_ENV
 
 
+def _airplay_conf_name():
+    try:
+        with open(SHAIRPORT_CONF) as fh:
+            m = re.search(r'^\s*name\s*=\s*"([^"]*)";', fh.read(), flags=re.M)
+        return m.group(1) if m else None
+    except Exception:
+        return None
+
+
 def apply_name(force_services=False):
     """Sett spillernavnet. Tjenestene (AirPlay, Spotify, Blåtann) endres/restartes bare når navnet faktisk endres
     (ved oppstart kun hvis det avviker fra det installasjonen satte, dvs. KI_AMP_NAME)."""
@@ -1034,6 +1043,8 @@ def apply_name(force_services=False):
     new = effective_name()
     old = _name_applied[0]
     NAME = new
+    if old is None and not force_services and _airplay_conf_name() not in (None, new):
+        force_services = True   # installasjonen satte et gammelt navn (f.eks. «Pultforsterker») i shairport-sync.conf
     if old == new or (old is None and new == NAME_ENV and not force_services):
         _name_applied[0] = new; return
     _name_applied[0] = new
@@ -2480,6 +2491,11 @@ def follow_source():
             if state["auto_input"] and cur != last and cur[1] and cur[0] in ("airplay", "bt", "radio") and state["power"] and state["input"] != cur[0]:
                 print("Auto-kilde:", cur[0], flush=True)
                 set_input(cur[0], announce=False)
+            # Uten miks: AirPlay/Blåtann og radio skal aldri spille samtidig (Node/Core har ingen nivåstyring per kilde
+            # som demper den andre) – stopp radioen når en trådløs kilde spiller.
+            if not state["mix"] and st.get("playing") and st.get("source") in ("airplay", "bt") and lyr.info.get("mode") == "play":
+                print("Stopper radio – %s spiller (miks er av)" % st.get("source"), flush=True)
+                lyr.cmd(["pause", "1"]); lyr.info = {**lyr.info, "mode": "pause"}
             last = cur
         except Exception as e:
             print("Auto-kilde:", e, flush=True)
