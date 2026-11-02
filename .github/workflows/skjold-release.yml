@@ -118,10 +118,15 @@ jobs:
         run: |
           X="$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"; echo "Bruker $X"
           sudo xcode-select -s "$X/Contents/Developer"; xcodebuild -version
+      - name: Lag Xcode-prosjekt for byggeserveren (XcodeGen – Skjold.xcodeproj er Xcode 27-format)
+        working-directory: skjold/ios
+        run: |
+          brew install xcodegen
+          xcodegen generate --spec ci-project.yml
       - name: Bygg .app uten signering
         working-directory: skjold/ios
         run: |
-          xcodebuild -project Skjold.xcodeproj -scheme Skjold -configuration Release -sdk iphoneos \
+          xcodebuild -project SkjoldCI.xcodeproj -scheme Skjold -configuration Release -sdk iphoneos \
             -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM=""
       - name: Pakk som IPA
         working-directory: skjold/ios

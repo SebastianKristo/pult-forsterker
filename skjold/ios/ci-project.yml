@@ -1,0 +1,38 @@
+# Prosjektbeskrivelse for byggeserveren (XcodeGen). Skjold.xcodeproj bruker Xcode 27s nye tekstformat, som
+# GitHubs Mac-maskiner (Xcode 26) ikke kan lese – release-workflowen lager derfor et vanlig SkjoldCI.xcodeproj
+# fra denne fila. Hold innstillingene i takt med Skjold.xcodeproj/project.xcproj.
+name: SkjoldCI
+options:
+  deploymentTarget: { iOS: "26.0" }
+targets:
+  Skjold:
+    type: application
+    scheme: {}
+    platform: iOS
+    sources:
+      - path: Skjold
+        excludes: [Info.plist]
+    settings:
+      base:
+        PRODUCT_NAME: Skjold
+        PRODUCT_BUNDLE_IDENTIFIER: com.sebastiankristojemtlandpersonalteam.Skjold
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Skjold/Info.plist
+        INFOPLIST_KEY_NSCameraUsageDescription: Skann QR-koden på forsterkeren.
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: Skjold finner forsterkere på nettverket ditt.
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIStatusBarStyle: UIStatusBarStyleDefault
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+        ENABLE_PREVIEWS: YES
+        CODE_SIGNING_ALLOWED: NO
