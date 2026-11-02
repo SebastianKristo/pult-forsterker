@@ -9,7 +9,7 @@ export interface Preset { n: number; title: string }
 export interface FullPreset { title: string; url: string; icon?: string }
 
 export interface Status {
-  power: boolean; input: InputId; volume: number; mute: boolean; bt_pairing: boolean;
+  power: boolean; input: InputId; volume: number; mute: boolean; bt_pairing: boolean; source_label?: string;
   loudness: boolean; loudness_level: number; voice: boolean; voice_profile: string; voice_profiles: Record<string, string>;
   presets: Preset[]; preset: number; auto_input: boolean; mix: boolean; usb_pc: number; usb_names: string[];
   headphones: boolean; hp_automute: boolean; overtemp: boolean; levels: Record<string, number>;
@@ -114,7 +114,7 @@ export const api = {
   playFav: (n: number) => post('/api/presets/' + n + '/play', {}),
   radioSearch: (q: string) => req<{ norway: Station[]; world: Station[]; offline?: boolean }>('/api/radio/search?q=' + encodeURIComponent(q), undefined, getBase(), 12000),
   radioBrowse: () => req<{ shelves: Shelf[]; offline?: boolean }>('/api/radio/browse', undefined, getBase(), 12000),
-  radioPlay: (b: { url: string; title: string; image?: string; genre?: string }) => post('/api/radio/play', b),
+  radioPlay: (b: { url: string; title: string; image?: string; genre?: string; track?: string; artist?: string; album?: string; duration?: number; source?: string }) => post('/api/radio/play', b),
   playPreset: (n: number) => post('/api/preset', { n }),
   savePreset: (n: number) => post('/api/preset', { n, save: true }),
   setPresets: (presets: (FullPreset | null)[]) => post<{ presets: (FullPreset | null)[]; active: number }>('/api/presets', { presets }),

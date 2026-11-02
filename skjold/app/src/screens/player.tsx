@@ -15,7 +15,7 @@ export function subLine(t: { sub: string; album?: string }): string { return [t.
 export function nowTitle(s: Status | null): { title: string; sub: string; album?: string } {
   if (!s) return { title: 'Ikke tilkoblet', sub: '' };
   if (!s.power) return { title: 'Standby', sub: 'Trykk på av/på for å slå på' };
-  const src = inputLabel(s.input);
+  const src = s.source_label || inputLabel(s.input);
   if (s.title) return { title: s.title, sub: s.artist || src, album: s.album || '' };
   if (s.input === 'radio' && s.station) return { title: s.station, sub: 'Radio' };
   if (s.input === 'bt' && s.bt_device) return { title: s.bt_device, sub: 'Blåtann' };
@@ -37,7 +37,7 @@ export function Art({ s, size = 'big' }: { s: Status | null; size?: 'big' | 'sma
           <span class="big" style={{ fontSize: '30px' }}>{t.title}</span>
         </>
       )}
-      {size === 'big' && s?.input === 'radio' && s.playing && <span class="live" style={{ position: 'absolute', top: '16px', right: '16px' }}>DIREKTE</span>}
+      {size === 'big' && s?.input === 'radio' && !s.source_label && s.playing && <span class="live" style={{ position: 'absolute', top: '16px', right: '16px' }}>DIREKTE</span>}
     </div>
   );
 }
@@ -79,7 +79,7 @@ export function InputChips({ s }: { s: Status | null }) {
   return (
     <div class="chips" data-testid="inputs">
       {list.map((id) => (
-        <Chip key={id} on={s?.input === id} onClick={() => act(() => api.input(id), { input: id })}>
+        <Chip key={id} on={s?.input === id && !(id === 'radio' && s?.source_label)} onClick={() => act(() => api.input(id), { input: id })}>
           <i style={{ width: '8px', height: '8px', borderRadius: '50%', background: SRC_COLOR[id] }} />
           {inputLabel(id)}
         </Chip>
