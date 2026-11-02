@@ -13,7 +13,9 @@ class LumaSSD1306:
         self.dev = ssd1306(i2c(port=int(sk.get("i2c_port", 1)), address=addr), width=int(sk.get("width", 128)),
                            height=int(sk.get("height", 32)), rotate=int(sk.get("rotate", 2)))
 
-        try: self.dev.command(0xD5, 0xF0)   # høyeste interne klokke → høyere oppdateringsfrekvens, mindre synlig flimring
+        # Samme registre som oppstartsskjermen (skjold_early.py), som ser riktig ut: standard klokke (0xD5 0x80 –
+        # 0xF0 ga flimring), lang forlading (0xD9 0xF1) og høy VCOMH (0xDB 0x40) → jevnt og sterkt lys.
+        try: self.dev.command(0xD5, 0x80); self.dev.command(0xD9, 0xF1); self.dev.command(0xDB, 0x40)
         except Exception: pass
         self.prev = None   # forrige sides bytes per side (8 rader) – bare endrede sider/kolonner sendes
 
