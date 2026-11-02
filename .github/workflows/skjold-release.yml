@@ -165,7 +165,11 @@ jobs:
   release:
     name: GitHub Release
     needs: [web, ios, flasher, manual]
-    if: startsWith(github.ref, 'refs/tags/')
+    # iOS-jobben får av og til ingen macOS-maskin hos GitHub og blir avbrutt – releasen publiseres likevel
+    # så lenge web/Android, Flasher og PDF gikk gjennom (IPA mangler da bare i den utgivelsen).
+    if: >-
+      always() && startsWith(github.ref, 'refs/tags/') &&
+      needs.web.result == 'success' && needs.flasher.result == 'success' && needs.manual.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
