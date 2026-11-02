@@ -1,7 +1,7 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.14.0",
-  "compatibility": ">=12.0.0",
+  "version": "2.15.0",
+  "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
     "local"
@@ -2227,5 +2227,65 @@
   "source": "https://github.com/SebastianKristo/pult-forsterker",
   "bugs": {
     "url": "https://github.com/SebastianKristo/pult-forsterker/issues"
+  },
+  "widgets": {
+    "nowplaying": {
+      "id": "nowplaying",
+      "name": {
+        "en": "Skjold – Now playing",
+        "no": "Skjold – Spiller nå"
+      },
+      "height": 180,
+      "transparent": true,
+      "settings": [
+        {
+          "id": "device",
+          "type": "autocomplete",
+          "title": {
+            "en": "Skjold device",
+            "no": "Skjold-enhet"
+          }
+        }
+      ],
+      "api": {
+        "getState": {
+          "method": "GET",
+          "path": "/state"
+        },
+        "action": {
+          "method": "POST",
+          "path": "/action"
+        }
+      }
+    },
+    "favorites": {
+      "id": "favorites",
+      "name": {
+        "en": "Skjold – Radio favourites",
+        "no": "Skjold – Radiofavoritter"
+      },
+      "height": 240,
+      "transparent": true,
+      "settings": [
+        {
+          "id": "device",
+          "type": "autocomplete",
+          "title": {
+            "en": "Skjold device",
+            "no": "Skjold-enhet"
+          }
+        }
+      ],
+      "api": {
+        "getState": {
+          "method": "GET",
+          "path": "/state"
+        },
+        "action": {
+          "method": "POST",
+          "path": "/action"
+        }
+      }
+    }
   }
 }

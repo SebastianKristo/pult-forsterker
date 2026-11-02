@@ -281,6 +281,51 @@ class SkjoldDevice extends Homey.Device {
   async savePreset(n) { await this.apply(await this.request('POST', '/preset', { n, save: true })); }
   presetList() { return (this._presets || []).filter((p) => p.title); }
 
+  /** Albumbildet som data-URL (for widgets: dashbordet kjører på https og kan ikke hente http-bilder fra Pi-en). */
+  async coverDataUrl() {
+    const st = this._last || {};
+    const key = st.cover || '';
+    if (!key) return '';
+    if (this._coverCache && this._coverCache.key === key) return this._coverCache.url;
+    const { host, port } = this.base();
+    const url = await new Promise((resolve) => {
+      http.get({ host, port, path: '/api/cover', timeout: 4000 }, (res) => {
+        if (res.statusCode !== 200) { res.resume(); return resolve(''); }
+        const chunks = []; res.on('data', (c) => chunks.push(c));
+        res.on('end', () => resolve(`data:${res.headers['content-type'] || 'image/jpeg'};base64,${Buffer.concat(chunks).toString('base64')}`));
+      }).on('error', () => resolve('')).on('timeout', function () { this.destroy(); resolve(''); });
+    });
+    this._coverCache = { key, url };
+    return url;
+  }
+
+  /** Det widgetene trenger, i én pakke. */
+  async widgetState() {
+    const st = this._last || {};
+    const rn = st.radio_now || {};
+    return {
+      name: this.getName(), product: this.product(st), online: this.getAvailable(),
+      power: !!st.power, playing: !!st.playing, input: st.input || '', inputLabel: SOURCE_LABELS[st.input] || st.input || '',
+      title: st.title || rn.name || st.station || '', artist: st.artist || rn.now || '', album: st.album || '',
+      volume: Number(st.volume || 0), mute: !!st.mute, cover: await this.coverDataUrl(), image: rn.image || '',
+      preset: st.preset || rn.n || 0, presets: this.presetList().map((p) => ({ n: p.n, title: p.title, genre: p.genre || '', image: p.image || p.icon || '' })),
+    };
+  }
+
+  /** Handling fra en widget. */
+  async widgetAction(a) {
+    switch (a && a.type) {
+      case 'toggle': return this.transport(this._last && this._last.playing ? 'pause' : 'play');
+      case 'next': return this.transport('next');
+      case 'prev': return this.transport('previous');
+      case 'volume': return this.setVolume(Math.max(0, Math.min(100, Math.round(Number(a.value) || 0))));
+      case 'mute': return this.setMute(!(this._last && this._last.mute));
+      case 'power': return this.togglePower();
+      case 'preset': return this.playPreset(Number(a.n));
+      default: throw new Error('Ukjent handling');
+    }
+  }
+
   /** LED-ringene (Skjold Node): lysstyrke 0–100 og/eller modus press|always|off. */
   async setLed(level, mode) {
     const patch = {}; if (level !== undefined) patch.ledLevel = level; if (mode !== undefined) patch.ledMode = mode;
