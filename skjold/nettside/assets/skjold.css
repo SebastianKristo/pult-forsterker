@@ -395,3 +395,12 @@ a.kort:hover,a.flis:hover{opacity:1;border-color:rgba(216,207,180,.35);transform
 .produkt .h{overflow-wrap:anywhere;hyphens:auto}
 /* Skjold Touch: lyse renders – ingen mørk vignett, avrundet som et fotokort */
 img[src*="-touch"]{-webkit-mask-image:none;mask-image:none;border-radius:22px}
+/* Bruksanvisning (PDF-visning) */
+.pdf{max-width:1180px;margin:0 auto;padding:0 16px 80px}
+.pdf-verktoy{position:sticky;top:60px;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;margin:0 0 18px;border-radius:16px;background:rgba(18,18,20,.85);backdrop-filter:blur(12px);border:1px solid #2a2a2e}
+.pdf-verktoy .mono{color:#8b8b86;font-size:12px;margin-right:auto}
+.pdf-verktoy button{height:36px;min-width:40px;padding:0 12px;border-radius:10px;border:1px solid #2e2e30;background:#161618;color:#f2f2ee;font-size:15px;cursor:pointer}
+.pdf-sider{display:flex;flex-direction:column;align-items:center;gap:18px}
+.pdf-side{width:100%;display:flex;justify-content:center}
+.pdf-side canvas{background:#fff;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.5);max-width:100%}
+.pdf-feil{color:#c9c9c4}

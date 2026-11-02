@@ -26,6 +26,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         if: env.HAR_TOKEN == 'true'
+      - name: Hent nyeste bruksanvisning (PDF) fra siste skjold-v*-utgivelse
+        if: env.HAR_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          URL=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/${{ github.repository }}/releases?per_page=30" | python3 -c '
+          import json,sys
+          def v(t):
+              try: return tuple(int(x) for x in t.split("skjold-v",1)[1].split("."))
+              except Exception: return (0,)
+          best=None
+          for r in json.load(sys.stdin):
+              if r.get("draft") or not str(r.get("tag_name","")).startswith("skjold-v"): continue
+              for a in r.get("assets",[]):
+                  if a["name"]=="Skjold_Byggeanvisning.pdf" and (best is None or v(r["tag_name"])>best[0]): best=(v(r["tag_name"]),a["browser_download_url"])
+          print(best[1] if best else "")')
+          if [ -n "$URL" ]; then curl -fsSL -o skjold/nettside/assets/pdf/Skjold_Byggeanvisning.pdf "$URL" && echo "PDF: $URL"; fi
       - name: Publiser
         if: env.HAR_TOKEN == 'true'
         uses: cloudflare/wrangler-action@v3
