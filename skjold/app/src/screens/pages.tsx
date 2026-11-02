@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, PRODUCT_HW, PRODUCT_LABEL, type InputId } from '../lib/api';
 import { act, deviceName, eqActiveSource, go, inputLabel, online, openFull, product, recent, setEqProfile, setSetting, settings, status } from '../lib/store';
 import { art, EQ, EQ_DESC, EQ_HZ, EQ_NAMES, fmt, type EqSource } from '../lib/settings';
-import { Chip, PRODUCT_ICON, Section, Slider, SrcCircle, Toggle } from '../components/ui';
-import { InputChips } from './player';
+import { Chip, PRODUCT_ICON, Slider, SrcCircle, Toggle } from '../components/ui';
 import { favs, favsLoaded, loadFavs, playFav } from '../lib/radio';
+import { ndConfigured } from '../lib/navidrome';
 
 /** Ikke-brytende mellomrom før enheter, som i designet (2 × 50 W). */
 export const nbHw = (s: string) => s.replace(/ (×|W\b|kHz|mm)/g, ' $1').replace(/(\d) ×/g, '$1 ×');
@@ -18,13 +18,7 @@ export function HomePage({ wide = false }: { wide?: boolean }) {
   useEffect(() => { if (!favsLoaded.value) void loadFavs(); }, []);
   if (wide) return <HomeWide />;
   const p = product.value;
-  const inputs = s?.inputs?.length ? s.inputs : ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
-  const services = SRC_ORDER.filter(([id]) => inputs.includes(id));
-  const pickSrc = (id: InputId) => {
-    if (id === 'radio') { go('radio'); return; }
-    void act(() => api.input(id), { input: id }); openFull();
-  };
-  const rc = recent.value.slice(0, 8);
+  void s;
   return (
     <>
       <div class="home-hdr">
@@ -40,6 +34,25 @@ export function HomePage({ wide = false }: { wide?: boolean }) {
         </div>
         <span class="bytt">Bytt</span>
       </button>
+      <HomeBody />
+    </>
+  );
+}
+
+/** Nylig spilt, Kilder (inkl. musikktjenester) og Radiofavoritter – felles for mobil og PC (designet tHome). */
+function HomeBody({ wide = false }: { wide?: boolean }) {
+  const s = status.value;
+  const inputs = s?.inputs?.length ? s.inputs : ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
+  const services = SRC_ORDER.filter(([id]) => inputs.includes(id));
+  const st0 = settings.value;
+  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : [])];
+  const pickSrc = (id: InputId) => {
+    if (id === 'radio') { go('radio'); return; }
+    void act(() => api.input(id), { input: id }); openFull();
+  };
+  const rc = recent.value.slice(0, wide ? 10 : 8);
+  return (
+    <div class={'col ' + (wide ? 'gap16 home-wide' : 'gap16')} style={wide ? undefined : { display: 'contents' }}>
       {rc.length > 0 && (
         <div class="col gap10">
           <span class="h2">Nylig spilt</span>
@@ -66,8 +79,14 @@ export function HomePage({ wide = false }: { wide?: boolean }) {
         <div class="hscroll" style={{ gap: '14px' }} data-testid="inputs">
           {services.map(([id, label]) => (
             <button key={id} class="svc" onClick={() => pickSrc(id)}>
-              <SrcCircle label={label} />
+              <SrcCircle label={label} size={wide ? 76 : 64} />
               <span>{id === 'aux' || id === 'aux2' ? inputLabel(id) : label}</span>
+            </button>
+          ))}
+          {libs.map(([id, label]) => (
+            <button key={id} class="svc" onClick={() => go('lib', id)}>
+              <SrcCircle label={label} size={wide ? 76 : 64} />
+              <span>{label}</span>
             </button>
           ))}
         </div>
@@ -88,33 +107,11 @@ export function HomePage({ wide = false }: { wide?: boolean }) {
           </div>
         ) : favsLoaded.value ? <button class="dashed" onClick={() => go('radio')}>Legg til radiokanal</button> : null}
       </div>
-    </>
-  );
-}
-
-function HomeWide() {
-  const s = status.value;
-  return (
-    <div class="col gap16">
-      <Section title="Kilder"><InputChips s={s} /></Section>
-      <Section title="Radiofavoritter" action={<button class="link" onClick={() => go('radio')}>Administrer</button>}>
-        {favs.value.length ? (
-          <div class="grid-fav">
-            {favs.value.map((f) => {
-              const a = art(f.title, f.image);
-              const on = s?.input === 'radio' && (s.radio_now?.n === f.n || s.station === f.title);
-              return (
-                <button key={f.n} class={'preset' + (on ? ' on' : '')} style={{ background: a.bg, color: a.ink }} onClick={() => playFav(f)}>
-                  <span class="n">{f.n}</span><span class="t">{a.logo ? '' : f.title}</span>
-                </button>
-              );
-            })}
-          </div>
-        ) : <button class="dashed" onClick={() => go('radio')}>Legg til radiokanal</button>}
-      </Section>
     </div>
   );
 }
+
+function HomeWide() { return <HomeBody wide />; }
 
 // ---------- Lyd (EQ) ----------
 function curve(eq: number[]): { line: string; area: string } {
