@@ -22,12 +22,40 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=SCAN_INTERVAL_S))
         self.api = api
         self.entry = entry
+        self.presets: list[dict] = []   # fylte favoritter fra /api/presets: [{n, title, genre, image…}]
+        self._presets_sig: object = None
 
     async def _async_update_data(self) -> dict:
         try:
-            return await self.api.status()
+            data = await self.api.status()
         except KiAmpError as err:
             raise UpdateFailed(err) from err
+        await self._refresh_presets(data)
+        return data
+
+    async def _refresh_presets(self, data: dict) -> None:
+        """Hent /api/presets bare når favorittlista i status har endret seg (status har bare n/title)."""
+        sig = tuple((p.get("n"), p.get("title")) for p in data.get("presets") or [] if isinstance(p, dict))
+        if sig == self._presets_sig:
+            return
+        try:
+            res = await self.api.presets()
+            items = res.get("items")
+            if not isinstance(items, list):
+                items = [p for p in res.get("presets") or [] if p]
+            self.presets = [p for p in items if isinstance(p, dict) and p.get("n") and p.get("title")]
+        except KiAmpError:
+            # eldre daemon uten /api/presets: bruk plassene i status
+            self.presets = [p for p in data.get("presets") or [] if isinstance(p, dict) and p.get("title")]
+        self._presets_sig = sig
+
+    def async_set_updated_data(self, data: dict) -> None:
+        if isinstance(data, dict) and "presets" in data:
+            sig = tuple((p.get("n"), p.get("title")) for p in data.get("presets") or [] if isinstance(p, dict))
+            if sig != self._presets_sig:   # favoritter endret (lagret) – hentes på nytt ved neste oppdatering
+                self.presets = [p for p in data.get("presets") or [] if isinstance(p, dict) and p.get("title")]
+                self._presets_sig = None
+        super().async_set_updated_data(data)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

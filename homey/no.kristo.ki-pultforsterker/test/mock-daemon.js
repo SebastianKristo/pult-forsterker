@@ -18,6 +18,12 @@ function createMockDaemon({ port = 0 } = {}) {
         res.writeHead(200, { 'Content-Type': 'image/png' }); return res.end(Buffer.from('89504e470d0a1a0a', 'hex'));
       }
       if (req.method === 'GET' && p === '/api/status') { /* bare status */ }
+      else if (req.method === 'GET' && p === '/api/presets') {
+        if (!state.presets_api) { res.writeHead(404); return res.end('{}'); }   // eldre daemon
+        const items = state.presets.filter((x) => x && x.title).map((x) => ({ ...x, url: `http://radio/${x.n}`, genre: '' }));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ presets: state.presets.map((x) => (x && x.title ? x : null)), items, count: items.length, max: 50, active: state.preset }));
+      }
       else if (p === '/api/power') state.power = !!body.on;
       else if (p === '/api/toggle') state.power = !state.power;
       else if (p === '/api/input') { if (!(state.inputs || ['airplay', 'bt', 'aux', 'usb']).includes(body.input)) return fail(res, 'ukjent kilde'); state.input = body.input; }

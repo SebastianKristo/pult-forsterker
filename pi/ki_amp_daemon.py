@@ -143,8 +143,8 @@ BOARD = os.environ.get("KI_AMP_BOARD", "modules")
 # Spillernavnet (AirPlay/Spotify/Blåtann/mDNS). Node: «Skjold Node» med mindre brukeren har satt et annet (malverdien
 # «Pultforsterker» i ki-amp.env regnes som ikke satt).
 NAME = os.environ.get("KI_AMP_NAME", "").strip()
-if not NAME or (BOARD == "node" and NAME == "Pultforsterker"):
-    NAME = ("Skjold Core" if os.environ.get("KI_AMP_NODE_GPIO", "1") == "0" else "Skjold Node") if BOARD == "node" else "Pultforsterker"
+if not NAME or NAME == "Pultforsterker":   # gammelt standardnavn i ki-amp.env
+    NAME = ("Skjold Core" if os.environ.get("KI_AMP_NODE_GPIO", "1") == "0" else "Skjold Node") if BOARD == "node" else ("Skjold S1" if BOARD == "main" else "Skjold")
 PIN_RELAY_AMP = 27      # modules: relé 3 (24 V til forsterker)   main: strømrelé + 5V_SW (høy = på)
 PIN_RELAY_AUX = 22      # modules: relé lav = DAC, høy = AUX       main: TPA3116 SDZ (høy = forsterker på)
 PIN_X9C_INC, PIN_X9C_UD, PIN_X9C_CS = 26, 14, 15   # modules (serial console må være av)

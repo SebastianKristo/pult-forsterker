@@ -4,7 +4,7 @@ const Homey = require('homey');
 
 class KiPultforsterkerApp extends Homey.App {
   async onInit() {
-    this.log('Pultforsterker-appen starter');
+    this.log('Skjold-appen starter (S1, Node, Core)');
 
     this.homey.flow.getConditionCard('ki_is_playing')
       .registerRunListener(async ({ device }) => device.getCapabilityValue('speaker_playing') === true);
@@ -36,6 +36,8 @@ class KiPultforsterkerApp extends Homey.App {
       .registerRunListener(async ({ device, action }) => device.reboot(action === 'poweroff'));
     this.homey.flow.getActionCard('ki_set_bright')
       .registerRunListener(async ({ device, bright }) => device.setBright(Number(bright)));
+    this.homey.flow.getActionCard('ki_set_led')
+      .registerRunListener(async ({ device, level, mode }) => device.setLed(Math.round(level), mode));
     this.homey.flow.getActionCard('ki_set_loudness')
       .registerRunListener(async ({ device, on, level }) => device.setLoudness(on === 'on', level));
   }

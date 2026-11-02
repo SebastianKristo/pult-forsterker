@@ -29,7 +29,7 @@ class KiAmpPairButton(KiAmpEntity, ButtonEntity):
 
 
 class KiAmpPresetButton(KiAmpEntity, ButtonEntity):
-    """Radiokanal 1–6 – navnet følger stasjonen som er lagret på plassen."""
+    """Radiofavoritt 1–6 («knappeplassene») – navnet følger stasjonen som er lagret på plassen. Alle 50 finnes i Radiokanal-selecten."""
     _attr_icon = "mdi:radio"
 
     def __init__(self, c, n: int) -> None:
