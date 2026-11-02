@@ -2897,7 +2897,9 @@ def play_url(url, title="", image="", genre=""):
         raise ValueError("url må være http(s)")
     if not state["power"]:
         set_power(True)
-    lyr.rpc(["playlist", "play", url, title or ""])
+    print(f"Spiller strøm via Lyrion: {title or '?'} ({url.split('?')[0]})", flush=True)
+    r = lyr.rpc(["playlist", "play", url, title or ""])
+    print("  Lyrion svarte:", r, flush=True)
     radio_tmp.clear(); radio_tmp.update(title=title or "", url=url, icon=image or "", genre=genre or "")
     lyr.info = {**lyr.info, "mode": "play", "station": title or "", "song": "", "artist": "", "url": url, "art": image or ""}
     n = next((k + 1 for k, p in enumerate(state["presets"]) if p and p.get("url") == url), 0)
@@ -3219,6 +3221,7 @@ async def h_radio_play(r):
         await asyncio.get_running_loop().run_in_executor(None, play_url, url, str(b.get("title") or ""),
                                                          str(b.get("image") or ""), str(b.get("genre") or ""))
     except Exception as e:
+        print("radio/play feilet:", repr(e), flush=True)
         return web.json_response({"error": str(e)}, status=409)
     return j()
 
