@@ -393,3 +393,5 @@ a.kort:hover,a.flis:hover{opacity:1;border-color:rgba(216,207,180,.35);transform
 @media (max-width:520px){.seksjon{padding:96px 18px}}
 .p-hero h1{font-size:clamp(40px,7.2vw,84px);overflow-wrap:anywhere;hyphens:auto}
 .produkt .h{overflow-wrap:anywhere;hyphens:auto}
+/* Skjold Touch: lyse renders – ingen mørk vignett, avrundet som et fotokort */
+img[src*="-touch"]{-webkit-mask-image:none;mask-image:none;border-radius:22px}
