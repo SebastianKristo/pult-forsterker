@@ -85,7 +85,7 @@ def room(devs):
 
 
 if __name__ == "__main__":
-    devs = {k: cutout(os.path.join(SRC, f"{k}.png")) for k in ("s1", "node", "core", "touch", "pultforsterker")}
+    devs = {k: cutout(os.path.join(SRC, f"{k}.png")) for k in ("s1", "node", "core", "pultforsterker")}   # touch: bilde fra designets render (touch_1_forfra_skra), ikke herfra
     for k, dev in devs.items():
         driver_image(dev, os.path.join(ROOT, "drivers", k, "assets", "images"))
     r = room((devs["s1"], devs["node"]))
