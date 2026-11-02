@@ -14,11 +14,17 @@ else
 import json, sys
 try: rels = json.load(sys.stdin)
 except Exception: sys.exit(0)
+def ver(t):   # skjold-v0.1.14 -> (0, 1, 14): høyeste versjon vinner, uansett rekkefølgen GitHub lister i
+    try: return tuple(int(x) for x in t.split("skjold-v", 1)[1].split("."))
+    except Exception: return (0,)
+best = None
 for r in rels:
     if r.get("draft") or r.get("prerelease") or not str(r.get("tag_name", "")).startswith("skjold-v"): continue
     for a in r.get("assets", []):
         n = a.get("name", "")
-        if n.startswith("skjold-web-") and n.endswith(".zip"): print(a["browser_download_url"]); sys.exit(0)
+        if n.startswith("skjold-web-") and n.endswith(".zip") and a.get("state", "uploaded") == "uploaded":
+            if best is None or ver(r["tag_name"]) > best[0]: best = (ver(r["tag_name"]), a["browser_download_url"])
+if best: print(best[1])
 ' 2>/dev/null || true)"
   if [ -n "$WEB_URL" ] && curl -fsSL --max-time 120 -o "$WEB_TMP/web.zip" "$WEB_URL" \
      && unzip -q -o "$WEB_TMP/web.zip" -d "$WEB_TMP/x" && rm -f "$WEB_TMP/web.zip"; then
