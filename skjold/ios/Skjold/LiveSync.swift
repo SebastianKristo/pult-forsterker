@@ -378,9 +378,10 @@ extension AppModel {
     // MARK: Settings (GET/POST /api/settings)
 
     static let boolKeys: Set<String> = Set(SK.cats.flatMap(\.items).filter { $0.kind == .bool }.map(\.k)).union(["updAuto", "setupDone"])
-    /// Service credentials stay on the phone (the daemon ignores unknown keys anyway).
-    static let localKeys: Set<String> = ["ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken"]
-    static let stringKeys = ["nAux1", "nAux2", "nUsb1", "nUsb2", "nameCustom"]
+    /// Innloggingene til musikktjenestene lagres nå på forsterkeren (/api/settings), så appen og web-UI-et deler dem.
+    static let localKeys: Set<String> = []
+    static let serviceKeys = ["ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken"]
+    static let stringKeys = ["nAux1", "nAux2", "nUsb1", "nUsb2", "nameCustom"] + serviceKeys
 
     func loadSettings(_ h: String) async {
         guard let d = await DeviceLink.shared.get("/api/settings", on: h), let s = DevSettings(d), h == settingsHost else { return }
@@ -389,8 +390,14 @@ extension AppModel {
         if n != sset { sset = n }
         if let f = s.ints["hold"] { fav = f }
         var nm = names
-        for k in Self.stringKeys { if let v = s.strings[k], !held("set-" + k) { nm[k] = v } }
+        var push: [String: Any] = [:]
+        for k in Self.stringKeys {
+            guard !held("set-" + k) else { continue }
+            if let v = s.strings[k], !(v.isEmpty && Self.serviceKeys.contains(k) && !(nm[k] ?? "").isEmpty) { nm[k] = v }
+            else if Self.serviceKeys.contains(k), let mine = nm[k], !mine.isEmpty { push[k] = mine }   // forsterkeren er tom: send det appen har
+        }
         if nm != names { names = nm }
+        if !push.isEmpty { let data = DeviceLink.json(push); Task { await DeviceLink.shared.sendRaw("/api/settings", data, on: h) } }
         var e = eqP
         for (src, p) in s.eq where !held("eq-" + src) { e[src] = EQProfile(preset: p.preset, eq: p.eq, loud: p.loud) }
         if e != eqP { eqP = e }
