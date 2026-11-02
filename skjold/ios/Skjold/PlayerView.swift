@@ -195,6 +195,9 @@ struct FullPlayerView: View {
         let rows: [QRow]
         if let lq = m.lq, m.libTrack != nil {
             rows = lq.enumerated().map { QRow(t: $0.element.t, s: $0.element.artist, cur: $0.offset == m.li, i: $0.offset) }
+        } else if m.live {
+            // the amplifier has no queue API: show what is playing now
+            rows = [QRow(t: m.np.t, s: m.np.s, cur: true, i: 0)]
         } else {
             rows = SK.tr.enumerated().map { QRow(t: $0.element.0, s: $0.element.1, cur: $0.offset == m.trk, i: $0.offset) }
         }
@@ -204,7 +207,7 @@ struct FullPlayerView: View {
                 VStack(spacing: 0) {
                     ForEach(rows, id: \.self) { r in
                         Button {
-                            if let lq = m.lq, m.libTrack != nil { m.playLib(lq, r.i, keepOpen: true) } else { m.trk = r.i; m.pos = 0 }
+                            if let lq = m.lq, m.libTrack != nil { m.playLib(lq, r.i, keepOpen: true) } else if !m.live { m.trk = r.i; m.pos = 0 }
                             m.queueOpen = false
                         } label: {
                             HStack(spacing: 10) {

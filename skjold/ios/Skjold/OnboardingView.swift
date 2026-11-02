@@ -3,7 +3,6 @@ import SwiftUI
 /// 02–08: OPPSETT · n AV 4 (find amplifier, QR, Wi-Fi, room, speaker test, software).
 struct OnboardingView: View {
     @Environment(AppModel.self) private var m
-    @State private var browser = DeviceBrowser()
 
     var body: some View {
         GeometryReader { g in
@@ -18,7 +17,7 @@ struct OnboardingView: View {
                     if m.scan { ScanStep() }
                     else {
                         switch m.ob {
-                        case 0: FindStep(browser: browser)
+                        case 0: FindStep(browser: m.browser)
                         case 1: WifiStep()
                         case 2: RoomStep()
                         case 3: TestStep()
@@ -36,8 +35,7 @@ struct OnboardingView: View {
             .scrollDismissesKeyboard(.interactively)
             .scrollBounceBehavior(.basedOnSize)
         }
-        .onAppear { browser.start() }
-        .onDisappear { browser.stop() }
+        .onAppear { m.browser.start() }
     }
 
     private var header: some View {
@@ -65,15 +63,16 @@ private struct FindStep: View {
     var body: some View {
         Group {
             if browser.devices.isEmpty {
-                deviceCard(name: "Skjold S1", meta: "SKJ-S1-0001 · Blåtann · ikke satt opp", icon: SK.dev("s1").icon, selected: true) { m.pickDevice("s1") }
-                deviceCard(name: "Skjold Node", meta: "Raspberry Pi 4 · bare utgang · ikke satt opp", icon: SK.dev("node").icon, selected: false) { m.pickDevice("node") }
+                // nothing on the network: the design's two cards, which continue in demo mode
+                deviceCard(name: "Skjold S1", meta: "Demo · ingen enhet funnet ennå", icon: SK.dev("s1").icon, selected: true) { m.pickDevice("s1") }
+                deviceCard(name: "Skjold Node", meta: "Demo · ingen enhet funnet ennå", icon: SK.dev("node").icon, selected: false) { m.pickDevice("node") }
             } else {
                 ForEach(Array(browser.devices.enumerated()), id: \.element.id) { i, d in
-                    let node = d.name.localizedCaseInsensitiveContains("node")
-                    deviceCard(name: node ? "Skjold Node" : "Skjold S1", meta: d.name + " · ikke satt opp",
-                               icon: SK.dev(node ? "node" : "s1").icon, selected: i == 0) {
-                        DeviceLink.shared.host = d.name.replacingOccurrences(of: " ", with: "-") + ".local"
-                        m.pickDevice(node ? "node" : "s1")
+                    let type = Self.type(d)
+                    let set = m.known.contains { $0.host == d.host }
+                    deviceCard(name: SK.dev(type).n, meta: d.name + " · " + (d.host.map { $0 + (set ? " · lagt til" : "") } ?? "kobler til …"),
+                               icon: SK.dev(type).icon, selected: i == 0) {
+                        if let h = d.host { m.pickFound(h, type: type) } else { Haptics.warning() }
                     }
                 }
             }
@@ -90,6 +89,13 @@ private struct FindStep: View {
                 m.startScan(simulated: !QRScannerView.isAvailable)
             }
         }
+    }
+
+    /// Model from the TXT record (product=s1|node|core), else guessed from the name.
+    static func type(_ d: FoundDevice) -> String {
+        if ["s1", "node", "core"].contains(d.product) { return d.product }
+        if d.name.localizedCaseInsensitiveContains("core") { return "core" }
+        return d.name.localizedCaseInsensitiveContains("node") ? "node" : "s1"
     }
 
     private func deviceCard(name: String, meta: String, icon: String, selected: Bool, action: @escaping () -> Void) -> some View {
@@ -120,7 +126,7 @@ private struct ScanStep: View {
         ZStack {
             RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(hex: 0x151517))
             if QRScannerView.isAvailable {
-                QRScannerView { _ in m.qrFound() }
+                QRScannerView { m.qrFound($0) }
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             VStack(spacing: 16) {
@@ -179,7 +185,7 @@ private struct WifiStep: View {
     var body: some View {
         @Bindable var m = m
         VStack(spacing: 0) {
-            ForEach(Array(AppModel.nets.enumerated()), id: \.offset) { i, ssid in
+            ForEach(Array(m.nets.enumerated()), id: \.offset) { i, ssid in
                 let on = !m.netManual && m.net == i
                 row(ssid, mark: on ? "✓" : "", bg: on ? .selBg : .clear, line: i > 0 ? .line : .clear, fg: .ink) {
                     m.net = i; m.netManual = false
@@ -206,6 +212,11 @@ private struct WifiStep: View {
         }
         if m.needPw {
             SKField(placeholder: "Passord", text: $m.pw, secure: true)
+        }
+        if m.wifiBusy { Text("Henter nettverk fra forsterkeren …").sora(12, .regular, .muted) }
+        if !m.obErr.isEmpty {
+            Text(m.obErr).sora(12, .regular, m.obErr.hasPrefix("Kobler") ? .muted : .danger, lineHeight: 1.45)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -302,6 +313,15 @@ private struct TestStep: View {
 private struct SoftwareStep: View {
     @Environment(AppModel.self) private var m
 
+    /// Installed version from the amplifier and the newest skjold-v* release on GitHub (installing is done on the device).
+    private var text: String {
+        guard m.live else { return m.obUpd >= 100 ? "1.4.2 installert" : "1.4.1 → 1.4.2 · \(m.obUpd) %" }
+        let cur = m.dev?.version ?? "–"
+        if m.obUpd < 100 || m.checking { return cur + " · ser etter oppdatering · \(min(m.obUpd, 99)) %" }
+        if let rel = m.upd.latest { return cur + " → " + GitHubReleases.version(rel.tag) + " · installeres fra forsterkeren" }
+        return cur + " installert"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             GeometryReader { g in
@@ -312,7 +332,7 @@ private struct SoftwareStep: View {
             }
             .frame(height: 6)
             .clipShape(RoundedRectangle(cornerRadius: 3))
-            Text(m.obUpd >= 100 ? "1.4.2 installert" : "1.4.1 → 1.4.2 · \(m.obUpd) %").mono(12)
+            Text(text).mono(12)
         }
     }
 }

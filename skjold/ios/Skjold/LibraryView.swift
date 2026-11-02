@@ -7,21 +7,56 @@ struct LibraryView: View {
     private var L: SK.Library { SK.lib[m.lib] ?? SK.lib["ytm"]! }
     /// Album-based personal libraries (Navidrome, Plex) vs. the YouTube Music mix layout.
     private var nd: Bool { m.lib == "nd" || m.lib == "plex" }
-    private var pls: [(String, [Track])] { L.pls.map { ($0.0, $0.1.map { SK.lt[$0] }) } }
 
-    private var albums: [(String, [Track])] {
-        var out: [(String, [Track])] = []
+    /// An album or playlist. Live collections load their tracks when opened or played (`src`).
+    private struct Coll {
+        var name: String
+        var tracks: [Track]
+        var count: Int
+        var artist: String
+        var src: LibColl? = nil
+    }
+
+    private var data: LibData { m.libs[m.lib] ?? LibData() }
+
+    private func coll(_ c: LibColl) -> Coll {
+        let t = data.tracks[c.id] ?? []
+        return Coll(name: c.name, tracks: t, count: t.isEmpty ? c.count : t.count, artist: c.artist, src: c)
+    }
+
+    private var pls: [Coll] {
+        guard m.demo else { return data.playlists.map(coll) }
+        return L.pls.map { p in let t = p.1.map { SK.lt[$0] }; return Coll(name: p.0, tracks: t, count: t.count, artist: t.first?.artist ?? "") }
+    }
+
+    private var albums: [Coll] {
+        guard m.demo else { return data.albums.map(coll) }
+        var out: [Coll] = []
         for k in L.pls.flatMap(\.1) {
             let a = SK.lt[k].album
-            if !out.contains(where: { $0.0 == a }) { out.append((a, SK.lt.filter { $0.album == a })) }
+            if !out.contains(where: { $0.name == a }) {
+                let t = SK.lt.filter { $0.album == a }
+                out.append(Coll(name: a, tracks: t, count: t.count, artist: t.first?.artist ?? ""))
+            }
         }
         return out
     }
 
     private var hist: [AppModel.HistEntry] { m.hist[m.lib] ?? m.defaultHist(m.lib) }
     private var cur: Track? { m.svc == m.lib && m.lq != nil && m.li < m.lq!.count ? m.lq![m.li] : nil }
-    private var plSrc: [(String, [Track])] { m.libTab == 0 && nd ? albums : pls }
-    private var open: (String, [Track])? { m.libPl.flatMap { $0 < plSrc.count ? plSrc[$0] : nil } }
+    private var plSrc: [Coll] { m.libTab == 0 && nd ? albums : pls }
+    private var open: Coll? { m.libPl.flatMap { $0 < plSrc.count ? plSrc[$0] : nil } }
+
+    /// Plays a collection, loading its tracks first when needed.
+    private func play(_ c: Coll, shuffle: Bool = false, queue: Bool = false) {
+        let go: ([Track]) -> Void = { t in
+            guard !t.isEmpty else { Haptics.warning(); return }
+            if queue { m.addQueue(t) } else { m.playLib(shuffle ? t.shuffled() : t, 0); if shuffle { m.shuffle = true } }
+        }
+        if !c.tracks.isEmpty || c.src == nil { go(c.tracks); return }
+        let lib = m.lib
+        Task { if let src = c.src { go(await m.collTracks(lib, src)) } }
+    }
 
     var body: some View {
         @Bindable var m = m
@@ -32,13 +67,33 @@ struct LibraryView: View {
         SKField(placeholder: "Søk etter sang, artist eller album", text: $m.lq2, height: 44, size: 15)
 
         let q = m.lq2.trimmingCharacters(in: .whitespaces).lowercased()
+        let state = data.state
         if !q.isEmpty {
-            let res = SK.lt.filter { ($0.t + " " + $0.artist + " " + $0.album).lowercased().contains(q) }
-            if res.isEmpty { Text("Ingen treff").sora(13, .regular, .muted) }
+            let res = m.demo ? SK.lt.filter { ($0.t + " " + $0.artist + " " + $0.album).lowercased().contains(q) } : (m.libRes ?? [])
+            if res.isEmpty { Text(m.live && m.libRes == nil ? "Søker …" : "Ingen treff").sora(13, .regular, .muted) }
             trackList(res, meta: nil)
+                .task(id: m.lib + "/" + q) {
+                    guard m.live else { return }
+                    m.libRes = nil
+                    try? await Task.sleep(for: .milliseconds(400))
+                    guard !Task.isCancelled else { return }
+                    let r = await m.searchLib(m.lib, q)
+                    if !Task.isCancelled { m.libRes = r }
+                }
+        } else if m.live && state != "ok" {
+            // not set up / not reachable / YouTube Music without backend: no sample data
+            Text(state == "busy" || state.isEmpty ? "Henter biblioteket …" : state)
+                .sora(13, .regular, .muted, lineHeight: 1.45).fixedSize(horizontal: false, vertical: true)
+                .task(id: m.lib) { await m.loadLib(m.lib) }
+            if state != "busy" && !state.isEmpty && m.lib != "ytm" {
+                SKLinkButton(title: "Prøv igjen") { Task { await m.loadLib(m.lib, force: true) } }
+            }
         } else if let open {
             playlistHeader(open)
-            trackList(open.1, meta: nil)
+                .task(id: (open.src?.id ?? open.name) + m.lib) {
+                    if let src = open.src, open.tracks.isEmpty { _ = await m.collTracks(m.lib, src) }
+                }
+            trackList(open.tracks, meta: nil)
         } else {
             SKSegmented(items: L.tabs, selected: m.libTab) { i in m.libTab = i; m.libPl = nil }
             switch m.libTab {
@@ -73,24 +128,24 @@ struct LibraryView: View {
         .skBox(.card, .line)
     }
 
-    private func playlistHeader(_ p: (String, [Track])) -> some View {
-        let a = art(p.0)
-        let total = p.1.reduce(0) { $0 + $1.dur }
+    private func playlistHeader(_ p: Coll) -> some View {
+        let a = art(p.name)
+        let total = p.tracks.reduce(0) { $0 + $1.dur }
         return HStack(alignment: .bottom, spacing: 14) {
             ZStack(alignment: .bottomLeading) {
                 ArtFill(a)
-                Text(p.0).sora(15, .semibold, a.ink, lineHeight: 1.05).padding(10)
+                Text(p.name).sora(15, .semibold, a.ink, lineHeight: 1.05).padding(10)
             }
             .frame(width: 120, height: 120)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(p.0).sora(19, .semibold, lineHeight: 1.15)
-                    Text("\(p.1.count) låter · \(total / 60) min").mono(10)
+                    Text(p.name).sora(19, .semibold, lineHeight: 1.15)
+                    Text("\(p.count) låter · \(total / 60) min").mono(10)
                 }
                 HStack(spacing: 8) {
-                    SKPill(title: "Spill", primary: true) { m.playLib(p.1, 0) }
-                    SKPill(title: "Tilfeldig", hPad: 14) { m.playLib(p.1.shuffled(), 0); m.shuffle = true }
+                    SKPill(title: "Spill", primary: true) { play(p) }
+                    SKPill(title: "Tilfeldig", hPad: 14) { play(p, shuffle: true) }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -102,10 +157,10 @@ struct LibraryView: View {
             ForEach(Array(pls.enumerated()), id: \.offset) { i, p in
                 Button { m.libPl = i } label: {
                     HStack(spacing: 12) {
-                        ArtFill(p.0).frame(width: 52, height: 52).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        ArtFill(p.name).frame(width: 52, height: 52).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(p.0).sora(15)
-                            Text("\(p.1.count) låter").sora(12, .regular, .muted)
+                            Text(p.name).sora(15)
+                            Text("\(p.count) låter").sora(12, .regular, .muted)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         SKIcon(d: Icons.chevronRight, size: 16, stroke: 2, color: .muted)
@@ -134,10 +189,10 @@ struct LibraryView: View {
     private struct Shelf { var kicker: String; var title: String; var tiles: [Tile] }
 
     @ViewBuilder private var discover: some View {
-        let feat: [(String, [Track])] = nd ? Array(albums.prefix(5)) : Array(pls.dropFirst()) + Array(pls.prefix(1))
+        let feat: [Coll] = nd ? Array(albums.prefix(5)) : Array(pls.dropFirst()) + Array(pls.prefix(1))
         let fi = m.libHero % max(1, feat.count)
-        let f = feat[fi]
-        heroCard(f, fi: fi, count: feat.count)
+        if fi < feat.count { heroCard(feat[fi], fi: fi, count: feat.count) }
+        else { Text("Biblioteket er tomt").sora(13, .regular, .muted) }
         if !nd {
             EdgeScroll(spacing: 8) {
                 ForEach(Array(SK.moods.enumerated()), id: \.offset) { j, n in
@@ -161,16 +216,16 @@ struct LibraryView: View {
         return seen.prefix(3).joined(separator: ", ")
     }
 
-    private func heroCard(_ f: (String, [Track]), fi: Int, count: Int) -> some View {
-        let a = art(f.0)
-        let chips = nd ? ["\(f.1.count) låter", "FLAC", "44,1 kHz"] : ["Miks", "\(f.1.count) låter", "AAC 256"]
+    private func heroCard(_ f: Coll, fi: Int, count: Int) -> some View {
+        let a = art(f.name)
+        let chips = nd ? ["\(f.count) låter", "FLAC", "44,1 kHz"] : ["Miks", "\(f.count) låter", "AAC 256"]
         let openF = { m.libPl = nd ? fi : (fi + 1) % pls.count }
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .bottom, spacing: 14) {
                 Button(action: openF) {
                     ZStack(alignment: .bottomLeading) {
                         ArtFill(a)
-                        Text(f.0).sora(13, .semibold, a.ink, lineHeight: 1.05).multilineTextAlignment(.leading).padding(10)
+                        Text(f.name).sora(13, .semibold, a.ink, lineHeight: 1.05).multilineTextAlignment(.leading).padding(10)
                     }
                     .frame(width: 112, height: 112)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -179,8 +234,8 @@ struct LibraryView: View {
                 .plain()
                 VStack(alignment: .leading, spacing: 6) {
                     Text(nd ? "NYLIG LAGT TIL" : "UTVALGT MIKS").mono(10, .accent2, em: 0.12)
-                    Text(f.0).sora(21, .semibold, lineHeight: 1.1)
-                    Text(nd ? (f.1.first?.artist ?? "") : artists(f.1)).sora(12, .regular, .ink2).lineLimit(1)
+                    Text(f.name).sora(21, .semibold, lineHeight: 1.1)
+                    Text(nd ? f.artist : artists(f.tracks)).sora(12, .regular, .ink2).lineLimit(1)
                     FlowLayout(spacing: 5) {
                         ForEach(chips, id: \.self) { c in
                             Text(c).mono(9, .ink).padding(.horizontal, 7).frame(height: 20)
@@ -191,8 +246,8 @@ struct LibraryView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             HStack(spacing: 8) {
-                SKPill(title: "Spill", primary: true, icon: Icons.play) { m.playLib(f.1, 0) }
-                SKPill(title: "Legg i kø", hPad: 14, border: .off, bg: Color.bg.opacity(0.4)) { m.addQueue(f.1) }
+                SKPill(title: "Spill", primary: true, icon: Icons.play) { play(f) }
+                SKPill(title: "Legg i kø", hPad: 14, border: .off, bg: Color.bg.opacity(0.4)) { play(f, queue: true) }
                 Spacer(minLength: 0)
                 HStack(spacing: 4) {
                     ForEach(0..<count, id: \.self) { j in
@@ -247,13 +302,19 @@ struct LibraryView: View {
         func tr(_ list: [Track]) -> [Tile] {
             list.enumerated().map { i, x in Tile(name: x.t, meta: x.artist, key: x.album, label: "") { m.playLib(list, i) } }
         }
-        let plT: ((String, [Track])) -> Tile = { p in
-            let idx = pls.firstIndex { $0.0 == p.0 } ?? 0
-            return Tile(name: p.0, meta: "\(p.1.count) låter · " + artists(p.1), key: p.0, label: p.0) { m.libPl = idx }
+        let plT: (Coll) -> Tile = { p in
+            let idx = pls.firstIndex { $0.name == p.name } ?? 0
+            return Tile(name: p.name, meta: "\(p.count) låter · " + artists(p.tracks), key: p.name, label: p.name) { m.libPl = idx }
         }
-        let alT: ((String, [Track])) -> Tile = { al in
-            let idx = albums.firstIndex { $0.0 == al.0 } ?? 0
-            return Tile(name: al.0, meta: al.1.first?.artist ?? "", key: al.0, label: "") { m.libPl = idx }
+        let alT: (Coll) -> Tile = { al in
+            let idx = albums.firstIndex { $0.name == al.name && $0.src?.id == al.src?.id } ?? 0
+            return Tile(name: al.name, meta: al.artist, key: al.name, label: "") { m.libTab = 0; m.libPl = idx }
+        }
+        if nd && m.live {
+            let d = data
+            return [Shelf(kicker: "", title: "Nylig lagt til", tiles: d.newest.map(coll).map(alT)),
+                    Shelf(kicker: "", title: "Oppdag", tiles: d.other.map(coll).map(alT)),
+                    Shelf(kicker: "FRA BIBLIOTEKET", title: "Mest spilt", tiles: d.frequent.map(coll).map(alT))].filter { !$0.tiles.isEmpty }
         }
         if nd {
             return [Shelf(kicker: "", title: "Nylig lagt til", tiles: albums.map(alT)),

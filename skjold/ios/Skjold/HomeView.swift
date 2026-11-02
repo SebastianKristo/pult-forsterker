@@ -12,7 +12,7 @@ struct HomeView: View {
             Spacer()
             Button { m.tab = 2 } label: {
                 HStack(spacing: 6) {
-                    Circle().fill(Color.ok).frame(width: 6, height: 6)
+                    Circle().fill(m.link == .offline ? Color.danger : m.live && m.link != .online ? Color.muted : Color.ok).frame(width: 6, height: 6)
                     Text(m.groupName).sora(12).lineLimit(1)
                 }
                 .padding(.horizontal, 12).frame(height: 32)
@@ -110,6 +110,7 @@ struct HomeView: View {
     private struct Recent { var title: String; var key: String; var big: String; var kind: String; var round: Bool; var pick: () -> Void }
 
     private var recent: [Recent] {
+        guard m.demo else { return liveRecent }
         var out: [Recent] = []
         for i in 0..<2 {
             let t = SK.tr[i]
@@ -123,22 +124,42 @@ struct HomeView: View {
         return out
     }
 
+    /// Live: the latest library tracks played from the app, then the first radio favourites.
+    private var liveRecent: [Recent] {
+        var out: [Recent] = []
+        let names = ["nd": "Navidrome", "plex": "Plex", "ytm": "YouTube Music"]
+        for (lib, h) in m.hist.sorted(by: { $0.key < $1.key }) {
+            for (i, e) in h.prefix(2).enumerated() {
+                let list = h.map(\.track)
+                out.append(Recent(title: e.track.t, key: e.track.album, big: e.track.artist, kind: (names[lib] ?? lib) + " · låt", round: false) {
+                    m.lib = lib; m.playLib(list, i)
+                })
+            }
+        }
+        for (i, st) in m.radio.prefix(max(2, 5 - out.count)).enumerated() {
+            out.append(Recent(title: st.name, key: st.name, big: st.name, kind: "Radio · kanal", round: true) { m.playStation(i) })
+        }
+        return out
+    }
+
     private var services: [(String, () -> Void)] {
         let node = m.actRoom.type == "node"
         var list: [(String, () -> Void)] = [
             ("Radio", { m.sub = "radio" }),
-            ("AirPlay", { m.input = 0; m.svc = nil; m.full = true }),
+            ("AirPlay", { m.pickInput(0); m.full = true }),
             ("Blåtann", node ? {
                 m.tab = 3; m.setDev = m.actRoom.id
                 m.setCat = SK.catsFor("node").firstIndex { $0.id == "tilkobling" } ?? -1
-            } : { m.input = 1; m.svc = nil; m.full = true }),
-            ("Spotify", { m.svc = "spotify"; m.input = 0; m.full = true }),
-            ("UPnP/DLNA", { m.svc = "upnp"; m.input = 0; m.full = true }),
+            } : { m.pickInput(1); m.full = true }),
+            ("Spotify", { m.pickService("spotify") }),
+            ("UPnP/DLNA", { m.pickService("upnp") }),
             ("YT Music", { m.openLib("ytm") }),
             ("Navidrome", { m.openLib("nd") }),
             ("Plex", { m.openLib("plex") }),
-            ("Lyrion", { if let u = URL(string: "http://192.168.1.42:9000/") { openURL(u) } }),
-            ("AUX", { m.input = 2; m.svc = nil; m.full = true })
+            ("Lyrion", {
+                if let u = m.lyrionURL ?? (m.demo ? URL(string: "http://192.168.1.42:9000/") : nil) { openURL(u) } else { Haptics.warning() }
+            }),
+            ("AUX", { m.pickInput(2); m.full = true })
         ]
         if node { list.removeAll { $0.0 == "AUX" } }
         return list

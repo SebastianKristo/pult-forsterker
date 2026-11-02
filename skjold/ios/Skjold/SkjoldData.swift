@@ -102,16 +102,17 @@ enum SK {
         SettingCategory(id: "tjenester", n: "Musikktjenester", sub: "Spotify, UPnP/DLNA, YouTube Music, Navidrome, Plex", items: [
             .bool("spEn", "Spotify Connect", "Vises som høyttaler i Spotify-appen"),
             .bool("upnpEn", "UPnP/DLNA-mottaker", "Vises som høyttaler i apper som BubbleUPnP, foobar2000, Plex og «Cast til enhet» i Windows"),
-            .info("Navn på nettverket", val: "Skjold · romnavn", "Samme navn som i AirPlay. Endres under Enhet."),
+            .info("Navn på nettverket", key: "netName", "Samme navn som i AirPlay. Endres under Enhet."),
             .bool("ytmEn", "YouTube Music", "Krever YouTube Music Premium. Gratiskontoer virker ikke."),
             .str("ytmUser", "Google-konto", "navn@gmail.com", "Gmail-adressen, eller den 21-sifrede ID-en for en merkekonto", long: true, max: 64),
             .str("ytmCookie", "Innloggings-cookie", "Lim inn Cookie-verdien", "Google tillater ikke vanlig innlogging for andre apper. Cookien må hentes på nytt når den utløper.", long: true, max: 8000, secret: true),
             SettingItem(kind: .steps(["Åpne music.youtube.com i et privat vindu (inkognito) på en datamaskin og logg inn.", "Åpne utviklerverktøyene og velg fanen Nettverk (Network).", "Skriv /browse i filterfeltet. Åpne en av spillelistene dine.", "Klikk på forespørselen som dukker opp. Under Request Headers kopierer du hele verdien til Cookie, uten mellomrom foran eller bak.", "Lukk det private vinduet med en gang, uten å logge ut. Lim inn verdien over."]), k: "ytmSteps", n: "Slik henter du cookien"),
-            .info("PO-token-tjeneste", val: "Innebygd · kjører", "Bekrefter overfor Google at avspillingen kommer fra en ekte YouTube-klient"),
+            .info("PO-token-tjeneste", key: "ytmPo", "Bekrefter overfor Google at avspillingen kommer fra en ekte YouTube-klient"),
             .act("Test innlogging", id: "ytmTest", label: "Test", safe: true),
             .bool("ndEn", "Navidrome", "Eget musikkbibliotek via Subsonic-API"),
             .str("ndUrl", "Navidrome-server", "http://192.168.1.10:4533", "Adressen til Navidrome-serveren på hjemmenettet"),
             .str("ndUser", "Brukernavn", "brukernavn"),
+            .str("ndPass", "Passord", "Navidrome-passord", "Lagres bare på telefonen", long: true, max: 128, secret: true),
             .act("Test Navidrome", id: "ndTest", label: "Test tilkobling", safe: true),
             .bool("plexEn", "Plex", "Spill musikk fra Plex Media Server"),
             .str("plexUrl", "Plex-server", "http://192.168.1.20:32400", "Adressen til Plex Media Server på hjemmenettet", long: true, max: 120),
@@ -127,8 +128,8 @@ enum SK {
             .opt("auto", "Auto-standby uten lyd", ["Av", "20 min", "60 min"]), .bool("wake", "Slå på ved signal", "AirPlay eller Blåtann vekker forsterkeren")]),
         SettingCategory(id: "oppdatering", n: "Oppdatering", sub: "GitHub, backup og gjenoppretting", items: [SettingItem(kind: .update, k: "update", n: "Oppdatering")]),
         SettingCategory(id: "system", n: "System", sub: "Om, oppsett og tilbakestilling", items: [
-            .info("Programvare", val: "1.4.2"), .info("IP-adresse", val: "192.168.1.42"),
-            .info("Lyrion", key: "lyrion"), .info("Serienummer", val: "SKJ-S1-0001"),
+            .info("Programvare", key: "version"), .info("IP-adresse", key: "ip"),
+            .info("Lyrion", key: "lyrion"), .info("Serienummer", key: "serial"),
             .act("Kjør oppsett på nytt", id: "setup", label: "Start oppsett"),
             .act("Fabrikkinnstillinger", id: "reset", label: "Tilbakestill")])
     ]
@@ -198,7 +199,7 @@ enum SK {
         Release(tag: "v1.6.0-beta.1", name: "Skjold 1.6.0 beta 1", date: "2026-10-30", notes: ["Multirom med Lyrion-synk", "Ny radiomeny på skjermen"], size: "19,1 MB", pre: true)
     ]
 
-    static let updDefault = UpdateState(version: "1.4.2", repo: "skjold-audio/skjold-s1", channel: 0, auto: true, failNext: false, latest: nil, checkedAt: "", log: [], backups: [
+    static let updDefault = UpdateState(version: "1.4.2", repo: GitHubReleases.repo, channel: 0, auto: true, failNext: false, latest: nil, checkedAt: "", log: [], backups: [
         Backup(id: "b3", ver: "1.4.2", date: "2026-10-28 03:12", kind: "Automatisk før oppdatering"),
         Backup(id: "b2", ver: "1.4.1", date: "2026-10-02 03:08", kind: "Automatisk før oppdatering"),
         Backup(id: "b1", ver: "1.4.0", date: "2026-09-14 19:40", kind: "Manuell")
@@ -241,6 +242,7 @@ struct Station: Codable, Hashable, Sendable {
     var name: String
     var genre: String
     var url: String? = nil
+    var image: String? = nil
 }
 
 struct Track: Hashable, Sendable {
@@ -248,6 +250,10 @@ struct Track: Hashable, Sendable {
     var artist: String
     var album: String
     var dur: Int
+    /// Live libraries: service id, cover URL and a stream URL the amplifier can play. Empty for demo tracks.
+    var id: String = ""
+    var cover: String = ""
+    var stream: String = ""
 }
 
 struct Room: Codable, Hashable, Sendable, Identifiable {
@@ -259,6 +265,10 @@ struct Room: Codable, Hashable, Sendable, Identifiable {
     var group: String? = nil
     var np: [String]? = nil
     var role: Int? = nil
+    /// Skjold daemon ("ip:port") when the room is a Skjold device, nil for a plain Lyrion player.
+    var host: String? = nil
+    /// Lyrion playerid (Squeezelite MAC) used for sync and per-room volume.
+    var pid: String? = nil
 }
 
 struct SystemState: Codable, Sendable {

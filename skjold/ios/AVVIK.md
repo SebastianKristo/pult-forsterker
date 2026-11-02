@@ -1,23 +1,32 @@
 # Avvik mot designet
 
-Status 2026-11-02. Appen bygger uten feil eller advarsler (Any iOS Simulator Device). Simulatoren for iOS 27.2 er ikke installert på maskinen, så skjermbildene i `skjermer/` er **ikke** sammenlignet med kjørende app ennå. Listen under er kjente avvik fra koden.
+Status 2026-11-02. Utseendet er det samme som før; endringene under er logikk og noen få tekster/rader som trengs for ekte data. Etter at koblingene til daemonen ble lagt inn er appen **ikke bygget i Xcode ennå** (bare syntakssjekket). Skjermbildene i `design/skjermer/` er heller ikke sammenlignet med kjørende app.
 
 ## Mangler fra designpakken
 | Hva | Hvorfor | Midlertidig løsning |
 |---|---|---|
 | `renders/cut/01–04-*.png` (velkomst-hero) | Ikke med i zip-filen | S1-renderen er klippet ut av `01-velkomst.png` (`hero-s1`). Node-bildene vises som strektegning. Legg ekte renders inn som `hero-01-s1`, `hero-03-s1`, `hero-02-node`, `hero-04-node` i Assets, så brukes de automatisk. |
 | `logo/brands/navidrome.png`, `lyrion_fav.png` | Ikke med i zip-filen | Bokstavmerke. Legg inn `brand-navidrome` / `brand-lyrion` i Assets. |
-| `README.md`, punkt 3 (REST/WebSocket-API) | Ikke med i zip-filen | `DeviceLink` sender `POST http://<navn>.local/api/<type>` med samme meldinger som designets BroadcastChannel. Endepunktene må rettes når API-et er kjent. |
+| `README.md`, punkt 3 (REST/WebSocket-API) | Ikke med i zip-filen | Erstattet av det ekte API-et i `pi/ki_amp_daemon.py` (REST + SSE på port 8765). Se «Koblinger» i `CLAUDE.md`. |
 | Logo for NRK Alltid Nyheter | Ikke på static.nrk.no | Hentes via Radio Browser, ellers fargeforløp. |
 
 ## Bevisste avvik
-- Fant vi ingen enheter med Bonjour, vises designets to demo-kort (S1 og Node) på «Finn forsterker».
-- QR-skanning bruker kamera der det finnes. I simulatoren går den videre etter 2,2 s, slik designet gjør.
-- Spilleposisjonen går fremover mens det spilles. I designet står den stille på 0:45.
+- Demokortene (S1 og Node) i «Finn forsterker» vises bare når ingen enhet er funnet, og meta-teksten er «Demo · ingen enhet funnet ennå». Funne enheter viser navn og `ip:port`.
+- Wi-Fi settes via forsterkerens nettverk (`/api/wifi`), ikke kryptert over Blåtann som designet beskriver. Steg 2 har en ekstra statuslinje («Henter nettverk …», feilmelding).
+- Innstillinger → Musikktjenester har en ny rad «Passord» for Navidrome (Subsonic krever det).
+- Info-radene (Programvare, IP, Serienummer, Lyrion, Parede enheter, Navn på nettverket) viser ekte verdier eller «Frakoblet»/«Ikke funnet». «PO-token-tjeneste» viser «Ikke tilgjengelig».
+- Rom-pillen på Hjem har rød prikk når forsterkeren er frakoblet, grå mens appen kobler til.
+- Bibliotek som ikke er satt opp (eller YouTube Music, som ikke har backend) viser en forklarende tekst i stedet for hyller. «Mest spilt» i Navidrome/Plex er album, ikke låter.
+- «Nylig spilt» på Hjem viser bibliotekhistorikk og radiofavoritter (designets AirPlay-/Blåtann-låter finnes ikke uten demomodus).
+- Køen viser bare det som spiller når kilden ikke er et bibliotek. Spoling og tilfeldig/gjenta er lokale.
+- Installering/backup/gjenoppretting fra Oppdatering gir en melding om at forsterkeren ikke støtter det ennå (simuleringen finnes bare i demomodus).
+- QR-skanning bruker kamera der det finnes. Inneholder koden en adresse, kobler appen seg dit. I simulatoren går den videre etter 2,2 s, slik designet gjør.
+- Spilleposisjonen går fremover mens det spilles, og rettes av status fra forsterkeren.
 - Oppsettet huskes. Etter første fullføring starter appen rett i hovedappen (introen vises fortsatt).
 - «7 favoritter» brytes på to linjer i skjermbilde 19. Det ser ut som en layoutfeil i designet, så her står teksten på én linje.
 - Statuslinjen og hjemindikatoren er systemets egne, ikke designets attrapper.
 
 ## Gjenstår
-1. Installer iOS 27.2-simulatoren (Xcode → Settings → Components). Ta skjermbilde av alle 20 skjermene på iPhone 15 Pro, sammenlign mot `skjermer/` og legg inn avvikene her.
-2. Kontroller linjehøyder: Sora har en annen naturlig linjehøyde enn CSS `line-height`. Bare ekstra linjeavstand er lagt til, ingen negativ.
+1. Bygg i Xcode og rett eventuelle kompileringsfeil (se «Må testes i Xcode» i `CLAUDE.md`).
+2. Installer iOS 27.2-simulatoren (Xcode → Settings → Components). Ta skjermbilde av alle 20 skjermene på iPhone 15 Pro, sammenlign mot `skjermer/` og legg inn avvikene her.
+3. Kontroller linjehøyder: Sora har en annen naturlig linjehøyde enn CSS `line-height`. Bare ekstra linjeavstand er lagt til, ingen negativ.

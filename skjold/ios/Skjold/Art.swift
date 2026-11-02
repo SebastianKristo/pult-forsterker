@@ -29,7 +29,7 @@ func art(_ key: String) -> ArtInfo {
     if let asset = SK.nrkAsset[key] {
         info.logoAsset = asset
         info.ink = .clear
-    } else if let url = LogoStore.shared.url(for: key) {
+    } else if let url = CoverStore.shared.url(for: key) ?? LogoStore.shared.url(for: key) {
         info.logoURL = url
         info.ink = .clear
     }
@@ -66,6 +66,21 @@ struct ArtFill: View {
     }
 }
 
+/// Real cover art by key (track title, album or playlist name, station). Filled from the amplifier status (cover_url),
+/// Lyrion, Navidrome and Plex. In memory only: the URLs carry tokens and change with the cover hash.
+@Observable
+final class CoverStore {
+    static let shared = CoverStore()
+    private(set) var urls: [String: URL] = [:]
+
+    func url(for key: String) -> URL? { key.isEmpty ? nil : urls[key] }
+
+    func set(_ key: String, _ url: String) {
+        guard !key.isEmpty, !url.isEmpty, let u = URL(string: url), urls[key] != u else { return }
+        urls[key] = u
+    }
+}
+
 /// Fetches station logos from Radio Browser (same source as the design) and caches the URLs.
 @Observable
 final class LogoStore {
@@ -95,6 +110,12 @@ final class LogoStore {
                 if let found { store(name, found) }
             }
         }
+    }
+
+    /// Station image from the amplifier's favourites (only when no logo is known yet).
+    func adopt(_ name: String, _ url: String) {
+        guard !url.isEmpty, url.lowercased().hasPrefix("https"), SK.nrkAsset[name] == nil, (urls[name] ?? "").isEmpty else { return }
+        store(name, url)
     }
 
     private func store(_ name: String, _ url: String) {

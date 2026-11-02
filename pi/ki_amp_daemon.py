@@ -53,6 +53,8 @@ API:
                                           id: popular_no, pop, news, classical, jazz, rock, local
          st = {"id"(stationuuid),"name","genre","url"(url_resolved),"image"(favicon),"country"(kode),"codec","bitrate"}
   POST /api/radio/play {"url","title","image"?,"genre"?}   spill en kanal som ikke er favoritt (via Lyrion)
+  Status: "lyrion": bool (tilkoblet), "lyrion_server": "host:port" for Lyrion JSON-RPC ("" når ikke funnet) – brukes av iOS-appen
+          (skjold/ios) til rom/synk og Lyrion-knappen i Kilder. "lyrion_player": Squeezelite-spillerens MAC/playerid i Lyrion.
   Status: "presets" = [{n,title}…] (alle plasser), "presets_count" (antall fylte), "presets_max" (50),
           "radio_now": {"name","genre","now","image","url","n"(favoritt-nr, 0 = ikke favoritt),"playing"} | null
   KI_AMP_RADIOBROWSER=<base-URL> overstyrer Radio Browser-speilene (test).
@@ -1186,7 +1188,8 @@ def read_status():
               "duration": plex["duration"], "position": plex["position"], "bt_device": st.get("bt_device", "")}
     extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", "")} for i, p in enumerate(state["presets"])],
              "presets_count": sum(1 for p in state["presets"] if p), "presets_max": PRESETS_MAX, "radio_now": radio_now(),
-             "station": lyr.info.get("station", ""), "lyrion": lyr.connected}
+             "station": lyr.info.get("station", ""), "lyrion": lyr.connected,
+             "lyrion_server": f"{lyr.host}:{lyr.port}" if lyr.host else "", "lyrion_player": lyr.player}
     playing, paused = bool(st.get("playing")), bool(st.get("paused"))
     if _transport_hint["until"] > time.time() and _transport_hint["src"] == st.get("source", ""):
         if playing == _transport_hint["playing"]:
@@ -1198,7 +1201,7 @@ def read_status():
     return {**state, **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"],
-            "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"],
+            "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"], "lyrion_server": extra["lyrion_server"], "lyrion_player": extra["lyrion_player"],
             "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD,
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
