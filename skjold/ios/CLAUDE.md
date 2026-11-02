@@ -2,7 +2,7 @@
 
 Fjernkontroll-app for Skjold-lydsystemet: forsterkeren **Skjold S1** (Pi Zero 2 W, OLED, knapper), **Skjold Node** (Raspberry Pi med bare lydutgang) og **Skjold Core** (Lyrion-server). Rom synkroniseres av **Lyrion Music Server**.
 
-**Status:** Hele brukergrensesnittet og app-logikken er ferdig og testet i simulatoren. Alle 20 skjermene fra designet finnes, pluss ekstra funksjoner (se lenger ned). **Det som mangler er koblingen til ekte data.** I dag kommer innholdet fra eksempeldata, og kommandoene sendes til et gjettet API. Jobben videre er å fylle inn de koblingene. Selve utseendet skal ikke endres.
+**Status:** Hele brukergrensesnittet er ferdig. Appen er nå koblet til den ekte Skjold-daemonen (`pi/ki_amp_daemon.py`, port 8765), Lyrion, Navidrome, Plex og GitHub Releases. Eksempeldataene brukes bare i **demomodus**, det vil si når appen aldri har funnet eller valgt en Skjold-enhet. Selve utseendet skal ikke endres. **Koblingene er skrevet uten Swift-kompilator (bare syntakssjekket), så første bygg i Xcode må sjekkes.**
 
 ---
 
@@ -13,8 +13,9 @@ Fjernkontroll-app for Skjold-lydsystemet: forsterkeren **Skjold S1** (Pi Zero 2 
 - Mappen `Skjold/` er synkronisert med målet, så nye `.swift`-filer der kommer automatisk med i bygget.
 - Swift 5-modus med `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`. Rene hjelpetyper uten UI er derfor merket `nonisolated` (for eksempel `SVGPathParser`, `RadioBrowser` og `PlexAPI`).
 - Signering: personlig team `23A28PYU2U`, bundle-id `com.sebastiankristojemtlandpersonalteam.Skjold`.
-- Info.plist: fontene ligger under `UIAppFonts`. I tillegg er `NSBonjourServices` satt til `_skjold._tcp`, `NSLocalNetworkUsageDescription` og `NSCameraUsageDescription` er fylt ut, og ATS har `NSAllowsLocalNetworking = true`.
-- Bygget gir verken feil eller advarsler, både for simulator og for «Any iOS Device».
+- Info.plist: fontene ligger under `UIAppFonts`. I tillegg er `NSBonjourServices` satt til `_kipultamp._tcp` (det daemonen annonserer) og `_skjold._tcp`, `NSLocalNetworkUsageDescription` og `NSCameraUsageDescription` er fylt ut, og ATS har `NSAllowsLocalNetworking = true`.
+- Prosjektfilen er `Skjold.xcodeproj/project.xcproj`: Xcode 27s nye tekstformat (JSON-aktig, `"last-upgrade": "27.0"`), ikke en gammel `project.pbxproj`. Ikke gi den nytt navn.
+- Før koblingene ble lagt inn ga bygget verken feil eller advarsler. Etter dem er det ikke bygget ennå (se «Må testes i Xcode»).
 
 ## Designkilde
 
@@ -50,7 +51,9 @@ MyApp → ContentView (rot: bakgrunn, intro, velkomst/oppsett/app)
 | `ContentView.swift` | `ContentView` (rot), `AppShell` (faner: glass og klassisk), `NowPlayingAccessory` (minispilleren i glassmodus). |
 | `AppModel.swift` | All tilstand og alle handlinger. Lagrer i UserDefaults via `Store`. Her ligger `post(...)`, se «Koblinger». |
 | `SkjoldData.swift` | `SK` med statiske data: innstillingskategorier (`SettingCategory`/`SettingItem`/`SettingKind`), standardverdier (`SK.def`), EQ-presets og -kilder, radiokatalog, enhetstyper, demosystem (`SK.sysDefault`), utgivelser, **demobibliotek** (`SK.tr`, `SK.lt`, `SK.lib`). Inneholder også verdityper: `Station`, `Track`, `Room`, `SystemState`, `EQProfile`, `UpdateState` m.m. |
-| `Services.swift` | `RadioBrowser` (ekte søk, logoer og strømtest), `PlexAPI.test` (ekte), `DeviceBrowser` (ekte Bonjour med `NWBrowser`), `DeviceLink` (**gjettet** REST, se under). |
+| `Services.swift` | `RadioBrowser` (søk, logoer, strømtest, `streamURL(for:)`), `PlexAPI.test`, `DeviceBrowser` (Bonjour `_kipultamp._tcp` + `_skjold._tcp` med TXT og oppløsning til `ip:port`), `Net` (HTTP), `DevStatus`/`DevSettings`/`DevPreset` (tolking av daemon-JSON), `DeviceEvents` (SSE), `DeviceLink` (REST mot daemonen). |
+| `Backend.swift` | `Lyrion` (JSON-RPC), `Subsonic` (Navidrome), `PlexLib` (Plex-bibliotek), `GitHubReleases` (`skjold-v*`). Alt er `nonisolated` og gir tilbake `Sendable`-verdier (`LibItem`, `LibColl`, `Lyrion.Player` …). |
+| `LiveSync.swift` | `extension AppModel`: tilkobling, SSE/polling, status → modell med hold-vindu, kommandoer, rom fra enheter + Lyrion, Lyrion-synk, bibliotekene, innstillinger, oppdatering. `KnownDevice`, `LibData`. |
 | `Art.swift` | `art(key)`: cover- og logo-oppslag. Gir NRK-SVG fra Assets, Radio Browser-favicon via `LogoStore`, eller et oklch-fargeforløp. Visningen er `ArtFill`. |
 | `Theme.swift` | Farger (`Color.bg`, `.accent` …), `Font.sora`/`Font.plexMono`, modifikatorene `.sora()`, `.mono()`, `.skBorder()`, `.skBox()` og `.topLine()`, `PlainPress`-knappestil (med haptikk), OKLCH og `CSSLinearGradient`. |
 | `SVGShape.swift` | SVG-sti-parser (alle kommandoer, også buer) og `SKIcon`. `Icons.*` er ikonene fra designet. |
@@ -72,87 +75,65 @@ MyApp → ContentView (rot: bakgrunn, intro, velkomst/oppsett/app)
 
 ## Hva er ekte og hva er demo
 
-**Ekte (fungerer nå):**
-- Radio Browser-søk (`RadioBrowser.search`), logo-henting (`RadioBrowser.logo` / `LogoStore`) og strømtest (`RadioBrowser.testStream`, med AVPlayer).
-- Bonjour-søk etter `_skjold._tcp` (`DeviceBrowser`). Funne enheter vises i oppsett steg 1, og velger du en, settes `DeviceLink.shared.host`.
-- Plex-tilkoblingstest (`PlexAPI.test`, `GET {server}/library/sections?X-Plex-Token=`).
-- Kameraskanning av QR-kode.
-- Lagring av all lokal tilstand: radiofavoritter, EQ-profiler, innstillinger, navn, system og oppdatering.
-- Hele UI-logikken: grupper, roller, EQ-profiler per kilde, favoritt-rekkefølge, haptikk og så videre.
+**Demomodus** = `known` (lagrede Skjold-enheter, `skjold-known`) er tom. Da brukes designets eksempeldata (`SK.sysDefault`, `SK.tr`, `SK.lt`, `SK.lib`, simulert oppdatering) og ingenting sendes. Så snart Bonjour finner og løser opp en enhet mens appen er i hovedvisningen, kobler appen seg til og forlater demomodus. I «Finn forsterker» står demokortene bare når ingenting er funnet, og de er merket «Demo».
 
-**Demo, som må erstattes med ekte data:**
-- **Rom og spillere:** `SK.sysDefault` (Stue, Kjøkken, Kontor, Hjemmekino), lagret i `sys`.
-- **Hva som spiller:** `AppModel.np` bygges fra `SK.tr` (tre faste låter), `SK.nowPlayingMap` (radio) eller biblioteket. Spilleposisjonen telles lokalt i `start()`.
-- **Bibliotekene** (YouTube Music, Navidrome, Plex): `SK.lt` og `SK.lib`. Det er de samme 12 demolåtene for alle tre.
-- **Cover:** `art()` lager fargeforløp. Ekte omslag må komme fra Lyrion, tjenestene eller AirPlay-metadata.
-- **Oppdatering:** `SK.releases` og `runJob` i `AppModel` simulerer GitHub-utgivelser, backup og gjenoppretting.
-- **Oppsett:** Wi-Fi-listen (`AppModel.nets`) er fast, og programvaresteget teller bare til 100 %.
-- **Innstillinger:** Info-felter som «Parede enheter», «Lyrion: Tilkoblet», IP og serienummer er faste verdier i `SettingsView.info()` og i `SK.cats`.
-- **Når ingen enhet finnes:** «Finn forsterker» viser demokortene S1 og Node.
-- **Lyrion i Kilder** åpner den faste adressen `http://192.168.1.42:9000/`.
+**Ekte (koblet):**
+- **Enhet:** `DeviceLink` mot daemonen. Status leses fra `GET /api/events` (SSE, `URLSession.bytes`), med `GET /api/status` hvert 2. s som reserve. Tilstanden (`link`: tilkobler/tilkoblet/frakoblet) vises i rom-pillen på Hjem, i hva som spiller («Frakoblet»), i romkortene og i Innstillinger → System/Tilkobling.
+- **Hva som spiller:** tittel, artist, album, cover (`cover_url` → `CoverStore` → `art()`), spiller/pause, posisjon/varighet, volum, inngang, hodetelefoner, `radio_now`, AirPlay-/Blåtann-enhet. Brukerens siste endring holdes en stund (`hold()`, som i `skjold/app/src/lib/store.ts`), og volum sendes med maks én forespørsel i lufta.
+- **Rom:** `sys.rooms` bygges av lagrede/funne Skjold-enheter (hver med egen status, polles hvert 4. s) og Lyrion-spillere uten egen daemon. Grupper leses fra Lyrion (`sync_master`/`sync_slaves`) og endres med `sync`. Volum per rom går til daemonen eller til Lyrion (`mixer volume`). Et rom som bare er en Lyrion-spiller styres over JSON-RPC.
+- **Radiofavoritter:** hentes fra `GET /api/presets`, lagres med `POST /api/presets {"presets":[…]}` (katalogkanaler uten URL slås opp på Radio Browser først), spilles med `POST /api/presets/{n}/play`. Andre kanaler: `POST /api/radio/play`.
+- **Innstillinger og EQ:** `GET/POST /api/settings` (samme nøkler som `skjold_settings.js`, bools som `true/false`, EQ som `{"eq":{src:{preset,eq,loud}}}`). Leses ved tilkobling, ved bytte av enhet og hvert ~30. s.
+- **Bibliotekene:** Navidrome (Subsonic: `getAlbumList2` newest/random/frequent, `getPlaylists`, `getAlbum`/`getPlaylist`, `search3`, `getCoverArt`, `stream`) og Plex (`/library/sections`, `…/all?type=9`, `/playlists`, `…/children`, `…/items`, `…/search?type=10`, thumbs via `/photo/:/transcode`). «Spill» sender strøm-URL-en til forsterkeren (`POST /api/radio/play`), som spiller den via Lyrion. Køen ligger i appen: når strømmen er ferdig, sendes neste låt.
+- **Oppsett:** ekte enheter i steg 1 (modell fra TXT `product`), QR med adresse, Wi-Fi-liste og tilkobling (`GET/POST /api/wifi`), romnavn (`nameCustom`), høyttalertest (`POST /api/test`), programvaresteget viser installert versjon og nyeste utgivelse, `setupDone` settes til slutt.
+- **Oppdatering:** GitHub Releases i `SebastianKristo/pult-forsterker`, bare tagger `skjold-v*` (betaer på Beta-kanalen). Installert versjon = `version` fra daemonen.
+- **Lyrion i Kilder** åpner `lyrion_server` fra daemonens status.
+- Fra før: Radio Browser, logoer, strømtest, Plex-test, QR-kamera, lokal lagring.
 
----
+**Fortsatt lokalt, og hvorfor:**
+- **YouTube Music:** ingen tjeneste på forsterkeren eller i appen. Biblioteket viser «ikke koblet til», og «Test innlogging» sier «Ikke støttet ennå». Ingen falske data utenom demomodus.
+- **UPnP/DLNA:** ingen backend, knappen bytter bare visning.
+- **Installering, backup og gjenoppretting** av programvare: daemonen har ikke endepunkter for det. Appen sier fra og viser lenken til utgivelsen. «Demo: la neste oppdatering feile» virker bare i demomodus.
+- **Uten endepunkt i daemonen:** `setup`-stegene (ingen visning på skjermen), `previewClock`, `updSync`, `forget` (POST `/api/bt` med `forget` ville startet paring), `reset` (`/api/reset` finnes ikke).
+- **Surround-roller og «Samme musikk»/«Surround»-modus:** bare i appen. Lyrion synker grupper, men har ingen roller.
+- **Kø, tilfeldig, gjenta og spoling:** i appen. Daemonen har ingen kø eller seek. Køfanen viser bare det som spiller når kilden ikke er et bibliotek.
+- **Lyrion-oppdagelse:** via daemonens `lyrion_server`. UDP 3483-broadcast fra iOS krever multicast-entitlement og er ikke laget.
+- **Wi-Fi over Blåtann** (designets plan) er ikke laget. Wi-Fi settes via daemonens `/api/wifi`, altså bare når forsterkeren allerede er på nettet.
+- **Passord og token** for Navidrome (`ndPass`, nytt felt) og Plex ligger i `names` i UserDefaults, ikke i nøkkelringen, og sendes ikke til forsterkeren.
 
-## Koblinger som må fylles inn
+## Koblinger (meldingene fra designet → daemonen)
 
-### 1. Transport: `DeviceLink` (`Services.swift`)
+Alle handlinger går fortsatt gjennom `AppModel`. I demomodus sendes ingenting. I live-modus:
 
-I dag sender `DeviceLink.post(_:)` `POST http://<host>/api/<type>` med meldingen som JSON-kropp. Svar leses ikke. Alle handlinger i `AppModel` går gjennom `post([...])`. Meldingene er de samme som designfilen sendte på sin `BroadcastChannel`:
-
-| Melding | Når |
+| Melding / handling | Endepunkt |
 |---|---|
-| `setup {step, name, upd?}` | Steg i oppsettet (0, 1, 2, 3, 4, 6, 7, 8). |
-| `setupTest {ch: "L"\|"R"}` | Høyttalertest i oppsettet. |
-| `pause`, `next` | Spill/pause og neste låt. «Forrige» sender i dag ingenting. |
-| `vol {v}` | Volum på aktivt rom. |
-| `wl {v: "air"\|"bt"}` | Bytte til trådløs inngang. |
-| `input {i}` | Bytte til fysisk inngang (1 = AUX, 2 = Radio, 3 = USB). |
-| `src {v}` | Bytte radiokanal (indeks i favoritter). |
-| `play {svc, t}` / `play {name, url}` | Spill fra bibliotek eller vilkårlig radiostrøm. |
-| `presets {list}`, `radioSync` | Radiofavoritter endret. |
-| `set {k, v}` | Innstilling endret (nøklene i `SK.cats` / `SK.def`, også `hold`). |
-| `eqSync {src}` | EQ-profil endret. Profilen ligger i `eqP[src]`. |
-| `sysSync` | Rom, grupper, roller eller volum endret (`sys`). |
-| `btPair {room}` | Gjør Node eller Core synlig for Blåtann. |
-| `previewClock` | Vis standby-klokke på forsterkeren. |
-| `updSync {version}` | Etter oppdatering eller gjenoppretting. |
-| Øvrige `act`-id-er | Sendes som `{type: id}`: `testSpk`, `testOut`, `forget`, `testVoice`, `ndTest`, `reset`. |
+| `togglePlay` (`pause`) | `POST /api/transport {"action":"play"\|"pause"}` (Lyrion-rom: `pause 0/1`) |
+| `next` / `prev` | `POST /api/transport {"action":"next"\|"previous"}` (bibliotek: neste strøm fra appens kø) |
+| `vol {v}` | `POST /api/volume {"volume":v}` (andre rom: deres egen daemon, eller Lyrion `mixer volume`) |
+| `wl {v}` / `input {i}` | `POST /api/input {"input":"airplay\|bt\|aux\|radio\|usb"}`; Spotify i Kilder: `{"input":"spotify"}` hvis enheten har det |
+| `src {v}` | `POST /api/presets/{n}/play` |
+| `play {name,url}` / `play {svc,t}` | `POST /api/radio/play {"url","title","image"?,"genre"?}` |
+| `presets` / `radioSync` | `POST /api/presets {"presets":[{title,url,genre,icon}…]}`, deretter `GET /api/presets` |
+| `set {k,v}` | `POST /api/settings {k:v}` (tjenestenøkler som `ndUrl`, `plexToken`, `ytmCookie` holdes lokalt; `name` nullstiller `nameCustom`) |
+| `eqSync {src}` | `POST /api/settings {"eq":{src:{preset,eq,loud}}}` |
+| `sysSync` | Lyrion `sync <pid>` / `sync -`, volum per rom |
+| `btPair` | `POST /api/bt {"pairing":true}` |
+| `setupTest`, `testSpk`, `testOut` | `POST /api/test {"channel":"L"\|"R"}` |
+| `testVoice` | `POST /api/voice {"say":"bt_pairing"}` |
+| `ndTest` | Subsonic `ping` (i appen) |
+| `setup` steg 2 / 7 | `POST /api/wifi`, `POST /api/settings {"nameCustom"}` / `{"setupDone":true}` |
+| `previewClock`, `updSync`, `forget`, `reset`, øvrige `setup`-steg | ingen endepunkt, lokalt |
 
-**Hva som trengs:**
-- **Ekte API-beskrivelse:** README fra Skjold-prosjektet, eller kilden til webgrensesnittet. Uten den må endepunktene leses ut av enhetens egen kode.
-- **Lesing tilbake:** en `GET`/WebSocket for status, i designet `{type:'state', ...}` med `hp`, `btDev`, `err`, `set` og mer. Tilstanden skal oppdatere `AppModel`, for eksempel `headphones`, `sset`, hva som spiller og volum.
-- **Feilhåndtering:** frakoblet-tilstand i UI. Systemkortet viser i dag alltid «Tilkoblet».
+**Lagt til i daemonen for appen:** `lyrion_server` (`host:port`) og `lyrion_player` (Squeezelite-MAC) i `/api/status` (dokumentert i docstringen).
 
-### 2. Lyrion Music Server (anbefalt for rom, avspilling og synk)
+## Må testes i Xcode
 
-Lyrion har et dokumentert JSON-RPC-API: `POST http://<server>:9000/jsonrpc.js` med `{"id":1,"method":"slim.request","params":[<playerid>, [<cmd>...]]}`. Det kan dekke:
-
-- **Rom:** `players 0 100` gir spillerne, som skal fylle `sys.rooms`. Map `name`, `playerid` og modell til `type`.
-- **Hva som spiller:** `status - 1 tags:aAlKdc` gir tittel, artist, album, varighet, tid, cover-URL (`/music/<coverid>/cover.jpg`) og volum. Fyll `np`, `position`, `duration` og `playing`, og bytt ut den lokale telleren i `start()`.
-- **Kontroll:** `pause`, `playlist index +1` / `-1` og `mixer volume <n>`.
-- **Synk:** `sync <playerid>` og `sync -`. Map til `toggledInGroup`, `groupedAll` og «Bare …».
-- **Radio:** `playlist play <url> <title>`.
-- **Kilder:** Lyrion-knappen i Kilder skal bruke den konfigurerte serveradressen i stedet for den faste.
-- **Serveradresse:** legg inn et innstillingsfelt for adressen, eller finn serveren automatisk (Lyrion svarer på UDP 3483-discovery).
-
-### 3. Bibliotekene (`LibraryView` / `SK.lib`)
-
-- **Plex:** innstillingene `plexUrl`/`plexToken` ligger i `m.names`. Bruk `/library/sections` → `/library/sections/{id}/all?type=9` (album), `/playlists`, `/status/sessions` og `/library/metadata/{id}/children`. Cover hentes fra `{server}{thumb}?X-Plex-Token=`.
-- **Navidrome:** Subsonic-API med `ndUrl`/`ndUser` (passord og token mangler i innstillingene). Bruk `getAlbumList2`, `getPlaylists` og `search3`.
-- **YouTube Music:** cookie og konto ligger i `ytmUser`/`ytmCookie`. Ifølge designet skjer avspillingen på forsterkeren. Appen trenger bare å vise listene, enten via enhetens API eller via ytmusicapi.
-- **Avspilling:** «Spill» i biblioteket skal sende til Lyrion eller enheten, ikke bare oppdatere `lq`/`li` lokalt.
-
-### 4. Oppsett av ny enhet (`OnboardingView`)
-
-- Steg 1: `DeviceBrowser` finner `_skjold._tcp`. Hent detaljer fra TXT-posten eller enhetens API (modell, serienummer, «ikke satt opp»).
-- Wi-Fi-overføringen skal ifølge designet gå **kryptert over Blåtann** («Godta på forsterkeren med volumknappen»). Det krever CoreBluetooth og en GATT-tjeneste på enheten. Ingenting av dette er laget.
-- Ekte Wi-Fi-liste, romnavn, høyttalertest og programvareoppdatering må gå mot enheten.
-
-### 5. Oppdatering (`UpdateSettingsView` / `AppModel.checkUpdate` …)
-
-Bytt ut simuleringen med GitHub Releases (`https://api.github.com/repos/skjold-audio/skjold-s1/releases`). Selve installasjon og backup må utføres av enheten.
-
----
+1. Bygg. Koden er bare syntakssjekket (tree-sitter-swift), ikke typesjekket. Se særlig `LiveSync.swift`, `Backend.swift`, `Services.swift` og `LibraryView.swift`, og samtidighetsvarsler (`nonisolated`, `Sendable`, `Task`-fangster).
+2. Bonjour: at `_kipultamp._tcp` dukker opp i «Finn forsterker», at modellen kommer fra TXT og at adressen løses opp (IPv4).
+3. SSE: at status kommer straks ved endring (volumknapp på forsterkeren), og at appen faller tilbake til polling og viser «Frakoblet» når enheten slås av.
+4. Volum- og spill/pause-glidere hopper ikke tilbake (hold-vinduet).
+5. Rom med to enheter og Lyrion: gruppering (hake), volum per rom, bytte aktivt rom.
+6. Navidrome/Plex: lister, cover, avspilling via forsterkeren, neste låt når strømmen er ferdig.
+7. Oppdatering: «Se etter oppdatering» mot GitHub.
 
 ## Designregler (ikke bryt dem)
 
@@ -168,15 +149,12 @@ Bytt ut simuleringen med GitHub Releases (`https://api.github.com/repos/skjold-a
 - Når fanelinjen er minimert i glassmodus, kommer den bare tilbake når du ruller helt til toppen. Det er systemets oppførsel.
 - Produktbildene i velkomstkarusellen: S1-bildet er klippet ut av et skjermbilde (`hero-s1`), og Node vises som strektegning. Legg ekte bilder inn som `hero-01-s1`, `hero-03-s1`, `hero-02-node` og `hero-04-node` i Assets, så brukes de automatisk.
 - Navidrome- og Lyrion-logoene er bokstavmerker. Legg inn `brand-navidrome` og `brand-lyrion` i Assets.
-- `DeviceBrowser` viser enhetsnavnet, men gjetter modellen ut fra navnet.
-- `AVVIK.md` er utdatert og bør oppdateres.
+- `DeviceBrowser` gjetter modellen ut fra navnet bare når TXT-posten mangler `product`.
 
-## Forslag til rekkefølge
+## Forslag til videre arbeid
 
-1. Lag `LyrionClient` (JSON-RPC) i `Services.swift`, med serveradresse i innstillingene og autodiscovery.
-2. La `AppModel` hente spillere inn i `sys.rooms`, og polle `status` (eller bruke Comet/CLI) for `np`, posisjon, volum og cover.
-3. Koble handlingene (`togglePlay`, `next`, `prev`, `setVol`, gruppefunksjonene, `playRadio`, `playLib`) til Lyrion. Behold `post(...)` for Skjold-spesifikke ting: innganger, EQ og innstillinger.
-4. Ekte cover i `art()` / `ArtFill`, med URL fra Lyrion eller Plex.
-5. Plex og Navidrome som ekte biblioteker.
-6. Skjolds eget API når README-en finnes: innstillinger, EQ, innganger, oppsett og oppdatering.
-7. Bestem om demodataene skal fjernes eller bli en tydelig merket demomodus.
+1. Endepunkter i daemonen for oppdatering/backup, `forget`, `reset` og visning av oppsettsteg på skjermen.
+2. YouTube Music-tjeneste (for eksempel ytmusicapi på forsterkeren) og UPnP.
+3. Kø og seek i daemonen (eller via Lyrion `playlist add`), så køen ikke må ligge i appen.
+4. Nøkkelring for Navidrome-passord og Plex-token.
+5. Manuell IP-adresse i «Finn forsterker» (`m.connect("192.168.1.5")` finnes allerede).

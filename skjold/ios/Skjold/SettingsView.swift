@@ -264,25 +264,24 @@ struct SettingItemsCard: View {
             return m.names[k] ?? defaults[k] ?? ""
         }, set: { v in
             if k == "ytmCookie" { m.ytmT = nil }
-            if k == "plexUrl" || k == "plexToken" { m.plexT = nil }
+            if k == "plexUrl" || k == "plexToken" { m.plexT = nil; m.libs["plex"] = nil }
+            if k == "ndUrl" || k == "ndUser" || k == "ndPass" { m.ndT = nil; m.libs["nd"] = nil }
             m.saveName(k, String(v.prefix(max)))
         })
     }
 
-    private func info(_ key: String?) -> String {
-        switch key {
-        case "btDev": return "Sebastians iPhone, MacBook Pro"
-        case "lyrion": return "Tilkoblet"
-        default: return ""
-        }
-    }
+    private func info(_ key: String?) -> String { m.infoText(key) }
 
     private func actLabel(_ id: String, _ label: String, _ confirm: Bool, _ now: Date) -> (String, Color) {
         if id == "ytmTest", m.ytmT != nil {
             let c = (m.names["ytmCookie"] ?? "").trimmingCharacters(in: .whitespaces)
             if c.isEmpty { return ("Lim inn cookien først", .danger) }
             if !c.contains("__Secure-3PAPISID") { return ("Mangler __Secure-3PAPISID · hent på nytt", .danger) }
-            return ("Innlogget · Premium", .ok)
+            // no YouTube Music service on the amplifier yet, so the cookie cannot be checked
+            return m.demo ? ("Innlogget · Premium", .ok) : ("Ikke støttet ennå", .danger)
+        }
+        if id == "ndTest", let t = m.ndT {
+            return t == "busy" ? ("Tester …", .ink2) : (t, m.ndOK ? .ok : .danger)
         }
         if id == "plexTest", let t = m.plexT {
             return t == "busy" ? ("Tester …", .ink2) : (t, m.plexOK ? .ok : .danger)

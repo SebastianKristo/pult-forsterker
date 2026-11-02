@@ -78,7 +78,9 @@ final class AppModel {
     var setCat = -1
     var openK = ""
     var confirm = ""
-    var setDev = "stue"
+    var setDev = "stue" {
+        didSet { if live, oldValue != setDev, let h = settingsHost { Task { [weak self] in await self?.loadSettings(h) } } }
+    }
     var sset: [String: Int] { didSet { Store.save(sset, "skjold-set") } }
     var names: [String: String] { didSet { Store.save(names, "skjold-names") } }
     var ytmT: Date? = nil
@@ -101,14 +103,45 @@ final class AppModel {
     var updMsg = ""
     var restoreConf = ""
 
-    @ObservationIgnored private var tasks: [String: Task<Void, Never>] = [:]
+    // MARK: Live system (see LiveSync.swift)
+    var known: [KnownDevice] { didSet { Store.save(known, "skjold-known") } }
+    var activeHost: String? {
+        didSet { UserDefaults.standard.set(activeHost, forKey: "skjold-host"); DeviceLink.shared.host = activeHost }
+    }
+    var link: Link = .none
+    var dev: DevStatus? = nil
+    var devStats: [String: DevStatus] = [:]
+    var lyrionServer: String? = nil
+    var lyPlayers: [Lyrion.Player] = []
+    var lyStats: [String: Lyrion.PStatus] = [:]
+    var presetNs: [Int] = []
+    var wifiNets: [String] = []
+    var wifiBusy = false
+    var obErr = ""
+    var ndT: String? = nil
+    var ndOK = false
+    var libs: [String: LibData] = [:]
+    var libRes: [Track]? = nil
+    let browser = DeviceBrowser()
+    @ObservationIgnored var holds: [String: Date] = [:]
+    @ObservationIgnored var volWant: Int? = nil
+    @ObservationIgnored var volBusy = false
+    @ObservationIgnored var libStream: String? = nil
+    @ObservationIgnored var libSawPlaying = false
+    @ObservationIgnored var presetSig = ""
+
+    @ObservationIgnored var tasks: [String: Task<Void, Never>] = [:]
 
     init() {
         radio = Store.load("skjold-radio") ?? SK.defaultRadio
         sset = Store.load("skjold-set") ?? SK.def
         names = Store.load("skjold-names") ?? [:]
         sys = Store.load("skjold-sys") ?? SK.sysDefault
-        upd = Store.load("skjold-upd") ?? SK.updDefault
+        var u: UpdateState = Store.load("skjold-upd") ?? SK.updDefault
+        if u.repo != GitHubReleases.repo { u.repo = GitHubReleases.repo; u.latest = nil }
+        upd = u
+        known = Store.load("skjold-known") ?? []
+        activeHost = UserDefaults.standard.string(forKey: "skjold-host")
         var eq: [String: EQProfile] = Store.load("skjold-eq") ?? [:]
         if eq["air"] == nil {
             for (k, _) in SK.eqSources {
@@ -119,6 +152,7 @@ final class AppModel {
         eqP = eq
         mode = UserDefaults.standard.bool(forKey: "skjold-setup-done") ? .app : .onboard
         if mode == .app { welcome = false }
+        DeviceLink.shared.host = activeHost
     }
 
     // MARK: - Lifecycle
@@ -140,10 +174,12 @@ final class AppModel {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 guard let self, self.playing, self.hasProgress else { continue }
-                let p = (self.pos ?? 45) + 1
-                if p >= self.duration { self.next() } else { self.pos = p }
+                let p = (self.pos ?? (self.live ? 0 : 45)) + 1
+                if self.live { self.pos = min(p, self.duration) }   // the amplifier advances by itself
+                else if p >= self.duration { self.next() } else { self.pos = p }
             }
         }
+        startLive()
     }
 
     func restartHero(_ i: Int) {
@@ -159,12 +195,26 @@ final class AppModel {
         }
     }
 
-    private func run(_ key: String, _ op: @escaping @MainActor () async -> Void) {
+    func run(_ key: String, _ op: @escaping @MainActor () async -> Void) {
         tasks[key]?.cancel()
         tasks[key] = Task { await op() }
     }
 
-    func post(_ m: [String: Any]) { DeviceLink.shared.post(m) }
+    /// The design's BroadcastChannel messages, mapped to the daemon API (pi/ki_amp_daemon.py). Demo mode sends nothing.
+    /// Messages without an endpoint (setup steps, previewClock, updSync, forget, reset) stay local; see CLAUDE.md.
+    func post(_ msg: [String: Any]) {
+        guard live, let type = msg["type"] as? String else { return }
+        switch type {
+        case "setupTest": devSend("/api/test", ["channel": msg["ch"] as? String ?? "L"])
+        case "testSpk", "testOut": speakerTest(on: settingsHost)
+        case "testVoice": devSend("/api/voice", ["say": "bt_pairing"], on: settingsHost)
+        case "btPair": devSend("/api/bt", ["pairing": true], on: settingsHost)
+        case "src": if let v = msg["v"] as? Int { livePlayFavourite(v) }
+        case "set": if let k = msg["k"] as? String, let v = msg["v"] { liveSetting(k, v) }
+        case "eqSync": if let src = msg["src"] as? String { liveEQ(src) }
+        default: break
+        }
+    }
 
     // MARK: - Onboarding
 
@@ -192,7 +242,10 @@ final class AppModel {
 
     func goOb(_ n: Int) {
         ob = n
+        obErr = ""
         post(["type": "setup", "step": [1, 2, 3, 4, 6][min(n, 4)], "name": room])
+        if n == 1 && live { loadWifi() }
+        if n == 4 && live { checkUpdate() }
         if n == 4 {
             obUpd = 0
             run("obUpd") { [weak self] in
@@ -212,9 +265,15 @@ final class AppModel {
 
     func obNext() {
         guard okOb else { return }
+        if live && ob == 1 { joinWifi(); return }
+        if live && ob == 2 {
+            let name = room.trimmingCharacters(in: .whitespaces)
+            if let h = activeHost { Task { await DeviceLink.shared.send("/api/settings", ["nameCustom": name], on: h) } }
+            names["nameCustom"] = name
+        }
         // speaker test lives in Innstillinger → Lyd, not in setup
         if ob < 4 { goOb(ob == 2 ? 4 : ob + 1); return }
-        if obType == "node", !sys.rooms.contains(where: { $0.name == room }) {
+        if demo, obType == "node", !sys.rooms.contains(where: { $0.name == room }) {
             sys.rooms.append(Room(id: "r\(Int(Date().timeIntervalSince1970 * 1000))", name: room, type: "node", hw: "Raspberry Pi 4 · HDMI", vol: 30))
         }
         Haptics.success()
@@ -222,6 +281,8 @@ final class AppModel {
         tab = obType == "node" ? 2 : 0
         UserDefaults.standard.set(true, forKey: "skjold-setup-done")
         post(["type": "setup", "step": 7, "name": room])
+        if live, let h = activeHost { Task { await DeviceLink.shared.send("/api/settings", ["setupDone": true], on: h) } }
+        startLive()
         run("setupDone") { [weak self] in
             try? await Task.sleep(for: .seconds(3))
             self?.post(["type": "setup", "step": 8])
@@ -229,6 +290,45 @@ final class AppModel {
     }
 
     func pickDevice(_ type: String) { obType = type; goOb(1) }
+
+    /// A real device in «Finn forsterker» (Bonjour or QR): connect, then continue the setup against it.
+    func pickFound(_ host: String, type: String) {
+        obType = type
+        Task { [weak self] in
+            guard let self else { return }
+            if await self.connect(host) { Haptics.success(); self.goOb(1) } else { Haptics.error() }
+        }
+    }
+
+    /// Wi-Fi networks seen by the amplifier (GET /api/wifi, nmcli).
+    var nets: [String] { live && !wifiNets.isEmpty ? wifiNets : (live ? [] : Self.nets) }
+
+    func loadWifi() {
+        wifiBusy = true
+        Task { [weak self] in
+            let d = await DeviceLink.shared.get("/api/wifi", timeout: 25)
+            guard let self else { return }
+            self.wifiBusy = false
+            self.wifiNets = d.map(DevWifi.list) ?? []
+            if self.wifiNets.isEmpty { self.netManual = true }
+        }
+    }
+
+    /// POST /api/wifi {ssid, psk, hidden}. The amplifier is already on the network when it was found, so this mostly
+    /// moves it to another network; the result shows in obErr.
+    func joinWifi() {
+        let name = netManual ? ssid.trimmingCharacters(in: .whitespaces) : (net < nets.count ? nets[net] : "")
+        guard !name.isEmpty, let h = activeHost else { goOb(2); return }
+        var body: [String: Any] = ["ssid": name, "hidden": netManual]
+        if needPw && !pw.isEmpty { body["psk"] = pw }
+        let data = DeviceLink.json(body)
+        obErr = "Kobler til \(name) …"
+        Task { [weak self] in
+            let ok = await DeviceLink.shared.sendRaw("/api/wifi", data, on: h, timeout: 50) != nil
+            guard let self else { return }
+            if ok { Haptics.success(); self.goOb(2) } else { Haptics.error(); self.obErr = "Fikk ikke koblet til \(name). Sjekk passordet." }
+        }
+    }
 
     /// Starts the QR step. On a device the camera calls `qrFound()`; in the simulator it finishes after 2.2 s like the design.
     func startScan(simulated: Bool) {
@@ -247,8 +347,15 @@ final class AppModel {
         }
     }
 
-    func qrFound() {
+    func qrFound(_ payload: String = "") {
         guard scan else { return }
+        // QR with an address (http://ip:8765, ip or name.local): connect to it
+        let p = payload.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !p.isEmpty, p.range(of: #"^(https?://)?[A-Za-z0-9.\-\[\]:]+(/.*)?$"#, options: .regularExpression) != nil {
+            scan = false
+            pickFound(p, type: obType)
+            return
+        }
         Haptics.success()
         scanFound = true
         run("scan") { [weak self] in
@@ -261,6 +368,7 @@ final class AppModel {
 
     func testSide(_ k: String) {
         tested.insert(k)
+        if live { devSend("/api/test", ["channel": k]); return }
         post(["type": "setupTest", "ch": k])
     }
 
@@ -283,7 +391,11 @@ final class AppModel {
             .replacingOccurrences(of: " W", with: "\u{00a0}W").replacingOccurrences(of: " kHz", with: "\u{00a0}kHz")
     }
 
-    func setSys(_ n: SystemState) { sys = n; post(["type": "sysSync"]) }
+    func setSys(_ n: SystemState) {
+        let old = sys
+        sys = n
+        if live { liveSys(old: old, new: n) }
+    }
 
     // MARK: - Player
 
@@ -302,6 +414,7 @@ final class AppModel {
 
     var np: NowPlaying {
         if let lt = libTrack, let svc { return NowPlaying(st: Self.svcInfo[svc]?.0 ?? "", t: lt.t, s: lt.artist + " · " + lt.album) }
+        if let l = liveNP { return l }
         if let svc, let info = Self.svcInfo[svc], input == 0 { return NowPlaying(st: info.0, t: SK.tr[trk].0, s: SK.tr[trk].1 + info.1) }
         switch input {
         case 3:
@@ -322,9 +435,13 @@ final class AppModel {
         return PlayerArt(key: big, kicker: kicker, big: big, size: big.count > 14 ? 30 : 40, live: input == 3)
     }
 
-    var duration: Int { libTrack?.dur ?? (trk < SK.dur.count ? SK.dur[trk] : 240) }
-    var position: Int { min(pos ?? 45, duration) }
-    var hasProgress: Bool { input != 3 && input != 2 && input != 4 }
+    var duration: Int {
+        if let d = libTrack?.dur, d > 0 { return d }
+        if live { return actLyrionOnly ? activeLyrion?.duration ?? 0 : dev?.duration ?? 0 }
+        return libTrack?.dur ?? (trk < SK.dur.count ? SK.dur[trk] : 240)
+    }
+    var position: Int { min(pos ?? (live ? 0 : 45), duration) }
+    var hasProgress: Bool { input != 3 && input != 2 && input != 4 && (!live || duration > 0) }
 
     var srcName: String {
         let sn = ["upnp": "UPnP/DLNA", "spotify": "Spotify", "ytm": "YouTube Music", "nd": "Navidrome", "plex": "Plex"]
@@ -352,25 +469,32 @@ final class AppModel {
 
     func pickInput(_ i: Int) {
         input = i; svc = nil
+        if live { liveInput(i); return }
         if i < 2 { post(["type": "wl", "v": i == 1 ? "bt" : "air"]) } else { post(["type": "input", "i": i - 1]) }
     }
 
-    func togglePlay() { Haptics.thump(); playing.toggle(); post(["type": "pause"]) }
+    func togglePlay() {
+        Haptics.thump()
+        playing.toggle()
+        if live { hold("play", 3); liveTransport(playing ? "play" : "pause") } else { post(["type": "pause"]) }
+    }
 
     func next() {
         if let lq, svc != nil { playLib(lq, (li + 1) % lq.count, keepOpen: true); return }
+        if live { pos = 0; hold("pos", 1); liveTransport("next"); return }
         trk = (trk + 1) % 3; pos = 0
         post(["type": "next"])
     }
 
     func prev() {
         if let lq, svc != nil { playLib(lq, (li + lq.count - 1) % lq.count, keepOpen: true); return }
+        if live { pos = 0; hold("pos", 1); liveTransport("previous"); return }
         trk = (trk + 2) % 3; pos = 0
     }
 
     func setVol(_ v: Int) {
         vol = v
-        post(["type": "vol", "v": v])
+        if live { liveVolume(v) } else { post(["type": "vol", "v": v]) }
     }
 
     func playLib(_ list: [Track], _ i: Int, keepOpen: Bool = false) {
@@ -379,7 +503,7 @@ final class AppModel {
         hist[lib] = Array(([HistEntry(track: tr, when: "Nå")] + cur).prefix(20))
         svc = lib; input = 0; lq = list; li = i; pos = 0; playing = true
         if !keepOpen { full = true }
-        post(["type": "play", "svc": lib, "t": tr.t])
+        if live { livePlayTrack(tr) } else { post(["type": "play", "svc": lib, "t": tr.t]) }
     }
 
     func addQueue(_ list: [Track]) {
@@ -388,7 +512,8 @@ final class AppModel {
     }
 
     func defaultHist(_ lib: String) -> [HistEntry] {
-        (SK.lib[lib]?.hist ?? []).map { HistEntry(track: SK.lt[$0.0], when: $0.1) }
+        guard demo else { return [] }
+        return (SK.lib[lib]?.hist ?? []).map { HistEntry(track: SK.lt[$0.0], when: $0.1) }
     }
 
     func openLib(_ id: String) {
@@ -402,20 +527,19 @@ final class AppModel {
     func setRL(_ l: [Station]) {
         radio = l
         station = min(station, l.count - 1)
-        post(["type": "presets", "list": l.map { [$0.name, $0.genre] }])
-        post(["type": "radioSync"])
+        if live { pushPresets(l) }
         LogoStore.shared.fetch(l.map(\.name))
     }
 
     func playStation(_ i: Int, open: Bool = true) {
         rTmp = nil; station = i; input = 3
         if open { full = true }
-        post(["type": "input", "i": 2]); post(["type": "src", "v": i])
+        if live { livePlayFavourite(i) }
     }
 
     func playAny(_ st: Station) {
         rTmp = st; input = 3; full = true
-        post(["type": "input", "i": 2]); post(["type": "play", "name": st.name, "url": st.url ?? ""])
+        if live { livePlayStream(st) }
     }
 
     func favIndex(_ name: String) -> Int? { radio.firstIndex { $0.name == name } }
@@ -486,6 +610,7 @@ final class AppModel {
         confirm = ""
         switch id {
         case "ytmTest": ytmT = Date()
+        case "ndTest": testNavidrome()
         case "plexTest": testPlex()
         case "btPair": btPairT = Date(); post(["type": "btPair", "room": devRoom.id])
         case "openRadio": tab = 0; sub = "radio"
@@ -527,6 +652,11 @@ final class AppModel {
     // MARK: - Update (simulated GitHub release flow from the design)
 
     func checkUpdate() {
+        liveCheckUpdate()
+    }
+
+    /// The design's simulated check (kept for reference; not used).
+    private func checkUpdateDemo() {
         checking = true; job = nil; updMsg = ""
         run("check") { [weak self] in
             try? await Task.sleep(for: .seconds(1.1))
@@ -540,6 +670,7 @@ final class AppModel {
     }
 
     func backupNow() {
+        if live { updMsg = "Backup fra appen er ikke støttet av forsterkeren ennå."; Haptics.warning(); return }
         upd.backups = Array(([Backup(id: "b\(Int(Date().timeIntervalSince1970 * 1000))", ver: upd.version, date: SK.now(), kind: "Manuell")] + upd.backups).prefix(6))
         Haptics.success()
         updMsg = "Backup av \(upd.version) er lagret."
@@ -549,6 +680,11 @@ final class AppModel {
     func installUpdate() {
         guard let rel = upd.latest else { return }
         updMsg = ""
+        if live {
+            Haptics.warning()
+            updMsg = "Installering fra appen er ikke koblet til forsterkeren ennå. Oppdater med Skjold Flasher eller fra forsterkerens meny (\(rel.tag))."
+            return
+        }
         let u = upd, fail = u.failNext, ver = rel.tag.replacingOccurrences(of: "v", with: "", options: .anchored)
         let steps = ["Tar backup av " + u.version, "Laster ned " + rel.tag + " fra github.com/" + u.repo, "Verifiserer SHA-256", "Installerer", fail ? "Starter tjenester …" : "Starter på nytt"]
         runJob(steps: steps, inc: 4, failAt: fail ? 4 : nil) { [weak self] failed in
@@ -571,6 +707,7 @@ final class AppModel {
 
     func restore(_ b: Backup) {
         if restoreConf != b.id { Haptics.warning(); restoreConf = b.id; return }
+        if live { restoreConf = ""; updMsg = "Gjenoppretting fra appen er ikke støttet av forsterkeren ennå."; return }
         restoreConf = ""; updMsg = ""
         let u = upd
         runJob(steps: ["Stopper tjenester", "Gjenoppretter " + b.ver, "Starter på nytt"], inc: 6, failAt: nil) { [weak self] _ in
