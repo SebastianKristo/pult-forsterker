@@ -289,8 +289,9 @@ plex = {"available": False, "playing": False, "paused": False, "title": "", "art
 LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD == "main" else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
 _pairing_until = 0.0
-menu = {"open": False, "idx": 1, "until": 0.0}   # kanalmeny på OLED (hold volumknotten 1 s i radio)
+menu = {"open": False, "idx": 1, "until": 0.0, "stepped": 0.0}   # kanalmeny på OLED (hold volumknotten 1 s i radio)
 MENU_S = 6.0
+MENU_AUTOPLAY_S = 1.8   # radiomenyen: valgt favoritt spiller av seg selv så lenge etter siste trykk
 
 # ---------- maskinvare ----------
 class _Dummy:
@@ -1468,7 +1469,7 @@ def _hold_btn(b, short, held, key=None, info=None, on_change=None, ring=None):
 def menu_open():
     if not lyr.connected:
         return
-    menu.update(open=True, idx=state["preset"] or 1, until=time.time() + MENU_S); write_ctrl()
+    menu.update(open=True, idx=state["preset"] or 1, until=time.time() + MENU_S, stepped=0.0); write_ctrl()
 
 
 def menu_close():
@@ -1476,7 +1477,8 @@ def menu_close():
 
 
 def menu_step(d):
-    menu["idx"] = (menu["idx"] - 1 + d) % len(state["presets"]) + 1; menu["until"] = time.time() + MENU_S; write_ctrl()
+    menu["idx"] = (menu["idx"] - 1 + d) % len(state["presets"]) + 1; menu["until"] = time.time() + MENU_S
+    menu["stepped"] = time.time(); write_ctrl()
 
 
 def menu_pick():
@@ -1493,6 +1495,12 @@ def menu_save():
 
 async def menu_task():
     while True:
+        if menu["open"] and menu.get("stepped") and time.time() - menu["stepped"] > MENU_AUTOPLAY_S:
+            menu["stepped"] = 0.0   # blått til en ny favoritt: spill den (som en bilradio) – hold er ikke nødvendig
+            n = menu["idx"]
+            if n != state["preset"] or state["input"] != "radio" or lyr.info.get("mode") != "play":
+                if n <= len(state["presets"]) and state["presets"][n - 1]:
+                    await asyncio.get_running_loop().run_in_executor(None, menu_pick)
         if menu["open"] and time.time() > menu["until"]:
             menu_close()
         if smenu["open"] and time.time() > smenu["until"]:
