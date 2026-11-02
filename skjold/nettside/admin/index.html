@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Skjold – rediger nettsiden</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap">
+<link rel="stylesheet" href="/admin/editor.css">
+<script src="/admin/editor.js" defer></script>
+</head>
+<body>
+
+<!-- Innlogging -->
+<section id="innlogging" class="skjerm" hidden>
+  <form id="logginn" class="kort" autocomplete="on">
+    <div class="merke"><span class="stolper" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span> SKJOLD</div>
+    <h1>Rediger nettsiden</h1>
+    <p class="demp">Skriv inn admin-nøkkelen (ADMIN_NOKKEL).</p>
+    <input type="text" name="username" value="admin" autocomplete="username" hidden>
+    <label for="nokkel">Nøkkel</label>
+    <input id="nokkel" name="password" type="password" autocomplete="current-password" required>
+    <label class="hake"><input id="husk" type="checkbox"> Husk meg på denne enheten</label>
+    <button class="knapp hoved" type="submit">Logg inn</button>
+    <p id="loggfeil" class="feil" role="alert"></p>
+  </form>
+</section>
+
+<!-- Sideliste -->
+<section id="sider" class="skjerm" hidden>
+  <header class="topp">
+    <div class="merke"><span class="stolper" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span> SKJOLD <span class="demp">· rediger</span></div>
+    <div class="handlinger">
+      <button class="knapp" id="nyside" type="button">+ Ny side</button>
+      <button class="knapp stille" id="loggut" type="button">Logg ut</button>
+    </div>
+  </header>
+  <div class="innhold-liste">
+    <p class="demp">Velg en side å redigere. Endringer publiseres først når du trykker «Lagre og publiser».</p>
+    <div class="grupper">
+      <div><h2>Norsk</h2><ul id="liste-no" class="sideliste"></ul></div>
+      <div><h2>English</h2><ul id="liste-en" class="sideliste"></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- Editor -->
+<section id="editor" class="skjerm" hidden>
+  <header class="topp verktoy">
+    <button class="knapp stille" id="tilbake" type="button" title="Tilbake til sidelisten">‹ Sider</button>
+    <span id="sidenavn" class="sidenavn"></span>
+    <div class="faner" role="tablist">
+      <button class="fane aktiv" id="fane-visuell" type="button" role="tab">Visuell</button>
+      <button class="fane" id="fane-html" type="button" role="tab">HTML</button>
+    </div>
+    <div class="handlinger">
+      <button class="knapp stille" id="angre" type="button" title="Angre (Ctrl+Z)" disabled>↶<span class="tekst"> Angre</span></button>
+      <button class="knapp stille" id="gjenta" type="button" title="Gjør om (Ctrl+Shift+Z)" disabled>↷<span class="tekst"> Gjør om</span></button>
+      <button class="knapp stille" id="sideinfo" type="button" title="Tittel, beskrivelse og deling">Sideinfo</button>
+      <a class="knapp stille" id="se" target="_blank" rel="noopener" href="/">Se siden ↗</a>
+      <button class="knapp hoved" id="lagre" type="button" disabled>Lagre og publiser</button>
+    </div>
+  </header>
+  <div class="arbeid">
+    <div class="flate">
+      <iframe id="ramme" title="Forhåndsvisning av siden"></iframe>
+      <div id="rafl" class="raa" hidden>
+        <textarea id="raa" spellcheck="false" aria-label="HTML-kilde"></textarea>
+        <div class="raa-knapper"><button class="knapp" id="raa-bruk" type="button">Bruk endringene</button> <span class="demp">Avansert: endre HTML direkte. Trykk «Bruk endringene» før du går tilbake til visuell.</span></div>
+      </div>
+    </div>
+    <aside id="panel" class="panel">
+      <div id="panel-tom" class="pdel">
+        <h3>Slik redigerer du</h3>
+        <ul class="hjelp">
+          <li>Klikk på en tekst for å skrive i den.</li>
+          <li>Klikk på et bilde for å bytte det eller endre alt-teksten.</li>
+          <li>Den oransje rammen viser blokken du står i. Bruk knappene ↑ ↓ for å flytte, «Kopier» for å lage en ny lik blokk, og «Slett» for å fjerne den.</li>
+          <li>«Sideinfo» endrer tittel og beskrivelse i Google og ved deling.</li>
+          <li>Ingenting blir synlig før du trykker «Lagre og publiser».</li>
+        </ul>
+      </div>
+      <div id="panel-tekst" class="pdel" hidden>
+        <h3>Tekst</h3>
+        <div class="rad-knapper">
+          <button class="knapp" id="fet" type="button" title="Fet (Ctrl+B)"><b>F</b></button>
+          <button class="knapp" id="kursiv" type="button" title="Kursiv (Ctrl+I)"><i>K</i></button>
+          <button class="knapp" id="lenke" type="button" title="Lag lenke av markert tekst">Lenke</button>
+          <button class="knapp" id="fjernlenke" type="button" title="Fjern lenke">Fjern lenke</button>
+          <button class="knapp" id="ferdig" type="button">Ferdig</button>
+        </div>
+        <p class="demp liten">Enter = ferdig · Shift+Enter = linjeskift</p>
+      </div>
+      <div id="panel-href" class="pdel" hidden>
+        <label for="href">Lenken går til</label>
+        <input id="href" type="text" placeholder="/s1/ eller https://…">
+      </div>
+      <div id="panel-bilde" class="pdel" hidden>
+        <h3>Bilde</h3>
+        <img id="bilde-vis" alt="" class="bilde-vis">
+        <label class="knapp hoved fil">Bytt bilde … <input id="bilde-fil" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif"></label>
+        <p class="demp liten">PNG, JPG, WebP, GIF eller AVIF, maks 5 MB. Bildet lastes opp med en gang.</p>
+        <label for="alt">Alt-tekst (beskrivelse for skjermlesere)</label>
+        <input id="alt" type="text">
+      </div>
+      <div id="panel-blokk" class="pdel" hidden>
+        <h3>Blokk <span id="blokk-navn" class="demp"></span></h3>
+        <div class="rad-knapper">
+          <button class="knapp" data-blokk="opp" type="button">↑ Opp</button>
+          <button class="knapp" data-blokk="ned" type="button">↓ Ned</button>
+          <button class="knapp" data-blokk="kopier" type="button">Kopier</button>
+          <button class="knapp fare" data-blokk="slett" type="button">Slett</button>
+          <button class="knapp stille" data-blokk="ytre" type="button">Velg ytre</button>
+        </div>
+      </div>
+      <div id="panel-meta" class="pdel" hidden>
+        <h3>Sideinfo</h3>
+        <label for="m-title">Tittel (fanen og Google)</label><input id="m-title" type="text" data-meta="title">
+        <label for="m-desc">Beskrivelse (Google)</label><textarea id="m-desc" rows="3" data-meta="description"></textarea>
+        <label for="m-ogt">Delingstittel (og:title)</label><input id="m-ogt" type="text" data-meta="og:title">
+        <label for="m-ogd">Delingstekst (og:description)</label><textarea id="m-ogd" rows="3" data-meta="og:description"></textarea>
+        <label for="m-ogi">Delingsbilde (og:image)</label><input id="m-ogi" type="text" data-meta="og:image">
+        <button class="knapp" id="meta-lukk" type="button">Lukk</button>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- Ny side -->
+<dialog id="ny-dialog">
+  <form method="dialog" id="ny-skjema">
+    <h3>Ny side</h3>
+    <p class="demp">Lager en kopi av en eksisterende side som du kan redigere.</p>
+    <label for="ny-fra">Bruk som mal</label>
+    <select id="ny-fra"></select>
+    <label for="ny-til">Adresse for den nye siden</label>
+    <input id="ny-til" type="text" placeholder="f.eks. kampanje  →  /kampanje/" required>
+    <p id="ny-feil" class="feil" role="alert"></p>
+    <div class="rad-knapper"><button class="knapp stille" value="avbryt" type="submit" formnovalidate>Avbryt</button> <button class="knapp hoved" id="ny-lag" value="lag" type="submit">Lag siden</button></div>
+  </form>
+</dialog>
+
+<div id="melding" class="melding" role="status" aria-live="polite" hidden></div>
+<noscript><p class="feil">Editoren krever JavaScript.</p></noscript>
+</body>
+</html>
