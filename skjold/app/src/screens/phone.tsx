@@ -287,6 +287,12 @@ export function FullSheet() {
 export { fmtDur };
 
 // ---------- Rom («Ditt system») ----------
+/** Volum på et annet rom (aktivt rom går via setVolume). */
+export async function setVolAt(base: string, v: number): Promise<void> {
+  try { const r = await fetch(base + '/api/volume', { credentials: credFor(base), method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: v }) }); if (!r.ok) throw new Error(); }
+  catch { showToast('Fikk ikke kontakt med ' + base.replace(/^https?:\/\//, '')); }
+}
+
 export function RoomsPhone({ wide = false }: { wide?: boolean }) {
   const rooms = useRooms(), ak = activeKey(), g = groups.value;
   const act0 = rooms[0]!;
@@ -299,15 +305,12 @@ export function RoomsPhone({ wide = false }: { wide?: boolean }) {
     if (st.input === 'radio') return st.radio_now?.name || st.station || 'Radio';
     return st.title ? st.title + (st.artist ? ' · ' + st.artist : '') : inputLabel(st.input);
   };
-  const setVolAt = async (base: string, v: number) => {
-    try { const r = await fetch(base + '/api/volume', { credentials: credFor(base), method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: v }) }); if (!r.ok) throw new Error(); }
-    catch { showToast('Fikk ikke kontakt med ' + base.replace(/^https?:\/\//, '')); }
-  };
   return (
     <>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onClick={() => groupAll(rooms.map((r) => r.key))} style={`height:36px;padding:0 14px;border-radius:999px;border:1px solid ${allG ? A : '#2e2e30'};background:${allG ? '#1c170d' : '#141415'};font-size:13px;cursor:pointer;white-space:nowrap`}>Alle rom</button>
         <button onClick={groupNone} style="height:36px;padding:0 14px;border-radius:999px;border:1px solid #2e2e30;background:#141415;font-size:13px;cursor:pointer;white-space:nowrap">Bare {act0.name}</button>
+        <button onClick={() => go('grp')} style="height:36px;padding:0 12px;border-radius:999px;border:none;background:transparent;color:#f0c46a;font-size:13px;cursor:pointer;white-space:nowrap">Gruppeoppsett ›</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         {n > 1 && (
