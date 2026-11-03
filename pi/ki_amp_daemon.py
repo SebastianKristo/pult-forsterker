@@ -651,8 +651,29 @@ def set_voice_profile(prof):
 
 
 # ---------- CamillaDSP (loudness + digitalt volum) ----------
+EQ_SRC = {"airplay": "air", "bt": "bt", "radio": "radio", "aux": "aux", "aux2": "aux", "usb": "usb"}
+EQ_BANDS = [("Lowshelf", 60, 0.7), ("Peaking", 250, 1.0), ("Peaking", 1000, 1.0), ("Peaking", 4000, 1.0), ("Highshelf", 12000, 0.7)]
+
+
+def eq_profile():
+    """EQ-profilen for det som høres nå: hodetelefoner har egen, ellers per kilde (andre strømmetjenester følger AirPlay)."""
+    prof = (settings().get("eq") or {})
+    k = "hp" if state.get("headphones") else EQ_SRC.get(state["input"], "air")
+    p = prof.get(k) or {}
+    eq = p.get("eq") if isinstance(p.get("eq"), list) and len(p.get("eq")) == 5 else [0] * 5
+    return [max(-12.0, min(12.0, float(x or 0))) for x in eq], p.get("loud", True) is not False
+
+
 def dsp_config():
-    lvl = state["loudness_level"] if state["loudness"] else 0
+    eq, loud_ok = eq_profile()
+    lvl = state["loudness_level"] if state["loudness"] and loud_ok else 0
+    # Hodetrom: trekk ned like mye som største løft (inkl. loudness ved lavt volum), så EQ aldri klipper
+    pre = -max([0.0] + eq)
+    eqf = "".join(f"""
+  eq{i}:
+    type: Biquad
+    parameters: {{type: {t}, freq: {f}, {'q' if t == 'Peaking' else 'slope'}: {q if t == 'Peaking' else 6}, gain: {g:.1f}}}""" for i, ((t, f, q), g) in enumerate(zip(EQ_BANDS, eq)) if g)
+    names = ", ".join(["pre"] + [f"eq{i}" for i, g in enumerate(eq) if g] + ["loud"])
     return f"""devices:
   samplerate: 48000
   chunksize: 1024
@@ -660,16 +681,19 @@ def dsp_config():
   capture: {{type: Alsa, channels: 2, device: "{DSP_CAPTURE}", format: S32LE}}
   playback: {{type: Alsa, channels: 2, device: "{DSP_PLAYBACK}", format: {DSP_FORMAT}}}
 filters:
+  pre:
+    type: Gain
+    parameters: {{gain: {pre:.1f}}}{eqf}
   loud:
     type: Loudness
     parameters: {{fader: Main, reference_level: -10.0, high_boost: {lvl * 0.5:.1f}, low_boost: {float(lvl):.1f}, attenuate_mid: false}}
 pipeline:
   - type: Filter
     channel: 0
-    names: [loud]
+    names: [{names}]
   - type: Filter
     channel: 1
-    names: [loud]
+    names: [{names}]
 """
 
 
@@ -906,6 +930,7 @@ def speakers_on():
 
 def apply_headphones():
     """Hodetelefonforsterker (TPA6132A2 EN på MCP GPA6) følger jacken; høyttalerne dempes via SDZ hvis auto-demping er på."""
+    dsp.update()   # egen EQ-profil for hodetelefoner
     if not (HW and BOARD == "main"):
         return
     if mcp:
@@ -976,10 +1001,10 @@ SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn":
                 "plexEn": False, "plexUrl": "", "plexToken": "",
                 # Skjold Touch-skjermen (synkes med app og web-UI)
                 "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False,
-                "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [6, 3, 0, 0, 1]), ("radio", 2, [-2, 0, 3, 2, 0]),
-                                                                                     ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [3, 1, -1, -2, -3]))}}
+                "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [5, 2, 0, 0, 1]), ("radio", 2, [-2, -1, 2, 3, 1]),
+                                                                                     ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [2, 1, 0, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
-SETTINGS_APPLIED = {"led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
+SETTINGS_APPLIED = {"eq", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
 
 
 def settings():
@@ -1002,6 +1027,7 @@ def apply_settings(changed_keys=()):
     env_names = _usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):]   # KI_AMP_USBSW_NAMES er standard til brukeren setter navn i appen
     USBSW_NAMES = [str(s_["nUsb1"] if s_["nUsb1"] != SETTINGS_DEF["nUsb1"] else env_names[0])[:16],
                    str(s_["nUsb2"] if s_["nUsb2"] != SETTINGS_DEF["nUsb2"] else env_names[1])[:16]]
+    if "eq" in changed_keys: dsp.update()
     if "voice" in changed_keys: state["voice"] = bool(s_["voice"])
     if "lang" in changed_keys and LANG_PROFILE.get(int(s_["lang"]) if str(s_["lang"]).isdigit() else -1):
         state["voice_profile"] = LANG_PROFILE[int(s_["lang"])]

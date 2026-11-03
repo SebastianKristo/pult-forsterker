@@ -38,8 +38,11 @@ export const LANGS = ['Norsk', 'English', 'Svenska', 'Dansk'];
 export const EQ = {
   bands: ['60', '250', '1k', '4k', '12k'],
   presets: [
-    ['Flat', [0, 0, 0, 0, 0]], ['Bass+', [6, 3, 0, 0, 1]], ['Vokal', [-2, 0, 3, 2, 0]],
-    ['Kveld', [3, 1, -1, -2, -3]], ['Podkast', [-4, 0, 4, 3, -1]], ['Klassisk', [2, 0, -1, 1, 3]]
+    ['Flat', [0, 0, 0, 0, 0]], ['Bass+', [5, 2, 0, 0, 1]], ['Vokal', [-2, -1, 2, 3, 1]],
+    ['Kveld', [2, 1, 0, -2, -3]], ['Podkast', [-5, -1, 3, 3, -2]], ['Klassisk', [1, 0, 0, 1, 2]],
+    ['Rock', [4, 1, -2, 2, 3]], ['Pop', [2, 0, 1, 2, 2]], ['Elektronisk', [6, 1, -1, 1, 3]],
+    ['Hip-hop', [6, 3, -1, 1, 1]], ['Jazz', [2, 1, -1, 1, 2]], ['Akustisk', [1, 2, 0, 2, 2]],
+    ['Små høyttalere', [-4, 2, 1, 1, 0]], ['Lavt volum', [4, 1, -1, 1, 3]]
   ] as [string, number[]][],
   sources: [['air', 'AirPlay'], ['bt', 'Blåtann'], ['radio', 'Radio'], ['aux', 'AUX'], ['usb', 'USB'], ['hp', 'Hodetelefoner']] as [EqSource, string][],
   defaults: { air: 0, bt: 1, radio: 2, aux: 0, usb: 0, hp: 3 } as Record<EqSource, number>
