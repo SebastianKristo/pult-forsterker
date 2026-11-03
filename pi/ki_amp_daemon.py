@@ -974,6 +974,8 @@ SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn":
                 # Musikktjenester – lagres her så appen (iOS/Android) og web-UI-et deler innloggingene
                 "ytmEn": False, "ytmUser": "", "ytmCookie": "", "ndEn": False, "ndUrl": "", "ndUser": "", "ndPass": "",
                 "plexEn": False, "plexUrl": "", "plexToken": "",
+                # Skjold Touch-skjermen (synkes med app og web-UI)
+                "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False,
                 "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [6, 3, 0, 0, 1]), ("radio", 2, [-2, 0, 3, 2, 0]),
                                                                                      ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [3, 1, -1, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
@@ -2850,6 +2852,8 @@ class Lyrion:
         self.cover_id = ""
         self._art = None
         self._vol_ok = False
+        self._lms_vol = None
+        self._lms_mute = None
         if os.environ.get("KI_AMP_LMS", "1") == "1":
             threading.Thread(target=self._run, daemon=True).start()
 
@@ -2964,19 +2968,27 @@ class Lyrion:
         v = r.get("mixer volume")
         if v is None:
             return
-        v = abs(int(float(v)))   # negativt = mutet i Lyrion
+        raw = int(float(v)); v, muted = abs(raw), raw < 0   # negativt = mutet i Lyrion
         if not self._vol_ok:
             self.rpc(["playerpref", "digitalVolumeControl", "0"])   # «Output level is fixed at 100%»
-            self._vol_ok = True; self._lms_vol = None
+            self._vol_ok = True; self._lms_vol = None; self._lms_mute = None
+        # Lyrion styrer oss når radio er valgt eller Lyrion faktisk spiller (startet fra Lyrion/Material-appen)
+        ours = state["input"] == "radio" or r.get("mode") == "play"
         if self._lms_vol is not None and v != self._lms_vol:      # noen dro i glideren i Lyrion
             self._lms_vol = v
-            if state["input"] == "radio":
+            if ours:
                 set_volume(v)
+                print("Volum fra Lyrion:", v, flush=True)
         elif v != state["volume"]:                                # vårt volum er endret – vis det i Lyrion
             self.rpc(["mixer", "volume", state["volume"]])
             self._lms_vol = state["volume"]
         else:
             self._lms_vol = v
+        if self._lms_mute is not None and muted != self._lms_mute and ours:
+            set_mute(muted)
+        elif self._lms_mute is not None and bool(state.get("mute")) != muted:
+            self.rpc(["mixer", "muting", 1 if state.get("mute") else 0]); muted = bool(state.get("mute"))
+        self._lms_mute = muted
 
     def _fetch_art(self):
         art = self.info.get("art", "")
@@ -3913,6 +3925,13 @@ class Sky:
 sky = Sky(lan=False)   # LAN-søket startes i on_startup (ikke ved import / i tester)
 
 
+async def h_rom(_r):
+    """Andre Skjold-enheter på LAN-et (mDNS) – brukes av Skjold Touch-skjermens romvelger."""
+    peers = sorted((sky.lan.peers.values() if getattr(sky, "lan", None) else []), key=lambda p: str(p.get("navn") or ""))
+    return web.json_response({"rom": [{"id": p.get("id"), "navn": p.get("navn"), "produkt": p.get("produkt"),
+                                       "base": f"http://{p['ip']}:{int(p['port'])}"} for p in peers if p.get("ip") and p.get("port")]})
+
+
 async def h_sky_get(_r):
     return web.json_response(sky.status())
 
@@ -4031,7 +4050,7 @@ def main():
                     web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post),
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
                     web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test),
-                    web.get("/api/sky", h_sky_get), web.post("/api/sky", h_sky_post)])
+                    web.get("/api/sky", h_sky_get), web.get("/api/rom", h_rom), web.post("/api/sky", h_sky_post)])
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
     webdir = os.environ.get("KI_AMP_WEBAPP", "")
     for cand in ([webdir] if webdir else []) + ["/usr/local/share/ki-amp/webapp", os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")]:
