@@ -2929,6 +2929,11 @@ class Lyrion:
                     station = lp.get("title", "")
                 if same and not art and lp.get("art"):
                     art = lp["art"]
+                # Lyrions standardbilde for radio (masten i html/images/…) er ikke et ekte cover: bruk kanalens logo
+                # (favoritt/søk) når vi har en – ellers ble logoen overstyrt av masten i alle appene.
+                if not art or _generic_art(art):
+                    logo = _known_logo(loop.get("url", ""), lp)
+                    if logo: art = logo
                 self.info = {"mode": r.get("mode", "stop"), "station": station if same and lp.get("source") else (station or loop.get("album", "")), "song": song,
                              "artist": artist, "url": lp["url"] if same and lp else loop.get("url", ""), "art": self.url(art),
                              "duration": float(r.get("duration", 0) or 0), "time": float(r.get("time", 0) or 0)}
@@ -2989,6 +2994,27 @@ class Lyrion:
             self.cover_id = hashlib.sha1(img).hexdigest()[:12]
         except Exception as e:
             print("Stasjonsbilde:", e, flush=True); self.cover_id = ""
+
+
+def _generic_art(a):
+    a = str(a or "").lower()
+    return "html/images/" in a or a.endswith(("/radio.png", "/radio.svg", "/cover.png")) or "/plugins/" in a and "icon" in a
+
+
+def _known_logo(url, lp=None):
+    """Logo for strømmen som spiller: favoritten med samme URL, sist startede strøm (søk/Navidrome) eller radio_tmp."""
+    for p in state.get("presets") or []:
+        if p and p.get("url") == url and (p.get("icon") or p.get("image")):
+            return p.get("icon") or p.get("image")
+    if lp and lp.get("art"):
+        return lp["art"]
+    if radio_tmp.get("url") == url and radio_tmp.get("icon"):
+        return radio_tmp["icon"]
+    if 0 < (state.get("preset") or 0) <= len(state.get("presets") or []):
+        p = state["presets"][state["preset"] - 1]
+        if p and lyr.info.get("mode") == "play" and (p.get("icon") or p.get("image")):
+            return p.get("icon") or p.get("image")
+    return ""
 
 
 lyr = Lyrion()

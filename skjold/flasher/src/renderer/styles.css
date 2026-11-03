@@ -93,3 +93,14 @@ ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 
 .grid.ipf { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 .ipf .inp { font-family: var(--mono); font-size: 13px; }
 .inp.bad, .inp.bad:focus { border-color: #e05a4a; }
+
+/* Lagrede bilder */
+.cache { display: flex; flex-direction: column; gap: 8px; }
+.card.cached { display: flex; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 10px; text-align: left; cursor: pointer; }
+.card.cached > div { align-items: flex-start; }
+.card.cached .t { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mini { flex: none; height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid #2e2e30; background: #1b1b1c; color: #f2f2ee; font-size: 12px; cursor: pointer; }
+.mini:hover { border-color: #d9a441; }
+.mini.danger { color: #ff8a7a; }
+.mini.danger:hover { border-color: #e05a4a; }
+.badge.ok { background: rgba(62,207,110,.14); color: #3ecf6e; border-color: transparent; }

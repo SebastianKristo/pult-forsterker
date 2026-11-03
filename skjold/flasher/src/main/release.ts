@@ -74,7 +74,7 @@ export async function download(img: ReleaseImage, cacheDir: string, onProgress: 
   await fsp.mkdir(cacheDir, { recursive: true });
   const dest = path.join(cacheDir, path.basename(img.name));
   const ok = await fsp.stat(dest).then(s => !img.size || s.size === img.size, () => false);
-  if (ok && img.sha256 && (await sha256File(dest)) === img.sha256) return dest;
+  if (ok && img.sha256 && (await sha256File(dest)) === img.sha256) { await saveMeta(dest, img); return dest; }
 
   const tmp = dest + '.part';
   const r = await net.fetch(img.url, { signal, headers: { 'User-Agent': 'skjold-flasher' } });
@@ -97,6 +97,7 @@ export async function download(img: ReleaseImage, cacheDir: string, onProgress: 
   const got = hash.digest('hex');
   if (img.sha256 && got !== img.sha256) { await fsp.rm(tmp, { force: true }); throw new Error('SHA-256 stemmer ikke for nedlastet bilde.'); }
   await fsp.rename(tmp, dest);
+  await saveMeta(dest, img);
   return dest;
 }
 
@@ -105,4 +106,37 @@ async function sha256File(p: string): Promise<string> {
   const h = createHash('sha256');
   for await (const c of createReadStream(p)) h.update(c as Buffer);
   return h.digest('hex');
+}
+
+
+/** Lagrede bilder (behold mellom flashinger): metadata i <bilde>.json ved siden av bildet. */
+export interface CachedImage { name: string; path: string; size: number; tag: string; sha256?: string; savedAt: string; base?: boolean }
+
+async function saveMeta(dest: string, img: ReleaseImage): Promise<void> {
+  const st = await fsp.stat(dest);
+  const meta: CachedImage = { name: path.basename(dest), path: dest, size: st.size, tag: img.tag, sha256: img.sha256, savedAt: new Date().toISOString(), base: img.base };
+  await fsp.writeFile(dest + '.json', JSON.stringify(meta));
+}
+
+export async function listCached(cacheDir: string): Promise<CachedImage[]> {
+  const out: CachedImage[] = [];
+  const names = await fsp.readdir(cacheDir).catch(() => [] as string[]);
+  for (const n of names) {
+    if (!n.endsWith('.json')) continue;
+    const img = path.join(cacheDir, n.slice(0, -5));
+    try {
+      const st = await fsp.stat(img);
+      const m = JSON.parse(await fsp.readFile(path.join(cacheDir, n), 'utf8')) as CachedImage;
+      out.push({ ...m, path: img, name: path.basename(img), size: st.size });
+    } catch { /* bildet er borte – ignorer */ }
+  }
+  return out.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+}
+
+export async function deleteCached(cacheDir: string, name: string): Promise<void> {
+  const base = path.basename(String(name));
+  if (!base || base.startsWith('.')) throw new Error('Ugyldig filnavn');
+  await fsp.rm(path.join(cacheDir, base), { force: true });
+  await fsp.rm(path.join(cacheDir, base + '.json'), { force: true });
+  await fsp.rm(path.join(cacheDir, base + '.part'), { force: true });
 }

@@ -4,12 +4,15 @@ type Media = 'sd' | 'usb';
 interface DriveInfo { device: string; name: string; path: string; size: number; mountpoints: string[]; media: Media; readOnly: boolean }
 interface ReleaseImage { tag: string; name: string; url: string; size: number; sha256?: string; publishedAt: string; base?: boolean }
 interface LocalImage { path: string; name: string; size: number }
+interface CachedImage { name: string; path: string; size: number; tag: string; sha256?: string; savedAt: string; base?: boolean }
 type Phase = 'download' | 'decompress' | 'configure' | 'authorize' | 'flashing' | 'verifying' | 'done' | 'error';
 interface Progress { phase: Phase; percent: number; bytes?: number; total?: number; speed?: number; eta?: number; message?: string }
 interface FlashResult { ok: boolean; error?: string; url?: string; qr?: string; install?: boolean }
 interface SkjoldApi {
   listDrives(): Promise<DriveInfo[]>;
   latestImage(): Promise<ReleaseImage | null>;
+  cacheList(): Promise<CachedImage[]>;
+  cacheDelete(name: string): Promise<CachedImage[]>;
   pickImage(): Promise<LocalImage | null>;
   flash(req: unknown): Promise<FlashResult>;
   cancel(): Promise<void>;
@@ -36,7 +39,10 @@ const S = {
   drive: '' as string,
   media: 'sd' as Media,
   drives: [] as DriveInfo[],
-  imgMode: 'latest' as 'latest' | 'local',
+  imgMode: 'latest' as 'latest' | 'local' | 'cached',
+  cache: [] as CachedImage[],
+  cacheSel: '' as string,
+  replaceCache: '' as string,
   release: null as ReleaseImage | null,
   releaseState: 'loading' as 'loading' | 'ok' | 'none' | 'error',
   local: null as LocalImage | null,
@@ -83,7 +89,11 @@ const NETS: ['wifi' | 'eth', string, string, string][] = [
 ];
 
 function hostOk(h: string) { return /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(h); }
-function imageReady() { return S.imgMode === 'latest' ? !!S.release : !!S.local; }
+function imageReady() { return S.imgMode === 'latest' ? !!S.release : S.imgMode === 'cached' ? !!cachedSel() : !!S.local; }
+function cachedSel() { return S.cache.find(c => c.name === S.cacheSel) ?? null; }
+/** Er det lagrede bildet det samme som det nyeste (samme fil eller samme sjekksum)? */
+function isLatest(c: CachedImage) { return !!S.release && (c.name === S.release.name.split('/').pop() || (!!c.sha256 && c.sha256 === S.release.sha256)); }
+async function refreshCache() { try { S.cache = await skjold.cacheList(); } catch { S.cache = []; } if (S.imgMode === 'cached' && !cachedSel()) S.imgMode = S.release ? 'latest' : 'local'; }
 function canNext(): boolean {
   if (S.p === 0) return imageReady() && shownDrives().some(d => d.device === S.drive && !d.readOnly);
   if (S.p === 1) {
@@ -104,7 +114,8 @@ function renderSide() {
   if (S.imgMode === 'latest') {
     if (S.release) { a = S.release.name; b = `${gb(S.release.size)} · ${S.release.sha256 ? 'SHA-256 sjekkes' : S.release.tag}`; }
     else if (S.releaseState === 'loading') a = 'Ser etter siste bilde …';
-  } else if (S.local) { a = S.local.name; b = `${gb(S.local.size)} · lokal fil`; }
+  } else if (S.imgMode === 'cached' && cachedSel()) { const c = cachedSel()!; a = c.name; b = `${gb(c.size)} · lagret bilde`; }
+  else if (S.local) { a = S.local.name; b = `${gb(S.local.size)} · lokal fil`; }
   $('imginfo').innerHTML = `<span>${esc(a)}</span><span>${esc(b)}</span>`;
 }
 
@@ -114,6 +125,19 @@ function renderFooter() {
   const err = S.p === 2 && S.progress?.phase === 'error';
   next.textContent = err ? 'Prøv igjen' : ['Neste', isUsb() ? 'Skriv til USB-disken' : 'Skriv til kortet', 'Skriver …', isUsb() ? 'Flash en disk til' : 'Flash et kort til'][S.p];
   next.disabled = !canNext();
+}
+
+/** Lagrede bilder: bruk uten ny nedlasting, slett, eller hent nyeste. */
+function cacheBox(): string {
+  if (!S.cache.length) return '';
+  const d = (iso: string) => { try { return new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return ''; } };
+  return `<div class="cache"><span class="label" style="margin-top:12px">Lagrede bilder</span>${S.cache.map(c => {
+    const nyest = isLatest(c), sel = S.imgMode === 'cached' && S.cacheSel === c.name;
+    return `<div class="card cached ${sel ? 'sel' : ''}" data-cache="${esc(c.name)}" role="button" tabindex="0">
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1"><span class="t">${esc(c.name)} ${nyest ? '<span class="badge ok">Nyeste</span>' : S.release ? '<span class="badge">Nyere finnes</span>' : ''}</span>
+      <span class="s">${esc(c.tag || '')} · ${gb(c.size)} · lagret ${d(c.savedAt)} – brukes uten ny nedlasting</span></div>
+      ${!nyest && S.release ? `<button class="mini" data-cache-update="${esc(c.name)}">Oppdater til nyeste</button>` : ''}
+      <button class="mini danger" data-cache-del="${esc(c.name)}">Slett</button></div>`; }).join('')}</div>`;
 }
 
 function page0(): string {
@@ -132,7 +156,7 @@ function page0(): string {
     <div class="group"><span class="label">Bilde</span><div class="grid">
       <button class="card ${S.imgMode === 'latest' ? 'sel' : ''}" data-img="latest"><span class="t">${S.release?.base ? 'Raspberry Pi OS Lite 64-bit + Skjold' : 'Siste Skjold-bilde'}</span><span class="s">${rel}</span></button>
       <button class="card ${S.imgMode === 'local' ? 'sel' : ''}" data-img="local"><span class="t">Velg fil …</span><span class="s">${S.local ? esc(S.local.name) : '.img, .img.xz eller .zip'}</span></button>
-    </div></div>
+    </div>${cacheBox()}</div>
     <div class="group"><span class="label">Start fra</span>
       <div class="seg">${(['sd', 'usb'] as Media[]).map(k => `<button class="${S.media === k ? 'on' : ''}" data-media="${k}">${k === 'sd' ? 'SD-kort' : 'USB-pinne eller SSD'}</button>`).join('')}</div>
       ${isUsb() ? `<div class="infobox"><span class="h">Start fra USB</span><span>${USB_HINT[DEVS[S.dev][0]]}</span>
@@ -259,7 +283,7 @@ async function startFlash() {
   S.p = 2; S.progress = { phase: S.imgMode === 'latest' ? 'download' : 'decompress', percent: 0 }; S.result = null; render();
   const [lang, , ] = LANGS[S.lang];
   const req = {
-    image: S.imgMode === 'latest' ? { kind: 'latest', release: S.release } : { kind: 'local', path: S.local!.path },
+    image: S.imgMode === 'latest' ? { kind: 'latest', release: S.release } : S.imgMode === 'cached' ? { kind: 'local', path: cachedSel()!.path } : { kind: 'local', path: S.local!.path },
     drive: S.drive,
     setup: { device: DEVS[S.dev][0], preset: S.pre, net: S.net, media: S.media,
       staticIp: S.net === 'eth' && S.stat ? { ip: S.ip.trim(), gw: S.gw.trim(), dns: S.dns.trim() } : null, ssid: S.ssid, wifiPassword: S.pw, country: S.country, name: S.name.trim(),
@@ -267,6 +291,11 @@ async function startFlash() {
   };
   const r = await skjold.flash(req);
   S.result = r;
+  if (r.ok && S.imgMode === 'latest') {   // nytt bilde er lagret – fjern det gamle hvis «Oppdater til nyeste» ble valgt
+    const old = S.replaceCache; S.replaceCache = '';
+    await refreshCache();
+    if (old && S.cache.some(c => c.name !== old && isLatest(c))) { try { S.cache = await skjold.cacheDelete(old); } catch { /* ignorer */ } }
+  }
   if (r.ok) { S.p = 3; render(); }
   else { S.progress = { phase: 'error', percent: 0, message: r.error }; render(); }
 }
@@ -298,6 +327,15 @@ function bind() {
     else if (d.toggle === 'lms') S.lms = !S.lms;
     else if (d.toggle === 'ssh') S.ssh = !S.ssh;
     else if (d.open) { skjold.open(d.open); return; }
+    else if (d.cacheDel !== undefined) {
+      if (!confirm(`Slette ${d.cacheDel}? Bildet må lastes ned på nytt neste gang.`)) return;
+      try { S.cache = await skjold.cacheDelete(d.cacheDel); } catch (err) { alert(err instanceof Error ? err.message : String(err)); }
+      if (S.imgMode === 'cached' && !cachedSel()) S.imgMode = S.release ? 'latest' : 'local';
+    }
+    else if (d.cacheUpdate !== undefined) {   // hent nyeste – det gamle slettes når det nye er lastet ned (ved neste flashing)
+      S.imgMode = 'latest'; S.replaceCache = d.cacheUpdate;
+    }
+    else if (t.closest('[data-cache]')) { S.cacheSel = (t.closest('[data-cache]') as HTMLElement).dataset.cache!; S.imgMode = 'cached'; }
     else if (d.img === 'latest') S.imgMode = 'latest';
     else if (d.img === 'local') {
       const f = await skjold.pickImage();
@@ -345,6 +383,10 @@ async function init() {
     S.releaseState = S.release ? 'ok' : 'none';
     if (!S.release && !S.local) S.imgMode = 'local';
   } catch { S.releaseState = 'error'; }
+  await refreshCache();
+  // Har vi et lagret bilde som er det nyeste (eller nett mangler), velg det – ingen ny nedlasting
+  const best = S.cache.find(isLatest) ?? (S.release ? null : S.cache[0]);
+  if (best) { S.cacheSel = best.name; S.imgMode = 'cached'; }
   if (S.p === 0) render();
 }
 
