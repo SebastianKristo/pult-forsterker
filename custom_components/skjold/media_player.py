@@ -126,7 +126,10 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
         return {"bt_device": self.d.get("bt_device", ""), "bt_pairing": bool(self.d.get("bt_pairing")),
                 "spotify_connected": bool((self.d.get("spotify") or {}).get("connected")),
                 "board": self.d.get("board", ""), "product": product(self.d),
-                "radio_now": self.d.get("radio_now")}
+                "radio_now": self.d.get("radio_now"),
+                # Radiofavoritter til Skjold-kortene i dashbordet (spill med media_player.play_media, type «preset»)
+                "presets": [{"n": p.get("n"), "title": p.get("title", ""), "image": p.get("image") or p.get("icon") or ""}
+                            for p in (getattr(self.coordinator, "presets", None) or []) if isinstance(p, dict) and p.get("n")][:50]}
 
     async def async_turn_on(self) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_power(True))

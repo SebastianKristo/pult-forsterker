@@ -58,7 +58,31 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         super().async_set_updated_data(data)
 
 
+CARDS_URL = "/skjold_static/skjold-cards.js"
+
+
+async def _register_cards(hass: HomeAssistant) -> None:
+    """Dashbordkortene (skjold-card, skjold-rom-card) lastes automatisk – ingen manuell ressurs i Lovelace."""
+    if hass.data.get(DOMAIN + "_cards"):
+        return
+    hass.data[DOMAIN + "_cards"] = True
+    import os
+    from homeassistant.components import frontend
+    path = os.path.join(os.path.dirname(__file__), "www", "skjold-cards.js")
+    try:
+        from homeassistant.components.http import StaticPathConfig
+        await hass.http.async_register_static_paths([StaticPathConfig(CARDS_URL, path, True)])
+    except ImportError:   # eldre Home Assistant
+        hass.http.register_static_path(CARDS_URL, path, True)
+    from .const import VERSION_CARDS
+    frontend.add_extra_js_url(hass, f"{CARDS_URL}?v={VERSION_CARDS}")
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    try:
+        await _register_cards(hass)
+    except Exception as e:  # kortene er pynt – integrasjonen skal virke uansett
+        _LOGGER.warning("Skjold-kortene ble ikke registrert: %s", e)
     api = KiAmpApi(async_get_clientsession(hass), entry.data[CONF_HOST], entry.data[CONF_PORT])
     coordinator = KiAmpCoordinator(hass, api, entry)
     await coordinator.async_config_entry_first_refresh()

@@ -49,3 +49,24 @@ action: media_player.play_media
 target: { entity_id: media_player.skjold_s1 }
 data: { media_content_type: preset, media_content_id: "1" }
 ```
+
+## Dashbordkort
+
+Integrasjonen tar med to kort som lastes automatisk (ingen manuell ressurs). Finn dem under **Rediger dashbord → Legg til kort → «Skjold – Spiller» / «Skjold – Alle rom»**, eller skriv YAML:
+
+```yaml
+type: custom:skjold-card
+entity: media_player.skjold_s1
+kilder: true        # kildeknapper (Radio, AirPlay, Bluetooth, Spotify …)
+favoritter: true    # radiofavoritter som fliser (trykk = spill)
+```
+
+```yaml
+type: custom:skjold-rom-card
+tittel: Skjold
+# entities: [media_player.skjold_s1, media_player.skjold_node]   # tomt = alle Skjold-enheter
+```
+
+- **Skjold – Spiller**: cover (med uskarp bakgrunn), tittel/artist, av/på, forrige/spill-pause/neste, volum og lyd av, kilder og radiofavoritter.
+- **Skjold – Alle rom**: alle Skjold-enheter med cover, hva som spiller, volum og spill/pause, og «Pause alle».
+Kortene følger HA-temaet (lyst/mørkt). Gullfargen kan endres med temavariabelen `skjold-accent`.
