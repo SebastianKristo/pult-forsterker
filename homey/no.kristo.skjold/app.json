@@ -2331,6 +2331,68 @@
             ]
           }
         ]
+      },
+      {
+        "id": "ki_play_url",
+        "title": {
+          "en": "Play audio from URL",
+          "no": "Spill av lyd fra adresse"
+        },
+        "titleFormatted": {
+          "en": "Play [[url]] as [[mode]]",
+          "no": "Spill av [[url]] som [[mode]]"
+        },
+        "hint": {
+          "en": "Audio file or stream (http/https), e.g. from Homey's sound board, a doorbell sound or a web radio. Announcement plays on top of what is playing.",
+          "no": "Lydfil eller strøm (http/https), f.eks. en dørklokkelyd eller nettradio. Kunngjøring spilles oppå det som spiller."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "text",
+            "name": "url",
+            "placeholder": {
+              "en": "https://…/sound.mp3",
+              "no": "https://…/lyd.mp3"
+            },
+            "title": {
+              "en": "URL",
+              "no": "Adresse"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "title": {
+              "en": "Mode",
+              "no": "Modus"
+            },
+            "values": [
+              {
+                "id": "play",
+                "title": {
+                  "en": "playback",
+                  "no": "avspilling"
+                }
+              },
+              {
+                "id": "announce",
+                "title": {
+                  "en": "announcement",
+                  "no": "kunngjøring"
+                }
+              }
+            ]
+          }
+        ]
       }
     ]
   },
