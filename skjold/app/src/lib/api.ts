@@ -59,7 +59,17 @@ export function needsHost(): boolean {
   return (isNative || location.protocol === 'file:') && !getBase();
 }
 export function setBase(url: string | null): void {
-  try { if (url) localStorage.setItem(HOST_KEY, normHost(url)); else localStorage.removeItem(HOST_KEY); } catch { /* ignore */ }
+  try { if (url) localStorage.setItem(HOST_KEY, isRelayBase(url) ? url.replace(/\/+$/, '') : normHost(url)); else localStorage.removeItem(HOST_KEY); } catch { /* ignore */ }
+}
+/** Skjold-hjem: relé-base via skyen (`…/api/hjem/steder/{sted}/enheter/{id}`) – base + '/api/status' virker som lokalt. */
+export function isRelayBase(base: string): boolean { return base.includes('/api/hjem/steder/'); }
+/** Fetch-valg for en base: relé mot en annen origin trenger informasjonskapselen fra Cloudflare Access. */
+export function credFor(base: string): RequestCredentials { return isRelayBase(base) && /^https?:/i.test(base) ? 'include' : 'same-origin'; }
+/** Svar som betyr at Cloudflare Access vil ha innlogging (401/403, omdirigering eller HTML-innloggingsside). */
+export function isAccessBlock(r: Response): boolean {
+  if (r.type === 'opaqueredirect' || r.status === 401 || r.status === 403) return true;
+  if (r.redirected && /cloudflareaccess\.com|cdn-cgi\/access/.test(r.url)) return true;
+  return false;
 }
 export function normHost(h: string): string {
   let u = h.trim().replace(/\/+$/, '');
@@ -69,6 +79,7 @@ export function normHost(h: string): string {
 }
 export function hostLabel(): string {
   const b = getBase();
+  if (isRelayBase(b)) return 'Skjold-hjem';
   if (b) return b.replace(/^https?:\/\//i, '');
   return location.host || 'skjold.local';
 }
@@ -83,7 +94,9 @@ async function req<T>(path: string, init?: RequestInit, base = getBase(), timeou
   // CapacitorHttp sin fetch-erstatning bryr seg ikke om AbortSignal – tidsavbrudd med race i tillegg
   const timeout = new Promise<never>((_, rej) => { t = window.setTimeout(() => { ctl.abort(); rej(new ApiError(0, 'Tidsavbrudd')); }, timeoutMs); });
   try {
-    const r = await Promise.race([fetch(base + path, { cache: 'no-store', ...init, signal: ctl.signal }), timeout]);
+    const relay = isRelayBase(base);
+    const r = await Promise.race([fetch(base + path, { cache: 'no-store', ...(relay ? { credentials: credFor(base), redirect: 'manual' as RequestRedirect } : {}), ...init, signal: ctl.signal }), timeout]);
+    if (relay && isAccessBlock(r)) throw new ApiError(401, 'Logg inn på Skjold-hjem');
     if (!r.ok) {
       let msg = r.statusText;
       try { const j = (await r.json()) as { error?: string }; if (j.error) msg = j.error; } catch { /* no body */ }
@@ -94,8 +107,12 @@ async function req<T>(path: string, init?: RequestInit, base = getBase(), timeou
 }
 const post = <T = Status>(path: string, body: unknown) => req<T>(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
 
+export interface SkyStatus { koblet: boolean; sted?: string | null; stedNavn?: string | null; aktivHoved?: string | null; erHoved?: boolean; tilkoblet?: boolean; error?: string }
 export interface RemoteStatus { enabled: boolean; host: string; master: boolean; active: boolean; installed: boolean; busy: boolean; log: string; has_token: boolean }
 export const api = {
+  sky: () => req<SkyStatus>('/api/sky'),
+  skyKobl: (kode: string) => post<SkyStatus>('/api/sky', { kode }),
+  skyKobleFra: () => post<SkyStatus>('/api/sky', { koble_fra: true }),
   remote: () => req<RemoteStatus>('/api/remote'),
   setRemote: (b: { enable: boolean; token?: string; host?: string }) => post<RemoteStatus>('/api/remote', b),
   status: () => req<Status>('/api/status'),

@@ -14,6 +14,7 @@ import { ob } from './onboard';
 import { getLocal, setLocal } from '../lib/services';
 import { ndConfigured, ndError, ndPing } from '../lib/navidrome';
 import { RadioFavorites } from './radio';
+import { SkyPanel, StederPanel } from './hjem';
 import { favs } from '../lib/radio';
 import { PRODUCT_HW, PRODUCT_LABEL } from '../lib/api';
 import { Chevron } from '../components/ui';
@@ -41,7 +42,7 @@ export function CategoryList() {
     <>
       {rooms.length > 1 && <div class="dsc" style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px;flex-shrink:0">
         {rooms.map((r) => { const c = sel(r.active); return (
-          <button key={r.key} onClick={() => { if (!r.active) void switchRoom(r.base); }} style={`display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 12px;border-radius:12px;border:1px solid ${c.bd};background:${c.bg};cursor:pointer;flex-shrink:0;text-align:left`}>
+          <button key={r.key} onClick={() => { if (!r.active) void switchRoom(r.base, r.enhet); }} style={`display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 12px;border-radius:12px;border:1px solid ${c.bd};background:${c.bg};cursor:pointer;flex-shrink:0;text-align:left`}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c9c9c4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d={PRODUCT_ICON[r.product]} /></svg>
             <span style={`font-size:13px;color:${c.fg};white-space:nowrap`}>{r.name}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#8b8b86;white-space:nowrap">{PRODUCT_LABEL[r.product]}</span>
           </button>
@@ -66,6 +67,8 @@ export function CategoryList() {
 export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) {
   if (cat.id === 'oppdatering') return <><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}</>;
   if (cat.id === 'fjernstyring') return <RemotePanel />;
+  if (cat.id === 'steder') return <StederPanel />;
+  if (cat.id === 'skjoldhjem') return <SkyPanel />;
   const items = cat.items.filter((it) => it.kind !== 'clocks' && it.kind !== 'update');
   const hasClocks = cat.items.some((it) => it.kind === 'clocks');
   return (
