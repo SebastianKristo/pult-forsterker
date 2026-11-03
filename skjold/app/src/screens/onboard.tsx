@@ -150,10 +150,10 @@ function QrScan({ onBack, onFound, onFail }: { onBack: () => void; onFound: (hos
 }
 
 interface Net { ssid: string; security?: string; signal?: number; active?: boolean }
-const Bars = ({ sig }: { sig: number }) => (
+export const Bars = ({ sig }: { sig: number }) => (
   <svg width="16" height="12" viewBox="0 0 16 12" aria-label={'Signal ' + sig + ' %'}>{[0, 1, 2, 3].map((i) => <rect key={i} x={i * 4} y={9 - i * 3} width="3" height={3 + i * 3} rx="0.8" fill={sig >= 15 + i * 22 ? '#c9c9c4' : '#3a3a37'} />)}</svg>
 );
-const Lock = () => <svg width="11" height="12" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="Passord"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>;
+export const Lock = () => <svg width="11" height="12" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="Passord"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>;
 
 function Wifi({ back }: { back: () => void }) {
   const s = status.value;

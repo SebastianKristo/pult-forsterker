@@ -94,7 +94,7 @@ enum SK {
             .opt("rate", "Samplingsfrekvens", ["44,1 kHz", "48 kHz", "96 kHz", "Følg kilden"]),
             .opt("mixer", "Volumkontroll", ["Programvare", "Maskinvare (DAC)", "Fast 100 % (styres av forsterker)"], "Velg fast hvis enheten er koblet til en egen forsterker med volumknapp"),
             .act("Test utgang", id: "testOut", label: "Spill testtone", safe: true)]),
-        SettingCategory(id: "tilkobling", n: "Tilkobling", sub: "Navn og Blåtann", items: [
+        SettingCategory(id: "tilkobling", n: "Tilkobling", sub: "Wi-Fi, navn og Blåtann", items: [
             .opt("name", "Enhetsnavn", names, "Navnet som vises i AirPlay og Blåtann"),
             .str("nAux1", "Navn på AUX 1", "AUX 1", "Vises på skjermen og i appen", dev: ["s1"]), .str("nAux2", "Navn på AUX 2", "AUX 2", dev: ["s1"]),
             .str("nUsb1", "Navn på USB-C «PC 1»", "PC", "For eksempel Mac eller Jobb-PC", dev: ["s1"]), .str("nUsb2", "Navn på USB-C «PC 2»", "Switch", dev: ["s1"]),

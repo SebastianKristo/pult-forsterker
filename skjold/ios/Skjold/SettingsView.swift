@@ -27,6 +27,7 @@ struct SettingsView: View {
                 SkyDeviceView()
             } else {
                 if cat.id == "skjerm" { ClockPicker() }
+                if cat.id == "tilkobling" { WifiSettingsView() }
                 SettingItemsCard(items: cat.items.filter { $0.kind != .update && $0.kind != .clocks })
             }
         }

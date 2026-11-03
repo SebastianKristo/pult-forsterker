@@ -126,7 +126,7 @@ export const CATS: Category[] = [
     { kind: 'levels', n: 'Nivå per kilde', hint: 'Juster så kildene er like høye' },
     num('lvlAux', 'Nivå AUX', -6, 6, 'dB', 'Juster så AUX er like høy som strømming'), num('lvlUsb', 'Nivå USB', -6, 6, 'dB'),
     { kind: 'test', n: 'Test høyttalerne', hint: 'Spill en tone i venstre eller høyre høyttaler' }] },
-  { id: 'tilkobling', n: 'Tilkobling', sub: 'Navn og Blåtann', items: [
+  { id: 'tilkobling', n: 'Tilkobling', sub: 'Wi-Fi, navn og Blåtann', items: [
     opt('name', 'Enhetsnavn', NAMES, 'Navnet som vises i AirPlay og Blåtann'),
     str('nameCustom', 'Eget navn', 'Valgfritt', 'Overstyrer listen over – AirPlay, Spotify og Blåtann'),
     str('nAux1', 'Navn på AUX 1', 'AUX 1', 'Vises på skjermen og i appen'), str('nAux2', 'Navn på AUX 2', 'AUX 2'),

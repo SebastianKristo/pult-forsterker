@@ -67,6 +67,7 @@ fun SettingsView(m: AppModel) {
     else if (cat.id == "skjoldhjem") SkyDeviceView(m)
     else {
         if (cat.id == "skjerm") ClockPicker(m)
+        if (cat.id == "tilkobling") WifiSettingsView(m)
         SettingItemsCard(m, cat.items.filter { it.kind != SettingKind.Update && it.kind != SettingKind.Clocks })
     }
 }

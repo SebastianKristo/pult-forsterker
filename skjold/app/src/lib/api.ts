@@ -149,7 +149,7 @@ export const api = {
   setSettings: (patch: Record<string, unknown>) => post<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings', patch),
   // Oppsett: Wi-Fi via NetworkManager (nmcli) og høyttalertest (aplay) – nyere daemon; eldre svarer 404
   wifiScan: () => req<{ networks: { ssid: string; security?: string; signal?: number; active?: boolean }[] }>('/api/wifi', undefined, getBase(), 25000),
-  wifiConnect: (ssid: string, psk: string, hidden = false) => req<{ ok: boolean }>('/api/wifi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid, psk, hidden }) }, getBase(), 50000),
+  wifiConnect: (ssid: string, psk: string, hidden = false, security?: 'wpa2' | 'wpa3' | 'open') => req<{ ok: boolean }>('/api/wifi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid, psk, hidden, ...(security ? { security } : {}) }) }, getBase(), 50000),
   speakerTest: (channel: 'L' | 'R') => post<{ ok: boolean }>('/api/test', { channel }),
   reboot: () => post<{ ok: boolean }>('/api/reboot', {}),
   factoryReset: () => post<{ ok: boolean }>('/api/reset', {}),
