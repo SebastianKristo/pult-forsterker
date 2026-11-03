@@ -70,7 +70,13 @@ const gwOk = () => !S.gw.trim() || ipv4(S.gw);
 const dnsOk = () => S.dns.split(/[\s,;]+/).filter(Boolean).every(ipv4);
 const staticOk = () => cidrOk(S.ip) && gwOk() && dnsOk();
 const isUsb = () => S.media === 'usb';
-const shownDrives = () => S.drives.filter(d => d.media === S.media);
+// Mange SD-kortlesere (særlig USB-lesere på Mac) meldes som vanlig USB-disk. Finnes ingen av valgt type,
+// vises de andre flyttbare diskene også, så kortet aldri «forsvinner».
+const shownDrives = () => {
+  const own = S.drives.filter(d => d.media === S.media);
+  return own.length ? own : S.drives;
+};
+const otherKindShown = () => S.drives.length > 0 && !S.drives.some(d => d.media === S.media);
 const WP_HINT: Record<Media, string> = {
   sd: 'Låsen på siden av kortet står på «Lock». Ta ut kortet, skyv låsen opp og sett det inn igjen.',
   usb: 'Pinnen har en skrivebeskyttelse-bryter. Slå den av, eller velg en annen disk.',
@@ -144,13 +150,14 @@ function page0(): string {
   const rel = S.release ? `${esc(S.release.tag)} · ${gb(S.release.size)}`
     : { loading: 'Henter bildeliste …', none: 'Ingen bilde funnet', error: 'Fikk ikke kontakt med GitHub / raspberrypi.com', ok: '' }[S.releaseState];
   const list = shownDrives();
-  const drives = list.length
+  const note = otherKindShown() ? `<p class="lead" style="margin:0 0 8px">Fant ingen ${isUsb() ? 'USB-disk' : 'SD-kort'} – viser alle flyttbare disker. Kortlesere meldes ofte som USB.</p>` : '';
+  const drives = note + (list.length
     ? list.map(d => `<button class="card drive ${S.drive === d.device && !d.readOnly ? 'sel' : ''} ${d.readOnly ? 'wp' : ''}" data-drive="${esc(d.device)}" ${d.readOnly ? 'aria-disabled="true"' : ''}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[d.media]}"></path></svg>
         <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span class="t">${esc(d.name)}${d.readOnly ? `<span class="badge">${LOCK}Skrivebeskyttet</span>` : ''}</span><span class="s">${esc(d.path)}</span>
         ${d.readOnly ? `<span class="wphint">${WP_HINT[d.media]}</span>` : ''}</div>
         <span class="size">${gb(d.size)}</span></button>`).join('')
-    : `<div class="empty">Fant ingen ${isUsb() ? 'USB-disk' : 'SD-kort'}. Sett den inn, så dukker den opp her.</div>`;
+    : `<div class="empty">Fant ingen ${isUsb() ? 'USB-disk' : 'SD-kort'}. Sett den inn, så dukker den opp her. Bruker du en kortleser, kan det ta noen sekunder.</div>`);
   return `<h1>Velg lagring</h1>
     <p class="lead">Bare flyttbare disker vises. Alt på disken blir slettet.</p>
     <div class="group"><span class="label">Bilde</span><div class="grid">
