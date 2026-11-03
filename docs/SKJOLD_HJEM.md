@@ -67,3 +67,30 @@ Brukerens liste over steder: Durable Object `Konto` per e-post (`idFromName(epos
   kontaktpunkt nå. I Innstillinger → Steder: gi nytt navn, velg hovedenhet, sorter reserveliste, legg til enhet (vis kode),
   fjern enhet, lag/slett sted.
 - Er enheten på samme LAN (svarer på sin lokale adresse) brukes den direkte; ellers relé via skyen.
+
+## Presiseringer fra implementasjonen (`skjold/sky`, `pi/ki_amp_daemon.py`)
+Disse utfyller tabellene over; ingen stier eller meldingstyper er endret.
+- **Enhetsnøkkel**: `noekkel` har formen `<sted>.<64 hex>` (32 tilfeldige byte). Da finner `/enhet/ws` stedet rett fra
+  `Authorization: Bearer <id>.<noekkel>` uten egen indeks. Skyen lagrer bare SHA-256 av hele `noekkel`.
+  `/enhet/kobl` svarer `{sted, stedNavn, noekkel}`. Ny kobling av samme id erstatter nøkkelen. Første enhet blir `hoved`.
+- **Koblingskode**: `POST …/kobling` → `201 {kode, utloper}` der `utloper` er ISO-tid. Tegn `A–Z`/`2–9` uten `I O 0 1`,
+  engangs, 10 min. En tredje Durable Object `Koder` (navn «koder») holder kode → sted.
+- **`GET /api/hjem/steder`**: `enheter` = antall enheter, `online` = antall tilkoblet (0 = ingen). I tillegg `hoved`,
+  `reserve`, `aktiv` og `medlemmer`. `POST`/`PATCH` svarer med samme objekt for stedet.
+- **`GET …/enheter`**: `lan` = `{ip, port, via}` når en tilkoblet enhet har sett den på LAN-et (`via` = den som så den),
+  ellers `null`; `reserveNr` er 1-basert eller `null`; `sist` = Unix-sekunder; i tillegg `versjon`.
+- **Relé**: skyen sender `req`/`sub` rett til enheten om den er tilkoblet, ellers til aktiv hovedenhet med `til` satt.
+  Mål kan være en registrert enhet eller en enhet som står i en tilkoblet enhets `lan`-liste. Feil: `404` ukjent enhet,
+  `503` ingen enhet på stedet er tilkoblet, `504` ikke svar på 25 s, `502` enheten koblet fra underveis. Svaret har
+  headeren `x-skjold-via: <id>`. Feil-JSON fra skyen er `{"feil": "…"}`.
+- **Enheten** slipper bare gjennom stier under `/api/` og avviser endring av `/api/sky` via skyen (403), så skyen ikke kan
+  koble enheten fra. Videresending til LAN går bare til enheter funnet med mDNS (ingen vilkårlige adresser).
+- **SSE-slutt**: når strømmen fra enheten tar slutt sender enheten `{"t":"res","rid":"…","s":204}`; skyen lukker da
+  strømmen mot klienten (klienten kobler til på nytt). Leser ikke klienten lenger, sender skyen `unsub`.
+- **Liv**: enheten sender `{"t":"ping"}` (nøyaktig denne teksten – skyen svarer `{"t":"pong"}` uten å vekke objektet) hvert
+  20. s; skyen sender også `ping` hvert 30. s og kobler fra etter 45 s uten livstegn. Enheten kobler til på nytt etter
+  60 s uten melding fra skyen, med pause 2 → 60 s.
+- **WebSocket-lukkekoder fra skyen**: 4000 ingen ping, 4001 enheten fjernet, 4002 sted slettet, 4003 ny nøkkel,
+  4004 ny tilkobling for samme id.
+- **`/api/sky`** (enheten) svarer også `url`, `id` og `feil` (siste tilkoblingsfeil). `POST {kode, url?}` – `url`
+  overstyrer `KI_AMP_SKY_URL` (test). `/api/status` har `sky: {koblet, sted, erAktivHoved}`.

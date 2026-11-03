@@ -1,0 +1,46 @@
+# Skjold-hjem – sky-relé (se README.md og docs/SKJOLD_HJEM.md)
+name = "skjold-hjem"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+keep_vars = true
+
+# Egen adresse: legg til ruten under når sonen smarthjemexperten.no ligger i samme Cloudflare-konto.
+# Fjern «#» foran linjene (custom_domain = true lager DNS-posten automatisk), eller legg ruten til i dashbordet:
+# Workers & Pages → skjold-hjem → Settings → Domains & Routes.
+# routes = [
+#   { pattern = "skjold-styring.smarthjemexperten.no", custom_domain = true }
+# ]
+# (alternativt: { pattern = "skjold-styring.smarthjemexperten.no/*", zone_name = "smarthjemexperten.no" })
+
+# Web-UI-et (skjold/app) bygges i CI før deploy og legges ut som statiske filer.
+# Worker-koden kjøres først for /api/* og /enhet/*; alt annet hentes fra ASSETS (SPA-fallback til index.html).
+[assets]
+directory = "../app/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/enhet/*"]
+
+[[durable_objects.bindings]]
+name = "STED"
+class_name = "Sted"
+
+[[durable_objects.bindings]]
+name = "KONTO"
+class_name = "Konto"
+
+[[durable_objects.bindings]]
+name = "KODER"
+class_name = "Koder"
+
+# SQLite-baserte Durable Objects (gratisplanen)
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Sted", "Konto", "Koder"]
+
+# Variabler settes i dashbordet (Workers & Pages → skjold-hjem → Settings → Variables and Secrets) eller med
+# «npx wrangler secret put NAVN», og beholdes ved deploy (keep_vars):
+#   ACCESS_TEAM_DOMAIN – Access-teamet, f.eks. «smarthjem» eller «smarthjem.cloudflareaccess.com»
+#   ACCESS_AUD         – «Application Audience (AUD) Tag» fra Access-applikasjonen
+# Når begge er satt verifiseres JWT-en fra Access (Cf-Access-Jwt-Assertion). Uten dem avvises alle /api/hjem-kall,
+# med mindre DEV_INSECURE = "1" (bare lokalt: «npx wrangler dev --var DEV_INSECURE:1», godtar headeren X-Skjold-User).

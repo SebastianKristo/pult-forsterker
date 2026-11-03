@@ -37,6 +37,10 @@ API:
   CORS: alle /api/* svarer med Access-Control-Allow-Origin (+ OPTIONS-preflight og Private Network Access),
         så appen (capacitor://localhost, https://localhost) og andre web-UI kan bruke API-et direkte.
   POST /api/transport {"action":"play|pause|playpause|next|previous|stop"}  (AirPlay/Bluetooth/Radio)
+  GET/POST /api/sky  Skjold-hjem (docs/SKJOLD_HJEM.md): {koblet, sted, stedNavn, aktivHoved, erHoved, tilkoblet};
+                    POST {"kode":"K7Q2XM"} kobler enheten til et sted, {"koble_fra":true} kobler fra. Nøkkel i
+                    /var/lib/ki-amp/sky.json (0600). Sky-adresse: KI_AMP_SKY_URL; KI_AMP_SKY=0 slår modulen av.
+                    Status har "sky": {koblet, sted, erAktivHoved}.
   Radiofavoritter: inntil 50 (PRESETS_MAX). state["presets"] har alltid minst 6 plasser (None = tom plass, de 6 første
   er «knappeplassene» på S1/radiokortet) og vokser når flere legges til. Hver favoritt: {title,url,icon,genre}.
   GET  /api/presets                       {"presets":[{n,title,url,icon,image,genre}|null…], "items":[bare fylte],
@@ -1312,7 +1316,8 @@ def read_status():
             "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD,
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
-            "menu": dict(menu) if menu["open"] else None, "hold": hold_status(), "settings_menu": smenu_status()}
+            "menu": dict(menu) if menu["open"] else None, "hold": hold_status(), "settings_menu": smenu_status(),
+            "sky": sky.kort()}
 
 
 # ---------- USB-delingsswitch (Ugreen 2 PC → 4 USB) ----------
@@ -3497,6 +3502,410 @@ def _local_ip():
         s.close()
 
 
+# ---------- Skjold-hjem: sky-relé (docs/SKJOLD_HJEM.md) ----------
+# Én WebSocket ut til skyen (Cloudflare Worker «skjold-hjem»). Skyen sender forespørsler («req») som besvares mot eget API
+# på 127.0.0.1, eller – når denne enheten er aktiv hovedenhet og «til» er en annen enhet – mot den enheten på LAN-et
+# (funnet via mDNS). Nøkkelen ligger bare i sky.json (0600) og vises aldri i API-et.
+SKY_FILE = os.environ.get("KI_AMP_SKY_FILE", os.path.join(os.path.dirname(STATE_FILE), "sky.json"))
+SKY_URL = os.environ.get("KI_AMP_SKY_URL", "https://skjold-styring.smarthjemexperten.no").rstrip("/")
+SKY_PING_S = 20          # ping hvert 20. s (skyen kobler fra etter 45 s uten livstegn)
+SKY_STILLE_S = 60        # ingen melding fra skyen på så lenge ⇒ ny tilkobling
+SKY_MAX_BODY = 700_000   # Cloudflare tillater 1 MiB per WebSocket-melding; base64 gir +33 %
+SKY_HOP = {"host", "connection", "content-length", "transfer-encoding", "keep-alive", "upgrade", "te", "trailer",
+           "proxy-authorization", "proxy-connection"}
+
+
+class SkyFeil(Exception):
+    def __init__(self, melding, status=400):
+        super().__init__(melding); self.status = status
+
+
+class LanPeers:
+    """Andre Skjold-enheter på LAN-et (mDNS _kipultamp._tcp). python3-zeroconf (kun søk, ingen annonsering – den gjør
+    avahi), ellers «avahi-browse» hvert 30. s. Kjører i egen tråd; `peers` byttes ut atomisk: id → {id,navn,ip,port,produkt}."""
+    TYPE = "_kipultamp._tcp.local."
+
+    def __init__(self, own_id):
+        self.own_id, self.peers, self._zc, self._navn = own_id, {}, None, {}
+
+    def start(self):
+        threading.Thread(target=self._run, daemon=True, name="sky-lan").start()
+
+    def _sett(self, navn, info):
+        p = dict(self.peers)
+        if info and info.get("id") and info["id"] != self.own_id:
+            self._navn[navn] = info["id"]; p[info["id"]] = info
+        elif navn in self._navn:
+            p.pop(self._navn.pop(navn), None)
+        self.peers = p
+
+    def _run(self):
+        try:
+            from zeroconf import Zeroconf, ServiceBrowser, ServiceStateChange
+        except Exception:
+            return self._avahi_loop()
+        try:
+            self._zc = Zeroconf()
+
+            def endring(zeroconf, service_type, name, state_change):
+                if state_change is ServiceStateChange.Removed:
+                    self._sett(name, None); return
+                threading.Thread(target=self._los, args=(zeroconf, service_type, name), daemon=True).start()
+            ServiceBrowser(self._zc, self.TYPE, handlers=[endring])
+        except Exception as e:
+            print("sky: mDNS-søk (zeroconf) feilet, bruker avahi-browse:", repr(e), flush=True)
+            self._avahi_loop()
+
+    def _los(self, zc, typ, name):
+        try:
+            info = zc.get_service_info(typ, name, 3000)
+            if not info:
+                return
+            props = {(k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else (v or ""))
+                     for k, v in (info.properties or {}).items()}
+            ips = [a for a in info.parsed_addresses() if ":" not in a]
+            if ips:
+                self._sett(name, {"id": props.get("id", ""), "navn": props.get("name", name.split(".")[0]), "ip": ips[0],
+                                  "port": info.port, "produkt": props.get("product", "")})
+        except Exception as e:
+            print("sky: mDNS-oppslag feilet:", repr(e), flush=True)
+
+    @staticmethod
+    def parse_avahi(text, own_id=""):
+        """Tolker `avahi-browse -rpt _kipultamp._tcp` (linjer «=;iface;proto;navn;type;domene;vert;adresse;port;txt»)."""
+        ut = {}
+        for line in text.splitlines():
+            f = line.split(";")
+            if len(f) < 10 or f[0] != "=" or f[2] != "IPv4":
+                continue
+            txt = dict(kv.split("=", 1) for kv in re.findall(r'"([^"]*)"', ";".join(f[9:])) if "=" in kv)
+            pid = txt.get("id", "")
+            if pid and pid != own_id and pid not in ut:
+                navn = re.sub(r"\\(\d{3})", lambda m: chr(int(m.group(1))), f[3])
+                ut[pid] = {"id": pid, "navn": txt.get("name", navn), "ip": f[7], "port": int(f[8]), "produkt": txt.get("product", "")}
+        return ut
+
+    def _avahi_loop(self):
+        while True:
+            try:
+                r = subprocess.run(["avahi-browse", "-rpt", "_kipultamp._tcp"], capture_output=True, text=True, timeout=15)
+                self.peers = self.parse_avahi(r.stdout, self.own_id)
+            except FileNotFoundError:
+                print("sky: verken zeroconf eller avahi-browse – LAN-videresending av", flush=True); return
+            except Exception as e:
+                print("sky: avahi-browse feilet:", repr(e), flush=True)
+            time.sleep(30)
+
+    def close(self):
+        if self._zc:
+            try:
+                self._zc.close()
+            except Exception:
+                pass
+
+
+class Sky:
+    def __init__(self, path=SKY_FILE, url=SKY_URL, local=None, ident=None, info=None, lan=None):
+        self.path, self.default_url = path, url
+        self.local = local or f"http://127.0.0.1:{PORT}"
+        self.ident = ident or socket.gethostname()
+        self.info = info or (lambda: {"navn": NAME, "produkt": PRODUCT, "versjon": VERSION})
+        self.lan = lan if lan is not None else LanPeers(self.ident)
+        self.cfg = self._les()
+        self.tilkoblet, self.aktiv, self.hoved, self.sist_feil = False, None, None, ""
+        self._ws, self._wake, self._http, self._subs = None, None, None, {}
+        self._send_lock = None
+
+    # --- lagring ---
+    def _les(self):
+        try:
+            with open(self.path) as fh:
+                c = json.load(fh)
+            return c if all(c.get(k) for k in ("url", "sted", "id", "noekkel")) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _skriv(self, cfg):
+        d = os.path.dirname(self.path)
+        if d:
+            os.makedirs(d, exist_ok=True)
+        tmp = self.path + ".tmp"
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as fh:
+            json.dump(cfg, fh)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, self.path)
+
+    # --- status (aldri nøkkelen) ---
+    def status(self):
+        return {"koblet": bool(self.cfg), "sted": self.cfg.get("sted"), "stedNavn": self.cfg.get("stedNavn"),
+                "aktivHoved": self.aktiv, "erHoved": bool(self.cfg) and self.aktiv == self.cfg.get("id"),
+                "tilkoblet": self.tilkoblet, "url": self.cfg.get("url") or self.default_url, "id": self.cfg.get("id") or self.ident,
+                "feil": self.sist_feil or None}
+
+    def kort(self):
+        return {"koblet": bool(self.cfg), "sted": self.cfg.get("sted"), "erAktivHoved": self.status()["erHoved"]}
+
+    # --- HTTP-klient ---
+    def http(self):
+        import aiohttp
+        if self._http is None or self._http.closed:
+            self._http = aiohttp.ClientSession()
+        return self._http
+
+    def _vekk(self):
+        if self._wake:
+            self._wake.set()
+        if self._ws is not None and not self._ws.closed:
+            asyncio.ensure_future(self._ws.close())
+
+    async def kobl(self, kode, url=None):
+        import aiohttp
+        kode = re.sub(r"[\s-]", "", str(kode or "")).upper()
+        if not re.fullmatch(r"[A-Z0-9]{6}", kode):
+            raise SkyFeil("koden må ha seks tegn")
+        base = (url or self.default_url).rstrip("/")
+        i = self.info()
+        try:
+            async with self.http().post(base + "/enhet/kobl", json={"kode": kode, "id": self.ident, "navn": i.get("navn"),
+                                                                     "produkt": i.get("produkt")},
+                                        timeout=aiohttp.ClientTimeout(total=15)) as r:
+                data = await r.json(content_type=None)
+                if r.status != 200:
+                    raise SkyFeil((data or {}).get("feil") or f"skyen svarte {r.status}", 404 if r.status == 404 else 502)
+        except SkyFeil:
+            raise
+        except Exception as e:
+            raise SkyFeil(f"fikk ikke kontakt med skyen: {e}", 502)
+        cfg = {"url": base, "sted": data["sted"], "stedNavn": data.get("stedNavn"), "id": self.ident, "noekkel": data["noekkel"]}
+        self._skriv(cfg)
+        self.cfg, self.sist_feil, self.aktiv = cfg, "", None
+        self._vekk()
+        return self.status()
+
+    def koble_fra(self):
+        try:
+            os.remove(self.path)
+        except FileNotFoundError:
+            pass
+        self.cfg, self.aktiv, self.hoved = {}, None, None
+        self._vekk()
+        return self.status()
+
+    # --- WebSocket-løkka ---
+    async def run(self):
+        self._wake = asyncio.Event()
+        self._send_lock = asyncio.Lock()
+        pause = 2
+        while True:
+            if not self.cfg:
+                self._wake.clear()
+                await self._wake.wait()
+                continue
+            self._wake.clear()
+            t0 = time.monotonic()
+            try:
+                await self._okt(dict(self.cfg))
+                self.sist_feil = ""
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                self.sist_feil = str(e) or repr(e)
+                if getattr(e, "status", None) == 401:
+                    self.sist_feil = "skyen avviste enhetsnøkkelen – koble til på nytt"
+                    pause = 60
+            finally:
+                self.tilkoblet, self._ws = False, None
+                for t in list(self._subs.values()):
+                    t.cancel()
+                self._subs.clear()
+            if time.monotonic() - t0 > 60:
+                pause = 2   # var oppe en stund – prøv raskt igjen
+            if self._wake.is_set():
+                continue    # ny konfigurasjon (kobl/koble_fra)
+            try:
+                await asyncio.wait_for(self._wake.wait(), pause)
+            except asyncio.TimeoutError:
+                pass
+            pause = min(60, pause * 2)
+
+    async def _okt(self, cfg):
+        url = re.sub(r"^http", "ws", cfg["url"]) + "/enhet/ws"
+        ws = await asyncio.wait_for(self.http().ws_connect(url, headers={"Authorization": f"Bearer {cfg['id']}.{cfg['noekkel']}"},
+                                                           autoping=True, max_msg_size=4 * 1024 * 1024), 20)
+        self._ws, self.tilkoblet = ws, True
+        print(f"sky: tilkoblet {cfg['url']} (sted {cfg['sted']})", flush=True)
+        pinger = asyncio.create_task(self._pinger(ws))
+        try:
+            import aiohttp
+            while True:
+                try:
+                    msg = await ws.receive(timeout=SKY_STILLE_S)
+                except asyncio.TimeoutError:
+                    raise RuntimeError("ingen livstegn fra skyen")
+                if msg.type != aiohttp.WSMsgType.TEXT:
+                    if msg.type in (aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSING, aiohttp.WSMsgType.ERROR):
+                        if ws.close_code and ws.close_code >= 4000:
+                            raise RuntimeError(f"skyen lukket tilkoblingen ({ws.close_code})")
+                        return
+                    continue
+                try:
+                    m = json.loads(msg.data)
+                except ValueError:
+                    continue
+                self._melding(m)
+        finally:
+            pinger.cancel()
+            if not ws.closed:
+                await ws.close()
+
+    def _melding(self, m):
+        t = m.get("t")
+        if t == "ping":
+            asyncio.create_task(self._send_raw('{"t":"pong"}'))
+        elif t == "rolle":
+            self.aktiv, self.hoved = m.get("aktiv"), m.get("hoved")
+        elif t == "req":
+            asyncio.create_task(self._req(m))
+        elif t == "sub" and m.get("rid"):
+            self._subs[m["rid"]] = asyncio.create_task(self._sub(m))
+        elif t == "unsub":
+            task = self._subs.pop(m.get("rid"), None)
+            if task:
+                task.cancel()
+
+    def _hei(self):
+        i = self.info()
+        lan = sorted(self.lan.peers.values(), key=lambda p: p.get("id", "")) if self.lan else []
+        return {"t": "hei", "id": self.cfg.get("id") or self.ident, "navn": i.get("navn"), "produkt": i.get("produkt"),
+                "versjon": i.get("versjon"), "lan": lan}
+
+    async def _pinger(self, ws):
+        """«hei» ved tilkobling og når LAN-lista endres; ping hvert 20. s."""
+        sist_hei, neste_ping = None, time.monotonic() + SKY_PING_S
+        while not ws.closed:
+            hei = self._hei()
+            if hei != sist_hei:
+                await self._send(hei); sist_hei = hei
+            if time.monotonic() >= neste_ping:
+                await self._send_raw('{"t":"ping"}'); neste_ping = time.monotonic() + SKY_PING_S
+            await asyncio.sleep(2)
+
+    async def _send_raw(self, tekst):
+        ws = self._ws
+        if ws is None or ws.closed:
+            return False
+        try:
+            async with self._send_lock:
+                await ws.send_str(tekst)
+            return True
+        except Exception:
+            return False
+
+    async def _send(self, obj):
+        return await self._send_raw(json.dumps(obj, separators=(",", ":")))
+
+    def _maal(self, til):
+        """Basis-URL for forespørselen: eget API, eller en LAN-enhet (bare de mDNS har funnet – ingen vilkårlige adresser)."""
+        if not til or til == self.ident or til == self.cfg.get("id"):
+            return self.local
+        p = (self.lan.peers if self.lan else {}).get(til)
+        if p and p.get("ip") and p.get("port"):
+            return f"http://{p['ip']}:{int(p['port'])}"
+        return None
+
+    @staticmethod
+    def _sjekk_sti(m, p):
+        if not p.startswith("/api/") or ".." in p or "\x00" in p:
+            return "bare /api/* kan nås via skyen"
+        if p.split("?")[0].rstrip("/") == "/api/sky" and m != "GET":
+            return "skykobling kan bare endres lokalt"
+        return None
+
+    async def _req(self, m):
+        import aiohttp
+        import base64
+        rid, metode, p = m.get("rid"), str(m.get("m") or "GET").upper(), str(m.get("p") or "/")
+
+        def feil(s, tekst):
+            return {"t": "res", "rid": rid, "s": s, "h": {"content-type": "application/json"},
+                    "b": base64.b64encode(json.dumps({"feil": tekst}).encode()).decode()}
+        hindring = self._sjekk_sti(metode, p)
+        base = self._maal(m.get("til"))
+        if hindring:
+            res = feil(403, hindring)
+        elif base is None:
+            res = feil(502, f"finner ikke {m.get('til')} på LAN-et")
+        else:
+            try:
+                body = base64.b64decode(m["b"]) if m.get("b") else None
+                h = {k: v for k, v in (m.get("h") or {}).items() if k.lower() not in SKY_HOP}
+                async with self.http().request(metode, base + p, data=body, headers=h, allow_redirects=False,
+                                               timeout=aiohttp.ClientTimeout(total=20)) as r:
+                    data = await r.read()
+                    if len(data) > SKY_MAX_BODY:
+                        res = feil(413, "svaret er for stort for reléet")
+                    else:
+                        hh = {k.lower(): v for k, v in r.headers.items()
+                              if k.lower() in ("content-type", "cache-control", "etag", "last-modified")}
+                        res = {"t": "res", "rid": rid, "s": r.status, "h": hh, "b": base64.b64encode(data).decode()}
+            except Exception as e:
+                res = feil(502, f"{type(e).__name__}: {e}")
+        await self._send(res)
+
+    async def _sub(self, m):
+        import aiohttp
+        rid, p = m.get("rid"), str(m.get("p") or "/api/events")
+        base = self._maal(m.get("til"))
+        avsluttet = False
+        try:
+            if base is None or self._sjekk_sti("GET", p):
+                return
+            async with self.http().get(base + p, timeout=aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=None),
+                                       headers={"Accept": "text/event-stream"}) as r:
+                if r.status != 200:
+                    return
+                async for line in r.content:
+                    line = line.decode("utf-8", "replace").rstrip("\r\n")
+                    if line.startswith("data:"):
+                        await self._send({"t": "ev", "rid": rid, "d": line[5:].lstrip(" ")})
+        except asyncio.CancelledError:
+            avsluttet = True   # unsub / frakobling – ikke svar
+            raise
+        except Exception as e:
+            print("sky: SSE-relé feilet:", repr(e), flush=True)
+        finally:
+            self._subs.pop(rid, None)
+            if not avsluttet:
+                await self._send({"t": "res", "rid": rid, "s": 204})   # strømmen tok slutt ⇒ skyen lukker for klienten
+
+    async def close(self):
+        if self._http is not None and not self._http.closed:
+            await self._http.close()
+
+
+sky = Sky(lan=False)   # LAN-søket startes i on_startup (ikke ved import / i tester)
+
+
+async def h_sky_get(_r):
+    return web.json_response(sky.status())
+
+
+async def h_sky_post(r):
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    try:
+        if b.get("koble_fra"):
+            return web.json_response(sky.koble_fra())
+        if b.get("kode"):
+            return web.json_response(await sky.kobl(b["kode"], b.get("url")))
+    except SkyFeil as e:
+        return web.json_response({"error": str(e), "feil": str(e), **sky.status()}, status=e.status)
+    return web.json_response({"error": "oppgi kode eller koble_fra"}, status=400)
+
+
 AVAHI_SVC = "/etc/avahi/services/skjold.service"
 
 
@@ -3541,11 +3950,19 @@ async def on_startup(app):
     app["btn"] = setup_buttons()
     app["pair"] = asyncio.create_task(pairing_task())
     app["menu"] = asyncio.create_task(menu_task())
+    if os.environ.get("KI_AMP_SKY", "1") != "0":   # Skjold-hjem: sky-relé (gjør ingenting før enheten er koblet)
+        sky.lan = LanPeers(sky.ident); sky.lan.start()
+        app["sky"] = asyncio.create_task(sky.run())
     if node_leds:
         apply_node_leds(); threading.Thread(target=node_led_thread, daemon=True, name="node-led").start()
 
 
 async def on_cleanup(app):
+    if app.get("sky"):
+        app["sky"].cancel()
+    await sky.close()
+    if sky.lan:
+        sky.lan.close()
     if app.get("zc"):
         await asyncio.get_running_loop().run_in_executor(None, app["zc"].close)
 
@@ -3587,7 +4004,8 @@ def main():
                     web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
                     web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post),
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
-                    web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test)])
+                    web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test),
+                    web.get("/api/sky", h_sky_get), web.post("/api/sky", h_sky_post)])
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
     webdir = os.environ.get("KI_AMP_WEBAPP", "")
     for cand in ([webdir] if webdir else []) + ["/usr/local/share/ki-amp/webapp", os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")]:
