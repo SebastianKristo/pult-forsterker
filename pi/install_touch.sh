@@ -6,7 +6,7 @@
 set -euo pipefail
 USR="${1:-${SUDO_USER:-pi}}"
 ROT="${KI_TOUCH_ROTATE:-0}"
-URL="${KI_TOUCH_URL:-http://127.0.0.1:8765/?kiosk=1}"
+URL="${KI_TOUCH_URL:-http://127.0.0.1:8765/touch.html}"
 
 apt-get update -qq
 apt-get install -y -qq cage seatd libinput-tools fonts-ibm-plex >/dev/null 2>&1 || apt-get install -y -qq cage seatd libinput-tools
@@ -35,7 +35,7 @@ for i in \$(seq 60); do curl -fs -o /dev/null http://127.0.0.1:8765/api/status &
 [ "$ROT" != 0 ] && command -v wlr-randr >/dev/null && wlr-randr --output "\$(wlr-randr | head -1 | cut -d' ' -f1)" --transform $ROT || true
 exec "$CHR" --kiosk --app="$URL" \\
   --ozone-platform=wayland --enable-features=UseOzonePlatform,OverlayScrollbar \\
-  --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 \\
+  --force-device-scale-factor=1 --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 \\
   --disable-features=TouchpadOverscrollHistoryNavigation,Translate,HardwareMediaKeyHandling \\
   --noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble \\
   --check-for-update-interval=31536000 --password-store=basic --autoplay-policy=no-user-gesture-required \\

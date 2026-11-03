@@ -18,6 +18,8 @@ export interface Settings {
   /** LED-modus: 'press' = lyser ved trykk og toner ut, 'always' = aktiv kilde lyser, 'off' = av. */
   ledMode: LedMode;
   auto: number; wake: boolean; spEn: boolean; upnpEn: boolean; castEn: boolean; ytmEn: boolean; ndEn: boolean; ytmUser: string; ytmCookie: string; ndUrl: string; ndUser: string; ndPass: string; plexEn: boolean; plexUrl: string; plexToken: string;
+  /** Skjold Touch-skjermen: rolle, lydutgang, standby etter, standby-visning, nattmodus. */
+  tRole: number; tOut: number; tStandby: number; tIdle: number; tNight: boolean;
   updChannel: number; updAuto: boolean;
   setupDone: boolean;
   eq: EqProfiles;
@@ -56,6 +58,7 @@ export const DEF: Settings = {
   bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, lvlAux: 0, lvlUsb: 0,
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
   hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '',
+  tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false,
   updChannel: 0, updAuto: true, setupDone: false,
   eq: defaultEq()
 };
@@ -66,8 +69,8 @@ export const fmt = {
 } as const;
 
 export type NumKey = 'bass' | 'treb' | 'bal' | 'lvlAux' | 'lvlUsb';
-export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto';
-export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn' | 'castEn' | 'ytmEn' | 'ndEn';
+export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle';
+export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn' | 'castEn' | 'ytmEn' | 'ndEn' | 'tNight';
 /** Lagres bare på denne telefonen (innlogginger til musikktjenester sendes ikke til forsterkeren). */
 export type LocalKey = 'ytmUser' | 'ytmCookie' | 'ndUrl' | 'ndUser' | 'ndPass';
 export type StrKey = 'nAux1' | 'nAux2' | 'nUsb1' | 'nUsb2' | 'nameCustom';
@@ -100,6 +103,11 @@ const opt = (k: OptKey, n: string, list: string[], hint?: string): Item => ({ ki
 const bool = (k: BoolKey, n: string, hint?: string): Item => ({ kind: 'bool', k, n, hint });
 const str = (k: StrKey, n: string, ph: string, hint?: string): Item => ({ kind: 'str', k, n, ph, hint });
 
+export const TOUCH_ROLES = ['Spiller og fjernkontroll', 'Bare spiller', 'Bare fjernkontroll'];
+export const TOUCH_OUT = ['RCA', '3,5 mm', 'Begge'];
+export const TOUCH_STANDBY = ['Aldri', '30 s', '1 min', '5 min'];
+export const TOUCH_STANDBY_S = [0, 30, 60, 300];
+export const TOUCH_IDLE = ['Klokke', 'Cover', 'Svart'];
 export const CATS: Category[] = [
   { id: 'eq', n: 'Equalizer', sub: 'Egen profil per inngang', items: [{ kind: 'eq', n: 'Equalizer' }] },
   { id: 'lyd', n: 'Lyd', sub: 'Tone, volum og nivå', items: [
@@ -149,6 +157,12 @@ export const CATS: Category[] = [
     { kind: 'api-opt', id: 'voiceProfile', n: 'Stemme' },
     opt('lang', 'Språk', LANGS), opt('vv', 'Stemmevolum', ['Lav', 'Middels', 'Høy']),
     { kind: 'act', n: 'Test stemme', id: 'testVoice', label: 'Spill av', safe: true }] },
+  { id: 'touch', n: 'Skjold Touch', sub: 'Rolle, skjerm og standby', items: [
+    opt('tRole', 'Rolle', TOUCH_ROLES, 'Som spiller har den egen lydutgang (RCA og 3,5 mm). Som fjernkontroll styrer den alle Skjold-enhetene i huset.'),
+    opt('tOut', 'Lydutgang', TOUCH_OUT, 'PCM5122 HIFI HAT'),
+    opt('tStandby', 'Standby etter', TOUCH_STANDBY, 'Uten trykk på skjermen'),
+    opt('tIdle', 'I standby vis', TOUCH_IDLE),
+    bool('tNight', 'Nattmodus', 'Rødlig, svakt lys mellom 23 og 07')] },
   { id: 'skjerm', n: 'Skjerm og lys', sub: 'Dimming, klokke, LED', items: [
     opt('dim', 'Dimme skjermen etter', ['Av', '30 s', '1 min']), opt('off', 'Slukk skjermen etter', ['Av', '2 min', '5 min'], 'Beskytter OLED-skjermen mot innbrenning'),
     bool('clock', 'Klokke i standby'), { kind: 'clocks', n: 'Klokke i standby' },
@@ -262,7 +276,7 @@ function itemKey(it: Item): string {
 export function catsFor(product: 's1' | 'node' | 'core' | 'touch', inputs: string[] = []): Category[] {
   const hasAux = product === 's1' || inputs.some((i) => i === 'aux' || i === 'aux2');
   const hasUsb = product === 's1' || inputs.includes('usb');
-  return CATS.filter((c) => !(product === 'core' && NO_DISPLAY.has(c.id))).map((c) => ({
+  return CATS.filter((c) => !(product === 'core' && NO_DISPLAY.has(c.id)) && (c.id !== 'touch' || product === 'touch')).map((c) => ({
     ...c,
     sub: product === 'core' && c.id === 'tilkobling' ? 'Navn og Blåtann' : c.sub,
     items: c.items.filter((it) => {

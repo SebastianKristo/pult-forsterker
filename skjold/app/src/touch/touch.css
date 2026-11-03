@@ -1,0 +1,12 @@
+/* Skjold Touch – fonter bundlet lokalt (enheten skal virke uten nett) */
+@font-face { font-family: Sora; font-weight: 300; font-display: block; src: url('@fontsource/sora/files/sora-latin-300-normal.woff2') format('woff2'); }
+@font-face { font-family: Sora; font-weight: 400; font-display: block; src: url('@fontsource/sora/files/sora-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: Sora; font-weight: 600; font-display: block; src: url('@fontsource/sora/files/sora-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 400; font-display: block; src: url('@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 500; font-display: block; src: url('@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2') format('woff2'); }
+html, body { margin: 0; padding: 0; background: #0b0b0c; color: #f2f2ee; font-family: Sora, -apple-system, sans-serif; overflow: hidden; }
+body { user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; touch-action: manipulation; }
+html, body, * { cursor: none !important; }
+button { font-family: inherit; color: inherit; touch-action: manipulation; }
+input[type='range'] { touch-action: none; margin: 0; }
+::-webkit-scrollbar { width: 0; height: 0; }
