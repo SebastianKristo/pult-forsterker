@@ -17,7 +17,7 @@ import { Icon, Logo, PRODUCT_ICON, Slider } from './components/ui';
 import { HomePage, EqPage } from './screens/pages';
 import { RadioPage } from './screens/radio';
 import { SettingsPage, CategoryDetail } from './screens/settings';
-import { Art, PlayerBody, PowerButton, Transport, VolumeRow, artFor, nowTitle, subLine } from './screens/player';
+import { PlayerBody, PowerButton, Transport, artFor, nowTitle, subLine } from './screens/player';
 import { openFull } from './lib/store';
 import { FindDevice, Setup } from './screens/onboard';
 import { showToast, settings } from './lib/store';
@@ -177,7 +177,7 @@ function Desktop() {
         </nav>
         <main class="main">
           <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>
-          {r.page === 'home' && <><div class="player"><Art s={s} /><div class="col gap16"><div class="col gap4"><span style={{ fontSize: '24px', fontWeight: 600 }} data-testid="now-title">{t.title}</span><span class="muted">{t.sub}</span>{t.album && <span class="muted" style={{ fontSize: '13px', opacity: 0.8 }} data-testid="album">{t.album}</span>}{air && <span class="muted" style={{ fontSize: '12px' }}>{air}</span>}</div><Transport s={s} /><VolumeRow s={s} /></div></div><HomePage wide /></>}
+          {r.page === 'home' && <HomePage wide />}
           {r.page === 'play' && <div class="player"><PlayerBody /></div>}
           {r.page === 'radio' && <RadioPage wide />}
           {r.page === 'rooms' && <RoomsPhone wide />}
