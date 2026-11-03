@@ -216,7 +216,7 @@ object SK {
     val eqNames = listOf("Dypbass", "Bass", "Mellomtone", "Presens", "Luft")
     val eqHz = listOf("60 Hz", "250 Hz", "1 kHz", "4 kHz", "12 kHz")
     val eqDesc = listOf("Trommer, bassgitar og dunk. Mye her kan gi rumling.", "Fylde og varme. For mye gjør lyden grøtete.", "Stemmer og de fleste instrumenter.", "Klarhet i tale og vokal. For mye blir skarpt.", "Cymbaler, glans og romfølelse.")
-    val eqPresets: List<Pair<String, List<Int>>> = listOf("Flat" to listOf(0, 0, 0, 0, 0), "Bass+" to listOf(6, 3, 0, 0, 1), "Vokal" to listOf(-2, 0, 3, 2, 0), "Kveld" to listOf(3, 1, -1, -2, -3), "Podkast" to listOf(-4, 0, 4, 3, -1), "Klassisk" to listOf(2, 0, -1, 1, 3))
+    val eqPresets: List<Pair<String, List<Int>>> = listOf("Flat" to listOf(0, 0, 0, 0, 0), "Bass+" to listOf(5, 2, 0, 0, 1), "Vokal" to listOf(-2, -1, 2, 3, 1), "Kveld" to listOf(2, 1, 0, -2, -3), "Podkast" to listOf(-5, -1, 3, 3, -2), "Klassisk" to listOf(1, 0, 0, 1, 2), "Rock" to listOf(4, 1, -2, 2, 3), "Pop" to listOf(2, 0, 1, 2, 2), "Elektronisk" to listOf(6, 1, -1, 1, 3), "Hip-hop" to listOf(6, 3, -1, 1, 1), "Jazz" to listOf(2, 1, -1, 1, 2), "Akustisk" to listOf(1, 2, 0, 2, 2), "Små høyttalere" to listOf(-4, 2, 1, 1, 0), "Lavt volum" to listOf(4, 1, -1, 1, 3))
     val eqSources: List<Pair<String, String>> = listOf("air" to "AirPlay", "bt" to "Blåtann", "radio" to "Radio", "aux" to "AUX", "usb" to "USB", "hp" to "Hodetelefoner")
     val eqDefaults = mapOf("air" to 0, "bt" to 1, "radio" to 2, "aux" to 0, "usb" to 0, "hp" to 3)
 
