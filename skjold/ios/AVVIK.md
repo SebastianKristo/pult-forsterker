@@ -6,7 +6,6 @@ Status 2026-11-02. Utseendet er det samme som før; endringene under er logikk o
 | Hva | Hvorfor | Midlertidig løsning |
 |---|---|---|
 | `renders/cut/01–04-*.png` (velkomst-hero) | Ikke med i zip-filen | S1-renderen er klippet ut av `01-velkomst.png` (`hero-s1`). Node-bildene vises som strektegning. Legg ekte renders inn som `hero-01-s1`, `hero-03-s1`, `hero-02-node`, `hero-04-node` i Assets, så brukes de automatisk. |
-| `logo/brands/navidrome.png`, `lyrion_fav.png` | Ikke med i zip-filen | Bokstavmerke. Legg inn `brand-navidrome` / `brand-lyrion` i Assets. |
 | `README.md`, punkt 3 (REST/WebSocket-API) | Ikke med i zip-filen | Erstattet av det ekte API-et i `pi/ki_amp_daemon.py` (REST + SSE på port 8765). Se «Koblinger» i `CLAUDE.md`. |
 | Logo for NRK Alltid Nyheter | Ikke på static.nrk.no | Hentes via Radio Browser, ellers fargeforløp. |
 
@@ -25,6 +24,17 @@ Status 2026-11-02. Utseendet er det samme som før; endringene under er logikk o
 - Oppsettet huskes. Etter første fullføring starter appen rett i hovedappen (introen vises fortsatt).
 - «7 favoritter» brytes på to linjer i skjermbilde 19. Det ser ut som en layoutfeil i designet, så her står teksten på én linje.
 - Statuslinjen og hjemindikatoren er systemets egne, ikke designets attrapper.
+
+## Handoff 45 (2026-11-03)
+| Punkt | Status |
+|---|---|
+| Radio-oppdagside (søk, «Favoritter», toppkort, sjangerfiltre, hyller, ★/☆, spill uten favoritt) | finnes (iOS og Android) |
+| Favoritter i Innstillinger → Radio, inntil 50, rekkefølge, strøm-URL | finnes |
+| «Annet nettverk …» med SSID/sikkerhet/passord og «Skriv eget navn» | finnes |
+| Merkelogoer Navidrome og Lyrion (`logo/brands`) | finnes (lagt inn nå: `brand-navidrome`, `brand-lyrion`, Android `brand_*`) |
+| Kategori «Skjold Touch» (rolle, utgang, standby, standby-visning, nattmodus) | finnes (lagt inn nå; samme nøkler som daemon og web, ikke designets tDim/tOff/tBri/tCtl/tWake/tBtn som daemonen ikke har) |
+| Lydutgang og Blåtann-paring også for Touch, Spotpear HIFI HAT i I²S-listen | finnes (lagt inn nå) |
+| Skjermtyper per rom (`DISPLAYS`, klokker per skjerm) | mangler – daemonen har ikke valg av skjermtype ennå |
 
 ## Gjenstår
 1. Bygg i Xcode og rett eventuelle kompileringsfeil (se «Må testes i Xcode» i `CLAUDE.md`).

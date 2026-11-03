@@ -82,9 +82,15 @@ enum SK {
             .num("lvlAux", "Nivå AUX", -6, 6, .dB, "Juster så AUX er like høy som strømming", dev: ["s1"]),
             .num("lvlUsb", "Nivå USB", -6, 6, .dB, dev: ["s1"]),
             .act("Test høyttalerne", id: "testSpk", label: "Spill av", safe: true, "Spiller en kort tone i venstre og så i høyre høyttaler, så du kan sjekke at de er koblet riktig")]),
-        SettingCategory(id: "utgang", n: "Lydutgang", sub: "DAC, HDMI, optisk eller 3,5 mm", dev: ["node", "core"], items: [
+        SettingCategory(id: "touch", n: "Skjold Touch", sub: "Rolle, skjerm og standby", dev: ["touch"], items: [
+            .opt("tRole", "Rolle", ["Spiller og fjernkontroll", "Bare spiller", "Bare fjernkontroll"], "Som spiller har den egen lydutgang (RCA og 3,5 mm). Som fjernkontroll styrer den alle Skjold-enhetene i huset."),
+            .opt("tOut", "Lydutgang", ["RCA", "3,5 mm", "Begge"], "PCM5122 HIFI HAT"),
+            .opt("tStandby", "Standby etter", ["Aldri", "30 s", "1 min", "5 min"], "Uten trykk på skjermen"),
+            .opt("tIdle", "I standby vis", ["Klokke", "Cover og klokke", "Svart"]),
+            .bool("tNight", "Nattmodus", "Rødlig, svakt lys mellom 23 og 07")]),
+        SettingCategory(id: "utgang", n: "Lydutgang", sub: "DAC, HDMI, optisk eller 3,5 mm", dev: ["node", "core", "touch"], items: [
             .opt("out", "Utgang", ["3,5 mm (innebygd)", "HDMI", "USB-DAC", "I²S-kort (HiFiBerry / IQaudio)", "Optisk (S/PDIF)"], "Pi 3B og Pi 4 har 3,5 mm og HDMI. Et I²S-kort gir best lyd."),
-            .opt("hat", "I²S-kort", ["HiFiBerry DAC+", "HiFiBerry DAC2 HD", "IQaudio DAC Pro", "Allo Boss"], "Brukes bare når utgang er I²S-kort"),
+            .opt("hat", "I²S-kort", ["Spotpear HIFI HAT (PCM5122)", "HiFiBerry DAC+", "HiFiBerry DAC2 HD", "IQaudio DAC Pro", "Allo Boss"], "Brukes bare når utgang er I²S-kort"),
             .opt("rate", "Samplingsfrekvens", ["44,1 kHz", "48 kHz", "96 kHz", "Følg kilden"]),
             .opt("mixer", "Volumkontroll", ["Programvare", "Maskinvare (DAC)", "Fast 100 % (styres av forsterker)"], "Velg fast hvis enheten er koblet til en egen forsterker med volumknapp"),
             .act("Test utgang", id: "testOut", label: "Spill testtone", safe: true)]),
@@ -93,8 +99,8 @@ enum SK {
             .str("nAux1", "Navn på AUX 1", "AUX 1", "Vises på skjermen og i appen", dev: ["s1"]), .str("nAux2", "Navn på AUX 2", "AUX 2", dev: ["s1"]),
             .str("nUsb1", "Navn på USB-C «PC 1»", "PC", "For eksempel Mac eller Jobb-PC", dev: ["s1"]), .str("nUsb2", "Navn på USB-C «PC 2»", "Switch", dev: ["s1"]),
             .info("Parede enheter", key: "btDev"),
-            .act("Blåtann-paring", id: "btPair", label: "Start paring", safe: true, "Enheten har ingen knapp. Gjør den synlig for Blåtann i 2 minutter herfra.", dev: ["node", "core"]),
-            .bool("btAuto", "Blåtann alltid synlig", "Kan pares uten å starte paring først. Mindre sikkert.", dev: ["node", "core"]),
+            .act("Blåtann-paring", id: "btPair", label: "Start paring", safe: true, "Enheten har ingen knapp. Gjør den synlig for Blåtann i 2 minutter herfra.", dev: ["node", "core", "touch"]),
+            .bool("btAuto", "Blåtann alltid synlig", "Kan pares uten å starte paring først. Mindre sikkert.", dev: ["node", "core", "touch"]),
             .act("Glem alle Blåtann-enheter", id: "forget", label: "Glem alle")]),
         SettingCategory(id: "radio", n: "Radio", sub: "Favoritter, knapper og oppstart", items: [
             .opt("hold", "Hold radioknappen", presetsRadio, "Kanalen som spilles når du holder radioknappen inne", dev: ["s1"]),
@@ -137,7 +143,7 @@ enum SK {
     ]
 
     /// Default setting values. Booleans are stored as 0/1.
-    static let def: [String: Int] = ["nodeStart": 0, "btAuto": 0, "out": 3, "hat": 0, "rate": 3, "mixer": 0, "clockStyle": 0, "name": 0, "lvlAux": 0, "lvlUsb": 0, "led": 0, "voice": 0, "lang": 0, "vv": 1, "hold": 2, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": 1, "hpOwn": 1, "dim": 1, "off": 1, "clock": 1, "auto": 1, "wake": 1]
+    static let def: [String: Int] = ["nodeStart": 0, "btAuto": 0, "out": 3, "hat": 0, "rate": 3, "mixer": 0, "clockStyle": 0, "name": 0, "lvlAux": 0, "lvlUsb": 0, "led": 0, "voice": 0, "lang": 0, "vv": 1, "hold": 2, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": 1, "hpOwn": 1, "dim": 1, "off": 1, "clock": 1, "auto": 1, "wake": 1, "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": 0]
 
     static func forDev(_ dev: [String]?, _ type: String) -> Bool { dev == nil || dev!.contains(type) }
 

@@ -148,9 +148,15 @@ object SK {
             S.num("lvlAux", "Nivå AUX", -6, 6, NumFormat.DB, "Juster så AUX er like høy som strømming", dev = listOf("s1")),
             S.num("lvlUsb", "Nivå USB", -6, 6, NumFormat.DB, dev = listOf("s1")),
             S.act("Test høyttalerne", "testSpk", "Spill av", true, "Spiller en kort tone i venstre og så i høyre høyttaler, så du kan sjekke at de er koblet riktig"))),
-        SettingCategory("utgang", "Lydutgang", "DAC, HDMI, optisk eller 3,5 mm", dev = listOf("node", "core"), items = listOf(
+        SettingCategory("touch", "Skjold Touch", "Rolle, skjerm og standby", dev = listOf("touch"), items = listOf(
+            S.opt("tRole", "Rolle", listOf("Spiller og fjernkontroll", "Bare spiller", "Bare fjernkontroll"), "Som spiller har den egen lydutgang (RCA og 3,5 mm). Som fjernkontroll styrer den alle Skjold-enhetene i huset."),
+            S.opt("tOut", "Lydutgang", listOf("RCA", "3,5 mm", "Begge"), "PCM5122 HIFI HAT"),
+            S.opt("tStandby", "Standby etter", listOf("Aldri", "30 s", "1 min", "5 min"), "Uten trykk på skjermen"),
+            S.opt("tIdle", "I standby vis", listOf("Klokke", "Cover og klokke", "Svart")),
+            S.bool("tNight", "Nattmodus", "Rødlig, svakt lys mellom 23 og 07"))),
+        SettingCategory("utgang", "Lydutgang", "DAC, HDMI, optisk eller 3,5 mm", dev = listOf("node", "core", "touch"), items = listOf(
             S.opt("out", "Utgang", listOf("3,5 mm (innebygd)", "HDMI", "USB-DAC", "I²S-kort (HiFiBerry / IQaudio)", "Optisk (S/PDIF)"), "Pi 3B og Pi 4 har 3,5 mm og HDMI. Et I²S-kort gir best lyd."),
-            S.opt("hat", "I²S-kort", listOf("HiFiBerry DAC+", "HiFiBerry DAC2 HD", "IQaudio DAC Pro", "Allo Boss"), "Brukes bare når utgang er I²S-kort"),
+            S.opt("hat", "I²S-kort", listOf("Spotpear HIFI HAT (PCM5122)", "HiFiBerry DAC+", "HiFiBerry DAC2 HD", "IQaudio DAC Pro", "Allo Boss"), "Brukes bare når utgang er I²S-kort"),
             S.opt("rate", "Samplingsfrekvens", listOf("44,1 kHz", "48 kHz", "96 kHz", "Følg kilden")),
             S.opt("mixer", "Volumkontroll", listOf("Programvare", "Maskinvare (DAC)", "Fast 100 % (styres av forsterker)"), "Velg fast hvis enheten er koblet til en egen forsterker med volumknapp"),
             S.act("Test utgang", "testOut", "Spill testtone", true))),
@@ -159,8 +165,8 @@ object SK {
             S.str("nAux1", "Navn på AUX 1", "AUX 1", "Vises på skjermen og i appen", dev = listOf("s1")), S.str("nAux2", "Navn på AUX 2", "AUX 2", dev = listOf("s1")),
             S.str("nUsb1", "Navn på USB-C «PC 1»", "PC", "For eksempel Mac eller Jobb-PC", dev = listOf("s1")), S.str("nUsb2", "Navn på USB-C «PC 2»", "Switch", dev = listOf("s1")),
             S.info("Parede enheter", key = "btDev"),
-            S.act("Blåtann-paring", "btPair", "Start paring", true, "Enheten har ingen knapp. Gjør den synlig for Blåtann i 2 minutter herfra.", dev = listOf("node", "core")),
-            S.bool("btAuto", "Blåtann alltid synlig", "Kan pares uten å starte paring først. Mindre sikkert.", dev = listOf("node", "core")),
+            S.act("Blåtann-paring", "btPair", "Start paring", true, "Enheten har ingen knapp. Gjør den synlig for Blåtann i 2 minutter herfra.", dev = listOf("node", "core", "touch")),
+            S.bool("btAuto", "Blåtann alltid synlig", "Kan pares uten å starte paring først. Mindre sikkert.", dev = listOf("node", "core", "touch")),
             S.act("Glem alle Blåtann-enheter", "forget", "Glem alle"))),
         SettingCategory("radio", "Radio", "Favoritter, knapper og oppstart", items = listOf(
             S.opt("hold", "Hold radioknappen", presetsRadio, "Kanalen som spilles når du holder radioknappen inne", dev = listOf("s1")),
@@ -203,7 +209,7 @@ object SK {
     )
 
     /** Default setting values. Booleans are stored as 0/1. */
-    val def: Map<String, Int> = mapOf("nodeStart" to 0, "btAuto" to 0, "out" to 3, "hat" to 0, "rate" to 3, "mixer" to 0, "clockStyle" to 0, "name" to 0, "lvlAux" to 0, "lvlUsb" to 0, "led" to 0, "voice" to 0, "lang" to 0, "vv" to 1, "hold" to 2, "bass" to 0, "treb" to 0, "bal" to 0, "vstart" to 0, "vmax" to 0, "perIn" to 1, "hpOwn" to 1, "dim" to 1, "off" to 1, "clock" to 1, "auto" to 1, "wake" to 1)
+    val def: Map<String, Int> = mapOf("nodeStart" to 0, "btAuto" to 0, "out" to 3, "hat" to 0, "rate" to 3, "mixer" to 0, "clockStyle" to 0, "name" to 0, "lvlAux" to 0, "lvlUsb" to 0, "led" to 0, "voice" to 0, "lang" to 0, "vv" to 1, "hold" to 2, "bass" to 0, "treb" to 0, "bal" to 0, "vstart" to 0, "vmax" to 0, "perIn" to 1, "hpOwn" to 1, "dim" to 1, "off" to 1, "clock" to 1, "auto" to 1, "wake" to 1, "tRole" to 0, "tOut" to 2, "tStandby" to 1, "tIdle" to 0, "tNight" to 0)
 
     fun forDev(dev: List<String>?, type: String) = dev == null || dev.contains(type)
 

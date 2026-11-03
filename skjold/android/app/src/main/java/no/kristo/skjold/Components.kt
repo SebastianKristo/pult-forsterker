@@ -330,16 +330,14 @@ object SourceLogos {
         "UPnP/DLNA" -> SourceStyle(solid(Color.White), C.card2, brand = upnp, size = 0.6f)
         "AUX" -> SourceStyle(solid(C.off), C.ink, stroke = "M12 2.5v3M9.5 5.5h5v4h-5zM10.8 9.5h2.4v8.2a1.2 1.2 0 0 1-2.4 0zM10.8 13h2.4", size = 0.47f)
         "Navidrome" -> SourceStyle({ m ->
-            // fallback mark (brand PNG was not in the design hand-off)
-            BoxWithConstraints(m.background(C.bg), contentAlignment = Alignment.Center) {
-                Box(Modifier.fillMaxSize(0.625f).clip(CircleShape).background(hex(0x0f62fe)))
-                T("N", sora(maxWidth.value * 0.34f, W.Semibold, Color.White))
-            }
+            Box(m.background(C.bg)) { Image(painterResource(R.drawable.brand_navidrome), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
         }, Color.White, size = 0f)
         "USB" -> SourceStyle(solid(C.seg), C.ink, stroke = "M12 3v15M8 9v2.5l4 3M16 8v3l-4 3", fillPath = "M12 2l-2 3h4zM12 18a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zM7 7.5h2v2H7zM16 6.5a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z", size = 0.5f)
         "Hodetelefoner" -> SourceStyle(solid(hex(0x2f2a40)), C.ink, stroke = "M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zM20 15a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z", size = 0.5f)
         "Plex" -> SourceStyle(solid(hex(0x1f1f1f)), hex(0xe5a00d), brand = plex, size = 0.5f)
-        "Lyrion" -> SourceStyle({ m -> BoxWithConstraints(m.background(C.bg), contentAlignment = Alignment.Center) { T("L", sora(maxWidth.value * 0.375f, W.Semibold, C.ink)) } }, Color.White, size = 0f)
+        "Lyrion" -> SourceStyle({ m ->
+            Box(m.background(C.bg)) { Image(painterResource(R.drawable.brand_lyrion), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        }, Color.White, size = 0f)
         else -> SourceStyle(solid(C.seg), C.ink, size = 0.47f)
     }
 }
