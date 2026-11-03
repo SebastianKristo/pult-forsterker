@@ -52,7 +52,7 @@ button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: default; }
 a { color: var(--accent); text-decoration: none; }
-a:hover { color: var(--accent-2); }
+@media (hover: hover) { a:hover { color: var(--accent-2); } }
 input::placeholder { color: var(--muted-3); }
 input[type='range'] { accent-color: var(--accent); margin: 0; }
 h1, h2, h3, p { margin: 0; }
@@ -87,7 +87,7 @@ svg { display: block; }
 
 /* Buttons */
 .btn { height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--card-2); color: var(--text); font-size: 13px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-.btn:hover { border-color: var(--line-3); }
+@media (hover: hover) { .btn:hover { border-color: var(--line-3); } }
 .btn.sm { height: 32px; padding: 0 12px; font-size: 12px; }
 .btn.danger { border-color: var(--red); color: var(--red-text); }
 .btn.primary { border: none; background: var(--accent); color: var(--bg); font-weight: 600; }
@@ -97,7 +97,7 @@ svg { display: block; }
 .btn.square { width: 32px; height: 32px; padding: 0; }
 .btn.square.lg { width: 36px; height: 36px; }
 .link { border: none; background: none; color: var(--accent); font-size: 13px; padding: 4px 0; }
-.link:hover { color: var(--accent-2); }
+@media (hover: hover) { .link:hover { color: var(--accent-2); } }
 .dashed { height: 46px; border-radius: var(--r-btn); border: 1px dashed var(--accent-line); background: transparent; color: var(--accent-2); font-size: 13px; width: 100%; }
 .dashed:disabled { border-color: var(--line-2); color: var(--muted); }
 
@@ -206,7 +206,7 @@ svg { display: block; }
 .desktop nav.side { flex: 0 0 230px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 22px; max-height: calc(100vh - 140px); overflow-y: auto; }
 .desktop nav .head { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; color: var(--muted-2); padding: 16px 12px 6px; }
 .desktop nav .nv { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 40px; padding: 0 12px; border-radius: 8px; border: none; background: transparent; color: var(--text); font-size: 14px; text-align: left; width: 100%; }
-.desktop nav .nv:hover { background: var(--card); }
+@media (hover: hover) { .desktop nav .nv:hover { background: var(--card); } }
 .desktop nav .nv.on { background: var(--accent-bg); color: var(--accent-2); }
 .desktop nav .nv .badge { font-family: var(--mono); font-size: 10px; color: var(--muted); }
 .desktop .dev-ico { width: 44px; height: 44px; border-radius: 12px; background: #1f1f21; border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; color: var(--accent-2); flex-shrink: 0; }
@@ -586,3 +586,21 @@ html, body { height: 100%; }
 .dsc::-webkit-scrollbar { display: none; }
 .range.white { accent-color: #f2f2ee; }
 @media (min-width: 900px) { .dshell { max-width: 440px; margin: 0 auto; border-left: 1px solid #1b1b1c; border-right: 1px solid #1b1b1c; } }
+
+/* ── Berøring (Skjold Touch-skjerm, mobil, nettbrett) ── */
+/* glidere: hele bevegelsen går til glideren, ikke til siderulling (ellers pointercancel midt i dra) */
+input[type='range'] { touch-action: none; }
+button, a, .btn, [role='button'], input, label { touch-action: manipulation; }
+@media (pointer: coarse) {
+  body { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  input[type='text'], input[type='search'], input[type='password'], input[type='url'], input[type='number'], textarea { user-select: text; -webkit-user-select: text; }
+  img { -webkit-user-drag: none; }
+  .range { height: 44px; }
+  .vrange { width: 44px; }
+  input[type='range']::-webkit-slider-thumb { width: 28px; height: 28px; }
+  button:active, .btn:active, [role='button']:active { transform: scale(.96); filter: brightness(1.15); transition: transform .06s, filter .06s; }
+}
+/* kiosk på Skjold Touch: ingen peker, ingen rullefelt, ingen kontekstmeny */
+html.kiosk, html.kiosk * { cursor: none !important; }
+html.kiosk ::-webkit-scrollbar { width: 0; height: 0; }
+html.kiosk body { overscroll-behavior: none; }
