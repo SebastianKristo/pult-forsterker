@@ -3,6 +3,7 @@
 # Kjør som vanlig bruker:  bash install.sh
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
+sudo mkdir -p /usr/local/share/ki-amp && (cd "$SRC/.." && pwd) | sudo tee /usr/local/share/ki-amp/src >/dev/null
 # KI_AMP_OUT=dac        : I2S-DAC / hovedkort (standard)
 # KI_AMP_OUT=headphones : TEST uten hovedkort – lyd ut på Pi 4 sin 3,5 mm-kontakt (bcm2835 Headphones, 16 bit)
 # KI_AMP_BOARD=main     : hovedkort rev B (PCM5102A + PCM1808 på I2S, lydkortet heter «pultamp», TFT/touch mulig)

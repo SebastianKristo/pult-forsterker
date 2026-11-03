@@ -19,6 +19,7 @@ API:
   POST /api/input  {"input":"airplay|bt|aux|usb"}
   POST /api/volume {"volume":0-100} | {"delta":±n}
   POST /api/loudness {"on":bool, "level":0-10}
+  GET  /api/update   {current,latest,available,running,result,log} · POST /api/update starter oppdatering (git pull + update.sh)
   POST /api/play     {"url", "title"?, "announce"?:bool, "volume"?} – spill lydfil/strøm (HA/Homey); announce = oppå det som spiller
   POST /api/mute   {"mute":bool}
   POST /api/bt     {"pairing":true}   (gjør Pi-en synlig 2 min)
@@ -119,6 +120,7 @@ import socket
 import subprocess
 import time
 import hashlib
+import shlex
 import shutil
 import urllib.parse
 import urllib.request
@@ -3600,6 +3602,100 @@ async def h_play(r):
     return j()
 
 
+# ---------- Programvareoppdatering fra appen / web-UI ----------
+UPD_LOG = "/var/log/skjold-update.log"
+_upd_latest = {"t": 0.0, "tag": ""}
+
+
+def _rel_ver(t):
+    try:
+        return tuple(int(x) for x in str(t).split("skjold-v", 1)[1].split("."))
+    except Exception:
+        return (0,)
+
+
+def _upd_src():
+    for c in (_read_text("/usr/local/share/ki-amp/src"), "/opt/skjold/src", os.path.expanduser("~pi/pult-forsterker")):
+        if c and os.path.isdir(os.path.join(c, ".git")) and os.path.isfile(os.path.join(c, "pi", "update.sh")):
+            return c
+    return ""
+
+
+def _read_text(path):
+    try:
+        with open(path) as fh:
+            return fh.read().strip()
+    except OSError:
+        return ""
+
+
+def _latest_release():
+    if time.time() - _upd_latest["t"] < 600 and _upd_latest["tag"]:
+        return _upd_latest["tag"]
+    req = urllib.request.Request("https://api.github.com/repos/SebastianKristo/pult-forsterker/releases?per_page=30",
+                                 headers={"Accept": "application/vnd.github+json", "User-Agent": "Skjold"})
+    with urllib.request.urlopen(req, timeout=8) as r:
+        rels = json.loads(r.read())
+    tags = [x["tag_name"] for x in rels if not x.get("draft") and not x.get("prerelease") and str(x.get("tag_name", "")).startswith("skjold-v")]
+    _upd_latest.update(t=time.time(), tag=max(tags, key=_rel_ver) if tags else "")
+    return _upd_latest["tag"]
+
+
+def _upd_running():
+    return subprocess.run(["systemctl", "is-active", "--quiet", "skjold-update"], check=False).returncode == 0
+
+
+def update_info(check=True):
+    cur = _read_text("/usr/local/share/ki-amp/release")
+    latest, err = "", ""
+    if check:
+        try:
+            latest = _latest_release()
+        except Exception as e:
+            err = f"Fant ikke nyeste versjon: {e}"
+    log = _read_text(UPD_LOG).splitlines()
+    last = next((l for l in reversed(log) if l.startswith("SKJOLD-RESULTAT:")), "")
+    src = _upd_src()
+    return {"current": cur or None, "version": VERSION, "latest": latest or None,
+            "available": bool(latest) and (not cur or cur == "lokal" or _rel_ver(latest) > _rel_ver(cur)),
+            "running": _upd_running(), "result": last.split(":", 1)[1].strip() if last else None,
+            "log": [l for l in log if not l.startswith("SKJOLD-RESULTAT:")][-30:], "can_update": bool(src), "error": err or None}
+
+
+def start_update():
+    src = _upd_src()
+    if not src:
+        raise RuntimeError("Fant ikke kildetreet (kjør pi/update.sh én gang fra terminalen først)")
+    if _upd_running():
+        return
+    script = (f"cd {shlex.quote(src)} && echo \"== $(date '+%F %T') Henter nyeste versjon\" && "
+              "git -c safe.directory='*' pull --ff-only && "
+              "echo '== Installerer' && bash pi/update.sh && "
+              "{ [ -f /etc/systemd/system/skjold-os.service ] && [ -f skjold/os/install.sh ] && bash skjold/os/install.sh || true; }; "
+              "rc=$?; [ $rc = 0 ] && echo 'SKJOLD-RESULTAT: ok' || echo \"SKJOLD-RESULTAT: feil ($rc)\"")
+    with open(UPD_LOG, "w") as fh:
+        fh.write("== Starter oppdatering\n")
+    # egen systemd-enhet: overlever at ki-amp startes på nytt underveis
+    subprocess.run(["systemd-run", "--unit=skjold-update", "--collect", "--quiet",
+                    "-p", f"StandardOutput=append:{UPD_LOG}", "-p", f"StandardError=append:{UPD_LOG}",
+                    "/bin/bash", "-c", script], check=True, timeout=10)
+
+
+async def h_update_get(r):
+    """GET /api/update → {current, latest, available, running, result, log[], can_update}"""
+    check = r.query.get("check", "1") != "0"
+    return web.json_response(await asyncio.get_running_loop().run_in_executor(None, update_info, check))
+
+
+async def h_update_post(_r):
+    """POST /api/update → henter nyeste versjon (git pull + update.sh) i bakgrunnen. Følg med via GET /api/update."""
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, start_update)
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=409)
+    return web.json_response(await asyncio.get_running_loop().run_in_executor(None, update_info, False))
+
+
 # ---------- avspillingskontroll (AirPlay via Shairport Sync D-Bus, Bluetooth via BlueZ AVRCP) ----------
 TRANSPORT = {"play", "pause", "playpause", "next", "previous", "stop"}
 SPS = ("org.gnome.ShairportSync", "/org/gnome/ShairportSync", "org.gnome.ShairportSync.RemoteControl")
@@ -4162,7 +4258,7 @@ def main():
     app = web.Application(middlewares=[cors_mw])
     app.add_routes([web.get("/api/status", h_status), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

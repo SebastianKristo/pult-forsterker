@@ -3,6 +3,7 @@
 #   cd ~/pult-forsterker && git pull && bash pi/update.sh
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
+sudo mkdir -p /usr/local/share/ki-amp && (cd "$SRC/.." && pwd) | sudo tee /usr/local/share/ki-amp/src >/dev/null   # kildetreet, for oppdatering fra appen
 
 echo "== Programmer og tjenester"
 # I2C for OLED (Pi OS leverer det avslått) og moduler via modules-load.d (Debian 13)
