@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -2391,6 +2391,55 @@
         "getState": {
           "method": "GET",
           "path": "/state"
+        },
+        "action": {
+          "method": "POST",
+          "path": "/action"
+        }
+      }
+    },
+    "kontroll": {
+      "id": "kontroll",
+      "name": {
+        "en": "Skjold – Source & volume",
+        "no": "Skjold – Kilde og volum"
+      },
+      "height": 200,
+      "transparent": true,
+      "settings": [
+        {
+          "id": "device",
+          "type": "autocomplete",
+          "title": {
+            "en": "Skjold device",
+            "no": "Skjold-enhet"
+          }
+        }
+      ],
+      "api": {
+        "getState": {
+          "method": "GET",
+          "path": "/state"
+        },
+        "action": {
+          "method": "POST",
+          "path": "/action"
+        }
+      }
+    },
+    "alle": {
+      "id": "alle",
+      "name": {
+        "en": "Skjold – All rooms",
+        "no": "Skjold – Alle rom"
+      },
+      "height": 260,
+      "transparent": true,
+      "settings": [],
+      "api": {
+        "getAll": {
+          "method": "GET",
+          "path": "/all"
         },
         "action": {
           "method": "POST",
