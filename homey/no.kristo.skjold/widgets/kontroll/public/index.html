@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  /* Lyst og mørkt tema: Homey setter .homey-dark-mode; prefers-color-scheme som reserve. Homey-variabler brukes der de finnes. */
+  :root { --acc: #c8902b; --ink: #1d1d1b; --mut: rgba(29,29,27,.6); --card: var(--homey-background-color, #ffffff); --line: rgba(0,0,0,.08);
+          --art: #ece9e2; --track: rgba(0,0,0,.14); --veil: linear-gradient(90deg, rgba(255,255,255,.82), rgba(255,255,255,.6)); --bgfx: blur(28px) saturate(1.2) brightness(1.15); --pp-ink: #fff; --pp: #1d1d1b; }
+  @media (prefers-color-scheme: dark) { :root:not(.homey-light-mode) { --acc: #d9a441; --ink: #f4f1ea; --mut: rgba(244,241,234,.62); --card: var(--homey-background-color, #121214); --line: rgba(255,255,255,.06);
+          --art: #232326; --track: rgba(255,255,255,.18); --veil: linear-gradient(90deg, rgba(10,10,12,.55), rgba(10,10,12,.25)); --bgfx: blur(28px) saturate(1.3) brightness(.45); --pp-ink: #111; --pp: #f4f1ea; } }
+  .homey-dark-mode, .homey-dark-mode :root { --acc: #d9a441; --ink: #f4f1ea; --mut: rgba(244,241,234,.62); --card: var(--homey-background-color, #121214); --line: rgba(255,255,255,.06);
+          --art: #232326; --track: rgba(255,255,255,.18); --veil: linear-gradient(90deg, rgba(10,10,12,.55), rgba(10,10,12,.25)); --bgfx: blur(28px) saturate(1.3) brightness(.45); --pp-ink: #111; --pp: #f4f1ea; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: var(--homey-font-family, -apple-system, system-ui, sans-serif); color: var(--ink); }
+  .card { position: relative; overflow: hidden; border-radius: var(--homey-border-radius-default, 16px); background: var(--card); box-shadow: inset 0 0 0 1px var(--line); padding: 14px; }
+  button { border: 0; background: none; color: var(--ink); cursor: pointer; padding: 0; font: inherit; -webkit-tap-highlight-color: transparent; }
+  button:active { transform: scale(.95); }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--acc) var(--p,40%), var(--track) var(--p,40%)); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--pp); box-shadow: 0 1px 6px rgba(0,0,0,.35); }
+  .mut { color: var(--mut); }
+  .ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hd { display: flex; align-items: center; gap: 10px; }
+  .art { width: 44px; height: 44px; flex: none; border-radius: 10px; background: var(--art) center/cover no-repeat; display: flex; align-items: center; justify-content: center; color: var(--mut); }
+  .art svg { width: 20px; height: 20px; }
+  .ti { flex: 1; min-width: 0; } .ti b { display: block; font-size: 15px; } .ti span { display: block; font-size: 12px; }
+  .pw { width: 36px; height: 36px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center; }
+  .pw.on { background: var(--acc); color: #111; box-shadow: none; }
+  .src { display: flex; gap: 8px; margin: 14px 0; overflow-x: auto; scrollbar-width: none; }
+  .src button { flex: none; height: 32px; padding: 0 12px; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); font-size: 13px; }
+  .src button.on { background: var(--pp); color: var(--pp-ink); box-shadow: none; }
+  .vol { display: flex; align-items: center; gap: 12px; } .vol .n { width: 30px; text-align: right; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .mute { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+</style></head><body>
+<div class="card" id="card">
+  <div class="hd"><div class="art" id="art"><svg viewBox="0 0 42 46" fill="currentColor"><rect x="1" y="2" width="4.6" height="22" rx="2.3"/><rect x="9" y="2" width="4.6" height="33" rx="2.3"/><rect x="18.7" y="2" width="4.6" height="42" rx="2.3"/><rect x="28.4" y="2" width="4.6" height="33" rx="2.3"/><rect x="36.4" y="2" width="4.6" height="22" rx="2.3"/></svg></div><div class="ti"><b class="ell" id="title">Skjold</b><span class="ell mut" id="sub"></span></div>
+    <button class="pw" id="pw" aria-label="Av/på"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v9M6.3 7.3a8 8 0 1 0 11.4 0"/></svg></button></div>
+  <div class="src" id="src"></div>
+  <div class="vol"><button class="mute" id="mute" aria-label="Lyd av"></button><input type="range" min="0" max="100" id="vol"><span class="n" id="vv">0</span></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const SPK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg>';
+const MUTE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>';
+let device = null, dragging = false, sig = '';
+function render(s) {
+  $('title').textContent = s.title || s.name; $('sub').textContent = s.power ? [s.inputLabel, s.artist].filter(Boolean).join(' · ') : 'Standby';
+  const img = s.cover || s.image; $('art').style.backgroundImage = img ? `url("${img}")` : ''; $('art').querySelector('svg').style.display = img ? 'none' : '';
+  $('pw').classList.toggle('on', s.power); $('mute').innerHTML = s.mute ? MUTE : SPK;
+  const k = JSON.stringify([s.inputs, s.input]);
+  if (k !== sig) { sig = k; $('src').innerHTML = (s.inputs || []).map((i) => `<button data-i="${i.id}" class="${i.id === s.input ? 'on' : ''}">${i.label}</button>`).join('');
+    $('src').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => act({ type: 'input', input: b.dataset.i }))); }
+  if (!dragging) { $('vol').value = s.volume; $('vol').style.setProperty('--p', s.volume + '%'); $('vv').textContent = s.volume; }
+}
+async function load() { try { render(await Homey.api('GET', '/state?device=' + encodeURIComponent(device || ''))); } catch (e) { $('title').textContent = e.message || String(e); } }
+async function act(b) { try { render(await Homey.api('POST', '/action', { device, ...b })); } catch (e) { Homey.alert && Homey.alert(e.message || String(e)); } }
+function onHomeyReady(Homey) {
+  window.Homey = Homey; const st = Homey.getSettings() || {}; device = st.device && st.device.id;
+  $('pw').addEventListener('click', () => act({ type: 'power' })); $('mute').addEventListener('click', () => act({ type: 'mute' }));
+  const v = $('vol'); v.addEventListener('input', () => { dragging = true; v.style.setProperty('--p', v.value + '%'); $('vv').textContent = v.value; });
+  v.addEventListener('change', () => { dragging = false; act({ type: 'volume', value: Number(v.value) }); });
+  load(); setInterval(load, 3000); Homey.ready({ height: document.querySelector('.card').offsetHeight });
+}
+</script></body></html>

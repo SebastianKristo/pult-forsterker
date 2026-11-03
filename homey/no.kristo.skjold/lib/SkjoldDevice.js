@@ -283,19 +283,39 @@ class SkjoldDevice extends Homey.Device {
   presetList() { return (this._presets || []).filter((p) => p.title); }
 
   /** Albumbildet som data-URL (for widgets: dashbordet kjører på https og kan ikke hente http-bilder fra Pi-en). */
+  /** Henter et bilde (http/https) og gir det som data-URL, eller '' ved feil. Følger én omdirigering. */
+  _fetchImage(url, hop = 0) {
+    return new Promise((resolve) => {
+      let mod = http; try { if (new URL(url).protocol === 'https:') mod = require('https'); } catch (e) { return resolve(''); }
+      const req = mod.get(url, { timeout: 5000 }, (res) => {
+        if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location && hop < 2) {
+          res.resume(); return resolve(this._fetchImage(new URL(res.headers.location, url).toString(), hop + 1));
+        }
+        const type = String(res.headers['content-type'] || '');
+        if (res.statusCode !== 200 || !type.startsWith('image/')) { res.resume(); return resolve(''); }
+        const chunks = []; let n = 0;
+        res.on('data', (c) => { n += c.length; if (n > 3e6) { req.destroy(); resolve(''); } else chunks.push(c); });
+        res.on('end', () => resolve(`data:${type.split(';')[0]};base64,${Buffer.concat(chunks).toString('base64')}`));
+      });
+      req.on('error', () => resolve('')); req.on('timeout', () => { req.destroy(); resolve(''); });
+    });
+  }
+
+  /** Albumbilde/kanallogo som data-URL (dashbordet kjører på https og kan ikke hente http-bilder fra Pi-en selv).
+   *  Prøver i rekkefølge: status.cover_url (relativ → Pi-en, full URL → direkte), /api/cover, radio_now.image. */
   async coverDataUrl() {
     const st = this._last || {};
-    const key = st.cover || '';
-    if (!key) return '';
+    const rn = st.radio_now || {};
+    const key = [st.cover, st.cover_url, rn.image, st.title].join('|');
     if (this._coverCache && this._coverCache.key === key) return this._coverCache.url;
     const { host, port } = this.base();
-    const url = await new Promise((resolve) => {
-      http.get({ host, port, path: '/api/cover', timeout: 4000 }, (res) => {
-        if (res.statusCode !== 200) { res.resume(); return resolve(''); }
-        const chunks = []; res.on('data', (c) => chunks.push(c));
-        res.on('end', () => resolve(`data:${res.headers['content-type'] || 'image/jpeg'};base64,${Buffer.concat(chunks).toString('base64')}`));
-      }).on('error', () => resolve('')).on('timeout', function () { this.destroy(); resolve(''); });
-    });
+    const dev = (p) => `http://${host}:${port}${p}`;
+    const cands = [];
+    if (st.cover_url) cands.push(/^https?:\/\//.test(st.cover_url) ? st.cover_url : dev(st.cover_url.startsWith('/') ? st.cover_url : '/' + st.cover_url));
+    if (st.cover) cands.push(dev('/api/cover?v=' + encodeURIComponent(st.cover)));
+    if (rn.image && /^https?:\/\//.test(rn.image)) cands.push(rn.image);
+    let url = '';
+    for (const c of cands) { url = await this._fetchImage(c); if (url) break; }
     this._coverCache = { key, url };
     return url;
   }
@@ -308,7 +328,8 @@ class SkjoldDevice extends Homey.Device {
       name: this.getName(), product: this.product(st), online: this.getAvailable(),
       power: !!st.power, playing: !!st.playing, input: st.input || '', inputLabel: SOURCE_LABELS[st.input] || st.input || '',
       title: st.title || rn.name || st.station || '', artist: st.artist || rn.now || '', album: st.album || '',
-      volume: Number(st.volume || 0), mute: !!st.mute, cover: await this.coverDataUrl(), image: rn.image || '',
+      volume: Number(st.volume || 0), mute: !!st.mute, cover: await this.coverDataUrl(), image: /^https:/.test(rn.image || '') ? rn.image : '',
+      inputs: statusInputs(st).map((i) => ({ id: i, label: SOURCE_LABELS[i] || i })),
       preset: st.preset || rn.n || 0, presets: this.presetList().map((p) => ({ n: p.n, title: p.title, genre: p.genre || '', image: p.image || p.icon || '' })),
     };
   }
@@ -323,6 +344,7 @@ class SkjoldDevice extends Homey.Device {
       case 'mute': return this.setMute(!(this._last && this._last.mute));
       case 'power': return this.togglePower();
       case 'preset': return this.playPreset(Number(a.n));
+      case 'input': return this.setInput(String(a.input));
       default: throw new Error('Ukjent handling');
     }
   }

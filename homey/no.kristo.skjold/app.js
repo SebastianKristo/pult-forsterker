@@ -42,7 +42,7 @@ class KiPultforsterkerApp extends Homey.App {
       .registerRunListener(async ({ device, on, level }) => device.setLoudness(on === 'on', level));
 
     // Dashbord-widgets: velg Skjold-enhet
-    for (const id of ['nowplaying', 'favorites']) {
+    for (const id of ['nowplaying', 'favorites', 'kontroll']) {
       try {
         this.homey.dashboards.getWidget(id).registerSettingAutocompleteListener('device', async (query) => this.skjoldDevices()
           .map((d) => ({ id: d.getData().id, name: d.getName(), description: { s1: 'Skjold S1', node: 'Skjold Node', core: 'Skjold Core' }[d.product(d._last)] || 'Skjold' }))
