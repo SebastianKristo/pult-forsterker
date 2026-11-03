@@ -47,6 +47,7 @@ echo "== Talemeldinger"
 bash "$SRC/ki-voice-setup.sh"
 
 echo "== Lyrion-radio (Squeezelite)"
+command -v ffmpeg >/dev/null || sudo apt-get -y install --no-install-recommends ffmpeg >/dev/null   # /api/play announce
 command -v squeezelite >/dev/null || sudo apt-get -y install --no-install-recommends squeezelite >/dev/null
 sudo systemctl disable --now squeezelite 2>/dev/null || true
 sudo systemctl daemon-reload

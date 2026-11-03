@@ -77,7 +77,7 @@ sudo apt-get -y install --no-install-recommends \
   libssl-dev libsoxr-dev libplist-dev libsodium-dev libavutil-dev libavcodec-dev \
   libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils libplist-utils libglib2.0-dev \
   bluez bluez-alsa-utils python3-dbus \
-  python3-pip python3-pil python3-smbus python3-smbus2 python3-evdev python3-numpy i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl gnupg unzip
+  python3-pip python3-pil python3-smbus python3-smbus2 python3-evdev python3-numpy i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev curl gnupg unzip ffmpeg
 
 echo "== 4/9  ALSA dmix → loopback → CamillaDSP (loudness + digitalt volum) → DAC"
 sed "s/sndrpihifiberry/$PB_CARD/g" "$SRC/asound.conf" | sudo tee /etc/asound.conf >/dev/null

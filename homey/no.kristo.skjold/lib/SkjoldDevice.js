@@ -272,6 +272,13 @@ class SkjoldDevice extends Homey.Device {
 
   async setVolume(v) { await this.apply(await this.request('POST', '/volume', { volume: v })); }
   async setMute(m) { await this.apply(await this.request('POST', '/mute', { mute: !!m })); }
+  async playUrl(url, announce = false) {
+    const u = String(url || '').trim();
+    if (!/^https?:\/\//.test(u)) throw new Error('Adressen må starte med http:// eller https://');
+    const r = await this.request('POST', '/play', { url: u, announce: !!announce });
+    if (!announce) await this.apply(r);
+  }
+
   async btPair() { await this.apply(await this.request('POST', '/bt', { pairing: true })); }
   async setLoudness(on, level) {
     const body = {}; if (on !== undefined) body.on = !!on; if (level !== undefined) body.level = level;

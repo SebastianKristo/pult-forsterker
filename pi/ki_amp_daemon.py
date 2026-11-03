@@ -19,6 +19,7 @@ API:
   POST /api/input  {"input":"airplay|bt|aux|usb"}
   POST /api/volume {"volume":0-100} | {"delta":±n}
   POST /api/loudness {"on":bool, "level":0-10}
+  POST /api/play     {"url", "title"?, "announce"?:bool, "volume"?} – spill lydfil/strøm (HA/Homey); announce = oppå det som spiller
   POST /api/mute   {"mute":bool}
   POST /api/bt     {"pairing":true}   (gjør Pi-en synlig 2 min)
   POST /api/auto_input {"on":bool} (bytt kilde automatisk når AirPlay/BT/Radio begynner å spille)
@@ -118,6 +119,8 @@ import socket
 import subprocess
 import time
 import hashlib
+import shutil
+import urllib.parse
 import urllib.request
 
 from aiohttp import web
@@ -3553,6 +3556,50 @@ async def h_radio_play(r):
     return j()
 
 
+_announce_lock = threading.Lock()
+
+
+def announce_url(url, vol=None):
+    """Kunngjøring (HA TTS, dørklokke …): lydfila spilles OPPÅ det som spiller (dmix), uten å bytte kilde."""
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("ffmpeg mangler (kjør pi/update.sh)")
+    with _announce_lock:
+        filt = ["-af", f"volume={max(0.0, min(2.0, float(vol))):.2f}"] if vol is not None else []
+        dec = subprocess.Popen(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", url, *filt, "-ac", "2", "-ar", "48000", "-f", "wav", "-"],
+                               stdout=subprocess.PIPE)
+        try:
+            subprocess.run(["aplay", "-q", "-D", "default"], stdin=dec.stdout, timeout=300, check=False)
+        finally:
+            dec.kill()
+
+
+async def h_play(r):
+    """POST /api/play {"url", "title"?, "artist"?, "image"?, "announce"?: bool, "volume"?: 0–100}
+    Spill en lydfil/mediestrøm (Home Assistant media, Homey, lenker). announce=true spiller den oppå det som spiller."""
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    url = str(b.get("url") or "").strip()
+    if not url.startswith(("http://", "https://")):
+        return web.json_response({"error": "url må være http(s)"}, status=400)
+    loop = asyncio.get_running_loop()
+    try:
+        if b.get("announce"):
+            v = b.get("volume")
+            loop.run_in_executor(None, announce_url, url, (float(v) / max(1, state["volume"])) if v not in (None, "") else None)
+            return j()
+        if b.get("volume") not in (None, ""):
+            set_volume(int(b["volume"]))
+        title = str(b.get("title") or "") or urllib.parse.unquote(url.split("?")[0].rstrip("/").rsplit("/", 1)[-1])[:80]
+        meta = {"track": title, "artist": str(b.get("artist") or ""), "album": str(b.get("album") or ""), "duration": 0.0, "source": "media"}
+        await loop.run_in_executor(None, lambda: play_url(url, title, str(b.get("image") or ""), "", meta))
+    except Exception as e:
+        print("play feilet:", repr(e), flush=True)
+        return web.json_response({"error": str(e)}, status=409)
+    return j()
+
+
 # ---------- avspillingskontroll (AirPlay via Shairport Sync D-Bus, Bluetooth via BlueZ AVRCP) ----------
 TRANSPORT = {"play", "pause", "playpause", "next", "previous", "stop"}
 SPS = ("org.gnome.ShairportSync", "/org/gnome/ShairportSync", "org.gnome.ShairportSync.RemoteControl")
@@ -4115,7 +4162,7 @@ def main():
     app = web.Application(middlewares=[cors_mw])
     app.add_routes([web.get("/api/status", h_status), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

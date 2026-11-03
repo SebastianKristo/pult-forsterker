@@ -1,7 +1,12 @@
 """Én media_player som samler strøm, kilde, volum, mute og «spiller nå»."""
 from __future__ import annotations
 
+from homeassistant.components import media_source
+from homeassistant.components.media_player.browse_media import async_process_play_media_url
 from homeassistant.components.media_player import (
+    ATTR_MEDIA_ANNOUNCE,
+    ATTR_MEDIA_EXTRA,
+    BrowseMedia,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -40,12 +45,16 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
         super().__init__(c, "amp")
         self._fetched_at = dt_util.utcnow()
 
+    # lydfiler, TTS og mediebibliotek fra Home Assistant (media_source) kan alltid spilles
+    _MEDIA = (MediaPlayerEntityFeature.PLAY_MEDIA | MediaPlayerEntityFeature.BROWSE_MEDIA
+              | MediaPlayerEntityFeature.MEDIA_ANNOUNCE)
+
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
         # avspillingskontroll bare for AirPlay og Bluetooth (AUX/USB styres fra kilden)
         if self.d.get("input") in PLAYABLE:
-            return self._attr_supported_features | self._TRANSPORT | MediaPlayerEntityFeature.PLAY_MEDIA
-        return self._attr_supported_features
+            return self._attr_supported_features | self._TRANSPORT | self._MEDIA
+        return self._attr_supported_features | self._MEDIA
 
     @property
     def d(self) -> dict:
@@ -181,8 +190,26 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
         return self.d.get("station") or (self.d.get("radio_now") or {}).get("name") or None
 
     async def async_play_media(self, media_type: str, media_id: str, **kwargs) -> None:
-        """media_player.play_media med media_content_type «preset» (eller «channel») og id 1–50."""
-        n = int(str(media_id).strip())
-        if not 1 <= n <= PRESETS_MAX:
-            raise ValueError(f"radiofavoritt må være 1–{PRESETS_MAX}")
-        self.coordinator.async_set_updated_data(await self.coordinator.api.play_preset(n))
+        """Radiofavoritt («preset»/«channel» + 1–50), eller hvilken som helst lyd: media-kilder i HA (lydfiler, TTS,
+        DLNA, Radio Browser …) og vanlige http(s)-adresser. announce=True spiller oppå det som spiller."""
+        if str(media_type) in ("preset", "channel") and str(media_id).strip().isdigit():
+            n = int(str(media_id).strip())
+            if not 1 <= n <= PRESETS_MAX:
+                raise ValueError(f"radiofavoritt må være 1–{PRESETS_MAX}")
+            self.coordinator.async_set_updated_data(await self.coordinator.api.play_preset(n))
+            return
+        title = ""
+        if media_source.is_media_source_id(media_id):
+            item = await media_source.async_resolve_media(self.hass, media_id, self.entity_id)
+            media_id = item.url
+        url = async_process_play_media_url(self.hass, media_id)
+        extra = kwargs.get(ATTR_MEDIA_EXTRA) or {}
+        title = str(extra.get("title") or title)
+        await self.coordinator.api.play_url(url, title=title, announce=bool(kwargs.get(ATTR_MEDIA_ANNOUNCE)),
+                                            image=str(extra.get("thumb") or extra.get("image") or ""))
+        await self.coordinator.async_request_refresh()
+
+    async def async_browse_media(self, media_content_type: str | None = None, media_content_id: str | None = None) -> BrowseMedia:
+        """Bla i Home Assistants mediebibliotek (lydfiler, TTS, Radio Browser, DLNA …) – bare lyd."""
+        return await media_source.async_browse_media(
+            self.hass, media_content_id, content_filter=lambda item: item.media_content_type.startswith("audio/"))

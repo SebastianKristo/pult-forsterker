@@ -70,3 +70,19 @@ tittel: Skjold
 - **Skjold – Spiller**: cover (med uskarp bakgrunn), tittel/artist, av/på, forrige/spill-pause/neste, volum og lyd av, kilder og radiofavoritter.
 - **Skjold – Alle rom**: alle Skjold-enheter med cover, hva som spiller, volum og spill/pause, og «Pause alle».
 Kortene følger HA-temaet (lyst/mørkt). Gullfargen kan endres med temavariabelen `skjold-accent`.
+
+## Spill av lyd og media
+
+Skjold-spilleren kan spille alt fra Home Assistants mediebibliotek: lydfiler i `/media`, TTS, Radio Browser, DLNA osv.
+Bla i «Media» i sidemenyen og velg Skjold, eller bruk en tjeneste:
+
+```yaml
+action: media_player.play_media
+target: { entity_id: media_player.skjold_s1 }
+data:
+  media_content_id: media-source://media_source/local/dorklokke.mp3
+  media_content_type: music
+  announce: true      # spilles oppå det som spiller (kunngjøring), uten å bytte kilde
+```
+
+TTS (`tts.speak`) virker også, og spilles som kunngjøring.
