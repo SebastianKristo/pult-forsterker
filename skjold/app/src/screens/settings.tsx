@@ -1,6 +1,6 @@
 // Innstillinger: kategoriliste + detaljside, generert fra CATS i lib/settings.ts.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { api, type RemoteStatus, cmpVersion, fetchLatestRelease, hostLabel, isNative, REPO, type LevelSource, type Release } from '../lib/api';
+import { api, type RemoteStatus, hostLabel, isNative, REPO, type LevelSource, type UpdateInfo } from '../lib/api';
 import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status } from '../lib/store';
 import { computed } from '@preact/signals';
 import { CAT_TILE, ICONS, LED_MODES, LED_MODE_NAMES, catsFor, fmt, type Category, type Item } from '../lib/settings';
@@ -283,44 +283,80 @@ function ClockPicker() {
 }
 
 function UpdatePanel() {
-  const st = settings.value, s = status.value;
-  const [rel, setRel] = useState<Release | null | undefined>(undefined);
+  const st = settings.value;
+  const [info, setInfo] = useState<UpdateInfo | null | undefined>(undefined);
+  const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ t: string; bad?: boolean } | null>(null);
-  const cur = s?.version ?? '–';
-  const check = async () => {
-    setBusy(true); setMsg(null);
-    try {
-      const r = await fetchLatestRelease(st.updChannel === 1);
-      const newer = !!r && cmpVersion(r.tag.replace(/^(skjold-)?v?/, ''), cur) > 0;
-      setRel(newer ? r : null);
-      if (!newer) setMsg({ t: 'Du har siste versjon (' + cur + '). Sjekket ' + new Date().toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short' }) + '.' });
-    } catch (e) { setMsg({ t: 'Fikk ikke sjekket GitHub: ' + (e instanceof Error ? e.message : String(e)), bad: true }); }
+  const [phase, setPhase] = useState<'' | 'running' | 'gone' | 'done' | 'failed'>('');
+  const [log, setLog] = useState<string[]>([]);
+  const alive = useRef(true);
+  useEffect(() => () => { alive.current = false; }, []);
+  const load = async (check = true) => {
+    setBusy(true); setErr('');
+    try { const r = await api.update(check); setInfo(r); setLog(r.log); if (r.running) void follow(); }
+    catch (e) { setInfo(null); setErr(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   };
+  useEffect(() => { void load(); }, []);
+  /** Følg med til oppdateringen er ferdig. Tjenesten starter på nytt underveis – tål inntil 3 min uten svar. */
+  const follow = async () => {
+    setPhase('running');
+    let lastOk = Date.now();
+    while (alive.current) {
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        const r = await api.update(false); lastOk = Date.now(); setLog(r.log);
+        if (!r.running) {
+          const ok = (r.result ?? '').startsWith('ok');
+          setPhase(ok ? 'done' : 'failed');
+          try { setInfo(await api.update(true)); } catch { setInfo(r); }
+          return;
+        }
+        setPhase('running');
+      } catch {
+        setPhase('gone');
+        if (Date.now() - lastOk > 180000) { setPhase('failed'); setErr('Enheten har ikke svart på 3 minutter. Den kan fortsatt holde på – prøv igjen litt senere.'); return; }
+      }
+    }
+  };
+  const start = async () => {
+    setErr(''); setLog([]);
+    try { const r = await api.startUpdate(); setLog(r.log); void follow(); }
+    catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+  };
   const tog = (on: boolean, fn: () => void) => <button onClick={fn} role="switch" aria-checked={on} style={`width:46px;height:28px;border-radius:999px;border:none;background:${on ? A : '#3a3a37'};position:relative;cursor:pointer;padding:0;flex-shrink:0`}><div style={`position:absolute;top:3px;left:${on ? 21 : 3}px;width:22px;height:22px;border-radius:50%;background:#f2f2ee`} /></button>;
+  const cur = info?.current && info.current !== 'lokal' ? info.current : info?.current === 'lokal' ? 'Lokal utviklerversjon' : 'Ukjent versjon';
+  const working = phase === 'running' || phase === 'gone';
+  const mono = "font-family:'IBM Plex Mono',monospace";
   return (
     <div style="display:flex;flex-direction:column;gap:14px">
       <div style="background:#141415;border:1px solid #242426;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:#8b8b86">Installert</span><span style="font-size:22px;font-weight:600">Skjold {cur}</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:#8b8b86">Installert</span><span style="font-size:22px;font-weight:600" data-testid="upd-current">{info === undefined ? '…' : cur}</span>
+            {info?.latest && <span style={`font-size:11px;color:#8b8b86;${mono}`}>NYESTE: {info.latest}</span>}</div>
           <a href={`https://github.com/${REPO}/releases`} target="_blank" rel="noreferrer" style="font-size:12px;white-space:nowrap">github.com/{REPO} ↗</a>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          {['Stabil', 'Beta'].map((label, i) => { const c = { bd: st.updChannel === i ? A : '#2e2e30', bg: st.updChannel === i ? '#2a2112' : '#1b1b1c', fg: st.updChannel === i ? '#f0c46a' : '#f2f2ee' }; return <button key={label} onClick={() => { setSetting('updChannel', i); setRel(undefined); }} style={`height:32px;padding:0 12px;border-radius:14px;border:1px solid ${c.bd};background:${c.bg};color:${c.fg};font-size:12px;cursor:pointer;white-space:nowrap`}>{label}</button>; })}
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px">Installer automatisk om natten</span>{pending('updAuto') && <span style="font-size:11px;color:#c9b48a">{pending('updAuto')}</span>}</span>{tog(st.updAuto, () => setSetting('updAuto', !st.updAuto))}</div>
-        <button onClick={check} disabled={busy} style="height:42px;border-radius:14px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;cursor:pointer">{busy ? 'Sjekker GitHub …' : 'Se etter oppdatering'}</button>
-        {msg && <div style={`padding:10px 12px;border-radius:8px;background:${msg.bad ? '#2a1412' : '#16201a'};border:1px solid ${msg.bad ? '#5a2620' : '#2a4a33'};font-size:13px;color:${msg.bad ? '#ff9a8a' : '#9be0a8'};line-height:1.45`}>{msg.t}</div>}
+        {info && !working && phase !== 'done' && (info.available
+          ? <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:13px;color:#e8dcc4">En ny versjon er klar: <b>{info.latest}</b></span>
+              {info.can_update
+                ? <button onClick={start} style={`height:44px;border-radius:14px;border:none;background:${A};color:#0b0b0c;font-size:14px;font-weight:600;cursor:pointer`} data-testid="upd-start">Oppdater til {info.latest}</button>
+                : <span style="font-size:12px;color:#c9b48a;line-height:1.5">Denne enheten må oppdateres fra terminalen én gang før den kan oppdateres herfra:<br /><code style={`${mono};font-size:11px;color:#f2f2ee`}>git pull && sudo bash pi/update.sh</code></span>}
+            </div>
+          : <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#6fcf7f" /><span style="font-size:13px">Skjold er oppdatert</span></div>)}
+        {working && <div style="display:flex;align-items:center;gap:8px"><span class="spin" style={`width:14px;height:14px;border-radius:50%;border:2px solid #3a3a37;border-top-color:${A};animation:spin 1s linear infinite`} /><span style="font-size:13px">{phase === 'gone' ? 'Starter Skjold på nytt … venter på enheten' : 'Oppdaterer … ikke slå av enheten'}</span></div>}
+        {phase === 'done' && <div style="padding:10px 12px;border-radius:8px;background:#16201a;border:1px solid #2a4a33;font-size:13px;color:#9be0a8">Oppdatert{info?.current ? ' til ' + info.current : ''}. Last siden på nytt for å få det nyeste web-grensesnittet.</div>}
+        {phase === 'failed' && <div style="padding:10px 12px;border-radius:8px;background:#2a1412;border:1px solid #5a2620;font-size:13px;color:#ff9a8a">Oppdateringen feilet. Se loggen under.</div>}
+        {!working && <button onClick={() => { setPhase(''); void load(); }} disabled={busy} style="height:42px;border-radius:14px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;cursor:pointer">{busy ? 'Sjekker …' : 'Se etter oppdateringer'}</button>}
+        {(err || info?.error) && <div style="padding:10px 12px;border-radius:8px;background:#2a1412;border:1px solid #5a2620;font-size:13px;color:#ff9a8a;line-height:1.45">{err || info?.error}</div>}
+        {log.length > 0 && (working || phase === 'failed' || phase === 'done') && <pre style={`margin:0;max-height:220px;overflow:auto;padding:10px 12px;border-radius:10px;background:#0f0f10;border:1px solid #242426;${mono};font-size:11px;color:#c9c9c4;white-space:pre-wrap;line-height:1.5`}>{log.slice(-30).join('\n')}</pre>}
       </div>
-      {rel && (
-        <div style="background:#1c170d;border:1px solid #5a4420;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:16px;font-weight:600">{rel.name}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c9b48a">{[rel.tag, rel.date, rel.size].filter(Boolean).join(' · ')}</span></div>
-          <div style="display:flex;flex-direction:column;gap:4px">{rel.notes.map((t, j) => <span key={j} style="font-size:13px;color:#e8dcc4;line-height:1.45">· {t}</span>)}</div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><a href={rel.url} target="_blank" rel="noreferrer" style="font-size:12px">Se på GitHub ↗</a></div>
-          <span style="font-size:11px;color:#c9b48a">Installering fra appen er ikke koblet til forsterkeren ennå. Oppdater med Skjold Flasher eller fra forsterkerens meny.</span>
-        </div>
-      )}
+      <div style="background:#141415;border:1px solid #242426;border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:13px">Kanal</span><div style="display:flex;gap:6px">
+          {['Stabil', 'Beta'].map((label, i) => { const c = { bd: st.updChannel === i ? A : '#2e2e30', bg: st.updChannel === i ? '#2a2112' : '#1b1b1c', fg: st.updChannel === i ? '#f0c46a' : '#f2f2ee' }; return <button key={label} onClick={() => setSetting('updChannel', i)} style={`height:32px;padding:0 12px;border-radius:14px;border:1px solid ${c.bd};background:${c.bg};color:${c.fg};font-size:12px;cursor:pointer;white-space:nowrap`}>{label}</button>; })}
+        </div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px">Installer automatisk om natten</span>{pending('updAuto') && <span style="font-size:11px;color:#c9b48a">{pending('updAuto')}</span>}</span>{tog(st.updAuto, () => setSetting('updAuto', !st.updAuto))}</div>
+      </div>
       <span style="font-size:14px;font-weight:600">Backup</span>
       <div style="background:#141415;border:1px solid #242426;border-radius:14px;padding:12px 14px"><span style="font-size:12px;color:#8b8b86;line-height:1.45">Backup og gjenoppretting er ikke koblet til forsterkeren ennå.</span></div>
     </div>

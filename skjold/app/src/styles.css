@@ -604,3 +604,4 @@ button, a, .btn, [role='button'], input, label { touch-action: manipulation; }
 html.kiosk, html.kiosk * { cursor: none !important; }
 html.kiosk ::-webkit-scrollbar { width: 0; height: 0; }
 html.kiosk body { overscroll-behavior: none; }
+@keyframes spin { to { transform: rotate(360deg); } }

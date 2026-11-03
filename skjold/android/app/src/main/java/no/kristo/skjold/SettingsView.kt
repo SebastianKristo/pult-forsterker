@@ -62,7 +62,7 @@ fun SettingsView(m: AppModel) {
         if (m.rAdd) RadioAddView(m) else RadioFavoritesView(m)
         T("Knapper og oppstart", sora(17f, W.Semibold), Modifier.padding(top = 6.dp))
     }
-    if (cat.id == "oppdatering") UpdateSettingsView(m)
+    if (cat.id == "oppdatering") { DeviceUpdateView(m); UpdateSettingsView(m) }
     else if (cat.id == "steder") StederSettingsView(m)
     else if (cat.id == "skjoldhjem") SkyDeviceView(m)
     else {
