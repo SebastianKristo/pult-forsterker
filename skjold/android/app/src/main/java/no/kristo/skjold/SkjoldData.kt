@@ -193,6 +193,8 @@ object SK {
         SettingCategory("strom", "Strøm", "Standby og påslag", items = listOf(
             S.opt("auto", "Auto-standby uten lyd", listOf("Av", "20 min", "60 min")), S.bool("wake", "Slå på ved signal", "AirPlay eller Blåtann vekker forsterkeren"))),
         SettingCategory("oppdatering", "Oppdatering", "GitHub, backup og gjenoppretting", items = listOf(SettingItem(SettingKind.Update, "update", "Oppdatering"))),
+        SettingCategory("steder", "Steder", "Skjold-hjem: Hjem, Hytta … hovedenhet og reserve", items = listOf(SettingItem(SettingKind.Update, "steder", "Steder"))),
+        SettingCategory("skjoldhjem", "Skjold-hjem", "Koble denne enheten til et sted", items = listOf(SettingItem(SettingKind.Update, "skjoldhjem", "Skjold-hjem"))),
         SettingCategory("system", "System", "Om, oppsett og tilbakestilling", items = listOf(
             S.info("Programvare", key = "version"), S.info("IP-adresse", key = "ip"),
             S.info("Lyrion", key = "lyrion"), S.info("Serienummer", key = "serial"),

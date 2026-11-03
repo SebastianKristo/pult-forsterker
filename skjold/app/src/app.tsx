@@ -1,7 +1,9 @@
 // Skall: telefon (App v2) under 900 px eller i Capacitor, ellers PC (S1 Web v3).
 import { useEffect, useState } from 'preact/hooks';
 import { App as CapApp } from '@capacitor/app';
-import { isNative, hostLabel, PRODUCT_HW, PRODUCT_LABEL } from './lib/api';
+import { isNative, isRelayBase, hostLabel, PRODUCT_HW, PRODUCT_LABEL } from './lib/api';
+import { visSted } from './lib/hjem';
+import { StedPicker } from './screens/hjem';
 import { setVolume } from './lib/store';
 import { atRoot, closeFull, deviceName, fullPlayer, go, lastError, mode, online, product, queueOpen, route, srcOpen, status, toast, type Page } from './lib/store';
 import { Welcome } from './screens/welcome';
@@ -90,7 +92,7 @@ function Phone() {
   const title = cat ? cat.n : page === 'lib' ? libTitle() : TITLES[page];
   return (
     <div class="phone">
-      {page !== 'home' && <div class="top"><span class="title">{title}</span></div>}
+      {page !== 'home' && <div class="top">{page === 'rooms' && visSted() ? <StedPicker big /> : <span class="title">{title}</span>}</div>}
       <div class="scroll" key={page + (r.cat ?? '')}>
         <Offline />
         {page === 'home' && <HomePhone />}
@@ -155,7 +157,7 @@ function Desktop() {
         <div class="row" style={{ minWidth: 0, gap: '14px' }}>
           <Logo lg word={false} />
           <div class="col" style={{ minWidth: 0 }}>
-            <span class="row" style={{ gap: '10px', position: 'relative' }}><PlayerPicker /><span class="type-badge" data-testid="type-badge"><Icon d={PRODUCT_ICON[p]} size={15} sw={1.5} />{PRODUCT_LABEL[p]}</span></span>
+            <span class="row" style={{ gap: '10px', position: 'relative' }}><PlayerPicker /><StedPicker /><span class="type-badge" data-testid="type-badge"><Icon d={PRODUCT_ICON[p]} size={15} sw={1.5} />{PRODUCT_LABEL[p]}</span></span>
             <span class="sub ellip">{PRODUCT_HW[p]}{s?.version ? ' · v' + s.version : ''}</span>
           </div>
         </div>
@@ -171,7 +173,7 @@ function Desktop() {
           {NAV.map(([id, n]) => <button key={id} class={'nv' + (r.page === id ? ' on' : '')} onClick={() => go(id)}><span class="row gap12"><Icon d={NICON[id] ?? ''} size={18} sw={1.6} />{n}</span></button>)}
           {libs.map(([id, n]) => <button key={id} class={'nv' + (isLib && r.cat === id ? ' on' : '')} onClick={() => go('lib', id)}><span class="row gap12"><Icon d={NICON.lib ?? ''} size={18} sw={1.6} />{n}</span></button>)}
           <div class="head">INNSTILLINGER</div>
-          {sideCats.map((c) => <button key={c.id} class={'nv' + (r.page === 'settings' && r.cat === c.id ? ' on' : '')} onClick={() => go('settings', c.id)}><span class="row gap12"><Icon d={NICON[c.id] ?? NICON.system ?? ''} size={18} sw={1.6} />{c.n}</span></button>)}
+          {sideCats.map((c) => <button key={c.id} class={'nv' + (r.page === 'settings' && r.cat === c.id ? ' on' : '')} onClick={() => go('settings', c.id)}><span class="row gap12"><Icon d={NICON[c.id] ?? ICONS[c.id] ?? NICON.system ?? ''} size={18} sw={1.6} />{c.n}</span></button>)}
         </nav>
         <main class="main">
           <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>
@@ -211,14 +213,14 @@ function PlayerPicker() {
           <span style="padding:12px 14px 8px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8b8b86">VELG SPILLER</span>
           {rooms.map((pl, i) => { const fg = pl.active ? '#f0c46a' : '#f2f2ee', host = (pl.base || location.origin).replace(/^https?:\/\//, ''); return (
             <div key={pl.key} style={`display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:0 8px 0 0;border-top:1px solid #242426;background:${pl.active ? '#1c170d' : 'transparent'}`}>
-              <button onClick={() => { setOpen(false); if (!pl.active) void switchRoom(pl.base); }} style="display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:center;min-height:58px;padding:0 14px;border:none;background:transparent;cursor:pointer;text-align:left">
+              <button onClick={() => { setOpen(false); if (!pl.active) void switchRoom(pl.base, pl.enhet); }} style="display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:center;min-height:58px;padding:0 14px;border:none;background:transparent;cursor:pointer;text-align:left">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={fg} stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d={PRODUCT_ICON[pl.product]} /></svg>
                 <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
                   <span style={`display:flex;align-items:center;gap:8px;font-size:14px;color:${fg}`}>{pl.name}<span style="font-size:11px;color:#8b8b86">{PRODUCT_LABEL[pl.product]}</span></span>
-                  <span style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86"><div style={`width:6px;height:6px;border-radius:50%;background:${pl.st ? '#6fcf7f' : '#e05a4a'}`} />{host} {i === 0 ? '· denne' : ''}</span>
+                  <span style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8b86"><div style={`width:6px;height:6px;border-radius:50%;background:${pl.st ? '#6fcf7f' : '#e05a4a'}`} />{isRelayBase(host) ? 'via Skjold-hjem' : host} {i === 0 ? '· denne' : ''}</span>
                 </span>
               </button>
-              <a href={(pl.base || location.origin) + '/?solo=1'} target="_blank" rel="noreferrer" title="Enhetens eget web-UI" style="display:flex;align-items:center;height:30px;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;font-size:11px;color:#c9c9c4;white-space:nowrap">Eget UI ↗</a>
+              {!isRelayBase(pl.base) && <a href={(pl.base || location.origin) + '/?solo=1'} target="_blank" rel="noreferrer" title="Enhetens eget web-UI" style="display:flex;align-items:center;height:30px;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;font-size:11px;color:#c9c9c4;white-space:nowrap">Eget UI ↗</a>}
             </div>
           ); })}
           <span style="padding:10px 14px 12px;border-top:1px solid #242426;font-size:11px;color:#8b8b86;line-height:1.45;text-wrap:pretty">Samme side på alle adressene. «Eget UI» åpner bare den enheten, som reserve hvis noe er galt med nettverket.</span>

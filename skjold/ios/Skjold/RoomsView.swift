@@ -148,6 +148,7 @@ struct RoomsView: View {
     private var addTile: some View {
         Button {
             Haptics.tap()
+            if !m.stedId.isEmpty { m.openStederSettings(); return }
             m.mode = .onboard; m.welcome = false; m.ob = 0; m.tested = []; m.pw = ""; m.obUpd = 0; m.scan = false
         } label: {
             VStack(spacing: 10) {
@@ -251,6 +252,7 @@ private struct RoomTile: View {
                     }
                     Spacer(minLength: 0)
                     Text(room.name).sora(16, .semibold).lineLimit(1)
+                    if let e = m.hjemEnhet(room.id) { HjemBadges(e: e).padding(.vertical, 2) }
                     Text(status).sora(11, .regular, inG ? .ink2 : .muted).lineLimit(1)
                     HStack(spacing: 6) {
                         SKIcon(d: Icons.volume, size: 12, stroke: 2, color: .muted)

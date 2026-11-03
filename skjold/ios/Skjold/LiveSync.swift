@@ -33,7 +33,7 @@ extension AppModel {
     enum Link: Equatable { case none, connecting, online, offline }
 
     /// Demo mode: no Skjold device has ever been found or chosen.
-    var demo: Bool { known.isEmpty }
+    var demo: Bool { known.isEmpty && stedId.isEmpty }
     var live: Bool { !demo }
 
     /// The active room is a plain Lyrion player (no Skjold daemon): control it over JSON-RPC.
@@ -460,8 +460,9 @@ extension AppModel {
     // MARK: Rooms (Skjold devices + Lyrion players)
 
     func pollSystem() async {
-        for k in known where k.host != activeHost {
-            devStats[k.host] = await DeviceLink.status(at: k.host, timeout: 2.5)
+        for k in devices where k.host != activeHost {
+            if !stedId.isEmpty, stedEnheter.first(where: { $0.id == k.id })?.online == false { devStats[k.host] = nil; continue }
+            devStats[k.host] = await DeviceLink.status(at: k.host, timeout: HjemAPI.isRelay(k.host) ? 5 : 2.5)
         }
         if let srv = lyrionServer, let ps = await Lyrion.players(srv) {
             lyPlayers = ps
@@ -489,7 +490,7 @@ extension AppModel {
         let prev = sys
         var rooms: [Room] = []
         var used = Set<String>()
-        for k in known {
+        for k in devices {
             let st = k.host == activeHost ? (link == .offline ? nil : dev) : devStats[k.host]
             let id = (st?.id).flatMap { $0.isEmpty ? nil : $0 } ?? k.id
             let p = st?.product ?? k.product
@@ -500,7 +501,7 @@ extension AppModel {
                 pid = lyPlayers.first { $0.name.caseInsensitiveCompare(r.name) == .orderedSame }?.id.lowercased() ?? ""
             }
             if !pid.isEmpty, lyPlayers.isEmpty || lyPlayers.contains(where: { $0.id.lowercased() == pid }) { r.pid = pid; used.insert(pid) }
-            if st == nil { r.np = ["Frakoblet", k.host] }
+            if st == nil { r.np = ["Frakoblet", HjemAPI.isRelay(k.host) ? "Skjold-hjem" : k.host] }
             else if k.host != activeHost, let st, st.playing, !st.title.isEmpty { r.np = [st.title, st.artist.isEmpty ? st.name : st.artist] }
             if !rooms.contains(where: { $0.id == r.id }) { rooms.append(r) }
         }

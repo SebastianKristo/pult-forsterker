@@ -4,8 +4,8 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppModel.self) private var m
 
-    static let catIcon: [String: String] = ["tjenester": "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", "eq": "M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4", "lyd": "M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12", "tilkobling": "M7 7l10 10-5 5V2l5 5L7 17", "radio": "M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4", "stemme": "M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3", "skjerm": "M3 5h18v12H3zM8 21h8M12 17v4", "strom": "M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0", "system": "M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z", "oppdatering": "M12 4v11M7 10l5 5 5-5M5 20h14", "utgang": "M4 9h3l5-4v14l-5-4H4zM16 8l5 4-5 4"]
-    static let catTile: [String: UInt32] = ["tjenester": 0x2a3a2e, "eq": 0x3a2e17, "lyd": 0x2a3340, "tilkobling": 0x22314a, "radio": 0x3d2a2a, "stemme": 0x2f2a40, "skjerm": 0x2a3a33, "strom": 0x40362a, "system": 0x333335, "oppdatering": 0x1f3a3a, "utgang": 0x2a3340]
+    static let catIcon: [String: String] = ["tjenester": "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", "eq": "M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4", "lyd": "M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12", "tilkobling": "M7 7l10 10-5 5V2l5 5L7 17", "radio": "M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4", "stemme": "M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3", "skjerm": "M3 5h18v12H3zM8 21h8M12 17v4", "strom": "M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0", "system": "M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z", "oppdatering": "M12 4v11M7 10l5 5 5-5M5 20h14", "utgang": "M4 9h3l5-4v14l-5-4H4zM16 8l5 4-5 4", "steder": "M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "skjoldhjem": "M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5z"]
+    static let catTile: [String: UInt32] = ["tjenester": 0x2a3a2e, "eq": 0x3a2e17, "lyd": 0x2a3340, "tilkobling": 0x22314a, "radio": 0x3d2a2a, "stemme": 0x2f2a40, "skjerm": 0x2a3a33, "strom": 0x40362a, "system": 0x333335, "oppdatering": 0x1f3a3a, "utgang": 0x2a3340, "steder": 0x2a3340, "skjoldhjem": 0x22314a]
 
     var body: some View {
         let cats = m.cats
@@ -21,6 +21,10 @@ struct SettingsView: View {
             }
             if cat.id == "oppdatering" {
                 UpdateSettingsView()
+            } else if cat.id == "steder" {
+                StederSettingsView()
+            } else if cat.id == "skjoldhjem" {
+                SkyDeviceView()
             } else {
                 if cat.id == "skjerm" { ClockPicker() }
                 SettingItemsCard(items: cat.items.filter { $0.kind != .update && $0.kind != .clocks })

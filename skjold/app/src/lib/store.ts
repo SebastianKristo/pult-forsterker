@@ -1,6 +1,6 @@
 // Global tilstand (Preact signals): status-polling, innstillinger, navigasjon.
 import { signal, computed, effect } from '@preact/signals';
-import { api, ApiError, coverUrl, getBase, needsHost, productOf, type Status, type InputId } from './api';
+import { api, ApiError, coverUrl, credFor, getBase, needsHost, productOf, type Status, type InputId } from './api';
 import { DEF, defaultEq, mergeSettings, type Settings, type EqProfiles, type EqSource } from './settings';
 
 export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib';
@@ -110,7 +110,7 @@ let es: EventSource | null = null, esRetry = 0, esFails = 0;
 function connectEvents(): void {
   clearTimeout(esRetry);
   if (es || typeof EventSource === 'undefined' || document.visibilityState === 'hidden') return;
-  try { es = new EventSource(getBase() + '/api/events'); } catch { es = null; return; }
+  try { const b = getBase(); es = new EventSource(b + '/api/events', { withCredentials: credFor(b) === 'include' }); } catch { es = null; return; }
   es.onopen = () => { live.value = true; esFails = 0; schedule(); };
   es.onmessage = (e) => { try { applyStatus(JSON.parse(e.data as string) as Status); } catch { /* ignore */ } };
   es.onerror = () => {
