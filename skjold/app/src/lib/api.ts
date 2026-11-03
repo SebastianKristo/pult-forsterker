@@ -109,6 +109,9 @@ const post = <T = Status>(path: string, body: unknown) => req<T>(path, { method:
 
 export interface SkyStatus { koblet: boolean; sted?: string | null; stedNavn?: string | null; aktivHoved?: string | null; erHoved?: boolean; tilkoblet?: boolean; error?: string }
 export interface RemoteStatus { enabled: boolean; host: string; master: boolean; active: boolean; installed: boolean; busy: boolean; log: string; has_token: boolean }
+/** GET/POST /api/update: installert og nyeste skjold-v*-utgivelse, og oppdatering fra appen (git pull + update.sh). */
+export type UpdateInfo = { current: string | null; version: string; latest: string | null; available: boolean; running: boolean; result: string | null; log: string[]; can_update: boolean; error: string | null };
+
 export const api = {
   sky: () => req<SkyStatus>('/api/sky'),
   skyKobl: (kode: string) => post<SkyStatus>('/api/sky', { kode }),
@@ -148,6 +151,8 @@ export const api = {
   getSettings: () => req<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings'),
   setSettings: (patch: Record<string, unknown>) => post<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings', patch),
   // Oppsett: Wi-Fi via NetworkManager (nmcli) og høyttalertest (aplay) – nyere daemon; eldre svarer 404
+  update: (check = true) => req<UpdateInfo>('/api/update' + (check ? '' : '?check=0'), undefined, getBase(), 15000),
+  startUpdate: () => req<UpdateInfo>('/api/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }, getBase(), 15000),
   wifiScan: () => req<{ networks: { ssid: string; security?: string; signal?: number; active?: boolean }[] }>('/api/wifi', undefined, getBase(), 25000),
   wifiConnect: (ssid: string, psk: string, hidden = false, security?: 'wpa2' | 'wpa3' | 'open') => req<{ ok: boolean }>('/api/wifi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid, psk, hidden, ...(security ? { security } : {}) }) }, getBase(), 50000),
   speakerTest: (channel: 'L' | 'R') => post<{ ok: boolean }>('/api/test', { channel }),

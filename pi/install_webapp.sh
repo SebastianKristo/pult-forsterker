@@ -34,6 +34,10 @@ if best: print(best[1])
   [ "$WEB_OK" = 1 ] && { rm -rf "${WEB_TMP:?}/x"; cp -r "$WEB_TMP/app/." "$WEB_TMP/" && rm -rf "$WEB_TMP/app"; }
 fi
 if [ "$WEB_OK" != 1 ]; then echo "web-app: ingen utgivelse – bruker pi/webapp"; rm -rf "${WEB_TMP:?}"/*; cp -r "$SRC/webapp/." "$WEB_TMP/"; fi
+# versjonen som er installert (vises og sammenlignes i Innstillinger → Oppdatering)
+WEB_TAG="$(printf '%s' "${WEB_URL:-}" | sed -n 's#.*/download/\(skjold-v[0-9.]*\)/.*#\1#p')"
+[ "$WEB_OK" = 1 ] && [ -z "$WEB_TAG" ] && WEB_TAG="lokal"
+sudo mkdir -p /usr/local/share/ki-amp && printf '%s\n' "${WEB_TAG:-}" | sudo tee /usr/local/share/ki-amp/release >/dev/null
 sudo rm -rf "$WEBAPP" && sudo mkdir -p "$WEBAPP" && sudo cp -r "$WEB_TMP/." "$WEBAPP/" \
   && sudo find "$WEBAPP" -type d -exec chmod 755 {} + && sudo find "$WEBAPP" -type f -exec chmod 644 {} +
 rm -rf "$WEB_TMP"

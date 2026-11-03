@@ -20,6 +20,7 @@ struct SettingsView: View {
                 Text("Knapper og oppstart").sora(17, .semibold).padding(.top, 6)
             }
             if cat.id == "oppdatering" {
+                DeviceUpdateView()
                 UpdateSettingsView()
             } else if cat.id == "steder" {
                 StederSettingsView()
