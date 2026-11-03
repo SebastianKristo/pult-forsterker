@@ -88,6 +88,4 @@ if __name__ == "__main__":
     devs = {k: cutout(os.path.join(SRC, f"{k}.png")) for k in ("s1", "node", "core", "pultforsterker")}   # touch: bilde fra designets render (touch_1_forfra_skra), ikke herfra
     for k, dev in devs.items():
         driver_image(dev, os.path.join(ROOT, "drivers", k, "assets", "images"))
-    r = room((devs["s1"], devs["node"]))
-    for name, size in (("xlarge", (1000, 700)), ("large", (500, 350)), ("small", (250, 175))):
-        r.resize(size, Image.LANCZOS).save(os.path.join(ROOT, "assets", "images", f"{name}.png"), optimize=True)
+    # appbildet lages av make_app_image.py
