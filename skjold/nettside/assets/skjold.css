@@ -404,3 +404,5 @@ img[src*="-touch"]{-webkit-mask-image:none;mask-image:none;border-radius:22px}
 .pdf-side{width:100%;display:flex;justify-content:center}
 .pdf-side canvas{background:#fff;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.5);max-width:100%}
 .pdf-feil{color:#c9c9c4}
+
+.familie{max-width:1200px;margin:8px auto 48px;padding:0 20px}.familie img{display:block;width:100%;height:auto;border-radius:18px}
