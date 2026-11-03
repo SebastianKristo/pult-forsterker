@@ -2957,6 +2957,11 @@ class Lyrion:
                     if lp.get("duration") and not float(r.get("duration", 0) or 0): r["duration"] = lp["duration"]
                 if same and not (station or loop.get("album")) and not lp.get("source"):
                     station = lp.get("title", "")
+                # Mange kanaler sender «låt – artist» bare i strømmen (ICY), og Lyrion viser det ikke alltid: les det selv
+                if not song and r.get("mode") == "play" and not (same and lp.get("source")):
+                    t = icy.title(lp["url"] if same and lp else loop.get("url", ""))
+                    if t and t != station:
+                        artist, song = t.split(" - ", 1) if " - " in t else ("", t)
                 if same and not art and lp.get("art"):
                     art = lp["art"]
                 # Lyrions standardbilde for radio (masten i html/images/…) er ikke et ekte cover: bruk kanalens logo
@@ -3055,6 +3060,48 @@ def _known_logo(url, lp=None):
     return ""
 
 
+class Icy:
+    """Leser «StreamTitle» (ICY-metadata) direkte fra radiostrømmen i bakgrunnen, for kanaler der Lyrion mangler låt/artist."""
+    JUNK = ("", "-", " - ", "unknown", "advert", "reklame")
+
+    def __init__(self):
+        self.url, self.text, self.t, self._busy = "", "", 0.0, False
+
+    def title(self, url):
+        if not url or not url.startswith("http") or "/api/stream/" in url:
+            return ""
+        if url != self.url:
+            self.url, self.text, self.t = url, "", 0.0
+        if time.time() - self.t > 20 and not self._busy:
+            self._busy = True; self.t = time.time()
+            threading.Thread(target=self._read, args=(url,), daemon=True).start()
+        return self.text if self.url == url else ""
+
+    def _read(self, url):
+        try:
+            req = urllib.request.Request(url, headers={"Icy-MetaData": "1", "User-Agent": "Skjold/1.0"})
+            with urllib.request.urlopen(req, timeout=6) as r:
+                n = int(r.headers.get("icy-metaint") or 0)
+                if not n or n > 1_000_000:
+                    return
+                r.read(n); ln = r.read(1)[0] * 16
+                meta = r.read(ln).rstrip(b"\0")
+            raw = meta.decode("utf-8", "replace")
+            if "\ufffd" in raw:
+                raw = meta.decode("latin-1")
+            m = re.search(r"StreamTitle='(.*?)';", raw, re.S)
+            t = (m.group(1).strip() if m else "")
+            if t.lower() in self.JUNK or t.lower().startswith(("http", "www.")):
+                t = ""
+            if self.url == url:
+                self.text = t[:200]
+        except Exception:
+            pass
+        finally:
+            self._busy = False
+
+
+icy = Icy()
 lyr = Lyrion()
 
 
