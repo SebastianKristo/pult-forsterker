@@ -99,6 +99,7 @@ fun AppShell(m: AppModel) {
                 if (i == 3) m.setCat = -1
             }
         }
+        if (m.hjemLogin) HjemLoginView(m)
         AnimatedVisibility(m.full, enter = slideInVertically(tween(280)) { it }, exit = slideOutVertically(tween(280)) { it }) {
             FullPlayerView(m)
         }
@@ -115,7 +116,8 @@ private fun Page(m: AppModel, tab: Int) {
         else -> if (m.setCat >= 0 && m.setCat < m.cats.size) m.cats[m.setCat].n else "Innstillinger"
     }
     Column(Modifier.fillMaxSize()) {
-        if (title != null) T(title, sora(28f, W.Semibold), Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), maxLines = 1)
+        if (tab == 2 && m.visSted) Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)) { StedPicker(m, 28f) }
+        else if (title != null) T(title, sora(28f, W.Semibold), Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), maxLines = 1)
         // new scroll position when the visible page changes
         key("$tab-${m.sub}-${m.lib}-${m.setCat}-${m.libPl ?: -1}") {
             Column(

@@ -241,6 +241,8 @@ nonisolated enum Net {
         }
         for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
         guard let (d, r) = try? await URLSession.shared.data(for: req), let http = r as? HTTPURLResponse else { return nil }
+        // Relé via Skjold-hjem: Cloudflare Access sender til innloggingssiden når informasjonskapselen mangler/er utløpt
+        if HjemAPI.accessBlocked(http) { return (d, 401) }
         return (d, http.statusCode)
     }
 

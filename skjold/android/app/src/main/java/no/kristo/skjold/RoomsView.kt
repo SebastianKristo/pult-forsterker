@@ -163,6 +163,7 @@ private fun AddTile(m: AppModel) {
         Modifier.fillMaxWidth().height(150.dp).skBorder(hex(0x3a2e17), 18.dp, dash = listOf(5f, 4f))
             .press {
                 Haptics.tap()
+                if (m.stedId.isNotEmpty()) { m.openStederSettings(); return@press }
                 m.mode = Mode.ONBOARD; m.welcome = false; m.ob = 0; m.tested = emptySet(); m.pw = ""; m.obUpd = 0; m.scan = false
             },
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
@@ -280,6 +281,7 @@ private fun RoomTile(m: AppModel, room: Room, act: Room) {
             }
             Spacer(Modifier.weight(1f))
             T(room.name, sora(16f, W.Semibold), maxLines = 1)
+            m.hjemEnhet(room.id)?.let { HjemBadges(it, Modifier.padding(vertical = 2.dp)) }
             T(status, sora(11f, W.Regular, if (inG) C.ink2 else C.muted), maxLines = 1)
             Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 SKIcon(Icons.volume, 12.dp, 2f, C.muted)

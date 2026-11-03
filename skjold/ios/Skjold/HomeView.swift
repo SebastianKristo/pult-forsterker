@@ -21,6 +21,8 @@ struct HomeView: View {
             .plain()
         }
 
+        if m.visSted { StedPicker(size: 22) }
+
         Button { m.tab = 2 } label: {
             HStack(spacing: 12) {
                 SKIcon(d: SK.dev(room.type).icon, size: 24, stroke: 1.5, color: .accent2)

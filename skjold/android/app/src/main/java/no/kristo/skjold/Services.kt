@@ -64,6 +64,7 @@ object Net {
         .connectTimeout(6, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
         .retryOnConnectionFailure(false)
+        .addInterceptor(Hjem.cookieInterceptor)
         .build()
 
     private val JSON_TYPE = "application/json".toMediaType()
@@ -84,7 +85,10 @@ object Net {
             }
             val req = Request.Builder().url(url).method(method, rb).header("Cache-Control", "no-cache")
             headers.forEach { (k, v) -> req.header(k, v) }
-            c.newCall(req.build()).execute().use { r -> Pair(r.body?.bytes() ?: ByteArray(0), r.code) }
+            c.newCall(req.build()).execute().use { r ->
+                // Relé via Skjold-hjem: Cloudflare Access omdirigerer til innloggingen når informasjonskapselen mangler
+                Pair(r.body?.bytes() ?: ByteArray(0), if (Hjem.accessBlocked(r.request.url.host, r.request.url.encodedPath)) 401 else r.code)
+            }
         } catch (_: Exception) {
             null
         }

@@ -69,6 +69,7 @@ MyApp → ContentView (rot: bakgrunn, intro, velkomst/oppsett/app)
 | `RoomsView.swift` | Rom («Ditt system»): gruppekort med gruppevolum, `RoomTile`-rutenett (dra sidelengs for volum), surround-plassering. |
 | `LibraryView.swift` | YouTube Music, Navidrome og Plex: søk, faner, hero, hyller, spillelister, historikk. |
 | `RadioView.swift` | 16–17 Radio: hero, sjangre, hyller, søk (norsk katalog og Radio Browser). |
+| `Hjem.swift` | Skjold-hjem (`docs/SKJOLD_HJEM.md`): `HjemAPI` (skyens API, relé-URL-er, CF_Authorization-informasjonskapsel), `HjemSted`/`HjemEnhet`, `extension AppModel` (steder, `selectSted`, `velgEnhet`, `devices`), `StedPicker` (tittel «Hytta ▾» på Hjem/Rom), `HjemBadges`, Innstillinger → Steder (`StederSettingsView`) og → Skjold-hjem (`SkyDeviceView`, `/api/sky`), `HjemLoginView` (WKWebView). |
 | `SettingsView.swift` | 18–20 Innstillinger: kategorier per enhet, items, radiofavoritter, oppdatering/backup, standby-klokker (`ClockFace`), APPEN → valg av fanelinje. |
 
 ---
@@ -124,6 +125,12 @@ Alle handlinger går fortsatt gjennom `AppModel`. I demomodus sendes ingenting. 
 | `previewClock`, `updSync`, `forget`, `reset`, øvrige `setup`-steg | ingen endepunkt, lokalt |
 
 **Lagt til i daemonen for appen:** `lyrion_server` (`host:port`) og `lyrion_player` (Squeezelite-MAC) i `/api/status` (dokumentert i docstringen).
+
+## Skjold-hjem
+
+- Valgt sted (`stedId`, tom = Dette nettverket) bytter romlista til stedets enheter (`devices` i stedet for `known`). Hver enhet brukes direkte på LAN hvis `lan` svarer innen 1,5 s, ellers via relé `https://<sky>/api/hjem/steder/{sted}/enheter/{id}` – en full URL som `host`, så `Net.url`/`DeviceLink`/SSE virker uendret.
+- Innlogging: WKWebView mot skyen; `CF_Authorization` kopieres til `HTTPCookieStorage.shared` (og lagres i UserDefaults for gjenoppretting). ASWebAuthenticationSession deler ikke informasjonskapsler med appen og krever et callback-endepunkt i Workeren. Google-IdP blokkerer innebygde nettlesere – bruk engangskode i Access.
+- 401 eller omdirigering til `*.cloudflareaccess.com` gir «Logg inn på Skjold-hjem».
 
 ## Må testes i Xcode
 

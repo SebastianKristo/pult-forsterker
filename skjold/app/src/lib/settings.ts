@@ -158,6 +158,8 @@ export const CATS: Category[] = [
     opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay eller Blåtann vekker forsterkeren')] },
   { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub, backup og gjenoppretting', items: [{ kind: 'update', n: 'Oppdatering' }] },
   { id: 'fjernstyring', n: 'Fjernstyring', sub: 'Styr Skjold hjemmefra via Cloudflare', items: [{ kind: 'update', n: 'Fjernstyring' }] },
+  { id: 'steder', n: 'Steder', sub: 'Skjold-hjem: Hjem, Hytta … hovedenhet og reserve', items: [{ kind: 'update', n: 'Steder' }] },
+  { id: 'skjoldhjem', n: 'Skjold-hjem', sub: 'Koble denne enheten til et sted', items: [{ kind: 'update', n: 'Skjold-hjem' }] },
   { id: 'system', n: 'System', sub: 'Om, oppsett og tilbakestilling', items: [
     { kind: 'info', n: 'Programvare', key: 'version' }, { kind: 'info', n: 'Adresse', key: 'ip' },
     { kind: 'info', n: 'Lyrion', key: 'lyrion' }, { kind: 'info', n: 'Enhets-ID', key: 'id' }, { kind: 'info', n: 'Type', key: 'board' },
@@ -177,6 +179,8 @@ export const ICONS: Record<string, string> = {
   stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
   skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4',
   strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0',
+  steder: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  skjoldhjem: 'M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5z',
   rom: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z',
@@ -187,7 +191,7 @@ export const ICONS: Record<string, string> = {
 export const CAT_TILE: Record<string, string> = {
   tjenester: '#2a3a2e',
   eq: '#3a2e17', lyd: '#2a3340', tilkobling: '#22314a', radio: '#3d2a2a', stemme: '#2f2a40', skjerm: '#2a3a33',
-  strom: '#40362a', rom: '#2a3a33', oppdatering: '#333', system: '#333335'
+  strom: '#40362a', steder: '#2a3340', skjoldhjem: '#22314a', rom: '#2a3a33', oppdatering: '#333', system: '#333335'
 };
 
 /** Bezier curve through the five EQ bands – same geometry as the design file. */

@@ -38,6 +38,8 @@ fun HomeView(m: AppModel) {
         }
     }
 
+    if (m.visSted) StedPicker(m, 22f)
+
     Row(
         Modifier.fillMaxWidth().skBox(C.card, C.line).press { m.tab = 2 }.padding(14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),

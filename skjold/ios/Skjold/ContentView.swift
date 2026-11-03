@@ -47,6 +47,7 @@ struct AppShell: View {
             }
         }
         .animation(.easeOut(duration: 0.28), value: m.full)
+        .sheet(isPresented: Binding(get: { m.hjemLogin }, set: { m.hjemLogin = $0 })) { HjemLoginView() }
     }
 
     private var glass: Bool { m.tabStyle == "glass" }
@@ -89,7 +90,11 @@ struct AppShell: View {
     /// Title + scrolling content for a tab.
     private func page(_ tab: Int) -> some View {
         VStack(spacing: 0) {
-            if let title = title(tab) {
+            if tab == 2 && m.visSted {
+                StedPicker(size: 28)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 8)
+            } else if let title = title(tab) {
                 Text(title).sora(28, .semibold).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 8)

@@ -1,9 +1,11 @@
 // Telefon (Skjold App v2): Hjem, fullskjermspiller med kø, og Rom («Ditt system»). Malen er portert 1:1 fra
 // designfilen (samme mål, farger og tekster); dataene kommer fra forsterkeren (/api/status, /api/presets).
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { api, getBase, PRODUCT_HW, PRODUCT_LABEL, productOf, setBase, type InputId, type Product, type Status } from '../lib/api';
+import { api, credFor, getBase, PRODUCT_HW, PRODUCT_LABEL, productOf, setBase, type InputId, type Product, type Status } from '../lib/api';
 import { act, deviceName, eqActiveProfile, go, inputLabel, loadSettings, mode, online, openFull, closeFull, playPause, product, queueOpen, reconnect, recent, setVolume, showToast, srcOpen, status } from '../lib/store';
 import { knownDevices } from '../lib/discover';
+import { aktivEnhet, enheter, relayBase, stedId, velgEnhet, visSted, type Enhet } from '../lib/hjem';
+import { RolleMerker, StedPicker } from './hjem';
 import { art } from '../lib/settings';
 import { PRODUCT_ICON, SrcCircle, Slider } from '../components/ui';
 import { favs, favsLoaded, loadFavs, playFav } from '../lib/radio';
@@ -17,30 +19,38 @@ const A = '#d9a441';
 const sel = (b: boolean) => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
 
 // ---------- rom (denne forsterkeren + andre appen kjenner) ----------
-export interface Room { key: string; base: string; name: string; product: Product; st: Status | null; active: boolean }
+export interface Room { key: string; base: string; name: string; product: Product; st: Status | null; active: boolean; enhet?: Enhet }
 export const activeKey = (): string => getBase() || location.origin;
 export function useRooms(): Room[] {
-  const s = status.value, cur = getBase();
+  const s = status.value, cur = getBase(), sid = stedId.value, ens = enheter.value, akt = aktivEnhet.value;
   const [others, setOthers] = useState<Record<string, Status | null>>({});
-  const known = knownDevices().filter((d) => d.base !== cur && d.base !== location.origin && d.base.replace(/^https?:\/\//, '') !== location.host);
-  const knownKey = known.map((d) => d.base).join(',');
+  // Valgt sted: stedets enheter (status via relé, bare de som er online). Ellers: kjente enheter på LAN.
+  const known: { base: string; name: string; product?: string; enhet?: Enhet; skip?: boolean }[] = sid
+    ? ens.filter((e) => e.id !== akt).map((e) => ({ base: relayBase(sid, e.id), name: e.navn, product: e.produkt, enhet: e, skip: !e.online }))
+    : knownDevices().filter((d) => d.base !== cur && d.base !== location.origin && d.base.replace(/^https?:\/\//, '') !== location.host);
+  const knownKey = known.map((d) => d.base + (d.skip ? '-' : '')).join(',');
   useEffect(() => {
     if (!known.length) return undefined;
     let stop = false;
     const poll = async () => {
       const res: Record<string, Status | null> = {};
-      await Promise.all(known.map(async (d) => { try { res[d.base] = await api.statusAt(d.base, 2500); } catch { res[d.base] = null; } }));
+      await Promise.all(known.map(async (d) => { if (d.skip) { res[d.base] = null; return; } try { res[d.base] = await api.statusAt(d.base, sid ? 5000 : 2500); } catch { res[d.base] = null; } }));
       if (!stop) setOthers(res);
     };
-    void poll(); const t = window.setInterval(poll, 5000);
+    void poll(); const t = window.setInterval(poll, sid ? 8000 : 5000);
     return () => { stop = true; clearInterval(t); };
   }, [knownKey]);
+  const me = sid ? ens.find((e) => e.id === akt) : undefined;
   return [
-    { key: activeKey(), base: cur, name: deviceName.value, product: product.value, st: s, active: true },
-    ...known.map((d) => { const st = others[d.base] ?? null; return { key: d.base, base: d.base, name: st?.name || d.name, product: productOf(st ?? { board: '', product: d.product ?? '' }), st, active: false }; })
+    { key: activeKey(), base: cur, name: deviceName.value, product: product.value, st: s, active: true, ...(me ? { enhet: me } : {}) },
+    ...known.map((d) => { const st = others[d.base] ?? null; return { key: d.base, base: d.base, name: st?.name || d.name, product: productOf(st ?? { board: '', product: d.product ?? '' }), st, active: false, ...(d.enhet ? { enhet: d.enhet } : {}) }; })
   ];
 }
-export async function switchRoom(base: string): Promise<void> { setBase(base); reconnect(); await loadSettings(); }
+/** Bytt enhet. I et sted velges LAN eller relé på nytt (velgEnhet); ellers rett til adressen. */
+export async function switchRoom(base: string, enhet?: Enhet): Promise<void> {
+  if (enhet && stedId.value) { await velgEnhet(enhet); return; }
+  setBase(base); reconnect(); await loadSettings();
+}
 export function groupLabel(): string { const n = groupCount(activeKey()); return deviceName.value + (n > 1 ? ' + ' + (n - 1) : ''); }
 
 // ---------- Hjem ----------
@@ -71,6 +81,7 @@ export function HomePhone() {
         <div style="display:flex;align-items:center;gap:9px"><div style="display:flex;align-items:flex-end;gap:2px;height:16px">{[8, 12, 16, 12, 8].map((h, i) => <div key={i} style={`width:2.5px;height:${h}px;background:#f2f2ee;border-radius:2px`} />)}</div><span style="font-weight:600;font-size:15px;letter-spacing:0.12em">SKJOLD</span></div>
         <button onClick={() => go('rooms')} style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;background:#141415;font-size:12px;cursor:pointer;white-space:nowrap;max-width:60%;overflow:hidden"><div style={`width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${online.value ? '#6fcf7f' : '#e05a4a'}`} /><span style="overflow:hidden;text-overflow:ellipsis">{groupLabel()}</span></button>
       </div>
+      {visSted() && <div style="flex-shrink:0;display:flex"><StedPicker big /></div>}
       <button onClick={() => go('rooms')} data-testid="device-card" style="flex-shrink:0;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border-radius:14px;border:1px solid #242426;background:#141415;cursor:pointer;text-align:left;box-sizing:border-box;width:100%">
         <div style="width:44px;height:44px;border-radius:12px;background:#1c170d;border:1px solid #5a4420;color:#f0c46a;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d={PRODUCT_ICON[p]} /></svg></div>
         <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
@@ -289,7 +300,7 @@ export function RoomsPhone({ wide = false }: { wide?: boolean }) {
     return st.title ? st.title + (st.artist ? ' · ' + st.artist : '') : inputLabel(st.input);
   };
   const setVolAt = async (base: string, v: number) => {
-    try { const r = await fetch(base + '/api/volume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: v }) }); if (!r.ok) throw new Error(); }
+    try { const r = await fetch(base + '/api/volume', { credentials: credFor(base), method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: v }) }); if (!r.ok) throw new Error(); }
     catch { showToast('Fikk ikke kontakt med ' + base.replace(/^https?:\/\//, '')); }
   };
   return (
@@ -313,10 +324,10 @@ export function RoomsPhone({ wide = false }: { wide?: boolean }) {
           const inG = inGroup(r.key, ak), on = r.active, vol = r.st?.volume ?? 0;
           return (
             <div key={r.key} style={`display:grid;grid-template-columns:44px minmax(0,1fr) 32px;gap:12px;align-items:center;padding:12px;border-radius:14px;background:${on ? '#1c170d' : '#141415'};border:1px solid ${on ? '#5a4420' : '#242426'}`}>
-              <button onClick={() => { if (!on) void switchRoom(r.base); }} aria-label={'Styr ' + r.name} style="width:44px;height:44px;border-radius:10px;background:#1f1f21;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#c9c9c4;padding:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d={PRODUCT_ICON[r.product]} /></svg></button>
+              <button onClick={() => { if (!on) void switchRoom(r.base, r.enhet); }} aria-label={'Styr ' + r.name} style="width:44px;height:44px;border-radius:10px;background:#1f1f21;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#c9c9c4;padding:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d={PRODUCT_ICON[r.product]} /></svg></button>
               <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
-                <button onClick={() => { if (!on) void switchRoom(r.base); }} style="border:none;background:none;padding:0;cursor:pointer;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:baseline">
-                  <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:15px">{r.name}</span><span style="font-size:11px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{PRODUCT_LABEL[r.product]} · {np(r.st)}</span></span>
+                <button onClick={() => { if (!on) void switchRoom(r.base, r.enhet); }} style="border:none;background:none;padding:0;cursor:pointer;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+                  <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:15px">{r.name}</span>{r.enhet && <RolleMerker e={r.enhet} />}<span style="font-size:11px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{PRODUCT_LABEL[r.product]} · {np(r.st)}</span></span>
                   <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c9c9c4">{r.st ? vol : '–'}</span>
                 </button>
                 <Slider value={vol} label={'Volum ' + r.name} onCommit={(v, fin) => { if (on) setVolume(v, fin); else if (fin) void setVolAt(r.base, v); }} />
@@ -331,7 +342,7 @@ export function RoomsPhone({ wide = false }: { wide?: boolean }) {
           );
         })}
       </div>
-      <button onClick={() => { mode.value = 'find'; }} data-testid="add-device" style={`display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:68px;padding:12px 14px;border-radius:14px;border:1px solid #3a2e17;background:#141209;cursor:pointer;text-align:left${wide ? ';width:100%' : ''}`}>
+      <button onClick={() => { if (stedId.value) go('settings', 'steder'); else mode.value = 'find'; }} data-testid="add-device" style={`display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:68px;padding:12px 14px;border-radius:14px;border:1px solid #3a2e17;background:#141209;cursor:pointer;text-align:left${wide ? ';width:100%' : ''}`}>
         <div style="width:44px;height:44px;border-radius:12px;background:#2a2112;border:1px solid #5a4420;color:#f0c46a;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg></div>
         <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px;font-weight:600;color:#f2f2ee">Legg til enhet</span><span style="font-size:12px;color:#8b8b86">Skjold S1, Node eller Core</span></div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>

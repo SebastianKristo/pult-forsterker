@@ -110,6 +110,19 @@ final class AppModel {
         didSet { UserDefaults.standard.set(activeHost, forKey: "skjold-host"); DeviceLink.shared.host = activeHost }
     }
     var link: Link = .none
+
+    // MARK: Skjold-hjem (see Hjem.swift)
+    var steder: [HjemSted] = []
+    /// "" = «Dette nettverket» (Bonjour/kjente enheter som før).
+    var stedId: String = UserDefaults.standard.string(forKey: "skjold-sted") ?? "" {
+        didSet { UserDefaults.standard.set(stedId, forKey: "skjold-sted") }
+    }
+    var stedEnheter: [HjemEnhet] = []
+    /// Enhets-id → adressen appen bruker: "ip:port" på LAN eller relé-URL via skyen.
+    var stedHosts: [String: String] = [:]
+    /// "", "laster", "ok", "login" eller en feiltekst.
+    var hjemState = ""
+    var hjemLogin = false
     var dev: DevStatus? = nil
     var devStats: [String: DevStatus] = [:]
     var lyrionServer: String? = nil
@@ -181,6 +194,8 @@ final class AppModel {
             }
         }
         startLive()
+        HjemAPI.restoreCookie()
+        Task { [weak self] in await self?.startHjem() }
     }
 
     func restartHero(_ i: Int) {

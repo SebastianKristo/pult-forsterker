@@ -201,6 +201,20 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         get() = _activeHost
         set(v) { _activeHost = v; Store.setString("skjold-host", v); DeviceLink.host = v }
     var link by mutableStateOf(Link.NONE)
+
+    // MARK: Skjold-hjem (Hjem.kt)
+    var steder by mutableStateOf(listOf<HjemSted>())
+    private var _stedId by mutableStateOf(Store.string("skjold-sted") ?: "")
+    /** "" = «Dette nettverket» (LAN som før). Lagres. */
+    var stedId: String
+        get() = _stedId
+        set(v) { _stedId = v; Store.setString("skjold-sted", v) }
+    var stedEnheter by mutableStateOf(listOf<HjemEnhet>())
+    /** Enhets-id → adressen som brukes: "ip:port" på LAN eller relé-URL via skyen. */
+    var stedHosts by mutableStateOf(mapOf<String, String>())
+    /** "", "laster", "ok", "login" eller feiltekst. */
+    var hjemState by mutableStateOf("")
+    var hjemLogin by mutableStateOf(false)
     var dev by mutableStateOf<DevStatus?>(null)
     val devStats = mutableStateMapOf<String, DevStatus?>()
     var lyrionServer by mutableStateOf<String?>(null)
@@ -257,6 +271,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             }
         }
         startLive()
+        launch { startHjem() }
+    }
+
+    /** Bytt aktiv enhet til en adresse (LAN eller relé) uten å legge den i `known` (Skjold-hjem). */
+    fun switchHost(h: String?) {
+        activeHost = h
+        dev = null
+        devStats.clear()
+        link = if (h == null) Link.NONE else Link.CONNECTING
+        libStream = null
+        rebuildRooms()
+        if (h != null) {
+            startEvents()
+            launch { loadSettings(h) }
+            launch { loadPresets() }
+        }
     }
 
     fun restartHero(i: Int) {
@@ -852,7 +882,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // =====================================================================================================
 
     /** Demo mode: no Skjold device has ever been found or chosen. */
-    val demo: Boolean get() = known.isEmpty()
+    val demo: Boolean get() = known.isEmpty() && stedId.isEmpty()
     val live: Boolean get() = !demo
 
     /** The active room is a plain Lyrion player (no Skjold daemon): control it over JSON-RPC. */
@@ -1257,7 +1287,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // MARK: Rooms (Skjold devices + Lyrion players)
 
     suspend fun pollSystem() {
-        for (k in known) if (k.host != activeHost) devStats[k.host] = DeviceLink.status(k.host, 2.5)
+        for (k in devices) {
+            if (k.host == activeHost) continue
+            if (stedId.isNotEmpty() && stedEnheter.firstOrNull { it.id == k.id }?.online == false) { devStats[k.host] = null; continue }
+            devStats[k.host] = DeviceLink.status(k.host, if (Hjem.isRelay(k.host)) 5.0 else 2.5)
+        }
         val srv = lyrionServer
         if (srv != null) {
             val ps = Lyrion.players(srv)
@@ -1284,7 +1318,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val prev = sys
         val rooms = ArrayList<Room>()
         val used = HashSet<String>()
-        for (k in known) {
+        for (k in devices) {
             val st = if (k.host == activeHost) (if (link == Link.OFFLINE) null else dev) else devStats[k.host]
             val id = st?.id?.takeIf { it.isNotEmpty() } ?: k.id
             val p = st?.product ?: k.product
@@ -1293,7 +1327,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             var pid = (st?.lyrionPlayer ?: "").lowercase()
             if (pid.isEmpty() || pid == "00:00:00:00:00:01") pid = lyPlayers.firstOrNull { it.name.equals(r.name, ignoreCase = true) }?.id?.lowercase() ?: ""
             if (pid.isNotEmpty() && (lyPlayers.isEmpty() || lyPlayers.any { it.id.lowercase() == pid })) { r = r.copy(pid = pid); used.add(pid) }
-            if (st == null) r = r.copy(np = listOf("Frakoblet", k.host))
+            if (st == null) r = r.copy(np = listOf("Frakoblet", if (Hjem.isRelay(k.host)) "Skjold-hjem" else k.host))
             else if (k.host != activeHost && st.playing && st.title.isNotEmpty()) r = r.copy(np = listOf(st.title, st.artist.ifEmpty { st.name }))
             if (rooms.none { it.id == r.id }) rooms.add(r)
         }
