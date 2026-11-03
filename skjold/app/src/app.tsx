@@ -16,6 +16,7 @@ import { cats } from './screens/settings';
 import { Icon, Logo, PRODUCT_ICON, Slider } from './components/ui';
 import { HomePage, EqPage } from './screens/pages';
 import { RadioPage } from './screens/radio';
+import { GroupsPage, SpeakerButton } from './screens/groups';
 import { SettingsPage, CategoryDetail } from './screens/settings';
 import { PlayerBody, PowerButton, Transport, artFor, nowTitle, subLine } from './screens/player';
 import { openFull } from './lib/store';
@@ -80,7 +81,7 @@ const TAB_ICON: Record<string, preact.JSX.Element> = {
 };
 const TABS: [Page, string][] = [['home', 'Hjem'], ['eq', 'Lyd'], ['rooms', 'Rom'], ['settings', 'Innstillinger']];
 
-const TITLES: Record<Page, string> = { home: 'Hjem', play: 'Spiller', eq: 'Lyd', radio: 'Radio', rooms: 'Ditt system', settings: 'Innstillinger', lib: 'Bibliotek' };
+const TITLES: Record<Page, string> = { home: 'Hjem', play: 'Spiller', eq: 'Lyd', radio: 'Radio', rooms: 'Ditt system', settings: 'Innstillinger', lib: 'Bibliotek', grp: 'Grupper og surround' };
 
 function Phone() {
   const s = status.value, r = route.value;
@@ -88,7 +89,7 @@ function Phone() {
   useEffect(() => { if (page === 'play') { go('home'); openFull(); } }, [page]);
   useEffect(() => { if (!fullPlayer.value) { queueOpen.value = false; srcOpen.value = false; } }, [fullPlayer.value]);
   const cat = page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
-  const tabOf = page === 'radio' || page === 'play' || page === 'lib' ? 'home' : page;
+  const tabOf = page === 'radio' || page === 'play' || page === 'lib' ? 'home' : page === 'grp' ? 'rooms' : page;
   const title = cat ? cat.n : page === 'lib' ? libTitle() : TITLES[page];
   return (
     <div class="phone">
@@ -101,6 +102,7 @@ function Phone() {
         {page === 'rooms' && <RoomsPhone />}
         {page === 'settings' && <SettingsPage />}
         {page === 'lib' && <LibraryPage />}
+        {page === 'grp' && <GroupsPage />}
       </div>
       {s && !fullPlayer.value && <MiniPhone />}
       <nav class="tabs">
@@ -138,8 +140,8 @@ interface DesignState { welcome?: boolean; mode?: string; ob?: number; scan?: bo
 };
 
 const NAV: [Page, string][] = [['home', 'Hjem'], ['play', 'Spiller'], ['radio', 'Radio'], ['eq', 'Equalizer']];
-const NICON: Record<string, string> = { tjenester: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', lib: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5', play: 'M8 5v14l11-7z', eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
-const PAGE_SUB: Partial<Record<Page, string>> = { radio: 'Norske kanaler og over 50 000 fra hele verden', eq: 'Egen profil per inngang og for hodetelefoner' };
+const NICON: Record<string, string> = { grp: 'M4 7h6v10H4zM14 7h6v10h-6zM10 12h4', tjenester: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', lib: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5', play: 'M8 5v14l11-7z', eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
+const PAGE_SUB: Partial<Record<Page, string>> = { radio: 'Norske kanaler og over 50 000 fra hele verden', eq: 'Egen profil per inngang og for hodetelefoner', grp: 'Spill i flere rom samtidig, eller sett opp surround med flere Skjold' };
 
 function Desktop() {
   const s = status.value, r = route.value, p = product.value;
@@ -149,7 +151,7 @@ function Desktop() {
   const sideCats = cats.value.filter((c) => c.id !== 'eq');
   const st0 = settings.value;
   const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : [])];
-  const isLib = r.page === 'lib';
+  const isLib = r.page === 'lib' || r.page === 'grp';
   const air = s?.input === 'airplay' && s.airplay_device ? 'Fra ' + s.airplay_device : '';
   return (
     <div class="desktop">
@@ -172,6 +174,8 @@ function Desktop() {
           <div class="head">LYTT</div>
           {NAV.map(([id, n]) => <button key={id} class={'nv' + (r.page === id ? ' on' : '')} onClick={() => go(id)}><span class="row gap12"><Icon d={NICON[id] ?? ''} size={18} sw={1.6} />{n}</span></button>)}
           {libs.map(([id, n]) => <button key={id} class={'nv' + (isLib && r.cat === id ? ' on' : '')} onClick={() => go('lib', id)}><span class="row gap12"><Icon d={NICON.lib ?? ''} size={18} sw={1.6} />{n}</span></button>)}
+          <div class="head">OPPSETT</div>
+          <button class={'nv' + (r.page === 'grp' ? ' on' : '')} onClick={() => go('grp')}><span class="row gap12"><Icon d={NICON.grp ?? ''} size={18} sw={1.6} />Grupper og surround</span></button>
           <div class="head">INNSTILLINGER</div>
           {sideCats.map((c) => <button key={c.id} class={'nv' + (r.page === 'settings' && r.cat === c.id ? ' on' : '')} onClick={() => go('settings', c.id)}><span class="row gap12"><Icon d={NICON[c.id] ?? ICONS[c.id] ?? NICON.system ?? ''} size={18} sw={1.6} />{c.n}</span></button>)}
         </nav>
@@ -182,6 +186,7 @@ function Desktop() {
           {r.page === 'radio' && <RadioPage wide />}
           {r.page === 'rooms' && <RoomsPhone wide />}
           {r.page === 'lib' && <LibraryPage />}
+          {r.page === 'grp' && <GroupsPage />}
           {r.page === 'eq' && <EqPage />}
           {r.page === 'settings' && (cat ? <CategoryDetail cat={cat} wide /> : <SettingsPage wide />)}
         </main>
@@ -194,7 +199,7 @@ function Desktop() {
       <div class="dock">
         <button class="np" onClick={() => go('play')}><div class="cover" style={{ background: artFor(s).bg }} /><div class="col" style={{ minWidth: 0, gap: '1px' }}><span class="mono ellip" style={{ fontSize: '10px', color: '#8b8b86' }}>{deviceName.value}</span><span class="ellip" style={{ fontSize: '14px', fontWeight: 600 }}>{t.title}</span><span class="ellip muted" style={{ fontSize: '12px' }}>{air || subLine(t)}</span></div></button>
         <Transport s={s} />
-        <div class="dvol"><span class="mono" style={{ fontSize: '11px', color: '#8b8b86' }}>VOL</span><Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} /><span class="mono" style={{ fontSize: '13px', minWidth: '2.5ch', textAlign: 'right' }}>{s?.volume ?? 0}</span></div>
+        <div class="dvol"><SpeakerButton /><span class="mono" style={{ fontSize: '11px', color: '#8b8b86' }}>VOL</span><Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} /><span class="mono" style={{ fontSize: '13px', minWidth: '2.5ch', textAlign: 'right' }}>{s?.volume ?? 0}</span></div>
       </div>
     </div>
   );
