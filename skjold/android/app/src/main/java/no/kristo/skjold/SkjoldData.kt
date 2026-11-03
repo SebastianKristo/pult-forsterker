@@ -160,7 +160,7 @@ object SK {
             S.opt("rate", "Samplingsfrekvens", listOf("44,1 kHz", "48 kHz", "96 kHz", "Følg kilden")),
             S.opt("mixer", "Volumkontroll", listOf("Programvare", "Maskinvare (DAC)", "Fast 100 % (styres av forsterker)"), "Velg fast hvis enheten er koblet til en egen forsterker med volumknapp"),
             S.act("Test utgang", "testOut", "Spill testtone", true))),
-        SettingCategory("tilkobling", "Tilkobling", "Navn og Blåtann", items = listOf(
+        SettingCategory("tilkobling", "Tilkobling", "Wi-Fi, navn og Blåtann", items = listOf(
             S.opt("name", "Enhetsnavn", names, "Navnet som vises i AirPlay og Blåtann"),
             S.str("nAux1", "Navn på AUX 1", "AUX 1", "Vises på skjermen og i appen", dev = listOf("s1")), S.str("nAux2", "Navn på AUX 2", "AUX 2", dev = listOf("s1")),
             S.str("nUsb1", "Navn på USB-C «PC 1»", "PC", "For eksempel Mac eller Jobb-PC", dev = listOf("s1")), S.str("nUsb2", "Navn på USB-C «PC 2»", "Switch", dev = listOf("s1")),

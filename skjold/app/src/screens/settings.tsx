@@ -11,6 +11,7 @@ import { Icon, PRODUCT_ICON, Slider, Toggle } from '../components/ui';
 import { nbHw, useMinuteTick } from './pages';
 import { useRooms, switchRoom } from './phone';
 import { ob } from './onboard';
+import { WifiPanel } from './wifi';
 import { getLocal, setLocal } from '../lib/services';
 import { ndConfigured, ndError, ndPing } from '../lib/navidrome';
 import { RadioFavorites } from './radio';
@@ -78,6 +79,7 @@ export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) 
         <RadioFavorites wide={wide} />
         <span style={`flex-shrink:0;font-size:${wide ? '18px' : '17px'};font-weight:600;margin-top:6px`}>Knapper og oppstart</span>
       </> : null}
+      {cat.id === 'tilkobling' && <WifiPanel wide={wide} />}
       {hasClocks && settings.value.clock && <ClockPicker />}
       <div style={CARD}>{items.map((it, i) => <Row key={i} it={it} i={i} />)}</div>
       {settingsSource.value === 'local' && <div class="banner warn"><span>Forsterkeren svarer ikke på /api/settings – endringer lagres bare på denne enheten.</span></div>}
