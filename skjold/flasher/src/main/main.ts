@@ -5,7 +5,7 @@ import net from 'net';
 import path from 'path';
 import QRCode from 'qrcode';
 import { listDrives } from './drives';
-import { latestImage, download } from './release';
+import { latestImage, download, listCached, deleteCached } from './release';
 import { decompress, prepareBoot } from './image';
 import { eject, prepareLinuxDevice, runWriter, writeJobFile } from './elevate';
 import { hostnameFromName, type InitMode, onboardingUrl, validate } from '../shared/bootconfig';
@@ -129,6 +129,9 @@ async function runWriterWithProgress(image: string, device: string): Promise<voi
 app.whenReady().then(() => {
   ipcMain.handle('drives:list', () => listDrives());
   ipcMain.handle('release:latest', () => latestImage());
+  const cacheDir = () => path.join(app.getPath('userData'), 'cache');
+  ipcMain.handle('cache:list', () => listCached(cacheDir()));
+  ipcMain.handle('cache:delete', async (_e, name: string) => { if (busy) throw new Error('Skriver nå – prøv igjen etterpå.'); await deleteCached(cacheDir(), name); return listCached(cacheDir()); });
   ipcMain.handle('image:pick', async () => {
     const r = await dialog.showOpenDialog(win!, { title: 'Velg Skjold-bilde', properties: ['openFile'],
       filters: [{ name: 'Diskbilde', extensions: ['img', 'xz', 'zip', 'gz'] }] });

@@ -4,6 +4,8 @@ import type { FlashProgress, FlashRequest } from '../shared/types';
 contextBridge.exposeInMainWorld('skjold', {
   listDrives: () => ipcRenderer.invoke('drives:list'),
   latestImage: () => ipcRenderer.invoke('release:latest'),
+  cacheList: () => ipcRenderer.invoke('cache:list'),
+  cacheDelete: (name: string) => ipcRenderer.invoke('cache:delete', name),
   pickImage: () => ipcRenderer.invoke('image:pick'),
   flash: (req: FlashRequest) => ipcRenderer.invoke('flash:start', req),
   cancel: () => ipcRenderer.invoke('flash:cancel'),
