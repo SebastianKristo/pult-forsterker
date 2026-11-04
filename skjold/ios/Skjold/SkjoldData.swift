@@ -127,9 +127,12 @@ enum SK {
         SettingCategory(id: "stemme", n: "Stemme", sub: "Talebeskjeder", items: [
             .bool("voice", "Talebeskjed ved bytte"), .opt("lang", "Språk", ["Norsk", "English", "Svenska", "Dansk"]), .opt("vv", "Stemmevolum", ["Lav", "Middels", "Høy"]),
             .act("Test stemme", id: "testVoice", label: "Spill av", safe: true)]),
-        SettingCategory(id: "skjerm", n: "Skjerm og lys", sub: "Dimming, klokke, LED", dev: ["s1"], items: [
-            .opt("dim", "Dimme skjermen etter", ["Av", "30 s", "1 min"]), .opt("off", "Slukk skjermen etter", ["Av", "2 min", "5 min"], "Beskytter OLED-skjermen mot innbrenning"),
-            .bool("clock", "Klokke i standby"), SettingItem(kind: .clocks, k: "clockStyle", n: "Klokkestil i standby"), .opt("led", "LED-ringer", ["Høy", "Middels", "Lav", "Av"])]),
+        SettingCategory(id: "skjerm", n: "Skjerm og lys", sub: "Skjermtype, dimming, klokke, LED", dev: ["s1", "node"], items: [
+            // v4: skjermvelger – menyene og klokkene tilpasses skjermen (DISP_FOR i skjold_settings.js)
+            .opt("disp", "Skjerm", ["1,3″ OLED", "2,42″ OLED", "2,0″ TFT"], "Menyene og klokkene tilpasses skjermen. OLED: 128 × 64, TFT: 320 × 240 med bakgrunnslys og farge", dev: ["s1"]),
+            .opt("disp", "Skjerm", ["0,91″ OLED", "1,3″ OLED", "1,8″ TFT", "Ingen skjerm"], "Menyene og klokkene tilpasses skjermen. Den lille 0,91″ OLED-en (128 × 32) får kompakte klokker", dev: ["node"]),
+            .opt("dim", "Dimme skjermen etter", ["Av", "30 s", "1 min"], dev: ["s1"]), .opt("off", "Slukk skjermen etter", ["Av", "2 min", "5 min"], "Beskytter OLED-skjermen mot innbrenning. TFT-skjermer får ikke innbrenning", dev: ["s1"]),
+            .bool("clock", "Klokke i standby", dev: ["s1"]), SettingItem(kind: .clocks, k: "clockStyle", n: "Klokkestil i standby", dev: ["s1"]), .opt("led", "LED-ringer", ["Høy", "Middels", "Lav", "Av"], dev: ["s1"])]),
         SettingCategory(id: "strom", n: "Strøm", sub: "Standby og påslag", items: [
             .opt("auto", "Auto-standby uten lyd", ["Av", "20 min", "60 min"]), .bool("wake", "Slå på ved signal", "AirPlay eller Blåtann vekker forsterkeren")]),
         SettingCategory(id: "oppdatering", n: "Oppdatering", sub: "GitHub, backup og gjenoppretting", items: [SettingItem(kind: .update, k: "update", n: "Oppdatering")]),
@@ -143,7 +146,7 @@ enum SK {
     ]
 
     /// Default setting values. Booleans are stored as 0/1.
-    static let def: [String: Int] = ["nodeStart": 0, "btAuto": 0, "out": 3, "hat": 0, "rate": 3, "mixer": 0, "clockStyle": 0, "name": 0, "lvlAux": 0, "lvlUsb": 0, "led": 0, "voice": 0, "lang": 0, "vv": 1, "hold": 2, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": 1, "hpOwn": 1, "dim": 1, "off": 1, "clock": 1, "auto": 1, "wake": 1, "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": 0]
+    static let def: [String: Int] = ["nodeStart": 0, "btAuto": 0, "out": 3, "hat": 0, "rate": 3, "mixer": 0, "clockStyle": 0, "disp": 0, "name": 0, "lvlAux": 0, "lvlUsb": 0, "led": 0, "voice": 0, "lang": 0, "vv": 1, "hold": 2, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": 1, "hpOwn": 1, "dim": 1, "off": 1, "clock": 1, "auto": 1, "wake": 1, "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": 0]
 
     static func forDev(_ dev: [String]?, _ type: String) -> Bool { dev == nil || dev!.contains(type) }
 
@@ -186,6 +189,7 @@ enum SK {
     static let devTypes: [String: DevType] = [
         "s1": DevType(n: "Skjold S1", d: "Forsterker med skjerm, knapper og AUX/USB-innganger", icon: "M3 7.5h18a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM4.5 9.8h5v3.4h-5zM11.6 10.3a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M13.8 10.3a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M11.6 13.7a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M13.8 13.7a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0M16.4 12a2.3 2.3 0 1 0 4.6 0a2.3 2.3 0 1 0-4.6 0M18.7 10.2v1.2M3.5 16.5v1M20.5 16.5v1", inputs: ["AirPlay", "Blåtann", "AUX", "Radio", "USB"]),
         "node": DevType(n: "Skjold Node", d: "Raspberry Pi 3B eller 4 med bare lydutgang. Kobles til egen forsterker, aktive høyttalere eller DAC.", icon: "M4 6h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 18H4a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 4 6zM19.5 8h2v2.6h-2zM19.5 11.4h2v2.6h-2zM19.5 14.6h2v2h-2zM5 7.8h9M8 18v1.2M11.5 18v1.2M6.2 11.2h4.6v4.6H6.2zM15.2 15.3a.5.5 0 1 0 1 0a.5.5 0 1 0-1 0", inputs: ["AirPlay", "Blåtann", "Radio"]),
+        "touch": DevType(n: "Skjold Touch", d: "7″ skjerm · Pi 3/4/5 · RCA + 3,5 mm", icon: "M3 5h18a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM5 7h6v6H5zM13 8h6M13 10.5h4M8 17l-1.5 3h11L16 17", inputs: ["AirPlay", "Blåtann", "Radio"]),
         "core": DevType(n: "Skjold Core", d: "Sentral enhet uten skjerm. Kjører Lyrion-serveren for hele systemet og kan spille via linjeutgang eller digital utgang.", icon: "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 8h8v8H8zM12 4V2M12 22v-2M4 12H2M22 12h-2M10 11h4M10 13h4", inputs: ["AirPlay", "Blåtann", "Radio"])
     ]
 

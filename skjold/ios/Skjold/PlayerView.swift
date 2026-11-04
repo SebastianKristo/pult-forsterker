@@ -3,6 +3,7 @@ import SwiftUI
 /// 10 Fullskjermspiller + 11 Kø. Opened from the mini player, dragged down to close.
 struct FullPlayerView: View {
     @Environment(AppModel.self) private var m
+    @State private var moreOpen = false
 
     var body: some View {
         let pa = m.playerArt
@@ -24,6 +25,12 @@ struct FullPlayerView: View {
                 // full screen: background goes behind the status bar and the home indicator
                 .ignoresSafeArea()
             }
+        }
+        .sheet(isPresented: $moreOpen) {
+            PlayerMoreSheet(close: { moreOpen = false })
+                .presentationDetents([.medium])
+                .presentationCornerRadius(SkG.moreRadius)
+                .presentationBackground(.thinMaterial)
         }
     }
 
@@ -51,13 +58,30 @@ struct FullPlayerView: View {
                 topButton(Icons.chevronDown, size: 26, stroke: 2.2, label: "Lukk") { m.full = false }
                 Spacer()
                 topButton(Icons.speaker, size: 22, stroke: 1.8, label: "Høyttalere") { m.full = false; m.tab = 2 }
-                topButton(Icons.moreVertical, size: 22, fill: true, on: m.srcOpen, label: "Mer") {
-                    withAnimation(.easeOut(duration: 0.2)) { m.srcOpen.toggle() }
+                topButton(Icons.moreVertical, size: 22, fill: true, on: moreOpen, label: "Mer") {
+                    Haptics.tap(); moreOpen = true
                 }
             }
             .padding(.horizontal, 8)
         }
         .padding(.top, 8).padding(.bottom, 4)
+    }
+
+    /// v4 «Spill på»-statuslinje: hvor mange rom som spiller i takt. Trykk for å åpne Rom.
+    private var playOnStatus: some View {
+        let g = m.sys.groupOf(m.actRoom.id)
+        let text = g.count > 1 ? "\(g.count) rom spiller i takt · " + g.map(\.name).joined(separator: ", ")
+                               : "Spiller bare i " + m.actRoom.name
+        return Button { m.full = false; m.tab = 2 } label: {
+            HStack(spacing: 8) {
+                SKIcon(d: Icons.speaker, size: 14, stroke: 1.8, color: g.count > 1 ? .accent2 : Color.ink.opacity(0.7))
+                Text(text).sora(12, .regular, Color.ink.opacity(0.75)).lineLimit(1)
+                Spacer(minLength: 0)
+                Text("Spill på ›").sora(12, .semibold, .accent2)
+            }
+        }
+        .plain()
+        .accessibilityLabel("Spill på")
     }
 
     private func topButton(_ d: String, size: CGFloat, stroke: CGFloat = 2, fill: Bool = false, on: Bool = false,
@@ -117,6 +141,7 @@ struct FullPlayerView: View {
             SKSlider(value: Binding(get: { Double(m.vol) }, set: { m.setVol(Int($0)) }), tint: .ink)
             Text("\(m.vol)").mono(12, Color.ink.opacity(0.7)).frame(width: 22, alignment: .trailing)
         }
+        playOnStatus
         HStack(spacing: 12) {
             circleButton(Icons.queue, on: m.queueOpen, label: "Kø") {
                 withAnimation(.easeOut(duration: 0.2)) { m.queueOpen.toggle() }
@@ -294,4 +319,55 @@ struct FullPlayerView: View {
     }
 
     private func fmt(_ s: Int) -> String { "\(s / 60):" + String(format: "%02d", s % 60) }
+}
+
+
+/// v4 «Mer»-arket fra Nå spilles: favoritt, kilde, rom, søk og lyd.
+struct PlayerMoreSheet: View {
+    @Environment(AppModel.self) private var m
+    let close: () -> Void
+
+    private struct Row: Identifiable { let id: String; let icon: String; let on: Bool; let act: () -> Void }
+
+    private var rows: [Row] {
+        var r: [Row] = []
+        if m.input == 3 {
+            let st = m.curRadio
+            let fav = m.favIndex(st.name) != nil
+            r.append(Row(id: fav ? "Lagret i Skjold-favoritter" : "Lagre i Skjold-favoritter",
+                         icon: "M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z", on: fav) { m.toggleFav(st) })
+        }
+        r.append(Row(id: "Bytt kilde", icon: Icons.chevronDown, on: false) { close(); m.srcOpen = true })
+        r.append(Row(id: "Spill på …", icon: Icons.speaker, on: false) { close(); m.full = false; m.tab = 2 })
+        r.append(Row(id: "Søk", icon: "M11 18a7 7 0 1 0 0-14a7 7 0 1 0 0 14M20 20l-4-4", on: false) {
+            close(); m.full = false; m.tab = 0; m.sub = "search"
+        })
+        r.append(Row(id: "Lyd og equalizer", icon: Icons.volume, on: false) { close(); m.full = false; m.tab = 1 })
+        return r
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(m.np.t).sora(17, .semibold).lineLimit(1)
+                Text(m.np.s).sora(13, .regular, .muted).lineLimit(1)
+            }
+            .padding(.horizontal, 20).padding(.top, 22).padding(.bottom, 12)
+            ForEach(rows) { row in
+                Button { Haptics.tap(); row.act() } label: {
+                    HStack(spacing: 14) {
+                        SKIcon(d: row.icon, size: 22, stroke: 1.8, color: row.on ? .accent2 : .ink, fill: false)
+                            .frame(width: 28)
+                        Text(row.id).sora(16, .regular, row.on ? .accent2 : .ink)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 20).frame(height: 54)
+                    .contentShape(Rectangle())
+                }
+                .plain()
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
