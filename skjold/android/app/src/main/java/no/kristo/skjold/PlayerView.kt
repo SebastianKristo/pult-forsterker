@@ -1,6 +1,9 @@
 package no.kristo.skjold
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -24,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -58,6 +63,7 @@ import kotlin.math.sin
 fun FullPlayerView(m: AppModel) {
     val pa = m.playerArt
     val scope = rememberCoroutineScope()
+    var more by remember { mutableStateOf(false) }
     val drag = remember { Animatable(0f) }
     val closeAt = with(LocalDensity.current) { 90.dp.toPx() }
     Box(
@@ -80,33 +86,97 @@ fun FullPlayerView(m: AppModel) {
         ArtFill(pa.key)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to C.bg.copy(alpha = 0.15f), 0.55f to C.bg.copy(alpha = 0.55f), 1f to C.bg.copy(alpha = 0.85f))))
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
-            TopBar(m)
+            TopBar(m) { more = true }
             Column(Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                PlayerContent(m, pa)
+                PlayerContent(m, pa) { more = true }
+            }
+        }
+        if (more) MoreSheet(m) { more = false }
+    }
+}
+
+// v4: segmentkontroll Låt/Kø (Android) – kantlinje rgba(242,242,238,.4), linse rgba(240,196,106,.24) som glir 0.4 s
+private val LensEase = CubicBezierEasing(0.3f, 1.3f, 0.45f, 1f)
+
+@Composable
+private fun SongQueueSwitch(m: AppModel) {
+    val segW = 76.dp
+    val x by animateDpAsState(if (m.queueOpen) segW else 0.dp, tween(400, easing = LensEase), label = "lens")
+    Box(Modifier.width(segW * 2 + 8.dp).height(40.dp).clip(CircleShape).skCapsuleBorder(SkG.segLine).padding(4.dp)) {
+        Box(Modifier.offset(x = x).width(segW).height(32.dp).clip(CircleShape).background(SkG.segLens))
+        Row {
+            for ((q, label) in listOf(false to "Låt", true to "Kø")) {
+                val on = m.queueOpen == q
+                Box(Modifier.width(segW).height(32.dp).clip(CircleShape).press { if (!on) Haptics.tick(); m.queueOpen = q }, contentAlignment = Alignment.Center) {
+                    T(label, sora(14f, W.Semibold, if (on) C.ink else C.ink.copy(alpha = 0.6f)))
+                }
             }
         }
     }
 }
 
-/** Top bar (YouTube Music style): close ⌄ · Låt/Kø switch · speakers · more ⋮ */
+/** v4 «Mer»-arket (Android): fra bunnkanten, radius 28/28/0/0, dempelag rgba(5,5,6,.88). */
 @Composable
-private fun TopBar(m: AppModel) {
-    Box(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), contentAlignment = Alignment.Center) {
-        Row(Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.3f)).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            for ((q, label) in listOf(false to "Låt", true to "Kø")) {
-                val on = m.queueOpen == q
-                Box(
-                    Modifier.height(32.dp).clip(CircleShape).background(if (on) C.ink.copy(alpha = 0.16f) else Color.Transparent)
-                        .press { if (!on) Haptics.tick(); m.queueOpen = q }.padding(horizontal = 18.dp),
-                    contentAlignment = Alignment.Center,
-                ) { T(label, sora(14f, W.Semibold, if (on) C.ink else C.ink.copy(alpha = 0.5f))) }
+private fun MoreSheet(m: AppModel, close: () -> Unit) {
+    var crossfade by remember { mutableStateOf(false) }
+    var sleep by remember { mutableStateOf("Av") }
+    Box(Modifier.fillMaxSize().background(SkG.dimBg).press { close() }, contentAlignment = Alignment.BottomCenter) {
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(SkG.menuBg)
+                .press { }.windowInsetsPadding(WindowInsets.systemBars).padding(top = 10.dp, bottom = 12.dp),
+        ) {
+            Box(Modifier.align(Alignment.CenterHorizontally).width(36.dp).height(4.dp).clip(CircleShape).background(C.ink.copy(alpha = 0.3f)))
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ArtFill(m.playerArt.key, Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)))
+                Column(Modifier.weight(1f)) {
+                    T(m.np.t, sora(15f, W.Semibold), maxLines = 1)
+                    T(m.np.s, sora(12f, W.Regular, SkG.miniSub), maxLines = 1)
+                }
+            }
+            val radioSt = if (m.input == 3) m.curRadio else null
+            MoreRow(Icons.plus, if (radioSt != null && m.favIndex(radioSt.name) != null) "Fjern fra Skjold-favoritter" else "Lagre i Skjold-favoritter", enabled = radioSt != null) {
+                if (radioSt != null) m.toggleFav(radioSt); close()
+            }
+            MoreRow(Icons.queue, "Spill neste", enabled = m.lq != null) { Haptics.tick(); close() }
+            MoreRow(Icons.favList, "Legg til i spilleliste", enabled = m.lq != null) { Haptics.tick(); close() }
+            MoreRow(Icons.search, "Søk etter artist", enabled = m.np.s.isNotBlank()) {
+                // åpner kildesiden (biblioteket som spiller, ellers Navidrome) med artisten i søkefeltet
+                m.openLib(if (m.libTrack != null) m.lib else "nd"); m.lq2 = m.np.s.substringBefore(" · ").trim(); m.full = false; close()
+            }
+            MoreRow(Icons.close, "Fjern fra køen", enabled = m.lq != null) { Haptics.tick(); close() }
+            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                T("Krysstoning", sora(15f), Modifier.weight(1f))
+                SKToggle(crossfade, onColor = C.accent) { crossfade = !crossfade }
+            }
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                T("Sovetimer", sora(15f))
+                Flow(6.dp) { for (o in listOf("Av", "15 min", "30 min", "60 min", "Etter låten")) SKChip(o, on = sleep == o) { sleep = o } }
             }
         }
+    }
+}
+
+@Composable
+private fun MoreRow(icon: String, label: String, enabled: Boolean = true, action: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).alpha(if (enabled) 1f else 0.4f).press(enabled = enabled, onClick = action).padding(horizontal = 20.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        SKIcon(icon, 22.dp, 1.8f, C.ink)
+        T(label, sora(15f))
+    }
+}
+
+/** Top bar (YouTube Music style): close ⌄ · Låt/Kø switch · speakers · more ⋮ */
+@Composable
+private fun TopBar(m: AppModel, openMore: () -> Unit) {
+    Box(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), contentAlignment = Alignment.Center) {
+        SongQueueSwitch(m)
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TopButton(Icons.chevronDown, 26.dp, 2.2f) { m.full = false }
             Spacer(Modifier.weight(1f))
             TopButton(Icons.speaker, 22.dp, 1.8f) { m.full = false; m.tab = 2 }
-            TopButton(Icons.moreVertical, 22.dp, fill = true, on = m.srcOpen) { m.srcOpen = !m.srcOpen }
+            TopButton(Icons.moreVertical, 22.dp, fill = true) { openMore() }
         }
     }
 }
@@ -119,7 +189,7 @@ private fun TopButton(d: String, size: androidx.compose.ui.unit.Dp, stroke: Floa
 }
 
 @Composable
-private fun androidx.compose.foundation.layout.ColumnScope.PlayerContent(m: AppModel, pa: AppModel.PlayerArt) {
+private fun androidx.compose.foundation.layout.ColumnScope.PlayerContent(m: AppModel, pa: AppModel.PlayerArt, openMore: () -> Unit) {
     // Flexible area: the cover (or the queue) shrinks so everything fits without scrolling.
     Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
         if (!m.queueOpen) Cover(m, pa) else Queue(m)
@@ -166,7 +236,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.PlayerContent(m: AppM
             T(m.groupName, sora(14f, W.Semibold), maxLines = 1)
         }
         Spacer(Modifier.weight(1f))
-        CircleButton(Icons.more, m.srcOpen, fill = true) { m.srcOpen = !m.srcOpen }
+        CircleButton(Icons.more, false, fill = true) { openMore() }
     }
 }
 
@@ -175,7 +245,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.PlayerContent(m: AppM
 @Composable
 private fun Cover(m: AppModel, pa: AppModel.PlayerArt) {
     val a = art(pa.key)
-    Box(Modifier.fillMaxHeight().aspectRatio(1f, matchHeightConstraintsFirst = true).shadow(20.dp, RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp))) {
+    Box(Modifier.widthIn(max = 322.dp).heightIn(max = 322.dp).fillMaxHeight().aspectRatio(1f, matchHeightConstraintsFirst = true).shadow(30.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp))) {
         ArtFill(a)
         Column(Modifier.fillMaxSize().padding(20.dp)) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -81,7 +81,12 @@ fun SoundView(m: AppModel) {
 
     // MARK: EQ
     val presetName = if (prof.preset >= 0 && prof.preset < SK.eqPresets.size) SK.eqPresets[prof.preset].first else "Egendefinert"
-    Column(Modifier.fillMaxWidth().skBox(C.card, C.line, 18.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    // v4: kort med radius 26, gradient #17171a → #111113, kant #242426
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(hex(0x17171a), hex(0x111113))))
+            .skBorder(hex(0x242426), 26.dp).padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             T("Equalizer", sora(17f, W.Semibold))
             Box(Modifier.height(20.dp).clip(CircleShape).background(C.selBg2).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
@@ -103,7 +108,8 @@ fun SoundView(m: AppModel) {
                 }
             }
         }
-        // what the selected band does
+        // what the selected band does (v4: «HVA BÅNDENE GJØR»)
+        SKMonoLabel("HVA BÅNDENE GJØR")
         Row(Modifier.fillMaxWidth().skBox(C.bg.copy(alpha = 0.6f), C.line, 12.dp).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.width(70.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 T(dB(prof.eq[band]), mono(20f, C.accent2, weight = W.Medium))

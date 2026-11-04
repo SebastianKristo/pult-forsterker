@@ -232,6 +232,7 @@ object Icons {
     const val chevronDown = "M6 9l6 6 6-6"
     const val chevronUp = "M6 15l6-6 6 6"
     const val plus = "M12 5v14M5 12h14"
+    const val search = "M11 18a7 7 0 1 0 0-14a7 7 0 1 0 0 14M20 20l-4-4"
     const val close = "M6 6l12 12M18 6L6 18"
     const val play = "M8 5v14l11-7z"
     const val playRound = "M8 5.2v13.6a1 1 0 0 0 1.52.85l10.6-6.8a1 1 0 0 0 0-1.7L9.52 4.35A1 1 0 0 0 8 5.2z"

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -400,6 +401,33 @@ fun SKTabBar(selected: Int, pick: (Int) -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** v4 brettbar/nettbrett (Android, showRail): faner i en kolonne til venstre, 92 bred, #141415, kantlinje #232326. */
+@Composable
+fun SKNavRail(selected: Int, pick: (Int) -> Unit) {
+    val items = listOf(Icons.tabHome to "Hjem", Icons.tabSound to "Lyd", Icons.tabRooms to "Rom", Icons.tabSettings to "Innstillinger")
+    Row(Modifier.fillMaxHeight()) {
+        Column(
+            Modifier.width(92.dp).fillMaxHeight().background(hex(0x141415)).windowInsetsPadding(WindowInsets.systemBars).padding(top = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            items.forEachIndexed { i, it ->
+                val on = i == selected
+                Column(
+                    Modifier.press { if (i != selected) Haptics.tick(); pick(i) },
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Box(
+                        Modifier.size(SkG.barIndW, SkG.barIndH).clip(RoundedCornerShape(16.dp)).background(if (on) SkG.barIndicator else Color.Transparent),
+                        contentAlignment = Alignment.Center,
+                    ) { SKIcon(it.first, 22.dp, 1.8f, if (on) SkG.barOn else SkG.barOff) }
+                    T(it.second, sora(12f, if (on) W.Semibold else W.Regular, SkG.barLabel), maxLines = 1)
+                }
+            }
+        }
+        Box(Modifier.width(1.dp).fillMaxHeight().background(SkG.barLine))
     }
 }
 
