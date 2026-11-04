@@ -12,7 +12,7 @@ import { LibraryPage, libBack, libTitle, libUi } from './screens/library';
 import { ob, obBack } from './screens/onboard';
 import { ICONS } from './lib/settings';
 import { cats } from './screens/settings';
-import { Icon, Logo, PRODUCT_ICON, Slider } from './components/ui';
+import { Icon, PRODUCT_ICON, Slider } from './components/ui';
 import { HomePage, EqPage } from './screens/pages';
 import { RadioPage } from './screens/radio';
 import { GroupsPage, SpeakerButton } from './screens/groups';
@@ -146,6 +146,10 @@ const SETUP_NAV: ['grp' | 'int' | 'plug' | 'set', string][] = [['grp', 'Grupper 
 const NICON: Record<string, string> = { ytm: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM10 8.5v7l6-3.5z', nd: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z', int: 'M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0zM12 17v4', plug: 'M10 4a2 2 0 1 1 4 0v2h4v4h-2a2 2 0 1 0 0 4h2v4h-4v-2a2 2 0 1 0-4 0v2H6v-4h2a2 2 0 1 0 0-4H6V6h4z', set: 'M12 15a3 3 0 1 0 0-6a3 3 0 1 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z', grp: 'M4 7h6v10H4zM14 7h6v10h-6zM10 12h4', tjenester: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', lib: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5', play: 'M8 5v14l11-7z', eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
 const PAGE_SUB: Partial<Record<Page, string>> = { radio: 'Norske kanaler og over 50 000 fra hele verden', eq: 'Egen profil per inngang og for hodetelefoner', grp: 'Spill i flere rom samtidig, eller sett opp surround med flere Skjold', int: 'Lyrion, Spotify, UPnP/DLNA, YouTube Music, Navidrome, Home Assistant, Homey og API', plug: 'Utvidelser for Lyrion og Skjold. Gjelder hele systemet' };
 
+const RCOL_KEY = 'skjold-rcol';
+function readRcol(): boolean { try { return localStorage.getItem(RCOL_KEY) !== '0'; } catch { return true; } }
+
+/** PC-skall: ikonskinne (64 px) · innhold · romkolonne som kan skjules · kontrollstripe nederst. */
 function Desktop() {
   const s = status.value, r = route.value, p = product.value;
   const t = nowTitle(s);
@@ -153,37 +157,48 @@ function Desktop() {
   const title = cat ? cat.n : r.page === 'lib' ? libTitle() : TITLES[r.page];
   const st0 = settings.value;
   const libs: [string, string][] = [['ytm', 'YouTube Music'], ['nd', 'Navidrome']];
-  const isLib = r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug';
+  const [rcol, setRcol] = useState(readRcol);
+  const toggleRcol = () => { const v = !rcol; setRcol(v); try { localStorage.setItem(RCOL_KEY, v ? '1' : '0'); } catch { /* ignore */ } };
+  // Hjem har «Ditt system» som egen flis; biblioteker og oppsettsider trenger hele bredden.
+  const noRcol = r.page === 'home' || r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug';
+  const showRcol = rcol && !noRcol;
   const air = s?.input === 'airplay' && s.airplay_device ? 'Fra ' + s.airplay_device : '';
+  const rb = (key: string, label: string, on: boolean, onClick: () => void, badge = 0) => (
+    <button key={key} class={'rb' + (on ? ' on' : '')} onClick={onClick} aria-label={label} aria-current={on ? 'page' : undefined}>
+      <Icon d={NICON[key] ?? ''} size={20} sw={1.6} />
+      {badge > 0 && <sup>{badge}</sup>}
+      <span class="tip">{label}</span>
+    </button>
+  );
   return (
-    <div class="desktop">
-      <header class="hdr">
-        <div class="row" style={{ minWidth: 0, gap: '14px' }}>
-          <Logo lg word={false} />
-          <div class="col" style={{ minWidth: 0 }}>
-            <span class="row" style={{ gap: '10px', position: 'relative' }}><PlayerPicker /><StedPicker /><span class="type-badge" data-testid="type-badge"><Icon d={PRODUCT_ICON[p]} size={15} sw={1.5} />{PRODUCT_LABEL[p]}</span></span>
-            <span class="sub ellip">{PRODUCT_HW[p]}{s?.version ? ' · v' + s.version : ''}</span>
+    <div class={'desktop dk2' + (showRcol ? '' : ' norc')}>
+      <aside class="rail" aria-label="Meny">
+        <div class="rlogo" aria-hidden="true">{[9, 15, 21, 15, 9].map((h, i) => <i key={i} style={{ height: h + 'px' }} />)}</div>
+        <span class="rhead">LYTT</span>
+        {NAV.filter(([id]) => id !== 'eq').map(([id, n]) => rb(id, n, r.page === id, () => go(id)))}
+        {libs.map(([id, n]) => rb(id, n, r.page === 'lib' && r.cat === id, () => go('lib', id)))}
+        {rb('eq', 'Equalizer', r.page === 'eq', () => go('eq'))}
+        <hr />
+        <span class="rhead">OPPSETT</span>
+        {SETUP_NAV.map(([id, n]) => rb(id, n, id === 'set' ? r.page === 'settings' : r.page === id, () => go(id === 'set' ? 'settings' : id), id === 'int' ? intCount(st0) : id === 'plug' ? plugCount() : 0))}
+      </aside>
+      <div class="dk-main">
+        <header class="hdr">
+          <div class="row" style={{ minWidth: 0, gap: '14px' }}>
+            <div class="col" style={{ minWidth: 0 }}>
+              <span class="row" style={{ gap: '10px', position: 'relative', flexWrap: 'wrap' }}><PlayerPicker /><StedPicker /><span class="type-badge" data-testid="type-badge"><Icon d={PRODUCT_ICON[p]} size={15} sw={1.5} />{PRODUCT_LABEL[p]}</span></span>
+              <span class="sub ellip">{PRODUCT_HW[p]}{s?.version ? ' · v' + s.version : ''}</span>
+            </div>
           </div>
-        </div>
-        <div class="row gap10">
-          <span class="link-pill"><i style={{ background: online.value ? 'var(--green)' : 'var(--red)' }} />{online.value ? (s?.power ? 'På' : 'Standby') : 'Frakoblet'}</span>
-          <PowerButton s={s} />
-        </div>
-      </header>
-      <Offline />
-      <div class="cols">
-        <nav class="side">
-          <div class="head">LYTT</div>
-          {NAV.filter(([id]) => id !== 'eq').map(([id, n]) => <button key={id} class={'nv' + (r.page === id ? ' on' : '')} onClick={() => go(id)}><span class="row gap12"><Icon d={NICON[id] ?? ''} size={18} sw={1.6} />{n}</span></button>)}
-          {libs.map(([id, n]) => <button key={id} class={'nv' + (r.page === 'lib' && r.cat === id ? ' on' : '')} onClick={() => go('lib', id)}><span class="row gap12"><Icon d={NICON[id] ?? ''} size={18} sw={1.6} />{n}</span></button>)}
-          <button class={'nv' + (r.page === 'eq' ? ' on' : '')} onClick={() => go('eq')}><span class="row gap12"><Icon d={NICON.eq ?? ''} size={18} sw={1.6} />Equalizer</span></button>
-          <div class="head">OPPSETT</div>
-          {SETUP_NAV.map(([id, n]) => { const badge = id === 'int' ? intCount(st0) : id === 'plug' ? plugCount() : 0; const on = id === 'set' ? r.page === 'settings' : r.page === id; return (
-            <button key={id} class={'nv' + (on ? ' on' : '')} onClick={() => go(id === 'set' ? 'settings' : id)}><span class="row gap12" style={{ flex: 1 }}><Icon d={NICON[id] ?? ''} size={18} sw={1.6} />{n}</span>{badge > 0 && <span class="mono" style={{ fontSize: '11px', color: '#8b8b86' }}>{badge}</span>}</button>
-          ); })}
-        </nav>
+          <div class="row gap10">
+            <span class="link-pill"><i style={{ background: online.value ? 'var(--green)' : 'var(--red)' }} />{online.value ? (s?.power ? 'På' : 'Standby') : 'Frakoblet'}</span>
+            {!noRcol && <button class={'rc-toggle' + (rcol ? ' on' : '')} onClick={toggleRcol} aria-pressed={rcol} title={rcol ? 'Skjul rom' : 'Vis rom'}><Icon d="M4 5h16v14H4zM15 5v14" size={18} sw={1.6} /><span>Rom</span></button>}
+            <PowerButton s={s} />
+          </div>
+        </header>
+        <Offline />
         <main class="main">
-          <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>
+          {r.page !== 'home' && <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>}
           {r.page === 'home' && <HomePage wide />}
           {r.page === 'play' && <div class="player"><PlayerBody /></div>}
           {r.page === 'radio' && <RadioPage wide />}
@@ -195,16 +210,17 @@ function Desktop() {
           {r.page === 'eq' && <EqPage />}
           {r.page === 'settings' && (cat ? <CategoryDetail cat={cat} wide /> : <SettingsPage wide />)}
         </main>
-        {!isLib && <aside class="sys">
-          <span style={{ fontSize: '17px', fontWeight: 600 }}>Ditt system</span>
-          <RoomsPhone wide />
-          {s?.overtemp && <div class="banner bad"><span>Forsterkeren er for varm</span></div>}
-        </aside>}
       </div>
-      <div class="dock">
-        <button class="np" onClick={() => go('play')}><div class="cover" style={{ background: artFor(s).bg }} /><div class="col" style={{ minWidth: 0, gap: '1px' }}><span class="mono ellip" style={{ fontSize: '10px', color: '#8b8b86' }}>{deviceName.value}</span><span class="ellip" style={{ fontSize: '14px', fontWeight: 600 }}>{t.title}</span><span class="ellip muted" style={{ fontSize: '12px' }}>{air || subLine(t)}</span></div></button>
+      {showRcol && <aside class="rcol" aria-label="Ditt system">
+        <div class="row between"><span style={{ fontSize: '17px', fontWeight: 600 }}>Ditt system</span><button class="rc-x" onClick={toggleRcol} aria-label="Skjul romkolonnen"><Icon d="M6 6l12 12M18 6L6 18" size={16} sw={1.8} /></button></div>
+        <RoomsPhone wide />
+        {s?.overtemp && <div class="banner bad"><span>Forsterkeren er for varm</span></div>}
+      </aside>}
+      <div class="strip">
+        <button class="np" onClick={() => go('play')}><div class="cover" style={{ background: artFor(s).bg }} /><div class="col" style={{ minWidth: 0, gap: '3px' }}><span class="mono ellip" style={{ fontSize: '10px', color: '#8b8b86', letterSpacing: '.08em' }}>{deviceName.value.toUpperCase()}</span><span class="ellip" style={{ fontSize: '17px', fontWeight: 600 }}>{t.title}</span><span class="ellip muted" style={{ fontSize: '12.5px' }}>{air || subLine(t)}</span></div></button>
         <Transport s={s} />
-        <div class="dvol"><SpeakerButton /><span class="mono" style={{ fontSize: '11px', color: '#8b8b86' }}>VOL</span><Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} /><span class="mono" style={{ fontSize: '13px', minWidth: '2.5ch', textAlign: 'right' }}>{s?.volume ?? 0}</span></div>
+        <div class="knob"><div class="col" style={{ flex: 1, gap: '6px', minWidth: 0 }}><span class="lbl">VOLUM</span><Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} /></div><span class="big">{s?.volume ?? 0}</span></div>
+        <div class="rz"><span class="lbl">SPILL PÅ</span><SpeakerButton /></div>
       </div>
     </div>
   );

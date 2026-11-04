@@ -6,6 +6,8 @@ import { art, EQ, EQ_DESC, EQ_HZ, EQ_NAMES, fmt, type EqSource } from '../lib/se
 import { Chip, PRODUCT_ICON, Slider, SrcCircle, Toggle } from '../components/ui';
 import { favs, favsLoaded, loadFavs, playFav } from '../lib/radio';
 import { ndConfigured } from '../lib/navidrome';
+import { Transport, artFor, nowTitle, sourceLine, subLine } from './player';
+import { useRooms } from './phone';
 
 /** Ikke-brytende mellomrom før enheter, som i designet (2 × 50 W). */
 export const nbHw = (s: string) => s.replace(/ (×|W\b|kHz|mm)/g, ' $1').replace(/(\d) ×/g, '$1 ×');
@@ -111,7 +113,80 @@ function HomeBody({ wide = false }: { wide?: boolean }) {
   );
 }
 
-function HomeWide() { return <HomeBody wide />; }
+/** PC-hjem som dashbord: fliser i ulike størrelser (Nå spilles, Ditt system, Radiofavoritter, Lyd nå, Kilder, Nylig spilt). */
+function HomeWide() {
+  const s = status.value, t = nowTitle(s), a = artFor(s);
+  const rooms = useRooms();
+  const inputs = s?.inputs?.length ? s.inputs : ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
+  const services = SRC_ORDER.filter(([id]) => inputs.includes(id));
+  const st0 = settings.value;
+  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : [])];
+  const pickSrc = (id: InputId) => { if (id === 'radio') { go('radio'); return; } void act(() => api.input(id), { input: id }); openFull(); };
+  const eqSrc = eqActiveSource.value, eq = st0.eq[eqSrc]?.eq ?? [0, 0, 0, 0, 0];
+  const live = s?.input === 'radio' && !s.source_label && s.playing;
+  const rc = recent.value.slice(0, 8);
+  const online2 = rooms.filter((x) => x.st).length;
+  return (
+    <div class="bento" data-testid="dashboard">
+      <section class="card t now" style={{ gridColumn: 'span 4', gridRow: 'span 3' }}>
+        <button class="now-cover" style={{ background: a.bg, color: a.ink }} onClick={() => go('play')} aria-label="Åpne spilleren">{!a.img && <span class="big">{t.title}</span>}</button>
+        <div class="now-txt">
+          <div class="col" style={{ gap: '8px', minWidth: 0 }}>
+            <span class="lbl">{live ? <span class="live">DIREKTE</span> : sourceLine(s).toUpperCase()}</span>
+            <h2 class="now-t">{t.title}</h2>
+            <span class="muted ellip2">{subLine(t) || sourceLine(s)}</span>
+          </div>
+          <Transport s={s} />
+        </div>
+      </section>
+      <section class="card t" style={{ gridColumn: 'span 2', gridRow: 'span 3' }}>
+        <div class="row between"><h3 class="th">Ditt system</h3><span class="lbl">{online2}/{rooms.length}</span></div>
+        <div class="col" style={{ gap: '8px', overflowY: 'auto', minHeight: 0 }}>
+          {rooms.map((x) => (
+            <button key={x.key} class={'mini-room' + (x.active ? ' on' : '')} onClick={() => go('rooms')}>
+              <span class="ri"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d={PRODUCT_ICON[x.product]} /></svg></span>
+              <span class="col" style={{ minWidth: 0, gap: '2px' }}><span class="row between" style={{ gap: '8px' }}><b class="ellip">{x.name}</b><span class="mono muted" style={{ fontSize: '12px' }}>{x.st ? x.st.volume : '–'}</span></span><span class="muted ellip" style={{ fontSize: '12px' }}>{PRODUCT_LABEL[x.product]}{x.st ? ' · ' + nowTitle(x.st).title : ' · frakoblet'}</span></span>
+            </button>
+          ))}
+        </div>
+        <button class="link0" style={{ marginTop: 'auto', alignSelf: 'flex-start' }} onClick={() => go('grp')}>Grupper og surround ›</button>
+      </section>
+      <section class="card t" style={{ gridColumn: 'span 4', gridRow: 'span 2' }}>
+        <div class="row between"><h3 class="th">Radiofavoritter</h3><button class="link0" onClick={() => go('radio')}>Administrer</button></div>
+        {favs.value.length ? (
+          <div class="fav-grid">
+            {favs.value.slice(0, 6).map((f) => { const fa = art(f.title, f.image); const on = s?.input === 'radio' && s.preset === f.n; return (
+              <button key={f.n} class={'fav' + (on ? ' on' : '')} style={{ background: fa.bg, color: fa.ink }} onClick={() => playFav(f)}><em>{f.n}</em><b>{fa.logo ? '' : f.title}</b></button>
+            ); })}
+          </div>
+        ) : favsLoaded.value ? <button class="dashed" onClick={() => go('radio')}>Legg til radiokanal</button> : null}
+      </section>
+      <section class="card t" style={{ gridColumn: 'span 2', gridRow: 'span 2' }}>
+        <div class="row between"><h3 class="th">Lyd nå</h3><button class="link0" onClick={() => go('eq')}>EQ ›</button></div>
+        <div class="eq-mini">
+          {eq.map((v, i) => <div key={i} class="b"><span style={{ height: Math.max(6, 40 + v * 3.2) + 'px' }} /><em>{EQ.bands[i]}</em></div>)}
+        </div>
+        <span class="muted" style={{ fontSize: '12px' }}>{EQ.sources.find((x) => x[0] === eqSrc)?.[1] ?? ''}</span>
+      </section>
+      <section class="card t srcs" style={{ gridColumn: 'span 6', gridRow: 'span 1' }}>
+        <h3 class="th" style={{ flexShrink: 0 }}>Kilder</h3>
+        {services.map(([id, label]) => <button key={id} class="svc" onClick={() => pickSrc(id)}><SrcCircle label={label} size={48} /><span>{id === 'aux' || id === 'aux2' ? inputLabel(id) : label}</span></button>)}
+        {libs.map(([id, label]) => <button key={id} class="svc" onClick={() => go('lib', id)}><SrcCircle label={label} size={48} /><span>{label}</span></button>)}
+      </section>
+      {rc.length > 0 && <section class="card t" style={{ gridColumn: 'span 6', gridRow: 'span 2' }}>
+        <h3 class="th">Nylig spilt</h3>
+        <div class="hscroll">
+          {rc.map((x) => { const ra = art(x.title, x.image); return (
+            <button key={x.key} class="rc" onClick={() => { if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else go('radio'); } else void act(() => api.input(x.input), { input: x.input }); }}>
+              <div class="sq" style={{ background: ra.bg, color: ra.ink, borderRadius: x.station ? '50%' : '10px' }}>{ra.logo ? '' : x.big}</div>
+              <span class="t">{x.title}</span><span class="k">{x.kind}</span>
+            </button>
+          ); })}
+        </div>
+      </section>}
+    </div>
+  );
+}
 
 // ---------- Lyd (EQ) ----------
 function curve(eq: number[]): { line: string; area: string } {
