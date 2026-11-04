@@ -680,3 +680,7 @@ html.kiosk body { overscroll-behavior: none; }
 .dk2.railx .rb { width: 100%; height: 42px; display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 0 10px; }
 .dk2.railx .rb .rl { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dk2.railx .rb sup { position: static; margin-left: auto; font-size: 11px; }
+/* ikonskinnen: ingen synlig rullefelt, og «OPPSETT» får plass */
+.dk2 .rail { scrollbar-width: none; overflow-x: hidden; }
+.dk2 .rail::-webkit-scrollbar { display: none; }
+.desktop.dk2:not(.railx) .rhead { font-size: 7.5px; letter-spacing: 0.06em; }
