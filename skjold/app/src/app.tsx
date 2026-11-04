@@ -8,17 +8,18 @@ import { setVolume } from './lib/store';
 import { atRoot, closeFull, deviceName, fullPlayer, go, lastError, mode, online, product, queueOpen, route, srcOpen, status, toast, type Page } from './lib/store';
 import { Welcome } from './screens/welcome';
 import { HomePhone, MiniPhone, FullSheet, RoomsPhone, useRooms, switchRoom } from './screens/phone';
+import { DeskHome, DeskLibrary, DeskPlayer, DeskRadio } from './screens/desk';
 import { LibraryPage, libBack, libTitle, libUi } from './screens/library';
 import { ob, obBack } from './screens/onboard';
 import { ICONS } from './lib/settings';
 import { cats } from './screens/settings';
 import { Icon, PRODUCT_ICON, Slider } from './components/ui';
-import { HomePage, EqPage } from './screens/pages';
+import { EqPage } from './screens/pages';
 import { RadioPage } from './screens/radio';
 import { GroupsPage, SpeakerButton } from './screens/groups';
 import { IntegrationsPage, PluginsPage, intCount, plugCount } from './screens/integ';
 import { SettingsPage, CategoryDetail } from './screens/settings';
-import { PlayerBody, PowerButton, Transport, artFor, nowTitle, subLine } from './screens/player';
+import { PowerButton, Transport, artFor, nowTitle, subLine } from './screens/player';
 import { openFull } from './lib/store';
 import { FindDevice, Setup } from './screens/onboard';
 import { showToast, settings } from './lib/store';
@@ -163,7 +164,7 @@ function Desktop() {
   const toggleRail = () => { const v = !railx; setRailx(v); try { localStorage.setItem(RAIL_KEY, v ? '1' : '0'); } catch { /* ignore */ } };
   const toggleRcol = () => { const v = !rcol; setRcol(v); try { localStorage.setItem(RCOL_KEY, v ? '1' : '0'); } catch { /* ignore */ } };
   // Hjem har «Ditt system» som egen flis; biblioteker og oppsettsider trenger hele bredden.
-  const noRcol = r.page === 'home' || r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug';
+  const noRcol = r.page === 'home' || r.page === 'play' || r.page === 'radio' || r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug';
   const showRcol = rcol && !noRcol;
   const air = s?.input === 'airplay' && s.airplay_device ? 'Fra ' + s.airplay_device : '';
   const rb = (key: string, label: string, on: boolean, onClick: () => void, badge = 0) => (
@@ -207,11 +208,11 @@ function Desktop() {
         <Offline />
         <main class="main">
           {r.page !== 'home' && <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>}
-          {r.page === 'home' && <HomePage wide />}
-          {r.page === 'play' && <div class="player"><PlayerBody /></div>}
-          {r.page === 'radio' && <RadioPage wide />}
+          {r.page === 'home' && <DeskHome />}
+          {r.page === 'play' && <DeskPlayer />}
+          {r.page === 'radio' && <DeskRadio />}
           {r.page === 'rooms' && <RoomsPhone wide />}
-          {r.page === 'lib' && <LibraryPage />}
+          {r.page === 'lib' && <DeskLibrary key={r.cat} lib={r.cat === 'ytm' ? 'ytm' : 'nd'} />}
           {r.page === 'grp' && <GroupsPage />}
           {r.page === 'int' && <IntegrationsPage />}
           {r.page === 'plug' && <PluginsPage />}
