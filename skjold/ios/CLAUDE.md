@@ -36,19 +36,36 @@ Kjente avvik fra designet står i `AVVIK.md`. Merk at den filen skal oppdateres.
 En enkelt `@Observable` modell, `AppModel`, opprettes i `MyApp` og sendes ned med `.environment(model)`. Visningene leser `@Environment(AppModel.self) private var m`. Modellen speiler `state` og logikken fra `class Component` i designfilen.
 
 ```
-MyApp → ContentView (rot: bakgrunn, intro, velkomst/oppsett/app)
-          └─ AppShell
-               ├─ tabStyle == "glass": system-TabView (Liquid Glass) + tabViewBottomAccessory(NowPlayingAccessory)
-               ├─ tabStyle == "classic": egen SKTabBar + SKMiniPlayer
-               └─ FullPlayerView (overlay, dra ned / ⌄ for å lukke)
+MyApp → ContentView (UI/V4Root.swift: rot, intro, velkomst/oppsett/app)
+          └─ V4App (v4-skallet, «Skjold App v4.dc.html»)
+               ├─ V4TabPages: Hjem / Lyd / Rom / Innstillinger
+               ├─ V4SourcePage (kildeside) · V4PlaylistPage · V4SearchPage
+               ├─ V4Dock: minispiller + fanelinje med linse, sammenslått dokk ved rulling, spillerlinje på iPad
+               ├─ menyer (steder, sortering), «Fest rom»-ark, V4NowPlaying, V4MoreSheet, V4VolumeDial
 ```
+
+UI-et ble bygget på nytt fra bunnen etter design v4 (`fasit/v4/` er skjermbilder av designfila). Ren UI-tilstand
+(kildeside, spilleliste, søk, «Mer», volumknott, sammenslått dokk, festede rom) ligger i `V4State`; avspilling, rom,
+EQ og innstillinger ligger fortsatt i `AppModel`. Avledede verdier for v4 (gruppenavn, gruppevolum, kø) står i `UI/V4Model.swift`.
 
 ### Filer
 
 | Fil | Innhold |
 |---|---|
 | `MyApp.swift` | Appens inngang. Oppretter `AppModel`. |
-| `ContentView.swift` | `ContentView` (rot), `AppShell` (faner: glass og klassisk), `NowPlayingAccessory` (minispilleren i glassmodus). |
+| `UI/V4Tokens.swift` | Farger, kurver og ikoner fra v4, glassflater (`v4Glass`), `V4Switch`, `V4Bar`, `V4SourceIcon`, `V4Art`, `V4Mosaic`, `V4Shelf`. |
+| `UI/V4Root.swift` | `ContentView` (rot) og `V4App` (skallet), `V4TabPages`, `V4TopNav` (iPad). |
+| `UI/V4State.swift` | `V4State` (UI-tilstand), `V4Playlist`, `V4Lib` (spillelister/låter fra bibliotekene eller demodata). |
+| `UI/V4Model.swift` | `extension AppModel` med v4-avledninger: gruppe, gruppevolum, romvolum, kø, kilde. |
+| `UI/V4Dock.swift` | Minispiller, fanelinje med linse, sammenslått dokk med fremdriftsring, iPad-spillerlinje. |
+| `UI/V4Home.swift` | Hjem og stedsmenyen. |
+| `UI/V4Sound.swift` | Lyd: kildechips, EQ-kurve (5 bånd, dra), profiler, lydbilde. |
+| `UI/V4Rooms.swift` | Rom: romkort, sortering, «Fest rom». |
+| `UI/V4Settings.swift` | Innstillinger-listen (undersidene er `SettingsView`). |
+| `UI/V4NowPlaying.swift` | Nå spilles: Låt/Kø, omslag, kontroller, «Spill på»-panel. |
+| `UI/V4MoreSheet.swift` | «Mer»-arket og volumknotten. |
+| `UI/V4SourcePage.swift` | Kildeside (søk, spillelister, låter, innganger) og spillelisten. |
+| `UI/V4SearchPage.swift` | Søk på tvers av tjenestene. |
 | `AppModel.swift` | All tilstand og alle handlinger. Lagrer i UserDefaults via `Store`. Her ligger `post(...)`, se «Koblinger». |
 | `SkjoldData.swift` | `SK` med statiske data: innstillingskategorier (`SettingCategory`/`SettingItem`/`SettingKind`), standardverdier (`SK.def`), EQ-presets og -kilder, radiokatalog, enhetstyper, demosystem (`SK.sysDefault`), utgivelser, **demobibliotek** (`SK.tr`, `SK.lt`, `SK.lib`). Inneholder også verdityper: `Station`, `Track`, `Room`, `SystemState`, `EQProfile`, `UpdateState` m.m. |
 | `Services.swift` | `RadioBrowser` (søk, logoer, strømtest, `streamURL(for:)`), `PlexAPI.test`, `DeviceBrowser` (Bonjour `_kipultamp._tcp` + `_skjold._tcp` med TXT og oppløsning til `ip:port`), `Net` (HTTP), `DevStatus`/`DevSettings`/`DevPreset` (tolking av daemon-JSON), `DeviceEvents` (SSE), `DeviceLink` (REST mot daemonen). |
@@ -63,12 +80,6 @@ MyApp → ContentView (rot: bakgrunn, intro, velkomst/oppsett/app)
 | `WelcomeView.swift` | 01 Velkomst og `HeroCarousel`. |
 | `OnboardingView.swift` | 02–08 Oppsett: finn enhet (Bonjour og demokort), QR, Wi-Fi, rom, høyttalertest, programvare. |
 | `QRScannerView.swift` | Kameraskanner med VisionKit `DataScannerViewController`. |
-| `HomeView.swift` | 09 Hjem: rom-pille, romkort, Nylig spilt, Kilder, Radiofavoritter. |
-| `PlayerView.swift` | 10–11 Fullskjermspiller og kø, med topplinje i YouTube Music-stil. |
-| `SoundView.swift` | Lyd: kildeprofil, interaktiv `EQGraph`, preset-fliser, tone (`SKCenterSlider`) og loudness. |
-| `RoomsView.swift` | Rom («Ditt system»): gruppekort med gruppevolum, `RoomTile`-rutenett (dra sidelengs for volum), surround-plassering. |
-| `LibraryView.swift` | YouTube Music, Navidrome og Plex: søk, faner, hero, hyller, spillelister, historikk. |
-| `RadioView.swift` | 16–17 Radio: hero, sjangre, hyller, søk (norsk katalog og Radio Browser). |
 | `Hjem.swift` | Skjold-hjem (`docs/SKJOLD_HJEM.md`): `HjemAPI` (skyens API, relé-URL-er, CF_Authorization-informasjonskapsel), `HjemSted`/`HjemEnhet`, `extension AppModel` (steder, `selectSted`, `velgEnhet`, `devices`), `StedPicker` (tittel «Hytta ▾» på Hjem/Rom), `HjemBadges`, Innstillinger → Steder (`StederSettingsView`) og → Skjold-hjem (`SkyDeviceView`, `/api/sky`), `HjemLoginView` (WKWebView). |
 | `SettingsView.swift` | 18–20 Innstillinger: kategorier per enhet, items, radiofavoritter, oppdatering/backup, standby-klokker (`ClockFace`), APPEN → valg av fanelinje. |
 
@@ -148,7 +159,7 @@ Alle handlinger går fortsatt gjennom `AppModel`. I demomodus sendes ingenting. 
 - **Farger:** bare tokens fra `Theme.swift`, aldri løse hex-verdier i ny kode. Valgt tilstand = `SelStyle.of(true)`.
 - **Komponenter:** bruk komponentene i `Components.swift`, ikke `List`, `Form` eller standard `NavigationStack`-titler.
 - **Haptikk:** knapper får trykk automatisk gjennom `PlainPress`. Nye kontroller skal bruke `Haptics.*`.
-- **Fanelinje:** to design, valgt under Innstillinger → APPEN → Fanelinje (`m.tabStyle`: `"glass"` er standard, `"classic"` er alternativet).
+- **Fanelinje:** v4-dokken (egen glassfanelinje med linse). `m.tabStyle` brukes ikke lenger.
 
 ## Kjente småfeil og gjenstående
 
