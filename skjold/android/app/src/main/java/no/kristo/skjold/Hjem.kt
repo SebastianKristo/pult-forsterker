@@ -160,7 +160,7 @@ object Hjem {
 /** Enhetene som vises som rom: valgt steds enheter, ellers de kjente på LAN. */
 val AppModel.devices: List<KnownDevice>
     get() = if (stedId.isEmpty()) known else stedEnheter.map { e -> KnownDevice(stedHosts[e.id] ?: Hjem.relay(stedId, e.id), e.id, e.navn, e.produkt) }
-val AppModel.stedNavn: String get() = steder.firstOrNull { it.id == stedId }?.navn ?: if (stedId.isEmpty()) "Dette nettverket" else "Sted"
+val AppModel.stedNavn: String get() = steder.firstOrNull { it.id == stedId }?.navn ?: if (stedId.isEmpty()) "Hjemme" else "Sted"
 val AppModel.visSted: Boolean get() = stedId.isNotEmpty() || steder.isNotEmpty()
 fun AppModel.hjemEnhet(id: String): HjemEnhet? = if (stedId.isEmpty()) null else stedEnheter.firstOrNull { it.id == id }
 

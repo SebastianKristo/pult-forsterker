@@ -62,7 +62,7 @@ fun RoomsView(m: AppModel) {
 
     if (surround) SurroundCard(m, members)
 
-    T("Rom med hake spiller det samme, synkronisert av Lyrion. Trykk på et rom for å styre det.", sora(11f, W.Regular, C.muted))
+    T("Samme musikk i alle rommene, synkronisert ned til millisekunder. Trykk på et rom for å styre det.", sora(11f, W.Regular, C.muted))
 }
 
 // MARK: Group / now playing
@@ -71,21 +71,39 @@ fun RoomsView(m: AppModel) {
 private fun GroupCard(m: AppModel, act: Room, members: List<Room>, gid: String?, gMode: String) {
     val np = m.np
     val groupVol = if (members.isEmpty()) m.vol else (members.sumOf { if (it.id == act.id) m.vol else it.vol }.toDouble() / members.size).roundToInt()
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(C.card).skBorder(C.line, 20.dp)) {
-        // blurred art background is approximated by a dim gradient over the art colours
-        Box(Modifier.matchParentSize().background(art(m.playerArt.key).base.copy(alpha = 0.45f)))
-        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(C.bg.copy(alpha = 0.3f), C.bg.copy(alpha = 0.85f)))))
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    // v4: romkort r24 tonet i omslagsfargen (romfarger), navn 17/600 og enhetsikoner, cover 52, rund omrisset spill-knapp
+    val tone = art(m.playerArt.key).base
+    Box(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+            .cssGradient(150.0, listOf(0f to mix(tone, C.bg, 0.25f), 1f to mix(tone, C.bg, 0.6f)))
+            .skBorder(Color.White.copy(alpha = 0.1f), 24.dp),
+    ) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                T(if (members.size > 1) m.groupName else act.name, sora(17f, W.Semibold), Modifier.weight(1f), maxLines = 1)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (r in (if (members.isEmpty()) listOf(act) else members)) {
+                        Box(Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
+                            SKIcon(SK.dev(r.type).icon, 16.dp, 1.4f, C.ink)
+                        }
+                    }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ArtFill(m.playerArt.key, Modifier.size(56.dp).shadow(10.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).press { Haptics.thump(); m.full = true })
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    T(if (members.size > 1) "SPILLER I ${members.size} ROM" else "SPILLER I ${act.name.uppercase()}", mono(10f, C.accent2, 0.12f))
-                    T(np.t, sora(17f, W.Semibold), maxLines = 1)
-                    T(np.s, sora(12f, W.Regular, C.ink2), maxLines = 1)
+                ArtFill(m.playerArt.key, Modifier.size(52.dp).shadow(8.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).press { Haptics.thump(); m.full = true })
+                Column(Modifier.weight(1f).press { m.full = true }, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    T(np.t, sora(14f, W.Semibold), maxLines = 1)
+                    T(np.s, sora(12f, W.Regular, C.ink.copy(alpha = 0.72f)), maxLines = 1)
                 }
-                Box(Modifier.size(42.dp).clip(CircleShape).background(C.ink).press { m.togglePlay() }, contentAlignment = Alignment.Center) {
-                    SKIcon(if (m.playing) Icons.pause else Icons.playRound, 18.dp, color = C.bg, fill = true)
-                }
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape).skBorder(C.ink.copy(alpha = 0.7f), 20.dp, 1.5.dp).press { m.togglePlay() },
+                    contentAlignment = Alignment.Center,
+                ) { SKIcon(if (m.playing) Icons.pause else Icons.playRound, 15.dp, color = C.ink, fill = true) }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SKIcon("M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6", 16.dp, 1.8f, C.ink.copy(alpha = 0.8f))
+                SkBarSlider(groupVol.toDouble(), { setGroupVolume(m, it.roundToInt()) }, Modifier.weight(1f))
+                T("$groupVol", mono(13f, C.ink), Modifier.width(24.dp), align = androidx.compose.ui.text.style.TextAlign.End)
             }
             // members
             Flow(6.dp) {
@@ -98,12 +116,6 @@ private fun GroupCard(m: AppModel, act: Room, members: List<Room>, gid: String?,
                         T(r.name, sora(12f))
                     }
                 }
-            }
-            // group volume
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SKIcon(Icons.volume, 18.dp, 2f, C.ink2)
-                SKSlider(groupVol.toDouble(), { setGroupVolume(m, it.toInt()) }, tint = C.accent, modifier = Modifier.weight(1f))
-                T("$groupVol", mono(12f, C.ink), Modifier.width(26.dp), align = androidx.compose.ui.text.style.TextAlign.End)
             }
             if (members.size > 1 && gid != null) {
                 SKSegmented(listOf("Samme musikk", "Surround"), if (gMode == "surround") 1 else 0, 34.dp, Color.Black.copy(alpha = 0.3f), null, C.selBg2, C.accent2, C.ink2) { i ->

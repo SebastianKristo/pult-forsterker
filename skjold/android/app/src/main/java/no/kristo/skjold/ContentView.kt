@@ -93,7 +93,7 @@ fun AppShell(m: AppModel) {
         // The tabs stay mounted under the player so scroll positions survive opening/closing it.
         Column(Modifier.fillMaxSize().alpha(if (m.full) 0f else 1f)) {
             Box(Modifier.weight(1f).windowInsetsPadding(WindowInsets.statusBars).imePadding()) { Page(m, m.tab) }
-            SKMiniPlayer(m)
+            if (m.tab != 2) SKMiniPlayer(m)   // v4: Rom-fanen har volum per rom og ingen minispiller
             SKTabBar(m.tab) { i ->
                 m.tab = i; m.sub = ""
                 if (i == 3) m.setCat = -1
@@ -112,12 +112,12 @@ private fun Page(m: AppModel, tab: Int) {
     val title: String? = when (tab) {
         0 -> if (m.sub == "radio") "Radio" else if (m.sub == "lib") SK.lib[m.lib]?.name else null
         1 -> "Lyd"
-        2 -> "Ditt system"
+        2 -> "Rom"
         else -> if (m.setCat >= 0 && m.setCat < m.cats.size) m.cats[m.setCat].n else "Innstillinger"
     }
     Column(Modifier.fillMaxSize()) {
-        if (tab == 2 && m.visSted) Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)) { StedPicker(m, 28f) }
-        else if (title != null) T(title, sora(28f, W.Semibold), Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), maxLines = 1)
+        if (tab == 2 && m.visSted) Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)) { StedPicker(m, 32f) }
+        else if (title != null) T(title, sora(32f, W.Semibold).copy(letterSpacing = (-0.02f).em), Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), maxLines = 1)
         // new scroll position when the visible page changes
         key("$tab-${m.sub}-${m.lib}-${m.setCat}-${m.libPl ?: -1}") {
             Column(
