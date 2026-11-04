@@ -954,7 +954,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             var n = 0
             while (isActive) {
                 pollSystem()
-                if (n % 8 == 0) settingsHost?.let { loadSettings(it) }
+                if (n % 2 == 0) settingsHost?.let { loadSettings(it) }
                 n++
                 delay(4000)
             }
@@ -1224,7 +1224,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         s.ints["hold"]?.let { fav = it }
         val nm = names.toMutableMap()
         for (k in stringKeys) { val v = s.strings[k]; if (v != null && !held("set-$k")) nm[k] = v }
-        if (nm != names) names = nm
+        if (nm != names) {
+            // Endret i web-UI-et eller en annen app: last bibliotekene på nytt med de nye innloggingene.
+            val changed = listOf("ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken").filter { (nm[it] ?: "") != (names[it] ?: "") }.toSet()
+            names = nm
+            if (changed.any { it.startsWith("nd") }) { ndT = null; libs = libs - "nd" }
+            if (changed.any { it.startsWith("plex") }) { plexT = null; libs = libs - "plex" }
+            if (changed.any { it.startsWith("ytm") }) ytmT = null
+        }
         val e = eqP.toMutableMap()
         for ((src, p) in s.eq) if (!held("eq-$src")) e[src] = p
         if (e != eqP) eqP = e

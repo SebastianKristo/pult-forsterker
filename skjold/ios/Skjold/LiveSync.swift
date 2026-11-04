@@ -110,7 +110,7 @@ extension AppModel {
             while !Task.isCancelled {
                 guard let self else { return }
                 await self.pollSystem()
-                if n % 8 == 0, let h = self.settingsHost { await self.loadSettings(h) }
+                if n % 2 == 0, let h = self.settingsHost { await self.loadSettings(h) }   // hvert 8. s: endringer fra web-UI-et vises raskt
                 n += 1
                 try? await Task.sleep(for: .seconds(4))
             }
@@ -396,7 +396,14 @@ extension AppModel {
             if let v = s.strings[k], !(v.isEmpty && Self.serviceKeys.contains(k) && !(nm[k] ?? "").isEmpty) { nm[k] = v }
             else if Self.serviceKeys.contains(k), let mine = nm[k], !mine.isEmpty { push[k] = mine }   // forsterkeren er tom: send det appen har
         }
-        if nm != names { names = nm }
+        if nm != names {
+            // Endret i web-UI-et eller en annen app: glem bufrede bibliotek og tilkoblingsstatus, så de lastes på nytt med de nye innloggingene.
+            let changed = Set(Self.serviceKeys.filter { (nm[$0] ?? "") != (names[$0] ?? "") })
+            names = nm
+            if !changed.isDisjoint(with: ["ndUrl", "ndUser", "ndPass"]) { ndT = nil; libs["nd"] = nil }
+            if !changed.isDisjoint(with: ["plexUrl", "plexToken"]) { plexT = nil; libs["plex"] = nil }
+            if !changed.isDisjoint(with: ["ytmUser", "ytmCookie"]) { ytmT = nil }
+        }
         if !push.isEmpty { let data = DeviceLink.json(push); Task { await DeviceLink.shared.sendRaw("/api/settings", data, on: h) } }
         var e = eqP
         for (src, p) in s.eq where !held("eq-" + src) { e[src] = EQProfile(preset: p.preset, eq: p.eq, loud: p.loud) }

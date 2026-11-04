@@ -118,7 +118,7 @@ enum SK {
             .bool("ndEn", "Navidrome", "Eget musikkbibliotek via Subsonic-API"),
             .str("ndUrl", "Navidrome-server", "http://192.168.1.10:4533", "Adressen til Navidrome-serveren på hjemmenettet"),
             .str("ndUser", "Brukernavn", "brukernavn"),
-            .str("ndPass", "Passord", "Navidrome-passord", "Lagres bare på telefonen", long: true, max: 128, secret: true),
+            .str("ndPass", "Passord", "Navidrome-passord", "Lagres på Skjold og deles med web-UI-et", long: true, max: 128, secret: true),
             .act("Test Navidrome", id: "ndTest", label: "Test tilkobling", safe: true),
             .bool("plexEn", "Plex", "Spill musikk fra Plex Media Server"),
             .str("plexUrl", "Plex-server", "http://192.168.1.20:32400", "Adressen til Plex Media Server på hjemmenettet", long: true, max: 120),
