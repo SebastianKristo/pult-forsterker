@@ -85,6 +85,32 @@ fun HomeView(m: AppModel) {
             }
         }
     }
+    // v4: «Dine spillelister» – spillelister fra Navidrome/Plex som er lastet inn
+    val pls = playlists(m)
+    if (pls.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            T("Dine spillelister", sora(SkG.shelfTitle, W.Semibold))
+            EdgeScroll(12.dp) {
+                for ((lib, p) in pls) {
+                    Column(Modifier.width(SkG.recentSize).press { m.openLib(lib) }, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        val a = art(p.name)
+                        Box(Modifier.size(SkG.recentSize).clip(RoundedCornerShape(SkG.recentR)), contentAlignment = Alignment.BottomStart) {
+                            ArtFill(a)
+                            T(p.name, sora(15f, W.Semibold, a.ink, 1.05f), Modifier.padding(11.dp), maxLines = 2)
+                        }
+                        T(p.name, sora(13f, W.Semibold), maxLines = 1)
+                        T(if (p.count > 0) "${p.count} låter" else "Spilleliste", sora(11f, W.Regular, SkG.subText), maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun playlists(m: AppModel): List<Pair<String, LibColl>> {
+    val out = ArrayList<Pair<String, LibColl>>()
+    for ((lib, d) in m.libs) for (p in d.playlists) out.add(lib to p)
+    return out.take(12)
 }
 
 /** «NRK P1»: første ord hvitt og fett, resten i kanalfargen (20/700, −0.02em). */
