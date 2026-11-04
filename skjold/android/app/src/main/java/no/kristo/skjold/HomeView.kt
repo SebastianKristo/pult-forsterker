@@ -20,93 +20,88 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 
 /** 09 Hjem: logo + room pill, active room card, recently played, sources, radio favourites. */
 @Composable
 fun HomeView(m: AppModel) {
     val uri = LocalUriHandler.current
-    val room = m.actRoom
+    // v4: hjemmets navn (32/600, −0.02em) med pil som bytter hjem, og en kapsel med søk og innstillinger
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        SKLogo()
-        Spacer(Modifier.weight(1f))
+        Box(Modifier.weight(1f)) { StedPicker(m, 32f) }
         Row(
-            Modifier.height(32.dp).clip(CircleShape).background(C.card).skCapsuleBorder(C.line2).press { m.tab = 2 }.padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.height(44.dp).clip(CircleShape).background(SkG.pillBg).skCapsuleBorder(SkG.pillLine).padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Dot(if (m.link == Link.OFFLINE) C.danger else if (m.live && m.link != Link.ONLINE) C.muted else C.ok)
-            T(m.groupName, sora(12f), maxLines = 1)
-        }
-    }
-
-    if (m.visSted) StedPicker(m, 22f)
-
-    Row(
-        Modifier.fillMaxWidth().skBox(C.card, C.line).press { m.tab = 2 }.padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(C.selBg).skBorder(C.selLine, 12.dp), contentAlignment = Alignment.Center) {
-            SKIcon(SK.dev(room.type).icon, 24.dp, 1.5f, C.accent2)
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            T(room.name, sora(15f, W.Semibold))
-            T(SK.dev(room.type).n, sora(12f, W.Semibold, C.accent2))
-            T(AppModel.hwText(room), mono(10f), Modifier.padding(top = 2.dp), maxLines = 1)
-        }
-        Box(Modifier.height(28.dp).skCapsuleBorder(C.line2).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-            T("Bytt", sora(12f, W.Regular, C.ink2))
+            Box(Modifier.size(38.dp).clip(CircleShape).press { m.sub = "radio" }, contentAlignment = Alignment.Center) {
+                SKIcon("M11 18a7 7 0 1 0 0-14a7 7 0 1 0 0 14M20 20l-4-4", 20.dp, 1.8f, C.ink)
+            }
+            Box(Modifier.size(38.dp).clip(CircleShape).press { m.tab = 3; m.setCat = -1 }, contentAlignment = Alignment.Center) {
+                SKIcon(Icons.tabSettings, 20.dp, 1.8f, C.ink)
+            }
         }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SKSectionHeader("Nylig spilt")
+        T("Nylig spilt ›", sora(SkG.shelfTitle, W.Semibold))
         EdgeScroll(12.dp) {
             for (r in recent(m)) {
-                Column(Modifier.width(118.dp).press(onClick = r.pick), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.width(SkG.recentSize).press(onClick = r.pick), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     val a = art(r.key)
-                    Box(Modifier.size(118.dp).clip(RoundedCornerShape(if (r.round) 59.dp else 10.dp)), contentAlignment = Alignment.BottomStart) {
+                    Box(Modifier.size(SkG.recentSize).clip(RoundedCornerShape(SkG.recentR)), contentAlignment = Alignment.BottomStart) {
                         ArtFill(a)
-                        T(r.big, sora(14f, W.Semibold, a.ink, 1.05f), Modifier.padding(10.dp))
+                        T(r.big, sora(15f, W.Semibold, a.ink, 1.05f), Modifier.padding(11.dp))
                     }
-                    T(r.title, sora(13f), maxLines = 1)
-                    T(r.kind, sora(11f, W.Regular, C.muted))
+                    T(r.title, sora(13f, W.Semibold), maxLines = 1)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SourceGlyph(r.src, 16.dp)
+                        T(r.src, sora(11f, W.Regular, SkG.subText), maxLines = 1)
+                    }
                 }
             }
         }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SKSectionHeader("Kilder")
+        T("Kilder", sora(SkG.shelfTitle, W.Semibold))
         EdgeScroll(14.dp) {
             for ((label, act) in services(m) { u -> try { uri.openUri(u) } catch (_: Exception) { Haptics.warning() } }) SKSourceLogo(label, act)
         }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            T("Radiofavoritter", sora(17f, W.Semibold))
-            Spacer(Modifier.weight(1f))
-            SKLinkButton("Administrer") { m.sub = "radio" }
-        }
+        T("Radiofavoritter ›", sora(SkG.shelfTitle, W.Semibold), Modifier.press { m.sub = "radio" })
         EdgeScroll(12.dp) {
             m.radio.forEachIndexed { i, st ->
-                Column(Modifier.width(96.dp).press { m.playStation(i) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val a = art(st.name)
-                    Box(Modifier.size(96.dp).clip(RoundedCornerShape(12.dp))) {
-                        ArtFill(a)
-                        Column(Modifier.fillMaxSize().padding(9.dp)) {
-                            T("${i + 1}", mono(9f, a.ink.copy(alpha = a.ink.alpha * 0.8f)))
-                            Spacer(Modifier.weight(1f))
-                            T(st.name, sora(13f, W.Semibold, a.ink, 1.05f))
-                        }
-                    }
-                    T(st.genre, sora(11f, W.Regular, C.muted), maxLines = 1)
+                val on = m.input == 3 && m.station == i
+                Column(
+                    Modifier.size(SkG.favSize).clip(RoundedCornerShape(16.dp)).background(SkG.favBg).skBorder(if (on) C.accent else C.line, 16.dp)
+                        .press { m.playStation(i) }.padding(10.dp),
+                ) {
+                    T("${i + 1}", mono(9f))
+                    Spacer(Modifier.weight(1f))
+                    FavName(st.name)
                 }
             }
         }
     }
 }
 
-private data class Recent(val title: String, val key: String, val big: String, val kind: String, val round: Boolean, val pick: () -> Unit)
+/** «NRK P1»: første ord hvitt og fett, resten i kanalfargen (20/700, −0.02em). */
+@Composable
+private fun FavName(name: String) {
+    val parts = name.split(" ", limit = 2)
+    val colors = mapOf("P1" to hex(0x7fa8ff), "P2" to hex(0xe86fa8), "P3" to hex(0xf5d53a))
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+        T(parts[0], sora(20f, W.Semibold).copy(letterSpacing = (-0.02f).em), maxLines = 1)
+        if (parts.size > 1) T(parts[1], sora(20f, W.Regular, colors[parts[1]] ?: C.accent2).copy(letterSpacing = (-0.02f).em), maxLines = 1)
+    }
+}
+
+private data class Recent(val title: String, val key: String, val big: String, val kind: String, val round: Boolean, val pick: () -> Unit) {
+    /** kilden (før « · ») – vises med kildeikonet under omslaget */
+    val src: String get() = kind.substringBefore(" · ")
+}
 
 private fun recent(m: AppModel): List<Recent> {
     if (!m.demo) return liveRecent(m)
@@ -145,9 +140,9 @@ private fun services(m: AppModel, open: (String) -> Unit): List<Pair<String, () 
             m.setCat = SK.catsFor("node").indexOfFirst { it.id == "tilkobling" }
         }) else ({ m.pickInput(1); m.full = true })),
         "Spotify" to { m.pickService("spotify") },
-        "UPnP/DLNA" to { m.pickService("upnp") },
         "YT Music" to { m.openLib("ytm") },
         "Navidrome" to { m.openLib("nd") },
+        "UPnP/DLNA" to { m.pickService("upnp") },
         "Plex" to { m.openLib("plex") },
         "Lyrion" to {
             val u = m.lyrionURL ?: if (m.demo) "http://192.168.1.42:9000/" else null

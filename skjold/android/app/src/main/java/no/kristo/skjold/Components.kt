@@ -360,8 +360,8 @@ fun SourceGlyph(label: String, size: Dp = 24.dp) = SourceArt(SourceLogos.style(l
 
 @Composable
 fun SKSourceLogo(label: String, action: () -> Unit) {
-    Column(Modifier.press(onClick = action), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SourceArt(SourceLogos.style(label), 64.dp, 1.8f)
+    Column(Modifier.width(SkG.sourceSize).press(onClick = action), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        SourceArt(SourceLogos.style(label), SkG.sourceSize, 1.8f)
         T(label, sora(11f, W.Regular, C.ink2), maxLines = 1)
     }
 }
@@ -382,17 +382,21 @@ fun SKLogo(barW: Dp = 2.5.dp, gap: Dp = 2.dp, size: Float = 15f, tracking: Float
 
 @Composable
 fun SKTabBar(selected: Int, pick: (Int) -> Unit) {
+    // v4 (android): heldekkende linje #161618, pilleindikator 64×32 bak ikonet, etikett 12 / 700 når valgt
     val items = listOf(Icons.tabHome to "Hjem", Icons.tabSound to "Lyd", Icons.tabRooms to "Rom", Icons.tabSettings to "Innstillinger")
-    Column(Modifier.fillMaxWidth().background(hex(0x121213, 0.97f)).topLine(hex(0x232325)).windowInsetsPadding(WindowInsets.navigationBars)) {
-        Row(Modifier.fillMaxWidth().height(70.dp).padding(start = 6.dp, end = 6.dp, top = 4.dp)) {
+    Column(Modifier.fillMaxWidth().background(SkG.barBg).topLine(SkG.barLine).windowInsetsPadding(WindowInsets.navigationBars)) {
+        Row(Modifier.fillMaxWidth().padding(top = SkG.barPadTop, bottom = 12.dp)) {
             items.forEachIndexed { i, it ->
                 val on = i == selected
                 Column(
-                    Modifier.weight(1f).fillMaxHeight().press { if (i != selected) Haptics.tick(); pick(i) },
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                    Modifier.weight(1f).press { if (i != selected) Haptics.tick(); pick(i) },
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) { SKIcon(it.first, 22.dp, 1.8f, if (on) C.accent2 else C.muted) }
-                    T(it.second, sora(10.5f, if (on) W.Semibold else W.Regular, if (on) C.accent2 else C.muted), maxLines = 1)
+                    Box(
+                        Modifier.size(SkG.barIndW, SkG.barIndH).clip(RoundedCornerShape(16.dp)).background(if (on) SkG.barIndicator else Color.Transparent),
+                        contentAlignment = Alignment.Center,
+                    ) { SKIcon(it.first, 22.dp, 1.8f, if (on) SkG.barOn else SkG.barOff) }
+                    T(it.second, sora(12f, if (on) W.Semibold else W.Regular, SkG.barLabel), maxLines = 1)
                 }
             }
         }
@@ -401,38 +405,70 @@ fun SKTabBar(selected: Int, pick: (Int) -> Unit) {
 
 // MARK: - Mini player
 
+/** v4 (android): kort #1f1f22 r16 med cover 48, gruppe · modell (mono, gull), tittel, artist, hvit spill-knapp og volumlinje. */
 @Composable
 fun SKMiniPlayer(m: AppModel) {
     val np = m.np
-    Box(Modifier.padding(start = 10.dp, end = 10.dp, bottom = 8.dp)) {
+    Column(
+        Modifier.padding(start = SkG.miniM, end = SkG.miniM, bottom = 8.dp).fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(SkG.miniR), clip = false)
+            .clip(RoundedCornerShape(SkG.miniR)).background(SkG.miniBg)
+            .pointerInput(Unit) {
+                var dy = 0f
+                detectVerticalDragGestures(onDragStart = { dy = 0f }, onDragEnd = { if (dy < -30) { Haptics.thump(); m.full = true } }) { _, d -> dy += d }
+            },
+    ) {
         Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(hex(0x1b1b1d)).skBorder(hex(0x2a2a2c), 14.dp)
-                .pointerInput(Unit) {
-                    var dy = 0f
-                    detectVerticalDragGestures(onDragStart = { dy = 0f }, onDragEnd = { if (dy < -30) { Haptics.thump(); m.full = true } }) { _, d -> dy += d }
+            Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(Modifier.weight(1f).press { m.full = true }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ArtFill(m.playerArt.key, Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    T("${m.groupName} · ${m.actModel}", mono(10f, SkG.barOn), maxLines = 1)
+                    T(np.t, sora(14f, W.Semibold), maxLines = 1)
+                    T(np.s, sora(12f, W.Regular, SkG.miniSub), maxLines = 1)
                 }
-                .padding(8.dp),
+            }
+            Box(Modifier.size(44.dp).clip(CircleShape).background(C.ink).press { m.togglePlay() }, contentAlignment = Alignment.Center) {
+                SKIcon(if (m.playing) Icons.pause else Icons.playRound, 18.dp, color = C.bg, fill = true)
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ArtFill(m.playerArt.key, Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).press { m.full = true })
-            Column(Modifier.weight(1f).press { m.full = true }, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                T("${m.groupName} · ${m.actModel}", mono(9.5f), maxLines = 1)
-                T(np.t, sora(13f, W.Semibold), maxLines = 1)
-                T(np.s, sora(11f, W.Regular, C.muted), maxLines = 1)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(34.dp, 40.dp).press { m.prev() }, contentAlignment = Alignment.Center) { SKIcon(Icons.prev, 18.dp, color = C.ink, fill = true) }
-                Box(Modifier.size(38.dp).clip(CircleShape).background(C.ink.copy(alpha = 0.1f)).press { m.togglePlay() }, contentAlignment = Alignment.Center) {
-                    SKIcon(if (m.playing) Icons.pause else Icons.playRound, 18.dp, color = C.ink, fill = true)
+            SKIcon("M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6", 16.dp, 1.8f, SkG.miniVolIcon)
+            SkBarSlider(m.vol.toDouble(), { m.setVol(it.roundToInt()) }, Modifier.weight(1f))
+            T("${m.vol}", mono(12f, C.ink2), Modifier.width(22.dp), align = TextAlign.End)
+        }
+    }
+}
+
+/** Volumlinje uten knott (v4): spor 6 dp, rgba(242,242,238,.18), fyll #f2f2ee. Treffflaten er 26 dp høy. */
+@Composable
+fun SkBarSlider(value: Double, onChange: (Double) -> Unit, modifier: Modifier = Modifier, range: ClosedFloatingPointRange<Double> = 0.0..100.0) {
+    val cb by rememberUpdatedState(onChange)
+    val curValue by rememberUpdatedState(value)
+    Canvas(
+        modifier.height(26.dp).pointerInput(range) {
+            awaitEachGesture {
+                var last = curValue
+                fun upd(px: Float) {
+                    val p = (px / size.width).coerceIn(0f, 1f)
+                    val v = (range.start + p * (range.endInclusive - range.start)).roundToInt().toDouble()
+                    if (v != last) { detentHaptic(range, 1.0, last, v); last = v; cb(v) }
                 }
-                Box(Modifier.size(34.dp, 40.dp).press { m.next() }, contentAlignment = Alignment.Center) { SKIcon(Icons.next, 18.dp, color = C.ink, fill = true) }
+                val down = awaitFirstDown()
+                upd(down.position.x)
+                drag(down.id) { c -> upd(c.position.x); c.consume() }
             }
-        }
-        // thin progress line along the bottom edge (radio shows a live marker instead)
-        val frac = if (m.hasProgress) m.position.toFloat() / maxOf(1, m.duration) else 1f
-        Box(Modifier.align(Alignment.BottomStart).padding(start = 14.dp, end = 14.dp, bottom = 1.dp).fillMaxWidth().height(2.dp).clip(CircleShape).background(C.ink.copy(alpha = 0.1f))) {
-            Box(Modifier.fillMaxWidth(frac.coerceIn(0f, 1f)).fillMaxHeight().clip(CircleShape).background(if (m.input == 3) C.live.copy(alpha = 0.8f) else C.accent))
-        }
+        },
+    ) {
+        val tr = 6.dp.toPx(); val cy = size.height / 2
+        val frac = ((value - range.start) / (range.endInclusive - range.start)).toFloat().coerceIn(0f, 1f)
+        drawRoundRect(SkG.miniVolTrack, Offset(0f, cy - tr / 2), Size(size.width, tr), CornerRadius(tr / 2))
+        if (frac > 0f) drawRoundRect(C.ink, Offset(0f, cy - tr / 2), Size(size.width * frac, tr), CornerRadius(tr / 2))
     }
 }
 
