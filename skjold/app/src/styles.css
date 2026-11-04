@@ -607,9 +607,9 @@ html.kiosk body { overscroll-behavior: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── PC-skall v2: ikonskinne · innhold · romkolonne · kontrollstripe ── */
-.desktop.dk2 { display: grid; grid-template-columns: 64px minmax(0, 1fr) 300px; gap: 0; padding: 0 0 132px; min-height: 100vh; max-width: none; }
+.desktop.dk2 { display: grid; grid-template-columns: 64px minmax(0, 1fr) 300px; gap: 0; padding: 0 0 104px; min-height: 100vh; max-width: none; }
 .desktop.dk2.norc { grid-template-columns: 64px minmax(0, 1fr); }
-.dk2 .rail { position: sticky; top: 0; height: calc(100vh - 132px); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 0; border-right: 1px solid var(--line); background: var(--bg-2); overflow-y: auto; overflow-x: visible; z-index: 25; }
+.dk2 .rail { position: sticky; top: 0; height: calc(100vh - 104px); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 0; border-right: 1px solid var(--line); background: var(--bg-2); overflow-y: auto; overflow-x: visible; z-index: 25; }
 .dk2 .rlogo { display: flex; gap: 2px; align-items: flex-end; height: 22px; margin-bottom: 10px; }
 .dk2 .rlogo i { width: 3px; border-radius: 2px; background: var(--accent-2); }
 .dk2 .rhead { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.12em; color: var(--muted-2); padding: 8px 0 2px; }
@@ -625,7 +625,7 @@ html.kiosk body { overscroll-behavior: none; }
 .dk2 main.main { flex: 1 1 auto; }
 .dk2 .rc-toggle { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); font-size: 12px; }
 .dk2 .rc-toggle.on { border-color: var(--accent-line); color: var(--accent-2); background: var(--accent-bg); }
-.dk2 .rcol { position: sticky; top: 0; height: calc(100vh - 132px); overflow-y: auto; border-left: 1px solid var(--line); background: var(--bg-2); padding: 20px 18px; display: flex; flex-direction: column; gap: 14px; }
+.dk2 .rcol { position: sticky; top: 0; height: calc(100vh - 104px); overflow-y: auto; border-left: 1px solid var(--line); background: var(--bg-2); padding: 20px 18px; display: flex; flex-direction: column; gap: 14px; }
 .dk2 .rc-x { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line-2); background: transparent; color: var(--muted); display: grid; place-items: center; }
 @media (max-width: 1150px) { .desktop.dk2 { grid-template-columns: 64px minmax(0, 1fr); } .dk2 .rcol { display: none; } }
 /* kontrollstripe */
@@ -684,3 +684,15 @@ html.kiosk body { overscroll-behavior: none; }
 .dk2 .rail { scrollbar-width: none; overflow-x: hidden; }
 .dk2 .rail::-webkit-scrollbar { display: none; }
 .desktop.dk2:not(.railx) .rhead { font-size: 7.5px; letter-spacing: 0.06em; }
+
+/* spillerlinje A · flytende kapsel */
+.dk2 .strip { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); height: auto; padding: 10px 16px 10px 10px; border: 1px solid var(--line-2); border-radius: 18px; background: var(--card-2); box-shadow: 0 14px 40px rgba(0,0,0,.45); grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 20px; }
+.dk2 .strip .np { gap: 12px; }
+.dk2 .strip .np .cover { width: 56px; height: 56px; border-radius: 10px; }
+.dk2 .strip .tbtn { width: 38px; height: 38px; }
+.dk2 .strip .tbtn.main { width: 46px; height: 46px; }
+.dk2 .strip .sr { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+.dk2 .strip .vol { display: flex; align-items: center; gap: 10px; width: 210px; min-width: 0; color: var(--text-2); }
+.dk2 .strip .vol .num { font-family: var(--mono); font-size: 13px; width: 2.2ch; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 1150px) { .dk2 .strip { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); } .dk2 .strip .vol { width: 150px; } }
+.dk2 .toast { bottom: 110px; }

@@ -225,10 +225,9 @@ function Desktop() {
         {s?.overtemp && <div class="banner bad"><span>Forsterkeren er for varm</span></div>}
       </aside>}
       <div class="strip">
-        <button class="np" onClick={() => go('play')}><div class="cover" style={{ background: artFor(s).bg }} /><div class="col" style={{ minWidth: 0, gap: '3px' }}><span class="mono ellip" style={{ fontSize: '10px', color: '#8b8b86', letterSpacing: '.08em' }}>{deviceName.value.toUpperCase()}</span><span class="ellip" style={{ fontSize: '17px', fontWeight: 600 }}>{t.title}</span><span class="ellip muted" style={{ fontSize: '12.5px' }}>{air || subLine(t)}</span></div></button>
+        <button class="np" onClick={() => go('play')}><div class="cover" style={{ background: artFor(s).bg }} /><div class="col" style={{ minWidth: 0, gap: '2px' }}><span class="mono ellip" style={{ fontSize: '10px', color: '#8b8b86', letterSpacing: '.12em' }}>{deviceName.value.toUpperCase()}</span><span class="ellip" style={{ fontSize: '15px', fontWeight: 600 }}>{t.title}</span><span class="ellip muted" style={{ fontSize: '12.5px' }}>{air || subLine(t)}</span></div></button>
         <Transport s={s} />
-        <div class="knob"><div class="col" style={{ flex: 1, gap: '6px', minWidth: 0 }}><span class="lbl">VOLUM</span><Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} /></div><span class="big">{s?.volume ?? 0}</span></div>
-        <div class="rz"><span class="lbl">SPILL PÅ</span><SpeakerButton /></div>
+        <div class="sr"><SpeakerButton /><div class="vol"><Icon d="M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6" size={18} sw={1.7} /><Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} /><span class="num">{s?.volume ?? 0}</span></div></div>
       </div>
     </div>
   );
