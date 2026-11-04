@@ -66,6 +66,7 @@ private struct FindStep: View {
                 // nothing on the network: the design's two cards, which continue in demo mode
                 deviceCard(name: "Skjold S1", meta: "Demo · ingen enhet funnet ennå", icon: SK.dev("s1").icon, selected: true, action: "Sett opp") { m.pickDevice("s1") }
                 deviceCard(name: "Skjold Node", meta: "Demo · ingen enhet funnet ennå", icon: SK.dev("node").icon, selected: false, action: "Sett opp") { m.pickDevice("node") }
+                deviceCard(name: "Skjold Touch", meta: SK.dev("touch").d, icon: SK.dev("touch").icon, selected: false, action: "Sett opp") { m.pickDevice("touch") }
             } else {
                 ForEach(Array(browser.devices.enumerated()), id: \.element.id) { i, d in
                     let type = Self.type(d)
@@ -96,10 +97,11 @@ private struct FindStep: View {
         }
     }
 
-    /// Model from the TXT record (product=s1|node|core), else guessed from the name.
+    /// Model from the TXT record (product=s1|node|core|touch), else guessed from the name.
     static func type(_ d: FoundDevice) -> String {
-        if ["s1", "node", "core"].contains(d.product) { return d.product }
+        if ["s1", "node", "core", "touch"].contains(d.product) { return d.product }
         if d.name.localizedCaseInsensitiveContains("core") { return "core" }
+        if d.name.localizedCaseInsensitiveContains("touch") { return "touch" }
         return d.name.localizedCaseInsensitiveContains("node") ? "node" : "s1"
     }
 

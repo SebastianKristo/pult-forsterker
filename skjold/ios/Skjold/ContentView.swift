@@ -132,7 +132,7 @@ struct AppShell: View {
 
     private func title(_ tab: Int) -> String? {
         switch tab {
-        case 0: return m.sub == "radio" ? "Radio" : m.sub == "lib" ? SK.lib[m.lib]?.name : nil
+        case 0: return m.sub == "radio" ? "Radio" : m.sub == "lib" ? SK.lib[m.lib]?.name : m.sub == "search" ? "Søk" : nil
         case 1: return "Lyd"
         case 2: return "Rom"
         default: return m.setCat >= 0 && m.setCat < m.cats.count ? m.cats[m.setCat].n : "Innstillinger"
@@ -142,7 +142,7 @@ struct AppShell: View {
     @ViewBuilder private func content(_ tab: Int) -> some View {
         switch tab {
         case 0:
-            if m.sub == "radio" { RadioView() } else if m.sub == "lib" { LibraryView() } else { HomeView() }
+            if m.sub == "radio" { RadioView() } else if m.sub == "lib" { LibraryView() } else if m.sub == "search" { SearchView() } else { HomeView() }
         case 1: SoundView()
         case 2: RoomsView()
         default: SettingsView()
