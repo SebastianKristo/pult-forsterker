@@ -88,26 +88,17 @@ enum V4 {
 // MARK: - Glass (G.btnBg / G.miniBg / G.fieldBg + skygger) – Liquid Glass med HTML-lagene oppå
 
 extension View {
-    /// Glassflate: native Liquid Glass + topp-gradient, indre kantlys og ytre skygge som i malen.
+    /// Liquid Glass (Apple: glassEffect(_:in:)) for flytende kontroller i navigasjons-/kontrollaget.
+    /// Ingen egne fyll, kanter eller skygger: materialet tegner refleksjon, lys og dybde selv.
+    /// Parametrene er beholdt for kompatibilitet med eksisterende kall, men brukes ikke.
     func v4Glass<S: Shape>(_ shape: S, top: Double = 0.13, bottom: Double = 0.05, highlight: Double = 0.45,
                            shadowRadius: CGFloat = 17, shadowY: CGFloat = 12, shadowOpacity: Double = 0.5) -> some View {
-        self
-            .background {
-                shape.fill(LinearGradient(colors: [Color.white.opacity(top), Color.white.opacity(bottom)],
-                                          startPoint: .top, endPoint: .bottom))
-            }
-            .glassEffect(.regular, in: shape)
-            .overlay {
-                shape.stroke(LinearGradient(colors: [Color.white.opacity(highlight), Color.white.opacity(0.12)],
-                                            startPoint: .top, endPoint: .bottom), lineWidth: 1)
-                    .allowsHitTesting(false)
-            }
-            .shadow(color: .black.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
+        glassEffect(.regular.interactive(), in: shape)
     }
 
-    /// G.btnBg + G.btnSh: knapper og søkefelt på kildesiden.
+    /// Flytende glassknapp (tilbake, søk, sorter …) – reagerer på berøring som systemknapper.
     func v4GlassButton<S: Shape>(_ shape: S) -> some View {
-        v4Glass(shape, top: 0.18, bottom: 0.06, highlight: 0.45, shadowRadius: 9, shadowY: 6, shadowOpacity: 0.35)
+        glassEffect(.regular.interactive(), in: shape)
     }
 
     /// Tett mørk kapsel med tynn kant (rgba(40,40,42,.6) + 1px rgba(255,255,255,.1)) – knapper i sidetitler.
@@ -120,13 +111,9 @@ extension View {
             }
     }
 
-    /// Menyflate (G.menuBg / menuBd / menuSh).
+    /// Flytende meny over innholdet: Liquid Glass uten egen bakgrunn (Apple: ikke legg egne bakgrunner bak glass).
     func v4Menu(radius: CGFloat = 22) -> some View {
-        let s = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        return background(s.fill(Color(hex: 0x2c2c30, alpha: 0.78)))
-            .glassEffect(.regular, in: s)
-            .overlay(s.strokeBorder(Color.white.opacity(0.14), lineWidth: 1))
-            .shadow(color: .black.opacity(0.6), radius: 30, y: 24)
+        glassEffect(.regular, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
     }
 
     /// 1 px linje øverst (border-top i lister).

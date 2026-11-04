@@ -34,7 +34,6 @@ struct V4MoreSheet: View {
 
     private var sheet: some View {
         let a = art(m.playerArt.key)
-        let top = a.stops.first?.color ?? Color(hex: 0x145a67)
         let mid = a.stops.last?.color ?? Color(hex: 0x0b2f38)
         let shape = RoundedRectangle(cornerRadius: 34, style: .continuous)
         return VStack(alignment: .leading, spacing: 4) {
@@ -65,10 +64,7 @@ struct V4MoreSheet: View {
             .padding(.horizontal, 4).frame(minHeight: 48)
         }
         .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 26)
-        .background(shape.fill(LinearGradient(colors: [top.opacity(0.93), mid.opacity(0.95)], startPoint: .top, endPoint: .bottom)))
-        .glassEffect(.regular, in: shape)
-        .overlay(shape.stroke(LinearGradient(colors: [Color.white.opacity(0.3), .clear], startPoint: .top, endPoint: .center), lineWidth: 1))
-        .shadow(color: .black.opacity(0.5), radius: 20, y: -10)
+        .glassEffect(.regular.tint(mid.opacity(0.55)), in: shape)
     }
 
     private struct Row { var n: String; var p: String; var fill: Bool; var ic: Color; var sw: Bool? = nil; var val: String? = nil; var act: () -> Void }
@@ -156,8 +152,7 @@ struct V4VolumeDial: View {
 
     var body: some View {
         ZStack {
-            Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
-                .overlay(Color(hex: 0x050506, alpha: 0.6).ignoresSafeArea())
+            Color(hex: 0x050506, alpha: 0.78).ignoresSafeArea()
                 .onTapGesture { withAnimation(V4.fade) { ui.dial = false } }
             VStack(spacing: 26) {
                 HStack(spacing: 8) {

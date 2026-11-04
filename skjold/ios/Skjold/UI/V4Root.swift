@@ -42,17 +42,13 @@ struct V4App: View {
             let panelW: CGFloat = wide ? 400 : 0
             ZStack(alignment: .topLeading) {
                 V4.bg.ignoresSafeArea()
-                V4TabPages(wide: wide)
-                topFade
+                tabs
                 if ui.src != nil {
                     V4SourcePage(wide: wide).transition(.move(edge: .trailing)).zIndex(14)
                 }
                 if ui.pl != nil {
                     V4PlaylistPage(wide: wide).transition(.move(edge: .trailing)).zIndex(15)
                 }
-                V4Dock(wide: wide)
-                    .zIndex(20)
-                if wide { V4TopNav().zIndex(21) }
                 if ui.homeOpen { V4HomeMenu(wide: wide).zIndex(30) }
                 if ui.sortOpen { V4SortMenu().zIndex(30) }
                 V4PinSheet(wide: wide).zIndex(35)
@@ -82,13 +78,26 @@ struct V4App: View {
 
     private var showHint: Bool { ui.hint && m.tab == 0 && !m.full && !ui.homeOpen && !wide && !ui.search && ui.src == nil }
 
-    /// Toppfade bak statuslinjen (64 høy, #0b0b0c .92 → 0).
-    private var topFade: some View {
-        LinearGradient(stops: [.init(color: V4.bg.opacity(0.92), location: 0), .init(color: V4.bg.opacity(0.6), location: 0.55),
-                               .init(color: V4.bg.opacity(0), location: 1)], startPoint: .top, endPoint: .bottom)
-            .frame(height: 64)
-            .ignoresSafeArea(edges: .top)
-            .allowsHitTesting(false)
+    /// Fanene: systemets TabView (Liquid Glass). Fanelinjen minimeres ved rulling, minispilleren er
+    /// tilbehøret nederst, og på iPad blir fanene en sidemeny (sidebarAdaptable) – som Apple anbefaler.
+    private var tabs: some View {
+        TabView(selection: Binding(get: { m.tab }, set: { i in pickTab(i) })) {
+            Tab("Hjem", systemImage: "house", value: 0) { V4TabPage(tab: 0, wide: wide) }
+            Tab("Lyd", systemImage: "slider.vertical.3", value: 1) { V4TabPage(tab: 1, wide: wide) }
+            Tab("Rom", systemImage: "square.grid.2x2", value: 2) { V4TabPage(tab: 2, wide: wide) }
+            Tab("Innstillinger", systemImage: "gearshape", value: 3) { V4TabPage(tab: 3, wide: wide) }
+        }
+        .tint(V4.gold)
+        .tabViewStyle(.sidebarAdaptable)
+        .tabBarMinimizeBehavior(.onScrollDown)
+        .tabViewBottomAccessory { V4MiniAccessory() }
+    }
+
+    private func pickTab(_ i: Int) {
+        if i != m.tab { Haptics.tick() }
+        ui.resetOverlays(); m.full = false
+        m.tab = i
+        if i == 3 { m.setCat = -1 }
     }
 
     private var hintBubble: some View {
@@ -98,7 +107,7 @@ struct V4App: View {
                 .padding(.horizontal, 14).frame(height: 32)
                 .background(Capsule().fill(Color(hex: 0x2c2c30, alpha: 0.85)))
                 .overlay(Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 1))
-                .padding(.bottom, 212 - 34)
+                .padding(.bottom, 150)
         }
         .frame(maxWidth: .infinity)
         .allowsHitTesting(false)
@@ -125,58 +134,30 @@ struct V4App: View {
     private func closeFull() { m.full = false; ui.more = false }
 }
 
-/// De fire fanene som én rullbar side (padding 58 / 20 / 230, gap 22).
-struct V4TabPages: View {
+/// Én fane: rullbar side (padding 20 / 6). Systemets fanelinje og tilbehør legger seg over innholdet.
+struct V4TabPage: View {
     @Environment(AppModel.self) private var m
-    @Environment(V4State.self) private var ui
+    let tab: Int
     let wide: Bool
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 22) {
-                switch m.tab {
+                switch tab {
                 case 0: V4HomeTab()
                 case 1: V4SoundTab()
                 case 2: V4RoomsTab(wide: wide)
                 default: V4SettingsTab()
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: wide ? 860 : .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, wide ? 40 : 20)
-            .padding(.top, wide ? 58 : 6)
-            .padding(.bottom, wide ? 130 : 230)
+            .padding(.top, wide ? 24 : 6)
+            .padding(.bottom, 40)
         }
         .scrollDismissesKeyboard(.interactively)
-        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, y in
-            if !wide { ui.scrolled(y) }
-        }
-        .id("tab-\(m.tab)-\(m.setCat)")
-    }
-}
-
-/// iPad: fanene som sentrert glasskapsel øverst (topNav).
-struct V4TopNav: View {
-    @Environment(AppModel.self) private var m
-    @Environment(V4State.self) private var ui
-    var body: some View {
-        HStack(spacing: 2) {
-            ForEach(Array(V4.tabs.enumerated()), id: \.offset) { i, t in
-                Button { pick(i) } label: {
-                    Text(t.0).sora(14, .semibold, i == m.tab ? V4.gold : V4.tabIdle)
-                        .padding(.horizontal, 18).frame(height: 38)
-                        .background(Capsule().fill(i == m.tab ? Color.white.opacity(0.16) : .clear))
-                }
-                .plain()
-            }
-        }
-        .padding(4)
-        .frame(height: 46)
-        .v4GlassButton(Capsule())
-        .frame(maxWidth: .infinity)
-        .padding(.top, 4)
-        .animation(V4.toggle, value: m.tab)
-    }
-    private func pick(_ i: Int) {
-        Haptics.tick(); ui.resetOverlays(); m.full = false; m.tab = i; m.setCat = -1
+        .background(V4.bg.ignoresSafeArea())
+        .id("tab-\(tab)-\(m.setCat)")
     }
 }

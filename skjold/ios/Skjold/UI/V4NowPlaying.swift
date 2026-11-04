@@ -70,34 +70,30 @@ struct V4NowPlaying: View {
             })
     }
 
-    /// Låt/Kø: glasslinse som glir med (.3,1.3,.45,1) 0.4 s.
+    /// Låt/Kø: valgt del er en Liquid Glass-linse som morpher mellom knappene (GlassEffectContainer).
     private var segment: some View {
         let q = ui.fm == "queue"
-        return ZStack(alignment: .leading) {
-            Capsule()
-                .fill(LinearGradient(colors: [Color.white.opacity(0.22), Color.white.opacity(0.1)], startPoint: .top, endPoint: .bottom))
-                .overlay(Capsule().stroke(Color.white.opacity(0.4), lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
-                .frame(width: 81, height: 34)
-                .offset(x: q ? 81 : 0)
-                .animation(V4.segLens, value: q)
+        return GlassEffectContainer(spacing: 0) {
             HStack(spacing: 0) {
-                Button { Haptics.tick(); ui.fm = "ctrl" } label: {
-                    Text("Låt").sora(15, .semibold, q ? V4.ink.opacity(0.55) : V4.ink).frame(width: 81, height: 34)
-                }
-                .plain()
-                Button { Haptics.tick(); ui.fm = "queue" } label: {
-                    Text("Kø").sora(15, .semibold, q ? V4.ink : V4.ink.opacity(0.55)).frame(width: 81, height: 34)
-                }
-                .plain()
+                segButton("Låt", on: !q) { ui.fm = "ctrl" }
+                segButton("Kø", on: q) { ui.fm = "queue" }
             }
-            .animation(V4.segText, value: q)
         }
         .padding(4)
         .frame(width: 170, height: 42)
         .background(Capsule().fill(Color.black.opacity(0.22)))
-        .overlay(Capsule().strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
-        .glassEffect(.regular, in: Capsule())
+    }
+
+    private func segButton(_ title: String, on: Bool, _ act: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.tick()
+            withAnimation(V4.segLens) { act() }
+        } label: {
+            Text(title).sora(15, .semibold, on ? V4.ink : V4.ink.opacity(0.55))
+                .frame(width: 81, height: 34)
+                .glassEffect(on ? Glass.regular.interactive() : Glass.identity, in: Capsule())
+        }
+        .plain()
     }
 
     // MARK: Omslag
@@ -312,7 +308,6 @@ struct V4NowPlaying: View {
         }
         .padding(.horizontal, 16).padding(.vertical, 14)
         .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(V4.ink.opacity(0.1)))
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Color.white.opacity(0.14), lineWidth: 1))
     }
 

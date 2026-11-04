@@ -42,7 +42,7 @@ struct V4HomeTab: View {
             }
             .padding(.horizontal, 4)
             .frame(height: 44)
-            .v4DarkPill(Capsule())
+            .glassEffect(.regular.interactive(), in: Capsule())
         }
     }
 
