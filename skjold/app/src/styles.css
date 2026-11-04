@@ -696,3 +696,131 @@ html.kiosk body { overscroll-behavior: none; }
 .dk2 .strip .vol .num { font-family: var(--mono); font-size: 13px; width: 2.2ch; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 1150px) { .dk2 .strip { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); } .dk2 .strip .vol { width: 150px; } }
 .dk2 .toast { bottom: 110px; }
+
+/* ── PC-sider v3 (desk.tsx): Hjem, Spiller, Radio, bibliotek ── */
+.gap20 { gap: 20px; } .gap24 { gap: 24px; }
+.dkx-sh { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; min-width: 0; }
+.dkx-sh h2 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+.dkx-row { display: grid; grid-auto-flow: column; grid-auto-columns: 152px; gap: 16px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+.dkx-row::-webkit-scrollbar { display: none; }
+.dkx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 16px; }
+.dkx-tile { display: flex; flex-direction: column; gap: 6px; border: none; background: none; padding: 0; text-align: left; color: var(--text); min-width: 0; cursor: pointer; }
+.dkx-tile .sq { position: relative; width: 100%; aspect-ratio: 1; border-radius: 12px; display: flex; align-items: flex-end; padding: 12px; font-size: 14px; font-weight: 600; line-height: 1.1; overflow: hidden; box-shadow: 0 8px 22px rgba(0,0,0,.35); }
+.dkx-tile .sq b { position: relative; max-width: 80%; }
+.dkx-tile .sq .live { position: absolute; top: 8px; left: 8px; height: 18px; padding: 0 6px; border-radius: 4px; background: var(--red); color: #fff; font-family: var(--mono); font-size: 9px; letter-spacing: .08em; display: flex; align-items: center; }
+.dkx-tile .sq .pl { position: absolute; right: 8px; bottom: 8px; width: 34px; height: 34px; border-radius: 50%; background: rgba(11,11,12,.72); display: grid; place-items: center; opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; }
+@media (hover: hover) { .dkx-tile:hover .sq .pl { opacity: 1; transform: none; } }
+.dkx-tile:focus-visible .sq .pl { opacity: 1; transform: none; }
+.dkx-tile .n { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dkx-tile .m { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -3px; }
+.dkx-empty { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px; border-radius: var(--r-card); border: 1px dashed var(--line-2); color: var(--text-2); font-size: 13px; flex-wrap: wrap; }
+.dkx-search { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--card); color: var(--muted); min-width: 0; }
+.dkx-search.sm { height: 40px; border-radius: 12px; width: 300px; max-width: 100%; }
+.dkx-search input { flex: 1; min-width: 0; height: 100%; border: none; background: transparent; outline: none; font-size: 15px; color: var(--text); }
+.dkx-search:focus-within { border-color: var(--accent-line); }
+.dkx-search .x { border: none; background: none; color: var(--muted); font-size: 20px; line-height: 1; padding: 0 4px; }
+.dkx-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.dkx-chips button { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); font-size: 13px; }
+.dkx-chips button.on { background: var(--accent-bg); border-color: var(--accent-line); color: var(--accent-2); }
+
+/* Hjem */
+.dkx-home { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
+.dkx-main { display: flex; flex-direction: column; gap: 30px; min-width: 0; }
+.dkx-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 20px; }
+.dkx-card { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.dkx-hi { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+.dkx-hi h1 { margin: 0; font-size: 34px; font-weight: 600; letter-spacing: -0.02em; }
+.dkx-now { display: flex; align-items: center; gap: 14px; padding: 8px 16px 8px 8px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--card); color: var(--text); min-width: 0; max-width: 460px; flex: 1 1 320px; }
+.dkx-now .cv { width: 56px; height: 56px; border-radius: 10px; flex-shrink: 0; display: grid; place-items: center; font-weight: 600; font-size: 13px; }
+.dkx-now b { font-size: 15px; }
+.dkx-now .go { margin-left: auto; font-size: 12.5px; color: var(--accent-2); white-space: nowrap; }
+@media (hover: hover) { .dkx-now:hover { border-color: var(--accent-line); } }
+.dkx-favs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.dkx-fav { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 14px 8px 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--text); text-align: left; }
+.dkx-fav .lg { width: 48px; height: 48px; border-radius: 10px; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+.dkx-fav b { font-size: 14px; }
+.dkx-fav em { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--muted-2); }
+.dkx-fav.on { border-color: var(--accent-line); background: var(--accent-bg); }
+.dkx-fav.on b { color: var(--accent-2); }
+@media (hover: hover) { .dkx-fav:hover { border-color: var(--line-3); } }
+.dkx-srcs { display: flex; gap: 18px; flex-wrap: wrap; }
+.dkx-srcs .svc { display: flex; flex-direction: column; align-items: center; gap: 8px; border: none; background: none; color: var(--text-2); font-size: 12.5px; width: 76px; padding: 0; }
+.dkx-srcs .svc.on span { color: var(--accent-2); }
+@media (max-width: 1150px) { .dkx-home { grid-template-columns: minmax(0, 1fr); } .dkx-side { position: static; display: grid; grid-template-columns: 1fr 1fr; } }
+
+/* Spiller */
+.dkx-player { position: relative; display: grid; grid-template-columns: minmax(280px, 520px) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); align-items: start; padding: 8px 0 20px; }
+.dkx-player .glow { position: absolute; inset: -40px -20px auto -20px; height: 420px; filter: blur(90px); opacity: .28; pointer-events: none; border-radius: 40%; }
+.dkx-player .cvwrap { position: relative; }
+.dkx-player .cv { width: 100%; aspect-ratio: 1; border-radius: 20px; box-shadow: 0 30px 70px rgba(0,0,0,.55); display: flex; align-items: flex-end; padding: 24px; font-size: 28px; font-weight: 600; line-height: 1.05; }
+.dkx-player .info { position: relative; display: flex; flex-direction: column; gap: 22px; min-width: 0; max-width: 620px; }
+.dkx-player .seg { align-self: flex-start; display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+.dkx-player .seg button { height: 32px; padding: 0 18px; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
+.dkx-player .seg button.on { background: var(--card-3); color: var(--text); }
+.dkx-player .tt { margin: 0; font-size: clamp(28px, 3vw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.08; text-wrap: balance; }
+.dkx-player .sub { font-size: 17px; color: var(--text-2); }
+.dkx-player .bar.live i { width: 100%; background: linear-gradient(90deg, var(--accent-line), var(--accent)); }
+.dkx-player .ctl .tbtn { width: 46px; height: 46px; }
+.dkx-player .ctl .tbtn.main { width: 64px; height: 64px; }
+.dkx-player .vol { display: flex; align-items: center; gap: 14px; color: var(--text-2); }
+.dkx-player .vol .num { font-family: var(--mono); font-size: 22px; color: var(--accent-2); width: 2.4ch; text-align: right; font-variant-numeric: tabular-nums; }
+.dkx-queue { display: flex; flex-direction: column; border-radius: var(--r-card); border: 1px solid var(--line); background: var(--card); overflow: hidden; }
+.dkx-queue > button { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 60px; padding: 0 14px; border: none; border-top: 1px solid var(--line); background: transparent; color: var(--text); }
+.dkx-queue > button:first-child { border-top: none; }
+.dkx-queue > button.on b { color: var(--accent-2); }
+.dkx-queue .qc, .dkx-tt .qc { width: 44px; height: 44px; border-radius: 6px; flex-shrink: 0; }
+.dkx-queue .dkx-empty { border: none; }
+@media (max-width: 1000px) { .dkx-player { grid-template-columns: minmax(0, 1fr); } .dkx-player .cvwrap { max-width: 380px; } }
+
+/* Radio */
+.dkx-radio { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+.dkx-rmain { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+.dkx-rhero { position: relative; overflow: hidden; display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 26px; align-items: center; padding: 24px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); }
+.dkx-rhero .glow, .dkx-alhead .glow { position: absolute; inset: -60px; filter: blur(70px); opacity: .35; pointer-events: none; }
+.dkx-rhero .cv { position: relative; width: 180px; height: 180px; border-radius: 16px; border: none; box-shadow: 0 20px 44px rgba(0,0,0,.5); display: flex; align-items: flex-end; padding: 14px; font-size: 18px; font-weight: 600; text-align: left; }
+.dkx-rhero h2 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
+.dkx-rhero .now { font-size: 14px; color: var(--text); }
+.dkx-rhero .kicker, .dkx-alhead .kicker { display: flex; align-items: center; gap: 6px; }
+.dkx-rhero .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.dkx-list { display: flex; flex-direction: column; border-radius: var(--r-card); border: 1px solid var(--line); background: var(--card); overflow: hidden; }
+.dkx-srow { display: grid; grid-template-columns: 44px minmax(0, 1fr) 40px; gap: 12px; align-items: center; min-height: 60px; padding: 0 8px 0 12px; border-top: 1px solid var(--line); }
+.dkx-srow:first-child { border-top: none; }
+.dkx-srow .lg { width: 44px; height: 44px; border-radius: 8px; border: none; font-size: 11px; font-weight: 600; }
+.dkx-srow .tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; border: none; background: none; padding: 0; text-align: left; color: var(--text); }
+.dkx-srow .tx span { font-size: 12px; }
+.dkx-srow .star { width: 36px; height: 36px; border: none; background: none; font-size: 19px; border-radius: 8px; }
+.dkx-rside { position: sticky; top: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 150px); overflow-y: auto; scrollbar-width: thin; }
+.dkx-frow { display: grid; grid-template-columns: 20px 40px minmax(0, 1fr); gap: 10px; align-items: center; padding: 6px 8px; border-radius: 10px; border: none; background: transparent; color: var(--text); }
+.dkx-frow em { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--muted-2); text-align: right; }
+.dkx-frow .lg { width: 40px; height: 40px; border-radius: 8px; display: grid; place-items: center; font-size: 11px; font-weight: 600; }
+.dkx-frow b { font-size: 13.5px; }
+.dkx-frow.on { background: var(--accent-bg); }
+.dkx-frow.on b { color: var(--accent-2); }
+@media (hover: hover) { .dkx-frow:hover { background: var(--card-2); } }
+@media (max-width: 1150px) { .dkx-radio { grid-template-columns: minmax(0, 1fr); } .dkx-rside { position: static; max-height: none; } }
+@media (max-width: 700px) { .dkx-rhero { grid-template-columns: minmax(0, 1fr); } }
+
+/* Bibliotek */
+.dkx-lib { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.dkx-libbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.dkx-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+.dkx-tabs button { height: 34px; padding: 0 16px; border-radius: 9px; border: none; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
+.dkx-tabs button.on { background: var(--card-3); color: var(--text); }
+.dkx-off { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 22px; align-items: center; padding: 24px; border-radius: 18px; border: 1px solid var(--line); background: var(--card); }
+.dkx-off h2 { margin: 0; font-size: 22px; font-weight: 600; }
+@media (max-width: 800px) { .dkx-off { grid-template-columns: minmax(0, 1fr); } }
+.dkx-alhead { position: relative; overflow: hidden; display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; align-items: end; padding: 24px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); }
+.dkx-alhead .cv { position: relative; width: 200px; height: 200px; border-radius: 14px; border: none; box-shadow: 0 22px 50px rgba(0,0,0,.5); }
+.dkx-alhead h1 { margin: 0; font-size: clamp(26px, 3vw, 38px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.08; text-wrap: balance; }
+@media (max-width: 700px) { .dkx-alhead { grid-template-columns: minmax(0, 1fr); } }
+.dkx-tt { display: flex; flex-direction: column; border-radius: var(--r-card); border: 1px solid var(--line); background: var(--card); overflow: hidden; }
+.dkx-tt .hd, .dkx-tt > button { display: grid; grid-template-columns: 36px minmax(0, 2fr) minmax(0, 1fr) 70px; gap: 14px; align-items: center; padding: 0 16px; }
+.dkx-tt .hd { height: 38px; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; border-bottom: 1px solid var(--line); }
+.dkx-tt > button { min-height: 58px; border: none; border-top: 1px solid var(--line); background: transparent; color: var(--text); text-align: left; font-size: 13px; }
+.dkx-tt > button:nth-child(2) { border-top: none; }
+.dkx-tt > button.on b { color: var(--accent-2); }
+@media (hover: hover) { .dkx-tt > button:hover, .dkx-queue > button:hover { background: var(--card-2); } }
+.dkx-tt .t { display: flex; align-items: center; gap: 12px; min-width: 0; }
+@media (max-width: 760px) { .dkx-tt .hd, .dkx-tt > button { grid-template-columns: 28px minmax(0, 1fr) 56px; } .dkx-tt .hd span:nth-child(3), .dkx-tt > button > span:nth-child(3) { display: none; } }
+.dkx-tile .sq.rnd { border-radius: 50%; justify-content: center; align-items: center; text-align: center; padding: 18px; }
+.dkx-tile .sq.rnd b { max-width: 100%; }
