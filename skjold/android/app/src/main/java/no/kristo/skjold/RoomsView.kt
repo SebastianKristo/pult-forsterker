@@ -41,8 +41,38 @@ fun RoomsView(m: AppModel) {
     val gMode = gid?.let { m.sys.modes[it] } ?: "sync"
     val surround = members.size > 1 && gMode == "surround"
 
-    GroupCard(m, act, members, gid, gMode)
+    // v4: over 900 dp (nettbrett) står gruppekortet og romrutenettet i to kolonner
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val wide = maxWidth >= 900.dp
+        if (wide) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    GroupCard(m, act, members, gid, gMode)
+                    if (surround) SurroundCard(m, members)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    RoomsGrid(m, act)
+                    RoomsHint()
+                }
+            }
+        } else {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                GroupCard(m, act, members, gid, gMode)
+                RoomsGrid(m, act)
+                if (surround) SurroundCard(m, members)
+                RoomsHint()
+            }
+        }
+    }
+}
 
+@Composable
+private fun RoomsHint() {
+    T("Samme musikk i alle rommene, synkronisert ned til millisekunder. Trykk på et rom for å styre det.", sora(11f, W.Regular, C.muted))
+}
+
+@Composable
+private fun RoomsGrid(m: AppModel, act: Room) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             SKMonoLabel("ROM")
@@ -59,10 +89,6 @@ fun RoomsView(m: AppModel) {
             }
         }
     }
-
-    if (surround) SurroundCard(m, members)
-
-    T("Samme musikk i alle rommene, synkronisert ned til millisekunder. Trykk på et rom for å styre det.", sora(11f, W.Regular, C.muted))
 }
 
 // MARK: Group / now playing
