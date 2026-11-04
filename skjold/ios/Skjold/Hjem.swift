@@ -169,7 +169,7 @@ extension AppModel {
             KnownDevice(host: stedHosts[e.id] ?? HjemAPI.relay(stedId, e.id), id: e.id, name: e.navn, product: e.produkt)
         }
     }
-    var stedNavn: String { steder.first { $0.id == stedId }?.navn ?? (stedId.isEmpty ? "Dette nettverket" : "Sted") }
+    var stedNavn: String { steder.first { $0.id == stedId }?.navn ?? (stedId.isEmpty ? "Hjemme" : "Sted") }
     /// Stedsvelgeren vises som tittel når Skjold-hjem er i bruk.
     var visSted: Bool { !stedId.isEmpty || !steder.isEmpty }
     func hjemEnhet(_ id: String) -> HjemEnhet? { stedId.isEmpty ? nil : stedEnheter.first { $0.id == id } }
