@@ -184,7 +184,7 @@ object SK {
             S.bool("ndEn", "Navidrome", "Eget musikkbibliotek via Subsonic-API"),
             S.str("ndUrl", "Navidrome-server", "http://192.168.1.10:4533", "Adressen til Navidrome-serveren på hjemmenettet"),
             S.str("ndUser", "Brukernavn", "brukernavn"),
-            S.str("ndPass", "Passord", "Navidrome-passord", "Lagres bare på telefonen", long = true, max = 128, secret = true),
+            S.str("ndPass", "Passord", "Navidrome-passord", "Lagres på Skjold og deles med web-UI-et", long = true, max = 128, secret = true),
             S.act("Test Navidrome", "ndTest", "Test tilkobling", true),
             S.bool("plexEn", "Plex", "Spill musikk fra Plex Media Server"),
             S.str("plexUrl", "Plex-server", "http://192.168.1.20:32400", "Adressen til Plex Media Server på hjemmenettet", long = true, max = 120),
