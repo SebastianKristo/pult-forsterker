@@ -7,21 +7,28 @@ struct HomeView: View {
 
     var body: some View {
         let room = m.actRoom
-        HStack {
-            SKLogo()
-            Spacer()
-            Button { m.tab = 2 } label: {
-                HStack(spacing: 6) {
-                    Circle().fill(m.link == .offline ? Color.danger : m.live && m.link != .online ? Color.muted : Color.ok).frame(width: 6, height: 6)
-                    Text(m.groupName).sora(12).lineLimit(1)
+        // v4: hjemmets navn (32/600) med pil – trykk for å bytte sted – og glasskapsel med søk og innstillinger
+        HStack(alignment: .center, spacing: 12) {
+            StedPicker(size: 32)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 2) {
+                Button { Haptics.tap(); m.tab = 0; m.sub = "radio" } label: {
+                    SKIcon(d: "M11 18a7 7 0 1 0 0-14a7 7 0 1 0 0 14M20 20l-4-4", size: 20, stroke: 1.8, color: .ink)
+                        .frame(width: 38, height: 38)
                 }
-                .padding(.horizontal, 12).frame(height: 32)
-                .background(Capsule().fill(Color.card)).skCapsuleBorder(.line2)
+                .plain()
+                .accessibilityLabel("Søk")
+                Button { Haptics.tap(); m.tab = 3; m.setCat = -1 } label: {
+                    SKIcon(d: Icons.tabSettings, size: 20, stroke: 1.8, color: .ink)
+                        .frame(width: 38, height: 38)
+                }
+                .plain()
+                .accessibilityLabel("Innstillinger")
             }
-            .plain()
+            .padding(.horizontal, 4)
+            .frame(height: 44)
+            .glassEffect(.regular.interactive(), in: Capsule())
         }
-
-        if m.visSted { StedPicker(size: 22) }
 
         Button { m.tab = 2 } label: {
             HStack(spacing: 12) {

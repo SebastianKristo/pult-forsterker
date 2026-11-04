@@ -28,7 +28,7 @@ struct RoomsView: View {
 
         if surround { surroundCard(members) }
 
-        Text("Rom med hake spiller det samme, synkronisert av Lyrion. Trykk på et rom for å styre det.")
+        Text("Samme musikk i alle rommene, synkronisert ned til millisekunder. Trykk på et rom for å styre det.")
             .sora(11, .regular, .muted).fixedSize(horizontal: false, vertical: true)
     }
 

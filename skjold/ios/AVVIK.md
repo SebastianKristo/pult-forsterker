@@ -40,3 +40,19 @@ Status 2026-11-02. Utseendet er det samme som før; endringene under er logikk o
 1. Bygg i Xcode og rett eventuelle kompileringsfeil (se «Må testes i Xcode» i `CLAUDE.md`).
 2. Installer iOS 27.2-simulatoren (Xcode → Settings → Components). Ta skjermbilde av alle 20 skjermene på iPhone 15 Pro, sammenlign mot `skjermer/` og legg inn avvikene her.
 3. Kontroller linjehøyder: Sora har en annen naturlig linjehøyde enn CSS `line-height`. Bare ekstra linjeavstand er lagt til, ingen negativ.
+
+## Design v4 (App v4.dc.html, platform=ios) – første runde
+| Punkt | Status |
+|---|---|
+| SkjoldTheme.swift med iOS-tokens (titler 32/600, dokk, ark, hyller, iPad-marg) + `skGlass` | finnes |
+| Hjem: hjemmets navn 32/600 med pil (stedvelger) + glasskapsel med søk og innstillinger | finnes |
+| Sidetitler 32/600, Rom-fanen heter «Rom» | finnes |
+| Rom: gruppetekst «Samme musikk i alle rommene, synkronisert ned til millisekunder …» | finnes |
+| Lyd: «HVA BÅNDENE GJØR» | finnes |
+| Innstillinger → Radio: hint om radioknappen og ★ | finnes |
+| «Klokkestil i standby» | finnes |
+| iPad (TARGETED_DEVICE_FAMILY 1,2, sidebarAdaptable, bred marg og maks bredde) | finnes |
+| Hyller i v4-mål (Nylig spilt 132, Kilder 68 runde, Radio 112), «Dine spillelister» | mangler |
+| Mer-arket, Søk-skjerm, kildesider, spilleliste i v4-stil | mangler |
+| Grupper og surround, «Spill på»-statuslinje, skjermvelger, Navidrome Utforsk, Touch-kort i oppsett | mangler |
+| Sammenligning mot simulator | ikke gjort |

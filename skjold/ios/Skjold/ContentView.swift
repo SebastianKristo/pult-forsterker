@@ -30,6 +30,10 @@ struct ContentView: View {
 /// Main app: tab content with either the system Liquid Glass tab bar or the classic bar – plus the full-screen player.
 struct AppShell: View {
     @Environment(AppModel.self) private var m
+    @Environment(\.horizontalSizeClass) private var hsc
+    /// iPad (og store iPhone i liggende): bredere marg og innhold med maks bredde, som «brettbar» i designet.
+    private var wide: Bool { hsc == .regular }
+    private var pad: CGFloat { wide ? SkG.padPad : SkG.padPhone }
 
     var body: some View {
         ZStack {
@@ -66,6 +70,7 @@ struct AppShell: View {
             Tab("Innstillinger", systemImage: "gearshape", value: 3) { page(3) }
         }
         .tint(.accent2)
+        .tabViewStyle(.sidebarAdaptable)
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewBottomAccessory { NowPlayingAccessory() }
     }
@@ -91,17 +96,19 @@ struct AppShell: View {
     private func page(_ tab: Int) -> some View {
         VStack(spacing: 0) {
             if tab == 2 && m.visSted {
-                StedPicker(size: 28)
+                StedPicker(size: SkG.titleSize)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 8)
+                    .padding(.horizontal, pad).padding(.top, 6).padding(.bottom, 8)
             } else if let title = title(tab) {
-                Text(title).sora(28, .semibold).lineLimit(1)
+                Text(title).tracking(SkG.titleTracking).sora(SkG.titleSize, .semibold).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 8)
+                    .padding(.horizontal, pad).padding(.top, 6).padding(.bottom, 8)
             }
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) { content(tab) }
-                    .padding(.horizontal, 20).padding(.top, 10)
+                    .frame(maxWidth: wide ? SkG.padMaxWidth : .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, pad).padding(.top, 10)
                     // glass: the bottom accessory floats over the content, leave room for it
                     .padding(.bottom, glass ? 84 : 16)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -127,7 +134,7 @@ struct AppShell: View {
         switch tab {
         case 0: return m.sub == "radio" ? "Radio" : m.sub == "lib" ? SK.lib[m.lib]?.name : nil
         case 1: return "Lyd"
-        case 2: return "Ditt system"
+        case 2: return "Rom"
         default: return m.setCat >= 0 && m.setCat < m.cats.count ? m.cats[m.setCat].n : "Innstillinger"
         }
     }

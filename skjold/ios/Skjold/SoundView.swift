@@ -88,7 +88,8 @@ struct SoundView: View {
                     .plain()
                 }
             }
-            // what the selected band does
+            // what the selected band does (v4: «HVA BÅNDENE GJØR»)
+            SKMonoLabel(text: "HVA BÅNDENE GJØR")
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(dB(prof.eq[band])).font(.plexMono(20, .medium)).foregroundStyle(Color.accent2)

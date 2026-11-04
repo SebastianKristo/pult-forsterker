@@ -333,6 +333,9 @@ struct RadioFavoritesView: View {
             Spacer()
             SKLinkButton(title: m.rEdit ? "Ferdig" : "Endre rekkefølge") { m.rEdit.toggle() }.padding(.vertical, 4)
         }
+        Text("Rekkefølgen er den samme som på radioknappen. ★ spilles når du holder radioknappen inne.")
+            .sora(12, .regular, .muted, lineHeight: 1.4)
+            .fixedSize(horizontal: false, vertical: true)
         VStack(spacing: 0) {
             ForEach(Array(rl.enumerated()), id: \.offset) { i, st in
                 let playing = m.input == 3 && m.stIdx == i && m.rTmp == nil

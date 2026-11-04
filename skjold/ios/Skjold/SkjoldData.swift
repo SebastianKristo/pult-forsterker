@@ -129,7 +129,7 @@ enum SK {
             .act("Test stemme", id: "testVoice", label: "Spill av", safe: true)]),
         SettingCategory(id: "skjerm", n: "Skjerm og lys", sub: "Dimming, klokke, LED", dev: ["s1"], items: [
             .opt("dim", "Dimme skjermen etter", ["Av", "30 s", "1 min"]), .opt("off", "Slukk skjermen etter", ["Av", "2 min", "5 min"], "Beskytter OLED-skjermen mot innbrenning"),
-            .bool("clock", "Klokke i standby"), SettingItem(kind: .clocks, k: "clockStyle", n: "Klokke i standby"), .opt("led", "LED-ringer", ["Høy", "Middels", "Lav", "Av"])]),
+            .bool("clock", "Klokke i standby"), SettingItem(kind: .clocks, k: "clockStyle", n: "Klokkestil i standby"), .opt("led", "LED-ringer", ["Høy", "Middels", "Lav", "Av"])]),
         SettingCategory(id: "strom", n: "Strøm", sub: "Standby og påslag", items: [
             .opt("auto", "Auto-standby uten lyd", ["Av", "20 min", "60 min"]), .bool("wake", "Slå på ved signal", "AirPlay eller Blåtann vekker forsterkeren")]),
         SettingCategory(id: "oppdatering", n: "Oppdatering", sub: "GitHub, backup og gjenoppretting", items: [SettingItem(kind: .update, k: "update", n: "Oppdatering")]),
