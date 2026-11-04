@@ -1,6 +1,13 @@
 package no.kristo.skjold
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -89,19 +96,50 @@ fun ContentView(m: AppModel) {
 /** Main app: tab content with the classic tab bar and mini player – plus the full-screen player. */
 @Composable
 fun AppShell(m: AppModel) {
-    Box(Modifier.fillMaxSize()) {
-        // The tabs stay mounted under the player so scroll positions survive opening/closing it.
-        Column(Modifier.fillMaxSize().alpha(if (m.full) 0f else 1f)) {
-            Box(Modifier.weight(1f).windowInsetsPadding(WindowInsets.statusBars).imePadding()) { Page(m, m.tab) }
-            if (m.tab != 2) SKMiniPlayer(m)   // v4: Rom-fanen har volum per rom og ingen minispiller
-            SKTabBar(m.tab) { i ->
-                m.tab = i; m.sub = ""
-                if (i == 3) m.setCat = -1
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // v4: brettbar (≥ 600) og nettbrett (≥ 1000) – faner i en kolonne til venstre, Nå spilles som panel fra høyre
+        val wide = maxWidth >= 600.dp
+        val panelW = if (maxWidth >= 1000.dp) 420.dp else 360.dp
+        val pick: (Int) -> Unit = { i ->
+            m.tab = i; m.sub = ""
+            if (i == 3) m.setCat = -1
+        }
+        if (wide) {
+            Row(Modifier.fillMaxSize()) {
+                SKNavRail(m.tab, pick)
+                Column(Modifier.weight(1f).fillMaxHeight()) {
+                    Box(Modifier.weight(1f).windowInsetsPadding(WindowInsets.statusBars).imePadding()) {
+                        Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) { Page(m, m.tab) }
+                    }
+                    if (m.tab != 2) Box(
+                        Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(start = 12.dp, end = 12.dp, bottom = 14.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Box(Modifier.widthIn(max = 1000.dp)) { SKMiniPlayer(m) } }
+                }
+            }
+        } else {
+            // The tabs stay mounted under the player so scroll positions survive opening/closing it.
+            Column(Modifier.fillMaxSize().alpha(if (m.full) 0f else 1f)) {
+                Box(Modifier.weight(1f).windowInsetsPadding(WindowInsets.statusBars).imePadding()) { Page(m, m.tab) }
+                if (m.tab != 2) SKMiniPlayer(m)   // v4: Rom-fanen har volum per rom og ingen minispiller
+                SKTabBar(m.tab, pick)
             }
         }
         if (m.hjemLogin) HjemLoginView(m)
-        AnimatedVisibility(m.full, enter = slideInVertically(tween(280)) { it }, exit = slideOutVertically(tween(280)) { it }) {
-            FullPlayerView(m)
+        if (wide) {
+            // dempelag rgba(0,0,0,.45) bak panelet; trykk lukker
+            AnimatedVisibility(m.full, enter = fadeIn(tween(450)), exit = fadeOut(tween(300))) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).clickable(remember { MutableInteractionSource() }, null) { m.full = false })
+            }
+            AnimatedVisibility(
+                m.full, modifier = Modifier.align(Alignment.CenterEnd),
+                enter = slideInHorizontally(tween(450, easing = CubicBezierEasing(0.2f, 0.7f, 0.2f, 1f))) { it },
+                exit = slideOutHorizontally(tween(350)) { it },
+            ) { Box(Modifier.width(panelW).fillMaxHeight()) { FullPlayerView(m) } }
+        } else {
+            AnimatedVisibility(m.full, enter = slideInVertically(tween(280)) { it }, exit = slideOutVertically(tween(280)) { it }) {
+                FullPlayerView(m)
+            }
         }
     }
 }
@@ -117,7 +155,17 @@ private fun Page(m: AppModel, tab: Int) {
     }
     Column(Modifier.fillMaxSize()) {
         if (tab == 2 && m.visSted) Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)) { StedPicker(m, 32f) }
-        else if (title != null) T(title, sora(32f, W.Semibold).copy(letterSpacing = (-0.02f).em), Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), maxLines = 1)
+        else if (title != null) Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            T(title, sora(32f, W.Semibold).copy(letterSpacing = (-0.02f).em), Modifier.weight(1f), maxLines = 1)
+            // v4 Lyd: kapsel med gruppen som spiller (grønn prikk)
+            if (tab == 1) Row(
+                Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(SkG.pillBg).skBorder(SkG.pillLine, 18.dp).padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(Modifier.size(6.dp).clip(CircleShape).background(C.ok))
+                T(m.groupName, sora(13f), maxLines = 1)
+            }
+        }
         // new scroll position when the visible page changes
         key("$tab-${m.sub}-${m.lib}-${m.setCat}-${m.libPl ?: -1}") {
             Column(
