@@ -56,3 +56,22 @@ Status 2026-11-02. Utseendet er det samme som før; endringene under er logikk o
 | Mer-arket, Søk-skjerm, kildesider, spilleliste i v4-stil | mangler |
 | Grupper og surround, «Spill på»-statuslinje, skjermvelger, Navidrome Utforsk, Touch-kort i oppsett | mangler |
 | Sammenligning mot simulator | ikke gjort |
+
+## v4 – UI bygget på nytt fra bunnen (`UI/`)
+
+Fasit: `fasit/v4/*.png` (skjermbilder av «Skjold App v4.dc.html», 390 × 844 og iPad 1180 × 820). Ikke sammenlignet mot simulator ennå (ingen Xcode i byggemiljøet).
+
+| Del | Status |
+|---|---|
+| Dokk: minispiller (radius 26, glass, mono-linje i gull, volum 6), fanelinje 64/32 med linse (.5 s, overskyting) | finnes |
+| Sammenslått dokk ved rulling (>60 ned, <−4 / <20 opp), fremdriftsring 21.5/3 | finnes (matchedGeometryEffect + fjær .45/.8) |
+| Hjem: tittel + stedsmeny, søk/innstillinger-kapsel, Nylig spilt 132, Kilder 68, Radiofavoritter 112, Dine spillelister 148, hyller | finnes – hyllene viser bibliotekhistorikk (live) i stedet for designets «Mest spilt i november» |
+| Lyd: kildechips, EQ-kurve 196 (gauss, dra), båndfaner, forklaring, sammenlign, nullstill, profiler 104, lydbilde | finnes – 14 profiler (felles med web/daemon) i stedet for 7; Nattmodus og Små høyttalere lagres bare i appen (ingen nøkkel i daemonen) |
+| Rom: kort 24 med romfarge fra omslaget, enhetsikoner, volum per rom, sortering, «Fest rom»-ark | finnes |
+| Innstillinger: kategoriliste i v4-stil | finnes – undersidene er fortsatt `SettingsView` |
+| Nå spilles: gradient, Låt/Kø-linse, omslag 322 → 200 (rom), kø, «Spill på»-panel, bunnrad | finnes – spoling er bare visning (ingen seek i daemonen) |
+| «Mer»-ark (glass, 34) og volumknott (−150°…150°) | finnes – «Legg til i spilleliste» og sovetimer har ingen backend |
+| Kildeside (glød, status, søk, spillelister, låter / forklaring for innganger) | finnes – Spotify vises som inngang (Spotify Connect har ikke bibliotek) |
+| Spilleliste (gradient 560, mosaikk 240) og Søk (#050506, «Søk i»-filter, felt nederst) | finnes |
+| iPad: fanekapsel øverst, spillerlinje maks 1000, Nå spilles som panel 400 fra høyre | finnes |
+| Sora 700 | mangler fontfila – 700 tegnes som 600 |
