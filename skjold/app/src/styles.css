@@ -667,3 +667,16 @@ html.kiosk body { overscroll-behavior: none; }
 .dk2 .eq-mini em { font-style: normal; font-family: var(--mono); font-size: 10px; color: var(--muted); }
 .dk2 .bento .srcs { flex-direction: row; align-items: center; gap: 20px; overflow-x: auto; }
 @media (max-width: 1250px) { .dk2 .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; } .dk2 .bento > * { grid-column: span 2 !important; grid-row: auto !important; } .dk2 .bento .now { min-height: 260px; } .dk2 .bento .t:not(.now):not(.srcs) { min-height: 220px; } }
+
+/* ikonskinnen kan utvides til vanlig sidemeny med navn */
+.dk2 .rexp { margin-top: auto; }
+.desktop.dk2.railx { grid-template-columns: 232px minmax(0, 1fr) 300px; }
+.desktop.dk2.railx.norc { grid-template-columns: 232px minmax(0, 1fr); }
+@media (max-width: 1150px) { .desktop.dk2.railx { grid-template-columns: 232px minmax(0, 1fr); } }
+.dk2.railx .rail { align-items: stretch; padding: 16px 12px; }
+.dk2.railx .rlogo { padding-left: 10px; }
+.dk2.railx .rhead { padding-left: 10px; }
+.dk2.railx .rail hr { width: auto; margin: 8px 10px 2px; }
+.dk2.railx .rb { width: 100%; height: 42px; display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 0 10px; }
+.dk2.railx .rb .rl { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dk2.railx .rb sup { position: static; margin-left: auto; font-size: 11px; }
