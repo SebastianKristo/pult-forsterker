@@ -8,7 +8,6 @@ import { setVolume } from './lib/store';
 import { atRoot, closeFull, deviceName, fullPlayer, go, lastError, mode, online, product, queueOpen, route, srcOpen, status, toast, type Page } from './lib/store';
 import { Welcome } from './screens/welcome';
 import { HomePhone, MiniPhone, FullSheet, RoomsPhone, useRooms, switchRoom } from './screens/phone';
-import { ndConfigured } from './lib/navidrome';
 import { LibraryPage, libBack, libTitle, libUi } from './screens/library';
 import { ob, obBack } from './screens/onboard';
 import { ICONS } from './lib/settings';
@@ -17,6 +16,7 @@ import { Icon, Logo, PRODUCT_ICON, Slider } from './components/ui';
 import { HomePage, EqPage } from './screens/pages';
 import { RadioPage } from './screens/radio';
 import { GroupsPage, SpeakerButton } from './screens/groups';
+import { IntegrationsPage, PluginsPage, intCount, plugCount } from './screens/integ';
 import { SettingsPage, CategoryDetail } from './screens/settings';
 import { PlayerBody, PowerButton, Transport, artFor, nowTitle, subLine } from './screens/player';
 import { openFull } from './lib/store';
@@ -81,7 +81,7 @@ const TAB_ICON: Record<string, preact.JSX.Element> = {
 };
 const TABS: [Page, string][] = [['home', 'Hjem'], ['eq', 'Lyd'], ['rooms', 'Rom'], ['settings', 'Innstillinger']];
 
-const TITLES: Record<Page, string> = { home: 'Hjem', play: 'Spiller', eq: 'Lyd', radio: 'Radio', rooms: 'Ditt system', settings: 'Innstillinger', lib: 'Bibliotek', grp: 'Grupper og surround' };
+const TITLES: Record<Page, string> = { home: 'Hjem', play: 'Spiller', eq: 'Lyd', radio: 'Radio', rooms: 'Ditt system', settings: 'Innstillinger', lib: 'Bibliotek', grp: 'Grupper og surround', int: 'Integrasjoner', plug: 'Plugins' };
 
 function Phone() {
   const s = status.value, r = route.value;
@@ -89,7 +89,7 @@ function Phone() {
   useEffect(() => { if (page === 'play') { go('home'); openFull(); } }, [page]);
   useEffect(() => { if (!fullPlayer.value) { queueOpen.value = false; srcOpen.value = false; } }, [fullPlayer.value]);
   const cat = page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
-  const tabOf = page === 'radio' || page === 'play' || page === 'lib' ? 'home' : page === 'grp' ? 'rooms' : page;
+  const tabOf = page === 'radio' || page === 'play' || page === 'lib' ? 'home' : page === 'grp' ? 'rooms' : page === 'int' || page === 'plug' ? 'settings' : page;
   const title = cat ? cat.n : page === 'lib' ? libTitle() : TITLES[page];
   return (
     <div class="phone">
@@ -103,6 +103,8 @@ function Phone() {
         {page === 'settings' && <SettingsPage />}
         {page === 'lib' && <LibraryPage />}
         {page === 'grp' && <GroupsPage />}
+        {page === 'int' && <IntegrationsPage />}
+        {page === 'plug' && <PluginsPage />}
       </div>
       {s && !fullPlayer.value && <MiniPhone />}
       <nav class="tabs">
@@ -140,18 +142,18 @@ interface DesignState { welcome?: boolean; mode?: string; ob?: number; scan?: bo
 };
 
 const NAV: [Page, string][] = [['home', 'Hjem'], ['play', 'Spiller'], ['radio', 'Radio'], ['eq', 'Equalizer']];
-const NICON: Record<string, string> = { grp: 'M4 7h6v10H4zM14 7h6v10h-6zM10 12h4', tjenester: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', lib: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5', play: 'M8 5v14l11-7z', eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
-const PAGE_SUB: Partial<Record<Page, string>> = { radio: 'Norske kanaler og over 50 000 fra hele verden', eq: 'Egen profil per inngang og for hodetelefoner', grp: 'Spill i flere rom samtidig, eller sett opp surround med flere Skjold' };
+const SETUP_NAV: ['grp' | 'int' | 'plug' | 'set', string][] = [['grp', 'Grupper og surround'], ['int', 'Integrasjoner'], ['plug', 'Plugins'], ['set', 'Innstillinger']];
+const NICON: Record<string, string> = { ytm: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM10 8.5v7l6-3.5z', nd: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z', int: 'M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0zM12 17v4', plug: 'M10 4a2 2 0 1 1 4 0v2h4v4h-2a2 2 0 1 0 0 4h2v4h-4v-2a2 2 0 1 0-4 0v2H6v-4h2a2 2 0 1 0 0-4H6V6h4z', set: 'M12 15a3 3 0 1 0 0-6a3 3 0 1 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z', grp: 'M4 7h6v10H4zM14 7h6v10h-6zM10 12h4', tjenester: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', lib: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5', play: 'M8 5v14l11-7z', eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
+const PAGE_SUB: Partial<Record<Page, string>> = { radio: 'Norske kanaler og over 50 000 fra hele verden', eq: 'Egen profil per inngang og for hodetelefoner', grp: 'Spill i flere rom samtidig, eller sett opp surround med flere Skjold', int: 'Lyrion, Spotify, UPnP/DLNA, YouTube Music, Navidrome, Home Assistant, Homey og API', plug: 'Utvidelser for Lyrion og Skjold. Gjelder hele systemet' };
 
 function Desktop() {
   const s = status.value, r = route.value, p = product.value;
   const t = nowTitle(s);
   const cat = r.page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
   const title = cat ? cat.n : r.page === 'lib' ? libTitle() : TITLES[r.page];
-  const sideCats = cats.value.filter((c) => c.id !== 'eq');
   const st0 = settings.value;
-  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : [])];
-  const isLib = r.page === 'lib' || r.page === 'grp';
+  const libs: [string, string][] = [['ytm', 'YouTube Music'], ['nd', 'Navidrome']];
+  const isLib = r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug';
   const air = s?.input === 'airplay' && s.airplay_device ? 'Fra ' + s.airplay_device : '';
   return (
     <div class="desktop">
@@ -172,12 +174,13 @@ function Desktop() {
       <div class="cols">
         <nav class="side">
           <div class="head">LYTT</div>
-          {NAV.map(([id, n]) => <button key={id} class={'nv' + (r.page === id ? ' on' : '')} onClick={() => go(id)}><span class="row gap12"><Icon d={NICON[id] ?? ''} size={18} sw={1.6} />{n}</span></button>)}
-          {libs.map(([id, n]) => <button key={id} class={'nv' + (isLib && r.cat === id ? ' on' : '')} onClick={() => go('lib', id)}><span class="row gap12"><Icon d={NICON.lib ?? ''} size={18} sw={1.6} />{n}</span></button>)}
+          {NAV.filter(([id]) => id !== 'eq').map(([id, n]) => <button key={id} class={'nv' + (r.page === id ? ' on' : '')} onClick={() => go(id)}><span class="row gap12"><Icon d={NICON[id] ?? ''} size={18} sw={1.6} />{n}</span></button>)}
+          {libs.map(([id, n]) => <button key={id} class={'nv' + (r.page === 'lib' && r.cat === id ? ' on' : '')} onClick={() => go('lib', id)}><span class="row gap12"><Icon d={NICON[id] ?? ''} size={18} sw={1.6} />{n}</span></button>)}
+          <button class={'nv' + (r.page === 'eq' ? ' on' : '')} onClick={() => go('eq')}><span class="row gap12"><Icon d={NICON.eq ?? ''} size={18} sw={1.6} />Equalizer</span></button>
           <div class="head">OPPSETT</div>
-          <button class={'nv' + (r.page === 'grp' ? ' on' : '')} onClick={() => go('grp')}><span class="row gap12"><Icon d={NICON.grp ?? ''} size={18} sw={1.6} />Grupper og surround</span></button>
-          <div class="head">INNSTILLINGER</div>
-          {sideCats.map((c) => <button key={c.id} class={'nv' + (r.page === 'settings' && r.cat === c.id ? ' on' : '')} onClick={() => go('settings', c.id)}><span class="row gap12"><Icon d={NICON[c.id] ?? ICONS[c.id] ?? NICON.system ?? ''} size={18} sw={1.6} />{c.n}</span></button>)}
+          {SETUP_NAV.map(([id, n]) => { const badge = id === 'int' ? intCount(st0) : id === 'plug' ? plugCount() : 0; const on = id === 'set' ? r.page === 'settings' : r.page === id; return (
+            <button key={id} class={'nv' + (on ? ' on' : '')} onClick={() => go(id === 'set' ? 'settings' : id)}><span class="row gap12" style={{ flex: 1 }}><Icon d={NICON[id] ?? ''} size={18} sw={1.6} />{n}</span>{badge > 0 && <span class="mono" style={{ fontSize: '11px', color: '#8b8b86' }}>{badge}</span>}</button>
+          ); })}
         </nav>
         <main class="main">
           <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>
@@ -187,6 +190,8 @@ function Desktop() {
           {r.page === 'rooms' && <RoomsPhone wide />}
           {r.page === 'lib' && <LibraryPage />}
           {r.page === 'grp' && <GroupsPage />}
+          {r.page === 'int' && <IntegrationsPage />}
+          {r.page === 'plug' && <PluginsPage />}
           {r.page === 'eq' && <EqPage />}
           {r.page === 'settings' && (cat ? <CategoryDetail cat={cat} wide /> : <SettingsPage wide />)}
         </main>

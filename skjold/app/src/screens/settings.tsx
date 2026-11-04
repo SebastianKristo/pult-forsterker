@@ -23,7 +23,7 @@ import { AppUpdater, canSelfUpdate, fetchLatestAppRelease, installedAppVersion, 
 
 export function SettingsPage({ wide = false }: { wide?: boolean }) {
   const cat = cats.value.find((c) => c.id === route.value.cat);
-  if (!cat) return <CategoryList />;
+  if (!cat) return <CategoryList wide={wide} />;
   return (
     <>
       {!wide && <button onClick={() => go('settings')} style="align-self:flex-start;display:flex;align-items:center;gap:4px;border:none;background:none;color:#d9a441;font-size:14px;cursor:pointer;padding:0"><Chevron dir="left" />Innstillinger</button>}
@@ -36,7 +36,7 @@ const A = '#d9a441';
 const sel = (b: boolean) => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
 const CARD = 'display:flex;flex-direction:column;border-radius:14px;background:#141415;border:1px solid #242426;flex-shrink:0';
 
-export function CategoryList() {
+export function CategoryList({ wide = false }: { wide?: boolean } = {}) {
   const rooms = useRooms();
   const p = product.value;
   return (
@@ -50,6 +50,17 @@ export function CategoryList() {
         ); })}
       </div>}
       <span style="font-size:11px;color:#8b8b86">{nbHw(PRODUCT_HW[p])}{p === 'node' ? ' · ingen skjerm eller knapper' : ''}</span>
+      {!wide && <div style={CARD}>
+        {([['int', 'Integrasjoner', 'Lyrion, Spotify, Home Assistant, Homey og API', '#2c3a52', 'M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0zM12 17v4'], ['plug', 'Plugins', 'Utvidelser for Lyrion og Skjold', '#3a2e52', 'M10 4a2 2 0 1 1 4 0v2h4v4h-2a2 2 0 1 0 0 4h2v4h-4v-2a2 2 0 1 0-4 0v2H6v-4h2a2 2 0 1 0 0-4H6V6h4z']] as const).map(([id, n, sub, tile, d], i) => (
+          <button key={id} class="cat-row" onClick={() => go(id)} style={`display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-height:58px;padding:8px 14px;border:none;border-top:1px solid ${i ? '#242426' : 'transparent'};background:transparent;cursor:pointer;text-align:left`}>
+            <span style="display:flex;align-items:center;gap:12px;min-width:0">
+              <span style={`width:32px;height:32px;border-radius:8px;background:${tile};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#f2f2ee`}><Icon d={d} size={18} /></span>
+              <span style="flex:1 1 auto;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{n}</span><span style="font-size:11px;color:#8b8b86">{sub}</span></span>
+            </span>
+            <Chevron color="#8b8b86" />
+          </button>
+        ))}
+      </div>}
       <div style={CARD}>
         {cats.value.map((c, i) => (
           <button key={c.id} class="cat-row" onClick={() => go('settings', c.id)} style={`display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-height:58px;padding:8px 14px;border:none;border-top:1px solid ${i ? '#242426' : 'transparent'};background:transparent;cursor:pointer;text-align:left`}>
