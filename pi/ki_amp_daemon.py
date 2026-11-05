@@ -146,6 +146,9 @@ DSP_FORMAT = os.environ.get("KI_AMP_DSP_FORMAT", "S32LE")   # S16LE for Pi-ens 3
 
 # ---------- GPIO (BCM) ----------
 # KI_AMP_BOARD=modules : modulbygget (XH-M562, X9C103S, relékort) – standard
+# KI_AMP_BOARD=kit     : Skjold Kit – ferdige moduler uten eget kort: GY-PCM5102 (I2S, XSMT på GPIO 26), TPA3116D2-modul bak
+#                        relé på GPIO 27 (høy = på), AUX 1/2 fra to USB-lydkort (UCA202), ingen knapper/encoder. Av/på uten smell:
+#                        av = demp i CamillaDSP → XSMT lav → relé av; på = relé på → vent → XSMT høy.
 # KI_AMP_BOARD=main    : Pultforsterker hovedkort rev B (PGA2311 på SPI0, knapper/LED/USB-mux via MCP23017 på I2C,
 #                        GPIO 27 = «smart relé» (24 V til forsterker + 5 V_SW), GPIO 22 = TPA3116 SDZ, AUX 1 = I2S-ADC, AUX 2 = USB-kodek)
 BOARD = os.environ.get("KI_AMP_BOARD", "modules")
@@ -255,12 +258,19 @@ elif BOARD == "node":   # Skjold Node: pinner fra node_pins.json (se docstring)
     ENC = None          # ingen encoder på OLED-Noden – volum fra potmeteret (ADS1115)
     NODE_GPIO = os.environ.get("KI_AMP_NODE_GPIO", "1") == "1"   # 0 = Skjold Core: ren Pi uten knapper/potmeter/LED-ringer
     NODE_BUTTONS = NODE_GPIO and os.environ.get("KI_AMP_NODE_BUTTONS", "1") == "1"
+elif BOARD == "kit":   # Skjold Kit: alt styres fra appen/HA – ingen knapper, LED-er eller encoder på GPIO
+    BTN = {}
+    LED = {}
+    LED_POWER = None
+    _xs = os.environ.get("KI_AMP_XSMT_PIN", "26").strip().lower()
+    PIN_DAC_XSMT = None if _xs in ("", "none", "0", "off") else int(_xs)   # GY-PCM5102 XSMT (loddebro H3L åpen), høy = lyd
+    ENC = None
 else:
     BTN = {"airplay": 5, "bt": 6, "aux": 12, "usb": 13}
     LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
     LED_POWER = 11      # PWM
     PIN_DAC_XSMT = None
-BTN_POWER = {"radio": 3, "test": 26, "main": None}.get(BOARD, 16)   # main: POWER via MCP23017 (GPIO16 er PGA2311 CS) + knapp bak GPIO 15
+BTN_POWER = {"radio": 3, "test": 26, "main": None, "kit": None}.get(BOARD, 16)   # main: POWER via MCP23017 (GPIO16 er PGA2311 CS) + knapp bak GPIO 15
 
 SPOTIFY_ON = os.environ.get("KI_AMP_SPOTIFY", "1") == "1"   # Spotify Connect (librespot, ki-spotify.service)
 PLEX_ON = os.environ.get("KI_AMP_PLEX", "0") == "1"           # Plex-spiller (Plexamp headless / Caldera Music, ki-plex.service)
@@ -268,6 +278,8 @@ if BOARD == "node":
     INPUTS = ["radio", "airplay", "bt"]
 elif BOARD == "main":
     INPUTS = ["radio", "airplay", "bt", "aux", "aux2", "usb"]
+elif BOARD == "kit":
+    INPUTS = ["radio", "airplay", "bt", "aux", "aux2"]
 else:
     INPUTS = ["radio", "airplay", "bt", "aux", "usb"]
 if SPOTIFY_ON:
@@ -297,7 +309,7 @@ spotify = {"connected": False, "playing": False, "paused": False, "title": "", "
            "duration": 0, "position": 0, "user": "", "event": "", "t": 0.0}
 plex = {"available": False, "playing": False, "paused": False, "title": "", "artist": "", "album": "", "cover": "",
         "duration": 0, "position": 0, "t": 0.0}   # Plex-spilleren (pollet fra :32500, se plex_thread)   # siste librespot-hendelse (POST /api/spotify)   # innstillingsmodellen fra appen/web (skjold_settings.js) – se SETTINGS_DEF
-LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD == "main" else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
+LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD in ("main", "kit") else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
 _x9c_pos = None
 _pairing_until = 0.0
 menu = {"open": False, "idx": 1, "until": 0.0, "stepped": 0.0}   # kanalmeny på OLED (hold volumknotten 1 s i radio)
@@ -362,6 +374,7 @@ except Exception as e:
     HW = False
 
 relay_amp = relay_aux = _Dummy()
+dac_xsmt = None
 led_power = None
 leds, fav_leds = {}, []
 node_leds = {}
@@ -377,6 +390,11 @@ if HW:
         pga = pga_pins if all(pga_pins) else None
         if not pga:
             print("PGA2311 (bit-bang GPIO 0/1/16) ikke tilgjengelig", flush=True)
+    elif BOARD == "kit":
+        # relémodul i H-modus (jumper på H): høy = 24 V til forsterkeren. Starter AV – apply_power slår på i riktig rekkefølge.
+        relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=os.environ.get("RELAY_ACTIVE_LOW", "0") != "1", initial_value=False) or _Dummy()
+        if PIN_DAC_XSMT is not None:
+            dac_xsmt = _mk(OutputDevice, PIN_DAC_XSMT, active_high=True, initial_value=False)
     elif BOARD == "modules":
         relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=not RELAY_ACTIVE_LOW, initial_value=True) or _Dummy()
         relay_aux = _mk(OutputDevice, PIN_RELAY_AUX, active_high=not RELAY_ACTIVE_LOW, initial_value=False) or _Dummy()
@@ -504,6 +522,8 @@ def apply_volume():
     global _x9c_pos
     if BOARD in ("radio", "test", "node"):   # bare digitalt volum (CamillaDSP)
         dsp.update(); return
+    if BOARD == "kit":   # alt digitalt: volum, nivå per kilde og miks i CamillaDSP/softvol
+        apply_levels(); dsp.update(); return
     if BOARD == "main":   # rev B: alt er digitalt – PGA2311 står fast, volum og nivåer i CamillaDSP/softvol.
         # Fast analogt nivå (KI_AMP_PGA_DB, standard -9 dB): DAC 2,1 Vrms * -9 dB = 0,74 Vrms = det TPA3116 (26 dB) klarer ved 24 V
         # uten å klippe. Da kan ikke full digital styrke overstyre forsterkeren. Hodetelefonforsterkeren har +6 dB for å kompensere.
@@ -733,7 +753,7 @@ class Dsp:
                 ws = websocket.create_connection(DSP_WS, timeout=2)
                 if cfg != self._last_cfg:
                     self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg
-                db = vol_db(state["volume"]) if (state["input"] != "aux" or BOARD == "main") else 0.0
+                db = vol_db(state["volume"]) if (state["input"] != "aux" or BOARD in ("main", "kit")) else 0.0
                 self._send(ws, {"SetVolume": db})
                 self._send(ws, {"SetMute": bool(state["mute"]) or not state["power"]})
                 ws.close()
@@ -753,7 +773,7 @@ def apply_input():
                    "aux": state["input"] in ("aux", "aux2"), "usb": state["input"] == "usb"}
             for k, bit in MCP_LED.items():
                 mcp.set_b(bit, bool(state["power"] and lit[k] and led_scale() > 0))
-    else:
+    elif BOARD != "kit":
         relay_aux.value = state["input"] == "aux"
     leds_on = led_scale() > 0
     for k, led in leds.items():
@@ -979,6 +999,15 @@ def apply_power():
             if mcp: mcp.set_a(MCP_HP_EN, False)
             if dac_xsmt: dac_xsmt.value = False
             time.sleep(0.1); relay_amp.value = False
+    elif HW and BOARD == "kit":   # modulene har ingen SDZ: demp digitalt og i DAC-en (XSMT, myk rampe) før 24 V brytes
+        if state["power"]:
+            relay_amp.value = True; time.sleep(float(os.environ.get("KI_AMP_KIT_ON_DELAY", "0.8")))   # TPA3116 får starte i stillhet
+            if dac_xsmt: dac_xsmt.value = True
+            time.sleep(0.05)
+        else:
+            dsp.update(); time.sleep(0.15)   # CamillaDSP demper (power av) – lyden er borte før noe slås av
+            if dac_xsmt: dac_xsmt.value = False
+            time.sleep(0.25); relay_amp.value = False
     elif HW:
         relay_amp.value = state["power"]
     if HW:
@@ -1906,6 +1935,9 @@ def setup_buttons():
             objs.append(b)
     if BOARD == "node":
         return setup_node_buttons() if NODE_BUTTONS else []
+    if BOARD == "kit":   # ingen knapper på kit-bygget (åpne GPIO-er skulle ellers gitt falske trykk)
+        print("Knapper: ingen (Skjold Kit – styres fra appen/HA)", flush=True)
+        return []
     mcp_btns = {}
     if BOARD == "main" and mcp and mcp.ok:   # knappene via MCP23017 – pollet fra INT-pinnen og hvert 50 ms
         for name, bit in MCP_BTN.items():

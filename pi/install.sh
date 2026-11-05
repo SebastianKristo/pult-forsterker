@@ -11,6 +11,8 @@ sudo mkdir -p /usr/local/share/ki-amp && (cd "$SRC/.." && pwd) | sudo tee /usr/l
 # KI_AMP_BOARD=node     : Skjold Node (Pi 4/3B, lyd på 3,5 mm, OLED 128×32 på I²C eies av Skjold OS, potmeter via ADS1115). Gir alltid KI_AMP_OUT=headphones.
 #                         Ingen S1-skjermprogram, USB-gadget eller AUX; vertsnavnet beholdes; config.txt-blokken legges inn av
 #                         skjold/node/driver/installer_node.sh. KI_AMP_NAME=… = navn i AirPlay/Spotify/Bluetooth/Lyrion.
+# KI_AMP_BOARD=kit      : Skjold Kit – ferdige moduler: GY-PCM5102 (I2S) + TPA3116D2-modul, relé på GPIO 27 (jumper H), DAC XSMT på GPIO 26,
+#                         AUX 1/2 fra to USB-lydkort (Behringer UCA202). Ingen knapper/skjerm – appen/HA styrer alt.
 # KI_AMP_CORE=1        : Skjold Core – ren Raspberry Pi uten kasse, knapper eller skjerm (som node, men uten GPIO)
 # KI_AMP_SPOTIFY=0      : uten Spotify Connect (librespot)
 # KI_AMP_PLEX=1         : med Plex-spiller (Plexamp headless, krever Plex Pass) – se pi/install_plex.sh. KI_PLEX_PLAYER=caldera = Caldera Music
@@ -160,7 +162,21 @@ sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
 sudo install -m 644 "$SRC/ki-usb-audio.service" /etc/systemd/system/ki-usb-audio.service
 sudo install -m 644 "$SRC/ki-aux1.service" "$SRC/ki-aux2.service" /etc/systemd/system/
 if [ "$BOARD_SEL" = main ]; then sudo systemctl enable ki-aux1 ki-aux2; fi   # AUX 1 (I2S-ADC) og AUX 2 (USB-kodek) bare på hovedkortet
-sudo systemctl enable ki-usb-audio
+if [ "$BOARD_SEL" = kit ]; then
+  # Kit: AUX 1 og AUX 2 fra hvert sitt USB-lydkort (UCA202/PCM2902 heter «CODEC» og «CODEC_1» i ALSA).
+  # Bytter de plass, endre KI_AMP_AUX1_DEV/KI_AMP_AUX2_DEV i /etc/ki-amp.env (f.eks. plughw:CODEC_1) og kjør bash pi/install.sh på nytt.
+  A1=$(sudo sed -n 's/^KI_AMP_AUX1_DEV=//p' /etc/ki-amp.env 2>/dev/null | tail -n1); A1=${A1:-plughw:CODEC}
+  A2=$(sudo sed -n 's/^KI_AMP_AUX2_DEV=//p' /etc/ki-amp.env 2>/dev/null | tail -n1); A2=${A2:-plughw:CODEC_1}
+  for n in 1 2; do
+    D=$([ $n = 1 ] && echo "$A1" || echo "$A2")
+    sudo mkdir -p /etc/systemd/system/ki-aux$n.service.d
+    printf '[Unit]\nDescription=Skjold Kit – AUX %s (USB-lydkort %s) -> miks\n[Service]\nExecStart=\nExecStart=/usr/bin/alsaloop -C %s -P aux%s -r 48000 -f S16_LE -c 2 -t 50000 -S 0\n' "$n" "$D" "$D" "$n" \
+      | sudo tee /etc/systemd/system/ki-aux$n.service.d/kit.conf >/dev/null
+  done
+  sudo systemctl daemon-reload; sudo systemctl enable ki-aux1 ki-aux2
+else
+sudo systemctl enable ki-usb-audio   # Kit: USB-C er strøminngangen – ingen USB-gadget
+fi
 fi
 
 echo "== 8/9  OLED (SSD1309 2,42\")"
@@ -189,6 +205,10 @@ elif [ "$OUT" = headphones ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e '/^KI_AMP_DSP_FORMAT=/d' /etc/ki-amp.env
   echo "KI_AMP_DSP_FORMAT=$PB_FMT" | sudo tee -a /etc/ki-amp.env >/dev/null
   sudo sed -i 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=test/' /etc/ki-amp.env      # testbenk-pinner (knapper/LED rett på Pi-en)
+elif [ "$BOARD_SEL" = kit ]; then
+  sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=kit/' -e 's/^KI_AMP_LEVELS=.*/KI_AMP_LEVELS=1/' -e '/^KI_AMP_DISPLAY=/d' -e '/^RELAY_ACTIVE_LOW=/d' /etc/ki-amp.env
+  grep -q '^KI_AMP_LEVELS=' /etc/ki-amp.env || echo "KI_AMP_LEVELS=1" | sudo tee -a /etc/ki-amp.env >/dev/null
+  printf 'KI_AMP_DISPLAY=none\nRELAY_ACTIVE_LOW=0\n' | sudo tee -a /etc/ki-amp.env >/dev/null   # ingen skjerm (bare metadata), relé i H-modus
 elif [ "$BOARD_SEL" = main ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=main/' -e "s/^KI_AMP_DISPLAY=.*/KI_AMP_DISPLAY=$DISPLAY_SEL/" -e "s/^KI_AMP_TFT=.*/KI_AMP_TFT=$TFT_SEL/" -e 's/^KI_AMP_LEVELS=.*/KI_AMP_LEVELS=1/' /etc/ki-amp.env
   echo "== TESTMODUS: lyd ut på 3,5 mm-kontakten. Sett volum på jacken: amixer -c Headphones sset PCM 100%"
