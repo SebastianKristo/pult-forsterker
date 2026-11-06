@@ -25,15 +25,19 @@ export function QR({ text, size = 168, label = 'QR-kode' }: { text: string; size
 export interface MatterInfo {
   enabled: boolean; available: boolean; running: boolean; commissioned: boolean; fabrics: { label: string; vendor: number }[];
   qr: string; manual: string; endpoints: string[]; error?: string;
+  installed?: boolean; busy?: '' | 'install' | 'uninstall'; memMB?: number; lowmem?: boolean;
 }
 export const matter = signal<MatterInfo | null>(null);
 const mErr = signal('');
 export async function matterLoad(): Promise<void> { try { matter.value = await apiReq<MatterInfo>('/api/matter'); mErr.value = ''; } catch { matter.value = null; } }
-async function matterSet(b: { enabled?: boolean; reset?: boolean }): Promise<void> {
+async function matterSet(b: { enabled?: boolean; reset?: boolean; install?: boolean; uninstall?: boolean }): Promise<void> {
   try { matter.value = await apiPost<MatterInfo>('/api/matter', b); mErr.value = ''; } catch (e) { mErr.value = err(e); }
 }
 export function matterStatus(): string {
   const m = matter.value;
+  if (m?.busy === 'install') return 'Installerer …';
+  if (m?.busy === 'uninstall') return 'Avinstallerer …';
+  if (m && m.installed === false) return 'Ikke installert';
   if (!m || !m.enabled) return 'Av';
   if (!m.available) return 'Krever installasjon';
   if (!m.running) return 'Starter …';
@@ -42,8 +46,14 @@ export function matterStatus(): string {
 export function matterRows(): Row[] {
   const m = matter.value;
   if (!m) return [{ n: 'Matter', hint: 'Får ikke kontakt med Skjold.', el: btn('Prøv igjen', () => void matterLoad()) }];
+  const ram = m.lowmem ? ` Denne enheten har bare ${m.memMB} MB minne – Matter tar ca. 120 MB og kan gjøre resten tregere.` : '';
+  if (m.busy) return [{ n: m.busy === 'install' ? 'Installerer Matter-pluginen' : 'Avinstallerer Matter-pluginen', hint: 'Dette tar noen minutter. Du kan lukke siden.', el: txt('…') }];
+  if (m.installed === false) return [
+    { n: 'Matter-plugin', hint: 'Ikke installert. Installerer Node.js 20 og matter.js (ca. 150 MB på disk, ca. 120 MB minne når den kjører). Kan fjernes helt igjen.' + ram, el: btn('Installer', () => void matterSet({ install: true })) },
+    ...(m.error ? [{ n: 'Feil', el: txt(m.error) }] : []),
+  ];
   const rows: Row[] = [{ n: 'Vis Skjold i Matter', hint: 'Apple Hjem, Google Home, Alexa, SmartThings og Home Assistant – uten skyen.', el: <Toggle on={m.enabled} onChange={(b) => void matterSet({ enabled: b })} /> }];
-  if (!m.enabled) return rows;
+  if (!m.enabled) return [...rows, { n: 'Avinstaller Matter-plugin', hint: 'Fjerner matter.js og Node.js igjen.', el: btn('Avinstaller', () => void matterSet({ uninstall: true })) }];
   if (!m.available) return [...rows, { n: 'Matter-tjenesten mangler', hint: m.error || 'Slå på pluginen «Matter» og kjør oppdatering – den installerer Node 20 og matter.js.', el: txt('Krever oppdatering') }];
   rows.push({ n: 'Status', hint: m.error || (m.running ? '' : 'Tjenesten starter …'), el: txt(m.commissioned ? '● Paret' : '○ Venter') });
   if (m.qr) rows.push({ n: 'Paringskode', hint: 'Skann QR-koden i appen (Legg til enhet → Matter), eller skriv inn den manuelle koden. Flere apper kan legges til etter hverandre.', el: <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px"><QR text={m.qr} label="QR-kode for Matter" /><span style={`font-family:${MONO};font-size:20px;letter-spacing:.06em;color:#f0c46a`}>{m.manual}</span></div> });
@@ -51,6 +61,7 @@ export function matterRows(): Row[] {
   rows.push({ n: 'Dette vises', hint: 'Høyttaler: av/på = strøm, nivå = volum (0–100), demp. Pluss én bryter per radiofavoritt 1–6 og en kildevelger.', el: txt(`${m.endpoints.length || 8} endepunkter`) });
   rows.push({ n: 'Glem paringer', hint: 'Fjerner Skjold fra alle Matter-kontrollere og lager ny paringskode.', el: btn('Glem paringer', () => { if (confirm('Glemme alle Matter-paringer?')) void matterSet({ reset: true }); }) });
   if (mErr.value) rows.push({ n: 'Feil', el: txt(mErr.value) });
+  rows.push({ n: 'Avinstaller Matter-plugin', hint: 'Stopper tjenesten og fjerner matter.js, paringer og Node.js (hvis Skjold installerte den). Frigjør minne og disk.' + ram, el: btn('Avinstaller', () => { if (confirm('Avinstallere Matter? Paringene i Hjem-appene forsvinner.')) void matterSet({ uninstall: true }); }) });
   return rows;
 }
 

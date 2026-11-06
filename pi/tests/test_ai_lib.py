@@ -108,7 +108,7 @@ def _llm(tmp, provider, resp):
         calls.append((url, body, headers))
         return resp
     llm = ask.LLM(os.path.join(tmp, "ai.json"), post=post)
-    llm.set({"provider": provider, "anthropicKey": "sk-test-1234"})
+    llm.set({"provider": provider, "anthropicKey": "sk-test-1234", "ollamaUrl": "http://ollama.test:11434"})
     return llm, calls
 
 
@@ -205,3 +205,37 @@ def test_chunks_and_due():
     p = ps.PodSum({"data_dir": tempfile.mkdtemp()})
     p.cfg.update(enabled=True, follow=[{"kind": "rss", "id": "x"}], time="07:15", lastRun="")
     assert not p.due(dt.datetime(2026, 11, 6, 7, 0)) and p.due(dt.datetime(2026, 11, 6, 7, 20))
+
+
+def test_ollama_needs_external_url(tmp_path):
+    from skjold_ask import LLM, norm_ollama_url
+    assert norm_ollama_url("") == ""
+    assert norm_ollama_url("192.168.1.20") == "http://192.168.1.20:11434"
+    assert norm_ollama_url("http://pc.local:8080/") == "http://pc.local:8080"
+    assert norm_ollama_url("https://ollama.hjem") == "https://ollama.hjem:11434"
+    llm = LLM(str(tmp_path / "ai.json"))
+    llm.set({"provider": "ollama"})
+    assert not llm.enabled                      # ingen lokal standard – må peke på en egen server
+    llm.set({"ollamaUrl": "pc.local"})
+    assert llm.enabled and llm.cfg["ollamaUrl"] == "http://pc.local:11434"
+
+
+def test_ollama_test_lists_models(tmp_path):
+    from skjold_ask import LLM
+    seen = []
+
+    def get(url, timeout=6):
+        seen.append(url)
+        if url.endswith("/api/tags"):
+            return {"models": [{"name": "qwen2.5:7b"}, {"name": "llama3.2:latest"}]}
+        return {"version": "0.5.1"}
+    llm = LLM(str(tmp_path / "ai.json"), get=get)
+    r = llm.test_ollama("10.0.0.5")
+    assert r["ok"] and r["models"] == ["llama3.2:latest", "qwen2.5:7b"] and r["version"] == "0.5.1"
+    assert seen[0] == "http://10.0.0.5:11434/api/tags"
+
+    def bad(url, timeout=6):
+        raise OSError("Connection refused")
+    r = LLM(str(tmp_path / "b.json"), get=bad).test_ollama("10.0.0.5")
+    assert not r["ok"] and "OLLAMA_HOST" in r["error"]
+    assert not LLM(str(tmp_path / "c.json")).test_ollama("")["ok"]

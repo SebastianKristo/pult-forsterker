@@ -223,7 +223,7 @@ sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pi
 sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || echo "HAP-python ble ikke installert – Apple Hjem er av"
 python3 -c "import cryptography" 2>/dev/null || sudo apt-get install -y -q python3-cryptography >/dev/null 2>&1 || true   # Skjold Cloud (AES-GCM)
 python3 -c "import mutagen" 2>/dev/null || sudo apt-get install -y -q python3-mutagen >/dev/null 2>&1 || true   # Platesamling (FLAC-tagger)
-sudo mkdir -p /usr/local/share/skjold-matter && sudo cp -r "$SRC/matter/package.json" "$SRC/matter/package-lock.json" "$SRC/matter/index.js" "$SRC/matter/mapping.js" "$SRC/matter/skjold-matter.service" "$SRC/matter/install.sh" /usr/local/share/skjold-matter/   # Matter-pluginen (installeres når den slås på)
+sudo mkdir -p /usr/local/share/skjold-matter && sudo cp -r "$SRC/matter/package.json" "$SRC/matter/package-lock.json" "$SRC/matter/index.js" "$SRC/matter/mapping.js" "$SRC/matter/skjold-matter.service" "$SRC/matter/install.sh" "$SRC/matter/uninstall.sh" /usr/local/share/skjold-matter/   # Matter-pluginen (installeres når den slås på)
 [ -f /var/lib/ki-amp/matter.on ] && { sudo bash /usr/local/share/skjold-matter/install.sh || echo "ADVARSEL: Skjold Matter ble ikke oppdatert" >&2; }
 bash "$SRC/install_webapp.sh"   # web-app: lokal dist > siste skjold-web-*.zip > pi/webapp
 sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service

@@ -2,7 +2,7 @@
 
 Skjold som Matter-enhet, bygget på [matter.js](https://github.com/project-chip/matter.js) (`@matter/main`, låst versjon i `package-lock.json`).
 Tjenesten `skjold-matter.service` snakker med daemonen på `127.0.0.1:8765`. Den bruker SSE (`/api/events`) for status og REST for kommandoer.
-Pluginen slås på under **Integrasjoner → Matter**. Første gang installeres Node 20 og matter.js via `install.sh`. Etter det holder `update.sh` tjenesten oppdatert så lenge `/var/lib/ki-amp/matter.on` finnes.
+Matter er en plugin som ikke ligger på enheten før du installerer den under **Integrasjoner → Matter → Installer**. Da installeres Node 20 og matter.js via `install.sh` (ca. 150 MB disk, ca. 120 MB RAM). **Avinstaller** kjører `uninstall.sh`, som fjerner tjenesten, matter.js, paringsdata og Node.js hvis Skjold installerte den. På enheter med under 1,5 GB minne (Pi 3) vises en advarsel. Etter det holder `update.sh` tjenesten oppdatert så lenge `/var/lib/ki-amp/matter.on` finnes.
 
 ## Endepunkter
 

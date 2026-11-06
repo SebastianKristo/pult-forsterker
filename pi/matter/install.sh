@@ -9,6 +9,7 @@ if need_node; then
   apt-get install -y -q ca-certificates curl gnupg >/dev/null
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null
   apt-get install -y -q nodejs >/dev/null
+  mkdir -p /var/lib/ki-amp/matter && touch /var/lib/ki-amp/matter/.node-by-skjold   # avinstallering fjerner Node igjen
 fi
 mkdir -p "$DEST" /var/lib/ki-amp/matter
 install -m 644 "$SRC/package.json" "$SRC/package-lock.json" "$SRC/index.js" "$SRC/mapping.js" "$DEST/"
