@@ -1,0 +1,11 @@
+{
+  "name": "skjold-matter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Skjold som Matter-høyttaler (matter.js). Snakker med ki-amp-daemonen på 127.0.0.1:8765.",
+  "type": "module",
+  "main": "index.js",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node index.js", "test": "node --test test/*.test.js" },
+  "dependencies": { "@matter/main": "0.18.0" }
+}

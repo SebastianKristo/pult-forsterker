@@ -6250,6 +6250,70 @@ async def h_cloud(r):
     return web.json_response({"available": True, **cloud.status()})
 
 
+# ---------- Matter (pluginen «Matter», pi/matter: matter.js i skjold-matter.service) ----------
+MATTER_FLAG = os.environ.get("KI_AMP_MATTER_FLAG", "/var/lib/ki-amp/matter.on")
+MATTER_STATUS = os.environ.get("KI_AMP_MATTER_STATUS", "http://127.0.0.1:8767")
+MATTER_INSTALL = "/usr/local/share/skjold-matter/install.sh"
+_matter_job = {"busy": False, "error": ""}
+
+
+def _matter_install():
+    _matter_job.update(busy=True, error="")
+    try:
+        p = subprocess.run(["bash", MATTER_INSTALL], capture_output=True, text=True, timeout=1200, check=False)
+        if p.returncode:
+            _matter_job["error"] = (p.stderr or p.stdout or "installasjonen feilet").strip()[-300:]
+    except Exception as e:
+        _matter_job["error"] = str(e)
+    finally:
+        _matter_job["busy"] = False
+
+
+async def _matter_call(path, method="GET"):
+    import aiohttp as _a
+    async with _a.ClientSession(timeout=_a.ClientTimeout(total=4)) as s_:
+        async with s_.request(method, MATTER_STATUS + path) as resp:
+            return await resp.json(content_type=None)
+
+
+async def h_matter(r):
+    """GET /api/matter → {enabled, available, running, commissioned, fabrics, qr, manual, endpoints, error}
+    POST {"enabled": bool} slår av/på (installerer Node + matter.js første gang) · {"reset": true} glemmer paringer."""
+    if r.method == "POST":
+        b = await r.json()
+        if "enabled" in b:
+            if b["enabled"]:
+                os.makedirs(os.path.dirname(MATTER_FLAG), exist_ok=True)
+                open(MATTER_FLAG, "w").close()
+                if not os.path.isdir("/opt/skjold-matter/node_modules") and os.path.exists(MATTER_INSTALL):
+                    if not _matter_job["busy"]:
+                        threading.Thread(target=_matter_install, daemon=True, name="matter-install").start()
+                else:
+                    subprocess.run(["systemctl", "enable", "--now", "skjold-matter"], check=False, capture_output=True)
+            else:
+                try:
+                    os.remove(MATTER_FLAG)
+                except OSError:
+                    pass
+                subprocess.run(["systemctl", "disable", "--now", "skjold-matter"], check=False, capture_output=True)
+        if b.get("reset"):
+            try:
+                await _matter_call("/reset", "POST")
+            except Exception as e:
+                _matter_job["error"] = f"Glem paringer: {e}"
+            await asyncio.sleep(3)
+    on = os.path.exists(MATTER_FLAG)
+    out = {"enabled": on, "available": os.path.exists(MATTER_INSTALL) or os.path.isdir("/opt/skjold-matter"),
+           "running": False, "commissioned": False, "fabrics": [], "qr": "", "manual": "", "endpoints": [],
+           "error": _matter_job["error"] or ("Installerer Node og matter.js …" if _matter_job["busy"] else "")}
+    if on:
+        try:
+            out.update(await _matter_call("/status"))
+        except Exception:
+            pass
+    return web.json_response(out)
+
+
 def _nd():
     s_ = settings()
     if s_.get("ndUrl") and s_.get("ndUser") and s_.get("ndPass"):
@@ -6759,7 +6823,7 @@ def main():
     app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
