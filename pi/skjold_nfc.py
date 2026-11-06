@@ -262,3 +262,65 @@ def label_sheet_svg(cards: list[dict], image=None, start: int = 0, cut: bool = T
         p.append('</g>')
     p.append('</svg>')
     return "\n".join(p)
+
+
+class Spoler:
+    """Spolene i Kassett-spillerens vindu: hva motoren skal gjøre, ut fra det som spilles.
+
+    ESP-en (esphome/skjold-kassett.yaml) spør GET /api/nfc/spoler et par ganger i sekundet og får
+    {"modus": "spill"|"spol"|"tilbake"|"stopp", "rps": omdreininger/s, "retning": 1|-1}. Den står selv for myk
+    akselerasjon. Hopp i låten (posisjonen flytter seg mer enn forventet) og ny låt gir et kort «spol» fremover
+    (eller «tilbake» ved hopp bakover), som på en ekte kassettspiller. Innstillingene lagres i en liten JSON-fil."""
+
+    STD = {"på": True, "fart": 0.5, "spol": 1.6, "bare_kassett": True}
+    SPOL_TID = 1.4      # sekunder med spoling ved hopp eller ny låt
+    HOPP = 4.0          # avvik (s) i posisjon som regnes som hopp
+
+    def __init__(self, path: str | None = None):
+        self.path = path
+        self.cfg = dict(self.STD)
+        self._last: tuple | None = None   # (tid, posisjon, tittel)
+        self._spol_til = 0.0
+        self._spol_retning = 1
+        if path and os.path.exists(path):
+            try:
+                with open(path) as f:
+                    self.cfg.update({k: v for k, v in json.load(f).items() if k in self.STD})
+            except Exception:
+                pass
+
+    def sett(self, b: dict) -> dict:
+        if "på" in b:
+            self.cfg["på"] = bool(b["på"])
+        if "bare_kassett" in b:
+            self.cfg["bare_kassett"] = bool(b["bare_kassett"])
+        for k, lo, hi in (("fart", 0.1, 1.5), ("spol", 0.5, 3.0)):
+            if k in b and b[k] is not None:
+                self.cfg[k] = round(max(lo, min(hi, float(b[k]))), 2)
+        if self.path:
+            tmp = self.path + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(self.cfg, f)
+            os.replace(tmp, self.path)
+        return dict(self.cfg)
+
+    def status(self, st: dict, kassett_inne: bool, now: float | None = None) -> dict:
+        now = time.time() if now is None else now
+        playing = bool(st.get("playing")) and not st.get("paused")
+        pos = float(st.get("position") or 0)
+        tittel = str(st.get("title") or "")
+        last, self._last = self._last, (now, pos, tittel) if playing else None
+        if not self.cfg["på"] or (self.cfg["bare_kassett"] and not kassett_inne) or not playing:
+            self._spol_til = 0.0
+            return {"modus": "stopp", "rps": 0.0, "retning": 1, **self.cfg}
+        if last:
+            t0, p0, tit0 = last
+            forventet = p0 + (now - t0)
+            if tit0 and tittel and tittel != tit0:
+                self._spol_til, self._spol_retning = now + self.SPOL_TID, 1
+            elif pos and abs(pos - forventet) > self.HOPP:
+                self._spol_til, self._spol_retning = now + self.SPOL_TID, (1 if pos > forventet else -1)
+        if now < self._spol_til:
+            return {"modus": "spol" if self._spol_retning > 0 else "tilbake", "rps": self.cfg["spol"],
+                    "retning": self._spol_retning, **self.cfg}
+        return {"modus": "spill", "rps": self.cfg["fart"], "retning": 1, **self.cfg}

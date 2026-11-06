@@ -103,3 +103,38 @@ def test_ndef_og_etikett():
                                {"navn": "Uten bilde", "undertittel": ""}], image=lambda u: "data:image/png;base64,AA", start=2)
     assert svg.startswith("<svg") and "Nitimen &lt;3" in svg and "data:image/png;base64,AA" in svg
     assert svg.count('class="k"') == 2 and "UTEN BILDE" in svg
+
+
+def test_spoler_folger_avspillingen(tmp_path):
+    from skjold_nfc import Spoler
+    s = Spoler(str(tmp_path / "spoler.json"))
+    spill = {"playing": True, "paused": False, "position": 10, "title": "A"}
+    assert s.status(spill, kassett_inne=True, now=100)["modus"] == "spill"
+    assert s.status({**spill, "position": 11}, True, now=101)["rps"] == 0.5
+    # pause → stopp
+    assert s.status({**spill, "playing": False, "paused": True}, True, now=102)["modus"] == "stopp"
+    # uten kassett står spolene stille (standard)
+    assert s.status(spill, kassett_inne=False, now=103)["modus"] == "stopp"
+    # hopp fremover → kort spoling, så vanlig fart igjen
+    s.status({**spill, "position": 20}, True, now=110)
+    r = s.status({**spill, "position": 80}, True, now=111)
+    assert r["modus"] == "spol" and r["retning"] == 1 and r["rps"] == 1.6
+    assert s.status({**spill, "position": 81}, True, now=111.5)["modus"] == "spol"
+    assert s.status({**spill, "position": 83}, True, now=113)["modus"] == "spill"
+    # hopp bakover → tilbake
+    r = s.status({**spill, "position": 30}, True, now=114)
+    assert r["modus"] == "tilbake" and r["retning"] == -1
+    # ny låt → spol fremover
+    s.status({**spill, "position": 31}, True, now=120)
+    assert s.status({**spill, "position": 1, "title": "B"}, True, now=121)["modus"] == "spol"
+
+
+def test_spoler_innstillinger_lagres(tmp_path):
+    from skjold_nfc import Spoler
+    p = str(tmp_path / "spoler.json")
+    s = Spoler(p)
+    assert s.sett({"fart": 9, "spol": 0.1, "på": False, "bare_kassett": False}) == \
+        {"på": False, "fart": 1.5, "spol": 0.5, "bare_kassett": False}
+    s2 = Spoler(p)
+    assert s2.cfg["på"] is False and s2.cfg["fart"] == 1.5
+    assert s2.status({"playing": True, "position": 1, "title": "A"}, True, now=1)["modus"] == "stopp"
