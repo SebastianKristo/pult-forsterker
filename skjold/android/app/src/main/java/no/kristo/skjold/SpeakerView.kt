@@ -37,7 +37,7 @@ import java.net.URLEncoder
 import java.util.UUID
 
 /** «Høyttalerprofil» (Skjold Sertifisert): finn en delt profil i Skjold Cloud, eller mål høyttaleren (gated, ≈ 1 m foran).
- *  Analyse og EQ-tilpasning skjer på Skjold (/api/speakers/*). */
+ *  Analyse og EQ-tilpasning skjer på Skjold (/api/speakers/…). */
 private data class SpkHit(val id: String, val name: String, val count: Int, val certified: Boolean)
 
 @Composable
