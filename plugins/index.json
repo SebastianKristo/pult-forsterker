@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "base": "https://raw.githubusercontent.com/SebastianKristo/pult-forsterker/main/plugins/",
+  "plugins": [
+    {
+      "id": "dagens-lat",
+      "navn": "Dagens låt",
+      "versjon": "1.0.0",
+      "forfatter": "Skjold",
+      "beskrivelse": "Spiller en tilfeldig låt fra Navidrome-biblioteket ditt hver morgen, og viser den på skjermen.",
+      "ikon": "music",
+      "kategori": "Musikk",
+      "minSkjold": "0.1.0",
+      "tillatelser": [
+        "audio",
+        "schedule"
+      ],
+      "files": [
+        {
+          "path": "plugin.json",
+          "sha256": "3917975292e81117fab76b28a6338837c79ce8e5d53d0ab494f1b9ffe32b3f8e"
+        }
+      ]
+    },
+    {
+      "id": "hvit-stoy",
+      "navn": "Hvit støy-generator",
+      "versjon": "1.0.0",
+      "forfatter": "Skjold",
+      "beskrivelse": "Lager hvit, rosa eller brun støy for søvn og konsentrasjon. Kombiner med sovetimeren.",
+      "ikon": "waves",
+      "kategori": "Verktøy",
+      "minSkjold": "0.1.0",
+      "tillatelser": [
+        "audio"
+      ],
+      "files": [
+        {
+          "path": "main.py",
+          "sha256": "49549fdd40a3ec7f074ffef11b4826b855b77ec90b3c681526555b983aebe29e"
+        },
+        {
+          "path": "plugin.json",
+          "sha256": "7cfa4b47e5d6c0b55cf32495973926f9cf1065d97e724f3d1ea1d6318ebb5f68"
+        }
+      ]
+    },
+    {
+      "id": "vaer-for-nyheter",
+      "navn": "Værmelding før nyheter",
+      "versjon": "1.0.0",
+      "forfatter": "Skjold",
+      "beskrivelse": "Viser dagens værmelding fra MET Norge på skjermen rett før morgennyhetene starter.",
+      "ikon": "cloud-sun",
+      "kategori": "Radio og podkast",
+      "minSkjold": "0.1.0",
+      "tillatelser": [
+        "http"
+      ],
+      "files": [
+        {
+          "path": "main.py",
+          "sha256": "d8d3fecd260c0b58fa6781f066de4d218aaffb574f6b787dfb63ba8457b96758"
+        },
+        {
+          "path": "plugin.json",
+          "sha256": "5d36ae1edc2d410f2ba5257dd224b90a799f54343767440d3ff222afcee29326"
+        }
+      ]
+    }
+  ]
+}

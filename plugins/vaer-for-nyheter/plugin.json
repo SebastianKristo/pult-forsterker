@@ -1,0 +1,18 @@
+{
+  "id": "vaer-for-nyheter",
+  "navn": "Værmelding før nyheter",
+  "versjon": "1.0.0",
+  "forfatter": "Skjold",
+  "beskrivelse": "Viser dagens værmelding fra MET Norge på skjermen rett før morgennyhetene starter.",
+  "ikon": "cloud-sun",
+  "kategori": "Radio og podkast",
+  "minSkjold": "0.1.0",
+  "tillatelser": ["http"],
+  "events": ["before_news", "test"],
+  "settings": {
+    "sted": {"type": "string", "navn": "Stedsnavn", "default": "Oslo"},
+    "lat": {"type": "number", "navn": "Breddegrad", "default": 59.91},
+    "lon": {"type": "number", "navn": "Lengdegrad", "default": 10.75}
+  },
+  "entry": "main.py"
+}
