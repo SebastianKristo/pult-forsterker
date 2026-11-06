@@ -1,0 +1,400 @@
+"""Smart radio: en endeløs kanal ut fra en låt eller artist, med låter fra Navidrome (Subsonic) eller Music Assistant.
+
+Neste låt velges blant kandidater (lignende låter, topplåter for artisten, tilfeldige i samme sjanger) etter hvor godt den
+passer den forrige: tempo (BPM), energi (RMS) og klang (MFCC-snitt), regnet ut med numpy fra et 30-s utdrag (ffmpeg).
+Analysen caches per låt. Samme artist høyst 2 ganger på rad, og ingen gjentak blant de siste 50.
+
+Daemonen kaller routes(ctx) og start(ctx). ctx: settings(), subsonic() -> skjold_recognize.Subsonic|None,
+play_url(url, title, image, genre, meta), lyr_info() -> dict, data_dir, ma (valgfri, settes av skjold_ma.routes).
+"""
+from __future__ import annotations
+
+import json
+import math
+import os
+import random
+import subprocess
+import threading
+import time
+from collections import deque
+
+try:
+    import numpy as np
+except Exception:   # pragma: no cover – numpy finnes på Skjold
+    np = None
+
+SR = 22050
+
+
+# ---------- lydanalyse ----------
+def _frames(x, n, hop):
+    if len(x) < n:
+        x = np.pad(x, (0, n - len(x)))
+    k = 1 + (len(x) - n) // hop
+    idx = np.arange(n)[None, :] + hop * np.arange(k)[:, None]
+    return x[idx]
+
+
+def bpm_of(x, sr=SR):
+    """Tempo fra onset-styrke (positiv spektralfluks) og autokorrelasjon, søkt i 60–180 BPM."""
+    n, hop = 1024, 256
+    f = _frames(x, n, hop) * np.hanning(n)
+    mag = np.abs(np.fft.rfft(f, axis=1))
+    flux = np.maximum(0.0, np.diff(mag, axis=0)).sum(axis=1)
+    flux = flux - flux.mean()
+    if not np.any(flux):
+        return 0.0
+    ac = np.correlate(flux, flux, mode="full")[len(flux) - 1:]
+    fps = sr / hop
+    lo, hi = int(fps * 60 / 180), int(fps * 60 / 60)
+    hi = min(hi, len(ac) - 1)
+    if hi <= lo:
+        return 0.0
+    lag = lo + int(np.argmax(ac[lo:hi + 1]))
+    # parabolsk interpolasjon for finere tempo
+    if lo < lag < hi:
+        a, b, c = ac[lag - 1], ac[lag], ac[lag + 1]
+        d = (a - c) / (2 * (a - 2 * b + c)) if (a - 2 * b + c) else 0.0
+        lag = lag + d
+    return round(60.0 * fps / lag, 1)
+
+
+def _mel(n_fft, sr, n_mels=26):
+    def hz2m(h): return 2595 * math.log10(1 + h / 700)
+    def m2hz(m): return 700 * (10 ** (m / 2595) - 1)
+    pts = [m2hz(m) for m in np.linspace(hz2m(30), hz2m(sr / 2), n_mels + 2)]
+    bins = np.floor((n_fft + 1) * np.array(pts) / sr).astype(int)
+    fb = np.zeros((n_mels, n_fft // 2 + 1))
+    for i in range(1, n_mels + 1):
+        l, c, r = bins[i - 1], bins[i], bins[i + 1]
+        for k in range(l, c):
+            fb[i - 1, k] = (k - l) / max(1, c - l)
+        for k in range(c, r):
+            fb[i - 1, k] = (r - k) / max(1, r - c)
+    return fb
+
+
+def features(x, sr=SR):
+    """{bpm, rms, centroid, mfcc[13]} for et mono-signal (float, −1..1)."""
+    x = np.asarray(x, dtype=np.float64)
+    if x.size == 0:
+        return {"bpm": 0.0, "rms": 0.0, "centroid": 0.0, "mfcc": [0.0] * 13}
+    n, hop = 2048, 512
+    f = _frames(x, n, hop) * np.hanning(n)
+    spec = np.abs(np.fft.rfft(f, axis=1)) ** 2
+    freqs = np.fft.rfftfreq(n, 1 / sr)
+    tot = spec.sum(axis=1) + 1e-12
+    centroid = float(np.mean((spec * freqs).sum(axis=1) / tot))
+    mel = np.log(spec @ _mel(n, sr).T + 1e-10)
+    k = np.arange(mel.shape[1])
+    dct = np.cos(np.pi / mel.shape[1] * (k[None, :] + 0.5) * np.arange(13)[:, None])
+    mfcc = (mel @ dct.T).mean(axis=0)
+    return {"bpm": bpm_of(x, sr), "rms": float(np.sqrt(np.mean(x ** 2))), "centroid": round(centroid, 1),
+            "mfcc": [round(float(v), 3) for v in mfcc]}
+
+
+def decode(url, start=30, dur=30, sr=SR, timeout=60):
+    out = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-ss", str(start), "-t", str(dur), "-i", url,
+                          "-ac", "1", "-ar", str(sr), "-f", "s16le", "-"], capture_output=True, timeout=timeout)
+    if out.returncode != 0 or not out.stdout:
+        raise RuntimeError("kunne ikke dekode: " + (out.stderr.decode(errors="replace")[-200:] or "tomt"))
+    return np.frombuffer(out.stdout, dtype=np.int16).astype(np.float64) / 32768.0
+
+
+def _tempo_ratio(a, b):
+    if not a or not b:
+        return 1.0
+    r = max(a, b) / min(a, b)
+    # halv/dobbel tid regnes som samme puls
+    return min(r, abs(r - 2) + 1, abs(r - 0.5) + 1)
+
+
+def distance(a, b):
+    """Lavere = likere. Tempo (±8 % er gratis), klang (MFCC), energi og lyshet (sentroide)."""
+    t = max(0.0, _tempo_ratio(a.get("bpm", 0), b.get("bpm", 0)) - 1.08) * 10
+    ma, mb = np.array(a.get("mfcc") or [0] * 13), np.array(b.get("mfcc") or [0] * 13)
+    timbre = float(np.linalg.norm(ma[1:] - mb[1:])) / (1 + float(np.linalg.norm(ma[1:])))
+    ea, eb = a.get("rms", 0) or 1e-6, b.get("rms", 0) or 1e-6
+    energy = abs(math.log(ea / eb))
+    ca, cb = a.get("centroid", 0) or 1, b.get("centroid", 0) or 1
+    bright = abs(math.log(ca / cb))
+    return 1.5 * t + 2.0 * timbre + 1.0 * energy + 0.8 * bright
+
+
+def choose_next(cur, candidates, recent_ids=(), recent_artists=(), rnd=None):
+    """cur: features for låta som spiller. candidates: [{id, artist, feat?}]. Gir beste kandidat (dict) eller None."""
+    rnd = rnd or random.Random()
+    recent_ids = set(recent_ids)
+    last = list(recent_artists)[-2:]
+    pool = [c for c in candidates if c.get("id") not in recent_ids]
+    if len(last) == 2 and last[0] and last[0] == last[1]:
+        pool = [c for c in pool if (c.get("artist") or "").lower() != last[-1].lower()] or pool
+    if not pool:
+        return None
+    scored = []
+    for c in pool:
+        d = distance(cur, c["feat"]) if cur and c.get("feat") else 3.0
+        scored.append((d + rnd.random() * 0.15, c))
+    scored.sort(key=lambda t: t[0])
+    return scored[0][1]
+
+
+# ---------- kilder ----------
+def _songs(r, *path):
+    for p in path:
+        r = (r or {}).get(p) or {}
+    if isinstance(r, list):
+        return r
+    return r.get("song") or [] if isinstance(r, dict) else []
+
+
+def nd_candidates(nd, seed):
+    out, seen = [], set()
+
+    def add(lst):
+        for s in lst or []:
+            if s.get("id") and s["id"] not in seen:
+                seen.add(s["id"])
+                out.append({"id": s["id"], "title": s.get("title", ""), "artist": s.get("artist", ""), "album": s.get("album", ""),
+                            "genre": s.get("genre", ""), "duration": s.get("duration", 0), "cover": s.get("coverArt", ""), "src": "navidrome"})
+    try:
+        if seed.get("id"):
+            add(_songs(nd._call("getSimilarSongs2", id=seed["id"], count=40), "similarSongs2"))
+    except Exception:
+        pass
+    try:
+        if seed.get("artist"):
+            add(_songs(nd._call("getTopSongs", artist=seed["artist"], count=20), "topSongs"))
+    except Exception:
+        pass
+    try:
+        if seed.get("genre"):
+            add(_songs(nd._call("getRandomSongs", size=30, genre=seed["genre"]), "randomSongs"))
+        if len(out) < 10:
+            add(_songs(nd._call("getRandomSongs", size=30), "randomSongs"))
+    except Exception:
+        pass
+    return out
+
+
+def nd_stream_url(nd, song_id):
+    import hashlib
+    import secrets
+    import urllib.parse
+    salt = secrets.token_hex(6)
+    q = {"id": song_id, "u": nd.user, "t": hashlib.md5((nd.pw + salt).encode()).hexdigest(), "s": salt,
+         "v": "1.16.1", "c": "skjold", "format": "mp3", "maxBitRate": "320"}
+    return f"{nd.url}/rest/stream.view?" + urllib.parse.urlencode(q)
+
+
+def nd_cover_url(nd, cover_id):
+    if not cover_id:
+        return ""
+    import hashlib
+    import secrets
+    import urllib.parse
+    salt = secrets.token_hex(6)
+    q = {"id": cover_id, "u": nd.user, "t": hashlib.md5((nd.pw + salt).encode()).hexdigest(), "s": salt, "v": "1.16.1", "c": "skjold", "size": "600"}
+    return f"{nd.url}/rest/getCoverArt.view?" + urllib.parse.urlencode(q)
+
+
+def ma_candidates(ma, seed):
+    """Music Assistant: søk på artist/sjanger (MA har ikke et stabilt «lignende»-kall i alle versjoner)."""
+    out = []
+    q = seed.get("artist") or seed.get("title") or ""
+    if not q or ma is None:
+        return out
+    try:
+        res = ma.search(q, ["tracks"], 40)
+        for t in res.get("tracks") or []:
+            out.append({"id": t.get("uri") or t.get("id"), "title": t.get("name") or t.get("title", ""), "artist": t.get("artist", ""),
+                        "album": t.get("album", ""), "src": "ma", "uri": t.get("uri"), "image": t.get("image", "")})
+    except Exception:
+        pass
+    return out
+
+
+# ---------- motor ----------
+class SmartRadio:
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.lock = threading.Lock()
+        self.cache_path = os.path.join(ctx.get("data_dir") or "/var/lib/ki-amp", "smartradio_features.json")
+        self.cache = self._load()
+        self.reset()
+
+    def reset(self):
+        self.active, self.seed, self.src = False, None, ""
+        self.queue, self.current, self.cur_feat = [], None, None
+        self.recent_ids, self.recent_artists = deque(maxlen=50), deque(maxlen=5)
+        self.pool, self.err = [], ""
+
+    def _load(self):
+        try:
+            with open(self.cache_path) as fh:
+                return json.load(fh)
+        except Exception:
+            return {}
+
+    def _save(self):
+        try:
+            os.makedirs(os.path.dirname(self.cache_path), exist_ok=True)
+            with open(self.cache_path + ".tmp", "w") as fh:
+                json.dump(self.cache, fh)
+            os.replace(self.cache_path + ".tmp", self.cache_path)
+        except Exception:
+            pass
+
+    def feat(self, cand):
+        key = cand.get("id")
+        if key in self.cache:
+            return self.cache[key]
+        if cand.get("src") != "navidrome" or np is None:
+            return None
+        nd = self.ctx["subsonic"]()
+        if not nd:
+            return None
+        try:
+            f = features(decode(nd_stream_url(nd, cand["id"])))
+        except Exception:
+            return None
+        self.cache[key] = f
+        if len(self.cache) > 5000:
+            for k in list(self.cache)[:1000]:
+                self.cache.pop(k, None)
+        self._save()
+        return f
+
+    def status(self):
+        return {"active": self.active, "seed": self.seed, "source": self.src, "current": self.current,
+                "next": self.queue[:3], "error": self.err or None,
+                "label": ("Smart radio fra " + (self.seed.get("title") or self.seed.get("artist") or "")) if self.active and self.seed else ""}
+
+    def start(self, seed):
+        nd = self.ctx["subsonic"]()
+        ma = self.ctx.get("ma")
+        src = seed.get("source") or ("navidrome" if nd else "ma")
+        with self.lock:
+            self.reset()
+            self.seed, self.src, self.active = dict(seed), src, True
+        self._refill(first=True)
+        if not self.pool and not self.queue:
+            self.active, self.err = False, "Fant ingen låter å bygge radioen av"
+            raise RuntimeError(self.err)
+        self.advance()
+        return self.status()
+
+    def stop(self):
+        with self.lock:
+            self.active = False
+        return self.status()
+
+    def _refill(self, first=False):
+        nd = self.ctx["subsonic"]()
+        seed = dict(self.seed or {})
+        if self.current:
+            seed.update({"id": self.current.get("id") if self.current.get("src") == "navidrome" else seed.get("id"),
+                         "artist": self.current.get("artist") or seed.get("artist"), "genre": self.current.get("genre") or seed.get("genre")})
+        cands = nd_candidates(nd, seed) if self.src == "navidrome" and nd else ma_candidates(self.ctx.get("ma"), seed)
+        known = {c["id"] for c in self.pool}
+        self.pool += [c for c in cands if c["id"] not in known]
+        if first and self.seed.get("id") and self.src == "navidrome" and not any(c["id"] == self.seed["id"] for c in self.queue):
+            # start med selve låta det ble valgt fra
+            s = next((c for c in self.pool if c["id"] == self.seed["id"]), None) or {
+                "id": self.seed["id"], "title": self.seed.get("title", ""), "artist": self.seed.get("artist", ""), "src": "navidrome"}
+            self.queue.insert(0, s)
+
+    def _pick(self):
+        ref = self.queue[-1] if self.queue else self.current
+        ref_feat = (ref or {}).get("feat") or (self.feat(ref) if ref else None)
+        cands = [c for c in self.pool if c["id"] not in {q["id"] for q in self.queue}]
+        rnd = random.Random()
+        rnd.shuffle(cands)
+        cands = cands[:12]
+        for c in cands:
+            if "feat" not in c:
+                c["feat"] = self.feat(c)
+        arts = list(self.recent_artists) + [q.get("artist", "") for q in self.queue]
+        return choose_next(ref_feat, cands, list(self.recent_ids) + [q["id"] for q in self.queue], arts, rnd)
+
+    def fill(self):
+        if not self.active:
+            return
+        if len(self.pool) - len(self.recent_ids) < 8:
+            self._refill()
+        while self.active and len(self.queue) < 3:
+            c = self._pick()
+            if not c:
+                break
+            self.queue.append(c)
+
+    def advance(self):
+        if not self.active:
+            return
+        self.fill()
+        if not self.queue:
+            self.active, self.err = False, "Tom for låter"
+            return
+        c = self.queue.pop(0)
+        self.current = c
+        self.recent_ids.append(c["id"])
+        self.recent_artists.append(c.get("artist", ""))
+        if c.get("src") == "navidrome":
+            nd = self.ctx["subsonic"]()
+            self.ctx["play_url"](nd_stream_url(nd, c["id"]), c.get("title", ""), nd_cover_url(nd, c.get("cover", "")), c.get("genre", ""),
+                                 {"track": c.get("title", ""), "artist": c.get("artist", ""), "album": c.get("album", ""),
+                                  "duration": float(c.get("duration") or 0), "source": "Smart radio"})
+        elif self.ctx.get("ma") is not None and c.get("uri"):
+            self.ctx["ma"].play(c["uri"], "play")
+        threading.Thread(target=self.fill, daemon=True).start()
+
+    def tick(self):
+        """Kalles hvert 2. s: går videre når låta er slutt (Lyrion stopper, eller tiden er nådd)."""
+        if not self.active or not self.current:
+            return
+        i = self.ctx["lyr_info"]() or {}
+        dur, t, mode = float(i.get("duration") or 0), float(i.get("time") or 0), i.get("mode")
+        started = time.time() - getattr(self, "_t0", 0) > 8
+        if started and (mode == "stop" or (dur > 0 and t >= dur - 1.0)):
+            self._t0 = time.time()
+            self.advance()
+
+
+def routes(ctx):
+    from aiohttp import web
+    import asyncio
+    sr = SmartRadio(ctx)
+    ctx["smartradio"] = sr
+
+    def loop():
+        sr._t0 = 0
+        while True:
+            time.sleep(2)
+            try:
+                sr.tick()
+            except Exception as e:
+                print("Smart radio:", e, flush=True)
+    threading.Thread(target=loop, daemon=True).start()
+
+    async def h_get(_r):
+        return web.json_response(sr.status())
+
+    async def h_post(r):
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        try:
+            if b.get("stop"):
+                res = sr.stop()
+            elif b.get("skip"):
+                await asyncio.get_running_loop().run_in_executor(None, sr.advance)
+                res = sr.status()
+            else:
+                sr._t0 = time.time()
+                res = await asyncio.get_running_loop().run_in_executor(None, sr.start, b.get("seed") or b)
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=409)
+        return web.json_response(res)
+
+    return [web.get("/api/smartradio", h_get), web.post("/api/smartradio", h_post)]
