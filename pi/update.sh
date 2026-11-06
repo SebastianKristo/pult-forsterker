@@ -75,6 +75,12 @@ command -v squeezelite >/dev/null || sudo apt-get -y install --no-install-recomm
 sudo systemctl disable --now squeezelite 2>/dev/null || true
 sudo systemctl daemon-reload
 sudo systemctl enable --now ki-squeezelite
+# Kjernetjenestene skal starte ved oppstart. Hver for seg: én manglende enhet skal ikke stoppe de andre
+# (på Proxmox/x86 ble enable kjørt før enhetsfilene fantes, så ki-amp og camilladsp startet ikke etter omstart).
+sudo systemctl daemon-reload
+for s in ki-amp camilladsp oled-display; do
+  [ -f "/etc/systemd/system/$s.service" ] && { sudo systemctl enable "$s" >/dev/null 2>&1 || echo "ADVARSEL: kunne ikke slå på $s ved oppstart" >&2; }
+done
 sudo systemctl restart shairport-sync oled-display ki-amp ki-squeezelite
 sleep 2
 bash "$SRC/ki-diag.sh" | sed -n '1,12p'

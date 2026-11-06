@@ -112,9 +112,10 @@ echo "== 8/8  Daemon, web-app og tjenester (pi/update.sh)"
 install -m 755 "$SRC/oled_display.py" /usr/local/bin/oled_display.py   # bare metadata-tjeneste (KI_AMP_DISPLAY=none)
 install -m 644 "$SRC/oled-display.service" /etc/systemd/system/oled-display.service
 systemctl daemon-reload
-systemctl enable camilladsp shairport-sync ki-squeezelite oled-display ki-amp 2>/dev/null || true
-systemctl restart camilladsp || true
 bash "$SRC/update.sh"
+# enhetsfilene finnes først etter update.sh – slå på hver for seg så én feil ikke stopper resten
+for s in camilladsp shairport-sync ki-squeezelite oled-display ki-amp; do systemctl enable "$s" 2>/dev/null || echo "ADVARSEL: $s ble ikke slått på ved oppstart" >&2; done
+systemctl restart camilladsp || true
 systemctl enable --now avahi-daemon 2>/dev/null || true
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo
