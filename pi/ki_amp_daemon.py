@@ -64,7 +64,7 @@ API:
   Status: "lyrion": bool (tilkoblet), "lyrion_server": "host:port" for Lyrion JSON-RPC ("" når ikke funnet) – brukes av iOS-appen
           (skjold/ios) til rom/synk og Lyrion-knappen i Kilder. "lyrion_player": Squeezelite-spillerens MAC/playerid i Lyrion.
   Status: "presets" = [{n,title}…] (alle plasser), "presets_count" (antall fylte), "presets_max" (50),
-          "radio_now": {"name","genre","now","image","url","n"(favoritt-nr, 0 = ikke favoritt),"playing"} | null
+          "radio_now": {"name","genre","now","image","logo"(/api/logo?k=…),"url","n"(favoritt-nr, 0 = ikke favoritt),"playing"} | null
   KI_AMP_RADIOBROWSER=<base-URL> overstyrer Radio Browser-speilene (test).
   POST /api/spotify {"event":"playing|paused|stopped|track_changed|session_connected|session_disconnected|volume_changed|…",
                      "name":…, "artists":…, "album":…, "covers":…, "duration_ms":…, "position_ms":…, "user_name":…}
@@ -1421,7 +1421,7 @@ def read_status():
         st = {"playing": plex["playing"], "paused": plex["paused"], "source": "plex", "cover": plex["cover"],
               "title": plex["title"], "artist": plex["artist"], "album": plex["album"],
               "duration": plex["duration"], "position": plex["position"], "bt_device": st.get("bt_device", "")}
-    extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", "")} for i, p in enumerate(state["presets"])],
+    extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", ""), "logo": _logos.path_for((p or {}).get("icon") or (p or {}).get("image") or "", (p or {}).get("title", "")) if p else ""} for i, p in enumerate(state["presets"])],
              "presets_count": sum(1 for p in state["presets"] if p), "presets_max": PRESETS_MAX, "radio_now": radio_now(),
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected,
              "source_label": (last_play.get("source") or "") if state["input"] == "radio" and last_play.get("source") and lyr.info.get("url") == last_play.get("url") else "",
@@ -2645,6 +2645,15 @@ async def h_voice(r):
     return j()
 
 
+async def h_logo(r):
+    """GET /api/logo?k=<nøkkel> → kanallogo (hentet, cachet og servert av Skjold; se skjold_logos.py)."""
+    res = await asyncio.get_running_loop().run_in_executor(None, _logos.get, r.query.get("k", ""))
+    if not res:
+        return web.Response(status=404, text="ingen logo")
+    body, ct = res
+    return web.Response(body=body, content_type=ct, headers={"Cache-Control": "public, max-age=86400", "Access-Control-Allow-Origin": "*"})
+
+
 async def h_cover(r):
     try:
         with open(COVER_RADIO if state["input"] == "radio" else COVER_FILE, "rb") as fh:
@@ -3217,6 +3226,8 @@ class Icy:
 
 icy = Icy()
 lyr = Lyrion()
+import skjold_logos as _logos   # noqa: E402  (kanallogoer servert fra /api/logo – samme opphav som API-et)
+_logos.lyrion_base = lambda: f"http://{lyr.host}:{lyr.port}" if lyr.host else None
 
 
 PRESETS_MIN, PRESETS_MAX = 6, 50
@@ -3239,7 +3250,8 @@ def preset_out(i, p):
     if not p:
         return None
     return {"n": i + 1, "title": p.get("title", ""), "url": p.get("url", ""), "icon": p.get("icon", ""),
-            "image": p.get("icon", "") or p.get("image", ""), "genre": p.get("genre", "")}
+            "image": p.get("icon", "") or p.get("image", ""), "genre": p.get("genre", ""),
+            "logo": _logos.path_for(p.get("icon", "") or p.get("image", ""), p.get("title", ""))}
 
 
 def presets_payload():
@@ -3260,7 +3272,9 @@ def radio_now():
     if not name and not url:
         return None
     now = " – ".join(x for x in (i.get("artist", ""), i.get("song", "")) if x)
+    logo_src = (p or {}).get("icon", "") or (p or {}).get("image", "") or (i.get("art", "") if not _generic_art(i.get("art", "")) and not (p or {}).get("source") else "")
     return {"name": name, "genre": (p or {}).get("genre", ""), "now": now, "image": (p or {}).get("icon", "") or i.get("art", ""),
+            "logo": _logos.path_for(logo_src, name),
             "url": url, "n": n, "playing": i.get("mode") == "play"}
 
 
@@ -5922,7 +5936,7 @@ def main():
     app = web.Application(middlewares=[cors_mw])
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

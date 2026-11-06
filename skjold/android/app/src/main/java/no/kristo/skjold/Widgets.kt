@@ -117,7 +117,7 @@ object WidgetStore {
         }
         val sub = listOf(st.artist, if (st.input == "radio") rn?.name ?: "" else inputName)
             .filter { it.isNotEmpty() && it != title }.distinct().joinToString(" · ").ifEmpty { inputName }
-        val cover = DeviceLink.coverURL(st.coverURL, host).ifEmpty { rn?.image ?: "" }
+        val cover = DeviceLink.coverURL(st.coverURL, host).ifEmpty { rn?.let { if (it.logo.isNotEmpty()) DeviceLink.coverURL(it.logo, host) else it.image } ?: "" }
         val presets = st.presetTitles.mapIndexedNotNull { i, t -> if (t.isNotEmpty()) (i + 1) to t else null }
         return WidgetSnap(host, st.name, title, sub, st.input, st.playing && st.power, st.power, st.volume, cover, presets, st.preset,
             st.album, st.mute, st.duration, st.position, st.input == "radio" && st.duration <= 0)

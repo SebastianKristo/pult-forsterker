@@ -259,7 +259,7 @@ nonisolated enum Net {
 
 /// The parts of ki_amp_daemon.py's status the app uses. Parsed off the main actor, so it only holds plain values.
 nonisolated struct DevStatus: Sendable, Equatable {
-    struct RadioNow: Sendable, Equatable { var name = "", genre = "", now = "", image = "", url = ""; var n = 0; var playing = false }
+    struct RadioNow: Sendable, Equatable { var name = "", genre = "", now = "", image = "", url = "", logo = ""; var n = 0; var playing = false }
 
     var name = "", id = "", product = "", board = "", version = "", input = "", source = ""
     var title = "", artist = "", album = "", coverURL = "", btDevice = "", airplayDevice = ""
@@ -290,7 +290,7 @@ nonisolated struct DevStatus: Sendable, Equatable {
         presetTitles = ((j["presets"] as? [[String: Any]]) ?? []).map { s("title", $0) }
         if let r = j["radio_now"] as? [String: Any] {
             radioNow = RadioNow(name: s("name", r), genre: s("genre", r), now: s("now", r), image: s("image", r),
-                                url: s("url", r), n: i("n", r), playing: b("playing", r))
+                                url: s("url", r), logo: s("logo", r), n: i("n", r), playing: b("playing", r))
         }
     }
 }
@@ -325,6 +325,8 @@ nonisolated struct DevSettings: Sendable {
 /// One favourite from GET /api/presets.
 nonisolated struct DevPreset: Sendable, Equatable {
     var n: Int, title: String, url: String, genre: String, image: String
+    /// «/api/logo?k=…»: kanallogoen servert av Skjold selv (relativ – gjøres absolutt med DeviceLink.coverURL).
+    var logo: String = ""
 
     static func list(_ data: Data) -> [DevPreset]? {
         guard let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -332,7 +334,8 @@ nonisolated struct DevPreset: Sendable, Equatable {
         return ps.compactMap { p -> DevPreset? in
             guard let p = p as? [String: Any], let url = p["url"] as? String, !url.isEmpty else { return nil }
             return DevPreset(n: (p["n"] as? NSNumber)?.intValue ?? 0, title: p["title"] as? String ?? "", url: url,
-                             genre: p["genre"] as? String ?? "", image: (p["image"] as? String) ?? (p["icon"] as? String) ?? "")
+                             genre: p["genre"] as? String ?? "", image: (p["image"] as? String) ?? (p["icon"] as? String) ?? "",
+                             logo: p["logo"] as? String ?? "")
         }
     }
 }

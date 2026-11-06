@@ -118,6 +118,12 @@ final class LogoStore {
         store(name, url)
     }
 
+    /// Logo servert av Skjold selv (/api/logo): går foran Radio Browser-gjetninger (men de innebygde NRK-logoene beholdes).
+    func device(_ name: String, _ url: String) {
+        guard !url.isEmpty, SK.nrkAsset[name] == nil, urls[name] != url else { return }
+        store(name, url)
+    }
+
     private func store(_ name: String, _ url: String) {
         urls[name] = url
         UserDefaults.standard.set(urls, forKey: key)

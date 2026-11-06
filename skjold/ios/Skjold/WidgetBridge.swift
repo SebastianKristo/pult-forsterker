@@ -54,7 +54,10 @@ final class WidgetBridge {
         }
         lastVolume = s.volume
 
-        let img = coverURL.isEmpty ? (st.radioNow?.image ?? "") : coverURL
+        var img = coverURL
+        if img.isEmpty, let rn = st.radioNow {   // kanallogo fra Skjold (/api/logo) før Lyrions bildeadresse
+            img = rn.logo.isEmpty ? rn.image : DeviceLink.shared.coverURL(rn.logo, on: host)
+        }
         updateCover(img)
         updateActivity(s)
     }
