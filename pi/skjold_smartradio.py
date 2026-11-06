@@ -398,3 +398,254 @@ def routes(ctx):
         return web.json_response(res)
 
     return [web.get("/api/smartradio", h_get), web.post("/api/smartradio", h_post)]
+
+
+# ---------- Ukentlig «Oppdag»-liste ----------
+def _k(artist, title):
+    return ((artist or "").strip().lower(), (title or "").strip().lower())
+
+
+def taste(history, now, weeks=6):
+    """Toppartister og -sjangre fra lyttehistorikken de siste `weeks` ukene."""
+    t0 = now - weeks * 7 * 86400
+    arts, gen = {}, {}
+    for e in history:
+        if float(e.get("t") or 0) < t0:
+            continue
+        a = (e.get("artist") or "").strip()
+        if a:
+            arts[a] = arts.get(a, 0) + 1
+        g = (e.get("genre") or "").strip()
+        if g:
+            gen[g] = gen.get(g, 0) + 1
+    top = lambda d, n: [k for k, _ in sorted(d.items(), key=lambda kv: -kv[1])[:n]]
+    return {"artists": top(arts, 8), "genres": top(gen, 4)}
+
+
+def flow_order(items, feat_of):
+    """Grådig nærmeste nabo fra roligste låt, så BPM/energi glir i stedet for å hoppe."""
+    rest = list(items)
+    if not rest:
+        return []
+    keyf = lambda c: ((feat_of(c) or {}).get("rms", 0), (feat_of(c) or {}).get("bpm", 0))
+    rest.sort(key=keyf)
+    out = [rest.pop(0)]
+    while rest:
+        cur = feat_of(out[-1])
+        if cur:
+            j = min(range(len(rest)), key=lambda i: distance(cur, feat_of(rest[i])) if feat_of(rest[i]) else 9.0)
+        else:
+            j = 0
+        out.append(rest.pop(j))
+    return out
+
+
+def select_discover(cands, history, now, size=35, per_artist=2, played_days=90, rnd=None, feat_of=lambda c: c.get("feat")):
+    """Velg Oppdag-lista: ikke spilt siste `played_days`, høyst `per_artist` per artist, flytsortert."""
+    rnd = rnd or random.Random()
+    t0 = now - played_days * 86400
+    played = {_k(e.get("artist"), e.get("title") or e.get("song")) for e in history if float(e.get("t") or 0) >= t0}
+    pool, seen = [], set()
+    for c in cands:
+        k = _k(c.get("artist"), c.get("title"))
+        if not k[1] or k in played or k in seen or c.get("id") in seen:
+            continue
+        seen.add(k)
+        seen.add(c.get("id"))
+        pool.append(c)
+    rnd.shuffle(pool)
+    count, out = {}, []
+    for c in pool:
+        a = (c.get("artist") or "").lower()
+        if count.get(a, 0) >= per_artist:
+            continue
+        count[a] = count.get(a, 0) + 1
+        out.append(c)
+        if len(out) >= size:
+            break
+    return flow_order(out, feat_of)
+
+
+def week_no(now):
+    return int(time.strftime("%V", time.localtime(now)))
+
+
+class Discover:
+    DEF = {"enabled": True, "day": 0, "time": "06:00", "size": 35, "weeks": 6, "archive": True, "sources": ["navidrome", "ma"]}
+
+    def __init__(self, ctx, sr):
+        self.ctx, self.sr = ctx, sr
+        self.path = os.path.join(ctx.get("data_dir") or "/var/lib/ki-amp", "discover.json")
+        self.data = self._load()
+        self.busy, self.err = False, ""
+
+    def _load(self):
+        try:
+            with open(self.path) as fh:
+                return json.load(fh)
+        except Exception:
+            return {"cfg": dict(self.DEF), "lists": []}
+
+    def _save(self):
+        try:
+            with open(self.path + ".tmp", "w") as fh:
+                json.dump(self.data, fh)
+            os.replace(self.path + ".tmp", self.path)
+        except Exception:
+            pass
+
+    def cfg(self):
+        return {**self.DEF, **(self.data.get("cfg") or {})}
+
+    def set_cfg(self, b):
+        c = self.cfg()
+        for k in self.DEF:
+            if k in b:
+                c[k] = b[k]
+        self.data["cfg"] = c
+        self._save()
+
+    def status(self):
+        cur = (self.data.get("lists") or [None])[-1]
+        return {"cfg": self.cfg(), "current": cur, "busy": self.busy, "error": self.err or None}
+
+    def build(self, now=None):
+        now = now or time.time()
+        c = self.cfg()
+        nd = self.ctx["subsonic"]()
+        hist = self.ctx["history"]() or []
+        tst = taste(hist, now, int(c.get("weeks") or 6))
+        cands = []
+        if nd and "navidrome" in c.get("sources", []):
+            for a in tst["artists"][:6]:
+                try:
+                    info = nd._call("getArtistInfo2", id=self._artist_id(nd, a), count=6) if self._artist_id(nd, a) else {}
+                    sims = [s.get("name") for s in ((info.get("artistInfo2") or {}).get("similarArtist") or [])]
+                except Exception:
+                    sims = []
+                for name in [a] + sims[:4]:
+                    cands += nd_candidates(nd, {"artist": name})
+            for g in tst["genres"]:
+                cands += nd_candidates(nd, {"genre": g})
+            try:
+                for al in ((nd._call("getAlbumList2", type="newest", size=10).get("albumList2") or {}).get("album") or []):
+                    for s in ((nd._call("getAlbum", id=al["id"]).get("album") or {}).get("song") or [])[:3]:
+                        cands.append({"id": s["id"], "title": s.get("title", ""), "artist": s.get("artist", ""), "album": s.get("album", ""),
+                                      "duration": s.get("duration", 0), "cover": s.get("coverArt", ""), "src": "navidrome"})
+            except Exception:
+                pass
+        if self.ctx.get("ma") is not None and "ma" in c.get("sources", []):
+            for a in tst["artists"][:4]:
+                cands += ma_candidates(self.ctx["ma"], {"artist": a})
+        for x in cands:
+            if x["id"] in self.sr.cache:
+                x["feat"] = self.sr.cache[x["id"]]
+        picked = select_discover(cands, hist, now, int(c.get("size") or 35))
+        wk = week_no(now)
+        name = f"Oppdag uke {wk}"
+        entry = {"name": name, "week": wk, "t": now, "tracks": [{k: v for k, v in p.items() if k != "feat"} for p in picked], "navidrome": None}
+        if nd:
+            try:
+                ids = [p["id"] for p in picked if p.get("src") == "navidrome"]
+                pls = (nd._call("getPlaylists").get("playlists") or {}).get("playlist") or []
+                for p in pls:   # erstatt forrige (eller behold de 4 siste som arkiv)
+                    if str(p.get("name", "")).startswith("Oppdag uke"):
+                        old = [x for x in pls if str(x.get("name", "")).startswith("Oppdag uke")]
+                        if not c.get("archive") or len(old) >= 4 or p.get("name") == name:
+                            nd._call("deletePlaylist", id=p["id"])
+                if ids:
+                    r = nd._call("createPlaylist", name=name, songId=ids)
+                    entry["navidrome"] = ((r.get("playlist") or {}).get("id")) or True
+            except Exception as e:
+                self.err = f"Navidrome: {e}"
+        self.data.setdefault("lists", []).append(entry)
+        self.data["lists"] = self.data["lists"][-4:]
+        self.data["last_run"] = now
+        self._save()
+        return entry
+
+    def _artist_id(self, nd, name):
+        try:
+            r = nd._call("search3", query=name, artistCount=1, songCount=0, albumCount=0)
+            a = ((r.get("searchResult3") or {}).get("artist") or [])
+            return a[0]["id"] if a else None
+        except Exception:
+            return None
+
+    def run(self):
+        if self.busy:
+            return self.status()
+        self.busy, self.err = True, ""
+        try:
+            self.build()
+        except Exception as e:
+            self.err = str(e)
+        finally:
+            self.busy = False
+        return self.status()
+
+    def due(self, now=None):
+        now = now or time.time()
+        c = self.cfg()
+        if not c.get("enabled"):
+            return False
+        tm = time.localtime(now)
+        if tm.tm_wday != int(c.get("day", 0)) or time.strftime("%H:%M", tm) < str(c.get("time", "06:00")):
+            return False
+        return float(self.data.get("last_run") or 0) < now - 6 * 86400
+
+    def play(self, shuffle=False):
+        cur = (self.data.get("lists") or [None])[-1]
+        if not cur or not cur.get("tracks"):
+            raise RuntimeError("Ingen Oppdag-liste ennå")
+        tracks = list(cur["tracks"])
+        if shuffle:
+            random.shuffle(tracks)
+        sr = self.sr
+        with sr.lock:
+            sr.reset()
+            sr.active, sr.src = True, "navidrome"
+            sr.seed = {"title": cur["name"]}
+            sr.queue = tracks
+            sr.pool = list(tracks)
+        sr._t0 = time.time()
+        sr.advance()
+        return sr.status()
+
+
+def discover_routes(ctx):
+    from aiohttp import web
+    import asyncio
+    dv = Discover(ctx, ctx["smartradio"])
+    ctx["discover"] = dv
+
+    def loop():
+        while True:
+            time.sleep(60)
+            try:
+                if dv.due():
+                    dv.run()
+            except Exception as e:
+                print("Oppdag-liste:", e, flush=True)
+    threading.Thread(target=loop, daemon=True).start()
+
+    async def h(r):
+        if r.method == "GET":
+            return web.json_response(dv.status())
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        loop_ = asyncio.get_running_loop()
+        try:
+            if "cfg" in b:
+                dv.set_cfg(b["cfg"])
+            if b.get("build"):
+                await loop_.run_in_executor(None, dv.run)
+            if b.get("play"):
+                await loop_.run_in_executor(None, dv.play, bool(b.get("shuffle")))
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=409)
+        return web.json_response(dv.status())
+
+    return [web.get("/api/discover", h), web.post("/api/discover", h)]
