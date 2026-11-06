@@ -195,6 +195,8 @@ fi
 
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
+sudo install -m 644 "$SRC/skjold_homekit.py" /usr/local/bin/skjold_homekit.py   # Apple Hjem (HomeKit)
+sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || echo "HAP-python ble ikke installert – Apple Hjem er av"
 bash "$SRC/install_webapp.sh"   # web-app: lokal dist > siste skjold-web-*.zip > pi/webapp
 sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service
 [ -f /etc/ki-amp.env ] || sudo install -m 600 "$SRC/ki-amp.env" /etc/ki-amp.env

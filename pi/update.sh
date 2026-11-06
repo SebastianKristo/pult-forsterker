@@ -10,6 +10,7 @@ echo "== Programmer og tjenester"
 [ -e /dev/i2c-1 ] || { sudo raspi-config nonint do_i2c 0 2>/dev/null; sudo modprobe i2c-dev 2>/dev/null; } || true
 [ -f /etc/modules-load.d/ki-amp.conf ] || printf 'dwc2\ni2c-dev\n' | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
 sudo install -m 755 "$SRC/ki_amp_daemon.py" "$SRC/oled_display.py" "$SRC/oled_small.py" /usr/local/bin/
+sudo install -m 644 "$SRC/skjold_homekit.py" /usr/local/bin/   # Apple Hjem (HomeKit)
 bash "$SRC/install_webapp.sh"   # ny web-app fra siste skjold-v*-utgivelse (ikke den gamle pi/webapp)
 sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
 sudo mkdir -p /usr/local/share/ki-amp/sounds && sudo install -m 644 "$SRC"/sounds/*.wav /usr/local/share/ki-amp/sounds/   # ferdiginnspilte talemeldinger
@@ -50,6 +51,7 @@ bash "$SRC/ki-voice-setup.sh"
 echo "== Lyrion-radio (Squeezelite)"
 command -v ffmpeg >/dev/null || sudo apt-get -y install --no-install-recommends ffmpeg >/dev/null   # /api/play announce, radioopptak
 python3 -c "import paho.mqtt" 2>/dev/null || sudo apt-get -y install --no-install-recommends python3-paho-mqtt >/dev/null || true   # MQTT-bro
+python3 -c "import pyhap" 2>/dev/null || sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || true   # Apple Hjem (HomeKit)
 command -v squeezelite >/dev/null || sudo apt-get -y install --no-install-recommends squeezelite >/dev/null
 sudo systemctl disable --now squeezelite 2>/dev/null || true
 sudo systemctl daemon-reload

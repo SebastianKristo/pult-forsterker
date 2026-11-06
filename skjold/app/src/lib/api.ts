@@ -120,7 +120,10 @@ export interface Lyrics { enabled: boolean; found: boolean; plain?: string; sync
 export interface HistItem { t: number; title: string; artist: string; album: string; input: string; source: string; station: string; cover: string }
 export interface Recording { name: string; size: number; t: number; recording: boolean }
 export interface SnapClient { id: string; name: string; connected: boolean; latency: number; volume: number; muted: boolean }
+export interface HomeKitInfo { enabled: boolean; available: boolean; running: boolean; paired: boolean; pin: string; setup_uri: string; port: number; error: string | null }
 export const api = {
+  homekit: () => req<HomeKitInfo>('/api/homekit'),
+  setHomekit: (b: { enabled?: boolean; reset?: boolean }) => post<HomeKitInfo>('/api/homekit', b),
   sky: () => req<SkyStatus>('/api/sky'),
   skyKobl: (kode: string) => post<SkyStatus>('/api/sky', { kode }),
   skyKobleFra: () => post<SkyStatus>('/api/sky', { koble_fra: true }),
