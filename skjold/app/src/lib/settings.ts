@@ -17,7 +17,7 @@ export interface Settings {
   ledLevel: number;
   /** LED-modus: 'press' = lyser ved trykk og toner ut, 'always' = aktiv kilde lyser, 'off' = av. */
   ledMode: LedMode;
-  auto: number; wake: boolean; spEn: boolean; upnpEn: boolean; castEn: boolean; ytmEn: boolean; ndEn: boolean; ytmUser: string; ytmCookie: string; ndUrl: string; ndUser: string; ndPass: string; plexEn: boolean; plexUrl: string; plexToken: string;
+  auto: number; wake: boolean; spEn: boolean; upnpEn: boolean; castEn: boolean; ytmEn: boolean; ndEn: boolean; ytmUser: string; ytmCookie: string; ndUrl: string; ndUser: string; ndPass: string; plexEn: boolean; plexUrl: string; plexToken: string; maEn: boolean; maUrl: string; maToken: string;
   /** Skjold Touch-skjermen: rolle, lydutgang, standby etter, standby-visning, nattmodus. */
   tRole: number; tOut: number; tStandby: number; tIdle: number; tNight: boolean;
   dblPower: number; nightLight: boolean;
@@ -61,7 +61,7 @@ export function defaultEq(): EqProfiles {
 export const DEF: Settings = {
   bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, lvlAux: 0, lvlUsb: 0,
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
-  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '',
+  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '', maEn: false, maUrl: '', maToken: '',
   tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false,
   dblPower: 0, nightLight: true,
   updChannel: 0, updAuto: true, setupDone: false,

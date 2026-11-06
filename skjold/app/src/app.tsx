@@ -1,3 +1,4 @@
+import { signal } from '@preact/signals';
 // Skall: telefon (App v2) under 900 px eller i Capacitor, ellers PC (S1 Web v3).
 import { useEffect, useState } from 'preact/hooks';
 import { App as CapApp } from '@capacitor/app';
@@ -18,6 +19,8 @@ import { EqPage } from './screens/pages';
 import { RadioPage } from './screens/radio';
 import { GroupsPage, SpeakerButton } from './screens/groups';
 import { IntegrationsPage, PluginsPage, intCount, plugCount } from './screens/integ';
+import { MaPage, maConfigured } from './screens/ma';
+import { NrkPanel } from './screens/nrk';
 import { SettingsPage, CategoryDetail } from './screens/settings';
 import { PowerButton, Transport, artFor, nowTitle, subLine } from './screens/player';
 import { openFull } from './lib/store';
@@ -82,7 +85,7 @@ const TAB_ICON: Record<string, preact.JSX.Element> = {
 };
 const TABS: [Page, string][] = [['home', 'Hjem'], ['eq', 'Lyd'], ['rooms', 'Rom'], ['settings', 'Innstillinger']];
 
-const TITLES: Record<Page, string> = { home: 'Hjem', play: 'Spiller', eq: 'Lyd', radio: 'Radio', rooms: 'Ditt system', settings: 'Innstillinger', lib: 'Bibliotek', grp: 'Grupper og surround', int: 'Integrasjoner', plug: 'Plugins' };
+const TITLES: Record<Page, string> = { home: 'Hjem', play: 'Spiller', eq: 'Lyd', radio: 'Radio', rooms: 'Ditt system', settings: 'Innstillinger', lib: 'Bibliotek', grp: 'Grupper og surround', int: 'Integrasjoner', plug: 'Plugins', ma: 'Music Assistant' };
 
 function Phone() {
   const s = status.value, r = route.value;
@@ -90,7 +93,7 @@ function Phone() {
   useEffect(() => { if (page === 'play') { go('home'); openFull(); } }, [page]);
   useEffect(() => { if (!fullPlayer.value) { queueOpen.value = false; srcOpen.value = false; } }, [fullPlayer.value]);
   const cat = page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
-  const tabOf = page === 'radio' || page === 'play' || page === 'lib' ? 'home' : page === 'grp' ? 'rooms' : page === 'int' || page === 'plug' ? 'settings' : page;
+  const tabOf = page === 'radio' || page === 'play' || page === 'lib' ? 'home' : page === 'grp' ? 'rooms' : page === 'int' || page === 'plug' ? 'settings' : page === 'ma' ? 'home' : page;
   const title = cat ? cat.n : page === 'lib' ? libTitle() : TITLES[page];
   return (
     <div class="phone">
@@ -99,10 +102,11 @@ function Phone() {
         <Offline />
         {page === 'home' && <HomePhone />}
         {page === 'eq' && <EqPage />}
-        {page === 'radio' && <RadioPage />}
+        {page === 'radio' && <RadioTabs phone />}
         {page === 'rooms' && <RoomsPhone />}
         {page === 'settings' && <SettingsPage />}
-        {page === 'lib' && <LibraryPage />}
+        {page === 'lib' && (libUi && routeCat() === 'ytm' && maConfigured() ? <MaPage provider="YouTube Music" /> : <LibraryPage />)}
+        {page === 'ma' && <MaPage />}
         {page === 'grp' && <GroupsPage />}
         {page === 'int' && <IntegrationsPage />}
         {page === 'plug' && <PluginsPage />}
@@ -144,8 +148,8 @@ interface DesignState { welcome?: boolean; mode?: string; ob?: number; scan?: bo
 
 const NAV: [Page, string][] = [['home', 'Hjem'], ['play', 'Spiller'], ['radio', 'Radio'], ['eq', 'Equalizer']];
 const SETUP_NAV: ['grp' | 'int' | 'plug' | 'set', string][] = [['grp', 'Grupper og surround'], ['int', 'Integrasjoner'], ['plug', 'Plugins'], ['set', 'Innstillinger']];
-const NICON: Record<string, string> = { ytm: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM10 8.5v7l6-3.5z', nd: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z', int: 'M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0zM12 17v4', plug: 'M10 4a2 2 0 1 1 4 0v2h4v4h-2a2 2 0 1 0 0 4h2v4h-4v-2a2 2 0 1 0-4 0v2H6v-4h2a2 2 0 1 0 0-4H6V6h4z', set: 'M12 15a3 3 0 1 0 0-6a3 3 0 1 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z', grp: 'M4 7h6v10H4zM14 7h6v10h-6zM10 12h4', tjenester: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', lib: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5', play: 'M8 5v14l11-7z', eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
-const PAGE_SUB: Partial<Record<Page, string>> = { radio: 'Norske kanaler og over 50 000 fra hele verden', eq: 'Egen profil per inngang og for hodetelefoner', grp: 'Spill i flere rom samtidig, eller sett opp surround med flere Skjold', int: 'Lyrion, Spotify, UPnP/DLNA, YouTube Music, Navidrome, Apple Hjem, Home Assistant, Homey og API', plug: 'Utvidelser for Lyrion og Skjold. Gjelder hele systemet' };
+const NICON: Record<string, string> = { ma: 'M4 6h16M4 12h10M4 18h7M17 14v6M14 17h6', ytm: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM10 8.5v7l6-3.5z', nd: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z', int: 'M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0zM12 17v4', plug: 'M10 4a2 2 0 1 1 4 0v2h4v4h-2a2 2 0 1 0 0 4h2v4h-4v-2a2 2 0 1 0-4 0v2H6v-4h2a2 2 0 1 0 0-4H6V6h4z', set: 'M12 15a3 3 0 1 0 0-6a3 3 0 1 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z', grp: 'M4 7h6v10H4zM14 7h6v10h-6zM10 12h4', tjenester: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', lib: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5', play: 'M8 5v14l11-7z', eq: 'M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4', radio: 'M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4', lyd: 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12', tilkobling: 'M7 7l10 10-5 5V2l5 5L7 17', stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3', skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4', strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0', oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14', system: 'M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z' };
+const PAGE_SUB: Partial<Record<Page, string>> = { ma: 'TIDAL, Qobuz, Deezer, Spotify, YouTube Music, Plex, Jellyfin og podkaster i ett bibliotek', radio: 'Norske kanaler og over 50 000 fra hele verden', eq: 'Egen profil per inngang og for hodetelefoner', grp: 'Spill i flere rom samtidig, eller sett opp surround med flere Skjold', int: 'Lyrion, Spotify, UPnP/DLNA, YouTube Music, Navidrome, Apple Hjem, Home Assistant, Homey og API', plug: 'Utvidelser for Lyrion og Skjold. Gjelder hele systemet' };
 
 const RCOL_KEY = 'skjold-rcol', RAIL_KEY = 'skjold-rail';
 function readRail(): boolean { try { return localStorage.getItem(RAIL_KEY) === '1'; } catch { return false; } }
@@ -164,7 +168,7 @@ function Desktop() {
   const toggleRail = () => { const v = !railx; setRailx(v); try { localStorage.setItem(RAIL_KEY, v ? '1' : '0'); } catch { /* ignore */ } };
   const toggleRcol = () => { const v = !rcol; setRcol(v); try { localStorage.setItem(RCOL_KEY, v ? '1' : '0'); } catch { /* ignore */ } };
   // Hjem har «Ditt system» som egen flis; biblioteker og oppsettsider trenger hele bredden.
-  const noRcol = r.page === 'home' || r.page === 'play' || r.page === 'radio' || r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug';
+  const noRcol = r.page === 'home' || r.page === 'play' || r.page === 'radio' || r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug' || r.page === 'ma';
   const showRcol = rcol && !noRcol;
   const air = s?.input === 'airplay' && s.airplay_device ? 'Fra ' + s.airplay_device : '';
   const rb = (key: string, label: string, on: boolean, onClick: () => void, badge = 0) => (
@@ -182,6 +186,7 @@ function Desktop() {
         <span class="rhead">LYTT</span>
         {NAV.filter(([id]) => id !== 'eq').map(([id, n]) => rb(id, n, r.page === id, () => go(id)))}
         {libs.map(([id, n]) => rb(id, n, r.page === 'lib' && r.cat === id, () => go('lib', id)))}
+        {rb('ma', 'Music Assistant', r.page === 'ma', () => go('ma'))}
         {rb('eq', 'Equalizer', r.page === 'eq', () => go('eq'))}
         <hr />
         <span class="rhead">OPPSETT</span>
@@ -210,9 +215,10 @@ function Desktop() {
           {r.page !== 'home' && <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>}
           {r.page === 'home' && <DeskHome />}
           {r.page === 'play' && <DeskPlayer />}
-          {r.page === 'radio' && <DeskRadio />}
+          {r.page === 'radio' && <RadioTabs />}
+          {r.page === 'ma' && <MaPage />}
           {r.page === 'rooms' && <RoomsPhone wide />}
-          {r.page === 'lib' && <DeskLibrary key={r.cat} lib={r.cat === 'ytm' ? 'ytm' : 'nd'} />}
+          {r.page === 'lib' && (r.cat === 'ytm' && maConfigured() ? <MaPage provider="YouTube Music" /> : <DeskLibrary key={r.cat} lib={r.cat === 'ytm' ? 'ytm' : 'nd'} />)}
           {r.page === 'grp' && <GroupsPage />}
           {r.page === 'int' && <IntegrationsPage />}
           {r.page === 'plug' && <PluginsPage />}
@@ -263,3 +269,18 @@ function PlayerPicker() {
     </>
   );
 }
+
+const radioTab = signal(0);
+/** Radio-siden: kanaler (som før) og NRK «Program og podkaster». */
+function RadioTabs({ phone }: { phone?: boolean }) {
+  const t = radioTab.value;
+  return (
+    <div class="col gap16">
+      <div style="display:flex;gap:6px">
+        {['Kanaler', 'Program og podkaster'].map((n, i) => <button key={n} onClick={() => (radioTab.value = i)} style={`height:36px;padding:0 14px;border-radius:999px;border:1px solid ${t === i ? '#f2f2ee' : '#2e2e30'};background:${t === i ? '#f2f2ee' : 'transparent'};color:${t === i ? '#0b0b0c' : '#c9c9c4'};font-size:13px;cursor:pointer`}>{n}</button>)}
+      </div>
+      {t === 1 ? <NrkPanel /> : phone ? <RadioPage /> : <DeskRadio />}
+    </div>
+  );
+}
+function routeCat(): string | undefined { return route.value.cat; }
