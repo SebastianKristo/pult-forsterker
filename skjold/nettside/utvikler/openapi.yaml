@@ -1207,6 +1207,168 @@ paths:
         required: true
         schema:
           type: string
+  /api/placement:
+    get:
+      tags:
+      - Annet
+      summary: GET/POST /api/placement – innstillinger + siste resultat. POST-bodyen går til pluginen «placement».
+      operationId: get_api_placement
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: GET/POST /api/placement – innstillinger + siste resultat. POST-bodyen går til pluginen «placement».
+      operationId: post_api_placement
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/placement/analyze:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/placement/analyze?n=&lead=0.5 (WAV eller rå s16le) → ankomst, forsinkelse og nivå per høyttaler.
+      operationId: post_api_placement_analyze
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/placement/analyze?n=&lead=0.5 (WAV eller rå s16le) → ankomst, forsinkelse og nivå per høyttaler.
+
+        Klienten trimmer opptaket så det starter ved start_at (eller sender ?skip=sekunder).'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/placement/apply:
+    post:
+      tags:
+      - Annet
+      summary: 'POST /api/placement/apply – bruk siste resultat: lokale kanaler → trims her, andre enheter → room_delay_ms der.'
+      operationId: post_api_placement_apply
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/placement/devices:
+    post:
+      tags:
+      - Annet
+      summary: 'POST /api/placement/devices – enhetsmodus: alle høyttalere (hele enheter) spiller etter tur mens alle enhetene'
+      operationId: post_api_placement_devices
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/placement/devices – enhetsmodus: alle høyttalere (hele enheter) spiller etter tur mens alle enhetene
+
+        tar opp; toveis ankomsttider → avstander → posisjoner (MDS). Valgfritt mobilopptak kan senere plassere lytteren.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/placement/play:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/placement/play {channel, at} – kalles av lederen på de andre enhetene.
+      operationId: post_api_placement_play
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/placement/record:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/placement/record {at, dur, n} – ta opp med enhetens mikrofon og returner ankomsttider (enhetsmodus).
+      operationId: post_api_placement_record
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/placement/start:
+    post:
+      tags:
+      - Annet
+      summary: 'POST /api/placement/start – mobilmåling: spill sweep på hver høyttaler etter tur. Klienten tar opp record_s sekunder'
+      operationId: post_api_placement_start
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/placement/start – mobilmåling: spill sweep på hver høyttaler etter tur. Klienten tar opp record_s sekunder
+
+        fra start_at og sender opptaket til /api/placement/analyze.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
   /api/play:
     post:
       tags:

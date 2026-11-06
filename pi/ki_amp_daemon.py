@@ -766,7 +766,7 @@ def dsp_config():
                       + [f"rq{i}" for i in range(len(rq))] + ["loud"])
     try:   # romlig stereo / synk-forsinkelse / trådløs sub (pi/skjold_sync/dspblocks.py)
         from skjold_sync import dspblocks
-        xf, xm, xs = dspblocks.extra(plug_cfg("xtc"), plug_cfg("sync"))
+        xf, xm, xs = dspblocks.extra(plug_cfg("xtc"), plug_cfg("sync"), placement=plug_cfg("placement"))
     except Exception as e:
         print("dspblocks:", e); xf, xm, xs = "", "", []
     xm = f"mixers:{xm}\n" if xm else ""
@@ -3977,8 +3977,10 @@ def _cdsp_probe():
 
 
 PLUGIN_DEFS = [
-    ("xtc", "Romlig stereo", "skjold", "Lyd", "Krysstalekansellering for skrivebordet: bredere stereobilde fra to høyttalere foran deg.",
-     {"strength": 70, "span_cm": 50, "dist_cm": 60}),
+    ("xtc", "Romlig stereo", "skjold", "Lyd", "Krysstalekansellering og virtuell surround (HRTF) fra to høyttalere, tilpasset hvor du sitter.",
+     {"strength": 70, "span_cm": 50, "dist_cm": 60, "mode": "stereo", "surround": 60, "width": 50, "offset_cm": 0}),
+    ("placement", "Høyttalerplassering", "skjold", "Lyd", "Måler hvor høyttalerne står og stiller forsinkelse og nivå per høyttaler for multiroom og 5.1.",
+     {"layout": "2.0", "speakers": [], "trims": {}, "result": {}, "measured": 0}),
     ("sync", "Synkron multiroom", "skjold", "Lyd", "Spill helt synkront i flere rom uten Lyrion, og bruk en enhet som trådløs sub.",
      {"role": "off", "leader": "", "followers": [], "buffer_ms": 200, "room_delay_ms": 0, "sub_mode": "off", "sub_for": "",
       "sub_xover": 80, "sub_phase": 0, "sub_fine_ms": 0.0, "sub_level": 0.0}),
@@ -5260,6 +5262,208 @@ async def h_xtc_test(r):
     return web.json_response({"ok": True, "dur": 6.0})
 
 
+# --- Høyttalerplassering (pi/skjold_placement.py): sweep per høyttaler i tidsluker, mobil- eller enhetsmikrofon ---
+MIC_DEV = os.environ.get("SKJOLD_MIC_DEV", "default")
+_place_last = {}
+
+
+def _placement_speakers():
+    sp = plug_cfg("placement")["speakers"]
+    return sp or [{"name": "Venstre", "host": "", "channel": "L", "role": "L"}, {"name": "Høyre", "host": "", "channel": "R", "role": "R"}]
+
+
+def _place_play_local(channel, at, level=0.4):
+    """Spill placement-sweepen på kanal L/R/both ved klokkeslett «at» (time.time())."""
+    import numpy as np, wave, skjold_placement as pl
+    x = (np.clip(pl.sweep() * level, -1, 1) * 32767).astype("<i2")
+    z = np.zeros_like(x)
+    st = np.stack([x if channel in ("L", "both") else z, x if channel in ("R", "both") else z], 1)
+    path = f"/tmp/skjold-place-{channel}.wav"
+    with wave.open(path, "wb") as w:
+        w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000); w.writeframes(st.tobytes())
+    time.sleep(max(0.0, at - time.time()))
+    subprocess.run(["aplay", "-q", "-D", "default", path], timeout=10, check=False)
+
+
+def _place_remote(host, path, body, timeout=15):
+    url = f"http://{host if ':' in host else host + ':8765'}{path}"
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as f:
+        return json.loads(f.read() or b"{}")
+
+
+def _place_schedule(speakers, lead=2.0):
+    """Planlegg sweeps: høyttaler i spiller i luke i. Returnerer (start_at, [slot-starttider])."""
+    import skjold_placement as pl
+    t0 = time.time() + lead
+    slots = [t0 + a for a, _b in pl.sequence_signal(len(speakers), lead_s=0.5)]
+    for sp, at in zip(speakers, slots):
+        if sp.get("host"):
+            threading.Thread(target=lambda h=sp["host"], c=sp.get("channel", "both"), a=at: _safe(lambda: _place_remote(h, "/api/placement/play", {"channel": c, "at": a})), daemon=True).start()
+        else:
+            threading.Thread(target=_place_play_local, args=(sp.get("channel", "both"), at), daemon=True).start()
+    return t0, slots
+
+
+def _safe(fn):
+    try:
+        return fn()
+    except Exception as e:
+        print("plassering:", e)
+        return None
+
+
+def _place_record_local(at, dur):
+    """Ta opp mikrofonen på denne enheten fra «at» i dur sekunder → numpy float. None uten mikrofon."""
+    import numpy as np
+    time.sleep(max(0.0, at - time.time()))
+    p = subprocess.run(["arecord", "-q", "-D", MIC_DEV, "-f", "S16_LE", "-c", "1", "-r", "48000", "-d", str(int(math.ceil(dur))), "-t", "raw"],
+                       capture_output=True, timeout=dur + 10)
+    if p.returncode or not p.stdout:
+        return None
+    return np.frombuffer(p.stdout, "<i2").astype(float) / 32768
+
+
+async def h_placement(r):
+    """GET/POST /api/placement – innstillinger + siste resultat. POST-bodyen går til pluginen «placement»."""
+    if r.method == "POST":
+        try:
+            plugin_update("placement", await r.json())
+        except (ValueError, TypeError) as e:
+            return web.json_response({"error": str(e)}, status=400)
+    return web.json_response({**plug_cfg("placement"), "speakers_eff": _placement_speakers(), "mic": MIC_DEV, "last": _place_last})
+
+
+async def h_placement_play(r):
+    """POST /api/placement/play {channel, at} – kalles av lederen på de andre enhetene."""
+    b = await r.json()
+    ch = b.get("channel", "both") if b.get("channel") in ("L", "R", "both") else "both"
+    at = float(b.get("at") or time.time() + 0.5)
+    if abs(at - time.time()) > 60:
+        return web.json_response({"error": "tidspunkt for langt unna"}, status=400)
+    threading.Thread(target=_place_play_local, args=(ch, at), daemon=True).start()
+    return web.json_response({"ok": True})
+
+
+async def h_placement_start(r):
+    """POST /api/placement/start – mobilmåling: spill sweep på hver høyttaler etter tur. Klienten tar opp record_s sekunder
+    fra start_at og sender opptaket til /api/placement/analyze."""
+    import skjold_placement as pl
+    sp = _placement_speakers()
+    t0, slots = _place_schedule(sp, lead=2.0)
+    return web.json_response({"start_at": t0, "now": time.time(), "n": len(sp), "slot_s": pl.SLOT_S, "lead_s": 0.5,
+                              "record_s": 0.5 + len(sp) * pl.SLOT_S + 1.0, "speakers": sp})
+
+
+async def h_placement_analyze(r):
+    """POST /api/placement/analyze?n=&lead=0.5 (WAV eller rå s16le) → ankomst, forsinkelse og nivå per høyttaler.
+    Klienten trimmer opptaket så det starter ved start_at (eller sender ?skip=sekunder)."""
+    global _place_last
+    import skjold_placement as pl, skjold_roomeq as rq
+    body = await r.read()
+    if len(body) > 40 * 1024 * 1024:
+        return web.json_response({"error": "opptaket er for stort"}, status=413)
+    sp = _placement_speakers()
+    n = int(r.query.get("n") or len(sp))
+    skip = float(r.query.get("skip") or 0)
+
+    def work():
+        x, sr = rq.decode(body, r.headers.get("Content-Type", ""), int(r.query.get("sr") or 48000))
+        if sr != pl.SR:
+            x = rq._resample(x, sr, pl.SR)
+        x = x[int(max(0.0, skip) * pl.SR):]
+        arr = pl.arrivals(x, n, pl.SR, float(r.query.get("lead") or 0.5))
+        al = pl.align(arr)
+        out = {"mode": "phone", "arrivals": arr, "align": al, "speakers": sp[:n], "t": time.time()}
+        if any(a["snr_db"] < 15 for a in arr):
+            out["warning"] = "svakt signal fra minst én høyttaler – skru opp volumet eller flytt mobilen nærmere"
+        lc = [i for i, s in enumerate(sp[:n]) if not s.get("host") and s.get("channel") in ("L", "R")]
+        if len(lc) == 2 and arr[lc[0]]["t_ms"] is not None and arr[lc[1]]["t_ms"] is not None:
+            x_cfg = plug_cfg("xtc")
+            iL = lc[0] if sp[lc[0]]["channel"] == "L" else lc[1]
+            iR = lc[1] if iL == lc[0] else lc[0]
+            import skjold_spatial
+            out["offset_cm"] = skjold_spatial.offset_from_tdoa(x_cfg["span_cm"], x_cfg["dist_cm"], arr[iR]["t_ms"] - arr[iL]["t_ms"])
+        return out
+    try:
+        _place_last = await asyncio.get_running_loop().run_in_executor(None, work)
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=400)
+    return web.json_response(_place_last)
+
+
+async def h_placement_record(r):
+    """POST /api/placement/record {at, dur, n} – ta opp med enhetens mikrofon og returner ankomsttider (enhetsmodus)."""
+    import skjold_placement as pl
+    b = await r.json()
+    at, dur, n = float(b.get("at") or time.time()), float(b.get("dur") or 6), int(b.get("n") or 2)
+    x = await asyncio.get_running_loop().run_in_executor(None, _place_record_local, at, min(dur, 30))
+    if x is None:
+        return web.json_response({"error": "ingen mikrofon på denne enheten"}, status=409)
+    return web.json_response({"arrivals": pl.arrivals(x, n)})
+
+
+async def h_placement_devices(r):
+    """POST /api/placement/devices – enhetsmodus: alle høyttalere (hele enheter) spiller etter tur mens alle enhetene
+    tar opp; toveis ankomsttider → avstander → posisjoner (MDS). Valgfritt mobilopptak kan senere plassere lytteren."""
+    global _place_last
+    import numpy as np, skjold_placement as pl
+    sp = [s for s in _placement_speakers()]
+    if len(sp) < 3:
+        return web.json_response({"error": "trenger minst tre enheter med mikrofon for å finne posisjoner"}, status=400)
+    n = len(sp)
+    dur = 0.5 + n * pl.SLOT_S + 1.0
+    t0, _slots = _place_schedule(sp, lead=3.0)
+    loop = asyncio.get_running_loop()
+
+    def rec(s):
+        if s.get("host"):
+            return _place_remote(s["host"], "/api/placement/record", {"at": t0, "dur": dur, "n": n}, timeout=dur + 20)
+        x = _place_record_local(t0, dur)
+        return {"arrivals": pl.arrivals(x, n)} if x is not None else {"error": "ingen mikrofon"}
+    res = await asyncio.gather(*[loop.run_in_executor(None, lambda s=s: _safe(lambda: rec(s))) for s in sp])
+    T = np.zeros((n, n))
+    for j, rj in enumerate(res):
+        if not rj or "arrivals" not in rj or any(a["t_ms"] is None for a in rj["arrivals"]):
+            return web.json_response({"error": f"{sp[j].get('name') or sp[j].get('host') or 'denne'}: {(rj or {}).get('error', 'ingen svar')}"}, status=409)
+        for i, a in enumerate(rj["arrivals"]):
+            T[i, j] = a["t_ms"] / 1000
+    roles = [s.get("role") for s in sp]
+    front = roles.index("C") if "C" in roles else None
+    left = roles.index("L") if "L" in roles else None
+    phone = (_place_last or {}).get("arrivals") if (_place_last or {}).get("mode") == "phone" else None
+    lt = [a["t_ms"] for a in phone] if phone and len(phone) == n else None
+    out = pl.solve(T, lt, front=front, layout=plug_cfg("placement")["layout"], left=left)
+    _place_last = {"mode": "devices", **out, "speakers": sp, "t": time.time(), "listener_measured": lt is not None}
+    return web.json_response(_place_last)
+
+
+async def h_placement_apply(r):
+    """POST /api/placement/apply – bruk siste resultat: lokale kanaler → trims her, andre enheter → room_delay_ms der."""
+    last = _place_last or {}
+    al = last.get("align") or last.get("trims")
+    if not al:
+        return web.json_response({"error": "ingen måling ennå"}, status=400)
+    sp = last.get("speakers") or _placement_speakers()
+    trims, remote = {}, []
+    for s, t in zip(sp, al):
+        if not s.get("host") and s.get("channel") in ("L", "R"):
+            trims[s["channel"]] = {"delay_ms": t["delay_ms"], "gain_db": t["gain_db"]}
+        elif s.get("host"):
+            remote.append((s["host"], t))
+        else:
+            trims["L"] = trims["R"] = {"delay_ms": t["delay_ms"], "gain_db": t["gain_db"]}
+    plugin_update("placement", {"enabled": True, "trims": trims, "result": {k: last.get(k) for k in ("positions", "angles", "roles") if k in last}, "measured": int(time.time())})
+    done = []
+    for host, t in remote:
+        ok = _safe(lambda: _place_remote(host, "/api/sync", {"room_delay_ms": t["delay_ms"]}))
+        _safe(lambda: _place_remote(host, "/api/placement", {"enabled": True, "trims": {"L": {"delay_ms": 0, "gain_db": t["gain_db"]}, "R": {"delay_ms": 0, "gain_db": t["gain_db"]}}}))
+        done.append({"host": host, "ok": ok is not None})
+    if "offset_cm" in last:
+        plugin_update("xtc", {"offset_cm": int(round(last["offset_cm"]))})
+    return web.json_response({"ok": True, "trims": trims, "remote": done})
+
+
 _sync_proc = None
 
 
@@ -5813,13 +6017,13 @@ def plugin_update(pid, body):
                            "preset": int(a.get("preset") or 0), "url": str(a.get("url") or "")[:500],
                            "volume": max(0, min(100, int(a.get("volume", 30)))), "fade": max(0, min(30, int(a.get("fade", 0) or 0))), "on": bool(a.get("on", True))})
             v = al
-        if pid in ("xtc", "sync"):
+        if pid in ("xtc", "sync", "placement"):
             from skjold_sync import dspblocks
             v = dspblocks.sanitize(k, v)
         if pid == "speakers":
             v = speakers_sanitize(k, v)
         cfg[k] = v
-    if pid in ("xtc", "sync"):
+    if pid in ("xtc", "sync", "placement"):
         _plug_save(pid, cfg)
     if pid in ("roomeq", "xtc", "sync", "speakers"):
         dsp.update()
@@ -7296,7 +7500,7 @@ def main():
     app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/recordings/feed.xml", h_rec_feed), web.get("/api/recordings/prog/{prog}/{name}", h_rec_prog_file), web.get("/api/recordings/guide", h_rec_guide), web.get("/api/changelog", h_changelog), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/speakers", h_speakers), web.post("/api/speakers", h_speakers), web.post("/api/speakers/measure", h_speakers_measure), web.post("/api/speakers/save", h_speakers_save), web.get("/api/speakers/search", h_speakers_search), web.get("/api/speakers/profile/{pid}", h_speakers_profile), web.post("/api/speakers/share", h_speakers_share), web.post("/api/speakers/flag", h_speakers_share), web.post("/api/speakers/calibration", h_speakers_calibration), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/recordings/feed.xml", h_rec_feed), web.get("/api/recordings/prog/{prog}/{name}", h_rec_prog_file), web.get("/api/recordings/guide", h_rec_guide), web.get("/api/changelog", h_changelog), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/placement", h_placement), web.post("/api/placement", h_placement), web.post("/api/placement/play", h_placement_play), web.post("/api/placement/start", h_placement_start), web.post("/api/placement/analyze", h_placement_analyze), web.post("/api/placement/record", h_placement_record), web.post("/api/placement/devices", h_placement_devices), web.post("/api/placement/apply", h_placement_apply), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/speakers", h_speakers), web.post("/api/speakers", h_speakers), web.post("/api/speakers/measure", h_speakers_measure), web.post("/api/speakers/save", h_speakers_save), web.get("/api/speakers/search", h_speakers_search), web.get("/api/speakers/profile/{pid}", h_speakers_profile), web.post("/api/speakers/share", h_speakers_share), web.post("/api/speakers/flag", h_speakers_share), web.post("/api/speakers/calibration", h_speakers_calibration), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

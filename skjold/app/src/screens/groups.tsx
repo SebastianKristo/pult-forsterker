@@ -3,7 +3,7 @@ import { useRef, useState } from 'preact/hooks';
 import { PRODUCT_LABEL, type Status } from '../lib/api';
 import { go, setVolume } from '../lib/store';
 import { PRODUCT_ICON } from '../components/ui';
-import { SyncSubCard } from './advaudio';
+import { PlacementCard, SyncSubCard } from './advaudio';
 import { activeKey, setVolAt, useRooms, type Room } from './phone';
 import { applyLayout, delayMs, groupAll, groupNone, groups, inGroup, LAYOUTS, members, placeRoom, ROLE_FULL, ROLES, savePreset, setGset, setMembers, setMode, SLOT_POS, toggleMember } from '../lib/groups';
 
@@ -161,6 +161,7 @@ export function GroupsPage() {
       )}
       <span style="font-size:11px;color:#c9b48a;line-height:1.45">Gruppen lagres i appen. Synk-motoren under spiller i takt uten Lyrion.</span>
       <SyncSubCard />
+      <PlacementCard />
     </div>
   );
 }
