@@ -11,7 +11,7 @@ if [ -f "$SRC/../skjold/app/dist/index.html" ]; then
 else
   WEB_URL="$(curl -fsSL --max-time 20 -H 'Accept: application/vnd.github+json' \
       'https://api.github.com/repos/SebastianKristo/pult-forsterker/releases?per_page=30' 2>/dev/null | python3 -c '
-import json, sys
+import json, os, sys
 try: rels = json.load(sys.stdin)
 except Exception: sys.exit(0)
 def ver(t):   # skjold-v0.1.14 -> (0, 1, 14): høyeste versjon vinner, uansett rekkefølgen GitHub lister i
@@ -19,7 +19,7 @@ def ver(t):   # skjold-v0.1.14 -> (0, 1, 14): høyeste versjon vinner, uansett r
     except Exception: return (0,)
 best = None
 for r in rels:
-    if r.get("draft") or r.get("prerelease") or not str(r.get("tag_name", "")).startswith("skjold-v"): continue
+    if r.get("draft") or (r.get("prerelease") and os.environ.get("SKJOLD_CHANNEL") != "beta") or not str(r.get("tag_name", "")).startswith("skjold-v"): continue
     for a in r.get("assets", []):
         n = a.get("name", "")
         if n.startswith("skjold-web-") and n.endswith(".zip") and a.get("state", "uploaded") == "uploaded":

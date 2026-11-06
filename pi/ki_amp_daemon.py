@@ -124,6 +124,7 @@ import subprocess
 import time
 import base64
 import hashlib
+import glob
 import shlex
 import shutil
 import urllib.parse
@@ -1458,7 +1459,8 @@ def read_status():
             "sky": sky.kort(), "sleep": sleep_left(), "autostandby": autostandby_left(), "kids": plug_on("kids"), "subwave": subwave_playing(),
             "ui": s1f_ui(), "hw_rev": "F" if S1F else "",
             "night": {"on": bool(state.get("night")), "src": (state.get("night_ev") or {}).get("src", ""),
-                      "steps": (state.get("night_ev") or {}).get("steps") or [], "t": (state.get("night_ev") or {}).get("t", 0)}}
+                      "steps": (state.get("night_ev") or {}).get("steps") or [], "t": (state.get("night_ev") or {}).get("t", 0)},
+            **feat_status()}
 
 
 # ---------- USB-delingsswitch (Ugreen 2 PC → 4 USB) ----------
@@ -3761,15 +3763,23 @@ def _read_text(path):
         return ""
 
 
+def _beta():
+    try:
+        return int(settings().get("updChannel") or 0) == 1
+    except Exception:
+        return False
+
+
 def _latest_release():
-    if time.time() - _upd_latest["t"] < 600 and _upd_latest["tag"]:
+    beta = _beta()
+    if time.time() - _upd_latest["t"] < 600 and _upd_latest["tag"] and _upd_latest.get("beta") == beta:
         return _upd_latest["tag"]
     req = urllib.request.Request("https://api.github.com/repos/SebastianKristo/pult-forsterker/releases?per_page=30",
                                  headers={"Accept": "application/vnd.github+json", "User-Agent": "Skjold"})
     with urllib.request.urlopen(req, timeout=8) as r:
         rels = json.loads(r.read())
-    tags = [x["tag_name"] for x in rels if not x.get("draft") and not x.get("prerelease") and str(x.get("tag_name", "")).startswith("skjold-v")]
-    _upd_latest.update(t=time.time(), tag=max(tags, key=_rel_ver) if tags else "")
+    tags = [x["tag_name"] for x in rels if not x.get("draft") and (beta or not x.get("prerelease")) and str(x.get("tag_name", "")).startswith("skjold-v")]
+    _upd_latest.update(t=time.time(), tag=max(tags, key=_rel_ver) if tags else "", beta=beta)
     return _upd_latest["tag"]
 
 
@@ -3791,7 +3801,9 @@ def update_info(check=True):
     return {"current": cur or None, "version": VERSION, "latest": latest or None,
             "available": bool(latest) and (not cur or cur == "lokal" or _rel_ver(latest) > _rel_ver(cur)),
             "running": _upd_running(), "result": last.split(":", 1)[1].strip() if last else None,
-            "log": [l for l in log if not l.startswith("SKJOLD-RESULTAT:")][-30:], "can_update": bool(src), "error": err or None}
+            "log": [l for l in log if not l.startswith("SKJOLD-RESULTAT:")][-30:], "can_update": bool(src), "error": err or None,
+            "channel": "beta" if _beta() else "stabil", "can_rollback": bool(glob.glob("/var/lib/skjold/rollback/2*")),
+            "rolled_back": bool(last) and "rullet tilbake" in last}
 
 
 def start_update():
@@ -3800,11 +3812,21 @@ def start_update():
         raise RuntimeError("Fant ikke kildetreet (kjør pi/update.sh én gang fra terminalen først)")
     if _upd_running():
         return
-    script = (f"cd {shlex.quote(src)} && echo \"== $(date '+%F %T') Henter nyeste versjon\" && "
-              "git -c safe.directory='*' pull --ff-only && "
-              "echo '== Installerer' && bash pi/update.sh && "
+    # Stabil: gå til nyeste stabile release-tag (aldri bakover); Beta: siste main. Øyeblikksbilde først, helsesjekk etterpå.
+    try:
+        tag = "" if _beta() else _latest_release()
+    except Exception:
+        tag = ""
+    target = (f"T={shlex.quote(tag)}; if git -c safe.directory='*' merge-base --is-ancestor \"$T\" HEAD 2>/dev/null; then echo \"== Har allerede $T\"; "
+              f"else B=$(git rev-parse --abbrev-ref HEAD); [ \"$B\" = HEAD ] && B=main; git -c safe.directory='*' checkout -q -B \"$B\" \"$T\"; fi"
+              if tag else "git -c safe.directory='*' pull --ff-only")
+    script = (f"cd {shlex.quote(src)} && echo \"== $(date '+%F %T') Henter nyeste versjon ({'beta' if _beta() else 'stabil'})\" && "
+              "{ python3 /usr/local/bin/skjold_safeupdate.py snapshot \"$PWD\" >/dev/null 2>&1 || python3 pi/skjold_safeupdate.py snapshot \"$PWD\" >/dev/null 2>&1 || true; } && "
+              "git -c safe.directory='*' fetch -q --tags origin && " + target + " && "
+              f"echo '== Installerer' && SKJOLD_CHANNEL={'beta' if _beta() else 'stabil'} bash pi/update.sh && "
               "{ [ -f /etc/systemd/system/skjold-os.service ] && [ -f skjold/os/install.sh ] && bash skjold/os/install.sh || true; }; "
-              "rc=$?; [ $rc = 0 ] && echo 'SKJOLD-RESULTAT: ok' || echo \"SKJOLD-RESULTAT: feil ($rc)\"")
+              "rc=$?; if [ $rc = 0 ]; then echo 'SKJOLD-RESULTAT: ok'; systemctl start --no-block skjold-healthcheck.service 2>/dev/null || true; "
+              "else echo \"SKJOLD-RESULTAT: feil ($rc)\"; python3 /usr/local/bin/skjold_safeupdate.py rollback \"installasjonen feilet ($rc)\" || true; fi")
     with open(UPD_LOG, "w") as fh:
         fh.write("== Starter oppdatering\n")
     # egen systemd-enhet: overlever at ki-amp startes på nytt underveis
@@ -3819,8 +3841,20 @@ async def h_update_get(r):
     return web.json_response(await asyncio.get_running_loop().run_in_executor(None, update_info, check))
 
 
-async def h_update_post(_r):
-    """POST /api/update → henter nyeste versjon (git pull + update.sh) i bakgrunnen. Følg med via GET /api/update."""
+async def h_update_post(r):
+    """POST /api/update → henter nyeste versjon (git pull + update.sh) i bakgrunnen. Følg med via GET /api/update.
+    {"rollback": true} legger tilbake forrige versjon (øyeblikksbildet fra siste oppdatering)."""
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    if b.get("rollback"):
+        if _upd_running():
+            return web.json_response({"error": "en oppdatering pågår"}, status=409)
+        subprocess.run(["systemd-run", "--unit=skjold-update", "--collect", "--quiet",
+                        "-p", f"StandardOutput=append:{UPD_LOG}", "-p", f"StandardError=append:{UPD_LOG}",
+                        "/usr/bin/python3", "/usr/local/bin/skjold_safeupdate.py", "rollback", "manuelt"], check=False, timeout=10)
+        return web.json_response(await asyncio.get_running_loop().run_in_executor(None, update_info, False))
     try:
         await asyncio.get_running_loop().run_in_executor(None, start_update)
     except Exception as e:
@@ -5919,6 +5953,295 @@ async def h_sky_post(r):
     return web.json_response({"error": "oppgi kode eller koble_fra"}, status=400)
 
 
+# ---------- Intercom, låtgjenkjenning/vinylmodus, dørklokke, rutiner og trygg oppdatering (egne moduler) ----------
+import skjold_intercom as _icmod      # noqa: E402
+import skjold_recognize as _rcmod     # noqa: E402
+import skjold_doorbell as _dbmod      # noqa: E402
+import skjold_routines as _rtmod      # noqa: E402
+FEAT_DIR = os.path.dirname(STATE_FILE)
+FEAT_FILE = os.path.join(FEAT_DIR, "features.json")
+FEAT_DEF = {"recognize": {"acoustid_key": "", "audd_token": "", "seconds": 12, "vinyl_aux": False, "vinyl_aux2": False,
+                          "vinyl_usb": False, "vinyl_manual": False},
+            "s1_hold": {"aux": "", "usb": ""}}
+_feat = {"cfg": None, "last_hit": None, "vinyl": None}
+
+
+def feat_cfg():
+    if _feat["cfg"] is None:
+        c = json.loads(json.dumps(FEAT_DEF))
+        try:
+            with open(FEAT_FILE) as fh:
+                for k, v in json.load(fh).items():
+                    if k in c and isinstance(v, dict):
+                        c[k].update({kk: vv for kk, vv in v.items() if kk in c[k]})
+        except Exception:
+            pass
+        _feat["cfg"] = c
+    return _feat["cfg"]
+
+
+def feat_save():
+    os.makedirs(FEAT_DIR, exist_ok=True)
+    with open(FEAT_FILE + ".tmp", "w") as fh:
+        json.dump(feat_cfg(), fh)
+    os.chmod(FEAT_FILE + ".tmp", 0o600)
+    os.replace(FEAT_FILE + ".tmp", FEAT_FILE)
+
+
+def feat_public():
+    c = json.loads(json.dumps(feat_cfg()))
+    for k in ("acoustid_key", "audd_token"):
+        if c["recognize"].get(k):
+            c["recognize"][k] = "••••••"
+    return c
+
+
+def _peers():
+    lan = getattr(sky, "lan", None)
+    return [{"id": p.get("id"), "navn": p.get("navn"), "base": f"http://{p['ip']}:{int(p['port'])}"}
+            for p in (lan.peers.values() if lan else []) if p.get("ip") and p.get("port")]
+
+
+def _local(path, body=None):
+    req = urllib.request.Request(f"http://127.0.0.1:{PORT}{path}", data=json.dumps(body or {}).encode(), method="POST",
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read() or b"{}")
+
+
+def _tts(text):
+    try:
+        return voice._wav(str(text)[:400])
+    except Exception as e:   # verken piper eller espeak-ng
+        print("Tekst til tale:", e, flush=True)
+        return None
+
+
+intercom = _icmod.Intercom({"announce": announce_url, "get_volume": lambda: state["volume"], "set_volume": set_volume,
+                            "peers": _peers, "self_id": socket.gethostname, "tts": _tts})
+doorbell = _dbmod.Doorbell({"announce": announce_url, "get_volume": lambda: state["volume"], "set_volume": set_volume,
+                            "peers": _peers, "changed": changed, "make_tone": _icmod.make_tone, "tmpdir": "/tmp"},
+                           os.path.join(FEAT_DIR, "doorbell.json"))
+threading.Thread(target=doorbell.watch, daemon=True).start()
+
+
+def _preset_n(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        name = str(v or "").strip().lower()
+        for i, p in enumerate(state.get("presets") or []):
+            if p and str(p.get("title", "")).lower() == name:
+                return i + 1
+        raise ValueError(f"fant ikke radiofavoritten «{v}»")
+
+
+def routine_step(st):
+    """Ett rutine-steg utført her (rom-steg sendes til den andre Skjold av skjold_routines)."""
+    t, v = st["type"], st.get("verdi")
+    if t == "power":
+        set_power(bool(v))
+    elif t == "input":
+        set_input(str(v))
+    elif t == "preset":
+        set_power(True); play_preset(_preset_n(v))
+    elif t == "play_url":
+        set_power(True); play_url(str(v), st.get("tittel") or "")
+    elif t == "nrk":
+        set_power(True); _local("/api/nrk/play", {"query": v} if not str(v).isdigit() else {"id": v})
+    elif t == "ma":
+        set_power(True); _local("/api/ma/play", {"uri": v})
+    elif t == "volume":
+        set_volume(int(v))
+    elif t == "eq" and isinstance(v, dict):
+        update_settings({"eq": v})
+    elif t == "announce":
+        intercom.send(None, "", to="self", text=str(v), hop=True)
+    elif t == "sleep":
+        sleep_start(int(v or 0))
+    elif t == "night":
+        night_set(bool(v), "Rutine")
+
+
+routines = _rtmod.Routines({"do": routine_step, "peers": _peers,
+                            "names": lambda: {str(NAME).lower(), socket.gethostname().lower(), "her", "dette rommet"}},
+                           os.path.join(FEAT_DIR, "routines.json"))
+wishlist = _rcmod.Wishlist(os.path.join(FEAT_DIR, "wishlist.json"))
+
+
+def _nd():
+    s_ = settings()
+    if s_.get("ndUrl") and s_.get("ndUser") and s_.get("ndPass"):
+        return _rcmod.Subsonic(s_["ndUrl"], s_["ndUser"], s_["ndPass"])
+    return None
+
+
+def _vinyl_dev(inp):
+    if S1F:
+        return {"aux": "plughw:UCA_AUX1", "aux2": "plughw:UCA_AUX2"}.get(inp, os.environ.get("KI_AMP_VINYL_DEV", DSP_CAPTURE))
+    return os.environ.get("KI_AMP_VINYL_DEV", DSP_CAPTURE)
+
+
+def _vinyl_meta(m):
+    _feat["vinyl"] = m
+    changed()
+
+
+vinyl = _rcmod.VinylWatcher({"active_input": lambda: state["input"] if state.get("power") else "",
+                             "enabled_for": lambda i: bool(feat_cfg()["recognize"].get("vinyl_" + i)) and bool(feat_cfg()["recognize"].get("acoustid_key") or feat_cfg()["recognize"].get("audd_token")),
+                             "cfg": lambda: feat_cfg()["recognize"], "device": _vinyl_dev, "set_meta": _vinyl_meta,
+                             "log_track": lambda e: history_add({**e, "t": time.time(), "input": state["input"]})})
+threading.Thread(target=vinyl.run, daemon=True).start()
+
+
+def feat_status():
+    out = {"doorbell": doorbell.status(), "recognized": _feat["last_hit"] if _feat["last_hit"] and time.time() - _feat["last_hit"].get("t", 0) < 600 else None}
+    m = _feat["vinyl"]
+    if m and state.get("input") in ("aux", "aux2", "usb"):
+        out.update({"title": m["title"], "artist": m["artist"], "album": m["album"], "cover_url": m.get("art", ""),
+                    "vinyl": {"tracks": m.get("tracks") or [], "pos": m.get("pos"), "via": m.get("via", "")}})
+    return out
+
+
+def recognize_now():
+    """«Hva er dette?»: radio/strøm tas opp fra URL-en, ellers fra lydinngangen."""
+    cfg = feat_cfg()["recognize"]
+    if state.get("input") in ("aux", "aux2", "usb") and (cfg.get("vinyl_" + state["input"]) or cfg.get("vinyl_manual")):
+        vinyl.manual = True   # vinylmodus tar det fra sin egen lydbuffer
+    url = (lyr.info or {}).get("url", "") if state.get("input") == "radio" else ""
+    res = _rcmod.recognize(cfg, url=url if url.startswith("http") else "", device="" if url else _vinyl_dev(state.get("input", "")))
+    _feat["last_hit"] = res
+    changed()
+    return res
+
+
+async def _json(r):
+    try:
+        return await r.json()
+    except Exception:
+        return {}
+
+
+async def h_features(r):
+    if r.method == "POST":
+        b = await _json(r)
+        c = feat_cfg()
+        for sec in ("recognize", "s1_hold"):
+            for k, v in (b.get(sec) or {}).items():
+                if k in c[sec] and not (isinstance(v, str) and v.startswith("••••")):
+                    c[sec][k] = (bool(v) if isinstance(FEAT_DEF[sec][k], bool) else int(v) if isinstance(FEAT_DEF[sec][k], int) else str(v)[:300])
+        feat_save()
+    return web.json_response(feat_public())
+
+
+async def h_intercom(r):
+    loop = asyncio.get_running_loop()
+    ctype = r.headers.get("Content-Type", "")
+    text, to, data = r.query.get("text", ""), r.query.get("to", "all"), b""
+    if ctype.startswith("multipart/"):
+        async for part in (await r.multipart()):
+            if part.name == "to":
+                to = (await part.text()) or to
+            elif part.name == "text":
+                text = await part.text()
+            elif part.name in ("file", "audio"):
+                ctype = part.headers.get("Content-Type", "audio/webm"); data = bytes(await part.read())
+    elif ctype.startswith("application/json"):
+        b = await _json(r); text, to = str(b.get("text") or ""), b.get("to") or to
+    else:
+        data = await r.read()
+    try:
+        res = await loop.run_in_executor(None, lambda: intercom.send(data or None, ctype, to=to, text=text,
+                                                                     sender=r.headers.get("X-Skjold-From", ""), hop=r.query.get("hop") == "1"))
+    except ValueError as e:
+        return web.json_response({"error": str(e)}, status=400)
+    return web.json_response(res)
+
+
+async def h_recognize(r):
+    if r.method == "GET":
+        return web.json_response({"last": _feat["last_hit"], "wishlist": wishlist.load()})
+    b = await _json(r)
+    loop = asyncio.get_running_loop()
+    try:
+        if b.get("wish"):
+            hit = b["wish"] if isinstance(b["wish"], dict) else (_feat["last_hit"] or {})
+            if not hit.get("title"):
+                return web.json_response({"error": "ingenting å lagre"}, status=400)
+            return web.json_response(await loop.run_in_executor(None, lambda: wishlist.add(hit, _nd())))
+        if "remove" in b:
+            return web.json_response({"wishlist": wishlist.remove(int(b["remove"]))})
+        return web.json_response(await loop.run_in_executor(None, recognize_now))
+    except (ValueError, RuntimeError) as e:
+        return web.json_response({"error": str(e)}, status=409)
+
+
+async def h_doorbell(r):
+    if r.method == "GET":
+        return web.json_response(_dbmod.masked(doorbell.cfg))
+    b = await _json(r)
+    if any(k in b for k in _dbmod.DEFAULTS):
+        try:
+            return web.json_response(doorbell.save(b))
+        except ValueError as e:
+            return web.json_response({"error": str(e)}, status=400)
+    if not doorbell.cfg.get("enabled") and r.query.get("hop") != "1" and not b.get("test"):
+        return web.json_response({"error": "dørklokke-modus er av"}, status=409)
+    return web.json_response(doorbell.ring(hop=r.query.get("hop") == "1"))
+
+
+async def h_doorbell_camera(_r):
+    req = _dbmod.camera_request(doorbell.cfg)
+    if not req:
+        return web.json_response({"error": "ingen kamera satt opp"}, status=404)
+    def get():
+        with urllib.request.urlopen(req, timeout=8) as rr:
+            return rr.read(), rr.headers.get("Content-Type", "image/jpeg")
+    try:
+        data, ct = await asyncio.get_running_loop().run_in_executor(None, get)
+    except Exception as e:
+        return web.json_response({"error": f"fikk ikke kamerabildet: {e}"}, status=502)
+    return web.Response(body=data, content_type=ct.split(";")[0], headers={"Cache-Control": "no-store"})
+
+
+async def h_routines(r):
+    rid = r.match_info.get("rid", "")
+    try:
+        if r.method == "GET":
+            return web.json_response({"routines": routines.load(), "running": list(routines.running), "last": routines.last,
+                                      "types": list(_rtmod.STEP_TYPES), "icons": list(_rtmod.ICONS)})
+        if r.method == "DELETE":
+            return web.json_response({"routines": routines.delete(rid)})
+        b = await _json(r)
+        if r.path.endswith("/run"):
+            return web.json_response(routines.run(rid or b.get("id") or b.get("navn") or ""))
+        if r.path.endswith("/steps"):
+            steg = [_rtmod.clean_step(s) for s in b.get("steg") or []]
+            threading.Thread(target=routines.run_steps, args=(steg,), daemon=True).start()
+            return web.json_response({"ok": True, "steg": len(steg)})
+        return web.json_response({"routines": routines.save(b)})
+    except KeyError as e:
+        return web.json_response({"error": str(e).strip("'")}, status=404)
+    except (ValueError, TypeError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+
+
+def s1_hold_routine(btn):
+    """S1-knapp holdt inne: kjør rutinen som er koblet til knappen (AUX/USB), hvis satt. True = håndtert."""
+    rid = feat_cfg()["s1_hold"].get(btn)
+    if rid and routines.find(rid):
+        routines.run(rid)
+        return True
+    return False
+
+
+FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h_features),
+               ("POST", "/api/intercom", h_intercom), ("GET", "/api/recognize", h_recognize), ("POST", "/api/recognize", h_recognize),
+               ("GET", "/api/doorbell", h_doorbell), ("POST", "/api/doorbell", h_doorbell), ("GET", "/api/doorbell/camera", h_doorbell_camera),
+               ("GET", "/api/routines", h_routines), ("POST", "/api/routines", h_routines), ("POST", "/api/routines/steps", h_routines),
+               ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
+
+
 AVAHI_SVC = "/etc/avahi/services/skjold.service"
 
 
@@ -6029,7 +6352,7 @@ def _s1f_api():
               reboot=lambda: system_reboot(why="POWER holdt"), night_toggle=night_toggle, night_set=night_set,
               power_event=power_event, smenu_open=smenu_open, smenu_close=smenu_close, smenu_step=smenu_step,
               smenu_press=smenu_press, smenu_is_open=lambda: bool(smenu["open"]), smenu_idx=lambda: smenu["idx"] if smenu["open"] else None,
-              settings=settings, ui_event=s1f_ui_event, set_headphones=set_headphones, led_scale=lambda: led_level(),
+              settings=settings, ui_event=s1f_ui_event, hold_routine=lambda b: s1_hold_routine(b), set_headphones=set_headphones, led_scale=lambda: led_level(),
               settings_patch=update_settings, settings_reset=lambda: update_settings({k: v for k, v in SETTINGS_DEF.items() if k != "eq"}),
               presets_set=_s1f_presets_set, bt_forget=_bt_forget_all, speaker_test=lambda ch: threading.Thread(target=_test_tone, args=(ch,), daemon=True).start(),
               test_voice=lambda: voice.say("power_on"), preview_clock=lambda: state.update(ui_event={"name": "preview_clock", "t": time.time()}) or changed())
@@ -6196,6 +6519,7 @@ def main():
                                     "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp"}))
     except Exception as e:
         print("Music Assistant/NRK ikke tilgjengelig:", e, flush=True)
+    app.add_routes([web.route(m_, p_, h_) for m_, p_, h_ in FEAT_ROUTES])
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
     webdir = os.environ.get("KI_AMP_WEBAPP", "")
     for cand in ([webdir] if webdir else []) + ["/usr/local/share/ki-amp/webapp", os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")]:
