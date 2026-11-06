@@ -2141,6 +2141,176 @@ paths:
           application/json:
             schema:
               type: object
+  /api/speakers:
+    get:
+      tags:
+      - Annet
+      summary: 'GET/POST /api/speakers – innstillinger og aktiv profil. POST {"use": "<sky-id>"} henter og tar i bruk en delt profil.'
+      operationId: get_api_speakers
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: 'GET/POST /api/speakers – innstillinger og aktiv profil. POST {"use": "<sky-id>"} henter og tar i bruk en delt profil.'
+      operationId: post_api_speakers
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/speakers/calibration:
+    post:
+      tags:
+      - Annet
+      summary: 'POST /api/speakers/calibration (tekst: kalibreringsfil «frekvens dB») → antall punkter; tom kropp fjerner den.'
+      operationId: post_api_speakers_calibration
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/speakers/flag:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/speakers/share – del aktiv egen profil. /api/speakers/flag {id, reason} – flagg en delt profil.
+      operationId: post_api_speakers_flag
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/speakers/measure:
+    post:
+      tags:
+      - Annet
+      summary: 'POST /api/speakers/measure?session=&mode=gated|near&gate=5&reset=1&sr=  (body: WAV/PCM av sweepen)'
+      operationId: post_api_speakers_measure
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/speakers/measure?session=&mode=gated|near&gate=5&reset=1&sr=  (body: WAV/PCM av sweepen)
+
+        → målingen for dette punktet + forhåndsvisning av profilen for økten (snitt av målingene).'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/speakers/profile/{pid}:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/speakers/profile/{pid}
+      operationId: get_api_speakers_profile_pid
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: pid
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/speakers/save:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/speakers/save {session, brand, model, target, sensitivity, impedance, apply, share} → profil (lagres og evt. d
+      operationId: post_api_speakers_save
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/speakers/search:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/speakers/search
+      operationId: get_api_speakers_search
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/speakers/share:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/speakers/share – del aktiv egen profil. /api/speakers/flag {id, reason} – flagg en delt profil.
+      operationId: post_api_speakers_share
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
   /api/spotify:
     get:
       tags:
@@ -2421,6 +2591,84 @@ paths:
             application/json:
               schema:
                 type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/vinyl:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/vinyl
+      operationId: get_api_vinyl
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/vinyl/{act}:
+    delete:
+      tags:
+      - Annet
+      summary: DELETE /api/vinyl/{act}
+      operationId: delete_api_vinyl_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+      - Annet
+      summary: GET /api/vinyl/{act}
+      operationId: get_api_vinyl_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+      - Annet
+      summary: POST /api/vinyl/{act}
+      operationId: post_api_vinyl_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
       requestBody:
         required: false
         content:
