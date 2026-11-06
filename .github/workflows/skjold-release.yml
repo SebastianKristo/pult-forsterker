@@ -236,9 +236,27 @@ jobs:
           name: bruksanvisning
           path: "*.pdf"
 
+  print3d:
+    name: 3D-filer (Kassett og Hjul)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pakk STL, 3MF og kilde
+        run: |
+          mkdir -p ut
+          (cd kabinett && zip -qr ../ut/skjold-kassett-3d.zip kassett -x '*/__pycache__/*')
+          (cd kabinett && zip -qr ../ut/skjold-hjul-3d.zip hjul -x '*/__pycache__/*') && zip -qj ut/skjold-hjul-3d.zip esphome/skjold-hjul.yaml
+          # ferdige plater for slicer (Creality Print / OrcaSlicer) legges også ut hver for seg
+          find kabinett/kassett kabinett/hjul -name '*.3mf' -exec cp {} ut/ \;
+          ls -la ut
+      - uses: actions/upload-artifact@v4
+        with:
+          name: print3d
+          path: ut/*
+
   release:
     name: GitHub Release
-    needs: [web, android-native, ios, ios-native, flasher, manual]
+    needs: [web, android-native, ios, ios-native, flasher, manual, print3d]
     # macOS-jobbene (iOS og Flasher for Mac) blir ofte avbrutt uten maskin (eller når macOS-minuttene er brukt opp) –
     # releasen publiseres likevel når web/Android og PDF gikk gjennom; filene som ble bygget kommer med.
     if: >-
