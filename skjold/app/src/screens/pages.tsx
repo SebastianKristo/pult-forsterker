@@ -8,6 +8,7 @@ import { favs, favsLoaded, loadFavs, playFav } from '../lib/radio';
 import { ndConfigured } from '../lib/navidrome';
 import { Transport, artFor, nowTitle, sourceLine, subLine } from './player';
 import { useRooms } from './phone';
+import { SpatialCard } from './advaudio';
 
 /** Ikke-brytende mellomrom før enheter, som i designet (2 × 50 W). */
 export const nbHw = (s: string) => s.replace(/ (×|W\b|kHz|mm)/g, ' $1').replace(/(\d) ×/g, '$1 ×');
@@ -257,6 +258,7 @@ export function EqPage() {
           <Toggle on={prof.loud} label="Loudness" onChange={(v) => setEqProfile(src, { loud: v })} />
         </div>
       </div>
+      <SpatialCard />
     </div>
   );
 }

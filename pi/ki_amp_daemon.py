@@ -121,6 +121,7 @@ import os
 import re
 import socket
 import subprocess
+import sys
 import time
 import base64
 import hashlib
@@ -4962,6 +4963,45 @@ async def h_roomeq_sweep(r):
     return web.json_response({"f1": 20, "f2": 20000, "dur": 6.0, "sr": 48000, "delay": delay})
 
 
+async def h_xtc_test(r):
+    """POST /api/xtc/test – «Lyttetest»: rosa støy som vandrer venstre → midt → høyre (også brukt som sub-test)."""
+    def run():
+        import wave, skjold_xtc
+        with wave.open("/tmp/skjold-xtc.wav", "wb") as w:
+            w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000); w.writeframes(skjold_xtc.test_signal(48000).tobytes())
+        subprocess.run(["aplay", "-q", "-D", "default", "/tmp/skjold-xtc.wav"], timeout=30, check=False)
+    threading.Thread(target=run, daemon=True).start()
+    return web.json_response({"ok": True, "dur": 6.0})
+
+
+_sync_proc = None
+
+
+def sync_apply():
+    """Start/stopp synk-motoren (python3 -m skjold_sync.engine) etter innstillingene i pluginen «sync»."""
+    global _sync_proc
+    c = plug_cfg("sync")
+    if _sync_proc and _sync_proc.poll() is None:
+        _sync_proc.terminate()
+    _sync_proc = None
+    if not c["enabled"] or c["role"] == "off":
+        return
+    args = (["leader", ",".join(c["followers"]) or "127.0.0.1", str(c["buffer_ms"])] if c["role"] == "leader"
+            else ["follower", c["leader"] or "127.0.0.1", str(c["room_delay_ms"])])
+    _sync_proc = subprocess.Popen([sys.executable, "-m", "skjold_sync.engine", *args], cwd=SRC_DIR)
+
+
+async def h_sync(r):
+    if r.method == "POST":
+        try:
+            plugin_update("sync", await r.json())
+        except (ValueError, TypeError) as e:
+            return web.json_response({"error": str(e)}, status=400)
+        sync_apply()
+    from skjold_sync.engine import status
+    return web.json_response({**plug_cfg("sync"), **status(), "running": bool(_sync_proc and _sync_proc.poll() is None)})
+
+
 async def h_roomeq_analyze(r):
     """POST /api/roomeq/analyze?session=<id>&reset=1&sr=48000  (body: WAV, eller rå s16le mono med ?sr=)
     → {curve, after, filters [{f,q,g}], target, points, point, clipped}. Felles analyse for web, iOS og Android;
@@ -6694,6 +6734,7 @@ def main():
     threading.Thread(target=_plugins_thread, daemon=True).start()
     if plug_cfg("record").get("smb_share"):   # monter SMB-delingen for radioopptak ved oppstart
         threading.Thread(target=rec_smb_ensure, daemon=True).start()
+    threading.Thread(target=sync_apply, daemon=True).start()   # synkron multiroom / trådløs sub
     threading.Thread(target=hk_apply, daemon=True).start()   # Apple Hjem (HomeKit), hvis slått på   # sovetimer, vekkerklokke, volumtak, historikk, scrobbling
     apply_settings()   # navn på USB-switch, maksvolum osv. fra lagrede innstillinger
     usbsw.start()
@@ -6715,7 +6756,7 @@ def main():
     app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

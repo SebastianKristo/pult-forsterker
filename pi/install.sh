@@ -209,6 +209,7 @@ fi
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
 sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" "$SRC/skjold_cloud.py" /usr/local/bin/   # Apple Hjem (HomeKit)
+sudo install -m 644 "$SRC/skjold_xtc.py" /usr/local/bin/ && sudo install -d /usr/local/bin/skjold_sync && sudo install -m 644 "$SRC"/skjold_sync/*.py /usr/local/bin/skjold_sync/   # romlig stereo, synkron multiroom, trådløs sub
 sudo install -m 644 "$SRC/skjold_extras.py" /usr/local/bin/   # Roon, Plexamp, backup, automatisk standby, Skjold Wrapped
 
 # Intercom, låtgjenkjenning (fpcalc/Chromaprint), dørklokke, rutiner og trygg oppdatering (helsesjekk + tilbakerulling)
