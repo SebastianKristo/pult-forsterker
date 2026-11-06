@@ -3,7 +3,7 @@ import { signal, computed, effect } from '@preact/signals';
 import { api, ApiError, coverUrl, logoUrl, credFor, getBase, needsHost, productOf, type Status, type InputId } from './api';
 import { DEF, defaultEq, mergeSettings, type Settings, type EqProfiles, type EqSource } from './settings';
 
-export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib' | 'grp' | 'int' | 'plug' | 'ma';
+export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib' | 'grp' | 'int' | 'plug' | 'ma' | 'kass';
 export interface Route { page: Page; cat?: string }
 
 export const status = signal<Status | null>(null);

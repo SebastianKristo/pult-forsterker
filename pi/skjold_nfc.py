@@ -127,7 +127,11 @@ class NfcStore:
         """Kassett satt inn. Returnerer {known, card, learned, steps}. current(): det som spiller nå (for lær-modus)."""
         k = norm_uid(uid)
         if self.learning():
-            src = dict(self.learn_draft or {}) or (current() if current else {}) or {}
+            draft = dict(self.learn_draft or {})
+            src = draft
+            if not draft.get("handling"):  # bare rom/volum/navn: resten hentes fra det som spiller nå
+                cur = (current() if current else None) or {}
+                src = {**cur, **draft} if cur else {}
             if not src:
                 raise ValueError("ingenting spiller – start noe først, eller velg hva kassetten skal spille")
             src["uid"] = k
