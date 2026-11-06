@@ -144,6 +144,7 @@ export interface HomeKitInfo { enabled: boolean; available: boolean; running: bo
 export type NfcHandling = 'preset' | 'play_url' | 'nrk' | 'ma_uri' | 'navidrome_album' | 'navidrome_playlist' | 'routine';
 export interface NfcCard { uid?: string; navn: string; handling: NfcHandling; verdi: unknown; rom: string[]; volum: number | null; ved_uttak: 'pause' | 'ingenting'; omslag: string; undertittel: string; spilt?: number; sist?: number }
 export interface NfcStatus { learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[] }
+export interface Spoler { 'på': boolean; fart: number; spol: number; bare_kassett: boolean; modus?: 'spill' | 'spol' | 'tilbake' | 'stopp'; rps?: number }
 export interface Routine { id: string; navn: string; ikon?: string }
 export const api = {
   nfc: () => req<NfcStatus>('/api/nfc'),
@@ -151,6 +152,8 @@ export const api = {
   nfcDelete: (uid: string) => req<{ ok: boolean; cards: NfcCard[] }>('/api/nfc/cards/' + encodeURIComponent(uid), { method: 'DELETE' }),
   nfcLearn: (kort: Partial<NfcCard> | null, timeout = 60) => post<{ learning: boolean }>('/api/nfc/learn', { timeout, kort }),
   nfcLearnStop: () => post<{ learning: boolean }>('/api/nfc/learn', { stop: true }),
+  spoler: () => req<Spoler>('/api/nfc/spoler'),
+  spolerSett: (b: Partial<Spoler>) => post<Spoler>('/api/nfc/spoler', b),
   routines: () => req<{ routines?: Routine[] } | Routine[]>('/api/routines'),
   homekit: () => req<HomeKitInfo>('/api/homekit'),
   maStatus: () => req<MaStatus>('/api/ma/status', undefined, undefined, 12000),

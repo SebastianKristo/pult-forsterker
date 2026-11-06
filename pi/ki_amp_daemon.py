@@ -7094,6 +7094,7 @@ FEAT_ROUTES += [("GET", "/api/vinyl", h_vinyl), ("GET", "/api/vinyl/{act}", h_vi
 # ---------- Skjold Kassett: NFC-kassetter (pi/skjold_nfc.py, esphome/skjold-kassett.yaml) ----------
 import skjold_nfc as _nfcmod   # noqa: E402
 nfc = _nfcmod.NfcStore(os.path.join(FEAT_DIR, "nfc_cards.json"))
+spoler = _nfcmod.Spoler(os.path.join(FEAT_DIR, "kassett_spoler.json"))   # spolene i vinduet på Kassett-spilleren
 
 
 def nfc_play_navidrome(kind, item_id):
@@ -7134,7 +7135,7 @@ def nfc_label_image(url):
 
 async def h_nfc(r):
     """POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
-    · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status)."""
+    · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet)."""
     act = r.match_info.get("act", "")
     try:
         b = await r.json() if r.method == "POST" and r.can_read_body else {}
@@ -7151,6 +7152,12 @@ async def h_nfc(r):
             if r.method == "POST":
                 return web.json_response({"card": nfc.put(b), "cards": nfc.list()})
             return web.json_response({"cards": nfc.list()})
+        if act == "spoler":
+            # Spolene i Kassett-spillerens vindu. GET: hva motoren skal gjøre nå (ESP-en spør ofte) · POST: innstillinger.
+            if r.method == "POST":
+                return web.json_response(spoler.sett(b))
+            st = await loop.run_in_executor(None, read_status)
+            return web.json_response(spoler.status(st, bool(nfc.active_uid)))
         if act == "label":
             # Ferdig etikettark (SVG, A4, kuttlinjer som kabinett/kassett). ?uids=A,B (tom = alle) &start=n &kutt=0
             q = r.query

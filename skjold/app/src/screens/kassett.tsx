@@ -1,6 +1,6 @@
 /** Skjold Kassett: NFC-kassetter koblet til radio, NRK, Navidrome, Music Assistant eller rutiner. */
 import { useEffect, useState } from 'preact/hooks';
-import { api, getBase, type NfcCard, type NfcHandling, type NfcStatus, type Routine } from '../lib/api';
+import { api, getBase, type NfcCard, type NfcHandling, type NfcStatus, type Routine, type Spoler } from '../lib/api';
 import { HjulPanel } from './hjul';
 import { ndCover, ndConfigured, ndPlaylists, ndSearch } from '../lib/navidrome';
 
@@ -131,6 +131,30 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
   );
 }
 
+/** Spolene i vinduet på Kassett-spilleren: av/på, fart ved avspilling og ved spoling. */
+function SpolerPanel() {
+  const [s, setS] = useState<Spoler | null>(null);
+  const [err, setErr] = useState('');
+  const load = () => api.spoler().then((x) => { setS(x); setErr(''); }).catch((e) => setErr(String((e as Error).message || e)));
+  useEffect(() => { void load(); const t = setInterval(load, 3000); return () => clearInterval(t); }, []);
+  const set = (b: Partial<Spoler>) => { if (s) setS({ ...s, ...b }); void api.spolerSett(b).then(setS).catch((e) => setErr(String((e as Error).message || e))); };
+  if (!s) return err ? <small style="color:#e06c5a">Spolene: {err}</small> : null;
+  const MODUS = { spill: 'Spiller', spol: 'Spoler fremover', tilbake: 'Spoler tilbake', stopp: 'Står stille' } as const;
+  return (
+    <div style={box + ';display:flex;flex-direction:column;gap:10px'}>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <b style="flex:1">Spoler i vinduet</b>
+        <small style={'color:' + (s.modus && s.modus !== 'stopp' ? A : '#9a9a96')}>{MODUS[s.modus ?? 'stopp']}</small>
+        <button style={btn(s['på'])} onClick={() => set({ 'på': !s['på'] })}>{s['på'] ? 'På' : 'Av'}</button>
+      </div>
+      <small style="color:#9a9a96">Spolene i kassetten går rundt mens musikken spiller, står stille på pause og spoler når du hopper i låten eller bytter låt.</small>
+      <label style="display:flex;gap:10px;align-items:center">Fart <input type="range" min={0.1} max={1.5} step={0.05} value={s.fart} onChange={(e) => set({ fart: +e.currentTarget.value })} style="flex:1" /> <span style="width:70px;text-align:right">{s.fart.toFixed(2)} o/s</span></label>
+      <label style="display:flex;gap:10px;align-items:center">Spoling <input type="range" min={0.5} max={3} step={0.1} value={s.spol} onChange={(e) => set({ spol: +e.currentTarget.value })} style="flex:1" /> <span style="width:70px;text-align:right">{s.spol.toFixed(1)} o/s</span></label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked={s.bare_kassett} onChange={(e) => set({ bare_kassett: e.currentTarget.checked })} /> Bare når en kassett står i spilleren</label>
+    </div>
+  );
+}
+
 export function KassettPage() {
   const [tab, setTab] = useState<'k' | 'h'>('k');
   const [st, setSt] = useState<NfcStatus | null>(null);
@@ -155,6 +179,7 @@ export function KassettPage() {
         {st?.active && <small style={'color:' + A}>I spilleren: {cards.find((c) => c.uid === st.active)?.navn ?? st.active}</small>}
       </div>
       {err && <small style="color:#e06c5a">Fikk ikke kontakt: {err}</small>}
+      <SpolerPanel />
       {!cards.length && !err && <div style={box + ';color:#9a9a96'}>Ingen kassetter ennå. Bygg en Skjold Kassett-spiller (se kabinett/kassett/LES_MEG.md), og koble den første kassetten her.</div>}
       {st?.last?.uid && !st.last.known && <div style={box}>Ukjent kassett {st.last.uid} ble satt inn. <button style={btn()} onClick={() => setEdit('ny')}>Koble den</button></div>}
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">

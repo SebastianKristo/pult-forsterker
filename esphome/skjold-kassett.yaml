@@ -1,4 +1,4 @@
-# Skjold Kassett – NFC-kassettspiller (ESP32-S3 Zero + PN532 i I²C + WS2812-lys + summer)
+# Skjold Kassett – NFC-kassettspiller (ESP32-S3 Zero + PN532 i I²C + WS2812-lys + summer + spolemotor)
 # Flash: https://web.esphome.io (første gang via USB-C), deretter OTA fra ESPHome i Home Assistant.
 # Se kabinett/kassett/LES_MEG.md for kobling.
 substitutions:
@@ -9,6 +9,10 @@ substitutions:
   skjold_host: skjold.local
   skjold_port: "8765"
   pause_on_remove: "true"
+  # Spolene i vinduet: N20-girmotor (6 V, 200 o/min) via DRV8833. spole_max_rps = spolenes fart ved 100 % pådrag
+  # (motor ≈ 165 o/min på 5 V × trinseforhold 5/7,6 ≈ 1,8 omdr/s). Juster hvis spolene går for fort eller sakte.
+  spole_max_rps: "1.8"
+  spole_min_duty: "0.22"
 
 esphome:
   name: ${name}
@@ -45,7 +49,7 @@ i2c:
   frequency: 400kHz
 
 pn532_i2c:
-  id: nfc
+  id: nfc_leser
   update_interval: 400ms
   on_tag:
     then:
@@ -98,6 +102,57 @@ output:
   - platform: ledc
     id: buzzer_out
     pin: GPIO7
+  # DRV8833: AIN1 = GPIO8, AIN2 = GPIO9 (nSLEEP til 3V3, VM til 5V). 20 kHz → ingen hørbar PWM-pipelyd.
+  - platform: ledc
+    id: spole_a
+    pin: GPIO8
+    frequency: 20000Hz
+  - platform: ledc
+    id: spole_b
+    pin: GPIO9
+    frequency: 20000Hz
+
+globals:
+  - { id: spole_mal, type: float, initial_value: "0" }    # ønsket fart (omdr/s, negativ = bakover)
+  - { id: spole_naa, type: float, initial_value: "0" }    # fart nå (rampes mykt mot målet)
+  - { id: spole_kick, type: int, initial_value: "0" }
+
+interval:
+  # Spør Skjold hva spolene skal gjøre (spill / spol / tilbake / stopp)
+  - interval: 600ms
+    then:
+      - http_request.get:
+          url: http://${skjold_host}:${skjold_port}/api/nfc/spoler
+          capture_response: true
+          on_response:
+            then:
+              - lambda: |-
+                  if (response->status_code != 200) { id(spole_mal) = 0; return; }
+                  json::parse_json(body, [](JsonObject root) -> bool {
+                    float rps = root["rps"] | 0.0f;
+                    int dir = root["retning"] | 1;
+                    id(spole_mal) = rps * (dir < 0 ? -1.0f : 1.0f);
+                    return true;
+                  });
+          on_error:
+            then:
+              - lambda: "id(spole_mal) = 0;"
+  # Myk akselerasjon (ca. 2 omdr/s²) og pådrag til DRV8833
+  - interval: 40ms
+    then:
+      - lambda: |-
+          const float maxr = ${spole_max_rps}, mind = ${spole_min_duty}, step = 0.08f;
+          float m = id(spole_mal), n = id(spole_naa);
+          float was = n;
+          n += std::max(-step, std::min(step, m - n));
+          id(spole_naa) = n;
+          float a = fabsf(n);
+          if (a < 0.03f) { id(spole_a).set_level(0); id(spole_b).set_level(0); id(spole_kick) = 0; return; }
+          if (fabsf(was) < 0.03f) id(spole_kick) = 2;          // et lite «spark» så girmotoren kommer i gang
+          float d = id(spole_kick) > 0 ? 1.0f : std::min(1.0f, mind + (1.0f - mind) * a / maxr);
+          if (id(spole_kick) > 0) id(spole_kick)--;
+          if (n > 0) { id(spole_b).set_level(0); id(spole_a).set_level(d); }
+          else       { id(spole_a).set_level(0); id(spole_b).set_level(d); }
 rtttl:
   output: buzzer_out
 
@@ -106,7 +161,7 @@ light:
     id: ring
     name: "Lys"
     pin: GPIO4
-    num_leds: 5             # 5 LED (60/m) på høykant i kanalen: venstre side, front, høyre side
+    num_leds: 5             # 5 LED (60/m) i lista bak sporet, under lyslederen i toppen
     rgb_order: GRB
     chipset: WS2812
     default_transition_length: 300ms

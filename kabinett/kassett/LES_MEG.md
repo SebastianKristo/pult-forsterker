@@ -4,136 +4,151 @@ En liten spiller der du setter inn en «kassett» med en NFC-brikke. Skjold spil
 en radiokanal, en NRK-serie, et Navidrome-album eller en spilleliste, noe fra Music Assistant eller en rutine.
 Når du tar kassetten ut, pauses musikken (kan slås av per kassett).
 
-![Spiller med kassett](render/02_med_kassett.png)
+Kassetten står bak et **vindu i fronten**, som på en kassettspiller fra 80-tallet, og **spolene går rundt** mens
+musikken spiller: de står stille på pause, og spoler fort når du hopper i låten eller bytter låt.
 
-Bilder: [spiller](render/01_spiller.png) · [med kassett](render/02_med_kassett.png) · [kassett](render/03_kassett.png) · [kassett bakfra](render/05_kassett_bak.png) · [eksplodert](render/04_eksplodert.png) · [snitt](render/06_snitt.png)
+![Spiller med kassett, forfra](render/07_forfra.png)
+
+Bilder: [forfra](render/07_forfra.png) · [med kassett](render/02_med_kassett.png) · [spiller](render/01_spiller.png) · [kassett](render/03_kassett.png) · [kassett bakfra](render/05_kassett_bak.png) · [eksplodert](render/04_eksplodert.png) · [snitt](render/06_snitt.png)
+
+## Slik går spolene rundt
+
+- Hver kassett har **to løse spoler** (printede, med en 3 × 2 mm diametral magnet i navet). De ligger fritt mellom
+  kassetthalvdelene: navet stikker ut i spolevinduene på begge sider, og en flens inni (større enn vinduet) holder
+  spolen på plass. Ingen aksel, ingen lim.
+- Bak sporet sitter **to trinser** med 6 × 3 mm diametrale magneter, rett bak spolene (2,7 mm unna, gjennom
+  lommeveggen). Når trinsene går rundt, drar magnetene spolene med seg. Kassetten trenger ingen kontakt eller tannhjul,
+  og den kan settes inn i hvilken som helst stilling.
+- Begge trinsene og motortrinsen ligger i **én O-ring (22 × 2 mm)**, så begge spolene går samme vei, som på en ekte
+  kassett. Motoren er en **N20-girmotor (6 V, 200 o/min)** som går stille på 5 V, styrt med en **DRV8833** på 20 kHz
+  (ingen pipelyd fra PWM).
+- Magnetene sitter nederst, minst 20 mm fra PN532-antennen (som sitter øverst, rett bak NFC-brikken), så de
+  forstyrrer ikke lesingen.
+- Skjold forteller spilleren hva spolene skal gjøre (`GET /api/nfc/spoler`): spill ≈ 0,5 omdr/s, pause = stopp,
+  hopp/ny låt = kort spoling (≈ 1,6 omdr/s, bakover ved hopp bakover). ESP-en ramper farten mykt. Fart, spolefart og
+  «bare når en kassett står i» stilles under **Integrasjoner → Skjold Kassett** i appen.
 
 ## Deler
 
 | Del | Antall | Merknad |
 |---|---|---|
 | Waveshare ESP32-S3 Zero | 1 | klikkes i vugga på bunnen, USB-C mot hullet bak |
-| PN532 NFC-modul V3 (I²C), 42,7 × 40,5 mm | 1 | skyves inn i skinnene bak sporet, antennesiden mot sporet, pinnene ned. DIP: 1=ON, 2=OFF |
-| WS2812B-stripe 10 mm, 60 LED/m | 5 LED (ca. 85 mm) | står på høykant i kanalen rundt sporet: venstre side, front, høyre side |
-| Passiv piezo-summer 12 mm | 1 | valgfri, ligger med lydhullet ned i ringen på bunnen |
+| PN532 NFC-modul V3 (I²C), 42,7 × 40,5 mm | 1 | skyves inn i skinnene bak sporet, antennesiden mot sporet, antennen øverst. DIP: 1=ON, 2=OFF |
+| N20-girmotor 6 V, 200 o/min, 3 mm D-aksel | 1 | ligger i vugga på bunnen |
+| DRV8833 motordriver (lite kort) | 1 | VM til 5V, nSLEEP til 3V3 |
+| O-ring NBR 22 × 2 mm | 1 | reim mellom motortrinse og trinser (20–24 mm ID virker) |
+| Stålpinne Ø 2 × 10 mm (eller M2 × 10 skrue) | 2 | aksler for trinsene, presses inn i stolpene |
+| Neodymmagnet 6 × 3 mm, **diametral** | 2 | i trinsene |
+| Neodymmagnet 3 × 2 mm, **diametral** | 2 per kassett | i spolenavene |
+| Neodymmagnet 6 × 3 mm (aksial) | 1 i spilleren + 1 per kassett | holder kassetten nede – sjekk polaritet før liming |
 | NTAG215 NFC-klistremerke, 25 mm | 1 per kassett | NTAG213/216 virker også |
-| Neodymmagnet 6 × 3 mm | 1 i spilleren + 1 per kassett | sjekk polaritet før liming |
+| WS2812B-stripe 10 mm, 60 LED/m | 5 LED (ca. 84 mm) | i lista bak sporet, under lyslederen |
+| Passiv piezo-summer 12 mm | 1 | valgfri |
+| Klar rute 49 × 62,9 × 1,5 mm | 1 | print i klar PETG – eller skjær ut av 1,5 mm akryl/PETG-plate (klarest) |
 | M3 innpressmutter (heat-set), M3 × 5,7 mm, Ø ≤ 4,6 mm | 4 | hull Ø 4,0 × 6,5 mm i skruetårnene |
 | M3 × 8 mm senkehodeskrue (DIN 7991) | 4 | fra undersiden |
-| Selvklebende gummiføtter Ø 10 mm | 4 | i de grunne forsenkningene under |
-| Tynn silikonledning (26–28 AWG) | litt | |
-| USB-C-kabel og 5 V-lader | 1 | |
+| Selvklebende gummiføtter Ø 10 mm | 4 | |
+| Tynn silikonledning (26–28 AWG), USB-C-kabel og 5 V-lader | | |
+
+Diametrale magneter er magnetisert på tvers (nord på den ene halvdelen av sirkelen) – det er det som gjør at de kan
+dra hverandre rundt. Vanlige (aksiale) magneter virker ikke til spolene.
 
 ## Kobling
 
 | Fra | Til ESP32-S3 Zero |
 |---|---|
 | PN532 VCC / GND | 3V3 / GND |
-| PN532 SDA | GPIO5 |
-| PN532 SCL | GPIO6 |
+| PN532 SDA / SCL | GPIO5 / GPIO6 |
 | WS2812 DIN | GPIO4 (5 V og GND fra 5V-pinnen) |
 | Piezo + | GPIO7 (– til GND) |
+| DRV8833 AIN1 / AIN2 | GPIO8 / GPIO9 |
+| DRV8833 VM / GND / nSLEEP | 5V / GND / 3V3 |
+| DRV8833 AOUT1 / AOUT2 | N20-motoren (bytt ledningene hvis spolene går feil vei) |
 
 ## Slik er spilleren bygd
 
-![Snitt gjennom sporet](render/06_snitt.png)
+![Snitt gjennom spolen](render/06_snitt.png)
 
-- **Lokk og bunn skrus sammen** med fire M3-skruer fra undersiden inn i innpressmuttere i skruetårnene i hjørnene.
-  Bunnen ligger inne i lokket og presses mot en skrå hylle innvendig: skjøten blir en labyrint (lystett og uten synlig
-  spalte på sidene), og bunnen flukter med lokkets underkant.
-- **Sporet** er en lomme som heller 12° bakover, med vannrett bunn. Kassetten står 38 mm ned, slik at NFC-brikken
-  havner foran PN532-antennen. Klaring 0,6 mm rundt kassetten.
-- **Magneten** trykkes inn nedenfra i et tårn under sporbunnen (0,6 mm vegg mot kassettens magnet).
-- **LED-kanalen** går rundt sporet foran og på sidene, 15 mm dyp: stripa står på høykant mot lommeveggen med lysene utover,
-  og lyset kommer opp gjennom lyslederen, som ligger flatt i toppen (flukter med lokket) og hviler på en liten avsats.
-  Bak sporet er kanalen bare 5 mm dyp, så PN532-modulen får plass rett bak lommeveggen. Ledningene går ned gjennom et
-  hull i kanalbunnen på høyre side.
-- **PN532** skyves inn nedenfra i to skinner på baksiden av sporlomma og stopper øverst. En dråpe varmlim nederst holder den.
+- **Lokk og bunn skrus sammen** med fire M3-skruer fra undersiden inn i innpressmuttere i hjørnene. Bunnen ligger inne
+  i lokket og presses mot en skrå hylle innvendig, så skjøten blir lystett uten synlig spalte.
+- **Sporet** står loddrett rett bak frontveggen. Kassetten står 60 mm ned (10 mm stikker opp til å ta tak i) og hviler
+  på en vannrett sporbunn. Klaring 0,6 mm rundt; 0,65 mm mellom kassetten og ruten.
+- **Vinduet** er 44 × 52 mm. Ruten skyves opp i et spor innenfor frontveggen fra undersiden og står på bunnplata.
+- **Holdemagneten** trykkes inn nedenfra i et tårn under sporbunnen (0,6 mm vegg mot kassettens magnet).
+- **PN532** skyves inn nedenfra i to skinner bak sporet og stopper mot lokket (antennen øverst, foran NFC-brikken).
+  En dråpe varmlim nederst holder den.
+- **Drivverket** står på bunnplata: to stolper med aksler for trinsene og en vugge for N20-motoren. Når bunnen skrus
+  på, havner trinsene rett bak spolene (0,2 mm fra lommeveggen, som også holder dem på akslene).
+- **LED-lista** (5 LED) ligger i en kasse bak sporet, og en rett lysleder flukter med toppen.
 - **ESP32-S3 Zero** klikkes ned i vugga bak; USB-C-hullet i bakveggen er stort nok til vanlige plugger.
-- **Summeren** ligger med lydhullet ned over seks små hull i bunnen. Tre små kabelbuer på bunnen holder ledningene på plass.
 
-Kontrollert i modellen (trimesh/manifold): alle STL-er er vanntette, én sammenhengende del hver, og ingen deler
-overlapper i montert stilling (lokk, bunn, lysleder, kassett, PN532 og ESP). Minste avstand kassett–spor er 0,1 mm
-i de skrå hjørnene og 0,6 mm på sidene.
+Kontrollert i modellen med `sjekk_modell.py` (trimesh/manifold): alle STL-er er vanntette og én sammenhengende del, og
+ingen deler overlapper i montert stilling – heller ikke spolene når de roteres rundt (sjekket hver 30°). Minste
+klaring spole–kassett 0,18 mm (flens mot krage), trinse–lommevegg 0,2 mm, O-ring–PN532 0,8 mm.
 
 ## Utskrift (Creality K2 / K2 Pro / K2 Plus, 0,4 mm dyse)
 
-Hovedfila er **`skjold-kassett-k2.3mf`**: én plate (244 × 240 mm, passer alle K2-modellene) med lokk, bunn, lysleder og
-fire kassetter, ferdig orientert. Delene har fått hvert sitt filamentnummer, så med CFS printes alt på én gang:
+- **`skjold-kassett-k2.3mf`**: én plate (≤ 250 × 250 mm) med lokk, bunn med drivverk, fire kassetter, åtte spoler og
+  trinsene, ferdig orientert.
+- **`skjold-kassett-k2-klar.3mf`**: ruten og lyslederen i klar PETG (egen plate).
+
+`lag_3mf.py` lager begge fra STL-ene i `stl/`. Delene har hvert sitt filamentnummer, så med CFS printes en plate i én omgang:
 
 | Filament | Deler | Forslag |
 |---|---|---|
-| 1 | Lokk | Lys PETG (eller PLA) |
-| 2 | Bunn og kassettenes bakside | Sort PETG/PLA |
+| 1 | Lokk og spoler | Lys PETG (eller PLA) |
+| 2 | Bunn, kassettenes bakside, trinser | Sort PETG/PLA |
 | 3 | Kassettenes forside | Sennep/gull PLA |
-| 4 | Lysleder | Klar eller natur PETG |
+| 4 | Rute og lysleder | Klar PETG |
 
-Uten CFS: velg delene for én farge om gangen (eller slett resten) og print i flere omganger. Hvis slicer-en ikke
-henter filamentnummeret fra fila, setter du det per objekt i lista. Enkeltdelene ligger også i `stl/`, allerede
-snudd riktig vei.
-
-Anbefalte innstillinger (Creality Print 6 / OrcaSlicer, K2-profilen for 0,4 mm):
+Hvis slicer-en ikke henter filamentnummeret fra fila, setter du det per objekt i lista.
 
 | Innstilling | Verdi |
 |---|---|
-| Lag | 0,20 mm (0,16 mm for kassettene gir penere tekst) |
+| Lag | 0,20 mm (0,16 mm for kassetter og spoler) |
 | Vegger | 3 (lokket: 4) |
 | Topp/bunn | 5 / 4 lag |
-| Fyll | 15 % gyroid |
+| Fyll | 15 % gyroid (ruten: 100 %, monotont, sakte – blir klarest) |
 | Støtte | **av** – ingen deler trenger støtte |
-| Brim | av (lokket: 3 mm brim hvis platen er glatt og du printer PETG) |
 | Søm | bak (aligned/back) |
-| Ytre vegg | ca. 150 mm/s for penest overflate, resten med standardprofilen |
 | PLA | 210–220 °C, plate 55 °C |
 | PETG | 235–245 °C, plate 70 °C, kjøling 40–60 % |
 | Plate | teksturert PEI gir en matt, jevn toppflate på lokket |
 
-Utskriftsretning og hvorfor:
+- **Lokket printes med toppen ned.** Vinduskanten, sporbunnen og LED-kassens gulv er broer (maks ca. 12 mm). Toppkanten
+  har 45°-fas.
+- **Bunnen** printes flat. Akselhullene i stolpene er dråpeformet, så de printes uten støtte.
+- **Spolene** printes med magnetsiden ned; flensen har en 45°-kjegle under.
+- **Trinsene** printes med akselhullet ned og magnetlomma opp.
+- **Kassetthalvdelene** printes med utsiden ned.
 
-- **Lokket printes med toppen ned.** Toppflaten blir den første flaten mot platen – helt plan og jevn (teksturert PEI
-  gir et fint mønster). Toppkanten har 45°-fas i stedet for rund kant, så den printes uten støtte og uten elefantfot.
-  Sporbunnen, LED-kanalens bunn og avsatsen for lyslederen er vannrette broer (maks ca. 12 mm). Skinnene for PN532
-  har 45°-fas i enden.
-- **Bunnen** printes flat, med 0,4 mm fas nederst mot elefantfot.
-- **Lyslederen** printes med toppen ned (flaten som synes ligger mot platen).
-- **Kassetthalvdelene** printes med utsiden ned (uendret fra før).
+Ingen pause trengs: magnetene og NFC-brikken legges i etter print.
 
-Ingen pause trengs: NFC-brikken og magneten legges i kassetten når halvdelene settes sammen (lommene er åpne innover),
-magneten i spilleren trykkes inn nedenfra etter print, og innpressmutterne smeltes inn med loddebolt (ca. 220 °C).
-
-Vekt (fra STL-volum, PETG 1,27 / PLA 1,24 g/cm³, 100 % fylt – med 3 vegger og 15 % fyll blir det litt mindre):
-lokk ≈ 130 g, bunn ≈ 30 g, lysleder ≈ 2 g, kassett ≈ 16,5 g. Hele plata ≈ 230 g. Tid er ikke slicet – regn med
-flere timer for hele plata; slicer-en viser riktig tid.
+Vekt (fra STL-volum, 100 % fylt): lokk ≈ 135 g, bunn med drivverk ≈ 35 g, kassett med spoler ≈ 18 g, rute ≈ 6 g.
 
 ### Kassetten
 
-Kassetten er formet som en gammel kompaktkassett: etikettfelt øverst, trapes med to styrehull og SKJOLD nederst
-foran, og bak to spolevinduer med tannhjulsnav, et lite sentervindu og «skruer» i hjørnene. Navene står på fremre
-halvdel og stikker gjennom vinduene i bakre – de fungerer også som styring når halvdelene settes sammen.
-
-Den er bygd som to tynne skall (1,2 mm hud, 1,6 mm vegg) med ribber i stedet for massive plater:
-
-| | Før | Nå |
-|---|---|---|
-| Front | 20,5 g | 8,6 g |
-| Bak | 20,9 g | 7,8 g |
-| **Per kassett** | **41,4 g** | **16,4 g** (≈ 60 % mindre) |
-
-Ytre mål 50 × 70 × 10 mm. NFC-brikken (NTAG215, 25 mm) ligger i en ring rett innenfor bakhuden, og magneten (6 × 3 mm)
-sitter i bunnkanten midt i skjøten. Etikettene (43,2 × 51,2 mm) limes på feltet som er markert med en tynn linje.
+Kassetten er formet som en gammel kompaktkassett: etikettfelt øverst, spolevinduer gjennom begge sider nederst
+(med vinduskant foran), og bak trapes med SKJOLD og «skruer» i hjørnene. Den er bygd som to tynne skall (1,2 mm hud,
+1,6 mm vegg) med ribber. Ytre mål 50 × 70 × 10 mm. NFC-brikken ligger i en ring innenfor bakhuden (øverst, foran
+PN532-antennen) og holdemagneten i bunnkanten midt i skjøten. Etikettene (43,2 × 51,2 mm) limes på feltet som er
+markert med en tynn linje – de dekker de øverste 0,4 mm av spolevinduene, som ikke synes.
 
 ## Montering
 
 1. Smelt de fire innpressmutterne inn i skruetårnene i lokket (loddebolt, rett ned, ikke for dypt).
-2. Trykk magneten inn i tårnet under sporbunnen fra innsiden. Sjekk polariteten mot en kassett først, og lim.
-3. Lodd ledninger på LED-stripa, trekk dem gjennom hullet i kanalbunnen på høyre side, og fest stripa på høykant mot
-   lommeveggen (tapen på baksiden) – venstre side, front, høyre side. Trykk lyslederen ned i åpningen fra toppen.
-4. Skyv PN532 inn i skinnene nedenfra, antennesiden mot sporet og pinnene ned. Prikk varmlim nederst.
-5. Klikk ESP32-S3 Zero ned i vugga på bunnen med USB-C bakover, legg summeren i ringen, og lodd etter tabellen over.
-   Legg ledningene under kabelbuene.
-6. Sett bunnen inn i lokket og skru fast med fire M3 × 8 senkeskruer. Fest gummiføttene.
-7. Kassett: legg NFC-brikken i ringen i bakre halvdel og magneten i lomma nederst, og trykk halvdelene sammen
-   (tappene i hjørnene holder; en dråpe lim gjør den permanent).
+2. Trykk holdemagneten inn i tårnet under sporbunnen. Sjekk polariteten mot en kassett først, og lim.
+3. Lodd ledninger på LED-stripa, legg den i kassen bak sporet med lysene opp, trekk ledningene ned gjennom hullet, og
+   trykk lyslederen ned i åpningen fra toppen.
+4. Skyv PN532 inn i skinnene nedenfra, antennesiden mot sporet og antennen opp. Prikk varmlim nederst.
+5. Skyv ruten opp i sporet innenfor vinduet fra undersiden (lokket ligger opp-ned).
+6. Bunnen: press stålpinnene inn i stolpene, lim de 6 × 3 mm diametrale magnetene i trinsene (magnetene foran), og
+   tre trinsene på pinnene. Klikk N20-motoren ned i vugga med akselen fremover, trykk motortrinsen på akselen, og legg
+   O-ringen rundt alle tre. Klikk ESP32-S3 Zero ned i vugga bak, og lodd DRV8833 og resten etter tabellen.
+7. Sett bunnen inn i lokket og skru fast med fire M3 × 8 senkeskruer. Fest gummiføttene.
+8. Kassett: lim 3 × 2 mm diametrale magneter i spolene, legg NFC-brikken i ringen og holdemagneten i lomma i bakre
+   halvdel, legg spolene i vinduene, og trykk forsiden på (tappene i hjørnene holder; en dråpe lim gjør den permanent).
+   Spolene skal snurre fritt.
 
 ## Fastvare
 
@@ -143,7 +158,8 @@ sitter i bunnkanten midt i skjøten. Etikettene (43,2 × 51,2 mm) limes på felt
 esphome run esphome/skjold-kassett.yaml
 ```
 
-Spilleren sender `POST /api/nfc/scan` og `/api/nfc/remove` til Skjold-daemonen.
+Spilleren sender `POST /api/nfc/scan` og `/api/nfc/remove` til Skjold-daemonen, og spør `GET /api/nfc/spoler` om
+hva spolene skal gjøre. `spole_max_rps` og `spole_min_duty` øverst i fila justerer motoren.
 
 ## Koble kassetter
 
