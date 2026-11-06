@@ -9,6 +9,7 @@ import { ndConfigured } from '../lib/navidrome';
 import { Transport, artFor, nowTitle, sourceLine, subLine } from './player';
 import { useRooms } from './phone';
 import { SpatialCard } from './advaudio';
+import { SpeakerCard } from './speakers';
 
 /** Ikke-brytende mellomrom før enheter, som i designet (2 × 50 W). */
 export const nbHw = (s: string) => s.replace(/ (×|W\b|kHz|mm)/g, ' $1').replace(/(\d) ×/g, '$1 ×');
@@ -259,6 +260,7 @@ export function EqPage() {
         </div>
       </div>
       <SpatialCard />
+      <SpeakerCard />
     </div>
   );
 }

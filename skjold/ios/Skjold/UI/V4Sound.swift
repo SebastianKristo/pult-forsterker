@@ -355,9 +355,26 @@ struct V4SoundTab: View {
                 toggleRow("Små høyttalere", "Kutter den dypeste bassen så små høyttalere ikke forvrenger.", hpf) { hpf.toggle() }
                 maxRow
                 roomEQRow
+                speakerRow
             }
             .v4Card()
         }
+    }
+
+    private var speakerRow: some View {
+        Button { Haptics.tick(); m.showSpeakers = true } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Høyttalerprofil").sora(15)
+                    Text("Hent en Skjold Sertifisert-profil for høyttalerne dine, eller mål dem selv.").sora(12, .regular, V4.muted)
+                }
+                Spacer(minLength: 8)
+                Text("Åpne").sora(14, .regular, V4.gold)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .plain()
     }
 
     private var roomEQRow: some View {

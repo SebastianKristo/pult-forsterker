@@ -5,6 +5,7 @@ fallback som alltid virker uten nett. Resultatet er {genres, moods, energy, deca
 duration_min, kilder}. Oppslag: lydtaggene (skjold_libtag) → Navidrome → Music Assistant → nettradio.
 
 API:  POST /api/ask {text, room}       GET/POST /api/ai (LLM-oppsett, nøkkelen vises aldri)
+      POST /api/ai/test {url}            sjekk ekstern Ollama-server og list modeller
 """
 import json
 import os
@@ -157,6 +158,24 @@ def parse_anthropic(res):
     raise ValueError("tomt svar fra Anthropic")
 
 
+def _get(url, timeout=6):
+    with urllib.request.urlopen(urllib.request.Request(url), timeout=timeout) as r:
+        return json.loads(r.read() or b"{}")
+
+
+def norm_ollama_url(u):
+    """«maskin» / «192.168.1.20» / «http://maskin:11434/» → «http://maskin:11434». Tom = ikke satt."""
+    u = str(u or "").strip().rstrip("/")
+    if not u:
+        return ""
+    if "://" not in u:
+        u = "http://" + u
+    host = u.split("://", 1)[1]
+    if ":" not in host.split("/")[0].split("]")[-1]:
+        u += ":11434"
+    return u
+
+
 def parse_ollama(res):
     return clean(((res or {}).get("message") or {}).get("content") or "")
 
@@ -164,9 +183,10 @@ def parse_ollama(res):
 class LLM:
     """Felles LLM-oppsett (brukes også av podkastsammendraget). Lagres i data_dir/ai.json."""
 
-    def __init__(self, path, post=_post):
-        self.path, self.post = path, post
-        self.cfg = {"provider": "", "ollamaUrl": "http://localhost:11434", "ollamaModel": "llama3.2",
+    def __init__(self, path, post=_post, get=_get):
+        self.path, self.post, self.get = path, post, get
+        # Ollama kjører på en egen maskin (PC/Proxmox/NAS) – aldri på Pi-en; adressen må settes.
+        self.cfg = {"provider": "", "ollamaUrl": "", "ollamaModel": "llama3.2",
                     "anthropicKey": "", "anthropicModel": DEFAULT_MODEL}
         try:
             with open(path) as f:
@@ -184,6 +204,7 @@ class LLM:
         for k in ("provider", "ollamaUrl", "ollamaModel", "anthropicModel"):
             if k in b:
                 self.cfg[k] = str(b[k] or "").strip()
+        self.cfg["ollamaUrl"] = norm_ollama_url(self.cfg.get("ollamaUrl"))
         if b.get("anthropicKey") and "•" not in str(b["anthropicKey"]):
             self.cfg["anthropicKey"] = str(b["anthropicKey"]).strip()
         if b.get("clearKey"):
@@ -201,7 +222,27 @@ class LLM:
     @property
     def enabled(self):
         p = self.cfg.get("provider")
-        return p == "ollama" or (p == "anthropic" and bool(self.cfg.get("anthropicKey")))
+        return (p == "ollama" and bool(self.cfg.get("ollamaUrl"))) or (p == "anthropic" and bool(self.cfg.get("anthropicKey")))
+
+    def test_ollama(self, url=None):
+        """Sjekk at Ollama-serveren svarer og list modellene den har lastet ned."""
+        u = norm_ollama_url(url if url is not None else self.cfg.get("ollamaUrl"))
+        if not u:
+            return {"ok": False, "url": "", "models": [], "error": "skriv inn adressen til Ollama-serveren"}
+        try:
+            res = self.get(u + "/api/tags")
+            models = sorted(m.get("name") or m.get("model") or "" for m in res.get("models") or [])
+            ver = ""
+            try:
+                ver = (self.get(u + "/api/version") or {}).get("version", "")
+            except Exception:
+                pass
+            return {"ok": True, "url": u, "models": [m for m in models if m], "version": ver}
+        except Exception as e:
+            msg = str(getattr(e, "reason", "") or e)
+            if "refused" in msg.lower():
+                msg += " – kjører Ollama med OLLAMA_HOST=0.0.0.0 på serveren?"
+            return {"ok": False, "url": u, "models": [], "error": msg}
 
     def chat(self, system, user, max_tokens=600, timeout=60):
         """Fritt tekstsvar (brukt til sammendrag)."""
@@ -212,7 +253,7 @@ class LLM:
                              "system": system, "messages": [{"role": "user", "content": user}]},
                             {"x-api-key": self.cfg["anthropicKey"], "anthropic-version": "2023-06-01"}, timeout)
             return "".join(c.get("text", "") for c in res.get("content") or [] if c.get("type") == "text").strip()
-        if p == "ollama":
+        if p == "ollama" and self.cfg.get("ollamaUrl"):
             res = self.post(self.cfg["ollamaUrl"].rstrip("/") + "/api/chat",
                             {"model": self.cfg.get("ollamaModel"), "stream": False,
                              "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
@@ -220,14 +261,14 @@ class LLM:
             return ((res.get("message") or {}).get("content") or "").strip()
         raise RuntimeError("ingen LLM satt opp")
 
-    def interpret(self, text, timeout=25):
+    def interpret(self, text, timeout=45):  # ekstern Ollama kan bruke litt tid på å laste modellen første gang
         p = self.cfg.get("provider")
         if p == "anthropic" and self.cfg.get("anthropicKey"):
             return parse_anthropic(self.post("https://api.anthropic.com/v1/messages",
                                              anthropic_body(text, self.cfg.get("anthropicModel")),
                                              {"x-api-key": self.cfg["anthropicKey"], "anthropic-version": "2023-06-01"},
                                              timeout))
-        if p == "ollama":
+        if p == "ollama" and self.cfg.get("ollamaUrl"):
             return parse_ollama(self.post(self.cfg["ollamaUrl"].rstrip("/") + "/api/chat",
                                           {"model": self.cfg.get("ollamaModel"), "stream": False, "format": "json",
                                            "messages": [{"role": "system", "content": SYSTEM + " Svar med JSON med feltene "
@@ -388,5 +429,12 @@ def routes(ctx):
             return web.json_response(llm.set(await r.json()))
         return web.json_response(llm.public())
 
+    async def h_ai_test(r):
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        return web.json_response(await asyncio.get_running_loop().run_in_executor(None, lambda: llm.test_ollama(b.get("url"))))
+
     return [web.post("/api/ask", h_ask), web.post("/api/ask/parse", h_parse),
-            web.get("/api/ai", h_ai), web.post("/api/ai", h_ai)]
+            web.get("/api/ai", h_ai), web.post("/api/ai", h_ai), web.post("/api/ai/test", h_ai_test)]

@@ -1,7 +1,7 @@
 // «Spill noe til …», lydtagger for biblioteket (Innstillinger → Bibliotek), filtre i Navidrome-søket og podkastsammendrag.
 import { useEffect, useState } from 'preact/hooks';
 import { Toggle } from '../components/ui';
-import { ai, MOODS, type AiCfg, type AskResult, type PodSum, type TagFilter, type TagHit, type TagStatus } from '../lib/ai';
+import { ai, MOODS, type AiCfg, type AskResult, type PodSum, type TagFilter, type TagHit, type TagStatus, type OllamaTest } from '../lib/ai';
 import type { NdSong } from '../lib/navidrome';
 
 const sbtn = 'height:34px;padding:0 14px;border-radius:8px;border:1px solid #2e2e30;background:#1a1a1b;color:#f2f2ee;font-size:13px;cursor:pointer;white-space:nowrap';
@@ -66,6 +66,8 @@ export function LibraryTagsPanel() {
 
 export function AiSettingsPanel() {
   const [c, setC] = useState<AiCfg | null>(null), [key, setKey] = useState(''), [msg, setMsg] = useState('');
+  const [t, setT] = useState<OllamaTest | null>(null), [testing, setTesting] = useState(false);
+  const test = async () => { if (!c) return; setTesting(true); try { const r = await ai.aiTest(c.ollamaUrl); setT(r); if (r.ok) setC({ ...c, ollamaUrl: r.url, ollamaModel: c.ollamaModel && r.models.includes(c.ollamaModel) ? c.ollamaModel : (r.models[0] || c.ollamaModel) }); } catch (e) { setT({ ok: false, url: c.ollamaUrl, models: [], error: errText(e) }); } finally { setTesting(false); } };
   useEffect(() => { ai.aiCfg().then(setC).catch((e) => setMsg(errText(e))); }, []);
   if (!c) return msg ? <span style={muted}>{msg}</span> : null;
   const up = (p: Partial<AiCfg>) => setC({ ...c, ...p });
@@ -77,11 +79,17 @@ export function AiSettingsPanel() {
       <span style="font-size:16px;font-weight:600">KI-tolkning (valgfritt)</span>
       <span style={muted}>Brukes av «Spill noe til …» og podkastsammendraget. Uten KI brukes enkle regler og tittel + første setning.</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        {([['', 'Av'], ['ollama', 'Ollama (lokalt)'], ['anthropic', 'Anthropic API']] as const).map(([v, n]) => <button key={v} onClick={() => up({ provider: v })} style={c.provider === v ? pbtn : sbtn}>{n}</button>)}
+        {([['', 'Av'], ['ollama', 'Ollama (egen server)'], ['anthropic', 'Anthropic API']] as const).map(([v, n]) => <button key={v} onClick={() => up({ provider: v })} style={c.provider === v ? pbtn : sbtn}>{n}</button>)}
       </div>
       {c.provider === 'ollama' && <>
-        <input value={c.ollamaUrl} onInput={(e) => up({ ollamaUrl: e.currentTarget.value })} placeholder="http://maskin:11434" style={inp} />
-        <input value={c.ollamaModel} onInput={(e) => up({ ollamaModel: e.currentTarget.value })} placeholder="modell, f.eks. llama3.2" style={inp} />
+        <span style={muted}>Ollama kjører på en annen maskin i nettet (PC, Mac, Proxmox eller NAS), ikke på Skjold. Start den med OLLAMA_HOST=0.0.0.0 så Skjold når den.</span>
+        <div style="display:flex;gap:6px"><input value={c.ollamaUrl} onInput={(e) => { up({ ollamaUrl: e.currentTarget.value }); setT(null); }} placeholder="192.168.1.20 eller http://pc.local:11434" style={inp + ";flex:1"} />
+          <button onClick={() => void test()} disabled={testing || !c.ollamaUrl.trim()} style={sbtn}>{testing ? 'Tester …' : 'Test'}</button></div>
+        {t && <span style={`font-size:12px;color:${t.ok ? '#7fd18b' : '#ff8a7a'}`}>{t.ok ? `Tilkoblet ${t.url}${t.version ? ' · Ollama ' + t.version : ''} · ${t.models.length} modeller` : t.error}</span>}
+        {t?.ok && t.models.length > 0
+          ? <select value={c.ollamaModel} onChange={(e) => up({ ollamaModel: e.currentTarget.value })} style={inp}>{t.models.map((m) => <option key={m} value={m}>{m}</option>)}</select>
+          : <input value={c.ollamaModel} onInput={(e) => up({ ollamaModel: e.currentTarget.value })} placeholder="modell, f.eks. llama3.2" style={inp} />}
+        {t?.ok && t.models.length === 0 && <span style={muted}>Serveren har ingen modeller. Kjør «ollama pull llama3.2» på serveren.</span>}
       </>}
       {c.provider === 'anthropic' && <>
         <input type="password" value={key} onInput={(e) => setKey(e.currentTarget.value)} placeholder={c.hasKey ? `Lagret nøkkel ${c.anthropicKey}` : 'API-nøkkel'} style={inp} />

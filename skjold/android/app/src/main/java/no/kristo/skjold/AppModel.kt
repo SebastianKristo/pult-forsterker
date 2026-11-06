@@ -216,6 +216,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var hjemState by mutableStateOf("")
     var hjemLogin by mutableStateOf(false)
     var showRoomEQ by mutableStateOf(false)   // romkorreksjon med mikrofonen (RoomEQView)
+    var showSpeakers by mutableStateOf(false)   // høyttalerprofil / Skjold Sertifisert (SpeakerView)
     var dev by mutableStateOf<DevStatus?>(null)
     val devStats = mutableStateMapOf<String, DevStatus?>()
     var lyrionServer by mutableStateOf<String?>(null)
@@ -782,6 +783,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             "openRadio" -> { tab = 0; sub = "radio" }
             "setup" -> restartSetup()
             "roomeq" -> showRoomEQ = true
+            "speakers" -> showSpeakers = true
             else -> post(mapOf("type" to id))
         }
     }

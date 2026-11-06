@@ -165,6 +165,16 @@ fun SoundView(m: AppModel) {
                 }
                 T("Mål", sora(14f, W.Regular, C.accent2))
             }
+            Row(
+                Modifier.fillMaxWidth().topLine(C.line).press { Haptics.tick(); m.showSpeakers = true }.padding(vertical = 14.dp, horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    T("Høyttalerprofil", sora(14f))
+                    T("Skjold Sertifisert-profil for høyttalerne dine, eller mål dem selv", sora(11f, W.Regular, C.muted))
+                }
+                T("Åpne", sora(14f, W.Regular, C.accent2))
+            }
         }
     }
 }

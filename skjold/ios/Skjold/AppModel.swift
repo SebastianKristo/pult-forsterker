@@ -125,6 +125,7 @@ final class AppModel {
     var hjemLogin = false
     var whatsNew: ReleaseNote? = nil   // «Hva er nytt» etter oppdatering av enheten (ChangelogView.swift)
     var showRoomEQ = false   // romkorreksjon med mikrofonen (V4RoomEQSheet)
+    var showSpeakers = false   // høyttalerprofil / Skjold Sertifisert (V4SpeakerSheet)
     var dev: DevStatus? = nil
     var devStats: [String: DevStatus] = [:]
     var lyrionServer: String? = nil
@@ -678,6 +679,7 @@ final class AppModel {
         case "openRadio": tab = 0; sub = "radio"
         case "setup": restartSetup()
         case "roomeq": showRoomEQ = true
+        case "speakers": showSpeakers = true
         default: post(["type": id])
         }
     }

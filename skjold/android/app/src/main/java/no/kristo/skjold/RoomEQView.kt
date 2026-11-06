@@ -68,7 +68,7 @@ import kotlin.math.ln
 data class EqPt(val f: Double, val db: Double)
 data class EqCut(val f: Double, val q: Double, val g: Double)
 
-private object RoomEQRec {
+internal object RoomEQRec {
     const val SR = 48000
 
     fun source(ctx: Context): Int {
