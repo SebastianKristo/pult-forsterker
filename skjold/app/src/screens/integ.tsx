@@ -1,3 +1,4 @@
+import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
 import { signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
@@ -81,7 +82,7 @@ export function IntegrationsPage() {
         {list.map((x) => { const on = x.id === cur.id; return (
           <button key={x.id} onClick={() => { intSel.value = x.id; }} style={`display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:18px;border-radius:14px;border:1px solid ${on ? A : '#242426'};background:${on ? '#1c170d' : '#141415'};cursor:pointer;text-align:left;color:#f2f2ee`}>
             <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px">
-              <span style={`width:44px;height:44px;border-radius:11px;background:${x.tile};color:#0b0b0c;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px`}>{x.mono}</span>
+              <IntLogo id={x.id} mono={x.mono} tile={x.tile} />
               <span style={`display:flex;align-items:center;gap:6px;font-size:11px;color:${x.ok ? '#6fcf7f' : '#8b8b86'}`}><i style={`width:6px;height:6px;border-radius:50%;background:${x.ok ? '#6fcf7f' : '#8b8b86'}`} />{x.status}</span>
             </div>
             <span style="font-size:15px;font-weight:600">{x.name}</span>
@@ -170,4 +171,20 @@ export function PluginsPage() {
       {list.length === 0 && <span style="font-size:13px;color:#8b8b86">Ingen plugins passer søket.</span>}
     </>
   );
+}
+
+/** Ekte logo per integrasjon: merkene fra kildeikonene, Home Assistant fra Simple Icons, Homey som ordmerke. */
+const INT_SRC: Record<string, string> = { lyrion: 'Lyrion', spotify: 'Spotify', ytmusic: 'YouTube Music', navidrome: 'Navidrome', upnp: 'UPnP/DLNA' };
+const HA_PATH = 'M22.939 10.627 13.061.749a1.505 1.505 0 0 0-2.121 0l-9.879 9.878C.478 11.21 0 12.363 0 13.187v9c0 .826.675 1.5 1.5 1.5h9.227l-4.063-4.062a2.034 2.034 0 0 1-.664.113c-1.13 0-2.05-.92-2.05-2.05s.92-2.05 2.05-2.05 2.05.92 2.05 2.05c0 .233-.041.456-.113.665l3.163 3.163V9.928a2.05 2.05 0 0 1-1.15-1.84c0-1.13.92-2.05 2.05-2.05s2.05.92 2.05 2.05a2.05 2.05 0 0 1-1.15 1.84v8.127l3.146-3.146A2.051 2.051 0 0 1 18 12.239c1.13 0 2.05.92 2.05 2.05s-.92 2.05-2.05 2.05c-.25 0-.488-.047-.709-.13L12.9 20.602v3.088h9.6c.825 0 1.5-.675 1.5-1.5v-9c0-.825-.477-1.977-1.061-2.561z';
+function IntLogo({ id, mono, tile }: { id: string; mono: string; tile: string }) {
+  const box = 'width:44px;height:44px;border-radius:11px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0';
+  const src = INT_SRC[id] ? SRC_ICON[INT_SRC[id]] : undefined;
+  if (src) return (
+    <span style={`${box};background:${src.bg};color:${src.fg}`}>
+      {src.sz !== '0' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style={`width:${src.sz === '100%' ? '70%' : src.sz};height:${src.sz === '100%' ? '70%' : src.sz};display:block`}>{src.st && <path d={src.st} />}{src.fi && <path d={src.fi} fill="currentColor" stroke="none" />}{src.fp && <path d={src.fp} fill="currentColor" stroke="none" />}</svg>}
+    </span>
+  );
+  if (id === 'ha') return <span style={`${box};background:#18bcf2;color:#fff`}><svg viewBox="0 0 24 24" style="width:60%;height:60%;display:block"><path d={HA_PATH} fill="currentColor" /></svg></span>;
+  if (id === 'homey') return <span style={`${box};background:#fff;color:#1d1d1f;font-weight:700;font-size:12.5px;letter-spacing:-.02em`}>homey</span>;
+  return <span style={`${box};background:${tile};color:#0b0b0c;font-weight:700;font-size:14px`}>{mono}</span>;
 }
