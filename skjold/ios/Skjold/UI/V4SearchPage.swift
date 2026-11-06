@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Søk (searchOn): #050506, «Søk i»-filter (ring 3 / opasitet .45), Spillelister, Låter, Radio. Søkefeltet nederst.
 struct V4SearchPage: View {
@@ -6,6 +7,9 @@ struct V4SearchPage: View {
     @Environment(V4State.self) private var ui
     @FocusState private var focus: Bool
     @State private var hits: [String: [Track]] = [:]
+    /// Tastaturhøyden måles selv: siden ligger som overlegg i et ZStack over systemets TabView, og der flytter ikke
+    /// SwiftUI innholdet opp automatisk – søkefeltet nederst ble liggende bak tastaturet.
+    @State private var kb: CGFloat = 0
 
     private static let srcs = ["YouTube Music", "Navidrome", "Plex", "Radio", "AirPlay"]
     private var q: String { ui.sq.trimmingCharacters(in: .whitespaces) }
@@ -25,11 +29,29 @@ struct V4SearchPage: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollDismissesKeyboard(.interactively)
-            field
+            field.padding(.bottom, kb)
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { n in
+            setKeyboard(n)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.easeOut(duration: 0.25)) { kb = 0 }
         }
         .onAppear { focus = true }
         .task(id: q + "|\(ui.sSrc ?? -1)") { await run() }
         .onChange(of: q) { _, v in if ok("Radio") { m.setQ(v) } }
+    }
+
+    private func setKeyboard(_ n: Notification) {
+        guard let end = n.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+        let screen = UIScreen.main.bounds.height
+        let h = max(0, screen - end.minY)
+        // tastaturet dekker også hjem-indikatoren; trekk fra den nederste trygge sonen så feltet ikke svever for høyt
+        let bottomInset = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow?.safeAreaInsets.bottom }.first ?? 0
+        let lift = h > 0 ? max(0, h - bottomInset) : 0
+        withAnimation(.easeOut(duration: 0.25)) { kb = lift }
     }
 
     private var intro: some View {
