@@ -42,8 +42,14 @@ if have_ui && [ -z "${SKJOLD_CARD:-}" ]; then
   CARD=$(whiptail --title "Skjold – lydutgang" --default-item "$DEF_CARD" --menu \
     "Hvilket lydkort skal Skjold spille på?\n(PCH/Generic = PC-ens analoge linje-ut/hodetelefon)" 18 78 8 "${MENU[@]}" 3>&1 1>&2 2>&3) || exit 1
 fi
-mapfile -t PCMS < <(aplay -l 2>/dev/null | awk -v c="$CARD" -F'[:,]' '$0 ~ "\\["c"\\]" || $0 ~ "card [0-9]+: "c" " {for(i=1;i<=NF;i++) if ($i ~ /device [0-9]+/) {split($i,a," "); print a[2] "|" $(i+1)}}')
-PCM="${SKJOLD_PCM:-${PCMS[0]%%|*}}"; PCM="${PCM:-0}"
+# Utganger på valgt kort fra /proc/asound/pcm (krever ikke alsa-utils/aplay på verten): «00-03: HDMI 0 : HDMI 0 : playback 1»
+CNUM=$(awk -v c="$CARD" -F'[][]' '/^ *[0-9]+ \[/ {id=$2; gsub(/ /,"",id); n=$1; gsub(/ /,"",n); if (id==c) {print n; exit}}' /proc/asound/cards)
+PCMS=()
+if [ -n "$CNUM" ] && [ -r /proc/asound/pcm ]; then
+  mapfile -t PCMS < <(awk -v c="$CNUM" -F': ' '$0 ~ /playback/ {split($1,a,"-"); if (a[1]+0==c+0) print a[2]+0 "|" $2}' /proc/asound/pcm)
+fi
+PCM="${SKJOLD_PCM:-}"
+if [ -z "$PCM" ]; then PCM=0; [ "${#PCMS[@]}" -gt 0 ] && PCM="${PCMS[0]%%|*}"; fi
 if have_ui && [ -z "${SKJOLD_PCM:-}" ] && [ "${#PCMS[@]}" -gt 1 ]; then
   MENU=(); for p in "${PCMS[@]}"; do MENU+=("${p%%|*}" "${p#*|}"); done
   PCM=$(whiptail --title "Skjold – utgang på $CARD" --menu "Velg utgang (0 er vanligvis analog, 3/7/8 er HDMI):" 16 78 6 "${MENU[@]}" 3>&1 1>&2 2>&3) || exit 1
