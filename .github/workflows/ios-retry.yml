@@ -1,0 +1,37 @@
+#
+# iOS-jobbene i «Skjold release» blir av og til avbrutt fordi GitHub ikke finner en ledig Mac-maskin i tide
+# (jobben står i kø og avsluttes som «cancelled» uten at noe er kjørt). Denne workflowen ser etter det når
+# release-kjøringen er ferdig, og kjører de avbrutte jobbene på nytt – opptil 3 forsøk. Release-jobben kjøres
+# da også på nytt og legger iOS-filene til i releasen.
+#
+name: Prøv iOS på nytt
+
+on:
+  workflow_run:
+    workflows: ["Skjold release"]
+    types: [completed]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  retry:
+    if: github.event.workflow_run.conclusion != 'success' && github.event.workflow_run.run_attempt < 4
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kjør avbrutte Mac-jobber på nytt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          JOBS=$(gh api "repos/$REPO/actions/runs/$RUN/jobs?filter=latest&per_page=50" \
+            --jq '[.jobs[] | select(.conclusion=="cancelled" and (.labels|tostring|test("macos"))) | .name] | join(", ")')
+          FAILED=$(gh api "repos/$REPO/actions/runs/$RUN/jobs?filter=latest&per_page=50" \
+            --jq '[.jobs[] | select(.conclusion=="failure") | .name] | join(", ")')
+          if [ -n "$FAILED" ]; then echo "::warning::Ekte feil i: $FAILED – prøver ikke på nytt automatisk."; exit 0; fi
+          if [ -z "$JOBS" ]; then echo "Ingen avbrutte Mac-jobber."; exit 0; fi
+          echo "Avbrutt uten Mac-maskin: $JOBS – venter 2 min og kjører på nytt."
+          sleep 120
+          gh run rerun "$RUN" --failed -R "$REPO"
