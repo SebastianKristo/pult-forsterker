@@ -1,0 +1,24 @@
+[Unit]
+Description=Skjold S1 rev F – skjerm (960 × 320, cage + Chromium)
+After=systemd-user-sessions.service seatd.service ki-amp.service
+Wants=ki-amp.service
+Conflicts=getty@tty1.service
+
+[Service]
+# Brukeren, kildetreet og runtime-katalogen fylles inn av install_skjold_ui.sh
+User=@USER@
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+WorkingDirectory=@SRC@/pi
+Environment=XDG_RUNTIME_DIR=/run/user/@UID@
+Environment=WLR_LIBINPUT_NO_DEVICES=1
+Environment=SKJOLD_DAEMON=127.0.0.1:8765
+EnvironmentFile=-/etc/ki-amp.env
+ExecStartPre=+/bin/sh -c 'mkdir -p /run/user/@UID@ /etc/skjold && chown @USER@ /run/user/@UID@ && chmod 700 /run/user/@UID@ && chown @USER@ /etc/skjold'
+ExecStart=/usr/bin/python3 -m skjold_ui
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical.target
