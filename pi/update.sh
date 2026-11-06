@@ -16,7 +16,7 @@ sudo install -m 755 "$SRC/ki_amp_daemon.py" "$SRC/oled_display.py" "$SRC/oled_sm
 sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_s1f.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" "$SRC/skjold_cloud.py" /usr/local/bin/   # Apple Hjem (HomeKit), Skjold S1 rev F
 sudo install -m 644 "$SRC/skjold_xtc.py" /usr/local/bin/ && sudo install -d /usr/local/bin/skjold_sync && sudo install -m 644 "$SRC"/skjold_sync/*.py /usr/local/bin/skjold_sync/   # romlig stereo, synkron multiroom, trådløs sub
 sudo install -m 644 "$SRC/skjold_extras.py" /usr/local/bin/   # Roon, Plexamp, backup, automatisk standby, Skjold Wrapped
-sudo install -m 644 "$SRC/skjold_smartradio.py" "$SRC/skjold_home_extras.py" "$SRC/skjold_pluginstore.py" "$SRC/skjold_health.py" "$SRC/skjold_libtag.py" "$SRC/skjold_ask.py" "$SRC/skjold_podsum.py" /usr/local/bin/   # smart radio, helse, lydtagger, «Spill noe til …», podkastsammendrag
+sudo install -m 644 "$SRC/skjold_smartradio.py" "$SRC/skjold_home_extras.py" "$SRC/skjold_pluginstore.py" "$SRC/skjold_health.py" "$SRC/skjold_libtag.py" "$SRC/skjold_ask.py" "$SRC/skjold_podsum.py" "$SRC/skjold_vinyl.py" /usr/local/bin/   # smart radio, helse, lydtagger, «Spill noe til …», podkastsammendrag
 
 # Intercom, låtgjenkjenning (fpcalc/Chromaprint), dørklokke, rutiner og trygg oppdatering (helsesjekk + tilbakerulling)
 command -v fpcalc >/dev/null || sudo apt-get -y install --no-install-recommends libchromaprint-tools >/dev/null 2>&1 || true
@@ -67,6 +67,7 @@ command -v mount.cifs >/dev/null && command -v smbclient >/dev/null || sudo apt-
 python3 -c "import paho.mqtt" 2>/dev/null || sudo apt-get -y install --no-install-recommends python3-paho-mqtt >/dev/null || true   # MQTT-bro
 python3 -c "import pyhap" 2>/dev/null || sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || true   # Apple Hjem (HomeKit)
 python3 -c "import cryptography" 2>/dev/null || sudo apt-get install -y -q python3-cryptography >/dev/null 2>&1 || true   # Skjold Cloud (AES-GCM)
+python3 -c "import mutagen" 2>/dev/null || sudo apt-get install -y -q python3-mutagen >/dev/null 2>&1 || true   # Platesamling (FLAC-tagger)
 sudo mkdir -p /usr/local/share/skjold-matter && sudo cp -r "$SRC/matter/package.json" "$SRC/matter/package-lock.json" "$SRC/matter/index.js" "$SRC/matter/mapping.js" "$SRC/matter/skjold-matter.service" "$SRC/matter/install.sh" /usr/local/share/skjold-matter/   # Matter-pluginen (installeres når den slås på)
 [ -f /var/lib/ki-amp/matter.on ] && { sudo bash /usr/local/share/skjold-matter/install.sh || echo "ADVARSEL: Skjold Matter ble ikke oppdatert" >&2; }
 command -v squeezelite >/dev/null || sudo apt-get -y install --no-install-recommends squeezelite >/dev/null

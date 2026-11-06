@@ -225,6 +225,9 @@ final class AppModel {
         case "setupTest": devSend("/api/test", ["channel": msg["ch"] as? String ?? "L"])
         case "testSpk", "testOut": speakerTest(on: settingsHost)
         case "testVoice": devSend("/api/voice", ["say": "bt_pairing"], on: settingsHost)
+        case "vinylSide": devSend("/api/vinyl/start", [:], on: settingsHost)
+        case "vinylStop": devSend("/api/vinyl/stop", [:], on: settingsHost)
+        case "vinylSave": devSend("/api/vinyl/save", [:], on: settingsHost)
         case "btPair": devSend("/api/bt", ["pairing": true], on: settingsHost)
         case "src": if let v = msg["v"] as? Int { livePlayFavourite(v) }
         case "set": if let k = msg["k"] as? String, let v = msg["v"] { liveSetting(k, v) }
