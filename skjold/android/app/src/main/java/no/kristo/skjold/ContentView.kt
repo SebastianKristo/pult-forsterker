@@ -76,6 +76,7 @@ fun ContentView(m: AppModel) {
             }
             Mode.APP -> AppShell(m)
         }
+        WhatsNewOverlay(m)
         AnimatedVisibility(m.intro, enter = androidx.compose.animation.EnterTransition.None, exit = fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 1.04f)) {
             IntroView(m)
         }

@@ -134,6 +134,7 @@ export function IntegrationsPage() {
   return (
     <>
       <button onClick={() => go('kass')} style="align-self:flex-start;margin-bottom:12px;padding:10px 16px;border-radius:12px;border:1px solid #242426;background:#141415;color:#f2f2ee;cursor:pointer">Skjold Kassett – NFC-kassetter ›</button>
+      <button onClick={() => go('vinyl')} style="align-self:flex-start;margin-bottom:12px;padding:10px 16px;border-radius:12px;border:1px solid #242426;background:#141415;color:#f2f2ee;cursor:pointer">Platesamling – vinyl til FLAC ›</button>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
         {list.map((x) => { const on = x.id === cur.id; return (
           <button key={x.id} onClick={() => { intSel.value = x.id; }} style={`display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:18px;border-radius:14px;border:1px solid ${on ? A : '#242426'};background:${on ? '#1c170d' : '#141415'};cursor:pointer;text-align:left;color:#f2f2ee`}>

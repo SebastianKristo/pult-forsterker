@@ -322,6 +322,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             "setupTest" -> devSend("/api/test", mapOf("channel" to (msg["ch"] as? String ?: "L")))
             "testSpk", "testOut" -> speakerTest(settingsHost)
             "testVoice" -> devSend("/api/voice", mapOf("say" to "bt_pairing"), on = settingsHost)
+            "vinylSide" -> devSend("/api/vinyl/start", emptyMap<String, Any>(), on = settingsHost)
+            "vinylStop" -> devSend("/api/vinyl/stop", emptyMap<String, Any>(), on = settingsHost)
+            "vinylSave" -> devSend("/api/vinyl/save", emptyMap<String, Any>(), on = settingsHost)
             "btPair" -> devSend("/api/bt", mapOf("pairing" to true), on = settingsHost)
             "src" -> (msg["v"] as? Int)?.let { livePlayFavourite(it) }
             "set" -> { val k = msg["k"] as? String; val v = msg["v"]; if (k != null && v != null) liveSetting(k, v) }

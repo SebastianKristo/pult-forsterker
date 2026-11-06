@@ -198,6 +198,20 @@ paths:
           application/json:
             schema:
               type: object
+  /api/changelog:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/changelog → {current, notes{tag,name,body,date,url}, history[], offline}
+      operationId: get_api_changelog
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
   /api/cloud:
     get:
       tags:
@@ -1840,6 +1854,20 @@ paths:
           application/json:
             schema:
               type: object
+  /api/recordings/feed.xml:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/recordings/feed.xml[?p=<program>] → podkast-RSS for programopptakene.
+      operationId: get_api_recordings_feed_xml
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
   /api/recordings/file/{name}:
     get:
       tags:
@@ -1855,6 +1883,45 @@ paths:
               schema:
                 type: object
       parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/recordings/guide:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/recordings/guide?ch=p1&date=YYYY-MM-DD → sendinger fra NRKs programguide.
+      operationId: get_api_recordings_guide
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/recordings/prog/{prog}/{name}:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/recordings/prog/{prog}/{name}
+      operationId: get_api_recordings_prog_prog_name
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: prog
+        in: path
+        required: true
+        schema:
+          type: string
       - name: name
         in: path
         required: true
@@ -2516,6 +2583,84 @@ paths:
             application/json:
               schema:
                 type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/vinyl:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/vinyl
+      operationId: get_api_vinyl
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/vinyl/{act}:
+    delete:
+      tags:
+      - Annet
+      summary: DELETE /api/vinyl/{act}
+      operationId: delete_api_vinyl_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+      - Annet
+      summary: GET /api/vinyl/{act}
+      operationId: get_api_vinyl_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+      - Annet
+      summary: POST /api/vinyl/{act}
+      operationId: post_api_vinyl_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
       requestBody:
         required: false
         content:

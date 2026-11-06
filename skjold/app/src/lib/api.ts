@@ -130,7 +130,7 @@ export interface Lyrics { enabled: boolean; found: boolean; plain?: string; sync
 export interface HistItem { t: number; title: string; artist: string; album: string; input: string; source: string; station: string; cover: string }
 export interface Recording { name: string; size: number; t: number; recording: boolean; songs?: number | null }
 export interface RecSong { artist: string; title: string; dur?: number; t: number; channel: string; file?: string; where?: 'smb' | 'lokalt'; status: 'ok' | 'duplikat' | 'feil'; error?: string }
-export interface RecPayload { items: Recording[]; dir: string; songs?: RecSong[]; smb?: { set: boolean; ok: boolean; msg: string; share: string }; error?: string }
+export interface RecPayload { items: Recording[]; dir: string; songs?: RecSong[]; programs?: import('../screens/programs').Program[]; feed?: string; smb?: { set: boolean; ok: boolean; msg: string; share: string }; error?: string }
 export interface SnapClient { id: string; name: string; connected: boolean; latency: number; volume: number; muted: boolean }
 /** Music Assistant (/api/ma/*) og NRK på forespørsel (/api/nrk/*). */
 export interface MaItem { uri: string; kind: string; id: string; name: string; artist: string; album: string; duration: number; image: string; provider: string; year?: number | null }
