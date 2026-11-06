@@ -155,6 +155,16 @@ fun SoundView(m: AppModel) {
                 }
                 SKToggle(prof.loud) { Haptics.tick(); m.setProf { it.copy(loud = !it.loud) } }
             }
+            Row(
+                Modifier.fillMaxWidth().topLine(C.line).press { Haptics.tick(); m.showRoomEQ = true }.padding(vertical = 14.dp, horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    T("Romkorreksjon", sora(14f))
+                    T("Mål rommet med telefonens mikrofon og demp basstopper", sora(11f, W.Regular, C.muted))
+                }
+                T("Mål", sora(14f, W.Regular, C.accent2))
+            }
         }
     }
 }

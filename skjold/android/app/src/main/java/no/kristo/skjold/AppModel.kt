@@ -215,6 +215,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** "", "laster", "ok", "login" eller feiltekst. */
     var hjemState by mutableStateOf("")
     var hjemLogin by mutableStateOf(false)
+    var showRoomEQ by mutableStateOf(false)   // romkorreksjon med mikrofonen (RoomEQView)
     var dev by mutableStateOf<DevStatus?>(null)
     val devStats = mutableStateMapOf<String, DevStatus?>()
     var lyrionServer by mutableStateOf<String?>(null)
@@ -777,6 +778,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             "btPair" -> { btPairT = System.currentTimeMillis(); post(mapOf("type" to "btPair", "room" to devRoom.id)) }
             "openRadio" -> { tab = 0; sub = "radio" }
             "setup" -> restartSetup()
+            "roomeq" -> showRoomEQ = true
             else -> post(mapOf("type" to id))
         }
     }

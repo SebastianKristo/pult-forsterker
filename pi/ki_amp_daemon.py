@@ -4863,6 +4863,26 @@ async def h_roomeq_sweep(r):
     return web.json_response({"f1": 20, "f2": 20000, "dur": 6.0, "sr": 48000, "delay": delay})
 
 
+async def h_roomeq_analyze(r):
+    """POST /api/roomeq/analyze?session=<id>&reset=1&sr=48000  (body: WAV, eller rå s16le mono med ?sr=)
+    → {curve, after, filters [{f,q,g}], target, points, point, clipped}. Felles analyse for web, iOS og Android;
+    flere målepunkter i samme økt snittes. Lagre forslaget med POST /api/plugins/roomeq {"enabled":true,"filters":[…]}."""
+    try:
+        import skjold_roomeq as rq
+    except Exception as e:
+        return web.json_response({"error": f"Romkorreksjon mangler (kjør pi/update.sh): {e}"}, status=503)
+    body = await r.read()
+    if len(body) > 40 * 1024 * 1024:
+        return web.json_response({"error": "opptaket er for stort"}, status=413)
+    q = r.query
+    try:
+        out = await asyncio.get_running_loop().run_in_executor(None, lambda: rq.analyze(
+            body, r.headers.get("Content-Type", ""), int(q.get("sr") or 48000), q.get("session", ""), q.get("reset") in ("1", "true")))
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=400)
+    return web.json_response(out)
+
+
 # --- SUB/WAVE (getsubwave.com): AI-DJ-nettradio. MCP (JSON-RPC 2.0 over «streamable HTTP») på <stasjon>/api/mcp ---
 class SubwaveClient:
     """Liten MCP-klient: initialize → notifications/initialized → tools/list, deretter tools/call. Svar kan komme som JSON
@@ -5933,10 +5953,10 @@ def main():
     if pot.startswith("rc:"):   # rc:24 eller rc:24:inv (snu retningen)
         parts = pot.split(":")
         threading.Thread(target=pot_thread, args=(int(parts[1]), len(parts) > 2 and parts[2] == "inv"), daemon=True).start()
-    app = web.Application(middlewares=[cors_mw])
+    app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
