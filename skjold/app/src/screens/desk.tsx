@@ -16,6 +16,7 @@ import { libUi } from './library';
 import { LyricsPane, SubwavePane } from './plugins';
 import { WrappedTeaser } from './extras';
 import { RecognizeBox, RoutinesShelf } from './features';
+import { DiscoverCard, SmartRadioBox } from './extras2';
 
 const PLAY = 'M8 5v14l11-7z';
 const SRC_ORDER: [InputId, string][] = [['radio', 'Radio'], ['airplay', 'AirPlay'], ['bt', 'Blåtann'], ['spotify', 'Spotify'], ['plex', 'Plex'], ['aux', 'AUX'], ['aux2', 'AUX'], ['usb', 'USB']];
@@ -94,6 +95,7 @@ export function DeskHome() {
         </div>
 
         <WrappedTeaser />
+        <DiscoverCard />
         <RoutinesShelf />
 
         {rc.length > 0 && <section class="col gap12">
@@ -176,6 +178,7 @@ export function DeskPlayer() {
         <div class="seg">{((s?.subwave ? [['song', 'Låt'], ['booth', 'Booth'], ['queue', 'Kø']] : [['song', 'Låt'], ['queue', 'Kø'], ['lyrics', 'Tekst']]) as ['song' | 'queue' | 'lyrics' | 'booth', string][]).map(([k, n]) => <button key={k} class={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}</div>
         {tab === 'song' ? <>
           <RecognizeBox />
+          <SmartRadioBox seed={libQ && lq.value[li.value] ? { source: 'navidrome', id: lq.value[li.value]!.id, title: lq.value[li.value]!.title, artist: lq.value[li.value]!.artist } : s?.playing && s.artist ? { title: t.title, artist: s.artist } : null} />
           <div class="col" style={{ gap: '6px', minWidth: 0 }}>
             <span class="kicker">{live ? <span class="live">DIREKTE</span> : sourceLine(s).toUpperCase()}</span>
             <h1 class="tt" data-testid="now-title">{t.title}</h1>

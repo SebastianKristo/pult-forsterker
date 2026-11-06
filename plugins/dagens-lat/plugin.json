@@ -1,0 +1,21 @@
+{
+  "id": "dagens-lat",
+  "navn": "Dagens låt",
+  "versjon": "1.0.0",
+  "forfatter": "Skjold",
+  "beskrivelse": "Spiller en tilfeldig låt fra Navidrome-biblioteket ditt hver morgen, og viser den på skjermen.",
+  "ikon": "music",
+  "kategori": "Musikk",
+  "minSkjold": "0.1.0",
+  "tillatelser": ["audio", "schedule"],
+  "events": ["tick", "test"],
+  "settings": {
+    "tid": {"type": "time", "navn": "Klokkeslett", "default": "08:00"}
+  },
+  "entry": "plugin.json",
+  "skills": [
+    {"when": {"event": "tick", "time": "$tid", "days": [0, 1, 2, 3, 4, 5, 6]},
+     "do": [{"toast": "Dagens låt", "sub": "Tilfeldig fra biblioteket ditt"}, {"navidrome_random": true}]},
+    {"when": {"event": "test"}, "do": [{"navidrome_random": true}]}
+  ]
+}

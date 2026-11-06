@@ -548,11 +548,12 @@ class Discover:
             try:
                 ids = [p["id"] for p in picked if p.get("src") == "navidrome"]
                 pls = (nd._call("getPlaylists").get("playlists") or {}).get("playlist") or []
-                for p in pls:   # erstatt forrige (eller behold de 4 siste som arkiv)
-                    if str(p.get("name", "")).startswith("Oppdag uke"):
-                        old = [x for x in pls if str(x.get("name", "")).startswith("Oppdag uke")]
-                        if not c.get("archive") or len(old) >= 4 or p.get("name") == name:
-                            nd._call("deletePlaylist", id=p["id"])
+                # erstatt forrige, eller behold de 3 forrige som arkiv (= 4 med den nye)
+                old = sorted((x for x in pls if str(x.get("name", "")).startswith("Oppdag uke")), key=lambda x: str(x.get("created", "")))
+                keep = old[-3:] if c.get("archive") else []
+                for p in old:
+                    if p not in keep or p.get("name") == name:
+                        nd._call("deletePlaylist", id=p["id"])
                 if ids:
                     r = nd._call("createPlaylist", name=name, songId=ids)
                     entry["navidrome"] = ((r.get("playlist") or {}).get("id")) or True
@@ -593,6 +594,19 @@ class Discover:
         if tm.tm_wday != int(c.get("day", 0)) or time.strftime("%H:%M", tm) < str(c.get("time", "06:00")):
             return False
         return float(self.data.get("last_run") or 0) < now - 6 * 86400
+
+    def save(self):
+        """Lagre gjeldende Oppdag-liste for godt (egen Navidrome-spilleliste som ikke erstattes neste uke)."""
+        cur = (self.data.get("lists") or [None])[-1]
+        if not cur:
+            raise RuntimeError("Ingen Oppdag-liste ennå")
+        ids = [t["id"] for t in cur.get("tracks") or [] if t.get("src") == "navidrome"]
+        nd = self.ctx["subsonic"]()
+        if not nd or not ids:
+            raise RuntimeError("Navidrome er ikke satt opp")
+        nd._call("createPlaylist", name=f"Lagret – {cur['name']} {time.strftime('%Y', time.localtime(cur['t']))}", songId=ids)
+        cur["saved"] = True
+        self._save()
 
     def play(self, shuffle=False):
         cur = (self.data.get("lists") or [None])[-1]
@@ -644,6 +658,8 @@ def discover_routes(ctx):
                 await loop_.run_in_executor(None, dv.run)
             if b.get("play"):
                 await loop_.run_in_executor(None, dv.play, bool(b.get("shuffle")))
+            if b.get("save"):
+                await loop_.run_in_executor(None, dv.save)
         except Exception as e:
             return web.json_response({"error": str(e)}, status=409)
         return web.json_response(dv.status())

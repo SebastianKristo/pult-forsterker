@@ -1,0 +1,17 @@
+{
+  "id": "hvit-stoy",
+  "navn": "Hvit støy-generator",
+  "versjon": "1.0.0",
+  "forfatter": "Skjold",
+  "beskrivelse": "Lager hvit, rosa eller brun støy for søvn og konsentrasjon. Kombiner med sovetimeren.",
+  "ikon": "waves",
+  "kategori": "Verktøy",
+  "minSkjold": "0.1.0",
+  "tillatelser": ["audio"],
+  "events": ["play", "test"],
+  "settings": {
+    "farge": {"type": "select", "navn": "Type støy", "valg": ["hvit", "rosa", "brun"], "default": "rosa"},
+    "volum": {"type": "number", "navn": "Volum", "min": 5, "max": 40, "default": 15}
+  },
+  "entry": "main.py"
+}

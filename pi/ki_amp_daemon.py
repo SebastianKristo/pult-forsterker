@@ -3952,11 +3952,26 @@ async def h_homekit(r):
 # ---------- Plugins (Skjold-egne og Lyrion) – GET /api/plugins, POST /api/plugins/{id}, GET /api/lyrics, GET /api/history ----------
 # Innstillingene ligger i state["settings"]["plugins"][id], så appen, web-UI-et og Touch deler dem.
 NRK_P1 = "https://lyd.nrk.no/nrk_radio_p1_ostlandssendingen_mp3_h"
+_HX = {}   # ctx for skjold_home_extras/pluginstore/smartradio (fylles når web-appen starter)
+
+
+def _cdsp_probe():
+    import urllib.parse as _up
+    u = _up.urlparse(DSP_WS)
+    with socket.create_connection((u.hostname or "127.0.0.1", u.port or 1234), timeout=2):
+        return True, "svarer på " + str(u.port or 1234)
+
+
 PLUGIN_DEFS = [
     # id, navn, kilde, kategori, beskrivelse, standardinnstillinger
     ("sleep", "Sovetimer", "skjold", "Verktøy", "Skrur ned lyden det siste minuttet og slår av etter 15 til 90 minutter.", {"minutes": 30}),
     ("alarm", "Vekkerklokke", "skjold", "Verktøy", "Vekk med en radiofavoritt eller en strøm. Flere alarmer, valgfrie ukedager og myk oppstart.",
-     {"alarms": [{"time": "07:00", "days": [0, 1, 2, 3, 4], "preset": 1, "url": "", "volume": 30, "fade": 3, "on": True}]}),
+     {"alarms": [{"time": "07:00", "days": [0, 1, 2, 3, 4], "preset": 1, "url": "", "volume": 30, "fade": 3, "on": True}],
+      "light": {"enabled": False, "entities": [], "minutes": 10, "step": 20, "ha_url": "", "ha_token": ""}}),
+    ("presence", "Tilstede-modus", "skjold", "Hjem", "Bortreise: spiller radio i tilfeldige økter med lavt volum, så det virker som noen er hjemme.",
+     {"source": "favorites", "start": "07:00", "end": "23:00", "min_on": 10, "max_on": 60, "min_off": 15, "max_off": 120,
+      "volume": 15, "rooms": [], "rotate": False, "seed": 0}),
+    ("discover", "Oppdag uke", "skjold", "Musikk", "Ny spilleliste hver uke med 30–40 låter du ikke har hørt på en stund, basert på det du lytter til.", {}),
     ("news", "Morgennyheter", "skjold", "Radio og podkast", "Spiller NRK P1 med nyheter til fast tid på hverdager.",
      {"time": "06:30", "days": [0, 1, 2, 3, 4], "url": NRK_P1, "volume": 25, "minutes": 15}),
     ("lyrics", "Sangtekster", "skjold", "Verktøy", "Viser teksten til låten som spiller, synkronisert når den finnes. Fra lrclib.net.", {}),
@@ -4055,6 +4070,10 @@ def plug_status(pid, cfg):
         return "Krever måling"
     if pid == "snapcast":
         return "Beta"
+    if pid == "presence" and _HX.get("presence"):
+        return _HX["presence"].status()
+    if pid == "alarm" and _HX.get("wakelight") and _HX["wakelight"].run:
+        return "Vekkelys på"
     if pid == "sleep" and _sleep["until"]:
         return "Slår av om " + str(max(1, int(round((_sleep["until"] - time.time()) / 60)))) + " min"
     return "På"
@@ -4073,6 +4092,8 @@ def plugins_payload():
             cfg = {**cfg, "secret": "••••••"}
         if pid == "listenbrainz" and cfg.get("token"):
             cfg = {**cfg, "token": "••••••" + str(cfg["token"])[-4:]}
+        if pid == "alarm" and (cfg.get("light") or {}).get("ha_token"):
+            cfg = {**cfg, "light": {**cfg["light"], "ha_token": "••••••"}}
         for sk in ("password", "pin", "smb_password", "passphrase"):
             if cfg.get(sk):
                 cfg = {**cfg, sk: "••••••"}
@@ -4191,6 +4212,7 @@ def _alarm_tick():
         k = alarm_due({"time": c.get("time"), "days": c.get("days"), "id": "news"}, tm, _alarm_fired)
         if k:
             _alarm_fired.add(k)
+            if _HX.get("store_event"): threading.Thread(target=_HX["store_event"], args=("before_news",), daemon=True).start()
             fire_alarm({"time": c.get("time"), "url": c.get("url") or NRK_P1, "title": "NRK P1", "volume": c.get("volume", 25), "fade": 1}, "Morgennyheter")
             mins = int(c.get("minutes") or 0)
             if mins > 0 and not _sleep["until"]:
@@ -4736,6 +4758,7 @@ def mqtt_state_json():
     s = read_status()
     out = {k: s.get(k) for k in ("power", "input", "volume", "mute", "playing", "title", "artist", "album", "preset", "station", "sleep", "headphones")}
     out["night"] = bool(state.get("night"))
+    out["presence"] = plug_on("presence")
     return json.dumps(out, ensure_ascii=False)
 
 
@@ -4753,6 +4776,7 @@ def mqtt_command(topic_tail, payload):
             elif k == "mute": set_mute(str(v).lower() in ("1", "true", "on"))
             elif k == "preset": play_preset(int(v), announce=False)
             elif k == "transport": transport(str(v))
+            elif k == "presence" and _HX.get("presence"): _HX["presence"].set_enabled(str(v).lower() in ("1", "true", "on", "på"))
             elif k == "night": night_set(str(v).strip().lower() in ("1", "true", "on", "på"), "Home Assistant")
             elif k == "night_trigger": power_event("double_press", src="Home Assistant"); night_toggle("Home Assistant")
         except Exception as e:
@@ -4767,6 +4791,7 @@ def _mqtt_discovery(cl, base):
         ("number", "volume", {"name": "Volum", "command_topic": base + "/set/volume", "state_topic": base + "/state", "value_template": "{{ value_json.volume }}", "min": 0, "max": 100}),
         ("switch", "power", {"name": "Strøm", "command_topic": base + "/set/power", "state_topic": base + "/state", "value_template": "{{ 'ON' if value_json.power else 'OFF' }}", "payload_on": "on", "payload_off": "off", "state_on": "ON", "state_off": "OFF"}),
         ("select", "input", {"name": "Kilde", "command_topic": base + "/set/input", "state_topic": base + "/state", "value_template": "{{ value_json.input }}", "options": list(INPUTS)}),
+        ("switch", "presence", {"name": "Tilstede-modus", "command_topic": base + "/set/presence", "state_topic": base + "/state", "value_template": "{{ 'ON' if value_json.presence else 'OFF' }}", "payload_on": "on", "payload_off": "off", "state_on": "ON", "state_off": "OFF"}),
         ("sensor", "title", {"name": "Spiller nå", "state_topic": base + "/state", "value_template": "{{ value_json.title }}"}),
     ]
     for comp, key, cfg in ents:
@@ -6590,11 +6615,33 @@ def main():
     # Music Assistant og NRK på forespørsel (egne moduler, se pi/skjold_ma.py og pi/skjold_nrk.py)
     try:
         import skjold_ma as _ma, skjold_nrk as _nrk
-        app.add_routes(_ma.routes({"settings": settings, "name": lambda: NAME, "mac": lambda: lyr.player}))
+        _ma_ctx = {"settings": settings, "name": lambda: NAME, "mac": lambda: lyr.player}
+        app.add_routes(_ma.routes(_ma_ctx)); _HX["ma"] = _ma_ctx.get("ma")
         app.add_routes(_nrk.routes({"play_url": play_url, "lyr_cmd": lyr.cmd, "lyr_info": lambda: lyr.info,
                                     "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp"}))
     except Exception as e:
         print("Music Assistant/NRK ikke tilgjengelig:", e, flush=True)
+    # Smart radio, Oppdag-liste, hjem-ekstra, plugin-butikk og helsesjekk (egne moduler, minimale kroker her)
+    _hx_ctx = {"settings": settings, "subsonic": _nd, "play_url": play_url, "lyr_info": lambda: lyr.info, "lyr_cmd": lyr.cmd,
+               "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp", "history": lambda: list(_hist_load()),
+               "wishlist": wishlist.load, "alarm_cfg": lambda: plug_cfg("alarm"), "ha_fallback": lambda: feat_cfg().get("doorbell") or {},
+               "power": lambda: state["power"], "power_set": set_power, "volume_set": set_volume, "presets": lambda: state["presets"],
+               "play_preset": lambda n: play_preset(n, announce=False), "nrk_p1": NRK_P1, "plug_cfg": lambda: plug_cfg("presence"),
+               "plug_save": lambda c: _plug_save("presence", c), "toast": lambda t, s="": toast(t, s, key="plugin", secs=8),
+               "announce": announce_url, "version": _read_text("/usr/local/share/ki-amp/release") or VERSION,
+               "update": lambda: update_info(False), "lyrion": lambda: (bool(lyr.player), lyr.player or "ingen spiller funnet"),
+               "camilla": _cdsp_probe, "extra": lambda: {"input": state.get("input"), "settings": state.get("settings")}}
+    for _modname in ("skjold_smartradio", "skjold_home_extras", "skjold_pluginstore", "skjold_health"):
+        try:
+            _m = __import__(_modname)
+            if _modname == "skjold_smartradio":
+                _hx_ctx["ma"] = _HX.get("ma")
+                app.add_routes(_m.routes(_hx_ctx)); app.add_routes(_m.discover_routes(_hx_ctx))
+            else:
+                app.add_routes(_m.routes(_hx_ctx))
+        except Exception as e:
+            print(_modname, "ikke tilgjengelig:", e, flush=True)
+    _HX.update(_hx_ctx)
     app.add_routes([web.route(m_, p_, h_) for m_, p_, h_ in FEAT_ROUTES])
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
     webdir = os.environ.get("KI_AMP_WEBAPP", "")
