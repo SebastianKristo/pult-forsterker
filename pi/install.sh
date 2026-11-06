@@ -252,3 +252,8 @@ echo "Ferdig – start på nytt (sudo reboot)."
 echo "  AirPlay: «Pultforsterker» på iPhone/Mac   Bluetooth: hold AIRPLAY 2 s, så parr fra telefonen"
 echo "  USB: koble PC til USB-C bak – «UAC2 Gadget» dukker opp som lydenhet"
 echo "  API: http://$(hostname -I | awk '{print $1}'):8765/api/status"
+
+# Skjold S1 rev F: skjermen (960 × 320) – cage + Chromium med designets tegnekode (pi/skjold_ui)
+if [ "${KI_AMP_DISPLAY:-}" = bar958 ] || [ "${KI_AMP_BOARD:-}" = s1f ] || grep -qsE "^KI_AMP_(DISPLAY=bar958|BOARD=s1f)" /etc/ki-amp.env; then
+  sudo bash "$(cd "$(dirname "$0")" && pwd)/install_skjold_ui.sh" "${SUDO_USER:-$USER}" || echo "ADVARSEL: skjold-ui ble ikke installert" >&2
+fi
