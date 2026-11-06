@@ -1445,9 +1445,11 @@ def read_status():
             "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": "s1f" if S1F else BOARD,
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
-            "menu": dict(menu) if menu["open"] else None, "hold": hold_status(), "settings_menu": smenu_status(),
+            "menu": dict(menu) if menu["open"] else None, "hold": s1f_hold() or hold_status(), "settings_menu": smenu_status(),
             "sky": sky.kort(), "sleep": sleep_left(), "kids": plug_on("kids"), "subwave": subwave_playing(),
-            "ui": s1f_ui(), "greeting": greeting_status(), "hw_rev": "F" if S1F else ""}
+            "ui": s1f_ui(), "hw_rev": "F" if S1F else "",
+            "night": {"on": bool(state.get("night")), "src": (state.get("night_ev") or {}).get("src", ""),
+                      "steps": (state.get("night_ev") or {}).get("steps") or [], "t": (state.get("night_ev") or {}).get("t", 0)}}
 
 
 # ---------- USB-delingsswitch (Ugreen 2 PC → 4 USB) ----------
@@ -4509,7 +4511,9 @@ def mqtt_base():
 
 def mqtt_state_json():
     s = read_status()
-    return json.dumps({k: s.get(k) for k in ("power", "input", "volume", "mute", "playing", "title", "artist", "album", "preset", "station", "sleep", "night", "headphones")}, ensure_ascii=False)
+    out = {k: s.get(k) for k in ("power", "input", "volume", "mute", "playing", "title", "artist", "album", "preset", "station", "sleep", "headphones")}
+    out["night"] = bool(state.get("night"))
+    return json.dumps(out, ensure_ascii=False)
 
 
 def mqtt_command(topic_tail, payload):
@@ -5576,19 +5580,23 @@ def night_steps(payload):
         state["night_ev"] = {**state["night_ev"], "steps": steps}; changed()
 
 
-def greeting_status():
-    if not S1F:
-        return None
-    import skjold_s1f as _s1
-    g = _s1.greeting_load()
-    return g if g["state"] == "armed" else None
+S1F_UI = os.environ.get("KI_AMP_S1F_UI", "http://127.0.0.1:8766")   # skjold-ui (skjermen) – se pi/skjold_ui/KONTRAKT.md
 
 
-def greeting_dismiss():
-    import skjold_s1f as _s1
-    g = _s1.greeting_load()
-    if g["state"] == "armed":
-        g["state"] = "shown"; _s1.greeting_save(g); changed()
+def s1f_ui_event(ev, src, d=0):
+    """Gi skjermen hendelsen først. True = skjold-ui brukte den (hilsen, meny, hjul holdt) – ikke gjør noe her."""
+    try:
+        req = urllib.request.Request(S1F_UI + "/ui/event", data=json.dumps({"ev": ev, "src": src, "d": d}).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=0.3) as r:
+            return bool(json.loads(r.read() or b"{}").get("consumed"))
+    except Exception:
+        return False   # skjold-ui kjører ikke: knappene virker som vanlig
+
+
+def s1f_hold():
+    c = _s1f["controls"]
+    return c.hold if c else None
 
 
 def s1f_ui():
@@ -5604,8 +5612,7 @@ def _s1f_api():
               reboot=lambda: system_reboot(why="POWER holdt"), night_toggle=night_toggle, night_set=night_set,
               power_event=power_event, smenu_open=smenu_open, smenu_close=smenu_close, smenu_step=smenu_step,
               smenu_press=smenu_press, smenu_is_open=lambda: bool(smenu["open"]), smenu_idx=lambda: smenu["idx"] if smenu["open"] else None,
-              settings=settings, greeting_active=lambda: greeting_status() is not None, greeting_dismiss=greeting_dismiss,
-              set_headphones=set_headphones, led_scale=lambda: led_level(),
+              settings=settings, ui_event=s1f_ui_event, set_headphones=set_headphones, led_scale=lambda: led_level(),
               settings_patch=update_settings, settings_reset=lambda: update_settings({k: v for k, v in SETTINGS_DEF.items() if k != "eq"}),
               presets_set=_s1f_presets_set, bt_forget=_bt_forget_all, speaker_test=lambda ch: threading.Thread(target=_test_tone, args=(ch,), daemon=True).start(),
               test_voice=lambda: voice.say("power_on"), preview_clock=lambda: state.update(ui_event={"name": "preview_clock", "t": time.time()}) or changed())
@@ -5656,28 +5663,6 @@ async def h_night(r):
         else:
             night_toggle(str(b.get("src") or "Appen"))
     return web.json_response({"on": bool(state.get("night")), "ev": state.get("night_ev")})
-
-
-async def h_greeting(r):
-    import skjold_s1f as _s1
-    g = _s1.greeting_load()
-    if r.method == "POST":
-        try:
-            b = await r.json()
-        except Exception:
-            b = {}
-        if b.get("name") is not None:
-            g["name"] = str(b["name"]).strip()[:24] or "Pappa"
-        act = b.get("action") or b.get("state")
-        if act in ("install", "armed", "show"): g["state"] = "armed"
-        elif act in ("dismiss", "shown"): g["state"] = "shown"
-        elif act in ("off", "remove"): g["state"] = "off"
-        try:
-            _s1.greeting_save(g)
-        except Exception as e:
-            return web.json_response({"error": str(e)}, status=500)
-        changed()
-    return web.json_response(g)
 
 
 async def h_ws(r):
@@ -5773,7 +5758,7 @@ def main():
         parts = pot.split(":")
         threading.Thread(target=pot_thread, args=(int(parts[1]), len(parts) > 2 and parts[2] == "inv"), daemon=True).start()
     app = web.Application(middlewares=[cors_mw])
-    app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/greeting", h_greeting), web.post("/api/greeting", h_greeting), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
+    app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),

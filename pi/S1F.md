@@ -56,22 +56,27 @@ Test uten resten av Skjold: `sudo systemctl stop ki-amp && python3 pi/tools/s1f_
 | USB | velg USB, igjen = PC 1/2 + puls til switchen | |
 | Power | 1 = standby av/på (etter 380 ms) · 2 = nattmodus | 3 s = omstart |
 
-Hold-ringen vises etter 0,35 s. Første trykk når bursdagshilsenen vises lukker den og gjør ingenting annet.
+Hold-ringen vises etter 0,35 s (radio 0,9 s).
 LED: valgt kilde lyser (lysstyrke fra innstillingene), BT blinker 350 ms under paring, power blinker under omstart og 3 ganger ved nattmodus.
 
-## Status til skjermen (`/api/status`)
+## Samspill med skjermen (`pi/skjold_ui/KONTRAKT.md`)
+
+Hver fysiske hendelse sendes først til skjold-ui: `POST http://127.0.0.1:8766/ui/event`
+`{"ev": "press|turn|hold", "src": "knob|power|air|aux|radio|usb", "d": ±1}`. Svarer den `{"consumed": true}` (hilsenen vises,
+menyen er åpen, hjulet holdt 1,5 s = meny), gjør `skjold_s1f` ingenting. Kjører ikke skjold-ui, virker knappene som vanlig.
+Hilsenen og innstillingsmenyen på skjermen eies av skjold-ui (`/greeting`).
+
+Daemonen gir skjermen i `/api/status` blant annet:
 
 ```json
-"ui": {"screen": "main|standby|settings|pairing|greeting", "sel": 0, "edit": false,
-       "hold": {"kind": "pair|save|reboot|settings", "p": 0.42}, "overlay": {"type": "volume"}},
-"night": true, "night_ev": {"on": true, "src": "Skjold|Home Assistant|Homey|Appen", "steps": [{"name": "Lys av", "done": true}], "t": 0},
-"greeting": {"name": "Pappa", "state": "armed"},
+"hold": {"key": "knob|src|radio|reboot", "p": 0.42},
+"night": {"on": true, "src": "Skjold|Home Assistant|Homey|Appen", "steps": [{"name": "Lys av", "done": true}], "t": 0},
 "last_event": {"type": "event", "name": "power_double_press", "action": "nattmodus", "device": "Skjold S1", "seq": 3},
-"headphones": false, "hp_volume": 30, "settings_menu": {…}, "hw_rev": "F"
+"headphones": false, "hp_volume": 30, "bt_pairing": false, "rebooting": false, "input_seq": 12, "hw_rev": "F",
+"ui": {"screen": "main|standby|settings|pairing", "sel": null, "edit": false, "hold": null, "overlay": {"type": "volume"}}
 ```
 
-`settings_menu` er den eksisterende innstillingsmenyen (rader, valgt rad). `night_ev.t` brukes til å vise
-nattmodus-animasjonen én gang per endring.
+`hold` følger samme form som før (`saved` kommer fra «Lagret»-bekreftelsen når en radiokanal lagres).
 
 ## Nattmodus
 
@@ -95,5 +100,5 @@ Samme meldinger som prototypen: serveren sender `{"type": "state", …, "status"
 
 ## Bursdagshilsen
 
-`/etc/skjold/greeting.json` `{"name": "Pappa", "state": "armed"|"shown"|"off"}`. `POST /api/greeting {"name": "Pappa", "action": "install"}`
-arms den. Status har `greeting` så lenge den skal vises. Første knappetrykk eller vri setter `shown` (skrevet med fsync) før noe annet skjer.
+Eies av skjold-ui (`/greeting`, fil `/etc/skjold/greeting.json`). Første knappetrykk eller vri lukker den: skjold-ui svarer
+`consumed`, og knappen gjør ingenting annet.

@@ -1,4 +1,4 @@
-"""Skjold S1 rev F: knappelogikk, nattmodus-MQTT, bursdagshilsen og WebSocket-protokollen (uten GPIO)."""
+"""Skjold S1 rev F: knappelogikk, kontrakten mot skjold-ui, nattmodus-MQTT og WebSocket-protokollen (uten GPIO)."""
 import json
 import os
 import sys
@@ -11,14 +11,14 @@ class Api:
     def __init__(self, **st):
         self.state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False, "preset": 2,
                       "last_wireless": "airplay", "headphones": False, "hp_volume": 20, **st}
-        self.calls = []; self.greet = False; self.menu = False; self.sett = {"dblPower": 0, "hpOwn": True}
+        self.calls = []; self.menu = False; self.sett = {"dblPower": 0, "hpOwn": True}; self.consume = False; self.ui = []
 
     def __getattr__(self, n):
         return lambda *a: self.calls.append((n,) + a)
 
     def settings(self): return self.sett
-    def greeting_active(self): return self.greet
-    def greeting_dismiss(self): self.calls.append(("greeting_dismiss",)); self.greet = False
+    def ui_event(self, ev, src, d=0):
+        self.ui.append((ev, src, d)); return self.consume
     def smenu_is_open(self): return self.menu
     def smenu_idx(self): return 0 if self.menu else None
 
@@ -110,10 +110,20 @@ def test_aux_radio_usb():
     a, c = mk(input="usb"); click(c, "usb", 0.0); assert ("usb_toggle",) in a.calls
 
 
-def test_greeting_first_press_only_closes():
-    a, c = mk(); a.greet = True
-    c.press("radio", 0.0); c.release("radio", 0.1); c.tick(1)
-    assert a.calls == [("greeting_dismiss",)]
+def test_events_go_to_skjold_ui_first():
+    a, c = mk()
+    click(c, "bt", 0.0); c.rotate(-1); c.press("enc", 1.0); c.tick(2.6); c.release("enc", 2.7)
+    assert a.ui == [("press", "air", 1), ("turn", "knob", -1), ("hold", "knob", 1)]
+    a2, c2 = mk(); a2.consume = True   # hilsen vises / menyen er åpen: skjermen bruker hendelsen
+    click(c2, "radio", 0.0); c2.rotate(1); c2.press("power", 1.0); c2.tick(4.5)
+    assert a2.calls == []
+
+
+def test_hold_status_for_screen():
+    a, c = mk()
+    c.press("enc", 0.0); c.tick(0.75)
+    assert c.hold == {"key": "knob", "p": 0.5}
+    c.release("enc", 0.8); assert c.hold is None
 
 
 def test_led_frame():
@@ -124,13 +134,6 @@ def test_led_frame():
     on, off = c.led_frame(0.1, a.state)["bt"], c.led_frame(0.4, a.state)["bt"]
     assert on == 1.0 and off == 0.0
     a.state["power"] = False; assert c.led_frame(10.0, a.state)["aux"] == 0
-
-
-def test_greeting_roundtrip(tmp_path):
-    p = str(tmp_path / "g" / "greeting.json")
-    assert s1.greeting_load(p) == {"name": "Pappa", "state": "off"}
-    s1.greeting_save({"name": "Pappa", "state": "armed"}, p)
-    assert s1.greeting_load(p)["state"] == "armed"
 
 
 def test_mqtt_night_discovery():
@@ -164,6 +167,7 @@ def test_ws_commands():
 def test_design_state():
     st = {"power": True, "input": "aux2", "volume": 12, "mute": True, "usb_pc": 2, "preset": 3, "night": True,
           "presets": [{"title": "P1"}, None, {"title": "P3"}], "title": "T", "artist": "A", "name": "Stue"}
+    st["night"] = {"on": True, "src": "Skjold", "steps": []}
     d = s1.design_state(st, {"led": 0})
     assert (d["input"], d["aux"], d["usb"], d["preset"], d["vol"], d["muted"], d["night"]) == (1, 1, 1, 2, 12, True, True)
     assert d["presets"] == ["P1", "P3"] and d["set"] == {"led": 0}

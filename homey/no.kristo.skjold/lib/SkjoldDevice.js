@@ -266,16 +266,17 @@ class SkjoldDevice extends Homey.Device {
 
     // Skjold S1: nattmodus og dobbelttrykk på power
     if ('night' in st) {
+      const nightOn = st.night && typeof st.night === 'object' ? !!st.night.on : !!st.night;
       if (!this.hasCapability('night_mode') && this.product(st) === 's1') {
         await this.addCapability('night_mode').catch(this.error);
         this.registerCapabilityListener('night_mode', (on) => this.setNight(on));
       }
-      if (this.hasCapability('night_mode')) await this.setCapabilityValue('night_mode', !!st.night).catch(this.error);
-      if (this._lastNight !== null && this._lastNight !== !!st.night) {
-        const src = (st.night_ev && st.night_ev.src) || '';
-        await this.homey.flow.getDeviceTriggerCard('ki_night_changed').trigger(this, { on: !!st.night, src }, { on: !!st.night }).catch(this.error);
+      if (this.hasCapability('night_mode')) await this.setCapabilityValue('night_mode', nightOn).catch(this.error);
+      if (this._lastNight !== null && this._lastNight !== nightOn) {
+        const src = (st.night && st.night.src) || '';
+        await this.homey.flow.getDeviceTriggerCard('ki_night_changed').trigger(this, { on: nightOn, src }, { on: nightOn }).catch(this.error);
       }
-      this._lastNight = !!st.night;
+      this._lastNight = nightOn;
     }
     const ev = st.last_event;
     if (ev && ev.seq !== undefined) {

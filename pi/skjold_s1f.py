@@ -1,6 +1,6 @@
 """Skjold S1 rev F: knapper, volumhjul, LED-ringer, relé, USB-switch og hodetelefondetekt på Pi-ens GPIO.
 
-Ren logikk (ClickHold, S1FControls, ws_command, design_state, mqtt_* og greeting_*) har ingen GPIO-avhengighet og
+Ren logikk (ClickHold, S1FControls, ws_command, design_state, og mqtt_*) har ingen GPIO-avhengighet og
 testes i pi/tests/test_s1f.py. S1FHardware kobler logikken til gpiozero. Pinnene leses fra pi/config/s1f_pins.yaml
 (eller /etc/skjold/s1f_pins.yaml), aldri hardkodet.
 
@@ -109,6 +109,8 @@ class ClickHold:
 
 
 LED_LEVELS = [1.0, 0.55, 0.22, 0.0]   # Høy / Middels / Lav / Av
+UI_SRC = {"bt": "air", "aux": "aux", "radio": "radio", "usb": "usb", "power": "power", "enc": "knob"}   # navn i skjold-ui
+HOLD_KEY = {"bt": "src", "radio": "radio", "power": "reboot", "enc": "knob"}   # status["hold"]["key"] for skjermen
 RING_OF = {"airplay": "bt", "bt": "bt", "aux": "aux", "aux2": "aux", "radio": "radio", "usb": "usb"}
 
 
@@ -117,7 +119,10 @@ class S1FControls:
     state (dict), set_input(inp), set_power(on), set_mute(on), set_volume(v), transport(a), bt_pairing(on),
     step_preset(d), save_preset(n), usb_toggle(), reboot(), night_toggle(src), power_event(kind),
     smenu_open(), smenu_close(), smenu_step(d), smenu_press(), smenu_is_open(), settings() -> dict,
-    greeting_active() -> bool, greeting_dismiss(), set_headphones(on)."""
+    set_headphones(on), ui_event(ev, src, d) -> bool.
+
+    Hver fysiske hendelse sendes først til skjold-ui (pi/skjold_ui/KONTRAKT.md): `ui_event` returnerer True når skjermen
+    brukte den (hilsenen vises, menyen er åpen, hjulet holdt = meny) – da gjøres ingenting her."""
 
     def __init__(self, api, timing=None):
         self.api = api
@@ -131,7 +136,6 @@ class S1FControls:
             "power": ClickHold("power", e, multi=2, window=T["click_window"], hold=T["hold_reboot"], show=T["hold_show"]),
             "enc": ClickHold("enc", e, multi=3, window=T["click_window"], hold=T["hold_settings"], show=T["hold_show"]),
         }
-        self.swallow = set()          # knapper hvis neste slipp ikke skal gjøre noe (lukket hilsen)
         self.overlay = None           # {"type", ..., "until"}
         self.night_flash_t0 = 0.0
         self.reboot_t0 = 0.0
@@ -141,21 +145,17 @@ class S1FControls:
     def press(self, name, t=None):
         t = time.monotonic() if t is None else t
         with self.lock:
-            if self.api.greeting_active():
-                self.api.greeting_dismiss(); self.swallow.add(name); return
             self.btn[name].press(t)
 
     def release(self, name, t=None):
         t = time.monotonic() if t is None else t
         with self.lock:
-            if name in self.swallow:
-                self.swallow.discard(name); return
             self.btn[name].release(t)
 
     def rotate(self, d):
         with self.lock:
-            if self.api.greeting_active():
-                self.api.greeting_dismiss(); return
+            if self.api.ui_event("turn", "knob", 1 if d > 0 else -1):
+                return
             if self.api.smenu_is_open():
                 self.api.smenu_step(1 if d > 0 else -1); return
             st = self.api.state
@@ -176,6 +176,8 @@ class S1FControls:
     # --- handlinger
     def _on(self, kind, name, n):
         a, st = self.api, self.api.state
+        if a.ui_event("hold" if kind == "hold" else "press", UI_SRC[name], n if name == "enc" else 1):
+            return
         inp = st.get("input")
         if name == "bt":
             if kind == "hold":
@@ -224,6 +226,14 @@ class S1FControls:
             else:
                 a.transport("previous")
 
+    @property
+    def hold(self):
+        """Hold-ringen i formatet skjold-ui leser: {"key": knob|src|radio|reboot, "p": 0–1}."""
+        for k, b in self.btn.items():
+            if b.progress is not None and k in HOLD_KEY:
+                return {"key": HOLD_KEY[k], "p": b.progress}
+        return None
+
     def flash_night(self):
         self.night_flash_t0 = time.monotonic()
 
@@ -236,7 +246,7 @@ class S1FControls:
                 kind = {"bt": "pair", "radio": "save", "power": "reboot", "enc": "settings"}.get(k, k)
                 hold = {"kind": kind, "p": b.progress}
         st = self.api.state
-        screen = "greeting" if self.api.greeting_active() else ("settings" if self.api.smenu_is_open() else
+        screen = ("settings" if self.api.smenu_is_open() else
                  ("pairing" if st.get("bt_pairing") else ("main" if st.get("power") else "standby")))
         ov = dict(self.overlay) if self.overlay else None
         if ov:
@@ -259,33 +269,6 @@ class S1FControls:
         if self.night_flash_t0 and dt < 1.8:      # 3 blink ved nattmodus
             out["power"] = level if int(dt / 0.3) % 2 == 0 else 0.0
         return out
-
-
-# ---------------------------------------------------------------- bursdagshilsen
-
-GREETING_FILE = os.environ.get("SKJOLD_GREETING_FILE", "/etc/skjold/greeting.json")
-
-
-def greeting_load(path=None):
-    try:
-        with open(path or GREETING_FILE) as fh:
-            g = json.load(fh)
-        return {"name": str(g.get("name") or "Pappa"), "state": g.get("state") if g.get("state") in ("armed", "shown", "off") else "off"}
-    except Exception:
-        return {"name": "Pappa", "state": "off"}
-
-
-def greeting_save(g, path=None):
-    p = path or GREETING_FILE
-    os.makedirs(os.path.dirname(p), exist_ok=True)
-    tmp = p + ".tmp"
-    with open(tmp, "w") as fh:
-        json.dump({"name": g["name"], "state": g["state"]}, fh); fh.flush(); os.fsync(fh.fileno())
-    os.replace(tmp, p)
-    try:
-        fd = os.open(os.path.dirname(p), os.O_RDONLY); os.fsync(fd); os.close(fd)
-    except OSError:
-        pass
 
 
 # ---------------------------------------------------------------- nattmodus via MQTT (Home Assistant)
@@ -340,7 +323,7 @@ def design_state(s, settings):
             "preset": max(0, int(s.get("preset") or 1) - 1), "vol": s.get("volume", 0), "muted": bool(s.get("mute")),
             "hp": bool(s.get("headphones")), "paused": bool(s.get("paused")), "title": s.get("title", ""),
             "sub": s.get("artist", ""), "st": s.get("album", ""), "name": s.get("name", ""),
-            "presets": [p.get("title", "") for p in (s.get("presets") or []) if p][:6], "night": bool(s.get("night")),
+            "presets": [p.get("title", "") for p in (s.get("presets") or []) if p][:6], "night": bool((s.get("night") or {}).get("on")) if isinstance(s.get("night"), dict) else bool(s.get("night")),
             "set": settings, "status": s}
 
 

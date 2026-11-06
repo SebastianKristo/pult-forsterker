@@ -145,7 +145,8 @@ class KiAmpNightSwitch(KiAmpEntity, SwitchEntity):
 
     @property
     def is_on(self) -> bool:
-        return bool(self.coordinator.data.get("night"))
+        n = self.coordinator.data.get("night")
+        return bool(n.get("on")) if isinstance(n, dict) else bool(n)
 
     async def async_turn_on(self, **kwargs) -> None:
         await self.coordinator.api.set_night(True)
