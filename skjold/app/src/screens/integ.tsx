@@ -4,6 +4,7 @@ import { signal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { api, type HomeKitInfo, type MaStatus } from '../lib/api';
 import { qrMatrix } from '../lib/qr';
+import { matter, matterLoad, matterRows, matterStatus } from './platform';
 import { go, setSetting, settings, showToast } from '../lib/store';
 import { Toggle } from '../components/ui';
 import type { Settings } from '../lib/settings';
@@ -62,6 +63,7 @@ function ints(s: Settings): Int[] {
     { id: 'navidrome', name: 'Navidrome', mono: 'N', tile: '#7fa8e8', status: nd ? (s.ndEn ? 'Tilkoblet · på' : 'Tilkoblet · av') : 'Ikke tilkoblet', ok: nd && s.ndEn, desc: 'Ditt eget musikkbibliotek på hjemmenettet, i FLAC. Bruker Subsonic-API.' },
     { id: 'upnp', name: 'UPnP/DLNA', mono: 'DL', tile: '#ffffff', status: s.upnpEn ? 'På · venter' : 'Av', ok: s.upnpEn, desc: 'Ta imot lyd fra Android-apper, PC og NAS. Forsterkeren vises som en vanlig DLNA-høyttaler.' },
     { id: 'homekit', name: 'Apple Hjem (HomeKit)', mono: 'H', tile: '#f5a623', status: hkStatus(), ok: !!hk.value?.enabled && !!hk.value?.running, desc: 'Skjold som TV-tilbehør i Hjem-appen: av/på, kilder, radiofavoritter og volum. Med Siri og automasjoner.' },
+    { id: 'matter', name: 'Matter', mono: 'M', tile: '#9b8cf2', status: matterStatus(), ok: !!matter.value?.enabled && !!matter.value?.commissioned, desc: 'Skjold som Matter-høyttaler i Apple Hjem, Google Home, Alexa og SmartThings: av/på, volum, demp, radiofavoritter og kilde.' },
     { id: 'ha', name: 'Home Assistant', mono: 'HA', tile: '#7fb7e8', status: 'Klar', ok: true, desc: 'Styr volum, inngang og av/på fra automasjoner og dashbord.' },
     { id: 'homey', name: 'Homey', mono: 'H', tile: '#e8c77f', status: 'Klar', ok: true, desc: 'Bruk forsterkeren i Homey Flows, for eksempel radio når du kommer hjem.' },
     { id: 'api', name: 'Lokalt API', mono: '{ }', tile: '#c9c9c4', status: 'Aktivt', ok: true, desc: 'REST og Server-Sent Events for egne skript og andre systemer.' }
@@ -70,7 +72,7 @@ function ints(s: Settings): Int[] {
 
 /** Antall aktive integrasjoner (badge i sidemenyen): Lyrion + de som er slått på. */
 export function intCount(s: Settings): number {
-  return 1 + [s.spEn, !!s.ytmCookie && s.ytmEn, !!s.ndUrl && s.ndEn, s.upnpEn, !!hk.value?.enabled].filter(Boolean).length;
+  return 1 + [s.spEn, !!s.ytmCookie && s.ytmEn, !!s.ndUrl && s.ndEn, s.upnpEn, !!hk.value?.enabled, !!matter.value?.enabled].filter(Boolean).length;
 }
 
 type Row = { n: string; hint?: string; el: preact.ComponentChildren };
@@ -106,6 +108,7 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
         { n: 'Format', el: txt('FLAC, WAV, ALAC, MP3, AAC og OGG') },
         { n: 'Kompatible apper', el: txt('BubbleUPnP, Hi-Fi Cast, foobar2000, Plex, «Cast til enhet»') }] };
     case 'homekit': return { links: [], rows: homekitRows() };
+    case 'matter': return { links: [['Om Matter', 'https://csa-iot.org/all-solutions/matter/']], rows: matterRows() };
     case 'ha': return { links: [['Åpne Home Assistant', 'http://homeassistant.local:8123/']],
       rows: [{ n: 'Skjold-integrasjonen', hint: 'Installeres fra HACS. Home Assistant finner Skjold selv på nettverket.', el: txt('Klar') },
         { n: 'Entiteter', el: txt('media_player, select, number, switch') },
@@ -126,7 +129,7 @@ function checkMa() { if (!settings.value.maUrl) { maSt.value = null; return; } m
 async function findMa() { try { const r = await api.maDiscover(); if (r.found[0]) { setSetting('maUrl', r.found[0]); setTimeout(checkMa, 300); showToast('Fant Music Assistant på ' + r.found[0]); } else showToast('Fant ingen Music Assistant på nettet'); } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } }
 
 export function IntegrationsPage() {
-  useEffect(() => { checkMa(); void hkLoad(); const t = setInterval(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); }, 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { checkMa(); void hkLoad(); void matterLoad(); const t = setInterval(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); if (matter.value?.enabled && !matter.value.commissioned) void matterLoad(); }, 5000); return () => clearInterval(t); }, []);
   const s = settings.value, sel = intSel.value, list = ints(s), cur = list.find((x) => x.id === sel) ?? list[0]!, d = detail(cur.id, s);
   return (
     <>

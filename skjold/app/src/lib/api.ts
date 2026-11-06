@@ -107,6 +107,7 @@ async function req<T>(path: string, init?: RequestInit, base = getBase(), timeou
   } finally { clearTimeout(t); }
 }
 const post = <T = Status>(path: string, body: unknown) => req<T>(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+export { req as apiReq, post as apiPost };   // brukes av screens/platform.tsx (Matter, Skjold Cloud)
 
 export interface SkyStatus { koblet: boolean; sted?: string | null; stedNavn?: string | null; aktivHoved?: string | null; erHoved?: boolean; tilkoblet?: boolean; error?: string }
 export interface RemoteStatus { enabled: boolean; host: string; master: boolean; active: boolean; installed: boolean; busy: boolean; log: string; has_token: boolean }
@@ -169,6 +170,7 @@ export const api = {
   recShares: (q: Record<string, string>) => post<{ shares: string[] }>('/api/recordings', { smb_shares: q }),
   snapcast: (b?: Record<string, unknown>) => (b ? post<{ ok: boolean; error?: string; clients: SnapClient[]; role: string }>('/api/snapcast', b) : req<{ ok: boolean; error?: string; clients: SnapClient[]; role: string }>('/api/snapcast')),
   roomeqSweep: (b: { level?: number; delay?: number }) => post<{ f1: number; f2: number; dur: number; sr: number; delay: number }>('/api/roomeq/sweep', b),
+  xtcTest: () => post<{ ok: boolean; dur: number }>('/api/xtc/test', {}),
   subwave: (health = false) => req<Record<string, any>>('/api/subwave' + (health ? '?health=1' : ''), undefined, undefined, 15000),
   subwavePost: (b: Record<string, unknown>) => post<Record<string, any>>('/api/subwave', b),
   setRemote: (b: { enable: boolean; token?: string; host?: string }) => post<RemoteStatus>('/api/remote', b),
