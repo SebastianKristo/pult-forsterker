@@ -3985,6 +3985,7 @@ PLUGIN_DEFS = [
      {"source": "favorites", "start": "07:00", "end": "23:00", "min_on": 10, "max_on": 60, "min_off": 15, "max_off": 120,
       "volume": 15, "rooms": [], "rotate": False, "seed": 0}),
     ("discover", "Oppdag uke", "skjold", "Musikk", "Ny spilleliste hver uke med 30–40 låter du ikke har hørt på en stund, basert på det du lytter til.", {}),
+    ("podsum", "Podkastsammendrag", "skjold", "Radio og podkast", "Hver morgen: kort, opplest sammendrag av nye episoder fra podkastene du følger – og tilbud om å spille dem.", {}),
     ("news", "Morgennyheter", "skjold", "Radio og podkast", "Spiller NRK P1 med nyheter til fast tid på hverdager.",
      {"time": "06:30", "days": [0, 1, 2, 3, 4], "url": NRK_P1, "volume": 25, "minutes": 15}),
     ("lyrics", "Sangtekster", "skjold", "Verktøy", "Viser teksten til låten som spiller, synkronisert når den finnes. Fra lrclib.net.", {}),
@@ -6143,6 +6144,8 @@ def routine_step(st):
         sleep_start(int(v or 0))
     elif t == "night":
         night_set(bool(v), "Rutine")
+    elif t == "podsum" and _HX.get("podsum"):
+        _HX["podsum"].run()
     elif t in ("nd_album", "nd_playlist"):
         set_power(True); nfc_play_navidrome("album" if t == "nd_album" else "playlist", str(v))
 
@@ -6784,7 +6787,14 @@ def main():
                "announce": announce_url, "version": _read_text("/usr/local/share/ki-amp/release") or VERSION,
                "update": lambda: update_info(False), "lyrion": lambda: (bool(lyr.player), lyr.player or "ingen spiller funnet"),
                "camilla": _cdsp_probe, "extra": lambda: {"input": state.get("input"), "settings": state.get("settings")}}
-    for _modname in ("skjold_smartradio", "skjold_home_extras", "skjold_pluginstore", "skjold_health"):
+    _hx_ctx.update({"tts": _tts, "rb_list": rb_list, "radio_search": radio_search, "routines": routines})
+    try:
+        import skjold_nrk as _nrk_ps
+        _hx_ctx["nrk"] = _nrk_ps.NRK(os.path.join(_hx_ctx["data_dir"], "nrk_progress.json"))
+    except Exception as e:
+        print("NRK for podkastsammendrag:", e, flush=True)
+    for _modname in ("skjold_smartradio", "skjold_home_extras", "skjold_pluginstore", "skjold_health",
+                     "skjold_libtag", "skjold_ask", "skjold_podsum"):   # lydtagger, «Spill noe til …», podkastsammendrag
         try:
             _m = __import__(_modname)
             if _modname == "skjold_smartradio":

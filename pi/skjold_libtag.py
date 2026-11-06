@@ -98,7 +98,7 @@ def describe(x, sr=SR):
     # vokal: andel energi i 300–3400 Hz som varierer over tid (stemmer svinger mer enn jevne instrumenter)
     vb = (freqs >= 300) & (freqs <= 3400)
     vshare = spec[:, vb].sum(axis=1) / spec.sum(axis=1)
-    vocal = float(np.clip((np.mean(vshare) - 0.35) * 2.0 + np.std(vshare) * 4.0, 0, 1))
+    vocal = float(np.clip((np.mean(vshare) - 0.5) * 0.6 + np.std(vshare) * 6.0, 0, 1))   # jevne toner gir lite
     major, mscore = _chroma_major(spec, freqs)
     bpm = _bpm(x, sr)
     tempo = min(1.0, max(0.0, (bpm - 60) / 110.0)) if bpm else 0.4

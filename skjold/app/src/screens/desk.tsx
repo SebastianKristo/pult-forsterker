@@ -17,6 +17,7 @@ import { LyricsPane, SubwavePane } from './plugins';
 import { WrappedTeaser } from './extras';
 import { RecognizeBox, RoutinesShelf } from './features';
 import { DiscoverCard, SmartRadioBox } from './extras2';
+import { AskBox } from './ai';
 
 const PLAY = 'M8 5v14l11-7z';
 const SRC_ORDER: [InputId, string][] = [['radio', 'Radio'], ['airplay', 'AirPlay'], ['bt', 'Blåtann'], ['spotify', 'Spotify'], ['plex', 'Plex'], ['aux', 'AUX'], ['aux2', 'AUX'], ['usb', 'USB']];
@@ -95,6 +96,7 @@ export function DeskHome() {
         </div>
 
         <WrappedTeaser />
+        <AskBox />
         <DiscoverCard />
         <RoutinesShelf />
 

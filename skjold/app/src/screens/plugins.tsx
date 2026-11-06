@@ -6,6 +6,7 @@ import { status } from '../lib/store';
 import { favs, loadFavs } from '../lib/radio';
 import { Toggle } from '../components/ui';
 import { AutoStandbyPanel, BackupPanel, PlexampPanel, RoonPanel, WrappedPage } from './extras';
+import { PodsumPanel } from './ai';
 import { DiscoverPanel, PresencePanel, RadioListPanel, StorePage, WakeLightPanel } from './extras2';
 import { averageCurves, logSweep, recordMic, responseFromRecording, suggest, type Curve, type Peq } from '../lib/roomeq';
 
@@ -175,6 +176,7 @@ function Detail({ p }: { p: Plugin }) {
     case 'wrapped': body = <WrappedPage />; break;
     case 'presence': body = <PresencePanel d={d} up={up} saveBtn={saveBtn} />; break;
     case 'discover': body = <DiscoverPanel />; break;
+    case 'podsum': body = <PodsumPanel />; break;
     case 'roomeq': body = <RoomEqPanel enabled={p.enabled} filters={(p.cfg.filters as Peq[]) || []} />; break;
   }
   return (

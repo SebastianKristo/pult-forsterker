@@ -13,7 +13,7 @@ import time
 import urllib.request
 import uuid
 
-STEP_TYPES = ("power", "input", "preset", "play_url", "nrk", "ma", "volume", "wait", "eq", "announce", "sleep", "night")
+STEP_TYPES = ("power", "input", "preset", "play_url", "nrk", "ma", "volume", "wait", "eq", "announce", "sleep", "night", "podsum")
 ICONS = ("sun", "moon", "music", "radio", "coffee", "bed", "home", "party", "news", "star")
 
 TEMPLATES = [
