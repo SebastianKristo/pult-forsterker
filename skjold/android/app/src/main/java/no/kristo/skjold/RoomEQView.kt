@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -183,6 +184,46 @@ fun RoomEQView(m: AppModel) {
         }
     }
 
+    // Høyttalerplassering: hver høyttaler spiller en kort sweep etter tur (POST /api/placement/start), telefonen tar opp,
+    // Skjold finner ankomsttid og nivå (/api/placement/analyze) og justerer forsinkelse/nivå (/api/placement/apply).
+    var placeStatus by remember { mutableStateOf("") }
+    var placeBusy by remember { mutableStateOf(false) }
+    fun measurePlacement() {
+        val host = m.settingsHost ?: run { placeStatus = "Ingen Skjold valgt."; return }
+        if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            placeStatus = "Gi Skjold mikrofontilgang først (trykk «Start måling» én gang)."; return
+        }
+        placeBusy = true; placeStatus = "Hold telefonen der du sitter …"
+        scope.launch {
+            try {
+                val pl = DeviceLink.get("/api/placement", on = host)?.let { JSONObject(String(it)) }
+                val n = pl?.optJSONArray("speakers_eff")?.length() ?: 2
+                val secs = 2.0 + 0.5 + n * 1.6 + 2.0
+                var tRec = 0.0
+                val rec = async(Dispatchers.IO) { tRec = System.currentTimeMillis() / 1000.0; RoomEQRec.record(ctx, secs) }
+                delay(300)
+                val t1 = System.currentTimeMillis() / 1000.0
+                val st = DeviceLink.send("/api/placement/start", on = host)?.let { JSONObject(String(it)) }
+                val t2 = System.currentTimeMillis() / 1000.0
+                if (st == null) { rec.cancel(); placeStatus = "Fikk ikke kontakt med Skjold."; return@launch }
+                val skip = maxOf(0.0, st.optDouble("start_at") - (st.optDouble("now") - (t1 + t2) / 2) - tRec)
+                val wav = rec.await()
+                placeStatus = "Regner ut …"
+                val url = Net.url(host, "/api/placement/analyze?n=$n&skip=${"%.3f".format(java.util.Locale.US, skip)}")
+                val res = if (url != null) Net.data(url, "POST", wav, 60.0, mapOf("Content-Type" to "audio/wav")) else null
+                val o = res?.let { try { JSONObject(String(it.first)) } catch (_: Exception) { null } }
+                if (res == null || o == null || res.second >= 300) { placeStatus = o?.optString("error")?.takeIf { it.isNotEmpty() } ?: "Analysen feilet."; return@launch }
+                val al = o.optJSONArray("align") ?: JSONArray()
+                val parts = (0 until al.length()).map { i -> val a = al.getJSONObject(i); "#${i + 1} +${"%.2f".format(a.optDouble("delay_ms"))} ms ${"%.1f".format(a.optDouble("gain_db"))} dB" }
+                DeviceLink.send("/api/placement/apply", on = host)
+                placeStatus = (if (o.has("warning")) o.optString("warning") + ". " else "") + "Justert: " + parts.joinToString(" · ")
+                Haptics.success()
+            } catch (e: Exception) {
+                placeStatus = e.message ?: "Målingen feilet."
+            } finally { placeBusy = false }
+        }
+    }
+
     val perm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         if (ok) measure() else { status = "Skjold trenger mikrofontilgang for å måle rommet."; phase = "error" }
     }
@@ -209,6 +250,8 @@ fun RoomEQView(m: AppModel) {
                         Step(2, "Sitt der du lytter, med telefonen i ørehøyde.")
                         Step(3, "Mål 3–5 punkter rundt lytteplassen. Snittet blir mest riktig.")
                         SKPill("Start måling", primary = true, height = 46.dp) { start() }
+                        SKPill(if (placeBusy) "Måler plassering …" else "Mål høyttalerplassering", height = 42.dp) { if (!placeBusy) measurePlacement() }
+                        if (placeStatus.isNotEmpty()) T(placeStatus, sora(13f, W.Regular, C.muted))
                     }
                     "measuring" -> {
                         SKMonoLabel("PUNKT ${points + 1}")
