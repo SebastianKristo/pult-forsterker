@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals';
 // Skall: telefon (App v2) under 900 px eller i Capacitor, ellers PC (S1 Web v3).
+import { WhatsNewSheet, checkWhatsNew } from './screens/programs';
 import { useEffect, useState } from 'preact/hooks';
 import { App as CapApp } from '@capacitor/app';
 import { isNative, isRelayBase, hostLabel, PRODUCT_HW, PRODUCT_LABEL } from './lib/api';
@@ -61,12 +62,13 @@ export function App() {
       } catch { /* offline – ikke noe å si fra om */ }
     })();
   }, []);
+  useEffect(() => { if (mode.value === 'app') void checkWhatsNew(); }, [mode.value]);
   let body;
   if (mode.value === 'welcome') body = <Welcome />;
   else if (mode.value === 'find') body = <FindDevice />;
   else if (mode.value === 'setup') body = <Setup />;
   else body = wide ? <Desktop /> : <Phone />;
-  return <>{body}<DoorbellOverlay />{toast.value && <div class="toast fade" role="status">{toast.value}</div>}</>;
+  return <>{body}<DoorbellOverlay /><WhatsNewSheet />{toast.value && <div class="toast fade" role="status">{toast.value}</div>}</>;
 }
 
 function Offline() {

@@ -137,6 +137,8 @@ enum SK {
         SettingCategory(id: "strom", n: "Strøm", sub: "Standby og påslag", items: [
             .opt("auto", "Auto-standby uten lyd", ["Av", "20 min", "60 min"]), .bool("wake", "Slå på ved signal", "AirPlay eller Blåtann vekker forsterkeren")]),
         SettingCategory(id: "oppdatering", n: "Oppdatering", sub: "GitHub, backup og gjenoppretting", items: [SettingItem(kind: .update, k: "update", n: "Oppdatering")]),
+        SettingCategory(id: "programopptak", n: "Radioprogrammer", sub: "Planlagte opptak som podkast", items: [SettingItem(kind: .update, k: "programopptak", n: "Radioprogrammer")]),
+        SettingCategory(id: "endringslogg", n: "Endringslogg", sub: "Hva er nytt i hver versjon", items: [SettingItem(kind: .update, k: "endringslogg", n: "Endringslogg")]),
         SettingCategory(id: "steder", n: "Steder", sub: "Skjold-hjem: Hjem, Hytta … hovedenhet og reserve", items: [SettingItem(kind: .update, k: "steder", n: "Steder")]),
         SettingCategory(id: "skjoldhjem", n: "Skjold-hjem", sub: "Koble denne enheten til et sted", items: [SettingItem(kind: .update, k: "skjoldhjem", n: "Skjold-hjem")]),
         SettingCategory(id: "system", n: "System", sub: "Om, oppsett og tilbakestilling", items: [
