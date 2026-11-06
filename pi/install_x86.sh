@@ -26,7 +26,7 @@ apt-get -y install --no-install-recommends sudo ca-certificates curl gnupg unzip
   libpopt-dev libconfig-dev libasound2-dev avahi-daemon libavahi-client-dev libssl-dev libsoxr-dev libplist-dev \
   libsodium-dev libavutil-dev libavcodec-dev libavformat-dev uuid-dev libgcrypt-dev libplist-utils libglib2.0-dev \
   alsa-utils python3 python3-pip python3-dbus python3-aiohttp python3-zeroconf python3-websocket python3-numpy \
-  python3-pil python3-paho-mqtt ffmpeg dbus kmod
+  python3-pil python3-paho-mqtt ffmpeg cifs-utils smbclient dbus kmod
 # Ingen python3-gpiozero: daemonen kjører da uten GPIO (som Skjold Core). timezone som Pi-installasjonen
 timedatectl set-timezone Europe/Oslo 2>/dev/null || ln -sf /usr/share/zoneinfo/Europe/Oslo /etc/localtime
 

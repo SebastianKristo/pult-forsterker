@@ -87,7 +87,7 @@ sudo apt-get -y install --no-install-recommends \
   libssl-dev libsoxr-dev libplist-dev libsodium-dev libavutil-dev libavcodec-dev \
   libavformat-dev uuid-dev libgcrypt-dev xxd alsa-utils libplist-utils libglib2.0-dev \
   bluez bluez-alsa-utils python3-dbus \
-  python3-pip python3-pil python3-smbus python3-smbus2 python3-evdev python3-numpy i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev python3-paho-mqtt curl gnupg unzip ffmpeg
+  python3-pip python3-pil python3-smbus python3-smbus2 python3-evdev python3-numpy i2c-tools python3-aiohttp python3-zeroconf python3-gpiozero python3-websocket python3-spidev python3-paho-mqtt curl gnupg unzip ffmpeg cifs-utils smbclient
 
 echo "== 4/9  ALSA dmix → loopback → CamillaDSP (loudness + digitalt volum) → DAC"
 sed "s/sndrpihifiberry/$PB_CARD/g" "$SRC/asound.conf" | sudo tee /etc/asound.conf >/dev/null
@@ -208,7 +208,7 @@ fi
 
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
-sudo install -m 644 "$SRC/skjold_homekit.py" /usr/local/bin/skjold_homekit.py   # Apple Hjem (HomeKit)
+sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_rec.py" /usr/local/bin/   # Apple Hjem (HomeKit)
 sudo install -m 644 "$SRC/skjold_s1f.py" /usr/local/bin/skjold_s1f.py   # Skjold S1 rev F: knapper, LED, nattmodus
 sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pins.yaml" /usr/local/share/ki-amp/s1f_pins.yaml
 sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || echo "HAP-python ble ikke installert – Apple Hjem er av"
