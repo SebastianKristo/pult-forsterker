@@ -7108,6 +7108,25 @@ def nfc_current():
     return _nfcmod.current_to_card(state, radio_now(), last_play)
 
 
+def nfc_label_image(url):
+    """Cover → data-URI, så etikettarket kan skrives ut uten nett. Relative adresser (/api/cover, /api/logo) hentes lokalt."""
+    try:
+        u = str(url or "")
+        if u.startswith("/"):
+            u = f"http://127.0.0.1:{PORT}{u}"
+        if not u.startswith(("http://", "https://")):
+            return u if u.startswith("data:image/") else None
+        req = urllib.request.Request(u, headers={"User-Agent": "Skjold"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            ct = (resp.headers.get("Content-Type") or "image/jpeg").split(";")[0]
+            data = resp.read(3_000_000)
+        if not ct.startswith("image/"):
+            return None
+        return f"data:{ct};base64," + base64.b64encode(data).decode()
+    except Exception:
+        return None
+
+
 async def h_nfc(r):
     """POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
     · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status)."""
@@ -7127,6 +7146,19 @@ async def h_nfc(r):
             if r.method == "POST":
                 return web.json_response({"card": nfc.put(b), "cards": nfc.list()})
             return web.json_response({"cards": nfc.list()})
+        if act == "label":
+            # Ferdig etikettark (SVG, A4, kuttlinjer som kabinett/kassett). ?uids=A,B (tom = alle) &start=n &kutt=0
+            q = r.query
+            want = [x for x in (q.get("uids") or "").split(",") if x.strip()]
+            cards = [nfc.get(u) for u in want] if want else nfc.list()
+            cards = [c for c in cards if c]
+            svg = await loop.run_in_executor(None, lambda: _nfcmod.label_sheet_svg(
+                cards, nfc_label_image, int(q.get("start") or 0), q.get("kutt", "1") != "0"))
+            return web.Response(text=svg, content_type="image/svg+xml",
+                                headers={"Content-Disposition": 'inline; filename="kassett-etiketter.svg"'})
+        if act == "ndef":
+            uid = (r.query.get("uid") if r.method == "GET" else b.get("uid")) or ""
+            return web.json_response({"url": _nfcmod.ndef_url(uid), "uid": _nfcmod.norm_uid(uid)})
         if act == "learn":
             if b.get("stop"):
                 nfc.learn_until = 0.0
@@ -7158,6 +7190,53 @@ async def h_nfc(r):
 
 FEAT_ROUTES += [("GET", "/api/nfc", h_nfc), ("POST", "/api/nfc/{act}", h_nfc), ("GET", "/api/nfc/{act}", h_nfc),
                 ("DELETE", "/api/nfc/{act}/{uid}", h_nfc)]
+
+# ---------- Skjold Hjul: ESPHome-fjernkontroll (pi/skjold_hjul.py, esphome/skjold-hjul.yaml) ----------
+import skjold_hjul as _hjmod   # noqa: E402
+
+
+def _hjul_forward(base, body):
+    req = urllib.request.Request(base.rstrip("/") + "/api/hjul/event", data=json.dumps(body).encode(), method="POST",
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        return json.loads(resp.read() or b"{}")
+
+
+def _hjul_volume():
+    return state["hp_volume"] if (S1F and state.get("headphones") and settings().get("hpOwn", True)) else state["volume"]
+
+
+hjul = _hjmod.Hjul({"get_volume": _hjul_volume, "set_volume": set_volume, "transport": lambda a: transport(a),
+                    "playing": lambda: read_status().get("playing"),
+                    "run_steps": lambda st: threading.Thread(target=routines.run_steps, args=(st,), daemon=True).start(),
+                    "steps_for": _nfcmod.steps_for, "clean_card": _nfcmod.clean_card, "peers": _peers, "forward": _hjul_forward},
+                   os.path.join(FEAT_DIR, "hjul.json"))
+
+
+async def h_hjul(r):
+    """GET /api/hjul (oppsett, enheter, rom) · POST /api/hjul {favoritter, steg, enheter, glem}
+    · POST /api/hjul/event {device, type: rot|klikk|dobbel|lang|fav|hei, delta, n, batteri}."""
+    act = r.match_info.get("act", "")
+    try:
+        b = await r.json() if r.method == "POST" and r.can_read_body else {}
+    except Exception:
+        b = {}
+    loop = asyncio.get_running_loop()
+    try:
+        if act == "event":
+            res = await loop.run_in_executor(None, hjul.event, b)
+            return web.json_response(res)
+        if r.method == "POST":
+            res = hjul.set_config(b); changed()
+            return web.json_response(res)
+        return web.json_response(hjul.config())
+    except (ValueError, KeyError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+
+FEAT_ROUTES += [("GET", "/api/hjul", h_hjul), ("POST", "/api/hjul", h_hjul), ("POST", "/api/hjul/{act}", h_hjul)]
 
 AVAHI_SVC = "/etc/avahi/services/skjold.service"
 

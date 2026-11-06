@@ -128,6 +128,7 @@ fun AppShell(m: AppModel) {
         }
         if (m.hjemLogin) HjemLoginView(m)
         if (m.showRoomEQ) RoomEQView(m)
+        if (m.showKassett) KassettView(m)
         if (m.showSpeakers) SpeakerView(m)
         if (wide) {
             // dempelag rgba(0,0,0,.45) bak panelet; trykk lukker

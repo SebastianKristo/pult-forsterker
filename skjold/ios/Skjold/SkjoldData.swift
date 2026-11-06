@@ -98,6 +98,9 @@ enum SK {
             .opt("rate", "Samplingsfrekvens", ["44,1 kHz", "48 kHz", "96 kHz", "Følg kilden"]),
             .opt("mixer", "Volumkontroll", ["Programvare", "Maskinvare (DAC)", "Fast 100 % (styres av forsterker)"], "Velg fast hvis enheten er koblet til en egen forsterker med volumknapp"),
             .act("Test utgang", id: "testOut", label: "Spill testtone", safe: true)]),
+        SettingCategory(id: "kassett", n: "Kassetter", sub: "Lag NFC-kassetter og etiketter", items: [
+            .act("Lag kassett", id: "kassett", label: "Lag", safe: true, "Velg radio, spilleliste eller podkast, hold telefonen mot NFC-brikken og få en ferdig etikett til utskrift"),
+            .act("Skjold Hjul", id: "hjulInfo", label: "Les mer", safe: true, "Fjernkontroll med dreieknapp og fire favorittknapper. Favoritter og rom stilles inn under Kassetter → Skjold Hjul i web-appen")]),
         SettingCategory(id: "tilkobling", n: "Tilkobling", sub: "Wi-Fi, navn og Blåtann", items: [
             .opt("name", "Enhetsnavn", names, "Navnet som vises i AirPlay og Blåtann"),
             .str("nAux1", "Navn på AUX 1", "AUX 1", "Vises på skjermen og i appen", dev: ["s1"]), .str("nAux2", "Navn på AUX 2", "AUX 2", dev: ["s1"]),

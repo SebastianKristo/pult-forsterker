@@ -1,6 +1,7 @@
 /** Skjold Kassett: NFC-kassetter koblet til radio, NRK, Navidrome, Music Assistant eller rutiner. */
 import { useEffect, useState } from 'preact/hooks';
-import { api, type NfcCard, type NfcHandling, type NfcStatus, type Routine } from '../lib/api';
+import { api, getBase, type NfcCard, type NfcHandling, type NfcStatus, type Routine } from '../lib/api';
+import { HjulPanel } from './hjul';
 import { ndCover, ndConfigured, ndPlaylists, ndSearch } from '../lib/navidrome';
 
 const A = '#e8b04a';
@@ -43,17 +44,12 @@ async function search(src: Src, q: string, routines: Routine[]): Promise<Hit[]> 
   return [];
 }
 
-function printLabels(cards: NfcCard[]): void {
-  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
-  const cells = cards.map((c) => `<div class="l">${c.omslag ? `<img src="${esc(c.omslag)}">` : '<div class="ph">SKJOLD</div>'}<b>${esc(c.navn)}</b><i>${esc(c.undertittel || '')}</i></div>`).join('');
-  const w = window.open('', '_blank'); if (!w) return;
-  w.document.write(`<!doctype html><meta charset="utf-8"><title>Kassett-etiketter</title><style>
-@page{size:A4;margin:10mm}body{margin:0;font-family:system-ui,sans-serif}
-.g{display:grid;grid-template-columns:repeat(4,44mm);gap:4mm}
-.l{width:44mm;height:52mm;border:0.2mm dashed #999;box-sizing:border-box;padding:2mm;display:flex;flex-direction:column;overflow:hidden;break-inside:avoid}
-.l img,.ph{width:40mm;height:40mm;object-fit:cover;border-radius:1mm}.ph{background:#111;color:#e8b04a;display:grid;place-items:center;font-weight:700;letter-spacing:2px}
-b{font-size:8pt;margin-top:1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}i{font-size:6.5pt;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-</style><div class="g">${cells}</div><script>Promise.all([...document.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r}))).then(()=>print())</script>`);
+/** Ferdig A4-ark fra Skjold (GET /api/nfc/label): samme mål og kuttlinjer som kabinett/kassett, cover bakt inn. */
+function printLabels(cards: NfcCard[], start = 0): void {
+  const uids = cards.map((c) => c.uid).filter(Boolean).join(',');
+  const url = `${getBase()}/api/nfc/label?uids=${encodeURIComponent(uids)}&start=${start}`;
+  const w = window.open('', '_blank'); if (!w) { location.href = url; return; }
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>Kassett-etiketter</title><style>@page{size:A4;margin:0}body{margin:0}img{width:210mm;height:297mm;display:block}</style><img src="${url}" onload="setTimeout(()=>print(),300)">`);
   w.document.close();
 }
 
@@ -136,6 +132,7 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
 }
 
 export function KassettPage() {
+  const [tab, setTab] = useState<'k' | 'h'>('k');
   const [st, setSt] = useState<NfcStatus | null>(null);
   const [edit, setEdit] = useState<NfcCard | null | 'ny'>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -146,11 +143,15 @@ export function KassettPage() {
   const toggle = (u: string) => { const n = new Set(sel); n.has(u) ? n.delete(u) : n.add(u); setSel(n); };
 
   if (edit) return <Editor init={edit === 'ny' ? null : edit} onDone={() => { setEdit(null); void load(); }} />;
+  const tabs = <div style="display:flex;gap:6px"><button style={btn(tab === 'k')} onClick={() => setTab('k')}>Kassetter</button><button style={btn(tab === 'h')} onClick={() => setTab('h')}>Skjold Hjul</button></div>;
+  if (tab === 'h') return <div style="display:flex;flex-direction:column;gap:12px">{tabs}<HjulPanel cards={cards} /></div>;
   return (
     <div style="display:flex;flex-direction:column;gap:12px">
+      {tabs}
+      <small style="color:#9a9a96">Lag kassetter uten leser: velg «Lag kassett» i Skjold-appen på mobilen og hold telefonen mot NFC-brikken. Her kan du også koble med Kassett-spilleren (læremodus).</small>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button style={btn(true)} onClick={() => setEdit('ny')}>+ Koble ny kassett</button>
-        <button style={btn()} disabled={!cards.length} onClick={() => printLabels(sel.size ? cards.filter((c) => sel.has(c.uid!)) : cards)}>Skriv ut etiketter{sel.size ? ` (${sel.size})` : ''}</button>
+        <button style={btn()} disabled={!cards.length} onClick={() => printLabels(sel.size ? cards.filter((c) => sel.has(c.uid!)) : cards, Math.max(0, Math.min(14, +(prompt('Hopp over hvor mange ruter på arket? (0 = start øverst)', '0') || 0))))}>Skriv ut etiketter{sel.size ? ` (${sel.size})` : ''}</button>
         {st?.active && <small style={'color:' + A}>I spilleren: {cards.find((c) => c.uid === st.active)?.navn ?? st.active}</small>}
       </div>
       {err && <small style="color:#e06c5a">Fikk ikke kontakt: {err}</small>}

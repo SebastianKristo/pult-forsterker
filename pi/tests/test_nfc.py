@@ -94,3 +94,12 @@ def test_learn_partial_draft_merges_current(tmp_path):
     cur = lambda: {"navn": "NRK P2", "handling": "preset", "verdi": 2}
     r = s.scan("04a1", cur)
     assert r["learned"] and r["card"]["rom"] == ["Stue"] and r["card"]["handling"] == "preset" and r["card"]["volum"] == 30
+
+
+def test_ndef_og_etikett():
+    assert nfc.ndef_url("04a1b2") == "skjold://kassett/04-A1-B2"
+    assert nfc.uid_from_ndef("skjold://kassett/04-A1-B2") == "04-A1-B2"
+    svg = nfc.label_sheet_svg([{"navn": "Nitimen <3", "undertittel": "NRK P1", "omslag": "http://x/a.jpg"},
+                               {"navn": "Uten bilde", "undertittel": ""}], image=lambda u: "data:image/png;base64,AA", start=2)
+    assert svg.startswith("<svg") and "Nitimen &lt;3" in svg and "data:image/png;base64,AA" in svg
+    assert svg.count('class="k"') == 2 and "UTEN BILDE" in svg

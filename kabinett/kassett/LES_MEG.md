@@ -86,6 +86,19 @@ I Skjold-appen: **Innstillinger → Integrasjoner → Skjold Kassett**. Trykk «
 (eller «det som spiller nå»), rom og volum, og sett inn kassetten innen 60 sekunder. Under «Skriv ut etiketter»
 får du et A4-ark med 44×52 mm-etiketter med omslag. Ferdige etikettmaler ligger også i `etiketter_a4.svg/pdf/dxf`.
 
+## Lag kassett med telefonen
+
+Du trenger ikke spilleren for å koble kassetter:
+
+1. Gå til **Innstillinger → Kassetter → Lag kassett** i Skjold-appen på mobilen.
+2. Velg en radiofavoritt, en spilleliste eller en podkast.
+3. Hold telefonen mot NFC-brikken. Appen leser UID-en og skriver lenken `skjold://kassett/<UID>` på brikken. Kassetten registreres på Skjold.
+4. Du får en ferdig etikett som PDF med samme mål og kuttlinjer som `etiketter_a4.svg`.
+
+Skjold lager etiketten selv på `GET /api/nfc/label?uids=…`. Coveret er bakt inn i arket, så det kan skrives ut uten nett.
+
+På iPhone krever NFC-skriving en betalt Apple-utviklerkonto. Uten den bruker appen spilleren i læremodus, se `skjold/ios/Entitlements/Skjold-NFC.entitlements`. På Android virker det på alle telefoner med NFC.
+
 ## Kreditering og lisens
 
 Idéen er inspirert av TheStockPots «ESPHome Cartridge Player» (CC BY-NC 4.0). Ingen geometri er kopiert –
