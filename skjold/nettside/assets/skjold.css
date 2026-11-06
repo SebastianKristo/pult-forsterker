@@ -394,7 +394,7 @@ a.kort:hover,a.flis:hover{opacity:1;border-color:rgba(216,207,180,.35);transform
 .p-hero h1{font-size:clamp(40px,7.2vw,84px);overflow-wrap:anywhere;hyphens:auto}
 .produkt .h{overflow-wrap:anywhere;hyphens:auto}
 /* Skjold Touch: lyse renders – ingen mørk vignett, avrundet som et fotokort */
-img[src*="-touch"]{-webkit-mask-image:none;mask-image:none;border-radius:22px}
+img[src*="-touch"],img[src*="-s1"]{-webkit-mask-image:none;mask-image:none;border-radius:22px}
 /* Bruksanvisning (PDF-visning) */
 .pdf{max-width:1180px;margin:0 auto;padding:0 16px 80px}
 .pdf-verktoy{position:sticky;top:60px;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;margin:0 0 18px;border-radius:16px;background:rgba(18,18,20,.85);backdrop-filter:blur(12px);border:1px solid #2a2a2e}
@@ -406,3 +406,10 @@ img[src*="-touch"]{-webkit-mask-image:none;mask-image:none;border-radius:22px}
 .pdf-feil{color:#c9c9c4}
 
 .familie{max-width:1200px;margin:8px auto 48px;padding:0 20px}.familie img{display:block;width:100%;height:auto;border-radius:18px}
+
+/* S1: skjermbilder (960 × 320) i rad */
+.skjermrad{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.skjermrad figure{margin:0;display:flex;flex-direction:column;gap:8px}
+.skjermrad img{width:100%;height:auto;border-radius:14px;display:block}
+.skjermrad figcaption{font-size:13px;color:var(--dempet,#8b8b86)}
+@media (max-width:640px){.skjermrad{grid-template-columns:1fr}}
