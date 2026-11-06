@@ -13,6 +13,7 @@ import { useRooms } from './phone';
 import { SpeakerButton } from './groups';
 import { libUi } from './library';
 import { LyricsPane, SubwavePane } from './plugins';
+import { WrappedTeaser } from './extras';
 
 const PLAY = 'M8 5v14l11-7z';
 const SRC_ORDER: [InputId, string][] = [['radio', 'Radio'], ['airplay', 'AirPlay'], ['bt', 'Blåtann'], ['spotify', 'Spotify'], ['plex', 'Plex'], ['aux', 'AUX'], ['aux2', 'AUX'], ['usb', 'USB']];
@@ -89,6 +90,8 @@ export function DeskHome() {
             <span class="go">Åpne spiller ›</span>
           </button>
         </div>
+
+        <WrappedTeaser />
 
         {rc.length > 0 && <section class="col gap12">
           <SecHead title="Fortsett å lytte" kicker="NYLIG SPILT" />

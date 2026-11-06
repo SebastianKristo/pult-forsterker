@@ -5,6 +5,7 @@ import { api, INPUT_LABEL, type HistItem, type InputId, type Lyrics, type Plugin
 import { status } from '../lib/store';
 import { favs, loadFavs } from '../lib/radio';
 import { Toggle } from '../components/ui';
+import { AutoStandbyPanel, BackupPanel, PlexampPanel, RoonPanel, WrappedPage } from './extras';
 import { averageCurves, logSweep, recordMic, responseFromRecording, suggest, type Curve, type Peq } from '../lib/roomeq';
 
 const A = '#d9a441';
@@ -37,6 +38,11 @@ const ICON: Record<string, { bg: string; fg: string; st: string; fi?: string }> 
   roomeq: { bg: '#16201a', fg: '#9be0a8', st: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3' },
   qobuz: { bg: '#000000', fg: '#ffffff', st: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM14 14l5 5' },
   rp: { bg: '#1d2b1f', fg: '#e8d9a8', st: 'M4 12a8 8 0 0 1 16 0M7 12a5 5 0 0 1 10 0M12 12v8M9 20h6' },
+  roon: { bg: '#0b0b0c', fg: '#f2f2ee', st: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
+  plexamp: { bg: '#1f1a0a', fg: '#ebaf00', st: 'M8 4l9 8-9 8z' },
+  autostandby: { bg: '#1c2433', fg: '#9fc0ff', st: 'M12 3v8M6.3 6.3a8 8 0 1 0 11.4 0' },
+  backup: { bg: '#16201a', fg: '#9be0a8', st: 'M4 7h16v12H4zM8 7V4h8v3M12 11v5M9.5 13.5 12 16l2.5-2.5' },
+  wrapped: { bg: '#2a1d08', fg: '#d9a441', st: 'M4 9h16v11H4zM2 6h20v3H2zM12 6v14M12 6c-2-4-6-3-5 0M12 6c2-4 6-3 5 0' },
   subwave: { bg: '#0b0b0c', fg: '#f0c46a', st: 'M2 12c2-6 4-6 6 0s4 6 6 0 4-6 6 0 2 3 2 3' },
   dstm: { bg: '#1f1f21', fg: '#f0c46a', st: 'M18.2 8.5a3.5 3.5 0 1 1 0 7c-2.6 0-4-3.5-6.2-3.5s-3.6 3.5-6.2 3.5a3.5 3.5 0 1 1 0-7c2.6 0 4 3.5 6.2 3.5s3.6-3.5 6.2-3.5z' }
 };
@@ -158,6 +164,11 @@ function Detail({ p }: { p: Plugin }) {
     case 'mqtt': body = <><Row label="Broker"><Txt v={d.host} ph="192.168.1.10" w={180} on={(v) => up('host', v)} /><Num v={d.port} max={65535} w={90} on={(v) => up('port', v)} /></Row><Row label="Brukernavn"><Txt v={d.user} w={180} on={(v) => up('user', v)} /></Row><Row label="Passord"><Txt v={d.password} pw w={180} on={(v) => up('password', v)} /></Row><Row label="TLS"><Toggle on={!!d.tls} onChange={(v) => up('tls', v)} /></Row><Row label="Emne-prefiks" hint={`Status: ${d.prefix || 'skjold'}/<id>/state · kommandoer: …/set`}><Txt v={d.prefix} w={140} on={(v) => up('prefix', v)} /></Row><Row label="Home Assistant-oppdagelse"><Toggle on={!!d.discovery} onChange={(v) => up('discovery', v)} /></Row>{saveBtn}</>; break;
     case 'snapcast': body = <SnapPanel d={d} up={up} saveBtn={saveBtn} />; break;
     case 'subwave': body = <SubwavePanel d={d} up={up} saveBtn={saveBtn} />; break;
+    case 'roon': body = <RoonPanel />; break;
+    case 'plexamp': body = <><PlexampPanel name={d.name} /><Row label="Navn" hint="Navnet Plexamp viser"><Txt v={d.name} on={(v) => up('name', v)} /></Row>{saveBtn}</>; break;
+    case 'autostandby': body = <AutoStandbyPanel d={d} up={up} save={(x) => void save(x)} msg={msg} />; break;
+    case 'backup': body = <><Row label="Nattlig backup" hint="Kl. 03 til NAS (Skjold-backup/<navn>/) hvis opptak-pluginen har SMB, ellers lokalt."><Toggle on={!!d.nightly} onChange={(v) => up('nightly', v)} /></Row><Row label="Behold"><Num v={d.keep} max={60} on={(v) => up('keep', v)} /></Row><Row label="Passfrase" hint="Krypterer passord i nattlig backup. Tom = passord tas ikke med."><Txt v={d.passphrase} pw on={(v) => up('passphrase', v)} /></Row>{saveBtn}<BackupPanel /></>; break;
+    case 'wrapped': body = <WrappedPage />; break;
     case 'roomeq': body = <RoomEqPanel enabled={p.enabled} filters={(p.cfg.filters as Peq[]) || []} />; break;
   }
   return (
