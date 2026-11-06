@@ -5,10 +5,13 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
 sudo mkdir -p /usr/local/share/ki-amp && (cd "$SRC/.." && pwd) | sudo tee /usr/local/share/ki-amp/src >/dev/null   # kildetreet, for oppdatering fra appen
 
+# Raspberry Pi eller vanlig PC/Proxmox-LXC (pi/install_x86.sh): Pi-steg (I²C, USB-gadget, Blåtann) hoppes over på x86
+IS_PI=0; [ -r /proc/device-tree/model ] && grep -qi "raspberry" /proc/device-tree/model 2>/dev/null && IS_PI=1
+
 echo "== Programmer og tjenester"
 # I2C for OLED (Pi OS leverer det avslått) og moduler via modules-load.d (Debian 13)
-[ -e /dev/i2c-1 ] || { sudo raspi-config nonint do_i2c 0 2>/dev/null; sudo modprobe i2c-dev 2>/dev/null; } || true
-[ -f /etc/modules-load.d/ki-amp.conf ] || printf 'dwc2\ni2c-dev\n' | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
+[ "$IS_PI" = 0 ] || [ -e /dev/i2c-1 ] || { sudo raspi-config nonint do_i2c 0 2>/dev/null; sudo modprobe i2c-dev 2>/dev/null; } || true
+[ "$IS_PI" = 0 ] || [ -f /etc/modules-load.d/ki-amp.conf ] || printf 'dwc2\ni2c-dev\n' | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
 sudo install -m 755 "$SRC/ki_amp_daemon.py" "$SRC/oled_display.py" "$SRC/oled_small.py" /usr/local/bin/
 sudo install -m 644 "$SRC/skjold_homekit.py" /usr/local/bin/   # Apple Hjem (HomeKit)
 bash "$SRC/install_webapp.sh"   # ny web-app fra siste skjold-v*-utgivelse (ikke den gamle pi/webapp)
@@ -43,7 +46,7 @@ else
 fi
 
 echo "== Bluetooth"
-bash "$SRC/ki-bluetooth-setup.sh"
+if [ "$IS_PI" = 1 ]; then bash "$SRC/ki-bluetooth-setup.sh"; else echo "  hoppes over (ikke Raspberry Pi)"; fi
 
 echo "== Talemeldinger"
 bash "$SRC/ki-voice-setup.sh"
