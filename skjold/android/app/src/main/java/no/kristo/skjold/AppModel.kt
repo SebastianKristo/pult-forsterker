@@ -944,7 +944,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private var routeWatch = false
+
     fun startLive() {
+        if (!routeWatch) {
+            routeWatch = true
+            // Enhet valgt i systemets «Medieutgang» eller i mediebiblioteket: bytt aktivt rom
+            launch { SkjoldRoutes.selected.collect { h -> if (h != null && h != activeHost) { val r = sys.rooms.firstOrNull { it.host == h }; if (r != null) activate(r) else { activeHost = h; dev = null; startEvents() } } } }
+        }
         browser.onResolved = { d -> discovered(d) }
         browser.start()
         if (!live) return

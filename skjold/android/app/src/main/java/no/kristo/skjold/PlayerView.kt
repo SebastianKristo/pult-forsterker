@@ -170,12 +170,13 @@ private fun MoreRow(icon: String, label: String, enabled: Boolean = true, action
 /** Top bar (YouTube Music style): close ⌄ · Låt/Kø switch · speakers · more ⋮ */
 @Composable
 private fun TopBar(m: AppModel, openMore: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     Box(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), contentAlignment = Alignment.Center) {
         SongQueueSwitch(m)
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TopButton(Icons.chevronDown, 26.dp, 2.2f) { m.full = false }
             Spacer(Modifier.weight(1f))
-            TopButton(Icons.speaker, 22.dp, 1.8f) { m.full = false; m.tab = 2 }
+            TopButton(Icons.speaker, 22.dp, 1.8f) { if (!SkjoldRoutes.showOutputSwitcher(ctx)) { m.full = false; m.tab = 2 } }   // «Spill på»: systemets Medieutgang, ellers Rom
             TopButton(Icons.moreVertical, 22.dp, fill = true) { openMore() }
         }
     }
