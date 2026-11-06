@@ -1,0 +1,46 @@
+#
+# Lag en ny Skjold-release uten å pushe tag selv: finner høyeste skjold-v*-tag, lager neste (patch +1, eller
+# versjonen du oppgir) på main, og starter «Skjold release» på den taggen. Tagger pushet med GITHUB_TOKEN starter
+# ikke andre workflows av seg selv, men workflow_dispatch gjør det – derfor startes release-jobben eksplisitt.
+#
+name: Ny release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versjon, f.eks. 0.1.43 (tom = neste patch)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Finn neste versjon og lag tag
+        id: v
+        env:
+          WANT: ${{ inputs.version }}
+        run: |
+          git fetch --tags --force
+          LAST=$(git tag -l 'skjold-v*' | sed 's/^skjold-v//' | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1)
+          if [ -n "$WANT" ]; then NEXT="${WANT#skjold-v}"; else
+            IFS=. read -r A B C <<< "${LAST:-0.1.0}"; NEXT="$A.$B.$((C+1))"; fi
+          TAG="skjold-v$NEXT"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then echo "::error::$TAG finnes allerede"; exit 1; fi
+          git tag "$TAG" origin/main
+          git push origin "$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Laget $TAG (forrige: skjold-v$LAST) på $(git rev-parse --short origin/main)"
+      - name: Start «Skjold release» på taggen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run skjold-release.yml --ref "${{ steps.v.outputs.tag }}" -R "${{ github.repository }}"
