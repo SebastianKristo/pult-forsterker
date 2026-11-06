@@ -6061,6 +6061,8 @@ def routine_step(st):
         sleep_start(int(v or 0))
     elif t == "night":
         night_set(bool(v), "Rutine")
+    elif t in ("nd_album", "nd_playlist"):
+        set_power(True); nfc_play_navidrome("album" if t == "nd_album" else "playlist", str(v))
 
 
 routines = _rtmod.Routines({"do": routine_step, "peers": _peers,
@@ -6241,6 +6243,80 @@ FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h
                ("GET", "/api/routines", h_routines), ("POST", "/api/routines", h_routines), ("POST", "/api/routines/steps", h_routines),
                ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
 
+
+
+# ---------- Skjold Kassett: NFC-kassetter (pi/skjold_nfc.py, esphome/skjold-kassett.yaml) ----------
+import skjold_nfc as _nfcmod   # noqa: E402
+nfc = _nfcmod.NfcStore(os.path.join(FEAT_DIR, "nfc_cards.json"))
+
+
+def nfc_play_navidrome(kind, item_id):
+    s_ = settings()
+    if not s_.get("ndUrl"):
+        raise RuntimeError("Navidrome er ikke satt opp")
+    tracks = _nfcmod.subsonic_tracks(s_["ndUrl"], s_["ndUser"], s_["ndPass"], kind, item_id, _rcmod._get_json)
+    if not tracks:
+        raise RuntimeError("tom spilleliste")
+    t0 = tracks[0]
+    play_url(t0["url"], t0["title"], t0["cover"], "", {"track": t0["title"], "artist": t0["artist"], "album": t0["album"], "source": "Navidrome"})
+    for t in tracks[1:]:
+        lyr.cmd(["playlist", "add", proxied_url(t["url"]), t["title"]])
+
+
+def nfc_current():
+    return _nfcmod.current_to_card(state, radio_now(), last_play)
+
+
+async def h_nfc(r):
+    """POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+    · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status)."""
+    act = r.match_info.get("act", "")
+    try:
+        b = await r.json() if r.method == "POST" and r.can_read_body else {}
+    except Exception:
+        b = {}
+    loop = asyncio.get_running_loop()
+    try:
+        if act == "" and r.method == "GET":
+            return web.json_response({"learning": nfc.learning(), "learn_until": nfc.learn_until, "last": nfc.last,
+                                      "active": nfc.active_uid, "cards": nfc.list()})
+        if act == "cards":
+            if r.method == "DELETE":
+                return web.json_response({"ok": nfc.delete(r.match_info.get("uid", "")), "cards": nfc.list()})
+            if r.method == "POST":
+                return web.json_response({"card": nfc.put(b), "cards": nfc.list()})
+            return web.json_response({"cards": nfc.list()})
+        if act == "learn":
+            if b.get("stop"):
+                nfc.learn_until = 0.0
+                return web.json_response({"learning": False})
+            return web.json_response(nfc.learn(b.get("timeout") or 30, b.get("kort")))
+        if act == "scan":
+            res = nfc.scan(b.get("uid", ""), nfc_current)
+            card = res["card"]
+            if card and not res["learned"]:
+                if card["handling"] == "routine":
+                    routines.run(str(card.get("verdi") or card.get("navn")))
+                else:
+                    threading.Thread(target=routines.run_steps, args=(res["steps"],), daemon=True).start()
+                history_add({"t": int(time.time()), "title": card["navn"], "artist": card.get("undertittel", ""), "album": "",
+                             "input": "kassett", "source": "Kassett", "station": "", "cover": card.get("omslag", "")})
+            changed()
+            return web.json_response({"known": res["known"], "learned": res["learned"], "card": card})
+        if act == "remove":
+            res = nfc.removed(b.get("uid", ""))
+            if res["pause"]:
+                await loop.run_in_executor(None, transport, "pause")
+            return web.json_response(res)
+    except (ValueError, KeyError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+    raise web.HTTPNotFound()
+
+
+FEAT_ROUTES += [("GET", "/api/nfc", h_nfc), ("POST", "/api/nfc/{act}", h_nfc), ("GET", "/api/nfc/{act}", h_nfc),
+                ("DELETE", "/api/nfc/{act}/{uid}", h_nfc)]
 
 AVAHI_SVC = "/etc/avahi/services/skjold.service"
 
