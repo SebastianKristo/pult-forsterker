@@ -14,6 +14,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PI = os.path.join(ROOT, "pi")
 UT = os.path.join(ROOT, "docs", "api", "openapi.yaml")
+NETT = os.path.join(ROOT, "skjold", "nettside", "utvikler", "openapi.yaml")   # Redoc-siden /utvikler/
 
 R_WEB = re.compile(r'web\.(get|post|put|delete|patch)\(\s*"(/[^"]*)"\s*,\s*([\w.]+)')
 R_ROUTE = re.compile(r'web\.route\(\s*"(\w+|\*)"\s*,\s*"(/[^"]*)"\s*,\s*([\w.]+)')
@@ -133,5 +134,6 @@ if __name__ == "__main__":
     tekst = "# Generert av docs/api/gen_openapi.py – ikke rediger for hånd.\n" + yaml_dump(s) + "\n"
     if "--check" in sys.argv:
         sys.exit(0 if os.path.exists(UT) and open(UT, encoding="utf-8").read() == tekst else 1)
-    open(UT, "w", encoding="utf-8").write(tekst)
+    for f in (UT, NETT):
+        open(f, "w", encoding="utf-8").write(tekst)
     print(f"{UT}: {len(s['paths'])} stier, {sum(len(v) for v in s['paths'].values())} operasjoner")

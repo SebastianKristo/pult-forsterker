@@ -1,0 +1,11 @@
+[project]
+name = "skjold"
+version = "1.0.0"
+description = "Klient for Skjold-forsterkerens lokale API"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
