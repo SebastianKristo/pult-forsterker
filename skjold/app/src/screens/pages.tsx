@@ -60,7 +60,8 @@ function HomeBody({ wide = false }: { wide?: boolean }) {
           <span class="h2">Nylig spilt</span>
           <div class="hscroll">
             {rc.map((x) => {
-              const a = art(x.station ? x.title : x.title, x.image);
+              const fav = x.station && !x.image ? favs.value.find((f) => f.title === x.title) : undefined;   // eldre oppføringer uten bilde: bruk favorittens logo
+              const a = art(x.title, x.image || fav?.image || fav?.icon);
               return (
                 <button key={x.key} class="rc" onClick={() => {
                   if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else go('radio'); }
