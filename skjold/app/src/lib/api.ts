@@ -9,6 +9,7 @@ export interface Preset { n: number; title: string }
 export interface FullPreset { title: string; url: string; icon?: string }
 
 export interface Status {
+  kids?: boolean; sleep?: number; subwave?: boolean;
   power: boolean; input: InputId; volume: number; mute: boolean; bt_pairing: boolean; source_label?: string;
   loudness: boolean; loudness_level: number; voice: boolean; voice_profile: string; voice_profiles: Record<string, string>;
   presets: Preset[]; preset: number; auto_input: boolean; mix: boolean; usb_pc: number; usb_names: string[];
@@ -112,11 +113,28 @@ export interface RemoteStatus { enabled: boolean; host: string; master: boolean;
 /** GET/POST /api/update: installert og nyeste skjold-v*-utgivelse, og oppdatering fra appen (git pull + update.sh). */
 export type UpdateInfo = { current: string | null; version: string; latest: string | null; available: boolean; running: boolean; result: string | null; log: string[]; can_update: boolean; error: string | null };
 
+/** Plugins (GET/POST /api/plugins): Skjold-egne kjører i daemonen, Lyrion-plugins installeres i Lyrion. */
+export interface Plugin { id: string; name: string; src: 'skjold' | 'lyrion' | 'kommer'; cat: string; desc: string; enabled: boolean; status: string; cfg: Record<string, any>; url?: string }
+export interface PluginsResp { plugins: Plugin[]; sleep: number; on: number }
+export interface Lyrics { enabled: boolean; found: boolean; plain?: string; synced?: { t: number; l: string }[]; title?: string; artist?: string; position?: number; instrumental?: boolean; error?: string | null }
+export interface HistItem { t: number; title: string; artist: string; album: string; input: string; source: string; station: string; cover: string }
+export interface Recording { name: string; size: number; t: number; recording: boolean }
+export interface SnapClient { id: string; name: string; connected: boolean; latency: number; volume: number; muted: boolean }
 export const api = {
   sky: () => req<SkyStatus>('/api/sky'),
   skyKobl: (kode: string) => post<SkyStatus>('/api/sky', { kode }),
   skyKobleFra: () => post<SkyStatus>('/api/sky', { koble_fra: true }),
   remote: () => req<RemoteStatus>('/api/remote'),
+  plugins: () => req<PluginsResp>('/api/plugins'),
+  setPlugin: (id: string, b: Record<string, unknown>) => post<PluginsResp>('/api/plugins/' + id, b),
+  lyrics: () => req<Lyrics>('/api/lyrics', undefined, undefined, 12000),
+  history: () => req<{ enabled: boolean; items: HistItem[] }>('/api/history'),
+  recordings: () => req<{ items: Recording[]; dir: string }>('/api/recordings'),
+  recPost: (b: Record<string, unknown>) => post<{ items: Recording[]; dir: string }>('/api/recordings', b),
+  snapcast: (b?: Record<string, unknown>) => (b ? post<{ ok: boolean; error?: string; clients: SnapClient[]; role: string }>('/api/snapcast', b) : req<{ ok: boolean; error?: string; clients: SnapClient[]; role: string }>('/api/snapcast')),
+  roomeqSweep: (b: { level?: number; delay?: number }) => post<{ f1: number; f2: number; dur: number; sr: number; delay: number }>('/api/roomeq/sweep', b),
+  subwave: (health = false) => req<Record<string, any>>('/api/subwave' + (health ? '?health=1' : ''), undefined, undefined, 15000),
+  subwavePost: (b: Record<string, unknown>) => post<Record<string, any>>('/api/subwave', b),
   setRemote: (b: { enable: boolean; token?: string; host?: string }) => post<RemoteStatus>('/api/remote', b),
   status: () => req<Status>('/api/status'),
   statusAt: (base: string, timeoutMs = 2500) => req<Status>('/api/status', undefined, base, timeoutMs),

@@ -19,6 +19,7 @@ API:
   POST /api/input  {"input":"airplay|bt|aux|usb"}
   POST /api/volume {"volume":0-100} | {"delta":±n}
   POST /api/loudness {"on":bool, "level":0-10}
+  GET  /api/plugins  {plugins[],sleep,on} · POST /api/plugins/{id} {"enabled",…} · GET /api/lyrics · GET /api/history
   GET  /api/update   {current,latest,available,running,result,log} · POST /api/update starter oppdatering (git pull + update.sh)
   POST /api/play     {"url", "title"?, "announce"?:bool, "volume"?} – spill lydfil/strøm (HA/Homey); announce = oppå det som spiller
   POST /api/mute   {"mute":bool}
@@ -119,6 +120,7 @@ import re
 import socket
 import subprocess
 import time
+import base64
 import hashlib
 import shlex
 import shutil
@@ -698,7 +700,13 @@ def dsp_config():
   eq{i}:
     type: Biquad
     parameters: {{type: {t}, freq: {f}, {'q' if t == 'Peaking' else 'slope'}: {q if t == 'Peaking' else 6}, gain: {g:.1f}}}""" for i, ((t, f, q), g) in enumerate(zip(EQ_BANDS, eq)) if g)
-    names = ", ".join(["pre"] + [f"eq{i}" for i, g in enumerate(eq) if g] + ["loud"])
+    rq = roomeq_filters()
+    pre -= max([0.0] + [g for _f, _q, g in rq])
+    eqf += "".join(f"""
+  rq{i}:
+    type: Biquad
+    parameters: {{type: Peaking, freq: {f}, q: {q}, gain: {g:.1f}}}""" for i, (f, q, g) in enumerate(rq))
+    names = ", ".join(["pre"] + [f"eq{i}" for i, g in enumerate(eq) if g] + [f"rq{i}" for i in range(len(rq))] + ["loud"])
     return f"""devices:
   samplerate: 48000
   chunksize: 1024
@@ -1370,6 +1378,10 @@ def read_status():
         else:
             playing = _transport_hint["playing"]; paused = not playing
     cover = st.get("cover", "") or ""
+    swm = subwave_meta() if st.get("source") == "radio" else None   # SUB/WAVE: låtinfo fra stasjonens API
+    if swm and swm["title"]:
+        st = {**st, "title": swm["title"], "artist": swm["artist"] or st.get("artist", ""), "album": swm["album"] or "SUB/WAVE"}
+        if swm["cover"].startswith(("http://", "https://")): cover = swm["cover"]
     cover_url = cover if cover.startswith(("http://", "https://")) else (f"/api/cover?v={cover}" if cover else "")
     return {**state, **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
@@ -1379,7 +1391,7 @@ def read_status():
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
             "menu": dict(menu) if menu["open"] else None, "hold": hold_status(), "settings_menu": smenu_status(),
-            "sky": sky.kort()}
+            "sky": sky.kort(), "sleep": sleep_left(), "kids": plug_on("kids"), "subwave": subwave_playing()}
 
 
 # ---------- USB-delingsswitch (Ugreen 2 PC → 4 USB) ----------
@@ -3728,6 +3740,1128 @@ async def h_update_post(_r):
     return web.json_response(await asyncio.get_running_loop().run_in_executor(None, update_info, False))
 
 
+# ---------- Plugins (Skjold-egne og Lyrion) – GET /api/plugins, POST /api/plugins/{id}, GET /api/lyrics, GET /api/history ----------
+# Innstillingene ligger i state["settings"]["plugins"][id], så appen, web-UI-et og Touch deler dem.
+NRK_P1 = "https://lyd.nrk.no/nrk_radio_p1_ostlandssendingen_mp3_h"
+PLUGIN_DEFS = [
+    # id, navn, kilde, kategori, beskrivelse, standardinnstillinger
+    ("sleep", "Sovetimer", "skjold", "Verktøy", "Skrur ned lyden det siste minuttet og slår av etter 15 til 90 minutter.", {"minutes": 30}),
+    ("alarm", "Vekkerklokke", "skjold", "Verktøy", "Vekk med en radiofavoritt eller en strøm. Flere alarmer, valgfrie ukedager og myk oppstart.",
+     {"alarms": [{"time": "07:00", "days": [0, 1, 2, 3, 4], "preset": 1, "url": "", "volume": 30, "fade": 3, "on": True}]}),
+    ("news", "Morgennyheter", "skjold", "Radio og podkast", "Spiller NRK P1 med nyheter til fast tid på hverdager.",
+     {"time": "06:30", "days": [0, 1, 2, 3, 4], "url": NRK_P1, "volume": 25, "minutes": 15}),
+    ("lyrics", "Sangtekster", "skjold", "Verktøy", "Viser teksten til låten som spiller, synkronisert når den finnes. Fra lrclib.net.", {}),
+    ("history", "Lyttehistorikk", "skjold", "Verktøy", "Husker de siste 500 låtene og kanalene som er spilt, med tid og kilde.", {}),
+    ("nightcap", "Volumtak om natten", "skjold", "Verktøy", "Begrenser volumet om natten, så ingen vekkes av et uhell.", {"start": "22:00", "end": "07:00", "max": 25}),
+    ("listenbrainz", "ListenBrainz", "skjold", "Verktøy", "Registrerer det du spiller på ListenBrainz. Lim inn brukertokenet fra listenbrainz.org/settings.", {"token": ""}),
+    ("lastfm", "Last.fm", "skjold", "Verktøy", "Registrerer det du spiller på Last.fm. Krever egen API-nøkkel, hemmelighet og sesjonsnøkkel.", {"key": "", "secret": "", "session": ""}),
+    ("webhook", "Webhooks", "skjold", "Verktøy", "Sender en JSON-melding til din adresse når låt, avspilling eller kilde endres.", {"url": ""}),
+    ("subwave", "SUB/WAVE", "skjold", "Radio og podkast", "Selvhostet AI-DJ-radio (getsubwave.com). Spill stasjonen, se DJ-loggen og køen, og ønsk deg låter.",
+     {"url": "", "user": "", "password": ""}),
+    ("spotty", "Spotty", "lyrion", "Musikk", "Spotify i Lyrion, med søk, spillelister og Spotify Connect. Krever Spotify Premium.", {}),
+    ("tidal", "TIDAL", "lyrion", "Musikk", "Strømming i FLAC fra TIDAL. Krever abonnement.", {}),
+    ("qobuz", "Qobuz", "lyrion", "Musikk", "Hi-res opptil 24-bit / 192 kHz. Krever abonnement.", {}),
+    ("deezer", "Deezer", "lyrion", "Musikk", "Flow, mikser og spillelister fra Deezer.", {}),
+    ("podcast", "Podkaster", "lyrion", "Radio og podkast", "Abonner på podkaster. Fortsetter der du slapp, også i et annet rom.", {}),
+    ("rp", "Radio Paradise", "lyrion", "Radio og podkast", "Reklamefri radio i FLAC.", {}),
+    ("bbc", "BBC Sounds", "lyrion", "Radio og podkast", "Direktesendinger og opptak fra BBC.", {}),
+    ("dstm", "Ikke stopp musikken", "lyrion", "Verktøy", "Fyller køen med lignende musikk når den tar slutt.", {}),
+    ("kids", "Barnerom-modus", "skjold", "Verktøy", "Maks volum, bare utvalgte kilder og kanaler, og leggetid med myk avslutning. Låses med PIN.",
+     {"max": 40, "inputs": ["radio"], "presets": [], "bedtime": "20:00", "pin": ""}),
+    ("record", "Radioopptak", "skjold", "Radio og podkast", "Ta opp en radiofavoritt eller strøm nå eller til fast tid, og spill av opptaket senere.",
+     {"schedules": [], "max_mb": 2000}),
+    ("mqtt", "MQTT-bro", "skjold", "Verktøy", "Publiserer status og tar imot kommandoer over MQTT, med valgfri Home Assistant-oppdagelse.",
+     {"host": "", "port": 1883, "user": "", "password": "", "tls": False, "prefix": "skjold", "discovery": True}),
+    ("snapcast", "Snapcast", "skjold", "Verktøy", "Beta: synkron lyd til flere høyttalere med Snapcast. Krever pi/install_snapcast.sh.",
+     {"role": "server", "server": ""}),
+    ("roomeq", "Romkorreksjon", "skjold", "Verktøy", "Mål rommet med mikrofonen på telefonen og demp basstopper mellom 40 og 300 Hz.",
+     {"filters": [], "tilt": 0.0, "measured": ""}),
+]
+PLUGIN_BY_ID = {p[0]: p for p in PLUGIN_DEFS}
+_plug_lock = threading.Lock()
+
+
+def plug_cfg(pid):
+    d = PLUGIN_BY_ID[pid][5]
+    cur = ((state.get("settings") or {}).get("plugins") or {}).get(pid) or {}
+    out = {"enabled": bool(cur.get("enabled", False))}
+    for k, v in d.items():
+        out[k] = cur.get(k, json.loads(json.dumps(v)))
+    return out
+
+
+def plug_on(pid):
+    return plug_cfg(pid)["enabled"]
+
+
+def _plug_save(pid, cfg):
+    with _plug_lock:
+        s = state.setdefault("settings", {})
+        pl = s.setdefault("plugins", {})
+        pl[pid] = cfg
+    save_state()
+
+
+def plug_status(pid, cfg):
+    src = PLUGIN_BY_ID[pid][2]
+    if src == "kommer":
+        return "Kommer"
+    if src == "lyrion":
+        return "I Lyrion"
+    if not cfg["enabled"]:
+        return "Av"
+    if pid == "listenbrainz" and not cfg.get("token"):
+        return "Krever oppsett"
+    if pid == "lastfm" and not (cfg.get("key") and cfg.get("secret") and cfg.get("session")):
+        return "Krever oppsett"
+    if pid == "webhook" and not str(cfg.get("url", "")).startswith(("http://", "https://")):
+        return "Krever oppsett"
+    if pid == "subwave" and not str(cfg.get("url") or "").startswith(("http://", "https://")):
+        return "Krever oppsett"
+    if pid == "mqtt":
+        if not cfg.get("host"): return "Krever oppsett"
+        if not mqtt_available(): return "Krever paho-mqtt"
+        return "Tilkoblet" if _mqtt["ok"] else ("Feil: " + _mqtt["err"] if _mqtt["err"] else "Kobler til …")
+    if pid == "record" and any(x["recording"] for x in rec_list()):
+        return "Tar opp"
+    if pid == "roomeq" and not cfg.get("filters"):
+        return "Krever måling"
+    if pid == "snapcast":
+        return "Beta"
+    if pid == "sleep" and _sleep["until"]:
+        return "Slår av om " + str(max(1, int(round((_sleep["until"] - time.time()) / 60)))) + " min"
+    return "På"
+
+
+def lyrion_plugins_url():
+    h = lyr.host or "skjold.local"
+    return f"http://{h}:{lyr.port or 9000}/settings/index.html"
+
+
+def plugins_payload():
+    out = []
+    for pid, name, src, cat, desc, _d in PLUGIN_DEFS:
+        cfg = plug_cfg(pid)
+        if pid == "lastfm" and cfg.get("secret"):
+            cfg = {**cfg, "secret": "••••••"}
+        if pid == "listenbrainz" and cfg.get("token"):
+            cfg = {**cfg, "token": "••••••" + str(cfg["token"])[-4:]}
+        for sk in ("password", "pin"):
+            if cfg.get(sk):
+                cfg = {**cfg, sk: "••••••"}
+        item = {"id": pid, "name": name, "src": src, "cat": cat, "desc": desc, "enabled": cfg["enabled"] and src == "skjold",
+                "status": plug_status(pid, plug_cfg(pid)), "cfg": cfg}
+        if src == "lyrion":
+            item["url"] = lyrion_plugins_url()
+        out.append(item)
+    return {"plugins": out, "sleep": sleep_left(), "on": sum(1 for p in out if p["enabled"])}
+
+
+# --- Sovetimer ---
+_sleep = {"until": 0.0, "start_vol": None}
+
+
+def sleep_left():
+    return max(0, int(round(_sleep["until"] - time.time()))) if _sleep["until"] else 0
+
+
+def sleep_fade_volume(start_vol, left):
+    """Volum det siste minuttet: lineært fra startvolumet ned mot 0."""
+    if left >= 60:
+        return start_vol
+    return max(0, int(round(start_vol * max(0.0, left) / 60.0)))
+
+
+def sleep_start(minutes):
+    if minutes <= 0:
+        if _sleep["start_vol"] is not None:
+            set_volume(_sleep["start_vol"])
+        _sleep.update(until=0.0, start_vol=None); return
+    _sleep.update(until=time.time() + minutes * 60, start_vol=None)
+
+
+def _sleep_tick():
+    if not _sleep["until"]:
+        return
+    left = _sleep["until"] - time.time()
+    if left <= 60 and _sleep["start_vol"] is None:
+        _sleep["start_vol"] = state["volume"]
+    if left <= 0:
+        v0 = _sleep["start_vol"]
+        _sleep.update(until=0.0, start_vol=None)
+        print("Sovetimer: slår av", flush=True)
+        set_power(False)
+        if v0 is not None:
+            state["volume"] = v0; changed()   # neste gang den slås på: samme volum som før
+        return
+    if _sleep["start_vol"] is not None:
+        v = sleep_fade_volume(_sleep["start_vol"], left)
+        if v != state["volume"]:
+            set_volume(v)
+
+
+# --- Vekkerklokke og morgennyheter ---
+def hhmm_ok(s):
+    return isinstance(s, str) and re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", s) is not None
+
+
+def alarm_due(alarm, tm, fired):
+    """tm: time.struct_time (lokal). fired: sett med nøkler som allerede er utløst. Gir nøkkelen hvis alarmen skal gå nå."""
+    if not alarm.get("on", True) or not hhmm_ok(alarm.get("time")):
+        return None
+    if alarm["time"] != "%02d:%02d" % (tm.tm_hour, tm.tm_min):
+        return None
+    days = alarm.get("days")
+    if days and tm.tm_wday not in days:
+        return None
+    key = "%s|%04d-%02d-%02d|%s" % (alarm.get("id", ""), tm.tm_year, tm.tm_mon, tm.tm_mday, alarm["time"])
+    return None if key in fired else key
+
+
+_alarm_fired = set()
+
+
+def _fade_in(target, minutes):
+    steps = max(1, int(minutes * 60 / 5))
+    for i in range(1, steps + 1):
+        if not state["power"]:
+            return
+        set_volume(int(round(target * i / steps)))
+        time.sleep(5)
+
+
+def fire_alarm(a, label="Vekkerklokke"):
+    vol = max(0, min(100, int(a.get("volume", 30))))
+    fade = max(0, min(30, int(a.get("fade", 0) or 0)))
+    print(f"{label}: {a.get('time')} – spiller", flush=True)
+    if not state["power"]:
+        set_power(True)
+    set_volume(0 if fade else vol)
+    try:
+        n = int(a.get("preset") or 0)
+        if a.get("url"):
+            play_url(a["url"], a.get("title") or label)
+        elif n and 1 <= n <= len(state["presets"]) and state["presets"][n - 1]:
+            play_preset(n, announce=False)
+        else:
+            first = next((i + 1 for i, p in enumerate(state["presets"]) if p), 0)
+            if first: play_preset(first, announce=False)
+    except Exception as e:
+        print(f"{label} feilet:", e, flush=True)
+    if fade:
+        threading.Thread(target=_fade_in, args=(vol, fade), daemon=True).start()
+
+
+def _alarm_tick():
+    tm = time.localtime()
+    if plug_on("alarm"):
+        for i, a in enumerate(plug_cfg("alarm").get("alarms") or []):
+            k = alarm_due({**a, "id": f"a{i}"}, tm, _alarm_fired)
+            if k:
+                _alarm_fired.add(k); fire_alarm(a)
+    if plug_on("news"):
+        c = plug_cfg("news")
+        k = alarm_due({"time": c.get("time"), "days": c.get("days"), "id": "news"}, tm, _alarm_fired)
+        if k:
+            _alarm_fired.add(k)
+            fire_alarm({"time": c.get("time"), "url": c.get("url") or NRK_P1, "title": "NRK P1", "volume": c.get("volume", 25), "fade": 1}, "Morgennyheter")
+            mins = int(c.get("minutes") or 0)
+            if mins > 0 and not _sleep["until"]:
+                sleep_start(mins)
+    if len(_alarm_fired) > 200:
+        _alarm_fired.clear()
+
+
+# --- Volumtak om natten ---
+def in_window(hm, start, end):
+    """hm/start/end som 'HH:MM'. Vinduet kan gå over midnatt (22:00–07:00)."""
+    if not (hhmm_ok(start) and hhmm_ok(end)):
+        return False
+    if start == end:
+        return False
+    return start <= hm < end if start < end else (hm >= start or hm < end)
+
+
+def nightcap_limit(now_hm=None):
+    if not plug_on("nightcap"):
+        return None
+    c = plug_cfg("nightcap")
+    hm = now_hm or time.strftime("%H:%M")
+    return max(0, min(100, int(c.get("max", 25)))) if in_window(hm, c.get("start"), c.get("end")) else None
+
+
+def _nightcap_tick():
+    lim = nightcap_limit()
+    if lim is not None and state["volume"] > lim:
+        set_volume(lim)
+
+
+# --- Sangtekster (lrclib.net) ---
+_lyr_cache = {}
+
+
+def parse_lrc(text):
+    out = []
+    for line in str(text or "").splitlines():
+        m = re.match(r"^\s*((?:\[\d+:\d+(?:[.:]\d+)?\])+)(.*)$", line)
+        if not m:
+            continue
+        words = m.group(2).strip()
+        for t in re.findall(r"\[(\d+):(\d+(?:[.:]\d+)?)\]", m.group(1)):
+            out.append({"t": round(int(t[0]) * 60 + float(t[1].replace(":", ".")), 2), "l": words})
+    out.sort(key=lambda x: x["t"])
+    return out
+
+
+def lyrics_from_lrclib(data):
+    if not isinstance(data, dict):
+        return {"found": False, "plain": "", "synced": []}
+    plain = data.get("plainLyrics") or ""
+    synced = parse_lrc(data.get("syncedLyrics") or "")
+    if not plain and synced:
+        plain = "\n".join(x["l"] for x in synced)
+    return {"found": bool(plain or synced), "plain": plain, "synced": synced, "instrumental": bool(data.get("instrumental"))}
+
+
+def fetch_lyrics(artist, title, duration=0):
+    key = (artist.lower(), title.lower())
+    if key in _lyr_cache:
+        return _lyr_cache[key]
+    q = {"artist_name": artist, "track_name": title}
+    if duration and duration > 0:
+        q["duration"] = int(round(duration))
+    url = "https://lrclib.net/api/get?" + urllib.parse.urlencode(q)
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Skjold/2.0 (https://github.com/SebastianKristo/pult-forsterker)"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            res = lyrics_from_lrclib(json.loads(r.read()))
+    except urllib.error.HTTPError as e:
+        res = {"found": False, "plain": "", "synced": [], "error": None if e.code == 404 else f"HTTP {e.code}"}
+    except Exception as e:
+        return {"found": False, "plain": "", "synced": [], "error": str(e)}   # nettfeil: ikke cache
+    _lyr_cache[key] = res
+    if len(_lyr_cache) > 300:
+        _lyr_cache.pop(next(iter(_lyr_cache)))
+    return res
+
+
+async def h_lyrics(_r):
+    if not plug_on("lyrics"):
+        return web.json_response({"enabled": False, "found": False})
+    s = read_status()
+    title, artist = str(s.get("title") or ""), str(s.get("artist") or "")
+    if not title or not artist:
+        return web.json_response({"enabled": True, "found": False, "title": title, "artist": artist})
+    res = await asyncio.get_running_loop().run_in_executor(None, fetch_lyrics, artist, title, float(s.get("duration") or 0))
+    return web.json_response({"enabled": True, "title": title, "artist": artist, "position": s.get("position", 0), **res})
+
+
+# --- Låtvakt: historikk, scrobbling og webhooks ---
+HISTORY_FILE = os.path.join(os.path.dirname(STATE_FILE), "history.json")
+_hist = {"items": None}
+_watch = {"key": "", "playing": None, "input": None, "start": 0.0, "listened": 0.0, "last": 0.0, "scrobbled": False, "track": {}}
+
+
+def _hist_load():
+    if _hist["items"] is None:
+        try:
+            with open(HISTORY_FILE) as fh:
+                _hist["items"] = json.load(fh)[-500:]
+        except Exception:
+            _hist["items"] = []
+    return _hist["items"]
+
+
+def history_add(entry):
+    items = _hist_load()
+    items.append(entry)
+    del items[:-500]
+    try:
+        with open(HISTORY_FILE + ".tmp", "w") as fh:
+            json.dump(items, fh)
+        os.replace(HISTORY_FILE + ".tmp", HISTORY_FILE)
+    except Exception:
+        pass
+
+
+async def h_history(_r):
+    return web.json_response({"enabled": plug_on("history"), "items": list(reversed(_hist_load()))[:500]})
+
+
+def scrobble_due(listened, duration):
+    """ListenBrainz/Last.fm-regelen: halve låten eller 4 minutter, og låten må være over 30 s (ukjent lengde: 4 min)."""
+    if duration and duration > 0:
+        return duration > 30 and listened >= min(duration / 2.0, 240)
+    return listened >= 240
+
+
+def lastfm_sig(params, secret):
+    s = "".join(k + str(params[k]) for k in sorted(params) if k not in ("format", "callback")) + secret
+    return hashlib.md5(s.encode("utf-8")).hexdigest()
+
+
+def _post_json(url, body, headers=None, timeout=8):
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", "User-Agent": "Skjold/2.0", **(headers or {})})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.status
+
+
+def _lb_submit(kind, tr, ts=None):
+    tok = plug_cfg("listenbrainz").get("token")
+    if not tok:
+        return
+    meta = {"artist_name": tr["artist"], "track_name": tr["title"], "additional_info": {"media_player": "Skjold", "submission_client": "Skjold"}}
+    if tr.get("album"): meta["release_name"] = tr["album"]
+    pl = {"track_metadata": meta}
+    if ts: pl["listened_at"] = int(ts)
+    try:
+        _post_json("https://api.listenbrainz.org/1/submit-listens", {"listen_type": kind, "payload": [pl]}, {"Authorization": "Token " + tok})
+    except Exception as e:
+        print("ListenBrainz:", e, flush=True)
+
+
+def _lastfm_call(method, tr, ts=None):
+    c = plug_cfg("lastfm")
+    if not (c.get("key") and c.get("secret") and c.get("session")):
+        return
+    p = {"method": method, "api_key": c["key"], "sk": c["session"], "artist": tr["artist"], "track": tr["title"]}
+    if tr.get("album"): p["album"] = tr["album"]
+    if ts: p["timestamp"] = str(int(ts))
+    p["api_sig"] = lastfm_sig(p, c["secret"]); p["format"] = "json"
+    try:
+        req = urllib.request.Request("https://ws.audioscrobbler.com/2.0/", data=urllib.parse.urlencode(p).encode(), headers={"User-Agent": "Skjold/2.0"})
+        urllib.request.urlopen(req, timeout=8).read()
+    except Exception as e:
+        print("Last.fm:", e, flush=True)
+
+
+def _webhook(event, data):
+    c = plug_cfg("webhook")
+    u = str(c.get("url") or "")
+    if not c["enabled"] or not u.startswith(("http://", "https://")):
+        return
+    try:
+        _post_json(u, {"event": event, "device": NAME, "id": socket.gethostname(), "t": int(time.time()), **data}, timeout=5)
+    except Exception as e:
+        print("Webhook:", e, flush=True)
+
+
+def _bg(f, *a):
+    threading.Thread(target=f, args=a, daemon=True).start()
+
+
+def _watch_tick():
+    s = read_status()
+    now = time.time()
+    playing = bool(s.get("playing")) and bool(state["power"])
+    title, artist = str(s.get("title") or ""), str(s.get("artist") or "")
+    key = f"{s.get('input')}|{artist}|{title}" if title else ""
+    w = _watch
+    if w["last"] and w["playing"]:
+        w["listened"] += min(5.0, now - w["last"])
+    w["last"] = now
+    if w["input"] is not None and s.get("input") != w["input"]:
+        _bg(_webhook, "source", {"input": s.get("input")})
+    w["input"] = s.get("input")
+    if key != w["key"]:
+        w.update(key=key, start=now, listened=0.0, scrobbled=False,
+                 track={"title": title, "artist": artist, "album": str(s.get("album") or ""), "duration": float(s.get("duration") or 0), "input": s.get("input")})
+        if key and playing:
+            if plug_on("history"):
+                rn = s.get("radio_now") or {}
+                history_add({"t": int(now), "title": title, "artist": artist, "album": w["track"]["album"], "input": s.get("input"),
+                             "source": s.get("source_label") or s.get("input"), "station": rn.get("name") or "", "cover": s.get("cover_url") or rn.get("image") or ""})
+            if artist and plug_on("listenbrainz"): _bg(_lb_submit, "playing_now", dict(w["track"]))
+            if artist and plug_on("lastfm"): _bg(_lastfm_call, "track.updateNowPlaying", dict(w["track"]))
+            _bg(_webhook, "track", {"title": title, "artist": artist, "album": w["track"]["album"], "input": s.get("input")})
+    if w["playing"] is not None and playing != w["playing"]:
+        _bg(_webhook, "play" if playing else "pause", {"title": title, "artist": artist, "input": s.get("input")})
+    w["playing"] = playing
+    tr = w["track"]
+    if key and artist and not w["scrobbled"] and scrobble_due(w["listened"], tr.get("duration", 0)):
+        w["scrobbled"] = True
+        if plug_on("listenbrainz"): _bg(_lb_submit, "single", dict(tr), w["start"])
+        if plug_on("lastfm"): _bg(_lastfm_call, "track.scrobble", dict(tr), w["start"])
+
+
+# --- Barnerom-modus ---
+def kids_rules():
+    if not plug_on("kids"):
+        return None
+    c = plug_cfg("kids")
+    return {"max": max(0, min(100, int(c.get("max", 40)))), "inputs": [str(x) for x in c.get("inputs") or []],
+            "presets": [int(x) for x in c.get("presets") or []], "bedtime": c.get("bedtime") or ""}
+
+
+def kids_allowed_preset(n, rules):
+    return not rules["presets"] or n in rules["presets"]
+
+
+_kids_fired = set()
+
+
+def _kids_tick():
+    r = kids_rules()
+    if not r:
+        return
+    if state["volume"] > r["max"]:
+        set_volume(r["max"])
+    if not state["power"]:
+        return
+    if r["inputs"] and state["input"] not in r["inputs"]:
+        print("Barnerom: kilden", state["input"], "er låst", flush=True)
+        set_input(r["inputs"][0], announce=False)
+    if state["input"] == "radio" and r["presets"] and state["preset"] and not kids_allowed_preset(state["preset"], r):
+        try: play_preset(r["presets"][0], announce=False)
+        except Exception as e: print("Barnerom:", e, flush=True)
+    if hhmm_ok(r["bedtime"]):
+        k = alarm_due({"time": r["bedtime"], "id": "kids"}, time.localtime(), _kids_fired)
+        if k:
+            _kids_fired.add(k); print("Barnerom: leggetid", flush=True); sleep_start(1)
+
+
+# --- Radioopptak (ffmpeg) ---
+REC_DIR = os.environ.get("KI_AMP_REC_DIR", "/var/lib/skjold/opptak")
+_rec = {"procs": {}, "fired": set()}
+
+
+def _safe(s):
+    return re.sub(r"[^A-Za-z0-9æøåÆØÅ_-]+", "-", str(s or "opptak")).strip("-")[:40] or "opptak"
+
+
+def rec_source(spec):
+    """{'preset': n} eller {'url': …} → (url, navn)."""
+    if spec.get("url"):
+        return str(spec["url"]), str(spec.get("title") or "strøm")
+    n = int(spec.get("preset") or 0)
+    p = state["presets"][n - 1] if 1 <= n <= len(state["presets"]) else None
+    if not p:
+        raise ValueError("velg en radiofavoritt eller en URL")
+    return p["url"], p.get("title") or f"kanal {n}"
+
+
+def rec_start(spec):
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("ffmpeg mangler (kjør pi/update.sh)")
+    url, name = rec_source(spec)
+    mins = max(1, min(240, int(spec.get("minutes") or 60)))
+    os.makedirs(REC_DIR, exist_ok=True)
+    fn = f"{_safe(name)}-{time.strftime('%Y%m%d-%H%M')}.mp3"
+    path = os.path.join(REC_DIR, fn)
+    p = subprocess.Popen(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-t", str(mins * 60), "-i", url, "-vn", "-c:a", "libmp3lame", "-b:a", "192k", path],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _rec["procs"][fn] = (p, time.time() + mins * 60)
+    print("Radioopptak:", fn, f"({mins} min)", flush=True)
+    rec_prune()
+    return fn
+
+
+def rec_list():
+    try:
+        files = [f for f in os.listdir(REC_DIR) if f.endswith(".mp3")]
+    except OSError:
+        files = []
+    out = []
+    for f in sorted(files, reverse=True):
+        st = os.stat(os.path.join(REC_DIR, f))
+        pr = _rec["procs"].get(f)
+        out.append({"name": f, "size": st.st_size, "t": int(st.st_mtime), "recording": bool(pr and pr[0].poll() is None)})
+    return out
+
+
+def rec_prune():
+    lim = max(100, int(plug_cfg("record").get("max_mb", 2000))) * 1024 * 1024
+    items = sorted(rec_list(), key=lambda x: x["t"])
+    total = sum(x["size"] for x in items)
+    for x in items:
+        if total <= lim:
+            break
+        if not x["recording"]:
+            try: os.remove(os.path.join(REC_DIR, x["name"])); total -= x["size"]
+            except OSError: pass
+
+
+def rec_delete(name):
+    if "/" in name or not name.endswith(".mp3"):
+        raise ValueError("ugyldig filnavn")
+    pr = _rec["procs"].pop(name, None)
+    if pr and pr[0].poll() is None:
+        pr[0].terminate()
+    os.remove(os.path.join(REC_DIR, name))
+
+
+def _rec_tick():
+    for fn, (p, _end) in list(_rec["procs"].items()):
+        if p.poll() is not None:
+            _rec["procs"].pop(fn, None)
+    if not plug_on("record"):
+        return
+    tm = time.localtime()
+    for i, sc in enumerate(plug_cfg("record").get("schedules") or []):
+        k = alarm_due({**sc, "id": f"r{i}"}, tm, _rec["fired"])
+        if k:
+            _rec["fired"].add(k)
+            try: rec_start(sc)
+            except Exception as e: print("Radioopptak:", e, flush=True)
+
+
+async def h_recordings(_r):
+    return web.json_response({"items": rec_list(), "dir": REC_DIR})
+
+
+async def h_recording_file(r):
+    name = r.match_info["name"]
+    if "/" in name or not name.endswith(".mp3"):
+        return web.json_response({"error": "ugyldig"}, status=400)
+    path = os.path.join(REC_DIR, name)
+    if not os.path.isfile(path):
+        return web.json_response({"error": "finnes ikke"}, status=404)
+    return web.FileResponse(path, headers={"Content-Type": "audio/mpeg"})
+
+
+async def h_recordings_post(r):
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    loop = asyncio.get_running_loop()
+    try:
+        if b.get("delete"):
+            await loop.run_in_executor(None, rec_delete, str(b["delete"]))
+        elif b.get("play"):
+            name = str(b["play"])
+            if "/" in name: raise ValueError("ugyldig filnavn")
+            url = f"http://{_local_ip()}:{PORT}/api/recordings/file/{urllib.parse.quote(name)}"
+            await loop.run_in_executor(None, lambda: play_url(url, name.rsplit(".", 1)[0]))
+        elif b.get("start"):
+            await loop.run_in_executor(None, rec_start, b["start"])
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=400)
+    return web.json_response({"items": rec_list(), "dir": REC_DIR})
+
+
+# --- MQTT-bro (paho-mqtt) ---
+_mqtt = {"client": None, "ok": False, "err": "", "last": "", "cfg": None}
+
+
+def mqtt_available():
+    try:
+        import paho.mqtt.client  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+def mqtt_base():
+    return f"{(plug_cfg('mqtt').get('prefix') or 'skjold').strip('/')}/{socket.gethostname()}"
+
+
+def mqtt_state_json():
+    s = read_status()
+    return json.dumps({k: s.get(k) for k in ("power", "input", "volume", "mute", "playing", "title", "artist", "album", "preset", "station", "sleep")}, ensure_ascii=False)
+
+
+def mqtt_command(topic_tail, payload):
+    """skjold/<id>/set med JSON {volume|input|power|preset|transport|mute}, eller …/set/<felt> med ren verdi."""
+    try:
+        data = json.loads(payload) if payload.strip().startswith("{") else {topic_tail or "": payload.strip()}
+    except Exception:
+        return
+    for k, v in data.items():
+        try:
+            if k == "volume": set_volume(int(float(v)))
+            elif k == "input": set_input(str(v), announce=False)
+            elif k == "power": set_power(str(v).lower() in ("1", "true", "on", "på"))
+            elif k == "mute": set_mute(str(v).lower() in ("1", "true", "on"))
+            elif k == "preset": play_preset(int(v), announce=False)
+            elif k == "transport": transport(str(v))
+        except Exception as e:
+            print("MQTT-kommando:", k, e, flush=True)
+
+
+def _mqtt_discovery(cl, base):
+    dev = {"identifiers": [socket.gethostname()], "name": NAME, "manufacturer": "Skjold", "model": PRODUCT}
+    pre = "homeassistant"
+    hid = socket.gethostname().replace("-", "_")
+    ents = [
+        ("number", "volume", {"name": "Volum", "command_topic": base + "/set/volume", "state_topic": base + "/state", "value_template": "{{ value_json.volume }}", "min": 0, "max": 100}),
+        ("switch", "power", {"name": "Strøm", "command_topic": base + "/set/power", "state_topic": base + "/state", "value_template": "{{ 'ON' if value_json.power else 'OFF' }}", "payload_on": "on", "payload_off": "off", "state_on": "ON", "state_off": "OFF"}),
+        ("select", "input", {"name": "Kilde", "command_topic": base + "/set/input", "state_topic": base + "/state", "value_template": "{{ value_json.input }}", "options": list(INPUTS)}),
+        ("sensor", "title", {"name": "Spiller nå", "state_topic": base + "/state", "value_template": "{{ value_json.title }}"}),
+    ]
+    for comp, key, cfg in ents:
+        cfg.update(unique_id=f"{hid}_{key}", device=dev, availability_topic=base + "/online")
+        cl.publish(f"{pre}/{comp}/{hid}/{key}/config", json.dumps(cfg, ensure_ascii=False), retain=True)
+
+
+def _mqtt_tick():
+    c = plug_cfg("mqtt")
+    want = c["enabled"] and c.get("host")
+    sig = json.dumps([c.get(k) for k in ("host", "port", "user", "password", "tls", "prefix", "discovery")]) if want else ""
+    if _mqtt["cfg"] != sig:
+        if _mqtt["client"]:
+            try: _mqtt["client"].loop_stop(); _mqtt["client"].disconnect()
+            except Exception: pass
+        _mqtt.update(client=None, ok=False, cfg=sig, last="", err="")
+        if not want:
+            return
+        if not mqtt_available():
+            _mqtt["err"] = "krever paho-mqtt (kjør pi/update.sh)"; return
+        import paho.mqtt.client as mqtt
+        base = mqtt_base()
+        try:
+            try: cl = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="skjold-" + socket.gethostname())
+            except Exception: cl = mqtt.Client(client_id="skjold-" + socket.gethostname())
+            if c.get("user"): cl.username_pw_set(c["user"], c.get("password") or None)
+            if c.get("tls"): cl.tls_set()
+            cl.will_set(base + "/online", "offline", retain=True)
+
+            def on_connect(client, *_a):
+                _mqtt.update(ok=True, err="")
+                client.publish(base + "/online", "online", retain=True)
+                client.subscribe(base + "/set"); client.subscribe(base + "/set/#")
+                if plug_cfg("mqtt").get("discovery"): _mqtt_discovery(client, base)
+
+            def on_message(_c, _u, msg):
+                tail = msg.topic[len(base) + 5:] if msg.topic.startswith(base + "/set/") else ""
+                mqtt_command(tail, msg.payload.decode("utf-8", "replace"))
+
+            cl.on_connect = on_connect; cl.on_message = on_message
+            cl.on_disconnect = lambda *_a: _mqtt.update(ok=False)
+            cl.connect_async(c["host"], int(c.get("port") or (8883 if c.get("tls") else 1883)), 60)
+            cl.loop_start()
+            _mqtt["client"] = cl
+        except Exception as e:
+            _mqtt["err"] = str(e); return
+    cl = _mqtt["client"]
+    if cl and _mqtt["ok"]:
+        j = mqtt_state_json()
+        if j != _mqtt["last"]:
+            cl.publish(mqtt_base() + "/state", j, retain=True); _mqtt["last"] = j
+
+
+# --- Snapcast (beta): JSON-RPC mot snapserver på port 1705 ---
+def snap_rpc(method, params=None, host=None, timeout=4):
+    h = host or plug_cfg("snapcast").get("server") or "127.0.0.1"
+    with socket.create_connection((h, 1705), timeout=timeout) as s:
+        s.sendall((json.dumps({"id": 1, "jsonrpc": "2.0", "method": method, "params": params or {}}) + "\r\n").encode())
+        buf = b""
+        while b"\n" not in buf:
+            chunk = s.recv(65536)
+            if not chunk: break
+            buf += chunk
+    r = json.loads(buf.split(b"\n", 1)[0])
+    if "error" in r:
+        raise RuntimeError(r["error"].get("message", "feil"))
+    return r.get("result", {})
+
+
+def snap_clients(status):
+    out = []
+    for g in (status.get("server") or {}).get("groups", []):
+        for c in g.get("clients", []):
+            cfg = c.get("config", {})
+            out.append({"id": c.get("id"), "name": cfg.get("name") or (c.get("host") or {}).get("name", ""), "connected": c.get("connected", False),
+                        "latency": cfg.get("latency", 0), "volume": (cfg.get("volume") or {}).get("percent", 100), "muted": (cfg.get("volume") or {}).get("muted", False)})
+    return out
+
+
+async def h_snapcast(r):
+    loop = asyncio.get_running_loop()
+    try:
+        if r.method == "POST":
+            b = await r.json()
+            cid = str(b.get("id") or "")
+            if "latency" in b:
+                await loop.run_in_executor(None, snap_rpc, "Client.SetLatency", {"id": cid, "latency": int(b["latency"])})
+            if "volume" in b:
+                await loop.run_in_executor(None, snap_rpc, "Client.SetVolume", {"id": cid, "volume": {"percent": int(b["volume"]), "muted": bool(b.get("muted", False))}})
+        st = await loop.run_in_executor(None, snap_rpc, "Server.GetStatus")
+        return web.json_response({"ok": True, "clients": snap_clients(st), "role": plug_cfg("snapcast").get("role")})
+    except Exception as e:
+        return web.json_response({"ok": False, "error": f"Får ikke kontakt med snapserver: {e}", "clients": [], "role": plug_cfg("snapcast").get("role")})
+
+
+# --- Romkorreksjon: sweep og filtre ---
+def roomeq_filters():
+    """Lagrede kutt (bare når pluginen er på): [(freq, q, gain)], begrenset til 40–300 Hz, maks −10 dB / +3 dB."""
+    if not plug_on("roomeq"):
+        return []
+    out = []
+    for f in (plug_cfg("roomeq").get("filters") or [])[:8]:
+        try:
+            fr, q, g = float(f["f"]), float(f.get("q", 4)), float(f["g"])
+        except Exception:
+            continue
+        if 40 <= fr <= 300 and 0.3 <= q <= 15:
+            out.append((round(fr, 1), round(q, 2), max(-10.0, min(3.0, g))))
+    return out
+
+
+def log_sweep(f1=20.0, f2=20000.0, dur=6.0, sr=48000):
+    import numpy as np
+    t = np.arange(int(dur * sr)) / sr
+    k = math.log(f2 / f1)
+    x = np.sin(2 * math.pi * f1 * dur / k * (np.exp(t / dur * k) - 1))
+    fade = int(0.05 * sr)
+    w = np.ones_like(x); w[:fade] = np.linspace(0, 1, fade); w[-fade:] = np.linspace(1, 0, fade)
+    return (x * w * 0.5).astype("float32")
+
+
+def _play_sweep(level):
+    import numpy as np, wave
+    x = log_sweep()
+    path = "/tmp/skjold-sweep.wav"
+    pcm = (np.clip(x * level, -1, 1) * 32767).astype("<i2")
+    st = np.repeat(pcm[:, None], 2, axis=1)
+    with wave.open(path, "wb") as w:
+        w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000); w.writeframes(st.tobytes())
+    subprocess.run(["aplay", "-q", "-D", "default", path], timeout=30, check=False)
+
+
+async def h_roomeq_sweep(r):
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    level = max(0.05, min(1.0, float(b.get("level", 0.5))))
+    delay = max(0.0, min(3.0, float(b.get("delay", 1.0))))
+
+    def run():
+        time.sleep(delay); _play_sweep(level)
+    threading.Thread(target=run, daemon=True).start()
+    return web.json_response({"f1": 20, "f2": 20000, "dur": 6.0, "sr": 48000, "delay": delay})
+
+
+# --- SUB/WAVE (getsubwave.com): AI-DJ-nettradio. MCP (JSON-RPC 2.0 over «streamable HTTP») på <stasjon>/api/mcp ---
+class SubwaveClient:
+    """Liten MCP-klient: initialize → notifications/initialized → tools/list, deretter tools/call. Svar kan komme som JSON
+    eller som SSE («data:»-linjer). Mcp-Session-Id tas vare på. Lesekall caches i 10 s."""
+
+    def __init__(self, base, user="", password="", timeout=8, opener=None):
+        self.base = str(base or "").rstrip("/")
+        self.user, self.password, self.timeout = user or "", password or "", timeout
+        self.session = None
+        self.tools = None
+        self._id = 0
+        self._cache = {}
+        self._open = opener or urllib.request.urlopen
+
+    @property
+    def endpoint(self):
+        return self.base + "/api/mcp"
+
+    def _headers(self):
+        h = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream", "User-Agent": "Skjold/2.0"}
+        if self.session:
+            h["Mcp-Session-Id"] = self.session
+        if self.password:
+            h["Authorization"] = "Basic " + base64.b64encode(f"{self.user or 'skjold'}:{self.password}".encode()).decode()
+        return h
+
+    @staticmethod
+    def parse_body(ctype, raw, want_id=None):
+        """JSON-svar eller SSE: plukk siste «data:»-melding (med riktig id hvis gitt)."""
+        txt = raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw)
+        if "text/event-stream" in (ctype or "") or txt.lstrip().startswith(("event:", "data:", "id:")):
+            msgs, cur = [], []
+            for line in txt.splitlines():
+                if line.startswith("data:"):
+                    cur.append(line[5:].lstrip())
+                elif not line.strip() and cur:
+                    msgs.append("\n".join(cur)); cur = []
+            if cur:
+                msgs.append("\n".join(cur))
+            objs = []
+            for m in msgs:
+                try: objs.append(json.loads(m))
+                except Exception: pass
+            pick = [o for o in objs if isinstance(o, dict) and (want_id is None or o.get("id") == want_id)]
+            return pick[-1] if pick else (objs[-1] if objs else None)
+        return json.loads(txt) if txt.strip() else None
+
+    def _post(self, msg, expect=True):
+        req = urllib.request.Request(self.endpoint, data=json.dumps(msg).encode(), headers=self._headers(), method="POST")
+        with self._open(req, timeout=self.timeout) as r:
+            sid = r.headers.get("Mcp-Session-Id") or r.headers.get("mcp-session-id")
+            if sid:
+                self.session = sid
+            raw = r.read()
+            if not expect:
+                return None
+            return self.parse_body(r.headers.get("Content-Type", ""), raw, msg.get("id"))
+
+    def _rpc(self, method, params=None):
+        self._id += 1
+        res = self._post({"jsonrpc": "2.0", "id": self._id, "method": method, "params": params or {}})
+        if not isinstance(res, dict):
+            raise RuntimeError("tomt svar fra SUB/WAVE")
+        if res.get("error"):
+            raise RuntimeError(res["error"].get("message") or "feil fra SUB/WAVE")
+        return res.get("result") or {}
+
+    def connect(self):
+        if self.tools is not None:
+            return
+        self._rpc("initialize", {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "Skjold", "version": VERSION}})
+        try: self._post({"jsonrpc": "2.0", "method": "notifications/initialized"}, expect=False)
+        except Exception: pass
+        self.tools = {t.get("name"): t for t in (self._rpc("tools/list").get("tools") or [])}
+
+    @staticmethod
+    def unwrap(result):
+        """tools/call-resultat → Python-verdi: structuredContent, ellers JSON i første tekstblokk, ellers teksten."""
+        if not isinstance(result, dict):
+            return result
+        if result.get("structuredContent") is not None:
+            return result["structuredContent"]
+        texts = [c.get("text", "") for c in result.get("content") or [] if isinstance(c, dict) and c.get("type") == "text"]
+        joined = "\n".join(texts)
+        try: return json.loads(joined)
+        except Exception: return joined
+
+    def args_for(self, tool, values):
+        """Map våre verdier (text, name, …) til argumentnavnene verktøyet faktisk har (fra tools/list)."""
+        props = (((self.tools or {}).get(tool) or {}).get("inputSchema") or {}).get("properties") or {}
+        if not props:
+            return {k: v for k, v in values.items() if v not in (None, "")}
+        out = {}
+        for key, val in values.items():
+            if val in (None, ""):
+                continue
+            if key in props:
+                out[key] = val; continue
+            cand = {"text": ("request", "text", "query", "prompt", "message", "song"), "name": ("name", "requester", "from", "listener", "user")}.get(key, (key,))
+            hit = next((p for p in props if any(c in p.lower() for c in cand) and p not in out), None)
+            if hit:
+                out[hit] = val
+        return out
+
+    def call(self, tool, values=None, cache=False):
+        key = (tool, json.dumps(values or {}, sort_keys=True))
+        if cache and key in self._cache and time.time() - self._cache[key][0] < 10:
+            return self._cache[key][1]
+        try:
+            self.connect()
+            if self.tools and tool not in self.tools:
+                raise RuntimeError(f"stasjonen har ikke verktøyet {tool}")
+            val = self.unwrap(self._rpc("tools/call", {"name": tool, "arguments": self.args_for(tool, values or {})}))
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 404) and self.session:   # økten er utløpt: start på nytt én gang
+                self.session = None; self.tools = None
+                self.connect()
+                val = self.unwrap(self._rpc("tools/call", {"name": tool, "arguments": self.args_for(tool, values or {})}))
+            elif e.code == 401:
+                raise RuntimeError("SUB/WAVE krever passord (Basic auth)")
+            else:
+                raise
+        if cache:
+            self._cache[key] = (time.time(), val)
+        return val
+
+
+_sw = {"client": None, "sig": ""}
+
+
+def subwave():
+    c = plug_cfg("subwave")
+    if not c["enabled"] or not str(c.get("url") or "").startswith(("http://", "https://")):
+        return None
+    sig = json.dumps([c.get("url"), c.get("user"), c.get("password")])
+    if _sw["sig"] != sig:
+        _sw.update(client=SubwaveClient(c["url"], c.get("user"), c.get("password")), sig=sig)
+    return _sw["client"]
+
+
+def subwave_stream_url(fmt="mp3"):
+    c = plug_cfg("subwave")
+    u = urllib.parse.urlsplit(str(c.get("url") or "").rstrip("/"))
+    net = u.netloc
+    if c.get("password"):
+        net = urllib.parse.quote(c.get("user") or "skjold", safe="") + ":" + urllib.parse.quote(c["password"], safe="") + "@" + u.netloc
+    return urllib.parse.urlunsplit((u.scheme, net, (u.path or "") + "/stream." + fmt, "", ""))
+
+
+def subwave_playing():
+    c = plug_cfg("subwave")
+    host = urllib.parse.urlsplit(str(c.get("url") or "")).netloc.split("@")[-1]
+    url = str((lyr.info or {}).get("url") or "")
+    return bool(c["enabled"] and host and state["input"] == "radio" and host in url and "/stream." in url)
+
+
+def _find(d, *names):
+    """Første verdi for et av nøkkelnavnene, søkt rekursivt (SUB/WAVE-svarene er ikke dokumentert felt for felt)."""
+    if isinstance(d, dict):
+        for n in names:
+            if d.get(n) not in (None, "", [], {}):
+                return d[n]
+        for v in d.values():
+            r = _find(v, *names)
+            if r not in (None, ""):
+                return r
+    elif isinstance(d, list):
+        for v in d:
+            r = _find(v, *names)
+            if r not in (None, ""):
+                return r
+    return None
+
+
+def subwave_meta():
+    """Låt/artist/album/omslag fra subwave_now_playing (cache 10 s), eller None."""
+    cl = subwave()
+    if not cl or not subwave_playing():
+        return None
+    try:
+        np = cl.call("subwave_now_playing", cache=True)
+    except Exception as e:
+        print("SUB/WAVE:", e, flush=True); return None
+    if not isinstance(np, dict):
+        return None
+    tr = np.get("track") if isinstance(np.get("track"), dict) else np
+    return {"title": str(_find(tr, "title", "name", "track") or ""), "artist": str(_find(tr, "artist", "artists") or ""),
+            "album": str(_find(tr, "album") or ""), "cover": str(_find(tr, "cover_url", "coverUrl", "artwork_url", "artwork", "art", "cover", "image") or "")}
+
+
+async def h_subwave(r):
+    loop = asyncio.get_running_loop()
+    cl = subwave()
+    if not cl:
+        return web.json_response({"configured": False})
+    if r.method == "POST":
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        try:
+            if b.get("favorite"):
+                fmt = "opus" if b.get("opus") else "mp3"
+                url = subwave_stream_url(fmt)
+                if not any(p and p.get("url") == url for p in state["presets"]):
+                    lst = list(state["presets"]); item = {"title": "SUB/WAVE", "url": url, "icon": "", "genre": "AI-DJ"}
+                    k = next((i for i, p in enumerate(lst) if not p), None)
+                    if k is None: lst.append(item)
+                    else: lst[k] = item
+                    state["presets"] = norm_presets(lst); changed()
+                return web.json_response({"ok": True})
+            if b.get("play"):
+                await loop.run_in_executor(None, lambda: play_url(subwave_stream_url(), "SUB/WAVE"))
+                return web.json_response({"ok": True})
+            if b.get("text"):
+                res = await loop.run_in_executor(None, lambda: cl.call("subwave_request_song", {"text": str(b["text"])[:300], "name": str(b.get("name") or "")[:40]}))
+                return web.json_response({"ok": True, "result": res})
+            if b.get("action") in ("skip", "announce"):
+                if not plug_cfg("subwave").get("password"):
+                    return web.json_response({"error": "admin krever passord"}, status=403)
+                tool = "subwave_skip_track" if b["action"] == "skip" else "subwave_dj_announce"
+                res = await loop.run_in_executor(None, lambda: cl.call(tool, {"text": str(b.get("text") or "")[:300]}))
+                return web.json_response({"ok": True, "result": res})
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=502)
+        return web.json_response({"error": "ukjent handling"}, status=400)
+    out = {"configured": True, "playing": subwave_playing(), "admin": bool(plug_cfg("subwave").get("password"))}
+    for k, tool in (("health", "subwave_health"), ("now_playing", "subwave_now_playing"), ("state", "subwave_station_state"), ("schedule", "subwave_schedule")):
+        if k != "health" and r.query.get("health") == "1":
+            continue
+        try:
+            out[k] = await loop.run_in_executor(None, lambda t=tool: cl.call(t, cache=True))
+        except Exception as e:
+            out[k] = None; out.setdefault("error", str(e))
+    return web.json_response(out)
+
+
+def _plugins_thread():
+    n = 0
+    while True:
+        for f in (_sleep_tick, _nightcap_tick, _kids_tick):
+            try: f()
+            except Exception as e: print("Plugin:", f.__name__, e, flush=True)
+        if n % 5 == 0:
+            for f in (_alarm_tick, _watch_tick, _rec_tick, _mqtt_tick):
+                try: f()
+                except Exception as e: print("Plugin:", f.__name__, e, flush=True)
+        n += 1
+        time.sleep(1)
+
+
+def plugin_update(pid, body):
+    if pid not in PLUGIN_BY_ID:
+        raise KeyError(pid)
+    src = PLUGIN_BY_ID[pid][2]
+    if src != "skjold":
+        raise ValueError("denne pluginen styres i Lyrion" if src == "lyrion" else "denne pluginen er ikke klar ennå")
+    cfg = plug_cfg(pid)
+    defaults = PLUGIN_BY_ID[pid][5]
+    if "enabled" in body:
+        if pid == "kids" and cfg["enabled"] and not body["enabled"] and cfg.get("pin") and str(body.get("pin_check", "")) != str(cfg["pin"]):
+            raise ValueError("feil PIN")
+        cfg["enabled"] = bool(body["enabled"])
+    for k in defaults:
+        if k not in body:
+            continue
+        v = body[k]
+        if k in ("token", "secret", "password", "pin") and isinstance(v, str) and v.startswith("••••••"):
+            continue   # maskert verdi sendt tilbake uendret
+        if k in ("time", "start", "end") and not hhmm_ok(v):
+            raise ValueError(f"{k} må være TT:MM")
+        if k == "days":
+            v = sorted({int(d) for d in v if 0 <= int(d) <= 6})
+        if k in ("volume", "max", "minutes", "preset", "fade", "port", "max_mb"):
+            v = int(v)
+        if k in ("tls", "discovery"):
+            v = bool(v)
+        if k == "bedtime" and v and not hhmm_ok(v):
+            raise ValueError("leggetid må være TT:MM")
+        if k == "inputs":
+            v = [str(x) for x in v if str(x) in INPUTS]
+        if k == "presets":
+            v = sorted({int(x) for x in v if 1 <= int(x) <= PRESETS_MAX})
+        if k == "schedules":
+            v = [{"time": a["time"], "days": sorted({int(d) for d in a.get("days") or [] if 0 <= int(d) <= 6}), "minutes": max(1, min(240, int(a.get("minutes", 60)))),
+                  "preset": int(a.get("preset") or 0), "url": str(a.get("url") or "")[:500], "on": bool(a.get("on", True))}
+                 for a in (v or [])[:10] if hhmm_ok(a.get("time"))]
+        if k == "filters":
+            v = [{"f": float(f["f"]), "q": float(f.get("q", 4)), "g": max(-10.0, min(3.0, float(f["g"])))} for f in (v or [])[:8] if 40 <= float(f["f"]) <= 300]
+        if k == "tilt":
+            v = max(-3.0, min(3.0, float(v)))
+        if k == "alarms":
+            al = []
+            for a in (v or [])[:10]:
+                if not hhmm_ok(a.get("time")):
+                    raise ValueError("alarmtid må være TT:MM")
+                al.append({"time": a["time"], "days": sorted({int(d) for d in a.get("days") or [] if 0 <= int(d) <= 6}),
+                           "preset": int(a.get("preset") or 0), "url": str(a.get("url") or "")[:500],
+                           "volume": max(0, min(100, int(a.get("volume", 30)))), "fade": max(0, min(30, int(a.get("fade", 0) or 0))), "on": bool(a.get("on", True))})
+            v = al
+        cfg[k] = v
+    if pid == "roomeq":
+        dsp.update()
+    if pid == "sleep":
+        if "minutes" in body and cfg["enabled"]:
+            sleep_start(int(body["minutes"]))
+        if not cfg["enabled"]:
+            sleep_start(0)
+    _plug_save(pid, cfg)
+    return plugins_payload()
+
+
+async def h_plugins_get(_r):
+    return web.json_response(plugins_payload())
+
+
+async def h_plugin_post(r):
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    try:
+        return web.json_response(plugin_update(r.match_info["pid"], b if isinstance(b, dict) else {}))
+    except KeyError:
+        return web.json_response({"error": "ukjent plugin"}, status=404)
+    except (ValueError, TypeError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+
+
 # ---------- avspillingskontroll (AirPlay via Shairport Sync D-Bus, Bluetooth via BlueZ AVRCP) ----------
 TRANSPORT = {"play", "pause", "playpause", "next", "previous", "stop"}
 SPS = ("org.gnome.ShairportSync", "/org/gnome/ShairportSync", "org.gnome.ShairportSync.RemoteControl")
@@ -4270,6 +5404,7 @@ def main():
     if state.get("voice_profile") not in VOICE_PROFILES:
         state["voice_profile"] = "en"
     threading.Thread(target=voice.warm, daemon=True).start()   # etter load_state: riktig profil
+    threading.Thread(target=_plugins_thread, daemon=True).start()   # sovetimer, vekkerklokke, volumtak, historikk, scrobbling
     apply_settings()   # navn på USB-switch, maksvolum osv. fra lagrede innstillinger
     usbsw.start()
     if settings()["vstart"] and str(settings()["vstart"]).isdigit() and VSTART[int(settings()["vstart"])]:
@@ -4290,7 +5425,7 @@ def main():
     app = web.Application(middlewares=[cors_mw])
     app.add_routes([web.get("/api/status", h_status), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
