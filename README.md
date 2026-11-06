@@ -55,6 +55,16 @@ Kassen `kabinett/stl/v2_body_pcb.stl` + `v2_lid_pcb.stl` (200 × **165** × 48) 
 
 ![PCB-plan](docs/bilder/guide_04_inni_pcb.png)
 
+## Variant: Proxmox / vanlig PC
+
+Skjold Core kan kjøre i en Proxmox-LXC og spille ut på PC-ens analoge linje-ut, hodetelefonutgang, HDMI eller et USB-lydkort. Kjør på Proxmox-verten:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/pult-forsterker/main/pi/proxmox/skjold-lxc.sh)"
+```
+
+Se [docs/PROXMOX.md](docs/PROXMOX.md). På en vanlig Debian-PC: `sudo bash pi/install_x86.sh`.
+
 ## Kom i gang
 
 1. **Deler** – se delelisten i [docs/byggeveiledning.md](docs/byggeveiledning.md) og `docs/KI_Pultforsterker_Bildeveiledning.pdf`.
