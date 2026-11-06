@@ -176,3 +176,10 @@ Alle handlinger går fortsatt gjennom `AppModel`. I demomodus sendes ingenting. 
 3. Kø og seek i daemonen (eller via Lyrion `playlist add`), så køen ikke må ligge i appen.
 4. Nøkkelring for Navidrome-passord og Plex-token.
 5. Manuell IP-adresse i «Finn forsterker» (`m.connect("192.168.1.5")` finnes allerede).
+
+## Widgets, Kontrollsenter og Live Activity
+
+- Mål `SkjoldWidgets` (app-extension, WidgetKit + ActivityKit) finnes i `ci-project.yml` (CI). **Ikke** i `Skjold.xcodeproj` ennå: legg til et Widget Extension-mål i Xcode som peker på mappa `SkjoldWidgets/`, legg `Skjold/Shared/` og fontene i det, og slå på App Group `group.no.kristo.skjold` (Entitlements/) for begge målene.
+- `Skjold/Shared/WidgetShared.swift` (begge mål): `SkjoldShared` (App Group-status, omslag `cover.jpg`, `post`/`fetch` mot daemonen), `SharedNowPlaying`, `SkjoldNowPlayingAttributes`, AppIntents (`SkjoldPlayPauseIntent`, `SkjoldNextIntent`, `SkjoldVolumeIntent`, `SkjoldPresetIntent`).
+- `Skjold/WidgetBridge.swift` (app): kalles fra `apply(_:host:)`; skriver status, laster widgets på nytt ved låtbytte/spill-pause, lagrer omslag og styrer Live Activity (start når appen er aktiv og noe spiller, avslutt 2 min etter pause).
+- Widgets: «Spiller nå» (small/medium + låseskjerm), «Radiofavoritter» (medium/large), Kontrollsenter-knapp, Live Activity med Dynamic Island. Knappene kaller daemonen direkte mot sist kjente vert (virker på hjemmenettet; ikke via Skjold-hjem-relé, som krever innlogging).

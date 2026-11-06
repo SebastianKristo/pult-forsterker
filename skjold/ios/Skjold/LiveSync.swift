@@ -160,6 +160,7 @@ extension AppModel {
         let cover = DeviceLink.shared.coverURL(st.coverURL)
         if !cover.isEmpty { CoverStore.shared.set(st.title, cover) }
         if let rn = st.radioNow, !rn.name.isEmpty { LogoStore.shared.adopt(rn.name, rn.image) }
+        if !demo { WidgetBridge.shared.update(st, host: h, coverURL: cover, presets: radio.map(\.name)) }   // widgets og Live Activity
 
         let sig = st.presetTitles.joined(separator: "\u{1}")
         if sig != presetSig {
