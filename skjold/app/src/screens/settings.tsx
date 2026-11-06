@@ -21,6 +21,7 @@ import { favs } from '../lib/radio';
 import { PRODUCT_HW, PRODUCT_LABEL } from '../lib/api';
 import { Chevron } from '../components/ui';
 import { BackupPanel } from './extras';
+import { HealthPanel, RadioListPanel } from './extras2';
 import { AppUpdater, canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer, type AppRelease } from '../lib/appUpdate';
 
 export function SettingsPage({ wide = false }: { wide?: boolean }) {
@@ -81,10 +82,10 @@ export function CategoryList({ wide = false }: { wide?: boolean } = {}) {
 
 export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) {
   if (cat.id === 'oppdatering') return <><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}</>;
-  if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><RoutinesPanel /><DoorbellPanel /><RecognizeSettingsPanel /><WishlistPanel /></div>;
+  if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><RoutinesPanel /><DoorbellPanel /><RecognizeSettingsPanel /><WishlistPanel /><RadioListPanel source="wishlist" /></div>;
   if (cat.id === 'fjernstyring') return <RemotePanel />;
   if (cat.id === 'steder') return <StederPanel />;
-  const extra = cat.id === 'system' ? <BackupPanel /> : null;
+  const extra = cat.id === 'system' ? <><HealthPanel /><BackupPanel /></> : null;
   if (cat.id === 'skjoldhjem') return <SkyPanel />;
   const items = cat.items.filter((it) => it.kind !== 'clocks' && it.kind !== 'update');
   const hasClocks = cat.items.some((it) => it.kind === 'clocks');

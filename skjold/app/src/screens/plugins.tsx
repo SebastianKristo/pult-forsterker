@@ -6,12 +6,13 @@ import { status } from '../lib/store';
 import { favs, loadFavs } from '../lib/radio';
 import { Toggle } from '../components/ui';
 import { AutoStandbyPanel, BackupPanel, PlexampPanel, RoonPanel, WrappedPage } from './extras';
+import { DiscoverPanel, PresencePanel, RadioListPanel, StorePage, WakeLightPanel } from './extras2';
 import { averageCurves, logSweep, recordMic, responseFromRecording, suggest, type Curve, type Peq } from '../lib/roomeq';
 
 const A = '#d9a441';
 const MONO = "'IBM Plex Mono',monospace";
 const DAYS = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
-const CATS = ['Alle', 'På', 'Musikk', 'Radio og podkast', 'Verktøy'];
+const CATS = ['Alle', 'På', 'Musikk', 'Radio og podkast', 'Verktøy', 'Hjem', 'Butikk'];
 
 /** Merkelogoer fra Simple Icons (CC0). */
 const BRAND: Record<string, { bg: string; fg: string; fp: string }> = {
@@ -108,6 +109,7 @@ export function PluginsPage() {
         </div>
         <input value={q} onInput={(e) => setQ((e.currentTarget as HTMLInputElement).value)} placeholder="Søk i plugins" style="height:42px;width:280px;max-width:100%;padding:0 14px;border-radius:10px;border:1px solid #2e2e30;background:#141415;font-size:14px;outline:none;color:#f2f2ee" />
       </div>
+      {cat === 'Butikk' ? <StorePage /> : <>
       {plugErr.value && !plugList.value && <span style="font-size:13px;color:#ff8a7a">Får ikke hentet plugins fra Skjold: {plugErr.value}. Oppdater Skjold under Innstillinger → Oppdatering.</span>}
       {cur && <Detail p={cur} />}
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
@@ -131,7 +133,8 @@ export function PluginsPage() {
         })}
       </div>
       {plugList.value && list.length === 0 && <span style="font-size:13px;color:#8b8b86">Ingen plugins passer.</span>}
-      <span style="font-size:12px;color:#6a6a65;line-height:1.5">Lyrion-plugins installeres i Lyrions egne innstillinger (Plugins). Skjold-plugins kjører på denne enheten og deles med appen.</span>
+      <span style="font-size:12px;color:#6a6a65;line-height:1.5">Lyrion-plugins installeres i Lyrions egne innstillinger (Plugins). Skjold-plugins kjører på denne enheten og deles med appen. Flere finnes under Butikk.</span>
+      </>}
     </>
   );
 }
@@ -151,6 +154,7 @@ function Detail({ p }: { p: Plugin }) {
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><Time v={a.time} on={(v) => { const x = [...d.alarms]; x[i] = { ...a, time: v }; up('alarms', x); }} /><Days v={a.days} on={(v) => { const x = [...d.alarms]; x[i] = { ...a, days: v }; up('alarms', x); }} /><Toggle on={a.on} label="Alarm på" onChange={(v) => { const x = [...d.alarms]; x[i] = { ...a, on: v }; up('alarms', x); }} /></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><FavSel v={a.preset} none="Strøm-URL" on={(v) => { const x = [...d.alarms]; x[i] = { ...a, preset: v }; up('alarms', x); }} />{!a.preset && <Txt v={a.url} ph="https://…" on={(v) => { const x = [...d.alarms]; x[i] = { ...a, url: v }; up('alarms', x); }} />}<span style="font-size:12px;color:#8b8b86">Volum</span><Num v={a.volume} on={(v) => { const x = [...d.alarms]; x[i] = { ...a, volume: v }; up('alarms', x); }} /><span style="font-size:12px;color:#8b8b86">Myk start (min)</span><Num v={a.fade} max={30} w={60} on={(v) => { const x = [...d.alarms]; x[i] = { ...a, fade: v }; up('alarms', x); }} /><button onClick={() => up('alarms', d.alarms.filter((_: unknown, j: number) => j !== i))} style={sbtn}>Fjern</button></div>
       </div>))}
+      <WakeLightPanel light={d.light} set={(v) => up('light', v)} />
       <div><button onClick={() => up('alarms', [...d.alarms, { time: '07:00', days: [0, 1, 2, 3, 4], preset: favs.value[0]?.n ?? 0, url: '', volume: 30, fade: 3, on: true }])} style={sbtn}>+ Legg til alarm</button></div>{saveBtn}</>; break;
     case 'news': body = <><Row label="Tid"><Time v={d.time} on={(v) => up('time', v)} /></Row><Row label="Dager"><Days v={d.days} on={(v) => up('days', v)} /></Row><Row label="Volum"><Num v={d.volume} on={(v) => up('volume', v)} /></Row><Row label="Slå av etter" hint="Minutter. 0 = spill videre."><Num v={d.minutes} max={180} on={(v) => up('minutes', v)} /></Row><Row label="Strøm" hint="NRK P1 som standard"><Txt v={d.url} on={(v) => up('url', v)} /></Row>{saveBtn}</>; break;
     case 'lyrics': body = <span style="font-size:13px;color:#a9a9a3">Når pluginen er på, får Spiller-siden en egen fane «Tekst». Teksten hentes fra lrclib.net for låter med artist og tittel. Synkroniserte tekster følger låten linje for linje.</span>; break;
@@ -160,7 +164,7 @@ function Detail({ p }: { p: Plugin }) {
     case 'lastfm': body = <><span style="font-size:12.5px;color:#a9a9a3;line-height:1.5">Last.fm krever en egen API-konto (last.fm/api/account/create) og en sesjonsnøkkel for brukeren din. Lim inn alle tre.</span><Row label="API-nøkkel"><Txt v={d.key} on={(v) => up('key', v)} /></Row><Row label="Hemmelighet"><Txt v={d.secret} pw on={(v) => up('secret', v)} /></Row><Row label="Sesjonsnøkkel"><Txt v={d.session} pw on={(v) => up('session', v)} /></Row>{saveBtn}</>; break;
     case 'webhook': body = <><Row label="Adresse" hint="Får POST med JSON: event (track, play, pause, source), tittel, artist og kilde."><Txt v={d.url} ph="https://…" w={300} on={(v) => up('url', v)} /></Row>{saveBtn}</>; break;
     case 'kids': body = <KidsPanel p={p} d={d} up={up} save={save} msg={msg} />; break;
-    case 'record': body = <RecordPanel d={d} up={up} saveBtn={saveBtn} />; break;
+    case 'record': body = <><RecordPanel d={d} up={up} saveBtn={saveBtn} /><RadioListPanel /></>; break;
     case 'mqtt': body = <><Row label="Broker"><Txt v={d.host} ph="192.168.1.10" w={180} on={(v) => up('host', v)} /><Num v={d.port} max={65535} w={90} on={(v) => up('port', v)} /></Row><Row label="Brukernavn"><Txt v={d.user} w={180} on={(v) => up('user', v)} /></Row><Row label="Passord"><Txt v={d.password} pw w={180} on={(v) => up('password', v)} /></Row><Row label="TLS"><Toggle on={!!d.tls} onChange={(v) => up('tls', v)} /></Row><Row label="Emne-prefiks" hint={`Status: ${d.prefix || 'skjold'}/<id>/state · kommandoer: …/set`}><Txt v={d.prefix} w={140} on={(v) => up('prefix', v)} /></Row><Row label="Home Assistant-oppdagelse"><Toggle on={!!d.discovery} onChange={(v) => up('discovery', v)} /></Row>{saveBtn}</>; break;
     case 'snapcast': body = <SnapPanel d={d} up={up} saveBtn={saveBtn} />; break;
     case 'subwave': body = <SubwavePanel d={d} up={up} saveBtn={saveBtn} />; break;
@@ -169,6 +173,8 @@ function Detail({ p }: { p: Plugin }) {
     case 'autostandby': body = <AutoStandbyPanel d={d} up={up} save={(x) => void save(x)} msg={msg} />; break;
     case 'backup': body = <><Row label="Nattlig backup" hint="Kl. 03 til NAS (Skjold-backup/<navn>/) hvis opptak-pluginen har SMB, ellers lokalt."><Toggle on={!!d.nightly} onChange={(v) => up('nightly', v)} /></Row><Row label="Behold"><Num v={d.keep} max={60} on={(v) => up('keep', v)} /></Row><Row label="Passfrase" hint="Krypterer passord i nattlig backup. Tom = passord tas ikke med."><Txt v={d.passphrase} pw on={(v) => up('passphrase', v)} /></Row>{saveBtn}<BackupPanel /></>; break;
     case 'wrapped': body = <WrappedPage />; break;
+    case 'presence': body = <PresencePanel d={d} up={up} saveBtn={saveBtn} />; break;
+    case 'discover': body = <DiscoverPanel />; break;
     case 'roomeq': body = <RoomEqPanel enabled={p.enabled} filters={(p.cfg.filters as Peq[]) || []} />; break;
   }
   return (
