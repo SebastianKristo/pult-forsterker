@@ -227,7 +227,7 @@ export function eqCurve(eq: number[], w: number, h: number): { line: string; are
 
 /** Deterministic placeholder artwork for a title/station (used when there is no cover image). */
 export function art(key: string, image?: string): { bg: string; ink: string; logo?: string } {
-  if (image && /^(https?:)?\/\//i.test(image)) {
+  if (image && /^((https?:)?\/\/|\/|data:image\/|\.\/)/i.test(image)) {   // også /api/cover og logoer servert av Skjold selv
     const u = image.replace(/"/g, ''), nrk = /static\.nrk\.no/.test(u);
     return { bg: 'url("' + u + '") center / ' + (nrk ? '72% auto' : 'cover') + ' no-repeat, ' + (nrk ? '#121214' : '#f4f2ee'), ink: 'transparent', logo: u };
   }
