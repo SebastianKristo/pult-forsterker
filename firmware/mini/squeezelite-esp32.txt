@@ -1,0 +1,14 @@
+# Skjold Mini – innstillinger for squeezelite-esp32 (ESP32-S3 N16R8 + PCM5102A + TPA3118 PBTL)
+# Legg inn under «Hardware»/«NVS editor» i squeezelite-esp32-websiden (eller med nvs_set i konsollen).
+# Pinnene stemmer med koblingstabellen i kabinett/mini/LES_MEG.md.
+
+dac_config      = model=I2S,bck=4,ws=5,do=6
+dac_controlset  = 
+set_GPIO        = 7=amp,1=green,2=red
+rotary_config   = A=15,B=16,SW=17,volume,longpress
+autoexec1       = squeezelite -o I2S -b 500:2000 -C 30 -W -Z 96000 -n "Skjold Mini"
+host_name       = skjold-mini
+
+# Gi hver Mini et eget navn som begynner med «Skjold Mini», f.eks. «Skjold Mini bad».
+# Da finner Skjold den automatisk (Grupper → Skjold Mini) og kan koble den til et rom.
+# -C 30: forsterkeren (GPIO7 → TPA3118 SDZ) slås av etter 30 s stillhet.

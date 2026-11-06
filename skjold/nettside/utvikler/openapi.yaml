@@ -954,6 +954,39 @@ paths:
           application/json:
             schema:
               type: object
+  /api/mini:
+    get:
+      tags:
+      - Annet
+      summary: 'GET /api/mini (Mini-høyttalere i Lyrion) · POST /api/mini {id, action: sync|unsync|volume|power, value}.'
+      operationId: get_api_mini
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: 'GET /api/mini (Mini-høyttalere i Lyrion) · POST /api/mini {id, action: sync|unsync|volume|power, value}.'
+      operationId: post_api_mini
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
   /api/mix:
     post:
       tags:

@@ -7238,6 +7238,36 @@ async def h_hjul(r):
 
 FEAT_ROUTES += [("GET", "/api/hjul", h_hjul), ("POST", "/api/hjul", h_hjul), ("POST", "/api/hjul/{act}", h_hjul)]
 
+# ---------- Skjold Mini: ESP32-høyttalere via Lyrion (pi/skjold_mini.py, firmware/mini/) ----------
+import skjold_mini as _minimod   # noqa: E402
+
+
+def _mini_rpc(player, cmd):
+    if not lyr.host:
+        raise RuntimeError("Lyrion ikke funnet")
+    body = json.dumps({"id": 1, "method": "slim.request", "params": [player, cmd]}).encode()
+    req = urllib.request.Request(f"http://{lyr.host}:{lyr.port}/jsonrpc.js", data=body, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=4) as resp:
+        return json.loads(resp.read()).get("result", {}) or {}
+
+
+minis = _minimod.Minis(_mini_rpc, lambda: lyr.player)
+
+
+async def h_mini(r):
+    """GET /api/mini (Mini-høyttalere i Lyrion) · POST /api/mini {id, action: sync|unsync|volume|power, value}."""
+    loop = asyncio.get_running_loop()
+    if r.method == "POST":
+        try:
+            b = await r.json()
+            return web.json_response(await loop.run_in_executor(None, minis.act, b))
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e)}, status=400)
+    return web.json_response(await loop.run_in_executor(None, minis.list))
+
+
+FEAT_ROUTES += [("GET", "/api/mini", h_mini), ("POST", "/api/mini", h_mini)]
+
 AVAHI_SVC = "/etc/avahi/services/skjold.service"
 
 
