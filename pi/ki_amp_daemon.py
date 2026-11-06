@@ -1092,6 +1092,8 @@ SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn":
                 # Musikktjenester – lagres her så appen (iOS/Android) og web-UI-et deler innloggingene
                 "ytmEn": False, "ytmUser": "", "ytmCookie": "", "ndEn": False, "ndUrl": "", "ndUser": "", "ndPass": "",
                 "plexEn": False, "plexUrl": "", "plexToken": "",
+                # Music Assistant (bibliotek for TIDAL/Qobuz/Deezer/Spotify/YouTube Music/Plex/Jellyfin/podkaster)
+                "maEn": False, "maUrl": "", "maToken": "",
                 # Skjold Touch-skjermen (synkes med app og web-UI)
                 "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False,
                 # Skjold S1: dobbelttrykk på power (0 = Nattmodus, 1 = Av) og Nattlys-klokke i nattmodus
@@ -6186,6 +6188,14 @@ def main():
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
                     web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test),
                     web.get("/api/sky", h_sky_get), web.get("/api/rom", h_rom), web.post("/api/sky", h_sky_post)])
+    # Music Assistant og NRK på forespørsel (egne moduler, se pi/skjold_ma.py og pi/skjold_nrk.py)
+    try:
+        import skjold_ma as _ma, skjold_nrk as _nrk
+        app.add_routes(_ma.routes({"settings": settings, "name": lambda: NAME, "mac": lambda: lyr.player}))
+        app.add_routes(_nrk.routes({"play_url": play_url, "lyr_cmd": lyr.cmd, "lyr_info": lambda: lyr.info,
+                                    "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp"}))
+    except Exception as e:
+        print("Music Assistant/NRK ikke tilgjengelig:", e, flush=True)
     # web-app (PWA) for mobil/PC: http://<pi>:8765/  (filer i pi/webapp)
     webdir = os.environ.get("KI_AMP_WEBAPP", "")
     for cand in ([webdir] if webdir else []) + ["/usr/local/share/ki-amp/webapp", os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")]:

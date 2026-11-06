@@ -2,9 +2,9 @@ import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
 import { signal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { api, type HomeKitInfo } from '../lib/api';
+import { api, type HomeKitInfo, type MaStatus } from '../lib/api';
 import { qrMatrix } from '../lib/qr';
-import { go, setSetting, settings } from '../lib/store';
+import { go, setSetting, settings, showToast } from '../lib/store';
 import { Toggle } from '../components/ui';
 import type { Settings } from '../lib/settings';
 
@@ -58,6 +58,7 @@ function ints(s: Settings): Int[] {
     { id: 'lyrion', name: 'Lyrion', mono: 'L', tile: '#f2f2ee', status: 'Innebygd · kjører', ok: true, desc: 'Radio, favoritter og musikkbibliotek. Styrer også flere rom samtidig.' },
     { id: 'spotify', name: 'Spotify Connect', mono: 'S', tile: '#6fcf7f', status: s.spEn ? 'Installert · på' : 'Installert · av', ok: s.spEn, desc: 'Spill fra Spotify-appen rett til forsterkeren. Krever Spotify Premium.' },
     { id: 'ytmusic', name: 'YouTube Music', mono: 'YT', tile: '#e86a6a', status: ytm ? (s.ytmEn ? 'Innlogget · på' : 'Innlogget · av') : 'Ikke innlogget', ok: ytm && s.ytmEn, desc: 'Spillelister, mikser og historikk fra Google-kontoen din. Via Music Assistant.' },
+    { id: 'ma', name: 'Music Assistant', mono: 'MA', tile: '#18bcf2', status: s.maUrl ? (maSt.value?.ok ? 'Tilkoblet' + (maSt.value.player ? ' · ' + maSt.value.player : '') : maSt.value ? 'Feil' : 'Sjekker …') : 'Ikke satt opp', ok: !!s.maUrl && !!maSt.value?.ok, desc: 'TIDAL, Qobuz, Deezer, Spotify, YouTube Music, Plex, Jellyfin og podkaster i ett bibliotek, med søk i Skjold.' },
     { id: 'navidrome', name: 'Navidrome', mono: 'N', tile: '#7fa8e8', status: nd ? (s.ndEn ? 'Tilkoblet · på' : 'Tilkoblet · av') : 'Ikke tilkoblet', ok: nd && s.ndEn, desc: 'Ditt eget musikkbibliotek på hjemmenettet, i FLAC. Bruker Subsonic-API.' },
     { id: 'upnp', name: 'UPnP/DLNA', mono: 'DL', tile: '#ffffff', status: s.upnpEn ? 'På · venter' : 'Av', ok: s.upnpEn, desc: 'Ta imot lyd fra Android-apper, PC og NAS. Forsterkeren vises som en vanlig DLNA-høyttaler.' },
     { id: 'homekit', name: 'Apple Hjem (HomeKit)', mono: 'H', tile: '#f5a623', status: hkStatus(), ok: !!hk.value?.enabled && !!hk.value?.running, desc: 'Skjold som TV-tilbehør i Hjem-appen: av/på, kilder, radiofavoritter og volum. Med Siri og automasjoner.' },
@@ -89,6 +90,11 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
       rows: [{ n: 'YouTube Music', hint: 'Vises i menyen og under Kilder', el: tog('ytmEn', s.ytmEn) },
         { n: 'Innlogging', hint: s.ytmCookie ? 'Innlogget med cookie' + (s.ytmUser ? ' · ' + s.ytmUser : '') : 'Krever Premium. Logges inn med en cookie fra nettleseren, slik Music Assistant gjør.', el: btn(s.ytmCookie ? 'Endre' : 'Sett opp', () => go('settings', 'tjenester')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'ytm')) }] };
+    case 'ma': return { links: s.maUrl ? [['Åpne Music Assistant', maHttp(s.maUrl)]] : [['Om Music Assistant', 'https://music-assistant.io/']],
+      rows: [{ n: 'Adresse', hint: 'For eksempel 192.168.1.5 eller homeassistant.local:8095', el: <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><input value={s.maUrl} placeholder="192.168.1.5:8095" onChange={(e) => { setSetting('maUrl', (e.currentTarget as HTMLInputElement).value.trim()); setTimeout(checkMa, 300); }} style={`height:36px;width:200px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-family:${MONO};font-size:12px;outline:none;color:#f2f2ee`} />{btn('Finn automatisk', () => void findMa())}</span> },
+        { n: 'Token', hint: 'Nyere Music Assistant krever en token (Innstillinger → Brukere i MA). Lagres på Skjold.', el: <input type="password" value={s.maToken} placeholder="valgfritt" onChange={(e) => { setSetting('maToken', (e.currentTarget as HTMLInputElement).value.trim()); setTimeout(checkMa, 300); }} style={`height:36px;width:220px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-family:${MONO};font-size:12px;outline:none;color:#f2f2ee`} /> },
+        { n: 'Status', hint: maSt.value?.error || (maSt.value?.ok && !maSt.value.player ? 'Fant ikke denne Skjold-en som spiller i MA. Legg til Squeezelite-, AirPlay- eller DLNA-provideren i Music Assistant.' : ''), el: <span style="display:flex;gap:6px;align-items:center">{txt(maSt.value?.ok ? 'MA ' + (maSt.value.version || '') : s.maUrl ? 'Ikke tilkoblet' : '–')}{btn('Test', checkMa)}</span> },
+        { n: 'Bibliotek', el: btn('Åpne', () => go('ma')) }] };
     case 'navidrome': return { links: s.ndUrl ? [['Åpne Navidrome', s.ndUrl]] : [],
       rows: [{ n: 'Navidrome', hint: 'Vises i menyen og under Kilder', el: tog('ndEn', s.ndEn) },
         { n: 'Server', el: inp('ndUrl', s.ndUrl, 'http://192.168.1.10:4533') },
@@ -114,9 +120,13 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
 }
 
 const intSel = signal('lyrion');
+const maSt = signal<MaStatus | null>(null);
+const maHttp = (a: string) => (/^https?:\/\//.test(a) ? a : 'http://' + a + (/:\d+$/.test(a) ? '' : ':8095'));
+function checkMa() { if (!settings.value.maUrl) { maSt.value = null; return; } maSt.value = null; api.maStatus().then((r) => (maSt.value = r)).catch((e) => (maSt.value = { configured: true, ok: false, error: e instanceof Error ? e.message : String(e) })); }
+async function findMa() { try { const r = await api.maDiscover(); if (r.found[0]) { setSetting('maUrl', r.found[0]); setTimeout(checkMa, 300); showToast('Fant Music Assistant på ' + r.found[0]); } else showToast('Fant ingen Music Assistant på nettet'); } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } }
 
 export function IntegrationsPage() {
-  useEffect(() => { void hkLoad(); const t = setInterval(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); }, 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { checkMa(); void hkLoad(); const t = setInterval(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); }, 5000); return () => clearInterval(t); }, []);
   const s = settings.value, sel = intSel.value, list = ints(s), cur = list.find((x) => x.id === sel) ?? list[0]!, d = detail(cur.id, s);
   return (
     <>

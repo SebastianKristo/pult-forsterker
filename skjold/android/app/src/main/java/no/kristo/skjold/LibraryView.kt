@@ -91,6 +91,7 @@ fun LibraryView(m: AppModel) {
             val res = if (m.demo) SK.lt.filter { (it.t + " " + it.artist + " " + it.album).lowercase().contains(q) } else (m.libRes ?: emptyList())
             if (res.isEmpty()) T(if (m.live && m.libRes == null) "Søker …" else "Ingen treff", sora(13f, W.Regular, C.muted))
             TrackList(m, x, res, null)
+            ExtSearchResults(m, q)
             LaunchedEffect(m.lib + "/" + q) {
                 if (!m.live) return@LaunchedEffect
                 m.libRes = null

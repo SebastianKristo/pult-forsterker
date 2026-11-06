@@ -1,3 +1,4 @@
+import { NrkContinueShelf } from './nrk';
 // PC-sider (skall dk2): Hjem, Spiller, Radio og bibliotekene (YouTube Music / Navidrome) med eget, bredt oppsett.
 // Samme data og handlinger som telefonsidene – bare ny plassering og størrelser.
 import { useEffect, useState } from 'preact/hooks';
@@ -97,6 +98,8 @@ export function DeskHome() {
           <SecHead title="Fortsett å lytte" kicker="NYLIG SPILT" />
           <div class="dkx-row">{rc.map((x) => { const ra = art(x.title, x.image); return <Tile key={x.key} bg={ra.bg} ink={ra.ink} label={ra.logo ? '' : x.big} name={x.title} meta={x.kind} round={x.station} onClick={() => playRecent(x)} />; })}</div>
         </section>}
+
+        <NrkContinueShelf />
 
         <section class="col gap12">
           <SecHead title="Radiofavoritter" kicker={favs.value.length ? favs.value.length + ' KANALER' : undefined} more="Se all radio ›" onMore={() => go('radio')} />

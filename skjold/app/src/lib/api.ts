@@ -122,9 +122,28 @@ export interface Recording { name: string; size: number; t: number; recording: b
 export interface RecSong { artist: string; title: string; dur?: number; t: number; channel: string; file?: string; where?: 'smb' | 'lokalt'; status: 'ok' | 'duplikat' | 'feil'; error?: string }
 export interface RecPayload { items: Recording[]; dir: string; songs?: RecSong[]; smb?: { set: boolean; ok: boolean; msg: string; share: string }; error?: string }
 export interface SnapClient { id: string; name: string; connected: boolean; latency: number; volume: number; muted: boolean }
+/** Music Assistant (/api/ma/*) og NRK på forespørsel (/api/nrk/*). */
+export interface MaItem { uri: string; kind: string; id: string; name: string; artist: string; album: string; duration: number; image: string; provider: string; year?: number | null }
+export type MaSearch = Record<'tracks' | 'albums' | 'artists' | 'playlists' | 'radio' | 'podcasts' | 'audiobooks', MaItem[]>;
+export interface MaStatus { configured: boolean; ok: boolean; version?: string; player?: string | null; player_id?: string | null; players?: { id: string; name: string }[]; error?: string }
+export interface NrkSeries { id: string; title: string; subtitle: string; image: string; kind: 'series' | 'podcast' }
+export interface NrkEpisode { id: string; title: string; subtitle: string; date: string; duration: number; image: string; series: string; podcast: boolean; pos?: number; heard?: boolean }
+export interface NrkProg { id: string; title?: string; series?: string; image?: string; pos: number; dur?: number; t?: number }
 export interface HomeKitInfo { enabled: boolean; available: boolean; running: boolean; paired: boolean; pin: string; setup_uri: string; port: number; error: string | null }
 export const api = {
   homekit: () => req<HomeKitInfo>('/api/homekit'),
+  maStatus: () => req<MaStatus>('/api/ma/status', undefined, undefined, 12000),
+  maDiscover: () => req<{ found: string[] }>('/api/ma/discover', undefined, undefined, 10000),
+  maSearch: (q: string) => req<MaSearch>('/api/ma/search?q=' + encodeURIComponent(q), undefined, undefined, 15000),
+  maLibrary: (kind: string, q = '') => req<MaItem[]>('/api/ma/library/' + kind + (q ? '?q=' + encodeURIComponent(q) : ''), undefined, undefined, 15000),
+  maRecent: () => req<{ items: MaItem[] }>('/api/ma/recent', undefined, undefined, 15000),
+  maTracks: (uri: string) => req<{ item: MaItem; tracks: MaItem[] }>('/api/ma/tracks?uri=' + encodeURIComponent(uri), undefined, undefined, 15000),
+  maPlay: (uri: string, enqueue: 'play' | 'next' | 'add' = 'play') => post<{ ok: boolean }>('/api/ma/play', { uri, enqueue }),
+  nrkSearch: (q: string) => req<{ series: NrkSeries[]; episodes: NrkEpisode[] }>('/api/nrk/search?q=' + encodeURIComponent(q), undefined, undefined, 12000),
+  nrkPopular: () => req<{ series: NrkSeries[] }>('/api/nrk/popular', undefined, undefined, 12000),
+  nrkSeries: (id: string, kind = '') => req<NrkSeries & { episodes: NrkEpisode[] }>('/api/nrk/series/' + encodeURIComponent(id) + (kind ? '?kind=' + kind : ''), undefined, undefined, 15000),
+  nrkContinue: () => req<{ items: NrkProg[] }>('/api/nrk/continue'),
+  nrkPlay: (e: { id: string; title?: string; series?: string; image?: string; duration?: number; podcast?: boolean; restart?: boolean }) => post<{ ok: boolean; resume: number }>('/api/nrk/play', e),
   setHomekit: (b: { enabled?: boolean; reset?: boolean }) => post<HomeKitInfo>('/api/homekit', b),
   sky: () => req<SkyStatus>('/api/sky'),
   skyKobl: (kode: string) => post<SkyStatus>('/api/sky', { kode }),

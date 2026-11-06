@@ -10,6 +10,8 @@ struct V4SearchPage: View {
     /// Tastaturhøyden måles selv: siden ligger som overlegg i et ZStack over systemets TabView, og der flytter ikke
     /// SwiftUI innholdet opp automatisk – søkefeltet nederst ble liggende bak tastaturet.
     @State private var kb: CGFloat = 0
+    /// Treff fra Music Assistant og NRK (via Skjold: /api/ma/search og /api/nrk/search).
+    @State private var ext: [ExtHit] = []
 
     private static let srcs = ["YouTube Music", "Navidrome", "Plex", "Radio", "AirPlay"]
     private var q: String { ui.sq.trimmingCharacters(in: .whitespaces) }
@@ -177,7 +179,27 @@ struct V4SearchPage: View {
                 }
             }
         }
-        if !q.isEmpty && pls.isEmpty && trs.isEmpty && rs.isEmpty && !m.rBusy {
+        if !ext.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                V4Kicker(text: "MUSIC ASSISTANT OG NRK")
+                ForEach(ext) { h in
+                    Button { playExt(h) } label: {
+                        HStack(spacing: 14) {
+                            V4Art(key: h.title, radius: 9).frame(width: 52, height: 52)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(h.title).sora(15, .semibold).lineLimit(1)
+                                Text(h.sub).sora(12, .regular, V4.muted).lineLimit(1)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(h.badge).mono(10, V4.gold, em: 0.1)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .plain()
+                }
+            }
+        }
+        if !q.isEmpty && pls.isEmpty && trs.isEmpty && rs.isEmpty && ext.isEmpty && !m.rBusy {
             Text("Fant ingenting for «\(q)».").sora(14, .regular, V4.muted)
         }
     }
@@ -190,10 +212,34 @@ struct V4SearchPage: View {
         m.playLib(list, idx, keepOpen: true)
     }
 
+    private func playExt(_ h: ExtHit) {
+        let host = m.settingsHost
+        let path = h.path
+        let data = DeviceLink.json(h.body)
+        Task { _ = await DeviceLink.shared.sendRaw(path, data, on: host, timeout: 12) }
+    }
+
+    private func loadExt(_ query: String) async -> [ExtHit] {
+        let host = m.settingsHost
+        let enc = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        var out: [ExtHit] = []
+        if let d = await DeviceLink.shared.get("/api/ma/search?q=" + enc, on: host, timeout: 12) {
+            out += ExtHit.fromMA(d)
+        }
+        if let d = await DeviceLink.shared.get("/api/nrk/search?q=" + enc, on: host, timeout: 12) {
+            out += ExtHit.fromNRK(d)
+        }
+        return out
+    }
+
     private func run() async {
-        guard !q.isEmpty else { hits = [:]; return }
+        guard !q.isEmpty else { hits = [:]; ext = []; return }
         try? await Task.sleep(for: .milliseconds(350))
         guard !Task.isCancelled else { return }
+        if !m.demo {
+            let found = await loadExt(q)
+            if !Task.isCancelled { ext = found }
+        }
         var out: [String: [Track]] = [:]
         for lib in ["nd", "plex", "ytm"] where ok(V4Lib.names[lib] ?? "") {
             if m.demo {
@@ -227,5 +273,55 @@ struct V4SearchPage: View {
             .plain().accessibilityLabel("Lukk søk")
         }
         .padding(.horizontal, 12).padding(.bottom, 12)
+    }
+}
+
+
+/// Ett treff fra Music Assistant (låt/album/spilleliste/podkast) eller NRK (episode). Spilles via Skjold.
+struct ExtHit: Identifiable {
+    let id: String
+    let title: String
+    let sub: String
+    let badge: String
+    let path: String
+    let body: [String: Any]
+
+    static func fromMA(_ data: Data) -> [ExtHit] {
+        guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
+        var out: [ExtHit] = []
+        for key in ["tracks", "albums", "playlists", "podcasts"] {
+            let list = obj[key] as? [[String: Any]] ?? []
+            for item in list.prefix(key == "tracks" ? 8 : 4) {
+                let uri = item["uri"] as? String ?? ""
+                if uri.isEmpty { continue }
+                let name = item["name"] as? String ?? ""
+                let artist = item["artist"] as? String ?? ""
+                let prov = item["provider"] as? String ?? "MA"
+                let sub = artist.isEmpty ? prov : artist + " · " + prov
+                out.append(ExtHit(id: "ma:" + uri, title: name, sub: sub, badge: prov.uppercased(),
+                                  path: "/api/ma/play", body: ["uri": uri, "enqueue": "play"]))
+            }
+        }
+        return out
+    }
+
+    static func fromNRK(_ data: Data) -> [ExtHit] {
+        guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
+        let eps = obj["episodes"] as? [[String: Any]] ?? []
+        var out: [ExtHit] = []
+        for e in eps.prefix(8) {
+            let id = e["id"] as? String ?? ""
+            if id.isEmpty { continue }
+            let title = e["title"] as? String ?? ""
+            let series = e["series"] as? String ?? ""
+            let date = e["date"] as? String ?? ""
+            var body: [String: Any] = ["id": id, "title": title, "series": series]
+            if let img = e["image"] as? String { body["image"] = img }
+            if let dur = e["duration"] as? Double { body["duration"] = dur }
+            if let pod = e["podcast"] as? Bool { body["podcast"] = pod }
+            let sub = series.isEmpty ? date : (date.isEmpty ? series : series + " · " + date)
+            out.append(ExtHit(id: "nrk:" + id, title: title, sub: sub, badge: "NRK", path: "/api/nrk/play", body: body))
+        }
+        return out
     }
 }
