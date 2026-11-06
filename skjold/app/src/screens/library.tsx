@@ -7,6 +7,7 @@ import { art } from '../lib/settings';
 import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, LIB_TABS, lq, lsvc, playNd, whenText, type LibId } from '../lib/library';
 import { ndAlbum, ndAlbumList, ndConfigured, ndCover, ndPlaylist, ndPlaylists, ndSearch, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
 import { signal } from '@preact/signals';
+import { AskBox, TagFilterBar } from './ai';
 
 /** Tilstand per bibliotek-side (signaler, så tilbake-knappen og skjermbildeskriptet kan styre den). */
 export const libUi = { tab: signal(0), pl: signal<{ kind: 'album' | 'pl'; id: string; name: string } | null>(null), q: signal(''), hero: signal(0), mood: signal<number | null>(null) };
@@ -110,7 +111,7 @@ export function LibraryPage() {
   const nd = lib === 'nd' && ndConfigured();
   const data = useNd();
   const tab = libUi.tab.value, open = libUi.pl.value, q = libUi.q.value.trim();
-  const [res, setRes] = useState<NdSong[] | null>(null);
+  const [res, setRes] = useState<NdSong[] | null>(null), [tagRes, setTagRes] = useState<NdSong[] | null>(null);
   useEffect(() => {
     if (!nd || q.length < 2) { setRes(null); return undefined; }
     const t = setTimeout(() => { ndSearch(q).then(setRes).catch(() => setRes([])); }, 350);
@@ -126,7 +127,11 @@ export function LibraryPage() {
     <>
       <button onClick={() => { if (!libBack()) go('home'); }} style="align-self:flex-start;display:flex;align-items:center;gap:4px;border:none;background:none;color:#d9a441;font-size:14px;cursor:pointer;padding:0;margin-top:-6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg>{open ? tabs[tab] : 'Hjem'}</button>
       <input value={libUi.q.value} onInput={(e) => { libUi.q.value = e.currentTarget.value; }} placeholder="Søk etter sang, artist eller album" style="flex-shrink:0;height:44px;padding:0 14px;border-radius:12px;border:1px solid #2e2e30;background:#141415;font-size:15px;outline:none" />
-      {q ? (
+      {nd && !open && <TagFilterBar onResults={setTagRes} />}
+      {nd && !open && !q && !tagRes && <AskBox compact />}
+      {!q && tagRes ? (
+        tagRes.length ? <TrackRows list={tagRes} onPick={(i) => play(tagRes, i)} /> : <span style="font-size:13px;color:#8b8b86">Ingen låter med disse taggene ennå (se Innstillinger → Bibliotek)</span>
+      ) : q ? (
         off ? <NotConnected lib={lib} err={data.err} /> : <>
           {res && !res.length && <span style="font-size:13px;color:#8b8b86">Ingen treff</span>}
           {!res && <span style="font-size:13px;color:#8b8b86">Søker …</span>}

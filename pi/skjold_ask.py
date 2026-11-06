@@ -84,7 +84,7 @@ def parse_rules(text):
         out["language"] = "norsk"
     elif re.search(r"\b(engelsk|english)\b", t):
         out["language"] = "engelsk"
-    m = re.search(r"(?:som|like|à la|a la)\s+([A-ZÆØÅa-zæøå0-9 .&'-]{2,40}?)(?:\s+(?:fra|i|på|til|for|og)\b|[,.!?]|$)", (text or "").strip())
+    m = re.search(r"(?:som|like|à la|a la)\s+([A-ZÆØÅa-zæøå0-9 .&'-]{2,40}?)(?:\s+(?:fra|i|på|til|for|og|from|in|for|and|with)\b|[,.!?]|$)", (text or "").strip())
     if m and not any(w in m.group(1).lower() for w in ("noe", "musikk")):
         out["artists_like"].append(m.group(1).strip())
     m = re.search(r"(\d+)\s*(?:min|minutter|minutes)", t)

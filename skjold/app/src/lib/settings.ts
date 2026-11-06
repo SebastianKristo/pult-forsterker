@@ -157,6 +157,7 @@ export const CATS: Category[] = [
     { kind: 'local', k: 'ndUser', n: 'Brukernavn', ph: 'brukernavn' },
     { kind: 'local', k: 'ndPass', n: 'Passord', ph: 'passord', hint: 'Lagres bare på denne telefonen', secret: true },
     { kind: 'svc', id: 'ndTest', n: 'Test Navidrome', label: 'Test tilkobling' }] },
+  { id: 'bibliotek', n: 'Bibliotek', sub: 'Lydbeskrivelse av musikken og KI-tolkning', items: [] },
   { id: 'rutiner', n: 'Rutiner og dørklokke', sub: 'Rutiner, dørklokke, intercom og låtgjenkjenning', items: [] },
   { id: 'stemme', n: 'Stemme', sub: 'Talebeskjeder', items: [
     { kind: 'api-bool', id: 'voiceOn', n: 'Talebeskjed ved bytte' },
