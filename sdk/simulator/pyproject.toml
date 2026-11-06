@@ -1,0 +1,14 @@
+[project]
+name = "skjold-sim"
+version = "1.0.0"
+description = "Simulator for Skjold-forsterkerens lokale API"
+requires-python = ">=3.9"
+dependencies = ["aiohttp>=3.8"]
+license = { text = "MIT" }
+
+[project.scripts]
+skjold-sim = "skjold_sim.__main__:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"

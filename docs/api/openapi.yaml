@@ -1,0 +1,2570 @@
+# Generert av docs/api/gen_openapi.py – ikke rediger for hånd.
+openapi: 3.1.0
+info:
+  title: Skjold lokalt API
+  version: 1.0.0
+  description: "Skjold har et åpent HTTP-API på port **8765** i hjemmenettet. Det trengs ingen nøkkel, siden API-et bare kan nås lokalt. Bruk\
+    \ Skjold-hjem eller fjernstyring for tilgang utenfra.\n\n**Sanntid**\n- **SSE**: `GET /api/events` sender hele statusen (`data: {…}`) hver\
+    \ gang noe endrer seg.\n- **WebSocket**: `GET /api/ws` bruker samme meldinger som Skjold Touch.\n- **MQTT** (pluginen «MQTT-bro»):\n  - status\
+    \ publiseres retained på `skjold/<vertsnavn>/state`;\n  - kommandoer går til `skjold/<vertsnavn>/set` som JSON (`{\"volume\": 30}`, også `input`,\
+    \ `power`, `preset`, `transport` og `mute`), eller som en ren verdi på `…/set/<felt>`;\n  - med Home Assistant-oppdagelse slått på dukker\
+    \ Skjold opp av seg selv.\n\n**Eksempler**\n\n```bash\ncurl http://skjold.local:8765/api/status\ncurl -X POST http://skjold.local:8765/api/volume\
+    \ -H 'content-type: application/json' -d '{\"volume\": 30}'\ncurl -N http://skjold.local:8765/api/events\n```\n\n```python\nfrom skjold import\
+    \ Skjold          # sdk/python\ns = Skjold(\"skjold.local\")\ns.volume(30); s.preset(1)\nfor st in s.events(): print(st[\"title\"])\n```\n\
+    \n```js\nimport { Skjold } from \"skjold\";   // sdk/js\nconst s = new Skjold(\"skjold.local\");\nawait s.power(true);\nfor await (const st\
+    \ of s.events()) console.log(st.volume);\n```\n\n```yaml\n# Home Assistant – uten integrasjonen (configuration.yaml)\nrest_command:\n  skjold_volum:\n\
+    \    url: http://skjold.local:8765/api/volume\n    method: POST\n    content_type: application/json\n    payload: '{\"volume\": {{ volume\
+    \ }}}'\nsensor:\n  - platform: rest\n    name: Skjold volum\n    resource: http://skjold.local:8765/api/status\n    value_template: \"{{ value_json.volume\
+    \ }}\"\n```\n\nPlugins kan utvide API-et. Se [PLUGINS.md](https://github.com/SebastianKristo/pult-forsterker/blob/main/docs/PLUGINS.md). Simulatoren\
+    \ i `sdk/simulator` (`python -m skjold_sim`) svarer på det samme API-et uten maskinvare.\n"
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+- url: http://{vert}:8765
+  variables:
+    vert:
+      default: skjold.local
+tags:
+- name: Annet
+- name: Avspilling
+- name: Innstillinger
+- name: Integrasjoner
+- name: Music Assistant
+- name: Plugins
+- name: Radio
+- name: Rutiner
+- name: Skjold Cloud
+- name: Status
+- name: System
+paths:
+  /:
+    get:
+      tags:
+      - Annet
+      summary: GET /
+      operationId: get
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ai:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/ai
+      operationId: get_api_ai
+      x-skjold-modul: skjold_ask
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/ai
+      operationId: post_api_ai
+      x-skjold-modul: skjold_ask
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/ask:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/ask
+      operationId: post_api_ask
+      x-skjold-modul: skjold_ask
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/ask/parse:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/ask/parse
+      operationId: post_api_ask_parse
+      x-skjold-modul: skjold_ask
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/auto_input:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/auto_input
+      operationId: post_api_auto_input
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/backup:
+    get:
+      tags:
+      - System
+      summary: GET /api/backup?secrets=exclude|encrypt&pass=… → JSON-fil til nedlasting. ?info=1 gir bare status.
+      operationId: get_api_backup
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - System
+      summary: POST /api/backup {"action":"now"} → ta backup til NAS/lokalt nå.
+      operationId: post_api_backup
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/bt:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/bt
+      operationId: post_api_bt
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/cloud:
+    get:
+      tags:
+      - Skjold Cloud
+      summary: GET /api/cloud → status · POST {"aktiver":true[, "frase":"12 ord"]} | {"deaktiver":true} | {"deler":[…]} | {"synk":true}
+      operationId: get_api_cloud
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/cloud → status · POST {"aktiver":true[, "frase":"12 ord"]} | {"deaktiver":true} | {"deler":[…]} | {"synk":true}.
+
+        Frasen returneres bare én gang (ved aktivering uten frase).'
+    post:
+      tags:
+      - Skjold Cloud
+      summary: 'Skjold Cloud: aktiver, gjenopprett, velg deler, synk'
+      operationId: post_api_cloud
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/cloud → status · POST {"aktiver":true[, "frase":"12 ord"]} | {"deaktiver":true} | {"deler":[…]} | {"synk":true}.
+
+        Frasen returneres bare én gang (ved aktivering uten frase).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                aktiver:
+                  type: boolean
+                frase:
+                  type: string
+                  description: 12 ord – gjenopprett på et nytt hjem
+                deaktiver:
+                  type: boolean
+                deler:
+                  type: array
+                  items:
+                    type: string
+                synk:
+                  type: boolean
+            example:
+              synk: true
+  /api/cover:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/cover
+      operationId: get_api_cover
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/discover:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/discover
+      operationId: get_api_discover
+      x-skjold-modul: skjold_smartradio
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/discover
+      operationId: post_api_discover
+      x-skjold-modul: skjold_smartradio
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/doorbell:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/doorbell
+      operationId: get_api_doorbell
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/doorbell
+      operationId: post_api_doorbell
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/doorbell/camera:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/doorbell/camera
+      operationId: get_api_doorbell_camera
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/events:
+    get:
+      tags:
+      - Status
+      summary: 'Server-Sent Events: status hver gang den endrer seg'
+      operationId: get_api_events
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: Strøm
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: 'data: {"power":true,"volume":32,...}
+
+
+                '
+      description: '`text/event-stream`. Hver hendelse er `data: <Status-JSON>`. Klienten bør koble til igjen etter `retry`-tiden.'
+  /api/features:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/features
+      operationId: get_api_features
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/features
+      operationId: post_api_features
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/health:
+    get:
+      tags:
+      - System
+      summary: GET /api/health
+      operationId: get_api_health
+      x-skjold-modul: skjold_health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/health/report:
+    get:
+      tags:
+      - System
+      summary: GET /api/health/report
+      operationId: get_api_health_report
+      x-skjold-modul: skjold_health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/history:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/history
+      operationId: get_api_history
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/homekit:
+    get:
+      tags:
+      - Integrasjoner
+      summary: GET /api/homekit → {enabled, available, running, paired, pin, setup_uri, port, error}
+      operationId: get_api_homekit
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/homekit → {enabled, available, running, paired, pin, setup_uri, port, error}
+
+        POST /api/homekit {"enabled": bool} slår av/på · {"reset": true} glemmer alle paringer.'
+    post:
+      tags:
+      - Integrasjoner
+      summary: GET /api/homekit → {enabled, available, running, paired, pin, setup_uri, port, error}
+      operationId: post_api_homekit
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/homekit → {enabled, available, running, paired, pin, setup_uri, port, error}
+
+        POST /api/homekit {"enabled": bool} slår av/på · {"reset": true} glemmer alle paringer.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/hp_automute:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/hp_automute
+      operationId: post_api_hp_automute
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/input:
+    post:
+      tags:
+      - Avspilling
+      summary: Velg kilde
+      operationId: post_api_input
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200': &id001
+          description: Ny status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '400':
+          description: Ukjent kilde
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feil'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                input:
+                  type: string
+              required:
+              - input
+            example:
+              input: radio
+  /api/intercom:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/intercom
+      operationId: post_api_intercom
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/level:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/level
+      operationId: post_api_level
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/library/search:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/library/search
+      operationId: get_api_library_search
+      x-skjold-modul: skjold_libtag
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/library/tags:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/library/tags
+      operationId: get_api_library_tags
+      x-skjold-modul: skjold_libtag
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/library/tags
+      operationId: post_api_library_tags
+      x-skjold-modul: skjold_libtag
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/logo:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/logo?k=<nøkkel> → kanallogo (hentet, cachet og servert av Skjold; se skjold_logos.py).
+      operationId: get_api_logo
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/loudness:
+    post:
+      tags:
+      - Innstillinger
+      summary: POST /api/loudness
+      operationId: post_api_loudness
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/lyrics:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/lyrics
+      operationId: get_api_lyrics
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ma/discover:
+    get:
+      tags:
+      - Music Assistant
+      summary: GET /api/ma/discover
+      operationId: get_api_ma_discover
+      x-skjold-modul: skjold_ma
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ma/library/{kind}:
+    get:
+      tags:
+      - Music Assistant
+      summary: GET /api/ma/library/{kind}
+      operationId: get_api_ma_library_kind
+      x-skjold-modul: skjold_ma
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/ma/play:
+    post:
+      tags:
+      - Music Assistant
+      summary: POST /api/ma/play
+      operationId: post_api_ma_play
+      x-skjold-modul: skjold_ma
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/ma/recent:
+    get:
+      tags:
+      - Music Assistant
+      summary: GET /api/ma/recent
+      operationId: get_api_ma_recent
+      x-skjold-modul: skjold_ma
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ma/search:
+    get:
+      tags:
+      - Music Assistant
+      summary: GET /api/ma/search
+      operationId: get_api_ma_search
+      x-skjold-modul: skjold_ma
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ma/status:
+    get:
+      tags:
+      - Music Assistant
+      summary: GET /api/ma/status
+      operationId: get_api_ma_status
+      x-skjold-modul: skjold_ma
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ma/tracks:
+    get:
+      tags:
+      - Music Assistant
+      summary: GET /api/ma/tracks
+      operationId: get_api_ma_tracks
+      x-skjold-modul: skjold_ma
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/matter:
+    get:
+      tags:
+      - Integrasjoner
+      summary: GET /api/matter → {enabled, available, running, commissioned, fabrics, qr, manual, endpoints, error}
+      operationId: get_api_matter
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/matter → {enabled, available, running, commissioned, fabrics, qr, manual, endpoints, error}
+
+        POST {"enabled": bool} slår av/på (installerer Node + matter.js første gang) · {"reset": true} glemmer paringer.'
+    post:
+      tags:
+      - Integrasjoner
+      summary: 'Matter: slå av/på eller glem paringer'
+      operationId: post_api_matter
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/matter → {enabled, available, running, commissioned, fabrics, qr, manual, endpoints, error}
+
+        POST {"enabled": bool} slår av/på (installerer Node + matter.js første gang) · {"reset": true} glemmer paringer.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                reset:
+                  type: boolean
+            example:
+              enabled: true
+  /api/menu:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/menu
+      operationId: post_api_menu
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/mix:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/mix
+      operationId: post_api_mix
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/mute:
+    post:
+      tags:
+      - Avspilling
+      summary: Demp
+      operationId: post_api_mute
+      x-skjold-modul: ki_amp_daemon
+      responses: &id002
+        '200': *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mute:
+                  type: boolean
+              required:
+              - mute
+            example:
+              mute: true
+  /api/nfc:
+    get:
+      tags:
+      - Annet
+      summary: POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+      operationId: get_api_nfc
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+
+        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status).'
+  /api/nfc/{act}:
+    get:
+      tags:
+      - Annet
+      summary: POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+      operationId: get_api_nfc_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+
+        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status).'
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+      - Annet
+      summary: POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+      operationId: post_api_nfc_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+
+        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status).'
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/nfc/{act}/{uid}:
+    delete:
+      tags:
+      - Annet
+      summary: POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+      operationId: delete_api_nfc_act_uid
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+
+        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status).'
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: uid
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/night:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/night
+      operationId: get_api_night
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/night
+      operationId: post_api_night
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/nrk/continue:
+    get:
+      tags:
+      - Radio
+      summary: GET /api/nrk/continue
+      operationId: get_api_nrk_continue
+      x-skjold-modul: skjold_nrk
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/nrk/play:
+    post:
+      tags:
+      - Radio
+      summary: POST /api/nrk/play
+      operationId: post_api_nrk_play
+      x-skjold-modul: skjold_nrk
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/nrk/popular:
+    get:
+      tags:
+      - Radio
+      summary: GET /api/nrk/popular
+      operationId: get_api_nrk_popular
+      x-skjold-modul: skjold_nrk
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/nrk/search:
+    get:
+      tags:
+      - Radio
+      summary: GET /api/nrk/search
+      operationId: get_api_nrk_search
+      x-skjold-modul: skjold_nrk
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/nrk/series/{sid}:
+    get:
+      tags:
+      - Radio
+      summary: GET /api/nrk/series/{sid}
+      operationId: get_api_nrk_series_sid
+      x-skjold-modul: skjold_nrk
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: sid
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/play:
+    post:
+      tags:
+      - Avspilling
+      summary: Spill en URL (strøm eller fil)
+      operationId: post_api_play
+      x-skjold-modul: ki_amp_daemon
+      responses: *id002
+      description: 'POST /api/play {"url", "title"?, "artist"?, "image"?, "announce"?: bool, "volume"?: 0–100}
+
+        Spill en lydfil/mediestrøm (Home Assistant media, Homey, lenker). announce=true spiller den oppå det som spiller.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                title:
+                  type: string
+                artist:
+                  type: string
+                image:
+                  type: string
+                announce:
+                  type: boolean
+                  description: Spill oppå det som spiller
+                volume:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+              required:
+              - url
+            example:
+              url: https://lyd.nrk.no/nrk_radio_p1_ostlandssendingen_mp3_h
+  /api/plex:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/plex
+      operationId: get_api_plex
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/plexamp:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/plexamp
+      operationId: get_api_plexamp
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/plexamp
+      operationId: post_api_plexamp
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/plugins:
+    get:
+      tags:
+      - Plugins
+      summary: GET /api/plugins
+      operationId: get_api_plugins
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/plugins/{pid}:
+    post:
+      tags:
+      - Plugins
+      summary: POST /api/plugins/{pid}
+      operationId: post_api_plugins_pid
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: pid
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/podsum:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/podsum
+      operationId: get_api_podsum
+      x-skjold-modul: skjold_podsum
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/podsum
+      operationId: post_api_podsum
+      x-skjold-modul: skjold_podsum
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/podsum/play:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/podsum/play
+      operationId: post_api_podsum_play
+      x-skjold-modul: skjold_podsum
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/podsum/preview:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/podsum/preview
+      operationId: post_api_podsum_preview
+      x-skjold-modul: skjold_podsum
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/podsum/run:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/podsum/run
+      operationId: post_api_podsum_run
+      x-skjold-modul: skjold_podsum
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/power:
+    post:
+      tags:
+      - Avspilling
+      summary: Slå av/på
+      operationId: post_api_power
+      x-skjold-modul: ki_amp_daemon
+      responses: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                'on':
+                  type: boolean
+              required:
+              - 'on'
+            example:
+              'on': true
+  /api/presence:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/presence
+      operationId: get_api_presence
+      x-skjold-modul: skjold_home_extras
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/presence
+      operationId: post_api_presence
+      x-skjold-modul: skjold_home_extras
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/preset:
+    post:
+      tags:
+      - Radio
+      summary: Spill (eller lagre) radiofavoritt n
+      operationId: post_api_preset
+      x-skjold-modul: ki_amp_daemon
+      responses: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                n:
+                  type: integer
+                  minimum: 1
+                save:
+                  type: boolean
+              required:
+              - n
+            example:
+              n: 1
+  /api/presets:
+    get:
+      tags:
+      - Radio
+      summary: GET /api/presets
+      operationId: get_api_presets
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Radio
+      summary: POST /api/presets
+      operationId: post_api_presets
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/presets/order:
+    post:
+      tags:
+      - Radio
+      summary: POST /api/presets/order
+      operationId: post_api_presets_order
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+    put:
+      tags:
+      - Radio
+      summary: PUT /api/presets/order
+      operationId: put_api_presets_order
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/presets/{n}:
+    delete:
+      tags:
+      - Radio
+      summary: DELETE /api/presets/{n}
+      operationId: delete_api_presets_n
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: n
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/presets/{n}/play:
+    post:
+      tags:
+      - Radio
+      summary: POST /api/presets/{n}/play
+      operationId: post_api_presets_n_play
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: n
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/radio/browse:
+    get:
+      tags:
+      - Radio
+      summary: GET /api/radio/browse
+      operationId: get_api_radio_browse
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/radio/play:
+    post:
+      tags:
+      - Radio
+      summary: POST /api/radio/play
+      operationId: post_api_radio_play
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/radio/search:
+    get:
+      tags:
+      - Radio
+      summary: GET /api/radio/search
+      operationId: get_api_radio_search
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/radiolist:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/radiolist
+      operationId: get_api_radiolist
+      x-skjold-modul: skjold_home_extras
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/radiolist
+      operationId: post_api_radiolist
+      x-skjold-modul: skjold_home_extras
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/reboot:
+    post:
+      tags:
+      - System
+      summary: POST /api/reboot
+      operationId: post_api_reboot
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/recognize:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/recognize
+      operationId: get_api_recognize
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/recognize
+      operationId: post_api_recognize
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/recordings:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/recordings
+      operationId: get_api_recordings
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/recordings
+      operationId: post_api_recordings
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/recordings/file/{name}:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/recordings/file/{name}
+      operationId: get_api_recordings_file_name
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/remote:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/remote
+      operationId: get_api_remote
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/remote
+      operationId: post_api_remote
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/restore:
+    post:
+      tags:
+      - System
+      summary: POST /api/restore {"backup":{…}, "mode":"settings"|"all", "dry_run":bool, "passphrase":"…"}
+      operationId: post_api_restore
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/rom:
+    get:
+      tags:
+      - Annet
+      summary: Andre Skjold-enheter på LAN-et (mDNS) – brukes av Skjold Touch-skjermens romvelger.
+      operationId: get_api_rom
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/roomeq/analyze:
+    post:
+      tags:
+      - Annet
+      summary: 'POST /api/roomeq/analyze?session=<id>&reset=1&sr=48000  (body: WAV, eller rå s16le mono med ?sr=)'
+      operationId: post_api_roomeq_analyze
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/roomeq/analyze?session=<id>&reset=1&sr=48000  (body: WAV, eller rå s16le mono med ?sr=)
+
+        → {curve, after, filters [{f,q,g}], target, points, point, clipped}. Felles analyse for web, iOS og Android;
+
+        flere målepunkter i samme økt snittes. Lagre forslaget med POST /api/plugins/roomeq {"enabled":true,"filters":[…]}.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/roomeq/sweep:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/roomeq/sweep
+      operationId: post_api_roomeq_sweep
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/roon:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/roon
+      operationId: get_api_roon
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/roon
+      operationId: post_api_roon
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/routines:
+    get:
+      tags:
+      - Rutiner
+      summary: GET /api/routines
+      operationId: get_api_routines
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Rutiner
+      summary: POST /api/routines
+      operationId: post_api_routines
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/routines/steps:
+    post:
+      tags:
+      - Rutiner
+      summary: POST /api/routines/steps
+      operationId: post_api_routines_steps
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/routines/{rid}:
+    delete:
+      tags:
+      - Rutiner
+      summary: DELETE /api/routines/{rid}
+      operationId: delete_api_routines_rid
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: rid
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/routines/{rid}/run:
+    post:
+      tags:
+      - Rutiner
+      summary: POST /api/routines/{rid}/run
+      operationId: post_api_routines_rid_run
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: rid
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/settings:
+    get:
+      tags:
+      - Innstillinger
+      summary: GET /api/settings
+      operationId: get_api_settings
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Innstillinger
+      summary: POST /api/settings
+      operationId: post_api_settings
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/sky:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/sky
+      operationId: get_api_sky
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/sky
+      operationId: post_api_sky
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/smartradio:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/smartradio
+      operationId: get_api_smartradio
+      x-skjold-modul: skjold_smartradio
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/smartradio
+      operationId: post_api_smartradio
+      x-skjold-modul: skjold_smartradio
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/snapcast:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/snapcast
+      operationId: get_api_snapcast
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/snapcast
+      operationId: post_api_snapcast
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/spotify:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/spotify
+      operationId: get_api_spotify
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/spotify
+      operationId: post_api_spotify
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/status:
+    get:
+      tags:
+      - Status
+      summary: Hent status
+      operationId: get_api_status
+      x-skjold-modul: ki_amp_daemon
+      responses: *id002
+  /api/store:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/store
+      operationId: get_api_store
+      x-skjold-modul: skjold_pluginstore
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/store
+      operationId: post_api_store
+      x-skjold-modul: skjold_pluginstore
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/store/catalog:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/store/catalog
+      operationId: get_api_store_catalog
+      x-skjold-modul: skjold_pluginstore
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/stream/{sid}:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/stream/{sid}
+      operationId: get_api_stream_sid
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: sid
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/subwave:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/subwave
+      operationId: get_api_subwave
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/subwave
+      operationId: post_api_subwave
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/sync:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/sync
+      operationId: get_api_sync
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/sync
+      operationId: post_api_sync
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/test:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/test {"channel":"L"|"R"} → kort 440 Hz-tone i venstre eller høyre høyttaler (aplay).
+      operationId: post_api_test
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/toggle:
+    post:
+      tags:
+      - Avspilling
+      summary: Veksle av/på
+      operationId: post_api_toggle
+      x-skjold-modul: ki_amp_daemon
+      responses: *id002
+  /api/transport:
+    post:
+      tags:
+      - Avspilling
+      summary: Pause/spill/neste/forrige
+      operationId: post_api_transport
+      x-skjold-modul: ki_amp_daemon
+      responses: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum:
+                  - play
+                  - pause
+                  - playpause
+                  - next
+                  - previous
+                  - stop
+              required:
+              - action
+            example:
+              action: next
+  /api/update:
+    get:
+      tags:
+      - System
+      summary: GET /api/update → {current, latest, available, running, result, log[], can_update}
+      operationId: get_api_update
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - System
+      summary: POST /api/update → henter nyeste versjon (git pull + update.sh) i bakgrunnen. Følg med via GET /api/update.
+      operationId: post_api_update
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/update → henter nyeste versjon (git pull + update.sh) i bakgrunnen. Følg med via GET /api/update.
+
+        {"rollback": true} legger tilbake forrige versjon (øyeblikksbildet fra siste oppdatering).'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/usbsw:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/usbsw
+      operationId: post_api_usbsw
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/voice:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/voice
+      operationId: post_api_voice
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/volume:
+    post:
+      tags:
+      - Avspilling
+      summary: Sett volum (absolutt eller relativt)
+      operationId: post_api_volume
+      x-skjold-modul: ki_amp_daemon
+      responses: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                volume:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                delta:
+                  type: integer
+            example:
+              volume: 35
+  /api/wakelight:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/wakelight
+      operationId: get_api_wakelight
+      x-skjold-modul: skjold_home_extras
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/wakelight
+      operationId: post_api_wakelight
+      x-skjold-modul: skjold_home_extras
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/wifi:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/wifi → {"networks":[{ssid,signal 0-100,security open|wpa2|wpa3,active}]} via NetworkManager (nmcli).
+      operationId: get_api_wifi
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/wifi {"ssid","psk"?,"hidden"?:bool,"security"?:"wpa2|wpa3|open"} → kobler til med nmcli.
+      operationId: post_api_wifi
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/wrapped:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/wrapped
+      operationId: get_api_wrapped
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ws:
+    get:
+      tags:
+      - Status
+      summary: WebSocket (Skjold Touch-protokollen)
+      operationId: get_api_ws
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '101':
+          description: Switching Protocols
+      description: 'Oppgrader til WebSocket. Meldinger: state, input, vol, mute, power, pause, next, set, presets … (se pi/skjold_s1f.py).'
+  /api/xtc/test:
+    post:
+      tags:
+      - Annet
+      summary: 'POST /api/xtc/test – «Lyttetest»: rosa støy som vandrer venstre → midt → høyre (også brukt som sub-test).'
+      operationId: post_api_xtc_test
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+components:
+  schemas:
+    Status:
+      type: object
+      description: Hele tilstanden. Flere felt kan komme til; ukjente felt skal ignoreres.
+      properties:
+        power:
+          type: boolean
+        volume:
+          type: integer
+          minimum: 0
+          maximum: 100
+        mute:
+          type: boolean
+        input:
+          type: string
+          examples:
+          - radio
+        inputs:
+          type: array
+          items:
+            type: string
+        preset:
+          type: integer
+          description: Aktiv radiofavoritt (1-basert), 0 = ingen
+        name:
+          type: string
+        version:
+          type: string
+        product:
+          type: string
+          enum:
+          - s1
+          - node
+          - core
+          - touch
+        title:
+          type: string
+        artist:
+          type: string
+      additionalProperties: true
+      required:
+      - power
+      - volume
+      - mute
+      - input
+    Feil:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+      - error
+

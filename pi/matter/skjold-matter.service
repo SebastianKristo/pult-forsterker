@@ -1,0 +1,18 @@
+[Unit]
+Description=Skjold Matter (matter.js) – Skjold som Matter-høyttaler
+After=network-online.target ki-amp.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/skjold-matter
+Environment=NODE_ENV=production
+Environment=SKJOLD_MATTER_DIR=/var/lib/ki-amp/matter
+ExecStart=/usr/bin/node /opt/skjold-matter/index.js
+Restart=always
+RestartSec=5
+Nice=5
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

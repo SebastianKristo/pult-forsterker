@@ -102,3 +102,7 @@ event with a 10 s timeout and resource limits; network access is blocked unless 
 any returned action the plugin lacks permission for. The catalog is `plugins/index.json` in this repository (every file
 carries a sha256 checksum, regenerate it with `python3 plugins/build_index.py`). Plugins can also be installed from a URL
 or an uploaded zip. Install, update and remove them in the web app under Plugins → Butikk.
+
+## Utenfra: API og SDK
+
+Vil du styre Skjold fra et annet system i stedet for å kjøre kode på den? Bruk det lokale API-et: [docs/api/openapi.yaml](api/openapi.yaml) (vises på [/utvikler/](https://skjold.smarthjemexperten.no/utvikler/)). Det finnes også SDK-er for Python og JS, og en simulator i [sdk/](../sdk/README.md).

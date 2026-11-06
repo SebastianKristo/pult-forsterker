@@ -1,0 +1,12 @@
+{
+  "name": "skjold",
+  "version": "1.0.0",
+  "description": "Klient for Skjold-forsterkerens lokale API (ESM, fetch)",
+  "type": "module",
+  "main": "index.js",
+  "exports": { ".": "./index.js" },
+  "types": "index.d.ts",
+  "engines": { "node": ">=18" },
+  "license": "MIT",
+  "scripts": { "test": "node --test test/*.test.js" }
+}
