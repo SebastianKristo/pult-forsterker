@@ -439,37 +439,124 @@ function DraftInput({ value, onCommit, ...rest }: { value: string; onCommit: (v:
 
 
 /** Fjernstyring: Cloudflare Tunnel til denne enheten (master). Token fra Cloudflare Zero Trust → Tunnels. */
+/** Cloudflare-tunnel-token ut av det brukeren limer inn: selve tokenet, eller hele «cloudflared service install …»-kommandoen. */
+function pickToken(raw: string): string {
+  const m = raw.match(/eyJ[A-Za-z0-9_\-=.]{40,}/);
+  return m ? m[0] : raw.trim();
+}
+const HOST_RE = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
+const RSTEPS = ['Hva du får', 'Lag tunnel', 'Lim inn token', 'Offentlig adresse', 'Beskytt adressen', 'Slå på'];
+
 function RemotePanel() {
   const [st, setSt] = useState<RemoteStatus | null>(null);
   const [host, setHost] = useState('skjold-styring.smarthjemexperten.no');
-  const [token, setToken] = useState('');
+  const [raw, setRaw] = useState('');
   const [err, setErr] = useState('');
+  const [step, setStep] = useState(-1);          // -1 = oversikt, 0–5 = veiviser
+  const [guarded, setGuarded] = useState(false);
   const load = async () => { try { const r = await api.remote(); setSt(r); if (r.host) setHost(r.host); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
   useEffect(() => { void load(); }, []);
   useEffect(() => { if (!st?.busy) return; const t = setInterval(load, 1500); return () => clearInterval(t); }, [st?.busy]);
+  const token = pickToken(raw);
+  const tokenOk = /^eyJ[A-Za-z0-9_\-=.]{40,}$/.test(token) || (!raw && !!st?.has_token);
+  const hostOk = HOST_RE.test(host.trim());
   const send = async (enable: boolean) => {
     setErr('');
-    try { setSt(await api.setRemote({ enable, host, ...(token ? { token } : {}) })); setToken(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    try { setSt(await api.setRemote({ enable, host: host.trim(), ...(raw ? { token } : {}) })); setRaw(''); if (enable) setStep(5); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
   };
-  const box = 'display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;border:1px solid #242426;background:#121214';
-  const fld = 'height:40px;padding:0 12px;border-radius:10px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none;width:100%;box-sizing:border-box';
   const on = !!st?.enabled;
+  const box = 'display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:16px;border:1px solid #242426;background:#121214';
+  const fld = 'height:42px;padding:0 12px;border-radius:10px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none;width:100%;box-sizing:border-box;color:#f2f2ee';
+  const pbtn = 'height:42px;padding:0 18px;border-radius:10px;border:none;background:#d9a441;color:#0b0b0c;font-weight:600;cursor:pointer';
+  const sbtn = 'height:42px;padding:0 16px;border-radius:10px;border:1px solid #2e2e30;background:transparent;color:#f2f2ee;cursor:pointer';
+  const p = 'margin:0;font-size:13px;color:#c9c9c4;line-height:1.55';
+  const li = (n: number, t: preact.ComponentChildren) => <div style="display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start"><span class="mono" style="width:22px;height:22px;border-radius:50%;border:1px solid #5a4420;color:#f0c46a;font-size:11px;display:grid;place-items:center">{n}</span><span style={p}>{t}</span></div>;
+  const code = (t: string) => <span class="mono" style="font-size:12px;background:#0b0b0c;border:1px solid #242426;border-radius:6px;padding:1px 6px;color:#f0c46a">{t}</span>;
+  const status = <span style={`font-size:12px;color:${st?.active ? '#6fcf7f' : '#8b8b86'}`}>{st ? (st.busy ? 'Jobber …' : st.active ? '● Tilkoblet Cloudflare' : on ? '○ Venter på Cloudflare' : '○ Av') : '…'}</span>;
+
+  if (step < 0) return (
+    <div class="col gap16">
+      <div style={box}>
+        <div class="row between" style={{ alignItems: 'center', gap: '10px' }}><span style="font-size:16px;font-weight:600">{on ? 'Fjernstyring er på' : 'Styr Skjold hjemmefra'}</span>{status}</div>
+        {on ? <>
+          <p style={p}>Web-UI-et er tilgjengelig på <b>{st?.host}</b> via en kryptert Cloudflare-tunnel. Ingen porter er åpnet i ruteren.</p>
+          <div class="row gap10" style={{ flexWrap: 'wrap' }}>
+            {st?.host && <a href={'https://' + st.host} target="_blank" rel="noreferrer" style={pbtn + ';display:inline-flex;align-items:center;text-decoration:none'}>Åpne {st.host} ↗</a>}
+            <button onClick={() => setStep(1)} style={sbtn}>Endre oppsett</button>
+            <button disabled={st?.busy} onClick={() => void send(false)} style={sbtn}>Slå av</button>
+          </div>
+        </> : <>
+          <p style={p}>Få det samme web-UI-et på mobilen når du er borte, for eksempel på <b>skjold-styring.dittdomene.no</b>. Det tar rundt 10 minutter og er gratis med Cloudflare. Du trenger en Cloudflare-konto og et domene som ligger hos Cloudflare.</p>
+          <div class="row gap10"><button onClick={() => setStep(0)} style={pbtn}>Sett opp fjernstyring</button></div>
+        </>}
+        {(st?.log || err) && <pre style="margin:0;white-space:pre-wrap;font-size:11px;color:#c9c9c4;background:#0b0b0c;border-radius:10px;padding:10px;max-height:180px;overflow:auto">{err || st?.log}</pre>}
+      </div>
+    </div>
+  );
+
+  const canNext = step === 2 ? tokenOk : step === 3 ? hostOk : true;
   return (
     <div class="col gap16">
       <div style={box}>
-        <div class="row between" style={{ alignItems: 'center' }}>
-          <span style="font-size:15px;font-weight:600">{on ? 'Fjernstyring er på' : 'Fjernstyring er av'}</span>
-          <span style={`font-size:12px;color:${st?.active ? '#3ecf6e' : '#8b8b86'}`}>{st ? (st.busy ? 'Jobber …' : st.active ? '● Tilkoblet Cloudflare' : '○ Ikke tilkoblet') : '…'}</span>
-        </div>
-        <p style="margin:0;font-size:12px;color:#a9a9a3;line-height:1.5">Denne enheten blir <b>master</b>: nettadressen under går hit, og du får det samme web-UI-et hjemmefra. Lag en tunnel i Cloudflare Zero Trust → Networks → Tunnels med offentlig vertsnavn → <span class="mono">http://localhost:8765</span>, og beskytt adressen med Cloudflare Access (bare din e-post).</p>
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#8b8b86">Nettadresse<input value={host} onInput={(e) => setHost(e.currentTarget.value)} style={fld} autoCapitalize="off" spellcheck={false} /></label>
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#8b8b86">Tunnel-token {st?.has_token ? '(lagret – fyll inn bare for å bytte)' : ''}<input type="password" value={token} onInput={(e) => setToken(e.currentTarget.value)} placeholder="eyJh…" style={fld} autoCapitalize="off" spellcheck={false} /></label>
-        <div class="row gap10">
-          <button disabled={st?.busy} onClick={() => void send(true)} style="height:40px;padding:0 16px;border-radius:10px;border:none;background:#d9a441;color:#0b0b0c;font-weight:600;cursor:pointer">{on ? 'Oppdater' : 'Slå på fjernstyring'}</button>
-          {on && <button disabled={st?.busy} onClick={() => void send(false)} style="height:40px;padding:0 16px;border-radius:10px;border:1px solid #2e2e30;background:transparent;color:#f2f2ee;cursor:pointer">Slå av</button>}
-          {on && st?.host && <a href={'https://' + st.host} target="_blank" rel="noreferrer" style="align-self:center;font-size:13px;color:#d9a441">Åpne {st.host} ›</a>}
-        </div>
-        {(st?.log || err) && <pre style="margin:0;white-space:pre-wrap;font-size:11px;color:#c9c9c4;background:#0b0b0c;border-radius:10px;padding:10px">{err || st?.log}</pre>}
+        <div class="row between" style={{ alignItems: 'center' }}><span class="mono" style="font-size:10.5px;letter-spacing:.12em;color:#8b8b86">TRINN {step + 1} AV {RSTEPS.length}</span><button onClick={() => setStep(-1)} style="border:none;background:none;color:#8b8b86;font-size:12px;cursor:pointer">Avbryt</button></div>
+        <div style="display:flex;gap:4px">{RSTEPS.map((_, i) => <i key={i} style={`flex:1;height:3px;border-radius:2px;background:${i <= step ? '#d9a441' : '#2e2e30'}`} />)}</div>
+        <span style="font-size:18px;font-weight:600">{RSTEPS[step]}</span>
+
+        {step === 0 && <>
+          <p style={p}>Skjold kobler seg ut til Cloudflare med en tunnel. Mobilen din når Skjold via en vanlig nettadresse, uten at du åpner porter i ruteren eller trenger fast IP.</p>
+          {li(1, 'Denne enheten blir hovedenheten. Herfra styrer du også de andre rommene.')}
+          {li(2, 'Adressen beskyttes med Cloudflare Access, så bare e-postadressen din slipper inn.')}
+          {li(3, 'Du kan slå det av her når som helst.')}
+        </>}
+
+        {step === 1 && <>
+          {li(1, <>Åpne <a href="https://one.dash.cloudflare.com" target="_blank" rel="noreferrer" style="color:#f0c46a">Cloudflare Zero Trust ↗</a> og logg inn.</>)}
+          {li(2, <>Gå til <b>Networks → Tunnels</b> og velg <b>Create a tunnel</b>.</>)}
+          {li(3, <>Velg <b>Cloudflared</b>, gi tunnelen navnet {code('skjold')} og trykk <b>Save tunnel</b>.</>)}
+          {li(4, <>Under <b>Install and run a connector</b>: kopier kommandoen som starter med {code('sudo cloudflared service install eyJ…')}. Du trenger ikke kjøre den – Skjold gjør det.</>)}
+        </>}
+
+        {step === 2 && <>
+          <p style={p}>Lim inn hele kommandoen eller bare tokenet. Skjold plukker ut tokenet selv.</p>
+          <textarea value={raw} onInput={(e) => setRaw(e.currentTarget.value)} placeholder={st?.has_token ? 'Et token er lagret allerede – lim inn bare for å bytte' : 'sudo cloudflared service install eyJh…'} rows={3} style={fld + ';height:auto;padding:10px 12px;font-family:var(--mono);resize:vertical'} autoCapitalize="off" spellcheck={false} />
+          <span style={`font-size:12px;color:${raw ? (tokenOk ? '#6fcf7f' : '#ff8a7a') : '#8b8b86'}`}>{raw ? (tokenOk ? `✓ Token funnet (${token.length} tegn)` : 'Fant ikke et token. Det starter med «eyJ» og er langt.') : st?.has_token ? 'Lagret token brukes.' : 'Venter på token.'}</span>
+        </>}
+
+        {step === 3 && <>
+          {li(1, <>I Cloudflare, gå videre til fanen <b>Public Hostname</b> for tunnelen.</>)}
+          {li(2, <>Velg et underdomene, for eksempel {code('skjold-styring')}, og domenet ditt.</>)}
+          {li(3, <>Sett <b>Service</b> til {code('HTTP')} og {code('localhost:8765')}, og lagre.</>)}
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#8b8b86">Adressen du valgte<input value={host} onInput={(e) => setHost(e.currentTarget.value)} style={fld} autoCapitalize="off" spellcheck={false} placeholder="skjold-styring.dittdomene.no" /></label>
+          {!hostOk && host && <span style="font-size:12px;color:#ff8a7a">Skriv bare vertsnavnet, uten https:// og uten skråstrek.</span>}
+        </>}
+
+        {step === 4 && <>
+          <p style={p}>Uten dette kan alle som finner adressen styre Skjold. Det tar to minutter.</p>
+          {li(1, <>I Zero Trust: <b>Access → Applications → Add an application → Self-hosted</b>.</>)}
+          {li(2, <>Bruk samme adresse: {code(host.trim() || 'skjold-styring.dittdomene.no')}.</>)}
+          {li(3, <>Lag en policy <b>Allow</b> med <b>Emails</b> = e-postadressen din. Du får en engangskode på e-post når du logger inn.</>)}
+          <label style="display:flex;gap:10px;align-items:center;font-size:13px;color:#f2f2ee;cursor:pointer"><input type="checkbox" checked={guarded} onChange={(e) => setGuarded(e.currentTarget.checked)} style="width:18px;height:18px;accent-color:#d9a441" />Jeg har beskyttet adressen med Cloudflare Access</label>
+          {!guarded && <span style="font-size:12px;color:#c9b48a">Du kan gå videre uten, men vi anbefaler det sterkt.</span>}
+        </>}
+
+        {step === 5 && <>
+          {!st?.enabled || st?.busy ? <>
+            <p style={p}>Skjold installerer Cloudflare-tunnelen og kobler til. Det kan ta et minutt.</p>
+            <div class="row gap10"><button disabled={st?.busy || !tokenOk || !hostOk} onClick={() => void send(true)} style={pbtn}>{st?.busy ? 'Kobler til …' : 'Slå på fjernstyring'}</button></div>
+          </> : st.active ? <>
+            <p style={p}><b style="color:#6fcf7f">Ferdig!</b> Åpne adressen på mobilen og legg den til på hjemskjermen.</p>
+            <div class="row gap10" style={{ flexWrap: 'wrap' }}><a href={'https://' + st.host} target="_blank" rel="noreferrer" style={pbtn + ';display:inline-flex;align-items:center;text-decoration:none'}>Åpne {st.host} ↗</a><button onClick={() => setStep(-1)} style={sbtn}>Lukk</button></div>
+          </> : <>
+            <p style={p}>Tunnelen er installert, men Cloudflare har ikke svart ennå. Sjekk at tokenet er fra riktig tunnel og at Public Hostname peker til {code('localhost:8765')}.</p>
+            <div class="row gap10"><button onClick={() => void load()} style={sbtn}>Sjekk igjen</button><button onClick={() => setStep(2)} style={sbtn}>Bytt token</button></div>
+          </>}
+          {(st?.log || err) && <pre style="margin:0;white-space:pre-wrap;font-size:11px;color:#c9c9c4;background:#0b0b0c;border-radius:10px;padding:10px;max-height:180px;overflow:auto">{err || st?.log}</pre>}
+        </>}
+
+        {step < 5 && <div class="row between" style={{ marginTop: '4px' }}>
+          <button onClick={() => setStep(step - 1)} style={sbtn}>{step === 0 ? 'Tilbake' : '‹ Forrige'}</button>
+          <button disabled={!canNext} onClick={() => setStep(step + 1)} style={pbtn + (canNext ? '' : ';opacity:.45;cursor:default')}>Neste ›</button>
+        </div>}
       </div>
     </div>
   );
