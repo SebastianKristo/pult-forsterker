@@ -165,7 +165,7 @@ function PP({ playing, size }: { playing: boolean; size: number }) {
 
 // ---------- fullskjermspiller ----------
 const ALL_INPUTS: InputId[] = ['airplay', 'bt', 'aux', 'radio', 'usb', 'spotify'];
-const SRC_NAME: Record<InputId, string> = { airplay: 'AirPlay', bt: 'Blåtann', aux: 'AUX', aux2: 'AUX 2', radio: 'Radio', usb: 'USB-lyd', spotify: 'Spotify', plex: 'Plex' };
+const SRC_NAME: Record<InputId, string> = { airplay: 'AirPlay', bt: 'Blåtann', aux: 'AUX', aux2: 'AUX 2', radio: 'Radio', usb: 'USB-lyd', spotify: 'Spotify', plex: 'Plex', roon: 'Roon' };
 /** Spiller forsterkeren Navidrome-låten appen sendte? */
 function ndNow(s: Status | null) {
   if (lsvc.value !== 'nd' || !s || s.input !== 'radio') return null;

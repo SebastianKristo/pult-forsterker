@@ -19,6 +19,7 @@ API:
   POST /api/input  {"input":"airplay|bt|aux|usb"}
   POST /api/volume {"volume":0-100} | {"delta":±n}
   POST /api/loudness {"on":bool, "level":0-10}
+  GET  /api/backup (?secrets=exclude|encrypt&pass=) · POST /api/restore {backup,mode,dry_run,passphrase} · GET /api/wrapped?year= · GET/POST /api/roon · GET/POST /api/plexamp
   GET  /api/plugins  {plugins[],sleep,on} · POST /api/plugins/{id} {"enabled",…} · GET /api/lyrics · GET /api/history
   GET/POST /api/homekit  Apple Hjem: status, pin og QR (setup_uri), {"enabled"} / {"reset":true}
   GET  /api/update   {current,latest,available,running,result,log} · POST /api/update starter oppdatering (git pull + update.sh)
@@ -316,8 +317,11 @@ if SPOTIFY_ON:
     INPUTS = INPUTS + ["spotify"]
 if PLEX_ON:
     INPUTS = INPUTS + ["plex"]
+ROON_ON = os.environ.get("KI_AMP_ROON", "1" if os.path.isdir("/opt/RoonBridge") else "0") == "1"   # Roon-endepunkt (RoonBridge)
+if ROON_ON:
+    INPUTS = INPUTS + ["roon"]
 CYCLE = ["radio", "airplay", "bt", "usb"] if BOARD == "radio" else INPUTS   # SOURCE-knappen
-LEVEL_SOURCES = ["airplay", "bt", "usb", "radio", "aux", "aux2", "spotify", "plex"]   # eget nivå per kilde (ALSA softvol «KI <kilde>» på kortet Loopback)
+LEVEL_SOURCES = ["airplay", "bt", "usb", "radio", "aux", "aux2", "spotify", "plex", "roon"]   # eget nivå per kilde (ALSA softvol «KI <kilde>» på kortet Loopback)
 state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pairing": False,
          "loudness": True, "loudness_level": 5, "voice": True,
          "presets": [None] * 6, "preset": 0,
@@ -328,7 +332,7 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "last_wireless": "airplay",   # sist brukte trådløse kilde (airplay/bt) – «BT»-knappen på hovedkortet
          "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
          "overtemp": False,     # NTC på kjøleribben over ~75 °C (MCP GPA7) – TPA3116 dempes til den er under ~50 °C
-         "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100, "spotify": 100, "plex": 100},   # nivå per kilde (miks)
+         "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100, "spotify": 100, "plex": 100, "roon": 100},   # nivå per kilde (miks)
          "ui_event": None,      # Node: {"name":"settings","t":…} når ◀◀ holdes 3 s (skjermprosessen viser innstillinger)
          "poweroff": False,     # sammen med rebooting: true = slår av (ikke omstart)
          "boot_s": 45,          # siste målte oppstartstid (s, glidende snitt i /var/lib/skjold/boot_time) – «tilbake om ca. N s»
@@ -1421,6 +1425,9 @@ def read_status():
         st = {"playing": plex["playing"], "paused": plex["paused"], "source": "plex", "cover": plex["cover"],
               "title": plex["title"], "artist": plex["artist"], "album": plex["album"],
               "duration": plex["duration"], "position": plex["position"], "bt_device": st.get("bt_device", "")}
+    elif state["input"] == "roon" or (ROON_ON and _extras_roon["playing"] and not st.get("playing")):
+        st = {"playing": _extras_roon["playing"], "paused": False, "source": "roon", "cover": "", "title": "Roon", "artist": "",
+              "album": "", "duration": 0, "position": 0, "bt_device": st.get("bt_device", "")}
     extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", ""), "logo": _logos.path_for((p or {}).get("icon") or (p or {}).get("image") or "", (p or {}).get("title", "")) if p else ""} for i, p in enumerate(state["presets"])],
              "presets_count": sum(1 for p in state["presets"] if p), "presets_max": PRESETS_MAX, "radio_now": radio_now(),
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected,
@@ -1446,7 +1453,7 @@ def read_status():
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
             "menu": dict(menu) if menu["open"] else None, "hold": s1f_hold() or hold_status(), "settings_menu": smenu_status(),
-            "sky": sky.kort(), "sleep": sleep_left(), "kids": plug_on("kids"), "subwave": subwave_playing(),
+            "sky": sky.kort(), "sleep": sleep_left(), "autostandby": autostandby_left(), "kids": plug_on("kids"), "subwave": subwave_playing(),
             "ui": s1f_ui(), "hw_rev": "F" if S1F else "",
             "night": {"on": bool(state.get("night")), "src": (state.get("night_ev") or {}).get("src", ""),
                       "steps": (state.get("night_ev") or {}).get("steps") or [], "t": (state.get("night_ev") or {}).get("t", 0)}}
@@ -1614,7 +1621,7 @@ def _pause_others(inp):
 
 
 LEVEL_CTL = {"airplay": "KI AirPlay", "bt": "KI Bluetooth", "usb": "KI USB", "radio": "KI Radio", "aux": "KI AUX1", "aux2": "KI AUX2",
-             "spotify": "KI Spotify", "plex": "KI Plex"}
+             "spotify": "KI Spotify", "plex": "KI Plex", "roon": "KI Roon"}
 
 
 def apply_levels():
@@ -3941,6 +3948,13 @@ PLUGIN_DEFS = [
      {"host": "", "port": 1883, "user": "", "password": "", "tls": False, "prefix": "skjold", "discovery": True}),
     ("snapcast", "Snapcast", "skjold", "Verktøy", "Beta: synkron lyd til flere høyttalere med Snapcast. Krever pi/install_snapcast.sh.",
      {"role": "server", "server": ""}),
+    ("roon", "Roon", "skjold", "Musikk", "Skjold blir et Roon-endepunkt (RoonBridge). Lyden går gjennom Skjold med EQ og volum.", {}),
+    ("plexamp", "Plexamp", "skjold", "Musikk", "Plexamp headless på Skjold: velg den som spiller i Plexamp-appen. Krever Plex Pass.", {"name": ""}),
+    ("autostandby", "Automatisk standby", "skjold", "Verktøy", "Går i standby når det ikke har kommet lyd på en stund, og våkner når noe begynner å spille.",
+     {"minutes": 15, "pause_counts": True}),
+    ("backup", "Backup", "skjold", "Verktøy", "Lagrer innstillinger, favoritter, EQ og plugins hver natt til NAS (Radioopptak-delingen) eller på Skjold.",
+     {"nightly": True, "keep": 14, "passphrase": ""}),
+    ("wrapped", "Skjold Wrapped", "skjold", "Verktøy", "Årsoppsummering av det du har hørt: minutter, topp-artister, låter og kanaler.", {}),
     ("roomeq", "Romkorreksjon", "skjold", "Verktøy", "Mål rommet med mikrofonen på telefonen og demp basstopper mellom 40 og 300 Hz.",
      {"filters": [], "tilt": 0.0, "measured": ""}),
 ]
@@ -3991,6 +4005,16 @@ def plug_status(pid, cfg):
         return "Tilkoblet" if _mqtt["ok"] else ("Feil: " + _mqtt["err"] if _mqtt["err"] else "Kobler til …")
     if pid == "record" and any(x["recording"] for x in rec_list()):
         return "Tar opp"
+    if pid == "roon":
+        st = _xmod.roon_status()
+        return "Installerer …" if st["job"]["busy"] else ("Ikke installert" if not st["installed"] else ("Spiller" if _extras_roon["playing"] else ("Klar" if st["service"] == "active" else "Stoppet")))
+    if pid == "plexamp":
+        st = _xmod.plex_status()
+        return "Installerer …" if st["job"]["busy"] else ("Ikke installert" if not st["installed"] else ("Krever innlogging" if not st["signed_in"] else ("Klar" if st["service"] == "active" else "Stoppet")))
+    if pid == "autostandby" and autostandby_left():
+        return "Standby om " + str(max(1, int(round(autostandby_left() / 60)))) + " min"
+    if pid == "backup":
+        return "Siste: " + time.strftime("%d.%m %H:%M", time.localtime(_backup["last"])) if _backup["last"] else "På"
     if pid == "roomeq" and not cfg.get("filters"):
         return "Krever måling"
     if pid == "snapcast":
@@ -4013,7 +4037,7 @@ def plugins_payload():
             cfg = {**cfg, "secret": "••••••"}
         if pid == "listenbrainz" and cfg.get("token"):
             cfg = {**cfg, "token": "••••••" + str(cfg["token"])[-4:]}
-        for sk in ("password", "pin", "smb_password"):
+        for sk in ("password", "pin", "smb_password", "passphrase"):
             if cfg.get(sk):
                 cfg = {**cfg, sk: "••••••"}
         item = {"id": pid, "name": name, "src": src, "cat": cat, "desc": desc, "enabled": cfg["enabled"] and src == "skjold",
@@ -4338,6 +4362,8 @@ def _watch_tick():
                 rn = s.get("radio_now") or {}
                 history_add({"t": int(now), "title": title, "artist": artist, "album": w["track"]["album"], "input": s.get("input"),
                              "source": s.get("source_label") or s.get("input"), "station": rn.get("name") or "", "cover": s.get("cover_url") or rn.get("image") or ""})
+            if wrapped_on():
+                _wrapped.track(now, artist, title, (s.get("radio_now") or {}).get("name") or "")
             if artist and plug_on("listenbrainz"): _bg(_lb_submit, "playing_now", dict(w["track"]))
             if artist and plug_on("lastfm"): _bg(_lastfm_call, "track.updateNowPlaying", dict(w["track"]))
             _bg(_webhook, "track", {"title": title, "artist": artist, "album": w["track"]["album"], "input": s.get("input")})
@@ -5120,6 +5146,191 @@ async def h_subwave(r):
     return web.json_response(out)
 
 
+# ---------- Ekstra plugins: Roon, Plexamp, backup, automatisk standby og Skjold Wrapped (pi/skjold_extras.py) ----------
+import skjold_extras as _xmod   # noqa: E402
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))
+_extras_roon = {"playing": False}
+_auto = _xmod.AutoStandby()
+_wrapped = _xmod.Wrapped(os.path.join(os.path.dirname(STATE_FILE), "wrapped.json"))
+_backup = {"last": 0.0, "msg": "", "day": ""}
+_wr_last = {"t": 0.0}
+
+
+def wrapped_on():
+    return plug_on("wrapped") or plug_on("history")
+
+
+def autostandby_left():
+    c = plug_cfg("autostandby")
+    return _auto.left(int(c.get("minutes") or 0)) if c["enabled"] and state["power"] else 0
+
+
+def _src_tree():
+    for c in (_read_text("/usr/local/share/ki-amp/src") if "_read_text" in globals() else "", os.path.dirname(SRC_DIR), "/opt/skjold-src"):
+        if c and os.path.isfile(os.path.join(c, "pi", "install_plex.sh")):
+            return c
+    return ""
+
+
+def _extras_tick():
+    now = time.time()
+    s = None
+    # Roon: bytt kilde når RoonBridge begynner å spille
+    if ROON_ON:
+        was = _extras_roon["playing"]
+        _extras_roon["playing"] = _xmod.roon_playing()
+        if _extras_roon["playing"] and not was and state["auto_input"] and state["input"] != "roon" and state["power"]:
+            print("Auto-kilde: roon", flush=True)
+            set_input("roon", announce=False)
+        elif _extras_roon["playing"] != was:
+            changed()
+    # automatisk standby
+    c = plug_cfg("autostandby")
+    if c["enabled"]:
+        s = s or read_status()
+        if _auto.tick(now, int(c.get("minutes") or 0), bool(state["power"]), bool(s.get("playing")), bool(s.get("paused")), bool(c.get("pause_counts", True))):
+            print("Automatisk standby: ingen lyd på", c.get("minutes"), "min", flush=True)
+            _auto.idle_s = 0.0
+            set_power(False)
+    else:
+        _auto.tick(now, 0, False, False)
+    # Wrapped: lyttetid
+    if wrapped_on():
+        s = s or read_status()
+        dt = 0.0 if not _wr_last["t"] else min(30.0, now - _wr_last["t"])
+        _wr_last["t"] = now
+        if s.get("playing") and state["power"]:
+            _wrapped.listen(now, dt, s.get("input") or "", NAME)
+    # nattlig backup kl. 03:xx
+    b = plug_cfg("backup")
+    lt = time.localtime(now)
+    day = time.strftime("%Y-%m-%d", lt)
+    if b["enabled"] and b.get("nightly") and lt.tm_hour == 3 and _backup["day"] != day:
+        _backup["day"] = day
+        threading.Thread(target=backup_to_storage, daemon=True).start()
+
+
+def backup_extra_files():
+    return {"homekit.state": os.path.join(HK_DIR, "homekit.state"), "homekit.pin": os.path.join(HK_DIR, "homekit.pin"),
+            "wrapped.json": _wrapped.path, "history.json": HISTORY_FILE}
+
+
+def make_backup(secrets_mode="exclude", passphrase="", include_files=True):
+    dev = {"name": NAME, "id": socket.gethostname(), "product": PRODUCT, "version": VERSION, "board": BOARD}
+    return _xmod.make_backup(state, dev, backup_extra_files() if include_files else None, secrets_mode, passphrase)
+
+
+def backup_to_storage():
+    """Nattlig backup: til SMB-delingen fra Radioopptak (mappen Skjold-backup/<navn>/) hvis den er satt opp, ellers lokalt."""
+    try:
+        b = plug_cfg("backup")
+        pw = b.get("passphrase") or ""
+        data = make_backup("encrypt" if pw else "exclude", pw)
+        rc = plug_cfg("record")
+        if rc.get("smb_share") and rec_smb_ensure():
+            folder = os.path.join(_recmod.SMB_MNT, "Skjold-backup", _recmod.safe_name(NAME, 60)); where = "NAS"
+        else:
+            folder = os.path.join(os.path.dirname(STATE_FILE), "backup"); where = "lokalt"
+        os.makedirs(folder, exist_ok=True)
+        fn = os.path.join(folder, _xmod.backup_filename(NAME))
+        with open(fn + ".tmp", "w") as fh:
+            json.dump(data, fh)
+        os.replace(fn + ".tmp", fn)
+        _xmod.rotate_backups(folder, int(b.get("keep") or 14))
+        _backup.update(last=time.time(), msg=f"Lagret {where}: {os.path.basename(fn)}")
+        print("Backup:", _backup["msg"], flush=True)
+    except Exception as e:
+        _backup["msg"] = f"Feil: {e}"
+        print("Backup feilet:", e, flush=True)
+
+
+async def h_backup_get(r):
+    """GET /api/backup?secrets=exclude|encrypt&pass=… → JSON-fil til nedlasting. ?info=1 gir bare status."""
+    if r.query.get("info") == "1":
+        return web.json_response({"last": _backup["last"], "msg": _backup["msg"], "cfg": plugins_payload()})
+    mode = r.query.get("secrets", "exclude")
+    try:
+        data = make_backup("encrypt" if mode == "encrypt" else "exclude", r.query.get("pass", ""))
+    except ValueError as e:
+        return web.json_response({"error": str(e)}, status=400)
+    fn = _xmod.backup_filename(NAME)
+    return web.json_response(data, headers={"Content-Disposition": f'attachment; filename="{fn}"'})
+
+
+async def h_backup_post(r):
+    """POST /api/backup {"action":"now"} → ta backup til NAS/lokalt nå."""
+    b = await r.json()
+    if (b or {}).get("action") == "now":
+        await asyncio.get_running_loop().run_in_executor(None, backup_to_storage)
+        return web.json_response({"last": _backup["last"], "msg": _backup["msg"]})
+    return web.json_response({"error": "ukjent handling"}, status=400)
+
+
+async def h_restore(r):
+    """POST /api/restore {"backup":{…}, "mode":"settings"|"all", "dry_run":bool, "passphrase":"…"}"""
+    try:
+        b = await r.json()
+        backup = b.get("backup"); mode = "all" if b.get("mode") == "all" else "settings"
+        prev = _xmod.preview_restore(state, backup, mode)
+        if b.get("dry_run", True):
+            return web.json_response({"preview": prev})
+        written = _xmod.apply_restore(state, backup, mode, str(b.get("passphrase") or ""), backup_extra_files())
+    except (ValueError, TypeError, KeyError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+    state["presets"] = norm_presets(state["presets"] if isinstance(state["presets"], list) else [])
+    save_state(); apply_settings(tuple((state.get("settings") or {}).keys())); dsp.update(); apply_volume(); changed()
+    if any(w.startswith("homekit") for w in written):
+        print("Gjenoppretting: HomeKit-paringer skrevet – starter HomeKit på nytt ved neste omstart", flush=True)
+    return web.json_response({"ok": True, "preview": prev, "files": written})
+
+
+async def h_wrapped(r):
+    try:
+        year = int(r.query.get("year") or time.localtime().tm_year)
+    except ValueError:
+        year = time.localtime().tm_year
+    return web.json_response({**_wrapped.summary(year), "years": _wrapped.years(), "enabled": wrapped_on(), "name": NAME})
+
+
+async def h_roon(r):
+    if r.method == "POST":
+        b = await r.json()
+        a = (b or {}).get("action")
+        try:
+            if a == "install":
+                _xmod.run_job("roon", ["sudo", "-n"] + _xmod.roon_install_cmd() if os.geteuid() != 0 else _xmod.roon_install_cmd())
+            elif a in ("start", "stop", "restart"):
+                _xmod.service_ctl(_xmod.ROON_UNIT, a)
+            else:
+                return web.json_response({"error": "ukjent handling"}, status=400)
+        except ValueError as e:
+            return web.json_response({"error": str(e)}, status=400)
+    return web.json_response({**_xmod.roon_status(), "playing": _extras_roon["playing"], "input": "roon" in INPUTS})
+
+
+async def h_plexamp(r):
+    if r.method == "POST":
+        b = await r.json()
+        a = (b or {}).get("action")
+        try:
+            if a == "install":
+                src = _src_tree()
+                if not src:
+                    raise ValueError("fant ikke pi/install_plex.sh (kildetreet) – kjør pi/update.sh én gang")
+                _xmod.run_job("plex", ["bash", os.path.join(src, "pi", "install_plex.sh")], env={"KI_PLEX_SKIP_LOGIN": "1", "KI_AMP_NAME": NAME})
+            elif a == "claim":
+                inp = _xmod.plex_claim_input(b.get("code"), b.get("name") or plug_cfg("plexamp").get("name") or NAME)
+                _xmod.service_ctl(_xmod.PLEX_UNIT, "stop")
+                _xmod.run_job("plex_claim", _xmod.plex_claim_cmd(), stdin_text=inp, timeout=120)
+            elif a in ("start", "stop", "restart"):
+                _xmod.service_ctl(_xmod.PLEX_UNIT, a)
+            else:
+                return web.json_response({"error": "ukjent handling"}, status=400)
+        except ValueError as e:
+            return web.json_response({"error": str(e)}, status=400)
+    return web.json_response({**_xmod.plex_status(), "input": "plex" in INPUTS, "playing": plex["playing"]})
+
+
 def _plugins_thread():
     n = 0
     while True:
@@ -5127,7 +5338,7 @@ def _plugins_thread():
             try: f()
             except Exception as e: print("Plugin:", f.__name__, e, flush=True)
         if n % 5 == 0:
-            for f in (_alarm_tick, _watch_tick, _rec_tick, _mqtt_tick):
+            for f in (_alarm_tick, _watch_tick, _rec_tick, _mqtt_tick, _extras_tick):
                 try: f()
                 except Exception as e: print("Plugin:", f.__name__, e, flush=True)
         n += 1
@@ -5150,12 +5361,22 @@ def plugin_update(pid, body):
         if k not in body:
             continue
         v = body[k]
-        if k in ("token", "secret", "password", "pin", "smb_password") and isinstance(v, str) and v.startswith("••••••"):
+        if k in ("token", "secret", "password", "pin", "smb_password", "passphrase") and isinstance(v, str) and v.startswith("••••••"):
             continue   # maskert verdi sendt tilbake uendret
         if k in ("time", "start", "end") and not hhmm_ok(v):
             raise ValueError(f"{k} må være TT:MM")
         if k == "days":
             v = sorted({int(d) for d in v if 0 <= int(d) <= 6})
+        if k in ("pause_counts", "nightly"):
+            v = bool(v)
+        if k == "keep":
+            v = max(1, min(60, int(v)))
+        if k == "passphrase":
+            v = str(v or "")[:200]
+            if v and len(v) < 6:
+                raise ValueError("passfrasen må være minst 6 tegn")
+        if k == "name":
+            v = str(v or "")[:40]
         if k in ("volume", "max", "minutes", "preset", "fade", "port", "max_mb", "min_len"):
             v = int(v)
         if k == "min_len":
@@ -5956,7 +6177,7 @@ def main():
     app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

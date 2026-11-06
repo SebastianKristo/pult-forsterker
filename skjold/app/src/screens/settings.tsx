@@ -19,6 +19,7 @@ import { SkyPanel, StederPanel } from './hjem';
 import { favs } from '../lib/radio';
 import { PRODUCT_HW, PRODUCT_LABEL } from '../lib/api';
 import { Chevron } from '../components/ui';
+import { BackupPanel } from './extras';
 import { AppUpdater, canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer, type AppRelease } from '../lib/appUpdate';
 
 export function SettingsPage({ wide = false }: { wide?: boolean }) {
@@ -81,6 +82,7 @@ export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) 
   if (cat.id === 'oppdatering') return <><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}</>;
   if (cat.id === 'fjernstyring') return <RemotePanel />;
   if (cat.id === 'steder') return <StederPanel />;
+  const extra = cat.id === 'system' ? <BackupPanel /> : null;
   if (cat.id === 'skjoldhjem') return <SkyPanel />;
   const items = cat.items.filter((it) => it.kind !== 'clocks' && it.kind !== 'update');
   const hasClocks = cat.items.some((it) => it.kind === 'clocks');
@@ -94,6 +96,7 @@ export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) 
       {cat.id === 'tilkobling' && <WifiPanel wide={wide} />}
       {hasClocks && settings.value.clock && <ClockPicker />}
       <div style={CARD}>{items.map((it, i) => <Row key={i} it={it} i={i} />)}</div>
+      {extra}
       {settingsSource.value === 'local' && <div class="banner warn"><span>Forsterkeren svarer ikke på /api/settings – endringer lagres bare på denne enheten.</span></div>}
     </>
   );
