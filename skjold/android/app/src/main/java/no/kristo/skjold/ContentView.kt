@@ -128,6 +128,7 @@ fun AppShell(m: AppModel) {
         }
         if (m.hjemLogin) HjemLoginView(m)
         if (m.showRoomEQ) RoomEQView(m)
+        if (m.showSpeakers) SpeakerView(m)
         if (wide) {
             // dempelag rgba(0,0,0,.45) bak panelet; trykk lukker
             AnimatedVisibility(m.full, enter = fadeIn(tween(450)), exit = fadeOut(tween(300))) {

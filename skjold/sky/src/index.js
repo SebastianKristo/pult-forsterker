@@ -146,6 +146,7 @@ async function bruker(req, env) {
 const stedStub = (env, id) => env.STED.get(env.STED.idFromName(id));
 const kontoStub = (env, epost) => env.KONTO.get(env.KONTO.idFromName(epost));
 const koderStub = (env) => env.KODER.get(env.KODER.idFromName("koder"));
+const hoyttalerStub = (env) => env.HOYTTALERE.get(env.HOYTTALERE.idFromName("hoyttalere"));
 const intern = (stub, sti, data) =>
   stub.fetch("https://do/i" + sti, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data ?? {}) });
 
@@ -210,6 +211,18 @@ export default {
       h.set("x-skjold-enhet", t[1]);
       h.set("x-skjold-noekkel", t[2] + "." + t[3]);
       return stedStub(env, t[2]).fetch(new Request("https://do/i/ws", { headers: h }));
+    }
+
+    // --- Skjold Sertifisert: åpen, anonym database over høyttalerprofiler (se docs/HOYTTALERPROFILER.md) ---
+    if (p.startsWith("/hoyttaler/")) {
+      if (!env.HOYTTALERE) return feil(503, "profildatabasen er ikke satt opp");
+      const ip = req.headers.get("cf-connecting-ip") || "lokal";
+      const h = new Headers({ "content-type": "application/json", "x-ip": await sha256hex("skjold-ip:" + ip) });
+      const auth = /^Bearer\s+(.+)$/i.exec(req.headers.get("authorization") || "");
+      if (auth && env.MOD_TOKEN && likTid(auth[1].trim(), env.MOD_TOKEN)) h.set("x-mod", "1");
+      return hoyttalerStub(env).fetch(new Request("https://do" + p + url.search, {
+        method: req.method, headers: h, body: req.method === "GET" ? undefined : await req.text(),
+      }));
     }
 
     // --- brukere (bak Access) ---
@@ -856,5 +869,164 @@ export class Sted extends DurableObject {
     this.strommer.delete(rid);
     if (sendUnsub) this.send(s.ws, { t: "unsub", rid });
     s.writer.abort("lukket").catch(() => {}); // close() ville ventet på ulest data
+  }
+}
+
+
+// ---------- Hoyttalere: delte høyttalerprofiler («Skjold Sertifisert») ----------
+// Lagrer bare målekurver (1/12-oktav, normalisert), score, gyldig område og en anonym kilde (hash fra enheten).
+// Profilen som vises er medianen av innsendingene; EQ-filtrene regnes ut lokalt på Skjold.
+// Sertifisert: ≥ 3 ulike kilder innen 2 dB RMS (100 Hz–10 kHz) av medianen, og snittscore ≥ 70 (samme regel som
+// pi/skjold_speakerprofiles.py certify()). 3 flagg fra ulike kilder skjuler profilen til en moderator ser på den.
+const H_MAKS_PER_DOGN = 20;
+const H_MAKS_INNS = 50;
+const H_FLAGG_SKJUL = 3;
+
+export function slug(merke, modell) {
+  return (String(merke) + " " + String(modell)).toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
+    .replace(/æ/g, "ae").replace(/ø/g, "o").replace(/å/g, "a").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64);
+}
+
+function interpLog(fra, til) {
+  // fra: [{f,db}] → db-verdier på frekvensene i til
+  const lf = fra.map((c) => Math.log10(c.f));
+  return til.map((t) => {
+    const x = Math.log10(t);
+    if (x <= lf[0]) return fra[0].db;
+    if (x >= lf[lf.length - 1]) return fra[fra.length - 1].db;
+    let i = 1;
+    while (lf[i] < x) i++;
+    const w = (x - lf[i - 1]) / (lf[i] - lf[i - 1]);
+    return fra[i - 1].db * (1 - w) + fra[i].db * w;
+  });
+}
+
+const median = (a) => {
+  const s = [...a].sort((x, y) => x - y);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+
+function normaliser(fr, db) {
+  const idx = fr.map((f, i) => (f >= 300 && f <= 3000 ? i : -1)).filter((i) => i >= 0);
+  const snitt = idx.length ? idx.reduce((a, i) => a + db[i], 0) / idx.length : 0;
+  return db.map((d) => d - snitt);
+}
+
+function rmsAvvik(fr, a, b) {
+  const na = normaliser(fr, a), nb = normaliser(fr, b);
+  let s = 0, n = 0;
+  fr.forEach((f, i) => { if (f >= 100 && f <= 10000) { s += (na[i] - nb[i]) ** 2; n++; } });
+  return n ? Math.sqrt(s / n) : 99;
+}
+
+export function sammenstill(p) {
+  const inns = p.inns || [];
+  if (!inns.length) return null;
+  const fr = inns[0].kurve.map((c) => c.f);
+  const kurver = inns.map((x) => normaliser(fr, x.kurve.map((c) => c.db)));
+  const med = fr.map((_, i) => median(kurver.map((k) => k[i])));
+  const enige = inns.filter((x, j) => rmsAvvik(fr, kurver[j], med) <= 2);
+  const kilder = new Set(enige.map((x) => x.kilde));
+  const score = enige.length ? Math.round(enige.reduce((a, x) => a + (x.score || 0), 0) / enige.length) : 0;
+  const tall = (k) => { const v = inns.map((x) => x[k]).filter((v) => typeof v === "number"); return v.length ? median(v) : null; };
+  return {
+    id: p.id, merke: p.merke, modell: p.modell, antall: inns.length, enige: kilder.size, score,
+    sertifisert: kilder.size >= 3 && score >= 70, skjult: !!p.skjult, flagg: (p.flagg || []).length,
+    kurve: fr.map((f, i) => ({ f, db: Math.round(med[i] * 100) / 100 })),
+    gyldig: [Math.round(median(inns.map((x) => x.gyldig[0]))), Math.round(median(inns.map((x) => x.gyldig[1])))],
+    folsomhet: tall("folsomhet"), impedans: tall("impedans"), oppdatert: Math.max(...inns.map((x) => x.t)),
+  };
+}
+
+function sjekkInnsending(b) {
+  const merke = String(b.merke || "").trim().slice(0, 60), modell = String(b.modell || "").trim().slice(0, 80);
+  if (!merke || !modell) return [null, "merke og modell må oppgis"];
+  const k = Array.isArray(b.kurve) ? b.kurve : [];
+  if (k.length < 30 || k.length > 400) return [null, "kurven må ha 30–400 punkter"];
+  let forrige = 0;
+  for (const c of k) {
+    if (!c || typeof c.f !== "number" || typeof c.db !== "number" || !(c.f > forrige) || c.f > 24000 || Math.abs(c.db) > 60) return [null, "ugyldig kurve"];
+    forrige = c.f;
+  }
+  const kilde = String(b.kilde || "").slice(0, 32);
+  if (!/^[0-9a-f]{8,32}$/.test(kilde)) return [null, "kilde mangler"];
+  const g = Array.isArray(b.gyldig) && b.gyldig.length === 2 ? b.gyldig.map(Number) : [100, 20000];
+  const tall = (v, lo, hi) => (typeof v === "number" && v >= lo && v <= hi ? v : null);
+  return [{ merke, modell, kurve: k.map((c) => ({ f: c.f, db: c.db })), kilde, score: Math.max(0, Math.min(100, Math.round(Number(b.score) || 0))),
+    gyldig: [Math.max(20, g[0] || 20), Math.min(20000, g[1] || 20000)], folsomhet: tall(b.folsomhet, 70, 110), impedans: tall(b.impedans, 1, 32) }, null];
+}
+
+export class Hoyttalere extends DurableObject {
+  async fetch(req) {
+    const url = new URL(req.url);
+    const sti = url.pathname.replace(/^\/hoyttaler/, "");
+    const ip = req.headers.get("x-ip") || "";
+    const mod = req.headers.get("x-mod") === "1";
+    const st = this.ctx.storage;
+
+    if (sti === "/sok" && req.method === "GET") {
+      const q = (url.searchParams.get("q") || "").toLowerCase().trim();
+      const alle = await st.list({ prefix: "p:" });
+      const treff = [];
+      for (const p of alle.values()) {
+        if (p.skjult && !mod) continue;
+        if (q && !(p.merke + " " + p.modell).toLowerCase().includes(q) && !p.id.includes(slug(q, ""))) continue;
+        const s = sammenstill(p);
+        if (s) treff.push({ id: s.id, merke: s.merke, modell: s.modell, antall: s.antall, sertifisert: s.sertifisert, score: s.score, skjult: s.skjult });
+      }
+      treff.sort((a, b) => (b.sertifisert - a.sertifisert) || (b.antall - a.antall) || a.modell.localeCompare(b.modell));
+      return json({ treff: treff.slice(0, 50) }, 200, { "cache-control": "public, max-age=60" });
+    }
+    const m = /^\/profil\/([a-z0-9-]{1,64})$/.exec(sti);
+    if (m && req.method === "GET") {
+      const p = await st.get("p:" + m[1]);
+      if (!p || (p.skjult && !mod)) return feil(404, "ukjent profil");
+      return json(sammenstill(p));
+    }
+    if (sti === "/send" && req.method === "POST") {
+      const [x, f] = sjekkInnsending(await lesJson(req));
+      if (f) return feil(400, f);
+      const dag = new Date().toISOString().slice(0, 10);
+      const rk = "r:" + ip + ":" + dag;
+      const n = (await st.get(rk)) || 0;
+      if (n >= H_MAKS_PER_DOGN) return feil(429, "for mange innsendinger i dag");
+      await st.put(rk, n + 1);
+      const id = slug(x.merke, x.modell);
+      const p = (await st.get("p:" + id)) || { id, merke: x.merke, modell: x.modell, inns: [], flagg: [] };
+      const fr = p.inns.length ? p.inns[0].kurve.map((c) => c.f) : null;
+      const kurve = fr ? interpLog(x.kurve, fr).map((db, i) => ({ f: fr[i], db })) : x.kurve;
+      // én innsending per kilde og modell (ny måling erstatter den gamle)
+      p.inns = p.inns.filter((y) => y.kilde !== x.kilde);
+      p.inns.push({ kurve, kilde: x.kilde, score: x.score, gyldig: x.gyldig, folsomhet: x.folsomhet, impedans: x.impedans, t: Date.now() });
+      p.inns = p.inns.slice(-H_MAKS_INNS);
+      await st.put("p:" + id, p);
+      const s = sammenstill(p);
+      return json({ id, antall: s.antall, sertifisert: s.sertifisert, score: s.score }, 201);
+    }
+    if (sti === "/flagg" && req.method === "POST") {
+      const b = await lesJson(req);
+      const p = await st.get("p:" + String(b.id || ""));
+      if (!p) return feil(404, "ukjent profil");
+      p.flagg = (p.flagg || []).filter((y) => y.ip !== ip);
+      p.flagg.push({ ip, grunn: String(b.grunn || "").slice(0, 200), t: Date.now() });
+      if (p.flagg.length >= H_FLAGG_SKJUL) p.skjult = true;
+      await st.put("p:" + p.id, p);
+      return json({ ok: true, skjult: !!p.skjult });
+    }
+    if (sti === "/moder" && req.method === "POST") {
+      if (!mod) return feil(403, "krever moderatornøkkel");
+      const b = await lesJson(req);
+      const p = await st.get("p:" + String(b.id || ""));
+      if (!p) return feil(404, "ukjent profil");
+      if (b.handling === "slett") { await st.delete("p:" + p.id); return json({ ok: true, slettet: true }); }
+      if (b.handling === "vis") { p.skjult = false; p.flagg = []; }
+      else if (b.handling === "skjul") p.skjult = true;
+      else if (b.handling === "fjern_kilde") p.inns = p.inns.filter((y) => y.kilde !== b.kilde);
+      else return feil(400, "ukjent handling");
+      await st.put("p:" + p.id, p);
+      return json({ ok: true, profil: sammenstill(p) });
+    }
+    return feil(404, "finnes ikke");
   }
 }

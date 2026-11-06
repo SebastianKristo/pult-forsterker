@@ -9,6 +9,7 @@ import { Toggle } from '../components/ui';
 import { AutoStandbyPanel, BackupPanel, PlexampPanel, RoonPanel, WrappedPage } from './extras';
 import { PodsumPanel } from './ai';
 import { DiscoverPanel, PresencePanel, RadioListPanel, StorePage, WakeLightPanel } from './extras2';
+import { SpeakerCard } from './speakers';
 import { averageCurves, logSweep, recordMic, responseFromRecording, suggest, type Curve, type Peq } from '../lib/roomeq';
 
 const A = '#d9a441';
@@ -38,6 +39,7 @@ const ICON: Record<string, { bg: string; fg: string; st: string; fi?: string }> 
   kids: { bg: '#2a2112', fg: '#f0c46a', st: 'M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM5 21v-1a7 7 0 0 1 14 0v1M10 7h.01M14 7h.01' },
   record: { bg: '#2a1412', fg: '#ff6a5a', st: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z', fi: 'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z' },
   snapcast: { bg: '#14233a', fg: '#7fb2ff', st: 'M4 4h7v16H4zM13 4h7v16h-7zM7.5 13.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM16.5 13.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.5 8h.01M16.5 8h.01' },
+  speakers: { bg: '#2a2112', fg: '#f0c46a', st: 'M7 3h10v18H7zM12 7.5h.01M12 11a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z' },
   roomeq: { bg: '#16201a', fg: '#9be0a8', st: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3' },
   qobuz: { bg: '#000000', fg: '#ffffff', st: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM14 14l5 5' },
   rp: { bg: '#1d2b1f', fg: '#e8d9a8', st: 'M4 12a8 8 0 0 1 16 0M7 12a5 5 0 0 1 10 0M12 12v8M9 20h6' },
@@ -178,6 +180,7 @@ function Detail({ p }: { p: Plugin }) {
     case 'presence': body = <PresencePanel d={d} up={up} saveBtn={saveBtn} />; break;
     case 'discover': body = <DiscoverPanel />; break;
     case 'podsum': body = <PodsumPanel />; break;
+    case 'speakers': body = <SpeakerCard />; break;
     case 'roomeq': body = <RoomEqPanel enabled={p.enabled} filters={(p.cfg.filters as Peq[]) || []} />; break;
   }
   return (

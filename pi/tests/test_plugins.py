@@ -140,6 +140,24 @@ class TestPluginInnstillinger(unittest.TestCase):
         import yaml
         yaml.safe_load(cfg)
 
+    def test_hoyttalerprofil_dsp_og_romkorreksjon(self):
+        import yaml
+        d.state["settings"] = {}
+        d.dsp.update = lambda: None
+        d.plugin_update("speakers", {"enabled": True, "target": "tull", "profile": {
+            "brand": "Dali", "model": "Oberon 3", "filters": [{"f": 150, "q": 2, "g": -4}, {"f": 3000, "q": 2, "g": 8}, {"x": 1}]}})
+        c = d.plug_cfg("speakers")
+        self.assertEqual(c["target"], "flat")
+        self.assertEqual([f["g"] for f in c["profile"]["filters"]], [-4.0, 3.0])
+        self.assertEqual(d.speaker_filters(), [(150.0, 2.0, -4.0), (3000.0, 2.0, 3.0)])
+        cfg = yaml.safe_load(d.dsp_config())
+        self.assertIn("sp1", cfg["filters"]); self.assertEqual(cfg["filters"]["pre"]["parameters"]["gain"], -3.0)
+        d.plugin_update("roomeq", {"enabled": True, "filters": [{"f": 55, "q": 5, "g": -6}]})
+        cfg = yaml.safe_load(d.dsp_config())
+        names = cfg["pipeline"][0]["names"]
+        self.assertEqual([n for n in names if n.startswith("sp")], ["sp0"])   # bassen eies av romkorreksjonen
+        self.assertEqual(cfg["filters"]["sp0"]["parameters"]["freq"], 3000.0)
+
     def test_xtc_sync_sub_dsp(self):
         import tempfile, yaml
         from skjold_sync import dspblocks

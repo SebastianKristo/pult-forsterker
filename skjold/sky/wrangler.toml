@@ -33,14 +33,23 @@ class_name = "Konto"
 name = "KODER"
 class_name = "Koder"
 
+[[durable_objects.bindings]]
+name = "HOYTTALERE"
+class_name = "Hoyttalere"
+
 # SQLite-baserte Durable Objects (gratisplanen)
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Sted", "Konto", "Koder"]
 
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Hoyttalere"]
+
 # Variabler settes i dashbordet (Workers & Pages → skjold-hjem → Settings → Variables and Secrets) eller med
 # «npx wrangler secret put NAVN», og beholdes ved deploy (keep_vars):
 #   ACCESS_TEAM_DOMAIN – Access-teamet, f.eks. «smarthjem» eller «smarthjem.cloudflareaccess.com»
+#   MOD_TOKEN          – (valgfri) moderatornøkkel for /hoyttaler/moder (Bearer)
 #   ACCESS_AUD         – «Application Audience (AUD) Tag» fra Access-applikasjonen
 # Når begge er satt verifiseres JWT-en fra Access (Cf-Access-Jwt-Assertion). Uten dem avvises alle /api/hjem-kall,
 # med mindre DEV_INSECURE = "1" (bare lokalt: «npx wrangler dev --var DEV_INSECURE:1», godtar headeren X-Skjold-User).
