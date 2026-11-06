@@ -50,6 +50,9 @@
       },
       "hp_automute": {
         "name": "Mute speakers with headphones"
+      },
+      "night": {
+        "name": "Night mode"
       }
     },
     "sensor": {
@@ -157,6 +160,20 @@
           "press": "On press",
           "always": "Always",
           "off": "Off"
+        }
+      }
+    },
+    "event": {
+      "power_button": {
+        "name": "Power button",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "single_press": "Single press",
+              "double_press": "Double press",
+              "long_press": "Long press"
+            }
+          }
         }
       }
     }

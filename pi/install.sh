@@ -18,6 +18,9 @@ sudo mkdir -p /usr/local/share/ki-amp && (cd "$SRC/.." && pwd) | sudo tee /usr/l
 # KI_AMP_PLEX=1         : med Plex-spiller (Plexamp headless, krever Plex Pass) – se pi/install_plex.sh. KI_PLEX_PLAYER=caldera = Caldera Music
 # KI_AMP_SKJOLD_OS=0    : S1 (main) beholder det gamle skjermprogrammet i stedet for Skjold OS (skjold/os)
 BOARD_SEL="${KI_AMP_BOARD:-}"; [ "$BOARD_SEL" = node ] && KI_AMP_OUT=headphones
+# KI_AMP_BOARD=s1f      : Skjold S1 rev F – som Kit (PCM5102 + TPA3116 bak relé, 2 × UCA202) + knapper/volumhjul/LED (pi/config/s1f_pins.yaml),
+#                         USB-gadget for PC 1/2 og 4,58″ HDMI-skjerm. SPI er AV (GPIO 9–11 er volumhjulet).
+S1F=0; [ "$BOARD_SEL" = s1f ] && S1F=1 && BOARD_SEL=kit
 OUT="${KI_AMP_OUT:-dac}"; SPOTIFY="${KI_AMP_SPOTIFY:-1}"; NAME_SEL="${KI_AMP_NAME:-}"; SKJOLD_OS="${KI_AMP_SKJOLD_OS:-1}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
 CORE="${KI_AMP_CORE:-0}"; [ "$CORE" = 1 ] && BOARD_SEL=node && KI_AMP_OUT=headphones && OUT=headphones && PB_CORE_NAME="Skjold Core"
 [ "$BOARD_SEL" = node ] && [ -z "$NAME_SEL" ] && NAME_SEL="${PB_CORE_NAME:-Skjold Node}"   # Node: standardnavn i AirPlay/Spotify/Blåtann
@@ -42,6 +45,10 @@ if [ "$BOARD_SEL" = node ]; then
   # daemonen (system-python) leser potmeteret via ADS1115 med smbus2
   sudo apt-get -y install --no-install-recommends python3-smbus2 i2c-tools >/dev/null || true
   LINES='enable_uart=0'
+elif [ "$S1F" = 1 ]; then
+  sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
+  sudo sed -i -E '/^dtparam=spi=on$/d; /^dtoverlay=spi0-1cs/d' "$CFG"   # GPIO 9/10/11 = volumhjulet
+  LINES='dtoverlay=hifiberry-dac dtoverlay=dwc2,dr_mode=peripheral enable_uart=0 hdmi_force_hotplug:0=1'
 elif [ "$OUT" = headphones ]; then
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
   sudo sed -i 's/^dtoverlay=hifiberry-dac/#dtoverlay=hifiberry-dac/' "$CFG"
@@ -165,8 +172,13 @@ if [ "$BOARD_SEL" = main ]; then sudo systemctl enable ki-aux1 ki-aux2; fi   # A
 if [ "$BOARD_SEL" = kit ]; then
   # Kit: AUX 1 og AUX 2 fra hvert sitt USB-lydkort (UCA202/PCM2902 heter «CODEC» og «CODEC_1» i ALSA).
   # Bytter de plass, endre KI_AMP_AUX1_DEV/KI_AMP_AUX2_DEV i /etc/ki-amp.env (f.eks. plughw:CODEC_1) og kjør bash pi/install.sh på nytt.
-  A1=$(sudo sed -n 's/^KI_AMP_AUX1_DEV=//p' /etc/ki-amp.env 2>/dev/null | tail -n1); A1=${A1:-plughw:CODEC}
-  A2=$(sudo sed -n 's/^KI_AMP_AUX2_DEV=//p' /etc/ki-amp.env 2>/dev/null | tail -n1); A2=${A2:-plughw:CODEC_1}
+  A1=$(sudo sed -n 's/^KI_AMP_AUX1_DEV=//p' /etc/ki-amp.env 2>/dev/null | tail -n1)
+  A2=$(sudo sed -n 's/^KI_AMP_AUX2_DEV=//p' /etc/ki-amp.env 2>/dev/null | tail -n1)
+  if [ "$S1F" = 1 ]; then   # S1 rev F: faste navn fra udev (port → UCA_AUX1/2), UCA202 #1 er også hodetelefonutgangen
+    bash "$SRC/tools/s1f_uca202_udev.sh" || echo "  UCA202: koble til begge og kjør sudo bash pi/tools/s1f_uca202_udev.sh"
+    A1=${A1:-plughw:UCA_AUX1}; A2=${A2:-plughw:UCA_AUX2}
+  fi
+  A1=${A1:-plughw:CODEC}; A2=${A2:-plughw:CODEC_1}
   for n in 1 2; do
     D=$([ $n = 1 ] && echo "$A1" || echo "$A2")
     sudo mkdir -p /etc/systemd/system/ki-aux$n.service.d
@@ -174,6 +186,7 @@ if [ "$BOARD_SEL" = kit ]; then
       | sudo tee /etc/systemd/system/ki-aux$n.service.d/kit.conf >/dev/null
   done
   sudo systemctl daemon-reload; sudo systemctl enable ki-aux1 ki-aux2
+  [ "$S1F" = 1 ] && sudo systemctl enable ki-usb-audio   # S1 rev F: PC 1/PC 2 via USB-gadget + UGREEN-switch
 else
 sudo systemctl enable ki-usb-audio   # Kit: USB-C er strøminngangen – ingen USB-gadget
 fi
@@ -196,6 +209,8 @@ fi
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
 sudo install -m 644 "$SRC/skjold_homekit.py" /usr/local/bin/skjold_homekit.py   # Apple Hjem (HomeKit)
+sudo install -m 644 "$SRC/skjold_s1f.py" /usr/local/bin/skjold_s1f.py   # Skjold S1 rev F: knapper, LED, nattmodus
+sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pins.yaml" /usr/local/share/ki-amp/s1f_pins.yaml
 sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || echo "HAP-python ble ikke installert – Apple Hjem er av"
 bash "$SRC/install_webapp.sh"   # web-app: lokal dist > siste skjold-web-*.zip > pi/webapp
 sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service
@@ -211,6 +226,11 @@ elif [ "$BOARD_SEL" = kit ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=kit/' -e 's/^KI_AMP_LEVELS=.*/KI_AMP_LEVELS=1/' -e '/^KI_AMP_DISPLAY=/d' -e '/^RELAY_ACTIVE_LOW=/d' /etc/ki-amp.env
   grep -q '^KI_AMP_LEVELS=' /etc/ki-amp.env || echo "KI_AMP_LEVELS=1" | sudo tee -a /etc/ki-amp.env >/dev/null
   printf 'KI_AMP_DISPLAY=none\nRELAY_ACTIVE_LOW=0\n' | sudo tee -a /etc/ki-amp.env >/dev/null   # ingen skjerm (bare metadata), relé i H-modus
+  if [ "$S1F" = 1 ]; then   # skjermen (960 × 320 HDMI) tegnes av skjold-ui, ikke oled_display
+    sudo sed -i 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=s1f/; /^KI_AMP_PRODUCT=/d' /etc/ki-amp.env
+    echo "KI_AMP_PRODUCT=s1" | sudo tee -a /etc/ki-amp.env >/dev/null
+    grep -q '^KI_AMP_HP_DEV=' /etc/ki-amp.env || echo "KI_AMP_HP_DEV=plughw:UCA_AUX1" | sudo tee -a /etc/ki-amp.env >/dev/null
+  fi
 elif [ "$BOARD_SEL" = main ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=main/' -e "s/^KI_AMP_DISPLAY=.*/KI_AMP_DISPLAY=$DISPLAY_SEL/" -e "s/^KI_AMP_TFT=.*/KI_AMP_TFT=$TFT_SEL/" -e 's/^KI_AMP_LEVELS=.*/KI_AMP_LEVELS=1/' /etc/ki-amp.env
   echo "== TESTMODUS: lyd ut på 3,5 mm-kontakten. Sett volum på jacken: amixer -c Headphones sset PCM 100%"

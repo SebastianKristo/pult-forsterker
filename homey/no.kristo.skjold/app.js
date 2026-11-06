@@ -13,6 +13,10 @@ class KiPultforsterkerApp extends Homey.App {
     this.homey.flow.getConditionCard('ki_input_is')
       .registerRunListener(async ({ device, input }) => device.getCapabilityValue('ki_input') === input);
 
+    this.homey.flow.getDeviceTriggerCard('ki_night_changed')
+      .registerRunListener(async ({ state }, { on }) => state === 'any' || (state === 'on') === on);
+    this.homey.flow.getActionCard('ki_start_night')
+      .registerRunListener(async ({ device }) => device.request('POST', '/night', { on: true, src: 'Homey' }));
     this.homey.flow.getActionCard('ki_toggle')
       .registerRunListener(async ({ device }) => device.togglePower());
     this.homey.flow.getActionCard('ki_play_url')

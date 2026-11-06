@@ -16,6 +16,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEnt
     ents = [KiAmpPowerSwitch(c), KiAmpLoudnessSwitch(c), KiAmpVoiceSwitch(c), KiAmpAutoInputSwitch(c), KiAmpMixSwitch(c)]
     if product(c.data) == "s1":   # ingen hodetelefonjack på Node
         ents.append(KiAmpHpAutomuteSwitch(c))
+    if "night" in (c.data or {}):   # Skjold S1 rev F og nyere fastvare: nattmodus
+        ents.append(KiAmpNightSwitch(c))
     add(ents)
 
 
@@ -131,3 +133,25 @@ class KiAmpHpAutomuteSwitch(KiAmpEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_hp_automute(False))
+
+
+class KiAmpNightSwitch(KiAmpEntity, SwitchEntity):
+    """Nattmodus: dobbelttrykk på power på S1, eller herfra. Skjermen på S1 viser «Satt fra Home Assistant»."""
+    _attr_translation_key = "night"
+    _attr_icon = "mdi:weather-night"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "night")
+
+    @property
+    def is_on(self) -> bool:
+        n = self.coordinator.data.get("night")
+        return bool(n.get("on")) if isinstance(n, dict) else bool(n)
+
+    async def async_turn_on(self, **kwargs) -> None:
+        await self.coordinator.api.set_night(True)
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        await self.coordinator.api.set_night(False)
+        await self.coordinator.async_request_refresh()

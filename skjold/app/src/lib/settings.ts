@@ -20,6 +20,7 @@ export interface Settings {
   auto: number; wake: boolean; spEn: boolean; upnpEn: boolean; castEn: boolean; ytmEn: boolean; ndEn: boolean; ytmUser: string; ytmCookie: string; ndUrl: string; ndUser: string; ndPass: string; plexEn: boolean; plexUrl: string; plexToken: string;
   /** Skjold Touch-skjermen: rolle, lydutgang, standby etter, standby-visning, nattmodus. */
   tRole: number; tOut: number; tStandby: number; tIdle: number; tNight: boolean;
+  dblPower: number; nightLight: boolean;
   updChannel: number; updAuto: boolean;
   setupDone: boolean;
   eq: EqProfiles;
@@ -62,6 +63,7 @@ export const DEF: Settings = {
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
   hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '',
   tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false,
+  dblPower: 0, nightLight: true,
   updChannel: 0, updAuto: true, setupDone: false,
   eq: defaultEq()
 };
@@ -72,8 +74,8 @@ export const fmt = {
 } as const;
 
 export type NumKey = 'bass' | 'treb' | 'bal' | 'lvlAux' | 'lvlUsb';
-export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle';
-export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn' | 'castEn' | 'ytmEn' | 'ndEn' | 'tNight';
+export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle' | 'dblPower';
+export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn' | 'castEn' | 'ytmEn' | 'ndEn' | 'tNight' | 'nightLight';
 /** Lagres bare på denne telefonen (innlogginger til musikktjenester sendes ikke til forsterkeren). */
 export type LocalKey = 'ytmUser' | 'ytmCookie' | 'ndUrl' | 'ndUser' | 'ndPass';
 export type StrKey = 'nAux1' | 'nAux2' | 'nUsb1' | 'nUsb2' | 'nameCustom';
@@ -172,7 +174,9 @@ export const CATS: Category[] = [
     { kind: 'range', k: 'ledLevel', n: 'LED-lysstyrke', mn: 0, mx: 100, step: 5, unit: ' %', hint: 'Lysstyrken på LED-ringene rundt knappene' },
     { kind: 'ledMode', k: 'ledMode', n: 'LED-modus', hint: 'Ved trykk: ringen lyser når du trykker og toner ut. Alltid: aktiv kilde lyser.' }] },
   { id: 'strom', n: 'Strøm', sub: 'Standby og påslag', items: [
-    opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay eller Blåtann vekker forsterkeren')] },
+    opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay eller Blåtann vekker forsterkeren'),
+    opt('dblPower', 'Dobbelttrykk power', ['Nattmodus', 'Av'], 'Starter nattmodus og automasjonene dine i Home Assistant eller Homey'),
+    bool('nightLight', 'Nattlys i nattmodus', 'Svak klokke i standby så lenge nattmodus er på')] },
   { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub, backup og gjenoppretting', items: [{ kind: 'update', n: 'Oppdatering' }] },
   { id: 'fjernstyring', n: 'Fjernstyring', sub: 'Styr Skjold hjemmefra via Cloudflare', items: [{ kind: 'update', n: 'Fjernstyring' }] },
   { id: 'steder', n: 'Steder', sub: 'Skjold-hjem: Hjem, Hytta … hovedenhet og reserve', items: [{ kind: 'update', n: 'Steder' }] },
@@ -270,6 +274,7 @@ const AUX_USB = new Set(['nAux1', 'nAux2', 'nUsb1', 'nUsb2', 'usbPc', 'lvlAux', 
 const HEADPHONES = new Set(['hpAutomute', 'headphones', 'hpOwn']);
 const BUTTONS = new Set(['hold', 'ledLevel']);
 const NODE_ONLY = new Set(['ledMode']);
+const S1_ONLY = new Set(['dblPower', 'nightLight']);
 function itemKey(it: Item): string {
   if ('k' in it) return it.k;
   if (it.kind === 'info') return it.key;
@@ -289,6 +294,7 @@ export function catsFor(product: 's1' | 'node' | 'core' | 'touch', inputs: strin
       if (HEADPHONES.has(k)) return product === 's1';
       if (BUTTONS.has(k)) return product !== 'core';
       if (NODE_ONLY.has(k)) return product === 'node';
+      if (S1_ONLY.has(k)) return product === 's1';
       return true;
     })
   }));
