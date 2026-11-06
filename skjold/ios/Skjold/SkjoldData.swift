@@ -82,7 +82,10 @@ enum SK {
             .num("lvlAux", "Nivå AUX", -6, 6, .dB, "Juster så AUX er like høy som strømming", dev: ["s1"]),
             .num("lvlUsb", "Nivå USB", -6, 6, .dB, dev: ["s1"]),
             .act("Test høyttalerne", id: "testSpk", label: "Spill av", safe: true, "Spiller en kort tone i venstre og så i høyre høyttaler, så du kan sjekke at de er koblet riktig"),
-            .act("Romkorreksjon", id: "roomeq", label: "Mål rommet", safe: true, "Mål bassen i rommet med mikrofonen på telefonen, og la Skjold dempe toppene mellom 40 og 300 Hz")]),
+            .act("Romkorreksjon", id: "roomeq", label: "Mål rommet", safe: true, "Mål bassen i rommet med mikrofonen på telefonen, og la Skjold dempe toppene mellom 40 og 300 Hz"),
+            .act("Platesamling: ta opp side", id: "vinylSide", label: "Start", safe: true, "Spill platen på AUX. Skjold tar opp siden, deler den i spor og gjenkjenner albumet. Trykk igjen for side B."),
+            .act("Platesamling: side ferdig", id: "vinylStop", label: "Ferdig", safe: true),
+            .act("Platesamling: lagre platen", id: "vinylSave", label: "Lagre", safe: true, "FLAC med omslag på NAS-en fra Radioopptak. Rett titler i web-UI-et under Integrasjoner → Platesamling.")]),
         SettingCategory(id: "touch", n: "Skjold Touch", sub: "Rolle, skjerm og standby", dev: ["touch"], items: [
             .opt("tRole", "Rolle", ["Spiller og fjernkontroll", "Bare spiller", "Bare fjernkontroll"], "Som spiller har den egen lydutgang (RCA og 3,5 mm). Som fjernkontroll styrer den alle Skjold-enhetene i huset."),
             .opt("tOut", "Lydutgang", ["RCA", "3,5 mm", "Begge"], "PCM5122 HIFI HAT"),

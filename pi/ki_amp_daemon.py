@@ -6333,7 +6333,7 @@ def _vinyl_meta(m):
 
 
 vinyl = _rcmod.VinylWatcher({"active_input": lambda: state["input"] if state.get("power") else "",
-                             "enabled_for": lambda i: bool(feat_cfg()["recognize"].get("vinyl_" + i)) and bool(feat_cfg()["recognize"].get("acoustid_key") or feat_cfg()["recognize"].get("audd_token")),
+                             "enabled_for": lambda i: (globals().get("vinyl_rec") is None or vinyl_rec.state != "recording") and bool(feat_cfg()["recognize"].get("vinyl_" + i)) and bool(feat_cfg()["recognize"].get("acoustid_key") or feat_cfg()["recognize"].get("audd_token")),
                              "cfg": lambda: feat_cfg()["recognize"], "device": _vinyl_dev, "set_meta": _vinyl_meta,
                              "log_track": lambda e: history_add({**e, "t": time.time(), "input": state["input"]})})
 threading.Thread(target=vinyl.run, daemon=True).start()
@@ -6487,6 +6487,82 @@ FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h
                ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
 
 
+
+# ---------- Platesamling: vinyl til FLAC med sporoppdeling (pi/skjold_vinyl.py) ----------
+import skjold_vinyl as _vymod   # noqa: E402
+vinyl_archive = _vymod.Archive(os.path.join(REC_DIR, "vinyl.json"))
+
+
+def _vinyl_raw():
+    return state.setdefault("settings", {}).setdefault("plugins", {}).setdefault("record", {})
+
+
+def _vinyl_cfg():
+    c = _vinyl_raw()
+    return {k: c.get("vinyl_" + k, v) for k, v in _vymod.DEFAULTS.items()}
+
+
+def _vinyl_rec_dev():
+    d = _vinyl_cfg().get("device") or ""
+    return d or _vinyl_dev(state.get("input") if state.get("input") in ("aux", "aux2", "usb") else "aux")
+
+
+def _vinyl_root():
+    d, where = rec_song_dir()
+    if where == "smb":
+        return d, "smb"
+    return os.path.join(REC_DIR, "Platesamling"), "lokalt"
+
+
+def _vinyl_identify(path):
+    return _rcmod.recognize(feat_cfg()["recognize"], rec=lambda *_a: path)
+
+
+vinyl_rec = _vymod.Session({"device": _vinyl_rec_dev, "root": _vinyl_root, "identify": _vinyl_identify,
+                            "release": _rcmod.mb_release_tracks, "tmp": os.path.join(REC_DIR, ".vinyl"),
+                            "cfg": _vinyl_cfg, "on_change": changed}, vinyl_archive)
+
+
+async def h_vinyl(r):
+    act = r.match_info.get("act", "")
+    loop = asyncio.get_running_loop()
+    try:
+        if r.method == "GET":
+            if act == "archive":
+                return web.json_response({"albums": vinyl_archive.load()})
+            return web.json_response({**vinyl_rec.status(), "cfg": _vinyl_cfg()})
+        if r.method == "DELETE":
+            return web.json_response({"albums": vinyl_archive.delete(act)})
+        b = await _json(r)
+        if act == "start":
+            return web.json_response(await loop.run_in_executor(None, lambda: vinyl_rec.start_side(str(b.get("side") or ""))))
+        if act == "stop":
+            return web.json_response(await loop.run_in_executor(None, vinyl_rec.stop_side))
+        if act == "edit":
+            return web.json_response(vinyl_rec.edit(b))
+        if act == "save":
+            return web.json_response(vinyl_rec.finish())
+        if act == "cancel":
+            return web.json_response(vinyl_rec.cancel())
+        if act == "archive":
+            root = _vinyl_root()[0]
+            return web.json_response(await loop.run_in_executor(None, lambda: vinyl_archive.edit(str(b.get("id", "")), b, root)))
+        if act == "settings":
+            c = _vinyl_raw()
+            for k, d in _vymod.DEFAULTS.items():
+                if k in b:
+                    c["vinyl_" + k] = type(d)(b[k])
+            save_state()
+            return web.json_response(_vinyl_cfg())
+        return web.json_response({"error": "ukjent handling"}, status=404)
+    except KeyError as e:
+        return web.json_response({"error": str(e).strip("'")}, status=404)
+    except (ValueError, RuntimeError) as e:
+        return web.json_response({"error": str(e)}, status=409)
+
+
+FEAT_ROUTES += [("GET", "/api/vinyl", h_vinyl), ("GET", "/api/vinyl/{act}", h_vinyl), ("POST", "/api/vinyl/{act}", h_vinyl),
+                ("DELETE", "/api/vinyl/{act}", h_vinyl)]
 
 # ---------- Skjold Kassett: NFC-kassetter (pi/skjold_nfc.py, esphome/skjold-kassett.yaml) ----------
 import skjold_nfc as _nfcmod   # noqa: E402

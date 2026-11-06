@@ -148,7 +148,10 @@ object SK {
             S.num("lvlAux", "Nivå AUX", -6, 6, NumFormat.DB, "Juster så AUX er like høy som strømming", dev = listOf("s1")),
             S.num("lvlUsb", "Nivå USB", -6, 6, NumFormat.DB, dev = listOf("s1")),
             S.act("Test høyttalerne", "testSpk", "Spill av", true, "Spiller en kort tone i venstre og så i høyre høyttaler, så du kan sjekke at de er koblet riktig"),
-            S.act("Romkorreksjon", "roomeq", "Mål rommet", true, "Mål bassen i rommet med mikrofonen på telefonen, og la Skjold dempe toppene mellom 40 og 300 Hz"))),
+            S.act("Romkorreksjon", "roomeq", "Mål rommet", true, "Mål bassen i rommet med mikrofonen på telefonen, og la Skjold dempe toppene mellom 40 og 300 Hz"),
+            S.act("Platesamling: ta opp side", "vinylSide", "Start", true, "Spill platen på AUX. Skjold tar opp siden, deler den i spor og gjenkjenner albumet. Trykk igjen for side B."),
+            S.act("Platesamling: side ferdig", "vinylStop", "Ferdig", true),
+            S.act("Platesamling: lagre platen", "vinylSave", "Lagre", true, "FLAC med omslag på NAS-en fra Radioopptak. Rett titler i web-UI-et under Integrasjoner → Platesamling."))),
         SettingCategory("touch", "Skjold Touch", "Rolle, skjerm og standby", dev = listOf("touch"), items = listOf(
             S.opt("tRole", "Rolle", listOf("Spiller og fjernkontroll", "Bare spiller", "Bare fjernkontroll"), "Som spiller har den egen lydutgang (RCA og 3,5 mm). Som fjernkontroll styrer den alle Skjold-enhetene i huset."),
             S.opt("tOut", "Lydutgang", listOf("RCA", "3,5 mm", "Begge"), "PCM5122 HIFI HAT"),
