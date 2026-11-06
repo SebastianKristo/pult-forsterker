@@ -1,0 +1,121 @@
+# Skjold Kassett – NFC-kassettspiller (ESP32-S3 Zero + PN532 i I²C + WS2812-lys + summer)
+# Flash: https://web.esphome.io (første gang via USB-C), deretter OTA fra ESPHome i Home Assistant.
+# Se kabinett/kassett/LES_MEG.md for kobling.
+substitutions:
+  name: skjold-kassett
+  friendly_name: Skjold Kassett
+  # Adressen til Skjold-enheten som skal spille (mDNS-navn eller IP). ESPHome kan ikke bla i mDNS-tjenester,
+  # så bruk <navn>.local som Skjold annonserer (_kipultamp._tcp → vertsnavnet), f.eks. skjold-stue.local.
+  skjold_host: skjold.local
+  skjold_port: "8765"
+  pause_on_remove: "true"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - light.turn_on: { id: ring, effect: "Pust", brightness: 30% }
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework: { type: esp-idf }
+
+logger:
+api:
+  encryption:
+    key: !secret skjold_kassett_api_key
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: { ssid: "Skjold Kassett" }
+captive_portal:
+
+http_request:
+  verify_ssl: false
+  timeout: 4s
+
+i2c:
+  sda: GPIO5
+  scl: GPIO6
+  scan: true
+  frequency: 400kHz
+
+pn532_i2c:
+  id: nfc
+  update_interval: 400ms
+  on_tag:
+    then:
+      - logger.log: { format: "Kassett inn: %s", args: ["x.c_str()"] }
+      - homeassistant.event:
+          event: esphome.skjold_kassett
+          data: { uid: !lambda "return x;", state: "in" }
+      - http_request.post:
+          url: http://${skjold_host}:${skjold_port}/api/nfc/scan
+          request_headers: { Content-Type: application/json }
+          json:
+            uid: !lambda "return x;"
+            device: ${name}
+            ndef: !lambda |-
+              if (tag.has_ndef_message()) {
+                auto recs = tag.get_ndef_message()->get_records();
+                if (!recs.empty()) return recs[0]->get_payload();
+              }
+              return std::string("");
+          capture_response: true
+          on_response:
+            then:
+              - if:
+                  condition: { lambda: "return response->status_code == 200 && body.find(\"\\\"known\\\": true\") != std::string::npos;" }
+                  then:
+                    - light.turn_on: { id: ring, effect: "Lest", brightness: 80%, red: 100%, green: 72%, blue: 30% }
+                    - rtttl.play: "ok:d=16,o=6,b=180:c,e,g"
+                  else:
+                    - light.turn_on: { id: ring, effect: "Ukjent", brightness: 70%, red: 30%, green: 55%, blue: 100% }
+                    - rtttl.play: "ukjent:d=8,o=5,b=160:g,c"
+          on_error:
+            then:
+              - light.turn_on: { id: ring, effect: "Feil", brightness: 80%, red: 100%, green: 15%, blue: 10% }
+              - rtttl.play: "feil:d=4,o=4,b=120:c"
+  on_tag_removed:
+    then:
+      - homeassistant.event:
+          event: esphome.skjold_kassett
+          data: { uid: !lambda "return x;", state: "out" }
+      - if:
+          condition: { lambda: "return std::string(\"${pause_on_remove}\") == \"true\";" }
+          then:
+            - http_request.post:
+                url: http://${skjold_host}:${skjold_port}/api/nfc/remove
+                request_headers: { Content-Type: application/json }
+                json: { uid: !lambda "return x;", device: "${name}" }
+      - light.turn_on: { id: ring, effect: "Pust", brightness: 30%, red: 100%, green: 78%, blue: 35% }
+
+output:
+  - platform: ledc
+    id: buzzer_out
+    pin: GPIO7
+rtttl:
+  output: buzzer_out
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: ring
+    name: "Lys"
+    pin: GPIO4
+    num_leds: 18
+    rgb_order: GRB
+    chipset: WS2812
+    default_transition_length: 300ms
+    effects:
+      - pulse: { name: "Pust", transition_length: 1.6s, update_interval: 1.6s, min_brightness: 10%, max_brightness: 35% }
+      - addressable_scan: { name: "Lest", move_interval: 30ms, scan_width: 4 }
+      - pulse: { name: "Ukjent", transition_length: 400ms, update_interval: 400ms }
+      - strobe:
+          name: "Feil"
+          colors:
+            - { state: true, brightness: 100%, red: 100%, green: 10%, blue: 10%, duration: 150ms }
+            - { state: false, duration: 150ms }

@@ -1,0 +1,12 @@
+[Unit]
+Description=Skjold: helsesjekk etter oppdatering (ruller tilbake automatisk hvis Skjold ikke starter)
+After=ki-amp.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/bin/skjold_safeupdate.py check
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

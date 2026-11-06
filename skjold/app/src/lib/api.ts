@@ -130,7 +130,18 @@ export interface NrkSeries { id: string; title: string; subtitle: string; image:
 export interface NrkEpisode { id: string; title: string; subtitle: string; date: string; duration: number; image: string; series: string; podcast: boolean; pos?: number; heard?: boolean }
 export interface NrkProg { id: string; title?: string; series?: string; image?: string; pos: number; dur?: number; t?: number }
 export interface HomeKitInfo { enabled: boolean; available: boolean; running: boolean; paired: boolean; pin: string; setup_uri: string; port: number; error: string | null }
+/** Skjold Kassett (/api/nfc/*): kassetter med NFC-brikke, koblet til det som skal spilles. */
+export type NfcHandling = 'preset' | 'play_url' | 'nrk' | 'ma_uri' | 'navidrome_album' | 'navidrome_playlist' | 'routine';
+export interface NfcCard { uid?: string; navn: string; handling: NfcHandling; verdi: unknown; rom: string[]; volum: number | null; ved_uttak: 'pause' | 'ingenting'; omslag: string; undertittel: string; spilt?: number; sist?: number }
+export interface NfcStatus { learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[] }
+export interface Routine { id: string; navn: string; ikon?: string }
 export const api = {
+  nfc: () => req<NfcStatus>('/api/nfc'),
+  nfcSave: (c: NfcCard) => post<{ card: NfcCard; cards: NfcCard[] }>('/api/nfc/cards', c),
+  nfcDelete: (uid: string) => req<{ ok: boolean; cards: NfcCard[] }>('/api/nfc/cards/' + encodeURIComponent(uid), { method: 'DELETE' }),
+  nfcLearn: (kort: Partial<NfcCard> | null, timeout = 60) => post<{ learning: boolean }>('/api/nfc/learn', { timeout, kort }),
+  nfcLearnStop: () => post<{ learning: boolean }>('/api/nfc/learn', { stop: true }),
+  routines: () => req<{ routines?: Routine[] } | Routine[]>('/api/routines'),
   homekit: () => req<HomeKitInfo>('/api/homekit'),
   maStatus: () => req<MaStatus>('/api/ma/status', undefined, undefined, 12000),
   maDiscover: () => req<{ found: string[] }>('/api/ma/discover', undefined, undefined, 10000),

@@ -208,8 +208,13 @@ fi
 
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
-sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" /usr/local/bin/   # Apple Hjem (HomeKit)
+sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" /usr/local/bin/   # Apple Hjem (HomeKit)
 sudo install -m 644 "$SRC/skjold_extras.py" /usr/local/bin/   # Roon, Plexamp, backup, automatisk standby, Skjold Wrapped
+
+# Intercom, låtgjenkjenning (fpcalc/Chromaprint), dørklokke, rutiner og trygg oppdatering (helsesjekk + tilbakerulling)
+command -v fpcalc >/dev/null || sudo apt-get -y install --no-install-recommends libchromaprint-tools >/dev/null 2>&1 || true
+sudo install -m 644 "$SRC/skjold-healthcheck.service" /etc/systemd/system/skjold-healthcheck.service
+sudo mkdir -p /var/lib/skjold/rollback && sudo systemctl daemon-reload && sudo systemctl enable skjold-healthcheck.service >/dev/null 2>&1 || true
 sudo mkdir -p /usr/local/share/ki-amp/logos/nrk /var/lib/ki-amp/logos && sudo install -m 644 "$SRC"/logos/nrk/*.svg /usr/local/share/ki-amp/logos/nrk/   # innebygde NRK-logoer for /api/logo
 sudo install -m 644 "$SRC/skjold_s1f.py" /usr/local/bin/skjold_s1f.py   # Skjold S1 rev F: knapper, LED, nattmodus
 sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pins.yaml" /usr/local/share/ki-amp/s1f_pins.yaml

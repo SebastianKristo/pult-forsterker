@@ -14,6 +14,11 @@ on:
   push:
     tags: ["skjold-v*"]
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Beta (prerelease) – vises bare for enheter på beta-kanalen"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -249,4 +254,5 @@ jobs:
         with:
           name: Skjold ${{ github.ref_name }}
           generate_release_notes: true
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
           files: artefakter/**

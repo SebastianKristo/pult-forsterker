@@ -130,9 +130,9 @@ class S1FControls:
         T, e = self.T, self._on
         self.btn = {
             "bt": ClickHold("bt", e, hold=T["hold_pair"], show=T["hold_show"]),
-            "aux": ClickHold("aux", e),
+            "aux": ClickHold("aux", e, hold=T.get("hold_routine", 2.0), show=T["hold_show"]),   # hold = rutine (valgfritt)
             "radio": ClickHold("radio", e, hold=T["hold_save"], show=T["hold_show_radio"]),
-            "usb": ClickHold("usb", e),
+            "usb": ClickHold("usb", e, hold=T.get("hold_routine", 2.0), show=T["hold_show"]),
             "power": ClickHold("power", e, multi=2, window=T["click_window"], hold=T["hold_reboot"], show=T["hold_show"]),
             "enc": ClickHold("enc", e, multi=3, window=T["click_window"], hold=T["hold_settings"], show=T["hold_show"]),
         }
@@ -179,6 +179,11 @@ class S1FControls:
         if a.ui_event("hold" if kind == "hold" else "press", UI_SRC[name], n if name == "enc" else 1):
             return
         inp = st.get("input")
+        if kind == "hold" and name in ("aux", "usb"):
+            fn = getattr(a, "hold_routine", None)   # rutine koblet til knappen (Innstillinger → Rutiner)
+            if fn:
+                fn(name)
+            return
         if name == "bt":
             if kind == "hold":
                 a.bt_pairing(True)
