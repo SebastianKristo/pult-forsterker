@@ -441,6 +441,74 @@ paths:
             application/json:
               schema:
                 type: object
+  /api/hjul:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/hjul (oppsett, enheter, rom) · POST /api/hjul {favoritter, steg, enheter, glem}
+      operationId: get_api_hjul
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/hjul (oppsett, enheter, rom) · POST /api/hjul {favoritter, steg, enheter, glem}
+
+        · POST /api/hjul/event {device, type: rot|klikk|dobbel|lang|fav|hei, delta, n, batteri}.'
+    post:
+      tags:
+      - Annet
+      summary: GET /api/hjul (oppsett, enheter, rom) · POST /api/hjul {favoritter, steg, enheter, glem}
+      operationId: post_api_hjul
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/hjul (oppsett, enheter, rom) · POST /api/hjul {favoritter, steg, enheter, glem}
+
+        · POST /api/hjul/event {device, type: rot|klikk|dobbel|lang|fav|hei, delta, n, batteri}.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/hjul/{act}:
+    post:
+      tags:
+      - Annet
+      summary: GET /api/hjul (oppsett, enheter, rom) · POST /api/hjul {favoritter, steg, enheter, glem}
+      operationId: post_api_hjul_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/hjul (oppsett, enheter, rom) · POST /api/hjul {favoritter, steg, enheter, glem}
+
+        · POST /api/hjul/event {device, type: rot|klikk|dobbel|lang|fav|hei, delta, n, batteri}.'
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
   /api/homekit:
     get:
       tags:

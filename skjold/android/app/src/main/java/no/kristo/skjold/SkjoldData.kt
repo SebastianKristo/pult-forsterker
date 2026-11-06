@@ -161,6 +161,9 @@ object SK {
             S.opt("rate", "Samplingsfrekvens", listOf("44,1 kHz", "48 kHz", "96 kHz", "Følg kilden")),
             S.opt("mixer", "Volumkontroll", listOf("Programvare", "Maskinvare (DAC)", "Fast 100 % (styres av forsterker)"), "Velg fast hvis enheten er koblet til en egen forsterker med volumknapp"),
             S.act("Test utgang", "testOut", "Spill testtone", true))),
+        SettingCategory("kassett", "Kassetter", "Lag NFC-kassetter og etiketter", items = listOf(
+            S.act("Lag kassett", "kassett", "Lag", true, "Velg radio, spilleliste eller podkast, hold telefonen mot NFC-brikken og få en ferdig etikett til utskrift"),
+            S.act("Skjold Hjul", "hjulInfo", "Les mer", true, "Fjernkontroll med dreieknapp og fire favorittknapper. Favoritter og rom stilles inn under Kassetter → Skjold Hjul i web-appen"))),
         SettingCategory("tilkobling", "Tilkobling", "Wi-Fi, navn og Blåtann", items = listOf(
             S.opt("name", "Enhetsnavn", names, "Navnet som vises i AirPlay og Blåtann"),
             S.str("nAux1", "Navn på AUX 1", "AUX 1", "Vises på skjermen og i appen", dev = listOf("s1")), S.str("nAux2", "Navn på AUX 2", "AUX 2", dev = listOf("s1")),

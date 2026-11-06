@@ -215,6 +215,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** "", "laster", "ok", "login" eller feiltekst. */
     var hjemState by mutableStateOf("")
     var hjemLogin by mutableStateOf(false)
+    var showKassett by mutableStateOf(false)  // «Lag kassett» (KassettView)
     var showRoomEQ by mutableStateOf(false)   // romkorreksjon med mikrofonen (RoomEQView)
     var dev by mutableStateOf<DevStatus?>(null)
     val devStats = mutableStateMapOf<String, DevStatus?>()
@@ -779,6 +780,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             "openRadio" -> { tab = 0; sub = "radio" }
             "setup" -> restartSetup()
             "roomeq" -> showRoomEQ = true
+            "kassett" -> showKassett = true
+            "hjulInfo" -> settingsHost?.let { h ->
+                runCatching {
+                    getApplication<Application>().startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("http://$h/"))
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            }
             else -> post(mapOf("type" to id))
         }
     }

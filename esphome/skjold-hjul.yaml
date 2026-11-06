@@ -1,0 +1,227 @@
+# Skjold Hjul – fjernkontroll: dreieknapp med trykk + 4 favorittknapper + statuslys, på batteri.
+# ESP32-C3 SuperMini · EC11-dreieknapp · 4 × 12 mm trykknapper · 1 × WS2812 · LiPo 1S 1000 mAh + TP4056 (USB-C).
+# Flash: https://web.esphome.io (første gang via USB-C), deretter OTA. Kobling og deleliste: kabinett/hjul/LES_MEG.md.
+#
+# Styring (alt går til POST /api/hjul/event på Skjold – pi/skjold_hjul.py):
+#   drei = volum · trykk = spill/pause · dobbelttrykk = neste · hold inne = bytt rom · 1–4 = favoritter
+# Favoritter, rom og volumsteg stilles inn i Skjold-appen (Innstillinger → Kassetter → Skjold Hjul).
+#
+# Batteri: hjulet sover (deep sleep, ~10 µA) etter ${sleep_after} uten bruk og våkner av trykk, favoritt eller dreiing
+# (dreieknappens A-fase og trykket er diode-OR-et inn på WAKE-pinnen). Favoritten som vekket det, blir utført;
+# dreiing/trykk på hjulet vekker bare.
+# Fast IP (wifi: manual_ip) gjør oppvåkningen raskere: ca. 0,5 s i stedet for 2–3 s.
+substitutions:
+  name: skjold-hjul
+  friendly_name: Skjold Hjul
+  # Skjold-enheten hjulet snakker med (den videresender til andre rom ved behov). mDNS-navn eller IP.
+  skjold_host: skjold.local
+  skjold_port: "8765"
+  sleep_after: 45s
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    - priority: 600
+      then:
+        # Hvilken knapp vekket oss? Husk den, så den kan utføres når Wi-Fi er oppe.
+        - lambda: |-
+            uint64_t m = esp_sleep_get_gpio_wakeup_status();
+            if (m & (1ULL << 0)) id(wake_fav) = 1;
+            else if (m & (1ULL << 1)) id(wake_fav) = 2;
+            else if (m & (1ULL << 2)) id(wake_fav) = 3;
+            else if (m & (1ULL << 4)) id(wake_fav) = 4;
+            // GPIO5 (dreiing/trykk på hjulet) vekker bare – første trykk etter søvn starter ingenting ved et uhell
+    - priority: -100
+      then:
+        - light.turn_on: { id: led, brightness: 25%, red: 100%, green: 70%, blue: 25%, transition_length: 0s }
+        - wait_until: { condition: wifi.connected, timeout: 8s }
+        - if:
+            condition: { lambda: "return id(wake_fav) >= 1 && id(wake_fav) <= 4;" }
+            then:
+              - script.execute: { id: send, typ: "fav", n: !lambda "return id(wake_fav);", delta: 0 }
+            else:
+              - script.execute: { id: send, typ: "hei", n: 0, delta: 0 }
+        - lambda: "id(wake_fav) = 0;"
+        - script.execute: sleep_timer
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework: { type: esp-idf }
+
+logger:
+  level: INFO
+api:
+  encryption:
+    key: !secret skjold_hjul_api_key
+  reboot_timeout: 0s          # ingen Home Assistant? Ikke start på nytt hele tiden.
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  power_save_mode: light
+  ap: { ssid: "Skjold Hjul" }
+captive_portal:
+
+http_request:
+  verify_ssl: false
+  timeout: 3s
+
+globals:
+  - { id: acc, type: int, initial_value: "0" }        # dreiehakk som ikke er sendt ennå
+  - { id: wake_fav, type: int, initial_value: "0" }
+  - { id: batt_pct, type: int, initial_value: "-1" }
+
+deep_sleep:
+  id: ds
+
+script:
+  # Hold hjulet våkent mens det brukes; sov etter ${sleep_after} uten aktivitet.
+  - id: sleep_timer
+    mode: restart
+    then:
+      - delay: ${sleep_after}
+      - light.turn_off: { id: led, transition_length: 0s }
+      - lambda: |-
+          // WAKE-pinnene trekkes lave av knappene (intern pull-up holder dem høye i søvn)
+          const uint64_t mask = (1ULL << 0) | (1ULL << 1) | (1ULL << 2) | (1ULL << 4) | (1ULL << 5);
+          esp_deep_sleep_enable_gpio_wakeup(mask, ESP_GPIO_WAKEUP_GPIO_LOW);
+      - deep_sleep.enter: ds
+
+  - id: send
+    mode: queued
+    max_runs: 6
+    parameters: { typ: string, n: int, delta: int }
+    then:
+      - script.execute: sleep_timer
+      - http_request.post:
+          url: http://${skjold_host}:${skjold_port}/api/hjul/event
+          request_headers: { Content-Type: application/json }
+          json:
+            device: ${name}
+            type: !lambda "return typ;"
+            n: !lambda "return n;"
+            delta: !lambda "return delta;"
+            batteri: !lambda "return id(batt_pct);"
+          capture_response: true
+          on_response:
+            then:
+              - if:
+                  condition: { lambda: "return response->status_code == 200;" }
+                  then:
+                    - if:
+                        condition: { lambda: "return typ == \"lang\";" }
+                        then:   # nytt rom: blå blink
+                          - light.turn_on: { id: led, brightness: 70%, red: 20%, green: 45%, blue: 100%, transition_length: 0s }
+                          - delay: 600ms
+                        else:
+                          - if:
+                              condition: { lambda: "return typ == \"rot\";" }
+                              then:   # volum: lysstyrke følger volumet
+                                - light.turn_on:
+                                    id: led
+                                    red: 100%
+                                    green: 70%
+                                    blue: 25%
+                                    transition_length: 0s
+                                    brightness: !lambda |-
+                                      auto p = body.find("\"volum\":");
+                                      int v = p == std::string::npos ? 40 : atoi(body.c_str() + p + 8);
+                                      return 0.05f + 0.95f * std::min(100, std::max(0, v)) / 100.0f;
+                                - delay: 400ms
+                              else:   # spill/pause/favoritt: grønn
+                                - light.turn_on: { id: led, brightness: 60%, red: 25%, green: 100%, blue: 35%, transition_length: 0s }
+                                - delay: 300ms
+                  else:   # f.eks. favoritt ikke satt opp
+                    - light.turn_on: { id: led, brightness: 80%, red: 100%, green: 15%, blue: 10%, transition_length: 0s }
+                    - delay: 500ms
+              - light.turn_on: { id: led, brightness: 15%, red: 100%, green: 70%, blue: 25% }
+          on_error:
+            then:
+              - light.turn_on: { id: led, effect: "Feil", red: 100%, green: 10%, blue: 10% }
+              - delay: 900ms
+              - light.turn_on: { id: led, effect: "None", brightness: 15%, red: 100%, green: 70%, blue: 25% }
+
+sensor:
+  - platform: rotary_encoder
+    id: enc
+    pin_a: { number: GPIO6, mode: { input: true, pullup: true } }
+    pin_b: { number: GPIO7, mode: { input: true, pullup: true } }
+    resolution: 1
+    on_clockwise: [ lambda: "id(acc) += 1;", script.execute: sleep_timer ]
+    on_anticlockwise: [ lambda: "id(acc) -= 1;", script.execute: sleep_timer ]
+  - platform: adc
+    id: batt_v
+    pin: GPIO3
+    attenuation: 12db
+    update_interval: 60s
+    filters: [ multiply: 2.0 ]          # 100 k / 100 k spenningsdeler
+    on_value:
+      - lambda: |-
+          float v = x;                      // 3,3 V = tomt, 4,15 V = fullt (LiPo, grovt lineært)
+          id(batt_pct) = (int) std::max(0.0f, std::min(100.0f, (v - 3.3f) / (4.15f - 3.3f) * 100.0f));
+
+# Samle dreiing i små pakker (ett kall per 150 ms i stedet for ett per hakk)
+interval:
+  - interval: 150ms
+    then:
+      - if:
+          condition: { lambda: "return id(acc) != 0 && wifi::global_wifi_component->is_connected();" }
+          then:
+            - script.execute: { id: send, typ: "rot", n: 0, delta: !lambda "int d = id(acc); id(acc) = 0; return d;" }
+
+binary_sensor:
+  - platform: gpio
+    id: push
+    pin: { number: GPIO10, inverted: true, mode: { input: true, pullup: true } }
+    filters: [ delayed_on: 15ms, delayed_off: 15ms ]
+    on_multi_click:
+      - timing: [ ON for at least 700ms ]
+        then: [ script.execute: { id: send, typ: "lang", n: 0, delta: 0 } ]
+      - timing: [ ON for at most 350ms, OFF for at most 300ms, ON for at most 350ms, OFF for at least 50ms ]
+        then: [ script.execute: { id: send, typ: "dobbel", n: 0, delta: 0 } ]
+      - timing: [ ON for at most 350ms, OFF for at least 300ms ]
+        then: [ script.execute: { id: send, typ: "klikk", n: 0, delta: 0 } ]
+  - platform: gpio
+    id: fav1
+    pin: { number: GPIO0, inverted: true, mode: { input: true, pullup: true } }
+    filters: [ delayed_on: 20ms ]
+    on_press: [ script.execute: { id: send, typ: "fav", n: 1, delta: 0 } ]
+  - platform: gpio
+    id: fav2
+    pin: { number: GPIO1, inverted: true, mode: { input: true, pullup: true } }
+    filters: [ delayed_on: 20ms ]
+    on_press: [ script.execute: { id: send, typ: "fav", n: 2, delta: 0 } ]
+  - platform: gpio
+    id: fav3
+    pin: { number: GPIO2, inverted: true, mode: { input: true, pullup: true } }   # strapping-pinne: knappen må ikke holdes inne ved oppstart
+    filters: [ delayed_on: 20ms ]
+    on_press: [ script.execute: { id: send, typ: "fav", n: 3, delta: 0 } ]
+  - platform: gpio
+    id: fav4
+    pin: { number: GPIO4, inverted: true, mode: { input: true, pullup: true } }
+    filters: [ delayed_on: 20ms ]
+    on_press: [ script.execute: { id: send, typ: "fav", n: 4, delta: 0 } ]
+  # GPIO5 = WAKE (dreieknappens A + trykk via BAT54C). Brukes bare til å vekke; ingen handling her.
+  - platform: gpio
+    id: wake
+    pin: { number: GPIO5, inverted: true, mode: { input: true, pullup: true } }
+    internal: true
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: led
+    name: "Statuslys"
+    pin: GPIO21
+    num_leds: 1
+    rgb_order: GRB
+    chipset: WS2812
+    default_transition_length: 200ms
+    effects:
+      - strobe:
+          name: "Feil"
+          colors:
+            - { state: true, brightness: 100%, red: 100%, green: 10%, blue: 10%, duration: 120ms }
+            - { state: false, duration: 120ms }

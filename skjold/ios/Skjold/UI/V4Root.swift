@@ -71,6 +71,7 @@ struct V4App: View {
         }
         .sheet(isPresented: Binding(get: { m.hjemLogin }, set: { m.hjemLogin = $0 })) { HjemLoginView() }
         .sheet(isPresented: Binding(get: { m.showRoomEQ }, set: { m.showRoomEQ = $0 })) { V4RoomEQSheet().environment(m) }
+        .sheet(isPresented: Binding(get: { m.showKassett }, set: { m.showKassett = $0 })) { V4KassettSheet().environment(m) }
         .task {
             try? await Task.sleep(for: .seconds(4.5))
             withAnimation(V4.fade) { ui.hideHint() }

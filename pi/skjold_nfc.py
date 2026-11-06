@@ -197,3 +197,68 @@ def subsonic_tracks(url: str, user: str, pw: str, kind: str, item_id: str, opene
                     "title": s.get("title", ""), "artist": s.get("artist", ""), "album": s.get("album", holder.get("name", "")),
                     "cover": f"{base}/rest/getCoverArt.view?" + q(id=s.get("coverArt") or s["id"], size=300)})
     return out
+
+
+# ---------- «Lag kassett»: NDEF-lenke og ferdige etiketter ----------
+NDEF_PREFIX = "skjold://kassett/"
+# Samme mål som kabinett/kassett/lag_etiketter.py (43,2 × 51,2 mm, 3 × 5 på A4) – kuttlinjene passer forsenkningen.
+LBL_W, LBL_H, LBL_R, LBL_COLS, LBL_ROWS, LBL_GX, LBL_GY = 43.2, 51.2, 2.0, 3, 5, 8.0, 4.0
+A4_W, A4_H = 210.0, 297.0
+
+
+def ndef_url(uid: str) -> str:
+    """URI-posten telefonen skriver på brikken. Leseren bruker bare UID-en; lenken lar en telefon som holdes mot
+    kassetten åpne den i Skjold-appen."""
+    return NDEF_PREFIX + norm_uid(uid)
+
+
+def uid_from_ndef(text: str) -> str:
+    t = str(text or "").strip()
+    if t.lower().startswith(NDEF_PREFIX):
+        t = t[len(NDEF_PREFIX):]
+    return norm_uid(t)
+
+
+def _esc(s: str) -> str:
+    return (str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;"))
+
+
+def _clip(s: str, n: int) -> str:
+    s = str(s or "")
+    return s if len(s) <= n else s[: n - 1].rstrip() + "…"
+
+
+def label_sheet_svg(cards: list[dict], image=None, start: int = 0, cut: bool = True) -> str:
+    """A4-ark med ferdige etiketter (cover, tittel, undertittel). image(url) → data-URI eller None (cover bakes inn,
+    så arket kan skrives ut/deles uten nett). start: hopp over så mange ruter (for et delvis brukt ark)."""
+    mx = (A4_W - LBL_COLS * LBL_W - (LBL_COLS - 1) * LBL_GX) / 2
+    my = (A4_H - LBL_ROWS * LBL_H - (LBL_ROWS - 1) * LBL_GY) / 2
+    per = LBL_COLS * LBL_ROWS
+    start = max(0, min(per - 1, int(start or 0)))
+    p = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{A4_W}mm" height="{A4_H}mm" viewBox="0 0 {A4_W} {A4_H}">',
+         '<style>.k{fill:none;stroke:#e0451b;stroke-width:.2}.t{font-family:Sora,Helvetica,Arial,sans-serif}</style>',
+         f'<text x="{mx}" y="{my-4}" font-size="3" fill="#8b8b86" class="t">SKJOLD KASSETT · {len(cards)} etikett'
+         f'{"er" if len(cards) != 1 else ""} · rød linje = kutt</text>']
+    sz = LBL_W - 6
+    for i, c in enumerate(cards[: per - start]):
+        r, k = divmod(i + start, LBL_COLS)
+        x, y = mx + k * (LBL_W + LBL_GX), my + r * (LBL_H + LBL_GY)
+        src = image(c.get("omslag")) if (image and c.get("omslag")) else None
+        cid = f"c{i}"
+        p.append(f'<g transform="translate({x:.2f},{y:.2f})">'
+                 f'<rect width="{LBL_W}" height="{LBL_H}" rx="{LBL_R}" fill="#f6f3ee"/>'
+                 f'<clipPath id="{cid}"><rect x="3" y="3" width="{sz}" height="{sz}" rx="1.2"/></clipPath>')
+        if src:
+            p.append(f'<image href="{_esc(src)}" x="3" y="3" width="{sz}" height="{sz}" preserveAspectRatio="xMidYMid slice" clip-path="url(#{cid})"/>')
+        else:
+            p.append(f'<rect x="3" y="3" width="{sz}" height="{sz}" rx="1.2" fill="#141415"/>'
+                     f'<text x="{LBL_W/2}" y="{3+sz/2+1.5}" font-size="4.2" font-weight="700" letter-spacing="1.2" fill="#e8b04a" '
+                     f'text-anchor="middle" class="t">{_esc(_clip(c.get("navn"), 14).upper())}</text>')
+        p.append(f'<text x="3" y="{LBL_W+1.6}" font-size="3.2" font-weight="600" class="t" fill="#1b1b1c">{_esc(_clip(c.get("navn"), 24))}</text>'
+                 f'<text x="3" y="{LBL_W+5.4}" font-size="2.4" class="t" fill="#6a6a65">{_esc(_clip(c.get("undertittel"), 34))}</text>'
+                 f'<text x="{LBL_W-3}" y="{LBL_H-2}" font-size="1.8" class="t" fill="#b0aca4" text-anchor="end" letter-spacing=".4">SKJOLD</text>')
+        if cut:
+            p.append(f'<rect class="k" width="{LBL_W}" height="{LBL_H}" rx="{LBL_R}"/>')
+        p.append('</g>')
+    p.append('</svg>')
+    return "\n".join(p)

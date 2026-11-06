@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// App state. Mirrors `state` + the logic in `class Component` of "Skjold App v2.dc.html".
 @Observable
@@ -123,6 +124,7 @@ final class AppModel {
     /// "", "laster", "ok", "login" eller en feiltekst.
     var hjemState = ""
     var hjemLogin = false
+    var showKassett = false  // «Lag kassett» (V4KassettSheet)
     var showRoomEQ = false   // romkorreksjon med mikrofonen (V4RoomEQSheet)
     var dev: DevStatus? = nil
     var devStats: [String: DevStatus] = [:]
@@ -674,6 +676,8 @@ final class AppModel {
         case "openRadio": tab = 0; sub = "radio"
         case "setup": restartSetup()
         case "roomeq": showRoomEQ = true
+        case "kassett": showKassett = true
+        case "hjulInfo": if let h = settingsHost, let u = URL(string: "http://\(h)/#kass") { UIApplication.shared.open(u) }
         default: post(["type": id])
         }
     }
