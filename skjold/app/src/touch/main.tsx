@@ -12,6 +12,7 @@ import { favs, loadFavs, playFav } from '../lib/radio';
 import { ndAlbum, ndAlbumList, ndConfigured, ndCover, type NdAlbum } from '../lib/navidrome';
 import { playNd } from '../lib/library';
 import { groupAll } from '../lib/groups';
+import { DoorbellOverlay, TalkButton } from '../screens/features';
 
 const MONO = "'IBM Plex Mono',monospace";
 type Scr = 'now' | 'home' | 'lib' | 'rooms' | 'set';
@@ -411,4 +412,4 @@ function App() {
   screen: (k: Scr) => { scr.value = k; }, lib: (i: number) => { lib.value = i; }, standby: goIdle, wake, boot: runBoot,
   skipBoot: () => { bootT.forEach(clearTimeout); boot.value = { on: false, step: 9, op: 0 }; }, rooms: (o: boolean) => { roomsOpen.value = o; }
 };
-render(<App />, document.getElementById('touch')!);
+render(<><App /><DoorbellOverlay /><div style="position:fixed;right:12px;bottom:12px;z-index:50"><TalkButton compact /></div></>, document.getElementById('touch')!);

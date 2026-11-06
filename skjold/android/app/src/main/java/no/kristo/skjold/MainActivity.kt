@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(AColor.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        Shortcuts.refresh(applicationContext)   // rutine-snarveier på app-ikonet
         // Varsler trengs for «Spiller nå» i hurtiginnstillingene og på låseskjermen (Android 13+).
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {

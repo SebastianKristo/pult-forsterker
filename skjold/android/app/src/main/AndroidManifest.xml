@@ -35,7 +35,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- App-snarveier: rutiner, «Hva er dette?» og dørklokke (Shortcuts.kt) -->
+        <activity
+            android:name=".ShortcutActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <!-- Media3: mediekontroll i hurtigpanel/låseskjerm/Now Bar, medibibliotek og gjenopptak -->
         <service

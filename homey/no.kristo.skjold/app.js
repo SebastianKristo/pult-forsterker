@@ -17,6 +17,10 @@ class KiPultforsterkerApp extends Homey.App {
       .registerRunListener(async ({ state }, { on }) => state === 'any' || (state === 'on') === on);
     this.homey.flow.getActionCard('ki_start_night')
       .registerRunListener(async ({ device }) => device.request('POST', '/night', { on: true, src: 'Homey' }));
+    this.homey.flow.getActionCard('ki_doorbell')
+      .registerRunListener(async ({ device }) => device.request('POST', '/doorbell', { src: 'Homey' }));
+    this.homey.flow.getActionCard('ki_run_routine')
+      .registerRunListener(async ({ device, routine }) => device.request('POST', `/routines/${encodeURIComponent(routine)}/run`, {}));
     this.homey.flow.getActionCard('ki_toggle')
       .registerRunListener(async ({ device }) => device.togglePower());
     this.homey.flow.getActionCard('ki_play_url')

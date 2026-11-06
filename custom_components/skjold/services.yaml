@@ -1,0 +1,19 @@
+doorbell:
+  fields:
+    entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: skjold
+run_routine:
+  fields:
+    routine:
+      required: true
+      example: morgen
+      selector:
+        text:
+    entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: skjold

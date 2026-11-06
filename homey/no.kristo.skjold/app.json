@@ -2520,6 +2520,62 @@
             }
           }
         ]
+      },
+      {
+        "id": "ki_doorbell",
+        "title": {
+          "en": "Ring the doorbell",
+          "no": "Ring på døren"
+        },
+        "hint": {
+          "en": "Plays the doorbell chime and shows the camera on Skjold.",
+          "no": "Spiller dørklokka og viser kamera på Skjold."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=s1|pultforsterker|core|node|touch",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_run_routine",
+        "title": {
+          "en": "Run routine",
+          "no": "Kjør rutine"
+        },
+        "titleFormatted": {
+          "en": "Run routine [[routine]]",
+          "no": "Kjør rutine [[routine]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=s1|pultforsterker|core|node|touch",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "text",
+            "name": "routine",
+            "placeholder": {
+              "en": "routine id",
+              "no": "rutine-id"
+            },
+            "title": {
+              "en": "Routine",
+              "no": "Rutine"
+            }
+          }
+        ]
       }
     ]
   },
