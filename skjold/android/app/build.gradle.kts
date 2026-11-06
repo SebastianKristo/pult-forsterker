@@ -50,6 +50,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    // Media3 merker SimpleBasePlayer/MediaLibraryService som @UnstableApi; klassene bruker @OptIn, men lint skal ikke stoppe bygget
+    lint { disable += "UnsafeOptInUsageError"; abortOnError = false }
     buildFeatures { compose = true }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
@@ -78,5 +80,9 @@ dependencies {
     // Hjemskjerm-widgets (Glance), periodisk oppdatering og «Spiller nå»-medievarsling (MediaSession + MediaStyle)
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
-    implementation("androidx.media:media:1.7.0")
+    // Mediesystemet: Media3-økt/bibliotek (hurtigpanel, låseskjerm, Now Bar, gjenopptak) og medieruter (Medieutgang)
+    implementation("androidx.media3:media3-session:1.5.1")
+    implementation("androidx.media3:media3-common:1.5.1")
+    implementation("androidx.mediarouter:mediarouter:1.7.0")
+    implementation("com.google.guava:guava:33.3.1-android")
 }

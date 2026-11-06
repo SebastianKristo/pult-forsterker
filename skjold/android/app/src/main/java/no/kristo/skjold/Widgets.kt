@@ -61,6 +61,8 @@ data class WidgetSnap(
     val host: String = "", val room: String = "", val title: String = "", val sub: String = "", val input: String = "",
     val playing: Boolean = false, val power: Boolean = true, val volume: Int = 0, val cover: String = "",
     val presets: List<Pair<Int, String>> = emptyList(), val preset: Int = 0,
+    // for Media3-spilleren (hurtigpanel/låseskjerm): album, demping, varighet og posisjon i sekunder, direktesending
+    val album: String = "", val mute: Boolean = false, val duration: Int = 0, val position: Int = 0, val live: Boolean = false,
 )
 
 object WidgetStore {
@@ -78,6 +80,7 @@ object WidgetStore {
             WidgetSnap(
                 j.optString("host"), j.optString("room"), j.optString("title"), j.optString("sub"), j.optString("input"),
                 j.optBoolean("playing"), j.optBoolean("power", true), j.optInt("volume"), j.optString("cover"), presets, j.optInt("preset"),
+                j.optString("album"), j.optBoolean("mute"), j.optInt("duration"), j.optInt("position"), j.optBoolean("live"),
             )
         } catch (_: Exception) { WidgetSnap() }
     }
@@ -87,8 +90,17 @@ object WidgetStore {
         s.presets.forEach { (n, t) -> pa.put(JSONObject().put("n", n).put("t", t)) }
         val j = JSONObject().put("host", s.host).put("room", s.room).put("title", s.title).put("sub", s.sub).put("input", s.input)
             .put("playing", s.playing).put("power", s.power).put("volume", s.volume).put("cover", s.cover).put("presets", pa).put("preset", s.preset)
+            .put("album", s.album).put("mute", s.mute).put("duration", s.duration).put("position", s.position).put("live", s.live)
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("snap", j.toString()).apply()
     }
+
+    /** Ny aktiv enhet valgt utenfor appen (medieutgang/bibliotek). */
+    fun setHost(ctx: Context, host: String) { save(ctx, load(ctx).copy(host = host)); lastKey = "" }
+
+    fun coverBytes(ctx: Context): ByteArray? = try {
+        val f = File(ctx.filesDir, COVER_FILE)
+        if (f.exists()) f.readBytes() else null
+    } catch (_: Exception) { null }
 
     fun coverBitmap(ctx: Context): Bitmap? = try {
         val f = File(ctx.filesDir, COVER_FILE)
@@ -107,12 +119,14 @@ object WidgetStore {
             .filter { it.isNotEmpty() && it != title }.distinct().joinToString(" · ").ifEmpty { inputName }
         val cover = DeviceLink.coverURL(st.coverURL, host).ifEmpty { rn?.image ?: "" }
         val presets = st.presetTitles.mapIndexedNotNull { i, t -> if (t.isNotEmpty()) (i + 1) to t else null }
-        return WidgetSnap(host, st.name, title, sub, st.input, st.playing && st.power, st.power, st.volume, cover, presets, st.preset)
+        return WidgetSnap(host, st.name, title, sub, st.input, st.playing && st.power, st.power, st.volume, cover, presets, st.preset,
+            st.album, st.mute, st.duration, st.position, st.input == "radio" && st.duration <= 0)
     }
 
     /** Save a new status and refresh widgets + notification, but only when something visible changed. */
     suspend fun publish(ctx: Context, st: DevStatus, host: String) {
         val s = snapOf(st, host)
+        SkjoldMediaService.onSnap(ctx, s)   // Media3-spilleren får alle endringer (også posisjon)
         val key = listOf(s.host, s.room, s.title, s.sub, s.playing, s.power, s.volume, s.cover, s.preset, s.presets.size).joinToString("|")
         if (key == lastKey) return
         lastKey = key
@@ -122,7 +136,7 @@ object WidgetStore {
             fetchCover(ctx, s.cover)
         }
         refresh(ctx)
-        NowPlayingService.sync(ctx, s)
+        SkjoldMediaService.onSnap(ctx, s)   // nytt omslag lastet ned
     }
 
     private suspend fun fetchCover(ctx: Context, url: String) = withContext(Dispatchers.IO) {

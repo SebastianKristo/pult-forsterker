@@ -44,6 +44,7 @@ class SkjoldApp : android.app.Application(), ImageLoaderFactory {
         super.onCreate()
         Store.init(this)
         WidgetStore.schedule(this)   // widgets oppdateres hvert 15. min også når appen er lukket
+        try { SkjoldRoutes.init(this) } catch (_: Exception) { }   // Skjold-enhetene i systemets «Medieutgang»
     }
 
     override fun newImageLoader(): ImageLoader =
