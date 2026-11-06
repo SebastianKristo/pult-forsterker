@@ -1,0 +1,46 @@
+# Skjold S1 rev F – GPIO (BCM-numre). Knapper til GND med intern pull-up (aktiv lav).
+# Opptatt: I²S 18 (BCK), 19 (LRCK), 21 (DIN) · I²C 2/3 holdes ledig · 0/1 HAT-EEPROM.
+# Endre her og start ki-amp på nytt (sudo systemctl restart ki-amp). Ingen pinner er hardkodet i koden.
+buttons:
+  bt: 5          # BT/AirPlay
+  aux: 6         # AUX
+  radio: 13      # RADIO
+  usb: 16        # USB
+  power: 17      # power (fjærende, 16 mm)
+leds:            # hvite LED-ringer (via transistor), PWM
+  bt: 22
+  aux: 23
+  radio: 24
+  usb: 25
+  power: 12      # maskinvare-PWM0
+led_active_high: true
+led_hz: 400
+encoder:         # EC11 med trykk
+  a: 9
+  b: 10
+  sw: 11
+relay: 27        # 5 V relé (optokobler): 24 V til TPA3116 / høyttalere. Høy = på.
+relay_active_high: true
+dac_xsmt: 4      # PCM5102 XSMT (myk demping) – sett null hvis modulen har XSMT fast høy
+usb_switch:
+  pulse: 14      # transistor/optokobler over UGREEN-knappen (UART må være av)
+  sense: 15      # valgfritt: PC 1-LED via optokobler (null = av)
+  sense_pc1: low
+headphone_detect: 26   # PJ-392 detekt-pinne
+headphone_active_low: false   # true hvis lav = plugget i
+bounce: 0.03
+timing:
+  click_window: 0.38   # klikkvindu (s)
+  hold_show: 0.35      # vis hold-ring etter
+  hold_show_radio: 0.9
+  hold_settings: 1.5   # volumhjul holdt = innstillinger
+  hold_pair: 2.0       # BT/AirPlay holdt = paring
+  hold_save: 3.0       # RADIO holdt = lagre favoritt
+  hold_reboot: 3.0     # power holdt = omstart
+  pair_s: 60
+  bt_blink: 0.35
+  usb_pulse: 0.15
+audio:
+  aux1: plughw:UCA_AUX1   # udev-navn (pi/s1f-uca202.rules), ellers plughw:CODEC
+  aux2: plughw:UCA_AUX2
+  headphones: plughw:UCA_AUX1   # hodetelefonutgangen på UCA202 #1

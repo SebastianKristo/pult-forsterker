@@ -56,7 +56,8 @@
         "ki_auto_input",
         "ki_mix",
         "ki_hp_automute",
-        "ki_bright"
+        "ki_bright",
+        "night_mode"
       ],
       "capabilitiesOptions": {
         "speaker_playing": {
@@ -1103,6 +1104,21 @@
           }
         }
       ]
+    },
+    "night_mode": {
+      "type": "boolean",
+      "title": {
+        "en": "Night mode",
+        "no": "Nattmodus"
+      },
+      "desc": {
+        "en": "Set by double-pressing power on Skjold S1, or from here",
+        "no": "Settes med dobbelttrykk på power på Skjold S1, eller herfra"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "/assets/icon.svg"
     }
   },
   "flow": {
@@ -1214,6 +1230,95 @@
               "en": "Device",
               "no": "Enhet"
             }
+          }
+        ]
+      },
+      {
+        "id": "ki_power_double",
+        "title": {
+          "en": "Power button was double-pressed",
+          "no": "Power-knappen ble dobbelttrykket"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=s1",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_night_changed",
+        "title": {
+          "en": "Night mode turned on/off",
+          "no": "Nattmodus ble slått på/av"
+        },
+        "titleFormatted": {
+          "en": "Night mode was turned [[state]]",
+          "no": "Nattmodus ble slått [[state]]"
+        },
+        "tokens": [
+          {
+            "name": "on",
+            "type": "boolean",
+            "title": {
+              "en": "On",
+              "no": "På"
+            }
+          },
+          {
+            "name": "src",
+            "type": "string",
+            "title": {
+              "en": "Set by",
+              "no": "Satt fra"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=s1",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "state",
+            "title": {
+              "en": "State",
+              "no": "Tilstand"
+            },
+            "values": [
+              {
+                "id": "on",
+                "title": {
+                  "en": "on",
+                  "no": "på"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "off",
+                  "no": "av"
+                }
+              },
+              {
+                "id": "any",
+                "title": {
+                  "en": "on or off",
+                  "no": "på eller av"
+                }
+              }
+            ]
           }
         ]
       }
@@ -2391,6 +2496,28 @@
                 }
               }
             ]
+          }
+        ]
+      },
+      {
+        "id": "ki_start_night",
+        "title": {
+          "en": "Start night mode",
+          "no": "Start nattmodus"
+        },
+        "hint": {
+          "en": "Shows the night mode screen on Skjold S1, like a double press on power.",
+          "no": "Viser nattmodus-skjermen på Skjold S1, som et dobbelttrykk på power."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=s1",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           }
         ]
       }

@@ -50,6 +50,9 @@
       },
       "hp_automute": {
         "name": "Auto-demping ved hodetelefoner"
+      },
+      "night": {
+        "name": "Nattmodus"
       }
     },
     "sensor": {
@@ -157,6 +160,20 @@
           "press": "Ved trykk",
           "always": "Alltid",
           "off": "Av"
+        }
+      }
+    },
+    "event": {
+      "power_button": {
+        "name": "Power-knapp",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "single_press": "Ett trykk",
+              "double_press": "Dobbelttrykk",
+              "long_press": "Holdt inne"
+            }
+          }
         }
       }
     }

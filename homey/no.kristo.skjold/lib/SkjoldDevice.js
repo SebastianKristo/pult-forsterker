@@ -263,6 +263,27 @@ class SkjoldDevice extends Homey.Device {
       await card.trigger(this, st.playing ? { title: st.title || '', artist: st.artist || '' } : {}).catch(this.error);
     }
     this._wasPlaying = !!st.playing;
+
+    // Skjold S1: nattmodus og dobbelttrykk på power
+    if ('night' in st) {
+      if (!this.hasCapability('night_mode') && this.product(st) === 's1') {
+        await this.addCapability('night_mode').catch(this.error);
+        this.registerCapabilityListener('night_mode', (on) => this.setNight(on));
+      }
+      if (this.hasCapability('night_mode')) await this.setCapabilityValue('night_mode', !!st.night).catch(this.error);
+      if (this._lastNight !== null && this._lastNight !== !!st.night) {
+        const src = (st.night_ev && st.night_ev.src) || '';
+        await this.homey.flow.getDeviceTriggerCard('ki_night_changed').trigger(this, { on: !!st.night, src }, { on: !!st.night }).catch(this.error);
+      }
+      this._lastNight = !!st.night;
+    }
+    const ev = st.last_event;
+    if (ev && ev.seq !== undefined) {
+      if (this._lastEventSeq !== null && ev.seq !== this._lastEventSeq && ev.name === 'power_double_press') {
+        await this.homey.flow.getDeviceTriggerCard('ki_power_double').trigger(this, {}).catch(this.error);
+      }
+      this._lastEventSeq = ev.seq;
+    }
   }
 
   async setPower(on) {

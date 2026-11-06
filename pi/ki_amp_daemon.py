@@ -155,6 +155,26 @@ DSP_FORMAT = os.environ.get("KI_AMP_DSP_FORMAT", "S32LE")   # S16LE for Pi-ens 3
 # KI_AMP_BOARD=main    : Pultforsterker hovedkort rev B (PGA2311 på SPI0, knapper/LED/USB-mux via MCP23017 på I2C,
 #                        GPIO 27 = «smart relé» (24 V til forsterker + 5 V_SW), GPIO 22 = TPA3116 SDZ, AUX 1 = I2S-ADC, AUX 2 = USB-kodek)
 BOARD = os.environ.get("KI_AMP_BOARD", "modules")
+# KI_AMP_BOARD=s1f     : Skjold S1 rev F – ferdigmoduler som Kit (PCM5102 I²S + TPA3116 bak relé, AUX 1/2 fra hver sin UCA202,
+#                        hodetelefon på UCA202 #1) + knapper, volumhjul, LED-ringer, USB-switch og 4,58″ HDMI-skjerm.
+#                        Pinner i pi/config/s1f_pins.yaml, logikk i skjold_s1f.py. Bruker Kit-grenene for lyd og strøm.
+S1F = BOARD == "s1f"
+S1F_PINS = {}
+if S1F:
+    import skjold_s1f
+    try:
+        S1F_PINS = skjold_s1f.load_pins()
+    except Exception as _e:
+        print("S1F: fant ikke s1f_pins.yaml –", _e, flush=True)
+    _usb = S1F_PINS.get("usb_switch") or {}
+    for _k, _v in (("KI_AMP_USBSW_PULSE", _usb.get("pulse")), ("KI_AMP_USBSW_SENSE", _usb.get("sense")),
+                   ("KI_AMP_USBSW_SENSE_PC1", _usb.get("sense_pc1")), ("KI_AMP_XSMT_PIN", S1F_PINS.get("dac_xsmt", "none"))):
+        if _v is not None and not os.environ.get(_k):
+            os.environ[_k] = str(_v)
+    if "RELAY_ACTIVE_LOW" not in os.environ:
+        os.environ["RELAY_ACTIVE_LOW"] = "0" if S1F_PINS.get("relay_active_high", True) is not False else "1"
+    os.environ.setdefault("KI_AMP_PRODUCT", "s1")
+    BOARD = "kit"   # lyd, strøm og relé som Skjold Kit
 # Spillernavnet (AirPlay/Spotify/Blåtann/mDNS). Node: «Skjold Node» med mindre brukeren har satt et annet (malverdien
 # «Pultforsterker» i ki-amp.env regnes som ikke satt).
 NAME = os.environ.get("KI_AMP_NAME", "").strip()
@@ -162,6 +182,8 @@ if not NAME or NAME == "Pultforsterker":   # gammelt standardnavn i ki-amp.env
     NAME = ("Skjold Core" if os.environ.get("KI_AMP_NODE_GPIO", "1") == "0" else "Skjold Node") if BOARD == "node" else ("Skjold S1" if BOARD == "main" else "Skjold")
     if os.environ.get("KI_AMP_PRODUCT", "").strip() == "touch":
         NAME = "Skjold Touch"
+    if S1F:
+        NAME = "Skjold S1"
 PIN_RELAY_AMP = 27      # modules: relé 3 (24 V til forsterker)   main: strømrelé + 5V_SW (høy = på)
 PIN_RELAY_AUX = 22      # modules: relé lav = DAC, høy = AUX       main: TPA3116 SDZ (høy = forsterker på)
 PIN_X9C_INC, PIN_X9C_UD, PIN_X9C_CS = 26, 14, 15   # modules (serial console må være av)
@@ -275,6 +297,9 @@ else:
     PIN_DAC_XSMT = None
 BTN_POWER = {"radio": 3, "test": 26, "main": None, "kit": None}.get(BOARD, 16)   # main: POWER via MCP23017 (GPIO16 er PGA2311 CS) + knapp bak GPIO 15
 
+if S1F and S1F_PINS.get("relay") is not None:
+    PIN_RELAY_AMP = int(S1F_PINS["relay"])   # BTN/LED/ENC håndteres av skjold_s1f (Kit-grenene ser ingen knapper)
+
 SPOTIFY_ON = os.environ.get("KI_AMP_SPOTIFY", "1") == "1"   # Spotify Connect (librespot, ki-spotify.service)
 PLEX_ON = os.environ.get("KI_AMP_PLEX", "0") == "1"           # Plex-spiller (Plexamp headless / Caldera Music, ki-plex.service)
 if BOARD == "node":
@@ -285,6 +310,8 @@ elif BOARD == "kit":
     INPUTS = ["radio", "airplay", "bt", "aux", "aux2"]
 else:
     INPUTS = ["radio", "airplay", "bt", "aux", "usb"]
+if S1F:
+    INPUTS = INPUTS + ["usb"]   # PC 1/PC 2 via USB-gadget + UGREEN-switch
 if SPOTIFY_ON:
     INPUTS = INPUTS + ["spotify"]
 if PLEX_ON:
@@ -307,6 +334,9 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "boot_s": 45,          # siste målte oppstartstid (s, glidende snitt i /var/lib/skjold/boot_time) – «tilbake om ca. N s»
          "rebooting": False,    # settes ~1,5 s før daemonen starter omstart/slår av (skjermen viser omstart-animasjonen)
          "input_seq": 0,        # teller som øker for hver knapp-/potmeterhendelse
+         "night": False,        # nattmodus (S1: dobbelttrykk på power, HA/Homey/appen)
+         "night_ev": None,      # siste nattmodus-hendelse til skjermen: {"on","src","steps","t"}
+         "hp_volume": 30,       # eget hodetelefonvolum (innstilling hpOwn)
          "settings": {}}
 spotify = {"connected": False, "playing": False, "paused": False, "title": "", "artist": "", "album": "", "cover": "",
            "duration": 0, "position": 0, "user": "", "event": "", "t": 0.0}
@@ -692,6 +722,20 @@ def eq_profile():
     return [max(-12.0, min(12.0, float(x or 0))) for x in eq], p.get("loud", True) is not False
 
 
+def dsp_playback():
+    """S1 rev F: med hodetelefoner i går hele kjeden (EQ, volum) til UCA202 #1 i stedet for PCM5102."""
+    if S1F and state.get("headphones"):
+        return str((S1F_PINS.get("audio") or {}).get("headphones") or os.environ.get("KI_AMP_HP_DEV", "plughw:UCA_AUX1"))
+    return DSP_PLAYBACK
+
+
+def eff_volume():
+    """Volumet som brukes nå: eget hodetelefonvolum når det er slått på (S1 rev F)."""
+    if S1F and state.get("headphones") and settings().get("hpOwn", True):
+        return state.get("hp_volume", state["volume"])
+    return state["volume"]
+
+
 def dsp_config():
     eq, loud_ok = eq_profile()
     lvl = state["loudness_level"] if state["loudness"] and loud_ok else 0
@@ -713,7 +757,7 @@ def dsp_config():
   chunksize: 1024
   queuelimit: 4
   capture: {{type: Alsa, channels: 2, device: "{DSP_CAPTURE}", format: S32LE}}
-  playback: {{type: Alsa, channels: 2, device: "{DSP_PLAYBACK}", format: {DSP_FORMAT}}}
+  playback: {{type: Alsa, channels: 2, device: "{dsp_playback()}", format: {DSP_FORMAT}}}
 filters:
   pre:
     type: Gain
@@ -762,7 +806,7 @@ class Dsp:
                 ws = websocket.create_connection(DSP_WS, timeout=2)
                 if cfg != self._last_cfg:
                     self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg
-                db = vol_db(state["volume"]) if (state["input"] != "aux" or BOARD in ("main", "kit")) else 0.0
+                db = vol_db(eff_volume()) if (state["input"] != "aux" or BOARD in ("main", "kit")) else 0.0
                 self._send(ws, {"SetVolume": db})
                 self._send(ws, {"SetMute": bool(state["mute"]) or not state["power"]})
                 ws.close()
@@ -964,7 +1008,9 @@ def speakers_on():
 
 def apply_headphones():
     """Hodetelefonforsterker (TPA6132A2 EN på MCP GPA6) følger jacken; høyttalerne dempes via SDZ hvis auto-demping er på."""
-    dsp.update()   # egen EQ-profil for hodetelefoner
+    dsp.update()   # egen EQ-profil for hodetelefoner (S1 rev F: også utgangen – CamillaDSP spiller til UCA202 #1)
+    if S1F and HW:   # høyttalerne av (relé) mens hodetelefonene står i
+        relay_amp.value = bool(state["power"]) and not (state["headphones"] and state["hp_automute"]) and not state["overtemp"]
     if not (HW and BOARD == "main"):
         return
     if mcp:
@@ -1044,10 +1090,12 @@ SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn":
                 "plexEn": False, "plexUrl": "", "plexToken": "",
                 # Skjold Touch-skjermen (synkes med app og web-UI)
                 "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False,
+                # Skjold S1: dobbelttrykk på power (0 = Nattmodus, 1 = Av) og Nattlys-klokke i nattmodus
+                "dblPower": 0, "nightLight": True,
                 "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [5, 2, 0, 0, 1]), ("radio", 2, [-2, -1, 2, 3, 1]),
                                                                                      ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [2, 1, 0, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
-SETTINGS_APPLIED = {"eq", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
+SETTINGS_APPLIED = {"eq", "dblPower", "nightLight", "hpOwn", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
 
 
 def settings():
@@ -1297,7 +1345,7 @@ def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute", "settings")}, fh)
+            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute", "settings", "night", "hp_volume")}, fh)
     except Exception:
         pass
 
@@ -1349,6 +1397,8 @@ def read_raw():
 # blinker tilbake mens oled_display.py/Lyrion ennå ikke har oppdatert seg.
 _transport_hint = {"playing": False, "until": 0.0, "src": ""}
 PRODUCT = {"main": "s1", "node": "node" if BOARD != "node" or NODE_GPIO else "core"}.get(BOARD, BOARD)
+if S1F:
+    PRODUCT = "s1"
 if os.environ.get("KI_AMP_PRODUCT", "").strip() in ("s1", "node", "core", "touch"):   # Skjold Touch (7″ berøringsskjerm) m.fl.
     PRODUCT = os.environ["KI_AMP_PRODUCT"].strip()
 
@@ -1392,11 +1442,12 @@ def read_status():
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"],
             "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"], "source_label": extra["source_label"], "lyrion_server": extra["lyrion_server"], "lyrion_player": extra["lyrion_player"],
-            "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": BOARD,
+            "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": "s1f" if S1F else BOARD,
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
             "menu": dict(menu) if menu["open"] else None, "hold": hold_status(), "settings_menu": smenu_status(),
-            "sky": sky.kort(), "sleep": sleep_left(), "kids": plug_on("kids"), "subwave": subwave_playing()}
+            "sky": sky.kort(), "sleep": sleep_left(), "kids": plug_on("kids"), "subwave": subwave_playing(),
+            "ui": s1f_ui(), "greeting": greeting_status(), "hw_rev": "F" if S1F else ""}
 
 
 # ---------- USB-delingsswitch (Ugreen 2 PC → 4 USB) ----------
@@ -1514,7 +1565,10 @@ usbsw = UsbSwitch()
 # ---------- handlinger ----------
 def set_power(on):
     was = state["power"]
-    state["power"] = bool(on); apply_power(); changed()
+    state["power"] = bool(on); apply_power()
+    if S1F:
+        apply_headphones()   # relé av igjen hvis hodetelefonene står i
+    changed()
     if state["power"] and not was:
         voice.say("power_on", delay=2.5)   # vent til tjenestene er oppe igjen
 
@@ -1588,6 +1642,10 @@ def set_loudness(on=None, level=None):
 
 
 def set_volume(v):
+    if S1F and state.get("headphones") and settings().get("hpOwn", True):
+        state["hp_volume"] = max(0, min(100, int(v)))
+        if state["hp_volume"] > 0: state["mute"] = False
+        apply_volume(); changed(); return
     state["volume"] = max(0, min(100, int(v)))
     if state["volume"] > 0:
         state["mute"] = False
@@ -4433,6 +4491,7 @@ async def h_recordings_post(r):
 
 
 # --- MQTT-bro (paho-mqtt) ---
+_mqtt_events = []   # power-hendelser som venter på å bli sendt (single_press/double_press/long_press)
 _mqtt = {"client": None, "ok": False, "err": "", "last": "", "cfg": None}
 
 
@@ -4450,7 +4509,7 @@ def mqtt_base():
 
 def mqtt_state_json():
     s = read_status()
-    return json.dumps({k: s.get(k) for k in ("power", "input", "volume", "mute", "playing", "title", "artist", "album", "preset", "station", "sleep")}, ensure_ascii=False)
+    return json.dumps({k: s.get(k) for k in ("power", "input", "volume", "mute", "playing", "title", "artist", "album", "preset", "station", "sleep", "night", "headphones")}, ensure_ascii=False)
 
 
 def mqtt_command(topic_tail, payload):
@@ -4467,6 +4526,8 @@ def mqtt_command(topic_tail, payload):
             elif k == "mute": set_mute(str(v).lower() in ("1", "true", "on"))
             elif k == "preset": play_preset(int(v), announce=False)
             elif k == "transport": transport(str(v))
+            elif k == "night": night_set(str(v).strip().lower() in ("1", "true", "on", "på"), "Home Assistant")
+            elif k == "night_trigger": power_event("double_press", src="Home Assistant"); night_toggle("Home Assistant")
         except Exception as e:
             print("MQTT-kommando:", k, e, flush=True)
 
@@ -4484,6 +4545,9 @@ def _mqtt_discovery(cl, base):
     for comp, key, cfg in ents:
         cfg.update(unique_id=f"{hid}_{key}", device=dev, availability_topic=base + "/online")
         cl.publish(f"{pre}/{comp}/{hid}/{key}/config", json.dumps(cfg, ensure_ascii=False), retain=True)
+    import skjold_s1f as _s1
+    for topic, cfg in _s1.mqtt_night_discovery(base, hid, dev):   # nattmodus: utløser, event, knapp og bryter
+        cl.publish(topic, json.dumps(cfg, ensure_ascii=False), retain=True)
 
 
 def _mqtt_tick():
@@ -4511,10 +4575,13 @@ def _mqtt_tick():
             def on_connect(client, *_a):
                 _mqtt.update(ok=True, err="")
                 client.publish(base + "/online", "online", retain=True)
-                client.subscribe(base + "/set"); client.subscribe(base + "/set/#")
+                client.subscribe(base + "/set"); client.subscribe(base + "/set/#"); client.subscribe(base + "/night/steps")
+                client.publish(base + "/night", "ON" if state.get("night") else "OFF", retain=True)
                 if plug_cfg("mqtt").get("discovery"): _mqtt_discovery(client, base)
 
             def on_message(_c, _u, msg):
+                if msg.topic == base + "/night/steps":   # automasjonens steg, live fra HA
+                    night_steps(msg.payload.decode("utf-8", "replace")); return
                 tail = msg.topic[len(base) + 5:] if msg.topic.startswith(base + "/set/") else ""
                 mqtt_command(tail, msg.payload.decode("utf-8", "replace"))
 
@@ -4530,6 +4597,12 @@ def _mqtt_tick():
         j = mqtt_state_json()
         if j != _mqtt["last"]:
             cl.publish(mqtt_base() + "/state", j, retain=True); _mqtt["last"] = j
+        nv = "ON" if state.get("night") else "OFF"
+        if _mqtt.get("night") != nv:
+            cl.publish(mqtt_base() + "/night", nv, retain=True); _mqtt["night"] = nv
+        while _mqtt_events:
+            ev = _mqtt_events.pop(0)
+            cl.publish(mqtt_base() + "/event/power", ev)
 
 
 # --- Snapcast (beta): JSON-RPC mot snapserver på port 1705 ---
@@ -5463,10 +5536,194 @@ def start_mdns():
         print("mDNS ikke startet:", repr(e), flush=True); return None
 
 
+# ---------- Skjold S1 rev F: nattmodus, bursdagshilsen, knapper og WebSocket ----------
+_s1f = {"controls": None, "hw": None}
+
+
+def power_event(kind, src="Skjold"):
+    """single_press / double_press / long_press på power: MQTT (HA event + device trigger) og webhook."""
+    _mqtt_events.append(kind)
+    ev = {"type": "event", "name": "power_" + kind, "device": NAME, "src": src}
+    if kind == "double_press":
+        ev["action"] = "nattmodus" if int(settings().get("dblPower", 0) or 0) == 0 else "av"
+    state["last_event"] = {**ev, "t": time.time(), "seq": int((state.get("last_event") or {}).get("seq", 0)) + 1}
+    _webhook("power_" + kind, ev)
+    changed()
+
+
+def night_set(on, src="Skjold", steps=None):
+    """Sett nattmodus. Endrer ikke av/på. Ingen ekko: samme verdi utenfra gjør ingenting."""
+    on = bool(on)
+    if on == bool(state.get("night")) and src != "Skjold":
+        return
+    state["night"] = on
+    state["night_ev"] = {"on": on, "src": src, "steps": steps if isinstance(steps, list) else None, "t": time.time()}
+    if _s1f["controls"]:
+        _s1f["controls"].flash_night()
+    _webhook("night", {"on": on, "src": src})
+    changed()
+    print(f"Nattmodus {'på' if on else 'av'} ({src})", flush=True)
+
+
+def night_toggle(src="Skjold"):
+    night_set(not state.get("night"), src)
+
+
+def night_steps(payload):
+    import skjold_s1f as _s1
+    steps = _s1.parse_steps(payload)
+    if steps is not None and state.get("night_ev"):
+        state["night_ev"] = {**state["night_ev"], "steps": steps}; changed()
+
+
+def greeting_status():
+    if not S1F:
+        return None
+    import skjold_s1f as _s1
+    g = _s1.greeting_load()
+    return g if g["state"] == "armed" else None
+
+
+def greeting_dismiss():
+    import skjold_s1f as _s1
+    g = _s1.greeting_load()
+    if g["state"] == "armed":
+        g["state"] = "shown"; _s1.greeting_save(g); changed()
+
+
+def s1f_ui():
+    c = _s1f["controls"]
+    return c.ui if c else None
+
+
+def _s1f_api():
+    from types import SimpleNamespace as NS
+    return NS(state=state, set_input=lambda i: set_input(i), set_power=set_power, set_mute=set_mute, set_volume=set_volume,
+              transport=transport, bt_pairing=lambda on: bt_pairing(on, "knapp"), step_preset=step_preset, save_preset=save_preset,
+              play_preset=lambda n: play_preset(n), usb_toggle=usbsw.toggle, usb_set=usbsw.set,
+              reboot=lambda: system_reboot(why="POWER holdt"), night_toggle=night_toggle, night_set=night_set,
+              power_event=power_event, smenu_open=smenu_open, smenu_close=smenu_close, smenu_step=smenu_step,
+              smenu_press=smenu_press, smenu_is_open=lambda: bool(smenu["open"]), smenu_idx=lambda: smenu["idx"] if smenu["open"] else None,
+              settings=settings, greeting_active=lambda: greeting_status() is not None, greeting_dismiss=greeting_dismiss,
+              set_headphones=set_headphones, led_scale=lambda: led_level(),
+              settings_patch=update_settings, settings_reset=lambda: update_settings({k: v for k, v in SETTINGS_DEF.items() if k != "eq"}),
+              presets_set=_s1f_presets_set, bt_forget=_bt_forget_all, speaker_test=lambda ch: threading.Thread(target=_test_tone, args=(ch,), daemon=True).start(),
+              test_voice=lambda: voice.say("power_on"), preview_clock=lambda: state.update(ui_event={"name": "preview_clock", "t": time.time()}) or changed())
+
+
+def _s1f_presets_set(lst):
+    cur = list(state["presets"])
+    for i, p in enumerate(lst[:6]):
+        if p.get("url"):
+            while len(cur) <= i: cur.append(None)
+            cur[i] = {"title": p.get("title", ""), "url": p["url"], "icon": (cur[i] or {}).get("icon", "")}
+    state["presets"] = norm_presets(cur); changed()
+
+
+def _bt_forget_all():
+    try:
+        out = subprocess.run(["bluetoothctl", "devices", "Paired"], capture_output=True, text=True, timeout=5).stdout
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) >= 2 and parts[0] == "Device":
+                subprocess.run(["bluetoothctl", "remove", parts[1]], capture_output=True, timeout=5)
+    except Exception as e:
+        print("BT glem:", e, flush=True)
+
+
+def s1f_start():
+    import skjold_s1f as _s1
+    api = _s1f_api()
+    _s1f["controls"] = _s1.S1FControls(api, S1F_PINS.get("timing"))
+    if not HW:
+        print("S1F: kjører uten GPIO (bare API/WebSocket)", flush=True); return
+    try:
+        _s1f["hw"] = _s1.S1FHardware(S1F_PINS, _s1f["controls"], api)
+        b = S1F_PINS.get("buttons") or {}; e = S1F_PINS.get("encoder") or {}
+        print(f"S1F: knapper {b}, volumhjul {e}, relé {S1F_PINS.get('relay')}, pinner fra {S1F_PINS.get('_file')}", flush=True)
+    except Exception as ex:
+        print("S1F: GPIO feilet:", ex, flush=True)
+
+
+async def h_night(r):
+    if r.method == "POST":
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        if "on" in b:
+            night_set(bool(b["on"]), str(b.get("src") or "Appen"), b.get("steps"))
+        else:
+            night_toggle(str(b.get("src") or "Appen"))
+    return web.json_response({"on": bool(state.get("night")), "ev": state.get("night_ev")})
+
+
+async def h_greeting(r):
+    import skjold_s1f as _s1
+    g = _s1.greeting_load()
+    if r.method == "POST":
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        if b.get("name") is not None:
+            g["name"] = str(b["name"]).strip()[:24] or "Pappa"
+        act = b.get("action") or b.get("state")
+        if act in ("install", "armed", "show"): g["state"] = "armed"
+        elif act in ("dismiss", "shown"): g["state"] = "shown"
+        elif act in ("off", "remove"): g["state"] = "off"
+        try:
+            _s1.greeting_save(g)
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+        changed()
+    return web.json_response(g)
+
+
+async def h_ws(r):
+    """WebSocket med meldingene fra designet (state, input, wl, src, vol, mute, power, pause, next, set, presets,
+    forget, reset, setup, setupTest, testVoice, previewClock, updSync, nightMode, nightState)."""
+    import skjold_s1f as _s1
+    ws = web.WebSocketResponse(heartbeat=25)
+    await ws.prepare(r)
+    api = _s1f_api()
+    last = [None]
+
+    async def pump():
+        while not ws.closed:
+            try:
+                m = _s1.design_state(read_status(), settings())
+                js = json.dumps(m, ensure_ascii=False, default=str)
+                if js != last[0]:
+                    last[0] = js; await ws.send_str(js)
+            except Exception as e:
+                print("ws:", e, flush=True)
+            await asyncio.sleep(0.25)
+    task = asyncio.create_task(pump())
+    try:
+        async for msg in ws:
+            if msg.type != web.WSMsgType.TEXT:
+                continue
+            try:
+                m = json.loads(msg.data)
+                if m.get("type") == "hello":
+                    last[0] = None; continue
+                res = await asyncio.to_thread(_s1.ws_command, m, api)
+                if res:
+                    await ws.send_str(json.dumps(res, ensure_ascii=False))
+            except Exception as e:
+                await ws.send_str(json.dumps({"type": "error", "error": str(e)}, ensure_ascii=False))
+    finally:
+        task.cancel()
+    return ws
+
+
 async def on_startup(app):
     # zeroconf sin synkrone API kan ikke kalles fra aiohttp-løkka (gir EventLoopBlocked etter 10 s) – kjør i egen tråd
     app["zc"] = await asyncio.get_running_loop().run_in_executor(None, start_mdns)
     app["btn"] = setup_buttons()
+    if S1F:
+        s1f_start()
     app["pair"] = asyncio.create_task(pairing_task())
     app["menu"] = asyncio.create_task(menu_task())
     if os.environ.get("KI_AMP_SKY", "1") != "0":   # Skjold-hjem: sky-relé (gjør ingenting før enheten er koblet)
@@ -5516,7 +5773,7 @@ def main():
         parts = pot.split(":")
         threading.Thread(target=pot_thread, args=(int(parts[1]), len(parts) > 2 and parts[2] == "inv"), daemon=True).start()
     app = web.Application(middlewares=[cors_mw])
-    app.add_routes([web.get("/api/status", h_status), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
+    app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/greeting", h_greeting), web.post("/api/greeting", h_greeting), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
                     web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),

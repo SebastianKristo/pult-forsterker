@@ -75,6 +75,10 @@ class KiAmpApi:
         """Nivå per kilde (0–100) i miksen."""
         return await self._req("POST", "/level", {"source": source, "level": level})
 
+    async def set_night(self, on: bool) -> dict[str, Any]:
+        """Nattmodus av/på (S1). Skjermen viser «Satt fra Home Assistant»."""
+        return await self._req("POST", "/night", {"on": on, "src": "Home Assistant"})
+
     async def set_mix(self, on: bool) -> dict[str, Any]:
         """Miks digitale kilder (AirPlay, Bluetooth, USB og Radio spiller samtidig)."""
         return await self._req("POST", "/mix", {"on": on})
