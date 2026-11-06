@@ -6331,11 +6331,32 @@ async def h_cloud(r):
 MATTER_FLAG = os.environ.get("KI_AMP_MATTER_FLAG", "/var/lib/ki-amp/matter.on")
 MATTER_STATUS = os.environ.get("KI_AMP_MATTER_STATUS", "http://127.0.0.1:8767")
 MATTER_INSTALL = "/usr/local/share/skjold-matter/install.sh"
-_matter_job = {"busy": False, "error": ""}
+MATTER_UNINSTALL = "/usr/local/share/skjold-matter/uninstall.sh"
+_matter_job = {"busy": False, "error": "", "what": ""}
+
+
+def _mem_mb():
+    try:
+        with open("/proc/meminfo") as f:
+            return int(next(l for l in f if l.startswith("MemTotal")).split()[1]) // 1024
+    except Exception:
+        return 0
+
+
+def _matter_uninstall():
+    _matter_job.update(busy=True, error="", what="uninstall")
+    try:
+        p = subprocess.run(["bash", MATTER_UNINSTALL], capture_output=True, text=True, timeout=600, check=False)
+        if p.returncode:
+            _matter_job["error"] = (p.stderr or p.stdout or "avinstalleringen feilet").strip()[-300:]
+    except Exception as e:
+        _matter_job["error"] = str(e)
+    finally:
+        _matter_job.update(busy=False, what="")
 
 
 def _matter_install():
-    _matter_job.update(busy=True, error="")
+    _matter_job.update(busy=True, error="", what="install")
     try:
         p = subprocess.run(["bash", MATTER_INSTALL], capture_output=True, text=True, timeout=1200, check=False)
         if p.returncode:
@@ -6343,7 +6364,7 @@ def _matter_install():
     except Exception as e:
         _matter_job["error"] = str(e)
     finally:
-        _matter_job["busy"] = False
+        _matter_job.update(busy=False, what="")
 
 
 async def _matter_call(path, method="GET"):
@@ -6355,9 +6376,16 @@ async def _matter_call(path, method="GET"):
 
 async def h_matter(r):
     """GET /api/matter → {enabled, available, running, commissioned, fabrics, qr, manual, endpoints, error}
-    POST {"enabled": bool} slår av/på (installerer Node + matter.js første gang) · {"reset": true} glemmer paringer."""
+    POST {"install": true} installerer pluginen (Node 20 + matter.js, ca. 150 MB) og slår den på ·
+    {"uninstall": true} fjerner alt igjen · {"enabled": bool} slår av/på · {"reset": true} glemmer paringer.
+    Matter er en plugin: ingenting av den ligger på enheten før den installeres."""
     if r.method == "POST":
         b = await r.json()
+        if b.get("uninstall") and not _matter_job["busy"] and os.path.exists(MATTER_UNINSTALL):
+            threading.Thread(target=_matter_uninstall, daemon=True, name="matter-uninstall").start()
+            b = {}
+        if b.get("install"):
+            b["enabled"] = True
         if "enabled" in b:
             if b["enabled"]:
                 os.makedirs(os.path.dirname(MATTER_FLAG), exist_ok=True)
@@ -6380,9 +6408,12 @@ async def h_matter(r):
                 _matter_job["error"] = f"Glem paringer: {e}"
             await asyncio.sleep(3)
     on = os.path.exists(MATTER_FLAG)
+    mem = _mem_mb()
     out = {"enabled": on, "available": os.path.exists(MATTER_INSTALL) or os.path.isdir("/opt/skjold-matter"),
+           "installed": os.path.isdir("/opt/skjold-matter/node_modules"), "busy": _matter_job["what"],
+           "memMB": mem, "lowmem": 0 < mem < 1500,
            "running": False, "commissioned": False, "fabrics": [], "qr": "", "manual": "", "endpoints": [],
-           "error": _matter_job["error"] or ("Installerer Node og matter.js …" if _matter_job["busy"] else "")}
+           "error": _matter_job["error"] or ({"install": "Installerer Node og matter.js …", "uninstall": "Avinstallerer …"}.get(_matter_job["what"], ""))}
     if on:
         try:
             out.update(await _matter_call("/status"))
