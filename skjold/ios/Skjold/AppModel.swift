@@ -125,7 +125,9 @@ final class AppModel {
     var hjemState = ""
     var hjemLogin = false
     var showKassett = false  // «Lag kassett» (V4KassettSheet)
+    var whatsNew: ReleaseNote? = nil   // «Hva er nytt» etter oppdatering av enheten (ChangelogView.swift)
     var showRoomEQ = false   // romkorreksjon med mikrofonen (V4RoomEQSheet)
+    var showSpeakers = false   // høyttalerprofil / Skjold Sertifisert (V4SpeakerSheet)
     var dev: DevStatus? = nil
     var devStats: [String: DevStatus] = [:]
     var lyrionServer: String? = nil
@@ -227,6 +229,9 @@ final class AppModel {
         case "setupTest": devSend("/api/test", ["channel": msg["ch"] as? String ?? "L"])
         case "testSpk", "testOut": speakerTest(on: settingsHost)
         case "testVoice": devSend("/api/voice", ["say": "bt_pairing"], on: settingsHost)
+        case "vinylSide": devSend("/api/vinyl/start", [:], on: settingsHost)
+        case "vinylStop": devSend("/api/vinyl/stop", [:], on: settingsHost)
+        case "vinylSave": devSend("/api/vinyl/save", [:], on: settingsHost)
         case "btPair": devSend("/api/bt", ["pairing": true], on: settingsHost)
         case "src": if let v = msg["v"] as? Int { livePlayFavourite(v) }
         case "set": if let k = msg["k"] as? String, let v = msg["v"] { liveSetting(k, v) }
@@ -678,6 +683,7 @@ final class AppModel {
         case "roomeq": showRoomEQ = true
         case "kassett": showKassett = true
         case "hjulInfo": if let h = settingsHost, let u = URL(string: "http://\(h)/#kass") { UIApplication.shared.open(u) }
+        case "speakers": showSpeakers = true
         default: post(["type": id])
         }
     }

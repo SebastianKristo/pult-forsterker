@@ -217,6 +217,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var hjemLogin by mutableStateOf(false)
     var showKassett by mutableStateOf(false)  // «Lag kassett» (KassettView)
     var showRoomEQ by mutableStateOf(false)   // romkorreksjon med mikrofonen (RoomEQView)
+    var showSpeakers by mutableStateOf(false)   // høyttalerprofil / Skjold Sertifisert (SpeakerView)
     var dev by mutableStateOf<DevStatus?>(null)
     val devStats = mutableStateMapOf<String, DevStatus?>()
     var lyrionServer by mutableStateOf<String?>(null)
@@ -323,6 +324,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             "setupTest" -> devSend("/api/test", mapOf("channel" to (msg["ch"] as? String ?: "L")))
             "testSpk", "testOut" -> speakerTest(settingsHost)
             "testVoice" -> devSend("/api/voice", mapOf("say" to "bt_pairing"), on = settingsHost)
+            "vinylSide" -> devSend("/api/vinyl/start", emptyMap<String, Any>(), on = settingsHost)
+            "vinylStop" -> devSend("/api/vinyl/stop", emptyMap<String, Any>(), on = settingsHost)
+            "vinylSave" -> devSend("/api/vinyl/save", emptyMap<String, Any>(), on = settingsHost)
             "btPair" -> devSend("/api/bt", mapOf("pairing" to true), on = settingsHost)
             "src" -> (msg["v"] as? Int)?.let { livePlayFavourite(it) }
             "set" -> { val k = msg["k"] as? String; val v = msg["v"]; if (k != null && v != null) liveSetting(k, v) }
@@ -787,6 +791,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
             }
+            "speakers" -> showSpeakers = true
             else -> post(mapOf("type" to id))
         }
     }

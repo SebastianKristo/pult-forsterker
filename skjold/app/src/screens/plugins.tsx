@@ -1,4 +1,5 @@
 // Plugins (S1 Web v3 «plug»): Skjold-egne plugins kjører i daemonen (GET/POST /api/plugins), Lyrion-plugins installeres i Lyrion.
+import { GuidePicker, ProgramsPanel } from './programs';
 import { signal } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, INPUT_LABEL, type HistItem, type InputId, type Lyrics, type Plugin, type RecPayload, type RecSong, type SnapClient } from '../lib/api';
@@ -8,6 +9,7 @@ import { Toggle } from '../components/ui';
 import { AutoStandbyPanel, BackupPanel, PlexampPanel, RoonPanel, WrappedPage } from './extras';
 import { PodsumPanel } from './ai';
 import { DiscoverPanel, PresencePanel, RadioListPanel, StorePage, WakeLightPanel } from './extras2';
+import { SpeakerCard } from './speakers';
 import { averageCurves, logSweep, recordMic, responseFromRecording, suggest, type Curve, type Peq } from '../lib/roomeq';
 
 const A = '#d9a441';
@@ -37,6 +39,7 @@ const ICON: Record<string, { bg: string; fg: string; st: string; fi?: string }> 
   kids: { bg: '#2a2112', fg: '#f0c46a', st: 'M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM5 21v-1a7 7 0 0 1 14 0v1M10 7h.01M14 7h.01' },
   record: { bg: '#2a1412', fg: '#ff6a5a', st: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z', fi: 'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z' },
   snapcast: { bg: '#14233a', fg: '#7fb2ff', st: 'M4 4h7v16H4zM13 4h7v16h-7zM7.5 13.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM16.5 13.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.5 8h.01M16.5 8h.01' },
+  speakers: { bg: '#2a2112', fg: '#f0c46a', st: 'M7 3h10v18H7zM12 7.5h.01M12 11a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z' },
   roomeq: { bg: '#16201a', fg: '#9be0a8', st: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3' },
   qobuz: { bg: '#000000', fg: '#ffffff', st: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM14 14l5 5' },
   rp: { bg: '#1d2b1f', fg: '#e8d9a8', st: 'M4 12a8 8 0 0 1 16 0M7 12a5 5 0 0 1 10 0M12 12v8M9 20h6' },
@@ -177,6 +180,7 @@ function Detail({ p }: { p: Plugin }) {
     case 'presence': body = <PresencePanel d={d} up={up} saveBtn={saveBtn} />; break;
     case 'discover': body = <DiscoverPanel />; break;
     case 'podsum': body = <PodsumPanel />; break;
+    case 'speakers': body = <SpeakerCard />; break;
     case 'roomeq': body = <RoomEqPanel enabled={p.enabled} filters={(p.cfg.filters as Peq[]) || []} />; break;
   }
   return (
@@ -291,8 +295,13 @@ function RecordPanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: strin
           <FavSel v={a.preset} none="Strøm-URL" on={(v) => { const x = [...d.schedules]; x[i] = { ...a, preset: v }; up('schedules', x); }} />
           {!a.preset && <Txt v={a.url} ph="https://…" on={(v) => { const x = [...d.schedules]; x[i] = { ...a, url: v }; up('schedules', x); }} />}
           <Num v={a.minutes} min={1} max={240} on={(v) => { const x = [...d.schedules]; x[i] = { ...a, minutes: v }; up('schedules', x); }} /><span style="font-size:12px;color:#8b8b86">min</span>
+          <Txt v={a.program || ''} ph="Programnavn (valgfritt)" w={170} on={(v) => { const x = [...d.schedules]; x[i] = { ...a, program: v }; up('schedules', x); }} />
+          {a.program && <><span style="font-size:12px;color:#8b8b86">behold</span><Num v={a.keep || 8} min={1} max={52} on={(v) => { const x = [...d.schedules]; x[i] = { ...a, keep: v }; up('schedules', x); }} /></>}
+          {a.nrk && <span style="font-size:11.5px;color:#8b8b86">NRK {String(a.nrk).toUpperCase()}</span>}
           <button onClick={() => up('schedules', d.schedules.filter((_: unknown, j: number) => j !== i))} style={sbtn}>Fjern</button>
         </div>))}
+      <span style="font-size:12px;color:#8b8b86;line-height:1.5">Med programnavn lagres opptaket som en episode (ikke delt i låter) og vises som podkast under «Programmer».</span>
+      <GuidePicker onPick={(sc) => up('schedules', [...d.schedules, sc])} />
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button onClick={() => up('schedules', [...d.schedules, { time: '08:00', days: [5, 6], preset: favs.value[0]?.n ?? 0, url: '', minutes: 60, on: true }])} style={sbtn}>+ Planlegg opptak</button><span style="font-size:12px;color:#8b8b86">Maks lokal lagring</span><Num v={d.max_mb} min={100} max={100000} w={90} on={(v) => up('max_mb', v)} /><span style="font-size:12px;color:#8b8b86">MB</span></div>
       {saveBtn}
 
@@ -303,6 +312,7 @@ function RecordPanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: strin
           <span style="display:flex;flex-direction:column;min-width:0"><b style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{x.name.replace(/\.mp3$/, '')}</b><span style={`font-family:${MONO};font-size:11px;color:${x.recording ? '#ff6a5a' : '#8b8b86'}`}>{x.recording ? `● Tar opp${x.songs ? ' · ' + x.songs + ' låtbytter' : ''} · ` : ''}{(x.size / 1048576).toFixed(1)} MB</span></span>
           <span style="display:flex;gap:8px">{!x.recording && <button onClick={() => void post({ play: x.name })} style={sbtn}>Spill</button>}<button onClick={() => void post({ delete: x.name })} style={sbtn}>{x.recording ? 'Stopp' : 'Slett'}</button></span>
         </div>))}
+      <ProgramsPanel programs={rp.programs ?? []} feed={rp.feed ?? ''} onChange={(x) => setRp(x as RecPayload)} />
       {songs.length > 0 && <>
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px"><span style="font-size:13px;font-weight:600">Lagrede låter</span><button onClick={() => void post({ clear_songs: true })} style={sbtn}>Tøm listen</button></div>
         {songs.map((x, i) => (

@@ -72,6 +72,13 @@ struct V4App: View {
         .sheet(isPresented: Binding(get: { m.hjemLogin }, set: { m.hjemLogin = $0 })) { HjemLoginView() }
         .sheet(isPresented: Binding(get: { m.showRoomEQ }, set: { m.showRoomEQ = $0 })) { V4RoomEQSheet().environment(m) }
         .sheet(isPresented: Binding(get: { m.showKassett }, set: { m.showKassett = $0 })) { V4KassettSheet().environment(m) }
+        .sheet(isPresented: Binding(get: { m.showSpeakers }, set: { m.showSpeakers = $0 })) { V4SpeakerSheet().environment(m) }
+        .sheet(item: Binding(get: { m.whatsNew }, set: { m.whatsNew = $0 })) { n in
+            WhatsNewSheet(note: n) { if let h = m.activeHost { ChangelogData.markSeen(n.tag, host: h) }; m.whatsNew = nil }
+        }
+        .task(id: m.activeHost) {
+            if let h = m.activeHost, let n = await ChangelogData.whatsNew(host: h) { m.whatsNew = n }
+        }
         .task {
             try? await Task.sleep(for: .seconds(4.5))
             withAnimation(V4.fade) { ui.hideHint() }

@@ -752,12 +752,18 @@ def dsp_config():
     type: Biquad
     parameters: {{type: {t}, freq: {f}, {'q' if t == 'Peaking' else 'slope'}: {q if t == 'Peaking' else 6}, gain: {g:.1f}}}""" for i, ((t, f, q), g) in enumerate(zip(EQ_BANDS, eq)) if g)
     rq = roomeq_filters()
-    pre -= max([0.0] + [g for _f, _q, g in rq])
+    spf = speaker_filters(bool(rq))
+    pre -= max([0.0] + [g for _f, _q, g in rq]) + max([0.0] + [g for _f, _q, g in spf])
     eqf += "".join(f"""
   rq{i}:
     type: Biquad
     parameters: {{type: Peaking, freq: {f}, q: {q}, gain: {g:.1f}}}""" for i, (f, q, g) in enumerate(rq))
-    names = ", ".join(["pre"] + [f"eq{i}" for i, g in enumerate(eq) if g] + [f"rq{i}" for i in range(len(rq))] + ["loud"])
+    eqf += "".join(f"""
+  sp{i}:
+    type: Biquad
+    parameters: {{type: Peaking, freq: {f}, q: {q}, gain: {g:.1f}}}""" for i, (f, q, g) in enumerate(spf))
+    names = ", ".join(["pre"] + [f"eq{i}" for i, g in enumerate(eq) if g] + [f"sp{i}" for i in range(len(spf))]
+                      + [f"rq{i}" for i in range(len(rq))] + ["loud"])
     try:   # romlig stereo / synk-forsinkelse / trådløs sub (pi/skjold_sync/dspblocks.py)
         from skjold_sync import dspblocks
         xf, xm, xs = dspblocks.extra(plug_cfg("xtc"), plug_cfg("sync"))
@@ -4022,6 +4028,8 @@ PLUGIN_DEFS = [
     ("wrapped", "Skjold Wrapped", "skjold", "Verktøy", "Årsoppsummering av det du har hørt: minutter, topp-artister, låter og kanaler.", {}),
     ("roomeq", "Romkorreksjon", "skjold", "Verktøy", "Mål rommet med mikrofonen på telefonen og demp basstopper mellom 40 og 300 Hz.",
      {"filters": [], "tilt": 0.0, "measured": ""}),
+    ("speakers", "Skjold Sertifisert", "skjold", "Verktøy", "EQ-profil for høyttalerne dine: mål dem selv med mikrofonen, eller hent en delt profil fra Skjold Cloud.",
+     {"profile": {}, "profile_id": "", "target": "flat", "mic": "iphone", "calibration": "", "share": True}),
 ]
 PLUGIN_BY_ID = {p[0]: p for p in PLUGIN_DEFS}
 _plug_lock = threading.Lock()
@@ -4497,7 +4505,10 @@ def _safe(s):
 def rec_source(spec):
     """{'preset': n} eller {'url': …} → (url, navn)."""
     if spec.get("url"):
-        return str(spec["url"]), str(spec.get("title") or "strøm")
+        return str(spec["url"]), str(spec.get("title") or spec.get("program") or "strøm")
+    if spec.get("nrk") in _progmod.NRK_CHANNELS:
+        nm, u = _progmod.NRK_CHANNELS[spec["nrk"]]
+        return u, nm
     n = int(spec.get("preset") or 0)
     p = state["presets"][n - 1] if 1 <= n <= len(state["presets"]) else None
     if not p:
@@ -4506,6 +4517,9 @@ def rec_source(spec):
 
 
 import skjold_rec as _recmod   # noqa: E402  (SMB, ICY-opptak og deling i låter)
+import skjold_programs as _progmod   # noqa: E402  (planlagte programopptak som podkast + endringslogg)
+
+PROG = _progmod.Programs(os.path.join(REC_DIR, "programmer"))
 
 REC_SONGS = os.path.join(REC_DIR, "songs.json")
 _rec_smb = {"ok": False, "msg": "", "sig": None, "lock": threading.Lock()}
@@ -4577,7 +4591,8 @@ def rec_start(spec):
     p = state["presets"][n - 1] if 1 <= n <= len(state["presets"]) else None
     r = _recmod.IcyRecorder(url, path, mins * 60, get_title=lambda: rec_title_now(url))
     _rec["procs"][fn] = {"rec": r, "end": time.time() + mins * 60, "channel": name, "url": url, "t0": time.time(),
-                         "icon": (p or {}).get("icon") or (p or {}).get("image") or ""}
+                         "icon": (p or {}).get("icon") or (p or {}).get("image") or "",
+                         "program": str(spec.get("program") or "").strip(), "keep": int(spec.get("keep") or 8), "mins": mins}
     print("Radioopptak:", fn, f"({mins} min)", flush=True)
     if plug_cfg("record").get("smb_share"):
         threading.Thread(target=rec_smb_ensure, daemon=True).start()
@@ -4684,7 +4699,7 @@ def _rec_tick():
     for fn, job in list(_rec["procs"].items()):
         if not job["rec"].alive():
             _rec["procs"].pop(fn, None)
-            threading.Thread(target=rec_split, args=(fn, job), daemon=True).start()
+            threading.Thread(target=rec_program_done if job.get("program") else rec_split, args=(fn, job), daemon=True).start()
     if not plug_on("record"):
         return
     tm = time.localtime()
@@ -4696,9 +4711,33 @@ def _rec_tick():
             except Exception as e: print("Radioopptak:", e, flush=True)
 
 
+def rec_program_done(fn, job):
+    """Programopptak: lagres som episode (lokalt for podkast-feeden + kopi på SMB i «Programmer/<navn>/»), behold N siste."""
+    path = os.path.join(REC_DIR, fn)
+    if not os.path.isfile(path) or os.path.getsize(path) < 10_000:
+        return
+    extra = []
+    c = plug_cfg("record")
+    if c.get("smb_share"):
+        base, where = rec_song_dir()
+        if where == "smb":
+            extra.append(os.path.join(base, "Programmer"))
+    try:
+        ep = PROG.add(path, job["program"], job["t0"], time.time() - job["t0"], job.get("channel", ""), job.get("icon", ""),
+                      job.get("keep", 8), extra)
+        print("Programopptak:", job["program"], ep["file"], flush=True)
+    except Exception as e:
+        print("Programopptak feilet:", e, flush=True)
+
+
+def rec_feed_url():
+    return f"http://{_local_ip()}:{PORT}/api/recordings/feed.xml"
+
+
 def rec_payload():
     c = plug_cfg("record")
     return {"items": rec_list(), "dir": REC_DIR, "songs": _songs_load()[:200],
+            "programs": PROG.listing(), "feed": rec_feed_url(),
             "smb": {"set": bool(c.get("smb_share")), "ok": _rec_smb["ok"] and _recmod.smb_mounted(), "msg": _rec_smb["msg"],
                     "share": _recmod.smb_norm_share(c.get("smb_share", ""))}}
 
@@ -4743,12 +4782,58 @@ async def h_recordings_post(r):
             pw = q.get("password") if q.get("password") and not str(q.get("password")).startswith("••••••") else c.get("smb_password", "")
             shares = await loop.run_in_executor(None, lambda: _recmod.smb_list_shares(q.get("server") or c.get("smb_share", ""), q.get("user", c.get("smb_user", "")), pw, q.get("domain", c.get("smb_domain", ""))))
             return web.json_response({"shares": shares})
+        elif b.get("delete_episode"):
+            x = b["delete_episode"]
+            await loop.run_in_executor(None, PROG.remove_episode, str(x.get("prog", "")), str(x.get("file", "")))
+        elif b.get("play_episode"):
+            x = b["play_episode"]
+            if not PROG.path(str(x.get("prog", "")), str(x.get("file", ""))): raise ValueError("finnes ikke")
+            url = f"http://{_local_ip()}:{PORT}/api/recordings/prog/{urllib.parse.quote(x['prog'])}/{urllib.parse.quote(x['file'])}"
+            await loop.run_in_executor(None, lambda: play_url(url, str(x.get("title") or x["file"])))
         elif b.get("clear_songs"):
             try: os.remove(REC_SONGS)
             except OSError: pass
     except Exception as e:
         return web.json_response({"error": str(e)}, status=400)
     return web.json_response(rec_payload())
+
+
+async def h_rec_feed(r):
+    """GET /api/recordings/feed.xml[?p=<program>] → podkast-RSS for programopptakene."""
+    base = f"http://{r.host}" if r.host else f"http://{_local_ip()}:{PORT}"
+    xml = _progmod.build_feed(PROG.listing(), base, r.query.get("p") or None)
+    return web.Response(text=xml, content_type="application/rss+xml", charset="utf-8")
+
+
+async def h_rec_prog_file(r):
+    p = PROG.path(r.match_info["prog"], r.match_info["name"])
+    if not p:
+        return web.json_response({"error": "finnes ikke"}, status=404)
+    return web.FileResponse(p, headers={"Content-Type": "audio/mpeg"})
+
+
+async def h_rec_guide(r):
+    """GET /api/recordings/guide?ch=p1&date=YYYY-MM-DD → sendinger fra NRKs programguide."""
+    ch = r.query.get("ch", "p1")
+    if ch not in _progmod.NRK_CHANNELS:
+        return web.json_response({"error": "ukjent kanal"}, status=400)
+    try:
+        shows = await asyncio.get_running_loop().run_in_executor(None, _progmod.nrk_guide, ch, r.query.get("date") or None)
+    except Exception as e:
+        return web.json_response({"error": f"fikk ikke programguiden: {e}", "shows": [],
+                                  "channels": {k: v[0] for k, v in _progmod.NRK_CHANNELS.items()}}, status=502)
+    return web.json_response({"channel": ch, "shows": shows, "channels": {k: v[0] for k, v in _progmod.NRK_CHANNELS.items()}})
+
+
+# --- Endringslogg («Hva er nytt») ---
+CHANGELOG = _progmod.Changelog("/var/lib/skjold/changelog.json")
+
+
+async def h_changelog(r):
+    """GET /api/changelog → {current, notes{tag,name,body,date,url}, history[], offline}"""
+    cur = r.query.get("tag") or _read_text("/usr/local/share/ki-amp/release") or ""
+    d = await asyncio.get_running_loop().run_in_executor(None, CHANGELOG.payload, cur, _beta())
+    return web.json_response(d)
 
 
 # --- MQTT-bro (paho-mqtt) ---
@@ -4911,6 +4996,206 @@ async def h_snapcast(r):
         return web.json_response({"ok": True, "clients": snap_clients(st), "role": plug_cfg("snapcast").get("role")})
     except Exception as e:
         return web.json_response({"ok": False, "error": f"Får ikke kontakt med snapserver: {e}", "clients": [], "role": plug_cfg("snapcast").get("role")})
+
+
+# --- Skjold Sertifisert: høyttalerprofiler (pi/skjold_speakerprofiles.py, sky: /hoyttaler/*) ---
+def speakers_sanitize(k, v):
+    if k == "profile":
+        if not isinstance(v, dict):
+            return {}
+        filt = []
+        for f in (v.get("filters") or [])[:10]:
+            try:
+                filt.append({"f": float(f["f"]), "q": float(f.get("q", 1)), "g": max(-12.0, min(3.0, float(f["g"])))})
+            except (KeyError, TypeError, ValueError):
+                continue
+        keep = {kk: v.get(kk) for kk in ("brand", "model", "target", "valid", "score", "points", "sensitivity", "impedance",
+                                          "measured", "certified", "source", "hint")}
+        return {**keep, "brand": str(keep.get("brand") or "")[:60], "model": str(keep.get("model") or "")[:80], "filters": filt,
+                "curve": [c for c in (v.get("curve") or [])[:400] if isinstance(c, dict)],
+                "after": [c for c in (v.get("after") or [])[:400] if isinstance(c, dict)]}
+    if k == "target":
+        return v if v in ("flat", "varm", "bass") else "flat"
+    if k == "mic":
+        return v if v in ("flat", "iphone", "android", "s1", "file") else "iphone"
+    if k == "calibration":
+        return str(v or "")[:200000]
+    if k == "profile_id":
+        return str(v or "")[:64]
+    if k == "share":
+        return bool(v)
+    return v
+
+
+def speaker_filters(roomeq_on=False):
+    if not plug_on("speakers"):
+        return []
+    try:
+        import skjold_speakerprofiles as sp
+    except Exception as e:
+        print("speakerprofiles:", e); return []
+    return sp.dsp_filters(plug_cfg("speakers").get("profile"), roomeq_on)
+
+
+_sp_sessions = {}
+_sp_store = None
+
+
+def _sp():
+    global _sp_store
+    import skjold_speakerprofiles as sp
+    if _sp_store is None:
+        _sp_store = sp.Store(SKY_URL)
+    return sp, _sp_store
+
+
+def _sp_source():
+    try:
+        with open("/etc/machine-id") as f:
+            return "skjold:" + f.read().strip()
+    except OSError:
+        return "skjold:" + socket.gethostname()
+
+
+async def h_speakers(r):
+    """GET/POST /api/speakers – innstillinger og aktiv profil. POST {"use": "<sky-id>"} henter og tar i bruk en delt profil."""
+    if r.method == "POST":
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        try:
+            if b.get("use"):
+                sp, st = _sp()
+                cloud = await asyncio.get_running_loop().run_in_executor(None, st.get, str(b["use"]))
+                tgt = b.get("target") or plug_cfg("speakers")["target"]
+                filters, after = sp.profile_from_curve(cloud.get("kurve") or [], tgt)
+                b = {"enabled": True, "profile_id": str(b["use"]), "target": tgt, "profile": {
+                    "brand": cloud.get("merke"), "model": cloud.get("modell"), "target": tgt, "filters": filters,
+                    "curve": cloud.get("kurve"), "after": after, "valid": cloud.get("gyldig"), "score": cloud.get("score"),
+                    "points": cloud.get("antall"), "certified": cloud.get("sertifisert"), "source": "cloud",
+                    "sensitivity": cloud.get("folsomhet"), "impedance": cloud.get("impedans"),
+                    "hint": sp.power_hint(cloud.get("folsomhet"), cloud.get("impedans"))}}
+            plugin_update("speakers", b)
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=400)
+    c = plug_cfg("speakers")
+    c["calibration"] = bool(c.get("calibration"))
+    c["active_filters"] = [{"f": f, "q": q, "g": g} for f, q, g in speaker_filters(bool(roomeq_filters()))]
+    c["roomeq_on"] = plug_on("roomeq")
+    return web.json_response(c)
+
+
+async def h_speakers_measure(r):
+    """POST /api/speakers/measure?session=&mode=gated|near&gate=5&reset=1&sr=  (body: WAV/PCM av sweepen)
+    → målingen for dette punktet + forhåndsvisning av profilen for økten (snitt av målingene)."""
+    sp, _st = _sp()
+    body = await r.read()
+    if len(body) > 40 * 1024 * 1024:
+        return web.json_response({"error": "opptaket er for stort"}, status=413)
+    q, c = r.query, plug_cfg("speakers")
+    sid = q.get("session", "default")[:64]
+    try:
+        m = await asyncio.get_running_loop().run_in_executor(None, lambda: sp.measure(
+            body, r.headers.get("Content-Type", ""), int(q.get("sr") or 48000), q.get("mode", "gated"),
+            float(q.get("gate") or 5), c["mic"], c["calibration"] if c["mic"] == "file" else ""))
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=400)
+    now = time.time()
+    for k in [k for k, v in _sp_sessions.items() if now - v["t"] > 1800]:
+        _sp_sessions.pop(k)
+    s = _sp_sessions.setdefault(sid, {"t": now, "near": None, "far": []})
+    if q.get("reset") in ("1", "true"):
+        s.update(near=None, far=[])
+    s["t"] = now
+    if m["mode"] == "near":
+        s["near"] = m
+    else:
+        s["far"] = (s["far"] + [m])[-6:]
+    meas = [sp.splice(s["near"], f) if s["near"] else f for f in s["far"]] or [m]
+    prof = sp.build_profile(meas, q.get("brand", ""), q.get("model", ""), c["target"])
+    return web.json_response({"point": {"mode": m["mode"], "snr": m["snr"], "clipped": m["clipped"], "valid": m["valid"]},
+                              "near": bool(s["near"]), "gated": len(s["far"]), "profile": prof})
+
+
+async def h_speakers_save(r):
+    """POST /api/speakers/save {session, brand, model, target, sensitivity, impedance, apply, share} → profil (lagres og evt. deles)."""
+    sp, st = _sp()
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    s = _sp_sessions.get(str(b.get("session") or "default"))
+    if not s or not s["far"]:
+        return web.json_response({"error": "ingen gated måling i økten – mål minst én gang ≈ 1 m foran høyttaleren"}, status=400)
+    if not str(b.get("brand") or "").strip() or not str(b.get("model") or "").strip():
+        return web.json_response({"error": "oppgi merke og modell"}, status=400)
+    meas = [sp.splice(s["near"], f) if s["near"] else f for f in s["far"]]
+
+    def num(k):
+        try:
+            return float(b[k]) if b.get(k) not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+    prof = sp.build_profile(meas, b["brand"], b["model"], b.get("target") or plug_cfg("speakers")["target"], num("sensitivity"), num("impedance"))
+    prof["source"] = "own"
+    out = {"profile": prof, "shared": None}
+    if b.get("apply", True):
+        plugin_update("speakers", {"enabled": True, "profile": prof, "profile_id": "", "target": prof["target"]})
+    if b.get("share", plug_cfg("speakers")["share"]):
+        try:
+            out["shared"] = await asyncio.get_running_loop().run_in_executor(None, st.submit, prof, _sp_source())
+            if out["shared"] and out["shared"].get("id"):
+                plugin_update("speakers", {"profile_id": out["shared"]["id"]})
+        except Exception as e:
+            out["shared"] = {"error": f"kunne ikke dele nå ({e}) – prøv «Del» senere"}
+    return web.json_response(out)
+
+
+async def h_speakers_search(r):
+    _sp_mod, st = _sp()
+    return web.json_response(await asyncio.get_running_loop().run_in_executor(None, st.search, r.query.get("q", "")))
+
+
+async def h_speakers_profile(r):
+    _sp_mod, st = _sp()
+    try:
+        return web.json_response(await asyncio.get_running_loop().run_in_executor(None, st.get, r.match_info["pid"]))
+    except Exception as e:
+        return web.json_response({"error": f"fant ikke profilen ({e})"}, status=404)
+
+
+async def h_speakers_share(r):
+    """POST /api/speakers/share – del aktiv egen profil. /api/speakers/flag {id, reason} – flagg en delt profil."""
+    _sp_mod, st = _sp()
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    loop = asyncio.get_running_loop()
+    try:
+        if r.path.endswith("/flag"):
+            return web.json_response(await loop.run_in_executor(None, st.flag, str(b.get("id") or ""), b.get("reason", "")))
+        prof = plug_cfg("speakers")["profile"]
+        if not prof.get("curve") or prof.get("source") != "own":
+            return web.json_response({"error": "ingen egen måling å dele"}, status=400)
+        res = await loop.run_in_executor(None, st.submit, prof, _sp_source())
+        if res and res.get("id"):
+            plugin_update("speakers", {"profile_id": res["id"]})
+        return web.json_response(res)
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=502)
+
+
+async def h_speakers_calibration(r):
+    """POST /api/speakers/calibration (tekst: kalibreringsfil «frekvens dB») → antall punkter; tom kropp fjerner den."""
+    import skjold_speakerprofiles as sp
+    txt = (await r.read()).decode("utf-8", "replace")
+    pts = sp.parse_calibration(txt)
+    if txt.strip() and len(pts) < 5:
+        return web.json_response({"error": "fant ingen gyldige linjer «frekvens dB»"}, status=400)
+    plugin_update("speakers", {"calibration": txt if pts else "", "mic": "file" if pts else "iphone"})
+    return web.json_response({"points": len(pts)})
 
 
 # --- Romkorreksjon: sweep og filtre ---
@@ -5531,10 +5816,12 @@ def plugin_update(pid, body):
         if pid in ("xtc", "sync"):
             from skjold_sync import dspblocks
             v = dspblocks.sanitize(k, v)
+        if pid == "speakers":
+            v = speakers_sanitize(k, v)
         cfg[k] = v
     if pid in ("xtc", "sync"):
         _plug_save(pid, cfg)
-    if pid in ("roomeq", "xtc", "sync"):
+    if pid in ("roomeq", "xtc", "sync", "speakers"):
         dsp.update()
     if pid == "record" and any(k.startswith("smb_") for k in body):
         _plug_save(pid, cfg)
@@ -6254,11 +6541,32 @@ async def h_cloud(r):
 MATTER_FLAG = os.environ.get("KI_AMP_MATTER_FLAG", "/var/lib/ki-amp/matter.on")
 MATTER_STATUS = os.environ.get("KI_AMP_MATTER_STATUS", "http://127.0.0.1:8767")
 MATTER_INSTALL = "/usr/local/share/skjold-matter/install.sh"
-_matter_job = {"busy": False, "error": ""}
+MATTER_UNINSTALL = "/usr/local/share/skjold-matter/uninstall.sh"
+_matter_job = {"busy": False, "error": "", "what": ""}
+
+
+def _mem_mb():
+    try:
+        with open("/proc/meminfo") as f:
+            return int(next(l for l in f if l.startswith("MemTotal")).split()[1]) // 1024
+    except Exception:
+        return 0
+
+
+def _matter_uninstall():
+    _matter_job.update(busy=True, error="", what="uninstall")
+    try:
+        p = subprocess.run(["bash", MATTER_UNINSTALL], capture_output=True, text=True, timeout=600, check=False)
+        if p.returncode:
+            _matter_job["error"] = (p.stderr or p.stdout or "avinstalleringen feilet").strip()[-300:]
+    except Exception as e:
+        _matter_job["error"] = str(e)
+    finally:
+        _matter_job.update(busy=False, what="")
 
 
 def _matter_install():
-    _matter_job.update(busy=True, error="")
+    _matter_job.update(busy=True, error="", what="install")
     try:
         p = subprocess.run(["bash", MATTER_INSTALL], capture_output=True, text=True, timeout=1200, check=False)
         if p.returncode:
@@ -6266,7 +6574,7 @@ def _matter_install():
     except Exception as e:
         _matter_job["error"] = str(e)
     finally:
-        _matter_job["busy"] = False
+        _matter_job.update(busy=False, what="")
 
 
 async def _matter_call(path, method="GET"):
@@ -6278,9 +6586,16 @@ async def _matter_call(path, method="GET"):
 
 async def h_matter(r):
     """GET /api/matter → {enabled, available, running, commissioned, fabrics, qr, manual, endpoints, error}
-    POST {"enabled": bool} slår av/på (installerer Node + matter.js første gang) · {"reset": true} glemmer paringer."""
+    POST {"install": true} installerer pluginen (Node 20 + matter.js, ca. 150 MB) og slår den på ·
+    {"uninstall": true} fjerner alt igjen · {"enabled": bool} slår av/på · {"reset": true} glemmer paringer.
+    Matter er en plugin: ingenting av den ligger på enheten før den installeres."""
     if r.method == "POST":
         b = await r.json()
+        if b.get("uninstall") and not _matter_job["busy"] and os.path.exists(MATTER_UNINSTALL):
+            threading.Thread(target=_matter_uninstall, daemon=True, name="matter-uninstall").start()
+            b = {}
+        if b.get("install"):
+            b["enabled"] = True
         if "enabled" in b:
             if b["enabled"]:
                 os.makedirs(os.path.dirname(MATTER_FLAG), exist_ok=True)
@@ -6303,9 +6618,12 @@ async def h_matter(r):
                 _matter_job["error"] = f"Glem paringer: {e}"
             await asyncio.sleep(3)
     on = os.path.exists(MATTER_FLAG)
+    mem = _mem_mb()
     out = {"enabled": on, "available": os.path.exists(MATTER_INSTALL) or os.path.isdir("/opt/skjold-matter"),
+           "installed": os.path.isdir("/opt/skjold-matter/node_modules"), "busy": _matter_job["what"],
+           "memMB": mem, "lowmem": 0 < mem < 1500,
            "running": False, "commissioned": False, "fabrics": [], "qr": "", "manual": "", "endpoints": [],
-           "error": _matter_job["error"] or ("Installerer Node og matter.js …" if _matter_job["busy"] else "")}
+           "error": _matter_job["error"] or ({"install": "Installerer Node og matter.js …", "uninstall": "Avinstallerer …"}.get(_matter_job["what"], ""))}
     if on:
         try:
             out.update(await _matter_call("/status"))
@@ -6333,7 +6651,7 @@ def _vinyl_meta(m):
 
 
 vinyl = _rcmod.VinylWatcher({"active_input": lambda: state["input"] if state.get("power") else "",
-                             "enabled_for": lambda i: bool(feat_cfg()["recognize"].get("vinyl_" + i)) and bool(feat_cfg()["recognize"].get("acoustid_key") or feat_cfg()["recognize"].get("audd_token")),
+                             "enabled_for": lambda i: (globals().get("vinyl_rec") is None or vinyl_rec.state != "recording") and bool(feat_cfg()["recognize"].get("vinyl_" + i)) and bool(feat_cfg()["recognize"].get("acoustid_key") or feat_cfg()["recognize"].get("audd_token")),
                              "cfg": lambda: feat_cfg()["recognize"], "device": _vinyl_dev, "set_meta": _vinyl_meta,
                              "log_track": lambda e: history_add({**e, "t": time.time(), "input": state["input"]})})
 threading.Thread(target=vinyl.run, daemon=True).start()
@@ -6487,6 +6805,82 @@ FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h
                ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
 
 
+
+# ---------- Platesamling: vinyl til FLAC med sporoppdeling (pi/skjold_vinyl.py) ----------
+import skjold_vinyl as _vymod   # noqa: E402
+vinyl_archive = _vymod.Archive(os.path.join(REC_DIR, "vinyl.json"))
+
+
+def _vinyl_raw():
+    return state.setdefault("settings", {}).setdefault("plugins", {}).setdefault("record", {})
+
+
+def _vinyl_cfg():
+    c = _vinyl_raw()
+    return {k: c.get("vinyl_" + k, v) for k, v in _vymod.DEFAULTS.items()}
+
+
+def _vinyl_rec_dev():
+    d = _vinyl_cfg().get("device") or ""
+    return d or _vinyl_dev(state.get("input") if state.get("input") in ("aux", "aux2", "usb") else "aux")
+
+
+def _vinyl_root():
+    d, where = rec_song_dir()
+    if where == "smb":
+        return d, "smb"
+    return os.path.join(REC_DIR, "Platesamling"), "lokalt"
+
+
+def _vinyl_identify(path):
+    return _rcmod.recognize(feat_cfg()["recognize"], rec=lambda *_a: path)
+
+
+vinyl_rec = _vymod.Session({"device": _vinyl_rec_dev, "root": _vinyl_root, "identify": _vinyl_identify,
+                            "release": _rcmod.mb_release_tracks, "tmp": os.path.join(REC_DIR, ".vinyl"),
+                            "cfg": _vinyl_cfg, "on_change": changed}, vinyl_archive)
+
+
+async def h_vinyl(r):
+    act = r.match_info.get("act", "")
+    loop = asyncio.get_running_loop()
+    try:
+        if r.method == "GET":
+            if act == "archive":
+                return web.json_response({"albums": vinyl_archive.load()})
+            return web.json_response({**vinyl_rec.status(), "cfg": _vinyl_cfg()})
+        if r.method == "DELETE":
+            return web.json_response({"albums": vinyl_archive.delete(act)})
+        b = await _json(r)
+        if act == "start":
+            return web.json_response(await loop.run_in_executor(None, lambda: vinyl_rec.start_side(str(b.get("side") or ""))))
+        if act == "stop":
+            return web.json_response(await loop.run_in_executor(None, vinyl_rec.stop_side))
+        if act == "edit":
+            return web.json_response(vinyl_rec.edit(b))
+        if act == "save":
+            return web.json_response(vinyl_rec.finish())
+        if act == "cancel":
+            return web.json_response(vinyl_rec.cancel())
+        if act == "archive":
+            root = _vinyl_root()[0]
+            return web.json_response(await loop.run_in_executor(None, lambda: vinyl_archive.edit(str(b.get("id", "")), b, root)))
+        if act == "settings":
+            c = _vinyl_raw()
+            for k, d in _vymod.DEFAULTS.items():
+                if k in b:
+                    c["vinyl_" + k] = type(d)(b[k])
+            save_state()
+            return web.json_response(_vinyl_cfg())
+        return web.json_response({"error": "ukjent handling"}, status=404)
+    except KeyError as e:
+        return web.json_response({"error": str(e).strip("'")}, status=404)
+    except (ValueError, RuntimeError) as e:
+        return web.json_response({"error": str(e)}, status=409)
+
+
+FEAT_ROUTES += [("GET", "/api/vinyl", h_vinyl), ("GET", "/api/vinyl/{act}", h_vinyl), ("POST", "/api/vinyl/{act}", h_vinyl),
+                ("DELETE", "/api/vinyl/{act}", h_vinyl)]
 
 # ---------- Skjold Kassett: NFC-kassetter (pi/skjold_nfc.py, esphome/skjold-kassett.yaml) ----------
 import skjold_nfc as _nfcmod   # noqa: E402
@@ -6902,7 +7296,7 @@ def main():
     app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/recordings/feed.xml", h_rec_feed), web.get("/api/recordings/prog/{prog}/{name}", h_rec_prog_file), web.get("/api/recordings/guide", h_rec_guide), web.get("/api/changelog", h_changelog), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/speakers", h_speakers), web.post("/api/speakers", h_speakers), web.post("/api/speakers/measure", h_speakers_measure), web.post("/api/speakers/save", h_speakers_save), web.get("/api/speakers/search", h_speakers_search), web.get("/api/speakers/profile/{pid}", h_speakers_profile), web.post("/api/speakers/share", h_speakers_share), web.post("/api/speakers/flag", h_speakers_share), web.post("/api/speakers/calibration", h_speakers_calibration), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

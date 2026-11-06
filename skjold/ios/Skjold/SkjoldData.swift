@@ -82,7 +82,10 @@ enum SK {
             .num("lvlAux", "Nivå AUX", -6, 6, .dB, "Juster så AUX er like høy som strømming", dev: ["s1"]),
             .num("lvlUsb", "Nivå USB", -6, 6, .dB, dev: ["s1"]),
             .act("Test høyttalerne", id: "testSpk", label: "Spill av", safe: true, "Spiller en kort tone i venstre og så i høyre høyttaler, så du kan sjekke at de er koblet riktig"),
-            .act("Romkorreksjon", id: "roomeq", label: "Mål rommet", safe: true, "Mål bassen i rommet med mikrofonen på telefonen, og la Skjold dempe toppene mellom 40 og 300 Hz")]),
+            .act("Romkorreksjon", id: "roomeq", label: "Mål rommet", safe: true, "Mål bassen i rommet med mikrofonen på telefonen, og la Skjold dempe toppene mellom 40 og 300 Hz"),
+            .act("Platesamling: ta opp side", id: "vinylSide", label: "Start", safe: true, "Spill platen på AUX. Skjold tar opp siden, deler den i spor og gjenkjenner albumet. Trykk igjen for side B."),
+            .act("Platesamling: side ferdig", id: "vinylStop", label: "Ferdig", safe: true),
+            .act("Platesamling: lagre platen", id: "vinylSave", label: "Lagre", safe: true, "FLAC med omslag på NAS-en fra Radioopptak. Rett titler i web-UI-et under Integrasjoner → Platesamling.")]),
         SettingCategory(id: "touch", n: "Skjold Touch", sub: "Rolle, skjerm og standby", dev: ["touch"], items: [
             .opt("tRole", "Rolle", ["Spiller og fjernkontroll", "Bare spiller", "Bare fjernkontroll"], "Som spiller har den egen lydutgang (RCA og 3,5 mm). Som fjernkontroll styrer den alle Skjold-enhetene i huset."),
             .opt("tOut", "Lydutgang", ["RCA", "3,5 mm", "Begge"], "PCM5122 HIFI HAT"),
@@ -140,6 +143,8 @@ enum SK {
         SettingCategory(id: "strom", n: "Strøm", sub: "Standby og påslag", items: [
             .opt("auto", "Auto-standby uten lyd", ["Av", "20 min", "60 min"]), .bool("wake", "Slå på ved signal", "AirPlay eller Blåtann vekker forsterkeren")]),
         SettingCategory(id: "oppdatering", n: "Oppdatering", sub: "GitHub, backup og gjenoppretting", items: [SettingItem(kind: .update, k: "update", n: "Oppdatering")]),
+        SettingCategory(id: "programopptak", n: "Radioprogrammer", sub: "Planlagte opptak som podkast", items: [SettingItem(kind: .update, k: "programopptak", n: "Radioprogrammer")]),
+        SettingCategory(id: "endringslogg", n: "Endringslogg", sub: "Hva er nytt i hver versjon", items: [SettingItem(kind: .update, k: "endringslogg", n: "Endringslogg")]),
         SettingCategory(id: "steder", n: "Steder", sub: "Skjold-hjem: Hjem, Hytta … hovedenhet og reserve", items: [SettingItem(kind: .update, k: "steder", n: "Steder")]),
         SettingCategory(id: "skjoldhjem", n: "Skjold-hjem", sub: "Koble denne enheten til et sted", items: [SettingItem(kind: .update, k: "skjoldhjem", n: "Skjold-hjem")]),
         SettingCategory(id: "system", n: "System", sub: "Om, oppsett og tilbakestilling", items: [

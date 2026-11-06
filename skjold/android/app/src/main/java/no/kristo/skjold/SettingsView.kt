@@ -47,8 +47,8 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-private val catIcon = mapOf("tjenester" to "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", "eq" to "M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4", "lyd" to "M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12", "tilkobling" to "M7 7l10 10-5 5V2l5 5L7 17", "radio" to "M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4", "stemme" to "M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3", "skjerm" to "M3 5h18v12H3zM8 21h8M12 17v4", "strom" to "M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0", "system" to "M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z", "oppdatering" to "M12 4v11M7 10l5 5 5-5M5 20h14", "utgang" to "M4 9h3l5-4v14l-5-4H4zM16 8l5 4-5 4", "steder" to "M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "kassett" to "M3 6h18v12H3zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM16 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM10 12h4", "skjoldhjem" to "M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5z")
-private val catTile = mapOf("tjenester" to 0x2a3a2eL, "eq" to 0x3a2e17L, "lyd" to 0x2a3340L, "tilkobling" to 0x22314aL, "radio" to 0x3d2a2aL, "stemme" to 0x2f2a40L, "skjerm" to 0x2a3a33L, "strom" to 0x40362aL, "system" to 0x333335L, "oppdatering" to 0x1f3a3aL, "utgang" to 0x2a3340L, "steder" to 0x2a3340L, "skjoldhjem" to 0x22314aL, "kassett" to 0x3a2e17L)
+private val catIcon = mapOf("tjenester" to "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", "eq" to "M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4", "lyd" to "M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12", "tilkobling" to "M7 7l10 10-5 5V2l5 5L7 17", "radio" to "M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4", "stemme" to "M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3", "skjerm" to "M3 5h18v12H3zM8 21h8M12 17v4", "strom" to "M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0", "system" to "M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z", "oppdatering" to "M12 4v11M7 10l5 5 5-5M5 20h14", "endringslogg" to "M6 3h9l4 4v14H6zM9 10h7M9 14h7M9 18h4", "programopptak" to "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", "utgang" to "M4 9h3l5-4v14l-5-4H4zM16 8l5 4-5 4", "steder" to "M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "kassett" to "M3 6h18v12H3zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM16 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM10 12h4", "skjoldhjem" to "M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5z")
+private val catTile = mapOf("tjenester" to 0x2a3a2eL, "eq" to 0x3a2e17L, "lyd" to 0x2a3340L, "tilkobling" to 0x22314aL, "radio" to 0x3d2a2aL, "stemme" to 0x2f2a40L, "skjerm" to 0x2a3a33L, "strom" to 0x40362aL, "system" to 0x333335L, "oppdatering" to 0x1f3a3aL, "endringslogg" to 0x2a3a2eL, "programopptak" to 0x2a1412L, "utgang" to 0x2a3340L, "steder" to 0x2a3340L, "skjoldhjem" to 0x22314aL, "kassett" to 0x3a2e17L)
 
 /** 18 Innstillinger, 19 Innst. → Radio, 20 Innst. → Equalizer and the other categories from catsFor(type). */
 @Composable
@@ -63,6 +63,8 @@ fun SettingsView(m: AppModel) {
         T("Knapper og oppstart", sora(17f, W.Semibold), Modifier.padding(top = 6.dp))
     }
     if (cat.id == "oppdatering") { DeviceUpdateView(m); UpdateSettingsView(m) }
+    else if (cat.id == "endringslogg") ChangelogView(m)
+    else if (cat.id == "programopptak") RecordedProgramsView(m)
     else if (cat.id == "steder") StederSettingsView(m)
     else if (cat.id == "skjoldhjem") SkyDeviceView(m)
     else {

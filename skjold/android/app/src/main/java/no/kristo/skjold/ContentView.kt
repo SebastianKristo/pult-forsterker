@@ -76,6 +76,7 @@ fun ContentView(m: AppModel) {
             }
             Mode.APP -> AppShell(m)
         }
+        WhatsNewOverlay(m)
         AnimatedVisibility(m.intro, enter = androidx.compose.animation.EnterTransition.None, exit = fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 1.04f)) {
             IntroView(m)
         }
@@ -128,6 +129,7 @@ fun AppShell(m: AppModel) {
         if (m.hjemLogin) HjemLoginView(m)
         if (m.showRoomEQ) RoomEQView(m)
         if (m.showKassett) KassettView(m)
+        if (m.showSpeakers) SpeakerView(m)
         if (wide) {
             // dempelag rgba(0,0,0,.45) bak panelet; trykk lukker
             AnimatedVisibility(m.full, enter = fadeIn(tween(450)), exit = fadeOut(tween(300))) {

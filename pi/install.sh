@@ -208,10 +208,10 @@ fi
 
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
-sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" "$SRC/skjold_cloud.py" /usr/local/bin/   # Apple Hjem (HomeKit)
+sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" "$SRC/skjold_cloud.py" "$SRC/skjold_programs.py" "$SRC/skjold_speakerprofiles.py" /usr/local/bin/   # Apple Hjem (HomeKit)
 sudo install -m 644 "$SRC/skjold_xtc.py" /usr/local/bin/ && sudo install -d /usr/local/bin/skjold_sync && sudo install -m 644 "$SRC"/skjold_sync/*.py /usr/local/bin/skjold_sync/   # romlig stereo, synkron multiroom, trådløs sub
 sudo install -m 644 "$SRC/skjold_extras.py" /usr/local/bin/   # Roon, Plexamp, backup, automatisk standby, Skjold Wrapped
-sudo install -m 644 "$SRC/skjold_smartradio.py" "$SRC/skjold_home_extras.py" "$SRC/skjold_pluginstore.py" "$SRC/skjold_health.py" "$SRC/skjold_libtag.py" "$SRC/skjold_ask.py" "$SRC/skjold_podsum.py" /usr/local/bin/   # smart radio, helse, lydtagger, «Spill noe til …», podkastsammendrag
+sudo install -m 644 "$SRC/skjold_smartradio.py" "$SRC/skjold_home_extras.py" "$SRC/skjold_pluginstore.py" "$SRC/skjold_health.py" "$SRC/skjold_libtag.py" "$SRC/skjold_ask.py" "$SRC/skjold_podsum.py" "$SRC/skjold_vinyl.py" /usr/local/bin/   # smart radio, helse, lydtagger, «Spill noe til …», podkastsammendrag
 sudo install -m 644 "$SRC/skjold_nfc.py" "$SRC/skjold_hjul.py" /usr/local/bin/   # Skjold Kassett (NFC) og Skjold Hjul (fjernkontroll)
 
 # Intercom, låtgjenkjenning (fpcalc/Chromaprint), dørklokke, rutiner og trygg oppdatering (helsesjekk + tilbakerulling)
@@ -223,7 +223,8 @@ sudo install -m 644 "$SRC/skjold_s1f.py" /usr/local/bin/skjold_s1f.py   # Skjold
 sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pins.yaml" /usr/local/share/ki-amp/s1f_pins.yaml
 sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || echo "HAP-python ble ikke installert – Apple Hjem er av"
 python3 -c "import cryptography" 2>/dev/null || sudo apt-get install -y -q python3-cryptography >/dev/null 2>&1 || true   # Skjold Cloud (AES-GCM)
-sudo mkdir -p /usr/local/share/skjold-matter && sudo cp -r "$SRC/matter/package.json" "$SRC/matter/package-lock.json" "$SRC/matter/index.js" "$SRC/matter/mapping.js" "$SRC/matter/skjold-matter.service" "$SRC/matter/install.sh" /usr/local/share/skjold-matter/   # Matter-pluginen (installeres når den slås på)
+python3 -c "import mutagen" 2>/dev/null || sudo apt-get install -y -q python3-mutagen >/dev/null 2>&1 || true   # Platesamling (FLAC-tagger)
+sudo mkdir -p /usr/local/share/skjold-matter && sudo cp -r "$SRC/matter/package.json" "$SRC/matter/package-lock.json" "$SRC/matter/index.js" "$SRC/matter/mapping.js" "$SRC/matter/skjold-matter.service" "$SRC/matter/install.sh" "$SRC/matter/uninstall.sh" /usr/local/share/skjold-matter/   # Matter-pluginen (installeres når den slås på)
 [ -f /var/lib/ki-amp/matter.on ] && { sudo bash /usr/local/share/skjold-matter/install.sh || echo "ADVARSEL: Skjold Matter ble ikke oppdatert" >&2; }
 bash "$SRC/install_webapp.sh"   # web-app: lokal dist > siste skjold-web-*.zip > pi/webapp
 sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service
