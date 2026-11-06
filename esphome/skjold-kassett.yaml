@@ -106,13 +106,13 @@ light:
     id: ring
     name: "Lys"
     pin: GPIO4
-    num_leds: 18
+    num_leds: 5             # 5 LED (60/m) på høykant i kanalen: venstre side, front, høyre side
     rgb_order: GRB
     chipset: WS2812
     default_transition_length: 300ms
     effects:
       - pulse: { name: "Pust", transition_length: 1.6s, update_interval: 1.6s, min_brightness: 10%, max_brightness: 35% }
-      - addressable_scan: { name: "Lest", move_interval: 30ms, scan_width: 4 }
+      - addressable_scan: { name: "Lest", move_interval: 30ms, scan_width: 2 }
       - pulse: { name: "Ukjent", transition_length: 400ms, update_interval: 400ms }
       - strobe:
           name: "Feil"
