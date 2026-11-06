@@ -178,6 +178,27 @@ export default {
       const { sted } = await r.json();
       return intern(stedStub(env, sted), "/kobl", { kode, id, navn: b.navn, produkt: b.produkt });
     }
+    if (p === "/enhet/sync") {
+      // Skjold Cloud: ende-til-ende-krypterte blobs (favoritter, rutiner, innstillinger …) per konto (stedets eier).
+      // Skyen ser aldri innholdet – bare navn på delen, versjon, størrelse og tidspunkt.
+      const auth = req.headers.get("authorization") || "";
+      const m = /^Bearer\s+(.+)$/i.exec(auth);
+      const t = m ? /^(.+)\.(st_[a-z2-7]+)\.([0-9a-f]{64})$/.exec(m[1].trim()) : null;
+      if (!t) return feil(401, "ugyldig enhetsnøkkel");
+      const v = await stedStub(env, t[2]).fetch(new Request("https://do/i/eier", {
+        method: "POST",
+        headers: { "x-skjold-enhet": t[1], "x-skjold-noekkel": t[2] + "." + t[3] },
+      }));
+      if (!v.ok) return v;
+      const { eier } = await v.json();
+      const konto = kontoStub(env, eier);
+      if (req.method === "GET") return intern(konto, "/sync/hent", { del: url.searchParams.get("del") || "" });
+      if (req.method === "PUT") {
+        const b = await lesJson(req);
+        return intern(konto, "/sync/lagre", { ...b, enhet: t[1] });
+      }
+      return feil(405, "metode ikke støttet");
+    }
     if (p === "/enhet/ws") {
       if ((req.headers.get("upgrade") || "").toLowerCase() !== "websocket") return feil(426, "krever WebSocket");
       const auth = req.headers.get("authorization") || "";
@@ -214,8 +235,13 @@ export default {
 
 async function api(req, env, epost, url) {
   const deler = url.pathname.split("/").filter(Boolean).slice(2); // etter api/hjem
-  if (deler[0] !== "steder") return feil(404, "finnes ikke");
   const konto = kontoStub(env, epost);
+  if (deler[0] === "sync" && deler.length === 1) {
+    if (req.method === "GET") return intern(konto, "/sync/oversikt", {});
+    if (req.method === "DELETE") return intern(konto, "/sync/slett", {});
+    return feil(405, "metode ikke støttet");
+  }
+  if (deler[0] !== "steder") return feil(404, "finnes ikke");
 
   if (deler.length === 1) {
     if (req.method === "GET") {
@@ -272,6 +298,7 @@ export class Konto extends DurableObject {
   async fetch(req) {
     const sti = new URL(req.url).pathname;
     const b = await lesJson(req);
+    if (sti.startsWith("/i/sync/")) return this.sync(sti.slice(7), b);
     let steder = (await this.ctx.storage.get("steder")) || [];
     if (sti === "/i/liste") return json({ steder });
     if (sti === "/i/legg") {
@@ -283,6 +310,47 @@ export class Konto extends DurableObject {
     return json({ steder });
   }
 }
+
+const SYNC_DELER = ["favoritter", "rutiner", "innstillinger", "eq", "wrapped", "historikk", "kassetter", "plugins"];
+const SYNC_MAKS = 512 * 1024; // per del, base64 av kryptert innhold
+
+Konto.prototype.sync = async function (sti, b) {
+  const st = this.ctx.storage;
+  if (sti === "/oversikt") {
+    const ut = [];
+    for (const del of SYNC_DELER) {
+      const x = await st.get("sync:" + del);
+      if (x) ut.push({ del, versjon: x.versjon, storrelse: x.blob.length, endret: x.endret, enhet: x.enhet });
+    }
+    return json({ deler: ut });
+  }
+  if (sti === "/slett") {
+    for (const del of SYNC_DELER) await st.delete("sync:" + del);
+    return json({ ok: true });
+  }
+  const del = String(b.del || "");
+  if (sti === "/hent") {
+    if (!del) return this.sync("/oversikt", {});
+    if (!SYNC_DELER.includes(del)) return feil(400, "ukjent del");
+    const x = await st.get("sync:" + del);
+    return x ? json({ del, ...x }) : json({ del, versjon: 0, blob: null });
+  }
+  if (sti === "/lagre") {
+    if (!SYNC_DELER.includes(del)) return feil(400, "ukjent del");
+    const blob = String(b.blob || "");
+    if (!blob || blob.length > SYNC_MAKS || !/^[A-Za-z0-9+/=_-]+$/.test(blob)) return feil(413, "ugyldig eller for stor blob");
+    const naa = await st.get("sync:" + del);
+    const versjon = naa ? naa.versjon : 0;
+    if (Number(b.base ?? -1) !== versjon) {
+      // noen andre har lagret i mellomtiden: klienten må hente, flette og prøve igjen
+      return json({ konflikt: true, del, versjon, blob: naa ? naa.blob : null, endret: naa ? naa.endret : null }, 409);
+    }
+    const ny = { versjon: versjon + 1, blob, endret: Math.floor(Date.now() / 1000), enhet: String(b.enhet || "").slice(0, 64) };
+    await st.put("sync:" + del, ny);
+    return json({ del, versjon: ny.versjon, endret: ny.endret });
+  }
+  return feil(404, "finnes ikke");
+};
 
 // ---------- Koder: kode → sted ----------
 export class Koder extends DurableObject {
@@ -427,6 +495,13 @@ export class Sted extends DurableObject {
       return json(this.oversikt(b.bruker));
     }
     if (sti === "/kobl") return this.kobl(b);
+    if (sti === "/eier") {
+      const d = this.data;
+      const id = req.headers.get("x-skjold-enhet");
+      const e = d && d.enheter.find((x) => x.id === id);
+      if (!e || !likTid(await sha256hex(req.headers.get("x-skjold-noekkel") || ""), e.noekkelHash)) return feil(401, "ugyldig enhetsnøkkel");
+      return json({ eier: d.eier, sted: d.id });
+    }
     return feil(404, "finnes ikke");
   }
 
