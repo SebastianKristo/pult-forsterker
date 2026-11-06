@@ -162,6 +162,46 @@ final class RoomEQModel {
         status = r != nil ? "Romkorreksjon er slått av." : "Fikk ikke kontakt med Skjold."
     }
 
+    /// Høyttalerplassering (POST /api/placement/start → opptak → /api/placement/analyze → /api/placement/apply):
+    /// hver høyttaler spiller en kort sweep etter tur, Skjold regner ut forsinkelse og nivå så alt treffer lytteplassen likt.
+    var placementStatus = ""
+    var placementBusy = false
+
+    func measurePlacement(host: String?) async {
+        guard let host else { placementStatus = "Ingen Skjold valgt."; return }
+        guard await AVAudioApplication.requestRecordPermission() else { placementStatus = "Skjold trenger mikrofontilgang."; return }
+        placementBusy = true; defer { placementBusy = false }
+        placementStatus = "Hold telefonen der du sitter …"
+        do { try recorder.start() } catch { placementStatus = "Fikk ikke startet mikrofonen."; return }
+        let tRec = Date().timeIntervalSince1970
+        let t1 = Date().timeIntervalSince1970
+        guard let d = await DeviceLink.shared.send("/api/placement/start", [:], on: host),
+              let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any],
+              let startAt = (o["start_at"] as? NSNumber)?.doubleValue, let now = (o["now"] as? NSNumber)?.doubleValue else {
+            _ = recorder.stop(); placementStatus = "Fikk ikke kontakt med Skjold."; return
+        }
+        let t2 = Date().timeIntervalSince1970
+        let n = (o["n"] as? NSNumber)?.intValue ?? 2
+        let recS = (o["record_s"] as? NSNumber)?.doubleValue ?? 6
+        let skip = max(0, startAt - (now - (t1 + t2) / 2) - tRec)
+        try? await Task.sleep(for: .seconds(max(0, startAt - now) + recS))
+        let wav = recorder.stop()
+        placementStatus = "Regner ut …"
+        guard let url = Net.url(host, "/api/placement/analyze?n=\(n)&skip=\(String(format: "%.3f", skip))"),
+              let (rd, code) = await Net.data(url, method: "POST", body: wav, timeout: 60, headers: ["Content-Type": "audio/wav"]) else {
+            placementStatus = "Analysen feilet."; return
+        }
+        let r = (try? JSONSerialization.jsonObject(with: rd)) as? [String: Any] ?? [:]
+        if code >= 300 { placementStatus = r["error"] as? String ?? "Analysen feilet (\(code))."; return }
+        let al = r["align"] as? [[String: Any]] ?? []
+        let parts = al.enumerated().map { i, a in
+            String(format: "#%d +%.2f ms %.1f dB", i + 1, (a["delay_ms"] as? NSNumber)?.doubleValue ?? 0, (a["gain_db"] as? NSNumber)?.doubleValue ?? 0)
+        }
+        _ = await DeviceLink.shared.send("/api/placement/apply", [:], on: host)
+        placementStatus = ((r["warning"] as? String).map { $0 + ". " } ?? "") + "Justert: " + parts.joined(separator: " · ")
+        Haptics.success()
+    }
+
     func restart() { points = 0; before = []; after = []; filters = []; saved = false; status = ""; phase = .intro }
 }
 
@@ -205,6 +245,9 @@ struct V4RoomEQSheet: View {
             stepRow(2, "Sitt der du lytter, med telefonen i ørehøyde.")
             stepRow(3, "Mål 3–5 punkter rundt lytteplassen. Snittet blir mest riktig.")
             primary("Start måling") { Task { await model.measure(host: m.settingsHost) } }
+            secondary(model.placementBusy ? "Måler plassering …" : "Mål høyttalerplassering") { Task { await model.measurePlacement(host: m.settingsHost) } }
+                .disabled(model.placementBusy)
+            if !model.placementStatus.isEmpty { Text(model.placementStatus).sora(13, .regular, V4.muted) }
         }
         .padding(16).v4Card()
     }

@@ -116,6 +116,15 @@ export type UpdateInfo = { current: string | null; version: string; latest: stri
 
 /** Plugins (GET/POST /api/plugins): Skjold-egne kjører i daemonen, Lyrion-plugins installeres i Lyrion. */
 export interface Plugin { id: string; name: string; src: 'skjold' | 'lyrion' | 'kommer'; cat: string; desc: string; enabled: boolean; status: string; cfg: Record<string, any>; url?: string }
+export interface PlacementSpeaker { name: string; host: string; channel: 'L' | 'R' | 'both'; role: string }
+export interface PlacementResult {
+  mode: 'phone' | 'devices'; speakers: PlacementSpeaker[]; warning?: string; offset_cm?: number;
+  arrivals?: { t_ms: number | null; level_db: number | null; snr_db: number }[];
+  align?: { delay_ms: number; gain_db: number; rel_cm: number | null }[];
+  positions?: [number, number][]; angles?: number[]; trims?: { dist_m: number; delay_ms: number; gain_db: number }[];
+  roles?: Record<string, { index: number; dev_deg: number }>; listener_measured?: boolean;
+}
+export interface Placement { enabled: boolean; layout: '2.0' | '3.0' | '5.1'; speakers: PlacementSpeaker[]; speakers_eff: PlacementSpeaker[]; trims: Record<string, { delay_ms: number; gain_db: number }>; measured: number; last: PlacementResult | Record<string, never> }
 export interface PluginsResp { plugins: Plugin[]; sleep: number; on: number }
 export interface Lyrics { enabled: boolean; found: boolean; plain?: string; synced?: { t: number; l: string }[]; title?: string; artist?: string; position?: number; instrumental?: boolean; error?: string | null }
 export interface HistItem { t: number; title: string; artist: string; album: string; input: string; source: string; station: string; cover: string }
@@ -171,6 +180,13 @@ export const api = {
   snapcast: (b?: Record<string, unknown>) => (b ? post<{ ok: boolean; error?: string; clients: SnapClient[]; role: string }>('/api/snapcast', b) : req<{ ok: boolean; error?: string; clients: SnapClient[]; role: string }>('/api/snapcast')),
   roomeqSweep: (b: { level?: number; delay?: number }) => post<{ f1: number; f2: number; dur: number; sr: number; delay: number }>('/api/roomeq/sweep', b),
   xtcTest: () => post<{ ok: boolean; dur: number }>('/api/xtc/test', {}),
+  placement: () => req<Placement>('/api/placement'),
+  setPlacement: (b: Record<string, unknown>) => post<Placement>('/api/placement', b),
+  placementStart: () => post<{ start_at: number; now: number; n: number; record_s: number }>('/api/placement/start', {}),
+  placementAnalyze: (pcm: Int16Array, sr: number, n: number, skip: number) =>
+    req<PlacementResult>(`/api/placement/analyze?sr=${sr}&n=${n}&skip=${skip.toFixed(3)}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: pcm.buffer as ArrayBuffer }, undefined, 60000),
+  placementDevices: () => req<PlacementResult>('/api/placement/devices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }, undefined, 60000),
+  placementApply: () => post<{ ok: boolean; trims: Record<string, { delay_ms: number; gain_db: number }>; remote: { host: string; ok: boolean }[] }>('/api/placement/apply', {}),
   subwave: (health = false) => req<Record<string, any>>('/api/subwave' + (health ? '?health=1' : ''), undefined, undefined, 15000),
   subwavePost: (b: Record<string, unknown>) => post<Record<string, any>>('/api/subwave', b),
   setRemote: (b: { enable: boolean; token?: string; host?: string }) => post<RemoteStatus>('/api/remote', b),

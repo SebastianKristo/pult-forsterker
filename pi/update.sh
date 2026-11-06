@@ -14,7 +14,7 @@ echo "== Programmer og tjenester"
 [ "$IS_PI" = 0 ] || [ -f /etc/modules-load.d/ki-amp.conf ] || printf 'dwc2\ni2c-dev\n' | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
 sudo install -m 755 "$SRC/ki_amp_daemon.py" "$SRC/oled_display.py" "$SRC/oled_small.py" /usr/local/bin/
 sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_s1f.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" "$SRC/skjold_cloud.py" "$SRC/skjold_programs.py" "$SRC/skjold_speakerprofiles.py" /usr/local/bin/   # Apple Hjem (HomeKit), Skjold S1 rev F
-sudo install -m 644 "$SRC/skjold_xtc.py" /usr/local/bin/ && sudo install -d /usr/local/bin/skjold_sync && sudo install -m 644 "$SRC"/skjold_sync/*.py /usr/local/bin/skjold_sync/   # romlig stereo, synkron multiroom, trådløs sub
+sudo install -m 644 "$SRC/skjold_xtc.py" "$SRC/skjold_spatial.py" "$SRC/skjold_placement.py" /usr/local/bin/ && sudo install -d /usr/local/bin/skjold_sync && sudo install -m 644 "$SRC"/skjold_sync/*.py /usr/local/bin/skjold_sync/   # romlig stereo, synkron multiroom, trådløs sub
 sudo install -m 644 "$SRC/skjold_extras.py" /usr/local/bin/   # Roon, Plexamp, backup, automatisk standby, Skjold Wrapped
 sudo install -m 644 "$SRC/skjold_smartradio.py" "$SRC/skjold_home_extras.py" "$SRC/skjold_pluginstore.py" "$SRC/skjold_health.py" "$SRC/skjold_libtag.py" "$SRC/skjold_ask.py" "$SRC/skjold_podsum.py" "$SRC/skjold_vinyl.py" /usr/local/bin/   # smart radio, helse, lydtagger, «Spill noe til …», podkastsammendrag
 
