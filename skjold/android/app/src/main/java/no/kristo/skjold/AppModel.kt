@@ -993,6 +993,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val first = dev == null || link != Link.ONLINE
         dev = st
         link = Link.ONLINE
+        val ctx = getApplication<Application>()
+        viewModelScope.launch { WidgetStore.publish(ctx, st, h) }   // widgets + «Spiller nå»-varsling (bare når noe synlig endres)
         if (st.lyrionServer.isNotEmpty()) lyrionServer = st.lyrionServer
         headphones = st.headphones
         if (upd.repo == GitHubReleases.REPO && st.version.isNotEmpty() && upd.version != st.version) upd = upd.copy(version = st.version)
