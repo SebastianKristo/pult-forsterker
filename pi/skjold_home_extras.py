@@ -279,9 +279,10 @@ class RadioLists:
             return [{"title": w.get("title"), "artist": w.get("artist")} for w in (self.ctx["wishlist"]() or [])]
         out, seen = [], set()
         for h in self.ctx["history"]() or []:
-            if channel and channel.lower() not in str(h.get("station") or h.get("source") or h.get("title") or "").lower():
+            where = " ".join(str(h.get(k) or "") for k in ("station", "album", "source", "input")).lower()
+            if channel and channel.lower() not in where:
                 continue
-            t, a = h.get("track") or "", h.get("artist") or ""
+            t, a = h.get("track") or h.get("title") or "", h.get("artist") or ""
             if t and a and (norm(t), norm(a)) not in seen:
                 seen.add((norm(t), norm(a)))
                 out.append({"title": t, "artist": a})

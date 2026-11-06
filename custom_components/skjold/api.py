@@ -122,3 +122,7 @@ class KiAmpApi:
     async def set_settings(self, patch: dict[str, Any]) -> dict[str, Any]:
         """Delvis oppdatering av innstillingene (samme nøkler som web-appen). Svar: {"settings": …}."""
         return await self._req("POST", "/settings", patch)
+
+    async def set_presence(self, on: bool) -> dict[str, Any]:
+        """Tilstede-modus («Bortreise») av/på: spiller radio i tilfeldige økter så det virker som noen er hjemme."""
+        return await self._req("POST", "/presence", {"on": on})

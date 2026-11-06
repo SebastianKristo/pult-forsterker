@@ -1,19 +1,17 @@
-doorbell:
+presence_mode:
+  name: Tilstede-modus
+  description: Slå tilstede-modus («Bortreise») av eller på. Skjold spiller da radio i tilfeldige økter med lavt volum.
   fields:
-    entry_id:
-      required: false
-      selector:
-        config_entry:
-          integration: skjold
-run_routine:
-  fields:
-    routine:
+    "on":
+      name: På
+      description: true for på, false for av.
       required: true
-      example: morgen
+      default: true
       selector:
-        text:
+        boolean:
     entry_id:
-      required: false
+      name: Enhet
+      description: Valgfritt – bare denne Skjold-enheten (config entry). Tom = alle.
       selector:
         config_entry:
           integration: skjold
