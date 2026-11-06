@@ -1,0 +1,11 @@
+# Release-notater (generate_release_notes i skjold-release.yml): PR-titler siden forrige tag, gruppert.
+# Appene og enheten viser disse som «Hva er nytt» (pi/skjold_programs.py rydder bort lenker og «by @…»).
+changelog:
+  exclude:
+    labels: [ignore-for-release, skip-changelog]
+    authors: [dependabot, "dependabot[bot]"]
+  categories:
+    - title: Rettelser
+      labels: [bug, fix, rettelse]
+    - title: Nytt i Skjold
+      labels: ["*"]

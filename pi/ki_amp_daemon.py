@@ -4497,7 +4497,10 @@ def _safe(s):
 def rec_source(spec):
     """{'preset': n} eller {'url': …} → (url, navn)."""
     if spec.get("url"):
-        return str(spec["url"]), str(spec.get("title") or "strøm")
+        return str(spec["url"]), str(spec.get("title") or spec.get("program") or "strøm")
+    if spec.get("nrk") in _progmod.NRK_CHANNELS:
+        nm, u = _progmod.NRK_CHANNELS[spec["nrk"]]
+        return u, nm
     n = int(spec.get("preset") or 0)
     p = state["presets"][n - 1] if 1 <= n <= len(state["presets"]) else None
     if not p:
@@ -4506,6 +4509,9 @@ def rec_source(spec):
 
 
 import skjold_rec as _recmod   # noqa: E402  (SMB, ICY-opptak og deling i låter)
+import skjold_programs as _progmod   # noqa: E402  (planlagte programopptak som podkast + endringslogg)
+
+PROG = _progmod.Programs(os.path.join(REC_DIR, "programmer"))
 
 REC_SONGS = os.path.join(REC_DIR, "songs.json")
 _rec_smb = {"ok": False, "msg": "", "sig": None, "lock": threading.Lock()}
@@ -4577,7 +4583,8 @@ def rec_start(spec):
     p = state["presets"][n - 1] if 1 <= n <= len(state["presets"]) else None
     r = _recmod.IcyRecorder(url, path, mins * 60, get_title=lambda: rec_title_now(url))
     _rec["procs"][fn] = {"rec": r, "end": time.time() + mins * 60, "channel": name, "url": url, "t0": time.time(),
-                         "icon": (p or {}).get("icon") or (p or {}).get("image") or ""}
+                         "icon": (p or {}).get("icon") or (p or {}).get("image") or "",
+                         "program": str(spec.get("program") or "").strip(), "keep": int(spec.get("keep") or 8), "mins": mins}
     print("Radioopptak:", fn, f"({mins} min)", flush=True)
     if plug_cfg("record").get("smb_share"):
         threading.Thread(target=rec_smb_ensure, daemon=True).start()
@@ -4684,7 +4691,7 @@ def _rec_tick():
     for fn, job in list(_rec["procs"].items()):
         if not job["rec"].alive():
             _rec["procs"].pop(fn, None)
-            threading.Thread(target=rec_split, args=(fn, job), daemon=True).start()
+            threading.Thread(target=rec_program_done if job.get("program") else rec_split, args=(fn, job), daemon=True).start()
     if not plug_on("record"):
         return
     tm = time.localtime()
@@ -4696,9 +4703,33 @@ def _rec_tick():
             except Exception as e: print("Radioopptak:", e, flush=True)
 
 
+def rec_program_done(fn, job):
+    """Programopptak: lagres som episode (lokalt for podkast-feeden + kopi på SMB i «Programmer/<navn>/»), behold N siste."""
+    path = os.path.join(REC_DIR, fn)
+    if not os.path.isfile(path) or os.path.getsize(path) < 10_000:
+        return
+    extra = []
+    c = plug_cfg("record")
+    if c.get("smb_share"):
+        base, where = rec_song_dir()
+        if where == "smb":
+            extra.append(os.path.join(base, "Programmer"))
+    try:
+        ep = PROG.add(path, job["program"], job["t0"], time.time() - job["t0"], job.get("channel", ""), job.get("icon", ""),
+                      job.get("keep", 8), extra)
+        print("Programopptak:", job["program"], ep["file"], flush=True)
+    except Exception as e:
+        print("Programopptak feilet:", e, flush=True)
+
+
+def rec_feed_url():
+    return f"http://{_local_ip()}:{PORT}/api/recordings/feed.xml"
+
+
 def rec_payload():
     c = plug_cfg("record")
     return {"items": rec_list(), "dir": REC_DIR, "songs": _songs_load()[:200],
+            "programs": PROG.listing(), "feed": rec_feed_url(),
             "smb": {"set": bool(c.get("smb_share")), "ok": _rec_smb["ok"] and _recmod.smb_mounted(), "msg": _rec_smb["msg"],
                     "share": _recmod.smb_norm_share(c.get("smb_share", ""))}}
 
@@ -4743,12 +4774,58 @@ async def h_recordings_post(r):
             pw = q.get("password") if q.get("password") and not str(q.get("password")).startswith("••••••") else c.get("smb_password", "")
             shares = await loop.run_in_executor(None, lambda: _recmod.smb_list_shares(q.get("server") or c.get("smb_share", ""), q.get("user", c.get("smb_user", "")), pw, q.get("domain", c.get("smb_domain", ""))))
             return web.json_response({"shares": shares})
+        elif b.get("delete_episode"):
+            x = b["delete_episode"]
+            await loop.run_in_executor(None, PROG.remove_episode, str(x.get("prog", "")), str(x.get("file", "")))
+        elif b.get("play_episode"):
+            x = b["play_episode"]
+            if not PROG.path(str(x.get("prog", "")), str(x.get("file", ""))): raise ValueError("finnes ikke")
+            url = f"http://{_local_ip()}:{PORT}/api/recordings/prog/{urllib.parse.quote(x['prog'])}/{urllib.parse.quote(x['file'])}"
+            await loop.run_in_executor(None, lambda: play_url(url, str(x.get("title") or x["file"])))
         elif b.get("clear_songs"):
             try: os.remove(REC_SONGS)
             except OSError: pass
     except Exception as e:
         return web.json_response({"error": str(e)}, status=400)
     return web.json_response(rec_payload())
+
+
+async def h_rec_feed(r):
+    """GET /api/recordings/feed.xml[?p=<program>] → podkast-RSS for programopptakene."""
+    base = f"http://{r.host}" if r.host else f"http://{_local_ip()}:{PORT}"
+    xml = _progmod.build_feed(PROG.listing(), base, r.query.get("p") or None)
+    return web.Response(text=xml, content_type="application/rss+xml", charset="utf-8")
+
+
+async def h_rec_prog_file(r):
+    p = PROG.path(r.match_info["prog"], r.match_info["name"])
+    if not p:
+        return web.json_response({"error": "finnes ikke"}, status=404)
+    return web.FileResponse(p, headers={"Content-Type": "audio/mpeg"})
+
+
+async def h_rec_guide(r):
+    """GET /api/recordings/guide?ch=p1&date=YYYY-MM-DD → sendinger fra NRKs programguide."""
+    ch = r.query.get("ch", "p1")
+    if ch not in _progmod.NRK_CHANNELS:
+        return web.json_response({"error": "ukjent kanal"}, status=400)
+    try:
+        shows = await asyncio.get_running_loop().run_in_executor(None, _progmod.nrk_guide, ch, r.query.get("date") or None)
+    except Exception as e:
+        return web.json_response({"error": f"fikk ikke programguiden: {e}", "shows": [],
+                                  "channels": {k: v[0] for k, v in _progmod.NRK_CHANNELS.items()}}, status=502)
+    return web.json_response({"channel": ch, "shows": shows, "channels": {k: v[0] for k, v in _progmod.NRK_CHANNELS.items()}})
+
+
+# --- Endringslogg («Hva er nytt») ---
+CHANGELOG = _progmod.Changelog("/var/lib/skjold/changelog.json")
+
+
+async def h_changelog(r):
+    """GET /api/changelog → {current, notes{tag,name,body,date,url}, history[], offline}"""
+    cur = r.query.get("tag") or _read_text("/usr/local/share/ki-amp/release") or ""
+    d = await asyncio.get_running_loop().run_in_executor(None, CHANGELOG.payload, cur, _beta())
+    return web.json_response(d)
 
 
 # --- MQTT-bro (paho-mqtt) ---
@@ -6899,7 +6976,7 @@ def main():
     app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/recordings/feed.xml", h_rec_feed), web.get("/api/recordings/prog/{prog}/{name}", h_rec_prog_file), web.get("/api/recordings/guide", h_rec_guide), web.get("/api/changelog", h_changelog), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

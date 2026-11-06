@@ -180,6 +180,7 @@ export const CATS: Category[] = [
     opt('dblPower', 'Dobbelttrykk power', ['Nattmodus', 'Av'], 'Starter nattmodus og automasjonene dine i Home Assistant eller Homey'),
     bool('nightLight', 'Nattlys i nattmodus', 'Svak klokke i standby så lenge nattmodus er på')] },
   { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub, backup og gjenoppretting', items: [{ kind: 'update', n: 'Oppdatering' }] },
+  { id: 'endringslogg', n: 'Endringslogg', sub: 'Hva er nytt i hver versjon', items: [{ kind: 'update', n: 'Endringslogg' }] },
   { id: 'fjernstyring', n: 'Fjernstyring', sub: 'Styr Skjold hjemmefra via Cloudflare', items: [{ kind: 'update', n: 'Fjernstyring' }] },
   { id: 'steder', n: 'Steder', sub: 'Skjold-hjem: Hjem, Hytta … hovedenhet og reserve', items: [{ kind: 'update', n: 'Steder' }] },
   { id: 'skjoldhjem', n: 'Skjold-hjem', sub: 'Koble denne enheten til et sted', items: [{ kind: 'update', n: 'Skjold-hjem' }] },

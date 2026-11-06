@@ -1,4 +1,5 @@
 // Plugins (S1 Web v3 «plug»): Skjold-egne plugins kjører i daemonen (GET/POST /api/plugins), Lyrion-plugins installeres i Lyrion.
+import { GuidePicker, ProgramsPanel } from './programs';
 import { signal } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, INPUT_LABEL, type HistItem, type InputId, type Lyrics, type Plugin, type RecPayload, type RecSong, type SnapClient } from '../lib/api';
@@ -291,8 +292,13 @@ function RecordPanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: strin
           <FavSel v={a.preset} none="Strøm-URL" on={(v) => { const x = [...d.schedules]; x[i] = { ...a, preset: v }; up('schedules', x); }} />
           {!a.preset && <Txt v={a.url} ph="https://…" on={(v) => { const x = [...d.schedules]; x[i] = { ...a, url: v }; up('schedules', x); }} />}
           <Num v={a.minutes} min={1} max={240} on={(v) => { const x = [...d.schedules]; x[i] = { ...a, minutes: v }; up('schedules', x); }} /><span style="font-size:12px;color:#8b8b86">min</span>
+          <Txt v={a.program || ''} ph="Programnavn (valgfritt)" w={170} on={(v) => { const x = [...d.schedules]; x[i] = { ...a, program: v }; up('schedules', x); }} />
+          {a.program && <><span style="font-size:12px;color:#8b8b86">behold</span><Num v={a.keep || 8} min={1} max={52} on={(v) => { const x = [...d.schedules]; x[i] = { ...a, keep: v }; up('schedules', x); }} /></>}
+          {a.nrk && <span style="font-size:11.5px;color:#8b8b86">NRK {String(a.nrk).toUpperCase()}</span>}
           <button onClick={() => up('schedules', d.schedules.filter((_: unknown, j: number) => j !== i))} style={sbtn}>Fjern</button>
         </div>))}
+      <span style="font-size:12px;color:#8b8b86;line-height:1.5">Med programnavn lagres opptaket som en episode (ikke delt i låter) og vises som podkast under «Programmer».</span>
+      <GuidePicker onPick={(sc) => up('schedules', [...d.schedules, sc])} />
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button onClick={() => up('schedules', [...d.schedules, { time: '08:00', days: [5, 6], preset: favs.value[0]?.n ?? 0, url: '', minutes: 60, on: true }])} style={sbtn}>+ Planlegg opptak</button><span style="font-size:12px;color:#8b8b86">Maks lokal lagring</span><Num v={d.max_mb} min={100} max={100000} w={90} on={(v) => up('max_mb', v)} /><span style="font-size:12px;color:#8b8b86">MB</span></div>
       {saveBtn}
 
@@ -303,6 +309,7 @@ function RecordPanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: strin
           <span style="display:flex;flex-direction:column;min-width:0"><b style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{x.name.replace(/\.mp3$/, '')}</b><span style={`font-family:${MONO};font-size:11px;color:${x.recording ? '#ff6a5a' : '#8b8b86'}`}>{x.recording ? `● Tar opp${x.songs ? ' · ' + x.songs + ' låtbytter' : ''} · ` : ''}{(x.size / 1048576).toFixed(1)} MB</span></span>
           <span style="display:flex;gap:8px">{!x.recording && <button onClick={() => void post({ play: x.name })} style={sbtn}>Spill</button>}<button onClick={() => void post({ delete: x.name })} style={sbtn}>{x.recording ? 'Stopp' : 'Slett'}</button></span>
         </div>))}
+      <ProgramsPanel programs={rp.programs ?? []} feed={rp.feed ?? ''} onChange={(x) => setRp(x as RecPayload)} />
       {songs.length > 0 && <>
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px"><span style="font-size:13px;font-weight:600">Lagrede låter</span><button onClick={() => void post({ clear_songs: true })} style={sbtn}>Tøm listen</button></div>
         {songs.map((x, i) => (

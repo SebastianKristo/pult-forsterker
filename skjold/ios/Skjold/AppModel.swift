@@ -123,6 +123,7 @@ final class AppModel {
     /// "", "laster", "ok", "login" eller en feiltekst.
     var hjemState = ""
     var hjemLogin = false
+    var whatsNew: ReleaseNote? = nil   // «Hva er nytt» etter oppdatering av enheten (ChangelogView.swift)
     var showRoomEQ = false   // romkorreksjon med mikrofonen (V4RoomEQSheet)
     var dev: DevStatus? = nil
     var devStats: [String: DevStatus] = [:]
