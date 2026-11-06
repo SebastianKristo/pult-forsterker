@@ -1,6 +1,6 @@
 // Global tilstand (Preact signals): status-polling, innstillinger, navigasjon.
 import { signal, computed, effect } from '@preact/signals';
-import { api, ApiError, coverUrl, credFor, getBase, needsHost, productOf, type Status, type InputId } from './api';
+import { api, ApiError, coverUrl, logoUrl, credFor, getBase, needsHost, productOf, type Status, type InputId } from './api';
 import { DEF, defaultEq, mergeSettings, type Settings, type EqProfiles, type EqSource } from './settings';
 
 export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib' | 'grp' | 'int' | 'plug';
@@ -83,6 +83,9 @@ export function applyStatus(incoming: Status): void {
     if (now > h.until || JSON.stringify(s[k]) === JSON.stringify(h.v)) { if (now > h.until) holds.delete(k); continue; }
     s[k] = h.v;
   }
+  // Kanallogo fra Skjold (/api/logo) foran Lyrion-/eksterne bildeadresser, som ofte ikke kan nås fra nettleseren
+  const rn = s['radio_now'] as { logo?: string; image?: string } | null | undefined;
+  if (rn && rn.logo) s['radio_now'] = { ...rn, image: logoUrl(rn.logo) };
   status.value = s as unknown as Status; online.value = true; failures = 0; lastError.value = '';
 }
 

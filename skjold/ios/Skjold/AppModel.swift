@@ -123,6 +123,7 @@ final class AppModel {
     /// "", "laster", "ok", "login" eller en feiltekst.
     var hjemState = ""
     var hjemLogin = false
+    var showRoomEQ = false   // romkorreksjon med mikrofonen (V4RoomEQSheet)
     var dev: DevStatus? = nil
     var devStats: [String: DevStatus] = [:]
     var lyrionServer: String? = nil
@@ -672,6 +673,7 @@ final class AppModel {
         case "btPair": btPairT = Date(); post(["type": "btPair", "room": devRoom.id])
         case "openRadio": tab = 0; sub = "radio"
         case "setup": restartSetup()
+        case "roomeq": showRoomEQ = true
         default: post(["type": id])
         }
     }

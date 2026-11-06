@@ -159,7 +159,10 @@ extension AppModel {
 
         let cover = DeviceLink.shared.coverURL(st.coverURL)
         if !cover.isEmpty { CoverStore.shared.set(st.title, cover) }
-        if let rn = st.radioNow, !rn.name.isEmpty { LogoStore.shared.adopt(rn.name, rn.image) }
+        if let rn = st.radioNow, !rn.name.isEmpty {
+            if !rn.logo.isEmpty { LogoStore.shared.device(rn.name, DeviceLink.shared.coverURL(rn.logo, on: h)) }
+            else { LogoStore.shared.adopt(rn.name, rn.image) }
+        }
         if !demo { WidgetBridge.shared.update(st, host: h, coverURL: cover, presets: radio.map(\.name)) }   // widgets og Live Activity
 
         let sig = st.presetTitles.joined(separator: "\u{1}")
@@ -350,8 +353,15 @@ extension AppModel {
             return
         }
         presetNs = ps.map(\.n)
-        let l = ps.map { Station(name: $0.title, genre: $0.genre.isEmpty ? "Nettradio" : $0.genre, url: $0.url, image: $0.image.isEmpty ? nil : $0.image) }
-        for p in ps { LogoStore.shared.adopt(p.title, p.image) }
+        // Logoen fra Skjold (/api/logo) først: den nås alltid fra telefonen, i motsetning til Lyrions http-/relative bildeadresser
+        let l = ps.map { p -> Station in
+            let img = p.logo.isEmpty ? p.image : DeviceLink.shared.coverURL(p.logo, on: h)
+            return Station(name: p.title, genre: p.genre.isEmpty ? "Nettradio" : p.genre, url: p.url, image: img.isEmpty ? nil : img)
+        }
+        for p in ps {
+            if !p.logo.isEmpty { LogoStore.shared.device(p.title, DeviceLink.shared.coverURL(p.logo, on: h)) }
+            else { LogoStore.shared.adopt(p.title, p.image) }
+        }
         if l != radio { radio = l; station = min(station, max(0, l.count - 1)) }
         LogoStore.shared.fetch(l.map(\.name))
     }

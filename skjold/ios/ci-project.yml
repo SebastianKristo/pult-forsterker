@@ -24,6 +24,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: Skjold/Info.plist
         INFOPLIST_KEY_NSCameraUsageDescription: Skann QR-koden på forsterkeren.
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Skjold lytter til en testtone fra høyttalerne for å måle og rette bassen i rommet.
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: Skjold finner forsterkere på nettverket ditt.
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES

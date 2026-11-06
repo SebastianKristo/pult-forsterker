@@ -215,7 +215,7 @@ data class DevStatus(
     val volume: Int = 0, val duration: Int = 0, val position: Int = 0, val preset: Int = 0, val presetsCount: Int = 0, val btPairingLeft: Int = 0,
     val inputs: List<String> = emptyList(), val presetTitles: List<String> = emptyList(), val radioNow: RadioNow? = null,
 ) {
-    data class RadioNow(val name: String = "", val genre: String = "", val now: String = "", val image: String = "", val url: String = "", val n: Int = 0, val playing: Boolean = false)
+    data class RadioNow(val name: String = "", val genre: String = "", val now: String = "", val image: String = "", val url: String = "", val n: Int = 0, val playing: Boolean = false, val logo: String = "")
 
     companion object {
         fun parse(d: ByteArray?): DevStatus? = jsonObject(d)?.let { parse(it) }
@@ -230,7 +230,7 @@ data class DevStatus(
             val inputs = j.optJSONArray("inputs")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
             val presets = jsonList(j.opt("presets")).map { it.str("title") }
             val rn = j.optJSONObject("radio_now")?.let { r ->
-                RadioNow(r.str("name"), r.str("genre"), r.str("now"), r.str("image"), r.str("url"), r.num("n"), r.bool("playing"))
+                RadioNow(r.str("name"), r.str("genre"), r.str("now"), r.str("image"), r.str("url"), r.num("n"), r.bool("playing"), r.str("logo"))
             }
             return DevStatus(
                 name = j.str("name"), id = j.str("id"), product = product, board = board, version = j.str("version"),
@@ -274,7 +274,7 @@ class DevSettings private constructor(val ints: Map<String, Int>, val strings: M
 }
 
 /** One favourite from GET /api/presets. */
-data class DevPreset(val n: Int, val title: String, val url: String, val genre: String, val image: String) {
+data class DevPreset(val n: Int, val title: String, val url: String, val genre: String, val image: String, val logo: String = "") {
     companion object {
         fun list(d: ByteArray?): List<DevPreset>? {
             val j = jsonObject(d) ?: return null
@@ -282,7 +282,7 @@ data class DevPreset(val n: Int, val title: String, val url: String, val genre: 
             return jsonList(ps).mapNotNull { p ->
                 val url = p.str("url")
                 if (url.isEmpty()) null
-                else DevPreset(p.num("n"), p.str("title"), url, p.str("genre"), p.str("image").ifEmpty { p.str("icon") })
+                else DevPreset(p.num("n"), p.str("title"), url, p.str("genre"), p.str("image").ifEmpty { p.str("icon") }, p.str("logo"))
             }
         }
     }

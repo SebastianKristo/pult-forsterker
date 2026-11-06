@@ -124,6 +124,12 @@ object LogoStore {
         store(name, url)
     }
 
+    /** Logo servert av Skjold selv (/api/logo): går foran Radio Browser-gjetninger (NRK-logoene i appen beholdes). */
+    fun device(name: String, url: String) {
+        if (url.isEmpty() || SK.nrkAsset[name] != null || urls[name] == url) return
+        store(name, url)
+    }
+
     private fun store(name: String, url: String) {
         urls[name] = url
         val j = JSONObject()

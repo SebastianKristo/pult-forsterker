@@ -354,9 +354,26 @@ struct V4SoundTab: View {
                 toggleRow("Nattmodus", "Jevner ut forskjellen mellom svake og sterke partier.", night) { night.toggle() }
                 toggleRow("Små høyttalere", "Kutter den dypeste bassen så små høyttalere ikke forvrenger.", hpf) { hpf.toggle() }
                 maxRow
+                roomEQRow
             }
             .v4Card()
         }
+    }
+
+    private var roomEQRow: some View {
+        Button { Haptics.tick(); m.showRoomEQ = true } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Romkorreksjon").sora(15)
+                    Text("Mål rommet med telefonens mikrofon og demp basstopper.").sora(12, .regular, V4.muted)
+                }
+                Spacer(minLength: 8)
+                Text("Mål").sora(14, .regular, V4.gold)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .plain()
     }
 
     private var balanceRow: some View {

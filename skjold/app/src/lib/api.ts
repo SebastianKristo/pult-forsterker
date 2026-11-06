@@ -26,8 +26,8 @@ export interface Status {
   radio_now?: RadioNow | null;
 }
 
-export interface RadioNow { name: string; genre?: string; now?: string; image?: string; url?: string; n?: number | null; playing?: boolean }
-export interface Fav { n: number; title: string; url: string; genre?: string; image?: string; icon?: string }
+export interface RadioNow { name: string; genre?: string; now?: string; image?: string; logo?: string; url?: string; n?: number | null; playing?: boolean }
+export interface Fav { n: number; title: string; url: string; genre?: string; image?: string; icon?: string; logo?: string }
 export interface Station { id?: string; name: string; genre?: string; url: string; image?: string; country?: string; codec?: string; bitrate?: number }
 export interface PresetsResp { presets: (Fav | null)[]; items?: Fav[]; count?: number; max?: number; active: number; lyrion: boolean }
 export interface Shelf { id: string; title: string; items: Station[] }
@@ -185,13 +185,20 @@ export const api = {
   forgetBt: () => post<{ ok: boolean }>('/api/bt', { forget: true })
 };
 
+/** Kanallogo servert av Skjold selv (/api/logo?k=…): samme opphav som API-et, så den virker også over fjernstyring/relé
+ *  og uten blandet innhold. Gjøres absolutt mot aktiv enhet. */
+export function logoUrl(logo?: string | null): string {
+  if (!logo) return '';
+  return /^https?:\/\//i.test(logo) ? logo : getBase() + logo;
+}
+
 /** Omslag: cover_url fra daemonen (cache-bust med bildets hash), ellers eldre «cover»-felt. */
 export function coverUrl(st: Status | null): string | null {
   if (!st) return null;
   const u = st.cover_url ?? '';
   if (/^https?:\/\//i.test(u)) return u;
   if (u.startsWith('/')) return getBase() + u;
-  if (!st.cover) { const im = st.input === 'radio' ? st.radio_now?.image ?? '' : ''; return /^https?:\/\//i.test(im) ? im : null; }   // kanallogo når Lyrion ikke har bilde
+  if (!st.cover) { const im = st.input === 'radio' ? (st.radio_now?.logo ? logoUrl(st.radio_now.logo) : st.radio_now?.image ?? '') : ''; return /^(https?:\/\/|\/)/i.test(im) ? im : null; }   // kanallogo når Lyrion ikke har bilde
   if (/^https?:\/\//i.test(st.cover)) return st.cover;
   return getBase() + '/api/cover?v=' + encodeURIComponent(st.cover);
 }

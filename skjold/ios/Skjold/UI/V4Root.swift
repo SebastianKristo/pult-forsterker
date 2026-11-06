@@ -70,6 +70,7 @@ struct V4App: View {
             .animation(V4.fade, value: ui.dial)
         }
         .sheet(isPresented: Binding(get: { m.hjemLogin }, set: { m.hjemLogin = $0 })) { HjemLoginView() }
+        .sheet(isPresented: Binding(get: { m.showRoomEQ }, set: { m.showRoomEQ = $0 })) { V4RoomEQSheet().environment(m) }
         .task {
             try? await Task.sleep(for: .seconds(4.5))
             withAnimation(V4.fade) { ui.hideHint() }

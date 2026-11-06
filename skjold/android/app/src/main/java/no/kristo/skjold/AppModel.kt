@@ -215,6 +215,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** "", "laster", "ok", "login" eller feiltekst. */
     var hjemState by mutableStateOf("")
     var hjemLogin by mutableStateOf(false)
+    var showRoomEQ by mutableStateOf(false)   // romkorreksjon med mikrofonen (RoomEQView)
     var dev by mutableStateOf<DevStatus?>(null)
     val devStats = mutableStateMapOf<String, DevStatus?>()
     var lyrionServer by mutableStateOf<String?>(null)
@@ -777,6 +778,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             "btPair" -> { btPairT = System.currentTimeMillis(); post(mapOf("type" to "btPair", "room" to devRoom.id)) }
             "openRadio" -> { tab = 0; sub = "radio" }
             "setup" -> restartSetup()
+            "roomeq" -> showRoomEQ = true
             else -> post(mapOf("type" to id))
         }
     }
@@ -1008,7 +1010,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
         val cover = DeviceLink.coverURL(st.coverURL)
         if (cover.isNotEmpty()) CoverStore.set(st.title, cover)
-        st.radioNow?.let { if (it.name.isNotEmpty()) LogoStore.adopt(it.name, it.image) }
+        st.radioNow?.let {
+            if (it.name.isNotEmpty()) { if (it.logo.isNotEmpty()) LogoStore.device(it.name, DeviceLink.coverURL(it.logo)) else LogoStore.adopt(it.name, it.image) }
+        }
 
         val sig = st.presetTitles.joinToString("\u0001")
         if (sig != presetSig) { presetSig = sig; launch { loadPresets() } }
@@ -1200,8 +1204,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             return
         }
         presetNs = ps.map { it.n }
-        val l = ps.map { Station(it.title, it.genre.ifEmpty { "Nettradio" }, it.url, it.image.ifEmpty { null }) }
-        for (p in ps) LogoStore.adopt(p.title, p.image)
+        // Logoen fra Skjold (/api/logo) først: den nås alltid fra telefonen, i motsetning til Lyrions http-/relative bildeadresser
+        val l = ps.map { p ->
+            val img = if (p.logo.isNotEmpty()) DeviceLink.coverURL(p.logo, h) else p.image
+            Station(p.title, p.genre.ifEmpty { "Nettradio" }, p.url, img.ifEmpty { null })
+        }
+        for (p in ps) { if (p.logo.isNotEmpty()) LogoStore.device(p.title, DeviceLink.coverURL(p.logo, h)) else LogoStore.adopt(p.title, p.image) }
         if (l != radio) { radio = l; station = minOf(station, maxOf(0, l.size - 1)) }
         LogoStore.fetch(l.map { it.name })
     }

@@ -1,6 +1,6 @@
 // Radiofavoritter (inntil 50) og kanalkatalog fra daemonen: /api/presets*, /api/radio/*.
 import { signal, computed } from '@preact/signals';
-import { api, ApiError, type Fav, type Shelf, type Station, type Status } from './api';
+import { api, ApiError, logoUrl, type Fav, type Shelf, type Station, type Status } from './api';
 import { act, applyStatus, showToast } from './store';
 
 export const MAXRADIO = 50;
@@ -15,7 +15,7 @@ const errMsg = (e: unknown, fallback: string) => (e instanceof ApiError && e.sta
 
 function takePresets(r: { presets?: (Fav | null)[]; items?: Fav[]; max?: number; lyrion?: boolean }): void {
   const items = r.items ?? (r.presets ?? []).map((p, i) => (p ? { ...p, n: p.n ?? i + 1 } : null)).filter((p): p is Fav => !!p);
-  favs.value = items; favsLoaded.value = true;
+  favs.value = items.map((f) => (f.logo ? { ...f, image: logoUrl(f.logo), icon: logoUrl(f.logo) } : f)); favsLoaded.value = true;
   if (r.max) favMax.value = r.max;
   if (typeof r.lyrion === 'boolean') lyrionOk.value = r.lyrion;
 }
