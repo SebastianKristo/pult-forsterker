@@ -121,6 +121,7 @@ import os
 import re
 import socket
 import subprocess
+import sys
 import time
 import base64
 import hashlib
@@ -757,6 +758,13 @@ def dsp_config():
     type: Biquad
     parameters: {{type: Peaking, freq: {f}, q: {q}, gain: {g:.1f}}}""" for i, (f, q, g) in enumerate(rq))
     names = ", ".join(["pre"] + [f"eq{i}" for i, g in enumerate(eq) if g] + [f"rq{i}" for i in range(len(rq))] + ["loud"])
+    try:   # romlig stereo / synk-forsinkelse / trådløs sub (pi/skjold_sync/dspblocks.py)
+        from skjold_sync import dspblocks
+        xf, xm, xs = dspblocks.extra(plug_cfg("xtc"), plug_cfg("sync"))
+    except Exception as e:
+        print("dspblocks:", e); xf, xm, xs = "", "", []
+    xm = f"mixers:{xm}\n" if xm else ""
+    xs = "".join(st + "\n" for st in xs)
     return f"""devices:
   samplerate: 48000
   chunksize: 1024
@@ -769,15 +777,15 @@ filters:
     parameters: {{gain: {pre:.1f}}}{eqf}
   loud:
     type: Loudness
-    parameters: {{fader: Main, reference_level: -10.0, high_boost: {lvl * 0.5:.1f}, low_boost: {float(lvl):.1f}, attenuate_mid: false}}
-pipeline:
+    parameters: {{fader: Main, reference_level: -10.0, high_boost: {lvl * 0.5:.1f}, low_boost: {float(lvl):.1f}, attenuate_mid: false}}{xf}
+{xm}pipeline:
   - type: Filter
     channel: 0
     names: [{names}]
   - type: Filter
     channel: 1
     names: [{names}]
-"""
+{xs}"""
 
 
 class Dsp:
@@ -3963,6 +3971,11 @@ def _cdsp_probe():
 
 
 PLUGIN_DEFS = [
+    ("xtc", "Romlig stereo", "skjold", "Lyd", "Krysstalekansellering for skrivebordet: bredere stereobilde fra to høyttalere foran deg.",
+     {"strength": 70, "span_cm": 50, "dist_cm": 60}),
+    ("sync", "Synkron multiroom", "skjold", "Lyd", "Spill helt synkront i flere rom uten Lyrion, og bruk en enhet som trådløs sub.",
+     {"role": "off", "leader": "", "followers": [], "buffer_ms": 200, "room_delay_ms": 0, "sub_mode": "off", "sub_for": "",
+      "sub_xover": 80, "sub_phase": 0, "sub_fine_ms": 0.0, "sub_level": 0.0}),
     # id, navn, kilde, kategori, beskrivelse, standardinnstillinger
     ("sleep", "Sovetimer", "skjold", "Verktøy", "Skrur ned lyden det siste minuttet og slår av etter 15 til 90 minutter.", {"minutes": 30}),
     ("alarm", "Vekkerklokke", "skjold", "Verktøy", "Vekk med en radiofavoritt eller en strøm. Flere alarmer, valgfrie ukedager og myk oppstart.",
@@ -4950,6 +4963,45 @@ async def h_roomeq_sweep(r):
     return web.json_response({"f1": 20, "f2": 20000, "dur": 6.0, "sr": 48000, "delay": delay})
 
 
+async def h_xtc_test(r):
+    """POST /api/xtc/test – «Lyttetest»: rosa støy som vandrer venstre → midt → høyre (også brukt som sub-test)."""
+    def run():
+        import wave, skjold_xtc
+        with wave.open("/tmp/skjold-xtc.wav", "wb") as w:
+            w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000); w.writeframes(skjold_xtc.test_signal(48000).tobytes())
+        subprocess.run(["aplay", "-q", "-D", "default", "/tmp/skjold-xtc.wav"], timeout=30, check=False)
+    threading.Thread(target=run, daemon=True).start()
+    return web.json_response({"ok": True, "dur": 6.0})
+
+
+_sync_proc = None
+
+
+def sync_apply():
+    """Start/stopp synk-motoren (python3 -m skjold_sync.engine) etter innstillingene i pluginen «sync»."""
+    global _sync_proc
+    c = plug_cfg("sync")
+    if _sync_proc and _sync_proc.poll() is None:
+        _sync_proc.terminate()
+    _sync_proc = None
+    if not c["enabled"] or c["role"] == "off":
+        return
+    args = (["leader", ",".join(c["followers"]) or "127.0.0.1", str(c["buffer_ms"])] if c["role"] == "leader"
+            else ["follower", c["leader"] or "127.0.0.1", str(c["room_delay_ms"])])
+    _sync_proc = subprocess.Popen([sys.executable, "-m", "skjold_sync.engine", *args], cwd=SRC_DIR)
+
+
+async def h_sync(r):
+    if r.method == "POST":
+        try:
+            plugin_update("sync", await r.json())
+        except (ValueError, TypeError) as e:
+            return web.json_response({"error": str(e)}, status=400)
+        sync_apply()
+    from skjold_sync.engine import status
+    return web.json_response({**plug_cfg("sync"), **status(), "running": bool(_sync_proc and _sync_proc.poll() is None)})
+
+
 async def h_roomeq_analyze(r):
     """POST /api/roomeq/analyze?session=<id>&reset=1&sr=48000  (body: WAV, eller rå s16le mono med ?sr=)
     → {curve, after, filters [{f,q,g}], target, points, point, clipped}. Felles analyse for web, iOS og Android;
@@ -5475,8 +5527,13 @@ def plugin_update(pid, body):
                            "preset": int(a.get("preset") or 0), "url": str(a.get("url") or "")[:500],
                            "volume": max(0, min(100, int(a.get("volume", 30)))), "fade": max(0, min(30, int(a.get("fade", 0) or 0))), "on": bool(a.get("on", True))})
             v = al
+        if pid in ("xtc", "sync"):
+            from skjold_sync import dspblocks
+            v = dspblocks.sanitize(k, v)
         cfg[k] = v
-    if pid == "roomeq":
+    if pid in ("xtc", "sync"):
+        _plug_save(pid, cfg)
+    if pid in ("roomeq", "xtc", "sync"):
         dsp.update()
     if pid == "record" and any(k.startswith("smb_") for k in body):
         _plug_save(pid, cfg)
@@ -6096,6 +6153,100 @@ routines = _rtmod.Routines({"do": routine_step, "peers": _peers,
 wishlist = _rcmod.Wishlist(os.path.join(FEAT_DIR, "wishlist.json"))
 
 
+# ---------- Skjold Cloud – ende-til-ende-kryptert synk mellom hjem (pi/skjold_cloud.py) ----------
+try:
+    import skjold_cloud as _scmod
+except Exception:   # cryptography mangler / gammel installasjon
+    _scmod = None
+_SC_SKIP = {"eq", "plugins", "name", "nameCustom"}   # navnet er per høyttaler; plugins har egen del
+
+
+def _sc_hent(d):
+    s_ = state.get("settings") or {}
+    if d == "favoritter":
+        return {str(i + 1): p for i, p in enumerate(state.get("presets") or []) if isinstance(p, dict)}
+    if d == "rutiner":
+        return {r["id"]: r for r in routines.load() if r.get("id")}
+    if d == "eq":
+        return dict(s_.get("eq") or {})
+    if d == "innstillinger":
+        return {k: v for k, v in s_.items() if k not in _SC_SKIP}
+    if d == "plugins":
+        return {k: v for k, v in (s_.get("plugins") or {}).items()}
+    return {}   # wrapped/historikk/kassetter: bare lesing foreløpig
+
+
+def _sc_sett(d, v):
+    if d == "favoritter":
+        pres = list(state.get("presets") or [])
+        for k, p in v.items():
+            if k.isdigit() and 1 <= int(k) <= max(len(pres), 6):
+                pres += [None] * (int(k) - len(pres)); pres[int(k) - 1] = p
+        state["presets"] = norm_presets(pres); save_state(); changed()
+    elif d == "rutiner":
+        for r_ in v.values():
+            routines.save(r_)
+        for r_ in routines.load():
+            if r_.get("id") not in v:
+                routines.delete(r_["id"])
+    elif d in ("eq", "innstillinger"):
+        update_settings({"eq": v} if d == "eq" else v)
+    elif d == "plugins":
+        state.setdefault("settings", {})["plugins"] = v; save_state(); changed()
+
+
+async def _sc_http(metode, url, hdr, body):
+    async with sky.http().request(metode, url, headers=hdr, json=body, timeout=__import__("aiohttp").ClientTimeout(total=30)) as resp:
+        try:
+            return resp.status, await resp.json(content_type=None)
+        except Exception:
+            return resp.status, {}
+
+
+cloud = _scmod.SkjoldCloud({"hent": _sc_hent, "sett": _sc_sett, "sky": lambda: sky.cfg},
+                           os.path.join(FEAT_DIR, "cloud.json"), http=_sc_http) if _scmod else None
+
+
+async def cloud_task():
+    """Synk ved endring (sjekk hvert minutt) og ellers hver time."""
+    sist = None
+    while True:
+        await asyncio.sleep(60)
+        try:
+            if not (cloud and cloud.s.get("enabled")):
+                continue
+            fp = _scmod._h([_sc_hent(d) for d in cloud.s.get("deler", [])])
+            if fp != sist or time.time() - cloud.s.get("sist_synk", 0) > 3600:
+                r_ = await cloud.synk()
+                if r_.get("ok"):
+                    sist = _scmod._h([_sc_hent(d) for d in cloud.s.get("deler", [])])
+        except Exception as e:
+            print("Skjold Cloud:", e, flush=True)
+
+
+async def h_cloud(r):
+    """GET /api/cloud → status · POST {"aktiver":true[, "frase":"12 ord"]} | {"deaktiver":true} | {"deler":[…]} | {"synk":true}.
+    Frasen returneres bare én gang (ved aktivering uten frase)."""
+    if cloud is None:
+        return web.json_response({"available": False, "error": "skjold_cloud mangler (kjør pi/update.sh)"})
+    if r.method == "POST":
+        b = await r.json()
+        out = {}
+        try:
+            if b.get("aktiver"):
+                out = cloud.aktiver(b.get("frase") or None)
+            if b.get("deaktiver"):
+                cloud.deaktiver()
+            if isinstance(b.get("deler"), list):
+                cloud.velg(b["deler"])
+            if b.get("synk") or b.get("aktiver"):
+                out["synk"] = await cloud.synk()
+        except ValueError as e:
+            return web.json_response({"error": str(e)}, status=400)
+        return web.json_response({"available": True, **cloud.status(), **out})
+    return web.json_response({"available": True, **cloud.status()})
+
+
 def _nd():
     s_ = settings()
     if s_.get("ndUrl") and s_.get("ndUser") and s_.get("ndPass"):
@@ -6555,6 +6706,7 @@ async def on_startup(app):
     if os.environ.get("KI_AMP_SKY", "1") != "0":   # Skjold-hjem: sky-relé (gjør ingenting før enheten er koblet)
         sky.lan = LanPeers(sky.ident); sky.lan.start()
         app["sky"] = asyncio.create_task(sky.run())
+        app["cloud"] = asyncio.create_task(cloud_task())
     if node_leds:
         apply_node_leds(); threading.Thread(target=node_led_thread, daemon=True, name="node-led").start()
 
@@ -6582,6 +6734,7 @@ def main():
     threading.Thread(target=_plugins_thread, daemon=True).start()
     if plug_cfg("record").get("smb_share"):   # monter SMB-delingen for radioopptak ved oppstart
         threading.Thread(target=rec_smb_ensure, daemon=True).start()
+    threading.Thread(target=sync_apply, daemon=True).start()   # synkron multiroom / trådløs sub
     threading.Thread(target=hk_apply, daemon=True).start()   # Apple Hjem (HomeKit), hvis slått på   # sovetimer, vekkerklokke, volumtak, historikk, scrobbling
     apply_settings()   # navn på USB-switch, maksvolum osv. fra lagrede innstillinger
     usbsw.start()
@@ -6603,7 +6756,7 @@ def main():
     app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

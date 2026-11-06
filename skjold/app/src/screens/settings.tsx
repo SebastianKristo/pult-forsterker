@@ -17,6 +17,7 @@ import { getLocal, setLocal } from '../lib/services';
 import { ndConfigured, ndError, ndPing } from '../lib/navidrome';
 import { RadioFavorites } from './radio';
 import { SkyPanel, StederPanel } from './hjem';
+import { CloudPanel } from './platform';
 import { favs } from '../lib/radio';
 import { PRODUCT_HW, PRODUCT_LABEL } from '../lib/api';
 import { Chevron } from '../components/ui';
@@ -87,6 +88,7 @@ export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) 
   if (cat.id === 'steder') return <StederPanel />;
   const extra = cat.id === 'system' ? <><HealthPanel /><BackupPanel /></> : null;
   if (cat.id === 'skjoldhjem') return <SkyPanel />;
+  if (cat.id === 'cloud') return <CloudPanel />;
   const items = cat.items.filter((it) => it.kind !== 'clocks' && it.kind !== 'update');
   const hasClocks = cat.items.some((it) => it.kind === 'clocks');
   return (

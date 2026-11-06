@@ -182,6 +182,7 @@ export const CATS: Category[] = [
   { id: 'fjernstyring', n: 'Fjernstyring', sub: 'Styr Skjold hjemmefra via Cloudflare', items: [{ kind: 'update', n: 'Fjernstyring' }] },
   { id: 'steder', n: 'Steder', sub: 'Skjold-hjem: Hjem, Hytta … hovedenhet og reserve', items: [{ kind: 'update', n: 'Steder' }] },
   { id: 'skjoldhjem', n: 'Skjold-hjem', sub: 'Koble denne enheten til et sted', items: [{ kind: 'update', n: 'Skjold-hjem' }] },
+  { id: 'cloud', n: 'Skjold Cloud', sub: 'Kryptert synk av favoritter, rutiner og EQ mellom hjem', items: [{ kind: 'update', n: 'Skjold Cloud' }] },
   { id: 'system', n: 'System', sub: 'Om, oppsett og tilbakestilling', items: [
     { kind: 'info', n: 'Programvare', key: 'version' }, { kind: 'info', n: 'Adresse', key: 'ip' },
     { kind: 'info', n: 'Lyrion', key: 'lyrion' }, { kind: 'info', n: 'Enhets-ID', key: 'id' }, { kind: 'info', n: 'Type', key: 'board' },
@@ -202,6 +203,7 @@ export const ICONS: Record<string, string> = {
   skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4',
   strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0',
   steder: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  cloud: 'M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5zM10 13h4v3h-4zM11 13v-1.5a1 1 0 0 1 2 0V13',
   skjoldhjem: 'M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5z',
   rom: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   oppdatering: 'M12 4v11M7 10l5 5 5-5M5 20h14',
@@ -213,7 +215,7 @@ export const ICONS: Record<string, string> = {
 export const CAT_TILE: Record<string, string> = {
   tjenester: '#2a3a2e',
   eq: '#3a2e17', lyd: '#2a3340', tilkobling: '#22314a', radio: '#3d2a2a', stemme: '#2f2a40', skjerm: '#2a3a33',
-  strom: '#40362a', steder: '#2a3340', skjoldhjem: '#22314a', rom: '#2a3a33', oppdatering: '#333', system: '#333335'
+  strom: '#40362a', steder: '#2a3340', skjoldhjem: '#22314a', cloud: '#22314a', rom: '#2a3a33', oppdatering: '#333', system: '#333335'
 };
 
 /** Bezier curve through the five EQ bands – same geometry as the design file. */

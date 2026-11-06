@@ -140,6 +140,29 @@ class TestPluginInnstillinger(unittest.TestCase):
         import yaml
         yaml.safe_load(cfg)
 
+    def test_xtc_sync_sub_dsp(self):
+        import tempfile, yaml
+        from skjold_sync import dspblocks
+        d.state["settings"] = {}
+        d.dsp.update = lambda: None
+        with self.assertRaises(ValueError):
+            d.plugin_update("sync", {"sub_phase": 90})
+        d.plugin_update("sync", {"enabled": True, "role": "leader", "buffer_ms": 900, "sub_mode": "main", "sub_xover": 40})
+        c = d.plug_cfg("sync")
+        self.assertEqual((c["buffer_ms"], c["sub_xover"]), (500, 60))
+        cfg = yaml.safe_load(d.dsp_config())
+        self.assertEqual(cfg["filters"]["sub_hp"]["parameters"]["order"], 4)
+        self.assertEqual(cfg["filters"]["sync_delay"]["parameters"]["delay"], 500.0)
+        d.plugin_update("sync", {"role": "follower", "sub_mode": "sub", "sub_phase": 180})
+        x = dspblocks.extra({"enabled": True, "strength": 70}, d.plug_cfg("sync"), tempfile.mkdtemp())
+        cfg = yaml.safe_load(d.dsp_config())
+        self.assertTrue(cfg["filters"]["sub_gain"]["parameters"]["inverted"]); self.assertIn("sub_mono", cfg["mixers"])
+        self.assertNotIn("xtc_d", x[0])   # sub-enheten bruker ikke romlig stereo
+        d.state["settings"] = {}
+        x = dspblocks.extra({"enabled": True, "strength": 70}, {}, tempfile.mkdtemp())
+        y = yaml.safe_load("filters:" + x[0] + "\nmixers:" + x[1] + "\npipeline:\n" + "\n".join(x[2]))
+        self.assertEqual(len(y["pipeline"]), 6)
+
     def test_sweep(self):
         x = d.log_sweep(dur=0.5, sr=8000)
         self.assertEqual(len(x), 4000)
