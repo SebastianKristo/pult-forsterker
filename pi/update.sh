@@ -13,7 +13,7 @@ echo "== Programmer og tjenester"
 [ "$IS_PI" = 0 ] || [ -e /dev/i2c-1 ] || { sudo raspi-config nonint do_i2c 0 2>/dev/null; sudo modprobe i2c-dev 2>/dev/null; } || true
 [ "$IS_PI" = 0 ] || [ -f /etc/modules-load.d/ki-amp.conf ] || printf 'dwc2\ni2c-dev\n' | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
 sudo install -m 755 "$SRC/ki_amp_daemon.py" "$SRC/oled_display.py" "$SRC/oled_small.py" /usr/local/bin/
-sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_s1f.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" /usr/local/bin/   # Apple Hjem (HomeKit), Skjold S1 rev F
+sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_s1f.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" "$SRC/skjold_cloud.py" /usr/local/bin/   # Apple Hjem (HomeKit), Skjold S1 rev F
 sudo install -m 644 "$SRC/skjold_extras.py" /usr/local/bin/   # Roon, Plexamp, backup, automatisk standby, Skjold Wrapped
 
 # Intercom, låtgjenkjenning (fpcalc/Chromaprint), dørklokke, rutiner og trygg oppdatering (helsesjekk + tilbakerulling)
@@ -64,6 +64,7 @@ command -v ffmpeg >/dev/null || sudo apt-get -y install --no-install-recommends 
 command -v mount.cifs >/dev/null && command -v smbclient >/dev/null || sudo apt-get -y install --no-install-recommends cifs-utils smbclient >/dev/null   # radioopptak til SMB/NAS
 python3 -c "import paho.mqtt" 2>/dev/null || sudo apt-get -y install --no-install-recommends python3-paho-mqtt >/dev/null || true   # MQTT-bro
 python3 -c "import pyhap" 2>/dev/null || sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || true   # Apple Hjem (HomeKit)
+python3 -c "import cryptography" 2>/dev/null || sudo apt-get install -y -q python3-cryptography >/dev/null 2>&1 || true   # Skjold Cloud (AES-GCM)
 command -v squeezelite >/dev/null || sudo apt-get -y install --no-install-recommends squeezelite >/dev/null
 sudo systemctl disable --now squeezelite 2>/dev/null || true
 sudo systemctl daemon-reload

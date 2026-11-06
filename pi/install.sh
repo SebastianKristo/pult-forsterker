@@ -208,7 +208,7 @@ fi
 
 echo "== 9/9  KI-daemon (knapper, relé, volum, LED, HTTP-API, mDNS)"
 sudo install -m 755 "$SRC/ki_amp_daemon.py" /usr/local/bin/ki_amp_daemon.py
-sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" /usr/local/bin/   # Apple Hjem (HomeKit)
+sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" "$SRC/skjold_cloud.py" /usr/local/bin/   # Apple Hjem (HomeKit)
 sudo install -m 644 "$SRC/skjold_extras.py" /usr/local/bin/   # Roon, Plexamp, backup, automatisk standby, Skjold Wrapped
 
 # Intercom, låtgjenkjenning (fpcalc/Chromaprint), dørklokke, rutiner og trygg oppdatering (helsesjekk + tilbakerulling)
@@ -219,6 +219,7 @@ sudo mkdir -p /usr/local/share/ki-amp/logos/nrk /var/lib/ki-amp/logos && sudo in
 sudo install -m 644 "$SRC/skjold_s1f.py" /usr/local/bin/skjold_s1f.py   # Skjold S1 rev F: knapper, LED, nattmodus
 sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pins.yaml" /usr/local/share/ki-amp/s1f_pins.yaml
 sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || echo "HAP-python ble ikke installert – Apple Hjem er av"
+python3 -c "import cryptography" 2>/dev/null || sudo apt-get install -y -q python3-cryptography >/dev/null 2>&1 || true   # Skjold Cloud (AES-GCM)
 bash "$SRC/install_webapp.sh"   # web-app: lokal dist > siste skjold-web-*.zip > pi/webapp
 sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service
 [ -f /etc/ki-amp.env ] || sudo install -m 600 "$SRC/ki-amp.env" /etc/ki-amp.env
