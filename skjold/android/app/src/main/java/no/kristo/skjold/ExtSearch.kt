@@ -77,6 +77,30 @@ fun ExtSearchResults(m: AppModel, q: String) {
             ExtSearch.fromNRK(DeviceLink.get("/api/nrk/search?q=$enc", on = h, timeout = 12.0))
         hits = found
     }
+    var askMsg by remember(q) { mutableStateOf("") }
+    if (m.live && q.isNotBlank()) {
+        Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+            Row(
+                Modifier.fillMaxWidth().clickable {
+                    val host = m.settingsHost
+                    askMsg = "Finner noe …"
+                    scope.launch {
+                        val raw = DeviceLink.send("/api/ask", mapOf("text" to q), on = host, timeout = 60.0)
+                        val o = try { JSONObject(String(raw ?: ByteArray(0))) } catch (_: Exception) { null }
+                        askMsg = when {
+                            o == null -> "Fant ikke noe som passet"
+                            o.optBoolean("ok") -> "Spiller " + o.optString("summary")
+                            else -> o.optString("error", "Fant ikke noe som passet") + " (" + o.optString("summary") + ")"
+                        }
+                    }
+                }.padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                T("Spill noe til «$q»", sora(15f, W.Semibold, C.accent2), maxLines = 1)
+            }
+            if (askMsg.isNotEmpty()) T(askMsg, sora(12f, W.Regular, C.muted))
+        }
+    }
     if (hits.isEmpty()) return
     Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         T("MUSIC ASSISTANT OG NRK", mono(10f, C.muted, 0.12f))

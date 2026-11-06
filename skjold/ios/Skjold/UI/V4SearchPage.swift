@@ -12,6 +12,8 @@ struct V4SearchPage: View {
     @State private var kb: CGFloat = 0
     /// Treff fra Music Assistant og NRK (via Skjold: /api/ma/search og /api/nrk/search).
     @State private var ext: [ExtHit] = []
+    /// Svar fra «Spill noe til …» (POST /api/ask på Skjold).
+    @State private var askMsg: String = ""
 
     private static let srcs = ["YouTube Music", "Navidrome", "Plex", "Radio", "AirPlay"]
     private var q: String { ui.sq.trimmingCharacters(in: .whitespaces) }
@@ -179,6 +181,22 @@ struct V4SearchPage: View {
                 }
             }
         }
+        if !q.isEmpty && !m.demo {
+            VStack(alignment: .leading, spacing: 6) {
+                Button { askPlay(q) } label: {
+                    HStack(spacing: 10) {
+                        V4Icon(d: V4.search, size: 18, stroke: 2.2, color: V4.gold)
+                        Text("Spill noe til «\(q)»").sora(15, .semibold).lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, 6)
+                }
+                .plain()
+                if !askMsg.isEmpty {
+                    Text(askMsg).sora(12, .regular, V4.muted)
+                }
+            }
+        }
         if !ext.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 V4Kicker(text: "MUSIC ASSISTANT OG NRK")
@@ -217,6 +235,26 @@ struct V4SearchPage: View {
         let path = h.path
         let data = DeviceLink.json(h.body)
         Task { _ = await DeviceLink.shared.sendRaw(path, data, on: host, timeout: 12) }
+    }
+
+    private func askPlay(_ text: String) {
+        let host = m.settingsHost
+        let data = DeviceLink.json(["text": text])
+        askMsg = "Finner noe …"
+        Task {
+            let d = await DeviceLink.shared.sendRaw("/api/ask", data, on: host, timeout: 60)
+            var msg = "Fant ikke noe som passet"
+            if let d = d, let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
+                let ok = (o["ok"] as? Bool) ?? false
+                let sum = (o["summary"] as? String) ?? ""
+                if ok {
+                    msg = "Spiller " + sum
+                } else {
+                    msg = ((o["error"] as? String) ?? msg) + " (" + sum + ")"
+                }
+            }
+            askMsg = msg
+        }
     }
 
     private func loadExt(_ query: String) async -> [ExtHit] {
