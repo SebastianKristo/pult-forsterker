@@ -193,7 +193,7 @@ struct V4RoomEQSheet: View {
         HStack {
             Text("Romkorreksjon").sora(24, .semibold)
             Spacer()
-            Button("Lukk") { dismiss() }.sora(15, .regular, V4.gold).plain()
+            Button { dismiss() } label: { Text("Lukk").sora(15, .regular, V4.gold) }.plain()
         }
     }
 
