@@ -814,7 +814,12 @@ class Dsp:
         self._ev.set()   # skyv oppsett og volum ved oppstart
         while True:
             self._ev.wait(); self._ev.clear()
-            cfg = dsp_config()
+            try:
+                cfg = dsp_config()
+            except NameError:   # tråden starter før resten av daemonen er lastet (f.eks. roomeq_filters) – prøv igjen
+                time.sleep(1); self._ev.set(); continue
+            except Exception as e:
+                print("CamillaDSP-oppsett:", e, flush=True); time.sleep(2); self._ev.set(); continue
             try:   # samme oppsett på disk, så CamillaDSP starter riktig etter omstart/krasj
                 if not os.path.exists(DSP_FILE) or open(DSP_FILE).read() != cfg:
                     with open(DSP_FILE + ".tmp", "w") as fh: fh.write(cfg)
