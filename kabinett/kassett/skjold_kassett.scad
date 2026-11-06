@@ -3,7 +3,7 @@
 // (CC BY-NC 4.0) – ingen geometri er kopiert. Lisens: CC BY-NC-SA 4.0 (se LISENS-MASKINVARE.md).
 //
 // Bruk:  openscad -D 'part="spiller_topp"' -o spiller_topp.stl skjold_kassett.scad
-// part:  spiller_topp | spiller_bunn | kassett_front | kassett_bak | lysleder | samlet | med_kassett | eksplodert | kassett_samlet
+// part:  spiller_topp | spiller_bunn | kassett_front | kassett_bak | lysleder | samlet | med_kassett | eksplodert | kassett_samlet | kassett_bakside
 
 part = "samlet";
 $fn = 64;
@@ -43,29 +43,69 @@ module rbox_soft(w,d,h,r,t=3){ // avrundet topkant
 }
 
 // ---------- kassett ----------
+// Retro kompaktkassett i Skjold-form: to skall (1,2 mm hud, 1,6 mm vegg) med ribber i stedet for massiv plate.
+// Bakre halvdel har spolevinduer og sentervindu; fremre halvdel har tannhjulsnavene som stikker gjennom vinduene,
+// etikettfeltet og trapesen nederst. Begge printes med utsiden ned, uten støtte. z=0 er utsiden, z=kT/2 er skjøten.
+skin = 1.2;  kWall = 1.6;  rib = 1.0;
+reelX = [13, kW-13]; reelY = 50; reelD = 12.4; hubD = 7; hubTeeth = 6;
+screws = [[4.6,4.6],[kW-4.6,4.6],[4.6,kH-4.6],[kW-4.6,kH-4.6]];
+tagY = kH*0.42;   // brikken ligger rett bak PN532-antennen i spilleren
+module hub2d(){ difference(){ circle(d=hubD); for(i=[0:hubTeeth-1]) rotate(i*360/hubTeeth) translate([hubD/2,0]) circle(d=1.6); circle(d=2.2); } }
+module trapes2d(w0=40,w1=30,h=11){ polygon([[-w0/2,0],[w0/2,0],[w1/2,h],[-w1/2,h]]); }
+module groove(h=0.4) translate([0,0,-0.01]) linear_extrude(h+0.01) children();
+
 module kassett_halv(front=true){
+  H = kT/2;
   difference(){
-    rbox(kW,kH,kT/2,kR);
-    // brikkelomme i bakre halvdel (innside)
-    if(!front) translate([kW/2,kH*0.42,kT/2-tagT]) cylinder(d=tagD,h=tagT+0.01);
-    // etikettfelt foran (utside)
-    if(front) translate([(kW-lblW)/2,kH-lblH-4,-0.01]) rbox(lblW,lblH,lblT+0.01,2);
-    // magnetlomme nederst (i begge, halv dybde)
-    translate([kW/2,0,kT/2]) rotate([-90,0,0]) translate([0,0,-0.01]) cylinder(d=magD,h=magT+0.01);
-    // grep-spor øverst
-    translate([kW/2,kH+4,front?-0.01:kT/2-1.2]) scale([1,0.35,1]) cylinder(r=12,h=1.21);
-    // hull til tapper (i bakre)
-    if(!front) for(p=[[6,6],[kW-6,6],[6,kH-6],[kW-6,kH-6]]) translate([p[0],p[1],kT/2-pinH-0.3]) cylinder(d=pinD+0.25,h=pinH+0.31);
+    union(){
+      // skall: hud + yttervegg
+      difference(){ rbox(kW,kH,H,kR); translate([kWall,kWall,skin]) rbox(kW-2*kWall,kH-2*kWall,H,kR-kWall); }
+      // magnetklosse nederst (halve lomma i hver halvdel)
+      translate([kW/2-5,0,0]) cube([10,magT+1.4,H]);
+      // tapp-/skrueklosser i hjørnene
+      for(p=screws) translate([p[0],p[1],0]) cylinder(d=pinD+3.2,h=H);
+      if(front){
+        // ribber: midtlinje og tverrbjelke (holder huden stiv under etiketten)
+        translate([kW/2-rib/2,magT+1.4,0]) cube([rib,kH-magT-1.4-kWall,H]);
+        translate([kWall,tagY-rib/2,0]) cube([kW-2*kWall,rib,H]);
+        // tannhjulsnav som stikker gjennom spolevinduene i bakre halvdel
+        for(x=reelX) translate([x,reelY,0]) linear_extrude(kT-0.3) hub2d();
+      } else {
+        // ring som holder NFC-brikken mot bakhuden
+        translate([kW/2,tagY,0]) difference(){ cylinder(d=tagD+2*rib,h=skin+1.6); translate([0,0,skin]) cylinder(d=tagD,h=3); }
+        // krage rundt vinduene + sentervindu
+        for(x=reelX) translate([x,reelY,0]) cylinder(d=reelD+2*rib,h=H);
+        translate([kW/2-5-rib,reelY-3.5-rib,0]) rbox(10+2*rib,7+2*rib,H,1.5+rib);
+        // tverrbjelke under brikken
+        translate([kWall,tagY-tagD/2-rib-3,0]) cube([kW-2*kWall,rib,H]);
+      }
+    }
+    // magnetlomme (aksen langs y, sentrert i skjøten)
+    translate([kW/2,-0.01,H]) rotate([-90,0,0]) cylinder(d=magD,h=magT+0.01);
+    if(front){
+      // tapper står på fremre; hull for etikettens plass markeres med en 0,2 mm linje (printes rett på platen)
+      translate([(kW-lblW)/2+2,kH-lblH-2,0]) groove(0.2) difference(){ offset(r=2) square([lblW-4,lblH-4]); offset(r=1.4) square([lblW-4,lblH-4]); }
+      // trapes nederst som på en ekte kassett, med to «styrehull» og SKJOLD
+      translate([kW/2,0,0]) groove(0.4) difference(){ trapes2d(); offset(-0.8) trapes2d(); }
+      for(x=[kW/2-13,kW/2+13]) translate([x,3.6,0]) groove(0.6) circle(d=2.6);
+      translate([kW/2,6.2,0]) groove(0.4) text("SKJOLD",size=3.4,font="Liberation Sans:style=Bold",halign="center",spacing=1.25);
+    } else {
+      // spolevinduer og sentervindu tvers gjennom
+      for(x=reelX) translate([x,reelY,-0.01]) cylinder(d=reelD,h=H+1);
+      translate([kW/2-5,reelY-3.5,-0.01]) rbox(10,7,H+1,1.5);
+      // hull til tappene (blinde – «skruene» vises som ringer på utsiden)
+      for(p=screws) translate([p[0],p[1],H-pinH-0.3]) cylinder(d=pinD+0.15,h=pinH+0.31);
+      for(p=screws) translate([p[0],p[1],0]) groove(0.4) difference(){ circle(d=4.2); circle(d=3); }
+      translate([kW/2,10,0]) groove(0.4) difference(){ circle(d=4.2); circle(d=3); }
+    }
   }
-  if(front) for(p=[[6,6],[kW-6,6],[6,kH-6],[kW-6,kH-6]]) translate([p[0],p[1],kT/2]) cylinder(d=pinD,h=pinH);
-  // «SKJOLD» preget nederst foran
-  if(front) color(c_txt) translate([kW/2,7,0]) mirror([0,0,1]) linear_extrude(0.4) text("SKJOLD",size=3.6,font="Liberation Sans:style=Bold",halign="center",spacing=1.25);
+  if(front) for(p=screws) translate([p[0],p[1],H]) cylinder(d=pinD,h=pinH);
 }
 module kassett_samlet(lbl=true){
   // front-halvdel speilvendt oppå bakre, tapper inn
   color(c_k2) kassett_halv(false);
   color(c_k1) translate([0,0,kT]) mirror([0,0,1]) kassett_halv(true);
-  if(lbl) color(c_lbl) translate([(kW-lblW)/2+0.4,kH-lblH-3.6,kT-0.4]) rbox(lblW-0.8,lblH-0.8,0.38,2);
+  if(lbl) color(c_lbl) translate([(kW-lblW)/2+0.4,kH-lblH-3.6,kT]) rbox(lblW-0.8,lblH-0.8,0.15,2);
 }
 
 // ---------- spiller ----------
@@ -144,6 +184,7 @@ else if(part=="lysleder") lysleder();
 else if(part=="kassett_front") kassett_halv(true);
 else if(part=="kassett_bak") kassett_halv(false);
 else if(part=="kassett_samlet") kassett_samlet();
+else if(part=="kassett_bakside") translate([0,kH,kT]) rotate([180,0,0]) kassett_samlet(); // baksiden med spolevinduene
 else if(part=="med_kassett") med_kassett();
 else if(part=="eksplodert") eksplodert();
 else spiller_samlet();
