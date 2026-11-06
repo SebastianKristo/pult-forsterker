@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="recognize" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_recognize" android:shortcutLongLabel="@string/sc_recognize">
+        <intent android:action="android.intent.action.VIEW" android:data="skjold://recognize"
+            android:targetPackage="no.kristo.skjold.app" android:targetClass="no.kristo.skjold.ShortcutActivity" />
+    </shortcut>
+</shortcuts>

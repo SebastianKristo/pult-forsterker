@@ -203,3 +203,38 @@ nonisolated struct SkjoldPresetIntent: AppIntent {
         return .result()
     }
 }
+
+// MARK: - Siri / Snarveier: rutiner, dørklokke og «Hva er dette?»
+
+nonisolated struct SkjoldRoutineIntent: AppIntent {
+    static var title: LocalizedStringResource { "Kjør Skjold-rutine" }
+    static var description: IntentDescription { IntentDescription("Kjører en rutine på Skjold, f.eks. «morgen» eller «kveld».") }
+    @Parameter(title: "Rutine") var routine: String
+    init() {}
+    init(routine: String) { self.routine = routine }
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let id = routine.trimmingCharacters(in: .whitespaces).lowercased()
+        let path = "/api/routines/" + (id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id) + "/run"
+        let ok = await SkjoldShared.post(path, [:])
+        return .result(dialog: ok ? "Kjører \(routine)." : "Fikk ikke kontakt med Skjold.")
+    }
+}
+
+nonisolated struct SkjoldRecognizeIntent: AppIntent {
+    static var title: LocalizedStringResource { "Hva er dette?" }
+    static var description: IntentDescription { IntentDescription("Lar Skjold gjenkjenne låten som spiller nå.") }
+    init() {}
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let ok = await SkjoldShared.post("/api/recognize", [:])
+        return .result(dialog: ok ? "Lytter … svaret vises i Skjold-appen." : "Fikk ikke kontakt med Skjold.")
+    }
+}
+
+nonisolated struct SkjoldDoorbellIntent: AppIntent {
+    static var title: LocalizedStringResource { "Ring på hos Skjold" }
+    init() {}
+    func perform() async throws -> some IntentResult {
+        _ = await SkjoldShared.post("/api/doorbell", ["src": "Siri"])
+        return .result()
+    }
+}

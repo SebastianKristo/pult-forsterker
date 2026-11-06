@@ -1,5 +1,6 @@
 // Innstillinger: kategoriliste + detaljside, generert fra CATS i lib/settings.ts.
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { DoorbellPanel, RecognizeSettingsPanel, RoutinesPanel, WishlistPanel } from './features';
 import { api, type RemoteStatus, hostLabel, isNative, REPO, type LevelSource, type UpdateInfo } from '../lib/api';
 import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status } from '../lib/store';
 import { computed } from '@preact/signals';
@@ -80,6 +81,7 @@ export function CategoryList({ wide = false }: { wide?: boolean } = {}) {
 
 export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) {
   if (cat.id === 'oppdatering') return <><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}</>;
+  if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><RoutinesPanel /><DoorbellPanel /><RecognizeSettingsPanel /><WishlistPanel /></div>;
   if (cat.id === 'fjernstyring') return <RemotePanel />;
   if (cat.id === 'steder') return <StederPanel />;
   const extra = cat.id === 'system' ? <BackupPanel /> : null;
@@ -362,6 +364,9 @@ function UpdatePanel() {
         {working && <div style="display:flex;align-items:center;gap:8px"><span class="spin" style={`width:14px;height:14px;border-radius:50%;border:2px solid #3a3a37;border-top-color:${A};animation:spin 1s linear infinite`} /><span style="font-size:13px">{phase === 'gone' ? 'Starter Skjold på nytt … venter på enheten' : 'Oppdaterer … ikke slå av enheten'}</span></div>}
         {phase === 'done' && <div style="padding:10px 12px;border-radius:8px;background:#16201a;border:1px solid #2a4a33;font-size:13px;color:#9be0a8">Oppdatert{info?.current ? ' til ' + info.current : ''}. Last siden på nytt for å få det nyeste web-grensesnittet.</div>}
         {phase === 'failed' && <div style="padding:10px 12px;border-radius:8px;background:#2a1412;border:1px solid #5a2620;font-size:13px;color:#ff9a8a">Oppdateringen feilet. Se loggen under.</div>}
+        {info?.channel === 'beta' && <span style="font-size:11px;color:#f0c46a">Beta-kanal: får prerelease-versjoner</span>}
+        {info?.rolled_back && <span style="font-size:12px;color:#c9b48a">Rullet tilbake til {info.rolled_back}</span>}
+        {!working && info?.can_rollback && <button onClick={async () => { if (!confirm('Rull tilbake til forrige versjon?')) return; setErr(''); try { const r = await api.rollback(); setLog(r.log); void follow(); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } }} style="height:38px;border-radius:14px;border:1px solid #5a2620;background:#1b1b1c;color:#ff9a8a;font-size:13px;cursor:pointer" data-testid="upd-rollback">Rull tilbake til forrige versjon</button>}
         {!working && <button onClick={() => { setPhase(''); void load(); }} disabled={busy} style="height:42px;border-radius:14px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;cursor:pointer">{busy ? 'Sjekker …' : 'Se etter oppdateringer'}</button>}
         {(err || info?.error) && <div style="padding:10px 12px;border-radius:8px;background:#2a1412;border:1px solid #5a2620;font-size:13px;color:#ff9a8a;line-height:1.45">{err || info?.error}</div>}
         {log.length > 0 && (working || phase === 'failed' || phase === 'done') && <pre style={`margin:0;max-height:220px;overflow:auto;padding:10px 12px;border-radius:10px;background:#0f0f10;border:1px solid #242426;${mono};font-size:11px;color:#c9c9c4;white-space:pre-wrap;line-height:1.5`}>{log.slice(-30).join('\n')}</pre>}

@@ -25,6 +25,12 @@ class KiAmpApi:
         except (aiohttp.ClientError, TimeoutError) as err:
             raise KiAmpError(str(err)) from err
 
+    async def doorbell(self) -> dict[str, Any]:
+        return await self._req("POST", "/api/doorbell", {"src": "Home Assistant"})
+
+    async def run_routine(self, routine: str) -> dict[str, Any]:
+        return await self._req("POST", f"/api/routines/{routine}/run", {})
+
     @property
     def base(self) -> str:
         return self._base

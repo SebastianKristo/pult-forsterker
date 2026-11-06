@@ -23,6 +23,7 @@ import { IntegrationsPage, PluginsPage, intCount, plugCount } from './screens/in
 import { MaPage, maConfigured } from './screens/ma';
 import { NrkPanel } from './screens/nrk';
 import { SettingsPage, CategoryDetail } from './screens/settings';
+import { DoorbellOverlay, TalkButton } from './screens/features';
 import { PowerButton, Transport, artFor, nowTitle, subLine } from './screens/player';
 import { openFull } from './lib/store';
 import { FindDevice, Setup } from './screens/onboard';
@@ -65,7 +66,7 @@ export function App() {
   else if (mode.value === 'find') body = <FindDevice />;
   else if (mode.value === 'setup') body = <Setup />;
   else body = wide ? <Desktop /> : <Phone />;
-  return <>{body}{toast.value && <div class="toast fade" role="status">{toast.value}</div>}</>;
+  return <>{body}<DoorbellOverlay />{toast.value && <div class="toast fade" role="status">{toast.value}</div>}</>;
 }
 
 function Offline() {
@@ -202,7 +203,7 @@ function Desktop() {
         <header class="hdr">
           <div class="row" style={{ minWidth: 0, gap: '14px' }}>
             <div class="col" style={{ minWidth: 0 }}>
-              <span class="row" style={{ gap: '10px', position: 'relative', flexWrap: 'wrap' }}><PlayerPicker /><StedPicker /><span class="type-badge" data-testid="type-badge"><Icon d={PRODUCT_ICON[p]} size={15} sw={1.5} />{PRODUCT_LABEL[p]}</span></span>
+              <span class="row" style={{ gap: '10px', position: 'relative', flexWrap: 'wrap' }}><PlayerPicker /><StedPicker /><TalkButton compact /><span class="type-badge" data-testid="type-badge"><Icon d={PRODUCT_ICON[p]} size={15} sw={1.5} />{PRODUCT_LABEL[p]}</span></span>
               <span class="sub ellip">{PRODUCT_HW[p]}{s?.version ? ' · v' + s.version : ''}</span>
             </div>
           </div>

@@ -88,7 +88,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _register_services(hass)
     return True
+
+
+def _register_services(hass: HomeAssistant) -> None:
+    """skjold.doorbell og skjold.run_routine – går til alle Skjold-enheter (eller bare entry_id hvis oppgitt)."""
+    if hass.services.has_service(DOMAIN, "doorbell"):
+        return
+
+    def _targets(call):
+        want = call.data.get("entry_id")
+        return [c for eid, c in hass.data.get(DOMAIN, {}).items() if not want or eid == want]
+
+    async def _doorbell(call) -> None:
+        for c in _targets(call):
+            await c.api.doorbell()
+
+    async def _routine(call) -> None:
+        for c in _targets(call):
+            await c.api.run_routine(str(call.data["routine"]))
+
+    hass.services.async_register(DOMAIN, "doorbell", _doorbell)
+    hass.services.async_register(DOMAIN, "run_routine", _routine)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

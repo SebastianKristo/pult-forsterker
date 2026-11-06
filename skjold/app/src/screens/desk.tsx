@@ -15,6 +15,7 @@ import { SpeakerButton } from './groups';
 import { libUi } from './library';
 import { LyricsPane, SubwavePane } from './plugins';
 import { WrappedTeaser } from './extras';
+import { RecognizeBox, RoutinesShelf } from './features';
 
 const PLAY = 'M8 5v14l11-7z';
 const SRC_ORDER: [InputId, string][] = [['radio', 'Radio'], ['airplay', 'AirPlay'], ['bt', 'Blåtann'], ['spotify', 'Spotify'], ['plex', 'Plex'], ['aux', 'AUX'], ['aux2', 'AUX'], ['usb', 'USB']];
@@ -93,6 +94,7 @@ export function DeskHome() {
         </div>
 
         <WrappedTeaser />
+        <RoutinesShelf />
 
         {rc.length > 0 && <section class="col gap12">
           <SecHead title="Fortsett å lytte" kicker="NYLIG SPILT" />
@@ -173,6 +175,7 @@ export function DeskPlayer() {
       <div class="info">
         <div class="seg">{((s?.subwave ? [['song', 'Låt'], ['booth', 'Booth'], ['queue', 'Kø']] : [['song', 'Låt'], ['queue', 'Kø'], ['lyrics', 'Tekst']]) as ['song' | 'queue' | 'lyrics' | 'booth', string][]).map(([k, n]) => <button key={k} class={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}</div>
         {tab === 'song' ? <>
+          <RecognizeBox />
           <div class="col" style={{ gap: '6px', minWidth: 0 }}>
             <span class="kicker">{live ? <span class="live">DIREKTE</span> : sourceLine(s).toUpperCase()}</span>
             <h1 class="tt" data-testid="now-title">{t.title}</h1>
