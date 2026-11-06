@@ -3921,7 +3921,8 @@ PLUGIN_DEFS = [
     ("kids", "Barnerom-modus", "skjold", "Verktøy", "Maks volum, bare utvalgte kilder og kanaler, og leggetid med myk avslutning. Låses med PIN.",
      {"max": 40, "inputs": ["radio"], "presets": [], "bedtime": "20:00", "pin": ""}),
     ("record", "Radioopptak", "skjold", "Radio og podkast", "Ta opp en radiofavoritt eller strøm nå eller til fast tid, og spill av opptaket senere.",
-     {"schedules": [], "max_mb": 2000}),
+     {"schedules": [], "max_mb": 2000, "smb_share": "", "smb_sub": "Radioopptak", "smb_user": "", "smb_password": "", "smb_domain": "",
+      "smb_vers": "auto", "split": True, "fmt": "mp3", "min_len": 60, "keep_dupes": False, "keep_raw": False}),
     ("mqtt", "MQTT-bro", "skjold", "Verktøy", "Publiserer status og tar imot kommandoer over MQTT, med valgfri Home Assistant-oppdagelse.",
      {"host": "", "port": 1883, "user": "", "password": "", "tls": False, "prefix": "skjold", "discovery": True}),
     ("snapcast", "Snapcast", "skjold", "Verktøy", "Beta: synkron lyd til flere høyttalere med Snapcast. Krever pi/install_snapcast.sh.",
@@ -3998,7 +3999,7 @@ def plugins_payload():
             cfg = {**cfg, "secret": "••••••"}
         if pid == "listenbrainz" and cfg.get("token"):
             cfg = {**cfg, "token": "••••••" + str(cfg["token"])[-4:]}
-        for sk in ("password", "pin"):
+        for sk in ("password", "pin", "smb_password"):
             if cfg.get(sk):
                 cfg = {**cfg, sk: "••••••"}
         item = {"id": pid, "name": name, "src": src, "cat": cat, "desc": desc, "enabled": cfg["enabled"] and src == "skjold",
@@ -4392,6 +4393,66 @@ def rec_source(spec):
     return p["url"], p.get("title") or f"kanal {n}"
 
 
+import skjold_rec as _recmod   # noqa: E402  (SMB, ICY-opptak og deling i låter)
+
+REC_SONGS = os.path.join(REC_DIR, "songs.json")
+_rec_smb = {"ok": False, "msg": "", "sig": None, "lock": threading.Lock()}
+
+
+def rec_smb_ensure(force=False):
+    """Monter SMB-delingen fra Radioopptak-innstillingene (ved oppstart, før opptak og når innstillingene endres)."""
+    c = plug_cfg("record")
+    sig = json.dumps([c.get(k) for k in ("smb_share", "smb_user", "smb_password", "smb_domain", "smb_vers")])
+    with _rec_smb["lock"]:
+        if not c.get("smb_share"):
+            if _recmod.smb_mounted():
+                _recmod.smb_umount()
+            _rec_smb.update(ok=False, msg="", sig=sig)
+            return False
+        if not force and sig == _rec_smb["sig"] and _rec_smb["ok"] and _recmod.smb_mounted():
+            return True
+        try:
+            ok, msg = _recmod.smb_mount(c)
+        except Exception as e:
+            ok, msg = False, str(e)
+        _rec_smb.update(ok=ok, msg=msg, sig=sig)
+        print("Radioopptak SMB:", msg, flush=True)
+        return ok
+
+
+def rec_song_dir():
+    """Mappen låtene lagres i: SMB-delingen (+ undermappe) når den er montert, ellers lokalt."""
+    c = plug_cfg("record")
+    if c.get("smb_share") and rec_smb_ensure():
+        d = os.path.join(_recmod.SMB_MNT, _recmod.safe_name(c.get("smb_sub") or "", 80)) if c.get("smb_sub") else _recmod.SMB_MNT
+        return d, "smb"
+    return os.path.join(REC_DIR, "Låter"), "lokalt"
+
+
+def _songs_load():
+    try:
+        with open(REC_SONGS) as fh:
+            return json.load(fh)
+    except Exception:
+        return []
+
+
+def _songs_add(items):
+    cur = (items + _songs_load())[:500]
+    os.makedirs(REC_DIR, exist_ok=True)
+    with open(REC_SONGS + ".tmp", "w") as fh:
+        json.dump(cur, fh, ensure_ascii=False)
+    os.replace(REC_SONGS + ".tmp", REC_SONGS)
+
+
+def rec_title_now(url):
+    """Låt/artist for strømmer uten ICY: Lyrion-info hvis den spiller samme URL, ellers ICY-avlesning."""
+    i = lyr.info or {}
+    if i.get("url") == url and i.get("song"):
+        return f"{i.get('artist')} - {i['song']}" if i.get("artist") else i["song"]
+    return icy.title(url)
+
+
 def rec_start(spec):
     if not shutil.which("ffmpeg"):
         raise RuntimeError("ffmpeg mangler (kjør pi/update.sh)")
@@ -4400,12 +4461,75 @@ def rec_start(spec):
     os.makedirs(REC_DIR, exist_ok=True)
     fn = f"{_safe(name)}-{time.strftime('%Y%m%d-%H%M')}.mp3"
     path = os.path.join(REC_DIR, fn)
-    p = subprocess.Popen(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-t", str(mins * 60), "-i", url, "-vn", "-c:a", "libmp3lame", "-b:a", "192k", path],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    _rec["procs"][fn] = (p, time.time() + mins * 60)
+    n = int(spec.get("preset") or 0)
+    p = state["presets"][n - 1] if 1 <= n <= len(state["presets"]) else None
+    r = _recmod.IcyRecorder(url, path, mins * 60, get_title=lambda: rec_title_now(url))
+    _rec["procs"][fn] = {"rec": r, "end": time.time() + mins * 60, "channel": name, "url": url, "t0": time.time(),
+                         "icon": (p or {}).get("icon") or (p or {}).get("image") or ""}
     print("Radioopptak:", fn, f"({mins} min)", flush=True)
+    if plug_cfg("record").get("smb_share"):
+        threading.Thread(target=rec_smb_ensure, daemon=True).start()
     rec_prune()
     return fn
+
+
+def _rec_cover(icon, dest):
+    if not icon or not str(icon).startswith("http"):
+        return ""
+    try:
+        with urllib.request.urlopen(urllib.request.Request(icon, headers={"User-Agent": "Skjold/1.0"}), timeout=8) as r:
+            data = r.read(2_000_000)
+        with open(dest, "wb") as fh:
+            fh.write(data)
+        return dest
+    except Exception:
+        return ""
+
+
+def rec_split(fn, job):
+    """Etter opptak: finn låtbytter (metadata + lydmønster), lagre hver låt som egen fil med tagger på SMB/lokalt."""
+    c = plug_cfg("record")
+    path = os.path.join(REC_DIR, fn)
+    events = list(job["rec"].events)
+    _recmod.save_events(path, {"channel": job["channel"], "url": job["url"], "t0": job["t0"], "events": events})
+    if not c.get("split", True) or not events or not os.path.isfile(path):
+        return
+    res = []
+    try:
+        pcm = _recmod.decode_mono(path)
+        f = _recmod.features(pcm)
+        total = len(pcm) / _recmod.SR
+        # metadata kom på byte-posisjon i strømmen; skaler til faktisk varighet hvis bitraten var omtrentlig
+        songs, delay = _recmod.plan_songs(f, events, total, float(c.get("min_len", 60)))
+        print(f"Radioopptak: {fn}: {len(songs)} låter (metadata-forsinkelse {delay:.1f} s)", flush=True)
+        base, where = rec_song_dir()
+        cover = _rec_cover(job.get("icon"), os.path.join(REC_DIR, fn + ".cover.jpg"))
+        for sg in songs:
+            rel = _recmod.song_relpath(sg["artist"], sg["title"], c.get("fmt", "mp3"))
+            dest = os.path.join(base, rel)
+            item = {"artist": sg["artist"], "title": sg["title"], "dur": round(sg["end"] - sg["start"]), "t": int(job["t0"] + sg["start"]),
+                    "channel": job["channel"], "file": rel, "where": where, "status": "ok"}
+            if os.path.exists(dest) and not c.get("keep_dupes"):
+                item["status"] = "duplikat"
+            else:
+                if os.path.exists(dest):
+                    dest = dest.rsplit(".", 1)[0] + time.strftime(" (%Y%m%d-%H%M)") + "." + dest.rsplit(".", 1)[1]
+                try:
+                    _recmod.export_song(path, sg, dest, c.get("fmt", "mp3"), job["channel"], job["t0"], cover)
+                except Exception as e:
+                    item.update(status="feil", error=str(e)[:200])
+            res.append(item)
+        if cover:
+            try: os.remove(cover)
+            except OSError: pass
+    except Exception as e:
+        print("Radioopptak: deling feilet:", e, flush=True)
+        res.append({"artist": "", "title": fn, "status": "feil", "error": str(e)[:200], "t": int(time.time()), "channel": job["channel"]})
+    if res:
+        _songs_add(res)
+    if not c.get("keep_raw") and any(x["status"] == "ok" for x in res):
+        try: os.remove(path)
+        except OSError: pass
 
 
 def rec_list():
@@ -4417,7 +4541,8 @@ def rec_list():
     for f in sorted(files, reverse=True):
         st = os.stat(os.path.join(REC_DIR, f))
         pr = _rec["procs"].get(f)
-        out.append({"name": f, "size": st.st_size, "t": int(st.st_mtime), "recording": bool(pr and pr[0].poll() is None)})
+        out.append({"name": f, "size": st.st_size, "t": int(st.st_mtime), "recording": bool(pr and pr["rec"].alive()),
+                    "songs": len(pr["rec"].events) if pr else None})
     return out
 
 
@@ -4437,15 +4562,17 @@ def rec_delete(name):
     if "/" in name or not name.endswith(".mp3"):
         raise ValueError("ugyldig filnavn")
     pr = _rec["procs"].pop(name, None)
-    if pr and pr[0].poll() is None:
-        pr[0].terminate()
+    if pr and pr["rec"].alive():
+        pr["rec"].terminate()
+        return
     os.remove(os.path.join(REC_DIR, name))
 
 
 def _rec_tick():
-    for fn, (p, _end) in list(_rec["procs"].items()):
-        if p.poll() is not None:
+    for fn, job in list(_rec["procs"].items()):
+        if not job["rec"].alive():
             _rec["procs"].pop(fn, None)
+            threading.Thread(target=rec_split, args=(fn, job), daemon=True).start()
     if not plug_on("record"):
         return
     tm = time.localtime()
@@ -4457,8 +4584,15 @@ def _rec_tick():
             except Exception as e: print("Radioopptak:", e, flush=True)
 
 
+def rec_payload():
+    c = plug_cfg("record")
+    return {"items": rec_list(), "dir": REC_DIR, "songs": _songs_load()[:200],
+            "smb": {"set": bool(c.get("smb_share")), "ok": _rec_smb["ok"] and _recmod.smb_mounted(), "msg": _rec_smb["msg"],
+                    "share": _recmod.smb_norm_share(c.get("smb_share", ""))}}
+
+
 async def h_recordings(_r):
-    return web.json_response({"items": rec_list(), "dir": REC_DIR})
+    return web.json_response(rec_payload())
 
 
 async def h_recording_file(r):
@@ -4487,9 +4621,22 @@ async def h_recordings_post(r):
             await loop.run_in_executor(None, lambda: play_url(url, name.rsplit(".", 1)[0]))
         elif b.get("start"):
             await loop.run_in_executor(None, rec_start, b["start"])
+        elif b.get("smb_test"):
+            await loop.run_in_executor(None, lambda: rec_smb_ensure(force=True))
+            if not _rec_smb["ok"]:
+                return web.json_response({**rec_payload(), "error": _rec_smb["msg"] or "kunne ikke koble til"}, status=400)
+        elif b.get("smb_shares") is not None:
+            c = plug_cfg("record")
+            q = b["smb_shares"] if isinstance(b["smb_shares"], dict) else {}
+            pw = q.get("password") if q.get("password") and not str(q.get("password")).startswith("••••••") else c.get("smb_password", "")
+            shares = await loop.run_in_executor(None, lambda: _recmod.smb_list_shares(q.get("server") or c.get("smb_share", ""), q.get("user", c.get("smb_user", "")), pw, q.get("domain", c.get("smb_domain", ""))))
+            return web.json_response({"shares": shares})
+        elif b.get("clear_songs"):
+            try: os.remove(REC_SONGS)
+            except OSError: pass
     except Exception as e:
         return web.json_response({"error": str(e)}, status=400)
-    return web.json_response({"items": rec_list(), "dir": REC_DIR})
+    return web.json_response(rec_payload())
 
 
 # --- MQTT-bro (paho-mqtt) ---
@@ -4969,14 +5116,24 @@ def plugin_update(pid, body):
         if k not in body:
             continue
         v = body[k]
-        if k in ("token", "secret", "password", "pin") and isinstance(v, str) and v.startswith("••••••"):
+        if k in ("token", "secret", "password", "pin", "smb_password") and isinstance(v, str) and v.startswith("••••••"):
             continue   # maskert verdi sendt tilbake uendret
         if k in ("time", "start", "end") and not hhmm_ok(v):
             raise ValueError(f"{k} må være TT:MM")
         if k == "days":
             v = sorted({int(d) for d in v if 0 <= int(d) <= 6})
-        if k in ("volume", "max", "minutes", "preset", "fade", "port", "max_mb"):
+        if k in ("volume", "max", "minutes", "preset", "fade", "port", "max_mb", "min_len"):
             v = int(v)
+        if k == "min_len":
+            v = max(20, min(900, v))
+        if k in ("split", "keep_dupes", "keep_raw"):
+            v = bool(v)
+        if k == "fmt" and v not in ("mp3", "flac", "m4a"):
+            raise ValueError("format må være mp3, flac eller m4a")
+        if k == "smb_vers" and v not in ("auto", "3.1.1", "3.0", "2.1", "2.0", "1.0"):
+            raise ValueError("ukjent SMB-versjon")
+        if k in ("smb_share", "smb_sub", "smb_user", "smb_domain", "smb_password"):
+            v = str(v or "")[:300]
         if k in ("tls", "discovery"):
             v = bool(v)
         if k == "bedtime" and v and not hhmm_ok(v):
@@ -5005,6 +5162,9 @@ def plugin_update(pid, body):
         cfg[k] = v
     if pid == "roomeq":
         dsp.update()
+    if pid == "record" and any(k.startswith("smb_") for k in body):
+        _plug_save(pid, cfg)
+        threading.Thread(target=rec_smb_ensure, kwargs={"force": True}, daemon=True).start()
     if pid == "sleep":
         if "minutes" in body and cfg["enabled"]:
             sleep_start(int(body["minutes"]))
@@ -5739,6 +5899,8 @@ def main():
         state["voice_profile"] = "en"
     threading.Thread(target=voice.warm, daemon=True).start()   # etter load_state: riktig profil
     threading.Thread(target=_plugins_thread, daemon=True).start()
+    if plug_cfg("record").get("smb_share"):   # monter SMB-delingen for radioopptak ved oppstart
+        threading.Thread(target=rec_smb_ensure, daemon=True).start()
     threading.Thread(target=hk_apply, daemon=True).start()   # Apple Hjem (HomeKit), hvis slått på   # sovetimer, vekkerklokke, volumtak, historikk, scrobbling
     apply_settings()   # navn på USB-switch, maksvolum osv. fra lagrede innstillinger
     usbsw.start()

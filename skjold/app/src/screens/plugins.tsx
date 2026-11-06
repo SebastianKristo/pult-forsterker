@@ -1,7 +1,7 @@
 // Plugins (S1 Web v3 «plug»): Skjold-egne plugins kjører i daemonen (GET/POST /api/plugins), Lyrion-plugins installeres i Lyrion.
 import { signal } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { api, INPUT_LABEL, type HistItem, type InputId, type Lyrics, type Plugin, type Recording, type SnapClient } from '../lib/api';
+import { api, INPUT_LABEL, type HistItem, type InputId, type Lyrics, type Plugin, type RecPayload, type RecSong, type SnapClient } from '../lib/api';
 import { status } from '../lib/store';
 import { favs, loadFavs } from '../lib/radio';
 import { Toggle } from '../components/ui';
@@ -216,16 +216,54 @@ function KidsPanel({ p, d, up, save, msg }: { p: Plugin; d: Record<string, any>;
 }
 
 function RecordPanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: string, v: unknown) => void; saveBtn: preact.ComponentChildren }) {
-  const [items, setItems] = useState<Recording[]>([]);
+  const [rp, setRp] = useState<RecPayload>({ items: [], dir: '' });
   const [now, setNow] = useState({ preset: favs.value[0]?.n ?? 0, url: '', minutes: 60 });
   const [err, setErr] = useState('');
-  const load = () => api.recordings().then((r) => setItems(r.items)).catch(() => {});
+  const [smbMsg, setSmbMsg] = useState('');
+  const [shares, setShares] = useState<string[]>([]);
+  const load = () => api.recordings().then(setRp).catch(() => {});
   useEffect(() => { void load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
-  const post = async (b: Record<string, unknown>) => { setErr(''); try { setItems((await api.recPost(b)).items); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
+  const post = async (b: Record<string, unknown>) => { setErr(''); try { setRp(await api.recPost(b)); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
+  const host = String(d.smb_share || '').replace(/\\/g, '/').replace(/^smb:/i, '').replace(/^\/+/, '').split('/')[0] ?? '';
+  const test = async () => {
+    setSmbMsg('Kobler til …');
+    try { const r = await api.recPost({ smb_test: true }); setRp(r); setSmbMsg(r.smb?.msg || 'Tilkoblet'); } catch (e) { setSmbMsg(e instanceof Error ? e.message : String(e)); }
+  };
+  const listShares = async () => {
+    setSmbMsg('Henter delte mapper …'); setShares([]);
+    try { const r = await api.recShares({ server: host, user: d.smb_user, password: d.smb_password, domain: d.smb_domain }); setShares(r.shares); setSmbMsg(r.shares.length ? 'Velg en delt mappe' : 'Fant ingen delte mapper'); } catch (e) { setSmbMsg(e instanceof Error ? e.message : String(e)); }
+  };
+  const smb = rp.smb;
+  const songs = rp.songs ?? [];
+  const mmss = (s?: number) => s == null ? '' : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const stCol = (x: RecSong) => x.status === 'ok' ? '#6fcf7f' : x.status === 'duplikat' ? '#8b8b86' : '#ff8a7a';
+  const stTxt = (x: RecSong) => x.status === 'ok' ? (x.where === 'smb' ? 'Lagret på NAS' : 'Lagret lokalt') : x.status === 'duplikat' ? 'Finnes fra før' : 'Feil' + (x.error ? ': ' + x.error : '');
   return (
     <>
+      <span style="font-size:12px;color:#8b8b86;line-height:1.5">Opptak er for privat bruk.</span>
       <Row label="Ta opp nå"><FavSel v={now.preset} none="Strøm-URL" on={(v) => setNow({ ...now, preset: v })} />{!now.preset && <Txt v={now.url} ph="https://…" on={(v) => setNow({ ...now, url: v })} />}<Num v={now.minutes} min={1} max={240} on={(v) => setNow({ ...now, minutes: v })} /><span style="font-size:12px;color:#8b8b86">min</span><button onClick={() => void post({ start: now })} style={pbtn}>Ta opp</button></Row>
       {err && <span style="font-size:12px;color:#ff8a7a">{err}</span>}
+
+      <span style="font-size:13px;font-weight:600;padding-top:8px">Lagre på NAS (SMB)</span>
+      <span style="font-size:12px;color:#8b8b86;line-height:1.5">Låtene lagres som «Artist/Artist - Tittel» i den delte mappen. Uten NAS lagres de på Skjold.</span>
+      <Row label="Delt mappe" hint="F.eks. //nas.local/musikk"><Txt v={d.smb_share} ph="//nas.local/musikk" w={220} on={(v) => up('smb_share', v)} /><button onClick={() => void listShares()} disabled={!host} style={sbtn}>Finn mapper</button></Row>
+      {shares.length > 0 && <Row label={'Delte mapper på ' + host}>{shares.map((x) => <button key={x} onClick={() => { up('smb_share', `//${host}/${x}`); setShares([]); }} style={sbtn}>{x}</button>)}</Row>}
+      <Row label="Undermappe" hint="Tom = rett i den delte mappen"><Txt v={d.smb_sub} ph="Radioopptak" w={180} on={(v) => up('smb_sub', v)} /></Row>
+      <Row label="Brukernavn" hint="Tom = gjest"><Txt v={d.smb_user} w={160} on={(v) => up('smb_user', v)} /></Row>
+      <Row label="Passord"><Txt v={d.smb_password} pw w={160} ph={d.smb_password ? 'satt' : ''} on={(v) => up('smb_password', v)} /></Row>
+      <Row label="Domene" hint="Valgfritt"><Txt v={d.smb_domain} w={140} on={(v) => up('smb_domain', v)} /></Row>
+      <Row label="SMB-versjon"><select value={d.smb_vers} onChange={(e) => up('smb_vers', (e.currentTarget as HTMLSelectElement).value)} style={fld}>{['auto', '3.1.1', '3.0', '2.1', '2.0', '1.0'].map((v) => <option key={v} value={v}>{v === 'auto' ? 'Automatisk' : v}</option>)}</select></Row>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button onClick={() => void test()} disabled={!d.smb_share} style={sbtn}>Test tilkobling</button>
+        <span style={`font-size:12px;color:${smb?.ok ? '#6fcf7f' : smbMsg || smb?.msg ? '#ff8a7a' : '#8b8b86'}`}>{smbMsg || (smb?.set ? (smb.ok ? '● Tilkoblet ' + smb.share : smb.msg || 'Ikke tilkoblet') : 'Ikke satt – lagres lokalt')}</span></div>
+      <span style="font-size:11.5px;color:#8b8b86">Lagre innstillingene før du tester.</span>
+
+      <span style="font-size:13px;font-weight:600;padding-top:8px">Låter</span>
+      <Row label="Del opptaket i låter" hint="Finner låtbytter fra kanalens låtinfo og lydmønsteret"><Toggle on={!!d.split} label="" onChange={(v) => up('split', v)} /></Row>
+      <Row label="Format"><select value={d.fmt} onChange={(e) => up('fmt', (e.currentTarget as HTMLSelectElement).value)} style={fld}><option value="mp3">MP3 320 kbps</option><option value="flac">FLAC</option><option value="m4a">M4A (AAC 256)</option></select></Row>
+      <Row label="Korteste låt" hint="Kortere klipp (jingler, reklame) lagres ikke"><Num v={d.min_len} min={20} max={900} on={(v) => up('min_len', v)} /><span style="font-size:12px;color:#8b8b86">sek</span></Row>
+      <Row label="Behold duplikater" hint="Av = hopp over låter som allerede finnes"><Toggle on={!!d.keep_dupes} label="" onChange={(v) => up('keep_dupes', v)} /></Row>
+      <Row label="Behold hele opptaket" hint="I tillegg til låtene"><Toggle on={!!d.keep_raw} label="" onChange={(v) => up('keep_raw', v)} /></Row>
+
       <span style="font-size:13px;font-weight:600;padding-top:8px">Planlagte opptak</span>
       {(d.schedules as any[]).map((a, i) => (
         <div key={i} style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 0;border-top:1px solid #1f1f21">
@@ -236,15 +274,24 @@ function RecordPanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: strin
           <Num v={a.minutes} min={1} max={240} on={(v) => { const x = [...d.schedules]; x[i] = { ...a, minutes: v }; up('schedules', x); }} /><span style="font-size:12px;color:#8b8b86">min</span>
           <button onClick={() => up('schedules', d.schedules.filter((_: unknown, j: number) => j !== i))} style={sbtn}>Fjern</button>
         </div>))}
-      <div style="display:flex;gap:10px;align-items:center"><button onClick={() => up('schedules', [...d.schedules, { time: '08:00', days: [5, 6], preset: favs.value[0]?.n ?? 0, url: '', minutes: 60, on: true }])} style={sbtn}>+ Planlegg opptak</button><span style="font-size:12px;color:#8b8b86">Maks lagring</span><Num v={d.max_mb} min={100} max={100000} w={90} on={(v) => up('max_mb', v)} /><span style="font-size:12px;color:#8b8b86">MB</span></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button onClick={() => up('schedules', [...d.schedules, { time: '08:00', days: [5, 6], preset: favs.value[0]?.n ?? 0, url: '', minutes: 60, on: true }])} style={sbtn}>+ Planlegg opptak</button><span style="font-size:12px;color:#8b8b86">Maks lokal lagring</span><Num v={d.max_mb} min={100} max={100000} w={90} on={(v) => up('max_mb', v)} /><span style="font-size:12px;color:#8b8b86">MB</span></div>
       {saveBtn}
+
       <span style="font-size:13px;font-weight:600;padding-top:8px">Opptak</span>
-      {!items.length && <span style="font-size:12.5px;color:#8b8b86">Ingen opptak ennå.</span>}
-      {items.map((x) => (
+      {!rp.items.length && <span style="font-size:12.5px;color:#8b8b86">Ingen opptak ennå.</span>}
+      {rp.items.map((x) => (
         <div key={x.name} style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #1f1f21">
-          <span style="display:flex;flex-direction:column;min-width:0"><b style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{x.name.replace(/\\.mp3$/, '')}</b><span style={`font-family:${MONO};font-size:11px;color:${x.recording ? '#ff6a5a' : '#8b8b86'}`}>{x.recording ? '● Tar opp · ' : ''}{(x.size / 1048576).toFixed(1)} MB</span></span>
+          <span style="display:flex;flex-direction:column;min-width:0"><b style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{x.name.replace(/\.mp3$/, '')}</b><span style={`font-family:${MONO};font-size:11px;color:${x.recording ? '#ff6a5a' : '#8b8b86'}`}>{x.recording ? `● Tar opp${x.songs ? ' · ' + x.songs + ' låtbytter' : ''} · ` : ''}{(x.size / 1048576).toFixed(1)} MB</span></span>
           <span style="display:flex;gap:8px">{!x.recording && <button onClick={() => void post({ play: x.name })} style={sbtn}>Spill</button>}<button onClick={() => void post({ delete: x.name })} style={sbtn}>{x.recording ? 'Stopp' : 'Slett'}</button></span>
         </div>))}
+      {songs.length > 0 && <>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px"><span style="font-size:13px;font-weight:600">Lagrede låter</span><button onClick={() => void post({ clear_songs: true })} style={sbtn}>Tøm listen</button></div>
+        {songs.map((x, i) => (
+          <div key={i} style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid #1f1f21">
+            <span style="display:flex;flex-direction:column;min-width:0"><b style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{x.artist ? `${x.artist} – ${x.title}` : x.title}</b><span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{x.channel} · {new Date(x.t * 1000).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span></span>
+            <span style="display:flex;flex-direction:column;align-items:flex-end"><span style={`font-family:${MONO};font-size:11px;color:#c9c9c4`}>{mmss(x.dur)}</span><span style={`font-size:11px;color:${stCol(x)}`}>{stTxt(x)}</span></span>
+          </div>))}
+      </>}
     </>
   );
 }

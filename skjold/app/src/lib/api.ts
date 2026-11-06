@@ -118,7 +118,9 @@ export interface Plugin { id: string; name: string; src: 'skjold' | 'lyrion' | '
 export interface PluginsResp { plugins: Plugin[]; sleep: number; on: number }
 export interface Lyrics { enabled: boolean; found: boolean; plain?: string; synced?: { t: number; l: string }[]; title?: string; artist?: string; position?: number; instrumental?: boolean; error?: string | null }
 export interface HistItem { t: number; title: string; artist: string; album: string; input: string; source: string; station: string; cover: string }
-export interface Recording { name: string; size: number; t: number; recording: boolean }
+export interface Recording { name: string; size: number; t: number; recording: boolean; songs?: number | null }
+export interface RecSong { artist: string; title: string; dur?: number; t: number; channel: string; file?: string; where?: 'smb' | 'lokalt'; status: 'ok' | 'duplikat' | 'feil'; error?: string }
+export interface RecPayload { items: Recording[]; dir: string; songs?: RecSong[]; smb?: { set: boolean; ok: boolean; msg: string; share: string }; error?: string }
 export interface SnapClient { id: string; name: string; connected: boolean; latency: number; volume: number; muted: boolean }
 export interface HomeKitInfo { enabled: boolean; available: boolean; running: boolean; paired: boolean; pin: string; setup_uri: string; port: number; error: string | null }
 export const api = {
@@ -132,8 +134,9 @@ export const api = {
   setPlugin: (id: string, b: Record<string, unknown>) => post<PluginsResp>('/api/plugins/' + id, b),
   lyrics: () => req<Lyrics>('/api/lyrics', undefined, undefined, 12000),
   history: () => req<{ enabled: boolean; items: HistItem[] }>('/api/history'),
-  recordings: () => req<{ items: Recording[]; dir: string }>('/api/recordings'),
-  recPost: (b: Record<string, unknown>) => post<{ items: Recording[]; dir: string }>('/api/recordings', b),
+  recordings: () => req<RecPayload>('/api/recordings'),
+  recPost: (b: Record<string, unknown>) => post<RecPayload>('/api/recordings', b),
+  recShares: (q: Record<string, string>) => post<{ shares: string[] }>('/api/recordings', { smb_shares: q }),
   snapcast: (b?: Record<string, unknown>) => (b ? post<{ ok: boolean; error?: string; clients: SnapClient[]; role: string }>('/api/snapcast', b) : req<{ ok: boolean; error?: string; clients: SnapClient[]; role: string }>('/api/snapcast')),
   roomeqSweep: (b: { level?: number; delay?: number }) => post<{ f1: number; f2: number; dur: number; sr: number; delay: number }>('/api/roomeq/sweep', b),
   subwave: (health = false) => req<Record<string, any>>('/api/subwave' + (health ? '?health=1' : ''), undefined, undefined, 15000),
