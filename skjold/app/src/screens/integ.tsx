@@ -1,6 +1,9 @@
 import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
 import { signal } from '@preact/signals';
+import { useEffect } from 'preact/hooks';
+import { api, type HomeKitInfo } from '../lib/api';
+import { qrMatrix } from '../lib/qr';
 import { go, setSetting, settings } from '../lib/store';
 import { Toggle } from '../components/ui';
 import type { Settings } from '../lib/settings';
@@ -8,6 +11,43 @@ import type { Settings } from '../lib/settings';
 const A = '#d9a441';
 const MONO = "'IBM Plex Mono',monospace";
 const host = (): string => (typeof location !== 'undefined' && location.hostname) || 'skjold.local';
+
+// ---------- Apple Hjem (HomeKit) ----------
+const hk = signal<HomeKitInfo | null>(null);
+const hkErr = signal('');
+async function hkLoad(): Promise<void> { try { hk.value = await api.homekit(); hkErr.value = ''; } catch { hk.value = null; } }
+async function hkSet(b: { enabled?: boolean; reset?: boolean }): Promise<void> { try { hk.value = await api.setHomekit(b); hkErr.value = ''; } catch (e) { hkErr.value = e instanceof Error ? e.message : String(e); } }
+function hkStatus(): string {
+  const h = hk.value;
+  if (!h) return 'Av';
+  if (!h.available) return 'Krever HAP-python';
+  if (!h.enabled) return 'Av';
+  return h.paired ? 'Paret · på' : 'Venter på paring';
+}
+function QR({ text, size = 168 }: { text: string; size?: number }) {
+  let m: boolean[][] = [];
+  try { m = qrMatrix(text); } catch { return null; }
+  const n = m.length, q = 2;
+  let d = '';
+  m.forEach((row, y) => row.forEach((on, x) => { if (on) d += `M${x + q} ${y + q}h1v1h-1z`; }));
+  return <svg viewBox={`0 0 ${n + 2 * q} ${n + 2 * q}`} width={size} height={size} role="img" aria-label="QR-kode for Apple Hjem" style="display:block;border-radius:10px;background:#fff;shape-rendering:crispEdges"><path d={d} fill="#0b0b0c" /></svg>;
+}
+function homekitRows(): Row[] {
+  const h = hk.value;
+  if (!h) return [{ n: 'Apple Hjem', hint: 'Får ikke kontakt med Skjold.', el: btn('Prøv igjen', () => void hkLoad()) }];
+  if (!h.available) return [{ n: 'HAP-python mangler', hint: h.error || 'Kjør pi/update.sh på Skjold for å installere HomeKit-støtten.', el: txt('Krever oppdatering') }];
+  const rows: Row[] = [{ n: 'Vis Skjold i Apple Hjem', hint: 'Skjold annonserer seg på nettet som et TV-tilbehør.', el: <Toggle on={h.enabled} onChange={(b) => void hkSet({ enabled: b })} /> }];
+  if (!h.enabled) return rows;
+  rows.push({ n: 'Status', hint: h.error || (h.paired ? 'Lagt til i Hjem-appen.' : 'Ikke lagt til ennå.'), el: txt(h.paired ? '● Paret' : '○ Venter') });
+  if (!h.paired) {
+    rows.push({ n: 'Oppsettkode', hint: 'Skann QR-koden med kameraet eller Hjem-appen, eller skriv inn koden.', el: <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">{h.setup_uri && <QR text={h.setup_uri} />}<span style={`font-family:${MONO};font-size:22px;letter-spacing:.08em;color:#f0c46a`}>{h.pin}</span></div> });
+    rows.push({ n: 'Slik legger du til', hint: 'Hjem-appen → + → Legg til tilbehør → Flere valg … → Skjold. Trykk «Legg til likevel» når den sier ikke-sertifisert tilbehør, og skriv inn koden.', el: txt('') });
+  }
+  rows.push({ n: 'I Hjem-appen', hint: 'Av/på, kildene og radiofavorittene som innganger, volum med iPhone-fjernkontrollen. AirPlay-lyden fungerer som før.', el: txt('TV-tilbehør') });
+  rows.push({ n: 'Glem paringer', hint: 'Fjern Skjold fra Hjem-appen først. Etterpå kan den legges til på nytt.', el: btn('Glem paringer', () => void hkSet({ reset: true })) });
+  if (hkErr.value) rows.push({ n: 'Feil', el: txt(hkErr.value) });
+  return rows;
+}
 
 // ---------- Integrasjoner ----------
 interface Int { id: string; name: string; mono: string; tile: string; status: string; ok: boolean; desc: string }
@@ -20,6 +60,7 @@ function ints(s: Settings): Int[] {
     { id: 'ytmusic', name: 'YouTube Music', mono: 'YT', tile: '#e86a6a', status: ytm ? (s.ytmEn ? 'Innlogget · på' : 'Innlogget · av') : 'Ikke innlogget', ok: ytm && s.ytmEn, desc: 'Spillelister, mikser og historikk fra Google-kontoen din. Via Music Assistant.' },
     { id: 'navidrome', name: 'Navidrome', mono: 'N', tile: '#7fa8e8', status: nd ? (s.ndEn ? 'Tilkoblet · på' : 'Tilkoblet · av') : 'Ikke tilkoblet', ok: nd && s.ndEn, desc: 'Ditt eget musikkbibliotek på hjemmenettet, i FLAC. Bruker Subsonic-API.' },
     { id: 'upnp', name: 'UPnP/DLNA', mono: 'DL', tile: '#ffffff', status: s.upnpEn ? 'På · venter' : 'Av', ok: s.upnpEn, desc: 'Ta imot lyd fra Android-apper, PC og NAS. Forsterkeren vises som en vanlig DLNA-høyttaler.' },
+    { id: 'homekit', name: 'Apple Hjem (HomeKit)', mono: 'H', tile: '#f5a623', status: hkStatus(), ok: !!hk.value?.enabled && !!hk.value?.running, desc: 'Skjold som TV-tilbehør i Hjem-appen: av/på, kilder, radiofavoritter og volum. Med Siri og automasjoner.' },
     { id: 'ha', name: 'Home Assistant', mono: 'HA', tile: '#7fb7e8', status: 'Klar', ok: true, desc: 'Styr volum, inngang og av/på fra automasjoner og dashbord.' },
     { id: 'homey', name: 'Homey', mono: 'H', tile: '#e8c77f', status: 'Klar', ok: true, desc: 'Bruk forsterkeren i Homey Flows, for eksempel radio når du kommer hjem.' },
     { id: 'api', name: 'Lokalt API', mono: '{ }', tile: '#c9c9c4', status: 'Aktivt', ok: true, desc: 'REST og Server-Sent Events for egne skript og andre systemer.' }
@@ -28,7 +69,7 @@ function ints(s: Settings): Int[] {
 
 /** Antall aktive integrasjoner (badge i sidemenyen): Lyrion + de som er slått på. */
 export function intCount(s: Settings): number {
-  return 1 + [s.spEn, !!s.ytmCookie && s.ytmEn, !!s.ndUrl && s.ndEn, s.upnpEn].filter(Boolean).length;
+  return 1 + [s.spEn, !!s.ytmCookie && s.ytmEn, !!s.ndUrl && s.ndEn, s.upnpEn, !!hk.value?.enabled].filter(Boolean).length;
 }
 
 type Row = { n: string; hint?: string; el: preact.ComponentChildren };
@@ -58,6 +99,7 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
       rows: [{ n: 'UPnP/DLNA-mottaker', hint: 'Lyden går via Lyrion, så rom kan grupperes som vanlig.', el: tog('upnpEn', s.upnpEn) },
         { n: 'Format', el: txt('FLAC, WAV, ALAC, MP3, AAC og OGG') },
         { n: 'Kompatible apper', el: txt('BubbleUPnP, Hi-Fi Cast, foobar2000, Plex, «Cast til enhet»') }] };
+    case 'homekit': return { links: [], rows: homekitRows() };
     case 'ha': return { links: [['Åpne Home Assistant', 'http://homeassistant.local:8123/']],
       rows: [{ n: 'Skjold-integrasjonen', hint: 'Installeres fra HACS. Home Assistant finner Skjold selv på nettverket.', el: txt('Klar') },
         { n: 'Entiteter', el: txt('media_player, select, number, switch') },
@@ -74,6 +116,7 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
 const intSel = signal('lyrion');
 
 export function IntegrationsPage() {
+  useEffect(() => { void hkLoad(); const t = setInterval(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); }, 5000); return () => clearInterval(t); }, []);
   const s = settings.value, sel = intSel.value, list = ints(s), cur = list.find((x) => x.id === sel) ?? list[0]!, d = detail(cur.id, s);
   return (
     <>
@@ -122,6 +165,7 @@ function IntLogo({ id, mono, tile }: { id: string; mono: string; tile: string })
     </span>
   );
   if (id === 'ha') return <span style={`${box};background:#18bcf2;color:#fff`}><svg viewBox="0 0 24 24" style="width:60%;height:60%;display:block"><path d={HA_PATH} fill="currentColor" /></svg></span>;
+  if (id === 'homekit') return <span style={`${box};background:linear-gradient(160deg,#ffb340,#f5761a);color:#fff`}><svg viewBox="0 0 24 24" style="width:62%;height:62%;display:block" fill="currentColor"><path d="M12 3.2 2.6 11a1 1 0 0 0 1.3 1.5l.6-.5V20a1 1 0 0 0 1 1h4.5v-5.5h4V21h4.5a1 1 0 0 0 1-1v-8l.6.5a1 1 0 0 0 1.3-1.5z" /></svg></span>;
   if (id === 'homey') return <span style={`${box};background:#fff;color:#1d1d1f;font-weight:700;font-size:12.5px;letter-spacing:-.02em`}>homey</span>;
   return <span style={`${box};background:${tile};color:#0b0b0c;font-weight:700;font-size:14px`}>{mono}</span>;
 }

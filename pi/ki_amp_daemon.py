@@ -20,6 +20,7 @@ API:
   POST /api/volume {"volume":0-100} | {"delta":±n}
   POST /api/loudness {"on":bool, "level":0-10}
   GET  /api/plugins  {plugins[],sleep,on} · POST /api/plugins/{id} {"enabled",…} · GET /api/lyrics · GET /api/history
+  GET/POST /api/homekit  Apple Hjem: status, pin og QR (setup_uri), {"enabled"} / {"reset":true}
   GET  /api/update   {current,latest,available,running,result,log} · POST /api/update starter oppdatering (git pull + update.sh)
   POST /api/play     {"url", "title"?, "announce"?:bool, "volume"?} – spill lydfil/strøm (HA/Homey); announce = oppå det som spiller
   POST /api/mute   {"mute":bool}
@@ -1329,6 +1330,10 @@ def write_ctrl():
 
 def changed():
     write_ctrl(); save_state()
+    try:
+        hk_sync()   # Apple Hjem ser av/på, kilde og volum
+    except Exception:
+        pass
 
 
 def read_raw():
@@ -3740,6 +3745,93 @@ async def h_update_post(_r):
     return web.json_response(await asyncio.get_running_loop().run_in_executor(None, update_info, False))
 
 
+# ---------- Apple Hjem (HomeKit) – Skjold som ikke-sertifisert TV-tilbehør (pi/skjold_homekit.py, HAP-python) ----------
+try:
+    import skjold_homekit as _hkmod
+except Exception as _e:   # modulen mangler i en gammel installasjon
+    _hkmod = None
+HK_PORT = int(os.environ.get("KI_AMP_HOMEKIT_PORT", "51826"))
+HK_DIR = os.environ.get("KI_AMP_HOMEKIT_DIR", "/var/lib/ki-amp")
+_hk = {"obj": None}
+
+
+def hk_cfg():
+    return ((state.get("settings") or {}).get("plugins") or {}).get("homekit") or {}
+
+
+def _hk_state():
+    pres = state.get("presets") or []
+    return {**{k: state.get(k) for k in ("power", "input", "volume", "mute", "preset")},
+            "presets_full": [p if isinstance(p, dict) else None for p in pres], "version": VERSION,
+            "product": PRODUCT, "id": socket.gethostname()}
+
+
+def _hk_transport(a):
+    try:
+        transport(a)
+    except Exception as e:
+        print("HomeKit transport:", e, flush=True)
+
+
+def hk_bridge():
+    return {"state": _hk_state, "set_power": set_power, "set_input": lambda i: set_input(i),
+            "play_preset": lambda n: play_preset(n), "set_volume": set_volume, "set_mute": set_mute,
+            "transport": _hk_transport}
+
+
+def hk_get():
+    if _hkmod is None:
+        return None
+    if _hk["obj"] is None:
+        _hk["obj"] = _hkmod.SkjoldHomeKit(hk_bridge(), name=NAME, port=HK_PORT, persist=os.path.join(HK_DIR, "homekit.state"),
+                                          pin_file=os.path.join(HK_DIR, "homekit.pin"), inputs=[i for i in INPUTS])
+    return _hk["obj"]
+
+
+def hk_apply():
+    hk = hk_get()
+    if hk is None:
+        return
+    if hk_cfg().get("enabled"):
+        hk.start()
+    else:
+        hk.stop()
+
+
+def hk_sync():
+    hk = _hk["obj"]
+    if hk is not None:
+        hk.sync()
+
+
+def hk_info():
+    hk = hk_get()
+    on = bool(hk_cfg().get("enabled"))
+    if hk is None:
+        return {"enabled": on, "available": False, "running": False, "paired": False, "pin": "", "setup_uri": "",
+                "port": HK_PORT, "error": "skjold_homekit.py mangler (kjør pi/update.sh)"}
+    return {"enabled": on, **hk.info()}
+
+
+async def h_homekit(r):
+    """GET /api/homekit → {enabled, available, running, paired, pin, setup_uri, port, error}
+    POST /api/homekit {"enabled": bool} slår av/på · {"reset": true} glemmer alle paringer."""
+    loop = asyncio.get_running_loop()
+    if r.method == "POST":
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        if "enabled" in b:
+            s = state.setdefault("settings", {})
+            s.setdefault("plugins", {})["homekit"] = {**hk_cfg(), "enabled": bool(b["enabled"])}
+            save_state()
+            await loop.run_in_executor(None, hk_apply)
+        if b.get("reset") and hk_get() is not None:
+            await loop.run_in_executor(None, hk_get().reset)
+    return web.json_response(await loop.run_in_executor(None, hk_info))
+
+
 # ---------- Plugins (Skjold-egne og Lyrion) – GET /api/plugins, POST /api/plugins/{id}, GET /api/lyrics, GET /api/history ----------
 # Innstillingene ligger i state["settings"]["plugins"][id], så appen, web-UI-et og Touch deler dem.
 NRK_P1 = "https://lyd.nrk.no/nrk_radio_p1_ostlandssendingen_mp3_h"
@@ -5404,7 +5496,8 @@ def main():
     if state.get("voice_profile") not in VOICE_PROFILES:
         state["voice_profile"] = "en"
     threading.Thread(target=voice.warm, daemon=True).start()   # etter load_state: riktig profil
-    threading.Thread(target=_plugins_thread, daemon=True).start()   # sovetimer, vekkerklokke, volumtak, historikk, scrobbling
+    threading.Thread(target=_plugins_thread, daemon=True).start()
+    threading.Thread(target=hk_apply, daemon=True).start()   # Apple Hjem (HomeKit), hvis slått på   # sovetimer, vekkerklokke, volumtak, historikk, scrobbling
     apply_settings()   # navn på USB-switch, maksvolum osv. fra lagrede innstillinger
     usbsw.start()
     if settings()["vstart"] and str(settings()["vstart"]).isdigit() and VSTART[int(settings()["vstart"])]:
@@ -5425,7 +5518,7 @@ def main():
     app = web.Application(middlewares=[cors_mw])
     app.add_routes([web.get("/api/status", h_status), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.get("/api/cover", h_cover), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
