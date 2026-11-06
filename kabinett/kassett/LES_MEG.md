@@ -6,7 +6,7 @@ Når du tar kassetten ut, pauses musikken (kan slås av per kassett).
 
 ![Spiller med kassett](render/02_med_kassett.png)
 
-Bilder: [spiller](render/01_spiller.png) · [med kassett](render/02_med_kassett.png) · [kassett](render/03_kassett.png) · [eksplodert](render/04_eksplodert.png)
+Bilder: [spiller](render/01_spiller.png) · [med kassett](render/02_med_kassett.png) · [kassett](render/03_kassett.png) · [kassett bakfra](render/05_kassett_bak.png) · [eksplodert](render/04_eksplodert.png)
 
 ## Deler
 
@@ -37,7 +37,27 @@ Filene ligger i `stl/`. Kilde: `skjold_kassett.scad` (parametrisk, OpenSCAD).
 
 - PETG eller PLA, 0,2 mm lag, 3 vegger, 15–20 % fyll.
 - `spiller_topp.stl` og `spiller_bunn.stl`: ingen støtte nødvendig med flatsiden ned.
-- `kassett_front.stl` og `kassett_bak.stl`: skriv kassettene i to farger om du vil – SKJOLD-pregingen står i fronten.
+- `kassett_front.stl` og `kassett_bak.stl`: begge printes **med utsiden ned**, uten støtte. To farger går fint.
+
+### Kassetten
+
+Kassetten er formet som en gammel kompaktkassett: etikettfelt øverst, trapes med to styrehull og SKJOLD nederst
+foran, og bak to spolevinduer med tannhjulsnav, et lite sentervindu og «skruer» i hjørnene. Navene står på fremre
+halvdel og stikker gjennom vinduene i bakre – de fungerer også som styring når halvdelene settes sammen.
+
+Den er bygd som to tynne skall (1,2 mm hud, 1,6 mm vegg) med ribber i stedet for massive plater:
+
+| | Før | Nå |
+|---|---|---|
+| Front | 20,5 g | 8,6 g |
+| Bak | 20,9 g | 7,8 g |
+| **Per kassett** | **41,4 g** | **16,4 g** (≈ 60 % mindre) |
+| Tid (0,2 mm, 0,4 mm dyse) | ≈ 1 t 20 m | ≈ 40 m |
+
+Vekt er regnet fra STL-volum med PLA (1,24 g/cm³) og 100 % fylling. Med 2 vegger og 15 % fyll blir det enda litt mindre.
+Ytre mål er de samme som før (50 × 70 × 10 mm), så den passer sporet i spilleren uten endringer. NFC-brikken
+(NTAG215, 25 mm) ligger i en ring rett innenfor bakhuden – bare 1,2 mm fra PN532-antennen – og magneten (6 × 3 mm)
+sitter i bunnkanten midt i skjøten som før. Etikettene (43,2 × 51,2 mm) limes på feltet som er markert med en tynn linje.
 - `lysleder.stl`: klar/naturlig PETG gir best lys.
 - Noen kanter i `spiller_topp`/`spiller_bunn` deles av sammenfallende flater fra OpenSCAD-unionen. Slicere
   (PrusaSlicer, Cura, Bambu Studio) reparerer dette uten videre; vil du ha helt rene filer, eksporter på nytt fra `.scad`.
@@ -48,7 +68,7 @@ Filene ligger i `stl/`. Kilde: `skjold_kassett.scad` (parametrisk, OpenSCAD).
 2. Fest PN532 i holderen under kassettsporet, antennen opp.
 3. Legg LED-stripen bak lyslederen, og fest ESP32 med USB-C-porten mot hullet bak.
 4. Lodd etter tabellen over, skru sammen topp og bunn.
-5. Fest et NFC-klistremerke inni hver kassett før du klikker halvdelene sammen.
+5. Legg NFC-brikken i ringen i bakre halvdel og magneten i lomma nederst, og trykk halvdelene sammen (tappene i hjørnene holder; en dråpe lim gjør den permanent).
 
 ## Fastvare
 
