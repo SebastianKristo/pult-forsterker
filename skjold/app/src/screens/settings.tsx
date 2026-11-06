@@ -22,6 +22,7 @@ import { Chevron } from '../components/ui';
 import { AppUpdater, canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer, type AppRelease } from '../lib/appUpdate';
 
 export function SettingsPage({ wide = false }: { wide?: boolean }) {
+  if (status.value?.kids) return <KidsLocked />;
   const cat = cats.value.find((c) => c.id === route.value.cat);
   if (!cat) return <CategoryList wide={wide} />;
   return (
@@ -558,6 +559,17 @@ function RemotePanel() {
           <button disabled={!canNext} onClick={() => setStep(step + 1)} style={pbtn + (canNext ? '' : ';opacity:.45;cursor:default')}>Neste ›</button>
         </div>}
       </div>
+    </div>
+  );
+}
+
+/** Barnerom-modus: innstillingene er skjult til modusen slås av under Plugins (med PIN). */
+function KidsLocked() {
+  return (
+    <div style="display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:16px;border:1px solid #3a3220;background:#121214;max-width:520px">
+      <span style="font-size:17px;font-weight:600">Barnerom-modus er på</span>
+      <span style="font-size:13px;color:#a9a9a3;line-height:1.5">Innstillingene er skjult. Slå av barnerom-modus under Plugins for å endre dem. Har du satt en PIN-kode, trengs den.</span>
+      <div><button class="btn" onClick={() => go('plug')}>Gå til Plugins</button></div>
     </div>
   );
 }

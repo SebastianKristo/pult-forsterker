@@ -1,7 +1,6 @@
 import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
 import { signal } from '@preact/signals';
-import { useState } from 'preact/hooks';
 import { go, setSetting, settings } from '../lib/store';
 import { Toggle } from '../components/ui';
 import type { Settings } from '../lib/settings';
@@ -109,69 +108,7 @@ export function IntegrationsPage() {
 }
 
 // ---------- Plugins ----------
-const PLUGINS: [string, string, string, string, string, string, string][] = [
-  ['spotty', 'Spotty', 'Lyrion', 'Musikk', 'SP', '#1ed760', 'Spotify i Lyrion, med søk, spillelister og Spotify Connect. Krever Spotify Premium.'],
-  ['tidal', 'TIDAL', 'Lyrion', 'Musikk', 'TI', '#f2f2ee', 'Strømming i FLAC fra TIDAL. Krever abonnement.'],
-  ['qobuz', 'Qobuz', 'Lyrion', 'Musikk', 'QB', '#7fb2ff', 'Hi-res opptil 24-bit / 192 kHz. Krever abonnement.'],
-  ['deezer', 'Deezer', 'Lyrion', 'Musikk', 'DZ', '#c38bff', 'Flow, mikser og spillelister fra Deezer.'],
-  ['podcast', 'Podkaster', 'Lyrion', 'Radio og podkast', 'PC', '#e8893a', 'Abonner på podkaster. Fortsetter der du slapp, også i et annet rom.'],
-  ['rp', 'Radio Paradise', 'Lyrion', 'Radio og podkast', 'RP', '#d8cfb4', 'Reklamefri radio i FLAC.'],
-  ['bbc', 'BBC Sounds', 'Lyrion', 'Radio og podkast', 'BBC', '#f2f2ee', 'Direktesendinger og opptak fra BBC.'],
-  ['lastfm', 'Last.fm', 'Lyrion', 'Verktøy', 'FM', '#ff8a7a', 'Registrerer det du spiller på Last.fm (scrobbling).'],
-  ['dstm', 'Ikke stopp musikken', 'Lyrion', 'Verktøy', 'DS', '#7dd88f', 'Fyller køen med lignende musikk når den tar slutt.'],
-  ['alarm', 'Vekkerklokke', 'Skjold', 'Verktøy', 'AL', '#f0c46a', 'Vekk med radio eller en spilleliste. Egen tid per rom.'],
-  ['sleep', 'Sovetimer', 'Skjold', 'Verktøy', 'ZZ', '#7fb2ff', 'Skrur ned lyden og slår av etter 15 til 90 minutter.'],
-  ['lyrics', 'Sangtekster', 'Skjold', 'Verktøy', 'TX', '#c9c9c4', 'Viser teksten til låten i appen og på Skjold Touch.'],
-  ['snap', 'Snapcast', 'Skjold', 'Verktøy', 'SN', '#4a8cff', 'Send lyden til andre høyttalere på nettet, synkronisert med Skjold.']
-];
-const PL_KEY = 'skjold-plugins';
-function loadPl(): Record<string, boolean> {
-  try { const v = JSON.parse(localStorage.getItem(PL_KEY) || 'null') as Record<string, boolean> | null; if (v) return v; } catch { /* ignore */ }
-  return { podcast: true, dstm: true, alarm: true };
-}
-/** Plugins som er på (lagres i nettleseren til daemonen får en plugin-API). */
-export const plugState = signal<Record<string, boolean>>(loadPl());
-function savePl(n: Record<string, boolean>): void { plugState.value = n; try { localStorage.setItem(PL_KEY, JSON.stringify(n)); } catch { /* ignore */ } }
-export const plugCount = (): number => Object.values(plugState.value).filter(Boolean).length;
-
-const CATS = ['Alle', 'Installert', 'Musikk', 'Radio og podkast', 'Verktøy'];
-
-export function PluginsPage() {
-  const [cat, setCat] = useState('Alle'), [q, setQ] = useState(''), [busy, setBusy] = useState<string | null>(null);
-  const st = plugState.value, ql = q.trim().toLowerCase();
-  const list = PLUGINS.filter((p) => (cat === 'Alle' || (cat === 'Installert' ? st[p[0]] : p[3] === cat)) && (!ql || (p[1] + ' ' + p[6]).toLowerCase().includes(ql)));
-  return (
-    <>
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;gap:4px;padding:4px;border-radius:10px;background:#141415;border:1px solid #242426;flex-wrap:wrap">
-          {CATS.map((n) => <button key={n} onClick={() => setCat(n)} style={`height:34px;padding:0 14px;border-radius:7px;border:none;background:${cat === n ? '#2a2a2c' : 'transparent'};color:${cat === n ? '#f2f2ee' : '#8b8b86'};font-size:13px;cursor:pointer;white-space:nowrap`}>{n}</button>)}
-        </div>
-        <input value={q} onInput={(e) => setQ((e.currentTarget as HTMLInputElement).value)} placeholder="Søk i plugins" style="height:42px;width:280px;max-width:100%;padding:0 14px;border-radius:10px;border:1px solid #2e2e30;background:#141415;font-size:14px;outline:none;color:#f2f2ee" />
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
-        {list.map(([id, name, by, c, mono, col, desc]) => {
-          const on = !!st[id], b = busy === id;
-          const fg = b ? '#f0c46a' : on ? '#6fcf7f' : '#6a6a65';
-          const act = () => { if (b) return; if (on) { savePl({ ...plugState.value, [id]: false }); return; } setBusy(id); window.setTimeout(() => { setBusy(null); savePl({ ...plugState.value, [id]: true }); }, 1400); };
-          return (
-            <div key={id} style={`display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:14px;border:1px solid ${on ? '#3a3220' : '#242426'};background:#141415`}>
-              <div style="display:flex;align-items:center;gap:12px">
-                <span style={`width:44px;height:44px;border-radius:11px;background:${col};color:#0b0b0c;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0`}>{mono}</span>
-                <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;font-weight:600">{name}</span><span style={`font-family:${MONO};font-size:10px;color:#8b8b86`}>Fra {by} · {c}</span></div>
-              </div>
-              <span style="font-size:12.5px;color:#a9a9a3;line-height:1.45;text-wrap:pretty;flex:1">{desc}</span>
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-                <span style={`display:flex;align-items:center;gap:6px;font-size:11px;color:${fg};white-space:nowrap`}><i style={`width:6px;height:6px;border-radius:50%;background:${fg};flex-shrink:0`} />{b ? 'Installerer …' : on ? 'Installert' : 'Ikke installert'}</span>
-                <button onClick={act} style={`height:34px;padding:0 16px;border-radius:999px;border:1px solid ${on || b ? '#2e2e30' : A};background:${on || b ? 'transparent' : A};color:${on || b ? '#c9c9c4' : '#0b0b0c'};font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap`}>{b ? 'Vent' : on ? 'Fjern' : 'Installer'}</button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {list.length === 0 && <span style="font-size:13px;color:#8b8b86">Ingen plugins passer søket.</span>}
-    </>
-  );
-}
+export { PluginsPage, plugCount } from './plugins';
 
 /** Ekte logo per integrasjon: merkene fra kildeikonene, Home Assistant fra Simple Icons, Homey som ordmerke. */
 const INT_SRC: Record<string, string> = { lyrion: 'Lyrion', spotify: 'Spotify', ytmusic: 'YouTube Music', navidrome: 'Navidrome', upnp: 'UPnP/DLNA' };

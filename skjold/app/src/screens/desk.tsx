@@ -12,6 +12,7 @@ import { InputChips, Transport, artFor, mmss, nowTitle, sourceLine, subLine } fr
 import { useRooms } from './phone';
 import { SpeakerButton } from './groups';
 import { libUi } from './library';
+import { LyricsPane, SubwavePane } from './plugins';
 
 const PLAY = 'M8 5v14l11-7z';
 const SRC_ORDER: [InputId, string][] = [['radio', 'Radio'], ['airplay', 'AirPlay'], ['bt', 'Blåtann'], ['spotify', 'Spotify'], ['plex', 'Plex'], ['aux', 'AUX'], ['aux2', 'AUX'], ['usb', 'USB']];
@@ -155,7 +156,7 @@ export function DeskHome() {
 // ---------- Spiller ----------
 export function DeskPlayer() {
   const s = status.value, t = nowTitle(s), a = artFor(s);
-  const [tab, setTab] = useState<'song' | 'queue'>('song');
+  const [tab, setTab] = useState<'song' | 'queue' | 'lyrics' | 'booth'>('song');
   const dur = s?.duration ?? 0, pos = s?.position ?? 0;
   const live = s?.input === 'radio' && !s.source_label;
   const libQ = lsvc.value === 'nd' && lq.value.length > 0;
@@ -164,7 +165,7 @@ export function DeskPlayer() {
       <div class="glow" style={{ background: a.bg }} />
       <div class="cvwrap"><div class="cv" style={{ background: a.bg, color: a.ink }}>{!a.img && <span>{t.title}</span>}</div></div>
       <div class="info">
-        <div class="seg">{([['song', 'Låt'], ['queue', 'Kø']] as const).map(([k, n]) => <button key={k} class={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}</div>
+        <div class="seg">{((s?.subwave ? [['song', 'Låt'], ['booth', 'Booth'], ['queue', 'Kø']] : [['song', 'Låt'], ['queue', 'Kø'], ['lyrics', 'Tekst']]) as ['song' | 'queue' | 'lyrics' | 'booth', string][]).map(([k, n]) => <button key={k} class={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}</div>
         {tab === 'song' ? <>
           <div class="col" style={{ gap: '6px', minWidth: 0 }}>
             <span class="kicker">{live ? <span class="live">DIREKTE</span> : sourceLine(s).toUpperCase()}</span>
@@ -183,7 +184,7 @@ export function DeskPlayer() {
           <div class="vol"><Icon d="M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12" size={20} sw={1.6} /><Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} /><span class="num">{s?.volume ?? 0}</span></div>
           <div class="row gap10" style={{ flexWrap: 'wrap' }}><span class="kicker">SPILL PÅ</span><SpeakerButton /></div>
           <div class="col gap8"><span class="kicker">KILDE</span><InputChips s={s} /></div>
-        </> : (
+        </> : tab === 'lyrics' ? <LyricsPane pos={pos} /> : tab === 'booth' ? <SubwavePane mode="booth" /> : s?.subwave ? <SubwavePane mode="queue" /> : (
           <div class="dkx-queue">
             {libQ ? lq.value.map((x, i) => (
               <button key={x.id + i} class={i === li.value ? 'on' : ''} onClick={() => playNd(lq.value, i)}>
