@@ -46,6 +46,7 @@ class SkjoldApp : android.app.Application(), ImageLoaderFactory {
         Store.init(this)
         WidgetStore.schedule(this)   // widgets oppdateres hvert 15. min også når appen er lukket
         try { SkjoldRoutes.init(this) } catch (_: Exception) { }   // Skjold-enhetene i systemets «Medieutgang»
+        try { WearBridge.init(this) } catch (_: Exception) { }   // Wear OS-klokka: rom og kall via telefonen
     }
 
     override fun newImageLoader(): ImageLoader =

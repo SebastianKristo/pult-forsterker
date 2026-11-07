@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Skjold"
 include(":app")
+include(":wear")   // Wear OS-appen (klokke)

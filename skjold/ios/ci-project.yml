@@ -3,7 +3,7 @@
 # fra denne fila. Hold innstillingene i takt med Skjold.xcodeproj/project.xcproj.
 name: SkjoldCI
 options:
-  deploymentTarget: { iOS: "26.0" }
+  deploymentTarget: { iOS: "26.0", watchOS: "10.0" }
 targets:
   Skjold:
     type: application
@@ -70,4 +70,26 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks @executable_path/../../Frameworks"
         SKIP_INSTALL: YES
         CODE_SIGN_ENTITLEMENTS: Entitlements/SkjoldWidgets.entitlements
+        CODE_SIGNING_ALLOWED: NO
+  # Apple Watch-appen (watchOS 10+, SwiftUI). Bygges som eget scheme og legges i Skjold.app/Watch av release-jobben,
+  # så en feil her ikke stopper iOS-bygget. Snakker direkte med Skjold, eller via telefonen (WatchBridge.swift).
+  SkjoldWatch:
+    type: application
+    scheme: {}
+    platform: watchOS
+    sources:
+      - path: SkjoldWatch
+        excludes: [Info.plist]
+    settings:
+      base:
+        PRODUCT_NAME: SkjoldWatch
+        PRODUCT_BUNDLE_IDENTIFIER: com.sebastiankristojemtlandpersonalteam.Skjold.watchkitapp
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: SkjoldWatch/Info.plist
+        WATCHOS_DEPLOYMENT_TARGET: "10.0"
+        TARGETED_DEVICE_FAMILY: "4"
+        SWIFT_VERSION: "5.0"
+        SKIP_INSTALL: YES
         CODE_SIGNING_ALLOWED: NO
