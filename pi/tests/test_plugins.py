@@ -181,6 +181,19 @@ class TestPluginInnstillinger(unittest.TestCase):
         y = yaml.safe_load("filters:" + x[0] + "\nmixers:" + x[1] + "\npipeline:\n" + "\n".join(x[2]))
         self.assertEqual(len(y["pipeline"]), 6)
 
+    def test_mono_nedmiks(self):
+        import yaml
+        d.state["settings"] = {}
+        d.dsp.update = lambda: None
+        os.environ["KI_AMP_MONO"] = "1"
+        try:
+            cfg = yaml.safe_load(d.dsp_config())
+        finally:
+            del os.environ["KI_AMP_MONO"]
+        self.assertEqual(cfg["pipeline"][0], {"type": "Mixer", "name": "mono"})
+        self.assertEqual(len(cfg["mixers"]["mono"]["mapping"][1]["sources"]), 2)
+        self.assertNotIn("mixers", yaml.safe_load(d.dsp_config()))
+
     def test_sweep(self):
         x = d.log_sweep(dur=0.5, sr=8000)
         self.assertEqual(len(x), 4000)
