@@ -76,7 +76,7 @@ object Shortcuts {
         return "Skjold"
     }
 
-    private fun http(h: String?, method: String, path: String, body: JSONObject? = null): String? = try {
+    internal fun http(h: String?, method: String, path: String, body: JSONObject? = null): String? = try {
         val raw = (h ?: "").trim().trimEnd('/')
         if (raw.isEmpty()) null else {
             val base = if (raw.startsWith("http")) raw else "http://$raw"

@@ -47,6 +47,28 @@
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- Delte kassetter fra en venn (KassettDel.kt): spør før kassettene legges som ventende.
+             BROWSABLE: lenken kommer fra en QR-kode eller melding. -->
+        <activity
+            android:name=".KassettDelActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="skjold" android:host="kassett" android:pathPrefix="/del" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="skjold.smarthjemexperten.no" android:pathPrefix="/kassett/del" />
+            </intent-filter>
+        </activity>
+
         <!-- App-snarveier: rutiner, «Hva er dette?» og dørklokke (Shortcuts.kt) -->
         <activity
             android:name=".ShortcutActivity"

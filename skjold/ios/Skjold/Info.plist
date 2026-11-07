@@ -7,6 +7,17 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>no.kristo.skjold</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>skjold</string>
+			</array>
+		</dict>
+	</array>
 	<key>NFCReaderUsageDescription</key>
 	<string>Skjold skriver kassetter: holder du telefonen mot NFC-brikken, kobles den til det du har valgt.</string>
 	<key>NSBonjourServices</key>

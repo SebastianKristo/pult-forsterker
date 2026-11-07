@@ -216,6 +216,8 @@ fun KassettView(m: AppModel) {
         }
         when (phase) {
             "velg" -> {
+                KassettWrappedCard(host)
+                KassettDelPanel(host)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SKFilterChip("Album", src == "album") { src = "album"; pick = null }
                     SKFilterChip("Radio", src == "radio") { src = "radio"; pick = null }

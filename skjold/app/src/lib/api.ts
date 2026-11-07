@@ -144,9 +144,16 @@ export interface HomeKitInfo { enabled: boolean; available: boolean; running: bo
 export type NfcHandling = 'preset' | 'play_url' | 'nrk' | 'ma_uri' | 'navidrome_album' | 'navidrome_playlist' | 'routine' | 'album';
 export interface NfcLosning { kilde: 'navidrome' | 'ytmusic' | 'ma'; id?: string; uri?: string; navn?: string; artist?: string; t?: number }
 export interface NfcAlbum { artist: string; album: string }
-export interface NfcOppsett { ventende: NfcAlbum[]; paret: string; koble_ventende: boolean; enheter?: { navn: string; her: boolean }[] }
-export interface NfcCard { uid?: string; navn: string; handling: NfcHandling; verdi: unknown; rom: string[]; volum: number | null; ved_uttak: 'pause' | 'ingenting'; omslag: string; undertittel: string; spilt?: number; sist?: number; losning?: NfcLosning }
-export interface NfcStatus { learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[]; ventende?: NfcAlbum[]; paret?: string; koble_ventende?: boolean }
+/** Kassett-Wrapped (GET /api/nfc/stats). Tider i sekunder (unix). */
+export interface NfcStatRad { uid: string; navn: string; undertittel: string; omslag: string; laget: number; sist: number; finnes: boolean; fra?: string; spilt?: number; lyttetid?: number; kilde?: string; uker_siden?: number; aldri?: boolean }
+export interface NfcStats { periode: string; glemt_uker: number; totalt: { spilt: number; lyttetid: number; kassetter: number; brukt: number }; topp: NfcStatRad[]; alle: NfcStatRad[]; glemte: NfcStatRad[]; aldri_brukt: number; per_maned: { mnd: string; spilt: number }[]; kilder: { kilde: string; spilt: number }[]; favoritt: NfcStatRad | null }
+/** Delingskode for kassetter (POST /api/nfc/share). sky = kort kode via Skjold Cloud (kryptert, 14 dager). */
+export interface NfcDeling { kode: string; lenke: string; web: string; delt: number; hoppet_over: number; sky: boolean; utloper?: number }
+/** Ventende kassett: et album fra import, eller en delt kassett (handling/verdi/navn, «fra» = avsender). */
+export interface NfcVentende { artist?: string; album?: string; handling?: NfcHandling; verdi?: unknown; navn?: string; undertittel?: string; fra?: string }
+export interface NfcOppsett { ventende: NfcVentende[]; paret: string; koble_ventende: boolean; enheter?: { navn: string; her: boolean }[] }
+export interface NfcCard { uid?: string; navn: string; handling: NfcHandling; verdi: unknown; rom: string[]; volum: number | null; ved_uttak: 'pause' | 'ingenting'; omslag: string; undertittel: string; spilt?: number; sist?: number; losning?: NfcLosning; fra?: string }
+export interface NfcStatus { learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[]; ventende?: NfcVentende[]; paret?: string; koble_ventende?: boolean }
 export interface Spoler { 'på': boolean; fart: number; spol: number; bare_kassett: boolean; vent?: number; modus?: 'spill' | 'spol' | 'tilbake' | 'stopp'; rps?: number }
 export interface Routine { id: string; navn: string; ikon?: string }
 export const api = {
@@ -162,6 +169,9 @@ export const api = {
   nfcSok: (q: string) => req<{ treff: (NfcAlbum & { kilde: string })[] }>('/api/nfc/sok?q=' + encodeURIComponent(q)),
   nfcFinn: (artist: string, album: string) => req<{ losning: NfcLosning | null; kilde: string }>(`/api/nfc/finn?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`),
   spolerSett: (b: Partial<Spoler>) => post<Spoler>('/api/nfc/spoler', b),
+  nfcStats: (periode: 'uke' | 'mnd' | 'år' | 'alt' = 'år', glemt = 8) => req<NfcStats>(`/api/nfc/stats?periode=${encodeURIComponent(periode)}&glemt=${glemt}`),
+  nfcShare: (uids: string[], sky: boolean) => post<NfcDeling>('/api/nfc/share', { uids, sky }),
+  nfcShareImport: (kode: string) => post<NfcOppsett & { lagt_til: number; hoppet_over: number; fra: string }>('/api/nfc/share/import', { kode }),
   routines: () => req<{ routines?: Routine[] } | Routine[]>('/api/routines'),
   homekit: () => req<HomeKitInfo>('/api/homekit'),
   maStatus: () => req<MaStatus>('/api/ma/status', undefined, undefined, 12000),

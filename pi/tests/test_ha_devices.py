@@ -42,3 +42,10 @@ def test_hjul_devices():
     stue = out[1]
     assert stue["battery"] == 81 and stue["room"] == "Kjøkken" and stue["rooms"] == ["Dette rommet", "Kjøkken"]
     assert out[0]["room"] == "Dette rommet"
+
+
+def test_kassett_state_ventende_delte_og_mest_spilt():
+    s = D.kassett_state({"cards": [{"uid": "04-A1", "navn": "Meteora", "spilt": 5}, {"uid": "04-B2", "navn": "25", "spilt": 2}],
+                       "ventende": [{"artist": "Adele", "album": "21"},
+                                    {"handling": "album", "verdi": {"artist": "a-ha", "album": "HHL"}, "fra": "Kari"}]}, None)
+    assert s["ventende"] == 2 and s["ventende_delte"] == 1 and s["mest_spilt"] == "Meteora"
