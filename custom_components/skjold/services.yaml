@@ -15,3 +15,44 @@ presence_mode:
       selector:
         config_entry:
           integration: skjold
+
+set_eq_profile:
+  name: Sett EQ-profil
+  description: Velg en ferdig lydprofil (Flat, Bass+, Vokal, Kveld, Podkast …) for kilden som spiller, eller en bestemt kilde.
+  fields:
+    entity_id:
+      name: Skjold
+      required: true
+      selector:
+        entity:
+          integration: skjold
+          domain: media_player
+    profile:
+      name: Profil
+      required: true
+      selector:
+        select:
+          options: ["Flat", "Bass+", "Vokal", "Kveld", "Podkast", "Klassisk", "Rock", "Pop", "Elektronisk", "Hip-hop", "Jazz", "Akustisk", "Små høyttalere", "Lavt volum"]
+    source:
+      name: Kilde
+      description: Valgfritt – air, bt, radio, aux, usb eller hp. Tom = det som spiller nå.
+      selector:
+        select:
+          options: ["air", "bt", "radio", "aux", "usb", "hp"]
+ask:
+  name: Spill noe til …
+  description: Beskriv hva du vil høre («rolig jazz til middag»), så setter Skjold sammen en kø.
+  fields:
+    entity_id:
+      name: Skjold
+      required: true
+      selector:
+        entity:
+          integration: skjold
+          domain: media_player
+    text:
+      name: Ønske
+      required: true
+      example: rolig jazz til middag
+      selector:
+        text:
