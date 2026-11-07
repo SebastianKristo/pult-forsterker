@@ -1,16 +1,13 @@
 #
 # Ekte skjermbilder av den native iOS-appen (SwiftUI, skjold/ios) fra iOS-simulatoren.
 # Bygger appen for simulatoren, starter en falsk Skjold-enhet (skjold/ios/ci/mock_skjold.py) på maskinen og
-# tar bilde av hver fane i lyst og mørkt utseende. Bildene lastes opp som artifact «ios-skjermbilder» og legges
+# tar bilde av hver fane (appen har bare mørkt utseende). Bildene lastes opp som artifact «ios-skjermbilder» og legges
 # også på grenen «skjermbilder/ios» (skjermbilder/ios/*.png) så de kan hentes uten innlogging.
 #
 name: iOS-skjermbilder
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["claude/ios-skjermbilder"]
-    paths: [".github/workflows/ios-skjermbilder.yml", "skjold/ios/ci/**"]
 
 permissions:
   contents: write
@@ -71,18 +68,18 @@ jobs:
           xcrun simctl status_bar "$UDID" override --time "10:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
           mkdir -p ut
           navn=(hjem lyd rom innstillinger)
-          for look in dark light; do
+          for look in dark; do
             xcrun simctl ui "$UDID" appearance "$look"
             for t in 0 1 2 3; do
               xcrun simctl terminate "$UDID" "$BID" 2>/dev/null || true
               xcrun simctl launch "$UDID" "$BID" -skjold-setup-done YES -skjold-host 127.0.0.1:8765 -SkjoldDemoTab "$t"
-              sleep 9
-              xcrun simctl io "$UDID" screenshot "ut/$(printf '%d' $((t+1)))-${navn[$t]}-$look.png"
+              sleep 14   # første oppstart av en fane kan bruke litt tid (Innstillinger ble svart etter 9 s)
+              xcrun simctl io "$UDID" screenshot "ut/$(printf '%d' $((t+1)))-${navn[$t]}.png"
             done
             xcrun simctl terminate "$UDID" "$BID" 2>/dev/null || true
             xcrun simctl launch "$UDID" "$BID" -skjold-setup-done YES -skjold-host 127.0.0.1:8765 -SkjoldDemoTab 0 -SkjoldDemoFull YES
-            sleep 9
-            xcrun simctl io "$UDID" screenshot "ut/5-spiller-$look.png"
+            sleep 14
+            xcrun simctl io "$UDID" screenshot "ut/5-spiller.png"
           done
           ls -la ut
           tail -n 30 mock.log
