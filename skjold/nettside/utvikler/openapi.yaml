@@ -512,6 +512,20 @@ paths:
             application/json:
               schema:
                 type: object
+  /api/health/perf:
+    get:
+      tags:
+      - System
+      summary: GET /api/health/perf
+      operationId: get_api_health_perf
+      x-skjold-modul: skjold_health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
   /api/health/report:
     get:
       tags:

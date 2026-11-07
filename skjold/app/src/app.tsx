@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals';
 // Skall: telefon (App v2) under 900 px eller i Capacitor, ellers PC (S1 Web v3).
+import { t as tr } from './i18n';
 import { WhatsNewSheet, checkWhatsNew } from './screens/programs';
 import { useEffect, useState } from 'preact/hooks';
 import { App as CapApp } from '@capacitor/app';
@@ -99,7 +100,7 @@ function Phone() {
   useEffect(() => { if (!fullPlayer.value) { queueOpen.value = false; srcOpen.value = false; } }, [fullPlayer.value]);
   const cat = page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
   const tabOf = page === 'radio' || page === 'play' || page === 'lib' ? 'home' : page === 'grp' ? 'rooms' : page === 'int' || page === 'plug' || page === 'kass' || page === 'vinyl' ? 'settings' : page === 'ma' ? 'home' : page;
-  const title = cat ? cat.n : page === 'lib' ? libTitle() : TITLES[page];
+  const title = cat ? cat.n : page === 'lib' ? libTitle() : tr(TITLES[page]);
   return (
     <div class="phone">
       {page !== 'home' && <div class="top">{page === 'rooms' && visSted() ? <StedPicker big /> : <span class="title">{title}</span>}</div>}
@@ -122,7 +123,7 @@ function Phone() {
       <nav class="tabs">
         {TABS.map(([id, n]) => (
           <button key={id} class={'tab' + (tabOf === id ? ' on' : '')} onClick={() => go(id)}>
-            <span class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{TAB_ICON[id]}</svg></span>{n}
+            <span class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{TAB_ICON[id]}</svg></span>{tr(n)}
           </button>
         ))}
       </nav>
@@ -167,7 +168,7 @@ function Desktop() {
   const s = status.value, r = route.value, p = product.value;
   const t = nowTitle(s);
   const cat = r.page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
-  const title = cat ? cat.n : r.page === 'lib' ? libTitle() : TITLES[r.page];
+  const title = cat ? cat.n : r.page === 'lib' ? libTitle() : tr(TITLES[r.page]);
   const st0 = settings.value;
   const libs: [string, string][] = [['ytm', 'YouTube Music'], ['nd', 'Navidrome']];
   const [rcol, setRcol] = useState(readRcol);
@@ -178,25 +179,25 @@ function Desktop() {
   const noRcol = r.page === 'home' || r.page === 'play' || r.page === 'radio' || r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug' || r.page === 'ma' || r.page === 'kass' || r.page === 'vinyl';
   const showRcol = rcol && !noRcol;
   const air = s?.input === 'airplay' && s.airplay_device ? 'Fra ' + s.airplay_device : '';
-  const rb = (key: string, label: string, on: boolean, onClick: () => void, badge = 0) => (
+  const rb = (key: string, label0: string, on: boolean, onClick: () => void, badge = 0) => { const label = tr(label0); return (
     <button key={key} class={'rb' + (on ? ' on' : '')} onClick={onClick} aria-label={label} aria-current={on ? 'page' : undefined}>
       <Icon d={NICON[key] ?? ''} size={20} sw={1.6} />
       {railx && <span class="rl">{label}</span>}
       {badge > 0 && <sup>{badge}</sup>}
       {!railx && <span class="tip">{label}</span>}
     </button>
-  );
+  ); };
   return (
     <div class={'desktop dk2' + (showRcol ? '' : ' norc') + (railx ? ' railx' : '')}>
       <aside class="rail" aria-label="Meny">
         <div class="rlogo" aria-hidden="true">{[9, 15, 21, 15, 9].map((h, i) => <i key={i} style={{ height: h + 'px' }} />)}</div>
-        <span class="rhead">LYTT</span>
+        <span class="rhead">{tr("LYTT")}</span>
         {NAV.filter(([id]) => id !== 'eq').map(([id, n]) => rb(id, n, r.page === id, () => go(id)))}
         {libs.map(([id, n]) => rb(id, n, r.page === 'lib' && r.cat === id, () => go('lib', id)))}
         {rb('ma', 'Music Assistant', r.page === 'ma', () => go('ma'))}
         {rb('eq', 'Equalizer', r.page === 'eq', () => go('eq'))}
         <hr />
-        <span class="rhead">OPPSETT</span>
+        <span class="rhead">{tr("OPPSETT")}</span>
         {SETUP_NAV.map(([id, n]) => rb(id, n, id === 'set' ? r.page === 'settings' : r.page === id, () => go(id === 'set' ? 'settings' : id), id === 'int' ? intCount(st0) : id === 'plug' ? plugCount() : 0))}
         <button class="rb rexp" onClick={toggleRail} aria-expanded={railx} aria-label={railx ? 'Skjul navn' : 'Vis navn'} title={railx ? 'Skjul navn' : 'Vis navn'}>
           <Icon d={railx ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} size={18} sw={1.8} />
