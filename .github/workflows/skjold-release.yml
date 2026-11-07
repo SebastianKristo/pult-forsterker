@@ -193,15 +193,19 @@ jobs:
       - name: Pakk som IPA
         working-directory: skjold/ios
         run: |
+          # Standard-IPA uten Apple Watch: sideloading (Sideloadly/AltStore) gir appen ny bundle-id med team-suffiks,
+          # men endrer ikke WKCompanionAppBundleIdentifier i klokke-appen – da avviser iPhone hele installasjonen
+          # (InvalidCompanionAppBundleIdentifier). Klokke-utgaven legges ved som egen IPA for signering i Xcode.
           mkdir -p Payload
           cp -r build/Build/Products/Release-iphoneos/Skjold.app Payload/
+          zip -qr ../../skjold-ios-${GITHUB_REF_NAME}-usignert.ipa Payload
           W=build-watch/Build/Products/Release-watchos/SkjoldWatch.app
           if [ "${{ steps.watch.outcome }}" = "success" ] && [ -d "$W" ]; then
-            mkdir -p Payload/Skjold.app/Watch && cp -r "$W" Payload/Skjold.app/Watch/ && echo "Apple Watch-appen er med"
+            mkdir -p Payload/Skjold.app/Watch && cp -r "$W" Payload/Skjold.app/Watch/
+            zip -qr ../../skjold-ios-${GITHUB_REF_NAME}-med-klokke-usignert.ipa Payload && echo "Egen IPA med Apple Watch-appen laget"
           else
-            echo "::warning::Apple Watch-appen ble ikke bygget – IPA-en lages uten den"
+            echo "::warning::Apple Watch-appen ble ikke bygget – bare IPA uten klokke"
           fi
-          zip -qr ../../skjold-ios-${GITHUB_REF_NAME}-usignert.ipa Payload
       - uses: actions/upload-artifact@v4
         with:
           name: ios-native
