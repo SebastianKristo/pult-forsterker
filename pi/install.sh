@@ -218,7 +218,7 @@ sudo install -m 644 "$SRC/skjold_nfc.py" "$SRC/skjold_hjul.py" "$SRC/skjold_mini
 command -v fpcalc >/dev/null || sudo apt-get -y install --no-install-recommends libchromaprint-tools >/dev/null 2>&1 || true
 sudo install -m 644 "$SRC/skjold-healthcheck.service" /etc/systemd/system/skjold-healthcheck.service
 sudo mkdir -p /var/lib/skjold/rollback && sudo systemctl daemon-reload && sudo systemctl enable skjold-healthcheck.service >/dev/null 2>&1 || true
-sudo mkdir -p /usr/local/share/ki-amp/logos/nrk /var/lib/ki-amp/logos && sudo install -m 644 "$SRC"/logos/nrk/*.svg /usr/local/share/ki-amp/logos/nrk/   # innebygde NRK-logoer for /api/logo
+sudo mkdir -p /usr/local/share/ki-amp/logos/nrk /var/lib/ki-amp/logos && sudo install -m 644 "$SRC"/logos/nrk/*.svg "$SRC"/logos/nrk/*.png /usr/local/share/ki-amp/logos/nrk/   # innebygde NRK-logoer for /api/logo
 sudo install -m 644 "$SRC/skjold_s1f.py" /usr/local/bin/skjold_s1f.py   # Skjold S1 rev F: knapper, LED, nattmodus
 sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pins.yaml" /usr/local/share/ki-amp/s1f_pins.yaml
 sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || echo "HAP-python ble ikke installert – Apple Hjem er av"

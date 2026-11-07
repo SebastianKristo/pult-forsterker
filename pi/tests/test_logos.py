@@ -44,7 +44,7 @@ def test_nrk_builtin_when_source_fails(tmp_path):
         raise OSError("nede")
     k = L.path_for("", "NRK P3").split("k=")[1]
     body, ct = L.get(k, fetch=fetch)
-    assert ct == "image/svg+xml" and b"<svg" in body
+    assert ct == "image/png" and body[:4] == b"\x89PNG"   # PNG: appene viser ikke SVG
 
 
 def test_radio_browser_lookup(tmp_path):
@@ -72,3 +72,19 @@ def test_negative_cached(tmp_path):
 
 def test_bad_key():
     assert L.get("../../etc/passwd") is None
+
+
+def test_generic_lyrion_art_does_not_share_key():
+    import skjold_logos as L
+    g = "http://10.69.1.65:9000/html/images/radio.png"
+    a, b = L.path_for(g, "NRK Jazz"), L.path_for(g, "Radio Montebello")
+    assert a and b and a != b
+    assert L._reg[a.split("=")[1]]["src"] == ""     # standardbildet brukes ikke som logo
+
+
+def test_nrk_logo_served_as_png(tmp_path, monkeypatch):
+    import skjold_logos as L
+    monkeypatch.setattr(L, "CACHE_DIR", str(tmp_path))
+    k = L.path_for("", "NRK P3 (Oslo, Norway / Pop)").split("=")[1]
+    body, ct = L.get(k, fetch=lambda *a, **kw: (_ for _ in ()).throw(OSError("offline")))
+    assert ct == "image/png" and body[:8] == b"\x89PNG\r\n\x1a\n"
