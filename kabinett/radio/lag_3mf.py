@@ -7,10 +7,17 @@
 
 Kjør etter at STL-ene er eksportert:  python3 lag_3mf.py   (eller ./lag_stl.sh, som gjør alt)
 Hver del får filamentnummer i Metadata/model_settings.config (Creality Print / OrcaSlicer):
-1 = kroppsfarge (lys), 2 = sort/mørk, 3 = gull. Mørk variant: bytt filament 1 og 3 i sliceren."""
+1 = kroppsfarge (lys), 2 = sort/mørk, 3 = gull.
+
+Symbolene er innfelt i flukt (0,6 mm, egne legemer i en lomme med samme form). Hver knappehette, volumknotten og hjulet
+blir ett objekt med to deler (komponenter) – selve delen og symbolinnlegget – med hvert sitt filament, slik at CFS printer
+symbolet i kontrastfarge i samme utskrift: hettene sort (2) med gull symbol (3), volumknotten og hjulet gull (3) med sort
+symbol (2). Mørk variant (sort kropp, gullknapper): legg sort i spor 1, og bytt filament på hettene til 3 og symbolene til 2."""
 import math
 import os
 import zipfile
+from xml.sax.saxutils import escape
+
 import trimesh
 
 BED = 250
@@ -19,7 +26,9 @@ PLATES = {
         # fil, navn, filament, rotasjon om z, min-hjørne (x, y), «samme som»
         ("kropp", "Kropp (fronten ned)", 1, 0, (5, 0.5), None),
         ("knapp", "Knappehetter 1–6 og av/på (toppen ned)", 2, 0, (5, 146), None),
+        ("knapp_symbol", "Symbol", 3, 0, None, "knapp"),        # innlegg: delt opp og lagt inn i hver sin hette
         ("volum", "Volumknott", 3, 0, (145, 146), None),
+        ("volum_symbol", "Symbol høyttaler", 2, 0, None, "volum"),
         ("list", "Gullist (forsiden ned)", 3, 90, (5, 168), None),
     ]),
     "skjold-radio-k2-kammer.3mf": ("Skjold Radio – lydkammer og lokk (PETG/ASA)", [
@@ -33,9 +42,11 @@ PLATES = {
     "skjold-radio-k2-bak.3mf": ("Skjold Radio – bakplate og navigasjonshjul (PETG/ASA)", [
         ("bak", "Bakplate (baksiden ned)", 1, 0, (8, 3), None),
         ("knott", "Navigasjonshjul", 3, 0, (10, 145), None),
+        ("knott_symbol", "Symbol spill/pause", 2, 0, None, "knott"),
     ]),
 }
 COLORS = {1: "#ECE9E3", 2: "#232325", 3: "#D99E40"}
+HETTER = ["Knapp 1", "Knapp 2", "Knapp 3", "Knapp 4", "Knapp 5", "Knapp 6", "Knapp av/på"]
 
 
 def mesh_xml(m):
@@ -59,24 +70,69 @@ def place(parts):
             moved[f] = d
         assert m.bounds[1][0] <= BED and m.bounds[1][1] <= BED and m.bounds[0][0] >= 0 and m.bounds[0][1] >= 0, (f, m.bounds)
         out.append((f, name, fil, m))
-    # ingen overlapp mellom delene på plata
+    return out
+
+
+def objects(parts):
+    """Grupper delene til objekter: [(navn, [(delnavn, filament, mesh), …])]. Et innlegg («samme som») blir en ekstra del
+    i objektet det ligger i. Knappehettene (sju legemer i én fil) deles opp, så hver hette med symbolet blir ett objekt."""
+    placed = place(parts)
+    objs, by = [], {}
+    for f, name, fil, m in placed:
+        same = next(p[5] for p in parts if p[0] == f)
+        if same is None:
+            if f == "knapp":
+                for k, b in enumerate(sorted(m.split(only_watertight=False), key=lambda b: b.bounds[0][0])):
+                    objs.append([HETTER[k] + " (toppen ned)", [(HETTER[k], fil, b)]])
+                by[f] = objs[-7:]
+            else:
+                objs.append([name, [(name, fil, m)]])
+                by[f] = [objs[-1]]
+        else:
+            groups = by[same]
+            bodies = m.split(only_watertight=False) if len(groups) > 1 else [m]
+            for g in groups:
+                gb = g[1][0][2].bounds
+                mine = [b for b in bodies if all(gb[0][i] <= b.centroid[i] <= gb[1][i] for i in (0, 1))]
+                assert mine, (f, g[0])
+                g[1].append((f"{name} – {g[0].split(' (')[0]}" if len(groups) > 1 else name, fil, trimesh.util.concatenate(mine)))
+            assert sum(len(b.faces) for b in bodies) == sum(len(p[2].faces) for g in groups for p in g[1][1:]), f
+    # ingen overlapp mellom objektene på plata
+    out = [(o[0], None, None, trimesh.util.concatenate([p[2] for p in o[1]])) for o in objs]
     for i, (fa, _, _, a) in enumerate(out):
         for fb, _, _, b in out[i + 1:]:
             (a0, a1), (b0, b1) = a.bounds, b.bounds
             assert a1[0] <= b0[0] or b1[0] <= a0[0] or a1[1] <= b0[1] or b1[1] <= a0[1], (fa, fb)
-    return out
+    return objs
 
 
 def write(fn, title, parts):
-    objs, items, cfg = [], [], []
-    for i, (f, name, fil, m) in enumerate(place(parts), 1):
-        objs.append(f'<object id="{i}" name="{name}" type="model">{mesh_xml(m)}</object>')
-        items.append(f'<item objectid="{i}"/>')
-        cfg.append(f'<object id="{i}"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/>'
-                   f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/></part></object>')
+    objs, items, cfg, nid = [], [], [], 0
+    for name, dels in objects(parts):
+        if len(dels) == 1:   # én del: et vanlig mesh-objekt
+            nid += 1
+            dn, fil, m = dels[0]
+            objs.append(f'<object id="{nid}" name="{escape(name)}" type="model">{mesh_xml(m)}</object>')
+            items.append(f'<item objectid="{nid}"/>')
+            cfg.append(f'<object id="{nid}"><metadata key="name" value="{escape(name)}"/><metadata key="extruder" value="{fil}"/>'
+                       f'<part id="{nid}" subtype="normal_part"><metadata key="name" value="{escape(name)}"/><metadata key="extruder" value="{fil}"/></part></object>')
+            continue
+        # flere deler: ett objekt med komponenter, hver del med sitt filament (flerfarget med CFS)
+        ids = []
+        for dn, fil, m in dels:
+            nid += 1
+            ids.append(nid)
+            objs.append(f'<object id="{nid}" name="{escape(dn)}" type="model">{mesh_xml(m)}</object>')
+        nid += 1
+        objs.append(f'<object id="{nid}" name="{escape(name)}" type="model"><components>'
+                    + "".join(f'<component objectid="{i}"/>' for i in ids) + '</components></object>')
+        items.append(f'<item objectid="{nid}"/>')
+        cfg.append(f'<object id="{nid}"><metadata key="name" value="{escape(name)}"/><metadata key="extruder" value="{dels[0][1]}"/>'
+                   + "".join(f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{escape(dn)}"/>'
+                             f'<metadata key="extruder" value="{fil}"/></part>' for i, (dn, fil, _) in zip(ids, dels)) + '</object>')
     model = ('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" '
              'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
-             f'<metadata name="Title">{title}</metadata><metadata name="Designer">Skjold</metadata>'
+             f'<metadata name="Title">{escape(title)}</metadata><metadata name="Designer">Skjold</metadata>'
              '<metadata name="License">CC BY-NC-SA 4.0</metadata>'
              f'<resources>{"".join(objs)}</resources><build>{"".join(items)}</build></model>')
     ct = ('<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'

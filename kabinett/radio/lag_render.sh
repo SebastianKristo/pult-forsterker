@@ -25,4 +25,7 @@ r 05_skra_mork samlet $SKRA mork
 r 06_eksplodert_mork eksplodert $EKSP mork
 r 07_bak_lys samlet $BAK lys
 r 08_naer_lys samlet $NAER lys
+# innmaten: bakplata felt ned bakover med kortene på, og et merket oppsett (render/10_oppsett.png)
+openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera=-120,640,380,120,115,25 -D 'part="inni"' -o render/09_inni_lys.png skjold_radio.scad &
 wait
+python3 lag_oppsett.py

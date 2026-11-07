@@ -4,9 +4,9 @@ En lav bordradio med 4,3″ skjerm, seks favorittknapper, et stort navigasjonshj
 
 ![Skjold Radio, lys](render/02_skra_lys.png)
 
-Bilder: [forfra, lys](render/01_forfra_lys.png) · [skrått, lys](render/02_skra_lys.png) · [eksplodert, lys](render/03_eksplodert_lys.png) · [forfra, mørk](render/04_forfra_mork.png) · [skrått, mørk](render/05_skra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) · [bak](render/07_bak_lys.png) · [nær, grillen og panelet](render/08_naer_lys.png). Skjermen i bildene viser det ekte skjermbildet fra skjold-ui (se [Skjermen](#skjermen)).
+Bilder: [forfra, lys](render/01_forfra_lys.png) · [skrått, lys](render/02_skra_lys.png) · [eksplodert, lys](render/03_eksplodert_lys.png) · [forfra, mørk](render/04_forfra_mork.png) · [skrått, mørk](render/05_skra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) · [bak](render/07_bak_lys.png) · [nær, grillen og panelet](render/08_naer_lys.png) · [inni](render/09_inni_lys.png) · [oppsett inni](render/10_oppsett.png). Skjermen i bildene viser det ekte skjermbildet fra skjold-ui (se [Skjermen](#skjermen)).
 
-Mål: 240 × 128 × 140 mm (B × D × H, med grillen, uten knotter og gummiføtter). Selve kassa er 125 mm dyp; grillen stikker 3 mm ut fra fronten, som på Skjold Røst. Hjulet stikker 15,6 mm ut fra fronten, volumknotten 13,6 mm. Forrige utgave var en stående radio på 236 × 145 × 205 mm med to elementer (stereo) under en vannrett gullist. Den nye er 65 mm lavere, fordi det bare er ett element og det sitter ved siden av betjeningspanelet i stedet for under. Første utgave var en lav pult med skjermen og knappene på den skrå toppen.
+Mål: 240 × 118 × 140 mm (B × D × H, med grillen, uten knotter og gummiføtter). Selve kassa er 115 mm dyp (10 mm grunnere enn før, da radioen var 128 mm dyp med grillen); grillen stikker 3 mm ut fra fronten, som på Skjold Røst. Hjulet stikker 15,6 mm ut fra fronten, volumknotten 13,6 mm. Forrige utgave var en stående radio på 236 × 145 × 205 mm med to elementer (stereo) under en vannrett gullist. Den nye er 65 mm lavere, fordi det bare er ett element og det sitter ved siden av betjeningspanelet i stedet for under. Første utgave var en lav pult med skjermen og knappene på den skrå toppen.
 
 ## Designet
 
@@ -15,8 +15,10 @@ Radioen er en lav, liggende bordradio der alt vender mot deg. Fronten er loddret
 - **Fronten er delt i to av en tynn, loddrett gullist.** Til venstre er en grill trukket med mørkt, vevd høyttalerstoff foran det ene 3″-elementet. Grillen stikker 3 mm ut fra fronten, akkurat som på Skjold Røst, så den leses som en egen, myk pute. Rammen har rundet forkant (R 1,5), og stoffet er trukket over den og brettet rundt kanten, så ingen skjøter synes. Gullista og panelet ligger i flukt med fronten. Til høyre er et rolig betjeningspanel i kroppsfargen.
 - **Betjeningspanelet har tre lag.** Øverst sitter skjermen, med overkanten i flukt med grillens overkant. Rett under den står favoritt 1–6 på én rad, like bred som skjermen. Nederst sitter av/på til venstre, den lille gullknotten for volum i midten og det store gullhjulet (Ø 42 mm) til høyre, i flukt med skjermens høyre kant.
 - **Gullhjulet** er det største elementet på radioen. Drei for å bla i favorittene, trykk for spill/pause, hold for menyen på skjermen.
+- **Symbolene er printet inn i knappene.** Hver knapp har symbolet sitt innfelt i flukt i en kontrastfarge, printet i samme utskrift med CFS (se [Flerfarget print](#flerfarget-print-symbolene-i-knappene)): favorittene har tallene 1–6 og av/på har det vanlige av/på-symbolet ⏻ (IEC 60417-5009: en åpen sirkel med en loddrett strek, tegnet som geometri og ikke fra en skrifttype). Begge er i gull på de mørke hettene. Volumknotten har en høyttaler med to lydbølger, og hjulet har spill/pause ⏯, fordi et trykk på hjulet er spill/pause. Begge er sorte i skåla på de gule knottene. Overflaten er helt glatt, så symbolene kan ikke slites av.
 - **Skjold-formspråket:** myke hjørner (R14, som Node og Røst) sett forfra, faset frontkant hele veien rundt, lys kropp med mørkt høyttalerstoff og mørke knapper, gull hjul, volumknott og list, og SKJOLD preget over skjermen. Sidene, toppen og baksiden er helt rene.
-- **Mørk variant:** matt sort kropp, grafittgrått stoff og gullknapper. Bare filamentet byttes.
+- **Myk, avrundet bakdel.** Kassa er ikke en firkantet boks. Fronten er flat med R14-hjørner og fas, men bakover smalner kroppen svakt og rundes av med en stor radius (R26) over toppen og ned langs sidene, som en pute. Helt bak er toppen 12,7 mm lavere og hver side 6,4 mm smalere enn fronten, og de øvre hjørnene vokser fra R14 til R20. Bakplata er de siste 3 mm av den avrundede formen: kroppen slutter 3 mm før bakkanten, og plata ligger an mot kanten utenpå og fortsetter formen. Derfor er det ingen spalte rundt den, og en smal krage inni sentrerer den. Gulvet og de nedre hjørnene er uendret, så radioen står stødig. Buen stopper ved 42°, så kroppen printes fortsatt med fronten ned uten støtte.
+- **Mørk variant:** matt sort kropp, grafittgrått stoff og gullknapper med sorte symboler. Bare filamentet byttes.
 
 Designet er laget fra bunnen av for Skjold. Oppdelingen med høyttaler til venstre og betjening til høyre er vanlig for bordradioer, men proporsjonene, plasseringen av knappene og detaljene er egne. Den loddrette gullista mellom grill og panel, panelet i tre lag og gullhjulet nede i hjørnet er Skjold Radios kjennetegn.
 
@@ -31,8 +33,8 @@ Designet er laget fra bunnen av for Skjold. Oppdelingen med høyttaler til venst
 | **Dayton Audio RS75-4 (3″ fullrange, 4 Ω)** | Et vanlig, rimelig 3″-element med ren lyd og bred spredning, uten delefilter. Det sitter i ett lukket kammer på ca. 0,74 l netto. Lukket kasse gir stram bass og tåler å stå inntil veggen. |
 | **19–24 V / 3 A strømadapter + 5 V / 5 A nedtrapper** | Én adapter for alt. Forsterkeren får hele spenningen, og Pi-en får 5 V via GPIO-pinnene 2/4 (ikke via USB-C). Nedtrapperen må tåle 5 A, fordi Pi 4 med skjerm trekker opptil 3 A ved oppstart. |
 | **Relémodul 1-kanal, 3,3 V-styrt (jumper H)** | Som i Kit: GPIO 27 slår forsterkeren av og på uten smell. |
-| **2 × EC11 dreieknapp med trykk** | Hjulet (20 mm aksel) og volum (15 mm aksel). Billige, holdbare og med tydelige hakk. |
-| **7 × taktbryter 6 × 6 × 4,3 mm** | Under de printede knappehettene: seks på favorittkortet og én på et lite kort for av/på. Nuppen på hetta treffer bryteren med 0,1 mm forspenning. |
+| **2 × EC11 dreieknapp med trykk** | Hjulet og volum, begge med 15 mm D-aksel (kappes), hver på sitt lille kort. Billige, holdbare og med tydelige hakk. |
+| **7 × taktbryter 6 × 6 × 4,3 mm** | Under de printede knappehettene: seks på favorittkortet og én på et lite kort for av/på. Det er 0,1 mm luft mellom nuppen på hetta og bryteren, så vandringen blir ca. 0,35 mm (0,1 mm fritt + bryterens 0,25 mm). |
 
 Strømtrekket er normalt 6–15 W. Pi-en og skjermen trekker ca. 4–5 W alene.
 
@@ -76,16 +78,17 @@ Prisene er **anslag i norske kroner per november 2026**, med frakt fra AliExpres
 | Relémodul 1-kanal, H/L-jumper | 1 | AliExpress: «1 channel relay module 3.3V high low level trigger» | 20 kr |
 | DC-kontakt for panel 5,5 × 2,1/2,5 mm (Ø 8 mm) | 1 | «DC-022 panel jack» | 15 kr |
 | 3,5 mm stereokontakt for panel (Ø 6 mm) | 1 | «PJ-392 3.5mm panel jack» | 10 kr |
-| USB-C panelskjøt (hunn til USB-A) | 1 | AliExpress: «USB C female panel mount to USB A male» | 40 kr |
-| EC11 med trykk, 20 mm D-aksel | 1 | AliExpress: «EC11 rotary encoder 20mm D shaft» | 15 kr |
-| EC11 med trykk, 15 mm D-aksel | 1 | Samme | 15 kr |
+| USB-C panelskjøt (hunn til USB-A), helst med vinklet USB-A-plugg (Pi-ens USB-porter peker mot sideveggen) | 1 | AliExpress: «USB C female panel mount to USB A male 90 degree» | 40 kr |
+| EC11 med trykk, 15 mm D-aksel, vertikal (for kort) | 2 | AliExpress: «EC11 rotary encoder 15mm D shaft». Akselen kappes så den stikker 11 mm ut fra fronten. | 30 kr |
 | Taktbryter 6 × 6 × 4,3 mm | 7 | «tactile switch 6x6x4.3 THT» | 10 kr |
-| Hullkort ca. 110 × 16 mm (favoritter) og 30 × 16 mm (av/på) | 1 | «perfboard 5x15 cm», kuttes i to | 20 kr |
+| Hullkort: 110 × 16 mm (favoritter), 30 × 16 mm (av/på) og 2 × 20 × 34 mm (dreieknappene) | 1 | «perfboard 5x15 cm», kuttes i fire | 20 kr |
 | M3 innpressmutter (M3 × 5,7, Ø 4,0 hull) | 15 | «M3 heat set insert 5.7mm» | 40 kr |
 | M3 × 10 senkeskrue | 9 | Bakplata (5) og kammerørene (4) | 20 kr |
 | M3 × 8 skrue | 6 | Lokket på kammeret | 15 kr |
 | M3 × 10 selvgjengende | 4 | Elementet | 10 kr |
-| M2,5 × 6 selvgjengende | 12 | Skjermbrakett (4), favorittkort (2), av/på-kort (2), Pi (4) | 15 kr |
+| M2,5 × 6 selvgjengende | 16 | Skjermbrakett (4), Pi (4), favorittkort (2), av/på-kort (2), EC11-kortene (2 + 2) | 15 kr |
+| M3 × 8 selvgjengende | 6 | Forsterkeren (4), USB-C-skjøten i bakplata (2) | 10 kr |
+| Strips 2,5 × 100 mm | ca. 10 | DAC, nedtrapper, relé og kablene | 10 kr |
 | Gummiføtter Ø 12 mm, selvklebende | 4 | «bumpon 12mm» | 20 kr |
 | Skumtape 1–2 mm, 6 mm bred | 1 m | Tetning rundt kammerlokket | 30 kr |
 | Høyttalerstoff, akustisk transparent, antrasitt eller mørk grå, minst 120 × 140 mm (selges ofte som 50 × 140 cm) | 1 | AliExpress: «speaker grill cloth fabric acoustically transparent», eller Soundimports/Elfa «høyttalerstoff» | 50–100 kr |
@@ -93,7 +96,7 @@ Prisene er **anslag i norske kroner per november 2026**, med frakt fra AliExpres
 | Dempeull / polyfill | ca. 10 g | Løst i kammeret | 30 kr |
 | Ledning, skjermet lydkabel, krympestrømpe | – | | 50 kr |
 | **Elektronikk og stoff totalt** | | | **ca. 2 300–2 600 kr** |
-| PETG/ASA-filament (FDM) | ca. 0,75 kg | 3 farger: kropp, sort, gull | 150–250 kr |
+| PETG/ASA-filament (FDM) | ca. 0,7 kg | 3 farger: kropp, sort, gull | 150–250 kr |
 
 ## Kabinettet
 
@@ -101,27 +104,48 @@ Kabinettet er tegnet i [`skjold_radio.scad`](skjold_radio.scad) (OpenSCAD, param
 
 | Del | STL | Volum | Print (FDM) |
 |---|---|---|---|
-| Kropp (ett skall: front, sider, topp og gulv; åpen bak) | `stl/kropp.stl` | 327 cm³ | Fronten ned på platen. Alle vegger står loddrett, ingen støtte. 240 × 140 × 125 mm. |
-| Bakplate (DC, linje ut, USB-C, lufting) | `stl/bak.stl` | 87 cm³ | Baksiden ned |
+| Kropp (ett skall: front, sider, topp og gulv; åpen bak) | `stl/kropp.stl` | 327 cm³ | Fronten ned på platen. Ingen støtte: veggene står loddrett og heller innover mot den avrundede bakkanten (maks 42°). Tårnene for bakplata har avstivere ut til veggen, skrådd av under. 240 × 140 × 115 mm. |
+| Bakplate (de siste 3 mm av kassa: DC, linje ut, USB-C, lufting, holdere for nedtrapper og relé) | `stl/bak.stl` | 84 cm³ | Baksiden ned, holderne og kragen opp. Kanten heller inntil 42° utover, ingen støtte. |
 | Lydkammer (baffel, ører) | `stl/kammer.stl` | 176 cm³ | Baffelen ned. 100 % fyll i baffelen gir minst resonans. |
 | Lokk for kammeret | `stl/lokk.stl` | 32 cm³ | Flatt |
 | Grillramme for høyttalerstoff (tre vinduer, to stag, flens, to ribber mot baffelen; står 3 mm ut med rundet forkant) | `stl/grill.stl` | 18,8 cm³ | Forsiden ned, ribbene opp. Ingen støtte (den runde kanten R 1,5 ved platen går fint). |
 | Gullist (loddrett, 118 mm) | `stl/list.stl` | 0,6 cm³ | Forsiden ned |
 | Skjermbrakett med Pi-tårn | `stl/brakett.stl` | 13 cm³ | Flatt, tårnene opp |
-| Navigasjonshjul Ø 42 | `stl/knott.stl` | 7,5 cm³ | Toppen opp. Hult bakfra. |
-| Volumknott Ø 22 | `stl/volum.stl` | 2,8 cm³ | Toppen opp |
-| Knappehetter 1–6 og av/på | `stl/knapp.stl` | 4,0 cm³ | Toppen ned (sju hetter) |
+| Navigasjonshjul Ø 42 | `stl/knott.stl` | 7,4 cm³ | Toppen opp. Hult bakfra. Lomme for symbolet i skåla. |
+| Symbol spill/pause ⏯ (innlegg i hjulet, sort) | `stl/knott_symbol.stl` | 0,04 cm³ | Ligger i lomma i hjulet (samme koordinater som `knott.stl`) |
+| Volumknott Ø 22 | `stl/volum.stl` | 2,8 cm³ | Toppen opp. Lomme for symbolet i skåla. |
+| Symbol høyttaler (innlegg i volumknotten, sort) | `stl/volum_symbol.stl` | 0,02 cm³ | Ligger i lomma i volumknotten (samme koordinater som `volum.stl`) |
+| Knappehetter 1–6 og av/på | `stl/knapp.stl` | 3,6 cm³ | Toppen ned (sju hetter), lomme for symbolet i toppen. Flensen er rett avskåret oppe, så tallet står rett og hetta går klar av skjermmodulen. |
+| Symboler 1–6 og ⏻ (innlegg i hettene, gull) | `stl/knapp_symbol.stl` | 0,06 cm³ | Ligger i lommene i hettene (samme koordinater som `knapp.stl`), de første tre lagene |
+
+`ref/` har forenklede modeller av de kjøpte delene (referanse, ikke for print). `lag_oppsett.py` tegner det merkede oppsettet (`render/10_oppsett.png`) fra dem.
 
 3MF-plater for Creality K2 (250 × 250 mm, filament 1 = kroppsfarge, 2 = sort, 3 = gull):
 
-- `skjold-radio-k2.3mf`: kropp, volumknott, knappehetter og gullist
+- `skjold-radio-k2.3mf`: kropp, volumknott med symbol, sju knappehetter med symbol og gullist
 - `skjold-radio-k2-kammer.3mf`: lydkammer og lokk
 - `skjold-radio-k2-grill.3mf`: grillramme og skjermbrakett
-- `skjold-radio-k2-bak.3mf`: bakplate og navigasjonshjul
+- `skjold-radio-k2-bak.3mf`: bakplate og navigasjonshjul med symbol
+
+### Flerfarget print: symbolene i knappene
+
+Symbolene er egne legemer (innlegg), 0,6 mm dype, som ligger i en lomme med nøyaktig samme form i hetta eller knotten. Toppen av innlegget er i flukt med flaten. I 3MF-fila er hver knappehette, volumknotten og hjulet ett objekt med to deler, og hver del har sitt eget filament. Creality Print og OrcaSlicer printer da symbolet i kontrastfarge i samme utskrift, og CFS bytter filament selv.
+
+| Del | Selve delen | Symbolet |
+|---|---|---|
+| Favoritt 1–6 (tallene) og av/på (⏻) | filament 2, sort | filament 3, gull |
+| Volumknotten (høyttaler) | filament 3, gull | filament 2, sort |
+| Hjulet (spill/pause ⏯) | filament 3, gull | filament 2, sort |
+
+**Oppsett på K2 med CFS:** legg kroppsfargen i spor 1, sort i spor 2 og gull i spor 3, og koble sporene til filament 1–3 i Creality Print når du åpner 3MF-fila. Fargene står allerede på delene, så du trenger ikke male noe. Hettene printes med toppen ned, så symbolet blir de første lagene (3 lag à 0,2 mm eller 4 à 0,16 mm). Det gir rene kanter mot platen og trenger ingen støtte. Volumknotten og hjulet printes med toppen opp, så der skiftes fargen bare i de øverste 0,6 mm i skåla. Det blir få fargebytter, fordi de ligger på samme lag som resten av plata. Sett gjerne et avfallstårn (prime tower) og «flush into object infill» for å spare filament. **Mørk variant:** legg sort i spor 1, og bytt filament på hettene til 3 (gull) og symbolene i hettene til 2 (sort). Da får du gullknapper med sorte tall.
+
+**Uten flerfarge (én farge):** print delene som de er. Lommene blir da 0,6 mm dype, rene fordypninger med symbolet. Fyll dem med akrylmaling, emaljemaling eller lakktusj i kontrastfarge, og tørk av overskuddet med en klut med litt sprit før det tørker. Det blir like pent, og malingen sitter godt nede i lomma. Du kan også printe `knapp_symbol.stl`, `volum_symbol.stl` og `knott_symbol.stl` for seg i den andre fargen (0,6 mm tynne, toppen ned) og lime dem i lommene med en dråpe superlim. Ved bytte av filament midt i utskriften (M600/pause ved 0,6 mm) kan også hettene printes tofarget på en vanlig skriver.
 
 Tips for FDM: 0,16 mm lag, 3 vegger, 15 % gyroid. Bruk teksturert PEI for kroppen, så fronten får en jevn, matt struktur. Skjermvinduet, knappehullene og grillåpningen er gjennomgående hull rett opp fra platen, så kanten rundt dem blir skarp. Varm innpressmutterne inn med 220–240 °C.
 
-**Sjekket med `sjekk_modell.py`:** høyttalerstoffet (0,5 mm, over den utstikkende rammen, rundt den runde kanten og inn bak flensen) er tatt med i kollisjonssjekken. Grillen med stoffet stikker 3,0 mm ut, gullista 0,4 mm, og panelet ligger i flukt. Alle delene er vanntette og hver er ett legeme (knapp-fila har sju hetter). Alle ligger på platen og passer i K2. Ingen deler kolliderer i montert stilling. Kammeret er lukket i alle retninger når lokket og elementet er på, med ca. 0,74 l netto. Sidene, toppen, gulvet og bakplata er minst 2 mm overalt utenom de tiltenkte hullene.
+**Sjekket med `sjekk_modell.py`:** høyttalerstoffet (0,5 mm, over den utstikkende rammen, rundt den runde kanten og inn bak flensen) er tatt med i kollisjonssjekken. Grillen med stoffet stikker 3,0 mm ut, gullista 0,4 mm, og panelet ligger i flukt. Alle delene er vanntette og hver er ett legeme (knapp-fila har sju hetter). Symbolinnleggene er vanntette, 0,6 mm dype, i flukt med flaten, og fyller lomma i sin egen del uten å overlappe den. I montert stilling berører de bare sin egen del. De kjøpte delene (kort, brytere, EC11, skjerm, Pi, DAC, forsterker, nedtrapper, relé, kontakter) kolliderer ikke med noe, og knappehettene har 0,1 mm luft til bryterne. Skjøten mellom kroppen og bakplata er tett (0 mm spalte, også sett 30° på skrå). Det avrundede bakpartiet har ingen flater brattere enn 50° når kroppen ligger med fronten ned (maks 42°), og veggen er minst 2 mm også der. Dybden er sjekket: 8,4 mm bak kammerlokket (skruehoder og skumtape), 78 mm bak Pi-en og 26 mm fri gulvflate foran bakplata for DC-, 3,5 mm- og USB-C-kontaktene. Alle ligger på platen og passer i K2. Ingen deler kolliderer i montert stilling. Kammeret er lukket i alle retninger når lokket og elementet er på, med ca. 0,74 l netto. Sidene, toppen, gulvet og bakplata er minst 2 mm overalt utenom de tiltenkte hullene.
+
+**Grunnere kasse (115 mm).** Kroppen ble 10 mm grunnere uten at noe inni måtte krympes, og den avrundede bakdelen tar heller ikke plass fra innmaten: kammeret slutter før buen begynner for alvor, og tårnene for bakplata sitter i hjørnene utenfor kammeret. Lydkammeret er det samme (ca. 0,74 l netto), fordi det var plass bak lokket. Pi-en sitter rett bak skjermbraketten, ca. 34 mm bak fronten med kontaktene, så det er god plass til å bøye DSI-flatkabelen og USB-skjøten. Luftespaltene i gulvet er flyttet 10 mm fram, så det er like mye fri gulvflate som før (26 mm) mellom forsterkeren og kontaktene i bakplata.
 
 **Lydkammeret** er en egen boks med baffel (7 mm) og lokk med skumtape, bak venstre halvdel av fronten. Kroppen trenger derfor ikke være tett, og ventilasjonen til Pi-en og forsterkeren påvirker ikke bassen. Elementet skrus på baffelen forfra. Elementets ramme havner da 1 mm bak grillflensen med stoffet. Med ca. 0,74 l netto blir Qtc for RS75-4 ca. 0,95. Det gir en stram bass som likevel går godt ned for et 3″-element. Litt dempeull løst i kammeret gjør bassen enda jevnere. Bruker du et annet 3″-element, sjekk utsparingen (`drvCut`), rammen (`drvF`) og skruehullsirkelen (`drvPCD`) i `skjold_radio.scad`.
 
@@ -130,15 +154,59 @@ Tips for FDM: 0,16 mm lag, 3 vegger, 15 % gyroid. Bruk teksturert PEI for kroppe
 Alt monteres bakfra gjennom den åpne baksiden.
 
 1. **Innpressmuttere:** 5 i tårnene bak i kroppen, 6 bak i kammeret (lokket) og 4 i kammerørene (nedenfra).
-2. **Kammeret:** trekk høyttalerkabelen gjennom hullet i gulvet og tett med silikon. Skru elementet på baffelen (4 × M3 × 10 selvgjengende). Legg i litt dempeull. Legg skumtape rundt kanten og skru på lokket (6 × M3 × 8).
+2. **Kammeret:** trekk høyttalerkabelen gjennom hullet bak i høyre sidevegg (mot forsterkeren) og tett med silikon. Skru elementet på baffelen (4 × M3 × 10 selvgjengende). Legg i litt dempeull. Legg skumtape rundt kanten og skru på lokket (6 × M3 × 8).
 3. **Høyttalerstoffet:** klipp en bit på ca. 120 × 140 mm, med trådene rett langs kantene. Legg den med vrangsiden opp på bordet og grillrammen med forsiden ned midt på. Spray tynt med kontaktlim på baksiden av flensen (dekk resten av rammen med papir) og vent 1–2 minutter til limet er klebrig. Brett stoffet rundt den runde forkanten og sidene og trykk det på flensen: først midt på langsidene, så midt på kortsidene, og strekk jevnt utover mot hjørnene, så trådene holder seg rette og stoffet ligger stramt uten bobler. I hjørnene klipper du bort en kile og legger stoffet i små folder. Skjær bort overskuddet innenfor flensen og la limet herde i en time. Stoffet ligger da over forsiden, rundt kanten og limt bak flensen, og de to stagene holder det flatt foran elementet. Bruk ikke for mye lim på forsiden: limet tetter stoffet og gir flekker.
 4. **Fronten:** trykk gullista inn i det loddrette sporet mellom grillen og panelet (en dråpe lim i hver ende). Legg grillrammen med stoffet inn i åpningen fra innsiden, så flensen ligger i falsen og grillen stikker 3 mm ut av åpningen foran.
 5. **Kammeret i kroppen:** skyv det inn bakfra mot grillen og skru det fast med 4 × M3 × 10 senkeskrue nedenfra i ørene. Ribbene på grillrammen ligger mot baffelen og holder grillen på plass. Grillen kan tas ut igjen bakfra hvis stoffet skal byttes.
 6. **Skjermen og Pi-en:** legg skjermmodulen i lomma bak vinduet, med 1 mm skumtape mot kanten. Skru Pi-en på tårnene bak på braketten (4 × M2,5), før DSI-flatkabelen gjennom slissen og skru braketten over skjermen (4 × M2,5 i tårnene på hver side).
-7. **Knappene:** sett de seks favoritthettene og av/på-hetta i hullene fra innsiden. Lodd seks taktbrytere på favorittkortet med 16 mm mellom, og skru det på de to tårnene under skjermen (M2,5). Lodd av/på-bryteren midt på det lille kortet og skru det på tårnene nede til venstre (M2,5).
-8. **EC11:** hjulet og volumknotten monteres gjennom fronten med mutter. Trykk på knottene.
-9. **Gulvet under panelet (høyre halvdel):** fest forsterkeren, nedtrapperen og releet med dobbeltsidig tape over luftespaltene. Monter DC-, 3,5 mm- og USB-C-kontaktene i bakplata nede til høyre.
-10. **Kobl til** etter tabellen over. Skru på bakplata (5 × M3 × 10 senkeskrue) og sett gummiføttene i forsenkningene under.
+7. **Knappene:** sett de seks favoritthettene (1–6 fra venstre) og av/på-hetta (⏻) i hullene fra innsiden, med symbolet rett vei. Lodd seks taktbrytere på favorittkortet med 16 mm mellom, og skru det på de to tårnene under skjermen (M2,5). Lodd av/på-bryteren midt på det lille kortet og skru det på tårnene nede til venstre (M2,5).
+8. **EC11:** lodd hver dreieknapp midt på sitt lille kort (20 × 34 mm), stikk gjengehylsen inn i hullet i fronten og skru kortet på de to tårnene over og under (2 × M2,5 × 6). Huset står da mot innsiden av fronten og tar trykket; mutteren brukes ikke. Kapp akslene så de stikker 11 mm ut fra fronten, og trykk på knottene.
+9. **Gulvet:** skru forsterkeren på de fire stolpene over luftespaltene (4 × M3 × 8 selvgjengende). Legg DAC-en på de fire små stolpene foran og strips den fast. Se [Slik er det inni](#slik-er-det-inni).
+10. **Bakplata:** sett nedtrapperen og releet i hjørneholderne på innsiden og strips dem fast. Monter DC-kontakten og 3,5 mm-kontakten med mutter og USB-C-skjøten med 2 × M3 × 8.
+11. **Kobl til** etter tabellen over og [kabelveiene](#slik-er-det-inni). Skru på bakplata (5 × M3 × 10 senkeskrue) og sett gummiføttene i forsenkningene under.
+
+## Slik er det inni
+
+![Innmaten: bakplata felt ned bakover](render/09_inni_lys.png)
+
+![Oppsettet inni, sett bakfra og ovenfra](render/10_oppsett.png)
+
+Alt er plassert slik at det går klar av hverandre i den grunnere og avrundede kassa. `sjekk_modell.py` sjekker det med forenklede modeller av alle kjøpte deler i `ref/`: kortene, taktbryterne, EC11, skjermmodulen, Pi-en, DAC-en, forsterkeren, nedtrapperen, releet, kontaktene og elementet. Kortmålene er vanlige mål for disse kortene, men de varierer mellom selgere. **Mål dine egne kort** og juster variablene i `skjold_radio.scad` (`forstM`, `dacM`, `buckM`, `releM` og så videre) før du printer.
+
+| # | Del | Mål (mm) | Feste | Skruer | Plassering |
+|---|---|---|---|---|---|
+| 1 | Lydkammer + lokk | 102 × 92 × 124 | Ører på gulvet, lokk med skumtape | 4 × M3 × 10 senkeskrue nedenfra, 6 × M3 × 8 i lokket | Venstre halvdel, bak grillen |
+| 2 | Høyttaler RS75-4 | Ø 86 | På baffelen forfra | 4 × M3 × 10 selvgjengende | I kammeret |
+| 3 | Skjermmodul 4,3″ DSI | 106 × 68 × ca. 8 | I lomma bak vinduet, klemt av braketten | – | Høyre, øverst |
+| 4 | Skjermbrakett | 122 × 55 | Fire tårn i fronten | 4 × M2,5 × 6 selvgjengende | Bak skjermen |
+| 5 | Raspberry Pi 4 | 85 × 56, hull 58 × 49 | Fire tårn bak på braketten | 4 × M2,5 × 6 selvgjengende | Bak skjermen, portene mot høyre side |
+| 6 | Favorittkort med 6 taktbrytere | 110 × 16 | To tårn i fronten (y 3–10) | 2 × M2,5 × 6 selvgjengende | Under skjermen, brytere med 16 mm deling |
+| 7 | Av/på-kort | 30 × 16 | To tårn i fronten | 2 × M2,5 × 6 selvgjengende | Nede til venstre i panelet |
+| 8–9 | EC11 volum og hjul, hvert på eget kort | 20 × 34 (EC11 12 × 12) | To tårn 13 mm over og under aksen; huset mot fronten | 2 × M2,5 × 6 per kort | Bak knottene |
+| 10 | DAC PCM5102A | 32 × 17, uten hull | Fire stolper (4 mm) i gulvet + strips | – | Foran på gulvet, under av/på |
+| 11 | Forsterker TPA3116D2 (XH-M189-type) | 83 × 50 × 20, hull ca. 76 × 43 | Fire stolper (5 mm) i gulvet, rett over luftespaltene | 4 × M3 × 8 selvgjengende | Midt på gulvet til høyre |
+| 12 | Nedtrapper 5 V / 5 A (XL4015-type) | ca. 54 × 23 × 18 | Fire hjørneholdere på innsiden av bakplata + strips | – | Bakplata, over kontaktene |
+| 13 | Relémodul 1-kanal | ca. 50 × 26 × 19 | Fire hjørneholdere på innsiden av bakplata + strips | – | Bakplata, ved siden av nedtrapperen |
+| 14 | DC-022, PJ-392, USB-C-skjøt | Ø 8 / Ø 6 / 10 × 4,4 | Mutter / mutter / 2 × M3 (28 mm mellom hullene) | 2 × M3 × 8 | Bakplata nede |
+
+**Knappene.** Taktbryterne (6 × 6 × 4,3 mm) sitter på forsiden av kortene, og kortene ligger an mot tårnene 7 mm bak fronten. Nuppen på hetta har 0,1 mm luft til bryteren, så hetta beveger seg ca. 0,35 mm før den klikker (0,1 mm fritt + bryterens 0,25 mm). Hetta står 0,8 mm ut fra fronten og ca. 0,45 mm når den er trykket inn. Flensen bak fronten holder hetta på plass, og den rette overkanten holder tallet på rett kjøl.
+
+**Dreieknappene.** EC11 står på eget lite kort skrudd fast i to tårn, med huset mot innsiden av fronten. Da tar fronten trykket når du trykker på knotten, og kortet hindrer at dreieknappen roterer. Gjengehylsen går inn i hullet (Ø 7,2) og inn i en forsenkning under knotten, så mutteren trengs ikke.
+
+**Varme.** Forsterkeren står på 5 mm høye stolper rett over luftespaltene i gulvet. De nederste spaltene i bakplata ligger bak den, så varm luft går opp og ut bak. Pi-en har spalter rett bak seg i bakplata. Nedtrapperen og releet sitter høyt på bakplata, bort fra forsterkeren.
+
+**Kabelveier og strips-fester.** Det er fire strips-fester i gulvet: ett foran ved DAC-en og tre langs høyre side. Hjørneholderne på bakplata har også egne strips-fester.
+
+- **Strøm:** DC-kontakten går til nedtrapperen og releet på bakplata, og videre til forsterkeren på korteste vei. Nedtrapperen gir 5 V, som går opp langs høyre side til Pi-ens pinne 2/6.
+- **Lyd:** I²S fra Pi-ens GPIO går ned langs høyre side til DAC-en foran. Skjermet kabel fra DAC-en går bakover til forsterkerens inngang. Høyttalerkabelen går fra hullet i kammerets høyre sidevegg til forsterkerens utgang L.
+- **Knapper:** båndkabler fra favorittkortet, av/på-kortet og EC11-kortene går opp til Pi-ens GPIO.
+- **Skjerm:** DSI-flatkabelen går gjennom slissen i braketten rett til Pi-en.
+- **USB-C:** skjøten går opp langs høyre side til en av Pi-ens USB-porter. Bruk en vinklet USB-A-plugg.
+- **Bakplata:** la kablene til kontaktene, nedtrapperen og releet være 15–20 cm lange, så bakplata kan legges ned bak radioen mens du kobler. Det er slik den ligger i bildet over.
+
+**Rekkefølge:** se [Montering](#montering). Kort sagt: innpressmuttere → kammer med element → stoff og grill → skjerm, brakett og Pi → knappekort og EC11-kort → forsterker og DAC på gulvet → nedtrapper, relé og kontakter på bakplata → kabler og strips → bakplata på.
+
+**Print uten støtte.** Alt printes uten støtte. Stolpene og strips-festene i gulvet er dråpeformet sett ovenfra, med spissen mot fronten, så undersiden heller 45° når kroppen ligger med fronten ned. Skruehullene i dem har spisst tak. Tårnene for knappekortene og EC11-kortene står på fronten og bygges rett opp. Holderne på bakplata bygges rett opp fra plata.
 
 ## Programvare
 
@@ -238,16 +306,16 @@ Du kan bestille alle delene i resin (SLA) eller nylon (MJF) i stedet for å prin
 
 | Del | SLA resin (JLC3DP) | MJF PA12 sort (JLC3DP) | Craftcloud (EU, SLA/MJF) |
 |---|---|---|---|
-| Kropp (327 cm³, 240 × 140 × 125) | 750–1 400 kr | 800–1 550 kr | 1 500–3 000 kr |
+| Kropp (327 cm³, 240 × 140 × 112) | 750–1 400 kr | 800–1 550 kr | 1 500–3 000 kr |
 | Grillramme + gullist (19 cm³, stoffet kjøpes) | 80–170 kr | 100–200 kr | 220–450 kr |
-| Hjul + volumknott + 7 knappehetter (14 cm³) | 60–150 kr | 80–180 kr | 200–400 kr |
+| Hjul + volumknott + 7 knappehetter (14 cm³; symbolene males inn i lommene) | 60–150 kr | 80–180 kr | 200–400 kr |
 | Lydkammer + lokk (208 cm³, usynlig) | 450–850 kr | 550–1 000 kr | – (print selv) |
-| Bakplate + brakett (100 cm³, synes bare bakfra) | 220–450 kr | 250–520 kr | – (print selv) |
+| Bakplate + brakett (97 cm³, synes bare bakfra) | 220–450 kr | 250–520 kr | – (print selv) |
 | Frakt til Norge | 200–350 kr | 200–350 kr | 0–200 kr |
 
 Legg til 25 % MVA (og eventuelt fortollingsgebyr på ca. 100–200 kr fra Kina).
 
-**Anbefaling:** bestill bare de synlige delene i resin eller MJF (kropp, gullist, hjul, volumknott og knappehetter, ca. 1 300–2 500 kr med frakt og MVA; grillrammen synes ikke under stoffet og kan like gjerne printes selv). Print lydkammeret, lokket, bakplata og braketten selv på K2. De synes ikke, og kammeret blir faktisk bedre i tett PETG enn i hul resin. Velg MJF sort for den mørke varianten uten maling, og SLA med sliping, primer og lakk for den lyse varianten som skal se mest mulig sprøytestøpt ut.
+**Anbefaling:** bestill bare de synlige delene i resin eller MJF (kropp, gullist, hjul, volumknott og knappehetter, ca. 1 300–2 500 kr med frakt og MVA; symbolene males inn i lommene; grillrammen synes ikke under stoffet og kan like gjerne printes selv). Print lydkammeret, lokket, bakplata og braketten selv på K2. De synes ikke, og kammeret blir faktisk bedre i tett PETG enn i hul resin. Velg MJF sort for den mørke varianten uten maling, og SLA med sliping, primer og lakk for den lyse varianten som skal se mest mulig sprøytestøpt ut.
 
 ## Lisens
 
