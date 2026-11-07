@@ -1,20 +1,21 @@
 # Skjold Fjernkontroll
 
-En universell fjernkontroll for hele stua: 2,8″ fargeberøringsskjerm øverst, nesten fra kant til kant, 42 taster under, IR foran og Wi-Fi inni. Den styrer Skjold direkte (volum, spill/pause, favoritter, kilder og rom), sender og lærer IR-koder til TV, projektor og annet, og kjører aktiviteter som «Se TV» og «God natt» som setter i gang IR, Skjold og Home Assistant i én operasjon. Alle tastene sendes også til Home Assistant, så du kan bruke hvilken som helst tast til hva du vil.
+En universell fjernkontroll for hele stua: 2,8″ fargeberøringsskjerm øverst, nesten fra kant til kant, 21 taster under, IR foran og Wi-Fi inni. Den styrer Skjold direkte (volum, spill/pause, favoritter, kilder og rom), sender og lærer IR-koder til TV, projektor og annet, og kjører aktiviteter som «Se TV» og «God natt» som setter i gang IR, Skjold og Home Assistant i én operasjon. Alle tastene sendes også til Home Assistant, så du kan bruke hvilken som helst tast til hva du vil.
 
 Den er laget for å bygges hjemme. Kabinettet printes på en Creality K2, delene kommer fra AliExpress, og fastvaren er ESPHome.
 
 ![Skjold Fjernkontroll, lys](render/01_skra_lys.png)
 
 Bilder: [skrått, lys](render/01_skra_lys.png) · [ovenfra, lys](render/02_ovenfra_lys.png) · [eksplodert, lys](render/03_eksplodert_lys.png) · [skrått, mørk](render/04_skra_mork.png) · [ovenfra, mørk](render/05_ovenfra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) · [fra siden](render/07_side_lys.png) · [nær, skjermen og D-paden](render/08_naer_lys.png) · [halen med USB-C](render/09_hale_lys.png).
+I Bone White matt PLA med mørk matt PETG-bunn: [skrått](render/21_skra_bone.png) · [ovenfra](render/22_ovenfra_bone.png) · [fra siden](render/23_side_bone.png) · [nær](render/24_naer_bone.png) · [med grå PETG-bunn](render/25_skra_bone_gra.png). Se [Filament](#filament).
 Skjermen i bildene viser aktivitetslista slik fastvaren tegner den. Skjermbildene er laget med `lag_skjermbilder.py` (se [Skjermen](#skjermen)).
 
-**Mål: 55 × 230 mm, 13,5 mm tykk.** Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
+**Mål: 55 × 184 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 227 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
 
 Første utgave hadde en 2,0″-skjerm i en 54 × 208 mm kropp, med mye tom ramme på hver side av skjermen. Nå sitter en 2,8″-skjerm der: kroppen er 1 mm bredere og 22 mm lengre, og alt under skjermen (taster, form og farger) er det samme som før.
 
 Hvorfor 2,8″ og ikke 2,4″:
-- **Kroppen må være ca. 54 mm bred uansett.** Det krever tre talltaster, vippene og D-paden med hjørnetastene.
+- **Kroppen må være ca. 54 mm bred uansett.** Det krever D-paden med hjørnetastene og avspillingsraden (og talltastene i full variant).
 - **2,4″ fyller ikke bredden.** Glasset er bare 43–44 mm bredt, så det ville fortsatt blitt nesten 7 mm tom ramme på hver side.
 - **2,8″ fyller bredden.** Glasset er 50 mm bredt og fyller fronten med 4 mm ramme, mot 11 mm før.
 - **Lengden øker mer med 2,8″,** fordi panelet er 69 mm langt.
@@ -22,35 +23,39 @@ Hvorfor 2,8″ og ikke 2,4″:
 
 **Status: ikke bygget og ikke testet.** Modellen er kontrollert med `sjekk_modell.py`, og ESPHome-fila er validert med `esphome config` (ESPHome 2026.10.2). Fastvaren er ikke kompilert her: kompileringen trenger ESP-IDF-filer fra dl.espressif.com og komponentregisteret til Espressif, og de var blokkert i byggemiljøet. Se [Begrensninger](#begrensninger-og-hva-som-ikke-er-testet).
 
-## To varianter: full og kort
+## Standard og full variant
 
-| | **Full** | **Kort** |
+Standard er fjernkontrollen **uten talltaster**, som vist i bildene over. **Full variant (valgfri)** har i tillegg talltastene (1–9, −, 0, ↵) og smarthus-raden (lys, stikk, −, +).
+
+| | **Standard** | **Full variant (valgfri)** |
 |---|---|---|
-| Mål | 55 × 230 mm | **55 × 187 mm** (43 mm kortere) |
+| Mål | **55 × 184 mm** | 55 × 227 mm |
 | Tykkelse | 13,5 mm (15,0 mm med gullringen) | samme |
-| Taster | 42 brytere, 37 hetter | **26 brytere, 21 hetter** |
-| Uten | – | talltastene (1–9, −, 0, ↵) og smarthus-raden (lys, stikk, −, +) |
-| TCA9555 | 3 (0x20, 0x21, 0x22) | **2** (0x20, 0x21); vibrator, skjermstrøm og lader på brikke B, P1_4–P1_6 |
-| Tastekort | 48,6 × 141 mm (`tastekort/`) | 48,6 × 98 mm (`tastekort_kort/`) |
-| ESPHome | `esphome/skjold-fjernkontroll.yaml` | `esphome/skjold-fjernkontroll-kort.yaml` |
-| 3MF | `skjold-fjernkontroll-k2*.3mf` | `skjold-fjernkontroll-kort-k2*.3mf` |
-| Pris | ca. 725 kr | ca. 715 kr |
+| Taster | **21 brytere, 17 hetter** | 37 brytere, 33 hetter |
+| TCA9555 | **2** (0x20, 0x21); vibrator, skjermstrøm og lader på brikke B, P1_4–P1_6 | 3 (0x20, 0x21, 0x22); de tre styrepinnene på brikke C |
+| Tastekort | 48,6 × 95 mm (`tastekort/`) | 48,6 × 138 mm (`tastekort_full/`) |
+| ESPHome | `esphome/skjold-fjernkontroll.yaml` | `esphome/skjold-fjernkontroll-full.yaml` |
+| 3MF | `skjold-fjernkontroll-k2*.3mf` | `skjold-fjernkontroll-full-k2*.3mf` |
+| STL | `stl/` | `stl_full/` |
+| Pris | **ca. 630 kr** | ca. 640 kr |
 
-Det er samme skjerm, samme bredde og samme formspråk i begge. Den korte varianten slutter med de fire fargetastene. De passer til TV-apper og kan styre ting i Home Assistant.
+Begge har samme skjerm, samme bredde og samme formspråk. Standardvarianten slutter med de fire fargetastene. De passer til TV-apper og kan styre ting i Home Assistant.
 
-I kort variant ligger lys, stikk og ± på skjermen (Hjem-siden). De ligger også på **langt trykk på fargetastene**:
+**Smarthus-funksjonene på standardvarianten.** Lys, stikk og ± ligger på skjermen (Hjem-siden), og på **langt trykk på fargetastene**:
 - rød: veksler lys
 - grønn: veksler stikkontakt
 - gul: demper lyset (−)
 - blå: skrur lyset opp (+)
 
-Det samme langtrykket virker også på full variant. Uten smarthus-raden ble fjernkontrollen 43 mm kortere. Med raden ville den bare blitt 34 mm kortere.
+Det samme langtrykket virker også på full variant.
 
-I kort variant ligger ESP-en til venstre foran laderen (n = 125–148 mm), fordi halen er kortere. Prisforskjellen er liten: delene som utgår er billige, og TCA9555 og bryterne kjøpes i pakker uansett. Det er ca. 10 kr i filament og kortflate.
+**Plassering inni.** På standardvarianten ligger ESP-en til venstre foran laderen (n = 125–148 mm), fordi halen er kortere.
 
-Velg variant med `variant = "kort"` i `skjold_fjernkontroll.scad`, eller `-D 'variant="kort"'`. `lag_stl.sh` lager begge til `stl/` og `stl_kort/`.
+**Pris.** Forskjellen er liten: delene som utgår er billige, og TCA9555 og bryterne kjøpes i pakker uansett. Det er ca. 10 kr i filament og kortflate.
 
-Bilder av kort variant: [skrått, lys](render/11_skra_lys_kort.png) · [ovenfra, lys](render/12_ovenfra_lys_kort.png) · [eksplodert](render/13_eksplodert_lys_kort.png) · [skrått, mørk](render/14_skra_mork_kort.png) · [ovenfra, mørk](render/15_ovenfra_mork_kort.png) · [fra siden](render/16_side_lys_kort.png).
+**Velge variant.** Bruk `variant = "kort"` (standard) eller `"full"` i `skjold_fjernkontroll.scad`, eller `-D 'variant="full"'`. `lag_stl.sh` lager begge.
+
+Bilder av full variant: [skrått, lys](render/01_skra_lys_full.png) · [ovenfra, lys](render/02_ovenfra_lys_full.png) · [eksplodert](render/03_eksplodert_lys_full.png) · [skrått, mørk](render/04_skra_mork_full.png) · [ovenfra, mørk](render/05_ovenfra_mork_full.png) · [fra siden](render/07_side_lys_full.png).
 
 ## Designet
 
@@ -60,18 +65,17 @@ Fra toppen og ned:
 - **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (47,0 × 59,8 mm) er like stort som dekkglasset minus 1,5 mm kant på sidene og oppe, så den sorte glasskanten synes, og plastrammen ved siden av skjermen er bare 4 mm (inkludert fasen). Nede slutter vinduet 1,1 mm under det aktive området, slik at den brede glasskanten ved flatkabelen ligger skjult.
 - **Tre runde taster** sitter rett under skjermen: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og meny.
 - **D-paden** er en stor gullring (Ø 32 mm) med fire tydelige retningspiler (sorte trekanter, 4,6 × 3,3 mm, felt inn i gullet) og en mørk OK i midten. Den sitter høyt, der tommelen hviler. Over den, på hver side, sitter tilbake og avslutt.
-- **Volum og kanal/side** er to loddrette vipper, en på hver side. Mellom dem sitter demp og guide.
-- **Avspilling** har to rader med pilleformede taster: spol tilbake, spill/pause og spol frem, og under dem opptak, stopp og opptaksliste.
+- **Volumvippa** er den største tasten under D-paden: 11,5 × 28 mm, loddrett midt på. Demp sitter til venstre for den og guide til høyre, begge runde (Ø 9 mm).
+- **Avspilling** har én rad med pilleformede taster: spol tilbake, spill/pause og spol frem.
 - **Fargetastene** er fire smale piller i rødt, grønt, gult og blått.
-- **Talltastene** 1–9 står i tre kolonner, med −, 0 og ↵ i fjerde rad.
-- **Smarthus-raden** nederst har fire lyse taster: lys, stikkontakt, − og +.
+- *Full variant:* **talltastene** 1–9 står i tre kolonner, med −, 0 og ↵ i fjerde rad. **Smarthus-raden** nederst har fire lyse taster: lys, stikkontakt, − og +.
 - **SKJOLD** er felt inn i gull nederst.
 
 Designet er Skjolds eget. Det følger samme formspråk som Radio, Røst og Hjul S: myke hjørner, fas i stedet for avrundet «såpe», to toner, gull på det du bruker mest og SKJOLD i gull. Funksjonene er de samme som på andre universalfjernkontroller med skjerm, men formen og plasseringen er bevisst annerledes:
 - Siden er rett, ikke innsnevret, og overflaten er matt og printet, ikke en blank, sort plate.
 - D-paden sitter høyt, rett under skjermen.
-- Volum og kanal er loddrette vipper ytterst.
-- Avspillingstastene ligger under vippene.
+- Volum er én stor, loddrett vippe midt på, uten kanalvippe.
+- Avspillingstastene ligger i én rad under vippa.
 - Det er ingen pilleknapper for «aktiviteter» og «enheter» ved skjermen. Det gjør den ene gull-tasten med Skjold-skjoldet.
 
 Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavprofil SMD-bryter (4 × 4 × 1,5 mm) på et 1,0 mm tastekort. Hettene står 0,1 mm over bryteren, så de ikke slarker og ikke trykker på forhånd. Symbolene er felt 0,4 mm inn og printet i kontrastfarge (lyse på mørke taster, mørke på lyse). Med CFS blir symbolene en del av samme utskrift.
@@ -82,8 +86,8 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 |---|---|
 | **ESP32-S3 SuperMini** (ESP32-S3FH4R2, 4 MB flash, 2 MB PSRAM) | Det minste vanlige S3-kortet (22,5 × 18 mm). Det har Wi-Fi og nok minne til LVGL, pluss dyp søvn med vekking fra to pinner. Det koster rundt 45 kr. Det ligger under tastene, med antennen mot halen, der det bare er plast rundt. |
 | **2,8″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + FT6336U), naken FPC-modul med dekkglass, 50,0 × 69,2 × 3,8–4 mm (se også [Tre skjermvalg](#tre-skjermvalg)) | Den største skjermen som får plass i bredden. Glasset er 50 mm bredt, så kroppen trenger bare å vokse fra 54 til 55 mm, og skjermen fyller nesten hele fronten. Aktivt område 43,2 × 57,6 mm, dobbelt så stort som 2,0″ (30,6 × 40,8 mm). Samme oppløsning, så fastvaren er den samme med litt større skrift. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `ft63x6`). En naken FPC-modul er tynnere enn de røde kortene med stiftlist. |
-| **3 × TCA9555** (16-bits I²C-utvider, interne pull-ups) | 42 taster blir 42 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Fire pinner er til overs for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
-| **42 × SMD-taktbryter 4 × 4 × 1,5 mm** | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
+| **2 × TCA9555** (16-bits I²C-utvider, interne pull-ups; 3 i full variant) | 21 taster blir 21 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Fire pinner er til overs for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
+| **21 × SMD-taktbryter 4 × 4 × 1,5 mm** (37 i full variant) | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
 | **3 × IR-diode 940 nm (3 mm) + AO3400** | Tre dioder i viften gir lang rekkevidde og bred spredning. AO3400 (logisk nivå) gir ca. 200 mA puls per diode fra batteriet. |
 | **VS1838B** | IR-mottaker for å lære koder. Den har strøm bare når skjermen er på (trekker ca. 0,5 mA). |
 | **LiPo 603450, 1200 mAh** | Flat (6,0 mm) og passer under skjermen. Gir 4–5 uker ved vanlig bruk (se [Batteritid](#batteritid)). |
@@ -96,9 +100,9 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 
 ### Tastekortet – to måter
 
-**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 141 mm. Mappa `tastekort/` har alt du trenger for å tegne det:
+**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 95 mm (full variant: 48,6 × 138 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
 - `kort_omriss.dxf` er omrisset med hull og hakk for skruene (origo nede til venstre, halen ned).
-- `plassering.csv` gir x/y for de 42 bryterne (oppside) og de tre TCA9555 (underside).
+- `plassering.csv` gir x/y for de 21 bryterne (oppside) og de to TCA9555 (underside).
 - `koblinger.csv` viser hvilken bryter som går til hvilken brikke og pinne.
 - `bom.csv` er stykklista i JLC-format.
 
@@ -108,7 +112,7 @@ Det er ingen ferdige gerber-filer. Kortet tegnes på ca. 1–2 timer i EasyEDA (
 3. Koble hver bryter mellom pinnen sin og GND, og la autorouteren legge sporene.
 4. Legg jordflate på undersiden, men **ingen kobberfylling i feltet 24–36 mm fra kortets nedre kant**, der ESP-antennen ligger under.
 
-Hver TCA9555 skal ha 100 nF ved VCC og adressepinner slik: U1 A0–A2 = 000 (0x20), U2 = 100 (0x21, A0 høy), U3 = 010 (0x22, A1 høy). Kortet trenger også 10 kΩ pull-up på SDA, SCL og felles INT. Fem kort koster ca. 120 kr med billigste frakt. Med JLC-montering av de tre brikkene på undersiden blir det ca. 250 kr mer. Bryterne lodder du selv: fire store ben hver, så det går greit med vanlig loddebolt.
+Hver TCA9555 skal ha 100 nF ved VCC og adressepinner slik: U1 A0–A2 = 000 (0x20), U2 = 100 (0x21, A0 høy), og i full variant U3 = 010 (0x22, A1 høy). Kortet trenger også 10 kΩ pull-up på SDA, SCL og felles INT. Fem kort koster ca. 120 kr med billigste frakt. Med JLC-montering av de tre brikkene på undersiden blir det ca. 250 kr mer. Bryterne lodder du selv: fire store ben hver, så det går greit med vanlig loddebolt.
 
 **B. Printet bryterbrett (uten kretskort).** `stl/bryterbrett.stl` har samme omriss som kortet, er 1,0 mm tykt og har to Ø 1,0 mm hull ved hver bryter.
 - Lim bryterne på oppsiden med en dråpe superlim, med to ben ned i hullene.
@@ -142,12 +146,12 @@ Prisene er omtrentlige AliExpress-priser i november 2026, inkludert billigste fr
 | M2 × 10 selvgjengende skruer, linsehode (5 stk brukes) | «M2x10 self tapping pan head» | 1 pk | 20 kr |
 | Dobbeltsidig skumtape 1 mm | «1mm double sided foam tape» | 1 rull | 20 kr |
 | Filament, ca. 50 g (PLA eller PETG) | | | 20 kr |
-| **Sum** | | | **ca. 640 kr** |
+| **Sum** | | | **ca. 630 kr** (standard) · ca. 640 kr (full variant, mer filament og kortflate) |
 
 Valgfritt:
 - **IR-akryl, 1 mm** («IR transmitting acrylic sheet», ca. 35 kr) i stedet for printet IR-vindu.
 - **JLC-montering** av TCA9555 (ca. +250 kr).
-- **Variant B** med printet bryterbrett og tre PCF8575-moduler (ca. 60 kr i stedet for kortet og TCA9555): totalt **ca. 625 kr**.
+- **Variant B** med printet bryterbrett og to PCF8575-moduler (tre i full variant), ca. 40–60 kr i stedet for kortet og TCA9555: totalt **ca. 560 kr**.
 
 ## Kobling
 
@@ -194,44 +198,23 @@ Hver bryter kobles mellom pinnen sin og GND. TCA9555 har innebygde pull-ups, så
 | OK | `ok` | A | 0x20 | P1_1 |
 | Volum + | `vol_opp` | A | 0x20 | P1_2 |
 | Volum − | `vol_ned` | A | 0x20 | P1_3 |
-| Kanal + | `kan_opp` | A | 0x20 | P1_4 |
-| Kanal − | `kan_ned` | A | 0x20 | P1_5 |
-| Demp | `demp` | A | 0x20 | P1_6 |
-| Guide | `guide` | A | 0x20 | P1_7 |
-| Spol tilbake | `spol_tilbake` | B | 0x21 | P0_0 |
-| Spill-pause | `spill_pause` | B | 0x21 | P0_1 |
-| Spol frem | `spol_frem` | B | 0x21 | P0_2 |
-| Ta opp | `opptak` | B | 0x21 | P0_3 |
-| Stopp | `stopp` | B | 0x21 | P0_4 |
-| Opptak (liste) | `dvr` | B | 0x21 | P0_5 |
-| Rød | `rod` | B | 0x21 | P0_6 |
-| Grønn | `gronn` | B | 0x21 | P0_7 |
-| Gul | `gul` | B | 0x21 | P1_0 |
-| Blå | `bla` | B | 0x21 | P1_1 |
-| Tall 1 | `tall_1` | B | 0x21 | P1_2 |
-| Tall 2 | `tall_2` | B | 0x21 | P1_3 |
-| Tall 3 | `tall_3` | B | 0x21 | P1_4 |
-| Tall 4 | `tall_4` | B | 0x21 | P1_5 |
-| Tall 5 | `tall_5` | B | 0x21 | P1_6 |
-| Tall 6 | `tall_6` | B | 0x21 | P1_7 |
-| Tall 7 | `tall_7` | C | 0x22 | P0_0 |
-| Tall 8 | `tall_8` | C | 0x22 | P0_1 |
-| Tall 9 | `tall_9` | C | 0x22 | P0_2 |
-| Strek | `strek` | C | 0x22 | P0_3 |
-| Tall 0 | `tall_0` | C | 0x22 | P0_4 |
-| Enter | `enter` | C | 0x22 | P0_5 |
-| Lys | `lys` | C | 0x22 | P0_6 |
-| Stikkontakt | `stikk` | C | 0x22 | P0_7 |
-| Minus (dempe lys) | `minus` | C | 0x22 | P1_0 |
-| Pluss (mer lys) | `pluss` | C | 0x22 | P1_1 |
-| utgang: vibrasjonsmotor (via AO3400) | `vibrator` | C | 0x22 | P1_4 |
-| utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401) | `strom_skjerm` | C | 0x22 | P1_5 |
-| inngang: TP4056 CHRG (lav = lader) | `lader` | C | 0x22 | P1_6 |
-| ledig | `ledig` | C | 0x22 | P1_7 |
+| Demp | `demp` | A | 0x20 | P1_4 |
+| Guide | `guide` | A | 0x20 | P1_5 |
+| Spol tilbake | `spol_tilbake` | A | 0x20 | P1_6 |
+| Spill-pause | `spill_pause` | A | 0x20 | P1_7 |
+| Spol frem | `spol_frem` | B | 0x21 | P0_0 |
+| Rød | `rod` | B | 0x21 | P0_1 |
+| Grønn | `gronn` | B | 0x21 | P0_2 |
+| Gul | `gul` | B | 0x21 | P0_3 |
+| Blå | `bla` | B | 0x21 | P0_4 |
+| utgang: vibrasjonsmotor (via AO3400) | `vibrator` | B | 0x21 | P1_4 |
+| utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401) | `strom_skjerm` | B | 0x21 | P1_5 |
+| inngang: TP4056 CHRG (lav = lader) | `lader` | B | 0x21 | P1_6 |
+| ledig | `ledig` | B | 0x21 | P1_7 |
 
 ## Print (Creality K2)
 
-Tre ferdige plater. Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlicer), så med CFS printes hver plate i én omgang. Ingen deler trenger støtte.
+Tre ferdige plater for standardvarianten (`skjold-fjernkontroll-k2*.3mf`) og tre for full variant (`skjold-fjernkontroll-full-k2*.3mf`, med smarthus-tastene). Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlicer), så med CFS printes hver plate i én omgang. Ingen deler trenger støtte.
 
 | Plate | Innhold | Filament |
 |---|---|---|
@@ -246,6 +229,15 @@ Tre ferdige plater. Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlice
 
 **Mørk variant:** bytt filament 1 og 2 i sliceren. Da blir toppen mørk, bunnen lys og smarthus-tastene mørke med lyse symboler.
 
+### Filament
+
+Anbefalt (`farge = "bone"` i modellen, bildene 21–24):
+- **Topp: «Bone White» matt PLA**, en varm, grå-beige offwhite (f.eks. Bambu PLA Matte Bone White, ca. #CBC6B8). Den gir rolig, matt overflate uten fingermerker, og PLA printes skarpest, slik at tastehullene og fasen blir presise. Legg den som filament 1 i alle tre platene. Symbolene på de mørke tastene blir da i samme farge.
+- **Bunn: mørk koksgrå matt PETG** (ca. #2B2B2D). Bunnen er delen som blir holdt i, mistet i gulvet og skrudd i. PETG er seigere og sprekker ikke så lett som PLA ved slag, og tåler skruene bedre. Matt PETG viser mindre riper og fett enn blank. Legg den som filament 2 på topp/bunn-plata.
+- **Alternativ bunn:** natur eller grå matt PETG (`farge = "bone_gra"`, bilde 25) gir en lysere og mykere totonet look.
+
+PLA og PETG på samme plate går fint med CFS, siden toppen og bunnen er hver sin del. Bruk 220 °C og 60 °C seng for PLA, og 240 °C og 75 °C for PETG. Creality Print velger temperaturen per filament. Gullet (filament 3) og tastene (filament 2 på tasteplata) kan være PLA.
+
 **IR-vinduet** må slippe gjennom 940 nm. Klar eller natur PETG fungerer best. Sort PLA stopper ofte IR (sotpigment). Du kan teste med mobilkameraet: hold vinduet foran en IR-fjernkontroll og trykk, og se om lyset synes. Et 1 mm IR-akrylvindu (30 × 3,5 mm) kan limes inn i stedet.
 
 **Med én farge (uten CFS):** print alt i én farge og slett symbol-, logo- og fargedelene i sliceren. Symbolene og SKJOLD blir da felt inn 0,4–0,5 mm. Fyll dem med akrylmaling eller en tusj, og tørk av overflaten. Fargetastene kan males, eller printes en og en i hver sin farge.
@@ -254,7 +246,7 @@ Bruk `lag_stl.sh` for å eksportere alt på nytt (STL, sjekk og 3MF) etter endri
 
 ## Montering
 
-1. **Tastekortet:** lodd de 42 bryterne (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
+1. **Tastekortet:** lodd de 21 bryterne (37 i full variant) (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
 2. **IR-kortet:** lodd de tre IR-diodene liggende (de peker ut gjennom nesen), VS1838B og AO3400 på en 34 × 7 mm hullkortbit. Kortet står i sporet i nesen, med diodene mot vinduet.
 3. **IR-vinduet:** trykk det inn i nesen fra innsiden (kragen inn) og fest med en dråpe lim.
 4. **Lader og ESP:** legg TP4056 i lomma i halen med USB-C ut gjennom hullet. Legg SuperMini-en i lomma foran (antennen mot halen). Lodd ledningene etter tabellen. Bruk kort silikontråd og legg den flatt.
@@ -403,8 +395,8 @@ Du får mer ut av batteriet hvis du:
 | `sjekk_modell.py` | Kontroll: vanntett, ingen overlapp, vegger ≥ 1,6 mm, materiale mellom tastehullene, forvandring, tykkelse |
 | `lag_3mf.py` | 3MF-plater for K2 med filamentnumre |
 | `lag_render.sh`, `skjerm_i_render.py`, `lag_skjermbilder.py` | Bildene i `render/`, med skjermbildet lagt inn |
-| `tastekort/`, `tastekort_kort/` | Omriss (DXF), plassering, koblinger og stykkliste for tastekortet, full og kort |
-| `stl/`, `stl_kort/` | Alle utskriftsdelene for full og kort variant, inkludert `bryterbrett.stl` |
+| `tastekort/`, `tastekort_full/` | Omriss (DXF), plassering, koblinger og stykkliste for tastekortet, standard og full |
+| `stl/`, `stl_full/` | Alle utskriftsdelene for standard og full variant, inkludert `bryterbrett.stl` |
 
 ## Tre skjermvalg
 
@@ -412,7 +404,7 @@ Du får mer ut av batteriet hvis du:
 |---|---|---|---|
 | Hva | 2,8″ IPS, ST7789 + FT6336U, naken FPC | 2,8″ TN, ST7789V + 4-tråds resistiv berøring, 18-pinners FPC ([AliExpress 1005005780989629](https://www.aliexpress.com/item/1005005780989629.html)) | ESP32-S3, 2,8″ IPS og berøring på ett kort |
 | Pris | ca. 150 kr | ca. 40 kr + XPT2046 og FPC-kontakt ca. 10 kr | ca. 280 kr (erstatter også SuperMini og TP4056) |
-| Totalpris full / kort | ca. 725 / 715 kr | **ca. 625 / 615 kr** | ca. 785 kr, men ikke tegnet inn (se under) |
+| Totalpris standard / full | ca. 630 / 640 kr | ca. 615 / 625 kr | ca. 785 kr, men ikke tegnet inn (se under) |
 | Bilde | Godt fra alle vinkler | TN: farger og kontrast endrer seg når du vipper fjernkontrollen | IPS |
 | Berøring | Lett trykk og sveip, som på en telefon | Må trykkes litt; sveip går dårligere; må kalibreres | Kapasitiv, men V2 har CST3530 uten ESPHome-driver |
 | Passer i modellen | Ja | **Ja**, samme omriss og tykkelse (3,8 mm) | Ukjent: mål og pinner er ikke bekreftet |
@@ -440,7 +432,7 @@ XPT2046 sitter ved siden av FPC-kontakten og bruker samme SPI:
 
 Disse pinnene er ledige, fordi I²C-bussen for kapasitiv berøring ikke brukes. XL, XR, YU og YD fra panelet går til X+, X−, Y+ og Y− på XPT2046.
 
-Begge kortvariantene (`tastekort/` og `tastekort_kort/`) har FPC-kontakten (J1) og XPT2046 (U9, monteres bare for budsjett-skjermen) i plasseringen og stykklista. Den kapasitive IPS-modulen har ofte egen, liten flatkabel for berøringen. Den kobles med ledninger til I²C-bus B som før.
+Begge kortvariantene (`tastekort/` og `tastekort_full/`) har FPC-kontakten (J1) og XPT2046 (U9, monteres bare for budsjett-skjermen) i plasseringen og stykklista. Den kapasitive IPS-modulen har ofte egen, liten flatkabel for berøringen. Den kobles med ledninger til I²C-bus B som før.
 
 ## Vurdert: Waveshare ESP32-S3-Touch-LCD-2.8 («alt i ett», ca. 280 kr)
 

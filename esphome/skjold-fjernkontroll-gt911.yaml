@@ -4,7 +4,7 @@
 # 6-pins flatkabel (VCC, GND, SDA, SCL, INT, RST) og kobles til samme I²C-buss og pinner som FT6336U:
 #   SDA/SCL → bus_b, INT → GPIO7, RST → GPIO12 (deles med skjermens reset, som før).
 # Tastekortet trenger en 6-pins FPC-kontakt for berøringen – sjekk avstanden (0,5 eller 1,0 mm) på din kabel.
-# Kort variant: bytt skjold-fjernkontroll.yaml med skjold-fjernkontroll-kort.yaml under packages.
+# Standard er kort variant (skjold-fjernkontroll.yaml). Full variant: bytt til skjold-fjernkontroll-full.yaml under packages.
 packages:
   fjernkontroll: !include skjold-fjernkontroll.yaml
 

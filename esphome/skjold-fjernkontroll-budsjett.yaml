@@ -5,7 +5,7 @@
 #   · GPIO8 blir MISO (XPT2046 DOUT), GPIO3 blir XPT2046 CS, GPIO7 blir XPT2046 PENIRQ
 #   · TN-panelet bruker ikke invertert farge
 # Kalibrer: sett logger til DEBUG, trykk i hjørnene og les rå x/y i loggen. Før inn min/maks under calibration.
-# Kort variant: bytt skjold-fjernkontroll.yaml med skjold-fjernkontroll-kort.yaml under packages.
+# Standard er kort variant (skjold-fjernkontroll.yaml). Full variant: bytt til skjold-fjernkontroll-full.yaml under packages.
 packages:
   fjernkontroll: !include skjold-fjernkontroll.yaml
 

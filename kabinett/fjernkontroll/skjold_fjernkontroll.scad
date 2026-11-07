@@ -1,4 +1,4 @@
-// Skjold Fjernkontroll – universell fjernkontroll med 2,8″ fargeberøringsskjerm, 42 taster, IR og Wi-Fi. Parametrisk OpenSCAD.
+// Skjold Fjernkontroll – universell fjernkontroll med 2,8″ fargeberøringsskjerm, 21 taster (full variant 37), IR og Wi-Fi. Parametrisk OpenSCAD.
 // Eget Skjold-design: en rett, flat «plate» med myke R11-hjørner sett ovenfra og 45°-fas rundt topp- og bunnkanten
 // (ingen innsnevring på midten). Toppen er lys (eller mørk), bunnen mørk, delt i en rett skjøt rundt hele siden.
 // Gullring rundt OK, gull Skjold-tast under skjermen, SKJOLD i gull felt inn nederst. Tastene er egne hetter som holdes
@@ -7,16 +7,16 @@
 //
 // Koordinater: x = tvers (0 … W), y = langs (0 = halen med USB-C, L = nesen med IR), z = høyde (0 = undersiden).
 // Tastene ligger i taster.scad (laget av taster.py), målt fra nesen: y = L − n.
-// Bruk:  openscad -D 'part="topp"' -o stl/topp.stl skjold_fjernkontroll.scad
+// Bruk:  openscad -D 'part="topp"' -o stl/topp.stl skjold_fjernkontroll.scad   (-D 'variant="full"' for full variant)
 // part:  topp | bunn | logo | ir_vindu | knapper | knapper_lys | gull | symboler_lyse | symboler_morke |
 //        farge_rod | farge_gronn | farge_gul | farge_bla | bryterbrett | samlet | eksplodert | planet |
 //        A_<del> (montert stilling, for sjekk_modell.py) | skjermflate | kort_omriss (2D, DXF)
 include <taster.scad>
 
 part = "samlet";
-variant = "full";               // full (42 taster, 230 mm) | kort (uten talltastene og smarthus-raden: 26 taster, 187 mm)
+variant = "kort";               // kort (standard: 21 taster, 184 mm) | full (valgfri, med talltaster og smarthus-rad: 37 taster, 227 mm)
 kortv = variant == "kort";
-farge = "lys";                  // lys | mork
+farge = "lys";                  // lys | mork | bone (Bone White PLA + mørk PETG) | bone_gra (Bone White PLA + grå PETG)
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
 skjermE = 0;                    // part="skjermflate": samme eksplosjonsavstand som bildet
 $fn = 48;
@@ -70,9 +70,9 @@ zGlass = H - lepT;              // glassets overside (12,7)
 bossD = 5.0;  bossBD = 6.0;     // tårn i toppen og bunnen
 pilot = 1.7;  klar = 2.3;  hodeD = 4.3;  hodeH = 2.5;
 zMot = zs + lipH;               // hjørnetårnene møtes her (8,6)
-SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [W/2, L - 135]];   // nese ×2 (foran skjermen), hale ×2, midt (n = 135)
+SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [8, L - 120]];   // nese ×2 (foran skjermen), hale ×2, midt (venstre for volumvippa, n = 120)
 MIDT = 4;                       // skrue nr. 4 (midt) klemmer tastekortet
-PINNER = kortv ? [[W/2 - 7.5, 101 + DN], [W/2 + 7.5, 101 + DN]] : [[W/2 - 7.5, 101 + DN], [W/2 + 7.5, 101 + DN], [W/2, 125.3 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
+PINNER = [[W/2 - 7.5, 101 + DN], [W/2 + 7.5, 101 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
 
 // ---------- innmat ----------
 bat = [34, 50, 6.0];  batN = 11;    // LiPo 603450 (1200 mAh) under skjermen, fra n = 11
@@ -88,13 +88,17 @@ irW = 30; irH = 3.8; irZ = 4.3;     // IR-vinduet i nesen (z 2,4 … 6,2)
 irT = 1.2;                          // IR-vinduets tykkelse (veggen er t = 1,8; 0,6 mm krage inni)
 
 // ---------- farger ----------
-lys = farge == "lys";
-c_topp  = lys ? [0.93, 0.91, 0.87] : [0.15, 0.15, 0.16];
-c_bunn  = lys ? [0.20, 0.19, 0.19] : [0.82, 0.79, 0.74];
+// bone: topp i «Bone White» matt PLA (ca. #CEC6B4, litt varmere enn Bambu PLA Matte Bone White #CBC6B8),
+//       bunn i mørk koksgrå matt PETG (#2B2B2D) · bone_gra: samme topp, bunn i natur/grå matt PETG (#8E8C87)
+bone = farge == "bone" || farge == "bone_gra";
+lys = farge == "lys" || bone;
+c_bone  = [0.808, 0.776, 0.706];
+c_topp  = bone ? c_bone : lys ? [0.93, 0.91, 0.87] : [0.15, 0.15, 0.16];
+c_bunn  = farge == "bone_gra" ? [0.557, 0.549, 0.529] : bone ? [0.169, 0.169, 0.176] : lys ? [0.20, 0.19, 0.19] : [0.82, 0.79, 0.74];
 c_knapp = lys ? [0.19, 0.19, 0.20] : [0.26, 0.26, 0.27];
-c_lysk  = lys ? [0.93, 0.91, 0.87] : [0.82, 0.79, 0.74];
+c_lysk  = bone ? c_bone : lys ? [0.93, 0.91, 0.87] : [0.82, 0.79, 0.74];
 c_gull  = [0.85, 0.62, 0.25];
-c_sym_l = [0.93, 0.91, 0.87];
+c_sym_l = bone ? c_bone : [0.93, 0.91, 0.87];
 c_sym_m = [0.18, 0.18, 0.19];
 c_glass = [0.04, 0.05, 0.07];
 c_ir    = [0.10, 0.06, 0.09];

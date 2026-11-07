@@ -5,7 +5,8 @@
                                       og Skjold-tast, smarthus-tastene i lys farge, og IR-vinduet  1 lys · 2 mørk · 3 gull · 4 klar
   skjold-fjernkontroll-k2-farger.3mf  de fire fargetastene                                     1 rød · 2 grønn · 3 gul · 4 blå
 
-Kort variant (uten talltastene og smarthus-raden): samme tre plater med «-kort» i navnet, fra stl_kort/.
+Standard er kort variant (uten talltastene og smarthus-raden), fra stl/. Full variant: samme tre plater med «-full»
+i navnet, fra stl_full/.
 Kjør etter at STL-ene er eksportert:  python3 lag_3mf.py   (eller ./lag_stl.sh, som gjør alt)
 Hver del får filamentnummer i Metadata/model_settings.config (Creality Print / OrcaSlicer).
 Mørk variant: bytt filament 1 og 2 i sliceren (mørk topp, lys bunn og lyse taster med mørke symboler).
@@ -105,15 +106,16 @@ STL = "stl"
 
 
 def main():
-    """Full variant fra stl/, kort variant fra stl_kort/ (uten smarthus-tastene; filene heter skjold-fjernkontroll-kort-…)."""
+    """Standard (kort) fra stl/, full variant fra stl_full/ (filene heter skjold-fjernkontroll-full-…)."""
     global STL
-    for variant in ("full", "kort"):
-        STL = "stl" if variant == "full" else "stl_kort"
+    for variant in ("kort", "full"):
+        STL = "stl" if variant == "kort" else "stl_full"
         for fn, (title, parts, colors) in PLATES.items():
-            if variant == "kort":
-                fn = fn.replace("skjold-fjernkontroll-", "skjold-fjernkontroll-kort-")
-                title = title.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Kort")
-                parts = [p for p in parts if p[0] != "knapper_lys"]
+            if variant == "full":
+                fn = fn.replace("skjold-fjernkontroll-", "skjold-fjernkontroll-full-")
+                title = title.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full")
+            else:
+                parts = [p for p in parts if p[0] != "knapper_lys"]   # standard har ikke smarthus-raden
             write(fn, title, parts, colors)
 
 
