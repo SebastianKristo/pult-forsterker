@@ -1,6 +1,6 @@
 # Skjold Fjernkontroll
 
-En universell fjernkontroll for hele stua: 2,8″ fargeberøringsskjerm øverst, nesten fra kant til kant, 15 taster under, IR foran og Wi-Fi inni. Den styrer Skjold direkte (volum, spill/pause, favoritter, kilder og rom), sender og lærer IR-koder til TV, projektor og annet, og kjører aktiviteter som «Se TV» og «God natt» som setter i gang IR, Skjold og Home Assistant i én operasjon. Alle tastene sendes også til Home Assistant, så du kan bruke hvilken som helst tast til hva du vil.
+En universell fjernkontroll for hele stua: 2,8″ fargeberøringsskjerm øverst, nesten fra kant til kant, 17 taster under (med to app-taster nederst), IR foran og Wi-Fi inni. Den styrer Skjold direkte (volum, spill/pause, favoritter, kilder og rom), sender og lærer IR-koder til TV, projektor og annet, og kjører aktiviteter som «Se TV» og «God natt» som setter i gang IR, Skjold og Home Assistant i én operasjon. Alle tastene sendes også til Home Assistant, så du kan bruke hvilken som helst tast til hva du vil.
 
 Den er laget for å bygges hjemme. Kabinettet printes på en Creality K2, delene kommer fra AliExpress, og fastvaren er ESPHome.
 
@@ -11,7 +11,7 @@ Inni: [innmaten ovenfra](render/10_inni_ovenfra.png) · [skrått](render/11_inni
 I Bone White matt PLA med mørk matt PETG-bunn: [skrått](render/21_skra_bone.png) · [ovenfra](render/22_ovenfra_bone.png) · [fra siden](render/23_side_bone.png) · [nær](render/24_naer_bone.png) · [med grå PETG-bunn](render/25_skra_bone_gra.png). Se [Filament](#filament).
 Skjermen i bildene viser aktivitetslista slik fastvaren tegner den. Skjermbildene er laget med `lag_skjermbilder.py` (se [Skjermen](#skjermen)).
 
-**Mål: 55 × 180 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 223 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
+**Mål: 55 × 200 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 243 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
 
 Første utgave hadde en 2,0″-skjerm i en 54 × 208 mm kropp, med mye tom ramme på hver side av skjermen. Nå sitter en 2,8″-skjerm der: kroppen er 1 mm bredere og 22 mm lengre, og alt under skjermen (taster, form og farger) er det samme som før.
 
@@ -30,23 +30,23 @@ Standard er fjernkontrollen **uten talltaster**, som vist i bildene over. **Full
 
 | | **Standard** | **Full variant (valgfri)** |
 |---|---|---|
-| Mål | **55 × 180 mm** | 55 × 223 mm |
+| Mål | **55 × 200 mm** | 55 × 243 mm |
 | Tykkelse | 13,5 mm (15,0 mm med gullringen) | samme |
-| Taster | **15 brytere, 11 hetter** | 31 brytere, 27 hetter |
+| Taster | **17 brytere, 13 hetter** | 33 brytere, 29 hetter |
 | TCA9555 | **2** (0x20, 0x21); vibrator, skjermstrøm og lader på brikke B, P1_4–P1_6 | 3 (0x20, 0x21, 0x22); de tre styrepinnene på brikke C |
-| Tastekort | 48,6 × 87 mm (`tastekort/`) | 48,6 × 133 mm (`tastekort_full/`) |
+| Tastekort | 48,6 × 107 mm (`tastekort/`) | 48,6 × 153 mm (`tastekort_full/`) |
 | ESPHome | `esphome/skjold-fjernkontroll.yaml` | `esphome/skjold-fjernkontroll-full.yaml` |
 | 3MF | `skjold-fjernkontroll-k2*.3mf` | `skjold-fjernkontroll-full-k2*.3mf` |
 | STL | `stl/` | `stl_full/` |
 | Pris | **ca. 630 kr** | ca. 640 kr |
 
-Begge har samme skjerm, samme bredde og samme formspråk. Standardvarianten slutter med medieblokken: spill/pause og demp til venstre, volumvippa til høyre. Det er ingen fargetaster og ingen spoletaster.
+Begge har samme skjerm, samme bredde og samme formspråk. Begge har medieblokken og de to app-tastene rett under rutenettet; full variant har talltastene og smarthus-raden under app-tastene. Det er ingen fargetaster og ingen spoletaster.
 
 **Smarthus-funksjonene på standardvarianten.** Lys, stikk og ± ligger på skjermen (Hjem-siden). Det er ingen egne taster for dem, og de er ikke lagt på langt trykk på andre taster. Langt trykk på Skjold-tasten velger fortsatt rom, og langt trykk på av/på er «alt av». Vil du ha en fysisk tast til lyset, kan du koble hvilken som helst tast til det i Home Assistant (se [Home Assistant](#home-assistant)). Hver tast sendes som en hendelse, også langt trykk.
 
-**Én eller to TCA9555?** Standardvarianten har 15 brytere (volumvippa og D-paden har to og fire hver), og vibratoren, skjermstrømmen og ladestatusen trenger tre pinner til. Det blir 18 pinner, mens én TCA9555 har 16. Én brikke ville bare holde hvis vibratoren og ladestatusen ble droppet (15 + skjermstrøm = 16). SuperMini-en har ingen ledige pinner (GPIO 1–13, 43 og 44 er brukt til skjerm, berøring, IR, vekking og batteri). Derfor er det fortsatt to TCA9555.
+**Én eller to TCA9555?** Standardvarianten har 17 brytere (volumvippa og D-paden har to og fire hver), og vibratoren, skjermstrømmen og ladestatusen trenger tre pinner til. Det blir 20 pinner, mens én TCA9555 har 16, så det trengs to (32 pinner, 12 ledige). Full variant har 33 brytere + 3 = 36 pinner på tre brikker. SuperMini-en har ingen ledige pinner (GPIO 1–13, 43 og 44 er brukt til skjerm, berøring, IR, vekking og batteri). Derfor er det fortsatt to TCA9555.
 
-**Plassering inni.** ESP-en ligger til venstre under medieblokken (standard n = 124–147 mm, full n = 166–189 mm), med USB-C mot nesen. Se [Slik er det inni](#slik-er-det-inni).
+**Plassering inni.** ESP-en ligger til venstre under rutenettet og spill/pause (standard n = 124–147 mm, full n = 166–189 mm), med USB-C mot nesen. Se [Slik er det inni](#slik-er-det-inni).
 
 **Pris.** Forskjellen er liten: delene som utgår er billige, og TCA9555 og bryterne kjøpes i pakker uansett. Det er ca. 10 kr i filament og kortflate.
 
@@ -60,17 +60,17 @@ Fjernkontrollen er en rett, flat plate. Den har myke R11-hjørner sett ovenfra o
 
 Fra toppen og ned:
 - **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (47,0 × 59,8 mm) er like stort som dekkglasset minus 1,5 mm kant på sidene og oppe, så den sorte glasskanten synes, og plastrammen ved siden av skjermen er bare 4 mm (inkludert fasen). Nede slutter vinduet 1,1 mm under det aktive området, slik at den brede glasskanten ved flatkabelen ligger skjult.
-- **Tre runde taster** sitter rett under skjermen: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og meny.
-- **D-paden** er en stor gullring (Ø 32 mm) med fire tydelige retningspiler (sorte trekanter felt inn i gullet) og en mørk OK i midten. Den sitter der tommelen hviler.
-- **Rett under D-paden** sitter tilbake ↰, guide og avslutt ✕ i én rad (runde, Ø 8 mm), som et speilbilde av raden over ringen.
-- **Medieblokken** under har to kolonner: til venstre to store runde taster over hverandre, spill/pause og demp (Ø 12,5 mm); til høyre en høy volumpille (13 × 30 mm) med + øverst og − nederst. Spoletastene er tatt bort.
+- **D-paden** sitter rett under skjermen: en stor gullring (Ø 32 mm) med fire tydelige retningspiler (sorte trekanter felt inn i gullet) og en mørk OK i midten, der tommelen hviler.
+- **Under D-paden** står seks runde taster i et rutenett med tre kolonner og to rader: øverst av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og meny (Ø 7–7,6 mm), under dem tilbake ↰, guide og avslutt ✕ (Ø 8 mm). Kolonnene står 14 mm fra hverandre og radene 11,5 mm.
+- **Medieblokken** under er like bred som rutenettet over (36 mm, ytterkant mot ytterkant): til venstre to store runde taster over hverandre, spill/pause og demp (Ø 16 mm); til høyre en høy volumpille (17 × 35 mm) med + øverst og − nederst. Spoletastene er tatt bort.
+- **To app-taster** nederst, i samme bredde: to brede piller (16,5 × 8 mm) side om side, merket med en liten TV med play-trekant og tallet 1 eller 2. De starter en app på Apple TV, for eksempel Plex og YouTube (se [Home Assistant](#home-assistant)). Det er ingen merkelogoer på tastene; vil du ha navnet på tasten, kan du endre `ikon` i `taster.py` til en egen tekst (f.eks. «PLEX») og printe den som innlegg.
 - *Full variant:* **talltastene** 1–9 står i tre kolonner, med −, 0 og ↵ i fjerde rad. **Smarthus-raden** nederst har fire lyse taster: lys, stikkontakt, − og +.
 - **SKJOLD** er felt inn i gull nederst.
 
 Designet er Skjolds eget. Det følger samme formspråk som Radio, Røst og Hjul S: myke hjørner, fas i stedet for avrundet «såpe», to toner, gull på det du bruker mest og SKJOLD i gull. Funksjonene er de samme som på andre universalfjernkontroller med skjerm, men formen og plasseringen er bevisst annerledes:
 - Siden er rett, ikke innsnevret, og overflaten er matt og printet, ikke en blank, sort plate.
-- D-paden har en rad med tre runde taster over og under seg, så gullringen står midt i et rolig, symmetrisk felt.
-- Volum er én høy pille i medieblokken, ved siden av to store runde taster, uten kanalvippe.
+- D-paden sitter rett under skjermen, og alle de små tastene er samlet i ett rolig 3 × 2-rutenett under ringen.
+- Volum er én høy pille i medieblokken, ved siden av to store runde taster, uten kanalvippe. Medieblokken og app-tastene har samme ytterkanter som rutenettet over.
 - Det er ingen pilleknapper for «aktiviteter» og «enheter» ved skjermen. Det gjør den ene gull-tasten med Skjold-skjoldet.
 
 Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavprofil SMD-bryter (4 × 4 × 1,5 mm) på et 1,0 mm tastekort. Hettene står 0,1 mm over bryteren, så de ikke slarker og ikke trykker på forhånd. Symbolene er felt 0,4 mm inn og printet i kontrastfarge (lyse på mørke taster, mørke på lyse). Med CFS blir symbolene en del av samme utskrift.
@@ -81,8 +81,8 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 |---|---|
 | **ESP32-S3 SuperMini** (ESP32-S3FH4R2, 4 MB flash, 2 MB PSRAM) | Det minste vanlige S3-kortet (22,5 × 18 mm). Det har Wi-Fi og nok minne til LVGL, pluss dyp søvn med vekking fra to pinner. Det koster rundt 45 kr. Det ligger under tastene, med antennen mot halen, der det bare er plast rundt. |
 | **2,8″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + FT6336U), naken FPC-modul med dekkglass, 50,0 × 69,2 × 3,8–4 mm (se også [Tre skjermvalg](#tre-skjermvalg)) | Den største skjermen som får plass i bredden. Glasset er 50 mm bredt, så kroppen trenger bare å vokse fra 54 til 55 mm, og skjermen fyller nesten hele fronten. Aktivt område 43,2 × 57,6 mm, dobbelt så stort som 2,0″ (30,6 × 40,8 mm). Samme oppløsning, så fastvaren er den samme med litt større skrift. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `ft63x6`). En naken FPC-modul er tynnere enn de røde kortene med stiftlist. |
-| **2 × TCA9555** (16-bits I²C-utvider, interne pull-ups; 3 i full variant) | 15 taster blir 15 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Tre av de ledige pinnene brukes for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
-| **15 × SMD-taktbryter 4 × 4 × 1,5 mm** (31 i full variant) | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
+| **2 × TCA9555** (16-bits I²C-utvider, interne pull-ups; 3 i full variant) | 17 taster blir 17 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Tre av de ledige pinnene brukes for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
+| **17 × SMD-taktbryter 4 × 4 × 1,5 mm** (33 i full variant) | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
 | **3 × IR-diode 940 nm (3 mm) + AO3400** | Tre dioder i viften gir lang rekkevidde og bred spredning. AO3400 (logisk nivå) gir ca. 200 mA puls per diode fra batteriet. |
 | **VS1838B** | IR-mottaker for å lære koder. Den har strøm bare når skjermen er på (trekker ca. 0,5 mA). |
 | **LiPo 603450, 1200 mAh** | Flat (6,0 mm) og passer under skjermen. Gir 4–5 uker ved vanlig bruk (se [Batteritid](#batteritid)). |
@@ -95,9 +95,9 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 
 ### Tastekortet – to måter
 
-**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 87 mm (full variant: 48,6 × 133 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
+**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 107 mm (full variant: 48,6 × 153 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
 - `kort_omriss.dxf` er omrisset med hull og hakk for skruene (origo nede til venstre, halen ned).
-- `plassering.csv` gir x/y for de 15 bryterne (oppside) og de to TCA9555 (underside).
+- `plassering.csv` gir x/y for de 17 bryterne (oppside) og de to TCA9555 (underside).
 - `koblinger.csv` viser hvilken bryter som går til hvilken brikke og pinne.
 - `bom.csv` er stykklista i JLC-format.
 
@@ -105,7 +105,7 @@ Det er ingen ferdige gerber-filer. Kortet tegnes på ca. 1–2 timer i EasyEDA (
 1. Importer DXF-en som kortomriss.
 2. Plasser bryterne etter `plassering.csv`.
 3. Koble hver bryter mellom pinnen sin og GND, og la autorouteren legge sporene.
-4. Legg jordflate på undersiden, men **ingen kobberfylling over antennen til SuperMini-en**: de venstre 21 mm av kortet, 18–27 mm fra kortets nedre kant (full variant: 22–30 mm).
+4. Legg jordflate på undersiden, men **ingen kobberfylling over antennen til SuperMini-en**: de venstre 21 mm av kortet, 38–45 mm fra kortets nedre kant (full variant: 42–48 mm).
 
 Hver TCA9555 skal ha 100 nF ved VCC og adressepinner slik: U1 A0–A2 = 000 (0x20), U2 = 100 (0x21, A0 høy), og i full variant U3 = 010 (0x22, A1 høy). Kortet trenger også 10 kΩ pull-up på SDA, SCL og felles INT. Fem kort koster ca. 120 kr med billigste frakt. Med JLC-montering av de tre brikkene på undersiden blir det ca. 250 kr mer. Bryterne lodder du selv: fire store ben hver, så det går greit med vanlig loddebolt.
 
@@ -160,9 +160,9 @@ Alt står i bunnen, unntatt tastekortet og skjermen, som sitter i toppen. Bilder
 | Batteriet 603450 | under skjermen, n 12–62, midt på | lomme med 0,5 mm klaring rundt og 1,05 mm opp til skjermmodulen; kabelen går ut bak, i midtkanalen |
 | Vibrasjonsmotoren | til høyre, n 100–110 | i en ring (0,5 mm klaring) |
 | Vibrasjonsbryteren | til høyre, n 118–130 | i to vugger |
-| **ESP32-S3 SuperMini** | **til venstre under spill/pause og demp, n 124–147** (full variant: n 166–189) | på en 1 mm hylle i en lomme med 0,5 mm klaring; USB-C mot nesen, antennen mot halen. Det er 22 mm fri vei foran USB-C, så du kan koble til en vanlig kabel med bunnen åpen |
-| TP4056-laderen | i halen, midt på, n 150–178 | lomme med 0,5 mm klaring; USB-C sitter 0,95 mm bak en 1,2 mm forsenkning i halen, så vanlige kabler går helt inn |
-| Tastekortet | i toppen, n 79–167 | ligger på stolpene og klemmes av pinnene og midtskruen; TCA9555, J1 og J2 sitter på undersiden, minst 1,3 mm over alt i bunnen |
+| **ESP32-S3 SuperMini** | **til venstre under tilbake og spill/pause, n 124–147** (full variant: n 166–189) | på en 1 mm hylle i en lomme med 0,5 mm klaring; USB-C mot nesen, antennen mot halen. Det er 22 mm fri vei foran USB-C, så du kan koble til en vanlig kabel med bunnen åpen |
+| TP4056-laderen | i halen, midt på, n 170–198 (full: n 213–241) | lomme med 0,5 mm klaring; USB-C sitter 0,95 mm bak en 1,2 mm forsenkning i halen, så vanlige kabler går helt inn |
+| Tastekortet | i toppen, n 79–186 (full: n 79–232) | ligger på stolpene og klemmes av pinnene og midtskruen; TCA9555, J1 og J2 sitter på undersiden, minst 1,3 mm over alt i bunnen |
 | Flatkablene | rett bak skjermmodulen | går ned bak glasset og inn i J1 (skjerm) og J2 (berøring) under tastekortet |
 
 **Hva sjekken kontrollerer.** `sjekk_modell.py` laster referansedeler for alt som kjøpes (batteri, SuperMini, TP4056, IR-kort, bryter, motor, flatkabler og ledningsbunter) og sjekker at:
@@ -172,7 +172,7 @@ Alt står i bunnen, unntatt tastekortet og skjermen, som sitter i toppen. Bilder
 - USB-C-pluggen går inn i laderen (metallet fritt gjennom hullet, den støpte delen ≤ 1,0 mm fra kontakten), og det er fri vei for en plugg til SuperMini-en (12,4 × 6,5 × 22 mm);
 - skruetårnene, med 0,5 mm ekstra, ikke treffer noen komponent.
 
-**Hva som er endret for å få plass.** Batteriet er flyttet 1 mm bakover og IR-kortet 0,6 mm, slik at diodene går klar av vinduet. Midtskruen er flyttet fra n 120 til n 96, slik at den ikke står i veien for USB-pluggen. Laderen har fått rett vegg bak seg og en forsenkning i halen. Den ene pinnen over laderen har ingen stolpe i bunnen. Kroppen har samme mål som før.
+**Hva som er endret for å få plass.** Batteriet er flyttet 1 mm bakover og IR-kortet 0,6 mm, slik at diodene går klar av vinduet. Midtskruen er flyttet fra n 120 til n 90, slik at den ikke står i veien for USB-pluggen og går klar av gullringen (1,0 mm til flensen). Laderen har fått rett vegg bak seg og en forsenkning i halen. Den ene pinnen over laderen har ingen stolpe i bunnen. Kroppen har samme mål som før.
 
 ## Kobling og lodding
 
@@ -209,14 +209,14 @@ Hver bryter kobles mellom pinnen sin og GND. TCA9555 har innebygde pull-ups, så
 
 | Tast | Bryter-id | Brikke | Adresse | Pinne |
 |---|---|---|---|---|
-| Av-på | `av` | A | 0x20 | P0_0 |
-| Skjold (aktiviteter) | `hjem` | A | 0x20 | P0_1 |
-| Meny | `meny` | A | 0x20 | P0_2 |
-| Opp | `opp` | A | 0x20 | P0_3 |
-| Ned | `ned` | A | 0x20 | P0_4 |
-| Venstre | `venstre` | A | 0x20 | P0_5 |
-| Høyre | `hoyre` | A | 0x20 | P0_6 |
-| OK | `ok` | A | 0x20 | P0_7 |
+| Opp | `opp` | A | 0x20 | P0_0 |
+| Ned | `ned` | A | 0x20 | P0_1 |
+| Venstre | `venstre` | A | 0x20 | P0_2 |
+| Høyre | `hoyre` | A | 0x20 | P0_3 |
+| OK | `ok` | A | 0x20 | P0_4 |
+| Av-på | `av` | A | 0x20 | P0_5 |
+| Skjold (aktiviteter) | `hjem` | A | 0x20 | P0_6 |
+| Meny | `meny` | A | 0x20 | P0_7 |
 | Tilbake | `tilbake` | A | 0x20 | P1_0 |
 | Guide | `guide` | A | 0x20 | P1_1 |
 | Avslutt | `avslutt` | A | 0x20 | P1_2 |
@@ -224,12 +224,14 @@ Hver bryter kobles mellom pinnen sin og GND. TCA9555 har innebygde pull-ups, så
 | Demp | `demp` | A | 0x20 | P1_4 |
 | Volum + | `vol_opp` | A | 0x20 | P1_5 |
 | Volum − | `vol_ned` | A | 0x20 | P1_6 |
+| App 1 | `app_1` | A | 0x20 | P1_7 |
+| App 2 | `app_2` | B | 0x21 | P0_0 |
 | utgang: vibrasjonsmotor (via AO3400) | `vibrator` | B | 0x21 | P1_4 |
 | utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401) | `strom_skjerm` | B | 0x21 | P1_5 |
 | inngang: TP4056 CHRG (lav = lader) | `lader` | B | 0x21 | P1_6 |
 | ledig | `ledig` | B | 0x21 | P1_7 |
 
-Brikke A har én ledig pinne (P1_7), brikke B har P0_0–P1_3 og P1_7 ledige.
+Brikke A er full, brikke B har P0_1–P1_3 og P1_7 ledige.
 
 ### Loddepunkter på tastekortet
 
@@ -254,9 +256,9 @@ Alt er 30 AWG silikontråd (myk, 0,6 mm ytre), unntatt batteriets egne ledninger
 
 | Fra | Til | Lengde | Tråd |
 |---|---|---|---|
-| Batteri + / − | TP4056 B+ / B− | 95 mm | batteriets egne ledninger, kuttet (midtkanalen) |
-| TP4056 OUT+ / OUT− | SuperMini 5V / GND | 40 mm | 30 AWG, rød / sort |
-| TP4056 OUT+ / OUT− / CHRG | tastekort P15 / P16 / P17 | 60 mm | 30 AWG |
+| Batteri + / − | TP4056 B+ / B− | 115 mm | batteriets egne ledninger, kuttet (midtkanalen) |
+| TP4056 OUT+ / OUT− | SuperMini 5V / GND | 60 mm | 30 AWG, rød / sort |
+| TP4056 OUT+ / OUT− / CHRG | tastekort P15 / P16 / P17 | 75 mm | 30 AWG |
 | SuperMini (14 signaler) | tastekort P1–P14 | 60 mm hver | 30 AWG, gjerne flatkabel av silikontråd |
 | SuperMini GPIO43 / GPIO44 | IR-kort G / OUT | 135 mm | 30 AWG, venstre kanal |
 | tastekort P15 / P20 / P2 | IR-kort + / VS / − | 145 mm | 30 AWG, venstre kanal |
@@ -307,7 +309,7 @@ Bruk `lag_stl.sh` for å eksportere alt på nytt (STL, sjekk og 3MF) etter endri
 
 ## Montering
 
-1. **Tastekortet:** lodd de 15 bryterne (31 i full variant) (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
+1. **Tastekortet:** lodd de 17 bryterne (33 i full variant) (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
 2. **IR-kortet:** lodd de tre IR-diodene liggende (de peker ut gjennom nesen), VS1838B og AO3400 på en 34 × 6 mm hullkortbit. Kortet står i sporet i nesen, med diodene mot vinduet.
 3. **IR-vinduet:** trykk det inn i nesen fra innsiden (kragen inn) og fest med en dråpe lim.
 4. **Lader og ESP:** legg TP4056 i lomma i halen med USB-C i forsenkningen. Legg SuperMini-en på hylla i lomma (USB-C mot nesen, antennen mot halen). Lodd ledningene etter [Kobling og lodding](#kobling-og-lodding), i den rekkefølgen som står der, og legg dem i kanalene.
@@ -378,7 +380,14 @@ Etter det oppdateres den trådløst. Slå på «Hold våken (for oppdatering)» 
 
 ## Home Assistant
 
-ESPHome-integrasjonen finner fjernkontrollen. Slå på **«Tillat enheten å utføre handlinger i Home Assistant»** i integrasjonsvalgene, ellers virker ikke lys, stikk og scener.
+ESPHome-integrasjonen finner fjernkontrollen. Slå på **«Tillat enheten å utføre handlinger i Home Assistant»** i integrasjonsvalgene, ellers virker ikke lys, stikk, scener og app-tastene.
+
+**App-tastene (App 1 og App 2).** Et kort trykk starter en app på Apple TV med `remote.turn_on` og `activity: <appnavn>`, som er måten Apple TV-integrasjonen åpner apper på. Slik setter du dem opp:
+- I `substitutions` i yaml-fila: `app_1_entitet` og `app_2_entitet` (standard `remote.apple_tv`), `app_1` og `app_2` (standard `Plex` og `YouTube`, brukes første gang), og `app_kilde` (standard `media_player.apple_tv`).
+- Appnavnene er tekst-entiteter i Home Assistant, **«Skjold Fjernkontroll App 1»** og **«App 2»**. Skriv navnet slik det står i appvelgeren til Apple TV (f.eks. `Plex`, `YouTube`, `NRK TV`). Det lagres i fjernkontrollen og overlever omstart.
+- **Langt trykk** på en app-tast lagrer appen som er åpen på Apple TV nå (attributtet `app_name` på `app_kilde`). Åpne appen på TV-en, hold tasten, og den er lagret.
+- **Uten Home Assistant eller Apple TV:** lær en IR-kode på tasten med «Lær IR». Da sendes den i stedet, for eksempel Netflix-tasten fra TV-ens egen fjernkontroll.
+- Trykkene sendes også som hendelser (`app_1`, `app_1_lang` …), så du kan bruke dem til hva du vil i en automasjon, for eksempel `media_player.select_source` på en annen enhet.
 
 **Hver tast er en hendelse.** Det finnes to måter å fange den på:
 - **Event-entiteten `event.skjold_fjernkontroll_tast`** har én hendelsestype per tast: `meny`, `guide`, `spill_pause` (og `tall_1`, `lys` … i full variant) og `<tast>_lang` for langt trykk. Den er lettest å bruke i automasjonsredigereren.

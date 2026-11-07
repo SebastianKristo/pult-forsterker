@@ -22,9 +22,9 @@ BED = 250
 # fil, navn, filament, min-hjørne (x, y) eller None, «samme flytt som»
 PLATES = {
     "skjold-fjernkontroll-k2.3mf": ("Skjold Fjernkontroll – topp og bunn (PLA/PETG)", [
-        ("topp", "Topp (forsiden ned)", 1, (20, 20), None),
+        ("topp", "Topp (forsiden ned)", 1, (20, 3.5), None),
         ("logo", "SKJOLD (gull, felt inn i toppen)", 3, None, "topp"),
-        ("bunn", "Bunn", 2, (100, 20), None),
+        ("bunn", "Bunn", 2, (100, 3.5), None),
     ], {1: "#ECE9E3", 2: "#2E2D2C", 3: "#D99E40"}),
     "skjold-fjernkontroll-k2-taster.3mf": ("Skjold Fjernkontroll – taster og IR-vindu", [
         ("knapper", "Taster (mørke, flensen ned)", 2, (40, 30), None),

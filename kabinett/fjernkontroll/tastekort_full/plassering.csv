@@ -1,38 +1,40 @@
 ref,verdi,fotavtrykk,x_mm,y_mm,rot,side
-SW1,av,SW-SMD_4x4x1.5,10.30,129.60,0,topp
-SW2,hjem,SW-SMD_4x4x1.5,24.30,129.60,0,topp
-SW3,meny,SW-SMD_4x4x1.5,38.30,129.60,0,topp
-SW4,opp,SW-SMD_4x4x1.5,24.30,118.60,0,topp
-SW5,ned,SW-SMD_4x4x1.5,24.30,94.60,0,topp
-SW6,venstre,SW-SMD_4x4x1.5,12.30,106.60,0,topp
-SW7,hoyre,SW-SMD_4x4x1.5,36.30,106.60,0,topp
-SW8,ok,SW-SMD_4x4x1.5,24.30,106.60,0,topp
-SW9,tilbake,SW-SMD_4x4x1.5,10.30,83.60,0,topp
-SW10,guide,SW-SMD_4x4x1.5,24.30,83.60,0,topp
-SW11,avslutt,SW-SMD_4x4x1.5,38.30,83.60,0,topp
-SW12,spill_pause,SW-SMD_4x4x1.5,15.80,69.10,0,topp
-SW13,demp,SW-SMD_4x4x1.5,15.80,54.10,0,topp
-SW14,vol_opp,SW-SMD_4x4x1.5,34.30,71.10,0,topp
-SW15,vol_ned,SW-SMD_4x4x1.5,34.30,52.10,0,topp
-SW16,tall_1,SW-SMD_4x4x1.5,10.30,41.10,0,topp
-SW17,tall_2,SW-SMD_4x4x1.5,24.30,41.10,0,topp
-SW18,tall_3,SW-SMD_4x4x1.5,38.30,41.10,0,topp
-SW19,tall_4,SW-SMD_4x4x1.5,10.30,32.70,0,topp
-SW20,tall_5,SW-SMD_4x4x1.5,24.30,32.70,0,topp
-SW21,tall_6,SW-SMD_4x4x1.5,38.30,32.70,0,topp
-SW22,tall_7,SW-SMD_4x4x1.5,10.30,24.30,0,topp
-SW23,tall_8,SW-SMD_4x4x1.5,24.30,24.30,0,topp
-SW24,tall_9,SW-SMD_4x4x1.5,38.30,24.30,0,topp
-SW25,strek,SW-SMD_4x4x1.5,10.30,15.90,0,topp
-SW26,tall_0,SW-SMD_4x4x1.5,24.30,15.90,0,topp
-SW27,enter,SW-SMD_4x4x1.5,38.30,15.90,0,topp
-SW28,lys,SW-SMD_4x4x1.5,6.30,6.30,0,topp
-SW29,stikk,SW-SMD_4x4x1.5,18.30,6.30,0,topp
-SW30,minus,SW-SMD_4x4x1.5,30.30,6.30,0,topp
-SW31,pluss,SW-SMD_4x4x1.5,42.30,6.30,0,topp
-U1,TCA9555PWR 0x20,TSSOP-24,11.30,62.60,90,bunn
-U2,TCA9555PWR 0x21,TSSOP-24,24.30,62.60,90,bunn
-U3,TCA9555PWR 0x22,TSSOP-24,37.30,62.60,90,bunn
-J1,"FPC 18p 0,8 mm (skjerm)",FPC-18P-0.8mm bunnkontakt,24.30,130.50,0,bunn
-J2,"FPC 6p 0,5 mm (berøring)",FPC-6P-0.5mm bunnkontakt,39.30,130.50,0,bunn
-U9,XPT2046 (bare budsjett-skjerm),TSSOP-16,7.30,130.50,90,bunn
+SW1,opp,SW-SMD_4x4x1.5,24.30,148.60,0,topp
+SW2,ned,SW-SMD_4x4x1.5,24.30,124.60,0,topp
+SW3,venstre,SW-SMD_4x4x1.5,12.30,136.60,0,topp
+SW4,hoyre,SW-SMD_4x4x1.5,36.30,136.60,0,topp
+SW5,ok,SW-SMD_4x4x1.5,24.30,136.60,0,topp
+SW6,av,SW-SMD_4x4x1.5,10.30,114.10,0,topp
+SW7,hjem,SW-SMD_4x4x1.5,24.30,114.10,0,topp
+SW8,meny,SW-SMD_4x4x1.5,38.30,114.10,0,topp
+SW9,tilbake,SW-SMD_4x4x1.5,10.30,102.60,0,topp
+SW10,guide,SW-SMD_4x4x1.5,24.30,102.60,0,topp
+SW11,avslutt,SW-SMD_4x4x1.5,38.30,102.60,0,topp
+SW12,spill_pause,SW-SMD_4x4x1.5,14.30,86.60,0,topp
+SW13,demp,SW-SMD_4x4x1.5,14.30,67.60,0,topp
+SW14,vol_opp,SW-SMD_4x4x1.5,33.80,88.10,0,topp
+SW15,vol_ned,SW-SMD_4x4x1.5,33.80,66.10,0,topp
+SW16,app_1,SW-SMD_4x4x1.5,14.55,52.10,0,topp
+SW17,app_2,SW-SMD_4x4x1.5,34.05,52.10,0,topp
+SW18,tall_1,SW-SMD_4x4x1.5,10.30,41.10,0,topp
+SW19,tall_2,SW-SMD_4x4x1.5,24.30,41.10,0,topp
+SW20,tall_3,SW-SMD_4x4x1.5,38.30,41.10,0,topp
+SW21,tall_4,SW-SMD_4x4x1.5,10.30,32.70,0,topp
+SW22,tall_5,SW-SMD_4x4x1.5,24.30,32.70,0,topp
+SW23,tall_6,SW-SMD_4x4x1.5,38.30,32.70,0,topp
+SW24,tall_7,SW-SMD_4x4x1.5,10.30,24.30,0,topp
+SW25,tall_8,SW-SMD_4x4x1.5,24.30,24.30,0,topp
+SW26,tall_9,SW-SMD_4x4x1.5,38.30,24.30,0,topp
+SW27,strek,SW-SMD_4x4x1.5,10.30,15.90,0,topp
+SW28,tall_0,SW-SMD_4x4x1.5,24.30,15.90,0,topp
+SW29,enter,SW-SMD_4x4x1.5,38.30,15.90,0,topp
+SW30,lys,SW-SMD_4x4x1.5,6.30,6.30,0,topp
+SW31,stikk,SW-SMD_4x4x1.5,18.30,6.30,0,topp
+SW32,minus,SW-SMD_4x4x1.5,30.30,6.30,0,topp
+SW33,pluss,SW-SMD_4x4x1.5,42.30,6.30,0,topp
+U1,TCA9555PWR 0x20,TSSOP-24,11.30,82.10,90,bunn
+U2,TCA9555PWR 0x21,TSSOP-24,24.30,82.10,90,bunn
+U3,TCA9555PWR 0x22,TSSOP-24,37.30,82.10,90,bunn
+J1,"FPC 18p 0,8 mm (skjerm)",FPC-18P-0.8mm bunnkontakt,24.30,150.00,0,bunn
+J2,"FPC 6p 0,5 mm (berøring)",FPC-6P-0.5mm bunnkontakt,39.30,150.00,0,bunn
+U9,XPT2046 (bare budsjett-skjerm),TSSOP-16,7.30,150.00,90,bunn
