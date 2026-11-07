@@ -1,9 +1,9 @@
 // Skjold Radio – bordradio med skjerm, seks favorittknapper, navigasjonshjul og volumknott. Parametrisk OpenSCAD.
-// Eget Skjold-design: en klassisk, stående bordradio der alt vender mot deg. Fronten er loddrett og delt i to av en
-// tynn gullist: nederst en mørk grill med vannrette spalter over hele bredden (to 3″-elementer bak), øverst et rolig
-// betjeningspanel med skjermen til venstre, det store gullhjulet til høyre, og en rad med seks favorittknapper, av/på
-// og volumknotten under. Myke hjørner (R14) sett forfra som Node/Røst, faset frontkant, lys kropp, mørk grill og
-// knapper, gull hjul, volumknott, list og logo.
+// Eget Skjold-design: en lav, liggende bordradio der alt vender mot deg. Den loddrette fronten er delt i to av en
+// tynn, loddrett gullist: til venstre en mørk grill med vannrette spalter foran ett 3″-element (mono), til høyre et rolig
+// betjeningspanel i tre lag – skjermen øverst, favoritt 1–6 i én rad rett under, og nederst av/på, volumknotten og
+// det store gullhjulet. Myke hjørner (R14) sett forfra som Node/Røst, faset frontkant, lys (eller matt sort) kropp,
+// mørk grill og knapper, gull hjul, volumknott og list, og SKJOLD preget over skjermen.
 // Lisens: CC BY-NC-SA 4.0 (se LISENS-MASKINVARE.md).
 //
 // Koordinater: x = bredde (0 … W), y = dybde (0 = fronten, D = bak), z = høyde (0 = innsiden av gulvet).
@@ -19,7 +19,7 @@ farge = "lys";                   // lys | mork
 $fn = 64;
 
 // ---------- ytre mål ----------
-W = 236; D = 145; H = 202;       // bredde, dybde, høyde over gulvets innside (utvendig høyde H + t = 205)
+W = 240; D = 125; H = 137;       // bredde, dybde, høyde over gulvets innside (utvendig høyde H + t = 140)
 R = 14;                          // hjørnene sett forfra (alle fire)
 t = 3.0;                         // vegg og gulv (≥ 2 mm for resin/MJF; 7 linjer à 0,42 mm på FDM)
 c = 2.5;                         // fas rundt frontkanten
@@ -31,41 +31,46 @@ module ext_y(y0, y1) { translate([0, y1, 0]) rotate([90, 0, 0]) linear_extrude(y
 // Lokal ramme på frontflaten: u = x, v = z, w ut av fronten (w = 0 = frontflaten, w = −t = innsiden av frontveggen).
 module front_ramme() { rotate([90, 0, 0]) children(); }
 
-// ---------- høyttalere og lydkammer (uendret fra første utgave) ----------
-drvCut = 72;  drvF = 86;  drvFT = 4;      // 3″ fullrange (f.eks. Dayton RS75-4): utsparing, rammens Ø og tykkelse – mål ditt element
-drvPCD = 82;  drvX = 52;                  // skruehullsirkel, avstand fra midten
-kX0 = 22;  kW = W - 2*kX0;                // kammer: x 22 … 214
-kY0 = t + 5.6;  kD = 78;                  // baffelens forside 5,6 mm bak fronten (plass til grill, grillduk og elementrammen)
-kZ0 = 0;  kH = 88;                        // står på gulvet, 88 mm høyt
+// ---------- høyttaler og lydkammer (mono: ett 3″-element i ett lukket kammer bak venstre halvdel) ----------
+drvCut = 72;  drvF = 86;  drvFT = 4;      // 3″ fullrange (Dayton Audio RS75-4): utsparing, rammens Ø og tykkelse – mål ditt element
+drvPCD = 82;                              // skruehullsirkel
+kX0 = 22;  kW = 86;                       // kammer: x 22 … 108
+kY0 = t + 5.6;  kD = 92;                  // baffelens forside 5,6 mm bak fronten (plass til grill, grillduk og elementrammen)
+kZ0 = 0;  kH = 124;                       // står på gulvet, 124 mm høyt
 kT = 2.8;  baffT = 7;                     // kammervegg og baffel
-kOff = kT + 2.5;                          // innpressmutter-tårnene for lokket ligger i hjørnene (smelter inn i veggene)
-kBx = [kX0 + kOff, W/2 - kT/2 - 3, W/2 + kT/2 + 3, kX0 + kW - kOff];
-kBz = [kZ0 + kOff, kZ0 + kH - kOff];
+drvX = kX0 + kW/2;  drvZ = kZ0 + kH/2;    // elementet midt på baffelen
+kOff = kT + 2.5;                          // innpressmutter-tårnene for lokket ligger langs sideveggene (smelter inn i veggene)
+kBx = [kX0 + kOff, kX0 + kW - kOff];
+kBz = [kZ0 + kOff, kZ0 + kH/2, kZ0 + kH - kOff];
 kOre = 8;                                 // ører langs gulvet på utsiden (skrues fra undersiden)
 kOreY = [kY0 + 12, kY0 + kD - 12];
-// netto volum per side ≈ 91,8 × 71 × 82,4 mm − tårn og element ≈ 0,47 l (lukket, stereo med skillevegg)
+// netto volum ≈ 80,4 × 85 × 118,4 mm − tårn og element ≈ 0,75 l (lukket, mono)
 
-// ---------- grill (nedre del av fronten) ----------
-gM = 12;  gZ0 = 6;  gZ1 = 88;  gR = 6;     // grillåpningen: 12 mm marg på sidene, z 6 … 88
+// ---------- grill (venstre halvdel av fronten) ----------
+gX0 = 14;  gX1 = 114;  gZ0 = 8;  gZ1 = 126;  gR = 6;   // grillåpningen: 100 × 118 mm, samme marg oppe og nede
 gT = 3.0;  gFl = 2.5;                      // grillens tykkelse = veggen, flens bak
 slotW = 2.2; slotP = 4.4;                  // vannrette spalter
-// ---------- gullist mellom grill og panel ----------
-lX0 = gM;  lZ0 = 92;  lH = 3.5;  lDyp = 1.2;   // spor i fronten (x 12 … 224), lista står 0,4 mm ut
+slotM = 8;                                 // hel kant rundt spaltene (ribbene mot baffelen sitter oppe og nede)
+ribX = [drvX - 15, drvX + 15];             // ribber som holder grillen mot baffelen
+// ---------- loddrett gullist mellom grill og panel ----------
+lX0 = 118;  lZ0 = gZ0;  lH = 3.5;  lDyp = 1.2;   // spor i fronten (z 8 … 126), lista står 0,4 mm ut
 
-// ---------- betjeningspanel (øvre del av fronten) ----------
+// ---------- betjeningspanel (høyre halvdel av fronten) ----------
 scrAW = 96;  scrAH = 56;                   // synlig vindu (4,3″ DSI 800×480, aktivt område ≈ 95 × 54)
 scrGW = 106; scrGH = 68;                   // glass/LCD på modulen (lomme bak frontveggen) – mål din skjerm!
-scrX = 72;   scrZ = 158;                   // vinduets senter
-scrB = [[-56.5, -34], [56.5, -34], [-56.5, 34], [56.5, 34]];   // skruetårn rundt modulen (brakett)
-btnZ = 110; btnX0 = 24; btnP = 19;         // favoritter 1–6: rad under skjermen (x 24 … 119)
+scrX = 175;  scrZ = 98;                    // vinduets senter: vindu x 127 … 223, z 70 … 126 (flukt med grillens overkant)
+scrB = [[-57, -20], [57, -20], [-57, 20], [57, 20]];   // skruetårn på hver side av modulen (brakett)
+btnZ = 60; btnP = 16; btnX0 = scrX - 2.5*btnP;   // favoritter 1–6: rad rett under skjermen (x 135 … 215)
 capD = 11; capHole = 11.6; capUp = 0.8; capFl = 15; capFlT = 1.0;
-pwX = 146;                                 // av/på i samme rad, litt for seg selv
-kortX = [btnX0 - 12, pwX + 12];            // tårn for knappekortet (ett hullkort ca. 150 × 16 mm)
-whX = 178; whZ = 158;                      // navigasjonshjul (EC11 med trykk) til høyre for skjermen – knott Ø 46
-whD = 46;  whH = 15;
-volX = 178; volZ = btnZ;                   // volumknott rett under hjulet, i knapperaden
+kortX = [btnX0 - 12, btnX0 + 5*btnP + 12]; // tårn for knappekortet (hullkort ca. 110 × 16 mm)
+botZ = 28;                                 // nederste rad: av/på, volum og hjulet
+pwX = btnX0;                               // av/på under favoritt 1
+pwKort = [pwX - 12, pwX + 12];             // tårn for av/på-kortet (lite hullkort ca. 30 × 16 mm)
+volX = 161; volZ = botZ;                   // volumknott
 volD = 22; volH = 13;
-logoZ = 191;                               // SKJOLD preget over hjulet
+whD = 42;  whH = 15;                       // navigasjonshjul (EC11 med trykk) nede til høyre, flukt med vinduets høyre kant
+whX = scrX + scrAW/2 - whD/2; whZ = botZ;
+logoZ = 131.6;                             // SKJOLD preget over skjermen
 ec11 = 7.2;                                // EC11 M7-gjenge
 // ---------- fester ----------
 ins = 4.0; insD = 6.0; boss = 8.4; m3 = 3.4; m3k = 6.4;
@@ -77,6 +82,8 @@ piH = [[-29, -24.5], [29, -24.5], [-29, 24.5], [29, 24.5]];
 piSt = 5;                                  // avstandsstykker
 // ---------- bak ----------
 dcD = 8.2; jackD = 6.4; usbW = 10; usbH = 4.4;
+bakKZ = 22;                                // kontaktene (DC, linje ut, USB-C) nede til høyre, bak forsterkeren
+ventGulv = [130, 8, 10, 44, 52];           // luftespalter i gulvet under forsterkeren: x0, deling, antall, y0, lengde
 
 // ---------- farger ----------
 lys = farge == "lys";
@@ -91,9 +98,9 @@ c_inne  = [0.40, 0.40, 0.42];
 module rrect(w, d, r) { translate([r, r]) offset(r) square([w - 2*r, d - 2*r]); }
 module ytre() { hull() { ext_y(0, 0.01) prof(c); ext_y(c, D) prof(0); } }   // fas rundt frontkanten
 module front_hull(o = 0) {   // grillåpningen sett forfra (x, z)
-  offset(-o) hull() for (x = [gM + gR, W - gM - gR], z = [gZ0 + gR, gZ1 - gR]) translate([x, z]) circle(gR);
+  offset(-o) hull() for (x = [gX0 + gR, gX1 - gR], z = [gZ0 + gR, gZ1 - gR]) translate([x, z]) circle(gR);
 }
-module list2d(o = 0) { translate([lX0 + o, lZ0 + o]) rrect(W - 2*lX0 - 2*o, lH - 2*o, lH/2 - o - 0.05); }
+module list2d(o = 0) { translate([lX0 + o, lZ0 + o]) rrect(lH - 2*o, gZ1 - gZ0 - 2*o, lH/2 - o - 0.05); }
 
 // ---------- kropp (ett skall: front, sider, topp og gulv; åpen bak; printes med fronten ned på platen) ----------
 module kropp() {
@@ -107,7 +114,8 @@ module kropp() {
       }
       front_ramme() {
         for (p = scrB) translate([scrX + p[0], scrZ + p[1], -t - 6]) cylinder(d = 7, h = 7);      // skjermbrakett
-        for (x = kortX) translate([x, btnZ, -t - 7]) cylinder(d = 7, h = 8);                     // knappekort
+        for (x = concat(kortX), z = [btnZ]) translate([x, z, -t - 7]) cylinder(d = 7, h = 8);   // knappekort
+        for (x = pwKort) translate([x, botZ, -t - 7]) cylinder(d = 7, h = 8);                    // av/på-kort
       }
     }
     for (p = bakB) translate([p[0], D - bkT - insD, p[1]]) rotate([-90, 0, 0]) cylinder(d = ins, h = insD + 0.1);
@@ -124,22 +132,23 @@ module kropp() {
       for (p = scrB) translate([scrX + p[0], scrZ + p[1], -t - 6.1]) cylinder(d = 2.2, h = 5);   // M2,5 selvgjengende
       // favoritt 1–6 og av/på
       for (i = [0:5]) translate([btnX0 + i*btnP, btnZ, -t - 1]) cylinder(d = capHole, h = t + 2);
-      translate([pwX, btnZ, -t - 1]) cylinder(d = capHole, h = t + 2);
+      translate([pwX, botZ, -t - 1]) cylinder(d = capHole, h = t + 2);
       for (x = kortX) translate([x, btnZ, -t - 7.1]) cylinder(d = 2.2, h = 6);
+      for (x = pwKort) translate([x, botZ, -t - 7.1]) cylinder(d = 2.2, h = 6);
       // hjulet og volumknotten
       for (k = [[whX, whZ, whD], [volX, volZ, volD]]) {
         translate([k[0], k[1], -t - 1]) cylinder(d = ec11, h = t + 2);
         translate([k[0], k[1], -0.6]) cylinder(d = k[2] + 3, h = 1);    // grunn ring under knotten
       }
-      // logo SKJOLD preget over hjulet
-      translate([whX, logoZ, -0.6]) linear_extrude(1)
-        text("SKJOLD", size = 5, font = "Liberation Sans:style=Bold", halign = "center", valign = "center", spacing = 1.4);
+      // logo SKJOLD preget over skjermen
+      translate([scrX, logoZ, -0.6]) linear_extrude(1)
+        text("SKJOLD", size = 4, font = "Liberation Sans:style=Bold", halign = "center", valign = "center", spacing = 1.4);
     }
     // gulvet: kammerørene (senkeskruer nedenfra), gummiføtter og lufting under forsterkeren
     for (x = [kX0 - kOre/2, kX0 + kW + kOre/2], y = kOreY)
       translate([x, y, -t - 1]) { cylinder(d = m3, h = t + 2); cylinder(d = m3k, h = 1 + 1.7); }
     for (p = fotXY) translate([p[0], p[1], -t - 1]) cylinder(d = 12.6, h = 1.8);       // 0,8 mm forsenkning
-    for (i = [0:9]) translate([124 + i*8, kY0 + kD + 10, -t - 1]) cube([3, 40, t + 2]);
+    for (i = [0:ventGulv[2] - 1]) translate([ventGulv[0] + i*ventGulv[1], ventGulv[3], -t - 1]) cube([3, ventGulv[4], t + 2]);
   }
 }
 
@@ -150,14 +159,15 @@ module bak() {
     for (p = bakB) translate([p[0], D - bkT - 1, p[1]]) rotate([-90, 0, 0]) {
       cylinder(d = m3, h = bkT + 2); translate([0, 0, bkT + 1 - 1.7]) cylinder(d1 = m3, d2 = m3k, h = 1.71);   // senkeskrue
     }
-    translate([40, D - bkT - 1, 26]) rotate([-90, 0, 0]) cylinder(d = dcD, h = bkT + 2);
-    translate([62, D - bkT - 1, 26]) rotate([-90, 0, 0]) cylinder(d = jackD, h = bkT + 2);
-    translate([82 - usbW/2, D - bkT - 1, 26 - usbH/2]) cube([usbW, bkT + 2, usbH]);
-    for (i = [0:7], z = [12, 150]) translate([126 + i*10, D - bkT - 1, z]) cube([4, bkT + 2, 34]);   // nede: forsterker, oppe: Pi
+    translate([140, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = dcD, h = bkT + 2);
+    translate([160, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = jackD, h = bkT + 2);
+    translate([180 - usbW/2, D - bkT - 1, bakKZ - usbH/2]) cube([usbW, bkT + 2, usbH]);
+    for (i = [0:3]) translate([196 + i*7, D - bkT - 1, 10]) cube([4, bkT + 2, 30]);    // nede: forsterker
+    for (i = [0:8]) translate([128 + i*10, D - bkT - 1, 78]) cube([4, bkT + 2, 40]);   // oppe: Pi
   }
 }
 
-// ---------- lydkammer (stereo, lukket, med skillevegg) ----------
+// ---------- lydkammer (mono, lukket) ----------
 module kammer() {
   difference() {
     union() {
@@ -165,21 +175,18 @@ module kammer() {
         translate([kX0, kY0, kZ0]) cube([kW, kD, kH]);
         translate([kX0 + kT, kY0 + baffT, kZ0 + kT]) cube([kW - 2*kT, kD, kH - 2*kT]);
       }
-      translate([W/2 - kT/2, kY0, kZ0]) cube([kT, kD, kH]);                    // skillevegg (venstre/høyre)
       // tårn for lokkets innpressmuttere – går hele veien fra baffelen (printes som søyler)
       for (x = kBx, z = kBz) translate([x, kY0 + 1, z]) rotate([-90, 0, 0]) cylinder(d = boss, h = kD - 1);
       // ører langs gulvet på utsiden, skrues fast nedenfra gjennom gulvet
       for (x = [kX0 - kOre, kX0 + kW]) translate([x, kY0, kZ0]) cube([kOre, kD, 8]);
     }
-    for (s = [-1, 1]) let (x = W/2 + s*drvX, z = kZ0 + kH/2) {
-      translate([x, kY0 - 1, z]) rotate([-90, 0, 0]) cylinder(d = drvCut, h = baffT + 2);
-      for (k = [0:3]) translate([x + drvPCD/2*cos(45 + 90*k), kY0 - 1, z + drvPCD/2*sin(45 + 90*k)])
-        rotate([-90, 0, 0]) cylinder(d = 2.6, h = baffT);                     // M3 selvgjengende
-    }
+    translate([drvX, kY0 - 1, drvZ]) rotate([-90, 0, 0]) cylinder(d = drvCut, h = baffT + 2);
+    for (k = [0:3]) translate([drvX + drvPCD/2*cos(45 + 90*k), kY0 - 1, drvZ + drvPCD/2*sin(45 + 90*k)])
+      rotate([-90, 0, 0]) cylinder(d = 2.6, h = baffT);                     // M3 selvgjengende
     for (x = kBx, z = kBz) translate([x, kY0 + kD - insD, z]) rotate([-90, 0, 0]) cylinder(d = ins, h = insD + 0.1);
     for (x = [kX0 - kOre/2, kX0 + kW + kOre/2], y = kOreY) translate([x, y, kZ0 - 0.01]) cylinder(d = ins, h = insD);
     // kabelhull bak i gulvet (tettes med silikon etter at ledningene er trukket)
-    for (s = [-1, 1]) translate([W/2 + s*30, kY0 + kD - 14, kZ0 - 1]) cylinder(d = 4, h = kT + 2);
+    translate([drvX, kY0 + kD - 14, kZ0 - 1]) cylinder(d = 4, h = kT + 2);
   }
 }
 module lokk() {   // bakveggen på kammeret (tetning: 1–2 mm skumtape rundt kanten, klemmes flat)
@@ -189,15 +196,15 @@ module lokk() {   // bakveggen på kammeret (tetning: 1–2 mm skumtape rundt ka
   }
 }
 
-// ---------- grill (settes inn fra innsiden; holdes av flensen og kammerets midtribbe) ----------
+// ---------- grill (settes inn fra innsiden; holdes av flensen og to ribber mot baffelen) ----------
 module grill() {
   difference() {
     union() {
       ext_y(0, gT) front_hull(0.3);
       ext_y(t - 0.4, t + 0.6) offset(gFl - 0.3) front_hull();          // flens bak (ligger i falsen)
-      translate([W/2 - 1.2, t, gZ0 + 2]) cube([2.4, kY0 - t - 0.4, gZ1 - gZ0 - 8]);   // midtribbe mot skilleveggen
+      for (z = [gZ0 + 2.6, gZ1 - 5]) translate([ribX[0], t, z]) cube([ribX[1] - ribX[0], kY0 - t - 0.4, 2.4]);   // ribber mot baffelen
     }
-    for (z = [gZ0 + 3 : slotP : gZ1 - 7]) translate([gM + 8, -1, z]) cube([W - 2*gM - 16, gT + 1.7, slotW]);
+    for (z = [gZ0 + slotM : slotP : gZ1 - slotM - slotW]) translate([gX0 + slotM, -1, z]) cube([gX1 - gX0 - 2*slotM, gT + 1.7, slotW]);
   }
 }
 module list() { translate([0, -0.4, 0]) ext_y(0, lDyp + 0.35) list2d(0.15); }   // gullista, står 0,4 mm ut
@@ -206,10 +213,10 @@ module list() { translate([0, -0.4, 0]) ext_y(0, lDyp + 0.35) list2d(0.15); }   
 module brakett() {
   front_ramme() translate([0, 0, -t - 6]) {
     difference() {
-      hull() for (p = scrB) translate([scrX + p[0], scrZ + p[1], -2.4]) cylinder(d = 10, h = 2.4);
+      hull() for (p = scrB) translate([scrX + p[0], scrZ + p[1], -2.4]) cylinder(d = 8, h = 2.4);
       for (p = scrB) translate([scrX + p[0], scrZ + p[1], -3]) cylinder(d = 2.9, h = 4);
       translate([scrX - 14, scrZ - 30, -3]) cube([28, 6, 4]);                                // slisse for DSI-flatkabelen
-      for (s = [-1, 1]) translate([scrX + s*46 - 4, scrZ - 22, -3]) cube([8, 44, 4]);          // lufting
+      for (s = [-1, 1]) translate([scrX + s*46 - 4, scrZ - 14, -3]) cube([8, 28, 4]);          // lufting
     }
     for (p = piH) translate([scrX + p[0], scrZ + p[1], -2.4 - piSt]) difference() {
       cylinder(d = 6, h = piSt + 0.01); translate([0, 0, -1]) cylinder(d = 2.2, h = piSt);      // M2,5 selvgjengende
@@ -246,7 +253,7 @@ module knapp_lok(ikon) {
 module knapper() {
   front_ramme() {
     for (i = [0:5]) translate([btnX0 + i*btnP, btnZ, 0]) knapp_lok(str(i + 1));
-    translate([pwX, btnZ, 0]) knapp_lok("O");
+    translate([pwX, botZ, 0]) knapp_lok("O");
   }
 }
 
@@ -267,8 +274,8 @@ module montert(e = 0) {   // eksplodert: fronten ut mot deg, innmaten ut bakover
   color(c_gull) translate([0, -1.2*e, 0]) front_ramme() translate([whX, whZ, 0.6]) knott();
   color(c_gull) translate([0, -1.2*e, 0]) front_ramme() translate([volX, volZ, 0.6]) volum();
 }
-module elementer() {   // høyttalerelementene (illustrasjon): ramme foran baffelen, magnet bak
-  color([0.22, 0.22, 0.23]) for (s = [-1, 1]) translate([W/2 + s*drvX, kY0 - drvFT, kZ0 + kH/2]) rotate([-90, 0, 0]) {
+module elementer() {   // høyttalerelementet (illustrasjon): ramme foran baffelen, magnet bak
+  color([0.22, 0.22, 0.23]) translate([drvX, kY0 - drvFT, drvZ]) rotate([-90, 0, 0]) {
     difference() { cylinder(d = drvF, h = drvFT); translate([0, 0, 1]) cylinder(d = drvCut - 6, h = drvFT); }
     translate([0, 0, drvFT + baffT]) cylinder(d = 50, h = 30);
   }
@@ -288,7 +295,7 @@ module print(p) {
   else if (p == "kammer") translate([0, 0, -kY0]) rotate([90, 0, 0]) kammer();            // baffelen ned
   else if (p == "lokk") translate([0, 0, -(kY0 + kD)]) rotate([90, 0, 0]) lokk();
   else if (p == "grill") translate([0, gZ1 + gFl, 0]) rotate([90, 0, 0]) grill();         // forsiden ned
-  else if (p == "list") translate([0, 0, 0.4]) rotate([90, 0, 0]) list();                 // forsiden ned
+  else if (p == "list") translate([0, 0, 0.4]) rotate([90, 0, 0]) list();                 // forsiden ned (118 mm lang)
   else if (p == "brakett") translate([0, H, -(t + 6)]) rotate([90, 0, 0]) brakett();      // forsiden ned, Pi-tårn opp
   else if (p == "knott") knott();
   else if (p == "volum") volum();

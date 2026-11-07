@@ -251,6 +251,8 @@ elif [ "$BOARD_SEL" = main ]; then
 fi
 sudo sed -i '/^KI_AMP_SPOTIFY=/d' /etc/ki-amp.env && echo "KI_AMP_SPOTIFY=$SPOTIFY" | sudo tee -a /etc/ki-amp.env >/dev/null
 if [ -n "$NAME_SEL" ]; then sudo sed -i '/^KI_AMP_NAME=/d' /etc/ki-amp.env && echo "KI_AMP_NAME=$NAME_SEL" | sudo tee -a /etc/ki-amp.env >/dev/null; fi
+# KI_AMP_MONO=1 (Skjold Radio, ett element): CamillaDSP summerer L+R. KI_AMP_MONO=0 slår det av igjen.
+if [ -n "${KI_AMP_MONO:-}" ]; then sudo sed -i '/^KI_AMP_MONO=/d' /etc/ki-amp.env && echo "KI_AMP_MONO=$KI_AMP_MONO" | sudo tee -a /etc/ki-amp.env >/dev/null; fi
 sudo systemctl daemon-reload
 OS_INST="$SRC/../skjold/os/install.sh"
 if [ "$BOARD_SEL" = node ]; then
