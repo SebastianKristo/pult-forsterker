@@ -37,14 +37,15 @@ import kotlinx.coroutines.launch
 class SkjoldPlayer(private val ctx: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var snap: WidgetSnap = WidgetStore.load(ctx)
-    private var cover: ByteArray? = WidgetStore.coverBytes(ctx)
+    private var cover: ByteArray? = WidgetStore.coverBytes(ctx, snap.cover)
     private var coverKey = snap.cover
     private var posAtMs = SystemClock.elapsedRealtime()
 
     /** Ny status fra enheten. */
     fun update(s: WidgetSnap) {
-        if (s.cover != coverKey) { coverKey = s.cover; cover = WidgetStore.coverBytes(ctx) }
-        else if (cover == null && s.cover.isNotEmpty()) cover = WidgetStore.coverBytes(ctx)
+        // bare bildet som hører til denne adressen: første kall kommer før omslaget er lastet ned, det andre etter
+        if (s.cover != coverKey) { coverKey = s.cover; cover = WidgetStore.coverBytes(ctx, s.cover) }
+        else if (cover == null && s.cover.isNotEmpty()) cover = WidgetStore.coverBytes(ctx, s.cover)
         snap = s
         posAtMs = SystemClock.elapsedRealtime()
         invalidateState()

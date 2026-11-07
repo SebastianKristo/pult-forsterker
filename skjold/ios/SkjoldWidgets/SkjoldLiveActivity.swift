@@ -13,7 +13,7 @@ struct SkjoldLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    ActivityCover(title: context.state.title, size: 52)
+                    ActivityCover(title: context.state.title, cover: context.state.cover, size: 52)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     VStack(alignment: .trailing, spacing: 2) {
@@ -33,7 +33,7 @@ struct SkjoldLiveActivity: Widget {
                     ActivityControls(playing: context.state.playing)
                 }
             } compactLeading: {
-                ActivityCover(title: context.state.title, size: 22, radius: 6)
+                ActivityCover(title: context.state.title, cover: context.state.cover, size: 22, radius: 6)
             } compactTrailing: {
                 Image(systemName: context.state.playing ? "waveform" : "pause.fill")
                     .foregroundStyle(W.accent2)
@@ -57,7 +57,7 @@ struct LockScreenActivityView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            ActivityCover(title: state.title, size: 60, radius: 12)
+            ActivityCover(title: state.title, cover: state.cover, size: 60, radius: 12)
             VStack(alignment: .leading, spacing: 3) {
                 Text((room + " · " + state.source).uppercased())
                     .font(W.mono(9)).tracking(1.2).foregroundStyle(W.accent2).lineLimit(1)
@@ -73,13 +73,13 @@ struct LockScreenActivityView: View {
 
 struct ActivityCover: View {
     let title: String
+    var cover: String? = nil
     var size: CGFloat
     var radius: CGFloat = 10
 
     var body: some View {
-        let s = SkjoldShared.load()
-        return Group {
-            if s.title == title, let img = WCover.image(s) {
+        Group {
+            if let img = SkjoldShared.coverImage(key: cover) {
                 Image(uiImage: img).resizable().scaledToFill()
             } else {
                 ZStack {
