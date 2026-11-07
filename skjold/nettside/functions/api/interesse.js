@@ -11,7 +11,7 @@ const MAKS_BYTES = 8 * 1024;
 const GRENSE = 5;            // innsendinger
 const VINDU_S = 600;         // per 10 minutter per IP
 const EPOST_RE = /^[^@\s<>"']{1,64}@[^@\s<>"']{1,190}\.[^@\s<>"'.]{2,}$/;
-const PRODUKT = ['S1', 'Node', 'Touch', 'Begge', 'Flere'];
+const PRODUKT = ['S1', 'Node', 'Touch', 'Røst', 'Begge', 'Flere'];
 const TYPE = ['done', 'kit'];
 
 const rens = (v, n) => String(v ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim().slice(0, n);
