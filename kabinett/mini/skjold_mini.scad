@@ -1,18 +1,19 @@
 // Skjold Mini – liten aktiv høyttaler (3″ fullrange, bassrefleks) for bad, kjøkken og barnerom. Parametrisk OpenSCAD.
-// Tåler damp og sprut (mål: omtrent IPX4 – ikke vanntett): TPU-pakninger i alle skjøter, TPU-membran over knappene,
-// skjerm bak klar rute, vannavstøtende akustisk duk bak grillen og bassrefleksporten vendt bakover.
-// Skjerm og knapper sitter på toppen («dashbord» som heller svakt mot brukeren), foran volumhjulet. De ligger i et
-// eget, lukket rom under toppen («takrommet»), adskilt fra lydkammeret, så membranen ikke vibrerer med bassen.
+// Tåler damp (TPU-pakninger i skjøtene front/kropp og bunn, krage rundt EC11, DC-skive og USB-propp, ePTFE-ventil,
+// vannavstøtende duk bak grillen, port bakover). Knappene på toppen er vanlige printede knappehetter og er IKKE tette.
+// Skjerm og knapper sitter på toppen («dashbord» som heller svakt mot brukeren), foran volumhjulet, i et eget rom
+// under toppen («takrommet»), adskilt fra lydkammeret. Grillen er en løs del som trykkes på fronten med 4 tapper.
 // Lisens: CC BY-NC-SA 4.0 (se LISENS-MASKINVARE.md).
 //
 // Koordinater (montert): x = bredde (−50…50), y = dybde (−fT = forsiden, 0 = skjøten front/kropp, D = bak),
 // z = høyde (0 = underkant). Kropp og frontplate er skåret fra samme ytre form, så sidene flukter i skjøten.
 // Bruk:  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_mini.scad
-// part:  kropp | front | logo | grill | bunn | knott | skjermklemme | rute |
-//        pakning_front | pakning_bunn | pakning_skjerm | membran | krage | dc_skive | usb_propp | samlet | eksplodert
+// part:  kropp | front | logo | grill | bunn | knott | rute | knapp | knapp_av | knapp_1 … knapp_4 |
+//        pakning_front | pakning_bunn | krage | dc_skive | usb_propp | samlet | eksplodert
 // STL-ene eksporteres liggende slik de skal printes (se utskriftsretning nederst).
 
 part = "samlet";
+ki = 0;                         // hvilken knapp for part="knapp_i"
 $fn = 72;
 
 // ---------- ytre mål ----------
@@ -58,7 +59,7 @@ function topz(y) = H - kS * (D - y);
 z0 = topz(0);                   // toppen ved skjøten front/kropp
 // Lokal ramme for toppanelet: x som før, v langs toppen (fra y = 0 og bakover), w ut av toppen (w = 0 er overflaten).
 module panel() { translate([0, 0, z0]) rotate([aS, 0, 0]) children(); }
-tp = 7.5;                       // toppanelets tykkelse over takrommet (rute + skjermlomme / membran + stempler)
+tp = 7.5;                       // toppanelets tykkelse over takrommet (rute + skjermlomme / knappehetter)
 hR = 8.5;                       // takrommets høyde under panelet
 cT = 3.0;                       // takrommets gulv («himling» over lydkammeret)
 vB = 63;                        // takrommets bakkant (lokal v); bakveggen heller 45° opp til panelet
@@ -69,39 +70,52 @@ ec11V = 88; ec11D = 7.2;        // EC11-aksel gjennom toppen, bakerst (står vin
 krageD = 12.4; krageS = 1.2;    // forsenkning for TPU-kragen rundt akselen
 micX = 40;  micZ = 14; micD = 1.6;   // valgfri INMP441-mikrofon i fronten (ePTFE-akustikkmembran limes på innsiden)
 
-// ---------- skjerm: 1,54″ IPS 240×240 (ST7789, SPI) bak klar rute, i toppen ----------
-// Mål for den vanlige 7-pinners modulen (sjekk din: pcbW/pcbH og hvor det aktive feltet sitter).
-dispV = 38;                      // senter av det aktive feltet (lokal v)
-winW = 28.4;                     // vindu (aktivt felt 27,72 × 27,72 mm)
-pcbW = 31.8; pcbH = 40.0;        // kretskort (glasset ligger innenfor)
-pcbOffV = 3.0;                   // kortets senter i forhold til det aktive feltet (pinneraden bakover)
-pocketD = 3.4;                   // lomme nedenfra for glass + kort
-ruteW = 34.6; ruteT = 1.5;       // klar rute (akryl 1,5 mm eller klar PETG) i toppen
-skjT = 0.8; skjS = 0.6;          // TPU-ramme under ruta: 0,8 mm, klemmes til 0,6
-ruteRec = ruteT + skjS;          // forsenkning for rute + pakning (ruta flukter med toppen)
-clampX = pcbW/2 + 4.0;           // skruehull for skjermklemmen (M2,5 selvgjengende rett i panelet)
+// ---------- skjerm: 2,42″ OLED 128×64 (SSD1309, I²C, hvit) bak klar rute, i toppen ----------
+// Mål fra produsentens tegning (mål din modul og juster): kort 70,08 × ca. 39 mm med 4 hull (Ø3, 62 mm i bredden),
+// glass ca. 60 × 30,5 mm og 3,25 mm tykt, aktivt område 55,4 × 27,7 mm, flatkabel nederst på midten (12,6 mm),
+// pinnerad (GND VDD SCK SDA) øverst. Toppen av modulen («øverst») vender bakover mot volumhjulet.
+dispV = 42;                      // senter av det aktive området (lokal v)
+actW = 55.4; actH = 27.7;        // aktivt område
+winW = actW + 0.6; winH = actH + 0.6;   // vindu (0,3 mm klaring), 45° fas utover mot ruta
+glW = 60.0; glH = 30.5; glT = 3.25;     // glass (lomme nedenfra med 0,4 mm klaring)
+glOffV = 0;                      // glassets senter i forhold til det aktive området (v)
+pcbW = 70.08; pcbH = 39.0;       // kretskort
+pcbOffV = 0;                     // kortets senter i forhold til glasset (v)
+dHoleX = 31.0; dHoleV = 16.5;    // monteringshull (± fra kortets senter): 62 mm i bredden, mål avstanden i høyden
+fpcW = 12.6; fpcL = 3.0;         // flatkabelen bretter rundt glasskanten foran (mot knappene)
+ruteW = 64; ruteH = 36; ruteT = 1.5;    // klar rute (akryl 1,5 mm eller klar PETG) i toppen
+tapeT = 0.2;                     // tynn dobbeltsidig skumtape / lim under ruta (ikke TPU)
+ruteRec = ruteT + tapeT;         // forsenkning for rute + tape (ruta flukter med toppen)
+pcbV = dispV + glOffV + pcbOffV; // kortets senter (v)
 
-// ---------- knapper: av/på + favoritt 1–4 under én TPU-membran, foran skjermen ----------
+// ---------- knapper: av/på + favoritt 1–4 som printede knappehetter, foran skjermen ----------
+// Hetten går gjennom et hull i toppen og har en flens under toppanelet, så den ikke faller ut. Den hviler med en
+// liten nupp på taktbryteren (0,15 mm forspenning) – fjæra i bryteren holder flensen opp mot panelet.
 btnV = 10.5; btnX = [-32, -16, 0, 16, 32];  // [0] = av/på
-memW = 84; memH = 15; memR = 3; memT = 1.4; // membranen flukter med toppen
-keyD = 10;                       // tastefelt (markert med preget ring og ikon)
-plD = 4.4; plHole = 6.0;         // stempel på undersiden av membranen og hullet det går gjennom
+capD = 9.0; capHole = 9.5;       // hette og hull (0,25 mm klaring rundt)
+capUp = 0.6;                     // hetten står 0,6 mm over toppen (lett å kjenne), svakt avrundet
+flD = 12.0; flT = 0.9;           // flens under panelet
+nubD = 3.0;                      // nupp mot bryterens stempel
 tactH = 5.0;                     // 6 × 6 × 5 mm taktbryter (stempel 1,5 mm over huset)
 boardW = tp + 6.0;               // hullkortets overside under toppflaten (M2 × 6 mm avstandsstykker)
-plTip = boardW - tactH - 0.2;    // stempelspissen: 0,2 mm forspenning mot bryteren
+swTop = -(boardW - tactH);       // toppen av bryterens stempel (w)
+nubTip = swTop - 0.15;           // nuppens spiss: 0,15 mm forspenning
 boardHoles = [[-41, btnV], [41, btnV]];
 dcD = 8.2;  usbW = 10; usbH = 4.4; dcX = -25; usbX = 15; connZ = 13;
 ventD = 12.5; ventP = [25, 60];  // ePTFE-trykkutjevning (M12 × 1,5) i bunnen av elektronikkrommet
 knobD = 34; knobH = 14; shaftD = 6.1; shaftFlat = 4.6;
 wireV = 50; wireX = 30;          // ledningsgjennomføring takrom → lydkammer → elektronikkrom (tettes med lim)
 
-// ---------- grill ----------
-gT = 2.4; gGap = 0.6; gP = gT + gGap;      // grillen ligger i en lomme og flukter med fronten; duken ligger i luften bak
+// ---------- grill: løs del foran frontplaten (som første Mini), festet med 4 tapper ----------
+// Tappene har tre små klemribber, så grillen sitter stramt uten å rasle men kan trekkes av. Akustisk duk klemmes
+// mellom grillen og frontplaten (gGap = luft til duken).
+gT = 2.4; gGap = 0.6; gP = gT + gGap;
+pinD = 3.0; pinHole = 3.3; ribH = 0.25; pinL = 3.6;
 gW = 93; gZ0 = 31; gZ1 = z0 - fT * kS - 6;
 gPins = [[-24, gZ0 + 4], [24, gZ0 + 4], [-24, gZ1 - 4], [24, gZ1 - 4]];
 
 c_lys = [0.93,0.92,0.90]; c_mork = [0.13,0.13,0.14]; c_gull = [0.85,0.62,0.25]; c_grill = [0.18,0.18,0.19];
-c_tpu = [0.30,0.55,0.75]; c_klar = [0.80,0.90,0.95,0.45];
+c_tpu = [0.30,0.55,0.75]; c_knapp = [0.18,0.18,0.19]; c_klar = [0.80,0.90,0.95,0.45];
 
 // ---------- hjelpere ----------
 module rrect(w, h, r) { offset(r) offset(-r) square([w, h], center = true); }
@@ -138,7 +152,6 @@ module front_gk2d(w, zs = -1) {
   translate([-xi, zf + 0.4 - w/2]) square([2 * xi, w]);
 }
 module bunn_gk2d(w) { difference() { plan2d(-1.5 + w/2); plan2d(-1.5 - w/2); } }   // ring 1,5 mm inn fra kanten
-module skjerm_gk2d() { difference() { rrect(ruteW - 0.4, ruteW - 0.4, 1.5); square(winW + 1.0, center = true); } }
 // takrommet i panelets ramme: hulrom (w < 0 er under overflaten) og hele blokka (hulrom + gulv + bakvegg)
 module tak_hulrom() {
   translate([0, 0, 0]) rotate([90, 0, 90]) translate([0, 0, -xi]) linear_extrude(2 * xi)
@@ -187,14 +200,18 @@ module kropp() {
       // EC11 gjennom toppen + forsenkning for TPU-kragen
       translate([0, ec11V, -t - 1]) cylinder(d = ec11D, h = t + 2);
       translate([0, ec11V, -krageS]) cylinder(d = krageD, h = krageS + 1);
-      // skjerm: forsenkning for rute + TPU-ramme, vindu, lomme nedenfra for glass og kort, hull for klemmen
-      translate([0, dispV, -ruteRec - 0.03]) linear_extrude(ruteRec + 0.04) rrect(ruteW + 0.4, ruteW + 0.4, 1.7);
-      translate([0, dispV, -tp - 1]) linear_extrude(tp + 2) square(winW, center = true);
-      translate([0, dispV + pcbOffV, -tp - 0.01]) linear_extrude(pocketD + 0.01) offset(0.6) offset(-0.6) square([pcbW + 0.6, pcbH + 0.6], center = true);
-      for (sx = [-1, 1]) translate([sx * clampX, dispV + pcbOffV, -tp - 0.01]) cylinder(d = 2.2, h = 4.0);
-      // knapper: lomme for TPU-membranen, hull for stemplene, hull for knappekortets avstandsstykker
-      translate([0, btnV, -memT - 0.03]) linear_extrude(memT + 0.04) rrect(memW + 0.4, memH + 0.4, memR + 0.2);
-      for (x = btnX) translate([x, btnV, -tp - 1]) cylinder(d = plHole, h = tp + 2);
+      // skjerm: forsenkning for rute + tape, vindu med fas, lomme nedenfra for glasset og flatkabelen, skruehull
+      translate([0, dispV, -ruteRec - 0.03]) linear_extrude(ruteRec + 0.04) rrect(ruteW + 0.4, ruteH + 0.4, 2.2);
+      hull() {
+        translate([0, dispV, -tp + glT - 0.01]) linear_extrude(0.01) square([winW, winH], center = true);
+        translate([0, dispV, -ruteRec - 0.01]) linear_extrude(0.02) square([winW + 2 * (tp - glT - ruteRec), winH + 2 * (tp - glT - ruteRec)], center = true);
+      }
+      translate([0, dispV + glOffV, -tp - 0.01]) linear_extrude(glT + 0.01) square([glW + 0.8, glH + 0.8], center = true);
+      translate([0, dispV + glOffV - glH/2 - fpcL/2, -tp - 0.01]) linear_extrude(glT + 0.01) square([fpcW + 1.0, fpcL + 1.0], center = true);
+      for (sx = [-1, 1], sv = [-1, 1]) translate([sx * dHoleX, pcbV + sv * dHoleV, -tp - 0.01]) cylinder(d = 1.8, h = 4.5);   // M2 selvgjengende
+      // knapper: hull for hettene (fas på kanten), hull for knappekortets avstandsstykker
+      for (x = btnX) translate([x, btnV, -tp - 1]) cylinder(d = capHole, h = tp + 2);
+      for (x = btnX) translate([x, btnV, -0.6]) cylinder(d1 = capHole, d2 = capHole + 1.2, h = 0.61);
       for (b = boardHoles) translate([b[0], b[1], -tp - 0.01]) cylinder(d = 1.7, h = 4.0);
       // ledninger fra takrommet ned i lydkammeret (tettes med lim)
       translate([wireX, wireV, -tp - hR - cT - 1]) cylinder(d = 6, h = cT + 2);
@@ -217,17 +234,16 @@ module front() {
   difference() {
     intersection() { S(); translate([-W, -fT - 1, -1]) cube([2 * W, fT + 1, H + 2]); }
     skyggefuge();
-    // grill-lomme (grillen flukter med fronten; akustisk duk i luften bak)
-    translate([0, -fT - 0.01, 0]) rotate([-90, 0, 0]) linear_extrude(gP + 0.01) translate([0, -(gZ0 + gZ1)/2]) rrect(gW + 0.6, gZ1 - gZ0 + 0.6, 9.3);
-    for (p = gPins) translate([p[0], -fT + gP - 0.01, p[1]]) rotate([-90, 0, 0]) cylinder(d = 3.3, h = 3.5);
-    // element: utsparing, forsenkning for rammen (i bunnen av lomma) og skruehull
+    // hull for grillens tapper
+    for (p = gPins) translate([p[0], -fT - 0.01, p[1]]) rotate([-90, 0, 0]) cylinder(d = pinHole, h = pinL + 0.3);
+    // element: utsparing, forsenkning for rammen og skruehull
     translate([0, 1, drvZ]) rotate([90, 0, 0]) cylinder(d = drvCut, h = fT + 2);
-    translate([0, -fT + gP - 0.01, drvZ]) rotate([-90, 0, 0]) cylinder(d = drvRec, h = drvRecD);
+    translate([0, -fT - 0.01, drvZ]) rotate([-90, 0, 0]) cylinder(d = drvRec, h = drvRecD);
     for (a = [45, 135, 225, 315]) translate([drvPCD/2 * cos(a), 1, drvZ + drvPCD/2 * sin(a)]) rotate([90, 0, 0]) cylinder(d = drvScrew, h = fT + 2);
-    // frontskruer (senkehode i bunnen av grill-lomma)
+    // frontskruer (senkehode i forsiden, skjult bak grillen)
     for (sx = [-1, 1], z = fz) translate([sx * fbx, 1, z]) rotate([90, 0, 0]) {
       cylinder(d = m3, h = fT + 2);
-      translate([0, 0, 1 + fT - gP - 1.8]) cylinder(d1 = m3, d2 = m3k, h = 1.81);
+      translate([0, 0, 1 + fT - 1.8]) cylinder(d1 = m3, d2 = m3k, h = 1.81);
     }
     // mikrofon
     translate([micX, 1, micZ]) rotate([90, 0, 0]) cylinder(d = micD, h = fT + 2);
@@ -240,14 +256,18 @@ module front() {
 module grill() {
   difference() {
     union() {
-      translate([0, -fT, 0]) rotate([-90, 0, 0]) linear_extrude(gT) translate([0, -(gZ0 + gZ1)/2]) rrect(gW, gZ1 - gZ0, 9);
-      for (p = gPins) translate([p[0], -fT + gT - 0.01, p[1]]) rotate([-90, 0, 0]) cylinder(d = 3.0, h = gGap + 3.2);
+      translate([0, -fT - gP, 0]) rotate([-90, 0, 0]) linear_extrude(gT) translate([0, -(gZ0 + gZ1)/2]) rrect(gW, gZ1 - gZ0, 9);
+      for (p = gPins) translate([p[0], -fT - gGap - 0.01, p[1]]) rotate([-90, 0, 0]) {
+        cylinder(d = pinD, h = gGap + pinL);
+        for (a = [0, 120, 240]) rotate([0, 0, a]) translate([pinD/2 - 0.3, -0.35, gGap + 0.6]) cube([0.3 + ribH, 0.7, pinL - 1.0]);   // klemribber
+        translate([0, 0, gGap + pinL]) cylinder(d1 = pinD, d2 = pinD - 0.8, h = 0.01);
+      }
     }
     // sekskantmønster
     for (i = [-9:9], j = [0:24]) {
       x = i * 5.2 + (j % 2) * 2.6; z = gZ0 + 6 + j * 4.5;
       if (abs(x) < gW/2 - 5 && z < gZ1 - 5 && !(abs(abs(x) - 24) < 3.5 && (abs(z - gZ0 - 4) < 3.5 || abs(z - gZ1 + 4) < 3.5)))
-        translate([x, -fT - 1, z]) rotate([-90, 0, 0]) rotate([0, 0, 30]) cylinder(d = 4.2, h = gT + 2, $fn = 6);
+        translate([x, -fT - gP - 1, z]) rotate([-90, 0, 0]) rotate([0, 0, 30]) cylinder(d = 4.2, h = gT + 2, $fn = 6);
     }
   }
 }
@@ -295,27 +315,28 @@ module power_icon(r) {
   translate([-0.4, -0.3]) square([0.8, r + 0.8]);
 }
 
-// ---------- TPU-membran over knapperaden ----------
-// Flat forside med preget ring og ikon for hver tast (printes med forsiden ned); stempler bak trykker på taktbryterne.
-module membran() { panel() membran_lok(); }
-module membran_lok() {   // i panelets ramme: forsiden ved w = 0, stemplene ned
+// ---------- knappehetter (PETG) ----------
+// i = 0: av/på, 1–4: favoritter. Pregede ikoner (0,4 mm) i toppen. Printes med toppen ned (flensen opp – ingen overheng
+// siden toppen er nesten flat; den svake avrundingen er 0,3 mm).
+module knapp_lok(i) {   // i panelets ramme med hullets senter i origo: toppen ved w = capUp
   difference() {
     union() {
-      translate([0, btnV, -memT]) linear_extrude(memT) rrect(memW, memH, memR);
-      for (x = btnX) translate([x, btnV, -plTip - tp]) cylinder(d = plD, h = plTip + tp - memT + 0.01);
+      translate([0, 0, -tp]) cylinder(d = capD, h = tp + capUp - 0.3);
+      translate([0, 0, capUp - 0.3]) cylinder(d1 = capD, d2 = capD - 0.8, h = 0.3);
+      translate([0, 0, -tp - flT]) cylinder(d = flD, h = flT);          // flens under panelet
+      translate([0, 0, nubTip]) cylinder(d = nubD, h = -tp - flT - nubTip + 0.01);  // nupp mot bryteren
     }
-    for (i = [0:4]) translate([btnX[i], btnV, -0.4]) linear_extrude(0.41) {
-      difference() { circle(d = keyD); circle(d = keyD - 1.0); }
-      if (i == 0) power_icon(2.4); else text(str(i), size = 4.2, font = "Liberation Sans:style=Bold", halign = "center", valign = "center");
+    translate([0, 0, capUp - 0.4]) linear_extrude(0.41) {
+      if (i == 0) power_icon(2.4); else text(str(i), size = 4.6, font = "Liberation Sans:style=Bold", halign = "center", valign = "center");
     }
   }
 }
+module knapper() { panel() for (i = [0:4]) translate([btnX[i], btnV, 0]) knapp_lok(i); }
 
 // ---------- pakninger og små TPU-deler (th = tykkelse; montert vises de sammenklemt) ----------
 module pakning_front(th = gkT) { ytz(0, th) front_gk2d(gkB, 0); }
 module pakning_bunn(th = gkT) { translate([0, 0, -th]) linear_extrude(th) bunn_gk2d(gkB); }
-module pakning_skjerm(th = skjT) { panel() translate([0, dispV, -ruteT - th]) linear_extrude(th) skjerm_gk2d(); }
-module rute() { panel() translate([0, dispV, -ruteT]) linear_extrude(ruteT) rrect(ruteW, ruteW, 1.5); }
+module rute() { panel() translate([0, dispV, -ruteT]) linear_extrude(ruteT) rrect(ruteW, ruteH, 2); }
 module krage() { panel() translate([0, ec11V, -krageS]) difference() { cylinder(d = krageD - 0.4, h = krageS + 0.5); translate([0, 0, -1]) cylinder(d = 5.6, h = 4); } }
 module dc_skive() { translate([dcX, D, connZ]) rotate([-90, 0, 0]) difference() { cylinder(d = 13, h = 1.0); translate([0, 0, -1]) cylinder(d = dcD + 0.1, h = 3); } }
 module usb_propp() {
@@ -325,14 +346,14 @@ module usb_propp() {
   }
 }
 
-// ---------- skjermklemme ----------
-// Flat bøyle som presser skjermkortet inn i lomma (2 × M2,5 × 8 selvgjengende rett i frontplaten).
-module skjermklemme() { panel() translate([0, dispV + pcbOffV, -tp - 2.4]) skjermklemme_lok(); }
-module skjermklemme_lok() {
-  difference() {
-    linear_extrude(2.4) offset(2) offset(-2) square([2 * clampX + 8, 8], center = true);
-    for (sx = [-1, 1]) translate([sx * clampX, 0, -1]) cylinder(d = 2.9, h = 5);
-    translate([0, 0, -1]) linear_extrude(5) square([10, 3.2], center = true);   // plass til ledninger
+// ---------- skjermmodulen (bare for visning og kollisjonssjekk, printes ikke) ----------
+module skjerm() {
+  panel() {
+    translate([0, dispV + glOffV, -tp]) color([0.05,0.05,0.06]) linear_extrude(glT) square([glW, glH], center = true);
+    translate([0, pcbV, -tp - 1.6]) color([0.1,0.25,0.15]) difference() {
+      linear_extrude(1.6) square([pcbW, pcbH], center = true);
+      for (sx = [-1, 1], sv = [-1, 1]) translate([sx * dHoleX, sv * dHoleV, -1]) cylinder(d = 3, h = 4);
+    }
   }
 }
 
@@ -343,12 +364,11 @@ module samlet(ex = 0) {
   color(c_mork) translate([0, 0, -ex]) bunn();
   color(c_gull) translate([0, 0, 0.8 * ex]) knott();
   color(c_gull) translate([0, -ex, 0]) logo();
-  color(c_mork) translate([0, 0, -0.6 * ex]) skjermklemme();
+  translate([0, 0, -0.6 * ex]) skjerm();
   color(c_klar) translate([0, 0, 1.6 * ex]) rute();
   color(c_tpu) translate([0, -0.5 * ex, 0]) pakning_front(ex > 0 ? gkT : gkD);
   color(c_tpu) translate([0, 0, -0.5 * ex]) pakning_bunn(ex > 0 ? gkT : gkD);
-  color(c_tpu) translate([0, 0, 1.1 * ex]) pakning_skjerm(ex > 0 ? skjT : skjS);
-  color(c_tpu) translate([0, 0, 1.2 * ex]) membran();
+  color(c_knapp) translate([0, 0, 1.2 * ex]) knapper();
   color(c_tpu) translate([0, 0, 0.5 * ex]) krage();
   color(c_tpu) translate([0, 0.5 * ex, 0]) dc_skive();
   color(c_tpu) translate([0, 0.5 * ex, 0]) usb_propp();
@@ -359,24 +379,23 @@ module fram_opp() { translate([0, 0, 0]) rotate([-90, 0, 0]) children(); }      
 if (part == "kropp") translate([0, 0, D]) rotate([-90, 0, 0]) kropp();                          // bakveggen ned
 else if (part == "front") fram_opp() front();                                                    // baksiden ned, forsiden opp
 else if (part == "logo") fram_opp() logo();                                                      // samme stilling som front
-else if (part == "grill") translate([0, 0, fT]) rotate([90, 0, 0]) grill();                         // forsiden ned
+else if (part == "grill") translate([0, 0, fT + gP]) rotate([90, 0, 0]) grill();                    // forsiden ned, tappene opp
 else if (part == "bunn") rotate([180, 0, 0]) bunn();                                             // innsiden ned, føttene opp
 else if (part == "knott") translate([0, 0, 0.6 + knobH]) rotate([180, 0, 0]) knott_lok();
-else if (part == "skjermklemme") skjermklemme_lok();
-else if (part == "rute") linear_extrude(ruteT) rrect(ruteW, ruteW, 1.5);
+else if (part == "rute") linear_extrude(ruteT) rrect(ruteW, ruteH, 2);
 else if (part == "pakning_front") rotate([90, 0, 0]) pakning_front();
 else if (part == "pakning_bunn") translate([0, 0, gkT]) pakning_bunn();
-else if (part == "pakning_skjerm") linear_extrude(skjT) skjerm_gk2d();
-else if (part == "membran") rotate([180, 0, 0]) membran_lok();                                   // forsiden ned, stemplene opp
+else if (part == "knapp") for (i = [0:4]) translate([i * (flD + 3), 0, capUp]) rotate([180, 0, 0]) knapp_lok(i);   // alle fem, toppen ned
+else if (part == "knapp_i") translate([0, 0, capUp]) rotate([180, 0, 0]) knapp_lok(ki);
 else if (part == "krage") difference() { cylinder(d = krageD - 0.4, h = krageS + 0.5); translate([0, 0, -1]) cylinder(d = 5.6, h = 4); }
 else if (part == "dc_skive") translate([0, 0, -D]) rotate([90, 0, 0]) dc_skive();
 else if (part == "usb_propp") translate([0, 0, D + 1]) rotate([-90, 0, 0]) usb_propp();
 else if (part == "eksplodert") samlet(25);
 else if (part == "a_kropp") kropp(); else if (part == "a_front") front(); else if (part == "a_grill") grill();
 else if (part == "a_bunn") bunn(); else if (part == "a_knott") knott(); else if (part == "a_logo") logo();
-else if (part == "a_skjermklemme") skjermklemme(); else if (part == "a_rute") rute();
+else if (part == "a_skjerm") skjerm(); else if (part == "a_rute") rute();
 else if (part == "a_pakning_front") pakning_front(gkD); else if (part == "a_pakning_bunn") pakning_bunn(gkD);
-else if (part == "a_pakning_skjerm") pakning_skjerm(skjS); else if (part == "a_membran") membran();
+else if (part == "a_knapp") knapper();
 else if (part == "a_krage") krage(); else if (part == "a_dc_skive") dc_skive(); else if (part == "a_usb_propp") usb_propp();
 else if (part == "takluft") panel() tak_hulrom();
 else if (part == "luft") difference() {   // lydkammerets luft (for volumberegning)
