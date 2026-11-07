@@ -456,7 +456,7 @@ struct V4SoundTab: View {
                 Spacer(minLength: 0)
                 Text("\(maxv)").mono(12, V4.ink2)
             }
-            V4Bar(value: Double(maxv - 40) / 60, height: 8, trackColor: V4.track, label: "Maks volum") { v in
+            V4Bar(value: Double(maxv - 40) / 60, height: 8, trackColor: V4.track, label: "Maks volum", haptics: false) { v in
                 let want = 40 + v * 60
                 let idx = Self.vmax.enumerated().min { abs(Double($0.element) - want) < abs(Double($1.element) - want) }?.offset ?? 0
                 if idx != (m.sset["vmax"] ?? 0) { Haptics.tick(); m.setS("vmax", idx) }
