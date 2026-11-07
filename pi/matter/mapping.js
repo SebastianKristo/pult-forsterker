@@ -35,6 +35,7 @@ export function statusTilMatter(s) {
   return {
     hoyttaler: { onOff: !!s.power, level: volumTilNivaa(s.volume) },
     demp: !!s.mute,
+    volum: { onOff: !s.mute, level: volumTilNivaa(s.volume) },   // dimbar lampe «Volum»: Apple Hjem viser ikke Speaker
     favoritter: fav,
     kilde: kildeTilModus(s.inputs, s.input),
   };
@@ -46,6 +47,8 @@ export function hendelseTilKall(type, verdi, inputs) {
     case "onOff": return { sti: "/api/power", body: { on: !!verdi } };
     case "level": return { sti: "/api/volume", body: { volume: nivaaTilVolum(verdi) } };
     case "demp": return { sti: "/api/mute", body: { mute: !!verdi } };
+    case "volumPa": return { sti: "/api/mute", body: { mute: !verdi } };
+    case "volumNivaa": return { sti: "/api/volume", body: { volume: nivaaTilVolum(verdi) } };
     case "favoritt": return verdi.on ? { sti: "/api/preset", body: { n: verdi.n } } : { sti: "/api/power", body: { on: false } };
     case "kilde": {
       const k = modusTilKilde(inputs, verdi);
