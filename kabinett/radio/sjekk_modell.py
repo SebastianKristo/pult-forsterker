@@ -8,7 +8,8 @@ STL-ene lages med  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_radio.scad
   2. ingen deler overlapper i montert stilling (høyttalerstoffet tas med, det skal ligge an mot grillrammen) (par som skal ligge an mot hverandre har bare kontaktflater)
   3. lydkammeret er tett: ett lukket rom når lokket og elementet er på (bare kabelhullet i gulvet er åpent),
      med netto volum 0,6–0,9 l (mono, ett 3″-element)
-  4. kroppens og bakplatas yttervegg er hel (≥ 2 mm) utenom de tiltenkte hullene"""
+  4. kroppens og bakplatas yttervegg er hel (≥ 2 mm) utenom de tiltenkte hullene
+  5. grillen med stoffet stikker 3 mm ut fra fronten (som Skjold Røst), mens gullista og panelet ligger i flukt"""
 import itertools
 import sys
 
@@ -109,6 +110,12 @@ if bad:
     print(f"FEIL yttervegg tynnere enn 2 mm på {len(bad)} punkter, f.eks. {bad[:6]}")
 else:
     print("OK  yttervegg ≥ 2 mm på sidene, toppen, gulvet og bakplata utenom tiltenkte hull")
+
+# --- grillen stikker 3 mm ut (som Røst); gullista står bare 0,4 mm ut, panelet (kroppen) er flatt ---
+ut_stoff, ut_grill, ut_list, ut_kropp = -A["stoff"].bounds[0][1], -A["grill"].bounds[0][1], -A["list"].bounds[0][1], -A["kropp"].bounds[0][1]
+good = abs(ut_stoff - 3.0) < 0.05 and abs(ut_grill - 2.5) < 0.05 and ut_list < 0.45 and abs(ut_kropp) < 0.01
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} grillen stikker {ut_stoff:.1f} mm ut (rammen {ut_grill:.1f} mm + stoffet), gullista {ut_list:.1f} mm, panelet i flukt")
 
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)

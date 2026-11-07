@@ -4,17 +4,17 @@ En lav bordradio med 4,3″ skjerm, seks favorittknapper, et stort navigasjonshj
 
 ![Skjold Radio, lys](render/02_skra_lys.png)
 
-Bilder: [forfra, lys](render/01_forfra_lys.png) · [skrått, lys](render/02_skra_lys.png) · [eksplodert, lys](render/03_eksplodert_lys.png) · [forfra, mørk](render/04_forfra_mork.png) · [skrått, mørk](render/05_skra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) · [bak](render/07_bak_lys.png)
+Bilder: [forfra, lys](render/01_forfra_lys.png) · [skrått, lys](render/02_skra_lys.png) · [eksplodert, lys](render/03_eksplodert_lys.png) · [forfra, mørk](render/04_forfra_mork.png) · [skrått, mørk](render/05_skra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) · [bak](render/07_bak_lys.png) · [nær, grillen og panelet](render/08_naer_lys.png). Skjermen i bildene viser det ekte skjermbildet fra skjold-ui (se [Skjermen](#skjermen)).
 
-Mål: 240 × 125 × 140 mm (B × D × H, uten knotter og gummiføtter). Hjulet stikker 15,6 mm ut fra fronten, volumknotten 13,6 mm. Forrige utgave var en stående radio på 236 × 145 × 205 mm med to elementer (stereo) under en vannrett gullist. Den nye er 65 mm lavere, fordi det bare er ett element og det sitter ved siden av betjeningspanelet i stedet for under. Første utgave var en lav pult med skjermen og knappene på den skrå toppen.
+Mål: 240 × 128 × 140 mm (B × D × H, med grillen, uten knotter og gummiføtter). Selve kassa er 125 mm dyp; grillen stikker 3 mm ut fra fronten, som på Skjold Røst. Hjulet stikker 15,6 mm ut fra fronten, volumknotten 13,6 mm. Forrige utgave var en stående radio på 236 × 145 × 205 mm med to elementer (stereo) under en vannrett gullist. Den nye er 65 mm lavere, fordi det bare er ett element og det sitter ved siden av betjeningspanelet i stedet for under. Første utgave var en lav pult med skjermen og knappene på den skrå toppen.
 
 ## Designet
 
 Radioen er en lav, liggende bordradio der alt vender mot deg. Fronten er loddrett, så du ser skjermen rett forfra og når knappene som på en vanlig radio, enten den står på kjøkkenbenken, i bokhylla eller på nattbordet.
 
-- **Fronten er delt i to av en tynn, loddrett gullist.** Til venstre er en grill trukket med mørkt, vevd høyttalerstoff foran det ene 3″-elementet. Stoffet ligger i flukt med fronten og er brettet rundt kanten, så ingen skjøter synes. Til høyre er et rolig betjeningspanel i kroppsfargen.
+- **Fronten er delt i to av en tynn, loddrett gullist.** Til venstre er en grill trukket med mørkt, vevd høyttalerstoff foran det ene 3″-elementet. Grillen stikker 3 mm ut fra fronten, akkurat som på Skjold Røst, så den leses som en egen, myk pute. Rammen har rundet forkant (R 1,5), og stoffet er trukket over den og brettet rundt kanten, så ingen skjøter synes. Gullista og panelet ligger i flukt med fronten. Til høyre er et rolig betjeningspanel i kroppsfargen.
 - **Betjeningspanelet har tre lag.** Øverst sitter skjermen, med overkanten i flukt med grillens overkant. Rett under den står favoritt 1–6 på én rad, like bred som skjermen. Nederst sitter av/på til venstre, den lille gullknotten for volum i midten og det store gullhjulet (Ø 42 mm) til høyre, i flukt med skjermens høyre kant.
-- **Gullhjulet** er det største elementet på radioen. Drei for å bla i favorittene, trykk for spill/pause.
+- **Gullhjulet** er det største elementet på radioen. Drei for å bla i favorittene, trykk for spill/pause, hold for menyen på skjermen.
 - **Skjold-formspråket:** myke hjørner (R14, som Node og Røst) sett forfra, faset frontkant hele veien rundt, lys kropp med mørkt høyttalerstoff og mørke knapper, gull hjul, volumknott og list, og SKJOLD preget over skjermen. Sidene, toppen og baksiden er helt rene.
 - **Mørk variant:** matt sort kropp, grafittgrått stoff og gullknapper. Bare filamentet byttes.
 
@@ -97,7 +97,7 @@ Prisene er **anslag i norske kroner per november 2026**, med frakt fra AliExpres
 
 ## Kabinettet
 
-Kabinettet er tegnet i [`skjold_radio.scad`](skjold_radio.scad) (OpenSCAD, parametrisk). [`lag_stl.sh`](lag_stl.sh) eksporterer alle STL-er, sjekker modellen ([`sjekk_modell.py`](sjekk_modell.py)) og lager 3MF-platene ([`lag_3mf.py`](lag_3mf.py)). [`lag_render.sh`](lag_render.sh) lager bildene i `render/` (uten skjerm: `xvfb-run -a ./lag_render.sh`).
+Kabinettet er tegnet i [`skjold_radio.scad`](skjold_radio.scad) (OpenSCAD, parametrisk). [`lag_stl.sh`](lag_stl.sh) eksporterer alle STL-er, sjekker modellen ([`sjekk_modell.py`](sjekk_modell.py)) og lager 3MF-platene ([`lag_3mf.py`](lag_3mf.py)). [`lag_render.sh`](lag_render.sh) lager bildene i `render/` (uten skjerm: `xvfb-run -a ./lag_render.sh`), og [`skjerm_i_render.py`](skjerm_i_render.py) legger skjermbildet inn på skjermen.
 
 | Del | STL | Volum | Print (FDM) |
 |---|---|---|---|
@@ -105,7 +105,7 @@ Kabinettet er tegnet i [`skjold_radio.scad`](skjold_radio.scad) (OpenSCAD, param
 | Bakplate (DC, linje ut, USB-C, lufting) | `stl/bak.stl` | 87 cm³ | Baksiden ned |
 | Lydkammer (baffel, ører) | `stl/kammer.stl` | 176 cm³ | Baffelen ned. 100 % fyll i baffelen gir minst resonans. |
 | Lokk for kammeret | `stl/lokk.stl` | 32 cm³ | Flatt |
-| Grillramme for høyttalerstoff (tre vinduer, to stag, flens og to ribber mot baffelen) | `stl/grill.stl` | 9,7 cm³ | Forsiden ned, ribbene opp. Ingen støtte. |
+| Grillramme for høyttalerstoff (tre vinduer, to stag, flens, to ribber mot baffelen; står 3 mm ut med rundet forkant) | `stl/grill.stl` | 18,8 cm³ | Forsiden ned, ribbene opp. Ingen støtte (den runde kanten R 1,5 ved platen går fint). |
 | Gullist (loddrett, 118 mm) | `stl/list.stl` | 0,6 cm³ | Forsiden ned |
 | Skjermbrakett med Pi-tårn | `stl/brakett.stl` | 13 cm³ | Flatt, tårnene opp |
 | Navigasjonshjul Ø 42 | `stl/knott.stl` | 7,5 cm³ | Toppen opp. Hult bakfra. |
@@ -121,7 +121,7 @@ Kabinettet er tegnet i [`skjold_radio.scad`](skjold_radio.scad) (OpenSCAD, param
 
 Tips for FDM: 0,16 mm lag, 3 vegger, 15 % gyroid. Bruk teksturert PEI for kroppen, så fronten får en jevn, matt struktur. Skjermvinduet, knappehullene og grillåpningen er gjennomgående hull rett opp fra platen, så kanten rundt dem blir skarp. Varm innpressmutterne inn med 220–240 °C.
 
-**Sjekket med `sjekk_modell.py`:** høyttalerstoffet (0,5 mm, brettet rundt rammen og flensen) er tatt med i kollisjonssjekken. Alle delene er vanntette og hver er ett legeme (knapp-fila har sju hetter). Alle ligger på platen og passer i K2. Ingen deler kolliderer i montert stilling. Kammeret er lukket i alle retninger når lokket og elementet er på, med ca. 0,74 l netto. Sidene, toppen, gulvet og bakplata er minst 2 mm overalt utenom de tiltenkte hullene.
+**Sjekket med `sjekk_modell.py`:** høyttalerstoffet (0,5 mm, over den utstikkende rammen, rundt den runde kanten og inn bak flensen) er tatt med i kollisjonssjekken. Grillen med stoffet stikker 3,0 mm ut, gullista 0,4 mm, og panelet ligger i flukt. Alle delene er vanntette og hver er ett legeme (knapp-fila har sju hetter). Alle ligger på platen og passer i K2. Ingen deler kolliderer i montert stilling. Kammeret er lukket i alle retninger når lokket og elementet er på, med ca. 0,74 l netto. Sidene, toppen, gulvet og bakplata er minst 2 mm overalt utenom de tiltenkte hullene.
 
 **Lydkammeret** er en egen boks med baffel (7 mm) og lokk med skumtape, bak venstre halvdel av fronten. Kroppen trenger derfor ikke være tett, og ventilasjonen til Pi-en og forsterkeren påvirker ikke bassen. Elementet skrus på baffelen forfra. Elementets ramme havner da 1 mm bak grillflensen med stoffet. Med ca. 0,74 l netto blir Qtc for RS75-4 ca. 0,95. Det gir en stram bass som likevel går godt ned for et 3″-element. Litt dempeull løst i kammeret gjør bassen enda jevnere. Bruker du et annet 3″-element, sjekk utsparingen (`drvCut`), rammen (`drvF`) og skruehullsirkelen (`drvPCD`) i `skjold_radio.scad`.
 
@@ -131,8 +131,8 @@ Alt monteres bakfra gjennom den åpne baksiden.
 
 1. **Innpressmuttere:** 5 i tårnene bak i kroppen, 6 bak i kammeret (lokket) og 4 i kammerørene (nedenfra).
 2. **Kammeret:** trekk høyttalerkabelen gjennom hullet i gulvet og tett med silikon. Skru elementet på baffelen (4 × M3 × 10 selvgjengende). Legg i litt dempeull. Legg skumtape rundt kanten og skru på lokket (6 × M3 × 8).
-3. **Høyttalerstoffet:** klipp en bit på ca. 120 × 140 mm, med trådene rett langs kantene. Legg den med vrangsiden opp på bordet og grillrammen med forsiden ned midt på. Spray tynt med kontaktlim på baksiden av flensen (dekk resten av rammen med papir) og vent 1–2 minutter til limet er klebrig. Brett stoffet rundt kanten og trykk det på flensen: først midt på langsidene, så midt på kortsidene, og strekk jevnt utover mot hjørnene, så trådene holder seg rette og stoffet ligger stramt uten bobler. I hjørnene klipper du bort en kile og legger stoffet i små folder. Skjær bort overskuddet innenfor flensen og la limet herde i en time. Stoffet ligger da over forsiden, rundt kanten og limt bak flensen, og de to stagene holder det flatt foran elementet. Bruk ikke for mye lim på forsiden: limet tetter stoffet og gir flekker.
-4. **Fronten:** trykk gullista inn i det loddrette sporet mellom grillen og panelet (en dråpe lim i hver ende). Legg grillrammen med stoffet inn i åpningen fra innsiden, så flensen ligger i falsen og stoffet flukter med fronten.
+3. **Høyttalerstoffet:** klipp en bit på ca. 120 × 140 mm, med trådene rett langs kantene. Legg den med vrangsiden opp på bordet og grillrammen med forsiden ned midt på. Spray tynt med kontaktlim på baksiden av flensen (dekk resten av rammen med papir) og vent 1–2 minutter til limet er klebrig. Brett stoffet rundt den runde forkanten og sidene og trykk det på flensen: først midt på langsidene, så midt på kortsidene, og strekk jevnt utover mot hjørnene, så trådene holder seg rette og stoffet ligger stramt uten bobler. I hjørnene klipper du bort en kile og legger stoffet i små folder. Skjær bort overskuddet innenfor flensen og la limet herde i en time. Stoffet ligger da over forsiden, rundt kanten og limt bak flensen, og de to stagene holder det flatt foran elementet. Bruk ikke for mye lim på forsiden: limet tetter stoffet og gir flekker.
+4. **Fronten:** trykk gullista inn i det loddrette sporet mellom grillen og panelet (en dråpe lim i hver ende). Legg grillrammen med stoffet inn i åpningen fra innsiden, så flensen ligger i falsen og grillen stikker 3 mm ut av åpningen foran.
 5. **Kammeret i kroppen:** skyv det inn bakfra mot grillen og skru det fast med 4 × M3 × 10 senkeskrue nedenfra i ørene. Ribbene på grillrammen ligger mot baffelen og holder grillen på plass. Grillen kan tas ut igjen bakfra hvis stoffet skal byttes.
 6. **Skjermen og Pi-en:** legg skjermmodulen i lomma bak vinduet, med 1 mm skumtape mot kanten. Skru Pi-en på tårnene bak på braketten (4 × M2,5), før DSI-flatkabelen gjennom slissen og skru braketten over skjermen (4 × M2,5 i tårnene på hver side).
 7. **Knappene:** sett de seks favoritthettene og av/på-hetta i hullene fra innsiden. Lodd seks taktbrytere på favorittkortet med 16 mm mellom, og skru det på de to tårnene under skjermen (M2,5). Lodd av/på-bryteren midt på det lille kortet og skru det på tårnene nede til venstre (M2,5).
@@ -157,15 +157,49 @@ sudo mkdir -p /etc/skjold && sudo cp config/radio_pins.yaml /etc/skjold/ && sudo
 ```
 
 ```bash
-sudo bash install_skjold_ui.sh
+sudo SKJOLD_UI_LAYOUT=radio bash install_skjold_ui.sh
 ```
 
-- **Skjermen:** legg inn DSI-linja fra Waveshares wiki for «4.3inch DSI LCD» i `/boot/firmware/config.txt`. skjold-ui viser da Skjold-skjermen i Chromium. skjold-ui er tegnet for 960 × 320 (S1). På 800 × 480 vises den, men oppsettet er ikke tilpasset ennå.
-- **Favoritt 1–6:** kort trykk spiller favoritten, hold 2 s lagrer det som spiller.
-- **Hjulet:** drei for å bla i favorittene (starter etter 0,6 s ro), trykk for spill/pause.
+Kommandoen over installerer skjold-ui med radioskjermen (800 × 480). Den skriver `SKJOLD_UI_LAYOUT=radio` i `/etc/ki-amp.env`, så `update.sh` holder den oppdatert.
+
+- **Skjermen:** legg inn DSI-linja fra Waveshares wiki for «4.3inch DSI LCD» i `/boot/firmware/config.txt`. skjold-ui åpner da radioskjermen i Chromium (se [Skjermen](#skjermen)).
+- **Favoritt 1–6:** kort trykk spiller favoritten, hold 2 s lagrer det som spiller («Lagret som favoritt 4» på skjermen).
+- **Hjulet:** drei for å bla i favorittene (starter etter 0,6 s ro), trykk for spill/pause, hold 0,8 s for menyen.
 - **Volumknotten:** drei for volum ±2, trykk for å dempe.
 - **Av/på:** kort trykk for av/på, hold 3 s for omstart.
 - **Endre pinner:** rediger `/etc/skjold/radio_pins.yaml` og kjør `sudo systemctl restart skjold-radio-knapper`.
+
+### Skjermen
+
+skjold-ui har et eget oppsett for radioens 4,3″-skjerm (800 × 480), i samme formspråk som S1-skjermen: uskarpt omslag i bakgrunnen, hvite brikker for det som er valgt og gull som aksent, samme gull som hjulet. Oppsettet velges med `?layout=radio` (kiosken på radioen gjør det), og automatisk når vinduet er omtrent 5:3. S1 (960 × 320) er uendret. Alt kommer fra daemonens vanlige API; skjermen har ingen egne data.
+
+| | |
+|---|---|
+| ![Nå spilles: NRK P3](render/skjerm-1-radio.png) | ![Nå spilles: AirPlay](render/skjerm-2-airplay.png) |
+| **Nå spilles (radio).** Kanallogo eller omslag, stasjonsnavn, hva som spilles nå, kilde og sjanger, klokke og neste vekking øverst. Nederst står favoritt 1–6, hver rett over sin fysiske knapp (16 mm deling). Den som spiller er hvit. | **Nå spilles (AirPlay, Spotify, Blåtann …).** Omslag, tittel, artist og album, enheten som spiller og fremdriftslinje når låten har lengde. |
+| ![Volum](render/skjerm-3-volum.png) | ![Hjulet blar](render/skjerm-4-bla.png) |
+| **Volum.** Når volumknotten dreies, vises volumet i 2,2 s. «DEMPET» blir stående mens lyden er dempet. | **Hjulet blar.** Drei hjulet: favoritten det starter på får gull ring, og «Favoritt 5 · Radio Norge – spilles om litt» vises. Den starter etter 0,6 s ro. |
+| ![Meny](render/skjerm-5-meny.png) | ![Meny › Radio](render/skjerm-6-meny-radio.png) |
+| **Menyen** (hold hjulet 0,8 s): Radio, Kilder, Bibliotek (bare når Plex eller Jellyfin er satt opp), Sovetimer, Vekkerklokke (når pluginen finnes) og Innstillinger. | **Radio:** favorittene og stasjonslistene fra radio-browser (populære i Norge og sjangre). Trykk spiller stasjonen og lukker menyen. |
+| ![Sovetimer](render/skjerm-7-sovetimer.png) | ![Nettverk](render/skjerm-8-nettverk.png) |
+| **Sovetimer:** av, 15–90 min. Tiden som er igjen vises øverst på skjermen. | **Innstillinger:** lysstyrke (Auto/Høy/Middels/Lav), klokke i standby, nettverk (Wi-Fi, signal, IP, navn) og om radioen. |
+| ![Standby](render/skjerm-9-standby.png) | ![Lagret](render/skjerm-10-lagret.png) |
+| **Standby:** når radioen er av, eller har stått stille i 5 min, vises en dempet klokke med dato og neste vekking. Den flytter seg litt hvert minutt. | **Lagret:** hold en favorittknapp i 2 s, så lagres det som spiller, og skjermen bekrefter det. |
+
+**Slik styrer knappene skjermen.** `skjold_radio_knapper.py` sender hver hendelse til skjold-ui først (`POST /ui/event`, se [`pi/skjold_ui/KONTRAKT.md`](../../pi/skjold_ui/KONTRAKT.md) § 4):
+
+| Knapp | Uten meny | Med meny åpen |
+|---|---|---|
+| Hjulet, drei | blar i favorittene (gull ring på skjermen) | blar i menyen |
+| Hjulet, trykk | spill/pause | velger |
+| Hjulet, hold 0,8 s | åpner menyen | tilbake ett nivå (fra toppen: lukker) |
+| Favoritt 1–6 | spiller (brikken blinker), hold 2 s lagrer | spiller og lukker menyen |
+| Volumknotten | volum, trykk demper | volum |
+| Av/på | av/på, hold 3 s omstart | av/på |
+
+Skjermen har også touch: trykk på en favoritt for å spille den, på omslaget for spill/pause og på klokka for menyen. Menyen lukker seg etter 30 s uten hjul. Lysstyrken styrer baklyset på DSI-skjermen (`/sys/class/backlight`). Auto demper skjermen mellom kl. 22 og 07.
+
+Skjermbildene lages med en falsk daemon: `node pi/skjold_ui/test_render.js kabinett/radio/render radio` (Playwright og Chromium). `lag_render.sh` legger «nå spilles» inn på skjermen i OpenSCAD-bildene (`skjerm_i_render.py`).
 
 ### Mono
 
@@ -205,7 +239,7 @@ Du kan bestille alle delene i resin (SLA) eller nylon (MJF) i stedet for å prin
 | Del | SLA resin (JLC3DP) | MJF PA12 sort (JLC3DP) | Craftcloud (EU, SLA/MJF) |
 |---|---|---|---|
 | Kropp (327 cm³, 240 × 140 × 125) | 750–1 400 kr | 800–1 550 kr | 1 500–3 000 kr |
-| Grillramme + gullist (10 cm³, stoffet kjøpes) | 60–130 kr | 80–160 kr | 200–400 kr |
+| Grillramme + gullist (19 cm³, stoffet kjøpes) | 80–170 kr | 100–200 kr | 220–450 kr |
 | Hjul + volumknott + 7 knappehetter (14 cm³) | 60–150 kr | 80–180 kr | 200–400 kr |
 | Lydkammer + lokk (208 cm³, usynlig) | 450–850 kr | 550–1 000 kr | – (print selv) |
 | Bakplate + brakett (100 cm³, synes bare bakfra) | 220–450 kr | 250–520 kr | – (print selv) |

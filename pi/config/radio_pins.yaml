@@ -5,7 +5,7 @@
 #   sudo systemctl restart skjold-radio-knapper
 presets: [5, 6, 12, 13, 16, 17]   # favoritt 1–6 (kort trykk = spill, hold 2 s = lagre det som spiller)
 power: 4                          # av/på (kort trykk = av/på, hold 3 s = omstart)
-wheel:                            # stort navigasjonshjul (EC11 med trykk): drei = bla i favoritter, trykk = spill/pause
+wheel:                            # stort navigasjonshjul (EC11 med trykk): drei = bla i favoritter, trykk = spill/pause, hold = meny
   a: 22
   b: 23
   sw: 24
@@ -19,3 +19,4 @@ timing:
   hold_save: 2.0
   hold_reboot: 3.0
   wheel_settle: 0.6               # vent så lenge etter siste hakk før favoritten startes
+  hold_menu: 0.8                  # hold hjulet så lenge for menyen på skjermen (i menyen: tilbake)

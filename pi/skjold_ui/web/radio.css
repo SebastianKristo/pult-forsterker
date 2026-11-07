@@ -1,0 +1,141 @@
+/* Skjold Radio – skjermen (4,3″ DSI, 800 × 480). Samme formspråk som S1-skjermen (s1_draw.js): uskarpt omslag bak,
+   glasskort, hvite brikker for det som er valgt, varm hvit tekst og gull som aksent (samme gull som hjulet). */
+:root {
+  --w: #f6f3ee;                       /* tekst (S1: W) */
+  --dm: rgba(246, 243, 238, .62);     /* undertekst (S1: Dm) */
+  --lo: rgba(246, 243, 238, .38);     /* svak tekst (S1: Lo) */
+  --glass: rgba(255, 255, 255, .08);
+  --edge: rgba(255, 255, 255, .12);
+  --gold: #d9a441;                    /* hjulet, volumknotten og gullista */
+  --live: #e5312b;
+  --ink: #111;
+  --f: "Helvetica Neue", Arial, "Liberation Sans", sans-serif;
+}
+html, body { margin: 0; width: 800px; height: 480px; overflow: hidden; background: #000; cursor: none; }
+body { font-family: var(--f); color: var(--w); -webkit-font-smoothing: antialiased; user-select: none; }
+#app { position: absolute; inset: 0; overflow: hidden; transition: filter .6s; }
+.hide { display: none !important; }
+
+/* ---------- bakgrunn: omslaget, uskarpt og mørklagt ---------- */
+#bg { position: absolute; inset: -60px; background-size: cover; background-position: center; filter: blur(42px) saturate(1.35); transform: scale(1.15); opacity: .95; transition: background-image .6s; }
+#scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.42), rgba(0,0,0,.62) 70%, rgba(0,0,0,.78)); }
+
+/* ---------- toppen: kilde, status og klokke ---------- */
+.top { position: absolute; left: 24px; right: 24px; top: 18px; height: 34px; display: flex; align-items: center; gap: 10px; }
+.chip { height: 30px; padding: 0 14px; border-radius: 15px; background: var(--glass); color: var(--lo); font: bold 14px var(--f); letter-spacing: .06em; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.chip.on { background: var(--w); color: var(--ink); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+.top .grow { flex: 1; }
+.stat { font: 15px var(--f); color: var(--dm); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.stat svg { width: 16px; height: 16px; fill: currentColor; }
+#clock { font: bold 30px var(--f); letter-spacing: -.01em; font-variant-numeric: tabular-nums; margin-left: 8px; }
+
+/* ---------- nå spilles ---------- */
+#art { position: absolute; left: 24px; top: 70px; width: 252px; height: 252px; border-radius: 12px; overflow: hidden; box-shadow: 0 18px 40px rgba(0,0,0,.45); background: #222; }
+#art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+#art img.logo { object-fit: contain; padding: 34px; box-sizing: border-box; background: #fff; }
+.ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: bold 54px var(--f); color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.25); letter-spacing: -.02em; text-align: center; padding: 18px; box-sizing: border-box; line-height: 1.05; }
+.ph::after { content: ""; position: absolute; right: 16px; top: 16px; width: 56px; height: 56px; border-radius: 50%; border: 2px solid rgba(255,255,255,.28); box-shadow: 0 0 0 9px rgba(255,255,255,.07), 0 0 0 18px rgba(255,255,255,.05); }
+#paused { position: absolute; left: 24px; top: 70px; width: 252px; height: 252px; border-radius: 12px; background: rgba(0,0,0,.42); display: flex; align-items: center; justify-content: center; }
+#paused i { width: 14px; height: 52px; background: var(--w); border-radius: 3px; margin: 0 7px; }
+
+.meta { position: absolute; left: 304px; right: 24px; top: 70px; height: 252px; display: flex; flex-direction: column; }
+#kicker { font: bold 14px var(--f); letter-spacing: .12em; color: var(--dm); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 6px; }
+#title { font: bold 46px/1.06 var(--f); letter-spacing: -.015em; margin-top: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#artist { font: 24px/1.25 var(--f); color: var(--dm); margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta .grow { flex: 1; }
+.prog { height: 44px; }
+.bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.18); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--w); border-radius: 3px; }
+.times { display: flex; justify-content: space-between; font: 16px var(--f); color: var(--dm); margin-top: 10px; font-variant-numeric: tabular-nums; }
+.live { height: 44px; display: flex; align-items: flex-end; gap: 12px; font: bold 14px var(--f); letter-spacing: .12em; color: var(--dm); }
+.live .eq { display: flex; align-items: flex-end; gap: 3px; height: 22px; }
+.live .eq b { width: 4px; background: var(--w); border-radius: 2px; animation: eq 1.1s ease-in-out infinite; }
+.live .eq b:nth-child(2) { animation-delay: -.35s; } .live .eq b:nth-child(3) { animation-delay: -.7s; } .live .eq b:nth-child(4) { animation-delay: -.2s; }
+@keyframes eq { 0%, 100% { height: 30%; } 50% { height: 100%; } }
+.paused .live .eq b { animation: none; height: 25%; }
+
+/* ---------- favoritter 1–6: hver brikke står rett over sin fysiske knapp ---------- */
+#favs { position: absolute; left: 0; right: 0; top: 350px; height: 116px; }
+.fav { position: absolute; top: 0; width: 120px; height: 104px; margin-left: -60px; border-radius: 14px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--edge); box-sizing: border-box; padding: 10px 12px; transition: background .2s, transform .2s; }
+.fav .num { position: absolute; left: 12px; top: 9px; font: 13px var(--f); color: var(--lo); }
+.fav .lg { position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; border-radius: 10px; overflow: hidden; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center; font: bold 15px var(--f); color: var(--w); }
+.fav .lg img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.fav .nm { position: absolute; left: 12px; right: 10px; bottom: 11px; font: bold 16px/1.15 var(--f); color: var(--w); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fav.empty .nm { font-weight: normal; color: var(--lo); font-size: 14px; }
+.fav::after { content: ""; position: absolute; left: 50%; bottom: -12px; margin-left: -6px; border: 6px solid transparent; border-top-color: rgba(255,255,255,.18); }   /* peker ned mot knappen */
+.fav.on { background: var(--w); box-shadow: none; }
+.fav.on .num, .fav.on .nm { color: var(--ink); }
+.fav.on .lg { background: var(--ink); color: var(--w); }
+.fav.on::after { border-top-color: var(--w); }
+.fav.cur { box-shadow: inset 0 0 0 3px var(--gold); transform: translateY(-4px); }   /* hjulet blar hit */
+.fav.cur::after { border-top-color: var(--gold); }
+.fav.flash { transform: scale(.96); }
+#browse { position: absolute; left: 304px; right: 24px; top: 292px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: bold 17px var(--f); letter-spacing: .08em; color: var(--gold); text-transform: uppercase; }
+
+/* ---------- volum ---------- */
+#vol { position: absolute; left: 304px; right: 24px; top: 232px; height: 90px; border-radius: 18px; background: rgba(20,20,20,.72); box-shadow: inset 0 0 0 1px var(--edge); backdrop-filter: blur(10px); display: flex; align-items: center; gap: 18px; padding: 0 22px; box-sizing: border-box; }
+#vol .lbl { font: bold 14px var(--f); letter-spacing: .12em; color: var(--dm); width: 64px; }
+#vol .bar { flex: 1; height: 10px; border-radius: 5px; }
+#vol .bar i { background: var(--gold); border-radius: 5px; }
+#vol .val { font: bold 46px var(--f); min-width: 78px; text-align: right; font-variant-numeric: tabular-nums; }
+#vol.muted .val { font-size: 28px; color: var(--dm); }
+
+/* ---------- melding ---------- */
+#toast { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); height: 40px; padding: 0 20px; border-radius: 20px; background: var(--w); color: var(--ink); font: bold 17px var(--f); display: flex; align-items: center; gap: 10px; white-space: nowrap; box-shadow: 0 10px 30px rgba(0,0,0,.4); z-index: 5; }
+#toast b { color: #8a6514; }
+
+/* ---------- meny (hjulet) ---------- */
+#menu { position: absolute; inset: 0; background: #000; z-index: 3; }
+#menu .crumb { position: absolute; left: 32px; top: 24px; font: bold 14px var(--f); letter-spacing: .14em; color: var(--dm); text-transform: uppercase; }
+#menu .crumb b { color: var(--w); }
+#menu .mclock { position: absolute; right: 28px; top: 16px; font: bold 26px var(--f); font-variant-numeric: tabular-nums; }
+#menu .list { position: absolute; left: 16px; top: 62px; width: 432px; height: 358px; overflow: hidden; border-right: 1px solid rgba(255,255,255,.1); }
+#menu .row { position: absolute; left: 0; right: 16px; height: 50px; border-radius: 12px; display: flex; align-items: center; padding: 0 16px; box-sizing: border-box; font: 25px var(--f); color: var(--w); gap: 12px; transition: top .15s; }
+#menu .row .v { margin-left: auto; font: 19px var(--f); color: var(--dm); white-space: nowrap; }
+#menu .row .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#menu .row.back { color: var(--dm); font-size: 21px; }
+#menu .row.dis { color: var(--lo); }
+#menu .row.sel { background: var(--w); color: var(--ink); font-weight: bold; }
+#menu .row.sel .v { color: rgba(0,0,0,.6); font-weight: normal; }
+#menu .row .ck { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--lo); box-sizing: border-box; flex: none; }
+#menu .row .ck.on { border: 7px solid var(--gold); }
+#menu .row.sel .ck { border-color: rgba(0,0,0,.35); }
+#menu .row.sel .ck.on { border-color: #b8862c; }
+#menu .row .ic { width: 26px; height: 26px; flex: none; fill: currentColor; opacity: .9; }
+#menu .row .sub { margin-left: auto; width: 10px; height: 10px; border-right: 2px solid currentColor; border-top: 2px solid currentColor; transform: rotate(45deg); opacity: .55; flex: none; }
+#menu .row .v + .sub { margin-left: 10px; }
+#menu .scroll { position: absolute; left: 444px; top: 62px; width: 3px; border-radius: 2px; background: var(--w); opacity: .5; }
+#menu .det { position: absolute; left: 480px; right: 28px; top: 70px; height: 340px; }
+#menu .det .big { font: bold 40px/1.1 var(--f); letter-spacing: -.01em; margin-top: 10px; }
+#menu .det .art { width: 120px; height: 120px; border-radius: 14px; overflow: hidden; position: relative; background: #222; }
+#menu .det .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+#menu .det .art .ph { font-size: 26px; padding: 8px; }
+#menu .det .art .ph::after { display: none; }
+#menu .det p { font: 19px/1.4 var(--f); color: var(--dm); margin: 14px 0 0; }
+#menu .det .kv { font: 18px/1.5 var(--f); color: var(--dm); margin-top: 16px; }
+#menu .det .kv b { color: var(--w); font-weight: bold; }
+#menu .hint { position: absolute; left: 32px; right: 28px; bottom: 18px; font: 16px var(--f); color: var(--gold); display: flex; gap: 22px; }
+#menu .hint span { display: inline-flex; align-items: center; gap: 8px; }
+#menu .hint i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--gold); box-sizing: border-box; display: inline-block; }
+#menu .tbar { position: absolute; left: 32px; right: 28px; bottom: 50px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.1); }
+#menu .tbar i { display: block; height: 100%; background: rgba(255,255,255,.4); border-radius: 2px; }
+#menu .spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255,255,255,.2); border-top-color: var(--w); animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- standby / klokke ---------- */
+#standby { position: absolute; inset: 0; background: #000; z-index: 4; display: flex; align-items: center; justify-content: center; color: var(--w); }
+#standby .sbw { display: flex; flex-direction: column; align-items: center; }
+#standby .sc { font: 200 156px/1 var(--f); letter-spacing: -.02em; font-variant-numeric: tabular-nums; opacity: .62; }
+#standby .sd { font: 28px var(--f); color: var(--dm); opacity: .7; margin-top: 18px; }
+#standby .sa { font: 19px var(--f); color: var(--gold); opacity: .65; margin-top: 26px; display: flex; gap: 22px; }
+#standby .sa span { display: inline-flex; align-items: center; gap: 8px; }
+#standby .sa svg { width: 18px; height: 18px; fill: currentColor; }
+#standby .sn { position: absolute; bottom: 22px; font: bold 13px var(--f); letter-spacing: .3em; color: var(--lo); opacity: .6; }
+
+/* ---------- hilsen ---------- */
+#greet { position: absolute; inset: 0; z-index: 6; background: radial-gradient(circle at 50% 40%, #3a2a10, #000 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+#greet .g1 { font: bold 22px var(--f); letter-spacing: .2em; color: var(--gold); }
+#greet .g2 { font: bold 60px/1.1 var(--f); margin-top: 16px; }
+#greet .g3 { font: 18px var(--f); color: var(--dm); margin-top: 26px; }
