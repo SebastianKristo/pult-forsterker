@@ -16,6 +16,17 @@ for v in kort full; do
   for p in topp bunn logo vindu hetter symboler kort skjerm batteri mcu lader ir vib motor flex ledninger; do
     openscad -q -D "part=\"A_$p\"" -D "variant=\"$v\"" -o "$A/$p.stl" skjold_fjernkontroll.scad &
   done
+  openscad -q -D 'part="A_frontplate"' -D "variant=\"$v\"" -o "$A/front.stl" skjold_fjernkontroll.scad &
+  # frontplatene: utskrift i $S/front_<oppsett>/ og montert stilling i $A/front_<oppsett>/
+  for o in rutenett vannrett stor; do
+    mkdir -p "$S/front_$o" "$A/front_$o"
+    for p in frontplate front_knapper front_symboler; do
+      openscad -q -D "part=\"$p\"" -D "variant=\"$v\"" -D "oppsett=\"$o\"" -o "$S/front_$o/$p.stl" skjold_fjernkontroll.scad &
+    done
+    for p in frontplate hetter symboler; do
+      openscad -q -D "part=\"A_$p\"" -D "variant=\"$v\"" -D "oppsett=\"$o\"" -o "$A/front_$o/$p.stl" skjold_fjernkontroll.scad &
+    done
+  done
 done
 openscad -q -D 'part="kort_omriss"' -D 'variant="kort"' -o tastekort/kort_omriss.dxf skjold_fjernkontroll.scad &
 openscad -q -D 'part="kort_omriss"' -D 'variant="full"' -o tastekort_full/kort_omriss.dxf skjold_fjernkontroll.scad &

@@ -2,7 +2,7 @@
 # Dette er standardvarianten (uten talltastene og smarthus-raden). Full variant med talltaster og smarthus-rad:
 # skjold-fjernkontroll-full.yaml, laget av kabinett/fjernkontroll/taster.py fra denne fila.
 # Maskinvare (se kabinett/fjernkontroll/LES_MEG.md): ESP32-S3 SuperMini, 2,8″ IPS ST7789 + FT6336U berøring (naken FPC-modul),
-# 2 × TCA9555 på tastekortet (14 taster + vibrator, skjermstrøm og ladestatus), 3 × IR-diode 940 nm, VS1838B,
+# 3 × TCA9555 på tastekortet (8 faste taster + vibrator, skjermstrøm og ladestatus, og 35 brytere i rutenettet under frontplaten), 3 × IR-diode 940 nm, VS1838B,
 # vibrasjonsbryter (vekker når du løfter den), LiPo 603450 og TP4056 med USB-C.
 #
 #   · Skjermen: Aktiviteter · Spiller (nå spilles, cover, volum) · Kilder og radiofavoritter · Hjem (lys og scener) ·
@@ -12,6 +12,8 @@
 #   · IR: sender og lærer NEC, Samsung, Sony, RC5 og LG. Lærte koder lagres i flash (48 plasser: én per tast + 4 makroer).
 #   · Hver tast sendes til Home Assistant som en hendelse (event-entiteten «Tast» og esphome.skjold_fjernkontroll),
 #     så du kan bruke hvilken som helst tast i en automasjon.
+#   · Frontplaten (tasteblokken under D-paden) kan byttes: tastekortet har et rutenett med 7 × 5 brytere, og
+#     select-entiteten «Frontplate» velger hvilken bryter som er hvilken tast (oppsettene lages av taster.py).
 #   · Meny-tasten: kort trykk = meny (Kilder, eller lært IR-kode i TV/film), langt trykk = guide (Spiller-siden).
 #   · Dyp søvn etter ${sovn_etter} uten bruk. Vekkes av en tast (TCA9555 INT → GPIO2) eller av at du løfter den
 #     (vibrasjonsbryter → GPIO4).
@@ -23,7 +25,8 @@ substitutions:
   friendly_name: Skjold Fjernkontroll
   skjold_host: skjold.local          # Skjold-enheten fjernkontrollen styrer først (velg andre rom på skjermen)
   skjold_port: "8765"
-  ekstra_hub: tca_b                  # brikken med vibrator, skjermstrøm og ladestatus (full variant: tca_c)
+  ekstra_hub: tca_c                  # brikken med vibrator, skjermstrøm og ladestatus (full variant: tca_d)
+  oppsett: rutenett                  # frontplaten som sitter på: rutenett (A), vannrett (B) eller stor (C); kan byttes i HA
   sovn_etter: 40s                    # dyp søvn etter så lang tid uten tast eller berøring
   tv_kilde: aux                      # Skjold-inngangen TV-en er koblet til (aux, aux2, usb, bt …)
   # Home Assistant (krever «Tillat enheten å utføre handlinger i Home Assistant» i ESPHome-integrasjonen)
@@ -123,6 +126,7 @@ i2c:
 tca9555:
   - { id: tca_a, i2c_id: bus_a, address: 0x20 }
   - { id: tca_b, i2c_id: bus_a, address: 0x21 }
+  - { id: tca_c, i2c_id: bus_a, address: 0x22 }
 
 spi:
   clk_pin: GPIO9
@@ -237,7 +241,15 @@ globals:
 # >>> navneliste (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   - id: taster_navn
     type: std::vector<std::string>
-    initial_value: '{"av", "hjem", "meny", "opp", "ned", "venstre", "hoyre", "ok", "tilbake", "avslutt", "spill_pause", "vol_opp", "vol_ned", "demp"}'
+    initial_value: '{"av", "hjem", "meny", "opp", "ned", "venstre", "hoyre", "ok", "tilbake", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned"}'
+  # rutenettbryter → funksjon for hver frontplate (rutenett, vannrett, stor)
+  - id: oppsett_kart
+    type: std::vector<std::vector<std::string>>
+    initial_value: '{{"", "tilbake", "", "", "", "vol_opp", "", "", "", "", "", "", "", "", "", "avslutt", "", "", "", "vol_ned", "", "", "", "", "", "", "", "", "", "spill_pause", "", "", "", "demp", ""}, {"", "", "", "", "", "", "", "vol_ned", "", "", "", "", "", "vol_opp", "", "", "", "", "", "", "", "tilbake", "", "spill_pause", "", "demp", "", "avslutt", "", "", "", "", "", "", ""}, {"tilbake", "", "", "", "", "", "avslutt", "", "", "", "", "", "", "", "", "", "", "spill_pause", "", "", "", "", "", "", "", "", "", "", "vol_ned", "", "", "demp", "", "", "vol_opp"}}'
+  - id: oppsett_nr
+    type: int
+    restore_value: true
+    initial_value: '0'
 # <<< navneliste
 
 # ---------- sensorer ----------
@@ -383,77 +395,985 @@ binary_sensor:
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
         then: [ { script.execute: { id: tast, navn: "ok", lang: false } } ]
   - platform: gpio
-    id: t_tilbake
-    name: "Tast Tilbake"
+    id: t_g00
+    name: "Tast Rutenett r0 k0"
     internal: true
     pin: { tca9555: tca_a, number: 8, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][0]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][0];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g00 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][0];', lang: false }
+                  - delay: 160ms
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tilbake", lang: true } } ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][0]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][0];', lang: true } } ]
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tilbake", lang: false } } ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][0]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][0];', lang: false } } ]
   - platform: gpio
-    id: t_avslutt
-    name: "Tast Avslutt"
+    id: t_g01
+    name: "Tast Rutenett r0 k1"
     internal: true
     pin: { tca9555: tca_a, number: 9, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][1]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][1];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g01 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][1];', lang: false }
+                  - delay: 160ms
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "avslutt", lang: true } } ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][1]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][1];', lang: true } } ]
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "avslutt", lang: false } } ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][1]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][1];', lang: false } } ]
   - platform: gpio
-    id: t_spill_pause
-    name: "Tast Spill-pause"
+    id: t_g02
+    name: "Tast Rutenett r0 k2"
     internal: true
     pin: { tca9555: tca_a, number: 10, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][2]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][2];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g02 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][2];', lang: false }
+                  - delay: 160ms
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "spill_pause", lang: true } } ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][2]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][2];', lang: true } } ]
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "spill_pause", lang: false } } ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][2]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][2];', lang: false } } ]
   - platform: gpio
-    id: t_vol_opp
-    name: "Tast Volum +"
+    id: t_g03
+    name: "Tast Rutenett r0 k3"
     internal: true
     pin: { tca9555: tca_a, number: 11, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
-      - script.execute: { id: tast, navn: "vol_opp", lang: false }
-      - delay: 450ms
-      - while:
-          condition: { binary_sensor.is_on: t_vol_opp }
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][3]; return f == "vol_opp" || f == "vol_ned";' }
           then:
-            - script.execute: { id: tast, navn: "vol_opp", lang: false }
-            - delay: 160ms
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][3];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g03 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][3];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][3]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][3];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][3]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][3];', lang: false } } ]
   - platform: gpio
-    id: t_vol_ned
-    name: "Tast Volum −"
+    id: t_g04
+    name: "Tast Rutenett r0 k4"
     internal: true
     pin: { tca9555: tca_a, number: 12, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
-      - script.execute: { id: tast, navn: "vol_ned", lang: false }
-      - delay: 450ms
-      - while:
-          condition: { binary_sensor.is_on: t_vol_ned }
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][4]; return f == "vol_opp" || f == "vol_ned";' }
           then:
-            - script.execute: { id: tast, navn: "vol_ned", lang: false }
-            - delay: 160ms
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][4];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g04 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][4];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][4]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][4];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][4]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][4];', lang: false } } ]
   - platform: gpio
-    id: t_demp
-    name: "Tast Demp"
+    id: t_g05
+    name: "Tast Rutenett r0 k5"
     internal: true
     pin: { tca9555: tca_a, number: 13, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][5]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][5];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g05 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][5];', lang: false }
+                  - delay: 160ms
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "demp", lang: true } } ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][5]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][5];', lang: true } } ]
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "demp", lang: false } } ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][5]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][5];', lang: false } } ]
+  - platform: gpio
+    id: t_g06
+    name: "Tast Rutenett r0 k6"
+    internal: true
+    pin: { tca9555: tca_a, number: 14, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][6]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][6];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g06 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][6];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][6]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][6];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][6]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][6];', lang: false } } ]
+  - platform: gpio
+    id: t_g07
+    name: "Tast Rutenett r1 k0"
+    internal: true
+    pin: { tca9555: tca_a, number: 15, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][7]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][7];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g07 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][7];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][7]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][7];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][7]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][7];', lang: false } } ]
+  - platform: gpio
+    id: t_g08
+    name: "Tast Rutenett r1 k1"
+    internal: true
+    pin: { tca9555: tca_b, number: 0, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][8]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][8];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g08 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][8];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][8]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][8];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][8]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][8];', lang: false } } ]
+  - platform: gpio
+    id: t_g09
+    name: "Tast Rutenett r1 k2"
+    internal: true
+    pin: { tca9555: tca_b, number: 1, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][9]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][9];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g09 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][9];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][9]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][9];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][9]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][9];', lang: false } } ]
+  - platform: gpio
+    id: t_g10
+    name: "Tast Rutenett r1 k3"
+    internal: true
+    pin: { tca9555: tca_b, number: 2, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][10]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][10];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g10 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][10];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][10]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][10];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][10]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][10];', lang: false } } ]
+  - platform: gpio
+    id: t_g11
+    name: "Tast Rutenett r1 k4"
+    internal: true
+    pin: { tca9555: tca_b, number: 3, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][11]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][11];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g11 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][11];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][11]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][11];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][11]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][11];', lang: false } } ]
+  - platform: gpio
+    id: t_g12
+    name: "Tast Rutenett r1 k5"
+    internal: true
+    pin: { tca9555: tca_b, number: 4, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][12]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][12];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g12 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][12];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][12]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][12];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][12]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][12];', lang: false } } ]
+  - platform: gpio
+    id: t_g13
+    name: "Tast Rutenett r1 k6"
+    internal: true
+    pin: { tca9555: tca_b, number: 5, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][13]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][13];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g13 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][13];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][13]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][13];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][13]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][13];', lang: false } } ]
+  - platform: gpio
+    id: t_g14
+    name: "Tast Rutenett r2 k0"
+    internal: true
+    pin: { tca9555: tca_b, number: 6, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][14]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][14];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g14 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][14];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][14]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][14];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][14]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][14];', lang: false } } ]
+  - platform: gpio
+    id: t_g15
+    name: "Tast Rutenett r2 k1"
+    internal: true
+    pin: { tca9555: tca_b, number: 7, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][15]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][15];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g15 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][15];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][15]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][15];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][15]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][15];', lang: false } } ]
+  - platform: gpio
+    id: t_g16
+    name: "Tast Rutenett r2 k2"
+    internal: true
+    pin: { tca9555: tca_b, number: 8, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][16]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][16];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g16 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][16];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][16]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][16];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][16]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][16];', lang: false } } ]
+  - platform: gpio
+    id: t_g17
+    name: "Tast Rutenett r2 k3"
+    internal: true
+    pin: { tca9555: tca_b, number: 9, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][17]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][17];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g17 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][17];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][17]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][17];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][17]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][17];', lang: false } } ]
+  - platform: gpio
+    id: t_g18
+    name: "Tast Rutenett r2 k4"
+    internal: true
+    pin: { tca9555: tca_b, number: 10, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][18]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][18];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g18 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][18];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][18]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][18];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][18]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][18];', lang: false } } ]
+  - platform: gpio
+    id: t_g19
+    name: "Tast Rutenett r2 k5"
+    internal: true
+    pin: { tca9555: tca_b, number: 11, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][19]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][19];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g19 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][19];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][19]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][19];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][19]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][19];', lang: false } } ]
+  - platform: gpio
+    id: t_g20
+    name: "Tast Rutenett r2 k6"
+    internal: true
+    pin: { tca9555: tca_b, number: 12, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][20]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][20];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g20 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][20];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][20]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][20];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][20]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][20];', lang: false } } ]
+  - platform: gpio
+    id: t_g21
+    name: "Tast Rutenett r3 k0"
+    internal: true
+    pin: { tca9555: tca_b, number: 13, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][21]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][21];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g21 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][21];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][21]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][21];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][21]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][21];', lang: false } } ]
+  - platform: gpio
+    id: t_g22
+    name: "Tast Rutenett r3 k1"
+    internal: true
+    pin: { tca9555: tca_b, number: 14, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][22]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][22];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g22 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][22];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][22]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][22];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][22]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][22];', lang: false } } ]
+  - platform: gpio
+    id: t_g23
+    name: "Tast Rutenett r3 k2"
+    internal: true
+    pin: { tca9555: tca_b, number: 15, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][23]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][23];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g23 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][23];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][23]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][23];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][23]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][23];', lang: false } } ]
+  - platform: gpio
+    id: t_g24
+    name: "Tast Rutenett r3 k3"
+    internal: true
+    pin: { tca9555: tca_c, number: 0, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][24]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][24];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g24 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][24];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][24]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][24];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][24]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][24];', lang: false } } ]
+  - platform: gpio
+    id: t_g25
+    name: "Tast Rutenett r3 k4"
+    internal: true
+    pin: { tca9555: tca_c, number: 1, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][25]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][25];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g25 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][25];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][25]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][25];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][25]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][25];', lang: false } } ]
+  - platform: gpio
+    id: t_g26
+    name: "Tast Rutenett r3 k5"
+    internal: true
+    pin: { tca9555: tca_c, number: 2, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][26]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][26];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g26 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][26];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][26]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][26];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][26]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][26];', lang: false } } ]
+  - platform: gpio
+    id: t_g27
+    name: "Tast Rutenett r3 k6"
+    internal: true
+    pin: { tca9555: tca_c, number: 3, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][27]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][27];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g27 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][27];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][27]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][27];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][27]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][27];', lang: false } } ]
+  - platform: gpio
+    id: t_g28
+    name: "Tast Rutenett r4 k0"
+    internal: true
+    pin: { tca9555: tca_c, number: 4, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][28]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][28];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g28 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][28];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][28]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][28];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][28]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][28];', lang: false } } ]
+  - platform: gpio
+    id: t_g29
+    name: "Tast Rutenett r4 k1"
+    internal: true
+    pin: { tca9555: tca_c, number: 5, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][29]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][29];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g29 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][29];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][29]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][29];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][29]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][29];', lang: false } } ]
+  - platform: gpio
+    id: t_g30
+    name: "Tast Rutenett r4 k2"
+    internal: true
+    pin: { tca9555: tca_c, number: 6, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][30]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][30];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g30 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][30];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][30]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][30];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][30]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][30];', lang: false } } ]
+  - platform: gpio
+    id: t_g31
+    name: "Tast Rutenett r4 k3"
+    internal: true
+    pin: { tca9555: tca_c, number: 7, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][31]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][31];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g31 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][31];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][31]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][31];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][31]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][31];', lang: false } } ]
+  - platform: gpio
+    id: t_g32
+    name: "Tast Rutenett r4 k4"
+    internal: true
+    pin: { tca9555: tca_c, number: 8, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][32]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][32];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g32 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][32];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][32]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][32];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][32]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][32];', lang: false } } ]
+  - platform: gpio
+    id: t_g33
+    name: "Tast Rutenett r4 k5"
+    internal: true
+    pin: { tca9555: tca_c, number: 9, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][33]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][33];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g33 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][33];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][33]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][33];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][33]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][33];', lang: false } } ]
+  - platform: gpio
+    id: t_g34
+    name: "Tast Rutenett r4 k6"
+    internal: true
+    pin: { tca9555: tca_c, number: 10, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - if:
+          condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][34]; return f == "vol_opp" || f == "vol_ned";' }
+          then:
+            - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][34];', lang: false }
+            - delay: 450ms
+            - while:
+                condition: { binary_sensor.is_on: t_g34 }
+                then:
+                  - script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][34];', lang: false }
+                  - delay: 160ms
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][34]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][34];', lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then:
+          - if:
+              condition: { lambda: 'const std::string &f = id(oppsett_kart)[id(oppsett_nr)][34]; return !f.empty() && f != "vol_opp" && f != "vol_ned";' }
+              then: [ { script.execute: { id: tast, navn: !lambda 'return id(oppsett_kart)[id(oppsett_nr)][34];', lang: false } } ]
 # <<< taster
 
 event:
@@ -474,9 +1394,9 @@ event:
       - tilbake
       - avslutt
       - spill_pause
+      - demp
       - vol_opp
       - vol_ned
-      - demp
       - av_lang
       - hjem_lang
       - meny_lang
@@ -1011,3 +1931,18 @@ lvgl:
         - button: { x: 179, y: 152, width: 53, height: 28, widgets: [ { label: { align: CENTER, text: "Ekstra" } } ], on_click: [ { script.execute: { id: laer_start, plass: 47 } } ] }
         - button: { x: 8, y: 236, width: 108, height: 30, widgets: [ { label: { align: CENTER, text: "Ferdig" } } ], on_click: [ { lambda: "id(laer_steg) = 0;" }, { lvgl.page.show: side_hjem } ] }
         - button: { x: 124, y: 236, width: 108, height: 30, bg_color: 0xE8B450, widgets: [ { label: { align: CENTER, text: "Lagre", text_color: 0x101012 } } ], on_click: [ script.execute: laer_lagre ] }
+
+# ---------- frontplate ----------
+select:
+# >>> oppsettvalg (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
+  - platform: template
+    id: oppsett_valg
+    name: Frontplate
+    icon: mdi:view-grid-outline
+    optimistic: true
+    restore_value: true
+    initial_option: ${oppsett}
+    options: [ rutenett, vannrett, stor ]
+    on_value:
+      - lambda: 'id(oppsett_nr) = i;'
+# <<< oppsettvalg

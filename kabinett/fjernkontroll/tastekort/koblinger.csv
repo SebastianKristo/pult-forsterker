@@ -7,13 +7,42 @@ ned,Ned,A,0x20,P0_4,4
 venstre,Venstre,A,0x20,P0_5,5
 hoyre,Høyre,A,0x20,P0_6,6
 ok,OK,A,0x20,P0_7,7
-tilbake,Tilbake,A,0x20,P1_0,8
-avslutt,Avslutt,A,0x20,P1_1,9
-spill_pause,Spill-pause,A,0x20,P1_2,10
-vol_opp,Volum +,A,0x20,P1_3,11
-vol_ned,Volum −,A,0x20,P1_4,12
-demp,Demp,A,0x20,P1_5,13
-vibrator,utgang: vibrasjonsmotor (via AO3400),B,0x21,P1_4,12
-strom_skjerm,"utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)",B,0x21,P1_5,13
-lader,inngang: TP4056 CHRG (lav = lader),B,0x21,P1_6,14
-ledig,ledig,B,0x21,P1_7,15
+g00,Rutenett r0 k0,A,0x20,P1_0,8
+g01,Rutenett r0 k1,A,0x20,P1_1,9
+g02,Rutenett r0 k2,A,0x20,P1_2,10
+g03,Rutenett r0 k3,A,0x20,P1_3,11
+g04,Rutenett r0 k4,A,0x20,P1_4,12
+g05,Rutenett r0 k5,A,0x20,P1_5,13
+g06,Rutenett r0 k6,A,0x20,P1_6,14
+g07,Rutenett r1 k0,A,0x20,P1_7,15
+g08,Rutenett r1 k1,B,0x21,P0_0,0
+g09,Rutenett r1 k2,B,0x21,P0_1,1
+g10,Rutenett r1 k3,B,0x21,P0_2,2
+g11,Rutenett r1 k4,B,0x21,P0_3,3
+g12,Rutenett r1 k5,B,0x21,P0_4,4
+g13,Rutenett r1 k6,B,0x21,P0_5,5
+g14,Rutenett r2 k0,B,0x21,P0_6,6
+g15,Rutenett r2 k1,B,0x21,P0_7,7
+g16,Rutenett r2 k2,B,0x21,P1_0,8
+g17,Rutenett r2 k3,B,0x21,P1_1,9
+g18,Rutenett r2 k4,B,0x21,P1_2,10
+g19,Rutenett r2 k5,B,0x21,P1_3,11
+g20,Rutenett r2 k6,B,0x21,P1_4,12
+g21,Rutenett r3 k0,B,0x21,P1_5,13
+g22,Rutenett r3 k1,B,0x21,P1_6,14
+g23,Rutenett r3 k2,B,0x21,P1_7,15
+g24,Rutenett r3 k3,C,0x22,P0_0,0
+g25,Rutenett r3 k4,C,0x22,P0_1,1
+g26,Rutenett r3 k5,C,0x22,P0_2,2
+g27,Rutenett r3 k6,C,0x22,P0_3,3
+g28,Rutenett r4 k0,C,0x22,P0_4,4
+g29,Rutenett r4 k1,C,0x22,P0_5,5
+g30,Rutenett r4 k2,C,0x22,P0_6,6
+g31,Rutenett r4 k3,C,0x22,P0_7,7
+g32,Rutenett r4 k4,C,0x22,P1_0,8
+g33,Rutenett r4 k5,C,0x22,P1_1,9
+g34,Rutenett r4 k6,C,0x22,P1_2,10
+vibrator,utgang: vibrasjonsmotor (via AO3400),C,0x22,P1_4,12
+strom_skjerm,"utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)",C,0x22,P1_5,13
+lader,inngang: TP4056 CHRG (lav = lader),C,0x22,P1_6,14
+ledig,ledig,C,0x22,P1_7,15

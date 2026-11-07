@@ -105,6 +105,13 @@ def write(fn, title, parts, colors):
 STL = "stl"
 
 
+FRONT = {o: (f"Skjold Fjernkontroll – frontplate {navn}", [
+    (f"front_{o}/frontplate", "Frontplate (forsiden ned)", 1, (20, 20), None),
+    (f"front_{o}/front_knapper", "Taster til frontplaten (flensen ned)", 2, (90, 30), None),
+    (f"front_{o}/front_symboler", "Symboler på frontplatetastene", 1, None, f"front_{o}/front_knapper"),
+], {1: "#ECE9E3", 2: "#2E2D2C"}) for o, navn in taster.OPPSETT_NAVN.items()}
+
+
 def plater(variant):
     """{filnavn: (tittel, deler, farger)} for varianten. Full variant er 254,5 mm, lengre enn plata (250 mm):
     toppen og bunnen ligger da på hver sin plate, på skrå (45°)."""
@@ -115,12 +122,15 @@ def plater(variant):
             continue
         fn = fn.replace("skjold-fjernkontroll-", "skjold-fjernkontroll-full-")
         title = title.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full")
-        if fn.endswith("-k2.3mf") and taster.L_FULL > BED - 5:
+        if fn.endswith("-k2.3mf") and taster.L_FULL > BED - 4:
             diag = [(f, n, fil, "diag" if pos else None, same) for f, n, fil, pos, same in parts]
             ut[fn.replace("-k2.3mf", "-k2-topp.3mf")] = (title.replace("topp og bunn", "topp"), [p for p in diag if p[0] != "bunn"], colors)
             ut[fn.replace("-k2.3mf", "-k2-bunn.3mf")] = (title.replace("topp og bunn", "bunn"), [p for p in diag if p[0] == "bunn"], colors)
         else:
             ut[fn] = (title, parts, colors)
+    for o, (title, parts, colors) in FRONT.items():
+        fn = f"skjold-fjernkontroll-front-{o}.3mf" if variant == "kort" else f"skjold-fjernkontroll-full-front-{o}.3mf"
+        ut[fn] = (title if variant == "kort" else title.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full"), parts, colors)
     return ut
 
 
