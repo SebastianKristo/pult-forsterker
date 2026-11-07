@@ -1,4 +1,4 @@
-"""Kontroll av Skjold Mini-modellen.
+"""Kontroll av Skjold Mini-modellen (knappehetter og løs grill).
 
 Bruk:  python3 sjekk_modell.py <mappe med A_*.stl i montert stilling>
 A_*.stl lages med  openscad -D 'part="a_kropp"' -o A_kropp.stl skjold_mini.scad  (se dispatch nederst i .scad).
@@ -16,12 +16,14 @@ import trimesh
 
 ASM = sys.argv[1]
 ok = True
-PRINT = ["kropp", "front", "logo", "grill", "bunn", "knott", "skjermklemme", "rute",
-         "pakning_front", "pakning_bunn", "pakning_skjerm", "membran", "krage", "dc_skive", "usb_propp"]
+PRINT = ["kropp", "front", "logo", "grill", "bunn", "knott", "rute", "knapp",
+         "pakning_front", "pakning_bunn", "krage", "dc_skive", "usb_propp"]
+MULTI = {"logo": None, "knapp": 5}   # logo: flere bokstaver; knapp: fem hetter i én fil
 for n in PRINT:
     m = trimesh.load(f"stl/{n}.stl")
     parts = len(m.split(only_watertight=False))
-    good = m.is_watertight and m.is_volume and (parts == 1 or n == "logo") and (abs(m.bounds[0][2]) < 0.02 or n == "logo") \
+    good = m.is_watertight and m.is_volume and (parts == 1 or (n in MULTI and (MULTI[n] is None or parts == MULTI[n]))) \
+        and (abs(m.bounds[0][2]) < 0.02 or n == "logo") \
         and m.extents[0] <= 250 and m.extents[1] <= 250
     ok &= good
     print(f"{'OK ' if good else 'FEIL'} {n:15s} vanntett={m.is_watertight} deler={parts:2d} {m.volume/1000:7.2f} cm³ "
@@ -29,11 +31,12 @@ for n in PRINT:
 
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in PRINT}
 # par som skal ligge an mot hverandre (bare kontaktflater, sjekkes med liten toleranse)
-TOUCH = {("kropp", "front"), ("kropp", "bunn"), ("front", "bunn"), ("front", "logo"), ("kropp", "skjermklemme"),
+TOUCH = {("kropp", "front"), ("kropp", "bunn"), ("front", "bunn"), ("front", "logo"),
          ("kropp", "pakning_front"), ("front", "pakning_front"), ("kropp", "pakning_bunn"), ("bunn", "pakning_bunn"),
-         ("front", "pakning_bunn"), ("kropp", "rute"), ("kropp", "pakning_skjerm"), ("rute", "pakning_skjerm"),
-         ("kropp", "membran"), ("front", "grill"), ("kropp", "krage"), ("kropp", "dc_skive"), ("kropp", "usb_propp"),
-         ("dc_skive", "usb_propp")}
+         ("front", "pakning_bunn"), ("kropp", "rute"), ("kropp", "knapp"), ("kropp", "krage"), ("kropp", "dc_skive"),
+         ("kropp", "usb_propp"), ("dc_skive", "usb_propp")}
+# grillens tapper har klemribber som skal klemme mot hullene i fronten (tilsiktet presspasning)
+PRESS = {("front", "grill"): 6.0}
 
 
 def overlap(a, b):
@@ -48,10 +51,18 @@ def overlap(a, b):
 olap = []
 for x, y in itertools.combinations(PRINT, 2):
     v = overlap(A[x], A[y])
-    lim = 0.05 if (x, y) in TOUCH or (y, x) in TOUCH else 0.001
+    lim = PRESS.get((x, y), PRESS.get((y, x), 0.05 if (x, y) in TOUCH or (y, x) in TOUCH else 0.001))
     if not v <= lim:
         olap.append(f"{x} × {y}: {v:.3f} mm³")
 ok &= not olap
+# skjermmodulen (kjøpt del) skal ligge i lomma uten å kollidere med kroppen
+try:
+    sk = trimesh.load(f"{ASM}/skjerm.stl")
+    v = overlap(A["kropp"], sk)
+    if not v <= 0.05:
+        olap.append(f"kropp × skjermmodul: {v:.3f} mm³")
+except Exception as e:
+    print("(skjermmodul ikke sjekket:", e, ")")
 print("OK  ingen overlapp i montert stilling" if not olap else "FEIL overlapp: " + "; ".join(olap))
 
 # --- yttervegg ---
@@ -59,7 +70,7 @@ k = A["kropp"]
 W, D, H, t = 106, 113, 136, 2.6
 # (flate, senter u, senter v, radius) – tiltenkte åpninger. Toppen: v ≈ y (toppen heller bare ≈ 2,4°).
 HOLES = [("bak", -26, 40, 11.5), ("bak", -25, 13, 4.5), ("bak", 15, 13, 5.6), ("bak", 0, 100, 18),
-         ("topp", 0, 88, 6.6), ("topp", 0, 38, 20.6)] + [("topp", x, 10.5, 3.6) for x in (-32, -16, 0, 16, 32)]
+         ("topp", 0, 88, 6.6), ("topp", 0, 42, 33.0)] + [("topp", x, 10.5, 5.6) for x in (-32, -16, 0, 16, 32)]
 
 
 def wall(face, u, v):

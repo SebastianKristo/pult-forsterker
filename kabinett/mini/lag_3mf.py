@@ -1,8 +1,8 @@
 """Lag 3MF-platene for Skjold Mini (Creality K2 / K2 Pro / K2 Plus, 250 × 250 mm):
 
-  skjold-mini-k2.3mf        kropp med toppanel, frontplate med innfelt logo, knott og skjermklemme (PETG/ASA, 3 farger)
+  skjold-mini-k2.3mf        kropp med toppanel, frontplate med innfelt logo, knott og knappehetter (PETG/ASA, 3 farger)
   skjold-mini-k2-bunn.3mf   grill og bunnplate (PETG/ASA, sort)
-  skjold-mini-k2-tpu.3mf    pakninger, knappemembran, krage, DC-skive og USB-propp (TPU 95A)
+  skjold-mini-k2-tpu.3mf    pakninger i skjøtene, krage, DC-skive og USB-propp (TPU 95A)
 
 Kjør etter at STL-ene er eksportert:  python3 lag_3mf.py
 Hver del får filamentnummer i Metadata/model_settings.config (Creality Print / OrcaSlicer). Logoen ligger
@@ -19,17 +19,15 @@ PLATES = {
         ("front", "Frontplate (baksiden ned)", 2, 0, (114, 4), None),
         ("logo", "Logo SKJOLD (innfelt i fronten)", 3, 0, None, "front"),
         ("knott", "Knott (toppen ned)", 3, 0, (4, 146), None),
-        ("skjermklemme", "Skjermklemme", 2, 90, (46, 146), None),
+        ("knapp", "Knappehetter av/på og 1–4 (toppen ned)", 2, 0, (4, 190), None),
     ]),
     "skjold-mini-k2-bunn.3mf": ("Skjold Mini – grill og bunn (PETG/ASA)", [
         ("grill", "Grill (forsiden ned)", 2, 0, (4, 4), None),
         ("bunn", "Bunn (innsiden ned, føttene opp)", 2, 0, (102, 4), None),
     ]),
-    "skjold-mini-k2-tpu.3mf": ("Skjold Mini – pakninger og membran (TPU 95A)", [
+    "skjold-mini-k2-tpu.3mf": ("Skjold Mini – pakninger (TPU 95A)", [
         ("pakning_front", "Pakning front", 1, 0, (4, 4), None),
         ("pakning_bunn", "Pakning bunn", 1, 0, (110, 4), None),
-        ("membran", "Knappemembran (forsiden ned)", 1, 0, (4, 128), None),
-        ("pakning_skjerm", "Pakning skjerm", 1, 0, (96, 130), None),
         ("krage", "Krage EC11", 1, 0, (136, 130), None),
         ("dc_skive", "Skive DC-kontakt", 1, 0, (156, 130), None),
         ("usb_propp", "Propp USB-C", 1, 0, (176, 130), None),

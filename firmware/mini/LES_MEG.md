@@ -8,7 +8,7 @@ Mini bruker **squeezelite-esp32** (åpen kildekode, [sle118/squeezelite-esp32](h
 2. Koble til Wi-Fi-nettet som ESP-en lager (standard «squeezelite» / «squeezelite»), gå til 192.168.4.1 og legg inn ditt Wi-Fi.
 3. Åpne ESP-ens nettside, slå på NVS-editoren («Credits» → «Show NVS editor») og legg inn nøklene fra [`squeezelite-esp32.txt`](squeezelite-esp32.txt). Navnet må begynne med «Skjold Mini», for eksempel «Skjold Mini bad».
 4. Start på nytt. Mini dukker opp i Lyrion og i Skjold under **Grupper → Skjold Mini**. Trykk **Spill her** for å spille sammen med rommet du står i, og **Knapper** for å velge hvilke radiofavoritter knappene 1–4 spiller.
-5. For cover og egen visning på skjermen: installer pluginen **SqueezeESP32** i Lyrion (Innstillinger → Plugins) og velg visning under spillerens innstillinger.
+5. For egen visning på skjermen (f.eks. VU-meter): installer pluginen **SqueezeESP32** i Lyrion (Innstillinger → Plugins) og velg visning under spillerens innstillinger.
 
 ## Betjening
 
@@ -19,7 +19,7 @@ Mini bruker **squeezelite-esp32** (åpen kildekode, [sle118/squeezelite-esp32](h
 | Langt trykk | Bytter dreieknappen til forrige/neste (langt trykk igjen bytter tilbake) |
 | ⏻ | Av / på |
 | 1–4 | Spiller radiofavoritt 1–4 (velges i Skjold) |
-| Skjermen | Kanal eller låt, artist, volum og cover |
+| Skjermen | Kanal eller låt, artist og volum (monokrom: tekst og ikoner, ikke cover) |
 
 ## Alternativ: Snapcast
 
@@ -31,4 +31,4 @@ INMP441 (SCK 41, WS 42, SD 40) er koblet opp for fremtidig stemmestyring og mål
 
 ## Ikke testet
 
-Ingenting er flashet på ekte maskinvare. Nøklene er skrevet etter README-en til squeezelite-esp32, men det er ikke sjekket at S3-bygget godtar alle sammen, at ST7789-modulen trenger `invert` eller forskyvning, eller at «hold for å lagre» virker i rå-modus.
+Ingenting er flashet på ekte maskinvare. Nøklene er skrevet etter README-en til squeezelite-esp32, men det er ikke sjekket at S3-bygget godtar alle sammen, at SSD1309-modulen svarer som SSD1306 på adresse 0x3C (eller trenger HFlip/VFlip eller reset-pinne), eller at «hold for å lagre» virker i rå-modus.
