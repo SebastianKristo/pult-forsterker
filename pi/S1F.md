@@ -16,7 +16,12 @@ Installer: `KI_AMP_BOARD=s1f bash pi/install.sh` (ny Pi) eller `bash pi/update.s
 | Hodetelefon | UCA202 #1 sin hodetelefonutgang. Når pluggen står i, spiller CamillaDSP til UCA202 #1 i stedet for PCM5102, og reléet slår av høyttalerne. Eget volum når «Eget volum for hodetelefoner» er på. |
 | PC 1 / PC 2 | Pi-ens USB-C som USB-lydkort (dwc2-gadget) via UGREEN-switchen. USB-knappen bytter PC og pulser switchens knapp. |
 
-De to UCA202 er like, så de får faste navn etter USB-port: `sudo bash pi/tools/s1f_uca202_udev.sh` lager
+**Kompatible lydkort:** Behringer **UCA202**, **UCA222** og **UFO202** har samme lydbrikke (TI PCM2902, USB-id `08bb:2902`)
+og heter `CODEC` i ALSA, så alle tre virker likt og kan blandes. UCA222 har i tillegg optisk utgang (ikke brukt). UFO202 har
+innebygd **phono-forforsterker** (bryter Line/Phono) – sett AUX-en med platespilleren til Phono, så trenger du ikke egen
+RIAA-forsterker (fint sammen med Platesamlingen). Andre PCM2902-kort uten merke virker vanligvis også.
+
+De to lydkortene er like for systemet, så de får faste navn etter USB-port: `sudo bash pi/tools/s1f_uca202_udev.sh` lager
 `/etc/udev/rules.d/85-skjold-uca202.rules` (`UCA_AUX1` i laveste port, `UCA_AUX2` i den andre). Bytt med `--swap`.
 Overstyr med `KI_AMP_AUX1_DEV`, `KI_AMP_AUX2_DEV` og `KI_AMP_HP_DEV` i `/etc/ki-amp.env`.
 
