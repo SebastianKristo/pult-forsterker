@@ -4,10 +4,11 @@ Mini bruker **squeezelite-esp32** (åpen kildekode, [sle118/squeezelite-esp32](h
 
 ## Installasjon
 
-1. Flash squeezelite-esp32 for **ESP32-S3** med prosjektets web-installer eller `esptool` (se prosjektets README). Velg en bygg for S3 med PSRAM (N16R8).
-2. Koble til Wi-Fi-nettet `squeezelite-xxxx` som ESP-en lager, og legg inn ditt Wi-Fi.
-3. Åpne ESP-ens nettside og legg inn innstillingene fra [`squeezelite-esp32.txt`](squeezelite-esp32.txt). Navnet må begynne med «Skjold Mini», for eksempel «Skjold Mini bad».
-4. Start på nytt. Mini dukker opp i Lyrion og i Skjold under **Grupper → Skjold Mini**. Trykk **Spill her** for å spille sammen med rommet du står i.
+1. Flash squeezelite-esp32 for **ESP32-S3**. Prosjektets README sier at S3 krever en egen bygg (ESP-IDF 4.4, se «S3 version» der). Sjekk «Releases» og web-installeren først; finnes ingen S3-bygg, må du bygge selv. Velg oppsett for S3 med PSRAM (N16R8, oktal PSRAM).
+2. Koble til Wi-Fi-nettet som ESP-en lager (standard «squeezelite» / «squeezelite»), gå til 192.168.4.1 og legg inn ditt Wi-Fi.
+3. Åpne ESP-ens nettside, slå på NVS-editoren («Credits» → «Show NVS editor») og legg inn nøklene fra [`squeezelite-esp32.txt`](squeezelite-esp32.txt). Navnet må begynne med «Skjold Mini», for eksempel «Skjold Mini bad».
+4. Start på nytt. Mini dukker opp i Lyrion og i Skjold under **Grupper → Skjold Mini**. Trykk **Spill her** for å spille sammen med rommet du står i, og **Knapper** for å velge hvilke radiofavoritter knappene 1–4 spiller.
+5. For cover og egen visning på skjermen: installer pluginen **SqueezeESP32** i Lyrion (Innstillinger → Plugins) og velg visning under spillerens innstillinger.
 
 ## Betjening
 
@@ -15,14 +16,19 @@ Mini bruker **squeezelite-esp32** (åpen kildekode, [sle118/squeezelite-esp32](h
 |---|---|
 | Drei knappen | Volum |
 | Trykk | Spill / pause |
-| Langt trykk | Neste (squeezelite-esp32 `longpress`) |
-| Grønt lys | Tilkoblet |
-| Rødt lys | Ingen kontakt med Lyrion |
+| Langt trykk | Bytter dreieknappen til forrige/neste (langt trykk igjen bytter tilbake) |
+| ⏻ | Av / på |
+| 1–4 | Spiller radiofavoritt 1–4 (velges i Skjold) |
+| Skjermen | Kanal eller låt, artist, volum og cover |
 
 ## Alternativ: Snapcast
 
-Bruker du Snapcast-pluginen i stedet for Lyrion, kan Mini kjøre [snapclient for ESP32](https://github.com/CarlosDerSeher/snapclient) med samme pinner (I²S 4/5/6, forsterker på 7). Da styres den fra Snapcast, ikke fra Mini-kortet i Skjold.
+Bruker du Snapcast-pluginen i stedet for Lyrion, kan Mini kjøre [snapclient for ESP32](https://github.com/CarlosDerSeher/snapclient) med samme lydpinner (I²S 4/5/6, forsterker på 7). Da styres den fra Snapcast, og skjerm og knapper må settes opp der.
 
 ## Mikrofon (valgfri)
 
 INMP441 (SCK 41, WS 42, SD 40) er koblet opp for fremtidig stemmestyring og måling med romkorreksjon. squeezelite-esp32 bruker den ikke.
+
+## Ikke testet
+
+Ingenting er flashet på ekte maskinvare. Nøklene er skrevet etter README-en til squeezelite-esp32, men det er ikke sjekket at S3-bygget godtar alle sammen, at ST7789-modulen trenger `invert` eller forskyvning, eller at «hold for å lagre» virker i rå-modus.

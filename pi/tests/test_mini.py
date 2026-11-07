@@ -53,3 +53,16 @@ def test_no_lyrion():
     def rpc(player, cmd):
         raise RuntimeError("Lyrion ikke funnet")
     assert mini.Minis(rpc, lambda: "").list()["lyrion"] is False
+
+
+def test_presets_to_buttons():
+    presets = [{"title": "NRK P1", "url": "http://p1"}, None, {"title": "P3", "url": "http://p3"}, {"title": "Jazz", "url": ""}]
+    cmds = mini.preset_commands(presets, [3, 1, 2, 4, 1])
+    assert cmds == [
+        ["jivefavorites", "set_preset", "key:1", "favorites_url:http://p3", "favorites_title:P3", "favorites_type:audio"],
+        ["jivefavorites", "set_preset", "key:2", "favorites_url:http://p1", "favorites_title:NRK P1", "favorites_type:audio"],
+    ]
+    calls = []
+    m = mini.Minis(lambda p, c: calls.append((p, c)) or {"players_loop": []}, lambda: "own", lambda: presets)
+    m.act({"id": "24:0A:C4:11:22:33", "action": "presets", "value": [1, 3]})
+    assert [c for c in calls if c[1][0] == "jivefavorites"][1][0] == "24:0a:c4:11:22:33"
