@@ -1,0 +1,92 @@
+{
+  "entity": {
+    "switch": {
+      "rost_power": {
+        "default": "mdi:speaker",
+        "state": {
+          "off": "mdi:speaker-off"
+        }
+      },
+      "rost_synced": {
+        "default": "mdi:speaker-multiple",
+        "state": {
+          "off": "mdi:speaker"
+        }
+      },
+      "kassett_spoler": {
+        "default": "mdi:rotate-right",
+        "state": {
+          "off": "mdi:pause-circle-outline"
+        }
+      },
+      "power": {
+        "default": "mdi:amplifier",
+        "state": {
+          "off": "mdi:amplifier-off"
+        }
+      },
+      "night": {
+        "default": "mdi:weather-night"
+      },
+      "loudness": {
+        "default": "mdi:equalizer"
+      },
+      "voice": {
+        "default": "mdi:account-voice"
+      },
+      "mix": {
+        "default": "mdi:call-merge"
+      },
+      "auto_input": {
+        "default": "mdi:auto-mode"
+      },
+      "hp_automute": {
+        "default": "mdi:headphones"
+      }
+    },
+    "number": {
+      "rost_volume": {
+        "default": "mdi:volume-high"
+      }
+    },
+    "binary_sensor": {
+      "rost_playing": {
+        "default": "mdi:play-circle-outline",
+        "state": {
+          "off": "mdi:pause-circle-outline"
+        }
+      },
+      "rost_connected": {
+        "default": "mdi:wifi",
+        "state": {
+          "off": "mdi:wifi-off"
+        }
+      }
+    },
+    "sensor": {
+      "kassett_active": {
+        "default": "mdi:cassette"
+      },
+      "kassett_last": {
+        "default": "mdi:history"
+      },
+      "hjul_battery": {
+        "default": "mdi:battery"
+      },
+      "hjul_last": {
+        "default": "mdi:gesture-tap"
+      }
+    },
+    "select": {
+      "kassett_play": {
+        "default": "mdi:playlist-play"
+      },
+      "hjul_room": {
+        "default": "mdi:knob"
+      },
+      "preset": {
+        "default": "mdi:radio"
+      }
+    }
+  }
+}

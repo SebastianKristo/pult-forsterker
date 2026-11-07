@@ -7,6 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, product
+from .accessories import entities as accessories
 from .entity import KiAmpEntity
 
 
@@ -16,6 +17,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEnt
     if product(c.data) == "s1":   # hodetelefonjack og NTC finnes bare på Pultforsterker-kortene
         ents += [KiAmpHeadphonesSensor(c), KiAmpOvertempSensor(c)]
     add(ents)
+    add(accessories(c, "binary_sensor"))   # Skjold Røst, Kassett og Hjul som egne enheter
 
 
 class KiAmpPlayingSensor(KiAmpEntity, BinarySensorEntity):

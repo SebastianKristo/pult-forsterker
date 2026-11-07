@@ -53,6 +53,15 @@
       },
       "night": {
         "name": "Nattmodus"
+      },
+      "rost_power": {
+        "name": "Strøm"
+      },
+      "rost_synced": {
+        "name": "Spill med rommet"
+      },
+      "kassett_spoler": {
+        "name": "Spoler i vinduet"
       }
     },
     "sensor": {
@@ -74,6 +83,18 @@
       },
       "artist": {
         "name": "Artist"
+      },
+      "kassett_active": {
+        "name": "Kassett i spilleren"
+      },
+      "kassett_last": {
+        "name": "Sist innsatt"
+      },
+      "hjul_battery": {
+        "name": "Batteri"
+      },
+      "hjul_last": {
+        "name": "Sist brukt"
       }
     },
     "binary_sensor": {
@@ -85,6 +106,12 @@
       },
       "overtemp": {
         "name": "Overtemperatur"
+      },
+      "rost_playing": {
+        "name": "Spiller"
+      },
+      "rost_connected": {
+        "name": "Tilkoblet"
       }
     },
     "media_player": {
@@ -133,6 +160,9 @@
       },
       "led_level": {
         "name": "LED-lysstyrke"
+      },
+      "rost_volume": {
+        "name": "Volum"
       }
     },
     "select": {
@@ -161,6 +191,12 @@
           "always": "Alltid",
           "off": "Av"
         }
+      },
+      "kassett_play": {
+        "name": "Spill kassett"
+      },
+      "hjul_room": {
+        "name": "Rom"
       }
     },
     "event": {

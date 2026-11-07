@@ -9,6 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.const import EntityCategory
 
 from .const import DOMAIN, has_leds, product, setting, status_inputs
+from .accessories import entities as accessories
 from .entity import KiAmpEntity
 
 
@@ -18,6 +19,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEnt
     if has_leds(c.data):   # LED-ringene på Skjold Node
         ents.append(KiAmpLedLevel(c))
     add(ents)
+    add(accessories(c, "number"))   # Skjold Røst, Kassett og Hjul som egne enheter
     if product(c.data) != "s1":   # eldre oppsett: nivå-entitetene ble lagt til som aktive på Node/Core – skru dem av én gang
         from homeassistant.helpers import entity_registry as er
         reg = er.async_get(hass)

@@ -53,6 +53,15 @@
       },
       "night": {
         "name": "Night mode"
+      },
+      "rost_power": {
+        "name": "Power"
+      },
+      "rost_synced": {
+        "name": "Play with the room"
+      },
+      "kassett_spoler": {
+        "name": "Spools in the window"
       }
     },
     "sensor": {
@@ -74,6 +83,18 @@
       },
       "artist": {
         "name": "Artist"
+      },
+      "kassett_active": {
+        "name": "Cassette in player"
+      },
+      "kassett_last": {
+        "name": "Last inserted"
+      },
+      "hjul_battery": {
+        "name": "Battery"
+      },
+      "hjul_last": {
+        "name": "Last used"
       }
     },
     "binary_sensor": {
@@ -85,6 +106,12 @@
       },
       "overtemp": {
         "name": "Overheating"
+      },
+      "rost_playing": {
+        "name": "Playing"
+      },
+      "rost_connected": {
+        "name": "Connected"
       }
     },
     "media_player": {
@@ -133,6 +160,9 @@
       },
       "led_level": {
         "name": "LED brightness"
+      },
+      "rost_volume": {
+        "name": "Volume"
       }
     },
     "select": {
@@ -161,6 +191,12 @@
           "always": "Always",
           "off": "Off"
         }
+      },
+      "kassett_play": {
+        "name": "Play cassette"
+      },
+      "hjul_room": {
+        "name": "Room"
       }
     },
     "event": {

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" fill="none" stroke="#000" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+<!-- Skjold Kassett: spilleren med kassett i sporet; spolene synes gjennom vinduet i fronten -->
+<path d="M300 380H200A60 60 0 0 0 140 440V740A60 60 0 0 0 200 800H760A60 60 0 0 0 820 740V440A60 60 0 0 0 760 380H660"/>
+<path d="M300 380V170A28 28 0 0 1 328 142H632A28 28 0 0 1 660 170V380"/>
+<rect x="345" y="187" width="270" height="70" rx="10" stroke-width="16"/>
+<rect x="300" y="430" width="360" height="230" rx="24"/>
+<circle cx="405" cy="545" r="48"/>
+<circle cx="555" cy="545" r="48"/>
+<circle cx="405" cy="545" r="12" fill="#000" stroke="none"/>
+<circle cx="555" cy="545" r="12" fill="#000" stroke="none"/>
+<path d="M230 740H330" stroke-width="16"/>
+</svg>

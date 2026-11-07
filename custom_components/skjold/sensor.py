@@ -7,12 +7,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, all_known_sources
+from .accessories import entities as accessories
 from .entity import KiAmpEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     c = hass.data[DOMAIN][entry.entry_id]
     add([KiAmpSourceSensor(c), KiAmpTitleSensor(c), KiAmpArtistSensor(c)])
+    add(accessories(c, "sensor"))   # Skjold Røst, Kassett og Hjul som egne enheter
 
 
 class KiAmpSourceSensor(KiAmpEntity, SensorEntity):

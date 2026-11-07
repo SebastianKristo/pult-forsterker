@@ -36,6 +36,14 @@ class KiPultforsterkerApp extends Homey.App {
     play.registerArgumentAutocompleteListener('preset', async (query, { device }) => device.presetList()
       .map((p) => ({ id: String(p.n), name: `${p.n}. ${p.title}` }))
       .filter((r) => r.name.toLowerCase().includes((query || '').toLowerCase())));
+    // Tilbehør: Skjold Kassett og Skjold Røst
+    const kas = this.homey.flow.getActionCard('ki_kassett_play');
+    kas.registerRunListener(async ({ device, kassett }) => device.play(kassett.id));
+    kas.registerArgumentAutocompleteListener('kassett', async (query, { device }) => device.cards()
+      .map((c) => ({ id: c.uid, name: c.navn || c.uid }))
+      .filter((r) => r.name.toLowerCase().includes((query || '').toLowerCase())));
+    this.homey.flow.getActionCard('ki_rost_buttons')
+      .registerRunListener(async ({ device, b1, b2, b3, b4 }) => device.setButtons([b1, b2, b3, b4].map((x) => Number(x) || 0)));
     this.homey.flow.getActionCard('ki_save_preset')
       .registerRunListener(async ({ device, n }) => device.savePreset(Number(n)));
     this.homey.flow.getActionCard('ki_usb_pc')
