@@ -49,13 +49,20 @@ ink = 0.4;                      // symbolene: 0,4 mm innfelt, fylt med annen far
 kf = 0.5;                       // fas på hettens toppkant
 
 // ---------- skjerm ----------
-// 2,8″ IPS 240 × 320 med kapasitiv berøring (ST7789 + FT6336U), naken FPC-modul med dekkglass – mål din modul!
-// Vinduet er like stort som glasset minus 1,5 mm kant, så den sorte glasskanten synes og rammen blir 4 mm på hver side.
+// 2,8″ 240 × 320 naken FPC-modul med dekkglass: IPS med kapasitiv berøring (ST7789 + FT6336U, standard) eller
+// «Budsjett-skjerm» TN med resistiv berøring (ST7789V + XPT2046 på tastekortet). Begge har samme omriss etter
+// tegningen: 50,00 × 69,20 ± 0,2 mm, aktivt område 43,20 × 57,60 mm 2,60 mm fra overkanten (motsatt flatkabelen),
+// 3,8 mm tykk med berøring. Flatkabelen (19,16 mm) går ut i nedre kant mot tastene og bøyes ned til en
+// 18-pinners 0,8 mm FPC-kontakt på undersiden av tastekortet.
+// Vinduet er glasset minus 1,5 mm kant på sidene og oppe, og slutter 1,1 mm under det aktive området nede.
 modN0 = 8.4;                    // modulens nesekant fra nesen (R11-hjørnet bestemmer hvor nær den kan gå)
-modW = 50.0; modH = 69.2; modT = 4.0;  // glass/modul (lomme under toppen, 0,3 mm klaring)
-scrN = modN0 + modH/2;          // vinduets og det aktive områdets senter fra nesen (43,0)
-scrAW = 43.2; scrAH = 57.6;     // aktivt område (antatt midt på glasset)
-scrWW = modW - 3; scrWH = modH - 3;   // vindu i toppen: 47,0 × 66,2 mm
+modW = 50.0; modH = 69.2; modT = 4.0;  // glass/modul (lomme under toppen, 0,3 mm klaring ≥ toleransen ± 0,2); 3,8 mm + tape
+modC = modN0 + modH/2;          // modulens senter fra nesen (43,0)
+aktivTopp = 2.6;                // fra glassets overkant (mot nesen) til det aktive området
+scrAW = 43.2; scrAH = 57.6;     // aktivt område
+scrN = modN0 + aktivTopp + scrAH/2;   // det aktive områdets og vinduets senter fra nesen (39,8)
+scrWW = modW - 3; scrWH = scrAH + 2*(aktivTopp - 1.5);   // vindu i toppen: 47,0 × 59,8 mm
+fpcN = modN0 + modH + 4.5;      // FPC-kontakten under tastekortet (senter, n), 18-pinners 0,8 mm, 19,6 × 5 × 2 mm
 lepT = 0.8;                     // toppflaten over glasset rundt vinduet
 zGlass = H - lepT;              // glassets overside (12,7)
 
@@ -228,10 +235,8 @@ module topp() {
     // hull for tastene
     for (h = HETTER) if (h[1] != "ok") ved(h) translate([0, 0, H - tT - 1]) linear_extrude(tT + 2) hform(h[1], h[4], h[5], spill);
     // skjermvindu og lomme for glasset
-    translate([W/2, L - scrN, 0]) {
-      translate([0, 0, H - tT - 1]) linear_extrude(tT + 2) offset(1) square([scrWW - 2, scrWH - 2], center = true);
-      translate([0, 0, H - tT - 1]) linear_extrude(tT - lepT + 1) offset(1) square([modW + 0.6 - 2, modH + 0.6 - 2], center = true);
-    }
+    translate([W/2, L - scrN, H - tT - 1]) linear_extrude(tT + 2) offset(1) square([scrWW - 2, scrWH - 2], center = true);
+    translate([W/2, L - modC, H - tT - 1]) linear_extrude(tT - lepT + 1) offset(1) square([modW + 0.6 - 2, modH + 0.6 - 2], center = true);
     // skruehull (forbor)
     for (s = SKRUER) translate([s[0], s[1], zKort]) cylinder(d = pilot, h = H - 0.8 - zKort, $fn = 16);
     // SKJOLD felt inn nederst (gull)
@@ -298,7 +303,9 @@ module kort2d() {
 }
 module tastekort() { translate([0, 0, zKort]) linear_extrude(kortT) kort2d(); }
 module brytere() { for (b = BRYTERE) translate([b[1], L - b[2], zKort + kortT]) { translate([-2, -2, 0]) cube([4, 4, swH - 0.4]); cylinder(d = 2.4, h = swH, $fn = 16); } }
-module tca() { for (c = TCA) translate([c[0] - 2.2, L - c[1] - 3.9, zKort - 1.2]) cube([4.4, 7.8, 1.2]); }
+module tca() { for (c = TCA) translate([c[0] - 2.2, L - c[1] - 3.9, zKort - 1.2]) cube([4.4, 7.8, 1.2]);
+  translate([W/2 - 9.8, L - fpcN - 2.5, zKort - 2.0]) cube([19.6, 5.0, 2.0]);        // FPC-kontakt for skjermen
+  translate([W/2 + 14 - 2.5, L - fpcN - 3.2, zKort - 1.2]) cube([5.0, 6.4, 1.2]); }  // XPT2046 (bare budsjett-skjermen)
 module bryterbrett() {   // printet 1,0 mm plate med to Ø1,0-hull per bryter (ledningene) – limes på bryterne (se LES_MEG)
   difference() {
     linear_extrude(kortT) kort2d();
@@ -308,7 +315,7 @@ module bryterbrett() {   // printet 1,0 mm plate med to Ø1,0-hull per bryter (l
 
 // ---------- innmat (illustrasjon) ----------
 module skjermmodul() {
-  translate([W/2 - modW/2, L - scrN - modH/2, zGlass - modT]) {
+  translate([W/2 - modW/2, L - modC - modH/2, zGlass - modT]) {
     color([0.22, 0.22, 0.24]) cube([modW, modH, modT - 0.7]);
     color(c_glass) translate([0, 0, modT - 0.7]) cube([modW, modH, 0.7]);
   }
@@ -366,7 +373,7 @@ else if (part == "A_vindu") ir_vindu();
 else if (part == "A_hetter") { hetter("mork"); hetter("lys"); hetter("gull"); for (f = FARGER) hetter(f[0]); }
 else if (part == "A_symboler") { symboler("mork"); symboler("lys"); symboler("gull"); }
 else if (part == "A_kort") { tastekort(); brytere(); tca(); }
-else if (part == "A_skjerm") translate([W/2 - modW/2, L - scrN - modH/2, zGlass - modT]) cube([modW, modH, modT]);
+else if (part == "A_skjerm") translate([W/2 - modW/2, L - modC - modH/2, zGlass - modT]) cube([modW, modH, modT]);
 else if (part == "A_batteri") translate([W/2 - bat[0]/2, L - batN - bat[1], tB + 0.05]) cube(bat);
 else if (part == "A_mcu") translate([mcuX - mcu[0]/2, L - mcuN - mcu[1], tB + 0.05]) cube([mcu[0], mcu[1], 3.4]);
 else if (part == "A_lader") translate([W/2 - lad[0]/2, t + 0.6, tB + 0.05]) cube([lad[0], lad[1], 4.4]);

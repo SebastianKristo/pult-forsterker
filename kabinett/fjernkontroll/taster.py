@@ -215,6 +215,9 @@ def plassering():
         rows.append((f"SW{i + 1}", f"{bid}", "SW-SMD_4x4x1.5", f"{x - 3.2:.2f}", f"{PCB_N1 - n:.2f}", "0", "topp"))
     for i, (x, n) in enumerate(TCA_POS):
         rows.append((f"U{i + 1}", f"TCA9555PWR 0x{0x20 + i:02X}", "TSSOP-24", f"{x - 3.2:.2f}", f"{PCB_N1 - n:.2f}", "90", "bunn"))
+    fpc_n = 8.4 + 69.2 + 4.5   # fpcN i skjold_fjernkontroll.scad: rett bak skjermmodulen
+    rows.append(("J1", "FPC 18p 0,8 mm (skjerm)", "FPC-18P-0.8mm bunnkontakt", f"{CX - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "0", "bunn"))
+    rows.append(("U9", "XPT2046 (bare budsjett-skjerm)", "TSSOP-16", f"{CX + 14 - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "90", "bunn"))
     return rows
 
 
