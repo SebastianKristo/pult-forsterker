@@ -6,20 +6,19 @@ En bordradio med 4,3″ skjerm, seks favorittknapper, et stort navigasjonshjul, 
 
 Bilder: [forfra, lys](render/01_forfra_lys.png) · [skrått, lys](render/02_skra_lys.png) · [eksplodert, lys](render/03_eksplodert_lys.png) · [forfra, mørk](render/04_forfra_mork.png) · [skrått, mørk](render/05_skra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) · [bak](render/07_bak_lys.png)
 
-Mål: 236 × 152 mm, 100 mm høy foran og 128 mm bak (B × D × H, uten knotter og gummiføtter). Hjulet stikker 15,6 mm over toppen, volumknotten 14 mm ut på høyre side.
+Mål: 236 × 145 × 205 mm (B × D × H, uten knotter og gummiføtter). Hjulet stikker 15,6 mm ut fra fronten, volumknotten 13,6 mm. Første utgave var en lav pult på 236 × 152 mm, 100 mm høy foran og 128 mm bak, med skjermen og knappene på den skrå toppen.
 
 ## Designet
 
-Radioen er en lav, bred «pult»: hele toppen heller ca. 10,6° ned mot deg, som et skråstilt dashbord. Skjermen, favorittknappene og hjulet sitter på skråflaten, så du ser og når alt fra sofaen eller fra stolen ved kjøkkenbenken.
+Radioen er en klassisk, stående bordradio der alt vender mot deg. Fronten er loddrett, så du ser skjermen rett forfra og når knappene som på en vanlig radio, enten den står på kjøkkenbenken, i bokhylla eller på nattbordet.
 
-- **Fronten er bare lyd.** En mørk grill med vannrette spalter dekker hele fronten og går helt ned til bordet. Kroppen rammer den inn på sidene og oppe.
-- **Toppen er alt du trenger.** Seks favorittknapper ligger i en rad langs forkanten, med skjermen bak. Av/på sitter alene bak til venstre, så du ikke trykker på den ved et uhell.
-- **Gullhjulet (Ø 46 mm) er særpreget.** Det er det største elementet på radioen og sitter til høyre for skjermen, nær nok til å drives med tommelen. Drei for å bla i favorittene, trykk for spill/pause.
-- **Volumknotten er en liten gullknott på høyre side**, der hånda faller naturlig.
-- **Skjold-formspråket:** myke vertikale hjørner (R14, som Node og Røst), faset toppkant hele veien rundt, lys kropp med mørk grill og mørke knapper, gull hjul, og SKJOLD preget i toppen bak hjulet.
+- **Fronten er delt i to av en tynn gullist.** Nederst er en mørk grill med vannrette spalter over nesten hele bredden, med de to 3″-elementene bak. Øverst er et rolig betjeningspanel i kroppsfargen.
+- **Skjermen sitter til venstre og hjulet til høyre**, side om side på samme høyde. Gullhjulet (Ø 46 mm) er det største elementet på radioen. Drei for å bla i favorittene, trykk for spill/pause.
+- **Én rad med knapper under skjermen:** favoritt 1–6, så av/på litt for seg selv, og den lille gullknotten for volum rett under hjulet. Alle knappene sitter på én linje, så det er lett å finne dem i mørket.
+- **Skjold-formspråket:** myke hjørner (R14, som Node og Røst) sett forfra, faset frontkant hele veien rundt, lys kropp med mørk grill og mørke knapper, gull hjul, volumknott og list, og SKJOLD preget over hjulet. Sidene, toppen og baksiden er helt rene.
 - **Mørk variant:** sort kropp, grafittgrå grill og gullknapper. Bare filamentet byttes.
 
-Designet er laget fra bunnen av for Skjold. Det er ikke en kopi av noen eksisterende radio: proporsjoner, plassering av knapper og detaljer er egne. Den skrå pulten med grill helt ned til bordet er Skjold Radios kjennetegn.
+Designet er laget fra bunnen av for Skjold. Det er ikke en kopi av noen eksisterende radio: proporsjoner, plassering av knapper og detaljer er egne. Gullista som deler grill og panel, og hjulet ved siden av skjermen, er Skjold Radios kjennetegn.
 
 ## Elektronikk – hva og hvorfor
 
@@ -81,15 +80,15 @@ Prisene er **anslag i norske kroner per november 2026**, med frakt fra AliExpres
 | EC11 med trykk, 20 mm D-aksel | 1 | AliExpress: «EC11 rotary encoder 20mm D shaft» | 15 kr |
 | EC11 med trykk, 15 mm D-aksel | 1 | Samme | 15 kr |
 | Taktbryter 6 × 6 × 4,3 mm | 7 | «tactile switch 6x6x4.3 THT» | 10 kr |
-| Hullkort 2 × (ca. 150 × 20 og 40 × 20 mm) | 1 | «perfboard 5x15 cm» | 20 kr |
-| M3 innpressmutter (M3 × 5,7, Ø 4,0 hull) | 16 | «M3 heat set insert 5.7mm» | 40 kr |
-| M3 × 10 senkeskrue | 8 | Bunnplata (4 hjørner + 4 kammerører) | 20 kr |
+| Hullkort ca. 150 × 16 mm (favoritter og av/på) | 1 | «perfboard 5x15 cm» | 20 kr |
+| M3 innpressmutter (M3 × 5,7, Ø 4,0 hull) | 17 | «M3 heat set insert 5.7mm» | 40 kr |
+| M3 × 10 senkeskrue | 9 | Bakplata (5) og kammerørene (4) | 20 kr |
 | M3 × 8 skrue | 8 | Lokket på kammeret | 15 kr |
 | M3 × 10 selvgjengende | 8 | Elementene | 15 kr |
-| M2,5 × 6 selvgjengende | 12 | Skjermbrakett, knappekort, av/på-kort, Pi | 15 kr |
+| M2,5 × 6 selvgjengende | 10 | Skjermbrakett (4), knappekort (2), Pi (4) | 15 kr |
 | Gummiføtter Ø 12 mm, selvklebende | 4 | «bumpon 12mm» | 20 kr |
 | Skumtape 1–2 mm, 6 mm bred | 1 m | Tetning rundt kammerlokket | 30 kr |
-| Akustisk grillduk, mørk, ca. 230 × 100 mm | 1 | «speaker grill cloth black» | 40 kr |
+| Akustisk grillduk, mørk, ca. 220 × 90 mm | 1 | «speaker grill cloth black» | 40 kr |
 | Dempeull / polyfill | ca. 10 g | Løst i kamrene | 30 kr |
 | Ledning, skjermet lydkabel, krympestrømpe | – | | 50 kr |
 | **Elektronikk totalt** | | | **ca. 2 500–2 800 kr** |
@@ -101,40 +100,43 @@ Kabinettet er tegnet i [`skjold_radio.scad`](skjold_radio.scad) (OpenSCAD, param
 
 | Del | STL | Volum | Print (FDM) |
 |---|---|---|---|
-| Kropp (ett skall: sider, bak og skrå topp) | `stl/kropp.stl` | 285 cm³ | Toppflaten ned på platen. Glatt topp, ingen støtte. 236 × 173 × 130 mm. |
+| Kropp (ett skall: front, sider, topp og gulv; åpen bak) | `stl/kropp.stl` | 454 cm³ | Fronten ned på platen. Alle vegger står loddrett, ingen støtte. 236 × 205 × 145 mm. |
+| Bakplate (DC, linje ut, USB-C, lufting) | `stl/bak.stl` | 129 cm³ | Baksiden ned |
 | Lydkammer (baffel, skillevegg, ører) | `stl/kammer.stl` | 219 cm³ | Baffelen ned. 100 % fyll i baffelen gir minst resonans. |
 | Lokk for kammeret | `stl/lokk.stl` | 51 cm³ | Flatt |
-| Grill | `stl/grill.stl` | 43 cm³ | Forsiden ned (glatt mot platen) |
-| Bunnplate (Pi-tårn, lufting) | `stl/bunn.stl` | 128 cm³ | Undersiden ned |
-| Skjermbrakett | `stl/brakett.stl` | 11 cm³ | Flatt |
-| Navigasjonshjul Ø 46 | `stl/knott.stl` | 8,6 cm³ | Toppen opp. Hult nedenfra. |
+| Grill | `stl/grill.stl` | 38 cm³ | Forsiden ned (glatt mot platen) |
+| Gullist | `stl/list.stl` | 1,0 cm³ | Forsiden ned |
+| Skjermbrakett med Pi-tårn | `stl/brakett.stl` | 21 cm³ | Flatt, tårnene opp |
+| Navigasjonshjul Ø 46 | `stl/knott.stl` | 8,6 cm³ | Toppen opp. Hult bakfra. |
 | Volumknott Ø 22 | `stl/volum.stl` | 2,8 cm³ | Toppen opp |
 | Knappehetter 1–6 og av/på | `stl/knapp.stl` | 4,0 cm³ | Toppen ned (sju hetter) |
 
 3MF-plater for Creality K2 (250 × 250 mm, filament 1 = kroppsfarge, 2 = sort, 3 = gull):
 
-- `skjold-radio-k2.3mf`: kropp, hjul, volumknott og knappehetter
+- `skjold-radio-k2.3mf`: kropp, volumknott, knappehetter og gullist
 - `skjold-radio-k2-kammer.3mf`: lydkammer og lokk
 - `skjold-radio-k2-grill.3mf`: grill og skjermbrakett
-- `skjold-radio-k2-bunn.3mf`: bunnplate
+- `skjold-radio-k2-bak.3mf`: bakplate og navigasjonshjul
 
-Tips for FDM: 0,16 mm lag, 3 vegger, 15 % gyroid. Bruk teksturert PEI for kroppen, så skråflaten får en jevn, matt struktur. Varm innpressmutterne inn med 220–240 °C.
+Tips for FDM: 0,16 mm lag, 3 vegger, 15 % gyroid. Bruk teksturert PEI for kroppen, så fronten får en jevn, matt struktur. Skjermvinduet, knappehullene og grillåpningen er gjennomgående hull rett opp fra platen, så kanten rundt dem blir skarp. Varm innpressmutterne inn med 220–240 °C.
 
-**Sjekket med `sjekk_modell.py`:** alle delene er vanntette og hver er ett legeme (knapp-fila har sju hetter). Alle ligger på platen og passer i K2. Ingen deler kolliderer i montert stilling. Begge kamrene er lukket i alle retninger når lokket og elementene er på, med ca. 0,48 l netto hver. Ytterveggen er minst 2 mm overalt utenom de tiltenkte hullene.
+**Sjekket med `sjekk_modell.py`:** alle delene er vanntette og hver er ett legeme (knapp-fila har sju hetter). Alle ligger på platen og passer i K2. Ingen deler kolliderer i montert stilling. Begge kamrene er lukket i alle retninger når lokket og elementene er på, med ca. 0,48 l netto hver. Sidene, toppen, gulvet og bakplata er minst 2 mm overalt utenom de tiltenkte hullene.
 
-**Lydkammeret** er en egen boks med baffel (7 mm), skillevegg og lokk med skumtape. Kroppen trenger derfor ikke være tett, og ventilasjonen til Pi-en og forsterkeren påvirker ikke bassen. Elementene skrus på baffelen forfra. Rammen havner da 1 mm bak grillens flens. Med 0,47 l per element blir Qtc ca. 1,1. Det gir en litt fyldig, «radioaktig» bass. Litt dempeull løst i kamrene gjør bassen strammere.
+**Lydkammeret** er en egen boks med baffel (7 mm), skillevegg og lokk med skumtape. Kroppen trenger derfor ikke være tett, og ventilasjonen til Pi-en og forsterkeren påvirker ikke bassen. Elementene skrus på baffelen forfra. Rammen havner da 1 mm bak grillens flens. Kammeret er det samme som i første utgave. Med 0,47 l per element blir Qtc ca. 1,1. Det gir en litt fyldig, «radioaktig» bass. Litt dempeull løst i kamrene gjør bassen strammere.
 
 ## Montering
 
-1. **Innpressmuttere:** 4 i hjørnetårnene i kroppen (nedenfra), 8 bak i kammeret (lokket) og 4 i kammerørene (nedenfra).
+Alt monteres bakfra gjennom den åpne baksiden.
+
+1. **Innpressmuttere:** 5 i tårnene bak i kroppen, 8 bak i kammeret (lokket) og 4 i kammerørene (nedenfra).
 2. **Kammeret:** trekk høyttalerkablene gjennom hullene i gulvet og tett med silikon. Skru elementene på baffelen (M3 × 10 selvgjengende). Legg i litt dempeull. Legg skumtape rundt kanten og skru på lokket (8 × M3 × 8).
-3. **Toppen:** lim grillduken på baksiden av grillen. Sett grillen inn fra undersiden av kroppen (flensen legger seg i falsen på sidene og oppe).
-4. **Skjermen:** legg skjermmodulen i lomma under vinduet, med 1 mm skumtape mot kanten. Skru skjermbraketten over med 4 × M2,5.
-5. **Knappene:** sett de seks favoritthettene og av/på-hetta i hullene fra innsiden. Lodd taktbryterne på hullkortene med 23 mm mellom bryterne (favoritter). Skru kortene på tårnene under toppen (M2,5).
-6. **EC11:** hjulet monteres gjennom toppen og volumknotten gjennom høyre side, med mutter. Trykk på knottene.
-7. **Bunnplata:** skru Pi-en på tårnene (M2,5) med USB-C/HDMI-kanten mot bakveggen. Fest forsterkeren, nedtrapperen og releet med dobbeltsidig tape over luftespaltene. Monter DC-, 3,5 mm- og USB-C-kontaktene i bakveggen.
-8. **Kammeret på bunnplata:** 4 × M3 × 10 senkeskrue nedenfra i ørene. Kammeret holder grillen på plass via midtribben.
-9. **Kobl til** etter tabellen over. Sett kroppen ned over alt og skru bunnplata fast i hjørnene (4 × M3 × 10). Sett på gummiføttene i forsenkningene.
+3. **Fronten:** trykk gullista inn i sporet mellom grillen og panelet (en dråpe lim i hver ende). Lim grillduken på baksiden av grillen, og legg grillen inn i åpningen fra innsiden, så flensen ligger i falsen.
+4. **Kammeret i kroppen:** skyv det inn bakfra mot grillen og skru det fast med 4 × M3 × 10 senkeskrue nedenfra i ørene. Midtribben på grillen ligger mot skilleveggen og holder grillen på plass.
+5. **Skjermen og Pi-en:** legg skjermmodulen i lomma bak vinduet, med 1 mm skumtape mot kanten. Skru Pi-en på tårnene bak på braketten (4 × M2,5), før DSI-flatkabelen gjennom slissen og skru braketten over skjermen (4 × M2,5).
+6. **Knappene:** sett de seks favoritthettene og av/på-hetta i hullene fra innsiden. Lodd taktbryterne på hullkortet med 19 mm mellom favorittene og av/på 27 mm til høyre for favoritt 6. Skru kortet på de to tårnene (M2,5).
+7. **EC11:** hjulet og volumknotten monteres gjennom fronten med mutter. Trykk på knottene.
+8. **Gulvet bak kammeret:** fest forsterkeren, nedtrapperen og releet med dobbeltsidig tape over luftespaltene. Monter DC-, 3,5 mm- og USB-C-kontaktene i bakplata.
+9. **Kobl til** etter tabellen over. Skru på bakplata (5 × M3 × 10 senkeskrue) og sett gummiføttene i forsenkningene under.
 
 ## Programvare
 
@@ -169,7 +171,7 @@ Du kan bestille alle delene i resin (SLA) eller nylon (MJF) i stedet for å prin
 
 **Kan resin bli like pent som sprøytestøpt plast?** Nesten. SLA-resin har ingen synlige lag. Med 0,05 mm lag og en god resin som JLC 8001 eller 9600 blir overflaten glatt og matt, og kantene skarpe. Det skiller seg fra sprøytestøpt plast på tre punkter:
 
-1. **Støttemerker:** små prikker der støttene satt. Be om at de plasseres på innsiden. Kroppen er et åpent skall, så det går fint.
+1. **Støttemerker:** små prikker der støttene satt. Be om at de plasseres på innsiden. Kroppen er et skall som er åpent bak, så det går fint.
 2. **Overflaten:** den er glatt, men ikke helt «støpt». Etter sliping (400 → 800 → 1500 vått), sprøyteprimer, ny sliping og 2–3 lag lakk (matt eller silkematt 2K/akryl) er det svært vanskelig å se forskjell på 30 cm avstand.
 3. **Holdbarhet:** standardresin er hardere, men sprøere enn ABS/PC. Den kan sprekke hvis radioen faller i gulvet. Resin gulner også litt i sol over tid; lakk med UV-filter hjelper. Innpressmuttere fungerer dårlig i resin, så **lim M3-muttere (epoksy) i stedet**, eller bruk selvgjengende skruer.
 
@@ -179,7 +181,7 @@ Du kan bestille alle delene i resin (SLA) eller nylon (MJF) i stedet for å prin
 |---|---|---|---|---|
 | **SLA resin** (JLC 8001/9600, sort/hvit resin) | Glattest, ingen lag | Hard, sprø | Skarpest (0,05 mm) | Fjern støttemerker, slip, primer, lakk |
 | **MJF PA12, farget sort** | Jevn matt sandstruktur | Best (seig nylon) | Gode (0,08 mm) | Ingen for mørk variant; ev. damping/«vapor smoothing» for halvblank |
-| **FDM PETG/ASA** (egen K2) | Lag synlige på sidene; toppflaten glatt (mot PEI) | God | OK (0,4 mm dyse) | Mye: sparkel, primer, sliping, lakk |
+| **FDM PETG/ASA** (egen K2) | Lag synlige på sidene; fronten glatt (mot PEI) | God | OK (0,4 mm dyse) | Mye: sparkel, primer, sliping, lakk |
 
 **Tjenester:**
 
@@ -191,16 +193,16 @@ Du kan bestille alle delene i resin (SLA) eller nylon (MJF) i stedet for å prin
 
 | Del | SLA resin (JLC3DP) | MJF PA12 sort (JLC3DP) | Craftcloud (EU, SLA/MJF) |
 |---|---|---|---|
-| Kropp (285 cm³, 236 × 173 × 130) | 700–1 300 kr | 800–1 500 kr | 1 500–3 000 kr |
-| Grill (43 cm³) | 120–250 kr | 150–300 kr | 300–600 kr |
+| Kropp (454 cm³, 236 × 205 × 145) | 1 000–1 900 kr | 1 100–2 100 kr | 2 000–4 000 kr |
+| Grill + gullist (39 cm³) | 120–250 kr | 150–300 kr | 300–600 kr |
 | Hjul + volumknott + 7 knappehetter (15 cm³) | 60–150 kr | 80–180 kr | 200–400 kr |
 | Lydkammer + lokk (270 cm³, usynlig) | 600–1 100 kr | 700–1 300 kr | – (print selv) |
-| Bunnplate + brakett (139 cm³, usynlig) | 300–600 kr | 350–700 kr | – (print selv) |
+| Bakplate + brakett (150 cm³, synes bare bakfra) | 300–650 kr | 350–750 kr | – (print selv) |
 | Frakt til Norge | 200–350 kr | 200–350 kr | 0–200 kr |
 
 Legg til 25 % MVA (og eventuelt fortollingsgebyr på ca. 100–200 kr fra Kina).
 
-**Anbefaling:** bestill bare de synlige delene i resin eller MJF (kropp, grill, hjul, volumknott og knappehetter, ca. 1 100–2 000 kr med frakt og MVA). Print lydkammeret, lokket, bunnplata og braketten selv på K2. De synes ikke, og kammeret blir faktisk bedre i tett PETG enn i hul resin. Velg MJF sort for den mørke varianten uten maling, og SLA med sliping, primer og lakk for den lyse varianten som skal se mest mulig sprøytestøpt ut.
+**Anbefaling:** bestill bare de synlige delene i resin eller MJF (kropp, grill, gullist, hjul, volumknott og knappehetter, ca. 1 500–2 800 kr med frakt og MVA). Print lydkammeret, lokket, bakplata og braketten selv på K2. De synes ikke, og kammeret blir faktisk bedre i tett PETG enn i hul resin. Velg MJF sort for den mørke varianten uten maling, og SLA med sliping, primer og lakk for den lyse varianten som skal se mest mulig sprøytestøpt ut.
 
 ## Lisens
 
