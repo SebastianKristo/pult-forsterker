@@ -110,7 +110,8 @@ struct V4HomeTab: View {
             }
             .frame(width: 132, height: 132)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(V4.gold, lineWidth: r.cur ? 2 : 0))
+            // Bare når flisen spiller: strokeBorder med lineWidth 0 tegner en tynn hårstrek rundt logoen
+            .overlay { if r.cur { RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(V4.gold, lineWidth: 2) } }
             Text(r.t).sora(13, .semibold).lineLimit(1)
             HStack(spacing: 6) {
                 V4SourceIcon(label: r.src, size: 16)
