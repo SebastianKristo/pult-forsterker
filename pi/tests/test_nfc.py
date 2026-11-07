@@ -149,3 +149,18 @@ def test_spoler_tvang_ved_neste(tmp_path):
     assert st["modus"] == "tilbake" and st["retning"] == -1
     assert sp.status({"playing": True, "position": 1, "title": "Ny"}, True, now=103.0)["modus"] == "spill"
     assert sp.sett({"vent": 0})["vent"] == 0.0 and sp.skal_vente(True) == 0.0
+
+
+def test_spoler_hopp_i_laaten_gir_fysisk_spoling(tmp_path):
+    from skjold_nfc import Spoler
+    sp = Spoler(str(tmp_path / "s.json"))
+    sp.status({"playing": True, "position": 10, "title": "A"}, True, now=100.0)
+    sp.status({"playing": True, "position": 82, "title": "A"}, True, now=101.0)   # spolt 0:10 → 1:22
+    retning, hopp = sp.hent_hopp()
+    assert retning == 1 and 70 < hopp < 72 and sp.hent_hopp() is None
+    assert 1.0 <= sp.spoletid(hopp) <= 2.5 and sp.spoletid(600) == 2.5
+    sp.status({"playing": True, "position": 30, "title": "A"}, True, now=102.0)   # bakover
+    assert sp.hent_hopp()[0] == -1
+    sp.sett({"vent": 0})
+    sp.status({"playing": True, "position": 200, "title": "A"}, True, now=103.0)
+    assert sp.hent_hopp() is None                                                  # av: ingen pause
