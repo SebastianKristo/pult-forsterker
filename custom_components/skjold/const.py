@@ -72,4 +72,4 @@ def all_known_sources(data: dict | None) -> list[str]:
         if i not in out:
             out.append(i)
     return out
-VERSION_CARDS = "1"
+VERSION_CARDS = "2"

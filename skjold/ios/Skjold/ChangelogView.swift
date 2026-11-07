@@ -33,7 +33,13 @@ struct ChangelogData {
     }
 
     /// «Hva er nytt» én gang etter versjonsbytte. Første gang appen ser enheten vises ingenting.
-    static func whatsNew(host: String) async -> ReleaseNote? {
+    /// Sist «Hva er nytt» ble sjekket per enhet. Visningen kan bli laget på nytt ofte (statusoppdateringer, rombytte),
+    /// og et tomt/feilende svar ga da en ny forespørsel hver gang. Sjekk høyst hver 6. time per enhet.
+    @MainActor private static var lastCheck: [String: Date] = [:]
+
+    @MainActor static func whatsNew(host: String) async -> ReleaseNote? {
+        if let t = lastCheck[host], Date().timeIntervalSince(t) < 6 * 3600 { return nil }
+        lastCheck[host] = Date()
         guard let c = await fetch(host: host), let cur = c.current, let n = c.notes else { return nil }
         let key = "skjold-seenRelease-" + host
         guard let seen = UserDefaults.standard.string(forKey: key) else { UserDefaults.standard.set(cur, forKey: key); return nil }
