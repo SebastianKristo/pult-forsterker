@@ -256,6 +256,22 @@ jobs:
           name: print3d
           path: ut/*
 
+  hakort:
+    name: Skjold-kort for Home Assistant
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sjekk at kortet er bygget fra kilden
+        working-directory: ha-kort
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          git diff --exit-code -- dist/skjold-card.js ../custom_components/skjold/www/skjold-cards.js || { echo "::error::Kjør «npm run build» i ha-kort og sjekk inn dist"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hakort
+          path: ha-kort/dist/skjold-card.js
+
   rostfw:
     name: Fastvare for Skjold Røst (squeezelite-esp32 + Skjold-oppsett)
     runs-on: ubuntu-latest
@@ -278,7 +294,7 @@ jobs:
 
   release:
     name: GitHub Release
-    needs: [web, android-native, ios, ios-native, flasher, manual, print3d, rostfw]
+    needs: [web, android-native, ios, ios-native, flasher, manual, print3d, rostfw, hakort]
     # macOS-jobbene (iOS og Flasher for Mac) blir ofte avbrutt uten maskin (eller når macOS-minuttene er brukt opp) –
     # releasen publiseres likevel når web/Android og PDF gikk gjennom; filene som ble bygget kommer med.
     if: >-
