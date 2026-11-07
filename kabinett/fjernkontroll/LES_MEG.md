@@ -421,6 +421,8 @@ Du får mer ut av batteriet hvis du:
 | Ekstra deler | – | XPT2046 (TSSOP-16) + 1 µF på tastekortet | – |
 | ESPHome | `skjold-fjernkontroll.yaml` (eller `-kort`) | `skjold-fjernkontroll-budsjett.yaml` (pakke over hovedfila) | egen fil måtte lages |
 
+**IPS med GT911-berøring (også kapasitiv):** mange IPS-paneler selges med GT911 i stedet for FT6336U, f.eks. «IPS 2.8 inch RGB565 18PIN SPI TFT LCD Capacitive Screen ST7789V 6P GT911» (Ecyberspaces, ca. 100 kr + frakt, velg «IPS Screen with TP»). Skjermdelen er den samme (ST7789V, 18-pinners FPC). Berøringen har egen 6-pinners flatkabel (VCC, GND, SDA, SCL, INT, RST) som kobles til I²C-bus B, INT til GPIO7 og RST til GPIO12, akkurat som FT6336U. Bruk [`esphome/skjold-fjernkontroll-gt911.yaml`](../../esphome/skjold-fjernkontroll-gt911.yaml), som bytter `ft63x6` med `gt911`. Be selgeren om måltegningen og sjekk at den er ca. 50 × 69,2 mm med aktivt område 43,2 × 57,6 mm før du printer.
+
 **Anbefaling:** IPS med kapasitiv berøring er fortsatt standard, siden den har bedre bilde og føles bedre. Budsjett-skjermen er et godt valg hvis prisen betyr mest, og sparer ca. 100 kr.
 
 **Budsjett-skjermen passer i modellen.** Tegningen gir:
