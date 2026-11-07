@@ -12,6 +12,10 @@ import AppIntents
                 .task { CallDuck.shared.start() }   // «Senk musikken når telefonen ringer» (hvis slått på)
                 // Siri lærer navnene på favoritter og rutiner (for «Spill NRK Jazz med Skjold»)
                 .task { SkjoldShortcuts.updateAppShortcutParameters() }
+                // Delte kassetter: skjold://kassett/del?d=<kode> (QR/lenke fra en venn)
+                .onOpenURL { url in
+                    if let k = V4KassettMottaSheet.kode(fra: url) { model.kassettDel = k }
+                }
         }
     }
 }

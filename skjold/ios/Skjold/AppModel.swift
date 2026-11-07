@@ -127,6 +127,7 @@ final class AppModel {
     var hjemState = ""
     var hjemLogin = false
     var showKassett = false  // «Lag kassett» (V4KassettSheet)
+    var kassettDel: String? = nil   // mottatt delingskode (skjold://kassett/del?d=…) – V4KassettMottaSheet
     var whatsNew: ReleaseNote? = nil   // «Hva er nytt» etter oppdatering av enheten (ChangelogView.swift)
     var showRoomEQ = false   // romkorreksjon med mikrofonen (V4RoomEQSheet)
     var showSpeakers = false   // høyttalerprofil / Skjold Sertifisert (V4SpeakerSheet)

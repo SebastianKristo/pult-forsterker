@@ -24,6 +24,7 @@ struct V4KassettSheet: View {
     @State private var status = ""
     @State private var pdf: URL?
     @State private var busy = false
+    @State private var showDel = false
 
     enum Phase { case velg, skriv, ferdig }
 
@@ -46,12 +47,17 @@ struct V4KassettSheet: View {
         .background(V4.bg.ignoresSafeArea())
         .presentationDragIndicator(.visible)
         .task(id: src) { await load() }
+        .sheet(isPresented: $showDel) { V4KassettDelSheet().environment(m) }
     }
 
     // MARK: 1 – velg hva kassetten skal spille
 
     private var chooser: some View {
         VStack(alignment: .leading, spacing: 14) {
+            V4KassettWrappedCard()
+            Button { showDel = true } label: {
+                Text("Del kassettene med en venn").sora(14, .regular, V4.gold)
+            }.plain()
             HStack(spacing: 8) {
                 ForEach(Src.allCases, id: \.self) { s in
                     Button { src = s; pick = nil } label: {

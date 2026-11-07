@@ -72,6 +72,9 @@ struct V4App: View {
         .sheet(isPresented: Binding(get: { m.hjemLogin }, set: { m.hjemLogin = $0 })) { HjemLoginView() }
         .sheet(isPresented: Binding(get: { m.showRoomEQ }, set: { m.showRoomEQ = $0 })) { V4RoomEQSheet().environment(m) }
         .sheet(isPresented: Binding(get: { m.showKassett }, set: { m.showKassett = $0 })) { V4KassettSheet().environment(m) }
+        .sheet(isPresented: Binding(get: { m.kassettDel != nil }, set: { if !$0 { m.kassettDel = nil } })) {
+            if let k = m.kassettDel { V4KassettMottaSheet(kode: k).environment(m) }
+        }
         .sheet(isPresented: Binding(get: { m.showSpeakers }, set: { m.showSpeakers = $0 })) { V4SpeakerSheet().environment(m) }
         .sheet(item: Binding(get: { m.whatsNew }, set: { m.whatsNew = $0 })) { n in
             WhatsNewSheet(note: n) { if let h = m.activeHost { ChangelogData.markSeen(n.tag, host: h) }; m.whatsNew = nil }

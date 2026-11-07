@@ -50,6 +50,10 @@ def kassett_state(nfc: dict | None, spoler: dict | None) -> dict | None:
         "kilde": _KILDE.get(((by_uid.get(active) or {}).get("losning") or {}).get("kilde"), "") if active else "",
         "paret": str(nfc.get("paret") or ""),
         "ventende": len(nfc.get("ventende") or []),
+        # delte kassetter fra venner (QR/lenke/Skjold Cloud) som venter på en NFC-brikke
+        "ventende_delte": len([v for v in nfc.get("ventende") or [] if isinstance(v, dict) and (v.get("fra") or v.get("handling"))]),
+        "mest_spilt": (max(cards, key=lambda c: int(c.get("spilt") or 0)).get("navn")
+                       if cards and any(int(c.get("spilt") or 0) for c in cards) else None),
     }
 
 
