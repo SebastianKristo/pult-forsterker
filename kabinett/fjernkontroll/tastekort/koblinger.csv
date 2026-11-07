@@ -1,25 +1,21 @@
 bryter,navn,brikke,adresse,pinne,esphome_nummer
-av,Av-på,A,0x20,P0_0,0
-hjem,Skjold (aktiviteter),A,0x20,P0_1,1
-meny,Meny,A,0x20,P0_2,2
-tilbake,Tilbake,A,0x20,P0_3,3
-avslutt,Avslutt,A,0x20,P0_4,4
-opp,Opp,A,0x20,P0_5,5
-ned,Ned,A,0x20,P0_6,6
-venstre,Venstre,A,0x20,P0_7,7
-hoyre,Høyre,A,0x20,P1_0,8
-ok,OK,A,0x20,P1_1,9
-vol_opp,Volum +,A,0x20,P1_2,10
-vol_ned,Volum −,A,0x20,P1_3,11
-demp,Demp,A,0x20,P1_4,12
-guide,Guide,A,0x20,P1_5,13
+tilbake,Tilbake,A,0x20,P0_0,0
+avslutt,Avslutt,A,0x20,P0_1,1
+opp,Opp,A,0x20,P0_2,2
+ned,Ned,A,0x20,P0_3,3
+venstre,Venstre,A,0x20,P0_4,4
+hoyre,Høyre,A,0x20,P0_5,5
+ok,OK,A,0x20,P0_6,6
+vol_opp,Volum +,A,0x20,P0_7,7
+vol_ned,Volum −,A,0x20,P1_0,8
+demp,Demp,A,0x20,P1_1,9
+guide,Guide,A,0x20,P1_2,10
+av,Av-på,A,0x20,P1_3,11
+hjem,Skjold (aktiviteter),A,0x20,P1_4,12
+meny,Meny,A,0x20,P1_5,13
 spol_tilbake,Spol tilbake,A,0x20,P1_6,14
 spill_pause,Spill-pause,A,0x20,P1_7,15
 spol_frem,Spol frem,B,0x21,P0_0,0
-rod,Rød,B,0x21,P0_1,1
-gronn,Grønn,B,0x21,P0_2,2
-gul,Gul,B,0x21,P0_3,3
-bla,Blå,B,0x21,P0_4,4
 vibrator,utgang: vibrasjonsmotor (via AO3400),B,0x21,P1_4,12
 strom_skjerm,"utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)",B,0x21,P1_5,13
 lader,inngang: TP4056 CHRG (lav = lader),B,0x21,P1_6,14

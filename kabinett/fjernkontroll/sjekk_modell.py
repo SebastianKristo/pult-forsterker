@@ -40,7 +40,7 @@ def melding(god, tekst):
 
 
 # ---------- 1. utskriftsdelene ----------
-ANTALL = {"knapper": None, "knapper_lys": 4, "gull": 2, "farge_rod": 1, "farge_gronn": 1, "farge_gul": 1, "farge_bla": 1,
+ANTALL = {"knapper": None, "knapper_lys": 4, "gull": 2,
           "topp": 1, "bunn": 1, "ir_vindu": 1, "bryterbrett": 1, "logo": 6, "symboler_lyse": None, "symboler_morke": None}
 mork = sum(1 for h in taster.HETTER if h[8] == "mork")
 ANTALL["knapper"] = mork

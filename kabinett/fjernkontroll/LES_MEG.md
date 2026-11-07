@@ -1,6 +1,6 @@
 # Skjold Fjernkontroll
 
-En universell fjernkontroll for hele stua: 2,8″ fargeberøringsskjerm øverst, nesten fra kant til kant, 21 taster under, IR foran og Wi-Fi inni. Den styrer Skjold direkte (volum, spill/pause, favoritter, kilder og rom), sender og lærer IR-koder til TV, projektor og annet, og kjører aktiviteter som «Se TV» og «God natt» som setter i gang IR, Skjold og Home Assistant i én operasjon. Alle tastene sendes også til Home Assistant, så du kan bruke hvilken som helst tast til hva du vil.
+En universell fjernkontroll for hele stua: 2,8″ fargeberøringsskjerm øverst, nesten fra kant til kant, 17 taster under, IR foran og Wi-Fi inni. Den styrer Skjold direkte (volum, spill/pause, favoritter, kilder og rom), sender og lærer IR-koder til TV, projektor og annet, og kjører aktiviteter som «Se TV» og «God natt» som setter i gang IR, Skjold og Home Assistant i én operasjon. Alle tastene sendes også til Home Assistant, så du kan bruke hvilken som helst tast til hva du vil.
 
 Den er laget for å bygges hjemme. Kabinettet printes på en Creality K2, delene kommer fra AliExpress, og fastvaren er ESPHome.
 
@@ -10,7 +10,7 @@ Bilder: [skrått, lys](render/01_skra_lys.png) · [ovenfra, lys](render/02_ovenf
 I Bone White matt PLA med mørk matt PETG-bunn: [skrått](render/21_skra_bone.png) · [ovenfra](render/22_ovenfra_bone.png) · [fra siden](render/23_side_bone.png) · [nær](render/24_naer_bone.png) · [med grå PETG-bunn](render/25_skra_bone_gra.png). Se [Filament](#filament).
 Skjermen i bildene viser aktivitetslista slik fastvaren tegner den. Skjermbildene er laget med `lag_skjermbilder.py` (se [Skjermen](#skjermen)).
 
-**Mål: 55 × 184 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 227 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
+**Mål: 55 × 177 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 220 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
 
 Første utgave hadde en 2,0″-skjerm i en 54 × 208 mm kropp, med mye tom ramme på hver side av skjermen. Nå sitter en 2,8″-skjerm der: kroppen er 1 mm bredere og 22 mm lengre, og alt under skjermen (taster, form og farger) er det samme som før.
 
@@ -29,9 +29,9 @@ Standard er fjernkontrollen **uten talltaster**, som vist i bildene over. **Full
 
 | | **Standard** | **Full variant (valgfri)** |
 |---|---|---|
-| Mål | **55 × 184 mm** | 55 × 227 mm |
+| Mål | **55 × 177 mm** | 55 × 220 mm |
 | Tykkelse | 13,5 mm (15,0 mm med gullringen) | samme |
-| Taster | **21 brytere, 17 hetter** | 37 brytere, 33 hetter |
+| Taster | **17 brytere, 13 hetter** | 33 brytere, 29 hetter |
 | TCA9555 | **2** (0x20, 0x21); vibrator, skjermstrøm og lader på brikke B, P1_4–P1_6 | 3 (0x20, 0x21, 0x22); de tre styrepinnene på brikke C |
 | Tastekort | 48,6 × 95 mm (`tastekort/`) | 48,6 × 138 mm (`tastekort_full/`) |
 | ESPHome | `esphome/skjold-fjernkontroll.yaml` | `esphome/skjold-fjernkontroll-full.yaml` |
@@ -39,17 +39,13 @@ Standard er fjernkontrollen **uten talltaster**, som vist i bildene over. **Full
 | STL | `stl/` | `stl_full/` |
 | Pris | **ca. 630 kr** | ca. 640 kr |
 
-Begge har samme skjerm, samme bredde og samme formspråk. Standardvarianten slutter med de fire fargetastene. De passer til TV-apper og kan styre ting i Home Assistant.
+Begge har samme skjerm, samme bredde og samme formspråk. Standardvarianten slutter med av/på, Skjold-tasten og meny, og under dem avspillingsraden. Det er ingen fargetaster.
 
-**Smarthus-funksjonene på standardvarianten.** Lys, stikk og ± ligger på skjermen (Hjem-siden), og på **langt trykk på fargetastene**:
-- rød: veksler lys
-- grønn: veksler stikkontakt
-- gul: demper lyset (−)
-- blå: skrur lyset opp (+)
+**Smarthus-funksjonene på standardvarianten.** Lys, stikk og ± ligger på skjermen (Hjem-siden). Det er ingen egne taster for dem, og de er ikke lagt på langt trykk på andre taster. Langt trykk på Skjold-tasten velger fortsatt rom, og langt trykk på av/på er «alt av». Vil du ha en fysisk tast til lyset, kan du koble hvilken som helst tast til det i Home Assistant (se [Home Assistant](#home-assistant)). Hver tast sendes som en hendelse, også langt trykk.
 
-Det samme langtrykket virker også på full variant.
+**Én eller to TCA9555?** Standardvarianten har 17 brytere, og vibratoren, skjermstrømmen og ladestatusen trenger tre pinner til. Det blir 20 pinner, mens én TCA9555 har 16. SuperMini-en har ingen ledige pinner (GPIO 1–13, 43 og 44 er brukt til skjerm, berøring, IR, vekking og batteri). Derfor er det fortsatt to TCA9555.
 
-**Plassering inni.** På standardvarianten ligger ESP-en til venstre foran laderen (n = 125–148 mm), fordi halen er kortere.
+**Plassering inni.** På standardvarianten ligger ESP-en til venstre foran laderen (n = 124–147 mm), fordi halen er kortere.
 
 **Pris.** Forskjellen er liten: delene som utgår er billige, og TCA9555 og bryterne kjøpes i pakker uansett. Det er ca. 10 kr i filament og kortflate.
 
@@ -63,11 +59,10 @@ Fjernkontrollen er en rett, flat plate. Den har myke R11-hjørner sett ovenfra o
 
 Fra toppen og ned:
 - **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (47,0 × 59,8 mm) er like stort som dekkglasset minus 1,5 mm kant på sidene og oppe, så den sorte glasskanten synes, og plastrammen ved siden av skjermen er bare 4 mm (inkludert fasen). Nede slutter vinduet 1,1 mm under det aktive området, slik at den brede glasskanten ved flatkabelen ligger skjult.
-- **Tre runde taster** sitter rett under skjermen: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og meny.
-- **D-paden** er en stor gullring (Ø 32 mm) med fire tydelige retningspiler (sorte trekanter, 4,6 × 3,3 mm, felt inn i gullet) og en mørk OK i midten. Den sitter høyt, der tommelen hviler. Over den, på hver side, sitter tilbake og avslutt.
+- **D-paden** er en stor gullring (Ø 32 mm) med fire tydelige retningspiler (sorte trekanter, 4,6 × 3,3 mm, felt inn i gullet) og en mørk OK i midten. Den sitter høyt, rett under skjermen, der tommelen hviler. På hver side av toppen av ringen sitter tilbake og avslutt.
 - **Volumvippa** er den største tasten under D-paden: 11,5 × 28 mm, loddrett midt på. Demp sitter til venstre for den og guide til høyre, begge runde (Ø 9 mm).
+- **Tre runde taster** sitter rett over avspillingsraden: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og meny.
 - **Avspilling** har én rad med pilleformede taster: spol tilbake, spill/pause og spol frem.
-- **Fargetastene** er fire smale piller i rødt, grønt, gult og blått.
 - *Full variant:* **talltastene** 1–9 står i tre kolonner, med −, 0 og ↵ i fjerde rad. **Smarthus-raden** nederst har fire lyse taster: lys, stikkontakt, − og +.
 - **SKJOLD** er felt inn i gull nederst.
 
@@ -75,7 +70,7 @@ Designet er Skjolds eget. Det følger samme formspråk som Radio, Røst og Hjul 
 - Siden er rett, ikke innsnevret, og overflaten er matt og printet, ikke en blank, sort plate.
 - D-paden sitter høyt, rett under skjermen.
 - Volum er én stor, loddrett vippe midt på, uten kanalvippe.
-- Avspillingstastene ligger i én rad under vippa.
+- Av/på, Skjold-tasten og meny ligger rett over avspillingsraden, ikke ved skjermen.
 - Det er ingen pilleknapper for «aktiviteter» og «enheter» ved skjermen. Det gjør den ene gull-tasten med Skjold-skjoldet.
 
 Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavprofil SMD-bryter (4 × 4 × 1,5 mm) på et 1,0 mm tastekort. Hettene står 0,1 mm over bryteren, så de ikke slarker og ikke trykker på forhånd. Symbolene er felt 0,4 mm inn og printet i kontrastfarge (lyse på mørke taster, mørke på lyse). Med CFS blir symbolene en del av samme utskrift.
@@ -86,8 +81,8 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 |---|---|
 | **ESP32-S3 SuperMini** (ESP32-S3FH4R2, 4 MB flash, 2 MB PSRAM) | Det minste vanlige S3-kortet (22,5 × 18 mm). Det har Wi-Fi og nok minne til LVGL, pluss dyp søvn med vekking fra to pinner. Det koster rundt 45 kr. Det ligger under tastene, med antennen mot halen, der det bare er plast rundt. |
 | **2,8″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + FT6336U), naken FPC-modul med dekkglass, 50,0 × 69,2 × 3,8–4 mm (se også [Tre skjermvalg](#tre-skjermvalg)) | Den største skjermen som får plass i bredden. Glasset er 50 mm bredt, så kroppen trenger bare å vokse fra 54 til 55 mm, og skjermen fyller nesten hele fronten. Aktivt område 43,2 × 57,6 mm, dobbelt så stort som 2,0″ (30,6 × 40,8 mm). Samme oppløsning, så fastvaren er den samme med litt større skrift. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `ft63x6`). En naken FPC-modul er tynnere enn de røde kortene med stiftlist. |
-| **2 × TCA9555** (16-bits I²C-utvider, interne pull-ups; 3 i full variant) | 21 taster blir 21 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Fire pinner er til overs for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
-| **21 × SMD-taktbryter 4 × 4 × 1,5 mm** (37 i full variant) | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
+| **2 × TCA9555** (16-bits I²C-utvider, interne pull-ups; 3 i full variant) | 17 taster blir 17 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Fire pinner er til overs for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
+| **17 × SMD-taktbryter 4 × 4 × 1,5 mm** (33 i full variant) | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
 | **3 × IR-diode 940 nm (3 mm) + AO3400** | Tre dioder i viften gir lang rekkevidde og bred spredning. AO3400 (logisk nivå) gir ca. 200 mA puls per diode fra batteriet. |
 | **VS1838B** | IR-mottaker for å lære koder. Den har strøm bare når skjermen er på (trekker ca. 0,5 mA). |
 | **LiPo 603450, 1200 mAh** | Flat (6,0 mm) og passer under skjermen. Gir 4–5 uker ved vanlig bruk (se [Batteritid](#batteritid)). |
@@ -102,7 +97,7 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 
 **A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 95 mm (full variant: 48,6 × 138 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
 - `kort_omriss.dxf` er omrisset med hull og hakk for skruene (origo nede til venstre, halen ned).
-- `plassering.csv` gir x/y for de 21 bryterne (oppside) og de to TCA9555 (underside).
+- `plassering.csv` gir x/y for de 17 bryterne (oppside) og de to TCA9555 (underside).
 - `koblinger.csv` viser hvilken bryter som går til hvilken brikke og pinne.
 - `bom.csv` er stykklista i JLC-format.
 
@@ -186,27 +181,23 @@ Hver bryter kobles mellom pinnen sin og GND. TCA9555 har innebygde pull-ups, så
 
 | Tast | Bryter-id | Brikke | Adresse | Pinne |
 |---|---|---|---|---|
-| Av-på | `av` | A | 0x20 | P0_0 |
-| Skjold (aktiviteter) | `hjem` | A | 0x20 | P0_1 |
-| Meny | `meny` | A | 0x20 | P0_2 |
-| Tilbake | `tilbake` | A | 0x20 | P0_3 |
-| Avslutt | `avslutt` | A | 0x20 | P0_4 |
-| Opp | `opp` | A | 0x20 | P0_5 |
-| Ned | `ned` | A | 0x20 | P0_6 |
-| Venstre | `venstre` | A | 0x20 | P0_7 |
-| Høyre | `hoyre` | A | 0x20 | P1_0 |
-| OK | `ok` | A | 0x20 | P1_1 |
-| Volum + | `vol_opp` | A | 0x20 | P1_2 |
-| Volum − | `vol_ned` | A | 0x20 | P1_3 |
-| Demp | `demp` | A | 0x20 | P1_4 |
-| Guide | `guide` | A | 0x20 | P1_5 |
+| Tilbake | `tilbake` | A | 0x20 | P0_0 |
+| Avslutt | `avslutt` | A | 0x20 | P0_1 |
+| Opp | `opp` | A | 0x20 | P0_2 |
+| Ned | `ned` | A | 0x20 | P0_3 |
+| Venstre | `venstre` | A | 0x20 | P0_4 |
+| Høyre | `hoyre` | A | 0x20 | P0_5 |
+| OK | `ok` | A | 0x20 | P0_6 |
+| Volum + | `vol_opp` | A | 0x20 | P0_7 |
+| Volum − | `vol_ned` | A | 0x20 | P1_0 |
+| Demp | `demp` | A | 0x20 | P1_1 |
+| Guide | `guide` | A | 0x20 | P1_2 |
+| Av-på | `av` | A | 0x20 | P1_3 |
+| Skjold (aktiviteter) | `hjem` | A | 0x20 | P1_4 |
+| Meny | `meny` | A | 0x20 | P1_5 |
 | Spol tilbake | `spol_tilbake` | A | 0x20 | P1_6 |
 | Spill-pause | `spill_pause` | A | 0x20 | P1_7 |
 | Spol frem | `spol_frem` | B | 0x21 | P0_0 |
-| Rød | `rod` | B | 0x21 | P0_1 |
-| Grønn | `gronn` | B | 0x21 | P0_2 |
-| Gul | `gul` | B | 0x21 | P0_3 |
-| Blå | `bla` | B | 0x21 | P0_4 |
 | utgang: vibrasjonsmotor (via AO3400) | `vibrator` | B | 0x21 | P1_4 |
 | utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401) | `strom_skjerm` | B | 0x21 | P1_5 |
 | inngang: TP4056 CHRG (lav = lader) | `lader` | B | 0x21 | P1_6 |
@@ -214,13 +205,12 @@ Hver bryter kobles mellom pinnen sin og GND. TCA9555 har innebygde pull-ups, så
 
 ## Print (Creality K2)
 
-Tre ferdige plater for standardvarianten (`skjold-fjernkontroll-k2*.3mf`) og tre for full variant (`skjold-fjernkontroll-full-k2*.3mf`, med smarthus-tastene). Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlicer), så med CFS printes hver plate i én omgang. Ingen deler trenger støtte.
+To ferdige plater for standardvarianten (`skjold-fjernkontroll-k2*.3mf`) og to for full variant (`skjold-fjernkontroll-full-k2*.3mf`, med smarthus-tastene). Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlicer), så med CFS printes hver plate i én omgang. Ingen deler trenger støtte.
 
 | Plate | Innhold | Filament |
 |---|---|---|
 | `skjold-fjernkontroll-k2.3mf` | Toppen (forsiden ned), SKJOLD i gull felt inn i toppen, og bunnen | 1 = lys (topp), 2 = mørk (bunn), 3 = gull (logo) |
 | `skjold-fjernkontroll-k2-taster.3mf` | Alle hettene (flensen ned) i samme mønster som de sitter, med symbolene felt inn, gullringen og Skjold-tasten, smarthus-tastene, og IR-vinduet | 1 = lys, 2 = mørk, 3 = gull, 4 = klar/natur PETG (IR-vinduet) |
-| `skjold-fjernkontroll-k2-farger.3mf` | De fire fargetastene | 1 = rød, 2 = grønn, 3 = gul, 4 = blå |
 
 **Innstillinger:**
 - Topp og bunn: PLA eller PETG, 0,2 mm lag, 3 vegger, 25 % fyll.
@@ -240,13 +230,13 @@ PLA og PETG på samme plate går fint med CFS, siden toppen og bunnen er hver si
 
 **IR-vinduet** må slippe gjennom 940 nm. Klar eller natur PETG fungerer best. Sort PLA stopper ofte IR (sotpigment). Du kan teste med mobilkameraet: hold vinduet foran en IR-fjernkontroll og trykk, og se om lyset synes. Et 1 mm IR-akrylvindu (30 × 3,5 mm) kan limes inn i stedet.
 
-**Med én farge (uten CFS):** print alt i én farge og slett symbol-, logo- og fargedelene i sliceren. Symbolene og SKJOLD blir da felt inn 0,4–0,5 mm. Fyll dem med akrylmaling eller en tusj, og tørk av overflaten. Fargetastene kan males, eller printes en og en i hver sin farge.
+**Med én farge (uten CFS):** print alt i én farge og slett symbol- og logodelene i sliceren. Symbolene og SKJOLD blir da felt inn 0,4–0,5 mm. Fyll dem med akrylmaling eller en tusj, og tørk av overflaten.
 
 Bruk `lag_stl.sh` for å eksportere alt på nytt (STL, sjekk og 3MF) etter endringer, og `xvfb-run -a ./lag_render.sh` for bildene. Tastene flytter du i `taster.py`. Den oppdaterer modellen, tastekortdataene og ESPHome-fila samtidig.
 
 ## Montering
 
-1. **Tastekortet:** lodd de 21 bryterne (37 i full variant) (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
+1. **Tastekortet:** lodd de 17 bryterne (33 i full variant) (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
 2. **IR-kortet:** lodd de tre IR-diodene liggende (de peker ut gjennom nesen), VS1838B og AO3400 på en 34 × 7 mm hullkortbit. Kortet står i sporet i nesen, med diodene mot vinduet.
 3. **IR-vinduet:** trykk det inn i nesen fra innsiden (kragen inn) og fest med en dråpe lim.
 4. **Lader og ESP:** legg TP4056 i lomma i halen med USB-C ut gjennom hullet. Legg SuperMini-en i lomma foran (antennen mot halen). Lodd ledningene etter tabellen. Bruk kort silikontråd og legg den flatt.
@@ -320,17 +310,17 @@ Etter det oppdateres den trådløst. Slå på «Hold våken (for oppdatering)» 
 ESPHome-integrasjonen finner fjernkontrollen. Slå på **«Tillat enheten å utføre handlinger i Home Assistant»** i integrasjonsvalgene, ellers virker ikke lys, stikk og scener.
 
 **Hver tast er en hendelse.** Det finnes to måter å fange den på:
-- **Event-entiteten `event.skjold_fjernkontroll_tast`** har én hendelsestype per tast: `rod`, `tall_1`, `lys` … og `<tast>_lang` for langt trykk. Den er lettest å bruke i automasjonsredigereren.
+- **Event-entiteten `event.skjold_fjernkontroll_tast`** har én hendelsestype per tast: `meny`, `guide`, `spill_pause` (og `tall_1`, `lys` … i full variant) og `<tast>_lang` for langt trykk. Den er lettest å bruke i automasjonsredigereren.
 - **Hendelsen `esphome.skjold_fjernkontroll`** har `tast` og `lang` i data:
 
 ```yaml
 automation:
-  - alias: Rød tast tenner kjøkkenet
+  - alias: Langt trykk på meny tenner kjøkkenet
     triggers:
       - trigger: state
         entity_id: event.skjold_fjernkontroll_tast
         attribute: event_type
-        to: rod
+        to: meny_lang
     actions:
       - action: light.toggle
         target: { entity_id: light.kjokken }

@@ -1,4 +1,4 @@
-// Skjold Fjernkontroll – universell fjernkontroll med 2,8″ fargeberøringsskjerm, 21 taster (full variant 37), IR og Wi-Fi. Parametrisk OpenSCAD.
+// Skjold Fjernkontroll – universell fjernkontroll med 2,8″ fargeberøringsskjerm, 17 taster (full variant 33), IR og Wi-Fi. Parametrisk OpenSCAD.
 // Eget Skjold-design: en rett, flat «plate» med myke R11-hjørner sett ovenfra og 45°-fas rundt topp- og bunnkanten
 // (ingen innsnevring på midten). Toppen er lys (eller mørk), bunnen mørk, delt i en rett skjøt rundt hele siden.
 // Gullring rundt OK, gull Skjold-tast under skjermen, SKJOLD i gull felt inn nederst. Tastene er egne hetter som holdes
@@ -14,7 +14,7 @@
 include <taster.scad>
 
 part = "samlet";
-variant = "kort";               // kort (standard: 21 taster, 184 mm) | full (valgfri, med talltaster og smarthus-rad: 37 taster, 227 mm)
+variant = "kort";               // kort (standard: 17 taster, 177 mm) | full (valgfri, med talltaster og smarthus-rad: 33 taster, 220 mm)
 kortv = variant == "kort";
 farge = "lys";                  // lys | mork | bone (Bone White PLA + mørk PETG) | bone_gra (Bone White PLA + grå PETG)
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
@@ -22,7 +22,7 @@ skjermE = 0;                    // part="skjermflate": samme eksplosjonsavstand 
 $fn = 48;
 
 // ---------- ytre mål ----------
-W = 55; L = kortv ? L_KORT : L_FULL;   // bredde og lengde (fra taster.py: 230 eller 187 mm)
+W = 55; L = kortv ? L_KORT : L_FULL;   // bredde og lengde (fra taster.py: 177 mm standard, 220 mm full)
 HETTER = kortv ? HETTER_KORT : HETTER_FULL;
 BRYTERE = kortv ? BRYTERE_KORT : BRYTERE_FULL;
 PCB_N1 = kortv ? PCB_N1_KORT : PCB_N1_FULL;
@@ -72,12 +72,12 @@ pilot = 1.7;  klar = 2.3;  hodeD = 4.3;  hodeH = 2.5;
 zMot = zs + lipH;               // hjørnetårnene møtes her (8,6)
 SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [8, L - 120]];   // nese ×2 (foran skjermen), hale ×2, midt (venstre for volumvippa, n = 120)
 MIDT = 4;                       // skrue nr. 4 (midt) klemmer tastekortet
-PINNER = [[W/2 - 7.5, 101 + DN], [W/2 + 7.5, 101 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
+PINNER = [[W/2 - 7.5, 91 + DN], [W/2 + 7.5, 91 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
 
 // ---------- innmat ----------
 bat = [34, 50, 6.0];  batN = 11;    // LiPo 603450 (1200 mAh) under skjermen, fra n = 11
 mcu = [18, 22.6, 4.6];              // ESP32-S3 SuperMini (antennen mot halen)
-mcuN = kortv ? 125 : 150 + DN;       // kort: foran laderen, til venstre for midtskruen
+mcuN = kortv ? 124 : 166;            // kort: foran laderen til venstre, bak midtskruen; full: midt, foran laderen
 mcuX = kortv ? 13.5 : W/2;
 STOLPER = kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 165], [W/2 + 15, 165]]
                 : [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 172 + DN], [W/2 + 15, 172 + DN]];
