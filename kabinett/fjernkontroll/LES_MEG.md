@@ -57,7 +57,7 @@ Bilder av kort variant: [skrått, lys](render/11_skra_lys_kort.png) · [ovenfra,
 Fjernkontrollen er en rett, flat plate. Den har myke R11-hjørner sett ovenfra og en 45°-fas på 1,4 mm rundt topp- og bunnkanten. Sidene går rett, uten innsnevring på midten. Toppen er lys og bunnen mørk, delt i en rett skjøt 7 mm opp på siden. Den mørke varianten har mørk topp og lys bunn.
 
 Fra toppen og ned:
-- **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (47,0 × 66,2 mm) er like stort som dekkglasset minus 1,5 mm kant, så den sorte glasskanten synes, og plastrammen ved siden av skjermen er bare 4 mm (inkludert fasen).
+- **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (47,0 × 59,8 mm) er like stort som dekkglasset minus 1,5 mm kant på sidene og oppe, så den sorte glasskanten synes, og plastrammen ved siden av skjermen er bare 4 mm (inkludert fasen). Nede slutter vinduet 1,1 mm under det aktive området, slik at den brede glasskanten ved flatkabelen ligger skjult.
 - **Tre runde taster** sitter rett under skjermen: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og meny.
 - **D-paden** er en stor gullring (Ø 30 mm) med fire retninger og en mørk OK i midten. Den sitter høyt, der tommelen hviler. Fire små runde taster står på skrå rundt den: tilbake, info, guide og avslutt.
 - **Volum og kanal/side** er to loddrette vipper, en på hver side. Mellom dem sitter demp og siste kanal.
@@ -81,7 +81,7 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 | Del | Hvorfor |
 |---|---|
 | **ESP32-S3 SuperMini** (ESP32-S3FH4R2, 4 MB flash, 2 MB PSRAM) | Det minste vanlige S3-kortet (22,5 × 18 mm). Det har Wi-Fi og nok minne til LVGL, pluss dyp søvn med vekking fra to pinner. Det koster rundt 45 kr. Det ligger under tastene, med antennen mot halen, der det bare er plast rundt. |
-| **2,8″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + FT6336U), naken FPC-modul med dekkglass, ca. 50,0 × 69,2 × 4 mm | Den største skjermen som får plass i bredden. Glasset er 50 mm bredt, så kroppen trenger bare å vokse fra 54 til 55 mm, og skjermen fyller nesten hele fronten. Aktivt område 43,2 × 57,6 mm, dobbelt så stort som 2,0″ (30,6 × 40,8 mm). Samme oppløsning, så fastvaren er den samme med litt større skrift. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `ft63x6`). En naken FPC-modul er tynnere enn de røde kortene med stiftlist. |
+| **2,8″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + FT6336U), naken FPC-modul med dekkglass, 50,0 × 69,2 × 3,8–4 mm (se også [Tre skjermvalg](#tre-skjermvalg)) | Den største skjermen som får plass i bredden. Glasset er 50 mm bredt, så kroppen trenger bare å vokse fra 54 til 55 mm, og skjermen fyller nesten hele fronten. Aktivt område 43,2 × 57,6 mm, dobbelt så stort som 2,0″ (30,6 × 40,8 mm). Samme oppløsning, så fastvaren er den samme med litt større skrift. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `ft63x6`). En naken FPC-modul er tynnere enn de røde kortene med stiftlist. |
 | **3 × TCA9555** (16-bits I²C-utvider, interne pull-ups) | 44 taster blir 44 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Fire pinner er til overs for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
 | **44 × SMD-taktbryter 4 × 4 × 1,5 mm** | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
 | **3 × IR-diode 940 nm (3 mm) + AO3400** | Tre dioder i viften gir lang rekkevidde og bred spredning. AO3400 (logisk nivå) gir ca. 200 mA puls per diode fra batteriet. |
@@ -386,7 +386,7 @@ Du får mer ut av batteriet hvis du:
 ## Begrensninger og hva som ikke er testet
 
 - **Ingenting er bygget eller målt.** Modellen er sjekket for kollisjoner, veggtykkelse og tastehull. Fastvaren er validert med `esphome config`, men ikke kompilert eller kjørt. C++-koden i lambdaene (IR-sending, JSON og LVGL-kall) kan trenge småjusteringer ved første kompilering.
-- **Mål skjermmodulen før du printer.** 2,8″-modulene på AliExpress varierer. Modellen bruker 50,0 × 69,2 × 4,0 mm glass/modul med aktivt område 43,2 × 57,6 mm midt på glasset. På mange paneler sitter det aktive området litt nærmere den ene enden (motsatt flatkabelen). Juster `modW`, `modH`, `modT`, `modN0` og `scrAW`/`scrAH` i `skjold_fjernkontroll.scad` hvis din er annerledes. Er modulen tykkere enn 4 mm, bruk tynnere skumtape (eller ingen) mellom batteriet og skjermen, opptil 5 mm.
+- **Mål skjermmodulen før du printer.** 2,8″-modulene på AliExpress varierer. Modellen følger måltegningen til budsjett-panelet: glass 50,00 × 69,20 ± 0,2 mm, aktivt område 43,2 × 57,6 mm som begynner 2,6 mm fra overkanten (motsatt flatkabelen), og 3,8 mm tykt med berøring. IPS-panelene med samme omriss har normalt samme oppsett. Juster `modW`, `modH`, `modT`, `modN0`, `aktivTopp` og `scrAW`/`scrAH` i `skjold_fjernkontroll.scad` hvis din er annerledes. Er modulen tykkere enn 4 mm, bruk tynnere skumtape (eller ingen) mellom batteriet og skjermen, opptil 5 mm.
 - **SuperMini-kortene varierer litt** (pinnerekkefølge, LDO). Sjekk at GPIO 1–13, 43 og 44 er ført ut på ditt kort.
 - **4 MB flash er nok, men ikke romslig.** LVGL, tre skrifter og online_image tar plass, og OTA trenger to like store partisjoner. Blir bygget for stort, bruk færre glyfer, dropp `f_tittel` eller velg et S3-kort med 8–16 MB.
 - **Det første trykket etter søvn** når fram hvis du holder tasten litt (ESP-en bruker ca. 0,3 s på å våkne og leser tasten når den starter). Et veldig kort trykk vekker bare skjermen. Kommandoer til Skjold sendes så snart Wi-Fi er oppe (ca. 1,5 s).
@@ -405,8 +405,40 @@ Du får mer ut av batteriet hvis du:
 | `sjekk_modell.py` | Kontroll: vanntett, ingen overlapp, vegger ≥ 1,6 mm, materiale mellom tastehullene, forvandring, tykkelse |
 | `lag_3mf.py` | 3MF-plater for K2 med filamentnumre |
 | `lag_render.sh`, `skjerm_i_render.py`, `lag_skjermbilder.py` | Bildene i `render/`, med skjermbildet lagt inn |
-| `tastekort/`, `tastekort_kort/` | Omriss (DXF), plassering, koblinger (og stykkliste) for tastekortet, full og kort |
+| `tastekort/`, `tastekort_kort/` | Omriss (DXF), plassering, koblinger og stykkliste for tastekortet, full og kort |
 | `stl/`, `stl_kort/` | Alle utskriftsdelene for full og kort variant, inkludert `bryterbrett.stl` |
+
+## Tre skjermvalg
+
+| | **IPS med kapasitiv berøring** (standard) | **Budsjett-skjerm** (TN, resistiv) | **Waveshare ESP32-S3-Touch-LCD-2.8** |
+|---|---|---|---|
+| Hva | 2,8″ IPS, ST7789 + FT6336U, naken FPC | 2,8″ TN, ST7789V + 4-tråds resistiv berøring, 18-pinners FPC ([AliExpress 1005005780989629](https://www.aliexpress.com/item/1005005780989629.html)) | ESP32-S3, 2,8″ IPS og berøring på ett kort |
+| Pris | ca. 150 kr | ca. 40 kr + XPT2046 og FPC-kontakt ca. 10 kr | ca. 280 kr (erstatter også SuperMini og TP4056) |
+| Totalpris full / kort | ca. 725 / 715 kr | **ca. 625 / 615 kr** | ca. 785 kr, men ikke tegnet inn (se under) |
+| Bilde | Godt fra alle vinkler | TN: farger og kontrast endrer seg når du vipper fjernkontrollen | IPS |
+| Berøring | Lett trykk og sveip, som på en telefon | Må trykkes litt; sveip går dårligere; må kalibreres | Kapasitiv, men V2 har CST3530 uten ESPHome-driver |
+| Passer i modellen | Ja | **Ja**, samme omriss og tykkelse (3,8 mm) | Ukjent: mål og pinner er ikke bekreftet |
+| Ekstra deler | – | XPT2046 (TSSOP-16) + 1 µF på tastekortet | – |
+| ESPHome | `skjold-fjernkontroll.yaml` (eller `-kort`) | `skjold-fjernkontroll-budsjett.yaml` (pakke over hovedfila) | egen fil måtte lages |
+
+**Anbefaling:** IPS med kapasitiv berøring er fortsatt standard, siden den har bedre bilde og føles bedre. Budsjett-skjermen er et godt valg hvis prisen betyr mest, og sparer ca. 100 kr.
+
+**Budsjett-skjermen passer i modellen.** Tegningen gir:
+- **Omriss:** 50,00 × 69,20 ± 0,2 mm. Lomma er 50,6 × 69,8 mm (0,3 mm klaring rundt, større enn toleransen).
+- **Tykkelse:** 3,8 mm med berøring, inntil 4,0 mm med tapen. Modellen gir plass til 4,0 mm.
+- **Aktivt område:** 43,2 × 57,6 mm, 2,6 mm fra overkanten. Modellen og vinduet følger dette.
+- **Styrepinnene** bak (Ø 0,95 mm) trykkes ned i skumtapen på batteriet.
+- **Flatkabelen** er 19,16 mm og kommer ut i nedre kant mot tastene. Den bøyes rett ned i spalten mellom glasset og tastekortet, og inn i en 18-pinners 0,8 mm FPC-kontakt (bunnkontakt) på undersiden av tastekortet, rett bak skjermen. Kontakten er tegnet inn i modellen (`fpcN`), og veien er ca. 12 mm, så kabelen er lang nok. Kontaktområdet er 39,6 mm bredt og får plass i kortets 48,6 mm.
+- **Kortkoblinger:** fra kontakten går skjermsignalene til SuperMini som før (SCK 9, MOSI 10, DC 11, RES 12, BL 13, CS til GND).
+
+XPT2046 sitter ved siden av FPC-kontakten og bruker samme SPI:
+- MISO til GPIO8
+- CS til GPIO3
+- PENIRQ til GPIO7
+
+Disse pinnene er ledige, fordi I²C-bussen for kapasitiv berøring ikke brukes. XL, XR, YU og YD fra panelet går til X+, X−, Y+ og Y− på XPT2046.
+
+Begge kortvariantene (`tastekort/` og `tastekort_kort/`) har FPC-kontakten (J1) og XPT2046 (U9, monteres bare for budsjett-skjermen) i plasseringen og stykklista. Den kapasitive IPS-modulen har ofte egen, liten flatkabel for berøringen. Den kobles med ledninger til I²C-bus B som før.
 
 ## Vurdert: Waveshare ESP32-S3-Touch-LCD-2.8 («alt i ett», ca. 280 kr)
 

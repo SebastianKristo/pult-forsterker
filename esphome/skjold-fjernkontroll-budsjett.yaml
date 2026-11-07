@@ -1,0 +1,37 @@
+# Skjold Fjernkontroll med «Budsjett-skjerm»: 2,8″ TN 240 × 320 (ST7789V) med 4-tråds resistiv berøring
+# (AliExpress 1005005780989629, ca. 40 kr). Berøringen leses av en XPT2046 på tastekortet, som deler SPI med skjermen.
+# Denne fila tar hovedfila (eller kort-varianten) som pakke og bytter bare skjerm og berøring:
+#   · I²C-bussen for den kapasitive berøringen (bus_b) og cst/ft-berøringen fjernes
+#   · GPIO8 blir MISO (XPT2046 DOUT), GPIO3 blir XPT2046 CS, GPIO7 blir XPT2046 PENIRQ
+#   · TN-panelet bruker ikke invertert farge
+# Kalibrer: sett logger til DEBUG, trykk i hjørnene og les rå x/y i loggen. Før inn min/maks under calibration.
+# Kort variant: bytt skjold-fjernkontroll.yaml med skjold-fjernkontroll-kort.yaml under packages.
+packages:
+  fjernkontroll: !include skjold-fjernkontroll.yaml
+
+spi:
+  miso_pin: GPIO8
+
+i2c:
+  - id: !remove bus_b
+
+display:
+  - id: !extend skjerm
+    invert_colors: false             # TN; sett true hvis fargene blir negative
+
+touchscreen:
+  - id: !remove beroring
+  - platform: xpt2046
+    id: beroring
+    display: skjerm
+    cs_pin: GPIO3
+    interrupt_pin: GPIO7
+    update_interval: 50ms
+    threshold: 400
+    calibration:                     # typiske verdier – kalibrer ditt panel
+      x_min: 280
+      x_max: 3860
+      y_min: 340
+      y_max: 3860
+    on_touch:
+      - script.execute: sovn_teller
