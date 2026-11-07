@@ -6,9 +6,11 @@ Mini er laget for å tåle damp og sprut på badet (mål: omtrent IPX4). Den er 
 
 ![Skjold Mini](render/01_mini.png)
 
-Bilder: [mini](render/01_mini.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [skjerm og knapper](render/06_knapper_skjerm.png)
+Bilder: [mini](render/01_mini.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [toppanelet](render/06_knapper_skjerm.png)
 
-Mål: 101,6 × 110,1 × 190 mm (B × D × H, med bunn og føtter, uten knott). Fastvare og oppsett: [`firmware/mini/`](../../firmware/mini/LES_MEG.md).
+Mål: 106 × 121,5 × 144 mm (B × D × H, med grill, bunn og føtter, uten knott). Høyden er den samme som første Mini (100 × 106 × 144 mm). Knotten stikker 14,6 mm over toppen.
+
+Skjermen og knappene sitter på toppen, foran volumhjulet. Toppen heller svakt (5 mm, ca. 2,4°) ned mot fronten, så skjermen vender litt mot deg og vann renner av. Fronten har bare grillen og SKJOLD-logoen. Fastvare og oppsett: [`firmware/mini/`](../../firmware/mini/LES_MEG.md).
 
 ## Hvorfor disse komponentene
 
@@ -26,8 +28,8 @@ Mål: 101,6 × 110,1 × 190 mm (B × D × H, med bunn og føtter, uten knott). F
 | ESP32-S3-DevKitC-1 N16R8 | 1 | |
 | PCM5102A I²S DAC-kort | 1 | SCK til GND, XSMT til 3V3, FMT/FLT/DEMP til GND |
 | TPA3118D2 mono PBTL-forsterkerkort | 1 | 12–24 V inn. Sjekk at kortet er satt opp for PBTL (mono). |
-| 1,54″ IPS 240×240 ST7789, 7-pinners SPI-modul | 1 | Kort ca. 31,8 × 40 mm, aktivt felt 27,7 × 27,7 mm. Mål din modul og juster `pcbW`/`pcbH`/`pcbOffZ`. |
-| Taktbryter 6 × 6 × 5 mm | 5 | Loddes på et hullkort på ca. 84 × 18 mm, sentrert under knappene (16 mm mellom) |
+| 1,54″ IPS 240×240 ST7789, 7-pinners SPI-modul | 1 | Kort ca. 31,8 × 40 mm, aktivt felt 27,7 × 27,7 mm. Pinneraden vender bakover. Mål din modul og juster `pcbW`/`pcbH`/`pcbOffV`. |
+| Taktbryter 6 × 6 × 5 mm | 5 | Loddes på et hullkort på ca. 86 × 14 mm, sentrert under knappene (16 mm mellom) |
 | M2 × 6 mm avstandsstykke + 4 M2 × 4 skruer | 2 | Holder knappekortet 6 mm bak frontplaten |
 | MP1584EN nedtrapper 12 V → 5 V | 1 | Still inn 5,0 V før du kobler til ESP-en |
 | DC-kontakt 5,5/2,1 mm for panel (Ø8 mm) | 1 | Med mutter. TPU-skiven legges under flensen utvendig. |
@@ -42,7 +44,7 @@ Mål: 101,6 × 110,1 × 190 mm (B × D × H, med bunn og føtter, uten knott). F
 | TPU 95A filament | ca. 10 g | Pakninger, knappemembran, krage, DC-skive og USB-propp |
 | ePTFE trykkutjevningsventil M12 × 1,5 (med mutter) | 1 | Eller en selvklebende ePTFE-membran (Ø16 mm eller større) over hullet. Slipper ut damp og trykk, ikke vann. |
 | ePTFE akustisk membran, selvklebende, Ø8–10 mm | 1 | Bare med mikrofon: limes over mikrofonhullet på innsiden |
-| Vannavstøtende akustisk duk, ca. 95 × 115 mm | 1 | Polyester-/nylonduk for høyttalere (hydrofob). Ligger bak grillen. |
+| Vannavstøtende akustisk duk, ca. 100 × 100 mm | 1 | Polyester-/nylonduk for høyttalere (hydrofob). Ligger bak grillen. |
 | Beskyttelseslakk (conformal coating) | – | Akryl- eller silikonlakk på alle kretskortene. Ikke på kontakter, skjermglass og mikrofon. |
 | Silikon eller fleksibelt lim (f.eks. Sikaflex 11FC) | – | Membrankanten, ruta, kabelgjennomføringen og skruehodene i bunnen |
 | Polyfill / dempeull | ca. 5 g | Løst i kammeret, ikke foran porten |
@@ -69,18 +71,20 @@ Ikke bruk GPIO0, 3, 45 eller 46 (oppstartspinner), GPIO19/20 (USB), GPIO26–32 
 
 ## Akustikk
 
-- Lydkammer: ca. 1,04 l luft mellom vegger, front og gulv, ca. 0,97 l netto når porten er trukket fra og et element (ca. 50 cm³) er satt inn.
-- Bassrefleks: port Ø16 mm, 72 mm lang, i bakveggen og vendt bakover. Munningen er avrundet. Det gir en tuning på ca. 86 Hz, omtrent som før.
+- Lydkammer: ca. 0,95 l luft mellom vegger, front, gulv og takrommet, ca. 0,90 l netto når et element (ca. 50 cm³) er satt inn. For å holde volumet uten å gjøre Mini høyere er den 6 mm bredere og 11 mm dypere enn første versjon.
+- Bassrefleks: port Ø16 mm, 78 mm lang, nede til venstre i bakveggen (til siden for elementets magnet) og vendt bakover. Munningen er avrundet. Det gir en tuning på ca. 86 Hz, som før.
+- **Takrommet:** skjermen og knappekortet ligger i et eget, lukket rom rett under toppen (ca. 56 cm³), adskilt fra lydkammeret av et 3 mm gulv. Da vibrerer ikke knappemembranen med bassen, og takrommet påvirker ikke tuningen. Ledningene går gjennom et Ø6-hull i takrommets gulv og videre gjennom hullet i kammergulvet. Begge hullene tettes med silikon.
 - Dette er beregnet ut fra volum og port, ikke målt. Simuler ditt element i WinISD eller VituixCAD. Endre `portL` (lengre port gir lavere tuning) eller tett porten for et lukket kabinett.
 - Porten peker bakover, så sprut forfra ikke kommer inn i kammeret. La det være minst 5 cm luft bak Mini.
 - Kammeret er skilt fra elektronikkrommet av et gulv. Elementkabelen går gjennom et Ø6-hull i gulvet, og det må tettes med silikon, ellers lekker kammeret.
 
 ## Hvordan Mini holder fuktigheten ute
 
-- **Skjøten front–kropp:** kropp og frontplate er skåret fra samme ytre form, så sidene flukter helt (ingen trinn eller spalte). En smal skyggefuge (0,5 mm inn, 0,8 mm bred) gjør skjøten til en ren linje. Bak den ligger en U-formet TPU-pakning i et spor i kroppen, langs sidene, toppen og forkanten av gulvet. Frontplaten trykker den 0,2 mm sammen.
+- **Skjøten front–kropp:** kropp og frontplate er skåret fra samme ytre form, så sidene og toppen flukter helt (ingen trinn eller spalte). En smal skyggefuge (0,5 mm inn, 0,8 mm bred) gjør skjøten til en ren linje. Bak den ligger en TPU-pakning i et spor i kroppen, langs sidene, forkanten av takrommets gulv og forkanten av kammergulvet. Frontplaten trykker den 0,2 mm sammen.
 - **Bunnen:** en TPU-pakning i et spor rundt hele bunnplaten, under kroppen og frontplaten. Bunnen stikker 0,8 mm ut og har en dryppnese på undersiden, så vann som renner nedover sidene drypper av i stedet for å trekke inn under. Føttene er 4 mm høye, så Mini ikke står i vann.
-- **Knappene:** én TPU-membran over hele knapperaden, limt rundt kanten. Stemplene på baksiden går gjennom hull i frontplaten og trykker på taktbryterne.
-- **Skjermen:** klar rute foran (akryl 1,5 mm) på en TPU-ramme i en forsenkning. Ruta flukter med fronten og limes rundt kanten.
+- **Knappene:** én TPU-membran over hele knapperaden på toppen, limt rundt kanten og i flukt med toppen. Stemplene på undersiden går gjennom hull i toppanelet og trykker på taktbryterne i takrommet.
+- **Skjermen:** klar rute (akryl 1,5 mm) på en TPU-ramme i en forsenkning i toppen. Ruta flukter med toppen og limes rundt kanten.
+- **Toppen:** ingen forsenkninger der vann kan bli stående. Ruta, membranen og kragen flukter med overflaten, og toppen heller 2,4° mot fronten så vann renner av. Det drypper av forkanten og ned foran grillen, der den vannavstøtende duken stopper det.
 - **Grillen:** ligger i en lomme i frontplaten og flukter med fronten. Den vannavstøtende duken ligger i luftspalten bak grillen og holdes av grilltappene.
 - **Dreieknappen:** TPU-krage rundt akselen i en forsenkning i toppen. Knotten dekker den.
 - **DC og USB-C bak:** TPU-skive under flensen på DC-kontakten. USB-C brukes bare til flashing, og har en TPU-propp ellers.
@@ -100,7 +104,7 @@ Det er tre 3MF-filer, alle innenfor 250 × 250 mm, så de passer K2, K2 Pro og K
 
 | Fil | Deler | Filament |
 |---|---|---|
-| `skjold-mini-k2.3mf` | Kropp, frontplate med innfelt logo, knott, skjermklemme | 1 = lys (kropp), 2 = sort (front, klemme), 3 = gull (logo, knott) |
+| `skjold-mini-k2.3mf` | Kropp (med toppanel og takrom), frontplate med innfelt logo, knott, skjermklemme | 1 = lys (kropp), 2 = sort (front, klemme), 3 = gull (logo, knott) |
 | `skjold-mini-k2-bunn.3mf` | Grill, bunn | 2 = sort |
 | `skjold-mini-k2-tpu.3mf` | Pakning front, pakning bunn, pakning skjerm, knappemembran, krage, DC-skive, USB-propp | TPU 95A (egen utskrift; CFS mater ikke myk TPU, så bruk ekstern spole) |
 
@@ -108,8 +112,8 @@ Setter ikke Creality Print fargene selv, sett filament per del.
 
 | Del | Retning | Støtte |
 |---|---|---|
-| `kropp.stl` | Bakveggen ned, åpen front opp | Nei |
-| `front.stl` + `logo.stl` | **Baksiden ned, forsiden opp** (lommene for grill, membran og rute er åpne oppover) | Nei |
+| `kropp.stl` | Bakveggen ned, åpen front opp. Takrommets frontvegg printes som en kort bro (8,5 mm). | Nei |
+| `front.stl` + `logo.stl` | **Baksiden ned, forsiden opp** (grill-lomma og logoen er åpne oppover) | Nei |
 | `grill.stl` | Forsiden ned, tappene opp | Nei |
 | `bunn.stl` | Innsiden ned, føttene opp | Nei |
 | `knott.stl` | Toppen ned | Nei |
@@ -134,21 +138,22 @@ SKJOLD-logoen er et eget legeme (`logo.stl`) som ligger 0,6 mm inn i frontplaten
 
 1. Varm inn 8 M3-innpressmuttere: 4 i fronten av kroppens skruetårn, 4 i tårnene under.
 2. Lakk kretskortene med beskyttelseslakk og la det tørke.
-3. Lodd taktbryterne på hullkortet. Skru det på de to M2-avstandsstykkene bak frontplaten, slik at bryterne peker fram mot hullene.
-4. Legg skjermen i lomma bak vinduet med glasset fram, og skru skjermklemmen fast med to M2,5 × 8-skruer. Legg TPU-rammen i forsenkningen foran, og lim ruta oppå med en tynn streng silikon langs kanten.
-5. Lim knappemembranen i lomma foran knappene, med stemplene gjennom hullene. Bruk fleksibelt lim langs kanten, ikke under tastene.
-6. Monter EC11 gjennom toppen innenfra. Trykk TPU-kragen ned over akselen i forsenkningen, og trykk på knotten.
-7. Legg elektronikken i rommet under gulvet:
+3. Takrommet nås forfra før frontplaten er på. Lodd taktbryterne på hullkortet, og skru det på de to M2 × 6-avstandsstykkene under toppanelet, med bryterne opp mot hullene.
+4. Legg skjermen i lomma under vinduet med glasset opp og pinneraden bakover, og skru skjermklemmen fast med to M2,5 × 6-skruer. Legg TPU-rammen i forsenkningen i toppen, og lim ruta oppå med en tynn streng silikon langs kanten.
+5. Lim knappemembranen i lomma på toppen, med stemplene gjennom hullene. Bruk fleksibelt lim langs kanten, ikke under tastene.
+6. Trekk ledningene fra skjerm og knapper gjennom hullet i takrommets gulv og ned i kammeret. Tett hullet med silikon.
+7. Monter EC11 gjennom toppen innenfra (bak takrommet). Trykk TPU-kragen ned over akselen i forsenkningen, og trykk på knotten.
+8. Legg elektronikken i rommet under gulvet:
    - DC-kontakten (med TPU-skiven utvendig) og ESP32 (USB-C) skal sitte mot hullene bak.
    - Fest kortene med dobbeltsidig tape eller lim.
    - Skru inn ePTFE-ventilen i hullet i bunnplaten.
-8. Trekk elementkabelen gjennom hullet i gulvet og tett med silikon.
-9. Skru elementet fast i frontplaten, med rammen i forsenkningen.
-10. Legg TPU-pakningen i sporet i kroppens forkant. Legg litt dempeull i kammeret (ikke foran porten).
-11. Skru frontplaten fast med 4 senkeskruer i grill-lomma.
-12. Legg den akustiske duken over grill-lomma, og trykk grillen på, slik at tappene går gjennom duken.
-13. Legg TPU-pakningen i sporet i bunnplaten, og skru bunnen fast med 4 senkeskruer. En dråpe silikon på skruehodene holder vannet ute.
-14. Sett TPU-proppen i USB-C-hullet.
+9. Trekk elementkabelen og ledningene fra takrommet gjennom hullet i gulvet, og tett med silikon.
+10. Skru elementet fast i frontplaten, med rammen i forsenkningen.
+11. Legg TPU-pakningen i sporet i kroppens forkant. Legg litt dempeull i kammeret (ikke foran porten).
+12. Skru frontplaten fast med 4 senkeskruer i grill-lomma.
+13. Legg den akustiske duken over grill-lomma, og trykk grillen på, slik at tappene går gjennom duken.
+14. Legg TPU-pakningen i sporet i bunnplaten, og skru bunnen fast med 4 senkeskruer. En dråpe silikon på skruehodene holder vannet ute.
+15. Sett TPU-proppen i USB-C-hullet.
 
 ## Sjekket og ikke sjekket
 
@@ -159,6 +164,7 @@ SKJOLD-logoen er et eget legeme (`logo.stl`) som ligger 0,6 mm inn i frontplaten
   - kropp og frontplate flukter i skjøten
 - Ikke testet: ingenting er printet eller bygget. Følgende må prøves:
   - passformen til element, innpressmuttere, grilltapper, knott, skjermlomme og knappestempler
+  - om det går greit å montere skjerm og knappekort i takrommet forfra (det er trangt: 8,5 mm høyt)
   - hvor tett pakningene og membranen faktisk er (IPX4 er et mål, ikke et testresultat)
   - om TPU-membranen gir god nok følelse på knappene
   - lyden og porttuningen
