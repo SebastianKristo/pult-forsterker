@@ -3026,6 +3026,67 @@
             }
           }
         ]
+      },
+      {
+        "id": "ki_security_trigger",
+        "title": {
+          "en": "Trigger security alarm",
+          "no": "Utløs sikkerhetsalarm"
+        },
+        "titleFormatted": {
+          "en": "Trigger security alarm ([[reason]])",
+          "no": "Utløs sikkerhetsalarm ([[reason]])"
+        },
+        "hint": {
+          "en": "Turns Skjold on (also from standby), sets a high volume and plays a siren and a spoken message until stopped. Only works when security mode is enabled in Skjold.",
+          "no": "Slår på Skjold (også fra standby), setter høyt volum og spiller sirene og talemelding til den stoppes. Virker bare når sikkerhetsmodus er slått på i Skjold."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=s1|pultforsterker|core|node|touch",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "text",
+            "name": "reason",
+            "required": false,
+            "title": {
+              "en": "Reason",
+              "no": "Grunn"
+            },
+            "placeholder": {
+              "en": "Back door opened",
+              "no": "Bakdør åpnet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_security_stop",
+        "title": {
+          "en": "Stop security alarm",
+          "no": "Stopp sikkerhetsalarm"
+        },
+        "hint": {
+          "en": "Stops the siren and restores volume and power.",
+          "no": "Stopper sirenen og setter volum og av/på tilbake."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=s1|pultforsterker|core|node|touch",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          }
+        ]
       }
     ]
   },

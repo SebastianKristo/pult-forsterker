@@ -32,6 +32,10 @@ class KiAmpApi:
         """POST /api/duck: senk musikken og les opp tekst / spill lyd."""
         return await self._req("POST", "/duck", body)
 
+    async def security(self, body: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/security {action: trigger|stop, rom?, lyd?, tekst?} (krever at sikkerhetsmodus er slått på)."""
+        return await self._req("POST", "/security", body)
+
     async def run_routine(self, routine: str) -> dict[str, Any]:
         return await self._req("POST", f"/routines/{routine}/run", {})
 

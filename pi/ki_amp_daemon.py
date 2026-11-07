@@ -4528,7 +4528,8 @@ def _watch_tick():
         rn = rn0
         history_add({"t": int(now), "title": hist_title, "artist": artist, "album": w["track"].get("album", ""), "input": s.get("input"),
                      "source": s.get("source_label") or s.get("input"), "station": rn.get("name") or "",
-                     "cover": s.get("cover_url") or (rn.get("logo") if rn.get("logo") else rn.get("image")) or ""})
+                     "cover": s.get("cover_url") or (rn.get("logo") if rn.get("logo") else rn.get("image")) or "",
+                     "rom": NAME, "url": rn.get("url") or (last_play.get("url") if s.get("input") == "radio" else "") or ""})
     if w["playing"] is not None and playing != w["playing"]:
         _bg(_webhook, "play" if playing else "pause", {"title": title, "artist": artist, "input": s.get("input")})
     w["playing"] = playing
@@ -4542,6 +4543,8 @@ def _watch_tick():
 # --- Barnerom-modus ---
 def kids_rules():
     if not plug_on("kids"):
+        return None
+    if "security" in globals() and security.active:   # sikkerhetsmodus: full styrke selv på barnerommet
         return None
     c = plug_cfg("kids")
     return {"max": max(0, min(100, int(c.get("max", 40)))), "inputs": [str(x) for x in c.get("inputs") or []],
@@ -6021,7 +6024,7 @@ def _plugins_thread():
             try: f()
             except Exception as e: print("Plugin:", f.__name__, e, flush=True)
         if n % 5 == 0:
-            for f in (_alarm_tick, _watch_tick, _rec_tick, _mqtt_tick, _extras_tick):
+            for f in (_alarm_tick, _watch_tick, _rec_tick, _mqtt_tick, _extras_tick, lambda: "audiobooks" in globals() and _abs_tick()):
                 try: f()
                 except Exception as e: print("Plugin:", f.__name__, e, flush=True)
         n += 1
@@ -7254,6 +7257,304 @@ async def h_medialib(r):
 FEAT_ROUTES += [("GET", "/api/medialib", h_medialib), ("POST", "/api/medialib", h_medialib),
                 ("GET", "/api/medialib/{kind}/{act}", h_medialib), ("POST", "/api/medialib/{kind}/{act}", h_medialib),
                 ("GET", "/api/medialib/{kind}/{act}/{id}", h_medialib)]
+
+# ---------- Sikkerhetsmodus, sanglek, lydbøker, køhistorikk, bass management, AirPlay-ID ----------
+import skjold_security as _secmod   # noqa: E402
+import skjold_quiz as _quizmod      # noqa: E402
+import skjold_abs as _absmod        # noqa: E402
+import skjold_qhist as _qhmod       # noqa: E402
+
+security = _secmod.Security({"get_power": lambda: state["power"], "set_power": set_power,
+                             "get_volume": lambda: state["volume"], "set_volume": set_volume,
+                             "announce": lambda src: announce_url(src), "say": _tts, "post": _secmod.http_post},
+                            os.path.join(FEAT_DIR, "security.json"))
+
+
+async def h_security(r):
+    """POST /api/security {action: trigger|stop, rom?, lyd?, tekst?, grunn?} · GET /api/security · GET/POST /api/security/innstillinger."""
+    loop = asyncio.get_running_loop()
+    if r.match_info.get("act") == "innstillinger":
+        if r.method == "POST":
+            return web.json_response(security.sett(await r.json()))
+        return web.json_response(security.cfg)
+    if r.method == "GET":
+        return web.json_response(security.status())
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    fwd = not b.get("videresendt")
+    if b.get("action") == "stop":
+        return web.json_response(await loop.run_in_executor(None, lambda: security.stop(forward=fwd, rom=b.get("rom"))))
+    if b.get("action") == "trigger":
+        res = security.trigger(b, forward=fwd)
+        return web.json_response(res, status=200 if res.get("ok") else 409)
+    return web.json_response({"error": "action må være trigger eller stop"}, status=400)
+
+
+def _nd_signed(path, **params):
+    nd = _nd()
+    if not nd:
+        raise RuntimeError("Navidrome er ikke satt opp")
+    import secrets as _sec
+    salt = _sec.token_hex(6)
+    q = {"u": nd.user, "t": hashlib.md5((nd.pw + salt).encode()).hexdigest(), "s": salt, "v": "1.16.1", "c": "skjold", **params}
+    return f"{nd.url}/rest/{path}.view?" + urllib.parse.urlencode(q)
+
+
+def _quiz_songs(kilde, ident, tiar, n):
+    nd = _nd()
+    if not nd:
+        raise RuntimeError("Navidrome er ikke satt opp (Integrasjoner → Navidrome)")
+    from skjold_smartradio import nd_stream_url
+    return _quizmod.subsonic_songs(nd._call, lambda i: nd_stream_url(nd, i), lambda c: _nd_signed("getCoverArt", id=c, size=500),
+                                   kilde, ident, tiar, n)
+
+
+def _play_at(url, title, cover, start_s, meta=None):
+    play_url(url, title, cover, "", meta or {"track": title, "artist": "", "source": "media"})
+    if start_s and start_s > 1:
+        def seek():
+            time.sleep(1.2)
+            try:
+                lyr.cmd(["time", str(int(start_s))])
+            except Exception as e:
+                print("spol:", e, flush=True)
+        threading.Thread(target=seek, daemon=True).start()
+
+
+quiz = _quizmod.Quiz({"songs": _quiz_songs,
+                      "play": lambda url, t, c, start: _play_at(url, t, "", start, {"track": t, "artist": "Sanglek", "source": "Sanglek"}),
+                      "pause": lambda: transport("pause")})
+
+
+async def h_quiz(r):
+    if r.method == "GET":
+        return web.json_response(quiz.state())
+    try:
+        b = await r.json()
+        return web.json_response(await asyncio.get_running_loop().run_in_executor(None, quiz.handle, b))
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=400)
+
+
+def _abs_position():
+    i = lyr.info or {}
+    return i.get("url"), float(i.get("time") or 0)
+
+
+audiobooks = _absmod.Audiobooks({"play": lambda url, t, c, start: _play_at(url, t, c, start, {"track": t, "artist": "Lydbok", "source": "Lydbok"}),
+                                 "queue": lambda url, t: lyr.cmd(["playlist", "add", url, t]),
+                                 "position": _abs_position, "pause": lambda: transport("pause"),
+                                 "playing": lambda: (lyr.info or {}).get("mode") == "play"},
+                                os.path.join(FEAT_DIR, "abs.json"))
+
+
+def _abs_tick():
+    if audiobooks.cur:
+        audiobooks.tick()
+
+
+async def h_abs(r):
+    """Audiobookshelf – se pi/skjold_abs.py."""
+    loop = asyncio.get_running_loop()
+    run = lambda f, *a: loop.run_in_executor(None, f, *a)   # noqa: E731
+    act, ident = r.match_info.get("act"), r.match_info.get("id")
+    try:
+        if not act:
+            if r.method == "POST":
+                return web.json_response(await run(audiobooks.sett, await r.json()))
+            return web.json_response(audiobooks.public())
+        if act == "biblioteker":
+            return web.json_response(await run(lambda: audiobooks.client().libraries()))
+        if act == "boker":
+            lib = r.query.get("bibliotek") or audiobooks.cfg["bibliotek"]
+            if not lib:
+                libs = await run(lambda: audiobooks.client().libraries())
+                lib = libs[0]["id"] if libs else ""
+            return web.json_response(await run(lambda: audiobooks.client().items(lib)))
+        if act == "bok" and ident:
+            b = await run(lambda: audiobooks.client().book(ident))
+            b.pop("filer", None)
+            return web.json_response(b)
+        if act == "spill" and r.method == "POST":
+            b = await r.json()
+            return web.json_response(await run(audiobooks.play, str(b.get("id") or ""), bool(b.get("fra_start"))))
+        if act == "sovetimer" and r.method == "POST":
+            b = await r.json()
+            return web.json_response(await run(audiobooks.set_sleep, b.get("modus") or "av", b.get("minutter")))
+        if act == "naa":
+            return web.json_response(audiobooks.now())
+        return web.json_response({"error": "ukjent handling"}, status=404)
+    except urllib.error.HTTPError as e:
+        return web.json_response({"ok": False, "error": f"Audiobookshelf: HTTP {e.code} (sjekk adresse og token)"}, status=502)
+    except Exception as e:
+        return web.json_response({"ok": False, "error": str(e)}, status=400)
+
+
+async def h_qhist(r):
+    """GET /api/qhist?dag=&fra=&til=&rom=&alle=1 · POST /api/qhist/spill {spor, rom?}."""
+    loop = asyncio.get_running_loop()
+    if r.match_info.get("act") == "spill":
+        b = await r.json()
+        rom = str(b.get("rom") or "").rstrip("/")
+        if rom and rom.startswith(("http://", "https://")):
+            try:
+                res = await loop.run_in_executor(None, lambda: _secmod.http_post(rom + "/api/qhist/spill", {"spor": b.get("spor") or []}, 20))
+                return web.json_response(res)
+            except Exception as e:
+                return web.json_response({"error": f"rommet svarer ikke: {e}"}, status=502)
+        return web.json_response(await loop.run_in_executor(None, _qhist_play, b.get("spor") or []))
+    q = r.query
+    items = list(_hist_load())
+    if q.get("alle"):
+        def hent(p):
+            try:
+                with urllib.request.urlopen(p["base"] + "/api/history", timeout=4) as f:
+                    return [{**e, "rom": e.get("rom") or p.get("navn") or "", "base": p["base"]} for e in json.loads(f.read()).get("items", [])]
+            except Exception:
+                return []
+        for lst in await asyncio.gather(*[loop.run_in_executor(None, hent, p) for p in _peers()]):
+            items += lst
+    for e in items:
+        e.setdefault("rom", NAME)
+    rom = q.get("rom") or None
+    f = _qhmod.filtrer(items, q.get("dag"), q.get("fra"), q.get("til"), rom)
+    okter = _qhmod.okter(f)
+    for o in okter:
+        o["spor"] = _qhmod.unike_spor(o["spor"])
+    return web.json_response({"rom": sorted({str(e.get("rom") or "") for e in items}), "her": NAME,
+                              "aktiv": plug_on("history"), "okter": okter})
+
+
+def _qhist_play(spor):
+    """Spill sporene igjen som kø: strømmer/kanaler direkte, låter slås opp i Navidrome (eller lagret URL)."""
+    urls = []
+    nd = _nd()
+    from skjold_smartradio import nd_stream_url
+    for e in spor:
+        sp = _qhmod.spillbar(e)
+        if not sp:
+            continue
+        if sp["type"] == "sok":
+            sid = None
+            if nd:
+                try:
+                    sid = nd.find_song(sp["artist"], sp["tittel"])
+                except Exception:
+                    sid = None
+            if sid:
+                urls.append((nd_stream_url(nd, sid), f"{sp['artist']} – {sp['tittel']}", ""))
+            elif sp.get("url", "").startswith(("http://", "https://")):
+                urls.append((sp["url"], sp["tittel"], ""))
+        else:
+            urls.append((sp["url"], sp["tittel"], sp.get("cover", "")))
+    if not urls:
+        raise RuntimeError("fant ingenting å spille")
+    u0, t0, c0 = urls[0]
+    play_url(u0, t0, c0, "", {"track": t0, "source": "Køhistorikk"})
+    for u, t, _c in urls[1:]:
+        lyr.cmd(["playlist", "add", proxied_url(u) if "/rest/stream" in u else u, t])
+    return {"ok": True, "antall": len(urls), "spiller": t0}
+
+
+# --- Bass management (pi/skjold_bassmgmt.py): mål sub mot hovedhøyttalerne med mobilen ---
+_bass = {"sub": "", "forrige": None, "siste": None}
+
+
+async def h_bass(r):
+    """POST /api/bass/start {sub} · POST /api/bass/analyze (opptak) · POST /api/bass/apply · POST /api/bass/avbryt."""
+    import skjold_placement as pl
+    loop = asyncio.get_running_loop()
+    act = r.match_info.get("act")
+    if act == "start":
+        b = await r.json()
+        sub = str(b.get("sub") or "").strip()
+        if not sub:
+            return web.json_response({"error": "velg sub-enheten (adresse)"}, status=400)
+        try:
+            cur = await loop.run_in_executor(None, lambda: _place_remote_get(sub, "/api/sync"))
+            _bass["forrige"] = {k: cur.get(k) for k in ("sub_phase", "sub_fine_ms", "sub_level")}
+            await loop.run_in_executor(None, lambda: _place_remote(sub, "/api/sync", {"sub_phase": 0, "sub_fine_ms": 0.0, "sub_level": 0.0}))
+        except Exception as e:
+            return web.json_response({"error": f"sub-enheten svarer ikke: {e}"}, status=502)
+        _bass["sub"] = sub
+        t0, slots = _place_schedule([{"host": "", "channel": "both"}, {"host": sub, "channel": "both"}], lead=2.0)
+        return web.json_response({"start_at": t0, "now": time.time(), "n": 2, "slot_s": pl.SLOT_S, "lead_s": 0.5,
+                                  "record_s": 0.5 + 2 * pl.SLOT_S + 1.0})
+    if act == "analyze":
+        import skjold_bassmgmt as bmm, skjold_roomeq as rq
+        body = await r.read()
+        if len(body) > 40 * 1024 * 1024:
+            return web.json_response({"error": "opptaket er for stort"}, status=413)
+
+        def work():
+            x, sr = rq.decode(body, r.headers.get("Content-Type", ""), int(r.query.get("sr") or 48000))
+            if sr != pl.SR:
+                x = rq._resample(x, sr, pl.SR)
+            x = x[int(max(0.0, float(r.query.get("skip") or 0)) * pl.SR):]
+            irs = bmm.slot_irs(x, 2, pl.SR)
+            xover = int((plug_cfg("sync") or {}).get("sub_xover", 80))
+            return {**bmm.analyze(irs[0], irs[1], xover, pl.SR), "xover": xover}
+        try:
+            _bass["siste"] = await loop.run_in_executor(None, work)
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=400)
+        return web.json_response(_bass["siste"])
+    if act in ("apply", "avbryt"):
+        sub = _bass["sub"]
+        if not sub:
+            return web.json_response({"error": "ingen måling i gang"}, status=409)
+        res = _bass["siste"] if act == "apply" else None
+        body = ({k: res[k] for k in ("sub_phase", "sub_fine_ms", "sub_level")} if res else
+                {k: v for k, v in (_bass["forrige"] or {}).items() if v is not None})
+        try:
+            await loop.run_in_executor(None, lambda: _place_remote(sub, "/api/sync", body))
+            if res and res.get("main_delay_ms"):
+                plugin_update("sync", {"room_delay_ms": round(float(plug_cfg("sync").get("room_delay_ms", 0)) + res["main_delay_ms"], 1)})
+        except Exception as e:
+            return web.json_response({"error": f"sub-enheten svarer ikke: {e}"}, status=502)
+        return web.json_response({"ok": True, "satt": body, "hoved_forsinkelse_ms": (res or {}).get("main_delay_ms", 0)})
+    return web.json_response({"error": "ukjent handling"}, status=404)
+
+
+def _place_remote_get(host, path, timeout=8):
+    url = f"http://{host if ':' in host else host + ':8765'}{path}"
+    with urllib.request.urlopen(url, timeout=timeout) as f:
+        return json.loads(f.read() or b"{}")
+
+
+def ensure_airplay_id():
+    """Unik AirPlay 2-ID per enhet (klonede maskiner kan ellers få samme) – se pi/skjold_airplay.py."""
+    import skjold_airplay as apm
+    try:
+        if not os.path.isfile(SHAIRPORT_CONF):
+            return
+        conf = open(SHAIRPORT_CONF).read()
+        dev = apm.device_id(apm.read_machine_id(), apm.read_mac(), socket.gethostname())
+        if apm.current_id(conf) == dev:
+            return
+        new = apm.ensure_id(conf, dev)
+        if new != conf:
+            with open(SHAIRPORT_CONF, "w") as fh:
+                fh.write(new)
+            subprocess.run(["systemctl", "try-restart", "shairport-sync"], check=False, timeout=20,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("AirPlay: unik enhets-ID satt", dev, flush=True)
+    except Exception as e:
+        print("AirPlay-ID:", e, flush=True)
+
+
+if HW:
+    threading.Thread(target=ensure_airplay_id, daemon=True).start()
+
+FEAT_ROUTES += [("GET", "/api/security", h_security), ("POST", "/api/security", h_security),
+                ("GET", "/api/security/{act}", h_security), ("POST", "/api/security/{act}", h_security),
+                ("GET", "/api/quiz", h_quiz), ("POST", "/api/quiz", h_quiz),
+                ("GET", "/api/abs", h_abs), ("POST", "/api/abs", h_abs), ("GET", "/api/abs/{act}", h_abs),
+                ("POST", "/api/abs/{act}", h_abs), ("GET", "/api/abs/{act}/{id}", h_abs),
+                ("GET", "/api/qhist", h_qhist), ("POST", "/api/qhist/{act}", h_qhist),
+                ("POST", "/api/bass/{act}", h_bass)]
 
 # ---------- Skjold Kassett: NFC-kassetter (pi/skjold_nfc.py, esphome/skjold-kassett.yaml) ----------
 import skjold_nfc as _nfcmod   # noqa: E402

@@ -165,6 +165,22 @@ def _register_services(hass: HomeAssistant) -> None:
         for c in _targets(call):
             await c.api.duck(body)
 
+    async def _security(call, action: str) -> None:
+        body = {"action": action, "kilde": "ha"}
+        for k in ("tekst", "lyd", "grunn"):
+            if call.data.get(k) not in (None, ""):
+                body[k] = call.data[k]
+        if call.data.get("rom"):
+            body["rom"] = call.data["rom"]
+        for c in _targets(call):
+            await c.api.security(body)
+
+    async def _security_trigger(call) -> None:
+        await _security(call, "trigger")
+
+    async def _security_stop(call) -> None:
+        await _security(call, "stop")
+
     async def _routine(call) -> None:
         for c in _targets(call):
             await c.api.run_routine(str(call.data["routine"]))
@@ -204,6 +220,8 @@ def _register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, "doorbell", _doorbell)
     hass.services.async_register(DOMAIN, "run_routine", _routine)
     hass.services.async_register(DOMAIN, "duck", _duck)
+    hass.services.async_register(DOMAIN, "security_trigger", _security_trigger)
+    hass.services.async_register(DOMAIN, "security_stop", _security_stop)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

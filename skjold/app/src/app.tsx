@@ -21,6 +21,7 @@ import { RadioPage } from './screens/radio';
 import { GroupsPage, SpeakerButton } from './screens/groups';
 import { KassettPage } from './screens/kassett';
 import { VinylPage } from './screens/vinyl';
+import { AbsPage, QhistPage, QuizPage } from './screens/lyd';
 import { IntegrationsPage, PluginsPage, intCount, plugCount } from './screens/integ';
 import { MaPage, maConfigured } from './screens/ma';
 import { NrkPanel } from './screens/nrk';
@@ -90,7 +91,7 @@ const TAB_ICON: Record<string, preact.JSX.Element> = {
 };
 const TABS: [Page, string][] = [['home', 'Hjem'], ['eq', 'Lyd'], ['rooms', 'Rom'], ['settings', 'Innstillinger']];
 
-const TITLES: Record<Page, string> = { home: 'Hjem', play: 'Spiller', eq: 'Lyd', radio: 'Radio', rooms: 'Ditt system', settings: 'Innstillinger', lib: 'Bibliotek', grp: 'Grupper og surround', int: 'Integrasjoner', plug: 'Plugins', ma: 'Music Assistant', kass: 'Kassetter', vinyl: 'Platesamling' };
+const TITLES: Record<Page, string> = { home: 'Hjem', play: 'Spiller', eq: 'Lyd', radio: 'Radio', rooms: 'Ditt system', settings: 'Innstillinger', lib: 'Bibliotek', grp: 'Grupper og surround', int: 'Integrasjoner', plug: 'Plugins', ma: 'Music Assistant', kass: 'Kassetter', vinyl: 'Platesamling', quiz: 'Sanglek', abs: 'Lydbøker', qhist: 'Køhistorikk' };
 
 function Phone() {
   const s = status.value, r = route.value;
@@ -98,7 +99,7 @@ function Phone() {
   useEffect(() => { if (page === 'play') { go('home'); openFull(); } }, [page]);
   useEffect(() => { if (!fullPlayer.value) { queueOpen.value = false; srcOpen.value = false; } }, [fullPlayer.value]);
   const cat = page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
-  const tabOf = page === 'radio' || page === 'play' || page === 'lib' ? 'home' : page === 'grp' ? 'rooms' : page === 'int' || page === 'plug' || page === 'kass' || page === 'vinyl' ? 'settings' : page === 'ma' ? 'home' : page;
+  const tabOf = page === 'radio' || page === 'play' || page === 'lib' || page === 'quiz' || page === 'abs' || page === 'qhist' ? 'home' : page === 'grp' ? 'rooms' : page === 'int' || page === 'plug' || page === 'kass' || page === 'vinyl' ? 'settings' : page === 'ma' ? 'home' : page;
   const title = cat ? cat.n : page === 'lib' ? libTitle() : TITLES[page];
   return (
     <div class="phone">
@@ -116,6 +117,9 @@ function Phone() {
         {page === 'int' && <IntegrationsPage />}
         {page === 'kass' && <KassettPage />}
         {page === 'vinyl' && <VinylPage />}
+        {page === 'quiz' && <QuizPage />}
+        {page === 'abs' && <AbsPage />}
+        {page === 'qhist' && <QhistPage />}
         {page === 'plug' && <PluginsPage />}
       </div>
       {s && !fullPlayer.value && <MiniPhone />}
@@ -175,7 +179,7 @@ function Desktop() {
   const toggleRail = () => { const v = !railx; setRailx(v); try { localStorage.setItem(RAIL_KEY, v ? '1' : '0'); } catch { /* ignore */ } };
   const toggleRcol = () => { const v = !rcol; setRcol(v); try { localStorage.setItem(RCOL_KEY, v ? '1' : '0'); } catch { /* ignore */ } };
   // Hjem har «Ditt system» som egen flis; biblioteker og oppsettsider trenger hele bredden.
-  const noRcol = r.page === 'home' || r.page === 'play' || r.page === 'radio' || r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug' || r.page === 'ma' || r.page === 'kass' || r.page === 'vinyl';
+  const noRcol = r.page === 'home' || r.page === 'play' || r.page === 'radio' || r.page === 'lib' || r.page === 'grp' || r.page === 'int' || r.page === 'plug' || r.page === 'ma' || r.page === 'kass' || r.page === 'vinyl' || r.page === 'quiz' || r.page === 'abs' || r.page === 'qhist';
   const showRcol = rcol && !noRcol;
   const air = s?.input === 'airplay' && s.airplay_device ? 'Fra ' + s.airplay_device : '';
   const rb = (key: string, label: string, on: boolean, onClick: () => void, badge = 0) => (
@@ -230,6 +234,9 @@ function Desktop() {
           {r.page === 'int' && <IntegrationsPage />}
           {r.page === 'kass' && <KassettPage />}
           {r.page === 'vinyl' && <VinylPage />}
+          {r.page === 'quiz' && <QuizPage />}
+          {r.page === 'abs' && <AbsPage />}
+          {r.page === 'qhist' && <QhistPage />}
           {r.page === 'plug' && <PluginsPage />}
           {r.page === 'eq' && <EqPage />}
           {r.page === 'settings' && (cat ? <CategoryDetail cat={cat} wide /> : <SettingsPage wide />)}

@@ -3,13 +3,13 @@ import { signal, computed, effect } from '@preact/signals';
 import { api, ApiError, coverUrl, logoUrl, credFor, getBase, needsHost, productOf, type Status, type InputId } from './api';
 import { DEF, defaultEq, mergeSettings, type Settings, type EqProfiles, type EqSource } from './settings';
 
-export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib' | 'grp' | 'int' | 'plug' | 'ma' | 'kass' | 'vinyl';
+export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib' | 'grp' | 'int' | 'plug' | 'ma' | 'kass' | 'vinyl' | 'quiz' | 'abs' | 'qhist';
 export interface Route { page: Page; cat?: string }
 
 export const status = signal<Status | null>(null);
 export const online = signal<boolean>(false);
 export const lastError = signal<string>('');
-export const route = signal<Route>({ page: 'home' });
+export const route = signal<Route>({ page: typeof location !== 'undefined' && location.hash.startsWith('#sanglek') ? 'quiz' : 'home' });
 export const fullPlayer = signal<boolean>(false);          // telefon: fullskjerm-spiller
 const hash = typeof location !== 'undefined' ? location.hash : '';
 const welcomed = (() => { try { return localStorage.getItem('skjold-welcomed') === '1'; } catch { return true; } })();

@@ -52,6 +52,109 @@ paths:
             application/json:
               schema:
                 type: object
+  /api/abs:
+    get:
+      tags:
+      - Annet
+      summary: Audiobookshelf – se pi/skjold_abs.py.
+      operationId: get_api_abs
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: Audiobookshelf – se pi/skjold_abs.py.
+      operationId: post_api_abs
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/abs/{act}:
+    get:
+      tags:
+      - Annet
+      summary: Audiobookshelf – se pi/skjold_abs.py.
+      operationId: get_api_abs_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+      - Annet
+      summary: Audiobookshelf – se pi/skjold_abs.py.
+      operationId: post_api_abs_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/abs/{act}/{id}:
+    get:
+      tags:
+      - Annet
+      summary: Audiobookshelf – se pi/skjold_abs.py.
+      operationId: get_api_abs_act_id
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
   /api/ai:
     get:
       tags:
@@ -192,6 +295,32 @@ paths:
             application/json:
               schema:
                 type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/bass/{act}:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/bass/start {sub} · POST /api/bass/analyze (opptak) · POST /api/bass/apply · POST /api/bass/avbryt.
+      operationId: post_api_bass_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
       requestBody:
         required: false
         content:
@@ -2022,6 +2151,79 @@ paths:
           application/json:
             schema:
               type: object
+  /api/qhist:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/qhist?dag=&fra=&til=&rom=&alle=1 · POST /api/qhist/spill {spor, rom?}.
+      operationId: get_api_qhist
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/qhist/{act}:
+    post:
+      tags:
+      - Annet
+      summary: GET /api/qhist?dag=&fra=&til=&rom=&alle=1 · POST /api/qhist/spill {spor, rom?}.
+      operationId: post_api_qhist_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/quiz:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/quiz
+      operationId: get_api_quiz
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: POST /api/quiz
+      operationId: post_api_quiz
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
   /api/radio/browse:
     get:
       tags:
@@ -2562,6 +2764,84 @@ paths:
                 type: object
       parameters:
       - name: rid
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/security:
+    get:
+      tags:
+      - Annet
+      summary: 'POST /api/security {action: trigger|stop, rom?, lyd?, tekst?, grunn?} · GET /api/security · GET/POST /api/security/innst'
+      operationId: get_api_security
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: 'POST /api/security {action: trigger|stop, rom?, lyd?, tekst?, grunn?} · GET /api/security · GET/POST /api/security/innst'
+      operationId: post_api_security
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/security/{act}:
+    get:
+      tags:
+      - Annet
+      summary: 'POST /api/security {action: trigger|stop, rom?, lyd?, tekst?, grunn?} · GET /api/security · GET/POST /api/security/innst'
+      operationId: get_api_security_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+      - Annet
+      summary: 'POST /api/security {action: trigger|stop, rom?, lyd?, tekst?, grunn?} · GET /api/security · GET/POST /api/security/innst'
+      operationId: post_api_security_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
         in: path
         required: true
         schema:
