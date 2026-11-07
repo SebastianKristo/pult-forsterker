@@ -58,9 +58,9 @@ for n, want in ANTALL.items():
     melding(god, f"{n:15s} vanntett={m.is_watertight} legemer={deler} {m.volume/1000:6.2f} cm³ {m.extents.round(1)} mm")
 
 # ---------- 2. overlapp i montert stilling ----------
-DELER = ["topp", "bunn", "vindu", "logo", "hetter", "symboler", "kort", "skjerm", "batteri", "mcu", "lader", "ir", "vib", "motor", "flex", "ledninger"]
+DELER = ["topp", "front", "bunn", "vindu", "logo", "hetter", "symboler", "kort", "skjerm", "batteri", "mcu", "lader", "ir", "vib", "motor", "flex", "ledninger"]
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in DELER}
-TOUCH = {("topp", "logo"), ("hetter", "symboler"), ("bunn", "vindu"), ("topp", "kort"), ("bunn", "kort"), ("topp", "skjerm"),
+TOUCH = {("front", "kort"), ("topp", "logo"), ("hetter", "symboler"), ("bunn", "vindu"), ("topp", "kort"), ("bunn", "kort"), ("topp", "skjerm"),
          ("topp", "bunn"), ("flex", "kort"), ("flex", "skjerm")}
 
 
@@ -84,7 +84,7 @@ for a, b in itertools.combinations(hett, 2):
     v = overlapp(a, b)
     if not v <= 0.001:
         feil.append(f"to hetter ved {a.centroid[:2].round(1)} og {b.centroid[:2].round(1)}: {v:.3f} mm³")
-melding(not feil and len(hett) == len(taster.HETTER),
+melding(not feil and len(hett) == len(taster.HETTER) + len(taster.OPPSETT["rutenett"]),
         f"ingen overlapp i montert stilling ({len(DELER)} deler, {len(hett)} hetter)" if not feil else "overlapp: " + "; ".join(feil))
 
 # ---------- 3. veggtykkelse ----------
@@ -121,7 +121,7 @@ melding(not tynn, "sideveggen er ≥ 1,6 mm rundt hele (utenom USB-C, IR-vinduet
 
 # topp og gulv: loddrette stråler
 rot, gulv = [], []
-SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (W - 7, L - 95)]   # skruehodene og forborene
+SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (W - 7, L - 95)] + [(x, L - n) for x, n in taster.FRONT_SKRUER]   # skruehodene og forborene
 scr = (W/2 - 24.2, W/2 + 24.2, L - 8.1 - 67.1, L - 8.1)   # lomma for 2,8″-modulen (48,4 × 67,1 mm)
 for x in np.arange(5.13, W - 5, 1.0):
     for y in np.arange(5.37, L - 5, 1.0):
@@ -139,6 +139,48 @@ melding(not gulv, "gulvet er ≥ 1,5 mm utenom skruehodene" if not gulv else f"t
 # ---------- 4. materiale mellom tastehullene ----------
 steg = taster.sjekk_steg()
 melding(not steg, f"≥ {taster.MIN_STEG} mm mellom alle tastehull" if not steg else f"for smalt mellom: {steg}")
+
+# ---------- 4b. frontplatene: hver hette treffer bryteren sin, ingen kollisjoner, frontplaten passer ----------
+GRID = [(x, L - n) for x, n in taster.GRID]
+TOPP_PLUNGER = 8.2 + 1.0 + 1.5
+for o in taster.OPPSETT:
+    d = f"{ASM}/front_{o}"
+    F = {n: trimesh.load(f"{d}/{n}.stl") for n in ("frontplate", "hetter", "symboler")}
+    feil = []
+    for x, y in [("frontplate", "hetter"), ("frontplate", "topp"), ("frontplate", "skjerm"), ("hetter", "topp"), ("hetter", "kort")]:
+        a_, b_ = F.get(x, A.get(x)), F.get(y, A.get(y))
+        v = overlapp(a_, b_)
+        if not v <= 0.001:
+            feil.append(f"{x} × {y}: {v:.3f} mm³")
+    v = overlapp(F["frontplate"], A["kort"])
+    if not v <= 0.05:
+        feil.append(f"frontplate × kort: {v:.3f} mm³")
+    hs = F["hetter"].split(only_watertight=False)
+    for a_, b_ in itertools.combinations(hs, 2):
+        if overlapp(a_, b_) > 0.001:
+            feil.append("to hetter overlapper")
+    # stråler opp fra toppen av hver rutenettbryter: målbryteren har hetta 0,1 mm over seg, de andre ≥ 0,5 mm eller ingenting
+    kart = taster.kart(o)
+    o_ = np.array([[x, y, TOPP_PLUNGER - 0.01] for x, y in GRID])
+    loc, idx, _ = F["hetter"].ray.intersects_location(o_, np.tile([0, 0, 1.0], (len(o_), 1)), multiple_hits=False)
+    avst = np.full(len(o_), np.inf)
+    avst[idx] = loc[:, 2] - TOPP_PLUNGER
+    bom = [f"{f} (g{i:02d}: {avst[i]:.2f} mm)" for i, f in enumerate(kart) if f and abs(avst[i] - 0.1) > 0.03]
+    tull = [f"g{i:02d} ({avst[i]:.2f} mm)" for i, f in enumerate(kart) if not f and avst[i] < 0.45]
+    # sømmen: frontplaten ligger i flukt med toppen og hviler på kortet
+    fb = F["frontplate"].bounds
+    flukt = abs(fb[1][2] - A["topp"].bounds[1][2]) < 0.01 and abs(fb[0][2] - (8.2 + 1.0)) < 0.02
+    navn = taster.OPPSETT_NAVN[o]
+    melding(not feil and not bom and not tull and flukt and len(hs) == len(taster.HETTER) + len(taster.OPPSETT[o]),
+            f"frontplate {navn}: {len(taster.OPPSETT[o])} hetter, hver treffer sin bryter (0,1 mm), andre brytere ≥ 0,45 mm fri, "
+            f"i flukt med toppen og hviler på kortet" if not (feil or bom or tull) and flukt else
+            f"frontplate {navn}: {'; '.join(feil + bom + tull)} {'' if flukt else '(ikke i flukt)'}")
+    for n in ("frontplate", "front_knapper", "front_symboler"):
+        m = trimesh.load(f"{STL}/front_{o}/{n}.stl")
+        want = 1 if n == "frontplate" else len(taster.OPPSETT[o]) if n == "front_knapper" else None
+        deler = len(m.split(only_watertight=False))
+        melding(m.is_watertight and (want is None or deler == want) and abs(m.bounds[0][2]) < 0.02 or n == "front_symboler",
+                f"  {n:15s} vanntett={m.is_watertight} legemer={deler} {m.extents.round(1)} mm")
 
 # ---------- 5. forvandring og klaring ----------
 bryter_topp = 8.2 + 1.0 + 1.5

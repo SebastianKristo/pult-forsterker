@@ -17,7 +17,7 @@ import os
 import re
 
 W, L = 55.0, 230.0          # ytre mål (må stemme med skjold_fjernkontroll.scad); L byttes av bruk("kort")
-L_FULL, L_KORT = 244.5, 201.5
+L_FULL, L_KORT = 245.5, 202.5
 DN = 22.0                   # alt under skjermen flyttet 22 mm mot halen for 2,8″-skjermen (DN i .scad)
 CX = W / 2
 SPILL = 0.35                # klaring rundt hetta i hullet (hver side)
@@ -34,30 +34,84 @@ HETTER = [
     # D-pad: gullring Ø39 med fire brytere og OK (Ø15) i midten
     ("dpad", "D-pad", "ring", CX, 88.7, 39, 17, "pil", "gull", ["opp", "ned", "venstre", "hoyre"]),
     ("ok", "OK", "ok", CX, 88.7, 15, 15, "OK", "mork", ["ok"]),
-    # tasteblokk under D-paden: to kolonner med like store runde taster (Ø16) og 3,25 mm mellomrom.
-    # Venstre: tilbake, avslutt, spill/pause. Høyre: volumpillen (én tast bred, to høy) øverst, demp nederst.
-    ("tilbake", "Tilbake", "rund", CX - 9.625, 117.45, 16, 16, "tilbake", "mork", ["tilbake"]),
-    ("avslutt", "Avslutt", "rund", CX - 9.625, 136.7, 16, 16, "avslutt", "mork", ["avslutt"]),
-    ("spill_pause", "Spill-pause", "rund", CX - 9.625, 155.95, 16, 16, "spill_pause", "mork", ["spill_pause"]),
-    ("vol", "Volum", "vippe", CX + 9.625, 127.075, 16, 35.25, "vol", "mork", ["vol_opp", "vol_ned"]),
-    ("demp", "Demp", "rund", CX + 9.625, 155.95, 16, 16, "demp", "mork", ["demp"]),
 ] + [
     # talltaster 1–9, så − 0 ↵
-    (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 170.7 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
+    (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 171.7 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
     for d in range(1, 10)
 ] + [
-    ("strek", "Strek", "pille", CX - 14, 195.9, 11.6, 6.0, "strek", "mork", ["strek"]),
-    ("tall_0", "Tall 0", "pille", CX, 195.9, 11.6, 6.0, "0", "mork", ["tall_0"]),
-    ("enter", "Enter", "pille", CX + 14, 195.9, 11.6, 6.0, "enter", "mork", ["enter"]),
+    ("strek", "Strek", "pille", CX - 14, 196.9, 11.6, 6.0, "strek", "mork", ["strek"]),
+    ("tall_0", "Tall 0", "pille", CX, 196.9, 11.6, 6.0, "0", "mork", ["tall_0"]),
+    ("enter", "Enter", "pille", CX + 14, 196.9, 11.6, 6.0, "enter", "mork", ["enter"]),
     # smarthus-raden: lys, stikkontakt, − og +
-    ("lys", "Lys", "pille", CX - 18, 205.5, 9.6, 6.0, "lys", "lys", ["lys"]),
-    ("stikk", "Stikkontakt", "pille", CX - 6, 205.5, 9.6, 6.0, "stikk", "lys", ["stikk"]),
-    ("minus", "Minus (dempe lys)", "pille", CX + 6, 205.5, 9.6, 6.0, "minus", "lys", ["minus"]),
-    ("pluss", "Pluss (mer lys)", "pille", CX + 18, 205.5, 9.6, 6.0, "pluss", "lys", ["pluss"]),
+    ("lys", "Lys", "pille", CX - 18, 206.5, 9.6, 6.0, "lys", "lys", ["lys"]),
+    ("stikk", "Stikkontakt", "pille", CX - 6, 206.5, 9.6, 6.0, "stikk", "lys", ["stikk"]),
+    ("minus", "Minus (dempe lys)", "pille", CX + 6, 206.5, 9.6, 6.0, "minus", "lys", ["minus"]),
+    ("pluss", "Pluss (mer lys)", "pille", CX + 18, 206.5, 9.6, 6.0, "pluss", "lys", ["pluss"]),
 ]
 
 # alt under skjermen ligger DN mm lenger bak enn i første utgave (2,0″-skjerm)
 HETTER = [h[:4] + (h[4] + DN,) + h[5:] for h in HETTER]
+
+# ---------- frontplaten: utskiftbar tasteblokk under D-paden ----------
+# Tastekortet har et fast rutenett av brytere under frontplaten: 7 kolonner × 5 rader. Hver hette trykker på én bestemt
+# bryter (to for volumpiller); over de andre bryterne har hetta en grunn lomme, så de ikke trykkes. Et nytt oppsett
+# er bare en ny frontplate med hetter, og en ny linje i OPPSETT under.
+GRID_DX = [-17.25, -9.625, -4.8125, 0.0, 4.8125, 9.625, 17.25]   # kolonner: x − CX
+GRID_N = [118.3 + 9.625 * k for k in range(5)]                  # rader: n (før DN)
+GRID = [(CX + dx, n + DN) for n in GRID_N for dx in GRID_DX]     # rad for rad, venstre mot høyre
+FRONT_N0, FRONT_N1 = 128.0, 188.85     # frontplatens øvre og nedre kant (n, med DN)
+FRONT_X0, FRONT_X1 = 4.0, W - 4.0
+FRONT_BUE = 21.4                        # øvre kant buer rundt gullringen (radius fra D-padens senter)
+FRONT_SKRUER = [(6.0, GRID_N[2] + DN), (W - 6.0, GRID_N[2] + DN)]                 # M2 × 10 nedenfra gjennom bunn og kort
+FRONT_STOTTER = [(5.5, 131.0), (W - 5.5, 131.0), (5.5, 186.5), (W - 5.5, 186.5)]  # pinner som hviler på tastekortet
+FUNKSJONER = ["tilbake", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned"]
+
+
+def g(c, r):
+    """Bryter i rutenettet: kolonne c (0–6), rad r (0–4) → indeks."""
+    return r * len(GRID_DX) + c
+
+
+# (id, navn, form, x, n, b, h, ikon, farge, [(funksjon, rutenett-indeks), …])  – n før DN
+_R = GRID_N
+OPPSETT = {
+    # A: to kolonner med like store runde taster (Ø16, 3,25 mm mellomrom); volumpillen øverst til høyre
+    "rutenett": [
+        ("tilbake", "Tilbake", "rund", CX - 9.625, _R[0], 16, 16, "tilbake", "mork", [("tilbake", g(1, 0))]),
+        ("avslutt", "Avslutt", "rund", CX - 9.625, _R[2], 16, 16, "avslutt", "mork", [("avslutt", g(1, 2))]),
+        ("spill_pause", "Spill-pause", "rund", CX - 9.625, _R[4], 16, 16, "spill_pause", "mork", [("spill_pause", g(1, 4))]),
+        ("vol", "Volum", "vippe", CX + 9.625, _R[1], 16, 35.25, "vol", "mork", [("vol_opp", g(5, 0)), ("vol_ned", g(5, 2))]),
+        ("demp", "Demp", "rund", CX + 9.625, _R[4], 16, 16, "demp", "mork", [("demp", g(5, 4))]),
+    ],
+    # B: vannrett volumpille over hele bredden (− til venstre, + til høyre) og en rad med fire runde taster
+    "vannrett": [
+        ("vol", "Volum", "vippe", CX, _R[1], 35.75, 14, "vol", "mork", [("vol_ned", g(0, 1)), ("vol_opp", g(6, 1))]),
+        ("tilbake", "Tilbake", "rund", CX - 17.25, _R[3], 8.6, 8.6, "tilbake", "mork", [("tilbake", g(0, 3))]),
+        ("spill_pause", "Spill-pause", "rund", CX - 5.75, _R[3], 8.6, 8.6, "spill_pause", "mork", [("spill_pause", g(2, 3))]),
+        ("demp", "Demp", "rund", CX + 5.75, _R[3], 8.6, 8.6, "demp", "mork", [("demp", g(4, 3))]),
+        ("avslutt", "Avslutt", "rund", CX + 17.25, _R[3], 8.6, 8.6, "avslutt", "mork", [("avslutt", g(6, 3))]),
+    ],
+    # C: stor spill/pause i midten (Ø22) med fire små taster i hjørnene og demp under
+    "stor": [
+        ("spill_pause", "Spill-pause", "rund", CX, _R[2], 22, 22, "spill_pause", "mork", [("spill_pause", g(3, 2))]),
+        ("tilbake", "Tilbake", "rund", CX - 17.25, _R[0], 9, 9, "tilbake", "mork", [("tilbake", g(0, 0))]),
+        ("avslutt", "Avslutt", "rund", CX + 17.25, _R[0], 9, 9, "avslutt", "mork", [("avslutt", g(6, 0))]),
+        ("vol_ned", "Volum −", "rund", CX - 17.25, _R[4], 9, 9, "minus", "mork", [("vol_ned", g(0, 4))]),
+        ("vol_opp", "Volum +", "rund", CX + 17.25, _R[4], 9, 9, "pluss", "mork", [("vol_opp", g(6, 4))]),
+        ("demp", "Demp", "rund", CX, _R[4], 10.8, 10.8, "demp", "mork", [("demp", g(3, 4))]),
+    ],
+}
+OPPSETT = {k: [h[:4] + (h[4] + DN,) + h[5:] for h in v] for k, v in OPPSETT.items()}
+OPPSETT_NAVN = {"rutenett": "A «Rutenett»", "vannrett": "B «Vannrett»", "stor": "C «Stor»"}
+
+
+def kart(navn):
+    """Rutenett-indeks → funksjon for et oppsett ("" = ikke i bruk)."""
+    k = [""] * len(GRID)
+    for h in OPPSETT[navn]:
+        for f, i in h[9]:
+            k[i] = f
+    return k
 HETTER_FULL = HETTER
 # kort variant: uten talltastene (1–9, −, 0, ↵) og smarthus-raden (lys, stikk, −, +); fargetastene blir nederste rad
 KORT_UTEN = {f"tall_{d}" for d in range(10)} | {"strek", "enter", "lys", "stikk", "minus", "pluss"}
@@ -85,19 +139,22 @@ def brytere():
                 ut.append((bid, BRYTER_NAVN[bid], x, n + dn, hid))
         else:
             ut.append((ids[0], navn, x, n, hid))
-    return ut
+    fast = [b for b in ut if not b[0].startswith(("tall_", "strek", "enter", "lys", "stikk", "minus", "pluss"))]
+    resten = [b for b in ut if b not in fast]
+    rute = [(f"g{i:02d}", f"Rutenett r{i // len(GRID_DX)} k{i % len(GRID_DX)}", x, n, "front") for i, (x, n) in enumerate(GRID)]
+    return fast + rute + resten
 
 
 def tca(i):
     """Bryter nr. i → (brikke, adresse, pinne 0–15, «P0_3»)."""
     chip = i // 16
     pin = i % 16
-    return "ABC"[chip], 0x20 + chip, pin, f"P{pin // 8}_{pin % 8}"
+    return "ABCD"[chip], 0x20 + chip, pin, f"P{pin // 8}_{pin % 8}"
 
 
 # fire ledige pinner på siste brikke (pinne 12–15) brukes til styring: C i full variant, B i kort
 def ekstra():
-    c = "ABC"[len(TCA_POS) - 1]
+    c = "ABCD"[len(TCA_POS) - 1]
     return [("vibrator", c, 12, "P1_4", "utgang: vibrasjonsmotor (via AO3400)"),
             ("strom_skjerm", c, 13, "P1_5", "utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)"),
             ("lader", c, 14, "P1_6", "inngang: TP4056 CHRG (lav = lader)"),
@@ -109,10 +166,11 @@ def bruk(variant):
     global HETTER, L, PCB_N1, VARIANT, TCA_POS
     VARIANT = variant
     if variant == "kort":
-        HETTER, L, TCA_POS = HETTER_KORT, L_KORT, [(CX + 13, 145.0), (CX + 13, 157.0)]
+        HETTER, L, TCA_POS = HETTER_KORT, L_KORT, [(CX + 13, 145.0), (CX + 13, 157.0), (CX + 13, 169.0)]
     else:
-        HETTER, L, TCA_POS = HETTER_FULL, L_FULL, [(CX - 13, 150.0), (CX, 150.0), (CX + 13, 150.0)]
-    PCB_N1 = max(b[3] for b in brytere()) + 6.3   # 6,3 mm bak siste bryterrad
+        HETTER, L, TCA_POS = HETTER_FULL, L_FULL, [(CX - 13, 150.0), (CX, 150.0), (CX + 13, 150.0), (CX + 13, 162.0)]
+    # 6,3 mm bak siste bryterrad, og minst så langt at frontplatens nedre støttepinner hviler på kortet
+    PCB_N1 = max(max(b[3] for b in brytere()) + 6.3, FRONT_STOTTER[2][1] + 3.0)
 
 
 # ---------- 2D-former for sjekk av materialet mellom hullene ----------
@@ -163,9 +221,37 @@ def avstand(fa, fb):
     return min(math.hypot(a[0] - b[0], a[1] - b[1]) for a in pa for b in pb)
 
 
+def front_rand():
+    """Frontplatens omriss (sømmen) som punkter: rektangel med bue rundt gullringen."""
+    d = [h for h in HETTER if h[2] == "ring"][0]
+    pts = []
+    for i in range(400):
+        t = i / 400
+        pts += [(FRONT_X0 + (FRONT_X1 - FRONT_X0) * t, FRONT_N1), (FRONT_X0, FRONT_N0 + (FRONT_N1 - FRONT_N0) * t),
+                (FRONT_X1, FRONT_N0 + (FRONT_N1 - FRONT_N0) * t)]
+        x = FRONT_X0 + (FRONT_X1 - FRONT_X0) * t
+        dy = FRONT_BUE ** 2 - (x - d[3]) ** 2
+        pts.append((x, max(FRONT_N0, d[4] + math.sqrt(dy)) if dy > 0 else FRONT_N0))
+    return pts
+
+
 def sjekk_steg():
-    """[(hette a, hette b, avstand)] for alle par nærmere enn MIN_STEG (ring og OK er ett hull sammen)."""
-    hs = [h for h in HETTER if h[2] != "ok"]
+    """[(hette a, hette b, avstand)] for alle par nærmere enn MIN_STEG (ring og OK er ett hull sammen),
+    for de faste tastene sammen med hvert frontoppsett; og ≥ 1,2 mm fra hver frontplatehette til sømmen."""
+    feil = []
+    rand_ = front_rand()
+    for o, hf in OPPSETT.items():
+        for h in hf:
+            pts = rand(hull_form(h))
+            d = min(math.hypot(a[0] - b[0], a[1] - b[1]) for a in pts for b in rand_) - 0.15
+            if d < 1.2 or any(inni(hull_form(h), b) for b in rand_):
+                feil.append((o, h[0], "søm", round(d, 2)))
+        feil += [(o,) + f for f in _steg([q for q in HETTER if q[2] != "ok"] + hf)]
+    return feil
+
+
+def _steg(hs):
+    feil = []
     feil = []
     for i, a in enumerate(hs):
         for b in hs[i + 1:]:
@@ -173,8 +259,8 @@ def sjekk_steg():
             if abs(fa[1] - fb[1]) > 40 or abs(fa[2] - fb[2]) > 40:
                 continue
             d = avstand(fa, fb)
-            if d < MIN_STEG:
-                feil.append((a[0], b[0], round(d, 2)))
+            if d < MIN_STEG + (0.7 if a in sum(OPPSETT.values(), []) or b in sum(OPPSETT.values(), []) else 0):
+                feil.append((a[0], b[0], round(d, 2)))   # frontplatehettene: ≥ 2,1 mm, så flensene ikke møtes
     return feil
 
 
@@ -186,10 +272,27 @@ def scad():
         rows.append(f'  ["{hid}", "{form}", {x:.2f}, {n:.2f}, {b:.2f}, {h:.2f}, "{ikon}", "{farge}"]')
     br = [f'  ["{bid}", {x:.2f}, {n:.2f}]' for bid, _, x, n, _ in brytere()]
     v = VARIANT.upper()
-    return (f"// variant «{VARIANT}»: {len(brytere())} brytere, {len(HETTER)} hetter, L = {L}\n"
+    return (f"// variant «{VARIANT}»: {len(brytere())} brytere ({len(GRID)} i rutenettet), {len(HETTER)} faste hetter, L = {L}\n"
             f"HETTER_{v} = [\n{(',' + chr(10)).join(rows)}\n];\n"
             f"BRYTERE_{v} = [\n{(',' + chr(10)).join(br)}\n];\n"
             f"PCB_N1_{v} = {PCB_N1:.2f};\nL_{v} = {L};\n")
+
+
+def front_scad():
+    """Frontplaten og oppsettene til taster.scad. Oppsetthette: [id, form, x, n, b, h, ikon, farge, [[x, n] mål …]]."""
+    ut = ["// ---------- frontplaten ----------",
+          "GRID = [" + ", ".join(f"[{x:.4f}, {n:.4f}]" for x, n in GRID) + "];",
+          f"FRONT_N0 = {FRONT_N0}; FRONT_N1 = {FRONT_N1}; FRONT_X0 = {FRONT_X0}; FRONT_X1 = {FRONT_X1}; FRONT_BUE = {FRONT_BUE};",
+          "FRONT_SKRUER = [" + ", ".join(f"[{x}, {n:.4f}]" for x, n in FRONT_SKRUER) + "];",
+          "FRONT_STOTTER = [" + ", ".join(f"[{x}, {n}]" for x, n in FRONT_STOTTER) + "];",
+          "OPPSETT_NAVN = [" + ", ".join(f'"{o}"' for o in OPPSETT) + "];"]
+    for o, hs in OPPSETT.items():
+        rows = []
+        for hid, navn, form, x, n, b, h, ikon, farge, mal in hs:
+            m = ", ".join(f"[{GRID[i][0]:.4f}, {GRID[i][1]:.4f}]" for _, i in mal)
+            rows.append(f'  ["{hid}", "{form}", {x:.4f}, {n:.4f}, {b:.2f}, {h:.2f}, "{ikon}", "{farge}", [{m}]]')
+        ut.append(f"OPPSETT_{o.upper()} = [\n" + ",\n".join(rows) + "\n];")
+    return "\n".join(ut) + "\n"
 
 
 def plassering():
@@ -222,19 +325,48 @@ def koblinger():
 REPETER = {"vol_opp", "vol_ned", "opp", "ned", "venstre", "hoyre", "minus", "pluss"}   # gjentas når de holdes
 
 
+def tastenavn():
+    """Navnene tastene sendes med (faste taster, frontplatefunksjonene og talltastene): samme rekkefølge som IR-plassene."""
+    fast = [b[0] for b in brytere() if not b[0].startswith("g")]
+    return fast[:8] + FUNKSJONER + fast[8:]
+
+
 def yaml_blokker():
-    """Tre blokker i esphome/skjold-fjernkontroll.yaml: navnelista (globals), hendelsestypene (event) og en
-    binary_sensor for hver tast. Vanlige taster: kort trykk og langt trykk (≥ 0,6 s). Volum, kanal, D-pad og ± gjentas
-    så lenge de holdes inne. Alle kaller script «tast» med bryter-id og om trykket var langt."""
-    hub = {"A": "tca_a", "B": "tca_b", "C": "tca_c"}
-    ids = [b[0] for b in brytere()]
+    """Blokker i esphome/skjold-fjernkontroll.yaml: navnelista og oppsettkartet (globals), hendelsestypene (event),
+    en binary_sensor for hver bryter (faste taster og rutenettet) og valget av frontplate (select).
+    Faste taster: kort og langt trykk (≥ 0,6 s); volum, D-pad og ± gjentas så lenge de holdes.
+    Rutenettbryterne slår opp funksjonen i oppsettkartet for frontplaten som er valgt (tom = ikke i bruk)."""
+    hub = {"A": "tca_a", "B": "tca_b", "C": "tca_c", "D": "tca_d"}
+    ids = tastenavn()
+    navn_ = list(OPPSETT)
+    rader = ", ".join("{" + ", ".join(f'"{f}"' for f in kart(o)) + "}" for o in navn_)
     navn = ["# >>> navneliste (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
             "  - id: taster_navn",
             "    type: std::vector<std::string>",
             "    initial_value: '{" + ", ".join(f'"{i}"' for i in ids) + "}'",
+            "  # rutenettbryter → funksjon for hver frontplate (" + ", ".join(navn_) + ")",
+            "  - id: oppsett_kart",
+            "    type: std::vector<std::vector<std::string>>",
+            "    initial_value: '{" + rader + "}'",
+            "  - id: oppsett_nr",
+            "    type: int",
+            "    restore_value: true",
+            f"    initial_value: '{navn_.index('rutenett')}'",
             "# <<< navneliste"]
     hend = ["# >>> hendelser (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
             "    event_types:"] + [f"      - {i}" for i in ids] + [f"      - {i}_lang" for i in ids if i not in REPETER] + ["# <<< hendelser"]
+    valg = ["# >>> oppsettvalg (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
+            "  - platform: template",
+            "    id: oppsett_valg",
+            "    name: Frontplate",
+            "    icon: mdi:view-grid-outline",
+            "    optimistic: true",
+            "    restore_value: true",
+            "    initial_option: ${oppsett}",
+            "    options: [ " + ", ".join(navn_) + " ]",
+            "    on_value:",
+            "      - lambda: 'id(oppsett_nr) = i;'",
+            "# <<< oppsettvalg"]
     ut = ["# >>> taster (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)"]
     for i, (bid, nv, x, n, hid) in enumerate(brytere()):
         c, a, p, pn = tca(i)
@@ -244,7 +376,34 @@ def yaml_blokker():
                f"    internal: true",
                f"    pin: {{ tca9555: {hub[c]}, number: {p}, mode: {{ input: true }}, inverted: true }}",
                f"    filters: [ {{ delayed_on: 15ms }}, {{ delayed_off: 15ms }} ]"]
-        if bid in REPETER:
+        if hid == "front":
+            k = int(bid[1:])
+            f_ = f"id(oppsett_kart)[id(oppsett_nr)][{k}]"
+            gjenta = f"const std::string &f = {f_}; return f == \"vol_opp\" || f == \"vol_ned\";"
+            enkel = f"const std::string &f = {f_}; return !f.empty() && f != \"vol_opp\" && f != \"vol_ned\";"
+            ut += [f"    on_press:",
+                   f"      - if:",
+                   f"          condition: {{ lambda: '{gjenta}' }}",
+                   f"          then:",
+                   f"            - script.execute: {{ id: tast, navn: !lambda 'return {f_};', lang: false }}",
+                   f"            - delay: 450ms",
+                   f"            - while:",
+                   f"                condition: {{ binary_sensor.is_on: t_{bid} }}",
+                   f"                then:",
+                   f"                  - script.execute: {{ id: tast, navn: !lambda 'return {f_};', lang: false }}",
+                   f"                  - delay: 160ms",
+                   f"    on_multi_click:",
+                   f"      - timing: [ \"ON for at least 0.6s\" ]",
+                   f"        then:",
+                   f"          - if:",
+                   f"              condition: {{ lambda: '{enkel}' }}",
+                   f"              then: [ {{ script.execute: {{ id: tast, navn: !lambda 'return {f_};', lang: true }} }} ]",
+                   f"      - timing: [ \"ON for at most 0.59s\", \"OFF for at least 0.01s\" ]",
+                   f"        then:",
+                   f"          - if:",
+                   f"              condition: {{ lambda: '{enkel}' }}",
+                   f"              then: [ {{ script.execute: {{ id: tast, navn: !lambda 'return {f_};', lang: false }} }} ]"]
+        elif bid in REPETER:
             ut += [f"    on_press:",
                    f"      - script.execute: {{ id: tast, navn: \"{bid}\", lang: false }}",
                    f"      - delay: 450ms",
@@ -260,7 +419,19 @@ def yaml_blokker():
                    f"      - timing: [ \"ON for at most 0.59s\", \"OFF for at least 0.01s\" ]",
                    f"        then: [ {{ script.execute: {{ id: tast, navn: \"{bid}\", lang: false }} }} ]"]
     ut.append("# <<< taster")
-    return {"navneliste": "\n".join(navn), "hendelser": "\n".join(hend), "taster": "\n".join(ut)}
+    return {"navneliste": "\n".join(navn), "hendelser": "\n".join(hend), "taster": "\n".join(ut), "oppsettvalg": "\n".join(valg)}
+
+
+def oppsett_tabell():
+    """Markdown: hvilken rutenettbryter hver funksjon bruker i hvert oppsett."""
+    lines = ["| Funksjon | " + " | ".join(OPPSETT_NAVN[o] for o in OPPSETT) + " |", "|---|" + "---|" * len(OPPSETT)]
+    for f in FUNKSJONER:
+        cel = []
+        for o in OPPSETT:
+            i = kart(o).index(f) if f in kart(o) else None
+            cel.append("–" if i is None else f"`g{i:02d}` (rad {i // len(GRID_DX)}, kolonne {i % len(GRID_DX)})")
+        lines.append(f"| `{f}` | " + " | ".join(cel) + " |")
+    return "\n".join(lines)
 
 
 def tabell():
@@ -273,23 +444,23 @@ def tabell():
 
 def full_yaml(kort):
     """esphome/skjold-fjernkontroll-full.yaml: samme fil som standard (kort), men med talltastene og
-    smarthus-raden (30 taster) og 3 × TCA9555."""
+    smarthus-raden (30 taster) og 4 × TCA9555."""
     k = kort
     for a, b in [("  name: skjold-fjernkontroll\n", "  name: skjold-fjernkontroll-full\n"),
                  ("  friendly_name: Skjold Fjernkontroll\n", "  friendly_name: Skjold Fjernkontroll Full\n"),
-                 ("  ekstra_hub: tca_b ", "  ekstra_hub: tca_c "),
-                 ("  - { id: tca_b, i2c_id: bus_a, address: 0x21 }\n",
-                  "  - { id: tca_b, i2c_id: bus_a, address: 0x21 }\n  - { id: tca_c, i2c_id: bus_a, address: 0x22 }\n"),
+                 ("  ekstra_hub: tca_c ", "  ekstra_hub: tca_d "),
+                 ("  - { id: tca_c, i2c_id: bus_a, address: 0x22 }\n",
+                  "  - { id: tca_c, i2c_id: bus_a, address: 0x22 }\n  - { id: tca_d, i2c_id: bus_a, address: 0x23 }\n"),
                  ("  ap: { ssid: \"Skjold Fjernkontroll\" }", "  ap: { ssid: \"Skjold Fjernkontroll Full\" }"),
                  ("# Dette er standardvarianten (uten talltastene og smarthus-raden). Full variant med talltaster og smarthus-rad:\n"
                   "# skjold-fjernkontroll-full.yaml, laget av kabinett/fjernkontroll/taster.py fra denne fila.\n", ""),
                  ("14 taster, IR og Wi-Fi", "30 taster, IR og Wi-Fi"),
-                 ("2 × TCA9555 på tastekortet (14 taster", "3 × TCA9555 på tastekortet (30 taster")]:
+                 ("3 × TCA9555 på tastekortet (8 faste taster", "4 × TCA9555 på tastekortet (24 faste taster")]:
         assert a in k, a
         k = k.replace(a, b)
     hode = ("# FULL VARIANT (valgfri) – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger\n"
             "# her: endre skjold-fjernkontroll.yaml og kjør python3 taster.py. Med talltastene og smarthus-raden (30 taster,\n"
-            "# 3 × TCA9555).\n")
+            "# 4 × TCA9555).\n")
     for kk, v in yaml_blokker().items():
         k = re.sub(rf"# >>> {kk}.*?# <<< {kk}", lambda _m, v=v: v, k, flags=re.S)
     return hode + k
@@ -298,7 +469,7 @@ def full_yaml(kort):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     deler, yml = [], os.path.join(here, "..", "..", "esphome", "skjold-fjernkontroll.yaml")
-    for v, antall in (("kort", 14), ("full", 30)):
+    for v, antall in (("kort", 8 + len(GRID)), ("full", 24 + len(GRID))):
         bruk(v)
         assert len(brytere()) == antall, (v, len(brytere()))
         feil = sjekk_steg()
@@ -313,7 +484,7 @@ def main():
     with open(os.path.join(here, "taster.scad"), "w") as f:
         f.write("// Laget av taster.py – ikke rediger for hånd.\n"
                 "// hette: [id, form, x, n (fra nesen), bredde, høyde, ikon, farge] · bryter: [id, x, n]\n"
-                f"DPAD_R = {DPAD_R};\nVIPPE_D = {VIPPE_D};\nPCB_N0 = {PCB_N0};\n" + "".join(deler))
+                f"DPAD_R = {DPAD_R};\nVIPPE_D = {VIPPE_D};\nPCB_N0 = {PCB_N0};\n" + "".join(deler) + front_scad())
     # standard (kort) er hovedfila; full lages fra den
     bruk("kort")
     s = open(yml).read()
@@ -329,6 +500,8 @@ def main():
     if len(sys.argv) > 1:
         bruk(sys.argv[1])
     print(tabell())
+    print()
+    print(oppsett_tabell())
 
 
 if __name__ == "__main__":

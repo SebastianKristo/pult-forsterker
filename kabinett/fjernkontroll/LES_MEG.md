@@ -11,7 +11,7 @@ Inni: [innmaten ovenfra](render/10_inni_ovenfra.png) · [skrått](render/11_inni
 I Bone White matt PLA med mørk matt PETG-bunn: [skrått](render/21_skra_bone.png) · [ovenfra](render/22_ovenfra_bone.png) · [fra siden](render/23_side_bone.png) · [nær](render/24_naer_bone.png) · [med grå PETG-bunn](render/25_skra_bone_gra.png). Se [Filament](#filament).
 Skjermen i bildene viser aktivitetslista slik fastvaren tegner den. Skjermbildene er laget med `lag_skjermbilder.py` (se [Skjermen](#skjermen)).
 
-**Mål: 55 × 201,5 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 244,5 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
+**Mål: 55 × 202,5 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 245,5 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
 
 Første utgave hadde en 2,0″-skjerm i en 54 × 208 mm kropp, med mye tom ramme på hver side av skjermen. Nå sitter en 2,8″-skjerm der: kroppen er 1 mm bredere og 22 mm lengre, og alt under skjermen (taster, form og farger) er det samme som før.
 
@@ -30,11 +30,11 @@ Standard er fjernkontrollen **uten talltaster**, som vist i bildene over. **Full
 
 | | **Standard** | **Full variant (valgfri)** |
 |---|---|---|
-| Mål | **55 × 201,5 mm** | 55 × 244,5 mm |
+| Mål | **55 × 202,5 mm** | 55 × 245,5 mm |
 | Tykkelse | 13,5 mm (15,0 mm med gullringen) | samme |
 | Taster | **14 brytere, 10 hetter** | 30 brytere, 26 hetter |
-| TCA9555 | **2** (0x20, 0x21); vibrator, skjermstrøm og lader på brikke B, P1_4–P1_6 | 3 (0x20, 0x21, 0x22); de tre styrepinnene på brikke C |
-| Tastekort | 48,6 × 105 mm (`tastekort/`) | 48,6 × 154 mm (`tastekort_full/`) |
+| TCA9555 | **3** (0x20–0x22); vibrator, skjermstrøm og lader på brikke C, P1_4–P1_6 | 4 (0x20–0x23); de tre styrepinnene på brikke D |
+| Tastekort | 48,6 × 110 mm (`tastekort/`) | 48,6 × 155 mm (`tastekort_full/`) |
 | ESPHome | `esphome/skjold-fjernkontroll.yaml` | `esphome/skjold-fjernkontroll-full.yaml` |
 | 3MF | `skjold-fjernkontroll-k2*.3mf` | `skjold-fjernkontroll-full-k2*.3mf` |
 | STL | `stl/` | `stl_full/` |
@@ -44,7 +44,7 @@ Begge har samme skjerm, samme bredde og samme formspråk. Begge har samme øvers
 
 **Smarthus-funksjonene på standardvarianten.** Lys, stikk og ± ligger på skjermen (Hjem-siden). Det er ingen egne taster for dem, og de er ikke lagt på langt trykk på andre taster. Langt trykk på Skjold-tasten velger fortsatt rom, og langt trykk på av/på er «alt av». Vil du ha en fysisk tast til lyset, kan du koble hvilken som helst tast til det i Home Assistant (se [Home Assistant](#home-assistant)). Hver tast sendes som en hendelse, også langt trykk.
 
-**Én eller to TCA9555?** Standardvarianten har 14 brytere (volumvippa og D-paden har to og fire hver), og vibratoren, skjermstrømmen og ladestatusen trenger tre pinner til. Det blir 17 pinner, én mer enn de 16 på én TCA9555, så det trengs fortsatt to (32 pinner, 15 ledige). Én brikke ville holde hvis ladestatusen ble droppet (14 + vibrator + skjermstrøm = 16). Full variant har 30 brytere + 3 = 33 pinner på tre brikker. SuperMini-en har ingen ledige pinner (GPIO 1–13, 43 og 44 er brukt til skjerm, berøring, IR, vekking og batteri). Derfor er det fortsatt to TCA9555.
+**Hvor mange TCA9555?** Tastekortet har 8 faste brytere (av/på, Skjold, meny, fire under D-paden og OK) og 35 i rutenettet under frontplaten. Med vibratoren, skjermstrømmen og ladestatusen blir det 46 pinner, så standardvarianten har tre TCA9555 (48 pinner, 2 ledige). Full variant har 16 talltaster og smarthus-taster i tillegg: 62 pinner på fire brikker. SuperMini-en har ingen ledige pinner (GPIO 1–13, 43 og 44 er brukt til skjerm, berøring, IR, vekking og batteri).
 
 **Plassering inni.** ESP-en ligger til venstre under rutenettet og spill/pause (standard n = 124–147 mm, full n = 166–189 mm), med USB-C mot nesen. Se [Slik er det inni](#slik-er-det-inni).
 
@@ -62,7 +62,7 @@ Fra toppen og ned:
 - **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (45,0 × 59,4 mm) går 0,9 mm utenfor det aktive området rundt, så litt av den sorte glasskanten synes. Toppen holder glasset med 1,4 mm leppe på sidene og 1,5 mm oppe; nede dekker den 5,6 mm, slik at den brede glasskanten ved flatkabelen (6,47 mm) ligger skjult.
 - **Øverste rad**, mellom skjermen og gullringen: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og **meny** (☰; kort trykk = meny, langt trykk = guide). Alle tre er Ø 11,5 mm og står 14,5 mm fra hverandre, så raden er like bred som ringen under.
 - **D-paden**: en stor gullring (Ø 39 mm, før 32) med fire tydelige retningspiler (sorte trekanter 6,0 × 4,3 mm felt inn i gullet) og en mørk OK (Ø 15 mm) i midten, der tommelen hviler. Ringen er så stor som bredden tillater, med over 4 mm til sideveggene.
-- **Tasteblokken** under ringen er et rent rutenett i to kolonner: fire like store runde taster (Ø 16 mm) og volumpillen, med 3,25 mm mellomrom både på tvers og på langs. Venstre kolonne: tilbake ‹, avslutt ✕ og spill/pause. Høyre kolonne: volumpillen øverst, nøyaktig én tast bred og to taster pluss mellomrommet høy (16 × 35,25 mm), i flukt med tilbake og avslutt, og demp nederst ved siden av spill/pause. Blokken er 35,25 mm bred.
+- **Tasteblokken** under ringen sitter i en utskiftbar frontplate (se [Utskiftbar frontplate](#utskiftbar-frontplate)). Standardoppsettet A er et rent rutenett i to kolonner: fire like store runde taster (Ø 16 mm) og volumpillen, med 3,25 mm mellomrom både på tvers og på langs. Venstre kolonne: tilbake ‹, avslutt ✕ og spill/pause. Høyre kolonne: volumpillen øverst, nøyaktig én tast bred og to taster pluss mellomrommet høy (16 × 35,25 mm), i flukt med tilbake og avslutt, og demp nederst ved siden av spill/pause. Blokken er 35,25 mm bred.
 - **Symbolene** er strektegnet med jevn strek (0,65 mm) og ca. 38 % av tastens diameter: en tynn vinkel for tilbake, ✕, ▷‖, en høyttaler med skråstrek, tynne + og − på pillen (uten prikk), av/på-ring, meny-streker og Skjold-omrisset. Pilene på gullringen er tynne vinkler og OK er skrevet med vanlig (ikke fet) skrift. De er felt inn som lyse innlegg i de mørke tastene.
 - **Tastetoppene** har en myk R 1,0-kant i stedet for fas. De printes fortsatt med flensen ned og toppen opp, uten støtte. Toppen er flat, så innleggene blir jevnt 0,4 mm dype.
 - *Full variant:* **talltastene** 1–9 står i tre kolonner, med −, 0 og ↵ i fjerde rad. **Smarthus-raden** nederst har fire lyse taster: lys, stikkontakt, − og +.
@@ -76,14 +76,61 @@ Designet er Skjolds eget. Det følger samme formspråk som Radio, Røst og Hjul 
 
 Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavprofil SMD-bryter (4 × 4 × 1,5 mm) på et 1,0 mm tastekort. Hettene står 0,1 mm over bryteren, så de ikke slarker og ikke trykker på forhånd. Symbolene er felt 0,4 mm inn og printet i kontrastfarge (lyse på mørke taster, mørke på lyse). Med CFS blir symbolene en del av samme utskrift.
 
+## Utskiftbar frontplate
+
+![Frontplate A, B og C](render/31_front_rutenett.png)
+
+Tasteblokken under D-paden sitter i en egen **frontplate** som kan byttes, så du kan velge (eller lage) et annet oppsett uten nytt kort. Bilder: [A «Rutenett»](render/31_front_rutenett.png) · [B «Vannrett»](render/32_front_vannrett.png) · [C «Stor»](render/33_front_stor.png) · i Bone White: [A](render/34_front_rutenett_bone.png) · [B](render/35_front_vannrett_bone.png) · [C](render/36_front_stor_bone.png) · [frontplaten løftet av](render/37_front_av.png).
+
+**Rutenettet på tastekortet.** Under frontplaten har tastekortet 35 brytere i et fast rutenett: 7 kolonner × 5 rader.
+- Kolonnene står 17,25 / 9,625 / 4,8125 / 0 mm til hver side for midten, slik at alle hettene i de tre oppsettene står midt over (eller innen 1 mm fra) bryteren sin.
+- Radene står 9,625 mm fra hverandre (n = 140,3 … 178,8 mm fra nesen).
+- Bryterne heter `g00`–`g34`, rad for rad fra venstre.
+- Hver hette trykker på én bestemt bryter (volumpillene på to). Over de andre bryterne under hetta har den en grunn lomme (Ø 3,4 × 0,5 mm), så de ikke trykkes. Sjekken kontrollerer at målbryteren har 0,1 mm forvandring og at alle andre har minst 0,45 mm luft.
+
+**Frontplaten.** Den er en 1,6 mm plate i samme materiale og farge som toppen, og ligger i flukt med toppen.
+- Sømmen er 0,3 mm og følger en rolig bue rundt gullringen.
+- Platen hviler på tastekortet med fire pinner, og holdes av **to M2 × 10-skruer nedenfra**. Skruene går gjennom bunnen og kortet og inn i to tårn på frontplaten (x 6 og 49, ved siden av batteriet).
+- Skruer er valgt fremfor klips eller magneter fordi de holder platen stramt mot kortet, så tastene føles like faste, og fordi alt printes uten støtte.
+- Hettene fanges av frontplaten, akkurat som i toppen.
+- **Bytte oppsett:** skru ut de to skruene, løft av frontplaten med hettene, legg på den nye og skru fast. Velg så samme oppsett i Home Assistant (under).
+
+**Oppsettene.**
+- **A «Rutenett»** (standard): to kolonner med like store runde taster (Ø 16, 3,25 mm mellomrom). Til venstre tilbake, avslutt og spill/pause; til høyre volumpillen (16 × 35,25 mm) og demp.
+- **B «Vannrett»**: en vannrett volumpille over hele bredden (35,75 × 14 mm, − til venstre og + til høyre) og under den en rad med fire runde taster (Ø 8,6): tilbake, spill/pause, demp og avslutt.
+- **C «Stor»**: en stor spill/pause (Ø 22) i midten, fire små taster (Ø 9) i hjørnene (tilbake, avslutt, volum − og +) og demp (Ø 10,8) under.
+
+Hver frontplate har sin egen 3MF (`skjold-fjernkontroll-front-rutenett.3mf`, `-vannrett`, `-stor`) med platen og hettene. Platene passer også i full variant.
+
+**Fastvaren.** Rutenettbryterne har ingen fast funksjon. Fastvaren slår opp funksjonen i et kart for frontplaten som er valgt:
+- `substitutions: oppsett: rutenett` (eller `vannrett`, `stor`) velger oppsettet første gang.
+- Select-entiteten **«Frontplate»** i Home Assistant bytter oppsett mens den kjører, uten ny flashing. Valget lagres.
+- Brytere som ikke brukes i oppsettet, blir ignorert. Volum gjentas når du holder inne, de andre har langt trykk.
+
+Kartet (lages av `taster.py`):
+
+| Funksjon | A «Rutenett» | B «Vannrett» | C «Stor» |
+|---|---|---|---|
+| `tilbake` | `g01` (rad 0, kolonne 1) | `g21` (rad 3, kolonne 0) | `g00` (rad 0, kolonne 0) |
+| `avslutt` | `g15` (rad 2, kolonne 1) | `g27` (rad 3, kolonne 6) | `g06` (rad 0, kolonne 6) |
+| `spill_pause` | `g29` (rad 4, kolonne 1) | `g23` (rad 3, kolonne 2) | `g17` (rad 2, kolonne 3) |
+| `demp` | `g33` (rad 4, kolonne 5) | `g25` (rad 3, kolonne 4) | `g31` (rad 4, kolonne 3) |
+| `vol_opp` | `g05` (rad 0, kolonne 5) | `g13` (rad 1, kolonne 6) | `g34` (rad 4, kolonne 6) |
+| `vol_ned` | `g19` (rad 2, kolonne 5) | `g07` (rad 1, kolonne 0) | `g28` (rad 4, kolonne 0) |
+
+**Lage ditt eget oppsett.** Legg til en linje i `OPPSETT` i `taster.py`, med hettene og hvilken rutenettbryter (`g(kolonne, rad)`) hver funksjon bruker. Kjør `python3 taster.py` og `./lag_stl.sh`. Da lages frontplaten, hettene (med lommer over de andre bryterne), kartet i ESPHome-fila og en ny 3MF. Sjekken (`sjekk_modell.py`) kontrollerer:
+- at hettene ikke kolliderer;
+- at hver hette treffer bryteren sin;
+- at det er minst 1,2 mm materiale til sømmen.
+
 ## Elektronikk – hva og hvorfor
 
 | Del | Hvorfor |
 |---|---|
 | **ESP32-S3 SuperMini** (ESP32-S3FH4R2, 4 MB flash, 2 MB PSRAM) | Det minste vanlige S3-kortet (22,5 × 18 mm). Det har Wi-Fi og nok minne til LVGL, pluss dyp søvn med vekking fra to pinner. Det koster rundt 45 kr. Det ligger under tastene, med antennen mot halen, der det bare er plast rundt. |
 | **2,8″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + FT6336U), naken FPC-modul med dekkglass, 47,80 × 66,50 × 3,56 mm (se også [Tre skjermvalg](#tre-skjermvalg)) | Den største skjermen som får plass i bredden. Glasset er 47,8 mm bredt, og skjermen fyller nesten hele fronten. Kroppen kunne vært 54 mm nå, men den er 55 mm for at D-paden (Ø 39) skal få plass med god kant. Aktivt område 43,2 × 57,6 mm, dobbelt så stort som 2,0″ (30,6 × 40,8 mm). Samme oppløsning, så fastvaren er den samme med litt større skrift. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `ft63x6`). En naken FPC-modul er tynnere enn de røde kortene med stiftlist. |
-| **2 × TCA9555** (16-bits I²C-utvider, interne pull-ups; 3 i full variant) | 14 taster blir 14 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Tre av de ledige pinnene brukes for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
-| **14 × SMD-taktbryter 4 × 4 × 1,5 mm** (30 i full variant) | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
+| **3 × TCA9555** (16-bits I²C-utvider, interne pull-ups; 4 i full variant) | Alle 43 brytere blir egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Tre av de ledige pinnene brukes for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
+| **43 × SMD-taktbryter 4 × 4 × 1,5 mm** (59 i full variant; 35 av dem i rutenettet) | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
 | **3 × IR-diode 940 nm (3 mm) + AO3400** | Tre dioder i viften gir lang rekkevidde og bred spredning. AO3400 (logisk nivå) gir ca. 200 mA puls per diode fra batteriet. |
 | **VS1838B** | IR-mottaker for å lære koder. Den har strøm bare når skjermen er på (trekker ca. 0,5 mA). |
 | **LiPo 603450, 1200 mAh** | Flat (6,0 mm) og passer under skjermen. Gir 4–5 uker ved vanlig bruk (se [Batteritid](#batteritid)). |
@@ -96,9 +143,9 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 
 ### Tastekortet – to måter
 
-**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 105 mm (full variant: 48,6 × 154 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
+**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 110 mm (full variant: 48,6 × 155 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
 - `kort_omriss.dxf` er omrisset med hull og hakk for skruene (origo nede til venstre, halen ned).
-- `plassering.csv` gir x/y for de 14 bryterne (oppside) og de to TCA9555 (underside).
+- `plassering.csv` gir x/y for de 43 bryterne (oppside: 8 faste og rutenettet `g00`–`g34`) og de tre TCA9555 (underside).
 - `koblinger.csv` viser hvilken bryter som går til hvilken brikke og pinne.
 - `bom.csv` er stykklista i JLC-format.
 
@@ -218,18 +265,47 @@ Hver bryter kobles mellom pinnen sin og GND. TCA9555 har innebygde pull-ups, så
 | Venstre | `venstre` | A | 0x20 | P0_5 |
 | Høyre | `hoyre` | A | 0x20 | P0_6 |
 | OK | `ok` | A | 0x20 | P0_7 |
-| Tilbake | `tilbake` | A | 0x20 | P1_0 |
-| Avslutt | `avslutt` | A | 0x20 | P1_1 |
-| Spill-pause | `spill_pause` | A | 0x20 | P1_2 |
-| Volum + | `vol_opp` | A | 0x20 | P1_3 |
-| Volum − | `vol_ned` | A | 0x20 | P1_4 |
-| Demp | `demp` | A | 0x20 | P1_5 |
-| utgang: vibrasjonsmotor (via AO3400) | `vibrator` | B | 0x21 | P1_4 |
-| utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401) | `strom_skjerm` | B | 0x21 | P1_5 |
-| inngang: TP4056 CHRG (lav = lader) | `lader` | B | 0x21 | P1_6 |
-| ledig | `ledig` | B | 0x21 | P1_7 |
+| Rutenett r0 k0 | `g00` | A | 0x20 | P1_0 |
+| Rutenett r0 k1 | `g01` | A | 0x20 | P1_1 |
+| Rutenett r0 k2 | `g02` | A | 0x20 | P1_2 |
+| Rutenett r0 k3 | `g03` | A | 0x20 | P1_3 |
+| Rutenett r0 k4 | `g04` | A | 0x20 | P1_4 |
+| Rutenett r0 k5 | `g05` | A | 0x20 | P1_5 |
+| Rutenett r0 k6 | `g06` | A | 0x20 | P1_6 |
+| Rutenett r1 k0 | `g07` | A | 0x20 | P1_7 |
+| Rutenett r1 k1 | `g08` | B | 0x21 | P0_0 |
+| Rutenett r1 k2 | `g09` | B | 0x21 | P0_1 |
+| Rutenett r1 k3 | `g10` | B | 0x21 | P0_2 |
+| Rutenett r1 k4 | `g11` | B | 0x21 | P0_3 |
+| Rutenett r1 k5 | `g12` | B | 0x21 | P0_4 |
+| Rutenett r1 k6 | `g13` | B | 0x21 | P0_5 |
+| Rutenett r2 k0 | `g14` | B | 0x21 | P0_6 |
+| Rutenett r2 k1 | `g15` | B | 0x21 | P0_7 |
+| Rutenett r2 k2 | `g16` | B | 0x21 | P1_0 |
+| Rutenett r2 k3 | `g17` | B | 0x21 | P1_1 |
+| Rutenett r2 k4 | `g18` | B | 0x21 | P1_2 |
+| Rutenett r2 k5 | `g19` | B | 0x21 | P1_3 |
+| Rutenett r2 k6 | `g20` | B | 0x21 | P1_4 |
+| Rutenett r3 k0 | `g21` | B | 0x21 | P1_5 |
+| Rutenett r3 k1 | `g22` | B | 0x21 | P1_6 |
+| Rutenett r3 k2 | `g23` | B | 0x21 | P1_7 |
+| Rutenett r3 k3 | `g24` | C | 0x22 | P0_0 |
+| Rutenett r3 k4 | `g25` | C | 0x22 | P0_1 |
+| Rutenett r3 k5 | `g26` | C | 0x22 | P0_2 |
+| Rutenett r3 k6 | `g27` | C | 0x22 | P0_3 |
+| Rutenett r4 k0 | `g28` | C | 0x22 | P0_4 |
+| Rutenett r4 k1 | `g29` | C | 0x22 | P0_5 |
+| Rutenett r4 k2 | `g30` | C | 0x22 | P0_6 |
+| Rutenett r4 k3 | `g31` | C | 0x22 | P0_7 |
+| Rutenett r4 k4 | `g32` | C | 0x22 | P1_0 |
+| Rutenett r4 k5 | `g33` | C | 0x22 | P1_1 |
+| Rutenett r4 k6 | `g34` | C | 0x22 | P1_2 |
+| utgang: vibrasjonsmotor (via AO3400) | `vibrator` | C | 0x22 | P1_4 |
+| utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401) | `strom_skjerm` | C | 0x22 | P1_5 |
+| inngang: TP4056 CHRG (lav = lader) | `lader` | C | 0x22 | P1_6 |
+| ledig | `ledig` | C | 0x22 | P1_7 |
 
-Brikke A har P1_6 og P1_7 ledige, brikke B har P0_0–P1_3 og P1_7 ledige.
+Brikke C har P1_3 og P1_7 ledige. Rutenettbryterne `g00`–`g34` har ingen fast funksjon; se kartet under [Utskiftbar frontplate](#utskiftbar-frontplate).
 
 ### Loddepunkter på tastekortet
 
@@ -276,7 +352,7 @@ Kanalene i bunnen er 1,5 mm brede: venstre kanal (x ≈ 3–4,5 mm) fra nesen ti
 
 ## Print (Creality K2)
 
-To ferdige plater for standardvarianten (`skjold-fjernkontroll-k2*.3mf`) og to for full variant (`skjold-fjernkontroll-full-k2*.3mf`, med smarthus-tastene). Begge variantene får plass rett på plata. Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlicer), så med CFS printes hver plate i én omgang. Ingen deler trenger støtte.
+To ferdige plater for standardvarianten (`skjold-fjernkontroll-k2*.3mf`) og to for full variant (`skjold-fjernkontroll-full-k2*.3mf`, med smarthus-tastene). Begge variantene får plass rett på plata. I tillegg er det én plate per frontplate (`skjold-fjernkontroll-front-rutenett.3mf`, `-vannrett`, `-stor`, og `-full-front-*` for full variant) med frontplaten (filament 1) og hettene (filament 2) med symbolene (filament 1). Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlicer), så med CFS printes hver plate i én omgang. Ingen deler trenger støtte.
 
 | Plate | Innhold | Filament |
 |---|---|---|
@@ -307,7 +383,7 @@ Bruk `lag_stl.sh` for å eksportere alt på nytt (STL, sjekk og 3MF) etter endri
 
 ## Montering
 
-1. **Tastekortet:** lodd de 14 bryterne (30 i full variant) (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
+1. **Tastekortet:** lodd de 43 bryterne (59 i full variant) (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
 2. **IR-kortet:** lodd de tre IR-diodene liggende (de peker ut gjennom nesen), VS1838B og AO3400 på en 34 × 6 mm hullkortbit. Kortet står i sporet i nesen, med diodene mot vinduet.
 3. **IR-vinduet:** trykk det inn i nesen fra innsiden (kragen inn) og fest med en dråpe lim.
 4. **Lader og ESP:** legg TP4056 i lomma i halen med USB-C i forsenkningen. Legg SuperMini-en på hylla i lomma (USB-C mot nesen, antennen mot halen). Lodd ledningene etter [Kobling og lodding](#kobling-og-lodding), i den rekkefølgen som står der, og legg dem i kanalene.
@@ -315,6 +391,7 @@ Bruk `lag_stl.sh` for å eksportere alt på nytt (STL, sjekk og 3MF) etter endri
 6. **Skjermen:** legg en 1 mm skumtape på batteriet og legg skjermen med glasset ned i lomma i toppen (flatkabelen mot tastene). Lomma går nesten helt ut til sideveggene; leppa på bunnen er derfor kuttet langs skjermen.
 7. **Hettene:** legg toppen med forsiden ned og sett alle hettene i hullene sine fra innsiden. OK settes inn i gullringen nedenfra før ringen legges i. Flensen holder dem på plass.
 8. **Lukk:** legg tastekortet over hettene (bryterne ned mot hettene). Legg bunnen med all innmaten over, og skru sammen med 5 × M2 × 10 fra undersiden: fire i hjørnene og én i midten, som også klemmer tastekortet.
+9. **Frontplaten:** legg frontplatehettene i frontplaten (forsiden ned), legg frontplaten i hullet i toppen og skru den fast med 2 × M2 × 10 fra undersiden (de to hullene ved siden av batteriet, midt på). Se [Utskiftbar frontplate](#utskiftbar-frontplate).
 
 ## Fastvare
 

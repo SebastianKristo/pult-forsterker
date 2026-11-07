@@ -8,10 +8,10 @@ cd "$(dirname "$0")"
 mkdir -p render
 [ -f render/skjerm-1-aktiviteter.png ] || python3 lag_skjermbilder.py
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
-r() {   # navn  samlet|eksplodert  kamera  lys|mork  [full|kort]
-  E=0; P=samlet; [ "$2" = eksplodert ] && { E=25; P=eksplodert; }
-  V=${5:-kort}
-  ( openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D "part=\"$P\"" -D "farge=\"$4\"" -D "variant=\"$V\"" -D 'skjerm="nokkel"' -o "render/$1.png" skjold_fjernkontroll.scad
+r() {   # navn  samlet|eksplodert|front_av  kamera  lys|mork  [full|kort]  [oppsett]
+  E=0; P=samlet; F=0; [ "$2" = eksplodert ] && { E=25; P=eksplodert; }; [ "$2" = front_av ] && F=14
+  V=${5:-kort}; O=${6:-rutenett}
+  ( openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D "part=\"$P\"" -D "farge=\"$4\"" -D "variant=\"$V\"" -D "oppsett=\"$O\"" -D "frontE=$F" -D 'skjerm="nokkel"' -o "render/$1.png" skjold_fjernkontroll.scad
     openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D 'part="skjermflate"' -D "variant=\"$V\"" -D "skjermE=$E" -o "$TMP/$1.png" skjold_fjernkontroll.scad
     python3 skjerm_i_render.py "render/$1.png" "$TMP/$1.png" render/skjerm-1-aktiviteter.png ) &
 }
@@ -48,6 +48,14 @@ r 03_eksplodert_lys_full eksplodert $EKSPF lys full
 r 04_skra_mork_full samlet $SKRAF mork full
 r 05_ovenfra_mork_full samlet $OVENF mork full
 r 07_side_lys_full samlet $SIDEF lys full
+# frontplatene A/B/C (lys og Bone White) og frontplaten løftet av
+r 31_front_rutenett samlet $SKRA lys kort rutenett
+r 32_front_vannrett samlet $SKRA lys kort vannrett
+r 33_front_stor samlet $SKRA lys kort stor
+r 34_front_rutenett_bone samlet $SKRA bone kort rutenett
+r 35_front_vannrett_bone samlet $SKRA bone kort vannrett
+r 36_front_stor_bone samlet $SKRA bone kort stor
+r 37_front_av front_av 30,95,20,55,0,-38,330 bone kort vannrett
 # innmaten: bunnen med alle kjøpte deler (tastekortet gjennomsiktig), og montering (eksplodert, uten skjermbilde)
 ri() {   # navn  part  kamera  [kort|full]
   openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D "part=\"$2\"" -D 'farge="bone"' -D "variant=\"${4:-kort}\"" -o "render/$1.png" skjold_fjernkontroll.scad &
