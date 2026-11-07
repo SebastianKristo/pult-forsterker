@@ -279,6 +279,20 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         launch { startHjem() }
     }
 
+    /** CI-skjermbilder (.github/workflows/android-skjermbilder.yml): start rett i appen mot en falsk Skjold på [host],
+     *  på fane [tab], eventuelt med fullskjermspilleren åpen. Brukes bare når appen startes med disse intent-ekstraene. */
+    fun demoLaunch(host: String?, tab: Int, full: Boolean) {
+        Store.setBool("skjold-setup-done", true)
+        welcome = false
+        mode = Mode.APP
+        if (tab in 0..3) this.tab = tab
+        launch {
+            if (host != null) connect(host)
+            if (tab in 0..3) this@AppModel.tab = tab
+            if (full) { delay(1500); this@AppModel.full = true }
+        }
+    }
+
     /** Bytt aktiv enhet til en adresse (LAN eller relé) uten å legge den i `known` (Skjold-hjem). */
     fun switchHost(h: String?) {
         activeHost = h

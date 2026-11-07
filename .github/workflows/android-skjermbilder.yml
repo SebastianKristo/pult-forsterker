@@ -1,0 +1,67 @@
+#
+# Ekte skjermbilder av den native Android-appen (Jetpack Compose, skjold/android) fra Android-emulatoren.
+# Samme oppsett som ios-skjermbilder.yml: en falsk Skjold (skjold/ios/ci/mock_skjold.py) kjører på maskinen, og
+# appen startes med intent-ekstraene SkjoldHost/SkjoldDemoTab/SkjoldDemoFull (se MainActivity.kt) for hver fane.
+# Emulatoren når maskinen på 10.0.2.2. Bildene lastes opp som artifact «android-skjermbilder» og legges også på
+# grenen «skjermbilder/android» (skjermbilder/android/*.png).
+#
+name: Android-skjermbilder
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  skjermbilder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Bygg debug-APK
+        working-directory: skjold/android
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon
+          ls -la app/build/outputs/apk/debug/
+      - name: Slå på KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Start falsk Skjold
+        run: |
+          nohup python3 skjold/ios/ci/mock_skjold.py 8765 > mock.log 2>&1 &
+          for i in $(seq 1 20); do curl -sf localhost:8765/api/status >/dev/null && break; sleep 1; done
+          curl -s localhost:8765/api/status | head -c 200; echo
+      - name: Ta skjermbilder i emulatoren
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash skjold/android/ci/skjermbilder.sh
+      - name: Logg fra falsk Skjold
+        if: always()
+        run: tail -n 40 mock.log || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-skjermbilder
+          path: ut/*.png
+      - name: Legg bildene på grenen skjermbilder/android
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          D=$(mktemp -d); cp ut/*.png "$D/"
+          git checkout --orphan skjermbilder-tmp
+          git rm -rfq . >/dev/null
+          mkdir -p skjermbilder/android && cp "$D"/*.png skjermbilder/android/
+          git add skjermbilder/android
+          git commit -qm "Android-skjermbilder fra ${GITHUB_SHA::7}"
+          git push -f origin HEAD:skjermbilder/android

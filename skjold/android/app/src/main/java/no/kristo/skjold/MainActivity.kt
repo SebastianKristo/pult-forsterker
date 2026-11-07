@@ -38,6 +38,12 @@ class MainActivity : ComponentActivity() {
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7)
         }
+        // CI-skjermbilder: adb shell am start … --es SkjoldHost 10.0.2.2:8765 --ei SkjoldDemoTab 1 [--ez SkjoldDemoFull true]
+        intent?.let { i ->
+            val t = i.getIntExtra("SkjoldDemoTab", -1)
+            val h = i.getStringExtra("SkjoldHost")
+            if (t >= 0 || h != null) model.demoLaunch(h, t, i.getBooleanExtra("SkjoldDemoFull", false))
+        }
         setContent {
             // iOS uses fixed-size fonts (no Dynamic Type): keep the design's sizes regardless of the system font scale.
             val d = LocalDensity.current
