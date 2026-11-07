@@ -164,7 +164,8 @@ class KassettActive(_Acc, SensorEntity):
     @property
     def extra_state_attributes(self):
         k = _kas(self.coordinator)
-        return {"kilde": k.get("kilde") or None, "spilles_paa": k.get("paret") or "denne", "ventende_album": k.get("ventende", 0)}
+        return {"kilde": k.get("kilde") or None, "spilles_paa": k.get("paret") or "denne", "ventende_album": k.get("ventende", 0),
+                "mest_spilt": k.get("mest_spilt")}
 
 
 class KassettLast(_Acc, SensorEntity):
@@ -180,6 +181,22 @@ class KassettLast(_Acc, SensorEntity):
     def extra_state_attributes(self):
         t = _kas(self.coordinator).get("last_t")
         return {"tid": datetime.fromtimestamp(t, timezone.utc).isoformat()} if t else {}
+
+
+class KassettVentende(_Acc, SensorEntity):
+    """Antall delte kassetter fra venner som venter på en NFC-brikke."""
+    _attr_native_unit_of_measurement = "kassetter"
+
+    def __init__(self, c) -> None:
+        super().__init__(c, "kassett", "spiller", "Skjold Kassett", "shared_pending", "Ventende delte kassetter")
+
+    @property
+    def native_value(self):
+        return _kas(self.coordinator).get("ventende_delte", 0)
+
+    @property
+    def extra_state_attributes(self):
+        return {"ventende_totalt": _kas(self.coordinator).get("ventende", 0)}
 
 
 class KassettPlay(_Acc, SelectEntity):
@@ -290,7 +307,7 @@ def entities(c, platform: str) -> list:
         out += [x for m in minis for x in (RostPlaying(c, m), RostConnected(c, m))]
     elif platform == "sensor":
         if kas:
-            out += [KassettActive(c), KassettLast(c)]
+            out += [KassettActive(c), KassettLast(c), KassettVentende(c)]
         out += [x for h in hjul for x in (HjulBattery(c, h), HjulLastUsed(c, h))]
     elif platform == "select":
         if kas:

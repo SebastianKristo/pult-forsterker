@@ -32,6 +32,8 @@ def clean_card(c: dict) -> dict:
            "handling": c.get("handling") or "preset", "verdi": c.get("verdi"),
            "rom": c.get("rom") or [], "volum": c.get("volum"), "ved_uttak": c.get("ved_uttak") or "ingenting",
            "omslag": str(c.get("omslag") or "")[:500], "undertittel": str(c.get("undertittel") or "")[:120]}
+    if c.get("fra"):   # delt av en venn
+        out["fra"] = str(c["fra"])[:60]
     if out["handling"] not in HANDLINGER:
         raise ValueError(f"ukjent handling «{out['handling']}»")
     if out["ved_uttak"] not in UTTAK:
@@ -189,6 +191,267 @@ def steps_for(card: dict, standard_rom: str = "") -> list[dict]:
     return [{**x, "rom": r} for r in rom for x in base]
 
 
+# ---------- Kassett-Wrapped: logg over innsettinger og statistikk ----------
+KILDE_KORT = {"navidrome": "Navidrome", "ma": "YouTube Music", "ytmusic": "YouTube Music"}
+
+
+def kilde_for(card: dict) -> str:
+    """Kort kildenavn for loggen: Navidrome / YouTube Music / radio / NRK / Music Assistant / rutine."""
+    lo = card.get("losning") or {}
+    if card.get("handling") == "album":
+        k = lo.get("kilde") or ""
+        return KILDE_KORT.get(k, "YouTube Music" if lo.get("uri") else "ukjent")
+    return {"preset": "radio", "play_url": "radio", "nrk": "NRK", "ma_uri": "Music Assistant", "navidrome_album": "Navidrome",
+            "navidrome_playlist": "Navidrome", "routine": "rutine"}.get(card.get("handling"), "annet")
+
+
+class KassettLogg:
+    """Rullerende logg over innsettinger: {u: uid, t: tid, n: navn, k: kilde, d: sekunder kassetten sto i}."""
+    MAKS = 5000
+    MAKS_VARIGHET = 6 * 3600   # glemt i spilleren over natta teller ikke som 12 timer lytting
+
+    def __init__(self, path: str):
+        self.path = path
+        self.lock = threading.Lock()
+
+    def _les(self) -> list:
+        try:
+            with open(self.path) as fh:
+                d = json.load(fh)
+            return d if isinstance(d, list) else []
+        except Exception:
+            return []
+
+    def _skriv(self, d: list) -> None:
+        os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
+        tmp = self.path + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump(d[-self.MAKS:], fh, ensure_ascii=False, separators=(",", ":"))
+        os.replace(tmp, self.path)
+
+    def inn(self, uid: str, navn: str = "", kilde: str = "", now: float | None = None) -> None:
+        now = time.time() if now is None else now
+        with self.lock:
+            d = self._les()
+            d.append({"u": uid, "t": int(now), "n": str(navn)[:80], "k": str(kilde)[:30]})
+            self._skriv(d)
+
+    def ut(self, uid: str, now: float | None = None) -> None:
+        now = time.time() if now is None else now
+        with self.lock:
+            d = self._les()
+            for e in reversed(d):
+                if e.get("u") == uid and "d" not in e:
+                    e["d"] = int(max(0, min(self.MAKS_VARIGHET, now - e.get("t", now))))
+                    self._skriv(d)
+                    return
+
+    def hendelser(self) -> list:
+        return self._les()
+
+
+PERIODER = {"uke": 7, "mnd": 30, "år": 365, "aar": 365, "alt": None}
+
+
+def kassett_stats(cards: dict, logg: list, periode: str = "år", glemt_uker: int = 8, now: float | None = None) -> dict:
+    """Kassett-Wrapped: mest spilt, lyttetid, sist brukt, glemte kassetter og spilt per måned."""
+    now = time.time() if now is None else now
+    dager = PERIODER.get(periode, 365)
+    fra = now - dager * 86400 if dager else 0
+    sist_alle: dict = {}
+    for e in logg:
+        sist_alle[e.get("u")] = max(sist_alle.get(e.get("u"), 0), int(e.get("t", 0)))
+    per: dict = {}
+    mnd: dict = {}
+    kilder: dict = {}
+    for e in logg:
+        t = int(e.get("t", 0))
+        if t < fra:
+            continue
+        u = e.get("u")
+        x = per.setdefault(u, {"uid": u, "spilt": 0, "lyttetid": 0, "kilder": {}})
+        x["spilt"] += 1
+        x["lyttetid"] += int(e.get("d") or 0)
+        k = e.get("k") or "ukjent"
+        x["kilder"][k] = x["kilder"].get(k, 0) + 1
+        kilder[k] = kilder.get(k, 0) + 1
+        m = time.strftime("%Y-%m", time.localtime(t))
+        mnd[m] = mnd.get(m, 0) + 1
+
+    def info(uid):
+        c = cards.get(uid) or {}
+        sist = sist_alle.get(uid) or c.get("sist") or 0
+        return {"uid": uid, "navn": c.get("navn") or "(slettet kassett)", "undertittel": c.get("undertittel", ""),
+                "omslag": c.get("omslag", ""), "laget": c.get("laget") or 0, "sist": sist, "finnes": bool(c),
+                "fra": c.get("fra", "")}
+
+    rader = []
+    for uid, x in per.items():
+        rader.append({**info(uid), "spilt": x["spilt"], "lyttetid": x["lyttetid"],
+                      "kilde": max(x["kilder"], key=x["kilder"].get) if x["kilder"] else ""})
+    rader.sort(key=lambda r: (-r["spilt"], -r["lyttetid"], -(r["sist"] or 0)))
+    grense = now - max(1, int(glemt_uker)) * 7 * 86400
+    glemte = []
+    for uid, c in cards.items():
+        sist = sist_alle.get(uid) or c.get("sist") or 0
+        if (sist and sist < grense) or (not sist and (c.get("laget") or now) < grense):
+            glemte.append({**info(uid), "uker_siden": int((now - (sist or c.get("laget") or now)) / (7 * 86400)),
+                           "aldri": not sist})
+    glemte.sort(key=lambda r: (r["sist"] or 0, r["laget"] or 0))
+    aldri_brukt = [info(u) for u, c in cards.items() if not (sist_alle.get(u) or c.get("sist"))]
+    return {"periode": periode if periode in PERIODER else "år", "glemt_uker": int(glemt_uker),
+            "totalt": {"spilt": sum(r["spilt"] for r in rader), "lyttetid": sum(r["lyttetid"] for r in rader),
+                       "kassetter": len(cards), "brukt": len(rader)},
+            "topp": rader[:10], "alle": rader, "glemte": glemte[:30], "aldri_brukt": len(aldri_brukt),
+            "per_maned": [{"mnd": k, "spilt": mnd[k]} for k in sorted(mnd)][-12:],
+            "kilder": [{"kilde": k, "spilt": v} for k, v in sorted(kilder.items(), key=lambda kv: -kv[1])],
+            "favoritt": rader[0] if rader else None}
+
+
+# ---------- Del en kassett: kompakt delingskode (QR/lenke) ----------
+DEL_SKJEMA = "skjold://kassett/del?d="
+DEL_WEB = "https://skjold.smarthjemexperten.no/kassett/del#"
+DELBAR = ("album", "play_url", "nrk", "ma_uri", "navidrome_album")
+
+
+def til_deling(card: dict) -> dict | None:
+    """Det som kan deles av en kassett: aldri Navidrome-ID-er, rom, passord eller lokale favorittnummer.
+    Navidrome-album deles som artist + album, så mottakeren slår opp i sitt eget bibliotek (eller YouTube Music)."""
+    h, v = card.get("handling"), card.get("verdi")
+    base = {"navn": str(card.get("navn") or "")[:80], "undertittel": str(card.get("undertittel") or "")[:120]}
+    if h == "album" and isinstance(v, dict):
+        a = {"artist": v.get("artist", ""), "album": v.get("album", "")}
+        if v.get("spor"):
+            a["spor"] = v["spor"]
+        return {**base, "handling": "album", "verdi": a}
+    if h == "navidrome_album" and base["navn"]:
+        return {**base, "handling": "album", "verdi": {"artist": base["undertittel"], "album": base["navn"]}}
+    if h == "play_url" and isinstance(v, str) and re.match(r"^https?://", v) and not re.search(r"(u|p|t|s|token|key|pass)=", v, re.I):
+        return {**base, "handling": "play_url", "verdi": v[:500]}
+    if h == "nrk" and isinstance(v, str):
+        return {**base, "handling": "nrk", "verdi": v[:120]}
+    if h == "ma_uri" and isinstance(v, str) and not v.startswith(("library://", "filesystem")):
+        return {**base, "handling": "ma_uri", "verdi": v[:300]}
+    return None
+
+
+def _b64u(b: bytes) -> str:
+    import base64
+    return base64.urlsafe_b64encode(b).decode().rstrip("=")
+
+
+def _unb64u(s: str) -> bytes:
+    import base64
+    s = re.sub(r"[^A-Za-z0-9_-]", "", s)
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+def del_kode(cards: list[dict], fra: str = "") -> dict:
+    """Kassetter → {kode, lenke, web, delt, hoppet_over}. Koden er base64url(zlib(JSON)), kort nok for QR."""
+    import zlib
+    delt = [x for x in (til_deling(c) for c in cards) if x]
+    if not delt:
+        raise ValueError("ingen av kassettene kan deles (radiofavoritter, rutiner og Navidrome-spillelister er lokale)")
+    raw = json.dumps({"v": 1, "fra": str(fra)[:60], "k": delt[:40]}, ensure_ascii=False, separators=(",", ":")).encode()
+    kode = "1" + _b64u(zlib.compress(raw, 9))
+    return {"kode": kode, "lenke": DEL_SKJEMA + kode, "web": DEL_WEB + kode, "delt": len(delt[:40]),
+            "hoppet_over": len(cards) - len(delt[:40])}
+
+
+def les_kode(tekst: str) -> dict:
+    """Delingskode eller lenke → {fra, kassetter}. Godtar skjold://…?d=, https://…#, og koden alene."""
+    import zlib
+    t = str(tekst or "").strip()
+    m = re.search(r"[?&]d=([A-Za-z0-9_-]+)", t) or re.search(r"#([A-Za-z0-9_-]+)\s*$", t)
+    kode = m.group(1) if m else t
+    if not kode.startswith("1") or len(kode) < 8 or len(kode) > 20000:
+        raise ValueError("ukjent delingskode")
+    try:
+        d = json.loads(zlib.decompress(_unb64u(kode[1:]), bufsize=65536))
+    except Exception:
+        raise ValueError("delingskoden er ødelagt eller ufullstendig")
+    out = []
+    for k in (d.get("k") or [])[:40]:
+        try:
+            c = clean_ventende(k)
+        except Exception:
+            c = None
+        if c:
+            out.append(c)
+    return {"fra": str(d.get("fra") or "")[:60], "kassetter": out}
+
+
+# ---------- deling via Skjold Cloud: kryptert «postkasse» med utløp ----------
+# Innholdet krypteres på enheten med en tilfeldig nøkkel som bare står i delingskoden (S<id>.<nøkkel>). Skyen lagrer
+# bare den krypterte blobben i 14 dager og kan ikke lese den – som resten av Skjold Cloud, men uten at sender og
+# mottaker må dele konto eller frase. Koden er kort (fin i QR/melding) selv om innholdet er stort.
+def sky_pakk(cards: list[dict], fra: str = "") -> tuple[str, bytes, int]:
+    import base64, secrets
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    delt = [x for x in (til_deling(c) for c in cards) if x]
+    if not delt:
+        raise ValueError("ingen av kassettene kan deles (radiofavoritter, rutiner og Navidrome-spillelister er lokale)")
+    raw = json.dumps({"v": 1, "fra": str(fra)[:60], "k": delt[:40]}, ensure_ascii=False, separators=(",", ":")).encode()
+    key, nonce = secrets.token_bytes(16), secrets.token_bytes(12)
+    blob = base64.b64encode(b"\x01" + nonce + AESGCM(key).encrypt(nonce, raw, b"skjold-kassett")).decode()
+    return blob, key, len(delt[:40])
+
+
+def sky_kode(del_id: str, key: bytes) -> dict:
+    kode = "S" + del_id + "." + _b64u(key)
+    return {"kode": kode, "lenke": DEL_SKJEMA + kode, "web": DEL_WEB + kode}
+
+
+def er_sky_kode(tekst: str) -> str:
+    """Returnerer «S<id>.<nøkkel>» hvis teksten er (eller inneholder) en Skjold Cloud-delingskode, ellers ""."""
+    m = re.search(r"(?:^|[?&#=])(S[a-z0-9]{8,16}\.[A-Za-z0-9_-]{16,32})\s*$", str(tekst or "").strip())
+    return m.group(1) if m else ""
+
+
+def sky_les(kode: str, hent) -> dict:
+    """S<id>.<nøkkel> → {fra, kassetter}. hent(id) → base64-blob fra skyen (GET /del/<id>)."""
+    import base64
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    m = re.match(r"^S([a-z0-9]{8,16})\.([A-Za-z0-9_-]{16,32})$", kode)
+    if not m:
+        raise ValueError("ukjent delingskode")
+    raw = base64.b64decode(hent(m.group(1)))
+    if raw[:1] != b"\x01":
+        raise ValueError("ukjent format")
+    try:
+        d = json.loads(AESGCM(_unb64u(m.group(2))).decrypt(raw[1:13], raw[13:], b"skjold-kassett"))
+    except Exception:
+        raise ValueError("delingskoden passer ikke (feil nøkkel eller utløpt)")
+    return {"fra": str(d.get("fra") or "")[:60], "kassetter": [x for x in (clean_ventende(k) for k in (d.get("k") or [])[:40]) if x]}
+
+
+def clean_ventende(v) -> dict | None:
+    """En ventende kassett: enten et album {artist, album} (import) eller en delt kassett {handling, verdi, navn …}."""
+    if not isinstance(v, dict):
+        return clean_album(v)
+    if not v.get("handling"):
+        return clean_album(v)
+    if v["handling"] not in DELBAR:
+        return None
+    try:
+        c = clean_card({**v, "uid": "00"})
+    except Exception:
+        return None
+    out = {"handling": c["handling"], "verdi": c["verdi"], "navn": c["navn"], "undertittel": c["undertittel"]}
+    if v.get("fra"):
+        out["fra"] = str(v["fra"])[:60]
+    if c.get("omslag") and c["handling"] == "album":
+        out["omslag"] = c["omslag"]
+    return out
+
+
+def _ventende_nokkel(v: dict) -> tuple:
+    if v.get("handling") in (None, "album"):
+        a = v.get("verdi") if isinstance(v.get("verdi"), dict) else v
+        return ("album", norm_navn(a.get("artist", "")), norm_navn(a.get("album", "")))
+    return (v["handling"], str(v.get("verdi")))
+
+
 class NfcStore:
     def __init__(self, path: str):
         self.path = path
@@ -198,6 +461,7 @@ class NfcStore:
         self.last = {"uid": "", "t": 0.0, "known": False, "navn": ""}
         self.active_uid = ""
         self.ekstra_path = os.path.join(os.path.dirname(path) or ".", "kassett_oppsett.json")
+        self.logg = KassettLogg(os.path.join(os.path.dirname(path) or ".", "kassett_logg.json"))
 
     # ---------- ventende album (import) og paring ----------
     def _ekstra(self) -> dict:
@@ -228,7 +492,7 @@ class NfcStore:
             if "koble_ventende" in b:
                 d["koble_ventende"] = bool(b["koble_ventende"])
             if "ventende" in b and isinstance(b["ventende"], list):
-                d["ventende"] = [x for x in (clean_album(v) for v in b["ventende"]) if x][:200]
+                d["ventende"] = [x for x in (clean_ventende(v) for v in b["ventende"]) if x][:200]
             self._lagre_ekstra(d)
         return self.oppsett()
 
@@ -237,17 +501,44 @@ class NfcStore:
         nye = [x for x in (parse_album_line(l) for l in str(tekst or "").splitlines()) if x and x.get("album")]
         with self.lock:
             d = self._ekstra()
-            have = {(norm_navn(v.get("artist")), norm_navn(v.get("album"))) for v in d.get("ventende") or []}
-            have |= {(norm_navn((c.get("verdi") or {}).get("artist")), norm_navn((c.get("verdi") or {}).get("album")))
-                     for c in self.load().values() if c.get("handling") == "album"}
+            have = {_ventende_nokkel(v) for v in d.get("ventende") or []}
+            have |= {_ventende_nokkel(c) for c in self.load().values() if c.get("handling") == "album"}
             lagt = []
             for v in nye:
-                key = (norm_navn(v["artist"]), norm_navn(v["album"]))
+                key = _ventende_nokkel(v)
                 if key not in have:
                     have.add(key); lagt.append(v)
             d["ventende"] = (d.get("ventende") or []) + lagt
             self._lagre_ekstra(d)
         return {"lagt_til": len(lagt), "hoppet_over": len(nye) - len(lagt), **self.oppsett()}
+
+    def importer_deling(self, tekst: str, fra: str = "") -> dict:
+        """Delingskode/lenke (QR) eller innhold fra Skjold Cloud → ventende kassetter med «fra <navn>»."""
+        if isinstance(tekst, dict):          # allerede dekodet (f.eks. fra Skjold Cloud)
+            d = tekst
+        elif isinstance(tekst, str):
+            d = les_kode(tekst)
+        else:
+            d = {"fra": fra, "kassetter": [x for x in (clean_ventende(k) for k in tekst) if x]}
+        avsender = (fra or d.get("fra") or "").strip()[:60]
+        with self.lock:
+            e = self._ekstra()
+            have = {_ventende_nokkel(v) for v in e.get("ventende") or []}
+            have |= {_ventende_nokkel(c) for c in self.load().values() if c.get("handling") in DELBAR}
+            lagt = []
+            for k in d["kassetter"]:
+                if avsender:
+                    k = {**k, "fra": avsender}
+                key = _ventende_nokkel(k)
+                if key not in have:
+                    have.add(key); lagt.append(k)
+            e["ventende"] = (e.get("ventende") or []) + lagt
+            self._lagre_ekstra(e)
+        return {"lagt_til": len(lagt), "hoppet_over": len(d["kassetter"]) - len(lagt), "fra": avsender,
+                "nye": lagt, **self.oppsett()}
+
+    def stats(self, periode: str = "år", glemt_uker: int = 8, now: float | None = None) -> dict:
+        return kassett_stats(self.load(), self.logg.hendelser(), periode, glemt_uker, now)
 
     def _ta_ventende(self) -> dict | None:
         with self.lock:
@@ -314,7 +605,9 @@ class NfcStore:
         k = norm_uid(uid)
         if not self.learning() and not self.get(k):
             v = self._ta_ventende()
-            if v:
+            if v and v.get("handling"):   # delt kassett (QR/lenke/Skjold Cloud)
+                self.put({**v, "uid": k})
+            elif v:
                 self.put({"uid": k, "handling": "album", "verdi": v, "navn": v["album"], "undertittel": v["artist"]})
         if self.learning():
             draft = dict(self.learn_draft or {})
@@ -343,6 +636,10 @@ class NfcStore:
         if card["handling"] == "album" and resolve:
             card = resolve(card)
         try:
+            self.logg.inn(k, card.get("navn", ""), kilde_for(card))
+        except Exception:
+            pass
+        try:
             steps = [] if card["handling"] == "routine" else steps_for(card, standard_rom)
         except ValueError as e:   # album som ikke finnes noe sted: kassetten er kjent, men har ingenting å spille
             return {"known": True, "learned": False, "card": card, "steps": [], "feil": str(e)}
@@ -366,6 +663,10 @@ class NfcStore:
         k = norm_uid(uid)
         card = self.get(k)
         pause = bool(card and card.get("ved_uttak") == "pause" and self.active_uid == k)
+        try:
+            self.logg.ut(k)
+        except Exception:
+            pass
         if self.active_uid == k:
             self.active_uid = ""
         return {"pause": pause}

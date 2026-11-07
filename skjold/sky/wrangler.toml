@@ -37,6 +37,10 @@ class_name = "Koder"
 name = "HOYTTALERE"
 class_name = "Hoyttalere"
 
+[[durable_objects.bindings]]
+name = "DELINGER"
+class_name = "Delinger"
+
 # SQLite-baserte Durable Objects (gratisplanen)
 [[migrations]]
 tag = "v1"
@@ -45,6 +49,10 @@ new_sqlite_classes = ["Sted", "Konto", "Koder"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Hoyttalere"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["Delinger"]
 
 # Variabler settes i dashbordet (Workers & Pages → skjold-hjem → Settings → Variables and Secrets) eller med
 # «npx wrangler secret put NAVN», og beholdes ved deploy (keep_vars):

@@ -16,6 +16,7 @@ export function lagMiniflare(ekstra = {}) {
       KONTO: { className: "Konto", useSQLite: true },
       KODER: { className: "Koder", useSQLite: true },
       HOYTTALERE: { className: "Hoyttalere", useSQLite: true },
+      DELINGER: { className: "Delinger", useSQLite: true },
     },
     bindings: { DEV_INSECURE: "1", ...(bindings || {}) },
     ...(outboundService ? { outboundService } : {}),

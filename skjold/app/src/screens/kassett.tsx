@@ -1,6 +1,7 @@
 /** Skjold Kassett: NFC-kassetter koblet til radio, NRK, Navidrome, Music Assistant eller rutiner. */
 import { useEffect, useState } from 'preact/hooks';
-import { api, getBase, type NfcCard, type NfcHandling, type NfcOppsett, type NfcStatus, type Routine, type Spoler } from '../lib/api';
+import { api, getBase, type NfcCard, type NfcDeling, type NfcHandling, type NfcOppsett, type NfcStats, type NfcStatus, type NfcVentende, type Routine, type Spoler } from '../lib/api';
+import { QR } from './platform';
 import { HjulPanel } from './hjul';
 import { ndCover, ndConfigured, ndPlaylists, ndSearch } from '../lib/navidrome';
 
@@ -187,6 +188,125 @@ function SpolerPanel() {
 }
 
 /** Paring (hvilken Skjold spiller kassettene) og import av albumlister («Artist - Album» per linje). */
+const ventNavn = (v: NfcVentende) => v.navn || v.album || ((v.verdi as { album?: string } | undefined)?.album ?? 'Kassett');
+const ventUnder = (v: NfcVentende) => v.undertittel || v.artist || ((v.verdi as { artist?: string } | undefined)?.artist ?? (v.handling ? LABEL[v.handling] : ''));
+const tid = (s: number) => { const m = Math.round(s / 60); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} t ${m % 60} min`; };
+const dato = (t: number) => (t ? new Date(t * 1000).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }) : 'aldri');
+const MND = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+
+async function kopier(t: string): Promise<boolean> { try { await navigator.clipboard.writeText(t); return true; } catch { return false; } }
+
+/** Del kassetter: kort kode via Skjold Cloud (kryptert, 14 dager, passer i QR), eller en lengre kode uten sky. */
+function DelDialog({ uids, onClose }: { uids: string[]; onClose: () => void }) {
+  const [d, setD] = useState<NfcDeling | null>(null);
+  const [msg, setMsg] = useState('');
+  const lag = (sky: boolean) => { setD(null); setMsg(''); void api.nfcShare(uids, sky).then(setD).catch((e) => {
+    const m = String((e as Error).message || e);
+    if (sky) { setMsg(`Skjold Cloud svarte ikke (${m}) – viser kode uten sky.`); void api.nfcShare(uids, false).then(setD).catch((e2) => setMsg(String((e2 as Error).message || e2))); }
+    else setMsg(m);
+  }); };
+  useEffect(() => { lag(true); }, [uids.join(',')]);
+  const qrTekst = d && d.lenke.length <= 78 ? d.lenke : '';
+  return (
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:50;padding:16px" onClick={onClose}>
+      <div style={box + ';max-width:420px;width:100%;display:flex;flex-direction:column;gap:10px'} onClick={(e) => e.stopPropagation()}>
+        <b>Del {uids.length > 1 ? `${uids.length} kassetter` : 'kassett'}</b>
+        <small style="color:#9a9a96">Vennen skanner QR-koden med Skjold-appen (eller telefonkameraet) eller limer inn koden under «Motta kassett». Den blir en ventende kassett hos dem, klar til å kobles til en NFC-brikke. Albumet slås opp i deres eget Navidrome eller YouTube Music – ingen passord eller private ID-er deles.</small>
+        {!d && !msg && <small>Lager kode …</small>}
+        {msg && <small style="color:#e0a35a">{msg}</small>}
+        {d && <>
+          {qrTekst ? <div style="display:grid;place-items:center"><QR text={qrTekst} size={200} label="QR-kode for kassettdeling" /></div>
+            : <small style="color:#9a9a96">Koden er for lang for QR – send lenken eller koden i en melding{!d.sky ? ', eller del via Skjold Cloud for en kort kode' : ''}.</small>}
+          <small style="color:#9a9a96">{d.delt} kassett{d.delt === 1 ? '' : 'er'} delt{d.hoppet_over ? ` · ${d.hoppet_over} kunne ikke deles (radiofavoritter, rutiner og Navidrome-spillelister er lokale)` : ''}{d.sky && d.utloper ? ` · gyldig til ${dato(Math.round(d.utloper / 1000))}` : ''}</small>
+          <input readOnly style={inp + ';font-family:monospace;font-size:12px'} value={d.lenke} onFocus={(e) => (e.currentTarget as HTMLInputElement).select()} />
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button style={btn(true)} onClick={() => void kopier(d.lenke).then((ok) => setMsg(ok ? 'Lenken er kopiert' : 'Marker og kopier lenken'))}>Kopier lenke</button>
+            <button style={btn()} onClick={() => void kopier(d.kode).then((ok) => setMsg(ok ? 'Koden er kopiert' : 'Marker og kopier koden'))}>Kopier kode</button>
+            <button style={btn()} onClick={() => lag(!d.sky)}>{d.sky ? 'Uten sky' : 'Via Skjold Cloud'}</button>
+            <button style={btn()} onClick={onClose}>Lukk</button>
+          </div>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+/** Motta kassett: lim inn delingskode eller lenke. */
+function MottaPanel({ onDone }: { onDone: () => void }) {
+  const [kode, setKode] = useState('');
+  const [msg, setMsg] = useState('');
+  useEffect(() => {   // åpnet fra en delingslenke (…#kassett-del=<kode>)
+    const m = /kassett-del=([A-Za-z0-9_.-]+)/.exec(location.hash);
+    if (m) setKode(m[1]!);
+  }, []);
+  return (
+    <div style={box + ';display:flex;flex-direction:column;gap:8px'}>
+      <b>Motta kassett</b>
+      <small style="color:#9a9a96">Fått en kassett av en venn? Lim inn lenken eller koden. Den havner blant ventende kassetter – sett inn en ny NFC-brikke for å koble den.</small>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input style={inp + ';flex:1;min-width:180px'} placeholder="skjold://kassett/del?d=…" value={kode} onInput={(e) => setKode((e.target as HTMLInputElement).value)} />
+        <button style={btn(true)} disabled={!kode.trim()} onClick={() => void api.nfcShareImport(kode.trim()).then((r) => {
+          setMsg(r.lagt_til ? `${r.lagt_til} kassett${r.lagt_til === 1 ? '' : 'er'}${r.fra ? ` fra ${r.fra}` : ''} venter på en NFC-brikke` : 'Du har disse kassettene fra før');
+          setKode(''); onDone();
+        }).catch((e) => setMsg(String((e as Error).message || e)))}>Legg til</button>
+      </div>
+      {msg && <small style={'color:' + A}>{msg}</small>}
+    </div>
+  );
+}
+
+/** Kassett-Wrapped: mest spilt, lyttetid, glemte kassetter og spilt per måned (GET /api/nfc/stats). */
+export function KassettWrapped({ kompakt = false }: { kompakt?: boolean }) {
+  const [p, setP] = useState<'uke' | 'mnd' | 'år' | 'alt'>('år');
+  const [s, setS] = useState<NfcStats | null>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => { setS(null); api.nfcStats(p).then(setS).catch((e) => setErr(String((e as Error).message || e))); }, [p]);
+  if (err) return <small style="color:#e06c5a">{err}</small>;
+  if (!s) return <small style="color:#9a9a96">Henter kassettstatistikk …</small>;
+  const maks = Math.max(1, ...s.per_maned.map((m) => m.spilt));
+  const Omslag = ({ r, size }: { r: { omslag: string }; size: number }) => r.omslag
+    ? <img src={img(r.omslag)} style={`width:${size}px;height:${size}px;border-radius:8px;object-fit:cover;flex-shrink:0`} />
+    : <div style={`width:${size}px;height:${size}px;border-radius:8px;background:#111;color:${A};display:grid;place-items:center;font-size:9px;flex-shrink:0`}>SKJOLD</div>;
+  return (
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style={box + ';background:linear-gradient(135deg,#2a1d08,#141415);display:flex;flex-direction:column;gap:6px'}>
+        <span style={`font-size:11px;letter-spacing:.12em;color:${A}`}>KASSETT-WRAPPED</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">{(['uke', 'mnd', 'år', 'alt'] as const).map((x) => <button key={x} style={btn(p === x)} onClick={() => setP(x)}>{{ uke: 'Uke', mnd: '30 dager', år: 'År', alt: 'Alt' }[x]}</button>)}</div>
+        {s.totalt.spilt ? <>
+          <b style="font-size:40px;line-height:1">{s.totalt.spilt}</b>
+          <span style="font-size:13px;color:#a9a9a3">avspillinger · {tid(s.totalt.lyttetid)} med kassetter i spilleren · {s.totalt.brukt} av {s.totalt.kassetter} kassetter brukt</span>
+          {s.favoritt && <div style="display:flex;gap:10px;align-items:center;margin-top:6px"><Omslag r={s.favoritt} size={56} /><div><small style="color:#9a9a96">Mest spilte kassett</small><div><b>{s.favoritt.navn}</b></div><small style="color:#9a9a96">{s.favoritt.undertittel} · {s.favoritt.spilt}×</small></div></div>}
+        </> : <span style="font-size:13px;color:#a9a9a3">Ingen kassetter spilt i perioden ennå.</span>}
+      </div>
+      {s.topp.length > 0 && <div style={box + ';display:flex;flex-direction:column;gap:8px'}>
+        <b>Mest spilt</b>
+        {s.topp.slice(0, kompakt ? 3 : 5).map((r, i) => <div key={r.uid} style="display:flex;gap:10px;align-items:center">
+          <span style={`width:18px;color:${A};font-variant-numeric:tabular-nums`}>{i + 1}</span><Omslag r={r} size={40} />
+          <div style="flex:1;min-width:0"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{r.navn}</div><small style="color:#9a9a96">{r.undertittel}{r.kilde ? ` · ${r.kilde}` : ''}</small></div>
+          <small style="color:#9a9a96;text-align:right;font-variant-numeric:tabular-nums">{r.spilt}×<br />{tid(r.lyttetid ?? 0)}</small>
+        </div>)}
+      </div>}
+      {s.glemte.length > 0 && <div style={box + ';display:flex;flex-direction:column;gap:8px'}>
+        <b>Glemte kassetter</b>
+        <small style="color:#9a9a96">Ikke satt inn på {s.glemt_uker} uker eller mer{s.aldri_brukt ? ` · ${s.aldri_brukt} aldri brukt` : ''}.</small>
+        {s.glemte.slice(0, kompakt ? 3 : 8).map((r) => <div key={r.uid} style="display:flex;gap:10px;align-items:center">
+          <Omslag r={r} size={36} /><div style="flex:1;min-width:0"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{r.navn}</div><small style="color:#9a9a96">{r.aldri ? 'aldri brukt' : `sist ${dato(r.sist)} · ${r.uker_siden} uker siden`}</small></div>
+        </div>)}
+      </div>}
+      {!kompakt && s.per_maned.length > 1 && <div style={box + ';display:flex;flex-direction:column;gap:8px'}>
+        <b>Per måned</b>
+        <div style="display:flex;gap:6px;align-items:flex-end;height:90px" role="img" aria-label="Kassettavspillinger per måned">
+          {s.per_maned.map((m) => <div key={m.mnd} style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end">
+            <small style="color:#9a9a96;font-variant-numeric:tabular-nums">{m.spilt}</small>
+            <div style={`width:100%;max-width:28px;height:${Math.max(3, (m.spilt / maks) * 60)}px;background:${A};border-radius:4px 4px 0 0`} />
+            <small style="color:#9a9a96">{MND[+m.mnd.slice(5) - 1]}</small>
+          </div>)}
+        </div>
+      </div>}
+    </div>
+  );
+}
+
 function AlbumPanel() {
   const [o, setO] = useState<NfcOppsett | null>(null);
   const [tekst, setTekst] = useState('');
@@ -214,14 +334,15 @@ function AlbumPanel() {
       </div>
       {o.ventende.length > 0 && <div style="display:flex;flex-direction:column;gap:4px">
         <small style="color:#9a9a96">Ventende ({o.ventende.length}) – sett inn en ny brikke for å koble den første:</small>
-        {o.ventende.map((v, i) => <div key={i} style="display:flex;gap:8px;align-items:center"><span style="flex:1">{i === 0 ? '▶ ' : ''}{v.album} <small style="color:#9a9a96">· {v.artist}</small></span><button style={btn()} onClick={() => set({ ventende: o.ventende.filter((_, j) => j !== i) })}>Fjern</button></div>)}
+        {o.ventende.map((v, i) => <div key={i} style="display:flex;gap:8px;align-items:center"><span style="flex:1">{i === 0 ? '▶ ' : ''}{ventNavn(v)} <small style="color:#9a9a96">· {ventUnder(v)}{v.fra ? ` · fra ${v.fra}` : ''}</small></span><button style={btn()} onClick={() => set({ ventende: o.ventende.filter((_, j) => j !== i) })}>Fjern</button></div>)}
       </div>}
     </div>
   );
 }
 
 export function KassettPage() {
-  const [tab, setTab] = useState<'k' | 'h'>('k');
+  const [tab, setTab] = useState<'k' | 'h' | 'w'>(() => (/kassett-del=/.test(location.hash) ? 'k' : 'k'));
+  const [del, setDel] = useState<string[] | null>(null);
   const [st, setSt] = useState<NfcStatus | null>(null);
   const [edit, setEdit] = useState<NfcCard | null | 'ny'>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -232,8 +353,9 @@ export function KassettPage() {
   const toggle = (u: string) => { const n = new Set(sel); n.has(u) ? n.delete(u) : n.add(u); setSel(n); };
 
   if (edit) return <Editor init={edit === 'ny' ? null : edit} onDone={() => { setEdit(null); void load(); }} />;
-  const tabs = <div style="display:flex;gap:6px"><button style={btn(tab === 'k')} onClick={() => setTab('k')}>Kassetter</button><button style={btn(tab === 'h')} onClick={() => setTab('h')}>Skjold Hjul</button></div>;
+  const tabs = <div style="display:flex;gap:6px;flex-wrap:wrap"><button style={btn(tab === 'k')} onClick={() => setTab('k')}>Kassetter</button><button style={btn(tab === 'w')} onClick={() => setTab('w')}>Kassett-Wrapped</button><button style={btn(tab === 'h')} onClick={() => setTab('h')}>Skjold Hjul</button></div>;
   if (tab === 'h') return <div style="display:flex;flex-direction:column;gap:12px">{tabs}<HjulPanel cards={cards} /></div>;
+  if (tab === 'w') return <div style="display:flex;flex-direction:column;gap:12px">{tabs}<KassettWrapped /></div>;
   return (
     <div style="display:flex;flex-direction:column;gap:12px">
       {tabs}
@@ -241,9 +363,12 @@ export function KassettPage() {
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button style={btn(true)} onClick={() => setEdit('ny')}>+ Koble ny kassett</button>
         <button style={btn()} disabled={!cards.length} onClick={() => printLabels(sel.size ? cards.filter((c) => sel.has(c.uid!)) : cards, Math.max(0, Math.min(14, +(prompt('Hopp over hvor mange ruter på arket? (0 = start øverst)', '0') || 0))))}>Skriv ut etiketter{sel.size ? ` (${sel.size})` : ''}</button>
+        <button style={btn()} disabled={!cards.length} onClick={() => setDel(sel.size ? [...sel] : cards.map((c) => c.uid!))}>Del{sel.size ? ` (${sel.size})` : ' alle'}</button>
         {st?.active && <small style={'color:' + A}>I spilleren: {cards.find((c) => c.uid === st.active)?.navn ?? st.active}</small>}
       </div>
+      {del && <DelDialog uids={del} onClose={() => setDel(null)} />}
       {err && <small style="color:#e06c5a">Fikk ikke kontakt: {err}</small>}
+      <MottaPanel onDone={() => void load()} />
       <AlbumPanel />
       <SpolerPanel />
       {!cards.length && !err && <div style={box + ';color:#9a9a96'}>Ingen kassetter ennå. Bygg en Skjold Kassett-spiller (se kabinett/kassett/LES_MEG.md), og koble den første kassetten her.</div>}
@@ -255,9 +380,10 @@ export function KassettPage() {
             {c.omslag ? <img src={img(c.omslag)} style="width:52px;height:52px;border-radius:8px;object-fit:cover" /> : <div style={`width:52px;height:52px;border-radius:8px;background:#111;color:${A};display:grid;place-items:center;font-size:10px`}>SKJOLD</div>}
             <div style="flex:1;min-width:0">
               <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{c.navn}</div>
-              <small style="color:#9a9a96">{c.undertittel || LABEL[c.handling]} · spilt {c.spilt ?? 0}×{c.handling === 'album' ? ' · ' + (c.losning?.kilde ? KILDE[c.losning.kilde] : 'ikke slått opp ennå') : ''}</small>
+              <small style="color:#9a9a96">{c.undertittel || LABEL[c.handling]}{c.fra ? ` · fra ${c.fra}` : ''} · spilt {c.spilt ?? 0}×{c.handling === 'album' ? ' · ' + (c.losning?.kilde ? KILDE[c.losning.kilde] : 'ikke slått opp ennå') : ''}</small>
               <div style="display:flex;gap:6px;margin-top:6px">
                 <button style={btn()} onClick={() => setEdit(c)}>Endre</button>
+                <button style={btn()} onClick={() => setDel([c.uid!])}>Del</button>
                 <button style={btn()} onClick={() => { if (confirm(`Slette «${c.navn}»?`)) void api.nfcDelete(c.uid!).then(load); }}>Slett</button>
               </div>
             </div>

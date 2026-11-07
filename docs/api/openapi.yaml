@@ -1046,6 +1046,29 @@ paths:
       description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
 
         · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet).'
+  /api/nfc/share/import:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+      operationId: post_api_nfc_share_import
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
+
+        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet).'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
   /api/nfc/{act}:
     get:
       tags:

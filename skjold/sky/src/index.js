@@ -147,6 +147,7 @@ const stedStub = (env, id) => env.STED.get(env.STED.idFromName(id));
 const kontoStub = (env, epost) => env.KONTO.get(env.KONTO.idFromName(epost));
 const koderStub = (env) => env.KODER.get(env.KODER.idFromName("koder"));
 const hoyttalerStub = (env) => env.HOYTTALERE.get(env.HOYTTALERE.idFromName("hoyttalere"));
+const delingStub = (env) => env.DELINGER.get(env.DELINGER.idFromName("delinger"));
 const intern = (stub, sti, data) =>
   stub.fetch("https://do/i" + sti, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data ?? {}) });
 
@@ -222,6 +223,17 @@ export default {
       if (auth && env.MOD_TOKEN && likTid(auth[1].trim(), env.MOD_TOKEN)) h.set("x-mod", "1");
       return hoyttalerStub(env).fetch(new Request("https://do" + p + url.search, {
         method: req.method, headers: h, body: req.method === "GET" ? undefined : await req.text(),
+      }));
+    }
+
+    // --- Del en kassett: anonym postkasse for krypterte kassettlister (nøkkelen står bare i delingskoden) ---
+    if (p === "/del" || p.startsWith("/del/")) {
+      if (!env.DELINGER) return feil(503, "deling er ikke satt opp");
+      const ip = req.headers.get("cf-connecting-ip") || "lokal";
+      return delingStub(env).fetch(new Request("https://do" + p, {
+        method: req.method,
+        headers: { "content-type": "application/json", "x-ip": await sha256hex("skjold-ip:" + ip) },
+        body: req.method === "POST" ? await req.text() : undefined,
       }));
     }
 
@@ -1026,6 +1038,57 @@ export class Hoyttalere extends DurableObject {
       else return feil(400, "ukjent handling");
       await st.put("p:" + p.id, p);
       return json({ ok: true, profil: sammenstill(p) });
+    }
+    return feil(404, "finnes ikke");
+  }
+}
+
+
+// ---------- Del en kassett ----------
+// Skyen lagrer bare en kryptert blob (AES-GCM, nøkkelen genereres på Skjold-enheten og står bare i delingskoden
+// «S<id>.<nøkkel>» som sendes til vennen). Ingen konto, ingen innsyn. Blobben slettes etter 14 dager.
+const D_TTL_MS = 14 * 24 * 3600 * 1000;
+const D_MAKS_BYTES = 48 * 1024;
+const D_MAKS_PER_DOGN = 50;
+const D_ALFABET = "abcdefghijkmnpqrstuvwxyz23456789";
+
+function nyDelId() {
+  const b = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(b, (x) => D_ALFABET[x % D_ALFABET.length]).join("");
+}
+
+export class Delinger extends DurableObject {
+  async fetch(req) {
+    const url = new URL(req.url);
+    const st = this.ctx.storage;
+    const ip = req.headers.get("x-ip") || "";
+    const naa = Date.now();
+    if (url.pathname === "/del" && req.method === "POST") {
+      const b = await lesJson(req);
+      const blob = typeof b.blob === "string" ? b.blob : "";
+      if (!blob || blob.length > D_MAKS_BYTES || !/^[A-Za-z0-9+/=]+$/.test(blob)) return feil(400, "ugyldig deling");
+      const dag = new Date(naa).toISOString().slice(0, 10);
+      const rk = "r:" + ip + ":" + dag;
+      const n = (await st.get(rk)) || 0;
+      if (n >= D_MAKS_PER_DOGN) return feil(429, "for mange delinger i dag");
+      await st.put(rk, n + 1);
+      let id = nyDelId();
+      while (await st.get("d:" + id)) id = nyDelId();
+      const utloper = naa + D_TTL_MS;
+      await st.put("d:" + id, { blob, utloper });
+      // rydd utløpte (billig: maks 50 per innsending)
+      const gamle = await st.list({ prefix: "d:", limit: 50 });
+      for (const [k, v] of gamle) if (v && v.utloper < naa) await st.delete(k);
+      return json({ id, utloper }, 201);
+    }
+    const m = /^\/del\/([a-z0-9]{8,16})$/.exec(url.pathname);
+    if (m && req.method === "GET") {
+      const d = await st.get("d:" + m[1]);
+      if (!d || d.utloper < naa) {
+        if (d) await st.delete("d:" + m[1]);
+        return feil(404, "delingen finnes ikke eller er utløpt");
+      }
+      return json({ blob: d.blob, utloper: d.utloper }, 200, { "cache-control": "no-store" });
     }
     return feil(404, "finnes ikke");
   }

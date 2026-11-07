@@ -228,3 +228,102 @@ def test_paring_lagres(tmp_path):
     st = NfcStore(str(tmp_path / "c.json"))
     assert st.sett_oppsett({"paret": "Stue Touch"})["paret"] == "Stue Touch"
     assert NfcStore(str(tmp_path / "c.json")).oppsett()["paret"] == "Stue Touch"
+
+
+# ---------- Kassett-Wrapped ----------
+def test_kassett_stats_topp_glemte_og_maned(tmp_path):
+    import skjold_nfc as N
+    s = N.NfcStore(str(tmp_path / "nfc.json"))
+    a = s.put({"uid": "04A1", "handling": "album", "verdi": {"artist": "Linkin Park", "album": "Meteora"}})
+    b = s.put({"uid": "04B2", "handling": "play_url", "verdi": "https://radio.example/stream", "navn": "Jazz"})
+    c = s.put({"uid": "04C3", "handling": "nrk", "verdi": "p1", "navn": "NRK P1"})
+    dag = 86400
+    now = 1_800_000_000
+    for i in range(3):
+        s.logg.inn(a["uid"], "Meteora", "Navidrome", now=now - i * dag)
+        s.logg.ut(a["uid"], now=now - i * dag + 1800)
+    s.logg.inn(b["uid"], "Jazz", "radio", now=now - 2 * dag)
+    s.logg.inn(c["uid"], "NRK P1", "NRK", now=now - 100 * dag)          # gammel: glemt
+    st = s.stats("år", 8, now=now)
+    assert st["topp"][0]["navn"] == "Meteora" and st["topp"][0]["spilt"] == 3 and st["topp"][0]["lyttetid"] == 5400
+    assert st["favoritt"]["uid"] == a["uid"]
+    assert [g["navn"] for g in st["glemte"]] == ["NRK P1"]
+    assert st["totalt"]["spilt"] == 5 and st["totalt"]["kassetter"] == 3
+    assert sum(m["spilt"] for m in st["per_maned"]) == 5
+    assert s.stats("uke", 8, now=now)["totalt"]["spilt"] == 4                # NRK-avspillingen er eldre enn en uke
+
+
+def test_scan_og_uttak_logges(tmp_path):
+    import skjold_nfc as N
+    s = N.NfcStore(str(tmp_path / "nfc.json"))
+    s.put({"uid": "04D4", "handling": "play_url", "verdi": "https://x/y", "navn": "R"})
+    s.scan("04D4")
+    s.removed("04D4")
+    h = s.logg.hendelser()
+    assert len(h) == 1 and h[0]["u"] == "04-D4" and h[0]["k"] == "radio" and "d" in h[0]
+
+
+def test_logg_er_rullerende(tmp_path):
+    import skjold_nfc as N
+    lg = N.KassettLogg(str(tmp_path / "l.json"))
+    lg.MAKS = 10
+    for i in range(25):
+        lg.inn("04-AA", now=1000 + i)
+    assert len(lg.hendelser()) == 10
+
+
+# ---------- Del en kassett ----------
+def test_delingskode_rundtur_uten_private_felt(tmp_path):
+    import skjold_nfc as N
+    kort = [
+        {"uid": "01", "handling": "album", "verdi": {"artist": "Adele", "album": "25"}, "navn": "25", "undertittel": "Adele", "rom": ["Stue"]},
+        {"uid": "02", "handling": "navidrome_album", "verdi": "al-123-hemmelig", "navn": "Meteora", "undertittel": "Linkin Park"},
+        {"uid": "03", "handling": "play_url", "verdi": "https://radio.example/stream", "navn": "Jazz"},
+        {"uid": "04", "handling": "play_url", "verdi": "https://nd.local/rest/stream?u=meg&p=hemmelig", "navn": "Privat"},
+        {"uid": "05", "handling": "preset", "verdi": 3, "navn": "Favoritt 3"},
+    ]
+    d = N.del_kode(kort, fra="Sebastian")
+    assert d["delt"] == 3 and d["hoppet_over"] == 2
+    assert d["lenke"].startswith("skjold://kassett/del?d=") and len(d["kode"]) < 400
+    tilbake = N.les_kode(d["lenke"])
+    assert tilbake["fra"] == "Sebastian"
+    alt = str(tilbake)
+    assert "al-123" not in alt and "hemmelig" not in alt and "Stue" not in alt
+    assert tilbake["kassetter"][1] == {"handling": "album", "verdi": {"artist": "Linkin Park", "album": "Meteora"},
+                                       "navn": "Meteora", "undertittel": "Linkin Park", "omslag": tilbake["kassetter"][1]["omslag"]}
+    assert N.les_kode(d["web"])["kassetter"] == tilbake["kassetter"]
+    import pytest
+    with pytest.raises(ValueError):
+        N.les_kode("tull")
+    with pytest.raises(ValueError):
+        N.del_kode([kort[4]])
+
+
+def test_importer_deling_blir_ventende_og_kobles_til_ny_brikke(tmp_path):
+    import skjold_nfc as N
+    s = N.NfcStore(str(tmp_path / "nfc.json"))
+    kode = N.del_kode([{"uid": "01", "handling": "album", "verdi": {"artist": "Adele", "album": "25"}, "navn": "25"},
+                       {"uid": "02", "handling": "play_url", "verdi": "https://radio.example/s", "navn": "Jazz"}], fra="Ola")["kode"]
+    r = s.importer_deling(kode)
+    assert r["lagt_til"] == 2 and r["fra"] == "Ola"
+    assert s.importer_deling(kode)["lagt_til"] == 0                      # samme kode to ganger: ingen dubletter
+    res = s.scan("04EE")                                                  # ny brikke → første ventende
+    assert res["card"]["handling"] == "album" and res["card"]["fra"] == "Ola"
+    res2 = s.scan("04FF")
+    assert res2["card"]["handling"] == "play_url" and res2["card"]["verdi"] == "https://radio.example/s"
+    assert s.oppsett()["ventende"] == []
+
+
+def test_sky_deling_kryptert_rundtur():
+    import skjold_nfc as N
+    blob, key, n = N.sky_pakk([{"uid": "01", "handling": "album", "verdi": {"artist": "a-ha", "album": "Hunting High and Low"}, "navn": "HHL"}], "Kari")
+    assert n == 1 and "Hunting" not in blob                               # skyen ser bare kryptert innhold
+    k = N.sky_kode("abcdefgh23", key)
+    assert N.er_sky_kode(k["lenke"]) == k["kode"] and N.er_sky_kode(k["web"]) == k["kode"]
+    d = N.sky_les(k["kode"], lambda i: blob if i == "abcdefgh23" else None)
+    assert d["fra"] == "Kari" and d["kassetter"][0]["verdi"]["album"] == "Hunting High and Low"
+    import pytest
+    feil = N.sky_kode("abcdefgh23", b"x" * 16)["kode"]
+    with pytest.raises(ValueError):
+        N.sky_les(feil, lambda i: blob)
+    assert N.er_sky_kode("1abc") == ""

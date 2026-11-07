@@ -7287,16 +7287,69 @@ def nfc_label_image(url):
         return None
 
 
+def _kassett_sky(metode, sti, kropp=None):
+    """Skjold Cloud: anonym, kryptert delingspostkasse for kassetter (/del i skjold-hjem-workeren)."""
+    data = json.dumps(kropp).encode() if kropp is not None else None
+    req = urllib.request.Request(SKY_URL + sti, data=data, method=metode,
+                                 headers={"Content-Type": "application/json", "User-Agent": "Skjold/2.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        try:
+            j_ = json.loads(e.read() or b"{}")
+            msg = j_.get("feil") or j_.get("error") or ""
+        except Exception:
+            msg = ""
+        if e.code == 404:
+            raise ValueError("fant ikke delingen – den er utløpt (14 dager) eller koden er feil")
+        raise ValueError(msg or f"Skjold Cloud svarte {e.code}")
+
+
 async def h_nfc(r):
     """POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
     · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet)."""
     act = r.match_info.get("act", "")
+    if r.path.rstrip("/").endswith("/share/import"):
+        act = "share-import"
     try:
         b = await r.json() if r.method == "POST" and r.can_read_body else {}
     except Exception:
         b = {}
     loop = asyncio.get_running_loop()
     try:
+        if act == "stats":
+            # Kassett-Wrapped: GET /api/nfc/stats?periode=uke|mnd|år|alt&glemt=8
+            try:
+                glemt = int(r.query.get("glemt") or 8)
+            except ValueError:
+                glemt = 8
+            return web.json_response(await loop.run_in_executor(None, lambda: nfc.stats(r.query.get("periode") or "år", glemt)))
+        if act == "share":
+            # Del kassetter: POST {uids:[…], sky:false} → {kode, lenke, web}. sky:true → kryptert via Skjold Cloud (kort kode).
+            want = [u for u in (b.get("uids") or []) if u]
+            cards = [c for c in ((nfc.get(u) for u in want) if want else nfc.list()) if c]
+            fra = str(b.get("fra") or NAME)[:60]
+            if b.get("sky"):
+                blob, key, n = _nfcmod.sky_pakk(cards, fra)
+                res = await loop.run_in_executor(None, lambda: _kassett_sky("POST", "/del", {"blob": blob}))
+                return web.json_response({**_nfcmod.sky_kode(res["id"], key), "delt": n, "hoppet_over": len(cards) - n,
+                                          "utloper": res.get("utloper"), "sky": True})
+            return web.json_response({**_nfcmod.del_kode(cards, fra), "sky": False})
+        if act == "share-import":
+            # Mottatt delingskode/lenke (QR) → ventende kassetter. Skjold Cloud-koder (S…) hentes og dekrypteres her.
+            kode = str(b.get("kode") or b.get("lenke") or "")
+            sk = _nfcmod.er_sky_kode(kode)
+            if sk:
+                d = await loop.run_in_executor(None, lambda: _nfcmod.sky_les(sk, lambda i: _kassett_sky("GET", "/del/" + i)["blob"]))
+                res = nfc.importer_deling(d)
+            else:
+                res = nfc.importer_deling(kode)
+            changed()
+            if res["lagt_til"]:
+                _toast_safe(f"{res['lagt_til']} delt{'e' if res['lagt_til'] > 1 else ''} kassett{'er' if res['lagt_til'] > 1 else ''}"
+                            + (f" fra {res['fra']}" if res.get("fra") else "") + " venter på en NFC-brikke")
+            return web.json_response(res)
         if act == "" and r.method == "GET":
             return web.json_response({"learning": nfc.learning(), "learn_until": nfc.learn_until, "last": nfc.last,
                                       "active": nfc.active_uid, "cards": nfc.list(), **nfc.oppsett()})
@@ -7409,7 +7462,7 @@ async def h_nfc(r):
     raise web.HTTPNotFound()
 
 
-FEAT_ROUTES += [("GET", "/api/nfc", h_nfc), ("POST", "/api/nfc/{act}", h_nfc), ("GET", "/api/nfc/{act}", h_nfc),
+FEAT_ROUTES += [("GET", "/api/nfc", h_nfc), ("POST", "/api/nfc/share/import", h_nfc), ("POST", "/api/nfc/{act}", h_nfc), ("GET", "/api/nfc/{act}", h_nfc),
                 ("DELETE", "/api/nfc/{act}/{uid}", h_nfc)]
 
 # ---------- Skjold Hjul: ESPHome-fjernkontroll (pi/skjold_hjul.py, esphome/skjold-hjul.yaml) ----------
