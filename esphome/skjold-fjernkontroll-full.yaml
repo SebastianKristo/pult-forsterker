@@ -239,7 +239,7 @@ globals:
 # >>> navneliste (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   - id: taster_navn
     type: std::vector<std::string>
-    initial_value: '{"av", "hjem", "meny", "opp", "ned", "venstre", "hoyre", "ok", "tilbake", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned", "tall_1", "tall_2", "tall_3", "tall_4", "tall_5", "tall_6", "tall_7", "tall_8", "tall_9", "strek", "tall_0", "enter", "lys", "stikk", "minus", "pluss"}'
+    initial_value: '{"av", "hjem", "meny", "opp", "ned", "venstre", "hoyre", "ok", "tilbake", "avslutt", "spill_pause", "vol_opp", "vol_ned", "demp", "tall_1", "tall_2", "tall_3", "tall_4", "tall_5", "tall_6", "tall_7", "tall_8", "tall_9", "strek", "tall_0", "enter", "lys", "stikk", "minus", "pluss"}'
 # <<< navneliste
 
 # ---------- sensorer ----------
@@ -418,21 +418,10 @@ binary_sensor:
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
         then: [ { script.execute: { id: tast, navn: "spill_pause", lang: false } } ]
   - platform: gpio
-    id: t_demp
-    name: "Tast Demp"
-    internal: true
-    pin: { tca9555: tca_a, number: 11, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "demp", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "demp", lang: false } } ]
-  - platform: gpio
     id: t_vol_opp
     name: "Tast Volum +"
     internal: true
-    pin: { tca9555: tca_a, number: 12, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 11, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "vol_opp", lang: false }
@@ -446,7 +435,7 @@ binary_sensor:
     id: t_vol_ned
     name: "Tast Volum −"
     internal: true
-    pin: { tca9555: tca_a, number: 13, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 12, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "vol_ned", lang: false }
@@ -456,6 +445,17 @@ binary_sensor:
           then:
             - script.execute: { id: tast, navn: "vol_ned", lang: false }
             - delay: 160ms
+  - platform: gpio
+    id: t_demp
+    name: "Tast Demp"
+    internal: true
+    pin: { tca9555: tca_a, number: 13, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "demp", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "demp", lang: false } } ]
   - platform: gpio
     id: t_tall_1
     name: "Tast Tall 1"
@@ -658,9 +658,9 @@ event:
       - tilbake
       - avslutt
       - spill_pause
-      - demp
       - vol_opp
       - vol_ned
+      - demp
       - tall_1
       - tall_2
       - tall_3

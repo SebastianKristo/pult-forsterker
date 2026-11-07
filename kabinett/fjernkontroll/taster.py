@@ -34,13 +34,13 @@ HETTER = [
     # D-pad: gullring Ø39 med fire brytere og OK (Ø15) i midten
     ("dpad", "D-pad", "ring", CX, 88.7, 39, 17, "pil", "gull", ["opp", "ned", "venstre", "hoyre"]),
     ("ok", "OK", "ok", CX, 88.7, 15, 15, "OK", "mork", ["ok"]),
-    # tasteblokk under D-paden: to kolonner med like store runde taster (Ø16) og 3,25 mm mellomrom:
-    # tilbake og avslutt øverst, så spill/pause og demp til venstre og volumpillen (én tast bred, to høy) til høyre
+    # tasteblokk under D-paden: to kolonner med like store runde taster (Ø16) og 3,25 mm mellomrom.
+    # Venstre: tilbake, avslutt, spill/pause. Høyre: volumpillen (én tast bred, to høy) øverst, demp nederst.
     ("tilbake", "Tilbake", "rund", CX - 9.625, 117.45, 16, 16, "tilbake", "mork", ["tilbake"]),
-    ("avslutt", "Avslutt", "rund", CX + 9.625, 117.45, 16, 16, "avslutt", "mork", ["avslutt"]),
-    ("spill_pause", "Spill-pause", "rund", CX - 9.625, 136.7, 16, 16, "spill_pause", "mork", ["spill_pause"]),
-    ("demp", "Demp", "rund", CX - 9.625, 155.95, 16, 16, "demp", "mork", ["demp"]),
-    ("vol", "Volum", "vippe", CX + 9.625, 146.325, 16, 35.25, "vol", "mork", ["vol_opp", "vol_ned"]),
+    ("avslutt", "Avslutt", "rund", CX - 9.625, 136.7, 16, 16, "avslutt", "mork", ["avslutt"]),
+    ("spill_pause", "Spill-pause", "rund", CX - 9.625, 155.95, 16, 16, "spill_pause", "mork", ["spill_pause"]),
+    ("vol", "Volum", "vippe", CX + 9.625, 127.075, 16, 35.25, "vol", "mork", ["vol_opp", "vol_ned"]),
+    ("demp", "Demp", "rund", CX + 9.625, 155.95, 16, 16, "demp", "mork", ["demp"]),
 ] + [
     # talltaster 1–9, så − 0 ↵
     (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 170.7 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])

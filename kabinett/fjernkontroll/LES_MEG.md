@@ -62,7 +62,7 @@ Fra toppen og ned:
 - **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (45,0 × 59,4 mm) går 0,9 mm utenfor det aktive området rundt, så litt av den sorte glasskanten synes. Toppen holder glasset med 1,4 mm leppe på sidene og 1,5 mm oppe; nede dekker den 5,6 mm, slik at den brede glasskanten ved flatkabelen (6,47 mm) ligger skjult.
 - **Øverste rad**, mellom skjermen og gullringen: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og **meny** (☰; kort trykk = meny, langt trykk = guide). Alle tre er Ø 11,5 mm og står 14,5 mm fra hverandre, så raden er like bred som ringen under.
 - **D-paden**: en stor gullring (Ø 39 mm, før 32) med fire tydelige retningspiler (sorte trekanter 6,0 × 4,3 mm felt inn i gullet) og en mørk OK (Ø 15 mm) i midten, der tommelen hviler. Ringen er så stor som bredden tillater, med over 4 mm til sideveggene.
-- **Tasteblokken** under ringen er et rent rutenett i to kolonner: fire like store runde taster (Ø 16 mm) og volumpillen, med 3,25 mm mellomrom både på tvers og på langs. Øverst tilbake ‹ og avslutt ✕, så spill/pause og demp til venstre. Volumpillen til høyre er nøyaktig én tast bred og to taster pluss mellomrommet høy (16 × 35,25 mm), med topp og bunn i flukt med spill/pause og demp. Blokken er 35,25 mm bred.
+- **Tasteblokken** under ringen er et rent rutenett i to kolonner: fire like store runde taster (Ø 16 mm) og volumpillen, med 3,25 mm mellomrom både på tvers og på langs. Venstre kolonne: tilbake ‹, avslutt ✕ og spill/pause. Høyre kolonne: volumpillen øverst, nøyaktig én tast bred og to taster pluss mellomrommet høy (16 × 35,25 mm), i flukt med tilbake og avslutt, og demp nederst ved siden av spill/pause. Blokken er 35,25 mm bred.
 - **Symbolene** er strektegnet med jevn strek (0,65 mm) og ca. 38 % av tastens diameter: en tynn vinkel for tilbake, ✕, ▷‖, en høyttaler med skråstrek, tynne + og − på pillen (uten prikk), av/på-ring, meny-streker og Skjold-omrisset. Pilene på gullringen er tynne vinkler og OK er skrevet med vanlig (ikke fet) skrift. De er felt inn som lyse innlegg i de mørke tastene.
 - **Tastetoppene** har en myk R 1,0-kant i stedet for fas. De printes fortsatt med flensen ned og toppen opp, uten støtte. Toppen er flat, så innleggene blir jevnt 0,4 mm dype.
 - *Full variant:* **talltastene** 1–9 står i tre kolonner, med −, 0 og ↵ i fjerde rad. **Smarthus-raden** nederst har fire lyse taster: lys, stikkontakt, − og +.
@@ -221,9 +221,9 @@ Hver bryter kobles mellom pinnen sin og GND. TCA9555 har innebygde pull-ups, så
 | Tilbake | `tilbake` | A | 0x20 | P1_0 |
 | Avslutt | `avslutt` | A | 0x20 | P1_1 |
 | Spill-pause | `spill_pause` | A | 0x20 | P1_2 |
-| Demp | `demp` | A | 0x20 | P1_3 |
-| Volum + | `vol_opp` | A | 0x20 | P1_4 |
-| Volum − | `vol_ned` | A | 0x20 | P1_5 |
+| Volum + | `vol_opp` | A | 0x20 | P1_3 |
+| Volum − | `vol_ned` | A | 0x20 | P1_4 |
+| Demp | `demp` | A | 0x20 | P1_5 |
 | utgang: vibrasjonsmotor (via AO3400) | `vibrator` | B | 0x21 | P1_4 |
 | utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401) | `strom_skjerm` | B | 0x21 | P1_5 |
 | inngang: TP4056 CHRG (lav = lader) | `lader` | B | 0x21 | P1_6 |
