@@ -1,4 +1,4 @@
-// Skjold Mini – liten aktiv høyttaler (3″ fullrange, bassrefleks) for bad, kjøkken og barnerom. Parametrisk OpenSCAD.
+// Skjold Røst – liten aktiv høyttaler (3″ fullrange, bassrefleks) for bad, kjøkken og barnerom. Parametrisk OpenSCAD.
 // Tåler damp (TPU-pakninger i skjøtene front/kropp og bunn, krage rundt EC11, DC-skive og USB-propp, ePTFE-ventil,
 // vannavstøtende duk bak grillen, port bakover). Knappene på toppen er vanlige printede knappehetter og er IKKE tette.
 // Skjerm og knapper sitter på toppen («dashbord» som heller svakt mot brukeren), foran volumhjulet, i et eget rom
@@ -7,7 +7,7 @@
 //
 // Koordinater (montert): x = bredde (−50…50), y = dybde (−fT = forsiden, 0 = skjøten front/kropp, D = bak),
 // z = høyde (0 = underkant). Kropp og frontplate er skåret fra samme ytre form, så sidene flukter i skjøten.
-// Bruk:  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_mini.scad
+// Bruk:  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_rost.scad
 // part:  kropp | front | logo | grill | bunn | knott | rute | knapp | knapp_av | knapp_1 … knapp_4 |
 //        pakning_front | pakning_bunn | krage | dc_skive | usb_propp | samlet | eksplodert
 // STL-ene eksporteres liggende slik de skal printes (se utskriftsretning nederst).
@@ -17,7 +17,7 @@ ki = 0;                         // hvilken knapp for part="knapp_i"
 $fn = 72;
 
 // ---------- ytre mål ----------
-// Totalhøyde med bunn og føtter: H + bT + footH = 144 mm (samme som første Mini, uten knott).
+// Totalhøyde med bunn og føtter: H + bT + footH = 144 mm (samme som første Røst, uten knott).
 W = 106; D = 113; H = 136;      // kropp: H er høyden bak; toppen heller s mm ned mot fronten
 s = 5;                          // fall på toppen fra bak til forkant (≈ 2,4°): vann renner av, skjermen vender mot deg
 R = 12;                         // hjørneradius bak (som Node)
@@ -106,7 +106,7 @@ ventD = 12.5; ventP = [25, 60];  // ePTFE-trykkutjevning (M12 × 1,5) i bunnen a
 knobD = 34; knobH = 14; shaftD = 6.1; shaftFlat = 4.6;
 wireV = 50; wireX = 30;          // ledningsgjennomføring takrom → lydkammer → elektronikkrom (tettes med lim)
 
-// ---------- grill: løs del foran frontplaten (som første Mini), festet med 4 tapper ----------
+// ---------- grill: løs del foran frontplaten (som første Røst), festet med 4 tapper ----------
 // Tappene har tre små klemribber, så grillen sitter stramt uten å rasle men kan trekkes av. Akustisk duk klemmes
 // mellom grillen og frontplaten (gGap = luft til duken).
 gT = 2.4; gGap = 0.6; gP = gT + gGap;
@@ -225,7 +225,7 @@ module kropp() {
     ytz(-0.01, gkD) front_gk2d(gkW);
     skyggefuge();
     // gravert navn bak
-    translate([0, D - 0.59, 100]) rotate([90, 0, 180]) linear_extrude(0.6) text("SKJOLD MINI", size = 5, font = "Liberation Sans:style=Bold", halign = "center", valign = "center");
+    translate([0, D - 0.59, 100]) rotate([90, 0, 180]) linear_extrude(0.6) text("SKJOLD RØST", size = 5, font = "Liberation Sans:style=Bold", halign = "center", valign = "center");
   }
 }
 

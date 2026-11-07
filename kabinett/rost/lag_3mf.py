@@ -1,8 +1,8 @@
-"""Lag 3MF-platene for Skjold Mini (Creality K2 / K2 Pro / K2 Plus, 250 × 250 mm):
+"""Lag 3MF-platene for Skjold Røst (Creality K2 / K2 Pro / K2 Plus, 250 × 250 mm):
 
-  skjold-mini-k2.3mf        kropp med toppanel, frontplate med innfelt logo, knott og knappehetter (PETG/ASA, 3 farger)
-  skjold-mini-k2-bunn.3mf   grill og bunnplate (PETG/ASA, sort)
-  skjold-mini-k2-tpu.3mf    pakninger i skjøtene, krage, DC-skive og USB-propp (TPU 95A)
+  skjold-rost-k2.3mf        kropp med toppanel, frontplate med innfelt logo, knott og knappehetter (PETG/ASA, 3 farger)
+  skjold-rost-k2-bunn.3mf   grill og bunnplate (PETG/ASA, sort)
+  skjold-rost-k2-tpu.3mf    pakninger i skjøtene, krage, DC-skive og USB-propp (TPU 95A)
 
 Kjør etter at STL-ene er eksportert:  python3 lag_3mf.py
 Hver del får filamentnummer i Metadata/model_settings.config (Creality Print / OrcaSlicer). Logoen ligger
@@ -13,7 +13,7 @@ import trimesh
 
 BED = 250
 PLATES = {
-    "skjold-mini-k2.3mf": ("Skjold Mini – kropp, front og knott (PETG/ASA)", [
+    "skjold-rost-k2.3mf": ("Skjold Røst – kropp, front og knott (PETG/ASA)", [
         # fil, navn, filament, rotasjon om z, min-hjørne (x, y), «samme som» (legg nøyaktig likt som en annen del)
         ("kropp", "Kropp (bakveggen ned)", 1, 0, (4, 4), None),
         ("front", "Frontplate (baksiden ned)", 2, 0, (114, 4), None),
@@ -21,11 +21,11 @@ PLATES = {
         ("knott", "Knott (toppen ned)", 3, 0, (4, 146), None),
         ("knapp", "Knappehetter av/på og 1–4 (toppen ned)", 2, 0, (4, 190), None),
     ]),
-    "skjold-mini-k2-bunn.3mf": ("Skjold Mini – grill og bunn (PETG/ASA)", [
+    "skjold-rost-k2-bunn.3mf": ("Skjold Røst – grill og bunn (PETG/ASA)", [
         ("grill", "Grill (forsiden ned)", 2, 0, (4, 4), None),
         ("bunn", "Bunn (innsiden ned, føttene opp)", 2, 0, (102, 4), None),
     ]),
-    "skjold-mini-k2-tpu.3mf": ("Skjold Mini – pakninger (TPU 95A)", [
+    "skjold-rost-k2-tpu.3mf": ("Skjold Røst – pakninger (TPU 95A)", [
         ("pakning_front", "Pakning front", 1, 0, (4, 4), None),
         ("pakning_bunn", "Pakning bunn", 1, 0, (110, 4), None),
         ("krage", "Krage EC11", 1, 0, (136, 130), None),
