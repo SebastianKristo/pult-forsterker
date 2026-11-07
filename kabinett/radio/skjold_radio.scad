@@ -5,6 +5,7 @@
 // det store gullhjulet. Myke hjørner (R14) sett forfra som Node/Røst, faset frontkant, lys (eller matt sort) kropp,
 // mørk grill og knapper, gull hjul, volumknott og list, og SKJOLD preget over skjermen. Symbolene på knappene
 // (1–6, av/på ⏻, høyttaler på volum, spill/pause på hjulet) er innfelt i flukt i kontrastfarge (flerfarget med CFS).
+// Bakdelen er myk: kassa smalner svakt bakover og rundes av med R26 over toppen og ned langs sidene (maks 42° heling).
 // Lisens: CC BY-NC-SA 4.0 (se LISENS-MASKINVARE.md).
 //
 // Koordinater: x = bredde (0 … W), y = dybde (0 = fronten, D = bak), z = høyde (0 = innsiden av gulvet).
@@ -31,6 +32,32 @@ bkT = 3;                         // bakplata (ligger inne i åpningen bak, flukt
 
 // Profilen sett forfra (x, z), forskjøvet o innover
 module prof(o = 0) { translate([o, -t + o]) rrect(W - 2*o, H + t - 2*o, max(1, R - o)); }
+// ---------- avrundet og avsmalnende bakparti ----------
+// Fronten (R14 og fasen) er som før. Bakover smalner kassa svakt (kvadratisk, sL) og rundes til slutt av med en stor
+// radius Rb på toppen og sidene. Buen stopper ved aB = 42°, så ingen flate heller mer enn ca. 45° når kroppen printes
+// med fronten ned. Toppen senkes s(y), sidene trekkes inn s(y)/2 og de øvre hjørnene vokser til R + s/2. Gulvet og de nedre
+// hjørnene (R14) er uendret, så radioen står stødig og innmaten på gulvet (kammerørene, forsterkeren) får plass.
+sL = 6; Rb = 26; aB = 42;
+Lb = Rb * sin(aB);                          // buens lengde i dybden (17,4 mm)
+function s_av(y) = y <= c ? 0 : sL * pow((y - c) / (D - c), 2)
+  + (y > D - Lb ? Rb - sqrt(Rb*Rb - pow(y - (D - Lb), 2)) : 0);
+sD = s_av(D);                               // 12,7 mm lavere og 2 × 6,35 mm smalere helt bak
+Ys = concat([for (i = [0:10]) c + (D - Lb - c) * i / 10], [for (i = [1:8]) D - Lb + Lb * i / 8]);
+module profil(s, o = 0) {   // tverrsnittet (x, z) med innsving s, forskjøvet o innover
+  rt = max(1, R + s/2 - o); rb = max(1, R - o);
+  x0 = s/2 + o; x1 = W - s/2 - o; z0 = -t + o; z1 = H - s - o;
+  hull() {
+    for (x = [x0 + rb, x1 - rb]) translate([x, z0 + rb]) circle(rb);
+    for (x = [x0 + rt, x1 - rt]) translate([x, z1 - rt]) circle(rt);
+  }
+}
+module skall(o, y0) {   // det avrundede skallet fra y0 bakover (o = 0: utsiden, o = t: innsiden)
+  hull() {
+    ext_y(y0, y0 + 0.01) profil(0, o);
+    for (y = Ys) if (y > y0) ext_y(y - 0.01, y) profil(s_av(y), o);
+    if (o > 0) ext_y(D, D + 1) profil(sD, o);
+  }
+}
 module ext_y(y0, y1) { translate([0, y1, 0]) rotate([90, 0, 0]) linear_extrude(y1 - y0) children(); }   // 2D (x, z) → y0 … y1
 // Lokal ramme på frontflaten: u = x, v = z, w ut av fronten (w = 0 = frontflaten, w = −t = innsiden av frontveggen).
 module front_ramme() { rotate([90, 0, 0]) children(); }
@@ -89,8 +116,14 @@ symD = 0.6;                                // innleggsdybde (3 lag à 0,2 mm)
 knappIkon = ["1", "2", "3", "4", "5", "6", "av"];
 // ---------- fester ----------
 ins = 4.0; insD = 6.0; boss = 8.4; m3 = 3.4; m3k = 6.4;
-bakB = [[8.5, -t + 8.5], [W - 8.5, -t + 8.5], [8.5, H - 8.5], [W - 8.5, H - 8.5], [W/2, H - t - 3]];  // tårn for bakplata (x, z)
-bakY0 = 20;                                // tårnene starter 20 mm bak fronten (kjegle under, printes uten støtte)
+// tårn for bakplata (x, z) og retningen ut mot veggen: plassert i den smalere bakåpningen, 4,4 mm fra innerveggen.
+// Oppe i hjørnene på diagonalen, nede på sideveggen over kammerørene, og ett midt i toppen.
+bkX0 = sD/2 + t; bkX1 = W - sD/2 - t; bkZ1 = H - sD - t; bkRt = R + sD/2 - t;
+bkD = (bkRt - 4.4) / sqrt(2);
+bakB = [[bkX0 + 4.4, R, [-1, 0]], [bkX1 - 4.4, R, [1, 0]],
+        [bkX0 + bkRt - bkD, bkZ1 - bkRt + bkD, [-1, 1]/sqrt(2)], [bkX1 - bkRt + bkD, bkZ1 - bkRt + bkD, [1, 1]/sqrt(2)],
+        [W/2, bkZ1 - 4.4, [0, 1]]];
+bakY0 = 44;                                // tårnene starter 44 mm bak fronten (avstiverne skrås av foran, klar av skjermbraketten)
 fotXY = [[30, 22], [W - 30, 22], [30, D - 22], [W - 30, D - 22]];             // selvklebende gummiføtter Ø 12
 // Raspberry Pi 4 på baksiden av skjermbraketten (85 × 56, hull 58 × 49), sentrert bak skjermen
 piH = [[-29, -24.5], [29, -24.5], [-29, 24.5], [29, 24.5]];
@@ -116,7 +149,7 @@ c_inne  = [0.40, 0.40, 0.42];
 
 // ---------- grunnformer ----------
 module rrect(w, d, r) { translate([r, r]) offset(r) square([w - 2*r, d - 2*r]); }
-module ytre() { hull() { ext_y(0, 0.01) prof(c); ext_y(c, D) prof(0); } }   // fas rundt frontkanten
+module ytre() { hull() { ext_y(0, 0.01) prof(c); skall(0, c); } }   // fas rundt frontkanten, avrundet bak
 module front_hull(o = 0) {   // grillåpningen sett forfra (x, z)
   offset(-o) hull() for (x = [gX0 + gR, gX1 - gR], z = [gZ0 + gR, gZ1 - gR]) translate([x, z]) circle(gR);
 }
@@ -126,11 +159,16 @@ module list2d(o = 0) { translate([lX0 + o, lZ0 + o]) rrect(lH - 2*o, gZ1 - gZ0 -
 module kropp() {
   difference() {
     union() {
-      difference() { ytre(); ext_y(t, D + 1) prof(t); }
+      difference() { ytre(); skall(t, t); }
       // tårn for bakplata (innpressmuttere bakfra), med kjegle foran så de printes uten støtte
-      for (p = bakB) {
-        translate([p[0], bakY0, p[1]]) rotate([-90, 0, 0]) cylinder(d = boss, h = D - bkT - bakY0);
-        translate([p[0], bakY0 - 7, p[1]]) rotate([-90, 0, 0]) cylinder(d1 = 1, d2 = boss, h = 7.01);
+      // Veggen smalner bakover, så hvert tårn får en avstiver ut til veggen. Under (mot fronten) skrås den av mot en spiss,
+      // så den printes uten støtte (≤ 45°).
+      for (p = bakB) intersection() {
+        ytre();
+        hull() {
+          ext_y(bakY0, D - bkT) hull() { translate([p[0], p[1]]) circle(d = boss); translate([p[0], p[1]] + 30 * p[2]) circle(d = boss); }
+          for (k = [0, 30]) ext_y(bakY0 - 12 - k, bakY0 - 11.99 - k) translate([p[0], p[1]] + k * p[2]) circle(d = 1);   // 45° ned mot veggen
+        }
       }
       front_ramme() {
         for (p = scrB) translate([scrX + p[0], scrZ + p[1], -t - 6]) cylinder(d = 7, h = 7);      // skjermbrakett
@@ -175,7 +213,7 @@ module kropp() {
 // ---------- bakplate (DC, linje ut, USB-C og lufting; skrus i fem tårn) ----------
 module bak() {
   difference() {
-    ext_y(D - bkT, D) prof(t + 0.3);
+    ext_y(D - bkT, D) profil(sD, t + 0.3);   // følger den avrundede bakåpningen
     for (p = bakB) translate([p[0], D - bkT - 1, p[1]]) rotate([-90, 0, 0]) {
       cylinder(d = m3, h = bkT + 2); translate([0, 0, bkT + 1 - 1.7]) cylinder(d1 = m3, d2 = m3k, h = 1.71);   // senkeskrue
     }
@@ -198,7 +236,8 @@ module kammer() {
       // tårn for lokkets innpressmuttere – går hele veien fra baffelen (printes som søyler)
       for (x = kBx, z = kBz) translate([x, kY0 + 1, z]) rotate([-90, 0, 0]) cylinder(d = boss, h = kD - 1);
       // ører langs gulvet på utsiden, skrues fast nedenfra gjennom gulvet
-      for (x = [kX0 - kOre, kX0 + kW]) translate([x, kY0, kZ0]) cube([kOre, kD, 8]);
+      // (det venstre øret følger det avrundede hjørnet nede i kroppen bakover, med 0,2 mm klaring)
+      intersection() { for (x = [kX0 - kOre, kX0 + kW]) translate([x, kY0, kZ0]) cube([kOre, kD, 8]); skall(t + 0.2, t); }
     }
     translate([drvX, kY0 - 1, drvZ]) rotate([-90, 0, 0]) cylinder(d = drvCut, h = baffT + 2);
     for (k = [0:3]) translate([drvX + drvPCD/2*cos(45 + 90*k), kY0 - 1, drvZ + drvPCD/2*sin(45 + 90*k)])

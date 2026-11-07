@@ -8,11 +8,12 @@ STL-ene lages med  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_radio.scad
   2. ingen deler overlapper i montert stilling (høyttalerstoffet tas med, det skal ligge an mot grillrammen) (par som skal ligge an mot hverandre har bare kontaktflater)
   3. lydkammeret er tett: ett lukket rom når lokket og elementet er på (bare kabelhullet i gulvet er åpent),
      med netto volum 0,6–0,9 l (mono, ett 3″-element)
-  4. kroppens og bakplatas yttervegg er hel (≥ 2 mm) utenom de tiltenkte hullene
+  4. kroppens og bakplatas yttervegg er hel (≥ 2 mm) utenom de tiltenkte hullene, også i det avrundede bakpartiet
   5. grillen med stoffet stikker 3 mm ut fra fronten (som Skjold Røst), mens gullista og panelet ligger i flukt
   6. symbolinnleggene (knappehettene, volumknotten, hjulet) er vanntette, 0,6 mm dype, i flukt med flaten og fyller
      lomma i sin egen del uten å overlappe den (montert: bare kontakt med sin egen del)
-  7. det er plass i dybden: bak kammerlokket, bak Pi-en og foran kontaktene i bakplata"""
+  7. det er plass i dybden: bak kammerlokket, bak Pi-en og foran kontaktene i bakplata
+  8. det avrundede bakpartiet og tårnene for bakplata printes med fronten ned uten støtte (ingen flate brattere enn 50°)"""
 import itertools
 import sys
 
@@ -99,13 +100,40 @@ ok &= good
 print(f"{'OK ' if good else 'FEIL'} kammer (mono): netto ≈ {vol:.2f} l, lukket i alle {hits.sum()}/{len(hits)} retninger")
 
 # --- yttervegg ≥ 2 mm: stråler inn fra sidene, toppen, gulvet og bakplata ---
+# det avrundede bakpartiet (samme formler som i skjold_radio.scad): toppen senkes s(y), sidene trekkes inn s(y)/2
+c, R, t, sL, Rb, aB = 2.5, 14, 3.0, 6, 26, np.radians(42)
+Lb = Rb * np.sin(aB)
+
+
+def s_av(y):
+    if y <= c:
+        return 0.0
+    return sL * ((y - c) / (D - c))**2 + (Rb - np.sqrt(Rb**2 - (y - (D - Lb))**2) if y > D - Lb else 0.0)
+
+
+sD = s_av(D)
+bkX0, bkX1, bkZ1, bkRt = sD/2 + t, W - sD/2 - t, H - sD - t, R + sD/2 - t
+bkD = (bkRt - 4.4) / np.sqrt(2)
+BAKB = [(bkX0 + 4.4, R), (bkX1 - 4.4, R), (bkX0 + bkRt - bkD, bkZ1 - bkRt + bkD), (bkX1 - bkRt + bkD, bkZ1 - bkRt + bkD), (W/2, bkZ1 - 4.4)]
 # tiltenkte hull som rektangler (flate, u0, u1, v0, v1)
 HOLES = [("bunn", x - 3.7, x + 3.7, y - 3.7, y + 3.7) for x in (kX0 - 4, kX0 + kW + 4) for y in (kY0 + 12, kY0 + kD - 12)] + \
         [("bunn", 129, 209, 33, 87)] + \
         [("bak", 134.5, 145.5, 16.5, 27.5), ("bak", 155, 165, 17, 27), ("bak", 174, 186, 19, 25),
          ("bak", 195, 222, 9, 41), ("bak", 127, 213, 77, 119)] + \
-        [("bak", x - 4.5, x + 4.5, z - 4.5, z + 4.5) for x, z in ((8.5, 5.5), (W - 8.5, 5.5), (8.5, H - 8.5), (W - 8.5, H - 8.5), (W/2, H - 6))]
+        [("bak", x - 4.5, x + 4.5, z - 4.5, z + 4.5) for x, z in BAKB]
 
+
+def innenfor(y, x, z, m):
+    """Ligger (x, z) minst m mm innenfor tverrsnittet ved dybde y? (Strålene sendes bare der det er vegg å treffe.)"""
+    s = s_av(y)
+    x0, x1, z0, z1, rt = s/2 + m, W - s/2 - m, -t + m, H - s - m, max(0.1, R + s/2 - m)
+    if not (x0 <= x <= x1 and z0 <= z <= z1):
+        return False
+    for cx in (x0 + rt, x1 - rt):
+        cz = z1 - rt
+        if z > cz and (x < x0 + rt or x > x1 - rt) and np.hypot(x - cx, z - cz) > rt:
+            return False
+    return True
 
 def wall(mesh, o, d):
     loc, _, _ = mesh.ray.intersects_location([o], [d])
@@ -126,6 +154,10 @@ for face, mesh, us, vs, ray in FACES:
         for v in vs:
             if any(f == face and u0 <= u <= u1 and v0 <= v <= v1 for f, u0, u1, v0, v1 in HOLES):
                 continue
+            # bare der stråla treffer skallet midt på flaten (ikke rett i den avrundede kanten bak)
+            if face.startswith("side") and not innenfor(u, W/2, v, 2) or face in ("topp", "bunn") and not innenfor(v, u, H/2, 2) \
+                    or face == "bak" and not innenfor(D, u, v, t + 0.3 + 3):
+                continue
             o, d = ray(u, v)
             w = wall(mesh, o, d)
             if w < 1.99:
@@ -141,6 +173,15 @@ ut_stoff, ut_grill, ut_list, ut_kropp = -A["stoff"].bounds[0][1], -A["grill"].bo
 good = abs(ut_stoff - 3.0) < 0.05 and abs(ut_grill - 2.5) < 0.05 and ut_list < 0.45 and abs(ut_kropp) < 0.01
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} grillen stikker {ut_stoff:.1f} mm ut (rammen {ut_grill:.1f} mm + stoffet), gullista {ut_list:.1f} mm, panelet i flukt")
+
+# --- kroppen printes med fronten ned uten støtte: ingen flate i det avrundede bakpartiet eller tårnene heller mer enn 50°
+# (fronten y < 8 er platen og de grunne forsenkningene; skruehullene i gulvet (z < 0) er små liggende hull) ---
+kn, kc, ka = A["kropp"].face_normals, A["kropp"].triangles_center, A["kropp"].area_faces
+bratt = (kn[:, 1] < -np.sin(np.radians(50))) & (kc[:, 1] > 8) & (kc[:, 2] > 0)
+bak_hel = np.degrees(np.arcsin(np.clip(-kn[(kc[:, 1] > 60) & (kc[:, 2] > 0) & (kn[:, 1] < 0), 1], 0, 1))).max()
+good = ka[bratt].sum() < 1.0
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} printes uten støtte: bakpartiet heller maks {bak_hel:.0f}°, {ka[bratt].sum():.1f} mm² brattere enn 50°")
 
 # --- plass i dybden (115 mm): bak kammerlokket, bak Pi-en og bak luftespaltene (kontaktene i bakplata) ---
 bak_inn = A["bak"].bounds[0][1]
