@@ -149,6 +149,7 @@ DSP_CAPTURE = os.environ.get("KI_AMP_DSP_CAPTURE", "hw:Loopback,1")
 DSP_PLAYBACK = os.environ.get("KI_AMP_DSP_PLAYBACK", "hw:sndrpihifiberry")
 DSP_FILE = os.environ.get("KI_AMP_DSP_FILE", "/etc/camilladsp/config.yml")
 DSP_FORMAT = os.environ.get("KI_AMP_DSP_FORMAT", "S32LE")   # S16LE for Pi-ens 3,5 mm-utgang (testmodus)
+# KI_AMP_MONO=1: L+R summeres (−6 dB hver) til begge utgangene i CamillaDSP – for apparater med ett element (Skjold Radio)
 
 # ---------- GPIO (BCM) ----------
 # KI_AMP_BOARD=modules : modulbygget (XH-M562, X9C103S, relékort) – standard
@@ -769,6 +770,18 @@ def dsp_config():
         xf, xm, xs = dspblocks.extra(plug_cfg("xtc"), plug_cfg("sync"), placement=plug_cfg("placement"))
     except Exception as e:
         print("dspblocks:", e); xf, xm, xs = "", "", []
+    if os.environ.get("KI_AMP_MONO", "0") == "1":   # ett element: miks ned til mono før alt annet
+        xm = """
+  mono:
+    channels: {in: 2, out: 2}
+    mapping:
+      - dest: 0
+        sources: [{channel: 0, gain: -6.0}, {channel: 1, gain: -6.0}]
+      - dest: 1
+        sources: [{channel: 0, gain: -6.0}, {channel: 1, gain: -6.0}]""" + xm
+        mono_step = "  - type: Mixer\n    name: mono\n"
+    else:
+        mono_step = ""
     xm = f"mixers:{xm}\n" if xm else ""
     xs = "".join(st + "\n" for st in xs)
     return f"""devices:
@@ -785,7 +798,7 @@ filters:
     type: Loudness
     parameters: {{fader: Main, reference_level: -10.0, high_boost: {lvl * 0.5:.1f}, low_boost: {float(lvl):.1f}, attenuate_mid: false}}{xf}
 {xm}pipeline:
-  - type: Filter
+{mono_step}  - type: Filter
     channel: 0
     names: [{names}]
   - type: Filter

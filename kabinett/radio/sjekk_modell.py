@@ -5,9 +5,10 @@ STL-ene lages med  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_radio.scad
 (se lag_stl.sh). Krever trimesh og manifold3d. Sjekker:
   1. alle utskrifts-STL-er i stl/ er vanntette, ett legeme (knapp: sju hetter), ligger på platen (min z = 0)
      og passer i Creality K2 (250 × 250 × 250 mm)
-  2. ingen deler overlapper i montert stilling (par som skal ligge an mot hverandre har bare kontaktflater)
-  3. lydkammeret er tett: hver halvdel er et lukket rom når lokket er på (bare de to kabelhullene i gulvet er åpne)
-  4. kroppens og bakplatas yttervegg er hel (≥ 2 mm) utenom de tiltenkte hullene, og netto kammervolum per side"""
+  2. ingen deler overlapper i montert stilling (høyttalerstoffet tas med, det skal ligge an mot grillrammen) (par som skal ligge an mot hverandre har bare kontaktflater)
+  3. lydkammeret er tett: ett lukket rom når lokket og elementet er på (bare kabelhullet i gulvet er åpent),
+     med netto volum 0,6–0,9 l (mono, ett 3″-element)
+  4. kroppens og bakplatas yttervegg er hel (≥ 2 mm) utenom de tiltenkte hullene"""
 import itertools
 import sys
 
@@ -26,9 +27,9 @@ for n in PRINT:
     print(f"{'OK ' if good else 'FEIL'} {n:9s} vanntett={m.is_watertight} deler={parts} {m.volume/1000:7.1f} cm³ "
           f"{m.extents.round(1)} mm")
 
-ASMP = ["kropp", "bak", "kammer", "lokk", "grill", "list", "brakett", "knapper", "knott", "volum"]
+ASMP = ["kropp", "bak", "kammer", "lokk", "grill", "list", "brakett", "knapper", "knott", "volum", "stoff"]
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in ASMP}
-TOUCH = {("kropp", "bak"), ("kropp", "kammer"), ("kammer", "lokk"), ("kropp", "brakett"), ("kropp", "list")}
+TOUCH = {("grill", "stoff"), ("kropp", "stoff"), ("kropp", "bak"), ("kropp", "kammer"), ("kammer", "lokk"), ("kropp", "brakett"), ("kropp", "list")}
 
 
 def overlap(a, b):
@@ -49,36 +50,34 @@ for x, y in itertools.combinations(ASMP, 2):
 ok &= not olap
 print("OK  ingen overlapp i montert stilling" if not olap else "FEIL overlapp: " + "; ".join(olap))
 
-# --- lydkammeret: luft inne i hver halvdel, avgrenset av kammer + lokk (+ gulvet under kabelhullene) ---
-W, D, H, kX0, kY0, kD, kH, kT, baffT = 236, 145, 202, 22, 8.6, 78, 88, 2.8, 7
+# --- lydkammeret: luft inne i kammeret, avgrenset av kammer + lokk + elementet (+ gulvet under kabelhullet) ---
+W, D, H, kX0, kW, kY0, kD, kH, kT, baffT = 240, 125, 137, 22, 86, 8.6, 92, 124, 2.8, 7
+drvX, drvZ = kX0 + kW/2, kH/2
 box = A["kammer"].union(A["lokk"], engine="manifold")
-for s in (-1, 1):   # elementene tetter utsparingene i baffelen
-    el = trimesh.creation.cylinder(radius=43, height=4, sections=64)
-    el.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
-    el.apply_translation([W/2 + s*52, kY0 - 2, kH/2])
-    box = box.union(el, engine="manifold")
-tot = 0
-for side, (x0, x1) in {"venstre": (kX0 + kT, W/2 - kT/2), "høyre": (W/2 + kT/2, W - kX0 - kT)}.items():
-    inner = trimesh.creation.box(extents=[x1 - x0 - 0.02, kD - baffT - 0.02, kH - 2*kT - 0.02])
-    inner.apply_translation([(x0 + x1)/2, kY0 + baffT + (kD - baffT)/2, kH/2])
-    air = inner.difference(box, engine="manifold")
-    drv = 0.05e6   # elementets magnet/kurv bak baffelen ≈ 0,05 l
-    vol = (air.volume - drv) / 1e6
-    tot += vol
-    # tetthet: stråler fra luftrommets midte i 26 retninger skal alle treffe kammer/lokk
-    c = np.array([(x0 + x1)/2, kY0 + baffT + (kD - baffT)/2, kH/2])
-    dirs = np.array([d for d in itertools.product([-1, 0, 1], repeat=3) if any(d)], float)
-    hits = box.ray.intersects_any(np.repeat([c], len(dirs), 0), dirs)
-    good = hits.all() and 0.40 < vol < 0.60
-    ok &= good
-    print(f"{'OK ' if good else 'FEIL'} kammer {side}: netto ≈ {vol:.2f} l, lukket i alle {hits.sum()}/{len(dirs)} retninger")
+el = trimesh.creation.cylinder(radius=43, height=4, sections=64)   # elementet tetter utsparingen i baffelen
+el.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
+el.apply_translation([drvX, kY0 - 2, drvZ])
+box = box.union(el, engine="manifold")
+x0, x1 = kX0 + kT, kX0 + kW - kT
+inner = trimesh.creation.box(extents=[x1 - x0 - 0.02, kD - baffT - 0.02, kH - 2*kT - 0.02])
+inner.apply_translation([(x0 + x1)/2, kY0 + baffT + (kD - baffT)/2, kH/2])
+air = inner.difference(box, engine="manifold")
+drv = 0.05e6   # elementets magnet/kurv bak baffelen ≈ 0,05 l
+vol = (air.volume - drv) / 1e6
+# tetthet: stråler fra luftrommets midte og fire punkter rundt det i 26 retninger skal alle treffe kammer/lokk
+dirs = np.array([d for d in itertools.product([-1, 0, 1], repeat=3) if any(d)], float)
+cs = [np.array([(x0 + x1)/2 + dx, kY0 + baffT + (kD - baffT)/2, kH/2 + dz]) for dx, dz in ((0, 0), (-20, -35), (20, -35), (-20, 35), (20, 35))]
+hits = np.concatenate([box.ray.intersects_any(np.repeat([c], len(dirs), 0), dirs) for c in cs])
+good = hits.all() and 0.60 < vol < 0.90
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} kammer (mono): netto ≈ {vol:.2f} l, lukket i alle {hits.sum()}/{len(hits)} retninger")
 
 # --- yttervegg ≥ 2 mm: stråler inn fra sidene, toppen, gulvet og bakplata ---
 # tiltenkte hull som rektangler (flate, u0, u1, v0, v1)
-HOLES = [("bunn", x - 3.7, x + 3.7, y - 3.7, y + 3.7) for x in (18, 218) for y in (kY0 + 12, kY0 + kD - 12)] + \
-        [("bunn", 123, 203, kY0 + kD + 9, kY0 + kD + 51)] + \
-        [("bak", 34.5, 45.5, 20.5, 31.5), ("bak", 57, 67, 21, 31), ("bak", 76, 88, 23, 29),
-         ("bak", 125, 201, 11, 47), ("bak", 125, 201, 149, 185)] + \
+HOLES = [("bunn", x - 3.7, x + 3.7, y - 3.7, y + 3.7) for x in (kX0 - 4, kX0 + kW + 4) for y in (kY0 + 12, kY0 + kD - 12)] + \
+        [("bunn", 129, 209, 43, 97)] + \
+        [("bak", 134.5, 145.5, 16.5, 27.5), ("bak", 155, 165, 17, 27), ("bak", 174, 186, 19, 25),
+         ("bak", 195, 222, 9, 41), ("bak", 127, 213, 77, 119)] + \
         [("bak", x - 4.5, x + 4.5, z - 4.5, z + 4.5) for x, z in ((8.5, 5.5), (W - 8.5, 5.5), (8.5, H - 8.5), (W - 8.5, H - 8.5), (W/2, H - 6))]
 
 

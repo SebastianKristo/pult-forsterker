@@ -17,22 +17,22 @@ BED = 250
 PLATES = {
     "skjold-radio-k2.3mf": ("Skjold Radio – kropp, volumknott, knapper og gullist (PETG/ASA)", [
         # fil, navn, filament, rotasjon om z, min-hjørne (x, y), «samme som»
-        ("kropp", "Kropp (fronten ned)", 1, 0, (7, 0.5), None),
-        ("knapp", "Knappehetter 1–6 og av/på (toppen ned)", 2, 0, (7, 210), None),
-        ("volum", "Volumknott", 3, 0, (150, 207.5), None),
-        ("list", "Gullist (forsiden ned)", 3, 0, (7, 232), None),
+        ("kropp", "Kropp (fronten ned)", 1, 0, (5, 0.5), None),
+        ("knapp", "Knappehetter 1–6 og av/på (toppen ned)", 2, 0, (5, 146), None),
+        ("volum", "Volumknott", 3, 0, (145, 146), None),
+        ("list", "Gullist (forsiden ned)", 3, 90, (5, 168), None),
     ]),
     "skjold-radio-k2-kammer.3mf": ("Skjold Radio – lydkammer og lokk (PETG/ASA)", [
-        ("kammer", "Lydkammer (baffelen ned)", 2, 0, (21, 4), None),
-        ("lokk", "Lokk for kammeret", 2, 0, (29, 100), None),
+        ("kammer", "Lydkammer (baffelen ned)", 2, 0, (10, 5), None),
+        ("lokk", "Lokk for kammeret", 2, 0, (130, 5), None),
     ]),
     "skjold-radio-k2-grill.3mf": ("Skjold Radio – grill og skjermbrakett (PETG/ASA)", [
-        ("grill", "Grill (forsiden ned)", 2, 0, (17, 4), None),
-        ("brakett", "Skjermbrakett med Pi-tårn", 2, 0, (63, 104), None),
+        ("grill", "Grill (forsiden ned)", 2, 0, (5, 5), None),
+        ("brakett", "Skjermbrakett med Pi-tårn", 2, 0, (118, 5), None),
     ]),
     "skjold-radio-k2-bak.3mf": ("Skjold Radio – bakplate og navigasjonshjul (PETG/ASA)", [
-        ("bak", "Bakplate (baksiden ned)", 1, 0, (10, 1), None),
-        ("knott", "Navigasjonshjul", 3, 0, (102, 202), None),
+        ("bak", "Bakplate (baksiden ned)", 1, 0, (8, 3), None),
+        ("knott", "Navigasjonshjul", 3, 0, (10, 145), None),
     ]),
 }
 COLORS = {1: "#ECE9E3", 2: "#232325", 3: "#D99E40"}
