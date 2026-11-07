@@ -44,7 +44,7 @@ Begge har samme skjerm, samme bredde og samme formspråk. Begge har samme øvers
 
 **Smarthus-funksjonene på standardvarianten.** Lys, stikk og ± ligger på skjermen (Hjem-siden). Det er ingen egne taster for dem, og de er ikke lagt på langt trykk på andre taster. Langt trykk på Skjold-tasten velger fortsatt rom, og langt trykk på av/på er «alt av». Vil du ha en fysisk tast til lyset, kan du koble hvilken som helst tast til det i Home Assistant (se [Home Assistant](#home-assistant)). Hver tast sendes som en hendelse, også langt trykk.
 
-**Hvor mange TCA9555?** Tastekortet har 8 faste brytere (av/på, Skjold, meny, fire under D-paden og OK) og 35 i rutenettet under frontplaten. Med vibratoren, skjermstrømmen og ladestatusen blir det 46 pinner, så standardvarianten har tre TCA9555 (48 pinner, 2 ledige). Full variant har 16 talltaster og smarthus-taster i tillegg: 62 pinner på fire brikker. SuperMini-en har ingen ledige pinner (GPIO 1–13, 43 og 44 er brukt til skjerm, berøring, IR, vekking og batteri).
+**Hvor mange TCA9555?** Tastekortet har 8 faste brytere (av/på, Skjold, meny, fire under D-paden og OK) og 35 i rutenettet under tasteblokken. Med vibratoren, skjermstrømmen og ladestatusen blir det 46 pinner, så standardvarianten har tre TCA9555 (48 pinner, 2 ledige). Full variant har 16 talltaster og smarthus-taster i tillegg: 62 pinner på fire brikker. SuperMini-en har ingen ledige pinner (GPIO 1–13, 43 og 44 er brukt til skjerm, berøring, IR, vekking og batteri).
 
 **Plassering inni.** ESP-en ligger til venstre under rutenettet og spill/pause (standard n = 124–147 mm, full n = 166–189 mm), med USB-C mot nesen. Se [Slik er det inni](#slik-er-det-inni).
 
@@ -62,7 +62,7 @@ Fra toppen og ned:
 - **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (45,0 × 59,4 mm) går 0,9 mm utenfor det aktive området rundt, så litt av den sorte glasskanten synes. Toppen holder glasset med 1,4 mm leppe på sidene og 1,5 mm oppe; nede dekker den 5,6 mm, slik at den brede glasskanten ved flatkabelen (6,47 mm) ligger skjult.
 - **Øverste rad**, mellom skjermen og gullringen: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og **meny** (☰; kort trykk = meny, langt trykk = guide). Alle tre er Ø 11,5 mm og står 14,5 mm fra hverandre, så raden er like bred som ringen under.
 - **D-paden**: en stor gullring (Ø 39 mm, før 32) med fire tydelige retningspiler (sorte trekanter 6,0 × 4,3 mm felt inn i gullet) og en mørk OK (Ø 15 mm) i midten, der tommelen hviler. Ringen er så stor som bredden tillater, med over 4 mm til sideveggene.
-- **Tasteblokken** under ringen sitter i en utskiftbar frontplate (se [Utskiftbar frontplate](#utskiftbar-frontplate)). Standardoppsettet A er et rent rutenett i to kolonner: fire like store runde taster (Ø 16 mm) og volumpillen, med 3,25 mm mellomrom både på tvers og på langs. Venstre kolonne: tilbake ‹, avslutt ✕ og spill/pause. Høyre kolonne: volumpillen øverst, nøyaktig én tast bred og to taster pluss mellomrommet høy (16 × 35,25 mm), i flukt med tilbake og avslutt, og demp nederst ved siden av spill/pause. Blokken er 35,25 mm bred.
+- **Tasteblokken** under ringen finnes i tre oppsett (se [Tasteoppsett](#tasteoppsett-a-b-og-c)). Standardoppsettet A er et rent rutenett i to kolonner: fire like store runde taster (Ø 16 mm) og volumpillen, med 3,25 mm mellomrom både på tvers og på langs. Venstre kolonne: tilbake ‹, avslutt ✕ og spill/pause. Høyre kolonne: volumpillen øverst, nøyaktig én tast bred og to taster pluss mellomrommet høy (16 × 35,25 mm), i flukt med tilbake og avslutt, og demp nederst ved siden av spill/pause. Blokken er 35,25 mm bred.
 - **Symbolene** er strektegnet med jevn strek (0,65 mm) og ca. 38 % av tastens diameter: en tynn vinkel for tilbake, ✕, ▷‖, en høyttaler med skråstrek, tynne + og − på pillen (uten prikk), av/på-ring, meny-streker og Skjold-omrisset. Pilene på gullringen er tynne vinkler og OK er skrevet med vanlig (ikke fet) skrift. De er felt inn som lyse innlegg i de mørke tastene.
 - **Tastetoppene** har en myk R 1,0-kant i stedet for fas. De printes fortsatt med flensen ned og toppen opp, uten støtte. Toppen er flat, så innleggene blir jevnt 0,4 mm dype.
 - *Full variant:* **talltastene** 1–9 står i tre kolonner, med −, 0 og ↵ i fjerde rad. **Smarthus-raden** nederst har fire lyse taster: lys, stikkontakt, − og +.
@@ -76,36 +76,42 @@ Designet er Skjolds eget. Det følger samme formspråk som Radio, Røst og Hjul 
 
 Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavprofil SMD-bryter (4 × 4 × 1,5 mm) på et 1,0 mm tastekort. Hettene står 0,1 mm over bryteren, så de ikke slarker og ikke trykker på forhånd. Symbolene er felt 0,4 mm inn og printet i kontrastfarge (lyse på mørke taster, mørke på lyse). Med CFS blir symbolene en del av samme utskrift.
 
-## Utskiftbar frontplate
+## Tasteoppsett (A, B og C)
 
-![Frontplate A, B og C](render/31_front_rutenett.png)
+![Tasteoppsett A, B og C](render/31_oppsett_A.png)
 
-Tasteblokken under D-paden sitter i en egen **frontplate** som kan byttes, så du kan velge (eller lage) et annet oppsett uten nytt kort. Bilder: [A «Rutenett»](render/31_front_rutenett.png) · [B «Vannrett»](render/32_front_vannrett.png) · [C «Stor»](render/33_front_stor.png) · i Bone White: [A](render/34_front_rutenett_bone.png) · [B](render/35_front_vannrett_bone.png) · [C](render/36_front_stor_bone.png) · [frontplaten løftet av](render/37_front_av.png).
+Tasteblokken under D-paden finnes i tre oppsett. **Tastekortet og fastvaren er de samme**; du velger oppsett ved å printe toppen og hettene for det, og velge det samme i Home Assistant. Det er ingen egen frontplate eller søm: toppen er hel. Bilder: [A «Rutenett»](render/31_oppsett_A.png) · [B «Vannrett»](render/32_oppsett_B.png) · [C «Stor»](render/33_oppsett_C.png) · i Bone White: [A](render/34_oppsett_A_bone.png) · [B](render/35_oppsett_B_bone.png) · [C](render/36_oppsett_C_bone.png).
 
-**Rutenettet på tastekortet.** Under frontplaten har tastekortet 35 brytere i et fast rutenett: 7 kolonner × 5 rader.
-- Kolonnene står 17,25 / 9,625 / 4,8125 / 0 mm til hver side for midten, slik at alle hettene i de tre oppsettene står midt over (eller innen 1 mm fra) bryteren sin.
-- Radene står 9,625 mm fra hverandre (n = 140,3 … 178,8 mm fra nesen).
-- Bryterne heter `g00`–`g34`, rad for rad fra venstre.
-- Hver hette trykker på én bestemt bryter (volumpillene på to). Over de andre bryterne under hetta har den en grunn lomme (Ø 3,4 × 0,5 mm), så de ikke trykkes. Sjekken kontrollerer at målbryteren har 0,1 mm forvandring og at alle andre har minst 0,45 mm luft.
+**Rutenettet på tastekortet.** Under tasteblokken har tastekortet 35 brytere i et fast rutenett, 7 kolonner × 5 rader:
+- kolonnene står 17,25 / 9,625 / 4,8125 / 0 mm til hver side for midten, og radene 9,625 mm fra hverandre (n = 140,3 … 178,8 mm fra nesen);
+- bryterne heter `g00`–`g34`, rad for rad fra venstre;
+- alle hettene i de tre oppsettene står midt over (eller innen 1 mm fra) bryteren sin.
 
-**Frontplaten.** Den er en 1,6 mm plate i samme materiale og farge som toppen, og ligger i flukt med toppen.
-- Sømmen er 0,3 mm og følger en rolig bue rundt gullringen.
-- Platen hviler på tastekortet med fire pinner, og holdes av **to M2 × 10-skruer nedenfra**. Skruene går gjennom bunnen og kortet og inn i to tårn på frontplaten (x 6 og 49, ved siden av batteriet).
-- Skruer er valgt fremfor klips eller magneter fordi de holder platen stramt mot kortet, så tastene føles like faste, og fordi alt printes uten støtte.
-- Hettene fanges av frontplaten, akkurat som i toppen.
-- **Bytte oppsett:** skru ut de to skruene, løft av frontplaten med hettene, legg på den nye og skru fast. Velg så samme oppsett i Home Assistant (under).
+**Én aktuator per funksjon.** Hver hette har én aktuator (Ø 2,6 × 0,6 mm) rett over plungeren til sin bryter, og volumpillene har to (+ og −).
+- Resten av undersiden og flensen står 0,7 mm over alle andre brytere. En stor hette dekker gjerne flere ubrukte brytere, men bare aktuatoren når en plunger. Det er derfor helt i orden mekanisk.
+- Det er ingen støtteknotter. Hetta styres av hullet (1,6 mm vegg, 0,35 mm klaring) og flensen.
+- Flensen ligger i en 0,6 mm forsenkning under toppen. Toppen er 1,0 mm der og 1,6 mm ellers.
+- Sjekken kontrollerer for hvert oppsett og hver hette:
+  - at bare den tildelte bryteren er innen rekkevidde (0,1 mm over plungeren; vandring 0,25 mm + 0,1 mm margin);
+  - at alle andre brytere under hetta har minst 0,5 mm luft (målt: 0,70 mm);
+  - at ingenting forspenner noe i hvile.
+- Hettene til oppsettene printes **med forsiden ned**. Flensens overside er 45° skrå, så det går uten støtte, og symbolene blir de første lagene.
 
 **Oppsettene.**
 - **A «Rutenett»** (standard): to kolonner med like store runde taster (Ø 16, 3,25 mm mellomrom). Til venstre tilbake, avslutt og spill/pause; til høyre volumpillen (16 × 35,25 mm) og demp.
 - **B «Vannrett»**: en vannrett volumpille over hele bredden (35,75 × 14 mm, − til venstre og + til høyre) og under den en rad med fire runde taster (Ø 8,6): tilbake, spill/pause, demp og avslutt.
 - **C «Stor»**: en stor spill/pause (Ø 22) i midten, fire små taster (Ø 9) i hjørnene (tilbake, avslutt, volum − og +) og demp (Ø 10,8) under.
 
-Hver frontplate har sin egen 3MF (`skjold-fjernkontroll-front-rutenett.3mf`, `-vannrett`, `-stor`) med platen og hettene. Platene passer også i full variant.
+**Print.** For hvert oppsett finnes to plater:
+- `skjold-fjernkontroll-k2-topp-A.3mf` (eller `-B`, `-C`): hele toppen med SKJOLD.
+- `skjold-fjernkontroll-k2-taster-A.3mf`: oppsettets hetter med symbolene.
 
-**Fastvaren.** Rutenettbryterne har ingen fast funksjon. Fastvaren slår opp funksjonen i et kart for frontplaten som er valgt:
+De faste tastene (av/på, Skjold, meny, D-pad og OK) ligger på `skjold-fjernkontroll-k2-taster.3mf`, og bunnen på `skjold-fjernkontroll-k2.3mf`. `skjold-fjernkontroll-k2.3mf` har også topp A. For full variant heter platene `-full-k2-…`. **Bytte oppsett** = print ny topp og nye hetter, flytt de faste hettene over og velg oppsettet i Home Assistant.
+
+**Fastvaren.** Rutenettbryterne har ingen fast funksjon. Fastvaren slår opp funksjonen i et kart for oppsettet som er valgt:
 - `substitutions: oppsett: rutenett` (eller `vannrett`, `stor`) velger oppsettet første gang.
-- Select-entiteten **«Frontplate»** i Home Assistant bytter oppsett mens den kjører, uten ny flashing. Valget lagres.
-- Brytere som ikke brukes i oppsettet, blir ignorert. Volum gjentas når du holder inne, de andre har langt trykk.
+- Select-entiteten **«Tasteoppsett»** i Home Assistant bytter oppsett uten ny flashing. Valget lagres.
+- Brytere som ikke brukes, blir ignorert. Volum gjentas når du holder inne, de andre har langt trykk.
 
 Kartet (lages av `taster.py`):
 
@@ -118,10 +124,13 @@ Kartet (lages av `taster.py`):
 | `vol_opp` | `g05` (rad 0, kolonne 5) | `g13` (rad 1, kolonne 6) | `g34` (rad 4, kolonne 6) |
 | `vol_ned` | `g19` (rad 2, kolonne 5) | `g07` (rad 1, kolonne 0) | `g28` (rad 4, kolonne 0) |
 
-**Lage ditt eget oppsett.** Legg til en linje i `OPPSETT` i `taster.py`, med hettene og hvilken rutenettbryter (`g(kolonne, rad)`) hver funksjon bruker. Kjør `python3 taster.py` og `./lag_stl.sh`. Da lages frontplaten, hettene (med lommer over de andre bryterne), kartet i ESPHome-fila og en ny 3MF. Sjekken (`sjekk_modell.py`) kontrollerer:
-- at hettene ikke kolliderer;
-- at hver hette treffer bryteren sin;
-- at det er minst 1,2 mm materiale til sømmen.
+**Lage ditt eget oppsett.** Legg til en linje i `OPPSETT` i `taster.py`, med hettene og hvilken rutenettbryter (`g(kolonne, rad)`) hver funksjon bruker. Kjør så `python3 taster.py` og `./lag_stl.sh`. Da lages:
+- toppen med hullene og forsenkningene;
+- hettene med aktuatorer;
+- kartet i ESPHome-fila;
+- 3MF-platene.
+
+Sjekken kontrollerer kollisjoner og at hver aktuator treffer sin bryter og ingen andre.
 
 ## Elektronikk – hva og hvorfor
 
@@ -305,7 +314,7 @@ Hver bryter kobles mellom pinnen sin og GND. TCA9555 har innebygde pull-ups, så
 | inngang: TP4056 CHRG (lav = lader) | `lader` | C | 0x22 | P1_6 |
 | ledig | `ledig` | C | 0x22 | P1_7 |
 
-Brikke C har P1_3 og P1_7 ledige. Rutenettbryterne `g00`–`g34` har ingen fast funksjon; se kartet under [Utskiftbar frontplate](#utskiftbar-frontplate).
+Brikke C har P1_3 og P1_7 ledige. Rutenettbryterne `g00`–`g34` har ingen fast funksjon; se kartet under [Tasteoppsett](#tasteoppsett-a-b-og-c).
 
 ### Loddepunkter på tastekortet
 
@@ -352,7 +361,7 @@ Kanalene i bunnen er 1,5 mm brede: venstre kanal (x ≈ 3–4,5 mm) fra nesen ti
 
 ## Print (Creality K2)
 
-To ferdige plater for standardvarianten (`skjold-fjernkontroll-k2*.3mf`) og to for full variant (`skjold-fjernkontroll-full-k2*.3mf`, med smarthus-tastene). Begge variantene får plass rett på plata. I tillegg er det én plate per frontplate (`skjold-fjernkontroll-front-rutenett.3mf`, `-vannrett`, `-stor`, og `-full-front-*` for full variant) med frontplaten (filament 1) og hettene (filament 2) med symbolene (filament 1). Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlicer), så med CFS printes hver plate i én omgang. Ingen deler trenger støtte.
+To ferdige plater for standardvarianten (`skjold-fjernkontroll-k2*.3mf`) og to for full variant (`skjold-fjernkontroll-full-k2*.3mf`, med smarthus-tastene). Begge variantene får plass rett på plata. I tillegg er det to plater per tasteoppsett (`-k2-topp-A/B/C.3mf` og `-k2-taster-A/B/C.3mf`), se [Tasteoppsett](#tasteoppsett-a-b-og-c).
 
 | Plate | Innhold | Filament |
 |---|---|---|
@@ -391,7 +400,7 @@ Bruk `lag_stl.sh` for å eksportere alt på nytt (STL, sjekk og 3MF) etter endri
 6. **Skjermen:** legg en 1 mm skumtape på batteriet og legg skjermen med glasset ned i lomma i toppen (flatkabelen mot tastene). Lomma går nesten helt ut til sideveggene; leppa på bunnen er derfor kuttet langs skjermen.
 7. **Hettene:** legg toppen med forsiden ned og sett alle hettene i hullene sine fra innsiden. OK settes inn i gullringen nedenfra før ringen legges i. Flensen holder dem på plass.
 8. **Lukk:** legg tastekortet over hettene (bryterne ned mot hettene). Legg bunnen med all innmaten over, og skru sammen med 5 × M2 × 10 fra undersiden: fire i hjørnene og én i midten, som også klemmer tastekortet.
-9. **Frontplaten:** legg frontplatehettene i frontplaten (forsiden ned), legg frontplaten i hullet i toppen og skru den fast med 2 × M2 × 10 fra undersiden (de to hullene ved siden av batteriet, midt på). Se [Utskiftbar frontplate](#utskiftbar-frontplate).
+9. **Tasteoppsett:** hettene til oppsettet legges i toppen sammen med de faste hettene før du lukker (punkt 7). Velg samme oppsett i Home Assistant.
 
 ## Fastvare
 

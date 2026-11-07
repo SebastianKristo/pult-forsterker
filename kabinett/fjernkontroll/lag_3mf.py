@@ -105,11 +105,16 @@ def write(fn, title, parts, colors):
 STL = "stl"
 
 
-FRONT = {o: (f"Skjold Fjernkontroll – frontplate {navn}", [
-    (f"front_{o}/frontplate", "Frontplate (forsiden ned)", 1, (20, 20), None),
-    (f"front_{o}/front_knapper", "Taster til frontplaten (flensen ned)", 2, (90, 30), None),
-    (f"front_{o}/front_symboler", "Symboler på frontplatetastene", 1, None, f"front_{o}/front_knapper"),
-], {1: "#ECE9E3", 2: "#2E2D2C"}) for o, navn in taster.OPPSETT_NAVN.items()}
+# hvert tasteoppsett: hele toppen (med SKJOLD) og oppsettets hetter. A er også med i de vanlige platene.
+BOKSTAV = {"rutenett": "A", "vannrett": "B", "stor": "C"}
+OPPSETT_PLATER = {o: [
+    (f"Skjold Fjernkontroll – topp {navn}", [
+        (f"oppsett_{o}/topp", "Topp (forsiden ned)", 1, (20, 3.5), None),
+        ("logo", "SKJOLD (gull, felt inn i toppen)", 3, None, f"oppsett_{o}/topp")], {1: "#ECE9E3", 3: "#D99E40"}),
+    (f"Skjold Fjernkontroll – taster {navn}", [
+        (f"oppsett_{o}/front_knapper", "Taster til oppsettet (flensen ned)", 2, (40, 30), None),
+        (f"oppsett_{o}/front_symboler", "Symboler", 1, None, f"oppsett_{o}/front_knapper")], {1: "#ECE9E3", 2: "#2E2D2C"})]
+    for o, navn in taster.OPPSETT_NAVN.items()}
 
 
 def plater(variant):
@@ -128,9 +133,12 @@ def plater(variant):
             ut[fn.replace("-k2.3mf", "-k2-bunn.3mf")] = (title.replace("topp og bunn", "bunn"), [p for p in diag if p[0] == "bunn"], colors)
         else:
             ut[fn] = (title, parts, colors)
-    for o, (title, parts, colors) in FRONT.items():
-        fn = f"skjold-fjernkontroll-front-{o}.3mf" if variant == "kort" else f"skjold-fjernkontroll-full-front-{o}.3mf"
-        ut[fn] = (title if variant == "kort" else title.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full"), parts, colors)
+    for o, ((t1, p1, c1), (t2, p2, c2)) in OPPSETT_PLATER.items():
+        b = BOKSTAV[o]
+        pre = "skjold-fjernkontroll-k2" if variant == "kort" else "skjold-fjernkontroll-full-k2"
+        tt = (lambda t: t) if variant == "kort" else (lambda t: t.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full"))
+        ut[f"{pre}-topp-{b}.3mf"] = (tt(t1), p1, c1)
+        ut[f"{pre}-taster-{b}.3mf"] = (tt(t2), p2, c2)
     return ut
 
 

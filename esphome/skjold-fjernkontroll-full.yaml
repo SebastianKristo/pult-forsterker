@@ -13,8 +13,8 @@
 #   · IR: sender og lærer NEC, Samsung, Sony, RC5 og LG. Lærte koder lagres i flash (48 plasser: én per tast + 4 makroer).
 #   · Hver tast sendes til Home Assistant som en hendelse (event-entiteten «Tast» og esphome.skjold_fjernkontroll),
 #     så du kan bruke hvilken som helst tast i en automasjon.
-#   · Frontplaten (tasteblokken under D-paden) kan byttes: tastekortet har et rutenett med 7 × 5 brytere, og
-#     select-entiteten «Frontplate» velger hvilken bryter som er hvilken tast (oppsettene lages av taster.py).
+#   · Tasteblokken under D-paden har flere oppsett (ny topp og nye hetter printes): tastekortet har et rutenett med
+#     7 × 5 brytere, og select-entiteten «Tasteoppsett» velger hvilken bryter som er hvilken tast (fra taster.py).
 #   · Meny-tasten: kort trykk = meny (Kilder, eller lært IR-kode i TV/film), langt trykk = guide (Spiller-siden).
 #   · Dyp søvn etter ${sovn_etter} uten bruk. Vekkes av en tast (TCA9555 INT → GPIO2) eller av at du løfter den
 #     (vibrasjonsbryter → GPIO4).
@@ -27,7 +27,7 @@ substitutions:
   skjold_host: skjold.local          # Skjold-enheten fjernkontrollen styrer først (velg andre rom på skjermen)
   skjold_port: "8765"
   ekstra_hub: tca_d                  # brikken med vibrator, skjermstrøm og ladestatus (full variant: tca_d)
-  oppsett: rutenett                  # frontplaten som sitter på: rutenett (A), vannrett (B) eller stor (C); kan byttes i HA
+  oppsett: rutenett                  # tasteoppsettet toppen er printet med: rutenett (A), vannrett (B) eller stor (C); kan byttes i HA
   sovn_etter: 40s                    # dyp søvn etter så lang tid uten tast eller berøring
   tv_kilde: aux                      # Skjold-inngangen TV-en er koblet til (aux, aux2, usb, bt …)
   # Home Assistant (krever «Tillat enheten å utføre handlinger i Home Assistant» i ESPHome-integrasjonen)
@@ -244,7 +244,7 @@ globals:
   - id: taster_navn
     type: std::vector<std::string>
     initial_value: '{"av", "hjem", "meny", "opp", "ned", "venstre", "hoyre", "ok", "tilbake", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned", "tall_1", "tall_2", "tall_3", "tall_4", "tall_5", "tall_6", "tall_7", "tall_8", "tall_9", "strek", "tall_0", "enter", "lys", "stikk", "minus", "pluss"}'
-  # rutenettbryter → funksjon for hver frontplate (rutenett, vannrett, stor)
+  # rutenettbryter → funksjon for hvert tasteoppsett (rutenett, vannrett, stor)
   - id: oppsett_kart
     type: std::vector<std::vector<std::string>>
     initial_value: '{{"", "tilbake", "", "", "", "vol_opp", "", "", "", "", "", "", "", "", "", "avslutt", "", "", "", "vol_ned", "", "", "", "", "", "", "", "", "", "spill_pause", "", "", "", "demp", ""}, {"", "", "", "", "", "", "", "vol_ned", "", "", "", "", "", "vol_opp", "", "", "", "", "", "", "", "tilbake", "", "spill_pause", "", "demp", "", "avslutt", "", "", "", "", "", "", ""}, {"tilbake", "", "", "", "", "", "avslutt", "", "", "", "", "", "", "", "", "", "", "spill_pause", "", "", "", "", "", "", "", "", "", "", "vol_ned", "", "", "demp", "", "", "vol_opp"}}'
@@ -2146,12 +2146,12 @@ lvgl:
         - button: { x: 8, y: 236, width: 108, height: 30, widgets: [ { label: { align: CENTER, text: "Ferdig" } } ], on_click: [ { lambda: "id(laer_steg) = 0;" }, { lvgl.page.show: side_hjem } ] }
         - button: { x: 124, y: 236, width: 108, height: 30, bg_color: 0xE8B450, widgets: [ { label: { align: CENTER, text: "Lagre", text_color: 0x101012 } } ], on_click: [ script.execute: laer_lagre ] }
 
-# ---------- frontplate ----------
+# ---------- tasteoppsett ----------
 select:
 # >>> oppsettvalg (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   - platform: template
     id: oppsett_valg
-    name: Frontplate
+    name: Tasteoppsett
     icon: mdi:view-grid-outline
     optimistic: true
     restore_value: true
