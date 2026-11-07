@@ -91,6 +91,9 @@ def restore(d: str, run=subprocess.run) -> dict:
             run(["git", "-c", "safe.directory=*", "-C", meta["src"], "checkout", "-q", "-B", br, meta["rev"]], check=False)
     run(["systemctl", "daemon-reload"], check=False)
     for s in SERVICES + OPTIONAL_SERVICES:
+        # skjold-ui finnes bare på S1 rev F – ikke prøv å starte tjenester som ikke er installert
+        if s in OPTIONAL_SERVICES and not os.path.exists(f"/etc/systemd/system/{s}.service"):
+            continue
         run(["systemctl", "try-restart", s], check=False)
     return meta
 

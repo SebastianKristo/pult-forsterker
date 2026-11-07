@@ -12,4 +12,4 @@ echo "== oled-display-logg (siste 5)"; journalctl -u oled-display -n 5 --no-page
 echo "== Metadata-pipe"; ls -l /run/shairport-sync/ 2>&1; cat /run/pultamp_status.json 2>&1; echo
 echo "== API-status"; curl -s localhost:8765/api/status; echo
 echo "== Mixer på 3,5 mm"; amixer -c Headphones scontents 2>/dev/null | grep -E "Simple|Playback.*\[" | head -4
-echo "== Bluetooth"; bluetoothctl show | grep -E "Name|Powered|Discoverable|Pairable"; bluetoothctl devices Paired 2>/dev/null
+echo "== Bluetooth"; command -v bluetoothctl >/dev/null || echo "  (ingen Bluetooth på denne maskinen)"; command -v bluetoothctl >/dev/null && bluetoothctl show | grep -E "Name|Powered|Discoverable|Pairable"; bluetoothctl devices Paired 2>/dev/null
