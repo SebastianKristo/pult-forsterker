@@ -5,6 +5,7 @@
                                       og Skjold-tast, smarthus-tastene i lys farge, og IR-vinduet  1 lys · 2 mørk · 3 gull · 4 klar
   skjold-fjernkontroll-k2-farger.3mf  de fire fargetastene                                     1 rød · 2 grønn · 3 gul · 4 blå
 
+Kort variant (uten talltastene og smarthus-raden): samme tre plater med «-kort» i navnet, fra stl_kort/.
 Kjør etter at STL-ene er eksportert:  python3 lag_3mf.py   (eller ./lag_stl.sh, som gjør alt)
 Hver del får filamentnummer i Metadata/model_settings.config (Creality Print / OrcaSlicer).
 Mørk variant: bytt filament 1 og 2 i sliceren (mørk topp, lys bunn og lyse taster med mørke symboler).
@@ -51,7 +52,7 @@ def mesh_xml(m):
 def place(parts):
     out, moved = [], {}
     for f, name, fil, pos, same in parts:
-        m = trimesh.load(f"stl/{f}.stl")
+        m = trimesh.load(f"{STL}/{f}.stl")
         if same:
             d = moved[same]
         else:
@@ -100,9 +101,20 @@ def write(fn, title, parts, colors):
     print("skrev", fn)
 
 
+STL = "stl"
+
+
 def main():
-    for fn, (title, parts, colors) in PLATES.items():
-        write(fn, title, parts, colors)
+    """Full variant fra stl/, kort variant fra stl_kort/ (uten smarthus-tastene; filene heter skjold-fjernkontroll-kort-…)."""
+    global STL
+    for variant in ("full", "kort"):
+        STL = "stl" if variant == "full" else "stl_kort"
+        for fn, (title, parts, colors) in PLATES.items():
+            if variant == "kort":
+                fn = fn.replace("skjold-fjernkontroll-", "skjold-fjernkontroll-kort-")
+                title = title.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Kort")
+                parts = [p for p in parts if p[0] != "knapper_lys"]
+            write(fn, title, parts, colors)
 
 
 if __name__ == "__main__":

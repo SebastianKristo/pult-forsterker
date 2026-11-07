@@ -1,0 +1,1204 @@
+# KORT VARIANT – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her:
+# endre skjold-fjernkontroll.yaml og kjør python3 taster.py. Uten talltastene og smarthus-raden (28 taster,
+# 2 × TCA9555). Lys, stikk og ± ligger på Hjem-siden og på langt trykk på fargetastene.
+# Skjold Fjernkontroll – universell fjernkontroll med 2,8″ berøringsskjerm (240 × 320), 44 taster, IR og Wi-Fi.
+# Maskinvare (se kabinett/fjernkontroll/LES_MEG.md): ESP32-S3 SuperMini, 2,8″ IPS ST7789 + FT6336U berøring (naken FPC-modul),
+# 3 × TCA9555 på tastekortet (44 taster + vibrator, skjermstrøm og ladestatus), 3 × IR-diode 940 nm, VS1838B,
+# vibrasjonsbryter (vekker når du løfter den), LiPo 603450 og TP4056 med USB-C.
+#
+#   · Skjermen: Aktiviteter · Spiller (nå spilles, cover, volum) · Kilder og radiofavoritter · Hjem (lys og scener) ·
+#     Rom (velg hvilken Skjold du styrer) · Lær IR
+#   · Skjold styres over det vanlige API-et på port 8765 (/api/status, /api/volume, /api/mute, /api/transport,
+#     /api/preset, /api/presets, /api/input, /api/power, /api/rom, /api/cover) – samme som Skjold-appen bruker.
+#   · IR: sender og lærer NEC, Samsung, Sony, RC5 og LG. Lærte koder lagres i flash (48 plasser: én per tast + 4 makroer).
+#   · Hver tast sendes til Home Assistant som en hendelse (event-entiteten «Tast» og esphome.skjold_fjernkontroll),
+#     så du kan bruke hvilken som helst tast i en automasjon.
+#   · Dyp søvn etter ${sovn_etter} uten bruk. Vekkes av en tast (TCA9555 INT → GPIO2) eller av at du løfter den
+#     (vibrasjonsbryter → GPIO4).
+#
+# Pinnene er Skjolds eget oppsett for SuperMini (se koblingstabellen i LES_MEG.md). IKKE TESTET PÅ MASKINVARE.
+# Blokkene mellom «# >>> …» og «# <<< …» lages av kabinett/fjernkontroll/taster.py.
+substitutions:
+  name: skjold-fjernkontroll-kort
+  friendly_name: Skjold Fjernkontroll Kort
+  skjold_host: skjold.local          # Skjold-enheten fjernkontrollen styrer først (velg andre rom på skjermen)
+  skjold_port: "8765"
+  ekstra_hub: tca_b                  # brikken med vibrator, skjermstrøm og ladestatus (kort variant: tca_b)
+  sovn_etter: 40s                    # dyp søvn etter så lang tid uten tast eller berøring
+  tv_kilde: aux                      # Skjold-inngangen TV-en er koblet til (aux, aux2, usb, bt …)
+  # Home Assistant (krever «Tillat enheten å utføre handlinger i Home Assistant» i ESPHome-integrasjonen)
+  ha_lys: light.stue                 # Lys-tasten og ± (dimming)
+  ha_stikk: switch.stikkontakt       # Stikk-tasten
+  ha_rom_1: light.stue
+  ha_rom_2: light.kjokken
+  ha_rom_3: light.gang
+  ha_rom_4: light.soverom
+  scene_tv: scene.tv
+  scene_film: scene.kino
+  scene_morgen: scene.god_morgen
+  scene_natt: scene.god_natt
+  scene_middag: scene.middag
+  scene_lesing: scene.lesing
+  scene_alt_av: scene.alt_av
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    - priority: 600
+      then:
+        - output.turn_on: strom_skjerm         # 3V3 til skjerm og IR-mottaker (AO3401 via TCA9555)
+        - light.turn_on: { id: baklys, brightness: 80% }
+        - script.execute: sovn_teller
+    - priority: -100
+      then:
+        - wait_until: { condition: wifi.connected, timeout: 8s }
+        - script.execute: hent_rom
+        - script.execute: hent_favoritter
+        - script.execute: hent_status
+
+esp32:
+  board: esp32-s3-devkitc-1          # ESP32-S3 SuperMini (ESP32-S3FH4R2: 4 MB flash, 2 MB PSRAM)
+  variant: esp32s3
+  flash_size: 4MB
+  framework: { type: esp-idf }
+
+psram:
+  mode: quad
+  speed: 80MHz
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret skjold_fjernkontroll_api_key
+  actions:
+    - action: send_ir
+      variables: { plass: int }
+      then: [ { script.execute: { id: ir_send, plass: !lambda "return plass;" } } ]
+    - action: send_nec
+      variables: { adresse: int, kommando: int }
+      then:
+        - remote_transmitter.transmit_nec:
+            address: !lambda "return adresse;"
+            command: !lambda "return kommando;"
+    - action: slett_ir
+      variables: { plass: int }
+      then:
+        - lambda: |-
+            if (plass < 0 || plass >= 48) return;
+            id(ir_prot)[plass] = 0; id(ir_data)[plass] = 0; id(ir_bits)[plass] = 0;
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true                 # raskere tilkobling etter dyp søvn (sett gjerne fast IP under)
+  power_save_mode: light
+  # manual_ip: { static_ip: 192.168.1.60, gateway: 192.168.1.1, subnet: 255.255.255.0, dns1: 192.168.1.1 }
+  ap: { ssid: "Skjold Fjernkontroll Kort" }
+
+captive_portal:
+
+http_request:
+  verify_ssl: false
+  timeout: 3s
+
+# ---------- busser og I/O ----------
+i2c:
+  - id: bus_a                        # tastekortet (3 × TCA9555)
+    sda: GPIO5
+    scl: GPIO6
+    frequency: 400kHz
+    scan: false
+  - id: bus_b                        # berøring (FT6336U, 0x38) – egen buss, så skjermen kan slås helt av i søvn
+    sda: GPIO8
+    scl: GPIO3                       # strappe-pinne, men bare for JTAG-valg (eFuse) – trygg med pull-up
+    frequency: 400kHz
+    scan: false
+
+tca9555:
+  - { id: tca_a, i2c_id: bus_a, address: 0x20 }
+  - { id: tca_b, i2c_id: bus_a, address: 0x21 }
+
+spi:
+  clk_pin: GPIO9
+  mosi_pin: GPIO10
+
+output:
+  - platform: ledc
+    id: baklys_pwm
+    pin: GPIO13
+  - platform: gpio
+    id: strom_skjerm
+    pin: { tca9555: $ekstra_hub, number: 13, mode: { output: true }, inverted: true }   # lav = på
+  - platform: gpio
+    id: vibrator
+    pin: { tca9555: $ekstra_hub, number: 12, mode: { output: true } }
+
+light:
+  - platform: monochromatic
+    id: baklys
+    name: Skjermlys
+    output: baklys_pwm
+    restore_mode: ALWAYS_ON
+    default_transition_length: 250ms
+
+display:
+  - platform: ili9xxx
+    id: skjerm
+    model: ST7789V
+    dc_pin: GPIO11
+    reset_pin: GPIO12                # deles med berøringens RST
+    invert_colors: true              # IPS-paneler; sett false hvis fargene er negative
+    color_order: rgb                 # bytt til bgr hvis rødt og blått er byttet om
+    dimensions: { width: 240, height: 320 }
+    data_rate: 40MHz
+    auto_clear_enabled: false
+    update_interval: never
+
+touchscreen:
+  - platform: ft63x6                # FT6336U på 2,8″-modulen (en CST816-modul: platform cst816)
+    address: 0x38
+    id: beroring
+    i2c_id: bus_b
+    interrupt_pin: GPIO7
+    display: skjerm
+    on_touch:
+      - script.execute: sovn_teller
+
+# ---------- IR ----------
+remote_transmitter:
+  id: ir_tx
+  pin: GPIO43                        # → 1 kΩ → AO3400 → 3 × IR-diode 940 nm (hver med 10 Ω fra batteriet)
+  carrier_duty_percent: 33%
+  non_blocking: true
+
+remote_receiver:
+  id: ir_rx
+  pin: { number: GPIO44, inverted: true }   # VS1838B (aktiv lav)
+  dump: []
+  tolerance: 25%
+  on_nec:
+    - lambda: "id(ir_mottatt)->execute(1, ((uint32_t) x.address << 16) | x.command, 0);"
+  on_samsung:
+    - lambda: "id(ir_mottatt)->execute(2, (uint32_t) x.data, x.nbits);"
+  on_sony:
+    - lambda: "id(ir_mottatt)->execute(3, x.data, x.nbits);"
+  on_rc5:
+    - lambda: "id(ir_mottatt)->execute(4, ((uint32_t) x.address << 8) | x.command, 0);"
+  on_lg:
+    - lambda: "id(ir_mottatt)->execute(5, x.data, x.nbits);"
+
+# ---------- søvn ----------
+deep_sleep:
+  id: dyp_sovn
+  wakeup_pin: { number: GPIO2, inverted: true, mode: { input: true } }   # TCA9555 INT (felles, 10 kΩ til 3V3)
+  wakeup_pin_mode: KEEP_AWAKE
+  esp32_ext1_wakeup:
+    pins: [ { number: GPIO4, allow_other_uses: true } ]   # vibrasjonsbryter SW-18010P mellom 3V3 og GPIO4 (1 MΩ ned)
+    mode: ANY_HIGH
+
+switch:
+  - platform: template
+    id: hold_vaaken
+    name: Hold våken (for oppdatering)
+    icon: mdi:sleep-off
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    entity_category: config
+
+# ---------- tilstand ----------
+globals:
+  - { id: skjold_base, type: std::string, initial_value: '"http://${skjold_host}:${skjold_port}"' }
+  - { id: rom_valgt, type: int, restore_value: true, initial_value: "-1" }   # -1 = ${skjold_host}
+  - { id: rom_navn, type: std::vector<std::string>, initial_value: "{}" }
+  - { id: rom_base, type: std::vector<std::string>, initial_value: "{}" }
+  - { id: modus, type: int, restore_value: true, initial_value: "0" }        # 0 = Skjold/musikk, 1 = TV, 2 = film
+  - { id: aktivitet, type: std::string, initial_value: '""' }
+  - { id: volum, type: int, initial_value: "0" }
+  - { id: spiller, type: bool, initial_value: "false" }
+  - { id: demp, type: bool, initial_value: "false" }
+  - { id: tittel, type: std::string, initial_value: '"Skjold"' }
+  - { id: cover_nokkel, type: std::string, initial_value: '""' }
+  # lærte IR-koder: plass 0–43 = tastene (rekkefølgen i taster_navn), 44–47 = makro 1–4 (TV på, TV av, HDMI, ekstra)
+  # protokoll: 0 = tom, 1 = NEC (adresse << 16 | kommando), 2 = Samsung, 3 = Sony, 4 = RC5 (adresse << 8 | kommando), 5 = LG
+  - { id: ir_prot, type: "std::array<uint8_t, 48>", restore_value: true, initial_value: "{}" }
+  - { id: ir_data, type: "std::array<uint32_t, 48>", restore_value: true, initial_value: "{}" }
+  - { id: ir_bits, type: "std::array<uint8_t, 48>", restore_value: true, initial_value: "{}" }
+  - { id: laer_steg, type: int, initial_value: "0" }      # 0 = av, 1 = venter på tast, 2 = venter på IR, 3 = mottatt
+  - { id: laer_plass, type: int, initial_value: "-1" }
+  - { id: laer_prot, type: int, initial_value: "0" }
+  - { id: laer_data, type: uint32_t, initial_value: "0" }
+  - { id: laer_bits, type: int, initial_value: "0" }
+# >>> navneliste (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
+  - id: taster_navn
+    type: std::vector<std::string>
+    initial_value: '{"av", "hjem", "meny", "tilbake", "info", "guide", "avslutt", "opp", "ned", "venstre", "hoyre", "ok", "vol_opp", "vol_ned", "kan_opp", "kan_ned", "demp", "siste", "spol_tilbake", "spill_pause", "spol_frem", "opptak", "stopp", "dvr", "rod", "gronn", "gul", "bla"}'
+# <<< navneliste
+
+# ---------- sensorer ----------
+sensor:
+  - platform: adc
+    id: batteri_v
+    name: Batterispenning
+    pin: GPIO1                       # VBAT via 2 × 220 kΩ
+    attenuation: 12db
+    update_interval: 30s
+    filters: [ { multiply: 2.0 }, { sliding_window_moving_average: { window_size: 4, send_every: 1 } } ]
+    entity_category: diagnostic
+  - platform: template
+    id: batteri
+    name: Batteri
+    unit_of_measurement: "%"
+    device_class: battery
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: |-
+      float v = id(batteri_v).state;
+      if (isnan(v)) return {};
+      return clamp((v - 3.30f) / (4.15f - 3.30f) * 100.0f, 0.0f, 100.0f);
+    on_value:
+      - lambda: |-
+          lv_label_set_text_fmt(id(lbl_bat), "%s %d %%", id(lader).state ? LV_SYMBOL_CHARGE : LV_SYMBOL_BATTERY_FULL, (int) x);
+  - platform: wifi_signal
+    name: Wi-Fi-signal
+    update_interval: 60s
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: gpio
+    id: lader
+    name: Lader
+    pin: { tca9555: $ekstra_hub, number: 14, mode: { input: true }, inverted: true }   # TP4056 CHRG (lav = lader)
+    device_class: battery_charging
+  - platform: gpio
+    id: loftet
+    internal: true
+    pin: { number: GPIO4, mode: { input: true }, allow_other_uses: true }
+    on_press:
+      - script.execute: sovn_teller
+# >>> taster (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
+  - platform: gpio
+    id: t_av
+    name: "Tast Av-på"
+    internal: true
+    pin: { tca9555: tca_a, number: 0, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "av", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "av", lang: false } } ]
+  - platform: gpio
+    id: t_hjem
+    name: "Tast Skjold (aktiviteter)"
+    internal: true
+    pin: { tca9555: tca_a, number: 1, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "hjem", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "hjem", lang: false } } ]
+  - platform: gpio
+    id: t_meny
+    name: "Tast Meny"
+    internal: true
+    pin: { tca9555: tca_a, number: 2, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "meny", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "meny", lang: false } } ]
+  - platform: gpio
+    id: t_tilbake
+    name: "Tast Tilbake"
+    internal: true
+    pin: { tca9555: tca_a, number: 3, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "tilbake", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "tilbake", lang: false } } ]
+  - platform: gpio
+    id: t_info
+    name: "Tast Info"
+    internal: true
+    pin: { tca9555: tca_a, number: 4, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "info", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "info", lang: false } } ]
+  - platform: gpio
+    id: t_guide
+    name: "Tast Guide"
+    internal: true
+    pin: { tca9555: tca_a, number: 5, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "guide", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "guide", lang: false } } ]
+  - platform: gpio
+    id: t_avslutt
+    name: "Tast Avslutt"
+    internal: true
+    pin: { tca9555: tca_a, number: 6, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "avslutt", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "avslutt", lang: false } } ]
+  - platform: gpio
+    id: t_opp
+    name: "Tast Opp"
+    internal: true
+    pin: { tca9555: tca_a, number: 7, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - script.execute: { id: tast, navn: "opp", lang: false }
+      - delay: 450ms
+      - while:
+          condition: { binary_sensor.is_on: t_opp }
+          then:
+            - script.execute: { id: tast, navn: "opp", lang: false }
+            - delay: 160ms
+  - platform: gpio
+    id: t_ned
+    name: "Tast Ned"
+    internal: true
+    pin: { tca9555: tca_a, number: 8, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - script.execute: { id: tast, navn: "ned", lang: false }
+      - delay: 450ms
+      - while:
+          condition: { binary_sensor.is_on: t_ned }
+          then:
+            - script.execute: { id: tast, navn: "ned", lang: false }
+            - delay: 160ms
+  - platform: gpio
+    id: t_venstre
+    name: "Tast Venstre"
+    internal: true
+    pin: { tca9555: tca_a, number: 9, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - script.execute: { id: tast, navn: "venstre", lang: false }
+      - delay: 450ms
+      - while:
+          condition: { binary_sensor.is_on: t_venstre }
+          then:
+            - script.execute: { id: tast, navn: "venstre", lang: false }
+            - delay: 160ms
+  - platform: gpio
+    id: t_hoyre
+    name: "Tast Høyre"
+    internal: true
+    pin: { tca9555: tca_a, number: 10, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - script.execute: { id: tast, navn: "hoyre", lang: false }
+      - delay: 450ms
+      - while:
+          condition: { binary_sensor.is_on: t_hoyre }
+          then:
+            - script.execute: { id: tast, navn: "hoyre", lang: false }
+            - delay: 160ms
+  - platform: gpio
+    id: t_ok
+    name: "Tast OK"
+    internal: true
+    pin: { tca9555: tca_a, number: 11, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "ok", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "ok", lang: false } } ]
+  - platform: gpio
+    id: t_vol_opp
+    name: "Tast Volum +"
+    internal: true
+    pin: { tca9555: tca_a, number: 12, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - script.execute: { id: tast, navn: "vol_opp", lang: false }
+      - delay: 450ms
+      - while:
+          condition: { binary_sensor.is_on: t_vol_opp }
+          then:
+            - script.execute: { id: tast, navn: "vol_opp", lang: false }
+            - delay: 160ms
+  - platform: gpio
+    id: t_vol_ned
+    name: "Tast Volum −"
+    internal: true
+    pin: { tca9555: tca_a, number: 13, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - script.execute: { id: tast, navn: "vol_ned", lang: false }
+      - delay: 450ms
+      - while:
+          condition: { binary_sensor.is_on: t_vol_ned }
+          then:
+            - script.execute: { id: tast, navn: "vol_ned", lang: false }
+            - delay: 160ms
+  - platform: gpio
+    id: t_kan_opp
+    name: "Tast Kanal +"
+    internal: true
+    pin: { tca9555: tca_a, number: 14, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - script.execute: { id: tast, navn: "kan_opp", lang: false }
+      - delay: 450ms
+      - while:
+          condition: { binary_sensor.is_on: t_kan_opp }
+          then:
+            - script.execute: { id: tast, navn: "kan_opp", lang: false }
+            - delay: 160ms
+  - platform: gpio
+    id: t_kan_ned
+    name: "Tast Kanal −"
+    internal: true
+    pin: { tca9555: tca_a, number: 15, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_press:
+      - script.execute: { id: tast, navn: "kan_ned", lang: false }
+      - delay: 450ms
+      - while:
+          condition: { binary_sensor.is_on: t_kan_ned }
+          then:
+            - script.execute: { id: tast, navn: "kan_ned", lang: false }
+            - delay: 160ms
+  - platform: gpio
+    id: t_demp
+    name: "Tast Demp"
+    internal: true
+    pin: { tca9555: tca_b, number: 0, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "demp", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "demp", lang: false } } ]
+  - platform: gpio
+    id: t_siste
+    name: "Tast Siste kanal"
+    internal: true
+    pin: { tca9555: tca_b, number: 1, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "siste", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "siste", lang: false } } ]
+  - platform: gpio
+    id: t_spol_tilbake
+    name: "Tast Spol tilbake"
+    internal: true
+    pin: { tca9555: tca_b, number: 2, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "spol_tilbake", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "spol_tilbake", lang: false } } ]
+  - platform: gpio
+    id: t_spill_pause
+    name: "Tast Spill-pause"
+    internal: true
+    pin: { tca9555: tca_b, number: 3, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "spill_pause", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "spill_pause", lang: false } } ]
+  - platform: gpio
+    id: t_spol_frem
+    name: "Tast Spol frem"
+    internal: true
+    pin: { tca9555: tca_b, number: 4, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "spol_frem", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "spol_frem", lang: false } } ]
+  - platform: gpio
+    id: t_opptak
+    name: "Tast Ta opp"
+    internal: true
+    pin: { tca9555: tca_b, number: 5, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "opptak", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "opptak", lang: false } } ]
+  - platform: gpio
+    id: t_stopp
+    name: "Tast Stopp"
+    internal: true
+    pin: { tca9555: tca_b, number: 6, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "stopp", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "stopp", lang: false } } ]
+  - platform: gpio
+    id: t_dvr
+    name: "Tast Opptak (liste)"
+    internal: true
+    pin: { tca9555: tca_b, number: 7, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "dvr", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "dvr", lang: false } } ]
+  - platform: gpio
+    id: t_rod
+    name: "Tast Rød"
+    internal: true
+    pin: { tca9555: tca_b, number: 8, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "rod", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "rod", lang: false } } ]
+  - platform: gpio
+    id: t_gronn
+    name: "Tast Grønn"
+    internal: true
+    pin: { tca9555: tca_b, number: 9, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "gronn", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "gronn", lang: false } } ]
+  - platform: gpio
+    id: t_gul
+    name: "Tast Gul"
+    internal: true
+    pin: { tca9555: tca_b, number: 10, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "gul", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "gul", lang: false } } ]
+  - platform: gpio
+    id: t_bla
+    name: "Tast Blå"
+    internal: true
+    pin: { tca9555: tca_b, number: 11, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "bla", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "bla", lang: false } } ]
+# <<< taster
+
+event:
+  - platform: template
+    id: tast_hendelse
+    name: Tast
+    icon: mdi:remote
+# >>> hendelser (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
+    event_types:
+      - av
+      - hjem
+      - meny
+      - tilbake
+      - info
+      - guide
+      - avslutt
+      - opp
+      - ned
+      - venstre
+      - hoyre
+      - ok
+      - vol_opp
+      - vol_ned
+      - kan_opp
+      - kan_ned
+      - demp
+      - siste
+      - spol_tilbake
+      - spill_pause
+      - spol_frem
+      - opptak
+      - stopp
+      - dvr
+      - rod
+      - gronn
+      - gul
+      - bla
+      - av_lang
+      - hjem_lang
+      - meny_lang
+      - tilbake_lang
+      - info_lang
+      - guide_lang
+      - avslutt_lang
+      - ok_lang
+      - demp_lang
+      - siste_lang
+      - spol_tilbake_lang
+      - spill_pause_lang
+      - spol_frem_lang
+      - opptak_lang
+      - stopp_lang
+      - dvr_lang
+      - rod_lang
+      - gronn_lang
+      - gul_lang
+      - bla_lang
+# <<< hendelser
+
+# ---------- skript ----------
+script:
+  # Én tast: haptikk, hendelse til HA, læring av IR, ellers handlingen for aktiv modus.
+  - id: tast
+    mode: queued
+    max_runs: 4
+    parameters: { navn: string, lang: bool }
+    then:
+      - script.execute: sovn_teller
+      - output.turn_on: vibrator
+      - lambda: |-
+          id(tast_hendelse).trigger(lang ? navn + "_lang" : navn);
+      - homeassistant.event:
+          event: esphome.skjold_fjernkontroll
+          data:
+            tast: !lambda "return navn;"
+            lang: !lambda 'return lang ? "true" : "false";'
+      - delay: 25ms
+      - output.turn_off: vibrator
+      - lambda: |-
+          auto &N = id(taster_navn);
+          int plass = std::find(N.begin(), N.end(), navn) - N.begin();
+          // --- læring: neste tast velger plassen ---
+          if (id(laer_steg) == 1) {
+            id(laer_plass) = plass; id(laer_steg) = 2;
+            lv_label_set_text_fmt(id(lbl_laer_tast), "%s", navn.c_str());
+            lv_label_set_text(id(lbl_laer_info), "Pek den gamle fjernkontrollen\nmot nesen og trykk tasten");
+            return;
+          }
+          bool har_ir = plass < 48 && id(ir_prot)[plass] != 0;
+          int m = id(modus);
+          auto post = [](const char *sti, std::string kropp) { id(skjold_post)->execute(std::string(sti), kropp); };
+          // --- faste: skjermen og Skjold-tasten ---
+          if (navn == "hjem") { if (lang) id(vis_rom)->execute(); else id(vis_aktiviteter)->execute(); return; }
+          if (navn == "meny" && !(m != 0 && har_ir)) { id(vis_kilder)->execute(); return; }
+          if (navn == "av") { if (lang) id(akt_av)->execute(); else if (har_ir) id(ir_send)->execute(plass); else post("/api/power", "{\"on\":false}"); return; }
+          // --- langt trykk på fargetastene: lys, stikk, − og + (smarthus-raden finnes ikke på kort variant) ---
+          if (lang && navn == "rod") { id(ha_lys_veksle)->execute(); return; }
+          if (lang && navn == "gronn") { id(ha_stikk_veksle)->execute(); return; }
+          if (lang && (navn == "gul" || navn == "bla")) { id(ha_lys_steg)->execute(navn == "bla" ? 10 : -10); return; }
+          // --- smarthus-raden går alltid til Home Assistant ---
+          if (navn == "lys") { id(ha_lys_veksle)->execute(); return; }
+          if (navn == "stikk") { id(ha_stikk_veksle)->execute(); return; }
+          if (navn == "pluss" || navn == "minus") { id(ha_lys_steg)->execute(navn == "pluss" ? 10 : -10); return; }
+          // --- TV/film: lærte IR-koder først ---
+          if (m != 0 && har_ir) { id(ir_send)->execute(plass); return; }
+          // --- Skjold ---
+          if (navn == "vol_opp" || navn == "opp") { post("/api/volume", "{\"delta\":2}"); id(volum) = std::min(100, id(volum) + 2); }
+          else if (navn == "vol_ned" || navn == "ned") { post("/api/volume", "{\"delta\":-2}"); id(volum) = std::max(0, id(volum) - 2); }
+          else if (navn == "demp") { id(demp) = !id(demp); post("/api/mute", id(demp) ? "{\"mute\":true}" : "{\"mute\":false}"); }
+          else if (navn == "spill_pause" || navn == "ok") post("/api/transport", "{\"action\":\"playpause\"}");
+          else if (navn == "stopp") post("/api/transport", "{\"action\":\"stop\"}");
+          else if (navn == "spol_frem" || navn == "kan_opp" || navn == "hoyre") post("/api/transport", "{\"action\":\"next\"}");
+          else if (navn == "spol_tilbake" || navn == "kan_ned" || navn == "venstre") post("/api/transport", "{\"action\":\"previous\"}");
+          else if (navn.rfind("tall_", 0) == 0 && navn != "tall_0") post("/api/preset", "{\"n\":" + navn.substr(5) + "}");
+          else if (navn == "tilbake" || navn == "avslutt") id(vis_aktiviteter)->execute();
+          else if (navn == "info" || navn == "guide") id(vis_spiller)->execute();
+          else if (har_ir) id(ir_send)->execute(plass);   // f.eks. fargetastene: IR hvis du har lært dem
+          else ESP_LOGI("tast", "%s%s: ingen handling i modus %d", navn.c_str(), lang ? " (lang)" : "", m);
+          lv_slider_set_value(id(sl_volum), id(volum), LV_ANIM_OFF);
+          lv_label_set_text_fmt(id(lbl_volum), "%d", id(volum));
+
+  # POST til valgt Skjold (venter på Wi-Fi etter søvn). Svaret er full status, så skjermen oppdateres med en gang.
+  - id: skjold_post
+    mode: queued
+    max_runs: 6
+    parameters: { sti: string, kropp: string }
+    then:
+      - wait_until: { condition: wifi.connected, timeout: 5s }
+      - http_request.post:
+          url: !lambda "return id(skjold_base) + sti;"
+          request_headers: { Content-Type: application/json }
+          body: !lambda "return kropp;"
+          capture_response: true
+          max_response_buffer_size: 16384
+          on_response:
+            then:
+              - lambda: "id(les_status)->execute(body);"
+
+  - id: hent_status
+    mode: restart
+    then:
+      - http_request.get:
+          url: !lambda 'return id(skjold_base) + "/api/status";'
+          capture_response: true
+          max_response_buffer_size: 16384
+          on_response:
+            then:
+              - lambda: "id(les_status)->execute(body);"
+
+  # /api/status → volum, spiller, demp, tittel/artist (eller radiokanalen) og cover
+  - id: les_status
+    mode: queued
+    parameters: { body: string }
+    then:
+      - lambda: |-
+          std::string t, a, kilde, ny;
+          bool ok = json::parse_json(body, [&](JsonObject s) -> bool {
+            if (!s["volume"].is<int>()) return false;
+            id(volum) = s["volume"] | 0;
+            id(spiller) = s["playing"] | false;
+            id(demp) = s["mute"] | false;
+            t = s["title"] | "";
+            a = s["artist"] | "";
+            kilde = s["input"] | "";
+            JsonObject rn = s["radio_now"];
+            if (t.empty() && !rn.isNull()) t = rn["name"] | "";
+            ny = std::string(s["cover"] | "") + "|" + t;
+            return true;
+          });
+          if (!ok) return;
+          id(tittel) = t.empty() ? std::string("Skjold") : t;
+          lv_label_set_text(id(lbl_tittel), id(tittel).c_str());
+          lv_label_set_text(id(lbl_artist), (a.empty() ? kilde : a + " · " + kilde).c_str());
+          lv_slider_set_value(id(sl_volum), id(volum), LV_ANIM_OFF);
+          lv_label_set_text_fmt(id(lbl_volum), "%d", id(volum));
+          lv_label_set_text(id(lbl_spill), id(spiller) ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY);
+          if (ny != id(cover_nokkel)) {
+            id(cover_nokkel) = ny;
+            char url[200];
+            snprintf(url, sizeof url, "%s/api/cover?w=120&v=%u", id(skjold_base).c_str(), (unsigned) std::hash<std::string>{}(ny));
+            id(cover).set_url(url);
+            id(cover).update();
+          }
+
+  # /api/presets → navnene på radiofavoritt 1–6
+  - id: hent_favoritter
+    then:
+      - http_request.get:
+          url: !lambda 'return id(skjold_base) + "/api/presets";'
+          capture_response: true
+          max_response_buffer_size: 16384
+          on_response:
+            then:
+              - lambda: |-
+                  lv_obj_t *lbl[6] = {id(lbl_fav1), id(lbl_fav2), id(lbl_fav3), id(lbl_fav4), id(lbl_fav5), id(lbl_fav6)};
+                  json::parse_json(body, [&](JsonObject r) -> bool {
+                    for (JsonObject p : r["items"].as<JsonArray>()) {
+                      int n = p["n"] | 0;
+                      if (n >= 1 && n <= 6) lv_label_set_text(lbl[n - 1], (const char *) (p["title"] | "–"));
+                    }
+                    return true;
+                  });
+
+  # /api/rom → andre Skjold-enheter på nettet (mDNS), de fire første på rom-siden
+  - id: hent_rom
+    then:
+      - http_request.get:
+          url: "http://${skjold_host}:${skjold_port}/api/rom"
+          capture_response: true
+          max_response_buffer_size: 8192
+          on_response:
+            then:
+              - lambda: |-
+                  id(rom_navn).clear(); id(rom_base).clear();
+                  json::parse_json(body, [](JsonObject r) -> bool {
+                    for (JsonObject p : r["rom"].as<JsonArray>()) {
+                      if (id(rom_navn).size() >= 4) break;
+                      id(rom_navn).push_back(p["navn"] | "?");
+                      id(rom_base).push_back(p["base"] | "");
+                    }
+                    return true;
+                  });
+                  lv_obj_t *b[4] = {id(rom_1), id(rom_2), id(rom_3), id(rom_4)};
+                  lv_obj_t *l[4] = {id(lbl_rom_1), id(lbl_rom_2), id(lbl_rom_3), id(lbl_rom_4)};
+                  for (int i = 0; i < 4; i++) {
+                    if (i < (int) id(rom_navn).size()) { lv_label_set_text(l[i], id(rom_navn)[i].c_str()); lv_obj_clear_flag(b[i], LV_OBJ_FLAG_HIDDEN); }
+                    else lv_obj_add_flag(b[i], LV_OBJ_FLAG_HIDDEN);
+                  }
+                  int v = id(rom_valgt);
+                  if (v >= 0 && v < (int) id(rom_base).size()) {
+                    id(skjold_base) = id(rom_base)[v];
+                    lv_label_set_text(id(lbl_rom), id(rom_navn)[v].c_str());
+                  }
+
+  - id: velg_rom
+    parameters: { nr: int }
+    then:
+      - lambda: |-
+          id(rom_valgt) = nr;
+          if (nr >= 0 && nr < (int) id(rom_base).size()) {
+            id(skjold_base) = id(rom_base)[nr];
+            lv_label_set_text(id(lbl_rom), id(rom_navn)[nr].c_str());
+          } else {
+            id(skjold_base) = "http://${skjold_host}:${skjold_port}";
+            lv_label_set_text(id(lbl_rom), "Skjold");
+          }
+          id(cover_nokkel) = "";
+      - script.execute: hent_favoritter
+      - script.execute: hent_status
+      - lvgl.page.show: side_spiller
+
+  # IR: send lært kode fra plass 0–47
+  - id: ir_send
+    mode: queued
+    parameters: { plass: int }
+    then:
+      - lambda: |-
+          if (plass < 0 || plass >= 48 || id(ir_prot)[plass] == 0) { ESP_LOGW("ir", "ingen kode på plass %d", plass); return; }
+          uint32_t d = id(ir_data)[plass];
+          uint8_t nb = id(ir_bits)[plass];
+          auto call = id(ir_tx).transmit();
+          switch (id(ir_prot)[plass]) {
+            case 1: { remote_base::NECData x{}; x.address = d >> 16; x.command = d & 0xFFFF; x.command_repeats = 1;
+                      remote_base::NECProtocol().encode(call.get_data(), x); break; }
+            case 2: { remote_base::SamsungData x{}; x.data = d; x.nbits = nb ? nb : 32;
+                      remote_base::SamsungProtocol().encode(call.get_data(), x); break; }
+            case 3: { remote_base::SonyData x{}; x.data = d; x.nbits = nb ? nb : 12;
+                      remote_base::SonyProtocol().encode(call.get_data(), x); call.set_send_times(3); call.set_send_wait(45000); break; }
+            case 4: { remote_base::RC5Data x{}; x.address = d >> 8; x.command = d & 0xFF;
+                      remote_base::RC5Protocol().encode(call.get_data(), x); break; }
+            case 5: { remote_base::LGData x{}; x.data = d; x.nbits = nb ? nb : 28;
+                      remote_base::LGProtocol().encode(call.get_data(), x); break; }
+            default: return;
+          }
+          call.perform();
+
+  # IR mottatt (bare under læring): vis koden, «Lagre» skriver den til plassen
+  - id: ir_mottatt
+    parameters: { prot: int, data: uint32_t, bits: int }
+    then:
+      - lambda: |-
+          if (id(laer_steg) != 2 && id(laer_steg) != 3) return;
+          id(laer_prot) = prot; id(laer_data) = data; id(laer_bits) = bits; id(laer_steg) = 3;
+          static const char *P[] = {"?", "NEC", "Samsung", "Sony", "RC5", "LG"};
+          lv_label_set_text_fmt(id(lbl_laer_kode), "%s 0x%08X", P[prot], (unsigned) data);
+          lv_label_set_text(id(lbl_laer_info), "Mottatt! Trykk «Lagre».");
+
+  - id: laer_start
+    parameters: { plass: int }   # −1 = neste tast velger plassen, 44–47 = makro
+    then:
+      - lambda: |-
+          id(laer_plass) = plass; id(laer_steg) = plass < 0 ? 1 : 2;
+          lv_label_set_text(id(lbl_laer_kode), "–");
+          if (plass < 0) { lv_label_set_text(id(lbl_laer_tast), "–"); lv_label_set_text(id(lbl_laer_info), "Trykk tasten du vil lære"); }
+          else { lv_label_set_text_fmt(id(lbl_laer_tast), "Makro %d", plass - 43);
+                 lv_label_set_text(id(lbl_laer_info), "Pek den gamle fjernkontrollen\nmot nesen og trykk tasten"); }
+      - output.turn_on: strom_skjerm
+      - lvgl.page.show: side_laer
+
+  - id: laer_lagre
+    then:
+      - lambda: |-
+          int p = id(laer_plass);
+          if (id(laer_steg) != 3 || p < 0 || p >= 48) return;
+          id(ir_prot)[p] = id(laer_prot); id(ir_data)[p] = id(laer_data); id(ir_bits)[p] = id(laer_bits);
+          id(laer_steg) = 1;
+          lv_label_set_text(id(lbl_laer_info), "Lagret. Trykk neste tast,\neller «Ferdig».");
+          global_preferences->sync();
+
+  # ---------- aktiviteter: IR + Skjold + Home Assistant ----------
+  # Rediger rekkefølgen og stegene her. Makro 1 = TV på, 2 = TV av, 3 = HDMI-inngang, 4 = ekstra (lær dem under Hjem → Lær IR).
+  - id: akt_se_tv
+    then:
+      - lambda: 'id(modus) = 1; id(aktivitet) = "Se TV";'
+      - script.execute: { id: ir_send, plass: 44 }
+      - delay: 1500ms
+      - script.execute: { id: ir_send, plass: 46 }
+      - script.execute: { id: skjold_post, sti: "/api/power", kropp: '{"on":true}' }
+      - delay: 300ms
+      - script.execute: { id: skjold_post, sti: "/api/input", kropp: '{"input":"${tv_kilde}"}' }
+      - script.execute: { id: ha_scene, entitet: "${scene_tv}" }
+      - script.execute: { id: akt_merk, nr: 0 }
+  - id: akt_musikk
+    then:
+      - lambda: 'id(modus) = 0; id(aktivitet) = "Musikk";'
+      - script.execute: { id: skjold_post, sti: "/api/power", kropp: '{"on":true}' }
+      - delay: 300ms
+      - script.execute: { id: skjold_post, sti: "/api/input", kropp: '{"input":"radio"}' }
+      - script.execute: { id: akt_merk, nr: 1 }
+      - lvgl.page.show: side_spiller
+  - id: akt_film
+    then:
+      - lambda: 'id(modus) = 2; id(aktivitet) = "Film";'
+      - script.execute: { id: ir_send, plass: 44 }
+      - delay: 1500ms
+      - script.execute: { id: ir_send, plass: 47 }
+      - script.execute: { id: skjold_post, sti: "/api/power", kropp: '{"on":true}' }
+      - delay: 300ms
+      - script.execute: { id: skjold_post, sti: "/api/input", kropp: '{"input":"${tv_kilde}"}' }
+      - script.execute: { id: ha_scene, entitet: "${scene_film}" }
+      - script.execute: { id: akt_merk, nr: 2 }
+  - id: akt_god_morgen
+    then:
+      - lambda: 'id(modus) = 0; id(aktivitet) = "God morgen";'
+      - script.execute: { id: skjold_post, sti: "/api/power", kropp: '{"on":true}' }
+      - delay: 300ms
+      - script.execute: { id: skjold_post, sti: "/api/volume", kropp: '{"volume":22}' }
+      - script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":1}' }
+      - script.execute: { id: ha_scene, entitet: "${scene_morgen}" }
+      - script.execute: { id: akt_merk, nr: 3 }
+  - id: akt_god_natt
+    then:
+      - lambda: 'id(modus) = 0; id(aktivitet) = "God natt";'
+      - script.execute: { id: ir_send, plass: 45 }
+      - script.execute: { id: skjold_post, sti: "/api/transport", kropp: '{"action":"pause"}' }
+      - script.execute: { id: ha_scene, entitet: "${scene_natt}" }
+      - script.execute: { id: akt_merk, nr: 4 }
+  - id: akt_av
+    then:
+      - lambda: 'id(modus) = 0; id(aktivitet) = "";'
+      - script.execute: { id: ir_send, plass: 45 }
+      - script.execute: { id: skjold_post, sti: "/api/power", kropp: '{"on":false}' }
+      - script.execute: { id: akt_merk, nr: -1 }
+
+  - id: akt_merk                     # gullkant rundt aktiv aktivitet
+    parameters: { nr: int }
+    then:
+      - lambda: |-
+          lv_obj_t *b[5] = {id(akt_1), id(akt_2), id(akt_3), id(akt_4), id(akt_5)};
+          for (int i = 0; i < 5; i++) {
+            if (i == nr) lv_obj_add_state(b[i], LV_STATE_CHECKED); else lv_obj_clear_state(b[i], LV_STATE_CHECKED);
+          }
+
+  # ---------- Home Assistant ----------
+  - id: ha_lys_veksle
+    then: [ { homeassistant.action: { action: light.toggle, data: { entity_id: "${ha_lys}" } } } ]
+  - id: ha_stikk_veksle
+    then: [ { homeassistant.action: { action: switch.toggle, data: { entity_id: "${ha_stikk}" } } } ]
+  - id: ha_lys_steg
+    parameters: { steg: int }
+    then:
+      - homeassistant.action:
+          action: light.turn_on
+          data: { entity_id: "${ha_lys}" }
+          data_template: { brightness_step_pct: "{{ steg }}" }
+          variables: { steg: !lambda 'return steg;' }
+  - id: ha_veksle
+    parameters: { entitet: string }
+    then:
+      - homeassistant.action:
+          action: light.toggle
+          data_template: { entity_id: "{{ e }}" }
+          variables: { e: !lambda 'return entitet;' }
+  - id: ha_scene
+    parameters: { entitet: string }
+    then:
+      - homeassistant.action:
+          action: scene.turn_on
+          data_template: { entity_id: "{{ e }}" }
+          variables: { e: !lambda 'return entitet;' }
+
+  # ---------- skjermsider ----------
+  - id: vis_aktiviteter
+    then: [ { lvgl.page.show: side_akt } ]
+  - id: vis_spiller
+    then: [ { lvgl.page.show: side_spiller }, { script.execute: hent_status } ]
+  - id: vis_kilder
+    then: [ { lvgl.page.show: side_kilder } ]
+  - id: vis_rom
+    then: [ { lvgl.page.show: side_rom }, { script.execute: hent_rom } ]
+
+  # ---------- søvn ----------
+  - id: sovn_teller
+    mode: restart
+    then:
+      - light.turn_on: { id: baklys, brightness: 80% }
+      - delay: ${sovn_etter}
+      - if:
+          condition:
+            or:
+              - switch.is_on: hold_vaaken
+              - lambda: "return id(laer_steg) != 0;"
+          then:
+            - script.execute: sovn_teller
+          else:
+            - light.turn_off: baklys
+            - delay: 300ms
+            - output.turn_off: strom_skjerm      # skjerm, berøring og IR-mottaker uten strøm
+            - output.turn_off: vibrator
+            - deep_sleep.enter: dyp_sovn
+
+interval:
+  - interval: 3s
+    then:
+      - if:
+          condition: wifi.connected
+          then: [ script.execute: hent_status ]
+
+# ---------- skjermbilder ----------
+font:
+  - { file: "gfonts://Sora@600", id: f_tittel, size: 19, glyphs: &glyfer " !\"#%&'()*+,-./0123456789:;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]_abcdefghijklmnopqrstuvwxyzÆØÅæøåÉéÜüÖöÄä–·«»" }
+  - { file: "gfonts://Sora@600", id: f_knapp, size: 13, glyphs: *glyfer }
+  - { file: "gfonts://Sora@400", id: f_tekst, size: 11, glyphs: *glyfer }
+
+image:
+  - platform: online_image
+    id: cover
+    url: http://${skjold_host}:${skjold_port}/api/cover?w=120
+    format: JPEG
+    type: RGB565
+    resize: 120x120
+    update_interval: never
+    on_download_finished:
+      - lvgl.image.update: { id: img_cover, src: cover }
+
+lvgl:
+  displays: [ skjerm ]
+  touchscreens: [ beroring ]
+  buffer_size: 25%
+  bg_color: 0x101012
+  default_font: f_tekst
+  text_color: 0xF0EEE8
+  theme:
+    button:
+      bg_color: 0x202023
+      bg_grad_color: 0x202023
+      radius: 10
+      border_width: 0
+      shadow_width: 0
+      text_color: 0xF0EEE8
+      text_font: f_knapp
+      checked:
+        bg_color: 0x342C1E
+        border_width: 1
+        border_color: 0xE8B450
+        text_color: 0xE8B450
+      pressed:
+        bg_color: 0x3A3A3E
+  top_layer:
+    widgets:
+      - label: { id: lbl_rom, x: 10, y: 6, text: "Skjold", text_color: 0xE8B450, text_font: f_knapp }
+      - label: { id: lbl_bat, align: TOP_RIGHT, x: -8, y: 6, text: "–", text_font: montserrat_12 }
+      - obj:
+          x: 0
+          y: 288
+          width: 240
+          height: 32
+          pad_all: 0
+          radius: 0
+          bg_color: 0x101012
+          border_width: 1
+          border_side: TOP
+          border_color: 0x343438
+          widgets:
+            - button: { x: 0, y: 0, width: 60, height: 31, bg_opa: TRANSP, widgets: [ { label: { align: CENTER, text: "", text_font: montserrat_16 } } ], on_click: [ lvgl.page.show: side_akt ] }
+            - button: { x: 60, y: 0, width: 60, height: 31, bg_opa: TRANSP, widgets: [ { label: { align: CENTER, text: "", text_font: montserrat_16 } } ], on_click: [ script.execute: vis_spiller ] }
+            - button: { x: 120, y: 0, width: 60, height: 31, bg_opa: TRANSP, widgets: [ { label: { align: CENTER, text: "", text_font: montserrat_16 } } ], on_click: [ lvgl.page.show: side_kilder ] }
+            - button: { x: 180, y: 0, width: 60, height: 31, bg_opa: TRANSP, widgets: [ { label: { align: CENTER, text: "", text_font: montserrat_16 } } ], on_click: [ lvgl.page.show: side_hjem ] }
+  pages:
+    # --- Aktiviteter ---
+    - id: side_akt
+      widgets:
+        - label: { x: 10, y: 26, text: "Aktiviteter", text_font: f_tittel }
+        - button: { id: akt_1, x: 8, y: 56, width: 224, height: 40, checkable: true, widgets: [ { label: { x: 8, align: LEFT_MID, text: "Se TV" } } ], on_click: [ script.execute: akt_se_tv ] }
+        - button: { id: akt_2, x: 8, y: 101, width: 224, height: 40, checkable: true, widgets: [ { label: { x: 8, align: LEFT_MID, text: "Musikk" } } ], on_click: [ script.execute: akt_musikk ] }
+        - button: { id: akt_3, x: 8, y: 146, width: 224, height: 40, checkable: true, widgets: [ { label: { x: 8, align: LEFT_MID, text: "Film" } } ], on_click: [ script.execute: akt_film ] }
+        - button: { id: akt_4, x: 8, y: 191, width: 224, height: 40, checkable: true, widgets: [ { label: { x: 8, align: LEFT_MID, text: "God morgen" } } ], on_click: [ script.execute: akt_god_morgen ] }
+        - button: { id: akt_5, x: 8, y: 236, width: 224, height: 40, checkable: true, widgets: [ { label: { x: 8, align: LEFT_MID, text: "God natt" } } ], on_click: [ script.execute: akt_god_natt ] }
+    # --- Spiller (nå spilles) ---
+    - id: side_spiller
+      widgets:
+        - image: { id: img_cover, src: cover, x: 60, y: 30, radius: 10, clip_corner: true }
+        - label: { id: lbl_tittel, y: 158, width: 224, align: TOP_MID, text: "Skjold", text_font: f_tittel, text_align: CENTER, long_mode: DOT }
+        - label: { id: lbl_artist, y: 180, width: 224, align: TOP_MID, text: "", text_color: 0x96948E, text_align: CENTER, long_mode: DOT }
+        - button: { x: 40, y: 204, width: 44, height: 40, bg_opa: TRANSP, widgets: [ { label: { align: CENTER, text: "", text_font: montserrat_20 } } ],
+                    on_click: [ { script.execute: { id: skjold_post, sti: "/api/transport", kropp: '{"action":"previous"}' } } ] }
+        - button: { x: 98, y: 202, width: 44, height: 44, radius: 22, bg_color: 0xE8B450, widgets: [ { label: { id: lbl_spill, align: CENTER, text: "", text_color: 0x101012, text_font: montserrat_20 } } ],
+                    on_click: [ { script.execute: { id: skjold_post, sti: "/api/transport", kropp: '{"action":"playpause"}' } } ] }
+        - button: { x: 156, y: 204, width: 44, height: 40, bg_opa: TRANSP, widgets: [ { label: { align: CENTER, text: "", text_font: montserrat_20 } } ],
+                    on_click: [ { script.execute: { id: skjold_post, sti: "/api/transport", kropp: '{"action":"next"}' } } ] }
+        - label: { x: 12, y: 258, text: "Volum", text_color: 0x96948E }
+        - slider:
+            id: sl_volum
+            x: 58
+            y: 262
+            width: 140
+            height: 6
+            min_value: 0
+            max_value: 100
+            bg_color: 0x343438
+            indicator: { bg_color: 0xE8B450 }
+            knob: { bg_color: 0xF0EEE8, pad_all: 3 }
+            on_release:
+              - script.execute: { id: skjold_post, sti: "/api/volume", kropp: !lambda 'return "{\"volume\":" + to_string((int) x) + "}";' }
+        - label: { id: lbl_volum, align: TOP_RIGHT, x: -12, y: 256, text: "0", text_font: f_knapp }
+    # --- Kilder og radiofavoritter ---
+    - id: side_kilder
+      widgets:
+        - label: { x: 10, y: 26, text: "Kilder", text_font: f_tittel }
+        - button: { x: 8, y: 56, width: 110, height: 28, widgets: [ { label: { align: CENTER, text: "Radio" } } ], on_click: [ { script.execute: { id: skjold_post, sti: "/api/input", kropp: '{"input":"radio"}' } } ] }
+        - button: { x: 122, y: 56, width: 110, height: 28, widgets: [ { label: { align: CENTER, text: "AirPlay" } } ], on_click: [ { script.execute: { id: skjold_post, sti: "/api/input", kropp: '{"input":"airplay"}' } } ] }
+        - button: { x: 8, y: 90, width: 110, height: 28, widgets: [ { label: { align: CENTER, text: "Bluetooth" } } ], on_click: [ { script.execute: { id: skjold_post, sti: "/api/input", kropp: '{"input":"bt"}' } } ] }
+        - button: { x: 122, y: 90, width: 110, height: 28, widgets: [ { label: { align: CENTER, text: "Spotify" } } ], on_click: [ { script.execute: { id: skjold_post, sti: "/api/input", kropp: '{"input":"spotify"}' } } ] }
+        - label: { x: 10, y: 130, text: "Radiofavoritter", text_color: 0x96948E, text_font: f_knapp }
+        - button: { x: 8, y: 152, width: 110, height: 36, on_click: [ { script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":1}' } } ], widgets: [ { label: { id: lbl_fav1, width: 98, align: CENTER, text: "1", long_mode: DOT } } ] }
+        - button: { x: 122, y: 152, width: 110, height: 36, on_click: [ { script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":2}' } } ], widgets: [ { label: { id: lbl_fav2, width: 98, align: CENTER, text: "2", long_mode: DOT } } ] }
+        - button: { x: 8, y: 194, width: 110, height: 36, on_click: [ { script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":3}' } } ], widgets: [ { label: { id: lbl_fav3, width: 98, align: CENTER, text: "3", long_mode: DOT } } ] }
+        - button: { x: 122, y: 194, width: 110, height: 36, on_click: [ { script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":4}' } } ], widgets: [ { label: { id: lbl_fav4, width: 98, align: CENTER, text: "4", long_mode: DOT } } ] }
+        - button: { x: 8, y: 236, width: 110, height: 36, on_click: [ { script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":5}' } } ], widgets: [ { label: { id: lbl_fav5, width: 98, align: CENTER, text: "5", long_mode: DOT } } ] }
+        - button: { x: 122, y: 236, width: 110, height: 36, on_click: [ { script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":6}' } } ], widgets: [ { label: { id: lbl_fav6, width: 98, align: CENTER, text: "6", long_mode: DOT } } ] }
+    # --- Hjem: lys og scener i Home Assistant ---
+    - id: side_hjem
+      widgets:
+        - label: { x: 10, y: 26, text: "Hjem", text_font: f_tittel }
+        - button: { x: 8, y: 56, width: 110, height: 44, widgets: [ { label: { align: CENTER, text: "Stue" } } ], on_click: [ { script.execute: { id: ha_veksle, entitet: "${ha_rom_1}" } } ] }
+        - button: { x: 122, y: 56, width: 110, height: 44, widgets: [ { label: { align: CENTER, text: "Kjøkken" } } ], on_click: [ { script.execute: { id: ha_veksle, entitet: "${ha_rom_2}" } } ] }
+        - button: { x: 8, y: 106, width: 110, height: 44, widgets: [ { label: { align: CENTER, text: "Gang" } } ], on_click: [ { script.execute: { id: ha_veksle, entitet: "${ha_rom_3}" } } ] }
+        - button: { x: 122, y: 106, width: 110, height: 44, widgets: [ { label: { align: CENTER, text: "Soverom" } } ], on_click: [ { script.execute: { id: ha_veksle, entitet: "${ha_rom_4}" } } ] }
+        - label: { x: 10, y: 160, text: "Scener", text_color: 0x96948E, text_font: f_knapp }
+        - button: { x: 8, y: 180, width: 110, height: 30, widgets: [ { label: { align: CENTER, text: "Kino" } } ], on_click: [ { script.execute: { id: ha_scene, entitet: "${scene_film}" } } ] }
+        - button: { x: 122, y: 180, width: 110, height: 30, widgets: [ { label: { align: CENTER, text: "Middag" } } ], on_click: [ { script.execute: { id: ha_scene, entitet: "${scene_middag}" } } ] }
+        - button: { x: 8, y: 216, width: 110, height: 30, widgets: [ { label: { align: CENTER, text: "Lesing" } } ], on_click: [ { script.execute: { id: ha_scene, entitet: "${scene_lesing}" } } ] }
+        - button: { x: 122, y: 216, width: 110, height: 30, widgets: [ { label: { align: CENTER, text: "Alt av" } } ], on_click: [ { script.execute: { id: ha_scene, entitet: "${scene_alt_av}" } } ] }
+        - button: { x: 8, y: 252, width: 224, height: 30, bg_color: 0x342C1E, widgets: [ { label: { align: CENTER, text: "Lær IR-kode", text_color: 0xE8B450 } } ], on_click: [ { script.execute: { id: laer_start, plass: -1 } } ] }
+    # --- Rom: hvilken Skjold fjernkontrollen styrer (hold Skjold-tasten) ---
+    - id: side_rom
+      widgets:
+        - label: { x: 10, y: 26, text: "Rom", text_font: f_tittel }
+        - button: { x: 8, y: 56, width: 224, height: 38, widgets: [ { label: { x: 8, align: LEFT_MID, text: "${skjold_host}" } } ], on_click: [ { script.execute: { id: velg_rom, nr: -1 } } ] }
+        - button: { id: rom_1, x: 8, y: 100, width: 224, height: 38, hidden: true, widgets: [ { label: { id: lbl_rom_1, x: 8, align: LEFT_MID, text: "" } } ], on_click: [ { script.execute: { id: velg_rom, nr: 0 } } ] }
+        - button: { id: rom_2, x: 8, y: 144, width: 224, height: 38, hidden: true, widgets: [ { label: { id: lbl_rom_2, x: 8, align: LEFT_MID, text: "" } } ], on_click: [ { script.execute: { id: velg_rom, nr: 1 } } ] }
+        - button: { id: rom_3, x: 8, y: 188, width: 224, height: 38, hidden: true, widgets: [ { label: { id: lbl_rom_3, x: 8, align: LEFT_MID, text: "" } } ], on_click: [ { script.execute: { id: velg_rom, nr: 2 } } ] }
+        - button: { id: rom_4, x: 8, y: 232, width: 224, height: 38, hidden: true, widgets: [ { label: { id: lbl_rom_4, x: 8, align: LEFT_MID, text: "" } } ], on_click: [ { script.execute: { id: velg_rom, nr: 3 } } ] }
+    # --- Lær IR ---
+    - id: side_laer
+      widgets:
+        - label: { x: 10, y: 26, text: "Lær IR-kode", text_font: f_tittel }
+        - label: { id: lbl_laer_info, x: 10, y: 58, width: 220, text: "Trykk tasten du vil lære", text_align: CENTER }
+        - label: { x: 12, y: 104, text: "Tast", text_color: 0x96948E }
+        - label: { id: lbl_laer_tast, align: TOP_RIGHT, x: -12, y: 104, text: "–", text_color: 0xE8B450, text_font: f_knapp }
+        - label: { x: 12, y: 126, text: "Mottatt", text_color: 0x96948E }
+        - label: { id: lbl_laer_kode, align: TOP_RIGHT, x: -12, y: 126, text: "–", text_font: f_knapp }
+        - button: { x: 8, y: 152, width: 53, height: 28, widgets: [ { label: { align: CENTER, text: "TV på" } } ], on_click: [ { script.execute: { id: laer_start, plass: 44 } } ] }
+        - button: { x: 65, y: 152, width: 53, height: 28, widgets: [ { label: { align: CENTER, text: "TV av" } } ], on_click: [ { script.execute: { id: laer_start, plass: 45 } } ] }
+        - button: { x: 122, y: 152, width: 53, height: 28, widgets: [ { label: { align: CENTER, text: "HDMI" } } ], on_click: [ { script.execute: { id: laer_start, plass: 46 } } ] }
+        - button: { x: 179, y: 152, width: 53, height: 28, widgets: [ { label: { align: CENTER, text: "Ekstra" } } ], on_click: [ { script.execute: { id: laer_start, plass: 47 } } ] }
+        - button: { x: 8, y: 236, width: 108, height: 30, widgets: [ { label: { align: CENTER, text: "Ferdig" } } ], on_click: [ { lambda: "id(laer_steg) = 0;" }, { lvgl.page.show: side_hjem } ] }
+        - button: { x: 124, y: 236, width: 108, height: 30, bg_color: 0xE8B450, widgets: [ { label: { align: CENTER, text: "Lagre", text_color: 0x101012 } } ], on_click: [ script.execute: laer_lagre ] }

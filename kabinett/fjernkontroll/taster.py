@@ -1,11 +1,13 @@
 """Tastene på Skjold Fjernkontroll – én kilde for kabinettet, tastekortet, fastvaren og dokumentasjonen.
 
+To varianter: «full» (44 taster, 230 mm) og «kort» (uten talltastene og smarthus-raden: 28 taster, 187 mm).
 Kjør:  python3 taster.py
-  skriver  taster.scad                      (hettene og bryterne til skjold_fjernkontroll.scad)
-           tastekort/plassering.csv          (bryter- og brikkeplassering for tastekortet, mm fra kortets hjørne)
-           tastekort/koblinger.csv           (hver bryter → TCA9555-brikke og pinne)
-           ../../esphome/skjold-fjernkontroll.yaml  (blokkene mellom «# >>> navneliste/hendelser/taster» og «# <<< …»)
-  og skriver koblingstabellen (Markdown) til stdout, til LES_MEG.md.
+  skriver  taster.scad                      (hettene og bryterne for begge variantene til skjold_fjernkontroll.scad)
+           tastekort/ og tastekort_kort/     (plassering.csv og koblinger.csv: bryter- og brikkeplassering og
+                                              hver bryter → TCA9555-brikke og pinne)
+           ../../esphome/skjold-fjernkontroll.yaml       (blokkene mellom «# >>> navneliste/hendelser/taster» og «# <<< …»)
+           ../../esphome/skjold-fjernkontroll-kort.yaml  (laget fra den over, med kort-variantens taster og 2 × TCA9555)
+  og skriver koblingstabellen for full variant (Markdown) til stdout, til LES_MEG.md (python3 taster.py kort for kort).
 
 Koordinater: x = tvers (0 … W, venstre kant = 0), n = avstand fra nesen (IR-enden) målt langs fjernkontrollen.
 Former:  rund (d) · pille (b × h, h langs fjernkontrollen) · vippe (to brytere) · ring (D-pad med fire brytere) · ok."""
@@ -14,7 +16,8 @@ import math
 import os
 import re
 
-W, L = 55.0, 230.0          # ytre mål (må stemme med skjold_fjernkontroll.scad)
+W, L = 55.0, 230.0          # ytre mål (må stemme med skjold_fjernkontroll.scad); L byttes av bruk("kort")
+L_FULL, L_KORT = 230.0, 187.0
 DN = 22.0                   # alt under skjermen flyttet 22 mm mot halen for 2,8″-skjermen (DN i .scad)
 CX = W / 2
 SPILL = 0.35                # klaring rundt hetta i hullet (hver side)
@@ -70,6 +73,12 @@ HETTER = [
 
 # alt under skjermen ligger DN mm lenger bak enn i første utgave (2,0″-skjerm)
 HETTER = [h[:4] + (h[4] + DN,) + h[5:] for h in HETTER]
+HETTER_FULL = HETTER
+# kort variant: uten talltastene (1–9, −, 0, ↵) og smarthus-raden (lys, stikk, −, +); fargetastene blir nederste rad
+KORT_UTEN = {f"tall_{d}" for d in range(10)} | {"strek", "enter", "lys", "stikk", "minus", "pluss"}
+HETTER_KORT = [h for h in HETTER_FULL if h[0] not in KORT_UTEN]
+VARIANT = "full"
+TCA_POS = [(CX - 13, 135.0 + DN), (CX, 135.0 + DN), (CX + 13, 135.0 + DN)]
 
 BRYTER_NAVN = {
     "opp": "Opp", "ned": "Ned", "venstre": "Venstre", "hoyre": "Høyre", "vol_opp": "Volum +", "vol_ned": "Volum −",
@@ -101,11 +110,24 @@ def tca(i):
     return "ABC"[chip], 0x20 + chip, pin, f"P{pin // 8}_{pin % 8}"
 
 
-# fire ledige pinner på brikke C (pinne 12–15) brukes til styring
-EKSTRA = [("vibrator", "C", 12, "P1_4", "utgang: vibrasjonsmotor (via AO3400)"),
-          ("strom_skjerm", "C", 13, "P1_5", "utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)"),
-          ("lader", "C", 14, "P1_6", "inngang: TP4056 CHRG (lav = lader)"),
-          ("ledig", "C", 15, "P1_7", "ledig")]
+# fire ledige pinner på siste brikke (pinne 12–15) brukes til styring: C i full variant, B i kort
+def ekstra():
+    c = "ABC"[len(TCA_POS) - 1]
+    return [("vibrator", c, 12, "P1_4", "utgang: vibrasjonsmotor (via AO3400)"),
+            ("strom_skjerm", c, 13, "P1_5", "utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)"),
+            ("lader", c, 14, "P1_6", "inngang: TP4056 CHRG (lav = lader)"),
+            ("ledig", c, 15, "P1_7", "ledig")]
+
+
+def bruk(variant):
+    """Velg variant («full» eller «kort») for funksjonene under."""
+    global HETTER, L, PCB_N1, VARIANT, TCA_POS
+    VARIANT = variant
+    if variant == "kort":
+        HETTER, L, TCA_POS = HETTER_KORT, L_KORT, [(CX - 13, 157.0), (CX, 157.0)]
+    else:
+        HETTER, L, TCA_POS = HETTER_FULL, L_FULL, [(CX - 13, 135.0 + DN), (CX, 135.0 + DN), (CX + 13, 135.0 + DN)]
+    PCB_N1 = max(b[3] for b in brytere()) + 6.3   # 6,3 mm bak siste bryterrad
 
 
 # ---------- 2D-former for sjekk av materialet mellom hullene ----------
@@ -178,12 +200,11 @@ def scad():
     for hid, navn, form, x, n, b, h, ikon, farge, ids in HETTER:
         rows.append(f'  ["{hid}", "{form}", {x:.2f}, {n:.2f}, {b:.2f}, {h:.2f}, "{ikon}", "{farge}"]')
     br = [f'  ["{bid}", {x:.2f}, {n:.2f}]' for bid, _, x, n, _ in brytere()]
-    return ("// Laget av taster.py – ikke rediger for hånd.\n"
-            "// hette: [id, form, x, n (fra nesen), bredde, høyde, ikon, farge]\n"
-            f"HETTER = [\n{(',' + chr(10)).join(rows)}\n];\n"
-            "// bryter: [id, x, n]\n"
-            f"BRYTERE = [\n{(',' + chr(10)).join(br)}\n];\n"
-            f"DPAD_R = {DPAD_R};\nVIPPE_D = {VIPPE_D};\nPCB_N0 = {PCB_N0};\nPCB_N1 = {PCB_N1};\n")
+    v = VARIANT.upper()
+    return (f"// variant «{VARIANT}»: {len(brytere())} brytere, {len(HETTER)} hetter, L = {L}\n"
+            f"HETTER_{v} = [\n{(',' + chr(10)).join(rows)}\n];\n"
+            f"BRYTERE_{v} = [\n{(',' + chr(10)).join(br)}\n];\n"
+            f"PCB_N1_{v} = {PCB_N1:.2f};\nL_{v} = {L};\n")
 
 
 def plassering():
@@ -192,7 +213,7 @@ def plassering():
     rows = [("ref", "verdi", "fotavtrykk", "x_mm", "y_mm", "rot", "side")]
     for i, (bid, navn, x, n, hid) in enumerate(brytere()):
         rows.append((f"SW{i + 1}", f"{bid}", "SW-SMD_4x4x1.5", f"{x - 3.2:.2f}", f"{PCB_N1 - n:.2f}", "0", "topp"))
-    for i, (x, n) in enumerate([(CX - 13, 135.0 + DN), (CX, 135.0 + DN), (CX + 13, 135.0 + DN)]):
+    for i, (x, n) in enumerate(TCA_POS):
         rows.append((f"U{i + 1}", f"TCA9555PWR 0x{0x20 + i:02X}", "TSSOP-24", f"{x - 3.2:.2f}", f"{PCB_N1 - n:.2f}", "90", "bunn"))
     return rows
 
@@ -202,8 +223,8 @@ def koblinger():
     for i, (bid, navn, x, n, hid) in enumerate(brytere()):
         c, a, p, pn = tca(i)
         rows.append((bid, navn, c, f"0x{a:02X}", pn, str(p)))
-    for bid, c, p, pn, m in EKSTRA:
-        rows.append((bid, m, c, "0x22", pn, str(p)))
+    for bid, c, p, pn, m in ekstra():
+        rows.append((bid, m, c, f"0x{0x20 + len(TCA_POS) - 1:02X}", pn, str(p)))
     return rows
 
 
@@ -259,26 +280,58 @@ def tabell():
     return "\n".join(lines)
 
 
+def kort_yaml(full):
+    """esphome/skjold-fjernkontroll-kort.yaml: samme fil, men kort-variantens taster og bare 2 × TCA9555."""
+    k = full
+    for a, b in [("  name: skjold-fjernkontroll\n", "  name: skjold-fjernkontroll-kort\n"),
+                 ("  friendly_name: Skjold Fjernkontroll\n", "  friendly_name: Skjold Fjernkontroll Kort\n"),
+                 ("  ekstra_hub: tca_c ", "  ekstra_hub: tca_b "),
+                 ("  - { id: tca_c, i2c_id: bus_a, address: 0x22 }\n", ""),
+                 ("  ap: { ssid: \"Skjold Fjernkontroll\" }", "  ap: { ssid: \"Skjold Fjernkontroll Kort\" }")]:
+        assert a in k, a
+        k = k.replace(a, b)
+    hode = ("# KORT VARIANT – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her:\n"
+            "# endre skjold-fjernkontroll.yaml og kjør python3 taster.py. Uten talltastene og smarthus-raden (28 taster,\n"
+            "# 2 × TCA9555). Lys, stikk og ± ligger på Hjem-siden og på langt trykk på fargetastene.\n")
+    for kk, v in yaml_blokker().items():
+        k = re.sub(rf"# >>> {kk}.*?# <<< {kk}", lambda _m, v=v: v, k, flags=re.S)
+    return hode + k
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
-    feil = sjekk_steg()
-    assert len(brytere()) == 44, len(brytere())
-    if feil:
-        raise SystemExit(f"for lite materiale mellom hullene: {feil}")
+    deler, yml = [], os.path.join(here, "..", "..", "esphome", "skjold-fjernkontroll.yaml")
+    for v, antall in (("kort", 28), ("full", 44)):
+        bruk(v)
+        assert len(brytere()) == antall, (v, len(brytere()))
+        feil = sjekk_steg()
+        if feil:
+            raise SystemExit(f"{v}: for lite materiale mellom hullene: {feil}")
+        deler.append(scad())
+        mappe = os.path.join(here, "tastekort" if v == "full" else "tastekort_kort")
+        os.makedirs(mappe, exist_ok=True)
+        for fn, rows in (("plassering.csv", plassering()), ("koblinger.csv", koblinger())):
+            with open(os.path.join(mappe, fn), "w", newline="") as f:
+                csv.writer(f).writerows(rows)
+        if v == "kort":
+            kort_blokker = yaml_blokker()
     with open(os.path.join(here, "taster.scad"), "w") as f:
-        f.write(scad())
-    os.makedirs(os.path.join(here, "tastekort"), exist_ok=True)
-    for fn, rows in (("plassering.csv", plassering()), ("koblinger.csv", koblinger())):
-        with open(os.path.join(here, "tastekort", fn), "w", newline="") as f:
-            csv.writer(f).writerows(rows)
-    yml = os.path.join(here, "..", "..", "esphome", "skjold-fjernkontroll.yaml")
-    if os.path.exists(yml):
-        s = open(yml).read()
-        ny = s
-        for k, v in yaml_blokker().items():
-            ny = re.sub(rf"# >>> {k}.*?# <<< {k}", lambda _m, v=v: v, ny, flags=re.S)
-        if ny != s:
-            open(yml, "w").write(ny)
+        f.write("// Laget av taster.py – ikke rediger for hånd.\n"
+                "// hette: [id, form, x, n (fra nesen), bredde, høyde, ikon, farge] · bryter: [id, x, n]\n"
+                f"DPAD_R = {DPAD_R};\nVIPPE_D = {VIPPE_D};\nPCB_N0 = {PCB_N0};\n" + "".join(deler))
+    # full (bruk("full") er aktiv nå)
+    s = open(yml).read()
+    ny = s
+    for k, v in yaml_blokker().items():
+        ny = re.sub(rf"# >>> {k}.*?# <<< {k}", lambda _m, v=v: v, ny, flags=re.S)
+    if ny != s:
+        open(yml, "w").write(ny)
+    bruk("kort")
+    open(yml.replace(".yaml", "-kort.yaml"), "w").write(kort_yaml(ny))
+    bruk("full")
+    import sys
+    if len(sys.argv) > 1:
+        bruk(sys.argv[1])
     print(tabell())
 
 

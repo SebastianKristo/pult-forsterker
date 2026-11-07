@@ -1,6 +1,68 @@
 // Laget av taster.py – ikke rediger for hånd.
-// hette: [id, form, x, n (fra nesen), bredde, høyde, ikon, farge]
-HETTER = [
+// hette: [id, form, x, n (fra nesen), bredde, høyde, ikon, farge] · bryter: [id, x, n]
+DPAD_R = 11.2;
+VIPPE_D = 7.4;
+PCB_N0 = 79.5;
+// variant «kort»: 28 brytere, 23 hetter, L = 187.0
+HETTER_KORT = [
+  ["av", "rund", 13.50, 83.00, 7.00, 7.00, "av", "mork"],
+  ["hjem", "rund", 27.50, 83.00, 7.60, 7.60, "skjold", "gull"],
+  ["meny", "rund", 41.50, 83.00, 7.00, 7.00, "meny", "mork"],
+  ["tilbake", "rund", 7.60, 92.00, 6.60, 6.60, "tilbake", "mork"],
+  ["info", "rund", 47.40, 92.00, 6.60, 6.60, "info", "mork"],
+  ["guide", "rund", 7.60, 118.00, 6.60, 6.60, "guide", "mork"],
+  ["avslutt", "rund", 47.40, 118.00, 6.60, 6.60, "avslutt", "mork"],
+  ["dpad", "ring", 27.50, 105.00, 30.00, 14.60, "", "gull"],
+  ["ok", "ok", 27.50, 105.00, 12.60, 12.60, "OK", "mork"],
+  ["vol", "vippe", 9.40, 135.00, 8.40, 22.00, "vol", "mork"],
+  ["kan", "vippe", 45.60, 135.00, 8.40, 22.00, "kan", "mork"],
+  ["demp", "pille", 27.50, 128.50, 11.00, 6.40, "demp", "mork"],
+  ["siste", "pille", 27.50, 141.50, 11.00, 6.40, "siste", "mork"],
+  ["spol_tilbake", "pille", 12.00, 153.50, 12.00, 7.20, "spol_tilbake", "mork"],
+  ["spill_pause", "pille", 27.50, 153.50, 12.00, 7.20, "spill_pause", "mork"],
+  ["spol_frem", "pille", 43.00, 153.50, 12.00, 7.20, "spol_frem", "mork"],
+  ["opptak", "pille", 12.00, 163.00, 12.00, 6.60, "opptak", "mork"],
+  ["stopp", "pille", 27.50, 163.00, 12.00, 6.60, "stopp", "mork"],
+  ["dvr", "pille", 43.00, 163.00, 12.00, 6.60, "dvr", "mork"],
+  ["rod", "pille", 9.50, 171.60, 9.00, 4.40, "", "rod"],
+  ["gronn", "pille", 21.50, 171.60, 9.00, 4.40, "", "gronn"],
+  ["gul", "pille", 33.50, 171.60, 9.00, 4.40, "", "gul"],
+  ["bla", "pille", 45.50, 171.60, 9.00, 4.40, "", "bla"]
+];
+BRYTERE_KORT = [
+  ["av", 13.50, 83.00],
+  ["hjem", 27.50, 83.00],
+  ["meny", 41.50, 83.00],
+  ["tilbake", 7.60, 92.00],
+  ["info", 47.40, 92.00],
+  ["guide", 7.60, 118.00],
+  ["avslutt", 47.40, 118.00],
+  ["opp", 27.50, 93.80],
+  ["ned", 27.50, 116.20],
+  ["venstre", 16.30, 105.00],
+  ["hoyre", 38.70, 105.00],
+  ["ok", 27.50, 105.00],
+  ["vol_opp", 9.40, 127.60],
+  ["vol_ned", 9.40, 142.40],
+  ["kan_opp", 45.60, 127.60],
+  ["kan_ned", 45.60, 142.40],
+  ["demp", 27.50, 128.50],
+  ["siste", 27.50, 141.50],
+  ["spol_tilbake", 12.00, 153.50],
+  ["spill_pause", 27.50, 153.50],
+  ["spol_frem", 43.00, 153.50],
+  ["opptak", 12.00, 163.00],
+  ["stopp", 27.50, 163.00],
+  ["dvr", 43.00, 163.00],
+  ["rod", 9.50, 171.60],
+  ["gronn", 21.50, 171.60],
+  ["gul", 33.50, 171.60],
+  ["bla", 45.50, 171.60]
+];
+PCB_N1_KORT = 177.90;
+L_KORT = 187.0;
+// variant «full»: 44 brytere, 39 hetter, L = 230.0
+HETTER_FULL = [
   ["av", "rund", 13.50, 83.00, 7.00, 7.00, "av", "mork"],
   ["hjem", "rund", 27.50, 83.00, 7.60, 7.60, "skjold", "gull"],
   ["meny", "rund", 41.50, 83.00, 7.00, 7.00, "meny", "mork"],
@@ -41,8 +103,7 @@ HETTER = [
   ["minus", "pille", 33.50, 214.20, 9.60, 6.00, "minus", "lys"],
   ["pluss", "pille", 45.50, 214.20, 9.60, 6.00, "pluss", "lys"]
 ];
-// bryter: [id, x, n]
-BRYTERE = [
+BRYTERE_FULL = [
   ["av", 13.50, 83.00],
   ["hjem", 27.50, 83.00],
   ["meny", 41.50, 83.00],
@@ -88,7 +149,5 @@ BRYTERE = [
   ["minus", 33.50, 214.20],
   ["pluss", 45.50, 214.20]
 ];
-DPAD_R = 11.2;
-VIPPE_D = 7.4;
-PCB_N0 = 79.5;
-PCB_N1 = 220.5;
+PCB_N1_FULL = 220.50;
+L_FULL = 230.0;

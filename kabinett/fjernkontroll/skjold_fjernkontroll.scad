@@ -14,13 +14,18 @@
 include <taster.scad>
 
 part = "samlet";
+variant = "full";               // full (44 taster, 230 mm) | kort (uten talltastene og smarthus-raden: 28 taster, 187 mm)
+kortv = variant == "kort";
 farge = "lys";                  // lys | mork
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
 skjermE = 0;                    // part="skjermflate": samme eksplosjonsavstand som bildet
 $fn = 48;
 
 // ---------- ytre mål ----------
-W = 55; L = 230;                // bredde og lengde (taster.py bruker de samme)
+W = 55; L = kortv ? L_KORT : L_FULL;   // bredde og lengde (fra taster.py: 230 eller 187 mm)
+HETTER = kortv ? HETTER_KORT : HETTER_FULL;
+BRYTERE = kortv ? BRYTERE_KORT : BRYTERE_FULL;
+PCB_N1 = kortv ? PCB_N1_KORT : PCB_N1_FULL;
 DN = 22;                        // alt under skjermen er flyttet 22 mm mot halen for 2,8″-skjermen (taster.py: DN)
 H = 13.5;                       // høyde uten taster (tastene står 1,2 mm opp, gullringen 1,5 mm: 15,0 mm totalt)
 R = 11;                         // hjørneradius sett ovenfra
@@ -58,13 +63,18 @@ zGlass = H - lepT;              // glassets overside (12,7)
 bossD = 5.0;  bossBD = 6.0;     // tårn i toppen og bunnen
 pilot = 1.7;  klar = 2.3;  hodeD = 4.3;  hodeH = 2.5;
 zMot = zs + lipH;               // hjørnetårnene møtes her (8,6)
-SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [W/2, L - 113 - DN]];   // nese ×2 (foran skjermen), hale ×2, midt
+SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [W/2, L - 135]];   // nese ×2 (foran skjermen), hale ×2, midt (n = 135)
 MIDT = 4;                       // skrue nr. 4 (midt) klemmer tastekortet
-PINNER = [[W/2 - 7.5, 100 + DN], [W/2 + 7.5, 100 + DN], [W/2, 125.3 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
+PINNER = kortv ? [[W/2 - 7.5, 100 + DN], [W/2 + 7.5, 100 + DN]] : [[W/2 - 7.5, 100 + DN], [W/2 + 7.5, 100 + DN], [W/2, 125.3 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
 
 // ---------- innmat ----------
 bat = [34, 50, 6.0];  batN = 11;    // LiPo 603450 (1200 mAh) under skjermen, fra n = 11
-mcu = [18, 22.6, 4.6]; mcuN = 150 + DN;  // ESP32-S3 SuperMini (antennen mot halen)
+mcu = [18, 22.6, 4.6];              // ESP32-S3 SuperMini (antennen mot halen)
+mcuN = kortv ? 125 : 150 + DN;       // kort: foran laderen, til venstre for midtskruen
+mcuX = kortv ? 13.5 : W/2;
+STOLPER = kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 165], [W/2 + 15, 165]]
+                : [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 172 + DN], [W/2 + 15, 172 + DN]];
+TCA = kortv ? [[W/2 - 13, 157], [W/2, 157]] : [[W/2 - 13, 135 + DN], [W/2, 135 + DN], [W/2 + 13, 135 + DN]];   // TCA9555 under kortet
 lad = [17, 26, 4.6];                // TP4056 USB-C-modul med beskyttelse, mot halen
 usbW = 9.4; usbH = 3.6; usbZ = tB + 1.2 + 1.6;   // USB-C-åpningen (senter z ≈ 4,4)
 irW = 30; irH = 3.8; irZ = 4.3;     // IR-vinduet i nesen (z 2,4 … 6,2)
@@ -250,11 +260,11 @@ module bunn() {
             cylinder(d = bossBD, h = (i == MIDT ? zKort : zMot));
           // stolper under tastekortet
           for (p = PINNER) translate([p[0], L - p[1], 0]) cylinder(d = 3.0, h = zKort, $fn = 20);
-          for (p = [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 172 + DN], [W/2 + 15, 172 + DN]]) translate([p[0], L - p[1], 0]) cylinder(d = 3.0, h = zKort, $fn = 20);
+          for (p = STOLPER) translate([p[0], L - p[1], 0]) cylinder(d = 3.0, h = zKort, $fn = 20);
           // ribber: batterilomme, ladermodul og SuperMini
           translate([W/2, L - batN - bat[1]/2, tB - 0.01]) linear_extrude(1.6) difference() { square([bat[0] + 3.0, bat[1] + 3.0], center = true); square([bat[0] + 0.6, bat[1] + 0.6], center = true); translate([0, bat[1]/2]) square([12, 6], center = true); }
           translate([W/2, t + 0.6 + lad[1]/2, tB - 0.01]) linear_extrude(1.4) difference() { square([lad[0] + 2.6, lad[1] + 2.0], center = true); square([lad[0] + 0.4, lad[1] + 0.4], center = true); translate([0, -lad[1]/2]) square([lad[0] + 4, 4], center = true); }
-          translate([W/2, L - mcuN - mcu[1]/2, tB - 0.01]) linear_extrude(1.2) difference() { square([mcu[0] + 2.6, mcu[1] + 2.6], center = true); square([mcu[0] + 0.4, mcu[1] + 0.4], center = true); }
+          translate([mcuX, L - mcuN - mcu[1]/2, tB - 0.01]) linear_extrude(1.2) difference() { square([mcu[0] + 2.6, mcu[1] + 2.6], center = true); square([mcu[0] + 0.4, mcu[1] + 0.4], center = true); }
           // IR-kortet i nesen (lite hullkort 34 × 6,6 mm) står i et spor: bak ligger batteriribben, foran to korte knaster
           for (x = [W/2 - 17, W/2 + 14]) translate([x, L - t - 6.6, tB - 0.01]) cube([3, 1.0, 1.4]);
         }
@@ -288,7 +298,7 @@ module kort2d() {
 }
 module tastekort() { translate([0, 0, zKort]) linear_extrude(kortT) kort2d(); }
 module brytere() { for (b = BRYTERE) translate([b[1], L - b[2], zKort + kortT]) { translate([-2, -2, 0]) cube([4, 4, swH - 0.4]); cylinder(d = 2.4, h = swH, $fn = 16); } }
-module tca() { for (x = [W/2 - 13, W/2, W/2 + 13]) translate([x - 2.2, L - 135 - DN - 3.9, zKort - 1.2]) cube([4.4, 7.8, 1.2]); }
+module tca() { for (c = TCA) translate([c[0] - 2.2, L - c[1] - 3.9, zKort - 1.2]) cube([4.4, 7.8, 1.2]); }
 module bryterbrett() {   // printet 1,0 mm plate med to Ø1,0-hull per bryter (ledningene) – limes på bryterne (se LES_MEG)
   difference() {
     linear_extrude(kortT) kort2d();
@@ -311,7 +321,7 @@ module skjermhjorner() {
     color(q[2]) translate([W/2 - scrAW/2 + q[0]*scrAW/2, L - scrN - scrAH/2 + q[1]*scrAH/2, zGlass + 0.005]) cube([scrAW/2, scrAH/2, 0.02]);
 }
 module batteri() { color([0.55, 0.57, 0.60]) translate([W/2 - bat[0]/2, L - batN - bat[1], tB + 0.05]) cube(bat); }
-module mcu_kort() { translate([W/2 - mcu[0]/2, L - mcuN - mcu[1], tB + 0.05]) { color([0.10, 0.10, 0.12]) cube([mcu[0], mcu[1], 1.0]); color([0.75, 0.75, 0.77]) translate([2, 2, 1]) cube([14, 16, 2.4]); } }
+module mcu_kort() { translate([mcuX - mcu[0]/2, L - mcuN - mcu[1], tB + 0.05]) { color([0.10, 0.10, 0.12]) cube([mcu[0], mcu[1], 1.0]); color([0.75, 0.75, 0.77]) translate([2, 2, 1]) cube([14, 16, 2.4]); } }
 module lader() { translate([W/2 - lad[0]/2, t + 0.6, tB + 0.05]) { color([0.12, 0.25, 0.55]) cube([lad[0], lad[1], 1.2]); color([0.8, 0.8, 0.82]) translate([lad[0]/2 - 4.5, -0.25, 1.2]) cube([9.0, 7.5, 3.2]); } }
 module ir_kort() {
   translate([W/2 - 17, L - t - 7.6, tB + 0.05]) color([0.12, 0.42, 0.22]) cube([34, 1.0, 6.6]);
@@ -358,7 +368,7 @@ else if (part == "A_symboler") { symboler("mork"); symboler("lys"); symboler("gu
 else if (part == "A_kort") { tastekort(); brytere(); tca(); }
 else if (part == "A_skjerm") translate([W/2 - modW/2, L - scrN - modH/2, zGlass - modT]) cube([modW, modH, modT]);
 else if (part == "A_batteri") translate([W/2 - bat[0]/2, L - batN - bat[1], tB + 0.05]) cube(bat);
-else if (part == "A_mcu") translate([W/2 - mcu[0]/2, L - mcuN - mcu[1], tB + 0.05]) cube([mcu[0], mcu[1], 3.4]);
+else if (part == "A_mcu") translate([mcuX - mcu[0]/2, L - mcuN - mcu[1], tB + 0.05]) cube([mcu[0], mcu[1], 3.4]);
 else if (part == "A_lader") translate([W/2 - lad[0]/2, t + 0.6, tB + 0.05]) cube([lad[0], lad[1], 4.4]);
 else if (part == "skjermflate") translate([0, 0, 1.05*skjermE]) skjermhjorner();
 else if (part == "topp") print_topp() topp();
