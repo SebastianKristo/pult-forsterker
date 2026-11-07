@@ -7,6 +7,7 @@ import SwiftUI
         WindowGroup {
             ContentView()
                 .environment(model)
+                .task { WatchBridge.shared.start() }   // Apple Watch-appen: rom til klokka, kommandoer fra klokka
         }
     }
 }

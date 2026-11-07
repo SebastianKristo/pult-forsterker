@@ -85,4 +85,6 @@ dependencies {
     implementation("androidx.media3:media3-common:1.5.1")
     implementation("androidx.mediarouter:mediarouter:1.7.0")
     implementation("com.google.guava:guava:33.3.1-android")
+    // Wear OS-appen (:wear): rom til klokka og kall fra klokka (Wearable Data Layer)
+    implementation("com.google.android.gms:play-services-wearable:18.2.0")
 }
