@@ -2998,16 +2998,20 @@ async def _spol_etter_hopp(retning, hopp_s):
     if sek <= 0:
         return
     loop = asyncio.get_running_loop()
+    # Kilder Skjold kan pause (Lyrion: radio, Navidrome, YT Music via Lyrion/MA; AirPlay; Blåtann): lyden står mens
+    # spolene spoler. Spotify (librespot) kan ikke styres herfra – da spoler spolene mens lyden spiller videre.
     try:
         await loop.run_in_executor(None, transport, "pause")
+        pauset = True
     except Exception:
-        return
+        pauset = False
     spoler.tving(retning, sek)
     await asyncio.sleep(sek)
-    try:
-        await loop.run_in_executor(None, transport, "play")
-    except Exception:
-        pass
+    if pauset:
+        try:
+            await loop.run_in_executor(None, transport, "play")
+        except Exception:
+            pass
 
 
 async def h_transport(r):
