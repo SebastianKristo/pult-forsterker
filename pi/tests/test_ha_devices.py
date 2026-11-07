@@ -49,3 +49,16 @@ def test_kassett_state_ventende_delte_og_mest_spilt():
                        "ventende": [{"artist": "Adele", "album": "21"},
                                     {"handling": "album", "verdi": {"artist": "a-ha", "album": "HHL"}, "fra": "Kari"}]}, None)
     assert s["ventende"] == 2 and s["ventende_delte"] == 1 and s["mest_spilt"] == "Meteora"
+
+
+def test_perf_entities_have_translations():
+    import json, re
+    base = os.path.join(os.path.dirname(__file__), "..", "..", "custom_components", "skjold")
+    src = open(os.path.join(base, "sensor.py")).read()
+    keys = ["perf_" + k for k in re.findall(r'^\s*\("(\w+)", \(', src, re.M)]
+    assert "perf_cpu" in keys and "perf_cpu_temp" in keys and len(keys) == 7
+    for f in ("strings.json", "translations/en.json", "translations/nb.json"):
+        e = json.load(open(os.path.join(base, f)))["entity"]
+        for k in keys:
+            assert k in e["sensor"], (f, k)
+        assert "power_problem" in e["binary_sensor"]

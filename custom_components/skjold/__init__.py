@@ -29,6 +29,7 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         self.extras: dict = {"rost": None, "nfc": None, "spoler": None, "hjul": None}
         self._extras_n = 0
         self.settings: dict = {}             # /api/settings (EQ-profiler til Skjold-kortet)
+        self.perf: dict | None = None        # /api/health/perf (ytelse på Pi-en), hentes ca. hvert 30. s
         self._settings_n = 0
 
     async def _async_update_data(self) -> dict:
@@ -39,6 +40,10 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         await self._refresh_presets(data)
         if self._extras_n % 6 == 0:   # ca. hvert 30. sekund
             await self.refresh_extras()
+            try:
+                self.perf = await self.api.perf()
+            except KiAmpError:
+                self.perf = None   # eldre daemon uten /api/health/perf
         self._extras_n += 1
         # innstillingene endres sjelden: hent dem hver 6. oppdatering (~30 s) for EQ-profilen i kortet
         if self._settings_n % 6 == 0:

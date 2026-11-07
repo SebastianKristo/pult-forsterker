@@ -3,6 +3,7 @@
 # fra denne fila. Hold innstillingene i takt med Skjold.xcodeproj/project.xcproj.
 name: SkjoldCI
 options:
+  developmentLanguage: nb
   deploymentTarget: { iOS: "26.0", watchOS: "10.0" }
 targets:
   Skjold:

@@ -1,5 +1,6 @@
 package no.kristo.skjold
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -387,7 +388,8 @@ fun SKLogo(barW: Dp = 2.5.dp, gap: Dp = 2.dp, size: Float = 15f, tracking: Float
 @Composable
 fun SKTabBar(selected: Int, pick: (Int) -> Unit) {
     // v4 (android): heldekkende linje #161618, pilleindikator 64×32 bak ikonet, etikett 12 / 700 når valgt
-    val items = listOf(Icons.tabHome to "Hjem", Icons.tabSound to "Lyd", Icons.tabRooms to "Rom", Icons.tabSettings to "Innstillinger")
+    val items = listOf(Icons.tabHome to stringResource(R.string.tab_home), Icons.tabSound to stringResource(R.string.tab_sound),
+        Icons.tabRooms to stringResource(R.string.tab_rooms), Icons.tabSettings to stringResource(R.string.tab_settings))
     Column(Modifier.fillMaxWidth().background(SkG.barBg).topLine(SkG.barLine).windowInsetsPadding(WindowInsets.navigationBars)) {
         Row(Modifier.fillMaxWidth().padding(top = SkG.barPadTop, bottom = 12.dp)) {
             items.forEachIndexed { i, it ->
@@ -410,7 +412,8 @@ fun SKTabBar(selected: Int, pick: (Int) -> Unit) {
 /** v4 brettbar/nettbrett (Android, showRail): faner i en kolonne til venstre, 92 bred, #141415, kantlinje #232326. */
 @Composable
 fun SKNavRail(selected: Int, pick: (Int) -> Unit) {
-    val items = listOf(Icons.tabHome to "Hjem", Icons.tabSound to "Lyd", Icons.tabRooms to "Rom", Icons.tabSettings to "Innstillinger")
+    val items = listOf(Icons.tabHome to stringResource(R.string.tab_home), Icons.tabSound to stringResource(R.string.tab_sound),
+        Icons.tabRooms to stringResource(R.string.tab_rooms), Icons.tabSettings to stringResource(R.string.tab_settings))
     Row(Modifier.fillMaxHeight()) {
         Column(
             Modifier.width(92.dp).fillMaxHeight().background(hex(0x141415)).windowInsetsPadding(WindowInsets.systemBars).padding(top = 20.dp),

@@ -17,6 +17,10 @@ function createMockDaemon({ port = 0 } = {}) {
         if (!state.cover) { res.writeHead(404); return res.end(); }
         res.writeHead(200, { 'Content-Type': 'image/png' }); return res.end(Buffer.from('89504e470d0a1a0a', 'hex'));
       }
+      if (req.method === 'GET' && p === '/api/health/perf') {
+        if (!state.perf) { res.writeHead(404); return res.end('{}'); }   // eldre daemon
+        res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(state.perf));
+      }
       if (req.method === 'GET' && p === '/api/status') { /* bare status */ }
       else if (req.method === 'GET' && p === '/api/presets') {
         if (!state.presets_api) { res.writeHead(404); return res.end('{}'); }   // eldre daemon

@@ -10,9 +10,70 @@
   "theme_color": "#0b0b0c",
   "lang": "no",
   "icons": [
-    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "./icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Spill / pause",
+      "short_name": "Spill/pause",
+      "url": "./?snarvei=spillpause",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Neste låt",
+      "short_name": "Neste",
+      "url": "./?snarvei=neste",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Radio",
+      "url": "./?snarvei=radio",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Kassetter",
+      "url": "./?snarvei=kassetter",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }

@@ -111,6 +111,13 @@ object Shortcuts {
         }
     }
 
+    /** Siste kassett som sto i kassettspilleren: (uid, navn) fra GET /api/nfc, eller null. */
+    private fun lastCassette(h: String?): Pair<String, String>? = try {
+        val last = JSONObject(http(h, "GET", "/api/nfc") ?: "{}").optJSONObject("last")
+        val uid = last?.optString("uid").orEmpty()
+        if (uid.isBlank()) null else uid to (last?.optString("navn")?.ifBlank { null } ?: "Kassett")
+    } catch (_: Exception) { null }
+
     private fun routines(h: String?): List<Pair<String, String>> {
         val body = http(h, "GET", "/api/routines") ?: return emptyList()
         val arr = try { JSONObject(body).optJSONArray("routines") } catch (_: Exception) { null } ?: return emptyList()
@@ -152,6 +159,11 @@ object Shortcuts {
             "pause" -> if (post(h, "/api/transport", JSONObject().put("action", "pause"))) "Pause i $rom" else null
             "play" -> if (post(h, "/api/transport", JSONObject().put("action", "play"))) "Spiller i $rom" else null
             "neste" -> if (post(h, "/api/transport", JSONObject().put("action", "next"))) "Neste" else null
+            "spillpause" -> if (post(h, "/api/transport", JSONObject().put("action", "playpause"))) "Spill/pause i $rom" else null
+            "sistekassett" -> {
+                val uid = lastCassette(h)?.first
+                if (uid != null && post(h, "/api/nfc/scan", JSONObject().put("uid", uid).put("device", "android"))) "Spiller siste kassett i $rom" else null
+            }
             "av" -> if (post(h, "/api/power", JSONObject().put("on", false))) "Slo av $rom" else null
             "routine" -> if (post(h, "/api/routines/${Uri.encode(u.lastPathSegment ?: "")}/run")) "Kjører rutine" else null
             "recognize" -> if (post(h, "/api/recognize")) "Lytter …" else null
@@ -205,19 +217,29 @@ object Shortcuts {
         val rts = routines(h)
         val max = (ShortcutManagerCompat.getMaxShortcutCountPerActivity(ctx) - 1).coerceAtLeast(1)   // 1 statisk («Hva er dette?»)
         val list = mutableListOf<ShortcutInfoCompat>()
+        // Faste hurtigvalg først: spill/pause og siste kassett (hvis en kassettspiller er i bruk)
+        list += ShortcutInfoCompat.Builder(ctx, "playpause").setShortLabel(ctx.getString(R.string.sc_playpause)).setLongLabel(ctx.getString(R.string.sc_playpause))
+            .setIcon(IconCompat.createWithResource(ctx, R.drawable.ic_n_play))
+            .setIntent(Intent(Intent.ACTION_VIEW, Uri.parse("skjold://spillpause"), ctx, ShortcutActivity::class.java)).setRank(0).build()
+        lastCassette(h)?.let { (_, navn) ->
+            list += ShortcutInfoCompat.Builder(ctx, "lastcassette").setShortLabel(navn.take(24)).setLongLabel(ctx.getString(R.string.sc_last_cassette) + ": " + navn)
+                .setIcon(IconCompat.createWithResource(ctx, R.mipmap.ic_launcher))
+                .setIntent(Intent(Intent.ACTION_VIEW, Uri.parse("skjold://sistekassett"), ctx, ShortcutActivity::class.java)).setRank(1).build()
+        }
+        val base = list.size
         favs.forEachIndexed { i, (n, t) ->
             list += ShortcutInfoCompat.Builder(ctx, "fav-$n").setShortLabel(t).setLongLabel("Spill $t")
                 .setIcon(IconCompat.createWithResource(ctx, R.mipmap.ic_launcher))
                 .setIntent(Intent(Intent.ACTION_VIEW, Uri.parse("skjold://spill?n=$n"), ctx, ShortcutActivity::class.java))
                 .addCapabilityBinding("actions.intent.OPEN_APP_FEATURE", "feature", listOf(t))
-                .setRank(i).build()
+                .setRank(base + i).build()
         }
         rts.forEachIndexed { i, (id, navn) ->
             list += ShortcutInfoCompat.Builder(ctx, "routine-$id").setShortLabel(navn).setLongLabel("Kjør $navn")
                 .setIcon(IconCompat.createWithResource(ctx, R.mipmap.ic_launcher))
                 .setIntent(Intent(Intent.ACTION_VIEW, Uri.parse("skjold://routine/${Uri.encode(id)}"), ctx, ShortcutActivity::class.java))
                 .addCapabilityBinding("actions.intent.OPEN_APP_FEATURE", "feature", listOf(navn))
-                .setRank(favs.size + i).build()
+                .setRank(base + favs.size + i).build()
         }
         try { ShortcutManagerCompat.setDynamicShortcuts(ctx, list.take(max)) } catch (_: Exception) {}
     }

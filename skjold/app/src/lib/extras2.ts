@@ -62,5 +62,13 @@ export const x2 = {
   storePost: (b: Record<string, unknown>) => call<{ ok?: boolean; installed?: string; error?: string; actions?: unknown[]; result?: unknown }>('/api/store', b, 60000),
   storeUpload: (f: File, sha256 = '') => { const fd = new FormData(); fd.append('file', f); if (sha256) fd.append('sha256', sha256); return call<{ ok: boolean; installed: string }>('/api/store', fd, 60000); },
   health: () => call<Health>('/api/health', undefined, 20000),
+  perf: () => call<Perf>('/api/health/perf', undefined, 10000),
   healthReport: () => call<{ text: string; issue: string }>('/api/health/report?format=json', undefined, 20000),
 };
+
+export interface Perf {
+  cpu_pct: number | null; cpus: number; load: number[] | null; temp_c: number | null; model: string | null; uptime_s: number | null;
+  memory: { total_mb: number; used_mb: number; pct: number } | null; disk: { free_gb: number; total_gb: number; pct: number } | null;
+  throttle: { under_voltage: boolean; freq_capped: boolean; throttled: boolean; under_voltage_occurred: boolean; power_problem: boolean } | null;
+  services: Record<string, { cpu_pct: number | null; mem_mb: number | null }>;
+}

@@ -1,4 +1,5 @@
 // Innstillinger: kategoriliste + detaljside, generert fra CATS i lib/settings.ts.
+import { langPref, setLang, t, type LangPref } from '../i18n';
 import { ChangelogPanel } from './programs';
 import { HomeEditor } from './homeedit';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -34,7 +35,7 @@ export function SettingsPage({ wide = false }: { wide?: boolean }) {
   if (!cat) return <CategoryList wide={wide} />;
   return (
     <>
-      {!wide && <button onClick={() => go('settings')} style="align-self:flex-start;display:flex;align-items:center;gap:4px;border:none;background:none;color:#d9a441;font-size:14px;cursor:pointer;padding:0"><Chevron dir="left" />Innstillinger</button>}
+      {!wide && <button onClick={() => go('settings')} style="align-self:flex-start;display:flex;align-items:center;gap:4px;border:none;background:none;color:#d9a441;font-size:14px;cursor:pointer;padding:0"><Chevron dir="left" />{t('Innstillinger')}</button>}
       <CategoryDetail cat={cat} wide={wide} />
     </>
   );
@@ -63,7 +64,7 @@ export function CategoryList({ wide = false }: { wide?: boolean } = {}) {
           <button key={id} class="cat-row" onClick={() => go(id)} style={`display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-height:58px;padding:8px 14px;border:none;border-top:1px solid ${i ? '#242426' : 'transparent'};background:transparent;cursor:pointer;text-align:left`}>
             <span style="display:flex;align-items:center;gap:12px;min-width:0">
               <span style={`width:32px;height:32px;border-radius:8px;background:${tile};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#f2f2ee`}><Icon d={d} size={18} /></span>
-              <span style="flex:1 1 auto;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{n}</span><span style="font-size:11px;color:#8b8b86">{sub}</span></span>
+              <span style="flex:1 1 auto;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{t(n)}</span><span style="font-size:11px;color:#8b8b86">{t(sub)}</span></span>
             </span>
             <Chevron color="#8b8b86" />
           </button>
@@ -74,12 +75,13 @@ export function CategoryList({ wide = false }: { wide?: boolean } = {}) {
           <button key={c.id} class="cat-row" onClick={() => go('settings', c.id)} style={`display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-height:58px;padding:8px 14px;border:none;border-top:1px solid ${i ? '#242426' : 'transparent'};background:transparent;cursor:pointer;text-align:left`}>
             <span style="display:flex;align-items:center;gap:12px;min-width:0">
               <span style={`width:32px;height:32px;border-radius:8px;background:${CAT_TILE[c.id] ?? '#333'};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#f2f2ee`}>{ICONS[c.id] ? <Icon d={ICONS[c.id] ?? ''} size={18} /> : null}</span>
-              <span style="flex:1 1 auto;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{c.n}</span><span style="font-size:11px;color:#8b8b86">{c.sub}</span></span>
+              <span style="flex:1 1 auto;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{t(c.n)}</span><span style="font-size:11px;color:#8b8b86">{t(c.sub)}</span></span>
             </span>
             <Chevron color="#8b8b86" />
           </button>
         ))}
       </div>
+      <LangPicker />
     </>
   );
 }
@@ -587,6 +589,22 @@ function KidsLocked() {
       <span style="font-size:17px;font-weight:600">Barnerom-modus er på</span>
       <span style="font-size:13px;color:#a9a9a3;line-height:1.5">Innstillingene er skjult. Slå av barnerom-modus under Plugins for å endre dem. Har du satt en PIN-kode, trengs den.</span>
       <div><button class="btn" onClick={() => go('plug')}>Gå til Plugins</button></div>
+    </div>
+  );
+}
+
+
+/** Språkvalg (lagres i nettleseren): automatisk, norsk eller engelsk. */
+function LangPicker() {
+  const opts: [LangPref, string][] = [['auto', 'Automatisk (følg nettleseren)'], ['nb', 'Norsk'], ['en', 'Engelsk']];
+  return (
+    <div style={CARD + ';padding:12px 14px;gap:8px'}>
+      <span style="font-size:14px">{t('Språk')}</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        {opts.map(([v, n]) => { const c = sel(langPref.value === v); return (
+          <button key={v} onClick={() => setLang(v)} aria-pressed={langPref.value === v} style={`height:34px;padding:0 12px;border-radius:9px;border:1px solid ${c.bd};background:${c.bg};color:${c.fg};font-size:13px;cursor:pointer`}>{t(n)}</button>
+        ); })}
+      </div>
     </div>
   );
 }
