@@ -15,12 +15,12 @@ r() {   # navn  samlet|eksplodert  kamera  lys|mork  [full|kort]
     openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D 'part="skjermflate"' -D "variant=\"$V\"" -D "skjermE=$E" -o "$TMP/$1.png" skjold_fjernkontroll.scad
     python3 skjerm_i_render.py "render/$1.png" "$TMP/$1.png" render/skjerm-1-aktiviteter.png ) &
 }
-# standard (kort variant, 200 mm)
-SKRA=30,103,7,50,0,-38,350
-OVEN=27.5,100,7,15,0,-90,415
-EKSP=30,101,22,55,0,-38,425
-SIDE=27.5,100,6,80,0,-90,388
-NAER=27.5,118,10,42,0,-22,150
+# standard (kort variant, 193 mm)
+SKRA=30,99.5,7,50,0,-38,339
+OVEN=27.5,96.5,7,15,0,-90,401
+EKSP=30,97.5,22,55,0,-38,411
+SIDE=27.5,96.5,6,80,0,-90,375
+NAER=27.5,104,10,42,0,-22,160
 HALE=27,8,6,72,0,-28,120
 r 01_skra_lys samlet $SKRA lys
 r 02_ovenfra_lys samlet $OVEN lys
@@ -37,11 +37,11 @@ r 22_ovenfra_bone samlet $OVEN bone
 r 23_side_bone samlet $SIDE bone
 r 24_naer_bone samlet $NAER bone
 r 25_skra_bone_gra samlet $SKRA bone_gra
-# full variant (valgfri, 243 mm, med talltaster og smarthus-rad)
-SKRAF=30,125,7,50,0,-38,395
-OVENF=27.5,121.5,7,15,0,-90,500
-EKSPF=30,123,22,55,0,-38,485
-SIDEF=27.5,121.5,6,80,0,-90,468
+# full variant (valgfri, 236 mm, med talltaster og smarthus-rad)
+SKRAF=30,121.5,7,50,0,-38,384
+OVENF=27.5,118,7,15,0,-90,487
+EKSPF=30,119.5,22,55,0,-38,471
+SIDEF=27.5,118,6,80,0,-90,455
 r 01_skra_lys_full samlet $SKRAF lys full
 r 02_ovenfra_lys_full samlet $OVENF lys full
 r 03_eksplodert_lys_full eksplodert $EKSPF lys full
@@ -52,9 +52,9 @@ r 07_side_lys_full samlet $SIDEF lys full
 ri() {   # navn  part  kamera  [kort|full]
   openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D "part=\"$2\"" -D 'farge="bone"' -D "variant=\"${4:-kort}\"" -o "render/$1.png" skjold_fjernkontroll.scad &
 }
-ri 10_inni_ovenfra inni 27.5,100,4,0,0,-90,365
-ri 11_inni_skra inni 28,102,4,45,0,-35,275
-ri 12_montering montering 30,102,34,62,0,-40,515
-ri 10_inni_ovenfra_full inni 27.5,121.5,4,0,0,-90,445 full
+ri 10_inni_ovenfra inni 27.5,96.5,4,0,0,-90,352
+ri 11_inni_skra inni 28,98.5,4,45,0,-35,266
+ri 12_montering montering 30,98.5,34,62,0,-40,500
+ri 10_inni_ovenfra_full inni 27.5,118,4,0,0,-90,432 full
 wait
 python3 lag_oppsett.py
