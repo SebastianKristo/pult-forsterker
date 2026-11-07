@@ -1,5 +1,5 @@
-# Skjold Fjernkontroll – universell fjernkontroll med 2,0″ berøringsskjerm (240 × 320), 44 taster, IR og Wi-Fi.
-# Maskinvare (se kabinett/fjernkontroll/LES_MEG.md): ESP32-S3 SuperMini, 2,0″ IPS ST7789 + CST816 berøring,
+# Skjold Fjernkontroll – universell fjernkontroll med 2,8″ berøringsskjerm (240 × 320), 44 taster, IR og Wi-Fi.
+# Maskinvare (se kabinett/fjernkontroll/LES_MEG.md): ESP32-S3 SuperMini, 2,8″ IPS ST7789 + FT6336U berøring (naken FPC-modul),
 # 3 × TCA9555 på tastekortet (44 taster + vibrator, skjermstrøm og ladestatus), 3 × IR-diode 940 nm, VS1838B,
 # vibrasjonsbryter (vekker når du løfter den), LiPo 603450 og TP4056 med USB-C.
 #
@@ -110,7 +110,7 @@ i2c:
     scl: GPIO6
     frequency: 400kHz
     scan: false
-  - id: bus_b                        # berøring (CST816) – egen buss, så skjermen kan slås helt av i søvn
+  - id: bus_b                        # berøring (FT6336U, 0x38) – egen buss, så skjermen kan slås helt av i søvn
     sda: GPIO8
     scl: GPIO3                       # strappe-pinne, men bare for JTAG-valg (eFuse) – trygg med pull-up
     frequency: 400kHz
@@ -158,7 +158,8 @@ display:
     update_interval: never
 
 touchscreen:
-  - platform: cst816
+  - platform: ft63x6                # FT6336U på 2,8″-modulen (en CST816-modul: platform cst816)
+    address: 0x38
     id: beroring
     i2c_id: bus_b
     interrupt_pin: GPIO7
@@ -1258,9 +1259,9 @@ interval:
 
 # ---------- skjermbilder ----------
 font:
-  - { file: "gfonts://Sora@600", id: f_tittel, size: 17, glyphs: &glyfer " !\"#%&'()*+,-./0123456789:;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]_abcdefghijklmnopqrstuvwxyzÆØÅæøåÉéÜüÖöÄä–·«»" }
-  - { file: "gfonts://Sora@600", id: f_knapp, size: 12, glyphs: *glyfer }
-  - { file: "gfonts://Sora@400", id: f_tekst, size: 10, glyphs: *glyfer }
+  - { file: "gfonts://Sora@600", id: f_tittel, size: 19, glyphs: &glyfer " !\"#%&'()*+,-./0123456789:;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]_abcdefghijklmnopqrstuvwxyzÆØÅæøåÉéÜüÖöÄä–·«»" }
+  - { file: "gfonts://Sora@600", id: f_knapp, size: 13, glyphs: *glyfer }
+  - { file: "gfonts://Sora@400", id: f_tekst, size: 11, glyphs: *glyfer }
 
 image:
   - platform: online_image

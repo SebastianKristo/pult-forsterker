@@ -115,7 +115,7 @@ def ikon(d, navn, x, y, c, k=1.0):
 def aktiviteter():
     im, d = ny()
     status(d)
-    tekst(d, (10, 30), "Aktiviteter", font("semi", 17))
+    tekst(d, (10, 30), "Aktiviteter", font("semi", 19))
     rader = [("tv", "Se TV", "TV · Skjold · Stuelys 40 %", True), ("note", "Musikk", "Skjold · P2 Klassisk", False),
              ("film", "Film", "Projektor · Kinolys", False), ("sol", "God morgen", "Radio · Lys 70 %", False),
              ("maane", "God natt", "Alt av om 20 min", False)]
@@ -124,7 +124,7 @@ def aktiviteter():
         r(d, (8, y, 232, y + 40), 10, fill=KORT, outline=GULL if aktiv else None, width=1 if aktiv else 0)
         d.ellipse([16 * S, (y + 6) * S, 44 * S, (y + 34) * S], fill=(52, 44, 30) if aktiv else (44, 44, 48))
         ikon(d, ik, 30, y + 20, GULL if aktiv else HVIT, 0.85)
-        tekst(d, (54, y + 7), navn, font("semi", 12))
+        tekst(d, (54, y + 7), navn, font("semi", 13))
         tekst(d, (54, y + 24), under, font("reg", 8.5), GRAA)
         if aktiv:
             tekst(d, (224, y + 13), "PÅ", font("semi", 8), GULL, "ra")
@@ -181,7 +181,7 @@ def spiller():
 def kilder():
     im, d = ny()
     status(d)
-    tekst(d, (10, 30), "Kilder", font("semi", 17))
+    tekst(d, (10, 30), "Kilder", font("semi", 19))
     k = [("Radio", True), ("AirPlay", False), ("Bluetooth", False), ("Spotify", False)]
     for i, (n, a) in enumerate(k):
         x = 8 + (i % 2) * 114
@@ -204,7 +204,7 @@ def kilder():
 def hjem():
     im, d = ny()
     status(d)
-    tekst(d, (10, 30), "Hjem", font("semi", 17))
+    tekst(d, (10, 30), "Hjem", font("semi", 19))
     rom = [("Stue", "Taklys 40 %", True), ("Kjøkken", "Av", False), ("Gang", "Av", False), ("Soverom", "Nattlys", True)]
     for i, (n, s, on) in enumerate(rom):
         x = 8 + (i % 2) * 114
@@ -227,7 +227,7 @@ def hjem():
 def laer():
     im, d = ny()
     status(d)
-    tekst(d, (10, 30), "Lær IR-kode", font("semi", 17))
+    tekst(d, (10, 30), "Lær IR-kode", font("semi", 19))
     r(d, (8, 60, 232, 150), 12, fill=KORT, outline=GULL, width=1)
     ikon(d, "tv", 120, 86, GULL, 1.3)
     tekst(d, (120, 108), "Pek den gamle fjernkontrollen", font("reg", 9.5), HVIT, "ma")

@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)   # trimesh: tomme sn
 import taster
 
 ASM = sys.argv[1] if len(sys.argv) > 1 else "asm"
-W, L, H = 54.0, 208.0, 13.5
+W, L, H = taster.W, taster.L, 13.5
 ok = True
 
 
@@ -110,12 +110,12 @@ melding(not tynn, "sideveggen er ≥ 1,6 mm rundt hele (utenom USB-C, IR-vinduet
 
 # topp og gulv: loddrette stråler
 rot, gulv = [], []
-SKRUER = [(4.9, L - 8), (W - 4.9, L - 8), (4.9, 8), (W - 4.9, 8), (W/2, L - 113)]   # skruehodene og forborene
-scr = (W/2 - 18.3, W/2 + 18.3, L - 29.5 - 26.3, L - 29.5 + 26.3)
+SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (W/2, L - 113 - taster.DN)]   # skruehodene og forborene
+scr = (W/2 - 25.3, W/2 + 25.3, L - 8.1 - 69.8, L - 8.1)   # lomma for 2,8″-modulen (50,6 × 69,8 mm)
 for x in np.arange(5.13, W - 5, 1.0):
     for y in np.arange(5.37, L - 5, 1.0):
         s = segment(A["topp"], [x, y, H + 5], [0, 0, -1])
-        if s is not None and s < 1.49 and not (scr[0] <= x <= scr[1] and scr[2] <= y <= scr[3]) and not (13 <= x <= 41 and 4 <= y <= 10):   # SKJOLD er felt 0,5 mm inn
+        if s is not None and s < 1.49 and not (scr[0] <= x <= scr[1] and scr[2] <= y <= scr[3]) and not (W/2 - 14 <= x <= W/2 + 14 and 4 <= y <= 10):   # SKJOLD er felt 0,5 mm inn
             rot.append((round(float(x), 1), round(float(y), 1), round(s, 2)))
         g = segment(A["bunn"], [x, y, -5], [0, 0, 1])
         if g is None or g < 1.49:

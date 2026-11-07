@@ -14,19 +14,20 @@ import math
 import os
 import re
 
-W, L = 54.0, 208.0          # ytre mål (må stemme med skjold_fjernkontroll.scad)
+W, L = 55.0, 230.0          # ytre mål (må stemme med skjold_fjernkontroll.scad)
+DN = 22.0                   # alt under skjermen flyttet 22 mm mot halen for 2,8″-skjermen (DN i .scad)
 CX = W / 2
 SPILL = 0.35                # klaring rundt hetta i hullet (hver side)
 MIN_STEG = 1.4              # minste materiale mellom to hull i toppen
-PCB_N0, PCB_N1 = 57.5, 198.5  # tastekortet strekker seg fra n = 57,5 til 198,5 (under skjermen og ned mot halen)
+PCB_N0, PCB_N1 = 57.5 + DN, 198.5 + DN  # tastekortet strekker seg fra n = 57,5 til 198,5 (under skjermen og ned mot halen)
 
 # ---------- hettene ----------
 # (id, navn, form, x, n, b, h, ikon, farge, [bryter-id …])
 HETTER = [
     # rad 1 rett under skjermen
-    ("av", "Av-på", "rund", 13, 61, 7, 7, "av", "mork", ["av"]),
+    ("av", "Av-på", "rund", CX - 14, 61, 7, 7, "av", "mork", ["av"]),
     ("hjem", "Skjold (aktiviteter)", "rund", CX, 61, 7.6, 7.6, "skjold", "gull", ["hjem"]),
-    ("meny", "Meny", "rund", 41, 61, 7, 7, "meny", "mork", ["meny"]),
+    ("meny", "Meny", "rund", CX + 14, 61, 7, 7, "meny", "mork", ["meny"]),
     # fire hjørnetaster rundt D-paden
     ("tilbake", "Tilbake", "rund", 7.6, 70, 6.6, 6.6, "tilbake", "mork", ["tilbake"]),
     ("info", "Info", "rund", W - 7.6, 70, 6.6, 6.6, "info", "mork", ["info"]),
@@ -48,24 +49,27 @@ HETTER = [
     ("stopp", "Stopp", "pille", CX, 141, 12, 6.6, "stopp", "mork", ["stopp"]),
     ("dvr", "Opptak (liste)", "pille", W - 12, 141, 12, 6.6, "dvr", "mork", ["dvr"]),
     # fire fargetaster
-    ("rod", "Rød", "pille", 9, 149.6, 9, 4.4, "", "rod", ["rod"]),
-    ("gronn", "Grønn", "pille", 21, 149.6, 9, 4.4, "", "gronn", ["gronn"]),
-    ("gul", "Gul", "pille", 33, 149.6, 9, 4.4, "", "gul", ["gul"]),
-    ("bla", "Blå", "pille", 45, 149.6, 9, 4.4, "", "bla", ["bla"]),
+    ("rod", "Rød", "pille", CX - 18, 149.6, 9, 4.4, "", "rod", ["rod"]),
+    ("gronn", "Grønn", "pille", CX - 6, 149.6, 9, 4.4, "", "gronn", ["gronn"]),
+    ("gul", "Gul", "pille", CX + 6, 149.6, 9, 4.4, "", "gul", ["gul"]),
+    ("bla", "Blå", "pille", CX + 18, 149.6, 9, 4.4, "", "bla", ["bla"]),
 ] + [
     # talltaster 1–9, så − 0 ↵
-    (f"tall_{d}", f"Tall {d}", "pille", (13, CX, 41)[(d - 1) % 3], 157.4 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
+    (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 157.4 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
     for d in range(1, 10)
 ] + [
-    ("strek", "Strek", "pille", 13, 182.6, 11.6, 6.0, "strek", "mork", ["strek"]),
+    ("strek", "Strek", "pille", CX - 14, 182.6, 11.6, 6.0, "strek", "mork", ["strek"]),
     ("tall_0", "Tall 0", "pille", CX, 182.6, 11.6, 6.0, "0", "mork", ["tall_0"]),
-    ("enter", "Enter", "pille", 41, 182.6, 11.6, 6.0, "enter", "mork", ["enter"]),
+    ("enter", "Enter", "pille", CX + 14, 182.6, 11.6, 6.0, "enter", "mork", ["enter"]),
     # smarthus-raden: lys, stikkontakt, − og +
-    ("lys", "Lys", "pille", 9, 192.2, 9.6, 6.0, "lys", "lys", ["lys"]),
-    ("stikk", "Stikkontakt", "pille", 21, 192.2, 9.6, 6.0, "stikk", "lys", ["stikk"]),
-    ("minus", "Minus (dempe lys)", "pille", 33, 192.2, 9.6, 6.0, "minus", "lys", ["minus"]),
-    ("pluss", "Pluss (mer lys)", "pille", 45, 192.2, 9.6, 6.0, "pluss", "lys", ["pluss"]),
+    ("lys", "Lys", "pille", CX - 18, 192.2, 9.6, 6.0, "lys", "lys", ["lys"]),
+    ("stikk", "Stikkontakt", "pille", CX - 6, 192.2, 9.6, 6.0, "stikk", "lys", ["stikk"]),
+    ("minus", "Minus (dempe lys)", "pille", CX + 6, 192.2, 9.6, 6.0, "minus", "lys", ["minus"]),
+    ("pluss", "Pluss (mer lys)", "pille", CX + 18, 192.2, 9.6, 6.0, "pluss", "lys", ["pluss"]),
 ]
+
+# alt under skjermen ligger DN mm lenger bak enn i første utgave (2,0″-skjerm)
+HETTER = [h[:4] + (h[4] + DN,) + h[5:] for h in HETTER]
 
 BRYTER_NAVN = {
     "opp": "Opp", "ned": "Ned", "venstre": "Venstre", "hoyre": "Høyre", "vol_opp": "Volum +", "vol_ned": "Volum −",
@@ -184,11 +188,11 @@ def scad():
 
 def plassering():
     """Bryterne og brikkene på tastekortet. Origo = kortets nedre venstre hjørne sett ovenfra (halen ned):
-    kortet går fra x = 3,2 til 50,8 og n = PCB_N0 … PCB_N1, så kort-x = x − 3,2 og kort-y = PCB_N1 − n."""
+    kortet går fra x = 3,2 til W − 3,2 og n = PCB_N0 … PCB_N1, så kort-x = x − 3,2 og kort-y = PCB_N1 − n."""
     rows = [("ref", "verdi", "fotavtrykk", "x_mm", "y_mm", "rot", "side")]
     for i, (bid, navn, x, n, hid) in enumerate(brytere()):
         rows.append((f"SW{i + 1}", f"{bid}", "SW-SMD_4x4x1.5", f"{x - 3.2:.2f}", f"{PCB_N1 - n:.2f}", "0", "topp"))
-    for i, (x, n) in enumerate([(14.0, 135.0), (27.0, 135.0), (40.0, 135.0)]):
+    for i, (x, n) in enumerate([(CX - 13, 135.0 + DN), (CX, 135.0 + DN), (CX + 13, 135.0 + DN)]):
         rows.append((f"U{i + 1}", f"TCA9555PWR 0x{0x20 + i:02X}", "TSSOP-24", f"{x - 3.2:.2f}", f"{PCB_N1 - n:.2f}", "90", "bunn"))
     return rows
 
