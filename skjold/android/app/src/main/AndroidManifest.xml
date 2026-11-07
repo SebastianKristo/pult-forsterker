@@ -53,7 +53,23 @@
             android:exported="true"
             android:excludeFromRecents="true"
             android:noHistory="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <!-- Deep links for snarveier, Google Assistant og andre apper (Shortcuts.kt). Ikke «kassett»: NFC-brikkene leses av Skjold. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <!-- Ikke BROWSABLE: nettsider skal ikke kunne styre Skjold via lenker -->
+                <data android:scheme="skjold" />
+                <data android:host="spill" />
+                <data android:host="volum" />
+                <data android:host="pause" />
+                <data android:host="play" />
+                <data android:host="neste" />
+                <data android:host="av" />
+                <data android:host="routine" />
+                <data android:host="feature" />
+            </intent-filter>
+        </activity>
 
         <!-- Media3: mediekontroll i hurtigpanel/låseskjerm/Now Bar, medibibliotek og gjenopptak -->
         <service
