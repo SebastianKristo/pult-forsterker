@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Pultforsterker – feilsøking av lydkjeden. Kjør: bash ~/pult-forsterker/pi/ki-diag.sh
 echo "== Tjenester"; for s in camilladsp nqptp shairport-sync bluealsa bluealsa-aplay ki-bt-agent ki-squeezelite ki-amp oled-display ki-usb-audio; do printf '  %-16s %s\n' "$s" "$(systemctl is-active $s)"; done
-echo "== Lydkort"; aplay -l | grep '^card'
+echo "== Lydkort"; if command -v aplay >/dev/null; then aplay -l | grep '^card'; else cat /proc/asound/cards; fi
 echo "== Loopback-modul"; lsmod | grep -q snd_aloop && echo "  snd_aloop lastet" || echo "  MANGLER snd_aloop"
 echo "== /etc/ki-amp.env (DSP)"; sudo grep -E '^KI_AMP_(DSP|BOARD|OUT)' /etc/ki-amp.env
 echo "== CamillaDSP-config (devices)"; grep -A6 '^devices' /etc/camilladsp/config.yml
