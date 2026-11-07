@@ -1,6 +1,6 @@
 // Skjold Radio – bordradio med skjerm, seks favorittknapper, navigasjonshjul og volumknott. Parametrisk OpenSCAD.
 // Eget Skjold-design: en lav, liggende bordradio der alt vender mot deg. Den loddrette fronten er delt i to av en
-// tynn, loddrett gullist: til venstre en mørk grill med vannrette spalter foran ett 3″-element (mono), til høyre et rolig
+// tynn, loddrett gullist: til venstre en grill trukket med mørkt høyttalerstoff foran ett 3″-element (mono), til høyre et rolig
 // betjeningspanel i tre lag – skjermen øverst, favoritt 1–6 i én rad rett under, og nederst av/på, volumknotten og
 // det store gullhjulet. Myke hjørner (R14) sett forfra som Node/Røst, faset frontkant, lys (eller matt sort) kropp,
 // mørk grill og knapper, gull hjul, volumknott og list, og SKJOLD preget over skjermen.
@@ -35,7 +35,7 @@ module front_ramme() { rotate([90, 0, 0]) children(); }
 drvCut = 72;  drvF = 86;  drvFT = 4;      // 3″ fullrange (Dayton Audio RS75-4): utsparing, rammens Ø og tykkelse – mål ditt element
 drvPCD = 82;                              // skruehullsirkel
 kX0 = 22;  kW = 86;                       // kammer: x 22 … 108
-kY0 = t + 5.6;  kD = 92;                  // baffelens forside 5,6 mm bak fronten (plass til grill, grillduk og elementrammen)
+kY0 = t + 5.6;  kD = 92;                  // baffelens forside 5,6 mm bak fronten (plass til grill, stoff og elementrammen)
 kZ0 = 0;  kH = 124;                       // står på gulvet, 124 mm høyt
 kT = 2.8;  baffT = 7;                     // kammervegg og baffel
 drvX = kX0 + kW/2;  drvZ = kZ0 + kH/2;    // elementet midt på baffelen
@@ -49,8 +49,12 @@ kOreY = [kY0 + 12, kY0 + kD - 12];
 // ---------- grill (venstre halvdel av fronten) ----------
 gX0 = 14;  gX1 = 114;  gZ0 = 8;  gZ1 = 126;  gR = 6;   // grillåpningen: 100 × 118 mm, samme marg oppe og nede
 gT = 3.0;  gFl = 2.5;                      // grillens tykkelse = veggen, flens bak
-slotW = 2.2; slotP = 4.4;                  // vannrette spalter
-slotM = 8;                                 // hel kant rundt spaltene (ribbene mot baffelen sitter oppe og nede)
+// Grillen er en printet ramme trukket med akustisk høyttalerstoff. Stoffet legges over forsiden, brettes rundt kanten
+// og limes på baksiden av flensen. Rammen er 0,8 mm mindre enn åpningen rundt hele, så stoffet (≤ 0,5 mm) får plass.
+stM = 7;                                   // rammekant rundt vinduene (ribbene mot baffelen sitter oppe og nede)
+stSpor = 0.6;                              // forsiden av rammen ligger 0,6 mm inne, så stoffet havner i flukt med fronten
+stTyk = 0.5;                               // stoffets tykkelse (illustrasjon)
+stBar = [44, 82];                          // to vannrette stag som holder stoffet stramt (z, midt i staget), 3 mm brede
 ribX = [drvX - 15, drvX + 15];             // ribber som holder grillen mot baffelen
 // ---------- loddrett gullist mellom grill og panel ----------
 lX0 = 118;  lZ0 = gZ0;  lH = 3.5;  lDyp = 1.2;   // spor i fronten (z 8 … 126), lista står 0,4 mm ut
@@ -89,6 +93,8 @@ ventGulv = [130, 8, 10, 44, 52];           // luftespalter i gulvet under forste
 lys = farge == "lys";
 c_kropp = lys ? [0.93, 0.92, 0.90] : [0.13, 0.13, 0.14];
 c_grill = lys ? [0.17, 0.17, 0.18] : [0.30, 0.30, 0.31];
+c_stoff = lys ? [0.25, 0.24, 0.23] : [0.20, 0.20, 0.21];   // høyttalerstoff, varm antrasitt
+c_vev   = lys ? [0.33, 0.32, 0.30] : [0.27, 0.27, 0.28];
 c_gull  = [0.85, 0.62, 0.25];
 c_knapp = lys ? [0.18, 0.18, 0.19] : [0.85, 0.62, 0.25];
 c_glass = [0.05, 0.07, 0.10];
@@ -121,7 +127,7 @@ module kropp() {
     for (p = bakB) translate([p[0], D - bkT - insD, p[1]]) rotate([-90, 0, 0]) cylinder(d = ins, h = insD + 0.1);
     // grillåpningen og fals for grillens flens på innsiden
     ext_y(-1, t + 1) front_hull();
-    ext_y(t - 0.6, t + 0.6) offset(gFl) front_hull();
+    ext_y(t - 0.6, t + 1.0) offset(gFl) front_hull();   // (dyp nok til flensen med stoffet brettet rundt)
     // spor for gullista
     ext_y(-1, lDyp) list2d();
     front_ramme() {
@@ -200,11 +206,33 @@ module lokk() {   // bakveggen på kammeret (tetning: 1–2 mm skumtape rundt ka
 module grill() {
   difference() {
     union() {
-      ext_y(0, gT) front_hull(0.3);
-      ext_y(t - 0.4, t + 0.6) offset(gFl - 0.3) front_hull();          // flens bak (ligger i falsen)
-      for (z = [gZ0 + 2.6, gZ1 - 5]) translate([ribX[0], t, z]) cube([ribX[1] - ribX[0], kY0 - t - 0.4, 2.4]);   // ribber mot baffelen
+      ext_y(stSpor, gT) front_hull(0.8);                                // rammen (forsiden 0,6 mm inne)
+      ext_y(t - 0.1, t + 0.4) offset(gFl - 0.6) front_hull();          // flens bak (i falsen, med 0,5 mm til stoffet foran og rundt)
+      for (z = [gZ0 + 4.5, gZ1 - 6.9]) translate([ribX[0], t, z]) cube([ribX[1] - ribX[0], kY0 - t - 0.4, 2.4]);   // ribber mot baffelen
     }
-    for (z = [gZ0 + slotM : slotP : gZ1 - slotM - slotW]) translate([gX0 + slotM, -1, z]) cube([gX1 - gX0 - 2*slotM, gT + 1.7, slotW]);
+    // tre store vinduer bak stoffet, delt av to vannrette stag
+    for (w = [[gZ0 + stM, stBar[0] - 1.5], [stBar[0] + 1.5, stBar[1] - 1.5], [stBar[1] + 1.5, gZ1 - stM]])
+      translate([gX0 + stM, -1, w[0]]) cube([gX1 - gX0 - 2*stM, gT + 2, w[1] - w[0]]);
+  }
+}
+// høyttalerstoffet (illustrasjon, kjøpes): over forsiden, rundt kanten og brettet inn bak flensen, med vevd struktur
+module stoff() {
+  d = t - 0.6;                                                                       // falsens forside (y 2,4)
+  ext_y(stSpor - stTyk, stSpor) front_hull(0.3);                                     // over forsiden
+  ring_y(stSpor - stTyk, d + stTyk, 0.3, 0.8);                                       // rundt rammens kant
+  ext_y(d, d + stTyk) difference() { offset(gFl - 0.6) front_hull(); front_hull(0.8); }   // mellom falsen og flensen
+  ext_y(d, t + 0.4 + stTyk) difference() { offset(gFl - 0.15) front_hull(); offset(gFl - 0.6) front_hull(); }   // rundt flensen
+  ext_y(t + 0.4, t + 0.4 + stTyk) difference() { offset(gFl - 0.6) front_hull(); front_hull(2); }   // limt bak flensen
+}
+module ring_y(y0, y1, o0, o1) { ext_y(y0, y1) difference() { front_hull(o0); front_hull(o1); } }
+module stoff_vev() {   // trådene i vevingen, litt lysere (bare for bildene)
+  pitch = 1.2;
+  intersection() {
+    ext_y(stSpor - stTyk - 0.15, stSpor - stTyk + 0.01) front_hull(0.6);
+    union() {
+      for (x = [gX0 : pitch : gX1]) translate([x, stSpor - stTyk - 0.2, gZ0]) cube([0.45, 0.25, gZ1 - gZ0]);
+      for (z = [gZ0 + pitch/2 : pitch : gZ1]) translate([gX0, stSpor - stTyk - 0.2, z]) cube([gX1 - gX0, 0.25, 0.45]);
+    }
   }
 }
 module list() { translate([0, -0.4, 0]) ext_y(0, lDyp + 0.35) list2d(0.15); }   // gullista, står 0,4 mm ut
@@ -265,7 +293,7 @@ module montert(e = 0) {   // eksplodert: fronten ut mot deg, innmaten ut bakover
   color(c_inne) translate([0, 5.6*e, 0]) lokk();
   translate([0, 4.6*e, 0]) elementer();
   color(c_grill) translate([0, -1.6*e, 0]) grill();
-  color([0.08, 0.08, 0.09]) translate([0, -1.3*e, 0]) ext_y(t + 0.6, t + 0.9) offset(gFl - 0.5) front_hull();   // grillduk (illustrasjon)
+  translate([0, -2.4*e, 0]) { color(c_stoff) stoff(); color(c_vev) stoff_vev(); }          // høyttalerstoff (foran grillrammen)
   color(c_gull) translate([0, -1.0*e, 0]) list();
   color(c_glass) translate([0, 4.0*e, 0]) front_ramme() translate([scrX - scrGW/2, scrZ - scrGH/2, -t - 0.7]) cube([scrGW, scrGH, 0.6]);
   color(c_inne) translate([0, 5.0*e, 0]) brakett();
@@ -294,7 +322,7 @@ module print(p) {
   else if (p == "bak") translate([0, t, D]) rotate([-90, 0, 0]) bak();                    // baksiden ned
   else if (p == "kammer") translate([0, 0, -kY0]) rotate([90, 0, 0]) kammer();            // baffelen ned
   else if (p == "lokk") translate([0, 0, -(kY0 + kD)]) rotate([90, 0, 0]) lokk();
-  else if (p == "grill") translate([0, gZ1 + gFl, 0]) rotate([90, 0, 0]) grill();         // forsiden ned
+  else if (p == "grill") translate([0, gZ1 + gFl, -stSpor]) rotate([90, 0, 0]) grill();   // forsiden ned
   else if (p == "list") translate([0, 0, 0.4]) rotate([90, 0, 0]) list();                 // forsiden ned (118 mm lang)
   else if (p == "brakett") translate([0, H, -(t + 6)]) rotate([90, 0, 0]) brakett();      // forsiden ned, Pi-tårn opp
   else if (p == "knott") knott();
@@ -315,5 +343,6 @@ else if (part == "A_knapper") knapper();
 else if (part == "A_knott") front_ramme() translate([whX, whZ, 0.6]) knott();
 else if (part == "A_volum") front_ramme() translate([volX, volZ, 0.6]) volum();
 else if (part == "A_element") elementer();
+else if (part == "A_stoff") stoff();
 else if (part == "A_pi") pi_kort();
 else print(part);

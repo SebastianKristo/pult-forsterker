@@ -5,7 +5,7 @@ STL-ene lages med  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_radio.scad
 (se lag_stl.sh). Krever trimesh og manifold3d. Sjekker:
   1. alle utskrifts-STL-er i stl/ er vanntette, ett legeme (knapp: sju hetter), ligger på platen (min z = 0)
      og passer i Creality K2 (250 × 250 × 250 mm)
-  2. ingen deler overlapper i montert stilling (par som skal ligge an mot hverandre har bare kontaktflater)
+  2. ingen deler overlapper i montert stilling (høyttalerstoffet tas med, det skal ligge an mot grillrammen) (par som skal ligge an mot hverandre har bare kontaktflater)
   3. lydkammeret er tett: ett lukket rom når lokket og elementet er på (bare kabelhullet i gulvet er åpent),
      med netto volum 0,6–0,9 l (mono, ett 3″-element)
   4. kroppens og bakplatas yttervegg er hel (≥ 2 mm) utenom de tiltenkte hullene"""
@@ -27,9 +27,9 @@ for n in PRINT:
     print(f"{'OK ' if good else 'FEIL'} {n:9s} vanntett={m.is_watertight} deler={parts} {m.volume/1000:7.1f} cm³ "
           f"{m.extents.round(1)} mm")
 
-ASMP = ["kropp", "bak", "kammer", "lokk", "grill", "list", "brakett", "knapper", "knott", "volum"]
+ASMP = ["kropp", "bak", "kammer", "lokk", "grill", "list", "brakett", "knapper", "knott", "volum", "stoff"]
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in ASMP}
-TOUCH = {("kropp", "bak"), ("kropp", "kammer"), ("kammer", "lokk"), ("kropp", "brakett"), ("kropp", "list")}
+TOUCH = {("grill", "stoff"), ("kropp", "stoff"), ("kropp", "bak"), ("kropp", "kammer"), ("kammer", "lokk"), ("kropp", "brakett"), ("kropp", "list")}
 
 
 def overlap(a, b):
