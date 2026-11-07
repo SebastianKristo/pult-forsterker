@@ -94,3 +94,46 @@ duck:
       selector:
         config_entry:
           integration: skjold
+
+security_trigger:
+  name: Utløs sikkerhetsalarm
+  description: Slår på Skjold (også fra standby), setter høyt volum og spiller sirene + talemelding til alarmen stoppes eller maks varighet er nådd. Virker bare når sikkerhetsmodus er slått på i Skjold (Innstillinger → Rutiner).
+  fields:
+    grunn:
+      name: Grunn
+      description: Valgfritt – vises i loggen (f.eks. «Bakdør åpnet»).
+      selector:
+        text:
+    tekst:
+      name: Tekst
+      description: Valgfri talemelding. Tom = teksten i innstillingene.
+      selector:
+        text:
+    lyd:
+      name: Lyd
+      description: Valgfri lyd – «sirene», «pip» eller en http/https-lydfil. Tom = innstillingen.
+      selector:
+        text:
+    rom:
+      name: Rom
+      description: Valgfritt – adresser til andre Skjold-enheter som også skal utløses (f.eks. http://kjokken.local:8765). Tom = rommene i innstillingene.
+      selector:
+        text:
+          multiple: true
+    entry_id:
+      name: Enhet
+      description: Valgfritt – bare denne Skjold-enheten. Tom = alle.
+      selector:
+        config_entry:
+          integration: skjold
+
+security_stop:
+  name: Stopp sikkerhetsalarm
+  description: Stopper sirenen og setter volum og av/på tilbake slik de var.
+  fields:
+    entry_id:
+      name: Enhet
+      description: Valgfritt – bare denne Skjold-enheten. Tom = alle.
+      selector:
+        config_entry:
+          integration: skjold
