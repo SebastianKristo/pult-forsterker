@@ -4,6 +4,7 @@ import SwiftUI
 struct V4SettingsTab: View {
     @Environment(AppModel.self) private var m
     @AppStorage("skjold-show-lyrion-players") private var showLyrion = false
+    @AppStorage("hapticSliders") private var hapticSliders = true
 
     var body: some View {
         if m.setCat >= 0 && m.setCat < m.cats.count {
@@ -89,6 +90,20 @@ struct V4SettingsTab: View {
                 V4Switch(on: showLyrion, label: "Vis andre Lyrion-spillere") {
                     showLyrion.toggle()
                     m.rebuildRooms()
+                }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 13)
+            .v4Card()
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Haptikk på glidebrytere").sora(15)
+                    Text("Tikk for hvert steg på equalizer og balanse, tydelig klikk ved 0 dB og et støt ved grensen.")
+                        .sora(12, .regular, V4.muted, lineHeight: 1.4).fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                V4Switch(on: hapticSliders, label: "Haptikk på glidebrytere") {
+                    hapticSliders.toggle()
+                    if hapticSliders { Haptics.tick() }
                 }
             }
             .padding(.horizontal, 16).padding(.vertical, 13)

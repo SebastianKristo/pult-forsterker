@@ -57,7 +57,7 @@ export function ConfirmButton({ label, onConfirm, safe = false, danger = false, 
  * Slider som eier verdien sin mens den dras og i 800 ms etter slipp (innkommende status ignoreres da, så den ikke hopper).
  * onCommit(v, false) mens den dras (maks hvert 100 ms), onCommit(v, true) ved slipp.
  */
-export function Slider({ value, min = 0, max = 100, step = 1, onCommit, className = 'range', vertical = false, label }: { value: number; min?: number; max?: number; step?: number; onCommit: (v: number, final: boolean) => void; className?: string; vertical?: boolean; label?: string }) {
+export function Slider({ value, min = 0, max = 100, step = 1, onCommit, className = 'range', vertical = false, label, haptic = false, zero = 0 }: { value: number; min?: number; max?: number; step?: number; onCommit: (v: number, final: boolean) => void; className?: string; vertical?: boolean; label?: string; haptic?: boolean; zero?: number | null }) {
   const [local, setLocal] = useState(value);
   const drag = useRef(false);
   const released = useRef(0);
@@ -71,6 +71,7 @@ export function Slider({ value, min = 0, max = 100, step = 1, onCommit, classNam
   }, [value]);
   useEffect(() => () => clearTimeout(relT.current), []);
   const release = (v: number) => {
+    if (haptic && drag.current) confirmTap();
     drag.current = false; released.current = Date.now();
     if (sent.current !== v) { sent.current = v; onCommit(v, true); }
     clearTimeout(relT.current);
@@ -83,7 +84,9 @@ export function Slider({ value, min = 0, max = 100, step = 1, onCommit, classNam
       onPointerUp={(e) => release(+(e.currentTarget as HTMLInputElement).value)}
       onPointerCancel={(e) => release(+(e.currentTarget as HTMLInputElement).value)}
       onInput={(e) => {
-        const v = +(e.currentTarget as HTMLInputElement).value; setLocal(v);
+        const v = +(e.currentTarget as HTMLInputElement).value;
+        if (haptic) sliderStep(local, v, min, max, zero);
+        setLocal(v);
         const now = Date.now();
         if (now - last.current >= 100) { last.current = now; sent.current = v; onCommit(v, false); }
       }}
@@ -134,6 +137,7 @@ export const PRODUCT_ICON: Record<'s1' | 'node' | 'core' | 'touch', string> = { 
 
 export { SRC_ICON } from '../lib/srcicons';
 import { SRC_ICON } from '../lib/srcicons';
+import { confirmTap, sliderStep } from '../lib/haptics';
 export function SrcCircle({ label, size = 64 }: { label: string; size?: number }) {
   const ic = SRC_ICON[label] ?? { bg: '#2a2a2c', fg: '#f2f2ee', st: '', fi: '', fp: '', sz: '47%' };
   return (
