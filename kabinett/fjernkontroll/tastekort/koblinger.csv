@@ -1,18 +1,18 @@
 bryter,navn,brikke,adresse,pinne,esphome_nummer
 av,Av-på,A,0x20,P0_0,0
-opp,Opp,A,0x20,P0_1,1
-ned,Ned,A,0x20,P0_2,2
-venstre,Venstre,A,0x20,P0_3,3
-hoyre,Høyre,A,0x20,P0_4,4
-ok,OK,A,0x20,P0_5,5
-spill_pause,Spill-pause,A,0x20,P0_6,6
-demp,Demp,A,0x20,P0_7,7
-vol_opp,Volum +,A,0x20,P1_0,8
-vol_ned,Volum −,A,0x20,P1_1,9
-hjem,Skjold (aktiviteter),A,0x20,P1_2,10
-meny,Meny (hold: guide),A,0x20,P1_3,11
-tilbake,Tilbake,A,0x20,P1_4,12
-avslutt,Avslutt,A,0x20,P1_5,13
+hjem,Skjold (aktiviteter),A,0x20,P0_1,1
+meny,Meny (hold: guide),A,0x20,P0_2,2
+opp,Opp,A,0x20,P0_3,3
+ned,Ned,A,0x20,P0_4,4
+venstre,Venstre,A,0x20,P0_5,5
+hoyre,Høyre,A,0x20,P0_6,6
+ok,OK,A,0x20,P0_7,7
+tilbake,Tilbake,A,0x20,P1_0,8
+avslutt,Avslutt,A,0x20,P1_1,9
+spill_pause,Spill-pause,A,0x20,P1_2,10
+demp,Demp,A,0x20,P1_3,11
+vol_opp,Volum +,A,0x20,P1_4,12
+vol_ned,Volum −,A,0x20,P1_5,13
 vibrator,utgang: vibrasjonsmotor (via AO3400),B,0x21,P1_4,12
 strom_skjerm,"utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)",B,0x21,P1_5,13
 lader,inngang: TP4056 CHRG (lav = lader),B,0x21,P1_6,14

@@ -15,6 +15,8 @@ import math
 import zipfile
 
 import trimesh
+
+import taster
 import warnings
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)   # trimesh: tomme snitt gir 0/0 i tyngdepunktet
@@ -50,7 +52,7 @@ def place(parts):
         m = trimesh.load(f"{STL}/{f}.stl")
         if same:
             T = moved[same]
-        elif pos == "diag":   # for lang for plata: 45° og midt på (full variant, 252 mm)
+        elif pos == "diag":   # for lang for plata: 45° og midt på (lengre enn plata)
             T = trimesh.transformations.rotation_matrix(math.radians(45), [0, 0, 1])
             b = m.copy().apply_transform(T).bounds
             T = trimesh.transformations.translation_matrix([BED/2 - (b[0][0] + b[1][0])/2, BED/2 - (b[0][1] + b[1][1])/2, -b[0][2]]) @ T
@@ -113,7 +115,7 @@ def plater(variant):
             continue
         fn = fn.replace("skjold-fjernkontroll-", "skjold-fjernkontroll-full-")
         title = title.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full")
-        if fn.endswith("-k2.3mf"):
+        if fn.endswith("-k2.3mf") and taster.L_FULL > BED - 5:
             diag = [(f, n, fil, "diag" if pos else None, same) for f, n, fil, pos, same in parts]
             ut[fn.replace("-k2.3mf", "-k2-topp.3mf")] = (title.replace("topp og bunn", "topp"), [p for p in diag if p[0] != "bunn"], colors)
             ut[fn.replace("-k2.3mf", "-k2-bunn.3mf")] = (title.replace("topp og bunn", "bunn"), [p for p in diag if p[0] == "bunn"], colors)
