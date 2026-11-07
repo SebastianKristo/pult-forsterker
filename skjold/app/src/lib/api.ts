@@ -144,7 +144,7 @@ export interface HomeKitInfo { enabled: boolean; available: boolean; running: bo
 export type NfcHandling = 'preset' | 'play_url' | 'nrk' | 'ma_uri' | 'navidrome_album' | 'navidrome_playlist' | 'routine';
 export interface NfcCard { uid?: string; navn: string; handling: NfcHandling; verdi: unknown; rom: string[]; volum: number | null; ved_uttak: 'pause' | 'ingenting'; omslag: string; undertittel: string; spilt?: number; sist?: number }
 export interface NfcStatus { learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[] }
-export interface Spoler { 'på': boolean; fart: number; spol: number; bare_kassett: boolean; modus?: 'spill' | 'spol' | 'tilbake' | 'stopp'; rps?: number }
+export interface Spoler { 'på': boolean; fart: number; spol: number; bare_kassett: boolean; vent?: number; modus?: 'spill' | 'spol' | 'tilbake' | 'stopp'; rps?: number }
 export interface Routine { id: string; navn: string; ikon?: string }
 export const api = {
   nfc: () => req<NfcStatus>('/api/nfc'),

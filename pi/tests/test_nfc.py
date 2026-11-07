@@ -134,7 +134,18 @@ def test_spoler_innstillinger_lagres(tmp_path):
     p = str(tmp_path / "spoler.json")
     s = Spoler(p)
     assert s.sett({"fart": 9, "spol": 0.1, "på": False, "bare_kassett": False}) == \
-        {"på": False, "fart": 1.5, "spol": 0.5, "bare_kassett": False}
+        {"på": False, "fart": 1.5, "spol": 0.5, "bare_kassett": False, "vent": 2.5}
     s2 = Spoler(p)
     assert s2.cfg["på"] is False and s2.cfg["fart"] == 1.5
     assert s2.status({"playing": True, "position": 1, "title": "A"}, True, now=1)["modus"] == "stopp"
+
+
+def test_spoler_tvang_ved_neste(tmp_path):
+    from skjold_nfc import Spoler
+    sp = Spoler(str(tmp_path / "s.json"))
+    assert sp.skal_vente(True) == 2.5 and sp.skal_vente(False) == 0.0     # bare med kassett inne (standard)
+    sp.tving(-1, 2.5, now=100.0)
+    st = sp.status({"playing": False}, True, now=101.0)                  # lyden står mens den spoler
+    assert st["modus"] == "tilbake" and st["retning"] == -1
+    assert sp.status({"playing": True, "position": 1, "title": "Ny"}, True, now=103.0)["modus"] == "spill"
+    assert sp.sett({"vent": 0})["vent"] == 0.0 and sp.skal_vente(True) == 0.0
