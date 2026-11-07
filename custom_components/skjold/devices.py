@@ -47,7 +47,13 @@ def kassett_state(nfc: dict | None, spoler: dict | None) -> dict | None:
         "active_uid": active, "active": (by_uid.get(active) or {}).get("navn") if active else None,
         "last": last.get("navn") or None, "last_t": last.get("t") or None,
         "spoler": None if not isinstance(spoler, dict) else bool(spoler.get("på", True)),
+        "kilde": _KILDE.get(((by_uid.get(active) or {}).get("losning") or {}).get("kilde"), "") if active else "",
+        "paret": str(nfc.get("paret") or ""),
+        "ventende": len(nfc.get("ventende") or []),
     }
+
+
+_KILDE = {"navidrome": "Navidrome", "ytmusic": "YouTube Music", "ma": "Music Assistant"}
 
 
 def card_option_names(cards: list[dict]) -> list[str]:

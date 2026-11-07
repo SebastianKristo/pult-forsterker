@@ -164,3 +164,67 @@ def test_spoler_hopp_i_laaten_gir_fysisk_spoling(tmp_path):
     sp.sett({"vent": 0})
     sp.status({"playing": True, "position": 200, "title": "A"}, True, now=103.0)
     assert sp.hent_hopp() is None                                                  # av: ingen pause
+
+
+# ---------- album-kassetter, import og paring ----------
+def test_album_resolve_navidrome_forst_saa_youtube():
+    from skjold_nfc import resolve_album
+    nd = lambda q: [{"id": "al1", "name": "Meteora (Bonus Edition)", "artist": "Linkin Park", "coverArt": "c1"}]
+    ma = lambda q: [{"uri": "ytmusic://album/x", "name": "Meteora", "artist": "Linkin Park", "provider": "ytmusic"}]
+    lo = resolve_album("Linkin Park", "Meteora", nd, ma)
+    assert lo["kilde"] == "navidrome" and lo["id"] == "al1"
+    lo = resolve_album("Linkin Park", "Meteora", lambda q: [], ma)
+    assert lo["kilde"] == "ytmusic" and lo["uri"] == "ytmusic://album/x"
+    assert resolve_album("Adele", "25", lambda q: [{"id": "x", "name": "21", "artist": "Adele"}], lambda q: []) is None
+
+
+def test_album_fuzzy_artist_og_navn():
+    from skjold_nfc import best_album, norm_navn
+    assert norm_navn("Axwell Λ Ingrosso") == norm_navn("Axwell & Ingrosso")
+    hits = [{"name": "More Than You Know", "artist": "Axwell /\\ Ingrosso"}, {"name": "More Than You Know", "artist": "Someone Else"}]
+    assert best_album(hits, "Axwell Λ Ingrosso", "More Than You Know")["artist"].startswith("Axwell")
+    assert best_album([{"name": "LIVING THINGS", "artist": "Linkin Park"}], "linkin park", "Living Things")
+
+
+def test_album_kassett_scan_og_steg(tmp_path):
+    from skjold_nfc import NfcStore, steps_for
+    st = NfcStore(str(tmp_path / "c.json"))
+    st.put({"uid": "04AA", "handling": "album", "verdi": "Linkin Park - Hybrid Theory"})
+    c = st.get("04AA")
+    assert c["navn"] == "Hybrid Theory" and c["undertittel"] == "Linkin Park" and c["omslag"].startswith("/api/nfc/cover?")
+
+    def resolve(card):
+        return st.lagre_losning(card["uid"], {"kilde": "navidrome", "id": "al9"})
+    res = st.scan("04:aa", resolve=resolve, standard_rom="Kjøkken")
+    assert res["card"]["losning"]["kilde"] == "navidrome"
+    assert {"type": "nd_album", "verdi": "al9", "rom": "Kjøkken"} in res["steps"]
+    yt = {**c, "losning": {"kilde": "ytmusic", "uri": "ytmusic://album/7"}}
+    assert steps_for(yt)[-1] == {"type": "ma", "verdi": "ytmusic://album/7"}
+
+
+def test_trenger_ny_losning_maks_en_gang_i_dognet():
+    from skjold_nfc import trenger_ny_losning
+    assert trenger_ny_losning({"handling": "album"})
+    assert not trenger_ny_losning({"losning": {"kilde": "navidrome", "t": 0}}, now=10**9)
+    assert not trenger_ny_losning({"losning": {"kilde": "ytmusic", "t": 1000}}, now=2000)
+    assert trenger_ny_losning({"losning": {"kilde": "ytmusic", "t": 1000}}, now=1000 + 86401)
+
+
+def test_import_og_ventende_kobles_til_ny_brikke(tmp_path):
+    from skjold_nfc import NfcStore
+    st = NfcStore(str(tmp_path / "c.json"))
+    r = st.importer("# liste\nLinkin Park - Meteora\nAdele - 25\nLinkin Park - Meteora\n")
+    assert r["lagt_til"] == 2 and r["hoppet_over"] == 1 and len(r["ventende"]) == 2
+    res = st.scan("04-01", resolve=lambda c: c)
+    assert res["known"] and res["card"]["verdi"] == {"artist": "Linkin Park", "album": "Meteora"}
+    assert [v["album"] for v in st.oppsett()["ventende"]] == ["25"]
+    st.sett_oppsett({"koble_ventende": False})
+    assert not st.scan("04-02")["known"]
+    assert st.importer("Adele - 25")["lagt_til"] == 0             # finnes allerede som ventende
+
+
+def test_paring_lagres(tmp_path):
+    from skjold_nfc import NfcStore
+    st = NfcStore(str(tmp_path / "c.json"))
+    assert st.sett_oppsett({"paret": "Stue Touch"})["paret"] == "Stue Touch"
+    assert NfcStore(str(tmp_path / "c.json")).oppsett()["paret"] == "Stue Touch"

@@ -12,10 +12,10 @@ struct V4KassettSheet: View {
     @Environment(AppModel.self) private var m
     @Environment(\.dismiss) private var dismiss
 
-    enum Src: String, CaseIterable { case radio = "Radio", liste = "Spilleliste", podkast = "Podkast" }
+    enum Src: String, CaseIterable { case album = "Album", radio = "Radio", liste = "Spilleliste", podkast = "Podkast" }
     struct Pick: Hashable { var navn: String, under: String, omslag: String, handling: String, verdi: String, verdiKey: String = "" }
 
-    @State private var src: Src = .radio
+    @State private var src: Src = .album
     @State private var query = ""
     @State private var hits: [Pick] = []
     @State private var pick: Pick?
@@ -61,6 +61,14 @@ struct V4KassettSheet: View {
                             .overlay(Capsule().strokeBorder(src == s ? V4.goldDark : V4.line2, lineWidth: 1))
                     }.plain()
                 }
+            }
+            if src == .album {
+                TextField("Artist - Album", text: $query)
+                    .autocorrectionDisabled()
+                    .padding(12).v4Card(radius: 12)
+                    .onSubmit { Task { await load() } }
+                Text("Spilles fra Navidrome hvis du har albumet, ellers fra YouTube Music. Skriv f.eks. «Linkin Park - Meteora».")
+                    .sora(12, .regular, V4.muted)
             }
             if src == .podkast {
                 TextField("Søk i NRK-podkaster", text: $query)
@@ -108,6 +116,7 @@ struct V4KassettSheet: View {
         case .radio: return "Ingen radiofavoritter på denne Skjold ennå."
         case .liste: return m.ndConf.ok ? "Fant ingen spillelister i Navidrome." : "Navidrome er ikke satt opp i Innstillinger."
         case .podkast: return "Søk etter en podkast eller et program."
+        case .album: return "Skriv artist og album, og trykk Enter."
         }
     }
 
@@ -115,6 +124,18 @@ struct V4KassettSheet: View {
         hits = []; busy = true
         defer { busy = false }
         switch src {
+        case .album:
+            let q = query.trimmingCharacters(in: .whitespaces)
+            guard q.count >= 2 else { return }
+            hits = [Self.albumPick(q)]
+            if let enc = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+               let d = await DeviceLink.shared.get("/api/nfc/sok?q=" + enc, on: m.settingsHost, timeout: 12),
+               let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
+                for t in ((o["treff"] as? [[String: Any]]) ?? []).prefix(10) {
+                    let a = (t["artist"] as? String) ?? "", al = (t["album"] as? String) ?? ""
+                    if !al.isEmpty { hits.append(Self.albumPick("\(a) - \(al)", kilde: (t["kilde"] as? String) ?? "")) }
+                }
+            }
         case .radio:
             hits = m.radio.enumerated().map { i, s in
                 Pick(navn: s.name, under: s.genre.isEmpty ? "Radio" : s.genre, omslag: s.image ?? "", handling: "preset", verdi: "\(i + 1)")
@@ -134,12 +155,24 @@ struct V4KassettSheet: View {
         }
     }
 
+    /// «Artist - Album» → album-kassett. Skjold slår opp om den spilles fra Navidrome eller YouTube Music.
+    static func albumPick(_ text: String, kilde: String = "") -> Pick {
+        let parts = text.components(separatedBy: " - ")
+        let artist = parts.count > 1 ? parts[0].trimmingCharacters(in: .whitespaces) : ""
+        let album = (parts.count > 1 ? parts.dropFirst().joined(separator: " - ") : text).trimmingCharacters(in: .whitespaces)
+        var cs = CharacterSet.urlQueryAllowed; cs.remove(charactersIn: "&=+")
+        let ea = artist.addingPercentEncoding(withAllowedCharacters: cs) ?? "", eb = album.addingPercentEncoding(withAllowedCharacters: cs) ?? ""
+        return Pick(navn: album, under: kilde.isEmpty ? artist : "\(artist) · \(kilde)", omslag: "/api/nfc/cover?artist=\(ea)&album=\(eb)",
+                    handling: "album", verdi: "\(artist) - \(album)")
+    }
+
     private func card(uid: String?) -> [String: Any]? {
         guard let p = pick else { return nil }
         let verdi: Any
         if !p.verdiKey.isEmpty { verdi = [p.verdiKey: p.verdi] } else if p.handling == "preset" { verdi = Int(p.verdi) ?? 1 } else { verdi = p.verdi }
         var c: [String: Any] = ["navn": navn.isEmpty ? p.navn : navn, "handling": p.handling, "verdi": verdi,
-                                "omslag": p.omslag, "undertittel": p.under, "ved_uttak": "pause", "rom": [String]()]
+                                "omslag": p.omslag, "undertittel": p.handling == "album" ? (p.under.components(separatedBy: " · ").first ?? "") : p.under,
+                                "ved_uttak": "pause", "rom": [String]()]
         if let uid { c["uid"] = uid }
         return c
     }

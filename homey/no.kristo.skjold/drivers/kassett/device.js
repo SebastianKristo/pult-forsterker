@@ -21,7 +21,11 @@ class KassettDevice extends AccessoryDevice {
     const r = await this.request('GET', '/nfc');
     this._cards = (r.cards || []).filter((c) => c && c.uid);
     const byUid = Object.fromEntries(this._cards.map((c) => [c.uid, c]));
-    const active = r.active ? (byUid[r.active] || {}).navn || r.active : '';
+    const KILDE = { navidrome: 'Navidrome', ytmusic: 'YouTube Music', ma: 'Music Assistant' };
+    const ac = r.active ? byUid[r.active] || {} : {};
+    const kilde = KILDE[(ac.losning || {}).kilde] || '';
+    // Album-kassetter: vis hvor den spilles fra (Navidrome eller YouTube Music) og ev. paret Skjold-enhet
+    const active = r.active ? [ac.navn || r.active, kilde, r.paret ? `på ${r.paret}` : ''].filter(Boolean).join(' · ') : '';
     await this.setIf('ki_kassett', active || this.homey.__('kassett.none') || 'Ingen');
     const last = r.last || {};
     if (last.t && this._lastT !== null && last.t !== this._lastT && last.known) {

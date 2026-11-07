@@ -161,6 +161,11 @@ class KassettActive(_Acc, SensorEntity):
     def native_value(self):
         return _kas(self.coordinator)["active"] or "Ingen"
 
+    @property
+    def extra_state_attributes(self):
+        k = _kas(self.coordinator)
+        return {"kilde": k.get("kilde") or None, "spilles_paa": k.get("paret") or "denne", "ventende_album": k.get("ventende", 0)}
+
 
 class KassettLast(_Acc, SensorEntity):
 

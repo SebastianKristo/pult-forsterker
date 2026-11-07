@@ -57,6 +57,15 @@ import java.net.URLEncoder
  */
 private data class KPick(val navn: String, val under: String, val omslag: String, val handling: String, val verdi: Any)
 
+/** «Artist - Album» → album-kassett. Skjold slår opp om den spilles fra Navidrome eller YouTube Music. */
+private fun albumPick(text: String, kilde: String = ""): KPick {
+    val i = text.indexOf(" - ")
+    val artist = if (i > 0) text.substring(0, i).trim() else ""
+    val album = (if (i > 0) text.substring(i + 3) else text).trim()
+    val cover = "/api/nfc/cover?artist=" + URLEncoder.encode(artist, "UTF-8") + "&album=" + URLEncoder.encode(album, "UTF-8")
+    return KPick(album, if (kilde.isEmpty()) artist else "$artist · $kilde", cover, "album", "$artist - $album")
+}
+
 private tailrec fun Context.activity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.activity()
@@ -93,7 +102,7 @@ fun KassettView(m: AppModel) {
     val scope = rememberCoroutineScope()
     val nfc = remember { NfcAdapter.getDefaultAdapter(ctx) }
     val canNfc = nfc?.isEnabled == true
-    var src by remember { mutableStateOf("radio") }
+    var src by remember { mutableStateOf("album") }
     var query by remember { mutableStateOf("") }
     var hits by remember { mutableStateOf(listOf<KPick>()) }
     var pick by remember { mutableStateOf<KPick?>(null) }
@@ -106,6 +115,19 @@ fun KassettView(m: AppModel) {
     LaunchedEffect(src, query) {
         hits = emptyList()
         hits = when (src) {
+            "album" -> {
+                val q = query.trim()
+                if (q.length < 2) emptyList() else {
+                    delay(400)
+                    val d = DeviceLink.get("/api/nfc/sok?q=" + URLEncoder.encode(q, "UTF-8"), on = host, timeout = 12.0)
+                    val arr = d?.let { runCatching { JSONObject(String(it)).optJSONArray("treff") }.getOrNull() }
+                    listOf(albumPick(q)) + (0 until minOf(10, arr?.length() ?: 0)).mapNotNull { i ->
+                        val o = arr!!.getJSONObject(i)
+                        val al = o.optString("album")
+                        if (al.isEmpty()) null else albumPick(o.optString("artist") + " - " + al, o.optString("kilde"))
+                    }
+                }
+            }
             "radio" -> m.radio.mapIndexed { i, s -> KPick(s.name, s.genre.ifEmpty { "Radio" }, s.image ?: "", "preset", i + 1) }
             "liste" -> if (!m.ndConf.ok) emptyList() else Subsonic.playlists(m.ndConf).getOrNull().orEmpty()
                 .map { KPick(it.name, "Spilleliste · ${it.count} låter", it.cover, "navidrome_playlist", it.id) }
@@ -129,7 +151,8 @@ fun KassettView(m: AppModel) {
         return buildMap {
             if (uid != null) put("uid", uid)
             put("navn", navn.ifBlank { p.navn }); put("handling", p.handling); put("verdi", p.verdi)
-            put("omslag", p.omslag); put("undertittel", p.under); put("ved_uttak", "pause"); put("rom", emptyList<String>())
+            put("omslag", p.omslag); put("undertittel", if (p.handling == "album") p.under.substringBefore(" · ") else p.under)
+            put("ved_uttak", "pause"); put("rom", emptyList<String>())
         }
     }
 
@@ -194,14 +217,20 @@ fun KassettView(m: AppModel) {
         when (phase) {
             "velg" -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SKFilterChip("Album", src == "album") { src = "album"; pick = null }
                     SKFilterChip("Radio", src == "radio") { src = "radio"; pick = null }
                     SKFilterChip("Spilleliste", src == "liste") { src = "liste"; pick = null }
                     SKFilterChip("Podkast", src == "podkast") { src = "podkast"; pick = null }
                 }
                 if (src == "podkast") SKField("Søk i NRK-podkaster", query, { query = it }, Modifier.fillMaxWidth())
+                if (src == "album") {
+                    SKField("Artist - Album", query, { query = it }, Modifier.fillMaxWidth())
+                    T("Spilles fra Navidrome hvis du har albumet, ellers fra YouTube Music.", sora(12f, W.Regular, C.muted))
+                }
                 if (hits.isEmpty()) T(when (src) {
                     "radio" -> "Ingen radiofavoritter på denne Skjold ennå."
                     "liste" -> if (m.ndConf.ok) "Fant ingen spillelister i Navidrome." else "Navidrome er ikke satt opp i Innstillinger."
+                    "album" -> "Skriv artist og album, f.eks. «Linkin Park - Meteora»."
                     else -> "Søk etter en podkast eller et program."
                 }, sora(13f, W.Regular, C.muted))
                 SKCard(radius = 18.dp) {

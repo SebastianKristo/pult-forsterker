@@ -72,12 +72,19 @@ pn532_i2c:
           capture_response: true
           on_response:
             then:
+              - if:   # kjent kassett, men albumet finnes verken i Navidrome eller YouTube Music → rødt
+                  condition: { lambda: "return response->status_code == 200 && body.find(\"\\\"ok\\\": false\") != std::string::npos;" }
+                  then:
+                    - light.turn_on: { id: ring, effect: "Feil", brightness: 80%, red: 100%, green: 15%, blue: 10% }
+                    - rtttl.play: "feil:d=4,o=4,b=120:c"
               - if:
-                  condition: { lambda: "return response->status_code == 200 && body.find(\"\\\"known\\\": true\") != std::string::npos;" }
+                  condition: { lambda: "return response->status_code == 200 && body.find(\"\\\"ok\\\": false\") == std::string::npos && body.find(\"\\\"known\\\": true\") != std::string::npos;" }
                   then:
                     - light.turn_on: { id: ring, effect: "Lest", brightness: 80%, red: 100%, green: 72%, blue: 30% }
                     - rtttl.play: "ok:d=16,o=6,b=180:c,e,g"
-                  else:
+              - if:
+                  condition: { lambda: "return response->status_code != 200 || body.find(\"\\\"known\\\": true\") == std::string::npos;" }
+                  then:
                     - light.turn_on: { id: ring, effect: "Ukjent", brightness: 70%, red: 30%, green: 55%, blue: 100% }
                     - rtttl.play: "ukjent:d=8,o=5,b=160:g,c"
           on_error:
