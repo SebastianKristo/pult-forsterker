@@ -141,9 +141,12 @@ export interface NrkEpisode { id: string; title: string; subtitle: string; date:
 export interface NrkProg { id: string; title?: string; series?: string; image?: string; pos: number; dur?: number; t?: number }
 export interface HomeKitInfo { enabled: boolean; available: boolean; running: boolean; paired: boolean; pin: string; setup_uri: string; port: number; error: string | null }
 /** Skjold Kassett (/api/nfc/*): kassetter med NFC-brikke, koblet til det som skal spilles. */
-export type NfcHandling = 'preset' | 'play_url' | 'nrk' | 'ma_uri' | 'navidrome_album' | 'navidrome_playlist' | 'routine';
-export interface NfcCard { uid?: string; navn: string; handling: NfcHandling; verdi: unknown; rom: string[]; volum: number | null; ved_uttak: 'pause' | 'ingenting'; omslag: string; undertittel: string; spilt?: number; sist?: number }
-export interface NfcStatus { learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[] }
+export type NfcHandling = 'preset' | 'play_url' | 'nrk' | 'ma_uri' | 'navidrome_album' | 'navidrome_playlist' | 'routine' | 'album';
+export interface NfcLosning { kilde: 'navidrome' | 'ytmusic' | 'ma'; id?: string; uri?: string; navn?: string; artist?: string; t?: number }
+export interface NfcAlbum { artist: string; album: string }
+export interface NfcOppsett { ventende: NfcAlbum[]; paret: string; koble_ventende: boolean; enheter?: { navn: string; her: boolean }[] }
+export interface NfcCard { uid?: string; navn: string; handling: NfcHandling; verdi: unknown; rom: string[]; volum: number | null; ved_uttak: 'pause' | 'ingenting'; omslag: string; undertittel: string; spilt?: number; sist?: number; losning?: NfcLosning }
+export interface NfcStatus { learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[]; ventende?: NfcAlbum[]; paret?: string; koble_ventende?: boolean }
 export interface Spoler { 'på': boolean; fart: number; spol: number; bare_kassett: boolean; vent?: number; modus?: 'spill' | 'spol' | 'tilbake' | 'stopp'; rps?: number }
 export interface Routine { id: string; navn: string; ikon?: string }
 export const api = {
@@ -153,6 +156,11 @@ export const api = {
   nfcLearn: (kort: Partial<NfcCard> | null, timeout = 60) => post<{ learning: boolean }>('/api/nfc/learn', { timeout, kort }),
   nfcLearnStop: () => post<{ learning: boolean }>('/api/nfc/learn', { stop: true }),
   spoler: () => req<Spoler>('/api/nfc/spoler'),
+  nfcOppsett: () => req<NfcOppsett>('/api/nfc/oppsett'),
+  nfcSettOppsett: (b: Partial<NfcOppsett>) => post<NfcOppsett>('/api/nfc/oppsett', b),
+  nfcImport: (tekst: string) => post<NfcOppsett & { lagt_til: number; hoppet_over: number }>('/api/nfc/import', { tekst }),
+  nfcSok: (q: string) => req<{ treff: (NfcAlbum & { kilde: string })[] }>('/api/nfc/sok?q=' + encodeURIComponent(q)),
+  nfcFinn: (artist: string, album: string) => req<{ losning: NfcLosning | null; kilde: string }>(`/api/nfc/finn?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`),
   spolerSett: (b: Partial<Spoler>) => post<Spoler>('/api/nfc/spoler', b),
   routines: () => req<{ routines?: Routine[] } | Routine[]>('/api/routines'),
   homekit: () => req<HomeKitInfo>('/api/homekit'),

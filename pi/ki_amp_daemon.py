@@ -2998,10 +2998,16 @@ async def _spol_etter_hopp(retning, hopp_s):
     if sek <= 0:
         return
     loop = asyncio.get_running_loop()
+    base = nfc_paret_base()
+    if base:   # paret: det er den andre Skjold-enheten som spiller
+        def tr(a):
+            return _hjul_post(base, "/api/transport", {"action": a})
+    else:
+        tr = transport
     # Kilder Skjold kan pause (Lyrion: radio, Navidrome, YT Music via Lyrion/MA; AirPlay; Blåtann): lyden står mens
     # spolene spoler. Spotify (librespot) kan ikke styres herfra – da spoler spolene mens lyden spiller videre.
     try:
-        await loop.run_in_executor(None, transport, "pause")
+        await loop.run_in_executor(None, tr, "pause")
         pauset = True
     except Exception:
         pauset = False
@@ -3009,7 +3015,7 @@ async def _spol_etter_hopp(retning, hopp_s):
     await asyncio.sleep(sek)
     if pauset:
         try:
-            await loop.run_in_executor(None, transport, "play")
+            await loop.run_in_executor(None, tr, "play")
         except Exception:
             pass
 
@@ -7167,6 +7173,101 @@ def nfc_current():
     return _nfcmod.current_to_card(state, radio_now(), last_play)
 
 
+def _nfc_nd_search(q):
+    nd = _nd()
+    if not nd:
+        return []
+    r = nd._call("search3", query=q, albumCount=20, songCount=0, artistCount=0)
+    return (r.get("searchResult3") or {}).get("album") or []
+
+
+def _nfc_ma_search(q):
+    m = _HX.get("ma")
+    if not m:
+        return []
+    return (m.search(q, kinds=["albums"], limit=20) or {}).get("albums") or []
+
+
+def nfc_resolve(card, force=False):
+    """Album-kassett → hvor den spilles fra (Navidrome hvis du har albumet, ellers YouTube Music via Music Assistant).
+    Svaret caches på kassetten; et YouTube-treff sjekkes mot Navidrome på nytt maks én gang i døgnet."""
+    if card.get("handling") != "album" or not (force or _nfcmod.trenger_ny_losning(card)):
+        return card
+    v = card.get("verdi") or {}
+    lo = _nfcmod.resolve_album(v.get("artist", ""), v.get("album", ""), _nfc_nd_search, _nfc_ma_search)
+    if not lo and (card.get("losning") or {}).get("kilde"):
+        return card                       # behold forrige treff hvis søket feilet nå (f.eks. uten nett)
+    ny = nfc.lagre_losning(card["uid"], lo) or card
+    if not lo:
+        _toast_safe(f"Fant ikke «{v.get('album', '')}» i Navidrome eller YouTube Music")
+    return ny
+
+
+def _toast_safe(msg):
+    try:
+        toast(msg)
+    except Exception:
+        print(msg, flush=True)
+
+
+def nfc_paret_base():
+    """Basen (http://ip:port) til den parede Skjold-enheten, eller None (= denne)."""
+    navn = (nfc.oppsett().get("paret") or "").strip().lower()
+    if not navn or navn in {str(NAME).lower(), socket.gethostname().lower(), "her", "dette rommet"}:
+        return None
+    for p in _peers():
+        if str(p.get("navn") or "").lower() == navn or str(p.get("id") or "").lower() == navn:
+            return p["base"]
+    return None
+
+
+def _remote_status(base):
+    with urllib.request.urlopen(base.rstrip("/") + "/api/status", timeout=2) as resp:
+        return json.loads(resp.read() or b"{}")
+
+
+_nfc_cover_dir = os.path.join(FEAT_DIR, "kassett_cover")
+
+
+def nfc_cover(artist, album):
+    """(bytes, content-type) for et albumcover: Navidrome → iTunes → Cover Art Archive. Caches på disk."""
+    import hashlib as _h
+    os.makedirs(_nfc_cover_dir, exist_ok=True)
+    f = os.path.join(_nfc_cover_dir, _h.sha1(f"{artist}|{album}".lower().encode()).hexdigest()[:16])
+    if os.path.isfile(f):
+        b = open(f, "rb").read()
+        return b, ("image/png" if b[:4] == b"\x89PNG" else "image/jpeg")
+    def get(u, t=10):
+        with urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "SkjoldKassett/1.0"}), timeout=t) as resp:
+            return resp.read(4_000_000)
+    kandidater = []
+    try:
+        hit = _nfcmod.best_album(_nfc_nd_search(f"{artist} {album}".strip()), artist, album)
+        nd = _nd()
+        if hit and nd:
+            kandidater.append(lambda: get(_nfcmod.subsonic_cover_url(nd.url, nd.user, nd.pw, hit.get("coverArt") or hit["id"])))
+    except Exception:
+        pass
+    def itunes():
+        q = urllib.parse.urlencode({"term": f"{artist} {album}", "entity": "album", "limit": 5, "country": "NO"})
+        res = json.loads(get("https://itunes.apple.com/search?" + q)).get("results") or []
+        hit = _nfcmod.best_album(res, artist, album, "collectionName", "artistName") or (res[0] if res else None)
+        return get(re.sub(r"/\d+x\d+bb\.", "/600x600bb.", hit["artworkUrl100"])) if hit and hit.get("artworkUrl100") else None
+    def caa():
+        q = urllib.parse.quote(f'releasegroup:"{album}" AND artist:"{artist}"')
+        rg = json.loads(get(f"https://musicbrainz.org/ws/2/release-group/?query={q}&fmt=json&limit=1")).get("release-groups") or []
+        return get(f"https://coverartarchive.org/release-group/{rg[0]['id']}/front-500") if rg else None
+    for fn in kandidater + [itunes, caa]:
+        try:
+            b = fn()
+        except Exception:
+            b = None
+        if b and (b[:3] == b"\xff\xd8\xff" or b[:8] == b"\x89PNG\r\n\x1a\n"):
+            open(f, "wb").write(b)
+            return b, ("image/png" if b[:4] == b"\x89PNG" else "image/jpeg")
+    return None
+
+
 def nfc_label_image(url):
     """Cover → data-URI, så etikettarket kan skrives ut uten nett. Relative adresser (/api/cover, /api/logo) hentes lokalt."""
     try:
@@ -7198,7 +7299,45 @@ async def h_nfc(r):
     try:
         if act == "" and r.method == "GET":
             return web.json_response({"learning": nfc.learning(), "learn_until": nfc.learn_until, "last": nfc.last,
-                                      "active": nfc.active_uid, "cards": nfc.list()})
+                                      "active": nfc.active_uid, "cards": nfc.list(), **nfc.oppsett()})
+        if act == "oppsett":
+            # Paring (hvilken Skjold spiller kassettene) og ventende album. GET: også enhetene som kan velges.
+            if r.method == "POST":
+                res = nfc.sett_oppsett(b); changed()
+            else:
+                res = nfc.oppsett()
+            enheter = [{"navn": NAME, "her": True}] + [{"navn": p.get("navn"), "her": False} for p in _peers() if p.get("navn")]
+            return web.json_response({**res, "enheter": enheter})
+        if act == "import":
+            res = nfc.importer(b.get("tekst") or "\n".join(b.get("linjer") or [])); changed()
+            return web.json_response(res)
+        if act == "finn":
+            # Forhåndsvis hvor et album spilles fra: GET /api/nfc/finn?artist=&album=
+            a_, al = (r.query.get("artist") or ""), (r.query.get("album") or "")
+            lo = await loop.run_in_executor(None, lambda: _nfcmod.resolve_album(a_, al, _nfc_nd_search, _nfc_ma_search))
+            return web.json_response({"losning": lo, "kilde": _nfcmod.KILDE_NAVN.get((lo or {}).get("kilde"), "")})
+        if act == "sok":
+            # Forslag mens du skriver: Navidrome først, så Music Assistant. GET /api/nfc/sok?q=
+            q = r.query.get("q") or ""
+            def sok():
+                out = []
+                try:
+                    out += [{"artist": a.get("artist", ""), "album": a.get("name", ""), "kilde": "Navidrome"} for a in _nfc_nd_search(q)[:8]]
+                except Exception:
+                    pass
+                try:
+                    out += [{"artist": a.get("artist", ""), "album": a.get("name", ""), "kilde": a.get("provider", "") or "Music Assistant"}
+                            for a in _nfc_ma_search(q)[:8]]
+                except Exception:
+                    pass
+                return out
+            return web.json_response({"treff": await loop.run_in_executor(None, sok)})
+        if act == "cover":
+            a_, al = (r.query.get("artist") or ""), (r.query.get("album") or "")
+            res = await loop.run_in_executor(None, nfc_cover, a_, al)
+            if not res:
+                raise web.HTTPNotFound()
+            return web.Response(body=res[0], content_type=res[1], headers={"Cache-Control": "max-age=604800"})
         if act == "cards":
             if r.method == "DELETE":
                 return web.json_response({"ok": nfc.delete(r.match_info.get("uid", "")), "cards": nfc.list()})
@@ -7209,7 +7348,11 @@ async def h_nfc(r):
             # Spolene i Kassett-spillerens vindu. GET: hva motoren skal gjøre nå (ESP-en spør ofte) · POST: innstillinger.
             if r.method == "POST":
                 return web.json_response(spoler.sett(b))
-            st = await loop.run_in_executor(None, read_status)
+            base = nfc_paret_base()   # paret med en annen Skjold: spolene følger den enhetens avspilling
+            try:
+                st = await loop.run_in_executor(None, _remote_status, base) if base else await loop.run_in_executor(None, read_status)
+            except Exception:
+                st = await loop.run_in_executor(None, read_status)
             svar = spoler.status(st, bool(nfc.active_uid))
             hopp = spoler.hent_hopp()
             if hopp:   # spolt i låten utenfra (Touch/Lyrion): pause, la spolene spole fysisk, og spill videre
@@ -7234,7 +7377,8 @@ async def h_nfc(r):
                 return web.json_response({"learning": False})
             return web.json_response(nfc.learn(b.get("timeout") or 30, b.get("kort")))
         if act == "scan":
-            res = nfc.scan(b.get("uid", ""), nfc_current)
+            res = await loop.run_in_executor(None, lambda: nfc.scan(b.get("uid", ""), nfc_current, nfc_resolve,
+                                                                    nfc.oppsett().get("paret") or ""))
             card = res["card"]
             if card and not res["learned"]:
                 if card["handling"] == "routine":
@@ -7244,11 +7388,19 @@ async def h_nfc(r):
                 history_add({"t": int(time.time()), "title": card["navn"], "artist": card.get("undertittel", ""), "album": "",
                              "input": "kassett", "source": "Kassett", "station": "", "cover": card.get("omslag", "")})
             changed()
-            return web.json_response({"known": res["known"], "learned": res["learned"], "card": card})
+            if res.get("feil"):   # ESP-en viser rødt lys når «ok» er false
+                _toast_safe(res["feil"])
+            return web.json_response({"known": res["known"], "learned": res["learned"], "card": card,
+                                      "ok": not res.get("feil"), "feil": res.get("feil", ""),
+                                      "kilde": _nfcmod.KILDE_NAVN.get(((card or {}).get("losning") or {}).get("kilde"), "")})
         if act == "remove":
             res = nfc.removed(b.get("uid", ""))
             if res["pause"]:
-                await loop.run_in_executor(None, transport, "pause")
+                base = nfc_paret_base()
+                if base:
+                    await loop.run_in_executor(None, lambda: _hjul_post(base, "/api/transport", {"action": "pause"}))
+                else:
+                    await loop.run_in_executor(None, transport, "pause")
             return web.json_response(res)
     except (ValueError, KeyError) as e:
         return web.json_response({"error": str(e)}, status=400)
@@ -7262,6 +7414,13 @@ FEAT_ROUTES += [("GET", "/api/nfc", h_nfc), ("POST", "/api/nfc/{act}", h_nfc), (
 
 # ---------- Skjold Hjul: ESPHome-fjernkontroll (pi/skjold_hjul.py, esphome/skjold-hjul.yaml) ----------
 import skjold_hjul as _hjmod   # noqa: E402
+
+
+def _hjul_post(base, path, body):
+    req = urllib.request.Request(base.rstrip("/") + path, data=json.dumps(body).encode(), method="POST",
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        return json.loads(resp.read() or b"{}")
 
 
 def _hjul_forward(base, body):

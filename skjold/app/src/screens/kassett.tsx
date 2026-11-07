@@ -1,6 +1,6 @@
 /** Skjold Kassett: NFC-kassetter koblet til radio, NRK, Navidrome, Music Assistant eller rutiner. */
 import { useEffect, useState } from 'preact/hooks';
-import { api, getBase, type NfcCard, type NfcHandling, type NfcStatus, type Routine, type Spoler } from '../lib/api';
+import { api, getBase, type NfcCard, type NfcHandling, type NfcOppsett, type NfcStatus, type Routine, type Spoler } from '../lib/api';
 import { HjulPanel } from './hjul';
 import { ndCover, ndConfigured, ndPlaylists, ndSearch } from '../lib/navidrome';
 
@@ -8,9 +8,12 @@ const A = '#e8b04a';
 const box = 'background:#141415;border:1px solid #242426;border-radius:14px;padding:14px';
 const inp = 'background:#0e0e0f;border:1px solid #2a2a2c;border-radius:8px;color:#f2f2ee;padding:8px 10px;font:inherit';
 const btn = (on = false) => `padding:8px 14px;border-radius:9px;border:1px solid ${on ? A : '#2a2a2c'};background:${on ? '#1c170d' : '#1a1a1b'};color:#f2f2ee;cursor:pointer;font:inherit`;
-const LABEL: Record<NfcHandling, string> = { preset: 'Radio', play_url: 'Strøm', nrk: 'NRK', ma_uri: 'Music Assistant', navidrome_album: 'Navidrome-album', navidrome_playlist: 'Navidrome-spilleliste', routine: 'Rutine' };
+const LABEL: Record<NfcHandling, string> = { preset: 'Radio', play_url: 'Strøm', nrk: 'NRK', ma_uri: 'Music Assistant', navidrome_album: 'Navidrome-album', navidrome_playlist: 'Navidrome-spilleliste', routine: 'Rutine', album: 'Album' };
+const KILDE: Record<string, string> = { navidrome: 'Navidrome', ytmusic: 'YouTube Music', ma: 'Music Assistant' };
+/** Relative bilder fra Skjold (/api/nfc/cover, /api/logo) må ha enhetens adresse foran når appen kjører et annet sted. */
+const img = (u: string) => (u && u.startsWith('/') ? getBase() + u : u);
 
-type Src = 'nå' | 'radio' | 'nrk' | 'nd' | 'ma' | 'rutine';
+type Src = 'nå' | 'album' | 'radio' | 'nrk' | 'nd' | 'ma' | 'rutine';
 interface Hit { navn: string; undertittel: string; omslag: string; handling: NfcHandling; verdi: unknown }
 
 async function search(src: Src, q: string, routines: Routine[]): Promise<Hit[]> {
@@ -66,9 +69,27 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [learn, setLearn] = useState<'' | 'venter' | 'ok' | string>('');
   const [err, setErr] = useState('');
+  const initAlbum = init?.handling === 'album' ? (init.verdi as { artist?: string; album?: string }) : null;
+  const [artist, setArtist] = useState(initAlbum?.artist ?? '');
+  const [album, setAlbum] = useState(initAlbum?.album ?? '');
+  const [forslag, setForslag] = useState<{ artist: string; album: string; kilde: string }[]>([]);
+  const [kilde, setKilde] = useState('');
+  useEffect(() => { if (initAlbum) setSrc('album'); }, []);
+  useEffect(() => {
+    if (src !== 'album') return;
+    setPick(album.trim() ? { navn: album.trim(), undertittel: artist.trim(), omslag: `/api/nfc/cover?artist=${encodeURIComponent(artist.trim())}&album=${encodeURIComponent(album.trim())}`, handling: 'album', verdi: { artist: artist.trim(), album: album.trim() } } : null);
+    setKilde('');
+    const q = `${artist} ${album}`.trim();
+    if (q.length < 2) { setForslag([]); return; }
+    const t = setTimeout(() => {
+      api.nfcSok(q).then((r) => setForslag(r.treff.slice(0, 10))).catch(() => setForslag([]));
+      if (album.trim()) api.nfcFinn(artist.trim(), album.trim()).then((r) => setKilde(r.kilde || 'ikke funnet')).catch(() => setKilde(''));
+    }, 450);
+    return () => clearTimeout(t);
+  }, [src, artist, album]);
   useEffect(() => { api.routines().then((r) => setRoutines(Array.isArray(r) ? r : r.routines ?? [])).catch(() => {}); }, []);
   useEffect(() => {
-    if (src === 'nå' || (src !== 'rutine' && src !== 'nd' && q.trim().length < 2)) { setHits([]); return; }
+    if (src === 'nå' || src === 'album' || (src !== 'rutine' && src !== 'nd' && q.trim().length < 2)) { setHits([]); return; }
     const t = setTimeout(() => { setBusy(true); search(src, q.trim(), routines).then(setHits).catch(() => setHits([])).finally(() => setBusy(false)); }, 350);
     return () => clearTimeout(t);
   }, [src, q, routines]);
@@ -104,20 +125,29 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
   if (learn === 'venter') return <div style={box + ';text-align:center;padding:40px'}><div style={`font-size:22px;color:${A}`}>Sett inn kassetten nå</div><p style="color:#9a9a96">Venter på NFC-brikken (60 s) …</p><button style={btn()} onClick={() => { void api.nfcLearnStop(); setLearn(''); }}>Avbryt</button></div>;
   if (learn === 'ok') return <div style={box + ';text-align:center;padding:40px;color:' + A}>✓ Kassetten er koblet</div>;
 
-  const SRC: [Src, string][] = [['nå', 'Det som spiller nå'], ['radio', 'Radio'], ['nrk', 'NRK'], ['nd', 'Navidrome'], ['ma', 'Music Assistant'], ['rutine', 'Rutine']];
+  const SRC: [Src, string][] = [['nå', 'Det som spiller nå'], ['album', 'Album (Navidrome / YouTube Music)'], ['radio', 'Radio'], ['nrk', 'NRK'], ['nd', 'Navidrome'], ['ma', 'Music Assistant'], ['rutine', 'Rutine']];
   return (
     <div style={box + ';display:flex;flex-direction:column;gap:12px'}>
       <b>{init?.uid ? 'Rediger kassett' : 'Koble ny kassett'}</b>
       <div style="display:flex;flex-wrap:wrap;gap:6px">{SRC.filter(([k]) => !(init?.uid && k === 'nå')).map(([k, t]) => <button key={k} style={btn(src === k)} onClick={() => { setSrc(k); setHits([]); }}>{t}</button>)}</div>
-      {src !== 'nå' && <input style={inp} placeholder="Søk …" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />}
+      {src === 'album' && <>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input style={inp + ';flex:1;min-width:140px'} placeholder="Artist" value={artist} onInput={(e) => setArtist((e.target as HTMLInputElement).value)} />
+          <input style={inp + ';flex:1;min-width:140px'} placeholder="Album" value={album} onInput={(e) => setAlbum((e.target as HTMLInputElement).value)} />
+        </div>
+        <small style="color:#9a9a96">Har du albumet i Navidrome, spilles det derfra. Ellers fra YouTube Music (via Music Assistant). Skjold sjekker igjen hvert døgn om du har lastet det ned.</small>
+        {kilde && <small style={'color:' + (kilde === 'ikke funnet' ? '#e06c5a' : A)}>{kilde === 'ikke funnet' ? 'Fant det ikke i Navidrome eller YouTube Music nå – kassetten lagres likevel og prøver igjen når den settes inn.' : 'Spilles fra ' + kilde}</small>}
+        {forslag.length > 0 && <div style="display:flex;flex-wrap:wrap;gap:6px">{forslag.map((f, i) => <button key={i} style={btn(f.album === album && f.artist === artist)} onClick={() => { setArtist(f.artist); setAlbum(f.album); if (!navn) setNavn(f.album); }}>{f.album} <small style="color:#9a9a96">· {f.artist} · {f.kilde}</small></button>)}</div>}
+      </>}
+      {src !== 'nå' && src !== 'album' && <input style={inp} placeholder="Søk …" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />}
       {src === 'nd' && !ndConfigured() && <small style="color:#9a9a96">Navidrome er ikke satt opp.</small>}
       {busy && <small style="color:#9a9a96">Søker …</small>}
       {hits.length > 0 && <div style="max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:4px">{hits.map((h, i) => (
         <button key={i} style={btn(pick?.verdi === h.verdi) + ';display:flex;gap:10px;align-items:center;text-align:left'} onClick={() => { setPick(h); if (!navn) setNavn(h.navn); }}>
-          {h.omslag ? <img src={h.omslag} style="width:36px;height:36px;border-radius:6px;object-fit:cover" /> : <span style="width:36px;height:36px;border-radius:6px;background:#222" />}
+          {h.omslag ? <img src={img(h.omslag)} style="width:36px;height:36px;border-radius:6px;object-fit:cover" /> : <span style="width:36px;height:36px;border-radius:6px;background:#222" />}
           <span><div>{h.navn}</div><small style="color:#9a9a96">{h.undertittel} · {LABEL[h.handling]}</small></span>
         </button>))}</div>}
-      {pick && src !== 'nå' && <small style={'color:' + A}>Valgt: {pick.navn} ({LABEL[pick.handling]})</small>}
+      {pick && src !== 'nå' && src !== 'album' && <small style={'color:' + A}>Valgt: {pick.navn} ({LABEL[pick.handling]})</small>}
       <label>Navn på etiketten<br /><input style={inp + ';width:100%'} value={navn} placeholder={src === 'nå' ? 'Tas fra det som spiller' : ''} onInput={(e) => setNavn((e.target as HTMLInputElement).value)} /></label>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <label>Rom (kommaliste, tom = dette)<br /><input style={inp} value={rom} onInput={(e) => setRom((e.target as HTMLInputElement).value)} /></label>
@@ -156,6 +186,40 @@ function SpolerPanel() {
   );
 }
 
+/** Paring (hvilken Skjold spiller kassettene) og import av albumlister («Artist - Album» per linje). */
+function AlbumPanel() {
+  const [o, setO] = useState<NfcOppsett | null>(null);
+  const [tekst, setTekst] = useState('');
+  const [msg, setMsg] = useState('');
+  const load = () => api.nfcOppsett().then(setO).catch(() => {});
+  useEffect(() => { void load(); }, []);
+  if (!o) return null;
+  const set = (b: Partial<NfcOppsett>) => void api.nfcSettOppsett(b).then(setO).catch((e) => setMsg(String((e as Error).message || e)));
+  return (
+    <div style={box + ';display:flex;flex-direction:column;gap:10px'}>
+      <b>Spilles på</b>
+      <small style="color:#9a9a96">Par kassettspilleren med en Skjold (Touch, Node, S1, Core): kassettene spilles der, og spolene følger den enhetens avspilling. Pause, neste og volum styrer du som vanlig på den enheten.</small>
+      <select style={inp} value={o.paret} onChange={(e) => set({ paret: (e.target as HTMLSelectElement).value })}>
+        <option value="">Denne Skjold-enheten</option>
+        {(o.enheter ?? []).filter((x) => !x.her).map((x) => <option key={x.navn} value={x.navn}>{x.navn}</option>)}
+        {o.paret && !(o.enheter ?? []).some((x) => x.navn === o.paret) && <option value={o.paret}>{o.paret} (ikke funnet nå)</option>}
+      </select>
+      <b style="margin-top:6px">Importer album</b>
+      <small style="color:#9a9a96">Én per linje: «Artist - Album» (samme som album.txt). De blir ventende kassetter: neste nye NFC-brikke du setter inn blir neste album i lista.</small>
+      <textarea style={inp + ';min-height:90px;font-family:inherit'} placeholder={'Linkin Park - Meteora\nAdele - 25'} value={tekst} onInput={(e) => setTekst((e.target as HTMLTextAreaElement).value)} />
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button style={btn(true)} disabled={!tekst.trim()} onClick={() => void api.nfcImport(tekst).then((r) => { setO(r); setTekst(''); setMsg(`${r.lagt_til} lagt til${r.hoppet_over ? `, ${r.hoppet_over} fantes fra før` : ''}`); })}>Importer</button>
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" checked={o.koble_ventende} onChange={(e) => set({ koble_ventende: e.currentTarget.checked })} /> Koble nye brikker til ventende album</label>
+        {msg && <small style={'color:' + A}>{msg}</small>}
+      </div>
+      {o.ventende.length > 0 && <div style="display:flex;flex-direction:column;gap:4px">
+        <small style="color:#9a9a96">Ventende ({o.ventende.length}) – sett inn en ny brikke for å koble den første:</small>
+        {o.ventende.map((v, i) => <div key={i} style="display:flex;gap:8px;align-items:center"><span style="flex:1">{i === 0 ? '▶ ' : ''}{v.album} <small style="color:#9a9a96">· {v.artist}</small></span><button style={btn()} onClick={() => set({ ventende: o.ventende.filter((_, j) => j !== i) })}>Fjern</button></div>)}
+      </div>}
+    </div>
+  );
+}
+
 export function KassettPage() {
   const [tab, setTab] = useState<'k' | 'h'>('k');
   const [st, setSt] = useState<NfcStatus | null>(null);
@@ -180,6 +244,7 @@ export function KassettPage() {
         {st?.active && <small style={'color:' + A}>I spilleren: {cards.find((c) => c.uid === st.active)?.navn ?? st.active}</small>}
       </div>
       {err && <small style="color:#e06c5a">Fikk ikke kontakt: {err}</small>}
+      <AlbumPanel />
       <SpolerPanel />
       {!cards.length && !err && <div style={box + ';color:#9a9a96'}>Ingen kassetter ennå. Bygg en Skjold Kassett-spiller (se kabinett/kassett/LES_MEG.md), og koble den første kassetten her.</div>}
       {st?.last?.uid && !st.last.known && <div style={box}>Ukjent kassett {st.last.uid} ble satt inn. <button style={btn()} onClick={() => setEdit('ny')}>Koble den</button></div>}
@@ -187,10 +252,10 @@ export function KassettPage() {
         {cards.map((c) => (
           <div key={c.uid} style={box + `;display:flex;gap:10px;align-items:center;${c.uid === st?.active ? 'border-color:' + A : ''}`}>
             <input type="checkbox" checked={sel.has(c.uid!)} onChange={() => toggle(c.uid!)} title="Velg for utskrift" />
-            {c.omslag ? <img src={c.omslag} style="width:52px;height:52px;border-radius:8px;object-fit:cover" /> : <div style={`width:52px;height:52px;border-radius:8px;background:#111;color:${A};display:grid;place-items:center;font-size:10px`}>SKJOLD</div>}
+            {c.omslag ? <img src={img(c.omslag)} style="width:52px;height:52px;border-radius:8px;object-fit:cover" /> : <div style={`width:52px;height:52px;border-radius:8px;background:#111;color:${A};display:grid;place-items:center;font-size:10px`}>SKJOLD</div>}
             <div style="flex:1;min-width:0">
               <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{c.navn}</div>
-              <small style="color:#9a9a96">{c.undertittel || LABEL[c.handling]} · spilt {c.spilt ?? 0}×</small>
+              <small style="color:#9a9a96">{c.undertittel || LABEL[c.handling]} · spilt {c.spilt ?? 0}×{c.handling === 'album' ? ' · ' + (c.losning?.kilde ? KILDE[c.losning.kilde] : 'ikke slått opp ennå') : ''}</small>
               <div style="display:flex;gap:6px;margin-top:6px">
                 <button style={btn()} onClick={() => setEdit(c)}>Endre</button>
                 <button style={btn()} onClick={() => { if (confirm(`Slette «${c.navn}»?`)) void api.nfcDelete(c.uid!).then(load); }}>Slett</button>

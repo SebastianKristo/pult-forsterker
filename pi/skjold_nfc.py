@@ -15,7 +15,7 @@ import threading
 import time
 import urllib.parse
 
-HANDLINGER = ("preset", "play_url", "nrk", "ma_uri", "navidrome_album", "navidrome_playlist", "routine")
+HANDLINGER = ("preset", "play_url", "nrk", "ma_uri", "navidrome_album", "navidrome_playlist", "routine", "album")
 UTTAK = ("pause", "ingenting")
 
 
@@ -42,14 +42,138 @@ def clean_card(c: dict) -> dict:
         out["volum"] = None
     else:
         out["volum"] = max(0, min(100, int(out["volum"])))
+    if out["handling"] == "album":
+        v = out["verdi"] if isinstance(out["verdi"], dict) else parse_album_line(str(out["verdi"] or ""))
+        if not v or not str(v.get("album") or "").strip():
+            raise ValueError("album-kassetten trenger et albumnavn")
+        out["verdi"] = {"artist": str(v.get("artist") or "").strip()[:120], "album": str(v.get("album")).strip()[:160]}
+        if v.get("spor"):
+            out["verdi"]["spor"] = str(v["spor"]).strip()[:160]
+        if out["navn"] in ("", "Kassett"):
+            out["navn"] = out["verdi"]["album"][:80]
+        if not out["undertittel"]:
+            out["undertittel"] = out["verdi"]["artist"][:120]
+        if not out["omslag"]:
+            out["omslag"] = cover_path(out["verdi"]["artist"], out["verdi"]["album"])
+        if isinstance(c.get("losning"), dict):
+            out["losning"] = c["losning"]
+        return out
     if out["verdi"] in (None, "") and out["handling"] != "routine":
         raise ValueError("kassetten må ha noe å spille (verdi)")
     return out
 
 
-def steps_for(card: dict) -> list[dict]:
-    """Kassett → rutinesteg (samme format som skjold_routines). Rom: stegene gjentas per rom."""
+# ---------- album-kassetter: Navidrome hvis du har albumet, ellers YouTube Music (via Music Assistant) ----------
+_SUFFIKS = re.compile(r"\s*[\(\[][^\)\]]*(remaster|deluxe|edition|expanded|anniversary|bonus|version|live)[^\)\]]*[\)\]]\s*", re.I)
+
+
+def norm_navn(s: str) -> str:
+    """Sammenlignbar form: små bokstaver, uten «(Remastered)»/«[Deluxe]», feat., tegnsetting og Λ/&/and-varianter."""
+    t = str(s or "").lower().replace("λ", " ").replace("&", " ").replace(" and ", " ")
+    t = _SUFFIKS.sub(" ", t)
+    t = re.sub(r"\b(feat|ft|featuring)\.?\b.*$", " ", t)
+    t = t.replace("æ", "ae").replace("ø", "o").replace("å", "a")
+    return re.sub(r"[^a-z0-9]+", "", t)
+
+
+def _artist_ok(want: str, have: str) -> bool:
+    w, h = norm_navn(want), norm_navn(have)
+    if not w:
+        return True
+    return w in h or h in w or any(norm_navn(x) and norm_navn(x) in w for x in re.split(r",|/|;|λ|&| x ", have or "", flags=re.I))
+
+
+def clean_album(v) -> dict | None:
+    if isinstance(v, str):
+        v = parse_album_line(v)
+    if not isinstance(v, dict) or not str(v.get("album") or "").strip():
+        return None
+    return {"artist": str(v.get("artist") or "").strip()[:120], "album": str(v["album"]).strip()[:160]}
+
+
+def parse_album_line(line: str) -> dict | None:
+    """«Artist - Album» (samme format som kabinett/kassett/album-eksempel.txt). «| …» bak ignoreres her."""
+    s = str(line or "").split("|", 1)[0].strip()
+    if not s or s.startswith("#"):
+        return None
+    if " - " in s:
+        a, b = [x.strip() for x in s.split(" - ", 1)]
+        return {"artist": a, "album": b}
+    return {"artist": "", "album": s}
+
+
+def cover_path(artist: str, album: str) -> str:
+    return "/api/nfc/cover?" + urllib.parse.urlencode({"artist": artist or "", "album": album or ""})
+
+
+def best_album(albums: list[dict], artist: str, album: str, name_key="name", artist_key="artist") -> dict | None:
+    """Beste treff blant søkeresultater: albumnavnet må stemme (normalisert), artisten må passe hvis oppgitt."""
+    want = norm_navn(album)
+    exact, loose = [], []
+    for a in albums or []:
+        n = norm_navn(a.get(name_key) or "")
+        if not n or not _artist_ok(artist, a.get(artist_key) or ""):
+            continue
+        if n == want:
+            exact.append(a)
+        elif want and (n.startswith(want) or want.startswith(n)):
+            loose.append(a)
+    return (exact or loose or [None])[0]
+
+
+def resolve_album(artist: str, album: str, nd_search=None, ma_search=None) -> dict | None:
+    """Finn albumet: 1) Navidrome (search3) → {"kilde":"navidrome","id"}; 2) YouTube Music via Music Assistant →
+    {"kilde":"ytmusic","uri"} (andre MA-kilder godtas som reserve). None = finnes ingen steder.
+    nd_search(q) → liste av Subsonic-album {id,name,artist,coverArt}; ma_search(q) → liste av MA-album {uri,name,artist,provider,image}."""
+    q = f"{artist} {album}".strip()
+    if nd_search:
+        try:
+            hit = best_album(nd_search(q) or [], artist, album) or best_album(nd_search(album) or [], artist, album)
+        except Exception:
+            hit = None
+        if hit:
+            return {"kilde": "navidrome", "id": str(hit["id"]), "navn": hit.get("name", album), "artist": hit.get("artist", artist),
+                    "cover_id": hit.get("coverArt") or hit["id"]}
+    if ma_search:
+        try:
+            res = ma_search(q) or []
+        except Exception:
+            res = []
+        yt = [x for x in res if "youtube" in str(x.get("provider", "")).lower() or "ytmusic" in str(x.get("uri", "")).lower()]
+        hit = best_album(yt, artist, album) or best_album([x for x in res if "subsonic" not in str(x.get("provider", "")).lower()], artist, album)
+        if hit and hit.get("uri"):
+            prov = str(hit.get("provider") or "")
+            return {"kilde": "ytmusic" if hit in yt else "ma", "uri": hit["uri"], "navn": hit.get("name", album),
+                    "artist": hit.get("artist", artist), "leverandor": prov, "image": hit.get("image", "")}
+    return None
+
+
+KILDE_NAVN = {"navidrome": "Navidrome", "ytmusic": "YouTube Music", "ma": "Music Assistant"}
+
+
+def trenger_ny_losning(card: dict, now: float | None = None) -> bool:
+    """Album-kassetten må slås opp: aldri gjort, eller forrige treff var ikke Navidrome og er over et døgn gammelt
+    (kanskje du har lastet ned albumet siden)."""
+    lo = card.get("losning") or {}
+    if not lo.get("kilde"):
+        return True
+    if lo["kilde"] == "navidrome":
+        return False
+    return (now or time.time()) - float(lo.get("t", 0)) > 86400
+
+
+def steps_for(card: dict, standard_rom: str = "") -> list[dict]:
+    """Kassett → rutinesteg (samme format som skjold_routines). Rom: stegene gjentas per rom. standard_rom: den
+    parede Skjold-enheten (Touch/Node/S1) – brukes når kassetten selv ikke har rom."""
     h, v = card["handling"], card["verdi"]
+    if h == "album":
+        lo = card.get("losning") or {}
+        if lo.get("kilde") == "navidrome":
+            h, v = "navidrome_album", lo["id"]
+        elif lo.get("uri"):
+            h, v = "ma_uri", lo["uri"]
+        else:
+            raise ValueError(f"fant ikke «{(v or {}).get('album', '')}» i Navidrome eller YouTube Music")
     typ = {"preset": "preset", "play_url": "play_url", "nrk": "nrk", "ma_uri": "ma",
            "navidrome_album": "nd_album", "navidrome_playlist": "nd_playlist"}[h]
     base: list[dict] = []
@@ -59,7 +183,7 @@ def steps_for(card: dict) -> list[dict]:
     if h == "play_url":
         s["tittel"] = card.get("navn") or ""
     base.append(s)
-    rom = card.get("rom") or []
+    rom = card.get("rom") or ([standard_rom] if standard_rom else [])
     if not rom:
         return base
     return [{**x, "rom": r} for r in rom for x in base]
@@ -73,6 +197,66 @@ class NfcStore:
         self.learn_draft: dict | None = None
         self.last = {"uid": "", "t": 0.0, "known": False, "navn": ""}
         self.active_uid = ""
+        self.ekstra_path = os.path.join(os.path.dirname(path) or ".", "kassett_oppsett.json")
+
+    # ---------- ventende album (import) og paring ----------
+    def _ekstra(self) -> dict:
+        try:
+            with open(self.ekstra_path) as fh:
+                d = json.load(fh)
+            return d if isinstance(d, dict) else {}
+        except Exception:
+            return {}
+
+    def _lagre_ekstra(self, d: dict) -> None:
+        os.makedirs(os.path.dirname(self.ekstra_path) or ".", exist_ok=True)
+        tmp = self.ekstra_path + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump(d, fh, ensure_ascii=False, indent=1)
+        os.replace(tmp, self.ekstra_path)
+
+    def oppsett(self) -> dict:
+        d = self._ekstra()
+        return {"ventende": d.get("ventende") or [], "paret": d.get("paret") or "",
+                "koble_ventende": d.get("koble_ventende", True)}
+
+    def sett_oppsett(self, b: dict) -> dict:
+        with self.lock:
+            d = self._ekstra()
+            if "paret" in b:
+                d["paret"] = str(b.get("paret") or "")[:60]
+            if "koble_ventende" in b:
+                d["koble_ventende"] = bool(b["koble_ventende"])
+            if "ventende" in b and isinstance(b["ventende"], list):
+                d["ventende"] = [x for x in (clean_album(v) for v in b["ventende"]) if x][:200]
+            self._lagre_ekstra(d)
+        return self.oppsett()
+
+    def importer(self, tekst: str) -> dict:
+        """Linjer «Artist - Album» → ventende album-kassetter (kobles til de neste nye brikkene som settes inn)."""
+        nye = [x for x in (parse_album_line(l) for l in str(tekst or "").splitlines()) if x and x.get("album")]
+        with self.lock:
+            d = self._ekstra()
+            have = {(norm_navn(v.get("artist")), norm_navn(v.get("album"))) for v in d.get("ventende") or []}
+            have |= {(norm_navn((c.get("verdi") or {}).get("artist")), norm_navn((c.get("verdi") or {}).get("album")))
+                     for c in self.load().values() if c.get("handling") == "album"}
+            lagt = []
+            for v in nye:
+                key = (norm_navn(v["artist"]), norm_navn(v["album"]))
+                if key not in have:
+                    have.add(key); lagt.append(v)
+            d["ventende"] = (d.get("ventende") or []) + lagt
+            self._lagre_ekstra(d)
+        return {"lagt_til": len(lagt), "hoppet_over": len(nye) - len(lagt), **self.oppsett()}
+
+    def _ta_ventende(self) -> dict | None:
+        with self.lock:
+            d = self._ekstra()
+            if not d.get("koble_ventende", True) or not d.get("ventende"):
+                return None
+            v = d["ventende"].pop(0)
+            self._lagre_ekstra(d)
+            return v
 
     def load(self) -> dict:
         try:
@@ -123,9 +307,15 @@ class NfcStore:
     def learning(self) -> bool:
         return time.time() < self.learn_until
 
-    def scan(self, uid: str, current=None) -> dict:
-        """Kassett satt inn. Returnerer {known, card, learned, steps}. current(): det som spiller nå (for lær-modus)."""
+    def scan(self, uid: str, current=None, resolve=None, standard_rom: str = "") -> dict:
+        """Kassett satt inn. Returnerer {known, card, learned, steps}. current(): det som spiller nå (for lær-modus).
+        resolve(card) → card: slår opp album-kassetter (Navidrome/YouTube Music). standard_rom: paret Skjold-enhet.
+        Ukjent brikke + ventende album (fra import) → brikken blir neste ventende album."""
         k = norm_uid(uid)
+        if not self.learning() and not self.get(k):
+            v = self._ta_ventende()
+            if v:
+                self.put({"uid": k, "handling": "album", "verdi": v, "navn": v["album"], "undertittel": v["artist"]})
         if self.learning():
             draft = dict(self.learn_draft or {})
             src = draft
@@ -150,8 +340,26 @@ class NfcStore:
                 cards[k]["sist"] = int(time.time())
                 self._save(cards)
         self.active_uid = k
-        return {"known": True, "learned": False, "card": card,
-                "steps": [] if card["handling"] == "routine" else steps_for(card)}
+        if card["handling"] == "album" and resolve:
+            card = resolve(card)
+        try:
+            steps = [] if card["handling"] == "routine" else steps_for(card, standard_rom)
+        except ValueError as e:   # album som ikke finnes noe sted: kassetten er kjent, men har ingenting å spille
+            return {"known": True, "learned": False, "card": card, "steps": [], "feil": str(e)}
+        return {"known": True, "learned": False, "card": card, "steps": steps}
+
+    def lagre_losning(self, uid: str, losning: dict | None) -> dict | None:
+        k = norm_uid(uid)
+        with self.lock:
+            cards = self.load()
+            if k not in cards:
+                return None
+            if losning:
+                cards[k]["losning"] = {**losning, "t": int(time.time())}
+            else:
+                cards[k].pop("losning", None)
+            self._save(cards)
+            return cards[k]
 
     def removed(self, uid: str) -> dict:
         """Kassett tatt ut. Pause bare hvis det er kassetten som startet det som spiller nå."""
@@ -197,6 +405,13 @@ def subsonic_tracks(url: str, user: str, pw: str, kind: str, item_id: str, opene
                     "title": s.get("title", ""), "artist": s.get("artist", ""), "album": s.get("album", holder.get("name", "")),
                     "cover": f"{base}/rest/getCoverArt.view?" + q(id=s.get("coverArt") or s["id"], size=300)})
     return out
+
+
+def subsonic_cover_url(url: str, user: str, pw: str, cover_id: str, size: int = 600) -> str:
+    salt = secrets.token_hex(6)
+    p = {"u": user, "t": hashlib.md5((pw + salt).encode()).hexdigest(), "s": salt, "v": "1.16.1", "c": "skjold", "f": "json",
+         "id": cover_id, "size": size}
+    return f"{url.rstrip('/')}/rest/getCoverArt.view?" + urllib.parse.urlencode(p)
 
 
 # ---------- «Lag kassett»: NDEF-lenke og ferdige etiketter ----------
