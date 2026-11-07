@@ -1,7 +1,7 @@
 """Kontroll av Skjold Fjernkontroll-modellen.
 
-Bruk:  python3 sjekk_modell.py [mappe med A_*.stl i montert stilling] [full|kort]   (standard: asm/ full)
-       python3 sjekk_modell.py asm_kort kort   (kort variant: STL-ene ligger i stl_kort/)
+Bruk:  python3 sjekk_modell.py [mappe med A_*.stl i montert stilling] [kort|full]   (standard: asm/ kort)
+       python3 sjekk_modell.py asm_full full   (full variant: STL-ene ligger i stl_full/)
 STL-ene lages av lag_stl.sh. Krever trimesh og manifold3d. Sjekker:
   1. alle utskrifts-STL-er i stl/ er vanntette, har riktig antall legemer, ligger på platen (min z = 0)
      og passer i Creality K2 (250 × 250 × 250 mm)
@@ -25,9 +25,9 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)   # trimesh: tomme sn
 import taster
 
 ASM = sys.argv[1] if len(sys.argv) > 1 else "asm"
-VARIANT = sys.argv[2] if len(sys.argv) > 2 else "full"
+VARIANT = sys.argv[2] if len(sys.argv) > 2 else "kort"
 taster.bruk(VARIANT)
-STL = "stl" if VARIANT == "full" else "stl_kort"
+STL = "stl" if VARIANT == "kort" else "stl_full"
 W, L, H = taster.W, taster.L, 13.5
 print(f"Variant: {VARIANT} ({len(taster.brytere())} taster, {len(taster.HETTER)} hetter)")
 ok = True
@@ -117,7 +117,7 @@ melding(not tynn, "sideveggen er ≥ 1,6 mm rundt hele (utenom USB-C, IR-vinduet
 
 # topp og gulv: loddrette stråler
 rot, gulv = [], []
-SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (W/2, L - 135)]   # skruehodene og forborene
+SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (8, L - 120)]   # skruehodene og forborene
 scr = (W/2 - 25.3, W/2 + 25.3, L - 8.1 - 69.8, L - 8.1)   # lomma for 2,8″-modulen (50,6 × 69,8 mm)
 for x in np.arange(5.13, W - 5, 1.0):
     for y in np.arange(5.37, L - 5, 1.0):

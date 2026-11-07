@@ -1,6 +1,8 @@
-# Skjold Fjernkontroll – universell fjernkontroll med 2,8″ berøringsskjerm (240 × 320), 42 taster, IR og Wi-Fi.
+# Skjold Fjernkontroll – universell fjernkontroll med 2,8″ berøringsskjerm (240 × 320), 21 taster, IR og Wi-Fi.
+# Dette er standardvarianten (uten talltastene og smarthus-raden). Full variant med talltaster og smarthus-rad:
+# skjold-fjernkontroll-full.yaml, laget av kabinett/fjernkontroll/taster.py fra denne fila.
 # Maskinvare (se kabinett/fjernkontroll/LES_MEG.md): ESP32-S3 SuperMini, 2,8″ IPS ST7789 + FT6336U berøring (naken FPC-modul),
-# 3 × TCA9555 på tastekortet (42 taster + vibrator, skjermstrøm og ladestatus), 3 × IR-diode 940 nm, VS1838B,
+# 2 × TCA9555 på tastekortet (21 taster + vibrator, skjermstrøm og ladestatus), 3 × IR-diode 940 nm, VS1838B,
 # vibrasjonsbryter (vekker når du løfter den), LiPo 603450 og TP4056 med USB-C.
 #
 #   · Skjermen: Aktiviteter · Spiller (nå spilles, cover, volum) · Kilder og radiofavoritter · Hjem (lys og scener) ·
@@ -20,7 +22,7 @@ substitutions:
   friendly_name: Skjold Fjernkontroll
   skjold_host: skjold.local          # Skjold-enheten fjernkontrollen styrer først (velg andre rom på skjermen)
   skjold_port: "8765"
-  ekstra_hub: tca_c                  # brikken med vibrator, skjermstrøm og ladestatus (kort variant: tca_b)
+  ekstra_hub: tca_b                  # brikken med vibrator, skjermstrøm og ladestatus (full variant: tca_c)
   sovn_etter: 40s                    # dyp søvn etter så lang tid uten tast eller berøring
   tv_kilde: aux                      # Skjold-inngangen TV-en er koblet til (aux, aux2, usb, bt …)
   # Home Assistant (krever «Tillat enheten å utføre handlinger i Home Assistant» i ESPHome-integrasjonen)
@@ -106,7 +108,7 @@ http_request:
 
 # ---------- busser og I/O ----------
 i2c:
-  - id: bus_a                        # tastekortet (3 × TCA9555)
+  - id: bus_a                        # tastekortet (2 × TCA9555, full variant 3)
     sda: GPIO5
     scl: GPIO6
     frequency: 400kHz
@@ -120,7 +122,6 @@ i2c:
 tca9555:
   - { id: tca_a, i2c_id: bus_a, address: 0x20 }
   - { id: tca_b, i2c_id: bus_a, address: 0x21 }
-  - { id: tca_c, i2c_id: bus_a, address: 0x22 }
 
 spi:
   clk_pin: GPIO9
@@ -235,7 +236,7 @@ globals:
 # >>> navneliste (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   - id: taster_navn
     type: std::vector<std::string>
-    initial_value: '{"av", "hjem", "meny", "tilbake", "avslutt", "opp", "ned", "venstre", "hoyre", "ok", "vol_opp", "vol_ned", "kan_opp", "kan_ned", "demp", "guide", "spol_tilbake", "spill_pause", "spol_frem", "opptak", "stopp", "dvr", "rod", "gronn", "gul", "bla", "tall_1", "tall_2", "tall_3", "tall_4", "tall_5", "tall_6", "tall_7", "tall_8", "tall_9", "strek", "tall_0", "enter", "lys", "stikk", "minus", "pluss"}'
+    initial_value: '{"av", "hjem", "meny", "tilbake", "avslutt", "opp", "ned", "venstre", "hoyre", "ok", "vol_opp", "vol_ned", "demp", "guide", "spol_tilbake", "spill_pause", "spol_frem", "rod", "gronn", "gul", "bla"}'
 # <<< navneliste
 
 # ---------- sensorer ----------
@@ -431,38 +432,10 @@ binary_sensor:
             - script.execute: { id: tast, navn: "vol_ned", lang: false }
             - delay: 160ms
   - platform: gpio
-    id: t_kan_opp
-    name: "Tast Kanal +"
-    internal: true
-    pin: { tca9555: tca_a, number: 12, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_press:
-      - script.execute: { id: tast, navn: "kan_opp", lang: false }
-      - delay: 450ms
-      - while:
-          condition: { binary_sensor.is_on: t_kan_opp }
-          then:
-            - script.execute: { id: tast, navn: "kan_opp", lang: false }
-            - delay: 160ms
-  - platform: gpio
-    id: t_kan_ned
-    name: "Tast Kanal −"
-    internal: true
-    pin: { tca9555: tca_a, number: 13, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_press:
-      - script.execute: { id: tast, navn: "kan_ned", lang: false }
-      - delay: 450ms
-      - while:
-          condition: { binary_sensor.is_on: t_kan_ned }
-          then:
-            - script.execute: { id: tast, navn: "kan_ned", lang: false }
-            - delay: 160ms
-  - platform: gpio
     id: t_demp
     name: "Tast Demp"
     internal: true
-    pin: { tca9555: tca_a, number: 14, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 12, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -473,7 +446,7 @@ binary_sensor:
     id: t_guide
     name: "Tast Guide"
     internal: true
-    pin: { tca9555: tca_a, number: 15, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 13, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -484,7 +457,7 @@ binary_sensor:
     id: t_spol_tilbake
     name: "Tast Spol tilbake"
     internal: true
-    pin: { tca9555: tca_b, number: 0, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 14, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -495,7 +468,7 @@ binary_sensor:
     id: t_spill_pause
     name: "Tast Spill-pause"
     internal: true
-    pin: { tca9555: tca_b, number: 1, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 15, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -506,7 +479,7 @@ binary_sensor:
     id: t_spol_frem
     name: "Tast Spol frem"
     internal: true
-    pin: { tca9555: tca_b, number: 2, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 0, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -514,43 +487,10 @@ binary_sensor:
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
         then: [ { script.execute: { id: tast, navn: "spol_frem", lang: false } } ]
   - platform: gpio
-    id: t_opptak
-    name: "Tast Ta opp"
-    internal: true
-    pin: { tca9555: tca_b, number: 3, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "opptak", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "opptak", lang: false } } ]
-  - platform: gpio
-    id: t_stopp
-    name: "Tast Stopp"
-    internal: true
-    pin: { tca9555: tca_b, number: 4, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "stopp", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "stopp", lang: false } } ]
-  - platform: gpio
-    id: t_dvr
-    name: "Tast Opptak (liste)"
-    internal: true
-    pin: { tca9555: tca_b, number: 5, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "dvr", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "dvr", lang: false } } ]
-  - platform: gpio
     id: t_rod
     name: "Tast Rød"
     internal: true
-    pin: { tca9555: tca_b, number: 6, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 1, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -561,7 +501,7 @@ binary_sensor:
     id: t_gronn
     name: "Tast Grønn"
     internal: true
-    pin: { tca9555: tca_b, number: 7, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 2, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -572,7 +512,7 @@ binary_sensor:
     id: t_gul
     name: "Tast Gul"
     internal: true
-    pin: { tca9555: tca_b, number: 8, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 3, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -583,195 +523,13 @@ binary_sensor:
     id: t_bla
     name: "Tast Blå"
     internal: true
-    pin: { tca9555: tca_b, number: 9, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 4, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
         then: [ { script.execute: { id: tast, navn: "bla", lang: true } } ]
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
         then: [ { script.execute: { id: tast, navn: "bla", lang: false } } ]
-  - platform: gpio
-    id: t_tall_1
-    name: "Tast Tall 1"
-    internal: true
-    pin: { tca9555: tca_b, number: 10, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_1", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_1", lang: false } } ]
-  - platform: gpio
-    id: t_tall_2
-    name: "Tast Tall 2"
-    internal: true
-    pin: { tca9555: tca_b, number: 11, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_2", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_2", lang: false } } ]
-  - platform: gpio
-    id: t_tall_3
-    name: "Tast Tall 3"
-    internal: true
-    pin: { tca9555: tca_b, number: 12, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_3", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_3", lang: false } } ]
-  - platform: gpio
-    id: t_tall_4
-    name: "Tast Tall 4"
-    internal: true
-    pin: { tca9555: tca_b, number: 13, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_4", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_4", lang: false } } ]
-  - platform: gpio
-    id: t_tall_5
-    name: "Tast Tall 5"
-    internal: true
-    pin: { tca9555: tca_b, number: 14, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_5", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_5", lang: false } } ]
-  - platform: gpio
-    id: t_tall_6
-    name: "Tast Tall 6"
-    internal: true
-    pin: { tca9555: tca_b, number: 15, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_6", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_6", lang: false } } ]
-  - platform: gpio
-    id: t_tall_7
-    name: "Tast Tall 7"
-    internal: true
-    pin: { tca9555: tca_c, number: 0, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_7", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_7", lang: false } } ]
-  - platform: gpio
-    id: t_tall_8
-    name: "Tast Tall 8"
-    internal: true
-    pin: { tca9555: tca_c, number: 1, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_8", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_8", lang: false } } ]
-  - platform: gpio
-    id: t_tall_9
-    name: "Tast Tall 9"
-    internal: true
-    pin: { tca9555: tca_c, number: 2, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_9", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_9", lang: false } } ]
-  - platform: gpio
-    id: t_strek
-    name: "Tast Strek"
-    internal: true
-    pin: { tca9555: tca_c, number: 3, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "strek", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "strek", lang: false } } ]
-  - platform: gpio
-    id: t_tall_0
-    name: "Tast Tall 0"
-    internal: true
-    pin: { tca9555: tca_c, number: 4, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_0", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "tall_0", lang: false } } ]
-  - platform: gpio
-    id: t_enter
-    name: "Tast Enter"
-    internal: true
-    pin: { tca9555: tca_c, number: 5, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "enter", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "enter", lang: false } } ]
-  - platform: gpio
-    id: t_lys
-    name: "Tast Lys"
-    internal: true
-    pin: { tca9555: tca_c, number: 6, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "lys", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "lys", lang: false } } ]
-  - platform: gpio
-    id: t_stikk
-    name: "Tast Stikkontakt"
-    internal: true
-    pin: { tca9555: tca_c, number: 7, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "stikk", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "stikk", lang: false } } ]
-  - platform: gpio
-    id: t_minus
-    name: "Tast Minus (dempe lys)"
-    internal: true
-    pin: { tca9555: tca_c, number: 8, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_press:
-      - script.execute: { id: tast, navn: "minus", lang: false }
-      - delay: 450ms
-      - while:
-          condition: { binary_sensor.is_on: t_minus }
-          then:
-            - script.execute: { id: tast, navn: "minus", lang: false }
-            - delay: 160ms
-  - platform: gpio
-    id: t_pluss
-    name: "Tast Pluss (mer lys)"
-    internal: true
-    pin: { tca9555: tca_c, number: 9, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_press:
-      - script.execute: { id: tast, navn: "pluss", lang: false }
-      - delay: 450ms
-      - while:
-          condition: { binary_sensor.is_on: t_pluss }
-          then:
-            - script.execute: { id: tast, navn: "pluss", lang: false }
-            - delay: 160ms
 # <<< taster
 
 event:
@@ -793,36 +551,15 @@ event:
       - ok
       - vol_opp
       - vol_ned
-      - kan_opp
-      - kan_ned
       - demp
       - guide
       - spol_tilbake
       - spill_pause
       - spol_frem
-      - opptak
-      - stopp
-      - dvr
       - rod
       - gronn
       - gul
       - bla
-      - tall_1
-      - tall_2
-      - tall_3
-      - tall_4
-      - tall_5
-      - tall_6
-      - tall_7
-      - tall_8
-      - tall_9
-      - strek
-      - tall_0
-      - enter
-      - lys
-      - stikk
-      - minus
-      - pluss
       - av_lang
       - hjem_lang
       - meny_lang
@@ -834,27 +571,10 @@ event:
       - spol_tilbake_lang
       - spill_pause_lang
       - spol_frem_lang
-      - opptak_lang
-      - stopp_lang
-      - dvr_lang
       - rod_lang
       - gronn_lang
       - gul_lang
       - bla_lang
-      - tall_1_lang
-      - tall_2_lang
-      - tall_3_lang
-      - tall_4_lang
-      - tall_5_lang
-      - tall_6_lang
-      - tall_7_lang
-      - tall_8_lang
-      - tall_9_lang
-      - strek_lang
-      - tall_0_lang
-      - enter_lang
-      - lys_lang
-      - stikk_lang
 # <<< hendelser
 
 # ---------- skript ----------
@@ -893,7 +613,7 @@ script:
           if (navn == "hjem") { if (lang) id(vis_rom)->execute(); else id(vis_aktiviteter)->execute(); return; }
           if (navn == "meny" && !(m != 0 && har_ir)) { id(vis_kilder)->execute(); return; }
           if (navn == "av") { if (lang) id(akt_av)->execute(); else if (har_ir) id(ir_send)->execute(plass); else post("/api/power", "{\"on\":false}"); return; }
-          // --- langt trykk på fargetastene: lys, stikk, − og + (smarthus-raden finnes ikke på kort variant) ---
+          // --- langt trykk på fargetastene: lys, stikk, − og + (standardvarianten har ikke smarthus-raden) ---
           if (lang && navn == "rod") { id(ha_lys_veksle)->execute(); return; }
           if (lang && navn == "gronn") { id(ha_stikk_veksle)->execute(); return; }
           if (lang && (navn == "gul" || navn == "bla")) { id(ha_lys_steg)->execute(navn == "bla" ? 10 : -10); return; }
@@ -908,9 +628,8 @@ script:
           else if (navn == "vol_ned" || navn == "ned") { post("/api/volume", "{\"delta\":-2}"); id(volum) = std::max(0, id(volum) - 2); }
           else if (navn == "demp") { id(demp) = !id(demp); post("/api/mute", id(demp) ? "{\"mute\":true}" : "{\"mute\":false}"); }
           else if (navn == "spill_pause" || navn == "ok") post("/api/transport", "{\"action\":\"playpause\"}");
-          else if (navn == "stopp") post("/api/transport", "{\"action\":\"stop\"}");
-          else if (navn == "spol_frem" || navn == "kan_opp" || navn == "hoyre") post("/api/transport", "{\"action\":\"next\"}");
-          else if (navn == "spol_tilbake" || navn == "kan_ned" || navn == "venstre") post("/api/transport", "{\"action\":\"previous\"}");
+          else if (navn == "spol_frem" || navn == "hoyre") post("/api/transport", "{\"action\":\"next\"}");
+          else if (navn == "spol_tilbake" || navn == "venstre") post("/api/transport", "{\"action\":\"previous\"}");
           else if (navn.rfind("tall_", 0) == 0 && navn != "tall_0") post("/api/preset", "{\"n\":" + navn.substr(5) + "}");
           else if (navn == "tilbake" || navn == "avslutt") id(vis_aktiviteter)->execute();
           else if (navn == "guide") id(vis_spiller)->execute();

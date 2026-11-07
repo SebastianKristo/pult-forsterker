@@ -1,12 +1,12 @@
 #!/bin/sh
 # Eksporter alle STL-er for begge variantene, kjør sjekken og lag 3MF:
-#   full (42 taster, 230 mm): utskrift i stl/, montert stilling i asm/
-#   kort (26 taster, 187 mm, uten talltastene og smarthus-raden): stl_kort/ og asm_kort/
+#   standard (kort, 21 taster, 184 mm): utskrift i stl/, montert stilling i asm/
+#   full (valgfri, 37 taster, 227 mm, med talltaster og smarthus-rad): stl_full/ og asm_full/
 # Tastene ligger i taster.py; den kjøres først.
 cd "$(dirname "$0")"
 python3 taster.py > /dev/null || exit 1
-for v in full kort; do
-  S=stl; A=asm; [ $v = kort ] && { S=stl_kort; A=asm_kort; }
+for v in kort full; do
+  S=stl; A=asm; [ $v = full ] && { S=stl_full; A=asm_full; }
   mkdir -p $S $A
   P="topp bunn logo ir_vindu knapper knapper_lys gull symboler_lyse symboler_morke farge_rod farge_gronn farge_gul farge_bla bryterbrett"
   [ $v = kort ] && P=$(echo $P | sed 's/knapper_lys //')
@@ -17,7 +17,7 @@ for v in full kort; do
     openscad -q -D "part=\"A_$p\"" -D "variant=\"$v\"" -o "$A/$p.stl" skjold_fjernkontroll.scad &
   done
 done
-openscad -q -D 'part="kort_omriss"' -o tastekort/kort_omriss.dxf skjold_fjernkontroll.scad &
-openscad -q -D 'part="kort_omriss"' -D 'variant="kort"' -o tastekort_kort/kort_omriss.dxf skjold_fjernkontroll.scad &
+openscad -q -D 'part="kort_omriss"' -D 'variant="kort"' -o tastekort/kort_omriss.dxf skjold_fjernkontroll.scad &
+openscad -q -D 'part="kort_omriss"' -D 'variant="full"' -o tastekort_full/kort_omriss.dxf skjold_fjernkontroll.scad &
 wait
-python3 sjekk_modell.py asm full && python3 sjekk_modell.py asm_kort kort && python3 lag_3mf.py
+python3 sjekk_modell.py asm kort && python3 sjekk_modell.py asm_full full && python3 lag_3mf.py

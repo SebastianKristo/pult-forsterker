@@ -11,37 +11,16 @@ hoyre,Høyre,A,0x20,P1_0,8
 ok,OK,A,0x20,P1_1,9
 vol_opp,Volum +,A,0x20,P1_2,10
 vol_ned,Volum −,A,0x20,P1_3,11
-kan_opp,Kanal +,A,0x20,P1_4,12
-kan_ned,Kanal −,A,0x20,P1_5,13
-demp,Demp,A,0x20,P1_6,14
-guide,Guide,A,0x20,P1_7,15
-spol_tilbake,Spol tilbake,B,0x21,P0_0,0
-spill_pause,Spill-pause,B,0x21,P0_1,1
-spol_frem,Spol frem,B,0x21,P0_2,2
-opptak,Ta opp,B,0x21,P0_3,3
-stopp,Stopp,B,0x21,P0_4,4
-dvr,Opptak (liste),B,0x21,P0_5,5
-rod,Rød,B,0x21,P0_6,6
-gronn,Grønn,B,0x21,P0_7,7
-gul,Gul,B,0x21,P1_0,8
-bla,Blå,B,0x21,P1_1,9
-tall_1,Tall 1,B,0x21,P1_2,10
-tall_2,Tall 2,B,0x21,P1_3,11
-tall_3,Tall 3,B,0x21,P1_4,12
-tall_4,Tall 4,B,0x21,P1_5,13
-tall_5,Tall 5,B,0x21,P1_6,14
-tall_6,Tall 6,B,0x21,P1_7,15
-tall_7,Tall 7,C,0x22,P0_0,0
-tall_8,Tall 8,C,0x22,P0_1,1
-tall_9,Tall 9,C,0x22,P0_2,2
-strek,Strek,C,0x22,P0_3,3
-tall_0,Tall 0,C,0x22,P0_4,4
-enter,Enter,C,0x22,P0_5,5
-lys,Lys,C,0x22,P0_6,6
-stikk,Stikkontakt,C,0x22,P0_7,7
-minus,Minus (dempe lys),C,0x22,P1_0,8
-pluss,Pluss (mer lys),C,0x22,P1_1,9
-vibrator,utgang: vibrasjonsmotor (via AO3400),C,0x22,P1_4,12
-strom_skjerm,"utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)",C,0x22,P1_5,13
-lader,inngang: TP4056 CHRG (lav = lader),C,0x22,P1_6,14
-ledig,ledig,C,0x22,P1_7,15
+demp,Demp,A,0x20,P1_4,12
+guide,Guide,A,0x20,P1_5,13
+spol_tilbake,Spol tilbake,A,0x20,P1_6,14
+spill_pause,Spill-pause,A,0x20,P1_7,15
+spol_frem,Spol frem,B,0x21,P0_0,0
+rod,Rød,B,0x21,P0_1,1
+gronn,Grønn,B,0x21,P0_2,2
+gul,Gul,B,0x21,P0_3,3
+bla,Blå,B,0x21,P0_4,4
+vibrator,utgang: vibrasjonsmotor (via AO3400),B,0x21,P1_4,12
+strom_skjerm,"utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)",B,0x21,P1_5,13
+lader,inngang: TP4056 CHRG (lav = lader),B,0x21,P1_6,14
+ledig,ledig,B,0x21,P1_7,15
