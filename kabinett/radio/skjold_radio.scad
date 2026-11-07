@@ -3,12 +3,14 @@
 // tynn, loddrett gullist: til venstre en grill trukket med mørkt høyttalerstoff foran ett 3″-element (mono), til høyre et rolig
 // betjeningspanel i tre lag – skjermen øverst, favoritt 1–6 i én rad rett under, og nederst av/på, volumknotten og
 // det store gullhjulet. Myke hjørner (R14) sett forfra som Node/Røst, faset frontkant, lys (eller matt sort) kropp,
-// mørk grill og knapper, gull hjul, volumknott og list, og SKJOLD preget over skjermen.
+// mørk grill og knapper, gull hjul, volumknott og list, og SKJOLD preget over skjermen. Symbolene på knappene
+// (1–6, av/på ⏻, høyttaler på volum, spill/pause på hjulet) er innfelt i flukt i kontrastfarge (flerfarget med CFS).
 // Lisens: CC BY-NC-SA 4.0 (se LISENS-MASKINVARE.md).
 //
 // Koordinater: x = bredde (0 … W), y = dybde (0 = fronten, D = bak), z = høyde (0 = innsiden av gulvet).
 // Bruk:  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_radio.scad
 // part:  kropp | bak | kammer | lokk | grill | brakett | list | knott | volum | knapp (6 favoritter + av/på) |
+//        knapp_symbol | knott_symbol | volum_symbol (innfelte symboler i kontrastfarge, samme plassering som delen) |
 //        samlet | eksplodert | A_<del> (montert stilling, for sjekk_modell.py)
 // STL-ene eksporteres liggende slik de skal printes (FDM) – samme filer kan bestilles i resin/MJF (se LES_MEG.md).
 // Alle deler er åpne skall (ingen lukkede hulrom), så resin renner ut uten egne dreneringshull.
@@ -21,7 +23,7 @@ skjermE = 0;                     // part="skjermflate": samme eksplosjonsavstand
 $fn = 64;
 
 // ---------- ytre mål ----------
-W = 240; D = 125; H = 137;       // bredde, dybde, høyde over gulvets innside (utvendig høyde H + t = 140)
+W = 240; D = 115; H = 137;       // bredde, dybde (125 → 115: lydkammeret og Pi-en får fortsatt plass), høyde over gulvets innside (utvendig høyde H + t = 140)
 R = 14;                          // hjørnene sett forfra (alle fire)
 t = 3.0;                         // vegg og gulv (≥ 2 mm for resin/MJF; 7 linjer à 0,42 mm på FDM)
 c = 2.5;                         // fas rundt frontkanten
@@ -82,6 +84,9 @@ whD = 42;  whH = 15;                       // navigasjonshjul (EC11 med trykk) n
 whX = scrX + scrAW/2 - whD/2; whZ = botZ;
 logoZ = 131.6;                             // SKJOLD preget over skjermen
 ec11 = 7.2;                                // EC11 M7-gjenge
+// symbolene er innfelt i flukt: egne legemer (innlegg) i en lomme med samme form, printes i kontrastfarge (CFS)
+symD = 0.6;                                // innleggsdybde (3 lag à 0,2 mm)
+knappIkon = ["1", "2", "3", "4", "5", "6", "av"];
 // ---------- fester ----------
 ins = 4.0; insD = 6.0; boss = 8.4; m3 = 3.4; m3k = 6.4;
 bakB = [[8.5, -t + 8.5], [W - 8.5, -t + 8.5], [8.5, H - 8.5], [W - 8.5, H - 8.5], [W/2, H - t - 3]];  // tårn for bakplata (x, z)
@@ -93,7 +98,8 @@ piSt = 5;                                  // avstandsstykker
 // ---------- bak ----------
 dcD = 8.2; jackD = 6.4; usbW = 10; usbH = 4.4;
 bakKZ = 22;                                // kontaktene (DC, linje ut, USB-C) nede til høyre, bak forsterkeren
-ventGulv = [130, 8, 10, 44, 52];           // luftespalter i gulvet under forsterkeren: x0, deling, antall, y0, lengde
+ventGulv = [130, 8, 10, 34, 52];           // luftespalter i gulvet under forsterkeren: x0, deling, antall, y0, lengde
+                                           // (26 mm fri gulvflate bak spaltene til kontaktene i bakplata)
 
 // ---------- farger ----------
 lys = farge == "lys";
@@ -103,6 +109,8 @@ c_stoff = lys ? [0.25, 0.24, 0.23] : [0.20, 0.20, 0.21];   // høyttalerstoff, v
 c_vev   = lys ? [0.33, 0.32, 0.30] : [0.27, 0.27, 0.28];
 c_gull  = [0.85, 0.62, 0.25];
 c_knapp = lys ? [0.18, 0.18, 0.19] : [0.85, 0.62, 0.25];
+c_sym_knapp = lys ? c_gull : [0.16, 0.16, 0.17];   // symbolene i knappehettene (gull på mørk hette, mørk på gull hette)
+c_sym_knott = [0.16, 0.16, 0.17];                   // symbolene i hjulet og volumknotten (mørk på gull)
 c_glass = [0.05, 0.07, 0.10];
 c_inne  = [0.40, 0.40, 0.42];
 
@@ -267,7 +275,7 @@ module brakett() {
 }
 
 // ---------- knotter og knapper ----------
-module knott_form(d, h, riller) {   // hul nedenfra (mindre resin, ingen lukkede hulrom), D-aksel 6 mm
+module knott_form(d, h, riller, ikon) {   // hul nedenfra (mindre resin, ingen lukkede hulrom), D-aksel 6 mm
   difference() {
     union() {
       cylinder(d = d, h = h - 1.2);
@@ -275,12 +283,47 @@ module knott_form(d, h, riller) {   // hul nedenfra (mindre resin, ingen lukkede
     }
     for (k = [0:riller - 1]) rotate([0, 0, k * 360 / riller]) translate([d/2, 0, -1]) cylinder(d = 1.6, h = h - 2, $fn = 12);
     translate([0, 0, h - 0.5]) cylinder(d = d - 8, h = 1);                       // grunn skål i toppen
+    translate([0, 0, h - 0.5 - symD]) linear_extrude(symD + 0.01) ikon2d(ikon);   // lomme for symbolet i skålbunnen
     translate([0, 0, -0.01]) difference() { cylinder(d = d - 5, h = h - 3); cylinder(d = 10, h = h); }
     translate([0, 0, -0.01]) difference() { cylinder(d = 6.2, h = 11); translate([1.55, -4, -1]) cube([8, 8, 13]); }
   }
 }
-module knott() { knott_form(whD, whH, 48); }
-module volum() { knott_form(volD, volH, 24); }
+module knott_symbol_form(h, ikon) { translate([0, 0, h - 0.5 - symD]) linear_extrude(symD) ikon2d(ikon); }   // i flukt med skålbunnen
+module knott() { knott_form(whD, whH, 48, "spill"); }
+module volum() { knott_form(volD, volH, 24, "volum"); }
+module knott_symbol() { knott_symbol_form(whH, "spill"); }
+module volum_symbol() { knott_symbol_form(volH, "volum"); }
+
+// ---------- symbolene (2D, sentrert; strek ≥ 0,9 mm for 0,4 mm dyse) ----------
+module bue(r, w, a0, a1) {   // bue med runde ender, fra vinkel a0 til a1 (0° = opp, med klokka positiv)
+  intersection() {
+    difference() { circle(r + w/2); circle(r - w/2); }
+    polygon(concat([[0, 0]], [for (a = [a0 : (a1 - a0)/24 : a1]) 2*(r + w)*[sin(a), cos(a)]]));
+  }
+  for (a = [a0, a1]) translate(r*[sin(a), cos(a)]) circle(d = w, $fn = 24);
+}
+module av_pa() {   // IEC 60417-5009 (⏻): åpen sirkel med loddrett strek gjennom åpningen
+  bue(2.65, 1.0, 42, 318);
+  hull() for (y = [0.1, 3.2]) translate([0, y]) circle(d = 1.0, $fn = 24);
+}
+module hoyttaler() {   // høyttaler med to lydbølger
+  translate([-0.25, 0]) {
+    polygon([[-3.4, -1.1], [-1.8, -1.1], [0.2, -2.9], [0.2, 2.9], [-1.8, 1.1], [-3.4, 1.1]]);
+    for (r = [1.8, 3.3]) translate([0.2, 0]) bue(r, 0.8, 50, 130);
+  }
+}
+module spill_pause() {   // ⏯ spill/pause: trekant og to streker
+  translate([-1.1, 0]) {
+    offset(r = 0.4) offset(delta = -0.4) polygon([[-5, -4], [-5, 4], [1.6, 0]]);
+    for (x = [3.0, 5.6]) translate([x, -4]) square([1.6, 8]);
+  }
+}
+module ikon2d(ikon) {
+  if (ikon == "av") av_pa();
+  else if (ikon == "volum") scale(1.25) hoyttaler();
+  else if (ikon == "spill") scale(1.2) spill_pause();
+  else offset(r = 0.1) text(ikon, size = 5.4, font = "Liberation Sans:style=Bold", halign = "center", valign = "center");
+}
 module knapp_lok(ikon) {
   difference() {
     union() {
@@ -288,15 +331,13 @@ module knapp_lok(ikon) {
       translate([0, 0, -t - 0.2 - capFlT]) cylinder(d = capFl, h = capFlT);
       translate([0, 0, -t - capFlT - 1.8]) cylinder(d = 3, h = 1.61);  // (overlapper flensen 0,01)          // nupp mot taktbryteren
     }
-    translate([0, 0, capUp - 0.4]) linear_extrude(0.41)
-      text(ikon, size = 4.4, font = "Liberation Sans:style=Bold", halign = "center", valign = "center");
+    translate([0, 0, capUp - symD]) linear_extrude(symD + 0.01) ikon2d(ikon);    // lomme for symbolet
   }
 }
-module knapper() {
-  front_ramme() {
-    for (i = [0:5]) translate([btnX0 + i*btnP, btnZ, 0]) knapp_lok(str(i + 1));
-    translate([pwX, botZ, 0]) knapp_lok("O");
-  }
+module knapp_symbol(ikon) { translate([0, 0, capUp - symD]) linear_extrude(symD) ikon2d(ikon); }   // innlegget, i flukt med toppen
+module knapper(symbol = false) {
+  front_ramme() for (i = [0:6]) translate(i < 6 ? [btnX0 + i*btnP, btnZ, 0] : [pwX, botZ, 0])
+    if (symbol) knapp_symbol(knappIkon[i]); else knapp_lok(knappIkon[i]);
 }
 
 // ---------- montert / eksplodert ----------
@@ -314,8 +355,10 @@ module montert(e = 0) {   // eksplodert: fronten ut mot deg, innmaten ut bakover
   color(c_inne) translate([0, 5.0*e, 0]) brakett();
   translate([0, 5.8*e, 0]) pi_kort();
   color(c_knapp) translate([0, -0.8*e, 0]) knapper();
+  color(c_sym_knapp) translate([0, -0.8*e, 0]) knapper(true);
   color(c_gull) translate([0, -1.2*e, 0]) front_ramme() translate([whX, whZ, 0.6]) knott();
   color(c_gull) translate([0, -1.2*e, 0]) front_ramme() translate([volX, volZ, 0.6]) volum();
+  color(c_sym_knott) translate([0, -1.2*e, 0]) front_ramme() { translate([whX, whZ, 0.6]) knott_symbol(); translate([volX, volZ, 0.6]) volum_symbol(); }
 }
 // aktivt område på skjermen (95,04 × 53,86 mm, 800 × 480), rett foran glasset – brukes bare i bildene
 scrPW = 95.04; scrPH = 53.86;
@@ -345,7 +388,10 @@ module print(p) {
   else if (p == "brakett") translate([0, H, -(t + 6)]) rotate([90, 0, 0]) brakett();      // forsiden ned, Pi-tårn opp
   else if (p == "knott") knott();
   else if (p == "volum") volum();
-  else if (p == "knapp") for (i = [0:6]) translate([i * (capFl + 3), 0, capUp]) rotate([180, 0, 0]) knapp_lok(i < 6 ? str(i + 1) : "O");
+  else if (p == "knott_symbol") knott_symbol();                                            // samme plassering som knott.stl
+  else if (p == "volum_symbol") volum_symbol();                                            // samme plassering som volum.stl
+  else if (p == "knapp") for (i = [0:6]) translate([i * (capFl + 3), 0, capUp]) rotate([180, 0, 0]) knapp_lok(knappIkon[i]);
+  else if (p == "knapp_symbol") for (i = [0:6]) translate([i * (capFl + 3), 0, capUp]) rotate([180, 0, 0]) knapp_symbol(knappIkon[i]);
 }
 
 if (part == "samlet") montert(0);
@@ -358,6 +404,9 @@ else if (part == "A_grill") grill();
 else if (part == "A_list") list();
 else if (part == "A_brakett") brakett();
 else if (part == "A_knapper") knapper();
+else if (part == "A_knapp_symboler") knapper(true);
+else if (part == "A_knott_symbol") front_ramme() translate([whX, whZ, 0.6]) knott_symbol();
+else if (part == "A_volum_symbol") front_ramme() translate([volX, volZ, 0.6]) volum_symbol();
 else if (part == "A_knott") front_ramme() translate([whX, whZ, 0.6]) knott();
 else if (part == "A_volum") front_ramme() translate([volX, volZ, 0.6]) volum();
 else if (part == "A_element") elementer();
