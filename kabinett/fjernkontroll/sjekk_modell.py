@@ -4,7 +4,7 @@ Bruk:  python3 sjekk_modell.py [mappe med A_*.stl i montert stilling] [kort|full
        python3 sjekk_modell.py asm_full full   (full variant: STL-ene ligger i stl_full/)
 STL-ene lages av lag_stl.sh. Krever trimesh og manifold3d. Sjekker:
   1. alle utskrifts-STL-er i stl/ er vanntette, har riktig antall legemer, ligger på platen (min z = 0)
-     og passer i Creality K2 (250 × 250 × 250 mm)
+     og passer i Creality K2 (250 × 250 × 250 mm), rett eller på skrå (45°)
   2. ingen deler overlapper i montert stilling (topp, bunn, IR-vindu, logo, hetter, symboler, tastekort med brytere,
      skjermmodul, batteri, SuperMini, lader); par som skal ligge an mot hverandre har bare kontaktflater.
      Hettene sjekkes også mot hverandre (hver hette for seg).
@@ -54,7 +54,7 @@ for n, want in ANTALL.items():
     m = trimesh.load(f"{STL}/{n}.stl")
     deler = len(m.split(only_watertight=False))
     paa_plata = abs(m.bounds[0][2]) < 0.02 or n.startswith("symboler")   # symbolene ligger i hettene (samme plassering i 3MF)
-    god = m.is_watertight and m.is_volume and (want is None or deler == want) and paa_plata and max(m.extents) <= 250
+    god = m.is_watertight and m.is_volume and (want is None or deler == want) and paa_plata and m.extents[2] <= 250 and (max(m.extents[:2]) <= 250 or sum(m.extents[:2]) / 2**0.5 <= 250)
     melding(god, f"{n:15s} vanntett={m.is_watertight} legemer={deler} {m.volume/1000:6.2f} cm³ {m.extents.round(1)} mm")
 
 # ---------- 2. overlapp i montert stilling ----------
@@ -122,7 +122,7 @@ melding(not tynn, "sideveggen er ≥ 1,6 mm rundt hele (utenom USB-C, IR-vinduet
 # topp og gulv: loddrette stråler
 rot, gulv = [], []
 SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (W - 7, L - 88)]   # skruehodene og forborene
-scr = (W/2 - 25.3, W/2 + 25.3, L - 8.1 - 69.8, L - 8.1)   # lomma for 2,8″-modulen (50,6 × 69,8 mm)
+scr = (W/2 - 24.2, W/2 + 24.2, L - 8.1 - 67.1, L - 8.1)   # lomma for 2,8″-modulen (48,4 × 67,1 mm)
 for x in np.arange(5.13, W - 5, 1.0):
     for y in np.arange(5.37, L - 5, 1.0):
         s = segment(A["topp"], [x, y, H + 5], [0, 0, -1])

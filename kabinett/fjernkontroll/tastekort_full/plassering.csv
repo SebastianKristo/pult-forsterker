@@ -1,18 +1,18 @@
 ref,verdi,fotavtrykk,x_mm,y_mm,rot,side
-SW1,av,SW-SMD_4x4x1.5,4.30,142.35,0,topp
-SW2,opp,SW-SMD_4x4x1.5,24.30,139.35,0,topp
-SW3,ned,SW-SMD_4x4x1.5,24.30,111.35,0,topp
-SW4,venstre,SW-SMD_4x4x1.5,10.30,125.35,0,topp
-SW5,hoyre,SW-SMD_4x4x1.5,38.30,125.35,0,topp
-SW6,ok,SW-SMD_4x4x1.5,24.30,125.35,0,topp
-SW7,hjem,SW-SMD_4x4x1.5,14.30,100.65,0,topp
-SW8,meny,SW-SMD_4x4x1.5,33.80,100.65,0,topp
-SW9,tilbake,SW-SMD_4x4x1.5,14.30,89.65,0,topp
-SW10,avslutt,SW-SMD_4x4x1.5,33.80,89.65,0,topp
-SW11,spill_pause,SW-SMD_4x4x1.5,14.30,74.85,0,topp
-SW12,demp,SW-SMD_4x4x1.5,14.30,55.85,0,topp
-SW13,vol_opp,SW-SMD_4x4x1.5,33.80,76.35,0,topp
-SW14,vol_ned,SW-SMD_4x4x1.5,33.80,54.35,0,topp
+SW1,av,SW-SMD_4x4x1.5,14.30,159.60,0,topp
+SW2,opp,SW-SMD_4x4x1.5,24.30,146.30,0,topp
+SW3,ned,SW-SMD_4x4x1.5,24.30,118.30,0,topp
+SW4,venstre,SW-SMD_4x4x1.5,10.30,132.30,0,topp
+SW5,hoyre,SW-SMD_4x4x1.5,38.30,132.30,0,topp
+SW6,ok,SW-SMD_4x4x1.5,24.30,132.30,0,topp
+SW7,spill_pause,SW-SMD_4x4x1.5,14.30,103.60,0,topp
+SW8,demp,SW-SMD_4x4x1.5,14.30,84.60,0,topp
+SW9,vol_opp,SW-SMD_4x4x1.5,33.80,105.00,0,topp
+SW10,vol_ned,SW-SMD_4x4x1.5,33.80,83.00,0,topp
+SW11,hjem,SW-SMD_4x4x1.5,14.30,67.90,0,topp
+SW12,meny,SW-SMD_4x4x1.5,33.80,67.90,0,topp
+SW13,tilbake,SW-SMD_4x4x1.5,14.30,53.60,0,topp
+SW14,avslutt,SW-SMD_4x4x1.5,33.80,53.60,0,topp
 SW15,tall_1,SW-SMD_4x4x1.5,10.30,41.10,0,topp
 SW16,tall_2,SW-SMD_4x4x1.5,24.30,41.10,0,topp
 SW17,tall_3,SW-SMD_4x4x1.5,38.30,41.10,0,topp
@@ -29,9 +29,9 @@ SW27,lys,SW-SMD_4x4x1.5,6.30,6.30,0,topp
 SW28,stikk,SW-SMD_4x4x1.5,18.30,6.30,0,topp
 SW29,minus,SW-SMD_4x4x1.5,30.30,6.30,0,topp
 SW30,pluss,SW-SMD_4x4x1.5,42.30,6.30,0,topp
-U1,TCA9555PWR 0x20,TSSOP-24,11.30,75.35,90,bunn
-U2,TCA9555PWR 0x21,TSSOP-24,24.30,75.35,90,bunn
-U3,TCA9555PWR 0x22,TSSOP-24,37.30,75.35,90,bunn
-J1,"FPC 18p 0,8 mm (skjerm)",FPC-18P-0.8mm bunnkontakt,24.30,143.25,0,bunn
-J2,"FPC 6p 0,5 mm (berøring)",FPC-6P-0.5mm bunnkontakt,39.30,143.25,0,bunn
-U9,XPT2046 (bare budsjett-skjerm),TSSOP-16,7.30,143.25,90,bunn
+U1,TCA9555PWR 0x20,TSSOP-24,11.30,91.60,90,bunn
+U2,TCA9555PWR 0x21,TSSOP-24,24.30,91.60,90,bunn
+U3,TCA9555PWR 0x22,TSSOP-24,37.30,91.60,90,bunn
+J1,"FPC 18p 0,5 mm (skjerm)",FPC-18P-0.5mm bunnkontakt (FH12-18S-0.5SH-stil),23.11,129.70,0,bunn
+J2,"FPC 6p 0,5 mm (berøring)",FPC-6P-0.5mm bunnkontakt (FH12-6S-0.5SH-stil),32.30,137.10,0,bunn
+U9,XPT2046 (bare budsjett-skjerm),TSSOP-16,7.30,129.70,90,bunn

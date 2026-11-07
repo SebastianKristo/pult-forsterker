@@ -11,14 +11,14 @@ Inni: [innmaten ovenfra](render/10_inni_ovenfra.png) · [skrått](render/11_inni
 I Bone White matt PLA med mørk matt PETG-bunn: [skrått](render/21_skra_bone.png) · [ovenfra](render/22_ovenfra_bone.png) · [fra siden](render/23_side_bone.png) · [nær](render/24_naer_bone.png) · [med grå PETG-bunn](render/25_skra_bone_gra.png). Se [Filament](#filament).
 Skjermen i bildene viser aktivitetslista slik fastvaren tegner den. Skjermbildene er laget med `lag_skjermbilder.py` (se [Skjermen](#skjermen)).
 
-**Mål: 55 × 193 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 236 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
+**Mål: 55 × 209 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 252 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
 
 Første utgave hadde en 2,0″-skjerm i en 54 × 208 mm kropp, med mye tom ramme på hver side av skjermen. Nå sitter en 2,8″-skjerm der: kroppen er 1 mm bredere og 22 mm lengre, og alt under skjermen (taster, form og farger) er det samme som før.
 
 Hvorfor 2,8″ og ikke 2,4″:
 - **Kroppen må være ca. 54 mm bred uansett.** Det krever D-paden med hjørnetastene og avspillingsraden (og talltastene i full variant).
 - **2,4″ fyller ikke bredden.** Glasset er bare 43–44 mm bredt, så det ville fortsatt blitt nesten 7 mm tom ramme på hver side.
-- **2,8″ fyller bredden.** Glasset er 50 mm bredt og fyller fronten med 4 mm ramme, mot 11 mm før.
+- **2,8″ fyller bredden.** Glasset er 47,8 mm bredt og fyller fronten med ca. 5 mm ramme, mot 11 mm før.
 - **Lengden øker mer med 2,8″,** fordi panelet er 69 mm langt.
 - **Brede stavskjermer** (2,25″ og liknende) er for lave til lister og cover.
 
@@ -30,17 +30,17 @@ Standard er fjernkontrollen **uten talltaster**, som vist i bildene over. **Full
 
 | | **Standard** | **Full variant (valgfri)** |
 |---|---|---|
-| Mål | **55 × 193 mm** | 55 × 236 mm |
+| Mål | **55 × 209 mm** | 55 × 252 mm |
 | Tykkelse | 13,5 mm (15,0 mm med gullringen) | samme |
 | Taster | **14 brytere, 10 hetter** | 30 brytere, 26 hetter |
 | TCA9555 | **2** (0x20, 0x21); vibrator, skjermstrøm og lader på brikke B, P1_4–P1_6 | 3 (0x20, 0x21, 0x22); de tre styrepinnene på brikke C |
-| Tastekort | 48,6 × 98 mm (`tastekort/`) | 48,6 × 146 mm (`tastekort_full/`) |
+| Tastekort | 48,6 × 115 mm (`tastekort/`) | 48,6 × 162 mm (`tastekort_full/`) |
 | ESPHome | `esphome/skjold-fjernkontroll.yaml` | `esphome/skjold-fjernkontroll-full.yaml` |
-| 3MF | `skjold-fjernkontroll-k2*.3mf` | `skjold-fjernkontroll-full-k2*.3mf` |
+| 3MF | `skjold-fjernkontroll-k2*.3mf` (2 plater) | `skjold-fjernkontroll-full-k2*.3mf` (3 plater: topp og bunn hver for seg, på skrå) |
 | STL | `stl/` | `stl_full/` |
 | Pris | **ca. 630 kr** | ca. 640 kr |
 
-Begge har samme skjerm, samme bredde og samme formspråk. Begge har medieblokken rett under 2 × 2-rutenettet; full variant har talltastene og smarthus-raden under medieblokken. Det er ingen fargetaster og ingen spoletaster.
+Begge har samme skjerm, samme bredde og samme formspråk. Begge har medieblokken rett under D-paden og 2 × 2-rutenettet under den; full variant har talltastene og smarthus-raden under rutenettet. Det er ingen fargetaster og ingen spoletaster.
 
 **Smarthus-funksjonene på standardvarianten.** Lys, stikk og ± ligger på skjermen (Hjem-siden). Det er ingen egne taster for dem, og de er ikke lagt på langt trykk på andre taster. Langt trykk på Skjold-tasten velger fortsatt rom, og langt trykk på av/på er «alt av». Vil du ha en fysisk tast til lyset, kan du koble hvilken som helst tast til det i Home Assistant (se [Home Assistant](#home-assistant)). Hver tast sendes som en hendelse, også langt trykk.
 
@@ -59,17 +59,17 @@ Bilder av full variant: [skrått, lys](render/01_skra_lys_full.png) · [ovenfra,
 Fjernkontrollen er en rett, flat plate. Den har myke R11-hjørner sett ovenfra og en 45°-fas på 1,4 mm rundt topp- og bunnkanten. Sidene går rett, uten innsnevring på midten. Toppen er lys og bunnen mørk, delt i en rett skjøt 7 mm opp på siden. Den mørke varianten har mørk topp og lys bunn.
 
 Fra toppen og ned:
-- **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (47,0 × 59,8 mm) er like stort som dekkglasset minus 1,5 mm kant på sidene og oppe, så den sorte glasskanten synes, og plastrammen ved siden av skjermen er bare 4 mm (inkludert fasen). Nede slutter vinduet 1,1 mm under det aktive området, slik at den brede glasskanten ved flatkabelen ligger skjult.
-- **Av/på** (Ø 7 mm) sitter alene øverst til venstre, mellom skjermen og gullringen, slik den klassisk sitter på fjernkontroller.
-- **D-paden** sitter rett under skjermen: en stor gullring (Ø 39 mm, før 32) med fire tydelige retningspiler (sorte trekanter 6,0 × 4,3 mm felt inn i gullet) og en mørk OK (Ø 15 mm) i midten, der tommelen hviler. Ringen er så stor som bredden tillater med av/på ved siden av: flensen har 1 mm til skjermlomma, og siden har over 4 mm til sideveggen.
-- **Under D-paden** står fire runde taster (Ø 8 mm) i et 2 × 2-rutenett, i de samme to kolonnene som medieblokken under: øverst **Skjold-tasten i gull** (aktiviteter, hold for rom) og **meny** (☰; kort trykk = meny, langt trykk = guide), under dem tilbake ↰ og avslutt ✕. Med samme kolonner blir de små tastene og medieblokken én ryddig blokk, i stedet for en rad som må presses sammen for å få plass.
-- **Medieblokken** under er 36 mm bred, i de samme kolonnene som rutenettet over: til venstre to store runde taster over hverandre, spill/pause og demp (Ø 16 mm); til høyre en høy volumpille (17 × 35 mm) med + øverst og − nederst. Spoletastene er tatt bort.
+- **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (45,0 × 59,4 mm) går 0,9 mm utenfor det aktive området rundt, så litt av den sorte glasskanten synes. Toppen holder glasset med 1,4 mm leppe på sidene og 1,5 mm oppe; nede dekker den 5,6 mm, slik at den brede glasskanten ved flatkabelen (6,47 mm) ligger skjult.
+- **Av/på** (Ø 10 mm) har sin egen rad øverst, mellom skjermen og gullringen, venstrejustert i samme kolonne som spill/pause og Skjold-tasten.
+- **D-paden** står midt under den: en stor gullring (Ø 39 mm, før 32) med fire tydelige retningspiler (sorte trekanter 6,0 × 4,3 mm felt inn i gullet) og en mørk OK (Ø 15 mm) i midten, der tommelen hviler. Ringen er så stor som bredden tillater: over 4 mm til sideveggene, og 2,1 mm materiale mellom hullet og av/på-tasten.
+- **Medieblokken** sitter rett under D-paden, 36 mm bred: til venstre to store runde taster over hverandre, spill/pause og demp (Ø 16 mm); til høyre en høy volumpille (17 × 35 mm) med + øverst og − nederst.
+- **Under medieblokken** står fire runde taster (Ø 11,5 mm, symbolene skalert opp tilsvarende) i et 2 × 2-rutenett, i de samme to kolonnene: øverst **Skjold-tasten i gull** (aktiviteter, hold for rom) og **meny** (☰; kort trykk = meny, langt trykk = guide), under dem tilbake ↰ og avslutt ✕.
 - *Full variant:* **talltastene** 1–9 står i tre kolonner, med −, 0 og ↵ i fjerde rad. **Smarthus-raden** nederst har fire lyse taster: lys, stikkontakt, − og +.
 - **SKJOLD** er felt inn i gull nederst.
 
 Designet er Skjolds eget. Det følger samme formspråk som Radio, Røst og Hjul S: myke hjørner, fas i stedet for avrundet «såpe», to toner, gull på det du bruker mest og SKJOLD i gull. Funksjonene er de samme som på andre universalfjernkontroller med skjerm, men formen og plasseringen er bevisst annerledes:
 - Siden er rett, ikke innsnevret, og overflaten er matt og printet, ikke en blank, sort plate.
-- D-paden sitter rett under skjermen, av/på står for seg selv øverst til venstre, og de fire små tastene følger kolonnene til medieblokken.
+- Av/på står alene øverst, D-paden midt under, og medieblokken og de fire små tastene står i de samme to kolonnene under ringen.
 - Volum er én høy pille i medieblokken, ved siden av to store runde taster, uten kanalvippe. Medieblokken og 2 × 2-rutenettet har samme kolonner.
 - Det er ingen pilleknapper for «aktiviteter» og «enheter» ved skjermen. Det gjør den ene gull-tasten med Skjold-skjoldet.
 
@@ -80,7 +80,7 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 | Del | Hvorfor |
 |---|---|
 | **ESP32-S3 SuperMini** (ESP32-S3FH4R2, 4 MB flash, 2 MB PSRAM) | Det minste vanlige S3-kortet (22,5 × 18 mm). Det har Wi-Fi og nok minne til LVGL, pluss dyp søvn med vekking fra to pinner. Det koster rundt 45 kr. Det ligger under tastene, med antennen mot halen, der det bare er plast rundt. |
-| **2,8″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + FT6336U), naken FPC-modul med dekkglass, 50,0 × 69,2 × 3,8–4 mm (se også [Tre skjermvalg](#tre-skjermvalg)) | Den største skjermen som får plass i bredden. Glasset er 50 mm bredt, så kroppen trenger bare å vokse fra 54 til 55 mm, og skjermen fyller nesten hele fronten. Aktivt område 43,2 × 57,6 mm, dobbelt så stort som 2,0″ (30,6 × 40,8 mm). Samme oppløsning, så fastvaren er den samme med litt større skrift. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `ft63x6`). En naken FPC-modul er tynnere enn de røde kortene med stiftlist. |
+| **2,8″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + FT6336U), naken FPC-modul med dekkglass, 47,80 × 66,50 × 3,56 mm (se også [Tre skjermvalg](#tre-skjermvalg)) | Den største skjermen som får plass i bredden. Glasset er 47,8 mm bredt, og skjermen fyller nesten hele fronten. Kroppen kunne vært 54 mm nå, men den er 55 mm for at D-paden (Ø 39) skal få plass med god kant. Aktivt område 43,2 × 57,6 mm, dobbelt så stort som 2,0″ (30,6 × 40,8 mm). Samme oppløsning, så fastvaren er den samme med litt større skrift. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `ft63x6`). En naken FPC-modul er tynnere enn de røde kortene med stiftlist. |
 | **2 × TCA9555** (16-bits I²C-utvider, interne pull-ups; 3 i full variant) | 14 taster blir 14 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Tre av de ledige pinnene brukes for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
 | **14 × SMD-taktbryter 4 × 4 × 1,5 mm** (30 i full variant) | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
 | **3 × IR-diode 940 nm (3 mm) + AO3400** | Tre dioder i viften gir lang rekkevidde og bred spredning. AO3400 (logisk nivå) gir ca. 200 mA puls per diode fra batteriet. |
@@ -95,7 +95,7 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 
 ### Tastekortet – to måter
 
-**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 98 mm (full variant: 48,6 × 146 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
+**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 115 mm (full variant: 48,6 × 162 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
 - `kort_omriss.dxf` er omrisset med hull og hakk for skruene (origo nede til venstre, halen ned).
 - `plassering.csv` gir x/y for de 14 bryterne (oppside) og de to TCA9555 (underside).
 - `koblinger.csv` viser hvilken bryter som går til hvilken brikke og pinne.
@@ -105,7 +105,7 @@ Det er ingen ferdige gerber-filer. Kortet tegnes på ca. 1–2 timer i EasyEDA (
 1. Importer DXF-en som kortomriss.
 2. Plasser bryterne etter `plassering.csv`.
 3. Koble hver bryter mellom pinnen sin og GND, og la autorouteren legge sporene.
-4. Legg jordflate på undersiden, men **ingen kobberfylling over antennen til SuperMini-en**: de venstre 21 mm av kortet, 29–36 mm fra kortets nedre kant (full variant: 35–41 mm).
+4. Legg jordflate på undersiden, men **ingen kobberfylling over antennen til SuperMini-en**: de venstre 21 mm av kortet, 47–52 mm fra kortets nedre kant (full variant: 52–57 mm).
 
 Hver TCA9555 skal ha 100 nF ved VCC og adressepinner slik: U1 A0–A2 = 000 (0x20), U2 = 100 (0x21, A0 høy), og i full variant U3 = 010 (0x22, A1 høy). Kortet trenger også 10 kΩ pull-up på SDA, SCL og felles INT. Fem kort koster ca. 120 kr med billigste frakt. Med JLC-montering av de tre brikkene på undersiden blir det ca. 250 kr mer. Bryterne lodder du selv: fire store ben hver, så det går greit med vanlig loddebolt.
 
@@ -157,13 +157,13 @@ Alt står i bunnen, unntatt tastekortet og skjermen, som sitter i toppen. Bilder
 | Del | Hvor | Hvordan |
 |---|---|---|
 | IR-kortet (34 × 6 mm hullkort) | i nesen, n 3–10 | står i et spor mellom to knaster og batteriribba, diodene peker ut gjennom IR-vinduet med 0,5 mm luft |
-| Batteriet 603450 | under skjermen, n 12–62, midt på | lomme med 0,5 mm klaring rundt og 1,05 mm opp til skjermmodulen; kabelen går ut bak, i midtkanalen |
+| Batteriet 603450 | under skjermen, n 12–62, midt på | lomme med 0,5 mm klaring rundt og 1,49 mm opp til skjermmodulen (1 mm skumtape); kabelen går ut bak, i midtkanalen |
 | Vibrasjonsmotoren | til høyre, n 100–110 | i en ring (0,5 mm klaring) |
 | Vibrasjonsbryteren | til høyre, n 118–130 | i to vugger |
 | **ESP32-S3 SuperMini** | **til venstre under tilbake og spill/pause, n 124–147** (full variant: n 166–189) | på en 1 mm hylle i en lomme med 0,5 mm klaring; USB-C mot nesen, antennen mot halen. Det er 22 mm fri vei foran USB-C, så du kan koble til en vanlig kabel med bunnen åpen |
-| TP4056-laderen | i halen, midt på, n 163–191 (full: n 206–234) | lomme med 0,5 mm klaring; USB-C sitter 0,95 mm bak en 1,2 mm forsenkning i halen, så vanlige kabler går helt inn |
-| Tastekortet | i toppen, n 79–177 (full: n 79–225) | ligger på stolpene og klemmes av pinnene og midtskruen; TCA9555, J1 og J2 sitter på undersiden, minst 1,3 mm over alt i bunnen |
-| Flatkablene | rett bak skjermmodulen | går ned bak glasset og inn i J1 (skjerm) og J2 (berøring) under tastekortet |
+| TP4056-laderen | i halen, midt på, n 179–207 (full: n 222–250) | lomme med 0,5 mm klaring; USB-C sitter 0,95 mm bak en 1,2 mm forsenkning i halen, så vanlige kabler går helt inn |
+| Tastekortet | i toppen, n 79–194 (full: n 79–242) | ligger på stolpene og klemmes av pinnene og midtskruen; TCA9555, J1 og J2 sitter på undersiden, minst 1,3 mm over alt i bunnen |
+| Flatkablene | fra nedre kant av skjermen, bakover under tastekortet | skjermkabelen (9,5 mm, 42,58 mm) bøyes ned bak glasset og går til J1 ved n ≈ 112; berøringskabelen (5,2 mm, ca. 35 mm) til J2 ved n ≈ 105. Sjekken kontrollerer at de går klar av stolper, skruer og komponenter |
 
 **Hva sjekken kontrollerer.** `sjekk_modell.py` laster referansedeler for alt som kjøpes (batteri, SuperMini, TP4056, IR-kort, bryter, motor, flatkabler og ledningsbunter) og sjekker at:
 - ingen deler kolliderer;
@@ -172,7 +172,7 @@ Alt står i bunnen, unntatt tastekortet og skjermen, som sitter i toppen. Bilder
 - USB-C-pluggen går inn i laderen (metallet fritt gjennom hullet, den støpte delen ≤ 1,0 mm fra kontakten), og det er fri vei for en plugg til SuperMini-en (12,4 × 6,5 × 22 mm);
 - skruetårnene, med 0,5 mm ekstra, ikke treffer noen komponent.
 
-**Hva som er endret for å få plass.** Batteriet er flyttet 1 mm bakover og IR-kortet 0,6 mm, slik at diodene går klar av vinduet. Midtskruen er flyttet fra n 120 til høyre side ved toppen av D-paden (x 48, n 88), slik at den ikke står i veien for USB-pluggen eller av/på-tasten og går klar av gullringen (1,0 mm til flensen). Klemmepinnene står ved sideveggene (x 5,5 og 49,5). Laderen har fått rett vegg bak seg og en forsenkning i halen. Den ene pinnen over laderen har ingen stolpe i bunnen. Kroppen har samme mål som før.
+**Hva som er endret for å få plass.** Batteriet er flyttet 1 mm bakover og IR-kortet 0,6 mm, slik at diodene går klar av vinduet. Midtskruen er flyttet fra n 120 til høyre side over D-paden (x 48, n 88), slik at den ikke står i veien for USB-pluggen og går klar av gullringen og av/på-tasten. Klemmepinnene står ved sideveggene (x 5,5 og 49,5). Laderen har fått rett vegg bak seg og en forsenkning i halen. Den ene pinnen over laderen har ingen stolpe i bunnen. Kroppen har samme mål som før.
 
 ## Kobling og lodding
 
@@ -215,14 +215,14 @@ Hver bryter kobles mellom pinnen sin og GND. TCA9555 har innebygde pull-ups, så
 | Venstre | `venstre` | A | 0x20 | P0_3 |
 | Høyre | `hoyre` | A | 0x20 | P0_4 |
 | OK | `ok` | A | 0x20 | P0_5 |
-| Skjold (aktiviteter) | `hjem` | A | 0x20 | P0_6 |
-| Meny (hold: guide) | `meny` | A | 0x20 | P0_7 |
-| Tilbake | `tilbake` | A | 0x20 | P1_0 |
-| Avslutt | `avslutt` | A | 0x20 | P1_1 |
-| Spill-pause | `spill_pause` | A | 0x20 | P1_2 |
-| Demp | `demp` | A | 0x20 | P1_3 |
-| Volum + | `vol_opp` | A | 0x20 | P1_4 |
-| Volum − | `vol_ned` | A | 0x20 | P1_5 |
+| Spill-pause | `spill_pause` | A | 0x20 | P0_6 |
+| Demp | `demp` | A | 0x20 | P0_7 |
+| Volum + | `vol_opp` | A | 0x20 | P1_0 |
+| Volum − | `vol_ned` | A | 0x20 | P1_1 |
+| Skjold (aktiviteter) | `hjem` | A | 0x20 | P1_2 |
+| Meny (hold: guide) | `meny` | A | 0x20 | P1_3 |
+| Tilbake | `tilbake` | A | 0x20 | P1_4 |
+| Avslutt | `avslutt` | A | 0x20 | P1_5 |
 | utgang: vibrasjonsmotor (via AO3400) | `vibrator` | B | 0x21 | P1_4 |
 | utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401) | `strom_skjerm` | B | 0x21 | P1_5 |
 | inngang: TP4056 CHRG (lav = lader) | `lader` | B | 0x21 | P1_6 |
@@ -253,9 +253,9 @@ Alt er 30 AWG silikontråd (myk, 0,6 mm ytre), unntatt batteriets egne ledninger
 
 | Fra | Til | Lengde | Tråd |
 |---|---|---|---|
-| Batteri + / − | TP4056 B+ / B− | 110 mm | batteriets egne ledninger, kuttet (midtkanalen) |
-| TP4056 OUT+ / OUT− | SuperMini 5V / GND | 55 mm | 30 AWG, rød / sort |
-| TP4056 OUT+ / OUT− / CHRG | tastekort P15 / P16 / P17 | 70 mm | 30 AWG |
+| Batteri + / − | TP4056 B+ / B− | 125 mm | batteriets egne ledninger, kuttet (midtkanalen) |
+| TP4056 OUT+ / OUT− | SuperMini 5V / GND | 70 mm | 30 AWG, rød / sort |
+| TP4056 OUT+ / OUT− / CHRG | tastekort P15 / P16 / P17 | 90 mm | 30 AWG |
 | SuperMini (14 signaler) | tastekort P1–P14 | 60 mm hver | 30 AWG, gjerne flatkabel av silikontråd |
 | SuperMini GPIO43 / GPIO44 | IR-kort G / OUT | 135 mm | 30 AWG, venstre kanal |
 | tastekort P15 / P20 / P2 | IR-kort + / VS / − | 145 mm | 30 AWG, venstre kanal |
@@ -275,7 +275,7 @@ Kanalene i bunnen er 1,5 mm brede: venstre kanal (x ≈ 3–4,5 mm) fra nesen ti
 
 ## Print (Creality K2)
 
-To ferdige plater for standardvarianten (`skjold-fjernkontroll-k2*.3mf`) og to for full variant (`skjold-fjernkontroll-full-k2*.3mf`, med smarthus-tastene). Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlicer), så med CFS printes hver plate i én omgang. Ingen deler trenger støtte.
+To ferdige plater for standardvarianten (`skjold-fjernkontroll-k2*.3mf`) og tre for full variant (`skjold-fjernkontroll-full-k2-topp.3mf`, `-bunn.3mf` og `-taster.3mf`, med smarthus-tastene). Full variant er 252 mm lang, lengre enn plata, så toppen og bunnen ligger på hver sin plate, på skrå (45°). Filamentnumrene står i 3MF-fila (Creality Print / OrcaSlicer), så med CFS printes hver plate i én omgang. Ingen deler trenger støtte.
 
 | Plate | Innhold | Filament |
 |---|---|---|
@@ -438,7 +438,7 @@ Du får mer ut av batteriet hvis du:
 ## Begrensninger og hva som ikke er testet
 
 - **Ingenting er bygget eller målt.** Modellen er sjekket for kollisjoner, veggtykkelse og tastehull. Fastvaren er validert med `esphome config`, men ikke kompilert eller kjørt. C++-koden i lambdaene (IR-sending, JSON og LVGL-kall) kan trenge småjusteringer ved første kompilering.
-- **Mål skjermmodulen før du printer.** 2,8″-modulene på AliExpress varierer. Modellen følger måltegningen til budsjett-panelet: glass 50,00 × 69,20 ± 0,2 mm, aktivt område 43,2 × 57,6 mm som begynner 2,6 mm fra overkanten (motsatt flatkabelen), og 3,8 mm tykt med berøring. IPS-panelene med samme omriss har normalt samme oppsett. Juster `modW`, `modH`, `modT`, `modN0`, `aktivTopp` og `scrAW`/`scrAH` i `skjold_fjernkontroll.scad` hvis din er annerledes. Er modulen tykkere enn 4 mm, bruk tynnere skumtape (eller ingen) mellom batteriet og skjermen, opptil 5 mm.
+- **Mål skjermmodulen før du printer.** 2,8″-modulene på AliExpress varierer. Modellen følger selgerens måltegning for HP28030-DCT IPS (innplugg-versjonen): glass 47,80 × 66,50 mm, aktivt område 43,20 × 57,60 mm som begynner 2,43 mm fra overkanten og 2,30 mm fra sidene, og 3,56 mm tykt uten tape. Juster `modW`, `modH`, `modT`, `modN0`, `aktivTopp` og `scrAW`/`scrAH` i `skjold_fjernkontroll.scad` hvis din er annerledes. Det er 1,5 mm mellom modulen og batteriet, nok til 1 mm skumtape.
 - **SuperMini-kortene varierer litt** (pinnerekkefølge, LDO). Sjekk at GPIO 1–13, 43 og 44 er ført ut på ditt kort.
 - **4 MB flash er nok, men ikke romslig.** LVGL, tre skrifter og online_image tar plass, og OTA trenger to like store partisjoner. Blir bygget for stort, bruk færre glyfer, dropp `f_tittel` eller velg et S3-kort med 8–16 MB.
 - **Det første trykket etter søvn** når fram hvis du holder tasten litt (ESP-en bruker ca. 0,3 s på å våkne og leser tasten når den starter). Et veldig kort trykk vekker bare skjermen. Kommandoer til Skjold sendes så snart Wi-Fi er oppe (ca. 1,5 s).
@@ -470,22 +470,31 @@ Du får mer ut av batteriet hvis du:
 | Totalpris standard / full | ca. 630 / 640 kr | ca. 615 / 625 kr | ca. 785 kr, men ikke tegnet inn (se under) |
 | Bilde | Godt fra alle vinkler | TN: farger og kontrast endrer seg når du vipper fjernkontrollen | IPS |
 | Berøring | Lett trykk og sveip, som på en telefon | Må trykkes litt; sveip går dårligere; må kalibreres | Kapasitiv, men V2 har CST3530 uten ESPHome-driver |
-| Passer i modellen | Ja | **Ja**, samme omriss og tykkelse (3,8 mm) | Ukjent: mål og pinner er ikke bekreftet |
+| Passer i modellen | Ja | Med justering: større omriss (50 × 69,2 mm) og 0,8 mm FPC, se under | Ukjent: mål og pinner er ikke bekreftet |
 | Ekstra deler | – | XPT2046 (TSSOP-16) + 1 µF på tastekortet | – |
 | ESPHome | `skjold-fjernkontroll.yaml` (eller `-kort`) | `skjold-fjernkontroll-budsjett.yaml` (pakke over hovedfila) | egen fil måtte lages |
 
-**Valgt skjerm: HP28030-DCT IPS** ([AliExpress 1005006755555414](https://www.aliexpress.com/item/1005006755555414.html), ca. 66 kr). IPS med full betraktningsvinkel, ST7789, 18-pinners FPC og kapasitiv berøring på egen liten flatkabel. Annonsen oppgir ikke berøringsbrikken: les merkingen på brikken på berøringskabelen, eller se hvilken adresse ESP-en finner på I²C-bus B i loggen. **0x38** = FT6336U → bruk `esphome/skjold-fjernkontroll.yaml` (eller `-kort`). **0x5D/0x14** = GT911 → bruk `esphome/skjold-fjernkontroll-gt911.yaml`. Velg «HP» (IPS), ikke «HC», og «-DCT» (med berøring), ikke «-D». Mål panelet når det kommer: forventet 50 × 69,2 mm, aktivt 43,2 × 57,6 mm, maks 4 mm tykt.
+**Valgt skjerm: HP28030-DCT IPS** ([AliExpress 1005006755555414](https://www.aliexpress.com/item/1005006755555414.html), ca. 66 kr). IPS med full betraktningsvinkel, ST7789, 18-pinners FPC og kapasitiv berøring på egen liten flatkabel. Annonsen oppgir ikke berøringsbrikken: les merkingen på brikken på berøringskabelen, eller se hvilken adresse ESP-en finner på I²C-bus B i loggen. **0x38** = FT6336U → bruk `esphome/skjold-fjernkontroll.yaml` (eller `-kort`). **0x5D/0x14** = GT911 → bruk `esphome/skjold-fjernkontroll-gt911.yaml`. Velg «HP» (IPS), ikke «HC», og «-DCT» (med berøring), ikke «-D». Mål panelet når det kommer.
 
-**IPS med GT911-berøring (også kapasitiv):** mange IPS-paneler selges med GT911 i stedet for FT6336U, f.eks. «IPS 2.8 inch RGB565 18PIN SPI TFT LCD Capacitive Screen ST7789V 6P GT911» (Ecyberspaces, ca. 100 kr + frakt, velg «IPS Screen with TP»). Skjermdelen er den samme (ST7789V, 18-pinners FPC). Berøringen har egen 6-pinners flatkabel (VCC, GND, SDA, SCL, INT, RST) som kobles til I²C-bus B, INT til GPIO7 og RST til GPIO12, akkurat som FT6336U. Bruk [`esphome/skjold-fjernkontroll-gt911.yaml`](../../esphome/skjold-fjernkontroll-gt911.yaml), som bytter `ft63x6` med `gt911`. Be selgeren om måltegningen og sjekk at den er ca. 50 × 69,2 mm med aktivt område 43,2 × 57,6 mm før du printer.
+**Mål fra selgerens tegning (innplugg-versjonen med IPS og kapasitiv berøring), som modellen følger:**
+- **Omriss** (glass/CTP): 47,80 × 66,50 mm (CTP 47,50 bred). Lomma er 48,4 × 67,1 mm (0,3 mm klaring rundt).
+- **Aktivt område** 43,20 × 57,60 mm: 2,43 mm fra overkanten, 2,30 mm fra sidene, og 6,47 mm nede ved flatkabelen. Berøringsområdet er 44,00 × 58,40 mm (2,03 oppe, 1,90 på sidene). Vinduet følger det aktive området med 0,9 mm kant og skjuler den brede nedre kanten.
+- **Tykkelse** 3,56 mm uten tape. Det er plass til 1 mm skumtape mot batteriet.
+- **Styrepinner bak:** Ø 0,95 × 0,65 mm, 46,45 × 65,60 mm mellom senterne (0,68 mm inn fra kantene). De står i hjørnene, utenfor batteriet, og går fritt.
+- **Skjermens flatkabel:** 18 pinner med **0,5 mm** deling (8,50 mm totalt, 0,30 mm fingre), 9,50 mm bred, 17,96 mm fra venstre glasskant, og ca. 42,58 mm lang med avstiver (0,30 mm). Den bøyes i bøyesonen rett ned bak glasset og går ca. 36 mm bakover under tastekortet til J1, en 18-pinners 0,5 mm bunnkontakt (FH12-18S-0.5SH-stil; LCSC-søk «FPC 0.5mm 18P bottom contact flip», sjekk at kontaktene vender riktig vei).
+- **Berøringens flatkabel:** egen kabel med berøringsbrikken på, ca. 35,2 × 5,2 mm, 0,5 mm deling (3,50 mm fingre), til J2, en 6-pinners 0,5 mm bunnkontakt (FH12-6S-0.5SH-stil). **Pinnetallet er ikke lesbart på tegningen:** modellen antar 6 (VCC, GND, SDA, SCL, INT, RST). Tell fingrene og sjekk rekkefølgen før du bestiller kortet.
+- **Pinnerekkefølgen på 18-pinners kabelen** står ikke på tegningen. Sjekk den mot selgerens pinnetabell før du kobler (se [Tastekortet](#tastekortet--to-måter)).
+
+**IPS med GT911-berøring (også kapasitiv):** mange IPS-paneler selges med GT911 i stedet for FT6336U, f.eks. «IPS 2.8 inch RGB565 18PIN SPI TFT LCD Capacitive Screen ST7789V 6P GT911» (Ecyberspaces, ca. 100 kr + frakt, velg «IPS Screen with TP»). Skjermdelen er den samme (ST7789V, 18-pinners FPC). Berøringen har egen 6-pinners flatkabel (VCC, GND, SDA, SCL, INT, RST) som kobles til I²C-bus B, INT til GPIO7 og RST til GPIO12, akkurat som FT6336U. Bruk [`esphome/skjold-fjernkontroll-gt911.yaml`](../../esphome/skjold-fjernkontroll-gt911.yaml), som bytter `ft63x6` med `gt911`. Be selgeren om måltegningen og sammenlign med målene over før du printer.
 
 **Anbefaling:** IPS med kapasitiv berøring er fortsatt standard, siden den har bedre bilde og føles bedre. Budsjett-skjermen er et godt valg hvis prisen betyr mest, og sparer ca. 100 kr.
 
-**Budsjett-skjermen passer i modellen.** Tegningen gir:
-- **Omriss:** 50,00 × 69,20 ± 0,2 mm. Lomma er 50,6 × 69,8 mm (0,3 mm klaring rundt, større enn toleransen).
-- **Tykkelse:** 3,8 mm med berøring, inntil 4,0 mm med tapen. Modellen gir plass til 4,0 mm.
-- **Aktivt område:** 43,2 × 57,6 mm, 2,6 mm fra overkanten. Modellen og vinduet følger dette.
+**Budsjett-skjermen må justeres i modellen.** Den er større enn IPS-panelet. Sett `modW = 50.0`, `modH = 69.2`, `modT = 3.8` og `aktivTopp = 2.6` i `skjold_fjernkontroll.scad`, og bruk en 0,8 mm FPC-kontakt for J1. Tegningen gir:
+- **Omriss:** 50,00 × 69,20 ± 0,2 mm, mot 47,80 × 66,50 for IPS-panelet.
+- **Tykkelse:** 3,8 mm med berøring.
+- **Aktivt område:** 43,2 × 57,6 mm, 2,6 mm fra overkanten.
 - **Styrepinnene** bak (Ø 0,95 mm) trykkes ned i skumtapen på batteriet.
-- **Flatkabelen** er 19,16 mm og kommer ut i nedre kant mot tastene. Den bøyes rett ned i spalten mellom glasset og tastekortet, og inn i en 18-pinners 0,8 mm FPC-kontakt (bunnkontakt) på undersiden av tastekortet, rett bak skjermen. Kontakten er tegnet inn i modellen (`fpcN`), og veien er ca. 12 mm, så kabelen er lang nok. Kontaktområdet er 39,6 mm bredt og får plass i kortets 48,6 mm.
+- **Flatkabelen** er 19,16 mm og kommer ut i nedre kant mot tastene. Den er kortere enn IPS-kabelen, så J1 må flyttes nærmere skjermen (`fpcN = modN0 + modH + 4.5`) og være en 0,8 mm kontakt.
 - **Kortkoblinger:** fra kontakten går skjermsignalene til SuperMini som før (SCK 9, MOSI 10, DC 11, RES 12, BL 13, CS til GND).
 
 XPT2046 sitter ved siden av FPC-kontakten og bruker samme SPI:
