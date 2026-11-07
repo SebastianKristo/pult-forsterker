@@ -4,6 +4,7 @@ import { apiPost, apiReq } from '../lib/api';
 
 export interface Mini { id: string; name: string; ip: string; connected: boolean; power: boolean; playing: boolean; volume: number | null; synced: boolean; model: string }
 interface MiniList { lyrion: boolean; minis: Mini[]; error?: string }
+interface Preset { n: number; title: string }
 
 const A = '#d9a441';
 const card = 'display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:14px;background:#141415;border:1px solid #242426';
@@ -12,6 +13,11 @@ const sbtn = (on: boolean) => `height:32px;padding:0 12px;border-radius:8px;bord
 
 export function MiniCard() {
   const [d, setD] = useState<MiniList | null>(null), [err, setErr] = useState('');
+  const [presets, setPresets] = useState<Preset[]>([]), [picks, setPicks] = useState<number[]>([1, 2, 3, 4]), [open, setOpen] = useState(''), [msg, setMsg] = useState('');
+  useEffect(() => { apiReq<{ items?: Preset[] }>('/api/presets').then((r) => setPresets(r.items ?? [])).catch(() => setPresets([])); }, []);
+  const sendPresets = async (id: string) => {
+    try { setD(await apiPost<MiniList>('/api/mini', { id, action: 'presets', value: picks })); setMsg('Lagt på knappene'); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+  };
   const load = async () => { try { setD(await apiReq<MiniList>('/api/mini')); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
   useEffect(() => { void load(); const t = window.setInterval(() => void load(), 8000); return () => clearInterval(t); }, []);
   const act = async (id: string, action: string, value?: number | boolean) => {
@@ -34,10 +40,26 @@ export function MiniCard() {
             <div style="display:flex;gap:6px">
               <button disabled={!m.connected} onClick={() => void act(m.id, m.synced ? 'unsync' : 'sync')} style={sbtn(m.synced)}>{m.synced ? 'Spiller her' : 'Spill her'}</button>
               <button disabled={!m.connected} onClick={() => void act(m.id, 'power', !m.power)} style={sbtn(m.power)}>{m.power ? 'På' : 'Av'}</button>
+              <button disabled={!m.connected} onClick={() => { setOpen(open === m.id ? '' : m.id); setMsg(''); }} style={sbtn(open === m.id)}>Knapper</button>
             </div>
           </div>
           {m.connected && m.volume !== null && <input type="range" min={0} max={100} value={m.volume} aria-label={`Volum ${m.name}`}
             onChange={(e) => void act(m.id, 'volume', +e.currentTarget.value)} style={`width:100%;accent-color:${A}`} />}
+          {open === m.id && <div style="display:flex;flex-direction:column;gap:8px">
+            <span style={muted}>Velg hvilke radiofavoritter knappene 1–4 på fronten skal spille.</span>
+            {!presets.length && <span style={muted}>Du har ingen radiofavoritter ennå. Legg til noen under Radio først.</span>}
+            {presets.length > 0 && [0, 1, 2, 3].map((i) => (
+              <label key={i} style="display:flex;align-items:center;gap:10px;font-size:13px">
+                <span style={`width:22px;height:22px;border-radius:6px;background:#1b1b1c;border:1px solid #2e2e30;display:grid;place-items:center;font-weight:600;color:${A}`}>{i + 1}</span>
+                <select value={picks[i] ?? 0} onChange={(e) => { const p = [...picks]; p[i] = +e.currentTarget.value; setPicks(p); }}
+                  style="flex:1;min-width:0;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#0f0f10;color:#f2f2ee;padding:0 8px">
+                  <option value={0}>Ingen</option>
+                  {presets.map((p) => <option key={p.n} value={p.n}>{p.n}. {p.title}</option>)}
+                </select>
+              </label>))}
+            {presets.length > 0 && <div style="display:flex;gap:8px;align-items:center">
+              <button onClick={() => void sendPresets(m.id)} style={sbtn(true)}>Legg på knappene</button>{msg && <span style={muted}>{msg}</span>}</div>}
+          </div>}
         </div>
       ))}
       {err && <span style="font-size:12px;color:#ff8a7a">{err}</span>}

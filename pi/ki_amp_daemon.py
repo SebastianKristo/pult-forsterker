@@ -7263,11 +7263,11 @@ def _mini_rpc(player, cmd):
         return json.loads(resp.read()).get("result", {}) or {}
 
 
-minis = _minimod.Minis(_mini_rpc, lambda: lyr.player)
+minis = _minimod.Minis(_mini_rpc, lambda: lyr.player, lambda: state["presets"])
 
 
 async def h_mini(r):
-    """GET /api/mini (Mini-høyttalere i Lyrion) · POST /api/mini {id, action: sync|unsync|volume|power, value}."""
+    """GET /api/mini (Mini-høyttalere i Lyrion) · POST /api/mini {id, action: sync|unsync|volume|power|presets, value}."""
     loop = asyncio.get_running_loop()
     if r.method == "POST":
         try:

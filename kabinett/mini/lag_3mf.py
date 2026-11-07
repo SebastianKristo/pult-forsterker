@@ -1,19 +1,40 @@
-"""Lag skjold-mini-k2.3mf: alle delene til én Skjold Mini på én 250 × 250 mm plate (Creality K2 / K2 Pro / K2 Plus).
+"""Lag 3MF-platene for Skjold Mini (Creality K2 / K2 Pro / K2 Plus, 250 × 250 mm):
+
+  skjold-mini-k2.3mf        kropp, frontplate med innfelt logo, knott og skjermklemme (PETG/ASA, 3 farger)
+  skjold-mini-k2-bunn.3mf   grill og bunnplate (PETG/ASA, sort)
+  skjold-mini-k2-tpu.3mf    pakninger, knappemembran, krage, DC-skive og USB-propp (TPU 95A)
+
 Kjør etter at STL-ene er eksportert:  python3 lag_3mf.py
-Hver del får filamentnummer (1 = lys, 2 = sort, 3 = gull) i Metadata/model_settings.config (Creality Print / OrcaSlicer)."""
+Hver del får filamentnummer i Metadata/model_settings.config (Creality Print / OrcaSlicer). Logoen ligger
+nøyaktig der den skal i frontplaten (samme plassering), så den printes i egen farge i samme utskrift."""
 import math
-import struct
 import zipfile
-import numpy as np
 import trimesh
 
-PARTS = [  # fil, navn, filament, rotasjon om z (grader), plassering (min-hjørne x, y)
-    ("kropp", "Kropp (bakveggen ned)", 1, 0, (3, 3)),
-    ("front", "Frontplate (forsiden ned)", 2, 0, (108, 3)),
-    ("knott", "Knott (toppen ned)", 3, 0, (212, 6)),
-    ("bunn", "Bunn", 2, 0, (3, 148)),
-    ("grill", "Grill (forsiden ned)", 2, 90, (108, 150)),
-]
+BED = 250
+PLATES = {
+    "skjold-mini-k2.3mf": ("Skjold Mini – kropp, front og knott (PETG/ASA)", [
+        # fil, navn, filament, rotasjon om z, min-hjørne (x, y), «samme som» (legg nøyaktig likt som en annen del)
+        ("kropp", "Kropp (bakveggen ned)", 1, 0, (4, 4), None),
+        ("front", "Frontplate (baksiden ned)", 2, 0, (110, 4), None),
+        ("logo", "Logo SKJOLD (innfelt i fronten)", 3, 0, None, "front"),
+        ("knott", "Knott (toppen ned)", 3, 0, (214, 4), None),
+        ("skjermklemme", "Skjermklemme", 2, 90, (222, 44), None),
+    ]),
+    "skjold-mini-k2-bunn.3mf": ("Skjold Mini – grill og bunn (PETG/ASA)", [
+        ("grill", "Grill (forsiden ned)", 2, 0, (4, 4), None),
+        ("bunn", "Bunn (innsiden ned, føttene opp)", 2, 0, (100, 4), None),
+    ]),
+    "skjold-mini-k2-tpu.3mf": ("Skjold Mini – pakninger og membran (TPU 95A)", [
+        ("pakning_front", "Pakning front", 1, 0, (4, 4), None),
+        ("pakning_bunn", "Pakning bunn", 1, 0, (104, 4), None),
+        ("membran", "Knappemembran (forsiden ned)", 1, 0, (104, 120), None),
+        ("pakning_skjerm", "Pakning skjerm", 1, 0, (104, 145), None),
+        ("krage", "Krage EC11", 1, 0, (145, 145), None),
+        ("dc_skive", "Skive DC-kontakt", 1, 0, (165, 145), None),
+        ("usb_propp", "Propp USB-C", 1, 0, (185, 145), None),
+    ]),
+}
 COLORS = {1: "#ECE9E3", 2: "#232325", 3: "#D99E40"}
 
 
@@ -23,22 +44,41 @@ def mesh_xml(m):
     return f"<mesh><vertices>{v}</vertices><triangles>{t}</triangles></mesh>"
 
 
-def main():
-    objs, items, cfg = [], [], []
-    for i, (f, name, fil, rot, (x, y)) in enumerate(PARTS, 1):
+def place(parts):
+    out, moved = [], {}
+    for f, name, fil, rot, pos, same in parts:
         m = trimesh.load(f"stl/{f}.stl")
         if rot:
             m.apply_transform(trimesh.transformations.rotation_matrix(math.radians(rot), [0, 0, 1]))
-        b = m.bounds
-        m.apply_translation([x - b[0][0], y - b[0][1], -b[0][2]])
-        assert m.bounds[1][0] <= 250 and m.bounds[1][1] <= 250, f
+        if same:
+            m.apply_translation(moved[same])
+        else:
+            b = m.bounds
+            d = [pos[0] - b[0][0], pos[1] - b[0][1], -b[0][2]]
+            m.apply_translation(d)
+            moved[f] = d
+        assert m.bounds[1][0] <= BED and m.bounds[1][1] <= BED and m.bounds[0][0] >= 0 and m.bounds[0][1] >= 0, (f, m.bounds)
+        out.append((f, name, fil, m))
+    # ingen overlapp mellom delene på plata (bortsett fra logoen, som ligger i lomma i fronten)
+    for i, (fa, _, _, a) in enumerate(out):
+        for fb, _, _, b in out[i + 1:]:
+            if "logo" in (fa, fb):
+                continue
+            (a0, a1), (b0, b1) = a.bounds, b.bounds
+            assert a1[0] <= b0[0] or b1[0] <= a0[0] or a1[1] <= b0[1] or b1[1] <= a0[1], (fa, fb)
+    return out
+
+
+def write(fn, title, parts):
+    objs, items, cfg = [], [], []
+    for i, (f, name, fil, m) in enumerate(place(parts), 1):
         objs.append(f'<object id="{i}" name="{name}" type="model">{mesh_xml(m)}</object>')
         items.append(f'<item objectid="{i}"/>')
         cfg.append(f'<object id="{i}"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/>'
                    f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/></part></object>')
     model = ('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" '
              'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
-             '<metadata name="Title">Skjold Mini – alle deler (Creality K2)</metadata><metadata name="Designer">Skjold</metadata>'
+             f'<metadata name="Title">{title}</metadata><metadata name="Designer">Skjold</metadata>'
              '<metadata name="License">CC BY-NC-SA 4.0</metadata>'
              f'<resources>{"".join(objs)}</resources><build>{"".join(items)}</build></model>')
     ct = ('<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
@@ -48,12 +88,17 @@ def main():
     rels = ('<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             '<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
     conf = '<?xml version="1.0" encoding="UTF-8"?>\n<config>' + "".join(cfg) + "</config>"
-    with zipfile.ZipFile("skjold-mini-k2.3mf", "w", zipfile.ZIP_DEFLATED) as z:
+    with zipfile.ZipFile(fn, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("[Content_Types].xml", ct)
         z.writestr("_rels/.rels", rels)
         z.writestr("3D/3dmodel.model", model)
         z.writestr("Metadata/model_settings.config", conf)
-    print("skrev skjold-mini-k2.3mf")
+    print("skrev", fn)
+
+
+def main():
+    for fn, (title, parts) in PLATES.items():
+        write(fn, title, parts)
 
 
 if __name__ == "__main__":
