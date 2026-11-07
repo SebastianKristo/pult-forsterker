@@ -1,5 +1,8 @@
 package no.kristo.skjold
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -478,23 +481,35 @@ fun SKMiniPlayer(m: AppModel) {
 fun SkBarSlider(value: Double, onChange: (Double) -> Unit, modifier: Modifier = Modifier, range: ClosedFloatingPointRange<Double> = 0.0..100.0) {
     val cb by rememberUpdatedState(onChange)
     val curValue by rememberUpdatedState(value)
+    // Mens man drar tegnes fingerens posisjon (flytende, ikke avrundet), og verdier fra Skjold ignoreres –
+    // før hoppet linja tilbake når statusen fra enheten kom inn midt i dragningen, og den kjentes hakkete.
+    var dragFrac by remember { mutableStateOf<Float?>(null) }
+    val span = (range.endInclusive - range.start)
     Canvas(
-        modifier.height(26.dp).pointerInput(range) {
+        modifier.height(32.dp).pointerInput(range) {
             awaitEachGesture {
                 var last = curValue
-                fun upd(px: Float) {
+                var lastSent = 0L
+                fun upd(px: Float, final: Boolean) {
                     val p = (px / size.width).coerceIn(0f, 1f)
-                    val v = (range.start + p * (range.endInclusive - range.start)).roundToInt().toDouble()
-                    if (v != last) { detentHaptic(range, 1.0, last, v); last = v; cb(v) }
+                    dragFrac = p
+                    val v = (range.start + p * span).roundToInt().toDouble()
+                    if (v != last) { detentHaptic(range, 1.0, last, v); last = v }
+                    val now = System.currentTimeMillis()
+                    if (final || now - lastSent > 60) { lastSent = now; cb(v) }   // ikke flom Skjold med kall
                 }
-                val down = awaitFirstDown()
-                upd(down.position.x)
-                drag(down.id) { c -> upd(c.position.x); c.consume() }
+                val down = awaitFirstDown(requireUnconsumed = false)
+                down.consume()                                    // ikke la forelderen (sveip/rull) ta over
+                upd(down.position.x, false)
+                var lastX = down.position.x
+                drag(down.id) { c -> lastX = c.position.x; upd(lastX, false); c.consume() }
+                upd(lastX, true)
+                dragFrac = null
             }
         },
     ) {
         val tr = 6.dp.toPx(); val cy = size.height / 2
-        val frac = ((value - range.start) / (range.endInclusive - range.start)).toFloat().coerceIn(0f, 1f)
+        val frac = dragFrac ?: ((value - range.start) / span).toFloat().coerceIn(0f, 1f)
         drawRoundRect(SkG.miniVolTrack, Offset(0f, cy - tr / 2), Size(size.width, tr), CornerRadius(tr / 2))
         if (frac > 0f) drawRoundRect(C.ink, Offset(0f, cy - tr / 2), Size(size.width * frac, tr), CornerRadius(tr / 2))
     }
