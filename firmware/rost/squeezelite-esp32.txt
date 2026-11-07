@@ -10,7 +10,7 @@ display_config  = I2C,width=128,height=64,driver=SSD1306
 metadata_config = format=%artist% - %title%
 rotary_config   = A=15,B=16,SW=17,volume,longpress
 actrls_config   = knapper
-knapper         = [{"gpio":8,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"ACTRLS_POWER"}},{"gpio":9,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS1"}},{"gpio":18,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS2"}},{"gpio":39,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS3"}},{"gpio":47,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS4"}}]
+knapper         = [{"gpio":8,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"ACTRLS_POWER"},"long_press":1500,"longpress":{"pressed":"BCTRLS_PS5"}},{"gpio":9,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS1"}},{"gpio":18,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS2"}},{"gpio":39,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS3"}},{"gpio":47,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS4"}}]
 lms_ctrls_raw   = n
 host_name       = Skjold-Rost
 ap_ssid         = Skjold-Rost

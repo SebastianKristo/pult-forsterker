@@ -98,6 +98,9 @@ object Shortcuts {
     /** Enheten appen styrer nå (brukes av eldre kode). */
     fun post(ctx: Context, path: String): Boolean = post(host(ctx, null), path)
 
+    /** Senk musikken (telefonsamtale m.m.) på enheten appen styrer: POST /api/duck. Blokkerer – kall fra en bakgrunnstråd. */
+    fun duck(ctx: Context, body: JSONObject): Boolean = post(host(ctx, null), "/api/duck", body)
+
     private fun presets(h: String?): List<Pair<Int, String>> {
         val body = http(h, "GET", "/api/presets") ?: return emptyList()
         val arr = try { JSONObject(body).optJSONArray("presets") } catch (_: Exception) { null } ?: return emptyList()

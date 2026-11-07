@@ -72,3 +72,35 @@ def test_recognizes_new_ascii_and_old_names():
     for n in ("Skjold Røst bad", "Skjold Rost kjøkken", "Skjold Mini gammel"):
         assert mini.is_mini({"name": n, "model": "x"})
     assert not mini.is_mini({"name": "Stue", "model": "squeezelite", "modelname": "SqueezeLite"})
+
+
+def test_dusj_preset_timer_og_nedtoning(tmp_path):
+    import skjold_rost as R
+    url = "http://radio/p3"
+    calls, t = [], [1000.0]
+    state = {"playing": True, "power": True, "volume": 40}
+
+    def rpc(pid, cmd):
+        calls.append((pid, cmd))
+        if cmd == ["players", "0", "100"]:
+            return {"players_loop": [{"playerid": "aa", "name": "Skjold Røst bad", "connected": 1,
+                                      "power": int(state["power"]), "isplaying": int(state["playing"])}]}
+        if cmd == ["sync", "?"]:
+            return {"_sync": "-"}
+        if cmd[:2] == ["mixer", "volume"] and cmd[2] == "?":
+            return {"_volume": state["volume"]}
+        if cmd == ["path", "?"]:
+            return {"_path": url}
+        return {}
+    m = R.Minis(rpc, lambda: "own", lambda: [{"title": "P3", "url": url}])
+    d = R.Dusj(m, str(tmp_path / "d.json"), now=lambda: t[0])
+    d.sett({"favoritt": 1, "minutter": 1})
+    assert any(c[1][:2] == ["jivefavorites", "set_preset"] and "key:5" in c[1] for c in calls)
+    d.tick()
+    assert "aa" in d.aktive
+    t[0] += 45                                  # 15 s igjen: toner ned
+    d.tick()
+    assert ("aa", ["mixer", "volume", "20"]) in calls
+    t[0] += 20
+    d.tick()
+    assert ("aa", ["power", "0"]) in calls and ("aa", ["mixer", "volume", "40"]) in calls and not d.aktive

@@ -238,6 +238,28 @@ export function DoorbellPanel() {
   );
 }
 
+// ---------- Senk musikken og si … (/api/duck) ----------
+export function DuckPanel() {
+  const [c, setC] = useState<Record<string, any> | null>(null), [msg, setMsg] = useState(''), [rom, setRom] = useState('');
+  useEffect(() => { call<Record<string, any>>('/api/duck/innstillinger').then((r) => { setC(r); setRom((r.rom ?? []).join('\n')); }).catch(() => setC(null)); }, []);
+  if (!c) return null;
+  const set = async (b: Record<string, unknown>) => { try { setC(await call('/api/duck/innstillinger', b)); setMsg('Lagret'); } catch (e) { setMsg(errText(e)); } };
+  const box = (k: string, label: string) => <label class="row gap8" style={{ fontSize: '13px' }}><input type="checkbox" checked={!!c[k]} onChange={(e) => void set({ [k]: e.currentTarget.checked })} />{label}</label>;
+  return (
+    <div style={CARD}>
+      <div class="row between" style={{ alignItems: 'center' }}><span style="font-size:15px;font-weight:600">Senk musikken og si …</span>{box('på', 'På')}</div>
+      <span style={hint}>Musikken senkes, varselet leses opp eller spilles, og volumet løftes mykt igjen. Brukes av dørklokka, Home Assistant (skjold.duck), Homey («Senk musikken og si …»), appen når telefonen ringer, og {getBase() || 'http://<skjold>:8765'}/api/duck.</span>
+      <div class="row gap8" style={{ flexWrap: 'wrap' }}>{box('dørklokke', 'Dørklokke')}{box('ha', 'Home Assistant')}{box('homey', 'Homey')}{box('telefon', 'Telefonsamtaler')}</div>
+      <label class="row gap8" style={{ fontSize: '13px', alignItems: 'center' }}>Senk med <input type="range" min={-40} max={-6} step={1} value={c.db} onChange={(e) => void set({ db: +e.currentTarget.value })} style={{ flex: 1 }} /> <span style={{ width: '52px', textAlign: 'right' }}>{c.db} dB</span></label>
+      <label class="col gap4" style={{ fontSize: '12px', color: '#8b8b86' }}>Også i disse rommene (adresse per linje, f.eks. http://skjold-kjokken.local:8765)
+        <textarea value={rom} onInput={(e) => setRom(e.currentTarget.value)} rows={2} style={inp + ';height:auto;padding:8px 12px'} /></label>
+      <div class="row gap8"><button onClick={() => void set({ rom: rom.split(/\s+/).filter(Boolean) })} style={pbtn}>Lagre rom</button>
+        <button onClick={() => void call('/api/duck', { tekst: 'Dette er en test fra Skjold', kilde: 'api' }).then(() => setMsg('Test sendt')).catch((e) => setMsg(errText(e)))} style={sbtn}>Test</button></div>
+      {msg && <span style={hint}>{msg}</span>}
+    </div>
+  );
+}
+
 export function RecognizeSettingsPanel() {
   const [c, setC] = useState<{ recognize: Record<string, any>; s1_hold: Record<string, string> } | null>(null), [msg, setMsg] = useState('');
   const [rs, setRs] = useState<Routine[]>([]);

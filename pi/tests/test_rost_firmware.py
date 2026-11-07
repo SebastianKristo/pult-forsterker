@@ -15,7 +15,7 @@ spec.loader.exec_module(fw)
 
 # ESP32-S3 N16R8: oppstartspinner, USB, flash og oktal PSRAM skal ikke brukes
 FORBUDT = {0, 3, 45, 46, 19, 20, *range(26, 33), 33, 34, 35, 36, 37}
-ACTIONS = {"ACTRLS_POWER", "ACTRLS_TOGGLE", "ACTRLS_VOLUP", "ACTRLS_VOLDOWN", "BCTRLS_PS1", "BCTRLS_PS2", "BCTRLS_PS3", "BCTRLS_PS4"}
+ACTIONS = {"ACTRLS_POWER", "ACTRLS_TOGGLE", "ACTRLS_VOLUP", "ACTRLS_VOLDOWN", "BCTRLS_PS1", "BCTRLS_PS2", "BCTRLS_PS3", "BCTRLS_PS4", "BCTRLS_PS5"}
 
 
 def koblingstabell():
@@ -46,6 +46,10 @@ def test_knapper_er_gyldig_json_med_kjente_handlinger():
         assert b["type"] == "BUTTON_LOW" and b["pull"] is True
         assert b["normal"]["pressed"] in ACTIONS
     assert [b["normal"]["pressed"] for b in knapper] == ["ACTRLS_POWER", "BCTRLS_PS1", "BCTRLS_PS2", "BCTRLS_PS3", "BCTRLS_PS4"]
+    # dusj-modus: langt trykk på ⏻ sender preset 5 (squeezelite-esp32: «long_press» ms + «longpress»-handling)
+    assert knapper[0]["longpress"]["pressed"] == "BCTRLS_PS5" and 500 <= knapper[0]["long_press"] <= 3000
+    for b in knapper[1:]:
+        assert "longpress" not in b
 
 
 def test_ingen_heksadesimal_i_verdier():

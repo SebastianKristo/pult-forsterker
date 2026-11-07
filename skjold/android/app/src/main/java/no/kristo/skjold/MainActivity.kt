@@ -17,6 +17,12 @@ import coil.decode.SvgDecoder
 class MainActivity : ComponentActivity() {
     private val model: AppModel by viewModels()
 
+    @Deprecated("Deprecated in Java")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 11) CallDuck.start(applicationContext)   // tilgang til telefonstatus gitt i Innstillinger
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(AColor.TRANSPARENT),
@@ -24,6 +30,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         Shortcuts.refresh(applicationContext)   // rutine-snarveier på app-ikonet
+        CallDuck.start(applicationContext)        // «Senk musikken når telefonen ringer» (bare hvis slått på og tillatt)
         // Varsler trengs for «Spiller nå» i hurtiginnstillingene og på låseskjermen (Android 13+).
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {

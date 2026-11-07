@@ -381,6 +381,71 @@ paths:
             application/json:
               schema:
                 type: object
+  /api/duck:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/duck {tekst?, lyd?, db?, sekunder?, kilde?, slutt?} · GET/POST /api/duck/innstillinger.
+      operationId: post_api_duck
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/duck/{act}:
+    get:
+      tags:
+      - Annet
+      summary: POST /api/duck {tekst?, lyd?, db?, sekunder?, kilde?, slutt?} · GET/POST /api/duck/innstillinger.
+      operationId: get_api_duck_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+      - Annet
+      summary: POST /api/duck {tekst?, lyd?, db?, sekunder?, kilde?, slutt?} · GET/POST /api/duck/innstillinger.
+      operationId: post_api_duck_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
   /api/events:
     get:
       tags:
@@ -934,6 +999,124 @@ paths:
                   type: boolean
             example:
               enabled: true
+  /api/medialib:
+    get:
+      tags:
+      - Annet
+      summary: 'Plex/Jellyfin: se pi/skjold_medialib.py for API-et.'
+      operationId: get_api_medialib
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: 'Plex/Jellyfin: se pi/skjold_medialib.py for API-et.'
+      operationId: post_api_medialib
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/medialib/{kind}/{act}:
+    get:
+      tags:
+      - Annet
+      summary: 'Plex/Jellyfin: se pi/skjold_medialib.py for API-et.'
+      operationId: get_api_medialib_kind_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+      - Annet
+      summary: 'Plex/Jellyfin: se pi/skjold_medialib.py for API-et.'
+      operationId: post_api_medialib_kind_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/medialib/{kind}/{act}/{id}:
+    get:
+      tags:
+      - Annet
+      summary: 'Plex/Jellyfin: se pi/skjold_medialib.py for API-et.'
+      operationId: get_api_medialib_kind_act_id
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
   /api/menu:
     post:
       tags:
@@ -2243,6 +2426,39 @@ paths:
       - Annet
       summary: 'GET /api/rost (Røst-høyttalere i Lyrion) · POST /api/rost {id, action: sync|unsync|volume|power|presets, value}.'
       operationId: post_api_rost
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/rost/dusj:
+    get:
+      tags:
+      - Annet
+      summary: 'GET/POST /api/rost/dusj {på, favoritt, minutter}: dusj-modus (langt trykk på ⏻ på Røst).'
+      operationId: get_api_rost_dusj
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: 'GET/POST /api/rost/dusj {på, favoritt, minutter}: dusj-modus (langt trykk på ⏻ på Røst).'
+      operationId: post_api_rost_dusj
       x-skjold-modul: ki_amp_daemon
       responses:
         '200':
