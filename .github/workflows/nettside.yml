@@ -43,6 +43,27 @@ jobs:
                   if a["name"]=="Skjold_Byggeanvisning.pdf" and (best is None or v(r["tag_name"])>best[0]): best=(v(r["tag_name"]),a["browser_download_url"])
           print(best[1] if best else "")')
           if [ -n "$URL" ]; then curl -fsSL -o skjold/nettside/assets/pdf/Skjold_Byggeanvisning.pdf "$URL" && echo "PDF: $URL"; fi
+      - name: Hent fastvaren for Skjold Røst (nettleserflashing på /flasher/rost/)
+        if: env.HAR_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          D=skjold/nettside/flasher/rost
+          for f in skjold-rost-firmware.bin manifest.json; do
+            URL=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/${{ github.repository }}/releases?per_page=30" | F="$f" python3 -c '
+          import json,os,sys
+          def v(t):
+              try: return tuple(int(x) for x in t.split("skjold-v",1)[1].split("."))
+              except Exception: return (0,)
+          best=None
+          for r in json.load(sys.stdin):
+              if r.get("draft") or r.get("prerelease") or not str(r.get("tag_name","")).startswith("skjold-v"): continue
+              for a in r.get("assets",[]):
+                  n = "skjold-rost-manifest.json" if os.environ["F"]=="manifest.json" else os.environ["F"]
+                  if a["name"]==n and (best is None or v(r["tag_name"])>best[0]): best=(v(r["tag_name"]),a["browser_download_url"])
+          print(best[1] if best else "")')
+            if [ -n "$URL" ]; then curl -fsSL -o "$D/$f" "$URL" && echo "$f: $URL"; else echo "::warning::$f finnes ikke på noen release ennå"; fi
+          done
       - name: Publiser
         if: env.HAR_TOKEN == 'true'
         uses: cloudflare/wrangler-action@v3

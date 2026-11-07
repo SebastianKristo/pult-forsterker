@@ -1,34 +1,90 @@
 # Skjold Røst – fastvare
 
-Røst bruker **squeezelite-esp32** (åpen kildekode, [sle118/squeezelite-esp32](https://github.com/sle118/squeezelite-esp32)). Da blir høyttaleren en vanlig Squeezebox-spiller i Lyrion, akkurat som S1, Node og Touch. Lyrion holder alle spillerne i takt, så Røst spiller synkront med resten uten egen synk-kode.
+Røst kjører **squeezelite-esp32** for ESP32-S3 ([sle118/squeezelite-esp32](https://github.com/sle118/squeezelite-esp32)) med Skjold-oppsettet ferdig lagt inn. Høyttaleren blir en vanlig Squeezebox-spiller i Lyrion, så den spiller synkront med S1, Node og Touch.
 
-## Installasjon
+`skjold-rost-firmware.bin` er én fil som skrives til adresse `0x0`. Den lages av [`lag_firmware.py`](lag_firmware.py) og legges ved hver Skjold-release:
 
-1. Flash squeezelite-esp32 for **ESP32-S3**. Prosjektets README sier at S3 krever en egen bygg (ESP-IDF 4.4, se «S3 version» der). Sjekk «Releases» og web-installeren først; finnes ingen S3-bygg, må du bygge selv. Velg oppsett for S3 med PSRAM (N16R8, oktal PSRAM).
-2. Koble til Wi-Fi-nettet som ESP-en lager (standard «squeezelite» / «squeezelite»), gå til 192.168.4.1 og legg inn ditt Wi-Fi.
-3. Åpne ESP-ens nettside, slå på NVS-editoren («Credits» → «Show NVS editor») og legg inn nøklene fra [`squeezelite-esp32.txt`](squeezelite-esp32.txt). Navnet må begynne med «Skjold Røst» eller «Skjold Rost», for eksempel «Skjold Rost bad». Bruk helst ASCII «Rost» i fastvaren; Skjold viser høyttaleren som Skjold Røst.
-4. Start på nytt. Røst dukker opp i Lyrion og i Skjold under **Grupper → Skjold Røst**. Trykk **Spill her** for å spille sammen med rommet du står i, og **Knapper** for å velge hvilke radiofavoritter knappene 1–4 spiller.
-5. For egen visning på skjermen (f.eks. VU-meter): installer pluginen **SqueezeESP32** i Lyrion (Innstillinger → Plugins) og velg visning under spillerens innstillinger.
+- Det offisielle ESP32-S3-bygget fra squeezelite-esp32, release `S3-i2s.16.1779.master-v4.3`. Versjonen er låst og sjekkes med sha256.
+- En NVS-partisjon («settings» på `0x3F0000`, navnerom `config`) med Skjold-oppsettet: lyd, forsterker, skjerm, dreieknapp, knapper og navn. Du trenger ikke taste inn noe i NVS-editoren.
+
+## Installer
+
+**I nettleseren (enklest):** åpne <https://skjold.smarthjemexperten.no/flasher/rost/> i Chrome eller Edge, koble kortet til med USB-C og trykk **Installer på Skjold Røst**.
+
+**Med kommandolinjen:**
+
+```bash
+pip install esptool
+```
+
+```bash
+esptool.py --chip esp32s3 write_flash --erase-all 0x0 skjold-rost-firmware.bin
+```
+
+Finner ikke PC-en kortet, holder du **BOOT** inne, trykker **RST** og slipper **BOOT**.
+
+## Første oppstart
+
+1. Røst lager Wi-Fi-nettet **Skjold-Rost** med passord `squeezelite`. Koble til med mobilen. Oppsettsiden åpner seg, ellers gå til `192.168.4.1`. Velg ditt Wi-Fi.
+2. Røst dukker opp i Lyrion som **Skjold-Rost** og i Skjold under **Grupper → Skjold Røst**.
+3. Velg radiofavorittene for knappene 1–4 under **Grupper → Skjold Røst → Knapper**. Skjold legger dem som Lyrion-favoritter (presets) 1–4 på spilleren.
+4. Har du flere Røst, gir du hver sitt navn på Røst-ens egen nettside (fanen «Squeezelite», `-n Skjold-Rost-bad`). Navnet må begynne med «Skjold-Rost» eller «Skjold Røst», så Skjold finner den.
+5. For skjermen: installer pluginen **SqueezeESP32** i Lyrion (Innstillinger → Plugins). Under spillerens innstillinger → «Skjerm» velger du hva som vises. Velg **Klokke** som skjermsparer når spilleren er av.
 
 ## Betjening
 
-| Handling | Hva skjer |
-|---|---|
-| Drei knappen | Volum |
-| Trykk | Spill / pause |
-| Langt trykk | Bytter dreieknappen til forrige/neste (langt trykk igjen bytter tilbake) |
-| ⏻ | Av / på |
-| 1–4 | Spiller radiofavoritt 1–4 (velges i Skjold) |
-| Skjermen | Kanal eller låt, artist og volum (monokrom: tekst og ikoner, ikke cover) |
+| Handling | Hva skjer | Hvordan |
+|---|---|---|
+| Drei knappen | Volum | `rotary_config … ,volume` |
+| Trykk på knappen | Spill / pause | samme |
+| Langt trykk på knappen | Bytter dreieknappen til forrige/neste låt. Langt trykk igjen bytter tilbake. | `longpress` |
+| ⏻ | Av / på i Lyrion. Forsterkeren slås av når det er stille. | `ACTRLS_POWER`, `set_GPIO 7=amp` + `-C 30` |
+| 1–4 | Spiller favoritt 1–4 | `BCTRLS_PS1–4` → Lyrion «preset_N» |
+| Skjermen | Låt, artist og kanal, volum og klokke | Lyrion tegner skjermbildet (SqueezeESP32-pluginen) |
 
-## Alternativ: Snapcast
+Det finnes ikke noe «hold inne for å lagre» på favorittknappene. squeezelite-esp32 har ingen handling for å lagre presets uten rå-modus (`lms_ctrls_raw`), og rå-modus slår av resten av knappeoppsettet. Favorittene velges derfor i Skjold (punkt 3 over).
 
-Bruker du Snapcast-pluginen i stedet for Lyrion, kan Røst kjøre [snapclient for ESP32](https://github.com/CarlosDerSeher/snapclient) med samme lydpinner (I²S 4/5/6, forsterker på 7). Da styres den fra Snapcast, og skjerm og knapper må settes opp der.
+## Hva oppsettet består av
+
+[`squeezelite-esp32.txt`](squeezelite-esp32.txt) viser alle nøklene. Nøkkelnavnene og formatet er sjekket mot kildekoden til squeezelite-esp32 (`config_alloc_get(NVS_TYPE_STR, …)` og `PARSE_PARAM`):
+
+- **Tall må være desimale.** squeezelite-esp32 leser dem med `atoi()`, så `address=0x3C` blir 0. Skjermadressen er derfor utelatt; standard er 0x3C.
+- **SSD1309 bruker SSD1306-driveren.** Den har samme registre for 128×64.
+- **Pinner** (fra `kabinett/rost/LES_MEG.md`):
+  - I²S BCK/WS/DO: 4, 5, 6
+  - Forsterker (SDZ): 7
+  - Skjerm SDA/SCL: 11, 12
+  - Knapper: 8, 9, 18, 39, 47
+  - Dreieknapp A/B/trykk: 15, 16, 17
+
+  `pi/tests/test_rost_firmware.py` sjekker at de stemmer med koblingstabellen, og at ingen oppstarts-, USB-, flash- eller PSRAM-pinner er brukt.
+
+## Bygg selv
+
+```bash
+pip install esptool==4.8.1 esp-idf-nvs-partition-gen==0.3.0
+```
+
+```bash
+python3 firmware/rost/lag_firmware.py --ut ut
+```
+
+Skriptet laster ned upstream-bygget, sjekker sha256, lager NVS-partisjonen og slår alt sammen med `esptool merge_bin`. Det gjør det samme i release-workflowen (jobben `rostfw`).
+
+## Verifisert og ikke verifisert
+
+**Verifisert uten maskinvare:**
+- Bygget lages.
+- Bootloader, partisjonstabell, recovery og app ligger byte for byte på adressene fra `flash_project_args`.
+- Partisjonstabellen har `settings` på `0x3F0000`.
+- NVS-partisjonen inneholder oppsettet.
+- Nøklene følger kildekoden.
+
+**Bare på ekte maskinvare:**
+- Lyd, knapper og dreieknapp.
+- At SSD1309-modulen svarer på 0x3C. Står bildet opp ned, legg til `,HFlip,VFlip` i `display_config`. Svarer den ikke, trenger 7-pinners moduler `,reset=13` og RES koblet til GPIO13.
+- At «preset_N» spiller favorittene, og at skjermbildet fra Lyrion ser bra ut i 128×64.
 
 ## Mikrofon (valgfri)
 
-INMP441 (SCK 41, WS 42, SD 40) er koblet opp for fremtidig stemmestyring og måling med romkorreksjon. squeezelite-esp32 bruker den ikke.
-
-## Ikke testet
-
-Ingenting er flashet på ekte maskinvare. Nøklene er skrevet etter README-en til squeezelite-esp32, men det er ikke sjekket at S3-bygget godtar alle sammen, at SSD1309-modulen svarer som SSD1306 på adresse 0x3C (eller trenger HFlip/VFlip eller reset-pinne), eller at «hold for å lagre» virker i rå-modus.
+INMP441 (SCK 41, WS 42, SD 40) er koblet opp for senere bruk. squeezelite-esp32 bruker den ikke.

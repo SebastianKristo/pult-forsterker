@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="nb" class="statisk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flash Skjold Røst – Skjold</title>
+<meta name="description" content="Installer fastvaren på Skjold Røst rett fra nettleseren, med en USB-C-kabel.">
+<link rel="canonical" href="https://skjold.smarthjemexperten.no/flasher/rost/">
+<link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/flasher/rost/">
+<link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/flasher/rost/">
+<link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/flasher/rost/">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nb_NO">
+<meta property="og:locale:alternate" content="en_GB">
+<meta property="og:site_name" content="Skjold">
+<meta property="og:title" content="Flash Skjold Røst – Skjold">
+<meta property="og:description" content="Installer fastvaren på Skjold Røst rett fra nettleseren, med en USB-C-kabel.">
+<meta property="og:url" content="https://skjold.smarthjemexperten.no/flasher/rost/">
+<meta property="og:image" content="https://skjold.smarthjemexperten.no/assets/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="/assets/skjold.css?v=9c0b0c63">
+<script src="/assets/skjold.js?v=bf1d00de" defer></script>
+<script type="module" src="/flasher/ewt/install-button.js"></script>
+</head>
+<body>
+<a class="hopp" href="#hoved">Hopp til innholdet</a>
+<header class="nav">
+  <div class="nav-inn">
+    <a class="logo" href="/" aria-label="Skjold – forsiden"><span class="logo-stolper" aria-hidden="true"><i style="height:8px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:12px"></i><i style="height:8px"></i></span><span class="logo-ord">SKJOLD</span></a>
+    <nav class="nav-lenker" aria-label="Hovedmeny"><a href="/s1/">S1</a><a href="/node/">Node</a><a href="/touch/">Touch</a><a href="/rost/">Røst</a><a href="/core/">Core</a><a href="/programvare/">Programvare</a><a href="/sammenlign/">Sammenlign</a><a href="/stotte/">Støtte</a><a href="/bruksanvisning/">Bruksanvisning</a><a href="/om/">Om Skjold</a><a href="mailto:jemtlands@proton.me">Kontakt</a></nav>
+    <div class="spraak" role="group" aria-label="Språk"><a href="/flasher/rost/" lang="nb" hreflang="nb" aria-current="true">NO</a><span aria-hidden="true">|</span><a href="/flasher/rost/" lang="en" hreflang="en">EN</a></div>
+  </div>
+</header>
+<main id="hoved">
+<section class="side-topp"><div class="etikett">SKJOLD RØST · FASTVARE</div><h1>Installer fastvaren</h1><p style="margin:20px auto 0;max-width:620px;font-size:19px;line-height:1.5;color:var(--demp-l)">Koble Røst (ESP32-S3) til PC-en med en USB-C-kabel og trykk på knappen. Det virker i Chrome og Edge på PC og Mac.</p>
+<div class="knapper" style="justify-content:center;margin-top:30px">
+<esp-web-install-button manifest="/flasher/rost/manifest.json">
+<button slot="activate" class="knapp knapp-m">Installer på Skjold Røst</button>
+<span slot="unsupported">Nettleseren din kan ikke flashe over USB. Bruk Chrome eller Edge på PC eller Mac.</span>
+<span slot="not-allowed">Siden må åpnes over https for å flashe.</span>
+</esp-web-install-button>
+</div></section>
+<section class="seksjon hvit"><div class="innhold" style="max-width:760px">
+<h2 class="h2">Slik gjør du</h2>
+<ol style="font-size:17px;line-height:1.7">
+<li>Koble en av USB-C-portene på ESP32-S3-kortet til PC-en (<b>UART</b>-porten er ofte mest stabil). Finner ikke PC-en kortet: hold <b>BOOT</b> inne, trykk <b>RST</b>, slipp <b>BOOT</b>.</li>
+<li>Trykk <b>Installer på Skjold Røst</b>, velg porten og godkjenn sletting. Det tar 1–2 minutter.</li>
+<li>Koble til Wi-Fi-nettet <b>Skjold-Rost</b> (passord <code>squeezelite</code>) med mobilen. Oppsettsiden åpner seg (ellers gå til <code>192.168.4.1</code>). Velg ditt Wi-Fi.</li>
+<li>Røst dukker opp i Lyrion som <b>Skjold-Rost</b> og i Skjold under <b>Grupper → Skjold Røst</b>. Velg favorittene til knappene 1–4 under <b>Knapper</b>.</li>
+</ol>
+<p style="font-size:15px;color:var(--demp-l)">Fastvaren er <a href="https://github.com/sle118/squeezelite-esp32">squeezelite-esp32</a> for ESP32-S3 med Skjold-oppsettet ferdig lagt inn: lyd, skjerm, dreieknapp og knapper. Flasher du heller med kommandolinjen: <code>esptool.py --chip esp32s3 write_flash 0x0 skjold-rost-firmware.bin</code>. Fila ligger også på <a href="https://github.com/SebastianKristo/pult-forsterker/releases/latest">GitHub</a>.</p>
+</div></section>
+</main>
+<footer class="bunn"><div class="innhold"><div>Skjold · Designet av Sebastian Kristo Jemtland i Norge</div><div class="kopi">© 2026 Sebastian Kristo Jemtland. Nettsiden, tekstene, bildene, designet og produktene Skjold S1, Skjold Node og Skjold Touch er beskyttet av opphavsrett. Programvaren er åpen kildekode (MIT). Kasse, kretskort og design: CC BY-NC-SA 4.0 – bygg selv, men ikke for salg. Kontakt: <a href="mailto:jemtlands@proton.me">jemtlands@proton.me</a></div><div class="mono">skjold.smarthjemexperten.no</div></div></footer>
+</body>
+</html>
