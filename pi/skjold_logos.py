@@ -47,8 +47,27 @@ def nrk_file(name):
                 f = v
         if not f:
             return None
-    p = os.path.join(NRK_DIR, f + ".svg")
-    return p if os.path.isfile(p) else None
+    for ext in (".png", ".svg"):   # PNG først: iOS og Android viser ikke SVG
+        p = os.path.join(NRK_DIR, f + ext)
+        if os.path.isfile(p):
+            return p
+    return None
+
+
+def to_png(body):
+    """SVG → PNG på mørk, kvadratisk flis (appene viser ikke SVG; hvite logoer synes ikke på lys bakgrunn)."""
+    try:
+        import io
+        import cairosvg
+        from PIL import Image
+        logo = Image.open(io.BytesIO(cairosvg.svg2png(bytestring=body, output_width=420))).convert("RGBA")
+        tile = Image.new("RGBA", (512, 512), (18, 18, 20, 255))
+        tile.alpha_composite(logo, ((512 - logo.width) // 2, max(0, (512 - logo.height) // 2)))
+        out = io.BytesIO()
+        tile.convert("RGB").save(out, "PNG", optimize=True)
+        return out.getvalue()
+    except Exception:
+        return None
 
 
 def absolute(src):
@@ -64,13 +83,22 @@ def absolute(src):
     return (base.rstrip("/") + "/" + src.lstrip("/")) if base else ""
 
 
+def generic(src):
+    """Lyrions standardbilde for radio (masten) o.l. er ikke en kanallogo – samme fil for alle kanaler."""
+    a = (src or "").lower()
+    return "html/images/" in a or a.endswith(("/radio.png", "/radio.svg", "/cover.png")) or ("/plugins/" in a and "icon" in a)
+
+
 def key_for(src, name):
-    raw = (src or "").strip() or ("name:" + _norm(name))
+    # navnet er alltid med: ellers fikk alle kanaler med samme (standard)bilde samme nøkkel og samme logo
+    raw = (src or "").strip() + "|name:" + _norm(name)
     return hashlib.sha1(raw.encode()).hexdigest()[:16]
 
 
 def path_for(src="", name=""):
     """Relativ /api/logo-adresse for en kanal, eller "" når vi verken har kilde eller navn."""
+    if generic(src):
+        src = ""
     if not (src or name):
         return ""
     if not src and not nrk_file(name) and not name.strip():
@@ -163,7 +191,7 @@ def get(k, fetch=_fetch, now=None):
             ct = _sniff(body)
         except Exception:
             body = None
-    elif src:
+    elif src and not generic(src):
         try:
             body = fetch(src)
             ct = _sniff(body)
@@ -172,7 +200,8 @@ def get(k, fetch=_fetch, now=None):
     if not (body and ct):
         f = nrk_file(info.get("name", ""))
         if f:
-            body, ct = open(f, "rb").read(), "image/svg+xml"
+            body = open(f, "rb").read()
+            ct = "image/png" if f.endswith(".png") else "image/svg+xml"
     if not (body and ct) and info.get("name"):
         rb = radio_browser_logo(info["name"], fetch)
         if rb:
@@ -181,6 +210,10 @@ def get(k, fetch=_fetch, now=None):
                 ct = _sniff(body)
             except Exception:
                 body = None
+    if body and ct == "image/svg+xml":
+        png = to_png(body)
+        if png:
+            body, ct = png, "image/png"
     try:
         os.makedirs(CACHE_DIR, exist_ok=True)
         if body and ct:

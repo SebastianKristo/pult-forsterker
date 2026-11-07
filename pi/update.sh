@@ -23,7 +23,7 @@ sudo install -m 644 "$SRC/skjold_nfc.py" "$SRC/skjold_hjul.py" "$SRC/skjold_rost
 command -v fpcalc >/dev/null || sudo apt-get -y install --no-install-recommends libchromaprint-tools >/dev/null 2>&1 || true
 sudo install -m 644 "$SRC/skjold-healthcheck.service" /etc/systemd/system/skjold-healthcheck.service
 sudo mkdir -p /var/lib/skjold/rollback && sudo systemctl daemon-reload && sudo systemctl enable skjold-healthcheck.service >/dev/null 2>&1 || true
-sudo mkdir -p /usr/local/share/ki-amp/logos/nrk /var/lib/ki-amp/logos && sudo install -m 644 "$SRC"/logos/nrk/*.svg /usr/local/share/ki-amp/logos/nrk/   # innebygde NRK-logoer for /api/logo
+sudo mkdir -p /usr/local/share/ki-amp/logos/nrk /var/lib/ki-amp/logos && sudo install -m 644 "$SRC"/logos/nrk/*.svg "$SRC"/logos/nrk/*.png /usr/local/share/ki-amp/logos/nrk/   # innebygde NRK-logoer for /api/logo
 sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pins.yaml" /usr/local/share/ki-amp/s1f_pins.yaml
 bash "$SRC/install_webapp.sh"   # ny web-app fra siste skjold-v*-utgivelse (ikke den gamle pi/webapp)
 sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
@@ -68,6 +68,7 @@ command -v mount.cifs >/dev/null && command -v smbclient >/dev/null || sudo apt-
 python3 -c "import paho.mqtt" 2>/dev/null || sudo apt-get -y install --no-install-recommends python3-paho-mqtt >/dev/null || true   # MQTT-bro
 python3 -c "import pyhap" 2>/dev/null || sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || true   # Apple Hjem (HomeKit)
 python3 -c "import cryptography" 2>/dev/null || sudo apt-get install -y -q python3-cryptography >/dev/null 2>&1 || true   # Skjold Cloud (AES-GCM)
+python3 -c "import cairosvg" 2>/dev/null || sudo apt-get install -y -q python3-cairosvg >/dev/null 2>&1 || true   # SVG-logoer → PNG for appene
 python3 -c "import mutagen" 2>/dev/null || sudo apt-get install -y -q python3-mutagen >/dev/null 2>&1 || true   # Platesamling (FLAC-tagger)
 sudo mkdir -p /usr/local/share/skjold-matter && sudo cp -r "$SRC/matter/package.json" "$SRC/matter/package-lock.json" "$SRC/matter/index.js" "$SRC/matter/mapping.js" "$SRC/matter/skjold-matter.service" "$SRC/matter/install.sh" "$SRC/matter/uninstall.sh" /usr/local/share/skjold-matter/   # Matter-pluginen (installeres når den slås på)
 [ -f /var/lib/ki-amp/matter.on ] && { sudo bash /usr/local/share/skjold-matter/install.sh || echo "ADVARSEL: Skjold Matter ble ikke oppdatert" >&2; }
