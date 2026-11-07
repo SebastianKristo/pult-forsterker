@@ -238,3 +238,14 @@ test('Skjold Node: kilder fra status.inputs, ingen S1-capabilities, lysstyrke og
     for (const k of ['board', 'inputs', 'levels', 'headphones', 'settings', 'rebooting', 'poweroff']) delete daemon.state[k];
   }
 });
+
+test('ytelse fra /api/health/perf blir capabilities (CPU, minne, lagring, temperatur, strømproblem)', async () => {
+  daemon.state.perf = { cpu_pct: 12.5, temp_c: 51.2, memory: { pct: 40.1 }, disk: { free_gb: 9.3 }, throttle: { under_voltage: true } };
+  const d = makeDevice(); await d.onInit(); await d.pollPerf(); d.onDeleted();
+  assert.equal(d.getCapabilityValue('ki_cpu'), 12.5);
+  assert.equal(d.getCapabilityValue('ki_mem'), 40.1);
+  assert.equal(d.getCapabilityValue('ki_disk_free'), 9.3);
+  assert.equal(d.getCapabilityValue('measure_temperature.cpu'), 51.2);
+  assert.equal(d.getCapabilityValue('alarm_generic.power'), true);
+  delete daemon.state.perf;
+});

@@ -1,7 +1,8 @@
 // Smart radio, Oppdag uke, tilstede-modus, vekkelys, spillelister fra radio, plugin-butikk og helsesjekk.
+import { t as tr } from '../i18n';
 import { useEffect, useState } from 'preact/hooks';
 import { Toggle } from '../components/ui';
-import { fileUrl, x2, type Discover, type Health, type Level, type Presence, type RadioList, type SmartRadio, type SrSeed, type StorePlugin } from '../lib/extras2';
+import { fileUrl, x2, type Discover, type Health, type Perf, type Level, type Presence, type RadioList, type SmartRadio, type SrSeed, type StorePlugin } from '../lib/extras2';
 
 const MONO = "'IBM Plex Mono',monospace";
 const sbtn = 'height:34px;padding:0 14px;border-radius:8px;border:1px solid #2e2e30;background:#1a1a1b;color:#f2f2ee;font-size:13px;cursor:pointer;white-space:nowrap';
@@ -257,6 +258,7 @@ export function HealthPanel({ compact = false }: { compact?: boolean }) {
           <span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:13px;font-weight:600">{i.navn}</b><span style="font-size:12px;color:#a9a9a3">{i.forklaring}</span></span>
         </div>))}
       {h && compact && !items.length && <span style="font-size:12.5px;color:#6fcf7f">Alle sjekker er OK.</span>}
+      {!compact && <PerfBox />}
       {h && !compact && h.errors.length > 0 && <details><summary style={muted}>Siste feil i loggen ({h.errors.length})</summary><pre style={`font-family:${MONO};font-size:10.5px;color:#a9a9a3;white-space:pre-wrap;max-height:240px;overflow:auto`}>{h.errors.join('\n')}</pre></details>}
       <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:6px">
         <button onClick={() => void report()} style={pbtn}>Send feilrapport</button>
@@ -264,6 +266,36 @@ export function HealthPanel({ compact = false }: { compact?: boolean }) {
         {msg && <span style={muted}>{msg}</span>}
       </div>
       {rep && <><span style={muted}>Passord, tokens og IP-adresser er maskert. Se over teksten før du deler den.</span><textarea readOnly value={rep.text} style={fld + `;height:160px;padding:8px;font-family:${MONO};font-size:11px`} /></>}
+    </div>
+  );
+}
+
+
+/** Ytelse på maskinen (CPU, temperatur, minne, lagring, strøm og per tjeneste) – oppdateres hvert 5. sekund. */
+function PerfBox() {
+  const [p, setP] = useState<Perf | null>(null);
+  useEffect(() => { let on = true; const f = () => x2.perf().then((v) => on && setP(v)).catch(() => {}); f(); const id = setInterval(f, 5000); return () => { on = false; clearInterval(id); }; }, []);
+  if (!p) return null;
+  const tile = (n: string, v: string, warn = false) => (
+    <div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:#101011;border:1px solid #1f1f21;min-width:0">
+      <span style="font-size:10.5px;color:#8b8b86">{tr(n)}</span><b style={`font-size:15px;font-variant-numeric:tabular-nums;color:${warn ? '#f0a35a' : '#f2f2ee'}`}>{v}</b>
+    </div>);
+  const pw = p.throttle;
+  return (
+    <div style="display:flex;flex-direction:column;gap:8px;padding-top:8px;border-top:1px solid #1f1f21">
+      <span style="font-size:13px;font-weight:600">{tr('Ytelse')}{p.model ? ' · ' + p.model : ''}</span>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px">
+        {tile('CPU-bruk', p.cpu_pct == null ? '–' : p.cpu_pct.toFixed(0) + ' %', (p.cpu_pct ?? 0) > 85)}
+        {tile('CPU-temperatur', p.temp_c == null ? '–' : p.temp_c.toFixed(0) + ' °C', (p.temp_c ?? 0) >= 70)}
+        {tile('Last', p.load ? p.load.map((x) => x.toFixed(2)).join(' · ') : '–', !!p.load && (p.load[0] ?? 0) > p.cpus)}
+        {tile('Minnebruk', p.memory ? `${p.memory.pct.toFixed(0)} % (${p.memory.used_mb}/${p.memory.total_mb} MB)` : '–', (p.memory?.pct ?? 0) > 85)}
+        {tile('Ledig lagring', p.disk ? p.disk.free_gb.toFixed(1) + ' GB' : '–', (p.disk?.pct ?? 0) > 90)}
+        {tile('Strømproblem', !pw ? '–' : pw.under_voltage ? tr('For lav spenning') : pw.throttled || pw.freq_capped ? tr('Strupet') : tr('Ingen strømproblemer'), !!pw?.power_problem)}
+      </div>
+      {Object.keys(p.services).length > 0 && <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:11px;color:#8b8b86">{tr('Tjenester')}</span>
+        {Object.entries(p.services).map(([n, u]) => <span key={n} style={`font-family:${MONO};font-size:11px;color:#a9a9a3`}>{n}: {u.cpu_pct == null ? '–' : u.cpu_pct.toFixed(1) + ' %'} CPU · {u.mem_mb == null ? '–' : u.mem_mb.toFixed(0) + ' MB'}</span>)}
+      </div>}
     </div>
   );
 }

@@ -139,7 +139,26 @@ class SkjoldDevice extends Homey.Device {
       return;
     }
     if (!this.getAvailable()) await this.setAvailable();
-    await this.apply(st);
+    await this.apply(st);    this._perfN = (this._perfN || 0) + 1;
+    if (this._perfN % 6 === 1) await this.pollPerf().catch(() => {});   // ytelse ca. hvert 30. sekund
+  }
+
+  /** Ytelse på maskinen Skjold kjører på (/api/health/perf): CPU, temperatur, minne, lagring og strømproblem. */
+  async pollPerf() {
+    let p;
+    try { p = await this.request('GET', '/health/perf'); } catch (e) { return; }   // eldre daemon: ingen ytelse
+    if (!p || typeof p !== 'object') return;
+    const want = [['ki_cpu', p.cpu_pct], ['ki_mem', p.memory && p.memory.pct], ['ki_disk_free', p.disk && p.disk.free_gb],
+      ['measure_temperature.cpu', p.temp_c], ['alarm_generic.power', p.throttle ? !!(p.throttle.under_voltage || p.throttle.throttled || p.throttle.freq_capped) : null]];
+    for (const [cap, v] of want) {
+      if (v === null || v === undefined) continue;
+      if (!this.hasCapability(cap)) {
+        await this.addCapability(cap).catch(this.error);
+        if (cap === 'measure_temperature.cpu' && this.setCapabilityOptions) await this.setCapabilityOptions(cap, { title: { en: 'CPU temperature', no: 'CPU-temperatur' } }).catch(() => {});
+        if (cap === 'alarm_generic.power' && this.setCapabilityOptions) await this.setCapabilityOptions(cap, { title: { en: 'Power problem (Raspberry Pi)', no: 'Strømproblem (Raspberry Pi)' } }).catch(() => {});
+      }
+      if (this.getCapabilityValue(cap) !== v) await this.setCapabilityValue(cap, v).catch(this.error);
+    }
   }
 
   async setLevel(source, level) {

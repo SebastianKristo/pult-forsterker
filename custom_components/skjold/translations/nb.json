@@ -98,6 +98,27 @@
       },
       "kassett_shared_pending": {
         "name": "Ventende delte kassetter"
+      },
+      "perf_cpu": {
+        "name": "CPU-bruk"
+      },
+      "perf_cpu_temp": {
+        "name": "CPU-temperatur"
+      },
+      "perf_load_1": {
+        "name": "Last (1 min)"
+      },
+      "perf_memory": {
+        "name": "Minnebruk"
+      },
+      "perf_memory_used": {
+        "name": "Minne brukt"
+      },
+      "perf_disk_free": {
+        "name": "Ledig lagring"
+      },
+      "perf_uptime": {
+        "name": "Oppetid"
       }
     },
     "binary_sensor": {
@@ -115,6 +136,9 @@
       },
       "rost_connected": {
         "name": "Tilkoblet"
+      },
+      "power_problem": {
+        "name": "Strømproblem"
       }
     },
     "media_player": {
