@@ -125,7 +125,7 @@ Prisene er omtrentlige AliExpress-priser i november 2026, inkludert billigste fr
 | Del | Søkeord | Antall | Ca. pris |
 |---|---|---|---|
 | ESP32-S3 SuperMini | «ESP32-S3 SuperMini» | 1 | 45 kr |
-| 2,8″ IPS 240 × 320 berøringsskjerm, ST7789 + FT6336U (naken FPC med dekkglass, ikke rødt kort) | «2.8 inch IPS capacitive touch 240x320 ST7789 FT6336U» | 1 | 150 kr |
+| 2,8″ IPS 240 × 320 berøringsskjerm, ST7789 + kapasitiv berøring (GT911 eller FT6336U), naken FPC med dekkglass. **Valgt:** variant «HP28030-DCT IPS» fra [AliExpress 1005006755555414](https://www.aliexpress.com/item/1005006755555414.html) | «2.8 inch IPS capacitive 18PIN ST7789 HP28030-DCT» | 1 | 66 kr |
 | LiPo 603450 1200 mAh med JST-PH 2.0 | «603450 lipo 1200mAh» | 1 | 60 kr |
 | TP4056 USB-C med beskyttelse (5 stk) | «TP4056 type-c protection» | 1 pk | 25 kr |
 | Tastekort fra JLCPCB, 1,0 mm, 5 stk (uten montering) | jlcpcb.com | 1 bestilling | 120 kr |
@@ -142,7 +142,7 @@ Prisene er omtrentlige AliExpress-priser i november 2026, inkludert billigste fr
 | M2 × 10 selvgjengende skruer, linsehode (5 stk brukes) | «M2x10 self tapping pan head» | 1 pk | 20 kr |
 | Dobbeltsidig skumtape 1 mm | «1mm double sided foam tape» | 1 rull | 20 kr |
 | Filament, ca. 50 g (PLA eller PETG) | | | 20 kr |
-| **Sum** | | | **ca. 725 kr** |
+| **Sum** | | | **ca. 640 kr** |
 
 Valgfritt:
 - **IR-akryl, 1 mm** («IR transmitting acrylic sheet», ca. 35 kr) i stedet for printet IR-vindu.
@@ -418,6 +418,8 @@ Du får mer ut av batteriet hvis du:
 | Passer i modellen | Ja | **Ja**, samme omriss og tykkelse (3,8 mm) | Ukjent: mål og pinner er ikke bekreftet |
 | Ekstra deler | – | XPT2046 (TSSOP-16) + 1 µF på tastekortet | – |
 | ESPHome | `skjold-fjernkontroll.yaml` (eller `-kort`) | `skjold-fjernkontroll-budsjett.yaml` (pakke over hovedfila) | egen fil måtte lages |
+
+**Valgt skjerm: HP28030-DCT IPS** ([AliExpress 1005006755555414](https://www.aliexpress.com/item/1005006755555414.html), ca. 66 kr). IPS med full betraktningsvinkel, ST7789, 18-pinners FPC og kapasitiv berøring på egen liten flatkabel. Annonsen oppgir ikke berøringsbrikken: les merkingen på brikken på berøringskabelen, eller se hvilken adresse ESP-en finner på I²C-bus B i loggen. **0x38** = FT6336U → bruk `esphome/skjold-fjernkontroll.yaml` (eller `-kort`). **0x5D/0x14** = GT911 → bruk `esphome/skjold-fjernkontroll-gt911.yaml`. Velg «HP» (IPS), ikke «HC», og «-DCT» (med berøring), ikke «-D». Mål panelet når det kommer: forventet 50 × 69,2 mm, aktivt 43,2 × 57,6 mm, maks 4 mm tykt.
 
 **IPS med GT911-berøring (også kapasitiv):** mange IPS-paneler selges med GT911 i stedet for FT6336U, f.eks. «IPS 2.8 inch RGB565 18PIN SPI TFT LCD Capacitive Screen ST7789V 6P GT911» (Ecyberspaces, ca. 100 kr + frakt, velg «IPS Screen with TP»). Skjermdelen er den samme (ST7789V, 18-pinners FPC). Berøringen har egen 6-pinners flatkabel (VCC, GND, SDA, SCL, INT, RST) som kobles til I²C-bus B, INT til GPIO7 og RST til GPIO12, akkurat som FT6336U. Bruk [`esphome/skjold-fjernkontroll-gt911.yaml`](../../esphome/skjold-fjernkontroll-gt911.yaml), som bytter `ft63x6` med `gt911`. Be selgeren om måltegningen og sjekk at den er ca. 50 × 69,2 mm med aktivt område 43,2 × 57,6 mm før du printer.
 
