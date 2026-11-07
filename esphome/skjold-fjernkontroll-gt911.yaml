@@ -1,0 +1,19 @@
+# Skjold Fjernkontroll med 2,8″ IPS-panel med kapasitiv berøring via GT911
+# (f.eks. AliExpress «IPS 2.8 inch 18PIN SPI ST7789V 6P GT911», ca. 100 kr + frakt).
+# Skjermen er den samme som standard (ST7789V, 18-pins FPC, 240 × 320). Berøringen sitter på en egen
+# 6-pins flatkabel (VCC, GND, SDA, SCL, INT, RST) og kobles til samme I²C-buss og pinner som FT6336U:
+#   SDA/SCL → bus_b, INT → GPIO7, RST → GPIO12 (deles med skjermens reset, som før).
+# Tastekortet trenger en 6-pins FPC-kontakt for berøringen – sjekk avstanden (0,5 eller 1,0 mm) på din kabel.
+# Kort variant: bytt skjold-fjernkontroll.yaml med skjold-fjernkontroll-kort.yaml under packages.
+packages:
+  fjernkontroll: !include skjold-fjernkontroll.yaml
+
+touchscreen:
+  - id: !remove beroring
+  - platform: gt911
+    id: beroring
+    i2c_id: bus_b
+    interrupt_pin: GPIO7
+    display: skjerm
+    on_touch:
+      - script.execute: sovn_teller
