@@ -1,5 +1,5 @@
 [Unit]
-Description=Skjold S1 rev F – skjerm (960 × 320, cage + Chromium)
+Description=Skjold-skjerm (S1 960 × 320 eller Radio 800 × 480, cage + Chromium)
 After=systemd-user-sessions.service seatd.service ki-amp.service
 Wants=ki-amp.service
 Conflicts=getty@tty1.service

@@ -6,9 +6,13 @@ tjenesten (skjold-radio-knapper.service) leser bare knappene fra pi/config/radio
 så daemonen trenger ingen egen «radio»-profil:
 
   favoritt 1–6   kort trykk: spill favoritten · hold 2 s: lagre det som spiller som favoritten
-  hjulet         drei: bla i favorittene (starter etter 0,6 s ro) · trykk: spill/pause
+  hjulet         drei: bla i favorittene (starter etter 0,6 s ro) · trykk: spill/pause · hold 0,8 s: menyen på skjermen
   volumknotten   drei: volum ±2 · trykk: demp av/på
   av/på          kort trykk: av/på · hold 3 s: omstart
+
+Hver hendelse sendes først til skjermen (skjold-ui, POST /ui/event, se pi/skjold_ui/KONTRAKT.md § 4). Er menyen åpen,
+svarer skjold-ui {"consumed": true} for hjulet: da blar/velger hjulet i menyen og gjør ikke sin vanlige handling.
+Kjører ikke skjold-ui, virker alle knappene som før.
 
 Logikken (RadioKnapper) er ren Python og testes i pi/tests/test_radio_knapper.py uten GPIO."""
 import json
@@ -20,6 +24,7 @@ import urllib.request
 PIN_FILES = ["/etc/skjold/radio_pins.yaml", os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "radio_pins.yaml"),
              "/usr/local/share/ki-amp/radio_pins.yaml"]
 API = os.environ.get("SKJOLD_API", "http://127.0.0.1:8765")
+UI = os.environ.get("SKJOLD_UI", "http://127.0.0.1:8766")
 
 
 def load_pins(paths=PIN_FILES):
@@ -39,11 +44,22 @@ def http(method, path, body=None, timeout=4):
     return json.loads(raw or b"{}")
 
 
-class RadioKnapper:
-    """Hendelser inn (fra GPIO eller tester) → API-kall ut. `api(method, path, body)` og `clock()` kan byttes i tester."""
+def ui_event(ev, timeout=0.5):
+    """Send hendelsen til skjermen (skjold-ui). True = skjermen brukte den (menyen er åpen / hilsenen vises)."""
+    try:
+        req = urllib.request.Request(UI + "/ui/event", data=json.dumps(ev).encode(), method="POST",
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return bool(json.loads(r.read() or b"{}").get("consumed"))
+    except Exception:
+        return False   # ingen skjerm: knappene virker som før
 
-    def __init__(self, cfg, api=http, clock=time.monotonic):
-        self.cfg, self.api, self.clock = cfg or {}, api, clock
+
+class RadioKnapper:
+    """Hendelser inn (fra GPIO eller tester) → API-kall ut. `api(method, path, body)`, `ui(ev)` og `clock()` kan byttes i tester."""
+
+    def __init__(self, cfg, api=http, clock=time.monotonic, ui=ui_event):
+        self.cfg, self.api, self.clock, self.ui = cfg or {}, api, clock, ui
         self.step = int(self.cfg.get("volume_step", 2))
         self.settle = float((self.cfg.get("timing") or {}).get("wheel_settle", 0.6))
         self._wheel = 0          # netto hakk som venter på å bli til en favoritt
@@ -53,29 +69,48 @@ class RadioKnapper:
     # --- favoritter og av/på ---
     def preset(self, n, held=False):
         if held:
-            return self.api("POST", "/api/preset", {"n": n, "save": True})
+            r = self.api("POST", "/api/preset", {"n": n, "save": True})
+            self.ui({"ev": "saved", "src": "preset", "n": n})      # «Lagret som favoritt n» på skjermen
+            return r
+        if self.ui({"ev": "press", "src": "preset", "n": n}):
+            return None
         return self.api("POST", f"/api/presets/{n}/play", {})
 
     def power(self, held=False):
+        if self.ui({"ev": "hold" if held else "press", "src": "power"}):
+            return None
         if held:
             return self.api("POST", "/api/reboot", {})
         return self.api("POST", "/api/toggle", {})
 
     # --- volumknotten ---
     def volume(self, steps):
+        if self.ui({"ev": "turn", "src": "volume", "d": 1 if steps > 0 else -1}):
+            return None
         return self.api("POST", "/api/volume", {"delta": int(steps) * self.step})
 
     def mute_toggle(self):
+        if self.ui({"ev": "press", "src": "volume"}):
+            return None
         st = self.api("GET", "/api/status")
         return self.api("POST", "/api/mute", {"mute": not bool(st.get("mute"))})
 
     # --- hjulet ---
     def wheel(self, steps):
+        if self.ui({"ev": "turn", "src": "wheel", "d": 1 if steps > 0 else -1}):
+            return   # menyen er åpen: hjulet blar i menyen
         self._wheel += int(steps)
         self._wheel_at = self.clock()
 
     def wheel_press(self):
+        if self.ui({"ev": "press", "src": "wheel"}):
+            return None   # menyen er åpen: trykk = velg
         return self.api("POST", "/api/transport", {"action": "playpause"})
+
+    def wheel_hold(self):
+        """Hold hjulet: åpner menyen på skjermen, eller går tilbake ett nivå når den er åpen (skjold-ui avgjør)."""
+        self._wheel = 0
+        return self.ui({"ev": "hold", "src": "wheel"})
 
     def tick(self):
         """Kalles jevnlig: når hjulet har stått i ro i `settle` sekunder, spilles favoritten man bladde til."""
@@ -124,8 +159,11 @@ def main():  # pragma: no cover - krever GPIO
     ve = RotaryEncoder(v["a"], v["b"], max_steps=0)
     ve.when_rotated_clockwise = lambda: safe(k.volume, 1)
     ve.when_rotated_counter_clockwise = lambda: safe(k.volume, -1)
-    ws, vs = Button(w["sw"], pull_up=True, bounce_time=b), Button(v["sw"], pull_up=True, bounce_time=b)
-    ws.when_pressed = lambda: safe(k.wheel_press)
+    ws = Button(w["sw"], pull_up=True, bounce_time=b, hold_time=float(tm.get("hold_menu", 0.8)))
+    vs = Button(v["sw"], pull_up=True, bounce_time=b)
+    ws._held = False   # kort trykk = spill/pause (eller velg i menyen), hold = meny/tilbake
+    ws.when_held = lambda: (setattr(ws, "_held", True), safe(k.wheel_hold))
+    ws.when_released = lambda: (safe(k.wheel_press) if not ws._held else None, setattr(ws, "_held", False))
     vs.when_pressed = lambda: safe(k.mute_toggle)
     keep += [we, ve, ws, vs]
     print("Skjold Radio: knapper klare", flush=True)
