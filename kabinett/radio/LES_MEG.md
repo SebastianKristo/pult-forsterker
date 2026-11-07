@@ -6,7 +6,7 @@ En lav bordradio med 4,3″ skjerm, seks favorittknapper, et stort navigasjonshj
 
 Bilder: [forfra, lys](render/01_forfra_lys.png) · [skrått, lys](render/02_skra_lys.png) · [eksplodert, lys](render/03_eksplodert_lys.png) · [forfra, mørk](render/04_forfra_mork.png) · [skrått, mørk](render/05_skra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) · [bak](render/07_bak_lys.png) · [nær, grillen og panelet](render/08_naer_lys.png). Skjermen i bildene viser det ekte skjermbildet fra skjold-ui (se [Skjermen](#skjermen)).
 
-Mål: 240 × 128 × 140 mm (B × D × H, med grillen, uten knotter og gummiføtter). Selve kassa er 125 mm dyp; grillen stikker 3 mm ut fra fronten, som på Skjold Røst. Hjulet stikker 15,6 mm ut fra fronten, volumknotten 13,6 mm. Forrige utgave var en stående radio på 236 × 145 × 205 mm med to elementer (stereo) under en vannrett gullist. Den nye er 65 mm lavere, fordi det bare er ett element og det sitter ved siden av betjeningspanelet i stedet for under. Første utgave var en lav pult med skjermen og knappene på den skrå toppen.
+Mål: 240 × 118 × 140 mm (B × D × H, med grillen, uten knotter og gummiføtter). Selve kassa er 115 mm dyp (10 mm grunnere enn før, da radioen var 128 mm dyp med grillen); grillen stikker 3 mm ut fra fronten, som på Skjold Røst. Hjulet stikker 15,6 mm ut fra fronten, volumknotten 13,6 mm. Forrige utgave var en stående radio på 236 × 145 × 205 mm med to elementer (stereo) under en vannrett gullist. Den nye er 65 mm lavere, fordi det bare er ett element og det sitter ved siden av betjeningspanelet i stedet for under. Første utgave var en lav pult med skjermen og knappene på den skrå toppen.
 
 ## Designet
 
@@ -15,8 +15,10 @@ Radioen er en lav, liggende bordradio der alt vender mot deg. Fronten er loddret
 - **Fronten er delt i to av en tynn, loddrett gullist.** Til venstre er en grill trukket med mørkt, vevd høyttalerstoff foran det ene 3″-elementet. Grillen stikker 3 mm ut fra fronten, akkurat som på Skjold Røst, så den leses som en egen, myk pute. Rammen har rundet forkant (R 1,5), og stoffet er trukket over den og brettet rundt kanten, så ingen skjøter synes. Gullista og panelet ligger i flukt med fronten. Til høyre er et rolig betjeningspanel i kroppsfargen.
 - **Betjeningspanelet har tre lag.** Øverst sitter skjermen, med overkanten i flukt med grillens overkant. Rett under den står favoritt 1–6 på én rad, like bred som skjermen. Nederst sitter av/på til venstre, den lille gullknotten for volum i midten og det store gullhjulet (Ø 42 mm) til høyre, i flukt med skjermens høyre kant.
 - **Gullhjulet** er det største elementet på radioen. Drei for å bla i favorittene, trykk for spill/pause, hold for menyen på skjermen.
+- **Symbolene er printet inn i knappene.** Hver knapp har symbolet sitt innfelt i flukt i en kontrastfarge, printet i samme utskrift med CFS (se [Flerfarget print](#flerfarget-print-symbolene-i-knappene)): favorittene har tallene 1–6 og av/på har det vanlige av/på-symbolet ⏻ (IEC 60417-5009: en åpen sirkel med en loddrett strek, tegnet som geometri og ikke fra en skrifttype). Begge er i gull på de mørke hettene. Volumknotten har en høyttaler med to lydbølger, og hjulet har spill/pause ⏯, fordi et trykk på hjulet er spill/pause. Begge er sorte i skåla på de gule knottene. Overflaten er helt glatt, så symbolene kan ikke slites av.
 - **Skjold-formspråket:** myke hjørner (R14, som Node og Røst) sett forfra, faset frontkant hele veien rundt, lys kropp med mørkt høyttalerstoff og mørke knapper, gull hjul, volumknott og list, og SKJOLD preget over skjermen. Sidene, toppen og baksiden er helt rene.
-- **Mørk variant:** matt sort kropp, grafittgrått stoff og gullknapper. Bare filamentet byttes.
+- **Myk, avrundet bakdel.** Kassa er ikke en firkantet boks. Fronten er flat med R14-hjørner og fas, men bakover smalner kroppen svakt og rundes av med en stor radius (R26) over toppen og ned langs sidene, som en pute. Helt bak er toppen 12,7 mm lavere og hver side 6,4 mm smalere enn fronten, og de øvre hjørnene vokser fra R14 til R20. Bakplata følger den mindre, avrundede åpningen (ca. 221 × 121 mm). Gulvet og de nedre hjørnene er uendret, så radioen står stødig. Buen stopper ved 42°, så kroppen printes fortsatt med fronten ned uten støtte.
+- **Mørk variant:** matt sort kropp, grafittgrått stoff og gullknapper med sorte symboler. Bare filamentet byttes.
 
 Designet er laget fra bunnen av for Skjold. Oppdelingen med høyttaler til venstre og betjening til høyre er vanlig for bordradioer, men proporsjonene, plasseringen av knappene og detaljene er egne. Den loddrette gullista mellom grill og panel, panelet i tre lag og gullhjulet nede i hjørnet er Skjold Radios kjennetegn.
 
@@ -76,7 +78,7 @@ Prisene er **anslag i norske kroner per november 2026**, med frakt fra AliExpres
 | Relémodul 1-kanal, H/L-jumper | 1 | AliExpress: «1 channel relay module 3.3V high low level trigger» | 20 kr |
 | DC-kontakt for panel 5,5 × 2,1/2,5 mm (Ø 8 mm) | 1 | «DC-022 panel jack» | 15 kr |
 | 3,5 mm stereokontakt for panel (Ø 6 mm) | 1 | «PJ-392 3.5mm panel jack» | 10 kr |
-| USB-C panelskjøt (hunn til USB-A) | 1 | AliExpress: «USB C female panel mount to USB A male» | 40 kr |
+| USB-C panelskjøt (hunn til USB-A), helst med vinklet USB-A-plugg (Pi-ens USB-porter peker mot sideveggen) | 1 | AliExpress: «USB C female panel mount to USB A male 90 degree» | 40 kr |
 | EC11 med trykk, 20 mm D-aksel | 1 | AliExpress: «EC11 rotary encoder 20mm D shaft» | 15 kr |
 | EC11 med trykk, 15 mm D-aksel | 1 | Samme | 15 kr |
 | Taktbryter 6 × 6 × 4,3 mm | 7 | «tactile switch 6x6x4.3 THT» | 10 kr |
@@ -93,7 +95,7 @@ Prisene er **anslag i norske kroner per november 2026**, med frakt fra AliExpres
 | Dempeull / polyfill | ca. 10 g | Løst i kammeret | 30 kr |
 | Ledning, skjermet lydkabel, krympestrømpe | – | | 50 kr |
 | **Elektronikk og stoff totalt** | | | **ca. 2 300–2 600 kr** |
-| PETG/ASA-filament (FDM) | ca. 0,75 kg | 3 farger: kropp, sort, gull | 150–250 kr |
+| PETG/ASA-filament (FDM) | ca. 0,7 kg | 3 farger: kropp, sort, gull | 150–250 kr |
 
 ## Kabinettet
 
@@ -101,27 +103,46 @@ Kabinettet er tegnet i [`skjold_radio.scad`](skjold_radio.scad) (OpenSCAD, param
 
 | Del | STL | Volum | Print (FDM) |
 |---|---|---|---|
-| Kropp (ett skall: front, sider, topp og gulv; åpen bak) | `stl/kropp.stl` | 327 cm³ | Fronten ned på platen. Alle vegger står loddrett, ingen støtte. 240 × 140 × 125 mm. |
-| Bakplate (DC, linje ut, USB-C, lufting) | `stl/bak.stl` | 87 cm³ | Baksiden ned |
+| Kropp (ett skall: front, sider, topp og gulv; åpen bak) | `stl/kropp.stl` | 329 cm³ | Fronten ned på platen. Ingen støtte: veggene står loddrett og heller innover mot den avrundede bakkanten (maks 42°). Tårnene for bakplata har avstivere ut til veggen, skrådd av under. 240 × 140 × 115 mm. |
+| Bakplate (DC, linje ut, USB-C, lufting) | `stl/bak.stl` | 73 cm³ | Baksiden ned. Følger den avrundede åpningen. |
 | Lydkammer (baffel, ører) | `stl/kammer.stl` | 176 cm³ | Baffelen ned. 100 % fyll i baffelen gir minst resonans. |
 | Lokk for kammeret | `stl/lokk.stl` | 32 cm³ | Flatt |
 | Grillramme for høyttalerstoff (tre vinduer, to stag, flens, to ribber mot baffelen; står 3 mm ut med rundet forkant) | `stl/grill.stl` | 18,8 cm³ | Forsiden ned, ribbene opp. Ingen støtte (den runde kanten R 1,5 ved platen går fint). |
 | Gullist (loddrett, 118 mm) | `stl/list.stl` | 0,6 cm³ | Forsiden ned |
 | Skjermbrakett med Pi-tårn | `stl/brakett.stl` | 13 cm³ | Flatt, tårnene opp |
-| Navigasjonshjul Ø 42 | `stl/knott.stl` | 7,5 cm³ | Toppen opp. Hult bakfra. |
-| Volumknott Ø 22 | `stl/volum.stl` | 2,8 cm³ | Toppen opp |
-| Knappehetter 1–6 og av/på | `stl/knapp.stl` | 4,0 cm³ | Toppen ned (sju hetter) |
+| Navigasjonshjul Ø 42 | `stl/knott.stl` | 7,4 cm³ | Toppen opp. Hult bakfra. Lomme for symbolet i skåla. |
+| Symbol spill/pause ⏯ (innlegg i hjulet, sort) | `stl/knott_symbol.stl` | 0,04 cm³ | Ligger i lomma i hjulet (samme koordinater som `knott.stl`) |
+| Volumknott Ø 22 | `stl/volum.stl` | 2,8 cm³ | Toppen opp. Lomme for symbolet i skåla. |
+| Symbol høyttaler (innlegg i volumknotten, sort) | `stl/volum_symbol.stl` | 0,02 cm³ | Ligger i lomma i volumknotten (samme koordinater som `volum.stl`) |
+| Knappehetter 1–6 og av/på | `stl/knapp.stl` | 3,9 cm³ | Toppen ned (sju hetter), lomme for symbolet i toppen |
+| Symboler 1–6 og ⏻ (innlegg i hettene, gull) | `stl/knapp_symbol.stl` | 0,06 cm³ | Ligger i lommene i hettene (samme koordinater som `knapp.stl`), de første tre lagene |
 
 3MF-plater for Creality K2 (250 × 250 mm, filament 1 = kroppsfarge, 2 = sort, 3 = gull):
 
-- `skjold-radio-k2.3mf`: kropp, volumknott, knappehetter og gullist
+- `skjold-radio-k2.3mf`: kropp, volumknott med symbol, sju knappehetter med symbol og gullist
 - `skjold-radio-k2-kammer.3mf`: lydkammer og lokk
 - `skjold-radio-k2-grill.3mf`: grillramme og skjermbrakett
-- `skjold-radio-k2-bak.3mf`: bakplate og navigasjonshjul
+- `skjold-radio-k2-bak.3mf`: bakplate og navigasjonshjul med symbol
+
+### Flerfarget print: symbolene i knappene
+
+Symbolene er egne legemer (innlegg), 0,6 mm dype, som ligger i en lomme med nøyaktig samme form i hetta eller knotten. Toppen av innlegget er i flukt med flaten. I 3MF-fila er hver knappehette, volumknotten og hjulet ett objekt med to deler, og hver del har sitt eget filament. Creality Print og OrcaSlicer printer da symbolet i kontrastfarge i samme utskrift, og CFS bytter filament selv.
+
+| Del | Selve delen | Symbolet |
+|---|---|---|
+| Favoritt 1–6 (tallene) og av/på (⏻) | filament 2, sort | filament 3, gull |
+| Volumknotten (høyttaler) | filament 3, gull | filament 2, sort |
+| Hjulet (spill/pause ⏯) | filament 3, gull | filament 2, sort |
+
+**Oppsett på K2 med CFS:** legg kroppsfargen i spor 1, sort i spor 2 og gull i spor 3, og koble sporene til filament 1–3 i Creality Print når du åpner 3MF-fila. Fargene står allerede på delene, så du trenger ikke male noe. Hettene printes med toppen ned, så symbolet blir de første lagene (3 lag à 0,2 mm eller 4 à 0,16 mm). Det gir rene kanter mot platen og trenger ingen støtte. Volumknotten og hjulet printes med toppen opp, så der skiftes fargen bare i de øverste 0,6 mm i skåla. Det blir få fargebytter, fordi de ligger på samme lag som resten av plata. Sett gjerne et avfallstårn (prime tower) og «flush into object infill» for å spare filament. **Mørk variant:** legg sort i spor 1, og bytt filament på hettene til 3 (gull) og symbolene i hettene til 2 (sort). Da får du gullknapper med sorte tall.
+
+**Uten flerfarge (én farge):** print delene som de er. Lommene blir da 0,6 mm dype, rene fordypninger med symbolet. Fyll dem med akrylmaling, emaljemaling eller lakktusj i kontrastfarge, og tørk av overskuddet med en klut med litt sprit før det tørker. Det blir like pent, og malingen sitter godt nede i lomma. Du kan også printe `knapp_symbol.stl`, `volum_symbol.stl` og `knott_symbol.stl` for seg i den andre fargen (0,6 mm tynne, toppen ned) og lime dem i lommene med en dråpe superlim. Ved bytte av filament midt i utskriften (M600/pause ved 0,6 mm) kan også hettene printes tofarget på en vanlig skriver.
 
 Tips for FDM: 0,16 mm lag, 3 vegger, 15 % gyroid. Bruk teksturert PEI for kroppen, så fronten får en jevn, matt struktur. Skjermvinduet, knappehullene og grillåpningen er gjennomgående hull rett opp fra platen, så kanten rundt dem blir skarp. Varm innpressmutterne inn med 220–240 °C.
 
-**Sjekket med `sjekk_modell.py`:** høyttalerstoffet (0,5 mm, over den utstikkende rammen, rundt den runde kanten og inn bak flensen) er tatt med i kollisjonssjekken. Grillen med stoffet stikker 3,0 mm ut, gullista 0,4 mm, og panelet ligger i flukt. Alle delene er vanntette og hver er ett legeme (knapp-fila har sju hetter). Alle ligger på platen og passer i K2. Ingen deler kolliderer i montert stilling. Kammeret er lukket i alle retninger når lokket og elementet er på, med ca. 0,74 l netto. Sidene, toppen, gulvet og bakplata er minst 2 mm overalt utenom de tiltenkte hullene.
+**Sjekket med `sjekk_modell.py`:** høyttalerstoffet (0,5 mm, over den utstikkende rammen, rundt den runde kanten og inn bak flensen) er tatt med i kollisjonssjekken. Grillen med stoffet stikker 3,0 mm ut, gullista 0,4 mm, og panelet ligger i flukt. Alle delene er vanntette og hver er ett legeme (knapp-fila har sju hetter). Symbolinnleggene er vanntette, 0,6 mm dype, i flukt med flaten, og fyller lomma i sin egen del uten å overlappe den. I montert stilling berører de bare sin egen del. Det avrundede bakpartiet har ingen flater brattere enn 50° når kroppen ligger med fronten ned (maks 42°), og veggen er minst 2 mm også der. Dybden er sjekket: 8,4 mm bak kammerlokket (skruehoder og skumtape), 78 mm bak Pi-en og 26 mm fri gulvflate foran bakplata for DC-, 3,5 mm- og USB-C-kontaktene. Alle ligger på platen og passer i K2. Ingen deler kolliderer i montert stilling. Kammeret er lukket i alle retninger når lokket og elementet er på, med ca. 0,74 l netto. Sidene, toppen, gulvet og bakplata er minst 2 mm overalt utenom de tiltenkte hullene.
+
+**Grunnere kasse (115 mm).** Kroppen ble 10 mm grunnere uten at noe inni måtte krympes, og den avrundede bakdelen tar heller ikke plass fra innmaten: kammeret slutter før buen begynner for alvor, og tårnene for bakplata sitter i hjørnene utenfor kammeret. Lydkammeret er det samme (ca. 0,74 l netto), fordi det var plass bak lokket. Pi-en sitter rett bak skjermbraketten, ca. 34 mm bak fronten med kontaktene, så det er god plass til å bøye DSI-flatkabelen og USB-skjøten. Luftespaltene i gulvet er flyttet 10 mm fram, så det er like mye fri gulvflate som før (26 mm) mellom forsterkeren og kontaktene i bakplata.
 
 **Lydkammeret** er en egen boks med baffel (7 mm) og lokk med skumtape, bak venstre halvdel av fronten. Kroppen trenger derfor ikke være tett, og ventilasjonen til Pi-en og forsterkeren påvirker ikke bassen. Elementet skrus på baffelen forfra. Elementets ramme havner da 1 mm bak grillflensen med stoffet. Med ca. 0,74 l netto blir Qtc for RS75-4 ca. 0,95. Det gir en stram bass som likevel går godt ned for et 3″-element. Litt dempeull løst i kammeret gjør bassen enda jevnere. Bruker du et annet 3″-element, sjekk utsparingen (`drvCut`), rammen (`drvF`) og skruehullsirkelen (`drvPCD`) i `skjold_radio.scad`.
 
@@ -135,7 +156,7 @@ Alt monteres bakfra gjennom den åpne baksiden.
 4. **Fronten:** trykk gullista inn i det loddrette sporet mellom grillen og panelet (en dråpe lim i hver ende). Legg grillrammen med stoffet inn i åpningen fra innsiden, så flensen ligger i falsen og grillen stikker 3 mm ut av åpningen foran.
 5. **Kammeret i kroppen:** skyv det inn bakfra mot grillen og skru det fast med 4 × M3 × 10 senkeskrue nedenfra i ørene. Ribbene på grillrammen ligger mot baffelen og holder grillen på plass. Grillen kan tas ut igjen bakfra hvis stoffet skal byttes.
 6. **Skjermen og Pi-en:** legg skjermmodulen i lomma bak vinduet, med 1 mm skumtape mot kanten. Skru Pi-en på tårnene bak på braketten (4 × M2,5), før DSI-flatkabelen gjennom slissen og skru braketten over skjermen (4 × M2,5 i tårnene på hver side).
-7. **Knappene:** sett de seks favoritthettene og av/på-hetta i hullene fra innsiden. Lodd seks taktbrytere på favorittkortet med 16 mm mellom, og skru det på de to tårnene under skjermen (M2,5). Lodd av/på-bryteren midt på det lille kortet og skru det på tårnene nede til venstre (M2,5).
+7. **Knappene:** sett de seks favoritthettene (1–6 fra venstre) og av/på-hetta (⏻) i hullene fra innsiden, med symbolet rett vei. Lodd seks taktbrytere på favorittkortet med 16 mm mellom, og skru det på de to tårnene under skjermen (M2,5). Lodd av/på-bryteren midt på det lille kortet og skru det på tårnene nede til venstre (M2,5).
 8. **EC11:** hjulet og volumknotten monteres gjennom fronten med mutter. Trykk på knottene.
 9. **Gulvet under panelet (høyre halvdel):** fest forsterkeren, nedtrapperen og releet med dobbeltsidig tape over luftespaltene. Monter DC-, 3,5 mm- og USB-C-kontaktene i bakplata nede til høyre.
 10. **Kobl til** etter tabellen over. Skru på bakplata (5 × M3 × 10 senkeskrue) og sett gummiføttene i forsenkningene under.
@@ -238,16 +259,16 @@ Du kan bestille alle delene i resin (SLA) eller nylon (MJF) i stedet for å prin
 
 | Del | SLA resin (JLC3DP) | MJF PA12 sort (JLC3DP) | Craftcloud (EU, SLA/MJF) |
 |---|---|---|---|
-| Kropp (327 cm³, 240 × 140 × 125) | 750–1 400 kr | 800–1 550 kr | 1 500–3 000 kr |
+| Kropp (329 cm³, 240 × 140 × 115) | 750–1 400 kr | 800–1 550 kr | 1 500–3 000 kr |
 | Grillramme + gullist (19 cm³, stoffet kjøpes) | 80–170 kr | 100–200 kr | 220–450 kr |
-| Hjul + volumknott + 7 knappehetter (14 cm³) | 60–150 kr | 80–180 kr | 200–400 kr |
+| Hjul + volumknott + 7 knappehetter (14 cm³; symbolene males inn i lommene) | 60–150 kr | 80–180 kr | 200–400 kr |
 | Lydkammer + lokk (208 cm³, usynlig) | 450–850 kr | 550–1 000 kr | – (print selv) |
-| Bakplate + brakett (100 cm³, synes bare bakfra) | 220–450 kr | 250–520 kr | – (print selv) |
+| Bakplate + brakett (86 cm³, synes bare bakfra) | 220–450 kr | 250–520 kr | – (print selv) |
 | Frakt til Norge | 200–350 kr | 200–350 kr | 0–200 kr |
 
 Legg til 25 % MVA (og eventuelt fortollingsgebyr på ca. 100–200 kr fra Kina).
 
-**Anbefaling:** bestill bare de synlige delene i resin eller MJF (kropp, gullist, hjul, volumknott og knappehetter, ca. 1 300–2 500 kr med frakt og MVA; grillrammen synes ikke under stoffet og kan like gjerne printes selv). Print lydkammeret, lokket, bakplata og braketten selv på K2. De synes ikke, og kammeret blir faktisk bedre i tett PETG enn i hul resin. Velg MJF sort for den mørke varianten uten maling, og SLA med sliping, primer og lakk for den lyse varianten som skal se mest mulig sprøytestøpt ut.
+**Anbefaling:** bestill bare de synlige delene i resin eller MJF (kropp, gullist, hjul, volumknott og knappehetter, ca. 1 300–2 500 kr med frakt og MVA; symbolene males inn i lommene; grillrammen synes ikke under stoffet og kan like gjerne printes selv). Print lydkammeret, lokket, bakplata og braketten selv på K2. De synes ikke, og kammeret blir faktisk bedre i tett PETG enn i hul resin. Velg MJF sort for den mørke varianten uten maling, og SLA med sliping, primer og lakk for den lyse varianten som skal se mest mulig sprøytestøpt ut.
 
 ## Lisens
 
