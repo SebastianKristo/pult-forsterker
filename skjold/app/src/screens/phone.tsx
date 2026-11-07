@@ -1,6 +1,8 @@
 // Telefon (Skjold App v2): Hjem, fullskjermspiller med kø, og Rom («Ditt system»). Malen er portert 1:1 fra
 // designfilen (samme mål, farger og tekster); dataene kommer fra forsterkeren (/api/status, /api/presets).
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { Fragment, type ComponentChildren } from 'preact';
+import { homeOrder } from '../lib/homelayout';
 import { api, credFor, getBase, PRODUCT_HW, PRODUCT_LABEL, productOf, setBase, type InputId, type Product, type Status } from '../lib/api';
 import { act, deviceName, eqActiveProfile, go, inputLabel, loadSettings, mode, online, openFull, closeFull, playPause, product, queueOpen, reconnect, recent, setVolume, showToast, srcOpen, status } from '../lib/store';
 import { knownDevices } from '../lib/discover';
@@ -75,23 +77,8 @@ export function HomePhone() {
     ...(inputs.includes('usb') ? [['USB', () => pick('usb')] as Svc] : [])
   ];
   const rc = recent.value.slice(0, 8);
-  return (
-    <>
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-        <div style="display:flex;align-items:center;gap:9px"><div style="display:flex;align-items:flex-end;gap:2px;height:16px">{[8, 12, 16, 12, 8].map((h, i) => <div key={i} style={`width:2.5px;height:${h}px;background:#f2f2ee;border-radius:2px`} />)}</div><span style="font-weight:600;font-size:15px;letter-spacing:0.12em">SKJOLD</span></div>
-        <button onClick={() => go('rooms')} style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;background:#141415;font-size:12px;cursor:pointer;white-space:nowrap;max-width:60%;overflow:hidden"><div style={`width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${online.value ? '#6fcf7f' : '#e05a4a'}`} /><span style="overflow:hidden;text-overflow:ellipsis">{groupLabel()}</span></button>
-      </div>
-      {visSted() && <div style="flex-shrink:0;display:flex"><StedPicker big /></div>}
-      <button onClick={() => go('rooms')} data-testid="device-card" style="flex-shrink:0;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border-radius:14px;border:1px solid #242426;background:#141415;cursor:pointer;text-align:left;box-sizing:border-box;width:100%">
-        <div style="width:44px;height:44px;border-radius:12px;background:#1c170d;border:1px solid #5a4420;color:#f0c46a;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d={PRODUCT_ICON[p]} /></svg></div>
-        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
-          <span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{deviceName.value}</span>
-          <span style="font-size:12px;color:#f0c46a;font-weight:600">{PRODUCT_LABEL[p]}</span>
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1.45;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">{nbHw(PRODUCT_HW[p])}</span>
-        </div>
-        <span style="height:28px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;font-size:12px;color:#c9c9c4;display:flex;align-items:center">Bytt</span>
-      </button>
-      {rc.length > 0 && (
+  const sections: Record<string, ComponentChildren> = {
+    recent: (rc.length > 0 && (
         <div style="display:flex;flex-direction:column;gap:10px">
           <span style="font-size:17px;font-weight:600">Nylig spilt</span>
           <div class="dsc" style="display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px">
@@ -111,7 +98,8 @@ export function HomePhone() {
             })}
           </div>
         </div>
-      )}
+      )),
+    sources: (
       <div style="display:flex;flex-direction:column;gap:10px">
         <span style="font-size:17px;font-weight:600">Kilder</span>
         <div class="dsc" style="display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px" data-testid="inputs">
@@ -123,6 +111,8 @@ export function HomePhone() {
           ))}
         </div>
       </div>
+    ),
+    favs: (
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:17px;font-weight:600">Radiofavoritter</span><button onClick={() => go('radio')} style="border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:0">Administrer</button></div>
         {favs.value.length ? (
@@ -139,6 +129,26 @@ export function HomePhone() {
           </div>
         ) : favsLoaded.value ? <button onClick={() => go('radio')} style="height:46px;border-radius:14px;border:1px dashed #5a4420;background:transparent;color:#f0c46a;font-size:13px;cursor:pointer">Legg til radiokanal</button> : null}
       </div>
+    )
+  };
+  return (
+    <>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:9px"><div style="display:flex;align-items:flex-end;gap:2px;height:16px">{[8, 12, 16, 12, 8].map((h, i) => <div key={i} style={`width:2.5px;height:${h}px;background:#f2f2ee;border-radius:2px`} />)}</div><span style="font-weight:600;font-size:15px;letter-spacing:0.12em">SKJOLD</span></div>
+        <button onClick={() => go('rooms')} style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;background:#141415;font-size:12px;cursor:pointer;white-space:nowrap;max-width:60%;overflow:hidden"><div style={`width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${online.value ? '#6fcf7f' : '#e05a4a'}`} /><span style="overflow:hidden;text-overflow:ellipsis">{groupLabel()}</span></button>
+      </div>
+      {visSted() && <div style="flex-shrink:0;display:flex"><StedPicker big /></div>}
+      <button onClick={() => go('rooms')} data-testid="device-card" style="flex-shrink:0;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border-radius:14px;border:1px solid #242426;background:#141415;cursor:pointer;text-align:left;box-sizing:border-box;width:100%">
+        <div style="width:44px;height:44px;border-radius:12px;background:#1c170d;border:1px solid #5a4420;color:#f0c46a;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d={PRODUCT_ICON[p]} /></svg></div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{deviceName.value}</span>
+          <span style="font-size:12px;color:#f0c46a;font-weight:600">{PRODUCT_LABEL[p]}</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1.45;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">{nbHw(PRODUCT_HW[p])}</span>
+        </div>
+        <span style="height:28px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;font-size:12px;color:#c9c9c4;display:flex;align-items:center">Bytt</span>
+      </button>
+      {homeOrder(['recent', 'sources', 'favs']).map((id) => <Fragment key={id}>{sections[id]}</Fragment>)}
+      <button onClick={() => go('settings', 'hjemskjerm')} style="align-self:center;border:none;background:none;color:#8b8b86;font-size:12.5px;cursor:pointer;padding:6px 0">Rediger hjemskjerm</button>
     </>
   );
 }

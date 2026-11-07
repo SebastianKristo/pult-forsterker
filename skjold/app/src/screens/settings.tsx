@@ -1,5 +1,6 @@
 // Innstillinger: kategoriliste + detaljside, generert fra CATS i lib/settings.ts.
 import { ChangelogPanel } from './programs';
+import { HomeEditor } from './homeedit';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { DoorbellPanel, RecognizeSettingsPanel, RoutinesPanel, WishlistPanel } from './features';
 import { api, type RemoteStatus, hostLabel, isNative, REPO, type LevelSource, type UpdateInfo } from '../lib/api';
@@ -93,6 +94,7 @@ export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) 
   if (cat.id === 'skjoldhjem') return <SkyPanel />;
   if (cat.id === 'cloud') return <CloudPanel />;
   if (cat.id === 'endringslogg') return <ChangelogPanel />;
+  if (cat.id === 'hjemskjerm') return <HomeEditor />;
   const items = cat.items.filter((it) => it.kind !== 'clocks' && it.kind !== 'update');
   const hasClocks = cat.items.some((it) => it.kind === 'clocks');
   return (

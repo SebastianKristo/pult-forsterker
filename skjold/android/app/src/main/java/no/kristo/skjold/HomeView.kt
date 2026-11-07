@@ -15,6 +15,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,7 +30,6 @@ import androidx.compose.ui.unit.em
 /** 09 Hjem: logo + room pill, active room card, recently played, sources, radio favourites. */
 @Composable
 fun HomeView(m: AppModel) {
-    val uri = LocalUriHandler.current
     // v4: hjemmets navn (32/600, −0.02em) med pil som bytter hjem, og en kapsel med søk og innstillinger
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f)) { StedPicker(m, 32f) }
@@ -42,6 +46,23 @@ fun HomeView(m: AppModel) {
         }
     }
 
+    var editHome by remember { mutableStateOf(false) }
+    // Seksjonene i rekkefølgen brukeren har valgt (settings.homeLayout, delt med web og iOS).
+    for (sec in HomeLayout.resolve(m.homeLayout, HomeLayout.android).filter { s -> s.visible }) {
+        when (sec.id) {
+            "recent" -> RecentShelf(m)
+            "sources" -> SourcesShelf(m)
+            "favs" -> FavShelf(m)
+            "playlists" -> PlaylistShelf(m)
+        }
+    }
+    T("Rediger hjemskjerm", sora(13f, W.Regular, C.muted), Modifier.fillMaxWidth().press { editHome = true }.padding(vertical = 8.dp), align = TextAlign.Center)
+    if (editHome) HomeEditorDialog(m) { editHome = false }
+}
+
+
+@Composable
+private fun RecentShelf(m: AppModel) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         T("Nylig spilt ›", sora(SkG.shelfTitle, W.Semibold))
         EdgeScroll(12.dp) {
@@ -62,6 +83,11 @@ fun HomeView(m: AppModel) {
         }
     }
 
+}
+
+@Composable
+private fun SourcesShelf(m: AppModel) {
+    val uri = LocalUriHandler.current
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         T("Kilder", sora(SkG.shelfTitle, W.Semibold))
         EdgeScroll(14.dp) {
@@ -69,6 +95,10 @@ fun HomeView(m: AppModel) {
         }
     }
 
+}
+
+@Composable
+private fun FavShelf(m: AppModel) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         T("Radiofavoritter ›", sora(SkG.shelfTitle, W.Semibold), Modifier.press { m.sub = "radio" })
         EdgeScroll(12.dp) {
@@ -85,6 +115,10 @@ fun HomeView(m: AppModel) {
             }
         }
     }
+}
+
+@Composable
+private fun PlaylistShelf(m: AppModel) {
     // v4: «Dine spillelister» – spillelister fra Navidrome/Plex som er lastet inn
     val pls = playlists(m)
     if (pls.isNotEmpty()) {
@@ -104,8 +138,7 @@ fun HomeView(m: AppModel) {
                 }
             }
         }
-    }
-}
+    }}
 
 private fun playlists(m: AppModel): List<Pair<String, LibColl>> {
     val out = ArrayList<Pair<String, LibColl>>()

@@ -23,6 +23,8 @@ export interface Settings {
   dblPower: number; nightLight: boolean;
   updChannel: number; updAuto: boolean;
   setupDone: boolean;
+  /** Hjemskjermen: rekkefølge og synlighet per seksjon (lib/homelayout.ts) – per enhet, synkes til appene. */
+  homeLayout: { id: string; visible: boolean }[];
   eq: EqProfiles;
 }
 
@@ -65,6 +67,7 @@ export const DEF: Settings = {
   tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false,
   dblPower: 0, nightLight: true,
   updChannel: 0, updAuto: true, setupDone: false,
+  homeLayout: [],
   eq: defaultEq()
 };
 
@@ -180,6 +183,7 @@ export const CATS: Category[] = [
     opt('dblPower', 'Dobbelttrykk power', ['Nattmodus', 'Av'], 'Starter nattmodus og automasjonene dine i Home Assistant eller Homey'),
     bool('nightLight', 'Nattlys i nattmodus', 'Svak klokke i standby så lenge nattmodus er på')] },
   { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub, backup og gjenoppretting', items: [{ kind: 'update', n: 'Oppdatering' }] },
+  { id: 'hjemskjerm', n: 'Hjemskjerm', sub: 'Rekkefølge og hvilke seksjoner som vises', items: [{ kind: 'update', n: 'Hjemskjerm' }] },
   { id: 'endringslogg', n: 'Endringslogg', sub: 'Hva er nytt i hver versjon', items: [{ kind: 'update', n: 'Endringslogg' }] },
   { id: 'fjernstyring', n: 'Fjernstyring', sub: 'Styr Skjold hjemmefra via Cloudflare', items: [{ kind: 'update', n: 'Fjernstyring' }] },
   { id: 'steder', n: 'Steder', sub: 'Skjold-hjem: Hjem, Hytta … hovedenhet og reserve', items: [{ kind: 'update', n: 'Steder' }] },
@@ -254,6 +258,7 @@ export function mergeSettings(partial: unknown): Settings {
   for (const k of Object.keys(DEF) as (keyof Settings)[]) {
     if (k === 'eq') continue;
     const v = p[k];
+    if (k === 'homeLayout') { if (Array.isArray(v)) s.homeLayout = v.filter((x) => x && typeof x === 'object' && typeof (x as { id?: unknown }).id === 'string').map((x) => ({ id: (x as { id: string }).id, visible: (x as { visible?: unknown }).visible !== false })); continue; }
     if (k === 'ledMode') { if (typeof v === 'string' && (LED_MODES as string[]).includes(v)) s.ledMode = v as LedMode; else if (typeof v === 'number' && LED_MODES[v]) s.ledMode = LED_MODES[v] as LedMode; continue; }
     if (v !== undefined && typeof v === typeof DEF[k]) (s as unknown as Record<string, unknown>)[k] = v;
   }

@@ -1118,6 +1118,8 @@ SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn":
                 "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False,
                 # Skjold S1: dobbelttrykk på power (0 = Nattmodus, 1 = Av) og Nattlys-klokke i nattmodus
                 "dblPower": 0, "nightLight": True,
+                # Hjemskjermen: rekkefølge og synlighet for seksjonene (skjold_homelayout.py) – per enhet, synkes til alle klienter
+                "homeLayout": [],
                 "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [5, 2, 0, 0, 1]), ("radio", 2, [-2, -1, 2, 3, 1]),
                                                                                      ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [2, 1, 0, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
@@ -1255,6 +1257,9 @@ def _norm_led_patch(patch, cur):
     return patch
 
 
+import skjold_homelayout as _homelayout   # noqa: E402  (hjemskjermens rekkefølge – validering)
+
+
 def update_settings(patch):
     cur = state.setdefault("settings", {})
     patch = _norm_led_patch(patch, cur)
@@ -1268,6 +1273,8 @@ def update_settings(patch):
                     cl = {kk: prof[kk] for kk in ("preset", "eq", "loud") if kk in prof}
                     if "eq" in cl and not (isinstance(cl["eq"], list) and len(cl["eq"]) == 5): cl.pop("eq")
                     eq.setdefault(src, {}).update(cl)
+        elif k == "homeLayout":
+            cur[k] = _homelayout.clean(v)
         else:
             cur[k] = v
     apply_settings(set(patch)); changed()
