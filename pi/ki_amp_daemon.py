@@ -2993,6 +2993,23 @@ def plex_thread():
 async def h_plex_get(_r): return web.json_response(dict(plex))
 
 
+async def _spol_etter_hopp(retning, hopp_s):
+    sek = spoler.spoletid(hopp_s)
+    if sek <= 0:
+        return
+    loop = asyncio.get_running_loop()
+    try:
+        await loop.run_in_executor(None, transport, "pause")
+    except Exception:
+        return
+    spoler.tving(retning, sek)
+    await asyncio.sleep(sek)
+    try:
+        await loop.run_in_executor(None, transport, "play")
+    except Exception:
+        pass
+
+
 async def h_transport(r):
     a = (await r.json()).get("action", "")
     if a not in TRANSPORT:
@@ -7189,7 +7206,11 @@ async def h_nfc(r):
             if r.method == "POST":
                 return web.json_response(spoler.sett(b))
             st = await loop.run_in_executor(None, read_status)
-            return web.json_response(spoler.status(st, bool(nfc.active_uid)))
+            svar = spoler.status(st, bool(nfc.active_uid))
+            hopp = spoler.hent_hopp()
+            if hopp:   # spolt i låten utenfra (Touch/Lyrion): pause, la spolene spole fysisk, og spill videre
+                asyncio.ensure_future(_spol_etter_hopp(*hopp))
+            return web.json_response(svar)
         if act == "label":
             # Ferdig etikettark (SVG, A4, kuttlinjer som kabinett/kassett). ?uids=A,B (tom = alle) &start=n &kutt=0
             q = r.query

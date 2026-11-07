@@ -305,6 +305,16 @@ class Spoler:
             os.replace(tmp, self.path)
         return dict(self.cfg)
 
+    def hent_hopp(self):
+        """(retning, sekunder hoppet) for et nytt hopp i låten, eller None. Nullstilles når den er hentet."""
+        h, self._hopp = getattr(self, "_hopp", None), None
+        return h
+
+    def spoletid(self, hopp_s: float) -> float:
+        """Hvor lenge spolene skal spole for et hopp: lengre hopp = lengre spoling, maks «vent»."""
+        vent = float(self.cfg.get("vent", 0) or 0)
+        return round(min(vent, max(1.0, vent * min(1.0, 0.35 + hopp_s / 120.0))), 2) if vent > 0 else 0.0
+
     def skal_vente(self, kassett_inne: bool) -> float:
         """Sekunder å spole fysisk ved neste/forrige (0 = ikke vent)."""
         if not self.cfg["på"] or (self.cfg["bare_kassett"] and not kassett_inne):
@@ -336,6 +346,10 @@ class Spoler:
                 self._spol_til, self._spol_retning = now + self.SPOL_TID, 1
             elif pos and abs(pos - forventet) > self.HOPP:
                 self._spol_til, self._spol_retning = now + self.SPOL_TID, (1 if pos > forventet else -1)
+                # Spoling i låten (f.eks. fra Touch/Lyrion: 0:10 → 1:22). Daemonen kan da sette lyden på pause og la
+                # spolene spole fysisk før den spiller videre – se hent_hopp().
+                if self.skal_vente(kassett_inne) > 0:
+                    self._hopp = (self._spol_retning, abs(pos - forventet))
         if now < self._spol_til:
             return {"modus": "spol" if self._spol_retning > 0 else "tilbake", "rps": self.cfg["spol"],
                     "retning": self._spol_retning, **self.cfg}
