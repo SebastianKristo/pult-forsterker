@@ -13,6 +13,7 @@ STL-ene lages med  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_radio.scad
   6. symbolinnleggene (knappehettene, volumknotten, hjulet) er vanntette, 0,6 mm dype, i flukt med flaten og fyller
      lomma i sin egen del uten å overlappe den (montert: bare kontakt med sin egen del)
   7. det er plass i dybden: bak kammerlokket, bak Pi-en og foran kontaktene i bakplata
+  9. skjøten mellom kroppen og bakplata er tett: største spalte inn i kassa ≤ 0,5 mm, også sett 30° på skrå
   8. det avrundede bakpartiet og tårnene for bakplata printes med fronten ned uten støtte (ingen flate brattere enn 50°)"""
 import itertools
 import sys
@@ -118,8 +119,8 @@ BAKB = [(bkX0 + 4.4, R), (bkX1 - 4.4, R), (bkX0 + bkRt - bkD, bkZ1 - bkRt + bkD)
 # tiltenkte hull som rektangler (flate, u0, u1, v0, v1)
 HOLES = [("bunn", x - 3.7, x + 3.7, y - 3.7, y + 3.7) for x in (kX0 - 4, kX0 + kW + 4) for y in (kY0 + 12, kY0 + kD - 12)] + \
         [("bunn", 129, 209, 33, 87)] + \
-        [("bak", 134.5, 145.5, 16.5, 27.5), ("bak", 155, 165, 17, 27), ("bak", 174, 186, 19, 25),
-         ("bak", 195, 222, 9, 41), ("bak", 127, 213, 77, 119)] + \
+        [("bak", 124.5, 135.5, 16.5, 27.5), ("bak", 143, 153, 17, 27), ("bak", 160, 172, 19, 25),
+         ("bak", 183, 210, 9, 41), ("bak", 127, 213, 77, 119)] + \
         [("bak", x - 4.5, x + 4.5, z - 4.5, z + 4.5) for x, z in BAKB]
 
 
@@ -183,8 +184,40 @@ good = ka[bratt].sum() < 1.0
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} printes uten støtte: bakpartiet heller maks {bak_hel:.0f}°, {ka[bratt].sum():.1f} mm² brattere enn 50°")
 
+# --- skjøten bak: bakplata fortsetter kassas form, så det skal ikke gå an å se inn i kassa langs kanten, verken rett
+# bakfra eller 30° fra toppen og sidene. Måler lengste sammenhengende «lekkasje» langs linjer på tvers av kanten. ---
+KS = trimesh.util.concatenate([A["kropp"], A["bak"]])
+BAKHULL = [h[1:] for h in HOLES if h[0] == "bak"]
+
+
+def spalte(d):
+    d = np.array(d, float) / np.linalg.norm(d)
+    ys, mx = D - 3.5, 0
+    linjer = [[(x, z) for z in np.arange(80, 137, 0.05)] for x in (40, 70, 100, 230)] + \
+             [[(x, z) for x in np.arange(0, 40, 0.05)] for z in (30, 60, 90)] + \
+             [[(x, z) for x in np.arange(200, 240, 0.05)] for z in (50, 70, 90)]
+    for pts in linjer:
+        P = np.array(pts)
+        ps = np.c_[P[:, 0], np.full(len(P), ys), P[:, 1]]
+        loc, ri, _ = KS.ray.intersects_location(ps - d * 30, np.tile(d, (len(ps), 1)), multiple_hits=False)
+        hy = np.full(len(ps), -1e9)
+        hy[ri] = loc[:, 1]
+        cur = 0
+        for i, (x, _, z) in enumerate(ps):
+            lekk = hy[i] < ys and innenfor(ys, x, z, t - 0.01) and not any(u0 <= x <= u1 and v0 <= z <= v1 for u0, u1, v0, v1 in BAKHULL)
+            cur = cur + 1 if lekk else 0
+            mx = max(mx, cur)
+    return mx * 0.05
+
+
+sp = max(spalte(v) for v in ([0, -1, 0], [0, -np.cos(np.radians(30)), -np.sin(np.radians(30))],
+                             [np.sin(np.radians(30)), -np.cos(np.radians(30)), 0], [-np.sin(np.radians(30)), -np.cos(np.radians(30)), 0]))
+good = sp <= 0.5
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} skjøten bak: største spalte inn i kassa {sp:.2f} mm (rett bakfra og 30° fra toppen og sidene, maks 0,5)")
+
 # --- plass i dybden (115 mm): bak kammerlokket, bak Pi-en og bak luftespaltene (kontaktene i bakplata) ---
-bak_inn = A["bak"].bounds[0][1]
+bak_inn = A["bak"].bounds[1][1] - 3                          # innsiden av bakplata (kragen langs kanten er bare 1,2 mm bred)
 lokk_luft = bak_inn - A["lokk"].bounds[1][1]                  # skruehoder (3 mm) og skumtape
 pi_bak = A["brakett"].bounds[1][1] + 1.4 + 16                 # Pi-tårnene + kortet + USB/nett-kontaktene (16 mm)
 pi_luft = bak_inn - pi_bak                                    # DSI-kabelen og USB-skjøten bøyes bak Pi-en
@@ -192,7 +225,7 @@ spalte_bak = 34 + 52                                          # ventGulv: y0 + l
 kontakt_luft = bak_inn - spalte_bak                           # DC-022 (≈ 14 mm), PJ-392 og USB-C-skjøten med lodding/bøy
 good = lokk_luft >= 6 and pi_luft >= 50 and kontakt_luft >= 25
 ok &= good
-print(f"{'OK ' if good else 'FEIL'} dybden {A['kropp'].bounds[1][1]:.0f} mm (+ 3 mm grill): {lokk_luft:.1f} mm bak kammerlokket, "
+print(f"{'OK ' if good else 'FEIL'} dybden {A['bak'].bounds[1][1]:.0f} mm (+ 3 mm grill): {lokk_luft:.1f} mm bak kammerlokket, "
       f"{pi_luft:.0f} mm bak Pi-en, {kontakt_luft:.0f} mm fri gulvflate foran bakplata for kontaktene")
 
 print("ALT OK" if ok else "NOE FEILET")

@@ -177,6 +177,7 @@ module kropp() {
       }
     }
     for (p = bakB) translate([p[0], D - bkT - insD, p[1]]) rotate([-90, 0, 0]) cylinder(d = ins, h = insD + 0.1);
+    translate([-1, D - bkT, -t - 1]) cube([W + 2, bkT + 1, H + t + 2]);   // kroppen slutter der bakplata begynner
     // grillåpningen og fals for grillens flens på innsiden
     ext_y(-1, t + 1) front_hull();
     ext_y(t - 0.6, t + 1.0) offset(gFl) front_hull();   // (dyp nok til flensen med stoffet brettet rundt)
@@ -211,16 +212,30 @@ module kropp() {
 }
 
 // ---------- bakplate (DC, linje ut, USB-C og lufting; skrus i fem tårn) ----------
+// Bakplata er de siste 3 mm av den avrundede kassa: kroppen slutter 3 mm før, og plata ligger an mot kanten utenpå
+// og fortsetter formen uten spalte. En smal krage (1,5 mm) går inn i åpningen og sentrerer den, utenom tårnene.
+yBak = D - bkT;
+kragD = 1.5;
+module bak_krage() {
+  difference() {
+    ext_y(yBak - kragD, yBak + 0.01) difference() { profil(s_av(yBak), t + 0.3); profil(s_av(yBak), t + 1.5); }
+    for (p = bakB) ext_y(yBak - kragD - 1, yBak + 1)
+      hull() { translate([p[0], p[1]]) circle(d = boss + 1); translate([p[0], p[1]] + 30 * p[2]) circle(d = boss + 1); }
+  }
+}
 module bak() {
   difference() {
-    ext_y(D - bkT, D) profil(sD, t + 0.3);   // følger den avrundede bakåpningen
+    union() {
+      intersection() { ytre(); translate([-1, yBak, -t - 1]) cube([W + 2, bkT, H + t + 2]); }   // fortsetter kassas form
+      bak_krage();
+    }
     for (p = bakB) translate([p[0], D - bkT - 1, p[1]]) rotate([-90, 0, 0]) {
       cylinder(d = m3, h = bkT + 2); translate([0, 0, bkT + 1 - 1.7]) cylinder(d1 = m3, d2 = m3k, h = 1.71);   // senkeskrue
     }
-    translate([140, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = dcD, h = bkT + 2);
-    translate([160, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = jackD, h = bkT + 2);
-    translate([180 - usbW/2, D - bkT - 1, bakKZ - usbH/2]) cube([usbW, bkT + 2, usbH]);
-    for (i = [0:3]) translate([196 + i*7, D - bkT - 1, 10]) cube([4, bkT + 2, 30]);    // nede: forsterker
+    translate([130, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = dcD, h = bkT + 2);
+    translate([148, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = jackD, h = bkT + 2);
+    translate([166 - usbW/2, D - bkT - 1, bakKZ - usbH/2]) cube([usbW, bkT + 2, usbH]);
+    for (i = [0:3]) translate([184 + i*7, D - bkT - 1, 10]) cube([4, bkT + 2, 30]);    // nede: forsterker (godt klar av tårnet i hjørnet)
     for (i = [0:8]) translate([128 + i*10, D - bkT - 1, 78]) cube([4, bkT + 2, 40]);   // oppe: Pi
   }
 }
