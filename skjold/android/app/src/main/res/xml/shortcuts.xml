@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Statisk snarvei + App Actions-capability for Google Assistant («Åpne NRK Jazz i Skjold»).
+     Dynamiske snarveier (favoritter og rutiner) legges inn av Shortcuts.kt med capability-binding til OPEN_APP_FEATURE.
+     Stemmestøtten i Assistant krever at appen er publisert i Google Play; deep linkene virker uansett. -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+        <intent android:action="android.intent.action.VIEW"
+            android:targetPackage="no.kristo.skjold.app" android:targetClass="no.kristo.skjold.ShortcutActivity">
+            <url-template android:value="skjold://feature{?feature}" />
+            <parameter android:name="feature" android:key="feature" />
+        </intent>
+    </capability>
     <shortcut android:shortcutId="recognize" android:enabled="true" android:icon="@mipmap/ic_launcher"
         android:shortcutShortLabel="@string/sc_recognize" android:shortcutLongLabel="@string/sc_recognize">
         <intent android:action="android.intent.action.VIEW" android:data="skjold://recognize"
