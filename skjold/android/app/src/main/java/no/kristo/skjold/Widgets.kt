@@ -68,6 +68,7 @@ data class WidgetSnap(
 object WidgetStore {
     private const val PREFS = "skjold-widget"
     private const val COVER_FILE = "widget_cover.img"
+    private const val COVER_KEY_FILE = "widget_cover.key"   // hvilken adresse bildet i COVER_FILE kom fra
     private var lastKey = ""
     private var lastCover = ""
 
@@ -102,8 +103,18 @@ object WidgetStore {
         if (f.exists()) f.readBytes() else null
     } catch (_: Exception) { null }
 
-    fun coverBitmap(ctx: Context): Bitmap? = try {
+    /** Bildet bare hvis det faktisk hører til [url] (ellers fikk varselet forrige låts omslag). */
+    fun coverBytes(ctx: Context, url: String): ByteArray? =
+        if (url.isNotEmpty() && coverKey(ctx) == url) coverBytes(ctx) else null
+
+    private fun coverKey(ctx: Context): String = try {
+        val f = File(ctx.filesDir, COVER_KEY_FILE)
+        if (f.exists()) f.readText() else ""
+    } catch (_: Exception) { "" }
+
+    fun coverBitmap(ctx: Context, url: String): Bitmap? = try {
         val f = File(ctx.filesDir, COVER_FILE)
+        if (url.isEmpty() || coverKey(ctx) != url) null else
         if (f.exists()) BitmapFactory.decodeFile(f.absolutePath) else null
     } catch (_: Exception) { null }
 
@@ -117,7 +128,7 @@ object WidgetStore {
         }
         val sub = listOf(st.artist, if (st.input == "radio") rn?.name ?: "" else inputName)
             .filter { it.isNotEmpty() && it != title }.distinct().joinToString(" · ").ifEmpty { inputName }
-        val cover = DeviceLink.coverURL(st.coverURL, host).ifEmpty { rn?.let { if (it.logo.isNotEmpty()) DeviceLink.coverURL(it.logo, host) else it.image } ?: "" }
+        val cover = DeviceLink.coverURL(st.coverURL, host).ifEmpty { rn?.let { if (it.logo.isNotEmpty()) DeviceLink.coverURL(it.logo, host) else it.image.takeUnless { im -> "html/images/" in im } } ?: "" }   // Lyrions standardmast er ikke en logo
         val presets = st.presetTitles.mapIndexedNotNull { i, t -> if (t.isNotEmpty()) (i + 1) to t else null }
         return WidgetSnap(host, st.name, title, sub, st.input, st.playing && st.power, st.power, st.volume, cover, presets, st.preset,
             st.album, st.mute, st.duration, st.position, st.input == "radio" && st.duration <= 0)
@@ -133,7 +144,7 @@ object WidgetStore {
         save(ctx, s)
         if (s.cover != lastCover) {
             lastCover = s.cover
-            fetchCover(ctx, s.cover)
+            if (s.cover.isEmpty() || coverKey(ctx) != s.cover) fetchCover(ctx, s.cover)
         }
         refresh(ctx)
         SkjoldMediaService.onSnap(ctx, s)   // nytt omslag lastet ned
@@ -141,11 +152,28 @@ object WidgetStore {
 
     private suspend fun fetchCover(ctx: Context, url: String) = withContext(Dispatchers.IO) {
         val f = File(ctx.filesDir, COVER_FILE)
-        if (url.isEmpty()) { f.delete(); return@withContext }
+        val k = File(ctx.filesDir, COVER_KEY_FILE)
+        if (url.isEmpty()) { f.delete(); k.delete(); return@withContext }
+        // samme klient som resten av appen (relé/fjernstyring og samme opphav som API-et)
         val r = Net.data(url, timeout = 8.0)
-        if (r != null && r.second < 300 && r.first.isNotEmpty() && BitmapFactory.decodeByteArray(r.first, 0, r.first.size) != null) f.writeBytes(r.first)
-        else f.delete()
+        val small = if (r != null && r.second < 300 && r.first.isNotEmpty()) shrink(r.first) else null
+        if (small != null) { f.writeBytes(small); k.writeText(url) }
+        else { f.delete(); k.delete() }
     }
+
+    /** Ned til maks 512 px JPEG: lite nok for varsel, låseskjerm, Now Bar og widgets. */
+    private fun shrink(bytes: ByteArray): ByteArray? = try {
+        val src = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        if (src == null) null else {
+            val max = 512
+            val scale = minOf(1f, max.toFloat() / maxOf(src.width, src.height))
+            val bmp = if (scale < 1f) Bitmap.createScaledBitmap(src, (src.width * scale).toInt().coerceAtLeast(1), (src.height * scale).toInt().coerceAtLeast(1), true) else src
+            val out = java.io.ByteArrayOutputStream()
+            bmp.compress(Bitmap.CompressFormat.JPEG, 88, out)
+            out.toByteArray()
+        }
+    } catch (_: Exception) { null }
+
 
     suspend fun refresh(ctx: Context) {
         try { NowPlayingWidget().updateAll(ctx) } catch (_: Exception) { }
@@ -254,7 +282,7 @@ class NowPlayingWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         Store.init(context)
         val s = WidgetStore.load(context)
-        val bmp = WidgetStore.coverBitmap(context)
+        val bmp = WidgetStore.coverBitmap(context, s.cover)
         provideContent { NowPlaying(s, bmp) }
     }
 

@@ -2,6 +2,7 @@ import Foundation
 import AppIntents
 import ActivityKit
 import WidgetKit
+import UIKit
 
 // Felles for appen og widget-utvidelsen (SkjoldWidgets): siste status i App Group, kall mot Skjold, Live Activity-
 // attributter og AppIntents for knappene i widgets, Kontrollsenter og Live Activity. Alt er `nonisolated`, så fila
@@ -16,6 +17,20 @@ nonisolated enum SkjoldShared {
     /// Omslag/kanallogo som liten JPEG i den delte containeren (skrives av appen, leses av widgetene).
     static var coverFile: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)?.appendingPathComponent("cover.jpg")
+    }
+
+    /// Ett bilde per omslag/logo («cover-<nøkkel>.jpg»). Nøkkelen går i Live Activity-tilstanden, så aktiviteten
+    /// tegnes på nytt når bildet byttes (ActivityKit oppdaterer bare ved ny tilstand, og tilstanden må være liten).
+    static func coverFileFor(key: String) -> URL? {
+        guard !key.isEmpty, key.allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }
+        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)?
+            .appendingPathComponent("cover-\(key).jpg")
+    }
+
+    /// Bildet for nøkkelen (eller det gamle felles omslaget), som UIImage.
+    static func coverImage(key: String?) -> UIImage? {
+        if let k = key, let f = coverFileFor(key: k), let img = UIImage(contentsOfFile: f.path) { return img }
+        return nil
     }
 
     static func load() -> SharedNowPlaying {
@@ -83,6 +98,7 @@ nonisolated struct SharedNowPlaying: Codable, Sendable, Hashable {
     var presets: [String] = []
     var activePreset = 0
     var hasCover = false
+    var coverKey: String? = nil   // valgfri: eldre lagret tilstand uten feltet kan fortsatt leses
     var updated = Date.distantPast
 
     static let placeholder = SharedNowPlaying(host: "", room: "Stue", title: "Midnight City", subtitle: "M83 · NRK P3",
@@ -146,6 +162,7 @@ nonisolated struct SkjoldNowPlayingAttributes: ActivityAttributes {
         var source: String
         var playing: Bool
         var volume: Int
+        var cover: String? = nil   // nøkkel til bildet i App Group (cover-<nøkkel>.jpg), ikke selve bildet
     }
     var room: String
 }

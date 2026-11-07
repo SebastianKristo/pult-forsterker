@@ -8,10 +8,13 @@ Matter er en plugin som ikke ligger på enheten før du installerer den under **
 
 | # | Matter-enhetstype | Skjold | Apple Hjem | Google Home | Alexa | SmartThings / Home Assistant |
 |---|---|---|---|---|---|---|
-| 1 | Speaker (0x0022): OnOff + LevelControl | OnOff = av/på (strøm), nivå 0–254 = volum 0–100 | Høyttaler-flis (av/på, volum) | Høyttaler med av/på og volum | «Speaker»: av/på, volum | `media_player`/`switch` + `number` (nivå) |
+| 1 | Speaker (0x0022): OnOff + LevelControl | OnOff = av/på (strøm), nivå 0–254 = volum 0–100 | **Vises ikke** – Apple Hjem støtter ikke Matter-høyttalere | Høyttaler med av/på og volum | «Speaker»: av/på, volum | `media_player`/`switch` + `number` (nivå) |
+| 1b | Dimmable Light «Volum» | nivå = volum, av = dempet | Lampe med glidebryter (volum) | Lys med lysstyrke | Lys | `light` |
 | 2 | On/Off Plug-in Unit «Demp» | på = dempet | Stikkontakt | Plugg | Plugg | `switch` |
 | 3–8 | On/Off Plug-in Unit «Favoritt 1–6» | på = spill radiofavoritten, av = slå av Skjold | 6 stikkontakter | 6 plugger | 6 plugger | 6 × `switch` |
 | 9 | Mode Select «Kilde» | modus = inngang (AirPlay, Blåtann, Radio …) | vises ikke (Hjem støtter ikke Mode Select ennå) | vises som modusvelger der den støttes | rutiner | `select` |
+
+**Apple Hjem:** bruk heller Skjolds HomeKit-støtte (Integrasjoner → Apple Hjem). Den viser Skjold som TV/høyttaler med kilder, fjernkontroll og en «Volum»-glidebryter. Matter passer best for Google Home, Alexa, SmartThings og Home Assistant. Legger du Skjold til via Matter i Apple Hjem, får du «Volum» (lampe) og bryterne, men ikke selve høyttaleren.
 
 Merk: Matter-spesifikasjonen bruker OnOff på en Speaker til demping. Her er OnOff i stedet satt til strøm, slik Skjold-brukere forventer. Demping har et eget endepunkt.
 Endepunkter av samme type skilles med en TagList i Common Number-navnerommet. Navnene kan uansett endres i appen.

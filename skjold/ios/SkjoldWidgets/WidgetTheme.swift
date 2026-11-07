@@ -52,7 +52,9 @@ struct WCover: View {
     }
 
     static func image(_ s: SharedNowPlaying) -> UIImage? {
-        guard s.hasCover, let f = SkjoldShared.coverFile else { return nil }
+        guard s.hasCover else { return nil }
+        if let img = SkjoldShared.coverImage(key: s.coverKey) { return img }
+        guard let f = SkjoldShared.coverFile else { return nil }
         return UIImage(contentsOfFile: f.path)
     }
 }

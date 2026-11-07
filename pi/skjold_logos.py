@@ -54,6 +54,26 @@ def nrk_file(name):
     return None
 
 
+NRK_URL = (("nrk_p1plus", "NRK P1+"), ("p1pluss", "NRK P1+"), ("p1plus", "NRK P1+"), ("nrkjazz", "NRK Jazz"), ("jazz_", "NRK Jazz"),
+           ("klassisk", "NRK Klassisk"), ("folkemusikk", "NRK Folkemusikk"), ("nrk_mp3", "NRK mP3"), ("mp3_", "NRK mP3"),
+           ("sport", "NRK Sport"), ("p3_", "NRK P3"), ("nrkp3", "NRK P3"), ("p2_", "NRK P2"), ("nrkp2", "NRK P2"),
+           ("p1_", "NRK P1"), ("nrkp1", "NRK P1"))
+
+
+def logo_name(name, url=""):
+    """Navnet logoen skal slås opp på: «1-NRK Jazz» → «NRK Jazz», og NRK-kanalen fra strømadressen når Lyrion viser
+    programnavnet («Jazzbrunsj: …») i stedet for kanalnavnet."""
+    n = re.sub(r"^\s*\d+\s*[-.:)]\s*", "", name or "").strip()
+    if nrk_file(n):
+        return n
+    u = (url or "").lower()
+    if "nrk" in u or "contentdelivery.net" in u:
+        for pat, canon in NRK_URL:
+            if pat in u:
+                return canon
+    return n
+
+
 def to_png(body):
     """SVG → PNG på mørk, kvadratisk flis (appene viser ikke SVG; hvite logoer synes ikke på lys bakgrunn)."""
     try:
@@ -133,9 +153,21 @@ def _fetch(url, timeout=6, maxb=2_000_000):
 
 
 def radio_browser_logo(name, fetch=_fetch):
-    """Beste favicon fra Radio Browser for kanalnavnet (nøyaktig navn først, så flest stemmer)."""
+    """Beste favicon fra Radio Browser for kanalnavnet; prøver også uten «Radio »-prefiks og «(by, land / sjanger)»."""
     if not name:
         return ""
+    tried = []
+    for cand in (name, re.sub(r"\s*\(.*\)\s*$", "", name), re.sub(r"^radio\s+", "", name, flags=re.I)):
+        cand = cand.strip()
+        if cand and cand not in tried:
+            tried.append(cand)
+            hit = _radio_browser_one(cand, fetch)
+            if hit:
+                return hit
+    return ""
+
+
+def _radio_browser_one(name, fetch):
     q = urllib.parse.quote(name)
     for host in ("de1.api.radio-browser.info", "nl1.api.radio-browser.info", "at1.api.radio-browser.info"):
         try:

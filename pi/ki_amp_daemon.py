@@ -3304,7 +3304,7 @@ def radio_now():
     now = " – ".join(x for x in (i.get("artist", ""), i.get("song", "")) if x)
     logo_src = (p or {}).get("icon", "") or (p or {}).get("image", "") or (i.get("art", "") if not _generic_art(i.get("art", "")) and not (p or {}).get("source") else "")
     return {"name": name, "genre": (p or {}).get("genre", ""), "now": now, "image": (p or {}).get("icon", "") or i.get("art", ""),
-            "logo": _logos.path_for(logo_src, name),
+            "logo": _logos.path_for(logo_src, _logos.logo_name(name, url)),
             "url": url, "n": n, "playing": i.get("mode") == "play"}
 
 

@@ -2,7 +2,7 @@
 
 Tilbehøret er ikke MFi-sertifisert: Hjem-appen viser «Ikke-sertifisert tilbehør», og man trykker «Legg til likevel».
 Kildene (AirPlay, Blåtann, Radio, AUX, USB …) og radiofavorittene vises som innganger på «TV-en», volum og demping
-styres via TelevisionSpeaker (iPhone-fjernkontrollen og volumknappene), og av/på følger Skjold.
+styres via TelevisionSpeaker (iPhone-fjernkontrollen og volumknappene) og en «Volum»-lyspære som gir glidebryter i Hjem-appen, og av/på følger Skjold.
 
 Modulen kjenner ikke daemonen: den får en «bro» med funksjoner (state, set_power, set_input, play_preset,
 set_volume, set_mute, transport) slik at den kan testes uten maskinvare og uten pyhap.
@@ -211,6 +211,14 @@ class SkjoldHomeKit:
         c["volume"] = sp.configure_char("Volume", value=int(st.get("volume", 0)), setter_callback=lambda v: self.b["set_volume"](int(v)))
         sp.configure_char("VolumeSelector", setter_callback=self._vol_sel)
         tv.add_linked_service(sp)
+        # Hjem-appen viser ingen volumkontroll for TV-tilbehør (bare Fjernkontroll i Kontrollsenter). En lyspære
+        # «Volum» gir en vanlig glidebryter i Hjem og fungerer med Siri («sett Skjold volum til 30 %»):
+        # lysstyrke = volum, av/på = ikke dempet / dempet.
+        vol = acc.add_preload_service("Lightbulb", ["On", "Brightness", "Name"])
+        vol.configure_char("Name", value="Volum")
+        c["vol_on"] = vol.configure_char("On", value=not st.get("mute"), setter_callback=lambda v: self.b["set_mute"](not bool(v)))
+        c["vol_bri"] = vol.configure_char("Brightness", value=int(st.get("volume", 0)),
+                                          setter_callback=lambda v: self.b["set_volume"](max(0, min(100, int(v)))))
         return acc
 
     def _set_active(self, v):
@@ -233,7 +241,8 @@ class SkjoldHomeKit:
             return
         st = self.b["state"]()
         vals = {"active": 1 if st.get("power") else 0, "ident": active_id(self.inputs, st),
-                "mute": bool(st.get("mute")), "volume": int(st.get("volume", 0))}
+                "mute": bool(st.get("mute")), "volume": int(st.get("volume", 0)),
+                "vol_on": not st.get("mute"), "vol_bri": int(st.get("volume", 0))}
 
         def upd():
             for k, v in vals.items():
