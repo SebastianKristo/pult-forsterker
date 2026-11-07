@@ -248,13 +248,14 @@ data class DevStatus(
 }
 
 /** Settings from GET /api/settings (same keys as skjold_settings.js). Booleans become 0/1 like `AppModel.sset`. */
-class DevSettings private constructor(val ints: Map<String, Int>, val strings: Map<String, String>, val eq: Map<String, EQProfile>) {
+class DevSettings private constructor(val ints: Map<String, Int>, val strings: Map<String, String>, val eq: Map<String, EQProfile>, val homeLayout: List<HomeItem>? = null) {
     companion object {
         fun parse(d: ByteArray?): DevSettings? {
             val set = jsonObject(d)?.optJSONObject("settings") ?: return null
             val ints = HashMap<String, Int>(); val strings = HashMap<String, String>(); val eq = HashMap<String, EQProfile>()
             for (k in set.keys()) {
                 val v = set.opt(k)
+                if (k == "homeLayout") continue
                 if (k == "eq" && v is JSONObject) {
                     for (src in v.keys()) {
                         val p = v.optJSONObject(src) ?: continue
@@ -268,7 +269,7 @@ class DevSettings private constructor(val ints: Map<String, Int>, val strings: M
                     is Number -> ints[k] = v.toInt()
                 }
             }
-            return DevSettings(ints, strings, eq)
+            return DevSettings(ints, strings, eq, HomeLayout.parse(set.optJSONArray("homeLayout")))
         }
     }
 }

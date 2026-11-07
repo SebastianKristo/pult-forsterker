@@ -301,11 +301,15 @@ nonisolated struct DevSettings: Sendable {
     var ints: [String: Int] = [:]
     var strings: [String: String] = [:]
     var eq: [String: EQ] = [:]
+    /// settings.homeLayout (nil = feltet finnes ikke, eldre daemon).
+    var homeLayout: [HomeItem]? = nil
 
     init?(_ data: Data) {
         guard let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let set = j["settings"] as? [String: Any] else { return nil }
+        homeLayout = HomeLayout.parse(set["homeLayout"])
         for (k, v) in set {
+            if k == "homeLayout" { continue }
             if k == "eq", let e = v as? [String: Any] {
                 for (src, p) in e {
                     guard let p = p as? [String: Any] else { continue }

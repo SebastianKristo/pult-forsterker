@@ -4,15 +4,31 @@ import SwiftUI
 struct V4HomeTab: View {
     @Environment(AppModel.self) private var m
     @Environment(V4State.self) private var ui
+    @State private var editHome = false
 
     var body: some View {
         header
-        recentShelf
-        sourcesShelf
-        favShelf
-        playlistShelf
-        ForEach(shelves, id: \.title) { s in shelfView(s) }
+        // Seksjonene i rekkefølgen brukeren har valgt (settings.homeLayout, delt med web og Android).
+        ForEach(HomeLayout.resolve(m.homeLayout, available: HomeLayout.ios).filter(\.visible)) { it in
+            section(it.id)
+        }
+        Button { Haptics.tap(); editHome = true } label: {
+            Text("Rediger hjemskjerm").sora(13, .regular, V4.muted).frame(maxWidth: .infinity).padding(.vertical, 8)
+        }
+        .plain()
+        .sheet(isPresented: $editHome) { V4HomeEditor() }
         Color.clear.frame(height: 0).task { await loadLibs() }
+    }
+
+    @ViewBuilder private func section(_ id: String) -> some View {
+        switch id {
+        case "recent": recentShelf
+        case "sources": sourcesShelf
+        case "favs": favShelf
+        case "playlists": playlistShelf
+        case "library": ForEach(shelves, id: \.title) { s in shelfView(s) }
+        default: EmptyView()
+        }
     }
 
     // MARK: Topp
@@ -330,4 +346,46 @@ struct V4HomeMenu: View {
     }
 
     private func close() { withAnimation(V4.chevron) { ui.homeOpen = false } }
+}
+
+
+/// «Rediger hjemskjerm»: dra for å endre rekkefølge og slå seksjoner av og på (som Plexamp). Lagres på Skjold-enheten.
+struct V4HomeEditor: View {
+    @Environment(AppModel.self) private var m
+    @Environment(\.dismiss) private var dismiss
+
+    private var items: [HomeItem] { HomeLayout.resolve(m.homeLayout, available: HomeLayout.ios) }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(items) { it in
+                        Toggle(isOn: Binding(get: { it.visible }, set: { v in
+                            m.saveHomeLayout(items.map { $0.id == it.id ? HomeItem(id: $0.id, visible: v) : $0 })
+                        })) {
+                            Text(HomeLayout.label(it.id))
+                        }
+                    }
+                    .onMove { from, to in
+                        var next = items
+                        next.move(fromOffsets: from, toOffset: to)
+                        m.saveHomeLayout(next)
+                    }
+                } footer: {
+                    Text("Endringene gjelder dette rommet og vises også i web-UI-et og Android-appen.")
+                }
+                Section {
+                    Button("Tilbakestill", role: .destructive) { m.resetHomeLayout() }
+                }
+            }
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle("Rediger hjemskjerm")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Ferdig") { dismiss() } }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
 }

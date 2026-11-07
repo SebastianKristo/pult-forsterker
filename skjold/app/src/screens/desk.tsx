@@ -2,6 +2,8 @@ import { NrkContinueShelf } from './nrk';
 // PC-sider (skall dk2): Hjem, Spiller, Radio og bibliotekene (YouTube Music / Navidrome) med eget, bredt oppsett.
 // Samme data og handlinger som telefonsidene – bare ny plassering og størrelser.
 import { useEffect, useState } from 'preact/hooks';
+import { Fragment, type ComponentChildren } from 'preact';
+import { homeOrder } from '../lib/homelayout';
 import { api, PRODUCT_LABEL, type Fav, type InputId, type Station } from '../lib/api';
 import { act, deviceName, eqActiveSource, go, inputLabel, recent, setVolume, settings, status } from '../lib/store';
 import { art, EQ } from '../lib/settings';
@@ -76,6 +78,55 @@ export function DeskHome() {
     if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else go('radio'); }
     else void act(() => api.input(x.input), { input: x.input });
   };
+  const sections: Record<string, ComponentChildren> = {
+    wrapped: <WrappedTeaser />,
+    ask: <AskBox />,
+    discover: <DiscoverCard />,
+    routines: <RoutinesShelf />,
+    recent: (rc.length > 0 && <section class="col gap12">
+          <SecHead title="Fortsett å lytte" kicker="NYLIG SPILT" />
+          <div class="dkx-row">{rc.map((x) => { const ra = art(x.title, x.image); return <Tile key={x.key} bg={ra.bg} ink={ra.ink} label={ra.logo ? '' : x.big} name={x.title} meta={x.kind} round={x.station} onClick={() => playRecent(x)} />; })}</div>
+        </section>),
+    nrk: <NrkContinueShelf />,
+    favs: (
+        <section class="col gap12">
+          <SecHead title="Radiofavoritter" kicker={favs.value.length ? favs.value.length + ' KANALER' : undefined} more="Se all radio ›" onMore={() => go('radio')} />
+          {favs.value.length ? (
+            <div class="dkx-favs">
+              {favs.value.slice(0, 8).map((f) => { const fa = art(f.title, f.image); const on = s?.input === 'radio' && s.preset === f.n; return (
+                <button key={f.n} class={'dkx-fav' + (on ? ' on' : '')} onClick={() => playFav(f)}>
+                  <span class="lg" style={{ background: fa.bg, color: fa.ink }}>{fa.logo ? '' : f.title.replace(/^NRK /, '').slice(0, 3)}</span>
+                  <span class="col" style={{ minWidth: 0, gap: '1px' }}><b class="ellip">{f.title}</b><span class="ellip muted" style={{ fontSize: '12px' }}>{on ? 'Spiller nå' : f.genre || 'Radio'}</span></span>
+                  <em>{f.n}</em>
+                </button>
+              ); })}
+            </div>
+          ) : favsLoaded.value ? <button class="dashed" onClick={() => go('radio')}>Legg til radiokanal</button> : null}
+        </section>
+    ),
+    playlists: (
+        <section class="col gap12">
+          <SecHead title="Dine spillelister" kicker="FRA MUSIKKTJENESTENE" more={ndConfigured() ? 'Navidrome ›' : undefined} onMore={() => go('lib', 'nd')} />
+          {nd.pls.length || nd.alb.length ? (
+            <div class="dkx-row">
+              {nd.pls.map((p) => <Tile key={'p' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} onClick={() => { libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; go('lib', 'nd'); }} />)}
+              {nd.alb.map((al) => <Tile key={'a' + al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist} onClick={() => { libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; go('lib', 'nd'); }} />)}
+            </div>
+          ) : (
+            <div class="dkx-empty"><span>Koble til Navidrome eller YouTube Music for å se spillelistene dine her.</span><button class="btn" onClick={() => go('int')}>Integrasjoner</button></div>
+          )}
+        </section>
+    ),
+    sources: (
+        <section class="col gap12">
+          <SecHead title="Kilder" />
+          <div class="dkx-srcs">
+            {services.map(([id, label]) => <button key={id} class={'svc' + (s?.input === id ? ' on' : '')} onClick={() => pickSrc(id)}><SrcCircle label={label} size={52} /><span>{id === 'aux' || id === 'aux2' ? inputLabel(id) : label}</span></button>)}
+            {(['ytm', 'nd'] as LibId[]).map((id) => <button key={id} class="svc" onClick={() => go('lib', id)}><SrcCircle label={LIB_NAME[id]} size={52} /><span>{LIB_NAME[id]}</span></button>)}
+          </div>
+        </section>
+    )
+  };
   return (
     <div class="dkx-home" data-testid="dashboard">
       <div class="dkx-main">
@@ -95,52 +146,8 @@ export function DeskHome() {
           </button>
         </div>
 
-        <WrappedTeaser />
-        <AskBox />
-        <DiscoverCard />
-        <RoutinesShelf />
-
-        {rc.length > 0 && <section class="col gap12">
-          <SecHead title="Fortsett å lytte" kicker="NYLIG SPILT" />
-          <div class="dkx-row">{rc.map((x) => { const ra = art(x.title, x.image); return <Tile key={x.key} bg={ra.bg} ink={ra.ink} label={ra.logo ? '' : x.big} name={x.title} meta={x.kind} round={x.station} onClick={() => playRecent(x)} />; })}</div>
-        </section>}
-
-        <NrkContinueShelf />
-
-        <section class="col gap12">
-          <SecHead title="Radiofavoritter" kicker={favs.value.length ? favs.value.length + ' KANALER' : undefined} more="Se all radio ›" onMore={() => go('radio')} />
-          {favs.value.length ? (
-            <div class="dkx-favs">
-              {favs.value.slice(0, 8).map((f) => { const fa = art(f.title, f.image); const on = s?.input === 'radio' && s.preset === f.n; return (
-                <button key={f.n} class={'dkx-fav' + (on ? ' on' : '')} onClick={() => playFav(f)}>
-                  <span class="lg" style={{ background: fa.bg, color: fa.ink }}>{fa.logo ? '' : f.title.replace(/^NRK /, '').slice(0, 3)}</span>
-                  <span class="col" style={{ minWidth: 0, gap: '1px' }}><b class="ellip">{f.title}</b><span class="ellip muted" style={{ fontSize: '12px' }}>{on ? 'Spiller nå' : f.genre || 'Radio'}</span></span>
-                  <em>{f.n}</em>
-                </button>
-              ); })}
-            </div>
-          ) : favsLoaded.value ? <button class="dashed" onClick={() => go('radio')}>Legg til radiokanal</button> : null}
-        </section>
-
-        <section class="col gap12">
-          <SecHead title="Dine spillelister" kicker="FRA MUSIKKTJENESTENE" more={ndConfigured() ? 'Navidrome ›' : undefined} onMore={() => go('lib', 'nd')} />
-          {nd.pls.length || nd.alb.length ? (
-            <div class="dkx-row">
-              {nd.pls.map((p) => <Tile key={'p' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} onClick={() => { libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; go('lib', 'nd'); }} />)}
-              {nd.alb.map((al) => <Tile key={'a' + al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist} onClick={() => { libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; go('lib', 'nd'); }} />)}
-            </div>
-          ) : (
-            <div class="dkx-empty"><span>Koble til Navidrome eller YouTube Music for å se spillelistene dine her.</span><button class="btn" onClick={() => go('int')}>Integrasjoner</button></div>
-          )}
-        </section>
-
-        <section class="col gap12">
-          <SecHead title="Kilder" />
-          <div class="dkx-srcs">
-            {services.map(([id, label]) => <button key={id} class={'svc' + (s?.input === id ? ' on' : '')} onClick={() => pickSrc(id)}><SrcCircle label={label} size={52} /><span>{id === 'aux' || id === 'aux2' ? inputLabel(id) : label}</span></button>)}
-            {(['ytm', 'nd'] as LibId[]).map((id) => <button key={id} class="svc" onClick={() => go('lib', id)}><SrcCircle label={LIB_NAME[id]} size={52} /><span>{LIB_NAME[id]}</span></button>)}
-          </div>
-        </section>
+        {homeOrder(['wrapped', 'ask', 'discover', 'routines', 'recent', 'nrk', 'favs', 'playlists', 'sources']).map((id) => <Fragment key={id}>{sections[id]}</Fragment>)}
+        <button class="link0" style={{ alignSelf: 'flex-start' }} onClick={() => go('settings', 'hjemskjerm')}>Rediger hjemskjerm</button>
       </div>
 
       <aside class="dkx-side">

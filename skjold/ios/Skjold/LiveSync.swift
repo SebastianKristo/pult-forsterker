@@ -416,6 +416,7 @@ extension AppModel {
             if !changed.isDisjoint(with: ["ytmUser", "ytmCookie"]) { ytmT = nil }
         }
         if !push.isEmpty { let data = DeviceLink.json(push); Task { await DeviceLink.shared.sendRaw("/api/settings", data, on: h) } }
+        if let hl = s.homeLayout, !held("set-homeLayout"), hl != homeLayout { homeLayout = hl }
         var e = eqP
         for (src, p) in s.eq where !held("eq-" + src) { e[src] = EQProfile(preset: p.preset, eq: p.eq, loud: p.loud) }
         if e != eqP { eqP = e }
@@ -429,6 +430,25 @@ extension AppModel {
         var patch: [String: Any] = [k: val]
         if k == "name" { patch["nameCustom"] = ""; names["nameCustom"] = "" }
         let data = DeviceLink.json(patch)
+        Task { await DeviceLink.shared.sendRaw("/api/settings", data, on: h) }
+    }
+
+    /// Lagrer ny rekkefølge for hjemskjermen; seksjoner andre klienter kjenner (men ikke iOS) beholdes på slutten.
+    func saveHomeLayout(_ items: [HomeItem]) {
+        let rest = homeLayout.filter { o in !items.contains(where: { $0.id == o.id }) }
+        homeLayout = items + rest
+        guard let h = settingsHost else { return }
+        hold("set-homeLayout", 3)
+        let arr: [[String: Any]] = homeLayout.map { ["id": $0.id, "visible": $0.visible] }
+        let data = DeviceLink.json(["homeLayout": arr])
+        Task { await DeviceLink.shared.sendRaw("/api/settings", data, on: h) }
+    }
+
+    func resetHomeLayout() {
+        homeLayout = []
+        guard let h = settingsHost else { return }
+        hold("set-homeLayout", 3)
+        let data = DeviceLink.json(["homeLayout": [Any]()])
         Task { await DeviceLink.shared.sendRaw("/api/settings", data, on: h) }
     }
 

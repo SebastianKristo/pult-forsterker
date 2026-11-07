@@ -85,6 +85,8 @@ final class AppModel {
     }
     var sset: [String: Int] { didSet { Store.save(sset, "skjold-set") } }
     var names: [String: String] { didSet { Store.save(names, "skjold-names") } }
+    /// Hjemskjermens rekkefølge og synlighet (settings.homeLayout på den aktive Skjold-enheten).
+    var homeLayout: [HomeItem] = []
     var ytmT: Date? = nil
     var plexT: String? = nil   // nil, "busy", or the result text
     var plexOK = false

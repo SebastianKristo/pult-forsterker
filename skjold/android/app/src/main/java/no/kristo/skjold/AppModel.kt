@@ -175,6 +175,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             _setDev = v
             if (live && old != v) settingsHost?.let { h -> viewModelScope.launch { loadSettings(h) } }
         }
+    /** Hjemskjermens rekkefølge og synlighet (settings.homeLayout på den aktive Skjold-enheten). */
+    var homeLayout by mutableStateOf<List<HomeItem>>(emptyList())
     var sset by Persisted("skjold-set", Store.load("skjold-set", MapSerializer(String.serializer(), Int.serializer())) ?: SK.def, MapSerializer(String.serializer(), Int.serializer()))
     var names by Persisted("skjold-names", Store.load("skjold-names", MapSerializer(String.serializer(), String.serializer())) ?: emptyMap(), MapSerializer(String.serializer(), String.serializer()))
     var ytmT by mutableStateOf<Long?>(null)
@@ -1262,6 +1264,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (changed.any { it.startsWith("plex") }) { plexT = null; libs = libs - "plex" }
             if (changed.any { it.startsWith("ytm") }) ytmT = null
         }
+        s.homeLayout?.let { hl -> if (!held("set-homeLayout") && hl != homeLayout) homeLayout = hl }
         val e = eqP.toMutableMap()
         for ((src, p) in s.eq) if (!held("eq-$src")) e[src] = p
         if (e != eqP) eqP = e
@@ -1276,6 +1279,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val patch = mutableMapOf<String, Any?>(k to value)
         if (k == "name") { patch["nameCustom"] = ""; names = names + ("nameCustom" to "") }
         launch { DeviceLink.send("/api/settings", patch, on = h) }
+    }
+
+    /** Lagrer ny rekkefølge for hjemskjermen; seksjoner andre klienter kjenner (men ikke Android) beholdes på slutten. */
+    fun saveHomeLayout(items: List<HomeItem>) {
+        homeLayout = items + homeLayout.filter { o -> items.none { it.id == o.id } }
+        val h = settingsHost ?: return
+        hold("set-homeLayout", 3.0)
+        val body = mapOf("homeLayout" to HomeLayout.toJson(homeLayout))
+        launch { DeviceLink.send("/api/settings", body, on = h) }
+    }
+
+    fun resetHomeLayout() {
+        homeLayout = emptyList()
+        val h = settingsHost ?: return
+        hold("set-homeLayout", 3.0)
+        launch { DeviceLink.send("/api/settings", mapOf("homeLayout" to emptyList<Any>()), on = h) }
     }
 
     fun liveEQ(src: String) {
