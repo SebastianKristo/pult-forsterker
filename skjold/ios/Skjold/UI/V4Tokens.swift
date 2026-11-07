@@ -164,37 +164,103 @@ struct V4Switch: View {
 }
 
 /// Glidebryter uten knott (input range med opacity 0 over et spor). Høyden er sporets høyde.
+/// Mens fingeren er nede følger linja en lokal verdi (statusoppdateringer fra enheten overskriver den ikke),
+/// onChange sendes høyst hvert 70. ms og sluttverdien alltid når fingeren slippes. Trykk hopper dit.
 struct V4Bar: View {
     let value: Double          // 0…1
     var height: CGFloat = 8
     var trackColor: Color = Color(hex: 0xf2f2ee, alpha: 0.2)
     var fill: Color = V4.ink
     var label: String = "Volum"
+    /// Haptiske tikk per hele prosent (av for glidebrytere som gir egen haptikk).
+    var haptics: Bool = true
     var onChange: ((Double) -> Void)? = nil
     var onEnd: ((Double) -> Void)? = nil
+
+    @State private var local: Double? = nil      // posisjonen mens fingeren er nede (og like etter)
+    @State private var active = false
+    @State private var lastSent = Date.distantPast
+    @State private var pending: Double? = nil
+    @State private var flush: Task<Void, Never>? = nil
+
+    private static let interval: TimeInterval = 0.07
+    private var shown: Double { max(0, min(1, local ?? value)) }
 
     var body: some View {
         GeometryReader { g in
             let w = max(1, g.size.width)
             ZStack(alignment: .leading) {
                 Capsule().fill(trackColor)
-                Capsule().fill(fill).frame(width: w * CGFloat(max(0, min(1, value))))
+                Capsule().fill(fill).frame(width: w * CGFloat(shown))
             }
             .frame(height: height)
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { v in onChange?(Double(max(0, min(1, v.location.x / w)))) }
-                .onEnded { v in onEnd?(Double(max(0, min(1, v.location.x / w)))) })
+            // Høy prioritet: knapper, trykk og rulling rundt linja skal ikke ta draget
+            .highPriorityGesture(DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                .onChanged { v in moved(Double(v.location.x / w)) }
+                .onEnded { v in ended(Double(v.location.x / w)) })
         }
-        .frame(height: height + 20)
-        .padding(.vertical, -10)
+        .frame(height: height + 24)
+        .padding(.vertical, -12)
         .accessibilityElement()
         .accessibilityLabel(label)
-        .accessibilityValue("\(Int((value * 100).rounded()))")
+        .accessibilityValue("\(Int((shown * 100).rounded())) prosent")
         .accessibilityAdjustableAction { dir in
-            let n = max(0, min(1, value + (dir == .increment ? 0.05 : -0.05)))
+            let n = max(0, min(1, (Double(Int((shown * 100).rounded())) + (dir == .increment ? 5 : -5)) / 100))
+            if haptics { Haptics.tick() }
             onChange?(n); onEnd?(n)
+        }
+    }
+
+    private func moved(_ raw: Double) {
+        let f = max(0, min(1, raw))
+        if !active {
+            active = true
+            if haptics { Haptics.prepareSlider() }
+        }
+        let old = Int(((local ?? value) * 100).rounded())
+        local = f
+        if haptics { Haptics.sliderStep(from: old, to: Int((f * 100).rounded()), min: 0, max: 100, zero: nil) }
+        send(f)
+    }
+
+    private func ended(_ raw: Double) {
+        let f = max(0, min(1, raw))
+        flush?.cancel(); flush = nil; pending = nil
+        active = false
+        local = f
+        lastSent = Date()
+        onChange?(f)
+        onEnd?(f)
+        if haptics { Haptics.sliderRelease() }
+        // Behold den lokale verdien litt, til modellen (og enheten) har tatt igjen
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            if !active { local = nil }
+        }
+    }
+
+    /// Strupet sending: straks om det er gått 70 ms siden sist, ellers den siste verdien når tiden er ute.
+    private func send(_ f: Double) {
+        let since = Date().timeIntervalSince(lastSent)
+        if since >= Self.interval {
+            flush?.cancel(); flush = nil; pending = nil
+            lastSent = Date()
+            onChange?(f)
+            return
+        }
+        pending = f
+        guard flush == nil else { return }
+        let wait = Self.interval - since
+        flush = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(wait))
+            guard !Task.isCancelled else { return }
+            flush = nil
+            guard active, let p = pending else { return }
+            pending = nil
+            lastSent = Date()
+            onChange?(p)
         }
     }
 }
@@ -220,7 +286,7 @@ struct V4SourceIcon: View {
         .clipShape(Circle())
         .overlay(Circle().strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
         .padding(ring)
-        .overlay(Circle().strokeBorder(V4.gold, lineWidth: ring))
+        .overlay { if ring > 0 { Circle().strokeBorder(V4.gold, lineWidth: ring) } }   // lineWidth 0 tegner en hårstrek
         .padding(-ring)
     }
 }
@@ -233,7 +299,8 @@ struct V4Art: View {
     var body: some View {
         ArtFill(key)
             .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(V4.gold, lineWidth: ring))
+            // Bare når ringen er på: strokeBorder med lineWidth 0 tegner en tynn hårstrek (lys kant rundt logoen)
+            .overlay { if ring > 0 { RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(V4.gold, lineWidth: ring) } }
     }
 }
 
