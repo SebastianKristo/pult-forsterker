@@ -29,10 +29,10 @@ for n in PRINT:
 
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in PRINT}
 # par som skal ligge an mot hverandre (bare kontaktflater, sjekkes med liten toleranse)
-TOUCH = {("kropp", "front"), ("kropp", "bunn"), ("front", "bunn"), ("front", "logo"), ("front", "skjermklemme"),
+TOUCH = {("kropp", "front"), ("kropp", "bunn"), ("front", "bunn"), ("front", "logo"), ("kropp", "skjermklemme"),
          ("kropp", "pakning_front"), ("front", "pakning_front"), ("kropp", "pakning_bunn"), ("bunn", "pakning_bunn"),
-         ("front", "pakning_bunn"), ("front", "rute"), ("front", "pakning_skjerm"), ("rute", "pakning_skjerm"),
-         ("front", "membran"), ("front", "grill"), ("kropp", "krage"), ("kropp", "dc_skive"), ("kropp", "usb_propp"),
+         ("front", "pakning_bunn"), ("kropp", "rute"), ("kropp", "pakning_skjerm"), ("rute", "pakning_skjerm"),
+         ("kropp", "membran"), ("front", "grill"), ("kropp", "krage"), ("kropp", "dc_skive"), ("kropp", "usb_propp"),
          ("dc_skive", "usb_propp")}
 
 
@@ -56,10 +56,10 @@ print("OK  ingen overlapp i montert stilling" if not olap else "FEIL overlapp: "
 
 # --- yttervegg ---
 k = A["kropp"]
-W, D, H, t = 100, 100, 182, 2.6
-HOLES = [  # (flate, senter u, senter v, radius) – tiltenkte åpninger
-    ("bak", 0, 77, 11.5), ("bak", -25, 13, 4.5), ("bak", 15, 13, 5.6), ("bak", 0, 120, 18),
-    ("topp", 0, 70, 6.5)]
+W, D, H, t = 106, 113, 136, 2.6
+# (flate, senter u, senter v, radius) – tiltenkte åpninger. Toppen: v ≈ y (toppen heller bare ≈ 2,4°).
+HOLES = [("bak", -26, 40, 11.5), ("bak", -25, 13, 4.5), ("bak", 15, 13, 5.6), ("bak", 0, 100, 18),
+         ("topp", 0, 88, 6.6), ("topp", 0, 38, 20.6)] + [("topp", x, 10.5, 3.6) for x in (-32, -16, 0, 16, 32)]
 
 
 def wall(face, u, v):
@@ -68,7 +68,7 @@ def wall(face, u, v):
     elif face == "side-":
         o, d = [-W/2 - 5, u, v], [1, 0, 0]
     elif face == "topp":
-        o, d = [u, v, H + 5], [0, 0, -1]
+        o, d = [u, v, H + 5], [0, 0, -1]   # toppen er skrå; strålen treffer overflaten litt lavere foran
     else:
         o, d = [u, D + 5, v], [0, -1, 0]
     loc, _, _ = k.ray.intersects_location([o], [d])
@@ -96,7 +96,7 @@ else:
 
 # --- skjøten flukter: tverrsnitt av kropp og front like ved y = 0 har samme ytterkant ---
 fr = A["front"]
-for z in [20, 60, 120, 170]:
+for z in [20, 60, 100, 125]:
     xs = []
     for m, y in [(k, 0.6), (fr, -0.6)]:
         loc, _, _ = m.ray.intersects_location([[-80, y, z]], [[1, 0, 0]])
