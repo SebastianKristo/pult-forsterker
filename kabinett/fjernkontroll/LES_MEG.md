@@ -22,6 +22,36 @@ Hvorfor 2,8″ og ikke 2,4″:
 
 **Status: ikke bygget og ikke testet.** Modellen er kontrollert med `sjekk_modell.py`, og ESPHome-fila er validert med `esphome config` (ESPHome 2026.10.2). Fastvaren er ikke kompilert her: kompileringen trenger ESP-IDF-filer fra dl.espressif.com og komponentregisteret til Espressif, og de var blokkert i byggemiljøet. Se [Begrensninger](#begrensninger-og-hva-som-ikke-er-testet).
 
+## To varianter: full og kort
+
+| | **Full** | **Kort** |
+|---|---|---|
+| Mål | 55 × 230 mm | **55 × 187 mm** (43 mm kortere) |
+| Tykkelse | 13,5 mm (15,0 mm med gullringen) | samme |
+| Taster | 44 brytere, 39 hetter | **28 brytere, 23 hetter** |
+| Uten | – | talltastene (1–9, −, 0, ↵) og smarthus-raden (lys, stikk, −, +) |
+| TCA9555 | 3 (0x20, 0x21, 0x22) | **2** (0x20, 0x21); vibrator, skjermstrøm og lader på brikke B, P1_4–P1_6 |
+| Tastekort | 48,6 × 141 mm (`tastekort/`) | 48,6 × 98 mm (`tastekort_kort/`) |
+| ESPHome | `esphome/skjold-fjernkontroll.yaml` | `esphome/skjold-fjernkontroll-kort.yaml` |
+| 3MF | `skjold-fjernkontroll-k2*.3mf` | `skjold-fjernkontroll-kort-k2*.3mf` |
+| Pris | ca. 725 kr | ca. 715 kr |
+
+Det er samme skjerm, samme bredde og samme formspråk i begge. Den korte varianten slutter med de fire fargetastene. De passer til TV-apper og kan styre ting i Home Assistant.
+
+I kort variant ligger lys, stikk og ± på skjermen (Hjem-siden). De ligger også på **langt trykk på fargetastene**:
+- rød: veksler lys
+- grønn: veksler stikkontakt
+- gul: demper lyset (−)
+- blå: skrur lyset opp (+)
+
+Det samme langtrykket virker også på full variant. Uten smarthus-raden ble fjernkontrollen 43 mm kortere. Med raden ville den bare blitt 34 mm kortere.
+
+I kort variant ligger ESP-en til venstre foran laderen (n = 125–148 mm), fordi halen er kortere. Prisforskjellen er liten: delene som utgår er billige, og TCA9555 og bryterne kjøpes i pakker uansett. Det er ca. 10 kr i filament og kortflate.
+
+Velg variant med `variant = "kort"` i `skjold_fjernkontroll.scad`, eller `-D 'variant="kort"'`. `lag_stl.sh` lager begge til `stl/` og `stl_kort/`.
+
+Bilder av kort variant: [skrått, lys](render/11_skra_lys_kort.png) · [ovenfra, lys](render/12_ovenfra_lys_kort.png) · [eksplodert](render/13_eksplodert_lys_kort.png) · [skrått, mørk](render/14_skra_mork_kort.png) · [ovenfra, mørk](render/15_ovenfra_mork_kort.png) · [fra siden](render/16_side_lys_kort.png).
+
 ## Designet
 
 Fjernkontrollen er en rett, flat plate. Den har myke R11-hjørner sett ovenfra og en 45°-fas på 1,4 mm rundt topp- og bunnkanten. Sidene går rett, uten innsnevring på midten. Toppen er lys og bunnen mørk, delt i en rett skjøt 7 mm opp på siden. Den mørke varianten har mørk topp og lys bunn.
@@ -375,8 +405,24 @@ Du får mer ut av batteriet hvis du:
 | `sjekk_modell.py` | Kontroll: vanntett, ingen overlapp, vegger ≥ 1,6 mm, materiale mellom tastehullene, forvandring, tykkelse |
 | `lag_3mf.py` | 3MF-plater for K2 med filamentnumre |
 | `lag_render.sh`, `skjerm_i_render.py`, `lag_skjermbilder.py` | Bildene i `render/`, med skjermbildet lagt inn |
-| `tastekort/` | Omriss (DXF), plassering, koblinger og stykkliste for tastekortet |
-| `stl/` | Alle utskriftsdelene, inkludert `bryterbrett.stl` |
+| `tastekort/`, `tastekort_kort/` | Omriss (DXF), plassering, koblinger (og stykkliste) for tastekortet, full og kort |
+| `stl/`, `stl_kort/` | Alle utskriftsdelene for full og kort variant, inkludert `bryterbrett.stl` |
+
+## Vurdert: Waveshare ESP32-S3-Touch-LCD-2.8 («alt i ett», ca. 280 kr)
+
+Dette kortet har ESP32-S3, en 2,8″ IPS-skjerm (240 × 320, ST7789) og kapasitiv berøring på ett kort, i tillegg til høyttaler, lader og SD. Det kunne erstattet SuperMini, skjermpanelet og TP4056.
+
+**Konklusjon: passer ikke som standard nå.** De vanlige delene er fortsatt standard.
+
+Hvorfor:
+- **Berøringen er byttet.** Ifølge Waveshare sendes kortet fra 5. juni 2026 i versjon 2, med CST3530 i stedet for CST328. ESPHome har driver for CST328 (`cst328`, med et eksempel for dette kortet: I²C på GPIO6/7, INT GPIO8, RST GPIO17), men ikke for CST3530. Med en ny V2 må berøringen skrives som egen komponent (external component). Det er hovedgrunnen.
+- **Ukjente mål.** Jeg fikk ikke hentet målene, pinnetabellen og skjemaet fra Waveshare-wikien, fordi docs.waveshare.com og esphome.io var blokkert i byggemiljøet. Kortet er større enn glasset, og ESP-modul, høyttaler og kontakter sitter under skjermen. Totalt er det trolig 8–10 mm tykt. Da kan batteriet ikke ligge under skjermen, og lomma må tegnes etter målene. Det går ikke uten tegningen.
+- **Få ledige pinner.** Det ser ut som det bare er en 12-pinners SH1.0-kontakt (I²C, UART og noen få GPIO). TCA9555-brikkene kan dele I²C med berøringen. IR inn, IR ut, tastevekking (INT) og vibrasjonsbryteren trenger fire pinner til, og det er usikkert om de finnes.
+- **Høyere hvilestrøm.** Lader, LDO, lydforsterker, IMU og baklysdriver er alltid tilkoblet, og skjermstrømmen kan ikke slås av. Erfaringsmessig gir slike kort 0,5–3 mA i dyp søvn, mot ca. 0,08 mA her. Det gir dager til et par uker på 1200 mAh i stedet for ca. 4 uker.
+- **Pris.** Ca. 280 kr, mot ca. 200 kr for SuperMini, panel og TP4056. Til gjengjeld blir det mindre lodding.
+- **IMU-en (QMI8658) som løftevekker.** Bare 2.8B-utgaven er bekreftet å ha QMI8658. ESPHome leser den (`qmi8658`), men har ikke «wake on motion». Det måtte settes opp med registerskriving i en lambda, og INT-pinnen må gå til en RTC-GPIO. Det er ikke bekreftet.
+
+Hvis du har et V1-kort (CST328, se merket bak) og målene fra Waveshare, er det mulig å bruke det. Lag i så fall en lomme for kortet i stedet for `modW`/`modH`, legg batteriet under tastene, og bytt pinnene i ESPHome etter wikien.
 
 ## Lisens
 

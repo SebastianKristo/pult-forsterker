@@ -1,6 +1,7 @@
 """Kontroll av Skjold Fjernkontroll-modellen.
 
-Bruk:  python3 sjekk_modell.py [mappe med A_*.stl i montert stilling]   (standard: asm/)
+Bruk:  python3 sjekk_modell.py [mappe med A_*.stl i montert stilling] [full|kort]   (standard: asm/ full)
+       python3 sjekk_modell.py asm_kort kort   (kort variant: STL-ene ligger i stl_kort/)
 STL-ene lages av lag_stl.sh. Krever trimesh og manifold3d. Sjekker:
   1. alle utskrifts-STL-er i stl/ er vanntette, har riktig antall legemer, ligger på platen (min z = 0)
      og passer i Creality K2 (250 × 250 × 250 mm)
@@ -24,7 +25,11 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)   # trimesh: tomme sn
 import taster
 
 ASM = sys.argv[1] if len(sys.argv) > 1 else "asm"
+VARIANT = sys.argv[2] if len(sys.argv) > 2 else "full"
+taster.bruk(VARIANT)
+STL = "stl" if VARIANT == "full" else "stl_kort"
 W, L, H = taster.W, taster.L, 13.5
+print(f"Variant: {VARIANT} ({len(taster.brytere())} taster, {len(taster.HETTER)} hetter)")
 ok = True
 
 
@@ -39,8 +44,10 @@ ANTALL = {"knapper": None, "knapper_lys": 4, "gull": 2, "farge_rod": 1, "farge_g
           "topp": 1, "bunn": 1, "ir_vindu": 1, "bryterbrett": 1, "logo": 6, "symboler_lyse": None, "symboler_morke": None}
 mork = sum(1 for h in taster.HETTER if h[8] == "mork")
 ANTALL["knapper"] = mork
+if VARIANT == "kort":
+    del ANTALL["knapper_lys"]   # smarthus-raden finnes ikke
 for n, want in ANTALL.items():
-    m = trimesh.load(f"stl/{n}.stl")
+    m = trimesh.load(f"{STL}/{n}.stl")
     deler = len(m.split(only_watertight=False))
     paa_plata = abs(m.bounds[0][2]) < 0.02 or n.startswith("symboler")   # symbolene ligger i hettene (samme plassering i 3MF)
     god = m.is_watertight and m.is_volume and (want is None or deler == want) and paa_plata and max(m.extents) <= 250
@@ -110,7 +117,7 @@ melding(not tynn, "sideveggen er ≥ 1,6 mm rundt hele (utenom USB-C, IR-vinduet
 
 # topp og gulv: loddrette stråler
 rot, gulv = [], []
-SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (W/2, L - 113 - taster.DN)]   # skruehodene og forborene
+SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (W/2, L - 135)]   # skruehodene og forborene
 scr = (W/2 - 25.3, W/2 + 25.3, L - 8.1 - 69.8, L - 8.1)   # lomma for 2,8″-modulen (50,6 × 69,8 mm)
 for x in np.arange(5.13, W - 5, 1.0):
     for y in np.arange(5.37, L - 5, 1.0):

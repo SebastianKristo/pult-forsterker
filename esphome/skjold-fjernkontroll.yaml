@@ -20,6 +20,7 @@ substitutions:
   friendly_name: Skjold Fjernkontroll
   skjold_host: skjold.local          # Skjold-enheten fjernkontrollen styrer først (velg andre rom på skjermen)
   skjold_port: "8765"
+  ekstra_hub: tca_c                  # brikken med vibrator, skjermstrøm og ladestatus (kort variant: tca_b)
   sovn_etter: 40s                    # dyp søvn etter så lang tid uten tast eller berøring
   tv_kilde: aux                      # Skjold-inngangen TV-en er koblet til (aux, aux2, usb, bt …)
   # Home Assistant (krever «Tillat enheten å utføre handlinger i Home Assistant» i ESPHome-integrasjonen)
@@ -131,10 +132,10 @@ output:
     pin: GPIO13
   - platform: gpio
     id: strom_skjerm
-    pin: { tca9555: tca_c, number: 13, mode: { output: true }, inverted: true }   # lav = på
+    pin: { tca9555: $ekstra_hub, number: 13, mode: { output: true }, inverted: true }   # lav = på
   - platform: gpio
     id: vibrator
-    pin: { tca9555: tca_c, number: 12, mode: { output: true } }
+    pin: { tca9555: $ekstra_hub, number: 12, mode: { output: true } }
 
 light:
   - platform: monochromatic
@@ -270,7 +271,7 @@ binary_sensor:
   - platform: gpio
     id: lader
     name: Lader
-    pin: { tca9555: tca_c, number: 14, mode: { input: true }, inverted: true }   # TP4056 CHRG (lav = lader)
+    pin: { tca9555: $ekstra_hub, number: 14, mode: { input: true }, inverted: true }   # TP4056 CHRG (lav = lader)
     device_class: battery_charging
   - platform: gpio
     id: loftet
@@ -918,6 +919,10 @@ script:
           if (navn == "hjem") { if (lang) id(vis_rom)->execute(); else id(vis_aktiviteter)->execute(); return; }
           if (navn == "meny" && !(m != 0 && har_ir)) { id(vis_kilder)->execute(); return; }
           if (navn == "av") { if (lang) id(akt_av)->execute(); else if (har_ir) id(ir_send)->execute(plass); else post("/api/power", "{\"on\":false}"); return; }
+          // --- langt trykk på fargetastene: lys, stikk, − og + (smarthus-raden finnes ikke på kort variant) ---
+          if (lang && navn == "rod") { id(ha_lys_veksle)->execute(); return; }
+          if (lang && navn == "gronn") { id(ha_stikk_veksle)->execute(); return; }
+          if (lang && (navn == "gul" || navn == "bla")) { id(ha_lys_steg)->execute(navn == "bla" ? 10 : -10); return; }
           // --- smarthus-raden går alltid til Home Assistant ---
           if (navn == "lys") { id(ha_lys_veksle)->execute(); return; }
           if (navn == "stikk") { id(ha_stikk_veksle)->execute(); return; }
