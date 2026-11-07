@@ -86,3 +86,16 @@ data:
 ```
 
 TTS (`tts.speak`) virker også, og spilles som kunngjøring.
+
+## Tilbehør: Skjold Røst, Skjold Kassett og Skjold Hjul
+
+Integrasjonen lager egne enheter for tilbehøret som hører til en Skjold-enhet, koblet til den (via_device):
+
+| Enhet | Entiteter |
+|---|---|
+| Skjold Røst (én per høyttaler i Lyrion) | Strøm, Volum, Spill med rommet, Spiller, Tilkoblet |
+| Skjold Kassett | Kassett i spilleren, Sist innsatt, Spill kassett (velg = spill), Spoler i vinduet |
+| Skjold Hjul (ett per hjul) | Batteri, Sist brukt, Rom |
+
+Hovedenheten viser riktig modell (Skjold S1 rev F, Node, Touch eller Core) og maskinvareutgave. Nye Røst-høyttalere eller hjul
+dukker opp når integrasjonen lastes på nytt.

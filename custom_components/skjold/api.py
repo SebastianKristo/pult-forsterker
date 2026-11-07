@@ -150,3 +150,30 @@ class KiAmpApi:
     async def set_presence(self, on: bool) -> dict[str, Any]:
         """Tilstede-modus («Bortreise») av/på: spiller radio i tilfeldige økter så det virker som noen er hjemme."""
         return await self._req("POST", "/presence", {"on": on})
+
+    # --- tilbehør: Skjold Røst, Skjold Kassett og Skjold Hjul ---
+    async def rost(self) -> dict[str, Any]:
+        return await self._req("GET", "/rost")
+
+    async def rost_act(self, mid: str, action: str, value: Any = None) -> dict[str, Any]:
+        """action: power | volume | sync | unsync (se pi/skjold_rost.py)."""
+        return await self._req("POST", "/rost", {"id": mid, "action": action, "value": value})
+
+    async def nfc(self) -> dict[str, Any]:
+        return await self._req("GET", "/nfc")
+
+    async def nfc_scan(self, uid: str) -> dict[str, Any]:
+        """Spill kassetten som om den ble satt inn i spilleren."""
+        return await self._req("POST", "/nfc/scan", {"uid": uid, "device": "homeassistant"})
+
+    async def spoler(self) -> dict[str, Any]:
+        return await self._req("GET", "/nfc/spoler")
+
+    async def set_spoler(self, on: bool) -> dict[str, Any]:
+        return await self._req("POST", "/nfc/spoler", {"på": on})
+
+    async def hjul(self) -> dict[str, Any]:
+        return await self._req("GET", "/hjul")
+
+    async def set_hjul_room(self, dev: str, room: str) -> dict[str, Any]:
+        return await self._req("POST", "/hjul", {"enheter": {dev: {"rom": room}}})

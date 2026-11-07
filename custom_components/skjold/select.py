@@ -8,6 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import BRIGHT_OPTIONS, DOMAIN, LED_MODES, has_display, has_leds, product, setting
+from .accessories import entities as accessories
 from .entity import KiAmpEntity
 
 
@@ -21,6 +22,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEnt
     if product(c.data) == "s1":  # USB-delingsswitch finnes bare på Skjold S1
         ents.append(KiAmpUsbPcSelect(c))
     add(ents)
+    add(accessories(c, "select"))   # Skjold Røst, Kassett og Hjul som egne enheter
 
 
 class KiAmpPresetSelect(KiAmpEntity, SelectEntity):

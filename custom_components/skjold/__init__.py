@@ -25,6 +25,9 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         self.entry = entry
         self.presets: list[dict] = []   # fylte favoritter fra /api/presets: [{n, title, genre, image…}]
         self._presets_sig: object = None
+        # tilbehør (Skjold Røst, Kassett, Hjul): hentes sjeldnere enn status, og feil (eldre daemon) ignoreres
+        self.extras: dict = {"rost": None, "nfc": None, "spoler": None, "hjul": None}
+        self._extras_n = 0
         self.settings: dict = {}             # /api/settings (EQ-profiler til Skjold-kortet)
         self._settings_n = 0
 
@@ -34,6 +37,9 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         except KiAmpError as err:
             raise UpdateFailed(err) from err
         await self._refresh_presets(data)
+        if self._extras_n % 6 == 0:   # ca. hvert 30. sekund
+            await self.refresh_extras()
+        self._extras_n += 1
         # innstillingene endres sjelden: hent dem hver 6. oppdatering (~30 s) for EQ-profilen i kortet
         if self._settings_n % 6 == 0:
             try:
@@ -42,6 +48,13 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
                 pass
         self._settings_n += 1
         return data
+
+    async def refresh_extras(self) -> None:
+        for key, fn in (("rost", self.api.rost), ("nfc", self.api.nfc), ("spoler", self.api.spoler), ("hjul", self.api.hjul)):
+            try:
+                self.extras[key] = await fn()
+            except KiAmpError:
+                self.extras[key] = None
 
     async def _refresh_presets(self, data: dict) -> None:
         """Hent /api/presets bare når favorittlista i status har endret seg (status har bare n/title)."""

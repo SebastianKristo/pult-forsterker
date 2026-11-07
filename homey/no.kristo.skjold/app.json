@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.18.0",
+  "version": "2.19.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -560,6 +560,191 @@
         }
       ],
       "deprecated": true
+    },
+    {
+      "id": "rost",
+      "name": {
+        "en": "Skjold Røst",
+        "no": "Skjold Røst"
+      },
+      "class": "speaker",
+      "capabilities": [
+        "onoff",
+        "volume_set",
+        "speaker_playing",
+        "ki_rost_synced"
+      ],
+      "capabilitiesOptions": {
+        "speaker_playing": {
+          "setable": false
+        }
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "kipultamp",
+      "images": {
+        "small": "/drivers/rost/assets/images/small.png",
+        "large": "/drivers/rost/assets/images/large.png",
+        "xlarge": "/drivers/rost/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "host",
+          "type": "text",
+          "label": {
+            "en": "Skjold IP address",
+            "no": "IP-adressen til Skjold"
+          },
+          "value": ""
+        },
+        {
+          "id": "port",
+          "type": "number",
+          "label": {
+            "en": "Port",
+            "no": "Port"
+          },
+          "value": 8765
+        }
+      ]
+    },
+    {
+      "id": "kassett",
+      "name": {
+        "en": "Skjold Kassett",
+        "no": "Skjold Kassett"
+      },
+      "class": "other",
+      "capabilities": [
+        "ki_kassett",
+        "ki_spoler"
+      ],
+      "capabilitiesOptions": {},
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "kipultamp",
+      "images": {
+        "small": "/drivers/kassett/assets/images/small.png",
+        "large": "/drivers/kassett/assets/images/large.png",
+        "xlarge": "/drivers/kassett/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "host",
+          "type": "text",
+          "label": {
+            "en": "Skjold IP address",
+            "no": "IP-adressen til Skjold"
+          },
+          "value": ""
+        },
+        {
+          "id": "port",
+          "type": "number",
+          "label": {
+            "en": "Port",
+            "no": "Port"
+          },
+          "value": 8765
+        }
+      ]
+    },
+    {
+      "id": "hjul",
+      "name": {
+        "en": "Skjold Hjul",
+        "no": "Skjold Hjul"
+      },
+      "class": "remote",
+      "capabilities": [
+        "measure_battery",
+        "ki_hjul_room"
+      ],
+      "capabilitiesOptions": {},
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "kipultamp",
+      "images": {
+        "small": "/drivers/hjul/assets/images/small.png",
+        "large": "/drivers/hjul/assets/images/large.png",
+        "xlarge": "/drivers/hjul/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "host",
+          "type": "text",
+          "label": {
+            "en": "Skjold IP address",
+            "no": "IP-adressen til Skjold"
+          },
+          "value": ""
+        },
+        {
+          "id": "port",
+          "type": "number",
+          "label": {
+            "en": "Port",
+            "no": "Port"
+          },
+          "value": 8765
+        }
+      ],
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      }
     }
   ],
   "discovery": {
@@ -1119,6 +1304,59 @@
       "setable": true,
       "uiComponent": "toggle",
       "icon": "/assets/icon.svg"
+    },
+    "ki_rost_synced": {
+      "type": "boolean",
+      "title": {
+        "en": "Play with the room",
+        "no": "Spill med rommet"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "/drivers/rost/assets/icon.svg"
+    },
+    "ki_kassett": {
+      "type": "string",
+      "title": {
+        "en": "Cassette in player",
+        "no": "Kassett i spilleren"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/drivers/kassett/assets/icon.svg"
+    },
+    "ki_spoler": {
+      "type": "boolean",
+      "title": {
+        "en": "Spools in the window",
+        "no": "Spoler i vinduet"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "/drivers/kassett/assets/icon.svg"
+    },
+    "ki_hjul_room": {
+      "type": "enum",
+      "title": {
+        "en": "Room",
+        "no": "Rom"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "icon": "/drivers/hjul/assets/icon.svg",
+      "values": [
+        {
+          "id": "Dette rommet",
+          "title": {
+            "en": "This room",
+            "no": "Dette rommet"
+          }
+        }
+      ]
     }
   },
   "flow": {
@@ -1319,6 +1557,64 @@
                 }
               }
             ]
+          }
+        ]
+      },
+      {
+        "id": "ki_kassett_inserted",
+        "title": {
+          "en": "A cassette was inserted",
+          "no": "En kassett ble satt inn"
+        },
+        "tokens": [
+          {
+            "name": "navn",
+            "type": "string",
+            "title": {
+              "en": "Cassette",
+              "no": "Kassett"
+            },
+            "example": "NRK Jazz"
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=kassett",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_hjul_used",
+        "title": {
+          "en": "The remote was used",
+          "no": "Hjulet ble brukt"
+        },
+        "tokens": [
+          {
+            "name": "rom",
+            "type": "string",
+            "title": {
+              "en": "Room",
+              "no": "Rom"
+            },
+            "example": "Dette rommet"
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hjul",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           }
         ]
       }
@@ -2573,6 +2869,122 @@
             "title": {
               "en": "Routine",
               "no": "Rutine"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_kassett_play",
+        "title": {
+          "en": "Play cassette",
+          "no": "Spill kassett"
+        },
+        "titleFormatted": {
+          "en": "Play cassette [[kassett]]",
+          "no": "Spill kassett [[kassett]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=kassett",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "kassett",
+            "title": {
+              "en": "Cassette",
+              "no": "Kassett"
+            },
+            "placeholder": {
+              "en": "NRK Jazz",
+              "no": "NRK Jazz"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_rost_buttons",
+        "title": {
+          "en": "Put radio favourites on the buttons",
+          "no": "Legg radiofavoritter på knappene"
+        },
+        "titleFormatted": {
+          "en": "Buttons 1–4: favourites [[b1]], [[b2]], [[b3]], [[b4]]",
+          "no": "Knapp 1–4: favoritt [[b1]], [[b2]], [[b3]], [[b4]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=rost",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "number",
+            "name": "b1",
+            "min": 0,
+            "max": 50,
+            "step": 1,
+            "placeholder": {
+              "en": "1",
+              "no": "1"
+            },
+            "title": {
+              "en": "Button 1",
+              "no": "Knapp 1"
+            }
+          },
+          {
+            "type": "number",
+            "name": "b2",
+            "min": 0,
+            "max": 50,
+            "step": 1,
+            "placeholder": {
+              "en": "2",
+              "no": "2"
+            },
+            "title": {
+              "en": "Button 2",
+              "no": "Knapp 2"
+            }
+          },
+          {
+            "type": "number",
+            "name": "b3",
+            "min": 0,
+            "max": 50,
+            "step": 1,
+            "placeholder": {
+              "en": "3",
+              "no": "3"
+            },
+            "title": {
+              "en": "Button 3",
+              "no": "Knapp 3"
+            }
+          },
+          {
+            "type": "number",
+            "name": "b4",
+            "min": 0,
+            "max": 50,
+            "step": 1,
+            "placeholder": {
+              "en": "4",
+              "no": "4"
+            },
+            "title": {
+              "en": "Button 4",
+              "no": "Knapp 4"
             }
           }
         ]

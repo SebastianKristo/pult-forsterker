@@ -9,6 +9,13 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import KiAmpCoordinator
 from .const import DOMAIN, MANUFACTURER, PRODUCT_MODELS, product
+from .devices import main_model
+
+try:   # model_id i enhetsregisteret finnes fra Home Assistant 2024.8
+    from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
+    HAS_MODEL_ID = (MAJOR_VERSION, MINOR_VERSION) >= (2024, 8)
+except ImportError:  # pragma: no cover
+    HAS_MODEL_ID = False
 
 
 def _load_names() -> dict[str, dict]:
@@ -35,14 +42,16 @@ class KiAmpEntity(CoordinatorEntity[KiAmpCoordinator]):
         self._key = key
         uid = coordinator.entry.unique_id or coordinator.entry.entry_id
         self._attr_unique_id = f"{uid}_{key}"
+        model, model_id, hw = main_model(coordinator.data, product(coordinator.data))
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, uid)},
             name=coordinator.data.get("name") or PRODUCT_MODELS[product(coordinator.data)],
             manufacturer=MANUFACTURER,
-            model=PRODUCT_MODELS[product(coordinator.data)],
-            hw_version=coordinator.data.get("board") or None,
+            model=model,
+            **({"model_id": model_id} if HAS_MODEL_ID else {}),
+            hw_version=hw,
             sw_version=coordinator.data.get("version"),
-            configuration_url=f"http://{coordinator.entry.data['host']}:{coordinator.entry.data['port']}/api/status",
+            configuration_url=f"http://{coordinator.entry.data['host']}:{coordinator.entry.data['port']}/",
         )
 
     @property
