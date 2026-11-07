@@ -84,7 +84,7 @@ for s in ki-amp camilladsp oled-display; do
 done
 sudo systemctl restart shairport-sync oled-display ki-amp ki-squeezelite
 sleep 2
-bash "$SRC/ki-diag.sh" | sed -n '1,12p'
+bash "$SRC/ki-diag.sh" 2>/dev/null | sed -n '1,12p' || true   # bare visning: sed stopper etter 12 linjer (SIGPIPE) – det skal ikke få oppdateringen til å «feile» og rulles tilbake
 echo "Ferdig."
 
 # Skjold S1 rev F: skjermen (960 × 320) – cage + Chromium med designets tegnekode (pi/skjold_ui)
