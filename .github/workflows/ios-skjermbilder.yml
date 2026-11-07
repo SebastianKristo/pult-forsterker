@@ -1,0 +1,103 @@
+#
+# Ekte skjermbilder av den native iOS-appen (SwiftUI, skjold/ios) fra iOS-simulatoren.
+# Bygger appen for simulatoren, starter en falsk Skjold-enhet (skjold/ios/ci/mock_skjold.py) på maskinen og
+# tar bilde av hver fane i lyst og mørkt utseende. Bildene lastes opp som artifact «ios-skjermbilder» og legges
+# også på grenen «skjermbilder/ios» (skjermbilder/ios/*.png) så de kan hentes uten innlogging.
+#
+name: iOS-skjermbilder
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/ios-skjermbilder"]
+    paths: [".github/workflows/ios-skjermbilder.yml", "skjold/ios/ci/**"]
+
+permissions:
+  contents: write
+
+jobs:
+  skjermbilder:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Velg nyeste Xcode (som release-jobben)
+        run: |
+          X="$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"; echo "Bruker $X"
+          sudo xcode-select -s "$X/Contents/Developer"; xcodebuild -version
+      - name: Lag Xcode-prosjekt (XcodeGen)
+        working-directory: skjold/ios
+        run: |
+          brew install xcodegen
+          xcodegen generate --spec ci-project.yml
+      - name: Velg simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json,sys,re
+          d=json.load(sys.stdin)["devices"]
+          best=None
+          for rt,devs in d.items():
+              m=re.search(r"iOS-(\d+)-(\d+)",rt)
+              if not m: continue
+              v=(int(m.group(1)),int(m.group(2)))
+              for x in devs:
+                  n=x["name"]
+                  if not n.startswith("iPhone"): continue
+                  score=(v, "Pro" in n and "Max" not in n, n)
+                  if best is None or score>best[0]: best=(score,x["udid"],n,rt)
+          print(best[1]); print(best[2]+" / "+best[3], file=sys.stderr)')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+      - name: Bygg for simulatoren
+        working-directory: skjold/ios
+        run: |
+          xcodebuild -project SkjoldCI.xcodeproj -scheme Skjold -configuration Debug -sdk iphonesimulator \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" build | tail -n 40
+      - name: Start falsk Skjold
+        run: |
+          nohup python3 skjold/ios/ci/mock_skjold.py 8765 > mock.log 2>&1 &
+          for i in $(seq 1 20); do curl -sf localhost:8765/api/status >/dev/null && break; sleep 1; done
+          curl -s localhost:8765/api/status | head -c 200; echo
+      - name: Ta skjermbilder
+        env:
+          UDID: ${{ steps.sim.outputs.udid }}
+        run: |
+          APP=$(ls -d skjold/ios/build/Build/Products/Debug-iphonesimulator/Skjold.app)
+          BID=com.sebastiankristojemtlandpersonalteam.Skjold
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl status_bar "$UDID" override --time "10:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
+          mkdir -p ut
+          navn=(hjem lyd rom innstillinger)
+          for look in dark light; do
+            xcrun simctl ui "$UDID" appearance "$look"
+            for t in 0 1 2 3; do
+              xcrun simctl terminate "$UDID" "$BID" 2>/dev/null || true
+              xcrun simctl launch "$UDID" "$BID" -skjold-setup-done YES -skjold-host 127.0.0.1:8765 -SkjoldDemoTab "$t"
+              sleep 9
+              xcrun simctl io "$UDID" screenshot "ut/$(printf '%d' $((t+1)))-${navn[$t]}-$look.png"
+            done
+            xcrun simctl terminate "$UDID" "$BID" 2>/dev/null || true
+            xcrun simctl launch "$UDID" "$BID" -skjold-setup-done YES -skjold-host 127.0.0.1:8765 -SkjoldDemoTab 0 -SkjoldDemoFull YES
+            sleep 9
+            xcrun simctl io "$UDID" screenshot "ut/5-spiller-$look.png"
+          done
+          ls -la ut
+          tail -n 30 mock.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-skjermbilder
+          path: ut/*.png
+      - name: Legg bildene på grenen skjermbilder/ios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          D=$(mktemp -d); cp ut/*.png "$D/"
+          git checkout --orphan skjermbilder-tmp
+          git rm -rfq . >/dev/null
+          mkdir -p skjermbilder/ios && cp "$D"/*.png skjermbilder/ios/
+          git add skjermbilder/ios
+          git commit -qm "iOS-skjermbilder fra ${GITHUB_SHA::7}"
+          git push -f origin HEAD:skjermbilder/ios
