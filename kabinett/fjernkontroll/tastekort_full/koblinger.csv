@@ -1,12 +1,12 @@
 bryter,navn,brikke,adresse,pinne,esphome_nummer
-av,Av-på,A,0x20,P0_0,0
-hjem,Skjold (aktiviteter),A,0x20,P0_1,1
-meny,Meny,A,0x20,P0_2,2
-opp,Opp,A,0x20,P0_3,3
-ned,Ned,A,0x20,P0_4,4
-venstre,Venstre,A,0x20,P0_5,5
-hoyre,Høyre,A,0x20,P0_6,6
-ok,OK,A,0x20,P0_7,7
+opp,Opp,A,0x20,P0_0,0
+ned,Ned,A,0x20,P0_1,1
+venstre,Venstre,A,0x20,P0_2,2
+hoyre,Høyre,A,0x20,P0_3,3
+ok,OK,A,0x20,P0_4,4
+av,Av-på,A,0x20,P0_5,5
+hjem,Skjold (aktiviteter),A,0x20,P0_6,6
+meny,Meny,A,0x20,P0_7,7
 tilbake,Tilbake,A,0x20,P1_0,8
 guide,Guide,A,0x20,P1_1,9
 avslutt,Avslutt,A,0x20,P1_2,10
@@ -14,22 +14,24 @@ spill_pause,Spill-pause,A,0x20,P1_3,11
 demp,Demp,A,0x20,P1_4,12
 vol_opp,Volum +,A,0x20,P1_5,13
 vol_ned,Volum −,A,0x20,P1_6,14
-tall_1,Tall 1,A,0x20,P1_7,15
-tall_2,Tall 2,B,0x21,P0_0,0
-tall_3,Tall 3,B,0x21,P0_1,1
-tall_4,Tall 4,B,0x21,P0_2,2
-tall_5,Tall 5,B,0x21,P0_3,3
-tall_6,Tall 6,B,0x21,P0_4,4
-tall_7,Tall 7,B,0x21,P0_5,5
-tall_8,Tall 8,B,0x21,P0_6,6
-tall_9,Tall 9,B,0x21,P0_7,7
-strek,Strek,B,0x21,P1_0,8
-tall_0,Tall 0,B,0x21,P1_1,9
-enter,Enter,B,0x21,P1_2,10
-lys,Lys,B,0x21,P1_3,11
-stikk,Stikkontakt,B,0x21,P1_4,12
-minus,Minus (dempe lys),B,0x21,P1_5,13
-pluss,Pluss (mer lys),B,0x21,P1_6,14
+app_1,App 1,A,0x20,P1_7,15
+app_2,App 2,B,0x21,P0_0,0
+tall_1,Tall 1,B,0x21,P0_1,1
+tall_2,Tall 2,B,0x21,P0_2,2
+tall_3,Tall 3,B,0x21,P0_3,3
+tall_4,Tall 4,B,0x21,P0_4,4
+tall_5,Tall 5,B,0x21,P0_5,5
+tall_6,Tall 6,B,0x21,P0_6,6
+tall_7,Tall 7,B,0x21,P0_7,7
+tall_8,Tall 8,B,0x21,P1_0,8
+tall_9,Tall 9,B,0x21,P1_1,9
+strek,Strek,B,0x21,P1_2,10
+tall_0,Tall 0,B,0x21,P1_3,11
+enter,Enter,B,0x21,P1_4,12
+lys,Lys,B,0x21,P1_5,13
+stikk,Stikkontakt,B,0x21,P1_6,14
+minus,Minus (dempe lys),B,0x21,P1_7,15
+pluss,Pluss (mer lys),C,0x22,P0_0,0
 vibrator,utgang: vibrasjonsmotor (via AO3400),C,0x22,P1_4,12
 strom_skjerm,"utgang: 3V3 til skjerm og IR-mottaker (lav = på, AO3401)",C,0x22,P1_5,13
 lader,inngang: TP4056 CHRG (lav = lader),C,0x22,P1_6,14

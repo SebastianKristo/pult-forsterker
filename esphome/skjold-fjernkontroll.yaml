@@ -1,8 +1,8 @@
-# Skjold Fjernkontroll – universell fjernkontroll med 2,8″ berøringsskjerm (240 × 320), 15 taster, IR og Wi-Fi.
+# Skjold Fjernkontroll – universell fjernkontroll med 2,8″ berøringsskjerm (240 × 320), 17 taster, IR og Wi-Fi.
 # Dette er standardvarianten (uten talltastene og smarthus-raden). Full variant med talltaster og smarthus-rad:
 # skjold-fjernkontroll-full.yaml, laget av kabinett/fjernkontroll/taster.py fra denne fila.
 # Maskinvare (se kabinett/fjernkontroll/LES_MEG.md): ESP32-S3 SuperMini, 2,8″ IPS ST7789 + FT6336U berøring (naken FPC-modul),
-# 2 × TCA9555 på tastekortet (15 taster + vibrator, skjermstrøm og ladestatus), 3 × IR-diode 940 nm, VS1838B,
+# 2 × TCA9555 på tastekortet (17 taster + vibrator, skjermstrøm og ladestatus), 3 × IR-diode 940 nm, VS1838B,
 # vibrasjonsbryter (vekker når du løfter den), LiPo 603450 og TP4056 med USB-C.
 #
 #   · Skjermen: Aktiviteter · Spiller (nå spilles, cover, volum) · Kilder og radiofavoritter · Hjem (lys og scener) ·
@@ -12,6 +12,9 @@
 #   · IR: sender og lærer NEC, Samsung, Sony, RC5 og LG. Lærte koder lagres i flash (48 plasser: én per tast + 4 makroer).
 #   · Hver tast sendes til Home Assistant som en hendelse (event-entiteten «Tast» og esphome.skjold_fjernkontroll),
 #     så du kan bruke hvilken som helst tast i en automasjon.
+#   · App 1 og App 2 (nederst): starter en app på Apple TV via Home Assistant (remote.turn_on med activity).
+#     Appnavnene er tekst-entiteter i HA («App 1», «App 2»); hold tasten for å lagre appen som er åpen nå.
+#     Har du lært en IR-kode på tasten, sendes den i stedet.
 #   · Dyp søvn etter ${sovn_etter} uten bruk. Vekkes av en tast (TCA9555 INT → GPIO2) eller av at du løfter den
 #     (vibrasjonsbryter → GPIO4).
 #
@@ -39,6 +42,12 @@ substitutions:
   scene_middag: scene.middag
   scene_lesing: scene.lesing
   scene_alt_av: scene.alt_av
+  # App-tastene nederst: hvilken enhet de styrer, og appen de starter første gang (endres senere i HA eller med langt trykk)
+  app_1_entitet: remote.apple_tv     # remote.turn_on med activity = appnavnet (Apple TV-integrasjonen)
+  app_2_entitet: remote.apple_tv
+  app_1: Plex
+  app_2: YouTube
+  app_kilde: media_player.apple_tv   # langt trykk lagrer attributtet app_name herfra
 
 esphome:
   name: ${name}
@@ -211,6 +220,34 @@ switch:
     entity_category: config
 
 # ---------- tilstand ----------
+# App-tastene: navnet på appen hver tast starter (kan endres i Home Assistant, lagres i flash)
+text:
+  - platform: template
+    id: app_1_navn
+    name: App 1
+    icon: mdi:application
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "${app_1}"
+    max_length: 40
+  - platform: template
+    id: app_2_navn
+    name: App 2
+    icon: mdi:application
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "${app_2}"
+    max_length: 40
+
+text_sensor:
+  - platform: homeassistant
+    id: atv_app                      # appen som er åpen på Apple TV nå (brukes ved langt trykk på App 1/App 2)
+    entity_id: ${app_kilde}
+    attribute: app_name
+    internal: true
+
 globals:
   - { id: skjold_base, type: std::string, initial_value: '"http://${skjold_host}:${skjold_port}"' }
   - { id: rom_valgt, type: int, restore_value: true, initial_value: "-1" }   # -1 = ${skjold_host}
@@ -236,7 +273,7 @@ globals:
 # >>> navneliste (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   - id: taster_navn
     type: std::vector<std::string>
-    initial_value: '{"av", "hjem", "meny", "opp", "ned", "venstre", "hoyre", "ok", "tilbake", "guide", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned"}'
+    initial_value: '{"opp", "ned", "venstre", "hoyre", "ok", "av", "hjem", "meny", "tilbake", "guide", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned", "app_1", "app_2"}'
 # <<< navneliste
 
 # ---------- sensorer ----------
@@ -282,43 +319,10 @@ binary_sensor:
       - script.execute: sovn_teller
 # >>> taster (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   - platform: gpio
-    id: t_av
-    name: "Tast Av-på"
-    internal: true
-    pin: { tca9555: tca_a, number: 0, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "av", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "av", lang: false } } ]
-  - platform: gpio
-    id: t_hjem
-    name: "Tast Skjold (aktiviteter)"
-    internal: true
-    pin: { tca9555: tca_a, number: 1, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "hjem", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "hjem", lang: false } } ]
-  - platform: gpio
-    id: t_meny
-    name: "Tast Meny"
-    internal: true
-    pin: { tca9555: tca_a, number: 2, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "meny", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "meny", lang: false } } ]
-  - platform: gpio
     id: t_opp
     name: "Tast Opp"
     internal: true
-    pin: { tca9555: tca_a, number: 3, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 0, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "opp", lang: false }
@@ -332,7 +336,7 @@ binary_sensor:
     id: t_ned
     name: "Tast Ned"
     internal: true
-    pin: { tca9555: tca_a, number: 4, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 1, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "ned", lang: false }
@@ -346,7 +350,7 @@ binary_sensor:
     id: t_venstre
     name: "Tast Venstre"
     internal: true
-    pin: { tca9555: tca_a, number: 5, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 2, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "venstre", lang: false }
@@ -360,7 +364,7 @@ binary_sensor:
     id: t_hoyre
     name: "Tast Høyre"
     internal: true
-    pin: { tca9555: tca_a, number: 6, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 3, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "hoyre", lang: false }
@@ -374,13 +378,46 @@ binary_sensor:
     id: t_ok
     name: "Tast OK"
     internal: true
-    pin: { tca9555: tca_a, number: 7, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 4, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
         then: [ { script.execute: { id: tast, navn: "ok", lang: true } } ]
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
         then: [ { script.execute: { id: tast, navn: "ok", lang: false } } ]
+  - platform: gpio
+    id: t_av
+    name: "Tast Av-på"
+    internal: true
+    pin: { tca9555: tca_a, number: 5, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "av", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "av", lang: false } } ]
+  - platform: gpio
+    id: t_hjem
+    name: "Tast Skjold (aktiviteter)"
+    internal: true
+    pin: { tca9555: tca_a, number: 6, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "hjem", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "hjem", lang: false } } ]
+  - platform: gpio
+    id: t_meny
+    name: "Tast Meny"
+    internal: true
+    pin: { tca9555: tca_a, number: 7, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "meny", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "meny", lang: false } } ]
   - platform: gpio
     id: t_tilbake
     name: "Tast Tilbake"
@@ -464,6 +501,28 @@ binary_sensor:
           then:
             - script.execute: { id: tast, navn: "vol_ned", lang: false }
             - delay: 160ms
+  - platform: gpio
+    id: t_app_1
+    name: "Tast App 1"
+    internal: true
+    pin: { tca9555: tca_a, number: 15, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "app_1", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "app_1", lang: false } } ]
+  - platform: gpio
+    id: t_app_2
+    name: "Tast App 2"
+    internal: true
+    pin: { tca9555: tca_b, number: 0, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "app_2", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "app_2", lang: false } } ]
 # <<< taster
 
 event:
@@ -473,14 +532,14 @@ event:
     icon: mdi:remote
 # >>> hendelser (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
     event_types:
-      - av
-      - hjem
-      - meny
       - opp
       - ned
       - venstre
       - hoyre
       - ok
+      - av
+      - hjem
+      - meny
       - tilbake
       - guide
       - avslutt
@@ -488,15 +547,19 @@ event:
       - demp
       - vol_opp
       - vol_ned
+      - app_1
+      - app_2
+      - ok_lang
       - av_lang
       - hjem_lang
       - meny_lang
-      - ok_lang
       - tilbake_lang
       - guide_lang
       - avslutt_lang
       - spill_pause_lang
       - demp_lang
+      - app_1_lang
+      - app_2_lang
 # <<< hendelser
 
 # ---------- skript ----------
@@ -539,6 +602,21 @@ script:
           if (navn == "lys") { id(ha_lys_veksle)->execute(); return; }
           if (navn == "stikk") { id(ha_stikk_veksle)->execute(); return; }
           if (navn == "pluss" || navn == "minus") { id(ha_lys_steg)->execute(navn == "pluss" ? 10 : -10); return; }
+          // --- app-tastene: lært IR-kode, ellers start appen via Home Assistant; langt trykk lagrer appen som er åpen ---
+          if (navn == "app_1" || navn == "app_2") {
+            bool en = navn == "app_1";
+            auto *t = en ? id(app_1_navn) : id(app_2_navn);
+            if (lang) {
+              std::string naa = id(atv_app).state;
+              if (naa.empty()) { ESP_LOGW("app", "fant ingen åpen app på ${app_kilde}"); return; }
+              auto c = t->make_call(); c.set_value(naa); c.perform();
+              ESP_LOGI("app", "%s = %s", navn.c_str(), naa.c_str());
+              return;
+            }
+            if (har_ir) { id(ir_send)->execute(plass); return; }
+            id(ha_app)->execute(std::string(en ? "${app_1_entitet}" : "${app_2_entitet}"), t->state);
+            return;
+          }
           // --- TV/film: lærte IR-koder først ---
           if (m != 0 && har_ir) { id(ir_send)->execute(plass); return; }
           // --- Skjold ---
@@ -828,6 +906,13 @@ script:
           action: light.toggle
           data_template: { entity_id: "{{ e }}" }
           variables: { e: !lambda 'return entitet;' }
+  - id: ha_app                       # start en app (Apple TV: remote.turn_on med activity = appnavn)
+    parameters: { entitet: string, app: string }
+    then:
+      - homeassistant.action:
+          action: remote.turn_on
+          data_template: { entity_id: "{{ e }}", activity: "{{ a }}" }
+          variables: { e: !lambda 'return entitet;', a: !lambda 'return app;' }
   - id: ha_scene
     parameters: { entitet: string }
     then:
