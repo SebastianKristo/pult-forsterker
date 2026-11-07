@@ -15,10 +15,10 @@ MODEL_HINTS = ("squeezeesp32", "esp32", "squeezelite-esp32")
 
 
 def is_mini(p):
-    """Er denne Lyrion-spilleren en Skjold Røst? Navnet «Skjold Røst …» (også ASCII «Skjold Rost …» og gamle «Skjold Mini …») eller squeezelite-esp32-modell."""
+    """Er denne Lyrion-spilleren en Skjold Røst? Navnet «Skjold Røst …» (også ASCII «Skjold Rost …»/«Skjold-Rost» fra fastvaren og gamle «Skjold Mini …») eller squeezelite-esp32-modell."""
     name = str(p.get("name") or "").lower()
     model = (str(p.get("modelname") or "") + " " + str(p.get("model") or "")).lower()
-    return name.startswith(("skjold røst", "skjold rost", "skjold mini")) or any(h in model for h in MODEL_HINTS)
+    return name.replace("-", " ").replace("_", " ").startswith(("skjold røst", "skjold rost", "skjold mini")) or any(h in model for h in MODEL_HINTS)
 
 
 def parse_players(res, own_id="", sync_ids=()):

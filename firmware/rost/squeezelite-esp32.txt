@@ -1,42 +1,18 @@
-# Skjold Røst – innstillinger for squeezelite-esp32 (ESP32-S3 N16R8 + PCM5102A + TPA3118 PBTL + 2,42″ OLED SSD1309 på I²C)
-# Syntaksen er hentet fra README i sle118/squeezelite-esp32 (avsnittene I2C/SPI, DAC/I2S, Display, Set GPIO,
-# Rotary Encoder og Buttons). Legg nøklene inn i NVS-editoren på ESP-ens nettside («Credits» → «Show NVS editor»).
-# Pinnene stemmer med koblingstabellen i kabinett/rost/LES_MEG.md.
+# Skjold Røst – Skjold-oppsettet for squeezelite-esp32 (generert fra lag_firmware.py – endre der, ikke her).
+# Disse nøklene er allerede bakt inn i skjold-rost-firmware.bin. Fila trengs bare hvis du flasher et vanlig
+# squeezelite-esp32-bygg selv: legg nøklene inn i NVS-editoren («Credits» → «Show NVS editor»), start på nytt.
 
-# --- lyd ---
 dac_config      = model=I2S,bck=4,ws=5,do=6
 set_GPIO        = 7=amp
-# Kommandolinjen settes under «Squeezelite» på nettsiden (lagres som autoexec1). -C 30 slår av forsterkeren
-# (GPIO7 → TPA3118 SDZ) etter 30 s stillhet. Navnet må begynne med «Skjold Røst» (eller ASCII «Skjold Rost», tryggest i fastvaren).
-autoexec1       = squeezelite -o I2S -b 500:2000 -C 30 -W -Z 96000 -n "Skjold Rost bad"
-
-# --- skjerm: 2,42″ OLED 128×64, SSD1309 på I²C (hvit) ---
-# squeezelite-esp32 har ingen egen SSD1309-driver, men SSD1309 er registerkompatibel med SSD1306 for 128×64 over I²C.
+autoexec1       = squeezelite -o I2S -b 500:2000 -C 30 -W -n Skjold-Rost
 i2c_config      = sda=11,scl=12,port=0,speed=400000
-display_config  = I2C,width=128,height=64,address=0x3C,driver=SSD1306
-# Står bildet opp ned: legg til «,HFlip,VFlip». Svarer ikke skjermen: prøv address=0x3D, eller speed=100000.
-# 4-pinners I²C-moduler har egen reset-krets. Starter skjermen ikke etter strømbrudd, koble modulens RES (finnes på
-# 7-pinners kort) til en ledig GPIO og legg til «,reset=13». Noen moduler leveres satt opp for SPI og må loddes om til
-# I²C (motstander på baksiden, se modulens tegning). Vår variant er bestilt som I²C.
-# Skjermen er monokrom: tekst og ikoner (kanal, låt, artist, volum, VU), ikke cover eller logo.
-# metadata_config gjelder bare AirPlay og Bluetooth:
-metadata_config = format=%artist% – %title%
-
-# --- dreieknapp: volum, trykk = spill/pause, langt trykk bytter til forrige/neste ---
+display_config  = I2C,width=128,height=64,driver=SSD1306
+metadata_config = format=%artist% - %title%
 rotary_config   = A=15,B=16,SW=17,volume,longpress
-
-# --- knapper: av/på og radiofavoritt 1–4 (lag en ny NVS-nøkkel «knapper» med JSON-en under) ---
 actrls_config   = knapper
 knapper         = [{"gpio":8,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"ACTRLS_POWER"}},{"gpio":9,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS1"}},{"gpio":18,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS2"}},{"gpio":39,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS3"}},{"gpio":47,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS4"}}]
-# BCTRLS_PS1–4 spiller Lyrion-favoritt (preset) 1–4 på denne spilleren. Hvilke radiokanaler knappene har,
-# velger du i Skjold: Grupper → Skjold Røst → Knapper → «Legg på knappene».
-# Langt trykk for å lagre kanalen som spiller nå: squeezelite-esp32 har ingen egen «lagre»-handling. Setter du
-# lms_ctrls_raw = 1, sendes rå knappekoder til LMS, som da selv håndterer «hold» på preset-knappene slik en
-# Squeezebox Boom gjør – men da gjelder ikke JSON-oppsettet over (av/på må også mappes av LMS). Ikke testet.
-
-# Gi hver Røst et eget navn som begynner med «Skjold Røst», f.eks. «Skjold Rost bad» (ø kan gi problemer i fastvaren; Skjold viser begge).
-# Da finner Skjold den automatisk (Grupper → Skjold Røst) og kan koble den til et rom.
-
-# Navn på nettverket og i Wi-Fi-oppsettet (bare ASCII)
+lms_ctrls_raw   = n
 host_name       = Skjold-Rost
 ap_ssid         = Skjold-Rost
+airplay_name    = Skjold-Rost
+cspot_config    = {"deviceName":"Skjold-Rost","bitrate":160}

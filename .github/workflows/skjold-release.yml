@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # starter Nettside-publiseringen etter releasen (henter Røst-fastvaren til /flasher/rost/)
 
 env:
   NODE_VERSION: 22
@@ -255,9 +256,29 @@ jobs:
           name: print3d
           path: ut/*
 
+  rostfw:
+    name: Fastvare for Skjold Røst (squeezelite-esp32 + Skjold-oppsett)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Bygg skjold-rost-firmware.bin
+        run: |
+          pip install -q esptool==4.8.1 esp-idf-nvs-partition-gen==0.3.0
+          python3 firmware/rost/lag_firmware.py --ut ut
+          mv ut/manifest.json ut/skjold-rost-manifest.json
+          ls -la ut
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rostfw
+          path: |
+            ut/skjold-rost-firmware.bin
+            ut/skjold-rost-manifest.json
+
   release:
     name: GitHub Release
-    needs: [web, android-native, ios, ios-native, flasher, manual, print3d]
+    needs: [web, android-native, ios, ios-native, flasher, manual, print3d, rostfw]
     # macOS-jobbene (iOS og Flasher for Mac) blir ofte avbrutt uten maskin (eller når macOS-minuttene er brukt opp) –
     # releasen publiseres likevel når web/Android og PDF gikk gjennom; filene som ble bygget kommer med.
     if: >-
@@ -275,3 +296,9 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
           files: artefakter/**
+      - name: Oppdater nettsiden (Røst-fastvaren til nettleserflashing)
+        if: ${{ github.event.inputs.prerelease != 'true' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run nettside.yml --ref main -R "${{ github.repository }}"
