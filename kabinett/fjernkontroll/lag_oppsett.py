@@ -157,13 +157,13 @@ def oppsett(variant):
 # ---------- koblingsskjema ----------
 # (fra, til, signal, lengde mm, tråd)
 LEDNINGER = [
-    ("Batteri +", "TP4056 B+", "BAT+", 110, "batteriets egen ledning (26–28 AWG), kuttet"),
-    ("Batteri −", "TP4056 B−", "BAT−", 110, "batteriets egen ledning, kuttet"),
-    ("TP4056 OUT+", "SuperMini 5V", "VBAT", 55, "30 AWG silikon, rød"),
-    ("TP4056 OUT−", "SuperMini GND", "GND", 55, "30 AWG silikon, sort"),
-    ("TP4056 OUT+", "Tastekort P15", "VBAT", 70, "30 AWG silikon, rød"),
-    ("TP4056 OUT−", "Tastekort P16", "GND", 70, "30 AWG silikon, sort"),
-    ("TP4056 CHRG", "Tastekort P17", "CHRG", 70, "30 AWG silikon"),
+    ("Batteri +", "TP4056 B+", "BAT+", 115, "batteriets egen ledning (26–28 AWG), kuttet"),
+    ("Batteri −", "TP4056 B−", "BAT−", 115, "batteriets egen ledning, kuttet"),
+    ("TP4056 OUT+", "SuperMini 5V", "VBAT", 60, "30 AWG silikon, rød"),
+    ("TP4056 OUT−", "SuperMini GND", "GND", 60, "30 AWG silikon, sort"),
+    ("TP4056 OUT+", "Tastekort P15", "VBAT", 75, "30 AWG silikon, rød"),
+    ("TP4056 OUT−", "Tastekort P16", "GND", 75, "30 AWG silikon, sort"),
+    ("TP4056 CHRG", "Tastekort P17", "CHRG", 75, "30 AWG silikon"),
     ("SuperMini 3V3", "Tastekort P1", "3V3", 60, "30 AWG silikon"),
     ("SuperMini GND", "Tastekort P2", "GND", 60, "30 AWG silikon"),
     ("SuperMini GPIO5 / 6", "Tastekort P3 / P4", "SDA / SCL", 60, "30 AWG silikon, tvunnet par"),
@@ -222,10 +222,10 @@ def koblinger():
         if txt:
             d.text(tp, txt, fill=col, font=fs)
 
-    pil([(190, 210), (190, 290)], "#c0392b", "BAT+ / BAT− 110 mm", (200, 238))
+    pil([(190, 210), (190, 290)], "#c0392b", "BAT+ / BAT− 115 mm", (200, 238))
     pil([(340, 320), (430, 320), (430, 130), (520, 130)], "#c0392b", "VBAT, GND", (350, 292))
-    pil([(340, 320), (430, 320), (430, 130), (520, 130)], "#c0392b", "55 mm", (440, 220))
-    pil([(340, 430), (460, 430), (460, 700), (1000, 700), (1000, 560), (1080, 560)], "#c0392b", "VBAT, GND, CHRG 70 mm", (640, 672))
+    pil([(340, 320), (430, 320), (430, 130), (520, 130)], "#c0392b", "60 mm", (440, 220))
+    pil([(340, 430), (460, 430), (460, 700), (1000, 700), (1000, 560), (1080, 560)], "#c0392b", "VBAT, GND, CHRG 75 mm", (640, 672))
     pil([(900, 300), (1080, 300)], "#205080", "14 tråder", (930, 270))
     pil([(900, 300), (1080, 300)], "#205080", "60 mm", (950, 308))
     pil([(340, 615), (480, 615), (480, 540), (520, 540)], "#606060", "50 mm", (360, 588))
