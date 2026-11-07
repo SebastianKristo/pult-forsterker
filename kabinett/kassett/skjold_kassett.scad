@@ -24,7 +24,7 @@ magD = 6.2; magT = 3.2;         // 6 × 3 mm neodym-magnet (holder kassetten ned
 pinD = 3;   pinH = 2.4;         // klikk-tapper mellom halvdelene
 
 // ---------- spiller ----------
-pW = 120; pD = 92; pH = 72;     // ytre mål (høyere enn før: kassetten står bak vinduet)
+pW = 120; pD = 62; pH = 72;     // ytre mål – grunnere (var 92): ESP-en og summeren ligger ved siden av drivverket
 pR = 14;                        // myke hjørner (som Node/Touch)
 wall = 2.4;
 tilt = 0;                       // kassetten står loddrett bak vinduet (som en kassettspiller fra 80-tallet)
@@ -34,6 +34,8 @@ lidT = 2.4;                     // lokkets topptykkelse (6 × 0,4 mm linjer)
 ch = 2.4;                       // 45°-fas på toppkanten (printes med toppen ned uten støtte, ingen elefantfot)
 pnW = 42.7; pnH = 40.5; pcbT = 1.6; // PN532 V3-modul (I²C), skyves inn i skinner bak sporet
 espW = 18;  espL = 23.5; espT = 1.0; // Waveshare ESP32-S3 Zero, USB-C bak
+espX = pW - 30;                 // ESP-en bak til høyre (ved siden av N20-motoren), USB-C ut bak
+bzX = 30; bzY = 44;             // summeren bak til venstre
 bzD = 12.2; bzH = 9.5;          // passiv piezo-summer 12 mm
 insD = 4.0; insL = 6.5;         // hull for M3 × 5,7 mm innpressmutter (heat-set insert)
 bossD = 8;                      // skruetårn i hjørnene
@@ -195,7 +197,7 @@ module hylle(){ // skrå hylle innvendig nederst: bunnen presses mot den – lab
     translate([wall-eps,wall-eps,2.4]) rbox(pW-2*wall+2*eps,pD-2*wall+2*eps,1.6,pR-wall);
     hull(){ translate([wall+1.6,wall+1.6,2.4-eps]) rbox(pW-2*wall-3.2,pD-2*wall-3.2,eps,pR-wall-1.6);
             translate([wall,wall,4.0]) rbox(pW-2*wall,pD-2*wall,eps,pR-wall); }
-    translate([pW/2-12,pD-wall-4,2]) cube([24,4+eps,3]);   // plass til ESP-vuggen ved USB-C
+    translate([espX-12,pD-wall-4,2]) cube([24,4+eps,3]);   // plass til ESP-vuggen ved USB-C
   }
 }
 module lomme(){ // sporlomme med vannrett bunn
@@ -231,7 +233,7 @@ module spiller_topp(){
     translate([pW/2+ledL/2-6, ledY0+ledWd/2, pH-12]) cylinder(d=3.2,h=4);                // ledninger ned fra LED-lista
     translate([pW/2,ym,zf-4-eps]) cylinder(d=magD,h=3.4+eps);                         // holdemagnet
     for(p=bosses) translate([p[0],p[1],2.4-eps]) cylinder(d=insD,h=insL);            // innpressmuttere
-    translate([pW/2,pD-wall-1,usbZ]) rotate([-90,0,0]) linear_extrude(wall+2)        // USB-C (plass til pluggen)
+    translate([espX,pD-wall-1,usbZ]) rotate([-90,0,0]) linear_extrude(wall+2)        // USB-C (plass til pluggen)
       offset(r=2) square([12.5-4,7-4],center=true);
     translate([pW/2,0.6,(2.4+winZ0)/2+0.5]) rotate([90,0,0]) linear_extrude(1)       // SKJOLD gravert under vinduet
       text("SKJOLD",size=4.6,font="Liberation Sans:style=Bold",halign="center",valign="center",spacing=1.3);
@@ -275,17 +277,17 @@ module spiller_bunn(){ // i verdenskoordinater (ligger inne i lokkets åpning, 0
     union(){
       hull(){ translate([ox+0.4,ox+0.4,0]) rbox(bw-0.8,bd-0.8,0.4+eps,rB-0.4); translate([ox,ox,0.4]) rbox(bw,bd,2.0,rB); }
       // vugge for ESP32-S3 Zero: to skinner under, tre vegger og små klikk-lepper
-      translate([pW/2-espW/2-1.35,yE-1.2,2.4-eps]) difference(){
+      translate([espX-espW/2-1.35,yE-1.2,2.4-eps]) difference(){
         cube([espW+2.7,espL+1.2,1.2+espT+0.8+eps]);
         translate([1.35,1.2,1.2]) cube([espW+0.3,espL+1,5]);
         translate([1.35+1.6,1.2,-1]) cube([espW+0.3-3.2,espL+1,5]);
       }
-      for(s=[0,1]) translate([s ? pW/2+espW/2+0.15 : pW/2-espW/2-0.15,yE+espL*0.3,2.4+1.2+espT+0.05+0.55])
+      for(s=[0,1]) translate([s ? espX+espW/2+0.15 : espX-espW/2-0.15,yE+espL*0.3,2.4+1.2+espT+0.05+0.55])
         rotate([-90,0,0]) linear_extrude(espL*0.4) polygon(s ? [[0.3,0],[-0.45,0.55],[0.3,0.55]] : [[-0.3,0],[0.45,0.55],[-0.3,0.55]]);
       // ring for summeren (lydhullet ned mot hullene i bunnen)
-      translate([22,48,2.4-eps]) difference(){ cylinder(d=bzD+2.4,h=4); translate([0,0,-1]) cylinder(d=bzD+0.1,h=6); }
+      translate([bzX,bzY,2.4-eps]) difference(){ cylinder(d=bzD+2.4,h=4); translate([0,0,-1]) cylinder(d=bzD+0.1,h=6); }
       // kabelbuer
-      for(p=[[pW/2+26,58],[pW/2+30,40],[34,62]]) translate([p[0]-4,p[1]-2,2.4-eps]) difference(){ cube([8,4,4]); translate([1.5,-1,-1]) cube([5,6,3.5]); }
+      for(p=[[pW/2+12,pD-10],[pW/2-12,pD-10],[bzX,30]]) translate([p[0]-4,p[1]-2,2.4-eps]) difference(){ cube([8,4,4]); translate([1.5,-1,-1]) cube([5,6,3.5]); }
       // akselstolper for trinsene (Ø 2 mm stålpinne presses inn i teardrop-hull)
       for(x=dX) translate([x-4, pilY0, 2.4-eps]) difference(){
         hull(){ cube([8,3.2,eps]); translate([0,0,dZ+3-2.4]) cube([8,3.2,eps]); translate([2,0,dZ+5-2.4]) cube([4,3.2,eps]); }
@@ -299,8 +301,8 @@ module spiller_bunn(){ // i verdenskoordinater (ligger inne i lokkets åpning, 0
     for(x=dX) translate([x, pilY0-eps, dZ]) teardrop(pinA-0.1, 3.2+2*eps);             // akselhull (presspasning)
     for(p=bosses) translate([p[0],p[1],-eps]) { cylinder(d=3.4,h=4); cylinder(d1=6.6,d2=3.4,h=1.6); }   // M3 senkehode
     for(x=[ox+16,pW-ox-16], y=[ox+14,pD-ox-14]) translate([x,y,-eps]) cylinder(d=footD,h=0.6);      // gummiføtter
-    for(a=[0:60:300]) translate([22+3*cos(a),48+3*sin(a),-1]) cylinder(d=1.5,h=5);                   // lydhull
-    translate([22,48,-1]) cylinder(d=1.5,h=5);
+    for(a=[0:60:300]) translate([bzX+3*cos(a),bzY+3*sin(a),-1]) cylinder(d=1.5,h=5);                 // lydhull
+    translate([bzX,bzY,-1]) cylinder(d=1.5,h=5);
   }
 }
 // modeller av de kjøpte delene (bare for kontroll og bilder – ikke for print)

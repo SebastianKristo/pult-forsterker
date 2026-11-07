@@ -95,7 +95,10 @@ gjerne på klistremerkeark eller fotopapir, og klipp langs den tynne grå linjen
 - **Drivverket** står på bunnplata: to stolper med aksler for trinsene og en vugge for N20-motoren. Når bunnen skrus
   på, havner trinsene rett bak spolene (0,2 mm fra lommeveggen, som også holder dem på akslene).
 - **LED-lista** (5 LED) ligger i en kasse bak sporet, og en rett lysleder flukter med toppen.
-- **ESP32-S3 Zero** klikkes ned i vugga bak; USB-C-hullet i bakveggen er stort nok til vanlige plugger.
+- **ESP32-S3 Zero** klikkes ned i vugga **bak til høyre** (ved siden av N20-motoren); USB-C-hullet sitter i bakveggen
+  til høyre og er stort nok til vanlige plugger. **Summeren** ligger bak til venstre.
+- **Mål:** 120 × 62 × 72 mm (B × D × H). Spilleren er 30 mm grunnere enn før (var 92 mm): ESP-en og summeren ligger
+  nå ved siden av drivverket i stedet for bak det. Vinduet, kassetten, PN532 og magnetene står der de sto.
 
 Kontrollert i modellen med `sjekk_modell.py` (trimesh/manifold): alle STL-er er vanntette og én sammenhengende del, og
 ingen deler overlapper i montert stilling – heller ikke spolene når de roteres rundt (sjekket hver 30°). Minste
