@@ -13,11 +13,11 @@ r() {
     openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D 'part="skjermflate"' -D "skjermE=$E" -o "$TMP/$1.png" skjold_fjernkontroll.scad
     python3 skjerm_i_render.py "render/$1.png" "$TMP/$1.png" render/skjerm-1-aktiviteter.png ) &
 }
-SKRA=30,108,7,50,0,-38,345
-OVEN=27,104,7,15,0,-90,430
-EKSP=30,106,22,55,0,-38,420
-SIDE=27,104,6,80,0,-90,400
-NAER=27,152,10,42,0,-22,135
+SKRA=30,119,7,50,0,-38,370
+OVEN=27.5,115,7,15,0,-90,470
+EKSP=30,117,22,55,0,-38,450
+SIDE=27.5,115,6,80,0,-90,440
+NAER=27.5,165,10,42,0,-22,150
 HALE=27,8,6,72,0,-28,120
 r 01_skra_lys samlet $SKRA lys
 r 02_ovenfra_lys samlet $OVEN lys

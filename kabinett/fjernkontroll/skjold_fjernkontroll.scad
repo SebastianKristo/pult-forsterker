@@ -1,4 +1,4 @@
-// Skjold Fjernkontroll – universell fjernkontroll med 2,0″ fargeberøringsskjerm, 44 taster, IR og Wi-Fi. Parametrisk OpenSCAD.
+// Skjold Fjernkontroll – universell fjernkontroll med 2,8″ fargeberøringsskjerm, 44 taster, IR og Wi-Fi. Parametrisk OpenSCAD.
 // Eget Skjold-design: en rett, flat «plate» med myke R11-hjørner sett ovenfra og 45°-fas rundt topp- og bunnkanten
 // (ingen innsnevring på midten). Toppen er lys (eller mørk), bunnen mørk, delt i en rett skjøt rundt hele siden.
 // Gullring rundt OK, gull Skjold-tast under skjermen, SKJOLD i gull felt inn nederst. Tastene er egne hetter som holdes
@@ -20,7 +20,8 @@ skjermE = 0;                    // part="skjermflate": samme eksplosjonsavstand 
 $fn = 48;
 
 // ---------- ytre mål ----------
-W = 54; L = 208;                // bredde og lengde (taster.py bruker de samme)
+W = 55; L = 230;                // bredde og lengde (taster.py bruker de samme)
+DN = 22;                        // alt under skjermen er flyttet 22 mm mot halen for 2,8″-skjermen (taster.py: DN)
 H = 13.5;                       // høyde uten taster (tastene står 1,2 mm opp, gullringen 1,5 mm: 15,0 mm totalt)
 R = 11;                         // hjørneradius sett ovenfra
 c = 1.4;                        // 45°-fas rundt topp- og bunnkanten
@@ -42,11 +43,14 @@ okOpp = 1.1;
 ink = 0.4;                      // symbolene: 0,4 mm innfelt, fylt med annen farge (2 lag à 0,2 mm)
 kf = 0.5;                       // fas på hettens toppkant
 
-// ---------- skjerm (2,0″ IPS 240 × 320 med kapasitiv berøring, ST7789 + CST816) – mål din modul! ----------
-scrN = 29.5;                    // vinduets senter fra nesen
-scrAW = 30.6; scrAH = 40.8;     // aktivt område
-scrWW = 31.4; scrWH = 41.4;     // vindu i toppen
-modW = 36.0; modH = 52.0; modT = 4.0;  // glass/modul (lomme under toppen, 0,3 mm klaring)
+// ---------- skjerm ----------
+// 2,8″ IPS 240 × 320 med kapasitiv berøring (ST7789 + FT6336U), naken FPC-modul med dekkglass – mål din modul!
+// Vinduet er like stort som glasset minus 1,5 mm kant, så den sorte glasskanten synes og rammen blir 4 mm på hver side.
+modN0 = 8.4;                    // modulens nesekant fra nesen (R11-hjørnet bestemmer hvor nær den kan gå)
+modW = 50.0; modH = 69.2; modT = 4.0;  // glass/modul (lomme under toppen, 0,3 mm klaring)
+scrN = modN0 + modH/2;          // vinduets og det aktive områdets senter fra nesen (43,0)
+scrAW = 43.2; scrAH = 57.6;     // aktivt område (antatt midt på glasset)
+scrWW = modW - 3; scrWH = modH - 3;   // vindu i toppen: 47,0 × 66,2 mm
 lepT = 0.8;                     // toppflaten over glasset rundt vinduet
 zGlass = H - lepT;              // glassets overside (12,7)
 
@@ -54,13 +58,13 @@ zGlass = H - lepT;              // glassets overside (12,7)
 bossD = 5.0;  bossBD = 6.0;     // tårn i toppen og bunnen
 pilot = 1.7;  klar = 2.3;  hodeD = 4.3;  hodeH = 2.5;
 zMot = zs + lipH;               // hjørnetårnene møtes her (8,6)
-SKRUER = [[4.9, L - 8], [W - 4.9, L - 8], [4.9, 8], [W - 4.9, 8], [W/2, L - 113]];   // nese ×2, hale ×2, midt
+SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [W/2, L - 113 - DN]];   // nese ×2 (foran skjermen), hale ×2, midt
 MIDT = 4;                       // skrue nr. 4 (midt) klemmer tastekortet
-PINNER = [[19.5, 100], [34.5, 100], [27, 125.3]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
+PINNER = [[W/2 - 7.5, 100 + DN], [W/2 + 7.5, 100 + DN], [W/2, 125.3 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
 
 // ---------- innmat ----------
 bat = [34, 50, 6.0];  batN = 11;    // LiPo 603450 (1200 mAh) under skjermen, fra n = 11
-mcu = [18, 22.6, 4.6]; mcuN = 150;  // ESP32-S3 SuperMini (antennen mot halen)
+mcu = [18, 22.6, 4.6]; mcuN = 150 + DN;  // ESP32-S3 SuperMini (antennen mot halen)
 lad = [17, 26, 4.6];                // TP4056 USB-C-modul med beskyttelse, mot halen
 usbW = 9.4; usbH = 3.6; usbZ = tB + 1.2 + 1.6;   // USB-C-åpningen (senter z ≈ 4,4)
 irW = 30; irH = 3.8; irZ = 4.3;     // IR-vinduet i nesen (z 2,4 … 6,2)
@@ -236,7 +240,9 @@ module bunn() {
         hulrom();
       }
       // leppe som går 1,6 mm inn i toppen
-      translate([0, 0, zs - 0.01]) linear_extrude(lipH + 0.01) difference() { omriss(t + lipG); omriss(t + lipG + lipT); }
+      // (ikke langs skjermmodulen, som går nesten helt ut til sideveggene)
+      translate([0, 0, zs - 0.01]) linear_extrude(lipH + 0.01) difference() { omriss(t + lipG); omriss(t + lipG + lipT);
+        translate([0, L - modN0 - modH - 0.6]) square([W, modH + 0.9]); }
       intersection() {
         hulrom();
         union() {
@@ -244,13 +250,13 @@ module bunn() {
             cylinder(d = bossBD, h = (i == MIDT ? zKort : zMot));
           // stolper under tastekortet
           for (p = PINNER) translate([p[0], L - p[1], 0]) cylinder(d = 3.0, h = zKort, $fn = 20);
-          for (p = [[12, 70], [42, 70], [12, 172], [42, 172]]) translate([p[0], L - p[1], 0]) cylinder(d = 3.0, h = zKort, $fn = 20);
+          for (p = [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 172 + DN], [W/2 + 15, 172 + DN]]) translate([p[0], L - p[1], 0]) cylinder(d = 3.0, h = zKort, $fn = 20);
           // ribber: batterilomme, ladermodul og SuperMini
           translate([W/2, L - batN - bat[1]/2, tB - 0.01]) linear_extrude(1.6) difference() { square([bat[0] + 3.0, bat[1] + 3.0], center = true); square([bat[0] + 0.6, bat[1] + 0.6], center = true); translate([0, bat[1]/2]) square([12, 6], center = true); }
           translate([W/2, t + 0.6 + lad[1]/2, tB - 0.01]) linear_extrude(1.4) difference() { square([lad[0] + 2.6, lad[1] + 2.0], center = true); square([lad[0] + 0.4, lad[1] + 0.4], center = true); translate([0, -lad[1]/2]) square([lad[0] + 4, 4], center = true); }
           translate([W/2, L - mcuN - mcu[1]/2, tB - 0.01]) linear_extrude(1.2) difference() { square([mcu[0] + 2.6, mcu[1] + 2.6], center = true); square([mcu[0] + 0.4, mcu[1] + 0.4], center = true); }
-          // IR-kortet i nesen (lite hullkort 36 × 7,4 mm) står i et spor: bak ligger batteriribben, foran to korte knaster
-          for (x = [W/2 - 18, W/2 + 15]) translate([x, L - t - 6.6, tB - 0.01]) cube([3, 1.0, 1.4]);
+          // IR-kortet i nesen (lite hullkort 34 × 6,6 mm) står i et spor: bak ligger batteriribben, foran to korte knaster
+          for (x = [W/2 - 17, W/2 + 14]) translate([x, L - t - 6.6, tB - 0.01]) cube([3, 1.0, 1.4]);
         }
       }
     }
@@ -282,7 +288,7 @@ module kort2d() {
 }
 module tastekort() { translate([0, 0, zKort]) linear_extrude(kortT) kort2d(); }
 module brytere() { for (b = BRYTERE) translate([b[1], L - b[2], zKort + kortT]) { translate([-2, -2, 0]) cube([4, 4, swH - 0.4]); cylinder(d = 2.4, h = swH, $fn = 16); } }
-module tca() { for (x = [14, 27, 40]) translate([x - 2.2, L - 135 - 3.9, zKort - 1.2]) cube([4.4, 7.8, 1.2]); }
+module tca() { for (x = [W/2 - 13, W/2, W/2 + 13]) translate([x - 2.2, L - 135 - DN - 3.9, zKort - 1.2]) cube([4.4, 7.8, 1.2]); }
 module bryterbrett() {   // printet 1,0 mm plate med to Ø1,0-hull per bryter (ledningene) – limes på bryterne (se LES_MEG)
   difference() {
     linear_extrude(kortT) kort2d();
@@ -308,7 +314,7 @@ module batteri() { color([0.55, 0.57, 0.60]) translate([W/2 - bat[0]/2, L - batN
 module mcu_kort() { translate([W/2 - mcu[0]/2, L - mcuN - mcu[1], tB + 0.05]) { color([0.10, 0.10, 0.12]) cube([mcu[0], mcu[1], 1.0]); color([0.75, 0.75, 0.77]) translate([2, 2, 1]) cube([14, 16, 2.4]); } }
 module lader() { translate([W/2 - lad[0]/2, t + 0.6, tB + 0.05]) { color([0.12, 0.25, 0.55]) cube([lad[0], lad[1], 1.2]); color([0.8, 0.8, 0.82]) translate([lad[0]/2 - 4.5, -0.25, 1.2]) cube([9.0, 7.5, 3.2]); } }
 module ir_kort() {
-  translate([W/2 - 18, L - t - 7.6, tB + 0.05]) color([0.12, 0.42, 0.22]) cube([36, 1.0, 6.6]);
+  translate([W/2 - 17, L - t - 7.6, tB + 0.05]) color([0.12, 0.42, 0.22]) cube([34, 1.0, 6.6]);
   for (x = [W/2 - 12, W/2 - 4, W/2 + 4]) translate([x, L - t - 6.6, irZ]) rotate([-90, 0, 0]) color([0.30, 0.30, 0.45]) { cylinder(d = 3.0, h = 4.6, $fn = 20); translate([0, 0, 4.6]) sphere(d = 3.0, $fn = 20); }
   translate([W/2 + 9, L - t - 6.6, irZ - 2.6]) color([0.08, 0.08, 0.09]) cube([6, 4.6, 5.2]);
 }

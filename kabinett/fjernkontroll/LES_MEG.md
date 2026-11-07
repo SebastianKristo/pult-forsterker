@@ -1,6 +1,6 @@
 # Skjold Fjernkontroll
 
-En universell fjernkontroll for hele stua: 2,0″ fargeberøringsskjerm øverst, 44 taster under, IR foran og Wi-Fi inni. Den styrer Skjold direkte (volum, spill/pause, favoritter, kilder og rom), sender og lærer IR-koder til TV, projektor og annet, og kjører aktiviteter som «Se TV» og «God natt» som setter i gang IR, Skjold og Home Assistant i én operasjon. Alle tastene sendes også til Home Assistant, så du kan bruke hvilken som helst tast til hva du vil.
+En universell fjernkontroll for hele stua: 2,8″ fargeberøringsskjerm øverst, nesten fra kant til kant, 44 taster under, IR foran og Wi-Fi inni. Den styrer Skjold direkte (volum, spill/pause, favoritter, kilder og rom), sender og lærer IR-koder til TV, projektor og annet, og kjører aktiviteter som «Se TV» og «God natt» som setter i gang IR, Skjold og Home Assistant i én operasjon. Alle tastene sendes også til Home Assistant, så du kan bruke hvilken som helst tast til hva du vil.
 
 Den er laget for å bygges hjemme. Kabinettet printes på en Creality K2, delene kommer fra AliExpress, og fastvaren er ESPHome.
 
@@ -9,7 +9,16 @@ Den er laget for å bygges hjemme. Kabinettet printes på en Creality K2, delene
 Bilder: [skrått, lys](render/01_skra_lys.png) · [ovenfra, lys](render/02_ovenfra_lys.png) · [eksplodert, lys](render/03_eksplodert_lys.png) · [skrått, mørk](render/04_skra_mork.png) · [ovenfra, mørk](render/05_ovenfra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) · [fra siden](render/07_side_lys.png) · [nær, skjermen og D-paden](render/08_naer_lys.png) · [halen med USB-C](render/09_hale_lys.png).
 Skjermen i bildene viser aktivitetslista slik fastvaren tegner den. Skjermbildene er laget med `lag_skjermbilder.py` (se [Skjermen](#skjermen)).
 
-**Mål: 54 × 208 mm, 13,5 mm tykk.** Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 95–105 g med batteri (beregnet, ikke veid).
+**Mål: 55 × 230 mm, 13,5 mm tykk.** Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
+
+Første utgave hadde en 2,0″-skjerm i en 54 × 208 mm kropp, med mye tom ramme på hver side av skjermen. Nå sitter en 2,8″-skjerm der: kroppen er 1 mm bredere og 22 mm lengre, og alt under skjermen (taster, form og farger) er det samme som før.
+
+Hvorfor 2,8″ og ikke 2,4″:
+- **Kroppen må være ca. 54 mm bred uansett.** Det krever tre talltaster, vippene og D-paden med hjørnetastene.
+- **2,4″ fyller ikke bredden.** Glasset er bare 43–44 mm bredt, så det ville fortsatt blitt nesten 7 mm tom ramme på hver side.
+- **2,8″ fyller bredden.** Glasset er 50 mm bredt og fyller fronten med 4 mm ramme, mot 11 mm før.
+- **Lengden øker mer med 2,8″,** fordi panelet er 69 mm langt.
+- **Brede stavskjermer** (2,25″ og liknende) er for lave til lister og cover.
 
 **Status: ikke bygget og ikke testet.** Modellen er kontrollert med `sjekk_modell.py`, og ESPHome-fila er validert med `esphome config` (ESPHome 2026.10.2). Fastvaren er ikke kompilert her: kompileringen trenger ESP-IDF-filer fra dl.espressif.com og komponentregisteret til Espressif, og de var blokkert i byggemiljøet. Se [Begrensninger](#begrensninger-og-hva-som-ikke-er-testet).
 
@@ -18,7 +27,7 @@ Skjermen i bildene viser aktivitetslista slik fastvaren tegner den. Skjermbilden
 Fjernkontrollen er en rett, flat plate. Den har myke R11-hjørner sett ovenfra og en 45°-fas på 1,4 mm rundt topp- og bunnkanten. Sidene går rett, uten innsnevring på midten. Toppen er lys og bunnen mørk, delt i en rett skjøt 7 mm opp på siden. Den mørke varianten har mørk topp og lys bunn.
 
 Fra toppen og ned:
-- **Skjermen** ligger øverst, rett bak IR-nesen, under et 0,8 mm tynt vindu.
+- **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (47,0 × 66,2 mm) er like stort som dekkglasset minus 1,5 mm kant, så den sorte glasskanten synes, og plastrammen ved siden av skjermen er bare 4 mm (inkludert fasen).
 - **Tre runde taster** sitter rett under skjermen: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og meny.
 - **D-paden** er en stor gullring (Ø 30 mm) med fire retninger og en mørk OK i midten. Den sitter høyt, der tommelen hviler. Fire små runde taster står på skrå rundt den: tilbake, info, guide og avslutt.
 - **Volum og kanal/side** er to loddrette vipper, en på hver side. Mellom dem sitter demp og siste kanal.
@@ -42,7 +51,7 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 | Del | Hvorfor |
 |---|---|
 | **ESP32-S3 SuperMini** (ESP32-S3FH4R2, 4 MB flash, 2 MB PSRAM) | Det minste vanlige S3-kortet (22,5 × 18 mm). Det har Wi-Fi og nok minne til LVGL, pluss dyp søvn med vekking fra to pinner. Det koster rundt 45 kr. Det ligger under tastene, med antennen mot halen, der det bare er plast rundt. |
-| **2,0″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + CST816) | Høyt format passer i en smal fjernkontroll. IPS gir god vinkel, og kapasitiv berøring føles som en telefon. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `cst816`). Aktivt område 30,6 × 40,8 mm. |
+| **2,8″ IPS 240 × 320 med kapasitiv berøring** (ST7789 + FT6336U), naken FPC-modul med dekkglass, ca. 50,0 × 69,2 × 4 mm | Den største skjermen som får plass i bredden. Glasset er 50 mm bredt, så kroppen trenger bare å vokse fra 54 til 55 mm, og skjermen fyller nesten hele fronten. Aktivt område 43,2 × 57,6 mm, dobbelt så stort som 2,0″ (30,6 × 40,8 mm). Samme oppløsning, så fastvaren er den samme med litt større skrift. Begge brikkene har ferdige drivere i ESPHome (`ili9xxx`, `ft63x6`). En naken FPC-modul er tynnere enn de røde kortene med stiftlist. |
 | **3 × TCA9555** (16-bits I²C-utvider, interne pull-ups) | 44 taster blir 44 egne innganger, uten matrise, så det blir ingen spøkelsestrykk. Fire pinner er til overs for vibrator, skjermstrøm og ladestatus. INT-utgangene går sammen til én pinne som vekker ESP-en. Brikkene trekker ca. 1 µA hver i ro. |
 | **44 × SMD-taktbryter 4 × 4 × 1,5 mm** | Lav profil gjør fjernkontrollen tynn: kort 1,0 + bryter 1,5 + hette over. De er billige i 100-pakker. |
 | **3 × IR-diode 940 nm (3 mm) + AO3400** | Tre dioder i viften gir lang rekkevidde og bred spredning. AO3400 (logisk nivå) gir ca. 200 mA puls per diode fra batteriet. |
@@ -57,7 +66,7 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 
 ### Tastekortet – to måter
 
-**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 47,6 × 141 mm. Mappa `tastekort/` har alt du trenger for å tegne det:
+**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 141 mm. Mappa `tastekort/` har alt du trenger for å tegne det:
 - `kort_omriss.dxf` er omrisset med hull og hakk for skruene (origo nede til venstre, halen ned).
 - `plassering.csv` gir x/y for de 44 bryterne (oppside) og de tre TCA9555 (underside).
 - `koblinger.csv` viser hvilken bryter som går til hvilken brikke og pinne.
@@ -86,7 +95,7 @@ Prisene er omtrentlige AliExpress-priser i november 2026, inkludert billigste fr
 | Del | Søkeord | Antall | Ca. pris |
 |---|---|---|---|
 | ESP32-S3 SuperMini | «ESP32-S3 SuperMini» | 1 | 45 kr |
-| 2,0″ IPS 240 × 320 berøringsskjerm, ST7789 + CST816 | «2.0 inch IPS capacitive touch 240x320 ST7789 CST816» | 1 | 110 kr |
+| 2,8″ IPS 240 × 320 berøringsskjerm, ST7789 + FT6336U (naken FPC med dekkglass, ikke rødt kort) | «2.8 inch IPS capacitive touch 240x320 ST7789 FT6336U» | 1 | 150 kr |
 | LiPo 603450 1200 mAh med JST-PH 2.0 | «603450 lipo 1200mAh» | 1 | 60 kr |
 | TP4056 USB-C med beskyttelse (5 stk) | «TP4056 type-c protection» | 1 pk | 25 kr |
 | Tastekort fra JLCPCB, 1,0 mm, 5 stk (uten montering) | jlcpcb.com | 1 bestilling | 120 kr |
@@ -103,12 +112,12 @@ Prisene er omtrentlige AliExpress-priser i november 2026, inkludert billigste fr
 | M2 × 10 selvgjengende skruer, linsehode (5 stk brukes) | «M2x10 self tapping pan head» | 1 pk | 20 kr |
 | Dobbeltsidig skumtape 1 mm | «1mm double sided foam tape» | 1 rull | 20 kr |
 | Filament, ca. 50 g (PLA eller PETG) | | | 20 kr |
-| **Sum** | | | **ca. 685 kr** |
+| **Sum** | | | **ca. 725 kr** |
 
 Valgfritt:
 - **IR-akryl, 1 mm** («IR transmitting acrylic sheet», ca. 35 kr) i stedet for printet IR-vindu.
 - **JLC-montering** av TCA9555 (ca. +250 kr).
-- **Variant B** med printet bryterbrett og tre PCF8575-moduler (ca. 60 kr i stedet for kortet og TCA9555): totalt **ca. 585 kr**.
+- **Variant B** med printet bryterbrett og tre PCF8575-moduler (ca. 60 kr i stedet for kortet og TCA9555): totalt **ca. 625 kr**.
 
 ## Kobling
 
@@ -218,11 +227,11 @@ Bruk `lag_stl.sh` for å eksportere alt på nytt (STL, sjekk og 3MF) etter endri
 ## Montering
 
 1. **Tastekortet:** lodd de 44 bryterne (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
-2. **IR-kortet:** lodd de tre IR-diodene liggende (de peker ut gjennom nesen), VS1838B og AO3400 på en 36 × 7 mm hullkortbit. Kortet står i sporet i nesen, med diodene mot vinduet.
+2. **IR-kortet:** lodd de tre IR-diodene liggende (de peker ut gjennom nesen), VS1838B og AO3400 på en 34 × 7 mm hullkortbit. Kortet står i sporet i nesen, med diodene mot vinduet.
 3. **IR-vinduet:** trykk det inn i nesen fra innsiden (kragen inn) og fest med en dråpe lim.
 4. **Lader og ESP:** legg TP4056 i lomma i halen med USB-C ut gjennom hullet. Legg SuperMini-en i lomma foran (antennen mot halen). Lodd ledningene etter tabellen. Bruk kort silikontråd og legg den flatt.
 5. **Batteriet:** legg det i lomma under skjermen, med kabelen mot nesen, og koble til TP4056 B+/B−. **Flash fastvaren før dette** (se under).
-6. **Skjermen:** legg en 1 mm skumtape på batteriet og legg skjermen med glasset ned i lomma i toppen (flatkabelen mot tastene).
+6. **Skjermen:** legg en 1 mm skumtape på batteriet og legg skjermen med glasset ned i lomma i toppen (flatkabelen mot tastene). Lomma går nesten helt ut til sideveggene; leppa på bunnen er derfor kuttet langs skjermen.
 7. **Hettene:** legg toppen med forsiden ned og sett alle hettene i hullene sine fra innsiden. OK settes inn i gullringen nedenfra før ringen legges i. Flensen holder dem på plass.
 8. **Lukk:** legg tastekortet over hettene (bryterne ned mot hettene). Legg bunnen med all innmaten over, og skru sammen med 5 × M2 × 10 fra undersiden: fire i hjørnene og én i midten, som også klemmer tastekortet.
 
@@ -329,24 +338,25 @@ Dette er et overslag, ikke målt.
 | TP4056/DW01 fra batteriet | 3–6 µA |
 | Skjerm, berøring og IR-mottaker | 0 (strømmen er av) |
 
-**Våken** trekker den ca. 75 mA i snitt: Wi-Fi med lett strømsparing ca. 45 mA, baklys ca. 20 mA og skjerm og resten ca. 10 mA. Det tar ca. 1,5 s å koble til Wi-Fi etter søvn.
+**Våken** trekker den ca. 85 mA i snitt: Wi-Fi med lett strømsparing ca. 45 mA, baklys ca. 30 mA (2,8″ har flere lysdioder enn 2,0″) og skjerm og resten ca. 10 mA. Det tar ca. 1,5 s å koble til Wi-Fi etter søvn.
 
 | Bruk | Våken per døgn | Forbruk per døgn | 1200 mAh (85 % brukbart) |
 |---|---|---|---|
-| Lite: 10 løft à 30 s | 5 min | ca. 8 mAh | ca. 4 måneder |
-| Vanlig: 30 løft à 45 s | 22 min | ca. 30 mAh | **ca. 4–5 uker** |
-| Mye: 2 timer med skjermen på | 120 min | ca. 150 mAh | ca. 1 uke |
+| Lite: 10 løft à 30 s | 5 min | ca. 9 mAh | ca. 3–4 måneder |
+| Vanlig: 30 løft à 45 s | 22 min | ca. 34 mAh | **ca. 4 uker** |
+| Mye: 2 timer med skjermen på | 120 min | ca. 170 mAh | ca. 6 dager |
 
 Du får mer ut av batteriet hvis du:
 - setter fast IP (`manual_ip`), som gir raskere oppkobling;
 - setter `sovn_etter` til 20 s;
 - skrur ned baklyset;
-- bytter LDO-en på SuperMini til en med lav hvilestrøm (f.eks. HT7833, 4 µA).
+- bytter LDO-en på SuperMini til en med lav hvilestrøm (f.eks. HT7833, 4 µA);
+- bruker et større batteri. Under 2,8″-skjermen er det plass til et LiPo på 6 × 40 × 60 mm (604060, ca. 2000 mAh) hvis du justerer `bat` og ribbene i modellen.
 
 ## Begrensninger og hva som ikke er testet
 
 - **Ingenting er bygget eller målt.** Modellen er sjekket for kollisjoner, veggtykkelse og tastehull. Fastvaren er validert med `esphome config`, men ikke kompilert eller kjørt. C++-koden i lambdaene (IR-sending, JSON og LVGL-kall) kan trenge småjusteringer ved første kompilering.
-- **Mål skjermmodulen før du printer.** 2,0″-modulene på AliExpress varierer. Modellen bruker 36 × 52 × 4,0 mm glass/modul med aktivt område 30,6 × 40,8 mm midt på. Juster `modW`, `modH`, `modT` og `scrN` i `skjold_fjernkontroll.scad` hvis din er annerledes.
+- **Mål skjermmodulen før du printer.** 2,8″-modulene på AliExpress varierer. Modellen bruker 50,0 × 69,2 × 4,0 mm glass/modul med aktivt område 43,2 × 57,6 mm midt på glasset. På mange paneler sitter det aktive området litt nærmere den ene enden (motsatt flatkabelen). Juster `modW`, `modH`, `modT`, `modN0` og `scrAW`/`scrAH` i `skjold_fjernkontroll.scad` hvis din er annerledes. Er modulen tykkere enn 4 mm, bruk tynnere skumtape (eller ingen) mellom batteriet og skjermen, opptil 5 mm.
 - **SuperMini-kortene varierer litt** (pinnerekkefølge, LDO). Sjekk at GPIO 1–13, 43 og 44 er ført ut på ditt kort.
 - **4 MB flash er nok, men ikke romslig.** LVGL, tre skrifter og online_image tar plass, og OTA trenger to like store partisjoner. Blir bygget for stort, bruk færre glyfer, dropp `f_tittel` eller velg et S3-kort med 8–16 MB.
 - **Det første trykket etter søvn** når fram hvis du holder tasten litt (ESP-en bruker ca. 0,3 s på å våkne og leser tasten når den starter). Et veldig kort trykk vekker bare skjermen. Kommandoer til Skjold sendes så snart Wi-Fi er oppe (ca. 1,5 s).
