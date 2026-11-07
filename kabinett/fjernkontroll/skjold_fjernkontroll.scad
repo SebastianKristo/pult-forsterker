@@ -1,4 +1,4 @@
-// Skjold Fjernkontroll – universell fjernkontroll med 2,8″ fargeberøringsskjerm, 17 taster (full variant 33), IR og Wi-Fi. Parametrisk OpenSCAD.
+// Skjold Fjernkontroll – universell fjernkontroll med 2,8″ fargeberøringsskjerm, 14 taster (full variant 30), IR og Wi-Fi. Parametrisk OpenSCAD.
 // Eget Skjold-design: en rett, flat «plate» med myke R11-hjørner sett ovenfra og 45°-fas rundt topp- og bunnkanten
 // (ingen innsnevring på midten). Toppen er lys (eller mørk), bunnen mørk, delt i en rett skjøt rundt hele siden.
 // Gullring rundt OK, gull Skjold-tast under skjermen, SKJOLD i gull felt inn nederst. Tastene er egne hetter som holdes
@@ -14,7 +14,7 @@
 include <taster.scad>
 
 part = "samlet";
-variant = "kort";               // kort (standard: 17 taster, 200 mm) | full (valgfri, med talltaster og smarthus-rad: 33 taster, 243 mm)
+variant = "kort";               // kort (standard: 14 taster, 193 mm) | full (valgfri, med talltaster og smarthus-rad: 30 taster, 236 mm)
 kortv = variant == "kort";
 farge = "lys";                  // lys | mork | bone (Bone White PLA + mørk PETG) | bone_gra (Bone White PLA + grå PETG)
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
@@ -22,7 +22,7 @@ skjermE = 0;                    // part="skjermflate": samme eksplosjonsavstand 
 $fn = 48;
 
 // ---------- ytre mål ----------
-W = 55; L = kortv ? L_KORT : L_FULL;   // bredde og lengde (fra taster.py: 200 mm standard, 243 mm full)
+W = 55; L = kortv ? L_KORT : L_FULL;   // bredde og lengde (fra taster.py: 193 mm standard, 236 mm full)
 HETTER = kortv ? HETTER_KORT : HETTER_FULL;
 BRYTERE = kortv ? BRYTERE_KORT : BRYTERE_FULL;
 PCB_N1 = kortv ? PCB_N1_KORT : PCB_N1_FULL;
@@ -70,7 +70,7 @@ zGlass = H - lepT;              // glassets overside (12,7)
 bossD = 5.0;  bossBD = 6.0;     // tårn i toppen og bunnen
 pilot = 1.7;  klar = 2.3;  hodeD = 4.3;  hodeH = 2.5;
 zMot = zs + lipH;               // hjørnetårnene møtes her (8,6)
-SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [8, L - 90]];   // nese ×2 (foran skjermen), hale ×2, midt (venstre for D-paden, n = 90, utenfor USB-C-veien til SuperMini-en)
+SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [W - 7, L - 88]];   // nese ×2 (foran skjermen), hale ×2, midt (til høyre ved toppen av D-paden, n = 88)
 MIDT = 4;                       // skrue nr. 4 (midt) klemmer tastekortet
 PINNER = [[5.5, 133 + DN], [W - 5.5, 133 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
 
@@ -80,7 +80,7 @@ mcu = [18, 22.6, 4.6];              // ESP32-S3 SuperMini (antennen mot halen)
 mcuN = kortv ? 124 : 166;            // til venstre, foran laderen (USB-C mot nesen, fri vei 22 mm for pluggen)
 mcuX = 13.5;
 mcuZ = tB + 1.0;                     // kortet ligger på en 1,0 mm hylle, så USB-C-pluggen går klar av gulvet
-STOLPER = kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 180], [W/2 + 15, 180]]
+STOLPER = kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 172], [W/2 + 15, 172]]
                 : [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 222], [W/2 + 15, 222]];
 TCA = kortv ? [[W/2 + 13, 145], [W/2 + 13, 157]] : [[W/2 - 13, 150], [W/2, 150], [W/2 + 13, 150]];   // TCA9555 under kortet
 lad = [17, 28, 4.4];                // TP4056 Type-C-modul med beskyttelse (PCB 17 × 28 × 1,2, USB-C 9 × 7,3 × 3,2), mot halen
@@ -172,11 +172,6 @@ module ikon(i) {
   else if (i == "enter") { strek([1.5, 1.2], [1.5, -0.4]); strek([1.5, -0.4], [-0.8, -0.4]); polygon([[-1.8, -0.4], [-0.6, 0.6], [-0.6, -1.4]]); }
   else if (i == "lys") { circle(d = 2.6, $fn = 24); translate([-0.7, -2.3]) square([1.4, 1.2]); }
   else if (i == "stikk") { difference() { offset(0.6) square([2.0, 1.6], center = true); } translate([-0.7, 1.2]) square([0.5, 1.0]); translate([0.2, 1.2]) square([0.5, 1.0]); }
-  else if (i == "app1" || i == "app2") {   // liten TV med play-trekant, og tallet 1 eller 2 (ingen merkelogoer)
-    translate([-3.2, 0.3]) { difference() { offset(0.5) square([4.4, 3.0], center = true); offset(-0.3) square([4.4, 3.0], center = true); }
-                             translate([0.1, 0]) trekant(1.5); strek([-1.0, -2.6], [1.0, -2.6], 0.8); }
-    translate([3.2, 0]) tekst(i == "app1" ? "1" : "2", 3.6);
-  }
   else if (i == "minus") strek([-1.3, 0], [1.3, 0], 0.9);
   else if (i == "pluss") { strek([-1.3, 0], [1.3, 0], 0.9); strek([0, -1.3], [0, 1.3], 0.9); }
   else if (len(i) == 1) tekst(i, 3.4);
@@ -189,7 +184,7 @@ module vippe_ikon(i) {
 }
 module symbol2d(h) {   // symbolet for hette h, i hettens lokale ramme (y peker mot nesen)
   if (h[1] == "vippe") vippe_ikon(h[6]);
-  else if (h[1] == "ring") for (a = [0:90:270]) rotate(a) polygon([[-2.3, 10.1], [2.3, 10.1], [0, 13.4]]);   // piler 4,6 × 3,3 mm
+  else if (h[1] == "ring") for (a = [0:90:270]) rotate(a) polygon([[-3.0, 11.85], [3.0, 11.85], [0, 16.15]]);   // piler 6,0 × 4,3 mm
   else ikon(h[6]);
 }
 
@@ -199,7 +194,7 @@ function topp_av(h) = h[1] == "ring" ? H + ringOpp : h[1] == "ok" ? H + okOpp : 
 module hette_kropp(h) {
   f = h[1]; b = h[4]; hh = h[5]; zt = topp_av(h);
   if (f == "ring") {
-    ri = hh/2;                   // indre radius (7,3)
+    ri = hh/2;                   // indre radius (8,5)
     difference() {
       union() {
         translate([0, 0, zHb]) cylinder(r = b/2 + fl, h = flT, $fn = 96);
@@ -210,7 +205,7 @@ module hette_kropp(h) {
       translate([0, 0, 13.3 - 0.01]) cylinder(r = ri - 0.7, h = 5, $fn = 64);
     }
   } else if (f == "ok") {
-    ri = 7.3 - 0.3;              // OK: 0,3 mm klaring inni ringen (nedre del Ø14, øvre Ø12,6)
+    ri = [for (q = HETTER) if (q[1] == "ring") q[5]][0]/2 - 0.3;   // OK: 0,3 mm klaring inni ringen (nedre del Ø16,4, øvre Ø15)
     union() {
       translate([0, 0, zHb]) cylinder(r = ri, h = 12.3 - zHb, $fn = 64);
       translate([0, 0, 12.3 - 0.001]) cylinder(r1 = ri, r2 = ri - 0.7, h = 0.7, $fn = 64);

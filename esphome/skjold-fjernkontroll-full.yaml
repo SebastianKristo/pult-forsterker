@@ -1,9 +1,9 @@
 # FULL VARIANT (valgfri) – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger
-# her: endre skjold-fjernkontroll.yaml og kjør python3 taster.py. Med talltastene og smarthus-raden (33 taster,
+# her: endre skjold-fjernkontroll.yaml og kjør python3 taster.py. Med talltastene og smarthus-raden (30 taster,
 # 3 × TCA9555).
-# Skjold Fjernkontroll – universell fjernkontroll med 2,8″ berøringsskjerm (240 × 320), 33 taster, IR og Wi-Fi.
+# Skjold Fjernkontroll – universell fjernkontroll med 2,8″ berøringsskjerm (240 × 320), 30 taster, IR og Wi-Fi.
 # Maskinvare (se kabinett/fjernkontroll/LES_MEG.md): ESP32-S3 SuperMini, 2,8″ IPS ST7789 + FT6336U berøring (naken FPC-modul),
-# 3 × TCA9555 på tastekortet (33 taster + vibrator, skjermstrøm og ladestatus), 3 × IR-diode 940 nm, VS1838B,
+# 3 × TCA9555 på tastekortet (30 taster + vibrator, skjermstrøm og ladestatus), 3 × IR-diode 940 nm, VS1838B,
 # vibrasjonsbryter (vekker når du løfter den), LiPo 603450 og TP4056 med USB-C.
 #
 #   · Skjermen: Aktiviteter · Spiller (nå spilles, cover, volum) · Kilder og radiofavoritter · Hjem (lys og scener) ·
@@ -13,9 +13,7 @@
 #   · IR: sender og lærer NEC, Samsung, Sony, RC5 og LG. Lærte koder lagres i flash (48 plasser: én per tast + 4 makroer).
 #   · Hver tast sendes til Home Assistant som en hendelse (event-entiteten «Tast» og esphome.skjold_fjernkontroll),
 #     så du kan bruke hvilken som helst tast i en automasjon.
-#   · App 1 og App 2 (nederst): starter en app på Apple TV via Home Assistant (remote.turn_on med activity).
-#     Appnavnene er tekst-entiteter i HA («App 1», «App 2»); hold tasten for å lagre appen som er åpen nå.
-#     Har du lært en IR-kode på tasten, sendes den i stedet.
+#   · Meny-tasten: kort trykk = meny (Kilder, eller lært IR-kode i TV/film), langt trykk = guide (Spiller-siden).
 #   · Dyp søvn etter ${sovn_etter} uten bruk. Vekkes av en tast (TCA9555 INT → GPIO2) eller av at du løfter den
 #     (vibrasjonsbryter → GPIO4).
 #
@@ -43,12 +41,6 @@ substitutions:
   scene_middag: scene.middag
   scene_lesing: scene.lesing
   scene_alt_av: scene.alt_av
-  # App-tastene nederst: hvilken enhet de styrer, og appen de starter første gang (endres senere i HA eller med langt trykk)
-  app_1_entitet: remote.apple_tv     # remote.turn_on med activity = appnavnet (Apple TV-integrasjonen)
-  app_2_entitet: remote.apple_tv
-  app_1: Plex
-  app_2: YouTube
-  app_kilde: media_player.apple_tv   # langt trykk lagrer attributtet app_name herfra
 
 esphome:
   name: ${name}
@@ -222,34 +214,6 @@ switch:
     entity_category: config
 
 # ---------- tilstand ----------
-# App-tastene: navnet på appen hver tast starter (kan endres i Home Assistant, lagres i flash)
-text:
-  - platform: template
-    id: app_1_navn
-    name: App 1
-    icon: mdi:application
-    mode: text
-    optimistic: true
-    restore_value: true
-    initial_value: "${app_1}"
-    max_length: 40
-  - platform: template
-    id: app_2_navn
-    name: App 2
-    icon: mdi:application
-    mode: text
-    optimistic: true
-    restore_value: true
-    initial_value: "${app_2}"
-    max_length: 40
-
-text_sensor:
-  - platform: homeassistant
-    id: atv_app                      # appen som er åpen på Apple TV nå (brukes ved langt trykk på App 1/App 2)
-    entity_id: ${app_kilde}
-    attribute: app_name
-    internal: true
-
 globals:
   - { id: skjold_base, type: std::string, initial_value: '"http://${skjold_host}:${skjold_port}"' }
   - { id: rom_valgt, type: int, restore_value: true, initial_value: "-1" }   # -1 = ${skjold_host}
@@ -275,7 +239,7 @@ globals:
 # >>> navneliste (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   - id: taster_navn
     type: std::vector<std::string>
-    initial_value: '{"opp", "ned", "venstre", "hoyre", "ok", "av", "hjem", "meny", "tilbake", "guide", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned", "app_1", "app_2", "tall_1", "tall_2", "tall_3", "tall_4", "tall_5", "tall_6", "tall_7", "tall_8", "tall_9", "strek", "tall_0", "enter", "lys", "stikk", "minus", "pluss"}'
+    initial_value: '{"av", "opp", "ned", "venstre", "hoyre", "ok", "hjem", "meny", "tilbake", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned", "tall_1", "tall_2", "tall_3", "tall_4", "tall_5", "tall_6", "tall_7", "tall_8", "tall_9", "strek", "tall_0", "enter", "lys", "stikk", "minus", "pluss"}'
 # <<< navneliste
 
 # ---------- sensorer ----------
@@ -321,10 +285,21 @@ binary_sensor:
       - script.execute: sovn_teller
 # >>> taster (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   - platform: gpio
+    id: t_av
+    name: "Tast Av-på"
+    internal: true
+    pin: { tca9555: tca_a, number: 0, mode: { input: true }, inverted: true }
+    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
+    on_multi_click:
+      - timing: [ "ON for at least 0.6s" ]
+        then: [ { script.execute: { id: tast, navn: "av", lang: true } } ]
+      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
+        then: [ { script.execute: { id: tast, navn: "av", lang: false } } ]
+  - platform: gpio
     id: t_opp
     name: "Tast Opp"
     internal: true
-    pin: { tca9555: tca_a, number: 0, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 1, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "opp", lang: false }
@@ -338,7 +313,7 @@ binary_sensor:
     id: t_ned
     name: "Tast Ned"
     internal: true
-    pin: { tca9555: tca_a, number: 1, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 2, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "ned", lang: false }
@@ -352,7 +327,7 @@ binary_sensor:
     id: t_venstre
     name: "Tast Venstre"
     internal: true
-    pin: { tca9555: tca_a, number: 2, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 3, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "venstre", lang: false }
@@ -366,7 +341,7 @@ binary_sensor:
     id: t_hoyre
     name: "Tast Høyre"
     internal: true
-    pin: { tca9555: tca_a, number: 3, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 4, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "hoyre", lang: false }
@@ -380,24 +355,13 @@ binary_sensor:
     id: t_ok
     name: "Tast OK"
     internal: true
-    pin: { tca9555: tca_a, number: 4, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 5, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
         then: [ { script.execute: { id: tast, navn: "ok", lang: true } } ]
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
         then: [ { script.execute: { id: tast, navn: "ok", lang: false } } ]
-  - platform: gpio
-    id: t_av
-    name: "Tast Av-på"
-    internal: true
-    pin: { tca9555: tca_a, number: 5, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "av", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "av", lang: false } } ]
   - platform: gpio
     id: t_hjem
     name: "Tast Skjold (aktiviteter)"
@@ -411,7 +375,7 @@ binary_sensor:
         then: [ { script.execute: { id: tast, navn: "hjem", lang: false } } ]
   - platform: gpio
     id: t_meny
-    name: "Tast Meny"
+    name: "Tast Meny (hold: guide)"
     internal: true
     pin: { tca9555: tca_a, number: 7, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
@@ -432,21 +396,10 @@ binary_sensor:
       - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
         then: [ { script.execute: { id: tast, navn: "tilbake", lang: false } } ]
   - platform: gpio
-    id: t_guide
-    name: "Tast Guide"
-    internal: true
-    pin: { tca9555: tca_a, number: 9, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "guide", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "guide", lang: false } } ]
-  - platform: gpio
     id: t_avslutt
     name: "Tast Avslutt"
     internal: true
-    pin: { tca9555: tca_a, number: 10, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 9, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -457,7 +410,7 @@ binary_sensor:
     id: t_spill_pause
     name: "Tast Spill-pause"
     internal: true
-    pin: { tca9555: tca_a, number: 11, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 10, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -468,7 +421,7 @@ binary_sensor:
     id: t_demp
     name: "Tast Demp"
     internal: true
-    pin: { tca9555: tca_a, number: 12, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 11, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -479,7 +432,7 @@ binary_sensor:
     id: t_vol_opp
     name: "Tast Volum +"
     internal: true
-    pin: { tca9555: tca_a, number: 13, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 12, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "vol_opp", lang: false }
@@ -493,7 +446,7 @@ binary_sensor:
     id: t_vol_ned
     name: "Tast Volum −"
     internal: true
-    pin: { tca9555: tca_a, number: 14, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 13, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "vol_ned", lang: false }
@@ -504,32 +457,10 @@ binary_sensor:
             - script.execute: { id: tast, navn: "vol_ned", lang: false }
             - delay: 160ms
   - platform: gpio
-    id: t_app_1
-    name: "Tast App 1"
-    internal: true
-    pin: { tca9555: tca_a, number: 15, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "app_1", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "app_1", lang: false } } ]
-  - platform: gpio
-    id: t_app_2
-    name: "Tast App 2"
-    internal: true
-    pin: { tca9555: tca_b, number: 0, mode: { input: true }, inverted: true }
-    filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
-    on_multi_click:
-      - timing: [ "ON for at least 0.6s" ]
-        then: [ { script.execute: { id: tast, navn: "app_2", lang: true } } ]
-      - timing: [ "ON for at most 0.59s", "OFF for at least 0.01s" ]
-        then: [ { script.execute: { id: tast, navn: "app_2", lang: false } } ]
-  - platform: gpio
     id: t_tall_1
     name: "Tast Tall 1"
     internal: true
-    pin: { tca9555: tca_b, number: 1, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 14, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -540,7 +471,7 @@ binary_sensor:
     id: t_tall_2
     name: "Tast Tall 2"
     internal: true
-    pin: { tca9555: tca_b, number: 2, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_a, number: 15, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -551,7 +482,7 @@ binary_sensor:
     id: t_tall_3
     name: "Tast Tall 3"
     internal: true
-    pin: { tca9555: tca_b, number: 3, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 0, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -562,7 +493,7 @@ binary_sensor:
     id: t_tall_4
     name: "Tast Tall 4"
     internal: true
-    pin: { tca9555: tca_b, number: 4, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 1, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -573,7 +504,7 @@ binary_sensor:
     id: t_tall_5
     name: "Tast Tall 5"
     internal: true
-    pin: { tca9555: tca_b, number: 5, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 2, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -584,7 +515,7 @@ binary_sensor:
     id: t_tall_6
     name: "Tast Tall 6"
     internal: true
-    pin: { tca9555: tca_b, number: 6, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 3, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -595,7 +526,7 @@ binary_sensor:
     id: t_tall_7
     name: "Tast Tall 7"
     internal: true
-    pin: { tca9555: tca_b, number: 7, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 4, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -606,7 +537,7 @@ binary_sensor:
     id: t_tall_8
     name: "Tast Tall 8"
     internal: true
-    pin: { tca9555: tca_b, number: 8, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 5, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -617,7 +548,7 @@ binary_sensor:
     id: t_tall_9
     name: "Tast Tall 9"
     internal: true
-    pin: { tca9555: tca_b, number: 9, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 6, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -628,7 +559,7 @@ binary_sensor:
     id: t_strek
     name: "Tast Strek"
     internal: true
-    pin: { tca9555: tca_b, number: 10, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 7, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -639,7 +570,7 @@ binary_sensor:
     id: t_tall_0
     name: "Tast Tall 0"
     internal: true
-    pin: { tca9555: tca_b, number: 11, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 8, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -650,7 +581,7 @@ binary_sensor:
     id: t_enter
     name: "Tast Enter"
     internal: true
-    pin: { tca9555: tca_b, number: 12, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 9, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -661,7 +592,7 @@ binary_sensor:
     id: t_lys
     name: "Tast Lys"
     internal: true
-    pin: { tca9555: tca_b, number: 13, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 10, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -672,7 +603,7 @@ binary_sensor:
     id: t_stikk
     name: "Tast Stikkontakt"
     internal: true
-    pin: { tca9555: tca_b, number: 14, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 11, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_multi_click:
       - timing: [ "ON for at least 0.6s" ]
@@ -683,7 +614,7 @@ binary_sensor:
     id: t_minus
     name: "Tast Minus (dempe lys)"
     internal: true
-    pin: { tca9555: tca_b, number: 15, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 12, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "minus", lang: false }
@@ -697,7 +628,7 @@ binary_sensor:
     id: t_pluss
     name: "Tast Pluss (mer lys)"
     internal: true
-    pin: { tca9555: tca_c, number: 0, mode: { input: true }, inverted: true }
+    pin: { tca9555: tca_b, number: 13, mode: { input: true }, inverted: true }
     filters: [ { delayed_on: 15ms }, { delayed_off: 15ms } ]
     on_press:
       - script.execute: { id: tast, navn: "pluss", lang: false }
@@ -716,23 +647,20 @@ event:
     icon: mdi:remote
 # >>> hendelser (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
     event_types:
+      - av
       - opp
       - ned
       - venstre
       - hoyre
       - ok
-      - av
       - hjem
       - meny
       - tilbake
-      - guide
       - avslutt
       - spill_pause
       - demp
       - vol_opp
       - vol_ned
-      - app_1
-      - app_2
       - tall_1
       - tall_2
       - tall_3
@@ -749,17 +677,14 @@ event:
       - stikk
       - minus
       - pluss
-      - ok_lang
       - av_lang
+      - ok_lang
       - hjem_lang
       - meny_lang
       - tilbake_lang
-      - guide_lang
       - avslutt_lang
       - spill_pause_lang
       - demp_lang
-      - app_1_lang
-      - app_2_lang
       - tall_1_lang
       - tall_2_lang
       - tall_3_lang
@@ -810,27 +735,13 @@ script:
           auto post = [](const char *sti, std::string kropp) { id(skjold_post)->execute(std::string(sti), kropp); };
           // --- faste: skjermen og Skjold-tasten ---
           if (navn == "hjem") { if (lang) id(vis_rom)->execute(); else id(vis_aktiviteter)->execute(); return; }
+          if (navn == "meny" && lang) { id(vis_spiller)->execute(); return; }   // langt trykk = guide
           if (navn == "meny" && !(m != 0 && har_ir)) { id(vis_kilder)->execute(); return; }
           if (navn == "av") { if (lang) id(akt_av)->execute(); else if (har_ir) id(ir_send)->execute(plass); else post("/api/power", "{\"on\":false}"); return; }
           // --- smarthus-raden går alltid til Home Assistant ---
           if (navn == "lys") { id(ha_lys_veksle)->execute(); return; }
           if (navn == "stikk") { id(ha_stikk_veksle)->execute(); return; }
           if (navn == "pluss" || navn == "minus") { id(ha_lys_steg)->execute(navn == "pluss" ? 10 : -10); return; }
-          // --- app-tastene: lært IR-kode, ellers start appen via Home Assistant; langt trykk lagrer appen som er åpen ---
-          if (navn == "app_1" || navn == "app_2") {
-            bool en = navn == "app_1";
-            auto *t = en ? id(app_1_navn) : id(app_2_navn);
-            if (lang) {
-              std::string naa = id(atv_app).state;
-              if (naa.empty()) { ESP_LOGW("app", "fant ingen åpen app på ${app_kilde}"); return; }
-              auto c = t->make_call(); c.set_value(naa); c.perform();
-              ESP_LOGI("app", "%s = %s", navn.c_str(), naa.c_str());
-              return;
-            }
-            if (har_ir) { id(ir_send)->execute(plass); return; }
-            id(ha_app)->execute(std::string(en ? "${app_1_entitet}" : "${app_2_entitet}"), t->state);
-            return;
-          }
           // --- TV/film: lærte IR-koder først ---
           if (m != 0 && har_ir) { id(ir_send)->execute(plass); return; }
           // --- Skjold ---
@@ -842,8 +753,7 @@ script:
           else if (navn == "spol_tilbake" || navn == "venstre") post("/api/transport", "{\"action\":\"previous\"}");
           else if (navn.rfind("tall_", 0) == 0 && navn != "tall_0") post("/api/preset", "{\"n\":" + navn.substr(5) + "}");
           else if (navn == "tilbake" || navn == "avslutt") id(vis_aktiviteter)->execute();
-          else if (navn == "guide") id(vis_spiller)->execute();
-          else if (har_ir) id(ir_send)->execute(plass);   // f.eks. meny eller guide: IR hvis du har lært dem
+          else if (har_ir) id(ir_send)->execute(plass);   // f.eks. tilbake eller avslutt: IR hvis du har lært dem
           else ESP_LOGI("tast", "%s%s: ingen handling i modus %d", navn.c_str(), lang ? " (lang)" : "", m);
           lv_slider_set_value(id(sl_volum), id(volum), LV_ANIM_OFF);
           lv_label_set_text_fmt(id(lbl_volum), "%d", id(volum));
@@ -1120,13 +1030,6 @@ script:
           action: light.toggle
           data_template: { entity_id: "{{ e }}" }
           variables: { e: !lambda 'return entitet;' }
-  - id: ha_app                       # start en app (Apple TV: remote.turn_on med activity = appnavn)
-    parameters: { entitet: string, app: string }
-    then:
-      - homeassistant.action:
-          action: remote.turn_on
-          data_template: { entity_id: "{{ e }}", activity: "{{ a }}" }
-          variables: { e: !lambda 'return entitet;', a: !lambda 'return app;' }
   - id: ha_scene
     parameters: { entitet: string }
     then:
