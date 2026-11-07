@@ -12,7 +12,11 @@ STL-ene lages av lag_stl.sh. Krever trimesh og manifold3d. Sjekker:
      toppflaten ≥ 1,5 mm utenom hullene, skjermlomma (0,8 mm leppe) og SKJOLD (felt 0,5 mm inn), gulvet ≥ 1,5 mm utenom skruehodene
   4. minst 1,4 mm materiale mellom tastehullene i toppen (fra taster.py)
   5. hver hette står 0,1 mm over bryteren sin (forvandring) og har klaring rundt i hullet
-  6. tykkelse: kroppen ≤ 14 mm, høyeste tast ≤ 15,5 mm (mål ≤ 18 mm)"""
+  6. tykkelse: kroppen ≤ 14 mm, høyeste tast ≤ 15,5 mm (mål ≤ 18 mm)
+  7. innmaten (referansedeler for alt som kjøpes: batteri, SuperMini, TP4056, IR-kort, vibrasjonsbryter, motor,
+     flatkabler og ledningsbunter): ingen kollisjoner (punkt 2), ≥ 0,5 mm klaring til siden og ≥ 1,0 mm over
+     kort og komponenter, batterilomma ≥ batteriet + 0,5 mm, fri vei for USB-C-pluggen inn til laderen og
+     til SuperMini-en (flashing med bunnen åpen), og skruetårnene treffer ingen komponenter"""
 import itertools
 import sys
 
@@ -54,10 +58,10 @@ for n, want in ANTALL.items():
     melding(god, f"{n:15s} vanntett={m.is_watertight} legemer={deler} {m.volume/1000:6.2f} cm³ {m.extents.round(1)} mm")
 
 # ---------- 2. overlapp i montert stilling ----------
-DELER = ["topp", "bunn", "vindu", "logo", "hetter", "symboler", "kort", "skjerm", "batteri", "mcu", "lader"]
+DELER = ["topp", "bunn", "vindu", "logo", "hetter", "symboler", "kort", "skjerm", "batteri", "mcu", "lader", "ir", "vib", "motor", "flex", "ledninger"]
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in DELER}
 TOUCH = {("topp", "logo"), ("hetter", "symboler"), ("bunn", "vindu"), ("topp", "kort"), ("bunn", "kort"), ("topp", "skjerm"),
-         ("topp", "bunn")}
+         ("topp", "bunn"), ("flex", "kort"), ("flex", "skjerm")}
 
 
 def overlapp(a, b):
@@ -96,7 +100,7 @@ def segment(mesh, o, d):
     return s[1] - s[0]
 
 
-HULL_SIDE = [("hale", W/2 - 5.6, W/2 + 5.6, 1.8, 7.0), ("nese", W/2 - 16.2, W/2 + 16.2, 1.7, 7.5),
+HULL_SIDE = [("hale", W/2 - 6.6, W/2 + 6.6, 0.8, 8.0), ("nese", W/2 - 16.2, W/2 + 16.2, 1.7, 7.5),
              ("hale", W/2 - 9.4, W/2 - 7.6, 3.3, 5.5), ("hale", W/2 + 7.6, W/2 + 9.4, 3.3, 5.5)]
 tynn = []
 for z in np.arange(2.0, 11.8, 0.6):
@@ -117,7 +121,7 @@ melding(not tynn, "sideveggen er ≥ 1,6 mm rundt hele (utenom USB-C, IR-vinduet
 
 # topp og gulv: loddrette stråler
 rot, gulv = [], []
-SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (8, L - 120)]   # skruehodene og forborene
+SKRUER = [(7.5, L - 5.5), (W - 7.5, L - 5.5), (4.9, 8), (W - 4.9, 8), (8, L - 96)]   # skruehodene og forborene
 scr = (W/2 - 25.3, W/2 + 25.3, L - 8.1 - 69.8, L - 8.1)   # lomma for 2,8″-modulen (50,6 × 69,8 mm)
 for x in np.arange(5.13, W - 5, 1.0):
     for y in np.arange(5.37, L - 5, 1.0):
@@ -146,6 +150,102 @@ kropp = max(A["topp"].bounds[1][2], A["bunn"].bounds[1][2]) - A["bunn"].bounds[0
 tast = A["hetter"].bounds[1][2]
 mal = A["topp"].bounds[1] - A["bunn"].bounds[0]
 melding(kropp <= 14.0 and tast <= 15.5, f"mål {mal[0]:.1f} × {mal[1]:.1f} mm, kropp {kropp:.1f} mm tykk, med taster {tast:.1f} mm")
+
+# ---------- 7. innmaten ----------
+REF = {"batteri": 0.5, "mcu": 1.0, "lader": 1.0, "ir": 1.0, "vib": 0.5, "motor": 0.5}   # klaring over (mm)
+I_SPOR = {"ir": {"bunn"}, "vib": {"bunn"}}   # står i spor/vugger i bunnen (bevisst tett tilpasning)
+FAST = ["topp", "bunn", "vindu", "kort", "skjerm", "batteri", "mcu", "lader", "ir", "vib", "motor", "flex"]
+rng = np.random.default_rng(1)
+
+
+def scene(navn):
+    return trimesh.util.concatenate([A[n] for n in navn])
+
+
+def stråle(mesh, o, d):
+    """Avstand fra punktene o langs retningene d til første treff (inf når ingenting treffes)."""
+    loc, idx, _ = mesh.ray.intersects_location(o, d, multiple_hits=False)
+    ut = np.full(len(o), np.inf)
+    if len(idx):
+        ut[idx] = np.linalg.norm(loc - o[idx], axis=1)
+    return ut
+
+
+trangt = []
+for n, over in REF.items():
+    m = A[n]
+    p, fi = trimesh.sample.sample_surface_even(m, 6000, seed=1)
+    nr = m.face_normals[fi]
+    andre = [x for x in FAST if x != n]
+    side = (np.abs(nr[:, 2]) < 0.2) & (p[:, 2] > m.bounds[0][2] + 0.15)
+    topp_ = nr[:, 2] > 0.9
+    for maske, lim, hva in ((side, 0.5, "til siden"), (topp_, over, "over")):
+        if not maske.any():
+            continue
+        o, d = p[maske] + nr[maske] * 0.002, nr[maske]
+        for x in andre:
+            if x in I_SPOR.get(n, ()):
+                continue
+            a = stråle(A[x], o, d)
+            if a.min() < lim - 0.02:
+                i = a.argmin()
+                trangt.append(f"{n}→{x} {hva} {a[i]:.2f} mm ved {o[i].round(1)}")
+melding(not trangt, "klaring rundt referansedelene: ≥ 0,5 mm til siden, ≥ 1,0 mm over kortene (IR-kortet og vibrasjonsbryteren står i spor)"
+        if not trangt else "for trangt: " + "; ".join(trangt[:8]))
+
+# batterilomma: stråler fra batteriets midte i ±x og ±y mot ribbene, og opp mot skjermmodulen
+bv = A["batteri"].vertices
+bv = bv[bv[:, 2] > bv[:, 2].min() + 2.5]   # selve cellen (kabelstumpen ligger lavere)
+c0 = (bv.min(axis=0) + bv.max(axis=0)) / 2
+halv = (bv.max(axis=0) - bv.min(axis=0)) / 2
+z0b, z1b = A["batteri"].vertices[:, 2].min(), A["batteri"].vertices[:, 2].max()
+c0[2], halv[2] = (z0b + z1b) / 2, (z1b - z0b) / 2
+lomme = []
+for d, h in (([1, 0, 0], halv[0]), ([-1, 0, 0], halv[0]), ([0, 1, 0], halv[1]), ([0, -1, 0], halv[1])):
+    o = np.array([c0 + np.array([0, 0, z]) for z in (-2.2, -1.6)])   # i høyde med ribba (1,6 mm)
+    if d[1] < 0:   # kabelen går ut bak (hakket i ribba): mål ved siden av hakket
+        o[:, 0] -= 8
+    a = stråle(A["bunn"], o, np.tile(d, (len(o), 1))).min() - h
+    lomme.append(a)
+opp = stråle(A["skjerm"], np.array([c0]), np.array([[0, 0, 1.0]]))[0] - halv[2]
+melding(min(lomme) >= 0.5 and opp >= 0.5, f"batterilomma: {min(lomme):.2f} mm klaring rundt, {opp:.2f} mm over (krav 0,5)")
+
+# USB-C inn til laderen: pluggens metall (8,4 × 2,6) går fritt gjennom hullet, den støpte delen (12,4 × 6,5) stopper ≤ 1,0 mm fra kontakten
+lv = A["lader"].vertices
+lv = lv[lv[:, 2] > lv[:, 2].min() + 1.3]   # USB-C-kontakten står på kortet
+ufront = lv[:, 1].min()
+zc = 1.6 + 1.2 + 1.6
+skall_ = [(W/2 + u*4.2, zc + v*1.3) for u in (-1, 0, 1) for v in (-1, 0, 1)]
+o = np.array([[x, -5.0, z] for x, z in skall_])
+fri = stråle(A["bunn"], o, np.tile([0, 1.0, 0], (len(o), 1))) + -5.0
+gjennom = bool(np.all(fri > ufront - 0.01))
+# omrisset av den støpte delen: 12,4 × 6,5 mm med R2-hjørner
+vink = np.linspace(0, 2*np.pi, 48, endpoint=False)
+kant = np.array([[W/2 + np.sign(np.cos(a))*4.2 + 2*np.cos(a), -5.0, zc + np.sign(np.sin(a))*1.25 + 2*np.sin(a)] for a in vink])
+stopp = stråle(skall, kant, np.tile([0, 1.0, 0], (len(kant), 1))).min() - 5.0
+melding(gjennom and ufront - stopp <= 1.0,
+        f"USB-C i halen: metallet går fritt inn, den støpte delen stopper {ufront - stopp:.2f} mm foran kontakten (krav ≤ 1,0)")
+
+# USB-C på SuperMini-en (flashing med bunnen åpen): pluggen 12,4 × 6,5 mm og 22 mm lang rett mot nesen
+mv = A["mcu"].vertices
+mv = mv[(mv[:, 2] > mv[:, 2].min() + 1.05) & (mv[:, 1] > mv[:, 1].max() - 7.4)]   # USB-C-kontakten (mot nesen)
+if len(mv):
+    cx, cz, y0 = (mv[:, 0].min() + mv[:, 0].max()) / 2, (mv[:, 2].min() + mv[:, 2].max()) / 2, mv[:, 1].max()
+    plugg = trimesh.creation.box([12.4 + 0.4, 22.0, 6.5 + 0.4])
+    plugg.apply_translation([cx, y0 + 11.0 + 0.01, cz])
+    hinder = [(x, overlapp(plugg, A[x])) for x in ("bunn", "batteri", "lader", "ir", "vib", "motor", "ledninger")]
+    hinder = [f"{x} {v:.2f} mm³" for x, v in hinder if v > 0.001]
+    melding(not hinder, "USB-C på SuperMini-en: fri vei for pluggen (12,4 × 6,5 × 22 mm + 0,2 mm) med bunnen åpen"
+            if not hinder else "USB-C-pluggen til SuperMini-en treffer " + ", ".join(hinder))
+else:
+    melding(False, "fant ikke USB-C på SuperMini-en")
+
+# skruetårnene (med skruen, Ø2,3 mm gjennom hele) mot komponentene
+tårn = trimesh.util.concatenate([trimesh.creation.cylinder(radius=3.0 + 0.5, height=13.5, transform=trimesh.transformations.translation_matrix([x, y, 6.75]))
+                                 for x, y in SKRUER])
+treff = [f"{x} {overlapp(tårn, A[x]):.2f} mm³" for x in ("batteri", "mcu", "lader", "ir", "vib", "motor", "flex", "ledninger")
+         if overlapp(tårn, A[x]) > 0.001]
+melding(not treff, "skruetårnene (+ 0,5 mm) treffer ingen komponenter" if not treff else "skruetårn treffer " + ", ".join(treff))
 
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)

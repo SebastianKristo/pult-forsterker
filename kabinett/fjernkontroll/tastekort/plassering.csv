@@ -1,22 +1,21 @@
 ref,verdi,fotavtrykk,x_mm,y_mm,rot,side
-SW1,tilbake,SW-SMD_4x4x1.5,4.40,83.30,0,topp
-SW2,avslutt,SW-SMD_4x4x1.5,44.20,83.30,0,topp
-SW3,opp,SW-SMD_4x4x1.5,24.30,82.30,0,topp
-SW4,ned,SW-SMD_4x4x1.5,24.30,58.30,0,topp
-SW5,venstre,SW-SMD_4x4x1.5,12.30,70.30,0,topp
-SW6,hoyre,SW-SMD_4x4x1.5,36.30,70.30,0,topp
-SW7,ok,SW-SMD_4x4x1.5,24.30,70.30,0,topp
-SW8,vol_opp,SW-SMD_4x4x1.5,24.30,45.80,0,topp
-SW9,vol_ned,SW-SMD_4x4x1.5,24.30,27.80,0,topp
-SW10,demp,SW-SMD_4x4x1.5,9.30,36.80,0,topp
-SW11,guide,SW-SMD_4x4x1.5,39.30,36.80,0,topp
-SW12,av,SW-SMD_4x4x1.5,10.30,16.30,0,topp
-SW13,hjem,SW-SMD_4x4x1.5,24.30,16.30,0,topp
-SW14,meny,SW-SMD_4x4x1.5,38.30,16.30,0,topp
-SW15,spol_tilbake,SW-SMD_4x4x1.5,8.80,6.30,0,topp
-SW16,spill_pause,SW-SMD_4x4x1.5,24.30,6.30,0,topp
-SW17,spol_frem,SW-SMD_4x4x1.5,39.80,6.30,0,topp
-U1,TCA9555PWR 0x20,TSSOP-24,11.30,9.30,90,bunn
-U2,TCA9555PWR 0x21,TSSOP-24,24.30,9.30,90,bunn
-J1,"FPC 18p 0,8 mm (skjerm)",FPC-18P-0.8mm bunnkontakt,24.30,84.20,0,bunn
-U9,XPT2046 (bare budsjett-skjerm),TSSOP-16,38.30,84.20,90,bunn
+SW1,av,SW-SMD_4x4x1.5,10.30,83.80,0,topp
+SW2,hjem,SW-SMD_4x4x1.5,24.30,83.80,0,topp
+SW3,meny,SW-SMD_4x4x1.5,38.30,83.80,0,topp
+SW4,opp,SW-SMD_4x4x1.5,24.30,72.80,0,topp
+SW5,ned,SW-SMD_4x4x1.5,24.30,48.80,0,topp
+SW6,venstre,SW-SMD_4x4x1.5,12.30,60.80,0,topp
+SW7,hoyre,SW-SMD_4x4x1.5,36.30,60.80,0,topp
+SW8,ok,SW-SMD_4x4x1.5,24.30,60.80,0,topp
+SW9,tilbake,SW-SMD_4x4x1.5,10.30,37.80,0,topp
+SW10,guide,SW-SMD_4x4x1.5,24.30,37.80,0,topp
+SW11,avslutt,SW-SMD_4x4x1.5,38.30,37.80,0,topp
+SW12,spill_pause,SW-SMD_4x4x1.5,15.80,23.30,0,topp
+SW13,demp,SW-SMD_4x4x1.5,15.80,8.30,0,topp
+SW14,vol_opp,SW-SMD_4x4x1.5,34.30,25.30,0,topp
+SW15,vol_ned,SW-SMD_4x4x1.5,34.30,6.30,0,topp
+U1,TCA9555PWR 0x20,TSSOP-24,37.30,21.80,90,bunn
+U2,TCA9555PWR 0x21,TSSOP-24,37.30,9.80,90,bunn
+J1,"FPC 18p 0,8 mm (skjerm)",FPC-18P-0.8mm bunnkontakt,24.30,84.70,0,bunn
+J2,"FPC 6p 0,5 mm (berøring)",FPC-6P-0.5mm bunnkontakt,39.30,84.70,0,bunn
+U9,XPT2046 (bare budsjett-skjerm),TSSOP-16,7.30,84.70,90,bunn

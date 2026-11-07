@@ -1,6 +1,6 @@
 """Tastene på Skjold Fjernkontroll – én kilde for kabinettet, tastekortet, fastvaren og dokumentasjonen.
 
-To varianter: «kort» (standard, uten talltastene og smarthus-raden: 17 taster, 177 mm) og «full» (valgfri, 33 taster, 220 mm).
+To varianter: «kort» (standard, uten talltastene og smarthus-raden: 15 taster, 180 mm) og «full» (valgfri, 31 taster, 223 mm).
 Kjør:  python3 taster.py
   skriver  taster.scad                      (hettene og bryterne for begge variantene til skjold_fjernkontroll.scad)
            tastekort/ og tastekort_full/     (plassering.csv og koblinger.csv: bryter- og brikkeplassering og
@@ -17,7 +17,7 @@ import os
 import re
 
 W, L = 55.0, 230.0          # ytre mål (må stemme med skjold_fjernkontroll.scad); L byttes av bruk("kort")
-L_FULL, L_KORT = 220.0, 177.0
+L_FULL, L_KORT = 223.0, 180.0
 DN = 22.0                   # alt under skjermen flyttet 22 mm mot halen for 2,8″-skjermen (DN i .scad)
 CX = W / 2
 SPILL = 0.35                # klaring rundt hetta i hullet (hver side)
@@ -27,37 +27,34 @@ PCB_N0, PCB_N1 = 57.5 + DN, 198.5 + DN  # tastekortet strekker seg fra n = 57,5 
 # ---------- hettene ----------
 # (id, navn, form, x, n, b, h, ikon, farge, [bryter-id …])
 HETTER = [
-    # to hjørnetaster rett under skjermen, på hver side av D-paden (tilbake og avslutt)
-    ("tilbake", "Tilbake", "rund", 7.6, 61, 6.6, 6.6, "tilbake", "mork", ["tilbake"]),
-    ("avslutt", "Avslutt", "rund", W - 7.6, 61, 6.6, 6.6, "avslutt", "mork", ["avslutt"]),
-    # D-pad: gullring med fire brytere og OK i midten, rett under skjermen
-    ("dpad", "D-pad", "ring", CX, 74, 32, 14.6, "pil", "gull", ["opp", "ned", "venstre", "hoyre"]),
-    ("ok", "OK", "ok", CX, 74, 12.6, 12.6, "OK", "mork", ["ok"]),
-    # stor volumvippe i midten, demp til venstre og guide til høyre
-    ("vol", "Volum", "vippe", CX, 107.5, 11.5, 28, "vol", "mork", ["vol_opp", "vol_ned"]),
-    ("demp", "Demp", "rund", CX - 15, 107.5, 9, 9, "demp", "mork", ["demp"]),
-    ("guide", "Guide", "rund", CX + 15, 107.5, 9, 9, "guide", "mork", ["guide"]),
-    # av/på, Skjold-tasten (gull) og meny rett over avspillingsraden
-    ("av", "Av-på", "rund", CX - 14, 128, 7, 7, "av", "mork", ["av"]),
-    ("hjem", "Skjold (aktiviteter)", "rund", CX, 128, 7.6, 7.6, "skjold", "gull", ["hjem"]),
-    ("meny", "Meny", "rund", CX + 14, 128, 7, 7, "meny", "mork", ["meny"]),
-    # avspilling
-    ("spol_tilbake", "Spol tilbake", "pille", 12, 138, 12, 7.2, "spol_tilbake", "mork", ["spol_tilbake"]),
-    ("spill_pause", "Spill-pause", "pille", CX, 138, 12, 7.2, "spill_pause", "mork", ["spill_pause"]),
-    ("spol_frem", "Spol frem", "pille", W - 12, 138, 12, 7.2, "spol_frem", "mork", ["spol_frem"]),
+    # av/på, Skjold-tasten (gull) og meny rett under skjermen
+    ("av", "Av-på", "rund", CX - 14, 61, 7, 7, "av", "mork", ["av"]),
+    ("hjem", "Skjold (aktiviteter)", "rund", CX, 61, 7.6, 7.6, "skjold", "gull", ["hjem"]),
+    ("meny", "Meny", "rund", CX + 14, 61, 7, 7, "meny", "mork", ["meny"]),
+    # D-pad: gullring med fire brytere og OK i midten
+    ("dpad", "D-pad", "ring", CX, 84, 32, 14.6, "pil", "gull", ["opp", "ned", "venstre", "hoyre"]),
+    ("ok", "OK", "ok", CX, 84, 12.6, 12.6, "OK", "mork", ["ok"]),
+    # tilbake, guide og avslutt rett under D-paden
+    ("tilbake", "Tilbake", "rund", CX - 14, 107, 8, 8, "tilbake", "mork", ["tilbake"]),
+    ("guide", "Guide", "rund", CX, 107, 8, 8, "guide", "mork", ["guide"]),
+    ("avslutt", "Avslutt", "rund", CX + 14, 107, 8, 8, "avslutt", "mork", ["avslutt"]),
+    # medieblokk: store runde taster til venstre (spill/pause, demp), høy volumpille til høyre
+    ("spill_pause", "Spill-pause", "rund", CX - 8.5, 121.5, 12.5, 12.5, "spill_pause", "mork", ["spill_pause"]),
+    ("demp", "Demp", "rund", CX - 8.5, 136.5, 12.5, 12.5, "demp", "mork", ["demp"]),
+    ("vol", "Volum", "vippe", CX + 10, 129, 13, 30, "vol", "mork", ["vol_opp", "vol_ned"]),
 ] + [
     # talltaster 1–9, så − 0 ↵
-    (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 147.0 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
+    (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 149.5 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
     for d in range(1, 10)
 ] + [
-    ("strek", "Strek", "pille", CX - 14, 172.2, 11.6, 6.0, "strek", "mork", ["strek"]),
-    ("tall_0", "Tall 0", "pille", CX, 172.2, 11.6, 6.0, "0", "mork", ["tall_0"]),
-    ("enter", "Enter", "pille", CX + 14, 172.2, 11.6, 6.0, "enter", "mork", ["enter"]),
+    ("strek", "Strek", "pille", CX - 14, 174.7, 11.6, 6.0, "strek", "mork", ["strek"]),
+    ("tall_0", "Tall 0", "pille", CX, 174.7, 11.6, 6.0, "0", "mork", ["tall_0"]),
+    ("enter", "Enter", "pille", CX + 14, 174.7, 11.6, 6.0, "enter", "mork", ["enter"]),
     # smarthus-raden: lys, stikkontakt, − og +
-    ("lys", "Lys", "pille", CX - 18, 181.8, 9.6, 6.0, "lys", "lys", ["lys"]),
-    ("stikk", "Stikkontakt", "pille", CX - 6, 181.8, 9.6, 6.0, "stikk", "lys", ["stikk"]),
-    ("minus", "Minus (dempe lys)", "pille", CX + 6, 181.8, 9.6, 6.0, "minus", "lys", ["minus"]),
-    ("pluss", "Pluss (mer lys)", "pille", CX + 18, 181.8, 9.6, 6.0, "pluss", "lys", ["pluss"]),
+    ("lys", "Lys", "pille", CX - 18, 184.3, 9.6, 6.0, "lys", "lys", ["lys"]),
+    ("stikk", "Stikkontakt", "pille", CX - 6, 184.3, 9.6, 6.0, "stikk", "lys", ["stikk"]),
+    ("minus", "Minus (dempe lys)", "pille", CX + 6, 184.3, 9.6, 6.0, "minus", "lys", ["minus"]),
+    ("pluss", "Pluss (mer lys)", "pille", CX + 18, 184.3, 9.6, 6.0, "pluss", "lys", ["pluss"]),
 ]
 
 # alt under skjermen ligger DN mm lenger bak enn i første utgave (2,0″-skjerm)
@@ -74,7 +71,7 @@ BRYTER_NAVN = {
     "kan_opp": "Kanal +", "kan_ned": "Kanal −",
 }
 DPAD_R = 12.0      # bryterne under gullringen (radius fra senter)
-VIPPE_D = 9.0      # bryterne under volumvippa: ± fra midten
+VIPPE_D = 9.5      # bryterne under volumpillen: ± fra midten
 
 
 def brytere():
@@ -113,9 +110,9 @@ def bruk(variant):
     global HETTER, L, PCB_N1, VARIANT, TCA_POS
     VARIANT = variant
     if variant == "kort":
-        HETTER, L, TCA_POS = HETTER_KORT, L_KORT, [(CX - 13, 157.0), (CX, 157.0)]
+        HETTER, L, TCA_POS = HETTER_KORT, L_KORT, [(CX + 13, 145.0), (CX + 13, 157.0)]
     else:
-        HETTER, L, TCA_POS = HETTER_FULL, L_FULL, [(CX - 13, 135.0 + DN), (CX, 135.0 + DN), (CX + 13, 135.0 + DN)]
+        HETTER, L, TCA_POS = HETTER_FULL, L_FULL, [(CX - 13, 150.0), (CX, 150.0), (CX + 13, 150.0)]
     PCB_N1 = max(b[3] for b in brytere()) + 6.3   # 6,3 mm bak siste bryterrad
 
 
@@ -206,7 +203,8 @@ def plassering():
         rows.append((f"U{i + 1}", f"TCA9555PWR 0x{0x20 + i:02X}", "TSSOP-24", f"{x - 3.2:.2f}", f"{PCB_N1 - n:.2f}", "90", "bunn"))
     fpc_n = 8.4 + 69.2 + 4.5   # fpcN i skjold_fjernkontroll.scad: rett bak skjermmodulen
     rows.append(("J1", "FPC 18p 0,8 mm (skjerm)", "FPC-18P-0.8mm bunnkontakt", f"{CX - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "0", "bunn"))
-    rows.append(("U9", "XPT2046 (bare budsjett-skjerm)", "TSSOP-16", f"{CX + 14 - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "90", "bunn"))
+    rows.append(("J2", "FPC 6p 0,5 mm (berøring)", "FPC-6P-0.5mm bunnkontakt", f"{CX + 15 - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "0", "bunn"))
+    rows.append(("U9", "XPT2046 (bare budsjett-skjerm)", "TSSOP-16", f"{CX - 17 - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "90", "bunn"))
     return rows
 
 
@@ -274,7 +272,7 @@ def tabell():
 
 def full_yaml(kort):
     """esphome/skjold-fjernkontroll-full.yaml: samme fil som standard (kort), men med talltastene og
-    smarthus-raden (33 taster) og 3 × TCA9555."""
+    smarthus-raden (31 taster) og 3 × TCA9555."""
     k = kort
     for a, b in [("  name: skjold-fjernkontroll\n", "  name: skjold-fjernkontroll-full\n"),
                  ("  friendly_name: Skjold Fjernkontroll\n", "  friendly_name: Skjold Fjernkontroll Full\n"),
@@ -284,12 +282,12 @@ def full_yaml(kort):
                  ("  ap: { ssid: \"Skjold Fjernkontroll\" }", "  ap: { ssid: \"Skjold Fjernkontroll Full\" }"),
                  ("# Dette er standardvarianten (uten talltastene og smarthus-raden). Full variant med talltaster og smarthus-rad:\n"
                   "# skjold-fjernkontroll-full.yaml, laget av kabinett/fjernkontroll/taster.py fra denne fila.\n", ""),
-                 ("17 taster, IR og Wi-Fi", "33 taster, IR og Wi-Fi"),
-                 ("2 × TCA9555 på tastekortet (17 taster", "3 × TCA9555 på tastekortet (33 taster")]:
+                 ("15 taster, IR og Wi-Fi", "31 taster, IR og Wi-Fi"),
+                 ("2 × TCA9555 på tastekortet (15 taster", "3 × TCA9555 på tastekortet (31 taster")]:
         assert a in k, a
         k = k.replace(a, b)
     hode = ("# FULL VARIANT (valgfri) – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger\n"
-            "# her: endre skjold-fjernkontroll.yaml og kjør python3 taster.py. Med talltastene og smarthus-raden (33 taster,\n"
+            "# her: endre skjold-fjernkontroll.yaml og kjør python3 taster.py. Med talltastene og smarthus-raden (31 taster,\n"
             "# 3 × TCA9555).\n")
     for kk, v in yaml_blokker().items():
         k = re.sub(rf"# >>> {kk}.*?# <<< {kk}", lambda _m, v=v: v, k, flags=re.S)
@@ -299,7 +297,7 @@ def full_yaml(kort):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     deler, yml = [], os.path.join(here, "..", "..", "esphome", "skjold-fjernkontroll.yaml")
-    for v, antall in (("kort", 17), ("full", 33)):
+    for v, antall in (("kort", 15), ("full", 31)):
         bruk(v)
         assert len(brytere()) == antall, (v, len(brytere()))
         feil = sjekk_steg()
