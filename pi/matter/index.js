@@ -2,7 +2,8 @@
 //
 // Endepunkter (det kontrollerne viser):
 //   1  Høyttaler (Speaker 0x0022)  – OnOff = av/på (strøm), LevelControl = volum 0–100 ↔ 0–254
-//   2  «Demp» (On/Off Plug-in Unit) – på = dempet
+//   2  «Volum» (Dimmable Light)     – nivå = volum, av = dempet (glidebryter i Apple Hjem, som ikke viser Speaker)
+//   3  «Demp» (On/Off Plug-in Unit) – på = dempet
 //   3–8 «Favoritt 1–6» (On/Off Plug-in Unit) – på = spill radiofavoritten, av = slå av
 //   9  «Kilde» (Mode Select)        – én modus per inngang
 // Status hentes fra daemonen (SSE /api/events, REST som reserve) på 127.0.0.1:8765.
@@ -12,7 +13,7 @@ import http from "node:http";
 import crypto from "node:crypto";
 import { Endpoint, Environment, ServerNode, StorageService, VendorId } from "@matter/main";
 import { DescriptorServer } from "@matter/main/behaviors";
-import { ModeSelectDevice, OnOffPlugInUnitDevice, SpeakerDevice } from "@matter/main/devices";
+import { DimmableLightDevice, ModeSelectDevice, OnOffPlugInUnitDevice, SpeakerDevice } from "@matter/main/devices";
 import { FAVORITTER, hendelseTilKall, kildeModuser, statusTilMatter } from "./mapping.js";
 
 const DAEMON = process.env.SKJOLD_DAEMON || "http://127.0.0.1:8765";
@@ -69,11 +70,18 @@ const Bryter = OnOffPlugInUnitDevice.with(DescriptorServer.with("TagList"));
 const tag = (n, label) => ({ tagList: [{ mfgCode: null, namespaceId: 0x07, tag: n, label }] });
 const demp = new Endpoint(Bryter, { id: "demp", descriptor: tag(0, "Demp"), onOff: { onOff: t0.demp } });
 const fav = Array.from({ length: FAVORITTER }, (_, i) => new Endpoint(Bryter, { id: `favoritt${i + 1}`, descriptor: tag(i + 1, `Favoritt ${i + 1}`), onOff: { onOff: t0.favoritter[i] } }));
+// Apple Hjem (og noen andre) støtter ikke Matter-enhetstypen Speaker. En dimbar lampe «Volum» gir glidebryter overalt:
+// nivå = volum, av = dempet.
+const volum = new Endpoint(DimmableLightDevice.with(DescriptorServer.with("TagList")), {
+  id: "volum", descriptor: tag(7, "Volum"),
+  onOff: { onOff: t0.volum.onOff },
+  levelControl: { currentLevel: Math.max(1, t0.volum.level), minLevel: 1, maxLevel: 254, onLevel: null },
+});
 const kilde = new Endpoint(ModeSelectDevice, {
   id: "kilde",
   modeSelect: { description: "Kilde", standardNamespace: null, supportedModes: kildeModuser(inputs, status.input_names || {}), currentMode: t0.kilde },
 });
-for (const e of [hoyttaler, demp, ...fav, kilde]) await node.add(e);
+for (const e of [hoyttaler, volum, demp, ...fav, kilde]) await node.add(e);
 
 // Matter → daemon. «fraSkjold» stopper ekko når vi selv oppdaterer attributtene.
 let fraSkjold = false;
@@ -81,6 +89,8 @@ const send = (type, verdi) => { if (fraSkjold) return; const k = hendelseTilKall
 hoyttaler.events.onOff.onOff$Changed.on((v) => send("onOff", v));
 hoyttaler.events.levelControl.currentLevel$Changed.on((v) => v != null && send("level", v));
 demp.events.onOff.onOff$Changed.on((v) => send("demp", v));
+volum.events.onOff.onOff$Changed.on((v) => send("volumPa", v));
+volum.events.levelControl.currentLevel$Changed.on((v) => v != null && send("volumNivaa", v));
 fav.forEach((e, i) => e.events.onOff.onOff$Changed.on((v) => send("favoritt", { n: i + 1, on: v })));
 kilde.events.modeSelect.currentMode$Changed.on((v) => send("kilde", v));
 
@@ -92,6 +102,7 @@ async function oppdater(s) {
   try {
     await hoyttaler.set({ onOff: { onOff: t.hoyttaler.onOff }, levelControl: { currentLevel: t.hoyttaler.level } });
     await demp.set({ onOff: { onOff: t.demp } });
+    await volum.set({ onOff: { onOff: t.volum.onOff }, levelControl: { currentLevel: Math.max(1, t.volum.level) } });
     for (let i = 0; i < FAVORITTER; i++) await fav[i].set({ onOff: { onOff: t.favoritter[i] } });
     await kilde.set({ modeSelect: { currentMode: t.kilde } });
   } catch (e) { console.error("oppdater:", e.message); } finally { fraSkjold = false; }
@@ -125,7 +136,7 @@ function info() {
     qr: c.pairingCodes.qrPairingCode, manual: c.pairingCodes.manualPairingCode,
     tilstand: { pa: hoyttaler.state.onOff.onOff, niva: hoyttaler.state.levelControl.currentLevel, demp: demp.state.onOff.onOff,
       favoritter: fav.map((e) => e.state.onOff.onOff), kilde: kilde.state.modeSelect.currentMode },
-    endpoints: ["Høyttaler", "Demp", ...fav.map((_, i) => `Favoritt ${i + 1}`), "Kilde"],
+    endpoints: ["Høyttaler", "Volum", "Demp", ...fav.map((_, i) => `Favoritt ${i + 1}`), "Kilde"],
   };
 }
 

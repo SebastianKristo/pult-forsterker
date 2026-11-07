@@ -41,3 +41,12 @@ test("Matter → daemon-kall", () => {
   assert.equal(m.hendelseTilKall("kilde", 5, ["airplay"]), null);
   assert.equal(m.hendelseTilKall("tull", 1), null);
 });
+
+test("Volum-lampe: nivå = volum, av = dempet", () => {
+  const t = m.statusTilMatter({ power: true, volume: 50, mute: false, inputs: [] });
+  assert.equal(t.volum.onOff, true);
+  assert.equal(t.volum.level, 127);
+  assert.equal(m.statusTilMatter({ mute: true, volume: 10, inputs: [] }).volum.onOff, false);
+  assert.deepEqual(m.hendelseTilKall("volumPa", false, []), { sti: "/api/mute", body: { mute: true } });
+  assert.deepEqual(m.hendelseTilKall("volumNivaa", 254, []), { sti: "/api/volume", body: { volume: 100 } });
+});
