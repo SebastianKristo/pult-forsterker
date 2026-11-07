@@ -1,7 +1,7 @@
 #!/bin/sh
 # Eksporter alle STL-er for begge variantene, kjør sjekken og lag 3MF:
-#   standard (kort, 14 taster, 193 mm): utskrift i stl/, montert stilling i asm/
-#   full (valgfri, 30 taster, 236 mm, med talltaster og smarthus-rad): stl_full/ og asm_full/
+#   standard (kort, 14 taster, 209 mm): utskrift i stl/, montert stilling i asm/
+#   full (valgfri, 30 taster, 252 mm, med talltaster og smarthus-rad): stl_full/ og asm_full/
 # Tastene ligger i taster.py; den kjøres først.
 cd "$(dirname "$0")"
 python3 taster.py > /dev/null || exit 1

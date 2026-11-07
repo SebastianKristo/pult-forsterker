@@ -11,6 +11,7 @@ Hver del får filamentnummer i Metadata/model_settings.config (Creality Print / 
 Mørk variant: bytt filament 1 og 2 i sliceren (mørk topp, lys bunn og lyse taster med mørke symboler).
 Hettene ligger i samme mønster som på fjernkontrollen (spredt litt ut), så de er lette å finne igjen."""
 import itertools
+import math
 import zipfile
 
 import trimesh
@@ -48,12 +49,16 @@ def place(parts):
     for f, name, fil, pos, same in parts:
         m = trimesh.load(f"{STL}/{f}.stl")
         if same:
-            d = moved[same]
+            T = moved[same]
+        elif pos == "diag":   # for lang for plata: 45° og midt på (full variant, 252 mm)
+            T = trimesh.transformations.rotation_matrix(math.radians(45), [0, 0, 1])
+            b = m.copy().apply_transform(T).bounds
+            T = trimesh.transformations.translation_matrix([BED/2 - (b[0][0] + b[1][0])/2, BED/2 - (b[0][1] + b[1][1])/2, -b[0][2]]) @ T
         else:
             b = m.bounds
-            d = [pos[0] - b[0][0], pos[1] - b[0][1], -b[0][2]]
-        m.apply_translation(d)
-        moved[f] = d
+            T = trimesh.transformations.translation_matrix([pos[0] - b[0][0], pos[1] - b[0][1], -b[0][2]])
+        m.apply_transform(T)
+        moved[f] = T
         assert m.bounds[1][0] <= BED and m.bounds[1][1] <= BED and m.bounds[0][0] >= 0 and m.bounds[0][1] >= 0, (f, m.bounds)
         out.append((f, name, fil, m))
     # ingen deler overlapper på plata (symbolene og logoen ligger i lommene sine og berører bare)
@@ -98,17 +103,31 @@ def write(fn, title, parts, colors):
 STL = "stl"
 
 
+def plater(variant):
+    """{filnavn: (tittel, deler, farger)} for varianten. Full variant er 254,5 mm, lengre enn plata (250 mm):
+    toppen og bunnen ligger da på hver sin plate, på skrå (45°)."""
+    ut = {}
+    for fn, (title, parts, colors) in PLATES.items():
+        if variant == "kort":
+            ut[fn] = (title, [p for p in parts if p[0] != "knapper_lys"], colors)   # standard har ikke smarthus-raden
+            continue
+        fn = fn.replace("skjold-fjernkontroll-", "skjold-fjernkontroll-full-")
+        title = title.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full")
+        if fn.endswith("-k2.3mf"):
+            diag = [(f, n, fil, "diag" if pos else None, same) for f, n, fil, pos, same in parts]
+            ut[fn.replace("-k2.3mf", "-k2-topp.3mf")] = (title.replace("topp og bunn", "topp"), [p for p in diag if p[0] != "bunn"], colors)
+            ut[fn.replace("-k2.3mf", "-k2-bunn.3mf")] = (title.replace("topp og bunn", "bunn"), [p for p in diag if p[0] == "bunn"], colors)
+        else:
+            ut[fn] = (title, parts, colors)
+    return ut
+
+
 def main():
     """Standard (kort) fra stl/, full variant fra stl_full/ (filene heter skjold-fjernkontroll-full-…)."""
     global STL
     for variant in ("kort", "full"):
         STL = "stl" if variant == "kort" else "stl_full"
-        for fn, (title, parts, colors) in PLATES.items():
-            if variant == "full":
-                fn = fn.replace("skjold-fjernkontroll-", "skjold-fjernkontroll-full-")
-                title = title.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full")
-            else:
-                parts = [p for p in parts if p[0] != "knapper_lys"]   # standard har ikke smarthus-raden
+        for fn, (title, parts, colors) in plater(variant).items():
             write(fn, title, parts, colors)
 
 

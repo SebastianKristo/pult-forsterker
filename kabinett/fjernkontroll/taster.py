@@ -1,6 +1,6 @@
 """Tastene på Skjold Fjernkontroll – én kilde for kabinettet, tastekortet, fastvaren og dokumentasjonen.
 
-To varianter: «kort» (standard, uten talltastene og smarthus-raden: 14 taster, 193 mm) og «full» (valgfri, 30 taster, 236 mm).
+To varianter: «kort» (standard, uten talltastene og smarthus-raden: 14 taster, 209 mm) og «full» (valgfri, 30 taster, 252 mm).
 Kjør:  python3 taster.py
   skriver  taster.scad                      (hettene og bryterne for begge variantene til skjold_fjernkontroll.scad)
            tastekort/ og tastekort_full/     (plassering.csv og koblinger.csv: bryter- og brikkeplassering og
@@ -17,7 +17,7 @@ import os
 import re
 
 W, L = 55.0, 230.0          # ytre mål (må stemme med skjold_fjernkontroll.scad); L byttes av bruk("kort")
-L_FULL, L_KORT = 236.0, 193.0
+L_FULL, L_KORT = 252.0, 209.0
 DN = 22.0                   # alt under skjermen flyttet 22 mm mot halen for 2,8″-skjermen (DN i .scad)
 CX = W / 2
 SPILL = 0.35                # klaring rundt hetta i hullet (hver side)
@@ -27,34 +27,34 @@ PCB_N0, PCB_N1 = 57.5 + DN, 198.5 + DN  # tastekortet strekker seg fra n = 57,5 
 # ---------- hettene ----------
 # (id, navn, form, x, n, b, h, ikon, farge, [bryter-id …])
 HETTER = [
-    # av/på øverst til venstre, mellom skjermen og gullringen
-    ("av", "Av-på", "rund", 7.5, 61, 7, 7, "av", "mork", ["av"]),
+    # av/på på egen rad øverst, venstrejustert (samme kolonne som spill/pause og Skjold-tasten)
+    ("av", "Av-på", "rund", CX - 10, 60, 10, 10, "av", "mork", ["av"]),
     # D-pad: gullring Ø39 med fire brytere og OK (Ø15) i midten
-    ("dpad", "D-pad", "ring", CX, 78, 39, 17, "pil", "gull", ["opp", "ned", "venstre", "hoyre"]),
-    ("ok", "OK", "ok", CX, 78, 15, 15, "OK", "mork", ["ok"]),
-    # 2 × 2 under ringen, i samme kolonner som medieblokken: Skjold-tasten (gull) og meny (kort trykk = meny,
+    ("dpad", "D-pad", "ring", CX, 87.3, 39, 17, "pil", "gull", ["opp", "ned", "venstre", "hoyre"]),
+    ("ok", "OK", "ok", CX, 87.3, 15, 15, "OK", "mork", ["ok"]),
+    # medieblokk rett under D-paden (x = CX ± 18): spill/pause og demp til venstre, høy volumpille til høyre
+    ("spill_pause", "Spill-pause", "rund", CX - 10, 116, 16, 16, "spill_pause", "mork", ["spill_pause"]),
+    ("demp", "Demp", "rund", CX - 10, 135, 16, 16, "demp", "mork", ["demp"]),
+    ("vol", "Volum", "vippe", CX + 9.5, 125.6, 17, 35, "vol", "mork", ["vol_opp", "vol_ned"]),
+    # 2 × 2 under medieblokken, i de samme kolonnene: Skjold-tasten (gull) og meny (kort trykk = meny,
     # langt = guide) øverst, tilbake og avslutt under
-    ("hjem", "Skjold (aktiviteter)", "rund", CX - 10, 102.7, 8, 8, "skjold", "gull", ["hjem"]),
-    ("meny", "Meny (hold: guide)", "rund", CX + 9.5, 102.7, 8, 8, "meny", "mork", ["meny"]),
-    ("tilbake", "Tilbake", "rund", CX - 10, 113.7, 8, 8, "tilbake", "mork", ["tilbake"]),
-    ("avslutt", "Avslutt", "rund", CX + 9.5, 113.7, 8, 8, "avslutt", "mork", ["avslutt"]),
-    # medieblokk (x = CX ± 18): store runde taster til venstre (spill/pause, demp), høy volumpille til høyre
-    ("spill_pause", "Spill-pause", "rund", CX - 10, 128.5, 16, 16, "spill_pause", "mork", ["spill_pause"]),
-    ("demp", "Demp", "rund", CX - 10, 147.5, 16, 16, "demp", "mork", ["demp"]),
-    ("vol", "Volum", "vippe", CX + 9.5, 138, 17, 35, "vol", "mork", ["vol_opp", "vol_ned"]),
+    ("hjem", "Skjold (aktiviteter)", "rund", CX - 10, 151.7, 11.5, 11.5, "skjold", "gull", ["hjem"]),
+    ("meny", "Meny (hold: guide)", "rund", CX + 9.5, 151.7, 11.5, 11.5, "meny", "mork", ["meny"]),
+    ("tilbake", "Tilbake", "rund", CX - 10, 166, 11.5, 11.5, "tilbake", "mork", ["tilbake"]),
+    ("avslutt", "Avslutt", "rund", CX + 9.5, 166, 11.5, 11.5, "avslutt", "mork", ["avslutt"]),
 ] + [
     # talltaster 1–9, så − 0 ↵
-    (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 162.25 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
+    (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 178.5 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
     for d in range(1, 10)
 ] + [
-    ("strek", "Strek", "pille", CX - 14, 187.45, 11.6, 6.0, "strek", "mork", ["strek"]),
-    ("tall_0", "Tall 0", "pille", CX, 187.45, 11.6, 6.0, "0", "mork", ["tall_0"]),
-    ("enter", "Enter", "pille", CX + 14, 187.45, 11.6, 6.0, "enter", "mork", ["enter"]),
+    ("strek", "Strek", "pille", CX - 14, 203.7, 11.6, 6.0, "strek", "mork", ["strek"]),
+    ("tall_0", "Tall 0", "pille", CX, 203.7, 11.6, 6.0, "0", "mork", ["tall_0"]),
+    ("enter", "Enter", "pille", CX + 14, 203.7, 11.6, 6.0, "enter", "mork", ["enter"]),
     # smarthus-raden: lys, stikkontakt, − og +
-    ("lys", "Lys", "pille", CX - 18, 197.05, 9.6, 6.0, "lys", "lys", ["lys"]),
-    ("stikk", "Stikkontakt", "pille", CX - 6, 197.05, 9.6, 6.0, "stikk", "lys", ["stikk"]),
-    ("minus", "Minus (dempe lys)", "pille", CX + 6, 197.05, 9.6, 6.0, "minus", "lys", ["minus"]),
-    ("pluss", "Pluss (mer lys)", "pille", CX + 18, 197.05, 9.6, 6.0, "pluss", "lys", ["pluss"]),
+    ("lys", "Lys", "pille", CX - 18, 213.3, 9.6, 6.0, "lys", "lys", ["lys"]),
+    ("stikk", "Stikkontakt", "pille", CX - 6, 213.3, 9.6, 6.0, "stikk", "lys", ["stikk"]),
+    ("minus", "Minus (dempe lys)", "pille", CX + 6, 213.3, 9.6, 6.0, "minus", "lys", ["minus"]),
+    ("pluss", "Pluss (mer lys)", "pille", CX + 18, 213.3, 9.6, 6.0, "pluss", "lys", ["pluss"]),
 ]
 
 # alt under skjermen ligger DN mm lenger bak enn i første utgave (2,0″-skjerm)
@@ -201,9 +201,11 @@ def plassering():
         rows.append((f"SW{i + 1}", f"{bid}", "SW-SMD_4x4x1.5", f"{x - 3.2:.2f}", f"{PCB_N1 - n:.2f}", "0", "topp"))
     for i, (x, n) in enumerate(TCA_POS):
         rows.append((f"U{i + 1}", f"TCA9555PWR 0x{0x20 + i:02X}", "TSSOP-24", f"{x - 3.2:.2f}", f"{PCB_N1 - n:.2f}", "90", "bunn"))
-    fpc_n = 8.4 + 69.2 + 4.5   # fpcN i skjold_fjernkontroll.scad: rett bak skjermmodulen
-    rows.append(("J1", "FPC 18p 0,8 mm (skjerm)", "FPC-18P-0.8mm bunnkontakt", f"{CX - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "0", "bunn"))
-    rows.append(("J2", "FPC 6p 0,5 mm (berøring)", "FPC-6P-0.5mm bunnkontakt", f"{CX + 15 - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "0", "bunn"))
+    fpc_n = 8.4 + 66.5 + 37.0   # fpcN i skjold_fjernkontroll.scad: skjermhalen er 42,58 mm
+    tp_n = 8.4 + 66.5 + 29.6    # tpN: berøringens hale er ca. 35,2 mm
+    fpc_x = CX - 47.8 / 2 + 17.96 + 9.5 / 2
+    rows.append(("J1", "FPC 18p 0,5 mm (skjerm)", "FPC-18P-0.5mm bunnkontakt (FH12-18S-0.5SH-stil)", f"{fpc_x - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "0", "bunn"))
+    rows.append(("J2", "FPC 6p 0,5 mm (berøring)", "FPC-6P-0.5mm bunnkontakt (FH12-6S-0.5SH-stil)", f"{CX + 8 - 3.2:.2f}", f"{PCB_N1 - tp_n:.2f}", "0", "bunn"))
     rows.append(("U9", "XPT2046 (bare budsjett-skjerm)", "TSSOP-16", f"{CX - 17 - 3.2:.2f}", f"{PCB_N1 - fpc_n:.2f}", "90", "bunn"))
     return rows
 

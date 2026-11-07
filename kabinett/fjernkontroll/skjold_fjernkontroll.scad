@@ -14,7 +14,7 @@
 include <taster.scad>
 
 part = "samlet";
-variant = "kort";               // kort (standard: 14 taster, 193 mm) | full (valgfri, med talltaster og smarthus-rad: 30 taster, 236 mm)
+variant = "kort";               // kort (standard: 14 taster, 209 mm) | full (valgfri, med talltaster og smarthus-rad: 30 taster, 252 mm)
 kortv = variant == "kort";
 farge = "lys";                  // lys | mork | bone (Bone White PLA + mørk PETG) | bone_gra (Bone White PLA + grå PETG)
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
@@ -22,7 +22,7 @@ skjermE = 0;                    // part="skjermflate": samme eksplosjonsavstand 
 $fn = 48;
 
 // ---------- ytre mål ----------
-W = 55; L = kortv ? L_KORT : L_FULL;   // bredde og lengde (fra taster.py: 193 mm standard, 236 mm full)
+W = 55; L = kortv ? L_KORT : L_FULL;   // bredde og lengde (fra taster.py: 209 mm standard, 252 mm full)
 HETTER = kortv ? HETTER_KORT : HETTER_FULL;
 BRYTERE = kortv ? BRYTERE_KORT : BRYTERE_FULL;
 PCB_N1 = kortv ? PCB_N1_KORT : PCB_N1_FULL;
@@ -49,20 +49,26 @@ ink = 0.4;                      // symbolene: 0,4 mm innfelt, fylt med annen far
 kf = 0.5;                       // fas på hettens toppkant
 
 // ---------- skjerm ----------
-// 2,8″ 240 × 320 naken FPC-modul med dekkglass: IPS med kapasitiv berøring (ST7789 + FT6336U, standard) eller
-// «Budsjett-skjerm» TN med resistiv berøring (ST7789V + XPT2046 på tastekortet). Begge har samme omriss etter
-// tegningen: 50,00 × 69,20 ± 0,2 mm, aktivt område 43,20 × 57,60 mm 2,60 mm fra overkanten (motsatt flatkabelen),
-// 3,8 mm tykk med berøring. Flatkabelen (19,16 mm) går ut i nedre kant mot tastene og bøyes ned til en
-// 18-pinners 0,8 mm FPC-kontakt på undersiden av tastekortet.
-// Vinduet er glasset minus 1,5 mm kant på sidene og oppe, og slutter 1,1 mm under det aktive området nede.
+// 2,8″ 240 × 320 naken FPC-modul med dekkglass: HP28030-DCT IPS med kapasitiv berøring (innplugg-versjonen).
+// Selgerens tegning: 47,80 × 66,50 × 3,56 mm, aktivt område 43,20 × 57,60 mm 2,43 mm fra overkanten (motsatt
+// flatkabelen) og 2,30 mm fra sidene (6,47 mm nede). Skjermkabelen (18 p, 0,5 mm, 9,5 mm bred, 42,58 mm lang) bøyes
+// ned bak glasset og går bakover under tastekortet til J1; berøringens egen kabel (ca. 35,2 mm) går til J2.
+// Vinduet følger det aktive området med 0,9 mm kant rundt. Budsjett-skjermen (50 × 69,2 mm) krever andre mål.
 modN0 = 8.4;                    // modulens nesekant fra nesen (R11-hjørnet bestemmer hvor nær den kan gå)
-modW = 50.0; modH = 69.2; modT = 4.0;  // glass/modul (lomme under toppen, 0,3 mm klaring ≥ toleransen ± 0,2); 3,8 mm + tape
-modC = modN0 + modH/2;          // modulens senter fra nesen (43,0)
-aktivTopp = 2.6;                // fra glassets overkant (mot nesen) til det aktive området
+modW = 47.8; modH = 66.5; modT = 3.56; // HP28030-DCT IPS (innplugg-versjon, selgerens tegning): 47,80 × 66,50 × 3,56 mm uten tape
+                                // (lomme under toppen med 0,3 mm klaring; 1 mm skumtape under, mot batteriet)
+modC = modN0 + modH/2;          // modulens senter fra nesen (41,65)
+aktivTopp = 2.43;               // fra glassets overkant (mot nesen) til det aktive området; 2,30 på sidene, 6,47 nede ved FPC-en
 scrAW = 43.2; scrAH = 57.6;     // aktivt område
-scrN = modN0 + aktivTopp + scrAH/2;   // det aktive områdets og vinduets senter fra nesen (39,8)
-scrWW = modW - 3; scrWH = scrAH + 2*(aktivTopp - 1.5);   // vindu i toppen: 47,0 × 59,8 mm
-fpcN = modN0 + modH + 4.5;      // FPC-kontakten under tastekortet (senter, n), 18-pinners 0,8 mm, 19,6 × 5 × 2 mm
+scrN = modN0 + aktivTopp + scrAH/2;   // det aktive områdets og vinduets senter fra nesen (39,63)
+vKant = 0.9;                    // vinduet går 0,9 mm utenfor det aktive området rundt (svart glasskant synes)
+scrWW = scrAW + 2*vKant; scrWH = scrAH + 2*vKant;   // vindu i toppen: 45,0 × 59,4 mm; 1,4 mm leppe på sidene, 1,5 oppe, 5,6 nede
+pinD = 0.95; pinH = 0.65; pinInn = 0.675;   // styrepinner bak på modulen (46,45 × 65,60 mm mellom senterne)
+fpcX = W/2 - modW/2 + 17.96 + 9.5/2;   // skjermens FPC-hale: 9,5 mm bred, 17,96 mm fra glassets venstre kant
+fpcN = modN0 + modH + 37.0;     // J1 (senter, n): halen er 42,58 mm (ca. 6,3 ned og rundt, 36,3 bakover, 2,5 inn i kontakten)
+tpX = W/2 + 8;                  // berøringens FPC (ca. 5,2 mm bred, 35,2 mm lang)
+tpN = modN0 + modH + 29.6;      // J2 (senter, n)
+jW1 = 13.4; jW2 = 7.4; jD = 5.4; jH = 2.0;   // FH12-stil 0,5 mm, 18 p og 6 p: bredde, dybde, høyde
 lepT = 0.8;                     // toppflaten over glasset rundt vinduet
 zGlass = H - lepT;              // glassets overside (12,7)
 
@@ -70,7 +76,7 @@ zGlass = H - lepT;              // glassets overside (12,7)
 bossD = 5.0;  bossBD = 6.0;     // tårn i toppen og bunnen
 pilot = 1.7;  klar = 2.3;  hodeD = 4.3;  hodeH = 2.5;
 zMot = zs + lipH;               // hjørnetårnene møtes her (8,6)
-SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [W - 7, L - 88]];   // nese ×2 (foran skjermen), hale ×2, midt (til høyre ved toppen av D-paden, n = 88)
+SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [W - 7, L - 88]];   // nese ×2 (foran skjermen), hale ×2, midt (til høyre over D-paden, n = 88)
 MIDT = 4;                       // skrue nr. 4 (midt) klemmer tastekortet
 PINNER = [[5.5, 133 + DN], [W - 5.5, 133 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
 
@@ -80,8 +86,8 @@ mcu = [18, 22.6, 4.6];              // ESP32-S3 SuperMini (antennen mot halen)
 mcuN = kortv ? 124 : 166;            // til venstre, foran laderen (USB-C mot nesen, fri vei 22 mm for pluggen)
 mcuX = 13.5;
 mcuZ = tB + 1.0;                     // kortet ligger på en 1,0 mm hylle, så USB-C-pluggen går klar av gulvet
-STOLPER = kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 172], [W/2 + 15, 172]]
-                : [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 222], [W/2 + 15, 222]];
+STOLPER = kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 190], [W/2 + 15, 190]]
+                : [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 236], [W/2 + 15, 236]];
 TCA = kortv ? [[W/2 + 13, 145], [W/2 + 13, 157]] : [[W/2 - 13, 150], [W/2, 150], [W/2 + 13, 150]];   // TCA9555 under kortet
 lad = [17, 28, 4.4];                // TP4056 Type-C-modul med beskyttelse (PCB 17 × 28 × 1,2, USB-C 9 × 7,3 × 3,2), mot halen
 ladY = t + 0.6;                     // laderens bakkant (USB-C-kontaktens front 0,35 mm bak veggen)
@@ -185,6 +191,7 @@ module vippe_ikon(i) {
 module symbol2d(h) {   // symbolet for hette h, i hettens lokale ramme (y peker mot nesen)
   if (h[1] == "vippe") vippe_ikon(h[6]);
   else if (h[1] == "ring") for (a = [0:90:270]) rotate(a) polygon([[-3.0, 11.85], [3.0, 11.85], [0, 16.15]]);   // piler 6,0 × 4,3 mm
+  else if (h[1] == "rund" && h[4] > 9.9 && h[4] < 13) scale(h[4]/8.5) ikon(h[6]);   // av/på (Ø10) og 2 × 2-tastene (Ø11,5): større symboler
   else ikon(h[6]);
 }
 
@@ -330,8 +337,8 @@ module kort2d() {
 module tastekort() { translate([0, 0, zKort]) linear_extrude(kortT) kort2d(); }
 module brytere() { for (b = BRYTERE) translate([b[1], L - b[2], zKort + kortT]) { translate([-2, -2, 0]) cube([4, 4, swH - 0.4]); cylinder(d = 2.4, h = swH, $fn = 16); } }
 module tca() { for (c = TCA) translate([c[0] - 2.2, L - c[1] - 3.9, zKort - 1.2]) cube([4.4, 7.8, 1.2]);
-  translate([W/2 - 9.8, L - fpcN - 2.5, zKort - 2.0]) cube([19.6, 5.0, 2.0]);        // J1: FPC-kontakt 18 p 0,8 mm for skjermen
-  translate([W/2 + 11.5, L - fpcN - 2.5, zKort - 1.5]) cube([7.0, 5.0, 1.5]);         // J2: FPC-kontakt 6 p 0,5 mm for berøringen
+  translate([fpcX - jW1/2, L - fpcN - jD/2, zKort - jH]) cube([jW1, jD, jH]);        // J1: FPC-kontakt 18 p 0,5 mm for skjermen
+  translate([tpX - jW2/2, L - tpN - jD/2, zKort - jH]) cube([jW2, jD, jH]);           // J2: FPC-kontakt 6 p 0,5 mm for berøringen
   translate([W/2 - 19.5, L - fpcN - 3.2, zKort - 1.2]) cube([5.0, 6.4, 1.2]); }  // XPT2046 (bare budsjett-skjermen)
 module bryterbrett() {   // printet 1,0 mm plate med to Ø1,0-hull per bryter (ledningene) – limes på bryterne (se LES_MEG)
   difference() {
@@ -343,10 +350,11 @@ module bryterbrett() {   // printet 1,0 mm plate med to Ø1,0-hull per bryter (l
 // ---------- innmat (illustrasjon) ----------
 module skjermmodul() {
   translate([W/2 - modW/2, L - modC - modH/2, zGlass - modT]) {
-    color([0.22, 0.22, 0.24]) cube([modW, modH, modT - 0.7]);
+    color([0.22, 0.22, 0.24]) { cube([modW, modH, modT - 0.7]); styrepinner(); }
     color(c_glass) translate([0, 0, modT - 0.7]) cube([modW, modH, 0.7]);
   }
 }
+module styrepinner() { for (x = [pinInn, modW - pinInn], y = [pinInn, modH - pinInn]) translate([x, y, -pinH]) cylinder(d = pinD, h = pinH + 0.01, $fn = 16); }
 module skjermflate() { translate([W/2 - scrAW/2, L - scrN - scrAH/2, zGlass + 0.005]) cube([scrAW, scrAH, 0.02]); }
 // samme flate delt i fire fargede kvadranter (rød = øverst til venstre på skjermbildet, grønn = øverst til høyre,
 // blå = nederst til høyre, gul = nederst til venstre; «øverst» er mot nesen) – skjerm_i_render.py finner hjørnene fra dem
@@ -377,11 +385,10 @@ module vibbryter() { color([0.75, 0.75, 0.78]) translate([vibX, L - vibN - 12, t
 module motor() { color([0.7, 0.7, 0.72]) translate([motX, L - motN, tB + 0.05]) cylinder(d = 10, h = 2.7, $fn = 40); }
 // skjermens flatkabel (19,16 mm, ca. 20 mm bred) ned bak glasset og inn i J1 under tastekortet, og berøringens egen flex (6 mm)
 module flatkabler() {
-  color([0.85, 0.55, 0.15]) {
-    translate([W/2 - 10, L - modN0 - modH - 0.55, 6.4]) cube([20, 0.15, zGlass - modT - 6.4 + 0.3]);
-    translate([W/2 - 10, L - fpcN + 2.5, 6.4]) cube([20, fpcN - 2.5 - modN0 - modH - 0.55 + 0.15, 0.15]);
-    translate([W/2 + 12, L - modN0 - modH - 0.55, 6.4]) cube([6, 0.15, zGlass - modT - 6.4 + 0.3]);
-    translate([W/2 + 12, L - fpcN + 2.5, 6.4]) cube([6, fpcN - 2.5 - modN0 - modH - 0.55 + 0.15, 0.15]);
+  // skjermens hale (9,5 mm, 42,58 mm) ned bak glasset og bakover til J1; berøringens (5,2 mm, 35,2 mm) til J2
+  color([0.85, 0.55, 0.15]) for (f = [[fpcX, 9.5, fpcN], [tpX, 5.2, tpN]]) {
+    translate([f[0] - f[1]/2, L - modN0 - modH - 0.55, 6.4]) cube([f[1], 0.15, zGlass - modT - 6.4 + 0.3]);
+    translate([f[0] - f[1]/2, L - f[2] + jD/2, 6.4]) cube([f[1], f[2] - jD/2 - modN0 - modH - 0.55 + 0.15, 0.15]);
   }
 }
 // ledningsbunter (1,5 × 1,5 mm) i kanalene på gulvet
@@ -426,7 +433,7 @@ else if (part == "A_vindu") ir_vindu();
 else if (part == "A_hetter") { hetter("mork"); hetter("lys"); hetter("gull"); for (f = FARGER) hetter(f[0]); }
 else if (part == "A_symboler") { symboler("mork"); symboler("lys"); symboler("gull"); }
 else if (part == "A_kort") { tastekort(); brytere(); tca(); }
-else if (part == "A_skjerm") translate([W/2 - modW/2, L - modC - modH/2, zGlass - modT]) cube([modW, modH, modT]);
+else if (part == "A_skjerm") translate([W/2 - modW/2, L - modC - modH/2, zGlass - modT]) { cube([modW, modH, modT]); styrepinner(); }
 else if (part == "A_batteri") batteri();
 else if (part == "A_mcu") mcu_kort();
 else if (part == "A_lader") lader();
