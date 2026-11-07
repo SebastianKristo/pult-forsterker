@@ -2,8 +2,8 @@
 
 OpenSCAD kan ikke legge en tekstur på en flate. lag_render.sh tegner derfor det aktive området på skjermen i ren magenta
 (skjerm="nokkel"), og i tillegg bare det aktive området alene med samme kamera (part="skjermflate"), delt i fire fargede
-kvadranter (rød, grønn, blå, gul med klokka fra øverst til venstre). Hjørnet i hver kvadrant er pikselen lengst fra midten,
-så hjørnene blir riktige uansett hvordan fjernkontrollen er dreid i bildet. Fra det første bildet tar vi hvilke piksler
+kvadranter (rød, grønn, blå, gul med klokka fra øverst til venstre). Hjørnet i hver kvadrant regnes ut fra tyngdepunktene
+(se corners), så hjørnene blir riktige uansett hvordan fjernkontrollen er dreid og vippet i bildet. Fra det første bildet tar vi hvilke piksler
 som faktisk synes (vinduskanten skygger litt skrått fra).
 Skjermbildet vrenges perspektivisk inn i hjørnene og legges bare der magentaen synes, med en svak glassrefleks.
 
@@ -30,16 +30,20 @@ def kvadranter(img):
 
 
 def corners(qs):
-    alle = np.logical_or.reduce(qs)
-    ys, xs = np.nonzero(alle)
-    cx, cy = xs.mean(), ys.mean()
+    """Ytterhjørnet i hver kvadrant. For et parallellogram er hjørnet = 2 × kvadrantens tyngdepunkt − midtpunktet,
+    der midtpunktet er snittet av de fire tyngdepunktene. Det gjelder også når skjermen sees svært skrått (der
+    «pikselen lengst fra midten» bommer). Perspektivet gjør det ikke helt eksakt, så vi tar til slutt den
+    pikselen i kvadranten som ligger nærmest det beregnede punktet."""
+    cen = [np.array([np.nonzero(q)[1].mean(), np.nonzero(q)[0].mean()]) for q in qs]
+    c = np.mean(cen, axis=0)
     out = []
-    for q in qs:
-        qy, qx = np.nonzero(q)
-        i = ((qx - cx) ** 2 + (qy - cy) ** 2).argmax()
+    for q, m in zip(qs, cen):
+        p = 2 * m - c
+        ys, xs = np.nonzero(q)
+        i = ((xs - p[0]) ** 2 + (ys - p[1]) ** 2).argmin()
         # hjørnepikselen er et senter; flytt en halv piksel utover fra midten
-        dx, dy = np.sign(qx[i] - cx) * 0.5, np.sign(qy[i] - cy) * 0.5
-        out.append((qx[i] + dx, qy[i] + dy))
+        dx, dy = np.sign(xs[i] - c[0]) * 0.5, np.sign(ys[i] - c[1]) * 0.5
+        out.append((xs[i] + dx, ys[i] + dy))
     return out
 
 
