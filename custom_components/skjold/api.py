@@ -160,6 +160,10 @@ class KiAmpApi:
         return await self._req("POST", "/presence", {"on": on})
 
     # --- tilbehør: Skjold Røst, Skjold Kassett og Skjold Hjul ---
+    async def perf(self) -> dict[str, Any]:
+        """CPU, temperatur, minne, disk, oppetid og strømproblem (vcgencmd) fra /api/health/perf."""
+        return await self._req("GET", "/api/health/perf")
+
     async def rost(self) -> dict[str, Any]:
         return await self._req("GET", "/rost")
 

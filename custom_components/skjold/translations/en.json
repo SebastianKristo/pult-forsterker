@@ -98,6 +98,27 @@
       },
       "kassett_shared_pending": {
         "name": "Pending shared cassettes"
+      },
+      "perf_cpu": {
+        "name": "CPU usage"
+      },
+      "perf_cpu_temp": {
+        "name": "CPU temperature"
+      },
+      "perf_load_1": {
+        "name": "Load (1 min)"
+      },
+      "perf_memory": {
+        "name": "Memory usage"
+      },
+      "perf_memory_used": {
+        "name": "Memory used"
+      },
+      "perf_disk_free": {
+        "name": "Free storage"
+      },
+      "perf_uptime": {
+        "name": "Uptime"
       }
     },
     "binary_sensor": {
@@ -115,6 +136,9 @@
       },
       "rost_connected": {
         "name": "Connected"
+      },
+      "power_problem": {
+        "name": "Power problem"
       }
     },
     "media_player": {

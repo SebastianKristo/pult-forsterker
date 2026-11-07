@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.19.0",
+  "version": "2.20.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -1357,6 +1357,61 @@
           }
         }
       ]
+    },
+    "ki_cpu": {
+      "type": "number",
+      "title": {
+        "en": "CPU usage",
+        "no": "CPU-bruk"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_mem": {
+      "type": "number",
+      "title": {
+        "en": "Memory usage",
+        "no": "Minnebruk"
+      },
+      "units": {
+        "en": "%",
+        "no": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icon.svg"
+    },
+    "ki_disk_free": {
+      "type": "number",
+      "title": {
+        "en": "Free storage",
+        "no": "Ledig lagring"
+      },
+      "units": {
+        "en": "GB",
+        "no": "GB"
+      },
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/icon.svg"
     }
   },
   "flow": {

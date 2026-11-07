@@ -236,6 +236,114 @@ def collect(ctx):
             "time": time.time()}
 
 
+# ---------------------------------------------------------------- ytelse (for Home Assistant, Homey og web)
+PERF_SERVICES = ["ki-amp", "camilladsp", "ki-squeezelite", "squeezelite", "shairport-sync", "skjold-matter", "lyrion", "raspotify"]
+_perf_prev = {"cpu": None, "svc": {}}
+
+
+def parse_proc_stat(text):
+    """(total, idle) jiffies fra første linje i /proc/stat."""
+    for ln in text.splitlines():
+        if ln.startswith("cpu "):
+            v = [int(x) for x in ln.split()[1:]]
+            idle = v[3] + (v[4] if len(v) > 4 else 0)
+            return sum(v), idle
+    return None
+
+
+def cpu_pct(prev, cur):
+    if not prev or not cur or cur[0] <= prev[0]:
+        return None
+    dt, di = cur[0] - prev[0], cur[1] - prev[1]
+    return round(max(0.0, min(100.0, 100.0 * (dt - di) / dt)), 1)
+
+
+def parse_throttled(hexval):
+    """vcgencmd get_throttled → flagg. None når det ikke finnes (ikke Pi)."""
+    if not hexval:
+        return None
+    try:
+        v = int(hexval, 16)
+    except ValueError:
+        return None
+    return {"raw": hexval, "under_voltage": bool(v & 1), "freq_capped": bool(v & 2), "throttled": bool(v & 4),
+            "soft_temp_limit": bool(v & 8), "under_voltage_occurred": bool(v & 0x10000), "freq_capped_occurred": bool(v & 0x20000),
+            "throttled_occurred": bool(v & 0x40000), "soft_temp_limit_occurred": bool(v & 0x80000),
+            "power_problem": bool(v & 0x1 or v & 0x10000)}
+
+
+def parse_meminfo(text):
+    m = {}
+    for ln in text.splitlines():
+        k, _, v = ln.partition(":")
+        try:
+            m[k] = int((v.split() or ["0"])[0])
+        except ValueError:
+            pass
+    tot, av = m.get("MemTotal", 0), m.get("MemAvailable", 0)
+    if not tot:
+        return None
+    return {"total_mb": round(tot / 1024), "used_mb": round((tot - av) / 1024), "pct": round(100 - 100 * av / tot, 1)}
+
+
+def service_usage(name, now, prev):
+    """CPU % og minne for en systemd-tjeneste (CPUUsageNSec/MemoryCurrent); None hvis den ikke kjører."""
+    if not shutil.which("systemctl"):
+        return None
+    out = sh(["systemctl", "show", name + ".service", "-p", "ActiveState", "-p", "CPUUsageNSec", "-p", "MemoryCurrent"])
+    kv = dict(ln.split("=", 1) for ln in out.splitlines() if "=" in ln)
+    if kv.get("ActiveState") != "active":
+        return None
+    def num(k):
+        try:
+            return int(kv.get(k, ""))
+        except ValueError:
+            return None
+    ns, mem = num("CPUUsageNSec"), num("MemoryCurrent")
+    pct = None
+    p = prev.get(name)
+    if ns is not None and p and now > p[0] and ns >= p[1]:
+        pct = round(100.0 * (ns - p[1]) / ((now - p[0]) * 1e9) / (os.cpu_count() or 1), 1)
+    if ns is not None:
+        prev[name] = (now, ns)
+    return {"cpu_pct": pct, "mem_mb": round(mem / 1048576, 1) if mem and mem < 1 << 60 else None}
+
+
+def collect_perf():
+    """Rask ytelsesmåling (ingen journal/nettsjekk) – kalles ofte av Home Assistant og Homey."""
+    now = time.time()
+    cur = parse_proc_stat(read("/proc/stat"))
+    pct = cpu_pct(_perf_prev["cpu"], cur)
+    if pct is None and cur:   # første kall: mål kort selv
+        time.sleep(0.25)
+        cur2 = parse_proc_stat(read("/proc/stat"))
+        pct, cur = cpu_pct(cur, cur2), cur2
+    _perf_prev["cpu"] = cur
+    t = read("/sys/class/thermal/thermal_zone0/temp")
+    thr = sh(["vcgencmd", "get_throttled"]) if shutil.which("vcgencmd") else ""
+    try:
+        load = [round(x, 2) for x in os.getloadavg()]
+    except Exception:
+        load = None
+    try:
+        du = shutil.disk_usage("/")
+        disk = {"free_gb": round(du.free / 1e9, 1), "total_gb": round(du.total / 1e9, 1), "pct": round(100 * du.used / du.total, 1)}
+    except Exception:
+        disk = None
+    up = read("/proc/uptime").split()
+    model = read("/proc/device-tree/model").replace("\x00", "").strip("\x00 ") or None
+    svc = {}
+    for s in PERF_SERVICES:
+        u = service_usage(s, now, _perf_prev["svc"])
+        if u:
+            svc[s] = u
+    return {"cpu_pct": pct, "cpus": os.cpu_count() or 1, "load": load,
+            "temp_c": round(int(t) / 1000, 1) if t.lstrip("-").isdigit() else None,
+            "throttle": parse_throttled(thr.split("=", 1)[1] if "=" in thr else None),
+            "memory": parse_meminfo(read("/proc/meminfo")), "disk": disk,
+            "uptime_s": int(float(up[0])) if up else None, "model": model, "services": svc, "time": now}
+
+
 def routes(ctx):
     import asyncio
 
@@ -255,4 +363,7 @@ def routes(ctx):
         return web.Response(text=txt, content_type="text/markdown",
                             headers={"Content-Disposition": 'attachment; filename="skjold-feilrapport.md"'})
 
-    return [web.get("/api/health", h_health), web.get("/api/health/report", h_report)]
+    async def h_perf(_r):
+        return web.json_response(await asyncio.get_running_loop().run_in_executor(None, collect_perf))
+
+    return [web.get("/api/health", h_health), web.get("/api/health/report", h_report), web.get("/api/health/perf", h_perf)]
