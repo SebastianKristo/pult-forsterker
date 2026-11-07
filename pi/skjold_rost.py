@@ -1,13 +1,13 @@
-"""Skjold Mini – små ESP32-S3-høyttalere (squeezelite-esp32) som rom i Skjold.
+"""Skjold Røst – små ESP32-S3-høyttalere (squeezelite-esp32) som rom i Skjold.
 
-En Mini er en vanlig Squeezebox-spiller i Lyrion. Daemonen finner dem i Lyrions spillerliste og lar deg
+En Røst er en vanlig Squeezebox-spiller i Lyrion. Daemonen finner dem i Lyrions spillerliste og lar deg
 koble dem til dette rommet (Lyrion-synk = sample-nøyaktig avspilling), styre volum og slå av/på.
 Ingen egen protokoll – alt går gjennom Lyrions JSON-RPC som daemonen allerede bruker.
 
-API:  GET /api/mini → {lyrion, minis:[{id, name, ip, connected, power, playing, volume, synced, model}]}
+API:  GET /api/rost (gammelt navn /api/mini virker også) → {lyrion, minis:[{id, name, ip, connected, power, playing, volume, synced, model}]}
       POST /api/mini {id, action: sync|unsync|volume|power, value}
       POST /api/mini {id, action: "presets", value: [n1, n2, n3, n4]}   legg Skjolds radiofavoritter n1–n4 på
-           Mini-ens knapper 1–4 (Lyrion-presets via «jivefavorites set_preset»; knappene sender BCTRLS_PS1–4)
+           høyttalerens knapper 1–4 (Lyrion-presets via «jivefavorites set_preset»; knappene sender BCTRLS_PS1–4)
 """
 BUTTONS = 4   # favorittknapper på fronten
 
@@ -15,14 +15,14 @@ MODEL_HINTS = ("squeezeesp32", "esp32", "squeezelite-esp32")
 
 
 def is_mini(p):
-    """Er denne Lyrion-spilleren en Skjold Mini? Navnet «Skjold Mini …» eller squeezelite-esp32-modell."""
+    """Er denne Lyrion-spilleren en Skjold Røst? Navnet «Skjold Røst …» (også ASCII «Skjold Rost …» og gamle «Skjold Mini …») eller squeezelite-esp32-modell."""
     name = str(p.get("name") or "").lower()
     model = (str(p.get("modelname") or "") + " " + str(p.get("model") or "")).lower()
-    return name.startswith("skjold mini") or any(h in model for h in MODEL_HINTS)
+    return name.startswith(("skjold røst", "skjold rost", "skjold mini")) or any(h in model for h in MODEL_HINTS)
 
 
 def parse_players(res, own_id="", sync_ids=()):
-    """Lyrion «players 0 100»-svar → liste over Mini-er (eget rom utelatt)."""
+    """Lyrion «players 0 100»-svar → liste over Røst-høyttalere (eget rom utelatt)."""
     out = []
     own = (own_id or "").lower()
     synced = {s.lower() for s in sync_ids}
@@ -30,7 +30,7 @@ def parse_players(res, own_id="", sync_ids=()):
         pid = str(p.get("playerid") or "").lower()
         if not pid or pid == own or not is_mini(p):
             continue
-        out.append({"id": pid, "name": p.get("name") or "Skjold Mini", "ip": str(p.get("ip") or "").split(":")[0],
+        out.append({"id": pid, "name": p.get("name") or "Skjold Røst", "ip": str(p.get("ip") or "").split(":")[0],
                     "connected": bool(int(p.get("connected") or 0)), "power": bool(int(p.get("power") or 0)),
                     "playing": bool(int(p.get("isplaying") or 0)), "model": p.get("modelname") or p.get("model") or "",
                     "volume": None, "synced": pid in synced})
@@ -45,7 +45,7 @@ def parse_sync(res):
 
 
 def preset_commands(presets, picks):
-    """Skjolds radiofavoritter (state["presets"], 1-basert «n») → Lyrion-kommandoer for Mini-ens knapper 1–4.
+    """Skjolds radiofavoritter (state["presets"], 1-basert «n») → Lyrion-kommandoer for høyttalerens knapper 1–4.
     picks: liste med favorittnumre i knapperekkefølge (0/None = tom knapp)."""
     cmds = []
     for key, n in enumerate(list(picks or [])[:BUTTONS], 1):
@@ -62,7 +62,7 @@ def preset_commands(presets, picks):
 def command(action, own_id, value=None):
     """→ (spiller, Lyrion-kommando) for en handling. own_id er dette rommets spiller."""
     if action == "sync":
-        return own_id, ["sync", "{id}"]          # Mini-en blir med i dette rommets synkgruppe
+        return own_id, ["sync", "{id}"]          # høyttaleren blir med i dette rommets synkgruppe
     if action == "unsync":
         return "{id}", ["sync", "-"]
     if action == "volume":

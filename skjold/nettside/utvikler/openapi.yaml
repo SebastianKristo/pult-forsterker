@@ -958,7 +958,7 @@ paths:
     get:
       tags:
       - Annet
-      summary: 'GET /api/mini (Mini-høyttalere i Lyrion) · POST /api/mini {id, action: sync|unsync|volume|power, value}.'
+      summary: 'GET /api/rost (Røst-høyttalere i Lyrion) · POST /api/rost {id, action: sync|unsync|volume|power|presets, value}.'
       operationId: get_api_mini
       x-skjold-modul: ki_amp_daemon
       responses:
@@ -971,7 +971,7 @@ paths:
     post:
       tags:
       - Annet
-      summary: 'GET /api/mini (Mini-høyttalere i Lyrion) · POST /api/mini {id, action: sync|unsync|volume|power, value}.'
+      summary: 'GET /api/rost (Røst-høyttalere i Lyrion) · POST /api/rost {id, action: sync|unsync|volume|power|presets, value}.'
       operationId: post_api_mini
       x-skjold-modul: ki_amp_daemon
       responses:
@@ -1045,7 +1045,7 @@ paths:
                 type: object
       description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
 
-        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status).'
+        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet).'
   /api/nfc/{act}:
     get:
       tags:
@@ -1062,7 +1062,7 @@ paths:
                 type: object
       description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
 
-        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status).'
+        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet).'
       parameters:
       - name: act
         in: path
@@ -1084,7 +1084,7 @@ paths:
                 type: object
       description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
 
-        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status).'
+        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet).'
       parameters:
       - name: act
         in: path
@@ -1113,7 +1113,7 @@ paths:
                 type: object
       description: 'POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
 
-        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status).'
+        · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet).'
       parameters:
       - name: act
         in: path
@@ -2187,6 +2187,39 @@ paths:
       - Annet
       summary: POST /api/roon
       operationId: post_api_roon
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/rost:
+    get:
+      tags:
+      - Annet
+      summary: 'GET /api/rost (Røst-høyttalere i Lyrion) · POST /api/rost {id, action: sync|unsync|volume|power|presets, value}.'
+      operationId: get_api_rost
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags:
+      - Annet
+      summary: 'GET /api/rost (Røst-høyttalere i Lyrion) · POST /api/rost {id, action: sync|unsync|volume|power|presets, value}.'
+      operationId: post_api_rost
       x-skjold-modul: ki_amp_daemon
       responses:
         '200':

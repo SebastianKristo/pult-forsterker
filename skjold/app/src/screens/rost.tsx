@@ -1,9 +1,9 @@
-// Skjold Mini: små ESP32-høyttalere (squeezelite-esp32) som spiller synkront med dette rommet via Lyrion.
+// Skjold Røst: små ESP32-høyttalere (squeezelite-esp32) som spiller synkront med dette rommet via Lyrion.
 import { useEffect, useState } from 'preact/hooks';
 import { apiPost, apiReq } from '../lib/api';
 
-export interface Mini { id: string; name: string; ip: string; connected: boolean; power: boolean; playing: boolean; volume: number | null; synced: boolean; model: string }
-interface MiniList { lyrion: boolean; minis: Mini[]; error?: string }
+export interface RostSpeaker { id: string; name: string; ip: string; connected: boolean; power: boolean; playing: boolean; volume: number | null; synced: boolean; model: string }
+interface RostList { lyrion: boolean; minis: RostSpeaker[]; error?: string }
 interface Preset { n: number; title: string }
 
 const A = '#d9a441';
@@ -11,25 +11,25 @@ const card = 'display:flex;flex-direction:column;gap:10px;padding:16px;border-ra
 const muted = 'font-size:12px;color:#8f8f8a;line-height:1.45';
 const sbtn = (on: boolean) => `height:32px;padding:0 12px;border-radius:8px;border:1px solid ${on ? A : '#2e2e30'};background:${on ? '#2a2112' : '#1b1b1c'};color:${on ? '#f0c46a' : '#f2f2ee'};font-size:12.5px;cursor:pointer;white-space:nowrap`;
 
-export function MiniCard() {
-  const [d, setD] = useState<MiniList | null>(null), [err, setErr] = useState('');
+export function RostCard() {
+  const [d, setD] = useState<RostList | null>(null), [err, setErr] = useState('');
   const [presets, setPresets] = useState<Preset[]>([]), [picks, setPicks] = useState<number[]>([1, 2, 3, 4]), [open, setOpen] = useState(''), [msg, setMsg] = useState('');
   useEffect(() => { apiReq<{ items?: Preset[] }>('/api/presets').then((r) => setPresets(r.items ?? [])).catch(() => setPresets([])); }, []);
   const sendPresets = async (id: string) => {
-    try { setD(await apiPost<MiniList>('/api/mini', { id, action: 'presets', value: picks })); setMsg('Lagt på knappene'); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    try { setD(await apiPost<RostList>('/api/rost', { id, action: 'presets', value: picks })); setMsg('Lagt på knappene'); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
   };
-  const load = async () => { try { setD(await apiReq<MiniList>('/api/mini')); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
+  const load = async () => { try { setD(await apiReq<RostList>('/api/rost')); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
   useEffect(() => { void load(); const t = window.setInterval(() => void load(), 8000); return () => clearInterval(t); }, []);
   const act = async (id: string, action: string, value?: number | boolean) => {
-    try { setD(await apiPost<MiniList>('/api/mini', { id, action, value })); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    try { setD(await apiPost<RostList>('/api/rost', { id, action, value })); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
   };
   const list = d?.minis ?? [];
   return (
     <div style={card}>
-      <span style="font-size:16px;font-weight:600">Skjold Mini</span>
+      <span style="font-size:16px;font-weight:600">Skjold Røst</span>
       <span style={muted}>Små høyttalere med ESP32 og squeezelite-esp32. De vises som spillere i Lyrion og spiller i takt med dette rommet når du kobler dem til.</span>
-      {d && !d.lyrion && <span style={muted}>Får ikke kontakt med Lyrion. Mini-er trenger Lyrion for å spille.</span>}
-      {d?.lyrion && !list.length && <span style={muted}>Ingen Mini funnet. Gi høyttaleren et navn som begynner med «Skjold Mini» i oppsettet, så dukker den opp her.</span>}
+      {d && !d.lyrion && <span style={muted}>Får ikke kontakt med Lyrion. Røst-høyttalere trenger Lyrion for å spille.</span>}
+      {d?.lyrion && !list.length && <span style={muted}>Ingen Røst funnet. Gi høyttaleren et navn som begynner med «Skjold Røst» i oppsettet, så dukker den opp her.</span>}
       {list.map((m) => (
         <div key={m.id} style="display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px solid #242426">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
