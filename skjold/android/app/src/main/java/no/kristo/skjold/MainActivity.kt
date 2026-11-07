@@ -17,10 +17,12 @@ import coil.decode.SvgDecoder
 class MainActivity : ComponentActivity() {
     private val model: AppModel by viewModels()
 
-    @Deprecated("Deprecated in Java")
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 11) CallDuck.start(applicationContext)   // tilgang til telefonstatus gitt i Innstillinger
+    // Når brukeren kommer tilbake (f.eks. etter å ha gitt tilgang til telefonstatus i Innstillinger): start
+    // «Senk musikken når telefonen ringer» hvis den er slått på og tillatt. (ComponentActivity sin
+    // onRequestPermissionsResult er ikke overstyrbar her – derfor onResume.)
+    override fun onResume() {
+        super.onResume()
+        CallDuck.start(applicationContext)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
