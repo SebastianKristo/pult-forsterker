@@ -144,6 +144,9 @@ export function PluginsPage() {
 }
 
 function Detail({ p }: { p: Plugin }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  // Detaljene vises øverst i lista – rull dit automatisk når en plugin åpnes, i stedet for at man må bla opp selv.
+  useEffect(() => { boxRef.current?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }, [p.id]);
   const [d, setD] = useState<Record<string, any>>(() => JSON.parse(JSON.stringify(p.cfg)));
   const [msg, setMsg] = useState('');
   useEffect(() => { setD(JSON.parse(JSON.stringify(p.cfg))); setMsg(''); }, [p.id]);
@@ -184,7 +187,7 @@ function Detail({ p }: { p: Plugin }) {
     case 'roomeq': body = <RoomEqPanel enabled={p.enabled} filters={(p.cfg.filters as Peq[]) || []} />; break;
   }
   return (
-    <div style="display:flex;flex-direction:column;gap:10px;padding:18px;border-radius:16px;border:1px solid #3a3220;background:#121214">
+    <div ref={boxRef} style="scroll-margin-top:80px;display:flex;flex-direction:column;gap:10px;padding:18px;border-radius:16px;border:1px solid #3a3220;background:#121214">
       <div style="display:flex;align-items:center;gap:12px"><PlugLogo id={p.id} size={36} /><div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:16px;font-weight:600">{p.name}</span><span style="font-size:12px;color:#8b8b86">{p.status}</span></div><button onClick={() => { sel.value = null; }} style={sbtn + ';margin-left:auto'}>Lukk</button></div>
       {body}
     </div>
