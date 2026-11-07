@@ -4344,7 +4344,7 @@ async def h_lyrics(_r):
 # --- Låtvakt: historikk, scrobbling og webhooks ---
 HISTORY_FILE = os.path.join(os.path.dirname(STATE_FILE), "history.json")
 _hist = {"items": None}
-_watch = {"key": "", "playing": None, "input": None, "start": 0.0, "listened": 0.0, "last": 0.0, "scrobbled": False, "track": {}}
+_watch = {"key": "", "playing": None, "input": None, "start": 0.0, "listened": 0.0, "last": 0.0, "scrobbled": False, "logged": False, "track": {}}
 
 
 def _hist_load():
@@ -4440,7 +4440,10 @@ def _watch_tick():
     now = time.time()
     playing = bool(s.get("playing")) and bool(state["power"])
     title, artist = str(s.get("title") or ""), str(s.get("artist") or "")
-    key = f"{s.get('input')}|{artist}|{title}" if title else ""
+    rn0 = s.get("radio_now") or {}
+    # Radio uten låtinfo: logg kanalen (ellers ble ingenting lagret i lyttehistorikken for radio)
+    hist_title = title or (rn0.get("name") or "")
+    key = f"{s.get('input')}|{artist}|{hist_title}" if hist_title else ""
     w = _watch
     if w["last"] and w["playing"]:
         w["listened"] += min(5.0, now - w["last"])
@@ -4449,18 +4452,22 @@ def _watch_tick():
         _bg(_webhook, "source", {"input": s.get("input")})
     w["input"] = s.get("input")
     if key != w["key"]:
-        w.update(key=key, start=now, listened=0.0, scrobbled=False,
+        w.update(key=key, start=now, listened=0.0, scrobbled=False, logged=False,
                  track={"title": title, "artist": artist, "album": str(s.get("album") or ""), "duration": float(s.get("duration") or 0), "input": s.get("input")})
         if key and playing:
-            if plug_on("history"):
-                rn = s.get("radio_now") or {}
-                history_add({"t": int(now), "title": title, "artist": artist, "album": w["track"]["album"], "input": s.get("input"),
-                             "source": s.get("source_label") or s.get("input"), "station": rn.get("name") or "", "cover": s.get("cover_url") or rn.get("image") or ""})
             if wrapped_on():
                 _wrapped.track(now, artist, title, (s.get("radio_now") or {}).get("name") or "")
             if artist and plug_on("listenbrainz"): _bg(_lb_submit, "playing_now", dict(w["track"]))
             if artist and plug_on("lastfm"): _bg(_lastfm_call, "track.updateNowPlaying", dict(w["track"]))
             _bg(_webhook, "track", {"title": title, "artist": artist, "album": w["track"]["album"], "input": s.get("input")})
+    # Lyttehistorikk: logg når låten faktisk spilles – også hvis den startet på pause/før avspilling kom i gang
+    # (før ble den bare logget hvis «spiller» var sant akkurat i tikket låten byttet, og ofte aldri).
+    if key and playing and not w.get("logged") and plug_on("history"):
+        w["logged"] = True
+        rn = rn0
+        history_add({"t": int(now), "title": hist_title, "artist": artist, "album": w["track"].get("album", ""), "input": s.get("input"),
+                     "source": s.get("source_label") or s.get("input"), "station": rn.get("name") or "",
+                     "cover": s.get("cover_url") or (rn.get("logo") if rn.get("logo") else rn.get("image")) or ""})
     if w["playing"] is not None and playing != w["playing"]:
         _bg(_webhook, "play" if playing else "pause", {"title": title, "artist": artist, "input": s.get("input")})
     w["playing"] = playing
