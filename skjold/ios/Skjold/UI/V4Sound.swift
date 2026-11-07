@@ -123,7 +123,7 @@ struct V4SoundTab: View {
             .contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 0)
                 .onChanged { v in eqDrag(v.location, w: w) }
-                .onEnded { _ in dragging = false })
+                .onEnded { _ in dragging = false; Haptics.sliderRelease() })
         }
         .frame(height: Self.H)
         .padding(.horizontal, -4)
@@ -184,6 +184,7 @@ struct V4SoundTab: View {
     private func eqDrag(_ p: CGPoint, w: CGFloat) {
         if !dragging {
             dragging = true
+            Haptics.prepareSlider()
             let x = p.x / max(1, w)
             var best: CGFloat = 9, idx = band
             for (j, xx) in Self.XS.enumerated() where abs(xx - x) < best { best = abs(xx - x); idx = j }
@@ -198,6 +199,7 @@ struct V4SoundTab: View {
         let c = max(-12, min(12, v))
         if !eqOn { UserDefaults.standard.removeObject(forKey: offKey) }
         guard m.prof.eq.count == 5, m.prof.eq[i] != c || m.prof.preset != -1 else { return }
+        Haptics.sliderStep(from: m.prof.eq[i], to: c, min: -12, max: 12)
         m.setProf { p in
             if p.eq.count != 5 { p.eq = [0, 0, 0, 0, 0] }
             p.eq[i] = c; p.preset = -1
@@ -298,6 +300,7 @@ struct V4SoundTab: View {
                 ForEach(Array(SK.eqPresets.enumerated()), id: \.offset) { i, p in
                     profileTile(p.0, p.1, on: eqOn && m.prof.preset == i) {
                         UserDefaults.standard.removeObject(forKey: offKey)
+                        Haptics.thump()
                         m.setProf { $0.preset = i; $0.eq = p.1 }
                     }
                 }
@@ -418,7 +421,7 @@ struct V4SoundTab: View {
                     .gesture(DragGesture(minimumDistance: 0).onChanged { v in
                         let n = Int((v.location.x / max(1, w) * 10 - 5).rounded())
                         let c = max(-5, min(5, n))
-                        if c != bal { Haptics.tick(); m.setS("bal", c) }
+                        if c != bal { Haptics.sliderStep(from: bal, to: c, min: -5, max: 5); m.setS("bal", c) }
                     })
                 }
                 .frame(height: 30)
