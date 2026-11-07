@@ -272,7 +272,7 @@ class Spoler:
     akselerasjon. Hopp i låten (posisjonen flytter seg mer enn forventet) og ny låt gir et kort «spol» fremover
     (eller «tilbake» ved hopp bakover), som på en ekte kassettspiller. Innstillingene lagres i en liten JSON-fil."""
 
-    STD = {"på": True, "fart": 0.5, "spol": 1.6, "bare_kassett": True}
+    STD = {"på": True, "fart": 0.5, "spol": 1.6, "bare_kassett": True, "vent": 2.5}
     SPOL_TID = 1.4      # sekunder med spoling ved hopp eller ny låt
     HOPP = 4.0          # avvik (s) i posisjon som regnes som hopp
 
@@ -282,6 +282,7 @@ class Spoler:
         self._last: tuple | None = None   # (tid, posisjon, tittel)
         self._spol_til = 0.0
         self._spol_retning = 1
+        self._tvang_til = 0.0    # neste/forrige fra app/Touch: spol fysisk før låten byttes (også mens lyden står)
         if path and os.path.exists(path):
             try:
                 with open(path) as f:
@@ -294,7 +295,7 @@ class Spoler:
             self.cfg["på"] = bool(b["på"])
         if "bare_kassett" in b:
             self.cfg["bare_kassett"] = bool(b["bare_kassett"])
-        for k, lo, hi in (("fart", 0.1, 1.5), ("spol", 0.5, 3.0)):
+        for k, lo, hi in (("fart", 0.1, 1.5), ("spol", 0.5, 3.0), ("vent", 0.0, 6.0)):
             if k in b and b[k] is not None:
                 self.cfg[k] = round(max(lo, min(hi, float(b[k]))), 2)
         if self.path:
@@ -304,8 +305,23 @@ class Spoler:
             os.replace(tmp, self.path)
         return dict(self.cfg)
 
+    def skal_vente(self, kassett_inne: bool) -> float:
+        """Sekunder å spole fysisk ved neste/forrige (0 = ikke vent)."""
+        if not self.cfg["på"] or (self.cfg["bare_kassett"] and not kassett_inne):
+            return 0.0
+        return float(self.cfg.get("vent", 0) or 0)
+
+    def tving(self, retning: int, sek: float, now: float | None = None) -> None:
+        now = time.time() if now is None else now
+        self._tvang_til, self._spol_retning = now + sek, (1 if retning >= 0 else -1)
+        self._spol_til = 0.0   # ikke legg på en ekstra auto-spoling når den nye låten starter
+
     def status(self, st: dict, kassett_inne: bool, now: float | None = None) -> dict:
         now = time.time() if now is None else now
+        if now < self._tvang_til and self.cfg["på"]:
+            self._last = None
+            return {"modus": "spol" if self._spol_retning > 0 else "tilbake", "rps": self.cfg["spol"],
+                    "retning": self._spol_retning, **self.cfg}
         playing = bool(st.get("playing")) and not st.get("paused")
         pos = float(st.get("position") or 0)
         tittel = str(st.get("title") or "")

@@ -150,6 +150,7 @@ function SpolerPanel() {
       <small style="color:#9a9a96">Spolene i kassetten går rundt mens musikken spiller, står stille på pause og spoler når du hopper i låten eller bytter låt.</small>
       <label style="display:flex;gap:10px;align-items:center">Fart <input type="range" min={0.1} max={1.5} step={0.05} value={s.fart} onChange={(e) => set({ fart: +e.currentTarget.value })} style="flex:1" /> <span style="width:70px;text-align:right">{s.fart.toFixed(2)} o/s</span></label>
       <label style="display:flex;gap:10px;align-items:center">Spoling <input type="range" min={0.5} max={3} step={0.1} value={s.spol} onChange={(e) => set({ spol: +e.currentTarget.value })} style="flex:1" /> <span style="width:70px;text-align:right">{s.spol.toFixed(1)} o/s</span></label>
+      <label style="display:flex;gap:10px;align-items:center" title="Ved neste/forrige fra appen eller Touch står lyden mens spolene spoler">Vent ved neste <input type="range" min={0} max={6} step={0.5} value={s.vent ?? 2.5} onChange={(e) => set({ vent: +e.currentTarget.value })} style="flex:1" /> <span style="width:70px;text-align:right">{(s.vent ?? 2.5) ? (s.vent ?? 2.5).toFixed(1) + ' s' : 'av'}</span></label>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked={s.bare_kassett} onChange={(e) => set({ bare_kassett: e.currentTarget.checked })} /> Bare når en kassett står i spilleren</label>
     </div>
   );

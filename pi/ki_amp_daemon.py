@@ -2998,6 +2998,24 @@ async def h_transport(r):
     if a not in TRANSPORT:
         return web.json_response({"error": f"action må være en av {sorted(TRANSPORT)}"}, status=400)
     before = read_status()
+    # Kassett-spilleren: la spolene spole fysisk noen sekunder før låten byttes (lyden står så lenge), som en ekte kassett.
+    vent = spoler.skal_vente(bool(nfc.active_uid)) if a in ("next", "previous") and "spoler" in globals() else 0.0
+    if vent > 0 and before.get("playing"):
+        loop = asyncio.get_running_loop()
+        try:
+            await loop.run_in_executor(None, transport, "pause")
+        except Exception:
+            pass
+        spoler.tving(1 if a == "next" else -1, vent)
+        await asyncio.sleep(vent)
+        try:
+            await loop.run_in_executor(None, transport, a)
+            if state["input"] != "radio":
+                await loop.run_in_executor(None, transport, "play")
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=409)
+        await asyncio.sleep(0.6)
+        return j()
     try:
         await asyncio.get_running_loop().run_in_executor(None, transport, a)
     except Exception as e:
