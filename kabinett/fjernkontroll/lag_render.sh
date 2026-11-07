@@ -15,12 +15,12 @@ r() {   # navn  samlet|eksplodert  kamera  lys|mork  [full|kort]
     openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D 'part="skjermflate"' -D "variant=\"$V\"" -D "skjermE=$E" -o "$TMP/$1.png" skjold_fjernkontroll.scad
     python3 skjerm_i_render.py "render/$1.png" "$TMP/$1.png" render/skjerm-1-aktiviteter.png ) &
 }
-# standard (kort variant, 184 mm)
-SKRA=30,95,7,50,0,-38,320
-OVEN=27.5,92,7,15,0,-90,385
-EKSP=30,93,22,55,0,-38,390
-SIDE=27.5,92,6,80,0,-90,355
-NAER=27.5,120,10,42,0,-22,150
+# standard (kort variant, 177 mm)
+SKRA=30,91.5,7,50,0,-38,315
+OVEN=27.5,88.5,7,15,0,-90,370
+EKSP=30,89.5,22,55,0,-38,380
+SIDE=27.5,88.5,6,80,0,-90,345
+NAER=27.5,113,10,42,0,-22,150
 HALE=27,8,6,72,0,-28,120
 r 01_skra_lys samlet $SKRA lys
 r 02_ovenfra_lys samlet $OVEN lys
@@ -37,11 +37,11 @@ r 22_ovenfra_bone samlet $OVEN bone
 r 23_side_bone samlet $SIDE bone
 r 24_naer_bone samlet $NAER bone
 r 25_skra_bone_gra samlet $SKRA bone_gra
-# full variant (valgfri, 227 mm, med talltaster og smarthus-rad)
-SKRAF=30,117,7,50,0,-38,365
-OVENF=27.5,113.5,7,15,0,-90,465
-EKSPF=30,115,22,55,0,-38,445
-SIDEF=27.5,113.5,6,80,0,-90,435
+# full variant (valgfri, 220 mm, med talltaster og smarthus-rad)
+SKRAF=30,113.5,7,50,0,-38,360
+OVENF=27.5,110,7,15,0,-90,455
+EKSPF=30,111.5,22,55,0,-38,440
+SIDEF=27.5,110,6,80,0,-90,425
 r 01_skra_lys_full samlet $SKRAF lys full
 r 02_ovenfra_lys_full samlet $OVENF lys full
 r 03_eksplodert_lys_full eksplodert $EKSPF lys full

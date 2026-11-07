@@ -1,14 +1,14 @@
 #!/bin/sh
 # Eksporter alle STL-er for begge variantene, kjør sjekken og lag 3MF:
-#   standard (kort, 21 taster, 184 mm): utskrift i stl/, montert stilling i asm/
-#   full (valgfri, 37 taster, 227 mm, med talltaster og smarthus-rad): stl_full/ og asm_full/
+#   standard (kort, 17 taster, 177 mm): utskrift i stl/, montert stilling i asm/
+#   full (valgfri, 33 taster, 220 mm, med talltaster og smarthus-rad): stl_full/ og asm_full/
 # Tastene ligger i taster.py; den kjøres først.
 cd "$(dirname "$0")"
 python3 taster.py > /dev/null || exit 1
 for v in kort full; do
   S=stl; A=asm; [ $v = full ] && { S=stl_full; A=asm_full; }
   mkdir -p $S $A
-  P="topp bunn logo ir_vindu knapper knapper_lys gull symboler_lyse symboler_morke farge_rod farge_gronn farge_gul farge_bla bryterbrett"
+  P="topp bunn logo ir_vindu knapper knapper_lys gull symboler_lyse symboler_morke bryterbrett"
   [ $v = kort ] && P=$(echo $P | sed 's/knapper_lys //')
   for p in $P; do
     openscad -q -D "part=\"$p\"" -D "variant=\"$v\"" -o "$S/$p.stl" skjold_fjernkontroll.scad &

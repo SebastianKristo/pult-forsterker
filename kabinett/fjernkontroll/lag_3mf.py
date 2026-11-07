@@ -3,7 +3,6 @@
   skjold-fjernkontroll-k2.3mf         topp (forsiden ned) med SKJOLD i gull, og bunn          filament 1 lys · 2 mørk · 3 gull
   skjold-fjernkontroll-k2-taster.3mf  alle hetter (flensen ned) med symbolene felt inn, gullring
                                       og Skjold-tast, smarthus-tastene i lys farge, og IR-vinduet  1 lys · 2 mørk · 3 gull · 4 klar
-  skjold-fjernkontroll-k2-farger.3mf  de fire fargetastene                                     1 rød · 2 grønn · 3 gul · 4 blå
 
 Standard er kort variant (uten talltastene og smarthus-raden), fra stl/. Full variant: samme tre plater med «-full»
 i navnet, fra stl_full/.
@@ -35,12 +34,6 @@ PLATES = {
         ("gull", "Gullring (D-pad) og Skjold-tast", 3, None, "knapper"),
         ("ir_vindu", "IR-vindu (klar eller natur PETG, forsiden ned)", 4, (160, 30), None),
     ], {1: "#ECE9E3", 2: "#2E2D2C", 3: "#D99E40", 4: "#DDE6EA"}),
-    "skjold-fjernkontroll-k2-farger.3mf": ("Skjold Fjernkontroll – fargetaster", [
-        ("farge_rod", "Rød", 1, (40, 30), None),
-        ("farge_gronn", "Grønn", 2, None, "farge_rod"),
-        ("farge_gul", "Gul", 3, None, "farge_rod"),
-        ("farge_bla", "Blå", 4, None, "farge_rod"),
-    ], {1: "#C8302A", 2: "#33994D", 3: "#EBC033", 4: "#2E61C7"}),
 }
 
 
