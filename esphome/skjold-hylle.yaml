@@ -1,0 +1,230 @@
+# Skjold Kassetthylle – ta ut en kassett for å spille den, sett den tilbake for å stoppe.
+# ESP32-C3 SuperMini + én RC522 (13,56 MHz, SPI) bak hver plass + én WS2812 under hver plass.
+# Standard: 6 plasser (to moduler à 3). Flere plasser: bruk ESP32-S3 (flere ledige pinner) og legg til lesere under.
+# Flash: https://web.esphome.io første gang (USB-C), deretter OTA. Se kabinett/hylle/LES_MEG.md for kobling.
+substitutions:
+  name: skjold-hylle
+  friendly_name: Skjold Kassetthylle
+  # Skjold-enheten hylla snakker med (mDNS-navn eller IP). Avspillingen går til enheten kassettene er paret med
+  # (Kassett → «Spilles på» i appen), så dette kan godt være Core.
+  skjold_host: skjold.local
+  skjold_port: "8765"
+  plasser: "6"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - light.turn_on: { id: lys, effect: "Hylle", brightness: 70% }
+      - delay: 3s
+      - script.execute: hei
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework: { type: esp-idf }
+
+logger:
+api:
+  encryption:
+    key: !secret skjold_hylle_api_key
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: { ssid: "Skjold Kassetthylle" }
+captive_portal:
+
+http_request:
+  verify_ssl: false
+  timeout: 5s
+
+globals:
+  # Én bokstav per plass fra GET /api/hylle/lys: s = spiller, i = kassett inne, t = tom, u = ukjent brikke
+  - id: lysmonster
+    type: std::string
+    initial_value: '"tttttt"'
+
+spi:
+  clk_pin: GPIO4
+  miso_pin: GPIO5
+  mosi_pin: GPIO6
+
+script:
+  - id: hei
+    then:
+      - http_request.post:
+          url: http://${skjold_host}:${skjold_port}/api/hylle/event
+          request_headers: { Content-Type: application/json }
+          json:
+            device: ${name}
+            type: hei
+            antall: ${plasser}
+  - id: send
+    mode: queued
+    parameters: { plass: int, uid: string, typ: string }
+    then:
+      - homeassistant.event:
+          event: esphome.skjold_hylle
+          data:
+            plass: !lambda "return to_string(plass);"
+            uid: !lambda "return uid;"
+            type: !lambda "return typ;"
+      - http_request.post:
+          url: http://${skjold_host}:${skjold_port}/api/hylle/event
+          request_headers: { Content-Type: application/json }
+          json:
+            device: ${name}
+            plass: !lambda "return to_string(plass);"
+            uid: !lambda "return uid;"
+            type: !lambda "return typ;"
+      - script.execute: hent_lys
+
+  - id: hent_lys
+    mode: restart
+    then:
+      - http_request.get:
+          url: http://${skjold_host}:${skjold_port}/api/hylle/lys?device=${name}
+          capture_response: true
+          on_response:
+            then:
+              - lambda: |-
+                  if (response->status_code == 200 && !body.empty()) id(lysmonster) = body;
+
+interval:
+  - interval: 3s
+    then:
+      - script.execute: hent_lys
+
+# Én leser per plass. Plass 1 er lengst til venstre sett forfra. on_tag_removed = kassetten er tatt ut.
+rc522_spi:
+  - id: plass1
+    cs_pin: GPIO7
+    update_interval: 500ms
+    on_tag:
+      then:
+        - script.execute:
+            id: send
+            plass: 1
+            uid: !lambda "return x;"
+            typ: "inn"
+    on_tag_removed:
+      then:
+        - script.execute:
+            id: send
+            plass: 1
+            uid: !lambda "return x;"
+            typ: "ut"
+  - id: plass2
+    cs_pin: GPIO10
+    update_interval: 500ms
+    on_tag:
+      then:
+        - script.execute:
+            id: send
+            plass: 2
+            uid: !lambda "return x;"
+            typ: "inn"
+    on_tag_removed:
+      then:
+        - script.execute:
+            id: send
+            plass: 2
+            uid: !lambda "return x;"
+            typ: "ut"
+  - id: plass3
+    cs_pin: GPIO20
+    update_interval: 500ms
+    on_tag:
+      then:
+        - script.execute:
+            id: send
+            plass: 3
+            uid: !lambda "return x;"
+            typ: "inn"
+    on_tag_removed:
+      then:
+        - script.execute:
+            id: send
+            plass: 3
+            uid: !lambda "return x;"
+            typ: "ut"
+  - id: plass4
+    cs_pin: GPIO21
+    update_interval: 500ms
+    on_tag:
+      then:
+        - script.execute:
+            id: send
+            plass: 4
+            uid: !lambda "return x;"
+            typ: "inn"
+    on_tag_removed:
+      then:
+        - script.execute:
+            id: send
+            plass: 4
+            uid: !lambda "return x;"
+            typ: "ut"
+  - id: plass5
+    cs_pin: GPIO0
+    update_interval: 500ms
+    on_tag:
+      then:
+        - script.execute:
+            id: send
+            plass: 5
+            uid: !lambda "return x;"
+            typ: "inn"
+    on_tag_removed:
+      then:
+        - script.execute:
+            id: send
+            plass: 5
+            uid: !lambda "return x;"
+            typ: "ut"
+  - id: plass6
+    cs_pin: GPIO1
+    update_interval: 500ms
+    on_tag:
+      then:
+        - script.execute:
+            id: send
+            plass: 6
+            uid: !lambda "return x;"
+            typ: "inn"
+    on_tag_removed:
+      then:
+        - script.execute:
+            id: send
+            plass: 6
+            uid: !lambda "return x;"
+            typ: "ut"
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: lys
+    name: Lys
+    pin: GPIO3
+    num_leds: ${plasser}
+    chipset: WS2812
+    default_transition_length: 300ms
+    effects:
+      - addressable_lambda:
+          name: Hylle
+          update_interval: 50ms
+          lambda: |-
+            // s = spiller (varm gull, puster), i = inne (svakt hvitt), t = tom (av), u = ukjent brikke (svakt blått)
+            static float fase = 0;
+            fase += 0.08f;
+            float puls = 0.55f + 0.45f * sinf(fase);
+            const std::string &m = id(lysmonster);
+            for (int i = 0; i < it.size(); i++) {
+              char c = i < (int) m.size() ? m[i] : 't';
+              if (c == 's') it[i] = Color(255 * puls, 150 * puls, 30 * puls);
+              else if (c == 'i') it[i] = Color(28, 26, 22);
+              else if (c == 'u') it[i] = Color(0, 12, 40);
+              else it[i] = Color::BLACK;
+            }
