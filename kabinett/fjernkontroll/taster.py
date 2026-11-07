@@ -1,6 +1,6 @@
 """Tastene på Skjold Fjernkontroll – én kilde for kabinettet, tastekortet, fastvaren og dokumentasjonen.
 
-To varianter: «kort» (standard, uten talltastene og smarthus-raden: 14 taster, 209 mm) og «full» (valgfri, 30 taster, 252 mm).
+To varianter: «kort» (standard, uten talltastene og smarthus-raden: 14 taster, 196 mm) og «full» (valgfri, 30 taster, 239 mm).
 Kjør:  python3 taster.py
   skriver  taster.scad                      (hettene og bryterne for begge variantene til skjold_fjernkontroll.scad)
            tastekort/ og tastekort_full/     (plassering.csv og koblinger.csv: bryter- og brikkeplassering og
@@ -17,7 +17,7 @@ import os
 import re
 
 W, L = 55.0, 230.0          # ytre mål (må stemme med skjold_fjernkontroll.scad); L byttes av bruk("kort")
-L_FULL, L_KORT = 252.0, 209.0
+L_FULL, L_KORT = 239.0, 196.0
 DN = 22.0                   # alt under skjermen flyttet 22 mm mot halen for 2,8″-skjermen (DN i .scad)
 CX = W / 2
 SPILL = 0.35                # klaring rundt hetta i hullet (hver side)
@@ -27,34 +27,33 @@ PCB_N0, PCB_N1 = 57.5 + DN, 198.5 + DN  # tastekortet strekker seg fra n = 57,5 
 # ---------- hettene ----------
 # (id, navn, form, x, n, b, h, ikon, farge, [bryter-id …])
 HETTER = [
-    # av/på på egen rad øverst, venstrejustert (samme kolonne som spill/pause og Skjold-tasten)
-    ("av", "Av-på", "rund", CX - 10, 60, 10, 10, "av", "mork", ["av"]),
+    # øverste rad, like bred som gullringen: av/på, Skjold-tasten (gull) og meny (kort trykk = meny, langt = guide)
+    ("av", "Av-på", "rund", CX - 14.5, 60.6, 11.5, 11.5, "av", "mork", ["av"]),
+    ("hjem", "Skjold (aktiviteter)", "rund", CX, 60.6, 11.5, 11.5, "skjold", "gull", ["hjem"]),
+    ("meny", "Meny (hold: guide)", "rund", CX + 14.5, 60.6, 11.5, 11.5, "meny", "mork", ["meny"]),
     # D-pad: gullring Ø39 med fire brytere og OK (Ø15) i midten
-    ("dpad", "D-pad", "ring", CX, 87.3, 39, 17, "pil", "gull", ["opp", "ned", "venstre", "hoyre"]),
-    ("ok", "OK", "ok", CX, 87.3, 15, 15, "OK", "mork", ["ok"]),
-    # medieblokk rett under D-paden (x = CX ± 18): spill/pause og demp til venstre, høy volumpille til høyre
-    ("spill_pause", "Spill-pause", "rund", CX - 10, 116, 16, 16, "spill_pause", "mork", ["spill_pause"]),
-    ("demp", "Demp", "rund", CX - 10, 135, 16, 16, "demp", "mork", ["demp"]),
-    ("vol", "Volum", "vippe", CX + 9.5, 125.6, 17, 35, "vol", "mork", ["vol_opp", "vol_ned"]),
-    # 2 × 2 under medieblokken, i de samme kolonnene: Skjold-tasten (gull) og meny (kort trykk = meny,
-    # langt = guide) øverst, tilbake og avslutt under
-    ("hjem", "Skjold (aktiviteter)", "rund", CX - 10, 151.7, 11.5, 11.5, "skjold", "gull", ["hjem"]),
-    ("meny", "Meny (hold: guide)", "rund", CX + 9.5, 151.7, 11.5, 11.5, "meny", "mork", ["meny"]),
-    ("tilbake", "Tilbake", "rund", CX - 10, 166, 11.5, 11.5, "tilbake", "mork", ["tilbake"]),
-    ("avslutt", "Avslutt", "rund", CX + 9.5, 166, 11.5, 11.5, "avslutt", "mork", ["avslutt"]),
+    ("dpad", "D-pad", "ring", CX, 88.7, 39, 17, "pil", "gull", ["opp", "ned", "venstre", "hoyre"]),
+    ("ok", "OK", "ok", CX, 88.7, 15, 15, "OK", "mork", ["ok"]),
+    # tilbake og avslutt mellom D-paden og medieblokken, i medieblokkens kolonner
+    ("tilbake", "Tilbake", "rund", CX - 10, 115.1, 11.5, 11.5, "tilbake", "mork", ["tilbake"]),
+    ("avslutt", "Avslutt", "rund", CX + 9.5, 115.1, 11.5, 11.5, "avslutt", "mork", ["avslutt"]),
+    # medieblokk (x = CX ± 18): spill/pause og demp til venstre, høy volumpille til høyre
+    ("spill_pause", "Spill-pause", "rund", CX - 10, 131.65, 16, 16, "spill_pause", "mork", ["spill_pause"]),
+    ("demp", "Demp", "rund", CX - 10, 150.65, 16, 16, "demp", "mork", ["demp"]),
+    ("vol", "Volum", "vippe", CX + 9.5, 141.15, 17, 35, "vol", "mork", ["vol_opp", "vol_ned"]),
 ] + [
     # talltaster 1–9, så − 0 ↵
-    (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 178.5 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
+    (f"tall_{d}", f"Tall {d}", "pille", (CX - 14, CX, CX + 14)[(d - 1) % 3], 165.4 + 8.4 * ((d - 1) // 3), 11.6, 6.0, str(d), "mork", [f"tall_{d}"])
     for d in range(1, 10)
 ] + [
-    ("strek", "Strek", "pille", CX - 14, 203.7, 11.6, 6.0, "strek", "mork", ["strek"]),
-    ("tall_0", "Tall 0", "pille", CX, 203.7, 11.6, 6.0, "0", "mork", ["tall_0"]),
-    ("enter", "Enter", "pille", CX + 14, 203.7, 11.6, 6.0, "enter", "mork", ["enter"]),
+    ("strek", "Strek", "pille", CX - 14, 190.6, 11.6, 6.0, "strek", "mork", ["strek"]),
+    ("tall_0", "Tall 0", "pille", CX, 190.6, 11.6, 6.0, "0", "mork", ["tall_0"]),
+    ("enter", "Enter", "pille", CX + 14, 190.6, 11.6, 6.0, "enter", "mork", ["enter"]),
     # smarthus-raden: lys, stikkontakt, − og +
-    ("lys", "Lys", "pille", CX - 18, 213.3, 9.6, 6.0, "lys", "lys", ["lys"]),
-    ("stikk", "Stikkontakt", "pille", CX - 6, 213.3, 9.6, 6.0, "stikk", "lys", ["stikk"]),
-    ("minus", "Minus (dempe lys)", "pille", CX + 6, 213.3, 9.6, 6.0, "minus", "lys", ["minus"]),
-    ("pluss", "Pluss (mer lys)", "pille", CX + 18, 213.3, 9.6, 6.0, "pluss", "lys", ["pluss"]),
+    ("lys", "Lys", "pille", CX - 18, 200.2, 9.6, 6.0, "lys", "lys", ["lys"]),
+    ("stikk", "Stikkontakt", "pille", CX - 6, 200.2, 9.6, 6.0, "stikk", "lys", ["stikk"]),
+    ("minus", "Minus (dempe lys)", "pille", CX + 6, 200.2, 9.6, 6.0, "minus", "lys", ["minus"]),
+    ("pluss", "Pluss (mer lys)", "pille", CX + 18, 200.2, 9.6, 6.0, "pluss", "lys", ["pluss"]),
 ]
 
 # alt under skjermen ligger DN mm lenger bak enn i første utgave (2,0″-skjerm)
