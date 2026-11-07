@@ -7250,8 +7250,8 @@ async def h_hjul(r):
 
 FEAT_ROUTES += [("GET", "/api/hjul", h_hjul), ("POST", "/api/hjul", h_hjul), ("POST", "/api/hjul/{act}", h_hjul)]
 
-# ---------- Skjold Mini: ESP32-høyttalere via Lyrion (pi/skjold_mini.py, firmware/mini/) ----------
-import skjold_mini as _minimod   # noqa: E402
+# ---------- Skjold Røst: ESP32-høyttalere via Lyrion (pi/skjold_rost.py, firmware/rost/) ----------
+import skjold_rost as _rostmod   # noqa: E402
 
 
 def _mini_rpc(player, cmd):
@@ -7263,11 +7263,11 @@ def _mini_rpc(player, cmd):
         return json.loads(resp.read()).get("result", {}) or {}
 
 
-minis = _minimod.Minis(_mini_rpc, lambda: lyr.player, lambda: state["presets"])
+minis = _rostmod.Minis(_mini_rpc, lambda: lyr.player, lambda: state["presets"])
 
 
 async def h_mini(r):
-    """GET /api/mini (Mini-høyttalere i Lyrion) · POST /api/mini {id, action: sync|unsync|volume|power|presets, value}."""
+    """GET /api/rost (Røst-høyttalere i Lyrion) · POST /api/rost {id, action: sync|unsync|volume|power|presets, value}."""
     loop = asyncio.get_running_loop()
     if r.method == "POST":
         try:
@@ -7278,7 +7278,8 @@ async def h_mini(r):
     return web.json_response(await loop.run_in_executor(None, minis.list))
 
 
-FEAT_ROUTES += [("GET", "/api/mini", h_mini), ("POST", "/api/mini", h_mini)]
+FEAT_ROUTES += [("GET", "/api/rost", h_mini), ("POST", "/api/rost", h_mini),
+                ("GET", "/api/mini", h_mini), ("POST", "/api/mini", h_mini)]   # /api/mini: gammelt navn
 
 AVAHI_SVC = "/etc/avahi/services/skjold.service"
 

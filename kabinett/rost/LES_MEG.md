@@ -1,16 +1,16 @@
-# Skjold Mini
+# Skjold Røst
 
-En liten aktiv høyttaler for bad, kjøkken og barnerom. Den har et 3″ fullrange-element i et bassrefleks-kabinett, en ESP32-S3, en klasse D-forsterker, en 2,42″ OLED-skjerm og knapper for av/på og fire radiofavoritter. Mini er en vanlig Squeezebox-spiller i Lyrion, så den spiller synkront med S1, Node og Touch.
+En liten aktiv høyttaler for bad, kjøkken og barnerom. Den har et 3″ fullrange-element i et bassrefleks-kabinett, en ESP32-S3, en klasse D-forsterker, en 2,42″ OLED-skjerm og knapper for av/på og fire radiofavoritter. Røst er en vanlig Squeezebox-spiller i Lyrion, så den spiller synkront med S1, Node og Touch.
 
-Mini er laget for å tåle damp på badet. Skjøtene er pakket med TPU, men knappene på toppen er vanlige knappehetter og er **ikke tette**, så toppen tåler bare litt sprut. Mini er **ikke vanntett** og skal ikke stå i dusjen. Se [På badet](#på-badet).
+Røst er laget for å tåle damp på badet. Skjøtene er pakket med TPU, men knappene på toppen er vanlige knappehetter og er **ikke tette**, så toppen tåler bare litt sprut. Røst er **ikke vanntett** og skal ikke stå i dusjen. Se [På badet](#på-badet).
 
-![Skjold Mini](render/01_mini.png)
+![Skjold Røst](render/01_rost.png)
 
-Bilder: [mini](render/01_mini.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [toppanelet](render/06_knapper_skjerm.png)
+Bilder: [Røst](render/01_rost.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [toppanelet](render/06_knapper_skjerm.png)
 
-Mål: 106 × 124,5 × 144 mm (B × D × H, med grill, bunn og føtter, uten knott). Grillen står 3 mm foran frontplaten. Høyden er den samme som første Mini (100 × 106 × 144 mm). Knotten stikker 14,6 mm over toppen.
+Mål: 106 × 124,5 × 144 mm (B × D × H, med grill, bunn og føtter, uten knott). Grillen står 3 mm foran frontplaten. Høyden er den samme som første Røst (100 × 106 × 144 mm). Knotten stikker 14,6 mm over toppen.
 
-Skjermen og knappene sitter på toppen, foran volumhjulet. Toppen heller svakt (5 mm, ca. 2,4°) ned mot fronten, så skjermen vender litt mot deg og vann renner av. Fronten har bare grillen (en løs del som trykkes på) og SKJOLD-logoen under den. Fastvare og oppsett: [`firmware/mini/`](../../firmware/mini/LES_MEG.md).
+Skjermen og knappene sitter på toppen, foran volumhjulet. Toppen heller svakt (5 mm, ca. 2,4°) ned mot fronten, så skjermen vender litt mot deg og vann renner av. Fronten har bare grillen (en løs del som trykkes på) og SKJOLD-logoen under den. Fastvare og oppsett: [`firmware/rost/`](../../firmware/rost/LES_MEG.md).
 
 ## Hvorfor disse komponentene
 
@@ -72,30 +72,30 @@ Ikke bruk GPIO0, 3, 45 eller 46 (oppstartspinner), GPIO19/20 (USB), GPIO26–32 
 
 ## Akustikk
 
-- Lydkammer: ca. 0,95 l luft mellom vegger, front, gulv og takrommet, ca. 0,90 l netto når et element (ca. 50 cm³) er satt inn. For å holde volumet uten å gjøre Mini høyere er den 6 mm bredere og 11 mm dypere enn første versjon.
+- Lydkammer: ca. 0,95 l luft mellom vegger, front, gulv og takrommet, ca. 0,90 l netto når et element (ca. 50 cm³) er satt inn. For å holde volumet uten å gjøre Røst høyere er den 6 mm bredere og 11 mm dypere enn første versjon.
 - Bassrefleks: port Ø16 mm, 78 mm lang, nede til venstre i bakveggen (til siden for elementets magnet) og vendt bakover. Munningen er avrundet. Det gir en tuning på ca. 86 Hz, som før.
 - **Takrommet:** skjermen og knappekortet ligger i et eget, lukket rom rett under toppen (ca. 56 cm³), adskilt fra lydkammeret av et 3 mm gulv. Da rasler ikke knappehettene med bassen, og takrommet påvirker ikke tuningen. Ledningene går gjennom et Ø6-hull i takrommets gulv og videre gjennom hullet i kammergulvet. Begge hullene tettes med silikon.
 - Dette er beregnet ut fra volum og port, ikke målt. Simuler ditt element i WinISD eller VituixCAD. Endre `portL` (lengre port gir lavere tuning) eller tett porten for et lukket kabinett.
-- Porten peker bakover, så sprut forfra ikke kommer inn i kammeret. La det være minst 5 cm luft bak Mini.
+- Porten peker bakover, så sprut forfra ikke kommer inn i kammeret. La det være minst 5 cm luft bak Røst.
 - Kammeret er skilt fra elektronikkrommet av et gulv. Elementkabelen går gjennom et Ø6-hull i gulvet, og det må tettes med silikon, ellers lekker kammeret.
 
-## Hvordan Mini holder fuktigheten ute
+## Hvordan Røst holder fuktigheten ute
 
 - **Skjøten front–kropp:** kropp og frontplate er skåret fra samme ytre form, så sidene og toppen flukter helt (ingen trinn eller spalte). En smal skyggefuge (0,5 mm inn, 0,8 mm bred) gjør skjøten til en ren linje. Bak den ligger en TPU-pakning i et spor i kroppen, langs sidene, forkanten av takrommets gulv og forkanten av kammergulvet. Frontplaten trykker den 0,2 mm sammen.
-- **Bunnen:** en TPU-pakning i et spor rundt hele bunnplaten, under kroppen og frontplaten. Bunnen stikker 0,8 mm ut og har en dryppnese på undersiden, så vann som renner nedover sidene drypper av i stedet for å trekke inn under. Føttene er 4 mm høye, så Mini ikke står i vann.
+- **Bunnen:** en TPU-pakning i et spor rundt hele bunnplaten, under kroppen og frontplaten. Bunnen stikker 0,8 mm ut og har en dryppnese på undersiden, så vann som renner nedover sidene drypper av i stedet for å trekke inn under. Føttene er 4 mm høye, så Røst ikke står i vann.
 - **Knappene:** fem printede knappehetter (av/på og 1–4) i hull i toppen, med 0,25 mm klaring rundt. De står 0,6 mm over toppen og har en flens under toppanelet. **Hullene er ikke tette.** Vann som kommer på toppen kan renne ned langs hettene til takrommet. Vil du ha det tettere, smør en tynn ring silikonfett rundt hver hette før du setter den i, eller legg en dråpe nøytral silikon mellom flensen og panelet.
 - **Skjermen:** klar rute (akryl 1,5 mm, 64 × 36 mm) i en forsenkning i toppen, over et vindu tilpasset det aktive området, med fas, lagt på tynn dobbeltsidig skumtape (0,2 mm) eller lim. Ruta flukter med toppen. En tynn streng silikon langs kanten gjør den tett.
 - **Toppen:** ingen forsenkninger der vann kan bli stående. Ruta og kragen flukter med overflaten, og toppen heller 2,4° mot fronten så vann renner av. Det drypper av forkanten og ned foran grillen, der den vannavstøtende duken stopper det.
-- **Grillen:** en løs del som står 3 mm foran frontplaten, som på første Mini. Den trykkes på med 4 tapper med små klemribber, så den sitter stramt uten å rasle og kan trekkes av for rengjøring. Den vannavstøtende duken klemmes mellom grillen og frontplaten.
+- **Grillen:** en løs del som står 3 mm foran frontplaten, som på første Røst. Den trykkes på med 4 tapper med små klemribber, så den sitter stramt uten å rasle og kan trekkes av for rengjøring. Den vannavstøtende duken klemmes mellom grillen og frontplaten.
 - **Dreieknappen:** TPU-krage rundt akselen i en forsenkning i toppen. Knotten dekker den.
 - **DC og USB-C bak:** TPU-skive under flensen på DC-kontakten. USB-C brukes bare til flashing, og har en TPU-propp ellers.
-- **Trykkutjevning:** en ePTFE-ventil i bunnen av elektronikkrommet slipper ut trykk og damp når Mini blir varm og kald, slik at fukt ikke pumpes inn gjennom pakningene.
+- **Trykkutjevning:** en ePTFE-ventil i bunnen av elektronikkrommet slipper ut trykk og damp når Røst blir varm og kald, slik at fukt ikke pumpes inn gjennom pakningene.
 - **Kretskortene:** lakk dem med beskyttelseslakk (conformal coating). Det beskytter mot kondens som likevel kommer inn.
 
 ## På badet
 
 - **Strøm:** 12 V er ufarlig å ta på, men **strømadapteren (230 V) skal stå utenfor badet eller utenfor våtromssonene**, slik NEK 400 krever for elektrisk utstyr i våtrom. Bruk en lang 12 V-kabel. Har du en fast installert stikkontakt på badet, må den være godkjent for våtrom og riktig sone.
-- **Plassering:** ikke plasser Mini i direkte dusjsprut eller der den kan bli stående i vann. Den tåler damp, men **knappene på toppen er ikke tette**, så sett den der toppen ikke får sprut (for eksempel på en hylle unna dusjen). Silikonfett rundt knappehettene hjelper.
+- **Plassering:** ikke plasser Røst i direkte dusjsprut eller der den kan bli stående i vann. Den tåler damp, men **knappene på toppen er ikke tette**, så sett den der toppen ikke får sprut (for eksempel på en hylle unna dusjen). Silikonfett rundt knappehettene hjelper.
 - **Materiale:** print i **PETG eller ASA**, ikke PLA. PLA blir mykt ved varme og trekker fukt over tid. Pakningene i TPU 95A.
 - **Tørk av** vann som samler seg på toppen. Rengjør grillen forsiktig, så duken ikke blir skadet.
 
@@ -105,9 +105,9 @@ Det er tre 3MF-filer, alle innenfor 250 × 250 mm, så de passer K2, K2 Pro og K
 
 | Fil | Deler | Filament |
 |---|---|---|
-| `skjold-mini-k2.3mf` | Kropp (med toppanel og takrom), frontplate med innfelt logo, knott, 5 knappehetter | 1 = lys (kropp), 2 = sort (front, knappehetter), 3 = gull (logo, knott) |
-| `skjold-mini-k2-bunn.3mf` | Grill, bunn | 2 = sort |
-| `skjold-mini-k2-tpu.3mf` | Pakning front, pakning bunn, krage, DC-skive, USB-propp | TPU 95A (egen utskrift; CFS mater ikke myk TPU, så bruk ekstern spole) |
+| `skjold-rost-k2.3mf` | Kropp (med toppanel og takrom), frontplate med innfelt logo, knott, 5 knappehetter | 1 = lys (kropp), 2 = sort (front, knappehetter), 3 = gull (logo, knott) |
+| `skjold-rost-k2-bunn.3mf` | Grill, bunn | 2 = sort |
+| `skjold-rost-k2-tpu.3mf` | Pakning front, pakning bunn, krage, DC-skive, USB-propp | TPU 95A (egen utskrift; CFS mater ikke myk TPU, så bruk ekstern spole) |
 
 Setter ikke Creality Print fargene selv, sett filament per del.
 
@@ -130,7 +130,7 @@ Vekt og tid er ikke slicet.
 ### Logoen i egen farge
 
 SKJOLD-logoen er et eget legeme (`logo.stl`) som ligger 0,6 mm inn i frontplaten og flukter med forsiden. Strekene er minst 1 mm brede.
-- **Med CFS:** `skjold-mini-k2.3mf` har logoen som egen del med filament 3, plassert nøyaktig i fronten. Den printes i samme utskrift.
+- **Med CFS:** `skjold-rost-k2.3mf` har logoen som egen del med filament 3, plassert nøyaktig i fronten. Den printes i samme utskrift.
 - **Uten CFS:** en vanlig pause med filamentbytte virker ikke her, fordi frontplaten printes med forsiden opp. Da blir hele det øverste laget gull, ikke bare logoen. Gjør heller slik:
   - Print frontplaten i sort uten logoen. Slett logo-delen i sliceren, så blir lomma tom.
   - Print `logo.stl` alene i gull.

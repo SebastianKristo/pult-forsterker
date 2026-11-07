@@ -237,7 +237,7 @@ jobs:
           path: "*.pdf"
 
   print3d:
-    name: 3D-filer (Kassett, Hjul og Mini)
+    name: 3D-filer (Kassett, Hjul og Røst)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -246,9 +246,9 @@ jobs:
           mkdir -p ut
           (cd kabinett && zip -qr ../ut/skjold-kassett-3d.zip kassett -x '*/__pycache__/*')
           (cd kabinett && zip -qr ../ut/skjold-hjul-3d.zip hjul -x '*/__pycache__/*') && zip -qj ut/skjold-hjul-3d.zip esphome/skjold-hjul.yaml
-          (cd kabinett && zip -qr ../ut/skjold-mini-3d.zip mini -x '*/__pycache__/*') && zip -qr ut/skjold-mini-3d.zip firmware/mini
+          (cd kabinett && zip -qr ../ut/skjold-rost-3d.zip rost -x '*/__pycache__/*') && zip -qr ut/skjold-rost-3d.zip firmware/rost
           # ferdige plater for slicer (Creality Print / OrcaSlicer) legges også ut hver for seg
-          find kabinett/kassett kabinett/hjul kabinett/mini -name '*.3mf' -exec cp {} ut/ \;
+          find kabinett/kassett kabinett/hjul kabinett/rost -name '*.3mf' -exec cp {} ut/ \;
           ls -la ut
       - uses: actions/upload-artifact@v4
         with:
