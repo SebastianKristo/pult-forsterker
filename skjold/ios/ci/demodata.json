@@ -1,0 +1,1415 @@
+{
+ "status": {
+  "power": true,
+  "input": "radio",
+  "volume": 34,
+  "mute": false,
+  "bt_pairing": false,
+  "loudness": true,
+  "loudness_level": 5,
+  "voice": true,
+  "presets": [
+   {
+    "n": 1,
+    "title": "NRK P3"
+   },
+   {
+    "n": 2,
+    "title": "NRK P1"
+   },
+   {
+    "n": 3,
+    "title": "NRK Jazz"
+   },
+   {
+    "n": 4,
+    "title": "NRK Klassisk"
+   },
+   {
+    "n": 5,
+    "title": "P4"
+   },
+   {
+    "n": 6,
+    "title": "Radio Norge"
+   }
+  ],
+  "preset": 3,
+  "auto_input": true,
+  "mix": false,
+  "usb_pc": 1,
+  "headphones": false,
+  "last_wireless": "airplay",
+  "hp_automute": true,
+  "overtemp": false,
+  "levels": {
+   "airplay": 100,
+   "bt": 100,
+   "usb": 100,
+   "radio": 100,
+   "aux": 100,
+   "aux2": 100,
+   "spotify": 100,
+   "plex": 100
+  },
+  "ui_event": null,
+  "poweroff": false,
+  "boot_s": 45,
+  "rebooting": false,
+  "input_seq": 0,
+  "settings": {
+   "tIdle": 0,
+   "tNight": true
+  },
+  "voice_profile": "en",
+  "usbsw": false,
+  "usb_pc_names": [
+   "PC 1",
+   "PC 2"
+  ],
+  "voice_profiles": {
+   "en": "English (AI)",
+   "no": "Norsk",
+   "trondersk": "Trøndersk"
+  },
+  "presets_count": 0,
+  "presets_max": 50,
+  "radio_now": {
+   "name": "NRK Jazz",
+   "genre": "Jazz",
+   "now": "Bill Evans Trio – Waltz For Debby",
+   "image": "",
+   "logo": "/api/logo?k=nrkjazz",
+   "url": "https://example.invalid/jazz",
+   "n": 3,
+   "playing": true
+  },
+  "station": "NRK P3",
+  "lyrion": false,
+  "source_label": "",
+  "lyrion_server": "",
+  "lyrion_player": "02:fc:00:00:00:01",
+  "playing": true,
+  "paused": false,
+  "cover_url": "",
+  "product": "s1",
+  "source": "",
+  "cover": "",
+  "title": "Waltz For Debby",
+  "artist": "Bill Evans Trio",
+  "album": "Sunday at the Village Vanguard",
+  "duration": 418,
+  "position": 96,
+  "bt_device": "",
+  "name": "Stue",
+  "version": "2.0",
+  "id": "s1-stue",
+  "usb_names": [
+   "PC 1",
+   "PC 2"
+  ],
+  "inputs": [
+   "radio",
+   "airplay",
+   "bt",
+   "aux",
+   "usb",
+   "spotify"
+  ],
+  "board": "s1f",
+  "spotify": {
+   "connected": false,
+   "playing": false,
+   "paused": false,
+   "title": "",
+   "artist": "",
+   "album": "",
+   "cover": "",
+   "duration": 0,
+   "position": 0,
+   "user": "",
+   "event": "",
+   "t": 0.0
+  },
+  "plex": {
+   "available": false,
+   "playing": false,
+   "paused": false,
+   "title": "",
+   "artist": "",
+   "album": "",
+   "cover": "",
+   "duration": 0,
+   "position": 0,
+   "t": 0.0
+  },
+  "airplay_device": "",
+  "bt_pairing_left": 0,
+  "menu": null,
+  "hold": null,
+  "settings_menu": null,
+  "sky": {
+   "koblet": false,
+   "sted": null,
+   "erAktivHoved": false
+  }
+ },
+ "presets": {
+  "presets": [
+   {
+    "n": 1,
+    "title": "NRK P3",
+    "url": "https://example.invalid/0",
+    "icon": "",
+    "image": "",
+    "genre": "Pop",
+    "logo": "/api/logo?k=nrkp3"
+   },
+   {
+    "n": 2,
+    "title": "NRK P1",
+    "url": "https://example.invalid/1",
+    "icon": "",
+    "image": "",
+    "genre": "Prat",
+    "logo": "/api/logo?k=nrkp1"
+   },
+   {
+    "n": 3,
+    "title": "NRK Jazz",
+    "url": "https://example.invalid/2",
+    "icon": "",
+    "image": "",
+    "genre": "Jazz",
+    "logo": "/api/logo?k=nrkjazz"
+   },
+   {
+    "n": 4,
+    "title": "NRK Klassisk",
+    "url": "https://example.invalid/3",
+    "icon": "",
+    "image": "",
+    "genre": "Klassisk",
+    "logo": "/api/logo?k=nrkklassisk"
+   },
+   {
+    "n": 5,
+    "title": "P4",
+    "url": "https://example.invalid/4",
+    "icon": "",
+    "image": "",
+    "genre": "Pop",
+    "logo": "/api/logo?k=p4"
+   },
+   {
+    "n": 6,
+    "title": "Radio Norge",
+    "url": "https://example.invalid/5",
+    "icon": "",
+    "image": "",
+    "genre": "Pop",
+    "logo": "/api/logo?k=radionorge"
+   }
+  ],
+  "items": [
+   {
+    "n": 1,
+    "title": "NRK P3",
+    "url": "https://example.invalid/0",
+    "icon": "",
+    "image": "",
+    "genre": "Pop"
+   },
+   {
+    "n": 2,
+    "title": "NRK P1",
+    "url": "https://example.invalid/1",
+    "icon": "",
+    "image": "",
+    "genre": "Prat"
+   },
+   {
+    "n": 3,
+    "title": "NRK Jazz",
+    "url": "https://example.invalid/2",
+    "icon": "",
+    "image": "",
+    "genre": "Jazz"
+   },
+   {
+    "n": 4,
+    "title": "NRK Klassisk",
+    "url": "https://example.invalid/3",
+    "icon": "",
+    "image": "",
+    "genre": "Klassisk"
+   },
+   {
+    "n": 5,
+    "title": "P4",
+    "url": "https://example.invalid/4",
+    "icon": "",
+    "image": "",
+    "genre": "Pop"
+   },
+   {
+    "n": 6,
+    "title": "Radio Norge",
+    "url": "https://example.invalid/5",
+    "icon": "",
+    "image": "",
+    "genre": "Pop"
+   }
+  ],
+  "count": 6,
+  "max": 50,
+  "active": 1,
+  "lyrion": true
+ },
+ "settings": {
+  "settings": {
+   "bass": 0,
+   "treb": 0,
+   "bal": 0,
+   "vstart": 0,
+   "vmax": 0,
+   "perIn": true,
+   "hpOwn": true,
+   "lvlAux": 0,
+   "lvlUsb": 0,
+   "name": 0,
+   "nameCustom": "",
+   "updChannel": 0,
+   "updAuto": true,
+   "setupDone": false,
+   "nAux1": "AUX 1",
+   "nAux2": "AUX 2",
+   "nUsb1": "PC 1",
+   "nUsb2": "PC 2",
+   "hold": 2,
+   "voice": true,
+   "lang": 0,
+   "vv": 1,
+   "dim": 1,
+   "off": 1,
+   "clock": true,
+   "clockStyle": 0,
+   "bright": 0,
+   "led": 0,
+   "ledLevel": 100,
+   "ledMode": "press",
+   "auto": 1,
+   "wake": true,
+   "ytmEn": false,
+   "ytmUser": "",
+   "ytmCookie": "",
+   "ndEn": true,
+   "ndUrl": "https://musikk.demo",
+   "ndUser": "demo",
+   "ndPass": "demo",
+   "plexEn": false,
+   "plexUrl": "",
+   "plexToken": "",
+   "tRole": 0,
+   "tOut": 2,
+   "tStandby": 1,
+   "tIdle": 0,
+   "tNight": true,
+   "eq": {
+    "air": {
+     "preset": 0,
+     "eq": [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "loud": true
+    },
+    "bt": {
+     "preset": 1,
+     "eq": [
+      5,
+      2,
+      0,
+      0,
+      1
+     ],
+     "loud": true
+    },
+    "radio": {
+     "preset": 2,
+     "eq": [
+      -2,
+      -1,
+      2,
+      3,
+      1
+     ],
+     "loud": true
+    },
+    "aux": {
+     "preset": 0,
+     "eq": [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "loud": true
+    },
+    "usb": {
+     "preset": 0,
+     "eq": [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "loud": true
+    },
+    "hp": {
+     "preset": 3,
+     "eq": [
+      2,
+      1,
+      0,
+      -2,
+      -3
+     ],
+     "loud": false
+    }
+   }
+  },
+  "applied": [
+   "bright",
+   "clock",
+   "clockStyle",
+   "dim",
+   "eq",
+   "lang",
+   "led",
+   "ledLevel",
+   "ledMode",
+   "nUsb1",
+   "nUsb2",
+   "name",
+   "nameCustom",
+   "off",
+   "vmax",
+   "voice",
+   "vstart",
+   "wake"
+  ],
+  "schema_version": 1
+ },
+ "sky": {
+  "koblet": false,
+  "sted": null,
+  "stedNavn": null,
+  "aktivHoved": null,
+  "erHoved": false,
+  "tilkoblet": false,
+  "url": "https://skjold-styring.smarthjemexperten.no",
+  "id": "vm",
+  "feil": null
+ },
+ "update": {
+  "current": "skjold-v0.1.40",
+  "version": "2.0",
+  "latest": "skjold-v0.1.41",
+  "available": true,
+  "running": false,
+  "result": null,
+  "log": [],
+  "can_update": true,
+  "error": null
+ },
+ "wifi": {
+  "networks": [
+   {
+    "ssid": "Hjemme",
+    "signal": 82,
+    "security": "wpa2",
+    "active": true
+   },
+   {
+    "ssid": "Hjemme-5G",
+    "signal": 64,
+    "security": "wpa3",
+    "active": false
+   },
+   {
+    "ssid": "Naboen",
+    "signal": 31,
+    "security": "wpa2",
+    "active": false
+   }
+  ]
+ },
+ "remote": {
+  "enabled": false,
+  "host": "",
+  "master": false,
+  "active": false,
+  "installed": false,
+  "busy": false,
+  "log": "",
+  "has_token": false
+ },
+ "rom": {
+  "rom": [
+   {
+    "id": "node-kjokken",
+    "name": "Kjøkken",
+    "product": "node",
+    "host": "kjokken.local",
+    "port": 8765
+   },
+   {
+    "id": "touch-soverom",
+    "name": "Soverom",
+    "product": "touch",
+    "host": "soverom.local",
+    "port": 8765
+   }
+  ]
+ },
+ "browse": {
+  "shelves": [
+   {
+    "id": "popular_no",
+    "title": "Populære i Norge",
+    "items": [
+     {
+      "name": "NRK P3",
+      "url": "https://example.invalid/NRK-P3",
+      "genre": "Pop",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "P4",
+      "url": "https://example.invalid/P4",
+      "genre": "Pop",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "Radio Norge",
+      "url": "https://example.invalid/Radio-Norge",
+      "genre": "Pop",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "NRK P1",
+      "url": "https://example.invalid/NRK-P1",
+      "genre": "Prat",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "P5 Hits",
+      "url": "https://example.invalid/P5-Hits",
+      "genre": "Hits",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "NRK mP3",
+      "url": "https://example.invalid/NRK-mP3",
+      "genre": "Pop",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "Radio Rock",
+      "url": "https://example.invalid/Radio-Rock",
+      "genre": "Rock",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "P7 Klem",
+      "url": "https://example.invalid/P7-Klem",
+      "genre": "Kos",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "NRK P2",
+      "url": "https://example.invalid/NRK-P2",
+      "genre": "Kultur",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "Pop Norge",
+      "url": "https://example.invalid/Pop-Norge",
+      "genre": "Pop",
+      "country": "NO",
+      "bitrate": 128
+     }
+    ]
+   },
+   {
+    "id": "pop",
+    "title": "Pop og hits",
+    "items": [
+     {
+      "name": "P5 Hits",
+      "url": "https://example.invalid/P5-Hits",
+      "genre": "Hits",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "NRK mP3",
+      "url": "https://example.invalid/NRK-mP3",
+      "genre": "Pop",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "P4 Lyden av Norge",
+      "url": "https://example.invalid/P4-Lyden-av-Norge",
+      "genre": "Pop",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "Radio 1",
+      "url": "https://example.invalid/Radio-1",
+      "genre": "Hits",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "Pop Norge",
+      "url": "https://example.invalid/Pop-Norge",
+      "genre": "Pop",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "Topp 40",
+      "url": "https://example.invalid/Topp-40",
+      "genre": "Hits",
+      "country": "NO",
+      "bitrate": 128
+     }
+    ]
+   },
+   {
+    "id": "jazz",
+    "title": "Jazz",
+    "items": [
+     {
+      "name": "NRK Jazz",
+      "url": "https://example.invalid/NRK-Jazz",
+      "genre": "Jazz",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "Jazz FM",
+      "url": "https://example.invalid/Jazz-FM",
+      "genre": "Jazz",
+      "country": "GB",
+      "bitrate": 128
+     },
+     {
+      "name": "TSF Jazz",
+      "url": "https://example.invalid/TSF-Jazz",
+      "genre": "Jazz",
+      "country": "FR",
+      "bitrate": 128
+     },
+     {
+      "name": "Radio Swiss Jazz",
+      "url": "https://example.invalid/Radio-Swiss-Jazz",
+      "genre": "Jazz",
+      "country": "CH",
+      "bitrate": 128
+     },
+     {
+      "name": "Smooth Jazz",
+      "url": "https://example.invalid/Smooth-Jazz",
+      "genre": "Jazz",
+      "country": "US",
+      "bitrate": 128
+     }
+    ]
+   },
+   {
+    "id": "klassisk",
+    "title": "Klassisk",
+    "items": [
+     {
+      "name": "NRK Klassisk",
+      "url": "https://example.invalid/NRK-Klassisk",
+      "genre": "Klassisk",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "Radio Swiss Classic",
+      "url": "https://example.invalid/Radio-Swiss-Classic",
+      "genre": "Klassisk",
+      "country": "CH",
+      "bitrate": 128
+     },
+     {
+      "name": "BBC Radio 3",
+      "url": "https://example.invalid/BBC-Radio-3",
+      "genre": "Klassisk",
+      "country": "GB",
+      "bitrate": 128
+     },
+     {
+      "name": "Klassisk Radio",
+      "url": "https://example.invalid/Klassisk-Radio",
+      "genre": "Klassisk",
+      "country": "NO",
+      "bitrate": 128
+     }
+    ]
+   },
+   {
+    "id": "rock",
+    "title": "Rock",
+    "items": [
+     {
+      "name": "Radio Rock",
+      "url": "https://example.invalid/Radio-Rock",
+      "genre": "Rock",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "P10 Country",
+      "url": "https://example.invalid/P10-Country",
+      "genre": "Country",
+      "country": "NO",
+      "bitrate": 128
+     },
+     {
+      "name": "Planet Rock",
+      "url": "https://example.invalid/Planet-Rock",
+      "genre": "Rock",
+      "country": "GB",
+      "bitrate": 128
+     }
+    ]
+   }
+  ]
+ },
+ "search": {
+  "norway": [
+   {
+    "name": "NRK Jazz",
+    "url": "https://example.invalid/NRK-Jazz",
+    "genre": "Jazz",
+    "country": "NO",
+    "bitrate": 128
+   }
+  ],
+  "world": [
+   {
+    "name": "Jazz FM",
+    "url": "https://example.invalid/Jazz-FM",
+    "genre": "Jazz",
+    "country": "GB",
+    "bitrate": 128
+   },
+   {
+    "name": "TSF Jazz",
+    "url": "https://example.invalid/TSF-Jazz",
+    "genre": "Jazz",
+    "country": "FR",
+    "bitrate": 128
+   },
+   {
+    "name": "Radio Swiss Jazz",
+    "url": "https://example.invalid/Radio-Swiss-Jazz",
+    "genre": "Jazz",
+    "country": "CH",
+    "bitrate": 128
+   },
+   {
+    "name": "KJazz 88.1",
+    "url": "https://example.invalid/KJazz-88.1",
+    "genre": "Jazz",
+    "country": "US",
+    "bitrate": 128
+   }
+  ]
+ },
+ "nd": {
+  "albums": [
+   {
+    "id": "al1",
+    "name": "Hurry Up, We're Dreaming",
+    "artist": "M83",
+    "year": 2011,
+    "songCount": 22,
+    "duration": 5060,
+    "coverArt": "al1"
+   },
+   {
+    "id": "al2",
+    "name": "Random Access Memories",
+    "artist": "Daft Punk",
+    "year": 2013,
+    "songCount": 13,
+    "duration": 2990,
+    "coverArt": "al2"
+   },
+   {
+    "id": "al3",
+    "name": "Melodrama",
+    "artist": "Lorde",
+    "year": 2017,
+    "songCount": 11,
+    "duration": 2530,
+    "coverArt": "al3"
+   },
+   {
+    "id": "al4",
+    "name": "Currents",
+    "artist": "Tame Impala",
+    "year": 2015,
+    "songCount": 13,
+    "duration": 2990,
+    "coverArt": "al4"
+   },
+   {
+    "id": "al5",
+    "name": "In Rainbows",
+    "artist": "Radiohead",
+    "year": 2007,
+    "songCount": 10,
+    "duration": 2300,
+    "coverArt": "al5"
+   },
+   {
+    "id": "al6",
+    "name": "Blonde",
+    "artist": "Frank Ocean",
+    "year": 2016,
+    "songCount": 17,
+    "duration": 3910,
+    "coverArt": "al6"
+   },
+   {
+    "id": "al7",
+    "name": "Sauna",
+    "artist": "Kings of Convenience",
+    "year": 2021,
+    "songCount": 12,
+    "duration": 2760,
+    "coverArt": "al7"
+   },
+   {
+    "id": "al8",
+    "name": "Lys",
+    "artist": "Cezinando",
+    "year": 2019,
+    "songCount": 10,
+    "duration": 2300,
+    "coverArt": "al8"
+   },
+   {
+    "id": "al9",
+    "name": "Discovery",
+    "artist": "Daft Punk",
+    "year": 2001,
+    "songCount": 14,
+    "duration": 3220,
+    "coverArt": "al9"
+   },
+   {
+    "id": "al10",
+    "name": "Kid A",
+    "artist": "Radiohead",
+    "year": 2000,
+    "songCount": 10,
+    "duration": 2300,
+    "coverArt": "al10"
+   },
+   {
+    "id": "al11",
+    "name": "Folklore",
+    "artist": "Taylor Swift",
+    "year": 2020,
+    "songCount": 16,
+    "duration": 3680,
+    "coverArt": "al11"
+   },
+   {
+    "id": "al12",
+    "name": "Arrival",
+    "artist": "ABBA",
+    "year": 1976,
+    "songCount": 10,
+    "duration": 2300,
+    "coverArt": "al12"
+   }
+  ],
+  "playlists": [
+   {
+    "id": "pl1",
+    "name": "Kveldsrolig",
+    "songCount": 34,
+    "duration": 7800,
+    "coverArt": "al7"
+   },
+   {
+    "id": "pl2",
+    "name": "Trening",
+    "songCount": 48,
+    "duration": 10200,
+    "coverArt": "al2"
+   },
+   {
+    "id": "pl3",
+    "name": "Fredag",
+    "songCount": 27,
+    "duration": 6100,
+    "coverArt": "al6"
+   },
+   {
+    "id": "pl4",
+    "name": "Fokus",
+    "songCount": 52,
+    "duration": 12900,
+    "coverArt": "al4"
+   }
+  ],
+  "songs": [
+   {
+    "id": "s0",
+    "title": "Intro",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 322,
+    "coverArt": "al1"
+   },
+   {
+    "id": "s1",
+    "title": "Midnight City",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 244,
+    "coverArt": "al1"
+   },
+   {
+    "id": "s2",
+    "title": "Reunion",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 235,
+    "coverArt": "al1"
+   },
+   {
+    "id": "s3",
+    "title": "Where the Boats Go",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 120,
+    "coverArt": "al1"
+   },
+   {
+    "id": "s4",
+    "title": "Wait",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 343,
+    "coverArt": "al1"
+   },
+   {
+    "id": "s5",
+    "title": "Raconte-moi une histoire",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 250,
+    "coverArt": "al1"
+   },
+   {
+    "id": "s6",
+    "title": "Claudia Lewis",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 269,
+    "coverArt": "al1"
+   },
+   {
+    "id": "s7",
+    "title": "This Bright Flash",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 139,
+    "coverArt": "al1"
+   },
+   {
+    "id": "s8",
+    "title": "When Will You Come Home?",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 78,
+    "coverArt": "al1"
+   },
+   {
+    "id": "s9",
+    "title": "Soon, My Friend",
+    "artist": "M83",
+    "album": "Hurry Up, We're Dreaming",
+    "albumId": "al1",
+    "duration": 120,
+    "coverArt": "al1"
+   }
+  ]
+ },
+ "plugins": {
+  "plugins": [
+   {
+    "id": "sleep",
+    "name": "Sovetimer",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Skrur ned lyden det siste minuttet og slår av etter 15 til 90 minutter.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": true,
+     "minutes": 15
+    }
+   },
+   {
+    "id": "alarm",
+    "name": "Vekkerklokke",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Vekk med en radiofavoritt eller en strøm. Flere alarmer, valgfrie ukedager og myk oppstart.",
+    "enabled": true,
+    "status": "På",
+    "cfg": {
+     "enabled": true,
+     "alarms": [
+      {
+       "time": "07:00",
+       "days": [
+        0,
+        1,
+        2,
+        3,
+        4
+       ],
+       "preset": 1,
+       "url": "",
+       "volume": 30,
+       "fade": 3,
+       "on": true
+      }
+     ]
+    }
+   },
+   {
+    "id": "news",
+    "name": "Morgennyheter",
+    "src": "skjold",
+    "cat": "Radio og podkast",
+    "desc": "Spiller NRK P1 med nyheter til fast tid på hverdager.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "time": "06:30",
+     "days": [
+      0,
+      1,
+      2,
+      3,
+      4
+     ],
+     "url": "https://lyd.nrk.no/nrk_radio_p1_ostlandssendingen_mp3_h",
+     "volume": 25,
+     "minutes": 15
+    }
+   },
+   {
+    "id": "lyrics",
+    "name": "Sangtekster",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Viser teksten til låten som spiller, synkronisert når den finnes. Fra lrclib.net.",
+    "enabled": true,
+    "status": "På",
+    "cfg": {
+     "enabled": true
+    }
+   },
+   {
+    "id": "history",
+    "name": "Lyttehistorikk",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Husker de siste 500 låtene og kanalene som er spilt, med tid og kilde.",
+    "enabled": true,
+    "status": "På",
+    "cfg": {
+     "enabled": true
+    }
+   },
+   {
+    "id": "nightcap",
+    "name": "Volumtak om natten",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Begrenser volumet om natten, så ingen vekkes av et uhell.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "start": "22:00",
+     "end": "07:00",
+     "max": 25
+    }
+   },
+   {
+    "id": "listenbrainz",
+    "name": "ListenBrainz",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Registrerer det du spiller på ListenBrainz. Lim inn brukertokenet fra listenbrainz.org/settings.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "token": ""
+    }
+   },
+   {
+    "id": "lastfm",
+    "name": "Last.fm",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Registrerer det du spiller på Last.fm. Krever egen API-nøkkel, hemmelighet og sesjonsnøkkel.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "key": "",
+     "secret": "",
+     "session": ""
+    }
+   },
+   {
+    "id": "webhook",
+    "name": "Webhooks",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Sender en JSON-melding til din adresse når låt, avspilling eller kilde endres.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "url": ""
+    }
+   },
+   {
+    "id": "subwave",
+    "name": "SUB/WAVE",
+    "src": "skjold",
+    "cat": "Radio og podkast",
+    "desc": "Selvhostet AI-DJ-radio (getsubwave.com). Spill stasjonen, se DJ-loggen og køen, og ønsk deg låter.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "url": "",
+     "user": "",
+     "password": ""
+    }
+   },
+   {
+    "id": "spotty",
+    "name": "Spotty",
+    "src": "lyrion",
+    "cat": "Musikk",
+    "desc": "Spotify i Lyrion, med søk, spillelister og Spotify Connect. Krever Spotify Premium.",
+    "enabled": false,
+    "status": "I Lyrion",
+    "cfg": {
+     "enabled": false
+    },
+    "url": "http://skjold.local:9000/settings/index.html"
+   },
+   {
+    "id": "tidal",
+    "name": "TIDAL",
+    "src": "lyrion",
+    "cat": "Musikk",
+    "desc": "Strømming i FLAC fra TIDAL. Krever abonnement.",
+    "enabled": false,
+    "status": "I Lyrion",
+    "cfg": {
+     "enabled": false
+    },
+    "url": "http://skjold.local:9000/settings/index.html"
+   },
+   {
+    "id": "qobuz",
+    "name": "Qobuz",
+    "src": "lyrion",
+    "cat": "Musikk",
+    "desc": "Hi-res opptil 24-bit / 192 kHz. Krever abonnement.",
+    "enabled": false,
+    "status": "I Lyrion",
+    "cfg": {
+     "enabled": false
+    },
+    "url": "http://skjold.local:9000/settings/index.html"
+   },
+   {
+    "id": "deezer",
+    "name": "Deezer",
+    "src": "lyrion",
+    "cat": "Musikk",
+    "desc": "Flow, mikser og spillelister fra Deezer.",
+    "enabled": false,
+    "status": "I Lyrion",
+    "cfg": {
+     "enabled": false
+    },
+    "url": "http://skjold.local:9000/settings/index.html"
+   },
+   {
+    "id": "podcast",
+    "name": "Podkaster",
+    "src": "lyrion",
+    "cat": "Radio og podkast",
+    "desc": "Abonner på podkaster. Fortsetter der du slapp, også i et annet rom.",
+    "enabled": false,
+    "status": "I Lyrion",
+    "cfg": {
+     "enabled": false
+    },
+    "url": "http://skjold.local:9000/settings/index.html"
+   },
+   {
+    "id": "rp",
+    "name": "Radio Paradise",
+    "src": "lyrion",
+    "cat": "Radio og podkast",
+    "desc": "Reklamefri radio i FLAC.",
+    "enabled": false,
+    "status": "I Lyrion",
+    "cfg": {
+     "enabled": false
+    },
+    "url": "http://skjold.local:9000/settings/index.html"
+   },
+   {
+    "id": "bbc",
+    "name": "BBC Sounds",
+    "src": "lyrion",
+    "cat": "Radio og podkast",
+    "desc": "Direktesendinger og opptak fra BBC.",
+    "enabled": false,
+    "status": "I Lyrion",
+    "cfg": {
+     "enabled": false
+    },
+    "url": "http://skjold.local:9000/settings/index.html"
+   },
+   {
+    "id": "dstm",
+    "name": "Ikke stopp musikken",
+    "src": "lyrion",
+    "cat": "Verktøy",
+    "desc": "Fyller køen med lignende musikk når den tar slutt.",
+    "enabled": false,
+    "status": "I Lyrion",
+    "cfg": {
+     "enabled": false
+    },
+    "url": "http://skjold.local:9000/settings/index.html"
+   },
+   {
+    "id": "kids",
+    "name": "Barnerom-modus",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Maks volum, bare utvalgte kilder og kanaler, og leggetid med myk avslutning. Låses med PIN.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "max": 40,
+     "inputs": [
+      "radio"
+     ],
+     "presets": [],
+     "bedtime": "20:00",
+     "pin": ""
+    }
+   },
+   {
+    "id": "record",
+    "name": "Radioopptak",
+    "src": "skjold",
+    "cat": "Radio og podkast",
+    "desc": "Ta opp en radiofavoritt eller strøm nå eller til fast tid, og spill av opptaket senere.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "schedules": [],
+     "max_mb": 2000
+    }
+   },
+   {
+    "id": "mqtt",
+    "name": "MQTT-bro",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Publiserer status og tar imot kommandoer over MQTT, med valgfri Home Assistant-oppdagelse.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "host": "",
+     "port": 1883,
+     "user": "",
+     "password": "",
+     "tls": false,
+     "prefix": "skjold",
+     "discovery": true
+    }
+   },
+   {
+    "id": "snapcast",
+    "name": "Snapcast",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Beta: synkron lyd til flere høyttalere med Snapcast. Krever pi/install_snapcast.sh.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "role": "server",
+     "server": ""
+    }
+   },
+   {
+    "id": "roomeq",
+    "name": "Romkorreksjon",
+    "src": "skjold",
+    "cat": "Verktøy",
+    "desc": "Mål rommet med mikrofonen på telefonen og demp basstopper mellom 40 og 300 Hz.",
+    "enabled": false,
+    "status": "Av",
+    "cfg": {
+     "enabled": false,
+     "filters": [],
+     "tilt": 0.0,
+     "measured": ""
+    }
+   }
+  ],
+  "sleep": 0,
+  "on": 4
+ },
+ "lyrics": {
+  "enabled": true,
+  "found": true,
+  "title": "Midnight City",
+  "artist": "M83",
+  "plain": "",
+  "synced": [
+   {
+    "t": 0,
+    "l": "Waiting in a car"
+   },
+   {
+    "t": 4,
+    "l": "Waiting for a ride in the dark"
+   },
+   {
+    "t": 9,
+    "l": "The night city grows"
+   },
+   {
+    "t": 13,
+    "l": "Look and see her eyes, they glow"
+   },
+   {
+    "t": 18,
+    "l": "Waiting in a car"
+   },
+   {
+    "t": 22,
+    "l": "Waiting for the right time"
+   }
+  ]
+ },
+ "history": {
+  "enabled": true,
+  "items": [
+   {
+    "t": 1793970000,
+    "title": "Midnight City",
+    "artist": "M83",
+    "album": "",
+    "input": "radio",
+    "source": "Radio",
+    "station": "NRK P3",
+    "cover": ""
+   },
+   {
+    "t": 1793969700,
+    "title": "Dreams",
+    "artist": "Fleetwood Mac",
+    "album": "",
+    "input": "radio",
+    "source": "Radio",
+    "station": "NRK P1",
+    "cover": ""
+   }
+  ]
+ },
+ "recordings": {
+  "items": [
+   {
+    "name": "NRK-P3-20261106-0800.mp3",
+    "size": 86000000,
+    "t": 1793955600,
+    "recording": false
+   }
+  ],
+  "dir": "/var/lib/skjold/opptak"
+ },
+ "subwave": {
+  "configured": false
+ },
+ "snapcast": {
+  "ok": false,
+  "error": "Får ikke kontakt med snapserver (demo)",
+  "clients": [],
+  "role": "server"
+ }
+}
