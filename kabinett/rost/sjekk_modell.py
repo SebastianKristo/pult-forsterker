@@ -1,7 +1,7 @@
-"""Kontroll av Skjold Mini-modellen (knappehetter og løs grill).
+"""Kontroll av Skjold Røst-modellen (knappehetter og løs grill).
 
 Bruk:  python3 sjekk_modell.py <mappe med A_*.stl i montert stilling>
-A_*.stl lages med  openscad -D 'part="a_kropp"' -o A_kropp.stl skjold_mini.scad  (se dispatch nederst i .scad).
+A_*.stl lages med  openscad -D 'part="a_kropp"' -o A_kropp.stl skjold_rost.scad  (se dispatch nederst i .scad).
 Krever trimesh og manifold3d. Sjekker:
   1. alle utskrifts-STL-er i stl/ er vanntette, ett legeme, ligger på platen (min z = 0) og passer på 250 × 250 mm
   2. ingen deler overlapper i montert stilling (par som skal ligge an mot hverandre har bare kontaktflater)

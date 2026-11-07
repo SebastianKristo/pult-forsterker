@@ -1,8 +1,8 @@
-import skjold_mini as mini
+import skjold_rost as mini
 
 PLAYERS = {"players_loop": [
     {"playerid": "AA:BB:CC:00:00:01", "name": "Stue", "model": "squeezelite", "modelname": "SqueezeLite", "connected": 1},
-    {"playerid": "24:0a:c4:11:22:33", "name": "Skjold Mini bad", "model": "squeezelite", "modelname": "SqueezeESP32",
+    {"playerid": "24:0a:c4:11:22:33", "name": "Skjold Røst bad", "model": "squeezelite", "modelname": "SqueezeESP32",
      "ip": "192.168.1.40:51234", "connected": 1, "power": 1, "isplaying": 0},
     {"playerid": "24:0a:c4:44:55:66", "name": "Kjøkken", "model": "squeezelite", "modelname": "SqueezeESP32", "connected": 0},
     {"playerid": "00:04:20:aa:bb:cc", "name": "Gammel Boom", "model": "boom", "modelname": "Squeezebox Boom"},
@@ -11,7 +11,7 @@ PLAYERS = {"players_loop": [
 
 def test_finds_only_minis_and_skips_own():
     out = mini.parse_players(PLAYERS, own_id="aa:bb:cc:00:00:01", sync_ids=["24:0A:C4:11:22:33"])
-    assert [m["name"] for m in out] == ["Kjøkken", "Skjold Mini bad"]
+    assert [m["name"] for m in out] == ["Kjøkken", "Skjold Røst bad"]
     bad = out[1]
     assert bad["ip"] == "192.168.1.40" and bad["connected"] and bad["power"] and bad["synced"]
     assert not out[0]["connected"] and not out[0]["synced"]
@@ -66,3 +66,9 @@ def test_presets_to_buttons():
     m = mini.Minis(lambda p, c: calls.append((p, c)) or {"players_loop": []}, lambda: "own", lambda: presets)
     m.act({"id": "24:0A:C4:11:22:33", "action": "presets", "value": [1, 3]})
     assert [c for c in calls if c[1][0] == "jivefavorites"][1][0] == "24:0a:c4:11:22:33"
+
+
+def test_recognizes_new_ascii_and_old_names():
+    for n in ("Skjold Røst bad", "Skjold Rost kjøkken", "Skjold Mini gammel"):
+        assert mini.is_mini({"name": n, "model": "x"})
+    assert not mini.is_mini({"name": "Stue", "model": "squeezelite", "modelname": "SqueezeLite"})

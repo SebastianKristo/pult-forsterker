@@ -1,14 +1,14 @@
-# Skjold Mini – innstillinger for squeezelite-esp32 (ESP32-S3 N16R8 + PCM5102A + TPA3118 PBTL + 2,42″ OLED SSD1309 på I²C)
+# Skjold Røst – innstillinger for squeezelite-esp32 (ESP32-S3 N16R8 + PCM5102A + TPA3118 PBTL + 2,42″ OLED SSD1309 på I²C)
 # Syntaksen er hentet fra README i sle118/squeezelite-esp32 (avsnittene I2C/SPI, DAC/I2S, Display, Set GPIO,
 # Rotary Encoder og Buttons). Legg nøklene inn i NVS-editoren på ESP-ens nettside («Credits» → «Show NVS editor»).
-# Pinnene stemmer med koblingstabellen i kabinett/mini/LES_MEG.md.
+# Pinnene stemmer med koblingstabellen i kabinett/rost/LES_MEG.md.
 
 # --- lyd ---
 dac_config      = model=I2S,bck=4,ws=5,do=6
 set_GPIO        = 7=amp
 # Kommandolinjen settes under «Squeezelite» på nettsiden (lagres som autoexec1). -C 30 slår av forsterkeren
-# (GPIO7 → TPA3118 SDZ) etter 30 s stillhet. Navnet må begynne med «Skjold Mini».
-autoexec1       = squeezelite -o I2S -b 500:2000 -C 30 -W -Z 96000 -n "Skjold Mini bad"
+# (GPIO7 → TPA3118 SDZ) etter 30 s stillhet. Navnet må begynne med «Skjold Røst» (eller ASCII «Skjold Rost», tryggest i fastvaren).
+autoexec1       = squeezelite -o I2S -b 500:2000 -C 30 -W -Z 96000 -n "Skjold Rost bad"
 
 # --- skjerm: 2,42″ OLED 128×64, SSD1309 på I²C (hvit) ---
 # squeezelite-esp32 har ingen egen SSD1309-driver, men SSD1309 er registerkompatibel med SSD1306 for 128×64 over I²C.
@@ -29,10 +29,14 @@ rotary_config   = A=15,B=16,SW=17,volume,longpress
 actrls_config   = knapper
 knapper         = [{"gpio":8,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"ACTRLS_POWER"}},{"gpio":9,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS1"}},{"gpio":18,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS2"}},{"gpio":39,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS3"}},{"gpio":47,"type":"BUTTON_LOW","pull":true,"debounce":30,"normal":{"pressed":"BCTRLS_PS4"}}]
 # BCTRLS_PS1–4 spiller Lyrion-favoritt (preset) 1–4 på denne spilleren. Hvilke radiokanaler knappene har,
-# velger du i Skjold: Grupper → Skjold Mini → Knapper → «Legg på knappene».
+# velger du i Skjold: Grupper → Skjold Røst → Knapper → «Legg på knappene».
 # Langt trykk for å lagre kanalen som spiller nå: squeezelite-esp32 har ingen egen «lagre»-handling. Setter du
 # lms_ctrls_raw = 1, sendes rå knappekoder til LMS, som da selv håndterer «hold» på preset-knappene slik en
 # Squeezebox Boom gjør – men da gjelder ikke JSON-oppsettet over (av/på må også mappes av LMS). Ikke testet.
 
-# Gi hver Mini et eget navn som begynner med «Skjold Mini», f.eks. «Skjold Mini bad».
-# Da finner Skjold den automatisk (Grupper → Skjold Mini) og kan koble den til et rom.
+# Gi hver Røst et eget navn som begynner med «Skjold Røst», f.eks. «Skjold Rost bad» (ø kan gi problemer i fastvaren; Skjold viser begge).
+# Da finner Skjold den automatisk (Grupper → Skjold Røst) og kan koble den til et rom.
+
+# Navn på nettverket og i Wi-Fi-oppsettet (bare ASCII)
+host_name       = Skjold-Rost
+ap_ssid         = Skjold-Rost
