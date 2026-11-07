@@ -44,7 +44,7 @@ Bilder: [forfra](render/07_forfra.png) · [med kassett](render/02_med_kassett.pn
 | NTAG215 NFC-klistremerke, 25 mm | 1 per kassett | NTAG213/216 virker også |
 | WS2812B-stripe 10 mm, 60 LED/m | 5 LED (ca. 84 mm) | i lista bak sporet, under lyslederen |
 | Passiv piezo-summer 12 mm | 1 | valgfri |
-| Klar rute 49 × 62,9 × 1,5 mm | 1 | print i klar PETG – eller skjær ut av 1,5 mm akryl/PETG-plate (klarest) |
+| Klar rute 49 × 62,9 × 1,0 mm | 1 | 1 mm klar akryl (klarest) – eller print i klar PETG. Sporet er tegnet for 1,0 mm (`paneT` i .scad) |
 | M3 innpressmutter (heat-set), M3 × 5,7 mm, Ø ≤ 4,6 mm | 4 | hull Ø 4,0 × 6,5 mm i skruetårnene |
 | M3 × 8 mm senkehodeskrue (DIN 7991) | 4 | fra undersiden |
 | Selvklebende gummiføtter Ø 10 mm | 4 | |

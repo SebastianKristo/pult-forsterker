@@ -40,7 +40,7 @@ bossD = 8;                      // skruetårn i hjørnene
 footD = 10.4;                   // selvklebende gummiføtter Ø 10 mm
 // vindu og drivverk
 winW = 44;  winR = 3;           // synlig vindusåpning i fronten
-paneW = 49; paneT = 1.5;        // klar rute (PETG), skyves opp i spor innenfor frontveggen
+paneW = 49; paneT = 1.0;        // klar rute (1 mm akryl eller PETG), skyves opp i spor innenfor frontveggen
 dmD = 6.2;  dmT = 3.2;          // 6 × 3 mm diametral magnet i trinsene
 smD = 3.2;  smT = 2.2;          // 3 × 2 mm diametral magnet i spolenavet
 pinA = 2.0;                     // Ø 2 mm stålpinne (aksel) for trinsene
