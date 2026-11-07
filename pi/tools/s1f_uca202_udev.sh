@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Skjold S1 rev F: gi de to Behringer UCA202 faste ALSA-navn (UCA_AUX1 og UCA_AUX2) etter hvilken USB-port de sitter i.
+# Skjold S1 rev F: gi de to Behringer UCA202/UCA222/UFO202 (samme PCM2902-brikke, ALSA-id «CODEC») faste ALSA-navn (UCA_AUX1 og UCA_AUX2) etter hvilken USB-port de sitter i.
 # Kortet i den «laveste» porten (sortert USB-sti) blir AUX 1. Bytter de plass: kjør med --swap.
 #   sudo bash pi/tools/s1f_uca202_udev.sh [--swap]
 set -euo pipefail
@@ -14,7 +14,7 @@ for c in /sys/class/sound/card*; do
   ports+=("$port")
 done
 if [ "${#ports[@]}" -lt 2 ]; then
-  echo "Fant ${#ports[@]} UCA202 (trenger 2). Sjekk «aplay -l» og at begge er koblet til." >&2
+  echo "Fant ${#ports[@]} USB-lydkort (UCA202/UCA222/UFO202 – trenger 2). Sjekk «aplay -l» og at begge er koblet til." >&2
   exit 1
 fi
 mapfile -t ports < <(printf '%s\n' "${ports[@]}" | sort -V | head -n2)
