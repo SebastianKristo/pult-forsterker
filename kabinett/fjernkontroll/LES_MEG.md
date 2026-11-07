@@ -11,7 +11,7 @@ Inni: [innmaten ovenfra](render/10_inni_ovenfra.png) · [skrått](render/11_inni
 I Bone White matt PLA med mørk matt PETG-bunn: [skrått](render/21_skra_bone.png) · [ovenfra](render/22_ovenfra_bone.png) · [fra siden](render/23_side_bone.png) · [nær](render/24_naer_bone.png) · [med grå PETG-bunn](render/25_skra_bone_gra.png). Se [Filament](#filament).
 Skjermen i bildene viser aktivitetslista slik fastvaren tegner den. Skjermbildene er laget med `lag_skjermbilder.py` (se [Skjermen](#skjermen)).
 
-**Mål: 55 × 196 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 239 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
+**Mål: 55 × 201,5 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 244,5 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
 
 Første utgave hadde en 2,0″-skjerm i en 54 × 208 mm kropp, med mye tom ramme på hver side av skjermen. Nå sitter en 2,8″-skjerm der: kroppen er 1 mm bredere og 22 mm lengre, og alt under skjermen (taster, form og farger) er det samme som før.
 
@@ -30,11 +30,11 @@ Standard er fjernkontrollen **uten talltaster**, som vist i bildene over. **Full
 
 | | **Standard** | **Full variant (valgfri)** |
 |---|---|---|
-| Mål | **55 × 196 mm** | 55 × 239 mm |
+| Mål | **55 × 201,5 mm** | 55 × 244,5 mm |
 | Tykkelse | 13,5 mm (15,0 mm med gullringen) | samme |
 | Taster | **14 brytere, 10 hetter** | 30 brytere, 26 hetter |
 | TCA9555 | **2** (0x20, 0x21); vibrator, skjermstrøm og lader på brikke B, P1_4–P1_6 | 3 (0x20, 0x21, 0x22); de tre styrepinnene på brikke C |
-| Tastekort | 48,6 × 101 mm (`tastekort/`) | 48,6 × 149 mm (`tastekort_full/`) |
+| Tastekort | 48,6 × 105 mm (`tastekort/`) | 48,6 × 154 mm (`tastekort_full/`) |
 | ESPHome | `esphome/skjold-fjernkontroll.yaml` | `esphome/skjold-fjernkontroll-full.yaml` |
 | 3MF | `skjold-fjernkontroll-k2*.3mf` | `skjold-fjernkontroll-full-k2*.3mf` |
 | STL | `stl/` | `stl_full/` |
@@ -62,16 +62,16 @@ Fra toppen og ned:
 - **Skjermen** ligger øverst, rett bak IR-nesen. Vinduet (45,0 × 59,4 mm) går 0,9 mm utenfor det aktive området rundt, så litt av den sorte glasskanten synes. Toppen holder glasset med 1,4 mm leppe på sidene og 1,5 mm oppe; nede dekker den 5,6 mm, slik at den brede glasskanten ved flatkabelen (6,47 mm) ligger skjult.
 - **Øverste rad**, mellom skjermen og gullringen: av/på, **Skjold-tasten i gull** (aktiviteter, hold for rom) og **meny** (☰; kort trykk = meny, langt trykk = guide). Alle tre er Ø 11,5 mm og står 14,5 mm fra hverandre, så raden er like bred som ringen under.
 - **D-paden**: en stor gullring (Ø 39 mm, før 32) med fire tydelige retningspiler (sorte trekanter 6,0 × 4,3 mm felt inn i gullet) og en mørk OK (Ø 15 mm) i midten, der tommelen hviler. Ringen er så stor som bredden tillater, med over 4 mm til sideveggene.
-- **Tilbake ↰ og avslutt ✕** (Ø 11,5 mm) rett under ringen, i medieblokkens to kolonner: tilbake over spill/pause, avslutt over volumpillen.
-- **Medieblokken** nederst, 36 mm bred: til venstre spill/pause og demp (Ø 16 mm) over hverandre, til høyre en høy volumpille (17 × 35 mm) med + øverst og − nederst.
-- Symbolene på de mindre tastene er skalert opp med tastene.
+- **Tasteblokken** under ringen er et rent rutenett i to kolonner: fire like store runde taster (Ø 16 mm) og volumpillen, med 3,25 mm mellomrom både på tvers og på langs. Øverst tilbake ‹ og avslutt ✕, så spill/pause og demp til venstre. Volumpillen til høyre er nøyaktig én tast bred og to taster pluss mellomrommet høy (16 × 35,25 mm), med topp og bunn i flukt med spill/pause og demp. Blokken er 35,25 mm bred.
+- **Symbolene** er strektegnet med jevn strek (0,65 mm) og ca. 38 % av tastens diameter: en tynn vinkel for tilbake, ✕, ▷‖, en høyttaler med skråstrek, tynne + og − på pillen (uten prikk), av/på-ring, meny-streker og Skjold-omrisset. Pilene på gullringen er tynne vinkler og OK er skrevet med vanlig (ikke fet) skrift. De er felt inn som lyse innlegg i de mørke tastene.
+- **Tastetoppene** har en myk R 1,0-kant i stedet for fas. De printes fortsatt med flensen ned og toppen opp, uten støtte. Toppen er flat, så innleggene blir jevnt 0,4 mm dype.
 - *Full variant:* **talltastene** 1–9 står i tre kolonner, med −, 0 og ↵ i fjerde rad. **Smarthus-raden** nederst har fire lyse taster: lys, stikkontakt, − og +.
 - **SKJOLD** er felt inn i gull nederst.
 
 Designet er Skjolds eget. Det følger samme formspråk som Radio, Røst og Hjul S: myke hjørner, fas i stedet for avrundet «såpe», to toner, gull på det du bruker mest og SKJOLD i gull. Funksjonene er de samme som på andre universalfjernkontroller med skjerm, men formen og plasseringen er bevisst annerledes:
 - Siden er rett, ikke innsnevret, og overflaten er matt og printet, ikke en blank, sort plate.
-- De tre mest brukte systemtastene står samlet over ringen, og tilbake/avslutt og medieblokken står i de samme to kolonnene under den.
-- Volum er én høy pille i medieblokken, ved siden av to store runde taster, uten kanalvippe. Tilbake/avslutt og medieblokken har samme kolonner.
+- De tre mest brukte systemtastene står samlet over ringen, og tilbake/avslutt og medieblokken er ett rutenett med like store taster under den.
+- Volum er én høy pille i medieblokken, ved siden av to store runde taster, uten kanalvippe. 
 - Det er ingen pilleknapper for «aktiviteter» og «enheter» ved skjermen. Det gjør den ene gull-tasten med Skjold-skjoldet.
 
 Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavprofil SMD-bryter (4 × 4 × 1,5 mm) på et 1,0 mm tastekort. Hettene står 0,1 mm over bryteren, så de ikke slarker og ikke trykker på forhånd. Symbolene er felt 0,4 mm inn og printet i kontrastfarge (lyse på mørke taster, mørke på lyse). Med CFS blir symbolene en del av samme utskrift.
@@ -96,7 +96,7 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 
 ### Tastekortet – to måter
 
-**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 101 mm (full variant: 48,6 × 149 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
+**A. Bestilt kort fra JLCPCB (anbefalt).** 2-lags FR4, **1,0 mm** tykt, 48,6 × 105 mm (full variant: 48,6 × 154 mm, `tastekort_full/`). Mappa `tastekort/` har alt du trenger for å tegne det:
 - `kort_omriss.dxf` er omrisset med hull og hakk for skruene (origo nede til venstre, halen ned).
 - `plassering.csv` gir x/y for de 14 bryterne (oppside) og de to TCA9555 (underside).
 - `koblinger.csv` viser hvilken bryter som går til hvilken brikke og pinne.
@@ -106,7 +106,7 @@ Det er ingen ferdige gerber-filer. Kortet tegnes på ca. 1–2 timer i EasyEDA (
 1. Importer DXF-en som kortomriss.
 2. Plasser bryterne etter `plassering.csv`.
 3. Koble hver bryter mellom pinnen sin og GND, og la autorouteren legge sporene.
-4. Legg jordflate på undersiden, men **ingen kobberfylling over antennen til SuperMini-en**: de venstre 21 mm av kortet, 33–38 mm fra kortets nedre kant (full variant: 39–43 mm).
+4. Legg jordflate på undersiden, men **ingen kobberfylling over antennen til SuperMini-en**: de venstre 21 mm av kortet, 37–41 mm fra kortets nedre kant (full variant: 45–49 mm).
 
 Hver TCA9555 skal ha 100 nF ved VCC og adressepinner slik: U1 A0–A2 = 000 (0x20), U2 = 100 (0x21, A0 høy), og i full variant U3 = 010 (0x22, A1 høy). Kortet trenger også 10 kΩ pull-up på SDA, SCL og felles INT. Fem kort koster ca. 120 kr med billigste frakt. Med JLC-montering av de tre brikkene på undersiden blir det ca. 250 kr mer. Bryterne lodder du selv: fire store ben hver, så det går greit med vanlig loddebolt.
 
@@ -162,8 +162,8 @@ Alt står i bunnen, unntatt tastekortet og skjermen, som sitter i toppen. Bilder
 | Vibrasjonsmotoren | til høyre, n 100–110 | i en ring (0,5 mm klaring) |
 | Vibrasjonsbryteren | til høyre, n 118–130 | i to vugger |
 | **ESP32-S3 SuperMini** | **til venstre under tilbake og spill/pause, n 124–147** (full variant: n 166–189) | på en 1 mm hylle i en lomme med 0,5 mm klaring; USB-C mot nesen, antennen mot halen. Det er 22 mm fri vei foran USB-C, så du kan koble til en vanlig kabel med bunnen åpen |
-| TP4056-laderen | i halen, midt på, n 166–194 (full: n 209–237) | lomme med 0,5 mm klaring; USB-C sitter 0,95 mm bak en 1,2 mm forsenkning i halen, så vanlige kabler går helt inn |
-| Tastekortet | i toppen, n 79–180 (full: n 79–228) | ligger på stolpene og klemmes av pinnene og midtskruen; TCA9555, J1 og J2 sitter på undersiden, minst 1,3 mm over alt i bunnen |
+| TP4056-laderen | i halen, midt på, n 171–199 (full: n 214–242) | lomme med 0,5 mm klaring; USB-C sitter 0,95 mm bak en 1,2 mm forsenkning i halen, så vanlige kabler går helt inn |
+| Tastekortet | i toppen, n 79–184 (full: n 79–234) | ligger på stolpene og klemmes av pinnene og midtskruen; TCA9555, J1 og J2 sitter på undersiden, minst 1,3 mm over alt i bunnen |
 | Flatkablene | fra nedre kant av skjermen, bakover under tastekortet | skjermkabelen (9,5 mm, 42,58 mm) bøyes ned bak glasset og går til J1 ved n ≈ 112; berøringskabelen (5,2 mm, ca. 35 mm) til J2 ved n ≈ 105. Sjekken kontrollerer at de går klar av stolper, skruer og komponenter |
 
 **Hva sjekken kontrollerer.** `sjekk_modell.py` laster referansedeler for alt som kjøpes (batteri, SuperMini, TP4056, IR-kort, bryter, motor, flatkabler og ledningsbunter) og sjekker at:
@@ -254,9 +254,9 @@ Alt er 30 AWG silikontråd (myk, 0,6 mm ytre), unntatt batteriets egne ledninger
 
 | Fra | Til | Lengde | Tråd |
 |---|---|---|---|
-| Batteri + / − | TP4056 B+ / B− | 110 mm | batteriets egne ledninger, kuttet (midtkanalen) |
-| TP4056 OUT+ / OUT− | SuperMini 5V / GND | 55 mm | 30 AWG, rød / sort |
-| TP4056 OUT+ / OUT− / CHRG | tastekort P15 / P16 / P17 | 70 mm | 30 AWG |
+| Batteri + / − | TP4056 B+ / B− | 115 mm | batteriets egne ledninger, kuttet (midtkanalen) |
+| TP4056 OUT+ / OUT− | SuperMini 5V / GND | 60 mm | 30 AWG, rød / sort |
+| TP4056 OUT+ / OUT− / CHRG | tastekort P15 / P16 / P17 | 75 mm | 30 AWG |
 | SuperMini (14 signaler) | tastekort P1–P14 | 60 mm hver | 30 AWG, gjerne flatkabel av silikontråd |
 | SuperMini GPIO43 / GPIO44 | IR-kort G / OUT | 135 mm | 30 AWG, venstre kanal |
 | tastekort P15 / P20 / P2 | IR-kort + / VS / − | 145 mm | 30 AWG, venstre kanal |

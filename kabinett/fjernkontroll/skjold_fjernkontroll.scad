@@ -14,7 +14,7 @@
 include <taster.scad>
 
 part = "samlet";
-variant = "kort";               // kort (standard: 14 taster, 196 mm) | full (valgfri, med talltaster og smarthus-rad: 30 taster, 239 mm)
+variant = "kort";               // kort (standard: 14 taster, 201,5 mm) | full (valgfri, med talltaster og smarthus-rad: 30 taster, 244,5 mm)
 kortv = variant == "kort";
 farge = "lys";                  // lys | mork | bone (Bone White PLA + mørk PETG) | bone_gra (Bone White PLA + grå PETG)
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
@@ -22,7 +22,7 @@ skjermE = 0;                    // part="skjermflate": samme eksplosjonsavstand 
 $fn = 48;
 
 // ---------- ytre mål ----------
-W = 55; L = kortv ? L_KORT : L_FULL;   // bredde og lengde (fra taster.py: 196 mm standard, 239 mm full)
+W = 55; L = kortv ? L_KORT : L_FULL;   // bredde og lengde (fra taster.py: 201,5 mm standard, 244,5 mm full)
 HETTER = kortv ? HETTER_KORT : HETTER_FULL;
 BRYTERE = kortv ? BRYTERE_KORT : BRYTERE_FULL;
 PCB_N1 = kortv ? PCB_N1_KORT : PCB_N1_FULL;
@@ -46,7 +46,8 @@ opp = 1.2;                      // tastene står 1,2 mm over toppen
 ringOpp = 1.5;                  // gullringen 1,5 mm
 okOpp = 1.1;
 ink = 0.4;                      // symbolene: 0,4 mm innfelt, fylt med annen farge (2 lag à 0,2 mm)
-kf = 0.5;                       // fas på hettens toppkant
+kf = 0.5;                       // (ikke brukt lenger: toppkanten er rundet, kr)
+kr = 1.0;                       // myk toppkant: R1,0 rundt hver hette (printes med toppen opp, uten støtte)
 
 // ---------- skjerm ----------
 // 2,8″ 240 × 320 naken FPC-modul med dekkglass: HP28030-DCT IPS med kapasitiv berøring (innplugg-versjonen).
@@ -86,7 +87,7 @@ mcu = [18, 22.6, 4.6];              // ESP32-S3 SuperMini (antennen mot halen)
 mcuN = kortv ? 124 : 166;            // til venstre, foran laderen (USB-C mot nesen, fri vei 22 mm for pluggen)
 mcuX = 13.5;
 mcuZ = tB + 1.0;                     // kortet ligger på en 1,0 mm hylle, så USB-C-pluggen går klar av gulvet
-STOLPER = kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 176], [W/2 + 15, 176]]
+STOLPER = kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 178], [W/2 + 15, 178]]
                 : [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 222], [W/2 + 15, 222]];
 TCA = kortv ? [[W/2 + 13, 145], [W/2 + 13, 157]] : [[W/2 - 13, 150], [W/2, 150], [W/2 + 13, 150]];   // TCA9555 under kortet
 lad = [17, 28, 4.4];                // TP4056 Type-C-modul med beskyttelse (PCB 17 × 28 × 1,2, USB-C 9 × 7,3 × 3,2), mot halen
@@ -151,7 +152,23 @@ module hform(f, b, h, o = 0) {
 // ---------- symboler (2D, sentrert, ca. 4 mm store; streker ≥ 0,8 mm) ----------
 module strek(a, b, w = 0.85) { hull() { translate(a) circle(d = w, $fn = 12); translate(b) circle(d = w, $fn = 12); } }
 module trekant(s = 2.6) { polygon([[-s*0.45, -s/2], [-s*0.45, s/2], [s*0.55, 0]]); }
-module tekst(s, z = 3.0) { text(s, size = z, font = "Liberation Sans:style=Bold", halign = "center", valign = "center"); }
+module tekst(s, z = 3.0) { text(s, size = z, font = "Liberation Sans", halign = "center", valign = "center"); }
+// ---------- strektegnede symboler: jevn strek sw, ca. 38 % av tastens diameter (s = symbolets størrelse) ----------
+sw = 0.65;                      // strekbredde (mm) for alle hovedsymbolene
+module bue(r, a0, a1, w = sw) { for (a = [a0:(a1 - a0)/16:a1 - 0.001]) hull() { rotate(a) translate([r, 0]) circle(d = w, $fn = 12); rotate(a + (a1 - a0)/16) translate([r, 0]) circle(d = w, $fn = 12); } }
+module strekomriss(pts, w = sw) { difference() { offset(delta = w/2) polygon(pts); offset(delta = -w/2) polygon(pts); } }
+module ikonL(i, s) {
+  if (i == "av") { bue(0.42*s, 125, 415); strek([0, 0.02*s], [0, 0.55*s], sw); }
+  else if (i == "skjold") strekomriss([for (p = [[-1.9, 1.9], [1.9, 1.9], [1.9, 0.2], [0, -2.3], [-1.9, 0.2]]) p*s/4.4]);
+  else if (i == "meny") for (y = [-0.3, 0, 0.3]) strek([-0.42*s, y*s], [0.42*s, y*s], sw);
+  else if (i == "tilbake") { strek([0.12*s, 0.4*s], [-0.28*s, 0], sw); strek([-0.28*s, 0], [0.12*s, -0.4*s], sw); }
+  else if (i == "avslutt") { strek([-0.32*s, -0.32*s], [0.32*s, 0.32*s], sw); strek([-0.32*s, 0.32*s], [0.32*s, -0.32*s], sw); }
+  else if (i == "spill_pause") { strekomriss([for (p = [[-0.5, -0.36], [-0.5, 0.36], [0.06, 0]]) p*s]);
+                                 strek([0.28*s, -0.36*s], [0.28*s, 0.36*s], sw); strek([0.5*s, -0.36*s], [0.5*s, 0.36*s], sw); }
+  else if (i == "demp") { strekomriss([for (p = [[-0.5, -0.17], [-0.24, -0.17], [0.04, -0.42], [0.04, 0.42], [-0.24, 0.17], [-0.5, 0.17]]) p*s]);
+                         strek([-0.5*s, -0.5*s], [0.5*s, 0.5*s], sw); }
+  else if (i == "OK") tekst("OK", 3.6);
+}
 module ikon(i) {
   if (i == "av") { difference() { circle(d = 4.2, $fn = 32); circle(d = 2.5, $fn = 32); translate([-0.9, 0]) square([1.8, 3]); } translate([-0.42, 0]) square([0.84, 2.4]); }
   else if (i == "skjold") difference() {   // skjold-omriss
@@ -184,14 +201,14 @@ module ikon(i) {
 }
 // symbolene på vippene: + / − (volum) og ∧ / ∨ (kanal), og en liten prikk i midten
 module vippe_ikon(i) {
-  translate([0, VIPPE_D]) if (i == "vol") { strek([-1.2, 0], [1.2, 0]); strek([0, -1.2], [0, 1.2]); } else { strek([-1.2, -0.6], [0, 0.6]); strek([0, 0.6], [1.2, -0.6]); }
-  translate([0, -VIPPE_D]) if (i == "vol") strek([-1.2, 0], [1.2, 0]); else { strek([-1.2, 0.6], [0, -0.6]); strek([0, -0.6], [1.2, 0.6]); }
-  circle(d = 0.9, $fn = 12);
+  translate([0, VIPPE_D]) if (i == "vol") { strek([-1.8, 0], [1.8, 0], sw); strek([0, -1.8], [0, 1.8], sw); } else { strek([-1.2, -0.6], [0, 0.6]); strek([0, 0.6], [1.2, -0.6]); }
+  translate([0, -VIPPE_D]) if (i == "vol") strek([-1.8, 0], [1.8, 0], sw); else { strek([-1.2, 0.6], [0, -0.6]); strek([0, -0.6], [1.2, 0.6]); }
 }
 module symbol2d(h) {   // symbolet for hette h, i hettens lokale ramme (y peker mot nesen)
   if (h[1] == "vippe") vippe_ikon(h[6]);
-  else if (h[1] == "ring") for (a = [0:90:270]) rotate(a) polygon([[-3.0, 11.85], [3.0, 11.85], [0, 16.15]]);   // piler 6,0 × 4,3 mm
-  else if (h[1] == "rund" && h[4] > 9.9 && h[4] < 13) scale(h[4]/8.5) ikon(h[6]);   // av/på (Ø10) og 2 × 2-tastene (Ø11,5): større symboler
+  else if (h[1] == "ring") for (a = [0:90:270]) rotate(a) { strek([-2.4, 13.0], [0, 14.9], sw); strek([0, 14.9], [2.4, 13.0], sw); }   // tynne vinkler 4,8 × 1,9 mm
+  else if (h[1] == "ok") ikonL("OK", 0);
+  else if (h[1] == "rund" && h[4] >= 10) ikonL(h[6], 0.38*h[4]);   // runde taster: strektegnet, 38 % av diameteren
   else ikon(h[6]);
 }
 
@@ -205,7 +222,7 @@ module hette_kropp(h) {
     difference() {
       union() {
         translate([0, 0, zHb]) cylinder(r = b/2 + fl, h = flT, $fn = 96);
-        translate([0, 0, zHb]) hull() { cylinder(r = b/2, h = zt - zHb - kf, $fn = 96); cylinder(r = b/2 - kf, h = zt - zHb, $fn = 96); }
+        translate([0, 0, zHb]) hull() { cylinder(r = b/2, h = zt - zHb - kr, $fn = 96); for (a = [22.5:22.5:90]) cylinder(r = b/2 - kr*(1 - cos(a)), h = zt - zHb - kr + kr*sin(a), $fn = 96); }
       }
       translate([0, 0, zHb - 1]) cylinder(r = ri, h = 12.6 - zHb + 1, $fn = 64);         // OK-ens flens går inn her
       translate([0, 0, 12.6 - 0.001]) cylinder(r1 = ri, r2 = ri - 0.7, h = 0.7, $fn = 64);   // 45° krage holder OK-en
@@ -216,13 +233,13 @@ module hette_kropp(h) {
     union() {
       translate([0, 0, zHb]) cylinder(r = ri, h = 12.3 - zHb, $fn = 64);
       translate([0, 0, 12.3 - 0.001]) cylinder(r1 = ri, r2 = ri - 0.7, h = 0.7, $fn = 64);
-      translate([0, 0, 12.3]) hull() { cylinder(r = b/2, h = zt - 12.3 - kf, $fn = 64); cylinder(r = b/2 - kf, h = zt - 12.3, $fn = 64); }
+      translate([0, 0, 12.3]) hull() { cylinder(r = b/2, h = zt - 12.3 - kr, $fn = 64); for (a = [22.5:22.5:90]) cylinder(r = b/2 - kr*(1 - cos(a)), h = zt - 12.3 - kr + kr*sin(a), $fn = 64); }
     }
   } else {
     translate([0, 0, zHb]) linear_extrude(flT) hform(f, b, hh, fl);
     hull() {
-      translate([0, 0, zHb]) linear_extrude(zt - zHb - kf) hform(f, b, hh);
-      translate([0, 0, zt - 0.01]) linear_extrude(0.01) offset(-kf) hform(f, b, hh);
+      translate([0, 0, zHb]) linear_extrude(zt - zHb - kr) hform(f, b, hh);
+      for (a = [22.5:22.5:90]) translate([0, 0, zt - kr + kr*sin(a) - 0.01]) linear_extrude(0.01) hform(f, b, hh, -kr*(1 - cos(a)));
     }
   }
 }
