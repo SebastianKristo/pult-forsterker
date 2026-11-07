@@ -63,7 +63,7 @@ pip install playwright && python3 -m playwright install chromium   # én gang, f
 python3 lag_cover.py album.txt
 ```
 
-Skriv én linje per kassett i `album.txt`: `Artist - Album`. Bruk `Artist - Album | /sti/cover.jpg` for eget bilde, eller
+Skriv én linje per kassett i `album.txt` (lages fra `album-eksempel.txt` første gang, og følges ikke av Git – så `git pull` krasjer ikke med lista di): `Artist - Album`. Bruk `Artist - Album | /sti/cover.jpg` for eget bilde, eller
 `Artist - Album | 2` for flere kopier. Coveret hentes fra iTunes-søket (MusicBrainz som reserve); finnes det ikke, lages
 et fargefelt med albumnavnet. Resultatet er `kassett-cover.pdf`. Skriv ut i **100 % skala** (ikke «tilpass til side»),
 gjerne på klistremerkeark eller fotopapir, og klipp langs den tynne grå linjen.

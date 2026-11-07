@@ -212,6 +212,12 @@ def main(argv):
     if not argv:
         print(__doc__)
         return 1
+    if len(argv) == 1 and not os.path.isfile(argv[0]) and os.path.basename(argv[0]) == "album.txt":
+        ex = os.path.join(os.path.dirname(os.path.abspath(argv[0])), "album-eksempel.txt")
+        if os.path.isfile(ex):   # første gang: lag din egen album.txt fra eksempelet (album.txt følges ikke av Git)
+            import shutil
+            shutil.copy(ex, argv[0])
+            print(f"Laget {argv[0]} fra album-eksempel.txt – rediger den og kjør igjen om du vil endre lista.")
     if len(argv) == 1 and os.path.isfile(argv[0]):
         src = argv[0]
         out_dir = os.path.dirname(os.path.abspath(src))
