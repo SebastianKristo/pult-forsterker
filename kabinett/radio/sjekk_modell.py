@@ -7,7 +7,7 @@ STL-ene lages med  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_radio.scad
      og passer i Creality K2 (250 × 250 × 250 mm)
   2. ingen deler overlapper i montert stilling (par som skal ligge an mot hverandre har bare kontaktflater)
   3. lydkammeret er tett: hver halvdel er et lukket rom når lokket er på (bare de to kabelhullene i gulvet er åpne)
-  4. kroppens yttervegg er hel (≥ 2 mm) utenom de tiltenkte hullene, og netto kammervolum per side"""
+  4. kroppens og bakplatas yttervegg er hel (≥ 2 mm) utenom de tiltenkte hullene, og netto kammervolum per side"""
 import itertools
 import sys
 
@@ -16,7 +16,7 @@ import trimesh
 
 ASM = sys.argv[1] if len(sys.argv) > 1 else "asm"
 ok = True
-PRINT = ["kropp", "kammer", "lokk", "grill", "bunn", "brakett", "knott", "volum", "knapp"]
+PRINT = ["kropp", "bak", "kammer", "lokk", "grill", "list", "brakett", "knott", "volum", "knapp"]
 for n in PRINT:
     m = trimesh.load(f"stl/{n}.stl")
     parts = len(m.split(only_watertight=False))
@@ -26,9 +26,9 @@ for n in PRINT:
     print(f"{'OK ' if good else 'FEIL'} {n:9s} vanntett={m.is_watertight} deler={parts} {m.volume/1000:7.1f} cm³ "
           f"{m.extents.round(1)} mm")
 
-ASMP = ["kropp", "kammer", "lokk", "grill", "bunn", "brakett", "knapper", "knott", "volum"]
+ASMP = ["kropp", "bak", "kammer", "lokk", "grill", "list", "brakett", "knapper", "knott", "volum"]
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in ASMP}
-TOUCH = {("kropp", "bunn"), ("kammer", "bunn"), ("kammer", "lokk"), ("kropp", "brakett")}
+TOUCH = {("kropp", "bak"), ("kropp", "kammer"), ("kammer", "lokk"), ("kropp", "brakett"), ("kropp", "list")}
 
 
 def overlap(a, b):
@@ -49,8 +49,8 @@ for x, y in itertools.combinations(ASMP, 2):
 ok &= not olap
 print("OK  ingen overlapp i montert stilling" if not olap else "FEIL overlapp: " + "; ".join(olap))
 
-# --- lydkammeret: luft inne i hver halvdel, avgrenset av kammer + lokk (+ bunnplata under kabelhullene) ---
-W, D, kX0, kY0, kD, kH, kT, baffT = 236, 152, 22, 8.6, 78, 88, 2.8, 7
+# --- lydkammeret: luft inne i hver halvdel, avgrenset av kammer + lokk (+ gulvet under kabelhullene) ---
+W, D, H, kX0, kY0, kD, kH, kT, baffT = 236, 145, 202, 22, 8.6, 78, 88, 2.8, 7
 box = A["kammer"].union(A["lokk"], engine="manifold")
 for s in (-1, 1):   # elementene tetter utsparingene i baffelen
     el = trimesh.creation.cylinder(radius=43, height=4, sections=64)
@@ -73,14 +73,17 @@ for side, (x0, x1) in {"venstre": (kX0 + kT, W/2 - kT/2), "høyre": (W/2 + kT/2,
     ok &= good
     print(f"{'OK ' if good else 'FEIL'} kammer {side}: netto ≈ {vol:.2f} l, lukket i alle {hits.sum()}/{len(dirs)} retninger")
 
-# --- yttervegg ≥ 2 mm: stråler inn fra sidene og bak ---
-k = A["kropp"]
-HOLES = [("bak", 40, 26, 5), ("bak", 62, 26, 4), ("bak", 82, 26, 6.5)] + \
-        [("bak", 128 + i*10, z, 3.5) for i in range(8) for z in range(12, 47, 2)] + [("side+", 72, 52, 4.5)]
+# --- yttervegg ≥ 2 mm: stråler inn fra sidene, toppen, gulvet og bakplata ---
+# tiltenkte hull som rektangler (flate, u0, u1, v0, v1)
+HOLES = [("bunn", x - 3.7, x + 3.7, y - 3.7, y + 3.7) for x in (18, 218) for y in (kY0 + 12, kY0 + kD - 12)] + \
+        [("bunn", 123, 203, kY0 + kD + 9, kY0 + kD + 51)] + \
+        [("bak", 34.5, 45.5, 20.5, 31.5), ("bak", 57, 67, 21, 31), ("bak", 76, 88, 23, 29),
+         ("bak", 125, 201, 11, 47), ("bak", 125, 201, 149, 185)] + \
+        [("bak", x - 4.5, x + 4.5, z - 4.5, z + 4.5) for x, z in ((8.5, 5.5), (W - 8.5, 5.5), (8.5, H - 8.5), (W - 8.5, H - 8.5), (W/2, H - 6))]
 
 
-def wall(o, d):
-    loc, _, _ = k.ray.intersects_location([o], [d])
+def wall(mesh, o, d):
+    loc, _, _ = mesh.ray.intersects_location([o], [d])
     if len(loc) < 2:
         return 0.0
     s = sorted(np.linalg.norm(loc - np.array(o), axis=1))
@@ -88,21 +91,25 @@ def wall(o, d):
 
 
 bad = []
-for face, us, vs in [("side+", np.arange(20, D - 20, 4), np.arange(-2, 96, 4)), ("side-", np.arange(20, D - 20, 4), np.arange(-2, 96, 4)),
-                     ("bak", np.arange(20, W - 20, 4), np.arange(-2, 120, 4))]:
+FACES = [("side+", A["kropp"], np.arange(20, D - 20, 4), np.arange(-2, H - 2, 4), lambda u, v: ([W + 5, u, v], [-1, 0, 0])),
+         ("side-", A["kropp"], np.arange(20, D - 20, 4), np.arange(-2, H - 2, 4), lambda u, v: ([-5, u, v], [1, 0, 0])),
+         ("topp", A["kropp"], np.arange(20, W - 20, 4), np.arange(20, D - 20, 4), lambda u, v: ([u, v, H + 5], [0, 0, -1])),
+         ("bunn", A["kropp"], np.arange(20, W - 20, 4), np.arange(20, D - 20, 4), lambda u, v: ([u, v, -10], [0, 0, 1])),
+         ("bak", A["bak"], np.arange(20, W - 20, 4), np.arange(4, H - 8, 4), lambda u, v: ([u, D + 5, v], [0, -1, 0]))]
+for face, mesh, us, vs, ray in FACES:
     for u in us:
         for v in vs:
-            if any(f == face and np.hypot(u - a, v - b) < r for f, a, b, r in HOLES):
+            if any(f == face and u0 <= u <= u1 and v0 <= v <= v1 for f, u0, u1, v0, v1 in HOLES):
                 continue
-            o, d = ([W + 5, u, v], [-1, 0, 0]) if face == "side+" else ([-5, u, v], [1, 0, 0]) if face == "side-" else ([u, D + 5, v], [0, -1, 0])
-            w = wall(o, d)
+            o, d = ray(u, v)
+            w = wall(mesh, o, d)
             if w < 1.99:
                 bad.append((face, float(u), float(v), round(w, 2)))
 if bad:
     ok = False
     print(f"FEIL yttervegg tynnere enn 2 mm på {len(bad)} punkter, f.eks. {bad[:6]}")
 else:
-    print("OK  yttervegg ≥ 2 mm på sidene og bak utenom tiltenkte hull")
+    print("OK  yttervegg ≥ 2 mm på sidene, toppen, gulvet og bakplata utenom tiltenkte hull")
 
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)

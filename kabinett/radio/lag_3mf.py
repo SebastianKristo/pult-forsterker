@@ -1,25 +1,26 @@
 """Lag 3MF-platene for Skjold Radio (Creality K2 / K2 Pro / K2 Plus, 250 × 250 mm):
 
-  skjold-radio-k2.3mf          kropp (toppflaten ned), hjul, volumknott og knappehetter (PETG/ASA, 3 farger)
+  skjold-radio-k2.3mf          kropp (fronten ned), volumknott, knappehetter og gullist (PETG/ASA, 3 farger)
   skjold-radio-k2-kammer.3mf   lydkammer (baffelen ned) og lokk (PETG/ASA, 100 % fyll i baffelen gir best lyd)
-  skjold-radio-k2-grill.3mf    grill (forsiden ned) og skjermbrakett (PETG/ASA, sort)
-  skjold-radio-k2-bunn.3mf     bunnplate (undersiden ned)
+  skjold-radio-k2-grill.3mf    grill (forsiden ned) og skjermbrakett med Pi-tårn (PETG/ASA, sort)
+  skjold-radio-k2-bak.3mf      bakplate (baksiden ned) og navigasjonshjul
 
 Kjør etter at STL-ene er eksportert:  python3 lag_3mf.py   (eller ./lag_stl.sh, som gjør alt)
 Hver del får filamentnummer i Metadata/model_settings.config (Creality Print / OrcaSlicer):
 1 = kroppsfarge (lys), 2 = sort/mørk, 3 = gull. Mørk variant: bytt filament 1 og 3 i sliceren."""
 import math
+import os
 import zipfile
 import trimesh
 
 BED = 250
 PLATES = {
-    "skjold-radio-k2.3mf": ("Skjold Radio – kropp, hjul og knapper (PETG/ASA)", [
+    "skjold-radio-k2.3mf": ("Skjold Radio – kropp, volumknott, knapper og gullist (PETG/ASA)", [
         # fil, navn, filament, rotasjon om z, min-hjørne (x, y), «samme som»
-        ("kropp", "Kropp (toppflaten ned)", 1, 0, (7, 4), None),
-        ("knott", "Navigasjonshjul", 3, 0, (7, 186), None),
-        ("volum", "Volumknott", 3, 0, (60, 186), None),
-        ("knapp", "Knappehetter 1–6 og av/på (toppen ned)", 2, 0, (90, 186), None),
+        ("kropp", "Kropp (fronten ned)", 1, 0, (7, 0.5), None),
+        ("knapp", "Knappehetter 1–6 og av/på (toppen ned)", 2, 0, (7, 210), None),
+        ("volum", "Volumknott", 3, 0, (150, 207.5), None),
+        ("list", "Gullist (forsiden ned)", 3, 0, (7, 232), None),
     ]),
     "skjold-radio-k2-kammer.3mf": ("Skjold Radio – lydkammer og lokk (PETG/ASA)", [
         ("kammer", "Lydkammer (baffelen ned)", 2, 0, (21, 4), None),
@@ -27,10 +28,11 @@ PLATES = {
     ]),
     "skjold-radio-k2-grill.3mf": ("Skjold Radio – grill og skjermbrakett (PETG/ASA)", [
         ("grill", "Grill (forsiden ned)", 2, 0, (17, 4), None),
-        ("brakett", "Skjermbrakett", 2, 0, (63, 108), None),
+        ("brakett", "Skjermbrakett med Pi-tårn", 2, 0, (63, 104), None),
     ]),
-    "skjold-radio-k2-bunn.3mf": ("Skjold Radio – bunnplate (PETG/ASA)", [
-        ("bunn", "Bunnplate (undersiden ned)", 1, 0, (10, 52), None),
+    "skjold-radio-k2-bak.3mf": ("Skjold Radio – bakplate og navigasjonshjul (PETG/ASA)", [
+        ("bak", "Bakplate (baksiden ned)", 1, 0, (10, 1), None),
+        ("knott", "Navigasjonshjul", 3, 0, (102, 202), None),
     ]),
 }
 COLORS = {1: "#ECE9E3", 2: "#232325", 3: "#D99E40"}
@@ -93,6 +95,8 @@ def write(fn, title, parts):
 
 
 def main():
+    if os.path.exists("skjold-radio-k2-bunn.3mf"):   # fra første utgave (bunnplata finnes ikke lenger)
+        os.remove("skjold-radio-k2-bunn.3mf")
     for fn, (title, parts) in PLATES.items():
         write(fn, title, parts)
 
