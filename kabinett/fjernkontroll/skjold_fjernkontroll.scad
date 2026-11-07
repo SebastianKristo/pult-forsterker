@@ -16,8 +16,7 @@ include <taster.scad>
 part = "samlet";
 variant = "kort";               // kort (standard: 14 taster, 201,5 mm) | full (valgfri, med talltaster og smarthus-rad: 30 taster, 244,5 mm)
 kortv = variant == "kort";
-oppsett = "rutenett";           // frontplaten: rutenett (A) | vannrett (B) | stor (C) – se OPPSETT i taster.py
-frontE = 0;                     // part="front_av": hvor høyt frontplaten med hettene løftes
+oppsett = "rutenett";           // tasteoppsett under D-paden: rutenett (A) | vannrett (B) | stor (C) – se OPPSETT i taster.py
 farge = "lys";                  // lys | mork | bone (Bone White PLA + mørk PETG) | bone_gra (Bone White PLA + grå PETG)
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
 skjermE = 0;                    // part="skjermflate": samme eksplosjonsavstand som bildet
@@ -82,13 +81,14 @@ zMot = zs + lipH;               // hjørnetårnene møtes her (8,6)
 SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [W - 7, L - 95]];   // nese ×2 (foran skjermen), hale ×2, midt (til høyre ved D-paden, n = 95)
 MIDT = 4;                       // skrue nr. 4 (midt) klemmer tastekortet
 FRONT = oppsett == "vannrett" ? OPPSETT_VANNRETT : oppsett == "stor" ? OPPSETT_STOR : OPPSETT_RUTENETT;
-ALLE = concat(HETTER, FRONT);   // faste hetter og frontplatens hetter
+ALLE = concat(HETTER, FRONT);   // faste hetter og oppsettets hetter
+PINNER = [for (p = FRONT_STOTTER) p];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
 
 // ---------- innmat ----------
 bat = [34, 50, 6.0];  batN = 12;    // LiPo 603450 (1200 mAh) under skjermen, fra n = 11
 mcu = [18, 22.6, 4.6];              // ESP32-S3 SuperMini (antennen mot halen)
 mcuN = kortv ? 124 : 166;            // til venstre, foran laderen (USB-C mot nesen, fri vei 22 mm for pluggen)
-mcuX = kortv ? 13.5 : 15.5;   // full: litt mot høyre, så USB-pluggen går klar av frontplatens skrue
+mcuX = kortv ? 13.5 : 15.5;   // full: litt mot høyre, så USB-pluggen går klar av stolpen ved sideveggen
 mcuZ = tB + 1.0;                     // kortet ligger på en 1,0 mm hylle, så USB-C-pluggen går klar av gulvet
 STOLPER = kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 178], [W/2 + 15, 178]]
                 : [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 222], [W/2 + 15, 222]];
@@ -259,43 +259,36 @@ module symbol_vis(h) { translate([0, 0, topp_av(h) - ink]) linear_extrude(ink - 
 module ved(h) { translate([h[2], L - h[3], 0]) children(); }
 // grupper: «mork» = mørke hetter (med OK), «lys» = smarthus-raden, «gull» = ring og Skjold-tasten, ellers fargetastene
 function gruppe(h) = h[7];
-// frontplatens hetter: grunne lommer (Ø3,4 × 0,5 mm) over alle rutenettbryterne under hetta som ikke er målet,
-// så hetta bare trykker på sin egen bryter (eller sine to, for volumpillene)
+// oppsettets hetter (over rutenettet): hetta står 0,7 mm over alle bryterne, og har én aktuator (Ø2,6 × 0,6 mm) rett
+// over sin egen bryter (to for volumpillene). Flensen er løftet tilsvarende og ligger i en 0,6 mm forsenkning under toppen.
+// Ingen støtteknotter: hetta styres av hullet. Flensens overside er 45° skrå, så hetta printes med forsiden ned.
+akt_d = 2.6; akt_h = 0.6;       // aktuatoren: Ø2,6 mm, 0,6 mm under hetta
 function er_maal(h, p) = len([for (m = h[8]) if (abs(m[0] - p[0]) < 0.01 && abs(m[1] - p[1]) < 0.01) 1]) > 0;
+module aktuatorer(h, ekstra = 0) {
+  for (m = h[8]) translate([m[0] - h[2], h[3] - m[1], zHb]) cylinder(d = akt_d + ekstra, h = akt_h + 0.01, $fn = 24);
+}
 module hette_front(h) {
+  f = h[1]; b = h[4]; hh = h[5]; zt = topp_av(h); zb = zHb + akt_h;
   difference() {
-    hette(h);
-    for (p = GRID) if (!er_maal(h, p) && norm([p[0] - h[2], p[1] - h[3]]) < max(h[4], h[5])/2 + fl + 2)
-      translate([p[0] - h[2], h[3] - p[1], zHb - 1]) cylinder(d = 3.4, h = 1.5, $fn = 20);
+    union() {
+      // flens: 0,2 mm loddrett kant og 45° opp til kroppen (printes som 45°-overheng med forsiden ned)
+      hull() {
+        translate([0, 0, zb]) linear_extrude(0.2) hform(f, b, hh, fl);
+        translate([0, 0, zb + flT - 0.01]) linear_extrude(0.01) hform(f, b, hh, 0.1);
+      }
+      hull() {
+        translate([0, 0, zb]) linear_extrude(zt - zb - kr) hform(f, b, hh);
+        for (a = [22.5:22.5:90]) translate([0, 0, zt - kr + kr*sin(a) - 0.01]) linear_extrude(0.01) hform(f, b, hh, -kr*(1 - cos(a)));
+      }
+      aktuatorer(h);
+    }
+    translate([0, 0, zt - ink]) linear_extrude(1) symbol2d(h);
   }
 }
 module en_hette(h) { if (len(h) > 8) hette_front(h); else hette(h); }
 module hetter(g, liste = ALLE) { for (h = liste) if (gruppe(h) == g) ved(h) en_hette(h); }
 module symboler(g, vis = false, liste = ALLE) { for (h = liste) if (gruppe(h) == g && h[6] != "") ved(h) if (vis) symbol_vis(h); else symbol(h); }
 
-// ---------- frontplaten ----------
-// Omrisset (sømmen): rektangel under D-paden, med bue rundt gullringen. Frontplaten er 0,15 mm mindre og hullet i
-// toppen 0,15 mm større, så sømmen blir 0,3 mm. Den hviler på tastekortet med fire pinner og holdes av to M2-skruer
-// nedenfra (gjennom bunnen og kortet).
-D_PAD = [for (h = HETTER) if (h[1] == "ring") h][0];
-module front2d() {
-  offset(r = -1.5) offset(delta = 1.5) offset(r = 3) offset(delta = -3) difference() {
-    translate([FRONT_X0, L - FRONT_N1]) square([FRONT_X1 - FRONT_X0, FRONT_N1 - FRONT_N0]);
-    translate([D_PAD[2], L - D_PAD[3]]) circle(r = FRONT_BUE, $fn = 160);
-  }
-}
-module frontplate() {
-  difference() {
-    union() {
-      translate([0, 0, H - tT]) linear_extrude(tT) offset(delta = -0.15) front2d();
-      // skruetårn og støttepinner ned til tastekortet
-      for (p = FRONT_SKRUER) translate([p[0], L - p[1], zKort + kortT]) cylinder(d = 4.0, h = H - tT - zKort - kortT + 0.01, $fn = 24);
-      for (p = FRONT_STOTTER) translate([p[0], L - p[1], zKort + kortT]) cylinder(d = 2.4, h = H - tT - zKort - kortT + 0.01, $fn = 16);
-    }
-    for (h = FRONT) ved(h) translate([0, 0, H - tT - 1]) linear_extrude(tT + 2) hform(h[1], h[4], h[5], spill);
-    for (p = FRONT_SKRUER) translate([p[0], L - p[1], zKort]) cylinder(d = pilot, h = H - 0.8 - zKort, $fn = 16);
-  }
-}
 
 // ---------- toppen ----------
 module topp() {
@@ -305,6 +298,8 @@ module topp() {
         kropp_over();
         hulrom();
       }
+      // pinner som holder tastekortet nede (ved sideveggene, utenfor tasteblokken)
+      for (p = PINNER) translate([p[0], L - p[1], zKort + kortT]) cylinder(d = 2.2, h = H - tT - zKort - kortT + 0.01, $fn = 20);
       // skruetårn: hjørnene ned til zMot, midten ned til tastekortet
       intersection() {
         hulrom();
@@ -314,7 +309,9 @@ module topp() {
       }
     }
     // hull for tastene
-    for (h = HETTER) if (h[1] != "ok") ved(h) translate([0, 0, H - tT - 1]) linear_extrude(tT + 2) hform(h[1], h[4], h[5], spill);
+    for (h = ALLE) if (h[1] != "ok") ved(h) translate([0, 0, H - tT - 1]) linear_extrude(tT + 2) hform(h[1], h[4], h[5], spill);
+    // forsenkning (0,6 mm) under toppen for flensene til oppsettets hetter
+    for (h = FRONT) ved(h) translate([0, 0, H - tT - 1]) linear_extrude(1 + akt_h) hform(h[1], h[4], h[5], fl + 0.3);
     // skjermvindu og lomme for glasset
     translate([W/2, L - scrN, H - tT - 1]) linear_extrude(tT + 2) offset(1) square([scrWW - 2, scrWH - 2], center = true);
     translate([W/2, L - modC, H - tT - 1]) linear_extrude(tT - lepT + 1) offset(1) square([modW + 0.6 - 2, modH + 0.6 - 2], center = true);
@@ -323,8 +320,6 @@ module topp() {
     // SKJOLD felt inn nederst (gull)
     translate([0, 0, H - 0.5]) linear_extrude(1) logo2d();
     usb_forsenkning();
-    // hullet til frontplaten
-    translate([0, 0, H - tT - 1]) linear_extrude(tT + 2) offset(delta = 0.15) front2d();
   }
 }
 module logo2d() { translate([W/2, 5.2 + 1.6]) text("SKJOLD", size = 3.0, font = "Liberation Sans:style=Bold", halign = "center", valign = "center", spacing = 1.35); }
@@ -347,7 +342,6 @@ module bunn() {
     }
     // skruehull med forsenket hode
     for (s = SKRUER) translate([s[0], s[1], -1]) { cylinder(d = klar, h = 20, $fn = 16); cylinder(d = hodeD, h = hodeH + 1, $fn = 24); }
-    for (p = FRONT_SKRUER) translate([p[0], L - p[1], -1]) { cylinder(d = klar, h = zKort + 2, $fn = 16); cylinder(d = hodeD, h = hodeH + 1, $fn = 24); }
     // USB-C i halen
     translate([W/2, -1, usbZ]) rotate([-90, 0, 0]) linear_extrude(t + 2) offset(1.2) square([usbW - 2.4, usbH - 2.4], center = true);
     usb_forsenkning();
@@ -367,7 +361,7 @@ module bunn_innmat() {
           for (i = [0:len(SKRUER) - 1]) translate([SKRUER[i][0], SKRUER[i][1], 0])
             cylinder(d = bossBD, h = (i == MIDT ? zKort : zMot));
           // stolper under tastekortet
-          for (p = FRONT_SKRUER) translate([p[0], L - p[1], 0]) cylinder(d = 5.0, h = zKort, $fn = 24);   // frontplatens skruer
+          for (p = PINNER) translate([p[0], L - p[1], 0]) cylinder(d = 3.0, h = zKort, $fn = 20);
           for (p = STOLPER) translate([p[0], L - p[1], 0]) cylinder(d = 3.0, h = zKort, $fn = 20);
           // ribber: batterilomme, ladermodul og SuperMini
           // (0,5 mm klaring rundt; batterikabelen går ut i bakkant mot ledningskanalen i midten)
@@ -395,7 +389,6 @@ module kort2d() {
   difference() {
     translate([3.2, L - PCB_N1]) rrect(W - 6.4, PCB_N1 - PCB_N0, 4);
     for (i = [0:len(SKRUER) - 1]) translate([SKRUER[i][0], SKRUER[i][1]]) circle(d = i == MIDT ? 2.4 : bossBD + 0.6);
-    for (p = FRONT_SKRUER) translate([p[0], L - p[1]]) circle(d = 2.4, $fn = 16);
   }
 }
 module tastekort() { translate([0, 0, zKort]) linear_extrude(kortT) kort2d(); }
@@ -469,19 +462,19 @@ module montert(e = 0) {
   translate([0, 0, 1.05*e]) skjermmodul();
   if (skjerm == "nokkel") color([1, 0, 1]) translate([0, 0, 1.05*e]) skjermflate();
   translate([0, 0, 2.0*e]) { color(c_topp) topp(); color(c_gull) translate([0, 0, -0.02]) logo(); }
-  translate([0, 0, 2.0*e + frontE]) color(c_topp) frontplate();
   translate([0, 0, 1.45*e]) {
     color(c_knapp) hetter("mork", HETTER); color(c_sym_l) symboler("mork", true, HETTER);
     color(c_lysk) hetter("lys", HETTER); color(c_sym_m) symboler("lys", true, HETTER);
     color(c_gull) hetter("gull", HETTER); color(c_sym_m) symboler("gull", true, HETTER);
     for (f = FARGER) color(f[1]) hetter(f[0], HETTER);
   }
-  translate([0, 0, 1.45*e + frontE]) { color(c_knapp) hetter("mork", FRONT); color(c_sym_l) symboler("mork", true, FRONT); }
+  translate([0, 0, 1.45*e]) { color(c_knapp) hetter("mork", FRONT); color(c_sym_l) symboler("mork", true, FRONT); }
 }
 
 // ---------- utskriftsretning ----------
 module print_topp() { translate([0, L, H]) rotate([180, 0, 0]) children(); }     // forsiden ned
 // hettene printes i samme mønster som de sitter, men spredt (x × 1,35, n × 1,2), flensen ned
+module spredt_ned(h) { translate([(h[2] - W/2)*1.35 + W*0.675, (h[3] - 61)*1.2 - 60, topp_av(h)]) rotate([180, 0, 0]) children(); }
 module spredt(h) { translate([(h[2] - W/2)*1.35 + W*0.675, -(h[3] - 61)*1.2 + 170, -zHb]) children(); }
 module print_gruppe(g, sym = false) { for (h = HETTER) if (gruppe(h) == g && (!sym || h[6] != "")) spredt(h) if (sym) symbol(h); else hette(h); }
 
@@ -496,11 +489,9 @@ else if (part == "A_topp") topp();
 else if (part == "A_bunn") bunn();
 else if (part == "A_logo") logo();
 else if (part == "A_vindu") ir_vindu();
-else if (part == "A_frontplate") frontplate();
-else if (part == "frontplate") print_topp() frontplate();
-else if (part == "front_knapper") { for (h = FRONT) spredt(h) hette_front(h); }
-else if (part == "front_symboler") { for (h = FRONT) if (h[6] != "") spredt(h) symbol(h); }
-else if (part == "front_av") { montert(0); }
+else if (part == "front_knapper") { for (h = FRONT) spredt_ned(h) hette_front(h); }   // forsiden ned
+else if (part == "front_symboler") { for (h = FRONT) if (h[6] != "") spredt_ned(h) symbol(h); }
+else if (part == "aktuatorer") { for (h = FRONT) ved(h) aktuatorer(h, 0.1); }
 else if (part == "A_hetter") { hetter("mork"); hetter("lys"); hetter("gull"); for (f = FARGER) hetter(f[0]); }
 else if (part == "A_symboler") { symboler("mork"); symboler("lys"); symboler("gull"); }
 else if (part == "A_kort") { tastekort(); brytere(); tca(); }

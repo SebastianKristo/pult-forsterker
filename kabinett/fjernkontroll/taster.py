@@ -52,18 +52,14 @@ HETTER = [
 # alt under skjermen ligger DN mm lenger bak enn i første utgave (2,0″-skjerm)
 HETTER = [h[:4] + (h[4] + DN,) + h[5:] for h in HETTER]
 
-# ---------- frontplaten: utskiftbar tasteblokk under D-paden ----------
-# Tastekortet har et fast rutenett av brytere under frontplaten: 7 kolonner × 5 rader. Hver hette trykker på én bestemt
-# bryter (to for volumpiller); over de andre bryterne har hetta en grunn lomme, så de ikke trykkes. Et nytt oppsett
-# er bare en ny frontplate med hetter, og en ny linje i OPPSETT under.
+# ---------- tasteoppsett under D-paden ----------
+# Tastekortet har et fast rutenett av brytere under tasteblokken: 7 kolonner × 5 rader. Hver hette trykker på én bestemt
+# bryter (to for volumpiller); over de andre bryterne har hetta en grunn lomme, så de ikke trykkes. Et nytt oppsett er
+# en ny topp med hetter (printes på nytt) og en ny linje i OPPSETT under; kortet og fastvaren er de samme.
 GRID_DX = [-17.25, -9.625, -4.8125, 0.0, 4.8125, 9.625, 17.25]   # kolonner: x − CX
 GRID_N = [118.3 + 9.625 * k for k in range(5)]                  # rader: n (før DN)
 GRID = [(CX + dx, n + DN) for n in GRID_N for dx in GRID_DX]     # rad for rad, venstre mot høyre
-FRONT_N0, FRONT_N1 = 128.0, 188.85     # frontplatens øvre og nedre kant (n, med DN)
-FRONT_X0, FRONT_X1 = 4.0, W - 4.0
-FRONT_BUE = 21.4                        # øvre kant buer rundt gullringen (radius fra D-padens senter)
-FRONT_SKRUER = [(6.0, GRID_N[2] + DN), (W - 6.0, GRID_N[2] + DN)]                 # M2 × 10 nedenfra gjennom bunn og kort
-FRONT_STOTTER = [(5.5, 131.0), (W - 5.5, 131.0), (5.5, 186.5), (W - 5.5, 186.5)]  # pinner som hviler på tastekortet
+PINNER = [(5.5, GRID_N[2] + DN), (W - 5.5, GRID_N[2] + DN)]   # pinner fra toppen og stolper fra bunnen klemmer kortet
 FUNKSJONER = ["tilbake", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned"]
 
 
@@ -169,8 +165,7 @@ def bruk(variant):
         HETTER, L, TCA_POS = HETTER_KORT, L_KORT, [(CX + 13, 145.0), (CX + 13, 157.0), (CX + 13, 169.0)]
     else:
         HETTER, L, TCA_POS = HETTER_FULL, L_FULL, [(CX - 13, 150.0), (CX, 150.0), (CX + 13, 150.0), (CX + 13, 162.0)]
-    # 6,3 mm bak siste bryterrad, og minst så langt at frontplatens nedre støttepinner hviler på kortet
-    PCB_N1 = max(max(b[3] for b in brytere()) + 6.3, FRONT_STOTTER[2][1] + 3.0)
+    PCB_N1 = max(b[3] for b in brytere()) + 6.3   # 6,3 mm bak siste bryterrad
 
 
 # ---------- 2D-former for sjekk av materialet mellom hullene ----------
@@ -221,31 +216,11 @@ def avstand(fa, fb):
     return min(math.hypot(a[0] - b[0], a[1] - b[1]) for a in pa for b in pb)
 
 
-def front_rand():
-    """Frontplatens omriss (sømmen) som punkter: rektangel med bue rundt gullringen."""
-    d = [h for h in HETTER if h[2] == "ring"][0]
-    pts = []
-    for i in range(400):
-        t = i / 400
-        pts += [(FRONT_X0 + (FRONT_X1 - FRONT_X0) * t, FRONT_N1), (FRONT_X0, FRONT_N0 + (FRONT_N1 - FRONT_N0) * t),
-                (FRONT_X1, FRONT_N0 + (FRONT_N1 - FRONT_N0) * t)]
-        x = FRONT_X0 + (FRONT_X1 - FRONT_X0) * t
-        dy = FRONT_BUE ** 2 - (x - d[3]) ** 2
-        pts.append((x, max(FRONT_N0, d[4] + math.sqrt(dy)) if dy > 0 else FRONT_N0))
-    return pts
-
-
 def sjekk_steg():
     """[(hette a, hette b, avstand)] for alle par nærmere enn MIN_STEG (ring og OK er ett hull sammen),
-    for de faste tastene sammen med hvert frontoppsett; og ≥ 1,2 mm fra hver frontplatehette til sømmen."""
+    for de faste tastene sammen med hvert tasteoppsett."""
     feil = []
-    rand_ = front_rand()
     for o, hf in OPPSETT.items():
-        for h in hf:
-            pts = rand(hull_form(h))
-            d = min(math.hypot(a[0] - b[0], a[1] - b[1]) for a in pts for b in rand_) - 0.15
-            if d < 1.2 or any(inni(hull_form(h), b) for b in rand_):
-                feil.append((o, h[0], "søm", round(d, 2)))
         feil += [(o,) + f for f in _steg([q for q in HETTER if q[2] != "ok"] + hf)]
     return feil
 
@@ -260,7 +235,7 @@ def _steg(hs):
                 continue
             d = avstand(fa, fb)
             if d < MIN_STEG + (0.7 if a in sum(OPPSETT.values(), []) or b in sum(OPPSETT.values(), []) else 0):
-                feil.append((a[0], b[0], round(d, 2)))   # frontplatehettene: ≥ 2,1 mm, så flensene ikke møtes
+                feil.append((a[0], b[0], round(d, 2)))   # oppsetthettene: ≥ 2,1 mm, så flensene ikke møtes
     return feil
 
 
@@ -279,12 +254,10 @@ def scad():
 
 
 def front_scad():
-    """Frontplaten og oppsettene til taster.scad. Oppsetthette: [id, form, x, n, b, h, ikon, farge, [[x, n] mål …]]."""
-    ut = ["// ---------- frontplaten ----------",
+    """Rutenettet og tasteoppsettene til taster.scad. Oppsetthette: [id, form, x, n, b, h, ikon, farge, [[x, n] mål …]]."""
+    ut = ["// ---------- tasteoppsett ----------",
           "GRID = [" + ", ".join(f"[{x:.4f}, {n:.4f}]" for x, n in GRID) + "];",
-          f"FRONT_N0 = {FRONT_N0}; FRONT_N1 = {FRONT_N1}; FRONT_X0 = {FRONT_X0}; FRONT_X1 = {FRONT_X1}; FRONT_BUE = {FRONT_BUE};",
-          "FRONT_SKRUER = [" + ", ".join(f"[{x}, {n:.4f}]" for x, n in FRONT_SKRUER) + "];",
-          "FRONT_STOTTER = [" + ", ".join(f"[{x}, {n}]" for x, n in FRONT_STOTTER) + "];",
+          "FRONT_STOTTER = [" + ", ".join(f"[{x}, {n:.4f}]" for x, n in PINNER) + "];",
           "OPPSETT_NAVN = [" + ", ".join(f'"{o}"' for o in OPPSETT) + "];"]
     for o, hs in OPPSETT.items():
         rows = []
@@ -326,16 +299,16 @@ REPETER = {"vol_opp", "vol_ned", "opp", "ned", "venstre", "hoyre", "minus", "plu
 
 
 def tastenavn():
-    """Navnene tastene sendes med (faste taster, frontplatefunksjonene og talltastene): samme rekkefølge som IR-plassene."""
+    """Navnene tastene sendes med (faste taster, tasteblokkens funksjoner og talltastene): samme rekkefølge som IR-plassene."""
     fast = [b[0] for b in brytere() if not b[0].startswith("g")]
     return fast[:8] + FUNKSJONER + fast[8:]
 
 
 def yaml_blokker():
     """Blokker i esphome/skjold-fjernkontroll.yaml: navnelista og oppsettkartet (globals), hendelsestypene (event),
-    en binary_sensor for hver bryter (faste taster og rutenettet) og valget av frontplate (select).
+    en binary_sensor for hver bryter (faste taster og rutenettet) og valget av tasteoppsett (select).
     Faste taster: kort og langt trykk (≥ 0,6 s); volum, D-pad og ± gjentas så lenge de holdes.
-    Rutenettbryterne slår opp funksjonen i oppsettkartet for frontplaten som er valgt (tom = ikke i bruk)."""
+    Rutenettbryterne slår opp funksjonen i oppsettkartet for tasteoppsettet som er valgt (tom = ikke i bruk)."""
     hub = {"A": "tca_a", "B": "tca_b", "C": "tca_c", "D": "tca_d"}
     ids = tastenavn()
     navn_ = list(OPPSETT)
@@ -344,7 +317,7 @@ def yaml_blokker():
             "  - id: taster_navn",
             "    type: std::vector<std::string>",
             "    initial_value: '{" + ", ".join(f'"{i}"' for i in ids) + "}'",
-            "  # rutenettbryter → funksjon for hver frontplate (" + ", ".join(navn_) + ")",
+            "  # rutenettbryter → funksjon for hvert tasteoppsett (" + ", ".join(navn_) + ")",
             "  - id: oppsett_kart",
             "    type: std::vector<std::vector<std::string>>",
             "    initial_value: '{" + rader + "}'",
@@ -358,7 +331,7 @@ def yaml_blokker():
     valg = ["# >>> oppsettvalg (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
             "  - platform: template",
             "    id: oppsett_valg",
-            "    name: Frontplate",
+            "    name: Tasteoppsett",
             "    icon: mdi:view-grid-outline",
             "    optimistic: true",
             "    restore_value: true",
