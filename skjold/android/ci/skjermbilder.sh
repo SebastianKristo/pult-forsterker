@@ -9,6 +9,11 @@ mkdir -p ut
 adb install -r skjold/android/app/build/outputs/apk/debug/app-debug.apk
 adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS 2>/dev/null || true
 adb shell settings put system screen_off_timeout 1800000 || true
+# Ingen «… isn't responding»-dialoger fra emulatorens launcher over bildene, og norsk språk i appen
+adb shell settings put global hide_error_dialogs 1 || true
+adb shell pm disable-user --user 0 com.google.android.apps.nexuslauncher >/dev/null 2>&1 || true
+adb shell cmd locale set-app-locales "$PKG" --locales nb-NO || true
+sleep 20   # la emulatoren roe seg etter oppstart
 # Ren statuslinje (demomodus)
 adb shell settings put global sysui_demo_allowed 1 || true
 adb shell am broadcast -a com.android.systemui.demo -e command enter >/dev/null || true
@@ -23,6 +28,8 @@ skudd() {   # skudd <fil> <fane> [full]
   [ "${3:-}" = full ] && ekstra="--ez SkjoldDemoFull true"
   adb shell am start -n "$PKG/$ACT" --es SkjoldHost "$HOST" --ei SkjoldDemoTab "$2" $ekstra
   sleep 16
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
+  sleep 1
   adb exec-out screencap -p > "ut/$1.png"
   echo "tok ut/$1.png ($(stat -c %s "ut/$1.png") byte)"
 }
