@@ -1,0 +1,21 @@
+# Skjold Radio – GPIO (BCM-numre). Knapper til GND med intern pull-up (aktiv lav).
+# Opptatt (KI_AMP_BOARD=kit): I²S 18/19/20/21 til PCM5102A · 26 = DAC XSMT · 27 = forsterker på (TPA3116 MUTE/SDZ eller relé)
+# · I²C 2/3 holdes ledig · 0/1 HAT-EEPROM · SPI0 8/10/11 (spi0-1cs,no_miso frigjør 7 og 9).
+# Skjermen er DSI (egen kontakt), så ingen GPIO brukes til den. Endre her og start tjenesten på nytt:
+#   sudo systemctl restart skjold-radio-knapper
+presets: [5, 6, 12, 13, 16, 17]   # favoritt 1–6 (kort trykk = spill, hold 2 s = lagre det som spiller)
+power: 4                          # av/på (kort trykk = av/på, hold 3 s = omstart)
+wheel:                            # stort navigasjonshjul (EC11 med trykk): drei = bla i favoritter, trykk = spill/pause
+  a: 22
+  b: 23
+  sw: 24
+volume:                           # liten volumknott (EC11 med trykk): drei = volum, trykk = demp
+  a: 25
+  b: 9
+  sw: 7
+volume_step: 2
+bounce: 0.03
+timing:
+  hold_save: 2.0
+  hold_reboot: 3.0
+  wheel_settle: 0.6               # vent så lenge etter siste hakk før favoritten startes

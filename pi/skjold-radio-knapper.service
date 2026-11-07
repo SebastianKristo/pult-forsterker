@@ -1,0 +1,12 @@
+[Unit]
+Description=Skjold Radio: favorittknapper, navigasjonshjul og volumknott
+After=ki-amp.service
+Wants=ki-amp.service
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/skjold_radio_knapper.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
