@@ -99,7 +99,8 @@ scrAW = 96;  scrAH = 56;                   // synlig vindu (4,3″ DSI 800×480,
 scrGW = 106; scrGH = 68;                   // glass/LCD på modulen (lomme bak frontveggen) – mål din skjerm!
 scrX = 175;  scrZ = 98;                    // vinduets senter: vindu x 127 … 223, z 70 … 126 (flukt med grillens overkant)
 scrB = [[-57, -20], [57, -20], [-57, 20], [57, 20]];   // skruetårn på hver side av modulen (brakett)
-btnZ = 60; btnP = 16; btnX0 = scrX - 2.5*btnP;   // favoritter 1–6: rad rett under skjermen (x 135 … 215)
+btnZ = 57.5; btnP = 16; btnX0 = scrX - 2.5*btnP;   // favoritter 1–6: rad rett under skjermen (x 135 … 215)
+capFlat = 3.3;                             // flensens rette overkant 3,3 mm over aksen
 capD = 11; capHole = 11.6; capUp = 0.8; capFl = 15; capFlT = 1.0;
 kortX = [btnX0 - 12, btnX0 + 5*btnP + 12]; // tårn for knappekortet (hullkort ca. 110 × 16 mm)
 botZ = 28;                                 // nederste rad: av/på, volum og hjulet
@@ -131,7 +132,31 @@ piSt = 5;                                  // avstandsstykker
 // ---------- bak ----------
 dcD = 8.2; jackD = 6.4; usbW = 10; usbH = 4.4;
 bakKZ = 22;                                // kontaktene (DC, linje ut, USB-C) nede til høyre, bak forsterkeren
-ventGulv = [130, 8, 10, 34, 52];           // luftespalter i gulvet under forsterkeren: x0, deling, antall, y0, lengde
+dcX = 128; jackX = 144; usbX = 166; usbHull = 28;   // DC-022, PJ-392 og USB-C-skjøten (2 × M3, 28 mm mellom hullene – mål din)
+
+// ---------- innmaten (referansedeler, kjøpes – ikke printet; mål dine egne kort) ----------
+// Kort uten sikre hullmål ligger på stolper og holdes med strips; kortmålene er variabler her.
+pcb = 1.6;
+tact = [6, 6, 4.3];                        // taktbryter 6 × 6 × 4,3 (høyde over kortet med stempel), vandring 0,25 mm
+favKort = [110, 16];                       // hullkort for favoritt 1–6 (x 120 … 230), på tårnene i kortX
+pwKortM = [30, 16];                        // hullkort for av/på (x 120 … 150)
+kortY = t + 7;                             // kortenes forside (y 10): tårnene er 7 mm
+ecBody = [12, 12, 6.5];                    // EC11: hus 12 × 12, 6,5 mm fra kortet til gjengeskulderen
+ecKort = [20, 34];                         // eget lite hullkort per dreieknapp, to tårn 13 mm over og under aksen
+ecT = 13;
+ecY = t + ecBody[2];                       // kortet ligger an mot tårnene i y 9,5; huset står mot frontens innside (tar trykket)
+// TPA3116D2 2 × 50 W (XH-M189-type): 83 × 50 × 20 mm, 4 × Ø3 ca. 3,5 mm fra hjørnene (76 × 43) – på gulvet over spaltene
+forstP = [128, 38]; forstM = [83, 50, 20]; forstH = 5; forstHull = 3.5;
+// PCM5102A (GY-PCM5102): 32 × 17 mm, uten festehull – på fire stolper, holdes med strips
+dacP = [118, 14]; dacM = [32, 17]; dacH = 4;
+// 5 V / 5 A nedtrapper (XL4015-type, ca. 54 × 23 × 18) og relémodul (ca. 50 × 26 × 19) på innsiden av bakplata,
+// i hjørneholdere (5 mm høye) og med strips. (x, z) = nedre venstre hjørne sett bakfra i x
+buckP = [118, 46]; buckM = [54, 23, 18];
+releP = [176, 45]; releM = [50, 26, 19];
+holdH = 5;
+// strips-fester (bredde 8, for strips ≤ 3,6 × 1,8 mm): på gulvet langs høyre side og ved DAC-en
+stripsGulv = [[134, 9.5], [220, 30], [220, 60], [220, 95]];
+ventGulv = [136, 8, 9, 40, 46];            // luftespalter i gulvet under forsterkeren: x0, deling, antall, y0, lengde
                                            // (26 mm fri gulvflate bak spaltene til kontaktene i bakplata)
 
 // ---------- farger ----------
@@ -155,6 +180,25 @@ module front_hull(o = 0) {   // grillåpningen sett forfra (x, z)
 }
 module list2d(o = 0) { translate([lX0 + o, lZ0 + o]) rrect(lH - 2*o, gZ1 - gZ0 - 2*o, lH/2 - o - 0.05); }
 
+// ---------- festeelementer som printes på gulvet i kroppen (kroppen printes med fronten ned, så gulvet står loddrett:
+// alt som stikker opp fra gulvet er dråpeformet sett ovenfra, med spissen mot fronten, så undersiden heller 45°) ----------
+module drape2d(p, d) { hull() { translate(p) circle(d = d); translate(p - [0, d/2 * sqrt(2)]) square(0.01, center = true); } }
+module gulvstolpe(p, h, d = 6, hull_d = 0) {
+  difference() {
+    translate([0, 0, -0.01]) linear_extrude(h + 0.01) drape2d(p, d);
+    if (hull_d > 0) translate([0, 0, h - 6]) linear_extrude(7)   // skruehull med spiss tak (mot +y), M3 selvgjengende
+      hull() { translate(p) circle(d = hull_d); translate(p + [0, hull_d/2 * sqrt(2)]) square(0.01, center = true); }
+  }
+}
+module gulvstrips(p) {   // strips-feste: kloss med tunnel på tvers (langs x) og spisst tak
+  difference() {
+    translate([0, 0, -0.01]) linear_extrude(4.01) hull() { translate(p - [4, 2.5]) square([8, 5]); translate(p - [0, 6.5]) square(0.01, center = true); }
+    translate([p[0] - 5, 0, 0]) rotate([90, 0, 90]) linear_extrude(10)
+      polygon([[p[1] - 1.75, 1], [p[1] + 0.5, 1], [p[1] + 1.75, 1.9], [p[1] + 0.5, 2.8], [p[1] - 1.75, 2.8]]);
+  }
+}
+function kort_hjorner(p, m, inn) = [for (u = [inn, m[0] - inn], v = [inn, m[1] - inn]) p + [u, v]];
+
 // ---------- kropp (ett skall: front, sider, topp og gulv; åpen bak; printes med fronten ned på platen) ----------
 module kropp() {
   difference() {
@@ -174,7 +218,13 @@ module kropp() {
         for (p = scrB) translate([scrX + p[0], scrZ + p[1], -t - 6]) cylinder(d = 7, h = 7);      // skjermbrakett
         for (x = concat(kortX), z = [btnZ]) translate([x, z, -t - 7]) cylinder(d = 7, h = 8);   // knappekort
         for (x = pwKort) translate([x, botZ, -t - 7]) cylinder(d = 7, h = 8);                    // av/på-kort
+        for (k = [[volX, volZ], [whX, whZ]], s = [-1, 1])                                         // dreieknappkortene
+          translate([k[0], k[1] + s*ecT, -ecY]) cylinder(d = 7, h = ecY - t + 0.01);
       }
+      // gulvet: stolper for forsterkeren (M3) og DAC-en, og strips-fester
+      for (q = kort_hjorner(forstP, forstM, forstHull)) gulvstolpe(q, forstH, 6.5, 2.6);
+      for (q = kort_hjorner(dacP, dacM, 2.5)) gulvstolpe(q, dacH, 5);
+      for (q = stripsGulv) gulvstrips(q);
     }
     for (p = bakB) translate([p[0], D - bkT - insD, p[1]]) rotate([-90, 0, 0]) cylinder(d = ins, h = insD + 0.1);
     translate([-1, D - bkT, -t - 1]) cube([W + 2, bkT + 1, H + t + 2]);   // kroppen slutter der bakplata begynner
@@ -194,6 +244,7 @@ module kropp() {
       translate([pwX, botZ, -t - 1]) cylinder(d = capHole, h = t + 2);
       for (x = kortX) translate([x, btnZ, -t - 7.1]) cylinder(d = 2.2, h = 6);
       for (x = pwKort) translate([x, botZ, -t - 7.1]) cylinder(d = 2.2, h = 6);
+      for (k = [[volX, volZ], [whX, whZ]], s = [-1, 1]) translate([k[0], k[1] + s*ecT, -ecY - 0.1]) cylinder(d = 2.2, h = 5);
       // hjulet og volumknotten
       for (k = [[whX, whZ, whD], [volX, volZ, volD]]) {
         translate([k[0], k[1], -t - 1]) cylinder(d = ec11, h = t + 2);
@@ -218,7 +269,8 @@ yBak = D - bkT;
 kragD = 1.5;
 module bak_krage() {
   difference() {
-    ext_y(yBak - kragD, yBak + 0.01) difference() { profil(s_av(yBak), t + 0.3); profil(s_av(yBak), t + 1.5); }
+    intersection() { skall(t + 0.5, t); translate([-1, yBak - kragD, -t - 1]) cube([W + 2, kragD + 0.01, H + t + 2]); }   // samme form som åpningen
+    skall(t + 1.5, t);
     for (p = bakB) ext_y(yBak - kragD - 1, yBak + 1)
       hull() { translate([p[0], p[1]]) circle(d = boss + 1); translate([p[0], p[1]] + 30 * p[2]) circle(d = boss + 1); }
   }
@@ -228,14 +280,25 @@ module bak() {
     union() {
       intersection() { ytre(); translate([-1, yBak, -t - 1]) cube([W + 2, bkT, H + t + 2]); }   // fortsetter kassas form
       bak_krage();
+      // hjørneholdere for nedtrapperen og releet (printes oppover fra bakplata), og strips-fester
+      for (b = [[buckP, buckM], [releP, releM]]) {
+        for (u = [0, 1], v = [0, 1]) let(c = [b[0][0] + u*b[1][0], b[0][1] + v*b[1][1]])
+          difference() {
+            translate([c[0] - (u ? 1.5 : 3), yBak - holdH - pcb - 1.5, c[1] - (v ? 1.5 : 3)]) cube([4.5, holdH + pcb + 1.5 + 0.01, 4.5]);
+            translate([b[0][0] - 0.3, yBak - holdH - pcb - 2, b[0][1] - 0.3]) cube([b[1][0] + 0.6, pcb + 2, b[1][1] + 0.6]);
+          }
+        for (x = [b[0][0] + b[1][0]/2 - 4]) for (z = [b[0][1] - 7, b[0][1] + b[1][1] + 3])
+          difference() { translate([x, yBak - 4, z]) cube([8, 4.01, 4]); translate([x - 1, yBak - 3, z + 1]) cube([10, 1.8, 2]); }
+      }
     }
     for (p = bakB) translate([p[0], D - bkT - 1, p[1]]) rotate([-90, 0, 0]) {
       cylinder(d = m3, h = bkT + 2); translate([0, 0, bkT + 1 - 1.7]) cylinder(d1 = m3, d2 = m3k, h = 1.71);   // senkeskrue
     }
-    translate([130, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = dcD, h = bkT + 2);
-    translate([148, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = jackD, h = bkT + 2);
-    translate([166 - usbW/2, D - bkT - 1, bakKZ - usbH/2]) cube([usbW, bkT + 2, usbH]);
-    for (i = [0:3]) translate([184 + i*7, D - bkT - 1, 10]) cube([4, bkT + 2, 30]);    // nede: forsterker (godt klar av tårnet i hjørnet)
+    translate([dcX, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = dcD, h = bkT + 2);
+    translate([jackX, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = jackD, h = bkT + 2);
+    translate([usbX - usbW/2, D - bkT - 1, bakKZ - usbH/2]) cube([usbW, bkT + 2, usbH]);
+    for (s = [-1, 1]) translate([usbX + s*usbHull/2, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = 3.2, h = bkT + 2);   // M3 for USB-skjøten
+    for (i = [0:3]) translate([184 + i*7, D - bkT - 1, 10]) cube([4, bkT + 2, 26]);    // nede: forsterker (godt klar av tårnet i hjørnet)
     for (i = [0:8]) translate([128 + i*10, D - bkT - 1, 78]) cube([4, bkT + 2, 40]);   // oppe: Pi
   }
 }
@@ -259,8 +322,8 @@ module kammer() {
       rotate([-90, 0, 0]) cylinder(d = 2.6, h = baffT);                     // M3 selvgjengende
     for (x = kBx, z = kBz) translate([x, kY0 + kD - insD, z]) rotate([-90, 0, 0]) cylinder(d = ins, h = insD + 0.1);
     for (x = [kX0 - kOre/2, kX0 + kW + kOre/2], y = kOreY) translate([x, y, kZ0 - 0.01]) cylinder(d = ins, h = insD);
-    // kabelhull bak i gulvet (tettes med silikon etter at ledningene er trukket)
-    translate([drvX, kY0 + kD - 14, kZ0 - 1]) cylinder(d = 4, h = kT + 2);
+    // kabelhull bak i høyre sidevegg, rett mot forsterkeren (tettes med silikon etter at ledningene er trukket)
+    translate([kX0 + kW - kT - 1, kY0 + kD - 14, kZ0 + 14]) rotate([0, 90, 0]) cylinder(d = 4, h = kT + 2);
   }
 }
 module lokk() {   // bakveggen på kammeret (tetning: 1–2 mm skumtape rundt kanten, klemmes flat)
@@ -340,6 +403,7 @@ module knott_form(d, h, riller, ikon) {   // hul nedenfra (mindre resin, ingen l
     translate([0, 0, h - 0.5 - symD]) linear_extrude(symD + 0.01) ikon2d(ikon);   // lomme for symbolet i skålbunnen
     translate([0, 0, -0.01]) difference() { cylinder(d = d - 5, h = h - 3); cylinder(d = 10, h = h); }
     translate([0, 0, -0.01]) difference() { cylinder(d = 6.2, h = 11); translate([1.55, -4, -1]) cube([8, 8, 13]); }
+    translate([0, 0, -0.01]) cylinder(d = 7.8, h = 2.5);                          // plass til gjengehylsen på EC11
   }
 }
 module knott_symbol_form(h, ikon) { translate([0, 0, h - 0.5 - symD]) linear_extrude(symD) ikon2d(ikon); }   // i flukt med skålbunnen
@@ -382,8 +446,9 @@ module knapp_lok(ikon) {
   difference() {
     union() {
       translate([0, 0, -t - 0.21]) cylinder(d = capD, h = t + capUp + 0.21);
-      translate([0, 0, -t - 0.2 - capFlT]) cylinder(d = capFl, h = capFlT);
-      translate([0, 0, -t - capFlT - 1.8]) cylinder(d = 3, h = 1.61);  // (overlapper flensen 0,01)          // nupp mot taktbryteren
+      // flensen er rett avskåret oppe (under skjermmodulen): holder tallet på rett kjøl og gir 0,7 mm luft til skjermen
+      translate([0, 0, -t - 0.2 - capFlT]) intersection() { cylinder(d = capFl, h = capFlT); translate([-capFl, -capFl, -1]) cube([2*capFl, capFl + capFlat, capFlT + 2]); }
+      translate([0, 0, -t - capFlT - 1.6]) cylinder(d = 3, h = 1.41);  // nupp mot taktbryteren: 0,1 mm luft (overlapper flensen 0,01)
     }
     translate([0, 0, capUp - symD]) linear_extrude(symD + 0.01) ikon2d(ikon);    // lomme for symbolet
   }
@@ -431,6 +496,56 @@ module pi_kort() {   // Raspberry Pi 4 (illustrasjon) på braketten
   }
 }
 
+// ---------- referansedeler (kjøpes, ikke printet) – for bildene og kollisjonssjekken i sjekk_modell.py ----------
+c_kort = [0.10, 0.40, 0.22]; c_metall = [0.72, 0.72, 0.74]; c_svart = [0.12, 0.12, 0.13];
+module fk(p0, p1) { translate(p0) cube(p1 - p0); }   // boks fra hjørne til hjørne (x, y, z)
+module ref(n) {
+  if (n == "favkort") {   // hullkort med seks taktbrytere
+    color(c_kort) fk([btnX0 - 55 + 2.5*btnP + 0, kortY, btnZ - favKort[1]/2], [btnX0 + 2.5*btnP + 55, kortY + pcb, btnZ + favKort[1]/2]);
+    for (i = [0:5]) taktbryter([btnX0 + i*btnP, btnZ]);
+  } else if (n == "pwkort") {
+    color(c_kort) fk([pwX - 15, kortY, botZ - 8], [pwX + 15, kortY + pcb, botZ + 8]);
+    taktbryter([pwX, botZ]);
+  } else if (n == "ec_volum" || n == "ec_hjul") {
+    k = n == "ec_volum" ? [volX, volZ] : [whX, whZ];
+    color(c_kort) fk([k[0] - ecKort[0]/2, ecY, k[1] - ecKort[1]/2], [k[0] + ecKort[0]/2, ecY + pcb, k[1] + ecKort[1]/2]);
+    color(c_metall) fk([k[0] - 6, t, k[1] - 6], [k[0] + 6, ecY, k[1] + 6]);                        // hus mot frontens innside
+    color(c_metall) translate([k[0], t + 0.01, k[1]]) rotate([90, 0, 0]) cylinder(d = 7, h = 5);  // gjengehylse M7 (uten mutter)
+    color(c_metall) translate([k[0], 0, k[1]]) rotate([90, 0, 0]) intersection() {               // D-aksel, kappes 11 mm foran fronten
+      translate([0, 0, -2]) cylinder(d = 6, h = 0.6 + 10.8 + 2); translate([-4, -4, -3]) cube([5.45, 8, 20]); }
+  } else if (n == "skjermmodul") {   // Waveshare 4,3″ DSI (glass + LCD + kort), i lomma bak vinduet, klemt av braketten
+    color(c_svart) front_ramme() translate([scrX - scrGW/2, scrZ - scrGH/2, -t - 6]) cube([scrGW, scrGH, 7.8]);
+  } else if (n == "pi") pi_kort();
+  else if (n == "dac") {
+    color([0.35, 0.15, 0.55]) fk([dacP[0], dacP[1], dacH], [dacP[0] + dacM[0], dacP[1] + dacM[1], dacH + pcb]);
+    color(c_svart) fk([dacP[0] + 2, dacP[1] + dacM[1] - 4, dacH + pcb], [dacP[0] + dacM[0] - 2, dacP[1] + dacM[1] - 1.5, dacH + pcb + 8.5]);   // stiftlist
+  } else if (n == "forsterker") {
+    color(c_kort) fk([forstP[0], forstP[1], forstH], [forstP[0] + forstM[0], forstP[1] + forstM[1], forstH + pcb]);
+    color(c_metall) fk([forstP[0] + 20, forstP[1] + 10, forstH + pcb], [forstP[0] + 63, forstP[1] + 40, forstH + forstM[2]]);   // kjøleribbe
+    color([0.15, 0.35, 0.75]) fk([forstP[0] + 8, forstP[1] + forstM[1] - 9, forstH + pcb], [forstP[0] + 75, forstP[1] + forstM[1] - 1, forstH + 12]);   // skrueklemmer
+  } else if (n == "nedtrapper" || n == "rele") {
+    b = n == "nedtrapper" ? [buckP, buckM] : [releP, releM];
+    color(n == "rele" ? [0.10, 0.25, 0.60] : [0.15, 0.30, 0.65]) fk([b[0][0], yBak - holdH - pcb, b[0][1]], [b[0][0] + b[1][0], yBak - holdH, b[0][1] + b[1][1]]);
+    color(n == "rele" ? [0.15, 0.35, 0.80] : c_svart)
+      fk([b[0][0] + 8, yBak - holdH - b[1][2], b[0][1] + 4], [b[0][0] + b[1][0] - 12, yBak - holdH - pcb, b[0][1] + b[1][1] - 4]);
+  } else if (n == "kontakter") {   // DC-022, PJ-392 og USB-C-skjøten, sett inn fra baksiden
+    union() {
+      translate([dcX, yBak, bakKZ]) rotate([90, 0, 0]) cylinder(d = 10, h = 14);
+      translate([dcX, yBak - 0.01, bakKZ]) rotate([-90, 0, 0]) cylinder(d = 7.9, h = bkT + 0.02);
+      fk([jackX - 5, yBak - 12, bakKZ - 6], [jackX + 5, yBak, bakKZ + 6]);
+      translate([jackX, yBak - 0.01, bakKZ]) rotate([-90, 0, 0]) cylinder(d = 6, h = bkT + 0.02);
+      fk([usbX - 7, yBak - 18, bakKZ - 4], [usbX + 7, yBak, bakKZ + 4]);
+    }
+      fk([usbX - 3, yBak - 24, bakKZ + 3.9], [usbX + 3, yBak - 17.9, bakKZ + 18]);   // kabelen opp mot Pi-en (første bit)
+  } else if (n == "element") elementer();
+}
+module taktbryter(p) {
+  color(c_svart) fk([p[0] - 3, kortY - 3.5, p[1] - 3], [p[0] + 3, kortY, p[1] + 3]);
+  color(c_metall) translate([p[0], kortY - 3.5 + 0.01, p[1]]) rotate([90, 0, 0]) cylinder(d = 3.5, h = tact[2] - 3.5);
+}
+REFS = ["favkort", "pwkort", "ec_volum", "ec_hjul", "skjermmodul", "pi", "dac", "forsterker", "nedtrapper", "rele", "kontakter", "element"];
+module inni() { for (n = REFS) ref(n); }
+
 // ---------- utskriftsretning for STL ----------
 module print(p) {
   if (p == "kropp") translate([0, H, 0]) rotate([90, 0, 0]) kropp();                     // fronten ned
@@ -466,5 +581,12 @@ else if (part == "A_volum") front_ramme() translate([volX, volZ, 0.6]) volum();
 else if (part == "A_element") elementer();
 else if (part == "A_stoff") stoff();
 else if (part == "A_pi") pi_kort();
+else if (part == "inni") {   // innmaten: bakplata er felt ned bakover (innsiden opp) med nedtrapperen, releet og kontaktene
+  color(c_kropp) kropp(); color(c_inne) { kammer(); lokk(); brakett(); } color(c_knapp) knapper();
+  color(c_gull) front_ramme() { translate([whX, whZ, 0.6]) knott(); translate([volX, volZ, 0.6]) volum(); }
+  for (n = REFS) if (n != "nedtrapper" && n != "rele" && n != "kontakter") ref(n);
+  translate([0, D + 20, -t]) rotate([-90, 0, 0]) translate([0, -D, t]) { color(c_kropp) bak(); ref("nedtrapper"); ref("rele"); ref("kontakter"); }
+}
+else if (len(part) > 2 && part[0] == "R" && part[1] == "_") ref(chr([for (i = [2:len(part) - 1]) ord(part[i])]));
 else if (part == "skjermflate") color([1, 0, 1]) translate([0, 4.0*skjermE, 0]) skjermflate();   // bare det aktive området (hjørnene til lag_render.sh)
 else print(part);

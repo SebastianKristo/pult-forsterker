@@ -13,8 +13,10 @@ STL-ene lages med  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_radio.scad
   6. symbolinnleggene (knappehettene, volumknotten, hjulet) er vanntette, 0,6 mm dype, i flukt med flaten og fyller
      lomma i sin egen del uten å overlappe den (montert: bare kontakt med sin egen del)
   7. det er plass i dybden: bak kammerlokket, bak Pi-en og foran kontaktene i bakplata
+  8. det avrundede bakpartiet, tårnene og stolpene på gulvet printes med fronten ned uten støtte (ingen flate brattere enn 50°)
   9. skjøten mellom kroppen og bakplata er tett: største spalte inn i kassa ≤ 0,5 mm, også sett 30° på skrå
-  8. det avrundede bakpartiet og tårnene for bakplata printes med fronten ned uten støtte (ingen flate brattere enn 50°)"""
+ 10. de kjøpte delene (ref/: kort, taktbrytere, EC11, skjermmodul, Pi, DAC, forsterker, nedtrapper, relé, kontakter, element)
+     kolliderer ikke med noe, og knappehettene har 0,05–0,2 mm luft til taktbryteren"""
 import itertools
 import sys
 
@@ -38,6 +40,11 @@ for n in PRINT:
 ASMP = ["kropp", "bak", "kammer", "lokk", "grill", "list", "brakett", "knapper", "knott", "volum", "stoff",
         "knapp_symboler", "knott_symbol", "volum_symbol"]
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in ASMP}
+# kjøpte deler (referanse, ikke printet): kort, brytere, dreieknapper, skjermmodul, Pi, kontakter og elementet
+REFS = ["favkort", "pwkort", "ec_volum", "ec_hjul", "skjermmodul", "pi", "dac", "forsterker", "nedtrapper", "rele", "kontakter", "element"]
+for n in REFS:
+    A["ref_" + n] = trimesh.load(f"ref/{n}.stl")
+ASMP = ASMP + ["ref_" + n for n in REFS]
 TOUCH = {("grill", "stoff"), ("kropp", "stoff"), ("kropp", "bak"), ("kropp", "kammer"), ("kammer", "lokk"), ("kropp", "brakett"), ("kropp", "list"),
          ("knapper", "knapp_symboler"), ("knott", "knott_symbol"), ("volum", "volum_symbol")}   # innleggene ligger i lomma i sin del
 
@@ -54,11 +61,21 @@ def overlap(a, b):
 olap = []
 for x, y in itertools.combinations(ASMP, 2):
     v = overlap(A[x], A[y])
-    lim = 0.05 if (x, y) in TOUCH or (y, x) in TOUCH else 0.001
+    lim = 0.05 if (x, y) in TOUCH or (y, x) in TOUCH or x.startswith("ref_") or y.startswith("ref_") else 0.001   # kortene ligger an mot festene
     if not v <= lim:
         olap.append(f"{x} × {y}: {v:.3f} mm³")
 ok &= not olap
-print("OK  ingen overlapp i montert stilling" if not olap else "FEIL overlapp: " + "; ".join(olap))
+print(f"OK  ingen overlapp i montert stilling ({len(ASMP)} deler, {len(REFS)} av dem kjøpte deler: kort, brytere, EC11, skjerm, Pi, kontakter)"
+      if not olap else "FEIL overlapp: " + "; ".join(olap))
+
+# --- knappene: luft mellom nuppen og taktbryteren, og vandringen ---
+luft_fav = A["ref_favkort"].bounds[0][1] - A["knapper"].bounds[1][1]
+luft_pw = A["ref_pwkort"].bounds[0][1] - A["knapper"].bounds[1][1]
+TAKT_VANDRING = 0.25
+good = 0.05 <= luft_fav <= 0.2 and 0.05 <= luft_pw <= 0.2
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} knappene: {luft_fav:.2f} mm luft til bryteren, vandring {luft_fav + TAKT_VANDRING:.2f} mm "
+      f"(hetta står {0.8:.1f} mm ut, {0.8 - luft_fav - TAKT_VANDRING:.2f} mm når den er trykket inn)")
 
 # --- lydkammeret: luft inne i kammeret, avgrenset av kammer + lokk + elementet (+ gulvet under kabelhullet) ---
 # --- symbolinnleggene: 0,6 mm dype, i flukt med flaten, fyller lomma uten overlapp ---
@@ -119,8 +136,8 @@ BAKB = [(bkX0 + 4.4, R), (bkX1 - 4.4, R), (bkX0 + bkRt - bkD, bkZ1 - bkRt + bkD)
 # tiltenkte hull som rektangler (flate, u0, u1, v0, v1)
 HOLES = [("bunn", x - 3.7, x + 3.7, y - 3.7, y + 3.7) for x in (kX0 - 4, kX0 + kW + 4) for y in (kY0 + 12, kY0 + kD - 12)] + \
         [("bunn", 129, 209, 33, 87)] + \
-        [("bak", 124.5, 135.5, 16.5, 27.5), ("bak", 143, 153, 17, 27), ("bak", 160, 172, 19, 25),
-         ("bak", 183, 210, 9, 41), ("bak", 127, 213, 77, 119)] + \
+        [("bak", 122.5, 133.5, 16.5, 27.5), ("bak", 139, 149, 17, 27), ("bak", 150, 182, 17, 27),
+         ("bak", 183, 210, 9, 37), ("bak", 127, 213, 77, 119)] + \
         [("bak", x - 4.5, x + 4.5, z - 4.5, z + 4.5) for x, z in BAKB]
 
 
@@ -179,7 +196,7 @@ print(f"{'OK ' if good else 'FEIL'} grillen stikker {ut_stoff:.1f} mm ut (rammen
 # (fronten y < 8 er platen og de grunne forsenkningene; skruehullene i gulvet (z < 0) er små liggende hull) ---
 kn, kc, ka = A["kropp"].face_normals, A["kropp"].triangles_center, A["kropp"].area_faces
 bratt = (kn[:, 1] < -np.sin(np.radians(50))) & (kc[:, 1] > 8) & (kc[:, 2] > 0)
-bak_hel = np.degrees(np.arcsin(np.clip(-kn[(kc[:, 1] > 60) & (kc[:, 2] > 0) & (kn[:, 1] < 0), 1], 0, 1))).max()
+bak_hel = np.degrees(np.arcsin(np.clip(-kn[(kc[:, 1] > 60) & (kc[:, 2] > 0) & (kn[:, 1] < 0) & (ka > 0.05), 1], 0, 1))).max()
 good = ka[bratt].sum() < 1.0
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} printes uten støtte: bakpartiet heller maks {bak_hel:.0f}°, {ka[bratt].sum():.1f} mm² brattere enn 50°")
@@ -221,12 +238,12 @@ bak_inn = A["bak"].bounds[1][1] - 3                          # innsiden av bakpl
 lokk_luft = bak_inn - A["lokk"].bounds[1][1]                  # skruehoder (3 mm) og skumtape
 pi_bak = A["brakett"].bounds[1][1] + 1.4 + 16                 # Pi-tårnene + kortet + USB/nett-kontaktene (16 mm)
 pi_luft = bak_inn - pi_bak                                    # DSI-kabelen og USB-skjøten bøyes bak Pi-en
-spalte_bak = 34 + 52                                          # ventGulv: y0 + lengde
-kontakt_luft = bak_inn - spalte_bak                           # DC-022 (≈ 14 mm), PJ-392 og USB-C-skjøten med lodding/bøy
-good = lokk_luft >= 6 and pi_luft >= 50 and kontakt_luft >= 25
+kv = A["ref_kontakter"].vertices
+kontakt_luft = kv[kv[:, 2] < 25][:, 1].min() - A["ref_forsterker"].bounds[1][1]   # forsterkeren ↔ DC-022/PJ-392/USB-C bak
+good = lokk_luft >= 6 and pi_luft >= 50 and kontakt_luft >= 5
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} dybden {A['bak'].bounds[1][1]:.0f} mm (+ 3 mm grill): {lokk_luft:.1f} mm bak kammerlokket, "
-      f"{pi_luft:.0f} mm bak Pi-en, {kontakt_luft:.0f} mm fri gulvflate foran bakplata for kontaktene")
+      f"{pi_luft:.0f} mm bak Pi-en, {kontakt_luft:.0f} mm mellom forsterkeren og kontaktene bak (til lodding og kabler)")
 
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)
