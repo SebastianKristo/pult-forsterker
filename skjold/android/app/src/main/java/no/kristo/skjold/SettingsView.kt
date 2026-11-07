@@ -133,6 +133,21 @@ private fun Top(m: AppModel, cats: List<SettingCategory>) {
                 if (hapticSliders) Haptics.tick()
             }
         }
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        var callDuck by remember { mutableStateOf(CallDuck.enabled(ctx) && CallDuck.hasPermission(ctx)) }
+        Row(Modifier.fillMaxWidth().skBox(C.card, C.line).padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                T("Senk musikken når telefonen ringer", sora(14f))
+                T("Skjold senker volumet mens det ringer og under samtalen, og løfter det igjen etterpå. Krever tilgang til telefonstatus.", sora(11f, W.Regular, C.muted))
+            }
+            SKToggle(callDuck) {
+                callDuck = !callDuck
+                if (callDuck && !CallDuck.hasPermission(ctx)) {
+                    (ctx as? android.app.Activity)?.requestPermissions(arrayOf(android.Manifest.permission.READ_PHONE_STATE), 11)
+                }
+                CallDuck.setEnabled(ctx, callDuck)
+            }
+        }
     }
 }
 

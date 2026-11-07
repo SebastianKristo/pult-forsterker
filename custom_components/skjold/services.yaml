@@ -56,3 +56,41 @@ ask:
       example: rolig jazz til middag
       selector:
         text:
+
+duck:
+  name: Senk musikken og si …
+  description: Senker volumet på Skjold, leser opp en tekst og/eller spiller en lyd, og løfter volumet mykt igjen etterpå (f.eks. «Vaskemaskinen er ferdig»).
+  fields:
+    tekst:
+      name: Tekst
+      description: Leses opp på norsk.
+      example: Vaskemaskinen er ferdig
+      selector:
+        text:
+    lyd:
+      name: Lyd
+      description: Valgfri lydfil (http/https) som spilles oppå musikken.
+      selector:
+        text:
+    db:
+      name: Senk med (dB)
+      description: Hvor mye volumet senkes. Tom = innstillingen på Skjold (standard −20 dB).
+      selector:
+        number:
+          min: -60
+          max: -3
+          unit_of_measurement: dB
+    sekunder:
+      name: Hold nede (sekunder)
+      description: Hvor lenge musikken holdes nede etter varselet.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 300
+    entry_id:
+      name: Enhet
+      description: Valgfritt – bare denne Skjold-enheten. Tom = alle.
+      selector:
+        config_entry:
+          integration: skjold

@@ -345,7 +345,7 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "hp_volume": 30,       # eget hodetelefonvolum (innstilling hpOwn)
          "settings": {}}
 spotify = {"connected": False, "playing": False, "paused": False, "title": "", "artist": "", "album": "", "cover": "",
-           "duration": 0, "position": 0, "user": "", "event": "", "t": 0.0}
+           "duration": 0, "position": 0, "user": "", "event": "", "t": 0.0, "pos_t": 0.0}
 plex = {"available": False, "playing": False, "paused": False, "title": "", "artist": "", "album": "", "cover": "",
         "duration": 0, "position": 0, "t": 0.0}   # Plex-spilleren (pollet fra :32500, se plex_thread)   # siste librespot-hendelse (POST /api/spotify)   # innstillingsmodellen fra appen/web (skjold_settings.js) – se SETTINGS_DEF
 LEVELS_ON = os.environ.get("KI_AMP_LEVELS", "1" if BOARD in ("main", "kit") else "0") == "1"   # mix: ikke stopp de andre digitale kildene ved kildebytte   # loudness 0–10 dB · presets: radiokanal 1–6 · auto_input: bytt kilde når noe begynner å spille
@@ -1449,7 +1449,7 @@ def read_status():
     elif state["input"] == "spotify" or (spotify["playing"] and not st.get("playing")):
         st = {"playing": spotify["playing"], "paused": spotify["paused"], "source": "spotify", "cover": spotify["cover"],
               "title": spotify["title"], "artist": spotify["artist"], "album": spotify["album"],
-              "duration": spotify["duration"], "position": spotify["position"], "bt_device": st.get("bt_device", "")}
+              "duration": spotify["duration"], "position": spotify_pos(), "bt_device": st.get("bt_device", "")}
     elif state["input"] == "plex" or (plex["playing"] and not st.get("playing")):
         st = {"playing": plex["playing"], "paused": plex["paused"], "source": "plex", "cover": plex["cover"],
               "title": plex["title"], "artist": plex["artist"], "album": plex["album"],
@@ -2807,6 +2807,16 @@ def spotify_stop():
         subprocess.run(["systemctl", "restart", "ki-spotify"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def spotify_pos(now=None):
+    """Fremdrift i sekunder: siste posisjon fra librespot + tiden siden, mens den spiller (begrenset til varigheten)."""
+    now = time.time() if now is None else now
+    p = spotify.get("position") or 0
+    if spotify.get("playing") and spotify.get("pos_t"):
+        p += int(now - spotify["pos_t"])
+    d = spotify.get("duration") or 0
+    return min(p, d) if d else p
+
+
 def _ms(v):
     try:
         return int(float(v)) // 1000
@@ -2820,6 +2830,7 @@ _spotify_conn = [0.0]
 def spotify_event(b):
     ev = str(b.get("event") or b.get("player_event") or "").strip().lower()
     was = spotify["playing"]
+    cur = spotify_pos()            # posisjonen før tilstanden endres (pause skal fryse der den var)
     spotify.update(event=ev, t=time.time())
     if ev in ("session_connected", "session_client_changed"):
         spotify.update(connected=True, user=b.get("user_name", spotify["user"]))
@@ -2853,6 +2864,11 @@ def spotify_event(b):
         spotify["duration"] = _ms(b["duration_ms"])
     if b.get("position_ms") not in (None, ""):
         spotify["position"] = _ms(b["position_ms"])
+        spotify["pos_t"] = time.time()
+    elif ev in ("track_changed", "changed") and b.get("name"):
+        spotify.update(position=0, pos_t=time.time())   # ny låt uten posisjon: fra start
+    elif ev in ("playing", "started", "paused", "stopped"):
+        spotify.update(position=cur, pos_t=time.time())
     if spotify["playing"] and not was and state["auto_input"] and state["power"] and state["input"] != "spotify" and "spotify" in INPUTS:
         print("Auto-kilde: spotify", flush=True)
         set_input("spotify", announce=False)
@@ -6662,6 +6678,32 @@ doorbell = _dbmod.Doorbell({"announce": announce_url, "get_volume": lambda: stat
                            os.path.join(FEAT_DIR, "doorbell.json"))
 threading.Thread(target=doorbell.watch, daemon=True).start()
 
+# ---------- Senk musikken og si … (pi/skjold_duck.py) ----------
+import skjold_duck as _duckmod   # noqa: E402
+ducker = _duckmod.Ducker({"get_volume": lambda: state["volume"], "set_volume": set_volume, "announce": announce_url,
+                          "say": lambda t: voice._wav(t), "post": _duckmod.http_post},
+                         os.path.join(FEAT_DIR, "duck.json"))
+
+
+async def h_duck(r):
+    """POST /api/duck {tekst?, lyd?, db?, sekunder?, kilde?, slutt?} · GET/POST /api/duck/innstillinger."""
+    loop = asyncio.get_running_loop()
+    if r.match_info.get("act") == "innstillinger":
+        if r.method == "POST":
+            return web.json_response(ducker.sett(await r.json()))
+        return web.json_response(ducker.cfg)
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    if b.get("kilde") == "telefon" or not (b.get("tekst") or b.get("lyd")) or float(b.get("sekunder") or 0) < 1:
+        return web.json_response(await loop.run_in_executor(None, ducker.duck, b))
+    loop.run_in_executor(None, ducker.duck, b)   # lange varsler: svar med en gang
+    return web.json_response({"ok": True, "startet": True})
+
+
+DUCK_ROUTES = [("POST", "/api/duck", h_duck), ("GET", "/api/duck/{act}", h_duck), ("POST", "/api/duck/{act}", h_duck)]
+
 
 def _preset_n(v):
     try:
@@ -7071,6 +7113,7 @@ FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h
                ("GET", "/api/doorbell", h_doorbell), ("POST", "/api/doorbell", h_doorbell), ("GET", "/api/doorbell/camera", h_doorbell_camera),
                ("GET", "/api/routines", h_routines), ("POST", "/api/routines", h_routines), ("POST", "/api/routines/steps", h_routines),
                ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
+FEAT_ROUTES += DUCK_ROUTES
 
 
 
@@ -7149,6 +7192,68 @@ async def h_vinyl(r):
 
 FEAT_ROUTES += [("GET", "/api/vinyl", h_vinyl), ("GET", "/api/vinyl/{act}", h_vinyl), ("POST", "/api/vinyl/{act}", h_vinyl),
                 ("DELETE", "/api/vinyl/{act}", h_vinyl)]
+
+# ---------- Plex og Jellyfin som musikkilder (pi/skjold_medialib.py) ----------
+import skjold_medialib as _mlmod   # noqa: E402
+medialib = _mlmod.MediaLib(os.path.join(FEAT_DIR, "medialib.json"))
+
+
+def medialib_play(tracks, source):
+    tracks = [t for t in tracks if t.get("url")]
+    if not tracks:
+        raise RuntimeError("ingen spor å spille")
+    t0 = tracks[0]
+    play_url(t0["url"], t0["title"], t0["cover"], "", {"track": t0["title"], "artist": t0["artist"], "album": t0["album"],
+                                                         "duration": t0.get("duration") or 0, "source": source})
+    for t in tracks[1:]:
+        lyr.cmd(["playlist", "add", proxied_url(t["url"]), t["title"]])
+    return {"ok": True, "playing": t0["title"], "count": len(tracks)}
+
+
+async def h_medialib(r):
+    """Plex/Jellyfin: se pi/skjold_medialib.py for API-et."""
+    loop = asyncio.get_running_loop()
+    kind, act, ident = r.match_info.get("kind"), r.match_info.get("act"), r.match_info.get("id")
+    try:
+        if not kind:
+            if r.method == "POST":
+                return web.json_response(medialib.set(await r.json()))
+            return web.json_response(medialib.public())
+        c = medialib.client(kind)
+        src = "Plex" if kind == "plex" else "Jellyfin"
+        run = lambda f, *a: loop.run_in_executor(None, f, *a)   # noqa: E731
+        if act == "test":
+            return web.json_response(await run(c.test))
+        if act == "albums":
+            return web.json_response(await run(c.albums, r.query.get("type", "newest")))
+        if act == "album":
+            return web.json_response(await run(c.album, ident))
+        if act == "playlists":
+            return web.json_response(await run(c.playlists))
+        if act == "playlist":
+            return web.json_response(await run(c.playlist, ident))
+        if act == "search":
+            return web.json_response(await run(c.search, r.query.get("q", "")))
+        if act == "play" and r.method == "POST":
+            b = await r.json()
+            if b.get("album"):
+                tracks = (await run(c.album, str(b["album"])))["tracks"]
+            elif b.get("playlist"):
+                tracks = await run(c.playlist, str(b["playlist"]))
+            else:
+                tracks = [t for t in b.get("tracks") or [] if isinstance(t, dict)]
+            start = int(b.get("start") or 0)
+            return web.json_response(await run(medialib_play, tracks[start:] + tracks[:start], src))
+        return web.json_response({"error": "ukjent handling"}, status=404)
+    except urllib.error.HTTPError as e:
+        return web.json_response({"ok": False, "error": f"{kind}: HTTP {e.code} (sjekk token/nøkkel)"}, status=502)
+    except Exception as e:
+        return web.json_response({"ok": False, "error": str(e)}, status=400)
+
+
+FEAT_ROUTES += [("GET", "/api/medialib", h_medialib), ("POST", "/api/medialib", h_medialib),
+                ("GET", "/api/medialib/{kind}/{act}", h_medialib), ("POST", "/api/medialib/{kind}/{act}", h_medialib),
+                ("GET", "/api/medialib/{kind}/{act}/{id}", h_medialib)]
 
 # ---------- Skjold Kassett: NFC-kassetter (pi/skjold_nfc.py, esphome/skjold-kassett.yaml) ----------
 import skjold_nfc as _nfcmod   # noqa: E402
@@ -7480,6 +7585,32 @@ def _mini_rpc(player, cmd):
 
 
 minis = _rostmod.Minis(_mini_rpc, lambda: lyr.player, lambda: state["presets"])
+dusj = _rostmod.Dusj(minis, os.path.join(FEAT_DIR, "rost_dusj.json"))
+
+
+def _dusj_loop():
+    n = 0
+    while True:
+        time.sleep(5)
+        try:
+            if n % 120 == 0:          # hvert 10. minutt: hold dusj-favoritten på preset 5 (nye Røst-er, endrede favoritter)
+                dusj.legg_paa_preset()
+            dusj.tick()
+        except Exception as e:
+            print("Røst dusj:", e, flush=True)
+        n += 1
+
+
+threading.Thread(target=_dusj_loop, daemon=True, name="rost-dusj").start()
+
+
+async def h_rost_dusj(r):
+    """GET/POST /api/rost/dusj {på, favoritt, minutter}: dusj-modus (langt trykk på ⏻ på Røst)."""
+    loop = asyncio.get_running_loop()
+    if r.method == "POST":
+        b = await r.json()
+        return web.json_response(await loop.run_in_executor(None, dusj.sett, b))
+    return web.json_response(dusj.status())
 
 
 async def h_mini(r):
@@ -7494,7 +7625,8 @@ async def h_mini(r):
     return web.json_response(await loop.run_in_executor(None, minis.list))
 
 
-FEAT_ROUTES += [("GET", "/api/rost", h_mini), ("POST", "/api/rost", h_mini),
+FEAT_ROUTES += [("GET", "/api/rost/dusj", h_rost_dusj), ("POST", "/api/rost/dusj", h_rost_dusj),
+                ("GET", "/api/rost", h_mini), ("POST", "/api/rost", h_mini),
                 ("GET", "/api/mini", h_mini), ("POST", "/api/mini", h_mini)]   # /api/mini: gammelt navn
 
 AVAHI_SVC = "/etc/avahi/services/skjold.service"

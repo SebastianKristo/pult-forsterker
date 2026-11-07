@@ -62,6 +62,35 @@ export function RostCard() {
           </div>}
         </div>
       ))}
+      {list.length > 0 && <DusjPanel presets={presets} />}
+      {err && <span style="font-size:12px;color:#ff8a7a">{err}</span>}
+    </div>
+  );
+}
+
+interface Dusj { 'på': boolean; favoritt: number; minutter: number; aktive?: Record<string, number> }
+
+/** Dusj-modus: hold ⏻ på Røst i 1,5 s → spiller valgt favoritt og slår av etter valgt tid. */
+function DusjPanel({ presets }: { presets: Preset[] }) {
+  const [d, setD] = useState<Dusj | null>(null), [err, setErr] = useState('');
+  useEffect(() => { apiReq<Dusj>('/api/rost/dusj').then(setD).catch(() => setD(null)); }, []);
+  const set = async (b: Partial<Dusj>) => { try { setD(await apiPost<Dusj>('/api/rost/dusj', b)); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
+  if (!d) return null;
+  const aktive = Object.values(d.aktive ?? {});
+  return (
+    <div style="display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid #242426">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span style="font-size:14px;font-weight:600">Dusj-modus</span>
+        <button onClick={() => void set({ 'på': !d['på'] })} style={sbtn(d['på'])}>{d['på'] ? 'På' : 'Av'}</button>
+      </div>
+      <span style={muted}>Hold ⏻ på Røst i 1,5 sekunder: den spiller favoritten under og slår seg av etter valgt tid, med myk nedtoning det siste halve minuttet.{aktive.length ? ` Pågår nå – ${Math.ceil(Math.max(...aktive) / 60)} min igjen.` : ''}</span>
+      {d['på'] && <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select value={d.favoritt} onChange={(e) => void set({ favoritt: +e.currentTarget.value })} aria-label="Favoritt i dusj-modus"
+          style="flex:1;min-width:140px;height:32px;border-radius:8px;border:1px solid #2e2e30;background:#0f0f10;color:#f2f2ee;padding:0 8px">
+          {presets.map((p) => <option key={p.n} value={p.n}>{p.n}. {p.title}</option>)}
+        </select>
+        {[10, 15, 20, 30].map((m) => <button key={m} onClick={() => void set({ minutter: m })} style={sbtn(d.minutter === m)}>{m} min</button>)}
+      </div>}
       {err && <span style="font-size:12px;color:#ff8a7a">{err}</span>}
     </div>
   );

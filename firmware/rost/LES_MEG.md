@@ -88,3 +88,12 @@ Skriptet laster ned upstream-bygget, sjekker sha256, lager NVS-partisjonen og sl
 ## Mikrofon (valgfri)
 
 INMP441 (SCK 41, WS 42, SD 40) er koblet opp for senere bruk. squeezelite-esp32 bruker den ikke.
+
+## Dusj-modus (langt trykk på ⏻)
+
+Hold ⏻ inne i 1,5 sekunder: Røst spiller dusj-favoritten og slår seg av etter valgt tid (standard 15 min), med myk
+nedtoning det siste halve minuttet. Fastvaren sender `BCTRLS_PS5` ved langt trykk (squeezelite-esp32: `"long_press": 1500`,
+`"longpress": {"pressed": "BCTRLS_PS5"}`), og Skjold legger dusj-favoritten på Lyrion-preset 5 og står for tidtakingen
+(`pi/skjold_rost.py`, `Dusj`). Velg favoritt og tid i web-appen: Grupper → Skjold Røst → Dusj-modus.
+Kort trykk på ⏻ er av/på som før. Har du flashet en eldre fastvare, må du flashe på nytt (eller legge inn den nye
+`knapper`-verdien fra `squeezelite-esp32.txt` i NVS-editoren) for å få langt trykk.

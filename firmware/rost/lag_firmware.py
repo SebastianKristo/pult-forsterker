@@ -51,7 +51,11 @@ NAME = "Skjold-Rost"          # ASCII: nettverksnavn, Wi-Fi-oppsett og spillerna
 def buttons():
     def b(gpio, action):
         return {"gpio": gpio, "type": "BUTTON_LOW", "pull": True, "debounce": 30, "normal": {"pressed": action}}
-    return [b(PINS["btn_power"], "ACTRLS_POWER"),          # LMS «button power»: av/på (forsterkeren følger, se set_GPIO)
+    power = b(PINS["btn_power"], "ACTRLS_POWER")          # LMS «button power»: av/på (forsterkeren følger, se set_GPIO)
+    # Langt trykk (1,5 s) på ⏻ = dusj-modus: sender preset 5 (BCTRLS_PS5 → LMS «preset_5.single»). Skjold legger
+    # dusj-favoritten på preset 5 og slår høyttaleren av etter valgt tid (pi/skjold_rost.py, Dusj).
+    power.update({"long_press": 1500, "longpress": {"pressed": "BCTRLS_PS5"}})
+    return [power,
             b(PINS["btn_1"], "BCTRLS_PS1"), b(PINS["btn_2"], "BCTRLS_PS2"),   # LMS «button preset_N.single»
             b(PINS["btn_3"], "BCTRLS_PS3"), b(PINS["btn_4"], "BCTRLS_PS4")]
 

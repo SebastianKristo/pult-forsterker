@@ -2988,6 +2988,44 @@
             }
           }
         ]
+      },
+      {
+        "id": "ki_duck",
+        "title": {
+          "en": "Lower the music and say …",
+          "no": "Senk musikken og si …"
+        },
+        "titleFormatted": {
+          "en": "Lower the music and say [[text]]",
+          "no": "Senk musikken og si [[text]]"
+        },
+        "hint": {
+          "en": "Lowers the volume, reads the text aloud and raises the volume smoothly again.",
+          "no": "Senker volumet, leser opp teksten og løfter volumet mykt igjen."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=s1|pultforsterker|core|node|touch",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "text",
+            "name": "text",
+            "title": {
+              "en": "Text",
+              "no": "Tekst"
+            },
+            "placeholder": {
+              "en": "The washing machine is done",
+              "no": "Vaskemaskinen er ferdig"
+            }
+          }
+        ]
       }
     ]
   },

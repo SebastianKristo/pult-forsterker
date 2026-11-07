@@ -5,6 +5,7 @@ struct V4SettingsTab: View {
     @Environment(AppModel.self) private var m
     @AppStorage("skjold-show-lyrion-players") private var showLyrion = false
     @AppStorage("hapticSliders") private var hapticSliders = true
+    @AppStorage("callDuck") private var callDuck = false
 
     var body: some View {
         if m.setCat >= 0 && m.setCat < m.cats.count {
@@ -104,6 +105,20 @@ struct V4SettingsTab: View {
                 V4Switch(on: hapticSliders, label: "Haptikk på glidebrytere") {
                     hapticSliders.toggle()
                     if hapticSliders { Haptics.tick() }
+                }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 13)
+            .v4Card()
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Senk musikken når telefonen ringer").sora(15)
+                    Text("Skjold senker volumet mens det ringer og under samtalen. Virker når appen er åpen eller nylig brukt.")
+                        .sora(12, .regular, V4.muted, lineHeight: 1.4).fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                V4Switch(on: callDuck, label: "Senk musikken når telefonen ringer") {
+                    callDuck.toggle()
+                    CallDuck.enabled = callDuck
                 }
             }
             .padding(.horizontal, 16).padding(.vertical, 13)
