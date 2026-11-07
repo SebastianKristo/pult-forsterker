@@ -88,3 +88,23 @@ def test_nrk_logo_served_as_png(tmp_path, monkeypatch):
     k = L.path_for("", "NRK P3 (Oslo, Norway / Pop)").split("=")[1]
     body, ct = L.get(k, fetch=lambda *a, **kw: (_ for _ in ()).throw(OSError("offline")))
     assert ct == "image/png" and body[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_logo_name_from_program_title_and_prefix():
+    import skjold_logos as L
+    assert L.logo_name("1-NRK Jazz") == "NRK Jazz"
+    u = "https://cdn0-47115-liveicecast0.dna.contentdelivery.net/jazz_mp3_h?nrkjazz"
+    assert L.logo_name("Jazzbrunsj: Waltz For You, Harald Bergersen", u) == "NRK Jazz"
+    assert L.logo_name("Radio Montebello", "http://stream.example/x") == "Radio Montebello"
+
+
+def test_radio_browser_tries_without_radio_prefix():
+    import json as _j
+    import skjold_logos as L
+    seen = []
+    def fetch(u, **k):
+        seen.append(u)
+        if "byname/Montebello?" in u:
+            return _j.dumps([{"name": "Montebello", "countrycode": "NO", "favicon": "http://x/m.png"}]).encode()
+        return b"[]"
+    assert L.radio_browser_logo("Radio Montebello", fetch) == "http://x/m.png"
