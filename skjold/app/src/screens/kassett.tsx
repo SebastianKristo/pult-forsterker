@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { api, getBase, type NfcCard, type NfcDeling, type NfcHandling, type NfcOppsett, type NfcStats, type NfcStatus, type NfcVentende, type Routine, type Spoler } from '../lib/api';
 import { QR } from './platform';
+import { HyllePanel } from './hylle';
 import { HjulPanel } from './hjul';
 import { ndCover, ndConfigured, ndPlaylists, ndSearch } from '../lib/navidrome';
 
@@ -341,7 +342,7 @@ function AlbumPanel() {
 }
 
 export function KassettPage() {
-  const [tab, setTab] = useState<'k' | 'h' | 'w'>(() => (/kassett-del=/.test(location.hash) ? 'k' : 'k'));
+  const [tab, setTab] = useState<'k' | 'h' | 'w' | 'y'>(() => (/kassett-del=/.test(location.hash) ? 'k' : 'k'));
   const [del, setDel] = useState<string[] | null>(null);
   const [st, setSt] = useState<NfcStatus | null>(null);
   const [edit, setEdit] = useState<NfcCard | null | 'ny'>(null);
@@ -353,7 +354,8 @@ export function KassettPage() {
   const toggle = (u: string) => { const n = new Set(sel); n.has(u) ? n.delete(u) : n.add(u); setSel(n); };
 
   if (edit) return <Editor init={edit === 'ny' ? null : edit} onDone={() => { setEdit(null); void load(); }} />;
-  const tabs = <div style="display:flex;gap:6px;flex-wrap:wrap"><button style={btn(tab === 'k')} onClick={() => setTab('k')}>Kassetter</button><button style={btn(tab === 'w')} onClick={() => setTab('w')}>Kassett-Wrapped</button><button style={btn(tab === 'h')} onClick={() => setTab('h')}>Skjold Hjul</button></div>;
+  const tabs = <div style="display:flex;gap:6px;flex-wrap:wrap"><button style={btn(tab === 'k')} onClick={() => setTab('k')}>Kassetter</button><button style={btn(tab === 'w')} onClick={() => setTab('w')}>Kassett-Wrapped</button><button style={btn(tab === 'h')} onClick={() => setTab('h')}>Skjold Hjul</button><button style={btn(tab === 'y')} onClick={() => setTab('y')}>Kassetthylle</button></div>;
+  if (tab === 'y') return <div style="display:flex;flex-direction:column;gap:12px">{tabs}<HyllePanel cards={cards} /></div>;
   if (tab === 'h') return <div style="display:flex;flex-direction:column;gap:12px">{tabs}<HjulPanel cards={cards} /></div>;
   if (tab === 'w') return <div style="display:flex;flex-direction:column;gap:12px">{tabs}<KassettWrapped /></div>;
   return (

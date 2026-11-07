@@ -2703,7 +2703,26 @@ async def h_cover(r):
     if r.headers.get("If-None-Match") == etag:
         return web.Response(status=304, headers={"ETag": etag, "Cache-Control": cache})
     ctype = "image/png" if img[:8] == b"\x89PNG\r\n\x1a\n" else "image/jpeg"
+    w = r.query.get("w", "")
+    if w.isdigit() and 16 <= int(w) <= 1024:   # ?w=240: nedskalert, kvadratisk JPEG (Skjold Hjul S og andre små skjermer)
+        try:
+            img = await asyncio.get_running_loop().run_in_executor(None, _cover_scaled, img, int(w))
+            ctype = "image/jpeg"
+        except Exception:
+            pass
     return web.Response(body=img, content_type=ctype, headers={"Cache-Control": cache, "ETag": etag})
+
+
+def _cover_scaled(img, w):
+    """Beskjær til kvadrat, skaler til w × w og lagre som baseline-JPEG (ESPHome online_image tåler ikke progressiv)."""
+    import io
+    from PIL import Image
+    im = Image.open(io.BytesIO(img)).convert("RGB")
+    s = min(im.size)
+    im = im.crop(((im.width - s) // 2, (im.height - s) // 2, (im.width + s) // 2, (im.height + s) // 2)).resize((w, w))
+    out = io.BytesIO()
+    im.save(out, "JPEG", quality=82, progressive=False)
+    return out.getvalue()
 
 
 def _event_key(st):
@@ -7623,6 +7642,59 @@ async def h_hjul(r):
 
 
 FEAT_ROUTES += [("GET", "/api/hjul", h_hjul), ("POST", "/api/hjul", h_hjul), ("POST", "/api/hjul/{act}", h_hjul)]
+
+
+# ---------- Skjold Kassetthylle: ta ut en kassett = spill den (pi/skjold_hylle.py, esphome/skjold-hylle.yaml) ----------
+import skjold_hylle as _hymod   # noqa: E402
+
+
+def _hylle_spill(uid, device):
+    """Samme som at kassetten settes inn i kassettspilleren: /api/nfc/scan (paret enhet, album-oppslag, historikk)."""
+    req = urllib.request.Request(f"http://127.0.0.1:{PORT}/api/nfc/scan", method="POST",
+                                 data=json.dumps({"uid": uid, "device": device}).encode(), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        return json.loads(resp.read() or b"{}")
+
+
+def _hylle_stopp(uid):
+    nfc.removed(uid)
+    base = nfc_paret_base()
+    try:
+        if base:
+            _hjul_post(base, "/api/transport", {"action": "pause"})
+        else:
+            transport("pause")
+    except Exception as e:
+        print("Kassetthylle: pause:", e, flush=True)
+    changed()
+
+
+hylle = _hymod.Hylle({"spill": _hylle_spill, "stopp": _hylle_stopp, "kjent": lambda u: bool(nfc.get(u)),
+                      "aktiv": lambda: nfc.active_uid}, os.path.join(FEAT_DIR, "hylle.json"))
+
+
+async def h_hylle(r):
+    """GET /api/hylle (hyller og plasser) · GET /api/hylle/lys?device= (én bokstav per plass: s/i/t/u)
+    · POST /api/hylle/event {device, plass, uid, type: inn|ut|hei, antall?} · POST /api/hylle {device, navn?, antall?, glem?}."""
+    act = r.match_info.get("act", "")
+    loop = asyncio.get_running_loop()
+    try:
+        if act == "lys":
+            return web.Response(text=hylle.lys(r.query.get("device", "hylle")), content_type="text/plain")
+        if r.method == "POST":
+            b = await r.json()
+            if act == "event":
+                res = await loop.run_in_executor(None, hylle.event, b)
+                changed()
+                return web.json_response(res)
+            return web.json_response(hylle.sett(b))
+        return web.json_response(hylle.status())
+    except ValueError as e:
+        return web.json_response({"error": str(e)}, status=400)
+
+
+FEAT_ROUTES += [("GET", "/api/hylle", h_hylle), ("POST", "/api/hylle", h_hylle),
+                ("GET", "/api/hylle/{act}", h_hylle), ("POST", "/api/hylle/{act}", h_hylle)]
 
 # ---------- Skjold Røst: ESP32-høyttalere via Lyrion (pi/skjold_rost.py, firmware/rost/) ----------
 import skjold_rost as _rostmod   # noqa: E402

@@ -1,0 +1,264 @@
+# Skjold Hjul S – Skjold Hjul med rund skjerm. Bygget på M5Stack Dial (ESP32-S3 StampS3, 1,28″ rund GC9A01-skjerm
+# 240 × 240 med berøring, dreieknapp med trykk, summer, batterikontakt) – et ferdig «hjul med skjerm».
+# Skjermen viser cover eller kanallogo, tittel og artist, og en volumring rundt kanten.
+#   drei = volum · trykk på hjulet = spill/pause · dobbelttrykk = neste · hold = bytt rom
+#   trykk på skjermen = spill/pause · sveip venstre/høyre = forrige/neste favoritt (1–4)
+# Hendelsene går til samme API som Skjold Hjul (POST /api/hjul/event), så oppsett, rom og favoritter deles.
+# Pinnene under følger M5Dial (v1.1). Sjekk mot M5Stack sin dokumentasjon hvis du har en annen utgave.
+substitutions:
+  name: skjold-hjul-s
+  friendly_name: Skjold Hjul S
+  skjold_host: skjold.local
+  skjold_port: "8765"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    - priority: 600
+      then:
+        - output.turn_on: hold_strom     # M5Dial: hold strømmen på når den går på batteri
+    - priority: -100
+      then:
+        - script.execute: hent_status
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 8MB
+  framework: { type: esp-idf }
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+api:
+  encryption:
+    key: !secret skjold_hjul_s_api_key
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: { ssid: "Skjold Hjul S" }
+captive_portal:
+
+http_request:
+  verify_ssl: false
+  timeout: 5s
+
+output:
+  - platform: gpio
+    id: hold_strom
+    pin: GPIO46
+  - platform: ledc
+    id: baklys_pwm
+    pin: GPIO9
+
+light:
+  - platform: monochromatic
+    id: baklys
+    name: Skjermlys
+    output: baklys_pwm
+    restore_mode: ALWAYS_ON
+    default_transition_length: 400ms
+
+globals:
+  - id: tittel
+    type: std::string
+    initial_value: '"Skjold"'
+  - id: artist
+    type: std::string
+    initial_value: '""'
+  - id: volum
+    type: int
+    initial_value: "0"
+  - id: spiller
+    type: bool
+    initial_value: "false"
+  - id: rom
+    type: std::string
+    initial_value: '"Her"'
+  - id: cover_nokkel
+    type: std::string
+    initial_value: '""'
+  - id: fav
+    type: int
+    initial_value: "1"
+  - id: sveip_x
+    type: int
+    initial_value: "-1"
+
+spi:
+  clk_pin: GPIO6
+  mosi_pin: GPIO5
+
+i2c:
+  sda: GPIO11
+  scl: GPIO12
+  scan: false
+
+display:
+  - platform: ili9xxx
+    id: skjerm
+    model: GC9A01A
+    cs_pin: GPIO7
+    dc_pin: GPIO4
+    reset_pin: GPIO8
+    invert_colors: true
+    dimensions: { width: 240, height: 240 }
+    update_interval: 500ms
+    lambda: |-
+      auto gull = Color(232, 180, 80);
+      auto graa = Color(60, 60, 64);
+      it.fill(Color::BLACK);
+      // cover i midten (online_image, 120 × 120)
+      if (id(cover).get_width() > 0) it.image(120, 96, id(cover), ImageAlign::CENTER);
+      else it.filled_circle(120, 96, 58, Color(28, 28, 30));
+      // volumring rundt kanten: 270° bue fra kl. 7 til kl. 5
+      for (int a = 0; a <= 270; a += 3) {
+        float r = (135 + a) * 3.14159f / 180.0f;
+        int x = 120 + cosf(r) * 112, y = 120 + sinf(r) * 112;
+        it.filled_circle(x, y, 3, a <= id(volum) * 270 / 100 ? gull : graa);
+      }
+      it.printf(120, 172, id(f_tittel), Color::WHITE, TextAlign::TOP_CENTER, "%.18s", id(tittel).c_str());
+      it.printf(120, 194, id(f_liten), Color(170, 170, 165), TextAlign::TOP_CENTER, "%.24s", id(artist).c_str());
+      it.printf(120, 213, id(f_liten), gull, TextAlign::TOP_CENTER, "%s%s · %d", id(spiller) ? "" : "|| ",
+                id(rom).c_str(), id(volum));
+
+font:
+  - file: "gfonts://Sora@600"
+    id: f_tittel
+    size: 17
+    glyphs: " !\"#%&'()*+,-./0123456789:;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]_abcdefghijklmnopqrstuvwxyzÆØÅæøåÉéÜüÖöÄä–·"
+  - file: "gfonts://Sora@400"
+    id: f_liten
+    size: 13
+    glyphs: " !\"#%&'()*+,-./0123456789:;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]_abcdefghijklmnopqrstuvwxyzÆØÅæøåÉéÜüÖöÄä–·"
+
+online_image:
+  - id: cover
+    url: http://${skjold_host}:${skjold_port}/api/cover?w=120
+    format: JPEG
+    type: RGB565
+    resize: 120x120
+    update_interval: never
+    on_download_finished:
+      then:
+        - component.update: skjerm
+
+touchscreen:
+  - platform: ft63x6
+    id: beroring
+    address: 0x38
+    display: skjerm
+    on_touch:
+      then:
+        - lambda: "id(sveip_x) = touch.x;"
+    on_release:
+      then:
+        - lambda: |-
+            // kort trykk = spill/pause, sveip = forrige/neste favoritt
+            int dx = 0;
+            for (auto t : id(beroring).get_touches()) dx = t.x - id(sveip_x);
+            id(sveip_x) = -1;
+            if (dx > 50) { id(fav) = id(fav) % 4 + 1; id(send_fav).execute(); }
+            else if (dx < -50) { id(fav) = (id(fav) + 2) % 4 + 1; id(send_fav).execute(); }
+            else id(send).execute(std::string("klikk"), 0);
+
+sensor:
+  - platform: rotary_encoder
+    id: hjulet
+    pin_a: GPIO41
+    pin_b: GPIO40
+    resolution: 1
+    on_clockwise:
+      - script.execute: { id: send, typ: "rot", delta: 1 }
+    on_anticlockwise:
+      - script.execute: { id: send, typ: "rot", delta: -1 }
+
+binary_sensor:
+  - platform: gpio
+    id: knapp
+    pin: { number: GPIO42, inverted: true, mode: { input: true, pullup: true } }
+    on_multi_click:
+      - timing: [ "ON for at most 0.4s", "OFF for at most 0.3s", "ON for at most 0.4s", "OFF for at least 0.1s" ]
+        then: [ { script.execute: { id: send, typ: "dobbel", delta: 0 } } ]
+      - timing: [ "ON for at least 0.7s" ]
+        then: [ { script.execute: { id: send, typ: "lang", delta: 0 } } ]
+      - timing: [ "ON for at most 0.4s", "OFF for at least 0.35s" ]
+        then: [ { script.execute: { id: send, typ: "klikk", delta: 0 } } ]
+
+script:
+  - id: send
+    mode: queued
+    parameters: { typ: string, delta: int }
+    then:
+      - http_request.post:
+          url: http://${skjold_host}:${skjold_port}/api/hjul/event
+          request_headers: { Content-Type: application/json }
+          json:
+            device: ${name}
+            type: !lambda "return typ;"
+            delta: !lambda "return to_string(delta);"
+          capture_response: true
+          on_response:
+            then:
+              - lambda: |-
+                  json::parse_json(body, [](JsonObject r) -> bool {
+                    if (r["volum"].is<int>()) id(volum) = r["volum"];
+                    if (r["rom"].is<const char*>()) id(rom) = r["rom"].as<std::string>();
+                    if (r["spiller"].is<bool>()) id(spiller) = r["spiller"];
+                    return true;
+                  });
+              - component.update: skjerm
+
+  - id: send_fav
+    then:
+      - http_request.post:
+          url: http://${skjold_host}:${skjold_port}/api/hjul/event
+          request_headers: { Content-Type: application/json }
+          json:
+            device: ${name}
+            type: fav
+            n: !lambda "return to_string(id(fav));"
+      - delay: 1s
+      - script.execute: hent_status
+
+  - id: hent_status
+    mode: restart
+    then:
+      - http_request.get:
+          url: http://${skjold_host}:${skjold_port}/api/status
+          capture_response: true
+          max_response_buffer_size: 16384
+          on_response:
+            then:
+              - lambda: |-
+                  std::string ny;
+                  json::parse_json(body, [&ny](JsonObject s) -> bool {
+                    id(volum) = s["volume"] | 0;
+                    id(spiller) = s["playing"] | false;
+                    std::string t = s["title"] | "";
+                    JsonObject rn = s["radio_now"];
+                    if (t.empty() && !rn.isNull()) t = rn["name"] | "";
+                    id(tittel) = t.empty() ? std::string("Skjold") : t;
+                    id(artist) = s["artist"] | "";
+                    ny = std::string(s["cover"] | "") + "|" + t;
+                    return true;
+                  });
+                  if (ny != id(cover_nokkel)) {
+                    id(cover_nokkel) = ny;
+                    char url[160];
+                    snprintf(url, sizeof url, "http://${skjold_host}:${skjold_port}/api/cover?w=120&v=%u",
+                             (unsigned) std::hash<std::string>{}(ny));
+                    id(cover).set_url(url);
+                    id(cover).update();
+                  }
+              - component.update: skjerm
+
+interval:
+  - interval: 3s
+    then:
+      - script.execute: hent_status

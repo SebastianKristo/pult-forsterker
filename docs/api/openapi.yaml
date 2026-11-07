@@ -667,6 +667,96 @@ paths:
           application/json:
             schema:
               type: object
+  /api/hylle:
+    get:
+      tags:
+      - Annet
+      summary: 'GET /api/hylle (hyller og plasser) · GET /api/hylle/lys?device= (én bokstav per plass: s/i/t/u)'
+      operationId: get_api_hylle
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/hylle (hyller og plasser) · GET /api/hylle/lys?device= (én bokstav per plass: s/i/t/u)
+
+        · POST /api/hylle/event {device, plass, uid, type: inn|ut|hei, antall?} · POST /api/hylle {device, navn?, antall?, glem?}.'
+    post:
+      tags:
+      - Annet
+      summary: 'GET /api/hylle (hyller og plasser) · GET /api/hylle/lys?device= (én bokstav per plass: s/i/t/u)'
+      operationId: post_api_hylle
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/hylle (hyller og plasser) · GET /api/hylle/lys?device= (én bokstav per plass: s/i/t/u)
+
+        · POST /api/hylle/event {device, plass, uid, type: inn|ut|hei, antall?} · POST /api/hylle {device, navn?, antall?, glem?}.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/hylle/{act}:
+    get:
+      tags:
+      - Annet
+      summary: 'GET /api/hylle (hyller og plasser) · GET /api/hylle/lys?device= (én bokstav per plass: s/i/t/u)'
+      operationId: get_api_hylle_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/hylle (hyller og plasser) · GET /api/hylle/lys?device= (én bokstav per plass: s/i/t/u)
+
+        · POST /api/hylle/event {device, plass, uid, type: inn|ut|hei, antall?} · POST /api/hylle {device, navn?, antall?, glem?}.'
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+      - Annet
+      summary: 'GET /api/hylle (hyller og plasser) · GET /api/hylle/lys?device= (én bokstav per plass: s/i/t/u)'
+      operationId: post_api_hylle_act
+      x-skjold-modul: ki_amp_daemon
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      description: 'GET /api/hylle (hyller og plasser) · GET /api/hylle/lys?device= (én bokstav per plass: s/i/t/u)
+
+        · POST /api/hylle/event {device, plass, uid, type: inn|ut|hei, antall?} · POST /api/hylle {device, navn?, antall?, glem?}.'
+      parameters:
+      - name: act
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
   /api/input:
     post:
       tags:
