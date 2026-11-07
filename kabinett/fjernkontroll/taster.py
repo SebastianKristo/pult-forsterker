@@ -1,6 +1,6 @@
 """Tastene på Skjold Fjernkontroll – én kilde for kabinettet, tastekortet, fastvaren og dokumentasjonen.
 
-To varianter: «full» (44 taster, 230 mm) og «kort» (uten talltastene og smarthus-raden: 28 taster, 187 mm).
+To varianter: «full» (42 taster, 230 mm) og «kort» (uten talltastene og smarthus-raden: 26 taster, 187 mm).
 Kjør:  python3 taster.py
   skriver  taster.scad                      (hettene og bryterne for begge variantene til skjold_fjernkontroll.scad)
            tastekort/ og tastekort_kort/     (plassering.csv og koblinger.csv: bryter- og brikkeplassering og
@@ -31,19 +31,17 @@ HETTER = [
     ("av", "Av-på", "rund", CX - 14, 61, 7, 7, "av", "mork", ["av"]),
     ("hjem", "Skjold (aktiviteter)", "rund", CX, 61, 7.6, 7.6, "skjold", "gull", ["hjem"]),
     ("meny", "Meny", "rund", CX + 14, 61, 7, 7, "meny", "mork", ["meny"]),
-    # fire hjørnetaster rundt D-paden
+    # to hjørnetaster over D-paden (tilbake og avslutt)
     ("tilbake", "Tilbake", "rund", 7.6, 70, 6.6, 6.6, "tilbake", "mork", ["tilbake"]),
-    ("info", "Info", "rund", W - 7.6, 70, 6.6, 6.6, "info", "mork", ["info"]),
-    ("guide", "Guide", "rund", 7.6, 96, 6.6, 6.6, "guide", "mork", ["guide"]),
-    ("avslutt", "Avslutt", "rund", W - 7.6, 96, 6.6, 6.6, "avslutt", "mork", ["avslutt"]),
+    ("avslutt", "Avslutt", "rund", W - 7.6, 70, 6.6, 6.6, "avslutt", "mork", ["avslutt"]),
     # D-pad: gullring med fire brytere og OK i midten
-    ("dpad", "D-pad", "ring", CX, 83, 30, 14.6, "", "gull", ["opp", "ned", "venstre", "hoyre"]),
-    ("ok", "OK", "ok", CX, 83, 12.6, 12.6, "OK", "mork", ["ok"]),
-    # volum og kanal/side som loddrette vipper, demp og siste kanal mellom dem
+    ("dpad", "D-pad", "ring", CX, 84, 32, 14.6, "pil", "gull", ["opp", "ned", "venstre", "hoyre"]),
+    ("ok", "OK", "ok", CX, 84, 12.6, 12.6, "OK", "mork", ["ok"]),
+    # volum og kanal/side som loddrette vipper, demp og guide mellom dem
     ("vol", "Volum", "vippe", 9.4, 113, 8.4, 22, "vol", "mork", ["vol_opp", "vol_ned"]),
     ("kan", "Kanal og side", "vippe", W - 9.4, 113, 8.4, 22, "kan", "mork", ["kan_opp", "kan_ned"]),
     ("demp", "Demp", "pille", CX, 106.5, 11, 6.4, "demp", "mork", ["demp"]),
-    ("siste", "Siste kanal", "pille", CX, 119.5, 11, 6.4, "siste", "mork", ["siste"]),
+    ("guide", "Guide", "pille", CX, 119.5, 11, 6.4, "guide", "mork", ["guide"]),
     # avspilling
     ("spol_tilbake", "Spol tilbake", "pille", 12, 131.5, 12, 7.2, "spol_tilbake", "mork", ["spol_tilbake"]),
     ("spill_pause", "Spill-pause", "pille", CX, 131.5, 12, 7.2, "spill_pause", "mork", ["spill_pause"]),
@@ -84,7 +82,7 @@ BRYTER_NAVN = {
     "opp": "Opp", "ned": "Ned", "venstre": "Venstre", "hoyre": "Høyre", "vol_opp": "Volum +", "vol_ned": "Volum −",
     "kan_opp": "Kanal +", "kan_ned": "Kanal −",
 }
-DPAD_R = 11.2      # bryterne under gullringen (radius fra senter)
+DPAD_R = 12.0      # bryterne under gullringen (radius fra senter)
 VIPPE_D = 7.4      # bryterne under en vippe: ± fra midten
 
 
@@ -294,7 +292,7 @@ def kort_yaml(full):
         assert a in k, a
         k = k.replace(a, b)
     hode = ("# KORT VARIANT – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her:\n"
-            "# endre skjold-fjernkontroll.yaml og kjør python3 taster.py. Uten talltastene og smarthus-raden (28 taster,\n"
+            "# endre skjold-fjernkontroll.yaml og kjør python3 taster.py. Uten talltastene og smarthus-raden (26 taster,\n"
             "# 2 × TCA9555). Lys, stikk og ± ligger på Hjem-siden og på langt trykk på fargetastene.\n")
     for kk, v in yaml_blokker().items():
         k = re.sub(rf"# >>> {kk}.*?# <<< {kk}", lambda _m, v=v: v, k, flags=re.S)
@@ -304,7 +302,7 @@ def kort_yaml(full):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     deler, yml = [], os.path.join(here, "..", "..", "esphome", "skjold-fjernkontroll.yaml")
-    for v, antall in (("kort", 28), ("full", 44)):
+    for v, antall in (("kort", 26), ("full", 42)):
         bruk(v)
         assert len(brytere()) == antall, (v, len(brytere()))
         feil = sjekk_steg()

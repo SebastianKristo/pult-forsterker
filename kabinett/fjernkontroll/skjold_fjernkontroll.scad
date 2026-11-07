@@ -1,4 +1,4 @@
-// Skjold Fjernkontroll – universell fjernkontroll med 2,8″ fargeberøringsskjerm, 44 taster, IR og Wi-Fi. Parametrisk OpenSCAD.
+// Skjold Fjernkontroll – universell fjernkontroll med 2,8″ fargeberøringsskjerm, 42 taster, IR og Wi-Fi. Parametrisk OpenSCAD.
 // Eget Skjold-design: en rett, flat «plate» med myke R11-hjørner sett ovenfra og 45°-fas rundt topp- og bunnkanten
 // (ingen innsnevring på midten). Toppen er lys (eller mørk), bunnen mørk, delt i en rett skjøt rundt hele siden.
 // Gullring rundt OK, gull Skjold-tast under skjermen, SKJOLD i gull felt inn nederst. Tastene er egne hetter som holdes
@@ -14,7 +14,7 @@
 include <taster.scad>
 
 part = "samlet";
-variant = "full";               // full (44 taster, 230 mm) | kort (uten talltastene og smarthus-raden: 28 taster, 187 mm)
+variant = "full";               // full (42 taster, 230 mm) | kort (uten talltastene og smarthus-raden: 26 taster, 187 mm)
 kortv = variant == "kort";
 farge = "lys";                  // lys | mork
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
@@ -72,7 +72,7 @@ pilot = 1.7;  klar = 2.3;  hodeD = 4.3;  hodeH = 2.5;
 zMot = zs + lipH;               // hjørnetårnene møtes her (8,6)
 SKRUER = [[7.5, L - 5.5], [W - 7.5, L - 5.5], [4.9, 8], [W - 4.9, 8], [W/2, L - 135]];   // nese ×2 (foran skjermen), hale ×2, midt (n = 135)
 MIDT = 4;                       // skrue nr. 4 (midt) klemmer tastekortet
-PINNER = kortv ? [[W/2 - 7.5, 100 + DN], [W/2 + 7.5, 100 + DN]] : [[W/2 - 7.5, 100 + DN], [W/2 + 7.5, 100 + DN], [W/2, 125.3 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
+PINNER = kortv ? [[W/2 - 7.5, 101 + DN], [W/2 + 7.5, 101 + DN]] : [[W/2 - 7.5, 101 + DN], [W/2 + 7.5, 101 + DN], [W/2, 125.3 + DN]];   // pinner fra toppen og stolper fra bunnen klemmer kortet (x, n)
 
 // ---------- innmat ----------
 bat = [34, 50, 6.0];  batN = 11;    // LiPo 603450 (1200 mAh) under skjermen, fra n = 11
@@ -169,7 +169,7 @@ module vippe_ikon(i) {
 }
 module symbol2d(h) {   // symbolet for hette h, i hettens lokale ramme (y peker mot nesen)
   if (h[1] == "vippe") vippe_ikon(h[6]);
-  else if (h[1] == "ring") for (a = [0:90:270]) rotate(a) translate([0, 10.6]) polygon([[-1.5, -0.7], [1.5, -0.7], [0, 0.9]]);
+  else if (h[1] == "ring") for (a = [0:90:270]) rotate(a) polygon([[-2.3, 10.1], [2.3, 10.1], [0, 13.4]]);   // piler 4,6 × 3,3 mm
   else ikon(h[6]);
 }
 
@@ -205,9 +205,9 @@ module hette_kropp(h) {
   }
 }
 module hette(h) { difference() { hette_kropp(h); translate([0, 0, topp_av(h) - ink]) linear_extrude(1) symbol2d(h); } }
-module symbol(h) { if (h[1] != "ring") intersection() { hette_kropp(h); translate([0, 0, topp_av(h) - ink]) linear_extrude(ink) symbol2d(h); } }
+module symbol(h) { intersection() { hette_kropp(h); translate([0, 0, topp_av(h) - ink]) linear_extrude(ink) symbol2d(h); } }
 // i bildene (forhåndsvisning) uten intersection – OpenCSG blander fargene ellers
-module symbol_vis(h) { if (h[1] != "ring") translate([0, 0, topp_av(h) - ink]) linear_extrude(ink - 0.02) symbol2d(h); }
+module symbol_vis(h) { translate([0, 0, topp_av(h) - ink]) linear_extrude(ink - 0.02) symbol2d(h); }
 module ved(h) { translate([h[2], L - h[3], 0]) children(); }
 // grupper: «mork» = mørke hetter (med OK), «lys» = smarthus-raden, «gull» = ring og Skjold-tasten, ellers fargetastene
 function gruppe(h) = h[7];
