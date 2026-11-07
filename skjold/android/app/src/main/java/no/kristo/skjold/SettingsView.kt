@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -119,6 +120,18 @@ private fun Top(m: AppModel, cats: List<SettingCategory>) {
                 T("Ta med spillere som ikke er Skjold (for eksempel max2play eller TV-bokser) under Rom.", sora(11f, W.Regular, C.muted))
             }
             SKToggle(m.showLyrionPlayers) { m.setShowLyrion(!m.showLyrionPlayers) }
+        }
+        var hapticSliders by remember { mutableStateOf(Haptics.slidersOn) }
+        Row(Modifier.fillMaxWidth().skBox(C.card, C.line).padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                T("Haptikk på glidebrytere", sora(14f))
+                T("Tikk for hvert steg på equalizer og balanse, tydelig klikk ved 0 dB og et støt ved grensen.", sora(11f, W.Regular, C.muted))
+            }
+            SKToggle(hapticSliders) {
+                hapticSliders = !hapticSliders
+                Haptics.slidersOn = hapticSliders
+                if (hapticSliders) Haptics.tick()
+            }
         }
     }
 }

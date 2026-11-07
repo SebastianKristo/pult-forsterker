@@ -115,12 +115,22 @@ jobs:
           SKJOLD_KEYSTORE_PASSWORD: ${{ secrets.SKJOLD_KEYSTORE_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon -PskjoldVersionName=${{ steps.ver.outputs.name }} -PskjoldVersionCode=${{ steps.ver.outputs.code }}
+          ./gradlew :app:assembleRelease --no-daemon -PskjoldVersionName=${{ steps.ver.outputs.name }} -PskjoldVersionCode=${{ steps.ver.outputs.code }}
           cp app/build/outputs/apk/release/app-release.apk ../../skjold-android-${GITHUB_REF_NAME}.apk
+      - name: Bygg Wear OS-appen (feil her stopper ikke telefonappen)
+        continue-on-error: true
+        working-directory: skjold/android
+        env:
+          SKJOLD_KEYSTORE_PASSWORD: ${{ secrets.SKJOLD_KEYSTORE_PASSWORD }}
+        run: |
+          ./gradlew :wear:assembleRelease --no-daemon -PskjoldVersionName=${{ steps.ver.outputs.name }} -PskjoldVersionCode=${{ steps.ver.outputs.code }}
+          cp wear/build/outputs/apk/release/wear-release.apk ../../skjold-wear-${GITHUB_REF_NAME}.apk
       - uses: actions/upload-artifact@v4
         with:
           name: android-native
-          path: skjold-android-*.apk
+          path: |
+            skjold-android-*.apk
+            skjold-wear-*.apk
 
   ios:
     name: iOS IPA (gammel web-app, usignert)
@@ -173,11 +183,24 @@ jobs:
         run: |
           xcodebuild -project SkjoldCI.xcodeproj -scheme Skjold -configuration Release -sdk iphoneos \
             -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM=""
+      - name: Bygg Apple Watch-appen (egen jobb-del – feil her stopper ikke iOS-appen)
+        id: watch
+        continue-on-error: true
+        working-directory: skjold/ios
+        run: |
+          xcodebuild -project SkjoldCI.xcodeproj -scheme SkjoldWatch -configuration Release -destination 'generic/platform=watchOS' \
+            -derivedDataPath build-watch CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM=""
       - name: Pakk som IPA
         working-directory: skjold/ios
         run: |
           mkdir -p Payload
           cp -r build/Build/Products/Release-iphoneos/Skjold.app Payload/
+          W=build-watch/Build/Products/Release-watchos/SkjoldWatch.app
+          if [ "${{ steps.watch.outcome }}" = "success" ] && [ -d "$W" ]; then
+            mkdir -p Payload/Skjold.app/Watch && cp -r "$W" Payload/Skjold.app/Watch/ && echo "Apple Watch-appen er med"
+          else
+            echo "::warning::Apple Watch-appen ble ikke bygget – IPA-en lages uten den"
+          fi
           zip -qr ../../skjold-ios-${GITHUB_REF_NAME}-usignert.ipa Payload
       - uses: actions/upload-artifact@v4
         with:
@@ -256,6 +279,22 @@ jobs:
           name: print3d
           path: ut/*
 
+  hakort:
+    name: Skjold-kort for Home Assistant
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sjekk at kortet er bygget fra kilden
+        working-directory: ha-kort
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          git diff --exit-code -- dist/skjold-card.js ../custom_components/skjold/www/skjold-cards.js || { echo "::error::Kjør «npm run build» i ha-kort og sjekk inn dist"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hakort
+          path: ha-kort/dist/skjold-card.js
+
   rostfw:
     name: Fastvare for Skjold Røst (squeezelite-esp32 + Skjold-oppsett)
     runs-on: ubuntu-latest
@@ -278,7 +317,7 @@ jobs:
 
   release:
     name: GitHub Release
-    needs: [web, android-native, ios, ios-native, flasher, manual, print3d, rostfw]
+    needs: [web, android-native, ios, ios-native, flasher, manual, print3d, rostfw, hakort]
     # macOS-jobbene (iOS og Flasher for Mac) blir ofte avbrutt uten maskin (eller når macOS-minuttene er brukt opp) –
     # releasen publiseres likevel når web/Android og PDF gikk gjennom; filene som ble bygget kommer med.
     if: >-

@@ -10,6 +10,7 @@ import { Transport, artFor, nowTitle, sourceLine, subLine } from './player';
 import { useRooms } from './phone';
 import { SpatialCard } from './advaudio';
 import { SpeakerCard } from './speakers';
+import { confirmTap, hapticsOn, setHapticsOn } from '../lib/haptics';
 
 /** Ikke-brytende mellomrom før enheter, som i designet (2 × 50 W). */
 export const nbHw = (s: string) => s.replace(/ (×|W\b|kHz|mm)/g, ' $1').replace(/(\d) ×/g, '$1 ×');
@@ -219,7 +220,7 @@ export function EqPage() {
         <span class="lbl11">{src === act0 ? 'Aktiv nå · følger inngangen automatisk' : 'Aktiv nå er ' + name(act0) + ' · du redigerer ' + name(src)}</span>
       </div>
       <div class="row" style={{ gap: '6px', flexWrap: 'wrap' }}>
-        {EQ.presets.map(([n, v], i) => <button key={n} class={'pchip sm' + (prof.preset === i ? ' on' : '')} onClick={() => setEqProfile(src, { preset: i, eq: [...v] })}>{n}</button>)}
+        {EQ.presets.map(([n, v], i) => <button key={n} class={'pchip sm' + (prof.preset === i ? ' on' : '')} onClick={() => { confirmTap(); setEqProfile(src, { preset: i, eq: [...v] }); }}>{n}</button>)}
         {prof.preset < 0 && <button class="pchip sm on">Egendefinert</button>}
       </div>
       <div class="eq-card">
@@ -232,7 +233,7 @@ export function EqPage() {
           {EQ.bands.map((b, i) => (
             <div class="eq-band" key={b}>
               <span class="v">{(prof.eq[i] ?? 0) > 0 ? '+' : ''}{prof.eq[i] ?? 0}</span>
-              <Slider vertical min={-12} max={12} value={prof.eq[i] ?? 0} label={b + ' Hz'}
+              <Slider vertical haptic min={-12} max={12} value={prof.eq[i] ?? 0} label={b + ' Hz'}
                 onCommit={(v) => { const eq = [...prof.eq]; eq[i] = v; setEqProfile(src, { eq, preset: -1 }); }} />
               <span class="f">{b}</span>
               <span style="font-size:10px;color:#c9c9c4;white-space:nowrap">{EQ_NAMES[i]}</span>
@@ -245,12 +246,13 @@ export function EqPage() {
             <div class="w" key={b}><span class="row" style={{ gap: '6px', alignItems: 'baseline' }}><span class="nm">{EQ_NAMES[i]}</span><span class="hz">{EQ_HZ[i]}</span></span><span class="d">{EQ_DESC[i]}</span></div>
           ))}
         </div>
+        <HapticToggle />
       </div>
       <div class="list">
         {tone.map(([n, k, mn, mx, f]) => (
           <div class="tone" key={k}>
             <span style={{ fontSize: '13px' }}>{n}</span>
-            <Slider min={mn} max={mx} value={st[k]} label={n} onCommit={(v, fin) => { if (fin) setSetting(k, v); }} />
+            <Slider haptic min={mn} max={mx} value={st[k]} label={n} onCommit={(v, fin) => { if (fin) setSetting(k, v); }} />
             <span class="mono" style={{ fontSize: '12px', textAlign: 'right' }}>{f(st[k])}</span>
           </div>
         ))}
@@ -275,3 +277,14 @@ export function useTick(ms: number): number {
   return t;
 }
 export { Chip };
+
+
+function HapticToggle() {
+  const [on, setOn] = useState(hapticsOn());
+  return (
+    <label class="row between" style={{ padding: '10px 2px 0', fontSize: '13px', color: '#c9c9c4', gap: '12px' }}>
+      <span>Haptikk på glidebrytere <span style={{ color: '#8a8a86' }}>(Android)</span></span>
+      <Toggle on={on} label="Haptikk på glidebrytere" onChange={(v) => { setOn(v); setHapticsOn(v); }} />
+    </label>
+  );
+}

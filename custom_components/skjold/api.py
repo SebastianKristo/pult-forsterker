@@ -26,10 +26,10 @@ class KiAmpApi:
             raise KiAmpError(str(err)) from err
 
     async def doorbell(self) -> dict[str, Any]:
-        return await self._req("POST", "/api/doorbell", {"src": "Home Assistant"})
+        return await self._req("POST", "/doorbell", {"src": "Home Assistant"})
 
     async def run_routine(self, routine: str) -> dict[str, Any]:
-        return await self._req("POST", f"/api/routines/{routine}/run", {})
+        return await self._req("POST", f"/routines/{routine}/run", {})
 
     @property
     def base(self) -> str:
@@ -101,7 +101,7 @@ class KiAmpApi:
         body: dict[str, Any] = {"url": url, "title": title, "announce": announce, "image": image}
         if volume is not None:
             body["volume"] = volume
-        return await self._req("POST", "/api/play", body)
+        return await self._req("POST", "/play", body)
 
     async def presets(self) -> dict[str, Any]:
         """Radiofavorittene (inntil 50): {"presets":[…|null], "items":[bare fylte], "count", "max", "active"}."""
@@ -122,6 +122,30 @@ class KiAmpApi:
     async def set_settings(self, patch: dict[str, Any]) -> dict[str, Any]:
         """Delvis oppdatering av innstillingene (samme nøkler som web-appen). Svar: {"settings": …}."""
         return await self._req("POST", "/settings", patch)
+
+    async def settings(self) -> dict[str, Any]:
+        """Innstillingene (EQ-profiler m.m.): {"settings": …}."""
+        return await self._req("GET", "/settings")
+
+    async def ask(self, text: str) -> dict[str, Any]:
+        """«Spill noe til …»: fritekst → kø (skjold_ask)."""
+        try:
+            async with asyncio.timeout(60):
+                async with self._session.post(f"{self._base}/ask", json={"text": text}) as resp:
+                    resp.raise_for_status()
+                    return await resp.json()
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise KiAmpError(str(err)) from err
+
+    async def logo(self, k: str) -> tuple[bytes, str]:
+        """Kanallogo fra daemonens /api/logo (PNG/JPEG) → (bytes, content-type)."""
+        try:
+            async with asyncio.timeout(8):
+                async with self._session.get(f"{self._base}/logo", params={"k": k}) as resp:
+                    resp.raise_for_status()
+                    return await resp.read(), resp.headers.get("Content-Type", "image/png")
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise KiAmpError(str(err)) from err
 
     async def set_presence(self, on: bool) -> dict[str, Any]:
         """Tilstede-modus («Bortreise») av/på: spiller radio i tilfeldige økter så det virker som noen er hjemme."""

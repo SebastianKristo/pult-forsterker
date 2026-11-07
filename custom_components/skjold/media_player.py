@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
+from .cardhelpers import card_presets, eq_state, logo_url
 from .const import DOMAIN, PRESETS_MAX, product, source_label, status_inputs
 from .entity import KiAmpEntity
 
@@ -137,8 +138,12 @@ class KiAmpMediaPlayer(KiAmpEntity, MediaPlayerEntity):
                 "board": self.d.get("board", ""), "product": product(self.d),
                 "radio_now": self.d.get("radio_now"),
                 # Radiofavoritter til Skjold-kortene i dashbordet (spill med media_player.play_media, type «preset»)
-                "presets": [{"n": p.get("n"), "title": p.get("title", ""), "image": p.get("image") or p.get("icon") or ""}
-                            for p in (getattr(self.coordinator, "presets", None) or []) if isinstance(p, dict) and p.get("n")][:50]}
+                "presets": card_presets(self.coordinator.entry.entry_id, getattr(self.coordinator, "presets", None) or [],
+                                        self.d.get("presets") or []),
+                # til Skjold-kortet: kanallogo via HA, aktiv EQ-profil og rom-navn
+                "radio_logo": logo_url(self.coordinator.entry.entry_id, (self.d.get("radio_now") or {}).get("logo")),
+                "eq": eq_state(getattr(self.coordinator, "settings", None), self.d),
+                "room": self.d.get("name", ""), "skjold_entry": self.coordinator.entry.entry_id}
 
     async def async_turn_on(self) -> None:
         self.coordinator.async_set_updated_data(await self.coordinator.api.set_power(True))

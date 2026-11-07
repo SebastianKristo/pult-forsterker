@@ -1,4 +1,5 @@
 import SwiftUI
+import AppIntents
 
 @main struct MyApp: App {
     @State private var model = AppModel()
@@ -7,6 +8,9 @@ import SwiftUI
         WindowGroup {
             ContentView()
                 .environment(model)
+                .task { WatchBridge.shared.start() }   // Apple Watch-appen: rom til klokka, kommandoer fra klokka
+                // Siri lærer navnene på favoritter og rutiner (for «Spill NRK Jazz med Skjold»)
+                .task { SkjoldShortcuts.updateAppShortcutParameters() }
         }
     }
 }

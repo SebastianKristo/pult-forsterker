@@ -130,7 +130,7 @@ fun SoundView(m: AppModel) {
                 val on = prof.preset == i
                 Column(
                     Modifier.width(96.dp).clip(RoundedCornerShape(14.dp)).background(if (on) C.selBg else C.card).skBorder(if (on) C.accent else C.line, 14.dp)
-                        .press { if (!on) { Haptics.tick(); m.setProf { it.copy(preset = i, eq = p.second) } } }.padding(10.dp),
+                        .press { if (!on) { Haptics.thump(); m.setProf { it.copy(preset = i, eq = p.second) } } }.padding(10.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     // exaggerated so the shape reads at thumbnail size
@@ -227,13 +227,14 @@ fun EQGraph(eq: List<Int>, selected: Int, onSelect: (Int) -> Unit, onChange: (In
                     val raw = (h / 2 - y) / (h / 2 - pad) * 12
                     val v = raw.roundToInt().coerceIn(-12, 12)
                     if (v != last) {
-                        if (v == 0 || abs(v) == 12) Haptics.bump() else Haptics.tick()
+                        Haptics.sliderStep(last, v, -12, 12)
                         last = v
                         cb(i, v)
                     }
                 }
                 upd(down.position.y)
                 drag(down.id) { c -> upd(c.position.y); c.consume() }
+                Haptics.sliderRelease()
                 dragging = false
             }
         },
@@ -326,7 +327,7 @@ fun SKCenterSlider(value: Int, range: IntRange, modifier: Modifier = Modifier, o
                         val f = ((px - thumb / 2) / (size.width - thumb)).coerceIn(0f, 1f)
                         val v = range.first + (f * (range.last - range.first)).roundToInt()
                         if (v != last) {
-                            if (v == 0 || v == range.first || v == range.last) Haptics.bump() else Haptics.tick()
+                            Haptics.sliderStep(last, v, range.first, range.last, if (0 in range) 0 else null)
                             last = v
                             cb(v)
                         }
