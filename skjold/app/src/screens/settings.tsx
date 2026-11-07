@@ -4,6 +4,7 @@ import { ChangelogPanel } from './programs';
 import { HomeEditor } from './homeedit';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { DoorbellPanel, DuckPanel, RecognizeSettingsPanel, RoutinesPanel, WishlistPanel } from './features';
+import { SecurityPanel } from './lyd';
 import { api, type RemoteStatus, hostLabel, isNative, REPO, type LevelSource, type UpdateInfo } from '../lib/api';
 import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status } from '../lib/store';
 import { computed } from '@preact/signals';
@@ -88,7 +89,7 @@ export function CategoryList({ wide = false }: { wide?: boolean } = {}) {
 
 export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) {
   if (cat.id === 'oppdatering') return <><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}</>;
-  if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><RoutinesPanel /><DoorbellPanel /><DuckPanel /><RecognizeSettingsPanel /><WishlistPanel /><RadioListPanel source="wishlist" /></div>;
+  if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><RoutinesPanel /><DoorbellPanel /><DuckPanel /><SecurityPanel /><RecognizeSettingsPanel /><WishlistPanel /><RadioListPanel source="wishlist" /></div>;
   if (cat.id === 'bibliotek') return <div style="display:flex;flex-direction:column;gap:14px"><LibraryTagsPanel /><AiSettingsPanel /></div>;
   if (cat.id === 'fjernstyring') return <RemotePanel />;
   if (cat.id === 'steder') return <StederPanel />;

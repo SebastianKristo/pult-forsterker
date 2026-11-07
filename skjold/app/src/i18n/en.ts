@@ -4,6 +4,7 @@ export const EN: Record<string, string> = {
   'Hjem': 'Home', 'Lyd': 'Sound', 'Rom': 'Rooms', 'Innstillinger': 'Settings', 'Spiller': 'Player', 'Radio': 'Radio',
   'Ditt system': 'Your system', 'Bibliotek': 'Library', 'Grupper og surround': 'Groups and surround', 'Integrasjoner': 'Integrations',
   'Plugins': 'Plugins', 'Music Assistant': 'Music Assistant', 'Kassetter': 'Cassettes', 'Platesamling': 'Record collection',
+  'Sanglek': 'Song quiz', 'Lydbøker': 'Audiobooks', 'Køhistorikk': 'Queue history',
   'Equalizer': 'Equalizer', 'LYTT': 'LISTEN', 'OPPSETT': 'SETUP', 'Meny': 'Menu',
   // hjem
   'Nylig spilt': 'Recently played', 'Kilder': 'Sources', 'Radiofavoritter': 'Radio favourites', 'Administrer': 'Manage',

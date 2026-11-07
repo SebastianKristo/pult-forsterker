@@ -35,6 +35,37 @@ Daemonen starter motoren (`sync_apply`) ved oppstart og ved `POST /api/sync`. UI
 - Sub-enheten er følger i synk-motoren, så lyden kommer fram samtidig; resten justeres med finjusteringen.
 - UI: Grupper og surround → Sub (delefrekvens, fase, finjustering, nivå, «Test»).
 
+## 4. Bass management – automatisk sub-innstilling (`pi/skjold_bassmgmt.py`)
+
+Under Grupper og surround → «Bass management (mål med telefonen)» på hovedenheten:
+
+1. Velg sub-enheten. Skjold leser sub-ens nåværende fase/finjustering/nivå og setter den nøytralt (0°, 0 ms, 0 dB).
+2. Hold telefonen i lytteposisjonen og trykk «Mål». Hovedenheten og sub-en spiller hver sin sveip i hvert sitt
+   tidsvindu (samme timing som høyttalerplassering).
+3. Skjold regner ut impulsresponsen for hver, og prøver fase 0/180° og relativ forsinkelse −20…+20 ms i 0,1 ms-steg.
+   Den kombinasjonen som gir flattest summert respons rundt delefrekvensen (½–2 × delefrekvensen) vinner.
+   Nivået settes fra snittnivået i overgangsbåndet (−15…+6 dB i 0,5 dB-steg).
+4. Kommer sub-en for tidlig, forsinkes sub-en (finjustering). Kommer den for sent, forsinkes hovedenheten
+   (legges til rommets forsinkelse), fordi sub-ens forsinkelse ikke kan være negativ.
+5. Kurven før/etter vises; «Bruk» sender verdiene til sub-en (`/api/sync`), «Avbryt» setter tilbake det som var.
+
+API: `POST /api/bass/start {sub}`, `POST /api/bass/analyze` (opptaket), `POST /api/bass/apply`, `POST /api/bass/avbryt`.
+
+## 5. AirPlay 2 til flere rom (`pi/skjold_airplay.py`)
+
+Hver Skjold er sitt eget AirPlay 2-mål (shairport-sync + nqptp). På iPhone/Mac velger du flere høyttalere i
+AirPlay-menyen samtidig, og Apple holder dem synkrone selv – Skjold-grupper trengs ikke for dette.
+
+- **Navn**: AirPlay-navnet er enhetens navn i Skjold («Stue», «Kjøkken»), satt automatisk når navnet endres.
+- **Unik ID**: iPhone skiller høyttalere på AirPlay-ID-en. shairport-sync lager den fra MAC-adressen, så klonede
+  enheter (samme Proxmox-mal, kopiert SD-kort) kan få samme ID og vises som én. Ved oppstart setter Skjold
+  `airplay_device_id` i `general`-blokken i `/etc/shairport-sync.conf` fra en hash av `/etc/machine-id` + MAC +
+  vertsnavn (48 bit, «lokalt administrert»), og starter shairport-sync på nytt bare hvis ID-en endret seg.
+  Kloner du en maskin: kjør `rm /etc/machine-id && systemd-machine-id-setup` på klonen.
+- **Volum**: volumet fra iPhone følger Skjold-volumet per rom.
+- **Begrensning**: en Skjold-gruppe er ikke ett samlet AirPlay-mål. Velg rommene enkeltvis på iPhone, eller spill
+  til ett rom og bruk Skjold-synk derfra (da styrer Skjold synkroniseringen, ikke Apple).
+
 ## Tester (`pi/tests/test_xtc.py`, `test_sync.py`, `test_plugins.py`)
 
 Målt lokalt (spenn 50 cm, avstand 60 cm):
@@ -43,9 +74,13 @@ Målt lokalt (spenn 50 cm, avstand 60 cm):
 - To prosesser over loopback (leder med 137 ms klokkeoffset): klokkefeil ≈ 0,001 ms, krysskorrelasjon av
   avspilt signal mot fasit: 4 samples ≈ 0,08 ms.
 - Pakkeomstokking, tap og duplikater i jitterbufferen; YAML for sub/høypass/forsinkelse valideres.
+- Bass management (`test_lyd_funksjoner.py`): simulert hoved+sub med LR4 finner forsinkelse (±0,3 ms), invertert
+  fase og −6 dB nivå, og forsinker hovedenheten når sub-en kommer for sent. AirPlay: ID-er er unike per MAC,
+  og `airplay_device_id` settes inn/oppdateres i repoets `shairport-sync.conf` uten å endre resten.
 
 ## Ikke testet ennå
 
 - Ekte Wi-Fi mellom flere Pi-er, og latens i aplay/ALSA (kompenseres manuelt med per-rom forsinkelse).
 - Lytting med XTC på ekte høyttalere; sub-delefilter mot ekte subwoofer.
+- Bass management med ekte telefonmikrofon og sub over Wi-Fi; AirPlay 2 med flere ekte Skjold-enheter samtidig.
 - iOS/Android-appene har ikke fått egne skjermer – bruk web-UI (samme API).

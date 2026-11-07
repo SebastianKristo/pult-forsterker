@@ -19,6 +19,10 @@ class KiPultforsterkerApp extends Homey.App {
       .registerRunListener(async ({ device }) => device.request('POST', '/night', { on: true, src: 'Homey' }));
     this.homey.flow.getActionCard('ki_duck')
       .registerRunListener(async ({ device, text }) => device.request('POST', '/duck', { tekst: String(text || ''), kilde: 'homey' }));
+    this.homey.flow.getActionCard('ki_security_trigger')
+      .registerRunListener(async ({ device, reason }) => device.request('POST', '/security', { action: 'trigger', grunn: String(reason || ''), kilde: 'homey' }));
+    this.homey.flow.getActionCard('ki_security_stop')
+      .registerRunListener(async ({ device }) => device.request('POST', '/security', { action: 'stop', kilde: 'homey' }));
     this.homey.flow.getActionCard('ki_doorbell')
       .registerRunListener(async ({ device }) => device.request('POST', '/doorbell', { src: 'Homey' }));
     this.homey.flow.getActionCard('ki_run_routine')

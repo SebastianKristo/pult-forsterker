@@ -6,6 +6,7 @@ import { go, openFull, route } from '../lib/store';
 import { art } from '../lib/settings';
 import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, LIB_TABS, lq, lsvc, playNd, whenText, type LibId } from '../lib/library';
 import { MediaLibSection } from './medialib';
+import { LydLenker } from './lyd';
 import { ndAlbum, ndAlbumList, ndConfigured, ndCover, ndPlaylist, ndPlaylists, ndSearch, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
 import { signal } from '@preact/signals';
 import { AskBox, TagFilterBar } from './ai';
@@ -190,6 +191,7 @@ export function LibraryPage() {
           {h.length > 0 && <button onClick={() => clearHist(lib)} style="align-self:center;border:none;background:none;color:#8b8b86;font-size:13px;cursor:pointer;padding:6px">Tøm historikk</button>}
         </>}
       </>}
+      {!q && !open && tab === 0 && <LydLenker />}
       {!q && !open && tab === 0 && <MediaLibSection />}
     </>
   );
