@@ -126,6 +126,16 @@ bakB = [[bkX0 + 4.4, R, [-1, 0]], [bkX1 - 4.4, R, [1, 0]],
         [W/2, bkZ1 - 4.4, [0, 1]]];
 bakY0 = 44;                                // tårnene starter 44 mm bak fronten (avstiverne skrås av foran, klar av skjermbraketten)
 fotXY = [[30, 22], [W - 30, 22], [30, D - 22], [W - 30, D - 22]];             // selvklebende gummiføtter Ø 12
+// ---------- helling: fronten lener 6° bakover, så skjermen og knappene peker litt opp mot ansiktet ----------
+// Kassa er en kile: alt over gulvet er som før (kassas eget koordinatsystem), og under gulvet er det et skjørt som
+// fortsetter yttersidene ned til bordplanet. Bordplanet går gjennom bakre underkant og ligger hS = D·tan(6°) ≈ 12,1 mm
+// under gulvet foran. Inni er alt uendret; bare hele radioen står 6° bakover (plassert()).
+tilt = 6;
+hS = D * tan(tilt);
+module over_bord(o = 0) {   // alt over bordplanet (o mm over det), i kassas koordinater
+  translate([0, D, -t]) rotate([tilt, 0, 0]) translate([-50, -400, o]) cube([W + 100, 600, 400]);
+}
+module plassert() { translate([0, D, -t]) rotate([-tilt, 0, 0]) translate([0, -D, t]) children(); }   // står på bordet
 // Raspberry Pi 4 på baksiden av skjermbraketten (85 × 56, hull 58 × 49), sentrert bak skjermen
 piH = [[-29, -24.5], [29, -24.5], [-29, 24.5], [29, 24.5]];
 piSt = 5;                                  // avstandsstykker
@@ -199,6 +209,26 @@ module gulvstrips(p) {   // strips-feste: kloss med tunnel på tvers (langs x) o
 }
 function kort_hjorner(p, m, inn) = [for (u = [inn, m[0] - inn], v = [inn, m[1] - inn]) p + [u, v]];
 
+// ---------- skjørtet under gulvet (kilen) ----------
+// Yttersidene fortsetter rett ned til bordplanet (veggtykkelse t), og fire føtter (dråpeformet, spissen mot fronten)
+// går fra gulvet ned til bordplanet med forsenkning for gummiføttene. Undersiden er åpen, så skruene i kammerørene
+// og luftespaltene i gulvet er tilgjengelige og får luft. Printes med fronten ned uten støtte: skjørtet er en
+// forlengelse av veggene, og bordplanet heller oppover i printretningen.
+module ytre_kile() { intersection() { hull() { ytre(); translate([0, 0, -hS - 1]) ytre(); } over_bord(0); } }   // kassa forlenget ned til bordet
+module skjort() {
+  intersection() {
+    union() {
+      difference() {
+        ytre_kile();
+        hull() { skall(t, t); translate([0, 0, -hS - 5]) skall(t, t); }
+      }
+      for (p = fotXY) translate([0, 0, -t - hS - 1]) linear_extrude(hS + 1.01) drape2d(p, 14);
+    }
+    over_bord(0);
+    translate([-1, -1, -t - hS - 5]) cube([W + 2, D - bkT + 1, hS + 5 + t + R]);   // under gulvet og opp forbi de nedre hjørnene (R14), foran bakplata
+  }
+}
+
 // ---------- kropp (ett skall: front, sider, topp og gulv; åpen bak; printes med fronten ned på platen) ----------
 module kropp() {
   difference() {
@@ -225,6 +255,7 @@ module kropp() {
       for (q = kort_hjorner(forstP, forstM, forstHull)) gulvstolpe(q, forstH, 6.5, 2.6);
       for (q = kort_hjorner(dacP, dacM, 2.5)) gulvstolpe(q, dacH, 5);
       for (q = stripsGulv) gulvstrips(q);
+      render(convexity = 4) skjort();
     }
     for (p = bakB) translate([p[0], D - bkT - insD, p[1]]) rotate([-90, 0, 0]) cylinder(d = ins, h = insD + 0.1);
     translate([-1, D - bkT, -t - 1]) cube([W + 2, bkT + 1, H + t + 2]);   // kroppen slutter der bakplata begynner
@@ -257,7 +288,10 @@ module kropp() {
     // gulvet: kammerørene (senkeskruer nedenfra), gummiføtter og lufting under forsterkeren
     for (x = [kX0 - kOre/2, kX0 + kW + kOre/2], y = kOreY)
       translate([x, y, -t - 1]) { cylinder(d = m3, h = t + 2); cylinder(d = m3k, h = 1 + 1.7); }
-    for (p = fotXY) translate([p[0], p[1], -t - 1]) cylinder(d = 12.6, h = 1.8);       // 0,8 mm forsenkning
+    for (p = fotXY) difference() {                                                     // 0,8 mm forsenkning for gummiføttene i bordplanet
+      translate([p[0], p[1], -t - hS - 2]) cylinder(d = 12.6, h = hS + 2);
+      over_bord(0.8);
+    }
     for (i = [0:ventGulv[2] - 1]) translate([ventGulv[0] + i*ventGulv[1], ventGulv[3], -t - 1]) cube([3, ventGulv[4], t + 2]);
   }
 }
@@ -278,7 +312,7 @@ module bak_krage() {
 module bak() {
   difference() {
     union() {
-      intersection() { ytre(); translate([-1, yBak, -t - 1]) cube([W + 2, bkT, H + t + 2]); }   // fortsetter kassas form
+      intersection() { ytre_kile(); translate([-1, yBak, -t - hS - 1]) cube([W + 2, bkT, H + t + hS + 2]); }   // fortsetter kassas form (kilen)
       bak_krage();
       // hjørneholdere for nedtrapperen og releet (printes oppover fra bakplata), og strips-fester
       for (b = [[buckP, buckM], [releP, releM]]) {
@@ -461,7 +495,7 @@ module knapper(symbol = false) {
 
 // ---------- montert / eksplodert ----------
 module montert(e = 0) {   // eksplodert: fronten ut mot deg, innmaten ut bakover gjennom den åpne baksiden
-  color(c_kropp) kropp();
+  color(c_kropp) render(convexity = 6) kropp();
   color(c_kropp) translate([0, 8.0*e, 0]) bak();
   color(c_inne) translate([0, 4.6*e, 0]) kammer();
   color(c_inne) translate([0, 5.6*e, 0]) lokk();
@@ -563,8 +597,8 @@ module print(p) {
   else if (p == "knapp_symbol") for (i = [0:6]) translate([i * (capFl + 3), 0, capUp]) rotate([180, 0, 0]) knapp_symbol(knappIkon[i]);
 }
 
-if (part == "samlet") montert(0);
-else if (part == "eksplodert") montert(40);
+if (part == "samlet") plassert() montert(0);
+else if (part == "eksplodert") plassert() montert(40);
 else if (part == "A_kropp") kropp();
 else if (part == "A_bak") bak();
 else if (part == "A_kammer") kammer();
@@ -581,12 +615,12 @@ else if (part == "A_volum") front_ramme() translate([volX, volZ, 0.6]) volum();
 else if (part == "A_element") elementer();
 else if (part == "A_stoff") stoff();
 else if (part == "A_pi") pi_kort();
-else if (part == "inni") {   // innmaten: bakplata er felt ned bakover (innsiden opp) med nedtrapperen, releet og kontaktene
-  color(c_kropp) kropp(); color(c_inne) { kammer(); lokk(); brakett(); } color(c_knapp) knapper();
+else if (part == "inni") plassert() {   // innmaten: bakplata er felt ned bakover (innsiden opp) med nedtrapperen, releet og kontaktene
+  color(c_kropp) render(convexity = 6) kropp(); color(c_inne) { kammer(); lokk(); brakett(); } color(c_knapp) knapper();
   color(c_gull) front_ramme() { translate([whX, whZ, 0.6]) knott(); translate([volX, volZ, 0.6]) volum(); }
   for (n = REFS) if (n != "nedtrapper" && n != "rele" && n != "kontakter") ref(n);
   translate([0, D + 20, -t]) rotate([-90, 0, 0]) translate([0, -D, t]) { color(c_kropp) bak(); ref("nedtrapper"); ref("rele"); ref("kontakter"); }
 }
 else if (len(part) > 2 && part[0] == "R" && part[1] == "_") ref(chr([for (i = [2:len(part) - 1]) ord(part[i])]));
-else if (part == "skjermflate") color([1, 0, 1]) translate([0, 4.0*skjermE, 0]) skjermflate();   // bare det aktive området (hjørnene til lag_render.sh)
+else if (part == "skjermflate") plassert() color([1, 0, 1]) translate([0, 4.0*skjermE, 0]) skjermflate();   // bare det aktive området (hjørnene til lag_render.sh)
 else print(part);
