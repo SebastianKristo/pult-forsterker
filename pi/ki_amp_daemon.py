@@ -734,11 +734,60 @@ def eq_profile():
     return [max(-12.0, min(12.0, float(x or 0))) for x in eq], p.get("loud", True) is not False
 
 
+def usb_audio_cards(path="/proc/asound/cards"):
+    """USB-lydkort fra /proc/asound/cards → [(id, beskrivelse)]. Behringer UCA222/UCA202 heter «CODEC» («USB Audio CODEC»)."""
+    out = []
+    try:
+        lines = open(path).read().splitlines()
+    except Exception:
+        return out
+    for i, ln in enumerate(lines):
+        m = re.match(r"\s*\d+\s+\[(\S+)\s*\]:\s*USB-Audio\s*-\s*(.*)", ln)
+        if m:
+            out.append((m.group(1), m.group(2).strip()))
+    return out
+
+
+# Node/Core: «Lydutgang» i appen (settings.out) – samme rekkefølge som listen i appene.
+OUT_NAMES = ["3,5 mm (innebygd)", "HDMI", "USB-lydkort (UCA222 / UCA202)", "I²S-kort (HiFiBerry / IQaudio)", "Optisk (S/PDIF)"]
+
+
+def node_output():
+    """(enhet, format) for valgt utgang på Node/Core, eller None = det installasjonen satte (KI_AMP_DSP_PLAYBACK).
+    Bare når brukeren faktisk har valgt utgang i appen; USB uten lydkort tilkoblet faller tilbake til standard."""
+    if BOARD != "node":
+        return None
+    cur = (state.get("settings") or {}).get("out")
+    try:
+        o = int(cur)
+    except (TypeError, ValueError):
+        return None
+    if o == 0:
+        return "plughw:Headphones", "S16LE"
+    if o == 1:
+        return "plughw:vc4hdmi0", "S16LE"
+    if o == 2:
+        cards = usb_audio_cards()
+        if not cards:
+            print("Lydutgang: USB-lydkort valgt, men ikke funnet – bruker standardutgangen", flush=True)
+            return None
+        cid = next((c for c, d in cards if c == "CODEC" or "CODEC" in d), cards[0][0])
+        return f"plughw:{cid}", "S16LE"
+    return None   # I²S / optisk: kortet installasjonen satte opp
+
+
 def dsp_playback():
-    """S1 rev F: med hodetelefoner i går hele kjeden (EQ, volum) til UCA202 #1 i stedet for PCM5102."""
+    """S1 rev F: med hodetelefoner i går hele kjeden (EQ, volum) til UCA202 #1 i stedet for PCM5102.
+    Node/Core: utgangen som er valgt i appen (f.eks. UCA222 på USB)."""
     if S1F and state.get("headphones"):
         return str((S1F_PINS.get("audio") or {}).get("headphones") or os.environ.get("KI_AMP_HP_DEV", "plughw:UCA_AUX1"))
-    return DSP_PLAYBACK
+    no = node_output()
+    return no[0] if no else DSP_PLAYBACK
+
+
+def dsp_format():
+    no = node_output()
+    return no[1] if no else DSP_FORMAT
 
 
 def eff_volume():
@@ -794,7 +843,7 @@ def dsp_config():
   chunksize: 1024
   queuelimit: 4
   capture: {{type: Alsa, channels: 2, device: "{DSP_CAPTURE}", format: S32LE}}
-  playback: {{type: Alsa, channels: 2, device: "{dsp_playback()}", format: {DSP_FORMAT}}}
+  playback: {{type: Alsa, channels: 2, device: "{dsp_playback()}", format: {dsp_format()}}}
 filters:
   pre:
     type: Gain
@@ -1149,7 +1198,7 @@ def apply_power():
 
 
 # ---------- innstillinger (app/web, samme nøkler som skjold_settings.js) ----------
-SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "lvlAux": 0, "lvlUsb": 0,
+SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "lvlAux": 0, "lvlUsb": 0,
                 "name": 0, "nameCustom": "", "updChannel": 0, "updAuto": True, "setupDone": False, "nAux1": "AUX 1", "nAux2": "AUX 2", "nUsb1": "PC 1", "nUsb2": "PC 2", "hold": 2,
                 "voice": True, "lang": 0, "vv": 1, "dim": 1, "off": 1, "clock": True, "clockStyle": 0, "bright": 0, "led": 0, "ledLevel": 100, "ledMode": "press", "auto": 1, "wake": True,
                 # Musikktjenester – lagres her så appen (iOS/Android) og web-UI-et deler innloggingene
@@ -1166,7 +1215,7 @@ SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn":
                 "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [5, 2, 0, 0, 1]), ("radio", 2, [-2, -1, 2, 3, 1]),
                                                                                      ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [2, 1, 0, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
-SETTINGS_APPLIED = {"eq", "dblPower", "nightLight", "hpOwn", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
+SETTINGS_APPLIED = {"out", "eq", "dblPower", "nightLight", "hpOwn", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
 
 
 def settings():
@@ -1189,7 +1238,7 @@ def apply_settings(changed_keys=()):
     env_names = _usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):]   # KI_AMP_USBSW_NAMES er standard til brukeren setter navn i appen
     USBSW_NAMES = [str(s_["nUsb1"] if s_["nUsb1"] != SETTINGS_DEF["nUsb1"] else env_names[0])[:16],
                    str(s_["nUsb2"] if s_["nUsb2"] != SETTINGS_DEF["nUsb2"] else env_names[1])[:16]]
-    if "eq" in changed_keys: dsp.update()
+    if "eq" in changed_keys or "out" in changed_keys: dsp.update()   # out: ny lydutgang (Node/Core) → nytt CamillaDSP-oppsett
     if "voice" in changed_keys: state["voice"] = bool(s_["voice"])
     if "lang" in changed_keys and LANG_PROFILE.get(int(s_["lang"]) if str(s_["lang"]).isdigit() else -1):
         state["voice_profile"] = LANG_PROFILE[int(s_["lang"])]
@@ -4645,7 +4694,7 @@ REC_DIR = os.environ.get("KI_AMP_REC_DIR", "/var/lib/skjold/opptak")
 _rec = {"procs": {}, "fired": set()}
 
 
-def _safe(s):
+def _safe_name(s):
     return re.sub(r"[^A-Za-z0-9æøåÆØÅ_-]+", "-", str(s or "opptak")).strip("-")[:40] or "opptak"
 
 
@@ -4732,7 +4781,7 @@ def rec_start(spec):
     url, name = rec_source(spec)
     mins = max(1, min(240, int(spec.get("minutes") or 60)))
     os.makedirs(REC_DIR, exist_ok=True)
-    fn = f"{_safe(name)}-{time.strftime('%Y%m%d-%H%M')}.mp3"
+    fn = f"{_safe_name(name)}-{time.strftime('%Y%m%d-%H%M')}.mp3"
     path = os.path.join(REC_DIR, fn)
     n = int(spec.get("preset") or 0)
     p = state["presets"][n - 1] if 1 <= n <= len(state["presets"]) else None
@@ -5444,13 +5493,13 @@ def _place_schedule(speakers, lead=2.0):
     slots = [t0 + a for a, _b in pl.sequence_signal(len(speakers), lead_s=0.5)]
     for sp, at in zip(speakers, slots):
         if sp.get("host"):
-            threading.Thread(target=lambda h=sp["host"], c=sp.get("channel", "both"), a=at: _safe(lambda: _place_remote(h, "/api/placement/play", {"channel": c, "at": a})), daemon=True).start()
+            threading.Thread(target=lambda h=sp["host"], c=sp.get("channel", "both"), a=at: _place_safe(lambda: _place_remote(h, "/api/placement/play", {"channel": c, "at": a})), daemon=True).start()
         else:
             threading.Thread(target=_place_play_local, args=(sp.get("channel", "both"), at), daemon=True).start()
     return t0, slots
 
 
-def _safe(fn):
+def _place_safe(fn):
     try:
         return fn()
     except Exception as e:
@@ -5566,7 +5615,7 @@ async def h_placement_devices(r):
             return _place_remote(s["host"], "/api/placement/record", {"at": t0, "dur": dur, "n": n}, timeout=dur + 20)
         x = _place_record_local(t0, dur)
         return {"arrivals": pl.arrivals(x, n)} if x is not None else {"error": "ingen mikrofon"}
-    res = await asyncio.gather(*[loop.run_in_executor(None, lambda s=s: _safe(lambda: rec(s))) for s in sp])
+    res = await asyncio.gather(*[loop.run_in_executor(None, lambda s=s: _place_safe(lambda: rec(s))) for s in sp])
     T = np.zeros((n, n))
     for j, rj in enumerate(res):
         if not rj or "arrivals" not in rj or any(a["t_ms"] is None for a in rj["arrivals"]):
@@ -5601,8 +5650,8 @@ async def h_placement_apply(r):
     plugin_update("placement", {"enabled": True, "trims": trims, "result": {k: last.get(k) for k in ("positions", "angles", "roles") if k in last}, "measured": int(time.time())})
     done = []
     for host, t in remote:
-        ok = _safe(lambda: _place_remote(host, "/api/sync", {"room_delay_ms": t["delay_ms"]}))
-        _safe(lambda: _place_remote(host, "/api/placement", {"enabled": True, "trims": {"L": {"delay_ms": 0, "gain_db": t["gain_db"]}, "R": {"delay_ms": 0, "gain_db": t["gain_db"]}}}))
+        ok = _place_safe(lambda: _place_remote(host, "/api/sync", {"room_delay_ms": t["delay_ms"]}))
+        _place_safe(lambda: _place_remote(host, "/api/placement", {"enabled": True, "trims": {"L": {"delay_ms": 0, "gain_db": t["gain_db"]}, "R": {"delay_ms": 0, "gain_db": t["gain_db"]}}}))
         done.append({"host": host, "ok": ok is not None})
     if "offset_cm" in last:
         plugin_update("xtc", {"offset_cm": int(round(last["offset_cm"]))})
