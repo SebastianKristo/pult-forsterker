@@ -25,11 +25,11 @@ PLATES = {
     "skjold-radio-k2.3mf": ("Skjold Radio – kropp, volumknott, knapper og gullist (PETG/ASA)", [
         # fil, navn, filament, rotasjon om z, min-hjørne (x, y), «samme som»
         ("kropp", "Kropp (fronten ned)", 1, 0, (5, 0.5), None),
-        ("knapp", "Knappehetter 1–6 og av/på (toppen ned)", 2, 0, (5, 146), None),
+        ("knapp", "Knappehetter 1–6 og av/på (toppen ned)", 2, 0, (5, 158), None),
         ("knapp_symbol", "Symbol", 3, 0, None, "knapp"),        # innlegg: delt opp og lagt inn i hver sin hette
-        ("volum", "Volumknott", 3, 0, (145, 146), None),
+        ("volum", "Volumknott", 3, 0, (145, 158), None),
         ("volum_symbol", "Symbol høyttaler", 2, 0, None, "volum"),
-        ("list", "Gullist (forsiden ned)", 3, 90, (5, 168), None),
+        ("list", "Gullist (forsiden ned)", 3, 90, (5, 176), None),
     ]),
     "skjold-radio-k2-kammer.3mf": ("Skjold Radio – lydkammer og lokk (PETG/ASA)", [
         ("kammer", "Lydkammer (baffelen ned)", 2, 0, (10, 5), None),

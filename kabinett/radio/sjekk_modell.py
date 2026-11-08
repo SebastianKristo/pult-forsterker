@@ -15,6 +15,7 @@ STL-ene lages med  openscad -D 'part="kropp"' -o stl/kropp.stl skjold_radio.scad
   7. det er plass i dybden: bak kammerlokket, bak Pi-en og foran kontaktene i bakplata
   8. det avrundede bakpartiet, tårnene og stolpene på gulvet printes med fronten ned uten støtte (ingen flate brattere enn 50°)
   9. skjøten mellom kroppen og bakplata er tett: største spalte inn i kassa ≤ 0,5 mm, også sett 30° på skrå
+ 11. helling: kassa er en kile, så undersiden ligger plant på bordet og fronten lener 6° bakover; skjørtet printes uten støtte
  10. de kjøpte delene (ref/: kort, taktbrytere, EC11, skjermmodul, Pi, DAC, forsterker, nedtrapper, relé, kontakter, element)
      kolliderer ikke med noe, og knappehettene har 0,05–0,2 mm luft til taktbryteren"""
 import itertools
@@ -165,7 +166,7 @@ bad = []
 FACES = [("side+", A["kropp"], np.arange(20, D - 20, 4), np.arange(-2, H - 2, 4), lambda u, v: ([W + 5, u, v], [-1, 0, 0])),
          ("side-", A["kropp"], np.arange(20, D - 20, 4), np.arange(-2, H - 2, 4), lambda u, v: ([-5, u, v], [1, 0, 0])),
          ("topp", A["kropp"], np.arange(20, W - 20, 4), np.arange(20, D - 20, 4), lambda u, v: ([u, v, H + 5], [0, 0, -1])),
-         ("bunn", A["kropp"], np.arange(20, W - 20, 4), np.arange(20, D - 20, 4), lambda u, v: ([u, v, -10], [0, 0, 1])),
+         ("bunn", A["kropp"], np.arange(20, W - 20, 4), np.arange(20, D - 20, 4), lambda u, v: ([u, v, -30], [0, 0, 1])),
          ("bak", A["bak"], np.arange(20, W - 20, 4), np.arange(4, H - 8, 4), lambda u, v: ([u, D + 5, v], [0, -1, 0]))]
 for face, mesh, us, vs, ray in FACES:
     for u in us:
@@ -232,6 +233,25 @@ sp = max(spalte(v) for v in ([0, -1, 0], [0, -np.cos(np.radians(30)), -np.sin(np
 good = sp <= 0.5
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} skjøten bak: største spalte inn i kassa {sp:.2f} mm (rett bakfra og 30° fra toppen og sidene, maks 0,5)")
+
+# --- helling: radioen står 6° bakover på bordet (kile under gulvet). Snur kroppen, bakplata og grillen med stoffet til
+# bordstilling og sjekker at undersiden ligger plant på bordet, at fronten heller 6° bakover, og at skjørtet printes uten støtte ---
+TILT = 6.0
+Rt = trimesh.transformations.rotation_matrix(np.radians(-TILT), [1, 0, 0], [0, D, -3])
+verden = {n: A[n].copy().apply_transform(Rt) for n in ("kropp", "bak", "stoff", "knott", "volum")}
+bunn_k, bunn_b = verden["kropp"].bounds[0][2], verden["bak"].bounds[0][2]
+fn = verden["kropp"].face_normals[np.argmin(np.abs(A["kropp"].triangles_center[:, 1]) + 999 * (np.abs(A["kropp"].face_normals[:, 1] + 1) > 1e-3))]
+helling = np.degrees(np.arcsin(fn[2]))                          # frontflatens normal peker opp
+vb = verden["kropp"].vertices
+kontakt = vb[vb[:, 2] < bunn_k + 0.05]
+skj = (kc[:, 2] < -3.01) & (kc[:, 1] > 3) & (kn[:, 1] < -np.sin(np.radians(50)))   # (fronten y < 3 ligger på platen)
+skj &= np.min([np.hypot(kc[:, 0] - fx, kc[:, 1] - fy) for fx, fy in ((30, 22), (W - 30, 22), (30, D - 22), (W - 30, D - 22))], axis=0) > 7
+alle = trimesh.util.concatenate(list(verden.values()))
+mal = alle.extents
+good = abs(bunn_k - bunn_b) < 0.4 and abs(helling - TILT) < 0.2 and np.ptp(kontakt[:, 1]) > 100 and ka[skj].sum() < 1.0
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} helling: fronten lener {helling:.1f}° bakover, undersiden plan på bordet (kropp {bunn_k:.2f}, bakplate {bunn_b:.2f} mm), "
+      f"skjørtet {ka[skj].sum():.1f} mm² brattere enn 50°; på bordet {mal[0]:.0f} × {mal[1]:.0f} × {mal[2]:.0f} mm (B × D × H, med grill og knotter)")
 
 # --- plass i dybden (115 mm): bak kammerlokket, bak Pi-en og bak luftespaltene (kontaktene i bakplata) ---
 bak_inn = A["bak"].bounds[1][1] - 3                          # innsiden av bakplata (kragen langs kanten er bare 1,2 mm bred)
