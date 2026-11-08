@@ -31,12 +31,18 @@ import taster
 
 ASM = sys.argv[1] if len(sys.argv) > 1 else "asm"
 VARIANT = sys.argv[2] if len(sys.argv) > 2 else "kort"
-HK = VARIANT in ("hovedkort", "enkel")   # ferdig kort fra KiCad i stedet for SuperMini, TP4056 og tastekortet
+HK = VARIANT in ("hovedkort", "enkel", "hullkort")   # ferdig kort fra KiCad i stedet for SuperMini, TP4056 og tastekortet
 EN = VARIANT == "enkel"                  # enkel utgave: XIAO ESP32S3 + MCP23017 (ingen vibrasjonsmotor/-bryter)
+HU = VARIANT == "hullkort"               # hullkort-utgaven: XIAO, MCP23017-modul og THT-brytere på hullkort (som enkel: ingen vibrasjon)
 taster.bruk("kort" if HK else VARIANT)
-STL = "stl_en" if EN else "stl_hk" if HK else "stl" if VARIANT == "kort" else "stl_full"
+STL = "stl_hu" if HU else "stl_en" if EN else "stl_hk" if HK else "stl" if VARIANT == "kort" else "stl_full"
 W, L, H = taster.W, taster.L, 13.5
-print(f"Variant: {VARIANT} ({len(taster.tastekort_a()) if EN else len(taster.brytere())} taster, {len(taster.HETTER)} hetter)")
+Z_KORT, KORT_T, SW_H = (8.2, 1.0, 1.5) if not (HK and not EN and not HU) else (7.8, 1.0, 1.9)
+if HU:
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "hullkort"))
+    import hullkort as hkort
+    H, Z_KORT, KORT_T, SW_H = hkort.H, hkort.Z_KORT, hkort.KORT_T, hkort.SW_H
+print(f"Variant: {VARIANT} ({len(taster.tastekort_a()) if EN or HU else len(taster.brytere())} taster, {len(taster.HETTER)} hetter)")
 ok = True
 
 
@@ -65,7 +71,7 @@ for n, want in ANTALL.items():
 # ---------- 2. overlapp i montert stilling ----------
 DELER = ["topp", "bunn", "vindu", "logo", "hetter", "symboler", "kort", "skjerm", "batteri", "mcu", "lader", "ir", "vib", "motor", "flex", "ledninger"]
 if HK:
-    DELER = [d for d in DELER if d not in ("mcu", "lader") + (("vib", "motor") if EN else ())] + ["hkdeler"]
+    DELER = [d for d in DELER if d not in ("mcu", "lader") + (("vib", "motor") if EN or HU else ())] + ["hkdeler"]
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in DELER}
 TOUCH = {("topp", "logo"), ("hetter", "symboler"), ("bunn", "vindu"), ("topp", "kort"), ("bunn", "kort"), ("topp", "skjerm"),
          ("topp", "bunn"), ("flex", "kort"), ("flex", "skjerm"), ("kort", "hkdeler"), ("flex", "hkdeler")}
@@ -82,7 +88,7 @@ def overlapp(a, b):
 
 feil = []
 for x, y in itertools.combinations(DELER, 2):
-    if {x, y} == {"kort", "hkdeler"}:   # komponentboksene er en del av kortet
+    if {x, y} == {"kort", "hkdeler"} and not HU:   # komponentboksene er en del av kortet (hullkort: delene ligger på gulvet)
         continue
     v = overlapp(A[x], A[y])
     lim = 0.05 if (x, y) in TOUCH or (y, x) in TOUCH else 0.001
@@ -117,7 +123,7 @@ if HK:
 HULL_SIDE = [("hale", _ux - 6.9, _ux + 6.9, _uz - 3.9, _uz + 3.9), ("nese", W/2 - 16.2, W/2 + 16.2, 1.7, 7.5),
              ("hale", W/2 - 9.4, W/2 - 7.6, 3.3, 5.5), ("hale", W/2 + 7.6, W/2 + 9.4, 3.3, 5.5)]
 tynn = []
-for z in np.arange(2.0, 11.8, 0.6):
+for z in np.arange(2.0, H - 1.7, 0.6):
     for y in np.arange(14, L - 14, 3):
         for side, o, d in (("v", [-5, y, z], [1, 0, 0]), ("h", [W + 5, y, z], [-1, 0, 0])):
             s = segment(skall, o, d)
@@ -166,7 +172,7 @@ melding(not steg, f"≥ {taster.MIN_STEG} mm mellom alle tastehull" if not steg 
 
 # ---------- 4b. tasteoppsettene: hver hette treffer bryteren sin, ingen kollisjoner ----------
 GRID = [(x, L - n) for x, n in taster.GRID]
-TOPP_PLUNGER = 8.2 + 1.0 + 1.5
+TOPP_PLUNGER = Z_KORT + KORT_T + SW_H
 for o in ([] if HK else taster.OPPSETT):
     d = f"{ASM}/oppsett_{o}"
     F = {n: trimesh.load(f"{d}/{n}.stl") for n in ("topp", "hetter", "symboler")}
@@ -202,7 +208,7 @@ for o in ([] if HK else taster.OPPSETT):
                 f"  {n:15s} vanntett={m.is_watertight} legemer={deler} {m.extents.round(1)} mm")
 
 # ---------- 5. forvandring og klaring ----------
-bryter_topp = 8.2 + 1.0 + 1.5
+bryter_topp = Z_KORT + KORT_T + SW_H
 hette_bunn = min(h.bounds[0][2] for h in hett)
 melding(abs(hette_bunn - bryter_topp - 0.1) < 0.02, f"hettene står {hette_bunn - bryter_topp:.2f} mm over bryterne (forvandring)")
 
@@ -210,16 +216,16 @@ melding(abs(hette_bunn - bryter_topp - 0.1) < 0.02, f"hettene står {hette_bunn 
 kropp = max(A["topp"].bounds[1][2], A["bunn"].bounds[1][2]) - A["bunn"].bounds[0][2]
 tast = A["hetter"].bounds[1][2]
 mal = A["topp"].bounds[1] - A["bunn"].bounds[0]
-melding(kropp <= 14.0 and tast <= 15.5, f"mål {mal[0]:.1f} × {mal[1]:.1f} mm, kropp {kropp:.1f} mm tykk, med taster {tast:.1f} mm")
+melding(kropp <= H + 0.5 and tast <= H + 2.0, f"mål {mal[0]:.1f} × {mal[1]:.1f} mm, kropp {kropp:.1f} mm tykk, med taster {tast:.1f} mm")
 
 # ---------- 7. innmaten ----------
 REF = {"batteri": 0.5, "mcu": 1.0, "lader": 1.0, "ir": 1.0, "vib": 0.5, "motor": 0.5}   # klaring over (mm)
 if HK:
-    REF = {"batteri": 0.5, "ir": 1.0} if EN else {"batteri": 0.5, "ir": 1.0, "vib": 0.5, "motor": 0.5}
+    REF = {"batteri": 0.5, "ir": 1.0} if EN or HU else {"batteri": 0.5, "ir": 1.0, "vib": 0.5, "motor": 0.5}
 I_SPOR = {"ir": {"bunn"}, "vib": {"bunn"}}   # står i spor/vugger i bunnen (bevisst tett tilpasning)
 FAST = ["topp", "bunn", "vindu", "kort", "skjerm", "batteri", "mcu", "lader", "ir", "vib", "motor", "flex"]
 if HK:
-    FAST = [f for f in FAST if f not in ("mcu", "lader") + (("vib", "motor") if EN else ())] + ["hkdeler"]
+    FAST = [f for f in FAST if f not in ("mcu", "lader") + (("vib", "motor") if EN or HU else ())] + ["hkdeler"]
 rng = np.random.default_rng(1)
 
 
@@ -317,13 +323,25 @@ else:
     melding(False, "fant ikke USB-C på SuperMini-en")
 
 # skruetårnene (med skruen, Ø2,3 mm gjennom hele) mot komponentene
-tårn = trimesh.util.concatenate([trimesh.creation.cylinder(radius=3.0 + 0.5, height=13.5, transform=trimesh.transformations.translation_matrix([x, y, 6.75]))
+tårn = trimesh.util.concatenate([trimesh.creation.cylinder(radius=3.0 + 0.5, height=H, transform=trimesh.transformations.translation_matrix([x, y, H / 2]))
                                  for x, y in SKRUER])
 treff = [f"{x} {overlapp(tårn, A[x]):.2f} mm³" for x in ("batteri", "mcu", "lader", "ir", "vib", "motor", "flex", "ledninger", "hkdeler")
          if x in A and overlapp(tårn, A[x]) > 0.001]
 melding(not treff, "skruetårnene (+ 0,5 mm) treffer ingen komponenter" if not treff else "skruetårn treffer " + ", ".join(treff))
 
-if HK:   # komponentene på undersiden av hovedkortet: ≥ 0,5 mm ned til bunnen og det som står i den
+if HU:   # delene på gulvet: ≥ 0,3 mm opp til hullkortet og bryterbeina
+    p_, fi = trimesh.sample.sample_surface_even(A["hkdeler"], 8000, seed=2)
+    opp_ = A["hkdeler"].face_normals[fi][:, 2] > 0.9
+    d_ = stråle(A["kort"], p_[opp_] + [0, 0, 0.002], np.tile([0, 0, 1.0], (int(opp_.sum()), 1)))
+    melding(d_.min() >= 0.3, f"delene på gulvet (XIAO, MCP-modulen, FPC-adapterne): minst {d_.min():.2f} mm opp til hullkortet og bryterbeina (krav 0,3)")
+    # hver bryter: hetta (aktuator eller flat underside) står 0,1 mm over knappen
+    o_ = np.array([[b[6], L - b[7], TOPP_PLUNGER - 0.01] for b in hkort.BRYTERE])
+    loc, idx, _ = A["hetter"].ray.intersects_location(o_, np.tile([0, 0, 1.0], (len(o_), 1)), multiple_hits=False)
+    avst = np.full(len(o_), np.inf); avst[idx] = loc[:, 2] - TOPP_PLUNGER
+    bom = [f"{b[0]} {avst[i]:.2f}" for i, b in enumerate(hkort.BRYTERE) if abs(avst[i] - 0.1) > 0.03]
+    melding(not bom, f"alle 14 bryterne (snappet til 2,54 mm, største avvik {max(b[8] for b in hkort.BRYTERE):.2f} mm) har hetta 0,10 mm over knappen"
+            if not bom else "hetta treffer ikke bryteren: " + ", ".join(bom))
+elif HK:   # komponentene på undersiden av hovedkortet: ≥ 0,5 mm ned til bunnen og det som står i den
     p_, fi = trimesh.sample.sample_surface_even(A["hkdeler"], 8000, seed=2)
     ned = A["hkdeler"].face_normals[fi][:, 2] < -0.9
     under = trimesh.util.concatenate([A[x] for x in ("bunn", "batteri", "ir", "vib", "motor", "ledninger") if x in A])
