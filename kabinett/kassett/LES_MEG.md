@@ -53,9 +53,19 @@ Bilder: [forfra](render/07_forfra.png) · [med kassett](render/02_med_kassett.pn
 Diametrale magneter er magnetisert på tvers (nord på den ene halvdelen av sirkelen) – det er det som gjør at de kan
 dra hverandre rundt. Vanlige (aksiale) magneter virker ikke til spolene.
 
-## Cover til kassettene (A4)
+## Cover til kassettene (A4, uten lim)
 
-`lag_cover.py` henter albumcover og legger etikettene ferdig på A4 (15 per side, 43,2 × 51,2 mm, passer i etikettfeltet).
+Coveret printes på **vanlig A4-papir** og ligger **inni kassetten**, bak et etikettvindu i fronten: rammen rundt vinduet
+(2,4 mm) holder kantene, og en løs **bakplate** (egen printet del, `etikettplate`) presser papiret flatt når halvdelene
+klikkes sammen. Papiret kan ikke falle ut (vinduet er mindre enn arket), og du trenger verken lim eller klistremerker.
+
+1. Klipp ut coveret langs den grå linjen (44 × 49,6 mm, de øvre hjørnene er skrå – der står tappene).
+2. Legg kassettfronten med forsiden ned, legg coveret med bildet ned i vinduet.
+3. Legg bakplaten oppå (platen mot papiret, ribbene opp), og klikk bakhalvdelen på. Bytt cover: dra halvdelene fra hverandre.
+
+Bakplatene ligger i `skjold-kassett-k2-kassetter.3mf` (4 komplette kassetter: bak, front, bakplate og spoler).
+
+`lag_cover.py` henter albumcover og legger coverne ferdig på A4 (15 per side, 44 × 49,6 mm).
 
 ```bash
 cd kabinett/kassett
@@ -66,7 +76,7 @@ python3 lag_cover.py album.txt
 Skriv én linje per kassett i `album.txt` (lages fra `album-eksempel.txt` første gang, og følges ikke av Git – så `git pull` krasjer ikke med lista di): `Artist - Album`. Bruk `Artist - Album | /sti/cover.jpg` for eget bilde, eller
 `Artist - Album | 2` for flere kopier. Coveret hentes fra iTunes-søket (MusicBrainz som reserve); finnes det ikke, lages
 et fargefelt med albumnavnet. Resultatet er `kassett-cover.pdf`. Skriv ut i **100 % skala** (ikke «tilpass til side»),
-gjerne på klistremerkeark eller fotopapir, og klipp langs den tynne grå linjen.
+på vanlig papir (80–120 g/m²; fotopapir er for tykt), og klipp langs den tynne grå linjen.
 
 ## Kobling
 
@@ -149,8 +159,8 @@ Vekt (fra STL-volum, 100 % fylt): lokk ≈ 135 g, bunn med drivverk ≈ 35 g, ka
 Kassetten er formet som en gammel kompaktkassett: etikettfelt øverst, spolevinduer gjennom begge sider nederst
 (med vinduskant foran), og bak trapes med SKJOLD og «skruer» i hjørnene. Den er bygd som to tynne skall (1,2 mm hud,
 1,6 mm vegg) med ribber. Ytre mål 50 × 70 × 10 mm. NFC-brikken ligger i en ring innenfor bakhuden (øverst, foran
-PN532-antennen) og holdemagneten i bunnkanten midt i skjøten. Etikettene (43,2 × 51,2 mm) limes på feltet som er
-markert med en tynn linje – de dekker de øverste 0,4 mm av spolevinduene, som ikke synes.
+PN532-antennen) og holdemagneten i bunnkanten midt i skjøten. Coveret (44 × 49,6 mm) ligger inni kassetten bak
+etikettvinduet og holdes av rammen og bakplaten – se «Cover til kassettene».
 
 ## Montering
 

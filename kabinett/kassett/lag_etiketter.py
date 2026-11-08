@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Etikettark for Skjold Kassett (A4): SVG + DXF (kuttlinjer på eget lag «Kutt») + PDF (via Chromium/Playwright hvis tilgjengelig).
-Etikett 43,2 × 51,2 mm (litt mindre enn den 44 × 52 mm forsenkningen), hjørneradius 2 mm, 3 kolonner × 5 rader."""
+Cover 44 × 49,6 mm med øvre hjørner avfaset 7 mm – legges inni kassetten bak etikettvinduet (ingen lim), 3 × 5 per ark.
+Rammen dekker 2,4 mm langs kanten. Samme form som lag_cover.py og papW/papH/papC i skjold_kassett.scad."""
 import math, os, subprocess, sys
 
 W, H = 210.0, 297.0
-LW, LH, R = 43.2, 51.2, 2.0
+LW, LH, C, RIM = 44.0, 49.6, 7.0, 2.4
 COLS, ROWS = 3, 5
 GX, GY = 8.0, 4.0
 MX = (W - COLS * LW - (COLS - 1) * GX) / 2
@@ -16,26 +17,33 @@ def cells():
         for c in range(COLS):
             yield MX + c * (LW + GX), MY + r * (LH + GY)
 
+def punkter(inset=0.0):
+    c = C - inset * (math.sqrt(2) - 1)
+    a, w, h = inset, LW - inset, LH - inset
+    return [(a + c, a), (w - c, a), (w, a + c), (w, h), (a, h), (a, a + c)]
+
+
+def omriss(inset=0.0):
+    return "M" + " L".join(f"{x:.2f},{y:.2f}" for x, y in punkter(inset)) + " Z"
+
+
 def svg():
     p = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}mm" height="{H}mm" viewBox="0 0 {W} {H}">',
          '<style>.k{fill:none;stroke:#e0451b;stroke-width:.2}.b{fill:#f6f3ee}.t{font-family:Sora,Helvetica,Arial,sans-serif}</style>',
-         f'<text x="{MX}" y="{MY-4}" font-size="3" fill="#8b8b86" class="t">SKJOLD KASSETT · etiketter 43,2 × 51,2 mm · rød linje = kutt (eget lag)</text>']
+         f'<text x="{MX}" y="{MY-4}" font-size="3" fill="#8b8b86" class="t">SKJOLD KASSETT · cover 44 × 49,6 mm · rød linje = kutt (eget lag) · grått felt = synlig i vinduet</text>']
     for x, y in cells():
         p.append(f'<g transform="translate({x:.2f},{y:.2f})">'
-                 f'<rect class="b" width="{LW}" height="{LH}" rx="{R}"/>'
-                 f'<rect x="3" y="3" width="{LW-6}" height="{LW-6}" rx="1.2" fill="#e4e1db"/>'
-                 f'<text x="3" y="{LW+1.6}" font-size="3.2" font-weight="600" class="t" fill="#1b1b1c">Tittel</text>'
-                 f'<text x="3" y="{LW+5.4}" font-size="2.4" class="t" fill="#6a6a65">Artist · kilde</text>'
-                 f'<text x="{LW-3}" y="{LH-2}" font-size="1.8" class="t" fill="#b0aca4" text-anchor="end" letter-spacing=".4">SKJOLD</text>'
-                 f'<rect class="k" width="{LW}" height="{LH}" rx="{R}"/></g>')
+                 f'<path class="b" d="{omriss()}"/>'
+                 f'<path d="{omriss(RIM)}" fill="#e4e1db"/>'
+                 f'<text x="{RIM+1}" y="{LH-RIM-4}" font-size="3.0" font-weight="600" class="t" fill="#1b1b1c">Tittel</text>'
+                 f'<text x="{RIM+1}" y="{LH-RIM-1}" font-size="2.3" class="t" fill="#6a6a65">Artist · kilde</text>'
+                 f'<path class="k" d="{omriss()}"/></g>')
     p.append('</svg>')
     open(os.path.join(OUT, 'etiketter_a4.svg'), 'w').write('\n'.join(p))
 
 def dxf():
     def poly(x, y):
-        # avrundet rektangel som LWPOLYLINE med bulge (tan(90°/4)) på hjørnene
-        b = math.tan(math.pi / 8)
-        pts = [(x+R, y, 0), (x+LW-R, y, b), (x+LW, y+R, 0), (x+LW, y+LH-R, b), (x+LW-R, y+LH, 0), (x+R, y+LH, b), (x, y+LH-R, 0), (x, y+R, b)]
+        pts = [(x + px, y + py, 0) for px, py in punkter()]   # papirformen (avfasede øvre hjørner) som lukket LWPOLYLINE
         s = ['0', 'LWPOLYLINE', '8', 'Kutt', '62', '1', '90', str(len(pts)), '70', '1']
         for px, py, bb in pts:
             s += ['10', f'{px:.3f}', '20', f'{H-py:.3f}'] + (['42', f'{bb:.6f}'] if bb else [])

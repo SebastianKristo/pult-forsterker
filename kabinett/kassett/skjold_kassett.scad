@@ -74,7 +74,21 @@ module rbox_soft(w,d,h,r,t=3){ // avrundet topkant
 skin = 1.2;  kWall = 1.6;  rib = 1.0;
 reelX = [13, kW-13]; reelY = 10.2; reelD = 12.4;          // spolevinduer (Ø 12,4)
 spD = 11.6; spFl = 14.2; spFlT = 1.2;                  // spole: nav Ø 11,6, flens Ø 14,2
-screws = [[4.4,4.4],[kW-4.4,4.4],[4.4,kH-4.4],[kW-4.4,kH-4.4]];
+// tappene: de to øverste står lenger ut i hjørnet (og er litt tynnere), så papiret i etikettvinduet får plass
+screws = [[4.4,4.4],[kW-4.4,4.4],[3.9,kH-3.9],[kW-3.9,kH-3.9]];
+function bossD(p) = p[1] > kH/2 ? pinD+2.4 : pinD+3.2;
+// ---------- etikett uten lim ----------
+// Papiret (vanlig A4, klippet ut) ligger INNI kassetten, bak et vindu i fronten: rammen rundt vinduet holder kantene,
+// og en løs bakplate (egen del) presser papiret flatt når halvdelene klikkes sammen. Bytt cover: åpne kassetten.
+papW = 44.0; papH = 49.6; papY0 = 18.4; papC = 7;     // papiret: 44 × 49,6 mm, øvre hjørner avfaset 7 mm (tappene)
+papT = 0.2;                                         // plass til papiret (80–120 g/m² ≈ 0,1 mm)
+rimW = 2.4;                                         // rammen foran papiret (synlig kant)
+kpT = 1.0;                                          // bakplatens tykkelse
+module papir2d(inset=0){
+  x0=(kW-papW)/2; offset(delta=-inset) polygon([[x0,papY0],[x0+papW,papY0],[x0+papW,papY0+papH-papC],[x0+papW-papC,papY0+papH],
+                                                [x0+papC,papY0+papH],[x0,papY0+papH-papC]]);
+}
+module etikettvindu2d(){ offset(r=1.6) offset(delta=-1.6) papir2d(rimW); }
 tagY = 44;        // brikken ligger rett foran PN532-antennen i spilleren (øverste del av kortet)
 module trapes2d(w0=40,w1=30,h=11){ polygon([[-w0/2,0],[w0/2,0],[w1/2,h],[-w1/2,h]]); }
 module groove(h=0.4) translate([0,0,-0.01]) linear_extrude(h+0.01) children();
@@ -88,11 +102,9 @@ module kassett_halv(front=true){
       // magnetklosse nederst (halve lomma i hver halvdel), mellom spolene
       translate([kW/2-5,0,0]) cube([10,magT+1.4,H]);
       // tapp-/skrueklosser i hjørnene
-      for(p=screws) translate([p[0],p[1],0]) cylinder(d=pinD+3.2,h=H);
+      for(p=screws) translate([p[0],p[1],0]) cylinder(d=bossD(p),h=H);
       if(front){
-        // ribber: midtlinje over vinduene og tverrbjelke (holder huden stiv under etiketten)
-        translate([kW/2-rib/2,reelY+spFl/2+0.6,0]) cube([rib,kH-reelY-spFl/2-0.6-kWall,H]);
-        translate([kWall,tagY-rib/2,0]) cube([kW-2*kWall,rib,H]);
+        // (ingen ribber bak etiketten lenger: der er etikettvinduet, og papiret ligger rett bak rammen)
         // krage rundt vinduene: holder spolens flens (0,6 mm klaring)
         for(x=reelX) translate([x,reelY,0]) cylinder(d=reelD+2*rib,h=skin+2.6);
       } else {
@@ -107,8 +119,8 @@ module kassett_halv(front=true){
     // spolevinduer tvers gjennom begge halvdelene
     for(x=reelX) translate([x,reelY,-0.01]) cylinder(d=reelD,h=H+1);
     if(front){
-      // etikettfeltet markeres med en 0,2 mm linje (printes rett på platen)
-      translate([(kW-lblW)/2+2,kH-lblH-2,0]) groove(0.2) difference(){ offset(r=2) square([lblW-4,lblH-4]); offset(r=1.4) square([lblW-4,lblH-4]); }
+      // etikettvinduet gjennom huden (printes med forsiden ned: bare et hull, ingen bro)
+      translate([0,0,-0.01]) linear_extrude(skin+0.02) etikettvindu2d();
       // vinduskant rundt spolene som på en ekte kassett
       translate([kW/2,reelY,0]) groove(0.4) difference(){ offset(r=2) square([kW-2*kR-4,reelD-5.6],center=true); offset(r=1.4) square([kW-2*kR-4,reelD-5.6],center=true); }
     } else {
@@ -123,6 +135,30 @@ module kassett_halv(front=true){
   }
   if(front) for(p=screws) translate([p[0],p[1],H]) cylinder(d=pinD,h=pinH);
 }
+// Bakplaten bak papiret: flat plate med ribber som står mot innsiden av bakhalvdelen, så papiret presses mot rammen.
+// Koordinater som fronthalvdelen (z=0 forsiden, z=kT baksiden). Ribbene går utenom NFC-ringen og hopper over
+// tverrbjelken i bakhalvdelen. Printes med platen ned.
+kpZ0 = skin + papT;                       // platens forside
+kpRib = kT - skin - 0.15 - kpZ0 - kpT;   // ribbehøyde ned til bakhuden (0,15 mm klaring)
+beamY = tagY - tagD/2 - rib - 3;          // tverrbjelken i bakhalvdelen
+module etikettplate(){
+  ringR = tagD/2 + rib + 0.4;
+  linear_extrude(kpT) papir2d(0.25);
+  intersection(){
+    linear_extrude(kpT + kpRib) papir2d(0.25);
+    difference(){
+      union(){
+        for(x=[(kW-papW)/2+1.0, kW-(kW-papW)/2-2.0, kW/2-0.5]) translate([x,papY0,0]) cube([1.0,papH,kpT+kpRib]);
+        translate([0,papY0+0.6,0]) cube([kW,1.0,kpT+kpRib]);              // tverrribbe nederst
+      }
+      translate([kW/2,tagY,-1]) cylinder(r=ringR,h=kpT+kpRib+2);          // NFC-ringen
+      translate([-1,beamY-0.4,kT/2-kpZ0-0.1]) cube([kW+2,rib+0.8,kT]);     // tverrbjelken (fra skjøten og bakover)
+      for(p=screws) if(p[1] > kH/2) translate([p[0],p[1],-1]) cylinder(d=bossD(p)+0.6,h=kT);
+    }
+  }
+}
+module etikettplate_pos(){ translate([0,0,kpZ0]) etikettplate(); }
+
 // Spolen ligger med baksiden (magneten) ned på platen: nav, 45°-kjegle opp til flensen, flens, nav videre opp.
 // Lengde kT-0,6, så den aldri stikker ut av kassetten. Seks hakk i navet på forsiden, som en ekte kassettspole.
 spL = kT - 0.6; spZ0 = 0.3;                              // spolens plass i kassetten (z fra baksiden)
@@ -144,7 +180,8 @@ module kassett_samlet(lbl=true, spoler=true){
   // front-halvdel speilvendt oppå bakre, tapper inn
   color(c_k2) kassett_halv(false);
   color(c_k1) translate([0,0,kT]) mirror([0,0,1]) kassett_halv(true);
-  if(lbl) color(c_lbl) translate([(kW-lblW)/2+0.4,kH-lblH-1.6,kT]) rbox(lblW-0.8,lblH-0.8,0.15,2);
+  if(lbl) color(c_lbl) translate([0,0,kT-skin-papT+0.02]) linear_extrude(0.1) papir2d(0.2);   // papiret bak vinduet
+  color(c_k2) translate([0,0,kT]) mirror([0,0,1]) etikettplate_pos();
   if(spoler) for(x=reelX) color(c_reel) translate([x,reelY,spZ0]) spole();
 }
 
@@ -354,6 +391,7 @@ else if(part=="motortrinse") motortrinse();
 else if(part=="kassett_front") kassett_halv(true);
 else if(part=="kassett_bak") kassett_halv(false);
 else if(part=="spole") spole();
+else if(part=="etikettplate") etikettplate();
 else if(part=="kassett_samlet") kassett_samlet();
 else if(part=="kassett_bakside") translate([kW,0,kT]) rotate([0,180,0]) kassett_samlet(); // baksiden (spolene ned)
 else if(part=="med_kassett") med_kassett();
@@ -370,6 +408,7 @@ else if(part=="A_tr1") trinse_pos(1) trinse();
 else if(part=="A_mt") motortrinse_pos() motortrinse();
 else if(part=="A_kb") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) kassett_halv(false);
 else if(part=="A_kf") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) translate([0,0,kT]) mirror([0,0,1]) kassett_halv(true);
+else if(part=="A_kp") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) translate([0,0,kT]) mirror([0,0,1]) etikettplate_pos();
 else if(part=="A_s0") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) translate([reelX[0],reelY,spZ0]) spole();
 else if(part=="A_s1") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) translate([reelX[1],reelY,spZ0]) spole();
 else if(part=="A_pn") pn532();
