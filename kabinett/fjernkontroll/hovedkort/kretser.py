@@ -39,7 +39,7 @@ FP = {
 # LCSC-nummer er fra minnet og IKKE bekreftet her (lcsc.com/jlcpcb.com var ikke tilgjengelig); alle er merket «sjekk».
 LCSC = {
     "10k": "C25744", "100k": "C25741", "1k": "C11702", "5.1k": "C25905", "4.7k": "C25900", "1M": "C26083", "100R": "C25076",
-    "2.4k": "", "10R": "C25077", "100nF": "C1525", "1uF": "C52923", "10uF": "C19702", "100uF": "",
+    "2.4k": "", "68k": "", "10R": "C25077", "100nF": "C1525", "1uF": "C52923", "10uF": "C19702", "100uF": "",
     "AO3400A": "C20917", "AO3401A": "C15127", "USBLC6-2SC6": "C7519", "TP4056": "C16581", "B5819W": "C8598",
     "TYPE-C-31-M-12": "C165948", "TCA9555PWR": "", "RT9080-33GJ5": "", "ESP32-S3-WROOM-1-N4R2": "",
     "FH12-18S-0.5SH": "", "FH12-6S-0.5SH": "", "S2B-PH-SM4-TB": "", "SM05B-SRSS-TB": "", "KMR221G": "", "PTS810": "",
@@ -57,11 +57,11 @@ ESP_X, ESP_N = 2.3 + 12.75, 177.0   # antennen stikker 0,9 mm ut over kortkanten
 ESP = {"1": "GND", "2": "3V3", "3": "EN", "4": "IR_TX", "5": "IR_RX", "6": "VIB_SW", "7": "TCA_INT", "8": "SKJ_PA",
        "9": "MOTOR", "10": "CHRG", "11": "T_SDA", "12": "SDA", "13": "USB_DN", "14": "USB_DP", "15": "", "16": "", "17": "SCL",
        "18": "T_INT", "19": "LCD_MOSI", "20": "LCD_SCK", "21": "LCD_DC", "22": "LCD_RES", "23": "LCD_BL", "24": "", "25": "",
-       "26": "", "27": "BOOT", "28": "", "29": "", "30": "", "31": "T_SCL", "32": "", "33": "", "34": "", "35": "",
+       "26": "", "27": "BOOT", "28": "", "29": "", "30": "", "31": "T_SCL", "32": "", "33": "DOKK", "34": "", "35": "",
        "36": "U0RXD", "37": "U0TXD", "38": "T_RST", "39": "VBAT_ADC", "40": "GND", "41": "GND"}
 # GPIO: IR_TX 4 · IR_RX 5 · VIB_SW 6 (RTC, vekking) · TCA_INT 7 (RTC, vekking) · SKJ_PA 15 (3V3_SW av/på) · MOTOR 16 ·
-# CHRG 17 · SDA 8 · SCL 9 · T_SDA 18 · T_SCL 38 · T_INT 10 · MOSI 11 · SCK 12 · DC 13 · RES 14 · BL 21 · USB 19/20 · BOOT 0 · T_RST 2 · VBAT 1
-GPIO = {"IR_TX": 4, "IR_RX": 5, "VIB_SW": 6, "TCA_INT": 7, "SKJ_PA": 15, "MOTOR": 16, "CHRG": 17, "SDA": 8, "SCL": 9, "T_SDA": 18, "T_SCL": 38,
+# CHRG 17 · SDA 8 · SCL 9 · T_SDA 18 · T_SCL 38 · DOKK 40 · T_INT 10 · MOSI 11 · SCK 12 · DC 13 · RES 14 · BL 21 · USB 19/20 · BOOT 0 · T_RST 2 · VBAT 1
+GPIO = {"IR_TX": 4, "IR_RX": 5, "VIB_SW": 6, "TCA_INT": 7, "SKJ_PA": 15, "MOTOR": 16, "CHRG": 17, "SDA": 8, "SCL": 9, "T_SDA": 18, "T_SCL": 38, "DOKK": 40,
         "T_INT": 10, "LCD_MOSI": 11, "LCD_SCK": 12, "LCD_DC": 13, "LCD_RES": 14, "LCD_BL": 21, "USB_DN": 19, "USB_DP": 20,
         "BOOT": 0, "T_RST": 2, "VBAT_ADC": 1, "U0TXD": 43, "U0RXD": 44}
 k("U1", "WROOM", "ESP32-S3-WROOM-1-N4R2", "B", ESP_X, ESP_N, 90, {p: n for p, n in ESP.items() if n})
@@ -155,6 +155,13 @@ k("TP2", "PUTE", "MOT-", "B", 50.0, 106.5, 0, {"1": "MOT_K"})
 k("TP3", "PUTE", "VIB 3V3", "B", 47.0, 122.5, 0, {"1": "3V3"})
 k("TP4", "PUTE", "VIB", "B", 50.0, 122.5, 0, {"1": "VIB_SW"})
 k("R23", "R", "1M", "B", 47.0, 126.0, 0, {"1": "VIB_SW", "2": "GND"})
+# dokken: magnetisk pogo-kontakt (hunndelen i bunnen, rett under) → Schottky → VBUS, så USB-C og dokken ikke mater
+# hverandre; 68 k / 100 k til GPIO40 forteller fastvaren at den står i dokken (5 V → 3,0 V)
+k("TP16", "PUTE", "POGO+", "B", 48.5, 143.0, 0, {"1": "POGO"})
+k("TP17", "PUTE", "POGO-", "B", 48.5, 146.5, 0, {"1": "GND"})
+k("D3", "SOD123", "B5819W", "B", 45.5, 151.5, 90, {"1": "VBUS", "2": "POGO"})
+k("R26", "R", "68k", "B", 48.5, 151.0, 90, {"1": "POGO", "2": "DOKK"})
+k("R27", "R", "100k", "B", 48.5, 154.0, 90, {"1": "DOKK", "2": "GND"})
 # testpunkter
 for i, (nett, x, n) in enumerate([("3V3", 26.0, 160.0), ("VBAT", 28.5, 160.0), ("GND", 31.0, 160.0), ("EN", 26.0, 163.0), ("BOOT", 28.5, 163.0),
                                    ("U0TXD", 31.0, 163.0), ("U0RXD", 26.0, 166.0), ("SDA", 28.5, 166.0), ("SCL", 31.0, 166.0),

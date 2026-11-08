@@ -1,0 +1,41 @@
+del,pinne,nett,til
+U1 TCA9555 0x20,P0_0 (pinne 4),K_AV,tast «av» (SW1)
+U1 TCA9555 0x20,P0_1 (pinne 5),K_HJEM,tast «hjem» (SW2)
+U1 TCA9555 0x20,P0_2 (pinne 6),K_MENY,tast «meny» (SW3)
+U1 TCA9555 0x20,P0_3 (pinne 7),K_OPP,tast «opp» (SW4)
+U1 TCA9555 0x20,P0_4 (pinne 8),K_NED,tast «ned» (SW5)
+U1 TCA9555 0x20,P0_5 (pinne 9),K_VENSTRE,tast «venstre» (SW6)
+U1 TCA9555 0x20,P0_6 (pinne 10),K_HOYRE,tast «hoyre» (SW7)
+U1 TCA9555 0x20,P0_7 (pinne 11),K_OK,tast «ok» (SW8)
+U1 TCA9555 0x20,P1_0 (pinne 13),K_TILBAKE,tast «tilbake» (SW9)
+U1 TCA9555 0x20,P1_1 (pinne 14),K_AVSLUTT,tast «avslutt» (SW10)
+U1 TCA9555 0x20,P1_2 (pinne 15),K_SPILL_PAUSE,tast «spill_pause» (SW11)
+U1 TCA9555 0x20,P1_3 (pinne 16),K_DEMP,tast «demp» (SW12)
+U1 TCA9555 0x20,P1_4 (pinne 17),K_VOL_OPP,tast «vol_opp» (SW13)
+U1 TCA9555 0x20,P1_5 (pinne 18),K_VOL_NED,tast «vol_ned» (SW14)
+U1 TCA9555 0x20,P1_6 (pinne 19),SKJ,"skjermstrøm: AO3401-gaten (utgang, lav = på)"
+U1 TCA9555 0x20,P1_7 (pinne 20),DOKK,dokken: POGO+ via 68 kΩ / 100 kΩ (høy = i dokken)
+J1 JST-SH 5 p,1,3V3,SuperMini 3V3
+J1 JST-SH 5 p,2,GND,SuperMini GND
+J1 JST-SH 5 p,3,SDA,SuperMini GPIO5
+J1 JST-SH 5 p,4,SCL,SuperMini GPIO6
+J1 JST-SH 5 p,5,INT,SuperMini GPIO2 (vekking)
+TP1,pute,3V3,3V3
+TP2,pute,GND,GND
+TP3,pute,SDA,SDA
+TP4,pute,SCL,SCL
+TP5,pute,INT,INT
+TP6,pute,SKJ,SKJ
+TP7,pute,POGO,POGO+
+TP8,pute,VCC_SKJ,VCC
+TP9,pute,GND,GND
+TP10,pute,LCD_RES,LCD_RES
+TP11,pute,LCD_SCK,LCD_SCK
+TP12,pute,LCD_DC,LCD_DC
+TP13,pute,LCD_MOSI,LCD_MOSI
+TP14,pute,LED_A,LED_A
+TP15,pute,LED_K,LED_K
+TP16,pute,T_SDA,T_SDA
+TP17,pute,T_SCL,T_SCL
+TP18,pute,T_INT,T_INT
+TP19,pute,T_RST,T_RST

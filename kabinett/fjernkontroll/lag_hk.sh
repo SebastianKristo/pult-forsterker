@@ -6,7 +6,8 @@ mkdir -p stl_hk asm_hk
 for p in topp bunn; do
   openscad -q -D "part=\"$p\"" -D 'elektronikk="hovedkort"' -o "stl_hk/$p.stl" skjold_fjernkontroll.scad &
 done
-for p in topp bunn logo vindu hetter symboler kort skjerm batteri ir vib motor flex ledninger hkdeler usbc; do
+openscad -q -D 'part="bunn"' -D dokk_kontakt=true -D 'elektronikk="hovedkort"' -o stl_hk/bunn_dokk.stl skjold_fjernkontroll.scad &
+for p in topp bunn logo vindu hetter symboler kort skjerm batteri ir vib motor flex ledninger hkdeler usbc pogo; do
   openscad -q -D "part=\"A_$p\"" -D 'elektronikk="hovedkort"' -o "asm_hk/$p.stl" skjold_fjernkontroll.scad &
 done
 wait

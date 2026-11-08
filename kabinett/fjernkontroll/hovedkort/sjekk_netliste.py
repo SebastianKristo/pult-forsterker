@@ -54,7 +54,7 @@ melding(not dobbel, "ingen forsyninger kortsluttet (ingen 0 Ω mellom to forsyni
 # pinner som skal stå åpne
 APNE = {"U1": {"15": "IO3 strappinne (JTAG-kilde) – står åpen", "16": "IO46 strappinne – intern pull-down",
                "24": "IO47 ledig", "25": "IO48 ledig", "26": "IO45 strappinne (VDD_SPI) – intern pull-down",
-               **{str(i): "IO35–IO42 ledig (35–37 brukes av PSRAM på R8)" for i in range(28, 36) if i != 31}},
+               **{str(i): "IO35–IO42 ledig (35–37 brukes av PSRAM på R8)" for i in range(28, 36) if i not in (31, 33)}},
         "U3": {"6": "STDBY ikke brukt"}, "U7": {str(i): "P13–P17 ledig (intern pull-up)" for i in range(16, 21)}, "J3": {"7": "SDO/MISO ikke brukt", "17": "NC (antatt)"}}
 PINNER = {"U1": [str(i) for i in range(1, 42)], "U2": list("123456"), "U3": [str(i) for i in range(1, 10)], "U4": ["1", "2", "3", "5"],
           **{u: [str(i) for i in range(1, 25)] for u in ("U5", "U6", "U7")}, "J3": [str(i) for i in range(1, 19)]}

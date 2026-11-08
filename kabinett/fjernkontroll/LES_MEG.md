@@ -145,7 +145,7 @@ Hovedkortet samler alt på ett kretskort: ESP32-S3, USB-C med lader, batterikont
 | | |
 |---|---|
 | Mål | **48,6 × 119,8 mm**, 1,0 mm FR4, **2 lag**, samme omriss og skruehull som tastekortet (n 79,5–199,3) |
-| Komponenter | **119**: 61 på undersiden (29 linjer i BOM-en, JLC monterer dem), 43 taster KMR221G på oppsiden (loddes for hånd, eller JLC-montering på begge sider) og 15 testpunkter/loddeputer |
+| Komponenter | **124**: 64 på undersiden (30 linjer i BOM-en, JLC monterer dem), 43 taster KMR221G på oppsiden (loddes for hånd, eller JLC-montering på begge sider) og 17 testpunkter/loddeputer |
 | MCU | **ESP32-S3-WROOM-1-N4R2** (4 MB flash, 2 MB PSRAM, samme som SuperMini-en). Antennen stikker 0,9 mm ut over venstre kortkant ved halen, uten kobber under (antennesone på begge lag) |
 | USB-C | HRO TYPE-C-31-M-12 i halen, 5,1 kΩ på CC1/CC2 (vanlige USB-C-ladere gir strøm), USBLC6-2SC6 mot ESD. **Innebygd USB** (GPIO19/20): flashing og logg rett i ladeporten, ingen USB-seriebrikke |
 | Lading | TP4056, 2,4 kΩ PROG = ca. 500 mA. Lastdeling: VBUS → B5819W → VSYS, batteriet → AO3401 → VSYS (av når USB står i) |
@@ -159,6 +159,7 @@ Hovedkortet samler alt på ett kretskort: ESP32-S3, USB-C med lader, batterikont
 | Motor og bryter | AO3400 + B5819W for motoren (to loddeputer MOT+ / MOT−), to loddeputer for vibrasjonsbryteren (1 MΩ ned) |
 | Taster | 3 × TCA9555 (0x20, 0x21, 0x22), samme bryter-til-pinne-kart som den håndkoblede utgaven, så fastvaren for tastene er lik |
 | Testpunkter | 3V3, VBAT, VSYS, VBUS, GND, EN, BOOT, TX, RX, SDA, SCL, pluss RESET- og BOOT-knapp |
+| Dokken | loddeputer POGO+ / POGO− (TP16/TP17) for hunndelen av pogo-kontakten, B5819W (D3) til VBUS, og 68 kΩ / 100 kΩ (R26/R27) til GPIO40 (se [Dokk](#dokk)) |
 
 Bilder: [kobber oppside](hovedkort/skjold-hovedkort-oppside.png) · [kobber underside](hovedkort/skjold-hovedkort-underside.png) · [3D, undersiden](hovedkort/render_3d.png) · [innmaten med hovedkortet](hovedkort/render_inni.png) · [koblingsskjema (PDF)](hovedkort/skjema.pdf).
 
@@ -189,7 +190,8 @@ Fra `hovedkort/pinner.csv` (laget av `lag_skjema.py`). ESPHome-fila for hovedkor
 | 21 | LCD_BL | 100 Ω → AO3400 (Q3) → baklysets katode |
 | 43 / 44 | U0TXD / U0RXD | testpunkter |
 | 3, 45, 46 | – | strappinner, står åpne (interne verdier) |
-| 35–37, 39–42, 47, 48 | – | ledige |
+| 40 | DOKK | dokken: POGO+ via 68 kΩ / 100 kΩ (høy = i dokken) |
+| 35–37, 39, 41, 42, 47, 48 | – | ledige |
 
 ### Filer i `hovedkort/`
 
@@ -267,8 +269,8 @@ Taster (KMR221G, 43 per kort) kjøpes separat, eller monteres av JLC med «Stand
 ### Hva er kontrollert og hva er ikke
 
 Kontrollert her (med skriptene i `hovedkort/`):
-- **DRC (KiCad 7, `pcbnew.WriteDRCReport`): 0 feil og 0 ukoblede.** Advarslene (`skjold-hovedkort-drc.rpt`) er bare silketrykk og bibliotek: 119 × `lib_footprint_issues` (fotavtrykkene er hentet fra KiCads bibliotek, men biblioteket står ikke i prosjektets bibliotekstabell), 25 × `silk_overlap` og 13 × `silk_over_copper` (referansebetegnelser som overlapper hverandre eller puter; JLC klipper silketrykket mot putene) og 5 × `silk_edge_clearance` (betegnelser nær kortkanten).
-- **Rutingen**: Freerouting 2.0.1 uten grafikk, 2 lag, 0,2 mm spor, 0,15 mm klaring, 0,6/0,3 mm via: 1801 spor og 192 viaer, ingenting urutet. Jordflater på begge lag, ingen kobber i antennesonen.
+- **DRC (KiCad 7, `pcbnew.WriteDRCReport`): 0 feil og 0 ukoblede.** Advarslene (`skjold-hovedkort-drc.rpt`) er bare silketrykk og bibliotek: 124 × `lib_footprint_issues` (fotavtrykkene er hentet fra KiCads bibliotek, men biblioteket står ikke i prosjektets bibliotekstabell), 25 × `silk_overlap` og 13 × `silk_over_copper` (referansebetegnelser som overlapper hverandre eller puter; JLC klipper silketrykket mot putene) og 5 × `silk_edge_clearance` (betegnelser nær kortkanten).
+- **Rutingen**: Freerouting 2.0.1 uten grafikk, 2 lag, 0,2 mm spor, 0,15 mm klaring, 0,6/0,3 mm via: 1965 spor og 218 viaer, ingenting urutet. Jordflater på begge lag, ingen kobber i antennesonen.
 - **Nettlistesjekken** (`sjekk_netliste.py`): alle punktene over er OK, også at nettene på kortet er de samme som i `kretser.py` og at **ingenting er urutet**.
 - Kabinettet med hovedkortet (`lag_hk.sh` → `sjekk_modell.py asm_hk hovedkort`): ingen kollisjoner, USB-C går inn, minst 0,6 mm under komponentene, skruetårn klar av delene.
 - ESPHome-fila for hovedkortet er validert med `esphome config`.
@@ -280,6 +282,73 @@ Ikke kontrollert:
 - **Ingen ERC eller tegnet skjema:** KiCad 7 har ikke ERC på kommandolinja, og nettlista er skrevet direkte i `kretser.py`. `sjekk_netliste.py` dekker de viktigste reglene, men ikke alt en ERC fanger.
 - **Antennen** følger Espressifs anbefaling (modulen ved kanten, ingen kobber under), men rekkevidden er ikke målt.
 - Modulen er WROOM-1 i stedet for MINI-1: KiCad 7-biblioteket har ikke fotavtrykket for MINI-1, og WROOM-1 har Espressifs eget.
+
+## Dokk
+
+![Skjold Dokk med fjernkontrollen](dokk/render/04_med_fjernkontroll_bone.png)
+
+**Skjold Dokk** er en ladestasjon: fjernkontrollen står i 65° med baksiden mot ryggen og halen på en hylle, og lader gjennom en magnetisk pogo-kontakt. Mens den står der viser skjermen en stor klokke, datoen, ladingen og det som spilles, og den sover aldri. Om natta (22–07) dempes skjermen.
+
+Bilder: [dokka, Bone White](dokk/render/01_dokk_bone.png) · [mørk](dokk/render/02_dokk_mork.png) · [bakfra med USB-C](dokk/render/03_dokk_bak.png) · [med fjernkontrollen, Bone](dokk/render/04_med_fjernkontroll_bone.png) · [med fjernkontrollen, mørk](dokk/render/05_med_fjernkontroll_mork.png) · [fra siden, full variant](dokk/render/06_side_full.png).
+
+**Mål:** sokkel 80 × 100 × 12 mm, vugge 62 mm bred og 92 mm høy over bordet, vinkel **65°**. Dokka passer både standard og full variant og alle tre tasteoppsettene (sjekket): bare halen og baksiden berører den, og leppa foran er 4 mm, så SKJOLD-logoen synes.
+
+### Deler
+
+| Del | Søkeord | Antall | Ca. pris |
+|---|---|---|---|
+| **Magnetisk pogo-kontakt, 2 pinner, 2,80 mm, med ører** (han + hun, 2 A) | «DC Magnetic Pogo Pin Connector 2Pin with ear 2.80mm», variant **1set** | 1 sett per fjernkontroll og dokk | 9 kr |
+| USB-C-brikke, 6 pinner, med 5,1 kΩ på CC (så vanlige C-til-C-ladere gir strøm) | «Type-C 6pin female breakout 5.1k» | 1 | 5 kr |
+| Schottky-diode SS14 eller 1N5819 (bare håndkoblet; hovedkortet har D3) | «SS14» | 1 | 1 kr |
+| Motstander 68 kΩ og 100 kΩ (bare håndkoblet; hovedkortet har R26/R27) | | 1 + 1 | – |
+| M1,6 × 4 selvgjengende skruer (ørene på pogo-kontakten) | «M1.6x4 self tapping» | 4 | 10 kr |
+| Stålkuler, blyfrie fiskesøkker eller M8-skiver til vektlomma (ca. 70 g) | | | 15 kr |
+| Gummiføtter Ø 10 × 1 mm | «10mm rubber feet» | 4 | 10 kr |
+| Lysdiode 3 mm + 4,7 kΩ (valgfri, viser at dokka har strøm) | | 1 | 2 kr |
+| Silikontråd 26 AWG, rød og svart | | 20 cm | – |
+| Filament, ca. 75 g (Bone White PLA, mørk PLA/PETG, litt gull) | | | 15 kr |
+
+**Kjøp et sett med begge halvdelene.** Pogo-kontakten selges både som sett (han + hun) og som enkeltdeler. Velg varianten «1set» i annonsen. Dokka er tegnet for utgaven med ører og 2,80 mm deling. Utgaven uten ører passer også (`POGO_ORE = false` i begge scad-filene); den limes i en trang lomme. **Mål din kontakt** og juster `POGO_*` øverst i `skjold_fjernkontroll.scad` og `dokk/skjold_dokk.scad` (lengde med ører, bredde, høyde på hver halvdel, hullavstand og pinnedeling).
+
+### Slik virker den
+
+- **I fjernkontrollen:** hunndelen (flate puter) sitter i flukt med bunnen, 40 mm fra venstre kant og 33–54 mm fra halen, til høyre for laderen og USB-C. Den går klar av alt inni i alle tre utgavene (sjekket: minst 0,5 mm). Print bunnen fra `stl/bunn_dokk.stl` (`stl_full/`, `stl_hk/`) i stedet for den vanlige. Den har lomma og en ramme som ørene skrus i.
+- **I dokka:** handelen (fjærpinner) sitter i ryggen, og pinnene presses **0,9 mm** når fjernkontrollen står i dokka (sjekket, krav 0,5–1,0). Magnetene trekker de to halvdelene sammen.
+- **Bare én vei:** to knotter i ryggen går inn i de to skruehodene i halen. Pogo-kontakten sitter til siden, og magnetene er polvendt, så den kan ikke settes inn feil.
+- **Strøm:** USB-C bak i dokka → pogo + og − → i fjernkontrollen gjennom en Schottky-diode til laderens inngang (VBUS). Dioden hindrer at USB-C i halen og dokka mater hverandre. Dokken merkes med 68 kΩ / 100 kΩ fra pogo + (5 V → 3,0 V) til en ledig inngang:
+  - **Håndkoblet:** P1_7 på TCA9555 med vibrator og ladestatus (`ekstra_hub`, pinne 15).
+  - **Hovedkort:** GPIO40, med D3 (B5819W), R26 og R27 og loddeputene POGO+ / POGO− på kortet (TP16 og TP17, rett over hunndelen).
+
+### Kobling
+
+| Fra | Til |
+|---|---|
+| Dokka: USB-C-brikke VBUS | handelen + (pinnen nærmest hylla, se under) |
+| Dokka: USB-C-brikke GND | handelen − |
+| Dokka: VBUS → 4,7 kΩ → lysdiode → GND | (valgfri) |
+| Fjernkontrollen, håndkoblet: hunndelen + | SS14 anode; katoden til TP4056 IN+ (VBUS-puta ved USB-C) |
+| Fjernkontrollen, håndkoblet: hunndelen − | TP4056 IN− |
+| Fjernkontrollen, håndkoblet: hunndelen + | 68 kΩ → TCA9555 (ekstra_hub) P1_7, og 100 kΩ derfra til GND |
+| Fjernkontrollen, hovedkort: hunndelen + / − | POGO+ / POGO− (TP16 / TP17) |
+
+**Polariteten:** sett de to halvdelene sammen før du monterer dem (magnetene bestemmer hvordan de passer), og merk den ene enden på begge med en tusj. Monter handelen med merket ned mot hylla og hunndelen med merket mot halen, og koble + til den merkede pinnen på begge. Mål med multimeter (5 V på hunndelens puter når fjernkontrollen er tatt ut av dokka og USB står i dokka; riktig vei) før du lukker fjernkontrollen.
+
+### Print og montering
+
+- `dokk/skjold-dokk-k2.3mf` (Creality K2): vugga i Bone White (filament 1), sokkelen mørk (2) med gullstripa (3) felt inn, og lokket til vektlomma (2). **Ingen støtte:** vugga står på bunnen og ryggen heller 25° bakover. Sokkelen står på bunnen; vektlomma og fotsporene er åpne nedover, og taket over vektlomma er en bro på 30 mm. Sjekket med `dokk/sjekk_dokk.py`.
+- 0,2 mm lag, 4 vegger, 15 % fyll.
+1. Lodd ledninger på handelen, trekk dem ned gjennom hullet bak pogo-lomma og bakover i sokkelens kanal til USB-C-brikken. Skru handelen fast fra lomma (M1,6, fra forsiden før ledningene strammes).
+2. Legg USB-C-brikken i lomma bak (kontakten i forsenkningen) med en dråpe lim, og lodd VBUS og GND. Lysdioden kan gå i hullet foran til høyre.
+3. Fyll vektlomma (ca. 70 g), lim lokket over, og sett på gummiføttene.
+4. Sett vugga på tappene på sokkelen med lim.
+5. I fjernkontrollen: skru hunndelen inn i lomma i `bunn_dokk` med flaten ut, og koble den som i tabellen over.
+
+### Fastvaren i dokken
+
+- **Dokk-skjermen:** stor klokke (fra Home Assistant), datoen, batteriet og «lader / fulladet», og nå-kortet for valgt enhet med spill/pause. Trykk på kortet for å gå til enhetens side. Etter «Søvn etter» uten bruk går den tilbake til dokk-skjermen i stedet for å sove.
+- **Wi-Fi er på hele tiden** i dokken, så skjermen er oppdatert når du tar den ut. Om natta (22–07) dempes skjermen til 6 % etter 20 s uten bruk. Et trykk vekker den.
+- **Tatt ut:** Start-siden, og vanlig søvn igjen.
+- Entiteten **«I dokken»** finnes i Home Assistant (for eksempel for å la lysene slukke når du setter den fra deg).
 
 ## Alternativ: håndkoblet
 
@@ -304,6 +373,49 @@ Resten av elektronikkdelen beskriver den første utgaven, uten hovedkort: ESP32-
 | **Vibrasjonsmotor 1027** (myntcelle, valgfri) | Et kort «tikk» i fingeren på hvert tastetrykk. |
 
 **Alternativ, færre deler:** Waveshare *ESP32-S3-Touch-LCD-2* har ESP32-S3, 2″-skjermen med berøring, lader og akselerometer på ett kort (ca. 300 kr). Kabinettet har plass til det, men pinnene er andre enn i oppsettet her. Bytt pinnene i ESPHome-fila etter Waveshares wiki.
+
+### Tastekort A (bare knapper)
+
+![Tastekort A](tastekort_a/render_3d.png)
+
+Et enkelt tastekort for den håndkoblede utgaven når du bare vil ha **tasteoppsett A** (av/på, Skjold, meny, D-pad med OK, tilbake, avslutt, volum + og −, spill/pause og demp: 14 taster). Det har ingen rutenett, bare de 14 bryterne, nøyaktig der `taster.py` setter tastene i oppsett A, så hettene treffer.
+
+| | |
+|---|---|
+| Mål | **48,6 × 105,6 mm**, 1,0 mm FR4, 2 lag, samme omriss og skruehull som tastekortet i kabinettet (n 79,5–185,1) |
+| Taster | 14 × SMD-taktbryter 4 × 4 × 1,5 mm på oppsiden (DNP: loddes for hånd). Fotavtrykket bruker to diagonale ben, så det virker uansett hvilke ben bryteren har koblet sammen inni |
+| Undersiden | 1 × TCA9555 (0x20), 100 nF, 10 kΩ pull-up på SDA, SCL og INT, dokk-deler 68 kΩ / 100 kΩ, FPC 18 p (skjerm) og 6 p (berøring) som på det gamle tastekortet, og JST-SH 5 p (SM05B-SRSS-TB) til SuperMini-en |
+| Loddeputer | 3V3, GND, SDA, SCL, INT (parallelt med JST-SH), SKJ (P1_6), POGO+, VCC (skjermens 3V3_SW), LCD_RES, LCD_SCK, LCD_DC, LCD_MOSI, LED_A, LED_K, T_SDA, T_SCL, T_INT, T_RST |
+| Kontrollert | DRC 0 feil og 0 ukoblede (371 spor, 41 viaer), nettlistesjekken og kabinettet med `tastekort_a/sjekk_tastekort_a.py` (komponentene på undersiden går minst 1,96 mm klar av alt i bunnen) |
+
+**Hva som er annerledes:** én TCA9555 har 16 pinner: 0–13 er tastene, P1_6 styrer skjermstrømmen (AO3401-gaten) og P1_7 er dokken. **Vibrasjonsmotoren og ladestatusen (CHRG) er tatt ut** i denne utgaven (fastvaren har dem som tomme). Fastvaren er `esphome/skjold-fjernkontroll-tastekort-a.yaml`, laget av `taster.py` og validert med `esphome config`.
+
+**Kobling til SuperMini-en:**
+
+| Tastekort A | SuperMini |
+|---|---|
+| J1 1 / pute 3V3 | 3V3 |
+| J1 2 / pute GND | GND |
+| J1 3 / pute SDA | GPIO5 |
+| J1 4 / pute SCL | GPIO6 |
+| J1 5 / pute INT | GPIO2 (vekking) |
+| SKJ | AO3401-gaten (100 kΩ til 3V3); drain → pute VCC (skjerm og berøring) |
+| LCD_SCK / LCD_MOSI / LCD_DC / LCD_RES | GPIO9 / GPIO10 / GPIO11 / GPIO12 |
+| LED_A / LED_K | baklyset som før (GPIO13 via AO3400) |
+| T_SDA / T_SCL / T_INT / T_RST | GPIO8 / GPIO3 / GPIO7 / GPIO12 |
+| POGO+ | hunndelen av pogo-kontakten (+), hvis du har dokken |
+
+Pinnetabellen står i `tastekort_a/pinner.csv`.
+
+**Bestille fra JLCPCB:** last opp `tastekort_a/skjold-tastekort-a-gerber.zip`, 2 lag, **1,0 mm**, 5 stk. Slå på PCB Assembly, **Economic**, **Bottom side**, 2 eller 5 kort, og last opp `bom-jlc.csv` og `cpl-jlc.csv` (TCA9555, FPC-kontaktene, JST-SH og de passive; LCSC-numrene er merket «sjekk»). Bryterne står i `dnp-handlodding.csv` og loddes for hånd. Vil du ha bryterne montert også, må du velge «Standard» PCBA på begge sider (ca. +25 USD i oppsett).
+
+| | USD (anslag) | NOK med mva (ca.) |
+|---|---|---|
+| 5 kort, 49 × 106 mm | 5–8 | |
+| Montering av 2 kort: oppsett 8 + sjablong 1,5 + ca. 4 «extended» deler × 3 + deler og lodding ca. 5 | ca. 27 | |
+| Frakt | 10–15 | |
+| **5 kort, 2 monterte** | **ca. 45–50** | **ca. 600–700 kr** |
+| 5 kort, 5 monterte | ca. 55–60 | ca. 750–850 kr |
 
 ### Tastekortet – to måter
 
@@ -755,6 +867,7 @@ Du får mer ut av batteriet hvis du:
 - **SuperMini-kortene varierer litt** (pinnerekkefølge, LDO). Sjekk at GPIO 1–13, 43 og 44 er ført ut på ditt kort.
 - **4 MB flash er nok, men ikke romslig.** LVGL, tre skrifter og online_image tar plass, og OTA trenger to like store partisjoner. Blir bygget for stort, bruk færre glyfer, dropp `f_tittel` eller velg et S3-kort med 8–16 MB.
 - **Det første trykket etter søvn** sendes hvis tasten fortsatt holdes når ESP-en har startet (ca. 0,3 s). TCA9555 husker ikke et trykk som er sluppet, så et veldig kort trykk vekker bare skjermen. Kommandoer til Skjold og HA sendes så snart Wi-Fi og API-et er oppe (ca. 1,5–2 s).
+- **Dokka og tastekort A er ikke printet, bestilt eller testet.** Pogo-kontaktens mål er typiske verdier fra annonsene (mål din og juster `POGO_*`), og fotavtrykket til 4 × 4-bryterne er tegnet etter TS-1088-stilen (sjekk mot databladet).
 - **Skjermen er ikke kjørt på maskinvare.** Fastvaren (LVGL 9, C++ i lambdaene og `skjold_ui.h`) er validert med `esphome config`, og tastaturet og hjelpefunksjonene i `skjold_ui.h` er testet på PC, men kompileringen er ikke kjørt (ESP-IDF kunne ikke lastes ned her). Regn med småfeil ved første kompilering.
 - **IR-læring** fanger bare koder ESPHome kan tolke (NEC, Samsung, Sony, RC5, LG). Råkoder og klimaanlegg støttes ikke.
 - **Kilder** som ikke finnes på din Skjold-modell (f.eks. Spotify) gir bare en feilmelding i loggen.
@@ -779,6 +892,9 @@ Du får mer ut av batteriet hvis du:
 | `stl/`, `stl_full/` | Alle utskriftsdelene for standard og full variant, inkludert `bryterbrett.stl` |
 | `hovedkort/` | Hovedkortet: KiCad-kort, gerber, BOM/CPL, skjema og skriptene (se [Hovedkort](#hovedkort)) |
 | `lag_hk.sh`, `stl_hk/` | Toppen og bunnen for hovedkortet (`elektronikk = "hovedkort"`), sjekk og bilder |
+| `tastekort_a/` | Tastekort A (bare oppsett A): KiCad-kort, gerber, BOM/CPL, pinnetabell, bilder, `lag_tastekort_a.py` og `sjekk_tastekort_a.py` |
+| `dokk/` | Skjold Dokk: `skjold_dokk.scad`, `lag_dokk.sh` (STL, sjekk, 3MF og bilder), `sjekk_dokk.py`, `skjold-dokk-k2.3mf` |
+| `stl*/bunn_dokk.stl` | Bunnen med lomme for pogo-kontakten (til dokka) |
 
 ## Tre skjermvalg
 

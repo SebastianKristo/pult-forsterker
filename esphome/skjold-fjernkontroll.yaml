@@ -138,6 +138,9 @@ esphome:
     - priority: -50                            # siste kjente tilstand med en gang, så svar fra HA og Skjold
       then:
         - script.execute: vis_hurtigbuffer
+        - if:
+            condition: { binary_sensor.is_on: dokket }
+            then: [ script.execute: dokk_inn ]
         - lambda: |-
             // tasten som vekket den, som første trykk (nå som skjermen er klar)
             if (!skjold::tastatur.ignorer.empty() && millis() < skjold::tastatur.ignorer_til)
@@ -194,6 +197,10 @@ wifi:
   ap: { ssid: "Skjold Fjernkontroll" }
 
 captive_portal:
+
+time:
+  - platform: homeassistant         # klokka i dokken
+    id: klokka
 
 http_request:
   verify_ssl: false
@@ -391,6 +398,7 @@ sensor:
     on_value:
       - lambda: |-
           lv_label_set_text_fmt(id(lbl_bat), "%s %d %%", id(lader).state ? LV_SYMBOL_CHARGE : LV_SYMBOL_BATTERY_FULL, (int) x);
+          id(oppdater_dokk)->execute();
   - platform: wifi_signal
     id: wifi_db
     name: Wi-Fi-signal
@@ -508,6 +516,14 @@ binary_sensor:
     pin: { number: GPIO4, mode: { input: true }, allow_other_uses: true }
     on_press:
       - script.execute: sovn_teller
+  - platform: gpio
+    id: dokket
+    name: I dokken
+    icon: mdi:cradle-outline
+    pin: { tca9555: $ekstra_hub, number: 15, mode: { input: true } }   # pogo + via 68 kΩ / 100 kΩ (høy = i dokken)
+    filters: [ { delayed_on: 400ms }, { delayed_off: 300ms } ]
+    on_press: [ script.execute: dokk_inn ]
+    on_release: [ script.execute: dokk_ut ]
 # >>> taster (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   # Hver bryter melder trykk og slipp til tastaturet i skjold_ui.h, som avgjør kort/langt/dobbelt trykk og gjentar.
   - platform: gpio
@@ -1598,7 +1614,7 @@ script:
 
   # ---------- skjermen: sider, enheter, vinduer ----------
   # Sidene i rekkefølge: 0 start, 1 apper, 2 innganger, 3 spiller, 4 rom, 5 hjem, 6 mer, 7 lær IR, 8 aktivitet starter,
-  # 9 Skjold-kilder.
+  # 9 Skjold-kilder, 10 i dokken.
   # retning: 1 = skyv mot venstre (fram), −1 = mot høyre (tilbake), 0 = ton inn.
   - id: vis_side
     parameters: { side: int, retning: int }
@@ -1607,7 +1623,7 @@ script:
           lv_screen_load_anim_t a = retning > 0 ? LV_SCREEN_LOAD_ANIM_MOVE_LEFT : retning < 0 ? LV_SCREEN_LOAD_ANIM_MOVE_RIGHT : LV_SCREEN_LOAD_ANIM_FADE_IN;
           id(lvgl_hoved)->show_page(side, a, retning == 0 ? 160 : 220);
           lv_obj_t *F[4] = {id(fane_0), id(fane_1), id(fane_2), id(fane_3)};
-          int f = side == 0 || side == 8 ? 0 : (side <= 4 || side == 9) ? 1 : side == 5 ? 2 : 3;
+          int f = side == 0 || side == 8 || side == 10 ? 0 : (side <= 4 || side == 9) ? 1 : side == 5 ? 2 : 3;
           for (int i = 0; i < 4; i++) lv_obj_set_style_text_color(F[i], lv_color_hex(i == f ? 0xE8B450 : 0x96948E), 0);
           lv_obj_add_flag(id(velger), LV_OBJ_FLAG_HIDDEN);
           lv_obj_add_flag(id(appvalg), LV_OBJ_FLAG_HIDDEN);
@@ -1689,6 +1705,10 @@ script:
           else { t = "${enhet_3}"; u = id(proj_paa) ? "På" : "Av"; kan_spille = false; }
           lv_label_set_text(id(lbl_naa_t), t.c_str());
           lv_label_set_text(id(lbl_naa_u), u.c_str());
+          lv_label_set_text(id(lbl_dokk_t), t.c_str());
+          lv_label_set_text(id(lbl_dokk_u), u.c_str());
+          if (prog >= 0) { lv_bar_set_value(id(bar_dokk), prog, LV_ANIM_OFF); lv_obj_remove_flag(id(bar_dokk), LV_OBJ_FLAG_HIDDEN); }
+          else lv_obj_add_flag(id(bar_dokk), LV_OBJ_FLAG_HIDDEN);
           lv_label_set_text(id(lbl_naa_tid), tidtekst.c_str());
           lv_label_set_text(id(lbl_naa_spill), kan_spille ? (spill ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY) : LV_SYMBOL_POWER);
           if (prog >= 0) { lv_bar_set_value(id(bar_naa), prog, LV_ANIM_OFF); lv_obj_remove_flag(id(bar_naa), LV_OBJ_FLAG_HIDDEN); }
@@ -1765,6 +1785,32 @@ script:
       - script.execute: bygg_apper
       - script.execute: merk_inngang
 
+  # ---------- dokken ----------
+  - id: dokk_inn
+    then:
+      - script.execute: sovn_teller
+      - script.execute: oppdater_dokk
+      - script.execute: { id: vis_side, side: 10, retning: 0 }
+      - script.execute: { id: vis_toast, tekst: "Lader i dokken" }
+  - id: dokk_ut
+    then:
+      - script.execute: sovn_teller
+      - script.execute: { id: vis_side, side: 0, retning: 0 }
+  - id: oppdater_dokk                 # klokka, datoen og batteriet på dokk-skjermen
+    then:
+      - lambda: |-
+          static const char *DAG[7] = {"søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"};
+          static const char *MND[12] = {"januar", "februar", "mars", "april", "mai", "juni", "juli", "august",
+                                        "september", "oktober", "november", "desember"};
+          auto t = id(klokka).now();
+          if (t.is_valid()) {
+            lv_label_set_text_fmt(id(lbl_klokke), "%02d:%02d", t.hour, t.minute);
+            lv_label_set_text_fmt(id(lbl_dato), "%s %d. %s", DAG[(t.day_of_week + 6) % 7], t.day_of_month, MND[t.month - 1]);
+          }
+          float b = id(batteri).state;
+          lv_label_set_text_fmt(id(lbl_dokk_bat), "%s", isnan(b) ? "–" : (std::to_string((int) b) + " %").c_str());
+          lv_label_set_text(id(lbl_dokk_status), id(lader).state ? "lader" : (b >= 98 ? "fulladet" : "i dokken"));
+
   # ---------- søvn ----------
   # Én tidsstempel for siste aktivitet (tast, berøring, løft, handling fra HA). Intervallet under legger den i dyp søvn
   # etter «Søvn etter» (Mer-siden, standard ${sovn_etter}), men aldri mens den lader, lærer IR, kjører en aktivitet,
@@ -1790,14 +1836,25 @@ interval:
   - interval: 20ms                   # tastaturet: lange trykk, dobbelttrykk og gjentak
     then:
       - lambda: 'skjold::tastatur.tikk(millis());'
-  - interval: 1s                     # søvn
+  - interval: 1s                     # søvn, og dokken (klokke, nattdemping)
     then:
       - lambda: |-
           uint32_t stille = millis() - id(sist_aktiv);
-          bool vaaken = id(hold_vaaken).state || id(laer_steg) != 0 || id(akt_kjor)->is_running() || id(lader).state ||
-                        skjold::tastatur.noen_nede();
+          bool vaaken = id(hold_vaaken).state || id(laer_steg) != 0 || id(akt_kjor)->is_running() || skjold::tastatur.noen_nede();
           if (vaaken) { id(sist_aktiv) = millis(); return; }
           uint32_t grense = (uint32_t) id(sovn_s) * 1000;
+          if (id(dokket).state) {   // i dokken: aldri søvn; tilbake til dokk-skjermen, og dempet om natta
+            id(oppdater_dokk)->execute();
+            if (stille >= grense && id(lvgl_hoved)->get_current_page() != 10) id(vis_side)->execute(10, 0);
+            auto t = id(klokka).now();
+            bool natt = t.is_valid() && (t.hour >= 22 || t.hour < 7);
+            if (natt && !id(dimmet) && stille >= 20000) {
+              id(dimmet) = true;
+              auto c = id(baklys).turn_on(); c.set_brightness(0.06f); c.set_transition_length(1500); c.perform();
+            }
+            return;
+          }
+          if (id(lader).state) { id(sist_aktiv) = millis(); return; }   // lader med USB-C: våken
           if (!id(dimmet) && stille + 5000 >= grense) {
             id(dimmet) = true;
             auto c = id(baklys).turn_on(); c.set_brightness(0.15f); c.set_transition_length(400); c.perform();
@@ -1823,6 +1880,7 @@ font:
   - { file: "gfonts://Sora@600", id: f_tittel, size: 19, glyphs: &glyfer " !\"#%&'()*+,-./0123456789:;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]_abcdefghijklmnopqrstuvwxyzÆØÅæøåÉéÜüÖöÄä–·«»…›" }
   - { file: "gfonts://Sora@600", id: f_knapp, size: 13, glyphs: *glyfer }
   - { file: "gfonts://Sora@400", id: f_tekst, size: 11, glyphs: *glyfer }
+  - { file: "gfonts://Sora@300", id: f_klokke, size: 64, glyphs: "0123456789:–" }
 
 image:
   - platform: online_image
@@ -2274,6 +2332,38 @@ lvgl:
         - button: { x: 122, y: 198, width: 110, height: 36, on_click: [ { script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":4}' } } ], widgets: [ { label: { id: lbl_fav4, width: 98, align: CENTER, text: "4", long_mode: DOT } } ] }
         - button: { x: 8, y: 240, width: 110, height: 36, on_click: [ { script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":5}' } } ], widgets: [ { label: { id: lbl_fav5, width: 98, align: CENTER, text: "5", long_mode: DOT } } ] }
         - button: { x: 122, y: 240, width: 110, height: 36, on_click: [ { script.execute: { id: skjold_post, sti: "/api/preset", kropp: '{"n":6}' } } ], widgets: [ { label: { id: lbl_fav6, width: 98, align: CENTER, text: "6", long_mode: DOT } } ] }
+    # --- 10 I dokken: klokke, dato, lading og det som spilles ---
+    - id: side_dokk
+      widgets:
+        - label: { id: lbl_klokke, align: TOP_MID, y: 40, text: "–", text_font: f_klokke, text_color: 0xF0EEE8 }
+        - label: { id: lbl_dato, align: TOP_MID, y: 112, text: "", text_color: 0x96948E, text_font: f_knapp }
+        - label: { align: TOP_MID, x: -34, y: 140, text: "\uF0E7", text_font: montserrat_16, text_color: 0xE8B450 }
+        - label: { id: lbl_dokk_bat, align: TOP_MID, x: 2, y: 139, text: "–", text_font: f_tittel }
+        - label: { id: lbl_dokk_status, align: TOP_MID, y: 164, text: "i dokken", text_color: 0x6E6C68 }
+        - obj:
+            x: 8
+            y: 190
+            width: 224
+            height: 86
+            pad_all: 0
+            radius: 16
+            bg_color: 0x1A1A1D
+            border_width: 0
+            scrollable: false
+            on_click: [ { script.execute: { id: vis_enhet, retning: 0 } } ]
+            widgets:
+              - label: { id: lbl_dokk_t, x: 14, y: 12, width: 150, text: "", text_font: f_knapp, long_mode: DOT }
+              - label: { id: lbl_dokk_u, x: 14, y: 32, width: 150, text: "", text_color: 0x96948E, long_mode: DOT }
+              - bar: { id: bar_dokk, hidden: true, x: 14, y: 62, width: 196, height: 4, min_value: 0, max_value: 1000, value: 0 }
+              - button:
+                  x: 170
+                  y: 14
+                  width: 40
+                  height: 40
+                  radius: 20
+                  bg_color: 0xE8B450
+                  widgets: [ { label: { align: CENTER, text: "\uF04C", text_color: 0x101012, text_font: montserrat_14 } } ]
+                  on_click: [ script.execute: naa_knapp ]
 
 # ---------- tasteoppsett ----------
 select:

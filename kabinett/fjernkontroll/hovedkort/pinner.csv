@@ -31,7 +31,7 @@ modulpinne,GPIO,nett,funksjon
 30,,(åpen),
 31,GPIO38,T_SCL,I²C SCL berøring (3V3_SW)
 32,,(åpen),
-33,,(åpen),
+33,GPIO40,DOKK,dokken (POGO+ via 68 k / 100 k)
 34,,(åpen),
 35,,(åpen),
 36,GPIO44,U0RXD,UART RX (testpunkt)
