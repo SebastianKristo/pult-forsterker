@@ -1707,6 +1707,15 @@ script:
           lv_label_set_text(id(lbl_naa_u), u.c_str());
           lv_label_set_text(id(lbl_dokk_t), t.c_str());
           lv_label_set_text(id(lbl_dokk_u), u.c_str());
+          lv_label_set_text(id(lbl_dokk_spill), kan_spille ? (spill ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY) : LV_SYMBOL_POWER);
+          {   // dokk-kortet: coveret fra Skjold, ellers en flis med initialer (appen på Apple TV, eller enheten)
+            static const char *NAVN[4] = {"${enhet_0}", "${enhet_1}", "${enhet_2}", "${enhet_3}"};
+            std::string fn = e == 1 && skjold::rtc_atv_app[0] ? std::string(skjold::rtc_atv_app) : std::string(NAVN[e]);
+            lv_label_set_text(id(lbl_dokk_ini), skjold::initialer(fn).c_str());
+            lv_obj_set_style_bg_color(id(dokk_flis), lv_color_hex(skjold::flisfarge(fn)), 0);
+            if (e == 2 && !id(cover_nokkel).empty()) lv_obj_remove_flag(id(img_dokk_cover), LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_add_flag(id(img_dokk_cover), LV_OBJ_FLAG_HIDDEN);
+          }
           if (prog >= 0) { lv_bar_set_value(id(bar_dokk), prog, LV_ANIM_OFF); lv_obj_remove_flag(id(bar_dokk), LV_OBJ_FLAG_HIDDEN); }
           else lv_obj_add_flag(id(bar_dokk), LV_OBJ_FLAG_HIDDEN);
           lv_label_set_text(id(lbl_naa_tid), tidtekst.c_str());
@@ -1892,6 +1901,7 @@ image:
     update_interval: never
     on_download_finished:
       - lvgl.image.update: { id: img_cover, src: cover }
+      - lvgl.image.update: { id: img_dokk_cover, src: cover }
   - platform: online_image            # bildet til det som spilles på Apple TV (entity_picture fra HA)
     id: atv_bilde
     url: ${ha_url}/
@@ -2352,17 +2362,30 @@ lvgl:
             scrollable: false
             on_click: [ { script.execute: { id: vis_enhet, retning: 0 } } ]
             widgets:
-              - label: { id: lbl_dokk_t, x: 14, y: 12, width: 150, text: "", text_font: f_knapp, long_mode: DOT }
-              - label: { id: lbl_dokk_u, x: 14, y: 32, width: 150, text: "", text_color: 0x96948E, long_mode: DOT }
-              - bar: { id: bar_dokk, hidden: true, x: 14, y: 62, width: 196, height: 4, min_value: 0, max_value: 1000, value: 0 }
+              - obj:
+                  id: dokk_flis
+                  x: 12
+                  y: 15
+                  width: 56
+                  height: 56
+                  pad_all: 0
+                  radius: 12
+                  border_width: 0
+                  bg_color: 0x2E4F7A
+                  scrollable: false
+                  widgets: [ { label: { id: lbl_dokk_ini, align: CENTER, text: "Sk", text_font: f_tittel } } ]
+              - image: { id: img_dokk_cover, src: cover, x: 12, y: 15, pivot_x: 0, pivot_y: 0, scale: 0.5, radius: 12, clip_corner: true, hidden: true }
+              - label: { id: lbl_dokk_t, x: 78, y: 17, width: 92, text: "", text_font: f_knapp, long_mode: DOT }
+              - label: { id: lbl_dokk_u, x: 78, y: 37, width: 92, text: "", text_color: 0x96948E, long_mode: DOT }
+              - bar: { id: bar_dokk, hidden: true, x: 78, y: 62, width: 132, height: 4, min_value: 0, max_value: 1000, value: 0 }
               - button:
-                  x: 170
-                  y: 14
-                  width: 40
-                  height: 40
-                  radius: 20
+                  x: 176
+                  y: 18
+                  width: 36
+                  height: 36
+                  radius: 18
                   bg_color: 0xE8B450
-                  widgets: [ { label: { align: CENTER, text: "\uF04C", text_color: 0x101012, text_font: montserrat_14 } } ]
+                  widgets: [ { label: { id: lbl_dokk_spill, align: CENTER, text: "\uF04C", text_color: 0x101012, text_font: montserrat_14 } } ]
                   on_click: [ script.execute: naa_knapp ]
 
 # ---------- tasteoppsett ----------

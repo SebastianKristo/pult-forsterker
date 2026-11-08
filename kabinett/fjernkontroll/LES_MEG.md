@@ -285,11 +285,11 @@ Ikke kontrollert:
 
 ## Dokk
 
-![Skjold Dokk med fjernkontrollen](dokk/render/04_med_fjernkontroll_bone.png)
+![Skjold Dokk med fjernkontrollen og dokk-skjermen](dokk/render/00_hero.png)
 
 **Skjold Dokk** er en ladestasjon: fjernkontrollen står i 65° med baksiden mot ryggen og halen på en hylle, og lader gjennom en magnetisk pogo-kontakt. Mens den står der viser skjermen en stor klokke, datoen, ladingen og det som spilles, og den sover aldri. Om natta (22–07) dempes skjermen.
 
-Bilder: [dokka, Bone White](dokk/render/01_dokk_bone.png) · [mørk](dokk/render/02_dokk_mork.png) · [bakfra med USB-C](dokk/render/03_dokk_bak.png) · [med fjernkontrollen, Bone](dokk/render/04_med_fjernkontroll_bone.png) · [med fjernkontrollen, mørk](dokk/render/05_med_fjernkontroll_mork.png) · [fra siden, full variant](dokk/render/06_side_full.png).
+Bilder (skjermen er lagt inn med `skjerm_i_render.py`, som i de andre bildene): [i dokken](dokk/render/00_hero.png) · [dokka, Bone White](dokk/render/01_dokk_bone.png) · [mørk](dokk/render/02_dokk_mork.png) · [bakfra med USB-C](dokk/render/03_dokk_bak.png) · [med fjernkontrollen, Bone](dokk/render/04_med_fjernkontroll_bone.png) · [med fjernkontrollen, mørk](dokk/render/05_med_fjernkontroll_mork.png) · [fra siden, full variant](dokk/render/06_side_full.png).
 
 **Mål:** sokkel 80 × 100 × 12 mm, vugge 62 mm bred og 92 mm høy over bordet, vinkel **65°**. Dokka passer både standard og full variant og alle tre tasteoppsettene (sjekket): bare halen og baksiden berører den, og leppa foran er 4 mm, så SKJOLD-logoen synes.
 
@@ -345,7 +345,7 @@ Bilder: [dokka, Bone White](dokk/render/01_dokk_bone.png) · [mørk](dokk/render
 
 ### Fastvaren i dokken
 
-- **Dokk-skjermen:** stor klokke (fra Home Assistant), datoen, batteriet og «lader / fulladet», og nå-kortet for valgt enhet med spill/pause. Trykk på kortet for å gå til enhetens side. Etter «Søvn etter» uten bruk går den tilbake til dokk-skjermen i stedet for å sove.
+- **Dokk-skjermen** ([bilde](render/skjerm-9-dokk.png)): stor klokke (fra Home Assistant), datoen, batteriet og «lader / fulladet», og nå-kortet for valgt enhet med coveret fra Skjold (eller en flis med initialene til appen på Apple TV) og spill/pause. Trykk på kortet for å gå til enhetens side. Etter «Søvn etter» uten bruk går den tilbake til dokk-skjermen i stedet for å sove.
 - **Wi-Fi er på hele tiden** i dokken, så skjermen er oppdatert når du tar den ut. Om natta (22–07) dempes skjermen til 6 % etter 20 s uten bruk. Et trykk vekker den.
 - **Tatt ut:** Start-siden, og vanlig søvn igjen.
 - Entiteten **«I dokken»** finnes i Home Assistant (for eksempel for å la lysene slukke når du setter den fra deg).
@@ -727,7 +727,7 @@ Etter det oppdateres den trådløst. Slå på «Hold våken (for oppdatering)» 
 
 ![Alle sidene](render/skjerm-oversikt.png)
 
-Skjermbilder (tegnet med `lag_skjermbilder.py`, samme mål og farger som fastvaren): [Start](render/skjerm-1-start.png) · [velg enhet](render/skjerm-2-velger.png) · [Apple TV-apper](render/skjerm-3-apper.png) · [TV-innganger](render/skjerm-4-innganger.png) · [aktivitet starter](render/skjerm-5-aktivitet.png) · [Skjold](render/skjerm-6-spiller.png) · [Hjem](render/skjerm-7-hjem.png) · [Mer](render/skjerm-8-mer.png). Prøv den i [3D-siden](https://claude.ai/artifact/DyuMF6ZqSQiiFxcNCRVYLs) («▶ Prøv den»).
+Skjermbilder (tegnet med `lag_skjermbilder.py`, samme mål og farger som fastvaren): [Start](render/skjerm-1-start.png) · [velg enhet](render/skjerm-2-velger.png) · [Apple TV-apper](render/skjerm-3-apper.png) · [TV-innganger](render/skjerm-4-innganger.png) · [aktivitet starter](render/skjerm-5-aktivitet.png) · [Skjold](render/skjerm-6-spiller.png) · [Hjem](render/skjerm-7-hjem.png) · [Mer](render/skjerm-8-mer.png) · [i dokken](render/skjerm-9-dokk.png). Prøv den i [3D-siden](https://claude.ai/artifact/DyuMF6ZqSQiiFxcNCRVYLs) («▶ Prøv den»).
 
 **Øverst:** «Styrer»-brikken viser enheten tastene virker på: Stue-TV, Apple TV, Skjold eller Projektor. Trykk på den for å velge (eller hold Skjold-tasten), sveip på den for neste/forrige. Til høyre står batteriet (⚡ når den lader).
 

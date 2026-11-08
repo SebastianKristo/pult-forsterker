@@ -508,6 +508,10 @@ module flatkabler() {
 module ledninger() { color([0.85, 0.2, 0.2]) for (k = [KANAL_BAT, KANAL_IR]) if (len(k)) hull() for (q = k) translate([q[0], L - q[1], kanalZ + 0.75]) cube([1.5, 0.01, 1.5], center = true); }
 module innmat() { batteri(); if (!hk) { mcu_kort(); lader(); } ir_kort(); vibbryter(); motor(); ledninger(); }
 
+// ---------- i dokken (bare for bildene): samme plassering som fk_plass() i dokk/skjold_dokk.scad ----------
+DOKK_A = 65; DOKK_HB = 12 + 6*sin(DOKK_A) + 8*cos(DOKK_A);
+module i_dokk() { translate([0, 0, DOKK_HB]) rotate([DOKK_A, 0, 0]) translate([-W/2, 0, 0]) children(); }
+
 // ---------- montert / eksplodert ----------
 module montert(e = 0) {
   color(c_bunn) bunn();
@@ -575,6 +579,13 @@ else if (part == "inni") {   // bunnen med alt inni; tastekortet gjennomsiktig o
   color([0.3, 0.3, 0.35], 0.18) translate([W/2 - modW/2, L - modC - modH/2, zGlass - modT]) cube([modW, modH, modT]);
 }
 else if (part == "montering") montert(40);
+else if (part == "i_dokk") {           // bilder: fjernkontrollen i Skjold Dokk (dokk/stl/ fra dokk/lag_dokk.sh)
+  color(farge == "mork" ? [0.17, 0.17, 0.18] : c_bone) import("dokk/stl/vugge.stl");
+  color(farge == "mork" ? [0.82, 0.80, 0.75] : [0.169, 0.169, 0.176]) import("dokk/stl/sokkel.stl");
+  color(c_gull) import("dokk/stl/gull.stl");
+  i_dokk() montert(0);
+}
+else if (part == "skjermflate_dokk") i_dokk() skjermhjorner();
 else if (part == "skjermflate") translate([0, 0, 1.05*skjermE]) skjermhjorner();
 else if (part == "topp") print_topp() topp();
 else if (part == "logo") print_topp() logo();
