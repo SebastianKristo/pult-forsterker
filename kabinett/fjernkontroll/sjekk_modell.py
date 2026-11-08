@@ -18,6 +18,7 @@ STL-ene lages av lag_stl.sh. Krever trimesh og manifold3d. Sjekker:
      kort og komponenter, batterilomma ≥ batteriet + 0,5 mm, fri vei for USB-C-pluggen inn til laderen og
      til SuperMini-en (flashing med bunnen åpen), og skruetårnene treffer ingen komponenter"""
 import itertools
+import os
 import sys
 
 import numpy as np
@@ -323,6 +324,23 @@ if HK:   # komponentene på undersiden av hovedkortet: ≥ 0,5 mm ned til bunnen
     under = trimesh.util.concatenate([A[x] for x in ("bunn", "batteri", "ir", "vib", "motor", "ledninger")])
     d_ = stråle(under, p_[ned] - [0, 0, 0.002], np.tile([0, 0, -1.0], (int(ned.sum()), 1)))
     melding(d_.min() >= 0.5, f"hovedkortets komponenter: minst {d_.min():.2f} mm ned til bunnen og innmaten (krav 0,5)")
+
+if os.path.exists(f"{ASM}/pogo.stl"):   # dokk-kontakten (hunndelen av pogo-kontakten) i bunnen
+    pogo = trimesh.load(f"{ASM}/pogo.stl")
+    naer = []
+    for x in [d for d in DELER if d not in ("bunn", "topp", "logo", "vindu", "hetter", "symboler", "skjerm")] + ["kort"]:
+        if x not in A:
+            continue
+        v = overlapp(pogo, A[x])
+        d_ = trimesh.proximity.closest_point(A[x], pogo.vertices)[1].min()
+        if v > 0.001 or d_ < 0.5:
+            naer.append(f"{x} ({d_:.2f} mm)")
+    melding(not naer, "dokk-kontakten i bunnen: minst 0,5 mm til alle komponenter og ledninger" if not naer else "dokk-kontakten er for nær: " + ", ".join(naer))
+    bd = f"{STL}/bunn_dokk.stl"
+    if os.path.exists(bd):
+        b_ = trimesh.load(bd)
+        melding(b_.is_watertight and len(b_.split()) == 1 and overlapp(pogo, b_) < 0.001 and abs(pogo.bounds[0][2]) < 0.05,
+                f"bunn_dokk.stl er tett, ett legeme, og hunndelen ligger i flukt med undersiden (z = {pogo.bounds[0][2]:.2f})")
 
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)

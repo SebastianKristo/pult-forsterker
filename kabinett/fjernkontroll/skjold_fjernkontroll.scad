@@ -330,6 +330,48 @@ module topp() {
 module logo2d() { translate([W/2, 5.2 + 1.6]) text("SKJOLD", size = 3.0, font = "Liberation Sans:style=Bold", halign = "center", valign = "center", spacing = 1.35); }
 module logo() { translate([0, 0, H - 0.5]) linear_extrude(0.5) logo2d(); }   // flaten er flat her (godt innenfor fasen)
 
+// ---------- dokk-kontakt: hunndelen av en magnetisk pogo-kontakt (2 pinner) flatt i bunnen ----------
+// AliExpress «DC Magnetic Pogo Pin Connector», 1 sett (han + hun), «2Pin with ear 2.80mm». Mål din og juster her.
+dokk_kontakt = false;            // true: lomme for hunndelen (bunn_dokk.stl); false: hel bunn
+POGO_L = 21;                     // lengde med ører
+POGO_KROPP = 15;                 // kroppens lengde (uten ører)
+POGO_B = 6;                      // bredde
+POGO_HH = 3.0;                   // hunndelens høyde (flate puter)
+POGO_HM = 4.5;                   // handelens høyde (uten fjærpinner)
+POGO_PINNE = 0.9;                // fjærpinnene stikker så langt ut over handelen (presses 0,5–1,0 mm)
+POGO_ORE_T = 1.2;                // ørenes tykkelse (øverst på hunndelen, mot innsiden)
+POGO_HULL = 1.8;                 // hullene i ørene
+POGO_HULL_A = 18;                // avstand mellom hullene
+POGO_DELING = 2.8;               // avstand mellom pinnene (2,54 eller 2,80)
+POGO_ORE = true;                 // false: utgaven uten ører (limes i en trang lomme)
+POGO_X = 40; POGO_Y = 43.5;      // senter i bunnen (x tvers, y fra halen); langs y, til høyre for laderen og USB-C
+module pogo_2d(o = 0) {          // omrisset sett ovenfra (langs y)
+  if (POGO_ORE) hull() for (s = [-1, 1]) translate([0, s * (POGO_L/2 - POGO_B/2)]) circle(d = POGO_B + 2*o, $fn = 32);
+  else square([POGO_B + 2*o, POGO_KROPP + 2*o], center = true);
+}
+module pogo_hunn() {             // på plass i bunnen: flaten (putene) i z = 0
+  translate([POGO_X, POGO_Y, 0]) {
+    color([0.12, 0.12, 0.13]) difference() {
+      union() {
+        translate([0, 0, POGO_HH/2]) cube([POGO_B, POGO_KROPP, POGO_HH], center = true);
+        if (POGO_ORE) translate([0, 0, POGO_HH - POGO_ORE_T]) linear_extrude(POGO_ORE_T) pogo_2d();
+      }
+      if (POGO_ORE) for (s = [-1, 1]) translate([0, s * POGO_HULL_A/2, -1]) cylinder(d = POGO_HULL, h = 10, $fn = 16);
+    }
+    color([0.8, 0.65, 0.3]) for (s = [-1, 1]) translate([0, s * POGO_DELING/2, -0.01]) cylinder(d = 1.6, h = 0.3, $fn = 16);
+  }
+}
+module pogo_lomme() {            // kuttes i bunnen: kroppen gjennom gulvet, ørene over
+  translate([POGO_X, POGO_Y, 0]) {
+    translate([0, 0, -1]) linear_extrude(POGO_HH + 1 - (POGO_ORE ? POGO_ORE_T : 0) + 0.01) offset(0.12) square([POGO_B, POGO_KROPP], center = true);
+    if (POGO_ORE) translate([0, 0, POGO_HH - POGO_ORE_T]) linear_extrude(POGO_ORE_T + 3) pogo_2d(0.2);
+    if (POGO_ORE) for (s = [-1, 1]) translate([0, s * POGO_HULL_A/2, POGO_HH - POGO_ORE_T - 2.6]) cylinder(d = 1.3, h = 3, $fn = 12);   // forbor M1,6
+  }
+}
+module pogo_ramme() {            // innvendig ramme som ørene ligger på (z = POGO_HH − ørene), med plass til skruene
+  translate([POGO_X, POGO_Y, tB - 0.01]) linear_extrude(POGO_HH - (POGO_ORE ? POGO_ORE_T : 0) - tB + 0.01) offset(1.6) pogo_2d();
+}
+
 // ---------- bunnen ----------
 module bunn() {
   difference() {
@@ -345,7 +387,9 @@ module bunn() {
         translate([usbX - 7, -1]) square([14, t + lipT + 2]);   // ikke over USB-C-kontakten
         if (hk) translate([2.2, L - 177 - 10.5]) square([3, 21]); }   // tynnere leppe (0,3 mm) der ESP-modulens antenne stikker ut over kortkanten
       intersection() { hulrom(); bunn_innmat(); }
+      if (dokk_kontakt) pogo_ramme();
     }
+    if (dokk_kontakt) pogo_lomme();
     // skruehull med forsenket hode
     for (s = SKRUER) translate([s[0], s[1], -1]) { cylinder(d = klar, h = 20, $fn = 16); cylinder(d = hodeD, h = hodeH + 1, $fn = 24); }
     // USB-C i halen
@@ -518,6 +562,7 @@ else if (part == "A_vib") vibbryter();
 else if (part == "A_motor") motor();
 else if (part == "A_flex") flatkabler();
 else if (part == "A_ledninger") ledninger();
+else if (part == "A_pogo") pogo_hunn();
 else if (part == "hk_3d") {   // hovedkortet alene, sett fra undersiden (komponentene) – bruk med elektronikk="hovedkort"
   color([0.05, 0.35, 0.18]) tastekort(); color([0.85, 0.85, 0.85]) brytere();
   for (d = HK_DELER) if (d[5] < 0)

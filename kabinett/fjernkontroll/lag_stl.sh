@@ -13,7 +13,8 @@ for v in kort full; do
   for p in $P; do
     openscad -q -D "part=\"$p\"" -D "variant=\"$v\"" -o "$S/$p.stl" skjold_fjernkontroll.scad &
   done
-  for p in topp bunn logo vindu hetter symboler kort skjerm batteri mcu lader ir vib motor flex ledninger; do
+  openscad -q -D 'part="bunn"' -D dokk_kontakt=true -D "variant=\"$v\"" -o "$S/bunn_dokk.stl" skjold_fjernkontroll.scad &   # med lomme for dokk-kontakten
+  for p in topp bunn logo vindu hetter symboler kort skjerm batteri mcu lader ir vib motor flex ledninger pogo; do
     openscad -q -D "part=\"A_$p\"" -D "variant=\"$v\"" -o "$A/$p.stl" skjold_fjernkontroll.scad &
   done
   # tasteoppsettene: hele toppen og oppsettets hetter i $S/oppsett_<navn>/, montert stilling i $A/oppsett_<navn>/

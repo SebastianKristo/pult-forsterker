@@ -33,7 +33,7 @@ FUNKSJON = {
     "LCD_MOSI": "skjerm SPI MOSI", "LCD_SCK": "skjerm SPI SCK", "LCD_DC": "skjerm DC", "LCD_RES": "skjerm RES",
     "LCD_BL": "baklys PWM (→ Q3)", "USB_DN": "USB D−", "USB_DP": "USB D+", "BOOT": "BOOT-knapp (strappinne)",
     "VBAT_ADC": "batterispenning (1 M / 1 M)", "U0TXD": "UART TX (testpunkt)", "U0RXD": "UART RX (testpunkt)",
-    "EN": "reset (10 kΩ / 1 µF, RESET-knapp)", "3V3": "forsyning", "GND": "jord",
+    "EN": "reset (10 kΩ / 1 µF, RESET-knapp)", "DOKK": "dokken (POGO+ via 68 k / 100 k)", "3V3": "forsyning", "GND": "jord",
 }
 BLOKKER = [
     ("1  ESP32-S3-WROOM-1 med reset og BOOT", ["U1", "C1", "C2", "R1", "C3", "SW44", "SW45", "R2"]),
@@ -41,8 +41,8 @@ BLOKKER = [
                                                          "D1", "Q1", "R7", "R8", "U4", "C6", "C7", "R9", "R10", "C8", "J2"]),
     ("3  Skjerm, berøring, skjermstrøm og baklys", ["J3", "J4", "Q2", "R11", "C9", "Q3", "R12", "R13", "R14", "R24", "R25", "R18"]),
     ("4  TCA9555 og I²C", ["U5", "U6", "U7", "C10", "C11", "C12", "R15", "R16", "R17"]),
-    ("5  IR, motor, vibrasjonsbryter og testpunkter", ["J5", "Q4", "R19", "R20", "C13", "Q5", "R21", "R22", "D2", "TP1", "TP2",
-                                                      "TP3", "TP4", "R23"] + [f"TP{i}" for i in range(5, 16)]),
+    ("5  IR, motor, vibrasjonsbryter, dokken og testpunkter", ["J5", "Q4", "R19", "R20", "C13", "Q5", "R21", "R22", "D2", "TP1", "TP2",
+                                                      "TP3", "TP4", "R23", "TP16", "TP17", "D3", "R26", "R27"] + [f"TP{i}" for i in range(5, 16)]),
 ]
 
 

@@ -265,7 +265,7 @@ jobs:
           path: "*.pdf"
 
   print3d:
-    name: 3D-filer (Kassett, Hjul, Røst, Kassetthylle, Hjul S, Radio og Fjernkontroll)
+    name: 3D-filer (Kassett, Hjul, Røst, Kassetthylle, Hjul S, Radio, Fjernkontroll og Dokk)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -278,7 +278,8 @@ jobs:
           (cd kabinett && zip -qr ../ut/skjold-hylle-3d.zip hylle -x '*/__pycache__/*') && zip -qj ut/skjold-hylle-3d.zip esphome/skjold-hylle.yaml
           (cd kabinett && zip -qr ../ut/skjold-hjul-s-3d.zip hjul-s -x '*/__pycache__/*') && zip -qj ut/skjold-hjul-s-3d.zip esphome/skjold-hjul-s.yaml
           (cd kabinett && zip -qr ../ut/skjold-radio-3d.zip radio -x '*/__pycache__/*' 'radio/asm/*') && zip -qj ut/skjold-radio-3d.zip pi/skjold_radio_knapper.py pi/skjold-radio-knapper.service pi/config/radio_pins.yaml
-          (cd kabinett && zip -qr ../ut/skjold-fjernkontroll-3d.zip fjernkontroll -x '*/__pycache__/*' 'fjernkontroll/asm/*' 'fjernkontroll/asm_full/*' 'fjernkontroll/asm_kort/*') && zip -qj ut/skjold-fjernkontroll-3d.zip esphome/skjold-fjernkontroll.yaml esphome/skjold-fjernkontroll-full.yaml esphome/skjold-fjernkontroll-budsjett.yaml esphome/skjold-fjernkontroll-gt911.yaml
+          (cd kabinett && zip -qr ../ut/skjold-fjernkontroll-3d.zip fjernkontroll -x '*/__pycache__/*' 'fjernkontroll/asm/*' 'fjernkontroll/asm_full/*' 'fjernkontroll/asm_kort/*' 'fjernkontroll/asm_hk/*' 'fjernkontroll/dokk/*') && zip -qj ut/skjold-fjernkontroll-3d.zip esphome/skjold-fjernkontroll.yaml esphome/skjold-fjernkontroll-full.yaml esphome/skjold-fjernkontroll-hovedkort.yaml esphome/skjold-fjernkontroll-tastekort-a.yaml esphome/skjold-fjernkontroll-budsjett.yaml esphome/skjold-fjernkontroll-gt911.yaml esphome/skjold_ui.h esphome/blueprints/skjold_fjernkontroll.yaml
+          (cd kabinett/fjernkontroll && zip -qr ../../ut/skjold-dokk-3d.zip dokk -x '*/__pycache__/*' 'dokk/asm/*')
           # ferdige plater for slicer (Creality Print / OrcaSlicer) legges også ut hver for seg
           find kabinett/kassett kabinett/hjul kabinett/rost kabinett/hylle kabinett/hjul-s kabinett/radio kabinett/fjernkontroll -name '*.3mf' -exec cp {} ut/ \;
           ls -la ut

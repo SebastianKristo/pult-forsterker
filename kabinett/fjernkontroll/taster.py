@@ -8,6 +8,7 @@ Kjør:  python3 taster.py
            ../../esphome/skjold-fjernkontroll.yaml       (standard/kort: blokkene mellom «# >>> navneliste/hendelser/taster» og «# <<< …»)
            ../../esphome/skjold-fjernkontroll-full.yaml  (laget fra den over, med full variants taster og 3 × TCA9555)
            ../../esphome/skjold-fjernkontroll-hovedkort.yaml  (standard på hovedkortet: samme taster, hovedkortets GPIO-er)
+           ../../esphome/skjold-fjernkontroll-tastekort-a.yaml  (håndkoblet med tastekort A: oppsett A, én TCA9555)
   og skriver koblingstabellen for standard (kort) til stdout, til LES_MEG.md (python3 taster.py full for full).
 
 Koordinater: x = tvers (0 … W, venstre kant = 0), n = avstand fra nesen (IR-enden) målt langs fjernkontrollen.
@@ -483,13 +484,71 @@ def hovedkort_yaml(kort):
             ("    pin: { tca9555: $ekstra_hub, number: 14, mode: { input: true }, inverted: true }   # TP4056 CHRG (lav = lader)",
              "    pin: { number: GPIO17, inverted: true }   # TP4056 CHRG (åpen drain, 10 kΩ til 3V3; lav = lader)"),
             ("    pin: { number: GPIO4, mode: { input: true }, allow_other_uses: true }",
-             "    pin: { number: GPIO6, mode: { input: true }, allow_other_uses: true }")]:
+             "    pin: { number: GPIO6, mode: { input: true }, allow_other_uses: true }"),
+            ("    pin: { tca9555: $ekstra_hub, number: 15, mode: { input: true } }   # pogo + via 68 kΩ / 100 kΩ (høy = i dokken)",
+             "    pin: { number: GPIO40, mode: { input: true } }   # pogo + (POGO) via R26 68 kΩ / R27 100 kΩ (høy = i dokken)")]:
         assert k.count(a) == 1, a
         k = k.replace(a, b)
     assert "ekstra_hub" not in k and "GPIO43" not in k and "GPIO3\n" not in k
     hode = ("# HOVEDKORT – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her: endre\n"
             "# skjold-fjernkontroll.yaml og kjør python3 taster.py. Samme fjernkontroll (samme navn, taster og hendelser) på det\n"
             "# ferdige kretskortet i kabinett/fjernkontroll/hovedkort/ i stedet for den håndkoblede SuperMini-versjonen.\n")
+    return hode + k
+
+
+def tastekort_a():
+    """Tastekort A (bare tasteoppsett A, én TCA9555 0x20): [(funksjon, x, n, pinne)] i pinnerekkefølge.
+    Pinne 0–13 = tastene, 14 = skjermstrøm (P1_6, utgang), 15 = dokken (P1_7, inngang)."""
+    bruk("kort")
+    b = brytere()
+    fast = [(bid, x, n) for bid, nv, x, n, hid in b if hid != "front"]
+    k = kart("rutenett")
+    rute = {k[int(bid[1:])]: (x, n) for bid, nv, x, n, hid in b if hid == "front" and k[int(bid[1:])]}
+    rek = ["tilbake", "avslutt", "spill_pause", "demp", "vol_opp", "vol_ned"]
+    ut = [(f, x, n) for f, x, n in fast] + [(f,) + rute[f] for f in rek]
+    assert len(ut) == 14
+    return [(f, x, n, i) for i, (f, x, n) in enumerate(ut)]
+
+
+def tastekort_a_yaml(kort):
+    """esphome/skjold-fjernkontroll-tastekort-a.yaml: håndkoblet med tastekort A (bare oppsett A, én TCA9555).
+    Skjermstrøm på P1_6 og dokken på P1_7; ingen vibrasjonsmotor og ingen ladestatus (CHRG) i denne utgaven."""
+    k = kort
+    for a, b in [
+            ("# Dette er standardvarianten (uten talltastene og smarthus-raden). Full variant med talltaster og smarthus-rad:\n"
+             "# skjold-fjernkontroll-full.yaml, laget av kabinett/fjernkontroll/taster.py fra denne fila.\n", ""),
+            ("3 × TCA9555 på tastekortet (8 faste taster + vibrator, skjermstrøm og ladestatus, og 35 brytere",
+             "tastekort A med 1 × TCA9555 (14 taster i oppsett A, skjermstrøm og dokken; ikke vibrator eller ladestatus,"),
+            ("  ekstra_hub: tca_c                  # brikken med vibrator, skjermstrøm og ladestatus (full variant: tca_d)\n",
+             "  ekstra_hub: tca_a                  # tastekort A: én brikke (skjermstrøm P1_6, dokken P1_7)\n"),
+            ("  - { id: tca_b, i2c_id: bus_a, address: 0x21 }\n  - { id: tca_c, i2c_id: bus_a, address: 0x22 }\n", ""),
+            ("    pin: { tca9555: $ekstra_hub, number: 13, mode: { output: true }, inverted: true }   # lav = på",
+             "    pin: { tca9555: $ekstra_hub, number: 14, mode: { output: true }, inverted: true }   # P1_6, lav = på"),
+            ("  - platform: gpio\n    id: vibrator\n    pin: { tca9555: $ekstra_hub, number: 12, mode: { output: true } }",
+             "  - platform: template                # tastekort A: ingen vibrasjonsmotor\n    id: vibrator\n    type: binary\n    write_action: []"),
+            ("  - platform: gpio\n    id: lader\n    name: Lader\n    pin: { tca9555: $ekstra_hub, number: 14, mode: { input: true }, inverted: true }   # TP4056 CHRG (lav = lader)",
+             "  - platform: template                # tastekort A: CHRG er ikke koblet\n    id: lader\n    name: Lader\n    lambda: 'return false;'")]:
+        assert k.count(a) == 1, a
+        k = k.replace(a, b)
+    taster_ = ["# >>> taster (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
+               "  # Tastekort A: én TCA9555 (0x20), pinne 0–13 = tastene i oppsett A."]
+    vekk = []
+    for f, x, n, p in tastekort_a():
+        taster_ += [f"  - platform: gpio", f"    id: t_{f}", f"    name: \"Tast {f}\"", f"    internal: true",
+                    f"    pin: {{ tca9555: tca_a, number: {p}, mode: {{ input: true }}, inverted: true }}",
+                    f"    filters: [ {{ delayed_on: 10ms }}, {{ delayed_off: 15ms }} ]",
+                    f"    on_press: [ {{ script.execute: {{ id: tast_ned, navn: \"{f}\" }} }} ]",
+                    f"    on_release: [ {{ script.execute: {{ id: tast_opp, navn: \"{f}\" }} }} ]"]
+        vekk.append(f'{{0, {p}, "{f}", -1}}')
+    taster_.append("# <<< taster")
+    k = re.sub(r"# >>> taster.*?# <<< taster", lambda _m: "\n".join(taster_), k, flags=re.S)
+    vb = yaml_blokker()["vekking"].split("\n")
+    vb = [("            " + ", ".join(vekk) + "};") if l.startswith("            {") else l for l in vb]
+    vb = [("            switch (b.c) { case 0: nede = !id(tca_a).digital_read(b.p); break; }") if "switch (b.c)" in l else l for l in vb]
+    k = re.sub(r"# >>> vekking.*?# <<< vekking", lambda _m: "\n".join(vb), k, flags=re.S)
+    assert "tca_b" not in k and "tca_c" not in k
+    hode = ("# TASTEKORT A – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her.\n"
+            "# Håndkoblet utgave med tastekort A (kabinett/fjernkontroll/tastekort_a/): bare tasteoppsett A, én TCA9555.\n")
     return hode + k
 
 
@@ -524,6 +583,7 @@ def main():
     open(yml.replace(".yaml", "-full.yaml"), "w").write(full_yaml(ny))
     bruk("kort")
     open(yml.replace(".yaml", "-hovedkort.yaml"), "w").write(hovedkort_yaml(ny))
+    open(yml.replace(".yaml", "-tastekort-a.yaml"), "w").write(tastekort_a_yaml(ny))
     bruk("kort")
     import sys
     if len(sys.argv) > 1:
