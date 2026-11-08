@@ -46,7 +46,7 @@ def scad(part, ut):
 procs = []
 for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "rute"):
     procs.append(subprocess.Popen(["openscad", "-q", "-D", f'part="{p}"', "-o", f"stl/{p}.stl", SC]))
-for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "logo", "stenger", "rute", "skjerm", "skjermflate", "element"):
+for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "logo", "stenger", "rute", "skjerm", "skjermflate", "element", "knappekort", "ec11"):
     procs.append(subprocess.Popen(["openscad", "-q", "-D", f'part="a_{p}"', "-o", f"stl_asm/{p}.stl", SC]))
 procs.append(subprocess.Popen(["openscad", "-q", "-D", 'part="logo_kutt"', "-o", "stl_asm/logo_kutt.stl", SC]))
 for pr in procs:
@@ -144,9 +144,9 @@ for n in DELER:
         and m.extents[0] <= 250 and m.extents[1] <= 250 and m.extents[2] <= 250
     meld(god, f"{n:7s} tett={m.is_watertight} deler={k} {m.volume / 1000:6.1f} cm³ {m.extents.round(1)} mm")
 
-A = {n: trimesh.load(f"stl_asm/{n}.stl") for n in ("kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "skjerm", "element")}
+A = {n: trimesh.load(f"stl_asm/{n}.stl") for n in ("kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "skjerm", "element", "knappekort", "ec11")}
 LOV = {("kjerne", "bunn"), ("kjerne", "lokk"), ("bunn", "hylse"), ("lokk", "hylse"), ("lokk", "knapp"), ("hylse", "logo"), ("lokk", "knott"),
-       ("lokk", "rute"), ("lokk", "skjerm"), ("kjerne", "element")}
+       ("lokk", "rute"), ("lokk", "skjerm"), ("kjerne", "element"), ("lokk", "knappekort"), ("lokk", "ec11"), ("knapp", "knappekort"), ("knott", "ec11")}
 import itertools
 feil = []
 for x, y in itertools.combinations(A, 2):
