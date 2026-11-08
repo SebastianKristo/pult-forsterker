@@ -1,4 +1,4 @@
-"""Legg skjermbildet (render/skjerm-1-aktiviteter.png, laget av lag_skjermbilder.py) inn på skjermen i OpenSCAD-bildene.
+"""Legg skjermbildet (render/skjerm-1-start.png, laget av lag_skjermbilder.py) inn på skjermen i OpenSCAD-bildene.
 
 OpenSCAD kan ikke legge en tekstur på en flate. lag_render.sh tegner derfor det aktive området på skjermen i ren magenta
 (skjerm="nokkel"), og i tillegg bare det aktive området alene med samme kamera (part="skjermflate"), delt i fire fargede
@@ -56,7 +56,7 @@ def perspective_coeffs(dst, src):
     return np.linalg.solve(np.array(m, float), np.array(b, float)).tolist()
 
 
-def main(render, flate, shot="render/skjerm-1-aktiviteter.png"):
+def main(render, flate, shot="render/skjerm-1-start.png"):
     img = Image.open(render).convert("RGB")
     vis = key_mask(img)
     qs = kvadranter(Image.open(flate))

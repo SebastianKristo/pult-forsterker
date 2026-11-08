@@ -1,19 +1,19 @@
 #!/bin/sh
 # Renders av Skjold Fjernkontroll til render/ (OpenSCAD, fargeskjema Tomorrow, 1600 × 1100).
 # 01–09 viser standard (kort variant), 21–25 Bone White-fargene, *_full.png full variant (valgfri).
-# Skjermen viser aktivitetslista (render/skjerm-1-aktiviteter.png, laget av lag_skjermbilder.py): OpenSCAD tegner det
+# Skjermen viser Start-siden (render/skjerm-1-start.png, laget av lag_skjermbilder.py): OpenSCAD tegner det
 # aktive området i magenta, og skjerm_i_render.py legger skjermbildet inn i perspektiv (som Skjold Radio).
 # Uten skjerm (CI/server): xvfb-run -a ./lag_render.sh
 cd "$(dirname "$0")"
 mkdir -p render
-[ -f render/skjerm-1-aktiviteter.png ] || python3 lag_skjermbilder.py
+[ -f render/skjerm-1-start.png ] || python3 lag_skjermbilder.py
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 r() {   # navn  samlet|eksplodert  kamera  lys|mork  [full|kort]  [oppsett]
   E=0; P=samlet; [ "$2" = eksplodert ] && { E=25; P=eksplodert; }
   V=${5:-kort}; O=${6:-rutenett}
   ( openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D "part=\"$P\"" -D "farge=\"$4\"" -D "variant=\"$V\"" -D "oppsett=\"$O\"" -D 'skjerm="nokkel"' -o "render/$1.png" skjold_fjernkontroll.scad
     openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D 'part="skjermflate"' -D "variant=\"$V\"" -D "skjermE=$E" -o "$TMP/$1.png" skjold_fjernkontroll.scad
-    python3 skjerm_i_render.py "render/$1.png" "$TMP/$1.png" render/skjerm-1-aktiviteter.png ) &
+    python3 skjerm_i_render.py "render/$1.png" "$TMP/$1.png" render/skjerm-1-start.png ) &
 }
 # standard (kort variant, 201,5 mm)
 SKRA=30,101.75,7,50,0,-38,353

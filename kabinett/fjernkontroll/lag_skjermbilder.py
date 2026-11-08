@@ -1,10 +1,11 @@
 """Skjermbilder av brukerflaten på Skjold Fjernkontroll (240 × 320, tegnet i 3× oppløsning) til render/ og 3D-siden.
 
-Bildene følger oppsettet i esphome/skjold-fjernkontroll.yaml (LVGL): statuslinje øverst, innhold, og fire faner nederst
-(Aktiviteter · Spiller · Kilder · Hjem). De er tegnet med Pillow, ikke tatt fra en ekte skjerm – fargene, skriften (Sora)
-og plasseringen er de samme som i fastvaren, men detaljer kan avvike.
+Bildene følger oppsettet i esphome/skjold-fjernkontroll.yaml (LVGL): «Styrer»-brikken og batteriet øverst, innhold,
+og fire faner nederst (Start · Enhet · Hjem · Mer). De er tegnet med Pillow, ikke tatt fra en ekte skjerm – fargene,
+skriften (Sora), målene og plasseringen er de samme som i fastvaren, men detaljer kan avvike. Appnavn, titler og
+lys er eksempler.
 
-Bruk:  python3 lag_skjermbilder.py      → render/skjerm-1-aktiviteter.png … skjerm-5-laer.png"""
+Bruk:  python3 lag_skjermbilder.py      → render/skjerm-1-start.png … skjerm-8-mer.png"""
 import math
 import os
 
@@ -44,27 +45,36 @@ def tekst(d, xy, s, f, fill=HVIT, anchor="la"):
     d.text((xy[0] * S, xy[1] * S), s, font=f, fill=fill, anchor=anchor)
 
 
-def status(d, rom="Stue", bat=87):
-    tekst(d, (10, 9), rom, font("semi", 11), GULL)
-    # Wi-Fi-buer og batteri til høyre
-    cx, cy = 186, 18
-    for i, rad in enumerate((3, 6, 9)):
-        d.arc([(cx - rad) * S, (cy - rad) * S, (cx + rad) * S, (cy + rad) * S], 225, 315, fill=HVIT, width=int(1.6 * S))
-    r(d, (198, 10, 220, 20), 2, outline=HVIT, width=1)
-    r(d, (200, 12, 200 + 18 * bat / 100, 18), 1, fill=HVIT)
-    d.rectangle([221 * S, 13 * S, 223 * S, 17 * S], fill=HVIT)
+def status(d, enhet="Apple TV", ik="spill", bat=87, lader=False):
+    """«Styrer»-brikken (enheten tastene virker på) og batteriet."""
+    r(d, (6, 4, 166, 28), 12, fill=KORT)
+    ikon(d, ik, 17, 16, GULL, 0.55)
+    tekst(d, (28, 9), enhet, font("semi", 11), GULL)
+    d.line([(152 * S, 14 * S), (156 * S, 18 * S), (160 * S, 14 * S)], fill=GRAA, width=int(1.4 * S))
+    if lader:
+        d.polygon([(184 * S, 10 * S), (180 * S, 17 * S), (184 * S, 17 * S), (182 * S, 23 * S), (188 * S, 15 * S), (184 * S, 15 * S)], fill=GULL)
+    r(d, (194, 11, 214, 21), 2, outline=HVIT, width=1)
+    r(d, (196, 13, 196 + 16 * bat / 100, 19), 1, fill=HVIT)
+    d.rectangle([215 * S, 14 * S, 217 * S, 18 * S], fill=HVIT)
+    tekst(d, (232, 11), f"{bat}", font("semi", 8), HVIT, "ra")
 
 
-FANER = ["Aktiviteter", "Spiller", "Kilder", "Hjem"]
+FANER = [("hus", "Start"), ("rutenett", "Enhet"), ("lys", "Hjem"), ("tannhjul", "Mer")]
 
 
 def faner(d, aktiv):
-    d.line([0, 288 * S, W * S, 288 * S], fill=KANT, width=S)
-    for i, navn in enumerate(FANER):
+    d.line([0, 288 * S, W * S, 288 * S], fill=(44, 44, 48), width=S)
+    for i, (ik, navn) in enumerate(FANER):
         x = 30 + i * 60
         on = i == aktiv
-        ikon(d, ["liste", "spill", "radio", "hus"][i], x, 299, GULL if on else GRAA, 1.0)
+        ikon(d, ik, x, 298, GULL if on else GRAA, 0.8)
         tekst(d, (x, 309), navn, font("semi" if on else "reg", 8), GULL if on else GRAA, "ma")
+
+
+def knapp(d, box, tekst_, valgt=False, f=None, fill=None, farge=None):
+    r(d, box, 12, fill=fill or ((52, 44, 30) if valgt else KORT), outline=GULL if valgt else None, width=1)
+    x0, y0, x1, y1 = box
+    tekst(d, ((x0 + x1) / 2, (y0 + y1) / 2), tekst_, f or font("semi", 10), farge or (GULL if valgt else HVIT), "mm")
 
 
 def ikon(d, navn, x, y, c, k=1.0):
@@ -108,33 +118,30 @@ def ikon(d, navn, x, y, c, k=1.0):
     elif navn == "lys":
         d.ellipse([X - 5 * u, Y - 8 * u, X + 5 * u, Y + 2 * u], outline=c, width=w)
         d.line([X - 3 * u, Y + 5 * u, X + 3 * u, Y + 5 * u], fill=c, width=w)
+    elif navn == "rutenett":
+        for dx in (-4, 4):
+            for dy in (-4, 4):
+                d.rounded_rectangle([X + (dx - 3) * u, Y + (dy - 3) * u, X + (dx + 3) * u, Y + (dy + 3) * u], 1 * u, outline=c, width=w)
+    elif navn == "tannhjul":
+        d.ellipse([X - 5 * u, Y - 5 * u, X + 5 * u, Y + 5 * u], outline=c, width=w)
+        for a in range(0, 360, 60):
+            ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
+            d.line([X + 5 * u * ca, Y + 5 * u * sa, X + 8 * u * ca, Y + 8 * u * sa], fill=c, width=int(w * 1.6))
+    elif navn == "pause":
+        d.rectangle([X - 4 * u, Y - 6 * u, X - 1 * u, Y + 6 * u], fill=c)
+        d.rectangle([X + 1 * u, Y - 6 * u, X + 4 * u, Y + 6 * u], fill=c)
+    elif navn == "hake":
+        d.line([X - 5 * u, Y, X - 1.5 * u, Y + 4 * u, X + 6 * u, Y - 5 * u], fill=c, width=w, joint="curve")
+    elif navn == "pil":
+        d.polygon([(X - 3 * u, Y - 5 * u), (X - 3 * u, Y + 5 * u), (X + 4 * u, Y)], fill=c)
     elif navn == "skjold":
         d.polygon([(X - 6 * u, Y - 7 * u), (X + 6 * u, Y - 7 * u), (X + 6 * u, Y), (X, Y + 8 * u), (X - 6 * u, Y)], outline=c, width=w)
 
 
-def aktiviteter():
-    im, d = ny()
-    status(d)
-    tekst(d, (10, 30), "Aktiviteter", font("semi", 19))
-    rader = [("tv", "Se TV", "TV · Skjold · Stuelys 40 %", True), ("note", "Musikk", "Skjold · P2 Klassisk", False),
-             ("film", "Film", "Projektor · Kinolys", False), ("sol", "God morgen", "Radio · Lys 70 %", False),
-             ("maane", "God natt", "Alt av om 20 min", False)]
-    y = 58
-    for ik, navn, under, aktiv in rader:
-        r(d, (8, y, 232, y + 40), 10, fill=KORT, outline=GULL if aktiv else None, width=1 if aktiv else 0)
-        d.ellipse([16 * S, (y + 6) * S, 44 * S, (y + 34) * S], fill=(52, 44, 30) if aktiv else (44, 44, 48))
-        ikon(d, ik, 30, y + 20, GULL if aktiv else HVIT, 0.85)
-        tekst(d, (54, y + 7), navn, font("semi", 13))
-        tekst(d, (54, y + 24), under, font("reg", 8.5), GRAA)
-        if aktiv:
-            tekst(d, (224, y + 13), "PÅ", font("semi", 8), GULL, "ra")
-        y += 45
-    faner(d, 0)
-    return im
 
 
 def cover(size):
-    """Et enkelt, oppdiktet omslag (gradient og sirkler) – ikke et ekte albumomslag."""
+    """Et enkelt, oppdiktet omslag (gradient og sirkler) – ikke et ekte omslag."""
     c = Image.new("RGB", (size, size))
     p = c.load()
     for yy in range(size):
@@ -142,116 +149,246 @@ def cover(size):
             t = (xx + yy) / (2 * size)
             p[xx, yy] = (int(40 + 150 * t), int(70 + 60 * (1 - t)), int(110 + 80 * (1 - t)))
     dd = ImageDraw.Draw(c)
-    for i, rad in enumerate((0.42, 0.30, 0.18)):
+    for rad in (0.42, 0.30, 0.18):
         rr = rad * size
         dd.ellipse([size * 0.62 - rr, size * 0.40 - rr, size * 0.62 + rr, size * 0.40 + rr], outline=(240, 220, 170), width=max(2, size // 60))
     return c
 
 
-def spiller():
+# samme farger og initialer som skjold_ui.h (flisfarge, initialer)
+PALETT = [0x7A2E2E, 0x2E4F7A, 0x2E6B4F, 0x6B4F2E, 0x5A2E6B, 0x2E6468, 0x6B2E52, 0x46572E, 0x3B3B6E, 0x6E4A2E]
+
+
+def flisfarge(navn):
+    h = 2166136261
+    for c in navn.encode():
+        h = ((h ^ c) * 16777619) & 0xFFFFFFFF
+    v = PALETT[h % 10]
+    return (v >> 16, (v >> 8) & 255, v & 255)
+
+
+def initialer(navn):
+    ord_ = navn.split()
+    if len(ord_) >= 2:
+        return ord_[0][0] + ord_[1][0]
+    return ord_[0][0] + (ord_[0][1].lower() if len(ord_[0]) > 1 and ord_[0][1].isupper() else ord_[0][1:2])
+
+
+def flis(d, x, y, navn, w=68, h=58, fav=False):
+    r(d, (x, y, x + w, y + h), 14, fill=flisfarge(navn), outline=GULL if fav else None, width=2 if fav else 1)
+    tekst(d, (x + w / 2, y + 7), initialer(navn), font("semi", 19), HVIT, "ma")
+    tekst(d, (x + w / 2, y + h - 6), navn, font("reg", 9), (218, 215, 207), "md")
+
+
+def bar(d, x, y, w, h, andel):
+    r(d, (x, y, x + w, y + h), h / 2, fill=(52, 52, 56))
+    r(d, (x, y, x + max(h, w * andel), y + h), h / 2, fill=GULL)
+
+
+AKT = [("tv", "Se TV"), ("spill", "Apple TV"), ("film", "Film"), ("note", "Musikk"), ("maane", "God natt"), ("av", "Alt av")]
+
+
+def start():
     im, d = ny()
-    status(d, "Stue · Skjold Radio")
-    cv = cover(132 * S)
-    m = Image.new("L", cv.size, 0)
-    ImageDraw.Draw(m).rounded_rectangle([0, 0, cv.size[0], cv.size[1]], 12 * S, fill=255)
-    im.paste(cv, (54 * S, 34 * S), m)
-    d = ImageDraw.Draw(im)
-    tekst(d, (120, 174), "Morgenklassisk", font("semi", 14), anchor="ma")
-    tekst(d, (120, 194), "NRK P2 · Radio", font("reg", 10), GRAA, "ma")
-    # transport
-    for x, k in ((66, "forrige"), (120, "pause"), (174, "neste")):
-        if k == "pause":
-            d.ellipse([(x - 17) * S, 213 * S, (x + 17) * S, 247 * S], fill=GULL)
-            d.rectangle([(x - 6) * S, 223 * S, (x - 2) * S, 237 * S], fill=BG)
-            d.rectangle([(x + 2) * S, 223 * S, (x + 6) * S, 237 * S], fill=BG)
-        else:
-            s = -1 if k == "forrige" else 1
-            d.polygon([((x - 5 * s) * S, 223 * S), ((x - 5 * s) * S, 237 * S), ((x + 4 * s) * S, 230 * S)], fill=HVIT)
-            d.rectangle([min((x + 4 * s) * S, (x + 6 * s) * S), 223 * S, max((x + 4 * s) * S, (x + 6 * s) * S), 237 * S], fill=HVIT)
-    # volum
-    tekst(d, (14, 260), "Volum", font("reg", 9), GRAA)
-    r(d, (60, 262, 200, 268), 3, fill=KANT)
-    r(d, (60, 262, 60 + 140 * 0.38, 268), 3, fill=GULL)
-    d.ellipse([(60 + 140 * 0.38 - 6) * S, 259 * S, (60 + 140 * 0.38 + 6) * S, 271 * S], fill=HVIT)
-    tekst(d, (226, 260), "38", font("semi", 10), HVIT, "ra")
+    status(d)
+    r(d, (8, 34, 232, 118), 16, fill=(26, 26, 29))
+    tekst(d, (22, 42), "Slow Horses", font("semi", 17))
+    tekst(d, (22, 70), "Apple TV+ · Spiller", font("reg", 10), GRAA)
+    tekst(d, (22, 87), "31:12 / 49:40", font("reg", 9), (110, 108, 104))
+    bar(d, 22, 104, 196, 4, 0.63)
+    d.ellipse([174 * S, 48 * S, 218 * S, 92 * S], fill=GULL)
+    ikon(d, "pause", 196, 70, BG, 1.0)
+    tekst(d, (12, 126), "Aktiviteter", font("semi", 11), GRAA)
+    for i, (ik, n) in enumerate(AKT):
+        x = 8 + (i % 2) * 114
+        y = 146 + (i // 2) * 44
+        valgt = n == "Apple TV"
+        r(d, (x, y, x + 110, y + 40), 12, fill=(52, 44, 30) if valgt else KORT, outline=GULL if valgt else None, width=1)
+        ikon(d, ik, x + 17, y + 20, (217, 119, 106) if ik == "av" else (GULL if valgt else HVIT), 0.7)
+        tekst(d, (x + 32, y + 20), n, font("semi", 10.5), GULL if valgt else HVIT, "lm")
+    faner(d, 0)
+    return im
+
+
+def velger():
+    im = start()
+    d = ImageDraw.Draw(im, "RGBA")
+    d.rectangle([0, 30 * S, W * S, 287 * S], fill=(0, 0, 0, 120))
+    r(d, (6, 32, 178, 188), 14, fill=(24, 24, 27), outline=(52, 52, 56), width=1)
+    for i, (ik, n) in enumerate([("tv", "Stue-TV"), ("spill", "Apple TV"), ("note", "Skjold"), ("film", "Projektor")]):
+        y = 38 + i * 36
+        valgt = i == 1
+        r(d, (12, y, 170, y + 32), 12, fill=(52, 44, 30) if valgt else KORT, outline=GULL if valgt else None, width=1)
+        ikon(d, ik, 26, y + 16, GULL if valgt else HVIT, 0.65)
+        tekst(d, (42, y + 16), n, font("semi", 10.5), GULL if valgt else HVIT, "lm")
+    r(d, (40, 196, 200, 216), 10, fill=(32, 32, 35))
+    tekst(d, (120, 206), "Sveip på brikken for å bytte", font("reg", 9), (200, 198, 192), "mm")
+    return im
+
+
+APPER = ["Netflix", "YouTube", "NRK TV", "Disney+", "Apple TV+", "Plex", "Max", "TV 2 Play", "Spotify", "Viaplay", "Prime Video", "Arcade"]
+
+
+def apper():
+    im, d = ny()
+    status(d)
+    r(d, (8, 34, 232, 90), 14, fill=(26, 26, 29))
+    r(d, (14, 40, 58, 84), 10, fill=flisfarge("Apple TV+"))
+    tekst(d, (36, 62), initialer("Apple TV+"), font("semi", 13), HVIT, "mm")
+    tekst(d, (66, 40), "Slow Horses", font("semi", 11.5))
+    tekst(d, (66, 57), "Apple TV+ · Spiller", font("reg", 9), GRAA)
+    tekst(d, (66, 71), "31:12 / 49:40", font("reg", 8), (110, 108, 104))
+    bar(d, 66, 84, 118, 3, 0.63)
+    d.ellipse([190 * S, 44 * S, 226 * S, 80 * S], fill=GULL)
+    ikon(d, "pause", 208, 62, BG, 0.8)
+    for i, n in enumerate(APPER[:9]):
+        x = 8 + (i % 3) * 78
+        y = 96 + (i // 3) * 66
+        flis(d, x, y, n, fav=i < 4)
     faner(d, 1)
     return im
 
 
-def kilder():
+def innganger():
+    im, d = ny()
+    status(d, "Stue-TV", "tv")
+    tekst(d, (10, 34), "Stue-TV", font("semi", 19))
+    r(d, (186, 32, 232, 60), 12, fill=KORT)
+    ikon(d, "av", 209, 47, HVIT, 0.6)
+    k = [("HDMI 1", None, False), ("HDMI 2", None, True), ("HDMI 3", None, False), ("HDMI 4", None, False),
+         ("TV", None, False), ("Apple TV", "HDMI 2", True), ("Skjold", "lyden", False)]
+    for i, (n, under, valgt) in enumerate(k):
+        x = 8 + (i % 2) * 114
+        y = 68 + (i // 2) * 46
+        r(d, (x, y, x + 110, y + 40), 12, fill=(52, 44, 30) if valgt else KORT, outline=GULL if valgt else None, width=1)
+        if under:
+            tekst(d, (x + 55, y + 14), n, font("semi", 10.5), GULL if valgt else HVIT, "mm")
+            tekst(d, (x + 55, y + 29), under, font("reg", 8.5), GRAA, "mm")
+        else:
+            tekst(d, (x + 55, y + 20), n, font("semi", 10.5), GULL if valgt else HVIT, "mm")
+    r(d, (122, 206, 232, 246), 12, fill=(52, 44, 30))
+    tekst(d, (177, 226), "Lær IR", font("semi", 10.5), GULL, "mm")
+    tekst(d, (10, 258), "Styres gjennom Home Assistant", font("reg", 9), (110, 108, 104))
+    faner(d, 1)
+    return im
+
+
+def aktivitet():
     im, d = ny()
     status(d)
-    tekst(d, (10, 30), "Kilder", font("semi", 19))
-    k = [("Radio", True), ("AirPlay", False), ("Bluetooth", False), ("Spotify", False)]
-    for i, (n, a) in enumerate(k):
-        x = 8 + (i % 2) * 114
-        y = 58 + (i // 2) * 34
-        r(d, (x, y, x + 110, y + 28), 8, fill=(52, 44, 30) if a else KORT, outline=GULL if a else None, width=1)
-        tekst(d, (x + 55, y + 14), n, font("semi", 10), GULL if a else HVIT, "mm")
-    tekst(d, (10, 134), "Radiofavoritter", font("semi", 11), GRAA)
-    fav = ["NRK P1", "NRK P2", "P3 Musikk", "Radio Norge", "NRK Klassisk", "Jazz"]
-    for i, n in enumerate(fav):
-        x = 8 + (i % 2) * 114
-        y = 154 + (i // 2) * 42
-        r(d, (x, y, x + 110, y + 36), 8, fill=KORT, outline=GULL if i == 1 else None, width=1)
-        d.ellipse([(x + 6) * S, (y + 6) * S, (x + 30) * S, (y + 30) * S], fill=(44, 44, 48))
-        tekst(d, (x + 18, y + 18), str(i + 1), font("semi", 10), GULL, "mm")
-        tekst(d, (x + 36, y + 12), n, font("semi", 9), HVIT)
-    faner(d, 2)
+    tekst(d, (12, 36), "Film", font("semi", 19))
+    d.arc([200 * S, 34 * S, 226 * S, 60 * S], 0, 360, fill=(52, 52, 56), width=3 * S)
+    d.arc([200 * S, 34 * S, 226 * S, 60 * S], 300, 20, fill=GULL, width=3 * S)
+    steg = [("Slår på Projektor", "ok"), ("Vekker Apple TV", "ok"), ("Åpner Plex …", "går"), ("Skjold: aux …", ""),
+            ("Scene kino …", ""), ("Slår av Stue-TV …", "")]
+    for i, (t, st) in enumerate(steg):
+        y = 76 + i * 26
+        if st == "ok":
+            ikon(d, "hake", 22, y + 8, GULL, 0.8)
+            tekst(d, (40, y), t, font("semi", 12), (180, 177, 170))
+        elif st == "går":
+            ikon(d, "pil", 22, y + 8, GULL, 0.8)
+            tekst(d, (40, y), t, font("semi", 12), HVIT)
+        else:
+            tekst(d, (40, y), t, font("semi", 12), (110, 108, 104))
+    faner(d, 0)
+    return im
+
+
+def spiller():
+    im, d = ny()
+    status(d, "Skjold", "note")
+    r(d, (8, 32, 158, 58), 12, fill=KORT)
+    tekst(d, (18, 45), "Stue", font("semi", 10.5), GULL, "lm")
+    ikon(d, "pil", 148, 45, GRAA, 0.5)
+    knapp(d, (164, 32, 232, 58), "Kilder")
+    cv = cover(110 * S)
+    m = Image.new("L", cv.size, 0)
+    ImageDraw.Draw(m).rounded_rectangle([0, 0, cv.size[0], cv.size[1]], 12 * S, fill=255)
+    im.paste(cv, (65 * S, 64 * S), m)
+    d = ImageDraw.Draw(im)
+    tekst(d, (120, 180), "Morgenklassisk", font("semi", 15), anchor="ma")
+    tekst(d, (120, 203), "NRK P2 · radio", font("reg", 10), GRAA, "ma")
+    for x, k in ((62, "forrige"), (120, "pause"), (178, "neste")):
+        if k == "pause":
+            d.ellipse([(x - 21) * S, 220 * S, (x + 21) * S, 262 * S], fill=GULL)
+            ikon(d, "pause", x, 241, BG, 1.0)
+        else:
+            s = -1 if k == "forrige" else 1
+            d.polygon([((x - 5 * s) * S, 234 * S), ((x - 5 * s) * S, 248 * S), ((x + 4 * s) * S, 241 * S)], fill=HVIT)
+            d.rectangle([min((x + 4 * s) * S, (x + 6 * s) * S), 234 * S, max((x + 4 * s) * S, (x + 6 * s) * S), 248 * S], fill=HVIT)
+    tekst(d, (14, 268), "Vol", font("reg", 9), GRAA)
+    bar(d, 38, 272, 158, 6, 0.38)
+    d.ellipse([(38 + 158 * 0.38 - 6) * S, 269 * S, (38 + 158 * 0.38 + 6) * S, 281 * S], fill=HVIT)
+    tekst(d, (228, 266), "38", font("semi", 11), HVIT, "ra")
+    faner(d, 1)
     return im
 
 
 def hjem():
     im, d = ny()
     status(d)
-    tekst(d, (10, 30), "Hjem", font("semi", 19))
-    rom = [("Stue", "Taklys 40 %", True), ("Kjøkken", "Av", False), ("Gang", "Av", False), ("Soverom", "Nattlys", True)]
-    for i, (n, s, on) in enumerate(rom):
+    lys = [("Stue", True, 0.4), ("Kjøkken", False, 0.7), ("Gang", False, 0.3), ("Soverom", True, 0.15)]
+    for i, (n, on, b) in enumerate(lys):
+        y = 34 + i * 42
+        tekst(d, (12, y + 2), n, font("semi", 12))
+        r(d, (186, y, 230, y + 22), 11, fill=GULL if on else (52, 52, 56))
+        cx = 219 if on else 197
+        d.ellipse([(cx - 9) * S, (y + 2) * S, (cx + 9) * S, (y + 20) * S], fill=HVIT)
+        bar(d, 14, y + 28, 210, 5, b)
+    tekst(d, (12, 204), "Scener", font("semi", 11), GRAA)
+    for i, n in enumerate(["Kino", "Middag", "Lesing", "Alt av"]):
         x = 8 + (i % 2) * 114
-        y = 58 + (i // 2) * 62
-        r(d, (x, y, x + 110, y + 56), 10, fill=(52, 44, 30) if on else KORT)
-        ikon(d, "lys", x + 18, y + 20, GULL if on else GRAA, 0.9)
-        tekst(d, (x + 10, y + 32), n, font("semi", 10.5), HVIT)
-        tekst(d, (x + 10, y + 45), s, font("reg", 8), GRAA)
-    tekst(d, (10, 190), "Scener", font("semi", 11), GRAA)
-    sc = ["Kino", "Middag", "Lesing", "Alt av"]
-    for i, n in enumerate(sc):
-        x = 8 + (i % 2) * 114
-        y = 210 + (i // 2) * 36
-        r(d, (x, y, x + 110, y + 30), 8, fill=KORT)
-        tekst(d, (x + 55, y + 15), n, font("semi", 10), HVIT, "mm")
-    faner(d, 3)
+        y = 222 + (i // 2) * 32
+        knapp(d, (x, y, x + 110, y + 28), n)
+    faner(d, 2)
     return im
 
 
-def laer():
+def mer():
     im, d = ny()
-    status(d)
-    tekst(d, (10, 30), "Lær IR-kode", font("semi", 19))
-    r(d, (8, 60, 232, 150), 12, fill=KORT, outline=GULL, width=1)
-    ikon(d, "tv", 120, 86, GULL, 1.3)
-    tekst(d, (120, 108), "Pek den gamle fjernkontrollen", font("reg", 9.5), HVIT, "ma")
-    tekst(d, (120, 122), "mot nesen og trykk «Volum +»", font("reg", 9.5), HVIT, "ma")
-    tekst(d, (16, 168), "Tast", font("reg", 9), GRAA)
-    tekst(d, (224, 168), "Volum +", font("semi", 10), GULL, "ra")
-    tekst(d, (16, 188), "Enhet", font("reg", 9), GRAA)
-    tekst(d, (224, 188), "TV", font("semi", 10), HVIT, "ra")
-    tekst(d, (16, 208), "Mottatt", font("reg", 9), GRAA)
-    tekst(d, (224, 208), "NEC 0x04 / 0x02", font("semi", 10), HVIT, "ra")
-    r(d, (8, 236, 116, 266), 8, fill=KORT)
-    tekst(d, (62, 251), "Avbryt", font("semi", 10), HVIT, "mm")
-    r(d, (124, 236, 232, 266), 8, fill=GULL)
-    tekst(d, (178, 251), "Lagre", font("semi", 10), BG, "mm")
+    status(d, lader=True, bat=64)
+    tekst(d, (10, 34), "Mer", font("semi", 19))
+    tekst(d, (12, 66), "Lysstyrke", font("reg", 10), GRAA)
+    bar(d, 90, 70, 136, 5, 0.8)
+    d.ellipse([(90 + 136 * 0.8 - 6) * S, 66 * S, (90 + 136 * 0.8 + 6) * S, 78 * S], fill=HVIT)
+    tekst(d, (12, 92), "Søvn etter", font("reg", 10), GRAA)
+    bar(d, 90, 96, 96, 5, 0.15)
+    d.ellipse([(90 + 96 * 0.15 - 6) * S, 92 * S, (90 + 96 * 0.15 + 6) * S, 104 * S], fill=HVIT)
+    tekst(d, (228, 90), "40 s", font("semi", 11), HVIT, "ra")
+    tekst(d, (12, 118), "Tasteoppsett (toppen du har printet)", font("reg", 9.5), GRAA)
+    for i, n in enumerate("ABC"):
+        knapp(d, (8 + i * 76, 136, 80 + i * 76, 164), n, valgt=i == 0)
+    knapp(d, (8, 172, 118, 204), "Lær IR", fill=(52, 44, 30), farge=GULL)
+    knapp(d, (122, 172, 232, 204), "Skjold-rom")
+    knapp(d, (8, 210, 232, 240), "Hold våken (for oppdatering)")
+    tekst(d, (12, 248), "Wi-Fi −58 dBm · 192.168.1.60", font("reg", 9.5), (110, 108, 104))
+    tekst(d, (12, 263), "Batteri 3,92 V · 64 % · lader", font("reg", 9.5), (110, 108, 104))
     faner(d, 3)
     return im
+
+
+SIDER = [("start", start), ("velger", velger), ("apper", apper), ("innganger", innganger), ("aktivitet", aktivitet),
+         ("spiller", spiller), ("hjem", hjem), ("mer", mer)]
 
 
 def main():
-    os.makedirs(os.path.join(HER, "render"), exist_ok=True)
-    for i, (navn, f) in enumerate([("aktiviteter", aktiviteter), ("spiller", spiller), ("kilder", kilder), ("hjem", hjem), ("laer", laer)], 1):
-        fn = os.path.join(HER, "render", f"skjerm-{i}-{navn}.png")
+    mappe = os.path.join(HER, "render")
+    os.makedirs(mappe, exist_ok=True)
+    for f in os.listdir(mappe):
+        if f.startswith("skjerm-") and f.endswith(".png"):
+            os.remove(os.path.join(mappe, f))
+    for i, (navn, f) in enumerate(SIDER, 1):
+        fn = os.path.join(mappe, f"skjerm-{i}-{navn}.png")
         f().save(fn, optimize=True)
         print("skrev", os.path.relpath(fn, HER))
+    # alle sidene i ett bilde (LES_MEG)
+    ark = Image.new("RGB", (4 * 250 * 2 + 10, 2 * 330 * 2 + 10), (232, 230, 224))
+    for i, (navn, f) in enumerate(SIDER):
+        b = Image.open(os.path.join(mappe, f"skjerm-{i + 1}-{navn}.png")).resize((480, 640), Image.LANCZOS)
+        ark.paste(b, (10 + (i % 4) * 500, 10 + (i // 4) * 660))
+    ark.save(os.path.join(mappe, "skjerm-oversikt.png"), optimize=True)
+    print("skrev render/skjerm-oversikt.png")
 
 
 if __name__ == "__main__":
