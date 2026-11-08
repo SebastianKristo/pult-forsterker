@@ -1,6 +1,6 @@
 // Laget av hullkort/lag_hullkort.py – ikke rediger for hånd. (x, y) med y = L − n som i modellen.
-HU_Z_KORT = 7.4; HU_KORT_T = 1.6; HU_SW_H = 4.3; HU_SW_KROPP = 3.5; HU_BEIN = 0.8;
-HU_H = 16.10; HU_USB_X = 27.50; HU_USB_Z = 4.70; HU_FPC_Z = 3.80;
+HU_Z_KORT = 7.4; HU_KORT_T = 1.5; HU_SW_H = 4.3; HU_SW_KROPP = 3.5; HU_BEIN = 0.8;
+HU_H = 16.00; HU_USB_X = 27.50; HU_USB_Z = 4.70; HU_FPC_Z = 3.80;
 HU_OMRISS = [[3.370, 124.820], [51.630, 124.820], [51.630, 13.060], [44.010, 13.060], [44.010, 5.440], [10.990, 5.440], [10.990, 13.060], [3.370, 13.060]];
 HU_HULL = [[48.0, 107.5, 2.4]];
 HU_BRYTERE = [   // [funksjon, x, y]
