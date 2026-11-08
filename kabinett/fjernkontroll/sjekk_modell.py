@@ -31,11 +31,12 @@ import taster
 
 ASM = sys.argv[1] if len(sys.argv) > 1 else "asm"
 VARIANT = sys.argv[2] if len(sys.argv) > 2 else "kort"
-HK = VARIANT == "hovedkort"        # «alt på ett kort»: hovedkortet i stedet for SuperMini, TP4056 og tastekortet
+HK = VARIANT in ("hovedkort", "enkel")   # ferdig kort fra KiCad i stedet for SuperMini, TP4056 og tastekortet
+EN = VARIANT == "enkel"                  # enkel utgave: XIAO ESP32S3 + MCP23017 (ingen vibrasjonsmotor/-bryter)
 taster.bruk("kort" if HK else VARIANT)
-STL = "stl_hk" if HK else "stl" if VARIANT == "kort" else "stl_full"
+STL = "stl_en" if EN else "stl_hk" if HK else "stl" if VARIANT == "kort" else "stl_full"
 W, L, H = taster.W, taster.L, 13.5
-print(f"Variant: {VARIANT} ({len(taster.brytere())} taster, {len(taster.HETTER)} hetter)")
+print(f"Variant: {VARIANT} ({len(taster.tastekort_a()) if EN else len(taster.brytere())} taster, {len(taster.HETTER)} hetter)")
 ok = True
 
 
@@ -64,7 +65,7 @@ for n, want in ANTALL.items():
 # ---------- 2. overlapp i montert stilling ----------
 DELER = ["topp", "bunn", "vindu", "logo", "hetter", "symboler", "kort", "skjerm", "batteri", "mcu", "lader", "ir", "vib", "motor", "flex", "ledninger"]
 if HK:
-    DELER = [d for d in DELER if d not in ("mcu", "lader")] + ["hkdeler"]
+    DELER = [d for d in DELER if d not in ("mcu", "lader") + (("vib", "motor") if EN else ())] + ["hkdeler"]
 A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in DELER}
 TOUCH = {("topp", "logo"), ("hetter", "symboler"), ("bunn", "vindu"), ("topp", "kort"), ("bunn", "kort"), ("topp", "skjerm"),
          ("topp", "bunn"), ("flex", "kort"), ("flex", "skjerm"), ("kort", "hkdeler"), ("flex", "hkdeler")}
@@ -111,6 +112,8 @@ def segment(mesh, o, d):
 _ux, _uz = W/2, 4.4
 if HK:
     _u = trimesh.load(f"{ASM}/usbc.stl"); _ux = (_u.bounds[0][0] + _u.bounds[1][0]) / 2; _uz = (_u.bounds[0][2] + _u.bounds[1][2]) / 2
+    if EN:   # XIAO-ens USB-C henger under modulen: kontaktens senter er 1,6 mm over boksens underkant
+        _uz = _u.bounds[0][2] + 1.6
 HULL_SIDE = [("hale", _ux - 6.9, _ux + 6.9, _uz - 3.9, _uz + 3.9), ("nese", W/2 - 16.2, W/2 + 16.2, 1.7, 7.5),
              ("hale", W/2 - 9.4, W/2 - 7.6, 3.3, 5.5), ("hale", W/2 + 7.6, W/2 + 9.4, 3.3, 5.5)]
 tynn = []
@@ -212,11 +215,11 @@ melding(kropp <= 14.0 and tast <= 15.5, f"mål {mal[0]:.1f} × {mal[1]:.1f} mm, 
 # ---------- 7. innmaten ----------
 REF = {"batteri": 0.5, "mcu": 1.0, "lader": 1.0, "ir": 1.0, "vib": 0.5, "motor": 0.5}   # klaring over (mm)
 if HK:
-    REF = {"batteri": 0.5, "ir": 1.0, "vib": 0.5, "motor": 0.5}
+    REF = {"batteri": 0.5, "ir": 1.0} if EN else {"batteri": 0.5, "ir": 1.0, "vib": 0.5, "motor": 0.5}
 I_SPOR = {"ir": {"bunn"}, "vib": {"bunn"}}   # står i spor/vugger i bunnen (bevisst tett tilpasning)
 FAST = ["topp", "bunn", "vindu", "kort", "skjerm", "batteri", "mcu", "lader", "ir", "vib", "motor", "flex"]
 if HK:
-    FAST = [f for f in FAST if f not in ("mcu", "lader")] + ["hkdeler"]
+    FAST = [f for f in FAST if f not in ("mcu", "lader") + (("vib", "motor") if EN else ())] + ["hkdeler"]
 rng = np.random.default_rng(1)
 
 
@@ -277,6 +280,8 @@ if HK:
     U = trimesh.load(f"{ASM}/usbc.stl")
     ufront = U.bounds[0][1]
     zc = (U.bounds[0][2] + U.bounds[1][2]) / 2
+    if EN:
+        zc = U.bounds[0][2] + 1.6   # XIAO-ens USB-C (3,2 mm høy) henger under modulen
     ux = (U.bounds[0][0] + U.bounds[1][0]) / 2
 else:
     lv = A["lader"].vertices
@@ -302,7 +307,7 @@ if len(mv):
     cx, cz, y0 = (mv[:, 0].min() + mv[:, 0].max()) / 2, (mv[:, 2].min() + mv[:, 2].max()) / 2, mv[:, 1].max()
     plugg = trimesh.creation.box([12.4 + 0.4, 22.0, 6.5 + 0.4])
     plugg.apply_translation([cx, y0 + 11.0 + 0.01, cz])
-    hinder = [(x, overlapp(plugg, A[x])) for x in ("bunn", "batteri", "lader", "ir", "vib", "motor", "ledninger")]
+    hinder = [(x, overlapp(plugg, A[x])) for x in ("bunn", "batteri", "lader", "ir", "vib", "motor", "ledninger") if x in A]
     hinder = [f"{x} {v:.2f} mm³" for x, v in hinder if v > 0.001]
     melding(not hinder, "USB-C på SuperMini-en: fri vei for pluggen (12,4 × 6,5 × 22 mm + 0,2 mm) med bunnen åpen"
             if not hinder else "USB-C-pluggen til SuperMini-en treffer " + ", ".join(hinder))
@@ -321,7 +326,7 @@ melding(not treff, "skruetårnene (+ 0,5 mm) treffer ingen komponenter" if not t
 if HK:   # komponentene på undersiden av hovedkortet: ≥ 0,5 mm ned til bunnen og det som står i den
     p_, fi = trimesh.sample.sample_surface_even(A["hkdeler"], 8000, seed=2)
     ned = A["hkdeler"].face_normals[fi][:, 2] < -0.9
-    under = trimesh.util.concatenate([A[x] for x in ("bunn", "batteri", "ir", "vib", "motor", "ledninger")])
+    under = trimesh.util.concatenate([A[x] for x in ("bunn", "batteri", "ir", "vib", "motor", "ledninger") if x in A])
     d_ = stråle(under, p_[ned] - [0, 0, 0.002], np.tile([0, 0, -1.0], (int(ned.sum()), 1)))
     melding(d_.min() >= 0.5, f"hovedkortets komponenter: minst {d_.min():.2f} mm ned til bunnen og innmaten (krav 0,5)")
 

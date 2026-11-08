@@ -7,6 +7,7 @@ import csv
 import math
 import os
 import shutil
+import re
 import subprocess
 import sys
 import zipfile
@@ -281,8 +282,9 @@ def importer_ruting(pcb, ses):
         for v in finn(n, "via"):
             via = pcbnew.PCB_VIA(b)
             via.SetPosition(pcbnew.VECTOR2I(int(float(v[2]) * skala), int(-float(v[3]) * skala)))
-            via.SetDrill(mm(0.3))
-            via.SetWidth(mm(0.6))
+            m = re.search(r"_(\d+):(\d+)_um", v[1])      # padstack «Via[0-1]_600:300_um»: diameter og bor fra DSN-en
+            via.SetWidth(mm(int(m.group(1)) / 1000 if m else 0.6))
+            via.SetDrill(mm(int(m.group(2)) / 1000 if m else 0.3))
             via.SetNet(ni)
             b.Add(via)
             viaer += 1
@@ -325,6 +327,9 @@ def gerber(b, mappe):
     return z
 
 
+HANDLODD = set()   # deler på undersiden som loddes for hånd (ikke i JLC-BOM-en)
+
+
 def bom_cpl(b):
     """JLC-format. Bryterne på oppsiden er DNP (loddes for hånd), så JLC bare monterer undersiden."""
     rader = {}
@@ -334,7 +339,7 @@ def bom_cpl(b):
         fp = str(f.GetFPID().GetLibItemName())
         if ref.startswith("TP"):
             continue
-        dnp = f.GetLayer() == pcbnew.F_Cu
+        dnp = f.GetLayer() == pcbnew.F_Cu or f.GetReference() in HANDLODD
         nok = (verdi, fp, dnp)
         rader.setdefault(nok, []).append(ref)
         if not dnp:
