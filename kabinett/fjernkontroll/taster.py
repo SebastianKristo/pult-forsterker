@@ -621,6 +621,38 @@ def enkel_yaml(tastekort_a):
     return k
 
 
+def hullkort_yaml(enkel):
+    """esphome/skjold-fjernkontroll-hullkort.yaml: hullkort-utgaven (hullkort/): samme XIAO-pinner og MCP23017-pinner som
+    den enkle utgaven, men uten skjermbryter (AO3401): skjermen står på 3V3 og går i dvale (SLPIN) av seg selv før dyp
+    søvn, og GPB6 gir strøm rett til IR-mottakeren (høy = på). Tastene bruker MCP-ens interne pull-ups."""
+    k = enkel
+    for a, b in [
+            ("# ENKEL UTGAVE – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her.\n"
+             "# Skjold Fjernkontroll Enkel (kabinett/fjernkontroll/enkel/): Seeed XIAO ESP32S3 + MCP23017 på et bærekort, oppsett A.\n",
+             "# HULLKORT-UTGAVE – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her.\n"
+             "# Skjold Fjernkontroll, hullkort (kabinett/fjernkontroll/hullkort/): Seeed XIAO ESP32S3, MCP23017-modul (CJMCU-2317)\n"
+             "# og 14 × 6 × 6 mm THT-brytere på hullkort, uten kretskort. Oppsett A.\n"),
+            ("# MCP23017 (0x20): GPA0–7 + GPB0–5 = tastene, GPB6 = skjermstrøm (AO3401), GPB7 = dokken.\n",
+             "# MCP23017-modulen (0x20): GPA0–7 + GPB0–5 = tastene (interne pull-ups), GPB6 = strøm til IR-mottakeren, GPB7 = dokken.\n"),
+            ("# Maskinvare (se «Enkel utgave» i kabinett/fjernkontroll/LES_MEG.md): Seeed XIAO ESP32S3 (lader LiPo-en selv), 2,8″ IPS\n"
+             "# ST7789 + FT6336U berøring (naken FPC-modul HP28030), MCP23017 med 14 taster (4 × 4 mm), 2 × IR-diode 940 nm, VS1838B,\n",
+             "# Maskinvare (se «Hullkort-utgave» i kabinett/fjernkontroll/LES_MEG.md): Seeed XIAO ESP32S3 (lader LiPo-en selv), 2,8″ IPS\n"
+             "# ST7789 + FT6336U berøring (HP28030 på FPC-adaptere til 2,54 mm), MCP23017-modul med 14 taster (6 × 6 mm), 2 × IR-diode, VS1838B,\n"),
+            ("# Pinnene er XIAO-ens D0–D10 (se enkel/pinner.csv).", "# Pinnene er XIAO-ens D0–D10, som i den enkle utgaven (se hullkort/koblinger.csv)."),
+            ("        - output.turn_on: strom_skjerm         # 3V3 til skjerm og IR-mottaker (AO3401 via TCA9555)\n",
+             "        - output.turn_on: strom_skjerm         # strøm til IR-mottakeren (MCP GPB6)\n"),
+            ("  - id: bus_a                        # MCP23017 (0x20) og berøringen (0x38), 4,7 kΩ til 3V3",
+             "  - id: bus_a                        # MCP23017-modulen (0x20) og berøringen (0x38), 10 kΩ pull-ups på modulen"),
+            ("    pin: { mcp23xxx: $ekstra_hub, number: 14, mode: { output: true }, inverted: true }   # GPB6 → AO3401 (Q1), lav = på",
+             "    pin: { mcp23xxx: $ekstra_hub, number: 14, mode: { output: true } }   # GPB6 → VS1838B VCC (høy = på; skjermen står på 3V3)"),
+            ("      - output.turn_off: strom_skjerm      # skjerm og IR-mottaker uten strøm\n",
+             "      - output.turn_off: strom_skjerm      # IR-mottakeren uten strøm (skjermen går i dvale, SLPIN, når ESP-en sover)\n")]:
+        assert k.count(a) == 1, a
+        k = k.replace(a, b)
+    assert "pullup: true" in k
+    return k
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     deler, yml = [], os.path.join(here, "..", "..", "esphome", "skjold-fjernkontroll.yaml")
@@ -654,7 +686,9 @@ def main():
     open(yml.replace(".yaml", "-hovedkort.yaml"), "w").write(hovedkort_yaml(ny))
     ta = tastekort_a_yaml(ny)
     open(yml.replace(".yaml", "-tastekort-a.yaml"), "w").write(ta)
-    open(yml.replace(".yaml", "-enkel.yaml"), "w").write(enkel_yaml(ta))
+    en = enkel_yaml(ta)
+    open(yml.replace(".yaml", "-enkel.yaml"), "w").write(en)
+    open(yml.replace(".yaml", "-hullkort.yaml"), "w").write(hullkort_yaml(en))
     bruk("kort")
     import sys
     if len(sys.argv) > 1:

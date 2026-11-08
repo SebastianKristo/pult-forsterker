@@ -22,7 +22,7 @@ Hvorfor 2,8″ og ikke 2,4″:
 - **Lengden øker mer med 2,8″,** fordi panelet er 69 mm langt.
 - **Brede stavskjermer** (2,25″ og liknende) er for lave til lister og cover.
 
-**Elektronikken finnes i tre utgaver:** [enkel](#enkel-utgave-anbefalt) med en ferdig XIAO ESP32S3 og MCP23017 på et lite bærekort (anbefalt), et ferdig [hovedkort](#hovedkort) med alt på ett kort (avansert), eller [håndkoblet](#alternativ-håndkoblet) med SuperMini, TP4056-modul og tastekort.
+**Elektronikken finnes i fire utgaver:** [enkel](#enkel-utgave-anbefalt) med en ferdig XIAO ESP32S3 og MCP23017 på et lite bærekort (anbefalt), [hullkort](#hullkort-utgave-uten-kretskort) uten noe kretskort (XIAO, MCP23017-modul og 6 × 6-brytere på stripekort, 16,1 mm tykk), et ferdig [hovedkort](#hovedkort) med alt på ett kort (avansert), eller [håndkoblet](#alternativ-håndkoblet) med SuperMini, TP4056-modul og tastekort.
 
 **Status: ikke bygget og ikke testet.** Modellen er kontrollert med `sjekk_modell.py`, og ESPHome-fila er validert med `esphome config` (ESPHome 2026.10.2). Fastvaren er ikke kompilert her: kompileringen trenger ESP-IDF-filer fra dl.espressif.com og komponentregisteret til Espressif, og de var blokkert i byggemiljøet. Se [Begrensninger](#begrensninger-og-hva-som-ikke-er-testet).
 
@@ -133,6 +133,158 @@ Kartet (lages av `taster.py`):
 - 3MF-platene.
 
 Sjekken kontrollerer kollisjoner og at hver aktuator treffer sin bryter og ingen andre.
+
+## Hullkort-utgave (uten kretskort)
+
+![Innmaten i hullkort-utgaven](hullkort/render_inni.png)
+
+Denne utgaven har **ingen kretskort å bestille** og **ingen fin lodding**. Den passer hvis du ikke stoler på et kretskort du ikke kan rette opp selv. Alt kjøpes ferdig:
+
+- en Seeed XIAO ESP32S3,
+- en ferdig MCP23017-modul,
+- 14 vanlige 6 × 6 mm-brytere på et stykke stripekort (2,54 mm),
+- skjermen på to FPC-adaptere til 2,54 mm.
+
+Pinnene på XIAO-en og MCP23017-en er de samme som i [den enkle utgaven](#enkel-utgave-anbefalt). Fastvaren er nesten lik.
+
+**Ulempene, ærlig sagt:**
+- **Den er 16,1 mm tykk, 2,6 mm mer.** 6 × 6-bryterne er 4,3 mm høye, stripekortet er 1,6 mm, og under kortet ligger MCP-modulen og XIAO-en på gulvet med bryterbeina over seg.
+- **Rundt 60 ledninger** skal kuttes, avisoleres og loddes.
+- **Dokka passer ikke uten endring.** Lag den med `-D FH=16.1` (se under).
+- **Du må lodde én liten ting:** AO3400A i SOT-23 på to små SOT-23-til-DIP-adaptere. Alt annet har 2,54 mm deling eller er ferdige moduler.
+- **Ingen skjermbryter.** Skjermen står på 3,3 V og går i dvale (SLPIN) når ESP-en sover. IR-mottakeren får strøm fra en MCP-pinne.
+
+**Status: tegnet og kontrollert i modellen, ikke bygget.** Følgende er kontrollert: tegningen, koblingene mot fastvaren og kabinettet (`sjekk_modell.py asm_hu hullkort`: ALT OK).
+
+| | |
+|---|---|
+| Tykkelse | **16,1 mm** kropp, 17,3 mm med taster, 17,6 mm ved gullringen (de andre: 13,5 / 14,7 / 15,0) |
+| Bryterne | 14 × **6 × 6 × 4,3 mm THT** (søk «6x6x4.3 tactile switch DIP 4 pin»), beina i et 2 × 3-rutenett (5,08 × 7,62 mm) |
+| Hullkortet | stripekort 2,54 mm, 1,6 mm, **19 × 47 hull** (48,3 × 119,4 mm), stripene på tvers; hjørnene ved halen kuttes 3 × 3 hull for skruetårnene, ett Ø2,4-hull for midtskruen |
+| Under kortet (på gulvet, på tynn tape) | XIAO ESP32S3 i halen (USB-C ut, 0,90 mm fra den støpte delen av pluggen), MCP23017-modulen (26 × 21 mm), FPC 18 p-adapteren og FPC 6 p-adapteren |
+| Klaring | minst 0,55 mm fra delene på gulvet opp til hullkortet og bryterbeina (beina klippes til 0,8 mm under kortet) |
+| Skjermen | HP28030 på en **FPC 18 p 0,5 mm → 2,54 mm-adapter** (kjøp den med kontakten påloddet) og berøringen på en **FPC 6 p-adapter** |
+| IR | IR-kortet i nesen som i den håndkoblede utgaven: 2 × IR-diode i serie, R15 6,8 Ω fra batteriet, AO3400A, 100 µF, VS1838B |
+| Batteri | LiPo 603450 1200 mAh på XIAO-ens BAT-puter, ladet av XIAO-en (ca. 100 mA) |
+| Dokken | pogo-kontakten i bunnen som før; 1N5819 til XIAO-ens 5V, 68 kΩ / 100 kΩ til GPB7 |
+| Fastvare | `esphome/skjold-fjernkontroll-hullkort.yaml` (laget av `taster.py`, validert med `esphome config`) |
+
+### Bryterne på 2,54 mm
+
+Hver bryter er flyttet til nærmeste hullposisjon. Kolonnene står symmetrisk om midten, og radene er valgt så det største avviket blir minst mulig. Toppen og hettene er de samme. Aktuatorene under tasteoppsettets hetter er flyttet over de flyttede bryterne, og sjekken bekrefter at hver hette står 0,10 mm over knappen.
+
+| Tast | Avvik | Tast | Avvik |
+|---|---|---|---|
+| av / meny | 0,76 mm | tilbake / vol + | 1,03 mm |
+| Skjold | 0,16 mm | avslutt / vol − | 0,80 mm |
+| opp / ned / venstre / høyre | **1,24 mm** (under gullringen, som er 11 mm bred) | ⏯ / demp | 0,72 mm |
+| OK | 0,00 mm | | |
+
+### Deler fra AliExpress (hullkort-utgaven)
+
+Prisene er anslag fra november 2026, med frakt.
+
+| Del | Søk etter | Pris |
+|---|---|---|
+| Seeed XIAO ESP32S3 (ikke «Sense») med antenne | «Seeed Studio XIAO ESP32S3» | 80–100 kr |
+| MCP23017-modul (CJMCU-2317, ca. 26 × 21 mm – **sjekk**; har 10 kΩ pull-up på SDA/SCL/RESET og 10 kΩ ned på A0–A2) | «CJMCU-2317 MCP23017 module» | 25 kr |
+| 6 × 6 × 4,3 mm THT-brytere, 4 bein | «6x6x4.3 tactile switch DIP 4 pin» (100 stk) | 15 kr |
+| Stripekort 2,54 mm, minst 50 × 120 mm | «stripboard veroboard 6.5x14.4cm» | 20 kr |
+| FPC-adapter 18 p 0,5 mm → 2,54 mm, med kontakten påloddet | «FPC 18P 0.5mm to 2.54mm adapter board» | 15 kr |
+| FPC-adapter 6 p 0,5 mm → 2,54 mm | «FPC 6P 0.5mm adapter board» | 10 kr |
+| 2,8″ IPS HP28030-DCT ([1005006755555414](https://www.aliexpress.com/item/1005006755555414.html)) | | 66 kr |
+| LiPo 603450 1200 mAh med JST-PH 2,0 | «603450 1200mAh lipo PH2.0» | 60 kr |
+| AO3400A × 2 + SOT-23-til-DIP-adapter × 2 | «AO3400 SOT-23», «SOT23 to DIP adapter» | 15 kr |
+| Motstander 1/4 W og 1N5819, 100 nF, 100 µF 6,3 V | sett | 30 kr |
+| IR-diode 940 nm × 2, VS1838B, en stripe hullkort | | 25 kr |
+| 30 AWG wire-wrap-ledning (Kynar) i 8 farger + 26 AWG silikon (rød/svart) | «30AWG wire wrap wire 8 colors» | 55 kr |
+| JST-PH 2,0 2 p plugg med ledning | | 10 kr |
+| Pogo-kontakt 2 pinner 2,80 mm med ører (dokken) | | 9 kr |
+| M2 × 10-skruer, tynn dobbeltsidig tape, krympestrømpe | | 30 kr |
+| Filament ca. 55 g | | 25 kr |
+| **Sum** | | **ca. 520–600 kr** |
+
+Verktøy: loddebolt med fin spiss, 3,5 mm bor (kuttene i stripene), avbitertang, avisoleringstang og multimeter.
+
+### Tegningen (1:1) og koblingene
+
+- [**hullkort/tegning.pdf**](hullkort/tegning.pdf) har 2 sider A4, som skrives ut i 100 %. Linjalen på arket skal være 50 mm.
+  - Side 1 viser hullkortet sett ovenfra, med bryterne og hvilke hull beina går i, kolonne A–S og rad 1–47.
+  - Side 1 viser også kobbersiden speilvendt: hvilke stripehull som skal kuttes (rødt ×), GND-kjeden (svart) og hvor hver tasteledning loddes (fargen og MCP-pinnen står ved hullet). Under står tabellen over alle ledningene med farge og lengde.
+  - Side 2 viser delene i bunnen: XIAO, MCP-modulen, adapterne og ledningsbuntene.
+  - Det finnes også PNG-er i 300 dpi: [oppsiden](hullkort/tegning-oppside.png) og [kobbersiden](hullkort/tegning-kobberside.png).
+- [**hullkort/skjema.pdf**](hullkort/skjema.pdf) er koblingsskjemaet på 2 sider (schemdraw): XIAO ↔ MCP-modulen ↔ tastene ↔ batteri og dokk, og skjermadapterne ↔ baklys ↔ IR-kortet. Ledningsfargen står ved hvert nett.
+- [**hullkort/koblinger.csv**](hullkort/koblinger.csv) lister alle 57 ledningene: nett, farge, fra, til og lengde.
+
+Venstre bein på hver bryter er GND og høyre bein er tasten. To og to bein er koblet inni bryteren, og de diagonale er alltid ulike. Tastene har ingen motstander, fordi MCP23017 har interne pull-ups som fastvaren slår på (`pullup: true`). Pull-ups på I²C (10 kΩ) sitter på modulen. Har modulen din ikke det, lodd 2 × 4,7 kΩ fra SDA og SCL til VCC.
+
+Småkomponentene loddes på pinnene der de hører hjemme, med krympestrømpe over:
+
+| Del | Hvor | Hvordan |
+|---|---|---|
+| R3 10 kΩ | MCP-modulen | VCC → INTA (vekkelinja) |
+| R16 1 MΩ | 6 p-adapteren | pinne 1 (VDD) → 6 (RST), holder RST høy i dyp søvn |
+| R8 10 Ω | 18 p-adapteren | pinne 10 (VDD) → 11 (LED-A) |
+| Q2 AO3400A + R6 100 Ω + R7 100 kΩ | ved 18 p-adapteren | G ← R6 ← D9, R7 G–S, S = GND, D → pinne 12–15 (LED-K) |
+| R9 1 MΩ, R10 1 MΩ, C3 100 nF | XIAO-en | BAT+ → R9 → D0 → R10 og C3 → GND |
+| D1 1N5819 | XIAO-en | anode til POGO+-ledningen, katode (stripen) til 5V-puten |
+| R11 68 kΩ, R12 100 kΩ | MCP-modulen | POGO+ → R11 → GPB7 → R12 → GND |
+
+### Byggerekkefølge
+
+Ledningslengdene står i `koblinger.csv`. Lengdene der regner med 15 mm til lodding og slakk; kutt heller 1 cm for langt.
+
+1. **Skriv ut** `stl_hu/topp.stl` og `stl_hu/bunn.stl` (eller `bunn_dokk.stl`), hettene og IR-vinduet som før. Dokka lages med `openscad -D FH=16.1 …` i `dokk/`.
+2. **Skjær stripekortet** til 19 × 47 hull (kanten midt i en hullrad), og kutt bort 3 × 3 hull i begge hjørnene ved halen. Bor Ø2,4 mm for midtskruen der tegningen viser det.
+3. **Kutt stripene** etter tegningen (side 1, kobbersiden): 42 hull med et 3,5 mm bor, vridd for hånd. Mål at ingen stripe henger sammen over et kutt.
+4. **Lodd de 14 bryterne** på oppsiden. Klipp beina til 0,8 mm under kortet.
+5. **GND-kjeden:** 14 korte svarte ledninger på kobbersiden mellom hullene tegningen viser, og én videre til MCP GND (ca. 40 mm).
+6. **Tasteledningene:** 14 stk, 30–120 mm, én farge per MCP-pinne (fargekoden 1–8). Lodd dem i hullet tegningen viser, og la dem henge.
+7. **XIAO-en:** lodd BAT-ledningene (rød/svart silikon, 150 mm), R9/R10/C3 og D1 på baksiden *før* den limes. Lodd så D0–D10, 3V3, GND og 5V med 30 AWG i fargene fra tabellen.
+8. **MCP-modulen:** R3, R11 og R12 på pinnene. Lodd tasteledningene etter navn (GPA0–GPB5), så VCC, GND, SDA, SCL, INTA, GPB6 (IR-strøm) og GPB7.
+9. **Adapterne:** R8, R16 og Q2 (med R6/R7) som i tabellen. Lodd ledningene til XIAO-en og MCP-en.
+10. **IR-kortet** som i den håndkoblede utgaven: 2 dioder i serie, R15, C4, Q3 med R13/R14, og VS1838B med 5 ledninger (200 mm) langs venstre side.
+11. **I bunnen:** IR-kortet i sporet, batteriet i lomma, og XIAO-en (USB-C i åpningen), MCP-modulen og adapterne på tynn tape der side 2 viser. Legg ledningene langs sidene.
+12. **Gjennomgangstest** (under), *før* batteriet kobles til.
+13. **Skjermen** i lomma i toppen. Flatkablene går ned bak glasset og inn i adapterne, med kontaktene ned.
+14. **Hullkortet** på stolpene, med pinnene fra toppen. Legg på toppen og skru inn 5 × M2 × 10 fra undersiden.
+15. **Flash** gjennom USB-C (`esphome run esphome/skjold-fjernkontroll-hullkort.yaml`). Koble til batteriet. Sjekk polariteten først!
+
+### Gjennomgangstest før strøm
+
+Med multimeteret på pipetone, batteriet frakoblet og USB-C ute:
+
+- [ ] **3V3 – GND, 5V – GND og BAT+ – BAT− piper ikke.** Ingen kortslutning.
+- [ ] Hver tast: trykk tasten og mål fra MCP-pinnen (GPA0 … GPB5) til GND. Det skal pipe bare når tasten er nede, og bare på riktig pinne. Slipp tasten og mål mot nabopinnene: ingen pip.
+- [ ] Hver bryter: GND-siden piper mot MCP GND.
+- [ ] XIAO D4 – MCP SDA, D5 – SCL og D1 – INTA piper. D4 – D5 piper ikke.
+- [ ] XIAO D2/D3/D8/D10 – 18 p-adapterens pinne 4/2/3/6 piper. D3 – 6 p-adapterens pinne 6 piper.
+- [ ] 18 p-adapterens pinne 9/10 – 3V3 og 1/5/8/16/18 – GND piper.
+- [ ] Q2: D – pinne 12–15 piper. G – D9 viser ca. 100 Ω, og G – GND ca. 100 kΩ.
+- [ ] IR: D6 – R13 piper, D7 – VS1838B OUT piper, og MCP GPB6 – VS1838B VCC piper.
+- [ ] D1 leder bare fra POGO+ til XIAO 5V (diodetest ca. 0,2–0,3 V).
+- [ ] D0 – GND viser ca. 1 MΩ, og D0 – BAT+ ca. 1 MΩ.
+- [ ] Ingen bar ledning eller loddeklatt rører en nabostripe. Se over kobbersiden med lupe.
+
+### Batteritid (hullkort-utgaven)
+
+Overslag: søvn ca. 50–90 µA. Det er XIAO-en (15–30 µA), berøringen i dvale (ca. 25 µA), skjermen i SLPIN (5–30 µA), MCP-en (1 µA) og deleren (2 µA). Det gir ca. **4 måneder** ved lite bruk, **4 uker** ved vanlig bruk og ca. 6 dager med 2 timer skjerm om dagen. Har MCP-modulen en strøm-LED, fjern den (1–2 mA).
+
+### Filer i `hullkort/`
+
+| Fil | Hva |
+|---|---|
+| `hullkort.py` | **Kilden**: bryterne snappet til 2,54 mm, hullkortet, kuttene, delene på gulvet, nettene og ledningene |
+| `lag_hullkort.py` | Lager `hullkort_data.scad` (kabinettet), `hullkort.json` (3D-siden), `koblinger.csv` og tegningen |
+| `tegning.py` | `tegning.pdf` og PNG-ene i 1:1 |
+| `lag_skjema_hu.py` | `skjema.pdf` (koblingsskjemaet, 2 sider) |
+| `render_3d.png`, `render_inni.png` | Hullkortet sett fra undersiden, og innmaten |
+
+```bash
+python3 hullkort/lag_hullkort.py      # data, koblinger.csv og tegningen
+python3 hullkort/lag_skjema_hu.py     # skjema.pdf
+xvfb-run -a sh lag_hu.sh              # kabinettet (stl_hu/), sjekk og bilder
+```
 
 ## Enkel utgave (anbefalt)
 
@@ -1072,6 +1224,9 @@ Du får mer ut av batteriet hvis du:
 | `../../esphome/blueprints/skjold_fjernkontroll.yaml` | Blueprint for Home Assistant: handlinger per tast og trykktype |
 | `tastekort/`, `tastekort_full/` | Omriss (DXF), plassering, koblinger og stykkliste for tastekortet, standard og full |
 | `stl/`, `stl_full/` | Alle utskriftsdelene for standard og full variant, inkludert `bryterbrett.stl` |
+| `hullkort/` | Hullkort-utgaven: tegningen i 1:1, koblingsskjema, koblinger.csv og skriptene (se [Hullkort-utgave](#hullkort-utgave-uten-kretskort)) |
+| `lag_hu.sh`, `stl_hu/` | Toppen og bunnen for hullkort-utgaven (`elektronikk = "hullkort"`, 16,1 mm), sjekk og bilder |
+| `../../esphome/skjold-fjernkontroll-hullkort.yaml` | Fastvaren for hullkort-utgaven (laget av `taster.py`) |
 | `enkel/` | Enkel utgave: bærekortet for XIAO ESP32S3 og MCP23017, KiCad-kort, gerber, BOM/CPL, skjema og skriptene (se [Enkel utgave](#enkel-utgave-anbefalt)) |
 | `lag_en.sh`, `stl_en/` | Toppen og bunnen for den enkle utgaven (`elektronikk = "enkel"`), sjekk og bilder |
 | `../../esphome/skjold-fjernkontroll-enkel.yaml` | Fastvaren for den enkle utgaven (laget av `taster.py`) |

@@ -1,0 +1,58 @@
+nett,farge,fra,til,lengde_mm,merknad
+K_AV,brun,hull F4,MCP GPA0,90,av → MCP GPA0
+K_HJEM,rød,hull L4,MCP GPA1,100,hjem → MCP GPA1
+K_MENY,oransje,hull R4,MCP GPA2,120,meny → MCP GPA2
+K_OPP,gul,hull L9,MCP GPA3,90,opp → MCP GPA3
+K_NED,grønn,hull L21,MCP GPA4,60,ned → MCP GPA4
+K_VENSTRE,blå,hull F15,MCP GPA5,60,venstre → MCP GPA5
+K_HOYRE,fiolett,hull R15,MCP GPA6,90,hoyre → MCP GPA6
+K_OK,grå,hull L15,MCP GPA7,70,ok → MCP GPA7
+K_TILBAKE,brun,hull H27,MCP GPB0,30,tilbake → MCP GPB0
+K_AVSLUTT,rød,hull H34,MCP GPB1,50,avslutt → MCP GPB1
+K_SPILL_PAUSE,oransje,hull H42,MCP GPB2,70,spill_pause → MCP GPB2
+K_DEMP,gul,hull P42,MCP GPB3,90,demp → MCP GPB3
+K_VOL_OPP,grønn,hull P27,MCP GPB4,50,vol_opp → MCP GPB4
+K_VOL_NED,blå,hull P34,MCP GPB5,70,vol_ned → MCP GPB5
+GND,svart,hull D27,MCP GND,40,GND (tilbake) → MCP GND
+GND,svart,hull D27,hull D34,30,på kobbersiden
+GND,svart,hull D34,hull D42,40,på kobbersiden
+GND,svart,hull D42,hull L42,40,på kobbersiden
+GND,svart,hull L42,hull L34,40,på kobbersiden
+GND,svart,hull L34,hull L27,30,på kobbersiden
+GND,svart,hull L27,hull H21,40,på kobbersiden
+GND,svart,hull H21,hull H15,30,på kobbersiden
+GND,svart,hull H15,hull N15,30,på kobbersiden
+GND,svart,hull N15,hull H9,50,på kobbersiden
+GND,svart,hull H9,hull H4,30,på kobbersiden
+GND,svart,hull H4,hull N4,30,på kobbersiden
+GND,svart,hull N4,hull B4,50,på kobbersiden
+GND,svart,hull B4,hull B15,40,på kobbersiden
+VBAT,oransje,Batteri + (JST-PH),XIAO BAT+,150,
+GND,svart,Batteri − (JST-PH),XIAO BAT−,150,
+3V3,rød,XIAO 3V3,MCP VCC,70,
+GND,svart,XIAO GND,MCP GND,70,
+SDA,blå,XIAO D4,MCP SDA,70,
+SCL,gul,XIAO D5,MCP SCL,70,
+INT,hvit,XIAO D1,MCP INTA,70,
+SDA,blå,MCP SDA,6p-adapter 3 (SDA),80,
+SCL,gul,MCP SCL,6p-adapter 4 (SCL),80,
+3V3,rød,MCP VCC,6p-adapter 1 (VDD),80,
+GND,svart,MCP GND,6p-adapter 2 (GND),80,
+3V3,rød,6p-adapter 1 (VDD),18p-adapter 9+10 (VDD),50,
+GND,svart,6p-adapter 2 (GND),18p-adapter 1+5+8+16+18 (GND),50,
+LCD_SCK,grønn,XIAO D8,18p-adapter 3 (SCK),90,
+LCD_MOSI,lyseblå,XIAO D10,18p-adapter 6 (MOSI),90,
+LCD_DC,brun,XIAO D2,18p-adapter 4 (D/C),90,
+LCD_RES,grå,XIAO D3,18p-adapter 2 (RESET),90,
+LCD_RES,grå,18p-adapter 2 (RESET),6p-adapter 6 (RST),50,
+LCD_BL,rosa,XIAO D9,R6 → Q2 G,90,
+LED_K,svart/hvit,Q2 D,18p-adapter 12–15 (LED-K),30,
+IR_TX,turkis,XIAO D6,IR-kortet (R13),200,
+IR_RX,lysegrønn,XIAO D7,IR-kortet (VS1838B OUT),200,
+VBAT,oransje,XIAO BAT+,"IR-kortet (R15, C4)",200,
+GND,svart,XIAO GND,IR-kortet (GND),200,
+IR_STROM,oransje/hvit,MCP GPB6,IR-kortet (VS1838B VCC),160,
+POGO,lilla/hvit,Pogo +,D1 / R11,50,
+GND,svart,Pogo −,MCP GND,60,
+VBUS,lilla,D1 (katode),XIAO 5V,30,
+DOKK,fiolett,R11 / R12,MCP GPB7,30,
