@@ -13,12 +13,17 @@
 //        A_<del> (montert stilling, for sjekk_modell.py) | skjermflate | kort_omriss (2D, DXF)
 include <taster.scad>
 include <hovedkort/hovedkort_data.scad>
+include <enkel/enkel_data.scad>
 
 part = "samlet";
 variant = "kort";               // kort (standard: 14 taster, 201,5 mm) | full (valgfri, med talltaster og smarthus-rad: 30 taster, 244,5 mm)
 kortv = variant == "kort";
-elektronikk = "handkoblet";     // handkoblet (SuperMini + TP4056 + tastekort) | hovedkort («alt på ett kort», se hovedkort/)
-hk = elektronikk == "hovedkort" && kortv;
+elektronikk = "handkoblet";     // handkoblet (SuperMini + TP4056 + tastekort) | hovedkort («alt på ett kort», se hovedkort/) |
+                                // enkel (XIAO ESP32S3 + MCP23017 på et enkelt bærekort, se enkel/)
+hk_hk = elektronikk == "hovedkort" && kortv;   // hovedkortet (KMR2-brytere, ESP-modul med antenne ved kanten)
+en = elektronikk == "enkel" && kortv;          // enkel utgave (4 × 4 × 1,5-brytere, XIAO i halen)
+hk = hk_hk || en;                              // kortet har ferdige data (omriss, deler) fra KiCad
+D_OMRISS = en ? EN_OMRISS : HK_OMRISS;  D_HULL = en ? EN_HULL : HK_HULL;  D_USB_X = en ? EN_USB_X : HK_USB_X;  D_DELER = en ? EN_DELER : HK_DELER;
 oppsett = "rutenett";           // tasteoppsett under D-paden: rutenett (A) | vannrett (B) | stor (C) – se OPPSETT i taster.py
 farge = "lys";                  // lys | mork | bone (Bone White PLA + mørk PETG) | bone_gra (Bone White PLA + grå PETG)
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
@@ -43,8 +48,8 @@ lipH = 1.6; lipT = 1.2; lipG = 0.1;   // leppe på bunnen som går inn i toppen
 // ---------- taster ----------
 spill = 0.35;                   // klaring rundt hetta i hullet
 fl = 0.9;  flT = 1.0;           // flens under toppen: bredde og tykkelse
-zKort = hk ? 7.8 : 8.2; kortT = 1.0;   // tastekortet/hovedkortet (1,0 mm), undersiden (hovedkort: 0,4 mm lavere, høyere brytere)
-swH = hk ? 1.9 : 1.5;           // SMD-bryter 4 × 4 × 1,5 mm (hovedkortet: C&K KMR2, 4,2 × 2,8 × 1,9 mm)
+zKort = hk_hk ? 7.8 : 8.2; kortT = 1.0;   // tastekortet/hovedkortet (1,0 mm), undersiden (hovedkort: 0,4 mm lavere, høyere brytere)
+swH = hk_hk ? 1.9 : 1.5;           // SMD-bryter 4 × 4 × 1,5 mm (hovedkortet: C&K KMR2, 4,2 × 2,8 × 1,9 mm)
 zHb = zKort + kortT + swH + 0.1;  // hettens underside (0,1 mm over bryteren) = 10,8
 opp = 1.2;                      // tastene står 1,2 mm over toppen
 ringOpp = 1.5;                  // gullringen 1,5 mm
@@ -71,7 +76,7 @@ scrWW = scrAW + 2*vKant; scrWH = scrAH + 2*vKant;   // vindu i toppen: 45,0 × 5
 pinD = 0.95; pinH = 0.65; pinInn = 0.675;   // styrepinner bak på modulen (46,45 × 65,60 mm mellom senterne)
 fpcX = W/2 - modW/2 + 17.96 + 9.5/2;   // skjermens FPC-hale: 9,5 mm bred, 17,96 mm fra glassets venstre kant
 fpcN = modN0 + modH + 37.0;     // J1 (senter, n): halen er 42,58 mm (ca. 6,3 ned og rundt, 36,3 bakover, 2,5 inn i kontakten)
-tpX = W/2 + (hk ? 10.6 : 8);      // berøringens FPC (ca. 5,2 mm bred, 35,2 mm lang)
+tpX = W/2 + (hk_hk ? 10.6 : en ? 8.3 : 8);      // berøringens FPC (ca. 5,2 mm bred, 35,2 mm lang)
 tpN = modN0 + modH + 29.6;      // J2 (senter, n)
 jW1 = 13.4; jW2 = 7.4; jD = 5.4; jH = 2.0;   // FH12-stil 0,5 mm, 18 p og 6 p: bredde, dybde, høyde
 lepT = 0.8;                     // toppflaten over glasset rundt vinduet
@@ -93,11 +98,11 @@ mcu = [18, 22.6, 4.6];              // ESP32-S3 SuperMini (antennen mot halen)
 mcuN = kortv ? 124 : 166;            // til venstre, foran laderen (USB-C mot nesen, fri vei 22 mm for pluggen)
 mcuX = kortv ? 13.5 : 15.5;   // full: litt mot høyre, så USB-pluggen går klar av stolpen ved sideveggen
 mcuZ = tB + 1.0;                     // kortet ligger på en 1,0 mm hylle, så USB-C-pluggen går klar av gulvet
-STOLPER = hk ? [[20, 92], [W/2 + 15, 92], [24, 190], [W - 4.2, 184]] : kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 178], [W/2 + 15, 178]]
+STOLPER = en ? [[20, 92], [W/2 + 15, 92], [10, 178], [W - 4.2, 184]] : hk ? [[20, 92], [W/2 + 15, 92], [24, 190], [W - 4.2, 184]] : kortv ? [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 178], [W/2 + 15, 178]]
                 : [[W/2 - 15, 70 + DN], [W/2 + 15, 70 + DN], [W/2 - 15, 222], [W/2 + 15, 222]];
 TCA = kortv ? [[W/2 + 13, 145], [W/2 + 13, 157], [W/2 + 13, 169]] : [[W/2 - 13, 150], [W/2, 150], [W/2 + 13, 150], [W/2 + 13, 162]];   // TCA9555 under kortet
 ladX = W/2;                        // laderens senter
-usbX = hk ? HK_USB_X : ladX;       // USB-C i halen (hovedkortet: kontakten sitter på kortet, til høyre for midten)
+usbX = hk ? D_USB_X : ladX;       // USB-C i halen (hovedkortet: kontakten sitter på kortet, til høyre for midten)
 lad = [17, 28, 4.4];                // TP4056 Type-C-modul med beskyttelse (PCB 17 × 28 × 1,2, USB-C 9 × 7,3 × 3,2), mot halen
 ladY = t + 0.6;                     // laderens bakkant (USB-C-kontaktens front 0,35 mm bak veggen)
 spill_inni = 0.5;                   // klaring rundt kort og batteri i lommene
@@ -108,7 +113,7 @@ motX = W - 9.5; motN = 105;         // motoren: senter n 105
 KANAL_BAT = hk ? [] : [[W/2 + 4, 65.5], [W/2 + 4, L - ladY - lad[1] - 1]];        // x, n fra … til (batteriets bakkant → laderens nesekant)
 KANAL_IR  = [[3.75, 10.5], [3.75, hk ? 80 : 123]];            // IR-kortet → ESP
 kanalZ = tB + 0.4;                                  // ledningsbuntens underkant
-usbW = 9.4; usbH = 3.6; usbZ = hk ? zKort - 1.65 : tB + 1.2 + 1.6;   // USB-C-åpningen (senter z ≈ 4,4)
+usbW = 9.4; usbH = 3.6; usbZ = en ? zKort - 1.0 - 1.6 : hk ? zKort - 1.65 : tB + 1.2 + 1.6;   // USB-C-åpningen (senter z ≈ 4,4)
 usbFW = 13.6; usbFH = 7.4; usbFD = 1.2;          // forsenkning utvendig rundt USB-C (pluggens støpte del går 1,2 mm inn, veggen er 0,6 mm der)
 irW = 30; irH = 3.8; irZ = 4.3;     // IR-vinduet i nesen (z 2,4 … 6,2)
 irT = 1.2;                          // IR-vinduets tykkelse (veggen er t = 1,8; 0,6 mm krage inni)
@@ -384,8 +389,8 @@ module bunn() {
       // (ikke langs skjermmodulen, som går nesten helt ut til sideveggene)
       translate([0, 0, zs - 0.01]) linear_extrude(lipH + 0.01) difference() { omriss(t + lipG); omriss(t + lipG + lipT);
         translate([0, L - modN0 - modH - 0.6]) square([W, modH + 0.9]);
-        translate([usbX - 7, -1]) square([14, t + lipT + 2]);   // ikke over USB-C-kontakten
-        if (hk) translate([2.2, L - 177 - 10.5]) square([3, 21]); }   // tynnere leppe (0,3 mm) der ESP-modulens antenne stikker ut over kortkanten
+        translate([usbX - (en ? 9.5 : 7), -1]) square([en ? 19 : 14, t + lipT + 2]);   // ikke over USB-C-kontakten (enkel: XIAO-en er 17,5 mm bred)
+        if (hk_hk) translate([2.2, L - 177 - 10.5]) square([3, 21]); }   // tynnere leppe (0,3 mm) der ESP-modulens antenne stikker ut over kortkanten
       intersection() { hulrom(); bunn_innmat(); }
       if (dokk_kontakt) pogo_ramme();
     }
@@ -437,16 +442,17 @@ module ir_vindu() {
 
 // ---------- tastekort (1,0 mm) og bryterbrett (printet alternativ) ----------
 module kort2d() {
-  if (hk) difference() { polygon(HK_OMRISS); for (h = HK_HULL) translate([h[0], h[1]]) circle(d = h[2], $fn = 24); }
+  if (hk) difference() { polygon(D_OMRISS); for (h = D_HULL) translate([h[0], h[1]]) circle(d = h[2], $fn = 24); if (en && len(EN_VINDU)) polygon(EN_VINDU); }
   else difference() {
     translate([3.2, L - PCB_N1]) rrect(W - 6.4, PCB_N1 - PCB_N0, 4);
     for (i = [0:len(SKRUER) - 1]) translate([SKRUER[i][0], SKRUER[i][1]]) circle(d = i == MIDT ? 2.4 : bossBD + 0.6);
   }
 }
 module tastekort() { translate([0, 0, zKort]) linear_extrude(kortT) kort2d(); }
-module brytere() { if (hk) for (b = BRYTERE) translate([b[1], L - b[2], zKort + kortT]) { translate([-1.4, -2.1, 0]) cube([2.8, 4.2, swH - 0.5]); cylinder(d = 1.6, h = swH, $fn = 16); }
+module brytere() { if (en) { for (d = D_DELER) if (d[5] > 0) translate([(d[0] + d[2])/2, (d[1] + d[3])/2, zKort + kortT]) { translate([-2, -2, 0]) cube([4, 4, swH - 0.4]); cylinder(d = 2.4, h = swH, $fn = 16); } }
+  else if (hk_hk) for (b = BRYTERE) translate([b[1], L - b[2], zKort + kortT]) { translate([-1.4, -2.1, 0]) cube([2.8, 4.2, swH - 0.5]); cylinder(d = 1.6, h = swH, $fn = 16); }
   else for (b = BRYTERE) translate([b[1], L - b[2], zKort + kortT]) { translate([-2, -2, 0]) cube([4, 4, swH - 0.4]); cylinder(d = 2.4, h = swH, $fn = 16); } }
-module tca() { if (hk) for (d = HK_DELER) if (d[5] < 0) translate([d[0], d[1], zKort - d[4]]) cube([d[2] - d[0], d[3] - d[1], d[4]]);
+module tca() { if (hk) for (d = D_DELER) if (d[5] < 0) translate([d[0], d[1], zKort - d[4]]) cube([d[2] - d[0], d[3] - d[1], d[4]]);
   if (!hk) tca_hk_ikke(); }
 module tca_hk_ikke() { for (c = TCA) translate([c[0] - 2.2, L - c[1] - 3.9, zKort - 1.2]) cube([4.4, 7.8, 1.2]);
   translate([fpcX - jW1/2, L - fpcN - jD/2, zKort - jH]) cube([jW1, jD, jH]);        // J1: FPC-kontakt 18 p 0,5 mm for skjermen
@@ -499,14 +505,14 @@ module motor() { color([0.7, 0.7, 0.72]) translate([motX, L - motN, tB + 0.05]) 
 module flatkabler() {
   // skjermens hale (9,5 mm, 42,58 mm) ned bak glasset og bakover til J1; berøringens (5,2 mm, 35,2 mm) til J2
   color([0.85, 0.55, 0.15]) for (f = [[fpcX, 9.5, fpcN, "J3"], [tpX, 5.2, tpN, "J4"]]) {
-    ende = hk ? [for (d = HK_DELER) if (d[6] == f[3]) d[3]][0] : L - f[2] + jD/2;   // kontaktens front (modellens y)
+    ende = hk ? [for (d = D_DELER) if (d[6] == (en ? (f[3] == "J3" ? "J2" : "J3") : f[3])) d[3]][0] : L - f[2] + jD/2;   // kontaktens front (modellens y)
     translate([f[0] - f[1]/2, L - modN0 - modH - 0.55, 6.4]) cube([f[1], 0.15, zGlass - modT - 6.4 + 0.3]);
     translate([f[0] - f[1]/2, ende, 6.4]) cube([f[1], (L - modN0 - modH - 0.55 + 0.15) - ende, 0.15]);
   }
 }
 // ledningsbunter (1,5 × 1,5 mm) i kanalene på gulvet
 module ledninger() { color([0.85, 0.2, 0.2]) for (k = [KANAL_BAT, KANAL_IR]) if (len(k)) hull() for (q = k) translate([q[0], L - q[1], kanalZ + 0.75]) cube([1.5, 0.01, 1.5], center = true); }
-module innmat() { batteri(); if (!hk) { mcu_kort(); lader(); } ir_kort(); vibbryter(); motor(); ledninger(); }
+module innmat() { batteri(); if (!hk) { mcu_kort(); lader(); } ir_kort(); if (!en) { vibbryter(); motor(); } ledninger(); }
 
 // ---------- i dokken (bare for bildene): samme plassering som fk_plass() i dokk/skjold_dokk.scad ----------
 DOKK_A = 65; DOKK_HB = 12 + 6*sin(DOKK_A) + 8*cos(DOKK_A);
@@ -558,8 +564,8 @@ else if (part == "A_kort") { tastekort(); brytere(); tca(); }
 else if (part == "A_skjerm") translate([W/2 - modW/2, L - modC - modH/2, zGlass - modT]) { cube([modW, modH, modT]); styrepinner(); }
 else if (part == "A_batteri") batteri();
 else if (part == "A_mcu") mcu_kort();
-else if (part == "A_hkdeler") { for (d = HK_DELER) if (d[5] < 0) translate([d[0], d[1], zKort - d[4]]) cube([d[2] - d[0], d[3] - d[1], d[4]]); }
-else if (part == "A_usbc") { for (d = HK_DELER) if (d[6] == "J1") translate([d[0], d[1], zKort - d[4]]) cube([d[2] - d[0], d[3] - d[1], d[4]]); }
+else if (part == "A_hkdeler") { for (d = D_DELER) if (d[5] < 0) translate([d[0], d[1], zKort - d[4]]) cube([d[2] - d[0], d[3] - d[1], d[4]]); }
+else if (part == "A_usbc") { for (d = D_DELER) if (d[6] == (en ? "USBC" : "J1")) translate([d[0], d[1], zKort - d[4]]) cube([d[2] - d[0], d[3] - d[1], d[4]]); }
 else if (part == "A_lader") lader();
 else if (part == "A_ir") ir_kort();
 else if (part == "A_vib") vibbryter();
@@ -569,7 +575,7 @@ else if (part == "A_ledninger") ledninger();
 else if (part == "A_pogo") pogo_hunn();
 else if (part == "hk_3d") {   // hovedkortet alene, sett fra undersiden (komponentene) – bruk med elektronikk="hovedkort"
   color([0.05, 0.35, 0.18]) tastekort(); color([0.85, 0.85, 0.85]) brytere();
-  for (d = HK_DELER) if (d[5] < 0)
+  for (d = D_DELER) if (d[5] < 0)
     color(d[6] == "U1" ? [0.75, 0.75, 0.78] : d[6][0] == "J" ? [0.92, 0.92, 0.88] : d[6][0] == "T" ? [0.85, 0.7, 0.3] : [0.12, 0.12, 0.13])
       translate([d[0], d[1], zKort - d[4]]) cube([d[2] - d[0], d[3] - d[1], d[4]]);
 }

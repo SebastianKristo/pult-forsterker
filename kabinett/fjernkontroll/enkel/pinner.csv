@@ -1,0 +1,45 @@
+XIAO-pute,GPIO,nett,funksjon
+D0,GPIO1,VBAT_ADC,batterispenning via 1 MΩ / 1 MΩ
+D1,GPIO2,INT,"MCP23017 INTA (åpen drain, 10 kΩ), vekker fra dyp søvn"
+D2,GPIO3,LCD_DC,skjerm D/C
+D3,GPIO4,LCD_RES,skjerm RESET og berøringens RST
+D4,GPIO5,SDA,"I²C SDA (MCP23017 0x20, berøring 0x38)"
+D5,GPIO6,SCL,I²C SCL
+D6,GPIO43,IR_TX,IR-sender → 100 Ω → Q3
+D7,GPIO44,IR_RX,IR-mottaker VS1838B (aktiv lav)
+D8,GPIO7,LCD_SCK,skjerm SPI SCK
+D9,GPIO8,LCD_BL,baklys PWM → 100 Ω → Q2
+D10,GPIO9,LCD_MOSI,skjerm SPI MOSI
+3V3,,3V3,"3,3 V fra XIAO-ens regulator"
+GND,,GND,jord
+5V,,VBUS,5V-puten: 5 V fra dokken via D1 (lader batteriet)
+BAT+ (bak),,VBAT,batteriet + (fra J1 via TP1)
+BAT− (bak),,GND,batteriet − (fra J1 via TP2)
+MCP23017 pinne 1,GPB0,K_TILBAKE,tast
+MCP23017 pinne 2,GPB1,K_AVSLUTT,tast
+MCP23017 pinne 3,GPB2,K_SPILL_PAUSE,tast
+MCP23017 pinne 4,GPB3,K_DEMP,tast
+MCP23017 pinne 5,GPB4,K_VOL_OPP,tast
+MCP23017 pinne 6,GPB5,K_VOL_NED,tast
+MCP23017 pinne 7,GPB6,SKJ,
+MCP23017 pinne 8,GPB7,DOKK,
+MCP23017 pinne 9,,3V3,
+MCP23017 pinne 10,,GND,
+MCP23017 pinne 11,,(åpen),NC i databladet
+MCP23017 pinne 12,,SCL,
+MCP23017 pinne 13,,SDA,
+MCP23017 pinne 14,,(åpen),NC i databladet
+MCP23017 pinne 15,,GND,
+MCP23017 pinne 16,,GND,
+MCP23017 pinne 17,,GND,
+MCP23017 pinne 18,,MCP_RST,
+MCP23017 pinne 19,,(åpen),"INTB ikke brukt (INTA dekker begge portene, MIRROR)"
+MCP23017 pinne 20,,INT,
+MCP23017 pinne 21,GPA0,K_AV,tast
+MCP23017 pinne 22,GPA1,K_HJEM,tast
+MCP23017 pinne 23,GPA2,K_MENY,tast
+MCP23017 pinne 24,GPA3,K_OPP,tast
+MCP23017 pinne 25,GPA4,K_NED,tast
+MCP23017 pinne 26,GPA5,K_VENSTRE,tast
+MCP23017 pinne 27,GPA6,K_HOYRE,tast
+MCP23017 pinne 28,GPA7,K_OK,tast

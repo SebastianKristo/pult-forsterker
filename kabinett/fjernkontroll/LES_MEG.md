@@ -22,7 +22,7 @@ Hvorfor 2,8″ og ikke 2,4″:
 - **Lengden øker mer med 2,8″,** fordi panelet er 69 mm langt.
 - **Brede stavskjermer** (2,25″ og liknende) er for lave til lister og cover.
 
-**Elektronikken finnes i to utgaver:** et ferdig [hovedkort](#hovedkort) som JLCPCB lager og monterer (anbefalt), eller [håndkoblet](#alternativ-håndkoblet) med SuperMini, TP4056-modul og tastekort.
+**Elektronikken finnes i tre utgaver:** [enkel](#enkel-utgave-anbefalt) med en ferdig XIAO ESP32S3 og MCP23017 på et lite bærekort (anbefalt), et ferdig [hovedkort](#hovedkort) med alt på ett kort (avansert), eller [håndkoblet](#alternativ-håndkoblet) med SuperMini, TP4056-modul og tastekort.
 
 **Status: ikke bygget og ikke testet.** Modellen er kontrollert med `sjekk_modell.py`, og ESPHome-fila er validert med `esphome config` (ESPHome 2026.10.2). Fastvaren er ikke kompilert her: kompileringen trenger ESP-IDF-filer fra dl.espressif.com og komponentregisteret til Espressif, og de var blokkert i byggemiljøet. Se [Begrensninger](#begrensninger-og-hva-som-ikke-er-testet).
 
@@ -133,6 +133,188 @@ Kartet (lages av `taster.py`):
 - 3MF-platene.
 
 Sjekken kontrollerer kollisjoner og at hver aktuator treffer sin bryter og ingen andre.
+
+## Enkel utgave (anbefalt)
+
+![Bærekortet for den enkle utgaven, sett fra undersiden](enkel/render_3d.png)
+
+Den enkle utgaven er den letteste å bygge. Et lite bærekort (48,6 × 119,8 mm, 2 lag) har en **ferdig Seeed XIAO ESP32S3** i halen, en **MCP23017** for de 14 tastene, de to flatkabelkontaktene til skjermen og noen få transistorer og motstander. XIAO-en har allerede USB-C, lader og 3,3 V-regulator, så bærekortet har ingen USB-kontakt, ingen lader og ingen LDO. Det er ingen små QFN-brikker og ingen ESP-modul å lodde.
+
+[Hovedkortet](#hovedkort) er fortsatt det avanserte valget (egen ESP32-S3-modul, lader og USB på kortet, 43 brytere for alle tasteoppsettene). [Den håndkoblede utgaven](#alternativ-håndkoblet) trenger ikke noe kretskort i det hele tatt, men har mange ledninger.
+
+**Status: tegnet og kontrollert, ikke bestilt og ikke testet.** Se [sjekklisten](#før-du-bestiller-enkel-utgave) før du bestiller.
+
+| | |
+|---|---|
+| Mål | **48,6 × 119,8 mm**, 1,0 mm FR4, **2 lag**, samme omriss og skruehull som hovedkortet (n 79,5–199,3), med et vindu på 11 × 12 mm under XIAO-en |
+| Hjernen | **Seeed XIAO ESP32S3** (8 MB flash, 8 MB PSRAM) loddet flatt på kantputene (castellated) på undersiden, **USB-C ut gjennom halen** (samme åpning som hovedkortet). Flashing og logg går rett i USB-C |
+| Taster | **MCP23017-E/SO** (SOIC-28, I²C 0x20) og **14 brytere 4 × 4 × 1,5 mm** (SMD) på oppsiden, nøyaktig der `taster.py` har tasteoppsett A. Tastene går mot GND, med MCP-ens interne pull-ups. GPB6 styrer skjermstrømmen og GPB7 leser dokken |
+| Skjerm | HP28030 2,8″ (ST7789 + FT6336U): FPC 18 p (J2) og FPC 6 p (J3), 0,5 mm, Hirose FH12 |
+| Skjermstrøm | AO3401A (Q1) slår av 3V3_SW (skjerm og IR-mottaker) når den sover. 100 kΩ gate til 3V3: av ved oppstart |
+| Baklys | AO3400A (Q2) på LED-katoden, PWM fra D9, 10 Ω fra 3V3_SW |
+| IR | 2 × IR-diode 940 nm i serie på IR-kortet i nesen, drevet av **AO3400A (Q3)** med **6,8 Ω** fra batteriet (ca. 0,15 A topp), **100 µF** (C4) ved driveren. VS1838B som mottaker. IR-kortet kobles med JST-SH 5 p (J4) |
+| Batteri | **LiPo 603450, 1200 mAh** med beskyttelseskrets, i **JST-PH 2 p** (J1, pinne 1 = +) → to puter (BAT+ / BAT−) → to korte ledninger gjennom vinduet til XIAO-ens BAT-puter på baksiden. XIAO-en lader det (ca. 100 mA) |
+| Dokken | pogo-puter POGO+ / POGO− på baksiden, **B5819W (D1) til XIAO-ens 5V-pute** (lader i dokken), og 68 kΩ / 100 kΩ til GPB7 (høy = i dokken) |
+| Batterimåling | 1 MΩ / 1 MΩ + 100 nF til D0 (ca. 2 µA) |
+| Komponenter | 48: 29 på undersiden som JLC kan montere (19 linjer i BOM-en), XIAO-en og de 14 bryterne loddes for hånd, 4 loddeputer |
+
+Bilder: [kobber oppside](enkel/skjold-enkel-oppside.png) · [kobber underside](enkel/skjold-enkel-underside.png) · [3D, undersiden](enkel/render_3d.png) · [innmaten](enkel/render_inni.png) · [koblingsskjema (PDF, 3 sider)](enkel/skjema.pdf) · [skjema side 1 (PNG)](enkel/skjema-side1.png).
+
+**Kabinett:** `stl_en/topp.stl`, `stl_en/bunn.stl` og `stl_en/bunn_dokk.stl` (laget av `lag_en.sh`, `elektronikk = "enkel"`). Samme form som de andre; åpningen i halen passer XIAO-ens USB-C.
+
+### Pinnene på XIAO-en
+
+Fra `enkel/pinner.csv` (laget av `sjekk_enkel.py`). ESPHome-fila er `esphome/skjold-fjernkontroll-enkel.yaml`.
+
+| Pute | GPIO | Nett | Til |
+|---|---|---|---|
+| D0 | 1 | VBAT_ADC | batterispenning, 1 MΩ / 1 MΩ og 100 nF |
+| D1 | 2 | INT | MCP23017 INTA (åpen drain, 10 kΩ til 3V3), vekker fra dyp søvn |
+| D2 | 3 | LCD_DC | skjerm D/C |
+| D3 | 4 | LCD_RES | skjerm RESET og berøringens RST, 1 MΩ til 3V3 (R16) |
+| D4 / D5 | 5 / 6 | SDA / SCL | MCP23017 (0x20) og berøringen (0x38), 4,7 kΩ til 3V3 |
+| D6 | 43 | IR_TX | 100 Ω → AO3400A (Q3) → IR-diodene |
+| D7 | 44 | IR_RX | VS1838B (aktiv lav) |
+| D8 | 7 | LCD_SCK | skjerm SPI |
+| D9 | 8 | LCD_BL | 100 Ω → AO3400A (Q2) → baklysets katode |
+| D10 | 9 | LCD_MOSI | skjerm SPI |
+| 3V3 | – | 3V3 | MCP23017, pull-ups, berøringen, Q1 |
+| GND | – | GND | jord |
+| 5V | – | VBUS | 5 V fra dokken gjennom D1 |
+| BAT+ / BAT− (bak) | – | VBAT / GND | batteriet, via J1 og to korte ledninger |
+
+MCP23017: GPA0–GPA7 = av, Skjold, meny, opp, ned, venstre, høyre, OK; GPB0–GPB5 = tilbake, avslutt, ⏯, demp, volum +, volum −; GPB6 = skjermstrøm (lav = på); GPB7 = dokken. A0–A2 til GND (0x20), RESET med 10 kΩ til 3V3. Pinne 11 og 14 er NC, og INTB (19) brukes ikke.
+
+Alle XIAO-putene er brukt. Pinnetabellen følger Seeeds pinout (D0 = GPIO1 … D10 = GPIO9, D6/D7 = GPIO43/44); **sjekk den mot Seeeds wiki** før du bestiller.
+
+### Deler fra AliExpress (enkel utgave)
+
+Prisene er anslag fra november 2026, med frakt, ikke tilbud.
+
+| Del | Søk etter | Antall | Pris |
+|---|---|---|---|
+| **Seeed XIAO ESP32S3** (ikke «Sense»), med antennen som følger med | «Seeed Studio XIAO ESP32S3» | 1 | 80–100 kr |
+| 2,8″ IPS-skjerm med berøring, **HP28030-DCT IPS** ([AliExpress 1005006755555414](https://www.aliexpress.com/item/1005006755555414.html)) | «2.8 inch IPS capacitive 18PIN ST7789 HP28030-DCT» | 1 | 66 kr |
+| LiPo **603450, 1200 mAh**, med beskyttelseskrets og JST-PH 2,0-plugg | «603450 1200mAh lipo PH2.0» | 1 | 60 kr |
+| Bærekort fra JLCPCB (5 stk, uten montering) | – | 5 | ca. 150–250 kr |
+| *eller* bærekort med JLC Economic PCBA (2 monterte av 5) | – | 5 | ca. 650–850 kr |
+| MCP23017-E/SO (SOIC-28) – bare uten JLC-montering | «MCP23017-E/SO SOIC28» | 1 (5-pakning) | 30 kr |
+| SMD-bryter 4 × 4 × 1,5 mm | «4x4x1.5 SMD tactile switch» | 14 (100-pakning) | 30 kr |
+| FPC-kontakt 0,5 mm, 18 p og 6 p, liggende, kontakt nede – bare uten JLC-montering | «FPC 0.5mm 18P» / «FPC 0.5mm 6P» | 1 + 1 (10-pakninger) | 25 kr |
+| AO3400A × 2, AO3401A × 1, B5819W × 1, motstander og kondensatorer 0805, 100 µF 1210 – bare uten JLC-montering | sett | | 40 kr |
+| IR-diode 940 nm × 2, VS1838B × 1, liten hullkortbit | «IR LED 940nm 5mm», «VS1838B» | 2 + 1 | 25 kr |
+| JST-SH 1,0 mm 5 p kabel og JST-PH 2,0 mm 2 p kontakt (SMD) | «JST SH 1.0 5P cable» | 1 | 20 kr |
+| Pogo-kontakt, 2 pinner, 2,80 mm, med ører (til dokken) | «pogo pin connector 2pin 2.8mm magnetic» | 1 sett | 9 kr |
+| M2 × 10-skruer, skumtape, tråd | småtterier | | 40 kr |
+| Filament ca. 50 g | | | 20 kr |
+| **Sum, lodder selv** | | | **ca. 600–700 kr** |
+| **Sum, med JLC-montering** | | | **ca. 1050–1250 kr** (men da har du 2 monterte kort) |
+
+Det er ingen vibrasjonsmotor, vibrasjonsbryter, TP4056 eller tastekort i denne utgaven.
+
+### Kobling
+
+Det meste er på kortet. Det du kobler selv:
+
+1. **Batteriet** i J1 (JST-PH, pinne 1 = +, merket «+»). **Mål polariteten på pluggen først**: AliExpress-batterier har ofte pinnene i motsatt rekkefølge. Bytt pinnene i pluggen om nødvendig.
+2. **BAT+ / BAT−**: to korte, tynne ledninger (ca. 30 mm, 0,2 mm², silikon) fra putene BAT+ og BAT− ved J1 (TP1/TP2, x 40,5 mm) gjennom vinduet under XIAO-en til XIAO-ens BAT-puter på baksiden. **Rødt på BAT+.** Lodd dem på XIAO-en *før* du lodder XIAO-en på kortet.
+3. **XIAO-antennen** i U.FL-kontakten på XIAO-en. Klistre antennen på innsiden av bunnen ved halen, så langt fra batteriet som mulig.
+4. **IR-kortet** i nesen: JST-SH 5 p fra J4. På IR-kortet: pinne 1 (IR_A) → IR-diode 1 anode, katode → IR-diode 2 anode, katode → pinne 2 (IR_K). VS1838B: OUT → pinne 3, VCC → pinne 4 (3V3_SW), GND → pinne 5.
+5. **Pogo-kontakten** (hunndelen i bunnen): + til POGO+ (TP3), − til POGO− (TP4).
+6. **Flatkablene**: skjermen i J2 (18 p), berøringen i J3 (6 p), kontaktene ned.
+
+### Lodding, steg for steg
+
+1. **Uten JLC-montering (dra-lodding):** start med MCP23017 og de to FPC-kontaktene på undersiden. Fluks på putene, tinn på loddebolten, dra langs pinnene, og fjern bro med loddefletting. Sjekk med lupe at ingen pinner henger sammen. Så transistorene, D1 (streken mot «VBUS»/XIAO-en), motstandene, kondensatorene (C4 med + mot VBAT), J1 og J4.
+2. **Tastene** (oppsiden): de 14 4 × 4-bryterne. Lodd én pute, rett opp bryteren, lodd resten.
+3. **XIAO-en:** lodd BAT-ledningene på baksiden av XIAO-en først (steg 2 under Kobling). Tre ledningene gjennom vinduet, legg XIAO-en på putene på undersiden med **USB-C mot halen** (pinne-1-prikken og «XIAO … HER» står på silketrykket), lodd to hjørner, sjekk at USB-C står rett ut over kanten, og lodd alle 14 kantputene. Lodd BAT-ledningene på BAT+ / BAT−.
+4. **Test før skjermen:** USB-C i XIAO-en. Mål 3V3 (3,25–3,35 V). Flash fastvaren (`esphome run esphome/skjold-fjernkontroll-enkel.yaml`). Loggen skal finne 0x20 (MCP23017), og hver tast skal gi en hendelse.
+5. Batteriet, IR-kortet, flatkablene, og skru kortet fast i toppen.
+
+### Bestille fra JLCPCB (enkel utgave)
+
+1. Last opp `enkel/skjold-enkel-gerber.zip`.
+2. **Layers 2**, **Thickness 1.0 mm**, FR-4, 49 × 120 mm, LeadFree HASL (ENIG gir jevnere FPC-puter), valgfri maskefarge, kvantum 5.
+3. **Med montering:** PCB Assembly, **Economic**, **Assembly side: Bottom side**, kvantum 2 eller 5. Last opp `enkel/bom-jlc.csv` og `enkel/cpl-jlc.csv`. XIAO-en og bryterne er ikke i BOM-en (`enkel/dnp-handlodding.csv`). Bekreft hvert LCSC-nummer og sjekk rotasjon og pinne 1 i forhåndsvisningen.
+4. **Uten montering:** bare kortet (ca. 150–250 kr med frakt og mva); delene fra lista over, og dra-lodding.
+
+**Pris med montering (anslag, ikke hentet fra JLC):** kort ca. 10 USD, oppsett 8 + sjablong 1,5 USD, ca. 7 «extended» deler (MCP23017, FH12-18, FH12-6, SM05B, S2B-PH, 100 µF, AO3401A) × 3 USD, komponenter ca. 5 USD for 2 sett, frakt 10–20 USD: **ca. 55–75 USD, ca. 650–850 kr** med mva.
+
+### Før du bestiller (enkel utgave)
+
+- [ ] **XIAO-pinnene.** `kretser_en.py` følger Seeeds pinout for XIAO ESP32S3 (D0–D10 = GPIO1–6, 43, 44, 7, 8, 9; 5V, GND og 3V3 på den andre siden). Sjekk mot Seeeds wiki, og at kantputene i `fotavtrykk.pretty/Seeed_XIAO_ESP32S3_SMD.kicad_mod` (2,54 mm, 17,5 × 21 mm) stemmer med Seeeds KiCad-fotavtrykk.
+- [ ] **XIAO-antennen** (U.FL og FPC-antenne) er ikke tegnet inn i kabinettet. Sjekk at den får plass på innsiden av bunnen ved halen.
+- [ ] **FPC-pinnene på skjermen (J2) og berøringen (J3) er antatt**, som på hovedkortet (pinne 1 GND, 2 RES, 3 SCK, 4 DC, 5 CS til GND, 6 MOSI, 9–10 VCC, 11 LED-A, 12–15 LED-K; berøring VCC, GND, SDA, SCL, INT, RST). Sjekk mot selgerens tegning og rett opp i `kretser_en.py`.
+- [ ] **Batteripolaritet** (J1 pinne 1 = +).
+- [ ] **LCSC-numrene** i `enkel/bom-jlc.csv` er fra hukommelsen og merket «sjekk».
+- [ ] **4 × 4-bryternes fotavtrykk** er tegnet etter TS-1088-stilen (fire puter, to og to koblet). Sjekk mot databladet til bryterne du kjøper.
+- [ ] **Rotasjon i CPL** (SOT-23, SOIC-28 og kontaktene) i JLCs forhåndsvisning.
+- [ ] **Baklysmotstanden** R8 (10 Ω) – sjekk panelets LED-spesifikasjon.
+- [ ] **IR-motstanden** R15 (6,8 Ω, 0805): to dioder i serie gir ca. (3,8 − 2,8 V) / 6,8 Ω ≈ 0,15 A i korte pulser. Fullt batteri (4,2 V) gir ca. 0,2 A. Ok for 5 mm IR-dioder (1 A puls), men 0805-motstanden tåler det bare fordi pulsene er korte.
+
+### Hvorfor disse valgene
+
+- **XIAO ESP32S3:** ferdig modul med lader, regulator og USB-C, og den er liten nok (17,5 × 21 mm) til å ligge flatt i halen med USB-C ut i den eksisterende åpningen. Ingen USB, lader eller LDO på bærekortet.
+- **MCP23017 i SOIC-28:** stor nok til å dra-lodde, 16 pinner = 14 taster + skjermstrøm + dokk, og interne pull-ups. Ett I²C-nett for både tastene og berøringen (derfor er berøringen på 3V3 og ikke på den avslåtte 3V3_SW: en berøringsbrikke uten strøm ville holdt I²C-linjene lave).
+- **AO3400A som IR-driver:** logikknivå-MOSFET som er helt på ved 2,5 V gate (R_DS(on) ca. 50 mΩ ved 2,5 V), mens en 2N7000 trenger 4–5 V for å lede skikkelig og ville gitt svak IR fra en 3,3 V-pinne. SOT-23, JLC «basic».
+- **To dioder i serie fra batteriet:** dobbel lysmengde for samme strøm, og ingen belastning på XIAO-ens 3,3 V-regulator.
+- **JST-PH 2 p til XIAO-ens BAT-puter:** XIAO-en lader og beskytter selv; bærekortet bare fører batteriet frem.
+- **Dokken via Schottky til 5V-puten:** XIAO-en lader fra dokken som fra USB, og dioden hindrer at USB-C mater pogo-pinnene.
+- **Spor:** 0,3 mm signal, 0,5 mm der strømmen går (VBAT, IR, 5 V fra dokken). 3V3, 3V3_SW og LED-nettene er 0,3 mm fordi de ender på FPC-pinner med 0,5 mm deling; de bærer under 150 mA. Klaring 0,15 mm (de 0,5 mm FPC-pinnene har bare 0,2 mm mellomrom).
+
+### Batteritid (enkel utgave)
+
+Overslag, ikke målt. **I søvn ca. 40–70 µA:**
+
+| Hva | Strøm |
+|---|---|
+| XIAO ESP32S3 i dyp søvn (Seeed oppgir ca. 14 µA), med laderen og regulatoren | 15–30 µA |
+| Berøringen (FT6336U) i dvale (fastvaren legger den i dvale før søvn; den har strøm fra 3V3 hele tiden) | ca. 25 µA |
+| MCP23017 | ca. 1 µA |
+| Batterideleren (2 × 1 MΩ) | 2 µA |
+| R16 (1 MΩ) inn i skjermens RESET-pinne mens skjermen er uten strøm | under 3 µA |
+| Skjerm, baklys og IR-mottaker | 0 (3V3_SW er av) |
+
+| Bruk | Per døgn | 1200 mAh (85 % brukbart) |
+|---|---|---|
+| Lite: 10 løft à 30 s | ca. 8 mAh | **ca. 4 måneder** |
+| Vanlig: 30 løft à 45 s | ca. 33 mAh | **ca. 4–5 uker** |
+| Mye: 2 timer med skjermen på | ca. 170 mAh | ca. 6 dager |
+
+RST-linjen til berøringen (D3) flyter når ESP-en sover, så R16 (1 MΩ til 3V3) holder den høy og berøringen i dvale. Hvis berøringen likevel ikke går i dvale, trekker den ca. 1–2 mA i overvåkingsmodus, og «lite bruk» faller til 3–4 uker. **Mål søvnstrømmen** første gang (mellom batteriet og J1); over 0,1 mA betyr at noe er våkent.
+
+Lading: XIAO-en lader med ca. 100 mA, så et tomt batteri bruker 12–14 timer i dokken. Det er ingen ladestatus i fastvaren (XIAO-ens ladelys er bare på modulen).
+
+### Filer i `enkel/`
+
+| Fil | Hva |
+|---|---|
+| `kretser_en.py` | **Kilden**: komponentliste med plassering og nettliste |
+| `lag_enkel.py` | KiCad-kortet: plassering, Freerouting, jordflater, regelområder (ingen viaer under delene), DRC, gerber, BOM/CPL, bilder og `enkel_data.scad` (bruker `hovedkort/lag_hovedkort.py`) |
+| `sjekk_enkel.py` | Nettlistesjekken: strømpinner, MCP-adresse og ubrukte pinner, hver tast på sin pinne, XIAO-pinnene mot fastvaren, pull-ups, delere, diodens retning, avkobling, tastene mot `taster.py`, kortet mot nettlista og at alt er rutet. Skriver `pinner.csv` |
+| `lag_skjema_en.py` | `skjema.pdf` (3 sider, tegnet med schemdraw fra nettlista) og `skjema-side1.png` |
+| `skjold-enkel.kicad_pcb` / `.kicad_pro` / `.ses` | KiCad 7-prosjektet og rutingen |
+| `skjold-enkel-gerber.zip`, `bom-jlc.csv`, `cpl-jlc.csv`, `dnp-handlodding.csv` | Til JLCPCB |
+| `skjold-enkel-drc.rpt` | DRC-rapporten |
+| `fotavtrykk.pretty/` | XIAO ESP32S3 (kantputer) og 4 × 4 × 1,5-bryteren |
+| `enkel_data.scad` | Omriss, vindu, hull og komponentbokser til kabinettet (`elektronikk = "enkel"`) |
+
+```bash
+python3 enkel/lag_enkel.py            # kort, DRC, gerber, BOM/CPL, bilder (--ruting: rut på nytt med Freerouting, FREEROUTING=sti/til/freerouting.jar)
+python3 enkel/sjekk_enkel.py          # nettlistesjekken og pinner.csv
+python3 enkel/lag_skjema_en.py        # skjema.pdf
+xvfb-run -a sh lag_en.sh              # kabinettet (stl_en/), sjekk og bilder
+```
+
+### Hva er kontrollert (enkel utgave)
+
+- **DRC (KiCad 7): 0 feil og 0 ukoblede.** Advarslene er bare silketrykk og bibliotek (48 × `lib_footprint_issues`, 8 × `silk_overlap`, 8 × `silk_over_copper`, 13 × `silk_edge_clearance`).
+- **Rutingen:** Freerouting 2.0.1, 2 lag, 565 spor og 66 viaer (0,7/0,35 mm og 0,8/0,4 mm), ingenting urutet, jordflate på begge lag, ingen viaer under delene.
+- **Nettlistesjekken** (`sjekk_enkel.py`): alt OK.
+- **Kabinettet** (`lag_en.sh` → `sjekk_modell.py asm_en enkel`): ingen kollisjoner, USB-C går inn (0,90 mm), minst 1,6 mm under komponentene, skruetårnene klar av delene, dokk-kontakten klar.
+- **Fastvaren** (`esphome/skjold-fjernkontroll-enkel.yaml`) er validert med `esphome config` (ESPHome 2026.10.2).
+
+Ikke kontrollert: ingenting er bestilt, bygget eller målt; XIAO-pinnene, FPC-pinnene og LCSC-numrene er ikke bekreftet; antennen er ikke tegnet inn.
 
 ## Hovedkort
 
@@ -890,6 +1072,9 @@ Du får mer ut av batteriet hvis du:
 | `../../esphome/blueprints/skjold_fjernkontroll.yaml` | Blueprint for Home Assistant: handlinger per tast og trykktype |
 | `tastekort/`, `tastekort_full/` | Omriss (DXF), plassering, koblinger og stykkliste for tastekortet, standard og full |
 | `stl/`, `stl_full/` | Alle utskriftsdelene for standard og full variant, inkludert `bryterbrett.stl` |
+| `enkel/` | Enkel utgave: bærekortet for XIAO ESP32S3 og MCP23017, KiCad-kort, gerber, BOM/CPL, skjema og skriptene (se [Enkel utgave](#enkel-utgave-anbefalt)) |
+| `lag_en.sh`, `stl_en/` | Toppen og bunnen for den enkle utgaven (`elektronikk = "enkel"`), sjekk og bilder |
+| `../../esphome/skjold-fjernkontroll-enkel.yaml` | Fastvaren for den enkle utgaven (laget av `taster.py`) |
 | `hovedkort/` | Hovedkortet: KiCad-kort, gerber, BOM/CPL, skjema og skriptene (se [Hovedkort](#hovedkort)) |
 | `lag_hk.sh`, `stl_hk/` | Toppen og bunnen for hovedkortet (`elektronikk = "hovedkort"`), sjekk og bilder |
 | `tastekort_a/` | Tastekort A (bare oppsett A): KiCad-kort, gerber, BOM/CPL, pinnetabell, bilder, `lag_tastekort_a.py` og `sjekk_tastekort_a.py` |
