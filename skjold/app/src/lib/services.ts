@@ -4,6 +4,7 @@ import { ndConf, setNdConf } from './navidrome';
 import type { LocalKey, Settings } from './settings';
 import { setSetting, settings, settingsSource } from './store';
 import { effect } from '@preact/signals';
+import { ytmForget } from './ytm';
 
 const KEY = 'skjold-ytm';
 const ytm = signal<{ ytmUser: string; ytmCookie: string }>((() => { try { const j = JSON.parse(localStorage.getItem(KEY) || '{}') as Record<string, string>; return { ytmUser: j['ytmUser'] ?? '', ytmCookie: j['ytmCookie'] ?? '' }; } catch { return { ytmUser: '', ytmCookie: '' }; } })());
@@ -22,11 +23,12 @@ export function setLocal(k: LocalKey, v: string): void {
   if (k === 'ndPass') return setNdConf({ pass: val });
   ytm.value = { ...ytm.value, [k]: val };
   try { localStorage.setItem(KEY, JSON.stringify(ytm.value)); } catch { /* ignore */ }
+  ytmForget();   // ny innlogging: hent YouTube Music-biblioteket på nytt fra Skjold
 }
 
 // Innloggingene fra forsterkeren vinner (de kan være satt i iOS-/Android-appen). Er forsterkeren tom men denne
 // nettleseren har noe lagret fra før, sendes det opp én gang.
-let pushed = false;
+let pushed = false, pushedYtm = false;
 effect(() => {
   if (settingsSource.value !== 'api') return;
   const s = settings.value as unknown as Record<string, unknown>;
@@ -41,5 +43,10 @@ effect(() => {
   const y = { ytmUser: String(s['ytmUser'] ?? ''), ytmCookie: String(s['ytmCookie'] ?? '') };
   if ((y.ytmUser || y.ytmCookie) && (y.ytmUser !== ytm.peek().ytmUser || y.ytmCookie !== ytm.peek().ytmCookie)) {
     ytm.value = y; try { localStorage.setItem(KEY, JSON.stringify(y)); } catch { /* ignore */ }
+    ytmForget();
+  } else if (!y.ytmUser && !y.ytmCookie && !pushedYtm && (ytm.peek().ytmUser || ytm.peek().ytmCookie)) {
+    // Skjold-enheten trenger cookien selv (YouTube Music kjører der): send det denne nettleseren har lagret
+    pushedYtm = true; const c = ytm.peek();
+    setSetting('ytmUser' as keyof Settings, c.ytmUser as never); setSetting('ytmCookie' as keyof Settings, c.ytmCookie as never);
   }
 });

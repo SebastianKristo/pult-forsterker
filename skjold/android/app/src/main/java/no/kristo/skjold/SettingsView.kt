@@ -182,7 +182,7 @@ private val nameDefaults = mapOf("nAux1" to "AUX 1", "nAux2" to "AUX 2", "nUsb1"
 private fun nameValue(m: AppModel, k: String) = m.names[k] ?: nameDefaults[k] ?: ""
 
 private fun setName(m: AppModel, k: String, max: Int, v: String) {
-    if (k == "ytmCookie") m.ytmT = null
+    if (k == "ytmCookie" || k == "ytmUser") { m.ytmT = null; m.libs = m.libs - "ytm" }
     if (k == "plexUrl" || k == "plexToken") { m.plexT = null; m.libs = m.libs - "plex" }
     if (k == "ndUrl" || k == "ndUser" || k == "ndPass") { m.ndT = null; m.libs = m.libs - "nd" }
     m.saveName(k, v.take(max))
@@ -253,10 +253,10 @@ private fun StepButton(s: String, action: () -> Unit) {
 private fun actLabel(m: AppModel, id: String, label: String, confirm: Boolean, now: Long): Pair<String, Color> {
     if (id == "ytmTest" && m.ytmT != null) {
         val c = (m.names["ytmCookie"] ?: "").trim()
-        if (c.isEmpty()) return "Lim inn cookien først" to C.danger
-        if (!c.contains("__Secure-3PAPISID")) return "Mangler __Secure-3PAPISID · hent på nytt" to C.danger
-        // no YouTube Music service on the amplifier yet, so the cookie cannot be checked
-        return if (m.demo) "Innlogget · Premium" to C.ok else "Ikke støttet ennå" to C.danger
+        if (c.isNotEmpty() && !c.contains("__Secure-3PAPISID")) return "Mangler __Secure-3PAPISID · hent på nytt" to C.danger
+        if (m.demo) return "Innlogget · Premium" to C.ok
+        val t = m.ytmStatus.ifEmpty { "Tester …" }
+        return t to (if (t.startsWith("Innlogget") || t.startsWith("Tilkoblet")) C.ok else if (t == "Tester …") C.ink2 else C.danger)
     }
     val nd = m.ndT
     if (id == "ndTest" && nd != null) return if (nd == "busy") "Tester …" to C.ink2 else nd to (if (m.ndOK) C.ok else C.danger)

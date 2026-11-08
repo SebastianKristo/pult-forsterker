@@ -119,7 +119,7 @@ private fun FavShelf(m: AppModel) {
 
 @Composable
 private fun PlaylistShelf(m: AppModel) {
-    // v4: «Dine spillelister» – spillelister fra Navidrome/Plex som er lastet inn
+    // v4: «Dine spillelister» – spillelister fra Navidrome/Plex/YouTube Music som er lastet inn
     val pls = playlists(m)
     if (pls.isNotEmpty()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -142,7 +142,8 @@ private fun PlaylistShelf(m: AppModel) {
 
 private fun playlists(m: AppModel): List<Pair<String, LibColl>> {
     val out = ArrayList<Pair<String, LibColl>>()
-    for ((lib, d) in m.libs) for (p in d.playlists) out.add(lib to p)
+    // YouTube Music: også «Til deg» (mikser og anbefalte album fra forsiden)
+    for ((lib, d) in m.libs) for (p in (if (lib == "ytm") (d.playlists + d.frequent.take(8) + d.other.take(8)).distinctBy { it.id } else d.playlists)) out.add(lib to p)
     return out.take(12)
 }
 

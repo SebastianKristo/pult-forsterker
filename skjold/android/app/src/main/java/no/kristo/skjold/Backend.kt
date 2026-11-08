@@ -14,6 +14,20 @@ data class LibItem(val id: String, val title: String, val artist: String, val al
 /** An album or playlist. Tracks are loaded when it is opened. */
 data class LibColl(val id: String, val name: String, val artist: String, val cover: String, val count: Int, val playlist: Boolean)
 
+// MARK: - YouTube Music (innebygd i Skjold: GET /api/ytm/home|tracks|search, pi/skjold_ytm.py)
+
+object YtmLib {
+    fun colls(x: Any?): List<LibColl> = jsonList(x).map {
+        LibColl(it.str("id"), it.str("name"), it.str("artist"), it.str("cover"), it.num("count"), it.bool("playlist"))
+    }.filter { it.id.isNotEmpty() }
+
+    fun items(x: Any?): List<LibItem> = jsonList(x).map {
+        LibItem(it.str("id"), it.str("title"), it.str("artist"), it.str("album"), it.str("cover"), it.str("stream"), it.num("dur"))
+    }.filter { it.stream.isNotEmpty() }
+
+    fun q(s: String): String = java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+}
+
 /** Simple success/failure result with an error text (Result<_, Failure> in Swift). */
 sealed class Res<out T> {
     data class Ok<T>(val v: T) : Res<T>()

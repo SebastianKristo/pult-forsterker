@@ -24,7 +24,7 @@ import { KassettPage } from './screens/kassett';
 import { VinylPage } from './screens/vinyl';
 import { AbsPage, QhistPage, QuizPage } from './screens/lyd';
 import { IntegrationsPage, PluginsPage, intCount, plugCount } from './screens/integ';
-import { MaPage, maConfigured } from './screens/ma';
+import { MaPage } from './screens/ma';
 import { NrkPanel } from './screens/nrk';
 import { SettingsPage, CategoryDetail } from './screens/settings';
 import { DoorbellOverlay, TalkButton } from './screens/features';
@@ -112,7 +112,8 @@ function Phone() {
         {page === 'radio' && <RadioTabs phone />}
         {page === 'rooms' && <RoomsPhone />}
         {page === 'settings' && <SettingsPage />}
-        {page === 'lib' && (libUi && routeCat() === 'ytm' && maConfigured() ? <MaPage provider="YouTube Music" /> : <LibraryPage />)}
+        {/* YouTube Music er innebygd i Skjold (/api/ytm/*), så biblioteket brukes også når Music Assistant er satt opp */}
+        {page === 'lib' && <LibraryPage />}
         {page === 'ma' && <MaPage />}
         {page === 'grp' && <GroupsPage />}
         {page === 'int' && <IntegrationsPage />}
@@ -230,7 +231,7 @@ function Desktop() {
           {r.page === 'radio' && <RadioTabs />}
           {r.page === 'ma' && <MaPage />}
           {r.page === 'rooms' && <RoomsPhone wide />}
-          {r.page === 'lib' && (r.cat === 'ytm' && maConfigured() ? <MaPage provider="YouTube Music" /> : <DeskLibrary key={r.cat} lib={r.cat === 'ytm' ? 'ytm' : 'nd'} />)}
+          {r.page === 'lib' && <DeskLibrary key={r.cat} lib={r.cat === 'ytm' ? 'ytm' : 'nd'} />}
           {r.page === 'grp' && <GroupsPage />}
           {r.page === 'int' && <IntegrationsPage />}
           {r.page === 'kass' && <KassettPage />}
@@ -300,4 +301,3 @@ function RadioTabs({ phone }: { phone?: boolean }) {
     </div>
   );
 }
-function routeCat(): string | undefined { return route.value.cat; }

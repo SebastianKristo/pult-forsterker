@@ -12,7 +12,7 @@ import { art } from '../lib/settings';
 import { PRODUCT_ICON, SrcCircle, Slider } from '../components/ui';
 import { favs, favsLoaded, loadFavs, playFav } from '../lib/radio';
 import { groups, groupAll, groupCount, groupNone, inGroup, ROLES, setMode, setRole, toggleMember } from '../lib/groups';
-import { fmtDur, libNext, li, lq, lsvc, playNd } from '../lib/library';
+import { fmtDur, libNext, li, LIB_NAME, lq, lsvc, playNd } from '../lib/library';
 import { ndCover } from '../lib/navidrome';
 import { artFor, mmss, nowTitle } from './player';
 import { useTick, nbHw } from './pages';
@@ -176,11 +176,11 @@ function PP({ playing, size }: { playing: boolean; size: number }) {
 // ---------- fullskjermspiller ----------
 const ALL_INPUTS: InputId[] = ['airplay', 'bt', 'aux', 'radio', 'usb', 'spotify'];
 const SRC_NAME: Record<InputId, string> = { airplay: 'AirPlay', bt: 'Blåtann', aux: 'AUX', aux2: 'AUX 2', radio: 'Radio', usb: 'USB-lyd', spotify: 'Spotify', plex: 'Plex', roon: 'Roon' };
-/** Spiller forsterkeren Navidrome-låten appen sendte? */
+/** Spiller forsterkeren bibliotek-låten (Navidrome / YouTube Music) appen sendte? */
 function ndNow(s: Status | null) {
-  if (lsvc.value !== 'nd' || !s || s.input !== 'radio') return null;
+  if (!lsvc.value || !s || s.input !== 'radio') return null;
   const cur = lq.value[li.value];
-  return cur && (s.radio_now?.url?.includes('id=' + encodeURIComponent(cur.id)) || (s.station || s.radio_now?.name || '').startsWith(cur.title)) ? cur : null;
+  return cur && ((cur.stream ? s.radio_now?.url === cur.stream : s.radio_now?.url?.includes('id=' + encodeURIComponent(cur.id))) || (s.station || s.radio_now?.name || '').startsWith(cur.title)) ? cur : null;
 }
 
 export function FullSheet() {
@@ -206,7 +206,7 @@ export function FullSheet() {
   const viz = Array.from({ length: 12 }, (_, i) => { const e = eq[Math.min(4, Math.floor(i / 2.4))] ?? 0, v = s?.playing ? 0.35 + 0.55 * Math.abs(Math.sin(tick * 0.45 + i * 0.9) * Math.sin(tick * 0.21 + i)) : 0.06; return { h: Math.max(4, Math.min(100, v * 100 + e * 2.5)), o: s?.playing ? 1 : 0.35 }; });
   const dur = nd ? nd.duration : s?.duration ?? 0, pos = Math.min(s?.position ?? 0, dur || 0);
   const quality = live ? 'DIREKTE' : nd ? [nd.suffix?.toUpperCase(), nd.samplingRate ? (nd.samplingRate / 1000).toString().replace('.', ',') + ' kHz' : nd.bitRate ? nd.bitRate + ' kbps' : ''].filter(Boolean).join(' · ') : input === 'airplay' ? 'ALAC · 44,1 kHz' : input === 'aux' || input === 'aux2' ? 'ANALOG' : input === 'usb' ? 'USB-LYD' : input === 'spotify' ? 'OGG VORBIS' : input === 'plex' ? 'PLEXAMP' : '';
-  const srcName = nd ? 'Navidrome' : SRC_NAME[input] ?? 'AirPlay';
+  const srcName = nd ? LIB_NAME[lsvc.value ?? 'nd'] : SRC_NAME[input] ?? 'AirPlay';
   const list = s?.inputs?.length ? s.inputs : ALL_INPUTS;
   const off = !s || !s.power || ext;
   const prev = () => { if (!libNext(-1)) void act(() => api.transport('previous')); };
@@ -214,7 +214,7 @@ export function FullSheet() {
   const curName = station.toLowerCase();
   const icon = (d: string, sz = 20, fill = false) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill={fill ? 'currentColor' : 'none'} stroke={fill ? 'none' : 'currentColor'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={d} /></svg>;
   const rnd = 'width:40px;height:40px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0';
-  const queue = nd ? lq.value.map((x, i) => ({ t: x.title, s: x.artist, bg: art(x.album).bg, img: ndCover(x.coverArt, 120), on: i === li.value, pick: () => { playNd(lq.value, i); queueOpen.value = false; } }))
+  const queue = nd ? lq.value.map((x, i) => ({ t: x.title, s: x.artist, bg: art(x.album).bg, img: ndCover(x.coverArt, 120), on: i === li.value, pick: () => { playNd(lq.value, i, lsvc.value ?? 'nd'); queueOpen.value = false; } }))
     : [{ t: big, s: live ? (s?.radio_now?.now || t.sub) : t.sub, bg: a.bg, img: '', on: true, pick: () => { queueOpen.value = false; } }];
   return (
     <div data-testid="full" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}

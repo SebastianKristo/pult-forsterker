@@ -43,8 +43,13 @@ private class Lib(val m: AppModel) {
         return Coll(c.name, t, if (t.isEmpty()) c.count else t.size, c.artist, c)
     }
 
+    /** YouTube Music: også «Til deg» (mikser og anbefalte album fra forsiden), så det er noe å spille uten innlogging. */
     val pls: List<Coll> =
-        if (!m.demo) data.playlists.map { coll(it) }
+        if (!m.demo && m.lib == "ytm") {
+            val out = ArrayList<LibColl>()
+            for (c in data.playlists + data.newest.take(8) + data.frequent.take(8) + data.other.take(8)) if (out.none { it.id == c.id }) out.add(c)
+            out.map { coll(it) }
+        } else if (!m.demo) data.playlists.map { coll(it) }
         else L.pls.map { p -> val t = p.second.map { SK.lt[it] }; Coll(p.first, t, t.size, t.firstOrNull()?.artist ?: "") }
 
     val albums: List<Coll> = if (!m.demo) data.albums.map { coll(it) } else {
@@ -100,10 +105,10 @@ fun LibraryView(m: AppModel) {
             }
         }
         m.live && state != "ok" -> {
-            // not set up / not reachable / YouTube Music without backend: no sample data
+            // not set up / not reachable / Skjold without YouTube Music: no sample data
             T(if (state == "busy" || state.isEmpty()) "Henter biblioteket …" else state, sora(13f, W.Regular, C.muted, 1.45f))
             LaunchedEffect(m.lib) { m.loadLib(m.lib) }
-            if (state != "busy" && state.isNotEmpty() && m.lib != "ytm") SKLinkButton("Prøv igjen") { scope.launch { m.loadLib(m.lib, true) } }
+            if (state != "busy" && state.isNotEmpty()) SKLinkButton("Prøv igjen") { scope.launch { m.loadLib(m.lib, true) } }
         }
         x.open != null -> {
             val open = x.open!!
@@ -208,7 +213,7 @@ private fun Discover(m: AppModel, x: Lib, play: (Coll, Boolean, Boolean) -> Unit
     val feat: List<Coll> = if (x.nd) x.albums.take(5) else x.pls.drop(1) + x.pls.take(1)
     val fi = m.libHero % maxOf(1, feat.size)
     if (fi < feat.size) HeroCard(m, x, feat[fi], fi, feat.size, play) else T("Biblioteket er tomt", sora(13f, W.Regular, C.muted))
-    if (!x.nd) EdgeScroll(8.dp) {
+    if (!x.nd && !m.live) EdgeScroll(8.dp) {
         SK.moods.forEachIndexed { j, n -> SKFilterChip(n, m.libMood == j) { m.libMood = if (m.libMood == j) null else j } }
     }
     for (sh in shelves(m, x)) {
@@ -245,7 +250,7 @@ private fun HeroCard(m: AppModel, x: Lib, f: Coll, fi: Int, count: Int, play: (C
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     T(if (x.nd) "NYLIG LAGT TIL" else "UTVALGT MIKS", mono(10f, C.accent2, 0.12f))
                     T(f.name, sora(21f, W.Semibold, lineHeight = 1.1f))
-                    T(if (x.nd) f.artist else artists(f.tracks), sora(12f, W.Regular, C.ink2), maxLines = 1)
+                    T(if (x.nd) f.artist else artists(f.tracks).ifEmpty { f.artist }, sora(12f, W.Regular, C.ink2), maxLines = 1)
                     Flow(5.dp) {
                         for (c in chips) Box(Modifier.height(20.dp).clip(RoundedCornerShape(5.dp)).background(Color.White.copy(alpha = 0.09f)).padding(horizontal = 7.dp), contentAlignment = Alignment.Center) {
                             T(c, mono(9f, C.ink))
@@ -300,6 +305,19 @@ private fun shelves(m: AppModel, x: Lib): List<Shelf> {
             Shelf("", "Nylig lagt til", d.newest.map { x.coll(it) }.map(alT)),
             Shelf("", "Oppdag", d.other.map { x.coll(it) }.map(alT)),
             Shelf("FRA BIBLIOTEKET", "Mest spilt", d.frequent.map { x.coll(it) }.map(alT)),
+        ).filter { it.tiles.isNotEmpty() }
+    }
+    if (m.live) {
+        // YouTube Music fra Skjold (/api/ytm/home): spillelister, «Til deg» og album
+        val d = x.data
+        val ytT: (LibColl) -> Tile = { c ->
+            val idx = pls.indexOfFirst { it.src?.id == c.id }.coerceAtLeast(0)
+            Tile(c.name, if (c.playlist) "Spilleliste" else c.artist, c.name, c.name) { m.libPl = idx }
+        }
+        return listOf(
+            Shelf("", "Spillelister", d.playlists.map(ytT)),
+            Shelf("YOUTUBE MUSIC", "Til deg", (d.frequent + d.other).distinctBy { it.id }.take(16).map(ytT)),
+            Shelf("", "Album", d.newest.take(8).map(ytT)),
         ).filter { it.tiles.isNotEmpty() }
     }
     if (x.nd) return listOf(
