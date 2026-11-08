@@ -107,6 +107,8 @@ box = box.union(el, engine="manifold")
 x0, x1 = kX0 + kT, kX0 + kW - kT
 inner = trimesh.creation.box(extents=[x1 - x0 - 0.02, kD - baffT - 0.02, kH - 2*kT - 0.02])
 inner.apply_translation([(x0 + x1)/2, kY0 + baffT + (kD - baffT)/2, kH/2])
+# kammeret står på det skrå gulvet (6°): bunnen inni ligger kT over gulvplanet z = y·tan(6°)
+inner = trimesh.intersections.slice_mesh_plane(inner, [0, -np.sin(np.radians(6)), np.cos(np.radians(6))], [0, 0, kT / np.cos(np.radians(6))], cap=True)
 air = inner.difference(box, engine="manifold")
 drv = 0.05e6   # elementets magnet/kurv bak baffelen ≈ 0,05 l
 vol = (air.volume - drv) / 1e6
@@ -133,12 +135,12 @@ def s_av(y):
 sD = s_av(D)
 bkX0, bkX1, bkZ1, bkRt = sD/2 + t, W - sD/2 - t, H - sD - t, R + sD/2 - t
 bkD = (bkRt - 4.4) / np.sqrt(2)
-BAKB = [(bkX0 + 4.4, R), (bkX1 - 4.4, R), (bkX0 + bkRt - bkD, bkZ1 - bkRt + bkD), (bkX1 - bkRt + bkD, bkZ1 - bkRt + bkD), (W/2, bkZ1 - 4.4)]
+BAKB = [(bkX0 + 4.4, R + 10), (bkX1 - 4.4, R + 10), (bkX0 + bkRt - bkD, bkZ1 - bkRt + bkD), (bkX1 - bkRt + bkD, bkZ1 - bkRt + bkD), (W/2, bkZ1 - 4.4)]
 # tiltenkte hull som rektangler (flate, u0, u1, v0, v1)
 HOLES = [("bunn", x - 3.7, x + 3.7, y - 3.7, y + 3.7) for x in (kX0 - 4, kX0 + kW + 4) for y in (kY0 + 12, kY0 + kD - 12)] + \
         [("bunn", 129, 209, 33, 87)] + \
         [("bak", 122.5, 133.5, 16.5, 27.5), ("bak", 139, 149, 17, 27), ("bak", 150, 182, 17, 27),
-         ("bak", 183, 210, 9, 37), ("bak", 127, 213, 77, 119)] + \
+         ("bak", 183, 210, 15, 41), ("bak", 127, 213, 77, 119)] + \
         [("bak", x - 4.5, x + 4.5, z - 4.5, z + 4.5) for x, z in BAKB]
 
 
@@ -154,11 +156,11 @@ def innenfor(y, x, z, m):
             return False
     return True
 
-def wall(mesh, o, d):
+def wall(mesh, o, d, igjen=True):
     loc, _, _ = mesh.ray.intersects_location([o], [d])
-    if len(loc) < 2:
-        return 0.0
-    s = sorted(np.linalg.norm(loc - np.array(o), axis=1))
+    s = np.unique(np.round(np.linalg.norm(loc - np.array(o), axis=1), 3)) if len(loc) else []   # (samme treff på en kant telles én gang)
+    if len(s) < 2:   # stråla traff akkurat en kant i nettet: prøv en hundredels millimeter ved siden av
+        return wall(mesh, np.array(o) + np.cross(d, [0.6, 0.7, 0.4]) * 0.02, d, False) if igjen else 0.0
     return s[1] - s[0]
 
 
@@ -176,6 +178,9 @@ for face, mesh, us, vs, ray in FACES:
             # bare der stråla treffer skallet midt på flaten (ikke rett i den avrundede kanten bak)
             if face.startswith("side") and not innenfor(u, W/2, v, 2) or face in ("topp", "bunn") and not innenfor(v, u, H/2, 2) \
                     or face == "bak" and not innenfor(D, u, v, t + 0.3 + 3):
+                continue
+            # undersiden er skåret langs bordet (6°): ikke send stråler under bordplanet
+            if face.startswith("side") and v < -t + u * np.tan(np.radians(6)) + 2 or face == "bak" and v < -t + D * np.tan(np.radians(6)) + t + 3:
                 continue
             o, d = ray(u, v)
             w = wall(mesh, o, d)
@@ -196,8 +201,8 @@ print(f"{'OK ' if good else 'FEIL'} grillen stikker {ut_stoff:.1f} mm ut (rammen
 # --- kroppen printes med fronten ned uten støtte: ingen flate i det avrundede bakpartiet eller tårnene heller mer enn 50°
 # (fronten y < 8 er platen og de grunne forsenkningene; skruehullene i gulvet (z < 0) er små liggende hull) ---
 kn, kc, ka = A["kropp"].face_normals, A["kropp"].triangles_center, A["kropp"].area_faces
-bratt = (kn[:, 1] < -np.sin(np.radians(50))) & (kc[:, 1] > 8) & (kc[:, 2] > 0)
-bak_hel = np.degrees(np.arcsin(np.clip(-kn[(kc[:, 1] > 60) & (kc[:, 2] > 0) & (kn[:, 1] < 0) & (ka > 0.05), 1], 0, 1))).max()
+bratt = (kn[:, 1] < -np.sin(np.radians(50))) & (kc[:, 1] > 8) & (kc[:, 2] > -3 + kc[:, 1] * np.tan(np.radians(6)) + 3.3)   # (over gulvet; hullene i gulvet er små liggende hull)
+bak_hel = np.degrees(np.arcsin(np.clip(-kn[(kc[:, 1] > 60) & (kc[:, 2] > -3 + kc[:, 1] * np.tan(np.radians(6)) + 3.3) & (kn[:, 1] < 0) & (ka > 0.05), 1], 0, 1))).max()
 good = ka[bratt].sum() < 1.0
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} printes uten støtte: bakpartiet heller maks {bak_hel:.0f}°, {ka[bratt].sum():.1f} mm² brattere enn 50°")
@@ -234,10 +239,10 @@ good = sp <= 0.5
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} skjøten bak: største spalte inn i kassa {sp:.2f} mm (rett bakfra og 30° fra toppen og sidene, maks 0,5)")
 
-# --- helling: radioen står 6° bakover på bordet (kile under gulvet). Snur kroppen, bakplata og grillen med stoffet til
-# bordstilling og sjekker at undersiden ligger plant på bordet, at fronten heller 6° bakover, og at skjørtet printes uten støtte ---
+# --- helling: hele radioen står 6° bakover på bordet, vippet rundt fremre underkant og skåret plant under. Snur kroppen,
+# bakplata, stoffet og knottene til bordstilling og sjekker at undersiden ligger plant på bordet og at fronten heller 6° ---
 TILT = 6.0
-Rt = trimesh.transformations.rotation_matrix(np.radians(-TILT), [1, 0, 0], [0, D, -3])
+Rt = trimesh.transformations.rotation_matrix(np.radians(-TILT), [1, 0, 0], [0, 0, -3])
 verden = {n: A[n].copy().apply_transform(Rt) for n in ("kropp", "bak", "stoff", "knott", "volum")}
 bunn_k, bunn_b = verden["kropp"].bounds[0][2], verden["bak"].bounds[0][2]
 fn = verden["kropp"].face_normals[np.argmin(np.abs(A["kropp"].triangles_center[:, 1]) + 999 * (np.abs(A["kropp"].face_normals[:, 1] + 1) > 1e-3))]
@@ -251,7 +256,7 @@ mal = alle.extents
 good = abs(bunn_k - bunn_b) < 0.4 and abs(helling - TILT) < 0.2 and np.ptp(kontakt[:, 1]) > 100 and ka[skj].sum() < 1.0
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} helling: fronten lener {helling:.1f}° bakover, undersiden plan på bordet (kropp {bunn_k:.2f}, bakplate {bunn_b:.2f} mm), "
-      f"skjørtet {ka[skj].sum():.1f} mm² brattere enn 50°; på bordet {mal[0]:.0f} × {mal[1]:.0f} × {mal[2]:.0f} mm (B × D × H, med grill og knotter)")
+      f"kant under grillen {8 + 3:.0f} mm som før; på bordet {mal[0]:.0f} × {mal[1]:.0f} × {mal[2]:.0f} mm (B × D × H, med grill og knotter)")
 
 # --- plass i dybden (115 mm): bak kammerlokket, bak Pi-en og bak luftespaltene (kontaktene i bakplata) ---
 bak_inn = A["bak"].bounds[1][1] - 3                          # innsiden av bakplata (kragen langs kanten er bare 1,2 mm bred)

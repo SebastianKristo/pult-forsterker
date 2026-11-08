@@ -72,7 +72,7 @@ kT = 2.8;  baffT = 7;                     // kammervegg og baffel
 drvX = kX0 + kW/2;  drvZ = kZ0 + kH/2;    // elementet midt på baffelen
 kOff = kT + 2.5;                          // innpressmutter-tårnene for lokket ligger langs sideveggene (smelter inn i veggene)
 kBx = [kX0 + kOff, kX0 + kW - kOff];
-kBz = [kZ0 + kOff, kZ0 + kH/2, kZ0 + kH - kOff];
+kBz = [17, kZ0 + kH/2, kZ0 + kH - kOff];   // det nederste paret over det skrå gulvet
 kOre = 8;                                 // ører langs gulvet på utsiden (skrues fra undersiden)
 kOreY = [kY0 + 12, kY0 + kD - 12];
 // netto volum ≈ 80,4 × 85 × 118,4 mm − tårn og element ≈ 0,75 l (lukket, mono)
@@ -121,21 +121,25 @@ ins = 4.0; insD = 6.0; boss = 8.4; m3 = 3.4; m3k = 6.4;
 // Oppe i hjørnene på diagonalen, nede på sideveggen over kammerørene, og ett midt i toppen.
 bkX0 = sD/2 + t; bkX1 = W - sD/2 - t; bkZ1 = H - sD - t; bkRt = R + sD/2 - t;
 bkD = (bkRt - 4.4) / sqrt(2);
-bakB = [[bkX0 + 4.4, R, [-1, 0]], [bkX1 - 4.4, R, [1, 0]],
+bakB = [[bkX0 + 4.4, R + 10, [-1, 0]], [bkX1 - 4.4, R + 10, [1, 0]],   // (de nederste over det skrå gulvet og kammerøret)
         [bkX0 + bkRt - bkD, bkZ1 - bkRt + bkD, [-1, 1]/sqrt(2)], [bkX1 - bkRt + bkD, bkZ1 - bkRt + bkD, [1, 1]/sqrt(2)],
         [W/2, bkZ1 - 4.4, [0, 1]]];
 bakY0 = 44;                                // tårnene starter 44 mm bak fronten (avstiverne skrås av foran, klar av skjermbraketten)
 fotXY = [[30, 22], [W - 30, 22], [30, D - 22], [W - 30, D - 22]];             // selvklebende gummiføtter Ø 12
-// ---------- helling: fronten lener 6° bakover, så skjermen og knappene peker litt opp mot ansiktet ----------
-// Kassa er en kile: alt over gulvet er som før (kassas eget koordinatsystem), og under gulvet er det et skjørt som
-// fortsetter yttersidene ned til bordplanet. Bordplanet går gjennom bakre underkant og ligger hS = D·tan(6°) ≈ 12,1 mm
-// under gulvet foran. Inni er alt uendret; bare hele radioen står 6° bakover (plassert()).
+// ---------- helling: hele radioen lener 6° bakover, så skjermen og knappene peker litt opp mot ansiktet ----------
+// Den samme kassa er vippet bakover rundt fremre underkant, og undersiden er skåret plant langs bordet: bordplanet går
+// gjennom fremre underkant (y = 0, z = −t) og stiger bakover med tan(6°). Fronten har akkurat de samme proporsjonene og
+// den samme kanten under grillen og knappene som før. Bakover er gulvet skrått i kassas koordinater (pz(y) høyere), så
+// det som står på gulvet (kammeret, forsterkeren, DAC-en, festene) følger det nye gulvet. plassert() setter radioen på bordet.
 tilt = 6;
-hS = D * tan(tilt);
+function pz(y) = y * tan(tilt);              // bordplanet over den gamle undersiden ved dybde y
+function fz(y) = max(0, pz(y));              // gulvets overside ved dybde y (det gamle gulvet foran, det skrå bak)
 module over_bord(o = 0) {   // alt over bordplanet (o mm over det), i kassas koordinater
-  translate([0, D, -t]) rotate([tilt, 0, 0]) translate([-50, -400, o]) cube([W + 100, 600, 400]);
+  translate([0, 0, -t]) rotate([tilt, 0, 0]) translate([-50, -50, o]) cube([W + 100, 400, 400]);
 }
-module plassert() { translate([0, D, -t]) rotate([-tilt, 0, 0]) translate([0, -D, t]) children(); }   // står på bordet
+module over_gulv(o = 0) { intersection() { over_bord(t + o); translate([-50, -50, o]) cube([W + 100, 400, 400]); } }   // over gulvets overside + o
+module under_gulv(o = 0) { difference() { translate([-50, -50, -50]) cube([W + 100, 400, 400]); over_gulv(o); } }
+module plassert() { translate([0, 0, -t]) rotate([-tilt, 0, 0]) translate([0, 0, t]) children(); }   // står på bordet
 // Raspberry Pi 4 på baksiden av skjermbraketten (85 × 56, hull 58 × 49), sentrert bak skjermen
 piH = [[-29, -24.5], [29, -24.5], [-29, 24.5], [29, 24.5]];
 piSt = 5;                                  // avstandsstykker
@@ -156,9 +160,9 @@ ecKort = [20, 34];                         // eget lite hullkort per dreieknapp,
 ecT = 13;
 ecY = t + ecBody[2];                       // kortet ligger an mot tårnene i y 9,5; huset står mot frontens innside (tar trykket)
 // TPA3116D2 2 × 50 W (XH-M189-type): 83 × 50 × 20 mm, 4 × Ø3 ca. 3,5 mm fra hjørnene (76 × 43) – på gulvet over spaltene
-forstP = [128, 38]; forstM = [83, 50, 20]; forstH = 5; forstHull = 3.5;
+forstP = [128, 38]; forstM = [83, 50, 20]; forstH = 12; forstHull = 3.5;
 // PCM5102A (GY-PCM5102): 32 × 17 mm, uten festehull – på fire stolper, holdes med strips
-dacP = [118, 14]; dacM = [32, 17]; dacH = 4;
+dacP = [118, 14]; dacM = [32, 17]; dacH = 7;
 // 5 V / 5 A nedtrapper (XL4015-type, ca. 54 × 23 × 18) og relémodul (ca. 50 × 26 × 19) på innsiden av bakplata,
 // i hjørneholdere (5 mm høye) og med strips. (x, z) = nedre venstre hjørne sett bakfra i x
 buckP = [118, 46]; buckM = [54, 23, 18];
@@ -195,42 +199,23 @@ module list2d(o = 0) { translate([lX0 + o, lZ0 + o]) rrect(lH - 2*o, gZ1 - gZ0 -
 module drape2d(p, d) { hull() { translate(p) circle(d = d); translate(p - [0, d/2 * sqrt(2)]) square(0.01, center = true); } }
 module gulvstolpe(p, h, d = 6, hull_d = 0) {
   difference() {
-    translate([0, 0, -0.01]) linear_extrude(h + 0.01) drape2d(p, d);
+    translate([0, 0, -t]) linear_extrude(h + t) drape2d(p, d);   // fra gulvet (skjæres av bordplanet)
     if (hull_d > 0) translate([0, 0, h - 6]) linear_extrude(7)   // skruehull med spiss tak (mot +y), M3 selvgjengende
       hull() { translate(p) circle(d = hull_d); translate(p + [0, hull_d/2 * sqrt(2)]) square(0.01, center = true); }
   }
 }
 module gulvstrips(p) {   // strips-feste: kloss med tunnel på tvers (langs x) og spisst tak
   difference() {
-    translate([0, 0, -0.01]) linear_extrude(4.01) hull() { translate(p - [4, 2.5]) square([8, 5]); translate(p - [0, 6.5]) square(0.01, center = true); }
-    translate([p[0] - 5, 0, 0]) rotate([90, 0, 90]) linear_extrude(10)
+    translate([0, 0, -t]) linear_extrude(t + fz(p[1]) + 4) hull() { translate(p - [4, 2.5]) square([8, 5]); translate(p - [0, 6.5]) square(0.01, center = true); }
+    translate([p[0] - 5, 0, fz(p[1])]) rotate([90, 0, 90]) linear_extrude(10)
       polygon([[p[1] - 1.75, 1], [p[1] + 0.5, 1], [p[1] + 1.75, 1.9], [p[1] + 0.5, 2.8], [p[1] - 1.75, 2.8]]);
   }
 }
 function kort_hjorner(p, m, inn) = [for (u = [inn, m[0] - inn], v = [inn, m[1] - inn]) p + [u, v]];
 
-// ---------- skjørtet under gulvet (kilen) ----------
-// Yttersidene fortsetter rett ned til bordplanet (veggtykkelse t), og fire føtter (dråpeformet, spissen mot fronten)
-// går fra gulvet ned til bordplanet med forsenkning for gummiføttene. Undersiden er åpen, så skruene i kammerørene
-// og luftespaltene i gulvet er tilgjengelige og får luft. Printes med fronten ned uten støtte: skjørtet er en
-// forlengelse av veggene, og bordplanet heller oppover i printretningen.
-module ytre_kile() { intersection() { hull() { ytre(); translate([0, 0, -hS - 1]) ytre(); } over_bord(0); } }   // kassa forlenget ned til bordet
-module skjort() {
-  intersection() {
-    union() {
-      difference() {
-        ytre_kile();
-        hull() { skall(t, t); translate([0, 0, -hS - 5]) skall(t, t); }
-      }
-      for (p = fotXY) translate([0, 0, -t - hS - 1]) linear_extrude(hS + 1.01) drape2d(p, 14);
-    }
-    over_bord(0);
-    translate([-1, -1, -t - hS - 5]) cube([W + 2, D - bkT + 1, hS + 5 + t + R]);   // under gulvet og opp forbi de nedre hjørnene (R14), foran bakplata
-  }
-}
-
 // ---------- kropp (ett skall: front, sider, topp og gulv; åpen bak; printes med fronten ned på platen) ----------
-module kropp() {
+module kropp() { intersection() { kropp_raa(); over_bord(0); } }   // undersiden skåret plant langs bordet
+module kropp_raa() {
   difference() {
     union() {
       difference() { ytre(); skall(t, t); }
@@ -255,7 +240,7 @@ module kropp() {
       for (q = kort_hjorner(forstP, forstM, forstHull)) gulvstolpe(q, forstH, 6.5, 2.6);
       for (q = kort_hjorner(dacP, dacM, 2.5)) gulvstolpe(q, dacH, 5);
       for (q = stripsGulv) gulvstrips(q);
-      render(convexity = 4) skjort();
+      intersection() { ytre(); difference() { over_bord(0); over_bord(t); } }   // det skrå gulvet bak (t tykt over bordplanet)
     }
     for (p = bakB) translate([p[0], D - bkT - insD, p[1]]) rotate([-90, 0, 0]) cylinder(d = ins, h = insD + 0.1);
     translate([-1, D - bkT, -t - 1]) cube([W + 2, bkT + 1, H + t + 2]);   // kroppen slutter der bakplata begynner
@@ -287,12 +272,12 @@ module kropp() {
     }
     // gulvet: kammerørene (senkeskruer nedenfra), gummiføtter og lufting under forsterkeren
     for (x = [kX0 - kOre/2, kX0 + kW + kOre/2], y = kOreY)
-      translate([x, y, -t - 1]) { cylinder(d = m3, h = t + 2); cylinder(d = m3k, h = 1 + 1.7); }
+      translate([x, y, -t - 1 + pz(y)]) { cylinder(d = m3, h = t + 2); cylinder(d = m3k, h = 1 + 1.7); }
     for (p = fotXY) difference() {                                                     // 0,8 mm forsenkning for gummiføttene i bordplanet
-      translate([p[0], p[1], -t - hS - 2]) cylinder(d = 12.6, h = hS + 2);
+      translate([p[0], p[1], -t - 20]) cylinder(d = 12.6, h = 40);
       over_bord(0.8);
     }
-    for (i = [0:ventGulv[2] - 1]) translate([ventGulv[0] + i*ventGulv[1], ventGulv[3], -t - 1]) cube([3, ventGulv[4], t + 2]);
+    for (i = [0:ventGulv[2] - 1]) translate([ventGulv[0] + i*ventGulv[1], ventGulv[3], -t - 1 + pz(ventGulv[3])]) cube([3, ventGulv[4], t + 2 + pz(ventGulv[4])]);
   }
 }
 
@@ -312,8 +297,8 @@ module bak_krage() {
 module bak() {
   difference() {
     union() {
-      intersection() { ytre_kile(); translate([-1, yBak, -t - hS - 1]) cube([W + 2, bkT, H + t + hS + 2]); }   // fortsetter kassas form (kilen)
-      bak_krage();
+      intersection() { ytre(); over_bord(0); translate([-1, yBak, -t - 1]) cube([W + 2, bkT, H + t + 2]); }   // fortsetter kassas form, skåret langs bordet
+      intersection() { bak_krage(); over_gulv(0.3); }
       // hjørneholdere for nedtrapperen og releet (printes oppover fra bakplata), og strips-fester
       for (b = [[buckP, buckM], [releP, releM]]) {
         for (u = [0, 1], v = [0, 1]) let(c = [b[0][0] + u*b[1][0], b[0][1] + v*b[1][1]])
@@ -332,13 +317,17 @@ module bak() {
     translate([jackX, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = jackD, h = bkT + 2);
     translate([usbX - usbW/2, D - bkT - 1, bakKZ - usbH/2]) cube([usbW, bkT + 2, usbH]);
     for (s = [-1, 1]) translate([usbX + s*usbHull/2, D - bkT - 1, bakKZ]) rotate([-90, 0, 0]) cylinder(d = 3.2, h = bkT + 2);   // M3 for USB-skjøten
-    for (i = [0:3]) translate([184 + i*7, D - bkT - 1, 10]) cube([4, bkT + 2, 26]);    // nede: forsterker (godt klar av tårnet i hjørnet)
+    for (i = [0:3]) translate([184 + i*7, D - bkT - 1, 16]) cube([4, bkT + 2, 24]);    // nede: forsterker (godt klar av tårnet i hjørnet)
     for (i = [0:8]) translate([128 + i*10, D - bkT - 1, 78]) cube([4, bkT + 2, 40]);   // oppe: Pi
   }
 }
 
 // ---------- lydkammer (mono, lukket) ----------
-module kammer() {
+module kammer() {   // står på det skrå gulvet: bunnen følger gulvet (kT tykk), alt annet som før
+  intersection() { kammer_raa(); over_gulv(0.05); }   // (0,05 mm over gulvet)
+  intersection() { translate([kX0, kY0, -10]) cube([kW, kD, 40]); over_gulv(0.05); under_gulv(kT); }
+}
+module kammer_raa() {
   difference() {
     union() {
       difference() {
@@ -349,18 +338,19 @@ module kammer() {
       for (x = kBx, z = kBz) translate([x, kY0 + 1, z]) rotate([-90, 0, 0]) cylinder(d = boss, h = kD - 1);
       // ører langs gulvet på utsiden, skrues fast nedenfra gjennom gulvet
       // (det venstre øret følger det avrundede hjørnet nede i kroppen bakover, med 0,2 mm klaring)
-      intersection() { for (x = [kX0 - kOre, kX0 + kW]) translate([x, kY0, kZ0]) cube([kOre, kD, 8]); skall(t + 0.2, t); }
+      intersection() { for (x = [kX0 - kOre, kX0 + kW]) translate([x, kY0, -5]) cube([kOre, kD, 40]); skall(t + 0.2, t); under_gulv(8); }   // 8 mm over gulvet
     }
     translate([drvX, kY0 - 1, drvZ]) rotate([-90, 0, 0]) cylinder(d = drvCut, h = baffT + 2);
     for (k = [0:3]) translate([drvX + drvPCD/2*cos(45 + 90*k), kY0 - 1, drvZ + drvPCD/2*sin(45 + 90*k)])
       rotate([-90, 0, 0]) cylinder(d = 2.6, h = baffT);                     // M3 selvgjengende
     for (x = kBx, z = kBz) translate([x, kY0 + kD - insD, z]) rotate([-90, 0, 0]) cylinder(d = ins, h = insD + 0.1);
-    for (x = [kX0 - kOre/2, kX0 + kW + kOre/2], y = kOreY) translate([x, y, kZ0 - 0.01]) cylinder(d = ins, h = insD);
+    for (x = [kX0 - kOre/2, kX0 + kW + kOre/2], y = kOreY) translate([x, y, fz(y) - 0.01]) cylinder(d = ins, h = insD);
     // kabelhull bak i høyre sidevegg, rett mot forsterkeren (tettes med silikon etter at ledningene er trukket)
-    translate([kX0 + kW - kT - 1, kY0 + kD - 14, kZ0 + 14]) rotate([0, 90, 0]) cylinder(d = 4, h = kT + 2);
+    translate([kX0 + kW - kT - 1, kY0 + kD - 14, 22]) rotate([0, 90, 0]) cylinder(d = 4, h = kT + 2);
   }
 }
-module lokk() {   // bakveggen på kammeret (tetning: 1–2 mm skumtape rundt kanten, klemmes flat)
+module lokk() { intersection() { lokk_raa(); over_gulv(0.05); } }   // følger det skrå gulvet nede
+module lokk_raa() {   // bakveggen på kammeret (tetning: 1–2 mm skumtape rundt kanten, klemmes flat)
   difference() {
     translate([kX0, kY0 + kD, kZ0]) cube([kW, 3, kH]);
     for (x = kBx, z = kBz) translate([x, kY0 + kD - 1, z]) rotate([-90, 0, 0]) cylinder(d = m3, h = 5);
