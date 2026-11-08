@@ -13,6 +13,7 @@
 // spolene rundt gjennom 1,6 mm plast – ingen tannhjul som må treffe når kassetten settes inn.
 
 part = "samlet";
+cover = "";      // "demo" = tegn et eksempelcover på papiret (bare til bilder)
 $fn = 64;
 
 // ---------- kassett ----------
@@ -135,6 +136,26 @@ module kassett_halv(front=true){
   }
   if(front) for(p=screws) translate([p[0],p[1],H]) cylinder(d=pinD,h=pinH);
 }
+// Eksempelcover til bildene (eget motiv): kveldshimmel i bånd, sol over hav, tittel og artist under bildet.
+// Tegnes som tynne lag rett foran papiret, klippet til den synlige delen.
+module demo_cover(){
+  x0 = (kW-papW)/2; art = papW - 2*rimW - 2.6; ax = (kW-art)/2; ay1 = papY0 + papH - rimW - 0.6; ay0 = ay1 - art;
+  sky = [[0.98,0.80,0.52],[0.97,0.66,0.45],[0.93,0.50,0.43],[0.80,0.38,0.47],[0.58,0.30,0.50],[0.36,0.24,0.46],[0.20,0.18,0.38]];
+  intersection(){
+    linear_extrude(0.06) papir2d(rimW + 0.6);
+    union(){
+      for(i=[0:len(sky)-1]) color(sky[i]) translate([ax, ay0 + art*0.42 + i*(art*0.58/len(sky)), 0]) cube([art, art*0.58/len(sky)+0.01, 0.02]);
+      color([1.0,0.90,0.62]) translate([kW/2, ay0 + art*0.46, 0.02]) intersection(){ cylinder(r=art*0.2, h=0.02); translate([-art,0,0]) cube([2*art,art,1]); }
+      for(i=[0:5]) color(i%2 ? [0.13,0.20,0.34] : [0.17,0.27,0.43]) translate([ax, ay0 + i*(art*0.42/6), 0]) cube([art, art*0.42/6+0.01, 0.02]);
+      for(i=[0:3]) color([1.0,0.86,0.58]) translate([kW/2 - art*(0.16-i*0.03), ay0 + art*0.40 - i*2.6, 0.02]) cube([2*art*(0.16-i*0.03), 0.5, 0.02]);
+      color([0.98,0.95,0.90]) translate([ax+1.6, ay1-5.0, 0.02]) linear_extrude(0.02) text("SOMMERNATT", size=2.6, font="Liberation Sans:style=Bold", spacing=1.1);
+    }
+  }
+  color([0.11,0.11,0.12]) translate([x0+rimW+1, papY0+rimW+3.6, 0]) linear_extrude(0.03) text("Sommernatt", size=2.5, font="Liberation Sans:style=Bold");
+  color([0.42,0.42,0.40]) translate([x0+rimW+1, papY0+rimW+0.9, 0]) linear_extrude(0.03) text("Skjold Lab", size=1.9, font="Liberation Sans");
+  color([0.70,0.68,0.64]) translate([x0+papW-rimW-1, papY0+rimW+0.9, 0]) linear_extrude(0.03) text("SKJOLD", size=1.3, font="Liberation Sans", halign="right", spacing=1.3);
+}
+
 // Bakplaten bak papiret: flat plate med ribber som står mot innsiden av bakhalvdelen, så papiret presses mot rammen.
 // Koordinater som fronthalvdelen (z=0 forsiden, z=kT baksiden). Ribbene går utenom NFC-ringen og hopper over
 // tverrbjelken i bakhalvdelen. Printes med platen ned.
@@ -181,6 +202,7 @@ module kassett_samlet(lbl=true, spoler=true){
   color(c_k2) kassett_halv(false);
   color(c_k1) translate([0,0,kT]) mirror([0,0,1]) kassett_halv(true);
   if(lbl) color(c_lbl) translate([0,0,kT-skin-papT+0.02]) linear_extrude(0.1) papir2d(0.2);   // papiret bak vinduet
+  if(lbl && cover == "demo") translate([0,0,kT-skin-papT+0.12]) demo_cover();
   color(c_k2) translate([0,0,kT]) mirror([0,0,1]) etikettplate_pos();
   if(spoler) for(x=reelX) color(c_reel) translate([x,reelY,spZ0]) spole();
 }
@@ -263,7 +285,8 @@ module spiller_topp(){
     }
     slot_cut();
     // vindu i fronten + spor for ruten (fra undersiden og opp)
-    translate([0,-1,0]) rotate([-90,0,0]) mirror([0,1,0]) linear_extrude(wall+1.6) win2d();
+    // helt inn i sporet (y = wall + 1,6): før stoppet kuttet 1 mm foran og la igjen en tett 0,4 mm vegg bak ruten
+    translate([0,-1,0]) rotate([-90,0,0]) mirror([0,1,0]) linear_extrude(1 + wall + 1.6 + 0.2) win2d();
     translate([pW/2-paneW/2-0.25, chY0-eps, -1]) cube([paneW+0.5, chY1-chY0, paneZ1+0.2+1]);
     // åpning for lyslederen i toppen
     translate([pW/2-ledL/2, ledY0, pH-lidT-1]) cube([ledL, ledWd, lidT+2]);
@@ -409,6 +432,7 @@ else if(part=="A_mt") motortrinse_pos() motortrinse();
 else if(part=="A_kb") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) kassett_halv(false);
 else if(part=="A_kf") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) translate([0,0,kT]) mirror([0,0,1]) kassett_halv(true);
 else if(part=="A_kp") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) translate([0,0,kT]) mirror([0,0,1]) etikettplate_pos();
+else if(part=="A_papir") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) translate([0,0,kT-skin-papT+0.02]) linear_extrude(0.1) papir2d(0.2);
 else if(part=="A_s0") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) translate([reelX[0],reelY,spZ0]) spole();
 else if(part=="A_s1") slot_frame() translate([-kW/2,kT/2,-slotDepth]) rotate([90,0,0]) translate([reelX[1],reelY,spZ0]) spole();
 else if(part=="A_pn") pn532();

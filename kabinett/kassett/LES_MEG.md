@@ -7,9 +7,9 @@ Når du tar kassetten ut, pauses musikken (kan slås av per kassett).
 Kassetten står bak et **vindu i fronten**, som på en kassettspiller fra 80-tallet, og **spolene går rundt** mens
 musikken spiller: de står stille på pause, og spoler fort når du hopper i låten eller bytter låt.
 
-![Spiller med kassett, forfra](render/07_forfra.png)
+![Spiller med kassett og cover](render/08_cover_i_spiller.png)
 
-Bilder: [forfra](render/07_forfra.png) · [med kassett](render/02_med_kassett.png) · [spiller](render/01_spiller.png) · [kassett](render/03_kassett.png) · [kassett bakfra](render/05_kassett_bak.png) · [eksplodert](render/04_eksplodert.png) · [snitt](render/06_snitt.png)
+Bilder: [med cover](render/08_cover_i_spiller.png) · [cover forfra](render/09_cover_forfra.png) · [nærbilde](render/10_cover_naer.png) · [forfra](render/07_forfra.png) · [med kassett](render/02_med_kassett.png) · [spiller](render/01_spiller.png) · [kassett](render/03_kassett.png) · [kassett bakfra](render/05_kassett_bak.png) · [eksplodert](render/04_eksplodert.png) · [snitt](render/06_snitt.png)
 
 ## Slik går spolene rundt
 
