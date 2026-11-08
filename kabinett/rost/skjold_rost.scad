@@ -18,7 +18,7 @@ skjerm = "glass";               // glass | nokkel (aktivt område i ren magenta,
 $fn = 72;
 
 // ---------- ytre mål ----------
-// Totalhøyde med bunn og føtter: H + bT + footH = 142 mm (2 mm lavere enn før, nå med flat topp).
+// Totalhøyde med bunnbrett og gummiføtter: H + bT + footH = 145,5 mm (flat topp, avrundet bunn).
 // Formen: én glatt, myk form. Ytterformen er en Minkowski-sum av en kjerne og en kule (r = 8,5), så alle kanter har
 // samme radius og alle overganger er glatte (ingen fasetter). Foran: R8,5 rundt hele fronten, akkurat frontplatens
 // tykkelse, så buen ender i skjøten. Bak: R28 i hjørnene sett ovenfra og R8,5 i toppkanten, begge som én bue som
@@ -30,7 +30,12 @@ Rb = 28;                        // hjørneradius bak sett ovenfra (én bue som m
 t = 2.6;                        // vegg (6 × 0,42 mm linjer)
 zf = 26;  ft = 2.4;             // gulv mellom elektronikkrommet (under) og lydkammeret (over)
 fT = 8.5;                       // frontplate (baffel)
-bT = 4;  footH = 4;  drip = 0.8; // bunnplate, føtter og dryppkant (bunnen stikker 0,8 mm ut)
+// Bunnen er et lyst brett som fortsetter kroppen ned til bordet og runder av med samme R8,5 som toppen (nederst en
+// 45°-fas, så brettet printes med gulvet ned uten støtte). Frontplaten går helt ned, så fronten er sort til bordet.
+zB = -r;                        // undersiden (brettet er r = 8,5 mm høyt; kroppen begynner fortsatt på z = 0)
+bT = -zB; footH = 3;            // (bT = brettets høyde) · selvklebende gummiføtter Ø12 × 3 mm i forsenkninger
+flT = 2.4;                      // brettets gulv
+bfas = r * (1 - cos(45));       // 45°-fasen nederst: fra der buen står 45° og rett ned til undersiden
 
 // ---------- pakninger (TPU 95A) ----------
 gkW = 1.8; gkD = 1.0;           // spor: bredde og dybde
@@ -51,8 +56,8 @@ portZ = 40; portX = -26; portFlare = 8; // lavt i bakveggen, til siden for magne
 ins = 4.0;  insD = 6.5;         // M3 innpressmutter (Ø4,0 hull, 6,5 dyp)
 boss = 8.4;
 m3 = 3.4; m3k = 6.4;            // M3 senkeskrue: hull og senkehode
-bx = W/2 - t - boss/2 + 0.6;    // bunnens skruetårn i x (tårnet går inn i sideveggen)
-by = [8, 80];                   // bunnens skruetårn i y (bak: foran der hjørnebuen begynner)
+bx = 40;                        // bunnens skruetårn i x (innenfor den avrundede underkanten, så skruehodene ligger i det flate)
+by = [9, 84];                   // bunnens skruetårn i y
 fz = [36, 109];                 // frontplatens skruer (skjult bak grillen)
 fbx = 40;                       // frontskruenes x: senkehodet ligger i grill-lomma, tårnet har ribbe til sideveggen
 
@@ -166,8 +171,15 @@ module front2d(o = 0) {
 module shear() { multmatrix([[1, 0, 0, 0], [0, 1, 0, 0], [0, kS, 1, 0], [0, 0, 0, 1]]) children(); }
 module S() {
   intersection() {
-    minkowski() { translate([0, 0, -r]) linear_extrude(H) kjerne2d(-fT + r); K(r, r * c45); }
-    translate([-W, -fT - 1, 0]) cube([2 * W, D + fT + 2, H + 1]);
+    union() {
+      minkowski() { translate([0, 0, zB + r]) linear_extrude(H - zB - 2 * r) kjerne2d(-fT + r); K(r, r * c45); }
+      // 45°-fas nederst: fyller under buen fra der den står 45° (bfas over undersiden) rett ned, så den printes uten støtte
+      hull() {
+        translate([0, 0, zB]) linear_extrude(0.01) plan2d(-2 * bfas + 0.3);
+        translate([0, 0, zB + bfas + 0.8]) linear_extrude(0.01) plan2d(-bfas + 1.1);   // 0,3 mm utenfor tangenten og litt forbi: dekker kulefasettene (> 50°)
+      }
+    }
+    translate([-W, -fT - 1, zB]) cube([2 * W, D + fT + 2, H - zB + 1]);
   }
 }
 // innvendig hulrom: veggene og toppen t (åpent nedover og forover)
@@ -179,12 +191,15 @@ module skyggefuge() { ytz(-seamD, seamD) difference() { snitt2d(1); snitt2d(-sea
 xi = W/2 - t;                   // innsiden av sideveggen
 cBot0 = z0 - tp - hR - cT;      // undersiden av takrommets gulv ved y = 0 (lydkammerets tak foran)
 gkTop = cBot0 + 0.6;            // øverste pakningslist ligger i forkanten av takrommets gulv
+// Frontpakningen (U) ender på bunnpakningen i z = 0; skjøten mellom frontplaten og brettet har solid vegg bak seg,
+// og ringen på toppen av brettet tetter mot kroppen (også langs forkanten).
 module front_gk2d(w, zs = -1) {
   for (sx = [-1, 1]) translate([sx * (xi - w/2) - w/2, zs]) square([w, gkTop + w - zs]);
   translate([-xi, gkTop]) square([2 * xi, w]);
   translate([-xi, zf + 0.4 - w/2]) square([2 * xi, w]);
 }
-module bunn_gk2d(w) { difference() { plan2d(-1.5 + w/2); plan2d(-1.5 - w/2); } }   // ring 1,5 mm inn fra kanten
+module bunnplan(o = 0) { offset(delta = o) intersection() { plan2d(); translate([-W, 0]) square([2 * W, D + 1]); } }   // brettet: bak skjøten y = 0
+module bunn_gk2d(w) { difference() { bunnplan(-1.5 + w/2); bunnplan(-1.5 - w/2); } }   // ring 1,5 mm inn fra kanten av brettet
 // takrommet i panelets ramme: hulrom (w < 0 er under overflaten) og hele blokka (hulrom + gulv + bakvegg)
 module tak_hulrom() {   // (1,5 mm fra sideveggene, så de avrundede toppkantene beholder veggtykkelsen)
   translate([0, 0, 0]) rotate([90, 0, 90]) translate([0, 0, -xi + 1.5]) linear_extrude(2 * xi - 3)
@@ -225,7 +240,7 @@ module kropp_basis() {
   difference() {
     intersection() {
       S();
-      translate([-W, 0, -1]) cube([2 * W, D + 1, H + 2]);
+      translate([-W, 0, 0]) cube([2 * W, D + 1, H + 2]);
       union() {
         difference() { S(); Sin(); }
         intersection() { Sin(); panel() tak_blokk(); }                  // takrommet (fylles, hulrommet trekkes fra under)
@@ -292,7 +307,7 @@ module kropp_basis() {
 // ---------- frontplate (baffel) ----------
 module front() {
   difference() {
-    intersection() { S(); translate([-W, -fT - 1, -1]) cube([2 * W, fT + 1, H + 2]); }
+    intersection() { S(); translate([-W, -fT - 1, zB - 1]) cube([2 * W, fT + 1, H - zB + 2]); }
     skyggefuge();
     // hull for grillens tapper
     for (p = gPins) translate([p[0], -fT - 0.01, p[1]]) rotate([-90, 0, 0]) cylinder(d = pinHole, h = pinL + 0.3);
@@ -335,18 +350,29 @@ module grill() {
 // ---------- bunn: dryppkant, føtter, spor for TPU-pakning, ePTFE-ventil ----------
 module bunn() {
   difference() {
-    union() {
-      // avrundet underkant (R2,5): bunnen ser lett ut, og printes med innsiden ned (buen oppover, ingen støtte)
-      hull() {
-        translate([0, 0, -bT + 2.5]) linear_extrude(bT - 2.5) plan2d(drip);
-        for (a = [0:15:90]) translate([0, 0, -bT + 2.5 * (1 - sin(a))]) linear_extrude(0.01) plan2d(drip - 2.5 * (1 - cos(a)));
+    intersection() {
+      S();
+      translate([-W, 0, zB]) cube([2 * W, D + 1, -zB]);   // brettet: bak skjøten, under kroppen
+      union() {
+        difference() {
+          translate([-W, 0, zB - 1]) cube([2 * W, D + 1, -zB + 1]);
+          // lomma ovenfra: rette vegger t, og et skrått fall mot gulvet langs buen (vegg ≥ t overalt)
+          intersection() {
+            hull() {
+              translate([0, 0, zB + r]) linear_extrude(-zB - r + 1) plan2d(-t);
+              translate([0, 0, zB + flT]) linear_extrude(0.01) plan2d(-(r + 0.6));
+            }
+            translate([-W, t, zB]) cube([2 * W, D, -zB + 2]);
+          }
+        }
+        for (sx = [-1, 1], y = by) translate([sx * bx, y, zB]) cylinder(d = boss, h = -zB);   // skruetårn opp til kroppen
       }
-      for (sx = [-1, 1], y = [-fT + 14, D - 14]) translate([sx * 32, y, -bT - footH]) cylinder(d = 12, h = footH + 0.01);
     }
-    translate([0, 0, -gkD]) linear_extrude(gkD + 0.01) bunn_gk2d(gkW);                                  // pakningsspor
-    translate([0, 0, -bT - 0.01]) linear_extrude(0.8) difference() { plan2d(drip - 2.75); plan2d(drip - 3.25); } // dryppnese innenfor buen
-    for (sx = [-1, 1], y = by) translate([sx * bx, y, -bT - 1]) { cylinder(d = m3, h = bT + 2); cylinder(d1 = m3k + 2, d2 = m3, h = 1 + (m3k + 2 - m3)/2); }
-    translate([ventP[0], ventP[1], -bT - 1]) cylinder(d = ventD, h = bT + 2);
+    translate([0, 0, -gkD]) linear_extrude(gkD + 0.01) bunn_gk2d(gkW);                                   // pakningsspor i kanten
+    translate([0, 0, zB - 0.01]) linear_extrude(0.8) difference() { bunnplan(-2 * bfas - 1.2); bunnplan(-2 * bfas - 1.7); }   // dryppnese
+    for (sx = [-1, 1], y = by) translate([sx * bx, y, zB - 1]) { cylinder(d = m3, h = -zB + 2); cylinder(d1 = m3k + 2, d2 = m3, h = 1 + (m3k + 2 - m3)/2); }
+    translate([ventP[0], ventP[1], zB - 1]) cylinder(d = ventD, h = flT + 2);
+    for (sx = [-1, 1], y = [14, D - 16]) translate([sx * 32, y, zB - 0.01]) cylinder(d = 12.4, h = 0.6);   // forsenkninger for gummiføttene
   }
 }
 
@@ -428,11 +454,13 @@ module skjerm() {
 fra_stl = false;
 module del(navn) { if (fra_stl) import(str("asm/", navn, ".stl")); else render(convexity = 6) children(); }
 
+module foetter() { for (sx = [-1, 1], y = [14, D - 16]) translate([sx * 32, y, zB + 0.6 - footH]) cylinder(d = 12, h = footH); }   // selvklebende gummiføtter
 module samlet(ex = 0) {
   color(c_lys) del("kropp") kropp();
   color(c_mork) translate([0, -ex, 0]) del("front") front();
   color(c_grill) translate([0, -2.2 * ex, 0]) del("grill") grill();
   color(c_lys) translate([0, 0, -ex]) del("bunn") bunn();   // bunnen i samme lyse farge som kroppen
+  color([0.25, 0.25, 0.26]) translate([0, 0, -1.6 * ex]) foetter();
   color(c_gull) translate([0, 0, 0.8 * ex]) knott();
   color(c_gull) translate([0, -ex, 0]) logo();
   translate([0, 0, -0.6 * ex]) skjerm();
@@ -452,7 +480,7 @@ if (part == "kropp") translate([0, 0, D]) rotate([-90, 0, 0]) kropp();          
 else if (part == "front") fram_opp() front();                                                    // baksiden ned, forsiden opp
 else if (part == "logo") fram_opp() logo();                                                      // samme stilling som front
 else if (part == "grill") translate([0, 0, fT + gP]) rotate([90, 0, 0]) grill();                    // forsiden ned, tappene opp
-else if (part == "bunn") rotate([180, 0, 0]) bunn();                                             // innsiden ned, føttene opp
+else if (part == "bunn") translate([0, 0, -zB]) bunn();                                          // gulvet ned (45°-fasen nederst, ingen støtte)
 else if (part == "knott") translate([0, 0, 0.6 + knobH]) rotate([180, 0, 0]) knott_lok();
 else if (part == "rute") linear_extrude(ruteT) rrect(ruteW, ruteH, 2);
 else if (part == "pakning_front") rotate([90, 0, 0]) pakning_front();

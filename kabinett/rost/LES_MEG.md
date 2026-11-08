@@ -8,7 +8,7 @@ Røst er laget for å tåle damp på badet. Skjøtene er pakket med TPU, men kna
 
 Bilder: [Røst](render/01_rost.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [toppanelet](render/06_knapper_skjerm.png) · [skrått bakfra](render/07_bak_skra.png)
 
-Mål: 112 × 124,5 × 142 mm (B × D × H, med grill, bunn og føtter, uten knott). Kroppen er 112 × 113 × 134 mm, frontplaten 8,5 mm og grillen står 3 mm foran den. Knotten stikker 14,6 mm over toppen. (Forrige utgave: 106 × 124,5 × 144 mm med skrå topp, 136 mm bak og 131 mm foran. Den flate toppen ligger nå på 134 mm, midt mellom.)
+Mål: 112 × 124,5 × 145,5 mm (B × D × H, med grill, bunnbrett og gummiføtter, uten knott). Kroppen er 112 × 113 × 134 mm, frontplaten 8,5 mm og grillen står 3 mm foran den. Knotten stikker 14,6 mm over toppen. (Forrige utgave: 106 × 124,5 × 144 mm med skrå topp, 136 mm bak og 131 mm foran. Den flate toppen ligger nå på 134 mm, midt mellom.)
 
 Skjermen og knappene sitter på toppen, foran volumhjulet. Toppen er flat. Fronten har bare grillen (en løs del som trykkes på) og SKJOLD-logoen under den. Fastvare og oppsett: [`firmware/rost/`](../../firmware/rost/LES_MEG.md).
 
@@ -21,7 +21,7 @@ Ytterformen er én glatt flate. Den er laget som en Minkowski-sum: et prisme (gr
 - **Front og topp: R8,5 overalt.** Hjørnene foran, toppkanten foran, langs sidene og bak har alle R8,5, akkurat like mye som frontplatens tykkelse. Buen foran ender derfor nøyaktig i skjøten, og skillelinjen mellom den mørke fronten og den lyse kroppen går der flaten blir rett.
 - **Hjørnene bak, sett ovenfra: R28.** Det gir den myke, runde baksiden.
 - **Bakveggen** er en flat flate med en jevn, skarp 45°-kant rundt. Buene bak (R28 i hjørnene, R8,5 i toppkanten) går helt til de møter bakveggen i 45°, uten den flate fasen som var der før. Kanten er lik hele veien rundt, også i de to øvre hjørnene, så den leser som en bevisst ramme rundt bakpanelet.
-- **Underkanten: R2,5** rundt bunnplaten, så bunnen ser lett ut og ikke som en egen sokkel.
+- **Underkanten: R8,5 som toppen.** Bunnen er et 8,5 mm høyt brett i samme lyse farge som kroppen, og frontplaten går helt ned til bordet, så fronten er sort fra topp til bunn. Nederst flater buen ut i en 45°-fas, så brettet printes med gulvet ned uten støtte.
 - **Grill og front følger formen:** frontplaten er skåret fra den samme ytre formen som kroppen. Grillen er en egen, mørk flate på fronten med avrundede hjørner.
 
 **Hvorfor kanten bak.** Kroppen printes med bakveggen ned. Da blir alle de indre gulvene (lydkammergulvet, takrommets gulv og toppanelet) loddrette vegger, porten står rett opp, og ingenting trenger støtte. En hel R28-bue helt inn til bakveggen ville hengt over opp til 90° rett over printplata. Derfor stopper buen ved 45°. Andre retninger er vurdert:
@@ -70,7 +70,9 @@ Det er ingen skjult bombering, så toppen er helt flat. Vann som ligger på topp
 | EC11 dreieknapp med trykk, 20 mm D-aksel | 1 | |
 | INMP441 I²S-mikrofon | 1 | Valgfri |
 | M3 innpressmutter (M3 × 5,7, Ø4,0 hull) | 8 | 4 i fronten av kroppen, 4 i tårnene under |
-| M3 × 10 senkeskrue | 8 | |
+| M3 × 10 senkeskrue (front) | 4 | |
+| M3 × 12 senkeskrue (bunnbrett) | 4 | gjennom brettet og inn i innpressmutterne |
+| Selvklebende gummiføtter Ø12 × 3 mm | 4 | i forsenkningene under brettet |
 | M3 × 10 selvgjengende (element) | 4 | |
 | M2 × 6 selvgjengende (skjerm) | 4 | Gjennom skjermkortets hull og rett i toppanelet |
 | Akryl 1,5 mm, 64 × 36 mm, hjørneradius 2 | 1 | Rute foran skjermen. Kan også printes i klar PETG (`stl/rute.stl`), men akryl er klarere. |
@@ -115,7 +117,7 @@ Ikke bruk GPIO0, 3, 45 eller 46 (oppstartspinner), GPIO19/20 (USB), GPIO26–32 
 ## Hvordan Røst holder fuktigheten ute
 
 - **Skjøten front–kropp:** kropp og frontplate er skåret fra samme ytre form, så sidene og toppen flukter helt (ingen trinn eller spalte). En smal skyggefuge (0,5 mm inn, 0,8 mm bred) gjør skjøten til en ren linje. Bak den ligger en TPU-pakning i et spor i kroppen, langs sidene, forkanten av takrommets gulv og forkanten av kammergulvet. Frontplaten trykker den 0,2 mm sammen.
-- **Bunnen:** en TPU-pakning i et spor rundt hele bunnplaten, under kroppen og frontplaten. Bunnen stikker 0,8 mm ut, har R2,5 avrundet underkant og en dryppnese på undersiden innenfor buen, så vann som renner nedover sidene drypper av i stedet for å trekke inn under. Føttene er 4 mm høye, så Røst ikke står i vann.
+- **Bunnen:** et lyst brett med TPU-pakning i et spor rundt kanten (også langs forkanten), tett mot kroppen. Skjøten mellom frontplaten og brettet har en hel vegg bak seg. Undersiden har en dryppnese innenfor buen, så vann som renner nedover sidene drypper av i stedet for å trekke inn under, og fire selvklebende gummiføtter (Ø12 × 3 mm) i forsenkninger holder Røst over vann.
 - **Knappene:** fem printede knappehetter (av/på og 1–4) i hull i toppen, med 0,25 mm klaring rundt. De står 1,1 mm over toppen (0,6 mm over knappelista) og har en flens under toppanelet. Lista leder vann på toppen rundt hullene. **Hullene er ikke tette.** Vann som kommer på toppen kan renne ned langs hettene til takrommet. Vil du ha det tettere, smør en tynn ring silikonfett rundt hver hette før du setter den i, eller legg en dråpe nøytral silikon mellom flensen og panelet.
 - **Skjermen:** klar rute (akryl 1,5 mm, 64 × 36 mm) i en forsenkning i toppen, over et vindu tilpasset det aktive området, med fas, lagt på tynn dobbeltsidig skumtape (0,2 mm) eller lim. Ruta flukter med toppen, og en 0,5 mm hevet ramme rundt den holder vann på toppen borte fra fugen. En tynn streng silikon langs kanten gjør den tett.
 - **Toppen:** flat, med hevet knappelist og ramme rundt ruta og en hevet TPU-krage under knotten (se [Formen](#formen)). Vann som renner av går over de avrundede kantene. Av forkanten drypper det ned foran grillen, der den vannavstøtende duken stopper det.
@@ -187,7 +189,7 @@ SKJOLD-logoen er et eget legeme (`logo.stl`) som ligger 0,6 mm inn i frontplaten
 11. Legg TPU-pakningen i sporet i kroppens forkant. Legg litt dempeull i kammeret (ikke foran porten).
 12. Skru frontplaten fast med 4 senkeskruer. Hodene ligger bak grillen.
 13. Legg den akustiske duken over fronten, og trykk grillen på, slik at tappene går gjennom duken og inn i hullene. Klipp duken rundt grillen. Grillen kan trekkes av igjen.
-14. Legg TPU-pakningen i sporet i bunnplaten, og skru bunnen fast med 4 senkeskruer. En dråpe silikon på skruehodene holder vannet ute.
+14. Legg TPU-pakningen i sporet i bunnbrettet, og skru brettet fast med 4 M3 × 12 senkeskruer. Sett på gummiføttene. En dråpe silikon på skruehodene holder vannet ute.
 15. Sett TPU-proppen i USB-C-hullet.
 
 ## Sjekket og ikke sjekket
