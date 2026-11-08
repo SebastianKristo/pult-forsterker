@@ -10,12 +10,23 @@ Bilder: [skrå](render/rund_skra.png) · [mørk utgave](render/rund_skra_mork.pn
 
 ## Form
 
-- **Grunnriss:** avrundet rektangel 108 × 96 mm med R28 i hjørnene, loddrette sider, høyde 150 mm (+ 6 mm gummiføtter).
+- **Grunnriss:** avrundet rektangel 108 × 108 mm med R28 i hjørnene, loddrette sider, høyde 150 mm (+ 6 mm gummiføtter).
 - **Grillen:** en løs hylse som går rundt hele kroppen, med Skjolds sekskantmønster (2 507 hull, 3,2 mm over flatene, en
   spiss opp). Nederst et helt bånd på 14,5 mm med **SKJOLD** innfelt i gull foran, øverst et smalt bånd under lokket.
   Bak nede en spiss utsparing rundt DC-kontakten og USB-C.
 - **Toppen:** lokk med R4-kant, fem knapper foran (av/på, favoritt 1–4, pregede ikoner), **2,42″ OLED-skjerm** i midten
-  bak en klar rute i flukt med toppen, og gull volumknott (EC11, Ø28) bak.
+  bak en klar rute i flukt med toppen, og gull volumknott (EC11, Ø30) bak.
+
+## Fester under lokket
+
+![Undersiden av lokket](render/rund_under.png)
+
+- **Knappekortet:** hullkort 64 × 20 mm med de fem 6 × 6 × 5 mm-bryterne sentrert under hettene (13 mm mellom), skrudd
+  i to tapper bak knapperaden med M2 × 6 selvgjengende. Bryterstempelet står 0,2 mm under hettenes nupp.
+- **Skjermen:** fire tårn rundt glasslomma, M2 × 6 selvgjengende i kortets hull (62 × 33 mm).
+- **Volumhjulet (EC11):** huset under lokket, halsen gjennom lokket, og mutteren i en forsenkning i toppen under
+  knotten. Låsetappen går i en blind spalte, så den ikke kan vri seg.
+- **Stengene:** fire tårn med M3-innpressmuttere i hjørnene.
 
 ## Skjermen
 
@@ -59,8 +70,8 @@ så Creality Print / OrcaSlicer henter dem selv):
 
 ## Lyd
 
-- Lydkammer: ca. 1,04 l luft, ca. 0,94 l netto med element og elektronikk.
-- Bassrefleks: port Ø18 × 110 mm, ned gjennom bunnen (føttene gir 6 mm luft) → ca. 81 Hz. Beregnet, ikke målt.
+- Lydkammer: ca. 1,22 l luft, ca. 1,12 l netto med element og elektronikk.
+- Bassrefleks: port Ø18 × 110 mm, ned gjennom bunnen (føttene gir 6 mm luft) → ca. 74 Hz. Beregnet, ikke målt.
 - Elementet sitter bak en 16 mm frontblokk med tunnel Ø74 og skrus med 4 × M3 × 25 forfra (senkehodene ligger under hylsa).
 
 ## Deler (i tillegg til Røst-elektronikken)
@@ -71,7 +82,7 @@ så Creality Print / OrcaSlicer henter dem selv):
 | M3 mutter + skive | 4 |
 | M3 innpressmutter Ø4,0 × 5,5 | 4 |
 | M3 × 25 senkeskrue + mutter (elementet) | 4 |
-| Taktbryter 6 × 6 × 5 mm på hullkort (ca. 70 × 14 mm), 2 × M2-skruer | 5 |
+| Taktbryter 6 × 6 × 5 mm på hullkort 64 × 20 mm, 2 × M2 × 6 selvgjengende | 5 |
 | EC11 med trykk + mutter | 1 |
 | 2,42″ OLED 128×64 SSD1309 (I²C, hvit) | 1 |
 | M2 × 6 selvgjengende (skjermkortet) | 4 |

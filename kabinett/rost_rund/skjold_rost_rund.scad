@@ -12,7 +12,7 @@ part = "samlet";
 $fn = 64;
 
 // ---------- mål ----------
-W = 108; Dp = 96; R = 28;          // grunnriss: avrundet rektangel
+W = 108; Dp = 108; R = 28;          // grunnriss: avrundet rektangel
 H = 150;                           // høyde fra bunnplatens underside til toppen av lokket
 bpT = 5; capT = 5;                 // bunnplate og lokk
 sl = 1.8; sg = 0.3; t = 2.4;       // hylsens vegg, luft mellom hylse og kjerne, kjernens vegg
@@ -22,27 +22,31 @@ fot = 12.4; fotH = 0.6;            // forsenkninger for selvklebende gummiføtte
 // element (3″ fullrange, f.eks. Dayton RS75-4) bakfra mot frontblokka
 drvZ = 78; drvCut = 72; drvTun = 74; drvPCD = 82; blk = 16;   // senter, utsparing, tunnel, hullsirkel, blokkas dybde fra fronten
 // bassrefleks ned gjennom bunnen (føttene gir 6 mm luft)
-portD = 18; portW = 2; portL = 110; portP = [-14, 26];
+portD = 18; portW = 2; portL = 110; portP = [-14, 30];
 // stenger og innpressmuttere
-rodP = [for (sx = [-1, 1], sy = [-1, 1]) [sx * 37, sy < 0 ? -38 : 30]];   // de fremre går gjennom frontblokka (fri for elementets ramme)
+rodP = [for (sx = [-1, 1], sy = [-1, 1]) [sx * 37, sy < 0 ? -44 : 36]];   // de fremre går gjennom frontblokka (fri for elementets ramme)
 rodD = 3.4; bossD = 9; ins = 4.0; insL = 5.5;
 // I/O bak nede (gjennom kjernen; hylsa har en spiss bue rundt)
 ioX = 16; dcZ = z0 + 12; usbZ = z0 + 6; dcD = 8.2; usbW = 10; usbH = 4.4;
 ioW = 32; ioH = 28;                 // utsparingen i hylsa: bredde og høyde til spissen (45° tak, printes stående)
 // topp: fem knapper foran, skjerm i midten, knott bak
-btnY = -34; btnX = [-26, -13, 0, 13, 26]; capD = 9.0; capHole = 9.5; flD = 12; flT = 0.9; capUp = 1.1;
-encY = 31; ec11D = 7.2; knobD = 28; knobH = 13; shaftD = 6.1; shaftFlat = 4.6;
+btnY = -40; btnX = [-26, -13, 0, 13, 26]; capD = 9.0; capHole = 9.5; flD = 12; flT = 0.9; capUp = 1.1;
+encY = 34; ec11D = 7.2; knobD = 30; knobH = 13; shaftD = 6.1; shaftFlat = 4.6;
 // skjerm: 2,42″ OLED 128×64 (SSD1309, I²C, hvit), samme modul som Røst. Toppen av modulen (pinneraden) vender bakover
 // mot knotten, flatkabelen foran mot knappene. Glasset ligger i en lomme i en skjermramme under lokket (lokket er bare
 // 5 mm: rammen gir 7,5 mm til toppen som på Røst), kortet skrus i fire tårn med M2 × 6 selvgjengende.
-dispY = -4;                              // senter av det aktive området
+dispY = -6;                              // senter av det aktive området
 actW = 55.4; actH = 27.7; winW = actW + 0.6; winH = actH + 0.6;
 glW = 60.0; glH = 30.5; glT = 3.25; skD = 7.5;   // glass, og glassets underside under toppen
 pcbW = 70.08; pcbH = 39.0; dHoleX = 31.0; dHoleV = 16.5;
 fpcW = 12.6; fpcL = 3.0;
 ruteW = 64; ruteH = 36; ruteT = 1.5; ruteRec = ruteT + 0.2;   // klar rute i flukt med toppen (0,2 mm tape under)
 // (ingen hevet ramme rundt ruta: lokket printes med toppen ned, så toppen må være helt flat)
-boardY = btnY; boardZ = z1 - 6.7;   // knappekortets overside: 6 × 6 × 5 mm-bryterne står 0,2 mm under hettenes nupp
+boardZ = z1 - 6.7;                 // knappekortets overside: 6 × 6 × 5 mm-bryterne står 0,2 mm under hettenes nupp
+// knappekortet: hullkort 64 × 20 mm, bryterne sentrert under hettene, to M2-hull bak knapperaden (fri for stangtårnene)
+kortW = 64; kortH = 20; kortY = btnY + 3; kortHull = [[-29.5, btnY + 9], [29.5, btnY + 9]];
+// EC11: mutteren (M7 × 0,75, Ø12 × 2 mm) ligger i en forsenkning i toppen under knotten, låsetappen i en spalte
+ec11Mut = 12.6; ec11MutH = 2.2; ec11Tapp = [0, -7.8];   // tappen (ca. 1,2 × 1 mm) 7,8 mm fra akselen, mot skjermen
 
 c_lys = [0.92, 0.91, 0.88]; c_mork = [0.14, 0.14, 0.15]; c_gull = [0.85, 0.62, 0.25];
 
@@ -124,7 +128,7 @@ module lokk() {
         for (p = rodP) translate([p[0], p[1], z1 - 8]) cylinder(d = bossD, h = 8.01);
         translate([0, 0, z1 - 9]) linear_extrude(10) plan(inn - t - 0.25);
       }
-      for (sx = [-1, 1]) translate([sx * 38, boardY, boardZ]) cylinder(d = 6, h = z1 - boardZ + 0.01);          // knappekortets tapper
+      for (k = kortHull) translate([k[0], k[1], boardZ]) cylinder(d = 6, h = z1 - boardZ + 0.01);          // knappekortets tapper
       // skjermramme under lokket: rundt glasset og ned til kortet, med tårn for kortets fire skruer
       translate([0, dispY, H - skD]) linear_extrude(skD - capT + 0.01) rr(glW + 0.8 + 6, glH + 0.8 + 6, 3);
       for (sx = [-1, 1], sv = [-1, 1]) translate([sx * dHoleX, dispY + sv * dHoleV, H - skD]) cylinder(d = 5.5, h = skD - capT + 0.01);
@@ -133,8 +137,9 @@ module lokk() {
     for (x = btnX) translate([x, btnY, z1 - 1]) cylinder(d = capHole, h = capT + 2);
     for (x = btnX) translate([x, btnY, H - 0.6]) cylinder(d1 = capHole, d2 = capHole + 1.2, h = 0.61);
     translate([0, encY, z1 - 1]) cylinder(d = ec11D, h = capT + 2);
-    translate([0, encY, z1 - 0.01]) cylinder(d = 12.5, h = 2.4);                      // EC11-mutteren under lokket
-    for (sx = [-1, 1]) translate([sx * 38, boardY, boardZ - 0.1]) cylinder(d = 2.2, h = 5);
+    translate([0, encY, H - ec11MutH]) cylinder(d = ec11Mut, h = ec11MutH + 1);              // EC11-mutteren i toppen, under knotten
+    translate([ec11Tapp[0], encY + ec11Tapp[1], z1 - 0.01]) translate([-0.8, -0.7, 0]) cube([1.6, 1.4, 2.0]);   // låsetappen (blind spalte)
+    for (k = kortHull) translate([k[0], k[1], boardZ - 0.1]) cylinder(d = 1.8, h = 5);           // M2 × 6 selvgjengende
     // skjerm: forsenkning for ruta, vindu med 45° fas, glasslomme og flatkabel nedenfra, skruehull
     translate([0, dispY, H - ruteRec]) linear_extrude(ruteRec + 1) rr(ruteW + 0.4, ruteH + 0.4, 2.2);
     hull() {
@@ -198,6 +203,20 @@ module element() {
     translate([0, 0, 4]) cylinder(d = 52, h = 26);
   }
 }
+// knappekortet og EC11 (bare for bildene og kollisjonssjekken)
+module knappekort() {
+  translate([0, kortY, boardZ - 1.6]) difference() {
+    linear_extrude(1.6) square([kortW, kortH], center = true);
+    for (k = kortHull) translate([k[0], k[1] - kortY, -1]) cylinder(d = 2.4, h = 4);
+  }
+  for (x = btnX) translate([x - 3, btnY - 3, boardZ]) cube([6, 6, 3.5]);                  // bryterhus
+  for (x = btnX) translate([x, btnY, boardZ]) cylinder(d = 3.5, h = 5.0);                  // stempel (5 mm)
+}
+module ec11() {
+  translate([0, encY, z1 - 6.5]) translate([-6.2, -6.7, 0]) cube([12.4, 13.4, 6.5]);       // hus under lokket
+  translate([0, encY, z1 - 0.01]) cylinder(d = 7, h = capT - ec11MutH + 0.01);           // gjenget hals gjennom lokket
+  translate([0, encY, H - ec11MutH]) difference() { cylinder(d = 12, h = 2, $fn = 6); translate([0, 0, -1]) cylinder(d = 7.2, h = 4); }   // mutter
+}
 // gjengestenger (bare for bildene)
 module stenger() { for (p = rodP) translate([p[0], p[1], 1.5]) cylinder(d = 3, h = z1 - 8 + insL - 2); }
 
@@ -227,6 +246,7 @@ else if (part == "knapp") for (i = [0:4]) translate([i * (flD + 3), 0, capUp]) r
 else if (part == "a_kjerne") kjerne(); else if (part == "a_bunn") bunn(); else if (part == "a_lokk") lokk();
 else if (part == "a_knott") knott(); else if (part == "a_knapp") knapper(); else if (part == "a_stenger") stenger();
 else if (part == "a_element") element();
+else if (part == "a_knappekort") knappekort(); else if (part == "a_ec11") ec11();
 else if (part == "a_logo") logo_form(0); else if (part == "logo_kutt") logo_form(0.01);
 else if (part == "eksplodert") samlet(30);
 else samlet();
