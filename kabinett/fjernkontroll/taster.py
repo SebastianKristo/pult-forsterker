@@ -9,6 +9,7 @@ Kjør:  python3 taster.py
            ../../esphome/skjold-fjernkontroll-full.yaml  (laget fra den over, med full variants taster og 3 × TCA9555)
            ../../esphome/skjold-fjernkontroll-hovedkort.yaml  (standard på hovedkortet: samme taster, hovedkortets GPIO-er)
            ../../esphome/skjold-fjernkontroll-tastekort-a.yaml  (håndkoblet med tastekort A: oppsett A, én TCA9555)
+           ../../esphome/skjold-fjernkontroll-enkel.yaml  (enkel utgave: XIAO ESP32S3 + MCP23017, oppsett A)
   og skriver koblingstabellen for standard (kort) til stdout, til LES_MEG.md (python3 taster.py full for full).
 
 Koordinater: x = tvers (0 … W, venstre kant = 0), n = avstand fra nesen (IR-enden) målt langs fjernkontrollen.
@@ -552,6 +553,74 @@ def tastekort_a_yaml(kort):
     return hode + k
 
 
+def enkel_yaml(tastekort_a):
+    """esphome/skjold-fjernkontroll-enkel.yaml: Skjold Fjernkontroll Enkel (enkel/): Seeed XIAO ESP32S3 og MCP23017 på
+    et enkelt bærekort, laget fra tastekort A-fila (samme 14 taster i oppsett A, samme pinner på utvideren)."""
+    k = tastekort_a
+    for a, b in [
+            ("# TASTEKORT A – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her.\n"
+             "# Håndkoblet utgave med tastekort A (kabinett/fjernkontroll/tastekort_a/): bare tasteoppsett A, én TCA9555.\n",
+             "# ENKEL UTGAVE – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her.\n"
+             "# Skjold Fjernkontroll Enkel (kabinett/fjernkontroll/enkel/): Seeed XIAO ESP32S3 + MCP23017 på et bærekort, oppsett A.\n"
+             "# XIAO-pinner: D0 GPIO1 VBAT · D1 GPIO2 INT (MCP23017, vekking) · D2 GPIO3 DC · D3 GPIO4 RES (+ berøring RST) ·\n"
+             "# D4 GPIO5 SDA · D5 GPIO6 SCL · D6 GPIO43 IR TX · D7 GPIO44 IR RX · D8 GPIO7 SCK · D9 GPIO8 baklys · D10 GPIO9 MOSI.\n"
+             "# MCP23017 (0x20): GPA0–7 + GPB0–5 = tastene, GPB6 = skjermstrøm (AO3401), GPB7 = dokken.\n"),
+            ("  ekstra_hub: tca_a                  # tastekort A: én brikke (skjermstrøm P1_6, dokken P1_7)\n",
+             "  ekstra_hub: tca_a                  # MCP23017 (skjermstrøm GPB6, dokken GPB7)\n"),
+            ("  board: esp32-s3-devkitc-1          # ESP32-S3 SuperMini (ESP32-S3FH4R2: 4 MB flash, 2 MB PSRAM)\n  variant: esp32s3\n  flash_size: 4MB",
+             "  board: esp32-s3-devkitc-1          # Seeed XIAO ESP32S3 (8 MB flash, 8 MB PSRAM)\n  variant: esp32s3\n  flash_size: 8MB"),
+            ("psram:\n  mode: quad\n", "psram:\n  mode: octal\n"),
+            ("logger:\n  level: INFO\n", "logger:\n  level: INFO\n  hardware_uart: USB_SERIAL_JTAG   # GPIO43/44 brukes til IR\n"),
+            ("  - id: bus_a                        # tastekortet (2 × TCA9555, full variant 3)",
+             "  - id: bus_a                        # MCP23017 (0x20) og berøringen (0x38), 4,7 kΩ til 3V3"),
+            ("  - id: bus_b                        # berøring (FT6336U, 0x38) – egen buss, så skjermen kan slås helt av i søvn\n"
+             "    sda: GPIO8\n    scl: GPIO3                       # strappe-pinne, men bare for JTAG-valg (eFuse) – trygg med pull-up\n"
+             "    frequency: 400kHz\n    scan: false\n", ""),
+            ("tca9555:\n  - { id: tca_a, i2c_id: bus_a, address: 0x20 }\n",
+             "mcp23017:\n  - id: tca_a\n    i2c_id: bus_a\n    address: 0x20\n    open_drain_interrupt: true   # INTA (åpen drain, 10 kΩ til 3V3) → GPIO2\n"
+             "    # INTA vekker ESP-en (deep_sleep wakeup_pin); mens den er våken leses utvideren hver løkke\n"),
+            ("  clk_pin: GPIO9\n  mosi_pin: GPIO10", "  clk_pin: GPIO7\n  mosi_pin: GPIO9"),
+            ("    id: baklys_pwm\n    pin: GPIO13", "    id: baklys_pwm\n    pin: GPIO8                       # → 100 Ω → AO3400 (Q2) på LED-katoden"),
+            ("    pin: { tca9555: $ekstra_hub, number: 14, mode: { output: true }, inverted: true }   # P1_6, lav = på",
+             "    pin: { mcp23xxx: $ekstra_hub, number: 14, mode: { output: true }, inverted: true }   # GPB6 → AO3401 (Q1), lav = på"),
+            ("    dc_pin: GPIO11\n    reset_pin: GPIO12                # deles med berøringens RST",
+             "    dc_pin: GPIO3\n    reset_pin: GPIO4                 # deles med berøringens RST"),
+            ("    i2c_id: bus_b\n    interrupt_pin: GPIO7", "    i2c_id: bus_a                    # INT er ikke koblet: berøringen leses jevnlig"),
+            ("  wakeup_pin: { number: GPIO2, inverted: true, mode: { input: true } }   # TCA9555 INT (felles, 10 kΩ til 3V3)",
+             "  wakeup_pin: { number: GPIO2, inverted: true, mode: { input: true } }   # MCP23017 INTA"),
+            ("  esp32_ext1_wakeup:\n    pins: [ { number: GPIO4, allow_other_uses: true } ]   # vibrasjonsbryter SW-18010P mellom 3V3 og GPIO4 (1 MΩ ned)\n    mode: ANY_HIGH\n", ""),
+            ("  - platform: gpio\n    id: loftet\n    internal: true\n    pin: { number: GPIO4, mode: { input: true }, allow_other_uses: true }\n    on_press:\n      - script.execute: sovn_teller\n", ""),
+            ("    pin: { tca9555: $ekstra_hub, number: 15, mode: { input: true } }   # pogo + via 68 kΩ / 100 kΩ (høy = i dokken)",
+             "    pin: { mcp23xxx: $ekstra_hub, number: 15, mode: { input: true }, interrupt: CHANGE }   # GPB7: POGO+ via 68 kΩ / 100 kΩ"),
+            ("    pin: GPIO1                       # VBAT via 2 × 220 kΩ", "    pin: GPIO1                       # VBAT via 1 MΩ / 1 MΩ og 100 nF (D0)"),
+            ("  pin: GPIO43                        # → 1 kΩ → AO3400 → 3 × IR-diode 940 nm (hver med 10 Ω fra batteriet)",
+             "  pin: GPIO43                        # → 100 Ω → AO3400 (Q3) → 2 × IR-diode 940 nm i serie, 6,8 Ω fra batteriet"),
+            ("      - output.turn_off: strom_skjerm      # skjerm, berøring og IR-mottaker uten strøm\n",
+             "      - lambda: |-                       # berøringen har strøm fra 3V3 hele tiden (deler I²C med MCP23017): dvalemodus\n"
+             "          const uint8_t dvale[2] = {0xA5, 0x03};   // FT6336U PWR_MODE = hibernate (ca. 25 µA); vekkes av RST ved oppstart\n"
+             "          id(bus_a)->write(0x38, dvale, 2);\n"
+             "      - output.turn_off: strom_skjerm      # skjerm og IR-mottaker uten strøm\n"),
+            ("  name: skjold-fjernkontroll\n", "  name: skjold-fjernkontroll\n")]:
+        assert k.count(a) == 1, a
+        k = k.replace(a, b)
+    k = k.replace("mode: { input: true }, inverted: true }", "mode: { input: true, pullup: true }, inverted: true, interrupt: CHANGE }")
+    k = k.replace("{ tca9555: tca_a,", "{ mcp23xxx: tca_a,")
+    # maskinvarebeskrivelsen i toppen av fila
+    import re
+    i = k.index("# Maskinvare (se kabinett/fjernkontroll/LES_MEG.md)")
+    j = k.index("#\n", i)
+    k = k[:i] + ("# Maskinvare (se «Enkel utgave» i kabinett/fjernkontroll/LES_MEG.md): Seeed XIAO ESP32S3 (lader LiPo-en selv), 2,8″ IPS\n"
+                 "# ST7789 + FT6336U berøring (naken FPC-modul HP28030), MCP23017 med 14 taster (4 × 4 mm), 2 × IR-diode 940 nm, VS1838B,\n"
+                 "# LiPo 603450 på XIAO-ens BAT-puter og pogo-dokk (5 V via Schottky til XIAO-ens 5V). Ingen vibrasjonsbryter.\n") + k[j:]
+    k = re.sub(r"#   · Tasteblokken under D-paden har flere oppsett.*?\n(#     .*?\n)*", "#   · Tastene sitter fast i oppsett A (14 taster), rett på bærekortet.\n", k, count=1)
+    k = re.sub(r"#   · Dyp søvn etter \$\{sovn_etter\} uten bruk\..*?\n(#     .*?\n)*",
+               "#   · Dyp søvn etter ${sovn_etter} uten bruk. Vekkes av en tast (MCP23017 INTA → GPIO2).\n", k, count=1)
+    k = k.replace("# Pinnene er Skjolds eget oppsett for SuperMini (se koblingstabellen i LES_MEG.md).",
+                  "# Pinnene er XIAO-ens D0–D10 (se enkel/pinner.csv).")
+    assert "tca9555" not in k and "GPIO10" not in k and "GPIO13" not in k, [l for l in k.split("\n") if "tca9555" in l or "GPIO10" in l][:3]
+    return k
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     deler, yml = [], os.path.join(here, "..", "..", "esphome", "skjold-fjernkontroll.yaml")
@@ -583,7 +652,9 @@ def main():
     open(yml.replace(".yaml", "-full.yaml"), "w").write(full_yaml(ny))
     bruk("kort")
     open(yml.replace(".yaml", "-hovedkort.yaml"), "w").write(hovedkort_yaml(ny))
-    open(yml.replace(".yaml", "-tastekort-a.yaml"), "w").write(tastekort_a_yaml(ny))
+    ta = tastekort_a_yaml(ny)
+    open(yml.replace(".yaml", "-tastekort-a.yaml"), "w").write(ta)
+    open(yml.replace(".yaml", "-enkel.yaml"), "w").write(enkel_yaml(ta))
     bruk("kort")
     import sys
     if len(sys.argv) > 1:
