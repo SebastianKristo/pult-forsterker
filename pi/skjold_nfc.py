@@ -123,9 +123,10 @@ def best_album(albums: list[dict], artist: str, album: str, name_key="name", art
     return (exact or loose or [None])[0]
 
 
-def resolve_album(artist: str, album: str, nd_search=None, ma_search=None) -> dict | None:
-    """Finn albumet: 1) Navidrome (search3) → {"kilde":"navidrome","id"}; 2) YouTube Music via Music Assistant →
-    {"kilde":"ytmusic","uri"} (andre MA-kilder godtas som reserve). None = finnes ingen steder.
+def resolve_album(artist: str, album: str, nd_search=None, ma_search=None, ytm_find=None) -> dict | None:
+    """Finn albumet: 1) Navidrome (search3) → {"kilde":"navidrome","id"}; 2) YouTube Music innebygd (skjold_ytm) →
+    {"kilde":"ytmusic","ytm_id"}; 3) Music Assistant → {"kilde":"ytmusic"|"ma","uri"} (bare som reserve).
+    None = finnes ingen steder. ytm_find(artist, album) → treff eller None.
     nd_search(q) → liste av Subsonic-album {id,name,artist,coverArt}; ma_search(q) → liste av MA-album {uri,name,artist,provider,image}."""
     q = f"{artist} {album}".strip()
     if nd_search:
@@ -136,6 +137,13 @@ def resolve_album(artist: str, album: str, nd_search=None, ma_search=None) -> di
         if hit:
             return {"kilde": "navidrome", "id": str(hit["id"]), "navn": hit.get("name", album), "artist": hit.get("artist", artist),
                     "cover_id": hit.get("coverArt") or hit["id"]}
+    if ytm_find:
+        try:
+            hit = ytm_find(artist, album)
+        except Exception:
+            hit = None
+        if hit:
+            return hit
     if ma_search:
         try:
             res = ma_search(q) or []
@@ -172,11 +180,13 @@ def steps_for(card: dict, standard_rom: str = "") -> list[dict]:
         lo = card.get("losning") or {}
         if lo.get("kilde") == "navidrome":
             h, v = "navidrome_album", lo["id"]
+        elif lo.get("ytm_id"):
+            h, v = "ytm_samling", lo["ytm_id"]
         elif lo.get("uri"):
             h, v = "ma_uri", lo["uri"]
         else:
             raise ValueError(f"fant ikke «{(v or {}).get('album', '')}» i Navidrome eller YouTube Music")
-    typ = {"preset": "preset", "play_url": "play_url", "nrk": "nrk", "ma_uri": "ma",
+    typ = {"preset": "preset", "play_url": "play_url", "nrk": "nrk", "ma_uri": "ma", "ytm_samling": "ytm",
            "navidrome_album": "nd_album", "navidrome_playlist": "nd_playlist"}[h]
     base: list[dict] = []
     if card.get("volum") is not None:
@@ -200,7 +210,7 @@ def kilde_for(card: dict) -> str:
     lo = card.get("losning") or {}
     if card.get("handling") == "album":
         k = lo.get("kilde") or ""
-        return KILDE_KORT.get(k, "YouTube Music" if lo.get("uri") else "ukjent")
+        return KILDE_KORT.get(k, "YouTube Music" if lo.get("uri") or lo.get("ytm_id") else "ukjent")
     return {"preset": "radio", "play_url": "radio", "nrk": "NRK", "ma_uri": "Music Assistant", "navidrome_album": "Navidrome",
             "navidrome_playlist": "Navidrome", "routine": "rutine"}.get(card.get("handling"), "annet")
 

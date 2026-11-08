@@ -9,12 +9,13 @@ import { act, deviceName, eqActiveSource, go, inputLabel, recent, setVolume, set
 import { art, EQ } from '../lib/settings';
 import { Icon, PRODUCT_ICON, Slider, SrcCircle } from '../components/ui';
 import { browseState, currentStation, favOf, favs, favsLoaded, loadBrowse, loadFavs, norm, playFav, playStation, search, searchBusy, searchRes, shelves, toggleFav } from '../lib/radio';
-import { ndAlbum, ndAlbumList, ndConf, ndConfigured, ndCover, ndPlaylist, ndPlaylists, ndSearch, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
+import { ndAlbumList, ndConf, ndConfigured, ndCover, ndPlaylists, ndSearch, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
 import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, lq, lsvc, playNd, whenText, type LibId } from '../lib/library';
 import { InputChips, Transport, artFor, mmss, nowTitle, sourceLine, subLine } from './player';
 import { useRooms } from './phone';
 import { SpeakerButton } from './groups';
-import { libUi } from './library';
+import { collSongs, libUi } from './library';
+import { ytmHomeCached, ytmSearch, ytmWhy } from '../lib/ytm';
 import { LyricsPane, SubwavePane } from './plugins';
 import { WrappedTeaser } from './extras';
 import { RecognizeBox, RoutinesShelf } from './features';
@@ -62,11 +63,25 @@ function useNdHome() {
   }, [key]);
   return { pls, alb };
 }
+/** YouTube Music-spillelister og «Til deg» fra Skjold-enheten (når YouTube Music er slått på). */
+function useYtmHome() {
+  const [l, setL] = useState<NdAlbum[]>([]);
+  const on = settings.value.ytmEn;
+  useEffect(() => {
+    if (!on) { setL([]); return; }
+    let live = true;
+    ytmHomeCached().then((h) => { if (live) setL(uniqId([...h.playlists, ...h.frequent.slice(0, 8), ...h.other.slice(0, 8)]).slice(0, 16)); }).catch(() => { if (live) setL([]); });
+    return () => { live = false; };
+  }, [on]);
+  return l;
+}
+const uniqId = <T extends { id: string },>(l: T[]): T[] => l.filter((x, i) => l.findIndex((y) => y.id === x.id) === i);
 
 export function DeskHome() {
   const s = status.value, t = nowTitle(s), a = artFor(s);
   useEffect(() => { if (!favsLoaded.value) void loadFavs(); }, []);
   const nd = useNdHome();
+  const yt = useYtmHome();
   const rooms = useRooms();
   const inputs = s?.inputs?.length ? s.inputs : ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
   const services = SRC_ORDER.filter(([id]) => inputs.includes(id));
@@ -107,8 +122,9 @@ export function DeskHome() {
     playlists: (
         <section class="col gap12">
           <SecHead title="Dine spillelister" kicker="FRA MUSIKKTJENESTENE" more={ndConfigured() ? 'Navidrome ›' : undefined} onMore={() => go('lib', 'nd')} />
-          {nd.pls.length || nd.alb.length ? (
+          {nd.pls.length || nd.alb.length || yt.length ? (
             <div class="dkx-row">
+              {yt.map((p) => <Tile key={'y' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.playlist ? 'YouTube Music · spilleliste' : p.artist || 'YouTube Music'} onClick={() => { libUi.pl.value = { kind: p.playlist ? 'pl' : 'album', id: p.id, name: p.name }; go('lib', 'ytm'); }} />)}
               {nd.pls.map((p) => <Tile key={'p' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} onClick={() => { libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; go('lib', 'nd'); }} />)}
               {nd.alb.map((al) => <Tile key={'a' + al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist} onClick={() => { libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; go('lib', 'nd'); }} />)}
             </div>
@@ -178,7 +194,7 @@ export function DeskPlayer() {
   const [tab, setTab] = useState<'song' | 'queue' | 'lyrics' | 'booth'>('song');
   const dur = s?.duration ?? 0, pos = s?.position ?? 0;
   const live = s?.input === 'radio' && !s.source_label;
-  const libQ = lsvc.value === 'nd' && lq.value.length > 0;
+  const libQ = !!lsvc.value && lq.value.length > 0;
   return (
     <div class="dkx-player">
       <div class="glow" style={{ background: a.bg }} />
@@ -208,7 +224,7 @@ export function DeskPlayer() {
         </> : tab === 'lyrics' ? <LyricsPane pos={pos} /> : tab === 'booth' ? <SubwavePane mode="booth" /> : s?.subwave ? <SubwavePane mode="queue" /> : (
           <div class="dkx-queue">
             {libQ ? lq.value.map((x, i) => (
-              <button key={x.id + i} class={i === li.value ? 'on' : ''} onClick={() => playNd(lq.value, i)}>
+              <button key={x.id + i} class={i === li.value ? 'on' : ''} onClick={() => playNd(lq.value, i, lsvc.value ?? 'nd')}>
                 <span class="qc" style={{ background: ndBg(x.coverArt, x.album, 120) }} />
                 <span class="col" style={{ minWidth: 0, gap: '2px', textAlign: 'left' }}><b class="ellip">{x.title}</b><span class="ellip muted" style={{ fontSize: '12px' }}>{x.artist}</span></span>
                 <span class="mono muted" style={{ fontSize: '11px' }}>{fmtDur(x.duration)}</span>
@@ -322,23 +338,44 @@ function useNdLib(on: boolean) {
   return d;
 }
 
-function NotConnected({ lib, err }: { lib: LibId; err?: string }) {
-  const why = lib === 'ytm' ? 'YouTube Music spilles via Music Assistant, som ikke er koblet til Skjold ennå.' : err ? 'Fikk ikke kontakt med Navidrome: ' + err + '.' : 'Legg inn adressen til Navidrome-serveren, brukernavn og passord.';
+/** YouTube Music fra Skjold-enheten i samme form som useNdLib: rnd = «Til deg», pls = spillelister + «Til deg». */
+function useYtmLib(on: boolean) {
+  const [d, setD] = useState<{ newest: NdAlbum[]; rnd: NdAlbum[]; freq: NdAlbum[]; all: NdAlbum[]; pls: NdAlbum[]; err: string; done: boolean }>({ newest: [], rnd: [], freq: [], all: [], pls: [], err: '', done: false });
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!on) return;
+    let live = true;
+    setD((x) => ({ ...x, err: '', done: false }));
+    ytmHomeCached(n > 0).then((h) => {
+      if (!live) return;
+      const rnd = uniqId([...h.frequent, ...h.other]);
+      const pls = uniqId([...h.playlists, ...h.frequent.slice(0, 8), ...h.other.slice(0, 8)]);
+      const empty = !h.newest.length && !pls.length;
+      setD({ newest: h.newest, rnd, freq: [], all: h.newest, pls, err: empty ? 'Fant ingenting i YouTube Music. Legg inn cookien under Innstillinger → Musikktjenester for biblioteket ditt.' : '', done: true });
+    }).catch(async (e: unknown) => { const err = await ytmWhy(e); if (live) setD((x) => ({ ...x, err, done: true })); });
+    return () => { live = false; };
+  }, [on, n]);
+  return { ...d, retry: () => setN((x) => x + 1) };
+}
+
+function NotConnected({ lib, err, retry }: { lib: LibId; err?: string; retry?: () => void }) {
+  const why = lib === 'ytm' ? err || 'Henter YouTube Music fra Skjold-enheten …' : err ? 'Fikk ikke kontakt med Navidrome: ' + err + '.' : 'Legg inn adressen til Navidrome-serveren, brukernavn og passord.';
   return (
     <div class="dkx-off" data-testid="lib-off">
       <SrcCircle label={LIB_NAME[lib]} size={64} />
       <div class="col" style={{ gap: '6px', minWidth: 0 }}>
         <span class="kicker" style={{ color: 'var(--accent-2)' }}>IKKE TILKOBLET</span>
-        <h2>{LIB_NAME[lib]} er ikke koblet til</h2>
+        <h2>{lib === 'ytm' ? 'YouTube Music er ikke tilgjengelig' : LIB_NAME[lib] + ' er ikke koblet til'}</h2>
         <span class="muted" style={{ maxWidth: '60ch', lineHeight: 1.5 }}>{why}</span>
       </div>
+      {retry && <button class="btn" onClick={retry}>Prøv igjen</button>}
       <button class="btn primary" onClick={() => go('int')}>Åpne Integrasjoner</button>
     </div>
   );
 }
 
 function TrackTable({ list, onPick, meta }: { list: NdSong[]; onPick: (i: number) => void; meta?: (i: number) => string }) {
-  const cur = lsvc.value === 'nd' ? lq.value[li.value] : undefined;
+  const cur = lsvc.value ? lq.value[li.value] : undefined;
   return (
     <div class="dkx-tt" role="table">
       <div class="hd" role="row"><span>#</span><span>Tittel</span><span>Album</span><span style={{ textAlign: 'right' }}>{meta ? 'Spilt' : 'Tid'}</span></div>
@@ -354,12 +391,12 @@ function TrackTable({ list, onPick, meta }: { list: NdSong[]; onPick: (i: number
   );
 }
 
-function OpenList() {
+function OpenList({ lib }: { lib: LibId }) {
   const pl = libUi.pl.value!;
   const [songs, setSongs] = useState<NdSong[] | null>(null), [err, setErr] = useState('');
-  useEffect(() => { setSongs(null); (pl.kind === 'album' ? ndAlbum(pl.id).then((r) => r.songs) : ndPlaylist(pl.id)).then(setSongs).catch((e: unknown) => setErr(e instanceof Error ? e.message : String(e))); }, [pl.id]);
+  useEffect(() => { setSongs(null); setErr(''); collSongs(lib, pl.kind, pl.id).then(setSongs).catch((e: unknown) => setErr(e instanceof Error ? e.message : String(e))); }, [pl.id]);
   const list = songs ?? [], total = list.reduce((a, x) => a + x.duration, 0);
-  const play = (l: NdSong[], i: number) => { playNd(l, i); go('play'); };
+  const play = (l: NdSong[], i: number) => { playNd(l, i, lib); go('play'); };
   return (
     <div class="col gap20">
       <div class="dkx-alhead">
@@ -368,11 +405,11 @@ function OpenList() {
         <div class="col" style={{ gap: '8px', minWidth: 0, position: 'relative' }}>
           <span class="kicker">{pl.kind === 'album' ? 'ALBUM' : 'SPILLELISTE'}</span>
           <h1>{pl.name}</h1>
-          <span class="muted">{songs ? list.length + ' låter · ' + Math.round(total / 60) + ' min' + (list[0] && pl.kind === 'album' ? ' · ' + list[0].artist : '') : err || 'Henter …'}</span>
+          <span class="muted">{songs ? list.length + ' låter' + (total ? ' · ' + Math.round(total / 60) + ' min' : '') + (list[0] && pl.kind === 'album' ? ' · ' + list[0].artist : '') : err || 'Henter …'}</span>
           <div class="row gap10" style={{ marginTop: '6px' }}>
             <button class="btn primary" onClick={() => { if (list.length) play(list, 0); }}>Spill</button>
             <button class="btn" onClick={() => { if (list.length) play([...list].sort(() => Math.random() - 0.5), 0); }}>Tilfeldig</button>
-            <button class="btn" onClick={() => { if (list.length) addToQueue(list); }}>Legg i kø</button>
+            <button class="btn" onClick={() => { if (list.length) addToQueue(list, lib); }}>Legg i kø</button>
           </div>
         </div>
       </div>
@@ -382,22 +419,26 @@ function OpenList() {
 }
 
 export function DeskLibrary({ lib }: { lib: LibId }) {
-  const nd = lib === 'nd' && ndConfigured();
-  const data = useNdLib(nd && !!ndConf.value.url);
+  const nd = lib === 'nd' && ndConfigured(), ytm = lib === 'ytm';
+  const ndData = useNdLib(nd && !!ndConf.value.url), ytmData = useYtmLib(ytm);
+  const data = ytm ? ytmData : { ...ndData, retry: undefined };
   const tabs = TABS[lib];
   const tab = Math.min(libUi.tab.value, tabs.length - 1), open = libUi.pl.value, q = libUi.q.value.trim();
   const [res, setRes] = useState<NdSong[] | null>(null);
   useEffect(() => {
-    if (!nd || q.length < 2) { setRes(null); return undefined; }
-    const t = setTimeout(() => { ndSearch(q).then(setRes).catch(() => setRes([])); }, 350);
+    if ((!nd && !ytm) || q.length < 2) { setRes(null); return undefined; }
+    setRes(null);
+    const t = setTimeout(() => { (ytm ? ytmSearch(q) : ndSearch(q)).then(setRes).catch(() => setRes([])); }, 350);
     return () => clearTimeout(t);
-  }, [q, nd]);
-  const off = lib === 'ytm' || !ndConfigured() || (!!data.err && !data.newest.length);
-  const play = (l: NdSong[], i: number) => { playNd(l, i); go('play'); };
-  const openAl = (al: NdAlbum) => { libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; };
-  const alTile = (al: NdAlbum) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist + (al.year ? ' · ' + al.year : '')} onClick={() => openAl(al)} />;
+  }, [q, nd, ytm]);
+  const off = ytm ? !!data.err && !data.newest.length && !data.pls.length : !ndConfigured() || (!!data.err && !data.newest.length);
+  const play = (l: NdSong[], i: number) => { playNd(l, i, lib); go('play'); };
+  const openAl = (al: NdAlbum) => { libUi.pl.value = { kind: al.playlist ? 'pl' : 'album', id: al.id, name: al.name }; };
+  const alTile = (al: NdAlbum) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.playlist ? 'Spilleliste' : al.artist + (al.year ? ' · ' + al.year : '')} onClick={() => openAl(al)} />;
+  const plTile = (p: NdPlaylist | NdAlbum) => <Tile key={p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount ? p.songCount + ' låter' : 'artist' in p && p.artist && !p.playlist ? p.artist : 'Spilleliste'} onClick={() => { libUi.pl.value = { kind: 'playlist' in p && p.playlist === false ? 'album' : 'pl', id: p.id, name: p.name }; }} />;
   const h = hist.value[lib] ?? [];
-  const f = data.newest[0];
+  const f: NdAlbum | undefined = ytm ? ytmData.pls[0] ?? ytmData.newest[0] : ndData.newest[0];
+  const fKind = f?.playlist ? 'pl' as const : 'album' as const;
   const tabName = tabs[tab] ?? '';
   return (
     <div class="dkx-lib">
@@ -407,39 +448,42 @@ export function DeskLibrary({ lib }: { lib: LibId }) {
         )}
         <div class="dkx-search sm"><Icon d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4" size={16} sw={1.8} /><input value={libUi.q.value} onInput={(e) => { libUi.q.value = e.currentTarget.value; }} placeholder={'Søk i ' + LIB_NAME[lib]} aria-label={'Søk i ' + LIB_NAME[lib]} />{q && <button class="x" onClick={() => { libUi.q.value = ''; }} aria-label="Tøm søket">×</button>}</div>
       </div>
-      {off ? <NotConnected lib={lib} err={data.err} /> : q ? (
+      {off ? <NotConnected lib={lib} err={data.err} {...(data.retry ? { retry: data.retry } : {})} /> : q ? (
         <div class="col gap12">
           <SecHead title={'Treff for «' + q + '»'} kicker="LÅTER" />
           {!res && <span class="muted" style={{ fontSize: '13px' }}>Søker …</span>}
           {res && !res.length && <span class="muted" style={{ fontSize: '13px' }}>Ingen treff</span>}
           {res && res.length > 0 && <TrackTable list={res} onPick={(i) => play(res, i)} />}
         </div>
-      ) : open ? <OpenList /> : tabName === 'Utforsk' ? (
+      ) : open ? <OpenList lib={lib} /> : tabName === 'Utforsk' ? (
         <div class="col gap24">
           {f ? (
             <div class="dkx-alhead hero">
               <div class="glow" style={{ background: ndBg(f.coverArt, f.name, 400) }} />
               <button class="cv" style={{ background: ndBg(f.coverArt, f.name, 400) }} onClick={() => openAl(f)} aria-label={'Åpne ' + f.name} />
               <div class="col" style={{ gap: '8px', minWidth: 0, position: 'relative' }}>
-                <span class="kicker" style={{ color: 'var(--accent-2)' }}>NYLIG LAGT TIL</span>
+                <span class="kicker" style={{ color: 'var(--accent-2)' }}>{ytm ? 'UTVALGT' : 'NYLIG LAGT TIL'}</span>
                 <h1>{f.name}</h1>
-                <span class="muted">{[f.artist, f.year ? String(f.year) : '', f.songCount + ' låter', Math.round(f.duration / 60) + ' min'].filter(Boolean).join(' · ')}</span>
+                <span class="muted">{[f.artist, f.year ? String(f.year) : '', f.songCount ? f.songCount + ' låter' : '', f.duration ? Math.round(f.duration / 60) + ' min' : ''].filter(Boolean).join(' · ')}</span>
                 <div class="row gap10" style={{ marginTop: '6px' }}>
-                  <button class="btn primary" onClick={() => { void ndAlbum(f.id).then((r) => play(r.songs, 0)); }}>Spill</button>
-                  <button class="btn" onClick={() => { void ndAlbum(f.id).then((r) => addToQueue(r.songs)); }}>Legg i kø</button>
+                  <button class="btn primary" onClick={() => { void collSongs(lib, fKind, f.id).then((r) => { if (r.length) play(r, 0); }); }}>Spill</button>
+                  <button class="btn" onClick={() => { void collSongs(lib, fKind, f.id).then((r) => { if (r.length) addToQueue(r, lib); }); }}>Legg i kø</button>
                 </div>
               </div>
             </div>
-          ) : <span class="muted" style={{ fontSize: '13px' }}>{data.done ? 'Biblioteket er tomt.' : 'Henter biblioteket …'}</span>}
-          {data.newest.length > 1 && <section class="col gap12"><SecHead title="Nylig lagt til" more="Alle album ›" onMore={() => { libUi.tab.value = 1; }} /><div class="dkx-row">{data.newest.slice(1).map(alTile)}</div></section>}
-          {data.pls.length > 0 && <section class="col gap12"><SecHead title="Dine spillelister" /><div class="dkx-row">{data.pls.map((p) => <Tile key={p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} onClick={() => { libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; }} />)}</div></section>}
-          {data.rnd.length > 0 && <section class="col gap12"><SecHead title="Oppdag" kicker="TILFELDIGE ALBUM" /><div class="dkx-row">{data.rnd.map(alTile)}</div></section>}
+          ) : <span class="muted" style={{ fontSize: '13px' }}>{data.err || (data.done ? 'Biblioteket er tomt.' : 'Henter biblioteket …')}</span>}
+          {ytm && data.rnd.length > 0 && <section class="col gap12"><SecHead title="Til deg" kicker="YOUTUBE MUSIC" /><div class="dkx-row">{data.rnd.map(alTile)}</div></section>}
+          {ytm && ytmData.pls.some((p) => p.playlist) && <section class="col gap12"><SecHead title="Dine spillelister" /><div class="dkx-row">{ytmData.pls.filter((p) => p.playlist).map(plTile)}</div></section>}
+          {ytm && data.newest.length > 0 && <section class="col gap12"><SecHead title="Album" /><div class="dkx-row">{data.newest.map(alTile)}</div></section>}
+          {!ytm && data.newest.length > 1 && <section class="col gap12"><SecHead title="Nylig lagt til" more="Alle album ›" onMore={() => { libUi.tab.value = 1; }} /><div class="dkx-row">{data.newest.slice(1).map(alTile)}</div></section>}
+          {!ytm && data.pls.length > 0 && <section class="col gap12"><SecHead title="Dine spillelister" /><div class="dkx-row">{data.pls.map(plTile)}</div></section>}
+          {!ytm && data.rnd.length > 0 && <section class="col gap12"><SecHead title="Oppdag" kicker="TILFELDIGE ALBUM" /><div class="dkx-row">{data.rnd.map(alTile)}</div></section>}
           {data.freq.length > 0 && <section class="col gap12"><SecHead title="Mest spilt" kicker="FRA BIBLIOTEKET" /><div class="dkx-row">{data.freq.map(alTile)}</div></section>}
         </div>
       ) : tabName === 'Album' ? (
         <div class="dkx-grid">{(data.all.length ? data.all : data.newest).map(alTile)}</div>
       ) : tabName === 'Spillelister' ? (
-        data.pls.length ? <div class="dkx-grid">{data.pls.map((p) => <Tile key={p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} onClick={() => { libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; }} />)}</div>
+        data.pls.length ? <div class="dkx-grid">{data.pls.map(plTile)}</div>
           : <span class="muted" style={{ fontSize: '13px' }}>Ingen spillelister på serveren.</span>
       ) : (
         <div class="col gap12">

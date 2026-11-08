@@ -1,5 +1,5 @@
-// Bibliotekene (YouTube Music, Navidrome): kø, historikk og avspilling. Navidrome er ekte (Subsonic-API + /api/radio/play).
-// YouTube Music går via Music Assistant, som forsterkeren ikke har ennå – der vises «ikke tilkoblet».
+// Bibliotekene (YouTube Music, Navidrome): kø, historikk og avspilling. Navidrome via Subsonic-API-et, YouTube Music
+// via Skjold-enheten (/api/ytm/*, lib/ytm.ts). Begge spilles som en strøm-URL via /api/radio/play, så køen styres herfra.
 import { signal } from '@preact/signals';
 import { api, ApiError } from './api';
 import { act, showToast } from './store';
@@ -31,24 +31,25 @@ export function whenText(at: number): string {
   return d.getDate() + '.' + (d.getMonth() + 1) + '.';
 }
 
-/** Spill låt i fra listen via forsterkeren. */
-export function playNd(list: NdSong[], i: number): void {
+/** Spill låt i fra listen via forsterkeren. YouTube Music-låter har ferdig strøm-URL (s.stream). */
+export function playNd(list: NdSong[], i: number, lib: LibId = 'nd'): void {
   const s = list[i]; if (!s) return;
-  lq.value = list; li.value = i; lsvc.value = 'nd';
-  const h = (hist.value['nd'] ?? []).filter((x) => x.s.id !== s.id);
-  hist.value = { ...hist.value, nd: [{ s, at: Date.now() }, ...h].slice(0, 30) }; saveHist();
-  const image = ndCover(s.coverArt, 600);
+  lq.value = list; li.value = i; lsvc.value = lib;
+  const h = (hist.value[lib] ?? []).filter((x) => x.s.id !== s.id);
+  hist.value = { ...hist.value, [lib]: [{ s, at: Date.now() }, ...h].slice(0, 30) }; saveHist();
+  const image = ndCover(s.coverArt, 600), name = LIB_NAME[lib];
   void act(async () => {
-    try { return await api.radioPlay({ url: ndStream(s.id), title: s.title + (s.artist ? ' – ' + s.artist : ''), ...(image ? { image } : {}), genre: 'Navidrome', track: s.title, artist: s.artist, album: s.album, duration: s.duration, source: 'Navidrome' }); }
+    try { return await api.radioPlay({ url: s.stream || ndStream(s.id), title: s.title + (s.artist ? ' – ' + s.artist : ''), ...(image ? { image } : {}), genre: name, track: s.title, artist: s.artist, album: s.album, duration: s.duration, source: name }); }
     catch (e) { if (e instanceof ApiError && e.status === 404) throw new ApiError(404, 'forsterkeren kan ikke spille strømmer direkte ennå'); throw e; }
   }, { input: 'radio', station: s.title });
 }
-export function addToQueue(list: NdSong[]): void {
-  if (!lq.value.length || lsvc.value !== 'nd') { playNd(list, 0); return; }
+export function addToQueue(list: NdSong[], lib: LibId = 'nd'): void {
+  if (!lq.value.length || lsvc.value !== lib) { playNd(list, 0, lib); return; }
   lq.value = [...lq.value, ...list]; showToast(list.length === 1 ? 'Lagt i køen' : list.length + ' låter lagt i køen');
 }
 export function libNext(d: 1 | -1): boolean {
-  if (lsvc.value !== 'nd' || !lq.value.length) return false;
-  playNd(lq.value, (li.value + d + lq.value.length) % lq.value.length); return true;
+  const lib = lsvc.value;
+  if (!lib || !lq.value.length) return false;
+  playNd(lq.value, (li.value + d + lq.value.length) % lq.value.length, lib); return true;
 }
 export const fmtDur = (s: number) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');

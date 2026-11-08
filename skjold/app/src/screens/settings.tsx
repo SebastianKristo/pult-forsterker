@@ -19,6 +19,7 @@ import { ob } from './onboard';
 import { WifiPanel } from './wifi';
 import { getLocal, setLocal } from '../lib/services';
 import { ndConfigured, ndError, ndPing } from '../lib/navidrome';
+import { ytmTest } from '../lib/ytm';
 import { RadioFavorites } from './radio';
 import { SkyPanel, StederPanel } from './hjem';
 import { CloudPanel } from './platform';
@@ -265,7 +266,16 @@ function Confirm({ label, safe, onConfirm }: { label: string; safe: boolean; onC
 function SvcTest({ id, label }: { id: 'ytmTest' | 'ndTest'; label: string }) {
   const [r, setR] = useState<[string, string] | null>(null);
   const run = async () => {
-    if (id === 'ytmTest') { setR(['Ikke tilkoblet · krever Music Assistant', '#ff8a7a']); return; }
+    if (id === 'ytmTest') {
+      // YouTube Music er innebygd i Skjold: enheten svarer med om cookien gir et innlogget bibliotek (uten cookie virker søk)
+      const c = getLocal('ytmCookie').trim();
+      if (c && !c.includes('__Secure-3PAPISID')) { setR(['Mangler __Secure-3PAPISID · hent på nytt', '#ff8a7a']); return; }
+      if (settingsSource.value !== 'api') { setR(['Ingen Skjold-enhet', '#ff8a7a']); return; }
+      setR(['Tester …', '#c9c9c4']);
+      const [t, ok] = await ytmTest();
+      setR([t, ok ? '#6fcf7f' : '#ff8a7a']);
+      return;
+    }
     if (!ndConfigured()) { setR(['Fyll inn server, brukernavn og passord', '#ff8a7a']); return; }
     setR(['Tester …', '#c9c9c4']);
     setR((await ndPing()) ? ['Innlogget', '#6fcf7f'] : [ndError.value || 'Feil', '#ff8a7a']);

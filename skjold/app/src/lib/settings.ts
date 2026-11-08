@@ -154,7 +154,7 @@ export const CATS: Category[] = [
     bool('upnpEn', 'UPnP/DLNA-mottaker', 'Vises som høyttaler i apper som BubbleUPnP, foobar2000, Plex og «Cast til enhet» i Windows'),
     { kind: 'info', n: 'Navn på nettverket', key: 'netName', hint: 'Samme navn som i AirPlay. Endres under Tilkobling.' },
     bool('castEn', 'Chromecast', 'Vises som Cast-høyttaler via Music Assistant. Ikke tilkoblet ennå.'),
-    bool('ytmEn', 'YouTube Music', 'Via Music Assistant. Krever YouTube Music Premium. Gratiskontoer virker ikke.'),
+    bool('ytmEn', 'YouTube Music', 'Krever YouTube Music Premium. Gratiskontoer virker ikke.'),
     { kind: 'local', k: 'ytmUser', n: 'Google-konto', ph: 'navn@gmail.com', hint: 'Gmail-adressen, eller den 21-sifrede ID-en for en merkekonto', long: true },
     { kind: 'local', k: 'ytmCookie', n: 'Innloggings-cookie', ph: 'Lim inn Cookie-verdien', hint: 'Google tillater ikke vanlig innlogging for andre apper. Cookien må hentes på nytt når den utløper.', long: true, secret: true },
     { kind: 'steps', n: 'Slik henter du cookien', steps: ['Åpne music.youtube.com i et privat vindu (inkognito) på en datamaskin og logg inn.', 'Åpne utviklerverktøyene og velg fanen Nettverk (Network).', 'Skriv /browse i filterfeltet. Åpne en av spillelistene dine.', 'Klikk på forespørselen som dukker opp. Under Request Headers kopierer du hele verdien til Cookie, uten mellomrom foran eller bak.', 'Lukk det private vinduet med en gang, uten å logge ut. Lim inn verdien over.'] },

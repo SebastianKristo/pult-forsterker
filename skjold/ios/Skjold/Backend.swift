@@ -12,6 +12,28 @@ nonisolated struct LibItem: Sendable, Hashable {
     var dur: Int
 }
 
+// MARK: - YouTube Music (innebygd i Skjold: GET /api/ytm/home|tracks|search, pi/skjold_ytm.py)
+
+nonisolated enum YtmLib {
+    static func colls(_ x: Any?) -> [LibColl] {
+        list(x).map { o in
+            LibColl(id: str(o, "id"), name: str(o, "name"), artist: str(o, "artist"), cover: str(o, "cover"),
+                    count: num(o, "count"), playlist: (o["playlist"] as? Bool) ?? false)
+        }.filter { !$0.id.isEmpty }
+    }
+
+    static func items(_ x: Any?) -> [LibItem] {
+        list(x).map { o in
+            LibItem(id: str(o, "id"), title: str(o, "title"), artist: str(o, "artist"), album: str(o, "album"),
+                    cover: str(o, "cover"), stream: str(o, "stream"), dur: num(o, "dur"))
+        }.filter { !$0.stream.isEmpty }
+    }
+
+    static func object(_ d: Data?) -> [String: Any]? { d.flatMap { jsonObject($0) } }
+
+    static func q(_ s: String) -> String { s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed.subtracting(CharacterSet(charactersIn: "&=+?#"))) ?? s }
+}
+
 /// An album or playlist. Tracks are loaded when it is opened.
 nonisolated struct LibColl: Sendable, Hashable {
     var id: String, name: String, artist: String, cover: String

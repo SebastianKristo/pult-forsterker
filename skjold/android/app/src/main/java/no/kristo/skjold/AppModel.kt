@@ -180,6 +180,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var sset by Persisted("skjold-set", Store.load("skjold-set", MapSerializer(String.serializer(), Int.serializer())) ?: SK.def, MapSerializer(String.serializer(), Int.serializer()))
     var names by Persisted("skjold-names", Store.load("skjold-names", MapSerializer(String.serializer(), String.serializer())) ?: emptyMap(), MapSerializer(String.serializer(), String.serializer()))
     var ytmT by mutableStateOf<Long?>(null)
+    var ytmStatus by mutableStateOf("")
     var plexT by mutableStateOf<String?>(null)   // null, "busy", or the result text
     var plexOK by mutableStateOf(false)
     var btPairT by mutableStateOf<Long?>(null)
@@ -365,9 +366,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val svcInfo = mapOf("upnp" to ("UPnP/DLNA" to ""), "spotify" to ("Spotify Connect" to ""), "ytm" to ("YouTube Music" to ""), "nd" to ("Navidrome" to " · FLAC"), "plex" to ("Plex" to " · FLAC"))
         val inputNames = listOf("airplay", "bt", "aux", "radio", "usb")
         val boolKeys: Set<String> = SK.cats.flatMap { it.items }.filter { it.kind == SettingKind.Bool }.map { it.k }.toSet() + setOf("updAuto", "setupDone")
-        /** Service credentials stay on the phone (the daemon ignores unknown keys anyway). */
-        val localKeys = setOf("ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken")
-        val stringKeys = listOf("nAux1", "nAux2", "nUsb1", "nUsb2", "nameCustom")
+        /** Innloggingene til musikktjenestene lagres nå på forsterkeren (/api/settings), så appen og web-UI-et deler dem. */
+        val localKeys: Set<String> = emptySet()
+        val serviceKeys = listOf("ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken")
+        val stringKeys = listOf("nAux1", "nAux2", "nUsb1", "nUsb2", "nameCustom") + serviceKeys
 
         fun hwText(r: Room): String {
             val hw = if (r.type == "s1" && r.hw.contains("Raspberry Pi 4")) "Pi Zero 2 W · TPA3116 2 × 50 W" else r.hw
@@ -793,7 +795,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (confirm != id && !safe) { Haptics.warning(); confirm = id; return }
         confirm = ""
         when (id) {
-            "ytmTest" -> ytmT = System.currentTimeMillis()
+            "ytmTest" -> { if (demo) ytmT = System.currentTimeMillis() else testYtm() }
             "ndTest" -> testNavidrome()
             "plexTest" -> testPlex()
             "btPair" -> { btPairT = System.currentTimeMillis(); post(mapOf("type" to "btPair", "room" to devRoom.id)) }
@@ -1287,15 +1289,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (n != sset) sset = n
         s.ints["hold"]?.let { fav = it }
         val nm = names.toMutableMap()
-        for (k in stringKeys) { val v = s.strings[k]; if (v != null && !held("set-$k")) nm[k] = v }
+        val push = mutableMapOf<String, Any?>()
+        for (k in stringKeys) {
+            if (held("set-$k")) continue
+            val v = s.strings[k]
+            val mine = nm[k] ?: ""
+            val svcKey = serviceKeys.contains(k)
+            if (v != null && !(v.isEmpty() && svcKey && mine.isNotEmpty())) nm[k] = v
+            else if (svcKey && mine.isNotEmpty()) push[k] = mine   // forsterkeren er tom: send det appen har
+        }
         if (nm != names) {
             // Endret i web-UI-et eller en annen app: last bibliotekene på nytt med de nye innloggingene.
-            val changed = listOf("ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken").filter { (nm[it] ?: "") != (names[it] ?: "") }.toSet()
+            val changed = serviceKeys.filter { (nm[it] ?: "") != (names[it] ?: "") }.toSet()
             names = nm
             if (changed.any { it.startsWith("nd") }) { ndT = null; libs = libs - "nd" }
             if (changed.any { it.startsWith("plex") }) { plexT = null; libs = libs - "plex" }
-            if (changed.any { it.startsWith("ytm") }) ytmT = null
+            if (changed.any { it.startsWith("ytm") }) { ytmT = null; libs = libs - "ytm" }
         }
+        if (push.isNotEmpty()) launch { DeviceLink.send("/api/settings", push, on = h) }
         s.homeLayout?.let { hl -> if (!held("set-homeLayout") && hl != homeLayout) homeLayout = hl }
         val e = eqP.toMutableMap()
         for ((src, p) in s.eq) if (!held("eq-$src")) e[src] = p
@@ -1489,7 +1500,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         launch { for ((p, c) in cmds) Lyrion.command(srv, p, c) }
     }
 
-    // MARK: Libraries (Navidrome, Plex; YouTube Music has no backend)
+    // MARK: Libraries (Navidrome, Plex, YouTube Music via Skjold /api/ytm/*)
 
     val ndConf: Subsonic.Conf get() = Subsonic.Conf(names["ndUrl"] ?: "", names["ndUser"] ?: "", names["ndPass"] ?: "")
     val plexConf: PlexLib.Conf get() = PlexLib.Conf(names["plexUrl"] ?: "", names["plexToken"] ?: "")
@@ -1529,7 +1540,26 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
             }
-            else -> d = d.copy(state = "YouTube Music er ikke koblet til. Forsterkeren har ingen YouTube Music-tjeneste ennå.")
+            else -> {   // YouTube Music: innebygd i Skjold (ytmusicapi + yt-dlp), ingen Music Assistant
+                val h = activeHost
+                val o = if (h == null) null else jsonObject(DeviceLink.get("/api/ytm/home", on = h, timeout = 20.0))
+                d = if (h == null) d.copy(state = "Ingen Skjold-enhet er tilkoblet.")
+                else if (o == null) {
+                    val st = jsonObject(DeviceLink.get("/api/ytm/status", on = h))
+                    val miss = st?.optJSONArray("missing")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() } } ?: emptyList()
+                    d.copy(state = when {
+                        st == null -> "Skjold-enheten har ikke YouTube Music ennå. Oppdater programvaren."
+                        miss.isNotEmpty() -> "YouTube Music mangler ${miss.joinToString(", ")} på enheten. Oppdater programvaren."
+                        else -> "YouTube Music svarte ikke: " + st.str("error").ifEmpty { "ukjent feil" }
+                    })
+                } else {
+                    val y = LibData(
+                        state = "ok", newest = YtmLib.colls(o.opt("newest")), other = YtmLib.colls(o.opt("other")),
+                        frequent = YtmLib.colls(o.opt("frequent")), playlists = YtmLib.colls(o.opt("playlists")),
+                    )
+                    if (y.albums.isEmpty() && y.playlists.isEmpty()) y.copy(state = "Fant ingenting i YouTube Music. Legg inn cookien under Innstillinger → Musikktjenester for biblioteket ditt.") else y
+                }
+            }
         }
         for (c in d.albums + d.playlists) CoverStore.set(c.name, c.cover)
         setLib(id, d)
@@ -1537,7 +1567,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun collTracks(lib: String, c: LibColl): List<Track> {
         libs[lib]?.tracks?.get(c.id)?.let { if (it.isNotEmpty()) return it }
-        val items = if (lib == "plex") PlexLib.tracks(plexConf, c) else Subsonic.tracks(ndConf, c)
+        val items = when (lib) {
+            "plex" -> PlexLib.tracks(plexConf, c)
+            "ytm" -> YtmLib.items(jsonObject(DeviceLink.get("/api/ytm/tracks?id=" + YtmLib.q(c.id), on = activeHost, timeout = 20.0))?.opt("tracks"))
+            else -> Subsonic.tracks(ndConf, c)
+        }
         val t = items.map { track(it) }
         for (x in t) if (x.cover.isNotEmpty()) CoverStore.set(x.album, x.cover)
         val d = libs[lib] ?: LibData()
@@ -1553,11 +1587,37 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val sec = PlexLib.musicSection(plexConf) ?: return emptyList()
                 PlexLib.search(plexConf, sec, q)
             }
+            "ytm" -> {
+                val h = activeHost ?: return emptyList()
+                YtmLib.items(jsonObject(DeviceLink.get("/api/ytm/search?q=" + YtmLib.q(q), on = h, timeout = 15.0))?.opt("tracks"))
+            }
             else -> emptyList()
         }
         val t = items.map { track(it) }
         for (x in t) if (x.cover.isNotEmpty()) CoverStore.set(x.album, x.cover)
         return t
+    }
+
+    /** «Test innlogging» for YouTube Music: Skjold-enheten svarer med om cookien gir et innlogget bibliotek. */
+    fun testYtm() {
+        ytmT = System.currentTimeMillis(); ytmStatus = "Tester …"
+        val h = activeHost ?: run { ytmStatus = "Ingen Skjold-enhet"; return }
+        launch {
+            setLib("ytm", null)
+            val st = jsonObject(DeviceLink.get("/api/ytm/status", on = h))
+            val home = jsonObject(DeviceLink.get("/api/ytm/home?fresh=1", on = h, timeout = 20.0))
+            val miss = st?.optJSONArray("missing")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() } } ?: emptyList()
+            when {
+                st == null -> { ytmStatus = "Oppdater Skjold-programvaren"; Haptics.error() }
+                miss.isNotEmpty() -> { ytmStatus = "Mangler " + miss.joinToString(", "); Haptics.error() }
+                home == null -> { ytmStatus = st.str("error").let { if (it.isEmpty()) "Svarer ikke" else "Feil: $it" }; Haptics.error() }
+                else -> {
+                    val n = YtmLib.colls(home.opt("playlists")).size
+                    ytmStatus = if (st.bool("signed_in")) (if (n > 1) "Innlogget · $n spillelister" else "Innlogget") else "Tilkoblet uten innlogging (søk virker)"
+                    Haptics.success()
+                }
+            }
+        }
     }
 
     fun testNavidrome() {

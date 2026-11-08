@@ -1,6 +1,7 @@
 """Lager de ferdige platene for Creality K2 (Creality Print / OrcaSlicer) fra STL-ene i stl/.
 
-    python3 lag_3mf.py            # skriver skjold-kassett-k2.3mf og skjold-kassett-k2-klar.3mf
+    python3 lag_3mf.py            # skriver skjold-kassett-k2.3mf, -k2-kassetter.3mf og -k2-klar.3mf
+    (bakplatene som holder coveret ligger i -k2-kassetter.3mf, én per kassett)
 
 Alle delene ligger allerede i utskriftsretning i stl/. Hvert objekt får filamentnummer (extruder) i
 Metadata/model_settings.config, slik at CFS printer alt i én omgang:
@@ -23,6 +24,13 @@ for i in range(4):
 for i in range(8):
     HOVED.append(("spole", f"Spole {i + 1}", 1, 219 + 16 * (i % 2), 99 + 16.5 * (i // 2)))
 HOVED += [("trinse", "Trinse 1", 2, 221, 176), ("trinse", "Trinse 2", 2, 221, 189), ("motortrinse", "Motortrinse", 2, 236, 177)]
+# Ekstra kassetter (og bakplaten som holder coveret uten lim – den mangler på hovedplata, som er full)
+KASSETTER = []
+for i in range(4):
+    KASSETTER += [("kassett_bak", f"Kassett {i + 1} – bak", 2, 3 + 62 * i, 3),
+                  ("kassett_front", f"Kassett {i + 1} – front (etikettvindu)", 3, 3 + 62 * i, 78),
+                  ("etikettplate", f"Kassett {i + 1} – bakplate for coveret (platen ned)", 2, 6 + 62 * i, 153),
+                  ("spole", f"Kassett {i + 1} – spole 1", 1, 6 + 62 * i, 208), ("spole", f"Kassett {i + 1} – spole 2", 1, 26 + 62 * i, 208)]
 KLAR = [("vindu", "Rute (klar PETG, 100 % fyll)", 4, 10, 10), ("lysleder", "Lysleder (klar PETG)", 4, 70, 10)]
 
 
@@ -65,4 +73,5 @@ def skriv(navn, items, title):
 
 if __name__ == "__main__":
     skriv("skjold-kassett-k2.3mf", HOVED, "Skjold Kassett – spiller med spoler + 4 kassetter (Creality K2)")
+    skriv("skjold-kassett-k2-kassetter.3mf", KASSETTER, "Skjold Kassett – 4 kassetter med bakplate for coveret (Creality K2)")
     skriv("skjold-kassett-k2-klar.3mf", KLAR, "Skjold Kassett – rute og lysleder i klar PETG (Creality K2)")

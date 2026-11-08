@@ -6859,6 +6859,8 @@ def routine_step(st):
         _HX["podsum"].run()
     elif t in ("nd_album", "nd_playlist"):
         set_power(True); nfc_play_navidrome("album" if t == "nd_album" else "playlist", str(v))
+    elif t == "ytm":   # YouTube Music-samling («al:…» / «pl:…»), innebygd
+        set_power(True); ytm_play_queue(ytm.tracks(str(v)), 0, with_stream=True)
 
 
 routines = _rtmod.Routines({"do": routine_step, "peers": _peers,
@@ -7698,6 +7700,31 @@ def _nfc_nd_search(q):
     return (r.get("searchResult3") or {}).get("album") or []
 
 
+def _nfc_ytm_find(artist, album):
+    if ytm.missing():
+        return None
+    return ytm.find_album(artist, album)
+
+
+import skjold_ytm as _ytmmod   # noqa: E402
+ytm = _ytmmod.Ytm(settings, cache_dir=os.path.join(os.path.dirname(STATE_FILE) or "/var/lib/ki-amp", "ytm"))
+
+
+def ytm_play_queue(tracks, index=0, with_stream=False):
+    """YouTube Music-låter → Lyrion: første spilles straks, resten legges i køen (som Navidrome-kassetter)."""
+    if with_stream:
+        base = f"http://{_local_ip()}:{PORT}"
+        tracks = [{**t, "stream": f"{base}/api/ytm/stream/{t['id']}.m4a"} for t in tracks]
+    if not tracks:
+        raise RuntimeError("tom samling")
+    index = max(0, min(len(tracks) - 1, int(index or 0)))
+    t0 = tracks[index]
+    play_url(t0["stream"], t0["title"] + (" – " + t0["artist"] if t0.get("artist") else ""), t0.get("cover", ""), "",
+             {"track": t0["title"], "artist": t0.get("artist", ""), "album": t0.get("album", ""), "source": "YouTube Music"})
+    for t in tracks[index + 1:]:
+        lyr.cmd(["playlist", "add", t["stream"], t["title"]])
+
+
 def _nfc_ma_search(q):
     m = _HX.get("ma")
     if not m:
@@ -7711,7 +7738,7 @@ def nfc_resolve(card, force=False):
     if card.get("handling") != "album" or not (force or _nfcmod.trenger_ny_losning(card)):
         return card
     v = card.get("verdi") or {}
-    lo = _nfcmod.resolve_album(v.get("artist", ""), v.get("album", ""), _nfc_nd_search, _nfc_ma_search)
+    lo = _nfcmod.resolve_album(v.get("artist", ""), v.get("album", ""), _nfc_nd_search, _nfc_ma_search, ytm_find=_nfc_ytm_find)
     if not lo and (card.get("losning") or {}).get("kilde"):
         return card                       # behold forrige treff hvis søket feilet nå (f.eks. uten nett)
     ny = nfc.lagre_losning(card["uid"], lo) or card
@@ -8427,6 +8454,11 @@ def main():
                                     "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp"}))
     except Exception as e:
         print("Music Assistant/NRK ikke tilgjengelig:", e, flush=True)
+    # YouTube Music innebygd (pi/skjold_ytm.py) – ytmusicapi + yt-dlp, ingen Music Assistant
+    try:
+        app.add_routes(_ytmmod.routes(ytm, {"stream_base": lambda: f"http://{_local_ip()}:{PORT}", "play": ytm_play_queue}))
+    except Exception as e:
+        print("YouTube Music ikke tilgjengelig:", e, flush=True)
     # Smart radio, Oppdag-liste, hjem-ekstra, plugin-butikk og helsesjekk (egne moduler, minimale kroker her)
     _hx_ctx = {"settings": settings, "subsonic": _nd, "play_url": play_url, "lyr_info": lambda: lyr.info, "lyr_cmd": lyr.cmd,
                "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp", "history": lambda: list(_hist_load()),

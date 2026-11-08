@@ -11,7 +11,8 @@ Linjeformat i album.txt (tomme linjer og linjer som starter med # hoppes over):
     Artist - Album | 2                                (antall kopier)
 
 Resultat i samme mappe som album.txt (eller her): kassett-cover.pdf (A4, 15 per side) og kassett-cover.svg per side.
-Etiketten er 43,2 × 51,2 mm og passer i det forsenkede feltet på kassetten (44 × 52 mm). Skriv ut i 100 % skala
+Coveret er 44 × 49,6 mm med avfasede øvre hjørner, og legges inni kassetten bak etikettvinduet (ingen lim: rammen
+og bakplaten holder det). Vanlig A4-papir holder. Skriv ut i 100 % skala
 (ikke «tilpass til side»), helst på blankt fotopapir eller klistremerkeark, og klipp langs den tynne grå linjen.
 
 Cover hentes fra iTunes-søket (ingen nøkkel), med MusicBrainz/Cover Art Archive som reserve. Bildene caches i
@@ -29,7 +30,9 @@ import urllib.parse
 import urllib.request
 
 W, H = 210.0, 297.0
-LW, LH, R = 43.2, 51.2, 2.0          # samme mål som lag_etiketter.py / etikettfeltet i skjold_kassett.scad
+# Papiret ligger inni kassetten bak etikettvinduet (ingen lim): 44 × 49,6 mm, øvre hjørner avfaset 7 mm (papW/papH/papC
+# i skjold_kassett.scad). Rammen dekker 2,4 mm langs kanten (rimW), så alt viktig står innenfor det synlige vinduet.
+LW, LH, C, RIM = 44.0, 49.6, 7.0, 2.4
 COLS, ROWS = 3, 5
 GX, GY = 8.0, 4.0
 MX = (W - COLS * LW - (COLS - 1) * GX) / 2
@@ -150,26 +153,37 @@ def _hue(s):
     return int(hashlib.md5(s.encode()).hexdigest()[:4], 16) % 360
 
 
+def omriss(inset=0.0):
+    """Papirets form (SVG-sti), y nedover: avfaset 45° i de øvre hjørnene. inset > 0 = vinduet innenfor rammen."""
+    c = C - inset * (2 ** 0.5 - 1)   # samme 45°-fas, flyttet innover
+    a, b, w, h = inset, inset, LW - inset, LH - inset
+    return f"M{a + c:.2f},{b:.2f} L{w - c:.2f},{b:.2f} L{w:.2f},{b + c:.2f} L{w:.2f},{h:.2f} L{a:.2f},{h:.2f} L{a:.2f},{b + c:.2f} Z"
+
+
 def label(x, y, it, img):
-    ft, fa = _fit(it["album"], 3.2, LW - 6), _fit(it["artist"], 2.4, LW - 16)
-    side = LW - 6
+    tx = RIM + 1.0                      # tekst innenfor rammen
+    ft, fa = _fit(it["album"], 3.0, LW - 2 * tx), _fit(it["artist"], 2.3, LW - 2 * tx)
+    side = LW - 2 * RIM - 2.6           # kvadratisk cover, fylles helt opp mot vinduets avfasede hjørner
+    ax, ay = (LW - side) / 2, RIM + 0.6
+    cid = f"c{x:.0f}{y:.0f}"
+    clip = f'<clipPath id="{cid}"><path d="{omriss(RIM + 0.6)}"/></clipPath>'
     if img:
-        art = (f'<clipPath id="c{x:.0f}{y:.0f}"><rect x="3" y="3" width="{side}" height="{side}" rx="1.2"/></clipPath>'
-               f'<image href="data:{mime(img)};base64,{base64.b64encode(img).decode()}" x="3" y="3" width="{side}" height="{side}" '
-               f'preserveAspectRatio="xMidYMid slice" clip-path="url(#c{x:.0f}{y:.0f})"/>')
+        art = (clip + f'<image href="data:{mime(img)};base64,{base64.b64encode(img).decode()}" x="{ax}" y="{ay}" width="{side}" height="{side}" '
+               f'preserveAspectRatio="xMidYMid slice" clip-path="url(#{cid})"/>')
     else:   # fargefelt med navnet når coveret ikke finnes
         h = _hue(it["artist"] + it["album"])
         fs = 4.2
         ls = _lines(it["album"], fs, side - 6)
-        y0 = 3 + side / 2 - (len(ls) - 1) * fs * 0.6
-        txt = "".join(f'<text x="{3+side/2}" y="{y0 + i*fs*1.2:.2f}" font-size="{fs}" fill="hsl({h},40%,88%)" text-anchor="middle" '
+        y0 = ay + side / 2 - (len(ls) - 1) * fs * 0.6
+        txt = "".join(f'<text x="{LW/2}" y="{y0 + i*fs*1.2:.2f}" font-size="{fs}" fill="hsl({h},40%,88%)" text-anchor="middle" '
                       f'class="t" font-weight="600">{html.escape(l)}</text>' for i, l in enumerate(ls))
-        art = f'<rect x="3" y="3" width="{side}" height="{side}" rx="1.2" fill="hsl({h},35%,28%)"/>' + txt
-    return (f'<g transform="translate({x:.2f},{y:.2f})"><rect width="{LW}" height="{LH}" rx="{R}" fill="#f6f3ee"/>{art}'
-            f'<text x="3" y="{LW+1.6}" font-size="{ft}" font-weight="600" class="t" fill="#1b1b1c">{html.escape(_cut(it["album"], ft, LW-6))}</text>'
-            f'<text x="3" y="{LW+5.2}" font-size="{fa}" class="t" fill="#6a6a65">{html.escape(_cut(it["artist"], fa, LW-16))}</text>'
-            f'<text x="{LW-3}" y="{LH-2}" font-size="1.8" class="t" fill="#b0aca4" text-anchor="end" letter-spacing=".4">SKJOLD</text>'
-            f'<rect width="{LW}" height="{LH}" rx="{R}" fill="none" stroke="#c9c5bd" stroke-width=".15"/></g>')
+        art = clip + f'<rect x="{ax}" y="{ay}" width="{side}" height="{side}" fill="hsl({h},35%,28%)" clip-path="url(#{cid})"/>' + txt
+    ty = ay + side + 3.4
+    return (f'<g transform="translate({x:.2f},{y:.2f})"><path d="{omriss()}" fill="#f6f3ee"/>{art}'
+            f'<text x="{tx}" y="{ty:.2f}" font-size="{ft}" font-weight="600" class="t" fill="#1b1b1c">{html.escape(_cut(it["album"], ft, LW - 2 * tx))}</text>'
+            f'<text x="{tx}" y="{ty + 3.0:.2f}" font-size="{fa}" class="t" fill="#6a6a65">{html.escape(_cut(it["artist"], fa, LW - 2 * tx - 8))}</text>'
+            f'<text x="{LW - tx}" y="{ty + 3.0:.2f}" font-size="1.7" class="t" fill="#b0aca4" text-anchor="end" letter-spacing=".4">SKJOLD</text>'
+            f'<path d="{omriss()}" fill="none" stroke="#c9c5bd" stroke-width=".15"/></g>')
 
 
 def pages(items, imgs):
@@ -177,7 +191,7 @@ def pages(items, imgs):
     for p in range(0, len(items), per):
         parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}mm" height="{H}mm" viewBox="0 0 {W} {H}">',
                  '<style>.t{font-family:Sora,Helvetica,Arial,sans-serif}</style>',
-                 f'<text x="{MX}" y="{MY-3}" font-size="2.6" fill="#9b978f" class="t">SKJOLD KASSETT · cover 43,2 × 51,2 mm · '
+                 f'<text x="{MX}" y="{MY-3}" font-size="2.6" fill="#9b978f" class="t">SKJOLD KASSETT · cover 44 × 49,6 mm · '
                  f'skriv ut i 100 % · klipp langs den grå linjen</text>']
         for i, it in enumerate(items[p:p + per]):
             r, c = divmod(i, COLS)

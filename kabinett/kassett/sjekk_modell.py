@@ -11,7 +11,7 @@ import trimesh
 
 PRINT, ASM = sys.argv[1], sys.argv[2]
 ok = True
-for n in ["spiller_topp", "spiller_bunn", "vindu", "lysleder", "trinse", "motortrinse", "kassett_front", "kassett_bak", "spole"]:
+for n in ["spiller_topp", "spiller_bunn", "vindu", "lysleder", "trinse", "motortrinse", "kassett_front", "kassett_bak", "spole", "etikettplate"]:
     m = trimesh.load(f"{PRINT}/{n}.stl")
     parts = len(m.split(only_watertight=False))
     good = m.is_watertight and m.is_volume and parts == 1
@@ -20,7 +20,7 @@ for n in ["spiller_topp", "spiller_bunn", "vindu", "lysleder", "trinse", "motort
           f"{m.volume/1000:6.1f} cm³  {m.extents.round(1)} mm  min z={m.bounds[0][2]:.2f}")
 
 A = {n: trimesh.load(f"{ASM}/A_{n}.stl") for n in
-     ["topp", "bunn", "vindu", "lysleder", "tr0", "tr1", "mt", "kf", "kb", "s0", "s1", "pn", "n20", "oring"]}
+     ["topp", "bunn", "vindu", "lysleder", "tr0", "tr1", "mt", "kf", "kb", "kp", "s0", "s1", "pn", "n20", "oring"]}
 # par som skal ligge an mot hverandre (kontaktflater) – sjekkes ikke for overlapp
 TOUCH = {("kf", "kb"), ("mt", "n20"), ("oring", "tr0"), ("oring", "tr1"), ("oring", "mt")}
 
@@ -54,7 +54,7 @@ for ang in range(0, 360, 30):
         c = A[s].bounding_box.centroid
         R = trimesh.transformations.rotation_matrix(np.radians(ang), [0, 1, 0], c)
         B[s] = A[s].copy().apply_transform(R)
-    check(["s0", "s1", "kf", "kb", "topp", "vindu", "tr0", "tr1"], B, f" ({ang}°)")
+    check(["s0", "s1", "kf", "kb", "kp", "topp", "vindu", "tr0", "tr1"], B, f" ({ang}°)")
 
 
 def gap(a, b, n=4000):
@@ -64,6 +64,7 @@ def gap(a, b, n=4000):
 
 print(f"avstand spole–kassett: {min(gap(A['s0'], A['kf']), gap(A['s0'], A['kb'])):.2f} mm,"
       f" kassett–spor: {min(gap(A['kb'], A['topp']), gap(A['kf'], A['topp'])):.2f} mm,"
-      f" kassett–rute: {gap(A['kf'], A['vindu']):.2f} mm, trinse–lomme: {gap(A['tr0'], A['topp']):.2f} mm")
+      f" kassett–rute: {gap(A['kf'], A['vindu']):.2f} mm, trinse–lomme: {gap(A['tr0'], A['topp']):.2f} mm,"
+      f" bakplate–kassett: {min(gap(A['kp'], A['kf']), gap(A['kp'], A['kb'])):.2f} mm")
 print("ALT OK" if ok else "FEIL FUNNET")
 sys.exit(0 if ok else 1)

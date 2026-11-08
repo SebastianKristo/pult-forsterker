@@ -302,10 +302,10 @@ struct SettingItemsCard: View {
     private func actLabel(_ id: String, _ label: String, _ confirm: Bool, _ now: Date) -> (String, Color) {
         if id == "ytmTest", m.ytmT != nil {
             let c = (m.names["ytmCookie"] ?? "").trimmingCharacters(in: .whitespaces)
-            if c.isEmpty { return ("Lim inn cookien først", .danger) }
-            if !c.contains("__Secure-3PAPISID") { return ("Mangler __Secure-3PAPISID · hent på nytt", .danger) }
-            // no YouTube Music service on the amplifier yet, so the cookie cannot be checked
-            return m.demo ? ("Innlogget · Premium", .ok) : ("Ikke støttet ennå", .danger)
+            if !c.isEmpty && !c.contains("__Secure-3PAPISID") { return ("Mangler __Secure-3PAPISID · hent på nytt", .danger) }
+            if m.demo { return ("Innlogget · Premium", .ok) }
+            let t = m.ytmStatus
+            return (t, t.hasPrefix("Innlogget") || t.hasPrefix("Tilkoblet") ? .ok : t == "Tester …" ? .ink2 : .danger)
         }
         if id == "ndTest", let t = m.ndT {
             return t == "busy" ? ("Tester …", .ink2) : (t, m.ndOK ? .ok : .danger)

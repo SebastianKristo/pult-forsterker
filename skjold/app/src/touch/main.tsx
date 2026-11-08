@@ -11,6 +11,7 @@ import { art, TOUCH_IDLE, TOUCH_OUT, TOUCH_ROLES, TOUCH_STANDBY_S } from '../lib
 import { favs, loadFavs, playFav } from '../lib/radio';
 import { ndAlbum, ndAlbumList, ndConfigured, ndCover, type NdAlbum } from '../lib/navidrome';
 import { playNd } from '../lib/library';
+import { ytmHomeCached, ytmTracks, ytmWhy } from '../lib/ytm';
 import { groupAll } from '../lib/groups';
 import { DoorbellOverlay, TalkButton } from '../screens/features';
 
@@ -188,11 +189,21 @@ function Home() {
 interface Card { t: string; s: string; art: string; live?: boolean; play: () => void }
 function Library() {
   const [nd, setNd] = useState<NdAlbum[] | null>(null);
+  const [yt, setYt] = useState<NdAlbum[] | null>(null), [ytErr, setYtErr] = useState('');
   useEffect(() => { if (lib.value === 1 && nd === null && ndConfigured()) ndAlbumList('newest', 12).then(setNd).catch(() => setNd([])); }, [lib.value]);
+  useEffect(() => {
+    if (lib.value !== 0 || yt !== null) return;
+    // YouTube Music fra Skjold (/api/ytm/home): spillelister, «Til deg» og album
+    ytmHomeCached().then((h) => { const l = [...h.playlists, ...h.frequent, ...h.other, ...h.newest]; setYt(l.filter((x, i) => l.findIndex((y) => y.id === x.id) === i).slice(0, 24)); })
+      .catch(async (e: unknown) => { setYtErr((await ytmWhy(e)).toUpperCase()); setYt([]); });
+  }, [lib.value]);
   const st = status.value;
   const TABS = ['YouTube Music', 'Navidrome', 'Radio'];
   let kicker = '', items: Card[] = [];
-  if (lib.value === 0) { kicker = 'IKKE TILKOBLET · SETT OPP MUSIC ASSISTANT I APPEN'; }
+  if (lib.value === 0) {
+    kicker = ytErr || (yt === null ? 'HENTER …' : yt.length ? 'SPILLELISTER OG MIKSER' : 'FANT INGENTING · LEGG INN COOKIEN I APPEN');
+    items = (yt ?? []).map((a) => ({ t: a.name, s: a.playlist ? 'Spilleliste' : a.artist, art: artBg(a.name, ndCover(a.coverArt, 300)), play: () => { void ytmTracks(a.id).then((r) => { if (r.length) { playNd(r, 0, 'ytm'); scr.value = 'now'; } }); } }));
+  }
   else if (lib.value === 1) {
     kicker = ndConfigured() ? 'NYLIG LAGT TIL' : 'IKKE TILKOBLET · LOGG INN PÅ NAVIDROME I APPEN';
     items = (nd ?? []).map((a) => ({ t: a.name, s: a.artist, art: artBg(a.name, ndCover(a.coverArt, 300)), play: () => { void ndAlbum(a.id).then((r) => { playNd(r.songs, 0); scr.value = 'now'; }); } }));

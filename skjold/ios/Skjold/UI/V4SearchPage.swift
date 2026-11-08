@@ -282,7 +282,7 @@ struct V4SearchPage: View {
         for lib in ["nd", "plex", "ytm"] where ok(V4Lib.names[lib] ?? "") {
             if m.demo {
                 out[lib] = SK.lt.filter { ($0.t + " " + $0.artist + " " + $0.album).localizedCaseInsensitiveContains(q) }.prefix(lib == "ytm" ? 6 : 3).map { $0 }
-            } else if lib != "ytm" {
+            } else {
                 out[lib] = await m.searchLib(lib, q)
             }
             guard !Task.isCancelled else { return }
