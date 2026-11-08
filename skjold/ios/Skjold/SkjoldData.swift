@@ -93,7 +93,7 @@ enum SK {
             .opt("tIdle", "I standby vis", ["Klokke", "Cover og klokke", "Svart"]),
             .bool("tNight", "Nattmodus", "Rødlig, svakt lys mellom 23 og 07")]),
         SettingCategory(id: "utgang", n: "Lydutgang", sub: "DAC, HDMI, optisk eller 3,5 mm", dev: ["node", "core", "touch"], items: [
-            .opt("out", "Utgang", ["3,5 mm (innebygd)", "HDMI", "USB-DAC", "I²S-kort (HiFiBerry / IQaudio)", "Optisk (S/PDIF)"], "Pi 3B og Pi 4 har 3,5 mm og HDMI. Et I²S-kort gir best lyd."),
+            .opt("out", "Utgang", ["3,5 mm (innebygd)", "HDMI", "USB-lydkort (UCA222 / UCA202)", "I²S-kort (HiFiBerry / IQaudio)", "Optisk (S/PDIF)"], "Pi 3B og Pi 4 har 3,5 mm og HDMI. USB-lydkort (f.eks. Behringer UCA222) finnes automatisk. Et I²S-kort gir best lyd."),
             .opt("hat", "I²S-kort", ["Spotpear HIFI HAT (PCM5122)", "HiFiBerry DAC+", "HiFiBerry DAC2 HD", "IQaudio DAC Pro", "Allo Boss"], "Brukes bare når utgang er I²S-kort"),
             .opt("rate", "Samplingsfrekvens", ["44,1 kHz", "48 kHz", "96 kHz", "Følg kilden"]),
             .opt("mixer", "Volumkontroll", ["Programvare", "Maskinvare (DAC)", "Fast 100 % (styres av forsterker)"], "Velg fast hvis enheten er koblet til en egen forsterker med volumknapp"),

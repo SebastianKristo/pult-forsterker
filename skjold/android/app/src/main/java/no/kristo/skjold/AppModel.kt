@@ -1166,10 +1166,28 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // Samme pumpe per rom: mens et roms linje dras sendes nyeste verdi straks forrige svar er kommet, så volumet
+    // følger fingeren i sanntid og en eldre verdi aldri kommer frem sist.
+    private val roomVolWant = mutableMapOf<String, Pair<Int, Room>>()
+    private val roomVolBusy = mutableSetOf<String>()
+
     fun roomVolume(r: Room, v: Int) {
-        val h = r.host
-        if (h != null) launch { DeviceLink.send("/api/volume", mapOf("volume" to v), on = h) }
-        else r.pid?.let { lyrionCmd(it, listOf("mixer", "volume", "$v")) }
+        if (r.host == null) { r.pid?.let { lyrionCmd(it, listOf("mixer", "volume", "$v")) }; return }
+        roomVolWant[r.id] = v to r
+        pumpRoomVolume(r.id)
+    }
+
+    private fun pumpRoomVolume(id: String) {
+        if (id in roomVolBusy) return
+        val (v, r) = roomVolWant[id] ?: return
+        val h = r.host ?: return
+        roomVolWant.remove(id)
+        roomVolBusy.add(id)
+        launch {
+            DeviceLink.send("/api/volume", mapOf("volume" to v), on = h)
+            roomVolBusy.remove(id)
+            pumpRoomVolume(id)
+        }
     }
 
     fun liveInput(i: Int) {

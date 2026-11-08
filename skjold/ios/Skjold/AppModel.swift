@@ -148,6 +148,8 @@ final class AppModel {
     @ObservationIgnored var holds: [String: Date] = [:]
     @ObservationIgnored var volWant: Int? = nil
     @ObservationIgnored var volBusy = false
+    @ObservationIgnored var roomVolWant: [String: (Int, Room)] = [:]
+    @ObservationIgnored var roomVolBusy: Set<String> = []
     @ObservationIgnored var libStream: String? = nil
     @ObservationIgnored var libSawPlaying = false
     @ObservationIgnored var presetSig = ""

@@ -557,18 +557,23 @@ def pga_write(gain_code):
         sclk.off(); cs.on()
 
 
-def apply_volume():
-    """AUX: analogt volum (X9C på modulbygget, PGA2311 på hovedkortet). AirPlay/BT/USB: analogt på fast nivå, volum + loudness i CamillaDSP."""
+def apply_volume(vol_only=False):
+    """AUX: analogt volum (X9C på modulbygget, PGA2311 på hovedkortet). AirPlay/BT/USB: analogt på fast nivå, volum + loudness i CamillaDSP.
+    vol_only=True (bare volumet endret, f.eks. mens volumlinjen dras): hopp over nivåene per kilde (amixer) og hele
+    DSP-oppsettet – send bare nytt volum til CamillaDSP, så lyden endres i sanntid."""
     global _x9c_pos
+    upd = dsp.update_volume if vol_only else dsp.update
     if BOARD in ("radio", "test", "node"):   # bare digitalt volum (CamillaDSP)
-        dsp.update(); return
+        upd(); return
     if BOARD == "kit":   # alt digitalt: volum, nivå per kilde og miks i CamillaDSP/softvol
-        apply_levels(); dsp.update(); return
+        if not vol_only: apply_levels()
+        upd(); return
     if BOARD == "main":   # rev B: alt er digitalt – PGA2311 står fast, volum og nivåer i CamillaDSP/softvol.
         # Fast analogt nivå (KI_AMP_PGA_DB, standard -9 dB): DAC 2,1 Vrms * -9 dB = 0,74 Vrms = det TPA3116 (26 dB) klarer ved 24 V
         # uten å klippe. Da kan ikke full digital styrke overstyre forsterkeren. Hodetelefonforsterkeren har +6 dB for å kompensere.
         pga_write(0 if (state["mute"] or not state["power"]) else max(1, min(255, 192 + 2 * PGA_DB)))
-        apply_levels(); dsp.update(); return
+        if not vol_only: apply_levels()
+        upd(); return
     if state["mute"] or not state["power"]:
         target = 0
     elif state["input"] == "aux":
@@ -578,7 +583,7 @@ def apply_volume():
     if _x9c_pos is None:
         x9c_step(-100); _x9c_pos = 0
     x9c_step(target - _x9c_pos); _x9c_pos = target
-    dsp.update()
+    upd()
 
 
 # ---------- Talemeldinger (piper → espeak-ng som reserve), spilles gjennom dmix/CamillaDSP ----------
@@ -729,11 +734,60 @@ def eq_profile():
     return [max(-12.0, min(12.0, float(x or 0))) for x in eq], p.get("loud", True) is not False
 
 
+def usb_audio_cards(path="/proc/asound/cards"):
+    """USB-lydkort fra /proc/asound/cards → [(id, beskrivelse)]. Behringer UCA222/UCA202 heter «CODEC» («USB Audio CODEC»)."""
+    out = []
+    try:
+        lines = open(path).read().splitlines()
+    except Exception:
+        return out
+    for i, ln in enumerate(lines):
+        m = re.match(r"\s*\d+\s+\[(\S+)\s*\]:\s*USB-Audio\s*-\s*(.*)", ln)
+        if m:
+            out.append((m.group(1), m.group(2).strip()))
+    return out
+
+
+# Node/Core: «Lydutgang» i appen (settings.out) – samme rekkefølge som listen i appene.
+OUT_NAMES = ["3,5 mm (innebygd)", "HDMI", "USB-lydkort (UCA222 / UCA202)", "I²S-kort (HiFiBerry / IQaudio)", "Optisk (S/PDIF)"]
+
+
+def node_output():
+    """(enhet, format) for valgt utgang på Node/Core, eller None = det installasjonen satte (KI_AMP_DSP_PLAYBACK).
+    Bare når brukeren faktisk har valgt utgang i appen; USB uten lydkort tilkoblet faller tilbake til standard."""
+    if BOARD != "node":
+        return None
+    cur = (state.get("settings") or {}).get("out")
+    try:
+        o = int(cur)
+    except (TypeError, ValueError):
+        return None
+    if o == 0:
+        return "plughw:Headphones", "S16LE"
+    if o == 1:
+        return "plughw:vc4hdmi0", "S16LE"
+    if o == 2:
+        cards = usb_audio_cards()
+        if not cards:
+            print("Lydutgang: USB-lydkort valgt, men ikke funnet – bruker standardutgangen", flush=True)
+            return None
+        cid = next((c for c, d in cards if c == "CODEC" or "CODEC" in d), cards[0][0])
+        return f"plughw:{cid}", "S16LE"
+    return None   # I²S / optisk: kortet installasjonen satte opp
+
+
 def dsp_playback():
-    """S1 rev F: med hodetelefoner i går hele kjeden (EQ, volum) til UCA202 #1 i stedet for PCM5102."""
+    """S1 rev F: med hodetelefoner i går hele kjeden (EQ, volum) til UCA202 #1 i stedet for PCM5102.
+    Node/Core: utgangen som er valgt i appen (f.eks. UCA222 på USB)."""
     if S1F and state.get("headphones"):
         return str((S1F_PINS.get("audio") or {}).get("headphones") or os.environ.get("KI_AMP_HP_DEV", "plughw:UCA_AUX1"))
-    return DSP_PLAYBACK
+    no = node_output()
+    return no[0] if no else DSP_PLAYBACK
+
+
+def dsp_format():
+    no = node_output()
+    return no[1] if no else DSP_FORMAT
 
 
 def eff_volume():
@@ -789,7 +843,7 @@ def dsp_config():
   chunksize: 1024
   queuelimit: 4
   capture: {{type: Alsa, channels: 2, device: "{DSP_CAPTURE}", format: S32LE}}
-  playback: {{type: Alsa, channels: 2, device: "{dsp_playback()}", format: {DSP_FORMAT}}}
+  playback: {{type: Alsa, channels: 2, device: "{dsp_playback()}", format: {dsp_format()}}}
 filters:
   pre:
     type: Gain
@@ -808,16 +862,34 @@ filters:
 
 
 class Dsp:
-    """Egen tråd som holder CamillaDSP oppdatert via websocket (python3-websocket)."""
+    """Egen tråd som holder CamillaDSP oppdatert via websocket (python3-websocket).
+    update() skyver hele oppsettet (EQ, loudness …) + volum; update_volume() bare volum/demping – den raske veien mens
+    volumlinjen i appen dras, så lyden følger fingeren. Websocketen holdes åpen mellom oppdateringene."""
     def __init__(self):
-        self._ev = threading.Event(); self._last_cfg = None
+        self._ev = threading.Event(); self._last_cfg = None; self._full = True; self._ws = None
+        self._sent = (None, None)
         threading.Thread(target=self._run, daemon=True).start()
 
     def update(self):
+        self._full = True; self._ev.set()
+
+    def update_volume(self):
         self._ev.set()
 
     def _send(self, ws, cmd):
         ws.send(json.dumps(cmd)); return json.loads(ws.recv())
+
+    def _conn(self, websocket):
+        if self._ws is None:
+            self._ws = websocket.create_connection(DSP_WS, timeout=2)
+        return self._ws
+
+    def _drop(self):
+        try:
+            if self._ws is not None: self._ws.close()
+        except Exception:
+            pass
+        self._ws = None
 
     def _run(self):
         try:
@@ -827,28 +899,35 @@ class Dsp:
         self._ev.set()   # skyv oppsett og volum ved oppstart
         while True:
             self._ev.wait(); self._ev.clear()
+            full = self._full; self._full = False
+            cfg = None
+            if full:
+                try:
+                    cfg = dsp_config()
+                except NameError:   # tråden starter før resten av daemonen er lastet (f.eks. roomeq_filters) – prøv igjen
+                    self._full = True; time.sleep(1); self._ev.set(); continue
+                except Exception as e:
+                    print("CamillaDSP-oppsett:", e, flush=True); self._full = True; time.sleep(2); self._ev.set(); continue
+                try:   # samme oppsett på disk, så CamillaDSP starter riktig etter omstart/krasj
+                    if not os.path.exists(DSP_FILE) or open(DSP_FILE).read() != cfg:
+                        with open(DSP_FILE + ".tmp", "w") as fh: fh.write(cfg)
+                        os.replace(DSP_FILE + ".tmp", DSP_FILE)
+                except Exception as e:
+                    print("CamillaDSP-fil:", e)
             try:
-                cfg = dsp_config()
-            except NameError:   # tråden starter før resten av daemonen er lastet (f.eks. roomeq_filters) – prøv igjen
-                time.sleep(1); self._ev.set(); continue
-            except Exception as e:
-                print("CamillaDSP-oppsett:", e, flush=True); time.sleep(2); self._ev.set(); continue
-            try:   # samme oppsett på disk, så CamillaDSP starter riktig etter omstart/krasj
-                if not os.path.exists(DSP_FILE) or open(DSP_FILE).read() != cfg:
-                    with open(DSP_FILE + ".tmp", "w") as fh: fh.write(cfg)
-                    os.replace(DSP_FILE + ".tmp", DSP_FILE)
-            except Exception as e:
-                print("CamillaDSP-fil:", e)
-            try:
-                ws = websocket.create_connection(DSP_WS, timeout=2)
-                if cfg != self._last_cfg:
-                    self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg
+                ws = self._conn(websocket)
+                if cfg is not None and cfg != self._last_cfg:
+                    self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg; self._sent = (None, None)
                 db = vol_db(eff_volume()) if (state["input"] != "aux" or BOARD in ("main", "kit")) else 0.0
-                self._send(ws, {"SetVolume": db})
-                self._send(ws, {"SetMute": bool(state["mute"]) or not state["power"]})
-                ws.close()
-            except Exception as e:   # CamillaDSP ikke klar ennå – prøv igjen
-                print("CamillaDSP:", e, flush=True); self._last_cfg = None; time.sleep(2); self._ev.set()
+                mute = bool(state["mute"]) or not state["power"]
+                if full or self._sent[0] != db:
+                    self._send(ws, {"SetVolume": db})
+                if full or self._sent[1] != mute:
+                    self._send(ws, {"SetMute": mute})
+                self._sent = (db, mute)
+            except Exception as e:   # CamillaDSP ikke klar ennå / startet på nytt – koble til igjen
+                print("CamillaDSP:", e, flush=True); self._drop(); self._last_cfg = None; self._sent = (None, None)
+                self._full = True; time.sleep(2); self._ev.set()
 
 
 dsp = Dsp()
@@ -1119,7 +1198,7 @@ def apply_power():
 
 
 # ---------- innstillinger (app/web, samme nøkler som skjold_settings.js) ----------
-SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "lvlAux": 0, "lvlUsb": 0,
+SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "lvlAux": 0, "lvlUsb": 0,
                 "name": 0, "nameCustom": "", "updChannel": 0, "updAuto": True, "setupDone": False, "nAux1": "AUX 1", "nAux2": "AUX 2", "nUsb1": "PC 1", "nUsb2": "PC 2", "hold": 2,
                 "voice": True, "lang": 0, "vv": 1, "dim": 1, "off": 1, "clock": True, "clockStyle": 0, "bright": 0, "led": 0, "ledLevel": 100, "ledMode": "press", "auto": 1, "wake": True,
                 # Musikktjenester – lagres her så appen (iOS/Android) og web-UI-et deler innloggingene
@@ -1136,7 +1215,7 @@ SETTINGS_DEF = {"bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn":
                 "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [5, 2, 0, 0, 1]), ("radio", 2, [-2, -1, 2, 3, 1]),
                                                                                      ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [2, 1, 0, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
-SETTINGS_APPLIED = {"eq", "dblPower", "nightLight", "hpOwn", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
+SETTINGS_APPLIED = {"out", "eq", "dblPower", "nightLight", "hpOwn", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
 
 
 def settings():
@@ -1159,7 +1238,7 @@ def apply_settings(changed_keys=()):
     env_names = _usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):]   # KI_AMP_USBSW_NAMES er standard til brukeren setter navn i appen
     USBSW_NAMES = [str(s_["nUsb1"] if s_["nUsb1"] != SETTINGS_DEF["nUsb1"] else env_names[0])[:16],
                    str(s_["nUsb2"] if s_["nUsb2"] != SETTINGS_DEF["nUsb2"] else env_names[1])[:16]]
-    if "eq" in changed_keys: dsp.update()
+    if "eq" in changed_keys or "out" in changed_keys: dsp.update()   # out: ny lydutgang (Node/Core) → nytt CamillaDSP-oppsett
     if "voice" in changed_keys: state["voice"] = bool(s_["voice"])
     if "lang" in changed_keys and LANG_PROFILE.get(int(s_["lang"]) if str(s_["lang"]).isdigit() else -1):
         state["voice_profile"] = LANG_PROFILE[int(s_["lang"])]
@@ -1697,11 +1776,11 @@ def set_volume(v):
     if S1F and state.get("headphones") and settings().get("hpOwn", True):
         state["hp_volume"] = max(0, min(100, int(v)))
         if state["hp_volume"] > 0: state["mute"] = False
-        apply_volume(); changed(); return
+        apply_volume(vol_only=True); changed(); return
     state["volume"] = max(0, min(100, int(v)))
     if state["volume"] > 0:
         state["mute"] = False
-    apply_volume(); changed()
+    apply_volume(vol_only=True); changed()
 
 
 def set_mute(m):
@@ -4615,7 +4694,7 @@ REC_DIR = os.environ.get("KI_AMP_REC_DIR", "/var/lib/skjold/opptak")
 _rec = {"procs": {}, "fired": set()}
 
 
-def _safe(s):
+def _safe_name(s):
     return re.sub(r"[^A-Za-z0-9æøåÆØÅ_-]+", "-", str(s or "opptak")).strip("-")[:40] or "opptak"
 
 
@@ -4702,7 +4781,7 @@ def rec_start(spec):
     url, name = rec_source(spec)
     mins = max(1, min(240, int(spec.get("minutes") or 60)))
     os.makedirs(REC_DIR, exist_ok=True)
-    fn = f"{_safe(name)}-{time.strftime('%Y%m%d-%H%M')}.mp3"
+    fn = f"{_safe_name(name)}-{time.strftime('%Y%m%d-%H%M')}.mp3"
     path = os.path.join(REC_DIR, fn)
     n = int(spec.get("preset") or 0)
     p = state["presets"][n - 1] if 1 <= n <= len(state["presets"]) else None
@@ -5414,13 +5493,13 @@ def _place_schedule(speakers, lead=2.0):
     slots = [t0 + a for a, _b in pl.sequence_signal(len(speakers), lead_s=0.5)]
     for sp, at in zip(speakers, slots):
         if sp.get("host"):
-            threading.Thread(target=lambda h=sp["host"], c=sp.get("channel", "both"), a=at: _safe(lambda: _place_remote(h, "/api/placement/play", {"channel": c, "at": a})), daemon=True).start()
+            threading.Thread(target=lambda h=sp["host"], c=sp.get("channel", "both"), a=at: _place_safe(lambda: _place_remote(h, "/api/placement/play", {"channel": c, "at": a})), daemon=True).start()
         else:
             threading.Thread(target=_place_play_local, args=(sp.get("channel", "both"), at), daemon=True).start()
     return t0, slots
 
 
-def _safe(fn):
+def _place_safe(fn):
     try:
         return fn()
     except Exception as e:
@@ -5536,7 +5615,7 @@ async def h_placement_devices(r):
             return _place_remote(s["host"], "/api/placement/record", {"at": t0, "dur": dur, "n": n}, timeout=dur + 20)
         x = _place_record_local(t0, dur)
         return {"arrivals": pl.arrivals(x, n)} if x is not None else {"error": "ingen mikrofon"}
-    res = await asyncio.gather(*[loop.run_in_executor(None, lambda s=s: _safe(lambda: rec(s))) for s in sp])
+    res = await asyncio.gather(*[loop.run_in_executor(None, lambda s=s: _place_safe(lambda: rec(s))) for s in sp])
     T = np.zeros((n, n))
     for j, rj in enumerate(res):
         if not rj or "arrivals" not in rj or any(a["t_ms"] is None for a in rj["arrivals"]):
@@ -5571,8 +5650,8 @@ async def h_placement_apply(r):
     plugin_update("placement", {"enabled": True, "trims": trims, "result": {k: last.get(k) for k in ("positions", "angles", "roles") if k in last}, "measured": int(time.time())})
     done = []
     for host, t in remote:
-        ok = _safe(lambda: _place_remote(host, "/api/sync", {"room_delay_ms": t["delay_ms"]}))
-        _safe(lambda: _place_remote(host, "/api/placement", {"enabled": True, "trims": {"L": {"delay_ms": 0, "gain_db": t["gain_db"]}, "R": {"delay_ms": 0, "gain_db": t["gain_db"]}}}))
+        ok = _place_safe(lambda: _place_remote(host, "/api/sync", {"room_delay_ms": t["delay_ms"]}))
+        _place_safe(lambda: _place_remote(host, "/api/placement", {"enabled": True, "trims": {"L": {"delay_ms": 0, "gain_db": t["gain_db"]}, "R": {"delay_ms": 0, "gain_db": t["gain_db"]}}}))
         done.append({"host": host, "ok": ok is not None})
     if "offset_cm" in last:
         plugin_update("xtc", {"offset_cm": int(round(last["offset_cm"]))})
