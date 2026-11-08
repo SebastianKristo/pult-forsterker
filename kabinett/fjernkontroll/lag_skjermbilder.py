@@ -5,7 +5,7 @@ og fire faner nederst (Start · Enhet · Hjem · Mer). De er tegnet med Pillow, 
 skriften (Sora), målene og plasseringen er de samme som i fastvaren, men detaljer kan avvike. Appnavn, titler og
 lys er eksempler.
 
-Bruk:  python3 lag_skjermbilder.py      → render/skjerm-1-start.png … skjerm-8-mer.png"""
+Bruk:  python3 lag_skjermbilder.py      → render/skjerm-1-start.png … skjerm-9-dokk.png"""
 import math
 import os
 
@@ -368,8 +368,36 @@ def mer():
     return im
 
 
+def dokk():
+    """I dokken: stor klokke, dato, lading og nå-kortet (her Skjold med cover)."""
+    im, d = ny()
+    status(d, "Skjold", "note", bat=64, lader=True)
+    tekst(d, (120, 40), "21:47", font("lett", 64), HVIT, "ma")
+    tekst(d, (120, 114), "søndag 8. november", font("semi", 11), GRAA, "ma")
+    d.polygon([(98 * S, 141 * S), (93 * S, 151 * S), (98 * S, 151 * S), (95 * S, 160 * S), (104 * S, 147 * S), (99 * S, 147 * S), (102 * S, 141 * S)], fill=GULL)
+    tekst(d, (110, 139), "64 %", font("semi", 17), HVIT)
+    tekst(d, (120, 166), "lader", font("reg", 10), (110, 108, 104), "ma")
+    r(d, (8, 190, 232, 276), 16, fill=(26, 26, 29))
+    cv = cover(56 * S)
+    m = Image.new("L", cv.size, 0)
+    ImageDraw.Draw(m).rounded_rectangle([0, 0, cv.size[0], cv.size[1]], 12 * S, fill=255)
+    im.paste(cv, (20 * S, 205 * S), m)
+    d = ImageDraw.Draw(im)
+    f = font("semi", 12)
+    t = "Morgenklassisk"
+    while d.textlength(t, font=f) > 92 * S:   # som long_mode: DOT i fastvaren (92 px bred)
+        t = t[:-2] + "…"
+    tekst(d, (86, 207), t, f)
+    tekst(d, (86, 227), "NRK P2 · radio", font("reg", 9.5), GRAA)
+    bar(d, 86, 252, 132, 4, 0.42)
+    d.ellipse([184 * S, 208 * S, 220 * S, 244 * S], fill=GULL)
+    ikon(d, "pause", 202, 226, BG, 0.8)
+    faner(d, 0)
+    return im
+
+
 SIDER = [("start", start), ("velger", velger), ("apper", apper), ("innganger", innganger), ("aktivitet", aktivitet),
-         ("spiller", spiller), ("hjem", hjem), ("mer", mer)]
+         ("spiller", spiller), ("hjem", hjem), ("mer", mer), ("dokk", dokk)]
 
 
 def main():
@@ -383,10 +411,10 @@ def main():
         f().save(fn, optimize=True)
         print("skrev", os.path.relpath(fn, HER))
     # alle sidene i ett bilde (LES_MEG)
-    ark = Image.new("RGB", (4 * 250 * 2 + 10, 2 * 330 * 2 + 10), (232, 230, 224))
+    ark = Image.new("RGB", (5 * 250 * 2 + 10, 2 * 330 * 2 + 10), (232, 230, 224))
     for i, (navn, f) in enumerate(SIDER):
         b = Image.open(os.path.join(mappe, f"skjerm-{i + 1}-{navn}.png")).resize((480, 640), Image.LANCZOS)
-        ark.paste(b, (10 + (i % 4) * 500, 10 + (i // 4) * 660))
+        ark.paste(b, (10 + (i % 5) * 500, 10 + (i // 5) * 660))
     ark.save(os.path.join(mappe, "skjerm-oversikt.png"), optimize=True)
     print("skrev render/skjerm-oversikt.png")
 
