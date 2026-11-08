@@ -16,7 +16,7 @@ PLATES = {
     "skjold-rost-k2.3mf": ("Skjold Røst – kropp, front og knott (PETG/ASA)", [
         # fil, navn, filament, rotasjon om z, min-hjørne (x, y), «samme som» (legg nøyaktig likt som en annen del)
         ("kropp", "Kropp (bakveggen ned)", 1, 0, (4, 4), None),
-        ("front", "Frontplate (baksiden ned)", 2, 0, (114, 4), None),
+        ("front", "Frontplate (baksiden ned)", 2, 0, (122, 4), None),
         ("logo", "Logo SKJOLD (innfelt i fronten)", 3, 0, None, "front"),
         ("knott", "Knott (toppen ned)", 3, 0, (4, 146), None),
         ("knapp", "Knappehetter av/på og 1–4 (toppen ned)", 2, 0, (4, 190), None),
@@ -27,10 +27,10 @@ PLATES = {
     ]),
     "skjold-rost-k2-tpu.3mf": ("Skjold Røst – pakninger (TPU 95A)", [
         ("pakning_front", "Pakning front", 1, 0, (4, 4), None),
-        ("pakning_bunn", "Pakning bunn", 1, 0, (110, 4), None),
-        ("krage", "Krage EC11", 1, 0, (136, 130), None),
-        ("dc_skive", "Skive DC-kontakt", 1, 0, (156, 130), None),
-        ("usb_propp", "Propp USB-C", 1, 0, (176, 130), None),
+        ("pakning_bunn", "Pakning bunn", 1, 0, (114, 4), None),
+        ("krage", "Krage EC11", 1, 0, (136, 132), None),
+        ("dc_skive", "Skive DC-kontakt", 1, 0, (156, 132), None),
+        ("usb_propp", "Propp USB-C", 1, 0, (176, 132), None),
     ]),
 }
 COLORS = {1: "#ECE9E3", 2: "#232325", 3: "#D99E40"}

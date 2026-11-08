@@ -7,7 +7,11 @@ Krever trimesh og manifold3d. Sjekker:
   2. ingen deler overlapper i montert stilling (par som skal ligge an mot hverandre har bare kontaktflater)
   3. kroppens yttervegg er hel: stråler inn fra sidene, toppen og baksiden treffer ≥ 1,6 mm materiale overalt,
      bortsett fra de tiltenkte hullene (port, DC, USB, EC11, gravert navn)
-  4. kroppen og frontplaten flukter i skjøten (samme ytterkant på begge sider av y = 0)"""
+  4. kroppen og frontplaten flukter i skjøten (samme ytterkant på begge sider av y = 0)
+  5. pakningene følger den nye formen: frontpakningen ligger innenfor kroppens snitt i skjøten, bunnpakningen innenfor
+     kroppens grunnriss, begge med ≥ 0,5 mm til yttersiden
+  6. lydkammeret: netto volum og porttuning (fb) holdes nær forrige utgave (ca. 0,97 l og 83 Hz med samme regnemåte)
+  7. utskrift uten støtte: kroppens, bunnens og grillens yttersider har ingen flater brattere enn 50° i printretningen"""
 import itertools
 import sys
 
@@ -67,7 +71,7 @@ print("OK  ingen overlapp i montert stilling" if not olap else "FEIL overlapp: "
 
 # --- yttervegg ---
 k = A["kropp"]
-W, D, H, t = 106, 113, 136, 2.6
+W, D, H, t = 112, 113, 134, 2.6
 # (flate, senter u, senter v, radius) – tiltenkte åpninger. Toppen: v ≈ y (toppen heller bare ≈ 2,4°).
 HOLES = [("bak", -26, 40, 11.5), ("bak", -25, 13, 4.5), ("bak", 15, 13, 5.6), ("bak", 0, 100, 18),
          ("topp", 0, 88, 6.6), ("topp", 0, 42, 33.0)] + [("topp", x, 10.5, 5.6) for x in (-32, -16, 0, 16, 32)]
@@ -82,11 +86,13 @@ def wall(face, u, v):
         o, d = [u, v, H + 5], [0, 0, -1]   # toppen er skrå; strålen treffer overflaten litt lavere foran
     else:
         o, d = [u, D + 5, v], [0, -1, 0]
-    loc, _, _ = k.ray.intersects_location([o], [d])
-    if len(loc) < 2:
-        return 0.0
-    s = sorted(np.linalg.norm(loc - o, axis=1))
-    return s[1] - s[0]
+    for e in (0.0, 0.013):   # (traff stråla akkurat en kant i nettet, prøves en hundredels mm ved siden av)
+        oo = np.array(o, float) + np.cross(d, [0.6, 0.7, 0.4]) * e
+        loc, _, _ = k.ray.intersects_location([oo], [d])
+        s = np.unique(np.round(np.linalg.norm(loc - oo, axis=1), 3)) if len(loc) else []
+        if len(s) >= 2:
+            return s[1] - s[0]
+    return 0.0
 
 
 bad = []
@@ -115,6 +121,50 @@ for z in [20, 60, 100, 125]:
     good = xs[0] is not None and xs[1] is not None and abs(xs[0] - xs[1]) < 0.05
     ok &= good
     print(f"{'OK ' if good else 'FEIL'} skjøt z={z}: kropp x={xs[0]}  front x={xs[1]}")
+
+# --- pakningene følger formen ---
+from shapely.geometry import MultiPoint, Point  # noqa: E402
+from shapely.ops import unary_union  # noqa: E402
+
+
+def snitt(mesh, origin, normal, to2d):
+    sec = mesh.section(plane_origin=origin, plane_normal=normal)
+    pts = [to2d(p) for e in sec.discrete for p in e]
+    return MultiPoint(pts).convex_hull
+
+
+ytre_y0 = snitt(k, [0, 0.3, 0], [0, 1, 0], lambda p: (p[0], p[2]))
+ytre_z0 = snitt(trimesh.util.concatenate([k, fr]), [0, 0, 0.3], [0, 0, 1], lambda p: (p[0], p[1]))   # kropp + frontplate
+pf = A["pakning_front"].vertices
+pf = pf[pf[:, 2] > 2]                                       # (nederst lukker bunnplata)
+pb = A["pakning_bunn"].vertices
+mf = min(ytre_y0.exterior.distance(Point(x, z)) for x, _, z in pf[::7]) if ytre_y0.contains(MultiPoint([(x, z) for x, _, z in pf])) else 0
+mb = min(ytre_z0.exterior.distance(Point(x, y)) for x, y, _ in pb[::7]) if ytre_z0.contains(MultiPoint([(x, y) for x, y, _ in pb])) else 0
+good = mf >= 0.5 and mb >= 0.5
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} pakningene følger formen: frontpakningen {mf:.1f} mm og bunnpakningen {mb:.1f} mm innenfor yttersiden")
+
+# --- lydkammeret og porten ---
+luft = trimesh.load(f"{ASM}/luft.stl").volume / 1e6        # liter luft mellom vegger, front, gulv og takrom
+netto = luft - 0.05                                         # elementet (ca. 50 cm³)
+PORT_D, PORT_L = 0.016, 0.078                               # Ø16 mm, 78 mm (portL i skjold_rost.scad)
+fb = 343 / (2 * np.pi) * np.sqrt(np.pi * (PORT_D / 2) ** 2 / (netto / 1000 * (PORT_L + 0.732 * PORT_D)))
+good = 0.92 < netto < 1.05 and 80 < fb < 86
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} lydkammer: {luft:.2f} l luft, {netto:.2f} l netto, port Ø16 × 78 mm → fb ≈ {fb:.0f} Hz "
+      f"(forrige utgave: 1,02 l luft, 0,97 l netto, Ø16 × 78 mm → ca. 83 Hz med samme regnemåte)")
+
+# --- utskrift uten støtte: yttersidene (nær det konvekse skallet) har ingen flater brattere enn 50° ---
+res = []
+for n, maxz in (("kropp", 134 - 0.1), ("bunn", 99), ("grill", 99)):   # kropp: leppene på toppen (0,5 mm) regnes ikke
+    m = trimesh.load(f"stl/{n}.stl")
+    c, nn, a = m.triangles_center, m.face_normals, m.area_faces
+    ytre = np.abs(trimesh.proximity.signed_distance(m.convex_hull, c)) < 0.3
+    bratt = ytre & (nn[:, 2] < -np.sin(np.radians(50))) & (c[:, 2] > 0.3) & (c[:, 1] < maxz)
+    res.append((n, a[bratt].sum()))
+good = all(v < 1.0 for _, v in res)
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} printes uten støtte: " + ", ".join(f"{n} {v:.1f} mm²" for n, v in res) + " brattere enn 50° på yttersiden")
 
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)
