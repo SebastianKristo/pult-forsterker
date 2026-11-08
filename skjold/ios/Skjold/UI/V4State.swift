@@ -90,7 +90,8 @@ enum V4Lib {
             }
         }
         let d = m.libs[lib]
-        let colls = (d?.playlists ?? []) + (d?.newest ?? []).prefix(8)
+        // YouTube Music: også «Til deg» (mikser og anbefalte album fra forsiden), så det er noe å spille uten innlogging
+        let colls = (d?.playlists ?? []) + (d?.newest ?? []).prefix(8) + (lib == "ytm" ? Array((d?.frequent ?? []).prefix(8)) + Array((d?.other ?? []).prefix(8)) : [])
         return colls.map { c in
             V4Playlist(id: lib + "/" + c.id, name: c.name, owner: c.playlist ? "Spilleliste" : c.artist, src: src, lib: lib,
                        keys: [c.name, c.name + " 2", c.name + " 3", c.name + " 4"], coll: c, count: c.count)

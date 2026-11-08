@@ -664,8 +664,19 @@ extension AppModel {
             let (ra, rr, rf, rp) = await (a, r, f, p)
             d.newest = ra ?? []; d.other = rr ?? []; d.frequent = rf ?? []; d.playlists = rp ?? []
             d.state = ra == nil ? "Plex svarte ikke." : "ok"
-        default:
-            d.state = "YouTube Music er ikke koblet til. Forsterkeren har ingen YouTube Music-tjeneste ennå."
+        default:   // YouTube Music: innebygd i Skjold (ytmusicapi + yt-dlp), ingen Music Assistant
+            guard let h = activeHost else { d.state = "Ingen Skjold-enhet er tilkoblet."; break }
+            guard let o = YtmLib.object(await DeviceLink.shared.get("/api/ytm/home", on: h, timeout: 20)) else {
+                let st = YtmLib.object(await DeviceLink.shared.get("/api/ytm/status", on: h))
+                let miss = (st?["missing"] as? [String]) ?? []
+                d.state = st == nil ? "Skjold-enheten har ikke YouTube Music ennå. Oppdater programvaren."
+                    : !miss.isEmpty ? "YouTube Music mangler \(miss.joined(separator: ", ")) på enheten. Oppdater programvaren."
+                    : "YouTube Music svarte ikke: \((st?["error"] as? String) ?? "ukjent feil")"
+                break
+            }
+            d.newest = YtmLib.colls(o["newest"]); d.other = YtmLib.colls(o["other"])
+            d.frequent = YtmLib.colls(o["frequent"]); d.playlists = YtmLib.colls(o["playlists"])
+            d.state = d.albums.isEmpty && d.playlists.isEmpty ? "Fant ingenting i YouTube Music. Legg inn cookien under Innstillinger → Musikktjenester for biblioteket ditt." : "ok"
         }
         for c in d.albums + d.playlists { CoverStore.shared.set(c.name, c.cover) }
         libs[id] = d
@@ -678,7 +689,11 @@ extension AppModel {
     func collTracks(_ lib: String, _ c: LibColl) async -> [Track] {
         if let t = libs[lib]?.tracks[c.id], !t.isEmpty { return t }
         let items: [LibItem]
-        if lib == "plex" { items = await PlexLib.tracks(plexConf, c) } else { items = await Subsonic.tracks(ndConf, c) }
+        if lib == "plex" { items = await PlexLib.tracks(plexConf, c) }
+        else if lib == "ytm" {
+            let o = YtmLib.object(await DeviceLink.shared.get("/api/ytm/tracks?id=" + YtmLib.q(c.id), on: activeHost, timeout: 20))
+            items = YtmLib.items(o?["tracks"])
+        } else { items = await Subsonic.tracks(ndConf, c) }
         let t = items.map(Self.track)
         for x in t where !x.cover.isEmpty { CoverStore.shared.set(x.album, x.cover) }
         libs[lib, default: LibData()].tracks[c.id] = t
@@ -694,11 +709,33 @@ extension AppModel {
         case "plex":
             guard plexConf.ok, let sec = await PlexLib.musicSection(plexConf) else { return [] }
             items = await PlexLib.search(plexConf, section: sec, q)
+        case "ytm":
+            guard let h = activeHost else { return [] }
+            items = YtmLib.items(YtmLib.object(await DeviceLink.shared.get("/api/ytm/search?q=" + YtmLib.q(q), on: h, timeout: 15))?["tracks"])
         default: items = []
         }
         let t = items.map(Self.track)
         for x in t where !x.cover.isEmpty { CoverStore.shared.set(x.album, x.cover) }
         return t
+    }
+
+    /// «Test innlogging» for YouTube Music: Skjold-enheten svarer med om cookien gir et innlogget bibliotek.
+    func testYtm() {
+        ytmT = Date(); ytmStatus = "Tester …"
+        Task { [weak self] in
+            guard let self, let h = self.activeHost else { self?.ytmStatus = "Ingen Skjold-enhet"; return }
+            self.libs["ytm"] = nil
+            let st = YtmLib.object(await DeviceLink.shared.get("/api/ytm/status", on: h))
+            let home = YtmLib.object(await DeviceLink.shared.get("/api/ytm/home?fresh=1", on: h, timeout: 20))
+            let miss = (st?["missing"] as? [String]) ?? []
+            if st == nil { self.ytmStatus = "Oppdater Skjold-programvaren"; Haptics.error(); return }
+            if !miss.isEmpty { self.ytmStatus = "Mangler " + miss.joined(separator: ", "); Haptics.error(); return }
+            if home == nil { self.ytmStatus = (st?["error"] as? String).map { "Feil: " + $0 } ?? "Svarer ikke"; Haptics.error(); return }
+            let inn = (st?["signed_in"] as? Bool) ?? false
+            let n = YtmLib.colls(home?["playlists"]).count
+            self.ytmStatus = inn ? (n > 1 ? "Innlogget · \(n) spillelister" : "Innlogget") : "Tilkoblet uten innlogging (søk virker)"
+            Haptics.success()
+        }
     }
 
     func testNavidrome() {

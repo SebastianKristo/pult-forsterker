@@ -271,7 +271,7 @@ struct V4HomeTab: View {
 
     private func loadLibs() async {
         guard m.live else { return }
-        for lib in ["nd", "plex"] where (m.libs[lib]?.state ?? "").isEmpty { await m.loadLib(lib) }
+        for lib in ["ytm", "nd", "plex"] where (m.libs[lib]?.state ?? "").isEmpty { await m.loadLib(lib) }
     }
 }
 

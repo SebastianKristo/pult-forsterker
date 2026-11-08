@@ -88,6 +88,7 @@ final class AppModel {
     /// Hjemskjermens rekkefølge og synlighet (settings.homeLayout på den aktive Skjold-enheten).
     var homeLayout: [HomeItem] = []
     var ytmT: Date? = nil
+    var ytmStatus = ""
     var plexT: String? = nil   // nil, "busy", or the result text
     var plexOK = false
     var btPairT: Date? = nil
@@ -687,7 +688,7 @@ final class AppModel {
         if confirm != id && !safe { Haptics.warning(); confirm = id; return }
         confirm = ""
         switch id {
-        case "ytmTest": ytmT = Date()
+        case "ytmTest": if demo { ytmT = Date() } else { testYtm() }
         case "ndTest": testNavidrome()
         case "plexTest": testPlex()
         case "btPair": btPairT = Date(); post(["type": "btPair", "room": devRoom.id])

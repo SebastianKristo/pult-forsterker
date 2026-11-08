@@ -199,8 +199,7 @@ struct V4SourcePage: View {
 
     @ViewBuilder private func emptyLib(_ lib: String) -> some View {
         let s = m.libs[lib]?.state ?? ""
-        let text = lib == "ytm" ? "YouTube Music er ikke koblet til ennå. Legg inn innloggingen under Innstillinger → Musikktjenester."
-            : s == "busy" ? "Henter biblioteket …"
+        let text = s == "busy" ? "Henter biblioteket …"
             : s.isEmpty || s == "ok" ? "Ingen spillelister ennå." : s
         Text(text).sora(14, .regular, V4.muted, lineHeight: 1.45).fixedSize(horizontal: false, vertical: true)
     }
