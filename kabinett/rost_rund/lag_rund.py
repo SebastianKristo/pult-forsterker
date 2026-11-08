@@ -44,9 +44,9 @@ def scad(part, ut):
 
 # ---------- 1. OpenSCAD-delene ----------
 procs = []
-for p in ("kjerne", "bunn", "lokk", "knott", "knapp"):
+for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "rute"):
     procs.append(subprocess.Popen(["openscad", "-q", "-D", f'part="{p}"', "-o", f"stl/{p}.stl", SC]))
-for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "logo", "stenger"):
+for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "logo", "stenger", "rute", "skjerm", "skjermflate", "element"):
     procs.append(subprocess.Popen(["openscad", "-q", "-D", f'part="a_{p}"', "-o", f"stl_asm/{p}.stl", SC]))
 procs.append(subprocess.Popen(["openscad", "-q", "-D", 'part="logo_kutt"', "-o", "stl_asm/logo_kutt.stl", SC]))
 for pr in procs:
@@ -135,7 +135,7 @@ def meld(god, tekst):
     global ok
     ok &= bool(god); print(("OK   " if god else "FEIL ") + tekst)
 
-DELER = ["kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo"]
+DELER = ["kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute"]
 FLERE = {"knapp": 5, "logo": None}
 for n in DELER:
     m = trimesh.load(f"stl/{n}.stl")
@@ -144,8 +144,9 @@ for n in DELER:
         and m.extents[0] <= 250 and m.extents[1] <= 250 and m.extents[2] <= 250
     meld(god, f"{n:7s} tett={m.is_watertight} deler={k} {m.volume / 1000:6.1f} cm³ {m.extents.round(1)} mm")
 
-A = {n: trimesh.load(f"stl_asm/{n}.stl") for n in ("kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo")}
-LOV = {("kjerne", "bunn"), ("kjerne", "lokk"), ("bunn", "hylse"), ("lokk", "hylse"), ("lokk", "knapp"), ("hylse", "logo"), ("lokk", "knott")}
+A = {n: trimesh.load(f"stl_asm/{n}.stl") for n in ("kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "skjerm", "element")}
+LOV = {("kjerne", "bunn"), ("kjerne", "lokk"), ("bunn", "hylse"), ("lokk", "hylse"), ("lokk", "knapp"), ("hylse", "logo"), ("lokk", "knott"),
+       ("lokk", "rute"), ("lokk", "skjerm"), ("kjerne", "element")}
 import itertools
 feil = []
 for x, y in itertools.combinations(A, 2):
@@ -195,6 +196,16 @@ print("ALT OK" if ok else "NOE FEILET")
 sys.path.insert(0, os.path.join(HER, "..", "fjernkontroll"))
 import lag_3mf as L   # noqa: E402
 L.STL = "stl"
+# Utskriftsinnstillinger som objektinnstillinger i 3MF-en (Creality Print / OrcaSlicer leser model_settings.config):
+# lokket printes med toppen ned (ingen støtte trengs: alt under lokket peker opp, vinduets fas er 45°, glasslomma er åpen
+# oppover); sakte første lag og elefantfot-kompensasjon gir skarpe kanter rundt rutas forsenkning og knappehullene.
+# Ruta printes i klar PETG med 100 % fyll og bare én vegg (klarest), sakte.
+L.OBJ_INNST = {
+    "lokk": {"enable_support": "0", "initial_layer_speed": "20", "initial_layer_infill_speed": "30", "elefant_foot_compensation": "0.15"},
+    "rute": {"enable_support": "0", "sparse_infill_density": "100%", "wall_loops": "1", "top_shell_layers": "0", "bottom_shell_layers": "0",
+             "initial_layer_speed": "15", "outer_wall_speed": "30", "inner_wall_speed": "30", "sparse_infill_speed": "30"},
+    "kjerne": {"enable_support": "0"}, "hylse": {"enable_support": "0", "outer_wall_speed": "120"}, "bunn": {"enable_support": "0"},
+}
 L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper og knott", [
     ("kjerne", "Kjerne (mørk, stående)", 2, (70, 70), None),
     ("knapp", "Knappehetter (mørke, toppen ned)", 2, (10, 10), None),
@@ -202,7 +213,8 @@ L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper
 L.write("skjold-rost-rund-k2-hylse.3mf", "Skjold Røst Rund – grillhylse med SKJOLD i gull", [
     ("hylse", "Grillhylse (lys, stående)", 1, (70, 70), None),
     ("logo", "SKJOLD (gull, innfelt i hylsa)", 3, None, "hylse")], {1: "#ECE9E3", 3: "#D99E40"})
-L.write("skjold-rost-rund-k2-lokk-bunn.3mf", "Skjold Røst Rund – lokk og bunnplate", [
-    ("lokk", "Lokk (lys, toppen ned)", 1, (10, 10), None),
-    ("bunn", "Bunnplate med port (lys)", 1, (130, 10), None)], {1: "#ECE9E3"})
+L.write("skjold-rost-rund-k2-lokk-bunn.3mf", "Skjold Røst Rund – lokk med skjerm, rute og bunnplate", [
+    ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (10, 10), None),
+    ("bunn", "Bunnplate med port (lys)", 1, (130, 10), None),
+    ("rute", "Rute over skjermen (klar PETG, 100 % fyll)", 4, (20, 120), None)], {1: "#ECE9E3", 4: "#DDE6EA"})
 sys.exit(0 if ok else 1)

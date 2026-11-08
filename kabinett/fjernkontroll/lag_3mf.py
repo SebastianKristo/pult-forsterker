@@ -76,6 +76,7 @@ def place(parts):
     return out
 
 
+OBJ_INNST = {}   # {delnavn: {innstilling: verdi}} – ekstra objektinnstillinger (brukes av andre produkter, f.eks. Røst Rund)
 TOPP_INNST = {"brim_type": "outer_only", "brim_width": "5", "brim_object_gap": "0",
               "initial_layer_speed": "25", "initial_layer_infill_speed": "25"}
 
@@ -88,7 +89,8 @@ def write(fn, title, parts, colors):
         # toppen er lang og flat og løfter seg ved halen: brim og sakte første lag som egne objektinnstillinger
         # (Creality Print / OrcaSlicer leser dem fra model_settings.config; platetemperatur og vifter er filament-
         # innstillinger og kan ikke legges på et objekt)
-        ekstra = "".join(f'<metadata key="{k}" value="{v}"/>' for k, v in TOPP_INNST.items()) if f == "topp" or f.endswith("/topp") else ""
+        innst = TOPP_INNST if f == "topp" or f.endswith("/topp") else OBJ_INNST.get(f, {})
+        ekstra = "".join(f'<metadata key="{k}" value="{v}"/>' for k, v in innst.items())
         cfg.append(f'<object id="{i}"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/>{ekstra}'
                    f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/></part></object>')
     farger = ";".join(f"{k}={v}" for k, v in sorted(colors.items()))
