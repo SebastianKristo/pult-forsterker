@@ -1,7 +1,7 @@
 """Lag 3MF-platene for Skjold Røst (Creality K2 / K2 Pro / K2 Plus, 250 × 250 mm):
 
   skjold-rost-k2.3mf        kropp med toppanel, frontplate med innfelt logo, knott og knappehetter (PETG/ASA, 3 farger)
-  skjold-rost-k2-bunn.3mf   grill og bunnplate (PETG/ASA, sort)
+  skjold-rost-k2-bunn.3mf   grill (sort) og bunnplate (lys, som kroppen)
   skjold-rost-k2-tpu.3mf    pakninger i skjøtene, krage, DC-skive og USB-propp (TPU 95A)
 
 Kjør etter at STL-ene er eksportert:  python3 lag_3mf.py
@@ -23,7 +23,7 @@ PLATES = {
     ]),
     "skjold-rost-k2-bunn.3mf": ("Skjold Røst – grill og bunn (PETG/ASA)", [
         ("grill", "Grill (forsiden ned)", 2, 0, (4, 4), None),
-        ("bunn", "Bunn (innsiden ned, føttene opp)", 2, 0, (102, 4), None),
+        ("bunn", "Bunn (innsiden ned, føttene opp), lys som kroppen", 1, 0, (102, 4), None),
     ]),
     "skjold-rost-k2-tpu.3mf": ("Skjold Røst – pakninger (TPU 95A)", [
         ("pakning_front", "Pakning front", 1, 0, (4, 4), None),

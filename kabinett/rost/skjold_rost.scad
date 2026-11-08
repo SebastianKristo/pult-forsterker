@@ -115,7 +115,7 @@ gW = 93; gZ0 = 31; gZ1 = z0 - fT * kS - 6;
 gPins = [[-24, gZ0 + 4], [24, gZ0 + 4], [-24, gZ1 - 4], [24, gZ1 - 4]];
 
 c_lys = [0.93,0.92,0.90]; c_mork = [0.13,0.13,0.14]; c_gull = [0.85,0.62,0.25]; c_grill = [0.18,0.18,0.19];
-c_tpu = [0.30,0.55,0.75]; c_knapp = [0.18,0.18,0.19]; c_klar = [0.80,0.90,0.95,0.45];
+c_tpu = [0.86,0.85,0.82]; c_knapp = [0.18,0.18,0.19]; c_klar = [0.80,0.90,0.95,0.45];   // TPU naturhvit, så den blander seg med den lyse kroppen
 
 // ---------- hjelpere ----------
 module rrect(w, h, r) { offset(r) offset(-r) square([w, h], center = true); }
@@ -361,7 +361,7 @@ module samlet(ex = 0) {
   color(c_lys) kropp();
   color(c_mork) translate([0, -ex, 0]) front();
   color(c_grill) translate([0, -2.2 * ex, 0]) grill();
-  color(c_mork) translate([0, 0, -ex]) bunn();
+  color(c_lys) translate([0, 0, -ex]) bunn();   // bunnen i samme lyse farge som kroppen
   color(c_gull) translate([0, 0, 0.8 * ex]) knott();
   color(c_gull) translate([0, -ex, 0]) logo();
   translate([0, 0, -0.6 * ex]) skjerm();
