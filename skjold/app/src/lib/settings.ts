@@ -21,6 +21,8 @@ export interface Settings {
   /** Skjold Touch-skjermen: rolle, lydutgang, standby etter, standby-visning, nattmodus. */
   tRole: number; tOut: number; tStandby: number; tIdle: number; tNight: boolean;
   dblPower: number; nightLight: boolean;
+  /** Node/Core: lydutgang (indeks i OUT_LIST). 3 = I²S/som installert. USB-lydkort (UCA222/UCA202) finnes automatisk. */
+  out: number;
   updChannel: number; updAuto: boolean;
   setupDone: boolean;
   /** Hjemskjermen: rekkefølge og synlighet per seksjon (lib/homelayout.ts) – per enhet, synkes til appene. */
@@ -65,7 +67,7 @@ export const DEF: Settings = {
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
   hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '', maEn: false, maUrl: '', maToken: '',
   tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false,
-  dblPower: 0, nightLight: true,
+  dblPower: 0, nightLight: true, out: 3,
   updChannel: 0, updAuto: true, setupDone: false,
   homeLayout: [],
   eq: defaultEq()
@@ -77,7 +79,7 @@ export const fmt = {
 } as const;
 
 export type NumKey = 'bass' | 'treb' | 'bal' | 'lvlAux' | 'lvlUsb';
-export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle' | 'dblPower';
+export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle' | 'dblPower' | 'out';
 export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn' | 'castEn' | 'ytmEn' | 'ndEn' | 'tNight' | 'nightLight';
 /** Lagres bare på denne telefonen (innlogginger til musikktjenester sendes ikke til forsterkeren). */
 export type LocalKey = 'ytmUser' | 'ytmCookie' | 'ndUrl' | 'ndUser' | 'ndPass';
@@ -113,6 +115,8 @@ const str = (k: StrKey, n: string, ph: string, hint?: string): Item => ({ kind: 
 
 export const TOUCH_ROLES = ['Spiller og fjernkontroll', 'Bare spiller', 'Bare fjernkontroll'];
 export const TOUCH_OUT = ['RCA', '3,5 mm', 'Begge'];
+/** Samme rekkefølge som OUT_NAMES i ki_amp_daemon.py og listen i iOS-/Android-appen. */
+export const OUT_LIST = ['3,5 mm (innebygd)', 'HDMI', 'USB-lydkort (UCA222 / UCA202)', 'I²S-kort (HiFiBerry / IQaudio)', 'Optisk (S/PDIF)'];
 export const TOUCH_STANDBY = ['Aldri', '30 s', '1 min', '5 min'];
 export const TOUCH_STANDBY_S = [0, 30, 60, 300];
 export const TOUCH_IDLE = ['Klokke', 'Cover', 'Svart'];
@@ -120,6 +124,7 @@ export const CATS: Category[] = [
   { id: 'eq', n: 'Equalizer', sub: 'Egen profil per inngang', items: [{ kind: 'eq', n: 'Equalizer' }] },
   { id: 'lyd', n: 'Lyd', sub: 'Tone, volum og nivå', items: [
     { kind: 'info', n: 'Lydutgang', key: 'output' },
+    opt('out', 'Lydutgang', OUT_LIST, 'USB-lydkort (f.eks. Behringer UCA222) finnes automatisk. Uten kortet tilkoblet brukes standardutgangen.'),
     num('bass', 'Bass', -6, 6, 'dB'), num('treb', 'Diskant', -6, 6, 'dB'), num('bal', 'Balanse', -5, 5, 'bal'),
     { kind: 'api-bool', id: 'loudness', n: 'Loudness', hint: 'Mer bass og diskant ved lavt volum' },
     { kind: 'api-opt', id: 'loudLevel', n: 'Loudness-styrke' },
@@ -299,7 +304,8 @@ export function catsFor(product: 's1' | 'node' | 'core' | 'touch', inputs: strin
     sub: product === 'core' && c.id === 'tilkobling' ? 'Navn og Blåtann' : c.sub,
     items: c.items.filter((it) => {
       const k = itemKey(it);
-      if (k === 'output') return product !== 's1';
+      if (k === 'output') return product === 'touch';   // Node/Core: valgbar (out) i stedet
+      if (k === 'out') return product === 'node' || product === 'core';
       if (AUX_USB.has(k)) return k.toLowerCase().includes('usb') ? hasUsb : hasAux;
       if (HEADPHONES.has(k)) return product === 's1';
       if (BUTTONS.has(k)) return product !== 'core';
