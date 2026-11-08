@@ -8,9 +8,11 @@ R, H = 7.0, 0.4
 
 
 def orer(lengde, bredde=55.0):
-    pts = [(5.0, lengde - 5.0), (bredde - 5.0, lengde - 5.0), (bredde / 2, lengde + 1.5),   # halen (SKJOLD)
-           (5.0, 5.0), (bredde - 5.0, 5.0)]                                                 # nesen
-    disker = [trimesh.creation.cylinder(radius=R, height=H, sections=64).apply_translation((x, y, H / 2)) for x, y in pts]
+    # halehjørnene løfter seg mest (smal, rund hale med fas): større og tykkere skiver der
+    pts = [(4.0, lengde - 6.0, 10.0, 0.6), (bredde - 4.0, lengde - 6.0, 10.0, 0.6),        # halehjørnene
+           (bredde / 2, lengde + 1.5, R, H),                                                 # midt på halen
+           (5.0, 5.0, R, H), (bredde - 5.0, 5.0, R, H)]                                      # nesen
+    disker = [trimesh.creation.cylinder(radius=r, height=h, sections=72).apply_translation((x, y, h / 2)) for x, y, r, h in pts]
     return trimesh.util.concatenate(disker)
 
 

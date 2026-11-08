@@ -25,10 +25,10 @@ BED = 250
 # fil, navn, filament, min-hjørne (x, y) eller None, «samme flytt som»
 PLATES = {
     "skjold-fjernkontroll-k2.3mf": ("Skjold Fjernkontroll – topp og bunn (PLA/PETG)", [
-        ("topp", "Topp (forsiden ned)", 1, (20, 3.5), None),
+        ("topp", "Topp (forsiden ned)", 1, (172, 12), None),   # til høyre, unna sideviften på K2
         ("logo", "SKJOLD (gull, felt inn i toppen)", 3, None, "topp"),
         ("orer", "Museører (holder halen nede, vris av etter print)", 1, None, "topp"),
-        ("bunn", "Bunn", 2, (100, 3.5), None),
+        ("bunn", "Bunn", 2, (95, 12), None),
     ], {1: "#ECE9E3", 2: "#2E2D2C", 3: "#D99E40"}),
     "skjold-fjernkontroll-k2-taster.3mf": ("Skjold Fjernkontroll – taster og IR-vindu", [
         ("knapper", "Taster (mørke, flensen ned)", 2, (40, 30), None),
@@ -110,7 +110,7 @@ STL = "stl"
 BOKSTAV = {"rutenett": "A", "vannrett": "B", "stor": "C"}
 OPPSETT_PLATER = {o: [
     (f"Skjold Fjernkontroll – topp {navn}", [
-        (f"oppsett_{o}/topp", "Topp (forsiden ned)", 1, (20, 3.5), None),
+        (f"oppsett_{o}/topp", "Topp (forsiden ned)", 1, (100, 12), None),
         ("logo", "SKJOLD (gull, felt inn i toppen)", 3, None, f"oppsett_{o}/topp"),
         ("orer", "Museører (holder halen nede, vris av etter print)", 1, None, f"oppsett_{o}/topp")], {1: "#ECE9E3", 3: "#D99E40"}),
     (f"Skjold Fjernkontroll – taster {navn}", [
@@ -136,12 +136,15 @@ def plater(variant):
         else:
             ut[fn] = (title, parts, colors)
     if variant != "kort":   # full variant er for lang til museørene på plata (254,5 mm): bruk brim i sliceren i stedet
-        ut = {fn: (t, [p for p in ps if p[0] != "orer"], c) for fn, (t, ps, c) in ut.items()}
+        flytt = {"topp": (20, 2), "bunn": (100, 2)}   # og trenger hele lengden av plata
+        ut = {fn: (t, [(p[0], p[1], p[2], flytt.get(p[0], p[3]) if p[3] and p[3] != "diag" else p[3], p[4]) for p in ps if p[0] != "orer"], c)
+              for fn, (t, ps, c) in ut.items()}
     for o, ((t1, p1, c1), (t2, p2, c2)) in OPPSETT_PLATER.items():
         b = BOKSTAV[o]
         pre = "skjold-fjernkontroll-k2" if variant == "kort" else "skjold-fjernkontroll-full-k2"
         tt = (lambda t: t) if variant == "kort" else (lambda t: t.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full"))
-        ut[f"{pre}-topp-{b}.3mf"] = (tt(t1), p1 if variant == "kort" else [p for p in p1 if p[0] != "orer"], c1)
+        ut[f"{pre}-topp-{b}.3mf"] = (tt(t1), p1 if variant == "kort" else
+                                     [(p[0], p[1], p[2], (20, 2) if p[3] else None, p[4]) for p in p1 if p[0] != "orer"], c1)
         ut[f"{pre}-taster-{b}.3mf"] = (tt(t2), p2, c2)
     return ut
 
