@@ -1,0 +1,79 @@
+# Home Assistant-blueprint for Skjold Fjernkontroll.
+# Importer: Innstillinger → Automasjoner og scener → Blueprints → Importer blueprint, lim inn lenken til denne fila
+# (eller kopier den til config/blueprints/automation/skjold/). Lag så en automasjon fra den, velg fjernkontrollen
+# og legg inn handlinger for tastene du vil bruke.
+#
+# Fjernkontrollen sender hendelsen esphome.skjold_fjernkontroll for hvert trykk:
+#   knapp: av, hjem, meny, opp, ned, venstre, hoyre, ok, tilbake, avslutt, spill_pause, demp, vol_opp, vol_ned,
+#          (full variant også) tall_1 … tall_9, tall_0, strek, enter, lys, stikk, minus, pluss
+#   type:  kort | lang | dobbel   (lang og dobbel bare for tastene som har det, se LES_MEG.md)
+#   enhet: 0 = TV, 1 = Apple TV, 2 = Skjold, 3 = projektor (enheten som var valgt på skjermen)
+blueprint:
+  name: Skjold Fjernkontroll – taster
+  description: >-
+    Kjør handlinger når du trykker taster på Skjold Fjernkontroll (kort, langt eller dobbelt trykk).
+    Lys- og stikk-tastene (full variant) og dobbelttrykk på av/på er ferdig satt opp som valg; tre frie
+    plasser lar deg velge hvilken som helst tast og trykktype.
+  domain: automation
+  input:
+    fjernkontroll:
+      name: Fjernkontroll
+      selector: { device: { integration: esphome } }
+    lys_kort: { name: Lys – kort trykk, default: [], selector: { action: {} } }
+    lys_lang: { name: Lys – langt trykk, default: [], selector: { action: {} } }
+    lys_dobbel: { name: Lys – dobbelttrykk, default: [], selector: { action: {} } }
+    stikk_kort: { name: Stikk – kort trykk, default: [], selector: { action: {} } }
+    stikk_lang: { name: Stikk – langt trykk, default: [], selector: { action: {} } }
+    av_dobbel: { name: Av/på – dobbelttrykk, default: [], selector: { action: {} } }
+    meny_dobbel: { name: Meny – dobbelttrykk, default: [], selector: { action: {} } }
+    fri1_knapp: { name: Fri 1 – tast, default: "", selector: { text: {} } }
+    fri1_type: { name: Fri 1 – trykk, default: kort, selector: { select: { options: [ kort, lang, dobbel ] } } }
+    fri1: { name: Fri 1 – handling, default: [], selector: { action: {} } }
+    fri2_knapp: { name: Fri 2 – tast, default: "", selector: { text: {} } }
+    fri2_type: { name: Fri 2 – trykk, default: kort, selector: { select: { options: [ kort, lang, dobbel ] } } }
+    fri2: { name: Fri 2 – handling, default: [], selector: { action: {} } }
+    fri3_knapp: { name: Fri 3 – tast, default: "", selector: { text: {} } }
+    fri3_type: { name: Fri 3 – trykk, default: kort, selector: { select: { options: [ kort, lang, dobbel ] } } }
+    fri3: { name: Fri 3 – handling, default: [], selector: { action: {} } }
+
+mode: queued
+max: 10
+
+triggers:
+  - trigger: event
+    event_type: esphome.skjold_fjernkontroll
+    event_data:
+      device_id: !input fjernkontroll
+
+variables:
+  fri1_knapp: !input fri1_knapp
+  fri1_type: !input fri1_type
+  fri2_knapp: !input fri2_knapp
+  fri2_type: !input fri2_type
+  fri3_knapp: !input fri3_knapp
+  fri3_type: !input fri3_type
+  knapp: "{{ trigger.event.data.knapp }}"
+  type: "{{ trigger.event.data.type }}"
+
+actions:
+  - choose:
+      - conditions: "{{ knapp == 'lys' and type == 'kort' }}"
+        sequence: !input lys_kort
+      - conditions: "{{ knapp == 'lys' and type == 'lang' }}"
+        sequence: !input lys_lang
+      - conditions: "{{ knapp == 'lys' and type == 'dobbel' }}"
+        sequence: !input lys_dobbel
+      - conditions: "{{ knapp == 'stikk' and type == 'kort' }}"
+        sequence: !input stikk_kort
+      - conditions: "{{ knapp == 'stikk' and type == 'lang' }}"
+        sequence: !input stikk_lang
+      - conditions: "{{ knapp == 'av' and type == 'dobbel' }}"
+        sequence: !input av_dobbel
+      - conditions: "{{ knapp == 'meny' and type == 'dobbel' }}"
+        sequence: !input meny_dobbel
+  - if: "{{ fri1_knapp != '' and knapp == fri1_knapp and type == fri1_type }}"
+    then: !input fri1
+  - if: "{{ fri2_knapp != '' and knapp == fri2_knapp and type == fri2_type }}"
+    then: !input fri2
+  - if: "{{ fri3_knapp != '' and knapp == fri3_knapp and type == fri3_type }}"
+    then: !input fri3

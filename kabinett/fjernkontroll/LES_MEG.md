@@ -9,7 +9,7 @@ Den er laget for å bygges hjemme. Kabinettet printes på en Creality K2, delene
 Bilder: [skrått, lys](render/01_skra_lys.png) · [ovenfra, lys](render/02_ovenfra_lys.png) · [eksplodert, lys](render/03_eksplodert_lys.png) · [skrått, mørk](render/04_skra_mork.png) · [ovenfra, mørk](render/05_ovenfra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) · [fra siden](render/07_side_lys.png) · [nær, skjermen og D-paden](render/08_naer_lys.png) · [halen med USB-C](render/09_hale_lys.png).
 Inni: [innmaten ovenfra](render/10_inni_ovenfra.png) · [skrått](render/11_inni_skra.png) · [montering, eksplodert](render/12_montering.png) · [merket oppsett](render/13_oppsett.png) · [koblingsskjema](render/14_koblinger.png). Se [Slik er det inni](#slik-er-det-inni).
 I Bone White matt PLA med mørk matt PETG-bunn: [skrått](render/21_skra_bone.png) · [ovenfra](render/22_ovenfra_bone.png) · [fra siden](render/23_side_bone.png) · [nær](render/24_naer_bone.png) · [med grå PETG-bunn](render/25_skra_bone_gra.png). Se [Filament](#filament).
-Skjermen i bildene viser aktivitetslista slik fastvaren tegner den. Skjermbildene er laget med `lag_skjermbilder.py` (se [Skjermen](#skjermen)).
+Skjermen i bildene viser Start-siden slik fastvaren tegner den. Skjermbildene er laget med `lag_skjermbilder.py` (se [Skjermen og appene](#skjermen-og-appene)).
 
 **Mål: 55 × 202,5 mm, 13,5 mm tykk** (full variant med talltaster: 55 × 245,5 mm). Tastene står 1,2 mm opp (14,7 mm), og gullringen rundt OK står 1,5 mm opp (**15,0 mm på det tykkeste**). Den veier ca. 105–115 g med batteri (beregnet, ikke veid).
 
@@ -576,14 +576,9 @@ Etter det oppdateres den trådløst. Slå på «Hold våken (for oppdatering)» 
 
 ### Hva fastvaren gjør
 
-- **Skjermen (LVGL):** fire faner nederst.
-  - *Aktiviteter*: Se TV, Musikk, Film, God morgen, God natt. Den aktive får gullkant.
-  - *Spiller*: cover fra `/api/cover?w=120`, tittel og artist (eller radiokanalen), spill/pause, forrige/neste og volum som glidebryter.
-  - *Kilder*: Radio, AirPlay, Bluetooth, Spotify og radiofavoritt 1–6 med navn fra `/api/presets`.
-  - *Hjem*: fire lys og fire scener i Home Assistant, og «Lær IR-kode».
-  - *Rom* (hold Skjold-tasten): de andre Skjold-enhetene på nettet, fra `/api/rom`. Velg hvilken du vil styre, og valget huskes.
+- **Skjermen** (LVGL): se [Skjermen og appene](#skjermen-og-appene) under.
 - **Skjold** styres med det vanlige API-et på port 8765, det samme som appen bruker:
-  - `/api/status` hvert 3. sekund når den er våken
+  - `/api/status` hvert 3. sekund når Skjold er valgt eller spilleren vises
   - `/api/volume` (`delta` eller `volume`)
   - `/api/mute`
   - `/api/transport` (`playpause`, `next`, `previous`, `stop`, `pause`)
@@ -595,57 +590,133 @@ Etter det oppdateres den trådløst. Slå på «Hold våken (for oppdatering)» 
   - `/api/cover`
 
   Det er ingen nye endepunkter i Skjold.
-- **Tastene:**
-  - I *Musikk* (Skjold): volum, demp, spill/pause, D-pad (opp/ned = volum, venstre/høyre = forrige/neste, OK = spill/pause) og tall 1–9 (favoritt 1–9) går til Skjold.
-  - I *TV* og *Film* sendes den lærte IR-koden for tasten. Har tasten ingen kode, gjør den det samme som i musikkmodus. For eksempel går volumet til Skjold hvis TV-lyden går gjennom Skjold.
-  - Smarthus-raden går alltid til Home Assistant: lys veksler `ha_lys`, stikk veksler `ha_stikk`, og − og + demper lyset 10 % opp eller ned.
-  - Skjold-tasten viser aktivitetene (hold for rom). Av slår av Skjold (hold = «alt av»).
-  - Volum, kanal, D-pad og ± gjentas så lenge du holder dem inne.
-- **IR-læring:** Hjem → «Lær IR-kode».
-  1. Trykk tasten som skal lære, eller velg en av makroene TV på, TV av, HDMI eller Ekstra.
-  2. Pek den gamle fjernkontrollen mot nesen og trykk.
-  3. Trykk «Lagre».
+- **Tastene virker på enheten i «Styrer»-brikken:**
+  - *Apple TV:* D-pad, OK, tilbake (`menu`), avslutt (`home`), spill/pause går som `remote.send_command` til `atv_remote`. Hold tilbake = `top_menu`, hold avslutt = appveksleren (`home_hold`).
+  - *Stue-TV* og *projektor:* lærte IR-koder (egen blokk for hver). Mangler koden, sier skjermen fra.
+  - *Skjold:* opp/ned = volum, venstre/høyre = forrige/neste, OK og spill/pause = spill/pause, tall 1–9 = favoritt 1–9.
+  - *Volum og demp* går til Skjold når `lyd: skjold` (standard, TV-lyden går gjennom Skjold), ellers til TV-en (Home Assistant eller IR). Volumvinduet viser nivået.
+  - *Smarthus-raden* (full variant) går alltid til Home Assistant: lys veksler `ha_lys`, stikk veksler `ha_stikk`, − og + demper 10 %.
+  - *Skjold-tasten:* kort = Start, hold eller dobbelttrykk = velg enhet. *Meny:* kort = enhetens side, hold = Skjold-spilleren. *Av/på:* kort = den valgte enheten av/på, hold = **alt av**.
+- **Kort, langt og dobbelt trykk uten forsinkelse** (`Tastatur` i `esphome/skjold_ui.h`):
+  - D-pad, OK, volum, spill/pause og demp virker i det du trykker. Piler, volum og ± gjentas når du holder dem (etter 400 ms, så hvert 120 ms).
+  - Bare tastene som har et langt trykk (av/på, Skjold, meny, tilbake, avslutt, lys, stikk) venter på at du slipper, eller sender «lang» etter 0,6 s. Av/på, Skjold, meny, lys og stikk venter i tillegg 0,25 s på et dobbelttrykk.
+- **IR-læring:** Mer → «Lær IR» (eller «Lær IR» på inngangssiden).
+  1. Velg Stue-TV eller Projektor øverst.
+  2. Trykk tasten som skal lære, eller velg På, Av, TV eller HDMI 1–4.
+  3. Pek den gamle fjernkontrollen mot nesen og trykk. Trykk «Lagre».
 
-  Koden lagres i flash (48 plasser: én per tast og fire makroer). Fjernkontrollen forstår NEC, Samsung, Sony, RC5 og LG. Det dekker de fleste TV-er, men ikke for eksempel klimaanlegg.
-- **Aktivitetene** er skript i YAML-fila (`akt_se_tv`, `akt_film` …), og stegene står rett etter hverandre. «Se TV» gjør dette:
-  1. TV på (makro 1)
-  2. HDMI (makro 3)
-  3. Skjold på
-  4. Skjold-inngang `tv_kilde`
-  5. `scene_tv` i Home Assistant
+  Kodene lagres i flash: 2 × 56 plasser (TV og projektor), én per tast pluss på, av, HDMI 1–4 og TV. Fjernkontrollen forstår NEC, Samsung, Sony, RC5 og LG. Det dekker de fleste TV-er og projektorer, men ikke for eksempel klimaanlegg.
+- **Aktivitetene** (Se TV, Apple TV, Film, Musikk, God natt) står som steg i `substitutions` (`akt1_…` – `akt5_…`), se [Skjermen og appene](#skjermen-og-appene). Langt trykk på av/på kjører «Alt av».
+- **Søvn:** én tidsstempel for siste aktivitet (tast, berøring, løft, handling fra HA). Etter «Søvn etter» (standard 40 s, endres under Mer) dimmes skjermen i 5 s, så slukker baklyset, skjermen og IR-mottakeren mister strømmen, og ESP-en går i dyp søvn. Den sover aldri mens den lader, lærer IR, kjører en aktivitet, holder en tast eller har «Hold våken» på. Den våkner av en tast (felles INT fra TCA9555) eller av at du løfter den (vibrasjonsbryteren).
+- **Første trykk etter søvn:** rett etter oppstart leser fastvaren TCA9555-brikkene. Holdes tasten som vekket den fortsatt (ca. 0,3 s etter trykket), sendes den som første trykk. Loggen viser hva som vekket den («tast», «vibrasjonsbryteren» eller «strøm på»).
+- **Våkner som den sovnet:** valgt enhet, favorittene og innstillingene ligger i flash. Siste kjente tilstand (appliste, hva som spilles på Apple TV og Skjold, TV-inngang) ligger i RTC-minnet og vises med en gang. Så oppdateres skjermen når Home Assistant og Skjold svarer (HA sender tilstanden med en gang API-et kobler til).
 
-  Endre stegene som du vil.
-- **Søvn:** etter 40 s uten tast eller berøring slukker baklyset, skjermen og IR-mottakeren mister strømmen, og ESP-en går i dyp søvn. Den våkner av en tast (felles INT fra TCA9555 til GPIO2) eller av at du løfter den (vibrasjonsbryteren på GPIO4). Batteriprosenten og ⚡ for lading står øverst til høyre.
+## Skjermen og appene
+
+![Alle sidene](render/skjerm-oversikt.png)
+
+Skjermbilder (tegnet med `lag_skjermbilder.py`, samme mål og farger som fastvaren): [Start](render/skjerm-1-start.png) · [velg enhet](render/skjerm-2-velger.png) · [Apple TV-apper](render/skjerm-3-apper.png) · [TV-innganger](render/skjerm-4-innganger.png) · [aktivitet starter](render/skjerm-5-aktivitet.png) · [Skjold](render/skjerm-6-spiller.png) · [Hjem](render/skjerm-7-hjem.png) · [Mer](render/skjerm-8-mer.png). Prøv den i [3D-siden](https://claude.ai/artifact/DyuMF6ZqSQiiFxcNCRVYLs) («▶ Prøv den»).
+
+**Øverst:** «Styrer»-brikken viser enheten tastene virker på: Stue-TV, Apple TV, Skjold eller Projektor. Trykk på den for å velge (eller hold Skjold-tasten), sveip på den for neste/forrige. Til høyre står batteriet (⚡ når den lader).
+
+**Nederst** er fire faner:
+- **Start:** nå-kortet for valgt enhet (tittel, app, framdrift og spill/pause; sveip på kortet bytter enhet) og de seks aktivitetene.
+- **Enhet:** sida til valgt enhet.
+  - *Apple TV:* minispiller (bilde fra HA, tittel, app, framdrift) og et rutenett med appene. Hver flis har initialer på en farge laget av navnet (ingen logoer). Trykk = åpne appen. Hold = **fest/løsne** som favoritt eller **flytt** den fram/bak. Favorittene står først med gullkant.
+  - *Stue-TV og projektor:* av/på og innganger: HDMI 1–4, TV, **Apple TV** (bytter til HDMI `atv_hdmi` og vekker Apple TV) og **Skjold** (lyden gjennom Skjold). Inngangen TV-en står på har gullkant.
+  - *Skjold:* cover, tittel, spill/pause, forrige/neste og volum. Rom og kilder (radio, AirPlay, Bluetooth, TV og radiofavoritt 1–6) øverst.
+- **Hjem:** fire lys med av/på og lysstyrke, og fire scener.
+- **Mer:** lysstyrke, søvntid, tasteoppsett A/B/C, Lær IR, Skjold-rom, «Hold våken», Wi-Fi og batteri.
+
+**Over alt annet:** volumvinduet (1,3 s), korte meldinger nederst («Åpner Netflix», «Bytter til HDMI 2») og framdriften når en aktivitet starter («Slår på TV … Bytter til HDMI 2 … Åpner Plex»). Sidene skyves inn (200 ms) når du bytter enhet, og tones inn (160 ms) ellers.
+
+### Det Home Assistant trenger
+
+Fjernkontrollen leser alt med ESPHome sine `homeassistant`-sensorer, så du trenger ingen maler eller hjelpere i HA. Slå på **«Tillat enheten å utføre handlinger i Home Assistant»** i ESPHome-integrasjonen. Sett entitetene i `substitutions`:
+
+| Substitution | Eksempel | Brukes til |
+|---|---|---|
+| `atv_entitet` | `media_player.apple_tv` | appene (`source_list`), nå spilles (`app_name`, `media_title`, `media_position`, `media_duration`, `entity_picture`), åpne app (`media_player.select_source`) |
+| `atv_remote` | `remote.apple_tv` | piltaster, select, menu, home, play_pause (`remote.send_command`), vekke/dvale |
+| `tv_entitet` | `media_player.tv` | av/på, innganger (`source`, `media_player.select_source`), volum. Finnes den ikke (eller er `unavailable`), brukes lærte IR-koder |
+| `tv_inngang_1` … `_5` | `HDMI 1` … `TV` | TV-ens navn på inngangene (se `source_list` på TV-en i Utviklerverktøy → Tilstander) |
+| `atv_hdmi` | `2` | inngangen Apple TV står i |
+| `lyd` | `skjold` | hvor volumtastene går for TV/Apple TV (`skjold` eller `tv`) |
+| `ha_url` | `http://homeassistant.local:8123` | bildet til det som spilles på Apple TV |
+| `ha_rom_1` … `_4`, `ha_rom_1_navn` … | `light.stue`, `Stue` | lysene på Hjem-siden |
+| `scene_…` | `scene.kino` | scenene |
+| `atv_favoritter` | `Netflix\|YouTube\|NRK TV` | favorittene første gang (etterpå: tekst-entiteten **«Apple TV-favoritter»** i HA, eller hold en flis) |
+
+Apple TV-integrasjonen (pyatv) og TV-integrasjonene for LG webOS, Samsung og Sony Bravia gir alle `source_list` og `select_source`. Eksempel for en LG-TV og en Apple TV i stua:
+
+```yaml
+substitutions:
+  tv_entitet: media_player.lg_webos_tv_oled55
+  tv_inngang_1: "HDMI 1"
+  tv_inngang_2: "HDMI 2"
+  tv_inngang_5: "Live TV"
+  atv_entitet: media_player.stue_apple_tv
+  atv_remote: remote.stue_apple_tv
+  atv_hdmi: "2"
+  lyd: skjold
+```
+
+### Aktivitetene
+
+Hver aktivitet er en liste med steg i `substitutions`. Tomt felt = hopp over steget:
+
+| Felt | Verdier | Steg |
+|---|---|---|
+| `aktN_tv` | `på`, `av` | TV på/av (HA eller IR); etter «på» venter den `tv_oppstart_ms` |
+| `aktN_projektor` | `på`, `av` | projektor på/av (IR) |
+| `aktN_inngang` | `0` = ikke bytt, `1`–`4` = HDMI, `5` = TV | TV-inngang |
+| `aktN_atv` | `på`, `av` | vekk Apple TV / dvale |
+| `aktN_app` | f.eks. `Plex` | åpne appen på Apple TV (vekker den først) |
+| `aktN_skjold` | inngang (`aux`, `radio` …) eller `av` | Skjold |
+| `aktN_scene` | `scene.kino` | HA-scene |
+| `aktN_enhet` | `0`–`3` | enheten som er valgt etterpå |
+
+Standard: **Se TV** (TV på, TV-tuner, Skjold aux, scene tv), **Apple TV** (TV på, HDMI 2, vekk Apple TV, Skjold aux), **Film** (projektor på, Apple TV + Plex, Skjold aux, scene kino, TV av), **Musikk** (Skjold radio) og **God natt** (alt av + scene god_natt). Fjernkontrollen sender også `esphome.skjold_fjernkontroll_aktivitet` med nummeret, så du kan legge mer til i en automasjon.
 
 ## Home Assistant
 
 ESPHome-integrasjonen finner fjernkontrollen. Slå på **«Tillat enheten å utføre handlinger i Home Assistant»** i integrasjonsvalgene, ellers virker ikke lys, stikk og scener.
 
-**Meny-tasten** har to funksjoner: et kort trykk åpner Kilder (eller sender en lært IR-kode i TV/film-modus), og et langt trykk åpner Spiller-siden (guide). Hendelsene heter `meny` og `meny_lang`.
+**Hver tast er en hendelse** (`esphome.skjold_fjernkontroll`), med samme form for alle taster:
 
-**Hver tast er en hendelse.** Det finnes to måter å fange den på:
-- **Event-entiteten `event.skjold_fjernkontroll_tast`** har én hendelsestype per tast: `meny`, `tilbake`, `spill_pause` (og `tall_1`, `lys` … i full variant) og `<tast>_lang` for langt trykk. Den er lettest å bruke i automasjonsredigereren.
-- **Hendelsen `esphome.skjold_fjernkontroll`** har `tast` og `lang` i data:
+```yaml
+event_type: esphome.skjold_fjernkontroll
+data:
+  knapp: meny          # se lista under
+  type: kort           # kort | lang | dobbel
+  enhet: "1"           # 0 = TV, 1 = Apple TV, 2 = Skjold, 3 = projektor (valgt på skjermen)
+  device_id: …         # legges til av HA
+```
+
+**Knappene** (`knapp`): `av`, `hjem` (Skjold-tasten), `meny`, `opp`, `ned`, `venstre`, `hoyre`, `ok`, `tilbake`, `avslutt`, `spill_pause`, `demp`, `vol_opp`, `vol_ned`, og i full variant `tall_1` … `tall_9`, `tall_0`, `strek`, `enter`, `lys`, `stikk`, `minus`, `pluss`. `lang` finnes for `av`, `hjem`, `meny`, `tilbake`, `avslutt`, `lys` og `stikk`; `dobbel` for `av`, `hjem`, `meny`, `lys` og `stikk`. Gjentak mens en tast holdes sendes ikke til HA.
+
+**Blueprint:** `esphome/blueprints/skjold_fjernkontroll.yaml`. Importer den (Innstillinger → Automasjoner og scener → Blueprints → Importer, eller kopier fila til `config/blueprints/automation/skjold/`), lag en automasjon fra den, velg fjernkontrollen og fyll inn handlinger: lys og stikk (kort, langt, dobbelt), dobbelttrykk på av/på og meny, og tre frie plasser der du velger tast og trykktype selv.
+
+**Event-entiteten `event.skjold_fjernkontroll_tast`** finnes fortsatt, med typene `<knapp>`, `<knapp>_lang` og `<knapp>_dobbel`. Den er lettest å bruke i automasjonsredigereren:
 
 ```yaml
 automation:
   - alias: Langt trykk på tilbake tenner kjøkkenet
     triggers:
-      - trigger: state
-        entity_id: event.skjold_fjernkontroll_tast
-        attribute: event_type
-        to: tilbake_lang
+      - trigger: event
+        event_type: esphome.skjold_fjernkontroll
+        event_data: { knapp: tilbake, type: lang }
     actions:
       - action: light.toggle
         target: { entity_id: light.kjokken }
 ```
 
 **Handlinger** (Utviklerverktøy → Handlinger):
-- `esphome.skjold_fjernkontroll_send_ir` med `plass` 0–47 sender en lært kode.
+- `esphome.skjold_fjernkontroll_send_ir` med `plass` 0–111 sender en lært kode (0–55 TV, 56–111 projektor; i hver blokk 0–43 tastene, 44 på, 45 av, 46–49 HDMI 1–4, 50 TV).
 - `esphome.skjold_fjernkontroll_send_nec` med `adresse` og `kommando` sender en NEC-kode direkte.
 - `esphome.skjold_fjernkontroll_slett_ir` sletter en plass.
 
-**Entiteter:** Batteri (%), Batterispenning, Lader, Wi-Fi-signal, Skjermlys og «Hold våken».
+**Entiteter:** Batteri (%), Batterispenning, Lader, Wi-Fi-signal, Skjermlys, «Hold våken», Tasteoppsett og «Apple TV-favoritter» (tekst, `a|b|c`).
 
 ## Batteritid
 
@@ -683,7 +754,8 @@ Du får mer ut av batteriet hvis du:
 - **Mål skjermmodulen før du printer.** 2,8″-modulene på AliExpress varierer. Modellen følger selgerens måltegning for HP28030-DCT IPS (innplugg-versjonen): glass 47,80 × 66,50 mm, aktivt område 43,20 × 57,60 mm som begynner 2,43 mm fra overkanten og 2,30 mm fra sidene, og 3,56 mm tykt uten tape. Juster `modW`, `modH`, `modT`, `modN0`, `aktivTopp` og `scrAW`/`scrAH` i `skjold_fjernkontroll.scad` hvis din er annerledes. Det er 1,5 mm mellom modulen og batteriet, nok til 1 mm skumtape.
 - **SuperMini-kortene varierer litt** (pinnerekkefølge, LDO). Sjekk at GPIO 1–13, 43 og 44 er ført ut på ditt kort.
 - **4 MB flash er nok, men ikke romslig.** LVGL, tre skrifter og online_image tar plass, og OTA trenger to like store partisjoner. Blir bygget for stort, bruk færre glyfer, dropp `f_tittel` eller velg et S3-kort med 8–16 MB.
-- **Det første trykket etter søvn** når fram hvis du holder tasten litt (ESP-en bruker ca. 0,3 s på å våkne og leser tasten når den starter). Et veldig kort trykk vekker bare skjermen. Kommandoer til Skjold sendes så snart Wi-Fi er oppe (ca. 1,5 s).
+- **Det første trykket etter søvn** sendes hvis tasten fortsatt holdes når ESP-en har startet (ca. 0,3 s). TCA9555 husker ikke et trykk som er sluppet, så et veldig kort trykk vekker bare skjermen. Kommandoer til Skjold og HA sendes så snart Wi-Fi og API-et er oppe (ca. 1,5–2 s).
+- **Skjermen er ikke kjørt på maskinvare.** Fastvaren (LVGL 9, C++ i lambdaene og `skjold_ui.h`) er validert med `esphome config`, og tastaturet og hjelpefunksjonene i `skjold_ui.h` er testet på PC, men kompileringen er ikke kjørt (ESP-IDF kunne ikke lastes ned her). Regn med småfeil ved første kompilering.
 - **IR-læring** fanger bare koder ESPHome kan tolke (NEC, Samsung, Sony, RC5, LG). Råkoder og klimaanlegg støttes ikke.
 - **Kilder** som ikke finnes på din Skjold-modell (f.eks. Spotify) gir bare en feilmelding i loggen.
 - **Ingen USB-data i ladeporten.** Første flashing skjer via USB-C på SuperMini-en, med batteriet frakoblet.
@@ -701,6 +773,8 @@ Du får mer ut av batteriet hvis du:
 | `lag_oppsett.py` | `render/13_oppsett.png` (innmaten, merket) og `render/14_koblinger.png` (koblingsskjema) |
 | `lag_3mf.py` | 3MF-plater for K2 med filamentnumre |
 | `lag_render.sh`, `skjerm_i_render.py`, `lag_skjermbilder.py` | Bildene i `render/`, med skjermbildet lagt inn |
+| `../../esphome/skjold_ui.h` | Hjelpekode til fastvaren: tastaturet (kort/langt/dobbelt/gjentak), applista, initialer og farger, hurtigbuffer i RTC-minnet |
+| `../../esphome/blueprints/skjold_fjernkontroll.yaml` | Blueprint for Home Assistant: handlinger per tast og trykktype |
 | `tastekort/`, `tastekort_full/` | Omriss (DXF), plassering, koblinger og stykkliste for tastekortet, standard og full |
 | `stl/`, `stl_full/` | Alle utskriftsdelene for standard og full variant, inkludert `bryterbrett.stl` |
 | `hovedkort/` | Hovedkortet: KiCad-kort, gerber, BOM/CPL, skjema og skriptene (se [Hovedkort](#hovedkort)) |

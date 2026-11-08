@@ -297,6 +297,9 @@ def koblinger():
 
 
 REPETER = {"vol_opp", "vol_ned", "opp", "ned", "venstre", "hoyre", "minus", "pluss"}   # gjentas når de holdes
+TREG = {"av", "hjem", "meny", "tilbake", "avslutt", "lys", "stikk"}                  # har langt trykk (sendes ved slipp)
+DOBBEL = {"av", "hjem", "meny", "lys", "stikk"}                                        # har også dobbelttrykk
+# Samme lister står i esphome/skjold_ui.h (Tastatur).
 
 
 def tastenavn():
@@ -308,7 +311,7 @@ def tastenavn():
 def yaml_blokker():
     """Blokker i esphome/skjold-fjernkontroll.yaml: navnelista og oppsettkartet (globals), hendelsestypene (event),
     en binary_sensor for hver bryter (faste taster og rutenettet) og valget av tasteoppsett (select).
-    Faste taster: kort og langt trykk (≥ 0,6 s); volum, D-pad og ± gjentas så lenge de holdes.
+    Tastene meldes som trykk og slipp til Tastatur i esphome/skjold_ui.h (kort, langt ≥ 0,6 s, dobbelt, gjentak).
     Rutenettbryterne slår opp funksjonen i oppsettkartet for tasteoppsettet som er valgt (tom = ikke i bruk)."""
     hub = {"A": "tca_a", "B": "tca_b", "C": "tca_c", "D": "tca_d"}
     ids = tastenavn()
@@ -327,8 +330,9 @@ def yaml_blokker():
             "    restore_value: true",
             f"    initial_value: '{navn_.index('rutenett')}'",
             "# <<< navneliste"]
-    hend = ["# >>> hendelser (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
-            "    event_types:"] + [f"      - {i}" for i in ids] + [f"      - {i}_lang" for i in ids if i not in REPETER] + ["# <<< hendelser"]
+    hend = (["# >>> hendelser (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
+             "    event_types:"] + [f"      - {i}" for i in ids] + [f"      - {i}_lang" for i in ids if i in TREG]
+            + [f"      - {i}_dobbel" for i in ids if i in DOBBEL] + ["# <<< hendelser"])
     valg = ["# >>> oppsettvalg (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
             "  - platform: template",
             "    id: oppsett_valg",
@@ -341,59 +345,54 @@ def yaml_blokker():
             "    on_value:",
             "      - lambda: 'id(oppsett_nr) = i;'",
             "# <<< oppsettvalg"]
-    ut = ["# >>> taster (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)"]
+    ut = ["# >>> taster (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
+          "  # Hver bryter melder trykk og slipp til tastaturet i skjold_ui.h, som avgjør kort/langt/dobbelt trykk og gjentar."]
+    vekk = []
     for i, (bid, nv, x, n, hid) in enumerate(brytere()):
         c, a, p, pn = tca(i)
+        if hid == "front":
+            k = int(bid[1:])
+            navn_ = f"!lambda 'return id(oppsett_kart)[id(oppsett_nr)][{k}];'"
+            vekk.append(f'{{{"ABCD".index(c)}, {p}, "", {k}}}')
+        else:
+            navn_ = f'"{bid}"'
+            vekk.append(f'{{{"ABCD".index(c)}, {p}, "{bid}", -1}}')
         ut += [f"  - platform: gpio",
                f"    id: t_{bid}",
                f"    name: \"Tast {nv}\"",
                f"    internal: true",
                f"    pin: {{ tca9555: {hub[c]}, number: {p}, mode: {{ input: true }}, inverted: true }}",
-               f"    filters: [ {{ delayed_on: 15ms }}, {{ delayed_off: 15ms }} ]"]
-        if hid == "front":
-            k = int(bid[1:])
-            f_ = f"id(oppsett_kart)[id(oppsett_nr)][{k}]"
-            gjenta = f"const std::string &f = {f_}; return f == \"vol_opp\" || f == \"vol_ned\";"
-            enkel = f"const std::string &f = {f_}; return !f.empty() && f != \"vol_opp\" && f != \"vol_ned\";"
-            ut += [f"    on_press:",
-                   f"      - if:",
-                   f"          condition: {{ lambda: '{gjenta}' }}",
-                   f"          then:",
-                   f"            - script.execute: {{ id: tast, navn: !lambda 'return {f_};', lang: false }}",
-                   f"            - delay: 450ms",
-                   f"            - while:",
-                   f"                condition: {{ binary_sensor.is_on: t_{bid} }}",
-                   f"                then:",
-                   f"                  - script.execute: {{ id: tast, navn: !lambda 'return {f_};', lang: false }}",
-                   f"                  - delay: 160ms",
-                   f"    on_multi_click:",
-                   f"      - timing: [ \"ON for at least 0.6s\" ]",
-                   f"        then:",
-                   f"          - if:",
-                   f"              condition: {{ lambda: '{enkel}' }}",
-                   f"              then: [ {{ script.execute: {{ id: tast, navn: !lambda 'return {f_};', lang: true }} }} ]",
-                   f"      - timing: [ \"ON for at most 0.59s\", \"OFF for at least 0.01s\" ]",
-                   f"        then:",
-                   f"          - if:",
-                   f"              condition: {{ lambda: '{enkel}' }}",
-                   f"              then: [ {{ script.execute: {{ id: tast, navn: !lambda 'return {f_};', lang: false }} }} ]"]
-        elif bid in REPETER:
-            ut += [f"    on_press:",
-                   f"      - script.execute: {{ id: tast, navn: \"{bid}\", lang: false }}",
-                   f"      - delay: 450ms",
-                   f"      - while:",
-                   f"          condition: {{ binary_sensor.is_on: t_{bid} }}",
-                   f"          then:",
-                   f"            - script.execute: {{ id: tast, navn: \"{bid}\", lang: false }}",
-                   f"            - delay: 160ms"]
-        else:
-            ut += [f"    on_multi_click:",
-                   f"      - timing: [ \"ON for at least 0.6s\" ]",
-                   f"        then: [ {{ script.execute: {{ id: tast, navn: \"{bid}\", lang: true }} }} ]",
-                   f"      - timing: [ \"ON for at most 0.59s\", \"OFF for at least 0.01s\" ]",
-                   f"        then: [ {{ script.execute: {{ id: tast, navn: \"{bid}\", lang: false }} }} ]"]
+               f"    filters: [ {{ delayed_on: 10ms }}, {{ delayed_off: 15ms }} ]",
+               f"    on_press: [ {{ script.execute: {{ id: tast_ned, navn: {navn_} }} }} ]",
+               f"    on_release: [ {{ script.execute: {{ id: tast_opp, navn: {navn_} }} }} ]"]
+    brikker = sorted({tca(i)[0] for i in range(len(brytere()))})
+    les = " ".join(f"case {'ABCD'.index(c)}: nede = !id({hub[c]}).digital_read(b.p); break;" for c in brikker)
+    vekking = ["# >>> vekking (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)",
+               "  # Rett etter oppstart: hvorfor den våknet, og hvilken tast som holdes (den sendes som første trykk).",
+               "  - id: les_vekketast",
+               "    then:",
+               "      - lambda: |-",
+               "          static const struct { uint8_t c, p; const char *navn; int g; } B[] = {",
+               "            " + ", ".join(vekk) + "};",
+               "          auto aarsak = esp_sleep_get_wakeup_cause();",
+               "          ESP_LOGI(\"vekking\", \"vekket av %s\", aarsak == ESP_SLEEP_WAKEUP_EXT0 ? \"tast (TCA9555 INT)\" :",
+               "                   aarsak == ESP_SLEEP_WAKEUP_EXT1 ? \"vibrasjonsbryteren (løftet)\" : \"strøm på / omstart\");",
+               "          if (aarsak != ESP_SLEEP_WAKEUP_EXT0) return;",
+               "          for (auto &b : B) {",
+               "            bool nede = false;",
+               "            switch (b.c) { " + les + " }",
+               "            if (!nede) continue;",
+               "            std::string n = b.g < 0 ? std::string(b.navn) : id(oppsett_kart)[id(oppsett_nr)][b.g];",
+               "            if (n.empty()) continue;",
+               "            ESP_LOGI(\"vekking\", \"tasten %s holdes: sendes som første trykk\", n.c_str());",
+               "            skjold::tastatur.ignorer = n;",
+               "            skjold::tastatur.ignorer_til = millis() + 1500;",
+               "            return;",
+               "          }",
+               "# <<< vekking"]
     ut.append("# <<< taster")
-    return {"navneliste": "\n".join(navn), "hendelser": "\n".join(hend), "taster": "\n".join(ut), "oppsettvalg": "\n".join(valg)}
+    return {"navneliste": "\n".join(navn), "hendelser": "\n".join(hend), "taster": "\n".join(ut), "oppsettvalg": "\n".join(valg),
+            "vekking": "\n".join(vekking)}
 
 
 def oppsett_tabell():
