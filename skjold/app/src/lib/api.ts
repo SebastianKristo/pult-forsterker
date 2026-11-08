@@ -265,6 +265,11 @@ export function logoUrl(logo?: string | null): string {
 /** Omslag: cover_url fra daemonen (cache-bust med bildets hash), ellers eldre «cover»-felt. */
 export function coverUrl(st: Status | null): string | null {
   if (!st) return null;
+  // Radio: kanallogoen først – Lyrion sender ellers sitt eget generiske radioikon som omslag.
+  if (st.input === 'radio' && !st.source_label) {
+    const im = st.radio_now?.logo ? logoUrl(st.radio_now.logo) : st.radio_now?.image ?? '';
+    if (/^(https?:\/\/|\/)/i.test(im)) return im;
+  }
   const u = st.cover_url ?? '';
   if (/^https?:\/\//i.test(u)) return u;
   if (u.startsWith('/')) return getBase() + u;

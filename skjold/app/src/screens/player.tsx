@@ -16,8 +16,11 @@ export function nowTitle(s: Status | null): { title: string; sub: string; album?
   if (!s) return { title: 'Ikke tilkoblet', sub: '' };
   if (!s.power) return { title: 'Standby', sub: 'Trykk på av/på for å slå på' };
   const src = s.source_label || inputLabel(s.input);
-  if (s.title) return { title: s.title, sub: s.artist || src, album: s.album || '' };
-  if (s.input === 'radio' && s.station) return { title: s.station, sub: 'Radio' };
+  // Lyrion sender ofte tittel/album som mellomrom for radiostrømmer – da er det ingen låt, bare kanalen.
+  const ti = (s.title || '').trim(), ar = (s.artist || '').trim(), al = (s.album || '').trim();
+  const kanal = s.input === 'radio' && !s.source_label ? (s.radio_now?.name || s.station || '').trim() : '';
+  if (kanal) return { title: kanal, sub: ti ? [ti, ar].filter(Boolean).join(' – ') : (s.radio_now?.now || '').trim() || 'Radio' };
+  if (ti) return { title: ti, sub: ar || src, album: al };
   if (s.input === 'bt' && s.bt_device) return { title: s.bt_device, sub: 'Blåtann' };
   return { title: src, sub: s.playing ? 'Spiller' : 'Klar' };
 }

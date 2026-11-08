@@ -37,7 +37,7 @@ A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in PRINT}
 # par som skal ligge an mot hverandre (bare kontaktflater, sjekkes med liten toleranse)
 TOUCH = {("kropp", "front"), ("kropp", "bunn"), ("front", "bunn"), ("front", "logo"),
          ("kropp", "pakning_front"), ("front", "pakning_front"), ("kropp", "pakning_bunn"), ("bunn", "pakning_bunn"),
-         ("front", "pakning_bunn"), ("kropp", "rute"), ("kropp", "knapp"), ("kropp", "krage"), ("kropp", "dc_skive"),
+         ("front", "pakning_bunn"), ("bunn", "pakning_front"), ("kropp", "rute"), ("kropp", "knapp"), ("kropp", "krage"), ("kropp", "dc_skive"),
          ("kropp", "usb_propp"), ("dc_skive", "usb_propp")}
 # grillens tapper har klemribber som skal klemme mot hullene i fronten (tilsiktet presspasning)
 PRESS = {("front", "grill"): 6.0}
