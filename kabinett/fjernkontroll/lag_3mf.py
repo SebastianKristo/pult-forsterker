@@ -3,6 +3,8 @@
   skjold-fjernkontroll-k2.3mf         topp (forsiden ned) med SKJOLD i gull, og bunn          filament 1 lys · 2 mørk · 3 gull
   skjold-fjernkontroll-k2-taster.3mf  alle hetter (flensen ned) med symbolene felt inn, gullring
                                       og Skjold-tast, smarthus-tastene i lys farge, og IR-vinduet  1 lys · 2 mørk · 3 gull · 4 klar
+  skjold-fjernkontroll-k2-taster-uten-gull.3mf  alle de mørke tastene i oppsett A på én plate (power, meny, OK og
+                                      tilbake/exit, spill/pause, demp, volum) – uten gullringen og Skjold-tasten  1 lys · 2 mørk
 
 Standard er kort variant (uten talltastene og smarthus-raden), fra stl/. Full variant: samme tre plater med «-full»
 i navnet, fra stl_full/.
@@ -127,6 +129,17 @@ OPPSETT_PLATER = {o: [
     for o, navn in taster.OPPSETT_NAVN.items()}
 
 
+def uten_gull(front="oppsett_rutenett/"):
+    """Alle mørke taster i oppsett A med symbolene, uten gulldelene (D-pad-ringen og Skjold-tasten).
+    front: mappen (under STL) med oppsettets hetter – hullkort/enkel eksporterer sine egne (tappene følger bryterne)."""
+    return ("Skjold Fjernkontroll – alle taster uten gull", [
+        ("knapper", "Power, meny og OK (flensen ned)", 2, (60, 40), None),
+        ("symboler_lyse", "Symboler på power, meny og OK", 1, None, "knapper"),
+        (f"{front}front_knapper", "Tilbake/exit, spill/pause, demp og volum (forsiden ned)", 2, (70, 110), None),
+        (f"{front}front_symboler", "Symboler på media-tastene", 1, None, f"{front}front_knapper"),
+    ], {1: "#ECE9E3", 2: "#2E2D2C"})
+
+
 def plater(variant):
     """{filnavn: (tittel, deler, farger)} for varianten. Full variant er 254,5 mm, lengre enn plata (250 mm):
     toppen og bunnen ligger da på hver sin plate, på skrå (45°)."""
@@ -154,6 +167,8 @@ def plater(variant):
         ut[f"{pre}-topp-{b}.3mf"] = (tt(t1), p1 if variant == "kort" else
                                      [(p[0], p[1], p[2], (20, 2) if p[3] else None, p[4]) for p in p1 if p[0] != "orer"], c1)
         ut[f"{pre}-taster-{b}.3mf"] = (tt(t2), p2, c2)
+    if variant == "kort":
+        ut["skjold-fjernkontroll-k2-taster-uten-gull.3mf"] = uten_gull()
     return ut
 
 
