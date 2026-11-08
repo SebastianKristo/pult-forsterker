@@ -413,3 +413,30 @@ img[src*="-touch"],img[src*="-s1"]{-webkit-mask-image:none;mask-image:none;borde
 .skjermrad img{width:100%;height:auto;border-radius:14px;display:block}
 .skjermrad figcaption{font-size:13px;color:var(--dempet,#8b8b86)}
 @media (max-width:640px){.skjermrad{grid-template-columns:1fr}}
+/* Skjold Lab: ordmerket i menyen */
+.logo-lab{margin-left:.5em;font-weight:300;color:var(--khaki)}
+.familie figcaption{margin-top:10px;font-size:13px;color:var(--demp-l2);text-align:center}
+/* Stor figur med bildetekst, 3D-visning */
+.stor-figur{margin-top:34px}
+.stor-figur figcaption{padding:12px 18px 16px;font-size:13px;color:var(--demp-l2)}
+.modell{margin-top:34px;max-width:1080px;border-radius:28px;overflow:hidden;background:radial-gradient(ellipse 60% 55% at 50% 55%,#2c2c32 0%,#141416 62%,#0b0b0c 100%)}
+.modell model-viewer{display:block;width:100%;height:auto;aspect-ratio:3/2;max-height:72vh;background-color:transparent;--poster-color:transparent}
+.modell model-viewer:not(:defined){display:flex;align-items:center;justify-content:center}
+.modell-poster{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:var(--mono);font-size:13px;color:var(--demp-l2)}
+.modell-hint{margin-top:12px;font-size:13px;color:var(--demp-l2)}
+.modell-hint a,.status-boks a,.lenkerad a{color:var(--khaki);text-decoration:underline;text-underline-offset:3px}
+/* Stav */
+.status-boks{max-width:1080px;margin:0 auto;border:1px solid rgba(216,207,180,.3);border-radius:24px;padding:26px 28px;display:grid;gap:8px;background:#0d0d0e}
+.status-boks .k{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--khaki)}
+.status-boks p{margin:0;font-size:16px;line-height:1.55;color:var(--demp-l);max-width:820px}
+.skjermrad.tre{grid-template-columns:repeat(3,minmax(0,1fr))}
+.skjermrekke{margin-top:34px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.skjermrekke figure{margin:0;display:flex;flex-direction:column;gap:8px}
+.skjermrekke img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid rgba(255,255,255,.08)}
+.skjermrekke figcaption{font-size:13px;color:var(--demp-l2)}
+.kodeblokk{margin:22px 0 0;padding:20px 22px;background:#0d0d0e;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.6;color:var(--tekst-l)}
+.kodeblokk .c{color:var(--demp-l2)}
+.lenkerad{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px 22px;font-size:15px}
+@media (max-width:900px){.skjermrekke{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.skjermrad.tre{grid-template-columns:1fr}.skjermrekke{grid-template-columns:repeat(2,minmax(0,1fr))}.status-boks{padding:22px 20px}}
+@media (min-width:521px){.nav-inn{gap:22px}.nav-lenker{gap:17px}}

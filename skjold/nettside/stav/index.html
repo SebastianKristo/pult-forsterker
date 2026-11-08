@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="nb" class="statisk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skjold Stav – Fjernkontroll med 2,8″ berøringsskjerm – Skjold Lab</title>
+<meta name="description" content="Skjold Stav er en fjernkontroll du bygger selv: 2,8″ berøringsskjerm, IR-læring, Apple TV, TV-innganger, aktiviteter og Home Assistant, med ladedokk.">
+<link rel="canonical" href="https://skjold.smarthjemexperten.no/stav/">
+<link rel="alternate" hreflang="nb" href="https://skjold.smarthjemexperten.no/stav/">
+<link rel="alternate" hreflang="en" href="https://skjold.smarthjemexperten.no/en/stav/">
+<link rel="alternate" hreflang="x-default" href="https://skjold.smarthjemexperten.no/stav/">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nb_NO">
+<meta property="og:locale:alternate" content="en_GB">
+<meta property="og:site_name" content="Skjold Lab">
+<meta property="og:title" content="Skjold Stav – Fjernkontroll med 2,8″ berøringsskjerm – Skjold Lab">
+<meta property="og:description" content="Skjold Stav er en fjernkontroll du bygger selv: 2,8″ berøringsskjerm, IR-læring, Apple TV, TV-innganger, aktiviteter og Home Assistant, med ladedokk.">
+<meta property="og:url" content="https://skjold.smarthjemexperten.no/stav/">
+<meta property="og:image" content="https://skjold.smarthjemexperten.no/assets/img/stav-skra.jpg">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="1100">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="/assets/skjold.css?v=40d0dc3a">
+<script src="/assets/skjold.js?v=bf1d00de" defer></script>
+</head>
+<body>
+<a class="hopp" href="#hoved">Hopp til innholdet</a>
+<header class="nav">
+  <div class="nav-inn">
+    <a class="logo" href="/" aria-label="Skjold Lab – forsiden"><span class="logo-stolper" aria-hidden="true"><i style="height:8px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:12px"></i><i style="height:8px"></i></span><span class="logo-ord">SKJOLD<span class="logo-lab">LAB</span></span></a>
+    <nav class="nav-lenker" aria-label="Hovedmeny"><a href="/s1/">S1</a><a href="/node/">Node</a><a href="/touch/">Touch</a><a href="/rost/">Røst</a><a href="/stav/" aria-current="page">Stav</a><a href="/core/">Core</a><a href="/programvare/">Programvare</a><a href="/sammenlign/">Sammenlign</a><a href="/stotte/">Støtte</a><a href="/bruksanvisning/">Bruksanvisning</a><a href="/om/">Om Skjold Lab</a><a href="mailto:jemtlands@proton.me">Kontakt</a></nav>
+    <div class="spraak" role="group" aria-label="Språk"><a href="/stav/" lang="nb" hreflang="nb" aria-current="true">NO</a><span aria-hidden="true">|</span><a href="/en/stav/" lang="en" hreflang="en">EN</a></div>
+  </div>
+</header>
+<main id="hoved">
+<section class="p-hero node-bg">
+  <div class="k" data-reveal="0">Skjold Stav</div>
+  <h1 data-reveal="80">Én stav for hele stua</h1>
+  <p data-reveal="160">Stav er en universell fjernkontroll med 2,8″ berøringsskjerm. Den styrer Skjold, TV-en, Apple TV og projektoren, lærer kodene fra de gamle fjernkontrollene og kjører «Se TV» eller «God natt» med ett trykk. Den er tegnet for å bygges hjemme.</p>
+  <div class="knapper" data-reveal="240"><a class="knapp knapp-m" href="https://github.com/SebastianKristo/pult-forsterker/blob/main/kabinett/fjernkontroll/LES_MEG.md">Byggeveiledning ›</a><a class="knapp knapp-o" href="https://claude.ai/artifact/DyuMF6ZqSQiiFxcNCRVYLs">Prøv den i 3D ›</a></div>
+  <picture><source srcset="/assets/img/stav-skra.webp" type="image/webp"><img src="/assets/img/stav-skra.jpg" alt="Skjold Stav i Bone White, skrått ovenfra: skjerm øverst, gull D-pad og runde taster" width="1600" height="1100" data-zoom fetchpriority="high"></picture>
+</section>
+<section class="seksjon" style="padding-bottom:0"><div class="status-boks" data-reveal="0"><div class="k">STATUS · IKKE BYGGET ENNÅ</div><p>Stav er tegnet og kontrollert, men ikke printet, bygget eller testet på maskinvare. 3D-modellen er sjekket for kollisjoner og veggtykkelse, og fastvaren er validert med <code>esphome config</code>, men ikke kompilert. Hovedkortet er ikke bestilt. Alt under er planen, og tallene for batteri og vekt er beregnet, ikke målt. Følg arbeidet i <a href="https://github.com/SebastianKristo/pult-forsterker/blob/main/kabinett/fjernkontroll/LES_MEG.md">byggeveiledningen på GitHub</a>.</p></div></section>
+<section class="seksjon"><div class="innhold fliser"><div class="flis" data-reveal="0"><div class="k">SKJERM</div><h3 class="h">2,8″ berøringsskjerm</h3><p class="p">IPS, 240 × 320, nesten fra kant til kant. Viser hva som spilles, apper, innganger, lys og scener.</p></div><div class="flis" data-reveal="90"><div class="k">APPLE TV · TV</div><h3 class="h">Apper og innganger</h3><p class="p">Åpne Netflix eller NRK TV rett fra skjermen, fest favoritter, og bytt mellom HDMI 1–4 og TV.</p></div><div class="flis" data-reveal="180"><div class="k">AKTIVITETER</div><h3 class="h">Ett trykk, alt skjer</h3><p class="p">Se TV, Apple TV, Film, Musikk og God natt slår på TV-en, bytter inngang, åpner appen, starter Skjold og setter scenen.</p></div><div class="flis" data-reveal="270"><div class="k">IR-LÆRING</div><h3 class="h">Lærer av de gamle</h3><p class="p">Pek den gamle fjernkontrollen mot nesen og trykk. NEC, Samsung, Sony, RC5 og LG, 2 × 56 plasser.</p></div><div class="flis" data-reveal="0"><div class="k">HOME ASSISTANT</div><h3 class="h">Hver tast er en hendelse</h3><p class="p">Kort, langt og dobbelt trykk sendes til Home Assistant, med en ferdig blueprint for automasjoner.</p></div><div class="flis" data-reveal="90"><div class="k">SKJOLD DOKK</div><h3 class="h">Står og lader</h3><p class="p">Magnetisk pogo-lading i en dokk på 65°, med stor klokke og det som spilles på skjermen.</p></div></div></section>
+<section class="scrolly node-bg" data-scrolly aria-label="Detaljer"><div class="scrolly-inn">
+  <div class="tekster"><div class="tekst paa" data-cap><h3>Rett og flat</h3><p>55 × 202,5 mm og 13,5 mm tynn. Myke hjørner, en fas rundt kanten og rette sider. Toppen er lys og bunnen mørk, delt i en rett skjøt.</p></div><div class="tekst" data-cap><h3>Gull der tommelen hviler</h3><p>En stor gullring på Ø 39 mm med en mørk OK i midten. Over den sitter av/på, Skjold-tasten i gull og meny.</p></div><div class="tekst" data-cap><h3>Tynn fra siden</h3><p>Lavprofil-brytere på et 1,0 mm kort holder den tynn: 15,0 mm på det tykkeste, ved gullringen. Den veier ca. 105–115 g med batteri (beregnet).</p></div><div class="tekst" data-cap><h3>Lys eller mørk</h3><p>Bone White matt PLA med mørk bunn, eller mørk topp med lys bunn. Symbolene er felt inn og printet i kontrastfarge.</p></div><div class="prikker" aria-hidden="true"><i data-dot class="paa"></i><i data-dot></i><i data-dot></i><i data-dot></i></div></div>
+  <div class="bilder"><picture><source srcset="/assets/img/stav-topp.webp" type="image/webp"><img src="/assets/img/stav-topp.jpg" alt="Skjold Stav ovenfra i Bone White" width="1600" height="1100" class="paa" data-frame loading="lazy"></picture><picture><source srcset="/assets/img/stav-naer.webp" type="image/webp"><img src="/assets/img/stav-naer.jpg" alt="Nærbilde av skjermen, Skjold-tasten og gullringen med OK" width="1600" height="1100" data-frame loading="lazy"></picture><picture><source srcset="/assets/img/stav-side.webp" type="image/webp"><img src="/assets/img/stav-side.jpg" alt="Skjold Stav fra siden, som viser hvor tynn den er" width="1600" height="1100" data-frame loading="lazy"></picture><picture><source srcset="/assets/img/stav-mork.webp" type="image/webp"><img src="/assets/img/stav-mork.jpg" alt="Skjold Stav med mørk topp" width="1600" height="1100" data-frame loading="lazy"></picture></div>
+</div></section>
+<section class="seksjon" id="skjermen" aria-labelledby="skj-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">SKJERMEN</div><h2 class="h2" id="skj-h" data-reveal="60">Velg enhet, og tastene følger med</h2>
+  <p class="lead-p" data-reveal="100">«Styrer»-brikken øverst viser hva tastene virker på: Stue-TV, Apple TV, Skjold eller projektoren. Nederst er fire faner: Start, Enhet, Hjem og Mer. Skjold styres med det samme API-et som appen bruker.</p>
+  <div class="skjermrekke" data-reveal="120"><figure><picture><source srcset="/assets/img/stav-skjerm-start.webp" type="image/webp"><img src="/assets/img/stav-skjerm-start.jpg" alt="Startsiden med nå-kortet og aktivitetene" width="480" height="640" loading="lazy"></picture><figcaption>Start</figcaption></figure><figure><picture><source srcset="/assets/img/stav-skjerm-apper.webp" type="image/webp"><img src="/assets/img/stav-skjerm-apper.jpg" alt="Apple TV-apper som fliser med initialer, favorittene med gullkant" width="480" height="640" loading="lazy"></picture><figcaption>Apple TV-apper</figcaption></figure><figure><picture><source srcset="/assets/img/stav-skjerm-innganger.webp" type="image/webp"><img src="/assets/img/stav-skjerm-innganger.jpg" alt="TV-innganger: HDMI 1–4, TV, Apple TV og Skjold" width="480" height="640" loading="lazy"></picture><figcaption>TV-innganger</figcaption></figure><figure><picture><source srcset="/assets/img/stav-skjerm-aktivitet.webp" type="image/webp"><img src="/assets/img/stav-skjerm-aktivitet.jpg" alt="En aktivitet som starter, steg for steg" width="480" height="640" loading="lazy"></picture><figcaption>Aktivitet starter</figcaption></figure><figure><picture><source srcset="/assets/img/stav-skjerm-spiller.webp" type="image/webp"><img src="/assets/img/stav-skjerm-spiller.jpg" alt="Skjold-spilleren med cover, rom og kilder" width="480" height="640" loading="lazy"></picture><figcaption>Skjold</figcaption></figure><figure><picture><source srcset="/assets/img/stav-skjerm-dokk.webp" type="image/webp"><img src="/assets/img/stav-skjerm-dokk.jpg" alt="Dokk-skjermen med stor klokke, lading og det som spilles" width="480" height="640" loading="lazy"></picture><figcaption>I dokken</figcaption></figure></div>
+  <div class="lenkerad" data-reveal="0"><a href="https://claude.ai/artifact/DyuMF6ZqSQiiFxcNCRVYLs">Prøv skjermen i 3D-siden («▶ Prøv den»)</a></div>
+</div></section>
+<section class="seksjon" id="oppsett" aria-labelledby="opp-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">TASTEOPPSETT</div><h2 class="h2" id="opp-h" data-reveal="60">Tre topper, samme innmat</h2>
+  <p class="lead-p" data-reveal="100">Tasteblokken under gullringen finnes i tre oppsett. Kortet og fastvaren er de samme: du printer toppen og hettene for oppsettet du vil ha, og velger det samme i Home Assistant. Ingen ny flashing.</p>
+  <div class="skjermrad tre" data-reveal="120"><figure><picture><source srcset="/assets/img/stav-oppsett-a.webp" type="image/webp"><img src="/assets/img/stav-oppsett-a.jpg" alt="Tasteoppsett A «Rutenett»: to kolonner med runde taster og en høy volumpille" width="1600" height="1100" loading="lazy"></picture><figcaption>A «Rutenett» (standard): runde taster og en høy volumpille</figcaption></figure><figure><picture><source srcset="/assets/img/stav-oppsett-b.webp" type="image/webp"><img src="/assets/img/stav-oppsett-b.jpg" alt="Tasteoppsett B «Vannrett»: vannrett volumpille og fire små taster" width="1600" height="1100" loading="lazy"></picture><figcaption>B «Vannrett»: volum på tvers og fire små taster</figcaption></figure><figure><picture><source srcset="/assets/img/stav-oppsett-c.webp" type="image/webp"><img src="/assets/img/stav-oppsett-c.jpg" alt="Tasteoppsett C «Stor»: stor spill/pause-tast i midten" width="1600" height="1100" loading="lazy"></picture><figcaption>C «Stor»: stor spill/pause i midten</figcaption></figure></div>
+</div></section>
+<section class="seksjon" id="dokk" aria-labelledby="dokk-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">SKJOLD DOKK</div><h2 class="h2" id="dokk-h" data-reveal="60">En plass å stå</h2>
+  <p class="lead-p" data-reveal="100">Skjold Dokk holder Stav i 65° og lader den gjennom en magnetisk pogo-kontakt. Mens den står der viser skjermen en stor klokke, datoen, ladingen og det som spilles, og den sover aldri. Om natta dempes skjermen. Dokka har USB-C bak og en vektlomme i sokkelen, så den står stødig.</p>
+  <div class="skjermrad" data-reveal="120"><figure><picture><source srcset="/assets/img/stav-dokk.webp" type="image/webp"><img src="/assets/img/stav-dokk.jpg" alt="Skjold Stav i Skjold Dokk med klokken på skjermen" width="1600" height="1100" loading="lazy"></picture><figcaption>I dokken, med klokke og det som spilles</figcaption></figure><figure><picture><source srcset="/assets/img/stav-dokk-bone.webp" type="image/webp"><img src="/assets/img/stav-dokk-bone.jpg" alt="Skjold Dokk i Bone White med Stav" width="1600" height="1100" loading="lazy"></picture><figcaption>Dokk i Bone White</figcaption></figure></div>
+</div></section>
+<section class="seksjon" id="bygg" aria-labelledby="bygg-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">BYGG SELV</div><h2 class="h2" id="bygg-h" data-reveal="60">Tre måter å bygge den på</h2>
+  <p class="lead-p" data-reveal="100">Kabinettet printes på en Creality K2 uten støtte, delene kommer fra AliExpress, og fastvaren er ESPHome. Velg elektronikken som passer deg. Delene til standardvarianten koster ca. 630 kr.</p>
+  <div class="kort-rutenett" style="margin-top:34px"><div class="kort" data-reveal="0"><div class="k">ENKEL</div><div class="h">XIAO ESP32S3 på et bærekort</div><div class="p">Færrest deler: en Seeed XIAO ESP32S3 som lader batteriet selv, en MCP23017 for de 14 tastene og tasteoppsett A. Under arbeid.</div></div><div class="kort" data-reveal="100"><div class="k">HOVEDKORT</div><div class="h">Alt på ett kort</div><div class="p">ESP32-S3, USB-C med lader, skjermkontakt og alle tastene på ett kort som JLCPCB lager og monterer. Flashing rett i ladeporten. Tegnet og kontrollert, ikke bestilt.</div></div><div class="kort" data-reveal="0"><div class="k">HÅNDKOBLET</div><div class="h">SuperMini, lader og tastekort</div><div class="p">Den første utgaven: ESP32-S3 SuperMini, TP4056-modul og et tastekort, koblet med ledninger. Alle delene fra AliExpress.</div></div></div>
+  <figure class="ramme stor-figur" data-reveal="0"><picture><source srcset="/assets/img/stav-montering.webp" type="image/webp"><img src="/assets/img/stav-montering.jpg" alt="Skjold Stav delt opp: topp, skjerm, kretskort med tastene, batteri og bunn" width="1600" height="1100" loading="lazy"></picture><figcaption>Innmaten: topp, skjerm, kort med taster, batteri og bunn</figcaption></figure>
+  <div class="lenkerad" data-reveal="0"><a href="https://github.com/SebastianKristo/pult-forsterker/blob/main/kabinett/fjernkontroll/LES_MEG.md">Byggeveiledning (LES_MEG)</a><a href="https://github.com/SebastianKristo/pult-forsterker/tree/main/kabinett/fjernkontroll">Alle filene på GitHub</a><a href="https://claude.ai/artifact/DyuMF6ZqSQiiFxcNCRVYLs">Interaktiv 3D-modell</a></div>
+</div></section>
+<section class="seksjon" id="batteri" aria-labelledby="bat-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">BATTERITID</div><h2 class="h2" id="bat-h" data-reveal="60">Uker, ikke dager</h2>
+  <p class="lead-p" data-reveal="100">Et LiPo-batteri på 1200 mAh, og dyp søvn når den ligger. Den våkner av en tast, eller når du løfter den. Dette er et overslag, ikke målt.</p>
+  <div class="fliser" style="margin-top:34px"><div class="flis" data-reveal="0"><div class="k">LITE BRUK</div><h3 class="h">3–4 måneder</h3><p class="p">10 løft om dagen à 30 sekunder.</p></div><div class="flis" data-reveal="90"><div class="k">VANLIG BRUK</div><h3 class="h">Ca. 4 uker</h3><p class="p">30 løft om dagen à 45 sekunder.</p></div><div class="flis" data-reveal="180"><div class="k">MYE BRUK</div><h3 class="h">Ca. 6 dager</h3><p class="p">2 timer med skjermen på hver dag.</p></div><div class="flis" data-reveal="270"><div class="k">I SØVN</div><h3 class="h">70–90 µA</h3><p class="p">Ca. 2 mAh i døgnet. Skjerm, berøring og IR-mottaker får ikke strøm.</p></div></div>
+</div></section>
+<section id="integrasjoner" class="seksjon hvit lys" aria-labelledby="ha-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">HOME ASSISTANT</div><h2 class="h2" id="ha-h" data-reveal="60">Bruk hvilken som helst tast til hva du vil</h2>
+  <p class="lead-p" data-reveal="100">ESPHome-integrasjonen finner Stav. Hver tast sendes som hendelsen <code>esphome.skjold_fjernkontroll</code>, med samme form for alle taster, og blueprinten lar deg velge handling per tast og trykktype uten å skrive YAML.</p>
+<pre class="kodeblokk" data-reveal="120">event_type: esphome.skjold_fjernkontroll
+data:
+  knapp: tilbake   <span class="c"># av, hjem, meny, opp, ned, ok, spill_pause …</span>
+  type: lang       <span class="c"># kort | lang | dobbel</span>
+  enhet: "1"       <span class="c"># 0 = TV, 1 = Apple TV, 2 = Skjold, 3 = projektor</span></pre>
+  <div class="lenkerad" data-reveal="0"><a href="https://github.com/SebastianKristo/pult-forsterker/blob/main/esphome/blueprints/skjold_fjernkontroll.yaml">Blueprint for Home Assistant</a><a href="https://github.com/SebastianKristo/pult-forsterker/blob/main/kabinett/fjernkontroll/LES_MEG.md#home-assistant">Hendelser, handlinger og entiteter</a></div>
+</div></section>
+<section id="spec" class="seksjon hvit"><div class="spes">
+  <h2 data-reveal="0">Tekniske spesifikasjoner</h2><dl><div class="rad" data-reveal="0"><dt>Status</dt><dd>Tegnet og kontrollert. Ikke bygget eller testet.</dd></div><div class="rad" data-reveal="0"><dt>Mål</dt><dd>55 × 202,5 mm, 13,5 mm tykk (15,0 mm ved gullringen). Full variant med talltaster: 55 × 245,5 mm</dd></div><div class="rad" data-reveal="0"><dt>Vekt</dt><dd>Ca. 105–115 g med batteri (beregnet)</dd></div><div class="rad" data-reveal="0"><dt>Skjerm</dt><dd>2,8″ IPS, 240 × 320, kapasitiv berøring (ST7789 og FT6336U)</dd></div><div class="rad" data-reveal="0"><dt>Prosessor</dt><dd>ESP32-S3 med Wi-Fi, fastvare i ESPHome med LVGL</dd></div><div class="rad" data-reveal="0"><dt>Taster</dt><dd>14 i standardvarianten, 30 i full variant. Tasteoppsett A, B eller C.</dd></div><div class="rad" data-reveal="0"><dt>IR</dt><dd>940 nm IR-dioder i nesen og VS1838B-mottaker for læring (NEC, Samsung, Sony, RC5, LG)</dd></div><div class="rad" data-reveal="0"><dt>Batteri</dt><dd>LiPo 603450, 1200 mAh, lades med USB-C eller i dokken. Ca. 4 uker ved vanlig bruk (overslag).</dd></div><div class="rad" data-reveal="0"><dt>Kabinett</dt><dd>3D-printet på Creality K2: Bone White matt PLA med mørk matt bunn og gull, eller mørk topp med lys bunn</dd></div><div class="rad" data-reveal="0"><dt>Dokk</dt><dd>Skjold Dokk: 65°, magnetisk pogo-kontakt, USB-C, sokkel 80 × 100 mm</dd></div><div class="rad" data-reveal="0"><dt>Elektronikk</dt><dd>Enkel (XIAO ESP32S3), hovedkort (ESP32-S3 fra JLCPCB) eller håndkoblet (SuperMini)</dd></div><div class="rad" data-reveal="0"><dt>Integrasjoner</dt><dd>Skjold, Home Assistant (Apple TV, TV, lys og scener), IR</dd></div></dl>
+  <div class="knapper"><a class="knapp knapp-m" href="https://github.com/SebastianKristo/pult-forsterker/blob/main/kabinett/fjernkontroll/LES_MEG.md">Byggeveiledning ›</a><a class="knapp knapp-o" href="https://claude.ai/artifact/DyuMF6ZqSQiiFxcNCRVYLs">Prøv den i 3D ›</a></div>
+</div></section>
+<section class="seksjon" aria-labelledby="navn-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">NAVNET</div><h2 class="h2" id="navn-h" data-reveal="60">Hvorfor Stav?</h2>
+  <p class="lead-p" data-reveal="100">En stav er lang og slank, og den peker. I norrøn tid var staven både vandrestaven og tryllestaven, den du pekte med for å få noe til å skje. Det er akkurat det Stav gjør: pek, trykk, og stua følger med. Kort, norsk og i samme familie som Skjold, Røst og Dokk.</p>
+</div></section>
+<section id="interesse" class="seksjon interesse" aria-labelledby="int-h">
+  <div class="innhold">
+    <div class="etikett">MELD INTERESSE</div>
+    <h2 class="h2" id="int-h">Ikke til salgs ennå</h2>
+    <p class="ingress">Stav er ikke bygget ennå, og det finnes ingen ferdige å kjøpe. Legg igjen navn og e-post, så sier jeg fra når den første er bygget og testet, eller hvis det blir et byggesett.</p>
+    <form class="skjema" data-interesse method="post" action="/api/interesse" data-bad="Skriv inn navn og en gyldig e-post." data-err="Det gikk ikke å sende. Prøv igjen, eller send en e-post." novalidate>
+      <div class="to-felt">
+        <label class="felt">Navn<input name="navn" autocomplete="name" required maxlength="120"></label>
+        <label class="felt">E-post<input name="epost" type="email" autocomplete="email" required maxlength="200" inputmode="email"></label>
+      </div>
+      <fieldset><legend>Hvilken?</legend><div class="piller"><label class="pille"><input type="radio" name="produkt" value="S1"><span>Skjold S1</span></label><label class="pille"><input type="radio" name="produkt" value="Node"><span>Skjold Node</span></label><label class="pille"><input type="radio" name="produkt" value="Touch"><span>Skjold Touch</span></label><label class="pille"><input type="radio" name="produkt" value="Stav" checked><span>Skjold Stav</span></label><label class="pille"><input type="radio" name="produkt" value="Flere"><span>Flere</span></label></div></fieldset>
+      <fieldset><legend class="sr">Ferdig eller byggesett?</legend><div class="piller"><label class="pille"><input type="radio" name="type" value="done" checked><span>Ferdig bygget</span></label><label class="pille"><input type="radio" name="type" value="kit"><span>Byggesett</span></label></div></fieldset>
+      <label class="felt">Melding (valgfritt)<textarea name="melding" rows="3" maxlength="2000"></textarea></label>
+      <div class="honning" aria-hidden="true"><label>Nettsted (la stå tomt)<input name="nettsted" tabindex="-1" autocomplete="off"></label></div>
+      <div class="feil" role="alert" aria-live="polite"></div>
+      <div class="send"><button class="knapp" type="submit">Meld interesse</button><small>E-posten brukes bare til å si fra om Skjold.</small></div>
+    </form>
+    <div class="takk" id="interesse-takk" tabindex="-1" hidden><b aria-hidden="true">✓</b><span>Takk! Du hører fra meg.</span></div>
+  </div>
+</section>
+</main>
+<footer class="bunn"><div class="innhold"><div>Skjold Lab · Designet av Sebastian Kristo Jemtland i Norge</div><div class="kopi">© 2026 Sebastian Kristo Jemtland. Nettsiden, tekstene, bildene, designet og produktene Skjold S1, Skjold Node, Skjold Touch, Skjold Røst og Skjold Stav er beskyttet av opphavsrett. Programvaren er åpen kildekode (MIT). Kasse, kretskort og design: CC BY-NC-SA 4.0 – bygg selv, men ikke for salg. Kontakt: <a href="mailto:jemtlands@proton.me">jemtlands@proton.me</a></div><div class="mono">skjold.smarthjemexperten.no</div></div></footer>
+</body>
+</html>

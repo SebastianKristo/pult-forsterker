@@ -1,6 +1,6 @@
-# Skjold-nettsiden
+# Skjold Lab – nettsiden
 
-Statisk nettsted for **skjold.smarthjemexperten.no**. Det er bygget med ren HTML, CSS og JavaScript, uten byggesteg. Interesseskjemaet sendes til en Cloudflare Pages Function.
+Statisk nettsted for **skjold.smarthjemexperten.no**, nettsiden til **Skjold Lab**. Skjold Lab er merkenavnet (den som lager), mens produktene fortsatt heter Skjold S1, Skjold Node, Skjold Touch, Skjold Røst og Skjold Stav. Bruk «Skjold Lab» i logoen (`SKJOLD` + `LAB` i `.logo-lab`), bunnteksten, `og:site_name` og sidetitlene (`… – Skjold Lab`). Det er bygget med ren HTML, CSS og JavaScript, uten byggesteg. Interesseskjemaet sendes til en Cloudflare Pages Function.
 
 Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/design/README.md` (tokens og animasjoner).
 
@@ -9,13 +9,16 @@ Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/d
 | Sti | Side |
 |---|---|
 | `index.html` | Forside |
-| `s1/`, `node/` | Produktsidene (hero-zoom, sticky bildesekvens, kilder, integrasjoner, spesifikasjoner) |
+| `s1/`, `node/`, `touch/`, `rost/`, `core/` | Produktsidene (hero-zoom, sticky bildesekvens, kilder, integrasjoner, spesifikasjoner). `touch/` har også en 3D-modell med `<model-viewer>` |
+| `stav/` | Skjold Stav, fjernkontrollen fra `kabinett/fjernkontroll/` (med Skjold Dokk). Et byggeprosjekt som ikke er bygget eller testet ennå; siden sier det |
 | `programvare/`, `sammenlign/`, `stotte/`, `om/` | Øvrige sider |
 | `takk/`, `takk/feil/` | Svarsider for skjemaet uten JavaScript |
-| `en/` | Engelske sider: `en/`, `en/s1/`, `en/node/`, `en/software/`, `en/compare/`, `en/support/`, `en/about/`, `en/thanks/`, `en/thanks/error/` |
+| `en/` | Engelske sider: `en/`, `en/s1/`, `en/node/`, `en/touch/`, `en/stav/`, `en/software/`, `en/compare/`, `en/support/`, `en/about/`, `en/thanks/`, `en/thanks/error/` |
 | `404.html` | Feilside på norsk og engelsk (Cloudflare Pages bruker den automatisk) |
 | `assets/skjold.css`, `assets/skjold.js` | Felles stil og oppførsel (reveal, zoom, bildesekvens, USB-demo, skjema) |
-| `assets/img/` | Renders som PNG og WebP (`<picture>`), `og.jpg` for deling |
+| `assets/img/` | Renders som PNG/JPEG og WebP (`<picture>`), `og.jpg` for deling |
+| `assets/3d/skjold-touch.glb` | 3D-modellen av Touch (helsort, meter, Y opp), med skjermglass og skjermbildet fra renderen lagt inn som to flater |
+| `assets/vendor/model-viewer-4.1.0/` | Google `<model-viewer>` 4.1.0 (BSD-3-Clause, med `LICENSE`), lagt inn lokalt så CSP-en kan beholde `script-src 'self'` |
 | `functions/api/interesse.js` | Pages Function: `POST`/`GET /api/interesse` |
 | `admin/`, `functions/api/admin/[[path]].js` | Visuell editor og API-et bak den (se «Redigere nettsiden») |
 | `_headers`, `_redirects` | Sikkerhetshoder, caching og omdirigering fra de gamle `.dc.html`-navnene |
@@ -116,3 +119,21 @@ Renders fra 3D-modellene ligger i `assets/img/` som `.png` og `.webp`. Når de s
 ```sh
 python3 -c "from PIL import Image; Image.open('01-s1.png').save('01-s1.webp', quality=86, method=6)"
 ```
+
+Nye bilder legges inn som WebP med JPEG som reserve, maks ca. 1800 px bredt. Originalene (store PNG-er) holdes utenfor nettsiden:
+
+```sh
+python3 -c "from PIL import Image; im=Image.open('original.png').convert('RGB'); im.thumbnail((1800,1800)); im.save('navn.webp', quality=82, method=6); im.save('navn.jpg', quality=82, optimize=True, progressive=True)"
+```
+
+| Filer | Brukes på |
+|---|---|
+| `s1-skra`, `s1-front`, `s1-topp`, `s1-bak` | S1 (hero, bildesekvens), forsiden, sammenlign |
+| `node-tft-skra`, `node-tft-front`, `node-tft-topp`, `node-tft-bak` | Node (hero, bildesekvens), forsiden, sammenlign |
+| `touch-skraa`, `touch-front`, `touch-side`, `touch-bak`, `touch-eksplodert` | Touch, helsort med stoff (hero, bildesekvens, «Slik er den bygget»), forsiden |
+| `familie-lab`, `familie-lab-m` | Forsiden: hele familien på skrivebordet (også `og.jpg`) |
+| `stav-*` | Stav: renders fra `kabinett/fjernkontroll/render/` og `dokk/render/`, og skjermbildene |
+
+### 3D-modellen på Touch
+
+`touch/` og `en/touch/` laster `/assets/vendor/model-viewer-4.1.0/model-viewer.min.js` som `type="module"`, og `<model-viewer>` henter `/assets/3d/skjold-touch.glb`. Biblioteket er lagt inn lokalt (som Redoc og PDF.js), så `script-src` kan fortsatt være `'self'`. CSP-en i `_headers` har to tillegg for det: `'wasm-unsafe-eval'` i `script-src` (model-viewer setter opp en WebAssembly-dekoder) og `blob:` i `img-src` og `connect-src` (teksturen i GLB-fila, skjermbildet, lastes som en blob-URL). Bytt versjon ved å legge en ny mappe ved siden av og endre stien i de to sidene.
