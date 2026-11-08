@@ -6,7 +6,7 @@ Røst er laget for å tåle damp på badet. Skjøtene er pakket med TPU, men kna
 
 ![Skjold Røst](render/01_rost.png)
 
-Bilder: [Røst](render/01_rost.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [toppanelet](render/06_knapper_skjerm.png)
+Bilder: [Røst](render/01_rost.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [toppanelet](render/06_knapper_skjerm.png) · [skrått bakfra](render/07_bak_skra.png)
 
 Mål: 112 × 124,5 × 142 mm (B × D × H, med grill, bunn og føtter, uten knott). Kroppen er 112 × 113 × 134 mm, frontplaten 8,5 mm og grillen står 3 mm foran den. Knotten stikker 14,6 mm over toppen. (Forrige utgave: 106 × 124,5 × 144 mm med skrå topp, 136 mm bak og 131 mm foran. Den flate toppen ligger nå på 134 mm, midt mellom.)
 
@@ -14,21 +14,34 @@ Skjermen og knappene sitter på toppen, foran volumhjulet. Toppen er flat. Front
 
 ## Formen
 
-Røst er en myk, avrundet blokk: lys kropp, mørk front med grill, gull knott. Formen er laget i Skjold-stil, ikke kopiert fra noen annen høyttaler: rette, flate sider og en flat topp, men store radier der flatene møtes.
+Røst er en myk, avrundet blokk: lys kropp, mørk front med grill, gull knott. Formen er laget i Skjold-stil, ikke kopiert fra noen annen høyttaler: rette, flate sider og en flat topp, med store, rolige radier der flatene møtes.
 
-- **Hjørnene bak, sett ovenfra: R28.** Buen går til 45° og går så over i en rett 45°-fas mot bakveggen. En hel bue ville hengt over når kroppen printes med bakveggen ned; slik printes den uten støtte.
-- **Hjørnene foran: R8,5**, like stor som frontplatens tykkelse. Buen ender akkurat i skjøten, så frontplaten og kroppen følger samme kurve. Mer går ikke: elementets ramme (Ø86) og grillen (93 mm) trenger en flat front.
-- **Toppkantene: R8** langs sidene og forkanten. Bak er det samme bue til 45° og så fas, av samme grunn som hjørnene bak.
+Ytterformen er én glatt flate. Den er laget som en Minkowski-sum: et prisme (grunnrisset) «rullet» med en kule på R8,5. Alle kanter får da samme radius, og hjørnene der tre kanter møtes blir jevne, doble kurver uten fasetter eller knekker.
+
+- **Front og topp: R8,5 overalt.** Hjørnene foran, toppkanten foran, langs sidene og bak har alle R8,5, akkurat like mye som frontplatens tykkelse. Buen foran ender derfor nøyaktig i skjøten, og skillelinjen mellom den mørke fronten og den lyse kroppen går der flaten blir rett.
+- **Hjørnene bak, sett ovenfra: R28.** Det gir den myke, runde baksiden.
+- **Bakveggen** er en flat flate med en jevn, skarp 45°-kant rundt. Buene bak (R28 i hjørnene, R8,5 i toppkanten) går helt til de møter bakveggen i 45°, uten den flate fasen som var der før. Kanten er lik hele veien rundt, også i de to øvre hjørnene, så den leser som en bevisst ramme rundt bakpanelet.
 - **Underkanten: R2,5** rundt bunnplaten, så bunnen ser lett ut og ikke som en egen sokkel.
-- **Grill og front følger formen:** frontplaten er skåret fra den samme ytre formen som kroppen, så R8-toppkanten og R8,5-hjørnene går rett over i fronten. Grillen er en egen, mørk flate på fronten med avrundede hjørner.
+- **Grill og front følger formen:** frontplaten er skåret fra den samme ytre formen som kroppen. Grillen er en egen, mørk flate på fronten med avrundede hjørner.
+
+**Hvorfor kanten bak.** Kroppen printes med bakveggen ned. Da blir alle de indre gulvene (lydkammergulvet, takrommets gulv og toppanelet) loddrette vegger, porten står rett opp, og ingenting trenger støtte. En hel R28-bue helt inn til bakveggen ville hengt over opp til 90° rett over printplata. Derfor stopper buen ved 45°. Andre retninger er vurdert:
+- **Stående på bunnen:** lydkammergulvet og toppanelet blir tak på over 100 mm, som ikke kan printes uten støtte.
+- **Med fronten ned:** bakveggen blir et tak på 112 × 134 mm.
+- **Med toppen ned:** lydkammergulvet blir tak, og toppkantene får samme problem som baksiden har nå.
+
+**Hjørnene foran** kunne vært større om fronten var smalere. Elementets ramme (Ø86 i en forsenkning i fronten) og grillen (93 mm) trenger en flat front på minst ca. 90 mm, og med 112 mm bredde gir det høyst R11. Et mindre element (2,5″) ville gitt plass til R16–20, men koster bass og effekt. R8,5 er valgt fordi buen da ender nøyaktig i skjøten, og fordi den er lik radiusen på alle toppkantene. Volumet og tuningen er uendret (se [Akustikk](#akustikk)).
+
+**Toppen.** Knappelista og rammen rundt ruta er like brede (67,6 mm), har samme kantbredde (1,6 mm) og samme hjørneradius (3,8 mm), og står begge 0,5 mm over toppen. Knappene sitter med 13,7 mm mellomrom, så de fyller lista jevnt. Under dem ligger ruta, og bakerst volumhjulet, alt på midtlinjen.
+
+**Baksiden.** Porten, DC-kontakten og USB-C sitter på én loddrett linje (x = −26, til siden for elementets magnet) med like store mellomrom (ca. 6 mm), og Skjold-merket (fem staver, 14 × 15 mm, preget 1 mm inn) sitter på samme linje over porten. Portens munning er en R8-bue som møter bakveggen i 45°, samme form som kantene rundt. DC- og USB-hullet har 0,6 mm fas. Den graverte teksten «SKJOLD RØST» er fjernet.
 
 **Ingen sort sokkel.** Bunnplaten og føttene er i samme lyse farge som kroppen, og TPU-pakningen nederst ligger i et spor innenfor ytterkanten, så den synes ikke som en mørk stripe. Fra siden er skjøten mellom kropp og bunn bare en tynn lys linje over den 0,8 mm brede dryppkanten. Det eneste mørke helt nede er frontplaten: den går ned til bunnen og bærer SKJOLD-logoen under grillen. Jeg har beholdt den mørke fronten med vilje. Sett fra siden og bakfra er Røst helt lys, og forfra leser den mørke fronten som et panel med logo, ikke som en sokkel, fordi den går hele veien opp til toppkanten. En lys front med bare grillen mørk ville gjort grillen til en løs flekk midt på og tatt bort kontrasten bak gull-logoen.
 
 **Flat topp og vann.** Toppen heller ikke lenger. Vann holdes ute slik:
-- en 0,5 mm hevet leppe rundt hvert knappehull og en ramme rundt skjermruta, så vann som renner på toppen går rundt hullene og fugene i stedet for ned i dem
+- en 0,5 mm hevet knappelist rundt knappehullene og en like høy ramme rundt skjermruta, så vann som renner på toppen går rundt hullene og fugene i stedet for ned i dem
 - TPU-kragen rundt dreieknappens aksel står 0,5 mm over toppen og dekkes av knotten
 - ruta er lagt på skumtape og tettet med silikon langs kanten
-- R8-kantene rundt toppen gjør at vann renner av over kanten i stedet for å bli stående i et skarpt hjørne.
+- R8,5-kantene rundt toppen gjør at vann renner av over kanten i stedet for å bli stående i et skarpt hjørne.
 
 Det er ingen skjult bombering, så toppen er helt flat. Vann som ligger på toppen eller på ruta (inne i rammen) må tørkes av.
 
@@ -49,7 +62,7 @@ Det er ingen skjult bombering, så toppen er helt flat. Vann som ligger på topp
 | PCM5102A I²S DAC-kort | 1 | SCK til GND, XSMT til 3V3, FMT/FLT/DEMP til GND |
 | TPA3118D2 mono PBTL-forsterkerkort | 1 | 12–24 V inn. Sjekk at kortet er satt opp for PBTL (mono). |
 | 2,42″ OLED 128×64 SSD1309, «I2C interface, white» (AliExpress «Zave», ca. 105 kr) | 1 | Kort 70,08 × ca. 39 mm, 4 hull Ø3 (62 mm i bredden), glass ca. 60 × 30,5 × 3,25 mm, aktivt område 55,4 × 27,7 mm. Pinneraden (GND VDD SCK SDA) vender bakover, flatkabelen fremover. Mål din modul og juster `pcbH`, `dHoleV`, `glW`/`glH` og `glOffV`. **Bruk vinklede pinner eller lodd ledningene rett på kortet**: takrommet er bare 8,5 mm høyt, og rette pinner med plasthus får ikke plass. Noen moduler må loddes om fra SPI til I²C (motstander på baksiden). |
-| Taktbryter 6 × 6 × 5 mm | 5 | Loddes på et hullkort på ca. 86 × 14 mm, sentrert under knappene (16 mm mellom) |
+| Taktbryter 6 × 6 × 5 mm | 5 | Loddes på et hullkort på ca. 86 × 14 mm, sentrert under knappene (13,7 mm mellom), skruehull ±38 mm |
 | M2 × 6 mm avstandsstykke + 4 M2 × 4 skruer | 2 | Holder knappekortet 6 mm bak frontplaten |
 | MP1584EN nedtrapper 12 V → 5 V | 1 | Still inn 5,0 V før du kobler til ESP-en |
 | DC-kontakt 5,5/2,1 mm for panel (Ø8 mm) | 1 | Med mutter. TPU-skiven legges under flensen utvendig. |
@@ -92,8 +105,8 @@ Ikke bruk GPIO0, 3, 45 eller 46 (oppstartspinner), GPIO19/20 (USB), GPIO26–32 
 
 ## Akustikk
 
-- Lydkammer: ca. 1,01 l luft mellom vegger, front, gulv og takrommet, ca. 0,96 l netto når et element (ca. 50 cm³) er satt inn (målt på `asm/luft.stl` av `sjekk_modell.py`). De runde hjørnene tar litt volum, men den flate toppen og 6 mm ekstra bredde gir det tilbake. Forrige utgave (skrå topp, R12-hjørner) hadde 1,02 l luft og 0,97 l netto målt på samme måte.
-- Bassrefleks: port Ø16 mm, 78 mm lang, nede til venstre i bakveggen (til siden for elementets magnet) og vendt bakover. Munningen er avrundet. Det gir en beregnet tuning på ca. 84 Hz (forrige utgave ca. 83 Hz med samme formel og samme port).
+- Lydkammer: ca. 1,02 l luft mellom vegger, front, gulv og takrommet, ca. 0,97 l netto når et element (ca. 50 cm³) er satt inn (målt på `asm/luft.stl` av `sjekk_modell.py`). Buene bak som går helt til 45°, uten fas, gir litt mer volum enn forrige utgave (1,01 l luft, 0,96 l netto).
+- Bassrefleks: port Ø16 mm, 78 mm lang, nede til venstre i bakveggen (til siden for elementets magnet) og vendt bakover. Munningen er en R8-bue. Det gir en beregnet tuning på ca. 83 Hz (forrige utgave ca. 84 Hz med samme formel og samme port).
 - **Takrommet:** skjermen og knappekortet ligger i et eget, lukket rom rett under toppen (ca. 56 cm³), adskilt fra lydkammeret av et 3 mm gulv. Da rasler ikke knappehettene med bassen, og takrommet påvirker ikke tuningen. Ledningene går gjennom et Ø6-hull i takrommets gulv og videre gjennom hullet i kammergulvet. Begge hullene tettes med silikon.
 - Dette er beregnet ut fra volum og port, ikke målt. Simuler ditt element i WinISD eller VituixCAD. Endre `portL` (lengre port gir lavere tuning) eller tett porten for et lukket kabinett.
 - Porten peker bakover, så sprut forfra ikke kommer inn i kammeret. La det være minst 5 cm luft bak Røst.
@@ -103,9 +116,9 @@ Ikke bruk GPIO0, 3, 45 eller 46 (oppstartspinner), GPIO19/20 (USB), GPIO26–32 
 
 - **Skjøten front–kropp:** kropp og frontplate er skåret fra samme ytre form, så sidene og toppen flukter helt (ingen trinn eller spalte). En smal skyggefuge (0,5 mm inn, 0,8 mm bred) gjør skjøten til en ren linje. Bak den ligger en TPU-pakning i et spor i kroppen, langs sidene, forkanten av takrommets gulv og forkanten av kammergulvet. Frontplaten trykker den 0,2 mm sammen.
 - **Bunnen:** en TPU-pakning i et spor rundt hele bunnplaten, under kroppen og frontplaten. Bunnen stikker 0,8 mm ut, har R2,5 avrundet underkant og en dryppnese på undersiden innenfor buen, så vann som renner nedover sidene drypper av i stedet for å trekke inn under. Føttene er 4 mm høye, så Røst ikke står i vann.
-- **Knappene:** fem printede knappehetter (av/på og 1–4) i hull i toppen, med 0,25 mm klaring rundt. De står 1,1 mm over toppen (0,6 mm over leppa rundt hullet) og har en flens under toppanelet. Leppa leder vann på toppen rundt hullet. **Hullene er ikke tette.** Vann som kommer på toppen kan renne ned langs hettene til takrommet. Vil du ha det tettere, smør en tynn ring silikonfett rundt hver hette før du setter den i, eller legg en dråpe nøytral silikon mellom flensen og panelet.
+- **Knappene:** fem printede knappehetter (av/på og 1–4) i hull i toppen, med 0,25 mm klaring rundt. De står 1,1 mm over toppen (0,6 mm over knappelista) og har en flens under toppanelet. Lista leder vann på toppen rundt hullene. **Hullene er ikke tette.** Vann som kommer på toppen kan renne ned langs hettene til takrommet. Vil du ha det tettere, smør en tynn ring silikonfett rundt hver hette før du setter den i, eller legg en dråpe nøytral silikon mellom flensen og panelet.
 - **Skjermen:** klar rute (akryl 1,5 mm, 64 × 36 mm) i en forsenkning i toppen, over et vindu tilpasset det aktive området, med fas, lagt på tynn dobbeltsidig skumtape (0,2 mm) eller lim. Ruta flukter med toppen, og en 0,5 mm hevet ramme rundt den holder vann på toppen borte fra fugen. En tynn streng silikon langs kanten gjør den tett.
-- **Toppen:** flat, med hevede lepper rundt knappene og ruta og en hevet TPU-krage under knotten (se [Formen](#formen)). Vann som renner av går over de avrundede kantene. Av forkanten drypper det ned foran grillen, der den vannavstøtende duken stopper det.
+- **Toppen:** flat, med hevet knappelist og ramme rundt ruta og en hevet TPU-krage under knotten (se [Formen](#formen)). Vann som renner av går over de avrundede kantene. Av forkanten drypper det ned foran grillen, der den vannavstøtende duken stopper det.
 - **Grillen:** en løs del som står 3 mm foran frontplaten, som på første Røst. Den trykkes på med 4 tapper med små klemribber, så den sitter stramt uten å rasle og kan trekkes av for rengjøring. Den vannavstøtende duken klemmes mellom grillen og frontplaten.
 - **Dreieknappen:** TPU-krage rundt akselen i en forsenkning i toppen. Den står 0,5 mm over toppen, og knotten dekker den.
 - **DC og USB-C bak:** TPU-skive under flensen på DC-kontakten. USB-C brukes bare til flashing, og har en TPU-propp ellers.
@@ -166,7 +179,7 @@ SKJOLD-logoen er et eget legeme (`logo.stl`) som ligger 0,6 mm inn i frontplaten
 6. Trekk ledningene fra skjerm og knapper gjennom hullet i takrommets gulv og ned i kammeret. Tett hullet med silikon.
 7. Monter EC11 gjennom toppen innenfra (bak takrommet). Trykk TPU-kragen ned over akselen i forsenkningen, og trykk på knotten.
 8. Legg elektronikken i rommet under gulvet:
-   - DC-kontakten (med TPU-skiven utvendig) og ESP32 (USB-C) skal sitte mot hullene bak.
+   - DC-kontakten (med TPU-skiven utvendig) og ESP32 (USB-C) skal sitte mot hullene bak. Midten av USB-C-hullet er 7 mm over bunnen, så legg ESP32-kortet på et par millimeter tykk tape eller avstandsbiter.
    - Fest kortene med dobbeltsidig tape eller lim.
    - Skru inn ePTFE-ventilen i hullet i bunnplaten.
 9. Trekk elementkabelen og ledningene fra takrommet gjennom hullet i gulvet, og tett med silikon.
@@ -186,7 +199,7 @@ SKJOLD-logoen er et eget legeme (`logo.stl`) som ligger 0,6 mm inn i frontplaten
   - ytterveggen er minst 1,6 mm overalt, utenom de tiltenkte hullene
   - kropp og frontplate flukter i skjøten
   - pakningene følger formen hele veien rundt (minst 0,5 mm materiale på hver side av sporet)
-  - lydkammerets volum og porttuning (0,96 l netto, ca. 84 Hz)
+  - lydkammerets volum og porttuning (0,97 l netto, ca. 83 Hz)
   - yttersiden av kropp, bunn og grill har ingen overheng brattere enn 50° i utskriftsretningen
 - Ikke testet: ingenting er printet eller bygget. Følgende må prøves:
   - passformen til element, innpressmuttere, grilltapper (klemribbene), knott, skjermlomme og knappehetter (0,25 mm klaring, flens)

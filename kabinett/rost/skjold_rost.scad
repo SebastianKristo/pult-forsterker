@@ -1,7 +1,7 @@
 // Skjold Røst – liten aktiv høyttaler (3″ fullrange, bassrefleks) for bad, kjøkken og barnerom. Parametrisk OpenSCAD.
 // Tåler damp (TPU-pakninger i skjøtene front/kropp og bunn, krage rundt EC11, DC-skive og USB-propp, ePTFE-ventil,
 // vannavstøtende duk bak grillen, port bakover). Knappene på toppen er vanlige printede knappehetter og er IKKE tette.
-// Skjerm og knapper sitter på toppen (flat topp, hevede lepper rundt knapper og rute), foran volumhjulet, i et eget rom
+// Skjerm og knapper sitter på toppen (flat topp, hevet knappelist og ramme rundt ruta), foran volumhjulet, i et eget rom
 // under toppen («takrommet»), adskilt fra lydkammeret. Grillen er en løs del som trykkes på fronten med 4 tapper.
 // Lisens: CC BY-NC-SA 4.0 (se LISENS-MASKINVARE.md).
 //
@@ -19,14 +19,14 @@ $fn = 72;
 
 // ---------- ytre mål ----------
 // Totalhøyde med bunn og føtter: H + bT + footH = 142 mm (2 mm lavere enn før, nå med flat topp).
-// Formen: myk «pute» sett ovenfra (R28 i hjørnene bak, R8,5 foran der den mørke fronten bretter rundt), flat topp
-// med R8 langs alle toppkantene, og den lyse bunnen avrundet nedover. Overgangene mot bakveggen (som ligger på
-// printplata) går over i 45° (bue til 45°, så en kort fas), så kroppen printes uten støtte med bakveggen ned.
+// Formen: én glatt, myk form. Ytterformen er en Minkowski-sum av en kjerne og en kule (r = 8,5), så alle kanter har
+// samme radius og alle overganger er glatte (ingen fasetter). Foran: R8,5 rundt hele fronten, akkurat frontplatens
+// tykkelse, så buen ender i skjøten. Bak: R28 i hjørnene sett ovenfra og R8,5 i toppkanten, begge som én bue som
+// møter den flate bakveggen i en ren 45°-kant. Kroppen printes med bakveggen ned, og ingen flate står brattere enn 45°.
 W = 112; D = 113; H = 134;      // kropp
-s = 0;                          // toppen er flat (fallet mot fronten er fjernet)
-Rb = 28;                        // hjørneradius bak sett ovenfra (bue til 45°, så fas ned mot bakveggen)
-Rf = 8.5;                       // hjørneradius foran = frontplatens tykkelse: buen ender akkurat i skjøten
-rT = 8;                         // radius langs toppkantene (sider, foran; bak: bue til 45° + fas)
+s = 0;                          // toppen er flat
+r = 8.5;                        // kantradius overalt (= frontplatens tykkelse)
+Rb = 28;                        // hjørneradius bak sett ovenfra (én bue som møter bakveggen i 45°)
 t = 2.6;                        // vegg (6 × 0,42 mm linjer)
 zf = 26;  ft = 2.4;             // gulv mellom elektronikkrommet (under) og lydkammeret (over)
 fT = 8.5;                       // frontplate (baffel)
@@ -45,7 +45,7 @@ drvPCD = 82; drvScrew = 2.6;    // skruehull (M3 selvgjengende)
 drvZ = 75;                      // elementets senter
 portD = 16; portW = 2.0;        // port innv. Ø og vegg
 portL = 78;                     // portlengde fra munningen bak → fb ≈ 84 Hz (se LES_MEG.md)
-portZ = 40; portX = -26; portFlare = 3; // lavt i bakveggen, til siden for magneten, peker bakover (ikke mot dusjen)
+portZ = 40; portX = -26; portFlare = 8; // lavt i bakveggen, til siden for magneten, peker bakover. Munningen: bue R8 som møter bakveggen i 45°
 
 // ---------- fester ----------
 ins = 4.0;  insD = 6.5;         // M3 innpressmutter (Ø4,0 hull, 6,5 dyp)
@@ -78,7 +78,7 @@ micX = 40;  micZ = 14; micD = 1.6;   // valgfri INMP441-mikrofon i fronten (ePTF
 // Mål fra produsentens tegning (mål din modul og juster): kort 70,08 × ca. 39 mm med 4 hull (Ø3, 62 mm i bredden),
 // glass ca. 60 × 30,5 mm og 3,25 mm tykt, aktivt område 55,4 × 27,7 mm, flatkabel nederst på midten (12,6 mm),
 // pinnerad (GND VDD SCK SDA) øverst. Toppen av modulen («øverst») vender bakover mot volumhjulet.
-dispV = 42;                      // senter av det aktive området (lokal v)
+dispV = 43;                      // senter av det aktive området (lokal v)
 actW = 55.4; actH = 27.7;        // aktivt område
 winW = actW + 0.6; winH = actH + 0.6;   // vindu (0,3 mm klaring), 45° fas utover mot ruta
 glW = 60.0; glH = 30.5; glT = 3.25;     // glass (lomme nedenfra med 0,4 mm klaring)
@@ -95,18 +95,25 @@ pcbV = dispV + glOffV + pcbOffV; // kortets senter (v)
 // ---------- knapper: av/på + favoritt 1–4 som printede knappehetter, foran skjermen ----------
 // Hetten går gjennom et hull i toppen og har en flens under toppanelet, så den ikke faller ut. Den hviler med en
 // liten nupp på taktbryteren (0,15 mm forspenning) – fjæra i bryteren holder flensen opp mot panelet.
-btnV = 10.5; btnX = [-32, -16, 0, 16, 32];  // [0] = av/på
+lipB = 1.6;                      // bredden på den hevede rammen rundt ruta og knappelista
+barW = 64 + 0.4 + 2 * lipB;      // knappelista er like bred som rammen rundt ruta (ruteW + 0,4 + 2 · lipB)
+barH = 9.5 + 2 * lipB;           // capHole + 2 · lipB
+btnS = (barW - barH) / 4;        // 13,7 mm mellom knappene
+btnV = 11; btnX = [for (i = [0:4]) (i - 2) * btnS];  // [0] = av/på
 capD = 9.0; capHole = 9.5;       // hette og hull (0,25 mm klaring rundt)
 capUp = 1.1;                     // hetten står 1,1 mm over toppen (0,6 mm over leppa rundt hullet), svakt avrundet
-lip = 0.5;                       // hevet leppe rundt knappehullene og skjermruta: vann på den flate toppen renner rundt, ikke ned i hullene
+lip = 0.5;                       // knappelista og rammen rundt ruta står 0,5 mm over toppen: vann på den flate toppen renner rundt, ikke ned i hullene
 flD = 12.0; flT = 0.9;           // flens under panelet
 nubD = 3.0;                      // nupp mot bryterens stempel
 tactH = 5.0;                     // 6 × 6 × 5 mm taktbryter (stempel 1,5 mm over huset)
 boardW = tp + 6.0;               // hullkortets overside under toppflaten (M2 × 6 mm avstandsstykker)
 swTop = -(boardW - tactH);       // toppen av bryterens stempel (w)
 nubTip = swTop - 0.15;           // nuppens spiss: 0,15 mm forspenning
-boardHoles = [[-41, btnV], [41, btnV]];
-dcD = 8.2;  usbW = 10; usbH = 4.4; dcX = -25; usbX = 15; connZ = 13;
+boardHoles = [[-38, btnV], [38, btnV]];
+// bak: port, DC og USB-C på én loddrett linje (x = ioX) med like store mellomrom, og Skjold-merket preget over dem
+ioX = -26;                       // samme x som porten (porten må stå til siden for elementets magnet)
+dcD = 8.2;  usbW = 10; usbH = 4.4; dcX = ioX; usbX = ioX; dcZ = 19.5; usbZ = 7;
+merkeS = 0.36; merkeT = 1.0; merkeZ = 64;   // Skjold-merket (fem staver), 14,4 × 15 mm, 1 mm dypt
 ventD = 12.5; ventP = [25, 60];  // ePTFE-trykkutjevning (M12 × 1,5) i bunnen av elektronikkrommet
 knobD = 34; knobH = 14; shaftD = 6.1; shaftFlat = 4.6;
 wireV = 50; wireX = 30;          // ledningsgjennomføring takrom → lydkammer → elektronikkrom (tettes med lim)
@@ -116,7 +123,7 @@ wireV = 50; wireX = 30;          // ledningsgjennomføring takrom → lydkammer 
 // mellom grillen og frontplaten (gGap = luft til duken).
 gT = 2.4; gGap = 0.6; gP = gT + gGap;
 pinD = 3.0; pinHole = 3.3; ribH = 0.25; pinL = 3.6;
-gW = 93; gZ0 = 31; gZ1 = z0 - rT - 2;
+gW = 93; gZ0 = 31; gZ1 = z0 - r - 2;
 gPins = [[-24, gZ0 + 4], [24, gZ0 + 4], [-24, gZ1 - 4], [24, gZ1 - 4]];
 
 c_lys = [0.93,0.92,0.90]; c_mork = [0.13,0.13,0.14]; c_gull = [0.85,0.62,0.25]; c_grill = [0.18,0.18,0.19];
@@ -125,52 +132,47 @@ c_tpu = [0.86,0.85,0.82]; c_knapp = [0.18,0.18,0.19]; c_klar = [0.80,0.90,0.95,0
 // ---------- hjelpere ----------
 module rrect(w, h, r) { offset(r) offset(-r) square([w, h], center = true); }
 module ytz(y0, y1) { translate([0, y0, 0]) rotate([-90, 0, 0]) linear_extrude(y1 - y0) mirror([0, 1, 0]) children(); } // 2D i (x, z) → y0…y1
-// grunnriss: R8,5 foran (ender i skjøten), R28 bak som går over i 45° mot bakveggen, fra y = −fT til D
-kB = (W/2 - Rb + Rb * cos(45)) + (D - Rb + Rb * sin(45));   // 45°-tangenten bak: |x| + y ≤ kB
+// Ytre form S = minkowski(kjerne, K). Kjernen er grunnrisset (skarpe hjørner foran, bue Rb − r bak som ender i 45°)
+// ekstrudert langs z. K er en kule med radius r, skåret av der normalen står 45° fra bakveggen. Bakveggen blir flat med
+// en jevn 45°-kant rundt, alle andre flater står minst 45° fra den (printes uten støtte med bakveggen ned).
+c45 = cos(45);
+module K(rr, kutt) { intersection() { sphere(rr / cos(180 / 48), $fn = 48);   // ($fn-kula er innskrevet: skaler så polene og ekvator når rr)
+ translate([-rr - 1, -rr - 1, -rr - 1]) cube([2 * rr + 2, rr + 1 + kutt, 2 * rr + 2]); } }
+module kjerne2d(yf) {   // y = yf foran; bak ved y = D − r·cos45
+  intersection() {
+    hull() {
+      for (sx = [-1, 1]) translate([sx * (W/2 - Rb), D - Rb * c45]) circle(Rb - r, $fn = 120);
+      for (sx = [-1, 1]) translate([sx * (W/2 - r), yf]) square(0.01, center = true);
+    }
+    translate([-W, yf - 1]) square([2 * W, D - r * c45 - yf + 1]);
+  }
+}
+// grunnrisset (snittet av S under toppkantene): R8,5 foran, R28 bak som møter bakveggen i 45°
 module plan2d(o = 0) {
   offset(delta = o) intersection() {
     hull() {
-      for (sx = [-1, 1]) translate([sx * (W/2 - Rb), D - Rb]) circle(Rb, $fn = 144);
-      for (sx = [-1, 1]) translate([sx * (W/2 - Rf), -fT + Rf]) circle(Rf);
-      for (sx = [-1, 1]) translate([sx * (kB - D), D - 0.005]) square(0.01, center = true);   // 45°-fasen ned mot bakveggen
+      for (sx = [-1, 1]) translate([sx * (W/2 - Rb), D - Rb * c45]) circle(Rb, $fn = 144);
+      for (sx = [-1, 1]) translate([sx * (W/2 - r), -fT + r]) circle(r);
     }
-    polygon([[-W, -fT - 1], [W, -fT - 1], [W, kB - W], [kB - D, D], [D - kB, D], [-W, kB - W]]);
+    translate([-W, -fT - 1]) square([2 * W, D + fT + 1]);
   }
 }
-// sideprofil (y, z): R8 på toppkanten foran (frontplaten), R8 bak som går over i 45° mot bakveggen
-kT = (D - rT + rT * cos(45)) + (H - rT + rT * sin(45));     // y + z ≤ kT
-module side2d(o = 0) {
-  offset(delta = -o) intersection() {
-    hull() { translate([-fT, -2]) square([fT + D, 1]); translate([-fT + rT, H - rT]) circle(rT); translate([D - rT, H - rT]) circle(rT);
-      translate([D - 0.005, kT - D]) square(0.01, center = true); translate([kT - H, H - 0.005]) square(0.01, center = true); }
-    polygon([[-fT - 1, -3], [D + 1, -3], [D + 1, kT - D - 1], [kT - H - 1, H + 1], [-fT - 1, H + 1]]);
-  }
-  if (o > 0) translate([-fT + o, -5]) square([fT + D - 2 * o, H / 2 + 5]);
-}
-// frontprofil (x, z): R8 på toppkantene langs sidene
+// tverrsnitt (x, z) foran: rette sider, R8,5 i toppen
 module front2d(o = 0) {
-  offset(delta = -o) hull() { translate([-W/2, -2]) square([W, 1]); for (sx = [-1, 1]) translate([sx * (W/2 - rT), H - rT]) circle(rT); }
+  offset(delta = -o) hull() { translate([-W/2, -2]) square([W, 1]); for (sx = [-1, 1]) translate([sx * (W/2 - r), H - r]) circle(r); }
   if (o > 0) translate([-W/2 + o, -5]) square([W - 2 * o, H / 2 + 5]);
 }
-module ytx(o) { translate([-W, 0, 0]) rotate([90, 0, 90]) linear_extrude(2 * W) side2d(o); }   // (y, z) langs x
-// skjær z med y, så et flatt lag blir parallelt med den skrå toppen
+// skjær z med y, så et flatt lag blir parallelt med toppen (toppen er flat nå, s = 0)
 module shear() { multmatrix([[1, 0, 0, 0], [0, 1, 0, 0], [0, kS, 1, 0], [0, 0, 0, 1]]) children(); }
-module S() {   // ytre form: snittet av grunnrisset, sideprofilen og frontprofilen
+module S() {
   intersection() {
-    linear_extrude(H + 1) plan2d();
-    ytx(0);
-    ytz(-fT - 1, D + 1) front2d(0);
+    minkowski() { translate([0, 0, -r]) linear_extrude(H) kjerne2d(-fT + r); K(r, r * c45); }
+    translate([-W, -fT - 1, 0]) cube([2 * W, D + fT + 2, H + 1]);
   }
 }
 // innvendig hulrom: veggene og toppen t (åpent nedover og forover)
-module Sin() {
-  intersection() {
-    translate([0, 0, -2]) linear_extrude(H + 2) plan2d(-t);
-    ytx(t);
-    ytz(-fT - 1, D + 1) front2d(t);
-  }
-}
-// tverrsnitt i (x, z) i skjøten (y = 0): rette sider, R8 i toppen
+module Sin() { minkowski() { translate([0, 0, -20]) linear_extrude(H - r + 20) kjerne2d(-30); K(r - t, r * c45 - t); } }
+// tverrsnitt i (x, z) i skjøten (y = 0): rette sider, R8,5 i toppen
 module snitt2d(o = 0) { front2d(-o); }
 module skyggefuge() { ytz(-seamD, seamD) difference() { snitt2d(1); snitt2d(-seamW); } }
 // U-spor og U-pakning i skjøten (sider + under takrommet + over gulvet), i (x, z)
@@ -194,15 +196,31 @@ module tak_blokk() {
 }
 
 // ---------- kropp ----------
-// Den flate toppen har en 0,5 mm hevet leppe rundt hvert knappehull og en ramme rundt skjermruta, og TPU-kragen
+// Den flate toppen har en 0,5 mm hevet knappelist og en like høy ramme rundt skjermruta (samme bredde og radius), og TPU-kragen
 // tetter volumhjulet. Vann på toppen blir stående i et tynt lag og renner av over de avrundede kantene, ikke ned i hullene.
 module lepper() {
-  panel() {
-    for (x = btnX) translate([x, btnV, -0.01]) difference() { cylinder(d = capHole + 3.6, h = lip + 0.01); translate([0, 0, -1]) cylinder(d = capHole + 1.2, h = 3); }
-    translate([0, dispV, -0.01]) linear_extrude(lip + 0.01) difference() { rrect(ruteW + 3.6, ruteH + 3.6, 3.4); rrect(ruteW + 0.4, ruteH + 0.4, 2.2); }
+  panel() translate([0, 0, -0.01]) linear_extrude(lip + 0.01) {
+    translate([0, dispV]) difference() { rrect(ruteW + 0.4 + 2 * lipB, ruteH + 0.4 + 2 * lipB, 2.2 + lipB); rrect(ruteW + 0.4, ruteH + 0.4, 2.2); }   // ramme rundt ruta
+    translate([0, btnV]) difference() { rrect(barW, barH, 2.2 + lipB); for (x = btnX) translate([x, 0]) circle(d = capHole); }       // knappelista
   }
 }
-module kropp() { union() { kropp_basis(); lepper(); } }
+module kropp() {
+  difference() {
+    union() { kropp_basis(); lepper(); }
+    panel() for (x = btnX) translate([x, btnV, lip - 0.6]) cylinder(d1 = capHole, d2 = capHole + 1.2, h = 0.61);   // fas i knappehullene
+  }
+}
+// portens munning: bue med radius portFlare fra boringen til 45° mot bakveggen (h = dybde inn fra bakveggen)
+module port_munning() {
+  hc = portFlare * c45;
+  rotate_extrude($fn = 72) polygon(concat([[0, -1], [portD/2 + portFlare * (1 - c45), -1]],
+    [for (a = [45:-5:0]) [portD/2 + portFlare * (1 - cos(a)), hc - portFlare * sin(a)]], [[portD/2, hc + 1], [0, hc + 1]]));
+}
+// Skjold-merket: fem avrundede staver (som branding/skjold/skjold_merke.svg), sentrert
+module merke2d(sc) {
+  scale(sc) for (b = [[1, 22], [9, 33], [18.7, 42], [28.4, 33], [36.4, 22]])
+    translate([b[0] - 21, 21 - b[1]]) hull() for (y = [2.3, b[1] - 2.3]) translate([2.3, y]) circle(2.3, $fn = 24);
+}
 module kropp_basis() {
   difference() {
     intersection() {
@@ -216,6 +234,7 @@ module kropp_basis() {
         intersection() { Sin(); ytz(0, rimT) difference() { translate([-xi, -1]) square([2 * xi, H]); translate([-xi + rimW, -2]) square([2 * (xi - rimW), cBot0 - rimW + 2]); } }
         // bassrefleksport (bak)
         translate([portX, D - portL, portZ]) rotate([-90, 0, 0]) cylinder(d = portD + 2 * portW, h = portL);
+        translate([portX, D - 9, portZ]) rotate([-90, 0, 0]) cylinder(d = portD + 2 * portW + 6, h = 9);   // krage rundt den utvidede munningen
         // frontplatens skruetårn, med ribbe ut til sideveggen
         for (sx = [-1, 1], z = fz) hull() {
           translate([sx * fbx, 0, z]) rotate([-90, 0, 0]) cylinder(d = boss, h = D - t + 0.01);
@@ -233,7 +252,7 @@ module kropp_basis() {
     for (sx = [-1, 1], y = by) translate([sx * bx, y, -0.01]) cylinder(d = ins, h = insD);
     // portboring med avrundet munning bak
     translate([portX, D - portL - 1, portZ]) rotate([-90, 0, 0]) cylinder(d = portD, h = portL + 2);
-    translate([portX, D - portFlare, portZ]) rotate([-90, 0, 0]) cylinder(d1 = portD, d2 = portD + 2 * portFlare, h = portFlare + 0.01);
+    translate([portX, D, portZ]) rotate([90, 0, 0]) port_munning();
     // takrommet (lukket rom under toppen for skjerm og knapper)
     panel() tak_hulrom();
     panel() {
@@ -251,7 +270,6 @@ module kropp_basis() {
       for (sx = [-1, 1], sv = [-1, 1]) translate([sx * dHoleX, pcbV + sv * dHoleV, -tp - 0.01]) cylinder(d = 1.8, h = 4.5);   // M2 selvgjengende
       // knapper: hull for hettene (fas på kanten), hull for knappekortets avstandsstykker
       for (x = btnX) translate([x, btnV, -tp - 1]) cylinder(d = capHole, h = tp + 2);
-      for (x = btnX) translate([x, btnV, -0.6]) cylinder(d1 = capHole, d2 = capHole + 1.2, h = 0.61);
       for (b = boardHoles) translate([b[0], b[1], -tp - 0.01]) cylinder(d = 1.7, h = 4.0);
       // ledninger fra takrommet ned i lydkammeret (tettes med lim)
       translate([wireX, wireV, -tp - hR - cT - 1]) cylinder(d = 6, h = cT + 2);
@@ -259,13 +277,15 @@ module kropp_basis() {
     // gjennomføring for høyttalerkabel i gulvet (tettes med lim)
     translate([wireX, 85, zf - 1]) cylinder(d = 6, h = ft + 2);
     // bak: DC-kontakt og USB-C (ESP32) i elektronikkrommet
-    translate([dcX, D - t - 1, connZ]) rotate([-90, 0, 0]) cylinder(d = dcD, h = t + 2);
-    translate([usbX, D - t - 1, connZ]) rotate([-90, 0, 0]) linear_extrude(t + 2) rrect(usbW, usbH, 1.6);
+    translate([dcX, D - t - 1, dcZ]) rotate([-90, 0, 0]) cylinder(d = dcD, h = t + 2);
+    translate([dcX, D + 0.01, dcZ]) rotate([90, 0, 0]) cylinder(d1 = dcD + 1.2, d2 = dcD, h = 0.61);   // 0,6 mm fas
+    translate([usbX, D - t - 1, usbZ]) rotate([-90, 0, 0]) linear_extrude(t + 2) rrect(usbW, usbH, 1.6);
+    translate([usbX, D + 0.01, usbZ]) rotate([90, 0, 0]) hull() { linear_extrude(0.01) rrect(usbW + 1.2, usbH + 1.2, 2.2); translate([0, 0, 0.6]) linear_extrude(0.01) rrect(usbW, usbH, 1.6); }
     // spor for frontpakningen og skyggefuge
     ytz(-0.01, gkD) front_gk2d(gkW);
     skyggefuge();
-    // gravert navn bak
-    translate([0, D - 0.59, 100]) rotate([90, 0, 180]) linear_extrude(0.6) text("SKJOLD RØST", size = 5, font = "Liberation Sans:style=Bold", halign = "center", valign = "center");
+    // Skjold-merket preget i bakveggen, over porten
+    translate([ioX, D + 0.01, merkeZ]) rotate([90, 0, 0]) linear_extrude(merkeT + 0.01) merke2d(merkeS);
   }
 }
 
@@ -382,9 +402,9 @@ module pakning_front(th = gkT) { ytz(0, th) front_gk2d(gkB, 0); }
 module pakning_bunn(th = gkT) { translate([0, 0, -th]) linear_extrude(th) bunn_gk2d(gkB); }
 module rute() { panel() translate([0, dispV, -ruteT]) linear_extrude(ruteT) rrect(ruteW, ruteH, 2); }
 module krage() { panel() translate([0, ec11V, -krageS]) difference() { cylinder(d = krageD - 0.4, h = krageS + 0.5); translate([0, 0, -1]) cylinder(d = 5.6, h = 4); } }
-module dc_skive() { translate([dcX, D, connZ]) rotate([-90, 0, 0]) difference() { cylinder(d = 13, h = 1.0); translate([0, 0, -1]) cylinder(d = dcD + 0.1, h = 3); } }
+module dc_skive() { translate([dcX, D, dcZ]) rotate([-90, 0, 0]) difference() { cylinder(d = 13, h = 1.0); translate([0, 0, -1]) cylinder(d = dcD + 0.1, h = 3); } }
 module usb_propp() {
-  translate([usbX, D, connZ]) rotate([-90, 0, 0]) {
+  translate([usbX, D, usbZ]) rotate([-90, 0, 0]) {
     translate([0, 0, -t]) linear_extrude(t + 0.01) rrect(usbW - 0.2, usbH - 0.2, 1.5);
     linear_extrude(1.0) hull() { rrect(usbW + 5, usbH + 4, 2.5); translate([usbW/2 + 6, 0]) circle(d = usbH + 4); }   // flens med grep-flik
   }

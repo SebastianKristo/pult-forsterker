@@ -6,11 +6,11 @@ Krever trimesh og manifold3d. Sjekker:
   1. alle utskrifts-STL-er i stl/ er vanntette, ett legeme, ligger på platen (min z = 0) og passer på 250 × 250 mm
   2. ingen deler overlapper i montert stilling (par som skal ligge an mot hverandre har bare kontaktflater)
   3. kroppens yttervegg er hel: stråler inn fra sidene, toppen og baksiden treffer ≥ 1,6 mm materiale overalt,
-     bortsett fra de tiltenkte hullene (port, DC, USB, EC11, gravert navn)
+     bortsett fra de tiltenkte hullene (port, DC, USB, EC11, preget merke)
   4. kroppen og frontplaten flukter i skjøten (samme ytterkant på begge sider av y = 0)
   5. pakningene følger den nye formen: frontpakningen ligger innenfor kroppens snitt i skjøten, bunnpakningen innenfor
      kroppens grunnriss, begge med ≥ 0,5 mm til yttersiden
-  6. lydkammeret: netto volum og porttuning (fb) holdes nær forrige utgave (ca. 0,97 l og 83 Hz med samme regnemåte)
+  6. lydkammeret: netto volum og porttuning (fb) holdes nær forrige utgave (0,92–1,05 l netto, 80–86 Hz)
   7. utskrift uten støtte: kroppens, bunnens og grillens yttersider har ingen flater brattere enn 50° i printretningen"""
 import itertools
 import sys
@@ -72,9 +72,10 @@ print("OK  ingen overlapp i montert stilling" if not olap else "FEIL overlapp: "
 # --- yttervegg ---
 k = A["kropp"]
 W, D, H, t = 112, 113, 134, 2.6
-# (flate, senter u, senter v, radius) – tiltenkte åpninger. Toppen: v ≈ y (toppen heller bare ≈ 2,4°).
-HOLES = [("bak", -26, 40, 11.5), ("bak", -25, 13, 4.5), ("bak", 15, 13, 5.6), ("bak", 0, 100, 18),
-         ("topp", 0, 88, 6.6), ("topp", 0, 42, 33.0)] + [("topp", x, 10.5, 5.6) for x in (-32, -16, 0, 16, 32)]
+# (flate, senter u, senter v, radius) – tiltenkte åpninger. Toppen: v = y (flat topp).
+# Bak: port, DC, USB-C og Skjold-merket på én linje (x = −26).
+HOLES = [("bak", -26, 40, 11.5), ("bak", -26, 19.5, 5.3), ("bak", -26, 7, 6.4), ("bak", -26, 64, 9.5),
+         ("topp", 0, 88, 6.6), ("topp", 0, 43, 33.0)] + [("topp", (i - 2) * 13.725, 11, 5.6) for i in range(5)]
 
 
 def wall(face, u, v):
@@ -152,7 +153,7 @@ fb = 343 / (2 * np.pi) * np.sqrt(np.pi * (PORT_D / 2) ** 2 / (netto / 1000 * (PO
 good = 0.92 < netto < 1.05 and 80 < fb < 86
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} lydkammer: {luft:.2f} l luft, {netto:.2f} l netto, port Ø16 × 78 mm → fb ≈ {fb:.0f} Hz "
-      f"(forrige utgave: 1,02 l luft, 0,97 l netto, Ø16 × 78 mm → ca. 83 Hz med samme regnemåte)")
+      f"(forrige utgave med fas bak: 1,01 l luft, 0,96 l netto → ca. 84 Hz)")
 
 # --- utskrift uten støtte: yttersidene (nær det konvekse skallet) har ingen flater brattere enn 50° ---
 res = []
