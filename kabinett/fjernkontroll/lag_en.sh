@@ -26,4 +26,5 @@ for fn, (title, parts, colors) in L.plater("kort").items():
 title, parts, colors = L.PLATES["skjold-fjernkontroll-k2.3mf"]
 L.write("skjold-fjernkontroll-enkel-k2-dokk.3mf", "Skjold Fjernkontroll Enkel – topp og bunn med dokk-kontakt", [("bunn_dokk" if p[0] == "bunn" else p[0],) + p[1:] for p in parts], colors)
 L.write("skjold-fjernkontroll-enkel-k2-taster-uten-gull.3mf", *(lambda t, p, c: (t.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Enkel"), p, c))(*L.uten_gull("")))
+L.write("skjold-fjernkontroll-enkel-k2-taster-gull.3mf", *(lambda t, p, c: (t.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Enkel"), p, c))(*L.gull()))
 PY

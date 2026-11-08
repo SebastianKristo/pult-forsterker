@@ -140,6 +140,14 @@ def uten_gull(front="oppsett_rutenett/"):
     ], {1: "#ECE9E3", 2: "#2E2D2C"})
 
 
+def gull():
+    """Bare gulldelene: ringen rundt D-paden og Skjold-tasten, med de mørke symbolene (piler og Skjold-merket)."""
+    return ("Skjold Fjernkontroll – gulldelene", [
+        ("gull", "Gullring (D-pad) og Skjold-tast (flensen ned)", 3, (60, 40), None),
+        ("symboler_morke", "Symboler på gulldelene (piler og Skjold-merke)", 2, None, "gull"),
+    ], {2: "#2E2D2C", 3: "#D99E40"})
+
+
 def plater(variant):
     """{filnavn: (tittel, deler, farger)} for varianten. Full variant er 254,5 mm, lengre enn plata (250 mm):
     toppen og bunnen ligger da på hver sin plate, på skrå (45°)."""
@@ -169,6 +177,7 @@ def plater(variant):
         ut[f"{pre}-taster-{b}.3mf"] = (tt(t2), p2, c2)
     if variant == "kort":
         ut["skjold-fjernkontroll-k2-taster-uten-gull.3mf"] = uten_gull()
+        ut["skjold-fjernkontroll-k2-taster-gull.3mf"] = gull()
     return ut
 
 
