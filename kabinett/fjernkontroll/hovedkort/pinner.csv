@@ -1,0 +1,42 @@
+modulpinne,GPIO,nett,funksjon
+1,,GND,jord
+2,,3V3,forsyning
+3,,EN,"reset (10 kΩ / 1 µF, RESET-knapp)"
+4,GPIO4,IR_TX,IR-sender (→ Q4)
+5,GPIO5,IR_RX,IR-mottaker VS1838B
+6,GPIO6,VIB_SW,"vibrasjonsbryter (vekking, ext1)"
+7,GPIO7,TCA_INT,"INT fra 3 × TCA9555 (vekking, ext0)"
+8,GPIO15,SKJ_PA,"3V3_SW av/på (Q2, lav = på)"
+9,GPIO16,MOTOR,vibrasjonsmotor (→ Q5)
+10,GPIO17,CHRG,TP4056 CHRG (lav = lader)
+11,GPIO18,T_SDA,I²C SDA berøring (3V3_SW)
+12,GPIO8,SDA,I²C SDA (TCA9555)
+13,GPIO19,USB_DN,USB D−
+14,GPIO20,USB_DP,USB D+
+15,,(åpen),
+16,,(åpen),
+17,GPIO9,SCL,I²C SCL (TCA9555)
+18,GPIO10,T_INT,berøring INT
+19,GPIO11,LCD_MOSI,skjerm SPI MOSI
+20,GPIO12,LCD_SCK,skjerm SPI SCK
+21,GPIO13,LCD_DC,skjerm DC
+22,GPIO14,LCD_RES,skjerm RES
+23,GPIO21,LCD_BL,baklys PWM (→ Q3)
+24,,(åpen),
+25,,(åpen),
+26,,(åpen),
+27,GPIO0,BOOT,BOOT-knapp (strappinne)
+28,,(åpen),
+29,,(åpen),
+30,,(åpen),
+31,GPIO38,T_SCL,I²C SCL berøring (3V3_SW)
+32,,(åpen),
+33,,(åpen),
+34,,(åpen),
+35,,(åpen),
+36,GPIO44,U0RXD,UART RX (testpunkt)
+37,GPIO43,U0TXD,UART TX (testpunkt)
+38,GPIO2,T_RST,berøring RST
+39,GPIO1,VBAT_ADC,batterispenning (1 M / 1 M)
+40,,GND,jord
+41,,GND,jord

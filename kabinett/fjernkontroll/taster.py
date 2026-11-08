@@ -7,6 +7,7 @@ Kjør:  python3 taster.py
                                               hver bryter → TCA9555-brikke og pinne)
            ../../esphome/skjold-fjernkontroll.yaml       (standard/kort: blokkene mellom «# >>> navneliste/hendelser/taster» og «# <<< …»)
            ../../esphome/skjold-fjernkontroll-full.yaml  (laget fra den over, med full variants taster og 3 × TCA9555)
+           ../../esphome/skjold-fjernkontroll-hovedkort.yaml  (standard på hovedkortet: samme taster, hovedkortets GPIO-er)
   og skriver koblingstabellen for standard (kort) til stdout, til LES_MEG.md (python3 taster.py full for full).
 
 Koordinater: x = tvers (0 … W, venstre kant = 0), n = avstand fra nesen (IR-enden) målt langs fjernkontrollen.
@@ -439,6 +440,60 @@ def full_yaml(kort):
     return hode + k
 
 
+def hovedkort_yaml(kort):
+    """esphome/skjold-fjernkontroll-hovedkort.yaml: standardvarianten (kort) på det ferdige hovedkortet
+    (hovedkort/kretser.py): ESP32-S3-WROOM-1 i stedet for SuperMini, og vibrator, skjermstrøm og ladestatus
+    på egne GPIO-er i stedet for på TCA9555. Tastene og TCA9555-adressene er de samme."""
+    k = kort
+    for a, b in [
+            ("# Dette er standardvarianten (uten talltastene og smarthus-raden). Full variant med talltaster og smarthus-rad:\n"
+             "# skjold-fjernkontroll-full.yaml, laget av kabinett/fjernkontroll/taster.py fra denne fila.\n", ""),
+            ("ESP32-S3 SuperMini, 2,8″", "hovedkortet (ESP32-S3-WROOM-1-N4R2), 2,8″"),
+            ("3 × TCA9555 på tastekortet (8 faste taster + vibrator, skjermstrøm og ladestatus, og 35 brytere",
+             "3 × TCA9555 på hovedkortet (8 faste taster og 35 brytere"),
+            ("(TCA9555 INT → GPIO2) eller av at du løfter den\n#     (vibrasjonsbryter → GPIO4).",
+             "(TCA9555 INT → GPIO7) eller av at du løfter den\n#     (vibrasjonsbryter → GPIO6)."),
+            ("# Pinnene er Skjolds eget oppsett for SuperMini (se koblingstabellen i LES_MEG.md). IKKE TESTET PÅ MASKINVARE.",
+             "# Pinnene følger hovedkortet (kabinett/fjernkontroll/hovedkort/kretser.py, pinnetabellen i LES_MEG.md). IKKE TESTET PÅ MASKINVARE."),
+            ("  ekstra_hub: tca_c                  # brikken med vibrator, skjermstrøm og ladestatus (full variant: tca_d)\n", ""),
+            ("(AO3401 via TCA9555)", "(AO3401, GPIO15)"),
+            ("  board: esp32-s3-devkitc-1          # ESP32-S3 SuperMini (ESP32-S3FH4R2: 4 MB flash, 2 MB PSRAM)",
+             "  board: esp32-s3-devkitc-1          # ESP32-S3-WROOM-1-N4R2 (4 MB flash, 2 MB PSRAM)"),
+            ("  - id: bus_a                        # tastekortet (2 × TCA9555, full variant 3)\n    sda: GPIO5\n    scl: GPIO6",
+             "  - id: bus_a                        # 3 × TCA9555 (4,7 kΩ til 3V3)\n    sda: GPIO8\n    scl: GPIO9"),
+            ("    sda: GPIO8\n    scl: GPIO3                       # strappe-pinne, men bare for JTAG-valg (eFuse) – trygg med pull-up",
+             "    sda: GPIO18\n    scl: GPIO38                      # pull-up til 3V3_SW: bussen er død når skjermstrømmen er av"),
+            ("  clk_pin: GPIO9\n  mosi_pin: GPIO10", "  clk_pin: GPIO12\n  mosi_pin: GPIO11"),
+            ("    id: baklys_pwm\n    pin: GPIO13", "    id: baklys_pwm\n    pin: GPIO21                      # → AO3400 (Q3) på LED-katoden"),
+            ("    pin: { tca9555: $ekstra_hub, number: 13, mode: { output: true }, inverted: true }   # lav = på",
+             "    pin: { number: GPIO15, inverted: true }   # AO3401 (Q2), lav = på (100 kΩ holder den av i søvn)"),
+            ("    pin: { tca9555: $ekstra_hub, number: 12, mode: { output: true } }",
+             "    pin: GPIO16                      # → 1 kΩ → AO3400 (Q5) → motoren"),
+            ("    dc_pin: GPIO11\n    reset_pin: GPIO12                # deles med berøringens RST",
+             "    dc_pin: GPIO13\n    reset_pin: GPIO14"),
+            ("    i2c_id: bus_b\n    interrupt_pin: GPIO7", "    i2c_id: bus_b\n    interrupt_pin: GPIO10\n    reset_pin: GPIO2"),
+            ("  pin: GPIO43                        # → 1 kΩ → AO3400 → 3 × IR-diode 940 nm (hver med 10 Ω fra batteriet)",
+             "  pin: GPIO4                         # → 100 Ω → AO3400 (Q4) → 3 × IR-diode 940 nm på IR-kortet"),
+            ("  pin: { number: GPIO44, inverted: true }   # VS1838B (aktiv lav)",
+             "  pin: { number: GPIO5, inverted: true }    # VS1838B (aktiv lav)"),
+            ("  wakeup_pin: { number: GPIO2, inverted: true, mode: { input: true } }   # TCA9555 INT (felles, 10 kΩ til 3V3)",
+             "  wakeup_pin: { number: GPIO7, inverted: true, mode: { input: true } }   # TCA9555 INT (felles, 10 kΩ til 3V3)"),
+            ("    pins: [ { number: GPIO4, allow_other_uses: true } ]   # vibrasjonsbryter SW-18010P mellom 3V3 og GPIO4 (1 MΩ ned)",
+             "    pins: [ { number: GPIO6, allow_other_uses: true } ]   # vibrasjonsbryter SW-18010P mellom 3V3 og GPIO6 (1 MΩ ned)"),
+            ("    pin: GPIO1                       # VBAT via 2 × 220 kΩ", "    pin: GPIO1                       # VBAT via 2 × 1 MΩ og 100 nF"),
+            ("    pin: { tca9555: $ekstra_hub, number: 14, mode: { input: true }, inverted: true }   # TP4056 CHRG (lav = lader)",
+             "    pin: { number: GPIO17, inverted: true }   # TP4056 CHRG (åpen drain, 10 kΩ til 3V3; lav = lader)"),
+            ("    pin: { number: GPIO4, mode: { input: true }, allow_other_uses: true }",
+             "    pin: { number: GPIO6, mode: { input: true }, allow_other_uses: true }")]:
+        assert k.count(a) == 1, a
+        k = k.replace(a, b)
+    assert "ekstra_hub" not in k and "GPIO43" not in k and "GPIO3\n" not in k
+    hode = ("# HOVEDKORT – laget av kabinett/fjernkontroll/taster.py fra skjold-fjernkontroll.yaml. Ikke rediger her: endre\n"
+            "# skjold-fjernkontroll.yaml og kjør python3 taster.py. Samme fjernkontroll (samme navn, taster og hendelser) på det\n"
+            "# ferdige kretskortet i kabinett/fjernkontroll/hovedkort/ i stedet for den håndkoblede SuperMini-versjonen.\n")
+    return hode + k
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     deler, yml = [], os.path.join(here, "..", "..", "esphome", "skjold-fjernkontroll.yaml")
@@ -468,6 +523,8 @@ def main():
         open(yml, "w").write(ny)
     bruk("full")
     open(yml.replace(".yaml", "-full.yaml"), "w").write(full_yaml(ny))
+    bruk("kort")
+    open(yml.replace(".yaml", "-hovedkort.yaml"), "w").write(hovedkort_yaml(ny))
     bruk("kort")
     import sys
     if len(sys.argv) > 1:
