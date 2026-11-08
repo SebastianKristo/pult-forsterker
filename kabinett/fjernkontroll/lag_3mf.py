@@ -76,6 +76,7 @@ def place(parts):
     return out
 
 
+OBJ_INNST = {}   # {delnavn: {innstilling: verdi}} – ekstra objektinnstillinger (brukes av andre produkter, f.eks. Røst Rund)
 TOPP_INNST = {"brim_type": "outer_only", "brim_width": "5", "brim_object_gap": "0",
               "initial_layer_speed": "25", "initial_layer_infill_speed": "25"}
 
@@ -88,7 +89,8 @@ def write(fn, title, parts, colors):
         # toppen er lang og flat og løfter seg ved halen: brim og sakte første lag som egne objektinnstillinger
         # (Creality Print / OrcaSlicer leser dem fra model_settings.config; platetemperatur og vifter er filament-
         # innstillinger og kan ikke legges på et objekt)
-        ekstra = "".join(f'<metadata key="{k}" value="{v}"/>' for k, v in TOPP_INNST.items()) if f == "topp" or f.endswith("/topp") else ""
+        innst = TOPP_INNST if f == "topp" or f.endswith("/topp") else OBJ_INNST.get(f, {})
+        ekstra = "".join(f'<metadata key="{k}" value="{v}"/>' for k, v in innst.items())
         cfg.append(f'<object id="{i}"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/>{ekstra}'
                    f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/></part></object>')
     farger = ";".join(f"{k}={v}" for k, v in sorted(colors.items()))
@@ -140,6 +142,14 @@ def uten_gull(front="oppsett_rutenett/"):
     ], {1: "#ECE9E3", 2: "#2E2D2C"})
 
 
+def gull():
+    """Bare gulldelene: ringen rundt D-paden og Skjold-tasten, med de mørke symbolene (piler og Skjold-merket)."""
+    return ("Skjold Fjernkontroll – gulldelene", [
+        ("gull", "Gullring (D-pad) og Skjold-tast (flensen ned)", 3, (60, 40), None),
+        ("symboler_morke", "Symboler på gulldelene (piler og Skjold-merke)", 2, None, "gull"),
+    ], {2: "#2E2D2C", 3: "#D99E40"})
+
+
 def plater(variant):
     """{filnavn: (tittel, deler, farger)} for varianten. Full variant er 254,5 mm, lengre enn plata (250 mm):
     toppen og bunnen ligger da på hver sin plate, på skrå (45°)."""
@@ -169,6 +179,7 @@ def plater(variant):
         ut[f"{pre}-taster-{b}.3mf"] = (tt(t2), p2, c2)
     if variant == "kort":
         ut["skjold-fjernkontroll-k2-taster-uten-gull.3mf"] = uten_gull()
+        ut["skjold-fjernkontroll-k2-taster-gull.3mf"] = gull()
     return ut
 
 
