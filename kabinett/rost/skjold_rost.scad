@@ -44,9 +44,13 @@ rimW = 2.4; rimT = 2.0;         // leppe innvendig i kroppen som frontplaten lig
 seamW = 0.5; seamD = 0.4;       // skyggefuge rundt skjøten: 0,5 mm inn, 2 × 0,4 mm bred
 
 // ---------- element og port ----------
-drvCut = 72;                    // utsparing for 3″-element (sjekk ditt element, typisk 70–74 mm)
-drvRec = 86; drvRecD = 2.5;     // forsenkning for elementets ramme
-drvPCD = 82; drvScrew = 2.6;    // skruehull (M3 selvgjengende)
+// elementet: mål fra malen i ../elementer/elementer.scad (velg med element = "...", eller legg inn ditt eget der)
+include <../elementer/elementer.scad>
+element = "rs75_4";
+E = el_data(element);
+drvCut = el_utsp(E);            // utsparing
+drvRecD = 2.5;                  // forsenkning for elementets ramme (rammens form og mål fra malen, 0,3 mm klaring)
+drvScrew = 2.6;                 // skruehull (M3 selvgjengende)
 drvZ = 75;                      // elementets senter
 portD = 16; portW = 2.0;        // port innv. Ø og vegg
 portL = 78;                     // portlengde fra munningen bak → fb ≈ 84 Hz (se LES_MEG.md)
@@ -313,8 +317,8 @@ module front() {
     for (p = gPins) translate([p[0], -fT - 0.01, p[1]]) rotate([-90, 0, 0]) cylinder(d = pinHole, h = pinL + 0.3);
     // element: utsparing, forsenkning for rammen og skruehull
     translate([0, 1, drvZ]) rotate([90, 0, 0]) cylinder(d = drvCut, h = fT + 2);
-    translate([0, -fT - 0.01, drvZ]) rotate([-90, 0, 0]) cylinder(d = drvRec, h = drvRecD);
-    for (a = [45, 135, 225, 315]) translate([drvPCD/2 * cos(a), 1, drvZ + drvPCD/2 * sin(a)]) rotate([90, 0, 0]) cylinder(d = drvScrew, h = fT + 2);
+    translate([0, -fT - 0.01, drvZ]) rotate([-90, 0, 0]) linear_extrude(drvRecD) el_ramme2d(E, 0.3);
+    for (p = el_hullpos(E)) translate([p[0], 1, drvZ + p[1]]) rotate([90, 0, 0]) cylinder(d = drvScrew, h = fT + 2);
     // frontskruer (senkehode i forsiden, skjult bak grillen)
     for (sx = [-1, 1], z = fz) translate([sx * fbx, 1, z]) rotate([90, 0, 0]) {
       cylinder(d = m3, h = fT + 2);

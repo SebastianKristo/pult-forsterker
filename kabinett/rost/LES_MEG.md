@@ -8,6 +8,8 @@ Røst er laget for å tåle damp på badet. Skjøtene er pakket med TPU, men kna
 
 Bilder: [Røst](render/01_rost.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [toppanelet](render/06_knapper_skjerm.png) · [skrått bakfra](render/07_bak_skra.png)
 
+Elementet: hullene i frontplata tegnes fra malen i [../elementer](../elementer/LES_MEG.md) (standard Dayton RS75-4: utsparing 54 mm, ramme 72 mm, hullsirkel 64 mm). Velg et annet med `element = "..."`.
+
 Mål: 112 × 124,5 × 145,5 mm (B × D × H, med grill, bunnbrett og gummiføtter, uten knott). Kroppen er 112 × 113 × 134 mm, frontplaten 8,5 mm og grillen står 3 mm foran den. Knotten stikker 14,6 mm over toppen. (Forrige utgave: 106 × 124,5 × 144 mm med skrå topp, 136 mm bak og 131 mm foran. Den flate toppen ligger nå på 134 mm, midt mellom.)
 
 Skjermen og knappene sitter på toppen, foran volumhjulet. Toppen er flat. Fronten har bare grillen (en løs del som trykkes på) og SKJOLD-logoen under den. Fastvare og oppsett: [`firmware/rost/`](../../firmware/rost/LES_MEG.md).
@@ -29,7 +31,7 @@ Ytterformen er én glatt flate. Den er laget som en Minkowski-sum: et prisme (gr
 - **Med fronten ned:** bakveggen blir et tak på 112 × 134 mm.
 - **Med toppen ned:** lydkammergulvet blir tak, og toppkantene får samme problem som baksiden har nå.
 
-**Hjørnene foran** kunne vært større om fronten var smalere. Elementets ramme (Ø86 i en forsenkning i fronten) og grillen (93 mm) trenger en flat front på minst ca. 90 mm, og med 112 mm bredde gir det høyst R11. Et mindre element (2,5″) ville gitt plass til R16–20, men koster bass og effekt. R8,5 er valgt fordi buen da ender nøyaktig i skjøten, og fordi den er lik radiusen på alle toppkantene. Volumet og tuningen er uendret (se [Akustikk](#akustikk)).
+**Hjørnene foran** kunne vært større om fronten var smalere. Elementets ramme (inntil Ø86 i en forsenkning i fronten, RS75-4 er Ø72) og grillen (93 mm) trenger en flat front på minst ca. 90 mm, og med 112 mm bredde gir det høyst R11. Et mindre element (2,5″) ville gitt plass til R16–20, men koster bass og effekt. R8,5 er valgt fordi buen da ender nøyaktig i skjøten, og fordi den er lik radiusen på alle toppkantene. Volumet og tuningen er uendret (se [Akustikk](#akustikk)).
 
 **Toppen.** Knappelista og rammen rundt ruta er like brede (67,6 mm), har samme kantbredde (1,6 mm) og samme hjørneradius (3,8 mm), og står begge 0,5 mm over toppen. Knappene sitter med 13,7 mm mellomrom, så de fyller lista jevnt. Under dem ligger ruta, og bakerst volumhjulet, alt på midtlinjen.
 
@@ -57,7 +59,7 @@ Det er ingen skjult bombering, så toppen er helt flat. Vann som ligger på topp
 
 | Del | Antall | Merknad |
 |---|---|---|
-| 3″ fullrange-element, 4 Ω (Dayton Audio RS75-4 anbefalt) | 1 | Utsparing Ø72 mm, ramme inntil Ø86 mm, 4 skruer på Ø82 mm hullsirkel. Sjekk ditt element og juster `drvCut`/`drvPCD`. |
+| 3″ fullrange-element, 4 Ω (Dayton Audio RS75-4 anbefalt) | 1 | RS75-4: utsparing Ø54 mm, ramme Ø72 mm, 4 skruer på Ø64 mm hullsirkel. Andre elementer: velg eller legg inn målene i [../elementer/elementer.scad](../elementer/LES_MEG.md). |
 | ESP32-S3-DevKitC-1 N16R8 | 1 | |
 | PCM5102A I²S DAC-kort | 1 | SCK til GND, XSMT til 3V3, FMT/FLT/DEMP til GND |
 | TPA3118D2 mono PBTL-forsterkerkort | 1 | 12–24 V inn. Sjekk at kortet er satt opp for PBTL (mono). |
