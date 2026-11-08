@@ -36,8 +36,16 @@ vange_l = 40;
 VB = FW + 2*kl + 2*vegg;         // vuggas bredde
 // sokkel
 SB = 80; SY0 = -28; SY1 = 72;    // bredde, front og bakkant
-SH = 12; SR = 11; SF = 1.4;      // høyde, hjørneradius, fas
-gull_inn = 3.2; gull_b = 1.2; gull_d = 0.6;   // gullstripa rundt toppen
+SH = 12; SR = 16; SF = 4;        // høyde, hjørneradius, avrunding av toppkanten
+gull_inn = 5.2; gull_b = 1.2; gull_d = 0.6;   // gullstripa rundt toppen (på den flate toppen, innenfor avrundingen)
+// form på vugga (bare utsiden – alt fjernkontrollen berører er uendret)
+rund = 5;                        // avrunding i sideprofilet (ryggens topp, leppa foran)
+fas = 1.2;                       // myk 45°-fas på alle kanter (printes uten støtte)
+plan_r = 9;                      // hjørneradius sett ovenfra
+bak_y = 52;                      // finnen skråner ned til hit bak på sokkelen
+finne_b = 36;                    // den smale ryggen («finnen») bak – pogo-kontakten sitter i den
+skaal_l = 44;                    // skåla foran (full bredde, med hylle, leppe og vanger) langs fjernkontrollen
+skaal_bak = 34;                  // skåla skråner ned til hit
 // vekt og føtter
 vekt = [48, 30, 7];              // lomme foran for stålkuler eller skiver (ca. 60–90 g), lukkes med lokket
 vekt_Y = -7;                     // lommens senter (Y)
@@ -103,14 +111,44 @@ module nokler_lokal() {          // to knotter som går inn i skruehodene i hale
 pogo_bunn = fk([POGO_X, POGO_Y, -POGO_HM]);
 kanal_X = pogo_bunn[0]; kanal_Y = pogo_bunn[1];
 
+// Ytterformen: sideprofilet (Y–Z) gjennom hjørnene på ryggen, hylla og leppa, ned til sokkelen og skrått bakover,
+// avrundet; snittet med planformen (avrundet rektangel) og en myk fas rundt. Konveks, så minkowski går fort.
+function ppkt(p) = [fk(p)[1], fk(p)[2]];
+function profil(L) = [ppkt([0, -hylle_t, -rygg_t]), ppkt([0, L, -rygg_t]), ppkt([0, L, 0]),
+                      ppkt([0, -hylle_t, FH + kl + leppe_t]), ppkt([0, leppe_h, FH + kl + leppe_t])];
+prof_y0 = min([for (p = profil(rygg_l)) p[0]]);
+module profil2d(L, y1, o = 0) {
+  offset(r = rund - o) offset(delta = -rund) hull() {
+    polygon(profil(L));
+    translate([prof_y0, SH - 6]) square([y1 - prof_y0, 6]);
+  }
+}
+module myk(b, L, y1, r) {        // konveks del: sideprofil × planform, med myk 45°-fas rundt
+  minkowski() {
+    intersection() {
+      rotate([90, 0, 90]) linear_extrude(b - 2*fas, center = true) profil2d(L, y1, fas);
+      translate([0, 0, -10]) linear_extrude(400) translate([-b/2 + fas, prof_y0 + fas]) rrect(b - 2*fas, y1 - prof_y0 - 2*fas, r - fas);
+    }
+    union() { cylinder(r1 = fas, r2 = 0, h = fas, $fn = 16); mirror([0, 0, 1]) cylinder(r1 = fas, r2 = 0, h = fas, $fn = 16); }
+  }
+}
+// Ytterformen: en lav skål i full bredde foran (holder halen) og en smal, avrundet finne bak som bærer ryggen.
+module ytre() {
+  myk(VB, skaal_l, skaal_bak, plan_r);
+  myk(finne_b, rygg_l, bak_y, finne_b/2 - 2);
+}
+module vanger_myke() {           // vangene med avrundet toppkant, i fjernkontrollens koordinater
+  for (s = [0, 1]) translate([s ? FW + kl : -kl - vegg + 0.05, 0, -0.01]) hull() {   // 0,05 mm inn: ikke i samme plan som siden
+    cube([vegg - 0.05, vange_l, 0.01]);
+    translate([vegg/2, 0, 0]) rotate([-90, 0, 0]) cylinder(d = vegg, h = vange_l - vange_h - 1.5, $fn = 24);
+    translate([vegg/2, 0, vange_h - vegg/2]) rotate([-90, 0, 0]) cylinder(d = vegg, h = vange_l - vange_h - 1.5, $fn = 24);
+  }
+}
 module vugge() {
   difference() {
     union() {
-      hull() {
-        fk_plass() vugge_lokal();
-        linear_extrude(SH + 0.01) projection() fk_plass() vugge_lokal();
-      }
-      fk_plass() { vanger_lokal(); nokler_lokal(); }
+      ytre();
+      fk_plass() { vanger_myke(); nokler_lokal(); }
     }
     fk_plass() { fk_rom(); pogo_lomme_lokal(); }
     translate([0, 0, -1]) linear_extrude(SH + 1) square([400, 400], center = true);   // står på sokkelen
@@ -121,7 +159,11 @@ module vugge() {
 module sokkel() {
   difference() {
     union() {
-      hull() { linear_extrude(SH - SF) sokkel_2d(); translate([0, 0, SH - SF]) linear_extrude(SF) sokkel_2d(SF); }
+      hull() {   // rund toppkant (kvart sirkel, R = SF), loddrett side og 0,4 mm fas nederst mot elefantfot
+        translate([0, 0, 0.4]) linear_extrude(SH - SF - 0.4) sokkel_2d();
+        linear_extrude(0.4) sokkel_2d(0.4);
+        for (a = [0:15:90]) translate([0, 0, SH - SF + SF*sin(a) - 0.01]) linear_extrude(0.01) sokkel_2d(SF*(1 - cos(a)));
+      }
       for (x = [-20, 20]) translate([x, 8, SH - 0.01]) cylinder(d = 4, h = 3.5, $fn = 24);                 // tapper til vugga
     }
     // gullstripa rundt toppen
