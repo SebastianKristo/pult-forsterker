@@ -22,6 +22,8 @@ Hvorfor 2,8″ og ikke 2,4″:
 - **Lengden øker mer med 2,8″,** fordi panelet er 69 mm langt.
 - **Brede stavskjermer** (2,25″ og liknende) er for lave til lister og cover.
 
+**Elektronikken finnes i to utgaver:** et ferdig [hovedkort](#hovedkort) som JLCPCB lager og monterer (anbefalt), eller [håndkoblet](#alternativ-håndkoblet) med SuperMini, TP4056-modul og tastekort.
+
 **Status: ikke bygget og ikke testet.** Modellen er kontrollert med `sjekk_modell.py`, og ESPHome-fila er validert med `esphome config` (ESPHome 2026.10.2). Fastvaren er ikke kompilert her: kompileringen trenger ESP-IDF-filer fra dl.espressif.com og komponentregisteret til Espressif, og de var blokkert i byggemiljøet. Se [Begrensninger](#begrensninger-og-hva-som-ikke-er-testet).
 
 ## Standard og full variant
@@ -132,7 +134,160 @@ Kartet (lages av `taster.py`):
 
 Sjekken kontrollerer kollisjoner og at hver aktuator treffer sin bryter og ingen andre.
 
+## Hovedkort
+
+![Hovedkortet sett fra undersiden](hovedkort/render_3d.png)
+
+Hovedkortet samler alt på ett kretskort: ESP32-S3, USB-C med lader, batterikontakt, skjerm- og berøringskontakt, de tre TCA9555 og de 43 tastene. Det erstatter SuperMini-en, TP4056-modulen, tastekortet og nesten alle ledningene i [den håndkoblede utgaven](#alternativ-håndkoblet). Bare IR-kortet i nesen, vibrasjonsmotoren og vibrasjonsbryteren er fortsatt egne deler, og de kobles med en kort SH-kabel eller to korte ledninger.
+
+**Status: tegnet og kontrollert, ikke bestilt og ikke testet.** Se [Hva er kontrollert](#hva-er-kontrollert-og-hva-er-ikke) før du bestiller.
+
+| | |
+|---|---|
+| Mål | **48,6 × 119,8 mm**, 1,0 mm FR4, **2 lag**, samme omriss og skruehull som tastekortet (n 79,5–199,3) |
+| Komponenter | **119**: 61 på undersiden (29 linjer i BOM-en, JLC monterer dem), 43 taster KMR221G på oppsiden (loddes for hånd, eller JLC-montering på begge sider) og 15 testpunkter/loddeputer |
+| MCU | **ESP32-S3-WROOM-1-N4R2** (4 MB flash, 2 MB PSRAM, samme som SuperMini-en). Antennen stikker 0,9 mm ut over venstre kortkant ved halen, uten kobber under (antennesone på begge lag) |
+| USB-C | HRO TYPE-C-31-M-12 i halen, 5,1 kΩ på CC1/CC2 (vanlige USB-C-ladere gir strøm), USBLC6-2SC6 mot ESD. **Innebygd USB** (GPIO19/20): flashing og logg rett i ladeporten, ingen USB-seriebrikke |
+| Lading | TP4056, 2,4 kΩ PROG = ca. 500 mA. Lastdeling: VBUS → B5819W → VSYS, batteriet → AO3401 → VSYS (av når USB står i) |
+| 3,3 V | RT9080-33 (2 µA hvilestrøm, 600 mA) |
+| Batteri | JST-PH 2,0 (S2B-PH-SM4-TB), **pinne 1 = +**, merket «+» på silketrykket. Batteriet må ha egen beskyttelseskrets (603450-cellene har det) |
+| Batterimåling | 1 MΩ / 1 MΩ + 100 nF til GPIO1 (ca. 2 µA) |
+| Skjerm | FH12-18S-0.5SH (18 p, 0,5 mm), baklys med AO3400 (PWM, GPIO21) og 10 Ω fra 3V3_SW |
+| Berøring | FH12-6S-0.5SH (6 p, 0,5 mm) på **egen I²C-buss** (GPIO18/38) med pull-up til 3V3_SW |
+| Skjermstrøm | AO3401 slår av 3V3_SW (skjerm, berøring, IR-mottaker) i søvn |
+| IR | SH 5 p (SM05B-SRSS-TB) til IR-kortet i nesen: VSYS, IR-katode (AO3400 på hovedkortet), mottaker, 3V3_SW og GND. 100 µF ved kontakten for IR-pulsene |
+| Motor og bryter | AO3400 + B5819W for motoren (to loddeputer MOT+ / MOT−), to loddeputer for vibrasjonsbryteren (1 MΩ ned) |
+| Taster | 3 × TCA9555 (0x20, 0x21, 0x22), samme bryter-til-pinne-kart som den håndkoblede utgaven, så fastvaren for tastene er lik |
+| Testpunkter | 3V3, VBAT, VSYS, VBUS, GND, EN, BOOT, TX, RX, SDA, SCL, pluss RESET- og BOOT-knapp |
+
+Bilder: [kobber oppside](hovedkort/skjold-hovedkort-oppside.png) · [kobber underside](hovedkort/skjold-hovedkort-underside.png) · [3D, undersiden](hovedkort/render_3d.png) · [innmaten med hovedkortet](hovedkort/render_inni.png) · [koblingsskjema (PDF)](hovedkort/skjema.pdf).
+
+**Montering med hovedkortet:** print `stl_hk/topp.stl` og `stl_hk/bunn.stl` (laget av `lag_hk.sh`, samme form som standard, men med USB-C-åpning for kortets kontakt og uten lommer for SuperMini og lader). Lodd tastene på oppsiden, koble IR-kortet (SH 5 p), motoren (MOT+/MOT−) og vibrasjonsbryteren (VIB/VIB 3V3) til putene, sett flatkablene i J3 og J4, og plugg batteriet i J2. Kortet ligger i toppen der tastekortet lå, med komponentene ned, og skrus fast på samme måte.
+
+### Pinnene på ESP32-S3
+
+Fra `hovedkort/pinner.csv` (laget av `lag_skjema.py`). ESPHome-fila for hovedkortet er `esphome/skjold-fjernkontroll-hovedkort.yaml`.
+
+| GPIO | Nett | Til |
+|---|---|---|
+| 0 | BOOT | BOOT-knapp, 10 kΩ til 3V3 (strappinne) |
+| 1 | VBAT_ADC | batterispenning, 1 MΩ / 1 MΩ |
+| 2 | T_RST | berøring RST |
+| 4 | IR_TX | 100 Ω → AO3400 (Q4) → IR-diodene |
+| 5 | IR_RX | VS1838B (aktiv lav) |
+| 6 | VIB_SW | vibrasjonsbryter (vekking, ext1) |
+| 7 | TCA_INT | INT fra alle tre TCA9555, 10 kΩ til 3V3 (vekking, ext0) |
+| 8 / 9 | SDA / SCL | TCA9555, 4,7 kΩ til 3V3 |
+| 10 | T_INT | berøring INT, 10 kΩ til 3V3_SW |
+| 11 / 12 | LCD_MOSI / LCD_SCK | skjerm SPI |
+| 13 / 14 | LCD_DC / LCD_RES | skjerm |
+| 15 | SKJ_PA | AO3401 (Q2) for 3V3_SW, lav = på, 100 kΩ til 3V3 |
+| 16 | MOTOR | 1 kΩ → AO3400 (Q5) → motoren |
+| 17 | CHRG | TP4056 CHRG, 10 kΩ til 3V3 (lav = lader) |
+| 18 / 38 | T_SDA / T_SCL | berøring, 4,7 kΩ til 3V3_SW |
+| 19 / 20 | USB D− / D+ | USB-C (via USBLC6) |
+| 21 | LCD_BL | 100 Ω → AO3400 (Q3) → baklysets katode |
+| 43 / 44 | U0TXD / U0RXD | testpunkter |
+| 3, 45, 46 | – | strappinner, står åpne (interne verdier) |
+| 35–37, 39–42, 47, 48 | – | ledige |
+
+### Filer i `hovedkort/`
+
+| Fil | Hva |
+|---|---|
+| `kretser.py` | **Kilden**: komponentliste med plassering og nettliste (det finnes ikke noe tegnet skjema) |
+| `lag_hovedkort.py` | Lager KiCad-kortet fra `kretser.py`, plasserer, ruter (Freerouting), legger jordflater, kjører DRC og lager gerber, BOM, CPL og bilder |
+| `sjekk_netliste.py` | Nettlistesjekk (KiCad 7 har ikke ERC på kommandolinja): forsyningspinner, nett med én pinne, kortslutninger, ukoblede IC-pinner, strappinner, pull-ups, avkobling innen 6 mm, kortet mot nettlista og at alt er rutet |
+| `lag_skjema.py` | `skjema.pdf` (alle komponentene med nett på hver pinne, i fem blokker) og `pinner.csv` |
+| `skjold-hovedkort.kicad_pcb` / `.kicad_pro` | KiCad 7-prosjektet (kan åpnes og endres i KiCad) |
+| `skjold-hovedkort-gerber.zip` | Gerber og borefiler for JLCPCB |
+| `bom-jlc.csv`, `cpl-jlc.csv` | Stykkliste og plassering i JLC-format (undersiden) |
+| `dnp-handlodding.csv` | Tastene på oppsiden, som du lodder selv |
+| `skjold-hovedkort-drc.rpt` | DRC-rapporten |
+| `hovedkort_data.scad` | Omriss, hull og komponentbokser til kabinettmodellen (`elektronikk = "hovedkort"`) |
+
+Alt lages på nytt med:
+
+```bash
+python3 hovedkort/lag_hovedkort.py           # kort, ruting, DRC, gerber, BOM/CPL, bilder (Freerouting: FREEROUTING=sti/til/freerouting.jar)
+python3 hovedkort/sjekk_netliste.py          # nettlistesjekken
+python3 hovedkort/lag_skjema.py              # skjema.pdf og pinner.csv
+xvfb-run -a sh lag_hk.sh                     # kabinettet for hovedkortet (stl_hk/), sjekk og bilder
+```
+
+### Bestille fra JLCPCB
+
+1. Last opp `hovedkort/skjold-hovedkort-gerber.zip` på jlcpcb.com.
+2. Velg:
+   - **Layers 2**, **Thickness 1.0 mm** (viktig: kabinettet er tegnet for 1,0 mm), FR-4, 49 × 120 mm (leses fra filene)
+   - Surface finish: **LeadFree HASL** (eller ENIG for jevnere puter under FPC-kontaktene og modulen)
+   - Solder mask: valgfri farge (svart eller grønn)
+   - Remove order number: «Specify a location» er ikke tegnet inn; velg «Yes» (koster litt) eller godta nummeret
+   - Kvantum: 5
+3. **PCB Assembly:** slå på, **Economic**, **Assembly side: Bottom side**, kvantum 2 eller 5. Last opp `bom-jlc.csv` og `cpl-jlc.csv`.
+4. I deloversikten: finn eller bekreft hvert LCSC-nummer (se [Før du bestiller](#før-du-bestiller)). Tastene står ikke i BOM-en.
+5. Sjekk plasseringen i JLCs forhåndsvisning (rotasjon og pinne 1, se under), og bestill.
+
+**Pris (anslag, ikke hentet fra JLC):**
+
+| | USD | NOK (ca. 11 kr/USD, med 25 % mva) |
+|---|---|---|
+| 5 kort, 2 lag, 1,0 mm, 49 × 120 mm | ca. 8–12 | |
+| Montering, 5 kort: oppsett 8 + sjablong 1,5 + ca. 10 «extended» deler × 3 + lodding | ca. 45 | |
+| Komponenter, 5 sett (ESP32-S3-WROOM-1 ca. 3,5, 3 × TCA9555 ca. 1,5, resten ca. 3) | ca. 40 | |
+| Frakt (billigste) | ca. 10–20 | |
+| **Sum, 5 monterte kort** | **ca. 105–120** | **ca. 1450–1650 kr** |
+| Sum med bare 2 monterte (de 3 andre uten deler) | ca. 75–85 | ca. 1050–1150 kr |
+
+Taster (KMR221G, 43 per kort) kjøpes separat, eller monteres av JLC med «Standard» PCBA på begge sider (dyrere, ca. +25 USD i oppsett). JLC krever i dag mva gjennom VOEC, så prisen i kassen er inkludert mva.
+
+### Før du bestiller
+
+- [ ] **FPC-pinnene på skjermen (J3).** Rekkefølgen i `kretser.py` er **antatt** (pinne 1 GND, 2 RES, 3 SCK, 4 DC, 5 CS til GND, 6 MOSI, 9–10 VCC, 11 LED-A, 12–15 LED-K). Sjekk mot selgerens tegning for HP28030-DCT og rett opp `J3` i `kretser.py`, kjør `lag_hovedkort.py` på nytt.
+- [ ] **FPC-pinnene på berøringen (J4)** er også antatt (VCC, GND, SDA, SCL, INT, RST). Sjekk.
+- [ ] **Kontaktsiden på FPC-kontaktene.** FH12 har kontakter på undersiden; sjekk at flatkabelen kommer inn med kontaktene riktig vei når den bøyes ned bak glasset.
+- [ ] **Batteripolaritet.** J2 pinne 1 = +. AliExpress-batterier har ofte motsatt rekkefølge i JST-PH-pluggen. Mål med multimeter og bytt pinnene i pluggen om nødvendig. Feil vei ødelegger laderen.
+- [ ] **Rotasjon i CPL.** JLC og KiCad har ulik nullrotasjon for noen fotavtrykk (særlig SOT-23, SOT-23-5/6, ESOP-8 og kontaktene). Sjekk pinne 1 og retningen på hver del i JLCs forhåndsvisning, og juster rotasjonen der.
+- [ ] **LCSC-numrene** i `bom-jlc.csv` er fra hukommelsen og merket «(sjekk)» eller «sjekk: søk …». Bekreft hvert nummer (og at delen er på lager) i JLCs deloversikt.
+- [ ] **DFM:** kjør JLCs DFM-sjekk (eller last opp i deres viewer) og se etter advarsler om kobber mot kant ved USB-C og antennen.
+- [ ] **Antennen:** ingen kobber eller komponenter under antennen (venstre kortkant ved n 165–189). Kabinettet har bare 0,3 mm plast der. Ikke legg metall, batteri eller skrue der.
+- [ ] **Baklysmotstanden** (R14, 10 Ω) passer for 3 hvite LED-er i parallell (ca. 3,0 V, ca. 30 mA). Sjekk panelets LED-spesifikasjon.
+
+### Første oppstart / feilsøking
+
+1. **Før batteriet:** sett i USB-C. Mål 3V3-testpunktet (3,25–3,35 V) og VSYS (ca. 4,7 V med USB). Ingen 3,3 V: sjekk VBUS-testpunktet, D1 og U4.
+2. **Flash:** PC-en skal se en «USB JTAG/serial debug unit». Hvis ikke: hold BOOT, trykk RESET, slipp BOOT. Så `esphome run esphome/skjold-fjernkontroll-hovedkort.yaml`.
+3. **Batteri:** koble til (sjekk polariteten først). Med USB skal ⚡ vises og CHRG være lav. Uten USB skal VSYS følge batteriet.
+4. **Tastene:** se loggen (`esphome logs …`). Hver tast gir en hendelse. Ingen taster: sjekk SDA/SCL-testpunktene (4,7 kΩ til 3V3) og at loggen finner 0x20–0x22.
+5. **Skjermen:** svart skjerm, men baklys: sjekk FPC-pinnene (punktet over). Ikke noe baklys: mål LED-A (ca. 3,3 V) og GPIO21.
+6. **Berøringen:** egen buss, GPIO18/38. Den har bare strøm når skjermen er på.
+7. **Søvn:** strømmen fra batteriet i dyp søvn skal være ca. 15–25 µA (ESP ca. 8 µA, RT9080 2 µA, 3 × TCA9555 ca. 3 µA, deleren 2 µA). Mye mer: sjekk at 3V3_SW er av (Q2) og at ingen tast henger.
+8. **IR:** se med mobilkamera på diodene mens du trykker en tast i TV-modus.
+
+### Hva er kontrollert og hva er ikke
+
+Kontrollert her (med skriptene i `hovedkort/`):
+- **DRC (KiCad 7, `pcbnew.WriteDRCReport`): 0 feil og 0 ukoblede.** Advarslene (`skjold-hovedkort-drc.rpt`) er bare silketrykk og bibliotek: 119 × `lib_footprint_issues` (fotavtrykkene er hentet fra KiCads bibliotek, men biblioteket står ikke i prosjektets bibliotekstabell), 25 × `silk_overlap` og 13 × `silk_over_copper` (referansebetegnelser som overlapper hverandre eller puter; JLC klipper silketrykket mot putene) og 5 × `silk_edge_clearance` (betegnelser nær kortkanten).
+- **Rutingen**: Freerouting 2.0.1 uten grafikk, 2 lag, 0,2 mm spor, 0,15 mm klaring, 0,6/0,3 mm via: 1801 spor og 192 viaer, ingenting urutet. Jordflater på begge lag, ingen kobber i antennesonen.
+- **Nettlistesjekken** (`sjekk_netliste.py`): alle punktene over er OK, også at nettene på kortet er de samme som i `kretser.py` og at **ingenting er urutet**.
+- Kabinettet med hovedkortet (`lag_hk.sh` → `sjekk_modell.py asm_hk hovedkort`): ingen kollisjoner, USB-C går inn, minst 0,6 mm under komponentene, skruetårn klar av delene.
+- ESPHome-fila for hovedkortet er validert med `esphome config`.
+
+Ikke kontrollert:
+- **Ingenting er bestilt, bygget eller målt.**
+- **FPC-pinnene** til skjerm og berøring er antatt (se over).
+- **LCSC-numrene og prisene** er ikke slått opp (jlcpcb.com og lcsc.com var ikke tilgjengelige herfra).
+- **Ingen ERC eller tegnet skjema:** KiCad 7 har ikke ERC på kommandolinja, og nettlista er skrevet direkte i `kretser.py`. `sjekk_netliste.py` dekker de viktigste reglene, men ikke alt en ERC fanger.
+- **Antennen** følger Espressifs anbefaling (modulen ved kanten, ingen kobber under), men rekkevidden er ikke målt.
+- Modulen er WROOM-1 i stedet for MINI-1: KiCad 7-biblioteket har ikke fotavtrykket for MINI-1, og WROOM-1 har Espressifs eget.
+
+## Alternativ: håndkoblet
+
+Resten av elektronikkdelen beskriver den første utgaven, uten hovedkort: ESP32-S3 SuperMini, TP4056-modul og et tastekort (bestilt eller printet), koblet sammen med ledninger. Den trenger ingen bestilling av monterte kort, og alle delene kommer fra AliExpress. Modellen er den samme; sett `elektronikk = "handkoblet"` (standard) eller `"hovedkort"` i `skjold_fjernkontroll.scad`.
+
 ## Elektronikk – hva og hvorfor
+
+*Gjelder den håndkoblede utgaven. Hovedkortet er beskrevet under [Hovedkort](#hovedkort).*
 
 | Del | Hvorfor |
 |---|---|
@@ -404,7 +559,7 @@ Bruk `lag_stl.sh` for å eksportere alt på nytt (STL, sjekk og 3MF) etter endri
 
 ## Fastvare
 
-`esphome/skjold-fjernkontroll.yaml`. Gjør klar:
+`esphome/skjold-fjernkontroll.yaml` (håndkoblet) eller `esphome/skjold-fjernkontroll-hovedkort.yaml` (hovedkortet; samme fastvare med hovedkortets pinner, laget av `taster.py`). Med hovedkortet flasher du rett gjennom USB-C i halen, også med batteriet i (se [Første oppstart](#første-oppstart--feilsøking)). Gjør klar:
 - Sett `skjold_host` til Skjold-enheten din.
 - Sett Home Assistant-entitetene og scenene under `substitutions`.
 - Legg inn `wifi_ssid`, `wifi_password` og `skjold_fjernkontroll_api_key` i `secrets.yaml`.
@@ -532,7 +687,8 @@ Du får mer ut av batteriet hvis du:
 - **IR-læring** fanger bare koder ESPHome kan tolke (NEC, Samsung, Sony, RC5, LG). Råkoder og klimaanlegg støttes ikke.
 - **Kilder** som ikke finnes på din Skjold-modell (f.eks. Spotify) gir bare en feilmelding i loggen.
 - **Ingen USB-data i ladeporten.** Første flashing skjer via USB-C på SuperMini-en, med batteriet frakoblet.
-- **Tastekortet** er levert som data (omriss, plassering, koblinger, stykkliste), ikke som gerber-filer.
+- **Tastekortet** (håndkoblet utgave) er levert som data (omriss, plassering, koblinger, stykkliste), ikke som gerber-filer. Hovedkortet har gerber-filer.
+- **Hovedkortet** er DRC- og nettlistekontrollert, men FPC-pinnene og LCSC-numrene er ikke bekreftet. Se [Hva er kontrollert](#hva-er-kontrollert-og-hva-er-ikke).
 
 ## Filer
 
@@ -547,6 +703,8 @@ Du får mer ut av batteriet hvis du:
 | `lag_render.sh`, `skjerm_i_render.py`, `lag_skjermbilder.py` | Bildene i `render/`, med skjermbildet lagt inn |
 | `tastekort/`, `tastekort_full/` | Omriss (DXF), plassering, koblinger og stykkliste for tastekortet, standard og full |
 | `stl/`, `stl_full/` | Alle utskriftsdelene for standard og full variant, inkludert `bryterbrett.stl` |
+| `hovedkort/` | Hovedkortet: KiCad-kort, gerber, BOM/CPL, skjema og skriptene (se [Hovedkort](#hovedkort)) |
+| `lag_hk.sh`, `stl_hk/` | Toppen og bunnen for hovedkortet (`elektronikk = "hovedkort"`), sjekk og bilder |
 
 ## Tre skjermvalg
 
