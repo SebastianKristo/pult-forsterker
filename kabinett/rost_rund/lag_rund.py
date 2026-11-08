@@ -44,9 +44,9 @@ def scad(part, ut):
 
 # ---------- 1. OpenSCAD-delene ----------
 procs = []
-for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "rute"):
+for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "rute", "elementplate"):
     procs.append(subprocess.Popen(["openscad", "-q", "-D", f'part="{p}"', "-o", f"stl/{p}.stl", SC]))
-for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "logo", "stenger", "rute", "skjerm", "skjermflate", "element", "knappekort", "ec11"):
+for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "logo", "stenger", "rute", "skjerm", "skjermflate", "element", "knappekort", "ec11", "elementplate"):
     procs.append(subprocess.Popen(["openscad", "-q", "-D", f'part="a_{p}"', "-o", f"stl_asm/{p}.stl", SC]))
 procs.append(subprocess.Popen(["openscad", "-q", "-D", 'part="logo_kutt"', "-o", "stl_asm/logo_kutt.stl", SC]))
 for pr in procs:
@@ -135,7 +135,7 @@ def meld(god, tekst):
     global ok
     ok &= bool(god); print(("OK   " if god else "FEIL ") + tekst)
 
-DELER = ["kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute"]
+DELER = ["kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "elementplate"]
 FLERE = {"knapp": 5, "logo": None}
 for n in DELER:
     m = trimesh.load(f"stl/{n}.stl")
@@ -144,9 +144,9 @@ for n in DELER:
         and m.extents[0] <= 250 and m.extents[1] <= 250 and m.extents[2] <= 250
     meld(god, f"{n:7s} tett={m.is_watertight} deler={k} {m.volume / 1000:6.1f} cm³ {m.extents.round(1)} mm")
 
-A = {n: trimesh.load(f"stl_asm/{n}.stl") for n in ("kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "skjerm", "element", "knappekort", "ec11")}
+A = {n: trimesh.load(f"stl_asm/{n}.stl") for n in ("kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "skjerm", "element", "knappekort", "ec11", "elementplate")}
 LOV = {("kjerne", "bunn"), ("kjerne", "lokk"), ("bunn", "hylse"), ("lokk", "hylse"), ("lokk", "knapp"), ("hylse", "logo"), ("lokk", "knott"),
-       ("lokk", "rute"), ("lokk", "skjerm"), ("kjerne", "element"), ("lokk", "knappekort"), ("lokk", "ec11"), ("knapp", "knappekort"), ("knott", "ec11")}
+       ("lokk", "rute"), ("lokk", "skjerm"), ("lokk", "knappekort"), ("lokk", "ec11"), ("knapp", "knappekort"), ("knott", "ec11"), ("kjerne", "elementplate"), ("elementplate", "element")}
 import itertools
 feil = []
 for x, y in itertools.combinations(A, 2):
@@ -207,9 +207,10 @@ L.OBJ_INNST = {
     "kjerne": {"enable_support": "0"}, "hylse": {"enable_support": "0", "outer_wall_speed": "120"}, "bunn": {"enable_support": "0"},
 }
 L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper og knott", [
-    ("kjerne", "Kjerne (mørk, stående)", 2, (70, 70), None),
-    ("knapp", "Knappehetter (mørke, toppen ned)", 2, (10, 10), None),
-    ("knott", "Knott (gull, toppen ned)", 3, (10, 200), None)], {2: "#232325", 3: "#D99E40"})
+    ("kjerne", "Kjerne (mørk, stående)", 2, (10, 10), None),
+    ("knapp", "Knappehetter (mørke, toppen ned)", 2, (130, 112), None),
+    ("knott", "Knott (gull, toppen ned)", 3, (130, 132), None),
+    ("elementplate", "Elementplate (mørk, forsiden ned) – lag ny for et annet element", 2, (130, 10), None)], {2: "#232325", 3: "#D99E40"})
 L.write("skjold-rost-rund-k2-hylse.3mf", "Skjold Røst Rund – grillhylse med SKJOLD i gull", [
     ("hylse", "Grillhylse (lys, stående)", 1, (70, 70), None),
     ("logo", "SKJOLD (gull, innfelt i hylsa)", 3, None, "hylse")], {1: "#ECE9E3", 3: "#D99E40"})

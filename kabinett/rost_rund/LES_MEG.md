@@ -72,7 +72,7 @@ så Creality Print / OrcaSlicer henter dem selv):
 
 - Lydkammer: ca. 1,22 l luft, ca. 1,12 l netto med element og elektronikk.
 - Bassrefleks: port Ø18 × 110 mm, ned gjennom bunnen (føttene gir 6 mm luft) → ca. 74 Hz. Beregnet, ikke målt.
-- Elementet sitter bak en 16 mm frontblokk med tunnel Ø74 og skrus med 4 × M3 × 25 forfra (senkehodene ligger under hylsa).
+- Elementet skrus i en **utskiftbar elementplate** (92 × 92 × 4 mm, tegnet fra malen i [../elementer](../elementer/LES_MEG.md)), som skrus bak frontblokka (tunnel Ø80) med 4 × M3 × 10 i innpressmuttere. Standard er Dayton RS75-4; `skjold-rost-rund-k2-elementplater.3mf` har plater for fire elementer.
 
 ## Deler (i tillegg til Røst-elektronikken)
 

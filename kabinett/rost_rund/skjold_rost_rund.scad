@@ -9,6 +9,10 @@
 // Koordinater: x tvers, y fra front (−) til bak (+), z opp (0 = bordet, uten føtter).
 // part: lokk | kjerne | bunn | knott | knapp | samlet | eksplodert | a_<del> (montert stilling)
 part = "samlet";
+include <../elementer/elementer.scad>
+element = "rs75_4";                // se ../elementer/elementer.scad: rs75_4 | frs8_4 | grs3fr4 | faital3fe22 | egen
+E = el_data(element);
+if (!el_sikker(E)) echo(str("ADVARSEL: målene for ", element, " er delvis anslag – mål elementet og rett dem i elementer.scad før du printer elementplata"));
 $fn = 64;
 
 // ---------- mål ----------
@@ -20,7 +24,10 @@ z0 = bpT; z1 = H - capT;           // kjernen og hylsen står mellom bunnplaten 
 rT = 4;                            // toppkanten: R4, som flater ut i 45° fas mot toppen (printes med toppen ned)
 fot = 12.4; fotH = 0.6;            // forsenkninger for selvklebende gummiføtter Ø12 × 6 mm
 // element (3″ fullrange, f.eks. Dayton RS75-4) bakfra mot frontblokka
-drvZ = 78; drvCut = 72; drvTun = 74; drvPCD = 82; blk = 16;   // senter, utsparing, tunnel, hullsirkel, blokkas dybde fra fronten
+drvZ = 78; drvTun = 80; blk = 16;    // elementets senter, tunnelen gjennom frontblokka (fast, Ø80), blokkas dybde fra fronten
+// Elementplata (utskiftbar): 92 × 92 × 4 mm bak frontblokka, tegnet fra malen i elementer.scad. Elementet skrus i plata,
+// plata skrus i fire innpressmuttere i blokka (plFeste: x ±30, z ±42 fra elementets senter – fri for stengene).
+plW = 92; plT = 4; plR = 8; plFeste = [for (sx = [-1, 1], sz = [-1, 1]) [sx * 30, sz * 42]];
 // bassrefleks ned gjennom bunnen (føttene gir 6 mm luft)
 portD = 18; portW = 2; portL = 110; portP = [-14, 30];
 // stenger og innpressmuttere
@@ -76,10 +83,7 @@ module kjerne() {
     for (p = rodP) translate([p[0], p[1], z0 - 1]) cylinder(d = rodD, h = z1 - z0 + 2);
     // tunnel og element
     translate([0, -Dp/2 - 1, drvZ]) rotate([-90, 0, 0]) cylinder(d = drvTun, h = blk + 2);
-    for (a = [45, 135, 225, 315]) translate([drvPCD/2 * cos(a), -Dp/2 - 1, drvZ + drvPCD/2 * sin(a)]) rotate([-90, 0, 0]) {
-      cylinder(d = 3.4, h = blk + 2);                                     // M3 × 25 gjennom blokka, mutter bak elementets ramme
-      cylinder(d1 = 6.6, d2 = 3.4, h = 1 - inn + 1.6);                    // senkehode i flukt med kjernens front (under hylsa)
-    }
+    for (f = plFeste) translate([f[0], -Dp/2 + blk + 0.01, drvZ + f[1]]) rotate([90, 0, 0]) cylinder(d = ins, h = insL);   // innpressmuttere for elementplata
     // I/O bak
     translate([ioX - 8, Dp/2 + 1, dcZ]) rotate([90, 0, 0]) cylinder(d = dcD, h = -inn + t + 2);
     translate([ioX + 8, Dp/2 + 1, usbZ]) rotate([90, 0, 0]) linear_extrude(-inn + t + 2) offset(1.6) square([usbW - 3.2, usbH - 3.2], center = true);
@@ -195,14 +199,26 @@ module knapp_lok(i) {   // toppen ved z = capUp over lokket, flensen under lokke
 }
 module knapper() { for (i = [0:4]) translate([btnX[i], btnY, H]) knapp_lok(i); }
 
-// 3″-elementet (bare for bildene): ramme mot frontblokka bakfra, membran og støvhette
-module element() {
-  translate([0, -Dp/2 + blk, drvZ]) rotate([-90, 0, 0]) {
-    difference() { cylinder(d = 86, h = 4); translate([0, 0, -1]) cylinder(d = 62, h = 6); }
-    translate([0, 0, -0.5]) cylinder(d1 = 70, d2 = 30, h = 22);
-    translate([0, 0, 4]) cylinder(d = 52, h = 26);
+// elementplata i montert stilling (y fra blokkas bakside og bakover); i plataes egne koordinater: (x, z) = plan, y = tykkelse
+module elementplate_lok() {   // forsiden (mot blokka) i z = 0, baksiden (mot elementet) i z = plT
+  difference() {
+    translate([-plW/2, -plW/2, 0]) linear_extrude(plT) offset(r = plR) offset(-plR) square(plW);
+    translate([0, 0, -1]) cylinder(d = el_utsp(E), h = plT + 2, $fn = 96);
+    translate([0, 0, -0.01]) cylinder(d1 = el_utsp(E) + 2 * 1.5, d2 = el_utsp(E), h = 1.5, $fn = 96);    // fas mot blokka
+    for (p = el_hullpos(E)) translate([p[0], p[1], -1]) {
+      cylinder(d = 3.4, h = plT + 2, $fn = 24);                                                  // M3 gjennom plata og rammen
+      translate([0, 0, 1]) cylinder(d1 = 6.6, d2 = 3.4, h = 1.6, $fn = 24);                      // senkehode i flukt med forsiden
+    }
+    for (f = plFeste) translate([f[0], f[1], -1]) {
+      cylinder(d = 3.4, h = plT + 2, $fn = 24);                                                  // M3 × 10 inn i blokka
+      translate([0, 0, plT + 1 - 1.6]) cylinder(d1 = 3.4, d2 = 6.6, h = 1.61, $fn = 24);          // senkehode i flukt med baksiden
+    }
   }
 }
+module plate_pos() { translate([0, -Dp/2 + blk, drvZ]) rotate([-90, 0, 0]) mirror([0, 1, 0]) children(); }   // lokal (x, y) → (x, z)
+module elementplate() { plate_pos() elementplate_lok(); }
+// elementet (bare for bildene og kollisjonssjekken): rammen mot elementplata bakfra
+module element() { plate_pos() translate([0, 0, plT]) el_modell(E); }
 // knappekortet og EC11 (bare for bildene og kollisjonssjekken)
 module knappekort() {
   translate([0, kortY, boardZ - 1.6]) difference() {
@@ -246,6 +262,7 @@ else if (part == "knapp") for (i = [0:4]) translate([i * (flD + 3), 0, capUp]) r
 else if (part == "a_kjerne") kjerne(); else if (part == "a_bunn") bunn(); else if (part == "a_lokk") lokk();
 else if (part == "a_knott") knott(); else if (part == "a_knapp") knapper(); else if (part == "a_stenger") stenger();
 else if (part == "a_element") element();
+else if (part == "elementplate") elementplate_lok(); else if (part == "a_elementplate") elementplate();
 else if (part == "a_knappekort") knappekort(); else if (part == "a_ec11") ec11();
 else if (part == "a_logo") logo_form(0); else if (part == "logo_kutt") logo_form(0.01);
 else if (part == "eksplodert") samlet(30);
