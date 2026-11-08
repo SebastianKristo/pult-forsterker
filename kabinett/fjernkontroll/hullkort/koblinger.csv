@@ -1,32 +1,21 @@
 nett,farge,fra,til,lengde_mm,merknad
-K_AV,brun,hull F4,MCP GPA0,90,av → MCP GPA0
-K_HJEM,rød,hull L4,MCP GPA1,100,hjem → MCP GPA1
-K_MENY,oransje,hull R4,MCP GPA2,120,meny → MCP GPA2
-K_OPP,gul,hull L9,MCP GPA3,90,opp → MCP GPA3
-K_NED,grønn,hull L21,MCP GPA4,60,ned → MCP GPA4
-K_VENSTRE,blå,hull F15,MCP GPA5,60,venstre → MCP GPA5
-K_HOYRE,fiolett,hull R15,MCP GPA6,90,hoyre → MCP GPA6
-K_OK,grå,hull L15,MCP GPA7,70,ok → MCP GPA7
-K_TILBAKE,brun,hull H27,MCP GPB0,30,tilbake → MCP GPB0
-K_AVSLUTT,rød,hull H34,MCP GPB1,50,avslutt → MCP GPB1
-K_SPILL_PAUSE,oransje,hull H42,MCP GPB2,70,spill_pause → MCP GPB2
-K_DEMP,gul,hull P42,MCP GPB3,90,demp → MCP GPB3
-K_VOL_OPP,grønn,hull P27,MCP GPB4,50,vol_opp → MCP GPB4
-K_VOL_NED,blå,hull P34,MCP GPB5,70,vol_ned → MCP GPB5
-GND,svart,hull D27,MCP GND,40,GND (tilbake) → MCP GND
-GND,svart,hull D27,hull D34,30,på kobbersiden
-GND,svart,hull D34,hull D42,40,på kobbersiden
-GND,svart,hull D42,hull L42,40,på kobbersiden
-GND,svart,hull L42,hull L34,40,på kobbersiden
-GND,svart,hull L34,hull L27,30,på kobbersiden
-GND,svart,hull L27,hull H21,40,på kobbersiden
-GND,svart,hull H21,hull H15,30,på kobbersiden
-GND,svart,hull H15,hull N15,30,på kobbersiden
-GND,svart,hull N15,hull H9,50,på kobbersiden
-GND,svart,hull H9,hull H4,30,på kobbersiden
-GND,svart,hull H4,hull N4,30,på kobbersiden
-GND,svart,hull N4,hull B4,50,på kobbersiden
-GND,svart,hull B4,hull B15,40,på kobbersiden
+K_AV,brun,hull C7,MCP GPA0,90,av → MCP GPA0
+K_HJEM,rød,hull K3,MCP GPA1,100,hjem → MCP GPA1
+K_MENY,oransje,hull Q7,MCP GPA2,110,meny → MCP GPA2
+K_OPP,gul,hull K10,MCP GPA3,80,opp → MCP GPA3
+K_NED,grønn,hull K27,MCP GPA4,40,ned → MCP GPA4
+K_VENSTRE,blå,hull C27,MCP GPA5,40,venstre → MCP GPA5
+K_HOYRE,fiolett,hull Q27,MCP GPA6,60,hoyre → MCP GPA6
+K_OK,grå,hull K16,MCP GPA7,70,ok → MCP GPA7
+K_TILBAKE,brun,hull G26,MCP GPB0,30,tilbake → MCP GPB0
+K_AVSLUTT,rød,hull G30,MCP GPB1,40,avslutt → MCP GPB1
+K_SPILL_PAUSE,oransje,hull G38,MCP GPB2,60,spill_pause → MCP GPB2
+K_DEMP,gul,hull M38,MCP GPB3,70,demp → MCP GPB3
+K_VOL_OPP,grønn,hull M26,MCP GPB4,50,vol_opp → MCP GPB4
+K_VOL_NED,blå,hull M30,MCP GPB5,50,vol_ned → MCP GPB5
+GND,svart,hull E26,MCP GND,40,GND-stripe E → MCP GND
+GND,svart,hull E25,hull I27,30,på kobbersiden
+GND,svart,hull I28,hull O26,40,på kobbersiden
 VBAT,oransje,Batteri + (JST-PH),XIAO BAT+,150,
 GND,svart,Batteri − (JST-PH),XIAO BAT−,150,
 3V3,rød,XIAO 3V3,MCP VCC,70,

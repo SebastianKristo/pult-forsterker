@@ -2,11 +2,11 @@
 
 Kilden for hullkort_data.scad (kabinettet), hullkort.json (3D-siden), tegningene og sjekken. Koordinater som ellers i
 prosjektet: x tvers (0 … 55), n fra nesen (0 … 202,5), z fra undersiden. På hullkortet: kolonne k (x = CX + k · 2,54),
-rad j (n = R0 + j · 2,54); kobberstripene går på tvers (langs x), sett fra kobbersiden (undersiden).
+rad j (n = R0 + j · 2,54); kobberstripene går LANGS fjernkontrollen (langs n, én stripe per kolonne).
 
 Bryterne er 6 × 6 × 4,3 mm THT med beina i et 2 × 3-rutenett (5,08 × 7,62 mm): senteret står på en kolonne og midt
-mellom to rader. Beina to og to (de 6,5 mm fra hverandre, langs n) er koblet inni bryteren, så venstre bein (GND) og
-høyre bein (tasten) er hver sin side. Kuttene i stripene lages av koden: der to nabohull på samme stripe har ulike nett."""
+mellom to rader. Beina to og to (de 6,5 mm fra hverandre, langs n) er koblet inni bryteren og står på samme stripe,
+så GND-siden og tastens side ligger på hver sin stripe. Kuttene i stripene lages av koden: der to nabohull på samme stripe har ulike nett."""
 import math
 import os
 import sys
@@ -23,7 +23,7 @@ P = 2.54
 # ---------- høyder (z) ----------
 TB = 1.6                           # gulvet
 Z_KORT = 7.4                       # hullkortets underside
-KORT_T = 1.6                       # hullkortet (FR4/pertinax 1,6 mm)
+KORT_T = 1.5                       # hullkortet: stripekort i bakelitt, 1,5 mm (6,4 × 14,4 cm, 24 striper à 56 hull)
 SW_H = 4.3                         # 6 × 6 × 4,3 mm THT-bryter (fra kortet til toppen av knappen)
 SW_KROPP = 3.5                     # selve bryterhuset
 BEIN = 0.8                         # beina klippes til 0,8 mm under kortet (med loddet)
@@ -55,10 +55,16 @@ def hull_xy(k, j):
     return CX + k * P, R0 + j * P
 
 
+GND_KOL = {-5, -1, 5}   # stripene (kolonnene) som bare bærer GND: bryterne snus så GND-siden havner på en av dem
+
+
 def bein(b):
-    """De fire beina: [(k, j, nett)]; venstre side GND, høyre side tasten (diagonalt motsatte bein er alltid ulike)."""
+    """De fire beina: [(k, j, nett)]. To og to bein langs n (6,5 mm fra hverandre) er koblet inni bryteren, så hver side
+    ligger på én stripe (stripene går langs n). GND-siden legges på en GND-stripe (venstre eller høyre, bryteren snus 180°),
+    tastens side på den andre."""
     f, k, j = b[0], b[4], b[5]
-    return [(k - 1, j - 1, "GND"), (k - 1, j + 2, "GND"), (k + 1, j - 1, "K_" + f.upper()), (k + 1, j + 2, "K_" + f.upper())]
+    g, t = (k - 1, k + 1) if k - 1 in GND_KOL else (k + 1, k - 1)
+    return [(g, j - 1, "GND"), (g, j + 2, "GND"), (t, j - 1, "K_" + f.upper()), (t, j + 2, "K_" + f.upper())]
 
 
 # ---------- hullkortet ----------
@@ -192,99 +198,75 @@ def hullkart():
 
 
 def kutt_og_segmenter(h):
-    """Stripene går langs x (én per rad). Kutt der to bein på samme stripe har ulike nett: i et ledig hull mellom dem
-    (bor hullet med et 3,5 mm bor) eller, når de står inntil hverandre, en riss mellom hullene.
-    Returnerer (kutt: [(k_kutt, j, «hull»|«riss»)], segmenter: [(j, k0, k1, nett)])."""
+    """Kobberstripene går langs n (én per kolonne, langs fjernkontrollen). Kutt der to bein på samme stripe har ulike
+    nett: i et ledig hull mellom dem (bor hullet med et 3,5 mm bor) eller, når de står inntil hverandre, en riss.
+    Returnerer (kutt: [(k, j_kutt, «hull»|«riss»)], segmenter: [(k, j0, j1, nett)])."""
     kutt, seg = [], []
-    for j in range(J_MIN, J_MAX + 1):
-        ks = [k for k in range(K_MIN, K_MAX + 1) if paa_kortet(k, j)]
-        if not ks:
+    for k in range(K_MIN, K_MAX + 1):
+        js = [j for j in range(J_MIN, J_MAX + 1) if paa_kortet(k, j)]
+        if not js:
             continue
-        brukt = sorted((k, h[(k, j)]) for k in ks if (k, j) in h)
-        start, forrige = ks[0], None
-        for k, nett in brukt:
+        brukt = sorted((j, h[(k, j)]) for j in js if (k, j) in h)
+        start, forrige = js[0], None
+        for j, nett in brukt:
             if forrige and forrige[1] != nett:
-                ledige = [q for q in range(forrige[0] + 1, k) if (q, j) not in h]
+                ledige = [q for q in range(forrige[0] + 1, j) if (k, q) not in h]
                 if ledige:
                     q = ledige[len(ledige) // 2]
-                    kutt.append((q, j, "hull"))
-                    seg.append((j, start, q - 1, forrige[1]))
+                    kutt.append((k, q, "hull"))
+                    seg.append((k, start, q - 1, forrige[1]))
                     start = q + 1
                 else:
-                    kutt.append((k - 0.5, j, "riss"))
-                    seg.append((j, start, k - 1, forrige[1]))
-                    start = k
-            forrige = (k, nett)
-        seg.append((j, start, ks[-1], forrige[1] if forrige else None))
+                    kutt.append((k, j - 0.5, "riss"))
+                    seg.append((k, start, j - 1, forrige[1]))
+                    start = j
+            forrige = (j, nett)
+        seg.append((k, start, js[-1], forrige[1] if forrige else None))
     return kutt, seg
 
 
+MCP_J = round((144.0 - R0) / P)    # raden ved MCP-modulen: ledningene loddes så nær den som mulig (korte ledninger)
+
+
 def tilkoblingshull(h, seg):
-    """Et ledig hull på hvert segment som har et nett (der ledningen loddes), så nær beinet som mulig."""
+    """Et ledig hull på hvert segment som har et nett (der ledningen loddes): nærmest MCP-modulens rad."""
     ut = {}
-    for j, k0, k1, nett in seg:
+    for k, j0, j1, nett in seg:
         if not nett:
             continue
-        bein_k = [k for k in range(k0, k1 + 1) if (k, j) in h]
-        ledige = [k for k in range(k0, k1 + 1) if (k, j) not in h and paa_kortet(k, j)]
+        ledige = [j for j in range(j0, j1 + 1) if (k, j) not in h and paa_kortet(k, j)]
         if ledige:
-            ut[(j, k0, k1)] = min(ledige, key=lambda k: min(abs(k - b) for b in bein_k))
+            ut[(k, j0, j1)] = min(ledige, key=lambda j: abs(j - MCP_J))
     return ut
 
 
 def ledninger_paa_kortet():
-    """Hullkortets ledninger: én fra hver tast (høyre side) til MCP-modulen, og en GND-kjede (svart) mellom alle
-    GND-segmentene, med én GND-ledning videre til MCP-modulen. Ledningene loddes på kobbersiden.
-    Returnerer [(nett, (k, j) | None, mål, beskrivelse)]."""
+    """Hullkortets ledninger på kobbersiden: én fra hver tast til MCP-modulen, korte GND-lenker mellom GND-stripene
+    og én GND-ledning videre til MCP-modulen. Returnerer [(nett, (k, j), mål, beskrivelse)]."""
     h = hullkart()
     kutt, seg = kutt_og_segmenter(h)
     tk = tilkoblingshull(h, seg)
     ut = []
-    # én ledning per tast: fra et ledig hull på tastens segment (den nedre raden) til MCP-pinnen
     for b in BRYTERE:
         nett = "K_" + b[0].upper()
-        kand = [(j, k0, k1) for (j, k0, k1, nn) in seg if nn == nett]
-        kand = [s for s in kand if s in tk]
-        j, k0, k1 = max(kand, key=lambda s: s[0])
-        ut.append((nett, (tk[(j, k0, k1)], j), f"MCP {mcp_pinne(b[3])}", f"{b[0]} → MCP {mcp_pinne(b[3])}"))
-    # GND: hver bryters GND-side er ett nett (de to beina er koblet inni bryteren), men naboer på samme stripe kan dele
-    # segment. Kjede: koble bryterne i rekkefølge (nærmeste nabo) med korte svarte ledninger
-    grupper = []
-    for b in BRYTERE:
-        k, j = b[4], b[5]
-        gs = [s for s in seg if s[3] == "GND" and s[0] in (j - 1, j + 2) and s[1] <= k - 1 <= s[2]]
-        grupper.append((b[0], gs))
-    # union av grupper som deler segment
-    forelder = list(range(len(grupper)))
+        (k, j0, j1), = [(k, j0, j1) for (k, j0, j1, nn) in seg if nn == nett]
+        ut.append((nett, (k, tk[(k, j0, j1)]), f"MCP {mcp_pinne(b[3])}", f"{b[0]} → MCP {mcp_pinne(b[3])}"))
+    gnd = sorted([(k, tk[(k, j0, j1)]) for (k, j0, j1, nn) in seg if nn == "GND"], key=lambda q: abs(q[0] - (-3)))
+    navn = lambda q: "GND-stripe " + "ABCDEFGHIJKLMNOPQRS"[q[0] - K_MIN]
+    brukt = set()
 
-    def finn(i):
-        while forelder[i] != i:
-            i = forelder[i]
-        return i
-    for a in range(len(grupper)):
-        for c in range(a + 1, len(grupper)):
-            if set(grupper[a][1]) & set(grupper[c][1]):
-                forelder[finn(a)] = finn(c)
-    komp = {}
-    for i in range(len(grupper)):
-        komp.setdefault(finn(i), []).append(i)
-    # punkt (hull) for hver komponent: et ledig hull på den nedre GND-raden
-    punkt = []
-    for rot, idx in komp.items():
-        s = max((s for i in idx for s in grupper[i][1]), key=lambda s: s[0])
-        punkt.append(((tk[(s[0], s[1], s[2])], s[0]), [grupper[i][0] for i in idx]))
-    # nærmeste-nabo-kjede fra punktet nærmest MCP-modulen
-    mcp = (19.25, 144.0)
-    rest = sorted(punkt, key=lambda q: math.hypot(*(a - b for a, b in zip(hull_xy(*q[0]), mcp))))
-    kjede = [rest.pop(0)]
-    while rest:
-        a = hull_xy(*kjede[-1][0])
-        nxt = min(rest, key=lambda q: math.hypot(*(u - v for u, v in zip(hull_xy(*q[0]), a))))
-        rest.remove(nxt)
-        kjede.append(nxt)
-    ut.append(("GND", kjede[0][0], "MCP GND", f"GND ({', '.join(kjede[0][1])}) → MCP GND"))
+    def hull(q):
+        """Et eget ledig hull på samme stripe for hver ledning (q og så nabohullene)."""
+        for d in (0, 1, -1, 2, -2, 3, -3):
+            r = (q[0], q[1] + d)
+            if r not in h and r not in brukt and paa_kortet(*r):
+                brukt.add(r)
+                return r
+        raise ValueError(q)
+    kjede = sorted(gnd, key=lambda q: q[0])
+    ut.append(("GND", hull(gnd[0]), "MCP GND", f"{navn(gnd[0])} → MCP GND"))
     for a, c in zip(kjede, kjede[1:]):
-        ut.append(("GND", a[0], c[0], f"GND {'/'.join(a[1])} → {'/'.join(c[1])}"))
+        ut.append(("GND", hull(a), hull(c), f"{navn(a)} → {navn(c)}"))
     return ut
 
 

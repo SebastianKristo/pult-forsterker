@@ -39,13 +39,13 @@ def kort(ax, speil):
     ax.add_patch(Polygon(o, closed=True, fc="#f3e9d2" if not speil else "#f6efe2", ec="#333", lw=0.6))
     h = hk.hullkart()
     kutt, seg = hk.kutt_og_segmenter(h)
-    if speil:   # kobberstripene
-        for j in range(hk.J_MIN, hk.J_MAX + 1):
-            ks = [k for k in range(hk.K_MIN, hk.K_MAX + 1) if hk.paa_kortet(k, j)]
-            if ks:
-                x0, n = hk.hull_xy(ks[0], j)
-                x1, _ = hk.hull_xy(ks[-1], j)
-                ax.add_patch(Rectangle((x0 - 1.15, n - 0.9), x1 - x0 + 2.3, 1.8, fc="#d9a066", ec="none", alpha=0.75))
+    if speil:   # kobberstripene: langs fjernkontrollen, én per kolonne (stripa er brutt der midtskruens hull bores)
+        for k in range(hk.K_MIN, hk.K_MAX + 1):
+            js = [j for j in range(hk.J_MIN, hk.J_MAX + 1) if hk.paa_kortet(k, j)]
+            if js:
+                x, n0 = hk.hull_xy(k, js[0])
+                _, n1 = hk.hull_xy(k, js[-1])
+                ax.add_patch(Rectangle((x - 0.9, n0 - 1.15), 1.8, n1 - n0 + 2.3, fc="#d9a066", ec="none", alpha=0.75))
     for j in range(hk.J_MIN, hk.J_MAX + 1):
         for k in range(hk.K_MIN, hk.K_MAX + 1):
             if hk.paa_kortet(k, j):
@@ -88,10 +88,11 @@ def kobberside(ax):
     for k, j, t in kutt:
         x, n = hk.CX + k * hk.P, hk.R0 + j * hk.P
         if t == "hull":
-            ax.plot([x - 0.9, x + 0.9], [n - 0.9, n + 0.9], color="#d00", lw=0.8)
-            ax.plot([x - 0.9, x + 0.9], [n + 0.9, n - 0.9], color="#d00", lw=0.8)
+            ax.plot([x - 0.9, x + 0.9], [n - 0.9, n + 0.9], color="#d00", lw=0.9)
+            ax.plot([x - 0.9, x + 0.9], [n + 0.9, n - 0.9], color="#d00", lw=0.9)
+            ax.text(x + 1.3, n, hullnavn(k, j), fontsize=3.2, color="#d00", va="center", ha="right")
         else:
-            ax.plot([x, x], [n - 1.1, n + 1.1], color="#d00", lw=0.9)
+            ax.plot([x - 1.1, x + 1.1], [n, n], color="#d00", lw=0.9)
     for (k, j), nett in h.items():
         x, n = hk.hull_xy(k, j)
         ax.add_patch(Circle((x, n), 0.7, fc="#9a9a9a", ec="#444", lw=0.3))
@@ -100,7 +101,7 @@ def kobberside(ax):
         f = hk.farge(nett)[1]
         if isinstance(maal, tuple):
             x2, n2 = hk.hull_xy(*maal)
-            ax.plot([x, x, x2], [n, n2, n2], color=f, lw=0.9, solid_capstyle="round")
+            ax.plot([x, x2, x2], [n, n, n2], color=f, lw=0.9, solid_capstyle="round")
         else:
             ax.add_patch(Circle((x, n), 0.75, fc=f, ec="#000", lw=0.3))
             ax.text(x + (1.2 if x < hk.CX else -1.2), n + 0.2, f"{hullnavn(*hull)} → {maal}\n{hk.farge(nett)[0]}",
@@ -146,7 +147,7 @@ def main():
     with PdfPages(pdf) as pp:
         fig = plt.figure(figsize=A4)
         fig.text(0.5, 0.975, "Skjold Fjernkontroll – hullkort-utgaven, hullkortet i 1:1", ha="center", fontsize=10, weight="bold")
-        fig.text(0.5, 0.955, "Skriv ut i 100 % («faktisk størrelse»). Linjalen under skal være 50 mm. Hullkort 2,54 mm med kobberstriper på tvers, "
+        fig.text(0.5, 0.955, "Skriv ut i 100 % («faktisk størrelse»). Linjalen under skal være 50 mm. Stripekort 2,54 mm (bakelitt 1,5 mm) med kobberstripene LANGS fjernkontrollen, "
                  f"{hk.K_MAX - hk.K_MIN + 1} × {hk.J_MAX - hk.J_MIN + 1} hull.", ha="center", fontsize=6)
         a1 = akser(fig, 12, 297 - 25 - bh, bw, bh, xl, nl)
         oppside(a1)
