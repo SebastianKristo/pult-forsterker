@@ -30,3 +30,15 @@ f 04_med_fjernkontroll_bone 0,45,105,64,0,35,660 bone
 f 05_med_fjernkontroll_mork 0,45,105,64,0,35,660 mork
 f 06_side_full 0,55,125,80,0,62,760 bone full
 wait
+# Høyere vugge for Hullkort-utgaven (16,1 mm tykk)
+mkdir -p stl_hu
+for p in vugge sokkel gull lokk; do openscad -q -D "part=\"$p\"" -D FH=16.1 -o "stl_hu/$p.stl" skjold_dokk.scad & done
+wait
+python3 - <<'PY'
+import sys; sys.path.insert(0, ".."); import lag_3mf
+lag_3mf.STL = "stl_hu"
+lag_3mf.write("skjold-dokk-hullkort-k2.3mf", "Skjold Dokk for Hullkort-utgaven (16,1 mm) – vugge, sokkel og lokk", [
+    ("vugge", "Vugge (Bone White)", 1, (12, 20), None), ("sokkel", "Sokkel (mørk)", 2, (95, 20), None),
+    ("gull", "Gullstripe (felt inn i sokkelen)", 3, None, "sokkel"), ("lokk", "Lokk til vektlomma (mørk)", 2, (12, 150), None),
+], {1: "#CEC6B4", 2: "#2E2D2C", 3: "#D99E40"})
+PY
