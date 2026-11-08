@@ -16,6 +16,7 @@ openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera=2
 # K2-plater for denne utgaven: hettene (tappene følger bryterne), IR-vindu og logo, og 3MF med og uten dokk-kontakt
 for p in knapper gull symboler_lyse symboler_morke ir_vindu logo; do openscad -q -D "part=\"$p\"" -D "$E" -o "stl_en/$p.stl" skjold_fjernkontroll.scad & done
 wait
+python3 lag_orer.py stl_en
 python3 - <<'PY'
 import lag_3mf as L
 L.STL = "stl_en"

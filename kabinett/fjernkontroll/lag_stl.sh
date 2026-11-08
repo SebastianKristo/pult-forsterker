@@ -31,4 +31,4 @@ done
 openscad -q -D 'part="kort_omriss"' -D 'variant="kort"' -o tastekort/kort_omriss.dxf skjold_fjernkontroll.scad &
 openscad -q -D 'part="kort_omriss"' -D 'variant="full"' -o tastekort_full/kort_omriss.dxf skjold_fjernkontroll.scad &
 wait
-python3 sjekk_modell.py asm kort && python3 sjekk_modell.py asm_full full && python3 lag_3mf.py
+python3 sjekk_modell.py asm kort && python3 sjekk_modell.py asm_full full && python3 lag_orer.py stl stl_full && python3 lag_3mf.py
