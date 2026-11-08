@@ -74,12 +74,20 @@ def place(parts):
     return out
 
 
+TOPP_INNST = {"brim_type": "outer_only", "brim_width": "5", "brim_object_gap": "0",
+              "initial_layer_speed": "25", "initial_layer_infill_speed": "25"}
+
+
 def write(fn, title, parts, colors):
     objs, items, cfg = [], [], []
     for i, (f, name, fil, m) in enumerate(place(parts), 1):
         objs.append(f'<object id="{i}" name="{name}" type="model">{mesh_xml(m)}</object>')
         items.append(f'<item objectid="{i}"/>')
-        cfg.append(f'<object id="{i}"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/>'
+        # toppen er lang og flat og løfter seg ved halen: brim og sakte første lag som egne objektinnstillinger
+        # (Creality Print / OrcaSlicer leser dem fra model_settings.config; platetemperatur og vifter er filament-
+        # innstillinger og kan ikke legges på et objekt)
+        ekstra = "".join(f'<metadata key="{k}" value="{v}"/>' for k, v in TOPP_INNST.items()) if f == "topp" or f.endswith("/topp") else ""
+        cfg.append(f'<object id="{i}"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/>{ekstra}'
                    f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/></part></object>')
     farger = ";".join(f"{k}={v}" for k, v in sorted(colors.items()))
     model = ('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" '
