@@ -557,18 +557,23 @@ def pga_write(gain_code):
         sclk.off(); cs.on()
 
 
-def apply_volume():
-    """AUX: analogt volum (X9C på modulbygget, PGA2311 på hovedkortet). AirPlay/BT/USB: analogt på fast nivå, volum + loudness i CamillaDSP."""
+def apply_volume(vol_only=False):
+    """AUX: analogt volum (X9C på modulbygget, PGA2311 på hovedkortet). AirPlay/BT/USB: analogt på fast nivå, volum + loudness i CamillaDSP.
+    vol_only=True (bare volumet endret, f.eks. mens volumlinjen dras): hopp over nivåene per kilde (amixer) og hele
+    DSP-oppsettet – send bare nytt volum til CamillaDSP, så lyden endres i sanntid."""
     global _x9c_pos
+    upd = dsp.update_volume if vol_only else dsp.update
     if BOARD in ("radio", "test", "node"):   # bare digitalt volum (CamillaDSP)
-        dsp.update(); return
+        upd(); return
     if BOARD == "kit":   # alt digitalt: volum, nivå per kilde og miks i CamillaDSP/softvol
-        apply_levels(); dsp.update(); return
+        if not vol_only: apply_levels()
+        upd(); return
     if BOARD == "main":   # rev B: alt er digitalt – PGA2311 står fast, volum og nivåer i CamillaDSP/softvol.
         # Fast analogt nivå (KI_AMP_PGA_DB, standard -9 dB): DAC 2,1 Vrms * -9 dB = 0,74 Vrms = det TPA3116 (26 dB) klarer ved 24 V
         # uten å klippe. Da kan ikke full digital styrke overstyre forsterkeren. Hodetelefonforsterkeren har +6 dB for å kompensere.
         pga_write(0 if (state["mute"] or not state["power"]) else max(1, min(255, 192 + 2 * PGA_DB)))
-        apply_levels(); dsp.update(); return
+        if not vol_only: apply_levels()
+        upd(); return
     if state["mute"] or not state["power"]:
         target = 0
     elif state["input"] == "aux":
@@ -578,7 +583,7 @@ def apply_volume():
     if _x9c_pos is None:
         x9c_step(-100); _x9c_pos = 0
     x9c_step(target - _x9c_pos); _x9c_pos = target
-    dsp.update()
+    upd()
 
 
 # ---------- Talemeldinger (piper → espeak-ng som reserve), spilles gjennom dmix/CamillaDSP ----------
@@ -808,16 +813,34 @@ filters:
 
 
 class Dsp:
-    """Egen tråd som holder CamillaDSP oppdatert via websocket (python3-websocket)."""
+    """Egen tråd som holder CamillaDSP oppdatert via websocket (python3-websocket).
+    update() skyver hele oppsettet (EQ, loudness …) + volum; update_volume() bare volum/demping – den raske veien mens
+    volumlinjen i appen dras, så lyden følger fingeren. Websocketen holdes åpen mellom oppdateringene."""
     def __init__(self):
-        self._ev = threading.Event(); self._last_cfg = None
+        self._ev = threading.Event(); self._last_cfg = None; self._full = True; self._ws = None
+        self._sent = (None, None)
         threading.Thread(target=self._run, daemon=True).start()
 
     def update(self):
+        self._full = True; self._ev.set()
+
+    def update_volume(self):
         self._ev.set()
 
     def _send(self, ws, cmd):
         ws.send(json.dumps(cmd)); return json.loads(ws.recv())
+
+    def _conn(self, websocket):
+        if self._ws is None:
+            self._ws = websocket.create_connection(DSP_WS, timeout=2)
+        return self._ws
+
+    def _drop(self):
+        try:
+            if self._ws is not None: self._ws.close()
+        except Exception:
+            pass
+        self._ws = None
 
     def _run(self):
         try:
@@ -827,28 +850,35 @@ class Dsp:
         self._ev.set()   # skyv oppsett og volum ved oppstart
         while True:
             self._ev.wait(); self._ev.clear()
+            full = self._full; self._full = False
+            cfg = None
+            if full:
+                try:
+                    cfg = dsp_config()
+                except NameError:   # tråden starter før resten av daemonen er lastet (f.eks. roomeq_filters) – prøv igjen
+                    self._full = True; time.sleep(1); self._ev.set(); continue
+                except Exception as e:
+                    print("CamillaDSP-oppsett:", e, flush=True); self._full = True; time.sleep(2); self._ev.set(); continue
+                try:   # samme oppsett på disk, så CamillaDSP starter riktig etter omstart/krasj
+                    if not os.path.exists(DSP_FILE) or open(DSP_FILE).read() != cfg:
+                        with open(DSP_FILE + ".tmp", "w") as fh: fh.write(cfg)
+                        os.replace(DSP_FILE + ".tmp", DSP_FILE)
+                except Exception as e:
+                    print("CamillaDSP-fil:", e)
             try:
-                cfg = dsp_config()
-            except NameError:   # tråden starter før resten av daemonen er lastet (f.eks. roomeq_filters) – prøv igjen
-                time.sleep(1); self._ev.set(); continue
-            except Exception as e:
-                print("CamillaDSP-oppsett:", e, flush=True); time.sleep(2); self._ev.set(); continue
-            try:   # samme oppsett på disk, så CamillaDSP starter riktig etter omstart/krasj
-                if not os.path.exists(DSP_FILE) or open(DSP_FILE).read() != cfg:
-                    with open(DSP_FILE + ".tmp", "w") as fh: fh.write(cfg)
-                    os.replace(DSP_FILE + ".tmp", DSP_FILE)
-            except Exception as e:
-                print("CamillaDSP-fil:", e)
-            try:
-                ws = websocket.create_connection(DSP_WS, timeout=2)
-                if cfg != self._last_cfg:
-                    self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg
+                ws = self._conn(websocket)
+                if cfg is not None and cfg != self._last_cfg:
+                    self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg; self._sent = (None, None)
                 db = vol_db(eff_volume()) if (state["input"] != "aux" or BOARD in ("main", "kit")) else 0.0
-                self._send(ws, {"SetVolume": db})
-                self._send(ws, {"SetMute": bool(state["mute"]) or not state["power"]})
-                ws.close()
-            except Exception as e:   # CamillaDSP ikke klar ennå – prøv igjen
-                print("CamillaDSP:", e, flush=True); self._last_cfg = None; time.sleep(2); self._ev.set()
+                mute = bool(state["mute"]) or not state["power"]
+                if full or self._sent[0] != db:
+                    self._send(ws, {"SetVolume": db})
+                if full or self._sent[1] != mute:
+                    self._send(ws, {"SetMute": mute})
+                self._sent = (db, mute)
+            except Exception as e:   # CamillaDSP ikke klar ennå / startet på nytt – koble til igjen
+                print("CamillaDSP:", e, flush=True); self._drop(); self._last_cfg = None; self._sent = (None, None)
+                self._full = True; time.sleep(2); self._ev.set()
 
 
 dsp = Dsp()
@@ -1697,11 +1727,11 @@ def set_volume(v):
     if S1F and state.get("headphones") and settings().get("hpOwn", True):
         state["hp_volume"] = max(0, min(100, int(v)))
         if state["hp_volume"] > 0: state["mute"] = False
-        apply_volume(); changed(); return
+        apply_volume(vol_only=True); changed(); return
     state["volume"] = max(0, min(100, int(v)))
     if state["volume"] > 0:
         state["mute"] = False
-    apply_volume(); changed()
+    apply_volume(vol_only=True); changed()
 
 
 def set_mute(m):

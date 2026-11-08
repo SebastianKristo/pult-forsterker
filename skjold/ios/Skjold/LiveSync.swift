@@ -287,9 +287,25 @@ extension AppModel {
         }
     }
 
+    /// Same pump per room: while a room's bar is dragged the newest value follows as soon as the previous answer is in,
+    /// so the volume changes in real time and an older value can never arrive last.
     func roomVolume(_ r: Room, _ v: Int) {
-        if let h = r.host { Task { await DeviceLink.shared.send("/api/volume", ["volume": v], on: h) } }
-        else if let pid = r.pid { lyrionCmd(pid, ["mixer", "volume", "\(v)"]) }
+        guard r.host != nil else { if let pid = r.pid { lyrionCmd(pid, ["mixer", "volume", "\(v)"]) }; return }
+        roomVolWant[r.id] = (v, r)
+        pumpRoomVolume(r.id)
+    }
+
+    private func pumpRoomVolume(_ id: String) {
+        guard !roomVolBusy.contains(id), let w = roomVolWant[id], let h = w.1.host else { return }
+        let v = w.0
+        roomVolWant[id] = nil
+        roomVolBusy.insert(id)
+        Task { [weak self] in
+            _ = await DeviceLink.shared.send("/api/volume", ["volume": v], on: h)
+            guard let self else { return }
+            self.roomVolBusy.remove(id)
+            self.pumpRoomVolume(id)
+        }
     }
 
     static let inputNames = ["airplay", "bt", "aux", "radio", "usb"]
