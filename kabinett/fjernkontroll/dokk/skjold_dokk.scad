@@ -178,6 +178,27 @@ module klem_lokal() {
     rotate([90, 0, 90]) translate([0, 0, -200]) linear_extrude(400) klem_side2d();                // (y, z) langs x
   }
 }
+// Innføring (klem): fjernkontrollen skal finne plassen sin selv og kunne løftes ut med én hånd. Vingenes innsider vider
+// seg ut øverst (trakt), innerkantene på vingene og leppa er avfaset, så ingenting hekter seg.
+trakt = 2.2;                      // så mye vingene vider seg ut mot toppen (per side)
+trakt_y0 = klem_y - 12;           // trakten starter her (under er setet med vanlig klaring)
+module innforing_lokal() {
+  for (s = [0, 1]) {
+    x = s ? FW + kl : -kl; u = s ? 1 : -1;           // u peker utover
+    // trakt: innsiden går fra x ved trakt_y0 til x + u·trakt ved rygg_l
+    translate([0, 0, 0.3]) linear_extrude(klem_h + 2)
+      polygon([[x - u * 2, trakt_y0], [x, trakt_y0], [x + u * trakt, rygg_l + 2], [x - u * 2, rygg_l + 2]]);
+    // fas på innerkanten øverst langs hele vingen
+    hull() {   // fasen vokser jevnt inn fra like over leppa (ingen trapp som henger over)
+      rotate([90, 0, 0]) translate([0, 0, -rygg_l - 5]) linear_extrude(rygg_l + 5 - (leppe_h + 10))
+        polygon([[x - u * 0.01, klem_h - 1.8], [x - u * 0.01, klem_h + 2], [x + u * 2.6, klem_h + 2]]);
+      translate([x - u * 0.01, leppe_h + 2, klem_h + 1.9]) cube(0.01, center = true);
+    }
+  }
+  // fas under leppa foran (forsiden glir forbi den når fjernkontrollen settes ned)
+  translate([-kl, 0, 0]) rotate([90, 0, 90]) linear_extrude(FW + 2 * kl)   // bare over fjernkontrollens bredde
+    polygon([[leppe_h + 0.01, FH + kl - 0.01], [leppe_h - 1.6, FH + kl - 0.01], [leppe_h + 0.01, FH + kl + 1.6]]);
+}
 module ytre_klem() {
   myk(VB, pute_l, pute_bak, plan_r);
   for (s = [-1, 1]) translate([s * ribbe_x, 0, 0]) myk(ribbe_b, rygg_l - 4, bak_y, ribbe_b/2 - 1);
@@ -196,7 +217,7 @@ module vugge() {
       if (stil == "klem") ytre_klem(); else if (stil == "tvilling") ytre_tvilling(); else ytre();
       fk_plass() { if (stil != "klem") vanger_myke(stil == "tvilling" ? pute_l - 2 : vange_l); nokler_lokal(); }
     }
-    fk_plass() { fk_rom(); pogo_lomme_lokal(); }
+    fk_plass() { fk_rom(); pogo_lomme_lokal(); if (stil == "klem") innforing_lokal(); }
     translate([0, 0, -1]) linear_extrude(SH + 1) square([400, 400], center = true);   // står på sokkelen
     translate([kanal_X, kanal_Y, SH - 1]) cylinder(d = 4, h = pogo_bunn[2] - SH + 1.5, $fn = 20);   // ledninger
     for (x = [-20, 20]) translate([x, 8, SH - 1]) cylinder(d = 4.3, h = 5, $fn = 24);                  // tapper
