@@ -11,6 +11,8 @@
 // part:  topp | bunn | logo | ir_vindu | knapper | knapper_lys | gull | symboler_lyse | symboler_morke |
 //        farge_rod | farge_gronn | farge_gul | farge_bla | bryterbrett | samlet | eksplodert | planet |
 //        A_<del> (montert stilling, for sjekk_modell.py) | skjermflate | kort_omriss (2D, DXF)
+use <../fonter/Inter-Bold.otf>     // SKJOLD-logoen: Inter (ligger i repoet, ren J)
+use <../fonter/Inter-Regular.otf>
 include <taster.scad>
 include <hovedkort/hovedkort_data.scad>
 include <enkel/enkel_data.scad>
@@ -335,7 +337,7 @@ module topp() {
     if (hk) usb_aapning();   // hovedkortets USB-C sitter høyere: åpningen går over skjøten
   }
 }
-module logo2d() { translate([W/2, 5.2 + 1.6]) text("SKJOLD", size = 3.0, font = "Liberation Sans:style=Bold", halign = "center", valign = "center", spacing = 1.35); }
+module logo2d() { translate([W/2, 5.2 + 1.6]) text("SKJOLD", size = 2.85, font = "Inter:style=Bold", halign = "center", valign = "center", spacing = 1.35); }
 module logo() { translate([0, 0, H - 0.5]) linear_extrude(0.5) logo2d(); }   // flaten er flat her (godt innenfor fasen)
 
 // ---------- dokk-kontakt: hunndelen av en magnetisk pogo-kontakt (2 pinner) flatt i bunnen ----------

@@ -1,6 +1,8 @@
 // Skjold Tårn – KONSEPT (ikke ferdig produkt). Gulvhøyttaler, bassrefleks med port bak.
 // variant: "taarn" (2-veis: 1× SB17NRX2C35-8 + SB26STAC tweeter) | "pro" (2,5-veis: 2× SB17 + tweeter)
 // part: samlet | par | eksplodert | snitt
+use <../fonter/Inter-Bold.otf>     // SKJOLD-logoen: Inter (ligger i repoet, ren J)
+use <../fonter/Inter-Regular.otf>
 variant = "taarn";
 part = "samlet";
 $fn = 72;
@@ -37,7 +39,7 @@ module kasse(){
     frontslice(ztw,TC); frontslice(zw1,WC); if (variant=="pro") frontslice(zw2,WC);
   }
   color(c_gold) translate([W/2-30,-4.8,70]) cube([60,0.8,2]);
-  color(c_gold) translate([W/2,-4.8,82]) rotate([90,0,0]) linear_extrude(0.8) text("SKJOLD",size=10,font="Liberation Sans:style=Bold",halign="center",spacing=1.4);
+  color(c_gold) translate([W/2,-4.8,82]) rotate([90,0,0]) linear_extrude(0.8) text("SKJOLD",size=9.5,font="Inter:style=Bold",halign="center",spacing=1.4);
 }
 
 module konus(z,d){

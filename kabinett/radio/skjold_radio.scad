@@ -15,6 +15,8 @@
 //        samlet | eksplodert | A_<del> (montert stilling, for sjekk_modell.py)
 // STL-ene eksporteres liggende slik de skal printes (FDM) – samme filer kan bestilles i resin/MJF (se LES_MEG.md).
 // Alle deler er åpne skall (ingen lukkede hulrom), så resin renner ut uten egne dreneringshull.
+use <../fonter/Inter-Bold.otf>     // SKJOLD-logoen: Inter (ligger i repoet, ren J)
+use <../fonter/Inter-Regular.otf>
 
 part = "samlet";
 ex = 0;                          // eksplosjonsavstand (eksplodert visning)
@@ -268,7 +270,7 @@ module kropp_raa() {
       }
       // logo SKJOLD preget over skjermen
       translate([scrX, logoZ, -0.6]) linear_extrude(1)
-        text("SKJOLD", size = 4, font = "Liberation Sans:style=Bold", halign = "center", valign = "center", spacing = 1.4);
+        text("SKJOLD", size = 3.8, font = "Inter:style=Bold", halign = "center", valign = "center", spacing = 1.4);
     }
     // gulvet: kammerørene (senkeskruer nedenfra), gummiføtter og lufting under forsterkeren
     for (x = [kX0 - kOre/2, kX0 + kW + kOre/2], y = kOreY)

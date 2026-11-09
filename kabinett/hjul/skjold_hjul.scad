@@ -4,6 +4,8 @@
 //
 // Bruk:  openscad -D 'part="topp"' -o topp.stl skjold_hjul.scad
 // part:  topp | bunn | knott | knapp | lysleder | samlet | eksplodert | ovenfra
+use <../fonter/Inter-Bold.otf>     // SKJOLD-logoen: Inter (ligger i repoet, ren J)
+use <../fonter/Inter-Regular.otf>
 
 part = "samlet";
 $fn = 96;
@@ -83,7 +85,7 @@ module bunn(){
     for(a=[0,90,180,270]) rotate([0,0,a+22.5]) translate([D/2-14,0,-0.1]) cylinder(d=footD,h=footT); // føtter
     translate([0,D/2-wall/2,1.6+usbH/2+0.6]) cube([usbW,wall*4,usbH],center=true);      // USB-C bak
     translate([0,0,-0.1]) linear_extrude(0.5) mirror([1,0,0])
-      text("SKJOLD HJUL",size=4.2,font="Liberation Sans:style=Bold",halign="center",valign="center",spacing=1.2);
+      text("SKJOLD HJUL",size=3.99,font="Inter:style=Bold",halign="center",valign="center",spacing=1.2);
   }
   for(a=[45,135,225,315]) rotate([0,0,a]) translate([screwR-3,0,0]) difference(){       // skruestolper
     cylinder(d=6,h=botH); translate([0,0,-0.1]) cylinder(d=2.3,h=botH+1); translate([0,0,-0.1]) cylinder(d=4.2,h=1.4);
