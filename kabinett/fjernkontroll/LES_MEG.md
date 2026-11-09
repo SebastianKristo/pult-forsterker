@@ -661,14 +661,24 @@ Har du printet sokkelen, trenger du bare vugga:
 
 ![Flat dokk med fjernkontrollen](dokk/render/13_flat_med_fjernkontroll.png)
 
-`dokk/skjold-dokk-flat-k2.3mf` er et lavt brett (69 × 230,5 × 10 mm) der fjernkontrollen ligger flatt med skjermen opp. Den stikker 6,5 mm (standard) eller 9 mm (Hullkort) over brettet, så den går under TV-en.
+Et lavt brett der fjernkontrollen ligger flatt med skjermen opp, så den går under TV-en. Passer standard og Hullkort (55 × 202,5 mm). Full variant (245,5 mm) er for lang.
 
-- **Forsenkning:** den følger fjernkontrollens omriss med 0,6 mm klaring og 45° fas øverst.
-- **Grep:** to grep midt på sidene, så den er lett å løfte opp.
-- **USB-spor:** et spor i halen for USB-C-pluggen, rett eller vinklet. Kabelen ligger langs bordet.
-- **Utseende:** gullstripe felt inn i toppen (filament 3, samme utskrift) og plass til gummiføtter Ø10 under.
-- **Passer:** standard og Hullkort (55 × 202,5 mm). Full variant (245,5 mm) er for lang.
-- **Utskrift:** bunnen ned, ingen støtte. [Bilde uten fjernkontroll](dokk/render/14_flat.png).
+- **`dokk/skjold-dokk-flat-k2.3mf`, med magnetisk lading:**
+  - Brettet er 69 × 230,5 × 16 mm, og fjernkontrollen ligger 25 mm over bordet (Hullkort).
+  - **Handelen av pogo-kontakten** sitter i gulvet med flaten i flukt, rett under hunndelen i fjernkontrollens bunn. Bunnen må være `bunn_dokk`, som på den stående dokka. Magnetene trekker den på plass, og pinnene presses 0,9 mm.
+  - **USB-C-brikken** sitter i halen til venstre, med kontakten ut gjennom endeveggen. Ledningskanalen går under gulvet.
+  - **Bunnplata** (2 mm) skrus fast med 4 × selvgjengende M3 × 8 i forboringene. Gummiføttene sitter under den.
+  - Kobling som på den stående dokka: VBUS til handelen +, GND til handelen −. Sjekk polariteten med multimeter før du lukker.
+- **`dokk/skjold-dokk-flat-uten-pogo-k2.3mf`, uten magnetisk lading:** brettet er 10 mm høyt, og du lader med kabel i halen.
+
+Felles for begge:
+- **Forsenkning:** følger omrisset med 0,6 mm klaring og 45° fas.
+- **Grep:** midt på sidene.
+- **USB-spor i halen:** for kabel direkte i fjernkontrollen.
+- **Gullstripe:** felt inn i toppen.
+- **Utskrift:** bunnen ned, uten støtte.
+
+Bilder: [uten fjernkontroll](dokk/render/14_flat.png) · [undersiden uten bunnplate](dokk/render/15_flat_undersiden.png).
 
 ### Deler
 

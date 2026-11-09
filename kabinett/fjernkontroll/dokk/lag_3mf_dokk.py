@@ -27,9 +27,15 @@ lag_3mf.write(os.path.join(HER, "skjold-dokk-k2-sokkel-delt.3mf"), "Skjold Dokk 
     ("sokkel_topp", "Sokkel, toppdel (mørk, åpen under)", 2, (12, 20), None),
     ("gull", "Gullstripe (felt inn i sokkelen)", 3, None, "sokkel_topp"),
     ("sokkel_bunn", "Bunnplate (mørk)", 2, (110, 20), None)], {2: "#2E2D2C", 3: "#D99E40"})
-# flat dokk (fjernkontrollen ligger flatt, f.eks. foran TV-en): brett med gullstripe som én modell
+# flat dokk (fjernkontrollen ligger flatt, f.eks. foran TV-en). Med magnetisk lading: brett med pogo-kontakt og
+# USB-C-brikke, gullstripe (samme modell) og bunnplate som skrus fast. Uten: bare brettet, lading med kabel i halen.
 lag_3mf.STL = os.path.join(HER, "stl_flat")
-lag_3mf.write(os.path.join(HER, "skjold-dokk-flat-k2.3mf"), "Skjold Dokk Flat – brett der fjernkontrollen ligger flatt", [
+lag_3mf.write(os.path.join(HER, "skjold-dokk-flat-k2.3mf"), "Skjold Dokk Flat – med magnetisk lading (pogo)", [
+    ("brett", "Brett med pogo-lomme (mørk, bunnen ned)", 2, (15, 15), None),
+    ("gull", "Gullstripe (felt inn i toppen)", 3, None, "brett"),
+    ("bunnplate", "Bunnplate (mørk)", 2, (110, 15), None)], {2: "#2E2D2C", 3: "#D99E40"})
+lag_3mf.STL = os.path.join(HER, "stl_flat_enkel")
+lag_3mf.write(os.path.join(HER, "skjold-dokk-flat-uten-pogo-k2.3mf"), "Skjold Dokk Flat – uten magnetisk lading (kabel i halen)", [
     ("brett", "Brett (mørk, bunnen ned)", 2, (90, 15), None),
     ("gull", "Gullstripe (felt inn i toppen)", 3, None, "brett")], {2: "#2E2D2C", 3: "#D99E40"})
 lag_3mf.STL = os.path.join(HER, "stl")
