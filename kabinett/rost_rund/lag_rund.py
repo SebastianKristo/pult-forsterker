@@ -211,8 +211,6 @@ L.OBJ_INNST = {
     # (1,8 mm vegg = 4 linjer, helt fylt) og 0,24 mm lag kutter tiden kraftig uten å endre utseendet nevneverdig.
     "hylse": {"enable_support": "0", "layer_height": "0.24", "wall_loops": "2", "small_perimeter_speed": "100%",
               "outer_wall_speed": "150", "inner_wall_speed": "250", "wall_generator": "arachne", **BRIM},
-    # logoen er et eget objekt i lomma si: ingen støtte eller brim, og samme lagtykkelse som hylsa (de printes lag for lag sammen)
-    "logo": {"enable_support": "0", "brim_type": "no_brim", "layer_height": "0.24", "wall_loops": "1"},
     "bunn": {"enable_support": "0"},
 }
 L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper og knott", [
