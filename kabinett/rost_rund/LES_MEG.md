@@ -95,7 +95,7 @@ så Creality Print / OrcaSlicer henter dem selv):
 - `skjold_rost_rund.scad` – lokk, kjerne, bunn, knott, knapper, logo (OpenSCAD)
 - `lag_rund.py` – eksporterer alt, lager grillhylsa (manifold3d), sjekker modellen og skriver K2-platene:
   - `skjold-rost-rund-k2-kjerne.3mf` – kjerne, knapper (mørk) og knott (gull)
-  - `skjold-rost-rund-k2-hylse.3mf` – grillhylsa (lys) med SKJOLD (gull, 1 mm innfelt). Logoen er et eget objekt i lomma si, uten støtte og brim. Ingen støtte trengs: sekskanthullene har spiss topp og utsparingen bak har 45° tak. Hylsa har 0,24 mm lag, to vegger og full fart på de små hullene. Det kutter mye av printetiden.
+  - `skjold-rost-rund-k2-hylse.3mf` – grillhylsa (lys) med SKJOLD (gull, 1 mm innfelt). Hylsa og logoen er én modell med to deler (lys og gull), så logoen blir liggende i lomma si i sliceren. Ingen støtte trengs: sekskanthullene har spiss topp og utsparingen bak har 45° tak. Hylsa har 0,24 mm lag, to vegger og full fart på de små hullene. Det kutter mye av printetiden.
   - `skjold-rost-rund-k2-hylse-en-farge.3mf` – samme hylse i én farge, uten fargebytter. SKJOLD står felt 1 mm inn og kan fylles med gulltusj etterpå. Raskest.
   - `skjold-rost-rund-k2-lokk-bunn.3mf` – lokk med skjermramme og bunnplate (lys), og ruta (klar PETG)
 - Kontrollen i `lag_rund.py`: alle deler tette og ett legeme, ingen overlapp i montert stilling, ingen overheng

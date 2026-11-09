@@ -68,12 +68,28 @@ def place(parts):
 
 
 def write(fn, title, parts):
-    objs, items, cfg = [], [], []
-    for i, (f, name, fil, m) in enumerate(place(parts), 1):
-        objs.append(f'<object id="{i}" name="{name}" type="model">{mesh_xml(m)}</object>')
-        items.append(f'<item objectid="{i}"/>')
-        cfg.append(f'<object id="{i}"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/>'
-                   f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/></part></object>')
+    # innfelte deler («samme som», f.eks. logoen) blir deler av samme objekt som delen de ligger i: da holder de
+    # plassen sin (sliceren slipper ellers hvert objekt ned på plata) og får egen filamentfarge
+    plassert = place(parts)
+    grupper = {}
+    for k, (f, name, fil, m) in enumerate(plassert):
+        grupper.setdefault(parts[k][5] or f, []).append(k)
+    objs, items, cfg, nid = [], [], [], 0
+    for ledd in grupper.values():
+        dels = []
+        for k in ledd:
+            nid += 1
+            f, name, fil, m = plassert[k]
+            objs.append(f'<object id="{nid}" name="{name}" type="model">{mesh_xml(m)}</object>')
+            dels.append((nid, name, fil))
+        nid += 1
+        _, name0, fil0, _ = plassert[ledd[0]]
+        objs.append(f'<object id="{nid}" name="{name0}" type="model"><components>'
+                    + "".join(f'<component objectid="{i}"/>' for i, _, _ in dels) + '</components></object>')
+        items.append(f'<item objectid="{nid}"/>')
+        cfg.append(f'<object id="{nid}"><metadata key="name" value="{name0}"/><metadata key="extruder" value="{fil0}"/>'
+                   + "".join(f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{n}"/><metadata key="extruder" value="{fl}"/></part>'
+                             for i, n, fl in dels) + '</object>')
     model = ('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" '
              'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
              f'<metadata name="Title">{title}</metadata><metadata name="Designer">Skjold</metadata>'

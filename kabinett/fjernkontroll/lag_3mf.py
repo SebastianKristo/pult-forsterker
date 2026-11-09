@@ -81,10 +81,11 @@ TOPP_INNST = {"brim_type": "outer_only", "brim_width": "5", "brim_object_gap": "
               "initial_layer_speed": "25", "initial_layer_infill_speed": "25"}
 
 
-def write(fn, title, parts, colors, sammen=False):
-    """sammen=True: deler med «samme som» (innfelte logoer, symboler) blir deler av samme objekt som den de ligger i,
+def write(fn, title, parts, colors, sammen=True):
+    """sammen=True (standard): deler med «samme som» (innfelte logoer, symboler) blir deler av samme objekt som den de ligger i,
     med egen filamentfarge. Da behandler sliceren dem som én modell: ingen støtte eller brim på logoen for seg,
-    og ingen overlappende objekter."""
+    og ingen overlappende objekter. Viktigst: sliceren slipper hvert objekt ned på plata, så en innfelt del som ikke
+    ligger på plata (logo på en vegg, symboler på toppen av en hette) havner feil om den er et eget objekt."""
     if sammen:
         return write_sammen(fn, title, parts, colors)
     objs, items, cfg = [], [], []
