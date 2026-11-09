@@ -81,7 +81,12 @@ TOPP_INNST = {"brim_type": "outer_only", "brim_width": "5", "brim_object_gap": "
               "initial_layer_speed": "25", "initial_layer_infill_speed": "25"}
 
 
-def write(fn, title, parts, colors):
+def write(fn, title, parts, colors, sammen=False):
+    """sammen=True: deler med «samme som» (innfelte logoer, symboler) blir deler av samme objekt som den de ligger i,
+    med egen filamentfarge. Da behandler sliceren dem som én modell: ingen støtte eller brim på logoen for seg,
+    og ingen overlappende objekter."""
+    if sammen:
+        return write_sammen(fn, title, parts, colors)
     objs, items, cfg = [], [], []
     for i, (f, name, fil, m) in enumerate(place(parts), 1):
         objs.append(f'<object id="{i}" name="{name}" type="model">{mesh_xml(m)}</object>')
@@ -113,6 +118,56 @@ def write(fn, title, parts, colors):
         z.writestr("3D/3dmodel.model", model)
         z.writestr("Metadata/model_settings.config", conf)
     print("skrev", fn)
+
+
+def _pakk(fn, title, objs, items, cfg, colors):
+    farger = ";".join(f"{k}={v}" for k, v in sorted(colors.items()))
+    model = ('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" '
+             'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+             f'<metadata name="Title">{title}</metadata><metadata name="Designer">Skjold</metadata>'
+             f'<metadata name="Description">Filamenter: {farger}</metadata>'
+             '<metadata name="License">CC BY-NC-SA 4.0</metadata>'
+             f'<resources>{"".join(objs)}</resources><build>{"".join(items)}</build></model>')
+    ct = ('<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+          '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+          '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'
+          '<Default Extension="config" ContentType="text/xml"/></Types>')
+    rels = ('<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
+    conf = '<?xml version="1.0" encoding="UTF-8"?>\n<config>' + "".join(cfg) + "</config>"
+    with zipfile.ZipFile(fn, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", ct)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("3D/3dmodel.model", model)
+        z.writestr("Metadata/model_settings.config", conf)
+    print("skrev", fn)
+
+
+def write_sammen(fn, title, parts, colors):
+    plassert = place(parts)
+    grupper = {}   # hoveddel → [(indeks i plassert)]
+    for k, (f, name, fil, m) in enumerate(plassert):
+        same = parts[k][4]
+        grupper.setdefault(same or f, []).append(k)
+    objs, items, cfg, nid = [], [], [], 0
+    for hoved, ledd in grupper.items():
+        del_id = []
+        for k in ledd:
+            nid += 1
+            f, name, fil, m = plassert[k]
+            objs.append(f'<object id="{nid}" name="{name}" type="model">{mesh_xml(m)}</object>')
+            del_id.append((nid, name, fil))
+        nid += 1
+        f0, name0, fil0, _ = plassert[ledd[0]]
+        comps = "".join(f'<component objectid="{i}"/>' for i, _, _ in del_id)
+        objs.append(f'<object id="{nid}" name="{name0}" type="model"><components>{comps}</components></object>')
+        items.append(f'<item objectid="{nid}"/>')
+        innst = TOPP_INNST if f0 == "topp" or f0.endswith("/topp") else OBJ_INNST.get(f0, {})
+        ekstra = "".join(f'<metadata key="{k}" value="{v}"/>' for k, v in innst.items())
+        deler = "".join(f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{n}"/><metadata key="extruder" value="{fl}"/></part>'
+                        for i, n, fl in del_id)
+        cfg.append(f'<object id="{nid}"><metadata key="name" value="{name0}"/><metadata key="extruder" value="{fil0}"/>{ekstra}{deler}</object>')
+    _pakk(fn, title, objs, items, cfg, colors)
 
 
 STL = "stl"
