@@ -641,8 +641,9 @@ Ikke kontrollert:
 
 Bilder (skjermen er lagt inn med `skjerm_i_render.py`, som i de andre bildene): [i dokken](dokk/render/00_hero.png) · [dokka, Bone White](dokk/render/01_dokk_bone.png) · [mørk](dokk/render/02_dokk_mork.png) · [bakfra med USB-C](dokk/render/03_dokk_bak.png) · [med fjernkontrollen, Bone](dokk/render/04_med_fjernkontroll_bone.png) · [med fjernkontrollen, mørk](dokk/render/05_med_fjernkontroll_mork.png) · [fra siden, full variant](dokk/render/06_side_full.png).
 
-**Vugga finnes i to stiler** (`stil` i `dokk/skjold_dokk.scad`), og begge passer på samme sokkel:
-- **Tvilling (standard):** en lav pute foran holder halen, og to slanke ribber bak bærer fjernkontrollen, med luft imellom. Pogo-kontakten sitter i den høyre ribba. [Bilde](dokk/render/07_tvilling.png) · [bakfra](dokk/render/08_tvilling_bak.png) · [med fjernkontrollen](dokk/render/09_tvilling_med_fjernkontroll.png).
+**Vugga finnes i tre stiler** (`stil` i `dokk/skjold_dokk.scad`), og begge passer på samme sokkel:
+- **Klem (standard):** en avrundet skål med rund rygg som klemmer om sidene på fjernkontrollen 11 mm opp (under forsiden, så tastene er fri) et godt stykke oppover, og glir mykt inn i ryggen øverst. Under står puta foran og to ribber. [Bilde](dokk/render/10_klem.png) · [bakfra](dokk/render/11_klem_bak.png) · [med fjernkontrollen](dokk/render/12_klem_med_fjernkontroll.png).
+- **Tvilling:** en lav pute foran holder halen, og to slanke ribber bak bærer fjernkontrollen, med luft imellom. Pogo-kontakten sitter i den høyre ribba. [Bilde](dokk/render/07_tvilling.png) · [bakfra](dokk/render/08_tvilling_bak.png) · [med fjernkontrollen](dokk/render/09_tvilling_med_fjernkontroll.png).
 - **Skål:** den første utgaven, med skål foran og én bred finne bak.
 
 Har du printet sokkelen, trenger du bare `dokk/skjold-dokk-k2-vugge.3mf` (eller `skjold-dokk-hullkort-k2-vugge.3mf`).
