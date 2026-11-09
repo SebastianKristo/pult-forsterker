@@ -204,13 +204,13 @@ L.OBJ_INNST = {
     "lokk": {"enable_support": "0", "initial_layer_speed": "20", "initial_layer_infill_speed": "30", "elefant_foot_compensation": "0.15"},
     "rute": {"enable_support": "0", "sparse_infill_density": "100%", "wall_loops": "1", "top_shell_layers": "0", "bottom_shell_layers": "0",
              "initial_layer_speed": "15", "outer_wall_speed": "30", "inner_wall_speed": "30", "sparse_infill_speed": "30"},
-    "kjerne": {"enable_support": "0"}, "hylse": {"enable_support": "0", "outer_wall_speed": "120"}, "bunn": {"enable_support": "0"},
+    "kjerne": {"enable_support": "0"}, "elementplate": {"enable_support": "0"}, "hylse": {"enable_support": "0", "outer_wall_speed": "120"}, "bunn": {"enable_support": "0"},
 }
 L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper og knott", [
     ("kjerne", "Kjerne (mørk, stående)", 2, (10, 10), None),
-    ("knapp", "Knappehetter (mørke, toppen ned)", 2, (130, 112), None),
-    ("knott", "Knott (gull, toppen ned)", 3, (130, 132), None),
-    ("elementplate", "Elementplate (mørk, forsiden ned) – lag ny for et annet element", 2, (130, 10), None)], {2: "#232325", 3: "#D99E40"})
+    ("knapp", "Knappehetter (mørke, toppen ned)", 2, (130, 118), None),
+    ("knott", "Knott (gull, toppen ned)", 3, (130, 138), None),
+    ("elementplate", "Elementplate med krage (mørk, baksiden ned) – lag ny for et annet element", 2, (130, 10), None)], {2: "#232325", 3: "#D99E40"})
 L.write("skjold-rost-rund-k2-hylse.3mf", "Skjold Røst Rund – grillhylse med SKJOLD i gull", [
     ("hylse", "Grillhylse (lys, stående)", 1, (70, 70), None),
     ("logo", "SKJOLD (gull, innfelt i hylsa)", 3, None, "hylse")], {1: "#ECE9E3", 3: "#D99E40"})
@@ -218,4 +218,13 @@ L.write("skjold-rost-rund-k2-lokk-bunn.3mf", "Skjold Røst Rund – lokk med skj
     ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (10, 10), None),
     ("bunn", "Bunnplate med port (lys)", 1, (130, 10), None),
     ("rute", "Rute over skjermen (klar PETG, 100 % fyll)", 4, (20, 120), None)], {1: "#ECE9E3", 4: "#DDE6EA"})
+# elementplater for alle elementene i malen (kabinett/elementer/elementer.scad), på én plate
+EL = ["rs75_4", "frs8_4", "grs3fr4", "faital3fe22"]
+procs = [subprocess.Popen(["openscad", "-q", "-D", 'part="elementplate"', "-D", f'element="{e}"', "-o", f"stl/elementplate_{e}.stl", SC]) for e in EL]
+for pr in procs:
+    assert pr.wait() == 0
+L.OBJ_INNST = {f"elementplate_{e}": {"enable_support": "0"} for e in EL}
+L.write("skjold-rost-rund-k2-elementplater.3mf", "Skjold Røst Rund – elementplater med krage (velg den som passer elementet ditt)", [
+    (f"elementplate_{e}", f"Elementplate {e} (mørk, baksiden ned)", 2, ((10, 130)[i % 2], (10, 125)[i // 2]), None)
+    for i, e in enumerate(EL)], {2: "#232325"})
 sys.exit(0 if ok else 1)
