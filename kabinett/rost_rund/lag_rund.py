@@ -213,20 +213,9 @@ L.OBJ_INNST = {
               "outer_wall_speed": "150", "inner_wall_speed": "250", "wall_generator": "arachne", **BRIM},
     "bunn": {"enable_support": "0"},
 }
-L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper og knott", [
-    ("kjerne", "Kjerne (mørk, stående)", 2, (10, 10), None),
-    ("knapp", "Knappehetter (mørke, toppen ned)", 2, (130, 118), None),
-    ("knott", "Knott (gull, toppen ned)", 3, (130, 138), None),
-    ("elementplate", "Elementplate med krage (mørk, baksiden ned) – lag ny for et annet element", 2, (130, 10), None)], {2: "#232325", 3: "#D99E40"})
-L.write("skjold-rost-rund-k2-hylse.3mf", "Skjold Røst Rund – grillhylse med SKJOLD i gull", [
-    ("hylse", "Grillhylse (lys, stående)", 1, (70, 70), None),
-    ("logo", "SKJOLD (gull, innfelt i hylsa)", 3, None, "hylse")], {1: "#ECE9E3", 3: "#D99E40"})
-# uten gull: én farge, ingen fargebytter (SKJOLD står felt inn 1 mm; kan males med gulltusj etterpå)
-L.write("skjold-rost-rund-k2-hylse-en-farge.3mf", "Skjold Røst Rund – grillhylse i én farge (SKJOLD felt inn)", [
-    ("hylse", "Grillhylse (én farge, stående)", 1, (70, 70), None)], {1: "#ECE9E3"})
 # museører (som på fjernkontrollen): tynne skiver langs kanten av lokket og bunnplata, som holder hjørnene nede på
 # plata. Ø24 i de avrundede hjørnene (som løfter seg mest), Ø16 midt på sidene, 0,6 mm (3 lag). Vris av etter print.
-def orer(navn, r_hj=12.0, r_side=8.0, h=0.6):
+def orer(navn, r_hj=12.0, r_side=8.0, h=0.6, bare_ute=False):
     m = trimesh.load(f"stl/{navn}.stl")
     snitt = m.section(plane_origin=[0, 0, 0.1], plane_normal=[0, 0, 1])
     pts = snitt.vertices[:, :2]
@@ -240,11 +229,26 @@ def orer(navn, r_hj=12.0, r_side=8.0, h=0.6):
     # trekk fra delen selv (skivene ligger inntil kanten og holder den), og alt mer enn 3 mm inn fra kanten, så
     # skivene ikke fyller fotlommer eller hull lenger inn
     from shapely.geometry import MultiPoint
-    inni = trimesh.creation.extrude_polygon(MultiPoint(pts).convex_hull.buffer(-3), 5).apply_translation((0, 0, -1))
+    # (bare_ute: hele innsiden, for hylsa, som er en tynn ring: skivene sitter bare på utsiden av veggen)
+    inni = trimesh.creation.extrude_polygon(MultiPoint(pts).convex_hull.buffer(-0.01 if bare_ute else -3), 5).apply_translation((0, 0, -1))
     o = trimesh.boolean.difference([trimesh.util.concatenate(disker), m, inni], engine="manifold")
     o.export(f"stl/{navn}_orer.stl")
 for n in ("lokk", "bunn"):
     orer(n)
+orer("hylse", bare_ute=True)   # 140 mm høy med tynn vegg: museører i tillegg til brim
+L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper og knott", [
+    ("kjerne", "Kjerne (mørk, stående)", 2, (10, 10), None),
+    ("knapp", "Knappehetter (mørke, toppen ned)", 2, (130, 118), None),
+    ("knott", "Knott (gull, toppen ned)", 3, (130, 138), None),
+    ("elementplate", "Elementplate med krage (mørk, baksiden ned) – lag ny for et annet element", 2, (130, 10), None)], {2: "#232325", 3: "#D99E40"})
+L.write("skjold-rost-rund-k2-hylse.3mf", "Skjold Røst Rund – grillhylse med SKJOLD i gull", [
+    ("hylse", "Grillhylse (lys, stående)", 1, (70, 70), None),
+    ("hylse_orer", "Museører til hylsa (vris av etter print)", 1, None, "hylse"),
+    ("logo", "SKJOLD (gull, innfelt i hylsa)", 3, None, "hylse")], {1: "#ECE9E3", 3: "#D99E40"})
+# uten gull: én farge, ingen fargebytter (SKJOLD står felt inn 1 mm; kan males med gulltusj etterpå)
+L.write("skjold-rost-rund-k2-hylse-en-farge.3mf", "Skjold Røst Rund – grillhylse i én farge (SKJOLD felt inn)", [
+    ("hylse", "Grillhylse (én farge, stående)", 1, (70, 70), None),
+    ("hylse_orer", "Museører til hylsa (vris av etter print)", 1, None, "hylse")], {1: "#ECE9E3"})
 L.write("skjold-rost-rund-k2-lokk-bunn.3mf", "Skjold Røst Rund – lokk med skjerm, rute og bunnplate", [
     ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (14, 14), None),
     ("lokk_orer", "Museører til lokket (vris av etter print)", 1, None, "lokk"),

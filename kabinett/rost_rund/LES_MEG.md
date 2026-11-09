@@ -55,7 +55,7 @@ gjennom bunnplaten, med mutter i lommen under. Gummiføttene sitter rett over mu
 ## Utskrift
 
 
-**Museører på lokket og bunnplata:** `skjold-rost-rund-k2-lokk-bunn.3mf` har tynne skiver (0,6 mm, Ø24 i hjørnene og Ø16 midt på sidene) langs kanten av lokket og bunnplata. De holder de avrundede hjørnene nede, så de ikke løsner fra plata. De er en del av samme modell, så det blir ingen fargebytter. Vri eller skjær dem av etter print.
+**Museører på lokket, bunnplata og hylsa:** `skjold-rost-rund-k2-lokk-bunn.3mf` og hylsefilene har tynne skiver (0,6 mm, Ø24 i hjørnene og Ø16 midt på sidene) langs kanten av lokket, bunnplata og hylsa (på hylsa bare utenfor veggen, i tillegg til 5 mm brim). De holder de avrundede hjørnene nede, så de ikke løsner fra plata. De er en del av samme modell, så det blir ingen fargebytter. Vri eller skjær dem av etter print.
 
 Beste retning for hver del, og hvorfor ingen trenger støtte (innstillingene ligger som objektinnstillinger i 3MF-filene,
 så Creality Print / OrcaSlicer henter dem selv):
