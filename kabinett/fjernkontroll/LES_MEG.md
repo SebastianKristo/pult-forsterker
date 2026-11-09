@@ -657,6 +657,19 @@ Har du printet sokkelen, trenger du bare vugga:
 
 **Mål:** sokkel 80 × 100 × 12 mm, vugge 62 mm bred og 92 mm høy over bordet, vinkel **65°**. Dokka passer både standard og full variant og alle tre tasteoppsettene (sjekket): bare halen og baksiden berører den, og leppa foran er 4 mm, så SKJOLD-logoen synes.
 
+### Flat dokk (foran TV-en)
+
+![Flat dokk med fjernkontrollen](dokk/render/13_flat_med_fjernkontroll.png)
+
+`dokk/skjold-dokk-flat-k2.3mf` er et lavt brett (69 × 230,5 × 10 mm) der fjernkontrollen ligger flatt med skjermen opp. Den stikker 6,5 mm (standard) eller 9 mm (Hullkort) over brettet, så den går under TV-en.
+
+- **Forsenkning:** den følger fjernkontrollens omriss med 0,6 mm klaring og 45° fas øverst.
+- **Grep:** to grep midt på sidene, så den er lett å løfte opp.
+- **USB-spor:** et spor i halen for USB-C-pluggen, rett eller vinklet. Kabelen ligger langs bordet.
+- **Utseende:** gullstripe felt inn i toppen (filament 3, samme utskrift) og plass til gummiføtter Ø10 under.
+- **Passer:** standard og Hullkort (55 × 202,5 mm). Full variant (245,5 mm) er for lang.
+- **Utskrift:** bunnen ned, ingen støtte. [Bilde uten fjernkontroll](dokk/render/14_flat.png).
+
 ### Deler
 
 | Del | Søkeord | Antall | Ca. pris |
