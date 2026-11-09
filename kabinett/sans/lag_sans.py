@@ -54,22 +54,23 @@ for i, x in enumerate(MONTERT):
             feil.append(f"{x}×{y} {v:.2f} mm³")
 meld(not feil, "ingen overlapp i montert stilling" + ("" if not feil else ": " + "; ".join(feil)))
 
-# 3. overheng i utskriftsretning: flater som peker mer enn 50° nedover (ikke mot plata); små broer (< 3 mm) er greit
+# 3. overheng i utskriftsretning: flater som peker mer enn 50° nedover (ikke mot plata); broer er greit
 for p in ("kropp", "bakplate"):
     m = trimesh.load(f"stl/{p}.stl")
-    if p == "kropp":   # taket i skjoldets forsenkning fylles av gull-logoen (samme utskrift)
-        m = trimesh.boolean.union([m, trimesh.load("stl/logo.stl")], engine="manifold")
     nz = m.face_normals[:, 2]
     z = m.triangles_center[:, 2]
     ned = (nz < -np.sin(np.radians(50))) & (z > 0.05)   # mer enn 50° fra loddrett
+    if p == "kropp":   # taket i gullkantens spor (0,6 mm) fylles av gullkanten i samme utskrift
+        ned &= z > 0.65
     flater = m.submesh([np.where(ned)[0]], append=True) if ned.any() else None
     stor = 0.0
     if flater is not None:
         for f in flater.split(only_watertight=False):
             e = np.sort(f.extents[:2])
-            if e[0] > 3.0:          # en bro smalere enn 3 mm bygges fint over
+            flat = f.face_normals[:, 2].max() < -0.99
+            if e[0] > (15.0 if flat else 3.0):   # flate broer opp til 15 mm (kabelkanalen) og smale kanter er greit på K2
                 stor += f.area
-    meld(stor < 1.0, f"{p}: {m.area_faces[ned].sum():.1f} mm² nedovervendt, {stor:.1f} mm² bredere enn 3 mm (trenger støtte)")
+    meld(stor < 1.0, f"{p}: {m.area_faces[ned].sum():.1f} mm² nedovervendt, {stor:.1f} mm² som trenger støtte")
 
 # 4. K2-plata
 sys.path.insert(0, os.path.join(HER, "..", "fjernkontroll"))
@@ -77,9 +78,9 @@ import lag_3mf as L   # noqa: E402
 L.STL = "stl"
 BRIM = {"enable_support": "0", "initial_layer_speed": "20", "initial_layer_infill_speed": "30", "elefant_foot_compensation": "0.15"}
 L.OBJ_INNST = {"kropp": BRIM, "bakplate": BRIM}
-L.write("skjold-sans-k2.3mf", "Skjold Sans – kropp med gullskjold og bakplate (PETG/ASA)", [
+L.write("skjold-sans-k2.3mf", "Skjold Sans – skjoldformet kropp med gullkant og bakplate (PETG/ASA)", [
     ("kropp", "Kropp (lys, forsiden ned)", 1, (30, 40), None),
-    ("logo", "Skjold (gull, felt inn i forsiden)", 3, None, "kropp"),
+    ("logo", "Gullkant (felt inn i forsiden)", 3, None, "kropp"),
     ("bakplate", "Bakplate (lys, baksiden ned)", 1, (120, 40), None)], {1: "#ECE9E3", 3: "#D99E40"})
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)
