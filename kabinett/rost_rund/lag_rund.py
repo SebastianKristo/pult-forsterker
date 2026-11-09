@@ -207,7 +207,13 @@ L.OBJ_INNST = {
              "initial_layer_speed": "15", "outer_wall_speed": "30", "inner_wall_speed": "30", "sparse_infill_speed": "30"},
     # kjernen og hylsa er 140 mm høye med tynne vegger (ca. 1 080 og 620 mm² mot plata): 5 mm brim og sakte første lag
     "kjerne": {"enable_support": "0", **BRIM}, "elementplate": {"enable_support": "0"},
-    "hylse": {"enable_support": "0", "outer_wall_speed": "120", **BRIM}, "bunn": {"enable_support": "0"},
+    # hylsa: 2 667 små hull blir «små omkretser» som sliceren ellers printer på halv fart. Full fart på dem, to vegger
+    # (1,8 mm vegg = 4 linjer, helt fylt) og 0,24 mm lag kutter tiden kraftig uten å endre utseendet nevneverdig.
+    "hylse": {"enable_support": "0", "layer_height": "0.24", "wall_loops": "2", "small_perimeter_speed": "100%",
+              "outer_wall_speed": "150", "inner_wall_speed": "250", "wall_generator": "arachne", **BRIM},
+    # logoen er et eget objekt i lomma si: ingen støtte eller brim, og samme lagtykkelse som hylsa (de printes lag for lag sammen)
+    "logo": {"enable_support": "0", "brim_type": "no_brim", "layer_height": "0.24", "wall_loops": "1"},
+    "bunn": {"enable_support": "0"},
 }
 L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper og knott", [
     ("kjerne", "Kjerne (mørk, stående)", 2, (10, 10), None),
@@ -216,7 +222,10 @@ L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper
     ("elementplate", "Elementplate med krage (mørk, baksiden ned) – lag ny for et annet element", 2, (130, 10), None)], {2: "#232325", 3: "#D99E40"})
 L.write("skjold-rost-rund-k2-hylse.3mf", "Skjold Røst Rund – grillhylse med SKJOLD i gull", [
     ("hylse", "Grillhylse (lys, stående)", 1, (70, 70), None),
-    ("logo", "SKJOLD (gull, innfelt i hylsa)", 3, None, "hylse")], {1: "#ECE9E3", 3: "#D99E40"}, sammen=True)   # én modell, to farger
+    ("logo", "SKJOLD (gull, innfelt i hylsa)", 3, None, "hylse")], {1: "#ECE9E3", 3: "#D99E40"})
+# uten gull: én farge, ingen fargebytter (SKJOLD står felt inn 1 mm; kan males med gulltusj etterpå)
+L.write("skjold-rost-rund-k2-hylse-en-farge.3mf", "Skjold Røst Rund – grillhylse i én farge (SKJOLD felt inn)", [
+    ("hylse", "Grillhylse (én farge, stående)", 1, (70, 70), None)], {1: "#ECE9E3"})
 L.write("skjold-rost-rund-k2-lokk-bunn.3mf", "Skjold Røst Rund – lokk med skjerm, rute og bunnplate", [
     ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (10, 10), None),
     ("bunn", "Bunnplate med port (lys)", 1, (130, 10), None),
