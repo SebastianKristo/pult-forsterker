@@ -1,0 +1,145 @@
+# Skjold Sans – multisensor for vegg (bad, gang, stue): bevegelse, temperatur, fuktighet og lys.
+# Wemos D1 mini (ESP8266) + AM312 PIR + SHT40 (eller SHT31/BME280/DHT) + BH1750 (eller TEMT6000).
+# Kabinett og kobling: kabinett/sans/LES_MEG.md. Flash første gang med https://web.esphome.io (USB), deretter OTA.
+#
+# Kobling (D1 mini):
+#   AM312   VCC → 3V3   GND → G   OUT → D5 (GPIO14)
+#   SHT40   VIN → 3V3   GND → G   SDA → D2 (GPIO4)   SCL → D1 (GPIO5)
+#   BH1750  VCC → 3V3   GND → G   SDA → D2 (GPIO4)   SCL → D1 (GPIO5)   ADDR → G (0x23)
+#   DHT11/22 (i stedet for SHT40): DATA → D6 (GPIO12), 10 kΩ til 3V3 hvis modulen ikke har det
+#   TEMT6000 (i stedet for BH1750): SIG → A0
+substitutions:
+  name: skjold-sans
+  friendly_name: Skjold Sans
+  # sensoren sitter i eget kammer, men D1 mini varmer litt likevel: juster mot et kjent termometer etter en time
+  temp_offset: "-0.4"
+  # «Dusj pågår» når fuktigheten er så mange %-poeng over grunnlinja (siste timen)
+  dusj_grense: "8"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp8266:
+  board: d1_mini
+
+logger:
+  level: INFO
+api:
+  encryption:
+    key: !secret skjold_sans_api_key
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: { ssid: "Skjold Sans" }
+captive_portal:
+
+# den blå lysdioden på D1 mini (D4): blinker ved feil, ellers av (lyser ikke inn i lyssensoren)
+status_led:
+  pin: { number: D4, inverted: true }
+
+i2c:
+  sda: D2
+  scl: D1
+  scan: true
+
+binary_sensor:
+  - platform: gpio
+    pin: D5
+    name: Bevegelse
+    id: bevegelse
+    device_class: motion
+    filters:
+      - delayed_off: 15s     # AM312 holder i ca. 2 s; 15 s gir roligere automasjoner
+  - platform: template
+    name: Dusj pågår
+    id: dusj
+    icon: mdi:shower-head
+    device_class: moisture
+    lambda: |-
+      if (isnan(id(fukt).state) || isnan(id(fukt_grunn).state)) return {};
+      return id(fukt).state - id(fukt_grunn).state > ${dusj_grense};
+    filters:
+      - delayed_off: 5min    # vifta får gå litt etter at dusjen er ferdig
+  - platform: status
+    name: Status
+
+sensor:
+  # --- temperatur og fukt: SHT40 (anbefalt på bad: ±1,8 %RH, tåler kondens, egen varmer) ---
+  - platform: sht4x
+    temperature:
+      name: Temperatur
+      id: temp
+      filters:
+        - offset: ${temp_offset}
+    humidity:
+      name: Fuktighet
+      id: fukt
+    update_interval: 15s
+  # --- eller DHT11/DHT22: fjern sht4x over og bruk denne (DHT11 er unøyaktig over 80 %RH, DHT22 er bedre) ---
+  # - platform: dht
+  #   pin: D6
+  #   model: DHT22
+  #   temperature: { name: Temperatur, id: temp, filters: [ offset: "${temp_offset}" ] }
+  #   humidity: { name: Fuktighet, id: fukt }
+  #   update_interval: 15s
+
+  # grunnlinje for fuktigheten (glidende snitt over ca. en time), brukes av «Dusj pågår»
+  - platform: copy
+    source_id: fukt
+    id: fukt_grunn
+    name: Fuktighet grunnlinje
+    entity_category: diagnostic
+    filters:
+      - exponential_moving_average: { alpha: 0.004, send_every: 4 }
+  # hvor fort fuktigheten stiger (%-poeng per minutt): fin til å starte vifta tidlig
+  - platform: template
+    name: Fuktstigning
+    unit_of_measurement: "%/min"
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      static float forrige = NAN;
+      float naa = id(fukt).state;
+      float d = isnan(forrige) ? 0 : naa - forrige;
+      forrige = naa;
+      return d;
+  - platform: absolute_humidity
+    name: Absolutt fuktighet
+    temperature: temp
+    humidity: fukt
+  - platform: template
+    name: Duggpunkt
+    unit_of_measurement: "°C"
+    device_class: temperature
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      const float a = 17.62, b = 243.12;
+      float t = id(temp).state, rh = id(fukt).state;
+      if (isnan(t) || isnan(rh) || rh <= 0) return NAN;
+      float g = log(rh / 100.0) + a * t / (b + t);
+      return b * g / (a - g);
+
+  # --- lys: BH1750 (lux) ---
+  - platform: bh1750
+    name: Lys
+    address: 0x23
+    update_interval: 30s
+  # --- eller TEMT6000 på A0: fjern bh1750 over og bruk denne (omtrentlig lux) ---
+  # - platform: adc
+  #   pin: A0
+  #   name: Lys
+  #   unit_of_measurement: lx
+  #   update_interval: 30s
+  #   filters: [ multiply: 1000 ]
+
+  - platform: wifi_signal
+    name: WiFi-signal
+    update_interval: 120s
+    entity_category: diagnostic
+  - platform: uptime
+    name: Oppetid
+    entity_category: diagnostic
