@@ -22,3 +22,8 @@ lag_3mf.write(os.path.join(HER, "skjold-dokk-k2-vugge.3mf"), "Skjold Dokk – ba
 # propp til lysdiodehullet foran (for deg som ikke vil ha lys)
 lag_3mf.write(os.path.join(HER, "skjold-dokk-k2-led-propp.3mf"), "Skjold Dokk – propp til lysdiodehullet", [
     ("led_propp", "Propp (mørk, stående)", 2, (120, 120), None)], {2: "#2E2D2C"})
+# delt sokkel: toppdel (åpen under, så brikken, lysdioden og vekten kan legges inn) + bunnplate som skrus fast
+lag_3mf.write(os.path.join(HER, "skjold-dokk-k2-sokkel-delt.3mf"), "Skjold Dokk – delt sokkel: toppdel og bunnplate", [
+    ("sokkel_topp", "Sokkel, toppdel (mørk, åpen under)", 2, (12, 20), None),
+    ("gull", "Gullstripe (felt inn i sokkelen)", 3, None, "sokkel_topp"),
+    ("sokkel_bunn", "Bunnplate (mørk)", 2, (110, 20), None)], {2: "#2E2D2C", 3: "#D99E40"})

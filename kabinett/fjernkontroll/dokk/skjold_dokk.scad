@@ -256,6 +256,28 @@ module sokkel() {
     translate([led_X, SY0 - 1, 3.5]) rotate([-90, 0, 0]) cylinder(d = led_d, h = 4, $fn = 20);
   }
 }
+// Delt sokkel: toppdelen er sokkelen over z = delt_z (åpen under, så USB-C-brikken, lysdioden, ledningene og vekten
+// legges inn nedenfra), og en bunnplate på delt_z mm som skrus fast med fire selvgjengende M3 × 8 (eller M2,5 × 8).
+// Gummiføttene sitter på bunnplata. Toppen og tappene til vugga er som før.
+delt_z = 2.0;
+skruer = [[-35.5, -10], [35.5, -10], [-35.5, 40], [35.5, 40]];   // fri for kanalene, vektlomma og USB-lomma
+module sokkel_topp() {
+  difference() {
+    sokkel();
+    translate([-200, -200, -1]) cube([400, 400, delt_z + 1]);
+    for (p = skruer) translate([p[0], p[1], delt_z - 0.01]) cylinder(d = 2.6, h = 7, $fn = 20);   // forboring for skruene
+  }
+}
+module sokkel_bunn() {
+  difference() {
+    hull() { translate([0, 0, 0.4]) linear_extrude(delt_z - 0.4) sokkel_2d(); linear_extrude(0.4) sokkel_2d(0.4); }
+    for (p = skruer) translate([p[0], p[1], -0.01]) {
+      cylinder(d = 3.4, h = delt_z + 1, $fn = 20);
+      cylinder(d1 = 6.4, d2 = 3.4, h = 1.5, $fn = 32);                                              // senkehode under
+    }
+    for (x = [-SB/2 + 9, SB/2 - 9], y = [SY0 + 9, SY1 - 9]) translate([x, y, -0.01]) cylinder(d = fot_d + 0.4, h = fot_h, $fn = 32);
+  }
+}
 module gull() { translate([0, 0, SH - gull_d]) linear_extrude(gull_d) difference() { sokkel_2d(gull_inn + 0.08); sokkel_2d(gull_inn + gull_b - 0.08); } }
 module lokk() { translate([-vekt[0]/2 - 0.9, vekt_Y - vekt[1]/2 - 0.9, 0]) cube([vekt[0] + 1.8, vekt[1] + 1.8, 1.15]); }
 module pogo_han() { fk_plass() pogo_han_lokal(); }
@@ -274,6 +296,8 @@ else if (part == "gull") gull();
 else if (part == "lokk") lokk();
 else if (part == "pogo_han") pogo_han();
 else if (part == "led_propp") led_propp();
+else if (part == "sokkel_topp") sokkel_topp();
+else if (part == "sokkel_bunn") sokkel_bunn();
 else if (part == "samlet") samlet();
 else if (part == "med_fjernkontroll") {
   samlet();
