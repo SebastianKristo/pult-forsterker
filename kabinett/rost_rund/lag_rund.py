@@ -224,10 +224,33 @@ L.write("skjold-rost-rund-k2-hylse.3mf", "Skjold Røst Rund – grillhylse med S
 # uten gull: én farge, ingen fargebytter (SKJOLD står felt inn 1 mm; kan males med gulltusj etterpå)
 L.write("skjold-rost-rund-k2-hylse-en-farge.3mf", "Skjold Røst Rund – grillhylse i én farge (SKJOLD felt inn)", [
     ("hylse", "Grillhylse (én farge, stående)", 1, (70, 70), None)], {1: "#ECE9E3"})
+# museører (som på fjernkontrollen): tynne skiver langs kanten av lokket og bunnplata, som holder hjørnene nede på
+# plata. Ø24 i de avrundede hjørnene (som løfter seg mest), Ø16 midt på sidene, 0,6 mm (3 lag). Vris av etter print.
+def orer(navn, r_hj=12.0, r_side=8.0, h=0.6):
+    m = trimesh.load(f"stl/{navn}.stl")
+    snitt = m.section(plane_origin=[0, 0, 0.1], plane_normal=[0, 0, 1])
+    pts = snitt.vertices[:, :2]
+    c = (pts.max(0) + pts.min(0)) / 2
+    disker = []
+    for a in range(0, 360, 45):
+        u = np.array([np.cos(np.radians(a)), np.sin(np.radians(a))])
+        p = pts[np.argmax((pts - c) @ u)]              # ytterste punkt på kanten i den retningen
+        r = r_hj if a % 90 else r_side
+        disker.append(trimesh.creation.cylinder(radius=r, height=h, sections=96).apply_translation((p[0], p[1], h / 2)))
+    # trekk fra delen selv (skivene ligger inntil kanten og holder den), og alt mer enn 3 mm inn fra kanten, så
+    # skivene ikke fyller fotlommer eller hull lenger inn
+    from shapely.geometry import MultiPoint
+    inni = trimesh.creation.extrude_polygon(MultiPoint(pts).convex_hull.buffer(-3), 5).apply_translation((0, 0, -1))
+    o = trimesh.boolean.difference([trimesh.util.concatenate(disker), m, inni], engine="manifold")
+    o.export(f"stl/{navn}_orer.stl")
+for n in ("lokk", "bunn"):
+    orer(n)
 L.write("skjold-rost-rund-k2-lokk-bunn.3mf", "Skjold Røst Rund – lokk med skjerm, rute og bunnplate", [
-    ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (10, 10), None),
-    ("bunn", "Bunnplate med port (lys)", 1, (130, 10), None),
-    ("rute", "Rute over skjermen (klar PETG, 100 % fyll)", 4, (20, 120), None)], {1: "#ECE9E3", 4: "#DDE6EA"})
+    ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (14, 14), None),
+    ("lokk_orer", "Museører til lokket (vris av etter print)", 1, None, "lokk"),
+    ("bunn", "Bunnplate med port (lys)", 1, (128, 128), None),
+    ("bunn_orer", "Museører til bunnplata (vris av etter print)", 1, None, "bunn"),
+    ("rute", "Rute over skjermen (klar PETG, 100 % fyll)", 4, (14, 160), None)], {1: "#ECE9E3", 4: "#DDE6EA"})
 # elementplater for alle elementene i malen (kabinett/elementer/elementer.scad), på én plate
 EL = ["rs75_4", "frs8_4", "grs3fr4", "faital3fe22"]
 procs = [subprocess.Popen(["openscad", "-q", "-D", 'part="elementplate"', "-D", f'element="{e}"', "-o", f"stl/elementplate_{e}.stl", SC]) for e in EL]
