@@ -10,6 +10,10 @@
 part = "samlet";
 variant = "kort";                // kort | full (bare for bildene: dokka er lik for begge)
 farge = "bone";                  // bone | mork
+// stil på vugga (sokkelen er lik for begge, så en printet sokkel passer):
+//   tvilling – lav pute foran som holder halen, og to slanke ribber bak som bærer fjernkontrollen (luft imellom)
+//   skaal    – den første utgaven: skål foran og én bred finne bak
+stil = "tvilling";
 
 // ---------- fjernkontrollen (samme som skjold_fjernkontroll.scad) ----------
 FW = 55; FH = 13.5;
@@ -137,18 +141,28 @@ module ytre() {
   myk(VB, skaal_l, skaal_bak, plan_r);
   myk(finne_b, rygg_l, bak_y, finne_b/2 - 2);
 }
-module vanger_myke() {           // vangene med avrundet toppkant, i fjernkontrollens koordinater
+// Tvilling: en lav, bred pute foran (hylla, leppa, vangene og nøklene) og to slanke, avrundede ribber bak som bærer
+// fjernkontrollens bakside. Den høyre ribba har pogo-kontakten og ledningskanalen; mellom ribbene er det luft.
+pute_l = 24;                     // puta langs fjernkontrollen
+pute_bak = 26;                   // puta skråner ned til hit på sokkelen
+ribbe_b = 14;                    // ribbenes bredde
+ribbe_x = POGO_X - FW/2;         // ribbenes senter (±), den høyre midt over pogo-kontakten
+module ytre_tvilling() {
+  myk(VB, pute_l, pute_bak, plan_r);
+  for (s = [-1, 1]) translate([s * ribbe_x, 0, 0]) myk(ribbe_b, rygg_l, bak_y, ribbe_b/2 - 1);
+}
+module vanger_myke(vl = vange_l) {   // vangene med avrundet toppkant, i fjernkontrollens koordinater
   for (s = [0, 1]) translate([s ? FW + kl : -kl - vegg + 0.05, 0, -0.01]) hull() {   // 0,05 mm inn: ikke i samme plan som siden
-    cube([vegg - 0.05, vange_l, 0.01]);
-    translate([vegg/2, 0, 0]) rotate([-90, 0, 0]) cylinder(d = vegg, h = vange_l - vange_h - 1.5, $fn = 24);
-    translate([vegg/2, 0, vange_h - vegg/2]) rotate([-90, 0, 0]) cylinder(d = vegg, h = vange_l - vange_h - 1.5, $fn = 24);
+    cube([vegg - 0.05, vl, 0.01]);
+    translate([vegg/2, 0, 0]) rotate([-90, 0, 0]) cylinder(d = vegg, h = vl - vange_h - 1.5, $fn = 24);
+    translate([vegg/2, 0, vange_h - vegg/2]) rotate([-90, 0, 0]) cylinder(d = vegg, h = vl - vange_h - 1.5, $fn = 24);
   }
 }
 module vugge() {
   difference() {
     union() {
-      ytre();
-      fk_plass() { vanger_myke(); nokler_lokal(); }
+      if (stil == "tvilling") ytre_tvilling(); else ytre();
+      fk_plass() { vanger_myke(stil == "tvilling" ? pute_l - 2 : vange_l); nokler_lokal(); }
     }
     fk_plass() { fk_rom(); pogo_lomme_lokal(); }
     translate([0, 0, -1]) linear_extrude(SH + 1) square([400, 400], center = true);   // står på sokkelen

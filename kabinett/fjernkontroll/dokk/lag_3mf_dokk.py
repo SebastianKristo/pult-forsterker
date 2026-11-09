@@ -16,3 +16,6 @@ lag_3mf.write(os.path.join(HER, "skjold-dokk-k2.3mf"), "Skjold Dokk – vugge, s
     ("gull", "Gullstripe (felt inn i sokkelen)", 3, None, "sokkel"),
     ("lokk", "Lokk til vektlomma (mørk)", 2, (12, 150), None),
 ], {1: "#CEC6B4", 2: "#2E2D2C", 3: "#D99E40"})
+# bare vugga (til en sokkel som allerede er printet)
+lag_3mf.write(os.path.join(HER, "skjold-dokk-k2-vugge.3mf"), "Skjold Dokk – bare vugga (passer på sokkelen)", [
+    ("vugge", "Vugge (Bone White)", 1, (90, 80), None)], {1: "#CEC6B4"})

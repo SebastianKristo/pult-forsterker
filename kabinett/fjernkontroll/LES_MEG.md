@@ -641,6 +641,12 @@ Ikke kontrollert:
 
 Bilder (skjermen er lagt inn med `skjerm_i_render.py`, som i de andre bildene): [i dokken](dokk/render/00_hero.png) · [dokka, Bone White](dokk/render/01_dokk_bone.png) · [mørk](dokk/render/02_dokk_mork.png) · [bakfra med USB-C](dokk/render/03_dokk_bak.png) · [med fjernkontrollen, Bone](dokk/render/04_med_fjernkontroll_bone.png) · [med fjernkontrollen, mørk](dokk/render/05_med_fjernkontroll_mork.png) · [fra siden, full variant](dokk/render/06_side_full.png).
 
+**Vugga finnes i to stiler** (`stil` i `dokk/skjold_dokk.scad`), og begge passer på samme sokkel:
+- **Tvilling (standard):** en lav pute foran holder halen, og to slanke ribber bak bærer fjernkontrollen, med luft imellom. Pogo-kontakten sitter i den høyre ribba. [Bilde](dokk/render/07_tvilling.png) · [bakfra](dokk/render/08_tvilling_bak.png) · [med fjernkontrollen](dokk/render/09_tvilling_med_fjernkontroll.png).
+- **Skål:** den første utgaven, med skål foran og én bred finne bak.
+
+Har du printet sokkelen, trenger du bare `dokk/skjold-dokk-k2-vugge.3mf` (eller `skjold-dokk-hullkort-k2-vugge.3mf`).
+
 **Mål:** sokkel 80 × 100 × 12 mm, vugge 62 mm bred og 92 mm høy over bordet, vinkel **65°**. Dokka passer både standard og full variant og alle tre tasteoppsettene (sjekket): bare halen og baksiden berører den, og leppa foran er 4 mm, så SKJOLD-logoen synes.
 
 ### Deler
