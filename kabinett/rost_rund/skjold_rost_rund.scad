@@ -251,7 +251,8 @@ module stenger() { for (p = rodP) translate([p[0], p[1], 1.5]) cylinder(d = 3, h
 
 // logo: SKJOLD i gull, 1 mm innfelt i hylsas helt bånd foran nede (eget legeme, egen farge, samme utskrift som hylsa)
 logoZ = z0 + 7; logoT = 1.0;          // 1 mm dypt i den 1,8 mm tykke veggen
-module logo_2d() { text("SKJOLD", size = 7, font = "Liberation Sans:style=Bold", spacing = 1.2, halign = "center", valign = "center"); }
+use <../fonter/Inter-Bold.otf>   // Inter Bold ligger i repoet (ren J uten nebb, samme logo på alle maskiner)
+module logo_2d() { text("SKJOLD", size = 7, font = "Inter:style=Bold", spacing = 1.15, halign = "center", valign = "center"); }
 module logo_form(e = 0) { translate([0, -Dp/2 - e, logoZ]) rotate([-90, 0, 0]) mirror([0, 1, 0]) linear_extrude(logoT + e) offset(e) logo_2d(); }
 module hylse_stl() { import("stl_asm/hylse.stl"); }
 module logo_stl() { import("stl_asm/logo.stl"); }
