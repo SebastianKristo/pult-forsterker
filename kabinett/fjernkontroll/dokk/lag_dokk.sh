@@ -33,6 +33,7 @@ wait
 # Høyere vugge for Hullkort-utgaven (16,0 mm tykk)
 mkdir -p stl_hu
 for p in vugge sokkel gull lokk; do openscad -q -D "part=\"$p\"" -D FH=16.0 -o "stl_hu/$p.stl" skjold_dokk.scad & done
+openscad -q -D 'part="vugge"' -D FH=16.0 -D usb_spor=true -o stl_hu/vugge_usb.stl skjold_dokk.scad &
 wait
 python3 - <<'PY'
 import sys; sys.path.insert(0, ".."); import lag_3mf
@@ -41,6 +42,8 @@ lag_3mf.write("skjold-dokk-hullkort-k2.3mf", "Skjold Dokk for Hullkort-utgaven (
     ("vugge", "Vugge (Bone White)", 1, (12, 20), None), ("sokkel", "Sokkel (mørk)", 2, (95, 20), None),
     ("gull", "Gullstripe (felt inn i sokkelen)", 3, None, "sokkel"), ("lokk", "Lokk til vektlomma (mørk)", 2, (12, 150), None),
 ], {1: "#CEC6B4", 2: "#2E2D2C", 3: "#D99E40"})
+lag_3mf.write("skjold-dokk-hullkort-k2-vugge-usb.3mf", "Skjold Dokk for Hullkort-utgaven – vugge med spor for vinklet USB-C-plugg", [
+    ("vugge_usb", "Vugge med USB-spor (Bone White)", 1, (90, 80), None)], {1: "#CEC6B4"})
 lag_3mf.write("skjold-dokk-hullkort-k2-vugge.3mf", "Skjold Dokk for Hullkort-utgaven – bare vugga (passer på sokkelen)", [
     ("vugge", "Vugge (Bone White)", 1, (90, 80), None)], {1: "#CEC6B4"})
 PY

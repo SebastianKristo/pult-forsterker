@@ -650,7 +650,10 @@ Bilder (skjermen er lagt inn med `skjerm_i_render.py`, som i de andre bildene): 
 - **Tvilling:** en lav pute foran holder halen, og to slanke ribber bak bærer fjernkontrollen, med luft imellom. Pogo-kontakten sitter i den høyre ribba. [Bilde](dokk/render/07_tvilling.png) · [bakfra](dokk/render/08_tvilling_bak.png) · [med fjernkontrollen](dokk/render/09_tvilling_med_fjernkontroll.png).
 - **Skål:** den første utgaven, med skål foran og én bred finne bak.
 
-Har du printet sokkelen, trenger du bare `dokk/skjold-dokk-k2-vugge.3mf` (eller `skjold-dokk-hullkort-k2-vugge.3mf`).
+Har du printet sokkelen, trenger du bare vugga:
+- **Standard (13,5 mm tykk):** `dokk/skjold-dokk-k2-vugge.3mf`.
+- **Hullkort (16 mm tykk):** `dokk/skjold-dokk-hullkort-k2-vugge.3mf`. Standardvugga er for trang til Hullkort-fjernkontrollen.
+- **Hullkort, lading med kabel:** `dokk/skjold-dokk-hullkort-k2-vugge-usb.3mf`. Hylla har et spor for en **vinklet (90°) USB-C-plugg** i halen, og kabelen går ut til høyre. Sett pluggen i før fjernkontrollen settes ned. En rett plugg får ikke plass, for den ville stukket ned i basen. Pogo-lomma er der fortsatt. Kontrollert mot Hullkort-modellen: 0,3 mm til sidene, hviler på ryggen og hylla, ingen støtte.
 
 **Mål:** sokkel 80 × 100 × 12 mm, vugge 62 mm bred og 92 mm høy over bordet, vinkel **65°**. Dokka passer både standard og full variant og alle tre tasteoppsettene (sjekket): bare halen og baksiden berører den, og leppa foran er 4 mm, så SKJOLD-logoen synes.
 

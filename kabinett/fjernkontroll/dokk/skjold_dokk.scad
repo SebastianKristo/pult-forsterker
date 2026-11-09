@@ -182,6 +182,18 @@ module klem_lokal() {
 // seg ut øverst (trakt), innerkantene på vingene og leppa er avfaset, så ingenting hekter seg.
 trakt = 2.2;                      // så mye vingene vider seg ut mot toppen (per side)
 trakt_y0 = klem_y - 12;           // trakten starter her (under er setet med vanlig klaring)
+// Lading med kabel: spor i hylla for en vinklet (90°) USB-C-plugg i halen. Sporet er åpent mot fronten og til høyre,
+// så pluggen settes i før fjernkontrollen settes ned, og kabelen går ut til høyre. Pogo-lomma er der fortsatt.
+usb_spor = false;
+usb_x = 27.5; usb_z = 4.7;        // USB-C i halen (Hullkort: midt på, 4,7 mm over undersiden)
+usb_dybde = 9.5;                  // plass til den vinklede pluggen under halen
+module usb_spor_lokal() {   // enden oppe skrår 25° (ellers henger leppa og vingen over sporet)
+  z0 = usb_z - 4.2; b = FW + 30 - (usb_x - 7.5);
+  hull() {
+    translate([usb_x - 7.5, -usb_dybde, z0]) cube([b, usb_dybde + 0.5, 0.01]);
+    translate([usb_x - 7.5, -usb_dybde, 60]) cube([b, usb_dybde + 0.5 + (60 - z0) * tan(25), 0.01]);
+  }
+}
 module innforing_lokal() {
   for (s = [0, 1]) {
     x = s ? FW + kl : -kl; u = s ? 1 : -1;           // u peker utover
@@ -217,7 +229,7 @@ module vugge() {
       if (stil == "klem") ytre_klem(); else if (stil == "tvilling") ytre_tvilling(); else ytre();
       fk_plass() { if (stil != "klem") vanger_myke(stil == "tvilling" ? pute_l - 2 : vange_l); nokler_lokal(); }
     }
-    fk_plass() { fk_rom(); pogo_lomme_lokal(); if (stil == "klem") innforing_lokal(); }
+    fk_plass() { fk_rom(); pogo_lomme_lokal(); if (stil == "klem") innforing_lokal(); if (usb_spor) usb_spor_lokal(); }
     translate([0, 0, -1]) linear_extrude(SH + 1) square([400, 400], center = true);   // står på sokkelen
     translate([kanal_X, kanal_Y, SH - 1]) cylinder(d = 4, h = pogo_bunn[2] - SH + 1.5, $fn = 20);   // ledninger
     for (x = [-20, 20]) translate([x, 8, SH - 1]) cylinder(d = 4.3, h = 5, $fn = 24);                  // tapper
