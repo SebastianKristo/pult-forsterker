@@ -643,6 +643,8 @@ Bilder (skjermen er lagt inn med `skjerm_i_render.py`, som i de andre bildene): 
 
 **Vugga finnes i tre stiler** (`stil` i `dokk/skjold_dokk.scad`), og begge passer på samme sokkel:
 - **Klem (standard):** en avrundet skål med rund rygg som klemmer om sidene på fjernkontrollen 11 mm opp (under forsiden, så tastene er fri) et godt stykke oppover, og glir mykt inn i ryggen øverst. Under står puta foran og to ribber. [Bilde](dokk/render/10_klem.png) · [bakfra](dokk/render/11_klem_bak.png) · [med fjernkontrollen](dokk/render/12_klem_med_fjernkontroll.png).
+  - **Inn og ut med én hånd:** vingene vider seg ut øverst (trakt), og innerkantene på vingene og leppa er avfaset. Sett fjernkontrollen mot ryggen og la den gli ned, så finner den plassen sin selv. Den sitter fast fordi knottene klikker inn i skruehodene i halen, magneten i pogo-kontakten holder den inntil ryggen, og den lener seg bakover i 65°. Klaringen til sidene (0,4 mm) gjør at den ikke kiler seg fast, så du løfter den rett opp uten å holde i basen.
+  - **Fyll vektlomma i sokkelen helt** (ca. 70 g bly eller stål) og sett på gummiføttene. Da veier dokka rundt 160 g og står stille når du løfter fjernkontrollen ut.
 - **Tvilling:** en lav pute foran holder halen, og to slanke ribber bak bærer fjernkontrollen, med luft imellom. Pogo-kontakten sitter i den høyre ribba. [Bilde](dokk/render/07_tvilling.png) · [bakfra](dokk/render/08_tvilling_bak.png) · [med fjernkontrollen](dokk/render/09_tvilling_med_fjernkontroll.png).
 - **Skål:** den første utgaven, med skål foran og én bred finne bak.
 
