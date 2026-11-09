@@ -24,7 +24,7 @@ z0 = bpT; z1 = H - capT;           // kjernen og hylsen står mellom bunnplaten 
 rT = 4;                            // toppkanten: R4, som flater ut i 45° fas mot toppen (printes med toppen ned)
 fot = 12.4; fotH = 0.6;            // forsenkninger for selvklebende gummiføtter Ø12 × 6 mm
 // element (3″ fullrange, f.eks. Dayton RS75-4) bakfra mot frontblokka
-drvZ = 78; drvTun = 80; blk = 16;    // elementets senter, tunnelen gjennom frontblokka (fast, Ø80), blokkas dybde fra fronten
+drvZ = 78; drvTun = 80; blk = 16;    // elementets senter, tunnelen gjennom frontblokka (fast, Ø80, fylles av elementplatas krage), blokkas dybde
 // Elementplata (utskiftbar): 92 × 92 × 4 mm bak frontblokka, tegnet fra malen i elementer.scad. Elementet skrus i plata,
 // plata skrus i fire innpressmuttere i blokka (plFeste: x ±30, z ±42 fra elementets senter – fri for stengene).
 plW = 92; plT = 4; plR = 8; plFeste = [for (sx = [-1, 1], sz = [-1, 1]) [sx * 30, sz * 42]];
@@ -82,7 +82,8 @@ module kjerne() {
     }
     for (p = rodP) translate([p[0], p[1], z0 - 1]) cylinder(d = rodD, h = z1 - z0 + 2);
     // tunnel og element
-    translate([0, -Dp/2 - 1, drvZ]) rotate([-90, 0, 0]) cylinder(d = drvTun, h = blk + 2);
+    // tunnelen som dråpe: rund nede, 45° tak oppe (spiss), så toppen bygger seg opp uten bro eller støtte (stående print)
+    translate([0, -Dp/2 - 1, drvZ]) rotate([-90, 0, 0]) mirror([0, 1, 0]) linear_extrude(blk + 2) tunnel2d();
     for (f = plFeste) translate([f[0], -Dp/2 + blk + 0.01, drvZ + f[1]]) rotate([90, 0, 0]) cylinder(d = ins, h = insL);   // innpressmuttere for elementplata
     // I/O bak
     translate([ioX - 8, Dp/2 + 1, dcZ]) rotate([90, 0, 0]) cylinder(d = dcD, h = -inn + t + 2);
@@ -199,16 +200,28 @@ module knapp_lok(i) {   // toppen ved z = capUp over lokket, flensen under lokke
 }
 module knapper() { for (i = [0:4]) translate([btnX[i], btnY, H]) knapp_lok(i); }
 
-// elementplata i montert stilling (y fra blokkas bakside og bakover); i plataes egne koordinater: (x, z) = plan, y = tykkelse
-module elementplate_lok() {   // forsiden (mot blokka) i z = 0, baksiden (mot elementet) i z = plT
+// tunnelens tverrsnitt (dråpe: rund nede, 45° spiss oppe), i plataes egne koordinater (x, y = opp); o = klaring
+module tunnel2d(o = 0) { offset(delta = -o) hull() { circle(d = drvTun, $fn = 96); translate([0, drvTun/2 * sqrt(2)]) square(0.01, center = true); } }
+// elementplata i montert stilling (y fra blokkas bakside og bakover); i plataes egne koordinater: (x, y) = plan, z = tykkelse.
+// Krage foran fyller hele tunnelen, så åpningen ved elementet er nøyaktig elementets utsparing og vider seg ut i 45° mot
+// fronten (en kort bølgeleder; ingen kant eller hulrom foran membranen). Elementet skrus bakfra i innpressmuttere i plata.
+krageL = blk - sl - sg; krageKl = 0.3; krageLepp = 1.2;
+module elementplate_lok() {   // forsiden (mot blokka) i z = 0, kragen fram til z = -krageL, baksiden (mot elementet) i z = plT
+  rU = drvTun/2 - krageKl - krageLepp;                                                           // åpningen i fronten
   difference() {
-    translate([-plW/2, -plW/2, 0]) linear_extrude(plT) offset(r = plR) offset(-plR) square(plW);
-    translate([0, 0, -1]) cylinder(d = el_utsp(E), h = plT + 2, $fn = 96);
-    translate([0, 0, -0.01]) cylinder(d1 = el_utsp(E) + 2 * 1.5, d2 = el_utsp(E), h = 1.5, $fn = 96);    // fas mot blokka
-    for (p = el_hullpos(E)) translate([p[0], p[1], -1]) {
-      cylinder(d = 3.4, h = plT + 2, $fn = 24);                                                  // M3 gjennom plata og rammen
-      translate([0, 0, 1]) cylinder(d1 = 6.6, d2 = 3.4, h = 1.6, $fn = 24);                      // senkehode i flukt med forsiden
+    union() {
+      translate([-plW/2, -plW/2, 0]) linear_extrude(plT) offset(r = plR) offset(-plR) square(plW);
+      intersection() {   // kragen slutter i flukt med kjernens front, også der den buer rundt hjørnene
+        translate([0, 0, -krageL]) linear_extrude(krageL + 0.01) tunnel2d(krageKl);
+        mirror([0, 1, 0]) rotate([90, 0, 0]) translate([0, Dp/2 - blk, -60]) linear_extrude(120) plan(inn);
+      }
     }
+    translate([0, 0, -1]) cylinder(d = el_utsp(E), h = plT + 2, $fn = 96);
+    translate([0, 0, -krageL - 0.01]) hull() {                                                   // 45° utvidelse mot fronten
+      cylinder(r = rU, h = 0.01, $fn = 96);
+      translate([0, 0, max(0.01, rU - el_utsp(E)/2)]) cylinder(d = el_utsp(E), h = krageL - max(0.01, rU - el_utsp(E)/2) + 0.02, $fn = 96);
+    }
+    for (p = el_hullpos(E)) translate([p[0], p[1], plT - insL]) cylinder(d = ins, h = insL + 1, $fn = 24);   // M3-innpressmuttere bakfra
     for (f = plFeste) translate([f[0], f[1], -1]) {
       cylinder(d = 3.4, h = plT + 2, $fn = 24);                                                  // M3 × 10 inn i blokka
       translate([0, 0, plT + 1 - 1.6]) cylinder(d1 = 3.4, d2 = 6.6, h = 1.61, $fn = 24);          // senkehode i flukt med baksiden
@@ -262,7 +275,8 @@ else if (part == "knapp") for (i = [0:4]) translate([i * (flD + 3), 0, capUp]) r
 else if (part == "a_kjerne") kjerne(); else if (part == "a_bunn") bunn(); else if (part == "a_lokk") lokk();
 else if (part == "a_knott") knott(); else if (part == "a_knapp") knapper(); else if (part == "a_stenger") stenger();
 else if (part == "a_element") element();
-else if (part == "elementplate") elementplate_lok(); else if (part == "a_elementplate") elementplate();
+else if (part == "elementplate") translate([0, 0, plT]) mirror([0, 0, 1]) elementplate_lok();   // baksiden ned, kragen opp
+else if (part == "a_elementplate") elementplate();
 else if (part == "a_knappekort") knappekort(); else if (part == "a_ec11") ec11();
 else if (part == "a_logo") logo_form(0); else if (part == "logo_kutt") logo_form(0.01);
 else if (part == "eksplodert") samlet(30);

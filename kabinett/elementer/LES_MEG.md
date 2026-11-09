@@ -3,7 +3,7 @@
 Begge Røst-variantene tegner hullene for elementet fra én mal: `elementer.scad`. Velg et element med
 `element = "rs75_4"` øverst i produktfila (eller `-D 'element="frs8_4"'` på kommandolinjen), eller fyll inn ditt eget
 under `"egen"`. Røst får utsparing, forsenkning for rammen og skruehull i frontplata fra malen. Røst Rund får en
-**utskiftbar elementplate** (92 × 92 × 4 mm) bak frontblokka: bytter du element, printer du bare en ny plate.
+**utskiftbar elementplate** (92 × 92 × 4 mm, med krage som fyller tunnelen i frontblokka) bak frontblokka: bytter du element, printer du bare en ny plate.
 
 ## Mål du trenger (skyvelære eller datablad)
 
