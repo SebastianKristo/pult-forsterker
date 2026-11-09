@@ -19,3 +19,6 @@ lag_3mf.write(os.path.join(HER, "skjold-dokk-k2.3mf"), "Skjold Dokk – vugge, s
 # bare vugga (til en sokkel som allerede er printet)
 lag_3mf.write(os.path.join(HER, "skjold-dokk-k2-vugge.3mf"), "Skjold Dokk – bare vugga (passer på sokkelen)", [
     ("vugge", "Vugge (Bone White)", 1, (90, 80), None)], {1: "#CEC6B4"})
+# propp til lysdiodehullet foran (for deg som ikke vil ha lys)
+lag_3mf.write(os.path.join(HER, "skjold-dokk-k2-led-propp.3mf"), "Skjold Dokk – propp til lysdiodehullet", [
+    ("led_propp", "Propp (mørk, stående)", 2, (120, 120), None)], {2: "#2E2D2C"})

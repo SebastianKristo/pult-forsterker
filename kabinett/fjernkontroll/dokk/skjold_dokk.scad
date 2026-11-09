@@ -259,6 +259,9 @@ module sokkel() {
 module gull() { translate([0, 0, SH - gull_d]) linear_extrude(gull_d) difference() { sokkel_2d(gull_inn + 0.08); sokkel_2d(gull_inn + gull_b - 0.08); } }
 module lokk() { translate([-vekt[0]/2 - 0.9, vekt_Y - vekt[1]/2 - 0.9, 0]) cube([vekt[0] + 1.8, vekt[1] + 1.8, 1.15]); }
 module pogo_han() { fk_plass() pogo_han_lokal(); }
+// propp til lysdiodehullet foran, for deg som ikke vil ha lys: trykkes inn (en dråpe lim) og er i flukt med fronten.
+// Printes stående med den flate enden ned, i samme farge som sokkelen.
+module led_propp() { cylinder(d = led_d - 0.15, h = 3.2, $fn = 32); }
 
 c_topp = farge == "bone" ? [0.81, 0.78, 0.71] : [0.17, 0.17, 0.18];
 c_sokkel = farge == "bone" ? [0.17, 0.17, 0.18] : [0.82, 0.80, 0.75];
@@ -270,6 +273,7 @@ else if (part == "sokkel") sokkel();
 else if (part == "gull") gull();
 else if (part == "lokk") lokk();
 else if (part == "pogo_han") pogo_han();
+else if (part == "led_propp") led_propp();
 else if (part == "samlet") samlet();
 else if (part == "med_fjernkontroll") {
   samlet();
