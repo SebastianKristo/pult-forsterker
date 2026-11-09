@@ -200,11 +200,14 @@ L.STL = "stl"
 # lokket printes med toppen ned (ingen støtte trengs: alt under lokket peker opp, vinduets fas er 45°, glasslomma er åpen
 # oppover); sakte første lag og elefantfot-kompensasjon gir skarpe kanter rundt rutas forsenkning og knappehullene.
 # Ruta printes i klar PETG med 100 % fyll og bare én vegg (klarest), sakte.
+BRIM = {"brim_type": "outer_only", "brim_width": "5", "brim_object_gap": "0", "initial_layer_speed": "25", "initial_layer_infill_speed": "30"}
 L.OBJ_INNST = {
     "lokk": {"enable_support": "0", "initial_layer_speed": "20", "initial_layer_infill_speed": "30", "elefant_foot_compensation": "0.15"},
     "rute": {"enable_support": "0", "sparse_infill_density": "100%", "wall_loops": "1", "top_shell_layers": "0", "bottom_shell_layers": "0",
              "initial_layer_speed": "15", "outer_wall_speed": "30", "inner_wall_speed": "30", "sparse_infill_speed": "30"},
-    "kjerne": {"enable_support": "0"}, "elementplate": {"enable_support": "0"}, "hylse": {"enable_support": "0", "outer_wall_speed": "120"}, "bunn": {"enable_support": "0"},
+    # kjernen og hylsa er 140 mm høye med tynne vegger (ca. 1 080 og 620 mm² mot plata): 5 mm brim og sakte første lag
+    "kjerne": {"enable_support": "0", **BRIM}, "elementplate": {"enable_support": "0"},
+    "hylse": {"enable_support": "0", "outer_wall_speed": "120", **BRIM}, "bunn": {"enable_support": "0"},
 }
 L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper og knott", [
     ("kjerne", "Kjerne (mørk, stående)", 2, (10, 10), None),
