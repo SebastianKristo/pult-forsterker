@@ -13,7 +13,8 @@ farge = "bone";                  // bone | mork
 // stil på vugga (sokkelen er lik for begge, så en printet sokkel passer):
 //   tvilling – lav pute foran som holder halen, og to slanke ribber bak som bærer fjernkontrollen (luft imellom)
 //   skaal    – den første utgaven: skål foran og én bred finne bak
-stil = "tvilling";
+//   klem     – en avrundet skål som klemmer om sidene på fjernkontrollen et godt stykke opp, og glir inn i ryggen øverst
+stil = "klem";
 
 // ---------- fjernkontrollen (samme som skjold_fjernkontroll.scad) ----------
 FW = 55; FH = 13.5;
@@ -151,6 +152,37 @@ module ytre_tvilling() {
   myk(VB, pute_l, pute_bak, plan_r);
   for (s = [-1, 1]) translate([s * ribbe_x, 0, 0]) myk(ribbe_b, rygg_l, bak_y, ribbe_b/2 - 1);
 }
+// Klem: et avrundet skall i fjernkontrollens koordinater. Tverrsnittet er en U med rund rygg (R = klemR) og
+// vinger som går klem_h opp langs sidene (under forsiden, så tastene er fri). Vingene er fulle til klem_y og glir
+// så mykt inn i ryggen fram til rygg_l. Under skallet står puta foran og de to ribbene (som i tvilling).
+klem_v = 2.6;                     // vingenes tykkelse (skallet blir litt smalere enn puta, innenfor fasen)
+klem_h = 11;                      // vingene står så høyt opp fra fjernkontrollens bakside (forsiden er i FH = 13,5)
+klem_y = 34;                      // vingene er fulle hit, så glir de ned i ryggen
+klemR = 12;                       // rund rygg i tverrsnittet
+module klem_tverr2d() {           // tverrsnitt (x, z) i fjernkontrollens koordinater
+  x0 = -kl - klem_v; x1 = FW + kl + klem_v; z0 = -rygg_t;
+  hull() {
+    for (x = [x0 + klemR, x1 - klemR]) translate([x, z0 + klemR]) circle(r = klemR, $fn = 96);
+    for (x = [x0 + klem_v/2, x1 - klem_v/2]) translate([x, klem_h - klem_v/2]) circle(d = klem_v, $fn = 32);
+  }
+}
+module klem_side2d() {            // sideprofil (y, z): fulle vinger fram til klem_y, så en myk bue ned i ryggen
+  hull() {
+    translate([-hylle_t, -rygg_t]) square([klem_y + hylle_t, klem_h + rygg_t]);
+    translate([rygg_l - rygg_t, -rygg_t + 0.01]) intersection() { circle(r = rygg_t, $fn = 64); translate([-rygg_t, 0]) square(2 * rygg_t); }
+  }
+}
+module klem_lokal() {
+  intersection() {
+    rotate([90, 0, 0]) translate([0, 0, -400]) linear_extrude(800) klem_tverr2d();                 // (x, z) langs y
+    rotate([90, 0, 90]) translate([0, 0, -200]) linear_extrude(400) klem_side2d();                // (y, z) langs x
+  }
+}
+module ytre_klem() {
+  myk(VB, pute_l, pute_bak, plan_r);
+  for (s = [-1, 1]) translate([s * ribbe_x, 0, 0]) myk(ribbe_b, rygg_l - 4, bak_y, ribbe_b/2 - 1);
+  fk_plass() klem_lokal();
+}
 module vanger_myke(vl = vange_l) {   // vangene med avrundet toppkant, i fjernkontrollens koordinater
   for (s = [0, 1]) translate([s ? FW + kl : -kl - vegg + 0.05, 0, -0.01]) hull() {   // 0,05 mm inn: ikke i samme plan som siden
     cube([vegg - 0.05, vl, 0.01]);
@@ -161,8 +193,8 @@ module vanger_myke(vl = vange_l) {   // vangene med avrundet toppkant, i fjernko
 module vugge() {
   difference() {
     union() {
-      if (stil == "tvilling") ytre_tvilling(); else ytre();
-      fk_plass() { vanger_myke(stil == "tvilling" ? pute_l - 2 : vange_l); nokler_lokal(); }
+      if (stil == "klem") ytre_klem(); else if (stil == "tvilling") ytre_tvilling(); else ytre();
+      fk_plass() { if (stil != "klem") vanger_myke(stil == "tvilling" ? pute_l - 2 : vange_l); nokler_lokal(); }
     }
     fk_plass() { fk_rom(); pogo_lomme_lokal(); }
     translate([0, 0, -1]) linear_extrude(SH + 1) square([400, 400], center = true);   // står på sokkelen
