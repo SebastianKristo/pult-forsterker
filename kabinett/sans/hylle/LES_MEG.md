@@ -11,7 +11,21 @@ Samme innmat som [Skjold Sans](../LES_MEG.md), men laget for å henge under en h
 - **Fronten skrår 20° innover nedover,** så PIR-en og lysvinduet ser ut i rommet og litt ned. Sett forfra er det
   bare en ren front med PIR-kuppelen og et lite lysvindu.
 - **En tynn gullstripe går rundt nede.** Den printes i samme jobb som kroppen.
+- **Fronten og topplata følger hyllas bue** sett ovenfra, så enheten ligger jevnt med en rund hyllekant.
 - **Sett den med fronten i flukt med hyllekanten,** eller et par millimeter inn.
+
+### Mål buen på hylla di
+
+Standard er en radius på 350 mm. Slik finner du radiusen på din hylle:
+
+1. Legg en rett linjal langs forkanten, slik at den berører kanten i begge ender. En 30 cm linjal gir L = 300 mm.
+2. Mål avstanden s fra linjalen inn til kanten midt på.
+3. Regn ut radiusen: **R = L² / (8 · s) + s / 2.**
+
+Eksempel: L = 300 og s = 30 gir R = 390 mm. Er kanten rett (s = 0), setter du R stort, f.eks. 100000.
+
+Endre `hylleR` øverst i `skjold_sans_hylle.scad` og kjør `python3 lag_hylle.py`. Eller send meg målene, så lager
+jeg fila.
 
 ![Forfra](render/forfra.png)
 

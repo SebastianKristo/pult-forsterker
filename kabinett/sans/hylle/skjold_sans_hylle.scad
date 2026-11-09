@@ -2,7 +2,7 @@
 // Samme innmat som Skjold Sans: Wemos D1 mini + AM312 PIR + temperatur/fukt (SHT40 anbefalt) + lite lyskort.
 //
 // Formen: en lav «list» (84 × 64 × 26 mm) med flat topp mot hylla, runde hjørner sett ovenfra og en front som
-// skrår 20° innover nedover, så PIR-en ser ut i rommet og litt ned. En tynn gullstripe går rundt nede.
+// følger hyllas bue (hylleR) og skrår 20° innover nedover, så PIR-en ser ut i rommet og litt ned. En tynn gullstripe går rundt nede.
 //
 // Inni (sett ovenfra):
 //   - venstre: sensorkammeret, skilt fra resten med dobbel vegg; spalter i bunnen (peker rett ned) og i venstre side
@@ -26,7 +26,9 @@ tilt = 20;                        // frontens helning fra loddrett (innover nedo
 t = 2.0;                          // veggtykkelse
 plT = 3.0;                        // topplatas tykkelse
 yF0 = -Dd/2;                      // frontens overkant
-yF1 = yF0 + Hh * tan(tilt);       // frontens underkant
+yF1 = yF0 + Hh * tan(tilt);       // frontens underkant (midt på)
+hylleR = 350;                     // radius på hyllas forkant sett ovenfra (mål din: se LES_MEG); fronten følger buen
+hylleC = [0, yF0 + hylleR];       // buens sentrum (bak enheten)
 gullZ = -20; gullH = 1.0; gullT = 0.6;   // gullstripa
 
 // ---------- innmat ----------
@@ -47,24 +49,37 @@ leppe = 3; klar = 0.25;
 $fn = 64;
 
 // ---------- form ----------
-module plan2d(o = 0) { offset(r = R + o) offset(delta = -R) square([W, Dd], center = true); }
+module plan2d(o = 0) {   // sett ovenfra: runde hjørner, fronten følger hyllebuen
+  offset(r = R + o) offset(delta = -R) intersection() {
+    square([W, Dd], center = true);
+    translate(hylleC) circle(r = hylleR, $fn = 1440);
+  }
+}
+function sag(x) = hylleR - sqrt(hylleR * hylleR - x * x);   // hvor mye fronten ligger bak midten ved x
 module side2d(o = 0) {   // sett fra siden (y, z): front som skrår, fas nede foran og bak, toppen åpen over z = 0
   offset(delta = o) polygon([
-    [yF0 - 5 * tan(tilt), 5], [Dd/2, 5], [Dd/2, -Hh + 2.5], [Dd/2 - 2.5, -Hh],
-    [yF1 + 2, -Hh], [yF0 + (Hh - 3.5) * tan(tilt), -Hh + 3.5]]);
+    [yF0 - 20, 5], [Dd/2, 5], [Dd/2, -Hh + 2.5], [Dd/2 - 2.5, -Hh], [yF0 - 20, -Hh]]);   // fronten lages av konen under
 }
 module X() { multmatrix([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]]) children(); }   // 2D (y, z), ekstrudert langs x
+// fronten: en kon rundt hyllebuens sentrum, så skråningen (20°) og fasen nede følger buen
+module front_kon(o = 0) {
+  A = asin((W/2 + 12) / hylleR);
+  translate([hylleC[0], hylleC[1], 0]) rotate([0, 0, -90 - A]) rotate_extrude(angle = 2 * A, $fn = 4000)
+    offset(delta = o) polygon([[hylleR - 120, 5], [hylleR + 5 * tan(tilt), 5], [hylleR - (Hh - 3.5) * tan(tilt), -Hh + 3.5],
+                               [hylleR - Hh * tan(tilt) - 2, -Hh], [hylleR - 120, -Hh]]);
+}
 module form(o = 0, z0 = -Hh - 1, z1 = 0) {
   intersection() {
     translate([0, 0, z0]) linear_extrude(z1 - z0) plan2d(o);
     X() translate([0, 0, -W]) linear_extrude(2 * W) side2d(o);
+    front_kon(o);
   }
 }
 module innside(o = 0) { form(-t + o, -Hh + t - o, 1); }
 // lokal ramme på fronten: X langs x, Y opp langs fronten, Z innover (vinkelrett på fronten)
 module paa_front(x, z) {
   n = [0, cos(tilt), sin(tilt)];   // innover
-  translate([x, yF0 + (-z) * tan(tilt), z]) multmatrix([[1, 0, 0, 0], [0, -sin(tilt), cos(tilt), 0], [0, cos(tilt), sin(tilt), 0], [0, 0, 0, 1]]) children();
+  translate([x, yF0 + sag(x), 0]) rotate([0, 0, asin(x / hylleR)]) translate([0, (-z) * tan(tilt), z]) multmatrix([[1, 0, 0, 0], [0, -sin(tilt), cos(tilt), 0], [0, cos(tilt), sin(tilt), 0], [0, 0, 0, 1]]) children();
 }
 module draape2d(d) { hull() { circle(d = d); translate([0, d/2 * sqrt(2)]) square(0.01, center = true); } }   // spiss opp: hull uten støtte
 
@@ -127,7 +142,7 @@ module gull_form(e = 0) {
 module plate() {
   difference() {
     union() {
-      linear_extrude(plT) offset(r = R) offset(delta = -R) square([W, Dd], center = true);
+      linear_extrude(plT) plan2d(0);
       // leppe inn i kroppen (følger innsiden, også der fronten skrår), med åpning for skilleveggen og pluggen
       difference() {
         intersection() { innside(-klar); translate([-W, -Dd, -leppe]) cube([2 * W, 2 * Dd, leppe + 0.01]); }
