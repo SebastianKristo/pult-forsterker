@@ -41,4 +41,6 @@ lag_3mf.write("skjold-dokk-hullkort-k2.3mf", "Skjold Dokk for Hullkort-utgaven (
     ("vugge", "Vugge (Bone White)", 1, (12, 20), None), ("sokkel", "Sokkel (mørk)", 2, (95, 20), None),
     ("gull", "Gullstripe (felt inn i sokkelen)", 3, None, "sokkel"), ("lokk", "Lokk til vektlomma (mørk)", 2, (12, 150), None),
 ], {1: "#CEC6B4", 2: "#2E2D2C", 3: "#D99E40"})
+lag_3mf.write("skjold-dokk-hullkort-k2-vugge.3mf", "Skjold Dokk for Hullkort-utgaven – bare vugga (passer på sokkelen)", [
+    ("vugge", "Vugge (Bone White)", 1, (90, 80), None)], {1: "#CEC6B4"})
 PY
