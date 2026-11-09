@@ -1,6 +1,8 @@
 // Skjold Sub – KONSEPT (ikke ferdig produkt). Lukket kasse, element ned-/framovervendt, elektronikk bak.
 // variant: "sub8" (Dayton RSS210HF-4, ~20 l netto) | "sub10" (Dayton RSS265HF-4, ~35 l netto)
 // part: samlet | eksplodert | snitt
+use <../fonter/Inter-Bold.otf>     // SKJOLD-logoen: Inter (ligger i repoet, ren J)
+use <../fonter/Inter-Regular.otf>
 variant = "sub8";
 part = "samlet";
 $fn = 72;
@@ -31,7 +33,7 @@ module kasse(){
   }
   color(c_gold) translate([W/2,-4.6,H/2]) rotate([-90,0,0]) difference(){ cylinder(d=DD+16,h=0.8); translate([0,0,-1]) cylinder(d=DD+8,h=3); }
   // SKJOLD-logo
-  color(c_gold) translate([W/2,-4.8,28]) rotate([90,0,0]) linear_extrude(0.8) text("SKJOLD",size=11,font="Liberation Sans:style=Bold",halign="center",spacing=1.4);
+  color(c_gold) translate([W/2,-4.8,28]) rotate([90,0,0]) linear_extrude(0.8) text("SKJOLD",size=10.45,font="Inter:style=Bold",halign="center",spacing=1.4);
 }
 
 module element(){

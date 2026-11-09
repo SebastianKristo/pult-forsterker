@@ -11,6 +11,8 @@
 // part:  kropp | front | logo | grill | bunn | knott | rute | knapp | knapp_av | knapp_1 … knapp_4 |
 //        pakning_front | pakning_bunn | krage | dc_skive | usb_propp | samlet | eksplodert
 // STL-ene eksporteres liggende slik de skal printes (se utskriftsretning nederst).
+use <../fonter/Inter-Bold.otf>     // SKJOLD-logoen: Inter (ligger i repoet, ren J)
+use <../fonter/Inter-Regular.otf>
 
 part = "samlet";
 ki = 0;                         // hvilken knapp for part="knapp_i"
@@ -399,7 +401,7 @@ module knott_lok() {   // i panelets ramme, med akselen i origo
 // ---------- logo: «SKJOLD» som eget innfelt legeme ----------
 // 0,6 mm dypt (3 lag), flukter med forsiden. Fet skrift 6,5 mm: strekene er ≥ 1 mm brede (0,4 mm dyse).
 logoZ = 15.5; logoDepth = 0.6;               // under grillen, foran elektronikkrommet
-module logo_2d() { text("SKJOLD", size = 6.5, font = "Liberation Sans:style=Bold", spacing = 1.25, halign = "center", valign = "center"); }
+module logo_2d() { text("SKJOLD", size = 6.175, font = "Inter:style=Bold", spacing = 1.25, halign = "center", valign = "center"); }
 module logo_shape(e = 0) { translate([0, -fT - e, logoZ]) rotate([-90, 0, 0]) mirror([0, 1, 0]) linear_extrude(logoDepth + e) offset(e) logo_2d(); }
 module logo() { logo_shape(0); }
 

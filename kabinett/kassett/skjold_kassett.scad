@@ -11,6 +11,8 @@
 // fronten av spilleren. Bak sporet sitter to trinser med 6 × 3 mm diametrale magneter, drevet av én N20-girmotor via
 // en O-ring (alle tre trinsene i samme reim → begge spolene går samme vei, som på en ekte kassett). Magnetene drar
 // spolene rundt gjennom 1,6 mm plast – ingen tannhjul som må treffe når kassetten settes inn.
+use <../fonter/Inter-Bold.otf>     // SKJOLD-logoen: Inter (ligger i repoet, ren J)
+use <../fonter/Inter-Regular.otf>
 
 part = "samlet";
 cover = "";      // "demo" = tegn et eksempelcover på papiret (bare til bilder)
@@ -131,7 +133,7 @@ module kassett_halv(front=true){
       translate([kW/2,reelY+1.5,0]) groove(0.4) difference(){ circle(d=4.2); circle(d=3); }
       // trapes og SKJOLD bak, over spolene
       translate([kW/2,reelY+spFl/2+1,0]) groove(0.4) difference(){ trapes2d(34,26,8); offset(-0.8) trapes2d(34,26,8); }
-      translate([kW/2,reelY+spFl/2+3.2,0]) mirror([1,0,0]) groove(0.4) text("SKJOLD",size=3.0,font="Liberation Sans:style=Bold",halign="center",spacing=1.2);
+      translate([kW/2,reelY+spFl/2+3.2,0]) mirror([1,0,0]) groove(0.4) text("SKJOLD",size=2.85,font="Inter:style=Bold",halign="center",spacing=1.2);
     }
   }
   if(front) for(p=screws) translate([p[0],p[1],H]) cylinder(d=pinD,h=pinH);
@@ -153,7 +155,7 @@ module demo_cover(){
   }
   color([0.11,0.11,0.12]) translate([x0+rimW+1, papY0+rimW+3.6, 0]) linear_extrude(0.03) text("Sommernatt", size=2.5, font="Liberation Sans:style=Bold");
   color([0.42,0.42,0.40]) translate([x0+rimW+1, papY0+rimW+0.9, 0]) linear_extrude(0.03) text("Skjold Lab", size=1.9, font="Liberation Sans");
-  color([0.70,0.68,0.64]) translate([x0+papW-rimW-1, papY0+rimW+0.9, 0]) linear_extrude(0.03) text("SKJOLD", size=1.3, font="Liberation Sans", halign="right", spacing=1.3);
+  color([0.70,0.68,0.64]) translate([x0+papW-rimW-1, papY0+rimW+0.9, 0]) linear_extrude(0.03) text("SKJOLD", size=1.235, font="Inter", halign="right", spacing=1.3);
 }
 
 // Bakplaten bak papiret: flat plate med ribber som står mot innsiden av bakhalvdelen, så papiret presses mot rammen.
@@ -296,7 +298,7 @@ module spiller_topp(){
     translate([espX,pD-wall-1,usbZ]) rotate([-90,0,0]) linear_extrude(wall+2)        // USB-C (plass til pluggen)
       offset(r=2) square([12.5-4,7-4],center=true);
     translate([pW/2,0.6,(2.4+winZ0)/2+0.5]) rotate([90,0,0]) linear_extrude(1)       // SKJOLD gravert under vinduet
-      text("SKJOLD",size=4.6,font="Liberation Sans:style=Bold",halign="center",valign="center",spacing=1.3);
+      text("SKJOLD",size=4.37,font="Inter:style=Bold",halign="center",valign="center",spacing=1.3);
   }
 }
 module vindu(){ // klar rute (PETG), 1,5 mm – printes flatt, 100 % fyll; skyves opp i sporet før bunnen skrus på
