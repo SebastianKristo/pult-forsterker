@@ -3,7 +3,7 @@
 # Fjernkontrollens STL-er (../asm, ../asm_full) lages av ../lag_stl.sh.
 cd "$(dirname "$0")"
 mkdir -p stl asm render
-for p in vugge sokkel gull lokk; do openscad -q -D "part=\"$p\"" -o "stl/$p.stl" skjold_dokk.scad & done
+for p in vugge sokkel gull lokk led_propp; do openscad -q -D "part=\"$p\"" -o "stl/$p.stl" skjold_dokk.scad & done
 openscad -q -D 'part="pogo_han"' -o asm/pogo_han.stl skjold_dokk.scad &
 wait
 python3 sjekk_dokk.py || exit 1
