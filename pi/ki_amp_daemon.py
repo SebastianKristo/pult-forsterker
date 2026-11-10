@@ -4072,12 +4072,14 @@ def start_update():
     # Oppdateringen kjører som root, mens kildetreet ofte eies av brukeren (git: «dubious ownership»). Godta det for
     # alle git-kall i skriptet – også dem i update.sh og skjold_safeupdate.py – via miljøet (git ≥ 2.31).
     script = ("export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*'; "
+              f"KILDE={shlex.quote(src)}; EIER=$(stat -c %U:%G \"$KILDE\"); chown -R \"$EIER\" \"$KILDE\" 2>/dev/null || true; "
               f"cd {shlex.quote(src)} && echo \"== $(date '+%F %T') Henter nyeste versjon ({'beta' if _beta() else 'stabil'})\" && "
               "{ python3 /usr/local/bin/skjold_safeupdate.py snapshot \"$PWD\" >/dev/null 2>&1 || python3 pi/skjold_safeupdate.py snapshot \"$PWD\" >/dev/null 2>&1 || true; } && "
               "git -c safe.directory='*' fetch -q --tags origin && " + target + " && "
               f"echo '== Installerer' && SKJOLD_CHANNEL={'beta' if _beta() else 'stabil'} bash pi/update.sh && "
               "{ [ -f /etc/systemd/system/skjold-os.service ] && [ -f skjold/os/install.sh ] && bash skjold/os/install.sh || true; }; "
-              "rc=$?; if [ $rc = 0 ]; then echo 'SKJOLD-RESULTAT: ok'; systemctl start --no-block skjold-healthcheck.service 2>/dev/null || true; "
+              "rc=$?; chown -R \"$EIER\" \"$KILDE\" 2>/dev/null || true; "   # filene tilbake til eieren (git pull som bruker virker)
+              "if [ $rc = 0 ]; then echo 'SKJOLD-RESULTAT: ok'; systemctl start --no-block skjold-healthcheck.service 2>/dev/null || true; "
               "else echo \"SKJOLD-RESULTAT: feil ($rc)\"; python3 /usr/local/bin/skjold_safeupdate.py rollback \"installasjonen feilet ($rc)\" || true; fi")
     with open(UPD_LOG, "w") as fh:
         fh.write("== Starter oppdatering\n")
