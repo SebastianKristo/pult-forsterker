@@ -526,6 +526,18 @@ final class AppModel {
     }
     var position: Int { min(pos ?? (live ? 0 : 45), duration) }
     var hasProgress: Bool { input != 3 && input != 2 && input != 4 && (!live || duration > 0) }
+    /// Kan låten spoles? Bibliotekslåter (Navidrome, YouTube Music, Plex-bibliotek – spilles via Lyrion) og Plex-spilleren.
+    var canSeek: Bool { hasProgress && duration > 0 && (libTrack != nil || dev?.source == "plex" || !live) }
+
+    /// Spol til `s` sekunder. Viser ny posisjon med en gang og sender POST /api/seek (eller Lyrion «time» for et rent Lyrion-rom).
+    func seek(to s: Int) {
+        let p = max(0, min(s, max(0, duration - 1)))
+        pos = p
+        guard live else { return }
+        hold("pos", 2.5)
+        if actLyrionOnly, let pid = actRoom.pid { lyrionCmd(pid, ["time", "\(p)"]); return }
+        devSend("/api/seek", ["pos": p])
+    }
 
     var srcName: String {
         let sn = ["upnp": "UPnP/DLNA", "spotify": "Spotify", "ytm": "YouTube Music", "nd": "Navidrome", "plex": "Plex"]

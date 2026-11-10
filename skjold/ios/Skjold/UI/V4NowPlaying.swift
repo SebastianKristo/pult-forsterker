@@ -6,6 +6,7 @@ struct V4NowPlaying: View {
     @Environment(V4State.self) private var ui
     let wide: Bool
     @State private var drag: CGFloat = 0
+    @State private var seekDrag: Double? = nil   // 0…1 mens du drar i fremdriften
     @State private var segX: CGFloat? = nil     // linsens x mens Låt/Kø dras
     @State private var segHold = false          // linsen holdes (strekkes)
 
@@ -229,22 +230,57 @@ struct V4NowPlaying: View {
             .plain().accessibilityLabel(label)
     }
 
+    /// Fremdriften. Kan dras eller trykkes for å spole når kilden støtter det (m.canSeek).
     private var progress: some View {
-        VStack(spacing: 7) {
+        let dur = max(1, m.duration)
+        let shown = seekDrag.map { Int($0 * Double(dur)) } ?? m.position
+        let frac = seekDrag ?? m.v4Progress
+        return VStack(spacing: 7) {
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(V4.ink.opacity(0.2))
-                    Capsule().fill(V4.ink).frame(width: g.size.width * CGFloat(m.v4Progress))
-                        .animation(.linear(duration: 1), value: m.position)
+                    Capsule().fill(V4.ink).frame(width: g.size.width * CGFloat(frac))
+                        .animation(seekDrag == nil ? .linear(duration: 1) : nil, value: frac)
+                    if m.canSeek {
+                        Circle().fill(V4.ink).frame(width: 14, height: 14)
+                            .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+                            .scaleEffect(seekDrag == nil ? 1 : 1.3)
+                            .offset(x: g.size.width * CGFloat(frac) - 7)
+                            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: seekDrag == nil)
+                    }
                 }
+                .frame(height: seekDrag == nil ? 5 : 8)
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0)
+                    .onChanged { v in
+                        guard m.canSeek else { return }
+                        let f = min(1, max(0, Double(v.location.x / max(1, g.size.width))))
+                        if seekDrag == nil { Haptics.tick() }
+                        seekDrag = f
+                    }
+                    .onEnded { v in
+                        guard m.canSeek else { return }
+                        let f = min(1, max(0, Double(v.location.x / max(1, g.size.width))))
+                        seekDrag = nil
+                        Haptics.tick()
+                        m.seek(to: Int(f * Double(dur)))
+                    })
             }
-            .frame(height: 5)
+            .frame(height: 22)
             HStack {
-                Text(fmt(m.position))
+                Text(fmt(shown))
                 Spacer()
-                Text("−" + fmt(max(0, m.duration - m.position)))
+                Text("−" + fmt(max(0, m.duration - shown)))
             }
             .mono(11, V4.ink.opacity(0.6))
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Fremdrift")
+        .accessibilityValue("\(fmt(m.position)) av \(fmt(m.duration))")
+        .accessibilityAdjustableAction { dir in
+            guard m.canSeek else { return }
+            m.seek(to: m.position + (dir == .increment ? 10 : -10))
         }
     }
 

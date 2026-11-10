@@ -364,22 +364,43 @@ private fun Queue(m: AppModel) {
 
 // MARK: Progress + controls
 
+/** Fremdriften. Trykk eller dra for å spole når kilden støtter det (m.canSeek). */
 @Composable
 private fun Progress(m: AppModel) {
+    var drag by remember { mutableStateOf<Float?>(null) }   // 0…1 mens du drar
+    val dur = maxOf(1, m.duration)
+    val frac = drag ?: (m.position.toFloat() / dur).coerceIn(0f, 1f)
+    val shown = drag?.let { (it * dur).toInt() } ?: m.position
+    val seek = m.canSeek
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         BoxWithConstraints(
-            Modifier.fillMaxWidth().height(16.dp).pointerInput(m.duration) {
-                detectTapGestures { p -> m.pos = (p.x / size.width * m.duration).toInt() }
-            },
+            Modifier.fillMaxWidth().height(22.dp)
+                .pointerInput(seek, dur) {
+                    if (!seek) return@pointerInput
+                    detectTapGestures { p -> Haptics.tick(); m.seekTo(((p.x / size.width).coerceIn(0f, 1f) * dur).toInt()) }
+                }
+                .pointerInput(seek, dur) {
+                    if (!seek) return@pointerInput
+                    detectHorizontalDragGestures(
+                        onDragStart = { o -> Haptics.tick(); drag = (o.x / size.width).coerceIn(0f, 1f) },
+                        onDragEnd = { drag?.let { f -> Haptics.tick(); m.seekTo((f * dur).toInt()) }; drag = null },
+                        onDragCancel = { drag = null },
+                    ) { ch, d -> ch.consume(); drag = ((drag ?: 0f) + d / size.width).coerceIn(0f, 1f) }
+                },
             contentAlignment = Alignment.CenterStart,
         ) {
-            Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(C.ink.copy(alpha = 0.22f)))
-            Box(Modifier.width(maxWidth * (m.position.toFloat() / maxOf(1, m.duration))).height(5.dp).clip(CircleShape).background(C.ink.copy(alpha = 0.9f)))
+            val h = if (drag != null) 8.dp else 5.dp
+            Box(Modifier.fillMaxWidth().height(h).clip(CircleShape).background(C.ink.copy(alpha = 0.22f)))
+            Box(Modifier.width(maxWidth * frac).height(h).clip(CircleShape).background(C.ink.copy(alpha = 0.9f)))
+            if (seek) {
+                val knob = if (drag != null) 18.dp else 14.dp
+                Box(Modifier.offset(x = maxWidth * frac - knob / 2).size(knob).clip(CircleShape).background(C.ink))
+            }
         }
         Row(Modifier.fillMaxWidth()) {
-            T(fmt(m.position), mono(10f, C.ink.copy(alpha = 0.6f)))
+            T(fmt(shown), mono(10f, C.ink.copy(alpha = 0.6f)))
             Spacer(Modifier.weight(1f))
-            T("−" + fmt(m.duration - m.position), mono(10f, C.ink.copy(alpha = 0.6f)))
+            T("−" + fmt(m.duration - shown), mono(10f, C.ink.copy(alpha = 0.6f)))
         }
     }
 }

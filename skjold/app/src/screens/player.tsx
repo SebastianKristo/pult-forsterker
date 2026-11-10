@@ -1,7 +1,7 @@
 // Felles avspillingsdeler: omslag, transport, volum, kildevalg, radiofavoritter.
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, coverUrl, type InputId, type Status } from '../lib/api';
-import { act, inputLabel, status, playPause, setVolume } from '../lib/store';
+import { act, hold, inputLabel, showToast, status, playPause, setVolume } from '../lib/store';
 import { art } from '../lib/settings';
 import { Chip, MuteIcon, NextIcon, PlayPauseIcon, PowerIcon, PrevIcon, Slider } from '../components/ui';
 
@@ -124,14 +124,56 @@ export function PlayerBody() {
         {s?.input === 'airplay' && s.airplay_device && <span class="ellip muted" style={{ fontSize: '11px' }}>Fra {s.airplay_device}</span>}
       </div>
       {dur > 0 && (
-        <div class="col gap4">
-          <div class="bar"><i style={{ width: Math.min(100, (pos / dur) * 100) + '%' }} /></div>
-          <div class="row between mono muted" style={{ fontSize: '11px' }}><span>{mmss(pos)}</span><span>{mmss(dur)}</span></div>
-        </div>
+        <SeekBar pos={pos} dur={dur} seek={canSeek(s) ? seekTo : null} />
       )}
       <Transport s={s} />
       <VolumeRow s={s} />
       <InputChips s={s} />
+    </div>
+  );
+}
+
+/** Kan låten som spilles spoles? Lyrion-strømmer med varighet (Navidrome, YouTube Music, bibliotek) og Plex. */
+export function canSeek(s: Status | null): boolean {
+  return !!s && (s.duration ?? 0) > 0 && (s.source === 'plex' || s.input === 'radio');
+}
+/** Spol: viser ny posisjon med en gang (hold), og sier fra hvis kilden ikke kan spoles. */
+export async function seekTo(pos: number): Promise<void> {
+  hold({ position: pos }, 2500);
+  try { await api.seek(pos); } catch (e) { showToast(e instanceof Error ? e.message : 'Kunne ikke spole'); }
+}
+
+/** Fremdriftslinje som kan dras eller trykkes for å spole (når `seek` er satt). Tidene oppdateres mens du drar. */
+export function SeekBar({ pos, dur, seek, variant = 'desk' }: { pos: number; dur: number; seek?: ((p: number) => void) | null; variant?: 'desk' | 'phone' }) {
+  const [drag, setDrag] = useState<number | null>(null);
+  const el = useRef<HTMLDivElement>(null);
+  const at = (x: number) => { const r = el.current!.getBoundingClientRect(); return Math.max(0, Math.min(1, (x - r.left) / r.width)) * dur; };
+  const p = Math.min(drag ?? pos, dur), pct = dur > 0 ? Math.min(100, (p / dur) * 100) : 0;
+  const on = !!seek && dur > 0;
+  const down = (e: PointerEvent) => { if (!on) return; e.stopPropagation(); try { el.current!.setPointerCapture(e.pointerId); } catch { /* ignore */ } setDrag(at(e.clientX)); };
+  const move = (e: PointerEvent) => { if (drag !== null) setDrag(at(e.clientX)); };
+  const up = (e: PointerEvent) => { if (drag === null) return; const v = at(e.clientX); setDrag(null); seek!(v); };
+  const key = (e: KeyboardEvent) => {
+    if (!on) return;
+    const d = e.key === 'ArrowRight' ? 10 : e.key === 'ArrowLeft' ? -10 : 0;
+    if (d) { e.preventDefault(); seek!(Math.max(0, Math.min(dur - 1, pos + d))); }
+  };
+  const phone = variant === 'phone';
+  const track = phone ? 'rgba(242,242,238,.22)' : 'var(--line, #2e2e30)', fill = phone ? 'rgba(242,242,238,.9)' : 'var(--ink, #f2f2ee)';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div ref={el} data-seek role={on ? 'slider' : undefined} tabIndex={on ? 0 : undefined} aria-label={on ? 'Spol' : undefined}
+        aria-valuemin={0} aria-valuemax={Math.round(dur)} aria-valuenow={Math.round(p)} aria-valuetext={mmss(p) + ' av ' + mmss(dur)}
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => setDrag(null)} onKeyDown={key}
+        style={{ height: '18px', display: 'flex', alignItems: 'center', position: 'relative', cursor: on ? 'pointer' : 'default', touchAction: on ? 'none' : 'auto' }}>
+        <div style={{ flex: 1, height: drag !== null ? '7px' : '5px', borderRadius: '4px', background: track, overflow: 'hidden', transition: 'height .15s' }}>
+          <div style={{ height: '100%', width: pct.toFixed(2) + '%', background: fill, borderRadius: '4px' }} />
+        </div>
+        {on && <div style={{ position: 'absolute', left: `calc(${pct.toFixed(2)}% - 7px)`, width: '14px', height: '14px', borderRadius: '50%', background: fill, boxShadow: '0 1px 4px rgba(0,0,0,.4)', transform: drag !== null ? 'scale(1.25)' : 'scale(1)', transition: 'transform .15s' }} />}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'IBM Plex Mono',monospace", fontSize: phone ? '10px' : '11px', color: phone ? 'rgba(242,242,238,.6)' : 'var(--muted, #8b8b86)' }}>
+        <span>{mmss(p)}</span><span>{phone ? '−' + mmss(dur - p) : mmss(dur)}</span>
+      </div>
     </div>
   );
 }

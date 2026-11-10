@@ -3,13 +3,14 @@
 import { signal } from '@preact/signals';
 import { useEffect, useState } from 'preact/hooks';
 import { api, type MaItem, type MaSearch } from '../lib/api';
-import { go, settings, showToast } from '../lib/store';
+import { go, settings, showToast, trackSub } from '../lib/store';
 import { art } from '../lib/settings';
 
 const MONO = "'IBM Plex Mono',monospace";
 const TABS: [string, string][] = [['recent', 'Utforsk'], ['albums', 'Album'], ['artists', 'Artister'], ['playlists', 'Spillelister'], ['podcasts', 'Podkaster']];
 const maTab = signal(0);
 const maOpen = signal<MaItem | null>(null);
+trackSub(maOpen, () => { maOpen.value = null; });
 const maQ = signal('');
 
 export const maConfigured = (): boolean => !!(settings.value.maUrl || '').trim();

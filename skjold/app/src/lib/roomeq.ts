@@ -103,10 +103,36 @@ export function suggest(c: Curve, max = 8): { filters: Peq[]; target: number; af
   return { filters, target, after };
 }
 
-/** Tar opp mikrofonen i `secs` sekunder (uten ekkodemping/autoforsterkning). */
-export async function recordMic(secs: number, onStart?: () => void): Promise<{ data: Float32Array; sr: number }> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+/** Kan nettleseren ta opp fra mikrofonen her? (Krever https eller localhost.) */
+export function micAvailable(): boolean { return typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia; }
+/** Forklaring når mikrofonen er sperret – vanligvis fordi siden er åpnet på http://<ip> i stedet for https. */
+export function micBlockedMsg(): string {
+  return typeof window !== 'undefined' && !window.isSecureContext
+    ? `Nettleseren slipper ikke til mikrofonen på en vanlig http-adresse (${location.host}). Mål med Skjold-appen på iPhone eller Android, eller åpne Skjold via Skjold-hjem (https).`
+    : 'Denne nettleseren har ikke tilgang til mikrofonen.';
+}
+
+let mic: { ctx: AudioContext; stream: MediaStream } | null = null;
+/** Kall dette FØRST i klikk-handleren (før noe annet await): lager lydkonteksten mens trykket gjelder (Safari/iOS krever
+ *  det) og ber om mikrofonen før Skjold begynner å spille sweepen, så tillatelsesdialogen ikke spiser målingen. */
+export async function primeMic(): Promise<void> {
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error(micBlockedMsg());
+  if (mic && mic.stream.getTracks().some((t) => t.readyState === 'live')) { if (mic.ctx.state !== 'running') await mic.ctx.resume().catch(() => {}); return; }
   const ctx = new AudioContext();
+  const resumed = ctx.resume().catch(() => {});
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    mic = { ctx, stream };
+  } catch (e) { void ctx.close(); throw e; }
+  await resumed;
+}
+
+/** Tar opp mikrofonen i `secs` sekunder (uten ekkodemping/autoforsterkning). Bruker primeMic hvis den er kalt. */
+export async function recordMic(secs: number, onStart?: () => void): Promise<{ data: Float32Array; sr: number }> {
+  if (!mic) await primeMic();
+  const { ctx, stream } = mic!;
+  mic = null;
+  if (ctx.state !== 'running') { try { await ctx.resume(); } catch { /* ignore */ } }
   const src = ctx.createMediaStreamSource(stream);
   const proc = ctx.createScriptProcessor(4096, 1, 1);
   const chunks: Float32Array[] = [];
@@ -118,5 +144,6 @@ export async function recordMic(secs: number, onStart?: () => void): Promise<{ d
   const sr = ctx.sampleRate; await ctx.close();
   const n = chunks.reduce((s, c) => s + c.length, 0), data = new Float32Array(n);
   let o = 0; for (const c of chunks) { data.set(c, o); o += c.length; }
+  if (!n) throw new Error('Fikk ikke noe lyd fra mikrofonen. Prøv igjen, og sjekk at nettleseren har tilgang til mikrofonen.');
   return { data, sr };
 }

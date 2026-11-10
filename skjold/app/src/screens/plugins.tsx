@@ -3,14 +3,14 @@ import { GuidePicker, ProgramsPanel } from './programs';
 import { signal } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, INPUT_LABEL, type HistItem, type InputId, type Lyrics, type Plugin, type RecPayload, type RecSong, type SnapClient } from '../lib/api';
-import { status } from '../lib/store';
+import { status, trackSub } from '../lib/store';
 import { favs, loadFavs } from '../lib/radio';
 import { Toggle } from '../components/ui';
 import { AutoStandbyPanel, BackupPanel, PlexampPanel, RoonPanel, WrappedPage } from './extras';
 import { PodsumPanel } from './ai';
 import { DiscoverPanel, PresencePanel, RadioListPanel, StorePage, WakeLightPanel } from './extras2';
 import { SpeakerCard } from './speakers';
-import { averageCurves, logSweep, recordMic, responseFromRecording, suggest, type Curve, type Peq } from '../lib/roomeq';
+import { averageCurves, logSweep, micAvailable, micBlockedMsg, primeMic, recordMic, responseFromRecording, suggest, type Curve, type Peq } from '../lib/roomeq';
 
 const A = '#d9a441';
 const MONO = "'IBM Plex Mono',monospace";
@@ -98,6 +98,7 @@ const Time = ({ v, on }: { v: string; on: (s: string) => void }) => <input type=
 
 // ---------- side ----------
 const sel = signal<string | null>(null);
+trackSub(sel, () => { sel.value = null; });
 export function PluginsPage() {
   const [cat, setCat] = useState('Alle'), [q, setQ] = useState('');
   useEffect(() => { void loadPlugins(); if (!favs.value.length) void loadFavs(); const t = setInterval(() => void loadPlugins(), 15000); return () => clearInterval(t); }, []);
@@ -372,6 +373,7 @@ function RoomEqPanel({ enabled, filters }: { enabled: boolean; filters: Peq[] })
   const measure = async () => {
     setErr(''); setBusy('Forbereder …');
     try {
+      await primeMic();
       const info = await api.roomeqSweep({ level: level.current, delay: 1.5 });
       const rec = await recordMic(info.delay + info.dur + 1.5, () => setBusy('Måler – vær stille …'));
       const sw = logSweep(info.f1, info.f2, info.dur, rec.sr);
@@ -385,6 +387,7 @@ function RoomEqPanel({ enabled, filters }: { enabled: boolean; filters: Peq[] })
     <>
       <span style="font-size:12.5px;color:#a9a9a3;line-height:1.55">Hold telefonen der du sitter, med mikrofonen opp. Skjold spiller en sweep i 6 sekunder mens telefonen lytter. Mål 3–5 steder i rommet, så tas snittet. Forslaget demper bare basstopper mellom 40 og 300 Hz (maks −10 dB), fordi telefonmikrofoner er unøyaktige utenfor dette. Åpne siden over https eller på samme maskin, ellers tillater ikke nettleseren mikrofonen.</span>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button disabled={!!busy} onClick={() => void measure()} style={pbtn}>{busy || (meas.length ? `Mål punkt ${meas.length + 1}` : 'Start måling')}</button>{meas.length > 0 && <button onClick={() => { setMeas([]); setRes(null); }} style={sbtn}>Nullstill</button>}<span style="font-size:12px;color:#8b8b86">{meas.length} målepunkt{meas.length === 1 ? '' : 'er'}</span></div>
+      {!micAvailable() && !err && <span style="font-size:12px;color:#f0c46a;line-height:1.5">{micBlockedMsg()}</span>}
       {err && <span style="font-size:12px;color:#ff8a7a">{err}</span>}
       {avg && res && <><Graph curves={[{ c: avg, col: '#8b8b86' }, { c: { f: avg.f, db: res.after }, col: '#f0c46a' }]} /><span style="font-size:11.5px;color:#8b8b86">Grå: målt · gull: med korreksjon</span></>}
       {res && <div style="display:flex;flex-direction:column;gap:4px">{res.filters.length ? res.filters.map((f, i) => <span key={i} style={`font-family:${MONO};font-size:12px;color:#c9c9c4`}>{f.f.toFixed(0)} Hz · Q {f.q} · {f.g} dB</span>) : <span style="font-size:12.5px;color:#9be0a8">Ingen tydelige basstopper. Rommet trenger ingen korreksjon.</span>}</div>}

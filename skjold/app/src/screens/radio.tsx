@@ -1,7 +1,7 @@
 // Radio: oppdagelsesside (hyller, sjangre, søk) og favorittlisten under Innstillinger → Radio (S1 Web v3 / App v2).
 import { useEffect, useState } from 'preact/hooks';
 import type { Fav, Station } from '../lib/api';
-import { go, setSetting, settings, status } from '../lib/store';
+import { go, setSetting, settings, status, useSub } from '../lib/store';
 import { art } from '../lib/settings';
 import { addFav, browseState, currentStation, favMax, favOf, favs, favsLoaded, isFull, loadBrowse, loadFavs, moveFav, norm, playFav, playStation, removeFav, search, searchBusy, searchRes, shelves, testStream, toggleFav } from '../lib/radio';
 
@@ -124,6 +124,7 @@ export function RadioFavorites({ wide = false }: { wide?: boolean }) {
   useRadioData();
   const [edit, setEdit] = useState(false);
   const [adding, setAdding] = useState(false);
+  useSub(adding, () => setAdding(false));
   const s = status.value;
   const cur = currentStation(s);
   const hold = settings.value.hold;
