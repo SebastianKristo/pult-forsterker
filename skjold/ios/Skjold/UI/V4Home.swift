@@ -123,16 +123,29 @@ struct V4HomeTab: View {
 
     // MARK: Kilder (68 runde ikoner)
 
+    /// Kildene i brukerens rekkefølge, bare de som er slått på (Rediger hjemskjerm → Kilder).
     private var sources: [(String, String)] {
+        let alle = V4HomeTab.alleKilder(rom: m.actRoom.type)
+        return HomeLayout.resolve(m.homeSources, available: alle.map { $0.0 }).filter(\.visible)
+            .compactMap { it in alle.first { $0.0 == it.id } }
+    }
+
+    /// Alle kildene (navn, kort etikett). AUX bare på S1.
+    static func alleKilder(rom: String) -> [(String, String)] {
         var l: [(String, String)] = [("Radio", "Radio"), ("AirPlay", "AirPlay"), ("Blåtann", "Blåtann"), ("Spotify", "Spotify"),
                                      ("YouTube Music", "YT Music"), ("Navidrome", "Navidrome"), ("Plex", "Plex"), ("UPnP/DLNA", "UPnP/DLNA"), ("AUX", "AUX")]
-        if m.actRoom.type != "s1" { l.removeAll { $0.0 == "AUX" } }
+        if rom != "s1" { l.removeAll { $0.0 == "AUX" } }
         return l
     }
 
     private var sourcesShelf: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Kilder").sora(17, .semibold)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Kilder").sora(17, .semibold)
+                Spacer(minLength: 0)
+                Button { Haptics.tap(); editHome = true } label: { Text("Rediger").sora(13, .regular, V4.muted) }
+                    .plain().accessibilityLabel("Rediger kilder")
+            }
             V4Shelf(spacing: 14) {
                 ForEach(sources, id: \.0) { s in
                     Button { Haptics.tap(); ui.srcQ = ""; ui.pl = nil; ui.src = s.0 } label: {
@@ -356,6 +369,9 @@ struct V4HomeEditor: View {
     @Environment(\.dismiss) private var dismiss
 
     private var items: [HomeItem] { HomeLayout.resolve(m.homeLayout, available: HomeLayout.ios) }
+    private var kilder: [HomeItem] {
+        HomeLayout.resolve(m.homeSources, available: V4HomeTab.alleKilder(rom: m.actRoom.type).map { $0.0 })
+    }
 
     var body: some View {
         NavigationStack {
@@ -377,7 +393,25 @@ struct V4HomeEditor: View {
                     Text("Endringene gjelder dette rommet og vises også i web-UI-et og Android-appen.")
                 }
                 Section {
-                    Button("Tilbakestill", role: .destructive) { m.resetHomeLayout() }
+                    ForEach(kilder) { it in
+                        Toggle(isOn: Binding(get: { it.visible }, set: { v in
+                            m.homeSources = kilder.map { $0.id == it.id ? HomeItem(id: $0.id, visible: v) : $0 }
+                        })) {
+                            Text(it.id)
+                        }
+                    }
+                    .onMove { from, to in
+                        var next = kilder
+                        next.move(fromOffsets: from, toOffset: to)
+                        m.homeSources = next
+                    }
+                } header: {
+                    Text("Kilder")
+                } footer: {
+                    Text("Slå av kilder du ikke bruker, og dra dem i den rekkefølgen du vil ha på Hjem. Lagres på denne telefonen.")
+                }
+                Section {
+                    Button("Tilbakestill", role: .destructive) { m.resetHomeLayout(); m.homeSources = [] }
                 }
             }
             .environment(\.editMode, .constant(.active))

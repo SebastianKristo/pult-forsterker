@@ -93,6 +93,11 @@ final class AppModel {
     var plexOK = false
     var btPairT: Date? = nil
     var headphones = false
+    /// Kildene på Hjem: rekkefølge og hvilke som vises (lagres på telefonen; id = kildenavnet, f.eks. «Radio»).
+    var homeSources: [HomeItem] = (try? JSONDecoder().decode([HomeItem].self,
+                                     from: UserDefaults.standard.data(forKey: "skjold-home-sources") ?? Data())) ?? [] {
+        didSet { if let d = try? JSONEncoder().encode(homeSources) { UserDefaults.standard.set(d, forKey: "skjold-home-sources") } }
+    }
     /// App-level look of the tab bar: "glass" (Liquid Glass, floating) or "classic" (the original design).
     var tabStyle: String = UserDefaults.standard.string(forKey: "skjold-tabstyle") ?? "glass" {
         didSet { UserDefaults.standard.set(tabStyle, forKey: "skjold-tabstyle") }
