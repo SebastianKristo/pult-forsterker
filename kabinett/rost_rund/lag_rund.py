@@ -202,7 +202,11 @@ L.STL = "stl"
 # Ruta printes i klar PETG med 100 % fyll og bare én vegg (klarest), sakte.
 BRIM = {"brim_type": "outer_only", "brim_width": "5", "brim_object_gap": "0", "initial_layer_speed": "25", "initial_layer_infill_speed": "30"}
 L.OBJ_INNST = {
-    "lokk": {"enable_support": "0", "initial_layer_speed": "20", "initial_layer_infill_speed": "30", "elefant_foot_compensation": "0.15"},
+    # lokket: trestøtte (bare fra plata) under skjermramme og krage, 6 mm brim og store museører, så det står trygt
+    "lokk": {"enable_support": "1", "support_type": "tree(auto)", "support_on_build_plate_only": "1", "support_threshold_angle": "40",
+             "support_top_z_distance": "0.2", "support_object_xy_distance": "0.5",
+             "brim_type": "outer_only", "brim_width": "6", "brim_object_gap": "0",
+             "initial_layer_speed": "20", "initial_layer_infill_speed": "30", "elefant_foot_compensation": "0.15"},
     "rute": {"enable_support": "0", "sparse_infill_density": "100%", "wall_loops": "1", "top_shell_layers": "0", "bottom_shell_layers": "0",
              "initial_layer_speed": "15", "outer_wall_speed": "30", "inner_wall_speed": "30", "sparse_infill_speed": "30"},
     # kjernen og hylsa er 140 mm høye med tynne vegger (ca. 1 080 og 620 mm² mot plata): 5 mm brim og sakte første lag
@@ -211,30 +215,39 @@ L.OBJ_INNST = {
     # (1,8 mm vegg = 4 linjer, helt fylt) og 0,24 mm lag kutter tiden kraftig uten å endre utseendet nevneverdig.
     "hylse": {"enable_support": "0", "layer_height": "0.24", "wall_loops": "2", "small_perimeter_speed": "100%",
               "outer_wall_speed": "150", "inner_wall_speed": "250", "wall_generator": "arachne", **BRIM},
-    "bunn": {"enable_support": "0"},
+    "bunn": {"enable_support": "0", "brim_type": "outer_only", "brim_width": "6", "brim_object_gap": "0"},
 }
 # museører (som på fjernkontrollen): tynne skiver langs kanten av lokket og bunnplata, som holder hjørnene nede på
 # plata. Ø24 i de avrundede hjørnene (som løfter seg mest), Ø16 midt på sidene, 0,6 mm (3 lag). Vris av etter print.
 def orer(navn, r_hj=12.0, r_side=8.0, h=0.6, bare_ute=False):
+    # I 2D (shapely): sirkler langs kanten, minus delens fotavtrykk og (som før) alt mer enn 3 mm inn fra kanten, så
+    # skivene ikke fyller fotlommer eller hull. Deretter løftet til h. Gir et rent, lukket volum også når skivene er
+    # store og overlapper hverandre (en 3D-boolean med delen gav flater i samme plan og ødelagt nett).
+    from shapely.geometry import MultiPoint, Point
+    from shapely.ops import unary_union
     m = trimesh.load(f"stl/{navn}.stl")
     snitt = m.section(plane_origin=[0, 0, 0.1], plane_normal=[0, 0, 1])
     pts = snitt.vertices[:, :2]
     c = (pts.max(0) + pts.min(0)) / 2
+    fot = []   # delens fotavtrykk gjennom hele ørehøyden (avrundede kanter blir bredere oppover)
+    for z in np.linspace(0.05, h + 0.1, 8):
+        sn = m.section(plane_origin=[0, 0, z], plane_normal=[0, 0, 1])
+        if sn is not None:
+            fot += list(sn.to_2D(to_2D=np.eye(4))[0].polygons_full)
+    fot = unary_union(fot).buffer(0.05)
     disker = []
     for a in range(0, 360, 45):
         u = np.array([np.cos(np.radians(a)), np.sin(np.radians(a))])
         p = pts[np.argmax((pts - c) @ u)]              # ytterste punkt på kanten i den retningen
-        r = r_hj if a % 90 else r_side
-        disker.append(trimesh.creation.cylinder(radius=r, height=h, sections=96).apply_translation((p[0], p[1], h / 2)))
-    # trekk fra delen selv (skivene ligger inntil kanten og holder den), og alt mer enn 3 mm inn fra kanten, så
-    # skivene ikke fyller fotlommer eller hull lenger inn
-    from shapely.geometry import MultiPoint
-    # (bare_ute: hele innsiden, for hylsa, som er en tynn ring: skivene sitter bare på utsiden av veggen)
-    inni = trimesh.creation.extrude_polygon(MultiPoint(pts).convex_hull.buffer(-0.01 if bare_ute else -3), 5).apply_translation((0, 0, -1))
-    o = trimesh.boolean.difference([trimesh.util.concatenate(disker), m, inni], engine="manifold")
+        disker.append(Point(p[0], p[1]).buffer(r_hj if a % 90 else r_side, 96))
+    inni = MultiPoint(pts).convex_hull.buffer(-0.01 if bare_ute else -3)
+    form = unary_union(disker).difference(fot).difference(inni)
+    deler = [g for g in getattr(form, "geoms", [form]) if g.area > 1.0]   # bort med smuler
+    o = trimesh.util.concatenate([trimesh.creation.extrude_polygon(g, h) for g in deler])
+    assert o.is_volume, f"{navn}_orer er ikke et lukket volum"
     o.export(f"stl/{navn}_orer.stl")
 for n in ("lokk", "bunn"):
-    orer(n)
+    orer(n, r_hj=18.0, r_side=12.0)   # store ører (Ø36 i hjørnene, Ø24 på sidene) i tillegg til brim
 orer("hylse", bare_ute=True)   # 140 mm høy med tynn vegg: museører i tillegg til brim
 L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper og knott", [
     ("kjerne", "Kjerne (mørk, stående)", 2, (10, 10), None),
@@ -250,9 +263,9 @@ L.write("skjold-rost-rund-k2-hylse-en-farge.3mf", "Skjold Røst Rund – grillhy
     ("hylse", "Grillhylse (én farge, stående)", 1, (70, 70), None),
     ("hylse_orer", "Museører til hylsa (vris av etter print)", 1, None, "hylse")], {1: "#ECE9E3"})
 L.write("skjold-rost-rund-k2-lokk-bunn.3mf", "Skjold Røst Rund – lokk med skjerm, rute og bunnplate", [
-    ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (14, 14), None),
+    ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (10, 10), None),
     ("lokk_orer", "Museører til lokket (vris av etter print)", 1, None, "lokk"),
-    ("bunn", "Bunnplate med port (lys)", 1, (128, 128), None),
+    ("bunn", "Bunnplate med port (lys)", 1, (130, 130), None),
     ("bunn_orer", "Museører til bunnplata (vris av etter print)", 1, None, "bunn"),
     ("rute", "Rute over skjermen (klar PETG, 100 % fyll)", 4, (14, 160), None)], {1: "#ECE9E3", 4: "#DDE6EA"})
 # elementplater for alle elementene i malen (kabinett/elementer/elementer.scad), på én plate
