@@ -1,7 +1,7 @@
 // «Rediger hjemskjerm» (som Plexamp sin Home Screen-editor): dra for å endre rekkefølge, eller bruk opp/ned-knappene,
 // og slå seksjoner av og på. Lagres per Skjold-enhet (rom) og synkes til appene.
 import { useRef, useState } from 'preact/hooks';
-import { HOME_SECTIONS, homeLabel, resetHome, resolveHome, saveHome, type HomeItem } from '../lib/homelayout';
+import { HOME_SECTIONS, HOME_SOURCES, homeLabel, homeSources, resetHome, resolveHome, saveHome, saveSources, type HomeItem } from '../lib/homelayout';
 import { deviceName, settings } from '../lib/store';
 import { Toggle } from '../components/ui';
 
@@ -49,7 +49,32 @@ export function HomeEditor() {
           );
         })}
       </div>
-      <button onClick={resetHome} style="align-self:flex-start;height:36px;padding:0 14px;border-radius:999px;border:1px solid #2e2e30;background:transparent;color:#c9c9c4;font-size:13px;cursor:pointer">Tilbakestill</button>
+      <div style="padding:14px 16px 0;font-size:15px;font-weight:600">Kilder</div>
+      <div style="padding:0 16px;font-size:12.5px;color:#8b8b86;margin-top:-8px">Hvilke kilder som vises på Hjem, og i hvilken rekkefølge. Lagres i denne nettleseren.</div>
+      <SourceList />
+      <button onClick={() => { resetHome(); saveSources([]); }} style="align-self:flex-start;height:36px;padding:0 14px;border-radius:999px;border:1px solid #2e2e30;background:transparent;color:#c9c9c4;font-size:13px;cursor:pointer">Tilbakestill</button>
+    </div>
+  );
+}
+/** Kildene på Hjem: opp/ned og vis/skjul (homeSources, lagres lokalt). */
+function SourceList() {
+  const items = resolveHome(homeSources.value, HOME_SOURCES);
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= items.length) return;
+    const next = items.slice(); const [x] = next.splice(from, 1); next.splice(to, 0, x!); saveSources(next);
+  };
+  return (
+    <div style="display:flex;flex-direction:column" role="list" aria-label="Kilder på hjemskjermen">
+      {items.map((it, i) => (
+        <div key={it.id} role="listitem" style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px 6px 12px 16px;border-bottom:1px solid #242426">
+          <span style={`font-size:15px;${it.visible ? '' : 'color:#6b6b67;text-decoration:line-through'}`}>{it.id}</span>
+          <span style="display:flex;gap:2px">
+            <button aria-label={'Flytt ' + it.id + ' opp'} disabled={i === 0} onClick={() => move(i, i - 1)} style={arrow}>↑</button>
+            <button aria-label={'Flytt ' + it.id + ' ned'} disabled={i === items.length - 1} onClick={() => move(i, i + 1)} style={arrow}>↓</button>
+          </span>
+          <Toggle on={it.visible} onChange={(v: boolean) => saveSources(items.map((x, j) => (j === i ? { ...x, visible: v } : x)))} label={'Vis ' + it.id} />
+        </div>
+      ))}
     </div>
   );
 }

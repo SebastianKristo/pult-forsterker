@@ -2,7 +2,7 @@
 // designfilen (samme mål, farger og tekster); dataene kommer fra forsterkeren (/api/status, /api/presets).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Fragment, type ComponentChildren } from 'preact';
-import { homeOrder } from '../lib/homelayout';
+import { homeOrder, orderSources } from '../lib/homelayout';
 import { api, credFor, getBase, PRODUCT_HW, PRODUCT_LABEL, productOf, setBase, type InputId, type Product, type Status } from '../lib/api';
 import { act, deviceName, eqActiveProfile, go, inputLabel, loadSettings, mode, online, openFull, closeFull, playPause, product, queueOpen, reconnect, recent, setVolume, showToast, srcOpen, status } from '../lib/store';
 import { knownDevices } from '../lib/discover';
@@ -16,6 +16,7 @@ import { fmtDur, libNext, li, LIB_NAME, lq, lsvc, playNd } from '../lib/library'
 import { ndCover } from '../lib/navidrome';
 import { artFor, mmss, nowTitle } from './player';
 import { useTick, nbHw } from './pages';
+import { tick } from '../lib/haptics';
 
 const A = '#d9a441';
 const sel = (b: boolean) => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
@@ -101,9 +102,9 @@ export function HomePhone() {
       )),
     sources: (
       <div style="display:flex;flex-direction:column;gap:10px">
-        <span style="font-size:17px;font-weight:600">Kilder</span>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:17px;font-weight:600">Kilder</span><button onClick={() => go('settings', 'hjemskjerm')} style="border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:0">Rediger</button></div>
         <div class="dsc" style="display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px" data-testid="inputs">
-          {services.map(([label, fn]) => (
+          {orderSources(services, (x) => x[0]).map(([label, fn]) => (
             <button key={label} onClick={fn} style="display:flex;flex-direction:column;align-items:center;gap:6px;border:none;background:none;padding:0;cursor:pointer;flex-shrink:0">
               <SrcCircle label={label} />
               <span style="font-size:11px;color:#c9c9c4">{label === 'AUX' ? inputLabel('aux') : label}</span>
@@ -188,7 +189,7 @@ export function FullSheet() {
   const [dy, setDy] = useState(0);
   const start = useRef<number | null>(null), body = useRef<HTMLDivElement>(null), cur = useRef(0);
   const down = (e: PointerEvent) => {
-    if ((e.target as HTMLElement).closest('input, button')) return;
+    if ((e.target as HTMLElement).closest('input, button, [data-seg]')) return;
     if ((body.current?.scrollTop ?? 0) > 0) return;
     start.current = e.clientY; try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
   };
@@ -220,6 +221,7 @@ export function FullSheet() {
     <div data-testid="full" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
       style={`position:fixed;inset:0;top:calc(var(--sat) + 2px);z-index:50;display:flex;flex-direction:column;min-height:0;border-radius:18px 18px 0 0;overflow:hidden;background:linear-gradient(180deg, rgba(11,11,12,0.15) 0%, rgba(11,11,12,0.55) 55%, rgba(11,11,12,0.8) 100%), ${a.bg};transform:translateY(${dy}px);transition:${dy ? 'none' : 'transform .25s ease'};touch-action:pan-x;color:#f2f2ee;animation:up .25s cubic-bezier(.2,.7,.2,1)`}>
       <div style="display:flex;justify-content:center;padding:6px 0 4px"><button onClick={closeFull} aria-label="Lukk" class="grab-btn" style="width:56px;height:20px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><div style="width:36px;height:5px;border-radius:3px;background:rgba(242,242,238,.4)" /></button></div>
+      <div style="display:flex;justify-content:center;padding:2px 0 6px"><SongQueueSeg /></div>
       <div ref={body} class="dsc" style="flex:1;overflow:auto;scrollbar-width:none;padding:4px 18px calc(16px + var(--sab));display:flex;flex-direction:column;gap:14px;min-height:0">
         {!queueOpen.value && (
           <div data-testid="art" style={`aspect-ratio:1;border-radius:14px;background:${a.bg};position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:20px;box-sizing:border-box;box-shadow:0 18px 40px rgba(0,0,0,.35);flex-shrink:0`}>
@@ -295,6 +297,67 @@ export function FullSheet() {
   );
 }
 export { fmtDur };
+
+/** Låt/Kø: en glass-linse som kan dras mellom valgene (strekk når du holder, gummistrikk ved kantene, tikk ved midten
+ *  og fjæring når du slipper). Trykk på et valg virker også. Samme oppførsel som i iOS- og Android-appen. */
+function SongQueueSeg() {
+  const W = 76, q = queueOpen.value;
+  const [x, setX] = useState<number | null>(null);
+  const [hold, setHold] = useState(false);
+  const st = useRef<{ x0: number; base: number; raw: number; moved: boolean; t: number; vx: number; px: number } | null>(null);
+  const rubber = (v: number) => (v < 0 ? -Math.pow(-v, 0.7) : v > W ? W + Math.pow(v - W, 0.7) : v);
+  const pos = x ?? (q ? W : 0);
+  const down = (e: PointerEvent) => {
+    e.stopPropagation();
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    const base = q ? W : 0;
+    st.current = { x0: e.clientX, base, raw: base, moved: false, t: e.timeStamp, vx: 0, px: e.clientX };
+    setHold(true);
+  };
+  const move = (e: PointerEvent) => {
+    const g = st.current; if (!g) return;
+    const d = e.clientX - g.x0;
+    if (Math.abs(d) > 4) g.moved = true;
+    if (!g.moved) return;
+    const dt = Math.max(1, e.timeStamp - g.t);
+    g.vx = (e.clientX - g.px) / dt; g.px = e.clientX; g.t = e.timeStamp;
+    const old = rubber(g.raw);
+    g.raw = g.base + d;
+    const v = rubber(g.raw);
+    if ((old < W / 2) !== (v < W / 2)) tick();
+    setX(v);
+  };
+  const up = (e: PointerEvent) => {
+    const g = st.current; if (!g) return;
+    st.current = null;
+    let ko: boolean;
+    if (!g.moved) { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); ko = e.clientX - r.left - 4 > W; }
+    else ko = g.raw + g.vx * 160 > W / 2;
+    if (ko !== q) tick();
+    queueOpen.value = ko; setX(null); setHold(false);
+  };
+  const key = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') queueOpen.value = false;
+    else if (e.key === 'ArrowRight') queueOpen.value = true;
+    else if (e.key === 'Enter' || e.key === ' ') queueOpen.value = !q;
+    else return;
+    e.preventDefault();
+  };
+  const on = pos >= W / 2;
+  return (
+    <div data-seg role="tablist" aria-label="Låt eller kø" tabIndex={0} onKeyDown={key}
+      onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+      style="position:relative;display:flex;padding:4px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid rgba(242,242,238,.14);touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;outline-offset:2px">
+      <div aria-hidden="true" style={`position:absolute;top:4px;left:4px;width:${W}px;height:32px;transform:translateX(${pos}px);transition:${x !== null ? 'none' : 'transform .42s cubic-bezier(.3,1.45,.5,1)'};pointer-events:none`}>
+        <div style={`width:100%;height:100%;border-radius:999px;background:rgba(242,242,238,.2);border:1px solid rgba(255,255,255,.32);box-sizing:border-box;box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 4px 14px rgba(0,0,0,.25);backdrop-filter:blur(12px) saturate(1.6);-webkit-backdrop-filter:blur(12px) saturate(1.6);transform:scale(${hold ? '1.14, 0.9' : '1, 1'});transition:transform .3s cubic-bezier(.3,1.6,.5,1)`} />
+      </div>
+      {['Låt', 'Kø'].map((l, i) => {
+        const sel = (i === 1) === on;
+        return <span key={l} role="tab" aria-selected={(i === 1) === q} style={`position:relative;width:${W}px;height:32px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:${sel ? '#f2f2ee' : 'rgba(242,242,238,.6)'};transition:color .2s`}>{l}</span>;
+      })}
+    </div>
+  );
+}
 
 // ---------- Rom («Ditt system») ----------
 /** Volum på et annet rom (aktivt rom går via setVolume). */

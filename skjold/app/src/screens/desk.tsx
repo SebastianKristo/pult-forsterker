@@ -3,7 +3,7 @@ import { NrkContinueShelf } from './nrk';
 // Samme data og handlinger som telefonsidene – bare ny plassering og størrelser.
 import { useEffect, useState } from 'preact/hooks';
 import { Fragment, type ComponentChildren } from 'preact';
-import { homeOrder } from '../lib/homelayout';
+import { homeOrder, orderSources } from '../lib/homelayout';
 import { api, PRODUCT_LABEL, type Fav, type InputId, type Station } from '../lib/api';
 import { act, deviceName, eqActiveSource, go, inputLabel, recent, setVolume, settings, status } from '../lib/store';
 import { art, EQ } from '../lib/settings';
@@ -84,7 +84,7 @@ export function DeskHome() {
   const yt = useYtmHome();
   const rooms = useRooms();
   const inputs = s?.inputs?.length ? s.inputs : ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
-  const services = SRC_ORDER.filter(([id]) => inputs.includes(id));
+  const services = orderSources(SRC_ORDER.filter(([id]) => inputs.includes(id)), (x) => x[1]);
   const pickSrc = (id: InputId) => { if (id === 'radio') { go('radio'); return; } void act(() => api.input(id), { input: id }); go('play'); };
   const live = s?.input === 'radio' && !s.source_label;
   const eqSrc = eqActiveSource.value, eq = settings.value.eq[eqSrc]?.eq ?? [0, 0, 0, 0, 0];
@@ -135,7 +135,7 @@ export function DeskHome() {
     ),
     sources: (
         <section class="col gap12">
-          <SecHead title="Kilder" />
+          <SecHead title="Kilder" more="Rediger" onMore={() => go('settings', 'hjemskjerm')} />
           <div class="dkx-srcs">
             {services.map(([id, label]) => <button key={id} class={'svc' + (s?.input === id ? ' on' : '')} onClick={() => pickSrc(id)}><SrcCircle label={label} size={52} /><span>{id === 'aux' || id === 'aux2' ? inputLabel(id) : label}</span></button>)}
             {(['ytm', 'nd'] as LibId[]).map((id) => <button key={id} class="svc" onClick={() => go('lib', id)}><SrcCircle label={LIB_NAME[id]} size={52} /><span>{LIB_NAME[id]}</span></button>)}
