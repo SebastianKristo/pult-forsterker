@@ -6,6 +6,8 @@ struct V4NowPlaying: View {
     @Environment(V4State.self) private var ui
     let wide: Bool
     @State private var drag: CGFloat = 0
+    @State private var segX: CGFloat? = nil     // linsens x mens Låt/Kø dras
+    @State private var segHold = false          // linsen holdes (strekkes)
 
     private var info: ArtInfo { art(m.playerArt.key) }
     private var cover: CGFloat {
@@ -27,6 +29,9 @@ struct V4NowPlaying: View {
             bottomRow
         }
         .background { pbg.ignoresSafeArea() }
+        .contentShape(Rectangle())
+        // dra hvor som helst nedover for å lukke (i Kø-visningen bare i toppen, så lista kan rulle)
+        .simultaneousGesture(dismissDrag, including: wide || ui.fm == "queue" ? .none : .all)
         .offset(y: wide ? 0 : max(0, drag))
         .animation(V4.cover, value: ui.fm)
     }
@@ -62,38 +67,91 @@ struct V4NowPlaying: View {
         }
         .padding(.horizontal, -8)
         .contentShape(Rectangle())
-        .gesture(DragGesture(minimumDistance: 10)
-            .onChanged { v in if !wide { drag = v.translation.height } }
-            .onEnded { v in
-                if v.translation.height > 120 { close() }
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { drag = 0 }
-            })
+        .gesture(dismissDrag, including: ui.fm == "queue" ? .all : .none)   // ellers tar hele siden draget (se body)
     }
 
-    /// Låt/Kø: valgt del er en Liquid Glass-linse som morpher mellom knappene (GlassEffectContainer).
-    private var segment: some View {
-        let q = ui.fm == "queue"
-        return GlassEffectContainer(spacing: 0) {
-            HStack(spacing: 0) {
-                segButton("Låt", on: !q) { ui.fm = "ctrl" }
-                segButton("Kø", on: q) { ui.fm = "queue" }
+    /// Dra ned for å lukke: følger fingeren bare når draget er mest loddrett og nedover (vannrette drag, som
+    /// volumglideren, går til kontrollene). Lukker etter 120 pt, eller ved et raskt sveip nedover.
+    private var dismissDrag: some Gesture {
+        DragGesture(minimumDistance: 14)
+            .onChanged { v in
+                guard !wide else { return }
+                let t = v.translation
+                if drag > 0 || (t.height > 0 && abs(t.height) > abs(t.width) * 1.4) { drag = max(0, t.height) }
             }
+            .onEnded { v in
+                let fling = v.predictedEndTranslation.height - v.translation.height > 160
+                if drag > 0 && (v.translation.height > 120 || fling) { close() }
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { drag = 0 }
+            }
+    }
+
+    /// Låt/Kø: én Liquid Glass-linse som kan dras mellom knappene (som systemets segmentkontroller i iOS 26).
+    /// Mens du holder strekker linsen seg (bredere og lavere), følger fingeren med litt gummistrikk forbi kantene, gir et
+    /// lite tikk når den passerer midten, og fjærer på plass når du slipper. Et trykk på en knapp flytter linsen dit.
+    private var segment: some View {
+        let w: CGFloat = 81
+        let q = ui.fm == "queue"
+        let x = segX ?? (q ? w : 0)
+        let paKo = x >= w / 2
+        return ZStack(alignment: .leading) {
+            Capsule().fill(Color.clear)
+                .frame(width: w, height: 34)
+                .glassEffect(Glass.regular.interactive(), in: Capsule())
+                .scaleEffect(x: segHold ? 1.14 : 1, y: segHold ? 0.9 : 1)
+                .offset(x: x)
+            HStack(spacing: 0) {
+                Text("Låt").sora(15, .semibold, paKo ? V4.ink.opacity(0.55) : V4.ink).frame(width: w, height: 34)
+                Text("Kø").sora(15, .semibold, paKo ? V4.ink : V4.ink.opacity(0.55)).frame(width: w, height: 34)
+            }
+            .allowsHitTesting(false)
         }
         .padding(4)
         .frame(width: 170, height: 42)
         .background(Capsule().fill(Color.black.opacity(0.22)))
+        .contentShape(Capsule())
+        .gesture(segGesture(w: w))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(q ? "Kø" : "Låt")
+        .accessibilityHint("Bytt mellom låt og kø")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { velgSegment(ko: !q) }
     }
 
-    private func segButton(_ title: String, on: Bool, _ act: @escaping () -> Void) -> some View {
-        Button {
-            Haptics.tick()
-            withAnimation(V4.segLens) { act() }
-        } label: {
-            Text(title).sora(15, .semibold, on ? V4.ink : V4.ink.opacity(0.55))
-                .frame(width: 81, height: 34)
-                .glassEffect(on ? Glass.regular.interactive() : Glass.identity, in: Capsule())
-        }
-        .plain()
+    private func segGesture(w: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { v in
+                let start: CGFloat = ui.fm == "queue" ? w : 0
+                if !segHold { withAnimation(.spring(response: 0.28, dampingFraction: 0.62)) { segHold = true } }
+                guard abs(v.translation.width) > 3 || segX != nil else { return }
+                var nx = start + v.translation.width
+                if nx < 0 { nx = -pow(-nx, 0.7) }                       // gummistrikk forbi kantene
+                if nx > w { nx = w + pow(nx - w, 0.7) }
+                let for_ = (segX ?? start) >= w / 2
+                if (nx >= w / 2) != for_ { Haptics.tick() }
+                segX = nx
+            }
+            .onEnded { v in
+                let start: CGFloat = ui.fm == "queue" ? w : 0
+                let ko: Bool
+                if segX == nil {                                        // trykk: den knappen du traff
+                    ko = v.location.x > 4 + w
+                } else {                                                // drag: nærmeste, eller retningen på et raskt sveip
+                    let slutt = start + v.predictedEndTranslation.width
+                    ko = slutt >= w / 2
+                }
+                if ko != (ui.fm == "queue") && segX == nil { Haptics.tick() }
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
+                    ui.fm = ko ? "queue" : "ctrl"
+                    segX = nil
+                    segHold = false
+                }
+            }
+    }
+
+    private func velgSegment(ko: Bool) {
+        Haptics.tick()
+        withAnimation(V4.segLens) { ui.fm = ko ? "queue" : "ctrl" }
     }
 
     // MARK: Omslag
