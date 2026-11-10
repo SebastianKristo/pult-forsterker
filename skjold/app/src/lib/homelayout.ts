@@ -13,6 +13,7 @@ export const HOME_SECTIONS: [string, string][] = [
   ['discover', 'Oppdag'],
   ['ask', 'Spill noe til …'],
   ['nrk', 'Fortsett på NRK'],
+  ['trending', 'Populært på radio'],
   ['playlists', 'Dine spillelister'],
   ['library', 'Fra bibliotekene'],
   ['wrapped', 'Skjold Wrapped']

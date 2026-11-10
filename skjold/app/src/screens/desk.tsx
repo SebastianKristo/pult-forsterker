@@ -39,7 +39,7 @@ function SecHead({ title, kicker, more, onMore }: { title: string; kicker?: stri
   );
 }
 
-function Tile({ bg, ink, label, name, meta, round, live, onClick }: { bg: string; ink?: string; label?: string; name: string; meta?: string; round?: boolean; live?: boolean; onClick: () => void }) {
+function Tile({ bg, ink, label, name, meta, src, round, live, onClick }: { bg: string; ink?: string; label?: string; name: string; meta?: string; src?: string; round?: boolean; live?: boolean; onClick: () => void }) {
   return (
     <button class="dkx-tile" onClick={onClick}>
       <div class={"sq" + (round ? " rnd" : "")} style={{ background: bg, color: ink ?? "transparent" }}>
@@ -48,7 +48,7 @@ function Tile({ bg, ink, label, name, meta, round, live, onClick }: { bg: string
         <span class="pl"><Icon d={PLAY} size={14} sw={0} color="#f2f2ee" style={{ fill: '#f2f2ee' }} /></span>
       </div>
       <span class="n">{name}</span>
-      {meta && <span class="m">{meta}</span>}
+      {meta && <span class="m">{src && <SrcCircle label={src} size={15} />}<span class="ellip">{meta}</span></span>}
     </button>
   );
 }
@@ -89,7 +89,11 @@ export function DeskHome() {
   const pickSrc = (id: InputId) => { if (id === 'radio') { go('radio'); return; } void act(() => api.input(id), { input: id }); go('play'); };
   const live = s?.input === 'radio' && !s.source_label;
   const eqSrc = eqActiveSource.value, eq = settings.value.eq[eqSrc]?.eq ?? [0, 0, 0, 0, 0];
-  const rc = recent.value.slice(0, 10);
+  const rc = recent.value.slice(0, 12);
+  useEffect(() => { if (browseState.value === 'idle') void loadBrowse(); }, []);
+  const srcOf = (id: InputId) => SRC_ORDER.find(([k]) => k === id)?.[1];
+  const popular = shelves.value.find((x) => x.id === 'popular_no') ?? shelves.value[0];
+  const curName = (s?.input === 'radio' && (s.radio_now?.name || s.station)) || '';
   const playRecent = (x: typeof rc[number]) => {
     if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else go('radio'); }
     else void act(() => api.input(x.input), { input: x.input });
@@ -100,21 +104,21 @@ export function DeskHome() {
     discover: <DiscoverCard />,
     routines: <RoutinesShelf />,
     recent: (rc.length > 0 && <section class="col gap12">
-          <SecHead title="Fortsett å lytte" kicker="NYLIG SPILT" />
-          <div class="dkx-row">{rc.map((x) => { const ra = art(x.title, x.image); return <Tile key={x.key} bg={ra.bg} ink={ra.ink} label={ra.logo ? '' : x.big} name={x.title} meta={x.kind} round={x.station} onClick={() => playRecent(x)} />; })}</div>
+          <SecHead title="Nylig spilt" />
+          <div class="dkx-row">{rc.map((x) => { const ra = art(x.title, x.image); return <Tile key={x.key} bg={ra.bg} ink={ra.ink} label={ra.logo ? '' : x.big} name={x.title} meta={x.kind} src={x.station ? 'Radio' : srcOf(x.input)} onClick={() => playRecent(x)} />; })}</div>
         </section>),
     nrk: <NrkContinueShelf />,
+    trending: (popular && popular.items.length > 0 && <section class="col gap12">
+          <SecHead title="Populært på radio nå" kicker="RADIO" more="Se all radio ›" onMore={() => go('radio')} />
+          <div class="dkx-row">{popular.items.slice(0, 14).map((st: Station) => { const ra = art(st.name, st.image); return <Tile key={st.url || st.name} bg={ra.bg} ink={ra.ink} label={ra.logo ? '' : st.name} name={st.name} meta={st.genre || 'Nettradio'} src="Radio" live={!!curName && norm(curName) === norm(st.name)} onClick={() => playStation(st)} />; })}</div>
+        </section>),
     favs: (
         <section class="col gap12">
           <SecHead title="Radiofavoritter" kicker={favs.value.length ? favs.value.length + ' KANALER' : undefined} more="Se all radio ›" onMore={() => go('radio')} />
           {favs.value.length ? (
-            <div class="dkx-favs">
-              {favs.value.slice(0, 8).map((f) => { const fa = art(f.title, f.image); const on = s?.input === 'radio' && s.preset === f.n; return (
-                <button key={f.n} class={'dkx-fav' + (on ? ' on' : '')} onClick={() => playFav(f)}>
-                  <span class="lg" style={{ background: fa.bg, color: fa.ink }}>{fa.logo ? '' : f.title.replace(/^NRK /, '').slice(0, 3)}</span>
-                  <span class="col" style={{ minWidth: 0, gap: '1px' }}><b class="ellip">{f.title}</b><span class="ellip muted" style={{ fontSize: '12px' }}>{on ? 'Spiller nå' : f.genre || 'Radio'}</span></span>
-                  <em>{f.n}</em>
-                </button>
+            <div class="dkx-row">
+              {favs.value.map((f) => { const fa = art(f.title, f.image); const on = s?.input === 'radio' && s.preset === f.n; return (
+                <Tile key={f.n} bg={fa.bg} ink={fa.ink} label={fa.logo ? '' : f.title} name={f.title} meta={on ? 'Spiller nå' : f.genre || 'Radio'} src="Radio" live={on} onClick={() => playFav(f)} />
               ); })}
             </div>
           ) : favsLoaded.value ? <button class="dashed" onClick={() => go('radio')}>Legg til radiokanal</button> : null}
@@ -125,9 +129,9 @@ export function DeskHome() {
           <SecHead title="Dine spillelister" kicker="FRA MUSIKKTJENESTENE" more={ndConfigured() ? 'Navidrome ›' : undefined} onMore={() => go('lib', 'nd')} />
           {nd.pls.length || nd.alb.length || yt.length ? (
             <div class="dkx-row">
-              {yt.map((p) => <Tile key={'y' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.playlist ? 'YouTube Music · spilleliste' : p.artist || 'YouTube Music'} onClick={() => { go('lib', 'ytm'); libUi.pl.value = { kind: p.playlist ? 'pl' : 'album', id: p.id, name: p.name }; }} />)}
-              {nd.pls.map((p) => <Tile key={'p' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; }} />)}
-              {nd.alb.map((al) => <Tile key={'a' + al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist} onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; }} />)}
+              {yt.map((p) => <Tile key={'y' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.playlist ? 'Spilleliste' : p.artist || 'YouTube Music'} src="YouTube Music" onClick={() => { go('lib', 'ytm'); libUi.pl.value = { kind: p.playlist ? 'pl' : 'album', id: p.id, name: p.name }; }} />)}
+              {nd.pls.map((p) => <Tile key={'p' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} src="Navidrome" onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; }} />)}
+              {nd.alb.map((al) => <Tile key={'a' + al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist} src="Navidrome" onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; }} />)}
             </div>
           ) : (
             <div class="dkx-empty"><span>Koble til Navidrome eller YouTube Music for å se spillelistene dine her.</span><button class="btn" onClick={() => go('int')}>Integrasjoner</button></div>
@@ -136,10 +140,10 @@ export function DeskHome() {
     ),
     sources: (
         <section class="col gap12">
-          <SecHead title="Kilder" more="Rediger" onMore={() => go('settings', 'hjemskjerm')} />
+          <SecHead title="Dine tjenester" more="Rediger" onMore={() => go('settings', 'hjemskjerm')} />
           <div class="dkx-srcs">
-            {services.map(([id, label]) => <button key={id} class={'svc' + (s?.input === id ? ' on' : '')} onClick={() => pickSrc(id)}><SrcCircle label={label} size={52} /><span>{id === 'aux' || id === 'aux2' ? inputLabel(id) : label}</span></button>)}
-            {(['ytm', 'nd'] as LibId[]).map((id) => <button key={id} class="svc" onClick={() => go('lib', id)}><SrcCircle label={LIB_NAME[id]} size={52} /><span>{LIB_NAME[id]}</span></button>)}
+            {services.map(([id, label]) => <button key={id} class={'svc' + (s?.input === id ? ' on' : '')} onClick={() => pickSrc(id)}><SrcCircle label={label} size={84} /><span>{id === 'aux' || id === 'aux2' ? inputLabel(id) : label}</span></button>)}
+            {(['ytm', 'nd'] as LibId[]).map((id) => <button key={id} class="svc" onClick={() => go('lib', id)}><SrcCircle label={LIB_NAME[id]} size={84} /><span>{LIB_NAME[id]}</span></button>)}
           </div>
         </section>
     )
@@ -163,7 +167,7 @@ export function DeskHome() {
           </button>
         </div>
 
-        {homeOrder(['wrapped', 'ask', 'discover', 'routines', 'recent', 'nrk', 'favs', 'playlists', 'sources']).map((id) => <Fragment key={id}>{sections[id]}</Fragment>)}
+        {homeOrder(['recent', 'sources', 'playlists', 'trending', 'favs', 'nrk', 'routines', 'ask', 'discover', 'wrapped']).map((id) => <Fragment key={id}>{sections[id]}</Fragment>)}
         <button class="link0" style={{ alignSelf: 'flex-start' }} onClick={() => go('settings', 'hjemskjerm')}>Rediger hjemskjerm</button>
       </div>
 

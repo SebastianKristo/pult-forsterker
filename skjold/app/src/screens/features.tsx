@@ -160,6 +160,22 @@ export function DoorbellOverlay() {
 // ---------- Rutiner ----------
 interface Step { type: string; [k: string]: unknown }
 interface Routine { id: string; navn: string; ikon?: string; steg: Step[] }
+/** Ikonene rutinene kan ha (samme navn som ICONS i pi/skjold_routines.py). */
+const ROUTINE_ICON: Record<string, string> = {
+  sun: 'M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z',
+  moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
+  music: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+  radio: 'M4 9h16v11H4zM8 9l9-5M14 13h3M14 16h3M9.5 12.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  coffee: 'M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 2v3M12 2v3',
+  bed: 'M3 18V7M3 13h18v5M21 13a3 3 0 0 0-3-3h-7v3M7 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
+  home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5',
+  party: 'M4 20l4.5-12L16 15.5zM14 4l.5 2M19 6l-2 1.5M20 11l-2-.5M11 2.5 11.5 5',
+  news: 'M4 5h13v14H6a2 2 0 0 1-2-2zM17 9h3v8a2 2 0 0 1-2 2M8 9h5M8 13h5M8 16h3',
+  star: 'M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z',
+};
+
+const ICON_NAME: Record<string, string> = { sun: 'Sol', moon: 'Måne', music: 'Musikk', radio: 'Radio', coffee: 'Kaffe', bed: 'Seng', home: 'Hjem', party: 'Fest', news: 'Nyheter', star: 'Stjerne' };
+
 export function RoutinesShelf() {
   const [rs, setRs] = useState<Routine[]>([]), [msg, setMsg] = useState('');
   useEffect(() => { call<{ routines: Routine[] }>('/api/routines').then((r) => setRs(r.routines ?? [])).catch(() => setRs([])); }, []);
@@ -170,7 +186,7 @@ export function RoutinesShelf() {
       <div class="row between" style={{ alignItems: 'baseline' }}><span style="font-size:17px;font-weight:600">Rutiner</span>{msg && <span style={hint}>{msg}</span>}</div>
       <div class="row gap10" style={{ flexWrap: 'wrap' }}>
         {rs.map((r) => <button key={r.id} onClick={() => void run(r)} style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:150px;padding:14px 16px;border-radius:16px;border:1px solid #2e2e30;background:#141415;color:#f2f2ee;cursor:pointer;text-align:left">
-          <span style="font-size:20px">{r.ikon || '▶'}</span><b style="font-size:14px">{r.navn}</b><span style={hint}>{r.steg.length} steg</span>
+          <span style="width:36px;height:36px;border-radius:10px;background:#1c170d;border:1px solid #5a4420;color:#f0c46a;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d={ROUTINE_ICON[r.ikon ?? ''] ?? ROUTINE_ICON.star} /></svg></span><b style="font-size:14px">{r.navn}</b><span style={hint}>{r.steg.length} steg</span>
         </button>)}
       </div>
     </section>
@@ -197,16 +213,16 @@ export function RoutinesPanel() {
       <span style="font-size:15px;font-weight:600">Rutiner</span>
       <span style={hint}>Start med ett trykk fra Hjem, med et langt trykk på en S1-knapp, fra Siri/Snarveier, Android-snarveier, Home Assistant (skjold.run_routine) eller Homey.</span>
       {d?.routines.map((r) => <div key={r.id} class="row between" style={{ alignItems: 'center', gap: '8px' }}>
-        <span>{(r.ikon || '▶') + ' ' + r.navn}<span class="muted" style={{ fontSize: '12px' }}>{' · ' + r.steg.length + ' steg'}</span></span>
+        <span style="display:inline-flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f0c46a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={ROUTINE_ICON[r.ikon ?? ''] ?? ROUTINE_ICON.star} /></svg>{r.navn}<span class="muted" style={{ fontSize: '12px' }}>{' · ' + r.steg.length + ' steg'}</span></span>
         <span class="row gap8">
           <button onClick={() => void call('/api/routines/' + encodeURIComponent(r.id) + '/run', {}).then(() => setMsg('Startet «' + r.navn + '»')).catch((e) => setMsg(errText(e)))} style={sbtn + ';height:30px'}>Kjør</button>
           <button onClick={() => open(r)} style={sbtn + ';height:30px'}>Endre</button>
           <button onClick={() => void call('/api/routines/' + encodeURIComponent(r.id), undefined, { method: 'DELETE' }).then(load)} style={sbtn + ';height:30px'}>Slett</button>
         </span>
       </div>)}
-      <button onClick={() => open({ id: '', navn: 'Ny rutine', ikon: '▶', steg: [] })} style={sbtn}>+ Ny rutine</button>
+      <button onClick={() => open({ id: '', navn: 'Ny rutine', ikon: 'star', steg: [] })} style={sbtn}>+ Ny rutine</button>
       {edit && <div class="col gap8">
-        <div class="row gap8"><input value={edit.ikon ?? ''} onInput={(e) => setEdit({ ...edit, ikon: e.currentTarget.value })} style={inp + ';width:56px'} aria-label="Ikon" />
+        <div class="row gap8"><select value={edit.ikon ?? 'star'} onChange={(e) => setEdit({ ...edit, ikon: e.currentTarget.value })} style={inp + ';width:110px'} aria-label="Ikon">{Object.keys(ROUTINE_ICON).map((k) => <option key={k} value={k}>{ICON_NAME[k] ?? k}</option>)}</select>
           <input value={edit.navn} onInput={(e) => setEdit({ ...edit, navn: e.currentTarget.value })} style={inp + ';flex:1'} aria-label="Navn" /></div>
         <textarea value={json} onInput={(e) => setJson(e.currentTarget.value)} rows={8} style={inp + ";height:auto;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:12px"} />
         <span style={hint}>Steg som liste. Typer: {(d?.types ?? Object.keys(STEP_HELP)).map((t) => t + (STEP_HELP[t] ? ' ' + STEP_HELP[t] : '')).join(' · ')}</span>
