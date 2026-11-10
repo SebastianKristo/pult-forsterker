@@ -1555,7 +1555,9 @@ def read_status():
              "presets_count": sum(1 for p in state["presets"] if p), "presets_max": PRESETS_MAX, "radio_now": radio_now(),
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected,
              "source_label": (last_play.get("source") or "") if state["input"] == "radio" and last_play.get("source") and lyr.info.get("url") == last_play.get("url") else "",
-             "lyrion_server": f"{lyr.host}:{lyr.port}" if lyr.host else "", "lyrion_player": lyr.player}
+             "lyrion_server": f"{lyr.host}:{lyr.port}" if lyr.host else "", "lyrion_player": lyr.player,
+             # strømmen som spilles, for «Denne enheten» i appene (tom for AirPlay, Blåtann, Spotify, AUX …)
+             "listen": listen_path(lyr.info.get("url") or "") if state["input"] == "radio" else ""}
     playing, paused = bool(st.get("playing")), bool(st.get("paused"))
     if _transport_hint["until"] > time.time() and _transport_hint["src"] == st.get("source", ""):
         if playing == _transport_hint["playing"]:
@@ -3522,6 +3524,21 @@ def radio_now():
 
 
 PROXIED = {}   # id -> opprinnelig strøm-URL (Navidrome o.l.), servert til Lyrion via /api/stream/<id>.mp3
+
+
+def listen_path(url):
+    """«Lytt på denne enheten»: relativ adresse til strømmen via Skjold (/api/stream/<id>.mp3), så telefonen/PC-en kan
+    spille det samme som Skjold – også http-strømmer fra en https-side og Navidrome uten å kjenne innloggingen."""
+    if not url or not str(url).startswith(("http://", "https://")):
+        return ""
+    m = re.search(r"/api/stream/([0-9a-f]{16})\.mp3", url)
+    if m and m.group(1) in PROXIED:   # allerede vår egen proxy (Lyrion rapporterer adressen den fikk)
+        return f"/api/stream/{m.group(1)}.mp3"
+    import hashlib as _h
+    sid = _h.sha1(url.encode()).hexdigest()[:16]
+    PROXIED[sid] = url
+    while len(PROXIED) > 200: PROXIED.pop(next(iter(PROXIED)))
+    return f"/api/stream/{sid}.mp3"
 
 
 def proxied_url(url):

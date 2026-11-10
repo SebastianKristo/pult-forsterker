@@ -6,6 +6,7 @@ struct V4NowPlaying: View {
     @Environment(V4State.self) private var ui
     let wide: Bool
     @State private var drag: CGFloat = 0
+    @State private var local = LocalPlay.shared
     @State private var seekDrag: Double? = nil   // 0…1 mens du drar i fremdriften
     @State private var segX: CGFloat? = nil     // linsens x mens Låt/Kø dras
     @State private var segHold = false          // linsen holdes (strekkes)
@@ -228,10 +229,15 @@ struct V4NowPlaying: View {
             .padding(.horizontal, 4)
             HStack(spacing: 12) {
                 V4Icon(d: V4.vol, size: 18, color: V4.ink.opacity(0.8))
-                V4Bar(value: Double(m.v4GroupVol) / 100, height: 8, trackColor: V4.ink.opacity(0.2)) { v in
-                    m.v4SetGroupVol(Int((v * 100).rounded()))
+                if local.on {   // «Denne iPhonen»: glideren styrer volumet på telefonen
+                    V4Bar(value: local.vol, height: 8, trackColor: V4.ink.opacity(0.2), label: "Volum på denne iPhonen") { v in local.setVol(v) }
+                    Text("\(Int((local.vol * 100).rounded()))").mono(13, V4.gold).frame(width: 24, alignment: .trailing)
+                } else {
+                    V4Bar(value: Double(m.v4GroupVol) / 100, height: 8, trackColor: V4.ink.opacity(0.2)) { v in
+                        m.v4SetGroupVol(Int((v * 100).rounded()))
+                    }
+                    Text("\(m.v4GroupVol)").mono(13, V4.ink).frame(width: 24, alignment: .trailing)
                 }
-                Text("\(m.v4GroupVol)").mono(13, V4.ink).frame(width: 24, alignment: .trailing)
             }
         }
     }
@@ -373,6 +379,7 @@ struct V4NowPlaying: View {
         let group = m.v4Group
         let off = m.sys.rooms.filter { r in !group.contains { $0.id == r.id } }
         return VStack(alignment: .leading, spacing: 12) {
+            listenHereRow
             ForEach(group) { r in groupRow(r, canRemove: group.count > 1) }
             if group.count > 1 {
                 Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
@@ -414,6 +421,33 @@ struct V4NowPlaying: View {
         .padding(.horizontal, 16).padding(.vertical, 14)
         .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(V4.ink.opacity(0.1)))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Color.white.opacity(0.14), lineWidth: 1))
+    }
+
+    /// «Denne iPhonen»: lyden flyttes til telefonen, rommet dempes og følger med (kø, pause, spoling).
+    @ViewBuilder private var listenHereRow: some View {
+        if local.on || local.can(m) {
+            Button {
+                if local.on { local.stop() } else { local.start(m) }
+            } label: {
+                HStack(spacing: 12) {
+                    V4Icon(d: "M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2", size: 20, stroke: 1.8,
+                           color: local.on ? V4.gold : V4.ink)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(local.on ? "Spiller på denne iPhonen" : "Spill på denne iPhonen").sora(15, .semibold)
+                        Text(local.on ? "Trykk for å flytte lyden tilbake til rommet" : "Rommet dempes og følger med")
+                            .sora(12, .regular, V4.ink.opacity(0.6))
+                    }
+                    Spacer(minLength: 0)
+                    Circle().strokeBorder(local.on ? V4.gold : V4.ink.opacity(0.35), lineWidth: 1.5)
+                        .background(Circle().fill(local.on ? V4.gold : .clear))
+                        .frame(width: 24, height: 24)
+                }
+                .contentShape(Rectangle())
+            }
+            .plain()
+            .accessibilityAddTraits(local.on ? .isSelected : [])
+            Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
+        }
     }
 
     private func groupRow(_ r: Room, canRemove: Bool) -> some View {

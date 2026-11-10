@@ -1051,6 +1051,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val first = dev == null || link != Link.ONLINE
         dev = st
         link = Link.ONLINE
+        LocalPlay.sync(this, st, h)
         val ctx = getApplication<Application>()
         viewModelScope.launch { WidgetStore.publish(ctx, st, h) }   // widgets + «Spiller nå»-varsling (bare når noe synlig endres)
         if (st.lyrionServer.isNotEmpty()) lyrionServer = st.lyrionServer

@@ -266,6 +266,8 @@ nonisolated struct DevStatus: Sendable, Equatable {
     var lyrionServer = "", lyrionPlayer = ""
     /// Biblioteket en låt spilles fra («Navidrome», «YouTube Music» …), tom for radio. Fra /api/status `source_label`.
     var sourceLabel = ""
+    /// Strømmen som spilles, via Skjold (/api/stream/…), for «Denne iPhonen». Tom når kilden ikke kan spilles her.
+    var listen = ""
     var power = true, playing = false, paused = false, mute = false, headphones = false, lyrion = false, btPairing = false
     var volume = 0, duration = 0, position = 0, preset = 0, presetsCount = 0, btPairingLeft = 0
     var inputs: [String] = []
@@ -279,7 +281,7 @@ nonisolated struct DevStatus: Sendable, Equatable {
         func b(_ k: String, _ o: [String: Any] = j) -> Bool { (o[k] as? NSNumber)?.boolValue ?? false }
         name = s("name"); id = s("id"); board = s("board"); version = s("version"); input = s("input"); source = s("source")
         title = s("title"); artist = s("artist"); album = s("album"); btDevice = s("bt_device"); airplayDevice = s("airplay_device")
-        lyrionServer = s("lyrion_server"); lyrionPlayer = s("lyrion_player"); sourceLabel = s("source_label")
+        lyrionServer = s("lyrion_server"); lyrionPlayer = s("lyrion_player"); sourceLabel = s("source_label"); listen = s("listen")
         product = s("product")
         if product.isEmpty { product = board == "node" ? "node" : "s1" }
         coverURL = s("cover_url")

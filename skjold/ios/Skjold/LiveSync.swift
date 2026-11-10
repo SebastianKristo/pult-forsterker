@@ -153,6 +153,7 @@ extension AppModel {
         let first = dev == nil || link != .online
         dev = st
         link = .online
+        LocalPlay.shared.sync(st, host: h)
         if !st.lyrionServer.isEmpty { lyrionServer = st.lyrionServer }
         headphones = st.headphones
         if upd.repo == GitHubReleases.repo, !st.version.isEmpty, upd.version != st.version { upd.version = st.version }

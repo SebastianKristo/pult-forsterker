@@ -214,6 +214,8 @@ data class DevStatus(
     val headphones: Boolean = false, val lyrion: Boolean = false, val btPairing: Boolean = false,
     val volume: Int = 0, val duration: Int = 0, val position: Int = 0, val preset: Int = 0, val presetsCount: Int = 0, val btPairingLeft: Int = 0,
     val inputs: List<String> = emptyList(), val presetTitles: List<String> = emptyList(), val radioNow: RadioNow? = null,
+    /** Strømmen som spilles, via Skjold (/api/stream/…), for «Denne telefonen». Tom når kilden ikke kan spilles her. */
+    val listen: String = "",
 ) {
     data class RadioNow(val name: String = "", val genre: String = "", val now: String = "", val image: String = "", val url: String = "", val n: Int = 0, val playing: Boolean = false, val logo: String = "")
 
@@ -241,7 +243,7 @@ data class DevStatus(
                 headphones = j.bool("headphones"), lyrion = j.bool("lyrion"), btPairing = j.bool("bt_pairing"),
                 volume = j.num("volume"), duration = j.num("duration"), position = j.num("position"), preset = j.num("preset"),
                 presetsCount = j.num("presets_count"), btPairingLeft = j.num("bt_pairing_left"),
-                inputs = inputs, presetTitles = presets, radioNow = rn,
+                inputs = inputs, presetTitles = presets, radioNow = rn, listen = j.str("listen"),
             )
         }
     }
