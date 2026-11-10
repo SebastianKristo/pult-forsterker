@@ -2,7 +2,7 @@
 // Navidrome er ekte (Subsonic-API direkte fra appen). YouTube Music hentes fra Skjold-enheten (/api/ytm/*, lib/ytm.ts);
 // svarer den ikke, vises samme skall med en tydelig «ikke tilkoblet»-tilstand i stedet for eksempeldata.
 import { useEffect, useState } from 'preact/hooks';
-import { go, openFull, route } from '../lib/store';
+import { go, openFull, route, trackSub } from '../lib/store';
 import { art } from '../lib/settings';
 import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, LIB_TABS, lq, lsvc, playNd, whenText, type LibId } from '../lib/library';
 import { MediaLibSection } from './medialib';
@@ -14,6 +14,7 @@ import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 
 /** Tilstand per bibliotek-side (signaler, så tilbake-knappen og skjermbildeskriptet kan styre den). */
 export const libUi = { tab: signal(0), pl: signal<{ kind: 'album' | 'pl'; id: string; name: string } | null>(null), q: signal(''), hero: signal(0), mood: signal<number | null>(null) };
+trackSub(libUi.pl, () => { libUi.pl.value = null; });   // album/spilleliste: tilbake lukker den
 export function libBack(): boolean { if (libUi.pl.value) { libUi.pl.value = null; return true; } return false; }
 
 const cover = (id: string | undefined, key: string, size = 300) => { const u = ndCover(id, size), a = art(key); return { bg: u ? 'url("' + u.replace(/"/g, '') + '") center / cover no-repeat, ' + a.bg : a.bg, ink: u ? 'transparent' : a.ink }; };

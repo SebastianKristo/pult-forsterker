@@ -1,5 +1,6 @@
 // Global tilstand (Preact signals): status-polling, innstillinger, navigasjon.
-import { signal, computed, effect } from '@preact/signals';
+import { signal, computed, effect, type ReadonlySignal } from '@preact/signals';
+import { useEffect, useRef } from 'preact/hooks';
 import { api, ApiError, coverUrl, logoUrl, credFor, getBase, needsHost, productOf, type Status, type InputId } from './api';
 import { DEF, defaultEq, mergeSettings, type Settings, type EqProfiles, type EqSource } from './settings';
 
@@ -33,12 +34,51 @@ export function showToast(msg: string, ms = 2600): void {
   toast.value = msg; clearTimeout(toastT); toastT = window.setTimeout(() => (toast.value = ''), ms);
 }
 
-// ---------- navigasjon med historikk (Android tilbake-sveip / nettleserens tilbake går ett nivå opp i appen) ----------
-interface NavState { skjold: true; page: Page; cat?: string; full: boolean }
-const navState = (): NavState => ({ skjold: true, page: route.value.page, ...(route.value.cat ? { cat: route.value.cat } : {}), full: fullPlayer.value });
+// ---------- navigasjon med historikk (tilbake-sveip, nettleserens/musens tilbake-knapp går ett nivå opp i appen) ----------
+// Hver side (go), fullskjermspilleren (openFull) og hvert undernivå på en side (album, spilleliste, NRK-serie, plugin,
+// «Legg til kanal» … – se trackSub/useSub) får sin egen oppføring i historikken. Tilbake lukker det øverste nivået
+// i stedet for å sende deg ut av siden.
+interface NavState { skjold: true; page: Page; cat?: string; full: boolean; sub?: number }
+const subs: { id: number; close: () => void }[] = [];   // åpne undernivåer, nederst først
+let subSeq = 0, ignorePops = 0, popping = false;
+const navState = (): NavState => ({ skjold: true, page: route.value.page, ...(route.value.cat ? { cat: route.value.cat } : {}), full: fullPlayer.value, ...(subs.length ? { sub: subs.length } : {}) });
 function pushNav(): void { try { history.pushState(navState(), ''); } catch { /* ignore */ } }
+/** Lukk alle undernivåer uten å gå i historikken (ny side via go). */
+function dropSubs(): void { popping = true; try { while (subs.length) subs.pop()!.close(); } finally { popping = false; } }
+/** Et undernivå åpnes: ny oppføring i historikken. `close` kalles når brukeren går tilbake. */
+function subOpen(close: () => void): number { const id = ++subSeq; subs.push({ id, close }); pushNav(); return id; }
+/** Undernivået ble lukket i appen (egen tilbake-/lukk-knapp): fjern oppføringen(e) fra historikken også. */
+function subClose(id: number): void {
+  if (popping) return;
+  const i = subs.findIndex((x) => x.id === id);
+  if (i < 0) return;
+  const n = subs.length - i;
+  subs.splice(i);
+  ignorePops++;
+  try { history.go(-n); } catch { ignorePops--; }
+}
+/** Gjør et signal til et undernivå: åpent når verdien er «sann», lukkes med `close` ved tilbake. */
+export function trackSub(sig: ReadonlySignal<unknown>, close: () => void): void {
+  let id = 0;
+  effect(() => {
+    const open = !!sig.value;
+    if (open && !id) id = subOpen(() => { id = 0; close(); });
+    else if (!open && id) { const x = id; id = 0; subClose(x); }
+  });
+}
+/** Samme som trackSub, for lokal tilstand i en komponent. */
+export function useSub(open: boolean, close: () => void): void {
+  const id = useRef(0), cl = useRef(close);
+  cl.current = close;
+  useEffect(() => {
+    if (open && !id.current) id.current = subOpen(() => { id.current = 0; cl.current(); });
+    else if (!open && id.current) { const x = id.current; id.current = 0; subClose(x); }
+  }, [open]);
+  useEffect(() => () => { if (id.current) { const x = id.current; id.current = 0; subClose(x); } }, []);
+}
 export function go(page: Page, cat?: string): void {
-  const same = route.value.page === page && route.value.cat === cat && !fullPlayer.value;
+  const same = route.value.page === page && route.value.cat === cat && !fullPlayer.value && !subs.length;
+  dropSubs();
   route.value = cat ? { page, cat } : { page };
   fullPlayer.value = false;
   if (!same) pushNav();
@@ -54,11 +94,15 @@ export function closeFull(): void {
   if (st?.skjold && st.full) history.back(); else fullPlayer.value = false;
 }
 /** Er vi på «rot» (Hjem uten noe åpent)? Brukes av Android-tilbakeknappen for å avslutte appen der. */
-export function atRoot(): boolean { return route.value.page === 'home' && !fullPlayer.value; }
+export function atRoot(): boolean { return route.value.page === 'home' && !fullPlayer.value && !subs.length; }
 if (typeof window !== 'undefined') {
   try { history.replaceState(navState(), ''); } catch { /* ignore */ }
   window.addEventListener('popstate', (e) => {
+    if (ignorePops > 0) { ignorePops--; return; }   // vi gikk selv tilbake fordi et undernivå ble lukket i appen
     const st = e.state as NavState | null;
+    const depth = st?.skjold ? st.sub ?? 0 : 0;
+    popping = true;
+    try { while (subs.length > depth) subs.pop()!.close(); } finally { popping = false; }
     if (st?.skjold) {
       route.value = st.cat ? { page: st.page, cat: st.cat } : { page: st.page };
       fullPlayer.value = st.full;

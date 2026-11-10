@@ -124,9 +124,9 @@ export function DeskHome() {
           <SecHead title="Dine spillelister" kicker="FRA MUSIKKTJENESTENE" more={ndConfigured() ? 'Navidrome ›' : undefined} onMore={() => go('lib', 'nd')} />
           {nd.pls.length || nd.alb.length || yt.length ? (
             <div class="dkx-row">
-              {yt.map((p) => <Tile key={'y' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.playlist ? 'YouTube Music · spilleliste' : p.artist || 'YouTube Music'} onClick={() => { libUi.pl.value = { kind: p.playlist ? 'pl' : 'album', id: p.id, name: p.name }; go('lib', 'ytm'); }} />)}
-              {nd.pls.map((p) => <Tile key={'p' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} onClick={() => { libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; go('lib', 'nd'); }} />)}
-              {nd.alb.map((al) => <Tile key={'a' + al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist} onClick={() => { libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; go('lib', 'nd'); }} />)}
+              {yt.map((p) => <Tile key={'y' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.playlist ? 'YouTube Music · spilleliste' : p.artist || 'YouTube Music'} onClick={() => { go('lib', 'ytm'); libUi.pl.value = { kind: p.playlist ? 'pl' : 'album', id: p.id, name: p.name }; }} />)}
+              {nd.pls.map((p) => <Tile key={'p' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; }} />)}
+              {nd.alb.map((al) => <Tile key={'a' + al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist} onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; }} />)}
             </div>
           ) : (
             <div class="dkx-empty"><span>Koble til Navidrome eller YouTube Music for å se spillelistene dine her.</span><button class="btn" onClick={() => go('int')}>Integrasjoner</button></div>

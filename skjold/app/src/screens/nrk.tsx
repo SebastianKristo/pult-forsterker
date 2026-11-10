@@ -2,11 +2,12 @@
 import { signal } from '@preact/signals';
 import { useEffect, useState } from 'preact/hooks';
 import { api, type NrkEpisode, type NrkProg, type NrkSeries } from '../lib/api';
-import { showToast } from '../lib/store';
+import { showToast, trackSub } from '../lib/store';
 import { art } from '../lib/settings';
 
 const MONO = "'IBM Plex Mono',monospace";
 const nrkOpen = signal<NrkSeries | null>(null);
+trackSub(nrkOpen, () => { nrkOpen.value = null; });
 const nrkQ = signal('');
 export const nrkContinue = signal<NrkProg[]>([]);
 

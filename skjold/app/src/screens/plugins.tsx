@@ -3,7 +3,7 @@ import { GuidePicker, ProgramsPanel } from './programs';
 import { signal } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, INPUT_LABEL, type HistItem, type InputId, type Lyrics, type Plugin, type RecPayload, type RecSong, type SnapClient } from '../lib/api';
-import { status } from '../lib/store';
+import { status, trackSub } from '../lib/store';
 import { favs, loadFavs } from '../lib/radio';
 import { Toggle } from '../components/ui';
 import { AutoStandbyPanel, BackupPanel, PlexampPanel, RoonPanel, WrappedPage } from './extras';
@@ -98,6 +98,7 @@ const Time = ({ v, on }: { v: string; on: (s: string) => void }) => <input type=
 
 // ---------- side ----------
 const sel = signal<string | null>(null);
+trackSub(sel, () => { sel.value = null; });
 export function PluginsPage() {
   const [cat, setCat] = useState('Alle'), [q, setQ] = useState('');
   useEffect(() => { void loadPlugins(); if (!favs.value.length) void loadFavs(); const t = setInterval(() => void loadPlugins(), 15000); return () => clearInterval(t); }, []);
