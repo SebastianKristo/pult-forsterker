@@ -137,6 +137,9 @@ fi
 cd "$D/pi"
 if [ "$DEVICE" = s1 ]; then
   KI_AMP_BOARD=main bash ./install.sh || { echo "install.sh feilet"; exit 1; }
+elif [ "$DEVICE" = touch ]; then
+  # Skjold Touch: lyd på PCM5122-DAC-en, touch-UI-et i kiosk på 7″-skjermen, kjørt som brukeren med UID 1000
+  KI_AMP_BOARD=touch KI_AMP_NAME="$(get name "")" KI_TOUCH_USER="$(getent passwd 1000 | cut -d: -f1)" bash ./install.sh || { echo "install.sh feilet"; exit 1; }
 elif [ "$DEVICE" = core ]; then
   KI_AMP_CORE=1 KI_AMP_NAME="$(get name "")" bash ./install.sh || { echo "install.sh feilet"; exit 1; }
 else

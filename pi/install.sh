@@ -17,13 +17,19 @@ sudo mkdir -p /usr/local/share/ki-amp && (cd "$SRC/.." && pwd) | sudo tee /usr/l
 # KI_AMP_SPOTIFY=0      : uten Spotify Connect (librespot)
 # KI_AMP_PLEX=1         : med Plex-spiller (Plexamp headless, krever Plex Pass) – se pi/install_plex.sh. KI_PLEX_PLAYER=caldera = Caldera Music
 # KI_AMP_SKJOLD_OS=0    : S1 (main) beholder det gamle skjermprogrammet i stedet for Skjold OS (skjold/os)
+# KI_AMP_BOARD=touch    : Skjold Touch – Pi 4 + 7″ DSI-berøringsskjerm (800 × 480) + PCM5122 DAC HAT (RCA + 3,5 mm).
+#                         Som Node uten GPIO (KI_AMP_NODE_GPIO=0), men lyd på DAC-en og skjermen er touch-UI-et i kiosk
+#                         (pi/install_touch.sh). Ikke gjettet: KI_TOUCH_DAC_OVERLAY (standard hifiberry-dacplus-std) og
+#                         KI_TOUCH_DSI_OVERLAY (tom = Pi OS finner skjermen selv med display_auto_detect=1).
 BOARD_SEL="${KI_AMP_BOARD:-}"; [ "$BOARD_SEL" = node ] && KI_AMP_OUT=headphones
+TOUCH=0; [ "$BOARD_SEL" = touch ] && TOUCH=1 && KI_AMP_OUT=dac
 # KI_AMP_BOARD=s1f      : Skjold S1 rev F – som Kit (PCM5102 + TPA3116 bak relé, 2 × UCA202) + knapper/volumhjul/LED (pi/config/s1f_pins.yaml),
 #                         USB-gadget for PC 1/2 og 4,58″ HDMI-skjerm. SPI er AV (GPIO 9–11 er volumhjulet).
 S1F=0; [ "$BOARD_SEL" = s1f ] && S1F=1 && BOARD_SEL=kit
 OUT="${KI_AMP_OUT:-dac}"; SPOTIFY="${KI_AMP_SPOTIFY:-1}"; NAME_SEL="${KI_AMP_NAME:-}"; SKJOLD_OS="${KI_AMP_SKJOLD_OS:-1}"; DISPLAY_SEL="${KI_AMP_DISPLAY:-oled}"; TFT_SEL="${KI_AMP_TFT:-ili9341}"
 CORE="${KI_AMP_CORE:-0}"; [ "$CORE" = 1 ] && BOARD_SEL=node && KI_AMP_OUT=headphones && OUT=headphones && PB_CORE_NAME="Skjold Core"
 [ "$BOARD_SEL" = node ] && [ -z "$NAME_SEL" ] && NAME_SEL="${PB_CORE_NAME:-Skjold Node}"   # Node: standardnavn i AirPlay/Spotify/Blåtann
+[ "$TOUCH" = 1 ] && [ -z "$NAME_SEL" ] && NAME_SEL="Skjold Touch"
 if [ "$OUT" = headphones ]; then PB_CARD=Headphones; PB_DEV="plughw:Headphones"; PB_FMT=S16LE
 elif [ "$BOARD_SEL" = main ]; then PB_CARD=pultamp; PB_DEV="hw:pultamp"; PB_FMT=S32LE
 else PB_CARD=sndrpihifiberry; PB_DEV="hw:sndrpihifiberry"; PB_FMT=S32LE; fi
@@ -45,6 +51,13 @@ if [ "$BOARD_SEL" = node ]; then
   # daemonen (system-python) leser potmeteret via ADS1115 med smbus2
   sudo apt-get -y install --no-install-recommends python3-smbus2 i2c-tools >/dev/null || true
   LINES='enable_uart=0'
+elif [ "$TOUCH" = 1 ]; then
+  # Skjold Touch: PCM5122 (I²S + I²C), ingen innebygd lyd, ingen USB-gadget/SPI. Skjermen (DSI) finner Pi OS selv.
+  sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/; s/^dtoverlay=hifiberry-dac$/#dtoverlay=hifiberry-dac/' "$CFG"
+  sudo sed -i -E '/^dtparam=spi=on$/d; /^dtoverlay=spi0-1cs/d' "$CFG"
+  grep -qE '^display_auto_detect=1' "$CFG" || echo 'display_auto_detect=1' | sudo tee -a "$CFG"
+  grep -qE '^dtoverlay=vc4-kms-v3d' "$CFG" || echo 'dtoverlay=vc4-kms-v3d' | sudo tee -a "$CFG"
+  LINES="dtoverlay=${KI_TOUCH_DAC_OVERLAY:-hifiberry-dacplus-std} dtparam=i2c_arm=on enable_uart=0${KI_TOUCH_DSI_OVERLAY:+ dtoverlay=$KI_TOUCH_DSI_OVERLAY}"
 elif [ "$S1F" = 1 ]; then
   sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
   sudo sed -i -E '/^dtparam=spi=on$/d; /^dtoverlay=spi0-1cs/d' "$CFG"   # GPIO 9/10/11 = volumhjulet
@@ -75,7 +88,7 @@ for line in $LINES; do
 done
 sudo sed -i 's/ console=serial0,115200//' /boot/firmware/cmdline.txt 2>/dev/null || true
 # /etc/modules leses ikke lenger på Debian 13 – bruk modules-load.d
-if [ "$BOARD_SEL" = node ]; then printf 'i2c-dev\n'; else printf 'dwc2\ni2c-dev\n'; fi | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
+if [ "$BOARD_SEL" = node ] || [ "$TOUCH" = 1 ]; then printf 'i2c-dev\n'; else printf 'dwc2\ni2c-dev\n'; fi | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
 sudo raspi-config nonint do_i2c 0 2>/dev/null || true   # /dev/i2c-1 for OLED
 sudo modprobe i2c-dev 2>/dev/null || true
 sudo raspi-config nonint do_serial_hw 1 2>/dev/null || true   # frigjør GPIO 14/15 til X9C
@@ -230,7 +243,11 @@ sudo mkdir -p /usr/local/share/skjold-matter && sudo cp -r "$SRC/matter/package.
 bash "$SRC/install_webapp.sh"   # web-app: lokal dist > siste skjold-web-*.zip > pi/webapp
 sudo install -m 644 "$SRC/ki-amp.service" /etc/systemd/system/ki-amp.service
 [ -f /etc/ki-amp.env ] || sudo install -m 600 "$SRC/ki-amp.env" /etc/ki-amp.env
-if [ "$BOARD_SEL" = node ]; then
+if [ "$TOUCH" = 1 ]; then   # Touch: Node-oppførsel (digitalt volum) uten GPIO, lyd på DAC-en, produkt «touch»
+  sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e '/^KI_AMP_DSP_FORMAT=/d' -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=node/' \
+    -e '/^KI_AMP_NODE_GPIO=/d' -e '/^KI_AMP_PRODUCT=/d' -e '/^KI_AMP_DISPLAY=/d' /etc/ki-amp.env
+  printf 'KI_AMP_DSP_FORMAT=%s\nKI_AMP_NODE_GPIO=0\nKI_AMP_PRODUCT=touch\nKI_AMP_DISPLAY=none\n' "$PB_FMT" | sudo tee -a /etc/ki-amp.env >/dev/null
+elif [ "$BOARD_SEL" = node ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e '/^KI_AMP_DSP_FORMAT=/d' -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=node/' /etc/ki-amp.env
   echo "KI_AMP_DSP_FORMAT=$PB_FMT" | sudo tee -a /etc/ki-amp.env >/dev/null
 elif [ "$OUT" = headphones ]; then
@@ -256,7 +273,12 @@ if [ -n "$NAME_SEL" ]; then sudo sed -i '/^KI_AMP_NAME=/d' /etc/ki-amp.env && ec
 if [ -n "${KI_AMP_MONO:-}" ]; then sudo sed -i '/^KI_AMP_MONO=/d' /etc/ki-amp.env && echo "KI_AMP_MONO=$KI_AMP_MONO" | sudo tee -a /etc/ki-amp.env >/dev/null; fi
 sudo systemctl daemon-reload
 OS_INST="$SRC/../skjold/os/install.sh"
-if [ "$BOARD_SEL" = node ]; then
+if [ "$TOUCH" = 1 ]; then
+  # Skjold Touch: skjermen er touch-UI-et (web-appens touch.html) i cage + Chromium på 7″-skjermen
+  echo "== Skjold Touch: kiosk på berøringsskjermen"
+  sudo systemctl enable --now oled-display ki-amp   # oled-display = bare metadata (ingen skjerm her)
+  sudo bash "$SRC/install_touch.sh" "${SUDO_USER:-${KI_TOUCH_USER:-$USER}}" || echo "ADVARSEL: touch-skjermen ble ikke installert – kjør sudo bash pi/install_touch.sh" >&2
+elif [ "$BOARD_SEL" = node ]; then
   sudo sed -i '/^KI_AMP_DISPLAY=/d' /etc/ki-amp.env && echo "KI_AMP_DISPLAY=none" | sudo tee -a /etc/ki-amp.env >/dev/null
   sudo sed -i '/^KI_AMP_NODE_GPIO=/d' /etc/ki-amp.env
   [ "$CORE" = 1 ] && echo "KI_AMP_NODE_GPIO=0" | sudo tee -a /etc/ki-amp.env >/dev/null   # Core: ingen knapper/LED
