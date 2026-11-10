@@ -58,7 +58,7 @@ object LocalPlay {
         if (!wasMuted) m.devSend("/api/mute", mapOf("mute" to false), on = host)
     }
 
-    fun setVol(v: Int) {
+    fun changeVol(v: Int) {
         vol = v.coerceIn(0, 100)
         player?.setVolume(vol / 100f, vol / 100f)
         prefs?.edit()?.putInt("vol", vol)?.apply()
