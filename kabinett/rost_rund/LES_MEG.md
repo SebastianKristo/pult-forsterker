@@ -42,7 +42,7 @@ knappene. Kobling og fastvare som Røst (I²C på GPIO11/12).
 
 | Del | Hva | Print |
 |---|---|---|
-| Lokk | topp med knappehull, skjermvindu og skjermramme, EC11-hull, krage ned i kjernen, tårn med M3-innpressmuttere | toppen ned, ingen støtte (se under) |
+| Lokk | topp med knappehull, skjermvindu og skjermramme, EC11-hull, krage ned i kjernen, tårn med M3-innpressmuttere | toppen ned, trestøtte, brim og store museører (se under) |
 | Rute | klar rute over skjermen | flat, klar PETG, 100 % fyll (eller kjøp 1,5 mm akryl) |
 | Kjerne | rør med frontblokk (elementet monteres bakfra), tunnel Ø74, stangtårn med ribber, DC- og USB-hull bak | stående, ingen støtte (frontblokka er 45° over og under) |
 | Hylse | grillen | stående, ingen støtte |
@@ -55,7 +55,7 @@ gjennom bunnplaten, med mutter i lommen under. Gummiføttene sitter rett over mu
 ## Utskrift
 
 
-**Museører på lokket, bunnplata og hylsa:** `skjold-rost-rund-k2-lokk-bunn.3mf` og hylsefilene har tynne skiver (0,6 mm, Ø24 i hjørnene og Ø16 midt på sidene) langs kanten av lokket, bunnplata og hylsa (på hylsa bare utenfor veggen, i tillegg til 5 mm brim). De holder de avrundede hjørnene nede, så de ikke løsner fra plata. De er en del av samme modell, så det blir ingen fargebytter. Vri eller skjær dem av etter print.
+**Museører, brim og støtte:** `skjold-rost-rund-k2-lokk-bunn.3mf` har store museører på lokket og bunnplata (0,6 mm, Ø36 i hjørnene og Ø24 på sidene) og 6 mm brim, så de avrundede hjørnene ikke løsner fra plata. **Lokket har trestøtte** (bare fra plata, 40°) under skjermrammen og kragen. Støtte, brim og ører ligger som objektinnstillinger i 3MF-filen. Hylsefilene har mindre ører (Ø24/Ø16, bare utenfor veggen) i tillegg til 5 mm brim. Ørene er en del av samme modell, så det blir ingen fargebytter. Vri eller skjær dem av, og fjern støtten, etter print.
 
 Beste retning for hver del, og hvorfor ingen trenger støtte (innstillingene ligger som objektinnstillinger i 3MF-filene,
 så Creality Print / OrcaSlicer henter dem selv):
