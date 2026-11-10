@@ -4067,9 +4067,12 @@ def start_update():
     except Exception:
         tag = ""
     target = (f"T={shlex.quote(tag)}; if git -c safe.directory='*' merge-base --is-ancestor \"$T\" HEAD 2>/dev/null; then echo \"== Har allerede $T\"; "
-              f"else B=$(git rev-parse --abbrev-ref HEAD); [ \"$B\" = HEAD ] && B=main; git -c safe.directory='*' checkout -q -B \"$B\" \"$T\"; fi"
+              f"else B=$(git -c safe.directory='*' rev-parse --abbrev-ref HEAD); [ \"$B\" = HEAD ] && B=main; git -c safe.directory='*' checkout -q -B \"$B\" \"$T\"; fi"
               if tag else "git -c safe.directory='*' pull --ff-only")
-    script = (f"cd {shlex.quote(src)} && echo \"== $(date '+%F %T') Henter nyeste versjon ({'beta' if _beta() else 'stabil'})\" && "
+    # Oppdateringen kjører som root, mens kildetreet ofte eies av brukeren (git: «dubious ownership»). Godta det for
+    # alle git-kall i skriptet – også dem i update.sh og skjold_safeupdate.py – via miljøet (git ≥ 2.31).
+    script = ("export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*'; "
+              f"cd {shlex.quote(src)} && echo \"== $(date '+%F %T') Henter nyeste versjon ({'beta' if _beta() else 'stabil'})\" && "
               "{ python3 /usr/local/bin/skjold_safeupdate.py snapshot \"$PWD\" >/dev/null 2>&1 || python3 pi/skjold_safeupdate.py snapshot \"$PWD\" >/dev/null 2>&1 || true; } && "
               "git -c safe.directory='*' fetch -q --tags origin && " + target + " && "
               f"echo '== Installerer' && SKJOLD_CHANNEL={'beta' if _beta() else 'stabil'} bash pi/update.sh && "
