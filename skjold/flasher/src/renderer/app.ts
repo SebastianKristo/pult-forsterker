@@ -27,6 +27,7 @@ declare const skjold: SkjoldApi;
 const LANGS: [string, string, string][] = [['nb', 'Norsk', 'NO'], ['en', 'English', 'GB'], ['sv', 'Svenska', 'SE'], ['da', 'Dansk', 'DK']];
 const DEVS: [string, string, string][] = [
   ['s1', 'Skjold S1', 'Forsterker · Raspberry Pi 4'],
+  ['touch', 'Skjold Touch', '7″ berøringsskjerm · Raspberry Pi 4 · PCM5122-DAC'],
   ['node-pi4', 'Skjold Node · Pi 4', 'Bare lydutgang · 3,5 mm, HDMI, USB eller I²S'],
   ['node-pi3', 'Skjold Node · Pi 3B', 'Bare lydutgang · 3,5 mm, HDMI, USB eller I²S'],
   ['core', 'Skjold Core', 'Ren Raspberry Pi 4/3B · ingen kasse, knapper eller skjerm'],
@@ -83,6 +84,7 @@ const WP_HINT: Record<Media, string> = {
 };
 const USB_HINT: Record<string, string> = {
   's1': 'Raspberry Pi 4 starter fra USB når det ikke står noe SD-kort i. Pi-er kjøpt før 2020 trenger en nyere bootloader: start én gang fra et Skjold-SD-kort, så oppdateres den automatisk.',
+  'touch': 'Raspberry Pi 4 starter fra USB når det ikke står noe SD-kort i. Pi-er kjøpt før 2020 trenger én oppstart fra et Skjold-SD-kort først, så oppdateres bootloaderen.',
   'node-pi4': 'Pi 4 starter fra USB når det ikke står noe SD-kort i. Pi-er kjøpt før 2020 trenger én oppstart fra et Skjold-SD-kort først, så oppdateres bootloaderen.',
   'node-pi3': 'Pi 3B må først starte én gang fra et Skjold-SD-kort. Da slås USB-oppstart på permanent. Pi 3B+ starter fra USB uten dette.',
   'core': 'Pi 4 starter fra USB når det ikke står noe SD-kort i (Pi-er kjøpt før 2020 trenger én oppstart fra et Skjold-SD-kort først). Pi 3B må først starte én gang fra et Skjold-SD-kort. Da slås USB-oppstart på permanent. Pi 3B+ starter fra USB uten dette.',
@@ -250,7 +252,7 @@ function page3(): string {
   const core = DEVS[S.dev][0] === 'core';
   const step1 = isUsb()
     ? (DEVS[S.dev][0] === 'node-pi3' ? 'Ta ut SD-kortet fra Raspberry Pi-en hvis det står et der, og koble USB-disken til en USB-port.' : 'Ta ut SD-kortet fra Raspberry Pi-en hvis det står et der, og koble USB-disken til en blå USB 3-port.') + (core ? ' Koble til høyttalere eller en forsterker.' : '')
-    : core ? 'Ta ut kortet, sett det i Raspberry Pi-en og koble til høyttalere eller en forsterker.' : `Ta ut kortet og sett det i Raspberry Pi-en i ${S.dev === 0 ? 'forsterkeren' : 'Node-en'}.`;
+    : core ? 'Ta ut kortet, sett det i Raspberry Pi-en og koble til høyttalere eller en forsterker.' : `Ta ut kortet og sett det i Raspberry Pi-en i ${S.dev === 0 ? 'forsterkeren' : DEVS[S.dev][0] === 'touch' ? 'Skjold Touch' : 'Node-en'}.` + (DEVS[S.dev][0] === 'touch' ? ' Første oppstart installerer Skjold (ca. 15–20 min); så starter berøringsskjermen med Skjold.' : '');
   return `<div class="check">✓</div><h1>${isUsb() ? 'USB-disken er klar' : 'SD-kortet er klart'}</h1>
     <div class="done"><ol>
       <li>${step1}</li>
