@@ -92,3 +92,8 @@ echo "Ferdig."
 if [ "${KI_AMP_DISPLAY:-}" = bar958 ] || [ "${KI_AMP_BOARD:-}" = s1f ] || [ "${SKJOLD_UI_LAYOUT:-}" = radio ] || grep -qsE "^(KI_AMP_DISPLAY=bar958|KI_AMP_BOARD=s1f|SKJOLD_UI_LAYOUT=radio)" /etc/ki-amp.env; then
   sudo bash "$(cd "$(dirname "$0")" && pwd)/install_skjold_ui.sh" "${SUDO_USER:-$USER}" || echo "ADVARSEL: skjold-ui ble ikke installert" >&2
 fi
+
+# Filer laget under oppdateringen (kjørt med sudo eller fra appen som root) tilbake til eieren av kildetreet,
+# så «git pull» som vanlig bruker virker etterpå.
+KILDE="$(cd "$SRC/.." && pwd)"
+sudo chown -R "$(stat -c %U:%G "$KILDE")" "$KILDE" 2>/dev/null || true
