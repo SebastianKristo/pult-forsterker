@@ -269,7 +269,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.PlayerContent(m: AppM
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         SKIcon(Icons.volume, 18.dp, 2f, C.ink)
         if (LocalPlay.on) {   // «Denne telefonen»: glideren styrer volumet på telefonen
-            SKSlider(LocalPlay.vol.toDouble(), { LocalPlay.setVol(it.toInt()) }, tint = C.accent, modifier = Modifier.weight(1f))
+            SKSlider(LocalPlay.vol.toDouble(), { LocalPlay.changeVol(it.toInt()) }, tint = C.accent, modifier = Modifier.weight(1f))
             T("${LocalPlay.vol}", mono(12f, C.accent), Modifier.width(22.dp), align = androidx.compose.ui.text.style.TextAlign.End)
         } else {
             SKSlider(m.vol.toDouble(), { m.setVol(it.toInt()) }, tint = C.ink, modifier = Modifier.weight(1f))
