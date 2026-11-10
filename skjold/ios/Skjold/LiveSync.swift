@@ -224,6 +224,9 @@ extension AppModel {
         if !d.power { return NowPlaying(st: d.name, t: "Standby", s: srcName) }
         switch input {
         case 2, 4: return nil
+        case 3 where !d.sourceLabel.isEmpty:   // låt fra et bibliotek (startet fra web, en annen telefon, eller før omstart)
+            return NowPlaying(st: d.sourceLabel, t: d.title.isEmpty ? "Ingenting spiller" : d.title,
+                              s: [d.artist, d.album].filter { !$0.isEmpty }.joined(separator: " · "))
         case 3:
             let name = d.radioNow?.name.isEmpty == false ? d.radioNow!.name : curRadio.name
             return NowPlaying(st: "Radio · " + name, t: d.title.isEmpty || d.title == name ? "Direkte" : d.title,
@@ -351,7 +354,11 @@ extension AppModel {
         libStream = tr.stream
         libSawPlaying = false
         if !tr.cover.isEmpty { CoverStore.shared.set(tr.t, tr.cover); CoverStore.shared.set(tr.album, tr.cover) }
-        devSend("/api/radio/play", ["url": tr.stream, "title": tr.artist.isEmpty ? tr.t : tr.t + " – " + tr.artist, "image": tr.cover])
+        // Låtdata med, så forsterkeren vet at dette er en låt fra et bibliotek og ikke en radiokanal (source_label,
+        // varighet, spoling) – også når appen startes på nytt eller en annen app ser på.
+        let src = Self.svcInfo[svc ?? lib]?.0 ?? "Bibliotek"
+        devSend("/api/radio/play", ["url": tr.stream, "title": tr.artist.isEmpty ? tr.t : tr.t + " – " + tr.artist, "image": tr.cover,
+                                    "genre": src, "track": tr.t, "artist": tr.artist, "album": tr.album, "duration": tr.dur, "source": src])
     }
 
     /// The stream of a library track finished: play the next one in the queue.

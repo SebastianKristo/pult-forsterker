@@ -74,7 +74,8 @@ struct V4NowPlaying: View {
     /// Dra ned for å lukke: følger fingeren bare når draget er mest loddrett og nedover (vannrette drag, som
     /// volumglideren, går til kontrollene). Lukker etter 120 pt, eller ved et raskt sveip nedover.
     private var dismissDrag: some Gesture {
-        DragGesture(minimumDistance: 14)
+        // Skjermkoordinater: spilleren flyttes med fingeren (offset), og målt lokalt ville draget hakke opp og ned.
+        DragGesture(minimumDistance: 14, coordinateSpace: .global)
             .onChanged { v in
                 guard !wide else { return }
                 let t = v.translation
@@ -181,7 +182,17 @@ struct V4NowPlaying: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(m.np.t).sora(22, .semibold).lineLimit(1)
-                Text(m.np.s).sora(14, .regular, V4.ink.opacity(0.7)).lineLimit(1)
+                if let l = m.npLinks, !(l.artist.isEmpty && l.album.isEmpty) {
+                    // Artist og album som diskré lenker: åpner søket på artisten eller albumet
+                    HStack(spacing: 6) {
+                        if !l.artist.isEmpty { npLink(l.artist, "Gå til artisten") }
+                        if !l.artist.isEmpty && !l.album.isEmpty { Text("·").sora(14, .regular, V4.ink.opacity(0.45)) }
+                        if !l.album.isEmpty { npLink(l.album, "Gå til albumet") }
+                    }
+                    .lineLimit(1)
+                } else {
+                    Text(m.np.s).sora(14, .regular, V4.ink.opacity(0.7)).lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Text(m.quality).mono(10, V4.ink.opacity(0.65), em: 0.06).lineLimit(1).fixedSize()
@@ -468,4 +479,12 @@ struct V4NowPlaying: View {
     private func toggle(_ f: String) { Haptics.tick(); ui.fm = ui.fm == f ? "ctrl" : f }
     private func openMore(_ t: Track? = nil) { ui.moreTrack = t; withAnimation(V4.moreSheet) { ui.more = true } }
     private func close() { m.full = false; ui.more = false; ui.fm = "ctrl" }
+
+    private func npLink(_ text: String, _ hint: String) -> some View {
+        Button { Haptics.tap(); close(); ui.sq = text; ui.search = true } label: {
+            Text(text).sora(14, .regular, V4.ink.opacity(0.7)).lineLimit(1).truncationMode(.tail)
+        }
+        .plain()
+        .accessibilityHint(hint)
+    }
 }

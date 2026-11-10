@@ -843,6 +843,7 @@ def dsp_config():
   samplerate: 48000
   chunksize: 1024
   queuelimit: 4
+  volume_ramp_time: 60
   capture: {{type: Alsa, channels: 2, device: "{DSP_CAPTURE}", format: S32LE}}
   playback: {{type: Alsa, channels: 2, device: "{dsp_playback()}", format: {dsp_format()}}}
 filters:

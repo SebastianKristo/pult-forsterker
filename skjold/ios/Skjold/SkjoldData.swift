@@ -190,6 +190,18 @@ enum SK {
 
     /// NRK logos ship as vector assets (static.nrk.no SVGs).
     static let nrkAsset: [String: String] = ["NRK P1": "nrk-p1", "NRK P1+": "nrk-p1plus", "NRK P2": "nrk-p2", "NRK P3": "nrk-p3", "NRK mP3": "nrk-mp3", "NRK Klassisk": "nrk-klassisk", "NRK Jazz": "nrk-jazz", "NRK Folkemusikk": "nrk-folkemusikk", "NRK Sport": "nrk-sport"]
+    /// NRK-logo også når navnet har et tillegg, f.eks. «NRK Jazz (Oslo, Norway / Jazz)» fra Radio Browser/Lyrion.
+    /// Lengste navn først, så «NRK P1+» ikke blir «NRK P1».
+    static func nrkAssetFor(_ name: String) -> String? {
+        if let a = nrkAsset[name] { return a }
+        let n = name.trimmingCharacters(in: .whitespaces).lowercased()
+        guard n.hasPrefix("nrk") else { return nil }
+        for (k, v) in nrkAsset.sorted(by: { $0.key.count > $1.key.count }) {
+            let kl = k.lowercased()
+            if n == kl || n.hasPrefix(kl + " ") || n.hasPrefix(kl + "(") || n.hasPrefix(kl + " -") { return v }
+        }
+        return nil
+    }
 
     // MARK: Devices and rooms
 
