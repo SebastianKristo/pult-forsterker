@@ -4,6 +4,7 @@ import { NrkContinueShelf } from './nrk';
 import { useEffect, useState } from 'preact/hooks';
 import { Fragment, type ComponentChildren } from 'preact';
 import { homeOrder, orderSources } from '../lib/homelayout';
+import { localOn, localVol, setLocalVol } from '../lib/localplay';
 import { api, PRODUCT_LABEL, type Fav, type InputId, type Station } from '../lib/api';
 import { act, deviceName, eqActiveSource, go, inputLabel, recent, setVolume, settings, status } from '../lib/store';
 import { art, EQ } from '../lib/settings';
@@ -215,7 +216,7 @@ export function DeskPlayer() {
             <SeekBar pos={pos} dur={dur} seek={canSeek(s) ? seekTo : null} />
           ) : live ? <div class="bar live"><i /></div> : null}
           <div class="ctl"><Transport s={s} /></div>
-          <div class="vol"><Icon d="M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12" size={20} sw={1.6} /><Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} /><span class="num">{s?.volume ?? 0}</span></div>
+          <div class="vol"><Icon d="M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12" size={20} sw={1.6} /><Slider value={localOn.value ? localVol.value : s?.volume ?? 0} label={localOn.value ? 'Volum på denne enheten' : 'Volum'} onCommit={localOn.value ? setLocalVol : setVolume} /><span class="num">{localOn.value ? localVol.value : s?.volume ?? 0}</span></div>
           <div class="row gap10" style={{ flexWrap: 'wrap' }}><span class="kicker">SPILL PÅ</span><SpeakerButton /></div>
           <div class="col gap8"><span class="kicker">KILDE</span><InputChips s={s} /></div>
         </> : tab === 'lyrics' ? <LyricsPane pos={pos} /> : tab === 'booth' ? <SubwavePane mode="booth" /> : s?.subwave ? <SubwavePane mode="queue" /> : (

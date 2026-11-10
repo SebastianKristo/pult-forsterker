@@ -11,6 +11,8 @@ export interface FullPreset { title: string; url: string; icon?: string }
 export interface Status {
   kids?: boolean; sleep?: number; subwave?: boolean;
   power: boolean; input: InputId; volume: number; mute: boolean; bt_pairing: boolean; source_label?: string;
+  /** Strømmen som spilles, via Skjold (/api/stream/…), for «Denne enheten». Tom når kilden ikke kan spilles her. */
+  listen?: string;
   loudness: boolean; loudness_level: number; voice: boolean; voice_profile: string; voice_profiles: Record<string, string>;
   presets: Preset[]; preset: number; auto_input: boolean; mix: boolean; usb_pc: number; usb_names: string[];
   headphones: boolean; hp_automute: boolean; overtemp: boolean; levels: Record<string, number>;

@@ -2,6 +2,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { PRODUCT_LABEL, type Status } from '../lib/api';
 import { go, setVolume } from '../lib/store';
+import { ListenHere } from './listenhere';
 import { PRODUCT_ICON } from '../components/ui';
 import { PlacementCard, SyncSubCard } from './advaudio';
 import { BassCard } from './lyd';
@@ -197,6 +198,7 @@ export function SpeakerButton() {
                 <button onClick={() => toggleMember(ak, r.key)} aria-label="Spill her" style={`width:26px;height:26px;border-radius:50%;border:1.5px solid ${inG ? A : '#3a3a3c'};background:${inG ? A : 'transparent'};color:#0b0b0c;cursor:pointer;padding:0;font-size:13px;font-weight:700`}>{inG ? '✓' : ''}</button>
               </div>); })}
           </div>
+          <ListenHere />
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;border-radius:10px;background:#0b0b0c;border:1px solid #242426">{([['sync', 'Synkron'], ['surround', 'Surround']] as const).map(([m, n]) => { const on = has && mode === m; return <button key={m} onClick={() => { if (has) setMode(m); }} style={`height:38px;border-radius:8px;border:none;background:${on ? '#2a2112' : 'transparent'};color:${on ? '#f0c46a' : has ? '#c9c9c4' : '#5a5a56'};font-size:13px;font-weight:600;cursor:pointer`}>{n}</button>; })}</div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style={`font-size:12px;color:${has && mode === 'surround' && miss ? '#f0c46a' : '#8b8b86'};line-height:1.4;min-width:0`}>{hint}</span><button onClick={() => { setOpen(false); go('grp'); }} style="height:32px;padding:0 4px;border:none;background:transparent;color:#f0c46a;font-size:12.5px;cursor:pointer;white-space:nowrap;flex-shrink:0">Gruppeoppsett ›</button></div>
         </div>

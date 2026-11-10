@@ -268,9 +268,15 @@ private fun androidx.compose.foundation.layout.ColumnScope.PlayerContent(m: AppM
     Controls(m)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         SKIcon(Icons.volume, 18.dp, 2f, C.ink)
-        SKSlider(m.vol.toDouble(), { m.setVol(it.toInt()) }, tint = C.ink, modifier = Modifier.weight(1f))
-        T("${m.vol}", mono(12f, C.ink.copy(alpha = 0.7f)), Modifier.width(22.dp), align = androidx.compose.ui.text.style.TextAlign.End)
+        if (LocalPlay.on) {   // «Denne telefonen»: glideren styrer volumet på telefonen
+            SKSlider(LocalPlay.vol.toDouble(), { LocalPlay.setVol(it.toInt()) }, tint = C.accent, modifier = Modifier.weight(1f))
+            T("${LocalPlay.vol}", mono(12f, C.accent), Modifier.width(22.dp), align = androidx.compose.ui.text.style.TextAlign.End)
+        } else {
+            SKSlider(m.vol.toDouble(), { m.setVol(it.toInt()) }, tint = C.ink, modifier = Modifier.weight(1f))
+            T("${m.vol}", mono(12f, C.ink.copy(alpha = 0.7f)), Modifier.width(22.dp), align = androidx.compose.ui.text.style.TextAlign.End)
+        }
     }
+    ListenHere(m)
     Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         CircleButton(Icons.queue, m.queueOpen) { m.queueOpen = !m.queueOpen }
         Spacer(Modifier.weight(1f))
@@ -436,3 +442,26 @@ private fun CircleButton(d: String, on: Boolean, fill: Boolean = false, action: 
 }
 
 fun fmt(s: Int): String = "${s / 60}:" + "%02d".format(s % 60)
+
+
+/** «Spill på denne telefonen»: lyden flyttes hit, rommet dempes og følger med (kø, pause, spoling). Se LocalPlay. */
+@Composable
+private fun ListenHere(m: AppModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val on = LocalPlay.on
+    if (!on && !LocalPlay.can(m)) return
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+            .background(if (on) C.accent.copy(alpha = 0.16f) else C.ink.copy(alpha = 0.06f))
+            .skBorder(if (on) C.accent else C.ink.copy(alpha = 0.16f), 14.dp)
+            .press { if (on) LocalPlay.stop() else LocalPlay.start(ctx, m) }
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SKIcon("M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2", 20.dp, 1.8f, if (on) C.accent else C.ink)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            T(if (on) "Spiller på denne telefonen" else "Spill på denne telefonen", sora(14f, W.Semibold))
+            T(if (on) "Trykk for å flytte lyden tilbake til rommet" else "Rommet dempes og følger med", sora(12f, W.Regular, C.ink.copy(alpha = 0.6f)))
+        }
+    }
+}

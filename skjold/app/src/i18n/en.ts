@@ -1,5 +1,7 @@
 // Engelsk ordbok: norsk tekst → engelsk. Kjør `node scripts/i18n-dekning.mjs` for å se hva som mangler.
 export const EN: Record<string, string> = {
+  // innstillinger: grupper og samlede kategorier
+  'Lyd og musikk': 'Sound and music', 'Enheten': 'Device', 'Hjemme': 'Home', 'Skjold-hjem og fjernstyring': 'Skjold Home and remote access', 'Steder, styring hjemmefra og kryptert synk': 'Places, remote control and encrypted sync', 'Ny versjon, endringslogg, backup og gjenoppretting': 'New version, changelog, backup and restore', 'Hjem, Hytta … og hvilke enheter som hører til hvor': 'Home, Cabin … and which devices belong where', 'Denne enheten': 'This device', 'Koble denne Skjold til et sted': 'Connect this Skjold to a place', 'Skjold Cloud': 'Skjold Cloud',
   // navigasjon
   'Hjem': 'Home', 'Lyd': 'Sound', 'Rom': 'Rooms', 'Innstillinger': 'Settings', 'Spiller': 'Player', 'Radio': 'Radio',
   'Ditt system': 'Your system', 'Bibliotek': 'Library', 'Grupper og surround': 'Groups and surround', 'Integrasjoner': 'Integrations',

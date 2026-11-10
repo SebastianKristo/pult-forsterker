@@ -17,6 +17,8 @@ import { ndCover } from '../lib/navidrome';
 import { artFor, canSeek, nowTitle, SeekBar, seekTo } from './player';
 import { useTick, nbHw } from './pages';
 import { tick } from '../lib/haptics';
+import { localOn, localVol, setLocalVol } from '../lib/localplay';
+import { ListenHere } from './listenhere';
 
 const A = '#d9a441';
 const sel = (b: boolean) => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
@@ -281,9 +283,10 @@ export function FullSheet() {
         </div>
         <div style="display:grid;grid-template-columns:auto minmax(0,1fr) 2.5ch;gap:12px;align-items:center">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f2f2ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6" /></svg>
-          <Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} className="range white" />
-          <span data-testid="vol" style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:rgba(242,242,238,.7)">{s?.volume ?? 0}</span>
+          <Slider value={localOn.value ? localVol.value : s?.volume ?? 0} label={localOn.value ? 'Volum på denne enheten' : 'Volum'} onCommit={localOn.value ? setLocalVol : setVolume} className="range white" />
+          <span data-testid="vol" style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:rgba(242,242,238,.7)">{localOn.value ? localVol.value : s?.volume ?? 0}</span>
         </div>
+        <ListenHere compact />
         <div style="display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:12px;align-items:center;padding-top:4px">
           <button aria-label="Kø" onClick={() => { queueOpen.value = !queueOpen.value; }} style={`width:48px;height:48px;border-radius:50%;border:1px solid rgba(242,242,238,.18);background:${queueOpen.value ? 'rgba(242,242,238,.22)' : 'rgba(0,0,0,.18)'};color:#f2f2ee;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0`}>{icon('M10 6h11M10 12h11M10 18h11M3 5l4 3-4 3z')}</button>
           <button onClick={() => { closeFull(); go('rooms'); }} style="justify-self:center;display:flex;align-items:center;gap:8px;height:48px;padding:0 18px;border-radius:999px;border:1px solid rgba(242,242,238,.18);background:rgba(0,0,0,.18);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="6" y="3" width="10" height="18" rx="2" /><circle cx="11" cy="15" r="2.5" /><circle cx="11" cy="7.5" r="1" /></svg><span style="overflow:hidden;text-overflow:ellipsis">{groupLabel()}</span></button>
