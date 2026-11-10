@@ -123,9 +123,17 @@ get() { python3 -c "import json,sys;print(json.load(open('$B/skjold-setup.json')
 DEVICE=$(get device s1); REF=$(get ref ${INSTALL_REF})
 for i in $(seq 1 120); do curl -fsI --max-time 10 https://codeload.github.com >/dev/null && break; echo "venter på nett ($i)"; sleep 5; done
 D=/opt/skjold/src
-rm -rf "$D" && mkdir -p "$D"
-curl -fsSL --retry 5 "https://codeload.github.com/${REPO}/tar.gz/$REF" | tar xz -C "$D" --strip-components=1 || { echo "nedlasting feilet"; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
+# Et ekte git-kildetre, så «Oppdater» i appen virker senere (den bruker git fetch/checkout). Arkivet er bare reserve.
+command -v git >/dev/null || { apt-get update -qq && apt-get install -y -qq git; } || echo "ADVARSEL: fikk ikke installert git"
+rm -rf "$D" && mkdir -p "$D"
+if command -v git >/dev/null && git clone -q --branch "$REF" "https://github.com/${REPO}.git" "$D"; then
+  git -C "$D" fetch -q --tags origin || true
+else
+  echo "git clone feilet – bruker arkivet (oppdatering fra appen virker ikke før kildetreet er et git-repo)"
+  rm -rf "$D" && mkdir -p "$D"
+  curl -fsSL --retry 5 "https://codeload.github.com/${REPO}/tar.gz/$REF" | tar xz -C "$D" --strip-components=1 || { echo "nedlasting feilet"; exit 1; }
+fi
 cd "$D/pi"
 if [ "$DEVICE" = s1 ]; then
   KI_AMP_BOARD=main bash ./install.sh || { echo "install.sh feilet"; exit 1; }
