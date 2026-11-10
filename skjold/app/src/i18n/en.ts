@@ -9,7 +9,7 @@ export const EN: Record<string, string> = {
   // hjem
   'Nylig spilt': 'Recently played', 'Kilder': 'Sources', 'Radiofavoritter': 'Radio favourites', 'Administrer': 'Manage',
   'Rutiner': 'Routines', 'Oppdag': 'Discover', 'Dine spillelister': 'Your playlists', 'Fra bibliotekene': 'From your libraries',
-  'Rediger hjemskjerm': 'Edit home screen', 'Tilbakestill': 'Reset', 'Bytt': 'Switch', 'Spill': 'Play', 'Pause': 'Pause',
+  'Rediger hjemskjerm': 'Edit home screen', 'Rediger': 'Edit', 'Låt': 'Song', 'Kø': 'Queue', 'Tilbakestill': 'Reset', 'Bytt': 'Switch', 'Spill': 'Play', 'Pause': 'Pause',
   'Neste': 'Next', 'Forrige': 'Previous', 'Volum': 'Volume', 'Demp': 'Mute', 'Av': 'Off', 'På': 'On', 'Lukk': 'Close',
   'Lagre': 'Save', 'Lagret': 'Saved', 'Avbryt': 'Cancel', 'Slett': 'Delete', 'Søk': 'Search', 'Henter …': 'Loading …',
   'Prøv igjen': 'Try again', 'Ferdig': 'Done', 'Legg til': 'Add', 'Fjern': 'Remove', 'Endre': 'Edit', 'Ja': 'Yes', 'Nei': 'No',

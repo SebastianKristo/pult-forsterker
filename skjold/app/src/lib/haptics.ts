@@ -24,3 +24,6 @@ export function sliderStep(old: number, v: number, min: number, max: number, zer
 
 /** Lett bekreftelse (slipp, valgt profil). */
 export function confirmTap(): void { if (hapticsOn()) buzz(10); }
+
+/** Lite tikk (linsen i Låt/Kø krysser midten). */
+export function tick(): void { if (hapticsOn()) buzz(6); }
