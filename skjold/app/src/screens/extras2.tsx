@@ -58,7 +58,7 @@ export function SmartRadioBox({ seed }: { seed: SrSeed | null }) {
 export function DiscoverCard() {
   const [d, setD] = useState<Discover | null>(null), [msg, setMsg] = useState('');
   useEffect(() => { x2.discover().then(setD).catch(() => setD(null)); }, []);
-  if (!d || !d.cfg.enabled) return null;
+  if (!d || !d.cfg?.enabled) return null;
   const cur = d.current;
   const run = async (b: Parameters<typeof x2.discoverPost>[0], m: string) => { setMsg(m); try { setD(await x2.discoverPost(b)); setMsg(''); } catch (e) { setMsg(errText(e)); } };
   return (

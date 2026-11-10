@@ -86,7 +86,7 @@ function SeriesPage({ s }: { s: NrkSeries }) {
 /** «Fortsett å lytte» (NRK) – brukes på Hjem og øverst i NRK-fanen. */
 export function NrkContinueShelf() {
   useEffect(() => { void loadNrkContinue(); }, []);
-  const items = nrkContinue.value;
+  const items = Array.isArray(nrkContinue.value) ? nrkContinue.value : [];
   if (!items.length) return null;
   return (
     <div class="col gap10">

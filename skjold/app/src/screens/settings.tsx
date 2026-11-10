@@ -1,4 +1,5 @@
 // Innstillinger: kategoriliste + detaljside, generert fra CATS i lib/settings.ts.
+import { Fragment } from 'preact';
 import { langPref, setLang, t, type LangPref } from '../i18n';
 import { ChangelogPanel } from './programs';
 import { HomeEditor } from './homeedit';
@@ -8,7 +9,7 @@ import { SecurityPanel } from './lyd';
 import { api, type RemoteStatus, hostLabel, isNative, REPO, type LevelSource, type UpdateInfo } from '../lib/api';
 import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status } from '../lib/store';
 import { computed } from '@preact/signals';
-import { CAT_TILE, ICONS, LED_MODES, LED_MODE_NAMES, catsFor, fmt, type Category, type Item } from '../lib/settings';
+import { CAT_ALIAS, CAT_GROUPS, CAT_TILE, ICONS, LED_MODES, LED_MODE_NAMES, catsFor, fmt, type Category, type Item } from '../lib/settings';
 
 export const cats = computed(() => catsFor(product.value, status.value?.inputs ?? []));
 import { CLOCKS, drawClock } from '../lib/clocks';
@@ -33,7 +34,8 @@ import { AppUpdater, canSelfUpdate, fetchLatestAppRelease, installedAppVersion, 
 
 export function SettingsPage({ wide = false }: { wide?: boolean }) {
   if (status.value?.kids) return <KidsLocked />;
-  const cat = cats.value.find((c) => c.id === route.value.cat);
+  const id = route.value.cat ? CAT_ALIAS[route.value.cat] ?? route.value.cat : undefined;
+  const cat = cats.value.find((c) => c.id === id);
   if (!cat) return <CategoryList wide={wide} />;
   return (
     <>
@@ -72,8 +74,10 @@ export function CategoryList({ wide = false }: { wide?: boolean } = {}) {
           </button>
         ))}
       </div>}
+      {groupCats(cats.value).map(([title, list]) => (<Fragment key={title}>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8b8b86;margin:6px 0 -4px 4px">{t(title).toUpperCase()}</span>
       <div style={CARD}>
-        {cats.value.map((c, i) => (
+        {list.map((c, i) => (
           <button key={c.id} class="cat-row" onClick={() => go('settings', c.id)} style={`display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-height:58px;padding:8px 14px;border:none;border-top:1px solid ${i ? '#242426' : 'transparent'};background:transparent;cursor:pointer;text-align:left`}>
             <span style="display:flex;align-items:center;gap:12px;min-width:0">
               <span style={`width:32px;height:32px;border-radius:8px;background:${CAT_TILE[c.id] ?? '#333'};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#f2f2ee`}>{ICONS[c.id] ? <Icon d={ICONS[c.id] ?? ''} size={18} /> : null}</span>
@@ -83,21 +87,42 @@ export function CategoryList({ wide = false }: { wide?: boolean } = {}) {
           </button>
         ))}
       </div>
+      </Fragment>))}
       <LangPicker />
     </>
   );
 }
 
+/** Kategoriene i gruppene fra CAT_GROUPS (i den rekkefølgen), resten i siste gruppe. */
+function groupCats(list: Category[]): [string, Category[]][] {
+  const used = new Set<string>();
+  const out: [string, Category[]][] = CAT_GROUPS.map(([title, ids]) => {
+    const g = ids.map((id) => list.find((c) => c.id === id)).filter((c): c is Category => !!c);
+    g.forEach((c) => used.add(c.id));
+    return [title, g];
+  });
+  const rest = list.filter((c) => !used.has(c.id));
+  if (rest.length) out[out.length - 1]![1].push(...rest);
+  return out.filter(([, g]) => g.length > 0);
+}
+
+function SubHead({ n, sub }: { n: string; sub?: string }) {
+  return <div style="display:flex;flex-direction:column;gap:2px;margin-top:6px"><span style="font-size:16px;font-weight:600">{t(n)}</span>{sub && <span style="font-size:12px;color:#8b8b86">{t(sub)}</span>}</div>;
+}
+
 export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) {
-  if (cat.id === 'oppdatering') return <><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}</>;
+  if (cat.id === 'oppdatering') return <div style="display:flex;flex-direction:column;gap:14px"><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}<SubHead n="Endringslogg" /><ChangelogPanel /></div>;
+  if (cat.id === 'sky') return (   // Steder, Skjold-hjem, fjernstyring og Skjold Cloud – samme tema, én side
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <SubHead n="Steder" sub="Hjem, Hytta … og hvilke enheter som hører til hvor" /><StederPanel />
+      <SubHead n="Denne enheten" sub="Koble denne Skjold til et sted" /><SkyPanel />
+      <SubHead n="Fjernstyring" sub="Styr Skjold hjemmefra via Cloudflare" /><RemotePanel />
+      <SubHead n="Skjold Cloud" sub="Kryptert synk av favoritter, rutiner og EQ mellom hjem" /><CloudPanel />
+    </div>
+  );
   if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><RoutinesPanel /><DoorbellPanel /><DuckPanel /><SecurityPanel /><RecognizeSettingsPanel /><WishlistPanel /><RadioListPanel source="wishlist" /></div>;
   if (cat.id === 'bibliotek') return <div style="display:flex;flex-direction:column;gap:14px"><LibraryTagsPanel /><AiSettingsPanel /></div>;
-  if (cat.id === 'fjernstyring') return <RemotePanel />;
-  if (cat.id === 'steder') return <StederPanel />;
   const extra = cat.id === 'system' ? <><HealthPanel /><BackupPanel /></> : null;
-  if (cat.id === 'skjoldhjem') return <SkyPanel />;
-  if (cat.id === 'cloud') return <CloudPanel />;
-  if (cat.id === 'endringslogg') return <ChangelogPanel />;
   if (cat.id === 'hjemskjerm') return <HomeEditor />;
   const items = cat.items.filter((it) => it.kind !== 'clocks' && it.kind !== 'update');
   const hasClocks = cat.items.some((it) => it.kind === 'clocks');

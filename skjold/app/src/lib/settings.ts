@@ -187,13 +187,9 @@ export const CATS: Category[] = [
     opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay eller Blåtann vekker forsterkeren'),
     opt('dblPower', 'Dobbelttrykk power', ['Nattmodus', 'Av'], 'Starter nattmodus og automasjonene dine i Home Assistant eller Homey'),
     bool('nightLight', 'Nattlys i nattmodus', 'Svak klokke i standby så lenge nattmodus er på')] },
-  { id: 'oppdatering', n: 'Oppdatering', sub: 'GitHub, backup og gjenoppretting', items: [{ kind: 'update', n: 'Oppdatering' }] },
+  { id: 'oppdatering', n: 'Oppdatering', sub: 'Ny versjon, endringslogg, backup og gjenoppretting', items: [{ kind: 'update', n: 'Oppdatering' }] },
   { id: 'hjemskjerm', n: 'Hjemskjerm', sub: 'Rekkefølge og hvilke seksjoner som vises', items: [{ kind: 'update', n: 'Hjemskjerm' }] },
-  { id: 'endringslogg', n: 'Endringslogg', sub: 'Hva er nytt i hver versjon', items: [{ kind: 'update', n: 'Endringslogg' }] },
-  { id: 'fjernstyring', n: 'Fjernstyring', sub: 'Styr Skjold hjemmefra via Cloudflare', items: [{ kind: 'update', n: 'Fjernstyring' }] },
-  { id: 'steder', n: 'Steder', sub: 'Skjold-hjem: Hjem, Hytta … hovedenhet og reserve', items: [{ kind: 'update', n: 'Steder' }] },
-  { id: 'skjoldhjem', n: 'Skjold-hjem', sub: 'Koble denne enheten til et sted', items: [{ kind: 'update', n: 'Skjold-hjem' }] },
-  { id: 'cloud', n: 'Skjold Cloud', sub: 'Kryptert synk av favoritter, rutiner og EQ mellom hjem', items: [{ kind: 'update', n: 'Skjold Cloud' }] },
+  { id: 'sky', n: 'Skjold-hjem og fjernstyring', sub: 'Steder, styring hjemmefra og kryptert synk', items: [{ kind: 'update', n: 'Skjold-hjem' }] },
   { id: 'system', n: 'System', sub: 'Om, oppsett og tilbakestilling', items: [
     { kind: 'info', n: 'Programvare', key: 'version' }, { kind: 'info', n: 'Adresse', key: 'ip' },
     { kind: 'info', n: 'Lyrion', key: 'lyrion' }, { kind: 'info', n: 'Enhets-ID', key: 'id' }, { kind: 'info', n: 'Type', key: 'board' },
@@ -202,7 +198,23 @@ export const CATS: Category[] = [
     { kind: 'act', n: 'Fabrikkinnstillinger', id: 'reset', label: 'Tilbakestill' }] }
 ];
 
+/** Gamle kategori-id-er (lenker i appen, bokmerker) → kategorien de nå ligger i. */
+export const CAT_ALIAS: Record<string, string> = { endringslogg: 'oppdatering', steder: 'sky', skjoldhjem: 'sky', fjernstyring: 'sky', cloud: 'sky' };
+
+/** Gruppene i innstillingslista. Kategorier som ikke står her, havner i den siste gruppen. */
+export const CAT_GROUPS: [string, string[]][] = [
+  ['Lyd og musikk', ['eq', 'lyd', 'radio', 'tjenester', 'bibliotek']],
+  ['Enheten', ['tilkobling', 'touch', 'skjerm', 'strom', 'stemme']],
+  ['Hjemme', ['rutiner', 'hjemskjerm', 'sky']],
+  ['System', ['oppdatering', 'system']],
+];
+
 export const ICONS: Record<string, string> = {
+  bibliotek: 'M4 4h4v16H4zM10 4h4v16h-4zM16.5 4.5l3.8 1-4 15-3.8-1z',
+  rutiner: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
+  hjemskjerm: 'M4 4h7v9H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 15h7v5H4z',
+  touch: 'M4 5h16v11H4zM9 20h6M12 16v4',
+  sky: 'M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5zM12 11.5l-2.5 2.2V17h5v-3.3z',
   tjenester: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
   home: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5',
   play: 'M8 5v14l11-7z',
@@ -226,7 +238,7 @@ export const ICONS: Record<string, string> = {
 export const CAT_TILE: Record<string, string> = {
   tjenester: '#2a3a2e',
   eq: '#3a2e17', lyd: '#2a3340', tilkobling: '#22314a', radio: '#3d2a2a', stemme: '#2f2a40', skjerm: '#2a3a33',
-  strom: '#40362a', steder: '#2a3340', skjoldhjem: '#22314a', cloud: '#22314a', rom: '#2a3a33', oppdatering: '#333', system: '#333335'
+  strom: '#40362a', steder: '#2a3340', bibliotek: '#3a2e40', rutiner: '#2a3a3a', hjemskjerm: '#3a3326', touch: '#2a3340', sky: '#22314a', skjoldhjem: '#22314a', cloud: '#22314a', rom: '#2a3a33', oppdatering: '#333', system: '#333335'
 };
 
 /** Bezier curve through the five EQ bands – same geometry as the design file. */

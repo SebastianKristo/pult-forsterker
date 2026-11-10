@@ -14,7 +14,7 @@ import { HomePhone, MiniPhone, FullSheet, RoomsPhone, useRooms, switchRoom } fro
 import { DeskHome, DeskLibrary, DeskPlayer, DeskRadio } from './screens/desk';
 import { LibraryPage, libBack, libTitle, libUi } from './screens/library';
 import { ob, obBack } from './screens/onboard';
-import { ICONS } from './lib/settings';
+import { CAT_ALIAS, ICONS } from './lib/settings';
 import { cats } from './screens/settings';
 import { Icon, PRODUCT_ICON, Slider } from './components/ui';
 import { EqPage } from './screens/pages';
@@ -99,7 +99,7 @@ function Phone() {
   const page = r.page;
   useEffect(() => { if (page === 'play') { go('home'); openFull(); } }, [page]);
   useEffect(() => { if (!fullPlayer.value) { queueOpen.value = false; srcOpen.value = false; } }, [fullPlayer.value]);
-  const cat = page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
+  const cat = page === 'settings' ? cats.value.find((c) => c.id === (r.cat ? CAT_ALIAS[r.cat] ?? r.cat : r.cat)) : undefined;
   const tabOf = page === 'radio' || page === 'play' || page === 'lib' || page === 'quiz' || page === 'abs' || page === 'qhist' ? 'home' : page === 'grp' ? 'rooms' : page === 'int' || page === 'plug' || page === 'kass' || page === 'vinyl' ? 'settings' : page === 'ma' ? 'home' : page;
   const title = cat ? cat.n : page === 'lib' ? libTitle() : tr(TITLES[page]);
   return (
@@ -172,7 +172,7 @@ function readRcol(): boolean { try { return localStorage.getItem(RCOL_KEY) !== '
 function Desktop() {
   const s = status.value, r = route.value, p = product.value;
   const t = nowTitle(s);
-  const cat = r.page === 'settings' ? cats.value.find((c) => c.id === r.cat) : undefined;
+  const cat = r.page === 'settings' ? cats.value.find((c) => c.id === (r.cat ? CAT_ALIAS[r.cat] ?? r.cat : r.cat)) : undefined;
   const title = cat ? cat.n : r.page === 'lib' ? libTitle() : tr(TITLES[r.page]);
   const st0 = settings.value;
   const libs: [string, string][] = [['ytm', 'YouTube Music'], ['nd', 'Navidrome']];
