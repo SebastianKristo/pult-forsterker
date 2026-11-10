@@ -136,7 +136,8 @@ sudo systemctl daemon-reload && sudo systemctl enable --now shairport-sync
 
 echo "== 6/9  Bluetooth A2DP-mottak (bluealsa + parring uten PIN)"
 OLDHOST=$(hostname)
-if [ "$BOARD_SEL" != node ]; then   # Node: vertsnavnet er valgt i Skjold Flasher – behold det
+# Behold vertsnavnet hvis det er valgt (Skjold Flasher, Node, eller satt for hånd) – bare standardnavnet byttes til pultamp
+if [ "$BOARD_SEL" != node ] && { [ "$OLDHOST" = raspberrypi ] || [ -z "$OLDHOST" ]; }; then
 sudo hostnamectl set-hostname pultamp 2>/dev/null || true
 # /etc/hosts må kjenne det nye navnet, ellers klager sudo «unable to resolve host»
 if grep -q "^127.0.1.1" /etc/hosts; then
