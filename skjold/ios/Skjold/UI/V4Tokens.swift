@@ -343,7 +343,16 @@ struct V4ShelfHeader: View {
     let title: String
     var kicker: String = ""
     var icon: String = ""
+    /// Hva et trykk på overskriften gjør. Uten handling vises ingen pil.
+    var action: (() -> Void)? = nil
     var body: some View {
+        if let action {
+            Button(action: action) { row.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+                .accessibilityHint("Åpner \(title)")
+        } else { row }
+    }
+    private var row: some View {
         HStack(spacing: 10) {
             HStack(spacing: 9) {
                 if !icon.isEmpty { V4SourceIcon(label: icon, size: 20) }
@@ -353,7 +362,7 @@ struct V4ShelfHeader: View {
                 }
             }
             Spacer(minLength: 0)
-            V4Icon(d: V4.chevRight, size: 18, stroke: 2.2, color: V4.ink2)
+            if action != nil { V4Icon(d: V4.chevRight, size: 18, stroke: 2.2, color: V4.ink2) }
         }
         .padding(.bottom, 10)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1) }

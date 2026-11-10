@@ -2,7 +2,7 @@
 // gjøres i daemonen: pi/skjold_speakerprofiles.py), eller hent en delt profil fra Skjold Cloud (/hoyttaler/*).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, apiPost, apiReq } from '../lib/api';
-import { recordMic } from '../lib/roomeq';
+import { primeMic, recordMic } from '../lib/roomeq';
 
 type P = Record<string, any>;
 const A = '#d9a441';
@@ -68,6 +68,7 @@ export function SpeakerCard() {
 
   const measure = (m: 'gated' | 'near') => run(async () => {
     setBusy('Forbereder …');
+    await primeMic();
     const info = await api.roomeqSweep({ level: 0.4, delay: 1.5 });
     const rec = await recordMic(info.delay + info.dur + 1.5, () => setBusy('Måler – vær stille …'));
     const qs = new URLSearchParams({ session: sess, mode: m, sr: String(rec.sr), brand: form.brand, model: form.model, ...(reset.current ? { reset: '1' } : {}) });

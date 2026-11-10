@@ -2956,6 +2956,29 @@ paths:
           application/json:
             schema:
               type: object
+  /api/seek:
+    post:
+      tags:
+      - Avspilling
+      summary: Spol i låten (Lyrion-strømmer med varighet og Plex)
+      operationId: post_api_seek
+      x-skjold-modul: ki_amp_daemon
+      responses: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pos:
+                  type: number
+                  minimum: 0
+                  description: Sekunder fra start
+              required:
+              - pos
+            example:
+              pos: 90
   /api/settings:
     get:
       tags:
@@ -3776,6 +3799,102 @@ paths:
           application/json:
             schema:
               type: object
+  /api/ytm/home:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/ytm/home
+      operationId: get_api_ytm_home
+      x-skjold-modul: skjold_ytm
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ytm/play:
+    post:
+      tags:
+      - Annet
+      summary: POST /api/ytm/play
+      operationId: post_api_ytm_play
+      x-skjold-modul: skjold_ytm
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/ytm/search:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/ytm/search
+      operationId: get_api_ytm_search
+      x-skjold-modul: skjold_ytm
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ytm/status:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/ytm/status
+      operationId: get_api_ytm_status
+      x-skjold-modul: skjold_ytm
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/ytm/stream/{vid}:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/ytm/stream/{vid}
+      operationId: get_api_ytm_stream_vid
+      x-skjold-modul: skjold_ytm
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      parameters:
+      - name: vid
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/ytm/tracks:
+    get:
+      tags:
+      - Annet
+      summary: GET /api/ytm/tracks
+      operationId: get_api_ytm_tracks
+      x-skjold-modul: skjold_ytm
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 components:
   schemas:
     Status:

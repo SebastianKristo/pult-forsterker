@@ -222,6 +222,8 @@ export const api = {
   btPairing: () => post('/api/bt', { pairing: true }),
   loudness: (on?: boolean, level?: number) => post('/api/loudness', { ...(on !== undefined ? { on } : {}), ...(level !== undefined ? { level } : {}) }),
   transport: (action: 'play' | 'pause' | 'playpause' | 'next' | 'previous' | 'stop') => post('/api/transport', { action }),
+  /** Spol til `pos` sekunder (Lyrion-strømmer med varighet – Navidrome, YouTube Music, bibliotek – og Plex). */
+  seek: (pos: number) => post('/api/seek', { pos }),
   voice: (b: { on?: boolean; profile?: string; say?: string }) => post('/api/voice', b),
   presets: () => req<PresetsResp>('/api/presets'),
   addPreset: (b: { title: string; url: string; genre?: string; image?: string }) => post<PresetsResp>('/api/presets', b),

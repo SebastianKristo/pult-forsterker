@@ -30,8 +30,8 @@ import kotlinx.coroutines.launch
  * - Spillelisten har alltid tre elementer [forrige-plassholder, nå, neste-plassholder]. Det gjør at «neste»/«forrige»
  *   alltid er tilgjengelige i systemets mediekontroller; valget sendes som /api/transport, og indeksen settes tilbake
  *   til 1 ved neste statusoppdatering. (Skjold har ingen kø-API mot telefonen.)
- * - Radio er direktesending: isLive + dynamisk, ingen spoling. Låter fra Lyrion/Navidrome har varighet/posisjon,
- *   men daemonen har ingen spole-API, så isSeekable = false.
+ * - Radio er direktesending: isLive + dynamisk, ingen spoling. Låter med varighet (Navidrome, YouTube Music, Plex …)
+ *   kan spoles fra varselet og låseskjermen (POST /api/seek).
  */
 @OptIn(UnstableApi::class)
 class SkjoldPlayer(private val ctx: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
@@ -55,7 +55,7 @@ class SkjoldPlayer(private val ctx: Context) : SimpleBasePlayer(Looper.getMainLo
 
     private val commands: Player.Commands = Player.Commands.Builder().addAll(
         Player.COMMAND_PLAY_PAUSE, Player.COMMAND_PREPARE, Player.COMMAND_STOP,
-        Player.COMMAND_SEEK_TO_NEXT, Player.COMMAND_SEEK_TO_PREVIOUS,
+        Player.COMMAND_SEEK_TO_NEXT, Player.COMMAND_SEEK_TO_PREVIOUS, Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
         Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM, Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
         Player.COMMAND_GET_CURRENT_MEDIA_ITEM, Player.COMMAND_GET_TIMELINE, Player.COMMAND_GET_METADATA,
         Player.COMMAND_SET_MEDIA_ITEM, Player.COMMAND_CHANGE_MEDIA_ITEMS,
@@ -90,7 +90,7 @@ class SkjoldPlayer(private val ctx: Context) : SimpleBasePlayer(Looper.getMainLo
         val item = MediaItemData.Builder("now:" + s.host)
             .setMediaItem(now)
             .setMediaMetadata(metadata(s))
-            .setIsSeekable(false)
+            .setIsSeekable(!s.live && s.duration > 0)
             .apply {
                 if (s.live) {
                     setIsDynamic(true)
@@ -141,6 +141,7 @@ class SkjoldPlayer(private val ctx: Context) : SimpleBasePlayer(Looper.getMainLo
         when (seekCommand) {
             Player.COMMAND_SEEK_TO_NEXT, Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> send("/api/transport", mapOf("action" to "next"))
             Player.COMMAND_SEEK_TO_PREVIOUS, Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> send("/api/transport", mapOf("action" to "previous"))
+            Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM -> send("/api/seek", mapOf("pos" to positionMs / 1000))
             else -> if (mediaItemIndex == 2) send("/api/transport", mapOf("action" to "next"))
                     else if (mediaItemIndex == 0) send("/api/transport", mapOf("action" to "previous"))
         }

@@ -39,7 +39,7 @@ def ruter():
 
 TAGG = [("/api/status", "Status"), ("/api/events", "Status"), ("/api/ws", "Status"), ("/api/power", "Avspilling"), ("/api/toggle", "Avspilling"),
         ("/api/volume", "Avspilling"), ("/api/mute", "Avspilling"), ("/api/input", "Avspilling"), ("/api/preset", "Radio"),
-        ("/api/presets", "Radio"), ("/api/play", "Avspilling"), ("/api/transport", "Avspilling"), ("/api/settings", "Innstillinger"),
+        ("/api/presets", "Radio"), ("/api/play", "Avspilling"), ("/api/transport", "Avspilling"), ("/api/seek", "Avspilling"), ("/api/settings", "Innstillinger"),
         ("/api/eq", "Innstillinger"), ("/api/loudness", "Innstillinger"), ("/api/routines", "Rutiner"), ("/api/plugins", "Plugins"),
         ("/api/homekit", "Integrasjoner"), ("/api/matter", "Integrasjoner"), ("/api/cloud", "Skjold Cloud"), ("/api/ma", "Music Assistant"),
         ("/api/nrk", "Radio"), ("/api/radio", "Radio"), ("/api/update", "System"), ("/api/backup", "System"), ("/api/restore", "System"),
@@ -89,6 +89,7 @@ DETALJ = {
     ("/api/preset", "post"): {"summary": "Spill (eller lagre) radiofavoritt n", "requestBody": body({"n": {"type": "integer", "minimum": 1}, "save": {"type": "boolean"}}, ["n"], {"n": 1}), "responses": OK},
     ("/api/play", "post"): {"summary": "Spill en URL (strøm eller fil)", "requestBody": body({"url": {"type": "string", "format": "uri"}, "title": {"type": "string"}, "artist": {"type": "string"}, "image": {"type": "string"}, "announce": {"type": "boolean", "description": "Spill oppå det som spiller"}, "volume": {"type": "integer", "minimum": 0, "maximum": 100}}, ["url"], {"url": "https://lyd.nrk.no/nrk_radio_p1_ostlandssendingen_mp3_h"}), "responses": OK},
     ("/api/transport", "post"): {"summary": "Pause/spill/neste/forrige", "requestBody": body({"action": {"type": "string", "enum": ["play", "pause", "playpause", "next", "previous", "stop"]}}, ["action"], {"action": "next"}), "responses": OK},
+    ("/api/seek", "post"): {"summary": "Spol i låten (Lyrion-strømmer med varighet og Plex)", "requestBody": body({"pos": {"type": "number", "minimum": 0, "description": "Sekunder fra start"}}, ["pos"], {"pos": 90}), "responses": OK},
     ("/api/cloud", "post"): {"summary": "Skjold Cloud: aktiver, gjenopprett, velg deler, synk",
                              "requestBody": body({"aktiver": {"type": "boolean"}, "frase": {"type": "string", "description": "12 ord – gjenopprett på et nytt hjem"},
                                                   "deaktiver": {"type": "boolean"}, "deler": {"type": "array", "items": {"type": "string"}}, "synk": {"type": "boolean"}}, None, {"synk": True})},

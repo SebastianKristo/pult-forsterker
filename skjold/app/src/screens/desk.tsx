@@ -11,7 +11,7 @@ import { Icon, PRODUCT_ICON, Slider, SrcCircle } from '../components/ui';
 import { browseState, currentStation, favOf, favs, favsLoaded, loadBrowse, loadFavs, norm, playFav, playStation, search, searchBusy, searchRes, shelves, toggleFav } from '../lib/radio';
 import { ndAlbumList, ndConf, ndConfigured, ndCover, ndPlaylists, ndSearch, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
 import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, lq, lsvc, playNd, whenText, type LibId } from '../lib/library';
-import { InputChips, Transport, artFor, mmss, nowTitle, sourceLine, subLine } from './player';
+import { InputChips, SeekBar, Transport, artFor, canSeek, nowTitle, seekTo, sourceLine, subLine } from './player';
 import { useRooms } from './phone';
 import { SpeakerButton } from './groups';
 import { collSongs, libUi } from './library';
@@ -212,10 +212,7 @@ export function DeskPlayer() {
             {s?.input === 'airplay' && s.airplay_device && <span class="muted" style={{ fontSize: '12px' }}>Fra {s.airplay_device}</span>}
           </div>
           {dur > 0 ? (
-            <div class="col gap4">
-              <div class="bar"><i style={{ width: Math.min(100, (pos / dur) * 100) + '%' }} /></div>
-              <div class="row between mono muted" style={{ fontSize: '11px' }}><span>{mmss(pos)}</span><span>{mmss(dur)}</span></div>
-            </div>
+            <SeekBar pos={pos} dur={dur} seek={canSeek(s) ? seekTo : null} />
           ) : live ? <div class="bar live"><i /></div> : null}
           <div class="ctl"><Transport s={s} /></div>
           <div class="vol"><Icon d="M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12" size={20} sw={1.6} /><Slider value={s?.volume ?? 0} label="Volum" onCommit={setVolume} /><span class="num">{s?.volume ?? 0}</span></div>

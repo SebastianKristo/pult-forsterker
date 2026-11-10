@@ -14,7 +14,7 @@ import { favs, favsLoaded, loadFavs, playFav } from '../lib/radio';
 import { groups, groupAll, groupCount, groupNone, inGroup, ROLES, setMode, setRole, toggleMember } from '../lib/groups';
 import { fmtDur, libNext, li, LIB_NAME, lq, lsvc, playNd } from '../lib/library';
 import { ndCover } from '../lib/navidrome';
-import { artFor, mmss, nowTitle } from './player';
+import { artFor, canSeek, nowTitle, SeekBar, seekTo } from './player';
 import { useTick, nbHw } from './pages';
 import { tick } from '../lib/haptics';
 
@@ -189,7 +189,7 @@ export function FullSheet() {
   const [dy, setDy] = useState(0);
   const start = useRef<number | null>(null), body = useRef<HTMLDivElement>(null), cur = useRef(0);
   const down = (e: PointerEvent) => {
-    if ((e.target as HTMLElement).closest('input, button, [data-seg]')) return;
+    if ((e.target as HTMLElement).closest('input, button, [data-seg], [data-seek]')) return;
     if ((body.current?.scrollTop ?? 0) > 0) return;
     start.current = e.clientY; try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
   };
@@ -270,10 +270,7 @@ export function FullSheet() {
           <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em;color:rgba(242,242,238,.7)">{quality}</span>
         </div>
         {!live && !ext && dur > 0 && (
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <div style="height:16px;display:flex;align-items:center"><div style="flex:1;height:5px;border-radius:3px;background:rgba(242,242,238,.22);overflow:hidden"><div style={`height:100%;width:${Math.min(100, (pos / dur) * 100).toFixed(1)}%;background:rgba(242,242,238,.9);border-radius:3px`} /></div></div>
-            <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(242,242,238,.6)"><span>{mmss(pos)}</span><span>−{mmss(dur - pos)}</span></div>
-          </div>
+          <SeekBar pos={pos} dur={dur} seek={nd || canSeek(s) ? seekTo : null} variant="phone" />
         )}
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px">
           <button aria-label="Tilfeldig" disabled={!nd} title={nd ? 'Bland køen' : 'Ikke støttet av kilden'} onClick={() => { if (!nd) return; const rest = lq.value.filter((_, i) => i !== li.value).sort(() => Math.random() - 0.5); lq.value = [nd, ...rest]; li.value = 0; showToast('Køen er blandet'); }} style={rnd + `;color:rgba(242,242,238,.75);opacity:${nd ? 1 : 0.35}`}>{icon('M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5')}</button>

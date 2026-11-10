@@ -204,7 +204,7 @@ struct V4HomeTab: View {
         let pls = playlists
         if !pls.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                V4ShelfHeader(title: "Dine spillelister", kicker: "FRA MUSIKKTJENESTENE")
+                V4ShelfHeader(title: "Dine spillelister", kicker: "FRA MUSIKKTJENESTENE") { m.openLib(pls[0].lib) }
                 V4Shelf(spacing: 12) {
                     ForEach(pls, id: \.id) { p in
                         Button { ui.pl = p } label: {
@@ -228,7 +228,7 @@ struct V4HomeTab: View {
     // MARK: Hyller fra bibliotekene
 
     private struct ShelfTile: Identifiable { var id: String; var t: String; var s: String; var key: String; var now: Bool; var play: () -> Void }
-    private struct ShelfData { var title: String; var kicker: String; var icon: String; var w: CGFloat; var tiles: [ShelfTile] }
+    private struct ShelfData { var title: String; var kicker: String; var icon: String; var w: CGFloat; var tiles: [ShelfTile]; var open: () -> Void }
 
     private var shelves: [ShelfData] {
         var out: [ShelfData] = []
@@ -248,7 +248,7 @@ struct V4HomeTab: View {
             }
             let title = lib == "ytm" ? "Til deg" : lib == "nd" ? "Nytt i biblioteket" : "Fra Plex"
             let name = V4Lib.names[lib] ?? lib
-            out.append(ShelfData(title: title, kicker: name.uppercased(), icon: name, w: 148, tiles: tiles))
+            out.append(ShelfData(title: title, kicker: name.uppercased(), icon: name, w: 148, tiles: tiles) { [m] in m.openLib(lib) })
         }
         if !m.radio.isEmpty {
             let tiles = m.radio.prefix(6).enumerated().map { i, st in
@@ -256,14 +256,14 @@ struct V4HomeTab: View {
                     m.playStation(i, open: false)
                 }
             }
-            out.append(ShelfData(title: "Radio akkurat nå", kicker: "RADIO", icon: "Radio", w: 120, tiles: Array(tiles)))
+            out.append(ShelfData(title: "Radio akkurat nå", kicker: "RADIO", icon: "Radio", w: 120, tiles: Array(tiles)) { [m] in m.sub = "radio" })
         }
         return out
     }
 
     private func shelfView(_ s: ShelfData) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            V4ShelfHeader(title: s.title, kicker: s.kicker, icon: s.icon)
+            V4ShelfHeader(title: s.title, kicker: s.kicker, icon: s.icon, action: s.open)
             V4Shelf(spacing: 12) {
                 ForEach(s.tiles) { t in
                     Button(action: t.play) {

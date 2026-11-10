@@ -625,6 +625,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     val position: Int get() = minOf(pos ?: if (live) 0 else 45, duration)
     val hasProgress: Boolean get() = input != 3 && input != 2 && input != 4 && (!live || duration > 0)
+    /** Kan låten spoles? Bibliotekslåter (Navidrome, YouTube Music, Plex-bibliotek – via Lyrion) og Plex-spilleren. */
+    val canSeek: Boolean get() = hasProgress && duration > 0 && (libTrack != null || dev?.source == "plex" || !live)
+
+    /** Spol til [s] sekunder: viser ny posisjon med en gang og sender POST /api/seek (Lyrion «time» for et rent Lyrion-rom). */
+    fun seekTo(s: Int) {
+        val p = s.coerceIn(0, maxOf(0, duration - 1))
+        pos = p
+        if (!live) return
+        hold("pos", 2.5)
+        val pid = actRoom.pid
+        if (actLyrionOnly && pid != null) { lyrionCmd(pid, listOf("time", "$p")); return }
+        devSend("/api/seek", mapOf("pos" to p))
+    }
 
     val srcName: String
         get() {

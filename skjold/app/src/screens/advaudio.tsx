@@ -2,7 +2,7 @@
 // (xtc / sync) i daemonen, som bygger CamillaDSP-blokkene (pi/skjold_xtc.py, pi/skjold_sync/).
 import { useEffect, useState } from 'preact/hooks';
 import { api, type Placement, type PlacementResult, type PlacementSpeaker } from '../lib/api';
-import { recordMic } from '../lib/roomeq';
+import { primeMic, recordMic } from '../lib/roomeq';
 
 type Cfg = Record<string, any>;
 const A = '#d9a441';
@@ -38,6 +38,7 @@ function Switch({ on, set, label }: { on: boolean; set: (v: boolean) => void; la
 
 /** Mobilmåling: tar opp mens Skjold spiller en kort sweep på hver høyttaler etter tur, og sender opptaket til analyse. */
 export async function measureWithPhone(onStage?: (s: string) => void): Promise<PlacementResult> {
+  await primeMic();
   const pl = await api.placement();
   const n = pl.speakers_eff.length;
   const secs = 2 + 0.5 + n * 1.6 + 2;
