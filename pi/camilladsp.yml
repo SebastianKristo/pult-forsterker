@@ -2,6 +2,7 @@
 devices:
   samplerate: 48000
   chunksize: 1024
+  volume_ramp_time: 60
   queuelimit: 4
   capture: {type: Alsa, channels: 2, device: "hw:Loopback,1", format: S32LE}
   playback: {type: Alsa, channels: 2, device: "hw:sndrpihifiberry", format: S32LE}

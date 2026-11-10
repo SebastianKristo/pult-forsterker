@@ -525,9 +525,17 @@ final class AppModel {
         return libTrack?.dur ?? (trk < SK.dur.count ? SK.dur[trk] : 240)
     }
     var position: Int { min(pos ?? (live ? 0 : 45), duration) }
-    var hasProgress: Bool { input != 3 && input != 2 && input != 4 && (!live || duration > 0) }
+    var hasProgress: Bool { (input != 3 || liveLibTrack) && input != 2 && input != 4 && (!live || duration > 0) }
+    /// Forsterkeren spiller en låt fra et bibliotek (ikke en radiokanal), selv om appen ikke startet den.
+    var liveLibTrack: Bool { live && input == 3 && libTrack == nil && !(dev?.sourceLabel.isEmpty ?? true) && (dev?.duration ?? 0) > 0 }
+    /// Artist og album for låten som spilles (for lenkene under tittelen), nil for radio, AirPlay osv.
+    var npLinks: (artist: String, album: String)? {
+        if let lt = libTrack { return (lt.artist, lt.album) }
+        if live, input == 3, let d = dev, !d.sourceLabel.isEmpty { return (d.artist, d.album) }
+        return nil
+    }
     /// Kan låten spoles? Bibliotekslåter (Navidrome, YouTube Music, Plex-bibliotek – spilles via Lyrion) og Plex-spilleren.
-    var canSeek: Bool { hasProgress && duration > 0 && (libTrack != nil || dev?.source == "plex" || !live) }
+    var canSeek: Bool { hasProgress && duration > 0 && (libTrack != nil || liveLibTrack || dev?.source == "plex" || !live) }
 
     /// Spol til `s` sekunder. Viser ny posisjon med en gang og sender POST /api/seek (eller Lyrion «time» for et rent Lyrion-rom).
     func seek(to s: Int) {
@@ -546,6 +554,7 @@ final class AppModel {
     }
 
     var quality: String {
+        if liveLibTrack, let d = dev { return d.sourceLabel.uppercased() }
         if input == 3 { return "DIREKTE" }
         if svc == "nd" { return "FLAC · 44,1 kHz" }
         if svc == "plex" { return "FLAC · Direkte avspilling" }

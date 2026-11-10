@@ -31,7 +31,7 @@ func art(_ key: String) -> ArtInfo {
     let a = OKLCH.lab(0.42, 0.09, h), b = OKLCH.lab(0.2, 0.04, Double((Int(h) + 40) % 360))
     let ink = OKLCH.color(0.93, 0.03, h)
     var info = ArtInfo(stops: OKLCH.stops(from: a, to: b), ink: ink, name: key, nameInk: ink)
-    if let asset = SK.nrkAsset[key] {
+    if let asset = SK.nrkAssetFor(key) {
         info.logoAsset = asset
         info.ink = .clear
     } else if let url = CoverStore.shared.url(for: key) ?? LogoStore.shared.url(for: key) {
@@ -239,7 +239,7 @@ final class LogoStore {
     }
 
     func fetch(_ names: [String]) {
-        for name in names where urls[name] == nil && !pending.contains(name) && SK.nrkAsset[name] == nil {
+        for name in names where urls[name] == nil && !pending.contains(name) && SK.nrkAssetFor(name) == nil {
             guard let (q, cc) = SK.logoQuery[name] else { continue }
             pending.insert(name)
             Task {
@@ -253,13 +253,13 @@ final class LogoStore {
 
     /// Station image from the amplifier's favourites (only when no logo is known yet).
     func adopt(_ name: String, _ url: String) {
-        guard !url.isEmpty, url.lowercased().hasPrefix("https"), SK.nrkAsset[name] == nil, (urls[name] ?? "").isEmpty else { return }
+        guard !url.isEmpty, url.lowercased().hasPrefix("https"), SK.nrkAssetFor(name) == nil, (urls[name] ?? "").isEmpty else { return }
         store(name, url)
     }
 
     /// Logo servert av Skjold selv (/api/logo): går foran Radio Browser-gjetninger (men de innebygde NRK-logoene beholdes).
     func device(_ name: String, _ url: String) {
-        guard !url.isEmpty, SK.nrkAsset[name] == nil, urls[name] != url else { return }
+        guard !url.isEmpty, SK.nrkAssetFor(name) == nil, urls[name] != url else { return }
         store(name, url)
     }
 
