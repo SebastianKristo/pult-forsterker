@@ -51,7 +51,7 @@ fun HomeView(m: AppModel) {
     for (sec in HomeLayout.resolve(m.homeLayout, HomeLayout.android).filter { s -> s.visible }) {
         when (sec.id) {
             "recent" -> RecentShelf(m)
-            "sources" -> SourcesShelf(m)
+            "sources" -> SourcesShelf(m) { editHome = true }
             "favs" -> FavShelf(m)
             "playlists" -> PlaylistShelf(m)
         }
@@ -86,12 +86,19 @@ private fun RecentShelf(m: AppModel) {
 }
 
 @Composable
-private fun SourcesShelf(m: AppModel) {
+private fun SourcesShelf(m: AppModel, onEdit: () -> Unit) {
     val uri = LocalUriHandler.current
+    val alle = services(m) { u -> try { uri.openUri(u) } catch (_: Exception) { Haptics.warning() } }
+    // Rekkefølge og synlighet fra «Rediger hjemskjerm» (m.homeSources, lagres på telefonen)
+    val kilder = HomeLayout.resolve(m.homeSources, alle.map { it.first }).filter { it.visible }
+        .mapNotNull { k -> alle.firstOrNull { it.first == k.id } }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        T("Kilder", sora(SkG.shelfTitle, W.Semibold))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            T("Kilder", sora(SkG.shelfTitle, W.Semibold), Modifier.weight(1f))
+            T("Rediger", sora(13f, W.Regular, C.muted), Modifier.press(onClick = onEdit).padding(horizontal = 4.dp, vertical = 2.dp))
+        }
         EdgeScroll(14.dp) {
-            for ((label, act) in services(m) { u -> try { uri.openUri(u) } catch (_: Exception) { Haptics.warning() } }) SKSourceLogo(label, act)
+            for ((label, act) in kilder) SKSourceLogo(label, act)
         }
     }
 
@@ -189,6 +196,9 @@ private fun liveRecent(m: AppModel): List<Recent> {
     m.radio.take(maxOf(2, 5 - out.size)).forEachIndexed { i, st -> out.add(Recent(st.name, st.name, st.name, "Radio · kanal", true) { m.playStation(i) }) }
     return out
 }
+
+/** Navnene på kildene som finnes i dette rommet (for kilde-redigeringen). */
+fun kildeNavn(m: AppModel): List<String> = services(m) {}.map { it.first }
 
 private fun services(m: AppModel, open: (String) -> Unit): List<Pair<String, () -> Unit>> {
     val node = m.actRoom.type == "node"

@@ -177,6 +177,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     /** Hjemskjermens rekkefølge og synlighet (settings.homeLayout på den aktive Skjold-enheten). */
     var homeLayout by mutableStateOf<List<HomeItem>>(emptyList())
+    /** Kildene på Hjem: rekkefølge og hvilke som vises (lagres på telefonen, «navn|1» / «navn|0», samme nøkkel som iOS). */
+    private var homeSrcRaw by Persisted("skjold-home-sources-a", Store.load("skjold-home-sources-a", ListSerializer(String.serializer())) ?: emptyList(), ListSerializer(String.serializer()))
+    var homeSources: List<HomeItem>
+        get() = homeSrcRaw.mapNotNull { e -> val i = e.lastIndexOf('|'); if (i <= 0) null else HomeItem(e.substring(0, i), e.substring(i + 1) != "0") }
+        set(v) { homeSrcRaw = v.map { "${it.id}|${if (it.visible) 1 else 0}" } }
     var sset by Persisted("skjold-set", Store.load("skjold-set", MapSerializer(String.serializer(), Int.serializer())) ?: SK.def, MapSerializer(String.serializer(), Int.serializer()))
     var names by Persisted("skjold-names", Store.load("skjold-names", MapSerializer(String.serializer(), String.serializer())) ?: emptyMap(), MapSerializer(String.serializer(), String.serializer()))
     var ytmT by mutableStateOf<Long?>(null)

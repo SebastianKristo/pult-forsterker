@@ -1,8 +1,11 @@
 package no.kristo.skjold
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
@@ -98,17 +101,60 @@ fun FullPlayerView(m: AppModel) {
 // v4: segmentkontroll Låt/Kø (Android) – kantlinje rgba(242,242,238,.4), linse rgba(240,196,106,.24) som glir 0.4 s
 private val LensEase = CubicBezierEasing(0.3f, 1.3f, 0.45f, 1f)
 
+/**
+ * Låt/Kø: én linse som kan dras mellom knappene (som Liquid Glass-bryteren på iOS). Mens du holder strekker linsen seg
+ * (bredere og lavere), den følger fingeren med gummistrikk forbi kantene, gir et tikk når den passerer midten og
+ * fjærer på plass når du slipper. Et trykk flytter den dit du trykket.
+ */
 @Composable
 private fun SongQueueSwitch(m: AppModel) {
     val segW = 76.dp
-    val x by animateDpAsState(if (m.queueOpen) segW else 0.dp, tween(400, easing = LensEase), label = "lens")
-    Box(Modifier.width(segW * 2 + 8.dp).height(40.dp).clip(CircleShape).skCapsuleBorder(SkG.segLine).padding(4.dp)) {
-        Box(Modifier.offset(x = x).width(segW).height(32.dp).clip(CircleShape).background(SkG.segLens))
+    val segPx = with(LocalDensity.current) { segW.toPx() }
+    val scope = rememberCoroutineScope()
+    val lens = remember { Animatable(if (m.queueOpen) segPx else 0f) }
+    var hold by remember { mutableStateOf(false) }
+    val sx by animateFloatAsState(if (hold) 1.14f else 1f, spring(dampingRatio = 0.55f, stiffness = 600f), label = "lensX")
+    val sy by animateFloatAsState(if (hold) 0.9f else 1f, spring(dampingRatio = 0.55f, stiffness = 600f), label = "lensY")
+    LaunchedEffect(m.queueOpen) { if (!hold) lens.animateTo(if (m.queueOpen) segPx else 0f, tween(400, easing = LensEase)) }
+    val gummi = { r: Float -> if (r < 0f) -Math.pow((-r).toDouble(), 0.7).toFloat() else if (r > segPx) segPx + Math.pow((r - segPx).toDouble(), 0.7).toFloat() else r }
+    val onQ = lens.value >= segPx / 2
+    Box(
+        Modifier.width(segW * 2 + 8.dp).height(40.dp).clip(CircleShape).skCapsuleBorder(SkG.segLine).padding(4.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = { hold = true; tryAwaitRelease(); hold = false },
+                    onTap = { o -> val q = o.x > segPx; if (q != m.queueOpen) { Haptics.tick(); m.queueOpen = q } },
+                )
+            }
+            .pointerInput(Unit) {
+                var raw = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { hold = true; raw = lens.value },
+                    onDragEnd = {
+                        hold = false
+                        val q = lens.value >= segPx / 2
+                        if (q != m.queueOpen) m.queueOpen = q
+                        scope.launch { lens.animateTo(if (q) segPx else 0f, spring(dampingRatio = 0.62f, stiffness = 500f)) }
+                    },
+                    onDragCancel = { hold = false; scope.launch { lens.animateTo(if (m.queueOpen) segPx else 0f) } },
+                ) { ch, d ->
+                    ch.consume()
+                    val før = lens.value
+                    raw += d
+                    val nx = gummi(raw)
+                    if ((nx >= segPx / 2) != (før >= segPx / 2)) Haptics.tick()
+                    scope.launch { lens.snapTo(nx) }
+                }
+            },
+    ) {
+        Box(
+            Modifier.offset { IntOffset(lens.value.roundToInt(), 0) }.width(segW).height(32.dp)
+                .graphicsLayer { scaleX = sx; scaleY = sy }.clip(CircleShape).background(SkG.segLens),
+        )
         Row {
             for ((q, label) in listOf(false to "Låt", true to "Kø")) {
-                val on = m.queueOpen == q
-                Box(Modifier.width(segW).height(32.dp).clip(CircleShape).press { if (!on) Haptics.tick(); m.queueOpen = q }, contentAlignment = Alignment.Center) {
-                    T(label, sora(14f, W.Semibold, if (on) C.ink else C.ink.copy(alpha = 0.6f)))
+                Box(Modifier.width(segW).height(32.dp), contentAlignment = Alignment.Center) {
+                    T(label, sora(14f, W.Semibold, if (onQ == q) C.ink else C.ink.copy(alpha = 0.6f)))
                 }
             }
         }
