@@ -121,6 +121,7 @@ import threading
 import os
 import re
 import socket
+import uuid
 import subprocess
 import sys
 import time
@@ -141,6 +142,61 @@ COVER_FILE = "/run/pultamp_cover"   # albumbilde fra oled_display.py (AirPlay/BT
 COVER_RADIO = "/run/pultamp_cover_radio"   # stasjons-/albumbilde fra Lyrion
 CTRL_FILE = "/run/pultamp_ctrl.json"       # til oled_display.py
 STATE_FILE = "/var/lib/ki-amp/state.json"
+_FRESH_INSTALL = not os.path.exists(STATE_FILE)   # første oppstart (ny installasjon) – før load_state skriver fila
+DEVICE_ID_FILE = os.path.join(os.path.dirname(STATE_FILE), "device_id")
+_device_id = ""
+
+
+def device_id():
+    """Fast ID for enheten (mDNS «id», /api/status, Home Assistant, Homey, MQTT). Lagret i DEVICE_ID_FILE.
+    Eksisterende enheter beholder vertsnavnet; en ny installasjon får et unikt suffiks hvis navnet er tatt på nettet
+    (se resolve_device_id). Før den er avgjort: vertsnavnet."""
+    global _device_id
+    if not _device_id:
+        try:
+            _device_id = open(DEVICE_ID_FILE).read().strip()
+        except OSError:
+            pass
+    return _device_id or socket.gethostname()
+
+
+def _id_taken_on_lan(ident):
+    """Annonserer en annen Skjold på LAN-et allerede denne ID-en (mDNS _kipultamp._tcp, txt id=…)?"""
+    try:
+        own = set(subprocess.run(["hostname", "-I"], capture_output=True, text=True, timeout=3).stdout.split())
+        out = subprocess.run(["avahi-browse", "-rpt", "_kipultamp._tcp"], capture_output=True, text=True, timeout=10).stdout
+    except Exception:
+        return False
+    for line in out.splitlines():
+        f = line.split(";")
+        if f[0] == "=" and len(f) > 9 and f[7] not in own and f'"id={ident}"' in f[9]:
+            return True
+    return False
+
+
+def resolve_device_id():
+    """Avgjør og lagrer enhets-ID-en én gang. Ny installasjon + ID-en (vertsnavnet) er allerede i bruk av en annen Skjold
+    på nettet → «<vertsnavn>-<4 tegn fra machine-id>», så Home Assistant og Homey ser to enheter og ikke én.
+    En enhet som har kjørt før (state.json fantes) beholder vertsnavnet, så eksisterende oppføringer ikke brytes."""
+    global _device_id
+    if os.path.exists(DEVICE_ID_FILE):
+        return device_id()
+    ident = socket.gethostname()
+    if _FRESH_INSTALL and _id_taken_on_lan(ident):
+        try:
+            mid = open("/etc/machine-id").read().strip()
+        except OSError:
+            mid = "%012x" % uuid.getnode()
+        ident = f"{ident}-{mid[:4]}"
+        print(f"Enhets-ID: vertsnavnet er allerede i bruk av en annen Skjold på nettet – bruker {ident}", flush=True)
+    try:
+        os.makedirs(os.path.dirname(DEVICE_ID_FILE), exist_ok=True)
+        with open(DEVICE_ID_FILE, "w") as fh:
+            fh.write(ident + "\n")
+    except OSError as e:
+        print("Enhets-ID ikke lagret:", repr(e), flush=True)
+    _device_id = ident
+    return ident
 RELAY_ACTIVE_LOW = os.environ.get("RELAY_ACTIVE_LOW", "1") == "1"
 # Maks X9C-trinn (0-99) ved volum 100 %. 6 ohm / 40 W-høyttalere på 24 V: 85 holder forsterkeren under 40 W.
 MAX_TAP = max(10, min(99, int(os.environ.get("KI_AMP_MAX_TAP", "85"))))
@@ -1572,7 +1628,7 @@ def read_status():
     cover_url = cover if cover.startswith(("http://", "https://")) else (f"/api/cover?v={cover}" if cover else "")
     return {**state, **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
-            "name": NAME, "version": VERSION, "id": socket.gethostname(), "presets": extra["presets"],
+            "name": NAME, "version": VERSION, "id": device_id(), "presets": extra["presets"],
             "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"], "source_label": extra["source_label"], "lyrion_server": extra["lyrion_server"], "lyrion_player": extra["lyrion_player"],
             "usb_names": USBSW_NAMES, "voice_profiles": VOICE_PROFILES, "inputs": INPUTS, "board": "s1f" if S1F else BOARD,
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
@@ -4134,7 +4190,7 @@ def _hk_state():
     pres = state.get("presets") or []
     return {**{k: state.get(k) for k in ("power", "input", "volume", "mute", "preset")},
             "presets_full": [p if isinstance(p, dict) else None for p in pres], "version": VERSION,
-            "product": PRODUCT, "id": socket.gethostname()}
+            "product": PRODUCT, "id": device_id()}
 
 
 def _hk_transport(a):
@@ -4654,7 +4710,7 @@ def _webhook(event, data):
     if not c["enabled"] or not u.startswith(("http://", "https://")):
         return
     try:
-        _post_json(u, {"event": event, "device": NAME, "id": socket.gethostname(), "t": int(time.time()), **data}, timeout=5)
+        _post_json(u, {"event": event, "device": NAME, "id": device_id(), "t": int(time.time()), **data}, timeout=5)
     except Exception as e:
         print("Webhook:", e, flush=True)
 
@@ -5102,7 +5158,7 @@ def mqtt_available():
 
 
 def mqtt_base():
-    return f"{(plug_cfg('mqtt').get('prefix') or 'skjold').strip('/')}/{socket.gethostname()}"
+    return f"{(plug_cfg('mqtt').get('prefix') or 'skjold').strip('/')}/{device_id()}"
 
 
 def mqtt_state_json():
@@ -5135,9 +5191,9 @@ def mqtt_command(topic_tail, payload):
 
 
 def _mqtt_discovery(cl, base):
-    dev = {"identifiers": [socket.gethostname()], "name": NAME, "manufacturer": "Skjold", "model": PRODUCT}
+    dev = {"identifiers": [device_id()], "name": NAME, "manufacturer": "Skjold", "model": PRODUCT}
     pre = "homeassistant"
-    hid = socket.gethostname().replace("-", "_")
+    hid = device_id().replace("-", "_")
     ents = [
         ("number", "volume", {"name": "Volum", "command_topic": base + "/set/volume", "state_topic": base + "/state", "value_template": "{{ value_json.volume }}", "min": 0, "max": 100}),
         ("switch", "power", {"name": "Strøm", "command_topic": base + "/set/power", "state_topic": base + "/state", "value_template": "{{ 'ON' if value_json.power else 'OFF' }}", "payload_on": "on", "payload_off": "off", "state_on": "ON", "state_off": "OFF"}),
@@ -6069,7 +6125,7 @@ def backup_extra_files():
 
 
 def make_backup(secrets_mode="exclude", passphrase="", include_files=True):
-    dev = {"name": NAME, "id": socket.gethostname(), "product": PRODUCT, "version": VERSION, "board": BOARD}
+    dev = {"name": NAME, "id": device_id(), "product": PRODUCT, "version": VERSION, "board": BOARD}
     return _xmod.make_backup(state, dev, backup_extra_files() if include_files else None, secrets_mode, passphrase)
 
 
@@ -6472,7 +6528,7 @@ class Sky:
     def __init__(self, path=SKY_FILE, url=SKY_URL, local=None, ident=None, info=None, lan=None):
         self.path, self.default_url = path, url
         self.local = local or f"http://127.0.0.1:{PORT}"
-        self.ident = ident or socket.gethostname()
+        self.ident = ident or device_id()
         self.info = info or (lambda: {"navn": NAME, "produkt": PRODUCT, "versjon": VERSION})
         self.lan = lan if lan is not None else LanPeers(self.ident)
         self.cfg = self._les()
@@ -8239,7 +8295,7 @@ def start_mdns_avahi():
     if not os.path.isdir(os.path.dirname(AVAHI_SVC)) or subprocess.run(["systemctl", "is-active", "--quiet", "avahi-daemon"]).returncode != 0:
         return False
     from xml.sax.saxutils import escape
-    txt = {"id": socket.gethostname(), "version": VERSION, "name": NAME, "type": "pultforsterker", "product": PRODUCT, "path": "/api/status"}
+    txt = {"id": device_id(), "version": VERSION, "name": NAME, "type": "pultforsterker", "product": PRODUCT, "path": "/api/status"}
     rec = "".join(f"<txt-record>{escape(k)}={escape(str(v))}</txt-record>" for k, v in txt.items())
     xml = ('<?xml version="1.0" standalone=\'no\'?>\n<!DOCTYPE service-group SYSTEM "avahi-service.dtd">\n'
            f'<service-group><name>{escape(NAME)}</name><service><type>_kipultamp._tcp</type><port>{PORT}</port>{rec}</service></service-group>\n')
@@ -8253,13 +8309,14 @@ def start_mdns_avahi():
 
 
 def start_mdns():
+    resolve_device_id()   # før annonseringen: unik ID hvis vertsnavnet er tatt på nettet (ny installasjon)
     if start_mdns_avahi():
         return None
     try:
         from zeroconf import ServiceInfo, Zeroconf
         info = ServiceInfo("_kipultamp._tcp.local.", f"{NAME}._kipultamp._tcp.local.",
                            addresses=[socket.inet_aton(_local_ip())], port=PORT,
-                           properties={"id": socket.gethostname(), "version": VERSION, "name": NAME, "type": "pultforsterker",
+                           properties={"id": device_id(), "version": VERSION, "name": NAME, "type": "pultforsterker",
                                        "product": PRODUCT, "path": "/api/status"},
                            server=f"{socket.gethostname()}.local.")
         zc = Zeroconf(); zc.register_service(info)
@@ -8440,7 +8497,7 @@ async def on_startup(app):
     app["pair"] = asyncio.create_task(pairing_task())
     app["menu"] = asyncio.create_task(menu_task())
     if os.environ.get("KI_AMP_SKY", "1") != "0":   # Skjold-hjem: sky-relé (gjør ingenting før enheten er koblet)
-        sky.lan = LanPeers(sky.ident); sky.lan.start()
+        sky.ident = device_id(); sky.lan = LanPeers(sky.ident); sky.lan.start()   # ID-en er avgjort i start_mdns
         app["sky"] = asyncio.create_task(sky.run())
         app["cloud"] = asyncio.create_task(cloud_task())
     if node_leds:
