@@ -333,6 +333,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     private fun cancel(key: String) { tasks.remove(key)?.cancel() }
 
+    private var livePaused = false
+
+    /** Appen gikk i bakgrunnen: stopp hendelsesstrømmen og pollingen, så verken batteriet eller enheten belastes.
+     *  Spiller «Denne telefonen», må status følges videre, og da lar vi dem gå. */
+    fun pauseLive() {
+        if (LocalPlay.on || livePaused) return
+        livePaused = true
+        cancel("sse"); cancel("poll")
+    }
+
+    /** Appen er synlig igjen: koble til på nytt og hent status med en gang. */
+    fun resumeLive() {
+        if (!livePaused) return
+        livePaused = false
+        if (started) startLive()
+    }
+
     private fun launch(op: suspend CoroutineScope.() -> Unit) = viewModelScope.launch(block = op)
 
     override fun onCleared() {
@@ -820,6 +837,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             "ndTest" -> testNavidrome()
             "plexTest" -> testPlex()
             "btPair" -> { btPairT = System.currentTimeMillis(); post(mapOf("type" to "btPair", "room" to devRoom.id)) }
+            "forget" -> settingsHost?.let { h -> devSend("/api/bt", mapOf("forget" to true), on = h); showNotice("Blåtann-enhetene er glemt") }
+            "reset" -> settingsHost?.let { h -> devSend("/api/settings/reset", emptyMap(), on = h); showNotice("Innstillingene er tilbakestilt") }
             "openRadio" -> { tab = 0; sub = "radio" }
             "setup" -> restartSetup()
             "roomeq" -> showRoomEQ = true
