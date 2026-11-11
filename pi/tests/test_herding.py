@@ -95,5 +95,40 @@ class Kildebytte(unittest.TestCase):
         self.assertEqual(kall, [])
 
 
+
+class UgyldigKropp(unittest.TestCase):
+    """Ødelagt eller uventet innhold i en forespørsel gir 400 med forklaring, ikke 500."""
+
+    def kjor(self, handler, method="POST"):
+        import asyncio
+
+        class R:
+            path, headers, host = "/api/x", {}, "skjold.local:8765"
+        R.method = method
+        return asyncio.run(d.cors_mw(R(), handler))
+
+    def test_odelagt_json(self):
+        async def h(_r):
+            return json.loads("{ikke json")
+        resp = self.kjor(h)
+        self.assertEqual(resp.status, 400)
+        self.assertIn("ugyldig JSON", resp.text)
+
+    def test_manglende_felt_og_feil_type(self):
+        async def mangler(_r):
+            return {}["volume"]
+
+        async def liste(_r):
+            return [].get("x")
+        self.assertEqual(self.kjor(mangler).status, 400)
+        self.assertIn("mangler", self.kjor(mangler).text)
+        self.assertEqual(self.kjor(liste).status, 400)
+
+    def test_lesing_skjuler_ikke_feil(self):
+        async def h(_r):
+            return {}["x"]
+        with self.assertRaises(KeyError):          # en feil i en GET er vår egen, og skal synes i loggen som før
+            self.kjor(h, "GET")
+
 if __name__ == "__main__":
     unittest.main()

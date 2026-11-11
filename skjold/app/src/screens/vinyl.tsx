@@ -1,5 +1,6 @@
 /** Platesamling: ta opp vinyl fra AUX side for side, få sporene delt opp og gjenkjent, lagre som FLAC på NAS-en. */
 import { useEffect, useState } from 'preact/hooks';
+import { everyVisible } from '../lib/store';
 import { mmss, vinyl, type VAlbum, type VStatus } from '../lib/vinyl';
 
 const A = '#e8b04a';
@@ -20,7 +21,7 @@ export function VinylPage() {
   useEffect(() => { load(); loadArc(); }, []);
   useEffect(() => {
     const busy = st && st.state !== 'idle';
-    const t = window.setInterval(() => { load(); if (st?.state === 'saving') loadArc(); }, busy ? 1000 : 5000);
+    const t = everyVisible(() => { load(); if (st?.state === 'saving') loadArc(); }, busy ? 1000 : 5000);
     return () => clearInterval(t);
   }, [st?.state]);
   useEffect(() => { if (st?.state === 'idle') loadArc(); }, [st?.state]);

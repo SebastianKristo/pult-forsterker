@@ -1,5 +1,6 @@
 /** Skjold Kassetthylle: ta ut en kassett = spill den (pi/skjold_hylle.py, esphome/skjold-hylle.yaml). */
 import { useEffect, useState } from 'preact/hooks';
+import { everyVisible } from '../lib/store';
 import { apiPost, apiReq, type NfcCard } from '../lib/api';
 
 const A = '#e8b04a';
@@ -18,7 +19,7 @@ export function HyllePanel({ cards }: { cards: NfcCard[] }) {
   const [h, setH] = useState<Hylle[] | null>(null), [err, setErr] = useState('');
   const navnFor = (uid: string) => cards.find((c) => c.uid === uid)?.navn ?? (uid ? 'Ukjent brikke' : '');
   const last = () => apiReq<{ hyller: Hylle[] }>('/api/hylle').then((r) => { setH(r.hyller); setErr(''); }).catch((e) => setErr(String(e)));
-  useEffect(() => { void last(); const t = setInterval(() => void last(), 3000); return () => clearInterval(t); }, []);
+  useEffect(() => { void last(); const t = everyVisible(() => void last(), 3000); return () => clearInterval(t); }, []);
   const sett = (b: Record<string, unknown>) => apiPost<{ hyller: Hylle[] }>('/api/hylle', b).then((r) => setH(r.hyller)).catch((e) => setErr(String(e)));
   return (
     <div style={box + ';display:flex;flex-direction:column;gap:12px'}>

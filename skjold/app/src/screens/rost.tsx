@@ -1,5 +1,6 @@
 // Skjold Røst: små ESP32-høyttalere (squeezelite-esp32) som spiller synkront med dette rommet via Lyrion.
 import { useEffect, useState } from 'preact/hooks';
+import { everyVisible } from '../lib/store';
 import { apiPost, apiReq } from '../lib/api';
 
 export interface RostSpeaker { id: string; name: string; ip: string; connected: boolean; power: boolean; playing: boolean; volume: number | null; synced: boolean; model: string }
@@ -19,7 +20,7 @@ export function RostCard() {
     try { setD(await apiPost<RostList>('/api/rost', { id, action: 'presets', value: picks })); setMsg('Lagt på knappene'); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
   };
   const load = async () => { try { setD(await apiReq<RostList>('/api/rost')); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
-  useEffect(() => { void load(); const t = window.setInterval(() => void load(), 8000); return () => clearInterval(t); }, []);
+  useEffect(() => { void load(); const t = everyVisible(() => void load(), 8000); return () => clearInterval(t); }, []);
   const act = async (id: string, action: string, value?: number | boolean) => {
     try { setD(await apiPost<RostList>('/api/rost', { id, action, value })); setErr(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
   };

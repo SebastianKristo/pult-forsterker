@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { DoorbellPanel, DuckPanel, RecognizeSettingsPanel, RoutinesPanel, WishlistPanel } from './features';
 import { SecurityPanel } from './lyd';
 import { api, type RemoteStatus, hostLabel, isNative, REPO, type LevelSource, type UpdateInfo } from '../lib/api';
-import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status } from '../lib/store';
+import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status, everyVisible } from '../lib/store';
 import { computed } from '@preact/signals';
 import { CAT_ALIAS, CAT_GROUPS, CAT_TILE, ICONS, LED_MODES, LED_MODE_NAMES, catsFor, fmt, type Category, type Item } from '../lib/settings';
 
@@ -513,7 +513,7 @@ function RemotePanel() {
   const [guarded, setGuarded] = useState(false);
   const load = async () => { try { const r = await api.remote(); setSt(r); if (r.host) setHost(r.host); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
   useEffect(() => { void load(); }, []);
-  useEffect(() => { if (!st?.busy) return; const t = setInterval(load, 1500); return () => clearInterval(t); }, [st?.busy]);
+  useEffect(() => { if (!st?.busy) return; const t = everyVisible(load, 1500); return () => clearInterval(t); }, [st?.busy]);
   const token = pickToken(raw);
   const tokenOk = /^eyJ[A-Za-z0-9_\-=.]{40,}$/.test(token) || (!raw && !!st?.has_token);
   const hostOk = HOST_RE.test(host.trim());

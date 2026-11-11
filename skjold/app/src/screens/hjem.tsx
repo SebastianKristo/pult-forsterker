@@ -1,7 +1,7 @@
 // Skjold-hjem: stedsvelger (topp), Innstillinger → Steder (skyen) og Innstillinger → Skjold-hjem (enheten selv).
 import { useEffect, useState } from 'preact/hooks';
 import { api, ApiError, type SkyStatus } from '../lib/api';
-import { go, showToast } from '../lib/store';
+import { go, showToast, everyVisible } from '../lib/store';
 import {
   hjem, hjemErr, hjemState, loadEnheter, loadSteder, loginUrl, rolleMerke, sameOrigin, selectSted, setSkyUrl,
   SKY_DEFAULT, skyUrl, stedId, stedNavn, steder, type Enhet, type Sted
@@ -175,7 +175,7 @@ export function SkyPanel() {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const load = async () => { try { setSt(await api.sky()); setErr(''); } catch (e) { setErr(e instanceof ApiError && e.status === 404 ? 'Programvaren på enheten kjenner ikke Skjold-hjem ennå – oppdater den.' : msg(e)); } };
-  useEffect(() => { void load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { void load(); const t = everyVisible(load, 5000); return () => clearInterval(t); }, []);
   const send = async (fn: () => Promise<SkyStatus>) => {
     setBusy(true); setErr('');
     try { setSt(await fn()); setKode(''); } catch (e) { setErr(msg(e)); } finally { setBusy(false); }

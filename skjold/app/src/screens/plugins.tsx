@@ -3,7 +3,7 @@ import { GuidePicker, ProgramsPanel } from './programs';
 import { signal } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, INPUT_LABEL, type HistItem, type InputId, type Lyrics, type Plugin, type RecPayload, type RecSong, type SnapClient } from '../lib/api';
-import { status, trackSub } from '../lib/store';
+import { status, trackSub, everyVisible } from '../lib/store';
 import { favs, loadFavs } from '../lib/radio';
 import { Toggle } from '../components/ui';
 import { AutoStandbyPanel, BackupPanel, PlexampPanel, RoonPanel, WrappedPage } from './extras';
@@ -101,7 +101,7 @@ const sel = signal<string | null>(null);
 trackSub(sel, () => { sel.value = null; });
 export function PluginsPage() {
   const [cat, setCat] = useState('Alle'), [q, setQ] = useState('');
-  useEffect(() => { void loadPlugins(); if (!favs.value.length) void loadFavs(); const t = setInterval(() => void loadPlugins(), 15000); return () => clearInterval(t); }, []);
+  useEffect(() => { void loadPlugins(); if (!favs.value.length) void loadFavs(); const t = everyVisible(() => void loadPlugins(), 15000); return () => clearInterval(t); }, []);
   const all = plugList.value ?? [];
   const ql = q.trim().toLowerCase();
   const list = all.filter((p) => (cat === 'Alle' || (cat === 'På' ? p.enabled : p.cat === cat)) && (!ql || (p.name + ' ' + p.desc).toLowerCase().includes(ql)));
@@ -249,7 +249,7 @@ function RecordPanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: strin
   const [smbMsg, setSmbMsg] = useState('');
   const [shares, setShares] = useState<string[]>([]);
   const load = () => api.recordings().then(setRp).catch(() => {});
-  useEffect(() => { void load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
+  useEffect(() => { void load(); const t = everyVisible(load, 10000); return () => clearInterval(t); }, []);
   const post = async (b: Record<string, unknown>) => { setErr(''); try { setRp(await api.recPost(b)); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } };
   const host = String(d.smb_share || '').replace(/\\/g, '/').replace(/^smb:/i, '').replace(/^\/+/, '').split('/')[0] ?? '';
   const test = async () => {
@@ -443,7 +443,7 @@ const line = (x: any): [string, string] => typeof x === 'string' ? [x, ''] : [St
 export function SubwavePane({ mode }: { mode: 'booth' | 'queue' }) {
   const [d, setD] = useState<Record<string, any> | null>(null), [txt, setTxt] = useState(''), [msg, setMsg] = useState('');
   const load = () => api.subwave().then(setD).catch(() => setD({ error: 'Får ikke kontakt med Skjold' }));
-  useEffect(() => { void load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
+  useEffect(() => { void load(); const t = everyVisible(load, 15000); return () => clearInterval(t); }, []);
   const ask = async () => { if (!txt.trim()) return; setMsg('Sender ønsket …'); try { const r = await api.subwavePost({ text: txt.trim() }); setMsg(r.error ? 'Feil: ' + r.error : 'Ønsket er sendt til DJ-en.'); if (!r.error) setTxt(''); } catch (e) { setMsg('Feil: ' + (e instanceof Error ? e.message : String(e))); } };
   const st = d?.state ?? {};
   const items = mode === 'queue' ? arr(st, 'queue', 'upcoming', 'up_next') : [...arr(st, 'booth', 'booth_log', 'dj_log', 'log'), ...arr(d?.session, 'transcript', 'messages', 'log')];

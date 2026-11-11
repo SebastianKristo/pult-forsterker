@@ -5,7 +5,7 @@ import { useEffect } from 'preact/hooks';
 import { api, type HomeKitInfo, type MaStatus } from '../lib/api';
 import { qrMatrix } from '../lib/qr';
 import { matter, matterLoad, matterRows, matterStatus } from './platform';
-import { go, setSetting, settings, showToast } from '../lib/store';
+import { go, setSetting, settings, showToast, everyVisible } from '../lib/store';
 import { Toggle } from '../components/ui';
 import type { Settings } from '../lib/settings';
 
@@ -129,7 +129,7 @@ function checkMa() { if (!settings.value.maUrl) { maSt.value = null; return; } m
 async function findMa() { try { const r = await api.maDiscover(); if (r.found[0]) { setSetting('maUrl', r.found[0]); setTimeout(checkMa, 300); showToast('Fant Music Assistant på ' + r.found[0]); } else showToast('Fant ingen Music Assistant på nettet'); } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } }
 
 export function IntegrationsPage() {
-  useEffect(() => { checkMa(); void hkLoad(); void matterLoad(); const t = setInterval(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); if (matter.value?.enabled && !matter.value.commissioned) void matterLoad(); }, 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { checkMa(); void hkLoad(); void matterLoad(); const t = everyVisible(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); if (matter.value?.enabled && !matter.value.commissioned) void matterLoad(); }, 5000); return () => clearInterval(t); }, []);
   const s = settings.value, sel = intSel.value, list = ints(s), cur = list.find((x) => x.id === sel) ?? list[0]!, d = detail(cur.id, s);
   return (
     <>
