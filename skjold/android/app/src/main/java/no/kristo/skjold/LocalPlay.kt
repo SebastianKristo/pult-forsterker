@@ -1,6 +1,7 @@
 package no.kristo.skjold
 
 import android.content.Context
+import kotlinx.coroutines.launch
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import androidx.compose.runtime.getValue
@@ -26,6 +27,7 @@ object LocalPlay {
     private var wasMuted = false
     private var model: AppModel? = null
     private var prefs: android.content.SharedPreferences? = null
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 
     /** Kan det som spilles nå spilles på telefonen? (Radio og bibliotekene – ikke AirPlay, Blåtann, Spotify eller AUX.) */
     fun can(m: AppModel): Boolean = m.live && !m.dev?.listen.isNullOrEmpty()
@@ -42,7 +44,7 @@ object LocalPlay {
         cur = ""
         on = true
         sync(m, d, h)
-        if (!wasMuted) m.devSend("/api/mute", mapOf("mute" to true), on = h)
+        if (!wasMuted) { m.devSend("/api/mute", mapOf("mute" to true), on = h); prefs?.edit()?.putString("muted-host", h)?.apply() }
         Haptics.tick()
     }
 
@@ -52,10 +54,16 @@ object LocalPlay {
         val p = player
         val pos = if (p != null && prepared) p.currentPosition / 1000 else -1
         release()
-        val m = model ?: return
-        val d = m.devStats[host] ?: m.dev
-        if (d != null && d.duration > 0 && pos >= 0 && kotlin.math.abs(d.position - pos) > 3) m.devSend("/api/seek", mapOf("pos" to pos), on = host)
-        if (!wasMuted) m.devSend("/api/mute", mapOf("mute" to false), on = host)
+        val h = host
+        val d = model?.let { it.devStats[h] ?: it.dev }
+        val seek = d != null && d.duration > 0 && pos >= 0 && kotlin.math.abs(d.position - pos) > 3
+        val unmute = !wasMuted
+        prefs?.edit()?.remove("muted-host")?.apply()
+        // eget scope: virker også når appen lukkes og modellens scope allerede er avbrutt (ellers ble rommet stående dempet)
+        scope.launch {
+            if (seek) DeviceLink.send("/api/seek", mapOf("pos" to pos), on = h)
+            if (unmute) DeviceLink.send("/api/mute", mapOf("mute" to false), on = h)
+        }
     }
 
     fun changeVol(v: Int) {

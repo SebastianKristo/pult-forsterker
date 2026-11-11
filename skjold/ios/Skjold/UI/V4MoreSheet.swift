@@ -81,7 +81,6 @@ struct V4MoreSheet: View {
             if let t { m.v4PlayNext(t); Haptics.success() } else { Haptics.warning() }
             close()
         })
-        r.append(Row(n: "Legg til i spilleliste", p: "M4 6h12M4 12h12M4 18h8M18 15v6M15 18h6", fill: false, ic: V4.ink) { Haptics.warning() })
         let who = artist.components(separatedBy: " · ").first ?? artist
         r.append(Row(n: "Søk etter " + who, p: V4.search, fill: false, ic: V4.ink) {
             close(); m.full = false; ui.sq = who; ui.search = true

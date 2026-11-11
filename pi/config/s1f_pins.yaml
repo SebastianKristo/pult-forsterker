@@ -36,7 +36,10 @@ timing:
   hold_settings: 1.5   # volumhjul holdt = innstillinger
   hold_pair: 2.0       # BT/AirPlay holdt = paring
   hold_save: 3.0       # RADIO holdt = lagre favoritt
-  hold_reboot: 3.0     # power holdt = omstart
+  hold_reboot: 3.0     # power sluppet etter 3–10 s = omstart
+  hold_reset_warn: 7.0 # fra 7 s viser skjermen «Tilbakestill»
+  hold_reset: 10.0     # power holdt i 10 s = fabrikkinnstillinger
+  usb_show: 1.8        # USB i standby: skjerm og LED så lenge
   pair_s: 60
   bt_blink: 0.35
   usb_pulse: 0.15

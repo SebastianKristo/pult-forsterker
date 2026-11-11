@@ -18,7 +18,7 @@ PIN_FILES = ["/etc/skjold/s1f_pins.yaml", os.path.join(os.path.dirname(os.path.a
              "/usr/local/share/ki-amp/s1f_pins.yaml"]
 
 DEFAULT_TIMING = {"click_window": 0.38, "hold_show": 0.35, "hold_show_radio": 0.9, "hold_settings": 1.5, "hold_pair": 2.0,
-                  "hold_save": 3.0, "hold_reboot": 3.0, "pair_s": 60, "bt_blink": 0.35, "usb_pulse": 0.15}
+                  "hold_save": 3.0, "hold_reboot": 3.0, "hold_reset_warn": 7.0, "hold_reset": 10.0, "usb_show": 1.8, "pair_s": 60, "bt_blink": 0.35, "usb_pulse": 0.15}
 
 
 def _scalar(v):
@@ -76,10 +76,14 @@ class ClickHold:
     """Én knapp: klikk (eventuelt flere innen et vindu), hold med terskel, og fremdrift for hold-ringen.
 
     multi = 1: klikk sendes straks ved slipp. multi > 1: klikk telles og sendes når vinduet går ut, eller straks når
-    maks antall er nådd. Holdes knappen forbi `hold`, sendes hold én gang og slippet ignoreres."""
+    maks antall er nådd. Holdes knappen forbi `hold`, sendes hold én gang og slippet ignoreres.
 
-    def __init__(self, name, emit, multi=1, window=0.38, hold=None, show=0.35):
+    hold2 (power): to trinn. Hold sendes da først når knappen SLIPPES etter `hold` (trinn 1, omstart), eller straks når
+    den har vært holdt i `hold2` (trinn 2, tilbakestilling). `elapsed` er sekunder knappen har vært nede."""
+
+    def __init__(self, name, emit, multi=1, window=0.38, hold=None, show=0.35, hold2=None):
         self.name, self.emit, self.multi, self.window, self.hold, self.show = name, emit, multi, window, hold, show
+        self.hold2 = hold2; self.elapsed = 0.0
         self.down = None; self.held = False; self.clicks = 0; self.deadline = 0.0; self.progress = None
 
     def press(self, t):
@@ -88,9 +92,12 @@ class ClickHold:
     def release(self, t):
         if self.down is None:
             return
-        self.down = None; self.progress = None
+        el = t - self.down
+        self.down = None; self.progress = None; self.elapsed = 0.0
         if self.held:
             self.held = False; return
+        if self.hold2 and self.hold and el >= self.hold:      # sluppet mellom hold og hold2: trinn 1
+            self.clicks = 0; self.emit("hold", self.name, 1); return
         if self.multi <= 1:
             self.emit("click", self.name, 1); return
         self.clicks += 1; self.deadline = t + self.window
@@ -100,8 +107,13 @@ class ClickHold:
     def tick(self, t):
         if self.down is not None and not self.held and self.hold:
             el = t - self.down
+            self.elapsed = el
             self.progress = round(min(1.0, el / self.hold), 3) if el >= self.show else None
-            if el >= self.hold:
+            if self.hold2:
+                if el >= self.hold2:
+                    self.held = True; self.clicks = 0; self.progress = None; self.elapsed = 0.0
+                    self.emit("hold", self.name, 2)
+            elif el >= self.hold:
                 self.held = True; self.clicks = 0; self.progress = None
                 self.emit("hold", self.name, 1)
         if self.down is None and self.clicks and t >= self.deadline:
@@ -133,11 +145,12 @@ class S1FControls:
             "aux": ClickHold("aux", e, hold=T.get("hold_routine", 2.0), show=T["hold_show"]),   # hold = rutine (valgfritt)
             "radio": ClickHold("radio", e, hold=T["hold_save"], show=T["hold_show_radio"]),
             "usb": ClickHold("usb", e, hold=T.get("hold_routine", 2.0), show=T["hold_show"]),
-            "power": ClickHold("power", e, multi=2, window=T["click_window"], hold=T["hold_reboot"], show=T["hold_show"]),
+            "power": ClickHold("power", e, multi=2, window=T["click_window"], hold=T["hold_reboot"], show=T["hold_show"], hold2=T["hold_reset"]),
             "enc": ClickHold("enc", e, multi=3, window=T["click_window"], hold=T["hold_settings"], show=T["hold_show"]),
         }
         self.overlay = None           # {"type", ..., "until"}
         self.night_flash_t0 = 0.0
+        self.usb_flash_t0 = 0.0
         self.reboot_t0 = 0.0
         self.lock = threading.RLock()
 
@@ -205,13 +218,21 @@ class S1FControls:
             else:
                 a.step_preset(1)
         elif name == "usb":
-            if inp != "usb":
+            if not st.get("power"):
+                # i standby bytter USB-knappen PC på USB-bryteren uten å slå på eller bytte lydkilde
+                a.usb_toggle()
+                now = time.monotonic()
+                self.usb_flash_t0 = now
+                self.overlay = {"type": "usb", "pc": int(st.get("usb_pc") or 1), "until": now + self.T["usb_show"]}
+            elif inp != "usb":
                 a.set_input("usb")
             else:
                 a.usb_toggle()
         elif name == "power":
             if kind == "hold":
-                self.reboot_t0 = time.monotonic(); a.power_event("long_press"); a.reboot()
+                # sluppet etter 3–10 s = omstart · holdt i 10 s = tilbake til fabrikkinnstillinger
+                self.reboot_t0 = time.monotonic(); a.power_event("long_press")
+                (a.factory_reset if n >= 2 else a.reboot)()
             elif n >= 2:
                 a.power_event("double_press")
                 if int(a.settings().get("dblPower", 0) or 0) == 0:
@@ -250,6 +271,11 @@ class S1FControls:
             if b.progress is not None:
                 kind = {"bt": "pair", "radio": "save", "power": "reboot", "enc": "settings"}.get(k, k)
                 hold = {"kind": kind, "p": b.progress}
+                if k == "power":       # trinnene skjermen viser: 0–3 s omstart, 3–7 s «slipp for omstart», 7–10 s tilbakestill
+                    el = b.elapsed
+                    hold.update(s=round(el, 2), stage=0 if el < self.T["hold_reboot"] else 1 if el < self.T["hold_reset_warn"] else 2,
+                                left=round(max(0.0, (self.T["hold_reboot"] if el < self.T["hold_reboot"] else self.T["hold_reset"]) - el), 1))
+                    if hold["stage"] == 2: hold["kind"] = "reset"
         st = self.api.state
         screen = ("settings" if self.api.smenu_is_open() else
                  ("pairing" if st.get("bt_pairing") else ("main" if st.get("power") else "standby")))
@@ -270,6 +296,8 @@ class S1FControls:
         if st.get("bt_pairing"):
             out["bt"] = level if int(t / self.T["bt_blink"]) % 2 == 0 else 0.0
         out["power"] = level if on else level * 0.15
+        if self.usb_flash_t0 and t - self.usb_flash_t0 < self.T["usb_show"]:      # PC byttet i standby
+            out["usb"] = level
         dt = t - self.night_flash_t0
         if self.night_flash_t0 and dt < 1.8:      # 3 blink ved nattmodus
             out["power"] = level if int(dt / 0.3) % 2 == 0 else 0.0

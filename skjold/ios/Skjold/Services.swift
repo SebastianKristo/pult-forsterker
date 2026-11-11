@@ -172,6 +172,9 @@ final class DeviceBrowser {
 
     private func update(_ type: String, _ found: [FoundDevice]) {
         seen[type] = found
+        // glem adressen til enheter som forsvant, så de slås opp på nytt når de kommer tilbake (kanskje med ny IP)
+        let ids = Set(seen.values.flatMap { $0 }.map(\.id))
+        hosts = hosts.filter { ids.contains($0.key) }
         publish()
         for d in found where hosts[d.id] == nil { resolve(d) }
     }
@@ -270,6 +273,8 @@ nonisolated struct DevStatus: Sendable, Equatable {
     var listen = ""
     var power = true, playing = false, paused = false, mute = false, headphones = false, lyrion = false, btPairing = false
     var volume = 0, duration = 0, position = 0, preset = 0, presetsCount = 0, btPairingLeft = 0
+    /// Volumet som gjelder nå: hodetelefonvolumet når pluggen står i (S1), ellers høyttalervolumet. Fra `eff_volume`.
+    var effVolume = 0
     var inputs: [String] = []
     var presetTitles: [String] = []
     var radioNow: RadioNow? = nil
@@ -288,7 +293,7 @@ nonisolated struct DevStatus: Sendable, Equatable {
         if coverURL.isEmpty, !s("cover").isEmpty { coverURL = "/api/cover?v=" + s("cover") }
         power = j["power"] == nil ? true : b("power"); playing = b("playing"); paused = b("paused"); mute = b("mute")
         headphones = b("headphones"); lyrion = b("lyrion"); btPairing = b("bt_pairing")
-        volume = i("volume"); duration = i("duration"); position = i("position"); preset = i("preset")
+        volume = i("volume"); effVolume = j["eff_volume"] == nil ? volume : i("eff_volume"); duration = i("duration"); position = i("position"); preset = i("preset")
         presetsCount = i("presets_count"); btPairingLeft = i("bt_pairing_left")
         inputs = (j["inputs"] as? [String]) ?? []
         presetTitles = ((j["presets"] as? [[String: Any]]) ?? []).map { s("title", $0) }

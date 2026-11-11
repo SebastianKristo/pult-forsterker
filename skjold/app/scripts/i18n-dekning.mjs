@@ -5,7 +5,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 const root = new URL('../src/', import.meta.url).pathname;
 const en = readFileSync(join(root, 'i18n/en.ts'), 'utf8');
-const dict = new Set([...en.matchAll(/^\s*'((?:[^'\\]|\\.)+)':/gm), ...en.matchAll(/, '((?:[^'\\]|\\.)+)':/g)].map((m) => m[1].replace(/\\'/g, "'")));
+const auto = readFileSync(join(root, 'i18n/en-auto.ts'), 'utf8');
+const dict = new Set([...en.matchAll(/'((?:[^'\\]|\\.)+)':\s*'/g), ...auto.matchAll(/^  '((?:[^'\\]|\\.)+)': '/gm)].map((m) => m[1].replace(/\\'/g, "'").replace(/\\\\/g, '\\')));
 const files = [];
 (function walk(d) { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) { if (f !== 'i18n') walk(p); } else if (/\.tsx?$/.test(f)) files.push(p); } })(root);
 const NO = /[æøåÆØÅ]|\b(og|ikke|eller|med|til|for|på|av|som|er|du|kan|skal|har|når|alle|ingen|velg|slå|vis|spill|hent)\b/i;
@@ -18,4 +19,4 @@ for (const f of files) {
 const ui = [...seen].filter((x) => /[A-Za-zæøåÆØÅ]/.test(x) && NO.test(x) && !/^[a-z0-9_./:-]+$/.test(x) && !/[{};=<>]|https?:|^#|px|rgba?\(/.test(x));
 const done = ui.filter((x) => dict.has(x));
 console.log(`Web-app og Touch: ${done.length} av ${ui.length} norske tekster har engelsk oversettelse (${Math.round((100 * done.length) / ui.length)} %).`);
-if (process.argv.includes('--mangler')) for (const m of ui.filter((x) => !dict.has(x)).slice(0, 500)) console.log('  ·', m);
+if (process.argv.includes('--mangler')) for (const m of ui.filter((x) => !dict.has(x))) console.log('  ·', m);

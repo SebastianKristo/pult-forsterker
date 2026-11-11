@@ -183,13 +183,10 @@ private fun MoreSheet(m: AppModel, close: () -> Unit) {
             MoreRow(Icons.plus, if (radioSt != null && m.favIndex(radioSt.name) != null) "Fjern fra Skjold-favoritter" else "Lagre i Skjold-favoritter", enabled = radioSt != null) {
                 if (radioSt != null) m.toggleFav(radioSt); close()
             }
-            MoreRow(Icons.queue, "Spill neste", enabled = m.lq != null) { Haptics.tick(); close() }
-            MoreRow(Icons.favList, "Legg til i spilleliste", enabled = m.lq != null) { Haptics.tick(); close() }
             MoreRow(Icons.search, "Søk etter artist", enabled = m.np.s.isNotBlank()) {
                 // åpner kildesiden (biblioteket som spiller, ellers Navidrome) med artisten i søkefeltet
                 m.openLib(if (m.libTrack != null) m.lib else "nd"); m.lq2 = m.np.s.substringBefore(" · ").trim(); m.full = false; close()
             }
-            MoreRow(Icons.close, "Fjern fra køen", enabled = m.lq != null) { Haptics.tick(); close() }
             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                 T("Krysstoning", sora(15f), Modifier.weight(1f))
                 SKToggle(crossfade, onColor = C.accent) { crossfade = !crossfade }

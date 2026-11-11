@@ -1680,7 +1680,7 @@ def read_status():
         st = {**st, "title": swm["title"], "artist": swm["artist"] or st.get("artist", ""), "album": swm["album"] or "SUB/WAVE"}
         if swm["cover"].startswith(("http://", "https://")): cover = swm["cover"]
     cover_url = cover if cover.startswith(("http://", "https://")) else (f"/api/cover?v={cover}" if cover else "")
-    return {**state, "settings": public_settings(), **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
+    return {**state, "settings": public_settings(), **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "eff_volume": eff_volume(), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": device_id(), "presets": extra["presets"],
             "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"], "source_label": extra["source_label"], "lyrion_server": extra["lyrion_server"], "lyrion_player": extra["lyrion_player"],
@@ -1945,7 +1945,9 @@ def bt_pairing(on=True, reason=""):
     elif not on and state["bt_pairing"] and reason == "timeout":
         voice.say("bt_pairing_timeout")
     state["bt_pairing"] = bool(on)
-    _pairing_until = time.time() + 120 if on else 0
+    # S1 rev F: 60 s (pair_s i pinnefila). Ellers 2 minutter, som appene sier.
+    secs = float((globals().get("S1F_PINS") or {}).get("timing", {}).get("pair_s", 60)) if S1F else 120
+    _pairing_until = time.time() + secs if on else 0
     _pairing_known = read_status().get("bt_device", "") if on else ""
     for args in ([["power", "on"], ["pairable", "on"], ["discoverable", "on"]] if on else [["discoverable", "off"]]):
         subprocess.run(["bluetoothctl", *args], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
@@ -8599,13 +8601,56 @@ def _s1f_api():
     return NS(state=state, set_input=lambda i: set_input(i), set_power=set_power, set_mute=set_mute, set_volume=set_volume,
               transport=transport, bt_pairing=lambda on: bt_pairing(on, "knapp"), step_preset=step_preset, save_preset=save_preset,
               play_preset=lambda n: play_preset(n), usb_toggle=usbsw.toggle, usb_set=usbsw.set,
-              reboot=lambda: system_reboot(why="POWER holdt"), night_toggle=night_toggle, night_set=night_set,
+              reboot=lambda: system_reboot(why="POWER holdt"), factory_reset=lambda: factory_reset(), night_toggle=night_toggle, night_set=night_set,
               power_event=power_event, smenu_open=smenu_open, smenu_close=smenu_close, smenu_step=smenu_step,
               smenu_press=smenu_press, smenu_is_open=lambda: bool(smenu["open"]), smenu_idx=lambda: smenu["idx"] if smenu["open"] else None,
               settings=settings, ui_event=s1f_ui_event, hold_routine=lambda b: s1_hold_routine(b), set_headphones=set_headphones, led_scale=lambda: led_level(),
               settings_patch=update_settings, settings_reset=lambda: update_settings({k: v for k, v in SETTINGS_DEF.items() if k != "eq"}),
               presets_set=_s1f_presets_set, bt_forget=_bt_forget_all, speaker_test=lambda ch: threading.Thread(target=_test_tone, args=(ch,), daemon=True).start(),
               test_voice=lambda: voice.say("power_on"), preview_clock=lambda: state.update(ui_event={"name": "preview_clock", "t": time.time()}) or changed())
+
+
+def wifi_forget_all(run=subprocess.run):
+    """Sletter alle lagrede Wi-Fi-nett (NetworkManager). Returnerer antallet."""
+    n = 0
+    try:
+        out = run(["nmcli", "-t", "-f", "UUID,TYPE", "connection", "show"], capture_output=True, text=True, timeout=8).stdout
+        for line in out.splitlines():
+            uuid, _, typ = line.partition(":")
+            if typ.strip() == "802-11-wireless" and uuid:
+                run(["nmcli", "connection", "delete", "uuid", uuid], capture_output=True, timeout=8); n += 1
+    except Exception as e:
+        print("Wi-Fi glem:", e, flush=True)
+    return n
+
+
+def _wired_up():
+    for n in ("eth0", "end0"):
+        try:
+            with open(f"/sys/class/net/{n}/carrier") as f:
+                if f.read().strip() == "1":
+                    return True
+        except OSError:
+            pass
+    return False
+
+
+def factory_reset(why="POWER holdt i 10 s"):
+    """Tilbake til fabrikkinnstillinger: innstillinger og Blåtann-paringer slettes, første oppsett vises igjen, og enheten
+    starter på nytt. Virker uten nett og i standby.
+
+    Wi-Fi-nettene slettes bare når enheten kan nås etterpå: med nettverkskabel i, eller når KI_AMP_RESET_WIFI=1 er satt.
+    Oppsett-nettet med fanget portal er ikke laget ennå, og uten det ville en trådløs enhet blitt utilgjengelig."""
+    print(f"Tilbakestilling ({why})", flush=True)
+    update_settings({**{k: v for k, v in SETTINGS_DEF.items() if k != "eq"}, "setupDone": False})
+    _bt_forget_all()
+    if os.environ.get("KI_AMP_RESET_WIFI", "").strip() == "1" or _wired_up():
+        print("Tilbakestilling: slettet", wifi_forget_all(), "Wi-Fi-nett", flush=True)
+    else:
+        print("Tilbakestilling: Wi-Fi beholdes (ingen nettverkskabel – enheten ville blitt utilgjengelig)", flush=True)
+    state["night"] = False; state["mute"] = False
+    save_state()
+    system_reboot(why="Tilbakestilt")
 
 
 def _s1f_presets_set(lst):
