@@ -122,7 +122,7 @@ private fun GroupCard(m: AppModel, act: Room, members: List<Room>, gid: String?,
                     T(np.s, sora(12f, W.Regular, C.ink.copy(alpha = 0.72f)), maxLines = 1)
                 }
                 Box(
-                    Modifier.size(40.dp).clip(CircleShape).skBorder(C.ink.copy(alpha = 0.7f), 20.dp, 1.5.dp).press { m.togglePlay() },
+                    Modifier.size(48.dp).clip(CircleShape).skBorder(C.ink.copy(alpha = 0.7f), 24.dp, 1.5.dp).press(label = if (m.playing) "Pause" else "Spill") { m.togglePlay() },
                     contentAlignment = Alignment.Center,
                 ) { SKIcon(if (m.playing) Icons.pause else Icons.playRound, 15.dp, color = C.ink, fill = true) }
             }

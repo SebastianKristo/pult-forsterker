@@ -588,10 +588,19 @@ final class AppModel {
     }
 
     func next() {
-        if let lq, svc != nil { playLib(lq, (li + 1) % lq.count, keepOpen: true); return }
+        if let lq, svc != nil { playLib(lq, nextIndex(lq.count), keepOpen: true); return }
         if live { pos = 0; hold("pos", 1); liveTransport("next"); return }
         trk = (trk + 1) % 3; pos = 0
         post(["type": "next"])
+    }
+
+    /// Neste plass i køen: tilfeldig (men aldri samme låt) når «Tilfeldig» er på, ellers den neste.
+    func nextIndex(_ n: Int) -> Int {
+        guard n > 1 else { return 0 }
+        guard shuffle else { return (li + 1) % n }
+        var i = Int.random(in: 0..<(n - 1))
+        if i >= li { i += 1 }
+        return i
     }
 
     func prev() {

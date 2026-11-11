@@ -99,7 +99,7 @@ alarmen ringer («6 °C og overskyet · lyset på soverommet er på 40 %»).
 og send den til Touch:
 
 ```bash
-curl -X POST http://skjold-touch.local:8765/api/touch -H 'Content-Type: application/json' \\
+curl -X POST http://skjold-touch.local:8765/api/touch -H 'Content-Type: application/json' \
   -d '{"hub":"homey","homey_url":"http://homey-xxxx.local","homey_token":"<nøkkelen>"}'
 ```
 

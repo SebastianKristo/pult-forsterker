@@ -699,9 +699,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (live) { hold("play", 3.0); liveTransport(if (playing) "play" else "pause") } else post(mapOf("type" to "pause"))
     }
 
+    /** Neste plass i køen: tilfeldig (men aldri samme låt) når «Tilfeldig» er på, ellers den neste. */
+    fun nextIndex(n: Int): Int {
+        if (n <= 1) return 0
+        if (!shuffle) return (li + 1) % n
+        val i = (0 until n - 1).random()
+        return if (i >= li) i + 1 else i
+    }
+
     fun next() {
         val l = lq
-        if (l != null && svc != null) { playLib(l, (li + 1) % l.size, keepOpen = true); return }
+        if (l != null && svc != null) { playLib(l, nextIndex(l.size), keepOpen = true); return }
         if (live) { pos = 0; hold("pos", 1.0); liveTransport("next"); return }
         trk = (trk + 1) % 3; pos = 0
         post(mapOf("type" to "next"))
@@ -1296,7 +1304,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun libEnded() {
         val l = lq ?: return
         if (svc == null || l.isEmpty()) return
-        if (li + 1 < l.size || repeatOn) playLib(l, (li + 1) % l.size, keepOpen = true) else libStream = null
+        if (shuffle && l.size > 1) playLib(l, nextIndex(l.size), keepOpen = true)
+        else if (li + 1 < l.size || repeatOn) playLib(l, (li + 1) % l.size, keepOpen = true) else libStream = null
     }
 
     // MARK: Radio favourites (GET/POST /api/presets)

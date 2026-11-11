@@ -380,10 +380,11 @@ struct RadioFavoritesView: View {
                             Text(playing ? "Spiller" : "").sora(11, .regular, .accent2)
                             Button { m.fav = i; m.post(["type": "set", "k": "hold", "v": i]) } label: {
                                 Text("★").font(.system(size: 15)).foregroundStyle(m.fav == i ? Color.accent2 : .off)
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 32, height: 32).padding(6).contentShape(Rectangle()).padding(-6)
                             }
                             .plain()
                             .accessibilityLabel("Favoritt på radioknappen")
+                            .accessibilityAddTraits(m.fav == i ? .isSelected : [])
                         }
                     }
                 }

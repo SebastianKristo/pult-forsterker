@@ -37,10 +37,10 @@ fun HomeView(m: AppModel) {
             Modifier.height(44.dp).clip(CircleShape).background(SkG.pillBg).skCapsuleBorder(SkG.pillLine).padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Box(Modifier.size(38.dp).clip(CircleShape).press { m.sub = "radio" }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(48.dp).clip(CircleShape).press(label = "Søk i radio") { m.sub = "radio" }, contentAlignment = Alignment.Center) {
                 SKIcon("M11 18a7 7 0 1 0 0-14a7 7 0 1 0 0 14M20 20l-4-4", 20.dp, 1.8f, C.ink)
             }
-            Box(Modifier.size(38.dp).clip(CircleShape).press { m.tab = 3; m.setCat = -1 }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(48.dp).clip(CircleShape).press(label = "Innstillinger") { m.tab = 3; m.setCat = -1 }, contentAlignment = Alignment.Center) {
                 SKIcon(Icons.tabSettings, 20.dp, 1.8f, C.ink)
             }
         }

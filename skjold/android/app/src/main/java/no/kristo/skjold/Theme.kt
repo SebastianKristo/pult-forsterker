@@ -1,6 +1,8 @@
 package no.kristo.skjold
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -160,13 +162,16 @@ fun Modifier.topLine(color: Color): Modifier = this.drawBehind {
 }
 
 /** Plain press (PlainPress): no ripple, 0.75 opacity while pressed and a light haptic on touch-down. */
-fun Modifier.press(enabled: Boolean = true, onClick: () -> Unit): Modifier = composed {
+/** Trykkbar flate. `label` leses opp av TalkBack – sett den på knapper som bare har et ikon. */
+fun Modifier.press(enabled: Boolean = true, label: String? = null, onClick: () -> Unit): Modifier = composed {
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     LaunchedEffect(pressed) { if (pressed) Haptics.tap() }
     this
         .alpha(if (pressed) 0.75f else 1f)
-        .clickable(interactionSource = src, indication = null, enabled = enabled, onClick = onClick)
+        .clickable(interactionSource = src, indication = null, enabled = enabled, onClickLabel = label,
+                   role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+        .then(if (label != null) Modifier.semantics { contentDescription = label } else Modifier)
 }
 
 // MARK: - OKLCH (generated cover art)
