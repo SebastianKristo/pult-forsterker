@@ -22,6 +22,13 @@ interface Peer { id: string; navn: string; produkt: string; base: string }
 interface Alarm { time: string; days: number[]; on: boolean; name: string; smart: boolean; preset: number; url: string; volume: number; fade: number }
 interface Tile { id: string; name: string; domain: string; on: boolean; kind: 'toggle' | 'info' | 'climate' | 'camera'; text: string; tag: string; target?: number | null; pct?: number }
 interface Smart { ok: boolean; hub: string; tiles: Tile[]; scenes: { id: string; name: string }[]; error?: string; lock?: boolean }
+interface WakeNum { value: number; min: number; max: number; step: number }
+interface WakeAlarm {
+  id: string; name: string; on: boolean; days: { key: string; time: string; on: boolean; ok: boolean }[]; fade: WakeNum | null; off_after: WakeNum | null;
+  night_light: boolean | null; wake_person: boolean | null; only_if_asleep: boolean | null; next: string; next_day: string; skip: string;
+  running: boolean; phase: string; lights: number; can_test: boolean; person: { name: string; sleeping: boolean; pct: number | null; reason: string; can_set: boolean } | null;
+}
+interface WakeData { ok: boolean; alarms: WakeAlarm[]; error?: string }
 // Det denne enheten selv melder (alarm, ringeklokke, stemme, kommandoer) – uavhengig av hvilket rom som fjernstyres
 interface Dev {
   alarm?: { ringing: boolean; snoozed: boolean; name: string; time: string };
@@ -51,6 +58,7 @@ const doorToast = signal(0);
 const unlocked = signal(false);
 const morning = signal('');
 const queueOpen = signal(false), talkOpen = signal(false), searchOpen = signal(false), dimId = signal('');
+const wakeData = signal<WakeData | null>(null), wakeOpen = signal(false), wakeSel = signal('');
 const editAlarm = signal(-1);      // indeksen til alarmen som redigeres (-1 = ingen)
 const dev = (): Dev => (local.value ?? {}) as Dev;
 
@@ -87,6 +95,37 @@ let saveAT = 0;
 function saveAlarms(next: Alarm[]): void {
   alarms.value = next; clearTimeout(saveAT);
   saveAT = window.setTimeout(() => { void postAt('', '/api/plugins/alarm', { enabled: true, alarms: next }).catch(() => undefined); }, 400);
+}
+// Smart vekking: vekkealarmene fra KI Søvn i Home Assistant (lys som tones opp, og om du sover)
+let wakeW = 0;
+async function loadWake(): Promise<void> {
+  const t0 = Date.now();
+  try { const r = await getAt<WakeData>('', '/api/touch/wake'); if (wakeW < t0) wakeData.value = r; } catch { /* eldre daemon */ }
+}
+function wakePatch(a: WakeAlarm, ch: Record<string, unknown>): WakeAlarm {
+  const n: WakeAlarm = { ...a, days: a.days.map((d) => ({ ...d })) };
+  for (const [k, v] of Object.entries(ch)) {
+    const d = n.days.find((x) => x.key === k || x.key + '_aktiv' === k);
+    if (d) { if (k.endsWith('_aktiv')) d.on = !!v; else d.time = String(v); }
+    else if (k === 'aktiv') n.on = !!v;
+    else if (k === 'nattlampe') n.night_light = !!v;
+    else if (k === 'vekk_person') n.wake_person = !!v;
+    else if (k === 'bare_hvis_sover') n.only_if_asleep = !!v;
+    else if (k === 'fade_opp' && n.fade) n.fade = { ...n.fade, value: Number(v) };
+    else if (k === 'av_etter' && n.off_after) n.off_after = { ...n.off_after, value: Number(v) };
+  }
+  return n;
+}
+const wakeErr = signal('');
+async function setWake(id: string, ch: Record<string, unknown>): Promise<void> {
+  const cur = wakeData.value; wakeW = Date.now() + 1500; wakeErr.value = '';
+  if (cur) wakeData.value = { ...cur, alarms: cur.alarms.map((a) => (a.id === id ? wakePatch(a, ch) : a)) };
+  try {
+    const r = await fetch(here() + '/api/touch/wake', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, set: ch }) });
+    const j = await r.json() as WakeData;
+    wakeW = Date.now();
+    if (r.ok && j.ok) wakeData.value = j; else { wakeErr.value = j.error || 'Home Assistant svarte ikke'; wakeW = 0; void loadWake(); }
+  } catch { wakeErr.value = 'Får ikke kontakt med enheten'; wakeW = 0; }
 }
 function nextAlarm(): { time: string; name: string } | null {
   const d = new Date(now.value), cur = d.getHours() * 60 + d.getMinutes(), wd = (d.getDay() + 6) % 7;
@@ -706,7 +745,7 @@ const hhmm = (m: number) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + 
 
 function AlarmPage() {
   const AL = alarms.value, nx = nextAlarm();
-  useEffect(() => { void loadAlarms(); }, []);
+  useEffect(() => { void loadAlarms(); void loadWake(); const t = setInterval(() => void loadWake(), 5000); return () => clearInterval(t); }, []);
   const setA = (i: number, p: Partial<Alarm>) => saveAlarms(AL.map((a, j) => (j === i ? { ...a, ...p } : a)));
   return (
     <section class="inn" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 18px 10px;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y">
@@ -720,17 +759,15 @@ function AlarmPage() {
               <span style={`font-family:${MONO};font-size:32px;font-weight:500;color:${fg};width:104px;flex-shrink:0`}>{a.time}</span>
               <span style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
                 <span style={`font-size:14px;font-weight:600;color:${fg};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{a.name || 'Alarm'}</span>
-                <span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{daysTxt(a.days)} · {a.smart ? 'Smart vekking' : 'Vanlig'}</span>
+                <span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{daysTxt(a.days)} · {a.smart ? 'Myk start' : 'Vanlig'}</span>
               </span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6b67" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 5l7 7-7 7" /></svg>
             </button>
             <button onClick={() => setA(i, { on: !a.on })} aria-label="Slå alarm av eller på" style="width:64px;height:54px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style={`position:relative;width:52px;height:30px;border-radius:15px;background:${a.on ? '#f0c46a' : '#2a2a2c'};transition:background .2s ease`}><span style={`position:absolute;top:3px;left:${a.on ? 25 : 3}px;width:24px;height:24px;border-radius:12px;background:#f2f2ee;transition:left .2s ease`} /></span></button>
           </div>); })}
       </div>}
-      <div style="display:flex;gap:10px;flex-shrink:0">
-        <div style="flex:1;border-radius:14px;border:1px solid #242426;background:#141415;padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#f0c46a`}>SMART VEKKING</span><span style="font-size:12px;line-height:1.4;color:#c9c9c4">Lyden starter svakt og øker over tre minutter. Har du satt opp vekkelys i appen, skrus lyset gradvis opp før alarmen.</span></div>
-        <div style="flex:1;border-radius:14px;border:1px solid #242426;background:#141415;padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#6fcf7f`}>SAMME ALARMER OVERALT</span><span style="font-size:12px;line-height:1.4;color:#c9c9c4">Alarmene er de samme her, i appen og på web. De ligger på enheten og virker uten nett.</span></div>
-      </div>
+      <WakeEntry />
+      <span style="font-size:11.5px;line-height:1.4;color:#6b6b67;padding:0 4px;flex-shrink:0">Alarmene over er de samme her, i appen og på web. De ligger på enheten og virker uten nett.</span>
     </section>
   );
 }
@@ -778,10 +815,147 @@ function AlarmEdit() {
           </div>
           <button onClick={() => set({ smart: !a.smart, fade: a.smart ? 0 : 3 })} aria-pressed={a.smart} style="min-height:48px;margin-top:2px;border:none;background:none;padding:0;display:flex;align-items:center;gap:12px;text-align:left">
             <span style={`position:relative;width:52px;height:30px;flex-shrink:0;border-radius:15px;background:${a.smart ? '#f0c46a' : '#2a2a2c'};transition:background .2s ease`}><span style={`position:absolute;top:3px;left:${a.smart ? 25 : 3}px;width:24px;height:24px;border-radius:12px;background:#f2f2ee;transition:left .2s ease`} /></span>
-            <span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:600">Smart vekking</span><span style="font-size:11.5px;color:#8b8b86">Lyden starter svakt og øker over tre minutter</span></span>
+            <span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:600">Myk start</span><span style="font-size:11.5px;color:#8b8b86">Lyden starter svakt og øker over tre minutter</span></span>
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------- smart vekking (KI Søvn i Home Assistant) ----------
+const DAG = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+const plus = (t: string, min: number) => { const [h, m] = t.split(':').map(Number) as [number, number]; return hhmm((h * 60 + m + min) % 1440); };
+function Bryter({ on, small }: { on: boolean; small?: boolean }) {
+  const w = small ? 44 : 52, h = small ? 26 : 30, k = h - 6;
+  return <span style={`position:relative;display:block;width:${w}px;height:${h}px;flex-shrink:0;border-radius:${h / 2}px;background:${on ? '#f0c46a' : '#2a2a2c'};transition:background .2s ease`}><span style={`position:absolute;top:3px;left:${on ? w - k - 3 : 3}px;width:${k}px;height:${k}px;border-radius:50%;background:#f2f2ee;transition:left .2s ease`} /></span>;
+}
+function wakeLine(a: WakeAlarm): string {
+  if (a.running) return a.phase === 'fader' ? 'Vekker nå: lyset tones opp' : 'Vekker nå: lyset er på';
+  if (!a.on) return 'Slått av';
+  if (!a.next) return 'Ingen dager er valgt';
+  return 'Neste: ' + a.next_day.toLowerCase() + ' ' + a.next;
+}
+/** Inngangen på Alarm-siden: viser neste smarte vekking, eller forklarer hva som mangler. */
+function WakeEntry() {
+  const W = wakeData.value, kort = 'border-radius:14px;border:1px solid #242426;background:#141415;flex-shrink:0';
+  const kick = <span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#f0c46a`}>SMART VEKKING</span>;
+  if (!W) return null;
+  if (!W.alarms.length) return (
+    <div style={kort + ';padding:12px 14px;display:flex;flex-direction:column;gap:4px'}>{kick}
+      <span style="font-size:12.5px;line-height:1.45;color:#c9c9c4">{W.ok ? 'Smart vekking toner opp lyset før du skal opp, og kan vente med å vekke deg til du faktisk sover. Legg til «KI Søvn» i Home Assistant og lag en vekkealarm der, så dukker den opp her.' : W.error}</span>
+    </div>);
+  return (
+    <div style={kort + ';display:flex;flex-direction:column'}>
+      {W.alarms.map((a, i) => (
+        <div key={a.id} style={`display:flex;align-items:center;gap:6px;min-height:66px;padding:0 10px 0 4px;border-top:1px solid ${i ? '#1f1f21' : 'transparent'}`}>
+          <button class="flat" onClick={() => { wakeSel.value = a.id; wakeOpen.value = true; }} aria-label={'Smart vekking ' + a.name} style="flex:1;min-width:0;min-height:66px;border:none;background:none;padding:0 0 0 14px;display:flex;align-items:center;gap:14px;text-align:left">
+            <span style={`width:40px;height:40px;border-radius:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${a.on ? 'rgba(240,196,106,.14)' : '#1c1c1e'};color:${a.on ? '#f0c46a' : '#6b6b67'}`}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v2M4.6 6.6L6 8M19.4 6.6L18 8M3 15h2M19 15h2M7.5 15a4.5 4.5 0 0 1 9 0M3 19h18" /></svg></span>
+            <span style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="display:flex;align-items:center;gap:8px">{!i && kick}<span style={`font-size:14px;font-weight:600;color:${a.on ? '#f2f2ee' : '#8b8b86'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{a.name}</span></span>
+              <span style={`font-size:11.5px;color:${a.running ? '#f0c46a' : '#8b8b86'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{wakeLine(a)}{a.on && !a.running && a.fade ? ' · lyset tones opp over ' + a.fade.value + ' min' : ''}{a.person ? ' · ' + (a.person.name || 'Du') + (a.person.sleeping ? ' sover' : ' er våken') : ''}</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6b67" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 5l7 7-7 7" /></svg>
+          </button>
+          <button onClick={() => void setWake(a.id, { aktiv: !a.on })} aria-label={'Slå smart vekking ' + (a.on ? 'av' : 'på')} aria-pressed={a.on} style="width:64px;height:54px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0"><Bryter on={a.on} /></button>
+        </div>))}
+    </div>);
+}
+
+/** Velg tid for én dag med rullehjul, og bruk den på flere dager med ett trykk. Lagres når du trykker «Bruk». */
+function WakeTime({ a, day, onClose }: { a: WakeAlarm; day: number; onClose: () => void }) {
+  const d0 = a.days[day]!, [h0, m0] = d0.time.split(':').map(Number) as [number, number];
+  const [h, setH] = useState(h0), [m, setM] = useState(m0), [til, setTil] = useState<number[]>([day]);
+  const er = (l: number[]) => l.length === til.length && l.every((x) => til.includes(x));
+  const pill = (on: boolean) => `height:44px;padding:0 14px;border-radius:22px;border:1px solid ${on ? '#f0c46a' : '#2e2e30'};background:${on ? '#1c170d' : '#161617'};color:${on ? '#f0c46a' : '#f2f2ee'};font-size:12.5px;font-weight:600;white-space:nowrap`;
+  const bruk = () => { const ch: Record<string, unknown> = {}; for (const i of til) { ch[a.days[i]!.key] = hhmm(h * 60 + m); ch[a.days[i]!.key + '_aktiv'] = true; } void setWake(a.id, ch); onClose(); };
+  return (
+    <Sheet title={'Vekketid ' + DAG[day]!.toLowerCase()} kicker={a.name.toUpperCase()} onClose={onClose} height={300}>
+      <div style="display:flex;align-items:center;gap:22px;padding:0 18px 14px">
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <Wheel label="Time" value={h} count={24} onChange={setH} />
+          <span style={`font-family:${MONO};font-size:44px;color:#8b8b86;margin-top:-4px`}>:</span>
+          <Wheel label="Minutt" value={m} count={60} onChange={setM} />
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+          <span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>BRUK TIDEN PÅ</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <button onClick={() => setTil([day])} style={pill(er([day]))}>Bare {DAG[day]!.toLowerCase()}</button>
+            <button onClick={() => setTil([0, 1, 2, 3, 4])} style={pill(er([0, 1, 2, 3, 4]))}>Hverdager</button>
+            <button onClick={() => setTil([5, 6])} style={pill(er([5, 6]))}>Helg</button>
+            <button onClick={() => setTil([0, 1, 2, 3, 4, 5, 6])} style={pill(til.length === 7)}>Alle dager</button>
+          </div>
+          <button onClick={bruk} style="height:48px;margin-top:6px;border-radius:24px;border:none;background:#f0c46a;color:#0b0b0c;font-size:14px;font-weight:600">Bruk {hhmm(h * 60 + m)}</button>
+        </div>
+      </div>
+    </Sheet>);
+}
+
+/** Hele menyen for smart vekking: uka med tid og av/på per dag, hvordan lyset skal oppføre seg, og om du sover. */
+function WakeMenu() {
+  const W = wakeData.value, a = W?.alarms.find((x) => x.id === wakeSel.value) ?? W?.alarms[0];
+  const [pick, setPick] = useState(-1);
+  useEffect(() => { const t = setInterval(() => void loadWake(), 4000); return () => clearInterval(t); }, []);
+  if (!a) { wakeOpen.value = false; return null; }
+  const set = (ch: Record<string, unknown>) => void setWake(a.id, ch);
+  const lbl = `font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`;
+  const rad = 'min-height:48px;border:none;background:none;padding:0;display:flex;align-items:center;gap:12px;text-align:left;width:100%';
+  const steg = 'width:44px;height:44px;border-radius:22px;border:1px solid #2e2e30;background:#161617;color:#f2f2ee;font-size:20px;padding:0;flex-shrink:0';
+  const Tall = ({ k, n, title, sub }: { k: string; n: WakeNum; title: string; sub: string }) => { const s = Math.max(5, n.step), ned = Math.max(n.min, n.value <= s ? n.value - 1 : n.value - (n.value % s || s)), opp = Math.min(n.max, n.value + (s - (n.value % s))); return (
+    <div style="display:flex;align-items:center;gap:8px;min-height:48px">
+      <span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:600">{title}</span><span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{sub}</span></span>
+      <button onClick={() => set({ [k]: ned })} disabled={n.value <= n.min} aria-label={title + ' ned'} style={steg + (n.value <= n.min ? ';opacity:.35' : '')}>−</button>
+      <span style={`font-family:${MONO};font-size:15px;width:62px;text-align:center;flex-shrink:0`}>{n.value} min</span>
+      <button onClick={() => set({ [k]: opp })} disabled={n.value >= n.max} aria-label={title + ' opp'} style={steg + (n.value >= n.max ? ';opacity:.35' : '')}>+</button>
+    </div>); };
+  const Valg = ({ k, on, title, sub }: { k: string; on: boolean; title: string; sub: string }) => (
+    <button onClick={() => set({ [k]: !on })} aria-pressed={on} style={rad}><Bryter on={on} /><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:14px;font-weight:600">{title}</span><span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{sub}</span></span></button>);
+  const p = a.person, nextDay = a.days.find((d) => DAG[a.days.indexOf(d)] === a.next_day);
+  const info = wakeErr.value || a.skip || (a.running ? (a.phase === 'fader' ? 'Vekker nå. Lyset tones opp.' : 'Vekker nå. Lyset er på.') : !a.on ? 'Smart vekking er slått av.' : !a.next ? 'Ingen dager er valgt.' : `Neste: ${a.next_day.toLowerCase()} ${a.next}.` + (a.fade && a.lights ? ` Lyset er fullt ${plus(a.next, a.fade.value)}.` : ''));
+  return (
+    <div class="inn" style="position:absolute;inset:52px 0 0 0;z-index:6;background:#0b0b0c;display:flex;flex-direction:column;padding:8px 18px 10px 6px;box-sizing:border-box;gap:8px">
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button onClick={() => { wakeOpen.value = false; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
+        <span style="font-size:20px;font-weight:600;white-space:nowrap">Smart vekking</span>
+        {(W?.alarms.length ?? 0) > 1 ? <div style="display:flex;gap:6px;margin-left:8px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x;min-width:0">{W!.alarms.map((x) => <button key={x.id} onClick={() => { wakeSel.value = x.id; }} style={`height:36px;padding:0 13px;border-radius:18px;border:1px solid ${x.id === a.id ? '#f0c46a' : '#2e2e30'};background:${x.id === a.id ? '#1c170d' : '#161617'};color:${x.id === a.id ? '#f0c46a' : '#f2f2ee'};font-size:12.5px;font-weight:600;white-space:nowrap;flex-shrink:0`}>{x.name}</button>)}</div>
+          : <span style={lbl + ';margin-left:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'}>{a.name.toUpperCase()}</span>}
+        <div style="flex:1" />
+        <button onClick={() => set({ aktiv: !a.on })} aria-pressed={a.on} aria-label={'Slå smart vekking ' + (a.on ? 'av' : 'på')} style="height:44px;border:none;background:none;padding:0 4px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style={`font-size:12.5px;font-weight:600;color:${a.on ? '#f0c46a' : '#8b8b86'}`}>{a.on ? 'På' : 'Av'}</span><Bryter on={a.on} /></button>
+      </div>
+      <div style={`display:flex;gap:6px;padding-left:12px;flex-shrink:0;opacity:${a.on ? 1 : .5};transition:opacity .2s ease`}>
+        {a.days.map((d, i) => { const nx = a.on && d === nextDay; return (
+          <div key={d.key} style={`flex:1;min-width:0;border-radius:14px;border:1px solid ${nx ? '#d9a441' : '#242426'};background:${d.on ? '#161617' : '#101011'};display:flex;flex-direction:column;align-items:center;overflow:hidden`}>
+            <button class="flat" onClick={() => setPick(i)} aria-label={'Endre tiden for ' + DAG[i]!.toLowerCase() + ', nå ' + d.time} style="width:100%;height:60px;border:none;background:none;padding:6px 0 0;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:${nx ? '#f0c46a' : '#8b8b86'}`}>{DN[i]!.toUpperCase()}</span>
+              <span style={`font-family:${MONO};font-size:20px;font-weight:500;color:${d.on ? '#f2f2ee' : '#55554f'}`}>{d.time}</span>
+            </button>
+            <button onClick={() => set({ [d.key + '_aktiv']: !d.on })} aria-pressed={d.on} aria-label={DAG[i] + (d.on ? ' på' : ' av')} style="width:100%;height:44px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center"><Bryter on={d.on} small /></button>
+          </div>); })}
+      </div>
+      <span style={`font-size:12.5px;color:${wakeErr.value ? '#e05a4a' : a.running || a.skip ? '#f0c46a' : '#8b8b86'};padding-left:12px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{info}</span>
+      <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 26px;padding-left:12px;align-content:start;overflow-y:auto;scrollbar-width:none;touch-action:pan-y">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style={lbl}>LYSET</span>
+          {a.fade && Tall({ k: 'fade_opp', n: a.fade, title: 'Tones opp over', sub: 'Fra svakt til fullt lys' })}
+          {a.off_after && Tall({ k: 'av_etter', n: a.off_after, title: 'Slukkes etter', sub: a.off_after.value ? 'Etter at lyset er fullt' : 'Lyset blir stående på' })}
+          {a.night_light !== null && Valg({ k: 'nattlampe', on: a.night_light, title: 'Nattlampe', sub: 'Ta med nattlampen i vekkingen' })}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style={lbl}>SØVN</span>
+          {a.only_if_asleep !== null && Valg({ k: 'bare_hvis_sover', on: a.only_if_asleep, title: 'Bare hvis jeg sover', sub: 'Hopper over når du allerede er oppe' })}
+          {a.wake_person !== null && Valg({ k: 'vekk_person', on: a.wake_person, title: 'Marker meg som våken', sub: 'Når lyset er tonet helt opp' })}
+          {p && <div style="display:flex;align-items:center;gap:10px;min-height:48px">
+            <span style={`width:10px;height:10px;border-radius:50%;margin:0 4px 0 21px;flex-shrink:0;background:${p.sleeping ? '#7c8cf0' : '#6fcf7f'}`} />
+            <span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;margin-left:17px"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{(p.name || 'Du') + (p.sleeping ? ' sover' : ' er våken')}</span><span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{p.pct !== null ? p.pct + ' % sikker på søvn' : 'Fra KI Søvn'}</span></span>
+            {p.can_set && <button onClick={() => set({ [p.sleeping ? 'sett_vaken' : 'sett_sover']: true })} style="height:40px;padding:0 14px;border-radius:20px;border:1px solid #2e2e30;background:#161617;font-size:12.5px;font-weight:600;white-space:nowrap;flex-shrink:0">{p.sleeping ? 'Jeg er våken' : 'God natt'}</button>}
+          </div>}
+        </div>
+      </div>
+      {a.can_test && <div style="display:flex;align-items:center;gap:10px;padding-left:12px;flex-shrink:0">
+        <span style="flex:1;font-size:11.5px;color:#6b6b67;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{a.lights ? a.lights + ' lys er med. Hvilke lys velger du i Home Assistant.' : 'Ingen lys er valgt. Velg lys i Home Assistant.'}</span>
+        <button onClick={() => set({ [a.running ? 'stopp' : 'test']: true })} style={`height:44px;padding:0 20px;border-radius:22px;border:1px solid ${a.running ? '#7a2a20' : '#2e2e30'};background:${a.running ? 'rgba(224,90,74,.12)' : '#161617'};color:${a.running ? '#e05a4a' : '#f2f2ee'};font-size:12.5px;font-weight:600;flex-shrink:0`}>{a.running ? 'Stopp vekkingen' : 'Prøv vekkingen nå'}</button>
+      </div>}
+      {pick >= 0 && <WakeTime a={a} day={pick} onClose={() => setPick(-1)} />}
     </div>
   );
 }
@@ -949,7 +1123,7 @@ function App() {
       <nav style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;background:#101011;border-right:1px solid #1f1f21">
         <div style="display:flex;gap:2.5px;align-items:flex-end;height:26px;margin-bottom:4px">{[14, 20, 26, 20, 14].map((h, i) => <div key={i} style={`width:4px;height:${h}px;border-radius:2px;background:#f0c46a`} />)}</div>
         {NAV.map(([k, label]) => { const on = cur === k; return (
-          <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; dimId.value = ''; editAlarm.value = -1; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
+          <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; dimId.value = ''; editAlarm.value = -1; wakeOpen.value = false; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={IC[k]} /></svg>
             <span style={`font-size:9px;font-weight:${on ? 600 : 400}`}>{label}</span>
           </button>); })}
@@ -1002,6 +1176,7 @@ function App() {
           </div>
         </>}
         {editAlarm.value >= 0 && cur === 'alarm' && <AlarmEdit />}
+        {wakeOpen.value && cur === 'alarm' && <WakeMenu />}
         {searchOpen.value && cur === 'lib' && <Search />}
         {queueOpen.value && cur === 'now' && <QueueSheet />}
         {!!dimId.value && cur === 'smart' && <DimSheet />}
@@ -1021,7 +1196,7 @@ function App() {
 // Til skjermbilder og test: window.__touch.screen('home') osv.
 (window as unknown as { __touch: unknown }).__touch = {
   screen: (k: Scr) => { scr.value = k; }, lib: (i: number) => { lib.value = i; }, standby: goIdle, wake, boot: runBoot,
-  editAlarm: (i: number) => { editAlarm.value = i; },
+  editAlarm: (i: number) => { editAlarm.value = i; }, wake2: (o: boolean) => { wakeOpen.value = o; void loadWake(); },
   intercom: (o: boolean) => { talkOpen.value = o; }, search: (o: boolean) => { searchOpen.value = o; }, queue: (o: boolean) => { queueOpen.value = o; },
   skipBoot: () => { bootT.forEach(clearTimeout); started = true; boot.value = { on: false, step: 9, op: 0 }; }, rooms: (o: boolean) => { roomsOpen.value = o; },
   // de samme inngangene som i designet: alarm, ringeklokke, nattmodus og stemme

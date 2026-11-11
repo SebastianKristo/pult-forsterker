@@ -10,6 +10,7 @@ Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/d
 |---|---|
 | `index.html` | Forside |
 | `s1/`, `node/`, `touch/`, `rost/`, `core/` | Produktsidene (hero-zoom, sticky bildesekvens, kilder, integrasjoner, spesifikasjoner). `touch/` har også en 3D-modell med `<model-viewer>` |
+| `spole/` | Skjold Spole, kassettspilleren fra `kabinett/kassett/` (NFC-kassetter, spoler som går rundt). `/kassett/` sender videre hit; `kassett/del/` er delesiden appen lenker til |
 | `stav/` | Skjold Stav, fjernkontrollen fra `kabinett/fjernkontroll/` (med Skjold Dokk). Et byggeprosjekt som ikke er bygget eller testet ennå; siden sier det |
 | `programvare/`, `sammenlign/`, `stotte/`, `om/` | Øvrige sider |
 | `takk/`, `takk/feil/` | Svarsider for skjemaet uten JavaScript |

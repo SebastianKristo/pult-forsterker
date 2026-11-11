@@ -341,6 +341,141 @@ def home_calendar(events: list, today, tz=None) -> dict | None:
             "items": [((t + " ") if t else "") + n[:40] for d, t, n in rows if d == d0][:2]}
 
 
+# ------------------------------------------------------------------ smart vekking (KI Søvn i Home Assistant)
+# Integrasjonen ki_sovn lager en «vekkealarm» med én tid og én bryter per ukedag, og kan vite om personen sover.
+# Touch finner den via attributtet integrasjon = ki_sovn, og styrer bare entitetene den fant.
+WAKE_DAYS = ("mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lordag", "sondag")
+WAKE_SWITCHES = ("aktiv", "nattlampe", "vekk_person", "bare_hvis_sover")
+WAKE_NUMBERS = ("fade_opp", "av_etter")
+WAKE_BUTTONS = ("test", "stopp")
+WAKE_SKIP = {"betingelser": "Hoppes over nå: betingelsene i Home Assistant er ikke oppfylt",
+             "våken": "Hoppes over hvis du allerede er våken"}
+
+
+def _hm(v) -> str:
+    """«07:00:00» → «07:00». Ugyldig tid gir tom tekst."""
+    p = str(v or "").split(":")
+    try:
+        h, m = int(p[0]), int(p[1])
+    except (ValueError, IndexError):
+        return ""
+    return f"{h:02d}:{m:02d}" if 0 <= h < 24 and 0 <= m < 60 else ""
+
+
+def wake_find(states: list) -> list:
+    """Alle vekkealarmene fra ki_sovn i en liste med HA-tilstander, klare for skjermen."""
+    by = {s.get("entity_id", ""): s for s in states if isinstance(s, dict)}
+
+    def st(eid):
+        s = by.get(eid)
+        return s if s and s.get("state") not in (None, "unavailable", "unknown") else None
+
+    out = []
+    for eid, s in sorted(by.items()):
+        a = s.get("attributes") or {}
+        if not eid.startswith("sensor.") or a.get("integrasjon") != "ki_sovn" or a.get("type") != "vekking":
+            continue
+        base = eid.split(".", 1)[1]
+        base = base[:-len("_neste_alarm")] if base.endswith("_neste_alarm") else str(a.get("prefix") or base)
+        ent = {}
+        for k in WAKE_SWITCHES:
+            ent[k] = f"switch.{base}_{k}"
+        for d in WAKE_DAYS:
+            ent[d] = f"time.{base}_{d}"
+            ent[d + "_aktiv"] = f"switch.{base}_{d}_aktiv"
+        for k in WAKE_NUMBERS:
+            ent[k] = f"number.{base}_{k}"
+        for k in WAKE_BUTTONS:
+            ent[k] = f"button.{base}_{k}"
+        ent = {k: v for k, v in ent.items() if v in by}
+        on = lambda k: (st(ent.get(k, "")) or {}).get("state") == "on"       # noqa: E731
+
+        def num(k, dflt):
+            x = st(ent.get(k, ""))
+            if not x:
+                return None
+            xa = x.get("attributes") or {}
+            try:
+                return {"value": int(float(x["state"])), "min": int(float(xa.get("min", 1))), "max": int(float(xa.get("max", dflt))),
+                        "step": max(1, int(float(xa.get("step", 1))))}
+            except (TypeError, ValueError):
+                return None
+
+        days = [{"key": d, "time": _hm((st(ent.get(d, "")) or {}).get("state")) or "07:00", "on": on(d + "_aktiv"),
+                 "ok": d in ent and d + "_aktiv" in ent} for d in WAKE_DAYS]
+        run = st(f"binary_sensor.{base}_kjorer")
+        person = None
+        ps = st(str(a.get("person") or ""))
+        if ps:
+            pa = ps.get("attributes") or {}
+            pb = ps["entity_id"].split(".", 1)[1]
+            pb = pb[:-len("_sover")] if pb.endswith("_sover") else pb
+            try:
+                pct = round(float(pa.get("sannsynlighet")))
+            except (TypeError, ValueError):
+                pct = None
+            person = {"name": str(pa.get("navn") or "")[:24], "sleeping": ps["state"] == "on", "pct": pct,
+                      "reason": str(pa.get("årsak") or "")[:60],
+                      "can_set": f"button.{pb}_sett_sover" in by and f"button.{pb}_sett_vaken" in by, "_base": pb}
+        nxt = s.get("state") if _hm(s.get("state")) else ""
+        out.append({"id": base, "name": str(a.get("navn") or base)[:24], "on": on("aktiv"), "days": days,
+                    "fade": num("fade_opp", 60), "off_after": num("av_etter", 240),
+                    "night_light": on("nattlampe") if "nattlampe" in ent else None,
+                    "wake_person": on("vekk_person") if "vekk_person" in ent else None,
+                    "only_if_asleep": on("bare_hvis_sover") if "bare_hvis_sover" in ent else None,
+                    "next": nxt, "next_day": str(a.get("neste_dag") or "") if nxt else "",
+                    "skip": WAKE_SKIP.get(str(a.get("hopper_over") or ""), ""),
+                    "running": bool(run and run["state"] == "on"), "phase": str(((run or {}).get("attributes") or {}).get("fase") or ""),
+                    "lights": len(a.get("lys") or []), "person": person, "can_test": "test" in ent and "stopp" in ent, "_ent": ent})
+    return out
+
+
+def wake_calls(alarm: dict, changes: dict) -> list:
+    """Endringer fra skjermen → tjenestekall til HA: [(domene, tjeneste, data)]. Ukjente nøkler og verdier gir ValueError."""
+    ent, calls = alarm["_ent"], []
+    for k, v in changes.items():
+        if k in ("sett_sover", "sett_vaken"):
+            p = alarm.get("person")
+            if not (p and p.get("can_set")):
+                raise ValueError("vekkealarmen har ingen person å sette")
+            calls.append(("button", "press", {"entity_id": f"button.{p['_base']}_{k}"}))
+            continue
+        eid = ent.get(k)
+        if not eid:
+            raise ValueError(f"ukjent innstilling: {k}"[:60])
+        if k in WAKE_BUTTONS:
+            calls.append(("button", "press", {"entity_id": eid}))
+        elif k in WAKE_DAYS:
+            t = _hm(v)
+            if not t:
+                raise ValueError("tiden må være TT:MM")
+            calls.append(("time", "set_value", {"entity_id": eid, "time": t + ":00"}))
+        elif k in WAKE_NUMBERS:
+            n = alarm["fade" if k == "fade_opp" else "off_after"] or {"min": 1, "max": 240}
+            try:
+                x = int(v)
+            except (TypeError, ValueError):
+                raise ValueError("verdien må være et tall") from None
+            calls.append(("number", "set_value", {"entity_id": eid, "value": max(n["min"], min(n["max"], x))}))
+        else:
+            if not isinstance(v, bool):
+                raise ValueError("verdien må være true eller false")
+            calls.append(("switch", "turn_on" if v else "turn_off", {"entity_id": eid}))
+    if not calls:
+        raise ValueError("ingen endringer")
+    return calls
+
+
+def wake_public(alarms: list) -> list:
+    out = []
+    for a in alarms:
+        a = {k: v for k, v in a.items() if not k.startswith("_")}
+        if a.get("person"):
+            a["person"] = {k: v for k, v in a["person"].items() if not k.startswith("_")}
+        out.append(a)
+    return out
+
+
 def set_backlight(pct: int, root: str = "/sys/class/backlight") -> bool:
     """Bakgrunnslys 0–100 %. Skjermer uten styrbart lys gir False, og skjermen dimmes da bare i grensesnittet."""
     pct = max(0, min(100, int(pct)))
@@ -421,6 +556,7 @@ class Touch:
         self.voice = {"state": "idle", "text": "", "reply": "", "t": 0.0}
         self._auto = {"t": 0.0, "tiles": [], "scenes": []}
         self._cache = {"t": 0.0, "data": None}
+        self._wake = {"t": 0.0, "data": None}
 
     # --- oppsett
     def save(self, body: dict) -> dict:
@@ -552,6 +688,35 @@ class Touch:
         self._call(*service_for(eid, action, tgt, lo or 5.0, hi or 30.0, value))
         time.sleep(0.25)          # gi HA et øyeblikk, så svaret viser den nye tilstanden
         return self.smart(fresh=True)
+
+    # --- smart vekking (KI Søvn)
+    def _wake_load(self) -> list:
+        return wake_find(self._get("/api/states", 10))
+
+    def wake(self, fresh: bool = False) -> dict:
+        """Vekkealarmene fra KI Søvn i Home Assistant. Hurtiglagres i 3 s."""
+        now = time.time()
+        if not fresh and self._wake["data"] and now - self._wake["t"] < 3:
+            return self._wake["data"]
+        url, tok = self.ha()
+        if not (url and tok):
+            out = {"ok": False, "alarms": [], "error": "Koble til Home Assistant i appen: Innstillinger → Dørklokke → adresse og token."}
+        else:
+            try:
+                out = {"ok": True, "alarms": wake_public(self._wake_load())}
+            except Exception as e:
+                out = {"ok": False, "alarms": [], "error": "Får ikke kontakt med Home Assistant: " + str(e)[:120]}
+        self._wake = {"t": now, "data": out}
+        return out
+
+    def wake_set(self, wid: str, changes: dict) -> dict:
+        al = next((a for a in self._wake_load() if a["id"] == wid), None)
+        if not al:
+            raise ValueError("ukjent vekkealarm")
+        for c in wake_calls(al, changes):
+            self._call(*c)
+        time.sleep(0.3)
+        return self.wake(fresh=True)
 
     def unlock(self) -> dict:
         eid = self.cfg["lock_entity"]
@@ -735,6 +900,20 @@ def routes(touch: Touch):
                 return fail("Home Assistant svarte ikke: " + str(e)[:120], 502)
         return web.json_response(await bg(touch.smart))
 
+    async def h_wake(r):
+        if r.method == "POST":
+            b = await body(r)
+            ch = b.get("set")
+            try:
+                if not isinstance(ch, dict):
+                    raise ValueError("set må være et objekt")
+                return web.json_response(await bg(touch.wake_set, str(b.get("id") or ""), ch))
+            except (ValueError, TypeError) as e:
+                return fail(e)
+            except Exception as e:
+                return fail("Home Assistant svarte ikke: " + str(e)[:120], 502)
+        return web.json_response(await bg(touch.wake))
+
     async def h_unlock(_r):
         try:
             return web.json_response(await bg(touch.unlock))
@@ -790,6 +969,6 @@ def routes(touch: Touch):
         return web.json_response({"ok": await bg(set_backlight, lvl), "level": max(0, min(100, lvl))})
 
     return [("GET", "/api/touch", h_touch), ("POST", "/api/touch", h_touch), ("GET", "/api/touch/smart", h_smart),
-            ("POST", "/api/touch/smart", h_smart), ("POST", "/api/touch/unlock", h_unlock), ("GET", "/api/touch/morning", h_morning),
+            ("POST", "/api/touch/smart", h_smart), ("GET", "/api/touch/wake", h_wake), ("POST", "/api/touch/wake", h_wake), ("POST", "/api/touch/unlock", h_unlock), ("GET", "/api/touch/morning", h_morning),
             ("GET", "/api/alarm", h_alarm), ("POST", "/api/alarm", h_alarm), ("GET", "/api/touch/voice", h_voice),
             ("POST", "/api/touch/voice", h_voice), ("POST", "/api/touch/cmd", h_cmd), ("POST", "/api/touch/backlight", h_backlight)]
