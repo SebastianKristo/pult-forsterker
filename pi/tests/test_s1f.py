@@ -67,7 +67,8 @@ def test_double_press_off_setting_only_sends_event():
 def test_power_hold_reboots_and_shows_ring():
     a, c = mk()
     c.press("power", 0.0); c.tick(0.2); assert c.ui["hold"] is None
-    c.tick(1.5); assert c.ui["hold"] == {"kind": "reboot", "p": 0.5}
+    c.tick(1.5); h = c.ui["hold"]
+    assert (h["kind"], h["p"], h["stage"], h["left"]) == ("reboot", 0.5, 0, 1.5)
     c.tick(3.0); c.release("power", 3.1); c.tick(4.0)
     assert ("reboot",) in a.calls and not any(x[0] == "set_power" for x in a.calls)
 
@@ -171,3 +172,55 @@ def test_design_state():
     d = s1.design_state(st, {"led": 0})
     assert (d["input"], d["aux"], d["usb"], d["preset"], d["vol"], d["muted"], d["night"]) == (1, 1, 1, 2, 12, True, True)
     assert d["presets"] == ["P1", "P3"] and d["set"] == {"led": 0}
+
+
+# --- rev F-prompten: power i tre trinn, tilbakestilling og USB i standby ---
+def test_power_slipp_etter_3s_er_omstart_ikke_mens_den_holdes():
+    a, c = mk()
+    c.press("power", 0.0); c.tick(3.5)
+    assert not any(x[0] in ("reboot", "factory_reset") for x in a.calls)      # ingenting skjer før knappen slippes
+    assert c.ui["hold"]["kind"] == "reboot" and c.ui["hold"]["stage"] == 1
+    c.release("power", 5.0)
+    assert ("reboot",) in a.calls and ("factory_reset",) not in a.calls
+
+
+def test_power_10s_er_tilbakestilling():
+    a, c = mk()
+    c.press("power", 0.0); c.tick(8.0)
+    assert c.ui["hold"]["kind"] == "reset" and c.ui["hold"]["stage"] == 2 and c.ui["hold"]["left"] == 2.0
+    c.tick(10.01)
+    assert ("factory_reset",) in a.calls
+    c.release("power", 11.0)                                                  # slippet etterpå gjør ikke noe mer
+    assert sum(1 for x in a.calls if x[0] in ("reboot", "factory_reset")) == 1
+
+
+def test_power_kort_trykk_er_fortsatt_standby():
+    a, c = mk()
+    click(c, "power", 0.0, 0.2); c.tick(0.7)
+    assert ("set_power", False) in a.calls and ("reboot",) not in a.calls
+
+
+def test_tilbakestilling_virker_i_standby():
+    a, c = mk(power=False)
+    c.press("power", 0.0); c.tick(10.5)
+    assert ("factory_reset",) in a.calls
+
+
+def test_usb_i_standby_bytter_pc_uten_aa_slaa_paa():
+    import time
+    a, c = mk(power=False, input="airplay", usb_pc=2)
+    t0 = time.monotonic()
+    click(c, "usb", t0)
+    assert ("usb_toggle",) in a.calls
+    assert not any(x[0] in ("set_power", "set_input") for x in a.calls)
+    assert c.ui["overlay"] == {"type": "usb", "pc": 2}
+    assert c.led_frame(t0 + 0.5, a.state)["usb"] > 0                             # LED-ringen lyser mens skjermen viser PC n
+    assert c.led_frame(t0 + 2.5, a.state)["usb"] == 0
+    c.tick(t0 + 2.5); assert c.ui["overlay"] is None
+
+
+def test_usb_naar_paa_er_som_foer():
+    a, c = mk(input="airplay")
+    click(c, "usb", 0.0)
+    assert ("set_input", "usb") in a.calls and ("usb_toggle",) not in a.calls
+
