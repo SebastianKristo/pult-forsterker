@@ -1,6 +1,6 @@
 // Skjold Touch – felles byggeklosser laget for fingre: glidebryter, skjermtastatur og ark som glir opp.
 import type { ComponentChildren } from 'preact';
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 
 export const MONO = "'IBM Plex Mono',monospace";
 
@@ -87,3 +87,36 @@ export function useLongPress(fn: () => void): { on: Record<string, (e: PointerEv
     fired: () => hit.current
   };
 }
+
+const WH = 62;      // høyden på én rad i hjulet
+/** Rullehjul for tall (time, minutt): dra eller sveip, og det stopper på nærmeste verdi. Trykk på raden over eller under
+ *  for å gå ett steg. Tre rader vises, den midterste er valgt. */
+export function Wheel({ value, count, onChange, label, pad = 2 }: { value: number; count: number; onChange: (v: number) => void; label: string; pad?: number }) {
+  const el = useRef<HTMLDivElement>(null), t = useRef(0), own = useRef(value);
+  useEffect(() => { if (el.current && own.current !== value) { own.current = value; el.current.scrollTop = value * WH; } }, [value]);
+  useEffect(() => { if (el.current) el.current.scrollTop = value * WH; }, []);
+  const settle = () => {
+    clearTimeout(t.current);
+    t.current = window.setTimeout(() => {
+      if (!el.current) return;
+      const v = Math.max(0, Math.min(count - 1, Math.round(el.current.scrollTop / WH)));
+      if (v !== own.current) { own.current = v; onChange(v); }
+    }, 90);
+  };
+  const go = (v: number) => { if (el.current && v >= 0 && v < count) el.current.scrollTo({ top: v * WH, behavior: 'smooth' }); };
+  return (
+    <div style={`position:relative;width:118px;height:${WH * 3}px;flex-shrink:0`}>
+      <div style={`position:absolute;left:0;right:0;top:${WH}px;height:${WH}px;border-radius:14px;background:#1c170d;border:1px solid #d9a441;pointer-events:none`} />
+      <div ref={el} role="spinbutton" aria-label={label} aria-valuemin={0} aria-valuemax={count - 1} aria-valuenow={value} onScroll={settle}
+        style={`position:relative;height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;touch-action:pan-y;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent)`}>
+        <div style={`height:${WH}px`} />
+        {Array.from({ length: count }, (_, i) => (
+          <button key={i} class="flat" onClick={() => go(i)} tabIndex={-1}
+            style={`display:block;width:100%;height:${WH}px;scroll-snap-align:center;border:none;background:none;padding:0;font-family:${MONO};font-size:44px;font-weight:500;color:${i === value ? '#f2f2ee' : '#6b6b67'}`}>{String(i).padStart(pad, '0')}</button>
+        ))}
+        <div style={`height:${WH}px`} />
+      </div>
+    </div>
+  );
+}
+
