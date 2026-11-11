@@ -14,7 +14,7 @@ import { li, lq, lsvc, playNd } from '../lib/library';
 import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 import { groupAll } from '../lib/groups';
 import { canSeek, seekTo } from '../screens/player';
-import { Keyboard, MONO, Sheet, Slider, useLongPress } from './ui';
+import { Keyboard, MONO, Sheet, Slider, useLongPress, Wheel } from './ui';
 
 type Scr = 'now' | 'home' | 'smart' | 'alarm' | 'lib' | 'rooms' | 'set';
 const START: (Scr | 'standby')[] = ['now', 'home', 'smart', 'alarm', 'lib', 'rooms', 'set', 'standby'];
@@ -51,6 +51,7 @@ const doorToast = signal(0);
 const unlocked = signal(false);
 const morning = signal('');
 const queueOpen = signal(false), talkOpen = signal(false), searchOpen = signal(false), dimId = signal('');
+const editAlarm = signal(-1);      // indeksen til alarmen som redigeres (-1 = ingen)
 const dev = (): Dev => (local.value ?? {}) as Dev;
 
 // Kiosken kjører på enheten selv: start alltid på denne enheten (en lagret host fra fjernstyring nullstilles).
@@ -695,43 +696,35 @@ function TileCard({ t }: { t: Tile }) {
 
 // ---------- vekkeklokke ----------
 const DN = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
-const DAYSETS: number[][] = [[0, 1, 2, 3, 4], [5, 6], [0, 1, 2, 3, 4, 5, 6]];
 function daysTxt(d: number[]): string {
   if (!d.length || d.length === 7) return 'Hver dag';
   if (d.length === 5 && d.every((x) => x < 5)) return 'Hverdager';
   if (d.length === 2 && d.includes(5) && d.includes(6)) return 'Helg';
   return d.map((x) => DN[x]).join(' ');
 }
-const minOf = (t: string) => { const [h, m] = t.split(':'); return (+(h ?? 0)) * 60 + (+(m ?? 0)); };
 const hhmm = (m: number) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 
 function AlarmPage() {
   const AL = alarms.value, nx = nextAlarm();
   useEffect(() => { void loadAlarms(); }, []);
   const setA = (i: number, p: Partial<Alarm>) => saveAlarms(AL.map((a, j) => (j === i ? { ...a, ...p } : a)));
-  const chip = 'height:44px;padding:0 4px;border:none;background:none;font-size:11.5px;color:#8b8b86;white-space:nowrap;text-decoration:underline;text-decoration-color:#3a3a37;text-underline-offset:3px';
   return (
     <section class="inn" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 18px 10px;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y">
       <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:600">Vekkeklokke</span><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>{nx ? 'NESTE ALARM ' + nx.time : 'INGEN ALARMER PÅ'}</span><div style="flex:1" />
-        {AL.length < 10 && <button onClick={() => saveAlarms([...AL, { time: '08:00', days: [0, 1, 2, 3, 4], on: true, name: 'Alarm', smart: false, preset: 0, url: '', volume: 30, fade: 0 }])} style="height:44px;padding:0 16px;border-radius:22px;border:1px solid #2e2e30;background:#161617;font-size:12.5px;font-weight:600">+ Ny alarm</button>}</div>
+        {AL.length < 10 && <button onClick={() => { saveAlarms([...AL, { time: '07:00', days: [0, 1, 2, 3, 4], on: true, name: 'Alarm', smart: false, preset: 0, url: '', volume: 30, fade: 0 }]); editAlarm.value = AL.length; }} style="height:44px;padding:0 16px;border-radius:22px;border:1px solid #2e2e30;background:#161617;font-size:12.5px;font-weight:600">+ Ny alarm</button>}</div>
       {!AL.length && <span style="font-size:14px;color:#8b8b86">Ingen alarmer ennå. Trykk «Ny alarm».</span>}
       {!!AL.length && <div style="display:flex;flex-direction:column;border-radius:14px;border:1px solid #242426;background:#141415;flex-shrink:0">
-        {AL.map((a, i) => { const m = minOf(a.time), fg = a.on ? '#f2f2ee' : '#6b6b67'; return (
-          <div key={i} style={`display:flex;align-items:center;gap:8px;min-height:66px;padding:0 8px 0 10px;border-top:1px solid ${i ? '#1f1f21' : 'transparent'}`}>
-            <div style="display:flex;align-items:center">
-              <button onClick={() => setA(i, { time: hhmm((m + 1435) % 1440) })} aria-label="Fem minutter tidligere" style="width:44px;height:48px;border:none;background:none;color:#8b8b86;font-size:20px">‹</button>
-              <span style={`font-family:${MONO};font-size:30px;font-weight:500;color:${fg};width:92px;text-align:center`}>{a.time}</span>
-              <button onClick={() => setA(i, { time: hhmm((m + 5) % 1440) })} aria-label="Fem minutter senere" style="width:44px;height:48px;border:none;background:none;color:#8b8b86;font-size:20px">›</button>
-            </div>
-            <span style="display:flex;flex-direction:column;flex:1;min-width:0">
-              <span style={`font-size:14px;font-weight:600;color:${fg};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{a.name || 'Alarm'}</span>
-              <span style="display:flex;gap:6px;margin-top:-10px;margin-bottom:-12px">
-                <button onClick={() => { const k = DAYSETS.findIndex((d) => daysTxt(d) === daysTxt(a.days)); setA(i, { days: DAYSETS[(k + 1) % DAYSETS.length]! }); }} aria-label="Bytt dager" style={chip}>{daysTxt(a.days)}</button>
-                <button onClick={() => setA(i, { smart: !a.smart, fade: a.smart ? 0 : 3 })} aria-label="Bytt mellom smart og vanlig vekking" style={chip}>{a.smart ? 'Smart vekking' : 'Vanlig'}</button>
+        {AL.map((a, i) => { const fg = a.on ? '#f2f2ee' : '#6b6b67'; return (
+          <div key={i} style={`display:flex;align-items:center;gap:6px;min-height:66px;padding:0 10px 0 4px;border-top:1px solid ${i ? '#1f1f21' : 'transparent'}`}>
+            <button class="flat" onClick={() => { editAlarm.value = i; }} aria-label={'Endre alarmen ' + a.time + ' ' + (a.name || '')} style="flex:1;min-width:0;min-height:66px;border:none;background:none;padding:0 0 0 14px;display:flex;align-items:center;gap:18px;text-align:left">
+              <span style={`font-family:${MONO};font-size:32px;font-weight:500;color:${fg};width:104px;flex-shrink:0`}>{a.time}</span>
+              <span style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style={`font-size:14px;font-weight:600;color:${fg};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{a.name || 'Alarm'}</span>
+                <span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{daysTxt(a.days)} · {a.smart ? 'Smart vekking' : 'Vanlig'}</span>
               </span>
-            </span>
-            <button onClick={() => setA(i, { on: !a.on })} aria-label="Slå alarm av eller på" style="width:60px;height:48px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style={`position:relative;width:52px;height:30px;border-radius:15px;background:${a.on ? '#f0c46a' : '#2a2a2c'};transition:background .2s ease`}><span style={`position:absolute;top:3px;left:${a.on ? 25 : 3}px;width:24px;height:24px;border-radius:12px;background:#f2f2ee;transition:left .2s ease`} /></span></button>
-            <button onClick={() => saveAlarms(AL.filter((_, j) => j !== i))} aria-label="Slett alarm" style="width:44px;height:48px;border:none;background:none;color:#6b6b67;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6b67" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 5l7 7-7 7" /></svg>
+            </button>
+            <button onClick={() => setA(i, { on: !a.on })} aria-label="Slå alarm av eller på" style="width:64px;height:54px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style={`position:relative;width:52px;height:30px;border-radius:15px;background:${a.on ? '#f0c46a' : '#2a2a2c'};transition:background .2s ease`}><span style={`position:absolute;top:3px;left:${a.on ? 25 : 3}px;width:24px;height:24px;border-radius:12px;background:#f2f2ee;transition:left .2s ease`} /></span></button>
           </div>); })}
       </div>}
       <div style="display:flex;gap:10px;flex-shrink:0">
@@ -739,6 +732,57 @@ function AlarmPage() {
         <div style="flex:1;border-radius:14px;border:1px solid #242426;background:#141415;padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#6fcf7f`}>SAMME ALARMER OVERALT</span><span style="font-size:12px;line-height:1.4;color:#c9c9c4">Alarmene er de samme her, i appen og på web. De ligger på enheten og virker uten nett.</span></div>
       </div>
     </section>
+  );
+}
+
+const NAVN = ['Alarm', 'Jobb', 'Skole', 'Helg', 'Trening', 'Lur'];
+/** Rediger én alarm: rullehjul for time og minutt, en knapp per dag, og hurtigvalg. Alt lagres med en gang. */
+function AlarmEdit() {
+  const AL = alarms.value, i = editAlarm.value, a = AL[i];
+  if (!a) return null;
+  const set = (p: Partial<Alarm>) => saveAlarms(AL.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  const [hh, mm] = a.time.split(':').map(Number) as [number, number];
+  const days = a.days.length ? a.days : [0, 1, 2, 3, 4, 5, 6];
+  const tgl = (d: number) => { const n = days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort(); if (n.length) set({ days: n }); };
+  const er = (l: number[]) => l.length === days.length && l.every((x) => days.includes(x));
+  const pill = (on: boolean) => `height:44px;padding:0 14px;border-radius:22px;border:1px solid ${on ? '#f0c46a' : '#2e2e30'};background:${on ? '#1c170d' : '#161617'};color:${on ? '#f0c46a' : '#f2f2ee'};font-size:12.5px;font-weight:600;white-space:nowrap;flex-shrink:0`;
+  const lbl = `font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`;
+  return (
+    <div class="inn" style="position:absolute;inset:52px 0 0 0;z-index:6;background:#0b0b0c;display:flex;flex-direction:column;padding:8px 18px 14px 6px;box-sizing:border-box;gap:6px">
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button onClick={() => { editAlarm.value = -1; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
+        <span style="font-size:20px;font-weight:600">Endre alarm</span>
+        <div style="flex:1" />
+        <button onClick={() => { editAlarm.value = -1; saveAlarms(AL.filter((_, j) => j !== i)); }} style="height:44px;padding:0 16px;border-radius:22px;border:1px solid #2e2e30;background:#161617;color:#e05a4a;font-size:12.5px;font-weight:600">Slett</button>
+        <button onClick={() => { editAlarm.value = -1; }} style="height:44px;padding:0 22px;border-radius:22px;border:none;background:#f0c46a;color:#0b0b0c;font-size:13px;font-weight:600">Ferdig</button>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;align-items:center;gap:26px;padding-left:12px">
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <Wheel label="Time" value={hh} count={24} onChange={(v) => set({ time: hhmm(v * 60 + mm) })} />
+          <span style={`font-family:${MONO};font-size:44px;color:#8b8b86;margin-top:-4px`}>:</span>
+          <Wheel label="Minutt" value={mm} count={60} onChange={(v) => set({ time: hhmm(hh * 60 + v) })} />
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:9px">
+          <span style={lbl}>DAGER</span>
+          <div style="display:flex;gap:6px">
+            {DN.map((n, d) => { const on = days.includes(d); return <button key={n} onClick={() => tgl(d)} aria-pressed={on} aria-label={['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'][d]} style={`width:46px;height:46px;border-radius:23px;border:1px solid ${on ? '#f0c46a' : '#2e2e30'};background:${on ? '#f0c46a' : '#161617'};color:${on ? '#0b0b0c' : '#8b8b86'};font-size:13px;font-weight:600;padding:0;flex-shrink:0`}>{n}</button>; })}
+          </div>
+          <div style="display:flex;gap:6px">
+            <button onClick={() => set({ days: [0, 1, 2, 3, 4] })} style={pill(er([0, 1, 2, 3, 4]))}>Hverdager</button>
+            <button onClick={() => set({ days: [5, 6] })} style={pill(er([5, 6]))}>Helg</button>
+            <button onClick={() => set({ days: [0, 1, 2, 3, 4, 5, 6] })} style={pill(days.length === 7)}>Hver dag</button>
+          </div>
+          <span style={lbl + ';margin-top:4px'}>NAVN</span>
+          <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x">
+            {[...new Set([a.name || 'Alarm', ...NAVN])].map((n) => <button key={n} onClick={() => set({ name: n })} style={pill((a.name || 'Alarm') === n)}>{n}</button>)}
+          </div>
+          <button onClick={() => set({ smart: !a.smart, fade: a.smart ? 0 : 3 })} aria-pressed={a.smart} style="min-height:48px;margin-top:2px;border:none;background:none;padding:0;display:flex;align-items:center;gap:12px;text-align:left">
+            <span style={`position:relative;width:52px;height:30px;flex-shrink:0;border-radius:15px;background:${a.smart ? '#f0c46a' : '#2a2a2c'};transition:background .2s ease`}><span style={`position:absolute;top:3px;left:${a.smart ? 25 : 3}px;width:24px;height:24px;border-radius:12px;background:#f2f2ee;transition:left .2s ease`} /></span>
+            <span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:600">Smart vekking</span><span style="font-size:11.5px;color:#8b8b86">Lyden starter svakt og øker over tre minutter</span></span>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -905,7 +949,7 @@ function App() {
       <nav style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;background:#101011;border-right:1px solid #1f1f21">
         <div style="display:flex;gap:2.5px;align-items:flex-end;height:26px;margin-bottom:4px">{[14, 20, 26, 20, 14].map((h, i) => <div key={i} style={`width:4px;height:${h}px;border-radius:2px;background:#f0c46a`} />)}</div>
         {NAV.map(([k, label]) => { const on = cur === k; return (
-          <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; dimId.value = ''; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
+          <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; dimId.value = ''; editAlarm.value = -1; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={IC[k]} /></svg>
             <span style={`font-size:9px;font-weight:${on ? 600 : 400}`}>{label}</span>
           </button>); })}
@@ -957,6 +1001,7 @@ function App() {
               </button>); })}
           </div>
         </>}
+        {editAlarm.value >= 0 && cur === 'alarm' && <AlarmEdit />}
         {searchOpen.value && cur === 'lib' && <Search />}
         {queueOpen.value && cur === 'now' && <QueueSheet />}
         {!!dimId.value && cur === 'smart' && <DimSheet />}
@@ -976,6 +1021,7 @@ function App() {
 // Til skjermbilder og test: window.__touch.screen('home') osv.
 (window as unknown as { __touch: unknown }).__touch = {
   screen: (k: Scr) => { scr.value = k; }, lib: (i: number) => { lib.value = i; }, standby: goIdle, wake, boot: runBoot,
+  editAlarm: (i: number) => { editAlarm.value = i; },
   intercom: (o: boolean) => { talkOpen.value = o; }, search: (o: boolean) => { searchOpen.value = o; }, queue: (o: boolean) => { queueOpen.value = o; },
   skipBoot: () => { bootT.forEach(clearTimeout); started = true; boot.value = { on: false, step: 9, op: 0 }; }, rooms: (o: boolean) => { roomsOpen.value = o; },
   // de samme inngangene som i designet: alarm, ringeklokke, nattmodus og stemme
