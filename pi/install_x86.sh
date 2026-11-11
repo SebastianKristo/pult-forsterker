@@ -86,6 +86,7 @@ id shairport-sync >/dev/null 2>&1 || useradd -r -M -g audio -s /usr/sbin/nologin
 echo "== 6/8  Lyrion + Squeezelite"
 apt-get -y install --no-install-recommends squeezelite
 systemctl disable --now squeezelite 2>/dev/null || true
+install -m 755 "$SRC/ki-squeezelite-start" /usr/local/bin/ki-squeezelite-start
 install -m 644 "$SRC/ki-squeezelite.service" /etc/systemd/system/ki-squeezelite.service
 if [ -f "$SRC/install_lyrion.sh" ] && ! systemctl list-unit-files 2>/dev/null | grep -q '^lyrionmusicserver'; then
   bash "$SRC/install_lyrion.sh" || echo "ADVARSEL: Lyrion ble ikke installert – prøv: bash pi/install_lyrion.sh" >&2

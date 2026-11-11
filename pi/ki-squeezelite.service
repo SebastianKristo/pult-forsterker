@@ -5,9 +5,8 @@ Wants=network-online.target
 
 [Service]
 EnvironmentFile=-/etc/ki-amp.env
-# -o default: dmix → CamillaDSP (loudness/volum) · -C 5: slipp lydenheten etter 5 s stillhet
-# -s KI_AMP_LMS_SERVER (Lyrion): tom = finn Lyrion automatisk på nettet
-ExecStart=/bin/sh -c 'exec /usr/bin/squeezelite -n "$${KI_AMP_NAME:-Pultforsterker}" -o radio -C 5 -m "$$(cat /sys/class/net/eth0/address 2>/dev/null || echo 00:00:00:00:00:01)" $${KI_AMP_LMS_SERVER:+-s $$KI_AMP_LMS_SERVER}'
+# Spiller-ID og argumenter settes i ki-squeezelite-start (unik ID også på Wi-Fi-enheter uten eth0)
+ExecStart=/usr/local/bin/ki-squeezelite-start
 Restart=always
 RestartSec=5
 User=root
