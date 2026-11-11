@@ -18,4 +18,4 @@ for (const f of files) {
 const ui = [...seen].filter((x) => /[A-Za-zæøåÆØÅ]/.test(x) && NO.test(x) && !/^[a-z0-9_./:-]+$/.test(x) && !/[{};=<>]|https?:|^#|px|rgba?\(/.test(x));
 const done = ui.filter((x) => dict.has(x));
 console.log(`Web-app og Touch: ${done.length} av ${ui.length} norske tekster har engelsk oversettelse (${Math.round((100 * done.length) / ui.length)} %).`);
-if (process.argv.includes('--mangler')) for (const m of ui.filter((x) => !dict.has(x)).slice(0, 500)) console.log('  ·', m);
+if (process.argv.includes('--mangler')) for (const m of ui.filter((x) => !dict.has(x))) console.log('  ·', m);

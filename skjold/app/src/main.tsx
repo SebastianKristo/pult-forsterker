@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import { startDomI18n } from './i18n/dom';
 import './styles.css';
 import { App } from './app';
 import { go, loadSettings, mode, startPolling } from './lib/store';
@@ -27,3 +28,4 @@ if (snarvei && mode.value === 'app') {
 }
 document.documentElement.lang = lang.value === 'en' ? 'en' : 'no';
 render(<App />, document.getElementById('app')!);
+startDomI18n();   // engelsk: tekstene slås opp i ordboka etter at Preact har tegnet

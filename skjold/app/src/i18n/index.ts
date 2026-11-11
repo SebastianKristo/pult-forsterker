@@ -2,15 +2,19 @@
 // vises den norske teksten – så ingenting blir tomt. Valget lagres lokalt; «auto» følger nettleseren.
 import { signal } from '@preact/signals';
 import { EN } from './en';
+import { EN_AUTO } from './en-auto';
 
 export type Lang = 'nb' | 'en';
 export type LangPref = Lang | 'auto';
 const KEY = 'skjold-lang';
 
-// «auto» er norsk inntil videre: bare ca. 5 % av tekstene er oversatt, og en halvt engelsk app ser verre ut enn en
-// helt norsk. Engelsk kan fortsatt velges under Innstillinger › Språk. Bytt tilbake til nettleserspråket når
-// `node scripts/i18n-dekning.mjs` viser høy dekning.
-function detect(): Lang { return 'nb'; }
+// «auto» følger nettleseren: norsk (bokmål/nynorsk) gir norsk, alt annet engelsk. Tekstene slås opp av i18n/dom.ts.
+function detect(): Lang {
+  try {
+    const l = (navigator.languages?.length ? navigator.languages : [navigator.language]).map((x) => (x || '').toLowerCase());
+    return l.some((x) => /^(nb|no|nn)\b/.test(x)) || !l[0] ? 'nb' : 'en';
+  } catch { return 'nb'; }
+}
 function readPref(): LangPref {
   try { const v = localStorage.getItem(KEY); return v === 'nb' || v === 'en' || v === 'auto' ? v : 'auto'; } catch { return 'auto'; }
 }
@@ -27,7 +31,7 @@ export function setLang(p: LangPref): void {
 
 /** t('Norsk tekst', {n: 3}) → oversatt tekst med {n} byttet ut. */
 export function t(nb: string, vars?: Record<string, string | number>): string {
-  let s = lang.value === 'en' ? (EN[nb] ?? nb) : nb;
+  let s = lang.value === 'en' ? (EN[nb] ?? EN_AUTO[nb] ?? nb) : nb;
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.split('{' + k + '}').join(String(v));
   return s;
 }
