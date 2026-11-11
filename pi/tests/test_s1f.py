@@ -117,7 +117,7 @@ def test_events_go_to_skjold_ui_first():
     assert a.ui == [("press", "air", 1), ("turn", "knob", -1), ("hold", "knob", 1)]
     a2, c2 = mk(); a2.consume = True   # hilsen vises / menyen er åpen: skjermen bruker hendelsen
     click(c2, "radio", 0.0); c2.rotate(1); c2.press("power", 1.0); c2.tick(4.5)
-    assert a2.calls == []
+    assert [x for x in a2.calls if x[0] != "input_event"] == []      # aktivitet telles, men ingen handling utføres
 
 
 def test_hold_status_for_screen():

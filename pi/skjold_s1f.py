@@ -157,6 +157,7 @@ class S1FControls:
     # --- inn fra maskinvaren
     def press(self, name, t=None):
         t = time.monotonic() if t is None else t
+        self._activity()
         with self.lock:
             self.btn[name].press(t)
 
@@ -165,7 +166,14 @@ class S1FControls:
         with self.lock:
             self.btn[name].release(t)
 
+    def _activity(self):
+        """Hvert trykk og hvert hakk på hjulet teller som aktivitet, så skjermen våkner fra dimming."""
+        fn = getattr(self.api, "input_event", None)
+        if fn:
+            fn()
+
     def rotate(self, d):
+        self._activity()
         with self.lock:
             if self.api.ui_event("turn", "knob", 1 if d > 0 else -1):
                 return

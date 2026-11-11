@@ -147,6 +147,43 @@ class Vekking(unittest.TestCase):
         self.assertEqual(t.morning_text(None, {"state": "off"}), "")
 
 
+class Hjemmedata(unittest.TestCase):
+    """Data til standby-stilene på S1: samme form som eksempeldataene i designet (WIDE_DEF)."""
+
+    def setUp(self):
+        from datetime import timedelta, timezone
+        self.tz = timezone(timedelta(hours=1))
+
+    def test_vaer(self):
+        w = t.home_weather({"state": "rainy", "attributes": {"temperature": 4.4, "friendly_name": "Oslo"}},
+                           [{"datetime": "2026-11-11T22:00:00+00:00", "temperature": 4.2}, {"datetime": "2026-11-11T23:00:00+00:00", "temperature": 3}], self.tz)
+        self.assertEqual(w, {"t": 4, "c": "Regn · Oslo", "hours": [["23", 4], ["00", 3]]})
+        self.assertEqual(t.home_weather({"state": "sunny", "attributes": {"temperature": 20, "friendly_name": "Forecast Home"}})["c"], "Sol")
+        self.assertIsNone(t.home_weather({"state": "unavailable", "attributes": {}}))
+        self.assertIsNone(t.home_weather(None))
+
+    def test_sol(self):
+        s = t.home_sun({"attributes": {"next_rising": "2026-11-12T07:04:00+00:00", "next_setting": "2026-11-11T15:06:00+00:00"}}, self.tz)
+        self.assertEqual(s, ["08:04", "16:06"])
+        self.assertIsNone(t.home_sun({"attributes": {}}))
+
+    def test_kalender(self):
+        from datetime import date
+        ev = [{"summary": "Middag hos mormor", "start": {"dateTime": "2026-11-12T11:00:00+00:00"}},
+              {"summary": "Fotballtrening", "start": {"dateTime": "2026-11-12T08:30:00+00:00"}},
+              {"summary": "Ferie", "start": {"date": "2026-11-14"}}, {"summary": "", "start": {"date": "2026-11-11"}}]
+        k = t.home_calendar(ev, date(2026, 11, 11), self.tz)
+        self.assertEqual(k, {"day": "I MORGEN", "items": ["09:30 Fotballtrening", "12:00 Middag hos mormor"]})
+        self.assertEqual(t.home_calendar(ev, date(2026, 11, 12), self.tz)["day"], "I DAG")
+        self.assertEqual(t.home_calendar(ev[2:3], date(2026, 11, 11), self.tz), {"day": "LØRDAG", "items": ["Ferie"]})
+        self.assertIsNone(t.home_calendar([], date(2026, 11, 11)))
+
+    def test_uten_home_assistant_gir_bare_alarm(self):
+        with tempfile.TemporaryDirectory() as d:
+            x = t.Touch({"changed": lambda: None, "ha": lambda: {}, "alarms": lambda: [{"time": "06:30", "on": True, "days": []}]}, os.path.join(d, "t.json"))
+            self.assertEqual(x.home(), {"alarm": "06:30"})
+
+
 class Skjerm(unittest.TestCase):
     def ny(self, d):
         return t.Touch({"changed": lambda: None, "ha": lambda: {}, "alarms": lambda: []}, os.path.join(d, "t.json"))

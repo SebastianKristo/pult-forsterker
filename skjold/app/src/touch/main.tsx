@@ -27,6 +27,7 @@ interface Dev {
   alarm?: { ringing: boolean; snoozed: boolean; name: string; time: string };
   doorbell?: { t: number; camera: boolean; seconds: number } | null;
   night?: { on: boolean };
+  setup_net?: { active: boolean; ssid: string; password: string; url: string; joining: string; error: string } | null;
   touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string } };
 }
 
@@ -144,7 +145,7 @@ addEventListener('contextmenu', (e) => e.preventDefault());
 setInterval(() => {
   now.value = Date.now();
   const ms = (TOUCH_STANDBY_S[settings.value.tStandby] ?? 30) * 1000;
-  if (!idle.value && !boot.value.on && !dev().alarm?.ringing && !door.value && ms > 0 && Date.now() - lastAct > ms) goIdle();
+  if (!idle.value && !boot.value.on && !dev().alarm?.ringing && !door.value && !dev().setup_net?.active && ms > 0 && Date.now() - lastAct > ms) goIdle();
   if (!boot.value.on) backlight();
 }, 1000);
 
@@ -791,6 +792,32 @@ function DoorToast() {
   );
 }
 
+// ---------- oppsett-nett (enheten har ikke nett) ----------
+function SetupNet() {
+  const n = dev().setup_net!;
+  const steg = (i: number, a: string, b: preact.ComponentChildren) => (
+    <div style="display:flex;gap:14px;align-items:flex-start">
+      <span style={`width:30px;height:30px;flex-shrink:0;border-radius:15px;background:#1c170d;border:1px solid #d9a441;color:#f0c46a;font-family:${MONO};font-size:13px;display:flex;align-items:center;justify-content:center`}>{i}</span>
+      <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;font-weight:600">{a}</span><span style="font-size:13px;line-height:1.4;color:#a8a8a3">{b}</span></span>
+    </div>);
+  const kode = `font-family:${MONO};color:#f0c46a`;
+  return (
+    <div style="position:absolute;inset:0;z-index:22;background:#0b0b0c;display:grid;grid-template-columns:300px minmax(0,1fr);animation:tinn .4s ease both">
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:14px;padding:0 30px;background:#101011;border-right:1px solid #1f1f21">
+        <div style="display:flex;gap:5px;align-items:flex-end;height:52px">{BARS.map((h, i) => <div key={i} style={`width:8px;height:${h * 2}px;border-radius:4px;background:#f0c46a`} />)}</div>
+        <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#f0c46a`}>{n.joining ? 'KOBLER TIL' : 'IKKE PÅ NETT'}</span>
+        <span style="font-size:28px;font-weight:600;line-height:1.12;letter-spacing:-.01em">{n.joining ? 'Kobler til «' + n.joining + '»' : 'Koble Touch til Wi-Fi'}</span>
+        {!!n.error && !n.joining && <span style="font-size:13px;line-height:1.4;color:#e05a4a">{n.error}</span>}
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:18px;padding:0 32px">
+        {steg(1, 'Koble telefonen til dette nettet', <>Nett: <span style={kode}>{n.ssid}</span><br />Passord: <span style={kode}>{n.password}</span></>)}
+        {steg(2, 'Velg hjemmenettet ditt', <>Oppsettsiden åpner seg selv. Skjer det ikke, gå til <span style={kode}>{n.url.replace('http://', '')}</span></>)}
+        {steg(3, 'Ferdig', 'Touch slår av oppsett-nettet og kobler til. Denne siden forsvinner av seg selv.')}
+      </div>
+    </div>
+  );
+}
+
 // ---------- stemme ----------
 function Voice() {
   const v = dev().touch?.voice, st = v?.state ?? 'idle';
@@ -936,6 +963,7 @@ function App() {
         {talking && <Voice />}
       </main>
       {idle.value && <Standby clock={clock} dateTxt={dateTxt} />}
+      {(!!D.setup_net?.active || !!D.setup_net?.joining) && !boot.value.on && <SetupNet />}
       {!!doorToast.value && !door.value && <DoorToast />}
       {!!door.value && <Door clock={clock} />}
       {!!D.alarm?.ringing && <AlarmRinging clock={clock} />}

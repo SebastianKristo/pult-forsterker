@@ -45,8 +45,16 @@ def main(src):
         "function refresh(){}",
     ]
     web = os.path.join(HERE, "web")
+    text = "\n".join(out) + "\n"
+    # Rettelser som skal overleve et nytt uttrekk (gjør ingenting når designfila allerede har dem):
+    # «Blåtann» i all skjermtekst, og fremdriftslinja bruker låtens egentlige varighet.
+    for a, b in (("pill('BLUETOOTH');", "pill('BLÅTANN');"),
+                 ("velg den i Bluetooth på telefonen", "velg den i Blåtann på telefonen"),
+                 ("S.wl==='bt'?'BLUETOOTH':'AIRPLAY'", "S.wl==='bt'?'BLÅTANN':'AIRPLAY'"),
+                 ("dur=244, p=", "dur=(INPUTS[0].dur>1?INPUTS[0].dur:244), p=")):
+        text = text.replace(a, b)
     with open(os.path.join(web, "s1_draw.js"), "w", encoding="utf-8") as fh:
-        fh.write("\n".join(out) + "\n")
+        fh.write(text)
     for f in ("skjold_settings.js", "skjold_welcome.js"):
         shutil.copy(os.path.join(src, "felles", f), os.path.join(web, f))
     print("skrev", os.path.join(web, "s1_draw.js"))

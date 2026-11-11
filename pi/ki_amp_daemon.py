@@ -2127,8 +2127,44 @@ def _wifi_scan():
     return sorted(nets.values(), key=lambda n: (not n["active"], -n["signal"]))
 
 
+# --- Oppsett-nett: eget Wi-Fi med oppsettside når enheten ikke har nett (pi/skjold_setupnet.py) ---
+import skjold_setupnet as _snmod      # noqa: E402
+setupnet = _snmod.SetupNet({"device_id": lambda: device_id(), "changed": lambda: changed(), "scan": lambda: _wifi_scan(), "port": PORT})
+SETUP_NET_ON = os.environ.get("KI_AMP_SETUP_NET", "1").strip() not in ("0", "false", "nei")
+
+
+def _setupnet_loop():
+    while True:
+        time.sleep(15)
+        setupnet.tick()
+
+
+async def h_oppsett(r):
+    """GET /oppsett → oppsettsiden (velg Wi-Fi). GET /api/oppsett → tilstanden til oppsett-nettet."""
+    setupnet.hit()
+    if r.path.startswith("/api/"):
+        return web.json_response(setupnet.status() or {"active": False})
+    return web.Response(text=_snmod.page(socket.gethostname(), setupnet.ssid(), PORT), content_type="text/html",
+                        headers={"Cache-Control": "no-store"})
+
+
+async def h_port80(r):
+    """Port 80: telefonens «har jeg nett?»-sjekk og http://<navn>.local uten portnummer sendes til riktig side."""
+    if setupnet.active:
+        setupnet.hit()
+        raise web.HTTPFound(f"http://{_snmod.IP}:{PORT}/oppsett")
+    host = (r.host or socket.gethostname() + ".local").split(":")[0]
+    raise web.HTTPFound(f"http://{host}:{PORT}/")
+
+
 async def h_wifi_get(_r):
     """GET /api/wifi → {"networks":[{ssid,signal 0-100,security open|wpa2|wpa3,active}]} via NetworkManager (nmcli)."""
+    if setupnet.active:      # radioen er aksesspunkt: bruk skanningen fra rett før, hvis en ny ikke gir noe
+        try:
+            n = await asyncio.to_thread(_wifi_scan)
+        except Exception:
+            n = []
+        return web.json_response({"networks": n or setupnet.networks})
     try:
         return web.json_response({"networks": await asyncio.to_thread(_wifi_scan)})
     except FileNotFoundError:
@@ -2146,6 +2182,9 @@ async def h_wifi_post(r):
     ssid, psk = str((b or {}).get("ssid") or "").strip(), str((b or {}).get("psk") or "")
     if not ssid or len(ssid) > 32: return web.json_response({"error": "mangler gyldig ssid"}, status=400)
     if psk and not 8 <= len(psk) <= 63: return web.json_response({"error": "passordet må ha 8–63 tegn"}, status=400)
+    if setupnet.active:      # fra oppsettsiden: oppsett-nettet må ned før enheten kan koble til, så svaret kommer først
+        setupnet.connect_async(ssid, psk, bool((b or {}).get("hidden")))
+        return web.json_response({"ok": True, "ssid": ssid, "pending": True})
     cmd = ["nmcli", "device", "wifi", "connect", ssid] + (["password", psk] if psk else []) + (["hidden", "yes"] if b.get("hidden") else [])
     try:
         res = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=45)
@@ -7384,6 +7423,8 @@ threading.Thread(target=vinyl.run, daemon=True).start()
 def feat_status():
     out = {"doorbell": doorbell.status(), "recognized": _feat["last_hit"] if _feat["last_hit"] and time.time() - _feat["last_hit"].get("t", 0) < 600 else None}
     out.update(touch.status())
+    out["setup_net"] = setupnet.status()
+    out["home"] = touch.home()      # vær, sol, kalender og neste alarm til standby-stilene (tom uten Home Assistant)
     m = _feat["vinyl"]
     if m and state.get("input") in ("aux", "aux2", "usb"):
         out.update({"title": m["title"], "artist": m["artist"], "album": m["album"], "cover_url": m.get("art", ""),
@@ -7544,6 +7585,7 @@ touch = _tmod.Touch({"changed": lambda: changed(), "pause": lambda: transport("p
                      "volume_step": lambda d: set_volume(max(0, min(100, int(state["volume"]) + d))),
                      "playpause": lambda: transport("playpause")}, os.path.join(FEAT_DIR, "touch.json"))
 FEAT_ROUTES += _tmod.routes(touch)
+FEAT_ROUTES += [("GET", "/oppsett", h_oppsett), ("GET", "/api/oppsett", h_oppsett)]
 if os.environ.get("KI_TOUCH_ENC", "").strip():
     try:
         _touch_enc = _tmod.start_encoder(touch.ctx, os.environ["KI_TOUCH_ENC"])
@@ -8601,7 +8643,7 @@ def _s1f_api():
     return NS(state=state, set_input=lambda i: set_input(i), set_power=set_power, set_mute=set_mute, set_volume=set_volume,
               transport=transport, bt_pairing=lambda on: bt_pairing(on, "knapp"), step_preset=step_preset, save_preset=save_preset,
               play_preset=lambda n: play_preset(n), usb_toggle=usbsw.toggle, usb_set=usbsw.set,
-              reboot=lambda: system_reboot(why="POWER holdt"), factory_reset=lambda: factory_reset(), night_toggle=night_toggle, night_set=night_set,
+              reboot=lambda: system_reboot(why="POWER holdt"), factory_reset=lambda: factory_reset(), input_event=lambda: (input_event(), changed()), night_toggle=night_toggle, night_set=night_set,
               power_event=power_event, smenu_open=smenu_open, smenu_close=smenu_close, smenu_step=smenu_step,
               smenu_press=smenu_press, smenu_is_open=lambda: bool(smenu["open"]), smenu_idx=lambda: smenu["idx"] if smenu["open"] else None,
               settings=settings, ui_event=s1f_ui_event, hold_routine=lambda b: s1_hold_routine(b), set_headphones=set_headphones, led_scale=lambda: led_level(),
@@ -8639,15 +8681,17 @@ def factory_reset(why="POWER holdt i 10 s"):
     """Tilbake til fabrikkinnstillinger: innstillinger og Blåtann-paringer slettes, første oppsett vises igjen, og enheten
     starter på nytt. Virker uten nett og i standby.
 
-    Wi-Fi-nettene slettes bare når enheten kan nås etterpå: med nettverkskabel i, eller når KI_AMP_RESET_WIFI=1 er satt.
-    Oppsett-nettet med fanget portal er ikke laget ennå, og uten det ville en trådløs enhet blitt utilgjengelig."""
+    Wi-Fi-nettene slettes når enheten kan nås etterpå: oppsett-nettet er på (standard) og enheten har Wi-Fi, det står en
+    nettverkskabel i, eller KI_AMP_RESET_WIFI=1 er satt. Etter omstart starter oppsett-nettet «Skjold-oppsett-XXXX».
+    KI_AMP_RESET_WIFI=0 beholder alltid nettene."""
     print(f"Tilbakestilling ({why})", flush=True)
     update_settings({**{k: v for k, v in SETTINGS_DEF.items() if k != "eq"}, "setupDone": False})
     _bt_forget_all()
-    if os.environ.get("KI_AMP_RESET_WIFI", "").strip() == "1" or _wired_up():
+    rw = os.environ.get("KI_AMP_RESET_WIFI", "").strip()
+    if rw != "0" and (rw == "1" or _wired_up() or (SETUP_NET_ON and setupnet.wifi_dev())):
         print("Tilbakestilling: slettet", wifi_forget_all(), "Wi-Fi-nett", flush=True)
     else:
-        print("Tilbakestilling: Wi-Fi beholdes (ingen nettverkskabel – enheten ville blitt utilgjengelig)", flush=True)
+        print("Tilbakestilling: Wi-Fi beholdes (ingen vei tilbake uten oppsett-nett eller kabel)", flush=True)
     state["night"] = False; state["mute"] = False
     save_state()
     system_reboot(why="Tilbakestilt")
@@ -8752,9 +8796,19 @@ async def on_startup(app):
         app["cloud"] = asyncio.create_task(cloud_task())
     if node_leds:
         apply_node_leds(); threading.Thread(target=node_led_thread, daemon=True, name="node-led").start()
+    if SETUP_NET_ON:
+        threading.Thread(target=_setupnet_loop, daemon=True, name="oppsett-nett").start()
+        try:      # port 80: fanget portal og http://<navn>.local uten portnummer. Er porten opptatt, hopper vi over.
+            p80 = web.Application(); p80.router.add_route("*", "/{tail:.*}", h_port80)
+            app["p80"] = web.AppRunner(p80); await app["p80"].setup()
+            await web.TCPSite(app["p80"], "0.0.0.0", 80).start()
+        except OSError as e:
+            print("Port 80 er ikke ledig – oppsettsiden nås på port", PORT, f"({e})", flush=True)
 
 
 async def on_cleanup(app):
+    if app.get("p80"):
+        await app["p80"].cleanup()
     if app.get("sky"):
         app["sky"].cancel()
     await sky.close()

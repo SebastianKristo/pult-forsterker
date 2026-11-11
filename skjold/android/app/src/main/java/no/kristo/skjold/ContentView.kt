@@ -76,6 +76,7 @@ fun ContentView(m: AppModel) {
             }
             Mode.APP -> AppShell(m)
         }
+        if (m.mode == Mode.APP) Banner(m)
         WhatsNewOverlay(m)
         AnimatedVisibility(m.intro, enter = androidx.compose.animation.EnterTransition.None, exit = fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 1.04f)) {
             IntroView(m)
@@ -342,3 +343,38 @@ fun HeroCarousel(m: AppModel) {
     }
 }
 
+/** Øverst i appen: vekkeklokka som ringer (Slumre / Slå av), eller en kort beskjed fra enheten. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.Banner(m: AppModel) {
+    val d = m.dev
+    val ringing = d?.alarmRinging == true
+    val notice = m.notice
+    if (!ringing && notice == null) return
+    Column(
+        Modifier.align(Alignment.TopCenter).windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 14.dp, vertical = 6.dp).widthIn(max = 560.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (ringing && d != null) {
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(C.card).skBorder(C.accent, 20.dp).padding(start = 16.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    T("Alarmen ringer", sora(15f, W.Semibold))
+                    T(if (d.alarmName.isEmpty()) d.name else d.alarmName + " · " + d.name, sora(12f, W.Regular, C.ink2), maxLines = 1)
+                }
+                Box(Modifier.height(48.dp).clip(CircleShape).background(C.accent2).press { m.devSend("/api/alarm", mapOf("action" to "snooze")) }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                    T("Slumre", sora(14f, W.Semibold, C.bg))
+                }
+                Box(Modifier.height(48.dp).clip(CircleShape).skBorder(C.line2, 24.dp).press { m.devSend("/api/alarm", mapOf("action" to "stop")) }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                    T("Slå av", sora(14f, W.Semibold))
+                }
+            }
+        }
+        if (notice != null) {
+            Box(Modifier.clip(CircleShape).background(C.card).skBorder(C.line2, 24.dp).padding(horizontal = 16.dp, vertical = 11.dp)) {
+                T(notice, sora(13f))
+            }
+        }
+    }
+}

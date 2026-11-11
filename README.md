@@ -85,7 +85,7 @@ Alt ligger samlet i [siste utgivelse](https://github.com/SebastianKristo/pult-fo
 | [`homey/`](homey/) | Homey-appen |
 | [`docs/`](docs/) | Veiledninger og [API-dokumentasjon](docs/api/intro.md) |
 
-Flere veiledninger: [Skjold Touch](docs/SKJOLD_TOUCH.md) · [Flere rom](docs/MULTIROOM.md) · [Skjold-hjem](docs/SKJOLD_HJEM.md) ·
+Flere veiledninger: [Skjold Touch](docs/SKJOLD_TOUCH.md) · [Oppsett-nett](docs/OPPSETT_NETT.md) · [Flere rom](docs/MULTIROOM.md) · [Skjold-hjem](docs/SKJOLD_HJEM.md) ·
 [Fjernstyring](docs/FJERNSTYRING.md) · [Plugins](docs/PLUGINS.md) · [Proxmox og vanlig PC](docs/PROXMOX.md) ·
 [Den første pultforsterkeren](docs/PULTFORSTERKER.md)
 
