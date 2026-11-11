@@ -268,7 +268,7 @@ jobs:
           # Byggemaskinen har vanligvis bibliotekene Chromium trenger fra før. Installer derfor bare nettleseren, og
           # prøv den. Systempakkene hentes med apt (som ikke alltid når Ubuntus servere) bare hvis nettleseren ikke starter.
           python -m playwright install chromium
-          if ! python -c "from playwright.sync_api import sync_playwright as p; b = p().start().chromium.launch(); b.close()"; then
+          if ! timeout 60 python -c "exec('from playwright.sync_api import sync_playwright\nwith sync_playwright() as p: p.chromium.launch().close()')"; then
             for i in 1 2 3; do
               timeout 300 python -m playwright install-deps chromium && break
               echo "playwright install-deps feilet (forsøk $i av 3) – venter 20 s"; sleep 20
