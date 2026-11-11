@@ -133,7 +133,7 @@ python3 -c "from PIL import Image; im=Image.open('original.png').convert('RGB');
 | `s1-skra`, `s1-front`, `s1-topp`, `s1-bak` | S1 (hero, bildesekvens), forsiden, sammenlign |
 | `node-tft-skra`, `node-tft-front`, `node-tft-topp`, `node-tft-bak` | Node (hero, bildesekvens), forsiden, sammenlign |
 | `touch-skraa`, `touch-front`, `touch-side`, `touch-bak`, `touch-eksplodert` | Touch, helsort med stoff (hero, bildesekvens, «Slik er den bygget»), forsiden |
-| `familie-lab`, `familie-lab-m` | Forsiden: hele familien på skrivebordet (også `og.jpg`) |
+| `familie-2026` | Forsiden: hele familien på skrivebordet (også `og.jpg`). 1024 × 572 |
 | `stav-*` | Stav: renders fra `kabinett/fjernkontroll/render/` og `dokk/render/`, og skjermbildene |
 
 ### 3D-modellen på Touch
