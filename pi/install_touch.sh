@@ -31,6 +31,7 @@ udevadm control --reload-rules && udevadm trigger -s input || true
 cat > /usr/local/bin/skjold-touch-ui <<S
 #!/bin/sh
 # venter til daemonen svarer, så Chromium ikke viser feilside
+# --use-fake-ui-for-media-stream: intercom får bruke mikrofonen uten spørsmål (kiosken har ingen dialogruter)
 for i in \$(seq 60); do curl -fs -o /dev/null http://127.0.0.1:8765/api/status && break; sleep 1; done
 [ "$ROT" != 0 ] && command -v wlr-randr >/dev/null && wlr-randr --output "\$(wlr-randr | head -1 | cut -d' ' -f1)" --transform $ROT || true
 exec "$CHR" --kiosk --app="$URL" \\
@@ -39,6 +40,7 @@ exec "$CHR" --kiosk --app="$URL" \\
   --disable-features=TouchpadOverscrollHistoryNavigation,Translate,HardwareMediaKeyHandling \\
   --noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble \\
   --check-for-update-interval=31536000 --password-store=basic --autoplay-policy=no-user-gesture-required \\
+  --use-fake-ui-for-media-stream \\
   --user-data-dir=/home/$USR/.cache/skjold-touch
 S
 chmod +x /usr/local/bin/skjold-touch-ui

@@ -55,6 +55,17 @@ class Tjenester(unittest.TestCase):
         self.assertEqual(t.service_for("climate.stue", "up", 21.5)[2]["temperature"], 22.0)
         self.assertEqual(t.service_for("climate.stue", "up", 30, 5, 30)[2]["temperature"], 30)
 
+    def test_dimming(self):
+        self.assertEqual(t.service_for("light.stue", "brightness", value=40), ("light", "turn_on", {"entity_id": "light.stue", "brightness_pct": 40}))
+        self.assertEqual(t.service_for("light.stue", "brightness", value=0)[1], "turn_off")
+        self.assertEqual(t.service_for("light.stue", "brightness", value=250)[2]["brightness_pct"], 100)
+        with self.assertRaises(ValueError):
+            t.service_for("switch.lader", "brightness", value=40)
+        dim = t.tile_of({"entity_id": "light.stue", "state": "on", "attributes": {"brightness": 128, "supported_color_modes": ["brightness"]}})
+        self.assertEqual(dim["pct"], 50)
+        self.assertEqual(t.tile_of({"entity_id": "light.a", "state": "off", "attributes": {"supported_color_modes": ["color_temp"]}})["pct"], 0)
+        self.assertNotIn("pct", t.tile_of({"entity_id": "light.b", "state": "on", "attributes": {"supported_color_modes": ["onoff"]}}))
+
     def test_laas_og_alarm_styres_ikke(self):
         for e in ("lock.inngang", "alarm_control_panel.hus", "sensor.x"):
             with self.assertRaises(ValueError):
