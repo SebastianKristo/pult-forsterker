@@ -476,7 +476,7 @@ img.fri{-webkit-mask-image:none!important;mask-image:none!important;filter:drop-
 .p-hero img.fri{width:auto;max-width:min(88%,980px);max-height:min(62vh,640px);height:auto;margin:48px auto 70px;translate:none}
 .ramme img.fri,.bildepar img.fri,.bilder img.fri{padding:6%;box-sizing:border-box}
 /* Produktbildet i toppen av produktsidene: rolig inngang, alltid i full styrke (styres ikke av rulling) */
-.fx .p-hero img[src*="s1-skra"]{margin-top:clamp(-90px,-5vw,-20px)}
+.fx 
 .fx .p-hero img{animation:helt-inn 1.4s var(--ease) .15s both}
 @keyframes helt-inn{from{opacity:0;transform:translateY(36px) scale(.965)}to{opacity:1;transform:none}}
 /* Fliser og kort: seks deler seg 3 + 3 i stedet for 4 + 2 med hull */
