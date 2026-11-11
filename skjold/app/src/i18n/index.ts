@@ -7,12 +7,10 @@ export type Lang = 'nb' | 'en';
 export type LangPref = Lang | 'auto';
 const KEY = 'skjold-lang';
 
-function detect(): Lang {
-  try {
-    const l = (navigator.languages?.[0] || navigator.language || 'nb').toLowerCase();
-    return /^(nb|nn|no|da|sv)/.test(l) ? 'nb' : l.startsWith('en') ? 'en' : 'nb';
-  } catch { return 'nb'; }
-}
+// «auto» er norsk inntil videre: bare ca. 5 % av tekstene er oversatt, og en halvt engelsk app ser verre ut enn en
+// helt norsk. Engelsk kan fortsatt velges under Innstillinger › Språk. Bytt tilbake til nettleserspråket når
+// `node scripts/i18n-dekning.mjs` viser høy dekning.
+function detect(): Lang { return 'nb'; }
 function readPref(): LangPref {
   try { const v = localStorage.getItem(KEY); return v === 'nb' || v === 'en' || v === 'auto' ? v : 'auto'; } catch { return 'auto'; }
 }

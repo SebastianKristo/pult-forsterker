@@ -143,7 +143,7 @@ Det er tre 3MF-filer, alle innenfor 250 × 250 mm, så de passer K2, K2 Pro og K
 | Fil | Deler | Filament |
 |---|---|---|
 | `skjold-rost-k2.3mf` | Kropp (med toppanel og takrom), frontplate med innfelt logo, knott, 5 knappehetter | 1 = lys (kropp), 2 = sort (front, knappehetter), 3 = gull (logo, knott) |
-| `skjold-rost-k2-bunn.3mf` | Grill, bunn | 2 = sort |
+| `skjold-rost-k2-bunn.3mf` | Grill, bunn | 2 = sort (grill), 1 = lys (bunn) |
 | `skjold-rost-k2-tpu.3mf` | Pakning front, pakning bunn, krage, DC-skive, USB-propp | TPU 95A (egen utskrift; CFS mater ikke myk TPU, så bruk ekstern spole) |
 
 Setter ikke Creality Print fargene selv, sett filament per del.

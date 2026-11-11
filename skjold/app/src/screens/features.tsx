@@ -22,7 +22,7 @@ async function call<T = any>(path: string, body?: unknown, opt: { method?: strin
     else if (body !== undefined) { init.method = opt.method ?? 'POST'; init.headers = { 'Content-Type': 'application/json' }; init.body = JSON.stringify(body); }
     else if (opt.method) init.method = opt.method;
     const r = await fetch(base + path, init);
-    const j = await r.json().catch(() => ({}));
+    const j = await r.json().catch(() => { if (r.ok) throw new Error('Uventet svar fra Skjold'); return {}; });
     if (!r.ok) throw new Error((j as any).error || 'HTTP ' + r.status);
     return j as T;
   } finally { clearTimeout(tm); }

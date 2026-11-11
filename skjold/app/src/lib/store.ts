@@ -96,6 +96,11 @@ export function closeFull(): void {
 /** Er vi på «rot» (Hjem uten noe åpent)? Brukes av Android-tilbakeknappen for å avslutte appen der. */
 export function atRoot(): boolean { return route.value.page === 'home' && !fullPlayer.value && !subs.length; }
 if (typeof window !== 'undefined') {
+  // Last på nytt (F5, eller mobilnettleseren kastet fanen): bli på siden du var på i stedet for å havne på Hjem
+  try {
+    const st0 = history.state as NavState | null;
+    if (st0?.skjold && st0.page && !location.hash.startsWith('#sanglek')) route.value = st0.cat ? { page: st0.page, cat: st0.cat } : { page: st0.page };
+  } catch { /* ignore */ }
   try { history.replaceState(navState(), ''); } catch { /* ignore */ }
   window.addEventListener('popstate', (e) => {
     if (ignorePops > 0) { ignorePops--; return; }   // vi gikk selv tilbake fordi et undernivå ble lukket i appen
@@ -144,9 +149,13 @@ export async function refresh(): Promise<void> {
     if (failures >= 2) { online.value = false; lastError.value = e instanceof Error ? e.message : String(e); }
   } finally { inflight = false; }
 }
+/** Hent status nå (brukes når noe utenfor store vet at noe nettopp endret seg). */
+export function refreshNow(): Promise<void> { return refresh(); }
+/** Settes av lib/localplay: mens denne enheten spiller, må status følges også når fanen er skjult eller skjermen låst. */
+export const keepAlive = signal(false);
 function schedule(): void {
   clearTimeout(timer);
-  if (document.visibilityState === 'hidden') return;
+  if (document.visibilityState === 'hidden' && !keepAlive.value) return;
   const playing = status.value?.playing;
   // Med /api/events er polling bare en sikkerhetsline
   const ms = live.value ? 15000 : online.value ? (playing ? 1000 : 2000) : 4000;
@@ -156,7 +165,7 @@ function schedule(): void {
 let es: EventSource | null = null, esRetry = 0, esFails = 0;
 function connectEvents(): void {
   clearTimeout(esRetry);
-  if (es || typeof EventSource === 'undefined' || document.visibilityState === 'hidden') return;
+  if (es || typeof EventSource === 'undefined' || (document.visibilityState === 'hidden' && !keepAlive.value)) return;
   try { const b = getBase(); es = new EventSource(b + '/api/events', { withCredentials: credFor(b) === 'include' }); } catch { es = null; return; }
   es.onopen = () => { live.value = true; esFails = 0; schedule(); };
   es.onmessage = (e) => { try { applyStatus(JSON.parse(e.data as string) as Status); } catch { /* ignore */ } };
@@ -172,7 +181,7 @@ export function reconnect(): void { disconnectEvents(); esFails = 0; connectEven
 
 export function startPolling(): void {
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') { void refresh(); connectEvents(); } else disconnectEvents();
+    if (document.visibilityState === 'visible') { void refresh(); connectEvents(); } else if (!keepAlive.value) disconnectEvents();
     schedule();
   });
   connectEvents();
@@ -211,9 +220,11 @@ async function sendVolume(): Promise<void> {
   const v = volWant; volWant = null; volBusy = true; volLast = Date.now();
   try {
     const r = await api.volume(v);
-    hold({ volume: volWant ?? v }, 800);   // 800 ms etter siste svar ignoreres eldre verdier
+    // 800 ms etter siste svar ignoreres eldre verdier. Uten nyere ønske holdes det forsterkeren faktisk satte
+    // (den kan ha begrenset verdien, f.eks. «Maks volum»), så glideren viser riktig med en gang.
+    hold({ volume: volWant ?? r.volume ?? v }, 800);
     applyStatus(r);
-  } catch { showToast('Fikk ikke kontakt med forsterkeren'); }
+  } catch { showToast('Fikk ikke kontakt med forsterkeren'); holds.delete('volume'); void refresh(); }
   finally { volBusy = false; if (volWant !== null) volT = window.setTimeout(sendVolume, Math.max(0, 100 - (Date.now() - volLast))); }
 }
 

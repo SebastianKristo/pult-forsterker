@@ -4,7 +4,7 @@
 // lyden slås på igjen i Skjold og spilles der fra samme sted.
 import { effect, signal } from '@preact/signals';
 import { api, getBase } from './api';
-import { showToast, status } from './store';
+import { keepAlive, refreshNow, showToast, status } from './store';
 
 export const localOn = signal(false);
 const VOL_KEY = 'skjold-local-vol';
@@ -31,12 +31,12 @@ export function startLocal(): void {
   if (!s?.listen) { showToast('Dette kan ikke spilles på denne enheten'); return; }
   el ??= new Audio();
   el.preload = 'auto';
-  el.onended = () => { /* Skjold går videre selv; neste strøm plukkes opp av sync() */ };
+  el.onended = () => { void refreshNow(); };   // Skjold går videre selv: hent status med en gang, så neste strøm plukkes opp
   el.onerror = () => { if (localOn.value) { showToast('Fikk ikke spilt strømmen her'); stopLocal(); } };
   localOn.value = true;
   wasMuted = !!s.mute;
   sync();
-  if (!wasMuted) void api.mute(true).catch(() => {});
+  if (!wasMuted) { void api.mute(true).catch(() => {}); flagg(true); }
 }
 
 /** Tilbake til rommet: stopp her, og slå på lyden i Skjold igjen (fra samme sted i låten). */
@@ -49,6 +49,7 @@ export function stopLocal(): void {
   const s = status.value;
   if (pos !== null && s && (s.duration ?? 0) > 0 && Math.abs((s.position ?? 0) - pos) > 3) void api.seek(pos).catch(() => {});
   if (!wasMuted) void api.mute(false).catch(() => {});
+  flagg(false);
 }
 
 export function setLocalVol(v: number): void {
@@ -74,8 +75,27 @@ function sync(): void {
     try { el.currentTime = s.position; } catch { /* ignore */ }
   }
   el.volume = localVol.value / 100;
-  if (s.playing && el.paused) void el.play().catch(() => {});
+  if (s.playing && el.paused) void el.play().catch((e: unknown) => {
+    // nettleseren nektet å starte lyd uten et trykk (ny låt i bakgrunnen): ikke la rommet stå dempet i stillhet
+    if (e instanceof DOMException && e.name === 'NotAllowedError' && localOn.value) { showToast('Nettleseren stoppet lyden – tilbake til rommet'); stopLocal(); }
+  });
   else if (!s.playing && !el.paused) el.pause();
 }
 
 effect(() => { void status.value; if (localOn.value) sync(); });
+effect(() => { keepAlive.value = localOn.value; });
+
+// Rommet er dempet mens denne enheten spiller. Lukkes eller lastes fanen på nytt, må lyden slås på igjen – ellers
+// spiller forsterkeren videre uten lyd, og ingen vet hvorfor.
+const DEMPET_KEY = 'skjold-local-dempet';
+function flagg(on: boolean): void {
+  try { if (on) localStorage.setItem(DEMPET_KEY, getBase() || location.origin); else localStorage.removeItem(DEMPET_KEY); } catch { /* privat modus */ }
+}
+function opphevDemping(base: string): void {
+  try { void fetch(base.replace(/\/+$/, '') + '/api/mute', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: '{"mute":false}' }).catch(() => {}); } catch { /* ignore */ }
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => { if (localOn.value && !wasMuted) { opphevDemping(getBase() || location.origin); flagg(false); } });
+  // forrige økt ble avbrutt (krasj, strøm) før pagehide rakk å kjøre
+  try { const b = localStorage.getItem(DEMPET_KEY); if (b) { opphevDemping(b); localStorage.removeItem(DEMPET_KEY); } } catch { /* privat modus */ }
+}

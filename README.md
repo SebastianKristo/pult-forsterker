@@ -1,165 +1,117 @@
-<p align="center"><img src="docs/bilder/logo.png" width="520" alt="Pultforsterker"></p>
+<p align="center"><img src="skjold/nettside/assets/img/familie-lab.jpg" width="820" alt="Skjold-familien på et skrivebord: S1, Node, Touch og Stav med Dokk"></p>
 
-# Pultforsterker
+<h1 align="center">Skjold</h1>
 
+<p align="center"><b>Musikk i alle rom.</b><br>
+Forsterkere, spillere og høyttalere som spiller sammen, styrt fra én app.<br>
+Åpen programvare. Tegnet og bygget i Norge av Skjold Lab.</p>
 
-**Start her: [docs/TOTALINSTRUKS.md](docs/TOTALINSTRUKS.md)** – alt fra SD-kort til Home Assistant/Homey, med alle kommandoer.
+<p align="center">
+<a href="https://skjold.smarthjemexperten.no/">Nettside</a> ·
+<a href="https://github.com/SebastianKristo/pult-forsterker/releases/latest">Last ned</a> ·
+<a href="docs/TOTALINSTRUKS.md">Kom i gang</a> ·
+<a href="docs/api/intro.md">API</a>
+</p>
 
-DIY stereoforsterker (2 × 50 W) som henger under pulten. AirPlay 2, Bluetooth, AUX og USB-lyd fra PC/Mac, OLED-skjerm, fem LED-knapper og volumknott. Styres også fra **Home Assistant** og **Homey**.
+---
 
-![Front](docs/bilder/render_front.png)
+Skjold er et lydsystem du kan bygge selv. Hver enhet er en Raspberry Pi eller ESP32 med Skjold-programvaren, og alle
+dukker opp i samme app. Spill det samme i hele huset, eller noe forskjellig i hvert rom.
 
-| | |
-|---|---|
-| **Kabinett** | 3D-printet, 200 × 120 × 48 mm, tre deler (kasse, lokk, frontplate) |
-| **Hjerne** | Raspberry Pi Zero 2 W + PCM5102A I2S-DAC |
-| **Forsterker** | XH-M562 (TPA3116D2) 2 × 50 W, 24 V |
-| **Høyttalere** | 2 × 6 Ω, 5–40 W. Ved 24 V gir TPA3116 ca. 35–40 W i 6 Ω ved full utstyring – `KI_AMP_MAX_TAP=85` i `ki-amp.env` holder det under 40 W |
-| **Innganger** | AirPlay 2 (Shairport Sync), Bluetooth A2DP (bluealsa), AUX 3,5 mm (relé), USB-C (Pi som UAC2-lydkort) |
-| **Volum** | AirPlay/BT/USB: digitalt i CamillaDSP (X9C fast på taket). AUX: 2 × X9C103S digitalpot. Alt styrt av KY-040 encoder |
-| **Loudness** | CamillaDSP Loudness-filter (bass +0–10 dB, diskant halvparten) som avtar mot full styrke. Av/på og styrke fra API, HA og Homey. Gjelder ikke AUX (analog vei utenom Pi-en) |
-| **Skjerm** | 2,42" SSD1309 OLED 128 × 64, I2C |
-| **Integrasjoner** | Home Assistant custom-integrasjon (mDNS-oppdagelse) · Homey SDK3-app |
+## Produktene
 
-## Innhold i repoet
-
-```
-pi/                 Programvare til Raspberry Pi (daemon, OLED, install.sh, systemd, ALSA)
-homeassistant/      custom_components/skjold + eksempel-package
-homey/              Homey-app no.kristo.skjold
-kabinett/           Kabinett: skjold-s1/ (platemetall + printet frontplate, PCBWay) og STL-er for den printede kassen
-docs/               Byggeveiledning (PDF + markdown), bildeveiledning (PDF), alle renders
-3d-visning/         Interaktiv 3D-modell av ferdig produkt (three.js, én HTML-fil)
-design-referanse/   Opprinnelig designpakke (front, OLED-layout, oppførsel, farger)
-```
-
-## Beskyttelse og støy (anbefalte tilleggsdeler)
-
-| Del | Hvorfor | AliExpress |
+| | Hva | Bygget på |
 |---|---|---|
-| USB-isolator ADuM3160/4160 (eller ground-loop-isolator 3,5 mm) | PC og forsterker deler jord via USB-C/AUX → brum/«mus-pip». Settes ved PC-en: PC → isolator → kabel → forsterkerens USB-C. Isolatoren er full speed; USB-gadgeten kjører derfor full speed (`ki-usb-gadget.sh`) | [USB-isolator](https://www.aliexpress.com/w/wholesale-ADUM3160-USB-isolator.html) · [3,5 mm](https://www.aliexpress.com/w/wholesale-ground-loop-isolator-3.5mm.html) |
-| Elektrolyttkondensator 2200 µF / 35 V | buffer på 24 V ved forsterkerens VCC – basstopper, hindrer at 5 V-skinnen pumper | [Søk](https://www.aliexpress.com/w/wholesale-2200uF-35V-electrolytic-capacitor.html) |
-| Inline sikringsholder + 5 A | rett etter DC-099 – sikringen ryker, ikke ledningen | [Søk](https://www.aliexpress.com/w/wholesale-inline-fuse-holder-5x20-5A.html) |
-| Ferrittklips Ø 5–7 mm × 2 | på høyttalerledningene – klasse D-støy mot Pi-ens Wi-Fi | [Søk](https://www.aliexpress.com/w/wholesale-ferrite-clip-core-cable.html) |
-| 40-pinners header (hvis Pi-en er uten) · Dupont crimp-sett | header til Pi Zero; egne ledninger i riktig lengde | [Header](https://www.aliexpress.com/w/wholesale-40-pin-header-raspberry-pi-zero.html) · [Dupont](https://www.aliexpress.com/w/wholesale-dupont-connector-kit-crimp.html) |
+| **[Skjold S1](https://skjold.smarthjemexperten.no/s1/)** | Streamingforsterker for skrivebordet. 2 × 50 W, 4,58″ skjerm, USB-bryter for to PC-er. | Raspberry Pi 4, TPA3116D2 |
+| **[Skjold Node](https://skjold.smarthjemexperten.no/node/)** | Liten nettverksspiller for rom som allerede har forsterker. | Raspberry Pi 4 eller 3B |
+| **[Skjold Touch](https://skjold.smarthjemexperten.no/touch/)** | Spiller med 7″ berøringsskjerm. | Raspberry Pi 4, PCM5122 |
+| **[Skjold Røst](https://skjold.smarthjemexperten.no/rost/)** | Aktiv høyttaler med grill hele veien rundt, skjerm og volumknott. | ESP32-S3 |
+| **[Skjold Stav](https://skjold.smarthjemexperten.no/stav/)** | Fjernkontroll med 2,8″ berøringsskjerm, IR og ladedokk. | ESP32 (ESPHome) |
+| **[Skjold Core](https://skjold.smarthjemexperten.no/core/)** | Bare programvaren, på en Raspberry Pi du allerede har. | Raspberry Pi 4 eller 3B |
+| **Kassett, Hjul, Radio, Sans** | NFC-kassettspiller, dreieknapp-fjernkontroll, kjøkkenradio og romsensor. | ESP32 / Raspberry Pi |
 
-## Variant: Raspberry Pi 4 B med Ethernet
+## Dette kan den
 
-Samme programvare og GPIO-skjema, men kassen er 15 mm dypere (200 × 135 × 48) og innmaten er flyttet: Pi 4 til høyre med portene mot venstre, forsterkeren til venstre ved terminalene, RJ45-panelforlenger bak. Filer: `kabinett/stl/v2_body_pi4.stl`, `v2_lid_pi4.stl` / `v2_lid_frittstaende_pi4.stl` (frontplaten er felles). Bygg selv med `VARIANT=pi4 python3 build_stl.py`. Endrede deler: buck 5 V **5 A**, USB-C-flens med **USB-C hann** i enden, RJ45 panelforlenger, kjøleribber. 5 V til Pi 4 i 18 AWG på header-pinne 2/4 + 6.
-
-![Pi 4-plan](docs/bilder/guide_04_inni_pi4.png)
-
-## Variant: med hovedkortet (PCB rev A)
-
-Kassen `kabinett/stl/v2_body_pcb.stl` + `v2_lid_pcb.stl` (200 × **165** × 48) stabler hovedkortet (150 × 100) over Raspberry Pi 4: Pi-en ligger på gulvet på 6 mm M2,5-stolper med USB/Ethernet-portene ut til venstre for kortet, hovedkortet 25 mm over på fire Ø8 M3-stolper. 40-pinners flatkabel 10 cm (hunn–hunn) fra J5 ned til Pi-ens header. Bakveggen er lik Pi 4-varianten (26 mm fri bak kortet til DC-099, KCD1 og RJ45-forlengeren); panelkontaktene (KCD1, DC-099, RJ45, USB-C, AUX, terminaler) kobles med korte ledninger til kortets skruterminaler og JST-plugger. Bygg: `VARIANT=pcb python3 build_stl.py`.
-
-![PCB-plan](docs/bilder/guide_04_inni_pcb.png)
-
-## Variant: Proxmox / vanlig PC
-
-Skjold Core kan kjøre i en Proxmox-LXC og spille ut på PC-ens analoge linje-ut, hodetelefonutgang, HDMI eller et USB-lydkort. Kjør på Proxmox-verten:
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/pult-forsterker/main/pi/proxmox/skjold-lxc.sh)"
-```
-
-Se [docs/PROXMOX.md](docs/PROXMOX.md). På en vanlig Debian-PC: `sudo bash pi/install_x86.sh`.
+- **Kilder:** AirPlay 2, Spotify Connect, Blåtann, internettradio, AUX og USB-lyd fra PC.
+- **Bibliotek:** Navidrome, Plex, YouTube Music og Lyrion Music Server.
+- **Flere rom:** synkron avspilling og grupper, med volum per rom.
+- **Lyd:** equalizer per kilde, loudness og romkorreksjon med mikrofonen i telefonen.
+- **Smarthus:** Home Assistant, Homey, Apple Hjem, Matter og MQTT. Enhetene finnes automatisk på nettverket.
+- **Styring:** app for iPhone og Android, nettleser, knappene på enheten, fjernkontroll eller API.
 
 ## Kom i gang
 
-1. **Deler** – se delelisten i [docs/byggeveiledning.md](docs/byggeveiledning.md) og `docs/KI_Pultforsterker_Bildeveiledning.pdf`.
-2. **Print** `kabinett/stl/v2_frontplate.stl` først (prøv knappene i den), så `v2_body.stl` og `v2_lid.stl`. Skal forsterkeren stå på pulten i stedet for å henge under: bruk `v2_lid_frittstaende.stl` (uten ører) og lim på gummiføtter. Parametrene står i `kabinett/scad/pultforsterker_v2.scad`.
-3. **Pi:** Raspberry Pi OS Lite 64-bit, vertsnavn `pultamp`, SSH + Wi-Fi på. Kopier `pi/` til Pi-en og kjør `bash install.sh` (20–30 min), deretter `sudo reboot`.
-4. **Bygg** etter [bildeveiledningen](docs/KI_Pultforsterker_Bildeveiledning.pdf) (LEGO-stil, steg 0–16) – tabellene står i [byggeveiledningen](docs/KI_Pultforsterker_Byggeveiledning.pdf).
-5. **Home Assistant:** kopier `custom_components/skjold` til `config/custom_components/`, start HA på nytt – forsterkeren dukker opp under *Oppdagede enheter*. Valgfritt: `pi/ki_pultforsterker_package.yaml` i `packages/`.
-6. **Homey:** `cd homey/no.kristo.skjold && npm i && homey app install`.
+1. **Last ned [Skjold Flasher](https://github.com/SebastianKristo/pult-forsterker/releases/latest)** for Mac, Windows eller Linux.
+2. **Velg enhet** (S1, Touch, Node eller Core), skriv inn Wi-Fi og navn, og skriv SD-kortet.
+3. **Sett kortet i Raspberry Pi-en.** Første oppstart installerer Skjold. Det tar 15–20 minutter.
+4. **Åpne appen** eller `http://<navn>.local:8765` i nettleseren.
 
-## Programvare på Pi-en
+Hele veien fra SD-kort til smarthus står i [docs/TOTALINSTRUKS.md](docs/TOTALINSTRUKS.md).
 
-| Fil | Gjør |
-|---|---|
-| `ki_amp_daemon.py` | Hoveddaemon: knapper, encoder, LED-ringer, reléer, X9C-volum, HTTP-API (port 8765), mDNS `_kipultamp._tcp`, tilstand i `/var/lib/ki-amp/state.json` |
-| `oled_display.py` | Tegner OLED-grensesnittet (luma.oled, SSD1309) etter `design-referanse/DESIGN.md` |
-| `install.sh` | Setter opp config.txt (hifiberry-dac, I2C, dwc2, serial av), bygger Shairport Sync + NQPTP, bluealsa, USB-gadget-lyd, systemd-tjenester |
-| `asound.conf` | ALSA dmix → snd-aloop loopback. CamillaDSP leser loopbacken og skriver til DAC-en |
-| `camilladsp.yml` / `camilladsp.service` | CamillaDSP v2: Loudness-filter + digitalt volum, styres live av daemonen over websocket (port 1234) |
-| `shairport-sync.conf` | AirPlay 2, metadata-pipe til OLED |
-| `ki-amp.env` | Navn, port, relé-polaritet (kopieres til `/etc/ki-amp.env`) |
-| `ki-usb-gadget.sh` | Setter opp Pi-en som USB-lydkort «Pultforsterker» via configfs, full speed (virker gjennom ADuM-isolator) |
-| `*.service` | systemd: `camilladsp`, `ki-amp`, `oled-display`, `ki-usb-audio`, `bluealsa-aplay` |
+Vil du installere for hånd på en ferdig Raspberry Pi OS?
 
-### HTTP-API
-
-```
-GET  /api/status            {"power":true,"input":"airplay","volume":42,"mute":false,"playing":true,"title":...,"artist":...,"bt":"connected"}
-POST /api/power   {"on":true}
-POST /api/toggle
-POST /api/input   {"input":"airplay|bt|aux|usb"}
-POST /api/volume  {"volume":0-100}
-POST /api/mute    {"mute":true}
-POST /api/bt      {"pairing":true}
-POST /api/loudness {"on":true,"level":0-10}
+```bash
+git clone https://github.com/SebastianKristo/pult-forsterker.git && cd pult-forsterker
 ```
 
-### GPIO (BCM)
+```bash
+KI_AMP_BOARD=node bash pi/install.sh
+```
 
-| Funksjon | GPIO | | Funksjon | GPIO |
-|---|---|---|---|---|
-| I2C SDA / SCL (OLED) | 2 / 3 | | LED-ring AIRPLAY / BT / AUX / USB | 7 / 8 / 9 / 10 |
-| OLED RES | 4 | | LED-ring POWER (PWM) | 11 |
-| I2S BCK / LCK / DIN (DAC) | 18 / 19 / 21 | | Relé AUX-valg (1+2) | 22 |
-| Knapp AIRPLAY / BT / AUX / USB | 5 / 6 / 12 / 13 | | Relé forsterker-strøm (3) | 27 |
-| Knapp POWER | 16 | | X9C INC / U/D / CS | 26 / 14 / 15 |
-| Encoder CLK / DT / SW | 23 / 24 / 25 | | | |
+Bytt `node` med `main` (S1), `touch` eller bruk `KI_AMP_CORE=1` for Core. Alle valgene står øverst i [`pi/install.sh`](pi/install.sh).
 
-Serial console må være av (GPIO 14/15 brukes av X9C) – `install.sh` gjør det.
+## Last ned
 
-## Bruk
+Alt ligger samlet i [siste utgivelse](https://github.com/SebastianKristo/pult-forsterker/releases/latest):
 
-| Handling | Gjør |
+- **Skjold Flasher** (`.dmg`, `.exe`, `.AppImage`)
+- **Android-appen** (`.apk`) og **iOS-appen** (usignert `.ipa`)
+- **Filer til 3D-printer** for alle produktene, ferdig satt opp for Creality K2 (`.3mf`), pluss STL og OpenSCAD
+- **Bruksanvisning** (PDF) og **fastvare** for Røst
+
+## Hva som ligger hvor
+
+| Mappe | Innhold |
 |---|---|
-| Velg kilde | trykk AIRPLAY / BT / AUX / USB |
-| Volum / mute | vri knotten / trykk den |
-| Standby / på | kort trykk POWER |
-| Omstart | hold POWER 3 s |
-| Bluetooth-parring | hold AIRPLAY 2 s (synlig som «Pultforsterker») |
-| USB-lyd | koble PC til USB-C bak, velg lydenheten «UAC2 Gadget» |
+| [`pi/`](pi/) | Forsterkerprogrammet (`ki_amp_daemon.py`), installasjon, oppdatering og tester |
+| [`skjold/app/`](skjold/app/) | Web-appen (Preact) og skjermbildet til Touch |
+| [`skjold/ios/`](skjold/ios/), [`skjold/android/`](skjold/android/) | Appene for iPhone (SwiftUI) og Android (Compose) |
+| [`skjold/flasher/`](skjold/flasher/) | Skjold Flasher (Electron) |
+| [`skjold/os/`](skjold/os/) | Skjermprogrammet på S1 og Node |
+| [`skjold/nettside/`](skjold/nettside/) | Nettsiden |
+| [`kabinett/`](kabinett/) | 3D-modeller og utskriftsfiler. Hvert produkt har sin `LES_MEG.md` |
+| [`pcb/`](pcb/), [`esphome/`](esphome/) | Kretskort og ESPHome-oppsett |
+| [`custom_components/skjold/`](custom_components/skjold/), [`ha-kort/`](ha-kort/) | Home Assistant-integrasjonen og kortet (HACS) |
+| [`homey/`](homey/) | Homey-appen |
+| [`docs/`](docs/) | Veiledninger og [API-dokumentasjon](docs/api/intro.md) |
 
-## Interaktiv 3D-modell
+Flere veiledninger: [Skjold Touch](docs/SKJOLD_TOUCH.md) · [Flere rom](docs/MULTIROOM.md) · [Skjold-hjem](docs/SKJOLD_HJEM.md) ·
+[Fjernstyring](docs/FJERNSTYRING.md) · [Plugins](docs/PLUGINS.md) · [Proxmox og vanlig PC](docs/PROXMOX.md) ·
+[Den første pultforsterkeren](docs/PULTFORSTERKER.md)
 
-`3d-visning/index.html` er en selvstendig side (three.js fra CDN). Åpne den i en nettleser: roter, åpne kassen, bytt mellom «Under pult» og «Frittstående», trykk på knappene, dra i volumknotten – skjermen tegnes 1:1 etter designet.
+## Utvikling
 
-![Åpen kasse](docs/bilder/render_aapen.png)
+```bash
+cd pi && python3 -m pytest -q tests
+```
 
-## Bygge dokumentasjonen selv
+```bash
+cd skjold/app && npm ci && npm run dev
+```
 
-Se [kabinett/tools/README.md](kabinett/tools/README.md): STL fra SCAD-parametrene (manifold3d), 2D-planer (matplotlib), LEGO-steg (three.js + Playwright) og PDF-ene.
+Web-appen kan kjøres mot en falsk enhet: `python3 skjold/ios/ci/mock_skjold.py 8765`, og åpne
+`http://localhost:5173/?host=http://127.0.0.1:8765`.
 
-## Farger
+## Status
 
-| Del | Farge |
-|---|---|
-| Kasse og lokk (matt PLA – «Charcoal», «Anthracite», «Dark Grey») | `#2C2D30` |
-| Frontplate (samme filament; lysere i modellen pga. lyset) | `#37383C` |
-| Inngangsknapper og POWER (svartoksidert metall, hvit LED-ring) | `#1D1D20` |
-| Volumknott (svart anodisert aluminium) | `#18181A` |
-| OLED-vindu (røykfarget/grå akryl) | `#060708` |
-| Etiketter front/bak | `#A3A29D` |
-| OLED tekst / dempet / spor / bakgrunn | `#EEF6FF` / `#7D8A94` / `#2A3036` / `#000000` |
-| LED-ringer | hvit; POWER dimmet til ca. 10 % i standby |
-| Høyttalerterminaler + / − | `#A3261D` / `#141415` |
-
-Renderne i `docs/` bruker disse fargene med noe sterkere lys så antrasitten leses på papir.
+Skjold er et byggeprosjekt og er ikke til salgs. Programvaren er i daglig bruk, men ikke alt er testet på alle
+kombinasjoner av maskinvare. Finner du en feil, [meld den her](https://github.com/SebastianKristo/pult-forsterker/issues).
 
 ## Lisens
 
-- **Programvare** (`pi/`, `skjold/app`, `skjold/os`, `skjold/flasher`, integrasjonene): MIT – se [LICENSE](LICENSE).
-- **Maskinvare, design og dokumentasjon** (`pcb/`, `kabinett/`, `skjold/design/` m.m.): CC BY-NC-SA 4.0 – bygg selv, men ikke for salg. Se [LISENS-MASKINVARE.md](LISENS-MASKINVARE.md).
+- **Programvare** (`pi/`, `skjold/app`, `skjold/os`, `skjold/flasher`, integrasjonene): MIT. Se [LICENSE](LICENSE).
+- **Maskinvare, design og dokumentasjon** (`pcb/`, `kabinett/`, `skjold/design/` m.m.): CC BY-NC-SA 4.0. Du kan bygge
+  selv, men ikke for salg. Se [LISENS-MASKINVARE.md](LISENS-MASKINVARE.md).
 - **Nettsiden** (`skjold/nettside/`): alle rettigheter forbeholdt.
 
-Full oversikt i [LISENS.md](LISENS.md). Kommersiell lisens: jemtlands@proton.me
-
-
-## 3D-modell av hovedkortet
-
-`pcb/export_3d.py` bygger `pcb/produksjon/ki_pultforsterker_main.glb` direkte fra KiCad-filen med de offisielle 3D-modellene (kicad-packages3d) og teksturer fra kobber/loddemaske/silketrykk. Samme modell ligger i `3d-visning/board.json` og vises i den interaktive 3D-visningen (knappen «Hovedkort (PCB)»). Lokal visning: `cd 3d-visning && python3 -m http.server`.
+Full oversikt står i [LISENS.md](LISENS.md). Kommersiell lisens: jemtlands@proton.me

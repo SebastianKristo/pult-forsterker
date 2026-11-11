@@ -262,12 +262,15 @@ L.write("skjold-rost-rund-k2-hylse.3mf", "Skjold Røst Rund – grillhylse med S
 L.write("skjold-rost-rund-k2-hylse-en-farge.3mf", "Skjold Røst Rund – grillhylse i én farge (SKJOLD felt inn)", [
     ("hylse", "Grillhylse (én farge, stående)", 1, (70, 70), None),
     ("hylse_orer", "Museører til hylsa (vris av etter print)", 1, None, "hylse")], {1: "#ECE9E3"})
-L.write("skjold-rost-rund-k2-lokk-bunn.3mf", "Skjold Røst Rund – lokk med skjerm, rute og bunnplate", [
-    ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (10, 10), None),
+# Lokk og bunn på hver sin plate: med store ører (Ø36) og 6 mm brim får ikke begge plass på én plate på 250 mm
+# (brimmen gikk utenfor plata, og brimmene grodde sammen). (16, 16) gir 6 mm fra ørene til platekanten.
+L.write("skjold-rost-rund-k2-lokk.3mf", "Skjold Røst Rund – lokk med skjerm og rute", [
+    ("lokk", "Lokk med skjermramme (lys, toppen ned)", 1, (16, 16), None),
     ("lokk_orer", "Museører til lokket (vris av etter print)", 1, None, "lokk"),
-    ("bunn", "Bunnplate med port (lys)", 1, (130, 130), None),
-    ("bunn_orer", "Museører til bunnplata (vris av etter print)", 1, None, "bunn"),
-    ("rute", "Rute over skjermen (klar PETG, 100 % fyll)", 4, (14, 160), None)], {1: "#ECE9E3", 4: "#DDE6EA"})
+    ("rute", "Rute over skjermen (klar PETG, 100 % fyll)", 4, (160, 20), None)], {1: "#ECE9E3", 4: "#DDE6EA"})
+L.write("skjold-rost-rund-k2-bunn.3mf", "Skjold Røst Rund – bunnplate med port", [
+    ("bunn", "Bunnplate med port (lys)", 1, (18, 18), None),
+    ("bunn_orer", "Museører til bunnplata (vris av etter print)", 1, None, "bunn")], {1: "#ECE9E3"})
 # elementplater for alle elementene i malen (kabinett/elementer/elementer.scad), på én plate
 EL = ["rs75_4", "frs8_4", "grs3fr4", "faital3fe22"]
 procs = [subprocess.Popen(["openscad", "-q", "-D", 'part="elementplate"', "-D", f'element="{e}"', "-o", f"stl/elementplate_{e}.stl", SC]) for e in EL]

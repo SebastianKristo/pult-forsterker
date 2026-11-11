@@ -15,6 +15,7 @@ import { DeskHome, DeskLibrary, DeskPlayer, DeskRadio } from './screens/desk';
 import { LibraryPage, libBack, libTitle, libUi } from './screens/library';
 import { ob, obBack } from './screens/onboard';
 import { CAT_ALIAS, ICONS } from './lib/settings';
+import { Boundary } from './components/boundary';
 import { cats } from './screens/settings';
 import { Icon, PRODUCT_ICON, Slider } from './components/ui';
 import { EqPage } from './screens/pages';
@@ -107,6 +108,7 @@ function Phone() {
       {page !== 'home' && <div class="top">{page === 'rooms' && visSted() ? <StedPicker big /> : <span class="title">{title}</span>}</div>}
       <div class="scroll" key={page + (r.cat ?? '')}>
         <Offline />
+        <Boundary key={page + (r.cat ?? '')}>
         {page === 'home' && <HomePhone />}
         {page === 'eq' && <EqPage />}
         {page === 'radio' && <RadioTabs phone />}
@@ -123,6 +125,7 @@ function Phone() {
         {page === 'abs' && <AbsPage />}
         {page === 'qhist' && <QhistPage />}
         {page === 'plug' && <PluginsPage />}
+        </Boundary>
       </div>
       {s && !fullPlayer.value && <MiniPhone />}
       <nav class="tabs">
@@ -132,7 +135,7 @@ function Phone() {
           </button>
         ))}
       </nav>
-      {fullPlayer.value && <FullSheet />}
+      {fullPlayer.value && <Boundary liten><FullSheet /></Boundary>}
     </div>
   );
 }
@@ -226,6 +229,7 @@ function Desktop() {
         <Offline />
         <main class="main">
           {r.page !== 'home' && <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>}
+          <Boundary key={r.page + (r.cat ?? '')}>
           {r.page === 'home' && <DeskHome />}
           {r.page === 'play' && <DeskPlayer />}
           {r.page === 'radio' && <RadioTabs />}
@@ -242,6 +246,7 @@ function Desktop() {
           {r.page === 'plug' && <PluginsPage />}
           {r.page === 'eq' && <EqPage />}
           {r.page === 'settings' && (cat ? <CategoryDetail cat={cat} wide /> : <SettingsPage wide />)}
+          </Boundary>
         </main>
       </div>
       {showRcol && <aside class="rcol" aria-label="Ditt system">

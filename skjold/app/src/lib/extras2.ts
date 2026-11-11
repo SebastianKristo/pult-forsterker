@@ -12,7 +12,7 @@ async function call<T>(path: string, body?: unknown, timeoutMs = 15000): Promise
       else Object.assign(init, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     }
     const r = await fetch(base + path, init);
-    const j = (await r.json().catch(() => ({}))) as T & { error?: string };
+    const j = (await r.json().catch(() => { if (r.ok) throw new Error('Uventet svar fra Skjold'); return {}; })) as T & { error?: string };
     if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
     return j;
   } catch (e) {

@@ -16,7 +16,7 @@ async function call<T = any>(path: string, body?: unknown, timeoutMs = 15000): P
   const tm = setTimeout(() => ac.abort(), timeoutMs);
   try {
     const r = await fetch(base + path, { credentials: credFor(base), signal: ac.signal, ...(body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) });
-    const j = await r.json().catch(() => ({}));
+    const j = await r.json().catch(() => { if (r.ok) throw new Error('Uventet svar fra Skjold'); return {}; });
     if (!r.ok) throw new Error((j as any).error || 'HTTP ' + r.status);
     return j as T;
   } finally { clearTimeout(tm); }
