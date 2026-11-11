@@ -1680,7 +1680,7 @@ def read_status():
         st = {**st, "title": swm["title"], "artist": swm["artist"] or st.get("artist", ""), "album": swm["album"] or "SUB/WAVE"}
         if swm["cover"].startswith(("http://", "https://")): cover = swm["cover"]
     cover_url = cover if cover.startswith(("http://", "https://")) else (f"/api/cover?v={cover}" if cover else "")
-    return {**state, "settings": public_settings(), **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
+    return {**state, "settings": public_settings(), **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "eff_volume": eff_volume(), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": device_id(), "presets": extra["presets"],
             "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"], "source_label": extra["source_label"], "lyrion_server": extra["lyrion_server"], "lyrion_player": extra["lyrion_player"],

@@ -264,6 +264,16 @@ object GitHubReleases {
 
     /** > 0 when a is newer than b ("1.2.3", "2.0", "1.6.0-beta.1"). */
     fun cmp(a: String, b: String): Int {
+        // først tallene foran «-»; er de like, er versjonen uten forhåndsmerke nyest (1.6.0 > 1.6.0-beta.1)
+        val ca = version(a).substringBefore('-').split('.').map { it.toIntOrNull() ?: 0 }
+        val cb = version(b).substringBefore('-').split('.').map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(ca.size, cb.size)) {
+            val d = ca.getOrElse(i) { 0 } - cb.getOrElse(i) { 0 }
+            if (d != 0) return d
+        }
+        val prea = '-' in version(a)
+        val preb = '-' in version(b)
+        if (prea != preb) return if (prea) -1 else 1
         val pa = version(a).split('.', '-').map { it.toIntOrNull() }
         val pb = version(b).split('.', '-').map { it.toIntOrNull() }
         for (i in 0 until maxOf(pa.size, pb.size)) {

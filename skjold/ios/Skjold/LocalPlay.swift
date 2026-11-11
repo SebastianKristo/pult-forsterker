@@ -22,6 +22,8 @@ final class LocalPlay {
     @ObservationIgnored private weak var m: AppModel?
 
     /// Kan det som spilles nå spilles på telefonen? (Radio og bibliotekene – ikke AirPlay, Blåtann, Spotify eller AUX.)
+    private static let mutedKey = "skjold-local-muted-host"
+
     func can(_ m: AppModel) -> Bool { m.live && !(m.dev?.listen.isEmpty ?? true) }
 
     func start(_ m: AppModel) {
@@ -35,7 +37,10 @@ final class LocalPlay {
         wasMuted = d.mute
         cur = ""
         sync(d, host: h)
-        if !wasMuted { m.devSend("/api/mute", ["mute": true]) }
+        if !wasMuted {
+            m.devSend("/api/mute", ["mute": true])
+            UserDefaults.standard.set(h, forKey: Self.mutedKey)   // huskes til lyden er slått på igjen (se sync)
+        }
         Haptics.success()
     }
 
@@ -50,6 +55,7 @@ final class LocalPlay {
             if d.duration > 0, let pos, pos.isFinite, abs(Double(d.position) - pos) > 3 { m.devSend("/api/seek", ["pos": Int(pos)], on: host) }
             if !wasMuted { m.devSend("/api/mute", ["mute": false], on: host) }
         }
+        UserDefaults.standard.removeObject(forKey: Self.mutedKey)
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
@@ -61,6 +67,11 @@ final class LocalPlay {
 
     /// Kalles for hver ny status fra det aktive rommet: ny strøm, pause/spill og posisjon.
     func sync(_ d: DevStatus, host: String) {
+        // Appen ble lukket mens rommet var dempet av «Denne iPhonen»: slå lyden på igjen første gang vi ser rommet
+        if !on, d.mute, UserDefaults.standard.string(forKey: Self.mutedKey) == host {
+            UserDefaults.standard.removeObject(forKey: Self.mutedKey)
+            Task { _ = await DeviceLink.shared.sendRaw("/api/mute", DeviceLink.json(["mute": false]), on: host, timeout: 6) }
+        }
         guard on else { return }
         guard host == self.host else { stop(); return }   // byttet rom: lyden tilbake til rommet den kom fra
         guard !d.listen.isEmpty, let url = Net.url(host, d.listen) else { stop(); return }

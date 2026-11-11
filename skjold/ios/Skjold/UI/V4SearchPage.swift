@@ -231,14 +231,14 @@ struct V4SearchPage: View {
     }
 
     private func playExt(_ h: ExtHit) {
-        let host = m.settingsHost
+        let host = m.activeHost
         let path = h.path
         let data = DeviceLink.json(h.body)
         Task { _ = await DeviceLink.shared.sendRaw(path, data, on: host, timeout: 12) }
     }
 
     private func askPlay(_ text: String) {
-        let host = m.settingsHost
+        let host = m.activeHost
         let data = DeviceLink.json(["text": text])
         askMsg = "Finner noe …"
         Task {
@@ -258,8 +258,8 @@ struct V4SearchPage: View {
     }
 
     private func loadExt(_ query: String) async -> [ExtHit] {
-        let host = m.settingsHost
-        let enc = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        let host = m.activeHost
+        let enc = YtmLib.q(query)   // & + # i søket må kodes (AC&DC)
         var out: [ExtHit] = []
         if let d = await DeviceLink.shared.get("/api/ma/search?q=" + enc, on: host, timeout: 12) {
             out += ExtHit.fromMA(d)

@@ -91,7 +91,8 @@ extension AppModel {
             if self.known.contains(where: { $0.id == st.id && $0.host != h }) {
                 // same box, new address (DHCP): update it
                 self.remember(h, st)
-                if self.activeHost == nil || self.dev == nil { self.activeHost = h }
+                // ny adresse for enheten vi styrer (omstart, ny DHCP-adresse): bytt og koble hendelsene til på nytt
+                if self.activeHost == nil || self.dev == nil || self.link != .online { self.activeHost = h; self.startEvents() }
                 return
             }
             if self.demo && self.mode == .app { _ = await self.connect(h); return }
@@ -149,7 +150,7 @@ extension AppModel {
 
     func apply(_ st: DevStatus, host h: String) {
         devStats[h] = st
-        guard h == activeHost else { return }
+        guard h == activeHost else { rebuildRooms(); return }   // et annet rom: vis ny tilstand med en gang
         let first = dev == nil || link != .online
         dev = st
         link = .online
@@ -174,14 +175,15 @@ extension AppModel {
         if first { Task { [weak self] in await self?.loadSettings(h) } }
 
         guard !actLyrionOnly else { return }
-        if !held("vol") { vol = st.volume }
+        // med hodetelefoner og eget hodetelefonvolum styrer glideren det volumet, ikke høyttalervolumet
+        if !held("vol") { vol = st.effVolume }
         if !held("pos") { pos = st.position }
 
         // a library track we started on the amplifier (via Lyrion as a stream)?
         if let ls = libStream {
             if st.input == "radio", st.radioNow?.url == ls {
                 if st.playing { libSawPlaying = true }
-                else if libSawPlaying && !st.paused && !held("input") { libSawPlaying = false; libEnded() }
+                else if libSawPlaying && !st.paused && !held("input") && !held("play") { libSawPlaying = false; libEnded() }
                 if !held("play") { playing = st.playing }
                 return
             }
@@ -196,6 +198,7 @@ extension AppModel {
         case "usb": input = 4; svc = nil
         case "spotify": input = 0; svc = "spotify"
         case "plex": input = 0; svc = "plex"
+        case "roon": input = 0; svc = nil
         case "radio":
             input = 3; svc = nil
             if let rn = st.radioNow {
@@ -423,7 +426,7 @@ extension AppModel {
         var n = sset
         for (k, v) in s.ints where !held("set-" + k) { n[k] = v }
         if n != sset { sset = n }
-        if let f = s.ints["hold"] { fav = f }
+        if let f = s.ints["hold"], !held("set-hold") { fav = f }
         var nm = names
         var push: [String: Any] = [:]
         for k in Self.stringKeys {

@@ -54,7 +54,7 @@ struct V4RoomsTab: View {
             let t = r.np?.first ?? "Ledig"
             let s = (r.np?.count ?? 0) > 1 ? r.np![1] : SK.dev(r.type).n
             out.append(V4RoomCardData(id: r.id, name: r.name, types: [r.type], t: t, s: s, src: "Radio", key: r.np?.first ?? r.name,
-                                      playing: r.np != nil, isMain: false, pinned: ui.pins.contains(r.id),
+                                      playing: r.np != nil && r.np?.first != "Frakoblet", isMain: false, pinned: ui.pins.contains(r.id),
                                       ord: ui.pins.firstIndex(of: r.id), room: r))
         }
         let sort = ui.sort

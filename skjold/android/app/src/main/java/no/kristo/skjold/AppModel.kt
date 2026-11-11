@@ -334,6 +334,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private fun launch(op: suspend CoroutineScope.() -> Unit) = viewModelScope.launch(block = op)
 
     override fun onCleared() {
+        LocalPlay.stop()      // slå på lyden i rommet igjen hvis «Denne telefonen» spilte
         browser.stop()
         super.onCleared()
     }
@@ -984,10 +985,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (known.any { it.host == h }) return
         launch {
             val st = DeviceLink.status(h) ?: return@launch
-            if (known.any { it.id == st.id && it.host != h }) {
-                // same box, new address (DHCP): update it
+            val old = known.firstOrNull { it.id == st.id && it.host != h }?.host
+            if (old != null) {
+                // same box, new address (DHCP): update it – også når det er enheten vi styrer akkurat nå
                 remember(h, st)
-                if (activeHost == null || dev == null) activeHost = h
+                if (activeHost == null || dev == null || activeHost == old) activeHost = h
                 return@launch
             }
             if (demo && mode == Mode.APP) { connect(h); return@launch }
@@ -1092,6 +1094,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             "usb" -> { input = 4; svc = null }
             "spotify" -> { input = 0; svc = "spotify" }
             "plex" -> { input = 0; svc = "plex" }
+            "roon" -> { input = 0; svc = null }
             "radio" -> {
                 input = 3; svc = null
                 val rn = st.radioNow
@@ -1293,8 +1296,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 else mapOf("title" to s.name, "url" to u, "genre" to s.genre, "icon" to (s.image ?: LogoStore.url(s.name) ?: ""))
             }
             if (body.size < out.size) Haptics.warning()
-            DeviceLink.send("/api/presets", mapOf("presets" to body), on = h)
-            loadPresets()
+            // ingen kanaler med adresse (uten nett slås de ikke opp): ikke send en tom liste, og ikke last på nytt –
+            // loadPresets() ville sendt den samme tomme lista igjen i en evig runde
+            if (body.isEmpty()) return@launch
+            if (DeviceLink.send("/api/presets", mapOf("presets" to body), on = h) != null) loadPresets()
         }
     }
 
@@ -1526,7 +1531,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     private fun setLib(id: String, d: LibData?) { libs = if (d == null) libs - id else libs + (id to d) }
 
+    /** Henter biblioteket. Avbrytes hentingen (du gikk ut av siden), nullstilles «henter», så neste forsøk ikke henger. */
     suspend fun loadLib(id: String, force: Boolean = false) {
+        try { loadLibNow(id, force) } finally { if (libs[id]?.state == "busy") setLib(id, null) }
+    }
+
+    private suspend fun loadLibNow(id: String, force: Boolean) {
         if (!live) return
         val cur = libs[id]?.state
         if (!force && (cur == "ok" || cur == "busy")) return

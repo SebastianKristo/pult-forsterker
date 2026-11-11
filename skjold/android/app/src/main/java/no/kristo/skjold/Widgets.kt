@@ -235,8 +235,8 @@ class TransportAction : ActionCallback {
 
 class VolumeAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val v = (WidgetStore.load(context).volume + (parameters[KEY_DV] ?: 0)).coerceIn(0, 100)
-        WidgetStore.command(context, "/api/volume", mapOf("volume" to v))
+        // relativt steg: widgeten kan vise et gammelt volum, og et absolutt tall derfra kunne gitt et hopp i lydstyrke
+        WidgetStore.command(context, "/api/volume", mapOf("delta" to (parameters[KEY_DV] ?: 0)))
     }
 }
 
