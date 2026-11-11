@@ -35,7 +35,8 @@
   // i stedet for designets eksempeltall (vær, kalender, bilde, alarm).
   const NEEDS = { 9: 'weather', 11: 'sun', 13: 'photo', 14: 'alarm', 15: 'cal' };
   window.drawSaver = function (g, stl) {
-    const home = (st && st.home) || {}, need = NEEDS[stl];
+    const home = (st && st.home) || {}; let need = NEEDS[stl];
+    if (S.night && nightLight) { stl = 14; need = null; }      // nattmodus: «Nattlys» uansett valgt stil (kan slås av)
     if (need && !home[need]) stl = 5;
     const w = WL[S.wl] || {}, data = { name: devName(), last: w.t ? w.t + ' · ' + (w.s || '') : '' };
     ['weather', 'sun', 'cal', 'photo', 'caption', 'alarm'].forEach(k => { if (home[k] != null) data[k] = home[k]; });
@@ -81,11 +82,17 @@
     else if (ng && typeof ng === 'object') S.night = !!ng.on;
     if (st.sleep && st.sleep.left) S.toastT = 0;
     if (t !== (prev.title || '') || inp !== prev.input) S.actT = n;
-    S.lastAct = st.input_seq !== prev.input_seq ? n : S.lastAct;
+    // dimming: alt brukeren gjør teller som aktivitet (knapp, hjul, volum, kilde, hold), ikke bare input_seq
+    const ui = st.ui || {}, pu = prev.ui || {};
+    if (st.input_seq !== prev.input_seq || st.volume !== prev.volume || st.hp_volume !== prev.hp_volume || inp !== prev.input || !!st.mute !== !!prev.mute
+      || st.usb_pc !== prev.usb_pc || ui.hold || ui.overlay || !!st.power !== !!prev.power || JSON.stringify(st.setup_net || null) !== JSON.stringify(prev.setup_net || null)) S.lastAct = n;
+    if (ui.hold || ui.overlay || (st.setup_net && (st.setup_net.active || st.setup_net.joining))) wake(1200);
     wake(400);
   }
+  let nightLight = true;
   function applySettings(set) {
     if (!set) return;
+    if (typeof set.nightLight === 'boolean') nightLight = set.nightLight;
     for (const k in set) if (k in S.set && typeof set[k] === typeof S.set[k]) S.set[k] = set[k];
     LEDK = [1, 0.55, 0.22, 0][S.set.led | 0];
     wake(200);
@@ -137,9 +144,9 @@
 
   // Forhåndsvisning/test: ?demo=<tilstand> tegner uten daemon (brukes av test_render.js)
   const demo = new URLSearchParams(location.search).get('demo');
-  if (demo !== null) { window.__demo = true; window.SKJOLD_SCREEN = { apply, applySettings, onUi, S, wake }; startBoot(); wake(3000); return; }
+  if (demo !== null) { window.__demo = true; window.SKJOLD_SCREEN = { apply, applySettings, onUi, S, wake, status: () => st }; startBoot(); wake(3000); return; }
   startBoot(); wake(3000);
   greeting(); loadSettings(); poll(); events(); uiStream();
   setInterval(loadSettings, 30000);
-  window.SKJOLD_SCREEN = { apply, applySettings, onUi, S, wake };
+  window.SKJOLD_SCREEN = { apply, applySettings, onUi, S, wake, status: () => st };
 })();

@@ -8642,7 +8642,7 @@ def _s1f_api():
     return NS(state=state, set_input=lambda i: set_input(i), set_power=set_power, set_mute=set_mute, set_volume=set_volume,
               transport=transport, bt_pairing=lambda on: bt_pairing(on, "knapp"), step_preset=step_preset, save_preset=save_preset,
               play_preset=lambda n: play_preset(n), usb_toggle=usbsw.toggle, usb_set=usbsw.set,
-              reboot=lambda: system_reboot(why="POWER holdt"), factory_reset=lambda: factory_reset(), night_toggle=night_toggle, night_set=night_set,
+              reboot=lambda: system_reboot(why="POWER holdt"), factory_reset=lambda: factory_reset(), input_event=lambda: (input_event(), changed()), night_toggle=night_toggle, night_set=night_set,
               power_event=power_event, smenu_open=smenu_open, smenu_close=smenu_close, smenu_step=smenu_step,
               smenu_press=smenu_press, smenu_is_open=lambda: bool(smenu["open"]), smenu_idx=lambda: smenu["idx"] if smenu["open"] else None,
               settings=settings, ui_event=s1f_ui_event, hold_routine=lambda b: s1_hold_routine(b), set_headphones=set_headphones, led_scale=lambda: led_level(),

@@ -226,13 +226,13 @@ function drawBarBT(g,F){ const now=performance.now(), W='#f6f3ee', Dm='rgba(246,
   const txt=(s,x,y,px,wt,c,al)=>{ g.font=(wt||'')+' '+px+'px '+F; g.fillStyle=c; g.textAlign=al||'left'; g.fillText(s,x,y); g.textAlign='left'; };
   const bg=g.createRadialGradient(320,320,0,320,320,900); bg.addColorStop(0,'rgba(59,130,246,.22)'); bg.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=bg; g.fillRect(0,0,1920,640);
   const pill=(s)=>{ g.font='bold 30px '+F; const w=g.measureText(s).width; g.beginPath(); g.roundRect(X,66,w+48,52,26); g.fillStyle='rgba(59,130,246,.28)'; g.fill(); txt(s,X+24,103,30,'bold',W); };
-  pill('BLUETOOTH');
+  pill('BLÅTANN');
   if(S.pairT){ const t=(now-S.pairT)/1000, found=t>=4, cx=320, cy=320;
     if(!found){ for(let i=0;i<4;i++){ const r=((t*0.8+i/4)%1)*290; g.strokeStyle='rgba(120,170,255,'+(0.9*(1-r/290)).toFixed(2)+')'; g.lineWidth=4; g.beginPath(); g.arc(cx,cy,r,0,Math.PI*2); g.stroke(); }
       const a=t*2.4; const sw=g.createConicGradient?g.createConicGradient(a,cx,cy):null; if(sw){ sw.addColorStop(0,'rgba(120,170,255,.35)'); sw.addColorStop(0.12,'rgba(120,170,255,0)'); sw.addColorStop(1,'rgba(120,170,255,0)'); g.fillStyle=sw; g.beginPath(); g.arc(cx,cy,270,0,Math.PI*2); g.fill(); }
       g.fillStyle=BL; g.beginPath(); g.arc(cx,cy,92+4*Math.sin(t*4),0,Math.PI*2); g.fill(); btGlyph(g,cx,cy,26,12,'#fff');
       txt('Søker etter enheter'+'...'.slice(0,1+Math.floor(t*2)%3),X-4,250,96,'bold',W);
-      txt('Synlig som «'+devName()+'» · velg den i Bluetooth på telefonen',X,322,40,'',Dm);
+      txt('Synlig som «'+devName()+'» · velg den i Blåtann på telefonen',X,322,40,'',Dm);
       txt('Trykk BT igjen for å avbryte',X,430,30,'',Dm); }
     else { const u=Math.min(1,(t-4)/0.5), e=1-Math.pow(1-u,3), px=500+80*(1-e);
       g.fillStyle=BL; g.beginPath(); g.arc(150,cy,80,0,Math.PI*2); g.fill(); btGlyph(g,150,cy,22,10,'#fff');
@@ -391,7 +391,7 @@ function barNow(){ const i=S.input, k=INPUTS[i];
   if(i===2){ const p=PRESETS[S.preset]; return {src:'RADIO',t:p[0],s:p[1],live:true}; }
   if(i===1){ const a=AUXSRC[S.aux]; return {src:'AUX',t:a[0],s:a[1],live:true}; }
   if(i===3){ const u=USBSRC[S.usb]; return {src:'USB',t:u[0],s:u[1],live:true}; }
-  return {src:S.wl==='bt'?'BLUETOOTH':'AIRPLAY',t:k.t,s:k.s,live:false}; }
+  return {src:S.wl==='bt'?'BLÅTANN':'AIRPLAY',t:k.t,s:k.s,live:false}; }
 function bdayOn(){ if(S.bdayDemo) return true; try{ return localStorage.getItem('s1_bday_once')==='armed'; }catch(e){ return false; } }
 const CONF=Array.from({length:90},(_,i)=>({x:Math.random()*1920,y:Math.random()*640,v:40+Math.random()*90,w:6+Math.random()*10,h:12+Math.random()*16,r:Math.random()*6,s:(Math.random()-.5)*4,c:['#ff5a7a','#ffc94a','#5ad1ff','#8a7dff','#5be3a0','#ffffff'][i%6]}));
 function drawBday(g,F){ const t=performance.now()/1000; const bg=g.createLinearGradient(0,0,1920,640); bg.addColorStop(0,'#2a0b3d'); bg.addColorStop(0.55,'#5a1248'); bg.addColorStop(1,'#1d1240'); g.fillStyle=bg; g.fillRect(0,0,1920,640);
@@ -494,7 +494,7 @@ function drawBar(){ const g=cvb.getContext('2d'); g.setTransform(0.5,0,0,0.5,0,0
       meter(X,456,TW-tot-40,80); }
     dim(); return; }
   head(n.t,n.s);
-  if(!vol6()){ const el=((S.paused?S.pausedAt:now)-S.playT)/1000, dur=244, p=Math.min(1,(el%dur)/dur), m=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
+  if(!vol6()){ const el=((S.paused?S.pausedAt:now)-S.playT)/1000, dur=(INPUTS[0].dur>1?INPUTS[0].dur:244), p=Math.min(1,(el%dur)/dur), m=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
     rr(X,488,TW,8,4); g.fillStyle='rgba(255,255,255,.18)'; g.fill(); rr(X,488,Math.max(8,TW*p),8,4); g.fillStyle=W; g.fill();
     txt(m(el%dur),X,540,28,'',Dm); txt('−'+m(dur-el%dur),XR,540,28,'',Dm,'right');
     if(S.paused){ g.fillStyle=W; g.fillRect(X+TW/2-14,512,10,32); g.fillRect(X+TW/2+4,512,10,32); } }
