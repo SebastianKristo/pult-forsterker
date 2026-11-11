@@ -440,3 +440,44 @@ img[src*="-touch"],img[src*="-s1"]{-webkit-mask-image:none;mask-image:none;borde
 @media (max-width:900px){.skjermrekke{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:640px){.skjermrad.tre{grid-template-columns:1fr}.skjermrekke{grid-template-columns:repeat(2,minmax(0,1fr))}.status-boks{padding:22px 20px}}
 @media (min-width:521px){.nav-inn{gap:22px}.nav-lenker{gap:17px}}
+
+/* ===== Løft 2026-11: meny på mobil, roligere bildeinngang, lyse studiobilder, forskjøvet reveal ===== */
+/* Meny: på smale skjermer en knapp som åpner hele menyen (JS legger inn knappen; uten JS ruller lenkene som før) */
+.meny-knapp{display:none;flex:none;width:44px;height:44px;margin-left:auto;margin-right:-10px;border:0;background:none;color:var(--tekst-l);cursor:pointer;align-items:center;justify-content:center;border-radius:12px}
+.meny-knapp span{position:relative;display:block;width:18px;height:12px}
+.meny-knapp span::before,.meny-knapp span::after{content:"";position:absolute;left:0;right:0;height:1.6px;border-radius:2px;background:currentColor;transition:transform .35s var(--ease),top .35s var(--ease)}
+.meny-knapp span::before{top:1px}.meny-knapp span::after{top:9px}
+.nav.aapen .meny-knapp span::before{top:5px;transform:rotate(45deg)}
+.nav.aapen .meny-knapp span::after{top:5px;transform:rotate(-45deg)}
+@media (max-width:980px){
+  .har-meny .meny-knapp{display:flex}
+  .har-meny .spraak{margin-left:0}
+  .har-meny .nav-lenker{position:absolute;left:0;right:0;top:100%;height:calc(100vh - 53px);height:calc(100dvh - 53px);display:flex;flex-direction:column;gap:0;overflow-y:auto;white-space:normal;-webkit-mask-image:none;mask-image:none;padding:18px 22px calc(40px + env(safe-area-inset-bottom));background:#000;opacity:0;visibility:hidden;transform:translateY(-8px);transition:opacity .3s var(--ease),transform .3s var(--ease),visibility 0s .3s}
+  .har-meny .nav.aapen .nav-lenker{opacity:1;visibility:visible;transform:none;transition:opacity .3s var(--ease),transform .3s var(--ease)}
+  .har-meny .nav-lenker a{font-family:var(--sora);font-size:26px;font-weight:600;letter-spacing:-.02em;color:var(--tekst-l);padding:14px 0;border-bottom:1px solid rgba(255,255,255,.08);opacity:0;transform:translateY(10px);transition:opacity .4s var(--ease),transform .4s var(--ease)}
+  .har-meny .nav.aapen .nav-lenker a{opacity:1;transform:none;transition-delay:calc(var(--i,0)*28ms + 60ms)}
+  .har-meny .nav-lenker a[aria-current=page]{color:var(--khaki)}
+  .har-meny .nav-lenker a[href^="mailto"]{color:var(--demp-l);font-size:17px;font-weight:400;border-bottom:0;margin-top:10px}
+  .meny-laast{overflow:hidden}
+}
+/* Lyse studiobilder (Touch, Røst, Stav): en bevisst, avrundet flate i stedet for en maske som gir grå boks med mørk kant */
+.produkt img[src*="/touch-"],.produkt img[src*="-rund"],.produkt img[src*="/stav-"],
+.p-hero img[src*="/touch-"],.p-hero img[src*="-rund"],.p-hero img[src*="/stav-"],
+.ramme img[src*="/touch-"],.ramme img[src*="-rund"],.ramme img[src*="/stav-"],
+.bildepar img[src*="/touch-"],.bildepar img[src*="-rund"],.bildepar img[src*="/stav-"],
+.bilder img[src*="/touch-"],.bilder img[src*="-rund"],.bilder img[src*="/stav-"]{-webkit-mask-image:none;mask-image:none;border-radius:clamp(18px,3vw,36px);box-shadow:0 40px 120px -40px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.06)}
+/* Produktbildet i toppen av produktsidene: rolig inngang, alltid i full styrke (styres ikke av rulling) */
+.fx .p-hero img[src*="s1-skra"]{margin-top:clamp(-90px,-5vw,-20px)}
+.fx .p-hero img{animation:helt-inn 1.4s var(--ease) .15s both}
+@keyframes helt-inn{from{opacity:0;transform:translateY(36px) scale(.965)}to{opacity:1;transform:none}}
+/* Fliser og kort: seks deler seg 3 + 3 i stedet for 4 + 2 med hull */
+@media (min-width:860px){.fliser:has(>.flis:nth-child(6):last-child),.fliser:has(>.flis:nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kort-rutenett:has(>.kort:nth-child(6):last-child),.kort-rutenett:has(>.kort:nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Hover: løft og lys kant i stedet for at hele kortet blir blekere */
+a.produkt:hover,a.kort:hover,a.core-stripe:hover,.to-prod a:hover{opacity:1}
+a.produkt{transition:border-color .5s var(--ease)}
+a.produkt:hover{border-color:rgba(255,255,255,.16)}
+a.produkt .mer,a.kort .mer{transition:transform .4s var(--ease)}
+a.produkt:hover .mer,a.kort:hover .mer{transform:translateX(4px)}
+/* Litt bedre kontrast på små etiketter */
+.etikett{color:#a3a39c}
