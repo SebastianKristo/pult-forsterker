@@ -66,7 +66,7 @@ Alt ligger samlet i [siste utgivelse](https://github.com/SebastianKristo/pult-fo
 
 - **Skjold Flasher** (`.dmg`, `.exe`, `.AppImage`)
 - **Android-appen** (`.apk`) og **iOS-appen** (usignert `.ipa`)
-- **Filer til 3D-printer** for alle produktene, ferdig satt opp for Creality K2 (`.3mf`), pluss STL og OpenSCAD
+- **Filer til 3D-printer:** `skjold-3d-print.zip` med én mappe per produkt. Hver mappe har ferdige plater for Creality K2 (`.3mf`), enkeltdeler (STL), kilde (OpenSCAD) og egen `LES_MEG.md`
 - **Bruksanvisning** (PDF) og **fastvare** for Røst
 
 ## Hva som ligger hvor
