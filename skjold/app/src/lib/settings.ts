@@ -20,6 +20,7 @@ export interface Settings {
   auto: number; wake: boolean; spEn: boolean; upnpEn: boolean; castEn: boolean; ytmEn: boolean; ndEn: boolean; ytmUser: string; ytmCookie: string; ndUrl: string; ndUser: string; ndPass: string; plexEn: boolean; plexUrl: string; plexToken: string; maEn: boolean; maUrl: string; maToken: string;
   /** Skjold Touch-skjermen: rolle, lydutgang, standby etter, standby-visning, nattmodus. */
   tRole: number; tOut: number; tStandby: number; tIdle: number; tNight: boolean;
+  tStart: number; tBell: number; tNightMode: number; tNStart: number; tNEnd: number; tVoice: boolean; tWake: number; tMic: boolean;
   dblPower: number; nightLight: boolean;
   /** Node/Core: lydutgang (indeks i OUT_LIST). 3 = I²S/som installert. USB-lydkort (UCA222/UCA202) finnes automatisk. */
   out: number;
@@ -67,6 +68,7 @@ export const DEF: Settings = {
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
   hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '', maEn: false, maUrl: '', maToken: '',
   tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false,
+  tStart: 0, tBell: 0, tNightMode: 0, tNStart: 22, tNEnd: 7, tVoice: false, tWake: 0, tMic: true,
   dblPower: 0, nightLight: true, out: 3,
   updChannel: 0, updAuto: true, setupDone: false,
   homeLayout: [],
@@ -79,7 +81,7 @@ export const fmt = {
 } as const;
 
 export type NumKey = 'bass' | 'treb' | 'bal' | 'lvlAux' | 'lvlUsb';
-export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle' | 'dblPower' | 'out';
+export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle' | 'tStart' | 'tNightMode' | 'tBell' | 'dblPower' | 'out';
 export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn' | 'castEn' | 'ytmEn' | 'ndEn' | 'tNight' | 'nightLight';
 /** Lagres bare på denne telefonen (innlogginger til musikktjenester sendes ikke til forsterkeren). */
 export type LocalKey = 'ytmUser' | 'ytmCookie' | 'ndUrl' | 'ndUser' | 'ndPass';
@@ -120,6 +122,11 @@ export const OUT_LIST = ['3,5 mm (innebygd)', 'HDMI', 'USB-lydkort (UCA222 / UCA
 export const TOUCH_STANDBY = ['Aldri', '30 s', '1 min', '5 min'];
 export const TOUCH_STANDBY_S = [0, 30, 60, 300];
 export const TOUCH_IDLE = ['Klokke', 'Cover', 'Svart'];
+export const TOUCH_START = ['Spiller nå', 'Hjem', 'Smarthus', 'Vekkeklokke', 'Bibliotek', 'Rom', 'Innstillinger', 'Standby'];
+export const TOUCH_BELL = ['Vis kamera', 'Bare varsel', 'Av'];
+export const TOUCH_NIGHT = ['Av', 'Tidsplan', 'Styrt av HA/Homey', 'På'];
+export const TOUCH_WAKE = ['Okay Nabu', 'Hey Jarvis', 'Hey Mycroft'];
+export const TOUCH_WAKE_ID = ['ok_nabu', 'hey_jarvis', 'hey_mycroft'];
 export const CATS: Category[] = [
   { id: 'eq', n: 'Equalizer', sub: 'Egen profil per inngang', items: [{ kind: 'eq', n: 'Equalizer' }] },
   { id: 'lyd', n: 'Lyd', sub: 'Tone, volum og nivå', items: [
@@ -177,7 +184,9 @@ export const CATS: Category[] = [
     opt('tOut', 'Lydutgang', TOUCH_OUT, 'PCM5122 HIFI HAT'),
     opt('tStandby', 'Standby etter', TOUCH_STANDBY, 'Uten trykk på skjermen'),
     opt('tIdle', 'I standby vis', TOUCH_IDLE),
-    bool('tNight', 'Nattmodus', 'Rødlig, svakt lys mellom 23 og 07')] },
+    opt('tStart', 'Startside', TOUCH_START, 'Siden som vises etter oppstart'),
+    opt('tNightMode', 'Nattmodus', TOUCH_NIGHT, 'Rødlig, svakt lys. Tidsplanen stilles på skjermen.'),
+    opt('tBell', 'Ringeklokke', TOUCH_BELL, 'Når noen ringer på')] },
   { id: 'skjerm', n: 'Skjerm og lys', sub: 'Dimming, klokke, LED', items: [
     opt('dim', 'Dimme skjermen etter', ['Av', '30 s', '1 min']), opt('off', 'Slukk skjermen etter', ['Av', '2 min', '5 min'], 'Beskytter OLED-skjermen mot innbrenning'),
     bool('clock', 'Klokke i standby'), { kind: 'clocks', n: 'Klokke i standby' },

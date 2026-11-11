@@ -1266,6 +1266,8 @@ SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0
                 "maEn": False, "maUrl": "", "maToken": "",
                 # Skjold Touch-skjermen (synkes med app og web-UI)
                 "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False,
+                # Skjold Touch: startside, ringeklokke (0 kamera, 1 bare varsel, 2 av), nattmodus (0 av, 1 tidsplan, 2 HA/Homey, 3 på)
+                "tStart": 0, "tBell": 0, "tNightMode": 0, "tNStart": 22, "tNEnd": 7, "tVoice": False, "tWake": 0, "tMic": True,
                 # Skjold S1: dobbelttrykk på power (0 = Nattmodus, 1 = Av) og Nattlys-klokke i nattmodus
                 "dblPower": 0, "nightLight": True,
                 # Hjemskjermen: rekkefølge og synlighet for seksjonene (skjold_homelayout.py) – per enhet, synkes til alle klienter
@@ -4637,11 +4639,15 @@ def fire_alarm(a, label="Vekkerklokke"):
 
 def _alarm_tick():
     tm = time.localtime()
+    if globals().get("touch"):
+        touch.ring.tick()          # slumring og alarmer ingen har slått av
     if plug_on("alarm"):
         for i, a in enumerate(plug_cfg("alarm").get("alarms") or []):
             k = alarm_due({**a, "id": f"a{i}"}, tm, _alarm_fired)
             if k:
                 _alarm_fired.add(k); fire_alarm(a)
+                if globals().get("touch"):
+                    touch.ring.start(a)     # skjermene viser «God morgen» med Slumre og Slå av
     if plug_on("news"):
         c = plug_cfg("news")
         k = alarm_due({"time": c.get("time"), "days": c.get("days"), "id": "news"}, tm, _alarm_fired)
@@ -5301,6 +5307,8 @@ def mqtt_command(topic_tail, payload):
             elif k == "presence" and _HX.get("presence"): _HX["presence"].set_enabled(str(v).lower() in ("1", "true", "on", "på"))
             elif k == "night": night_set(str(v).strip().lower() in ("1", "true", "on", "på"), "Home Assistant")
             elif k == "night_trigger": power_event("double_press", src="Home Assistant"); night_toggle("Home Assistant")
+            elif k == "alarm": (touch.ring.snooze if str(v).strip().lower() in ("snooze", "slumre") else touch.ring.stop)()
+            elif k == "screen": touch.command("wake" if str(v).strip().lower() in ("1", "true", "on", "på", "wake") else "standby")
         except Exception as e:
             print("MQTT-kommando:", k, e, flush=True)
 
@@ -5322,6 +5330,10 @@ def _mqtt_discovery(cl, base):
     import skjold_s1f as _s1
     for topic, cfg in _s1.mqtt_night_discovery(base, hid, dev):   # nattmodus: utløser, event, knapp og bryter
         cl.publish(topic, json.dumps(cfg, ensure_ascii=False), retain=True)
+    if os.environ.get("KI_AMP_PRODUCT", "").strip() == "touch":   # Skjold Touch: vekkeklokke og skjerm som entiteter
+        import skjold_touch as _tm
+        for topic, cfg in _tm.mqtt_discovery(base, hid, dev):
+            cl.publish(topic, json.dumps(cfg, ensure_ascii=False), retain=True)
 
 
 def _mqtt_tick():
@@ -5374,6 +5386,10 @@ def _mqtt_tick():
         nv = "ON" if state.get("night") else "OFF"
         if _mqtt.get("night") != nv:
             cl.publish(mqtt_base() + "/night", nv, retain=True); _mqtt["night"] = nv
+        if globals().get("touch"):
+            av = "ON" if touch.ring.on else "OFF"
+            if _mqtt.get("alarm") != av:
+                cl.publish(mqtt_base() + "/alarm", av, retain=True); _mqtt["alarm"] = av
         while _mqtt_events:
             ev = _mqtt_events.pop(0)
             cl.publish(mqtt_base() + "/event/power", ev)
@@ -6438,7 +6454,8 @@ def plugin_update(pid, body):
                     raise ValueError("alarmtid må være TT:MM")
                 al.append({"time": a["time"], "days": sorted({int(d) for d in a.get("days") or [] if 0 <= int(d) <= 6}),
                            "preset": int(a.get("preset") or 0), "url": str(a.get("url") or "")[:500],
-                           "volume": max(0, min(100, int(a.get("volume", 30)))), "fade": max(0, min(30, int(a.get("fade", 0) or 0))), "on": bool(a.get("on", True))})
+                           "volume": max(0, min(100, int(a.get("volume", 30)))), "fade": max(0, min(30, int(a.get("fade", 0) or 0))), "on": bool(a.get("on", True)),
+                           "name": str(a.get("name") or "")[:24], "smart": bool(a.get("smart", False))})
             v = al
         if pid in ("xtc", "sync", "placement"):
             from skjold_sync import dspblocks
@@ -7314,6 +7331,7 @@ threading.Thread(target=vinyl.run, daemon=True).start()
 
 def feat_status():
     out = {"doorbell": doorbell.status(), "recognized": _feat["last_hit"] if _feat["last_hit"] and time.time() - _feat["last_hit"].get("t", 0) < 600 else None}
+    out.update(touch.status())
     m = _feat["vinyl"]
     if m and state.get("input") in ("aux", "aux2", "usb"):
         out.update({"title": m["title"], "artist": m["artist"], "album": m["album"], "cover_url": m.get("art", ""),
@@ -7459,6 +7477,26 @@ FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h
                ("GET", "/api/routines", h_routines), ("POST", "/api/routines", h_routines), ("POST", "/api/routines/steps", h_routines),
                ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
 FEAT_ROUTES += DUCK_ROUTES
+
+# --- Skjold Touch: smarthusfliser, vekkeklokke som ringer, stemmeoverlegg og skjermkommandoer (pi/skjold_touch.py) ---
+import skjold_touch as _tmod      # noqa: E402
+
+
+def _touch_ha():
+    c = doorbell.cfg if doorbell.cfg.get("ha_url") else (feat_cfg().get("doorbell") or {})
+    return c
+
+
+touch = _tmod.Touch({"changed": lambda: changed(), "pause": lambda: transport("pause"), "fire": lambda a: fire_alarm(a),
+                     "ha": _touch_ha, "alarms": lambda: (plug_cfg("alarm").get("alarms") or []) if plug_on("alarm") else [],
+                     "volume_step": lambda d: set_volume(max(0, min(100, int(state["volume"]) + d))),
+                     "playpause": lambda: transport("playpause")}, os.path.join(FEAT_DIR, "touch.json"))
+FEAT_ROUTES += _tmod.routes(touch)
+if os.environ.get("KI_TOUCH_ENC", "").strip():
+    try:
+        _touch_enc = _tmod.start_encoder(touch.ctx, os.environ["KI_TOUCH_ENC"])
+    except Exception as _e:
+        print("Touch: volumhjulet er ikke tilgjengelig:", _e, flush=True)
 
 
 

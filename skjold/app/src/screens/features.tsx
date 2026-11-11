@@ -31,7 +31,7 @@ const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 // ---------- Intercom ----------
 interface Room { id?: string; name: string }
-export function TalkButton({ compact }: { compact?: boolean }) {
+export function TalkButton({ compact, plain }: { compact?: boolean; plain?: boolean }) {
   const [open, setOpen] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [to, setTo] = useState('all');
@@ -63,8 +63,8 @@ export function TalkButton({ compact }: { compact?: boolean }) {
   const stop = () => { if (mr.current && mr.current.state !== 'inactive') mr.current.stop(); setRec(false); };
   return (
     <>
-      <button onClick={() => setOpen(true)} title="Snakk til et rom" aria-label="Snakk" style={compact ? sbtn + ';width:38px;padding:0;display:grid;place-items:center' : sbtn}>
-        {compact ? '🎙' : '🎙 Snakk'}
+      <button onClick={() => setOpen(true)} title="Snakk til et rom" aria-label="Snakk" style={plain ? 'width:44px;height:44px;border:none;background:none;color:#c9c9c4;padding:0;display:grid;place-items:center;flex-shrink:0' : compact ? sbtn + ';width:38px;padding:0;display:grid;place-items:center' : sbtn}>
+        {plain ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l5 4V6L6 10zM15 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" /></svg> : compact ? '🎙' : '🎙 Snakk'}
       </button>
       {open && <div onClick={() => { stop(); setOpen(false); }} style="position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px">
         <div onClick={(e) => e.stopPropagation()} style={CARD + ';width:360px;max-width:100%'}>

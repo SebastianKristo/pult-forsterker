@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Melder stemmesatellittens tilstand til Skjold Touch, så skjermen viser «Lytter», «Tenker» og svaret.
+
+wyoming-satellite kaller dette ved hver hendelse:   skjold-voice-event listen|think|reply|idle|error
+For think (det du sa) og reply (svaret) kommer teksten på stdin.
+"""
+import json
+import sys
+import urllib.request
+
+state = sys.argv[1] if len(sys.argv) > 1 else "idle"
+body = {"state": state}
+if state in ("think", "reply") and not sys.stdin.isatty():
+    body["text" if state == "think" else "reply"] = sys.stdin.read().strip()[:400]
+try:
+    urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:8765/api/touch/voice", json.dumps(body).encode(),
+                                                  {"Content-Type": "application/json"}), timeout=3).read()
+except Exception as e:      # skjermen skal aldri stoppe stemmen
+    print("skjold-voice-event:", e, file=sys.stderr)
