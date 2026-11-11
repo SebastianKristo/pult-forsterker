@@ -31,10 +31,10 @@ h1,h2,h3,p{margin:0}
 /* Nav */
 .nav{position:sticky;top:0;z-index:50;background:rgba(0,0,0,.74);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(255,255,255,.08);color:var(--tekst-l)}
 .nav-inn{max-width:1080px;margin:0 auto;padding:0 22px;height:52px;display:flex;align-items:center;gap:26px}
-.logo{display:flex;align-items:center;gap:8px;flex:none}
-.logo-stolper{display:flex;gap:2px;align-items:flex-start;height:16px}
+.logo{display:flex;align-items:center;gap:10px;flex:none}
+.logo-stolper{display:flex;gap:2px;align-items:flex-start;height:16px;transform:scale(1.25);transform-origin:left center;margin-right:5px}
 .logo-stolper i{display:block;width:3px;border-radius:2px;background:currentColor}
-.logo-ord{font-family:var(--sora);font-weight:600;letter-spacing:3px;font-size:14px}
+.logo-ord{font-family:var(--sora);font-weight:600;letter-spacing:3.5px;font-size:17px}
 .nav-lenker{display:flex;gap:22px;font-size:12.5px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);padding-right:24px}
 .nav-lenker::-webkit-scrollbar{display:none}
 .nav-lenker a{color:var(--demp-l);padding:14px 0}
