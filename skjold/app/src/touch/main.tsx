@@ -3,21 +3,32 @@
 // Data er ekte: status/hendelser fra daemonen, rom fra /api/rom (mDNS), innstillinger via /api/settings.
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { signal } from '@preact/signals';
+import { effect, signal } from '@preact/signals';
 import './touch.css';
 import { api, coverUrl, getBase, INPUT_LABEL, PRODUCT_SHORT, productOf, setBase, type InputId, type Status } from '../lib/api';
 import { loadSettings, playPause, reconnect, setSetting, setVolume, settings, startPolling, status, act, online } from '../lib/store';
-import { art, TOUCH_IDLE, TOUCH_OUT, TOUCH_ROLES, TOUCH_STANDBY_S } from '../lib/settings';
+import { art, TOUCH_BELL, TOUCH_IDLE, TOUCH_OUT, TOUCH_ROLES, TOUCH_STANDBY_S, TOUCH_START, TOUCH_WAKE, TOUCH_WAKE_ID } from '../lib/settings';
 import { favs, loadFavs, playFav } from '../lib/radio';
 import { ndAlbum, ndAlbumList, ndConfigured, ndCover, type NdAlbum } from '../lib/navidrome';
 import { playNd } from '../lib/library';
 import { ytmHomeCached, ytmTracks, ytmWhy } from '../lib/ytm';
 import { groupAll } from '../lib/groups';
-import { DoorbellOverlay, TalkButton } from '../screens/features';
+import { TalkButton } from '../screens/features';
 
 const MONO = "'IBM Plex Mono',monospace";
-type Scr = 'now' | 'home' | 'lib' | 'rooms' | 'set';
+type Scr = 'now' | 'home' | 'smart' | 'alarm' | 'lib' | 'rooms' | 'set';
+const START: (Scr | 'standby')[] = ['now', 'home', 'smart', 'alarm', 'lib', 'rooms', 'set', 'standby'];
 interface Peer { id: string; navn: string; produkt: string; base: string }
+interface Alarm { time: string; days: number[]; on: boolean; name: string; smart: boolean; preset: number; url: string; volume: number; fade: number }
+interface Tile { id: string; name: string; domain: string; on: boolean; kind: 'toggle' | 'info' | 'climate' | 'camera'; text: string; tag: string; target?: number | null }
+interface Smart { ok: boolean; hub: string; tiles: Tile[]; scenes: { id: string; name: string }[]; error?: string; lock?: boolean }
+// Det denne enheten selv melder (alarm, ringeklokke, stemme, kommandoer) – uavhengig av hvilket rom som fjernstyres
+interface Dev {
+  alarm?: { ringing: boolean; snoozed: boolean; name: string; time: string };
+  doorbell?: { t: number; camera: boolean; seconds: number } | null;
+  night?: { on: boolean };
+  touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string } };
+}
 
 // ---------- tilstand ----------
 const scr = signal<Scr>('now');
@@ -31,6 +42,14 @@ const local = signal<Status | null>(null);
 const boot = signal({ on: true, step: 0, op: 1 });
 const now = signal(Date.now());
 let lastAct = Date.now() + 4500;
+const alarms = signal<Alarm[]>([]);
+const smart = signal<Smart | null>(null);
+const sceneOn = signal('');
+const door = signal(0);        // tidsstempelet til ringingen som vises i fullskjerm (0 = lukket)
+const doorToast = signal(0);
+const unlocked = signal(false);
+const morning = signal('');
+const dev = (): Dev => (local.value ?? {}) as Dev;
 
 // Kiosken kjører på enheten selv: start alltid på denne enheten (en lagret host fra fjernstyring nullstilles).
 setBase(null);
@@ -48,6 +67,65 @@ async function pollRooms(): Promise<void> {
   peerSt.value = res;
 }
 void pollRooms(); setInterval(() => void pollRooms(), 5000);
+// Egen enhet direkte (hendelser), så alarm, ringeklokke og stemme kommer med en gang – også mens et annet rom fjernstyres
+if (typeof EventSource !== 'undefined') {
+  try { const ev = new EventSource(here() + '/api/events'); ev.onmessage = (e) => { try { local.value = JSON.parse(e.data as string) as Status; } catch { /* ignore */ } }; } catch { /* pollRooms holder den oppdatert */ }
+}
+
+// ---------- vekkeklokke, smarthus og nattmodus ----------
+async function loadAlarms(): Promise<void> {
+  try {
+    const r = await getAt<{ plugins: { id: string; enabled: boolean; cfg: { alarms?: Partial<Alarm>[] } }[] }>('', '/api/plugins');
+    const p = r.plugins.find((x) => x.id === 'alarm');
+    alarms.value = (p?.cfg.alarms ?? []).map((a) => ({ time: a.time ?? '07:00', days: a.days ?? [], on: !!p?.enabled && a.on !== false, name: a.name ?? '', smart: a.smart ?? (a.fade ?? 0) > 0, preset: a.preset ?? 0, url: a.url ?? '', volume: a.volume ?? 30, fade: a.fade ?? 0 }));
+  } catch { /* eldre daemon */ }
+}
+let saveAT = 0;
+function saveAlarms(next: Alarm[]): void {
+  alarms.value = next; clearTimeout(saveAT);
+  saveAT = window.setTimeout(() => { void postAt('', '/api/plugins/alarm', { enabled: true, alarms: next }).catch(() => undefined); }, 400);
+}
+function nextAlarm(): { time: string; name: string } | null {
+  const d = new Date(now.value), cur = d.getHours() * 60 + d.getMinutes(), wd = (d.getDay() + 6) % 7;
+  let best: { time: string; name: string; inMin: number } | null = null;
+  for (const a of alarms.value) {
+    if (!a.on) continue;
+    const [h, m] = a.time.split(':'), at = (+(h ?? 0)) * 60 + (+(m ?? 0)), days = a.days.length ? a.days : [0, 1, 2, 3, 4, 5, 6];
+    for (let k = 0; k < 8; k++) if (days.includes((wd + k) % 7) && (k > 0 || at > cur)) { const inMin = k * 1440 + at - cur; if (!best || inMin < best.inMin) best = { time: a.time, name: a.name || 'Alarm', inMin }; break; }
+  }
+  return best;
+}
+async function loadSmart(): Promise<void> { try { smart.value = await getAt<Smart>('', '/api/touch/smart'); } catch { /* behold forrige */ } }
+async function press(id: string, action: string): Promise<void> {
+  const sm = smart.value;
+  if (sm && action === 'toggle') smart.value = { ...sm, tiles: sm.tiles.map((t) => (t.id === id ? { ...t, on: !t.on } : t)) };   // svar med en gang
+  try { const r = await fetch(here() + '/api/touch/smart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }) }); if (r.ok) smart.value = (await r.json()) as Smart; else void loadSmart(); } catch { void loadSmart(); }
+}
+void loadAlarms(); void loadSmart();
+setInterval(() => { if (scr.value === 'smart' && !idle.value) void loadSmart(); }, 4000);
+setInterval(() => void loadAlarms(), 60000);
+
+function nightNow(): boolean {
+  const S = settings.value, h = new Date(now.value).getHours(), m = S.tNightMode || (S.tNight ? 1 : 0), a = S.tNStart ?? 22, b = S.tNEnd ?? 7;
+  return m === 3 || (m === 1 && (a > b ? h >= a || h < b : h >= a && h < b)) || (m === 2 && !!dev().night?.on);
+}
+// Bakgrunnslys: fullt når skjermen er i bruk, dempet i standby og om natten (skjermer uten styrbart lys overser dette)
+let blLast = -1;
+function backlight(): void {
+  const n = nightNow(), lvl = idle.value ? ((settings.value.tIdle ?? 0) === 2 ? 0 : n ? 3 : 30) : n ? 25 : 100;
+  if (lvl !== blLast) { blLast = lvl; void postAt('', '/api/touch/backlight', { level: lvl }).catch(() => undefined); }
+}
+
+// ---------- ringeklokke ----------
+let doorT = 0;
+function ringNow(t: number, force = false): void {
+  const mode = settings.value.tBell ?? 0;
+  if (mode === 2 && !force) return;
+  wake(); clearTimeout(doorT);
+  if (mode === 1 && !force) { doorToast.value = t; doorT = window.setTimeout(() => { doorToast.value = 0; }, 5000); return; }
+  doorToast.value = 0; unlocked.value = false; door.value = t || Date.now() / 1000;
+  doorT = window.setTimeout(() => { door.value = 0; }, 30000);
+}
 
 function control(base: string): void {
   roomsOpen.value = false;
@@ -56,17 +134,46 @@ function control(base: string): void {
 }
 
 // ---------- standby og oppstart ----------
-function goIdle(): void { idle.value = true; idleOp.value = 0; setTimeout(() => { idleOp.value = 1; }, 30); }
-function wake(): void { lastAct = Date.now(); idle.value = false; }
+function goIdle(): void { idle.value = true; idleOp.value = 0; setTimeout(() => { idleOp.value = 1; }, 30); backlight(); }
+function wake(): void { lastAct = Date.now(); if (idle.value) { idle.value = false; backlight(); } }
 addEventListener('pointerdown', () => { lastAct = Date.now(); }, true);
 addEventListener('contextmenu', (e) => e.preventDefault());
 setInterval(() => {
   now.value = Date.now();
   const ms = (TOUCH_STANDBY_S[settings.value.tStandby] ?? 30) * 1000;
-  if (!idle.value && !boot.value.on && ms > 0 && Date.now() - lastAct > ms) goIdle();
+  if (!idle.value && !boot.value.on && !dev().alarm?.ringing && !door.value && ms > 0 && Date.now() - lastAct > ms) goIdle();
+  if (!boot.value.on) backlight();
 }, 1000);
 
-let bootT: number[] = [];
+// Det enheten melder: kommandoer fra HA/Homey/appen, alarm som ringer, ringeklokke og stemme
+let seenCmd = -1, seenRing = -1, wasRinging = false, wasVoice = false;
+effect(() => {
+  const d = dev(), c = d.touch?.cmd;
+  if (c) {
+    if (seenCmd < 0) seenCmd = c.seq;
+    else if (c.seq !== seenCmd) {
+      seenCmd = c.seq;
+      if (c.cmd === 'standby') goIdle(); else if (c.cmd === 'wake') wake(); else if (c.cmd === 'boot') runBoot();
+      else if (c.cmd === 'page') { wake(); scr.value = c.arg as Scr; }
+    }
+  }
+  const ringing = !!d.alarm?.ringing;
+  if (ringing && !wasRinging) {
+    wake(); clearTimeout(doorT); door.value = 0; morning.value = '';
+    void getAt<{ text: string }>('', '/api/touch/morning').then((r) => { morning.value = r.text; }).catch(() => undefined);
+  }
+  wasRinging = ringing;
+  if (local.value) {
+    const t = d.doorbell?.t ?? 0;
+    if (seenRing < 0) seenRing = t;          // en ringing fra før skjermen startet vises ikke på nytt
+    else if (t && t !== seenRing) { seenRing = t; ringNow(t); }
+  }
+  const talking = !!d.touch?.voice && d.touch.voice.state !== 'idle';
+  if (talking && !wasVoice) wake();
+  wasVoice = talking;
+});
+
+let bootT: number[] = [], started = false;
 function runBoot(): void {
   bootT.forEach(clearTimeout); idle.value = false;
   const set = (p: Partial<typeof boot.value>) => { boot.value = { ...boot.value, ...p }; };
@@ -78,7 +185,10 @@ function runBoot(): void {
   const ready = () => {
     if (!online.value && Date.now() - t0 < 20000) { bootT.push(window.setTimeout(ready, 250)); return; }
     set({ step: 9 });
-    bootT.push(window.setTimeout(() => set({ op: 0 }), 400), window.setTimeout(() => { set({ on: false }); lastAct = Date.now(); }, 1000));
+    bootT.push(window.setTimeout(() => set({ op: 0 }), 400), window.setTimeout(() => {
+      set({ on: false }); lastAct = Date.now();
+      if (!started) { started = true; const st = START[settings.value.tStart ?? 0] ?? 'now'; if (st === 'standby') goIdle(); else scr.value = st; }   // startsiden fra Innstillinger
+    }, 1000));
   };
   bootT.push(window.setTimeout(ready, 3500));
   lastAct = Date.now() + 4500;
@@ -115,7 +225,7 @@ function npLine(s: Status | null): string {
 const role = () => settings.value.tRole ?? 0;   // 0 begge, 1 bare spiller, 2 bare fjernkontroll
 
 // ---------- ikoner (fra designfilen) ----------
-const IC: Record<Scr, string> = { now: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', home: 'M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10', lib: 'M4 4h4v16H4zM10 4h4v16h-4zM16 5l4 1-3 14-4-1z', rooms: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', set: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M16 4v4M10 10v4M18 16v4' };
+const IC: Record<Scr, string> = { smart: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z', alarm: 'M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 2.5M5 3 2 6M19 3l3 3', now: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', home: 'M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10', lib: 'M4 4h4v16H4zM10 4h4v16h-4zM16 5l4 1-3 14-4-1z', rooms: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', set: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M16 4v4M10 10v4M18 16v4' };
 type Src = [string, string, string, string, () => void];
 const recv = (id: InputId) => () => { void act(() => api.input(id), { input: id }); scr.value = 'now'; };
 const SRC: Src[] = [
@@ -275,12 +385,32 @@ function Setup() {
       {list.map((o, i) => <button key={o} onClick={() => set(i)} style={`height:34px;padding:0 12px;border-radius:9px;border:none;background:${i === cur ? '#2a2a2c' : 'transparent'};color:${i === cur ? '#f2f2ee' : '#8b8b86'};font-size:12px;font-weight:600;white-space:nowrap`}>{label ? label(o) : o}</button>)}
     </div>
   );
+  const SEGBOX = 'display:flex;gap:4px;padding:3px;border-radius:12px;background:#0f0f10;border:1px solid #242426;align-items:center';
+  const stepper = (txt: string, dn: () => void, up: () => void, w = 64) => (
+    <div style={SEGBOX}>
+      <button onClick={dn} aria-label="Forrige" style="width:44px;height:34px;border-radius:9px;border:none;background:transparent;color:#8b8b86;font-size:16px;font-weight:600">−</button>
+      <span style={`min-width:${w}px;height:34px;padding:0 10px;border-radius:9px;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;justify-content:center;box-sizing:border-box`}>{txt}</span>
+      <button onClick={up} aria-label="Neste" style="width:44px;height:34px;border-radius:9px;border:none;background:transparent;color:#8b8b86;font-size:16px;font-weight:600">+</button>
+    </div>);
+  const one = (txt: string, go: () => void) => <div style={SEGBOX}><button onClick={go} style="height:34px;padding:0 14px;border-radius:9px;border:none;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">{txt}</button></div>;
+  const nMode = S.tNightMode || (S.tNight ? 1 : 0);
   const rows: [string, string, preact.ComponentChildren][] = [
     ['Rolle', 'Spiller med egen lydutgang, fjernkontroll for huset, eller begge', seg(TOUCH_ROLES, S.tRole ?? 0, (i) => { setSetting('tRole', i); if (i === 1) control(''); }, (o) => o.replace('Spiller og fjernkontroll', 'Begge').replace('Bare ', ''))],
     ['Lydutgang', 'PCM5122 HIFI HAT', seg(TOUCH_OUT, S.tOut ?? 2, (i) => setSetting('tOut', i))],
     ['Dimme skjermen', 'Etter siste trykk', seg(['30 s', '1 min', '5 min'], Math.max(0, (S.tStandby ?? 1) - 1), (i) => setSetting('tStandby', i + 1))],
     ['I standby', 'Når skjermen hviler', seg(TOUCH_IDLE, S.tIdle ?? 0, (i) => setSetting('tIdle', i))],
-    ['Nattmodus', 'Svakt, rødlig lys 23–07', seg(['Av', 'På'], S.tNight ? 1 : 0, (i) => setSetting('tNight', i === 1))],
+    ['Startside', 'Siden som vises etter oppstart', stepper(TOUCH_START[S.tStart ?? 0] ?? '', () => setSetting('tStart', ((S.tStart ?? 0) + TOUCH_START.length - 1) % TOUCH_START.length), () => setSetting('tStart', ((S.tStart ?? 0) + 1) % TOUCH_START.length), 104)],
+    ['Nattmodus', 'Svakt, rødlig lys og dempet skjerm', seg(['Av', 'Tidsplan', 'HA/Homey', 'På'], nMode, (i) => { setSetting('tNightMode', i); setSetting('tNight', i === 1); })],
+    ['Natt fra', 'Brukes når nattmodus står på Tidsplan', stepper(String(S.tNStart ?? 22).padStart(2, '0') + ':00', () => setSetting('tNStart', ((S.tNStart ?? 22) + 23) % 24), () => setSetting('tNStart', ((S.tNStart ?? 22) + 1) % 24))],
+    ['Natt til', 'Vanlig lys igjen fra dette klokkeslettet', stepper(String(S.tNEnd ?? 7).padStart(2, '0') + ':00', () => setSetting('tNEnd', ((S.tNEnd ?? 7) + 23) % 24), () => setSetting('tNEnd', ((S.tNEnd ?? 7) + 1) % 24))],
+    ['Ringeklokke', 'Når noen ringer på', seg(TOUCH_BELL, S.tBell ?? 0, (i) => setSetting('tBell', i))],
+    ['Test ringeklokke', 'Ringer på slik en ekte ringeklokke gjør', one('Ring på', () => void postAt('', '/api/doorbell', { test: true }))],
+    ['Test alarm', 'Viser hvordan vekkingen ser ut', one('Start alarm', () => void postAt('', '/api/alarm', { action: 'test' }))],
+    ['Stemmeassistent', 'Home Assistant Assist med mikrofon på enheten', seg(['Av', 'På'], S.tVoice ? 1 : 0, (i) => { setSetting('tVoice', i === 1); void postAt('', '/api/touch/voice', { mic: i === 1 && S.tMic !== false }); })],
+    ...(S.tVoice ? [
+      ['Vekkeord', 'Lyttes etter lokalt på enheten', seg(TOUCH_WAKE, S.tWake ?? 0, (i) => { setSetting('tWake', i); void postAt('', '/api/touch/voice', { wake: TOUCH_WAKE_ID[i] }); })],
+      ['Mikrofon', 'Demp for å slå av lytting helt', seg(['På', 'Demp'], S.tMic === false ? 1 : 0, (i) => { setSetting('tMic', i === 0); void postAt('', '/api/touch/voice', { mic: i === 0 }); })]
+    ] as [string, string, preact.ComponentChildren][] : []),
     ['Vis standby nå', 'Eller vent ' + (TOUCH_STANDBY_S[S.tStandby ?? 1] ?? 30) + ' s uten å trykke', (
       <div style="display:flex;gap:4px;padding:3px;border-radius:12px;background:#0f0f10;border:1px solid #242426">
         <button onClick={goIdle} style="height:34px;padding:0 12px;border-radius:9px;border:none;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">Standby</button>
@@ -290,7 +420,7 @@ function Setup() {
   return (
     <section style="flex:1;display:flex;flex-direction:column;gap:12px;padding:18px 22px;min-height:0">
       <span style="font-size:22px;font-weight:600">Innstillinger</span>
-      <div style="display:flex;flex-direction:column;border-radius:14px;border:1px solid #242426;background:#141415;overflow-y:auto;min-height:0">
+      <div class="rull" style="display:flex;flex-direction:column;border-radius:14px;border:1px solid #242426;background:#141415;overflow-y:auto;min-height:0;touch-action:pan-y">
         {rows.map(([n, hint, ctrl], i) => (
           <div key={n} style={`display:flex;align-items:center;gap:14px;min-height:58px;padding:0 16px;border-top:1px solid ${i ? '#1f1f21' : 'transparent'};flex-shrink:0`}>
             <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:14px">{n}</span><span style="font-size:11.5px;color:#8b8b86">{hint}</span></span>
@@ -302,9 +432,169 @@ function Setup() {
   );
 }
 
+// ---------- smarthus ----------
+const TILE_IC: Record<string, string> = {
+  light: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z',
+  climate: 'M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z', cover: 'M3 21V9l9-6 9 6v12M7 21v-8h10v8M7 16h10',
+  switch: 'M13 2L4 14h7l-1 8 9-12h-7z', camera: 'M3 7h12v10H3zM15 10l6-3v10l-6-3', lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4',
+  sensor: 'M4 20V10M10 20V4M16 20v-7M22 20H2', weather: 'M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z'
+};
+const tileIcon = (d: string) => TILE_IC[d] ?? (d === 'input_boolean' || d === 'fan' || d === 'media_player' ? TILE_IC.switch! : TILE_IC.sensor!);
+
+function SmartHome() {
+  const sm = smart.value;
+  useEffect(() => { void loadSmart(); }, []);
+  return (
+    <section style="flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 18px 10px;min-height:0;overflow-y:auto;scrollbar-width:none">
+      <div style="display:flex;align-items:center;gap:10px;min-height:36px"><span style="font-size:20px;font-weight:600">Smarthus</span><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>VIA HOME ASSISTANT</span><div style="flex:1" />
+        {(sm?.scenes ?? []).map((sc) => { const on = sceneOn.value === sc.id; return <button key={sc.id} onClick={() => { sceneOn.value = sc.id; void press(sc.id, 'scene'); }} style={`height:44px;padding:0 14px;border-radius:22px;border:1px solid ${on ? '#f2f2ee' : '#2e2e30'};background:${on ? '#f2f2ee' : '#161617'};color:${on ? '#0b0b0c' : '#f2f2ee'};font-size:12px;font-weight:600;white-space:nowrap`}>{sc.name}</button>; })}</div>
+      {!sm && <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>HENTER …</span>}
+      {sm && !sm.ok && (
+        <div style="border-radius:14px;border:1px solid #242426;background:#141415;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+          <span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#f0c46a`}>IKKE KOBLET TIL</span>
+          <span style="font-size:14px;line-height:1.45;color:#c9c9c4">{sm.error}</span>
+          <span style="font-size:12px;line-height:1.45;color:#8b8b86">Flisene velges i appen under Innstillinger → Skjold Touch. Uten valg vises noen av lysene og bryterne dine.</span>
+        </div>)}
+      {sm?.ok && !sm.tiles.length && <span style="font-size:14px;color:#8b8b86">Fant ingen lys eller brytere i Home Assistant.</span>}
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
+        {(sm?.tiles ?? []).map((t) => {
+          const act = t.kind === 'toggle' ? () => void press(t.id, 'toggle') : t.kind === 'camera' ? () => ringNow(0, true) : undefined;
+          return (
+            <div key={t.id} style={`height:100px;border-radius:14px;border:1px solid ${t.on ? '#d9a441' : '#242426'};background:${t.on ? '#1c170d' : '#141415'};box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;padding:12px;min-width:0`}>
+              <button onClick={act} disabled={!act} style="border:none;background:none;padding:0;text-align:left;display:flex;align-items:center;gap:10px;min-width:0;min-height:44px;color:inherit;opacity:1">
+                <div style={`width:34px;height:34px;flex-shrink:0;border-radius:10px;background:${t.on ? '#f0c46a' : t.kind === 'climate' ? '#8a3b12' : t.kind === 'camera' ? '#1e5aa8' : '#1f1f21'};color:${t.on ? '#0b0b0c' : t.kind === 'climate' || t.kind === 'camera' ? '#f2f2ee' : '#8b8b86'};display:flex;align-items:center;justify-content:center`}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={tileIcon(t.domain)} /></svg></div>
+                <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{t.name}</span><span style={`font-size:11px;color:${t.on && t.kind !== 'climate' ? '#f0c46a' : '#8b8b86'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{t.text}</span></span>
+              </button>
+              {t.kind === 'climate' && t.target != null
+                ? <div style="display:flex;align-items:center;gap:6px"><button onClick={() => void press(t.id, 'down')} aria-label="Senk temperatur" style="width:44px;height:30px;border-radius:15px;border:1px solid #2e2e30;background:#161617;font-size:16px">−</button><span style={`flex:1;text-align:center;font-family:${MONO};font-size:15px`}>{t.target.toFixed(1).replace('.', ',')}°</span><button onClick={() => void press(t.id, 'up')} aria-label="Øk temperatur" style="width:44px;height:30px;border-radius:15px;border:1px solid #2e2e30;background:#161617;font-size:16px">+</button></div>
+                : <span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#6b6b67;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{t.tag}</span>}
+            </div>);
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ---------- vekkeklokke ----------
+const DN = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
+const DAYSETS: number[][] = [[0, 1, 2, 3, 4], [5, 6], [0, 1, 2, 3, 4, 5, 6]];
+function daysTxt(d: number[]): string {
+  if (!d.length || d.length === 7) return 'Hver dag';
+  if (d.length === 5 && d.every((x) => x < 5)) return 'Hverdager';
+  if (d.length === 2 && d.includes(5) && d.includes(6)) return 'Helg';
+  return d.map((x) => DN[x]).join(' ');
+}
+const minOf = (t: string) => { const [h, m] = t.split(':'); return (+(h ?? 0)) * 60 + (+(m ?? 0)); };
+const hhmm = (m: number) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+
+function AlarmPage() {
+  const AL = alarms.value, nx = nextAlarm();
+  useEffect(() => { void loadAlarms(); }, []);
+  const setA = (i: number, p: Partial<Alarm>) => saveAlarms(AL.map((a, j) => (j === i ? { ...a, ...p } : a)));
+  const chip = 'height:44px;padding:0 4px;border:none;background:none;font-size:11.5px;color:#8b8b86;white-space:nowrap;text-decoration:underline;text-decoration-color:#3a3a37;text-underline-offset:3px';
+  return (
+    <section style="flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 18px 10px;min-height:0;overflow-y:auto;scrollbar-width:none">
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:600">Vekkeklokke</span><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>{nx ? 'NESTE ALARM ' + nx.time : 'INGEN ALARMER PÅ'}</span><div style="flex:1" />
+        {AL.length < 10 && <button onClick={() => saveAlarms([...AL, { time: '08:00', days: [0, 1, 2, 3, 4], on: true, name: 'Alarm', smart: false, preset: 0, url: '', volume: 30, fade: 0 }])} style="height:44px;padding:0 16px;border-radius:22px;border:1px solid #2e2e30;background:#161617;font-size:12.5px;font-weight:600">+ Ny alarm</button>}</div>
+      {!AL.length && <span style="font-size:14px;color:#8b8b86">Ingen alarmer ennå. Trykk «Ny alarm».</span>}
+      {!!AL.length && <div style="display:flex;flex-direction:column;border-radius:14px;border:1px solid #242426;background:#141415;flex-shrink:0">
+        {AL.map((a, i) => { const m = minOf(a.time), fg = a.on ? '#f2f2ee' : '#6b6b67'; return (
+          <div key={i} style={`display:flex;align-items:center;gap:8px;min-height:66px;padding:0 8px 0 10px;border-top:1px solid ${i ? '#1f1f21' : 'transparent'}`}>
+            <div style="display:flex;align-items:center">
+              <button onClick={() => setA(i, { time: hhmm((m + 1435) % 1440) })} aria-label="Fem minutter tidligere" style="width:44px;height:48px;border:none;background:none;color:#8b8b86;font-size:20px">‹</button>
+              <span style={`font-family:${MONO};font-size:30px;font-weight:500;color:${fg};width:92px;text-align:center`}>{a.time}</span>
+              <button onClick={() => setA(i, { time: hhmm((m + 5) % 1440) })} aria-label="Fem minutter senere" style="width:44px;height:48px;border:none;background:none;color:#8b8b86;font-size:20px">›</button>
+            </div>
+            <span style="display:flex;flex-direction:column;flex:1;min-width:0">
+              <span style={`font-size:14px;font-weight:600;color:${fg};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{a.name || 'Alarm'}</span>
+              <span style="display:flex;gap:6px;margin-top:-10px;margin-bottom:-12px">
+                <button onClick={() => { const k = DAYSETS.findIndex((d) => daysTxt(d) === daysTxt(a.days)); setA(i, { days: DAYSETS[(k + 1) % DAYSETS.length]! }); }} aria-label="Bytt dager" style={chip}>{daysTxt(a.days)}</button>
+                <button onClick={() => setA(i, { smart: !a.smart, fade: a.smart ? 0 : 3 })} aria-label="Bytt mellom smart og vanlig vekking" style={chip}>{a.smart ? 'Smart vekking' : 'Vanlig'}</button>
+              </span>
+            </span>
+            <button onClick={() => setA(i, { on: !a.on })} aria-label="Slå alarm av eller på" style="width:60px;height:48px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style={`position:relative;width:52px;height:30px;border-radius:15px;background:${a.on ? '#f0c46a' : '#2a2a2c'};transition:background .2s ease`}><span style={`position:absolute;top:3px;left:${a.on ? 25 : 3}px;width:24px;height:24px;border-radius:12px;background:#f2f2ee;transition:left .2s ease`} /></span></button>
+            <button onClick={() => saveAlarms(AL.filter((_, j) => j !== i))} aria-label="Slett alarm" style="width:44px;height:48px;border:none;background:none;color:#6b6b67;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+          </div>); })}
+      </div>}
+      <div style="display:flex;gap:10px;flex-shrink:0">
+        <div style="flex:1;border-radius:14px;border:1px solid #242426;background:#141415;padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#f0c46a`}>SMART VEKKING</span><span style="font-size:12px;line-height:1.4;color:#c9c9c4">Lyden starter svakt og øker over tre minutter. Har du satt opp vekkelys i appen, skrus lyset gradvis opp før alarmen.</span></div>
+        <div style="flex:1;border-radius:14px;border:1px solid #242426;background:#141415;padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#6fcf7f`}>SAMME ALARMER OVERALT</span><span style="font-size:12px;line-height:1.4;color:#c9c9c4">Alarmene er de samme her, i appen og på web. De ligger på enheten og virker uten nett.</span></div>
+      </div>
+    </section>
+  );
+}
+
+function AlarmRinging({ clock }: { clock: string }) {
+  const a = dev().alarm;
+  const post = (action: string) => { void postAt('', '/api/alarm', { action }).then(() => pollRooms()); };
+  return (
+    <div style="position:absolute;inset:0;z-index:26;background:radial-gradient(ellipse at 50% 110%,#5a3a12 0%,#1c130a 45%,#050506 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;animation:tinn .5s ease both">
+      <span style={`font-family:${MONO};font-size:11px;letter-spacing:.18em;color:#f0c46a`}>{a?.snoozed ? 'SLUMRET · ' + (a.name || 'ALARM').toUpperCase() : 'GOD MORGEN · ' + (a?.name || 'ALARM').toUpperCase()}</span>
+      <span style="font-size:120px;font-weight:300;letter-spacing:-.03em;line-height:1;color:#f2f2ee">{clock}</span>
+      <span style="font-size:17px;color:#c9c9c4;min-height:24px;max-width:680px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{morning.value}</span>
+      <div style="display:flex;gap:12px;margin-top:26px">
+        <button onClick={() => post('snooze')} style="height:64px;padding:0 34px;border-radius:32px;border:none;background:#f0c46a;color:#0b0b0c;font-size:16px;font-weight:600">Slumre 9 min</button>
+        <button onClick={() => post('stop')} style="height:64px;padding:0 34px;border-radius:32px;border:1px solid #3a3a37;background:rgba(22,22,23,.85);color:#f2f2ee;font-size:16px;font-weight:600">Slå av</button>
+      </div>
+      <span style={`position:absolute;bottom:16px;font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#6b6b67`}>KAN OGSÅ SLÅS AV I APPEN, PÅ WEB OG I HOME ASSISTANT</span>
+    </div>
+  );
+}
+
+// ---------- ringeklokke ----------
+function Door({ clock }: { clock: string }) {
+  const [tick, setTick] = useState(0), [noCam, setNoCam] = useState(false);
+  useEffect(() => { const iv = setInterval(() => setTick((x) => x + 1), 1000); return () => clearInterval(iv); }, []);
+  const unlock = () => { void fetch(here() + '/api/touch/unlock', { method: 'POST' }).then((r) => { unlocked.value = r.ok; }).catch(() => undefined); };
+  const close = () => { clearTimeout(doorT); door.value = 0; };
+  return (
+    <div style="position:absolute;inset:0;z-index:24;background:#050506;overflow:hidden;animation:tinn .3s ease both">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,#3d4247 0%,#1f2326 45%,#0b0d0e 100%)" />
+      {!noCam && <img src={here() + '/api/doorbell/camera?t=' + door.value + '-' + tick} alt="Kamera ved inngangen" onError={() => setNoCam(true)} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" />}
+      {noCam && <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;color:#8b8b86">Ingen kamera er satt opp</span>}
+      <div style="position:absolute;left:0;right:0;top:0;height:68px;padding:0 20px;display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,rgba(0,0,0,.75),rgba(0,0,0,0))">
+        {!noCam && <span style={`height:22px;padding:0 8px;border-radius:5px;background:#e05a4a;color:#fff;font-family:${MONO};font-size:10px;letter-spacing:.1em;display:flex;align-items:center`}>DIREKTE</span>}
+        <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:600;color:#f2f2ee">{dev().doorbell?.t === door.value ? 'Det ringer på døren' : 'Inngang'}</span><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#c9c9c4`}>RINGEKLOKKE · INNGANG</span></span>
+        <div style="flex:1" />
+        <span style={`font-family:${MONO};font-size:14px;color:#f2f2ee`}>{clock}</span>
+      </div>
+      <div style="position:absolute;left:0;right:0;bottom:0;padding:18px 20px;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,0))">
+        {!!smart.value?.lock && <button onClick={unlock} style={`height:56px;padding:0 22px;border-radius:28px;border:1px solid #f0c46a;background:${unlocked.value ? '#f0c46a' : 'rgba(22,22,23,.85)'};color:${unlocked.value ? '#0b0b0c' : '#f0c46a'};display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600`}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 7.5-2" /></svg>{unlocked.value ? 'Låst opp' : 'Lås opp'}</button>}
+        <button onClick={close} style="height:56px;padding:0 28px;border-radius:28px;border:1px solid #3a3a37;background:rgba(22,22,23,.85);color:#f2f2ee;font-size:14px;font-weight:600">Lukk</button>
+      </div>
+    </div>
+  );
+}
+
+function DoorToast() {
+  return (
+    <button onClick={() => ringNow(doorToast.value, true)} style="position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:23;height:52px;padding:0 18px 0 12px;border-radius:26px;border:1px solid #d9a441;background:#1c170d;color:#f2f2ee;display:flex;align-items:center;gap:10px;box-shadow:0 12px 30px rgba(0,0,0,.5);animation:tinn .3s ease both">
+      <span style="width:30px;height:30px;border-radius:15px;background:#f0c46a;color:#0b0b0c;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4" /></svg></span>
+      <span style="font-size:14px;font-weight:600">Det ringer på døren</span><span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#f0c46a`}>VIS KAMERA</span>
+    </button>
+  );
+}
+
+// ---------- stemme ----------
+function Voice() {
+  const v = dev().touch?.voice, st = v?.state ?? 'idle';
+  const kicker = st === 'listen' ? 'LYTTER …' : st === 'think' ? 'TENKER …' : st === 'error' ? 'FIKK IKKE SVAR' : 'SVAR';
+  return (
+    <div style="position:absolute;inset:52px 0 0 0;z-index:5;background:rgba(6,6,7,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 48px;text-align:center;animation:tinn .2s ease both">
+      <div style="display:flex;align-items:center;gap:6px;height:64px">
+        {[0.55, 0.8, 1, 0.8, 0.55].map((k, i) => <div key={i} class={st === 'think' ? 'vb vb-t' : st === 'error' ? 'vb' : 'vb vb-l'} style={`width:10px;height:${Math.round(8 + 46 * k)}px;border-radius:5px;background:${st === 'think' || st === 'error' ? '#8b8b86' : '#f0c46a'};animation-delay:${i * 90}ms`} />)}
+      </div>
+      <span style={`font-family:${MONO};font-size:11px;letter-spacing:.16em;color:#f0c46a`}>{kicker}</span>
+      <span style="font-size:26px;font-weight:600;line-height:1.2;color:#f2f2ee;text-wrap:balance;max-width:560px">{v?.text ? '«' + v.text + '»' : 'Si noe …'}</span>
+      <span style="font-size:15px;line-height:1.45;color:#c9c9c4;text-wrap:pretty;max-width:520px;min-height:22px">{st === 'reply' ? v?.reply : ''}</span>
+      <button onClick={() => void postAt('', '/api/touch/voice', { state: 'idle' })} style="height:44px;padding:0 20px;border-radius:22px;border:1px solid #2e2e30;background:#161617;font-size:13px;font-weight:600;margin-top:6px">Lukk</button>
+      <span style={`position:absolute;bottom:14px;left:0;right:0;font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#6b6b67`}>HOME ASSISTANT ASSIST · {(TOUCH_WAKE[settings.value.tWake ?? 0] ?? '').toUpperCase()}</span>
+    </div>
+  );
+}
+
 function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
-  const s = status.value, m = settings.value.tIdle ?? 0, h = new Date(now.value).getHours();
-  const night = !!settings.value.tNight && (h >= 23 || h < 7);
+  const s = status.value, m = settings.value.tIdle ?? 0, night = nightNow(), nx = nextAlarm();
   const bg = artOf(s), playing = !!s?.playing;
   return (
     <button onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); wake(); }} aria-label="Vekk skjermen" style={`position:absolute;inset:0;border:none;background:#000;padding:0;overflow:hidden;opacity:${idleOp.value};transition:opacity .8s ease;z-index:20`}>
@@ -324,11 +614,12 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
       {(m === 0 || (m === 1 && night)) && (
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
           <span style={`font-size:132px;font-weight:300;letter-spacing:-.03em;color:${night ? '#7a2a20' : '#f2f2ee'};line-height:1`}>{clock}</span>
-          <span style="font-size:17px;color:#8b8b86;white-space:nowrap">{dateTxt}</span>
-          {playing && <span style="margin-top:26px;display:flex;align-items:center;gap:10px;font-size:13px;color:#8b8b86"><div style={`width:24px;height:24px;border-radius:5px;background:${bg}`} />{(s?.title || s?.station) + (s?.artist ? ' · ' + s.artist : '')}</span>}
+          <span style={`font-size:17px;color:${night ? '#5a211a' : '#8b8b86'};white-space:nowrap`}>{dateTxt}</span>
+          {nx && <span style={`margin-top:8px;font-family:${MONO};font-size:12px;letter-spacing:.12em;color:${night ? '#7a2a20' : '#f2f2ee'};opacity:.8`}>ALARM {nx.time}</span>}
+          {playing && !night && <span style="margin-top:26px;display:flex;align-items:center;gap:10px;font-size:13px;color:#8b8b86"><div style={`width:24px;height:24px;border-radius:5px;background:${bg}`} />{(s?.title || s?.station) + (s?.artist ? ' · ' + s.artist : '')}</span>}
         </div>
       )}
-      {m !== 2 && <span style={`position:absolute;left:0;right:0;bottom:16px;text-align:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#3a3a37`}>TRYKK FOR Å VEKKE</span>}
+      {m !== 2 && !night && <span style={`position:absolute;left:0;right:0;bottom:16px;text-align:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#3a3a37`}>TRYKK FOR Å VEKKE</span>}
     </button>
   );
 }
@@ -354,29 +645,30 @@ function Boot() {
 }
 
 function App() {
-  const s = status.value, d = new Date(now.value);
+  const s = status.value, d = new Date(now.value), S = settings.value, D = dev();
+  const talking = !!D.touch?.voice && D.touch.voice.state !== 'idle';
   const clock = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   const dateTxt = d.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, (c) => c.toUpperCase());
   const r = role(), cur = scr.value === 'rooms' && r === 1 ? 'now' : scr.value;
   // Bare fjernkontroll: styr første andre rom så snart det finnes
   useEffect(() => { if (r === 2 && !ctl.value && peers.value[0]) control(peers.value[0].base); if (r === 1 && ctl.value) control(''); }, [r, peers.value.length]);
-  const NAV: [Scr, string][] = ([['now', 'Spiller'], ['home', 'Hjem'], ['lib', 'Bibliotek'], ['rooms', 'Rom'], ['set', 'Oppsett']] as [Scr, string][]).filter(([k]) => !(r === 1 && k === 'rooms'));
+  const NAV: [Scr, string][] = ([['now', 'Spiller'], ['home', 'Hjem'], ['smart', 'Smarthus'], ['alarm', 'Alarm'], ['lib', 'Bibliotek'], ['rooms', 'Rom'], ['set', 'Oppsett']] as [Scr, string][]).filter(([k]) => !(r === 1 && k === 'rooms'));
   const rows = roomList();
   const curRoom = rows.find((x) => x.base === ctl.value);
   const roomLabel = curRoom?.name ?? s?.name ?? 'Skjold Touch', roomSub = (curRoom?.model ?? 'Skjold Touch').replace('Skjold ', '');
   return (
-    <div style="position:relative;width:800px;height:480px;background:#0b0b0c;overflow:hidden;display:grid;grid-template-columns:76px minmax(0,1fr)">
-      <nav style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0;background:#101011;border-right:1px solid #1f1f21">
-        <div style="display:flex;gap:2.5px;align-items:flex-end;height:26px;margin-bottom:10px">{[14, 20, 26, 20, 14].map((h, i) => <div key={i} style={`width:4px;height:${h}px;border-radius:2px;background:#f0c46a`} />)}</div>
+    <div style="position:relative;width:800px;height:480px;background:#0b0b0c;overflow:hidden;display:grid;grid-template-columns:76px minmax(0,1fr);grid-template-rows:480px">
+      <nav style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;background:#101011;border-right:1px solid #1f1f21">
+        <div style="display:flex;gap:2.5px;align-items:flex-end;height:26px;margin-bottom:4px">{[14, 20, 26, 20, 14].map((h, i) => <div key={i} style={`width:4px;height:${h}px;border-radius:2px;background:#f0c46a`} />)}</div>
         {NAV.map(([k, label]) => { const on = cur === k; return (
-          <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; }} aria-label={label} style={`width:60px;height:60px;border-radius:16px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0`}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={IC[k]} /></svg>
-            <span style={`font-size:9.5px;font-weight:${on ? 600 : 400}`}>{label}</span>
+          <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={IC[k]} /></svg>
+            <span style={`font-size:9px;font-weight:${on ? 600 : 400}`}>{label}</span>
           </button>); })}
         <div style="flex:1" />
-        <button onClick={goIdle} aria-label="Standby" style="width:44px;height:44px;border-radius:22px;border:1px solid #2e2e30;background:transparent;color:#8b8b86;display:flex;align-items:center;justify-content:center;padding:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0" /></svg></button>
+        <button onClick={goIdle} aria-label="Standby" style="width:44px;height:44px;margin-bottom:-2px;border-radius:22px;border:1px solid #2e2e30;background:transparent;color:#8b8b86;display:flex;align-items:center;justify-content:center;padding:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0" /></svg></button>
       </nav>
-      <main style="position:relative;display:flex;flex-direction:column;min-width:0">
+      <main style="position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden">
         <header style="height:52px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid #1a1a1c">
           <button onClick={() => { roomsOpen.value = !roomsOpen.value; }} style="height:34px;display:flex;align-items:center;gap:8px;padding:0 12px 0 10px;border-radius:17px;border:1px solid #2e2e30;background:#161617;min-width:0">
             <div style={`width:8px;height:8px;border-radius:50%;background:${online.value ? '#6fcf7f' : '#3a3a37'};flex-shrink:0`} />
@@ -386,10 +678,20 @@ function App() {
           </button>
           {!!ctl.value && <span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#f0c46a`}>FJERNKONTROLL</span>}
           <div style="flex:1" />
+          {role() !== 1 && <TalkButton plain />}
+          {!!S.tVoice && (() => { const muted = S.tMic === false, vs = talking; return (
+            <button onClick={() => { setSetting('tMic', muted); void postAt('', '/api/touch/voice', { mic: muted }); }} aria-label={muted ? 'Slå på mikrofonen' : 'Demp mikrofonen'} style={`height:44px;margin:0 -2px;display:flex;align-items:center;border:none;background:none;padding:0`}>
+              <span style={`height:34px;display:flex;align-items:center;gap:7px;padding:0 12px 0 10px;border-radius:17px;border:1px solid ${vs ? '#d9a441' : muted ? '#7a2a20' : '#2e2e30'};background:${vs ? 'rgba(240,196,106,.14)' : muted ? 'rgba(224,90,74,.12)' : '#161617'};color:${vs ? '#f0c46a' : muted ? '#e05a4a' : '#c9c9c4'}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={muted ? 'M3 3l18 18M9 9v2a3 3 0 0 0 5.1 2.1M15 10V5a3 3 0 0 0-5.7-1.3M19 11a7 7 0 0 1-1.2 3.9M5 11a7 7 0 0 0 11.4 5.4M12 18v3' : 'M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 11a7 7 0 0 1-14 0M12 18v3'} /></svg>
+                <span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;white-space:nowrap`}>{muted ? 'DEMPET' : vs ? 'LYTTER' : (TOUCH_WAKE[S.tWake ?? 0] ?? '').toUpperCase()}</span>
+              </span>
+            </button>); })()}
           <span style={`font-family:${MONO};font-size:14px;color:#c9c9c4`}>{clock}</span>
         </header>
         {cur === 'now' && <NowPlaying />}
         {cur === 'home' && <Home />}
+        {cur === 'smart' && <SmartHome />}
+        {cur === 'alarm' && <AlarmPage />}
         {cur === 'lib' && <Library />}
         {cur === 'rooms' && <Rooms />}
         {cur === 'set' && <Setup />}
@@ -411,8 +713,12 @@ function App() {
               </button>); })}
           </div>
         </>}
+        {talking && <Voice />}
       </main>
       {idle.value && <Standby clock={clock} dateTxt={dateTxt} />}
+      {!!doorToast.value && !door.value && <DoorToast />}
+      {!!door.value && <Door clock={clock} />}
+      {!!D.alarm?.ringing && <AlarmRinging clock={clock} />}
       {boot.value.on && <Boot />}
     </div>
   );
@@ -421,6 +727,10 @@ function App() {
 // Til skjermbilder og test: window.__touch.screen('home') osv.
 (window as unknown as { __touch: unknown }).__touch = {
   screen: (k: Scr) => { scr.value = k; }, lib: (i: number) => { lib.value = i; }, standby: goIdle, wake, boot: runBoot,
-  skipBoot: () => { bootT.forEach(clearTimeout); boot.value = { on: false, step: 9, op: 0 }; }, rooms: (o: boolean) => { roomsOpen.value = o; }
+  skipBoot: () => { bootT.forEach(clearTimeout); started = true; boot.value = { on: false, step: 9, op: 0 }; }, rooms: (o: boolean) => { roomsOpen.value = o; },
+  // de samme inngangene som i designet: alarm, ringeklokke, nattmodus og stemme
+  alarm: () => void postAt('', '/api/alarm', { action: 'test' }), ring: () => ringNow(0, true),
+  night: (on: boolean) => void postAt('', '/api/night', { on, src: 'Skjold Touch' }),
+  voice: (state: string, text = '', reply = '') => void postAt('', '/api/touch/voice', { state, text, reply })
 };
-render(<><App /><DoorbellOverlay /><div style="position:fixed;right:12px;bottom:12px;z-index:50"><TalkButton compact /></div></>, document.getElementById('touch')!);
+render(<App />, document.getElementById('touch')!);
