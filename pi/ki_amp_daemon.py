@@ -1299,7 +1299,7 @@ SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0
                 # Skjold Touch-skjermen (synkes med app og web-UI)
                 "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False,
                 # Skjold Touch: startside, ringeklokke (0 kamera, 1 bare varsel, 2 av), nattmodus (0 av, 1 tidsplan, 2 HA/Homey, 3 på)
-                "tStart": 0, "tBell": 0, "tNightMode": 0, "tNStart": 22, "tNEnd": 7, "tVoice": False, "tWake": 0, "tMic": True,
+                "tStart": 0, "tBell": 0, "tNightMode": 0, "tNStart": 22, "tNEnd": 7, "tVoice": False, "tWake": 0, "tMic": True, "tBright": 100,
                 # Skjold S1: dobbelttrykk på power (0 = Nattmodus, 1 = Av) og Nattlys-klokke i nattmodus
                 "dblPower": 0, "nightLight": True,
                 # Hjemskjermen: rekkefølge og synlighet for seksjonene (skjold_homelayout.py) – per enhet, synkes til alle klienter

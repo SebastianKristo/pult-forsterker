@@ -77,6 +77,9 @@ def tile_of(s: dict) -> dict:
     if dom == "light":
         b = a.get("brightness")
         t["text"] = ("På · %d %%" % round(float(b) / 255 * 100)) if t["on"] and b else ("På" if t["on"] else "Av")
+        modes = a.get("supported_color_modes") or []
+        if b is not None or any(m != "onoff" for m in modes):      # kan dimmes: hold på flisa for lysstyrke
+            t["pct"] = round(float(b) / 255 * 100) if t["on"] and b else 0
     elif dom in TOGGLE:
         t["text"] = "På" if t["on"] else "Av"
     elif dom == "cover":
@@ -126,7 +129,7 @@ def auto_pick(states: list) -> tuple:
     return tiles[:8], sorted(by.get("scene", []))[:3]
 
 
-def service_for(eid: str, action: str, target=None, lo=5.0, hi=30.0) -> tuple:
+def service_for(eid: str, action: str, target=None, lo=5.0, hi=30.0, value=None) -> tuple:
     """(domene, tjeneste, data) for et trykk på en flis. Låser og alarmer styres aldri herfra med et vanlig trykk."""
     dom = eid.split(".")[0]
     if action == "toggle":
@@ -137,6 +140,11 @@ def service_for(eid: str, action: str, target=None, lo=5.0, hi=30.0) -> tuple:
     if action in ("up", "down") and dom == "climate" and target is not None:
         t = max(lo, min(hi, float(target) + (0.5 if action == "up" else -0.5)))
         return "climate", "set_temperature", {"entity_id": eid, "temperature": t}
+    if action == "brightness" and dom == "light" and value is not None:
+        pct = max(0, min(100, int(round(float(value)))))
+        if pct == 0:
+            return "light", "turn_off", {"entity_id": eid}
+        return "light", "turn_on", {"entity_id": eid, "brightness_pct": pct}
     if action == "scene" and dom in ("scene", "script"):
         return dom, "turn_on", {"entity_id": eid}
     raise ValueError("kan ikke styres herfra")
@@ -335,7 +343,7 @@ class Touch:
         self._cache = {"t": now, "data": out}
         return out
 
-    def press(self, eid: str, action: str) -> dict:
+    def press(self, eid: str, action: str, value=None) -> dict:
         allowed = set(self.cfg["tiles"] or self._auto["tiles"]) | set(self.cfg["scenes"] or self._auto["scenes"])
         if eid not in allowed:
             raise ValueError("ukjent flis")
@@ -343,7 +351,7 @@ class Touch:
         if action in ("up", "down"):
             a = (self._state(eid) or {}).get("attributes") or {}
             tgt, lo, hi = a.get("temperature"), float(a.get("min_temp", 5)), float(a.get("max_temp", 30))
-        self._call(*service_for(eid, action, tgt, lo or 5.0, hi or 30.0))
+        self._call(*service_for(eid, action, tgt, lo or 5.0, hi or 30.0, value))
         time.sleep(0.25)          # gi HA et øyeblikk, så svaret viser den nye tilstanden
         return self.smart(fresh=True)
 
@@ -471,8 +479,8 @@ def routes(touch: Touch):
         if r.method == "POST":
             b = await body(r)
             try:
-                return web.json_response(await bg(touch.press, str(b.get("id") or ""), str(b.get("action") or "toggle")))
-            except ValueError as e:
+                return web.json_response(await bg(touch.press, str(b.get("id") or ""), str(b.get("action") or "toggle"), b.get("value")))
+            except (ValueError, TypeError) as e:
                 return fail(e)
             except Exception as e:
                 return fail("Home Assistant svarte ikke: " + str(e)[:120], 502)
