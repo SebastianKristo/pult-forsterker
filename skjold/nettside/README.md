@@ -26,7 +26,7 @@ Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/d
 | `_headers`, `_redirects` | Sikkerhetshoder, caching og omdirigering fra de gamle `.dc.html`-navnene |
 | `sitemap.xml`, `robots.txt`, `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` | |
 
-Nav og bunntekst står i hver side. Endrer du menyen, må den endres i alle `index.html`-filene (også under `en/`) og i `404.html`.
+Nav og bunntekst står i hver side. Produktene ligger i nedtrekksmenyen «Produkter» (`.nav-gruppe`); uten JS og på smale skjermer vises de flatt i menyen. Endrer du menyen, må den endres i alle `index.html`-filene (også under `en/`) og i `404.html`.
 
 **Språk:** norsk ligger på de vanlige adressene og engelsk under `/en/`. Hver side har `NO | EN` i menyen, som lenker til samme side på det andre språket, og har `hreflang` (`nb`, `en`, `x-default` = norsk) og `og:locale`. `sitemap.xml` lister begge språkene. Endrer du en tekst, endre den på begge språkene. Skjemaet på engelske sider sender `lang=en`, og da sender funksjonen besøkende uten JS til `/en/thanks/` eller `/en/thanks/error/`. Tekstene i `skjold.js` velges ut fra `<html lang>`.
 
