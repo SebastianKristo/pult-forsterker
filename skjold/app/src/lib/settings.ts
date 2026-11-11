@@ -193,7 +193,7 @@ export const CATS: Category[] = [
     { kind: 'range', k: 'ledLevel', n: 'LED-lysstyrke', mn: 0, mx: 100, step: 5, unit: ' %', hint: 'Lysstyrken på LED-ringene rundt knappene' },
     { kind: 'ledMode', k: 'ledMode', n: 'LED-modus', hint: 'Ved trykk: ringen lyser når du trykker og toner ut. Alltid: aktiv kilde lyser.' }] },
   { id: 'strom', n: 'Strøm', sub: 'Standby og påslag', items: [
-    opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay eller Blåtann vekker forsterkeren'),
+    opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay, Blåtann eller Spotify slår forsterkeren på fra standby'),
     opt('dblPower', 'Dobbelttrykk power', ['Nattmodus', 'Av'], 'Starter nattmodus og automasjonene dine i Home Assistant eller Homey'),
     bool('nightLight', 'Nattlys i nattmodus', 'Svak klokke i standby så lenge nattmodus er på')] },
   { id: 'oppdatering', n: 'Oppdatering', sub: 'Ny versjon, endringslogg, backup og gjenoppretting', items: [{ kind: 'update', n: 'Oppdatering' }] },

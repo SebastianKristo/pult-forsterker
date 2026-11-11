@@ -204,7 +204,7 @@ object SK {
             S.opt("dim", "Dimme skjermen etter", listOf("Av", "30 s", "1 min")), S.opt("off", "Slukk skjermen etter", listOf("Av", "2 min", "5 min"), "Beskytter OLED-skjermen mot innbrenning"),
             S.bool("clock", "Klokke i standby"), SettingItem(SettingKind.Clocks, "clockStyle", "Klokke i standby"), S.opt("led", "LED-ringer", listOf("Høy", "Middels", "Lav", "Av")))),
         SettingCategory("strom", "Strøm", "Standby og påslag", items = listOf(
-            S.opt("auto", "Auto-standby uten lyd", listOf("Av", "20 min", "60 min")), S.bool("wake", "Slå på ved signal", "AirPlay eller Blåtann vekker forsterkeren"))),
+            S.opt("auto", "Auto-standby uten lyd", listOf("Av", "20 min", "60 min")), S.bool("wake", "Slå på ved signal", "AirPlay, Blåtann eller Spotify slår forsterkeren på fra standby"))),
         SettingCategory("oppdatering", "Oppdatering", "GitHub, backup og gjenoppretting", items = listOf(SettingItem(SettingKind.Update, "update", "Oppdatering"))),
         SettingCategory("programopptak", "Radioprogrammer", "Planlagte opptak som podkast", items = listOf(SettingItem(SettingKind.Update, "programopptak", "Radioprogrammer"))),
         SettingCategory("endringslogg", "Endringslogg", "Hva er nytt i hver versjon", items = listOf(SettingItem(SettingKind.Update, "endringslogg", "Endringslogg"))),

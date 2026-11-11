@@ -141,7 +141,7 @@ enum SK {
             .opt("dim", "Dimme skjermen etter", ["Av", "30 s", "1 min"], dev: ["s1"]), .opt("off", "Slukk skjermen etter", ["Av", "2 min", "5 min"], "Beskytter OLED-skjermen mot innbrenning. TFT-skjermer får ikke innbrenning", dev: ["s1"]),
             .bool("clock", "Klokke i standby", dev: ["s1"]), SettingItem(kind: .clocks, k: "clockStyle", n: "Klokkestil i standby", dev: ["s1"]), .opt("led", "LED-ringer", ["Høy", "Middels", "Lav", "Av"], dev: ["s1"])]),
         SettingCategory(id: "strom", n: "Strøm", sub: "Standby og påslag", items: [
-            .opt("auto", "Auto-standby uten lyd", ["Av", "20 min", "60 min"]), .bool("wake", "Slå på ved signal", "AirPlay eller Blåtann vekker forsterkeren")]),
+            .opt("auto", "Auto-standby uten lyd", ["Av", "20 min", "60 min"]), .bool("wake", "Slå på ved signal", "AirPlay, Blåtann eller Spotify slår forsterkeren på fra standby")]),
         SettingCategory(id: "oppdatering", n: "Oppdatering", sub: "GitHub, backup og gjenoppretting", items: [SettingItem(kind: .update, k: "update", n: "Oppdatering")]),
         SettingCategory(id: "programopptak", n: "Radioprogrammer", sub: "Planlagte opptak som podkast", items: [SettingItem(kind: .update, k: "programopptak", n: "Radioprogrammer")]),
         SettingCategory(id: "endringslogg", n: "Endringslogg", sub: "Hva er nytt i hver versjon", items: [SettingItem(kind: .update, k: "endringslogg", n: "Endringslogg")]),
