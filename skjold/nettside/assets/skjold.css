@@ -510,9 +510,9 @@ a.produkt:hover .mer,a.kort:hover .mer{transform:translateX(4px)}
 .nav-gruppe-knapp,.nav-under span{display:none}
 .nav-under b{font-weight:inherit}
 @media (min-width:981px){
-  .nav-lenker{overflow:visible;-webkit-mask-image:none;mask-image:none;padding-right:0;gap:24px;font-size:13px}
+  .nav-lenker{overflow:visible;-webkit-mask-image:none;mask-image:none;padding-right:0;gap:24px;font-size:13px;align-items:center}
   .nav-gruppe{display:block;position:relative}
-  .nav-gruppe-knapp{display:flex;align-items:center;gap:6px;height:52px;padding:0;border:0;background:none;font:inherit;color:var(--demp-l);cursor:pointer}
+  .nav-gruppe-knapp{display:flex;align-items:center;gap:6px;height:52px;margin:0;padding:0;border:0;background:none;font:inherit;line-height:inherit;letter-spacing:inherit;color:var(--demp-l);cursor:pointer;-webkit-appearance:none;appearance:none}
   .nav-gruppe-knapp[data-her],.nav-gruppe-knapp:hover,.nav-gruppe.aapen .nav-gruppe-knapp{color:var(--tekst-l)}
   .nav-gruppe-knapp svg{transition:transform .25s var(--ease)}
   .nav-gruppe.aapen .nav-gruppe-knapp svg,.nav-gruppe:hover .nav-gruppe-knapp svg{transform:rotate(180deg)}
@@ -527,3 +527,9 @@ a.produkt:hover .mer,a.kort:hover .mer{transform:translateX(4px)}
   .nav-under a[aria-current=page] b{color:var(--khaki)}
 }
 @media (prefers-reduced-motion:reduce){.nav-under,.nav-gruppe-knapp svg{transition:none}}
+
+/* Logoer der siden nevner støtte for Home Assistant og Homey */
+.flis-logoer{display:flex;gap:10px;margin-bottom:4px}
+.flis-logoer img{display:block;width:34px;height:34px}
+.merke{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;vertical-align:bottom}
+.merke img{display:block;width:18px;height:18px;flex:none}
