@@ -279,3 +279,93 @@ class Skjerm(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+import types  # noqa: E402,F401
+import pytest  # noqa: E402
+T = t
+
+
+# ------------------------------------------------------------------ smart vekking (KI Søvn)
+def _ki_states(base="soverom_vekking", **over):
+    st = [{"entity_id": f"sensor.{base}_neste_alarm", "state": "06:30",
+           "attributes": {"integrasjon": "ki_sovn", "type": "vekking", "navn": "Soverom", "prefix": base, "neste_dag": "Mandag",
+                          "hopper_over": None, "person": "binary_sensor.sebastian_sovn_sover", "lys": ["light.a", "light.b"]}},
+          {"entity_id": f"binary_sensor.{base}_kjorer", "state": "off", "attributes": {"fase": "inaktiv"}},
+          {"entity_id": "binary_sensor.sebastian_sovn_sover", "state": "on",
+           "attributes": {"integrasjon": "ki_sovn", "type": "person", "navn": "Sebastian", "sannsynlighet": 87.4, "årsak": "i senga"}},
+          {"entity_id": "button.sebastian_sovn_sett_sover", "state": "x"}, {"entity_id": "button.sebastian_sovn_sett_vaken", "state": "x"},
+          {"entity_id": f"number.{base}_fade_opp", "state": "10.0", "attributes": {"min": 1, "max": 60, "step": 1}},
+          {"entity_id": f"number.{base}_av_etter", "state": "30", "attributes": {"min": 0, "max": 240, "step": 5}},
+          {"entity_id": f"button.{base}_test", "state": "x"}, {"entity_id": f"button.{base}_stopp", "state": "x"},
+          {"entity_id": "light.stue", "state": "on", "attributes": {"integrasjon": "noe_annet"}}]
+    for k, v in (("aktiv", "on"), ("nattlampe", "off"), ("vekk_person", "on"), ("bare_hvis_sover", "off")):
+        st.append({"entity_id": f"switch.{base}_{k}", "state": v})
+    for i, d in enumerate(T.WAKE_DAYS):
+        st.append({"entity_id": f"time.{base}_{d}", "state": "06:30:00" if i < 5 else "09:00:00"})
+        st.append({"entity_id": f"switch.{base}_{d}_aktiv", "state": "on" if i < 5 else "off"})
+    for s in st:
+        if s["entity_id"] in over:
+            s["state"] = over[s["entity_id"]]
+    return st
+
+
+def test_wake_find_reads_the_whole_alarm():
+    (a,) = T.wake_find(_ki_states())
+    assert (a["id"], a["name"], a["on"], a["next"], a["next_day"]) == ("soverom_vekking", "Soverom", True, "06:30", "Mandag")
+    assert [d["time"] for d in a["days"]] == ["06:30"] * 5 + ["09:00"] * 2
+    assert [d["on"] for d in a["days"]] == [True] * 5 + [False] * 2
+    assert a["fade"] == {"value": 10, "min": 1, "max": 60, "step": 1} and a["off_after"]["step"] == 5
+    assert (a["night_light"], a["wake_person"], a["only_if_asleep"], a["lights"], a["can_test"]) == (False, True, False, 2, True)
+    assert a["person"]["name"] == "Sebastian" and a["person"]["sleeping"] and a["person"]["pct"] == 87 and a["person"]["can_set"]
+
+
+def test_wake_find_ignores_other_integrations_and_handles_missing_parts():
+    assert T.wake_find([{"entity_id": "sensor.x_neste_alarm", "state": "07:00", "attributes": {"integrasjon": "annet"}}]) == []
+    st = [s for s in _ki_states() if "sebastian" not in s["entity_id"] and "fade_opp" not in s["entity_id"]]
+    (a,) = T.wake_find(st)
+    assert a["person"] is None and a["fade"] is None
+    (b,) = T.wake_find(_ki_states(**{"sensor.soverom_vekking_neste_alarm": "Av"}))
+    assert b["next"] == "" and b["next_day"] == ""
+
+
+def test_wake_public_hides_entity_ids():
+    (p,) = T.wake_public(T.wake_find(_ki_states()))
+    assert "_ent" not in p and "_base" not in p["person"]
+
+
+def test_wake_calls_maps_changes_to_services():
+    (a,) = T.wake_find(_ki_states())
+    c = T.wake_calls(a, {"mandag": "07:15", "lordag_aktiv": True, "aktiv": False, "fade_opp": 500, "test": True, "sett_vaken": True})
+    assert ("time", "set_value", {"entity_id": "time.soverom_vekking_mandag", "time": "07:15:00"}) in c
+    assert ("switch", "turn_on", {"entity_id": "switch.soverom_vekking_lordag_aktiv"}) in c
+    assert ("switch", "turn_off", {"entity_id": "switch.soverom_vekking_aktiv"}) in c
+    assert ("number", "set_value", {"entity_id": "number.soverom_vekking_fade_opp", "value": 60}) in c
+    assert ("button", "press", {"entity_id": "button.soverom_vekking_test"}) in c
+    assert ("button", "press", {"entity_id": "button.sebastian_sovn_sett_vaken"}) in c
+
+
+@pytest.mark.parametrize("ch", [{}, {"light.stue": True}, {"mandag": "25:00"}, {"mandag": "x"}, {"aktiv": "on"}, {"fade_opp": "mye"},
+                                {"entity_id": "lock.inngang"}])
+def test_wake_calls_rejects_bad_input(ch):
+    (a,) = T.wake_find(_ki_states())
+    with pytest.raises(ValueError):
+        T.wake_calls(a, ch)
+
+
+def test_wake_set_only_touches_found_alarms(tmp_path):
+    x = T.Touch({"changed": lambda: None, "ha": lambda: {"ha_url": "http://ha", "ha_token": "x"}, "alarms": lambda: []}, str(tmp_path / "t.json"))
+    calls = []
+    x._get = lambda path, timeout=5.0: _ki_states()
+    x._call = lambda *a: calls.append(a)
+    out = x.wake_set("soverom_vekking", {"tirsdag": "05:45"})
+    assert calls == [("time", "set_value", {"entity_id": "time.soverom_vekking_tirsdag", "time": "05:45:00"})]
+    assert out["ok"] and out["alarms"][0]["id"] == "soverom_vekking"
+    with pytest.raises(ValueError):
+        x.wake_set("noe_annet", {"aktiv": True})
+
+
+def test_wake_without_home_assistant_explains(tmp_path):
+    x = T.Touch({"changed": lambda: None, "ha": lambda: {}, "alarms": lambda: []}, str(tmp_path / "t.json"))
+    w = x.wake()
+    assert not w["ok"] and "Home Assistant" in w["error"]

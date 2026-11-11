@@ -108,8 +108,8 @@ varme justeres, og låser kan ikke styres med et trykk. Scener (Flows) vises ikk
 
 ### Vekkeklokke
 
-Opptil ti alarmer. ‹ og › flytter tiden fem minutter. Trykk på dagene for å bytte mellom hverdager, helg og hver dag,
-og på «Vanlig» for å slå på smart vekking (lyden øker over tre minutter). Alarmene er de samme som i appen
+Opptil ti alarmer. Trykk på en alarm for å endre den: rullehjul for time og minutt, en knapp per dag, hurtigvalg for
+hverdager, helg og hver dag, navn, og «Myk start» (lyden øker over tre minutter). Alarmene er de samme som i appen
 (**Plugins → Vekkerklokke**), ligger på enheten og virker uten nett.
 
 Når alarmen ringer, våkner skjermen med **Slumre 9 min** og **Slå av**. Det samme kan gjøres utenfra:
@@ -119,6 +119,31 @@ curl -X POST http://skjold-touch.local:8765/api/alarm -d '{"action":"snooze"}'
 ```
 
 `action` er `snooze`, `stop` eller `test`. Ingen som slår av? Da gir alarmen seg etter 30 minutter.
+
+### Smart vekking (KI Søvn)
+
+Har du integrasjonen **KI Søvn** (`ki_sovn`) i Home Assistant, viser Alarm-siden vekkealarmene derfra under de vanlige
+alarmene. Touch finner dem selv. Trykk på en for å åpne menyen:
+
+- **Uka:** en tid og en bryter per ukedag. Trykk på tiden for rullehjul, og bruk den på bare den dagen, hverdager, helg
+  eller alle dager.
+- **Lyset:** hvor lenge det tones opp, når det slukkes igjen, og om nattlampen skal være med.
+- **Søvn:** «Bare hvis jeg sover» og «Marker meg som våken», og om KI Søvn mener du sover akkurat nå.
+- **Prøv vekkingen nå** kjører sekvensen med en gang. Samme knapp stopper den.
+
+Hvilke lys som er med, betingelser og hvem som er personen velges i Home Assistant. Touch endrer bare entitetene til
+vekkealarmen (`time.<navn>_vekking_<dag>`, `switch.<navn>_vekking_*`, `number.<navn>_vekking_*`, `button.<navn>_vekking_*`)
+og knappene «Sett sover»/«Sett våken» til personen. Krever at Home Assistant er koblet til (se Smarthus). Virker ikke
+med Homey.
+
+```bash
+curl http://skjold-touch.local:8765/api/touch/wake
+```
+
+```bash
+curl -X POST http://skjold-touch.local:8765/api/touch/wake -H 'Content-Type: application/json' \
+  -d '{"id":"soverom_vekking","set":{"mandag":"06:30","mandag_aktiv":true,"fade_opp":15}}'
+```
 
 ### Ringeklokke
 
@@ -160,7 +185,8 @@ curl -X POST http://skjold-touch.local:8765/api/touch/cmd -d '{"cmd":"page","arg
 
 Ferdig:
 - Spiller, Hjem, Smarthus, Alarm, Bibliotek, Rom og Oppsett, med valgfri startside.
-- Vekkeklokke med slumring, smart vekking og fullskjerm når den ringer.
+- Vekkeklokke med slumring, myk start og fullskjerm når den ringer.
+- Smart vekking mot KI Søvn i Home Assistant (prøvd mot en simulert Home Assistant, ikke mot en ekte ennå).
 - Ringeklokke med kamera, varsel og «Lås opp».
 - Standby med klokke, cover eller svart. Nattmodus med tidsplan, styring fra HA/Homey og bakgrunnslys.
 - Stemmeoverlegg og installasjon av stemmesatellitt.
@@ -176,4 +202,3 @@ Ikke laget ennå:
 - Scener (Flows) fra Homey.
 - Toveis lyd («Snakk») mot ringeklokka, og direktevideo (kameraet vises som bilde som oppdateres hvert sekund).
 - Av/på-knapp på GPIO.
-- Lang trykk på en flis for dimmer og farge.
