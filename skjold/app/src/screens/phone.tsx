@@ -1,8 +1,9 @@
 // Telefon (Skjold App v2): Hjem, fullskjermspiller med kø, og Rom («Ditt system»). Malen er portert 1:1 fra
 // designfilen (samme mål, farger og tekster); dataene kommer fra forsterkeren (/api/status, /api/presets).
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Fragment, type ComponentChildren } from 'preact';
+import { type ComponentChildren } from 'preact';
 import { homeOrder, orderSources } from '../lib/homelayout';
+import { Boundary } from '../components/boundary';
 import { api, credFor, getBase, PRODUCT_HW, PRODUCT_LABEL, productOf, setBase, type InputId, type Product, type Status } from '../lib/api';
 import { act, deviceName, eqActiveProfile, go, inputLabel, loadSettings, mode, online, openFull, closeFull, playPause, product, queueOpen, reconnect, recent, setVolume, showToast, srcOpen, status } from '../lib/store';
 import { knownDevices } from '../lib/discover';
@@ -150,7 +151,7 @@ export function HomePhone() {
         </div>
         <span style="height:28px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;font-size:12px;color:#c9c9c4;display:flex;align-items:center">Bytt</span>
       </button>
-      {homeOrder(['recent', 'sources', 'favs']).map((id) => <Fragment key={id}>{sections[id]}</Fragment>)}
+      {homeOrder(['recent', 'sources', 'favs']).map((id) => <Boundary key={id} liten>{sections[id]}</Boundary>)}
       <button onClick={() => go('settings', 'hjemskjerm')} style="align-self:center;border:none;background:none;color:#8b8b86;font-size:12.5px;cursor:pointer;padding:6px 0">Rediger hjemskjerm</button>
     </>
   );
@@ -289,7 +290,7 @@ export function FullSheet() {
         <ListenHere compact />
         <div style="display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:12px;align-items:center;padding-top:4px">
           <button aria-label="Kø" onClick={() => { queueOpen.value = !queueOpen.value; }} style={`width:48px;height:48px;border-radius:50%;border:1px solid rgba(242,242,238,.18);background:${queueOpen.value ? 'rgba(242,242,238,.22)' : 'rgba(0,0,0,.18)'};color:#f2f2ee;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0`}>{icon('M10 6h11M10 12h11M10 18h11M3 5l4 3-4 3z')}</button>
-          <button onClick={() => { closeFull(); go('rooms'); }} style="justify-self:center;display:flex;align-items:center;gap:8px;height:48px;padding:0 18px;border-radius:999px;border:1px solid rgba(242,242,238,.18);background:rgba(0,0,0,.18);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="6" y="3" width="10" height="18" rx="2" /><circle cx="11" cy="15" r="2.5" /><circle cx="11" cy="7.5" r="1" /></svg><span style="overflow:hidden;text-overflow:ellipsis">{groupLabel()}</span></button>
+          <button onClick={() => go('rooms')} style="justify-self:center;display:flex;align-items:center;gap:8px;height:48px;padding:0 18px;border-radius:999px;border:1px solid rgba(242,242,238,.18);background:rgba(0,0,0,.18);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="6" y="3" width="10" height="18" rx="2" /><circle cx="11" cy="15" r="2.5" /><circle cx="11" cy="7.5" r="1" /></svg><span style="overflow:hidden;text-overflow:ellipsis">{groupLabel()}</span></button>
           <button aria-label="Mer" onClick={() => { srcOpen.value = !srcOpen.value; }} style={`width:48px;height:48px;border-radius:50%;border:1px solid rgba(242,242,238,.18);background:${srcOpen.value ? 'rgba(242,242,238,.22)' : 'rgba(0,0,0,.18)'};color:#f2f2ee;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0`}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg></button>
         </div>
       </div>

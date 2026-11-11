@@ -16,7 +16,7 @@ export const EN: Record<string, string> = {
   'Lagre': 'Save', 'Lagret': 'Saved', 'Avbryt': 'Cancel', 'Slett': 'Delete', 'Søk': 'Search', 'Henter …': 'Loading …',
   'Prøv igjen': 'Try again', 'Ferdig': 'Done', 'Legg til': 'Add', 'Fjern': 'Remove', 'Endre': 'Edit', 'Ja': 'Yes', 'Nei': 'No',
   // innstillinger
-  'Språk': 'Language', 'Automatisk (følg nettleseren)': 'Automatic (follow browser)', 'Norsk': 'Norwegian', 'Engelsk': 'English',
+  'Språk': 'Language', 'Standard (norsk)': 'Default (Norwegian)', 'Norsk': 'Norwegian', 'Engelsk': 'English',
   'Oppdatering': 'Update', 'System': 'System', 'Om': 'About', 'Endringslogg': 'Changelog',
   'Hjemskjerm': 'Home screen', 'Nettverk': 'Network', 'Fjernstyring': 'Remote access', 'Sikkerhetskopi': 'Backup',
   'Ytelse': 'Performance', 'CPU-bruk': 'CPU usage', 'CPU-temperatur': 'CPU temperature', 'Minnebruk': 'Memory usage',

@@ -1,5 +1,6 @@
 // Innstillinger: kategoriliste + detaljside, generert fra CATS i lib/settings.ts.
 import { Fragment } from 'preact';
+import { Boundary } from '../components/boundary';
 import { langPref, setLang, t, type LangPref } from '../i18n';
 import { ChangelogPanel } from './programs';
 import { HomeEditor } from './homeedit';
@@ -111,18 +112,18 @@ function SubHead({ n, sub }: { n: string; sub?: string }) {
 }
 
 export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) {
-  if (cat.id === 'oppdatering') return <div style="display:flex;flex-direction:column;gap:14px"><UpdatePanel />{canSelfUpdate && <AppUpdatePanel />}<SubHead n="Endringslogg" /><ChangelogPanel /></div>;
+  if (cat.id === 'oppdatering') return <div style="display:flex;flex-direction:column;gap:14px"><Boundary><UpdatePanel /></Boundary>{canSelfUpdate && <Boundary><AppUpdatePanel /></Boundary>}<SubHead n="Endringslogg" /><Boundary><ChangelogPanel /></Boundary></div>;
   if (cat.id === 'sky') return (   // Steder, Skjold-hjem, fjernstyring og Skjold Cloud – samme tema, én side
     <div style="display:flex;flex-direction:column;gap:14px">
-      <SubHead n="Steder" sub="Hjem, Hytta … og hvilke enheter som hører til hvor" /><StederPanel />
-      <SubHead n="Denne enheten" sub="Koble denne Skjold til et sted" /><SkyPanel />
-      <SubHead n="Fjernstyring" sub="Styr Skjold hjemmefra via Cloudflare" /><RemotePanel />
-      <SubHead n="Skjold Cloud" sub="Kryptert synk av favoritter, rutiner og EQ mellom hjem" /><CloudPanel />
+      <SubHead n="Steder" sub="Hjem, Hytta … og hvilke enheter som hører til hvor" /><Boundary><StederPanel /></Boundary>
+      <SubHead n="Denne enheten" sub="Koble denne Skjold til et sted" /><Boundary><SkyPanel /></Boundary>
+      <SubHead n="Fjernstyring" sub="Styr Skjold hjemmefra via Cloudflare" /><Boundary><RemotePanel /></Boundary>
+      <SubHead n="Skjold Cloud" sub="Kryptert synk av favoritter, rutiner og EQ mellom hjem" /><Boundary><CloudPanel /></Boundary>
     </div>
   );
-  if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><RoutinesPanel /><DoorbellPanel /><DuckPanel /><SecurityPanel /><RecognizeSettingsPanel /><WishlistPanel /><RadioListPanel source="wishlist" /></div>;
-  if (cat.id === 'bibliotek') return <div style="display:flex;flex-direction:column;gap:14px"><LibraryTagsPanel /><AiSettingsPanel /></div>;
-  const extra = cat.id === 'system' ? <><HealthPanel /><BackupPanel /></> : null;
+  if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><Boundary><RoutinesPanel /></Boundary><Boundary><DoorbellPanel /></Boundary><Boundary><DuckPanel /></Boundary><Boundary><SecurityPanel /></Boundary><Boundary><RecognizeSettingsPanel /></Boundary><Boundary><WishlistPanel /></Boundary><Boundary><RadioListPanel source="wishlist" /></Boundary></div>;
+  if (cat.id === 'bibliotek') return <div style="display:flex;flex-direction:column;gap:14px"><Boundary><LibraryTagsPanel /></Boundary><Boundary><AiSettingsPanel /></Boundary></div>;
+  const extra = cat.id === 'system' ? <><Boundary><HealthPanel /></Boundary><Boundary><BackupPanel /></Boundary></> : null;
   if (cat.id === 'hjemskjerm') return <HomeEditor />;
   const items = cat.items.filter((it) => it.kind !== 'clocks' && it.kind !== 'update');
   const hasClocks = cat.items.some((it) => it.kind === 'clocks');
@@ -632,7 +633,7 @@ function KidsLocked() {
 
 /** Språkvalg (lagres i nettleseren): automatisk, norsk eller engelsk. */
 function LangPicker() {
-  const opts: [LangPref, string][] = [['auto', 'Automatisk (følg nettleseren)'], ['nb', 'Norsk'], ['en', 'Engelsk']];
+  const opts: [LangPref, string][] = [['auto', 'Standard (norsk)'], ['nb', 'Norsk'], ['en', 'Engelsk']];
   return (
     <div style={CARD + ';padding:12px 14px;gap:8px'}>
       <span style="font-size:14px">{t('Språk')}</span>

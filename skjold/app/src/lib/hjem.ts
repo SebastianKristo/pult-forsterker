@@ -85,13 +85,13 @@ function fail(e: unknown): void {
 export async function loadSteder(): Promise<void> {
   if (hjemState.value !== 'ok') hjemState.value = 'laster';
   try {
-    steder.value = await hjem.steder(); hjemState.value = 'ok'; hjemErr.value = '';
+    const l = await hjem.steder(); steder.value = Array.isArray(l) ? l : []; hjemState.value = 'ok'; hjemErr.value = '';
     if (stedId.value) await loadEnheter();
   } catch (e) { fail(e); }
 }
 export async function loadEnheter(): Promise<void> {
   const id = stedId.value; if (!id) { enheter.value = []; return; }
-  try { const l = await hjem.enheter(id); if (stedId.value === id) enheter.value = l; } catch (e) { fail(e); }
+  try { const l = await hjem.enheter(id); if (stedId.value === id) enheter.value = Array.isArray(l) ? l : []; } catch (e) { fail(e); }
 }
 
 /** LAN-adressen skyen kjenner for enheten (`lan`: "ip:port", URL eller {ip,port}). */

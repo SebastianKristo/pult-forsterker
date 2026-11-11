@@ -2,8 +2,9 @@ import { NrkContinueShelf } from './nrk';
 // PC-sider (skall dk2): Hjem, Spiller, Radio og bibliotekene (YouTube Music / Navidrome) med eget, bredt oppsett.
 // Samme data og handlinger som telefonsidene – bare ny plassering og størrelser.
 import { useEffect, useState } from 'preact/hooks';
-import { Fragment, type ComponentChildren } from 'preact';
+import { type ComponentChildren } from 'preact';
 import { homeOrder, orderSources } from '../lib/homelayout';
+import { Boundary } from '../components/boundary';
 import { localOn, localVol, setLocalVol } from '../lib/localplay';
 import { api, PRODUCT_LABEL, type Fav, type InputId, type Station } from '../lib/api';
 import { act, deviceName, eqActiveSource, go, inputLabel, recent, setVolume, settings, status } from '../lib/store';
@@ -167,7 +168,7 @@ export function DeskHome() {
           </button>
         </div>
 
-        {homeOrder(['recent', 'sources', 'playlists', 'trending', 'favs', 'nrk', 'routines', 'ask', 'discover', 'wrapped']).map((id) => <Fragment key={id}>{sections[id]}</Fragment>)}
+        {homeOrder(['recent', 'sources', 'playlists', 'trending', 'favs', 'nrk', 'routines', 'ask', 'discover', 'wrapped']).map((id) => <Boundary key={id} liten>{sections[id]}</Boundary>)}
         <button class="link0" style={{ alignSelf: 'flex-start' }} onClick={() => go('settings', 'hjemskjerm')}>Rediger hjemskjerm</button>
       </div>
 
