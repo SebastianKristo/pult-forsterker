@@ -1248,11 +1248,43 @@ def apply_power():
     units = [u for u in ("shairport-sync", "bluealsa-aplay", "ki-usb-audio", "ki-squeezelite", "ki-aux1", "ki-aux2", "ki-spotify", "ki-plex")   # bare tjenester som er slått på
              if subprocess.run(["systemctl", "is-enabled", "--quiet", u], check=False).returncode == 0]
     if not state["power"]:   # stopp det som spiller pent før tjenestene tas ned
+        airplay_spilte = False
+        try:
+            raw = read_raw(); airplay_spilte = bool(raw.get("playing")) and raw.get("source") == "airplay"
+        except Exception:
+            pass
         _pause_others("")
         if lyr.info.get("mode") == "play":
             lyr.cmd(["pause", "1"])
+        _power_off_t[0] = time.time()
+        if settings().get("wake", True):
+            # «Slå på ved signal»: AirPlay, Blåtann og Spotify blir stående i standby, så de kan vekke forsterkeren.
+            # Spilte AirPlay, startes mottakeren på nytt – da kobles avsenderen fra i stedet for å spille videre i stillhet.
+            if airplay_spilte and "shairport-sync" in units:
+                subprocess.run(["systemctl", "try-restart", "shairport-sync"], check=False, timeout=20,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            units = [u for u in units if u not in WAKE_UNITS]
     subprocess.run(["systemctl", "start" if state["power"] else "stop", *units],
                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+WAKE_UNITS = ("shairport-sync", "bluealsa-aplay", "ki-spotify")   # mottakerne som kan vekke forsterkeren fra standby
+WAKE_GRACE_S = 8            # så lenge etter «av» ser vi bort fra signal (avsenderen rekker å stoppe)
+_power_off_t = [0.0]
+
+
+def wake_decision(power, playing, source, quiet_seen, wake_on, since_off):
+    """Skal forsterkeren slås på av et signal? Gir (vekk, quiet_seen).
+
+    Den våkner bare når noe BEGYNNER å spille i standby: først må det ha vært stille (quiet_seen), ellers ville en
+    telefon som overser «pause» slått forsterkeren på igjen rett etter at du slo den av."""
+    if power:
+        return False, False
+    if not playing:
+        return False, True
+    if quiet_seen and wake_on and source in ("airplay", "bt", "spotify") and since_off > WAKE_GRACE_S:
+        return True, False
+    return False, quiet_seen
 
 
 # ---------- innstillinger (app/web, samme nøkler som skjold_settings.js) ----------
@@ -3055,6 +3087,7 @@ def follow_source():
     last = (None, False)
     last_dev = None
     tick = 0
+    quiet = False
     while True:
         time.sleep(1)
         tick += 1
@@ -3074,6 +3107,10 @@ def follow_source():
             cur = (st.get("source"), bool(st.get("playing")))
             if lyr.info.get("mode") == "play" and state["input"] != "radio" and not st.get("playing"):
                 cur = ("radio", True)
+            vekk, quiet = wake_decision(state["power"], cur[1], cur[0], quiet, settings().get("wake", True), time.time() - _power_off_t[0])
+            if vekk:
+                print("Slås på av", cur[0], flush=True)
+                set_power(True); set_input(cur[0], announce=False)
             if state["auto_input"] and cur != last and cur[1] and cur[0] in ("airplay", "bt", "radio") and state["power"] and state["input"] != cur[0]:
                 print("Auto-kilde:", cur[0], flush=True)
                 set_input(cur[0], announce=False)
@@ -3157,7 +3194,11 @@ def spotify_event(b):
         spotify.update(position=0, pos_t=time.time())   # ny låt uten posisjon: fra start
     elif ev in ("playing", "started", "paused", "stopped"):
         spotify.update(position=cur, pos_t=time.time())
-    if spotify["playing"] and not was and state["auto_input"] and state["power"] and state["input"] != "spotify" and "spotify" in INPUTS:
+    if spotify["playing"] and not was and not state["power"] and "spotify" in INPUTS and settings().get("wake", True) \
+            and time.time() - _power_off_t[0] > WAKE_GRACE_S:
+        print("Slås på av spotify", flush=True)      # «Slå på ved signal»: Spotify Connect vekker forsterkeren
+        set_power(True); set_input("spotify", announce=False)
+    elif spotify["playing"] and not was and state["auto_input"] and state["power"] and state["input"] != "spotify" and "spotify" in INPUTS:
         print("Auto-kilde: spotify", flush=True)
         set_input("spotify", announce=False)
     else:

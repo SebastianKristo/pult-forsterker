@@ -130,5 +130,43 @@ class UgyldigKropp(unittest.TestCase):
         with self.assertRaises(KeyError):          # en feil i en GET er vår egen, og skal synes i loggen som før
             self.kjor(h, "GET")
 
+
+class VaakneVedSignal(unittest.TestCase):
+    """«Slå på ved signal»: noe som begynner å spille i standby slår forsterkeren på."""
+
+    def test_vaakner_naar_noe_begynner(self):
+        v, q = d.wake_decision(False, False, None, False, True, 60)
+        self.assertEqual((v, q), (False, True))                      # stille i standby: klar til å våkne
+        self.assertEqual(d.wake_decision(False, True, "airplay", q, True, 60), (True, False))
+        self.assertEqual(d.wake_decision(False, True, "bt", True, True, 60)[0], True)
+
+    def test_spretter_ikke_paa_igjen(self):
+        # telefonen overser «pause» og spiller videre etter at du slo av: ikke våkn før det har vært stille
+        self.assertEqual(d.wake_decision(False, True, "airplay", False, True, 60), (False, False))
+        self.assertEqual(d.wake_decision(False, True, "airplay", True, True, 3)[0], False)     # rett etter «av»
+
+    def test_av_i_innstillingene_og_andre_kilder(self):
+        self.assertFalse(d.wake_decision(False, True, "airplay", True, False, 60)[0])
+        self.assertFalse(d.wake_decision(False, True, "radio", True, True, 60)[0])
+        self.assertEqual(d.wake_decision(True, True, "airplay", True, True, 60), (False, False))   # allerede på
+
+    def test_mottakerne_staar_i_standby(self):
+        kall = []
+        with mock.patch.object(d.subprocess, "run", side_effect=lambda a, **k: kall.append(a) or mock.Mock(returncode=0)), \
+                mock.patch.object(d, "read_raw", return_value={"playing": True, "source": "airplay"}), \
+                mock.patch.object(d, "_pause_others"), mock.patch.object(d, "apply_volume"), mock.patch.object(d, "HW", False), \
+                mock.patch.dict(d.state, {"power": False}):
+            with mock.patch.object(d, "settings", return_value={"wake": True}):
+                d.apply_power()
+                stopp = [a for a in kall if a[:2] == ["systemctl", "stop"]][-1]
+                self.assertNotIn("shairport-sync", stopp)
+                self.assertNotIn("ki-spotify", stopp)
+                self.assertIn("ki-squeezelite", stopp)
+                self.assertIn(["systemctl", "try-restart", "shairport-sync"], kall)     # avsenderen kobles fra
+            kall.clear()
+            with mock.patch.object(d, "settings", return_value={"wake": False}):
+                d.apply_power()
+                self.assertIn("shairport-sync", [a for a in kall if a[:2] == ["systemctl", "stop"]][-1])
+
 if __name__ == "__main__":
     unittest.main()
