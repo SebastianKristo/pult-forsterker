@@ -1,5 +1,6 @@
 /** Skjold Hjul: ESPHome-fjernkontroll med dreieknapp og 4 favorittknapper (pi/skjold_hjul.py, esphome/skjold-hjul.yaml). */
 import { useEffect, useState } from 'preact/hooks';
+import { everyVisible } from '../lib/store';
 import { apiPost, apiReq, getBase, type NfcCard } from '../lib/api';
 
 const A = '#e8b04a';
@@ -21,7 +22,7 @@ export function HjulPanel({ cards }: { cards: NfcCard[] }) {
   const [cfg, setCfg] = useState<HjulCfg | null>(null);
   const [err, setErr] = useState('');
   const load = () => apiReq<HjulCfg>('/api/hjul').then((c) => { setCfg(c); setErr(''); }).catch((e) => setErr(String((e as Error).message || e)));
-  useEffect(() => { void load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
+  useEffect(() => { void load(); const t = everyVisible(load, 8000); return () => clearInterval(t); }, []);
   const save = (b: Partial<HjulCfg> & { glem?: string[] }) => apiPost<HjulCfg>('/api/hjul', b).then(setCfg).catch((e) => setErr(String((e as Error).message || e)));
   if (!cfg) return <div style={box + ';color:#9a9a96'}>{err ? 'Fikk ikke kontakt: ' + err : 'Henter …'}</div>;
 

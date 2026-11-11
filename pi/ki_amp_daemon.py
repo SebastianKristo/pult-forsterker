@@ -3031,6 +3031,15 @@ async def cors_mw(r, handler):
         resp = await handler(r)
     except web.HTTPException as e:
         resp = e
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        # tom eller ødelagt kropp skal gi en forklaring klienten kan bruke, ikke «500 Internal Server Error»
+        resp = web.json_response({"error": "ugyldig JSON i forespørselen"}, status=400)
+    except (KeyError, TypeError, AttributeError) as e:
+        if r.method not in ("POST", "PUT", "PATCH", "DELETE"):
+            raise
+        # et felt mangler eller har feil type (f.eks. en liste der det skulle vært et objekt)
+        print(f"{r.method} {r.path}: ugyldig forespørsel ({type(e).__name__}: {e})", flush=True)
+        resp = web.json_response({"error": "ugyldig forespørsel: " + (f"mangler {e}" if isinstance(e, KeyError) else str(e))[:160]}, status=400)
     if not resp.prepared:
         for k, v in _cors_headers(r).items():
             resp.headers.setdefault(k, v)

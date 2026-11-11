@@ -7,6 +7,8 @@ Bruk `skjold_s1_frontplate_oled.3mf` eller `..._tft.3mf`. Filen er ett objekt me
 | `khaki` (plate) | eSUN PETG-Matte Light Khaki |
 | `sort_innlegg` (tekst, ramme, ikon) | Sort PETG |
 
+Fargene (filament 1 og 2), 5 mm brim og rolig første lag ligger i 3MF-fila, så du trenger bare å velge filamentene i sliceren. Platene lages på nytt med `python3 lag_3mf.py`.
+
 STL-filene `_khaki.stl` og `_sort_innlegg.stl` er de samme delene, hvis du heller vil sette dem sammen selv. Velg «Load as parts of one object».
 
 ## Lag (målt fra byggeplaten)

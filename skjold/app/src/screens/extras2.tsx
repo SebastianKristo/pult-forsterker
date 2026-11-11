@@ -1,5 +1,6 @@
 // Smart radio, Oppdag uke, tilstede-modus, vekkelys, spillelister fra radio, plugin-butikk og helsesjekk.
 import { t as tr } from '../i18n';
+import { everyVisible } from '../lib/store';
 import { useEffect, useState } from 'preact/hooks';
 import { Toggle } from '../components/ui';
 import { fileUrl, x2, type Discover, type Health, type Perf, type Level, type Presence, type RadioList, type SmartRadio, type SrSeed, type StorePlugin } from '../lib/extras2';
@@ -30,7 +31,7 @@ const inp = (v: string | number, on: (s: string) => void, w = 120, type = 'text'
 export function SmartRadioBox({ seed }: { seed: SrSeed | null }) {
   const [sr, setSr] = useState<SmartRadio | null>(null), [busy, setBusy] = useState(false), [err, setErr] = useState('');
   const load = () => x2.smartradio().then(setSr).catch(() => setSr(null));
-  useEffect(() => { void load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
+  useEffect(() => { void load(); const t = everyVisible(load, 10000); return () => clearInterval(t); }, []);
   const run = async (f: () => Promise<SmartRadio>) => { setBusy(true); setErr(''); try { setSr(await f()); } catch (e) { setErr(errText(e)); } setBusy(false); };
   if (!sr && !seed) return null;
   return (
@@ -274,7 +275,7 @@ export function HealthPanel({ compact = false }: { compact?: boolean }) {
 /** Ytelse på maskinen (CPU, temperatur, minne, lagring, strøm og per tjeneste) – oppdateres hvert 5. sekund. */
 function PerfBox() {
   const [p, setP] = useState<Perf | null>(null);
-  useEffect(() => { let on = true; const f = () => x2.perf().then((v) => on && setP(v)).catch(() => {}); f(); const id = setInterval(f, 5000); return () => { on = false; clearInterval(id); }; }, []);
+  useEffect(() => { let on = true; const f = () => x2.perf().then((v) => on && setP(v)).catch(() => {}); f(); const id = everyVisible(f, 5000); return () => { on = false; clearInterval(id); }; }, []);
   if (!p) return null;
   const tile = (n: string, v: string, warn = false) => (
     <div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:#101011;border:1px solid #1f1f21;min-width:0">

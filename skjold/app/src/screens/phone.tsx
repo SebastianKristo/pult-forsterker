@@ -5,7 +5,7 @@ import { type ComponentChildren } from 'preact';
 import { homeOrder, orderSources } from '../lib/homelayout';
 import { Boundary } from '../components/boundary';
 import { api, credFor, getBase, PRODUCT_HW, PRODUCT_LABEL, productOf, setBase, type InputId, type Product, type Status } from '../lib/api';
-import { act, deviceName, eqActiveProfile, go, inputLabel, loadSettings, mode, online, openFull, closeFull, playPause, product, queueOpen, reconnect, recent, setVolume, showToast, srcOpen, status } from '../lib/store';
+import { act, deviceName, eqActiveProfile, go, inputLabel, loadSettings, mode, online, openFull, closeFull, playPause, product, queueOpen, reconnect, recent, setVolume, showToast, srcOpen, status, everyVisible } from '../lib/store';
 import { knownDevices } from '../lib/discover';
 import { aktivEnhet, enheter, relayBase, stedId, velgEnhet, visSted, type Enhet } from '../lib/hjem';
 import { RolleMerker, StedPicker } from './hjem';
@@ -43,7 +43,7 @@ export function useRooms(): Room[] {
       await Promise.all(known.map(async (d) => { if (d.skip) { res[d.base] = null; return; } try { res[d.base] = await api.statusAt(d.base, sid ? 5000 : 2500); } catch { res[d.base] = null; } }));
       if (!stop) setOthers(res);
     };
-    void poll(); const t = window.setInterval(poll, sid ? 8000 : 5000);
+    void poll(); const t = everyVisible(poll, sid ? 8000 : 5000);
     return () => { stop = true; clearInterval(t); };
   }, [knownKey]);
   const me = sid ? ens.find((e) => e.id === akt) : undefined;

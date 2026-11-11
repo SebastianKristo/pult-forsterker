@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiPost, apiReq, getBase } from '../lib/api';
 import { qrMatrix } from '../lib/qr';
 import { recordMic } from '../lib/roomeq';
-import { go } from '../lib/store';
+import { go, everyVisible } from '../lib/store';
 
 const A = '#d9a441';
 const card = 'display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:14px;background:#141415;border:1px solid #242426';
@@ -36,7 +36,7 @@ export function QuizPage() {
   const [kilde, setKilde] = useState('tilfeldig'), [tiar, setTiar] = useState(1990), [runder, setRunder] = useState(10);
   const vert = !location.hash.includes('spiller');
   const act = async (b: Record<string, unknown>) => { try { setS(await apiPost<QState>('/api/quiz', b)); setMsg(''); } catch (e) { setMsg(err(e)); } };
-  useEffect(() => { const f = () => apiReq<QState>('/api/quiz').then(setS).catch(() => {}); f(); const t = setInterval(f, 1500); return () => clearInterval(t); }, []);
+  useEffect(() => { const f = () => apiReq<QState>('/api/quiz').then(setS).catch(() => {}); f(); const t = everyVisible(f, 1500); return () => clearInterval(t); }, []);
   const lenke = `${location.origin}${location.pathname}#sanglek-spiller`;
   const bliMed = async () => { await act({ action: 'bli_med', navn }); setMeg(navn); try { localStorage.setItem('skjold-sanglek-navn', navn); } catch { /* privat modus */ } };
   if (!s) return <span style={muted}>Henter …</span>;
@@ -84,7 +84,7 @@ export function AbsPage() {
   const [books, setBooks] = useState<Book[] | null>(null), [now, setNow] = useState<Now | null>(null), [msg, setMsg] = useState(''), [q, setQ] = useState('');
   const load = () => apiReq<Book[]>('/api/abs/boker', undefined, undefined, 20000).then(setBooks).catch((e) => setMsg(err(e)));
   useEffect(() => { apiReq<{ konfigurert: boolean; url: string }>('/api/abs').then((x) => { setC(x); setUrl(x.url); if (x.konfigurert) void load(); }).catch((e) => setMsg(err(e))); }, []);
-  useEffect(() => { const f = () => apiReq<Now>('/api/abs/naa').then(setNow).catch(() => {}); f(); const t = setInterval(f, 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { const f = () => apiReq<Now>('/api/abs/naa').then(setNow).catch(() => {}); f(); const t = everyVisible(f, 5000); return () => clearInterval(t); }, []);
   const save = async () => { try { const r = await apiPost<{ ok?: boolean; error?: string; konfigurert: boolean; url: string }>('/api/abs', { url, token: tok }); setC(r); setTok(''); setMsg(r.ok ? 'Tilkoblet' : r.error ?? ''); if (r.ok) void load(); } catch (e) { setMsg(err(e)); } };
   const spill = async (id: string, fra_start = false) => { try { setNow(await apiPost<Now>('/api/abs/spill', { id, fra_start })); setMsg(''); } catch (e) { setMsg(err(e)); } };
   const sov = async (modus: string, minutter?: number) => { try { setNow(await apiPost<Now>('/api/abs/sovetimer', { modus, minutter })); } catch (e) { setMsg(err(e)); } };

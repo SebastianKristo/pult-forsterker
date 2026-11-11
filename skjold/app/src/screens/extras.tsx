@@ -1,7 +1,7 @@
 // Roon, Plexamp, automatisk standby, backup/gjenoppretting og Skjold Wrapped (daemonens skjold_extras).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { credFor, getBase } from '../lib/api';
-import { go } from '../lib/store';
+import { go, everyVisible } from '../lib/store';
 
 const A = '#d9a441';
 const pbtn = `height:38px;padding:0 16px;border-radius:999px;border:none;background:${A};color:#0b0b0c;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap`;
@@ -28,7 +28,7 @@ function useSvc(path: string) {
   const [st, setSt] = useState<SvcStatus | null>(null);
   const [err, setErr] = useState('');
   const load = async () => { try { setSt(await call<SvcStatus>(path)); setErr(''); } catch (e) { setErr(String((e as Error).message)); } };
-  useEffect(() => { void load(); const t = setInterval(() => void load(), 3000); return () => clearInterval(t); }, [path]);
+  useEffect(() => { void load(); const t = everyVisible(() => void load(), 3000); return () => clearInterval(t); }, [path]);
   const act = async (b: Record<string, unknown>) => { try { setSt(await call<SvcStatus>(path, b, 30000)); setErr(''); } catch (e) { setErr(String((e as Error).message)); } };
   return { st, err, act };
 }

@@ -1,5 +1,6 @@
 // «Spill noe til …», lydtagger for biblioteket (Innstillinger → Bibliotek), filtre i Navidrome-søket og podkastsammendrag.
 import { useEffect, useState } from 'preact/hooks';
+import { everyVisible } from '../lib/store';
 import { Toggle } from '../components/ui';
 import { ai, MOODS, type AiCfg, type AskResult, type PodSum, type TagFilter, type TagHit, type TagStatus, type OllamaTest } from '../lib/ai';
 import type { NdSong } from '../lib/navidrome';
@@ -43,7 +44,7 @@ export function AskBox({ compact = false }: { compact?: boolean }) {
 export function LibraryTagsPanel() {
   const [s, setS] = useState<TagStatus | null>(null), [err, setErr] = useState('');
   const load = () => ai.tags().then((x) => { setS(x); setErr(''); }).catch((e) => setErr(errText(e)));
-  useEffect(() => { void load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { void load(); const t = everyVisible(load, 5000); return () => clearInterval(t); }, []);
   const act = async (a: 'start' | 'pause') => { try { setS(await ai.tagsAction(a)); } catch (e) { setErr(errText(e)); } };
   const pct = s ? Math.round((s.progress || 0) * 100) : 0;
   return (

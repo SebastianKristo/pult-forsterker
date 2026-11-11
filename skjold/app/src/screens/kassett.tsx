@@ -1,5 +1,6 @@
 /** Skjold Kassett: NFC-kassetter koblet til radio, NRK, Navidrome, Music Assistant eller rutiner. */
 import { useEffect, useState } from 'preact/hooks';
+import { everyVisible } from '../lib/store';
 import { api, getBase, type NfcCard, type NfcDeling, type NfcHandling, type NfcOppsett, type NfcStats, type NfcStatus, type NfcVentende, type Routine, type Spoler } from '../lib/api';
 import { QR } from './platform';
 import { HyllePanel } from './hylle';
@@ -168,7 +169,7 @@ function SpolerPanel() {
   const [s, setS] = useState<Spoler | null>(null);
   const [err, setErr] = useState('');
   const load = () => api.spoler().then((x) => { setS(x); setErr(''); }).catch((e) => setErr(String((e as Error).message || e)));
-  useEffect(() => { void load(); const t = setInterval(load, 3000); return () => clearInterval(t); }, []);
+  useEffect(() => { void load(); const t = everyVisible(load, 3000); return () => clearInterval(t); }, []);
   const set = (b: Partial<Spoler>) => { if (s) setS({ ...s, ...b }); void api.spolerSett(b).then(setS).catch((e) => setErr(String((e as Error).message || e))); };
   if (!s) return err ? <small style="color:#e06c5a">Spolene: {err}</small> : null;
   const MODUS = { spill: 'Spiller', spol: 'Spoler fremover', tilbake: 'Spoler tilbake', stopp: 'Står stille' } as const;
@@ -349,7 +350,7 @@ export function KassettPage() {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [err, setErr] = useState('');
   const load = () => api.nfc().then((s) => { setSt(s); setErr(''); }).catch((e) => setErr(String((e as Error).message || e)));
-  useEffect(() => { void load(); const t = setInterval(load, 4000); return () => clearInterval(t); }, []);
+  useEffect(() => { void load(); const t = everyVisible(load, 4000); return () => clearInterval(t); }, []);
   const cards = st?.cards ?? [];
   const toggle = (u: string) => { const n = new Set(sel); n.has(u) ? n.delete(u) : n.add(u); setSel(n); };
 

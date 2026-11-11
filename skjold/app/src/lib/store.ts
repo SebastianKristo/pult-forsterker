@@ -151,6 +151,10 @@ export async function refresh(): Promise<void> {
 }
 /** Hent status nå (brukes når noe utenfor store vet at noe nettopp endret seg). */
 export function refreshNow(): Promise<void> { return refresh(); }
+/** Som setInterval, men hopper over rundene mens fanen er skjult: ingen grunn til å spørre enheten når ingen ser svaret. */
+export function everyVisible(fn: () => void, ms: number): number {
+  return window.setInterval(() => { if (document.visibilityState !== 'hidden') fn(); }, ms);
+}
 /** Settes av lib/localplay: mens denne enheten spiller, må status følges også når fanen er skjult eller skjermen låst. */
 export const keepAlive = signal(false);
 function schedule(): void {
