@@ -11,12 +11,31 @@ const ATTRS = ['aria-label', 'title', 'placeholder', 'alt'];
 const seen = new WeakMap<Node, { nb: string; en: string }>();
 const seenAttr = new WeakMap<Element, Record<string, { nb: string; en: string }>>();
 
-/** Engelsk for en norsk tekst (mellomrom foran og bak bevares), eller null når den ikke finnes i ordboka. */
+const one = (k: string): string | undefined => EN[k] ?? EN_AUTO[k];
+/** Ett ledd: slås opp som det står, eller med annen forbokstav / i versaler («SPILLER» → «Spiller» → «PLAYING»). */
+function part(k: string): string | null {
+  if (k.length < 2) return null;
+  const e = one(k);
+  if (e !== undefined) return e === k ? null : e;
+  if (/[A-ZÆØÅ]/.test(k) && k === k.toUpperCase()) {
+    const low = k.toLowerCase(), t = one(low[0]!.toUpperCase() + low.slice(1)) ?? one(low);
+    return t ? t.toUpperCase() : null;
+  }
+  const c = k[0]!, flip = c === c.toLowerCase() ? c.toUpperCase() + k.slice(1) : c.toLowerCase() + k.slice(1), t = one(flip);
+  if (!t) return null;
+  return c === c.toLowerCase() ? t[0]!.toLowerCase() + t.slice(1) : t[0]!.toUpperCase() + t.slice(1);
+}
+/** Engelsk for en norsk tekst (mellomrom foran og bak bevares), eller null når den ikke finnes i ordboka.
+ *  Sammensatte tekster («STUE · SPILLER», «Grupper ›») slås opp ledd for ledd. */
 export function lookup(s: string): string | null {
   const k = s.trim();
   if (k.length < 2) return null;
-  const e = EN[k] ?? EN_AUTO[k];
-  return e === undefined || e === k ? null : s.replace(k, e);
+  const hel = part(k);
+  if (hel !== null) return s.replace(k, hel);
+  if (!/ · | ›|‹ /.test(k)) return null;
+  let hit = false;
+  const ut = k.split(/( · | ›|‹ )/).map((x) => { const e = / · | ›|‹ /.test(x) ? null : part(x.trim()); if (e === null) return x; hit = true; return x.replace(x.trim(), e); }).join('');
+  return hit ? s.replace(k, ut) : null;
 }
 
 const skip = (el: Element | null): boolean => !!el && !!el.closest('[data-noi18n],script,style,textarea,code,pre');
