@@ -230,11 +230,14 @@ jobs:
           cache-dependency-path: skjold/flasher/package-lock.json
       - name: libudev (usb-modulen bygges fra kilde på Linux)
         if: runner.os == 'Linux'
-        # Ubuntus pakkeservere svarer ikke alltid fra byggemaskinene: prøv fem ganger før jobben gir opp
+        # Ubuntus pakkeservere svarer ikke alltid fra byggemaskinene. Hopp over apt når pakken finnes fra før, og gi
+        # hvert forsøk kort tidsfrist så jobben ikke blir stående i en halvtime.
         run: |
+          dpkg -s libudev-dev >/dev/null 2>&1 && { echo "libudev-dev finnes fra før"; exit 0; }
+          APT="-o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::Retries=1"
           for i in 1 2 3 4 5; do
-            sudo apt-get update && sudo apt-get install -y libudev-dev && exit 0
-            echo "apt feilet (forsøk $i av 5) – venter 30 s"; sleep 30
+            timeout 180 sudo apt-get $APT update && timeout 180 sudo apt-get $APT install -y libudev-dev && exit 0
+            echo "apt feilet (forsøk $i av 5) – venter 20 s"; sleep 20
           done
           exit 1
       - name: Installer og bygg installasjonsfiler
@@ -262,13 +265,15 @@ jobs:
         working-directory: skjold/bruksanvisning
         run: |
           pip install playwright
-          # Systempakkene hentes med apt, som ikke alltid når Ubuntus servere. Prøv tre ganger; går det ikke, installeres
-          # bare nettleseren (byggemaskinen har vanligvis bibliotekene Chromium trenger fra før).
-          for i in 1 2 3; do
-            python -m playwright install --with-deps chromium && break
-            echo "playwright --with-deps feilet (forsøk $i av 3) – venter 30 s"; sleep 30
-            [ "$i" = 3 ] && python -m playwright install chromium
-          done
+          # Byggemaskinen har vanligvis bibliotekene Chromium trenger fra før. Installer derfor bare nettleseren, og
+          # prøv den. Systempakkene hentes med apt (som ikke alltid når Ubuntus servere) bare hvis nettleseren ikke starter.
+          python -m playwright install chromium
+          if ! python -c "from playwright.sync_api import sync_playwright as p; b = p().start().chromium.launch(); b.close()"; then
+            for i in 1 2 3; do
+              timeout 300 python -m playwright install-deps chromium && break
+              echo "playwright install-deps feilet (forsøk $i av 3) – venter 20 s"; sleep 20
+            done
+          fi
           python render_pdf.py
           cp *.pdf ../../ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
