@@ -385,8 +385,11 @@ function Home() {
       <span style="font-size:20px;font-weight:600">{hils}</span>
       {fv.length > 0 && <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x;flex-shrink:0;margin:0 -18px;padding:0 18px">
         {fv.map((f, i) => { const on = st?.input === 'radio' && !!st.playing && (st.radio_now?.url === f.url || st.preset === f.n); return (
-          <button key={f.n} onClick={() => { playFav(f); }} style={`flex-shrink:0;height:52px;max-width:190px;border-radius:26px;border:1px solid ${on ? '#d9a441' : '#242426'};background:${on ? '#1c170d' : '#141415'};display:flex;align-items:center;gap:10px;padding:0 16px 0 7px`}>
-            <div style={`width:38px;height:38px;border-radius:19px;background:${artBg(f.title, f.image || f.logo, i)};flex-shrink:0`} />
+          <button key={f.n} onClick={() => { playFav(f); }} style={`flex-shrink:0;height:52px;max-width:220px;border-radius:26px;border:1px solid ${on ? '#d9a441' : '#242426'};background:${on ? '#1d1814' : '#141415'};display:flex;align-items:center;gap:10px;padding:0 16px 0 7px`}>
+            {/* NRK-logoene er brede ordmerker på mørk, firkantet bakgrunn: vis dem brede og uten skive (bakgrunnen blandes bort) */}
+            {/nrk/i.test(f.image || f.logo || '')
+              ? <div style={`width:62px;height:38px;margin-left:8px;flex-shrink:0;mix-blend-mode:lighten;background:url("${(f.image || f.logo || '').replace(/"/g, '')}") center / ${/static\.nrk\.no/.test(f.image || f.logo || '') ? 'contain' : '74px auto'} no-repeat`} />
+              : <div style={`width:38px;height:38px;border-radius:19px;background:${artBg(f.title, f.image || f.logo, i)};flex-shrink:0`} />}
             <span style={`font-size:13.5px;font-weight:600;color:${on ? '#f0c46a' : '#f2f2ee'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{f.title}</span>
           </button>); })}
       </div>}
