@@ -12,6 +12,15 @@
     // Reveal: 0,9 s cubic-bezier(.2,.7,.2,1), translateY 28px -> 0
     var els = document.querySelectorAll('[data-reveal]');
     els.forEach(function (el) { el.style.setProperty('--d', (+el.getAttribute('data-reveal') || 0) + 'ms'); });
+    // Fliser, kort og rader i samme rutenett kommer etter hverandre (70 ms mellom), ikke alle på én gang
+    document.querySelectorAll('.fliser,.kort-rutenett,.kilder,.integ,.steg,.manualer,.kjede').forEach(function (g) {
+      var barn = g.children;
+      for (var i = 0; i < barn.length; i++) {
+        if (!barn[i].hasAttribute('data-reveal')) { barn[i].setAttribute('data-reveal', '0'); }
+        barn[i].style.setProperty('--d', Math.min(i, 7) * 70 + 'ms');
+      }
+    });
+    els = document.querySelectorAll('[data-reveal]');
     if ('IntersectionObserver' in window) {
       var io = new IntersectionObserver(function (es) {
         es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('synlig'); io.unobserve(e.target); } });
@@ -21,15 +30,18 @@
       els.forEach(function (el) { el.classList.add('synlig'); });
     }
 
-    var zooms = document.querySelectorAll('[data-zoom]');
+    // Produktbildet i toppen av produktsidene har egen inngang (CSS) og skal ikke dempes av rulling
+    var zooms = Array.prototype.filter.call(document.querySelectorAll('[data-zoom]'), function (el) { return !el.closest('.p-hero'); });
     var boxes = document.querySelectorAll('[data-scrolly]');
     var tick = function () {
       var vh = innerHeight;
       zooms.forEach(function (el) {
         var r = el.getBoundingClientRect();
-        var p = Math.max(0, Math.min(1, 1 - (r.top + r.height * 0.3) / vh));
-        el.style.transform = 'scale(' + (0.86 + 0.14 * p).toFixed(4) + ')';
-        el.style.opacity = String(0.35 + 0.65 * Math.min(1, p * 1.6));
+        if (r.bottom < -200 || r.top > vh + 200) { return; }
+        // full styrke når bildet er godt inne i vinduet (toppen ca. 70 % ned), ikke først helt oppe ved menyen
+        var p = Math.max(0, Math.min(1, (vh - r.top) / (vh * 0.42)));
+        el.style.transform = 'scale(' + (0.94 + 0.06 * p).toFixed(4) + ')';
+        el.style.opacity = String(Math.min(1, 0.55 + 0.45 * p * 1.4));
       });
       boxes.forEach(function (box) {
         var r = box.getBoundingClientRect();
@@ -50,6 +62,35 @@
     addEventListener('scroll', function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); }, { passive: true });
     addEventListener('resize', tick);
     tick();
+  }
+
+  // Meny på smale skjermer: en knapp åpner hele menyen som et panel. (Uten JS ruller lenkene sidelengs som før.)
+  var nav = document.querySelector('header.nav');
+  var lenker = nav && nav.querySelector('.nav-lenker');
+  if (nav && lenker) {
+    var en0 = /^en\b/i.test(root.lang || '');
+    var mk = document.createElement('button');
+    mk.type = 'button'; mk.className = 'meny-knapp';
+    mk.setAttribute('aria-expanded', 'false'); mk.setAttribute('aria-controls', 'hovedmeny');
+    mk.setAttribute('aria-label', en0 ? 'Menu' : 'Meny');
+    mk.innerHTML = '<span aria-hidden="true"></span>';
+    lenker.id = lenker.id || 'hovedmeny';
+    Array.prototype.forEach.call(lenker.children, function (a, i) { a.style.setProperty('--i', i); });
+    nav.querySelector('.nav-inn').appendChild(mk);
+    root.classList.add('har-meny');
+    var sett = function (aapen) {
+      nav.classList.toggle('aapen', aapen);
+      mk.setAttribute('aria-expanded', aapen ? 'true' : 'false');
+      root.classList.toggle('meny-laast', aapen);
+    };
+    mk.addEventListener('click', function () { sett(!nav.classList.contains('aapen')); });
+    lenker.addEventListener('click', function (e) { if (e.target.closest('a')) { sett(false); } });
+    addEventListener('keydown', function (e) { if (e.key === 'Escape' && nav.classList.contains('aapen')) { sett(false); mk.focus(); } });
+    if (window.matchMedia) {
+      var mq = matchMedia('(min-width:981px)');
+      var lukk = function () { if (mq.matches) { sett(false); } };
+      if (mq.addEventListener) { mq.addEventListener('change', lukk); } else if (mq.addListener) { mq.addListener(lukk); }
+    }
   }
 
   // USB-bryter-demo (S1)

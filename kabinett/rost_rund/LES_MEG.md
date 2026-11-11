@@ -11,7 +11,7 @@ Bilder: [skrå](render/rund_skra.png) · [mørk utgave](render/rund_skra_mork.pn
 ## Form
 
 - **Grunnriss:** avrundet rektangel 108 × 108 mm med R28 i hjørnene, loddrette sider, høyde 150 mm (+ 6 mm gummiføtter).
-- **Grillen:** en løs hylse som går rundt hele kroppen, med Skjolds sekskantmønster (2 507 hull, 3,2 mm over flatene, en
+- **Grillen:** en løs hylse som går rundt hele kroppen, med Skjolds sekskantmønster (2 667 hull, 3,2 mm over flatene, en
   spiss opp). Nederst et helt bånd på 14,5 mm med **SKJOLD** innfelt i gull foran, øverst et smalt bånd under lokket.
   Bak nede en spiss utsparing rundt DC-kontakten og USB-C.
 - **Toppen:** lokk med R4-kant, fem knapper foran (av/på, favoritt 1–4, pregede ikoner), **2,42″ OLED-skjerm** i midten
