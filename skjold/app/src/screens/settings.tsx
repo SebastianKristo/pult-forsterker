@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { DoorbellPanel, DuckPanel, RecognizeSettingsPanel, RoutinesPanel, WishlistPanel } from './features';
 import { SecurityPanel } from './lyd';
 import { api, type RemoteStatus, hostLabel, isNative, REPO, type LevelSource, type UpdateInfo } from '../lib/api';
-import { act, applied, go, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status, everyVisible } from '../lib/store';
+import { act, applied, go, loadSettings, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status, everyVisible } from '../lib/store';
 import { computed } from '@preact/signals';
 import { CAT_ALIAS, CAT_GROUPS, CAT_TILE, ICONS, LED_MODES, LED_MODE_NAMES, catsFor, fmt, type Category, type Item } from '../lib/settings';
 
@@ -245,8 +245,8 @@ function Row({ it, i }: { it: Item; i: number }) {
         setup: () => { ob.step.value = 1; mode.value = 'setup'; },
         findDevice: () => { mode.value = 'find'; },
         testVoice: () => act(() => api.voice({ say: 'bt_pairing' })),
-        forget: () => showToast('Forsterkeren har ikke API for å glemme Blåtann-enheter ennå'),
-        reset: () => showToast('Fabrikkinnstillinger er ikke i API-et ennå'),
+        forget: () => { void api.btForget().then(() => showToast('Blåtann-enhetene er glemt')).catch(() => showToast('Fikk ikke kontakt med forsterkeren')); },
+        reset: () => { void api.settingsReset().then(() => { void loadSettings(); showToast('Innstillingene er tilbakestilt'); }).catch(() => showToast('Fikk ikke kontakt med forsterkeren')); },
         reboot: () => act(() => api.reboot() as never)
       };
       if (it.id === 'findDevice' && !isNative) return null;

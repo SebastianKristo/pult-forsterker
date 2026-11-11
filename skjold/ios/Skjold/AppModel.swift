@@ -721,6 +721,10 @@ final class AppModel {
         case "ndTest": testNavidrome()
         case "plexTest": testPlex()
         case "btPair": btPairT = Date(); post(["type": "btPair", "room": devRoom.id])
+        case "forget":
+            if let h = settingsHost { devSend("/api/bt", ["forget": true], on: h); showNotice("Blåtann-enhetene er glemt") }
+        case "reset":
+            if let h = settingsHost { devSend("/api/settings/reset", [:], on: h); showNotice("Innstillingene er tilbakestilt") }
         case "openRadio": tab = 0; sub = "radio"
         case "setup": restartSetup()
         case "roomeq": showRoomEQ = true

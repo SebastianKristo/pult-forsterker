@@ -25,6 +25,16 @@ class MainActivity : ComponentActivity() {
         CallDuck.start(applicationContext)
     }
 
+    override fun onStart() {
+        super.onStart()
+        model.resumeLive()
+    }
+
+    override fun onStop() {
+        model.pauseLive()
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(AColor.TRANSPARENT),
