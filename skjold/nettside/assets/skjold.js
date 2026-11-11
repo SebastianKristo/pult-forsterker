@@ -75,7 +75,18 @@
     mk.setAttribute('aria-label', en0 ? 'Menu' : 'Meny');
     mk.innerHTML = '<span aria-hidden="true"></span>';
     lenker.id = lenker.id || 'hovedmeny';
-    Array.prototype.forEach.call(lenker.children, function (a, i) { a.style.setProperty('--i', i); });
+    Array.prototype.forEach.call(lenker.querySelectorAll('a'), function (a, i) { a.style.setProperty('--i', i); });
+    // Produkter: nedtrekksmeny på brede skjermer. Åpnes med hover og fokus (CSS), og med trykk her (berøring og tastatur).
+    var gr = lenker.querySelector('.nav-gruppe'), gk = gr && gr.querySelector('.nav-gruppe-knapp');
+    if (gk) {
+      var grSett = function (a) { gr.classList.toggle('aapen', a); gr.classList.toggle('lukket', !a); gk.setAttribute('aria-expanded', a ? 'true' : 'false'); };
+      gk.addEventListener('click', function () { grSett(!gr.classList.contains('aapen')); });
+      gr.addEventListener('mouseenter', function () { gr.classList.remove('lukket'); });
+      gr.addEventListener('mouseleave', function () { gr.classList.remove('aapen', 'lukket'); gk.setAttribute('aria-expanded', 'false'); });
+      document.addEventListener('click', function (e) { if (!gr.contains(e.target)) { gr.classList.remove('aapen'); gk.setAttribute('aria-expanded', 'false'); } });
+      addEventListener('keydown', function (e) { if (e.key === 'Escape' && gr.contains(document.activeElement)) { grSett(false); gk.focus(); } });
+      gr.addEventListener('focusout', function (e) { if (!gr.contains(e.relatedTarget)) { gr.classList.remove('aapen', 'lukket'); gk.setAttribute('aria-expanded', 'false'); } });
+    }
     nav.querySelector('.nav-inn').appendChild(mk);
     root.classList.add('har-meny');
     var sett = function (aapen) {
