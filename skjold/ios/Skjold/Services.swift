@@ -273,6 +273,8 @@ nonisolated struct DevStatus: Sendable, Equatable {
     var listen = ""
     var power = true, playing = false, paused = false, mute = false, headphones = false, lyrion = false, btPairing = false
     var volume = 0, duration = 0, position = 0, preset = 0, presetsCount = 0, btPairingLeft = 0
+    /// Vekkeklokka på enheten ringer (fra /api/status `alarm`). Slumre og slå av med POST /api/alarm.
+    var alarmRinging = false, alarmName = ""
     /// Volumet som gjelder nå: hodetelefonvolumet når pluggen står i (S1), ellers høyttalervolumet. Fra `eff_volume`.
     var effVolume = 0
     var inputs: [String] = []
@@ -293,6 +295,7 @@ nonisolated struct DevStatus: Sendable, Equatable {
         if coverURL.isEmpty, !s("cover").isEmpty { coverURL = "/api/cover?v=" + s("cover") }
         power = j["power"] == nil ? true : b("power"); playing = b("playing"); paused = b("paused"); mute = b("mute")
         headphones = b("headphones"); lyrion = b("lyrion"); btPairing = b("bt_pairing")
+        if let al = j["alarm"] as? [String: Any] { alarmRinging = b("ringing", al); alarmName = s("name", al) }
         volume = i("volume"); effVolume = j["eff_volume"] == nil ? volume : i("eff_volume"); duration = i("duration"); position = i("position"); preset = i("preset")
         presetsCount = i("presets_count"); btPairingLeft = i("bt_pairing_left")
         inputs = (j["inputs"] as? [String]) ?? []
@@ -433,6 +436,12 @@ final class DeviceLink {
         guard let base = h ?? host, let url = Net.url(base, path) else { return nil }
         guard let (d, code) = await Net.data(url, method: method, body: data, timeout: timeout), code < 300 else { return nil }
         return d
+    }
+
+    /// Som sendRaw, men gir også statuskoden – så en feil fra enheten (400/409 med {"error": …}) kan vises.
+    func sendCode(_ path: String, _ data: Data?, method: String = "POST", on h: String? = nil, timeout: TimeInterval = 6) async -> (Data, Int)? {
+        guard let base = h ?? host, let url = Net.url(base, path) else { return nil }
+        return await Net.data(url, method: method, body: data, timeout: timeout)
     }
 
     /// Absolute URL for a cover_url from the status ("/api/cover?v=…" or a full https URL).

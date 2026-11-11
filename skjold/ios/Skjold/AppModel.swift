@@ -119,6 +119,9 @@ final class AppModel {
         didSet { UserDefaults.standard.set(activeHost, forKey: "skjold-host"); DeviceLink.shared.host = activeHost }
     }
     var link: Link = .none
+    /// Kort beskjed øverst i appen (f.eks. feilen enheten svarte med). Forsvinner av seg selv.
+    var notice: String? = nil
+    @ObservationIgnored var noticeSeq = 0
 
     // MARK: Skjold-hjem (see Hjem.swift)
     var steder: [HjemSted] = []

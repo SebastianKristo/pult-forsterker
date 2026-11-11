@@ -216,6 +216,8 @@ data class DevStatus(
     val inputs: List<String> = emptyList(), val presetTitles: List<String> = emptyList(), val radioNow: RadioNow? = null,
     /** Strømmen som spilles, via Skjold (/api/stream/…), for «Denne telefonen». Tom når kilden ikke kan spilles her. */
     val listen: String = "",
+    /** Vekkeklokka på enheten ringer (status.alarm). Slumre og slå av med POST /api/alarm. */
+    val alarmRinging: Boolean = false, val alarmName: String = "",
 ) {
     data class RadioNow(val name: String = "", val genre: String = "", val now: String = "", val image: String = "", val url: String = "", val n: Int = 0, val playing: Boolean = false, val logo: String = "")
 
@@ -244,6 +246,7 @@ data class DevStatus(
                 volume = j.num("volume"), duration = j.num("duration"), position = j.num("position"), preset = j.num("preset"),
                 presetsCount = j.num("presets_count"), btPairingLeft = j.num("bt_pairing_left"),
                 inputs = inputs, presetTitles = presets, radioNow = rn, listen = j.str("listen"),
+                alarmRinging = j.optJSONObject("alarm")?.bool("ringing") ?: false, alarmName = j.optJSONObject("alarm")?.str("name") ?: "",
             )
         }
     }
@@ -368,6 +371,14 @@ object DeviceLink {
     /** POST (or PUT/DELETE) with a JSON body. Returns the body on 2xx, null otherwise. */
     suspend fun send(path: String, body: Map<String, Any?> = emptyMap(), method: String = "POST", on: String? = null, timeout: Double = 6.0): ByteArray? =
         sendRaw(path, json(body, method), method, on, timeout)
+
+    /** Som send, men gir også statuskoden – så en feil fra enheten (400/409 med {"error": …}) kan vises. */
+    suspend fun sendCode(path: String, body: Map<String, Any?> = emptyMap(), method: String = "POST", on: String? = null, timeout: Double = 6.0): Pair<ByteArray, Int>? {
+        val base = on ?: host ?: return null
+        val url = Net.url(base, path) ?: return null
+        val (d, code) = Net.data(url, method, json(body, method), timeout) ?: return null
+        return Pair(d, code)
+    }
 
     suspend fun sendRaw(path: String, data: ByteArray?, method: String = "POST", on: String? = null, timeout: Double = 6.0): ByteArray? {
         val base = on ?: host ?: return null

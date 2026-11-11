@@ -209,6 +209,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         get() = _activeHost
         set(v) { _activeHost = v; Store.setString("skjold-host", v); DeviceLink.host = v }
     var link by mutableStateOf(Link.NONE)
+    var notice by mutableStateOf<String?>(null)
+    private var noticeSeq = 0
 
     // MARK: Skjold-hjem (Hjem.kt)
     var steder by mutableStateOf(listOf<HjemSted>())
@@ -1143,9 +1145,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun devSend(path: String, body: Map<String, Any?> = emptyMap(), method: String = "POST", on: String? = null) {
         val h = on ?: activeHost ?: return
         launch {
-            val d = DeviceLink.send(path, body, method, h)
-            DevStatus.parse(d)?.let { apply(it, h) }
+            val (d, code) = DeviceLink.sendCode(path, body, method, h) ?: return@launch
+            if (code < 300) DevStatus.parse(d)?.let { apply(it, h) }
+            else if (code >= 400) {
+                // enheten sa nei (f.eks. «Spotify styres fra Spotify-appen»): si hvorfor, i stedet for at knappen bare spretter tilbake
+                val msg = jsonObject(d)?.str("error").orEmpty()
+                showNotice(if (msg.isEmpty()) "Enheten kunne ikke gjøre det" else msg.replaceFirstChar { it.uppercase() })
+                Haptics.warning()
+            }
         }
+    }
+
+    /** Kort beskjed øverst i appen. Forsvinner av seg selv etter fire sekunder. */
+    fun showNotice(text: String) {
+        notice = text
+        val n = ++noticeSeq
+        launch { kotlinx.coroutines.delay(4000); if (noticeSeq == n) notice = null }
     }
 
     fun lyrionCmd(pid: String, cmd: List<String>) {

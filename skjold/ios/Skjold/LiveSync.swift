@@ -249,8 +249,25 @@ extension AppModel {
         guard let h = host ?? activeHost else { return }
         let data = DeviceLink.json(body, method: method)
         Task { [weak self] in
-            let d = await DeviceLink.shared.sendRaw(path, data, method: method, on: h)
-            if let d, let st = DevStatus(d) { self?.apply(st, host: h) }
+            guard let (d, code) = await DeviceLink.shared.sendCode(path, data, method: method, on: h) else { return }
+            if code < 300 {
+                if let st = DevStatus(d) { self?.apply(st, host: h) }
+            } else if code >= 400 {
+                // enheten sa nei (f.eks. «Spotify styres fra Spotify-appen»): si hvorfor, i stedet for at knappen bare spretter tilbake
+                let msg = ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any])?["error"] as? String
+                self?.showNotice(msg.map { $0.prefix(1).uppercased() + $0.dropFirst() } ?? "Enheten kunne ikke gjøre det")
+                Haptics.warning()
+            }
+        }
+    }
+
+    func showNotice(_ text: String) {
+        notice = text
+        noticeSeq += 1
+        let n = noticeSeq
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            if self?.noticeSeq == n { self?.notice = nil }
         }
     }
 

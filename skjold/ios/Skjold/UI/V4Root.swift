@@ -14,6 +14,7 @@ struct ContentView: View {
             case .app:
                 V4App()
             }
+            if m.mode == .app { V4Banner().zIndex(9) }
             if m.intro {
                 IntroView()
                     .transition(.asymmetric(insertion: .identity, removal: .opacity.combined(with: .scale(scale: 1.04))))
@@ -171,5 +172,53 @@ struct V4TabPage: View {
         .scrollDismissesKeyboard(.interactively)
         .background(V4.bg.ignoresSafeArea())
         .id("tab-\(tab)-\(m.setCat)")
+    }
+}
+
+/// Øverst i appen: vekkeklokka som ringer (Slumre / Slå av), eller en kort beskjed fra enheten.
+struct V4Banner: View {
+    @Environment(AppModel.self) private var m
+
+    var body: some View {
+        VStack(spacing: 8) {
+            if let d = m.dev, d.alarmRinging {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Alarmen ringer").font(.sora(15, .semibold)).foregroundStyle(V4.ink)
+                        Text(d.alarmName.isEmpty ? d.name : d.alarmName + " · " + d.name)
+                            .font(.sora(12)).foregroundStyle(V4.ink2).lineLimit(1)
+                    }
+                    Spacer(minLength: 8)
+                    Button { Haptics.tap(); m.devSend("/api/alarm", ["action": "snooze"]) } label: {
+                        Text("Slumre").font(.sora(14, .semibold)).foregroundStyle(V4.bg)
+                            .padding(.horizontal, 16).frame(minHeight: 44).background(V4.gold, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    Button { Haptics.tap(); m.devSend("/api/alarm", ["action": "stop"]) } label: {
+                        Text("Slå av").font(.sora(14, .semibold)).foregroundStyle(V4.ink)
+                            .padding(.horizontal, 16).frame(minHeight: 44).overlay(Capsule().stroke(V4.line2, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.leading, 16).padding(.trailing, 10).padding(.vertical, 10)
+                .background(V4.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(V4.goldDark, lineWidth: 1))
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+            if let n = m.notice {
+                Text(n).font(.sora(13)).foregroundStyle(V4.ink).multilineTextAlignment(.center)
+                    .padding(.horizontal, 16).padding(.vertical, 11)
+                    .background(V4.card, in: Capsule())
+                    .overlay(Capsule().stroke(V4.line2, lineWidth: 1))
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .accessibilityAddTraits(.isStaticText)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14).padding(.top, 6)
+        .frame(maxWidth: 560)
+        .animation(.easeOut(duration: 0.25), value: m.notice)
+        .animation(.easeOut(duration: 0.25), value: m.dev?.alarmRinging)
+        .allowsHitTesting(m.notice != nil || (m.dev?.alarmRinging ?? false))
     }
 }
