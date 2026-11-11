@@ -55,7 +55,7 @@ gjennom bunnplaten, med mutter i lommen under. Gummiføttene sitter rett over mu
 ## Utskrift
 
 
-**Museører, brim og støtte:** `skjold-rost-rund-k2-lokk-bunn.3mf` har store museører på lokket og bunnplata (0,6 mm, Ø36 i hjørnene og Ø24 på sidene) og 6 mm brim, så de avrundede hjørnene ikke løsner fra plata. **Lokket har trestøtte** (bare fra plata, 40°) under skjermrammen og kragen. Støtte, brim og ører ligger som objektinnstillinger i 3MF-filen. Hylsefilene har mindre ører (Ø24/Ø16, bare utenfor veggen) i tillegg til 5 mm brim. Ørene er en del av samme modell, så det blir ingen fargebytter. Vri eller skjær dem av, og fjern støtten, etter print.
+**Museører, brim og støtte:** `skjold-rost-rund-k2-lokk.3mf` og `skjold-rost-rund-k2-bunn.3mf` (hver sin plate, så brimmen får plass) har store museører på lokket og bunnplata (0,6 mm, Ø36 i hjørnene og Ø24 på sidene) og 6 mm brim, så de avrundede hjørnene ikke løsner fra plata. **Lokket har trestøtte** (bare fra plata, 40°) under skjermrammen og kragen. Støtte, brim og ører ligger som objektinnstillinger i 3MF-filen. Hylsefilene har mindre ører (Ø24/Ø16, bare utenfor veggen) i tillegg til 5 mm brim. Ørene er en del av samme modell, så det blir ingen fargebytter. Vri eller skjær dem av, og fjern støtten, etter print.
 
 Beste retning for hver del, og hvorfor ingen trenger støtte (innstillingene ligger som objektinnstillinger i 3MF-filene,
 så Creality Print / OrcaSlicer henter dem selv):
@@ -100,7 +100,8 @@ så Creality Print / OrcaSlicer henter dem selv):
   - `skjold-rost-rund-k2-kjerne.3mf` – kjerne, knapper (mørk) og knott (gull)
   - `skjold-rost-rund-k2-hylse.3mf` – grillhylsa (lys) med SKJOLD (gull, 1 mm innfelt). Hylsa og logoen er én modell med to deler (lys og gull), så logoen blir liggende i lomma si i sliceren. Ingen støtte trengs: sekskanthullene har spiss topp og utsparingen bak har 45° tak. Hylsa har 0,24 mm lag, to vegger og full fart på de små hullene. Det kutter mye av printetiden.
   - `skjold-rost-rund-k2-hylse-en-farge.3mf` – samme hylse i én farge, uten fargebytter. SKJOLD står felt 1 mm inn og kan fylles med gulltusj etterpå. Raskest.
-  - `skjold-rost-rund-k2-lokk-bunn.3mf` – lokk med skjermramme og bunnplate (lys), og ruta (klar PETG)
+  - `skjold-rost-rund-k2-lokk.3mf` – lokk med skjermramme (lys) og ruta (klar PETG)
+  - `skjold-rost-rund-k2-bunn.3mf` – bunnplate med port (lys)
 - Kontrollen i `lag_rund.py`: alle deler tette og ett legeme, ingen overlapp i montert stilling, ingen overheng
   brattere enn 50° på yttersidene, alt får plass på 250 × 250 mm, og lydkammer/porttuning innenfor 0,85–1,4 l og 65–95 Hz.
 

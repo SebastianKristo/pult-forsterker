@@ -21,5 +21,8 @@ if __name__ == "__main__":
         b = trimesh.load(f"{d}/topp.stl").bounds
         t = trimesh.load(f"{d}/topp.stl")
         # skivene skal bare røre toppen (lag_3mf.py tillater ikke overlapp): trekk toppen fra
-        trimesh.boolean.difference([orer(b[1][1] - b[0][1], b[1][0] - b[0][0]), t]).export(f"{d}/orer.stl")
+        o = trimesh.boolean.difference([orer(b[1][1] - b[0][1], b[1][0] - b[0][0]), t])
+        # 3D-differansen kan etterlate støvkorn (0,006 mm³ ved halen): behold bare ordentlige legemer
+        o = trimesh.util.concatenate([p for p in o.split(only_watertight=False) if abs(p.volume) > 1.0])
+        o.export(f"{d}/orer.stl")
         print("skrev", f"{d}/orer.stl")

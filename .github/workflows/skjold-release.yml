@@ -282,7 +282,7 @@ jobs:
           (cd kabinett && zip -qr ../ut/skjold-fjernkontroll-3d.zip fjernkontroll -x '*/__pycache__/*' 'fjernkontroll/asm/*' 'fjernkontroll/asm_full/*' 'fjernkontroll/asm_kort/*' 'fjernkontroll/asm_hk/*' 'fjernkontroll/asm_en/*' 'fjernkontroll/asm_hu/*' 'fjernkontroll/dokk/*') && zip -qj ut/skjold-fjernkontroll-3d.zip esphome/skjold-fjernkontroll.yaml esphome/skjold-fjernkontroll-full.yaml esphome/skjold-fjernkontroll-hovedkort.yaml esphome/skjold-fjernkontroll-tastekort-a.yaml esphome/skjold-fjernkontroll-enkel.yaml esphome/skjold-fjernkontroll-hullkort.yaml esphome/skjold-fjernkontroll-budsjett.yaml esphome/skjold-fjernkontroll-gt911.yaml esphome/skjold_ui.h esphome/blueprints/skjold_fjernkontroll.yaml
           (cd kabinett/fjernkontroll && zip -qr ../../ut/skjold-dokk-3d.zip dokk -x '*/__pycache__/*' 'dokk/asm/*')
           # ferdige plater for slicer (Creality Print / OrcaSlicer) legges også ut hver for seg
-          find kabinett/kassett kabinett/hjul kabinett/rost kabinett/rost_rund kabinett/sans kabinett/hylle kabinett/hjul-s kabinett/radio kabinett/fjernkontroll -name '*.3mf' -exec cp {} ut/ \;
+          find kabinett/kassett kabinett/hjul kabinett/rost kabinett/rost_rund kabinett/sans kabinett/hylle kabinett/hjul-s kabinett/radio kabinett/fjernkontroll kabinett/skjold-s1/print -name '*.3mf' -exec cp {} ut/ \;
           ls -la ut
       - uses: actions/upload-artifact@v4
         with:

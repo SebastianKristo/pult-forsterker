@@ -53,6 +53,10 @@ def place(parts):
     out, moved = [], {}
     for f, name, fil, pos, same in parts:
         m = trimesh.load(f"{STL}/{f}.stl")
+        # støvkorn fra boolske operasjoner (løse legemer under 0,01 mm³) kan ikke printes og forvirrer sliceren: fjern dem
+        biter = m.split(only_watertight=False)
+        if len(biter) > 1 and any(abs(x.volume) < 0.01 for x in biter):
+            m = trimesh.util.concatenate([x for x in biter if abs(x.volume) >= 0.01])
         if same:
             T = moved[same]
         elif pos == "diag":   # for lang for plata: 45° og midt på (lengre enn plata)
@@ -81,6 +85,11 @@ TOPP_INNST = {"brim_type": "outer_only", "brim_width": "5", "brim_object_gap": "
               "initial_layer_speed": "25", "initial_layer_infill_speed": "25"}
 
 
+def topp_innst():
+    """Toppens objektinnstillinger. Full variant er 245,5 mm på en plate på 250 mm: bare 2 mm brim får plass."""
+    return {**TOPP_INNST, "brim_width": "2"} if STL == "stl_full" else TOPP_INNST
+
+
 def write(fn, title, parts, colors, sammen=True):
     """sammen=True (standard): deler med «samme som» (innfelte logoer, symboler) blir deler av samme objekt som den de ligger i,
     med egen filamentfarge. Da behandler sliceren dem som én modell: ingen støtte eller brim på logoen for seg,
@@ -95,7 +104,7 @@ def write(fn, title, parts, colors, sammen=True):
         # toppen er lang og flat og løfter seg ved halen: brim og sakte første lag som egne objektinnstillinger
         # (Creality Print / OrcaSlicer leser dem fra model_settings.config; platetemperatur og vifter er filament-
         # innstillinger og kan ikke legges på et objekt)
-        innst = TOPP_INNST if f == "topp" or f.endswith("/topp") else OBJ_INNST.get(f, {})
+        innst = topp_innst() if f == "topp" or f.endswith("/topp") else OBJ_INNST.get(f, {})
         ekstra = "".join(f'<metadata key="{k}" value="{v}"/>' for k, v in innst.items())
         cfg.append(f'<object id="{i}"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/>{ekstra}'
                    f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{name}"/><metadata key="extruder" value="{fil}"/></part></object>')
@@ -163,7 +172,12 @@ def write_sammen(fn, title, parts, colors):
         comps = "".join(f'<component objectid="{i}"/>' for i, _, _ in del_id)
         objs.append(f'<object id="{nid}" name="{name0}" type="model"><components>{comps}</components></object>')
         items.append(f'<item objectid="{nid}"/>')
-        innst = TOPP_INNST if f0 == "topp" or f0.endswith("/topp") else OBJ_INNST.get(f0, {})
+        innst = topp_innst() if f0 == "topp" or f0.endswith("/topp") else OBJ_INNST.get(f0, {})
+        # brimmen må få plass på plata: hele gruppen (med museører) skal ligge minst brim_width fra kanten
+        brim = float(innst.get("brim_width", 0) or 0)
+        if brim:
+            lo = min(plassert[k][3].bounds[0][:2].min() for k in ledd); hi = max(plassert[k][3].bounds[1][:2].max() for k in ledd)
+            assert lo >= brim - 0.01 and hi <= BED - brim + 0.01, f"{fn}: {f0} med {brim} mm brim går utenfor plata ({lo:.1f}–{hi:.1f})"
         ekstra = "".join(f'<metadata key="{k}" value="{v}"/>' for k, v in innst.items())
         deler = "".join(f'<part id="{i}" subtype="normal_part"><metadata key="name" value="{n}"/><metadata key="extruder" value="{fl}"/></part>'
                         for i, n, fl in del_id)
@@ -223,7 +237,7 @@ def plater(variant):
         else:
             ut[fn] = (title, parts, colors)
     if variant != "kort":   # full variant er for lang til museørene på plata (254,5 mm): bruk brim i sliceren i stedet
-        flytt = {"topp": (20, 2), "bunn": (100, 2)}   # og trenger hele lengden av plata
+        flytt = {"topp": (20, 2.25), "bunn": (100, 2.25)}   # og trenger hele lengden av plata (midtstilt: 2,25 mm i hver ende)
         ut = {fn: (t, [(p[0], p[1], p[2], flytt.get(p[0], p[3]) if p[3] and p[3] != "diag" else p[3], p[4]) for p in ps if p[0] != "orer"], c)
               for fn, (t, ps, c) in ut.items()}
     for o, ((t1, p1, c1), (t2, p2, c2)) in OPPSETT_PLATER.items():
@@ -231,7 +245,7 @@ def plater(variant):
         pre = "skjold-fjernkontroll-k2" if variant == "kort" else "skjold-fjernkontroll-full-k2"
         tt = (lambda t: t) if variant == "kort" else (lambda t: t.replace("Skjold Fjernkontroll", "Skjold Fjernkontroll Full"))
         ut[f"{pre}-topp-{b}.3mf"] = (tt(t1), p1 if variant == "kort" else
-                                     [(p[0], p[1], p[2], (20, 2) if p[3] else None, p[4]) for p in p1 if p[0] != "orer"], c1)
+                                     [(p[0], p[1], p[2], (20, 2.25) if p[3] else None, p[4]) for p in p1 if p[0] != "orer"], c1)
         ut[f"{pre}-taster-{b}.3mf"] = (tt(t2), p2, c2)
     if variant == "kort":
         ut["skjold-fjernkontroll-k2-taster-uten-gull.3mf"] = uten_gull()
