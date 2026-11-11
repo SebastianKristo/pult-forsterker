@@ -460,12 +460,12 @@ img[src*="-touch"],img[src*="-s1"]{-webkit-mask-image:none;mask-image:none;borde
   .har-meny .nav-lenker a[href^="mailto"]{color:var(--demp-l);font-size:17px;font-weight:400;border-bottom:0;margin-top:10px}
   .meny-laast{overflow:hidden}
 }
-/* Lyse studiobilder (Touch, Røst, Stav): en bevisst, avrundet flate i stedet for en maske som gir grå boks med mørk kant */
-.produkt img[src*="/touch-"],.produkt img[src*="-rund"],.produkt img[src*="/stav-"],
-.p-hero img[src*="/touch-"],.p-hero img[src*="-rund"],.p-hero img[src*="/stav-"],
-.ramme img[src*="/touch-"],.ramme img[src*="-rund"],.ramme img[src*="/stav-"],
-.bildepar img[src*="/touch-"],.bildepar img[src*="-rund"],.bildepar img[src*="/stav-"],
-.bilder img[src*="/touch-"],.bilder img[src*="-rund"],.bilder img[src*="/stav-"]{-webkit-mask-image:none;mask-image:none;border-radius:clamp(18px,3vw,36px);box-shadow:0 40px 120px -40px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.06)}
+/* Frilagte produktbilder (gjennomsiktig bakgrunn, tools/frilegg.py): ingen maske eller boks – bare produktet, med en
+   myk skygge som setter det ned på flaten */
+img.fri{-webkit-mask-image:none!important;mask-image:none!important;filter:drop-shadow(0 30px 34px rgba(0,0,0,.55)) drop-shadow(0 4px 8px rgba(0,0,0,.35))}
+.produkt img.fri{width:auto;max-width:min(88%,820px);max-height:560px;height:auto;margin:34px auto 56px;translate:none}
+.p-hero img.fri{width:auto;max-width:min(88%,980px);max-height:min(62vh,640px);height:auto;margin:48px auto 70px;translate:none}
+.ramme img.fri,.bildepar img.fri,.bilder img.fri{padding:6%;box-sizing:border-box}
 /* Produktbildet i toppen av produktsidene: rolig inngang, alltid i full styrke (styres ikke av rulling) */
 .fx .p-hero img[src*="s1-skra"]{margin-top:clamp(-90px,-5vw,-20px)}
 .fx .p-hero img{animation:helt-inn 1.4s var(--ease) .15s both}
