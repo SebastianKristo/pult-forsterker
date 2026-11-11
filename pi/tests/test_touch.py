@@ -147,6 +147,64 @@ class Vekking(unittest.TestCase):
         self.assertEqual(t.morning_text(None, {"state": "off"}), "")
 
 
+class Homey(unittest.TestCase):
+    """Homey som smarthus-kilde: enhetene fra Homeys lokale API blir fliser i samme form som fra Home Assistant."""
+    LYS = {"id": "a1", "name": "Stue", "class": "light", "available": True, "capabilitiesObj": {"onoff": {"value": True}, "dim": {"value": 0.8}}}
+    VARME = {"id": "b2", "name": "Varme stue", "class": "thermostat", "capabilitiesObj": {"target_temperature": {"value": 21.5, "min": 5, "max": 30}, "measure_temperature": {"value": 21.2}}}
+    PLUGG = {"id": "c3", "name": "Kaffe", "class": "socket", "virtualClass": "light", "capabilitiesObj": {"onoff": {"value": False}}}
+    LAAS = {"id": "d4", "name": "Inngang", "class": "lock", "capabilitiesObj": {"locked": {"value": True}, "onoff": {"value": True}}}
+    STROM = {"id": "e5", "name": "Strøm", "class": "sensor", "capabilitiesObj": {"measure_power": {"value": 1840.4}}}
+
+    def test_fliser(self):
+        f = t.homey_tile(self.LYS)
+        self.assertEqual((f["id"], f["kind"], f["on"], f["text"], f["pct"], f["tag"]), ("homey:a1", "toggle", True, "På · 80 %", 80, "LYS"))
+        v = t.homey_tile(self.VARME)
+        self.assertEqual((v["kind"], v["text"], v["target"]), ("climate", "Nå 21,2 °C", 21.5))
+        self.assertEqual(t.homey_tile(self.PLUGG)["domain"], "light")              # «vis som lys» i Homey følges
+        l = t.homey_tile(self.LAAS)
+        self.assertEqual((l["kind"], l["text"]), ("info", "Låst"))
+        self.assertEqual(t.homey_tile(self.STROM)["text"], "1840,4 W")
+        self.assertEqual(t.homey_tile({**self.LYS, "available": False})["text"], "Utilgjengelig")
+
+    def test_handlinger(self):
+        self.assertEqual(t.homey_action(self.LYS, "toggle"), ("onoff", False))
+        self.assertEqual(t.homey_action(self.LYS, "brightness", 40), ("dim", 0.4))
+        self.assertEqual(t.homey_action(self.LYS, "brightness", 0), ("onoff", False))
+        self.assertEqual(t.homey_action(self.VARME, "up"), ("target_temperature", 22.0))
+        for dev, act in ((self.LAAS, "toggle"), (self.STROM, "toggle"), (self.PLUGG, "brightness")):
+            with self.assertRaises(ValueError):
+                t.homey_action(dev, act, 50)
+
+    def test_utvalg_og_oppsett(self):
+        ids = t.homey_pick([self.LYS, self.VARME, self.PLUGG, self.LAAS, self.STROM, {**self.LYS, "id": "z", "available": False}])
+        self.assertEqual(ids, ["c3", "a1", "b2"])                                   # lys (etter navn), så varme; lås og sensor velges ikke selv
+        c = t.clean(dict(t.DEFAULTS), {"hub": "homey", "homey_url": "homey-abc.local/", "homey_token": "hemmelig", "homey_devices": ["a1", ""]})
+        self.assertEqual((c["hub"], c["homey_url"], c["homey_devices"]), ("homey", "http://homey-abc.local", ["a1"]))
+        self.assertEqual(t.clean(c, {"homey_token": "••••••"})["homey_token"], "hemmelig")
+        with self.assertRaises(ValueError):
+            t.clean(dict(t.DEFAULTS), {"hub": "annet"})
+
+    def test_mot_falsk_homey(self):
+        kall = []
+        with tempfile.TemporaryDirectory() as d:
+            x = t.Touch({"changed": lambda: None, "ha": lambda: {}, "alarms": lambda: []}, os.path.join(d, "t.json"))
+            x.save({"hub": "homey"})
+            self.assertIn("Koble til Homey", x.smart()["error"])
+            x.save({"homey_url": "http://homey", "homey_token": "nøkkel"})
+            self.assertEqual(x.public()["homey_token"], "••••••")                   # nøkkelen vises aldri igjen
+            enheter = {"a1": dict(self.LYS), "b2": dict(self.VARME)}
+            def falsk(path, method="GET", body=None, timeout=6.0):
+                kall.append((method, path, body))
+                return enheter if method == "GET" else None
+            x._homey = falsk
+            sm = x.smart(fresh=True)
+            self.assertEqual((sm["ok"], sm["hub"], [f["id"] for f in sm["tiles"]]), (True, "Homey", ["homey:a1", "homey:b2"]))
+            x.press("homey:a1", "brightness", 30)
+            self.assertIn(("PUT", "/api/manager/devices/device/a1/capability/dim", {"value": 0.3}), kall)
+            with self.assertRaises(ValueError):
+                x.press("homey:ukjent", "toggle")
+
+
 class Hjemmedata(unittest.TestCase):
     """Data til standby-stilene på S1: samme form som eksempeldataene i designet (WIDE_DEF)."""
 

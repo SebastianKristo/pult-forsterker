@@ -164,7 +164,6 @@ private fun SongQueueSwitch(m: AppModel) {
 /** v4 «Mer»-arket (Android): fra bunnkanten, radius 28/28/0/0, dempelag rgba(5,5,6,.88). */
 @Composable
 private fun MoreSheet(m: AppModel, close: () -> Unit) {
-    var crossfade by remember { mutableStateOf(false) }
     var sleep by remember { mutableStateOf("Av") }
     Box(Modifier.fillMaxSize().background(SkG.dimBg).press { close() }, contentAlignment = Alignment.BottomCenter) {
         Column(
@@ -187,13 +186,15 @@ private fun MoreSheet(m: AppModel, close: () -> Unit) {
                 // åpner kildesiden (biblioteket som spiller, ellers Navidrome) med artisten i søkefeltet
                 m.openLib(if (m.libTrack != null) m.lib else "nd"); m.lq2 = m.np.s.substringBefore(" · ").trim(); m.full = false; close()
             }
-            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                T("Krysstoning", sora(15f), Modifier.weight(1f))
-                SKToggle(crossfade, onColor = C.accent) { crossfade = !crossfade }
-            }
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 T("Sovetimer", sora(15f))
-                Flow(6.dp) { for (o in listOf("Av", "15 min", "30 min", "60 min", "Etter låten")) SKChip(o, on = sleep == o) { sleep = o } }
+                // sovetimeren går på enheten (skrur ned det siste minuttet og slår av), så den virker også når appen lukkes
+                Flow(6.dp) {
+                    for ((o, mins) in listOf("Av" to 0, "15 min" to 15, "30 min" to 30, "60 min" to 60)) SKChip(o, on = sleep == o) {
+                        sleep = o
+                        m.devSend("/api/plugins/sleep", if (mins > 0) mapOf("enabled" to true, "minutes" to mins) else mapOf("enabled" to false))
+                    }
+                }
             }
         }
     }
@@ -227,7 +228,7 @@ private fun TopBar(m: AppModel, openMore: () -> Unit) {
 
 @Composable
 private fun TopButton(d: String, size: androidx.compose.ui.unit.Dp, stroke: Float = 2f, fill: Boolean = false, on: Boolean = false, action: () -> Unit) {
-    Box(Modifier.size(44.dp).clip(CircleShape).background(if (on) C.ink.copy(alpha = 0.16f) else Color.Transparent).press(onClick = action), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(48.dp).clip(CircleShape).background(if (on) C.ink.copy(alpha = 0.16f) else Color.Transparent).press(onClick = action), contentAlignment = Alignment.Center) {
         SKIcon(d, size, stroke, C.ink, fill)
     }
 }
@@ -411,19 +412,19 @@ private fun Progress(m: AppModel) {
 @Composable
 private fun Controls(m: AppModel) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(40.dp).press { m.shuffle = !m.shuffle }, contentAlignment = Alignment.Center) {
+        Box(Modifier.size(48.dp).press(label = if (m.shuffle) "Tilfeldig rekkefølge, på" else "Tilfeldig rekkefølge, av") { m.shuffle = !m.shuffle }, contentAlignment = Alignment.Center) {
             SKIcon(Icons.shuffle, 20.dp, 2f, if (m.shuffle) C.accent2 else C.ink.copy(alpha = 0.75f))
         }
         Spacer(Modifier.weight(1f))
-        Box(Modifier.size(52.dp).press { m.prev() }, contentAlignment = Alignment.Center) { SKIcon(Icons.prev, 30.dp, color = C.ink, fill = true) }
+        Box(Modifier.size(52.dp).press(label = "Forrige") { m.prev() }, contentAlignment = Alignment.Center) { SKIcon(Icons.prev, 30.dp, color = C.ink, fill = true) }
         Spacer(Modifier.weight(1f))
-        Box(Modifier.size(72.dp).shadow(10.dp, CircleShape).clip(CircleShape).background(C.ink).press { m.togglePlay() }, contentAlignment = Alignment.Center) {
+        Box(Modifier.size(72.dp).shadow(10.dp, CircleShape).clip(CircleShape).background(C.ink).press(label = if (m.playing) "Pause" else "Spill") { m.togglePlay() }, contentAlignment = Alignment.Center) {
             SKIcon(if (m.playing) Icons.pause else Icons.playRound, 32.dp, color = C.bg, fill = true)
         }
         Spacer(Modifier.weight(1f))
-        Box(Modifier.size(52.dp).press { m.next() }, contentAlignment = Alignment.Center) { SKIcon(Icons.next, 30.dp, color = C.ink, fill = true) }
+        Box(Modifier.size(52.dp).press(label = "Neste") { m.next() }, contentAlignment = Alignment.Center) { SKIcon(Icons.next, 30.dp, color = C.ink, fill = true) }
         Spacer(Modifier.weight(1f))
-        Box(Modifier.size(40.dp).press { m.repeatOn = !m.repeatOn }, contentAlignment = Alignment.Center) {
+        Box(Modifier.size(48.dp).press(label = if (m.repeatOn) "Gjenta, på" else "Gjenta, av") { m.repeatOn = !m.repeatOn }, contentAlignment = Alignment.Center) {
             SKIcon(Icons.repeatIcon, 20.dp, 2f, if (m.repeatOn) C.accent2 else C.ink.copy(alpha = 0.75f))
         }
     }

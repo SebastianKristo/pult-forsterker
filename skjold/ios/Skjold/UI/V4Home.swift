@@ -48,11 +48,11 @@ struct V4HomeTab: View {
             Spacer(minLength: 0)
             HStack(spacing: 2) {
                 Button { Haptics.tap(); ui.hideHint(); ui.search = true } label: {
-                    V4Icon(d: V4.search, size: 20, color: V4.ink).frame(width: 38, height: 38)
+                    V4Icon(d: V4.search, size: 20, color: V4.ink).frame(width: 38, height: 38).padding(3).contentShape(Rectangle()).padding(-3)
                 }
                 .plain().accessibilityLabel("Søk")
                 Button { Haptics.tap(); m.tab = 3; m.setCat = -1 } label: {
-                    V4Icon(d: V4.gear, size: 20, color: V4.ink).frame(width: 38, height: 38)
+                    V4Icon(d: V4.gear, size: 20, color: V4.ink).frame(width: 38, height: 38).padding(3).contentShape(Rectangle()).padding(-3)
                 }
                 .plain().accessibilityLabel("Innstillinger")
             }

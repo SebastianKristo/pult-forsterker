@@ -58,7 +58,8 @@
     if (typeof st.volume === 'number') { if (st.volume !== prev.volume && prev.volume !== undefined) S.volT = n; S.vol = st.volume; }
     if (!!st.mute !== !!prev.mute && prev.mute !== undefined) S.muteT = n;
     S.muted = !!st.mute; S.hp = !!st.headphones; S.paused = !st.playing;
-    S.err = st.overtemp ? 3 : (S.input === 2 && st.lyrion === false ? 1 : 0); if (S.err && !prev.overtemp && st.overtemp) S.errT = n;
+    const hot = !!(st.overtemp || st.warm), hotPrev = !!(prev.overtemp || prev.warm);   // «warm»: CPU-temperaturen (rev F har ingen egen føler)
+    S.err = hot ? 3 : (S.input === 2 && st.lyrion === false ? 1 : 0); if (S.err && !hotPrev && hot) S.errT = n;
     // nå spilles → designets datastrukturer (INPUTS/WL/TRACKS/PRESETS)
     const t = st.title || '', a = st.artist || '';
     if (S.input === 0) {

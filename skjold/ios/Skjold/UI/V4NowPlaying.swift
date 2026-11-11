@@ -206,10 +206,11 @@ struct V4NowPlaying: View {
         VStack(spacing: 16) {
             if m.hasProgress { progress } else { liveTag }
             HStack {
-                iconButton(V4.shuffle, 22, m.shuffle ? V4.gold : V4.ink.opacity(0.7), "Tilfeldig") { m.shuffle.toggle() }
+                iconButton(V4.shuffle, 22, m.shuffle ? V4.gold : V4.ink.opacity(0.7), "Tilfeldig rekkefølge") { m.shuffle.toggle() }
+                    .accessibilityValue(m.shuffle ? "På" : "Av")
                 Spacer()
                 Button { m.prev() } label: {
-                    V4Icon(d: V4.skip, size: 30, color: V4.ink, fill: true).scaleEffect(x: -1, y: 1).padding(6)
+                    V4Icon(d: V4.skip, size: 30, color: V4.ink, fill: true).scaleEffect(x: -1, y: 1).frame(width: 46, height: 46).contentShape(Rectangle())
                 }
                 .plain().accessibilityLabel("Forrige")
                 Spacer()
@@ -219,12 +220,13 @@ struct V4NowPlaying: View {
                         .background(Circle().fill(V4.ink.opacity(0.14)))
                         .overlay(Circle().strokeBorder(Color.white.opacity(0.16), lineWidth: 1))
                 }
-                .plain().accessibilityLabel("Spill/pause")
+                .plain().accessibilityLabel(m.playing ? "Pause" : "Spill")
                 Spacer()
-                Button { m.next() } label: { V4Icon(d: V4.skip, size: 30, color: V4.ink, fill: true).padding(6) }
+                Button { m.next() } label: { V4Icon(d: V4.skip, size: 30, color: V4.ink, fill: true).frame(width: 46, height: 46).contentShape(Rectangle()) }
                     .plain().accessibilityLabel("Neste")
                 Spacer()
                 iconButton(V4.repeatP, 22, m.repeatOn ? V4.gold : V4.ink.opacity(0.7), "Gjenta") { m.repeatOn.toggle() }
+                    .accessibilityValue(m.repeatOn ? "På" : "Av")
             }
             .padding(.horizontal, 4)
             HStack(spacing: 12) {
@@ -243,7 +245,7 @@ struct V4NowPlaying: View {
     }
 
     private func iconButton(_ d: String, _ size: CGFloat, _ c: Color, _ label: String, _ act: @escaping () -> Void) -> some View {
-        Button { Haptics.tick(); act() } label: { V4Icon(d: d, size: size, color: c).padding(6) }
+        Button { Haptics.tick(); act() } label: { V4Icon(d: d, size: size, color: c).frame(width: 44, height: 44).contentShape(Rectangle()) }
             .plain().accessibilityLabel(label)
     }
 

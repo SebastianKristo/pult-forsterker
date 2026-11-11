@@ -385,7 +385,8 @@ extension AppModel {
     /// The stream of a library track finished: play the next one in the queue.
     func libEnded() {
         guard let lq, svc != nil, !lq.isEmpty else { return }
-        if li + 1 < lq.count || repeatOn { playLib(lq, (li + 1) % lq.count, keepOpen: true) } else { libStream = nil }
+        if shuffle && lq.count > 1 { playLib(lq, nextIndex(lq.count), keepOpen: true) }
+        else if li + 1 < lq.count || repeatOn { playLib(lq, (li + 1) % lq.count, keepOpen: true) } else { libStream = nil }
     }
 
     // MARK: Radio favourites (GET/POST /api/presets)

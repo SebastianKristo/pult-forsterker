@@ -7,7 +7,8 @@ struct V4MoreSheet: View {
     let left: CGFloat
     @AppStorage("skjold-v4-favs") private var favsRaw = ""
 
-    private static let sleeps = ["Av", "15 min", "30 min", "60 min", "Etter låten"]
+    private static let sleeps = ["Av", "15 min", "30 min", "60 min"]
+    private static let sleepMin = [0, 15, 30, 60]
 
     var body: some View {
         GeometryReader { g in
@@ -89,12 +90,12 @@ struct V4MoreSheet: View {
             if let t { m.v4QueueRemove(t) }
             close()
         })
-        r.append(Row(n: "Krysstoning", p: "M3 6l9 6-9 6zM21 6l-9 6 9 6z", fill: false, ic: V4.ink, sw: ui.xfade) {
-            withAnimation(V4.toggle) { ui.xfade.toggle() }
-        })
         r.append(Row(n: "Sovetimer", p: "M12 21a8 8 0 1 0 0-16a8 8 0 1 0 0 16M12 9v4l2 2M5 3L2 6M19 3l3 3", fill: false,
-                     ic: ui.sleep > 0 ? V4.gold : V4.ink, val: Self.sleeps[ui.sleep]) {
+                     ic: ui.sleep > 0 ? V4.gold : V4.ink, val: Self.sleeps[min(ui.sleep, Self.sleeps.count - 1)]) {
+            // sovetimeren går på enheten (skrur ned det siste minuttet og slår av), så den virker også når appen lukkes
             ui.sleep = (ui.sleep + 1) % Self.sleeps.count
+            let mins = Self.sleepMin[ui.sleep]
+            m.devSend("/api/plugins/sleep", mins > 0 ? ["enabled": true, "minutes": mins] : ["enabled": false])
         })
         return r
     }

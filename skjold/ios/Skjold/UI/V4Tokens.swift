@@ -396,7 +396,7 @@ struct V4MoreButton: View {
     var size: CGFloat = 18
     let action: () -> Void
     var body: some View {
-        Button(action: action) { V4Icon(d: V4.dotsSmall, size: size, color: V4.ink, fill: true).frame(width: 36, height: 36) }
+        Button(action: action) { V4Icon(d: V4.dotsSmall, size: size, color: V4.ink, fill: true).frame(width: 36, height: 36).padding(4).contentShape(Rectangle()).padding(-4) }
             .plain()
             .accessibilityLabel("Mer")
     }

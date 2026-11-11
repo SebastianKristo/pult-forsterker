@@ -95,7 +95,16 @@ curl -X POST http://skjold-touch.local:8765/api/touch -H 'Content-Type: applicat
 `lock_entity` gir knappen «Lås opp» når det ringer på. `weather_entity` og `light_entity` gir linja under klokka når
 alarmen ringer («6 °C og overskyet · lyset på soverommet er på 40 %»).
 
-Homey: ringeklokke og nattmodus virker fra Homey-appen. Fliser fra Homey er ikke laget ennå.
+**Homey i stedet for Home Assistant:** lag en API-nøkkel i Homey (Innstillinger → API-nøkler, med tilgang til enheter)
+og send den til Touch:
+
+```bash
+curl -X POST http://skjold-touch.local:8765/api/touch -H 'Content-Type: application/json' \
+  -d '{"hub":"homey","homey_url":"http://homey-xxxx.local","homey_token":"<nøkkelen>"}'
+```
+
+Uten valg vises fire lys, én varme og to brytere. Velg selv med `"homey_devices": ["<enhets-ID>", …]`. Lys kan dimmes,
+varme justeres, og låser kan ikke styres med et trykk. Scener (Flows) vises ikke ennå. Ikke prøvd mot en ekte Homey.
 
 ### Vekkeklokke
 
@@ -164,7 +173,7 @@ Ikke prøvd på ekte maskinvare ennå (alt er testet mot en simulert Home Assist
 - Oppstartslogoen (Plymouth) sammen med kiosken.
 
 Ikke laget ennå:
-- Smarthus-fliser fra Homey.
+- Scener (Flows) fra Homey.
 - Toveis lyd («Snakk») mot ringeklokka, og direktevideo (kameraet vises som bilde som oppdateres hvert sekund).
 - Av/på-knapp på GPIO.
 - Lang trykk på en flis for dimmer og farge.

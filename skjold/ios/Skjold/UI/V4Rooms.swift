@@ -92,6 +92,7 @@ struct V4RoomCard: View {
                         .shadow(color: .black.opacity(0.35), radius: 8, y: 6)
                 }
                 .plain()
+                .accessibilityLabel("Åpne " + card.name)
                 Button { open() } label: {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(card.t).sora(14, .semibold).lineLimit(1)
@@ -107,9 +108,10 @@ struct V4RoomCard: View {
                     V4PlayIcon(playing: card.playing, size: 15, color: V4.ink)
                         .frame(width: 40, height: 40)
                         .overlay(Circle().strokeBorder(V4.ink.opacity(0.7), lineWidth: 1.5))
+                        .padding(2).contentShape(Rectangle()).padding(-2)
                 }
                 .plain()
-                .accessibilityLabel("Spill/pause")
+                .accessibilityLabel((card.playing ? "Pause i " : "Spill i ") + card.name)
             }
             HStack(spacing: 10) {
                 V4Icon(d: V4.vol, size: 16, color: V4.ink.opacity(0.8))

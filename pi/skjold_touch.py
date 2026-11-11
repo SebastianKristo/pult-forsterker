@@ -20,7 +20,9 @@ import threading
 import time
 import urllib.request
 
-DEFAULTS = {"tiles": [], "scenes": [], "lock_entity": "", "weather_entity": "", "light_entity": "", "calendar_entity": ""}
+DEFAULTS = {"tiles": [], "scenes": [], "lock_entity": "", "weather_entity": "", "light_entity": "", "calendar_entity": "",
+            # Homey som smarthus-kilde i stedet for Home Assistant: adresse (http://homey-xxxx.local eller IP) og API-nøkkel
+            "hub": "ha", "homey_url": "", "homey_token": "", "homey_devices": []}
 WAKE_WORDS = ("ok_nabu", "hey_jarvis", "hey_mycroft")
 PAGES = ("now", "home", "smart", "alarm", "lib", "rooms", "set")
 SNOOZE_MIN = 9
@@ -51,7 +53,22 @@ def clean(cfg: dict, body: dict) -> dict:
     for k, v in (body or {}).items():
         if k not in DEFAULTS:
             continue
-        if isinstance(DEFAULTS[k], list):
+        if k == "hub":
+            if v not in ("ha", "homey"):
+                raise ValueError("hub må være ha eller homey")
+        elif k == "homey_token":
+            if isinstance(v, str) and v.startswith("••••"):
+                continue                       # maskert verdi sendt tilbake uendret
+            v = str(v or "").strip()[:400]
+        elif k == "homey_url":
+            v = str(v or "").strip().rstrip("/")[:200]
+            if v and not v.startswith(("http://", "https://")):
+                v = "http://" + v
+        elif k == "homey_devices":
+            if not isinstance(v, list):
+                raise ValueError("homey_devices må være en liste")
+            v = [str(x).strip()[:80] for x in v if str(x).strip()][:12]
+        elif isinstance(DEFAULTS[k], list):
             if not isinstance(v, list):
                 raise ValueError(f"{k} må være en liste")
             v = [str(x).strip()[:120] for x in v if "." in str(x)][:12 if k == "tiles" else 4]
@@ -115,6 +132,77 @@ def _is_num(s) -> bool:
         return True
     except (TypeError, ValueError):
         return False
+
+
+# ------------------------------------------------------------------ Homey (lokalt web-API)
+HOMEY_CLASS = {"light": "light", "socket": "switch", "thermostat": "climate", "heater": "climate", "lock": "lock", "sensor": "sensor",
+               "garagedoor": "cover", "curtain": "cover", "blinds": "cover", "windowcoverings": "cover", "sunshade": "cover", "fan": "fan"}
+
+
+def homey_tile(dev: dict) -> dict:
+    """Én Homey-enhet → én flis, i samme form som flisene fra Home Assistant."""
+    caps = dev.get("capabilitiesObj") or {}
+    val = lambda c: (caps.get(c) or {}).get("value")
+    dom = HOMEY_CLASS.get(str(dev.get("virtualClass") or dev.get("class") or ""), "switch" if "onoff" in caps else "sensor")
+    t = {"id": "homey:" + str(dev.get("id")), "name": str(dev.get("name") or "")[:28], "domain": dom, "on": bool(val("onoff")),
+         "kind": "info", "text": "", "tag": TAGS.get(dom, "")}
+    if dev.get("available") is False:
+        t.update(on=False, text="Utilgjengelig")
+        return t
+    if dom == "climate" and "target_temperature" in caps:
+        cur, tgt = val("measure_temperature"), val("target_temperature")
+        t.update(kind="climate", on=True, text=("Nå " + no_num(cur) + " °C") if cur is not None else "",
+                 target=float(tgt) if tgt is not None else None,
+                 min=float((caps.get("target_temperature") or {}).get("min", 5)), max=float((caps.get("target_temperature") or {}).get("max", 30)))
+    elif dom == "lock":
+        laast = bool(val("locked"))
+        t.update(on=not laast, text="Låst" if laast else "Ulåst")            # låsen åpnes ikke med et trykk på flisa
+    elif dom == "cover":
+        st = val("windowcoverings_state") or val("garagedoor_closed")
+        aapen = (st == "up") if isinstance(st, str) else (st is False)
+        t.update(on=bool(aapen), text="Åpen" if aapen else "Lukket", tag="", kind="info")
+    elif "onoff" in caps:
+        t["kind"] = "toggle"
+        dim = val("dim")
+        if dom == "light" and dim is not None:
+            t["pct"] = round(float(dim) * 100) if t["on"] else 0
+            t["text"] = ("På · %d %%" % t["pct"]) if t["on"] else "Av"
+        else:
+            t["text"] = "På" if t["on"] else "Av"
+    else:
+        for cap, enhet, merke in (("measure_power", "W", "EFFEKT"), ("measure_temperature", "°C", "TEMPERATUR"), ("measure_humidity", "%", "FUKT"),
+                                  ("measure_battery", "%", "BATTERI")):
+            if val(cap) is not None:
+                t.update(text=no_num(val(cap), 1) + " " + enhet, tag=merke)
+                break
+        if "alarm_motion" in caps and not t["text"]:
+            t.update(text="Bevegelse" if val("alarm_motion") else "Ingen bevegelse", tag="BEVEGELSE")
+    return t
+
+
+def homey_action(dev: dict, action: str, value=None) -> tuple:
+    """(kapabilitet, verdi) for et trykk på en Homey-flis."""
+    caps = dev.get("capabilitiesObj") or {}
+    val = lambda c: (caps.get(c) or {}).get("value")
+    if action == "toggle" and "onoff" in caps and "locked" not in caps:
+        return "onoff", not bool(val("onoff"))
+    if action == "brightness" and "dim" in caps and value is not None:
+        pct = max(0, min(100, int(round(float(value)))))
+        return ("onoff", False) if pct == 0 else ("dim", pct / 100)
+    if action in ("up", "down") and "target_temperature" in caps and val("target_temperature") is not None:
+        c = caps["target_temperature"]
+        return "target_temperature", max(float(c.get("min", 5)), min(float(c.get("max", 30)), float(val("target_temperature")) + (0.5 if action == "up" else -0.5)))
+    raise ValueError("kan ikke styres herfra")
+
+
+def homey_pick(devices: list) -> list:
+    """Ingen enheter valgt: fire lys, én varme og to brytere."""
+    def kl(d):
+        return HOMEY_CLASS.get(str(d.get("virtualClass") or d.get("class") or ""), "")
+    ok = sorted((d for d in devices if d.get("available") is not False), key=lambda d: str(d.get("name") or "").lower())
+    ut = [d for d in ok if kl(d) == "light"][:4] + [d for d in ok if kl(d) == "climate" and "target_temperature" in (d.get("capabilitiesObj") or {})][:1] \
+        + [d for d in ok if kl(d) == "switch"][:2]
+    return [str(d.get("id")) for d in ut][:8]
 
 
 def auto_pick(states: list) -> tuple:
@@ -350,7 +438,53 @@ class Touch:
 
     def public(self) -> dict:
         url, tok = self.ha()
-        return {**self.cfg, "ha": bool(url and tok)}
+        c = dict(self.cfg)
+        if c.get("homey_token"):
+            c["homey_token"] = "••••••"
+        return {**c, "ha": bool(url and tok), "homey": bool(self.cfg["homey_url"] and self.cfg["homey_token"])}
+
+    # --- Homey
+    def _homey(self, path: str, method: str = "GET", body=None, timeout: float = 6.0):
+        url, tok = self.cfg["homey_url"], self.cfg["homey_token"]
+        if not (url and tok):
+            raise RuntimeError("Homey er ikke koblet til")
+        req = urllib.request.Request(url + path, method=method, data=json.dumps(body).encode() if body is not None else None,
+                                     headers={"Authorization": "Bearer " + tok, "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            raw = r.read()
+            return json.loads(raw) if raw else None
+
+    def _homey_devices(self) -> dict:
+        d = self._homey("/api/manager/devices/device/")
+        return d if isinstance(d, dict) else {str(x.get("id")): x for x in (d or [])}
+
+    def _homey_smart(self) -> dict:
+        if not (self.cfg["homey_url"] and self.cfg["homey_token"]):
+            return {"ok": False, "hub": "Homey", "tiles": [], "scenes": [],
+                    "error": "Koble til Homey: legg inn adressen og en API-nøkkel (Homey → Innstillinger → API-nøkler) med POST /api/touch."}
+        try:
+            alle = self._homey_devices()
+            ids = list(self.cfg["homey_devices"]) or homey_pick(list(alle.values()))
+            self._auto = {"t": time.time(), "tiles": ["homey:" + i for i in ids], "scenes": []}
+            return {"ok": True, "hub": "Homey", "scenes": [], "auto": not self.cfg["homey_devices"], "lock": False,
+                    "tiles": [homey_tile(alle[i]) for i in ids if i in alle]}
+        except Exception as e:
+            return {"ok": False, "hub": "Homey", "tiles": [], "scenes": [], "error": "Får ikke kontakt med Homey: " + str(e)[:120]}
+
+    def _homey_press(self, tid: str, action: str, value=None) -> dict:
+        did = tid.split(":", 1)[1]
+        if tid not in set(self._auto["tiles"]) | {"homey:" + i for i in self.cfg["homey_devices"]}:
+            raise ValueError("ukjent flis")
+        dev = self._homey_devices().get(did)
+        if not dev:
+            raise ValueError("ukjent flis")
+        cap, val = homey_action(dev, action, value)
+        self._homey(f"/api/manager/devices/device/{did}/capability/{cap}", "PUT", {"value": val})
+        if cap == "dim":                    # dimming slår ikke alltid på lyset av seg selv
+            if not ((dev.get("capabilitiesObj") or {}).get("onoff") or {}).get("value"):
+                self._homey(f"/api/manager/devices/device/{did}/capability/onoff", "PUT", {"value": True})
+        time.sleep(0.25)
+        return self.smart(fresh=True)
 
     # --- Home Assistant
     def _get(self, path: str, timeout: float = 5.0):
@@ -378,13 +512,17 @@ class Touch:
 
     def smart(self, fresh: bool = False) -> dict:
         """Flisene og scenene til Smarthus-siden. Svaret hurtiglagres i 3 s, så skjermen kan spørre ofte."""
+        now = time.time()
+        if not fresh and self._cache["data"] and now - self._cache["t"] < 3:
+            return self._cache["data"]
+        if self.cfg["hub"] == "homey":
+            out = self._homey_smart()
+            self._cache = {"t": now, "data": out}
+            return out
         url, tok = self.ha()
         if not (url and tok):
             return {"ok": False, "hub": "Home Assistant", "tiles": [], "scenes": [],
                     "error": "Koble til Home Assistant i appen: Innstillinger → Dørklokke → adresse og token."}
-        now = time.time()
-        if not fresh and self._cache["data"] and now - self._cache["t"] < 3:
-            return self._cache["data"]
         try:
             want, scenes = list(self.cfg["tiles"]), list(self.cfg["scenes"])
             if not want:
@@ -402,6 +540,8 @@ class Touch:
         return out
 
     def press(self, eid: str, action: str, value=None) -> dict:
+        if eid.startswith("homey:"):
+            return self._homey_press(eid, action, value)
         allowed = set(self.cfg["tiles"] or self._auto["tiles"]) | set(self.cfg["scenes"] or self._auto["scenes"])
         if eid not in allowed:
             raise ValueError("ukjent flis")
