@@ -73,6 +73,7 @@ item_re = re.compile(r"<item><type>([0-9a-f]+)</type><code>([0-9a-f]+)</code><le
 
 def airplay_thread():
     buf = ""
+    eof_n = 0
     while True:
         if not os.path.exists(PIPE):
             time.sleep(1); continue
@@ -89,7 +90,13 @@ def airplay_thread():
                 except BlockingIOError:
                     continue
                 if not raw:
-                    time.sleep(0.2); continue     # ingen skriver akkurat nå (Shairport startet på nytt) – vent
+                    # ingen skriver akkurat nå (Shairport stoppet/startet på nytt). Varer det over 3 s mens status sier
+                    # «AirPlay spiller», kom aldri «pend»: nullstill, ellers henger daemonen på en kilde som ikke finnes.
+                    eof_n += 1
+                    if eof_n == 15 and track.get("source") == "airplay" and track.get("playing"):
+                        track.update(playing=False, paused=False, airplay_device="")
+                    time.sleep(0.2); continue
+                eof_n = 0
                 buf += raw.decode("utf-8", "replace")
                 for m in item_re.finditer(buf):
                     t, c = bytes.fromhex(m.group(1)).decode("ascii", "replace"), bytes.fromhex(m.group(2)).decode("ascii", "replace")

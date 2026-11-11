@@ -1524,11 +1524,22 @@ async def h_settings_post(r):
     update_settings(body); return await h_settings_get(r)
 
 
+_saved_state = [""]
+
+
 def save_state():
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
-        with open(STATE_FILE, "w") as fh:
-            json.dump({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute", "settings", "night", "hp_volume")}, fh)
+        data = json.dumps({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute", "settings", "night", "hp_volume")})
+        if data == _saved_state[0]:
+            return
+        # atomisk: skriv ferdig til en midlertidig fil og bytt – et strømbrudd midt i skrivingen gir aldri en halv fil
+        # (som ville nullstilt navn, favoritter og innlogginger ved neste oppstart)
+        tmp = STATE_FILE + ".tmp"
+        with open(tmp, "w") as fh:
+            fh.write(data); fh.flush(); os.fsync(fh.fileno())
+        os.replace(tmp, STATE_FILE)
+        _saved_state[0] = data
     except Exception:
         pass
 
@@ -1557,6 +1568,15 @@ def write_ctrl():
         os.replace(tmp, CTRL_FILE)
     except Exception:
         pass
+
+
+_SECRET_KEY = re.compile(r"(pass|passord|password|token|cookie|secret|apikey|api_key|key|pin)$", re.I)
+
+
+def public_settings():
+    """Innstillingene slik de vises i /api/status, /api/events og /run/pultamp_ctrl.json: uten passord, tokens og
+    plugin-oppsett. (Appene henter hele settet fra /api/settings.)"""
+    return {k: v for k, v in (state.get("settings") or {}).items() if k != "plugins" and not _SECRET_KEY.search(k)}
 
 
 def changed():
@@ -1626,7 +1646,7 @@ def read_status():
         st = {**st, "title": swm["title"], "artist": swm["artist"] or st.get("artist", ""), "album": swm["album"] or "SUB/WAVE"}
         if swm["cover"].startswith(("http://", "https://")): cover = swm["cover"]
     cover_url = cover if cover.startswith(("http://", "https://")) else (f"/api/cover?v={cover}" if cover else "")
-    return {**state, **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
+    return {**state, "settings": public_settings(), **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "paused": bool(st.get("paused")), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
             "duration": st.get("duration", 0), "position": st.get("position", 0), "bt_device": st.get("bt_device", ""),
             "name": NAME, "version": VERSION, "id": device_id(), "presets": extra["presets"],
             "presets_count": extra["presets_count"], "presets_max": PRESETS_MAX, "radio_now": extra["radio_now"], "source_label": extra["source_label"], "lyrion_server": extra["lyrion_server"], "lyrion_player": extra["lyrion_player"],
@@ -1778,6 +1798,17 @@ def set_input(inp, announce=True):
                 voice.say("input_" + inp)
 
 
+def _airplay_hard_stop(inp):
+    """AirPlay 2-avsendere (iPhone) overser ofte «Pause» fra mottakeren. Spiller AirPlay fortsatt etter 3 s, og brukeren
+    fortsatt står på den nye kilden, kobles avsenderen fra ved å starte shairport-sync på nytt."""
+    time.sleep(3)
+    raw = read_raw()
+    if state["input"] == inp and inp != "airplay" and raw.get("playing") and raw.get("source") == "airplay":
+        print("AirPlay spiller fortsatt etter kildebytte – starter shairport-sync på nytt", flush=True)
+        subprocess.run(["systemctl", "try-restart", "shairport-sync"], check=False, timeout=20,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 def _pause_others(inp):
     """Som en ekte inngangsvelger: stopp AirPlay/Bluetooth som spiller på en annen kilde enn den valgte."""
     st = read_status()
@@ -1787,6 +1818,19 @@ def _pause_others(inp):
         spotify_stop()   # Spotify spiller i bakgrunnen mens en annen kilde vises
     if plex["playing"] and inp != "plex" and st.get("source") != "plex":
         plex_cmd("pause")
+    # AirPlay/Blåtann som spiller «bak» den valgte kilden: read_status() viser radio/Spotify/Plex når de er valgt, så
+    # se på rå status (ellers fortsatte AirPlay å spille, og follow_source satte radioen på pause igjen).
+    raw = read_raw()
+    if raw.get("playing") and raw.get("source") in ("airplay", "bt") and raw.get("source") != inp \
+            and not (st.get("playing") and st.get("source") == raw.get("source")):
+        try:
+            if raw["source"] == "bt":
+                _busctl("call", "org.bluez", _bt_player(), "org.bluez.MediaPlayer1", "Pause")
+            else:
+                _busctl("call", SPS[0], SPS[1], SPS[2], "Pause")
+                threading.Thread(target=_airplay_hard_stop, args=(inp,), daemon=True).start()
+        except Exception as e:
+            print("Pause AirPlay/Blåtann:", e, flush=True)
     if not st.get("playing") or st.get("source") in ("", inp, "radio"):
         return
     try:
@@ -1832,7 +1876,17 @@ def set_loudness(on=None, level=None):
     apply_volume(); changed()
 
 
+def volume_cap():
+    """«Maks volum» fra innstillingene (100, 90, 80 eller 70)."""
+    try:
+        i = int(settings().get("vmax", 0))
+        return VMAX[i] if 0 <= i < len(VMAX) else 100
+    except (TypeError, ValueError):
+        return 100
+
+
 def set_volume(v):
+    v = min(int(v), volume_cap())   # gjelder alle veier inn: appen, AirPlay-volum, Lyrion, MQTT, vekking
     if S1F and state.get("headphones") and settings().get("hpOwn", True):
         state["hp_volume"] = max(0, min(100, int(v)))
         if state["hp_volume"] > 0: state["mute"] = False
@@ -2806,20 +2860,37 @@ def j(_r=None):
 
 
 async def h_status(_r): return j()
-async def h_power(r): set_power((await r.json()).get("on", True)); return j()
-async def h_toggle(_r): set_power(not state["power"]); return j()
+async def _obj(r):
+    """JSON-kroppen som dict ({} ved tom/ugyldig kropp) – så en slurvete klient får standardoppførsel, ikke 500."""
+    b = await _json(r)
+    return b if isinstance(b, dict) else {}
+# Av/på, kildebytte, demping og paring kjører systemctl/amixer/bluetoothctl (opptil flere sekunder): i egen tråd, så
+# hendelser (SSE/WebSocket) og andre forespørsler ikke fryser imens.
+async def h_power(r): await asyncio.to_thread(set_power, (await _obj(r)).get("on", True)); return j()
+async def h_toggle(_r): await asyncio.to_thread(set_power, not state["power"]); return j()
 async def h_input(r):
-    inp = (await r.json()).get("input", "")
+    inp = (await _obj(r)).get("input", "")
     if inp not in INPUTS:
         return web.json_response({"error": f"input må være en av {INPUTS}"}, status=400)
-    set_input(inp); return j()
+    await asyncio.to_thread(set_input, inp); return j()
 async def h_volume(r):
-    b = await r.json()
+    b = await _json(r)
+    if not isinstance(b, dict):
+        return web.json_response({"error": "forventet et JSON-objekt"}, status=400)
     if b.get("source") == "airplay" and not (state["input"] == "airplay" or state["auto_input"]):
         return j()   # AirPlay-volum skal ikke styre en annen valgt kilde
-    set_volume(state["volume"] + int(b["delta"]) if "delta" in b else int(b.get("volume", state["volume"]))); return j()
-async def h_mute(r): set_mute((await r.json()).get("mute", True)); return j()
-async def h_bt(r): bt_pairing((await r.json()).get("pairing", True)); return j()
+    try:   # delta er relativt til volumet som gjelder nå (hodetelefonvolumet når de står i)
+        v = eff_volume() + int(b["delta"]) if "delta" in b else int(b.get("volume", eff_volume()))
+    except (TypeError, ValueError):
+        return web.json_response({"error": "volume/delta må være et heltall"}, status=400)
+    set_volume(v); return j()
+async def h_mute(r): await asyncio.to_thread(set_mute, (await _obj(r)).get("mute", True)); return j()
+async def h_bt(r):
+    try:
+        await asyncio.to_thread(bt_pairing, (await _obj(r)).get("pairing", True))
+    except subprocess.TimeoutExpired:
+        return web.json_response({"error": "Blåtann svarer ikke på denne enheten"}, status=503)
+    return j()
 async def h_voice(r):
     b = await r.json()
     if "on" in b:
@@ -2911,12 +2982,47 @@ def _cors_headers(r):
     return h
 
 
+CORS_EXTRA = {o.strip().rstrip("/") for o in os.environ.get("KI_AMP_CORS_ORIGINS", "").split(",") if o.strip()}
+
+
+def _origin_ok(r):
+    """Hvem får kalle API-et fra en nettleser? API-et har ingen innlogging, så en fremmed nettside brukeren tilfeldigvis
+    besøker må ikke kunne styre (eller lese fra) enheten. Tillatt: ingen Origin (Home Assistant, Homey, appene, curl),
+    samme vert, appens egne (capacitor/localhost), andre enheter på hjemmenettet (privat IP, *.local, navn uten punktum),
+    Skjold-hjem, og det som står i KI_AMP_CORS_ORIGINS (kommadelt)."""
+    o = r.headers.get("Origin")
+    if not o or o == "null" and r.method in ("GET", "HEAD"):
+        return True
+    try:
+        u = urllib.parse.urlsplit(o)
+    except ValueError:
+        return False
+    h = (u.hostname or "").lower()
+    if u.scheme in ("capacitor", "ionic") or h in ("localhost", "127.0.0.1", "::1") or u.netloc == r.host:
+        return True
+    if o.rstrip("/") in CORS_EXTRA or h.endswith(".local") or (h and "." not in h and ":" not in h):
+        return True
+    try:
+        import ipaddress
+        ip = ipaddress.ip_address(h)
+        return ip.is_private or ip.is_link_local or ip.is_loopback
+    except ValueError:
+        pass
+    try:   # Skjold-hjem (skyen enheten er koblet til) og fjernstyring via eget domene (samme vert som forespørselen)
+        sky_host = urllib.parse.urlsplit(str(getattr(sky, "url", "") or "")).hostname
+        return bool(sky_host) and h == sky_host
+    except Exception:
+        return False
+
+
 @web.middleware
 async def cors_mw(r, handler):
-    """CORS for /api/*: appen (capacitor://localhost / https://localhost) og web-UI fra en annen vert. API-et er åpent på
-    LAN-et uansett (ingen innlogging/cookies), så origin speiles."""
+    """CORS for /api/*: appen (capacitor://localhost / https://localhost) og web-UI fra en annen enhet på hjemmenettet.
+    Origin speiles bare for kjente avsendere (_origin_ok); fremmede nettsider får 403."""
     if not r.path.startswith("/api/"):
         return await handler(r)
+    if not _origin_ok(r):
+        return web.json_response({"error": "ukjent opphav (Origin) – legg det til i KI_AMP_CORS_ORIGINS om det er ditt"}, status=403)
     if r.method == "OPTIONS":
         return web.Response(status=204, headers=_cors_headers(r))
     try:
@@ -3284,8 +3390,17 @@ LMS_PORT = int(os.environ.get("KI_AMP_LMS_PORT", "9000"))
 def _player_mac():
     if os.environ.get("KI_AMP_LMS_PLAYER"):
         return os.environ["KI_AMP_LMS_PLAYER"].lower()
+    # samme rekkefølge som ki-squeezelite.service: kablet, så Wi-Fi (Pi Zero 2 W har ikke eth0), så avledet av machine-id
+    for nic in ("eth0", "end0", "wlan0"):
+        try:
+            m = open(f"/sys/class/net/{nic}/address").read().strip().lower()
+            if m and m != "00:00:00:00:00:00":
+                return m
+        except OSError:
+            continue
     try:
-        return open("/sys/class/net/eth0/address").read().strip().lower()   # samme -m som ki-squeezelite.service
+        h = open("/etc/machine-id").read().strip()[:10]
+        return "02:" + ":".join(h[i:i + 2] for i in range(0, 10, 2))
     except OSError:
         return "00:00:00:00:00:01"
 
@@ -6097,7 +6212,9 @@ def _extras_tick():
     c = plug_cfg("autostandby")
     if c["enabled"]:
         s = s or read_status()
-        if _auto.tick(now, int(c.get("minutes") or 0), bool(state["power"]), bool(s.get("playing")), bool(s.get("paused")), bool(c.get("pause_counts", True))):
+        # AUX/USB har ingen «spiller»-status (analog/PC-lyd): tell aldri ned der, ellers slo den seg av midt i lyttingen
+        aktiv = bool(s.get("playing")) or state["input"] in ("aux", "aux2", "usb")
+        if _auto.tick(now, int(c.get("minutes") or 0), bool(state["power"]), aktiv, bool(s.get("paused")), bool(c.get("pause_counts", True))):
             print("Automatisk standby: ingen lyd på", c.get("minutes"), "min", flush=True)
             _auto.idle_s = 0.0
             set_power(False)

@@ -27,12 +27,22 @@ sudo mkdir -p /usr/local/share/ki-amp/logos/nrk /var/lib/ki-amp/logos && sudo in
 sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pins.yaml" /usr/local/share/ki-amp/s1f_pins.yaml
 bash "$SRC/install_webapp.sh"   # ny web-app fra siste skjold-v*-utgivelse (ikke den gamle pi/webapp)
 sudo install -m 755 "$SRC/ki-usb-gadget.sh" /usr/local/bin/ki-usb-gadget.sh
+sudo install -m 755 "$SRC/ki-squeezelite-start" /usr/local/bin/ki-squeezelite-start
 sudo mkdir -p /usr/local/share/ki-amp/sounds && sudo install -m 644 "$SRC"/sounds/*.wav /usr/local/share/ki-amp/sounds/   # ferdiginnspilte talemeldinger
 sudo install -m 755 "$SRC/tft_screen.py" /usr/local/bin/tft_screen.py
 for u in ki-amp.service oled-display.service camilladsp.service shairport-sync.service ki-usb-audio.service ki-squeezelite.service ki-aux1.service ki-aux2.service; do
   sudo install -m 644 "$SRC/$u" /etc/systemd/system/$u
 done
-sudo install -m 644 "$SRC/shairport-sync.conf" /etc/shairport-sync.conf
+# AirPlay-oppsettet: behold navnet og den unike AirPlay-ID-en (ellers het enheten «Pultforsterker» med ny ID en stund
+# etter hver oppdatering, og shairport-sync startet på nytt flere ganger mens daemonen reparerte fila)
+SPS_CONF=/etc/shairport-sync.conf
+SPS_NAVN=$(sed -n 's/^[[:space:]]*name = "\(.*\)";.*/\1/p' "$SPS_CONF" 2>/dev/null | head -1 || true)
+SPS_ID=$(grep -m1 -E '^[[:space:]]*airplay_device_id' "$SPS_CONF" 2>/dev/null || true)
+sudo install -m 644 "$SRC/shairport-sync.conf" "$SPS_CONF"
+if [ -n "$SPS_NAVN" ]; then SPS_NAVN_E=$(printf '%s' "$SPS_NAVN" | sed 's/[&|\\]/\\&/g'); sudo sed -i "s|^\([[:space:]]*name = \)\"[^\"]*\";|\1\"$SPS_NAVN_E\";|" "$SPS_CONF"; fi
+if [ -n "$SPS_ID" ] && ! grep -q airplay_device_id "$SPS_CONF"; then
+  SPS_ID_E=$(printf '%s' "$SPS_ID" | sed 's/[&|\\]/\\&/g'); sudo sed -i "0,/^[[:space:]]*name = /s|^\([[:space:]]*name = .*\)$|\1\n$SPS_ID_E|" "$SPS_CONF"
+fi
 PB_CARD=$(sudo grep -oP "^KI_AMP_DSP_PLAYBACK=(plug)?hw:\K[^,]+" /etc/ki-amp.env || echo sndrpihifiberry); sed "s/sndrpihifiberry/$PB_CARD/g" "$SRC/asound.conf" | sudo tee /etc/asound.conf >/dev/null   # per-kilde-nivåer (softvol)
 sudo install -m 644 "$SRC/shairport-sync-dbus.conf" /etc/dbus-1/system.d/shairport-sync-dbus.conf
 sudo systemctl reload dbus 2>/dev/null || true

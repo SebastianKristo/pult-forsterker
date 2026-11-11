@@ -89,6 +89,9 @@ def restore(d: str, run=subprocess.run) -> dict:
             run(["git", "-c", "safe.directory=*", "-C", meta["src"], "checkout", "-q", "--detach", meta["rev"]], check=False)
         else:
             run(["git", "-c", "safe.directory=*", "-C", meta["src"], "checkout", "-q", "-B", br, meta["rev"]], check=False)
+    if meta.get("src") and os.path.isdir(meta["src"]):   # checkout som root: gi filene tilbake til eieren av kildetreet
+        st = os.stat(meta["src"])
+        run(["chown", "-R", f"{st.st_uid}:{st.st_gid}", meta["src"]], check=False)
     run(["systemctl", "daemon-reload"], check=False)
     for s in SERVICES + OPTIONAL_SERVICES:
         # skjold-ui finnes bare på S1 rev F – ikke prøv å starte tjenester som ikke er installert

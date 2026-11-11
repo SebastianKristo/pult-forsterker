@@ -36,7 +36,7 @@ After=bluetooth.service
 Requires=bluetooth.service
 
 [Service]
-ExecStartPre=/usr/bin/bluetoothctl power on
+ExecStartPre=-/usr/bin/bluetoothctl --timeout 5 power on
 ExecStart=/usr/bin/bt-agent -c NoInputNoOutput
 Restart=always
 RestartSec=3
@@ -48,8 +48,9 @@ UNIT
 sudo systemctl daemon-reload
 sudo systemctl restart bluetooth
 sleep 2
-sudo systemctl enable --now bluealsa bluealsa-aplay ki-bt-agent
-sudo systemctl restart bluealsa bluealsa-aplay
+# uten Blåtann-kontroller (slått av, rfkill, Pi uten BT) skal ikke hele installasjonen/oppdateringen stoppe
+sudo systemctl enable --now bluealsa bluealsa-aplay ki-bt-agent || echo "ADVARSEL: Blåtann ble ikke startet (ingen kontroller?)" >&2
+sudo systemctl restart bluealsa bluealsa-aplay || true
 bluetoothctl system-alias "$BT_NAME" >/dev/null || true
 bluetoothctl pairable on >/dev/null || true
 echo "Bluetooth klar: $(bluetoothctl show | grep -E 'Name|Powered|Pairable' | tr -s ' \t' ' ' | paste -sd ',')"

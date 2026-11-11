@@ -151,6 +151,7 @@ KI_AMP_NAME="$NAME_SEL" bash "$SRC/ki-bluetooth-setup.sh"
 echo "== 6b    Lyrion-radio (Squeezelite)"
 sudo apt-get -y install --no-install-recommends squeezelite >/dev/null
 sudo systemctl disable --now squeezelite 2>/dev/null || true      # Debians egen tjeneste – vi bruker ki-squeezelite
+sudo install -m 755 "$SRC/ki-squeezelite-start" /usr/local/bin/ki-squeezelite-start
 sudo install -m 644 "$SRC/ki-squeezelite.service" /etc/systemd/system/ki-squeezelite.service
 sudo systemctl daemon-reload && sudo systemctl enable --now ki-squeezelite
 
@@ -159,10 +160,11 @@ if [ "$SPOTIFY" = 1 ]; then
   # dtcooper/raspotify: apt-repo med ferdigbygd librespot for armhf/arm64. Vi bruker bare binærfila – egen tjeneste
   # (ki-spotify) så lyden går samme vei som de andre kildene (ALSA «spotify» → dmix → loopback → CamillaDSP).
   sudo install -d -m 755 /usr/share/keyrings
-  curl -fsSL https://dtcooper.github.io/raspotify/key.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/raspotify-archive-keyrings.gpg
-  echo 'deb [signed-by=/usr/share/keyrings/raspotify-archive-keyrings.gpg] https://dtcooper.github.io/raspotify raspotify main' \
-    | sudo tee /etc/apt/sources.list.d/raspotify.list >/dev/null
-  if sudo apt-get update && sudo apt-get -y install --no-install-recommends raspotify; then
+  # alt i betingelsen: er nøkkelserveren nede, skal bare Spotify hoppes over – ikke hele installasjonen (set -e)
+  if curl -fsSL https://dtcooper.github.io/raspotify/key.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/raspotify-archive-keyrings.gpg \
+     && echo 'deb [signed-by=/usr/share/keyrings/raspotify-archive-keyrings.gpg] https://dtcooper.github.io/raspotify raspotify main' \
+        | sudo tee /etc/apt/sources.list.d/raspotify.list >/dev/null \
+     && sudo apt-get update && sudo apt-get -y install --no-install-recommends raspotify; then
     sudo systemctl disable --now raspotify 2>/dev/null || true   # pakkens egen tjeneste – vi bruker ki-spotify
     sudo install -m 755 "$SRC/ki-spotify-event" /usr/local/bin/ki-spotify-event
     sudo install -m 644 "$SRC/ki-spotify.service" /etc/systemd/system/ki-spotify.service

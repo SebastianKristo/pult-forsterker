@@ -1,0 +1,18 @@
+#!/bin/sh
+# Starter Squeezelite (radio/Lyrion-spilleren) med en unik spiller-ID.
+# ID-en er MAC-adressen fra eth0, end0 eller wlan0 (Pi Zero 2 W har bare Wi-Fi). Finnes ingen, lages den av
+# /etc/machine-id. Samme regel som _player_mac() i ki_amp_daemon.py – de to må være enige, ellers styrer daemonen feil
+# spiller. KI_AMP_LMS_PLAYER i /etc/ki-amp.env overstyrer.
+M="$KI_AMP_LMS_PLAYER"
+for n in eth0 end0 wlan0; do
+  [ -n "$M" ] && break
+  M=$(cat "/sys/class/net/$n/address" 2>/dev/null)
+  [ "$M" = 00:00:00:00:00:00 ] && M=
+done
+if [ -z "$M" ]; then
+  I=$(cut -c1-10 /etc/machine-id 2>/dev/null)
+  [ -n "$I" ] && M="02:$(echo "$I" | cut -c1-2):$(echo "$I" | cut -c3-4):$(echo "$I" | cut -c5-6):$(echo "$I" | cut -c7-8):$(echo "$I" | cut -c9-10)"
+fi
+# -o radio: dmix → CamillaDSP (loudness/volum) · -C 5: slipp lydenheten etter 5 s stillhet
+# -s KI_AMP_LMS_SERVER (Lyrion): tom = finn Lyrion automatisk på nettet
+exec /usr/bin/squeezelite -n "${KI_AMP_NAME:-Pultforsterker}" -o radio -C 5 -m "${M:-00:00:00:00:00:01}" ${KI_AMP_LMS_SERVER:+-s $KI_AMP_LMS_SERVER}
