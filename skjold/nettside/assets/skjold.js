@@ -93,6 +93,22 @@
     }
   }
 
+  // 3D-modell: hent visningsprogrammet (ca. 1 MB) først når modellen nærmer seg skjermen
+  var mv = document.querySelector('model-viewer');
+  if (mv) {
+    var hentMv = function () {
+      var s = document.createElement('script');
+      s.type = 'module'; s.src = '/assets/vendor/model-viewer-4.1.0/model-viewer.min.js';
+      document.head.appendChild(s);
+    };
+    if ('IntersectionObserver' in window) {
+      var mio = new IntersectionObserver(function (es) {
+        if (es.some(function (e) { return e.isIntersecting; })) { mio.disconnect(); hentMv(); }
+      }, { rootMargin: '900px 0px' });
+      mio.observe(mv);
+    } else { hentMv(); }
+  }
+
   // USB-bryter-demo (S1)
   var usb = document.querySelector('[data-usb]');
   if (usb) {
