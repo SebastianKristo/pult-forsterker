@@ -7424,6 +7424,7 @@ def feat_status():
     out = {"doorbell": doorbell.status(), "recognized": _feat["last_hit"] if _feat["last_hit"] and time.time() - _feat["last_hit"].get("t", 0) < 600 else None}
     out.update(touch.status())
     out["setup_net"] = setupnet.status()
+    out["home"] = touch.home()      # vær, sol, kalender og neste alarm til standby-stilene (tom uten Home Assistant)
     m = _feat["vinyl"]
     if m and state.get("input") in ("aux", "aux2", "usb"):
         out.update({"title": m["title"], "artist": m["artist"], "album": m["album"], "cover_url": m.get("art", ""),

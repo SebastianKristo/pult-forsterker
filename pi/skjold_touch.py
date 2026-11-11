@@ -20,7 +20,7 @@ import threading
 import time
 import urllib.request
 
-DEFAULTS = {"tiles": [], "scenes": [], "lock_entity": "", "weather_entity": "", "light_entity": ""}
+DEFAULTS = {"tiles": [], "scenes": [], "lock_entity": "", "weather_entity": "", "light_entity": "", "calendar_entity": ""}
 WAKE_WORDS = ("ok_nabu", "hey_jarvis", "hey_mycroft")
 PAGES = ("now", "home", "smart", "alarm", "lib", "rooms", "set")
 SNOOZE_MIN = 9
@@ -195,6 +195,64 @@ def morning_text(weather: dict | None, light: dict | None) -> str:
     return " · ".join(parts)
 
 
+def _local_hm(iso: str, tz=None) -> str:
+    """ISO-tid fra Home Assistant (UTC eller med sone) → «HH:MM» i lokal tid."""
+    from datetime import datetime
+    return datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone(tz).strftime("%H:%M")
+
+
+def home_weather(state: dict | None, hourly: list | None = None, tz=None) -> dict | None:
+    """Været slik standby-stilene på S1 vil ha det: {t, c, hours: [[«HH», grader] × 4]}."""
+    if not state or state.get("state") in (None, "unavailable", "unknown"):
+        return None
+    a = state.get("attributes") or {}
+    if a.get("temperature") is None:
+        return None
+    tekst = WEATHER_NO.get(state["state"], str(state["state"]))
+    sted = str(a.get("friendly_name") or "").strip()
+    hours = []
+    for f in (hourly or [])[:4]:
+        try:
+            hours.append([_local_hm(f["datetime"], tz)[:2], round(float(f["temperature"]))])
+        except (KeyError, TypeError, ValueError):
+            pass
+    return {"t": round(float(a["temperature"])), "c": tekst[:1].upper() + tekst[1:] + ((" · " + sted) if sted and sted.lower() not in ("home", "hjem", "forecast home") else ""),
+            "hours": hours}
+
+
+def home_sun(state: dict | None, tz=None) -> list | None:
+    """[soloppgang, solnedgang] som «HH:MM» fra sun.sun."""
+    a = (state or {}).get("attributes") or {}
+    try:
+        return [_local_hm(a["next_rising"], tz), _local_hm(a["next_setting"], tz)]
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def home_calendar(events: list, today, tz=None) -> dict | None:
+    """Neste dag med avtaler: {day: «I DAG» | «I MORGEN» | «FREDAG», items: [«09:30 Fotballtrening», …]} (høyst to)."""
+    from datetime import date, datetime
+    dager = ["MANDAG", "TIRSDAG", "ONSDAG", "TORSDAG", "FREDAG", "LØRDAG", "SØNDAG"]
+    rows = []
+    for e in events or []:
+        st = e.get("start") or {}
+        try:
+            if st.get("dateTime"):
+                dt = datetime.fromisoformat(str(st["dateTime"]).replace("Z", "+00:00")).astimezone(tz)
+                rows.append((dt.date(), dt.strftime("%H:%M"), str(e.get("summary") or "").strip()))
+            elif st.get("date"):
+                rows.append((date.fromisoformat(st["date"]), "", str(e.get("summary") or "").strip()))
+        except (TypeError, ValueError):
+            pass
+    rows = sorted(r for r in rows if r[0] >= today and r[2])
+    if not rows:
+        return None
+    d0 = rows[0][0]
+    diff = (d0 - today).days
+    return {"day": "I DAG" if diff == 0 else "I MORGEN" if diff == 1 else dager[d0.weekday()],
+            "items": [((t + " ") if t else "") + n[:40] for d, t, n in rows if d == d0][:2]}
+
+
 def set_backlight(pct: int, root: str = "/sys/class/backlight") -> bool:
     """Bakgrunnslys 0–100 %. Skjermer uten styrbart lys gir False, og skjermen dimmes da bare i grensesnittet."""
     pct = max(0, min(100, int(pct)))
@@ -366,6 +424,57 @@ class Touch:
         w = self._state(self.cfg["weather_entity"]) if self.cfg["weather_entity"] else None
         l = self._state(self.cfg["light_entity"]) if self.cfg["light_entity"] else None
         return morning_text(w, l)
+
+    # --- data til standby-stilene på S1 (vær, sol, kalender, neste alarm)
+    def home(self) -> dict:
+        """Siste kjente data. Hentes på nytt i bakgrunnen hvert 5. minutt, så status aldri venter på Home Assistant."""
+        h = self.__dict__.setdefault("_home", {"t": 0.0, "data": {}, "busy": False})
+        if not h["busy"] and time.time() - h["t"] > 300 and all(self.ha()):
+            h["busy"] = True
+            threading.Thread(target=self._home_refresh, daemon=True).start()
+        d = dict(h["data"])
+        nxt = next_alarm(self.ctx["alarms"](), time.localtime())
+        if nxt:
+            d["alarm"] = nxt["time"]
+        return d
+
+    def _home_refresh(self):
+        from datetime import date, datetime, timedelta, timezone
+        h = self._home
+        out = {}
+        try:
+            w, c = self.cfg["weather_entity"], self.cfg["calendar_entity"]
+            if not (w and c):      # ikke valgt: bruk det første været og den første kalenderen i Home Assistant
+                ids = [str(x.get("entity_id") or "") for x in self._get("/api/states", 10)]
+                w = w or next((i for i in sorted(ids) if i.startswith("weather.")), "")
+                c = c or next((i for i in sorted(ids) if i.startswith("calendar.")), "")
+            if w:
+                hourly = []
+                try:
+                    url, tok = self.ha()
+                    req = urllib.request.Request(url + "/api/services/weather/get_forecasts?return_response", method="POST",
+                                                 data=json.dumps({"entity_id": w, "type": "hourly"}).encode(),
+                                                 headers={"Authorization": "Bearer " + tok, "Content-Type": "application/json"})
+                    with urllib.request.urlopen(req, timeout=8) as r:
+                        hourly = ((json.loads(r.read()).get("service_response") or {}).get(w) or {}).get("forecast") or []
+                except Exception:
+                    pass          # eldre Home Assistant eller vær uten timevarsel: vis uten timene
+                v = home_weather(self._state(w), hourly)
+                if v:
+                    out["weather"] = v
+            s = home_sun(self._state("sun.sun"))
+            if s:
+                out["sun"] = s
+            if c:
+                now = datetime.now(timezone.utc)
+                q = "?start=" + now.strftime("%Y-%m-%dT%H:%M:%SZ") + "&end=" + (now + timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                k = home_calendar(self._get("/api/calendars/" + c + q, 8), date.today())
+                if k:
+                    out["cal"] = k
+        except Exception as e:
+            print("Touch/S1: fikk ikke hentet vær og kalender:", str(e)[:120], flush=True)
+        h.update(t=time.time(), data=out or h["data"], busy=False)
+        self.ctx["changed"]()
 
     # --- skjerm og stemme
     def command(self, cmd: str, arg: str = "") -> dict:

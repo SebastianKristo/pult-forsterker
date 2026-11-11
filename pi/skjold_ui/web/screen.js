@@ -33,7 +33,7 @@
 
   // Standby-stiler med data fra Home Assistant (§4.3): bruk ekte data fra status.home; mangler det, vis «Dato» (5)
   // i stedet for designets eksempeltall (vær, kalender, bilde, alarm).
-  const NEEDS = { 9: 'weather', 11: 'sun', 13: 'photo', 14: 'alarm', 15: 'cal' };
+  const NEEDS = { 9: 'weather', 11: 'sun', 13: 'photo', 15: 'cal' };   // «Nattlys» (14) klarer seg uten alarm
   window.drawSaver = function (g, stl) {
     const home = (st && st.home) || {}; let need = NEEDS[stl];
     if (S.night && nightLight) { stl = 14; need = null; }      // nattmodus: «Nattlys» uansett valgt stil (kan slås av)
