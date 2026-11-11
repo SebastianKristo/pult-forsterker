@@ -266,7 +266,8 @@ function NowPlaying() {
     <section class="inn" style="position:relative;flex:1;min-height:0;overflow:hidden">
       {has && <>
         <div style={`position:absolute;inset:-50px;background:${bg};filter:blur(48px) saturate(1.25);opacity:.34`} />
-        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,11,12,.5),rgba(11,11,12,.94))" />
+        {/* toner helt ut mot topplinja (ingen kant), og mørkner nedover så teksten står tydelig */}
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,#0b0b0c 0%,rgba(11,11,12,.72) 14%,rgba(11,11,12,.5) 34%,rgba(11,11,12,.94) 100%)" />
       </>}
       <div style="position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:244px minmax(0,1fr);grid-template-rows:244px auto auto;column-gap:24px;row-gap:4px;padding:14px 22px 8px;align-content:center">
         <div style={`position:relative;width:244px;height:244px;border-radius:14px;background:${has ? bg : '#141415'};box-shadow:0 18px 44px rgba(0,0,0,.55);overflow:hidden;display:flex;align-items:center;justify-content:center`}>
