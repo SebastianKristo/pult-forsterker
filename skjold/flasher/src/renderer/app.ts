@@ -34,6 +34,10 @@ const DEVS: [string, string, string][] = [
 ];
 const STEPS = ['Velg lagring', 'Forhåndsinnstill', 'Skriv og verifiser', 'Ferdig'];
 
+/** Kort tilfeldig suffiks på det foreslåtte vertsnavnet (skjold-stue-3f2a): to enheter flashet med samme romnavn får
+ *  ikke samme navn – ellers ser Home Assistant og Homey dem som én enhet, og .local-adressen kolliderer. */
+const rndSuf = () => Array.from(crypto.getRandomValues(new Uint8Array(2)), (b) => b.toString(16).padStart(2, '0')).join('');
+let SUF = rndSuf();
 const S = {
   p: 0,
   dev: 0,
@@ -49,7 +53,7 @@ const S = {
   local: null as LocalImage | null,
   net: 'wifi' as 'wifi' | 'eth', stat: false, ip: '', gw: '', dns: '',
   pre: true, ssid: '', pw: '', name: 'Stue', lang: 0, country: 'NO',
-  hostname: 'skjold-stue', hostEdited: false,
+  hostname: 'skjold-stue-' + SUF, hostEdited: false,
   ssh: false, user: 'skjold', userPw: '', sshKey: '', lms: false,
   progress: null as Progress | null,
   result: null as FlashResult | null,
@@ -305,6 +309,7 @@ async function startFlash() {
     await refreshCache();
     if (old && S.cache.some(c => c.name !== old && isLatest(c))) { try { S.cache = await skjold.cacheDelete(old); } catch { /* ignorer */ } }
   }
+  if (r.ok && !S.hostEdited) { SUF = rndSuf(); S.hostname = (await skjold.hostname(S.name)) + '-' + SUF; }   // neste kort får nytt navn
   if (r.ok) { S.p = 3; render(); }
   else { S.progress = { phase: 'error', percent: 0, message: r.error }; render(); }
 }
@@ -312,7 +317,7 @@ async function startFlash() {
 async function setName(v: string) {
   S.name = v;
   if (!S.hostEdited) {
-    S.hostname = await skjold.hostname(v);
+    S.hostname = (await skjold.hostname(v)) + '-' + SUF;
     const h = document.querySelector<HTMLInputElement>('input[data-k="hostname"]');
     if (h) h.value = S.hostname;
     const hint = document.querySelector('.hint'); if (hint) hint.textContent = `Nås på http://${S.hostname}.local:8765/`;
