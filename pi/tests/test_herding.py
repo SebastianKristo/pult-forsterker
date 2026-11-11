@@ -168,5 +168,33 @@ class VaakneVedSignal(unittest.TestCase):
                 d.apply_power()
                 self.assertIn("shairport-sync", [a for a in kall if a[:2] == ["systemctl", "stop"]][-1])
 
+
+class Varmevern(unittest.TestCase):
+    """Uten egen temperaturføler: CPU-temperaturen holder volumet nede når kassen blir for varm."""
+
+    def test_terskler(self):
+        self.assertTrue(d.warm_decision(81, False))
+        self.assertFalse(d.warm_decision(75, False))
+        self.assertTrue(d.warm_decision(75, True))            # slipper ikke før den er under 70
+        self.assertFalse(d.warm_decision(69, True))
+        self.assertTrue(d.warm_decision(None, True))          # ingen måling: behold tilstanden
+
+    def test_volumtak_og_nedskruing(self):
+        with mock.patch.dict(d.state, {"warm": False, "volume": 85}), mock.patch.object(d, "settings", return_value={"vmax": 0}), \
+                mock.patch.object(d, "changed"), mock.patch.object(d, "set_volume") as sv, mock.patch.object(d, "cpu_temp", return_value=83.0):
+            self.assertEqual(d.volume_cap(), 100)
+            d._warm_tick()
+            self.assertTrue(d.state["warm"])
+            sv.assert_called_once_with(60)
+            self.assertEqual(d.volume_cap(), 60)
+            with mock.patch.object(d, "settings", return_value={"vmax": 3}):
+                self.assertEqual(d.volume_cap(), 60)          # 70 fra innstillingene, men varmevernet er strengere
+
+    def test_leser_temperatur(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = os.path.join(tmp, "temp"); open(p, "w").write("71234\n")
+            self.assertAlmostEqual(d.cpu_temp(p), 71.234)
+            self.assertIsNone(d.cpu_temp(os.path.join(tmp, "mangler")))
+
 if __name__ == "__main__":
     unittest.main()

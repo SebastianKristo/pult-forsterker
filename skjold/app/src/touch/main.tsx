@@ -514,7 +514,7 @@ function SmartHome() {
   useEffect(() => { void loadSmart(); }, []);
   return (
     <section class="inn" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 18px 10px;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y">
-      <div style="display:flex;align-items:center;gap:10px;min-height:36px"><span style="font-size:20px;font-weight:600">Smarthus</span><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>VIA HOME ASSISTANT</span><div style="flex:1" />
+      <div style="display:flex;align-items:center;gap:10px;min-height:36px"><span style="font-size:20px;font-weight:600">Smarthus</span><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>VIA {(sm?.hub ?? 'Home Assistant').toUpperCase()}</span><div style="flex:1" />
         {(sm?.scenes ?? []).map((sc) => { const on = sceneOn.value === sc.id; return <button key={sc.id} onClick={() => { sceneOn.value = sc.id; void press(sc.id, 'scene'); }} style={`height:44px;padding:0 14px;border-radius:22px;border:1px solid ${on ? '#f2f2ee' : '#2e2e30'};background:${on ? '#f2f2ee' : '#161617'};color:${on ? '#0b0b0c' : '#f2f2ee'};font-size:12px;font-weight:600;white-space:nowrap`}>{sc.name}</button>; })}</div>
       {!sm && <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>HENTER …</span>}
       {sm && !sm.ok && (
@@ -523,7 +523,7 @@ function SmartHome() {
           <span style="font-size:14px;line-height:1.45;color:#c9c9c4">{sm.error}</span>
           <span style="font-size:12px;line-height:1.45;color:#8b8b86">Flisene velges i appen under Innstillinger → Skjold Touch. Uten valg vises noen av lysene og bryterne dine.</span>
         </div>)}
-      {sm?.ok && !sm.tiles.length && <span style="font-size:14px;color:#8b8b86">Fant ingen lys eller brytere i Home Assistant.</span>}
+      {sm?.ok && !sm.tiles.length && <span style="font-size:14px;color:#8b8b86">Fant ingen lys eller brytere i {sm.hub}.</span>}
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
         {(sm?.tiles ?? []).map((t) => <TileCard key={t.id} t={t} />)}
       </div>

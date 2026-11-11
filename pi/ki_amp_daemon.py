@@ -391,6 +391,7 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "headphones": False,   # hodetelefoner i front-jacken (hovedkortet)
          "last_wireless": "airplay",   # sist brukte trådløse kilde (airplay/bt) – «BT»-knappen på hovedkortet
          "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
+         "warm": False,         # Pi-en er for varm (CPU ≥ 80 °C): volumet holdes på maks 60 til den er under 70 °C
          "overtemp": False,     # NTC på kjøleribben over ~75 °C (MCP GPA7) – TPA3116 dempes til den er under ~50 °C
          "levels": {"airplay": 100, "bt": 100, "usb": 100, "radio": 100, "aux": 100, "aux2": 100, "spotify": 100, "plex": 100, "roon": 100},   # nivå per kilde (miks)
          "ui_event": None,      # Node: {"name":"settings","t":…} når ◀◀ holdes 3 s (skjermprosessen viser innstillinger)
@@ -1921,9 +1922,41 @@ def volume_cap():
     """«Maks volum» fra innstillingene (100, 90, 80 eller 70)."""
     try:
         i = int(settings().get("vmax", 0))
-        return VMAX[i] if 0 <= i < len(VMAX) else 100
+        cap = VMAX[i] if 0 <= i < len(VMAX) else 100
     except (TypeError, ValueError):
-        return 100
+        cap = 100
+    return min(cap, WARM_VOLUME) if state.get("warm") else cap
+
+
+# --- Varmevern uten egen sensor (S1 rev F, Node, Touch, Core): CPU-temperaturen i kassen ---
+WARM_ON_C, WARM_OFF_C, WARM_VOLUME = 80.0, 70.0, 60
+
+
+def cpu_temp(path="/sys/class/thermal/thermal_zone0/temp"):
+    try:
+        with open(path) as f:
+            return int(f.read().strip()) / 1000.0
+    except (OSError, ValueError):
+        return None
+
+
+def warm_decision(temp, warm):
+    """For varmt? Slår inn ved 80 °C og slipper først under 70 °C, så det ikke vipper frem og tilbake."""
+    if temp is None:
+        return bool(warm)
+    return True if temp >= WARM_ON_C else False if temp <= WARM_OFF_C else bool(warm)
+
+
+def _warm_tick():
+    t = cpu_temp()
+    w = warm_decision(t, state.get("warm"))
+    if w == bool(state.get("warm")):
+        return
+    state["warm"] = w
+    print(f"Varmevern {'på' if w else 'av'} ({t:.0f} °C)" + (f": volumet holdes på maks {WARM_VOLUME}" if w else ""), flush=True)
+    if w and int(state.get("volume") or 0) > WARM_VOLUME:
+        set_volume(WARM_VOLUME)
+    changed()
 
 
 def set_volume(v):
@@ -6483,7 +6516,7 @@ def _plugins_thread():
             try: f()
             except Exception as e: print("Plugin:", f.__name__, e, flush=True)
         if n % 5 == 0:
-            for f in (_alarm_tick, _watch_tick, _rec_tick, _mqtt_tick, _extras_tick, lambda: "audiobooks" in globals() and _abs_tick()):
+            for f in (_alarm_tick, _warm_tick, _watch_tick, _rec_tick, _mqtt_tick, _extras_tick, lambda: "audiobooks" in globals() and _abs_tick()):
                 try: f()
                 except Exception as e: print("Plugin:", f.__name__, e, flush=True)
         n += 1
