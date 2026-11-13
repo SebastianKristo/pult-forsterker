@@ -37,7 +37,7 @@ COLS, ROWS = 3, 5
 GX, GY = 8.0, 4.0
 MX = (W - COLS * LW - (COLS - 1) * GX) / 2
 MY = (H - ROWS * LH - (ROWS - 1) * GY) / 2
-UA = {"User-Agent": "SkjoldKassett/1.0 (+https://skjold.smarthjemexperten.no)"}
+UA = {"User-Agent": "SkjoldKassett/1.0 (+https://skjold-lab.com)"}
 
 
 def _get(url, timeout=12):

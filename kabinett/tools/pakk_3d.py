@@ -64,7 +64,7 @@ siden av produktmappene hvis du skal bygge fra kilde.
 Materiale: PETG eller ASA anbefales (PLA blir mykt i varme og fuktige rom). Ingen av de ferdige platene trenger
 støtte, bortsett fra der LES_MEG sier det (lokket til Røst Rund).
 
-Mer: https://skjold.smarthjemexperten.no/stotte/   Kilde: https://github.com/SebastianKristo/pult-forsterker
+Mer: https://skjold-lab.com/stotte/   Kilde: https://github.com/SebastianKristo/pult-forsterker
 Lisens for 3D-modellene: CC BY-NC-SA 4.0 (bygg selv, ikke for salg).
 """
 

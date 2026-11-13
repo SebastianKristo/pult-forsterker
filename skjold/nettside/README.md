@@ -1,6 +1,6 @@
 # Skjold Lab – nettsiden
 
-Statisk nettsted for **skjold.smarthjemexperten.no**, nettsiden til **Skjold Lab**. Skjold Lab er merkenavnet (den som lager), mens produktene fortsatt heter Skjold S1, Skjold Node, Skjold Touch, Skjold Røst og Skjold Stav. Bruk «Skjold Lab» i logoen (`SKJOLD` + `LAB` i `.logo-lab`), bunnteksten, `og:site_name` og sidetitlene (`… – Skjold Lab`). Det er bygget med ren HTML, CSS og JavaScript, uten byggesteg. Interesseskjemaet sendes til en Cloudflare Pages Function.
+Statisk nettsted for **skjold-lab.com**, nettsiden til **Skjold Lab**. Skjold Lab er merkenavnet (den som lager), mens produktene fortsatt heter Skjold S1, Skjold Node, Skjold Touch, Skjold Røst og Skjold Stav. Bruk «Skjold Lab» i logoen (`SKJOLD` + `LAB` i `.logo-lab`), bunnteksten, `og:site_name` og sidetitlene (`… – Skjold Lab`). Det er bygget med ren HTML, CSS og JavaScript, uten byggesteg. Interesseskjemaet sendes til en Cloudflare Pages Function.
 
 Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/design/README.md` (tokens og animasjoner).
 
@@ -62,13 +62,13 @@ Bruk Cloudflares Git-integrasjon. Det trengs ingen GitHub Actions-workflow.
 4. Settings → Variables and Secrets:
    - `ADMIN_NOKKEL` (Secret) er en lang tilfeldig verdi du lager selv.
    - `VARSEL_WEBHOOK` er valgfri: en Discord-, Slack- eller Homey-webhook som får varsel ved nye meldinger.
-5. Custom domains → Set up a domain → `skjold.smarthjemexperten.no`. Ligger sonen på Cloudflare, lages CNAME-posten automatisk. Hvis ikke, legg inn CNAME `skjold` → `<prosjekt>.pages.dev`.
+5. Custom domains → Set up a domain → `skjold-lab.com`. Ligger sonen på Cloudflare, lages DNS-posten automatisk. Hvis ikke, pek domenet til `<prosjekt>.pages.dev`. Det gamle domenet `skjold.smarthjemexperten.no` bør sendes videre hit (Cloudflare → Rules → Redirect Rules), så gamle lenker og delte kassettlenker fortsatt virker.
 
 Hver push til `main` publiserer en ny versjon.
 
 ### Se innmeldinger
 
-- JSON: `https://skjold.smarthjemexperten.no/api/interesse?nokkel=<ADMIN_NOKKEL>`
+- JSON: `https://skjold-lab.com/api/interesse?nokkel=<ADMIN_NOKKEL>`
 - CSV: legg til `&format=csv`
 
 Hver e-postadresse lagres som én nøkkel (`i:<epost>`). En ny innsending fra samme adresse overskriver den gamle.
@@ -84,7 +84,7 @@ Hver e-postadresse lagres som én nøkkel (`i:<epost>`). En ny innsending fra sa
 
 ## Redigere nettsiden
 
-Nettsiden kan redigeres i nettleseren på **https://skjold.smarthjemexperten.no/admin/** – også fra mobilen. Klikk på en tekst for å skrive i den (fet, kursiv og lenker), klikk på et bilde for å bytte det eller endre alt-teksten, og bruk den oransje blokkrammen til å flytte (↑ ↓), kopiere eller slette seksjoner, fliser, kilder, rader og produktkort. «Sideinfo» endrer tittel, beskrivelse og delingsbilde. «HTML»-fanen viser kildekoden for avanserte endringer, og «+ Ny side» lager en kopi av en eksisterende side. Angre/gjør om: Ctrl+Z / Ctrl+Shift+Z.
+Nettsiden kan redigeres i nettleseren på **https://skjold-lab.com/admin/** – også fra mobilen. Klikk på en tekst for å skrive i den (fet, kursiv og lenker), klikk på et bilde for å bytte det eller endre alt-teksten, og bruk den oransje blokkrammen til å flytte (↑ ↓), kopiere eller slette seksjoner, fliser, kilder, rader og produktkort. «Sideinfo» endrer tittel, beskrivelse og delingsbilde. «HTML»-fanen viser kildekoden for avanserte endringer, og «+ Ny side» lager en kopi av en eksisterende side. Angre/gjør om: Ctrl+Z / Ctrl+Shift+Z.
 
 **«Lagre og publiser»** lagrer siden som en commit på `main` i GitHub. Da kjører `.github/workflows/nettside.yml`, og siden er oppdatert om ca. ett minutt. Opplastede bilder committes med en gang til `assets/img/opplastet/` (de vises i editoren med en gang, men på nettsiden først når siden er publisert). Editoren endrer bare det du faktisk har endret – resten av filen lagres tegn for tegn som før – så historikken i Git viser nøyaktig hva som ble endret.
 
@@ -99,7 +99,7 @@ Nettsiden kan redigeres i nettleseren på **https://skjold.smarthjemexperten.no/
    - `ADMIN_NOKKEL` (Secret) finnes fra før – det er dette passordet du logger inn med
    - Valgfritt: `GITHUB_REPO` (standard `SebastianKristo/pult-forsterker`), `GITHUB_BRANCH` (standard `main`), `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` (standard Sebastian Kristo Jemtland &lt;sebastian@kristo.no&gt;)
    - Publiser på nytt (eller vent til neste push) så funksjonen får de nye verdiene.
-3. Åpne https://skjold.smarthjemexperten.no/admin/ og logg inn med `ADMIN_NOKKEL`.
+3. Åpne https://skjold-lab.com/admin/ og logg inn med `ADMIN_NOKKEL`.
 
 ### Hvordan det virker
 

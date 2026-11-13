@@ -5,7 +5,7 @@ Skjold er en serie nettverkslydprodukter, designet av Sebastian Kristo Jemtland.
 - **Skjold S1:** streamingforsterker i bøyd aluminium, 190 × 160 × 48 mm. Raspberry Pi 4, I²S-DAC (HiFiBerry DAC+), TPA3116 2 × 50 W. Innebygd USB-bryter mellom Pi og PC. 2,42″ OLED eller TFT bak røyksort akryl.
 - **Skjold Node:** printet nettverksspiller, 91 × 74 × 34 mm. Pi 4 eller 3B/3B+, 1,8″ ST7735S, EC11-encoder og 4 × 12 mm knapper.
 - **Programvare:** Skjold OS (UI på enheten), webgrensesnitt (skjold.local), app for iOS og Android, Skjold Flasher (desktop), SD-bilde (pi-gen).
-- **Nettside:** skjold.smarthjemexperten.no, på Cloudflare Pages fra GitHub.
+- **Nettside:** skjold-lab.com, på Cloudflare Pages fra GitHub.
 
 ## Om designfilene
 Filene i denne pakken er **designreferanser laget i HTML**. Det er prototyper som viser utseende og oppførsel, og de er ikke produksjonskode. Oppgaven er å **gjenskape dem i riktig miljø**:

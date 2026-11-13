@@ -22,7 +22,7 @@ for _cand in (NRK_DIR, "/usr/local/share/ki-amp/logos/nrk"):
         break
 MAX_AGE = 30 * 86400
 NEG_AGE = 86400          # «fant ingen logo» huskes et døgn
-UA = {"User-Agent": "Skjold/1.0 (+https://skjold.smarthjemexperten.no)"}
+UA = {"User-Agent": "Skjold/1.0 (+https://skjold-lab.com)"}
 
 _reg = {}                # nøkkel -> {"src": url|"", "name": kanalnavn}
 _lock = threading.Lock()

@@ -21,8 +21,8 @@ Nettsiden er `Skjold Nettside.dc.html`. `index.html` sender besøkende dit. Side
 4. Trykk Deploy. Siden ligger nå på `skjold.pages.dev`.
 
 ## 3. Eget domene
-1. Gå til Pages-prosjektet → Custom domains → Set up a domain → `skjold.smarthjemexperten.no`.
-2. Ligger `smarthjemexperten.no` på Cloudflare, lages CNAME-posten automatisk. Hvis ikke: legg inn CNAME `skjold` → `skjold.pages.dev` hos domeneleverandøren.
+1. Gå til Pages-prosjektet → Custom domains → Set up a domain → `skjold-lab.com`.
+2. Ligger `skjold-lab.com` på Cloudflare, lages DNS-posten automatisk. Hvis ikke: pek domenet til `skjold.pages.dev` hos domeneleverandøren.
 3. HTTPS ordnes automatisk.
 
 Hver `git push` til `main` publiserer en ny versjon i løpet av ett minutt.
@@ -35,4 +35,4 @@ Skjemaet sender til `/api/interesse` (`functions/api/interesse.js`). Cloudflare 
 1. Gå til Workers & Pages → KV → Create namespace: `skjold-interesse`.
 2. Gå til Pages-prosjektet → Settings → Functions → KV namespace bindings. Legg til variabelen `INTERESSE` og velg `skjold-interesse`.
 3. Under Settings → Variables legger du inn `ADMIN_NOKKEL` som en hemmelig verdi du finner på selv. Du kan også legge inn `VARSEL_WEBHOOK` (Discord, Slack eller Homey) for å få varsel når noen melder seg.
-4. Se alle som har meldt interesse: `https://skjold.smarthjemexperten.no/api/interesse?nokkel=<ADMIN_NOKKEL>`
+4. Se alle som har meldt interesse: `https://skjold-lab.com/api/interesse?nokkel=<ADMIN_NOKKEL>`

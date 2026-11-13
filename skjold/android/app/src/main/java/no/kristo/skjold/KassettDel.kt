@@ -156,7 +156,7 @@ fun KassettDelPanel(host: String?) {
 }
 
 /**
- * Mottatt delingslenke (skjold://kassett/del?d=… eller https://skjold.smarthjemexperten.no/kassett/del#…):
+ * Mottatt delingslenke (skjold://kassett/del?d=… eller https://skjold-lab.com/kassett/del#…):
  * spør først, og legg så kassettene som ventende på Skjold-enheten appen styrer.
  */
 class KassettDelActivity : Activity() {
