@@ -9,6 +9,10 @@ import { DurableObject } from "cloudflare:workers";
 
 const KODE_TEGN = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // uten I, O, 0, 1
 const KODE_TTL_MS = 10 * 60 * 1000;
+// Automatisk innmelding av nye enheter på LAN-et: første forsøk straks, deretter dobles pausen opp til et døgn
+const INVITER_PAUSE_MS = KODE_TTL_MS;
+const INVITER_MAKS_PAUSE_MS = 24 * 60 * 60 * 1000;
+const INVITER_PER_RUNDE = 3;
 const RELE_TIMEOUT_MS = 25 * 1000;
 const STALE_MS = 45 * 1000;
 const ALARM_MS = 30 * 1000;
@@ -543,6 +547,7 @@ export class Sted extends DurableObject {
       reserve: d.reserve,
       aktiv: this.velgAktiv(tilk),
       medlemmer: d.medlemmer,
+      autoLegg: d.autoLegg !== false,
     };
   }
 
@@ -585,6 +590,7 @@ export class Sted extends DurableObject {
       if (!Array.isArray(b.reserve) || b.reserve.some((x) => !ids.has(x))) return feil(400, "ukjent enhet i reserve");
       d.reserve = [...new Set(b.reserve)];
     }
+    if (typeof b.autoLegg === "boolean") d.autoLegg = b.autoLegg;
     d.reserve = d.reserve.filter((x) => x !== d.hoved);
     await this.lagre();
     await this.valg(null, null, true); // «hoved» kan ha endret seg uten at aktiv gjorde det – send til alle
@@ -637,7 +643,9 @@ export class Sted extends DurableObject {
     if (e) Object.assign(e, { navn, produkt, noekkelHash });
     else d.enheter.push({ id: b.id, navn, produkt, rom: "", noekkelHash, lagtTil: Math.floor(Date.now() / 1000) });
     if (!d.hoved) d.hoved = b.id; // første enhet blir hovedenhet
+    if (d.utelatt) d.utelatt = d.utelatt.filter((x) => x !== b.id);
     await this.lagre();
+    await this.glemInvitasjon(b.id);
     // ny nøkkel ⇒ gamle tilkoblinger for samme id kastes
     for (const ws of this.ctx.getWebSockets(b.id)) {
       try {
@@ -647,10 +655,66 @@ export class Sted extends DurableObject {
     return json({ sted: d.id, stedNavn: d.navn, noekkel });
   }
 
+  // --- automatisk innmelding: enheter den aktive hovedenheten ser på LAN-et, men som ikke er med i stedet ---
+  // Skyen lager en vanlig koblingskode og ber hovedenheten levere den til enheten på LAN-et («inviter»). Enheten
+  // melder seg så inn selv med /enhet/kobl og får egen nøkkel og egen forbindelse. Enheter brukeren har fjernet
+  // («utelatt») inviteres ikke, og en enhet som ikke svarer får stadig lengre pause mellom forsøkene.
+  async inviterNye(ws, a) {
+    const d = this.data;
+    if (!d || d.autoLegg === false || !Array.isArray(a.lan) || !a.lan.length) return;
+    if (this.velgAktiv(this.tilkoblet()) !== a.id) return; // bare én enhet inviterer, ellers får hver nabo flere koder
+    const kjent = new Set(d.enheter.map((e) => e.id));
+    const utelatt = new Set(d.utelatt || []);
+    const logg = (await this.ctx.storage.get("invitert")) || {};
+    const naa = Date.now();
+    let sendt = 0;
+    let endret = false;
+    for (const id of Object.keys(logg)) {
+      if (kjent.has(id) || naa - logg[id].t > 2 * INVITER_MAKS_PAUSE_MS) {
+        delete logg[id];
+        endret = true;
+      }
+    }
+    for (const p of a.lan) {
+      const id = String(p?.id || "");
+      if (!id || id.length > 64 || kjent.has(id) || utelatt.has(id)) continue;
+      const f = logg[id];
+      if (f && naa - f.t < Math.min(INVITER_MAKS_PAUSE_MS, INVITER_PAUSE_MS * 2 ** (f.n - 1))) continue;
+      if (sendt >= INVITER_PER_RUNDE) break;
+      const r = await this.nyKode();
+      if (r.status !== 201) break;
+      const { kode } = await r.json();
+      logg[id] = { t: naa, n: Math.min(20, (f?.n || 0) + 1) };
+      endret = true;
+      sendt++;
+      this.send(ws, { t: "inviter", til: id, kode });
+    }
+    if (endret) await this.ctx.storage.put("invitert", logg);
+  }
+
+  async inviterFraAktiv() {
+    const d = this.data;
+    if (!d || d.autoLegg === false) return;
+    const aktiv = this.velgAktiv(this.tilkoblet());
+    if (!aktiv) return;
+    const ws = this.ctx.getWebSockets(aktiv)[0];
+    const a = ws && ws.deserializeAttachment();
+    if (a) await this.inviterNye(ws, a);
+  }
+
+  async glemInvitasjon(id) {
+    const logg = await this.ctx.storage.get("invitert");
+    if (logg && logg[id]) {
+      delete logg[id];
+      await this.ctx.storage.put("invitert", logg);
+    }
+  }
+
   async fjernEnhet(id) {
     const d = this.data;
     if (!d.enheter.some((e) => e.id === id)) return feil(404, "ukjent enhet");
     d.enheter = d.enheter.filter((e) => e.id !== id);
+    d.utelatt = [...new Set([...(d.utelatt || []), id])].slice(-100); // fjernet av brukeren ⇒ meldes ikke inn automatisk igjen
     if (d.hoved === id) d.hoved = d.enheter[0]?.id ?? null;
     d.reserve = d.reserve.filter((x) => x !== id && x !== d.hoved);
     await this.lagre();
@@ -711,6 +775,8 @@ export class Sted extends DurableObject {
         Object.assign(e, { navn: a.navn || e.navn, produkt: a.produkt || e.produkt, versjon: a.versjon });
         await this.lagre();
       }
+      ws.serializeAttachment(a);
+      await this.inviterNye(ws, a);
     } else if (m.t === "res") {
       const v = this.ventende.get(m.rid);
       if (v) {
@@ -775,6 +841,7 @@ export class Sted extends DurableObject {
       else this.skrivStrom(rid, ": ka\n\n");
     }
     if (!endret) await this.valg(null, null);
+    await this.inviterFraAktiv();
     if (this.sokler().length || this.strommer.size) await this.ctx.storage.setAlarm(Date.now() + ALARM_MS);
   }
 

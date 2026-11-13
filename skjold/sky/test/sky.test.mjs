@@ -273,3 +273,67 @@ test("uten Access-oppsett og uten DEV_INSECURE avvises alt", async () => {
     await m3.dispose();
   }
 });
+
+test("automatisk innmelding: aktiv hovedenhet får «inviter» for ukjente LAN-enheter, og koden melder dem inn", async () => {
+  const sted = await nyttSted();
+  const hub = new FalskEnhet(mf, "auto-hub", {
+    lan: [
+      { id: "auto-node", navn: "Kjøkken", ip: "192.168.1.50", port: 8765, produkt: "node" },
+      { id: "auto-hub", navn: "Seg selv", ip: "192.168.1.2", port: 8765, produkt: "core" },
+    ],
+  });
+  await hub.kobl(sted);
+  await hub.koblTil();
+  const inv = await hub.vent((m) => m.t === "inviter");
+  assert.equal(inv.til, "auto-node");
+  assert.match(inv.kode, /^[A-Z2-9]{6}$/);
+  await vent(50);
+  assert.equal(hub.meldinger.filter((m) => m.t === "inviter").length, 1, "én kode per enhet, og ingen til enheter som alt er med");
+  // enheten på LAN-et bruker koden og blir en vanlig enhet i stedet
+  const r = await mf.dispatchFetch(B + "/enhet/kobl", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kode: inv.kode, id: "auto-node", navn: "Kjøkken", produkt: "node" }),
+  });
+  assert.equal(r.status, 200);
+  const liste = await api(mf, "GET", `/api/hjem/steder/${sted}/enheter`);
+  assert.deepEqual(liste.data.map((e) => e.id).sort(), ["auto-hub", "auto-node"]);
+  hub.lukk();
+});
+
+test("automatisk innmelding: av for stedet, og fjernede enheter meldes ikke inn igjen", async () => {
+  const sted = await nyttSted();
+  const av = await api(mf, "PATCH", `/api/hjem/steder/${sted}`, "eier@test.no", { autoLegg: false });
+  assert.equal(av.data.autoLegg, false);
+  const lan = [{ id: "nabo-1", navn: "Bad", ip: "192.168.1.60", port: 8765, produkt: "node" }];
+  const hub = new FalskEnhet(mf, "av-hub", { lan });
+  await hub.kobl(sted);
+  await hub.koblTil();
+  await hub.ventRolle("av-hub");
+  await vent(150);
+  assert.equal(hub.meldinger.filter((m) => m.t === "inviter").length, 0, "ingen invitasjon når det er slått av");
+  hub.lukk();
+
+  // slått på igjen: nabo-1 meldes inn, fjernes av brukeren, og inviteres ikke på nytt
+  const paa = await api(mf, "PATCH", `/api/hjem/steder/${sted}`, "eier@test.no", { autoLegg: true });
+  assert.equal(paa.data.autoLegg, true);
+  const hub2 = new FalskEnhet(mf, "av-hub", { lan });
+  hub2.noekkel = hub.noekkel;
+  await hub2.koblTil();
+  const inv = await hub2.vent((m) => m.t === "inviter");
+  await mf.dispatchFetch(B + "/enhet/kobl", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kode: inv.kode, id: "nabo-1", navn: "Bad", produkt: "node" }),
+  });
+  const fjern = await api(mf, "DELETE", `/api/hjem/steder/${sted}/enheter/nabo-1`);
+  assert.equal(fjern.status, 200);
+  hub2.lukk();
+  const hub3 = new FalskEnhet(mf, "av-hub", { lan });
+  hub3.noekkel = hub.noekkel;
+  await hub3.koblTil();
+  await hub3.ventRolle("av-hub");
+  await vent(150);
+  assert.equal(hub3.meldinger.filter((m) => m.t === "inviter").length, 0, "fjernet enhet inviteres ikke igjen");
+  hub3.lukk();
+});

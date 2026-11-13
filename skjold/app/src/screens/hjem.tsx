@@ -144,6 +144,11 @@ function StedKort({ s, open, onToggle }: { s: Sted; open: boolean; onToggle: () 
             );
           })}
         </div>
+        {(() => { const auto = s.autoLegg !== false; return (
+          <button disabled={busy} role="switch" aria-checked={auto} data-testid="auto-legg" onClick={() => void run(() => hjem.endreSted(s.id, { autoLegg: !auto }), auto ? 'Nye enheter legges ikke til automatisk' : 'Nye enheter legges til automatisk')} style="display:flex;align-items:center;gap:12px;border:none;background:none;padding:2px 0;cursor:pointer;text-align:left;color:#f2f2ee">
+            <span style={`position:relative;width:44px;height:26px;flex-shrink:0;border-radius:13px;background:${auto ? A : '#2a2a2c'};transition:background .2s ease`}><span style={`position:absolute;top:3px;left:${auto ? 21 : 3}px;width:20px;height:20px;border-radius:50%;background:#f2f2ee;transition:left .2s ease`} /></span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px">Legg til nye enheter automatisk</span><span style="font-size:12px;color:#8b8b86;line-height:1.4">Skjold-enheter på samme nett som en enhet i stedet blir med av seg selv, så du når dem overalt. Enheter du fjerner, legges ikke til igjen.</span></span>
+          </button>); })()}
         {kode ? (
           <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;border-radius:12px;border:1px solid #5a4420;background:#1c170d" data-testid="kobling-kode">
             <span style={`${MONO};font-size:40px;font-weight:500;letter-spacing:.18em;color:#f0c46a`}>{kode.kode}</span>

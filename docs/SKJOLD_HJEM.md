@@ -94,3 +94,21 @@ Disse utfyller tabellene over; ingen stier eller meldingstyper er endret.
   4004 ny tilkobling for samme id.
 - **`/api/sky`** (enheten) svarer også `url`, `id` og `feil` (siste tilkoblingsfeil). `POST {kode, url?}` – `url`
   overstyrer `KI_AMP_SKY_URL` (test). `/api/status` har `sky: {koblet, sted, erAktivHoved}`.
+
+## Automatisk innmelding av enheter på samme nett
+Målet er at en enhet som først er med i et sted, alltid kan nås fra `https://hjem.skjold-lab.com`, og at du bare trenger
+å taste kode på **den første** enheten i hvert hjem.
+
+- Den aktive hovedenheten melder LAN-lista si til skyen i `hei`. For hver Skjold-enhet der som ikke er med i stedet,
+  lager skyen en vanlig koblingskode og sender `{"t":"inviter","til":"<id>","kode":"K7Q2XM"}` til hovedenheten.
+- Hovedenheten leser `GET /api/sky` på enheten (bare adresser mDNS har funnet). Er enheten ledig, sender den
+  `POST /api/sky {"kode","auto":true,"url"}`. Enheten melder seg så inn selv med `/enhet/kobl` og får **egen nøkkel og
+  egen forbindelse** til skyen. Den er dermed ikke avhengig av at hovedenheten er på.
+- En enhet som alt er med i et sted, blir aldri flyttet: hovedenheten sender ikke koden, og enheten selv svarer `409` på
+  `auto`. En kode du taster inn selv, flytter fortsatt enheten.
+- Fjerner du en enhet fra stedet, huskes den som `utelatt` og meldes ikke inn igjen. Taster du kode på den, er den med igjen.
+- En enhet som ikke tar imot koden, prøves på nytt med økende pause: 10 min, 20 min, 40 min … opp til et døgn.
+  Høyst tre invitasjoner per runde (`hei` og hvert 30. s).
+- Slå av per sted: `PATCH /api/hjem/steder/{sted} {"autoLegg": false}` (bryteren «Legg til nye enheter automatisk» i
+  web-UI-et). `GET …/steder` har feltet `autoLegg`. Slå av på én enhet: `KI_AMP_SKY_AUTO=0`.
+- Koden går ukryptert over LAN-et fra hovedenheten til enheten. Den virker én gang og i ti minutter.
