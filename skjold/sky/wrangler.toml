@@ -5,13 +5,11 @@ compatibility_date = "2025-09-01"
 workers_dev = true
 keep_vars = true
 
-# Egen adresse: legg til ruten under når sonen skjold-lab.com ligger i samme Cloudflare-konto.
-# Fjern «#» foran linjene (custom_domain = true lager DNS-posten automatisk), eller legg ruten til i dashbordet:
-# Workers & Pages → skjold-hjem → Settings → Domains & Routes.
-# routes = [
-#   { pattern = "hjem.skjold-lab.com", custom_domain = true }
-# ]
-# (alternativt: { pattern = "hjem.skjold-lab.com/*", zone_name = "skjold-lab.com" })
+# Egen adresse. custom_domain = true lager DNS-posten og sertifikatet automatisk (sonen skjold-lab.com ligger i samme
+# Cloudflare-konto). API-tokenet i GitHub trenger «Workers Routes: Edit» for sonen.
+routes = [
+  { pattern = "hjem.skjold-lab.com", custom_domain = true }
+]
 
 # Web-UI-et (skjold/app) bygges i CI før deploy og legges ut som statiske filer.
 # Worker-koden kjøres først for /api/* og /enhet/*; alt annet hentes fra ASSETS (SPA-fallback til index.html).

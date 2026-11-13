@@ -30,8 +30,7 @@ programvare bruker fortsatt den adressen, så la den stå til alt er oppdatert. 
 ekstra domene på Workeren, og som et ekstra domene i de **samme** to Access-applikasjonene (ikke lag nye). Da er
 AUD-taggen den samme, og `ACCESS_AUD` trenger ikke endres.
 
-1. **Adresse**: Workers & Pages → `skjold-hjem` → Settings → Domains & Routes → *Add Custom Domain*
-   `hjem.skjold-lab.com` (eller fjern `#` foran `routes` i `wrangler.toml`).
+1. **Adresse**: `hjem.skjold-lab.com` står som `routes` i `wrangler.toml` og lages automatisk ved utlegging.
 2. **Cloudflare Access** (Zero Trust → Access → Applications → *Add an application* → *Self-hosted*):
    - Applikasjon «Skjold-hjem»: domene `hjem.skjold-lab.com`, sti tom (hele nettstedet), policy
      *Allow* for e-postene/gruppa som skal ha tilgang (f.eks. «Emails ending in» eller en liste). Innlogging med
