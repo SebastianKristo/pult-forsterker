@@ -9,7 +9,7 @@ Røst kjører **squeezelite-esp32** for ESP32-S3 ([sle118/squeezelite-esp32](htt
 
 ## Installer
 
-**I nettleseren (enklest):** åpne <https://skjold.smarthjemexperten.no/flasher/rost/> i Chrome eller Edge, koble kortet til med USB-C og trykk **Installer på Skjold Røst**.
+**I nettleseren (enklest):** åpne <https://skjold-lab.com/flasher/rost/> i Chrome eller Edge, koble kortet til med USB-C og trykk **Installer på Skjold Røst**.
 
 **Med kommandolinjen:**
 

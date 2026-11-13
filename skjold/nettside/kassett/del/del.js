@@ -1,4 +1,4 @@
-// Delingslenke: https://skjold.smarthjemexperten.no/kassett/del#<kode> → åpne skjold://kassett/del?d=<kode> i appen.
+// Delingslenke: https://skjold-lab.com/kassett/del#<kode> → åpne skjold://kassett/del?d=<kode> i appen.
 (function () {
   var kode = decodeURIComponent((location.hash || '').replace(/^#/, '')).trim();
   var ok = /^[A-Za-z0-9_.-]{8,20000}$/.test(kode);

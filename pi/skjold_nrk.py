@@ -17,7 +17,7 @@ import urllib.parse
 import urllib.request
 
 API = os.environ.get("KI_AMP_NRK_API", "https://psapi.nrk.no")
-UA = "Skjold/1.0 (+https://skjold.smarthjemexperten.no)"
+UA = "Skjold/1.0 (+https://skjold-lab.com)"
 HEARD = 0.95
 
 

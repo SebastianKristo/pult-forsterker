@@ -7,7 +7,7 @@ Forsterkere, spillere og høyttalere som spiller sammen, styrt fra én app.<br>
 Åpen programvare. Tegnet og bygget i Norge av Skjold Lab.</p>
 
 <p align="center">
-<a href="https://skjold.smarthjemexperten.no/">Nettside</a> ·
+<a href="https://skjold-lab.com/">Nettside</a> ·
 <a href="https://github.com/SebastianKristo/pult-forsterker/releases/latest">Last ned</a> ·
 <a href="docs/TOTALINSTRUKS.md">Kom i gang</a> ·
 <a href="docs/api/intro.md">API</a>
@@ -22,12 +22,12 @@ dukker opp i samme app. Spill det samme i hele huset, eller noe forskjellig i hv
 
 | | Hva | Bygget på |
 |---|---|---|
-| **[Skjold S1](https://skjold.smarthjemexperten.no/s1/)** | Streamingforsterker for skrivebordet. 2 × 50 W, 4,58″ skjerm, USB-bryter for to PC-er. | Raspberry Pi 4, TPA3116D2 |
-| **[Skjold Node](https://skjold.smarthjemexperten.no/node/)** | Liten nettverksspiller for rom som allerede har forsterker. | Raspberry Pi 4 eller 3B |
-| **[Skjold Touch](https://skjold.smarthjemexperten.no/touch/)** | Spiller med 7″ berøringsskjerm. | Raspberry Pi 4, PCM5122 |
-| **[Skjold Røst](https://skjold.smarthjemexperten.no/rost/)** | Aktiv høyttaler med grill hele veien rundt, skjerm og volumknott. | ESP32-S3 |
-| **[Skjold Stav](https://skjold.smarthjemexperten.no/stav/)** | Fjernkontroll med 2,8″ berøringsskjerm, IR og ladedokk. | ESP32 (ESPHome) |
-| **[Skjold Core](https://skjold.smarthjemexperten.no/core/)** | Bare programvaren, på en Raspberry Pi du allerede har. | Raspberry Pi 4 eller 3B |
+| **[Skjold S1](https://skjold-lab.com/s1/)** | Streamingforsterker for skrivebordet. 2 × 50 W, 4,58″ skjerm, USB-bryter for to PC-er. | Raspberry Pi 4, TPA3116D2 |
+| **[Skjold Node](https://skjold-lab.com/node/)** | Liten nettverksspiller for rom som allerede har forsterker. | Raspberry Pi 4 eller 3B |
+| **[Skjold Touch](https://skjold-lab.com/touch/)** | Spiller med 7″ berøringsskjerm. | Raspberry Pi 4, PCM5122 |
+| **[Skjold Røst](https://skjold-lab.com/rost/)** | Aktiv høyttaler med grill hele veien rundt, skjerm og volumknott. | ESP32-S3 |
+| **[Skjold Stav](https://skjold-lab.com/stav/)** | Fjernkontroll med 2,8″ berøringsskjerm, IR og ladedokk. | ESP32 (ESPHome) |
+| **[Skjold Core](https://skjold-lab.com/core/)** | Bare programvaren, på en Raspberry Pi du allerede har. | Raspberry Pi 4 eller 3B |
 | **Kassett, Hjul, Radio, Sans** | NFC-kassettspiller, dreieknapp-fjernkontroll, kjøkkenradio og romsensor. | ESP32 / Raspberry Pi |
 
 ## Dette kan den

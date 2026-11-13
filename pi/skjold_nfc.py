@@ -320,7 +320,7 @@ def kassett_stats(cards: dict, logg: list, periode: str = "år", glemt_uker: int
 
 # ---------- Del en kassett: kompakt delingskode (QR/lenke) ----------
 DEL_SKJEMA = "skjold://kassett/del?d="
-DEL_WEB = "https://skjold.smarthjemexperten.no/kassett/del#"
+DEL_WEB = "https://skjold-lab.com/kassett/del#"
 DELBAR = ("album", "play_url", "nrk", "ma_uri", "navidrome_album")
 
 

@@ -66,6 +66,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="skjold-lab.com" android:pathPrefix="/kassett/del" />
+                <!-- Det gamle domenet: lenker som allerede er delt skal fortsatt åpne appen -->
                 <data android:scheme="https" android:host="skjold.smarthjemexperten.no" android:pathPrefix="/kassett/del" />
             </intent-filter>
         </activity>
