@@ -533,3 +533,6 @@ a.produkt:hover .mer,a.kort:hover .mer{transform:translateX(4px)}
 .flis-logoer img{display:block;width:34px;height:34px}
 .merke{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;vertical-align:bottom}
 .merke img{display:block;width:18px;height:18px;flex:none}
+
+/* Gullstolpen: den midterste stolpen i logoen har samme gull som app-ikonet */
+.logo-stolper i:nth-child(3),.stor-logo i:nth-child(3){background:#d9a441}
