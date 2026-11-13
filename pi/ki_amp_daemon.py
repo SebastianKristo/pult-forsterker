@@ -1465,7 +1465,7 @@ def update_settings(patch):
     apply_settings(set(patch)); changed()
 
 
-# ---------- fjernstyring (Cloudflare Tunnel) – web-UI-et på denne enheten via f.eks. skjold-styring.smarthjemexperten.no ----------
+# ---------- fjernstyring (Cloudflare Tunnel) – web-UI-et på denne enheten via f.eks. styring.skjold-lab.com ----------
 # Enheten der fjernstyring slås på er «master»: tunnelen går hit. Tokenet lagres bare i REMOTE_FILE (0600), aldri i status.
 REMOTE_FILE = os.path.join(os.path.dirname(STATE_FILE), "remote.json")
 _remote_job = {"busy": False, "log": ""}
@@ -6697,7 +6697,7 @@ def _local_ip():
 # på 127.0.0.1, eller – når denne enheten er aktiv hovedenhet og «til» er en annen enhet – mot den enheten på LAN-et
 # (funnet via mDNS). Nøkkelen ligger bare i sky.json (0600) og vises aldri i API-et.
 SKY_FILE = os.environ.get("KI_AMP_SKY_FILE", os.path.join(os.path.dirname(STATE_FILE), "sky.json"))
-SKY_URL = os.environ.get("KI_AMP_SKY_URL", "https://skjold-styring.smarthjemexperten.no").rstrip("/")
+SKY_URL = os.environ.get("KI_AMP_SKY_URL", "https://hjem.skjold-lab.com").rstrip("/")
 SKY_PING_S = 20          # ping hvert 20. s (skyen kobler fra etter 45 s uten livstegn)
 SKY_STILLE_S = 60        # ingen melding fra skyen på så lenge ⇒ ny tilkobling
 SKY_MAX_BODY = 700_000   # Cloudflare tillater 1 MiB per WebSocket-melding; base64 gir +33 %

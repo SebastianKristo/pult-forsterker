@@ -506,7 +506,7 @@ const RSTEPS = ['Hva du får', 'Lag tunnel', 'Lim inn token', 'Offentlig adresse
 
 function RemotePanel() {
   const [st, setSt] = useState<RemoteStatus | null>(null);
-  const [host, setHost] = useState('skjold-styring.smarthjemexperten.no');
+  const [host, setHost] = useState('styring.skjold-lab.com');
   const [raw, setRaw] = useState('');
   const [err, setErr] = useState('');
   const [step, setStep] = useState(-1);          // -1 = oversikt, 0–5 = veiviser

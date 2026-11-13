@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Skjold – fjernstyring via Cloudflare Tunnel (f.eks. https://skjold-styring.smarthjemexperten.no)
+# Skjold – fjernstyring via Cloudflare Tunnel (f.eks. https://styring.skjold-lab.com)
 #   sudo bash pi/install_fjernstyring.sh <TUNNEL-TOKEN>
 # Tokenet får du når du lager tunnelen i Cloudflare Zero Trust (se docs/FJERNSTYRING.md). Ingen porter åpnes i ruteren:
 # cloudflared kobler seg UT til Cloudflare, og Cloudflare sender trafikken for vertsnavnet inn til http://localhost:8765.
@@ -18,5 +18,5 @@ cloudflared service uninstall >/dev/null 2>&1 || true
 cloudflared service install "$TOKEN"
 systemctl enable --now cloudflared
 sleep 3
-systemctl is-active --quiet cloudflared && echo "Fjernstyring klar: åpne vertsnavnet du satte opp i Cloudflare (f.eks. https://skjold-styring.smarthjemexperten.no)" \
+systemctl is-active --quiet cloudflared && echo "Fjernstyring klar: åpne vertsnavnet du satte opp i Cloudflare (f.eks. https://styring.skjold-lab.com)" \
   || { echo "cloudflared startet ikke – se: journalctl -u cloudflared -n 50"; exit 1; }

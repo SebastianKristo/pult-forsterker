@@ -6,7 +6,9 @@ import { signal } from '@preact/signals';
 import { ApiError, getBase, isAccessBlock, isNative, isRelayBase, probe, setBase } from './api';
 import { loadSettings, reconnect } from './store';
 
-export const SKY_DEFAULT = 'https://skjold-styring.smarthjemexperten.no';
+export const SKY_DEFAULT = 'https://hjem.skjold-lab.com';
+/** Adressen skyen hadde før skjold-lab.com. Web-UI-et som åpnes derfra skal fortsatt virke. */
+const SKY_GAMMEL = 'https://skjold-styring.smarthjemexperten.no';
 const SKY_KEY = 'skjold-sky-url', STED_KEY = 'skjold-sted', LAN_KEY = 'skjold-lan-host', PICK_KEY = 'skjold-sted-enhet:';
 
 export interface Sted { id: string; navn: string; rolle: 'eier' | 'medlem'; enheter: number; online: number | boolean; hoved?: string; reserve?: string[] }
@@ -136,7 +138,7 @@ let started = false;
 export async function startHjem(): Promise<void> {
   if (started) return; started = true;
   if (!isNative && location.protocol.startsWith('http')) {
-    if (location.origin === SKY_DEFAULT || location.origin === skyUrl()) sameOrigin.value = true;
+    if (location.origin === SKY_DEFAULT || location.origin === SKY_GAMMEL || location.origin === skyUrl()) sameOrigin.value = true;
     else {
       try {   // en enhet svarer 404 her; skyen (eller lokal test) svarer med en JSON-liste
         const r = await fetch('/api/hjem/steder', { cache: 'no-store', redirect: 'manual' });
