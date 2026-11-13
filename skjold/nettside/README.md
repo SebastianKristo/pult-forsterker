@@ -24,7 +24,8 @@ Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/d
 | `functions/api/interesse.js` | Pages Function: `POST`/`GET /api/interesse` |
 | `admin/`, `functions/api/admin/[[path]].js` | Visuell editor og API-et bak den (se «Redigere nettsiden») |
 | `_headers`, `_redirects` | Sikkerhetshoder, caching og omdirigering fra de gamle `.dc.html`-navnene |
-| `sitemap.xml`, `robots.txt`, `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` | |
+| `sitemap.xml`, `robots.txt` | |
+| `favicon.ico`, `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `site.webmanifest` | Ikonet i nettleserfanen, på hjemskjermen og i søkeresultater. Alle er tegnet fra `favicon.svg` |
 
 Nav og bunntekst står i hver side. Produktene ligger i nedtrekksmenyen «Produkter» (`.nav-gruppe`); uten JS og på smale skjermer vises de flatt i menyen. Endrer du menyen, må den endres i alle `index.html`-filene (også under `en/`) og i `404.html`.
 
