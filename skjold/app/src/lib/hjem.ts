@@ -11,7 +11,7 @@ export const SKY_DEFAULT = 'https://hjem.skjold-lab.com';
 const SKY_GAMMEL = 'https://skjold-styring.smarthjemexperten.no';
 const SKY_KEY = 'skjold-sky-url', STED_KEY = 'skjold-sted', LAN_KEY = 'skjold-lan-host', PICK_KEY = 'skjold-sted-enhet:';
 
-export interface Sted { id: string; navn: string; rolle: 'eier' | 'medlem'; enheter: number; online: number | boolean; hoved?: string; reserve?: string[] }
+export interface Sted { id: string; navn: string; rolle: 'eier' | 'medlem'; enheter: number; online: number | boolean; hoved?: string; reserve?: string[]; autoLegg?: boolean }
 export interface Enhet {
   id: string; navn: string; produkt: string; rom?: string; online: boolean; aktivHoved: boolean; hoved: boolean;
   reserveNr: number | null; lan?: unknown; sist?: number;
@@ -71,7 +71,7 @@ const body = (method: string, b?: unknown): RequestInit => ({ method, ...(b !== 
 export const hjem = {
   steder: () => hj<Sted[]>('/api/hjem/steder'),
   nyttSted: (navn: string) => hj<Sted>('/api/hjem/steder', body('POST', { navn })),
-  endreSted: (id: string, p: { navn?: string; hoved?: string; reserve?: string[] }) => hj<Sted>('/api/hjem/steder/' + enc(id), body('PATCH', p)),
+  endreSted: (id: string, p: { navn?: string; hoved?: string; reserve?: string[]; autoLegg?: boolean }) => hj<Sted>('/api/hjem/steder/' + enc(id), body('PATCH', p)),
   slettSted: (id: string) => hj<unknown>('/api/hjem/steder/' + enc(id), body('DELETE')),
   enheter: (id: string) => hj<Enhet[]>('/api/hjem/steder/' + enc(id) + '/enheter'),
   kobling: (id: string) => hj<{ kode: string; utloper: number | string }>('/api/hjem/steder/' + enc(id) + '/kobling', body('POST', {})),

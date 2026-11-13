@@ -6698,6 +6698,7 @@ def _local_ip():
 # (funnet via mDNS). Nøkkelen ligger bare i sky.json (0600) og vises aldri i API-et.
 SKY_FILE = os.environ.get("KI_AMP_SKY_FILE", os.path.join(os.path.dirname(STATE_FILE), "sky.json"))
 SKY_URL = os.environ.get("KI_AMP_SKY_URL", "https://hjem.skjold-lab.com").rstrip("/")
+SKY_AUTO = os.environ.get("KI_AMP_SKY_AUTO", "1") != "0"   # la en enhet på samme nett melde denne inn i sitt sted
 SKY_PING_S = 20          # ping hvert 20. s (skyen kobler fra etter 45 s uten livstegn)
 SKY_STILLE_S = 60        # ingen melding fra skyen på så lenge ⇒ ny tilkobling
 SKY_MAX_BODY = 700_000   # Cloudflare tillater 1 MiB per WebSocket-melding; base64 gir +33 %
@@ -6963,6 +6964,33 @@ class Sky:
             task = self._subs.pop(m.get("rid"), None)
             if task:
                 task.cancel()
+        elif t == "inviter":
+            asyncio.create_task(self._inviter(m))
+
+    async def _inviter(self, m):
+        """Skyen ber oss levere en koblingskode til en Skjold-enhet på LAN-et som ikke er med i stedet ennå.
+        Enheten melder seg så inn selv. Vi rører ikke enheter som alt er koblet til et sted (heller ikke eldre
+        programvare som ikke kjenner «auto»), og bare enheter mDNS har funnet."""
+        import aiohttp
+        til, kode = str(m.get("til") or ""), str(m.get("kode") or "")
+        base = self._maal(til)
+        if not base or base == self.local or not re.fullmatch(r"[A-Z0-9]{6}", kode):
+            return False
+        try:
+            async with self.http().get(base + "/api/sky", timeout=aiohttp.ClientTimeout(total=6)) as r:
+                st = await r.json(content_type=None) if r.status == 200 else None
+            if not isinstance(st, dict) or st.get("koblet"):
+                return False
+            async with self.http().post(base + "/api/sky", json={"kode": kode, "auto": True, "url": self.cfg.get("url")},
+                                        timeout=aiohttp.ClientTimeout(total=25)) as r:
+                ok = r.status == 200
+            print(f"sky: {'meldte inn' if ok else 'fikk ikke meldt inn'} {til} i stedet", flush=True)
+            return ok
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            print(f"sky: nådde ikke {til} for innmelding: {e}", flush=True)
+            return False
 
     def _hei(self):
         i = self.info()
@@ -7097,6 +7125,11 @@ async def h_sky_post(r):
         if b.get("koble_fra"):
             return web.json_response(sky.koble_fra())
         if b.get("kode"):
+            # «auto»: en annen Skjold-enhet på nettet melder oss inn i sitt sted. Det skjer bare når vi ikke er med i
+            # noe sted fra før, og kan slås av med KI_AMP_SKY_AUTO=0. En kode du taster selv går alltid gjennom.
+            if b.get("auto") and (sky.cfg or not SKY_AUTO):
+                grunn = "enheten er allerede koblet til et sted" if sky.cfg else "automatisk innmelding er slått av"
+                return web.json_response({"error": grunn, "feil": grunn, **sky.status()}, status=409)
             return web.json_response(await sky.kobl(b["kode"], b.get("url")))
     except SkyFeil as e:
         return web.json_response({"error": str(e), "feil": str(e), **sky.status()}, status=e.status)

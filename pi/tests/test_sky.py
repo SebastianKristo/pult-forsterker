@@ -101,6 +101,125 @@ async def falsk_enhet(navn):
     return runner, port
 
 
+
+async def falsk_nabo(koblet, mottatt, status=200):
+    """En Skjold-enhet på LAN-et sett fra hovedenheten: GET /api/sky sier om den er med i et sted, POST tar imot koden."""
+    async def hent(_r):
+        return web.json_response({"koblet": koblet})
+
+    async def post(r):
+        mottatt.append(await r.json())
+        return web.json_response({"koblet": True}, status=status)
+    app = web.Application()
+    app.add_routes([web.get("/api/sky", hent), web.post("/api/sky", post)])
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "127.0.0.1", 0)
+    await site.start()
+    return runner, site._server.sockets[0].getsockname()[1]
+
+
+class TestAutomatiskInnmelding(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.runners, self.skyer = [], []
+
+    async def asyncTearDown(self):
+        for s in self.skyer:
+            await s.close()
+        for r in self.runners:
+            await r.cleanup()
+
+    def hoved(self, peers):
+        sti = os.path.join(tempfile.mkdtemp(), "sky.json")
+        s = d.Sky(path=sti, lan=FalskLan(peers), ident="pi-a", local="http://127.0.0.1:1")
+        s.cfg = {"url": "https://hjem.test", "sted": "st_x", "id": "pi-a", "noekkel": "st_x." + "0" * 64}
+        self.skyer.append(s)
+        return s
+
+    async def test_leverer_koden_til_enhet_som_ikke_er_med(self):
+        mottatt = []
+        r, port = await falsk_nabo(False, mottatt)
+        self.runners.append(r)
+        s = self.hoved({"nabo": {"id": "nabo", "ip": "127.0.0.1", "port": port}})
+        self.assertTrue(await s._inviter({"t": "inviter", "til": "nabo", "kode": "K7Q2XM"}))
+        self.assertEqual(mottatt, [{"kode": "K7Q2XM", "auto": True, "url": "https://hjem.test"}])
+
+    async def test_rorer_ikke_enhet_som_alt_er_med_i_et_sted(self):
+        mottatt = []
+        r, port = await falsk_nabo(True, mottatt)
+        self.runners.append(r)
+        s = self.hoved({"nabo": {"id": "nabo", "ip": "127.0.0.1", "port": port}})
+        self.assertFalse(await s._inviter({"t": "inviter", "til": "nabo", "kode": "K7Q2XM"}))
+        self.assertEqual(mottatt, [])
+
+    async def test_bare_enheter_funnet_paa_lan_og_gyldig_kode(self):
+        mottatt = []
+        r, port = await falsk_nabo(False, mottatt)
+        self.runners.append(r)
+        s = self.hoved({"nabo": {"id": "nabo", "ip": "127.0.0.1", "port": port}})
+        self.assertFalse(await s._inviter({"t": "inviter", "til": "ukjent", "kode": "K7Q2XM"}))
+        self.assertFalse(await s._inviter({"t": "inviter", "til": "nabo", "kode": "../x"}))
+        self.assertFalse(await s._inviter({"t": "inviter", "til": "pi-a", "kode": "K7Q2XM"}))   # aldri oss selv
+        self.assertEqual(mottatt, [])
+
+    async def test_nabo_som_ikke_svarer_eller_avslaar(self):
+        s = self.hoved({"dod": {"id": "dod", "ip": "127.0.0.1", "port": 9}})
+        self.assertFalse(await s._inviter({"t": "inviter", "til": "dod", "kode": "K7Q2XM"}))
+        mottatt = []
+        r, port = await falsk_nabo(False, mottatt, status=409)
+        self.runners.append(r)
+        s2 = self.hoved({"nabo": {"id": "nabo", "ip": "127.0.0.1", "port": port}})
+        self.assertFalse(await s2._inviter({"t": "inviter", "til": "nabo", "kode": "K7Q2XM"}))
+
+
+class FalskForesporsel:
+    def __init__(self, kropp):
+        self._k = kropp
+
+    async def json(self):
+        return self._k
+
+
+class TestAutoPaaMottakeren(unittest.IsolatedAsyncioTestCase):
+    """POST /api/sky {kode, auto}: en annen enhet melder oss inn. Bare når vi ikke er med i noe sted fra før."""
+    async def asyncSetUp(self):
+        self.gammel, self.gammel_auto = d.sky, d.SKY_AUTO
+        self.kall = []
+
+        class Sky:
+            cfg = {}
+
+            def status(self_):
+                return {"koblet": bool(self_.cfg)}
+
+            async def kobl(self_, kode, url=None):
+                self.kall.append((kode, url))
+                return {"koblet": True}
+        d.sky = Sky()
+
+    async def asyncTearDown(self):
+        d.sky, d.SKY_AUTO = self.gammel, self.gammel_auto
+
+    async def test_ledig_enhet_tar_imot(self):
+        r = await d.h_sky_post(FalskForesporsel({"kode": "K7Q2XM", "auto": True, "url": "https://hjem.test"}))
+        self.assertEqual(r.status, 200)
+        self.assertEqual(self.kall, [("K7Q2XM", "https://hjem.test")])
+
+    async def test_koblet_enhet_avslaar_auto_men_ikke_egen_kode(self):
+        d.sky.cfg = {"sted": "st_annet"}
+        r = await d.h_sky_post(FalskForesporsel({"kode": "K7Q2XM", "auto": True}))
+        self.assertEqual(r.status, 409)
+        self.assertEqual(self.kall, [])
+        r = await d.h_sky_post(FalskForesporsel({"kode": "K7Q2XM"}))     # tastet inn av brukeren: flytter enheten
+        self.assertEqual(r.status, 200)
+
+    async def test_kan_slaas_av_paa_enheten(self):
+        d.SKY_AUTO = False
+        r = await d.h_sky_post(FalskForesporsel({"kode": "K7Q2XM", "auto": True}))
+        self.assertEqual(r.status, 409)
+        self.assertEqual(self.kall, [])
+
+
 HAR_MINIFLARE = shutil.which("node") and os.path.isdir(os.path.join(SKY_DIR, "node_modules", "miniflare"))
 
 
