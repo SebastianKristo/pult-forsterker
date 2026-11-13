@@ -74,7 +74,7 @@ sealed class HjemSvar {
 }
 
 object Hjem {
-    const val STANDARD = "https://skjold-styring.smarthjemexperten.no"
+    const val STANDARD = "https://hjem.skjold-lab.com"
     const val COOKIE = "CF_Authorization"
     private const val URL_KEY = "skjold-sky-url"
     private const val TOKEN_KEY = "skjold-sky-token"

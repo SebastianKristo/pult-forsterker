@@ -7,7 +7,7 @@ tilbake (automatisk tilbakefall).
 
 ## Deler
 1. **Sky** – Cloudflare Worker `skjold-hjem` (mappe `skjold/sky/`), én Durable Object per sted (`Sted`), D1/KV ikke nødvendig.
-   Adresse: `https://skjold-styring.smarthjemexperten.no` (Worker-rute). Brukerinnlogging: Cloudflare Access foran
+   Adresse: `https://hjem.skjold-lab.com` (Worker-rute). Brukerinnlogging: Cloudflare Access foran
    `/` og `/api/hjem/*` (Worker leser `Cf-Access-Authenticated-User-Email`; lokalt/test: header `X-Skjold-User`).
    Enheter går utenom Access på `/enhet/*` og autentiseres med egen enhetsnøkkel.
 2. **Enhet** – `pi/ki_amp_daemon.py`: modul «sky» som holder én WebSocket ut til skyen, svarer på relé-forespørsler mot sitt

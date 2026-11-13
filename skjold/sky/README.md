@@ -25,10 +25,15 @@ ruten ligger i wrangler.toml) og `CLOUDFLARE_ACCOUNT_ID`; uten dem hoppes jobben
 
 ## Oppsett i Cloudflare (én gang)
 
+**Bytte fra det gamle domenet.** Skyen lå før på `skjold-styring.smarthjemexperten.no`. Enheter og apper med eldre
+programvare bruker fortsatt den adressen, så la den stå til alt er oppdatert. Legg `hjem.skjold-lab.com` til som et
+ekstra domene på Workeren, og som et ekstra domene i de **samme** to Access-applikasjonene (ikke lag nye). Da er
+AUD-taggen den samme, og `ACCESS_AUD` trenger ikke endres.
+
 1. **Adresse**: Workers & Pages → `skjold-hjem` → Settings → Domains & Routes → *Add Custom Domain*
-   `skjold-styring.smarthjemexperten.no` (eller fjern `#` foran `routes` i `wrangler.toml`).
+   `hjem.skjold-lab.com` (eller fjern `#` foran `routes` i `wrangler.toml`).
 2. **Cloudflare Access** (Zero Trust → Access → Applications → *Add an application* → *Self-hosted*):
-   - Applikasjon «Skjold-hjem»: domene `skjold-styring.smarthjemexperten.no`, sti tom (hele nettstedet), policy
+   - Applikasjon «Skjold-hjem»: domene `hjem.skjold-lab.com`, sti tom (hele nettstedet), policy
      *Allow* for e-postene/gruppa som skal ha tilgang (f.eks. «Emails ending in» eller en liste). Innlogging med
      engangskode på e-post eller Google.
    - Applikasjon «Skjold-hjem enheter»: samme domene, sti `enhet/` (dekker `/enhet/*`), policy med handling **Bypass**

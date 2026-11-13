@@ -69,7 +69,7 @@ nonisolated enum HjemSvar: Sendable {
 }
 
 nonisolated enum HjemAPI {
-    static let standard = "https://skjold-styring.smarthjemexperten.no"
+    static let standard = "https://hjem.skjold-lab.com"
     static let cookieName = "CF_Authorization"
     private static let urlKey = "skjold-sky-url", tokenKey = "skjold-sky-token"
 
