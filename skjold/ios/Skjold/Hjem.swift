@@ -16,6 +16,8 @@ nonisolated struct HjemSted: Sendable, Hashable, Identifiable {
     var rolle: String
     var enheter: Int
     var online: Int
+    /// Skjold-enheter på samme nett som en enhet i stedet meldes inn av seg selv (standard på).
+    var autoLegg: Bool
 
     init?(_ o: [String: Any]) {
         guard let id = o["id"] as? String else { return nil }
@@ -24,6 +26,7 @@ nonisolated struct HjemSted: Sendable, Hashable, Identifiable {
         rolle = (o["rolle"] as? String) ?? "medlem"
         enheter = (o["enheter"] as? NSNumber)?.intValue ?? (o["enheter"] as? [Any])?.count ?? 0
         if let b = o["online"] as? Bool { online = b ? 1 : 0 } else { online = (o["online"] as? NSNumber)?.intValue ?? 0 }
+        autoLegg = (o["autoLegg"] as? Bool) ?? ((o["autoLegg"] as? NSNumber)?.boolValue ?? true)
     }
 }
 
@@ -471,6 +474,17 @@ private struct StedCard: View {
             }
         }
         .skBox(.bg, .line, radius: 12)
+
+        HStack(alignment: .top, spacing: 12) {
+            SKToggle(on: s.autoLegg) { run("PATCH", "", ["autoLegg": !s.autoLegg]) }
+                .accessibilityLabel("Legg til nye enheter automatisk")
+                .accessibilityValue(s.autoLegg ? "På" : "Av")
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Legg til nye enheter automatisk").sora(14)
+                Text("Skjold-enheter på samme nett som en enhet i stedet blir med av seg selv, så du når dem overalt. Enheter du fjerner, legges ikke til igjen.")
+                    .sora(12, .regular, .muted).fixedSize(horizontal: false, vertical: true)
+            }
+        }
 
         if let kode {
             VStack(spacing: 8) {

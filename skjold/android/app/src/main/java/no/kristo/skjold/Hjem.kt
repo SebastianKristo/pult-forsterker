@@ -58,7 +58,8 @@ import java.net.URLEncoder
 // Begrensning: Google-innlogging tillates ikke i WebView; bruk engangskode (e-post) eller en annen IdP i Access.
 // En Custom Tab deler ikke informasjonskapsler med appen og ville krevd et callback-endepunkt i Workeren.
 
-data class HjemSted(val id: String, val navn: String, val rolle: String, val enheter: Int, val online: Int)
+/** autoLegg: Skjold-enheter på samme nett som en enhet i stedet meldes inn av seg selv (standard på). */
+data class HjemSted(val id: String, val navn: String, val rolle: String, val enheter: Int, val online: Int, val autoLegg: Boolean = true)
 
 data class HjemEnhet(
     val id: String, val navn: String, val produkt: String, val rom: String, val online: Boolean,
@@ -138,7 +139,7 @@ object Hjem {
         val en = o.opt("enheter")
         val n = if (en is JSONArray) en.length() else o.num("enheter")
         val on = when (val v = o.opt("online")) { is Boolean -> if (v) 1 else 0; else -> o.num("online") }
-        return HjemSted(id, o.str("navn").ifEmpty { id }, o.str("rolle").ifEmpty { "medlem" }, n, on)
+        return HjemSted(id, o.str("navn").ifEmpty { id }, o.str("rolle").ifEmpty { "medlem" }, n, on, if (o.has("autoLegg")) o.bool("autoLegg") else true)
     }
 
     fun enhet(o: JSONObject): HjemEnhet? {
@@ -447,6 +448,13 @@ private fun StedCard(m: AppModel, s: HjemSted, open: Boolean, toggle: () -> Unit
                         }
                     }
                 }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+            SKToggle(s.autoLegg) { send("PATCH", "", mapOf("autoLegg" to !s.autoLegg)) }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                T("Legg til nye enheter automatisk", sora(14f))
+                T("Skjold-enheter på samme nett som en enhet i stedet blir med av seg selv, så du når dem overalt. Enheter du fjerner, legges ikke til igjen.", sora(12f, W.Regular, C.muted))
             }
         }
         val k = kode
