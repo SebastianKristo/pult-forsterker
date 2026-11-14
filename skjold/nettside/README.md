@@ -19,6 +19,7 @@ Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/d
 | `404.html` | Feilside på norsk og engelsk (Cloudflare Pages bruker den automatisk) |
 | `assets/skjold.css`, `assets/skjold.js` | Felles stil og oppførsel (reveal, zoom, bildesekvens, forsidens stolpeteppe og produktvelger, USB-demo, skjema) |
 | `assets/img/` | Renders som PNG/JPEG og WebP (`<picture>`), `og.jpg` for deling |
+| `assets/img/*-studio.jpg` | Studiobilder av S1, Touch, Røst og Stav (1344 × 752), laget med bildegenerering ut fra renderne. De brukes i toppen av produktsidene og i produktvelgeren på forsiden (`img.studio`). Småtekst på produktene kan avvike fra tegningene; Node har derfor fortsatt den vanlige renderen |
 | `assets/3d/skjold-touch.glb` | 3D-modellen av Touch (helsort, meter, Y opp), med skjermglass og skjermbildet fra renderen lagt inn som to flater |
 | `assets/vendor/model-viewer-4.1.0/` | Google `<model-viewer>` 4.1.0 (BSD-3-Clause, med `LICENSE`), lagt inn lokalt så CSP-en kan beholde `script-src 'self'` |
 | `functions/api/interesse.js` | Pages Function: `POST`/`GET /api/interesse` |

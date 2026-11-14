@@ -208,6 +208,9 @@ a:hover .mer{transform:translateX(5px)}
 .f-panel .bilde picture{display:contents}
 .f-panel img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
 .f-panel img.fri{filter:drop-shadow(0 34px 36px rgba(0,0,0,.6)) drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+/* Studiobilder (mørk bakgrunn): fyller toppen av panelet og tones ut mot teksten */
+.f-panel .bilde:has(img.studio){padding:0!important}
+.f-panel img.studio{width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;object-position:50% 22%;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
 .f-panel img.foto{border-radius:14px;box-shadow:0 30px 70px -30px #000}
 .f-panel img.lys{mix-blend-mode:lighten}
 .f-panel .tekst-b{padding:8px clamp(22px,3vw,40px) clamp(26px,3vw,40px);display:grid;gap:10px}
@@ -365,6 +368,8 @@ a.produkt:hover{border-color:rgba(217,164,65,.32)}
 .p-hero img{display:block;width:min(1180px,118%);max-width:none;height:auto;margin:30px 0 0 50%;translate:-50% 0;transform-origin:50% 30%}
 .fx .p-hero img{animation:helt-inn 1.5s var(--ut) .15s both}
 @keyframes helt-inn{from{opacity:0;transform:translateY(44px) scale(.95)}to{opacity:1;transform:none}}
+/* Studiobilde i toppen av produktsiden: bredt, med kantene tonet ut i bakgrunnen */
+.p-hero img.studio{width:min(1240px,112%);margin-top:20px;border-radius:0;-webkit-mask-image:radial-gradient(ellipse 62% 66% at 50% 50%,#000 58%,transparent 100%);mask-image:radial-gradient(ellipse 62% 66% at 50% 50%,#000 58%,transparent 100%)}
 .s1-bg{background:var(--studio-s1)}.node-bg{background:var(--studio-node)}
 .p-hero h1,.side-topp h1,.h1-midt,.hjem-hero h1{background:linear-gradient(180deg,#fff 35%,#cfc7ad 120%);-webkit-background-clip:text;background-clip:text;color:transparent}
 /* Produktbilder */
