@@ -17,8 +17,9 @@ Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/d
 | `takk/`, `takk/feil/` | Svarsider for skjemaet uten JavaScript |
 | `en/` | Engelske sider: `en/`, `en/s1/`, `en/node/`, `en/touch/`, `en/stav/`, `en/software/`, `en/compare/`, `en/support/`, `en/about/`, `en/thanks/`, `en/thanks/error/` |
 | `404.html` | Feilside på norsk og engelsk (Cloudflare Pages bruker den automatisk) |
-| `assets/skjold.css`, `assets/skjold.js` | Felles stil og oppførsel (reveal, zoom, bildesekvens, USB-demo, skjema) |
+| `assets/skjold.css`, `assets/skjold.js` | Felles stil og oppførsel (reveal, zoom, bildesekvens, forsidens stolpeteppe og produktvelger, USB-demo, skjema) |
 | `assets/img/` | Renders som PNG/JPEG og WebP (`<picture>`), `og.jpg` for deling |
+| `assets/img/*-studio.jpg` | Studiobilder av S1, Touch, Røst og Stav (1344 × 752), laget med bildegenerering ut fra renderne. De brukes i toppen av produktsidene og i produktvelgeren på forsiden (`img.studio`). Småtekst på produktene kan avvike fra tegningene; Node har derfor fortsatt den vanlige renderen |
 | `assets/3d/skjold-touch.glb` | 3D-modellen av Touch (helsort, meter, Y opp), med skjermglass og skjermbildet fra renderen lagt inn som to flater |
 | `assets/vendor/model-viewer-4.1.0/` | Google `<model-viewer>` 4.1.0 (BSD-3-Clause, med `LICENSE`), lagt inn lokalt så CSP-en kan beholde `script-src 'self'` |
 | `functions/api/interesse.js` | Pages Function: `POST`/`GET /api/interesse` |
@@ -31,7 +32,18 @@ Nav og bunntekst står i hver side. Produktene ligger i nedtrekksmenyen «Produk
 
 **Språk:** norsk ligger på de vanlige adressene og engelsk under `/en/`. Hver side har `NO | EN` i menyen, som lenker til samme side på det andre språket, og har `hreflang` (`nb`, `en`, `x-default` = norsk) og `og:locale`. `sitemap.xml` lister begge språkene. Endrer du en tekst, endre den på begge språkene. Skjemaet på engelske sider sender `lang=en`, og da sender funksjonen besøkende uten JS til `/en/thanks/` eller `/en/thanks/error/`. Tekstene i `skjold.js` velges ut fra `<html lang>`.
 
-Animasjonene følger designet: reveal 0,9 s `cubic-bezier(.2,.7,.2,1)` med 28 px, hero-zoom 0,86 → 1 og sticky bildesekvens over 400vh med overtoning på 0,7 s. Med `prefers-reduced-motion: reduce`, eller uten JavaScript, vises alt uten animasjon, og bildesekvensen blir vanlige blokker.
+**Design (november 2026):** siden er tegnet på nytt rundt logoen, fem stolper der den midterste er gull (`--gull`, `#d9a441`). Gullet er eneste aksentfarge, og små etiketter har en gullstolpe foran. Alt er skrevet for hånd i `skjold.css` og `skjold.js`, uten biblioteker, fordi CSP-en bare tillater skript fra siden selv.
+
+Forsiden (`index.html`, `en/index.html`) har egne blokker med `f-` foran klassenavnet:
+
+- `.f-hero`: stolpeteppet i toppen tegnes på et `<canvas data-felt>` og strekker seg mot pekeren.
+- `.f-scene`: familiebildet vokser inn mens du ruller, og har punkter (`.f-punkt`, plassert med `--x` og `--y` i prosent) som lenker til produktsidene. Bytter du bilde, må punktene flyttes.
+- `.f-band`: løpende bånd med kilder og integrasjoner.
+- `.f-vis-ramme` (`data-vis`): produktvelgeren, bygget som faner (`role="tab"`) med piltaster. Den bytter selv hvert 6. sekund til noen velger. Uten JavaScript vises alle produktene under hverandre.
+- `.f-bento`: fire grunner, med små demoer (grupper rommene, pakker på nettet).
+- `.f-lenker`: lenkeliste til de øvrige sidene.
+
+På alle sider: en gullstrek under menyen viser hvor langt du har lest, kort lyser der pekeren er (`--mx`, `--my`), knapper trekkes svakt mot pekeren, produktbildet i toppen av produktsidene vipper litt, og sidebytter tones med View Transitions der nettleseren støtter det. Inngang ved rulling er 0,9 s med 26 px og litt uskarphet, og den sticky bildesekvensen går over 400vh. Med `prefers-reduced-motion: reduce`, eller uten JavaScript, vises alt uten animasjon, og bildesekvensen blir vanlige blokker.
 
 ## Forhåndsvisning lokalt
 
