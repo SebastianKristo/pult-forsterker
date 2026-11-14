@@ -202,7 +202,7 @@
       var f = naaP * (UN - 1), i = Math.floor(f), t = f - i;
       var a = naermeste(i, -1) || naermeste(i, 1), b = naermeste(Math.min(UN - 1, i + 1), 1) || a;
       if (a) { dekk(a, 1); if (b && b !== a && t > 0.01) { dekk(b, t); } ux.globalAlpha = 1; }
-      var k = Math.min(4, Math.floor(naaP * 5 + 0.0001));
+      var k = Math.min(kart.length - 1, Math.floor(naaP * kart.length + 0.0001));
       kart.forEach(function (li, j) { li.classList.toggle('paa', j === k); li.classList.toggle('forbi', j < k); });
       if (naaP !== mal) { uraf = requestAnimationFrame(tegnU); }
     };
