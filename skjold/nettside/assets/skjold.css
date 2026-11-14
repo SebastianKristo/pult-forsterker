@@ -711,3 +711,24 @@ body:has(.univers) .interesse{background:linear-gradient(180deg,transparent,rgba
 .f-film .f-film-ramme{position:relative;margin-top:36px;border-radius:22px;overflow:hidden;background:#000;box-shadow:0 50px 120px -50px #000,0 0 0 1px rgba(255,255,255,.06)}
 .f-film video{display:block;width:100%;height:auto;aspect-ratio:16/9}
 video.studio{background:transparent}
+
+/* 11. Software (selvhostet) */
+.sw-intro{max-width:640px;margin:22px auto 0;font-size:clamp(16px,1.6vw,19px);line-height:1.55;color:var(--demp-l)}
+.sw-produkt+.sw-produkt{border-top:1px solid var(--linje)}
+.sw-hode{display:flex;align-items:center;gap:22px}
+.sw-logo{width:clamp(64px,8vw,96px);height:auto;border-radius:22%;box-shadow:0 20px 50px -20px #000}
+.sw-hode .h2{margin-top:6px}
+.sw-ingress{margin-top:26px;max-width:760px;font-family:var(--sora);font-size:clamp(20px,2.2vw,27px);line-height:1.35;letter-spacing:-.01em}
+.sw-om{margin-top:16px;max-width:760px;font-size:16.5px;line-height:1.6;color:var(--demp-l)}
+.sw-galleri{margin-top:48px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:28px}
+.sw-galleri figure{margin:0}
+.sw-galleri img{display:block;width:100%;height:auto;border-radius:16px;border:1px solid var(--linje-2)}
+.sw-galleri figcaption{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--demp-l2);margin-top:10px}
+.sw-status{margin-top:40px;padding:22px 24px;border:1px solid var(--linje);border-left:3px solid var(--gull);border-radius:14px;max-width:760px}
+.sw-status p{margin-top:8px;font-size:15.5px;line-height:1.55;color:var(--demp-l)}
+.sw-bunn{margin-top:36px;display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center;justify-content:space-between}
+.sw-tek{max-width:620px;font-size:15px;color:var(--demp-l)}
+.sw-tek summary{cursor:pointer;font-family:var(--mono);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--t,#f2efe6)}
+.sw-tek p{margin-top:10px;line-height:1.55}
+.sw-merk{font-size:13.5px;color:var(--demp-l2);text-align:center}
+.side-topp .knapper{justify-content:center}
