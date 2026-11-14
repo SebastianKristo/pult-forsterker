@@ -317,7 +317,8 @@ fun SourceOverlays(m: AppModel, wide: Boolean = false) {
         SourceUi.src?.let { SourcePage(m, it, wide) }
         SourceUi.pl?.let { PlaylistPage(m, it, wide) }
     }
-    SourceMoreSheet(m)
+    // Søket har sitt eget «Mer»-ark; bare én vert om gangen
+    if (!SourceUi.search) SourceMoreSheet(m)
 }
 
 /** Kildeside (helside med egen rulling og glød). */
