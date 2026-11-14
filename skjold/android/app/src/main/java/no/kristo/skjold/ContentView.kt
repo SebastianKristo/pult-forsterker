@@ -63,6 +63,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.delay
 import kotlin.math.max
 import kotlin.math.min
 
@@ -83,8 +87,9 @@ fun ContentView(m: AppModel) {
         }
     }
     // system back: close the player, leave sub pages, step back in setup
-    BackHandler(enabled = m.full || m.sub.isNotEmpty() || m.setCat >= 0 || m.libPl != null || m.rAdd || (m.mode == Mode.ONBOARD && (m.ob > 0 || m.scan || !m.welcome))) {
+    BackHandler(enabled = DockUi.dial || m.full || m.sub.isNotEmpty() || m.setCat >= 0 || m.libPl != null || m.rAdd || (m.mode == Mode.ONBOARD && (m.ob > 0 || m.scan || !m.welcome))) {
         when {
+            DockUi.dial -> DockUi.dial = false
             m.full -> m.full = false
             m.mode == Mode.ONBOARD -> if (m.ob > 0 || m.scan) m.obBack() else if (m.known.isEmpty() && !m.welcome && m.ob == 0) m.welcome = true
             m.rAdd -> m.rAdd = false
@@ -95,37 +100,38 @@ fun ContentView(m: AppModel) {
     }
 }
 
-/** Main app: tab content with the classic tab bar and mini player – plus the full-screen player. */
+/**
+ * Hovedskallet (V4App på iOS): fanene, dokken (minispiller + fanelinje med linse, sammenslått ved rulling), hintboblen,
+ * arkene, Nå spilles og volumknotten. Brett/nettbrett (≥ 600 dp, iPad på iOS): fanene som kapsel øverst og
+ * minispilleren nederst, Nå spilles som panel (400) fra høyre.
+ */
 @Composable
 fun AppShell(m: AppModel) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // v4: brettbar (≥ 600) og nettbrett (≥ 1000) – faner i en kolonne til venstre, Nå spilles som panel fra høyre
         val wide = maxWidth >= 600.dp
-        val panelW = if (maxWidth >= 1000.dp) 420.dp else 360.dp
-        val pick: (Int) -> Unit = { i ->
-            m.tab = i; m.sub = ""
-            if (i == 3) m.setCat = -1
-        }
-        if (wide) {
-            Row(Modifier.fillMaxSize()) {
-                SKNavRail(m.tab, pick)
-                Column(Modifier.weight(1f).fillMaxHeight()) {
-                    Box(Modifier.weight(1f).windowInsetsPadding(WindowInsets.statusBars).imePadding()) {
-                        Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) { Page(m, m.tab) }
-                    }
-                    if (m.tab != 2) Box(
-                        Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(start = 12.dp, end = 12.dp, bottom = 14.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { Box(Modifier.widthIn(max = 1000.dp)) { SKMiniPlayer(m) } }
+        val panelW = 400.dp
+        // Fanene ligger under Nå spilles (rulleposisjonene beholdes); de skjules først når panelet har glidd helt inn.
+        val shown by animateFloatAsState(
+            if (m.full && !wide) 0f else 1f,
+            if (m.full && !wide) tween(1, delayMillis = 450) else tween(0), label = "tabs",
+        )
+        Box(Modifier.fillMaxSize().alpha(shown)) {
+            if (wide) {
+                Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
+                    DockTopNav(m)
+                    Box(Modifier.weight(1f).imePadding()) { Page(m, m.tab, true) }
                 }
+                DockWideMini(m)
+            } else {
+                Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).imePadding()) { Page(m, m.tab, false) }
+                DockV4(m)
             }
-        } else {
-            // The tabs stay mounted under the player so scroll positions survive opening/closing it.
-            Column(Modifier.fillMaxSize().alpha(if (m.full) 0f else 1f)) {
-                Box(Modifier.weight(1f).windowInsetsPadding(WindowInsets.statusBars).imePadding()) { Page(m, m.tab) }
-                if (m.tab != 2) SKMiniPlayer(m)   // v4: Rom-fanen har volum per rom og ingen minispiller
-                SKTabBar(m.tab, pick)
-            }
+            // «Hold på minispilleren for volumknotten» (første gang, på Hjem)
+            AnimatedVisibility(
+                DockUi.hint && m.tab == 0 && !m.full && !wide && m.sub.isEmpty() && !DockUi.dial,
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                enter = fadeIn(tween(250)), exit = fadeOut(tween(250)),
+            ) { Box(Modifier.fillMaxWidth().height(300.dp)) { DockHint() } }
         }
         if (m.hjemLogin) HjemLoginView(m)
         if (m.showRoomEQ) RoomEQView(m)
@@ -133,55 +139,56 @@ fun AppShell(m: AppModel) {
         if (m.showSpeakers) SpeakerView(m)
         if (wide) {
             // dempelag rgba(0,0,0,.45) bak panelet; trykk lukker
-            AnimatedVisibility(m.full, enter = fadeIn(tween(450)), exit = fadeOut(tween(300))) {
+            AnimatedVisibility(m.full, enter = fadeIn(tween(450, easing = DockPanelEase)), exit = fadeOut(tween(450, easing = DockPanelEase))) {
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).clickable(remember { MutableInteractionSource() }, null) { m.full = false })
             }
             AnimatedVisibility(
                 m.full, modifier = Modifier.align(Alignment.CenterEnd),
-                enter = slideInHorizontally(tween(450, easing = CubicBezierEasing(0.2f, 0.7f, 0.2f, 1f))) { it },
-                exit = slideOutHorizontally(tween(350)) { it },
-            ) { Box(Modifier.width(panelW).fillMaxHeight()) { FullPlayerView(m) } }
-        } else {
-            AnimatedVisibility(m.full, enter = slideInVertically(tween(280)) { it }, exit = slideOutVertically(tween(280)) { it }) {
-                FullPlayerView(m)
+                enter = slideInHorizontally(tween(450, easing = DockPanelEase)) { (it * 1.05f).toInt() },
+                exit = slideOutHorizontally(tween(450, easing = DockPanelEase)) { (it * 1.05f).toInt() },
+            ) {
+                Box(Modifier.width(panelW).fillMaxHeight()) {
+                    FullPlayerView(m)
+                    Box(Modifier.width(1.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.08f)))
+                }
             }
+        } else {
+            AnimatedVisibility(
+                m.full,
+                enter = slideInVertically(tween(450, easing = DockPanelEase)) { (it * 1.04f).toInt() },
+                exit = slideOutVertically(tween(450, easing = DockPanelEase)) { (it * 1.04f).toInt() },
+            ) { FullPlayerView(m) }
         }
+        AnimatedVisibility(DockUi.dial, enter = fadeIn(tween(250)), exit = fadeOut(tween(250))) { DockVolumeDial(m) }
+    }
+    // hintet forsvinner for godt etter 4,5 s
+    LaunchedEffect(Unit) {
+        delay(4500)
+        DockUi.hideHint()
     }
 }
 
-/** Title + scrolling content for a tab. */
+/** Én fane: rullbar side (padding 20 / 6, brett 40 / 24 og maks 860 bred), tittelraden øverst og 22 mellom delene. */
 @Composable
-private fun Page(m: AppModel, tab: Int) {
-    val title: String? = when (tab) {
-        0 -> if (m.sub == "radio") "Radio" else if (m.sub == "lib") SK.lib[m.lib]?.name else null
-        1 -> "Lyd"
-        2 -> "Rom"
-        else -> if (m.setCat >= 0 && m.setCat < m.cats.size) m.cats[m.setCat].n else "Innstillinger"
-    }
-    Column(Modifier.fillMaxSize()) {
-        if (tab == 2 && m.visSted) Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) { StedPicker(m, 32f) }
-            RoomsHeaderButtons(m)
+private fun Page(m: AppModel, tab: Int, wide: Boolean) {
+    val inset = dockContentInset(wide)
+    val density = LocalDensity.current.density
+    // ny rulleposisjon når siden som vises endres
+    key("$tab-${m.sub}-${m.lib}-${m.setCat}-${m.libPl ?: -1}") {
+        val scroll = rememberScrollState()
+        if (!wide) LaunchedEffect(scroll) {
+            snapshotFlow { scroll.value }.collect { DockUi.scrolled(it / density) }
         }
-        else if (title != null) Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            T(title, sora(32f, W.Semibold).copy(letterSpacing = (-0.02f).em), Modifier.weight(1f), maxLines = 1)
-            // v4 Lyd: kapsel med gruppen som spiller (grønn prikk)
-            if (tab == 1) Row(
-                Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(SkG.pillBg).skBorder(SkG.pillLine, 18.dp).padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Box(Modifier.size(6.dp).clip(CircleShape).background(C.ok))
-                T(m.groupName, sora(13f), maxLines = 1)
-            }
-            // v4 Rom: sorter og legg til
-            if (tab == 2) RoomsHeaderButtons(m)
-        }
-        // new scroll position when the visible page changes
-        key("$tab-${m.sub}-${m.lib}-${m.setCat}-${m.libPl ?: -1}") {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(scroll)
+                .padding(start = if (wide) 40.dp else 20.dp, end = if (wide) 40.dp else 20.dp, top = if (wide) 24.dp else 6.dp, bottom = 40.dp + inset),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                (if (wide) Modifier.widthIn(max = 860.dp) else Modifier).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(22.dp),
             ) {
+                DockTitleRow(m, tab)
                 when (tab) {
                     0 -> if (m.sub == "radio") RadioView(m) else if (m.sub == "lib") LibraryView(m) else HomeView(m)
                     1 -> SoundView(m)
@@ -368,10 +375,10 @@ private fun androidx.compose.foundation.layout.BoxScope.Banner(m: AppModel) {
                     T("Alarmen ringer", sora(15f, W.Semibold))
                     T(if (d.alarmName.isEmpty()) d.name else d.alarmName + " · " + d.name, sora(12f, W.Regular, C.ink2), maxLines = 1)
                 }
-                Box(Modifier.height(48.dp).clip(CircleShape).background(C.accent2).press { m.devSend("/api/alarm", mapOf("action" to "snooze")) }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.heightIn(min = 44.dp).clip(CircleShape).background(C.accent2).press { m.devSend("/api/alarm", mapOf("action" to "snooze")) }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                     T("Slumre", sora(14f, W.Semibold, C.bg))
                 }
-                Box(Modifier.height(48.dp).clip(CircleShape).skBorder(C.line2, 24.dp).press { m.devSend("/api/alarm", mapOf("action" to "stop")) }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.heightIn(min = 44.dp).clip(CircleShape).skBorder(C.line2, 22.dp).press { m.devSend("/api/alarm", mapOf("action" to "stop")) }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                     T("Slå av", sora(14f, W.Semibold))
                 }
             }

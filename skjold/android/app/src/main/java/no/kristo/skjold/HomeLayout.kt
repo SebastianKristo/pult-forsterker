@@ -29,8 +29,8 @@ object HomeLayout {
         "discover" to "Oppdag", "ask" to "Spill noe til …", "nrk" to "Fortsett på NRK", "playlists" to "Dine spillelister",
         "library" to "Fra bibliotekene", "wrapped" to "Skjold Wrapped",
     )
-    /** Seksjonene Android-appen viser, i standardrekkefølge. */
-    val android = listOf("recent", "sources", "favs", "playlists")
+    /** Seksjonene Android-appen viser, i standardrekkefølge (samme som iOS: HomeLayout.ios). */
+    val android = listOf("recent", "sources", "favs", "playlists", "library")
 
     fun label(id: String): String = sections.firstOrNull { it.first == id }?.second ?: id
 
@@ -54,53 +54,5 @@ object HomeLayout {
     }
 
     fun toJson(items: List<HomeItem>): List<Map<String, Any?>> = items.map { mapOf("id" to it.id, "visible" to it.visible) }
-}
-
-/** «Rediger hjemskjerm» (som Plexamp): opp/ned for rekkefølge og bryter for å vise/skjule. Lagres på Skjold-enheten. */
-@Composable
-fun HomeEditorDialog(m: AppModel, onClose: () -> Unit) {
-    Dialog(onDismissRequest = onClose) {
-        val items = HomeLayout.resolve(m.homeLayout, HomeLayout.android)
-        Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(C.card).padding(18.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            T("Rediger hjemskjerm", sora(17f, W.Semibold))
-            T("Endringene gjelder dette rommet og vises også i web-UI-et og iOS-appen.", sora(12f, W.Regular, C.muted), Modifier.padding(bottom = 8.dp))
-            items.forEachIndexed { i, it ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    T(HomeLayout.label(it.id), sora(15f, W.Regular, if (it.visible) C.ink else C.muted), Modifier.weight(1f), maxLines = 1)
-                    Arrow("↑", enabled = i > 0) { m.saveHomeLayout(items.toMutableList().also { l -> val x = l.removeAt(i); l.add(i - 1, x) }) }
-                    Arrow("↓", enabled = i < items.size - 1) { m.saveHomeLayout(items.toMutableList().also { l -> val x = l.removeAt(i); l.add(i + 1, x) }) }
-                    SKToggle(it.visible) { m.saveHomeLayout(items.map { o -> if (o.id == it.id) o.copy(visible = !o.visible) else o }) }
-                }
-            }
-            // Kildene: rekkefølge og synlighet (lagres på telefonen, m.homeSources)
-            val kilder = HomeLayout.resolve(m.homeSources, kildeNavn(m))
-            T("Kilder", sora(15f, W.Semibold), Modifier.padding(top = 14.dp))
-            T("Velg hvilke kilder som vises på Hjem, og i hvilken rekkefølge.", sora(12f, W.Regular, C.muted), Modifier.padding(bottom = 4.dp))
-            kilder.forEachIndexed { i, it ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    T(it.id, sora(15f, W.Regular, if (it.visible) C.ink else C.muted), Modifier.weight(1f), maxLines = 1)
-                    Arrow("↑", enabled = i > 0) { m.homeSources = kilder.toMutableList().also { l -> val x = l.removeAt(i); l.add(i - 1, x) } }
-                    Arrow("↓", enabled = i < kilder.size - 1) { m.homeSources = kilder.toMutableList().also { l -> val x = l.removeAt(i); l.add(i + 1, x) } }
-                    SKToggle(it.visible) { m.homeSources = kilder.map { o -> if (o.id == it.id) o.copy(visible = !o.visible) else o } }
-                }
-            }
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                T("Tilbakestill", sora(14f, W.Regular, C.ink2), Modifier.press { m.resetHomeLayout(); m.homeSources = emptyList() }.padding(8.dp))
-                T("Ferdig", sora(14f, W.Semibold, C.accent), Modifier.press(onClick = onClose).padding(8.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun Arrow(s: String, enabled: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier.size(34.dp).clip(RoundedCornerShape(9.dp)).skBorder(C.line2, 9.dp).press(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { T(s, sora(15f, W.Regular, if (enabled) C.ink2 else C.line2)) }
 }
 

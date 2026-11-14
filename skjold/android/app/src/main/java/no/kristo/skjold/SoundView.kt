@@ -256,14 +256,14 @@ private fun BandInfo(m: AppModel) {
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            StepButton("−", "Senk") { m.soundSetBand(band, cur - 1) }
-            StepButton("+", "Øk") { m.soundSetBand(band, cur + 1) }
+            SoundStepButton("−", "Senk") { m.soundSetBand(band, cur - 1) }
+            SoundStepButton("+", "Øk") { m.soundSetBand(band, cur + 1) }
         }
     }
 }
 
 @Composable
-private fun StepButton(s: String, label: String, act: () -> Unit) {
+private fun SoundStepButton(s: String, label: String, act: () -> Unit) {
     Box(
         Modifier.size(36.dp).clip(CircleShape).background(C.ink.copy(alpha = 0.1f)).press(label = label) { Haptics.tick(); act() },
         contentAlignment = Alignment.Center,
