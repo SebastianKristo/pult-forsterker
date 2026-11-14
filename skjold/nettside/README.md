@@ -153,6 +153,10 @@ python3 -c "from PIL import Image; im=Image.open('original.png').convert('RGB');
 
 Fotoene er laget fra 3D-renderne med bilde-til-bilde-generering (renderen som bilde 1, studiobildet av samme produkt som stilreferanse), så form, taster og skjerm følger modellen. De gamle `-fri.png` og `node-tft-*` er fjernet.
 
+### Video
+
+`assets/video/` har korte produktklipp (`s1`, `node`, `touch`, `rost`, `stav`, `familie`, 12 s, spilt frem og tilbake så de går i loop) med første bilde som plakat (`.jpg`), og reklamefilmen (`film-no.mp4` med musikk, `film-en.mp4` med engelsk stemme). Klippene er hero på produktsidene (klasse `hero-video`) og i produktvelgeren på forsiden; filmen ligger i seksjonen «Filmen». Videoene spilles bare når de er synlige, og står stille ved `prefers-reduced-motion`.
+
 ### 3D-modellen på Touch
 
 `touch/` og `en/touch/` laster `/assets/vendor/model-viewer-4.1.0/model-viewer.min.js` som `type="module"`, og `<model-viewer>` henter `/assets/3d/skjold-touch.glb`. Biblioteket er lagt inn lokalt (som Redoc og PDF.js), så `script-src` kan fortsatt være `'self'`. CSP-en i `_headers` har to tillegg for det: `'wasm-unsafe-eval'` i `script-src` (model-viewer setter opp en WebAssembly-dekoder) og `blob:` i `img-src` og `connect-src` (teksturen i GLB-fila, skjermbildet, lastes som en blob-URL). Bytt versjon ved å legge en ny mappe ved siden av og endre stien i de to sidene.
