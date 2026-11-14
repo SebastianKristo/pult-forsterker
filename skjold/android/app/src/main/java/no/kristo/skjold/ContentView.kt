@@ -159,7 +159,10 @@ private fun Page(m: AppModel, tab: Int) {
         else -> if (m.setCat >= 0 && m.setCat < m.cats.size) m.cats[m.setCat].n else "Innstillinger"
     }
     Column(Modifier.fillMaxSize()) {
-        if (tab == 2 && m.visSted) Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)) { StedPicker(m, 32f) }
+        if (tab == 2 && m.visSted) Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { StedPicker(m, 32f) }
+            RoomsHeaderButtons(m)
+        }
         else if (title != null) Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             T(title, sora(32f, W.Semibold).copy(letterSpacing = (-0.02f).em), Modifier.weight(1f), maxLines = 1)
             // v4 Lyd: kapsel med gruppen som spiller (grønn prikk)
@@ -170,6 +173,8 @@ private fun Page(m: AppModel, tab: Int) {
                 Box(Modifier.size(6.dp).clip(CircleShape).background(C.ok))
                 T(m.groupName, sora(13f), maxLines = 1)
             }
+            // v4 Rom: sorter og legg til
+            if (tab == 2) RoomsHeaderButtons(m)
         }
         // new scroll position when the visible page changes
         key("$tab-${m.sub}-${m.lib}-${m.setCat}-${m.libPl ?: -1}") {
