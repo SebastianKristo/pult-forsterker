@@ -164,6 +164,62 @@
     }
   }
 
+  // Forsiden: reisen gjennom Skjold Lab-universet. Filmen ligger som bilder i assets/univers/f/ og spilles av i takt
+  // med rullingen: øverst på siden står fjorden, nederst er vi hjemme. Bildene lastes grovt først (hvert 8.) og fylles
+  // inn etterpå, og mellom to bilder tones det over, så det blir mykt også før alt er lastet.
+  var univers = document.querySelector('[data-univers]');
+  if (univers && !reduce) {
+    var uc = univers.querySelector('canvas'), ux = uc.getContext('2d'), kart = document.querySelectorAll('.univers-kart li');
+    var UN = 288, UBANE = '/assets/univers/f/', bilder = new Array(UN), mal = 0, naaP = 0, uraf = 0, uw = 0, uh = 0;
+    var hent = function (i) {
+      if (bilder[i]) { return; }
+      var im = new Image(); im.decoding = 'async';
+      im.onload = function () { im.klar = true; if (!uraf) { uraf = requestAnimationFrame(tegnU); } };
+      im.src = UBANE + String(i + 1).padStart(4, '0') + '.webp'; bilder[i] = im;
+    };
+    var naermeste = function (i, retning) {
+      for (var d = 0; d < UN; d++) {
+        var j = i + d * retning;
+        if (j < 0 || j >= UN) { break; }
+        if (bilder[j] && bilder[j].klar) { return bilder[j]; }
+      }
+      return null;
+    };
+    var umaal = function () {
+      var dpr = Math.min(1.5, window.devicePixelRatio || 1);
+      uw = innerWidth; uh = innerHeight;
+      uc.width = Math.round(uw * dpr); uc.height = Math.round(uh * dpr);
+      ux.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    var dekk = function (im, a) {
+      var s = Math.max(uw / im.naturalWidth, uh / im.naturalHeight), w = im.naturalWidth * s, h = im.naturalHeight * s;
+      ux.globalAlpha = a; ux.drawImage(im, (uw - w) / 2, (uh - h) / 2, w, h);
+    };
+    var tegnU = function () {
+      uraf = 0;
+      naaP += (mal - naaP) * 0.12;
+      if (Math.abs(mal - naaP) < 0.0004) { naaP = mal; }
+      var f = naaP * (UN - 1), i = Math.floor(f), t = f - i;
+      var a = naermeste(i, -1) || naermeste(i, 1), b = naermeste(Math.min(UN - 1, i + 1), 1) || a;
+      if (a) { dekk(a, 1); if (b && b !== a && t > 0.01) { dekk(b, t); } ux.globalAlpha = 1; }
+      var k = Math.min(4, Math.floor(naaP * 5 + 0.0001));
+      kart.forEach(function (li, j) { li.classList.toggle('paa', j === k); li.classList.toggle('forbi', j < k); });
+      if (naaP !== mal) { uraf = requestAnimationFrame(tegnU); }
+    };
+    var urull = function () {
+      var maks = root.scrollHeight - innerHeight;
+      mal = maks > 0 ? Math.max(0, Math.min(1, scrollY / maks)) : 0;
+      if (!uraf) { uraf = requestAnimationFrame(tegnU); }
+    };
+    umaal();
+    for (var g = 0; g < UN; g += 8) { hent(g); }
+    var fyll = function () { for (var j = 0; j < UN; j++) { hent(j); } };
+    if ('requestIdleCallback' in window) { requestIdleCallback(fyll, { timeout: 2500 }); } else { setTimeout(fyll, 1200); }
+    addEventListener('scroll', urull, { passive: true });
+    addEventListener('resize', function () { umaal(); urull(); });
+    urull();
+  }
+
   // Forsiden: produktvelgeren. Faner med piltaster; bytter selv hvert 6. sekund til noen tar over.
   var vis = document.querySelector('[data-vis]');
   if (vis) {

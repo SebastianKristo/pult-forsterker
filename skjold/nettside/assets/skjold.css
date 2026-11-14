@@ -673,3 +673,35 @@ legend{padding:0;margin-bottom:6px;font-size:13px;color:var(--demp-l)}
   *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
   @view-transition{navigation:none}
 }
+
+/* ===== 9. Forsiden: reisen gjennom Skjold Lab-universet =====
+   En sammenhengende film (fjorden, porten, hallen, stjernebildet, hjem) ligger bak hele forsiden og spilles av i
+   takt med rullingen (assets/univers/, tegnes på <canvas> av skjold.js). Uten JS eller med redusert bevegelse står
+   første nøkkelbilde stille. */
+.univers{position:fixed;inset:0;z-index:0;pointer-events:none;background:#05070a url(/assets/univers/k1.jpg) center/cover no-repeat}
+.univers canvas{display:block;width:100%;height:100%}
+.univers-slor{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,6,8,.55) 0%,rgba(5,6,8,.18) 28%,rgba(5,6,8,.25) 62%,rgba(5,6,8,.7) 100%),radial-gradient(ellipse 80% 70% at 50% 50%,transparent 40%,rgba(0,0,0,.45) 100%)}
+body:has(.univers){background:#05070a}
+body:has(.univers) main,body:has(.univers) .bunn{position:relative;z-index:1}
+body:has(.univers) .bunn{background:linear-gradient(180deg,rgba(5,6,8,.4),rgba(5,6,8,.92) 40%)}
+body:has(.univers) .f-hero::after{background:linear-gradient(180deg,transparent,rgba(5,6,8,.55) 90%)}
+body:has(.univers) .f-hero h1,body:has(.univers) .f-hero-bunn p,body:has(.univers) .h2,body:has(.univers) .f-vis-hode p{text-shadow:0 2px 30px rgba(0,0,0,.55)}
+body:has(.univers) .f-hero-bunn{border-top-color:rgba(255,255,255,.22)}
+body:has(.univers) .f-hero-bunn p{color:#d6d6d0}
+body:has(.univers) .seksjon+.seksjon{border-top-color:transparent}
+body:has(.univers) .f-band{background:rgba(5,6,8,.35);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+body:has(.univers) .f-panel{background:radial-gradient(ellipse 70% 60% at 50% 38%,rgba(38,37,43,.82) 0%,rgba(19,19,22,.86) 58%,rgba(12,12,14,.9) 100%);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+body:has(.univers) .f-b,body:has(.univers) .skjema{background:rgba(17,17,20,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+body:has(.univers) .f-lenker{background:rgba(5,6,8,.5);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:18px;padding:0 clamp(12px,2vw,24px)}
+body:has(.univers) .interesse{background:linear-gradient(180deg,transparent,rgba(5,6,8,.5) 30%,rgba(5,6,8,.75))}
+/* Kartet over reisen: fem kapitler langs høyre kant */
+.univers-kart{position:fixed;right:clamp(12px,2vw,28px);top:50%;z-index:2;translate:0 -50%;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px;pointer-events:none}
+.univers-kart li{display:flex;align-items:center;justify-content:flex-end;gap:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(242,242,238,.45)}
+.univers-kart span{opacity:0;transform:translateX(6px);transition:opacity .5s,transform .6s var(--ut)}
+.univers-kart i{display:block;width:3px;height:12px;border-radius:2px;background:rgba(242,242,238,.35);transition:height .6s var(--ut),background .4s}
+.univers-kart li.paa{color:var(--tekst-l)}
+.univers-kart li.paa span{opacity:1;transform:none}
+.univers-kart li.paa i{height:26px;background:var(--gull)}
+.univers-kart li.forbi i{background:rgba(217,164,65,.55)}
+@media (max-width:720px){.univers-kart{display:none}}
+.statisk .univers-kart{display:none}
