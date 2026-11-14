@@ -138,8 +138,12 @@ private fun CircleButton(d: String, label: String, on: Boolean, act: () -> Unit)
 private fun RoomCard(m: AppModel, c: RoomCardData) {
     val vol = if (c.isMain) m.v4GroupVol else m.v4RoomVol(c.room)
     val a = art(c.key)
-    val open = {
-        if (c.isMain) m.full = true else { Haptics.tick(); m.v4Activate(c.room) }
+    val open: () -> Unit = {
+        if (c.isMain) {
+            m.full = true
+        } else {
+            Haptics.tick(); m.v4Activate(c.room)
+        }
     }
     Box(
         Modifier.fillMaxWidth().alpha(if (c.playing) 1f else 0.78f).clip(RoundedCornerShape(24.dp))
