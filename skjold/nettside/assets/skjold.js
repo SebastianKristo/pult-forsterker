@@ -170,7 +170,7 @@
   var univers = document.querySelector('[data-univers]');
   if (univers && !reduce) {
     var uc = univers.querySelector('canvas'), ux = uc.getContext('2d'), kart = document.querySelectorAll('.univers-kart li');
-    var UN = 288, UBANE = '/assets/univers/f/', bilder = new Array(UN), mal = 0, naaP = 0, uraf = 0, uw = 0, uh = 0;
+    var UN = 288, UBANE = '/assets/univers/f-03185cf1/', bilder = new Array(UN), mal = 0, naaP = 0, uraf = 0, uw = 0, uh = 0;
     var hent = function (i) {
       if (bilder[i]) { return; }
       var im = new Image(); im.decoding = 'async';
