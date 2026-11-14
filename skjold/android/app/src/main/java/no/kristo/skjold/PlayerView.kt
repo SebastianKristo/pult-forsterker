@@ -88,6 +88,7 @@ fun FullPlayerView(m: AppModel) {
     val info = art(m.playerArt.key)
     val top = info.stops.firstOrNull()?.second ?: hex(0x145a67)
     val mid = info.stops.lastOrNull()?.second ?: hex(0x0b2f38)
+    val panelScroll = rememberScrollState()
 
     DisposableEffect(Unit) { onDispose { PlayerUi.fm = "ctrl"; PlayerUi.more = false } }
     // tilbake-knappen lukker «Mer» før spilleren (ContentView lukker spilleren)
@@ -119,7 +120,7 @@ fun FullPlayerView(m: AppModel) {
                 Header(m)
                 Column(
                     Modifier.weight(1f).fillMaxWidth()
-                        .then(if (fm == "rooms") Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                        .then(if (fm == "rooms") Modifier.verticalScroll(panelScroll) else Modifier)
                         .padding(start = 24.dp, end = 24.dp, top = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {

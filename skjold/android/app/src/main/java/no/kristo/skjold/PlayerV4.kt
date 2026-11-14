@@ -44,8 +44,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -53,17 +51,17 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import kotlin.math.atan2
 import kotlin.math.roundToInt
 
 /*
  * Felles for Nå spilles (PlayerView.kt): UI-tilstand (V4State på iOS), ikonene fra V4Tokens.swift, v4-avledningene fra
- * V4Model.swift som spilleren trenger, «Mer»-arket og volumknotten (V4MoreSheet.swift).
+ * V4Model.swift som spilleren trenger, og «Mer»-arket (V4MoreSheet.swift). Volumknotten (V4VolumeDial) er DockVolumeDial i DockV4.kt.
  */
 
 // MARK: - UI-tilstand
 
-/** UI-tilstand for Nå spilles, «Mer» og volumknotten (fm, more, moreTrack, dial og sleep i V4State på iOS). */
+/** UI-tilstand for Nå spilles og «Mer» (fm, more og moreTrack i V4State på iOS). Sovetimeren deles med kildesidenes ark
+ *  (SourceUi.sleep, som ui.sleep på iOS). Volumknotten ligger i DockV4.kt. */
 object PlayerUi {
     private const val FAVS = "skjold-v4-favs"
 
@@ -72,10 +70,6 @@ object PlayerUi {
     var more by mutableStateOf(false)
     /** Låten «Mer» gjelder (fra køen eller en liste). null = det som spiller. */
     var moreTrack by mutableStateOf<Track?>(null)
-    /** Volumknotten (hold på minispilleren på iOS). Vises av PlayerVolumeDial(m). */
-    var dial by mutableStateOf(false)
-    /** Sovetimer: 0 av, 1 15 min, 2 30 min, 3 60 min (lagres ikke, som på iOS). */
-    var sleep by mutableStateOf(0)
 
     // Skjold-favoritter for låter: @AppStorage("skjold-v4-favs") på iOS, linjeskilt tekst under samme nøkkel.
     private val favsState = mutableStateOf<String?>(null)
@@ -188,13 +182,11 @@ val AppModel.playerProgress: Float
 /** Artist og album som lenker under tittelen (npLinks). Android-statusen har ikke sourceLabel, så bare bibliotekslåter. */
 val AppModel.playerLinks: Pair<String, String>? get() = libTrack?.let { it.artist to it.album }
 
-/** «Søk etter …»: Android har ingen egen søkeside ennå, så kildesiden åpnes med teksten i søkefeltet. */
+/** «Søk etter …» og artist-/albumlenkene: lukker spilleren og åpner søket med teksten (ui.sq / ui.search på iOS). */
 fun AppModel.playerSearch(text: String) {
     PlayerUi.more = false
-    full = false
     PlayerUi.fm = "ctrl"
-    openLib(if (libTrack != null) lib else "nd")
-    lq2 = text
+    openSearch(text)   // SourceV4.kt
 }
 
 // MARK: - Glidebryter (V4Bar)
@@ -253,8 +245,8 @@ private val SleepMinutes = listOf(0, 15, 30, 60)
 private class MoreRowData(val n: String, val p: String, val fill: Boolean, val ic: Color, val value: String? = null, val act: () -> Unit)
 
 /**
- * «Mer»-arket (V4MoreSheet.swift): dempelag 0.45, ark fra bunnen med radius 34, farget fra låten. Styres av PlayerUi.more.
- * FullPlayerView viser det; åpnes det fra andre sider (PlayerUi.openMore) må roten vise PlayerMoreSheet(m) når spilleren er lukket.
+ * «Mer»-arket i spilleren (V4MoreSheet.swift): dempelag 0.45, flytende ark med radius 34, farget fra låten. Styres av
+ * PlayerUi.more og vises av FullPlayerView. Kildesidene og søket har sitt eget (SourceMoreSheet i SourceV4.kt).
  */
 @Composable
 fun PlayerMoreSheet(m: AppModel) {
@@ -264,7 +256,7 @@ fun PlayerMoreSheet(m: AppModel) {
         }
         AnimatedVisibility(
             PlayerUi.more, modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(tween(420, easing = SheetEase)) { it }, exit = slideOutVertically(tween(420, easing = SheetEase)) { it },
+            enter = slideInVertically(tween(420, easing = SheetEase)) { it + 60 }, exit = slideOutVertically(tween(420, easing = SheetEase)) { it + 60 },
         ) { MoreSheetBody(m) }
     }
 }
@@ -275,10 +267,8 @@ private fun MoreSheetBody(m: AppModel) {
     val title = t?.t ?: m.np.t
     val artist = t?.artist ?: m.np.s
     val key = t?.album ?: m.playerArt.key
-    val a = art(m.playerArt.key)
-    val top = a.stops.firstOrNull()?.second ?: hex(0x145a67)
-    val mid = a.stops.lastOrNull()?.second ?: hex(0x0b2f38)
-    val shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)
+    val mid = art(m.playerArt.key).stops.lastOrNull()?.second ?: hex(0x0b2f38)
+    val shape = RoundedCornerShape(34.dp)
     val close = { PlayerUi.closeMore() }
 
     val rows = buildList {
@@ -302,20 +292,21 @@ private fun MoreSheetBody(m: AppModel) {
             if (t != null) m.playerQueueRemove(t)
             close()
         })
-        add(MoreRowData("Sovetimer", PlayerIcons.sleep, false, if (PlayerUi.sleep > 0) PlayerColors.gold else C.ink,
-            value = SleepLabels[PlayerUi.sleep.coerceIn(0, SleepLabels.size - 1)]) {
+        add(MoreRowData("Sovetimer", PlayerIcons.sleep, false, if (SourceUi.sleep > 0) PlayerColors.gold else C.ink,
+            value = SleepLabels[SourceUi.sleep.coerceIn(0, SleepLabels.size - 1)]) {
             // sovetimeren går på enheten (skrur ned det siste minuttet og slår av), så den virker også når appen lukkes
-            PlayerUi.sleep = (PlayerUi.sleep + 1) % SleepLabels.size
-            val mins = SleepMinutes[PlayerUi.sleep]
+            SourceUi.sleep = (SourceUi.sleep + 1) % SleepLabels.size
+            val mins = SleepMinutes[SourceUi.sleep]
             m.devSend("/api/plugins/sleep", if (mins > 0) mapOf("enabled" to true, "minutes" to mins) else mapOf("enabled" to false))
         })
     }
 
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(top, mid)))
+        // flytende ark 8 fra kantene, radius 34: glass farget med midtfargen .55 på iOS, mørk flate + samme farge her
+        Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(8.dp).fillMaxWidth()
+            .clip(shape).background(hex(0x1a1a1c)).background(mid.copy(alpha = 0.55f))
             .skBorder(Color.White.copy(alpha = 0.1f), 34.dp)
             .pointerInput(Unit) { detectTapGestures { } }   // trykk på arket lukker det ikke
-            .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 26.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -366,99 +357,6 @@ private fun MoreRow(r: MoreRowData) {
         if (r.value != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             T(r.value, sora(14f, W.Regular, C.ink.copy(alpha = 0.65f)))
             SKIcon(PlayerIcons.chevRight, 16.dp, 2.2f, C.ink)
-        }
-    }
-}
-
-// MARK: - Volumknotten
-
-/**
- * Volumknotten (V4VolumeDial): −150° … +150°, 31 streker, dra rundt knotten. Vises når PlayerUi.dial er sann
- * (på iOS: hold på minispilleren i 450 ms). Trykk utenfor lukker.
- */
-@Composable
-fun PlayerVolumeDial(m: AppModel) {
-    if (!PlayerUi.dial) return
-    Box(
-        Modifier.fillMaxSize().background(hex(0x050506, 0.78f)).pointerInput(Unit) { detectTapGestures { PlayerUi.dial = false } },
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(26.dp)) {
-            Row(
-                Modifier.height(34.dp).clip(CircleShape).background(hex(0x28282a, 0.7f)).skCapsuleBorder(Color.White.copy(alpha = 0.12f))
-                    .padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Box(Modifier.size(6.dp).clip(CircleShape).background(PlayerColors.green))
-                T(m.v4GroupName, sora(13f, W.Semibold), maxLines = 1)
-            }
-            Knob(m)
-            T("Dra rundt knotten · trykk utenfor for å lukke", sora(13f, W.Regular, C.body))
-        }
-    }
-}
-
-@Composable
-private fun Knob(m: AppModel) {
-    val vol = m.v4GroupVol
-    Box(
-        Modifier.size(310.dp)
-            .semantics { contentDescription = "Volum"; stateDescription = "$vol" }
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    fun upd(p: Offset) {
-                        val dx = p.x - size.width / 2f; val dy = p.y - size.height / 2f
-                        val a = (Math.toDegrees(atan2(dx.toDouble(), (-dy).toDouble()))).coerceIn(-150.0, 150.0)
-                        val n = ((a + 150) / 3).roundToInt()
-                        if (n != m.v4GroupVol) { Haptics.tick(); m.v4SetGroupVol(n) }
-                    }
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    down.consume()
-                    upd(down.position)
-                    drag(down.id) { c -> upd(c.position); c.consume() }
-                }
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        val lit = (vol / 100.0 * 30).roundToInt()
-        Canvas(Modifier.fillMaxSize()) {
-            val c = Offset(size.width / 2, size.height / 2)
-            val u = 1.dp.toPx()
-            // 31 streker på en sirkel med radius 140
-            for (i in 0..30) {
-                val on = i <= lit && vol > 0
-                val tip = i == lit
-                val h = (if (tip) 24f else 15f) * u
-                val w = 5f * u
-                val col = if (on) (if (tip) hex(0xfff3d6) else PlayerColors.gold) else C.ink.copy(alpha = 0.16f)
-                rotate(-150f + i * 10f, c) {
-                    val tl = Offset(c.x - w / 2, c.y - 140f * u - h / 2)
-                    if (on) drawRoundRect(PlayerColors.gold.copy(alpha = 0.22f), tl - Offset(3f * u, 3f * u), Size(w + 6f * u, h + 6f * u), CornerRadius(6f * u))
-                    drawRoundRect(col, tl, Size(w, h), CornerRadius(3f * u))
-                }
-            }
-            // selve knotten: 200, radialgradient fra øvre venstre
-            val r = 100f * u
-            drawCircle(Color.Black.copy(alpha = 0.35f), r + 6f * u, c + Offset(0f, 18f * u))
-            drawCircle(
-                Brush.radialGradient(
-                    listOf(hex(0x3c3c3f), hex(0x1a1a1c), hex(0x0d0d0e)),
-                    center = Offset(c.x - r + 2 * r * 0.36f, c.y - r + 2 * r * 0.28f), radius = 140f * u,
-                ),
-                r, c,
-            )
-            drawArc(
-                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent), startY = c.y - r, endY = c.y),
-                180f, 180f, false, Offset(c.x - r, c.y - r), Size(2 * r, 2 * r), style = Stroke(1f * u),
-            )
-            // viseren: 5 × 30, 14 inn fra kanten
-            rotate(-150f + vol * 3f, c) {
-                drawRoundRect(C.ink, Offset(c.x - 2.5f * u, c.y - r + 14f * u), Size(5f * u, 30f * u), CornerRadius(3f * u))
-            }
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            T("$vol", sora(56f, W.Light).copy(letterSpacing = (-0.03f).em))
-            T("VOLUM", mono(10f, C.muted, 0.14f))
         }
     }
 }

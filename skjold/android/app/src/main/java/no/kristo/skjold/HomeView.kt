@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,8 +46,8 @@ import androidx.compose.ui.unit.sp
 fun HomeView(m: AppModel) {
     var editHome by remember { mutableStateOf(false) }
     var placeOpen by remember { mutableStateOf(false) }
-    // Sidens kolonne har 10 dp topp og 16 dp mellomrom; v4 har 6 dp topp, 22 mellom seksjonene og 40 nederst.
-    Column(Modifier.fillMaxWidth().offset(y = (-4).dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    // Fanesiden gir 6 topp og 40 bunn (V4TabPage); 22 mellom seksjonene.
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         HomeHeader(m, placeOpen) { placeOpen = !placeOpen }
         // Seksjonene i rekkefølgen brukeren har valgt (settings.homeLayout, delt med web og iOS).
         for (sec in HomeLayout.resolve(m.homeLayout, HomeLayout.android).filter { it.visible }) {
@@ -83,7 +82,7 @@ private fun HomeHeader(m: AppModel, open: Boolean, toggle: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.weight(1f)) {
             Row(
-                Modifier.press(label = "Bytt sted, nå ${m.stedNavn}") { toggle() },
+                Modifier.press(label = "Bytt sted, nå ${m.stedNavn}") { toggle(); DockUi.hideHint() },
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 T(m.stedNavn, sora(32f, W.Semibold).copy(letterSpacing = (-0.02f).em), Modifier.weight(1f, fill = false), maxLines = 1)
@@ -94,8 +93,7 @@ private fun HomeHeader(m: AppModel, open: Boolean, toggle: () -> Unit) {
             Modifier.height(44.dp).homeDarkPill().padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            // Android har ikke v4-søkesiden ennå: søket åpner radiosøket som før.
-            Box(Modifier.size(38.dp).press(label = "Søk") { m.sub = "radio" }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(38.dp).press(label = "Søk") { DockUi.hideHint(); m.openSearch() }, contentAlignment = Alignment.Center) {
                 SKIcon(HomeV4.search, 20.dp, 1.8f, HomeV4.ink)
             }
             Box(Modifier.size(38.dp).press(label = "Innstillinger") { m.tab = 3; m.setCat = -1 }, contentAlignment = Alignment.Center) {
@@ -182,27 +180,6 @@ private fun sources(m: AppModel): List<Pair<String, String>> {
         .mapNotNull { k -> alle.firstOrNull { a -> a.first == k.id } }
 }
 
-/**
- * Hva et trykk på en kilde gjør. iOS åpner kildesiden (V4SourcePage); Android har ikke den, så kildene går dit de
- * gikk før: radiolisten, biblioteket, eller inngangen/tjenesten med Nå spilles.
- */
-private fun openSource(m: AppModel, label: String) {
-    when (label) {
-        "Radio" -> m.sub = "radio"
-        "AirPlay" -> { m.pickInput(0); m.full = true }
-        "Blåtann" -> if (m.actRoom.type == "node") {
-            m.tab = 3; m.setDev = m.actRoom.id
-            m.setCat = SK.catsFor("node").indexOfFirst { it.id == "tilkobling" }
-        } else { m.pickInput(1); m.full = true }
-        "Spotify" -> m.pickService("spotify")
-        "YouTube Music", "YT Music" -> m.openLib("ytm")
-        "Navidrome" -> m.openLib("nd")
-        "Plex" -> m.openLib("plex")
-        "UPnP/DLNA" -> m.pickService("upnp")
-        "AUX" -> { m.pickInput(2); m.full = true }
-    }
-}
-
 @Composable
 private fun SourcesShelf(m: AppModel, onEdit: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -214,7 +191,7 @@ private fun SourcesShelf(m: AppModel, onEdit: () -> Unit) {
         EdgeScroll(14.dp) {
             for ((name, short) in sources(m)) key(name) {
                 Column(
-                    Modifier.width(68.dp).press { openSource(m, name) },
+                    Modifier.width(68.dp).press { m.openSource(name) },
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
                     HomeSourceIcon(name, 68.dp)
@@ -238,7 +215,7 @@ private fun favColor(name: String): Color = when (name) {
 @Composable
 private fun FavShelf(m: AppModel) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        T("Radiofavoritter ›", sora(17f, W.Semibold), Modifier.press { m.sub = "radio" })
+        T("Radiofavoritter ›", sora(17f, W.Semibold), Modifier.press { m.openSource("Radio") })
         EdgeScroll(12.dp) {
             m.radio.forEachIndexed { i, st ->
                 val on = m.input == 3 && m.stIdx == i && m.rTmp == null
@@ -281,44 +258,8 @@ private fun FavName(name: String, avail: Dp) {
 
 // MARK: Dine spillelister
 
-/** Spilleliste fra et bibliotek eller demobiblioteket (V4Playlist). */
-private data class HomePlaylist(
-    val id: String, val name: String, val src: String, val lib: String, val keys: List<String>,
-    val coll: LibColl? = null, val demoIdx: Int = -1,
-)
-
-/** V4Lib.playlists: demodata eller det som er lastet fra tjenesten. */
-private fun libPlaylists(m: AppModel, lib: String): List<HomePlaylist> {
-    val src = HomeLibNames[lib] ?: lib
-    if (m.demo) {
-        return (SK.lib[lib]?.pls ?: emptyList()).mapIndexed { i, p ->
-            HomePlaylist("$lib/$i", p.first, src, lib, p.second.take(4).map { SK.lt[it % SK.lt.size].album }, demoIdx = i)
-        }
-    }
-    val d = m.libs[lib]
-    // YouTube Music: også «Til deg» (mikser og anbefalte album fra forsiden)
-    val colls = (d?.playlists ?: emptyList()) + (d?.newest ?: emptyList()).take(8) +
-        (if (lib == "ytm") (d?.frequent ?: emptyList()).take(8) + (d?.other ?: emptyList()).take(8) else emptyList())
-    return colls.map { c -> HomePlaylist("$lib/${c.id}", c.name, src, lib, listOf(c.name, c.name + " 2", c.name + " 3", c.name + " 4"), coll = c) }
-}
-
-private fun playlists(m: AppModel): List<HomePlaylist> =
-    listOf("ytm", "nd", "plex").flatMap { lib -> libPlaylists(m, lib).filter { it.coll?.playlist ?: true }.take(6) }
-
-/**
- * Åpner spillelisten. iOS viser den på spillelistesiden (V4PlaylistPage); her åpnes den samme lista i biblioteket
- * (fanen Spillelister, samme rekkefølge som LibraryView bruker).
- */
-private fun openPlaylist(m: AppModel, p: HomePlaylist) {
-    m.openLib(p.lib)
-    val c = p.coll
-    val idx = if (c == null) p.demoIdx else {
-        val d = m.libs[p.lib] ?: LibData()
-        val list = if (p.lib == "ytm") (d.playlists + d.newest.take(8) + d.frequent.take(8) + d.other.take(8)).distinctBy { it.id } else d.playlists
-        list.indexOfFirst { it.id == c.id }
-    }
-    if (idx >= 0) { m.libTab = 1; m.libPl = idx }
-}
+private fun playlists(m: AppModel): List<SourcePlaylist> =
+    listOf("ytm", "nd", "plex").flatMap { lib -> SourceLib.playlists(m, lib).filter { it.coll?.playlist ?: true }.take(6) }
 
 @Composable
 private fun PlaylistShelf(m: AppModel) {
@@ -328,7 +269,7 @@ private fun PlaylistShelf(m: AppModel) {
         HomeShelfHeader("Dine spillelister", kicker = "FRA MUSIKKTJENESTENE") { m.openLib(pls[0].lib) }
         EdgeScroll(12.dp) {
             for (p in pls) key(p.id) {
-                Column(Modifier.width(148.dp).press { openPlaylist(m, p) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.width(148.dp).press { m.openSourcePlaylist(p) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     HomeMosaic(p.keys, 148.dp, 14.dp)
                     T(p.name, sora(14f, W.Semibold), maxLines = 1)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

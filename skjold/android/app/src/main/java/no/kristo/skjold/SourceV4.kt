@@ -32,9 +32,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -317,8 +319,7 @@ fun SourceOverlays(m: AppModel, wide: Boolean = false) {
         SourceUi.src?.let { SourcePage(m, it, wide) }
         SourceUi.pl?.let { PlaylistPage(m, it, wide) }
     }
-    // Søket har sitt eget «Mer»-ark; bare én vert om gangen
-    if (!SourceUi.search) SourceMoreSheet(m)
+    SourceMoreSheet(m)
 }
 
 /** Kildeside (helside med egen rulling og glød). */
@@ -685,6 +686,16 @@ private fun NoDialogDim() {
  */
 @Composable
 fun SourceMoreSheet(m: AppModel) {
+    // Flere sider kan være verter (kildeside, søk, innebygd bibliotek); bare den sist komponerte tegner arket
+    val me = remember { Any() }
+    DisposableEffect(me) { moreHosts.add(me); onDispose { moreHosts.remove(me) } }
+    if (moreHosts.lastOrNull() === me) MoreSheetContent(m)
+}
+
+private val moreHosts = mutableStateListOf<Any>()
+
+@Composable
+private fun MoreSheetContent(m: AppModel) {
     if (!SourceUi.more) return
     val close = { SourceUi.more = false }
     val t = SourceUi.moreTrack ?: m.libTrack
