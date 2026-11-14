@@ -48,105 +48,29 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-private val catIcon = mapOf("tjenester" to "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", "eq" to "M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3M3 12h4M10 9h4M17 15h4", "lyd" to "M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12", "tilkobling" to "M7 7l10 10-5 5V2l5 5L7 17", "radio" to "M4 9h16v11H4zM8 9l9-5M8 14.5h.01M14 13h4M14 16h4", "stemme" to "M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3", "skjerm" to "M3 5h18v12H3zM8 21h8M12 17v4", "strom" to "M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0", "system" to "M12 8v4M12 16h.01M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7z", "oppdatering" to "M12 4v11M7 10l5 5 5-5M5 20h14", "endringslogg" to "M6 3h9l4 4v14H6zM9 10h7M9 14h7M9 18h4", "programopptak" to "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", "utgang" to "M4 9h3l5-4v14l-5-4H4zM16 8l5 4-5 4", "steder" to "M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "kassett" to "M3 6h18v12H3zM8 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM16 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM10 12h4", "skjoldhjem" to "M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5z")
-private val catTile = mapOf("tjenester" to 0x2a3a2eL, "eq" to 0x3a2e17L, "lyd" to 0x2a3340L, "tilkobling" to 0x22314aL, "radio" to 0x3d2a2aL, "stemme" to 0x2f2a40L, "skjerm" to 0x2a3a33L, "strom" to 0x40362aL, "system" to 0x333335L, "oppdatering" to 0x1f3a3aL, "endringslogg" to 0x2a3a2eL, "programopptak" to 0x2a1412L, "utgang" to 0x2a3340L, "steder" to 0x2a3340L, "skjoldhjem" to 0x22314aL, "kassett" to 0x3a2e17L)
-
 /** 18 Innstillinger, 19 Innst. → Radio, 20 Innst. → Equalizer and the other categories from catsFor(type). */
 @Composable
 fun SettingsView(m: AppModel) {
-    val cats = m.cats
-    if (m.setCat < 0 || m.setCat >= cats.size) { Top(m, cats); return }
+    val cats = SettingsUi.cats(m)
+    if (m.setCat < 0 || m.setCat >= cats.size) { SettingsTop(m); return }
     val cat = cats[m.setCat]
-    SKBackButton("Innstillinger") { m.setCat = -1; m.openK = "" }
-    if (cat.id == "radio") {
-        T("Favoritter", sora(17f, W.Semibold))
-        if (m.rAdd) RadioAddView(m) else RadioFavoritesView(m)
-        T("Knapper og oppstart", sora(17f, W.Semibold), Modifier.padding(top = 6.dp))
-    }
-    if (cat.id == "oppdatering") { DeviceUpdateView(m); UpdateSettingsView(m) }
-    else if (cat.id == "endringslogg") ChangelogView(m)
-    else if (cat.id == "programopptak") RecordedProgramsView(m)
-    else if (cat.id == "steder") StederSettingsView(m)
-    else if (cat.id == "skjoldhjem") SkyDeviceView(m)
-    else {
-        if (cat.id == "skjerm") ClockPicker(m)
-        if (cat.id == "tilkobling") WifiSettingsView(m)
-        SettingItemsCard(m, cat.items.filter { it.kind != SettingKind.Update && it.kind != SettingKind.Clocks })
-    }
-}
-
-@Composable
-private fun Top(m: AppModel, cats: List<SettingCategory>) {
-    val dev = m.devRoom
-    EdgeScroll(6.dp) {
-        for (r in m.sys.rooms) {
-            val s = SelStyle.of(r.id == dev.id)
-            Column(
-                Modifier.clip(RoundedCornerShape(12.dp)).background(s.bg).skBorder(s.bd, 12.dp).press { m.setDev = r.id; m.setCat = -1 }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
-            ) {
-                SKIcon(SK.dev(r.type).icon, 30.dp, 1.2f, C.ink2)
-                T(r.name, sora(13f, W.Regular, s.fg), maxLines = 1)
-                T(SK.dev(r.type).n, mono(9.5f), maxLines = 1)
-            }
+    // iOS: undersidene ligger i fanens VStack med 22 pt mellomrom
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+        SKBackButton("Innstillinger") { m.setCat = -1; m.openK = "" }
+        if (cat.id == "radio") {
+            T("Favoritter", sora(17f, W.Semibold))
+            if (m.rAdd) RadioAddView(m) else RadioFavoritesView(m)
+            T("Knapper og oppstart", sora(17f, W.Semibold), Modifier.padding(top = 6.dp))
         }
-    }
-    T(AppModel.hwText(dev) + if (dev.type == "node") " · ingen skjerm eller knapper" else "", sora(11f, W.Regular, C.muted))
-    SKCard {
-        cats.forEachIndexed { i, c ->
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 58.dp).topLine(if (i > 0) C.line else Color.Transparent)
-                    .press { m.setCat = i; m.openK = ""; m.confirm = "" }.padding(vertical = 8.dp, horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(hex(catTile[c.id] ?: 0x333333L)), contentAlignment = Alignment.Center) {
-                    SKIcon(catIcon[c.id] ?: "", 18.dp, 1.8f, C.ink)
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    T(c.n, sora(14f))
-                    T(c.sub, sora(11f, W.Regular, C.muted))
-                }
-                SKIcon(Icons.chevronRight, 16.dp, 2f, C.muted)
-            }
-        }
-    }
-    // App-level settings (not stored on the amplifier)
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SKMonoLabel("APPEN", modifier = Modifier.padding(top = 6.dp))
-        Row(Modifier.fillMaxWidth().skBox(C.card, C.line).padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                T("Vis andre Lyrion-spillere", sora(14f))
-                T("Ta med spillere som ikke er Skjold (for eksempel max2play eller TV-bokser) under Rom.", sora(11f, W.Regular, C.muted))
-            }
-            SKToggle(m.showLyrionPlayers) { m.setShowLyrion(!m.showLyrionPlayers) }
-        }
-        var hapticSliders by remember { mutableStateOf(Haptics.slidersOn) }
-        Row(Modifier.fillMaxWidth().skBox(C.card, C.line).padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                T("Haptikk på glidebrytere", sora(14f))
-                T("Tikk for hvert steg på equalizer og balanse, tydelig klikk ved 0 dB og et støt ved grensen.", sora(11f, W.Regular, C.muted))
-            }
-            SKToggle(hapticSliders) {
-                hapticSliders = !hapticSliders
-                Haptics.slidersOn = hapticSliders
-                if (hapticSliders) Haptics.tick()
-            }
-        }
-        val ctx = androidx.compose.ui.platform.LocalContext.current
-        var callDuck by remember { mutableStateOf(CallDuck.enabled(ctx) && CallDuck.hasPermission(ctx)) }
-        Row(Modifier.fillMaxWidth().skBox(C.card, C.line).padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                T("Senk musikken når telefonen ringer", sora(14f))
-                T("Skjold senker volumet mens det ringer og under samtalen, og løfter det igjen etterpå. Krever tilgang til telefonstatus.", sora(11f, W.Regular, C.muted))
-            }
-            SKToggle(callDuck) {
-                callDuck = !callDuck
-                if (callDuck && !CallDuck.hasPermission(ctx)) {
-                    (ctx as? android.app.Activity)?.requestPermissions(arrayOf(android.Manifest.permission.READ_PHONE_STATE), 11)
-                }
-                CallDuck.setEnabled(ctx, callDuck)
-            }
+        if (cat.id == "oppdatering") { DeviceUpdateView(m); UpdateSettingsView(m) }
+        else if (cat.id == "programopptak") RecordedProgramsView(m)
+        else if (cat.id == "endringslogg") ChangelogView(m)
+        else if (cat.id == "steder") StederSettingsView(m)
+        else if (cat.id == "skjoldhjem") SkyDeviceView(m)
+        else {
+            if (cat.id == "skjerm") ClockPicker(m)
+            if (cat.id == "tilkobling") WifiSettingsView(m)
+            SettingItemsCard(m, cat.items.filter { it.kind != SettingKind.Update && it.kind != SettingKind.Clocks })
         }
     }
 }
@@ -282,6 +206,7 @@ fun RadioFavoritesView(m: AppModel) {
         Spacer(Modifier.weight(1f))
         SKLinkButton(if (m.rEdit) "Ferdig" else "Endre rekkefølge", modifier = Modifier.padding(vertical = 4.dp)) { m.rEdit = !m.rEdit }
     }
+    T("Rekkefølgen er den samme som på radioknappen. ★ spilles når du holder radioknappen inne.", sora(12f, W.Regular, C.muted, 1.4f))
     SKCard {
         rl.forEachIndexed { i, st ->
             val playing = m.input == 3 && m.stIdx == i && m.rTmp == null
