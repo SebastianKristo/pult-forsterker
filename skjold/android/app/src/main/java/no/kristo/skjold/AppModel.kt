@@ -20,6 +20,7 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlin.math.roundToInt
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
@@ -595,6 +596,95 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val devRoom: Room get() = sys.rooms.firstOrNull { it.id == setDev } ?: sys.rooms.firstOrNull() ?: Room("stue", "Stue", "s1", "", 0)
     val groupName: String get() = if (sys.rooms.isEmpty()) room else sys.groupLabel(actRoom.id)
     val actModel: String get() = SK.dev(actRoom.type).n
+
+    // MARK: - v4 Rom (som V4Rooms.swift / V4Model.swift på iOS, samme lagringsnøkler)
+
+    /** Sortering i Rom: 0 spiller nå først, 1 mest brukt, 2 alfabetisk. */
+    var roomSort by Persisted("skjold-v4-sort", Store.load("skjold-v4-sort", Int.serializer()) ?: 0, Int.serializer())
+    /** Festede rom, i rekkefølge. De ligger alltid øverst i Rom. */
+    var roomPins by Persisted("skjold-v4-pins", Store.load("skjold-v4-pins", ListSerializer(String.serializer())) ?: emptyList(), ListSerializer(String.serializer()))
+    var roomSortOpen by mutableStateOf(false)
+    var roomPinOpen by mutableStateOf(false)
+
+    /** Gruppen til det aktive rommet (minst rommet selv). */
+    val v4Group: List<Room> get() = sys.groupOf(actRoom.id).ifEmpty { listOf(actRoom) }
+
+    /** «Stue», «Stue + Kjøkken», «Stue + 2». */
+    val v4GroupName: String
+        get() {
+            val g = v4Group
+            val first = g.firstOrNull { it.id == actRoom.id } ?: g.firstOrNull() ?: return actRoom.name
+            if (g.size == 1) return first.name
+            if (g.size == 2) g.firstOrNull { it.id != first.id }?.let { return first.name + " + " + it.name }
+            return first.name + " + ${g.size - 1}"
+        }
+
+    /** Gruppevolum = snittet av rommene i gruppen (det aktive rommet leses fra vol). */
+    val v4GroupVol: Int
+        get() {
+            val g = v4Group
+            if (g.size <= 1) return vol
+            val vals = g.map { if (it.id == actRoom.id) vol else it.vol }
+            return (vals.sum().toDouble() / vals.size).roundToInt()
+        }
+
+    /** Flytter alle rommene i gruppen like mye. */
+    fun v4SetGroupVol(v: Int) {
+        val target = v.coerceIn(0, 100)
+        val g = v4Group
+        if (g.size <= 1) { setVol(target); return }
+        val delta = target - v4GroupVol
+        if (delta == 0) return
+        val ids = g.map { it.id }.toSet()
+        val rooms = sys.rooms.map { r ->
+            if (r.id !in ids) r else {
+                val cur = if (r.id == actRoom.id) vol else r.vol
+                val nv = (cur + delta).coerceIn(0, 100)
+                if (r.id == actRoom.id) setVol(nv)
+                r.copy(vol = nv)
+            }
+        }
+        setSys(sys.copy(rooms = rooms))
+    }
+
+    fun v4RoomVol(r: Room): Int = if (r.id == actRoom.id) vol else r.vol
+
+    fun v4SetRoomVol(id: String, v: Int) {
+        val t = v.coerceIn(0, 100)
+        if (id == actRoom.id) setVol(t)
+        setSys(sys.copy(rooms = sys.rooms.map { if (it.id == id) it.copy(vol = t) else it }))
+    }
+
+    /** Gjør et rom aktivt (det appen styrer). Hvert rom beholder sitt eget volum. */
+    fun v4Activate(r: Room) {
+        if (r.id == actRoom.id) return
+        val old = actRoom
+        val rooms = sys.rooms.map { if (it.id == old.id) it.copy(vol = vol) else it }
+        vol = r.vol
+        setSys(sys.copy(rooms = rooms, active = r.id))
+    }
+
+    /** Spill/pause i et rom. Det aktive rommet går via togglePlay, de andre direkte til sin enhet eller Lyrion. */
+    fun v4ToggleRoom(r: Room) {
+        if (r.id == actRoom.id) { togglePlay(); return }
+        Haptics.thump()
+        val h = r.host; val pid = r.pid
+        if (h != null) devSend("/api/transport", mapOf("action" to "playpause"), on = h)
+        else if (pid != null) lyrionCmd(pid, listOf("pause"))
+    }
+
+    /** Kildeikon-etikett for det som spiller (SourceGlyph). */
+    val v4SrcIcon: String
+        get() {
+            svc?.let { s -> return mapOf("spotify" to "Spotify", "upnp" to "UPnP/DLNA", "ytm" to "YouTube Music", "nd" to "Navidrome", "plex" to "Plex")[s] ?: "AirPlay" }
+            return listOf("AirPlay", "Blåtann", "AUX", "Radio", "USB")[input.coerceIn(0, 4)]
+        }
+
+    /** «Legg til» i Rom: oppsettet, eller Steder når et Skjold-hjem-sted er valgt. */
+    fun v4AddDevice() {
+        if (stedId.isNotEmpty()) { openStederSettings(); return }
+        restartSetup()
+    }
 
     @JvmName("updateSys")
     fun setSys(n: SystemState) {

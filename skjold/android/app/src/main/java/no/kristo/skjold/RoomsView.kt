@@ -1,7 +1,6 @@
 package no.kristo.skjold
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,329 +8,318 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import kotlin.math.roundToInt
 
-/** Rom («Ditt system»): now-playing group card with group volume, room tiles (drag sideways for volume), surround and add device. */
+/*
+ * Rom (v4), som V4Rooms.swift på iOS: ett kort per rom (gruppen med det aktive rommet først), med omslag, hva som
+ * spiller, spill/pause og volum. Sortering og «Fest rom» ligger bak knappene ved tittelen (RoomsHeaderButtons).
+ */
+
+private object R4 {
+    const val sort = "M4 7h16M7 12h10M10 17h4"
+    const val pin = "M12 17v5M8 3h8l-1 6 3 3H6l3-3z"
+    const val up = "M6 15l6-6 6 6"
+    const val vol = "M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6"
+    val sheet = hex(0x1a1a1c)
+    val row = hex(0x202022)
+    val goldDark = hex(0xd9a441)
+    val sorts = listOf("Spiller nå først", "Mest brukt", "Alfabetisk")
+}
+
+private data class RoomCardData(
+    val id: String, val name: String, val types: List<String>, val t: String, val s: String, val src: String, val key: String,
+    val playing: Boolean, val isMain: Boolean, val pinned: Boolean, val ord: Int?, val room: Room,
+)
+
+private fun cards(m: AppModel): List<RoomCardData> {
+    val group = m.v4Group
+    val gids = group.map { it.id }.toSet()
+    val pins = m.roomPins
+    val np = m.np
+    val main = RoomCardData(
+        m.actRoom.id, m.v4GroupName, group.map { it.type }, np.t, np.s, m.v4SrcIcon, m.playerArt.key, m.playing, true,
+        group.any { it.id in pins }, group.mapNotNull { r -> pins.indexOf(r.id).takeIf { it >= 0 } }.minOrNull(), m.actRoom,
+    )
+    val out = mutableListOf(main)
+    for (r in m.sys.rooms) {
+        if (r.id in gids) continue
+        val rnp = r.np
+        val t = rnp?.firstOrNull() ?: "Ledig"
+        val s = if ((rnp?.size ?: 0) > 1) rnp!![1] else SK.dev(r.type).n
+        out += RoomCardData(
+            r.id, r.name, listOf(r.type), t, s, "Radio", rnp?.firstOrNull() ?: r.name,
+            rnp != null && rnp.firstOrNull() != "Frakoblet", false, r.id in pins, pins.indexOf(r.id).takeIf { it >= 0 }, r,
+        )
+    }
+    val sort = m.roomSort
+    return out.sortedWith { a, b ->
+        val pa = a.ord ?: 99; val pb = b.ord ?: 99
+        when {
+            pa != pb -> pa.compareTo(pb)
+            sort == 0 && a.playing != b.playing -> if (a.playing) -1 else 1
+            sort == 2 -> a.name.compareTo(b.name, ignoreCase = true)
+            else -> 0
+        }
+    }
+}
+
 @Composable
 fun RoomsView(m: AppModel) {
-    val act = m.actRoom
-    val members = m.sys.groupOf(act.id)
-    val gid = act.group
-    val gMode = gid?.let { m.sys.modes[it] } ?: "sync"
-    val surround = members.size > 1 && gMode == "surround"
-
-    // v4: over 900 dp (nettbrett) står gruppekortet og romrutenettet i to kolonner
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val wide = maxWidth >= 900.dp
-        if (wide) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    GroupCard(m, act, members, gid, gMode)
-                    if (surround) SurroundCard(m, members)
+    val list = cards(m)
+    // over 900 dp (nettbrett): to kolonner
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 0.dp)) {
+        val cols = if (maxWidth >= 900.dp) 2 else 1
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            list.chunked(cols).forEach { rowCards ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    rowCards.forEach { c -> Box(Modifier.weight(1f)) { RoomCard(m, c) } }
+                    if (rowCards.size < cols) Spacer(Modifier.weight(1f))
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    RoomsGrid(m, act)
-                    RoomsHint()
-                }
-            }
-        } else {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                GroupCard(m, act, members, gid, gMode)
-                RoomsGrid(m, act)
-                if (surround) SurroundCard(m, members)
-                RoomsHint()
             }
         }
+    }
+    if (m.roomPinOpen) PinSheet(m)
+}
+
+/** Sorter- og pluss-knappene ved tittelen «Rom», med «Sorter etter»-menyen under. */
+@Composable
+fun RoomsHeaderButtons(m: AppModel) {
+    Box {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CircleButton(R4.sort, "Sorter", m.roomSortOpen) { m.roomSortOpen = !m.roomSortOpen }
+            CircleButton(Icons.plus, "Legg til", false) { m.v4AddDevice() }
+        }
+        if (m.roomSortOpen) SortMenu(m)
     }
 }
 
 @Composable
-private fun RoomsHint() {
-    T("Samme musikk i alle rommene, synkronisert ned til millisekunder. Trykk på et rom for å styre det.", sora(11f, W.Regular, C.muted))
-}
-
-@Composable
-private fun RoomsGrid(m: AppModel, act: Room) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            SKMonoLabel("ROM")
-            Spacer(Modifier.weight(1f))
-            T("Dra sidelengs for volum", sora(11f, W.Regular, C.muted))
-        }
-        val cells: List<Room?> = m.sys.rooms + listOf(null)
-        cells.chunked(2).forEach { pair ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                pair.forEach { r ->
-                    Box(Modifier.weight(1f)) { if (r != null) RoomTile(m, r, act) else AddTile(m) }
-                }
-                if (pair.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-// MARK: Group / now playing
-
-@Composable
-private fun GroupCard(m: AppModel, act: Room, members: List<Room>, gid: String?, gMode: String) {
-    val np = m.np
-    val groupVol = if (members.isEmpty()) m.vol else (members.sumOf { if (it.id == act.id) m.vol else it.vol }.toDouble() / members.size).roundToInt()
-    // v4: romkort r24 tonet i omslagsfargen (romfarger), navn 17/600 og enhetsikoner, cover 52, rund omrisset spill-knapp
-    val tone = art(m.playerArt.key).base
+private fun CircleButton(d: String, label: String, on: Boolean, act: () -> Unit) {
     Box(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-            .cssGradient(150.0, listOf(0f to mix(tone, C.bg, 0.25f), 1f to mix(tone, C.bg, 0.6f)))
+        Modifier.size(44.dp).clip(CircleShape).background(if (on) C.ink.copy(alpha = 0.18f) else hex(0x28282a).copy(alpha = 0.6f))
+            .skCapsuleBorder(Color.White.copy(alpha = 0.12f))
+            .press(label = label) { Haptics.tap(); act() },
+        contentAlignment = Alignment.Center,
+    ) { SKIcon(d, 20.dp, 1.8f, C.ink) }
+}
+
+// MARK: Kort
+
+/** Romkort: radius 24, farget fra omslaget, kant .1, omslag 52, rund spill-knapp og volum. */
+@Composable
+private fun RoomCard(m: AppModel, c: RoomCardData) {
+    val vol = if (c.isMain) m.v4GroupVol else m.v4RoomVol(c.room)
+    val a = art(c.key)
+    val open = {
+        if (c.isMain) m.full = true else { Haptics.tick(); m.v4Activate(c.room) }
+    }
+    Box(
+        Modifier.fillMaxWidth().alpha(if (c.playing) 1f else 0.78f).clip(RoundedCornerShape(24.dp))
+            .cssGradient(150.0, a.stops)
+            .background(Color.Black.copy(alpha = if (a.hasLogo) 0.55f else 0.32f))
             .skBorder(Color.White.copy(alpha = 0.1f), 24.dp),
     ) {
         Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // navn (med nål når festet) og enhetsikoner
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                T(if (members.size > 1) m.groupName else act.name, sora(17f, W.Semibold), Modifier.weight(1f), maxLines = 1)
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (c.pinned) SKIcon(R4.pin, 13.dp, 1.5f, C.accent2, fill = true)
+                    T(c.name, sora(17f, W.Semibold), maxLines = 1)
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    for (r in (if (members.isEmpty()) listOf(act) else members)) {
+                    for (t in c.types) {
                         Box(Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-                            SKIcon(SK.dev(r.type).icon, 16.dp, 1.4f, C.ink)
+                            SKIcon(SK.dev(t).icon, 16.dp, 1.4f, C.ink)
                         }
                     }
                 }
             }
+            // omslag, tittel og kilde, spill/pause
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ArtFill(m.playerArt.key, Modifier.size(52.dp).shadow(8.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).press { Haptics.thump(); m.full = true })
-                Column(Modifier.weight(1f).press { m.full = true }, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    T(np.t, sora(14f, W.Semibold), maxLines = 1)
-                    T(np.s, sora(12f, W.Regular, C.ink.copy(alpha = 0.72f)), maxLines = 1)
+                ArtFill(a, Modifier.size(52.dp).shadow(8.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).press(label = "Åpne " + c.name) { open() })
+                Column(Modifier.weight(1f).press { open() }, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    T(c.t, sora(14f, W.Semibold), maxLines = 1)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SourceGlyph(c.src, 15.dp)
+                        T(c.s, sora(12f, W.Regular, C.ink.copy(alpha = 0.72f)), maxLines = 1)
+                    }
                 }
                 Box(
-                    Modifier.size(48.dp).clip(CircleShape).skBorder(C.ink.copy(alpha = 0.7f), 24.dp, 1.5.dp).press(label = if (m.playing) "Pause" else "Spill") { m.togglePlay() },
+                    Modifier.size(40.dp).clip(CircleShape).skCapsuleBorder(C.ink.copy(alpha = 0.7f), 1.5.dp)
+                        .press(label = (if (c.playing) "Pause i " else "Spill i ") + c.name) { m.v4ToggleRoom(c.room) },
                     contentAlignment = Alignment.Center,
-                ) { SKIcon(if (m.playing) Icons.pause else Icons.playRound, 15.dp, color = C.ink, fill = true) }
+                ) { SKIcon(if (c.playing) Icons.pause else Icons.playRound, 15.dp, color = C.ink, fill = true) }
             }
+            // volum
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SKIcon("M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6", 16.dp, 1.8f, C.ink.copy(alpha = 0.8f))
-                SkBarSlider(groupVol.toDouble(), { setGroupVolume(m, it.roundToInt()) }, Modifier.weight(1f))
-                T("$groupVol", mono(13f, C.ink), Modifier.width(24.dp), align = androidx.compose.ui.text.style.TextAlign.End)
-            }
-            // members
-            Flow(6.dp) {
-                for (r in members) {
-                    Row(
-                        Modifier.height(28.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)).padding(horizontal = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        SKIcon(SK.dev(r.type).icon, 14.dp, 1.6f, C.ink2)
-                        T(r.name, sora(12f))
-                    }
-                }
-            }
-            if (members.size > 1 && gid != null) {
-                SKSegmented(listOf("Samme musikk", "Surround"), if (gMode == "surround") 1 else 0, 34.dp, Color.Black.copy(alpha = 0.3f), null, C.selBg2, C.accent2, C.ink2) { i ->
-                    Haptics.tick()
-                    m.setSys(m.sys.withGroupMode(gid, if (i == 1) "surround" else "sync"))
-                }
-            }
-            val rooms = m.sys.rooms
-            val allGrouped = rooms.size > 1 && rooms.all { it.group != null && it.group == rooms[0].group }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickButton("Alle rom", Icons.tabRooms, allGrouped, Modifier.weight(1f)) { m.setSys(m.sys.groupedAll()) }
-                QuickButton("Bare ${act.name}", Icons.speaker, members.size == 1, Modifier.weight(1f)) {
-                    m.setSys(m.sys.copy(rooms = m.sys.rooms.map { it.copy(group = null) }))
-                }
+                SKIcon(R4.vol, 16.dp, 1.8f, C.ink.copy(alpha = 0.8f))
+                SkBarSlider(vol.toDouble(), { v ->
+                    val n = v.roundToInt()
+                    if (c.isMain) m.v4SetGroupVol(n) else m.v4SetRoomVol(c.room.id, n)
+                }, Modifier.weight(1f))
+                T("$vol", mono(13f, C.ink), Modifier.width(24.dp), align = TextAlign.End)
             }
         }
     }
 }
 
+// MARK: Sorter etter
+
 @Composable
-private fun QuickButton(title: String, icon: String, on: Boolean, modifier: Modifier, action: () -> Unit) {
-    Row(
-        modifier.height(36.dp).clip(CircleShape).background(if (on) C.selBg else Color.Black.copy(alpha = 0.25f)).skCapsuleBorder(if (on) C.accent else C.line2)
-            .press { if (!on) { Haptics.tick(); action() } },
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+private fun SortMenu(m: AppModel) {
+    val close = { m.roomSortOpen = false }
+    Popup(
+        alignment = Alignment.TopEnd,
+        offset = IntOffset(0, with(androidx.compose.ui.platform.LocalDensity.current) { 52.dp.roundToPx() }),
+        onDismissRequest = close,
+        properties = PopupProperties(focusable = true),
     ) {
-        SKIcon(icon, 14.dp, 1.8f, if (on) C.accent2 else C.ink)
-        T(title, sora(12f, if (on) W.Semibold else W.Regular, if (on) C.accent2 else C.ink), maxLines = 1)
-    }
-}
-
-/** Moves every member by the same amount, like a group volume on Sonos. Reads fresh values from the model each step. */
-private fun setGroupVolume(m: AppModel, v: Int) {
-    val act = m.actRoom
-    var rooms = m.sys.rooms.map { if (it.id == act.id) it.copy(vol = m.vol) else it }
-    val n0 = m.sys.copy(rooms = rooms)
-    val members = n0.groupOf(act.id)
-    if (members.isEmpty()) return
-    val current = (members.sumOf { it.vol }.toDouble() / members.size).roundToInt()
-    val delta = v - current
-    if (delta == 0) return
-    rooms = rooms.map { r ->
-        if (members.any { it.id == r.id }) {
-            val nv = (r.vol + delta).coerceIn(0, 100)
-            if (r.id == act.id) m.setVol(nv)
-            r.copy(vol = nv)
-        } else r
-    }
-    m.setSys(n0.copy(rooms = rooms))
-}
-
-// MARK: Add device
-
-@Composable
-private fun AddTile(m: AppModel) {
-    Column(
-        Modifier.fillMaxWidth().height(150.dp).skBorder(hex(0x3a2e17), 18.dp, dash = listOf(5f, 4f))
-            .press {
-                Haptics.tap()
-                if (m.stedId.isNotEmpty()) { m.openStederSettings(); return@press }
-                m.mode = Mode.ONBOARD; m.welcome = false; m.ob = 0; m.tested = emptySet(); m.pw = ""; m.obUpd = 0; m.scan = false
-            },
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
-    ) {
-        Box(Modifier.size(44.dp).clip(CircleShape).background(C.selBg2).skCapsuleBorder(C.selLine), contentAlignment = Alignment.Center) {
-            SKIcon(Icons.plus, 22.dp, 2f, C.accent2)
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            T("Legg til enhet", sora(13f, W.Semibold))
-            T("S1, Node eller Core", sora(11f, W.Regular, C.muted))
+        Column(
+            Modifier.width(250.dp).shadow(24.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(SkG.menuBg)
+                .skBorder(Color.White.copy(alpha = 0.1f), 18.dp).padding(8.dp),
+        ) {
+            T("SORTER ETTER", mono(10f, C.body, 0.12f), Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 6.dp))
+            R4.sorts.forEachIndexed { i, n ->
+                val on = m.roomSort == i
+                Row(
+                    Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(if (on) C.ink.copy(alpha = 0.08f) else Color.Transparent)
+                        .press { Haptics.tick(); m.roomSort = i; close() }.padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    T(if (on) "✓" else "", sora(14f, W.Regular, C.accent2), Modifier.width(16.dp))
+                    T(n, sora(14f))
+                }
+            }
+            Box(Modifier.padding(horizontal = 8.dp, vertical = 6.dp).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
+            Row(
+                Modifier.fillMaxWidth().height(44.dp).press { close(); m.roomPinOpen = true }.padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                SKIcon(R4.pin, 16.dp, 1.8f, C.ink)
+                T("Fest rom …", sora(14f))
+            }
         }
     }
 }
 
-// MARK: Surround
+// MARK: Fest rom
 
+/** «Fest rom»-arket: festede rom i rekkefølge (flytt opp, fjern) og de andre rommene (trykk for å feste). */
 @Composable
-private fun SurroundCard(m: AppModel, members: List<Room>) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SKMonoLabel("PLASSERING I SURROUND")
-        SKCard(radius = 18.dp) {
-            members.forEachIndexed { idx, r ->
-                Column(Modifier.fillMaxWidth().topLine(if (idx > 0) C.line else Color.Transparent).padding(vertical = 12.dp, horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SKIcon(SK.dev(r.type).icon, 18.dp, 1.4f, C.ink2)
-                        T(r.name, sora(14f), Modifier.weight(1f))
-                        T(SK.roles[r.role ?: 0], mono(10f, C.accent2))
-                    }
-                    Flow(5.dp) {
-                        SK.roles.forEachIndexed { j, label ->
-                            val on = (r.role ?: 0) == j
-                            SKChip(label, height = 30.dp, hPad = 10.dp, radius = 8.dp, style = SelStyle(if (on) C.accent else C.line2, if (on) C.selBg2 else C.card, if (on) C.accent2 else C.ink2)) {
-                                Haptics.tick()
-                                m.setSys(m.sys.copy(rooms = m.sys.rooms.map { if (it.id == r.id) it.copy(role = j) else it }))
-                            }
+private fun PinSheet(m: AppModel) {
+    val close = { m.roomPinOpen = false }
+    Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)).press(label = "Lukk") { close() }) {
+            val pins = m.roomPins
+            val pinned = pins.mapNotNull { id -> m.sys.rooms.firstOrNull { it.id == id } }
+            val others = m.sys.rooms.filter { it.id !in pins }
+            Column(
+                Modifier.fillMaxSize().statusBarsPadding().padding(top = 56.dp, start = 8.dp, end = 8.dp)
+                    .clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)).background(R4.sheet)
+                    .skBorder(Color.White.copy(alpha = 0.08f), 34.dp)
+                    .pointerInput(Unit) { detectTapGestures { } }  // trykk på arket lukker det ikke
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(44.dp).clip(CircleShape).background(C.ink.copy(alpha = 0.1f)).skCapsuleBorder(Color.White.copy(alpha = 0.12f))
+                            .press(label = "Lukk") { close() },
+                        contentAlignment = Alignment.Center,
+                    ) { SKIcon(Icons.close, 18.dp, 2f, C.ink) }
+                    Spacer(Modifier.weight(1f))
+                    Box(
+                        Modifier.height(44.dp).clip(CircleShape).background(R4.goldDark).press { close() }.padding(horizontal = 18.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { T("Ferdig", sora(14f, W.Semibold, C.bg)) }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    T("Fest rom", sora(28f, W.Semibold).copy(letterSpacing = (-0.02f).em))
+                    T("Festede rom ligger alltid øverst i Rom-fanen, i den rekkefølgen du velger her.", sora(13f, W.Regular, C.body, lineHeight = 1.5f))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SKMonoLabel("FESTET · ${pinned.size}")
+                    Spacer(Modifier.weight(1f))
+                    T("Velg alle", sora(13f, W.Regular, R4.goldDark), Modifier.press { Haptics.tick(); m.roomPins = m.sys.rooms.map { it.id } })
+                }
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(R4.row).skBorder(Color.White.copy(alpha = 0.08f), 18.dp)) {
+                    if (pinned.isEmpty()) T("Velg rom under for å feste dem.", sora(13f, W.Regular, C.muted), Modifier.padding(16.dp))
+                    pinned.forEachIndexed { i, r ->
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 56.dp).topLine(if (i > 0) Color.White.copy(alpha = 0.07f) else Color.Transparent).padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            T("${i + 1}", mono(11f, C.accent2), Modifier.width(22.dp))
+                            RoomIcon(r)
+                            T(r.name, sora(15f), Modifier.weight(1f), maxLines = 1)
+                            Box(
+                                Modifier.size(28.dp).alpha(if (i > 0) 1f else 0.3f).clip(RoundedCornerShape(8.dp)).background(C.ink.copy(alpha = 0.08f))
+                                    .press(enabled = i > 0, label = "Flytt opp") {
+                                        Haptics.tick()
+                                        val p = m.roomPins.toMutableList(); val t = p[i - 1]; p[i - 1] = p[i]; p[i] = t; m.roomPins = p
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) { SKIcon(R4.up, 14.dp, 2f, C.ink) }
+                            Box(
+                                Modifier.size(26.dp).clip(CircleShape).background(R4.goldDark)
+                                    .press(label = "Fjern") { Haptics.tick(); m.roomPins = m.roomPins.filter { it != r.id } },
+                                contentAlignment = Alignment.Center,
+                            ) { SKIcon(Icons.check, 14.dp, 3f, C.bg) }
                         }
                     }
                 }
+                SKMonoLabel("ANDRE ROM")
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(R4.row).skBorder(Color.White.copy(alpha = 0.08f), 18.dp)) {
+                    others.forEachIndexed { i, r ->
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 56.dp).topLine(if (i > 0) Color.White.copy(alpha = 0.07f) else Color.Transparent)
+                                .press { Haptics.tick(); m.roomPins = m.roomPins + r.id }.padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            RoomIcon(r)
+                            T(r.name, sora(15f), Modifier.weight(1f), maxLines = 1)
+                            Box(Modifier.size(26.dp).clip(CircleShape).skCapsuleBorder(C.dim, 1.5.dp))
+                        }
+                    }
+                    if (others.isEmpty()) T("Alle rom er festet.", sora(13f, W.Regular, C.muted), Modifier.padding(16.dp))
+                }
             }
         }
-        T("Tidsforsinkelse justeres automatisk ut fra plasseringen.", sora(11f, W.Regular, C.muted))
     }
 }
 
-// MARK: - Room tile
-
-/**
- * Square-ish tile: icon, name, status; the background fills with the volume. Drag sideways to change volume,
- * tap to control the room, check mark to add/remove it from the group. A vertical drag stays a scroll: only a
- * horizontal drag past the touch slop is taken by the tile (detectHorizontalDragGestures), the rest goes to the page.
- */
 @Composable
-private fun RoomTile(m: AppModel, room: Room, act: Room) {
-    val isA = room.id == act.id
-    val inG = isA || (act.group != null && room.group == act.group)
-    val vol = if (isA) m.vol else room.vol
-    val np = m.np
-    val status = room.np?.let { it[0] + " · " + it.getOrElse(1) { "" } } ?: if (inG) np.t else "Ledig"
-    val curVol by rememberUpdatedState(vol)
-    val drag = remember { floatArrayOf(0f, 0f) } // start volume, accumulated dx
-    BoxWithConstraints(
-        Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(18.dp)).background(if (isA) C.selBg else C.card)
-            .skBorder(if (isA) C.accent else C.line, 18.dp)
-            .pointerInput(room.id, isA) {
-                detectTapGestures {
-                    if (!isA) {
-                        Haptics.tick()
-                        // keep each room's own volume: store the old active room's volume, load the new one
-                        val old = m.actRoom
-                        val rooms = m.sys.rooms.map { if (it.id == old.id) it.copy(vol = m.vol) else it }
-                        m.vol = room.vol
-                        m.setSys(m.sys.copy(rooms = rooms, active = room.id))
-                    }
-                }
-            }
-            .pointerInput(room.id, isA) {
-                detectHorizontalDragGestures(
-                    onDragStart = { drag[0] = curVol.toFloat(); drag[1] = 0f },
-                    onDragEnd = {}, onDragCancel = {},
-                ) { change, dx ->
-                    change.consume()
-                    drag[1] += dx
-                    val v = (drag[0] + drag[1] / size.width * 100).roundToInt().coerceIn(0, 100)
-                    val cur = curVol
-                    if (v != cur) {
-                        if (v == 0 || v == 100) Haptics.bump() else if (v / 5 != cur / 5) Haptics.tick()
-                        setRoomVolume(m, room, v, isA)
-                    }
-                }
-            },
-    ) {
-        // volume fill from the left
-        Box(
-            Modifier.width(maxWidth * (vol / 100f)).fillMaxHeight()
-                .background(Brush.horizontalGradient(listOf(C.accent.copy(alpha = if (inG) 0.22f else 0.08f), C.accent.copy(alpha = if (inG) 0.12f else 0.04f)))),
-        )
-        Column(Modifier.fillMaxSize().padding(12.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Box(Modifier.size(40.dp).clip(RoundedCornerShape(11.dp)).background(Color.Black.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-                    SKIcon(SK.dev(room.type).icon, 26.dp, 1.3f, if (isA) C.accent2 else C.ink2)
-                }
-                Spacer(Modifier.weight(1f))
-                Box(
-                    Modifier.size(40.dp).press(enabled = !isA) {
-                        Haptics.tick()
-                        m.setSys(m.sys.toggledInGroup(act.id, room.id))
-                    },
-                    contentAlignment = Alignment.TopEnd,
-                ) {
-                    Box(
-                        Modifier.size(26.dp).clip(CircleShape).background(if (inG) C.accent else Color.Transparent).skCapsuleBorder(if (inG) C.accent else C.dim, 1.5.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { if (inG) SKIcon(Icons.check, 14.dp, 3f, C.bg) }
-                }
-            }
-            Spacer(Modifier.weight(1f))
-            T(room.name, sora(16f, W.Semibold), maxLines = 1)
-            m.hjemEnhet(room.id)?.let { HjemBadges(it, Modifier.padding(vertical = 2.dp)) }
-            T(status, sora(11f, W.Regular, if (inG) C.ink2 else C.muted), maxLines = 1)
-            Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SKIcon(Icons.volume, 12.dp, 2f, C.muted)
-                T("$vol", mono(11f, if (vol > 0) C.ink else C.muted))
-                Spacer(Modifier.weight(1f))
-                T(SK.dev(room.type).n.replace("Skjold ", ""), mono(9f, C.muted, 0.08f))
-            }
-        }
+private fun RoomIcon(r: Room) {
+    Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(C.bg), contentAlignment = Alignment.Center) {
+        SKIcon(SK.dev(r.type).icon, 20.dp, 1.3f, C.ink2)
     }
-}
-
-private fun setRoomVolume(m: AppModel, room: Room, v: Int, isA: Boolean) {
-    if (isA) m.setVol(v)
-    m.setSys(m.sys.copy(rooms = m.sys.rooms.map { if (it.id == room.id) it.copy(vol = v) else it }))
 }
