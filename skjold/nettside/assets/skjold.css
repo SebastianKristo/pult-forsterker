@@ -370,6 +370,7 @@ a.produkt:hover{border-color:rgba(217,164,65,.32)}
 @keyframes helt-inn{from{opacity:0;transform:translateY(44px) scale(.95)}to{opacity:1;transform:none}}
 /* Studiobilde i toppen av produktsiden: bredt, med kantene tonet ut i bakgrunnen */
 .p-hero img.studio{width:min(1240px,112%);margin-top:20px;border-radius:0;-webkit-mask-image:radial-gradient(ellipse 62% 66% at 50% 50%,#000 58%,transparent 100%);mask-image:radial-gradient(ellipse 62% 66% at 50% 50%,#000 58%,transparent 100%)}
+.p-hero img.foto{width:min(1240px,112%);margin-top:20px;border-radius:0;-webkit-mask-image:radial-gradient(ellipse 62% 66% at 50% 50%,#000 58%,transparent 100%);mask-image:radial-gradient(ellipse 62% 66% at 50% 50%,#000 58%,transparent 100%)}
 .s1-bg{background:var(--studio-s1)}.node-bg{background:var(--studio-node)}
 .p-hero h1,.side-topp h1,.h1-midt,.hjem-hero h1{background:linear-gradient(180deg,#fff 35%,#cfc7ad 120%);-webkit-background-clip:text;background-clip:text;color:transparent}
 /* Produktbilder */

@@ -145,11 +145,13 @@ python3 -c "from PIL import Image; im=Image.open('original.png').convert('RGB');
 
 | Filer | Brukes på |
 |---|---|
-| `s1-skra`, `s1-front`, `s1-topp`, `s1-bak` | S1 (hero, bildesekvens), forsiden, sammenlign |
-| `node-tft-skra`, `node-tft-front`, `node-tft-topp`, `node-tft-bak` | Node (hero, bildesekvens), forsiden, sammenlign |
-| `touch-skraa`, `touch-front`, `touch-side`, `touch-bak`, `touch-eksplodert` | Touch, helsort med stoff (hero, bildesekvens, «Slik er den bygget»), forsiden |
-| `familie-2026` | Forsiden: hele familien på skrivebordet (også `og.jpg`). 1024 × 572 |
-| `stav-*` | Stav: renders fra `kabinett/fjernkontroll/render/` og `dokk/render/`, og skjermbildene |
+| `*-studio.jpg` | Hero på produktsidene, forsidens produktvelger og sammenlign. 1344 × 752 (Stav 2048 × 1152) |
+| `*-foto.jpg` (+ `.webp`) | Produktfoto i studio av hver vinkel: S1, Node, Touch, Røst, Stav, Spole og Hjul. 1600 × 900, klasse `foto` |
+| `familie-studio` | Forsiden: hele familien på skjenken |
+| `s1-skjerm-*`, `stav-skjerm-*`, `web`, `app` | Skjermbilder av grensesnittet |
+| `01-s1` … `04-node` | Gamle renders, brukes fortsatt av designfilene og Homey-driverbildene, ikke av nettsiden |
+
+Fotoene er laget fra 3D-renderne med bilde-til-bilde-generering (renderen som bilde 1, studiobildet av samme produkt som stilreferanse), så form, taster og skjerm følger modellen. De gamle `-fri.png` og `node-tft-*` er fjernet.
 
 ### 3D-modellen på Touch
 
