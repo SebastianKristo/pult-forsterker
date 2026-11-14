@@ -220,6 +220,14 @@
     urull();
   }
 
+  // Videoer: stå stille ved redusert bevegelse, og hvil når de er utenfor skjermen
+  Array.prototype.forEach.call(document.querySelectorAll('video.hero-video'), function (v) {
+    if (reduce) { v.removeAttribute('autoplay'); v.pause(); return; }
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) { if (es[0].isIntersecting) { v.play().catch(function () {}); } else { v.pause(); } }, { threshold: 0.1 }).observe(v);
+    }
+  });
+
   // Forsiden: produktvelgeren. Faner med piltaster; bytter selv hvert 6. sekund til noen tar over.
   var vis = document.querySelector('[data-vis]');
   if (vis) {
@@ -234,6 +242,7 @@
         if (j === naa) { f.removeAttribute('tabindex'); } else { f.setAttribute('tabindex', '-1'); }
       });
       paneler.forEach(function (p, j) { p.classList.toggle('paa', j === naa); });
+      paneler.forEach(function (p, j) { var v = p.querySelector('video'); if (!v) { return; } if (j === naa && !reduce) { v.play().catch(function () {}); } else { v.pause(); } });
       if (fokus) { faner[naa].focus(); }
       // På smale skjermer ligger fanene på rad: hold den valgte synlig uten å flytte siden
       var l = faner[naa].parentNode;
@@ -254,7 +263,7 @@
       var start = function () { if (stanset || tid) { return; } vis.classList.add('auto'); tid = setInterval(function () { velg(naa + 1); }, TID); };
       var pause = function () { clearInterval(tid); tid = 0; };
       vis.style.setProperty('--tid', TID + 'ms');
-      new IntersectionObserver(function (es) { kjorer = es[0].isIntersecting; if (kjorer) { start(); } else { pause(); } }, { threshold: 0.35 }).observe(vis);
+      new IntersectionObserver(function (es) { kjorer = es[0].isIntersecting; var v = paneler[naa].querySelector('video'); if (kjorer) { start(); if (v) { v.play().catch(function () {}); } } else { pause(); if (v) { v.pause(); } } }, { threshold: 0.35 }).observe(vis);
       // Stopp for godt når noen velger selv; hvil mens pekeren er over
       faner.forEach(function (f) { f.addEventListener('click', function () { stanset = true; }); f.addEventListener('keydown', function () { stanset = true; }); });
       vis.addEventListener('pointerenter', function () { if (!stanset) { pause(); vis.classList.add('pause'); } });
