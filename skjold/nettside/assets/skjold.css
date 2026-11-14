@@ -696,8 +696,8 @@ body:has(.univers) .f-lenker{background:rgba(5,6,8,.5);-webkit-backdrop-filter:b
 body:has(.univers) .interesse{background:linear-gradient(180deg,transparent,rgba(5,6,8,.5) 30%,rgba(5,6,8,.75))}
 /* Kartet over reisen: fem kapitler langs høyre kant */
 .univers-kart{position:fixed;right:clamp(12px,2vw,28px);top:50%;z-index:2;translate:0 -50%;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px;pointer-events:none}
-.univers-kart li{display:flex;align-items:center;justify-content:flex-end;gap:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(242,242,238,.45)}
-.univers-kart span{opacity:0;transform:translateX(6px);transition:opacity .5s,transform .6s var(--ut)}
+.univers-kart li{position:relative;display:flex;align-items:center;justify-content:flex-end;height:26px;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(242,242,238,.45)}
+.univers-kart span{position:absolute;right:16px;top:50%;margin-top:-.65em;white-space:nowrap;opacity:0;transform:translateX(6px);transition:opacity .5s,transform .6s var(--ut)}
 .univers-kart i{display:block;width:3px;height:12px;border-radius:2px;background:rgba(242,242,238,.35);transition:height .6s var(--ut),background .4s}
 .univers-kart li.paa{color:var(--tekst-l)}
 .univers-kart li.paa span{opacity:1;transform:none}
