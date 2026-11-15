@@ -487,6 +487,14 @@ def set_backlight(pct: int, root: str = "/sys/class/backlight") -> bool:
             with open(os.path.join(d, "brightness"), "w") as f:
                 f.write(str(round(mx * pct / 100)))
             ok = True
+            # 0 % = skjermen helt av: mange DSI-paneler lyser svakt på lysstyrke 0, så slå av baklyset (FB_BLANK_POWERDOWN)
+            bp = os.path.join(d, "bl_power")
+            if os.path.exists(bp):
+                try:
+                    with open(bp, "w") as f:
+                        f.write("4" if pct == 0 else "0")
+                except OSError:
+                    pass
         except (OSError, ValueError):
             pass
     return ok
