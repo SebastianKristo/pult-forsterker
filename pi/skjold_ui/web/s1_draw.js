@@ -305,7 +305,7 @@ const SETS=[{s:'LYD',n:'Bass',num:['bass',-6,6]},{s:'LYD',n:'Diskant',num:['treb
  {s:'STRØM',n:'Auto-standby',o:['auto',['Av','20 min','60 min']]},{s:'STRØM',n:'Slå på ved signal',b:'wake'},
  {s:'LYD',n:'Nivå AUX',num:['lvlAux',-6,6]},{s:'LYD',n:'Nivå USB',num:['lvlUsb',-6,6]},
  {s:'SKJERM',n:'LED-ringer',o:['led',['Høy','Middels','Lav','Av']]},
- {s:'RADIO',n:'Hold radioknapp',o:['hold',PRESETS.map(p=>p[0])]},
+ {s:'RADIO',n:'Hold radioknapp',o:['hold',PRESETS.slice(0,6).map(p=>p[0])]},
  {s:'TILKOBLING',n:'Enhetsnavn',o:['name',NAMES]},{s:'TILKOBLING',n:'Parede enheter',act:()=>{S.set.page='bt';},v:()=>S.btDev.length+' ›'},{s:'TILKOBLING',n:'Glem alle enheter',act:()=>{ if(S.set.confirm){ S.btDev=[]; S.btPaired=false; if(S.wl==='bt'){ S.wl='air'; syncInputs(); } S.set.confirm=0; } else S.set.confirm=1; },v:()=>S.set.confirm?'Trykk igjen':''},
  {s:'SYSTEM',n:'Demo: feilmelding',o:['__err',['Ingen','Lyrion','Wi-Fi','Overoppheting']]},
  {s:'SYSTEM',n:'Kjør oppsett på nytt',act:()=>startSetup(),v:'›'},{s:'SYSTEM',n:'Om Skjold S1',act:()=>{S.set.page='om';},v:'›'},{s:'SYSTEM',n:'Fabrikkinnstillinger',act:()=>{ if(S.set.confirm){ Object.assign(S.set,SDEF); LEDK=1; S.set.confirm=0; S.set.page=''; setTimeout(startSetup,0); } else S.set.confirm=1; },v:()=>S.set.confirm?'Trykk igjen':'›'},
@@ -484,7 +484,7 @@ function drawBar(){ const g=cvb.getContext('2d'); g.setTransform(0.5,0,0,0.5,0,0
     txt(S.muted?'DEMPET':String(v),XR,530,72,'bold',W,'right'); return true; };
   if(S.input===2){ const p=PRESETS[S.preset], np=NOWP[S.preset]||['',''];
     head(p[0],'Nå: '+np[0]+(np[1]?' · '+np[1]:''));
-    if(!vol6()){ const cw=(TW-5*16)/6; PRESETS.forEach((q,i)=>{ const on=i===S.preset, x=X+i*(cw+16); rr(x,448,cw,88,14); g.fillStyle=on?W:'rgba(255,255,255,.08)'; g.fill();
+    if(!vol6()){ const cw=(TW-5*16)/6; PRESETS.slice(0,6).forEach((q,i)=>{ const on=i===S.preset, x=X+i*(cw+16); rr(x,448,cw,88,14); g.fillStyle=on?W:'rgba(255,255,255,.08)'; g.fill();
         txt(String(i+1),x+18,476,20,'',on?'#111':Lo); g.font=(on?'bold ':'')+'26px '+F; let t=q[0]; if(g.measureText(t).width>cw-36){ while(g.measureText(t+'…').width>cw-36&&t.length>3) t=t.slice(0,-1); t+='…'; } txt(t,x+18,514,26,on?'bold':'',on?'#111':W); }); }
     dim(); return; }
   if(S.input===3||S.input===1){ const U=S.input===3, it=U?USBSRC[S.usb]:AUXSRC[S.aux], list=U?USBSRC:AUXSRC, cur=U?S.usb:S.aux;
