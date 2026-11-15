@@ -36,6 +36,8 @@ SIZE = {"s1": (960, 320), "radio": (800, 480)}
 # vindusstørrelsen, og SKJOLD_UI_ROTATE=90|270|180 dreier S1-bildet (960 × 320) i nettleseren og sentrerer det på panelet.
 ROTATE = (os.environ.get("SKJOLD_UI_ROTATE", "0").strip() or "0")
 PANEL = os.environ.get("SKJOLD_UI_PANEL", "").strip().lower()
+# SKJOLD_UI_FIT=stretch strekker S1-bildet (320 høyt) til panelets høyde (f.eks. 400); standard er sentrert med svarte kanter.
+FIT = os.environ.get("SKJOLD_UI_FIT", "center").strip().lower()
 BACKLIGHT = os.environ.get("SKJOLD_BACKLIGHT", "/sys/class/backlight")
 RADIO_SRC = ("wheel", "preset", "power", "volume")   # Skjold Radio (skjold_radio_knapper.py)
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png", ".woff2": "font/woff2"}
@@ -303,13 +305,13 @@ def kiosk(port):
         try:
             pw, ph = (int(v) for v in PANEL.split("x", 1))
             w, h = pw, ph
-            q = f"?layout=s1&rot={ROTATE}&pw={pw}&ph={ph}"
+            q = f"?layout=s1&rot={ROTATE}&pw={pw}&ph={ph}&fit={FIT}"
         except ValueError:
             print(f"skjold-ui: ugyldig SKJOLD_UI_PANEL={PANEL!r} (bruk f.eks. 400x960)", file=sys.stderr)
     args = [cage, "-d", "-s", "--", chromium, "--kiosk", f"--app=http://127.0.0.1:{port}/{q}",
             "--ozone-platform=wayland", f"--window-size={w},{h}", "--force-device-scale-factor=1",
             "--noerrdialogs", "--disable-infobars", "--no-first-run", "--disable-pinch", "--overscroll-history-navigation=0",
-            "--disable-features=Translate,HardwareMediaKeyHandling", "--check-for-update-interval=31536000",
+            "--disable-translate", "--lang=nb-NO", "--disable-features=Translate,TranslateUI,HardwareMediaKeyHandling", "--check-for-update-interval=31536000",
             "--password-store=basic", f"--user-data-dir={os.path.expanduser('~')}/.cache/skjold-ui"]
     return subprocess.Popen(args)
 

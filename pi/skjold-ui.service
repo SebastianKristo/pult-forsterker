@@ -13,6 +13,9 @@ StandardInput=tty
 WorkingDirectory=@SRC@/pi
 Environment=XDG_RUNTIME_DIR=/run/user/@UID@
 Environment=WLR_LIBINPUT_NO_DEVICES=1
+# usynlig musepeker (pi/tools/blank_cursor.py), så cage ikke tegner en peker på skjermen
+Environment=XCURSOR_THEME=skjold-blank
+Environment=XCURSOR_SIZE=1
 Environment=SKJOLD_DAEMON=127.0.0.1:8765
 EnvironmentFile=-/etc/ki-amp.env
 ExecStartPre=+/bin/sh -c 'mkdir -p /run/user/@UID@ /etc/skjold && chown @USER@ /run/user/@UID@ && chmod 700 /run/user/@UID@ && chown @USER@ /etc/skjold'
