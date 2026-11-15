@@ -45,6 +45,12 @@ exec "$CHR" --kiosk --app="$URL" \\
 S
 chmod +x /usr/local/bin/skjold-touch-ui
 apt-get install -y -qq wlr-randr >/dev/null 2>&1 || true
+# usynlig musepeker (samme som skjold-ui på S1): eget tema + temaet «default» for brukeren, siden cage ikke alltid
+# leser XCURSOR_THEME; programvarepeker fordi Pi 4-ens maskinvarepeker ellers viser en pil uansett tema
+SRC="$(cd "$(dirname "$0")" && pwd)"
+python3 "$SRC/tools/blank_cursor.py" /usr/share/icons/skjold-blank >/dev/null || true
+UHOME="$(getent passwd "$USR" | cut -d: -f6)"
+[ -n "$UHOME" ] && sudo -u "$USR" python3 "$SRC/tools/blank_cursor.py" "$UHOME/.icons/default" >/dev/null || true
 
 cat > /etc/systemd/system/skjold-touch.service <<S
 [Unit]
@@ -60,7 +66,9 @@ TTYPath=/dev/tty1
 StandardInput=tty
 Environment=XDG_RUNTIME_DIR=/run/user/%U
 Environment=WLR_LIBINPUT_NO_DEVICES=1
+Environment=XCURSOR_THEME=skjold-blank
 Environment=XCURSOR_SIZE=1
+Environment=WLR_NO_HARDWARE_CURSORS=1
 RuntimeDirectory=skjold-touch
 ExecStartPre=+/bin/sh -c 'mkdir -p /run/user/\$(id -u $USR) && chown $USR /run/user/\$(id -u $USR) && chmod 700 /run/user/\$(id -u $USR)'
 # -d: ingen dekorasjoner, -s: tillat VT-bytte

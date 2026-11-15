@@ -104,6 +104,17 @@ if [ "${KI_AMP_DISPLAY:-}" = bar958 ] || [ "${KI_AMP_BOARD:-}" = s1f ] || [ "${S
   sudo bash "$(cd "$(dirname "$0")" && pwd)/install_skjold_ui.sh" "${SUDO_USER:-$USER}" || echo "ADVARSEL: skjold-ui ble ikke installert" >&2
 fi
 
+# Skjold Touch: usynlig musepeker i kiosken (uten å kjøre install_touch.sh på nytt, som ville nullstilt rotasjonen)
+if grep -qs "^KI_AMP_PRODUCT=touch" /etc/ki-amp.env && [ -f /etc/systemd/system/skjold-touch.service ]; then
+  TU="$(sed -n 's/^User=//p' /etc/systemd/system/skjold-touch.service | head -1)"; TH="$(getent passwd "$TU" | cut -d: -f6)"
+  sudo python3 "$SRC/tools/blank_cursor.py" /usr/share/icons/skjold-blank >/dev/null || true
+  [ -n "$TH" ] && [ ! -e "$TH/.icons/default/cursors/default" ] && sudo -u "$TU" python3 "$SRC/tools/blank_cursor.py" "$TH/.icons/default" >/dev/null || true
+  if ! grep -q WLR_NO_HARDWARE_CURSORS /etc/systemd/system/skjold-touch.service; then
+    sudo sed -i 's/^Environment=XCURSOR_SIZE=1$/Environment=XCURSOR_THEME=skjold-blank\nEnvironment=XCURSOR_SIZE=1\nEnvironment=WLR_NO_HARDWARE_CURSORS=1/' /etc/systemd/system/skjold-touch.service
+    sudo systemctl daemon-reload && sudo systemctl restart skjold-touch || true
+  fi
+fi
+
 # Filer laget under oppdateringen (kjørt med sudo eller fra appen som root) tilbake til eieren av kildetreet,
 # så «git pull» som vanlig bruker virker etterpå.
 KILDE="$(cd "$SRC/.." && pwd)"
