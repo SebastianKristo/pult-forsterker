@@ -19,6 +19,7 @@ import http.client
 import json
 import os
 import queue
+import shlex
 import shutil
 import socket
 import subprocess
@@ -226,6 +227,8 @@ class H(BaseHTTPRequestHandler):
             return self._json(ui)
         if p == "/ui/event":
             return self._json(handle_input(self._body()))
+        if p == "/ui/screen":   # S1: {"on": bool} – slå panelet av/på (bare med sway; cage avslutter uten skjerm)
+            return self._json(set_screen(bool(self._body().get("on", True))))
         if p == "/ui/backlight":   # radioskjermen: {"level": 0–1}
             return self._json(set_backlight(self._body().get("level", 1)))
         if p == "/greeting":   # web-UI → Innstillinger → Hilsen → Installer: {"name","state":"armed"}
@@ -296,12 +299,63 @@ class H(BaseHTTPRequestHandler):
         self.wfile.write(b)
 
 
+WM = os.environ.get("SKJOLD_UI_WM", "sway").strip().lower()   # sway (kan slå av skjermen) eller cage
+_wm = {"kind": "", "pid": 0, "on": True}
+
+
+def _swaysock():
+    run = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    s = f"{run}/sway-ipc.{os.getuid()}.{_wm['pid']}.sock"
+    if os.path.exists(s):
+        return s
+    socks = sorted(glob.glob(f"{run}/sway-ipc.*.sock"), key=os.path.getmtime)
+    return socks[-1] if socks else ""
+
+
+def set_screen(on):
+    """Slå HDMI-panelet av (DPMS, bildet og nettleseren kjører videre) eller på igjen. Bare under sway."""
+    if _wm["kind"] != "sway":
+        return {"ok": False, "on": True, "why": "krever sway (SKJOLD_UI_WM=sway)"}
+    if _wm["on"] == on:
+        return {"ok": True, "on": on}
+    sock = _swaysock()
+    if not sock:
+        return {"ok": False, "on": _wm["on"], "why": "fant ikke sway-IPC"}
+    r = subprocess.run(["swaymsg", "-s", sock, "output", "*", "power", "on" if on else "off"], capture_output=True, text=True, timeout=5)
+    if r.returncode == 0:
+        _wm["on"] = on
+        print("skjold-ui: skjermen", "på" if on else "av", flush=True)
+    return {"ok": r.returncode == 0, "on": _wm["on"], "why": (r.stderr or r.stdout).strip()}
+
+
+def _sway_config(cmd, path):
+    """Sway som kiosk: ingen rammer, ingen linje, svart bakgrunn, pekeren skjult, nettleseren i fullskjerm.
+    Nettleseren startes fra et eget skript (ingen sitat-tolking i sway-konfigen); lukkes den, avslutter sway også,
+    og systemd starter skjold-ui på nytt."""
+    d = os.path.dirname(path)
+    os.makedirs(d, exist_ok=True)
+    launch = os.path.join(d, "kiosk.sh")
+    with open(launch, "w") as f:
+        f.write("#!/bin/sh\n# laget av skjold-ui – endres ved hver start\n" + " ".join(shlex.quote(a) for a in cmd) + "\nswaymsg exit\n")
+    os.chmod(launch, 0o755)
+    with open(path, "w") as f:
+        f.write("# laget av skjold-ui – endres ved hver start\n"
+                "output * bg #000000 solid_color\n"
+                "default_border none\ndefault_floating_border none\nhide_edge_borders both\n"
+                "focus_follows_mouse no\nseat * hide_cursor 100\n"
+                "for_window [app_id=\".*\"] fullscreen enable\n"
+                f"exec {launch}\n")
+    return path
+
+
 def kiosk(port):
-    """cage (Wayland-kiosk, ingen X) + Chromium: 960 × 320 på HDMI0 (S1) eller 800 × 480 på DSI (radio)."""
+    """sway (eller cage) + Chromium: 960 × 320 på HDMI0 (S1) eller 800 × 480 på DSI (radio).
+    Sway er standard fordi den kan slå skjermen av (DPMS); cage brukes når sway mangler eller SKJOLD_UI_WM=cage."""
     chromium = shutil.which("chromium") or shutil.which("chromium-browser")
-    cage = shutil.which("cage")
-    if not (chromium and cage):
-        print("skjold-ui: mangler cage/chromium – kjører bare serveren", file=sys.stderr)
+    sway, cage = shutil.which("sway"), shutil.which("cage")
+    use_sway = bool(sway) and WM != "cage"
+    if not (chromium and (use_sway or cage)):
+        print("skjold-ui: mangler sway/cage/chromium – kjører bare serveren", file=sys.stderr)
         return None
     w, h = SIZE.get(LAYOUT, SIZE["s1"])
     q = "" if LAYOUT == "s1" else f"?layout={LAYOUT}"
@@ -312,12 +366,21 @@ def kiosk(port):
             q = f"?layout=s1&rot={ROTATE}&pw={pw}&ph={ph}&fit={FIT}&h={UI_H}&shift={SHIFT}"
         except ValueError:
             print(f"skjold-ui: ugyldig SKJOLD_UI_PANEL={PANEL!r} (bruk f.eks. 400x960)", file=sys.stderr)
-    args = [cage, "-d", "-s", "--", chromium, "--kiosk", f"--app=http://127.0.0.1:{port}/{q}",
-            "--ozone-platform=wayland", f"--window-size={w},{h}", "--force-device-scale-factor=1",
-            "--noerrdialogs", "--disable-infobars", "--no-first-run", "--disable-pinch", "--overscroll-history-navigation=0",
-            "--disable-translate", "--lang=nb-NO", "--disable-features=Translate,TranslateUI,HardwareMediaKeyHandling", "--check-for-update-interval=31536000",
-            "--password-store=basic", f"--user-data-dir={os.path.expanduser('~')}/.cache/skjold-ui"]
-    return subprocess.Popen(args)
+    if use_sway:
+        q += ("&" if q else "?") + "screenoff=1"   # siden kan be om å slå skjermen av
+    br = [chromium, "--kiosk", f"--app=http://127.0.0.1:{port}/{q}",
+          "--ozone-platform=wayland", f"--window-size={w},{h}", "--force-device-scale-factor=1",
+          "--noerrdialogs", "--disable-infobars", "--no-first-run", "--disable-pinch", "--overscroll-history-navigation=0",
+          "--disable-translate", "--lang=nb-NO", "--disable-features=Translate,TranslateUI,HardwareMediaKeyHandling", "--check-for-update-interval=31536000",
+          "--password-store=basic", f"--user-data-dir={os.path.expanduser('~')}/.cache/skjold-ui"]
+    if use_sway:
+        conf = _sway_config(br, os.path.expanduser("~/.cache/skjold-ui/sway.conf"))
+        p = subprocess.Popen([sway, "-c", conf])
+        _wm.update(kind="sway", pid=p.pid, on=True)
+        print("skjold-ui: sway (skjermen kan slås av)", flush=True)
+        return p
+    _wm.update(kind="cage", pid=0, on=True)
+    return subprocess.Popen([cage, "-d", "-s", "--"] + br)
 
 
 def main():

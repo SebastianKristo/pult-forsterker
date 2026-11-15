@@ -53,3 +53,11 @@ Finjustering når kanten av panelet dekker en del av bildet: `SKJOLD_UI_H=380` s
 Med «Klokke i standby» på og klokkestil 0–5 viser baren en stille fjord-loop (`web/media/fjord.webm`, 960 × 320, VP9)
 med klokka over fjellet til venstre. Et helt bilde skjuler baklyset, som ellers gjør en svart flate grå. Stil 6–15
 er designets egne brede skjermer, og nattmodus viser «Nattlys». «Klokke i standby» av gir svart skjerm.
+
+## Skjermen av (sway)
+
+Kiosken kjører i **sway** (standard) i stedet for cage, fordi sway kan slå HDMI-panelet av med DPMS mens bildet og
+nettleseren kjører videre. cage avslutter når den eneste skjermen slås av. Med «Klokke i standby» **av** slås panelet
+helt av i standby og når «Slukk etter» slår inn, og på igjen ved første knapp, hjul eller endring fra daemonen.
+Med klokka på vises klokka/skjermspareren som før. Siden ber om det via `POST /ui/screen {"on": bool}`
+(`swaymsg output * power off|on`). Tilbake til cage: `SKJOLD_UI_WM=cage` i `/etc/ki-amp.env`.
