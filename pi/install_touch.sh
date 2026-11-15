@@ -65,7 +65,7 @@ User=$USR
 PAMName=login
 TTYPath=/dev/tty1
 StandardInput=tty
-Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=XDG_RUNTIME_DIR=/run/user/$(id -u "$USR")
 Environment=WLR_LIBINPUT_NO_DEVICES=1
 Environment=XCURSOR_THEME=skjold-blank
 Environment=XCURSOR_SIZE=1
