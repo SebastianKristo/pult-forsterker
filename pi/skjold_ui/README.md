@@ -42,3 +42,6 @@ Står bildet opp ned, bruk `SKJOLD_UI_ROTATE=270`. Start på nytt med `sudo syst
 `SKJOLD_UI_FIT=stretch` strekker bildet på tvers så det fyller panelets korte side (320 → 400) i stedet for svarte kanter.
 Musepekeren skjules med et usynlig pekertema (`pi/tools/blank_cursor.py`, `XCURSOR_THEME=skjold-blank` i tjenesten), og
 Chromium startes uten oversettelsestilbud.
+
+Finjustering når kanten av panelet dekker en del av bildet: `SKJOLD_UI_H=380` setter bildets høyde i piksler (overstyrer
+`SKJOLD_UI_FIT`), og `SKJOLD_UI_SHIFT=10` flytter bildet 10 piksler opp (negativt tall = ned).

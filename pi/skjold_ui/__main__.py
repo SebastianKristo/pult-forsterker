@@ -38,6 +38,10 @@ ROTATE = (os.environ.get("SKJOLD_UI_ROTATE", "0").strip() or "0")
 PANEL = os.environ.get("SKJOLD_UI_PANEL", "").strip().lower()
 # SKJOLD_UI_FIT=stretch strekker S1-bildet (320 høyt) til panelets høyde (f.eks. 400); standard er sentrert med svarte kanter.
 FIT = os.environ.get("SKJOLD_UI_FIT", "center").strip().lower()
+# Finjustering når panelets synlige flate er mindre enn det melder: SKJOLD_UI_H = bildets høyde i piksler (f.eks. 380,
+# overstyrer FIT), SKJOLD_UI_SHIFT = flytt bildet opp (positiv) eller ned (negativ) i piksler.
+UI_H = os.environ.get("SKJOLD_UI_H", "").strip()
+SHIFT = os.environ.get("SKJOLD_UI_SHIFT", "0").strip() or "0"
 BACKLIGHT = os.environ.get("SKJOLD_BACKLIGHT", "/sys/class/backlight")
 RADIO_SRC = ("wheel", "preset", "power", "volume")   # Skjold Radio (skjold_radio_knapper.py)
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png", ".woff2": "font/woff2"}
@@ -305,7 +309,7 @@ def kiosk(port):
         try:
             pw, ph = (int(v) for v in PANEL.split("x", 1))
             w, h = pw, ph
-            q = f"?layout=s1&rot={ROTATE}&pw={pw}&ph={ph}&fit={FIT}"
+            q = f"?layout=s1&rot={ROTATE}&pw={pw}&ph={ph}&fit={FIT}&h={UI_H}&shift={SHIFT}"
         except ValueError:
             print(f"skjold-ui: ugyldig SKJOLD_UI_PANEL={PANEL!r} (bruk f.eks. 400x960)", file=sys.stderr)
     args = [cage, "-d", "-s", "--", chromium, "--kiosk", f"--app=http://127.0.0.1:{port}/{q}",
