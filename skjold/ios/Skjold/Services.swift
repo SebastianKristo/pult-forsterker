@@ -280,6 +280,9 @@ nonisolated struct DevStatus: Sendable, Equatable {
     var inputs: [String] = []
     var presetTitles: [String] = []
     var radioNow: RadioNow? = nil
+    /// S1: USB-switchen (to PC-er på én USB-lydinngang): på/av, valgt PC (1/2) og navnene.
+    var usbsw = false, usbPc = 1
+    var usbNames: [String] = []
 
     init?(_ data: Data) {
         guard let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any], j["volume"] != nil else { return nil }
@@ -299,6 +302,7 @@ nonisolated struct DevStatus: Sendable, Equatable {
         volume = i("volume"); effVolume = j["eff_volume"] == nil ? volume : i("eff_volume"); duration = i("duration"); position = i("position"); preset = i("preset")
         presetsCount = i("presets_count"); btPairingLeft = i("bt_pairing_left")
         inputs = (j["inputs"] as? [String]) ?? []
+        usbsw = b("usbsw"); usbPc = i("usb_pc") == 2 ? 2 : 1; usbNames = (j["usb_pc_names"] as? [String]) ?? []
         presetTitles = ((j["presets"] as? [[String: Any]]) ?? []).map { s("title", $0) }
         if let r = j["radio_now"] as? [String: Any] {
             radioNow = RadioNow(name: s("name", r), genre: s("genre", r), now: s("now", r), image: s("image", r),
