@@ -61,3 +61,8 @@ nettleseren kjører videre. cage avslutter når den eneste skjermen slås av. Me
 helt av i standby og når «Slukk etter» slår inn, og på igjen ved første knapp, hjul eller endring fra daemonen.
 Med klokka på vises klokka/skjermspareren som før. Siden ber om det via `POST /ui/screen {"on": bool}`
 (`swaymsg output * power off|on`). Tilbake til cage: `SKJOLD_UI_WM=cage` i `/etc/ki-amp.env`.
+
+Det 4,58″-panelet holder baklyset på selv uten signal og har ikke DDC/CI. Det får strøm fra Pi-ens USB-porter, så
+skjold-ui slår også USB-strømmen av med `uhubctl` (Pi 4: alle fire portene samlet, hub `1-1` og `2`) – bare når ingen
+andre USB-enheter er koblet til (`SKJOLD_UI_USBPOWER=auto`; `1` = alltid, `0` = aldri). Ved vekking kommer strømmen
+først, så signalet etter 2,5 s. `install_skjold_ui.sh` installerer `uhubctl` og en sudoers-regel for den.

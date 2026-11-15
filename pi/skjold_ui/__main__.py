@@ -25,6 +25,7 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -300,7 +301,7 @@ class H(BaseHTTPRequestHandler):
 
 
 WM = os.environ.get("SKJOLD_UI_WM", "sway").strip().lower()   # sway (kan slå av skjermen) eller cage
-_wm = {"kind": "", "pid": 0, "on": True}
+_wm = {"kind": "", "pid": 0, "on": True, "usb": False}
 
 
 def _swaysock():
@@ -312,8 +313,46 @@ def _swaysock():
     return socks[-1] if socks else ""
 
 
+# Panel som får strøm fra Pi-ens USB-porter (S1: 4,58″-panelet): baklyset slukkes bare når strømmen tas. Pi 4 slår alle
+# USB-portene av/på samlet (uhubctl), så det gjøres bare når ingen andre USB-enheter er koblet til (auto), eller alltid (1).
+USBPOWER = os.environ.get("SKJOLD_UI_USBPOWER", "auto").strip().lower()
+USB_HUBS = [h for h in os.environ.get("SKJOLD_UI_USB_HUBS", "1-1,2").split(",") if h.strip()]
+
+
+def _usb_only_hubs():
+    for f in glob.glob("/sys/bus/usb/devices/*/bDeviceClass"):
+        try:
+            if open(f).read().strip() != "09":   # 09 = hub
+                return False
+        except OSError:
+            pass
+    return True
+
+
+def usb_power(on):
+    if USBPOWER in ("0", "nei", "off") or not shutil.which("uhubctl"):
+        return False
+    if not on and USBPOWER == "auto" and not _usb_only_hubs():
+        print("skjold-ui: andre USB-enheter er koblet til – lar USB-strømmen stå på", flush=True)
+        return False
+    ok = True
+    for hub in USB_HUBS:
+        r = subprocess.run(["sudo", "-n", shutil.which("uhubctl"), "-l", hub.strip(), "-a", "on" if on else "off"],
+                           capture_output=True, text=True, timeout=10)
+        ok = ok and r.returncode == 0
+    return ok
+
+
+_screen_lock = threading.Lock()
+
+
 def set_screen(on):
-    """Slå HDMI-panelet av (DPMS, bildet og nettleseren kjører videre) eller på igjen. Bare under sway."""
+    with _screen_lock:
+        return _set_screen(on)
+
+
+def _set_screen(on):
+    """Slå HDMI-panelet av (DPMS, bildet og nettleseren kjører videre, og USB-strømmen til panelet) eller på igjen. Bare under sway."""
     if _wm["kind"] != "sway":
         return {"ok": False, "on": True, "why": "krever sway (SKJOLD_UI_WM=sway)"}
     if _wm["on"] == on:
@@ -321,7 +360,12 @@ def set_screen(on):
     sock = _swaysock()
     if not sock:
         return {"ok": False, "on": _wm["on"], "why": "fant ikke sway-IPC"}
+    if on and _wm.get("usb"):   # strømmen til panelet først, så signalet når det har startet
+        usb_power(True); _wm["usb"] = False
+        time.sleep(2.5)
     r = subprocess.run(["swaymsg", "-s", sock, "output", "*", "power", "on" if on else "off"], capture_output=True, text=True, timeout=5)
+    if not on and r.returncode == 0:
+        _wm["usb"] = usb_power(False)
     if r.returncode == 0:
         _wm["on"] = on
         print("skjold-ui: skjermen", "på" if on else "av", flush=True)
@@ -392,6 +436,8 @@ def main():
     srv.daemon_threads = True
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     print(f"skjold-ui på http://127.0.0.1:{a.port}/ (oppsett {LAYOUT}, daemon {DAEMON})", flush=True)
+    if not a.no_kiosk and LAYOUT == "s1" and USBPOWER not in ("0", "nei", "off") and shutil.which("uhubctl"):
+        usb_power(True)   # panelet skal ha strøm ved start (også etter krasj mens det var av)
     proc = None if a.no_kiosk else kiosk(a.port)
     try:
         if proc:

@@ -13,6 +13,12 @@ fi
 apt-get install -y -qq --no-install-recommends cage seatd fonts-liberation >/dev/null
 # sway: kiosken kan slå HDMI-panelet av (DPMS) – cage avslutter når skjermen slås av. cage står igjen som reserve (SKJOLD_UI_WM=cage).
 apt-get install -y -qq --no-install-recommends sway >/dev/null 2>&1 || echo "ADVARSEL: sway ble ikke installert – bruker cage (skjermen kan ikke slås av)" >&2
+# S1-panelet får strøm fra USB: uhubctl slår portene av når skjermen skal være helt mørk (bare når ingen andre USB-enheter er koblet til)
+apt-get install -y -qq --no-install-recommends uhubctl >/dev/null 2>&1 || true
+if command -v uhubctl >/dev/null; then
+  echo "$USR ALL=(root) NOPASSWD: $(command -v uhubctl)" > /etc/sudoers.d/skjold-ui-usb && chmod 440 /etc/sudoers.d/skjold-ui-usb
+  visudo -cf /etc/sudoers.d/skjold-ui-usb >/dev/null || rm -f /etc/sudoers.d/skjold-ui-usb
+fi
 apt-get install -y -qq --no-install-recommends chromium >/dev/null 2>&1 || apt-get install -y -qq --no-install-recommends chromium-browser >/dev/null
 usermod -aG video,input,render "$USR" || true
 systemctl enable --now seatd
