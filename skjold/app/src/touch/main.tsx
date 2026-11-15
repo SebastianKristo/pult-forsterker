@@ -33,7 +33,7 @@ interface WakeData { ok: boolean; alarms: WakeAlarm[]; error?: string }
 // Det denne enheten selv melder (alarm, ringeklokke, stemme, kommandoer) – uavhengig av hvilket rom som fjernstyres
 interface Dev {
   alarm?: { ringing: boolean; snoozed: boolean; name: string; time: string };
-  doorbell?: { t: number; camera: boolean; seconds: number } | null;
+  doorbell?: { t: number; camera: boolean; seconds: number; v0?: number | null } | null;
   night?: { on: boolean; src?: string; steps?: { name: string; done?: boolean }[]; t?: number };
   setup_net?: { active: boolean; ssid: string; password: string; url: string; joining: string; error: string } | null;
   touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string } };
@@ -981,6 +981,27 @@ function AlarmRinging({ clock }: { clock: string }) {
     </div>
   );
 }
+
+// Når ringeklokke-bildet lukkes: tilbake til skjermen, volumet og spill/pause slik det var før det ringte.
+// Volumet før ringingen kommer fra enheten (doorbell.v0) – statusen kan allerede vise det dempede volumet.
+let doorSnap: { vol: number; playing: boolean; scr: Scr; base: string } | null = null;
+effect(() => {
+  const d = door.value, v0 = dev().doorbell?.v0;
+  if (d && doorSnap && typeof v0 === 'number' && !ctl.peek()) doorSnap.vol = v0;   // enheten meldte volumet før dempingen
+  if (d && !doorSnap) {
+    const s = status.peek();
+    doorSnap = { vol: typeof v0 === 'number' && !ctl.peek() ? v0 : (s?.volume ?? -1), playing: !!s?.playing, scr: scr.peek(), base: ctl.peek() };
+  } else if (!d && doorSnap) {
+    const snap = doorSnap; doorSnap = null;
+    setTimeout(() => {
+      if (ctl.value !== snap.base) return;
+      const s = status.value; if (!s) return;
+      if (snap.vol >= 0 && s.volume !== snap.vol) setVolume(snap.vol, true);
+      if (snap.playing !== !!s.playing) playPause();
+      scr.value = snap.scr;
+    }, 250);
+  }
+});
 
 // ---------- ringeklokke ----------
 function Door({ clock }: { clock: string }) {

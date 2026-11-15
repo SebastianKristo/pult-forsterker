@@ -98,7 +98,7 @@ class Doorbell:
         """Til /api/status: vises i 60 s etter ring, så Touch og appene kan vise kamera/varsel."""
         if time.time() - self.last > max(30, int(self.cfg.get("seconds") or 20) + 10):
             return None
-        return {"t": self.last, "camera": bool(camera_request(self.cfg)), "seconds": self.cfg.get("seconds", 20)}
+        return {"t": self.last, "camera": bool(camera_request(self.cfg)), "seconds": self.cfg.get("seconds", 20), "v0": getattr(self, "v0", None)}
 
     def ring(self, hop: bool = False, forward=None) -> dict:
         """Ring på: varsel + lyd her, og (første gang) videre til alle rom."""
@@ -106,6 +106,7 @@ class Doorbell:
         if now - self.last < 4:   # flere trykk / flere kilder rett etter hverandre
             return {"ok": True, "ignored": True}
         self.last = now
+        self.v0 = None   # settes av _play før dempingen
         self.ctx["changed"]()
         if not hop and self.cfg.get("all_rooms", True):
             for p in self.ctx["peers"]():
@@ -128,6 +129,7 @@ class Doorbell:
         try:
             c = self.cfg
             v0 = self.ctx["get_volume"]()
+            self.v0 = v0   # volumet før ringingen, så Touch kan sette det tilbake når ringeklokke-bildet lukkes
             ducked = max(0, int(round(v0 + float(c.get("duck_db", -20)) / 0.6))) if v0 else 0
             if c.get("volume"):
                 ducked = min(ducked, int(c["volume"])) if v0 else int(c["volume"])
