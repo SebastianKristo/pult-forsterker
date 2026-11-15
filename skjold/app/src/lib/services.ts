@@ -2,7 +2,7 @@
 import { signal } from '@preact/signals';
 import { ndConf, setNdConf } from './navidrome';
 import type { LocalKey, Settings } from './settings';
-import { setSetting, settings, settingsSource } from './store';
+import { setSetting, settings, settingsSource, showToast } from './store';
 import { effect } from '@preact/signals';
 import { ytmForget } from './ytm';
 
@@ -18,6 +18,7 @@ export function getLocal(k: LocalKey): string {
 export function setLocal(k: LocalKey, v: string): void {
   const val = k === 'ndPass' || k === 'ytmCookie' ? v : v.trim();
   if (settingsSource.value === 'api') setSetting(k as keyof Settings, val as never);   // del med appene
+  else showToast('Fant ikke Skjold-enheten – innloggingen er bare lagret i denne nettleseren');
   if (k === 'ndUrl') return setNdConf({ url: val });
   if (k === 'ndUser') return setNdConf({ user: val });
   if (k === 'ndPass') return setNdConf({ pass: val });
