@@ -61,7 +61,7 @@ class Lagring(unittest.TestCase):
     def test_atomisk_og_bare_ved_endring(self):
         t = tempfile.mkdtemp(prefix="ki-st-")
         fil = os.path.join(t, "state.json")
-        with mock.patch.object(d, "STATE_FILE", fil), mock.patch.object(d, "_saved_state", [""]):
+        with mock.patch.object(d, "STATE_FILE", fil), mock.patch.object(d, "_saved_state", [""]), mock.patch.object(d, "_state_loaded", [True]):
             d.save_state()
             self.assertTrue(json.load(open(fil))["input"])
             self.assertFalse(os.path.exists(fil + ".tmp"))
@@ -70,6 +70,16 @@ class Lagring(unittest.TestCase):
                 d.save_state()          # ingen endring → ingen skriving (sparer SD-kortet)
                 rep.assert_not_called()
             self.assertEqual(os.stat(fil).st_mtime_ns, m)
+
+
+class LagringForLasting(unittest.TestCase):
+    def test_lagrer_ikke_for_fila_er_lest(self):
+        t = tempfile.mkdtemp(prefix="ki-st-")
+        fil = os.path.join(t, "state.json")
+        json.dump({"settings": {"ndEn": True}}, open(fil, "w"))
+        with mock.patch.object(d, "STATE_FILE", fil), mock.patch.object(d, "_saved_state", [""]), mock.patch.object(d, "_state_loaded", [False]):
+            d.save_state()   # f.eks. en tråd som kaller changed() før main() – skal ikke overskrive
+            self.assertEqual(json.load(open(fil))["settings"], {"ndEn": True})
 
 
 class Kildebytte(unittest.TestCase):

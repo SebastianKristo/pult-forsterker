@@ -1599,9 +1599,15 @@ async def h_settings_post(r):
 
 
 _saved_state = [""]
+_state_loaded = [False]
 
 
 def save_state():
+    # Ikke lagre før load_state() har lest fila: tråder som startes ved import (dørklokke, vinyl, Røst …) kan kalle
+    # changed() før main() er i gang, og da ble standardverdiene (tomme innstillinger, ingen favoritter) skrevet over
+    # det som var lagret. Det slettet innlogginger og favoritter på Touch ved hver omstart.
+    if not _state_loaded[0]:
+        return
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         data = json.dumps({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute", "settings", "night", "hp_volume")})
@@ -1633,6 +1639,7 @@ def load_state():
         state["presets"] = norm_presets(state["presets"] if isinstance(state["presets"], list) else [])
     except Exception:
         state["presets"] = [None] * 6
+    _state_loaded[0] = True
 
 
 def write_ctrl():
