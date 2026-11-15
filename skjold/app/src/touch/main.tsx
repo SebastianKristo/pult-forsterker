@@ -12,6 +12,7 @@ import { favs, loadFavs, playFav, playStation } from '../lib/radio';
 import { ndAlbum, ndAlbumList, ndConfigured, ndCover, ndSearch, type NdAlbum } from '../lib/navidrome';
 import { li, lq, lsvc, playNd } from '../lib/library';
 import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
+import '../lib/services';   // innloggingene (Navidrome, YouTube Music) hentes fra enheten – kiosken har ingen egne
 import { groupAll } from '../lib/groups';
 import { canSeek, seekTo } from '../screens/player';
 import { Keyboard, MONO, Sheet, Slider, useLongPress, Wheel } from './ui';
@@ -410,9 +411,10 @@ interface Card { t: string; s: string; art: string; live?: boolean; play: () => 
 function Library() {
   const [nd, setNd] = useState<NdAlbum[] | null>(null);
   const [yt, setYt] = useState<NdAlbum[] | null>(null), [ytErr, setYtErr] = useState('');
-  useEffect(() => { if (lib.value === 1 && nd === null && ndConfigured()) ndAlbumList('newest', 12).then(setNd).catch(() => setNd([])); }, [lib.value]);
+  const ndOk = ndConfigured();   // innloggingen kommer fra enheten etter oppstart
+  useEffect(() => { if (lib.value === 1 && (nd === null || !nd.length) && ndOk) ndAlbumList('newest', 12).then(setNd).catch(() => setNd([])); }, [lib.value, ndOk]);
   useEffect(() => {
-    if (lib.value !== 0 || yt !== null) return;
+    if (lib.value !== 0 || (yt !== null && yt.length)) return;   // tom/feil: prøv igjen når fanen åpnes
     // YouTube Music fra Skjold (/api/ytm/home): spillelister, «Til deg» og album
     ytmHomeCached().then((h) => { const l = [...h.playlists, ...h.frequent, ...h.other, ...h.newest]; setYt(l.filter((x, i) => l.findIndex((y) => y.id === x.id) === i).slice(0, 24)); })
       .catch(async (e: unknown) => { setYtErr((await ytmWhy(e)).toUpperCase()); setYt([]); });
@@ -425,7 +427,7 @@ function Library() {
     items = (yt ?? []).map((a) => ({ t: a.name, s: a.playlist ? 'Spilleliste' : a.artist, art: artBg(a.name, ndCover(a.coverArt, 300)), play: () => { void ytmTracks(a.id).then((r) => { if (r.length) { playNd(r, 0, 'ytm'); scr.value = 'now'; } }); } }));
   }
   else if (lib.value === 1) {
-    kicker = ndConfigured() ? 'NYLIG LAGT TIL' : 'IKKE TILKOBLET · LOGG INN PÅ NAVIDROME I APPEN';
+    kicker = ndOk ? 'NYLIG LAGT TIL' : 'IKKE TILKOBLET · LOGG INN PÅ NAVIDROME I APPEN';
     items = (nd ?? []).map((a) => ({ t: a.name, s: a.artist, art: artBg(a.name, ndCover(a.coverArt, 300)), play: () => { void ndAlbum(a.id).then((r) => { playNd(r.songs, 0); scr.value = 'now'; }); } }));
   } else {
     kicker = 'DINE FAVORITTER';
