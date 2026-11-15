@@ -50,6 +50,7 @@ apt-get install -y -qq wlr-randr >/dev/null 2>&1 || true
 # leser XCURSOR_THEME; programvarepeker fordi Pi 4-ens maskinvarepeker ellers viser en pil uansett tema
 SRC="$(cd "$(dirname "$0")" && pwd)"
 python3 "$SRC/tools/blank_cursor.py" /usr/share/icons/skjold-blank >/dev/null || true
+bash "$SRC/tools/kiosk_hardening.sh" || true   # HDMI-CEC er ikke en mus, og ingen Google Oversett
 UHOME="$(getent passwd "$USR" | cut -d: -f6)"
 [ -n "$UHOME" ] && sudo -u "$USR" python3 "$SRC/tools/blank_cursor.py" "$UHOME/.icons/default" >/dev/null || true
 

@@ -23,6 +23,7 @@ elif [ -f "$CFG" ] && ! grep -q "skjold-ui" "$CFG"; then   # S1: HDMI0 i 960 × 
   printf '\n# skjold-ui: 4,58" 960x320 på HDMI0\nhdmi_group:0=2\nhdmi_mode:0=87\nhdmi_cvt:0=960 320 60 6 0 0 0\ndisable_overscan=1\n' >> "$CFG"
 fi
 python3 "$SRC/pi/tools/blank_cursor.py" /usr/share/icons/skjold-blank >/dev/null   # ingen musepeker på skjermen
+bash "$SRC/pi/tools/kiosk_hardening.sh" || true   # HDMI-CEC er ikke en mus, og ingen Google Oversett
 # cage leser ikke alltid XCURSOR_THEME og faller da tilbake til temaet «default» – legg den usynlige pekeren der også (bare for brukeren)
 UHOME="$(getent passwd "$USR" | cut -d: -f6)"
 if [ -n "$UHOME" ] && [ ! -e "$UHOME/.icons/default/cursors/default" ]; then
