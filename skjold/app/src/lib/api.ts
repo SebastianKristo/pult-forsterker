@@ -212,6 +212,7 @@ export const api = {
   placementApply: () => post<{ ok: boolean; trims: Record<string, { delay_ms: number; gain_db: number }>; remote: { host: string; ok: boolean }[] }>('/api/placement/apply', {}),
   subwave: (health = false) => req<Record<string, any>>('/api/subwave' + (health ? '?health=1' : ''), undefined, undefined, 15000),
   subwavePost: (b: Record<string, unknown>) => post<Record<string, any>>('/api/subwave', b),
+  subwaveAt: (station: number, health = false) => req<Record<string, any>>('/api/subwave?station=' + station + (health ? '&health=1' : ''), undefined, undefined, 15000),
   setRemote: (b: { enable: boolean; token?: string; host?: string }) => post<RemoteStatus>('/api/remote', b),
   status: () => req<Status>('/api/status'),
   statusAt: (base: string, timeoutMs = 2500) => req<Status>('/api/status', undefined, base, timeoutMs),

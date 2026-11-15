@@ -1691,7 +1691,7 @@ def read_status():
     cover = st.get("cover", "") or ""
     swm = subwave_meta() if st.get("source") == "radio" else None   # SUB/WAVE: låtinfo fra stasjonens API
     if swm and swm["title"]:
-        st = {**st, "title": swm["title"], "artist": swm["artist"] or st.get("artist", ""), "album": swm["album"] or "SUB/WAVE"}
+        st = {**st, "title": swm["title"], "artist": swm["artist"] or st.get("artist", ""), "album": swm["album"] or swm.get("station") or "SUB/WAVE"}
         if swm["cover"].startswith(("http://", "https://")): cover = swm["cover"]
     cover_url = cover if cover.startswith(("http://", "https://")) else (f"/api/cover?v={cover}" if cover else "")
     return {**state, "settings": public_settings(), **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "eff_volume": eff_volume(), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
@@ -4558,7 +4558,7 @@ PLUGIN_DEFS = [
     ("lastfm", "Last.fm", "skjold", "Verktøy", "Registrerer det du spiller på Last.fm. Krever egen API-nøkkel, hemmelighet og sesjonsnøkkel.", {"key": "", "secret": "", "session": ""}),
     ("webhook", "Webhooks", "skjold", "Verktøy", "Sender en JSON-melding til din adresse når låt, avspilling eller kilde endres.", {"url": ""}),
     ("subwave", "SUB/WAVE", "skjold", "Radio og podkast", "Selvhostet AI-DJ-radio (getsubwave.com). Spill stasjonen, se DJ-loggen og køen, og ønsk deg låter.",
-     {"url": "", "user": "", "password": ""}),
+     {"url": "", "user": "", "password": "", "name": "", "extra": []}),   # extra: flere stasjoner [{name,url,user,password}]
     ("spotty", "Spotty", "lyrion", "Musikk", "Spotify i Lyrion, med søk, spillelister og Spotify Connect. Krever Spotify Premium.", {}),
     ("tidal", "TIDAL", "lyrion", "Musikk", "Strømming i FLAC fra TIDAL. Krever abonnement.", {}),
     ("qobuz", "Qobuz", "lyrion", "Musikk", "Hi-res opptil 24-bit / 192 kHz. Krever abonnement.", {}),
@@ -4627,7 +4627,7 @@ def plug_status(pid, cfg):
         return "Krever oppsett"
     if pid == "webhook" and not str(cfg.get("url", "")).startswith(("http://", "https://")):
         return "Krever oppsett"
-    if pid == "subwave" and not str(cfg.get("url") or "").startswith(("http://", "https://")):
+    if pid == "subwave" and not sw_stations(cfg):
         return "Krever oppsett"
     if pid == "mqtt":
         if not cfg.get("host"): return "Krever oppsett"
@@ -6218,33 +6218,75 @@ class SubwaveClient:
         return val
 
 
-_sw = {"client": None, "sig": ""}
+_sw = {}   # sig -> SubwaveClient
 
 
-def subwave():
+def sw_stations(c=None):
+    """Alle SUB/WAVE-stasjonene: den første (url/user/password/name) og «extra». Bare de med gyldig adresse."""
+    c = c or plug_cfg("subwave")
+    raw = [{"name": c.get("name") or "", "url": c.get("url"), "user": c.get("user"), "password": c.get("password")}]
+    raw += [x for x in (c.get("extra") or []) if isinstance(x, dict)]
+    out = []
+    for n, x in enumerate(raw):
+        u = str(x.get("url") or "").strip().rstrip("/")
+        if u.startswith(("http://", "https://")):
+            out.append({"i": len(out), "name": str(x.get("name") or "").strip() or ("SUB/WAVE" if not out else f"SUB/WAVE {len(out) + 1}"),
+                        "url": u, "user": str(x.get("user") or ""), "password": str(x.get("password") or "")})
+    return out
+
+
+def _sw_station(i=None):
     c = plug_cfg("subwave")
-    if not c["enabled"] or not str(c.get("url") or "").startswith(("http://", "https://")):
+    if not c["enabled"]:
         return None
-    sig = json.dumps([c.get("url"), c.get("user"), c.get("password")])
-    if _sw["sig"] != sig:
-        _sw.update(client=SubwaveClient(c["url"], c.get("user"), c.get("password")), sig=sig)
-    return _sw["client"]
+    st = sw_stations(c)
+    if not st:
+        return None
+    if i is None:
+        i = subwave_playing_idx()
+    try:
+        i = int(i if i is not None else 0)
+    except (TypeError, ValueError):
+        i = 0
+    return st[i] if 0 <= i < len(st) else st[0]
 
 
-def subwave_stream_url(fmt="mp3"):
-    c = plug_cfg("subwave")
-    u = urllib.parse.urlsplit(str(c.get("url") or "").rstrip("/"))
+def subwave(i=None):
+    """MCP-klienten for stasjon i (None = den som spiller, ellers den første)."""
+    x = _sw_station(i)
+    if not x:
+        return None
+    sig = json.dumps([x["url"], x["user"], x["password"]])
+    if sig not in _sw:
+        _sw[sig] = SubwaveClient(x["url"], x["user"], x["password"])
+    return _sw[sig]
+
+
+def subwave_stream_url(fmt="mp3", i=None):
+    x = _sw_station(i) or {"url": "", "user": "", "password": ""}
+    u = urllib.parse.urlsplit(x["url"])
     net = u.netloc
-    if c.get("password"):
-        net = urllib.parse.quote(c.get("user") or "skjold", safe="") + ":" + urllib.parse.quote(c["password"], safe="") + "@" + u.netloc
+    if x.get("password"):
+        net = urllib.parse.quote(x.get("user") or "skjold", safe="") + ":" + urllib.parse.quote(x["password"], safe="") + "@" + u.netloc
     return urllib.parse.urlunsplit((u.scheme, net, (u.path or "") + "/stream." + fmt, "", ""))
 
 
-def subwave_playing():
+def subwave_playing_idx():
+    """Indeksen til SUB/WAVE-stasjonen som spiller nå, eller None."""
     c = plug_cfg("subwave")
-    host = urllib.parse.urlsplit(str(c.get("url") or "")).netloc.split("@")[-1]
     url = str((lyr.info or {}).get("url") or "")
-    return bool(c["enabled"] and host and state["input"] == "radio" and host in url and "/stream." in url)
+    if not (c["enabled"] and state["input"] == "radio" and "/stream." in url):
+        return None
+    for x in sw_stations(c):
+        u = urllib.parse.urlsplit(x["url"])
+        host, path = u.netloc.split("@")[-1], (u.path or "")
+        if host and host in url and (path + "/stream.") in url:
+            return x["i"]
+    return None
+
+
+def subwave_playing():
+    return subwave_playing_idx() is not None
 
 
 def _find(d, *names):
@@ -6278,38 +6320,43 @@ def subwave_meta():
         return None
     tr = np.get("track") if isinstance(np.get("track"), dict) else np
     return {"title": str(_find(tr, "title", "name", "track") or ""), "artist": str(_find(tr, "artist", "artists") or ""),
-            "album": str(_find(tr, "album") or ""), "cover": str(_find(tr, "cover_url", "coverUrl", "artwork_url", "artwork", "art", "cover", "image") or "")}
+            "station": (_sw_station() or {}).get("name", ""), "album": str(_find(tr, "album") or ""), "cover": str(_find(tr, "cover_url", "coverUrl", "artwork_url", "artwork", "art", "cover", "image") or "")}
 
 
 async def h_subwave(r):
     loop = asyncio.get_running_loop()
-    cl = subwave()
-    if not cl:
-        return web.json_response({"configured": False})
+    b = {}
     if r.method == "POST":
         try:
             b = await r.json()
         except Exception:
             b = {}
+    si = b.get("station", r.query.get("station"))   # hvilken stasjon (indeks); tom = den som spiller, ellers den første
+    si = None if si in (None, "") else si
+    stn = _sw_station(si)
+    cl = subwave(si)
+    if not cl or not stn:
+        return web.json_response({"configured": False, "stations": []})
+    if r.method == "POST":
         try:
             if b.get("favorite"):
                 fmt = "opus" if b.get("opus") else "mp3"
-                url = subwave_stream_url(fmt)
+                url = subwave_stream_url(fmt, stn["i"])
                 if not any(p and p.get("url") == url for p in state["presets"]):
-                    lst = list(state["presets"]); item = {"title": "SUB/WAVE", "url": url, "icon": "", "genre": "AI-DJ"}
+                    lst = list(state["presets"]); item = {"title": stn["name"], "url": url, "icon": "", "genre": "AI-DJ"}
                     k = next((i for i, p in enumerate(lst) if not p), None)
                     if k is None: lst.append(item)
                     else: lst[k] = item
                     state["presets"] = norm_presets(lst); changed()
                 return web.json_response({"ok": True})
             if b.get("play"):
-                await loop.run_in_executor(None, lambda: play_url(subwave_stream_url(), "SUB/WAVE"))
+                await loop.run_in_executor(None, lambda: play_url(subwave_stream_url("mp3", stn["i"]), stn["name"]))
                 return web.json_response({"ok": True})
             if b.get("text"):
                 res = await loop.run_in_executor(None, lambda: cl.call("subwave_request_song", {"text": str(b["text"])[:300], "name": str(b.get("name") or "")[:40]}))
                 return web.json_response({"ok": True, "result": res})
             if b.get("action") in ("skip", "announce"):
-                if not plug_cfg("subwave").get("password"):
+                if not stn.get("password"):
                     return web.json_response({"error": "admin krever passord"}, status=403)
                 tool = "subwave_skip_track" if b["action"] == "skip" else "subwave_dj_announce"
                 res = await loop.run_in_executor(None, lambda: cl.call(tool, {"text": str(b.get("text") or "")[:300]}))
@@ -6317,7 +6364,9 @@ async def h_subwave(r):
         except Exception as e:
             return web.json_response({"error": str(e)}, status=502)
         return web.json_response({"error": "ukjent handling"}, status=400)
-    out = {"configured": True, "playing": subwave_playing(), "admin": bool(plug_cfg("subwave").get("password"))}
+    pi_ = subwave_playing_idx()
+    out = {"configured": True, "playing": pi_ == stn["i"], "admin": bool(stn.get("password")), "station": stn["i"], "name": stn["name"],
+           "playing_station": pi_, "stations": [{"i": x["i"], "name": x["name"]} for x in sw_stations()]}
     for k, tool in (("health", "subwave_health"), ("now_playing", "subwave_now_playing"), ("state", "subwave_station_state"), ("schedule", "subwave_schedule")):
         if k != "health" and r.query.get("health") == "1":
             continue
@@ -6589,6 +6638,9 @@ def plugin_update(pid, body):
             v = [{"f": float(f["f"]), "q": float(f.get("q", 4)), "g": max(-10.0, min(3.0, float(f["g"])))} for f in (v or [])[:8] if 40 <= float(f["f"]) <= 300]
         if k == "tilt":
             v = max(-3.0, min(3.0, float(v)))
+        if k == "extra" and pid == "subwave":   # flere SUB/WAVE-stasjoner
+            v = [{"name": str(x.get("name") or "")[:40], "url": str(x.get("url") or "").strip()[:300], "user": str(x.get("user") or "")[:100],
+                  "password": str(x.get("password") or "")[:200]} for x in (v or [])[:10] if isinstance(x, dict)]
         if k == "alarms":
             al = []
             for a in (v or [])[:10]:
