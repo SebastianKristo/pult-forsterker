@@ -54,7 +54,25 @@
       } else SKJOLD.drawClock(g, 1920, 640, stl, new Date());
     } else if (!saver.paused) saver.pause();
   }
-  setInterval(() => { const m = new Date().getMinutes(); if (m !== lastMin || busy()) { lastMin = m; wake(50); } }, 1000);
+  setInterval(() => { const m = new Date().getMinutes(); if (m !== lastMin || busy()) { lastMin = m; wake(50); } screenPower(); }, 1000);
+
+  // ---------- panelet av/på (bare under sway: ?screenoff=1) ----------
+  // Uten «Klokke i standby» var skjermen svart i standby og når «Slukk etter» slo inn – men et LCD-panel lyser grått
+  // når det viser svart. Da slås panelet helt av (DPMS via skjold-ui) og på igjen ved første knapp, hjul eller endring.
+  const SCREENOFF = new URLSearchParams(location.search).get('screenoff') === '1';
+  let panelOn = true, darkSince = 0;
+  function wantDark() {
+    if (S.rebootT || S.knobHoldT || S.pairT || S.set.open || S.setup.on || booting()) return false;
+    if (now() - (S.nightT || -1e9) < 8000 || S.set.clock) return false;   // nattanimasjon, eller klokke/skjermsparer i stedet
+    return !S.power ? !!S.main : screenDim() >= 1;
+  }
+  function screenPower() {
+    if (!SCREENOFF) return;
+    const d = wantDark(), n = now();
+    if (d) { if (!darkSince) darkSince = n; if (panelOn && n - darkSince > 1500) { panelOn = false; postScreen(false); } }
+    else { darkSince = 0; if (!panelOn) { panelOn = true; postScreen(true); } }
+  }
+  function postScreen(on) { fetch('/ui/screen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on }) }).catch(() => {}); }
 
   // Standby-stiler med data fra Home Assistant (§4.3): bruk ekte data fra status.home; mangler det, vis «Dato» (5)
   // i stedet for designets eksempeltall (vær, kalender, bilde, alarm).
@@ -122,7 +140,7 @@
     if (st.input_seq !== prev.input_seq || st.volume !== prev.volume || st.hp_volume !== prev.hp_volume || inp !== prev.input || !!st.mute !== !!prev.mute
       || st.usb_pc !== prev.usb_pc || ui.hold || ui.overlay || !!st.power !== !!prev.power || JSON.stringify(st.setup_net || null) !== JSON.stringify(prev.setup_net || null)) S.lastAct = n;
     if (ui.hold || ui.overlay || (st.setup_net && (st.setup_net.active || st.setup_net.joining))) wake(1200);
-    wake(400);
+    wake(400); screenPower();
   }
   let nightLight = true;
   function applySettings(set) {
@@ -152,6 +170,7 @@
   function postUi() { fetch('/ui/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ menu: !!S.set.open, setup: !!S.setup.on, bday: !!(bdayOn() && !S.bdayHide) }) }).catch(() => {}); }
   function onUi(ev) {
     const n = now(); S.lastAct = n;
+    screenPower();   // vekk panelet straks
     if (ev.ev === 'dismiss_greeting') { S.bdayHide = true; postUi(); wake(300); return; }
     if (ev.ev === 'menu_toggle') { S.power = true; toggleSettings(); postUi(); return; }
     if (!S.set.open) return;
