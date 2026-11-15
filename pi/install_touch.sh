@@ -38,6 +38,7 @@ exec "$CHR" --kiosk --app="$URL" \\
   --ozone-platform=wayland --enable-features=UseOzonePlatform,OverlayScrollbar \\
   --force-device-scale-factor=1 --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 \\
   --disable-features=TouchpadOverscrollHistoryNavigation,Translate,HardwareMediaKeyHandling \\
+  --disable-translate --lang=nb-NO \\
   --noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble \\
   --check-for-update-interval=31536000 --password-store=basic --autoplay-policy=no-user-gesture-required \\
   --use-fake-ui-for-media-stream \\

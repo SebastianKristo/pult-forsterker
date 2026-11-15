@@ -109,6 +109,11 @@ if grep -qs "^KI_AMP_PRODUCT=touch" /etc/ki-amp.env && [ -f /etc/systemd/system/
   TU="$(sed -n 's/^User=//p' /etc/systemd/system/skjold-touch.service | head -1)"; TH="$(getent passwd "$TU" | cut -d: -f6)"
   sudo python3 "$SRC/tools/blank_cursor.py" /usr/share/icons/skjold-blank >/dev/null || true
   [ -n "$TH" ] && [ ! -e "$TH/.icons/default/cursors/default" ] && sudo -u "$TU" python3 "$SRC/tools/blank_cursor.py" "$TH/.icons/default" >/dev/null || true
+  # ingen Google Oversett-boks i kiosken (eldre installasjoner manglet --disable-translate)
+  if [ -f /usr/local/bin/skjold-touch-ui ] && ! grep -q -- --disable-translate /usr/local/bin/skjold-touch-ui; then
+    sudo sed -i 's/  --noerrdialogs --disable-infobars/  --disable-translate --lang=nb-NO \\\n  --noerrdialogs --disable-infobars/' /usr/local/bin/skjold-touch-ui
+    sudo systemctl restart skjold-touch || true
+  fi
   if ! grep -q WLR_NO_HARDWARE_CURSORS /etc/systemd/system/skjold-touch.service; then
     sudo sed -i 's/^Environment=XCURSOR_SIZE=1$/Environment=XCURSOR_THEME=skjold-blank\nEnvironment=XCURSOR_SIZE=1\nEnvironment=WLR_NO_HARDWARE_CURSORS=1/' /etc/systemd/system/skjold-touch.service
     sudo systemctl daemon-reload && sudo systemctl restart skjold-touch || true
