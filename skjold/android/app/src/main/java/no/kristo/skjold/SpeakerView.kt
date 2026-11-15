@@ -5,6 +5,11 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -105,67 +110,77 @@ fun SpeakerView(m: AppModel) {
         else perm.launch(Manifest.permission.RECORD_AUDIO)
     }
 
+    // V4SpeakerSheet: VStack 16, padding 20, kort radius 22 (#141415 / kant #242426), gull-lenker, «Lagre og bruk» i gull
+    val card = Modifier.fillMaxWidth().skBox(C.card, C.line, 22.dp)
     Column(
         Modifier.fillMaxSize().background(C.bg).windowInsetsPadding(WindowInsets.statusBars).verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             T("Høyttalerprofil", sora(24f, W.Semibold), Modifier.weight(1f))
-            SKLinkButton("Lukk") { m.showSpeakers = false }
+            T("Lukk", sora(15f, W.Regular, C.accent2), Modifier.press { m.showSpeakers = false })
         }
         T("Retter høyttalernes egen frekvensgang. Romkorreksjonen tar seg fortsatt av bassen i rommet.", sora(13f, W.Regular, C.muted))
-        if (current.isNotEmpty()) SKCard(radius = 18.dp) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    T(current, sora(15f))
-                    T(if (certified) "✓ Skjold Sertifisert · $nFilters filtre" else "$nFilters filtre", sora(12f, W.Regular, if (certified) C.accent2 else C.muted))
-                }
-                SKToggle(enabled) {
-                    val host = m.settingsHost ?: return@SKToggle
-                    scope.launch { apply(obj(DeviceLink.send("/api/speakers", mapOf("enabled" to !enabled), on = host))) }
-                }
+        if (current.isNotEmpty()) Row(card.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                T(current, sora(15f))
+                T(if (certified) "✓ Skjold Sertifisert · $nFilters filtre" else "$nFilters filtre", sora(12f, W.Regular, if (certified) C.accent2 else C.muted))
+            }
+            SKToggle(enabled, onColor = C.accent2) {
+                val host = m.settingsHost ?: return@SKToggle
+                scope.launch { apply(obj(DeviceLink.send("/api/speakers", mapOf("enabled" to !enabled), on = host))) }
             }
         }
         SKMonoLabel("FINN PROFIL")
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SKField("Merke eller modell", q, { q = it }, Modifier.weight(1f), plainInput = true)
-            SKPill("Søk") { search() }
+        Row(card.padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            SKField("Merke eller modell", q, { q = it }, Modifier.weight(1f), border = Color.Transparent, bg = Color.Transparent, plainInput = true)
+            T("Søk", sora(14f, W.Regular, C.accent2), Modifier.press { search() })
         }
         hits.forEach { h ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+            Row(card.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     T(h.name, sora(14f))
                     T(if (h.certified) "✓ Skjold Sertifisert" else "${h.count} måling" + if (h.count == 1) "" else "er", sora(11f, W.Regular, if (h.certified) C.accent2 else C.muted))
                 }
-                SKPill("Bruk") {
-                    val host = m.settingsHost ?: return@SKPill
+                T("Bruk", sora(14f, W.Regular, C.accent2), Modifier.press {
+                    val host = m.settingsHost ?: return@press
                     scope.launch {
                         val r = DeviceLink.send("/api/speakers", mapOf("use" to h.id), on = host, timeout = 12.0)
                         if (r == null) status = "Fikk ikke hentet profilen." else { apply(obj(r)); Haptics.success() }
                     }
-                }
+                })
             }
         }
         SKMonoLabel("MÅL SELV")
         T("Spill én høyttaler. Hold telefonen 1 m foran, i høyde med diskanten og minst 1 m fra vegger og gulv. Mål 3–5 ganger fra litt ulike vinkler.", sora(12f, W.Regular, C.muted))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SKField("Merke", brand, { brand = it }, Modifier.weight(1f))
-            SKField("Modell", model, { model = it }, Modifier.weight(1f))
+        Row(card) {
+            SKField("Merke", brand, { brand = it }, Modifier.weight(1f), border = Color.Transparent, bg = Color.Transparent)
+            SKField("Modell", model, { model = it }, Modifier.weight(1f), border = Color.Transparent, bg = Color.Transparent)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            SKPill(if (busy) "Måler …" else if (measured == 0) "Start måling" else "Mål igjen ($measured)") { if (!busy) start() }
-            if (measured > 0) SKPill("Lagre og bruk", primary = true) {
-                val host = m.settingsHost ?: return@SKPill
-                if (brand.isBlank() || model.isBlank()) { status = "Oppgi merke og modell."; return@SKPill }
-                scope.launch {
-                    val r = DeviceLink.send("/api/speakers/save", mapOf("session" to session, "brand" to brand, "model" to model, "share" to share, "apply" to true), on = host, timeout = 20.0)
-                    if (r == null) status = "Fikk ikke lagret." else { measured = 0; status = "Lagret og i bruk."; Haptics.success(); apply(obj(DeviceLink.get("/api/speakers", on = host))) }
-                }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.weight(1f).skBox(C.card, C.line, 22.dp).press(enabled = !busy) { start() }.padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) { T(if (busy) "Måler …" else if (measured == 0) "Start måling" else "Mål igjen ($measured)", sora(14f, W.Regular, C.accent2)) }
+            if (measured > 0) {
+                val ready = brand.isNotBlank() && model.isNotBlank()
+                Box(
+                    Modifier.weight(1f).alpha(if (ready) 1f else 0.4f).clip(CircleShape).background(C.accent2)
+                        .press(enabled = ready) {
+                            val host = m.settingsHost ?: return@press
+                            scope.launch {
+                                val r = DeviceLink.send("/api/speakers/save", mapOf("session" to session, "brand" to brand, "model" to model, "share" to share, "apply" to true), on = host, timeout = 20.0)
+                                if (r == null) status = "Fikk ikke lagret – oppgi merke og modell og mål minst én gang."
+                                else { measured = 0; status = "Lagret og i bruk."; Haptics.success(); apply(obj(DeviceLink.get("/api/speakers", on = host))) }
+                            }
+                        }.padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) { T("Lagre og bruk", sora(14f, W.Regular, C.bg)) }
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             T("Del anonymt i Skjold Cloud", sora(13f), Modifier.weight(1f))
-            SKToggle(share) { share = !share }
+            SKToggle(share, onColor = C.accent2) { share = !share }
         }
         if (status.isNotEmpty()) T(status, sora(12f, W.Regular, C.muted))
     }

@@ -59,8 +59,17 @@ data class ChangelogData(val current: String?, val notes: ReleaseNote?, val hist
             } catch (_: Exception) { null }
         }
 
+        /**
+         * Sist «Hva er nytt» ble sjekket per enhet. Visningen kan bli laget på nytt ofte (statusoppdateringer, rombytte),
+         * og et tomt/feilende svar ga da en ny forespørsel hver gang. Sjekk høyst hver 6. time per enhet (som iOS).
+         */
+        private val lastCheck = mutableMapOf<String, Long>()
+
         /** «Hva er nytt» én gang etter versjonsbytte. Første gang appen ser enheten vises ingenting. */
         suspend fun whatsNew(host: String): ReleaseNote? {
+            val now = System.currentTimeMillis()
+            lastCheck[host]?.let { if (now - it < 6 * 3600_000L) return null }
+            lastCheck[host] = now
             val c = fetch(host) ?: return null
             val cur = c.current ?: return null
             val n = c.notes ?: return null
@@ -107,7 +116,7 @@ fun ChangelogView(m: AppModel) {
                 if (d.offline) T("Uten nett – viser lagrede notater.", sora(12f, W.Regular, Color(0xffc9b48a)))
                 if (d.history.isEmpty()) T("Ingen release-notater ennå.", sora(13f, W.Regular, C.muted))
                 d.history.forEach { r ->
-                    SKCard {
+                    SKCard(border = Color(0xff232325)) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 T(r.tag.removePrefix("skjold-") + (if (r.tag == d.current) " · installert" else "") + (if (r.prerelease) " · beta" else ""),
@@ -166,20 +175,27 @@ fun RecordedProgramsView(m: AppModel) {
         loaded = true
     }
     val fmt = remember { SimpleDateFormat("EEE d. MMM", Locale("nb", "NO")) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         T("Planlegg opptak (f.eks. «Nitimen hver lørdag») under Plugins → Radioopptak i web-appen. Episodene vises her og som podkast.", sora(12.5f, W.Regular, C.muted, 1.45f))
-        if (feed.isNotEmpty()) T(feed, mono(11f, C.accent))
+        if (feed.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+            T(feed, mono(11f, C.accent2), Modifier.weight(1f), maxLines = 2)
+            T("Kopier", sora(13f, W.Regular, C.accent2), Modifier.press {
+                (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager)
+                    ?.setPrimaryClip(android.content.ClipData.newPlainText("Skjold-podkast", feed))
+            }.padding(start = 8.dp))
+        }
         if (loaded && progs.isEmpty()) T("Ingen programmer tatt opp ennå.", sora(13f, W.Regular, C.muted))
         progs.forEach { p ->
             val id = p.optString("id")
-            SKCard {
+            SKCard(border = Color(0xff232325)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     T(p.optString("name") + " · " + p.optString("channel"), sora(14f, W.Semibold))
                     val eps = p.optJSONArray("episodes") ?: JSONArray()
                     (0 until eps.length()).mapNotNull { eps.optJSONObject(it) }.forEach { e ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             T(fmt.format(Date(e.optLong("t") * 1000)) + " · ${e.optInt("dur") / 60} min", sora(13f, W.Regular, C.ink2), Modifier.weight(1f))
-                            T("Spill", sora(13f, W.Regular, C.accent), Modifier.press {
+                            T("Spill", sora(13f, W.Regular, C.accent2), Modifier.press {
                                 scope.launch {
                                     val h = m.activeHost ?: return@launch
                                     val url = Net.url(h, "/api/recordings") ?: return@launch

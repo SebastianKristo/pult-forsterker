@@ -1,6 +1,5 @@
 package no.kristo.skjold
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +18,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.net.URLEncoder
 
-/** Ett treff fra Music Assistant eller NRK. Spilles via Skjold (/api/ma/play, /api/nrk/play). */
+/** Ett treff fra Music Assistant (låt/album/spilleliste/podkast) eller NRK (episode). Spilles via Skjold. */
 data class ExtHit(val id: String, val title: String, val sub: String, val badge: String, val path: String, val body: Map<String, Any?>)
 
 object ExtSearch {
@@ -52,73 +50,94 @@ object ExtSearch {
             val e = arr.optJSONObject(i) ?: continue
             val id = e.optString("id")
             if (id.isEmpty()) continue
+            val title = e.optString("title")
             val series = e.optString("series")
             val date = e.optString("date")
-            val body = mapOf<String, Any?>("id" to id, "title" to e.optString("title"), "series" to series,
-                "image" to e.optString("image"), "duration" to e.optDouble("duration", 0.0), "podcast" to e.optBoolean("podcast"))
-            out += ExtHit("nrk:$id", e.optString("title"), listOf(series, date).filter { it.isNotEmpty() }.joinToString(" · "), "NRK", "/api/nrk/play", body)
+            // som iOS: bilde, varighet og podkast bare når de finnes
+            val body = HashMap<String, Any?>()
+            body["id"] = id; body["title"] = title; body["series"] = series
+            if (e.has("image") && !e.isNull("image")) body["image"] = e.optString("image")
+            if (e.has("duration") && !e.isNull("duration")) body["duration"] = e.optDouble("duration")
+            if (e.has("podcast") && !e.isNull("podcast")) body["podcast"] = e.optBoolean("podcast")
+            val sub = if (series.isEmpty()) date else if (date.isEmpty()) series else "$series · $date"
+            out += ExtHit("nrk:$id", title, sub, "NRK", "/api/nrk/play", body)
         }
         return out
     }
+
+    /** Treff fra Music Assistant og NRK via Skjold (/api/ma/search og /api/nrk/search). */
+    suspend fun load(host: String?, q: String): List<ExtHit> {
+        val enc = YtmLib.q(q)   // & + # i søket må kodes (AC&DC)
+        return fromMA(DeviceLink.get("/api/ma/search?q=$enc", on = host, timeout = 12.0)) +
+            fromNRK(DeviceLink.get("/api/nrk/search?q=$enc", on = host, timeout = 12.0))
+    }
+
+    /** «Spill noe til …» (POST /api/ask). Gir teksten som vises under knappen. */
+    suspend fun ask(host: String?, text: String): String {
+        val raw = DeviceLink.send("/api/ask", mapOf("text" to text), on = host, timeout = 60.0)
+        val o = try { raw?.let { JSONObject(String(it)) } } catch (_: Exception) { null }
+        return when {
+            o == null -> "Fant ikke noe som passet"
+            o.optBoolean("ok") -> "Spiller " + o.optString("summary")
+            else -> o.optString("error", "Fant ikke noe som passet") + " (" + o.optString("summary") + ")"
+        }
+    }
+
+    /** Spiller et treff via Skjold. */
+    suspend fun play(host: String?, h: ExtHit) {
+        DeviceLink.send(h.path, h.body, on = host, timeout = 12.0)
+    }
 }
 
-/** Søkeresultater fra Music Assistant og NRK under bibliotekets søkefelt. */
+/** «MUSIC ASSISTANT OG NRK»: omslag 52 r9, tittel 15/600, undertekst 12, merke i mono gull. */
+@Composable
+fun ExtHitList(m: AppModel, ext: List<ExtHit>) {
+    val scope = rememberCoroutineScope()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SourceKicker("MUSIC ASSISTANT OG NRK")
+        for (h in ext) {
+            Row(
+                Modifier.fillMaxWidth().press { val host = m.activeHost; scope.launch { ExtSearch.play(host, h) } }.padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                SourceCover(h.title, 52.dp, 9.dp)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    T(h.title, sora(15f, W.Semibold), maxLines = 1)
+                    T(h.sub, sora(12f, W.Regular, SourceTok.muted), maxLines = 1)
+                }
+                T(h.badge, mono(10f, SourceTok.gold, 0.1f))
+            }
+        }
+    }
+}
+
+/** «Spill noe til …» og treff fra Music Assistant og NRK for et søk (samme som nederst i søket). */
 @Composable
 fun ExtSearchResults(m: AppModel, q: String) {
     var hits by remember { mutableStateOf<List<ExtHit>>(emptyList()) }
+    var askMsg by remember(q) { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     LaunchedEffect(q) {
         hits = emptyList()
-        if (!m.live || q.isBlank()) return@LaunchedEffect
-        delay(400)
-        val h = m.settingsHost
-        val enc = URLEncoder.encode(q, "UTF-8")
-        val found = ExtSearch.fromMA(DeviceLink.get("/api/ma/search?q=$enc", on = h, timeout = 12.0)) +
-            ExtSearch.fromNRK(DeviceLink.get("/api/nrk/search?q=$enc", on = h, timeout = 12.0))
-        hits = found
+        if (m.demo || q.isBlank()) return@LaunchedEffect
+        delay(350)
+        hits = ExtSearch.load(m.activeHost, q)
     }
-    var askMsg by remember(q) { mutableStateOf("") }
-    if (m.live && q.isNotBlank()) {
-        Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+    if (!m.demo && q.isNotBlank()) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
-                Modifier.fillMaxWidth().clickable {
-                    val host = m.settingsHost
+                Modifier.fillMaxWidth().press {
                     askMsg = "Finner noe …"
-                    scope.launch {
-                        val raw = DeviceLink.send("/api/ask", mapOf("text" to q), on = host, timeout = 60.0)
-                        val o = try { JSONObject(String(raw ?: ByteArray(0))) } catch (_: Exception) { null }
-                        askMsg = when {
-                            o == null -> "Fant ikke noe som passet"
-                            o.optBoolean("ok") -> "Spiller " + o.optString("summary")
-                            else -> o.optString("error", "Fant ikke noe som passet") + " (" + o.optString("summary") + ")"
-                        }
-                    }
+                    val host = m.activeHost
+                    scope.launch { askMsg = ExtSearch.ask(host, q) }
                 }.padding(vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                T("Spill noe til «$q»", sora(15f, W.Semibold, C.accent2), maxLines = 1)
+                SKIcon(SourceTok.search, 18.dp, 2.2f, SourceTok.gold)
+                T("Spill noe til «$q»", sora(15f, W.Semibold), Modifier.weight(1f), maxLines = 1)
             }
-            if (askMsg.isNotEmpty()) T(askMsg, sora(12f, W.Regular, C.muted))
+            if (askMsg.isNotEmpty()) T(askMsg, sora(12f, W.Regular, SourceTok.muted))
         }
     }
-    if (hits.isEmpty()) return
-    Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        T("MUSIC ASSISTANT OG NRK", mono(10f, C.muted, 0.12f))
-        for (h in hits) {
-            Row(
-                Modifier.fillMaxWidth().clickable {
-                    val host = m.settingsHost
-                    scope.launch { DeviceLink.send(h.path, h.body, on = host, timeout = 12.0) }
-                }.padding(vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Column(Modifier.weight(1f)) {
-                    T(h.title, sora(15f, W.Semibold), maxLines = 1)
-                    T(h.sub, sora(12f, W.Regular, C.muted), maxLines = 1)
-                }
-                T(h.badge, mono(10f, C.accent2, 0.1f))
-            }
-        }
-    }
+    if (hits.isNotEmpty()) ExtHitList(m, hits)
 }

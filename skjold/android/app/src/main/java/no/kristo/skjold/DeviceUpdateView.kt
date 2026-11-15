@@ -142,7 +142,8 @@ fun DeviceUpdateView(m: AppModel) {
             }
             if (working) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(C.accent))
+                    // ProgressView().tint(.accent)
+                    androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), color = C.accent, strokeWidth = 2.dp)
                     T(if (phase == "gone") "Starter Skjold på nytt … venter på enheten" else "Oppdaterer … ikke slå av enheten", sora(13f))
                 }
             } else {

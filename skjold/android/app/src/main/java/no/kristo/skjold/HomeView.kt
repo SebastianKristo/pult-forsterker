@@ -1,5 +1,7 @@
 package no.kristo.skjold
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,214 +14,319 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 
-/** 09 Hjem: logo + room pill, active room card, recently played, sources, radio favourites. */
+/*
+ * Hjem (v4), som V4Home.swift på iOS: tittel med stedsvelger («Hjemme ⌄») og en kapsel med søk og innstillinger,
+ * deretter seksjonene i brukerens rekkefølge (Nylig spilt, Kilder, Radiofavoritter, Dine spillelister, hyllene fra
+ * bibliotekene) og «Rediger hjemskjerm». Stedsmenyen og hjelperne ligger i HomeV4.kt, redigeringen i HomeLayout.kt.
+ */
+
 @Composable
 fun HomeView(m: AppModel) {
-    // v4: hjemmets navn (32/600, −0.02em) med pil som bytter hjem, og en kapsel med søk og innstillinger
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.weight(1f)) { StedPicker(m, 32f) }
-        Row(
-            Modifier.height(44.dp).clip(CircleShape).background(SkG.pillBg).skCapsuleBorder(SkG.pillLine).padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Box(Modifier.size(48.dp).clip(CircleShape).press(label = "Søk i radio") { m.sub = "radio" }, contentAlignment = Alignment.Center) {
-                SKIcon("M11 18a7 7 0 1 0 0-14a7 7 0 1 0 0 14M20 20l-4-4", 20.dp, 1.8f, C.ink)
-            }
-            Box(Modifier.size(48.dp).clip(CircleShape).press(label = "Innstillinger") { m.tab = 3; m.setCat = -1 }, contentAlignment = Alignment.Center) {
-                SKIcon(Icons.tabSettings, 20.dp, 1.8f, C.ink)
-            }
-        }
-    }
-
     var editHome by remember { mutableStateOf(false) }
-    // Seksjonene i rekkefølgen brukeren har valgt (settings.homeLayout, delt med web og iOS).
-    for (sec in HomeLayout.resolve(m.homeLayout, HomeLayout.android).filter { s -> s.visible }) {
-        when (sec.id) {
-            "recent" -> RecentShelf(m)
-            "sources" -> SourcesShelf(m) { editHome = true }
-            "favs" -> FavShelf(m)
-            "playlists" -> PlaylistShelf(m)
+    var placeOpen by remember { mutableStateOf(false) }
+    // Fanesiden gir 6 topp og 40 bunn (V4TabPage); 22 mellom seksjonene.
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+        HomeHeader(m, placeOpen) { placeOpen = !placeOpen }
+        // Seksjonene i rekkefølgen brukeren har valgt (settings.homeLayout, delt med web og iOS).
+        for (sec in HomeLayout.resolve(m.homeLayout, HomeLayout.android).filter { it.visible }) {
+            when (sec.id) {
+                "recent" -> RecentShelf(m)
+                "sources" -> SourcesShelf(m) { editHome = true }
+                "favs" -> FavShelf(m)
+                "playlists" -> PlaylistShelf(m)
+                "library" -> { for (s in shelves(m)) key(s.title) { ShelfView(s) } }
+            }
         }
+        T(
+            "Rediger hjemskjerm", sora(13f, W.Regular, HomeV4.muted),
+            Modifier.fillMaxWidth().press { editHome = true }.padding(vertical = 8.dp), align = TextAlign.Center,
+        )
     }
-    T("Rediger hjemskjerm", sora(13f, W.Regular, C.muted), Modifier.fillMaxWidth().press { editHome = true }.padding(vertical = 8.dp), align = TextAlign.Center)
-    if (editHome) HomeEditorDialog(m) { editHome = false }
+    HomePlaceMenu(m, placeOpen) { placeOpen = false }
+    if (editHome) HomeEditorSheet(m) { editHome = false }
+    // loadLibs(): hent bibliotekene som ikke er lastet ennå (bare koblet til en Skjold-enhet)
+    LaunchedEffect(m.live) {
+        if (!m.live) return@LaunchedEffect
+        for (lib in listOf("ytm", "nd", "plex")) if ((m.libs[lib]?.state ?: "").isEmpty()) m.loadLib(lib)
+    }
 }
 
+// MARK: Topp
+
+/** «Hjemme ⌄» (32/600, −0.02em, pil 18 som snur seg når menyen er åpen) og kapselen med søk og innstillinger. */
+@Composable
+private fun HomeHeader(m: AppModel, open: Boolean, toggle: () -> Unit) {
+    val rot by animateFloatAsState(if (open) 180f else 0f, tween(200, easing = HomeV4.easeInOut), label = "homeChevron")
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.weight(1f)) {
+            Row(
+                Modifier.press(label = "Bytt sted, nå ${m.stedNavn}") { toggle(); DockUi.hideHint() },
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                T(m.stedNavn, sora(32f, W.Semibold).copy(letterSpacing = (-0.02f).em), Modifier.weight(1f, fill = false), maxLines = 1)
+                SKIcon(HomeV4.chevDown, 18.dp, 2.2f, HomeV4.body, modifier = Modifier.padding(top = 4.dp).rotate(rot))
+            }
+        }
+        Row(
+            Modifier.height(44.dp).homeDarkPill().padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Box(Modifier.size(38.dp).press(label = "Søk") { DockUi.hideHint(); m.openSearch() }, contentAlignment = Alignment.Center) {
+                SKIcon(HomeV4.search, 20.dp, 1.8f, HomeV4.ink)
+            }
+            Box(Modifier.size(38.dp).press(label = "Innstillinger") { m.tab = 3; m.setCat = -1 }, contentAlignment = Alignment.Center) {
+                SKIcon(HomeV4.gear, 20.dp, 1.8f, HomeV4.ink)
+            }
+        }
+    }
+}
+
+// MARK: Nylig spilt (132 × 132, radius 16)
+
+private data class HomeRecent(val id: String, val t: String, val key: String, val big: String, val src: String, val cur: Boolean, val play: () -> Unit)
+
+private fun recent(m: AppModel): List<HomeRecent> {
+    val out = ArrayList<HomeRecent>()
+    for ((lib, h) in m.hist.toSortedMap()) {
+        val list = h.map { it.track }
+        h.take(3).forEachIndexed { i, e ->
+            val cur = m.libTrack?.t == e.track.t
+            out.add(HomeRecent("$lib-$i-${e.track.t}", e.track.t, e.track.album, e.track.artist, HomeLibNames[lib] ?: lib, cur) {
+                m.lib = lib; m.playLib(list, i, keepOpen = true)
+            })
+        }
+    }
+    if (m.demo && out.isEmpty()) {
+        SK.tr.forEachIndexed { i, t ->
+            out.add(HomeRecent("d$i", t.first, t.first, t.second, "AirPlay", m.input == 0 && m.trk == i && m.svc == null) {
+                m.pickInput(0); m.trk = i; m.pos = 0; m.playing = true
+            })
+        }
+    }
+    m.radio.take(maxOf(2, 5 - out.size)).forEachIndexed { i, st ->
+        out.add(HomeRecent("r$i", st.name, st.name, st.name, "Radio", m.input == 3 && m.stIdx == i && m.rTmp == null) {
+            m.playStation(i, open = false)
+        })
+    }
+    return out
+}
 
 @Composable
 private fun RecentShelf(m: AppModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        T("Nylig spilt ›", sora(SkG.shelfTitle, W.Semibold))
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        T("Nylig spilt ›", sora(17f, W.Semibold))
         EdgeScroll(12.dp) {
-            for (r in recent(m)) {
-                Column(Modifier.width(SkG.recentSize).press(onClick = r.pick), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    val a = art(r.key)
-                    Box(Modifier.size(SkG.recentSize).clip(RoundedCornerShape(SkG.recentR)), contentAlignment = Alignment.BottomStart) {
-                        ArtFill(a)
-                        T(r.big, sora(15f, W.Semibold, a.ink, 1.05f), Modifier.padding(11.dp))
-                    }
-                    T(r.title, sora(13f, W.Semibold), maxLines = 1)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        SourceGlyph(r.src, 16.dp)
-                        T(r.src, sora(11f, W.Regular, SkG.subText), maxLines = 1)
-                    }
-                }
-            }
+            for (r in recent(m)) key(r.id) { RecentTile(r) }
         }
     }
+}
 
+@Composable
+private fun RecentTile(r: HomeRecent) {
+    val a = art(r.key)
+    Column(Modifier.width(132.dp).press(onClick = r.play), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Box(Modifier.size(132.dp).clip(RoundedCornerShape(16.dp)), contentAlignment = Alignment.BottomStart) {
+            ArtFill(a)
+            T(r.big, sora(15f, W.Semibold, a.ink, 1.05f), Modifier.padding(11.dp), maxLines = 3)
+            // gull ring 2 bare når flisen spiller
+            if (r.cur) Box(Modifier.fillMaxSize().skBorder(HomeV4.gold, 16.dp, 2.dp))
+        }
+        T(r.t, sora(13f, W.Semibold), maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            HomeSourceIcon(r.src, 16.dp)
+            T(r.src, sora(11f, W.Regular, HomeV4.body), maxLines = 1)
+        }
+    }
+}
+
+// MARK: Kilder (68 runde ikoner)
+
+/** Alle kildene (navn, kort etikett), som V4HomeTab.alleKilder. AUX bare på S1. */
+fun homeAlleKilder(rom: String): List<Pair<String, String>> {
+    val l = mutableListOf(
+        "Radio" to "Radio", "AirPlay" to "AirPlay", "Blåtann" to "Blåtann", "Spotify" to "Spotify",
+        "YouTube Music" to "YT Music", "Navidrome" to "Navidrome", "Plex" to "Plex", "UPnP/DLNA" to "UPnP/DLNA", "AUX" to "AUX",
+    )
+    if (rom != "s1") l.removeAll { it.first == "AUX" }
+    return l
+}
+
+/** Kildene i brukerens rekkefølge, bare de som er slått på (Rediger hjemskjerm → Kilder). */
+private fun sources(m: AppModel): List<Pair<String, String>> {
+    val alle = homeAlleKilder(m.actRoom.type)
+    return HomeLayout.resolve(m.homeSources, alle.map { it.first }).filter { it.visible }
+        .mapNotNull { k -> alle.firstOrNull { a -> a.first == k.id } }
 }
 
 @Composable
 private fun SourcesShelf(m: AppModel, onEdit: () -> Unit) {
-    val uri = LocalUriHandler.current
-    val alle = services(m) { u -> try { uri.openUri(u) } catch (_: Exception) { Haptics.warning() } }
-    // Rekkefølge og synlighet fra «Rediger hjemskjerm» (m.homeSources, lagres på telefonen)
-    val kilder = HomeLayout.resolve(m.homeSources, alle.map { it.first }).filter { it.visible }
-        .mapNotNull { k -> alle.firstOrNull { it.first == k.id } }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            T("Kilder", sora(SkG.shelfTitle, W.Semibold), Modifier.weight(1f))
-            T("Rediger", sora(13f, W.Regular, C.muted), Modifier.press(onClick = onEdit).padding(horizontal = 4.dp, vertical = 2.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth()) {
+            T("Kilder", sora(17f, W.Semibold), Modifier.alignByBaseline())
+            Spacer(Modifier.weight(1f))
+            T("Rediger", sora(13f, W.Regular, HomeV4.muted), Modifier.alignByBaseline().press(label = "Rediger kilder", onClick = onEdit))
         }
         EdgeScroll(14.dp) {
-            for ((label, act) in kilder) SKSourceLogo(label, act)
+            for ((name, short) in sources(m)) key(name) {
+                Column(
+                    Modifier.width(68.dp).press { m.openSource(name) },
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp),
+                ) {
+                    HomeSourceIcon(name, 68.dp)
+                    T(short, sora(11f, W.Regular, HomeV4.ink2), Modifier.wrapContentWidth(unbounded = true), maxLines = 1)
+                }
+            }
         }
     }
+}
 
+// MARK: Radiofavoritter (112 × 112)
+
+/** Farge på kanalnavnet (V4Fav): NRK P1 #7fa8ff, P2 #e86fa8, P3 #f5d53a, ellers gull. */
+private fun favColor(name: String): Color = when (name) {
+    "NRK P1", "NRK P1+" -> hex(0x7fa8ff)
+    "NRK P2" -> hex(0xe86fa8)
+    "NRK P3" -> hex(0xf5d53a)
+    else -> HomeV4.gold
 }
 
 @Composable
 private fun FavShelf(m: AppModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        T("Radiofavoritter ›", sora(SkG.shelfTitle, W.Semibold), Modifier.press { m.sub = "radio" })
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        T("Radiofavoritter ›", sora(17f, W.Semibold), Modifier.press { m.openSource("Radio") })
         EdgeScroll(12.dp) {
             m.radio.forEachIndexed { i, st ->
-                val on = m.input == 3 && m.station == i
+                val on = m.input == 3 && m.stIdx == i && m.rTmp == null
                 Column(
-                    Modifier.size(SkG.favSize).clip(RoundedCornerShape(16.dp)).background(SkG.favBg).skBorder(if (on) C.accent else C.line, 16.dp)
-                        .press { m.playStation(i) }.padding(10.dp),
+                    Modifier.size(112.dp).clip(RoundedCornerShape(16.dp)).background(HomeV4.card2)
+                        .skBorder(if (on) HomeV4.goldDark else HomeV4.line, 16.dp)
+                        .press { m.playStation(i, open = false) }.padding(10.dp),
                 ) {
-                    T("${i + 1}", mono(9f))
+                    T("${i + 1}", mono(9f, HomeV4.muted))
                     Spacer(Modifier.weight(1f))
-                    FavName(st.name)
+                    FavName(st.name, 92.dp)
                 }
             }
         }
     }
 }
 
+/** «NRK P1»: første ord 20/700 (−0.02em), resten 20/400 i kanalfargen. Krymper ned til 55 % (minimumScaleFactor). */
+@Composable
+private fun FavName(name: String, avail: Dp) {
+    val parts = name.split(" ", limit = 2)
+    val a = parts[0]
+    val b = if (parts.size > 1) parts[1] else ""
+    val tm = rememberTextMeasurer()
+    val d = LocalDensity.current
+    val sa = sora(20f, W.Semibold).copy(letterSpacing = (-0.02f).em)
+    val sb = sora(20f, W.Regular, favColor(name))
+    val k = remember(name) {
+        val gap = with(d) { 4.dp.toPx() }
+        val w = tm.measure(a, sa, maxLines = 1).size.width.toFloat() +
+            (if (b.isEmpty()) 0f else gap + tm.measure(b, sb, maxLines = 1).size.width.toFloat())
+        val room = with(d) { avail.toPx() }
+        (room / w.coerceAtLeast(1f)).coerceIn(0.55f, 1f)
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        T(a, sa.copy(fontSize = (20f * k).sp), Modifier.alignByBaseline(), maxLines = 1)
+        if (b.isNotEmpty()) T(b, sb.copy(fontSize = (20f * k).sp), Modifier.alignByBaseline(), maxLines = 1)
+    }
+}
+
+// MARK: Dine spillelister
+
+private fun playlists(m: AppModel): List<SourcePlaylist> =
+    listOf("ytm", "nd", "plex").flatMap { lib -> SourceLib.playlists(m, lib).filter { it.coll?.playlist ?: true }.take(6) }
+
 @Composable
 private fun PlaylistShelf(m: AppModel) {
-    // v4: «Dine spillelister» – spillelister fra Navidrome/Plex/YouTube Music som er lastet inn
     val pls = playlists(m)
-    if (pls.isNotEmpty()) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            T("Dine spillelister", sora(SkG.shelfTitle, W.Semibold))
-            EdgeScroll(12.dp) {
-                for ((lib, p) in pls) {
-                    Column(Modifier.width(SkG.recentSize).press { m.openLib(lib) }, verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        val a = art(p.name)
-                        Box(Modifier.size(SkG.recentSize).clip(RoundedCornerShape(SkG.recentR)), contentAlignment = Alignment.BottomStart) {
-                            ArtFill(a)
-                            T(p.name, sora(15f, W.Semibold, a.ink, 1.05f), Modifier.padding(11.dp), maxLines = 2)
-                        }
-                        T(p.name, sora(13f, W.Semibold), maxLines = 1)
-                        T(if (p.count > 0) "${p.count} låter" else "Spilleliste", sora(11f, W.Regular, SkG.subText), maxLines = 1)
+    if (pls.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        HomeShelfHeader("Dine spillelister", kicker = "FRA MUSIKKTJENESTENE") { m.openLib(pls[0].lib) }
+        EdgeScroll(12.dp) {
+            for (p in pls) key(p.id) {
+                Column(Modifier.width(148.dp).press { m.openSourcePlaylist(p) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    HomeMosaic(p.keys, 148.dp, 14.dp)
+                    T(p.name, sora(14f, W.Semibold), maxLines = 1)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        HomeSourceIcon(p.src, 15.dp)
+                        T(p.src, sora(12f, W.Regular, HomeV4.muted), maxLines = 1)
                     }
                 }
             }
         }
-    }}
-
-private fun playlists(m: AppModel): List<Pair<String, LibColl>> {
-    val out = ArrayList<Pair<String, LibColl>>()
-    // YouTube Music: også «Til deg» (mikser og anbefalte album fra forsiden)
-    for ((lib, d) in m.libs) for (p in (if (lib == "ytm") (d.playlists + d.frequent.take(8) + d.other.take(8)).distinctBy { it.id } else d.playlists)) out.add(lib to p)
-    return out.take(12)
-}
-
-/** «NRK P1»: første ord hvitt og fett, resten i kanalfargen (20/700, −0.02em). */
-@Composable
-private fun FavName(name: String) {
-    val parts = name.split(" ", limit = 2)
-    val colors = mapOf("P1" to hex(0x7fa8ff), "P2" to hex(0xe86fa8), "P3" to hex(0xf5d53a))
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
-        T(parts[0], sora(20f, W.Semibold).copy(letterSpacing = (-0.02f).em), maxLines = 1)
-        if (parts.size > 1) T(parts[1], sora(20f, W.Regular, colors[parts[1]] ?: C.accent2).copy(letterSpacing = (-0.02f).em), maxLines = 1)
     }
 }
 
-private data class Recent(val title: String, val key: String, val big: String, val kind: String, val round: Boolean, val pick: () -> Unit) {
-    /** kilden (før « · ») – vises med kildeikonet under omslaget */
-    val src: String get() = kind.substringBefore(" · ")
-}
+// MARK: Hyller fra bibliotekene
 
-private fun recent(m: AppModel): List<Recent> {
-    if (!m.demo) return liveRecent(m)
-    val out = ArrayList<Recent>()
-    for (i in 0 until 2) {
-        val t = SK.tr[i]
-        out.add(Recent(t.first, t.first, t.second, "AirPlay · låt", false) { m.input = 0; m.trk = i; m.full = true })
+private data class HomeShelfTile(val id: String, val t: String, val s: String, val key: String, val now: Boolean, val play: () -> Unit)
+private data class HomeShelfData(val title: String, val kicker: String, val icon: String, val w: Dp, val tiles: List<HomeShelfTile>, val open: () -> Unit)
+
+private fun shelves(m: AppModel): List<HomeShelfData> {
+    val out = ArrayList<HomeShelfData>()
+    for (lib in listOf("ytm", "nd", "plex")) {
+        val tracks: List<Track> =
+            if (m.demo) (SK.lib[lib]?.pls?.firstOrNull()?.second ?: emptyList()).take(6).map { SK.lt[it % SK.lt.size] }
+            else (m.hist[lib] ?: emptyList()).map { it.track }.take(8)
+        if (tracks.isEmpty()) continue
+        val tiles = tracks.mapIndexed { i, t ->
+            HomeShelfTile("$lib-$i-${t.t}", t.t, t.artist, t.album, m.libTrack?.t == t.t && m.playing) {
+                m.lib = lib; m.playLib(tracks, i, keepOpen = true)
+            }
+        }
+        val title = when (lib) { "ytm" -> "Til deg"; "nd" -> "Nytt i biblioteket"; else -> "Fra Plex" }
+        val name = HomeLibNames[lib] ?: lib
+        out.add(HomeShelfData(title, name.uppercase(), name, 148.dp, tiles) { m.openLib(lib) })
     }
-    m.radio.take(2).forEachIndexed { i, st -> out.add(Recent(st.name, st.name, st.name, "Radio · kanal", true) { m.playStation(i) }) }
-    val t = SK.tr[2]
-    out.add(Recent(t.first, t.first, t.second, "Blåtann · låt", false) { m.input = 1; m.trk = 2; m.full = true })
+    if (m.radio.isNotEmpty()) {
+        val tiles = m.radio.take(6).mapIndexed { i, st ->
+            HomeShelfTile("r$i", st.name, st.genre, st.name, m.input == 3 && m.stIdx == i && m.playing) { m.playStation(i, open = false) }
+        }
+        out.add(HomeShelfData("Radio akkurat nå", "RADIO", "Radio", 120.dp, tiles) { m.sub = "radio" })
+    }
     return out
 }
 
-/** Live: the latest library tracks played from the app, then the first radio favourites. */
-private fun liveRecent(m: AppModel): List<Recent> {
-    val out = ArrayList<Recent>()
-    val names = mapOf("nd" to "Navidrome", "plex" to "Plex", "ytm" to "YouTube Music")
-    for ((lib, h) in m.hist.toSortedMap()) {
-        val list = h.map { it.track }
-        h.take(2).forEachIndexed { i, e ->
-            out.add(Recent(e.track.t, e.track.album, e.track.artist, (names[lib] ?: lib) + " · låt", false) { m.lib = lib; m.playLib(list, i) })
+@Composable
+private fun ShelfView(s: HomeShelfData) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        HomeShelfHeader(s.title, s.kicker, s.icon, s.open)
+        EdgeScroll(12.dp) {
+            for (t in s.tiles) key(t.id) {
+                Column(Modifier.width(s.w).press(onClick = t.play), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box {
+                        HomeArt(t.key, s.w, 14.dp, if (t.now) 2.dp else 0.dp)
+                        if (t.now) HomeNowBars(Modifier.align(Alignment.TopEnd).padding(9.dp))
+                    }
+                    T(t.t, sora(14f, W.Semibold), maxLines = 1)
+                    T(t.s, sora(12f, W.Regular, HomeV4.muted), maxLines = 1)
+                }
+            }
         }
     }
-    m.radio.take(maxOf(2, 5 - out.size)).forEachIndexed { i, st -> out.add(Recent(st.name, st.name, st.name, "Radio · kanal", true) { m.playStation(i) }) }
-    return out
-}
-
-/** Navnene på kildene som finnes i dette rommet (for kilde-redigeringen). */
-fun kildeNavn(m: AppModel): List<String> = services(m) {}.map { it.first }
-
-private fun services(m: AppModel, open: (String) -> Unit): List<Pair<String, () -> Unit>> {
-    val node = m.actRoom.type == "node"
-    val list = mutableListOf<Pair<String, () -> Unit>>(
-        "Radio" to { m.sub = "radio" },
-        "AirPlay" to { m.pickInput(0); m.full = true },
-        "Blåtann" to (if (node) ({
-            m.tab = 3; m.setDev = m.actRoom.id
-            m.setCat = SK.catsFor("node").indexOfFirst { it.id == "tilkobling" }
-        }) else ({ m.pickInput(1); m.full = true })),
-        "Spotify" to { m.pickService("spotify") },
-        "YT Music" to { m.openLib("ytm") },
-        "Navidrome" to { m.openLib("nd") },
-        "UPnP/DLNA" to { m.pickService("upnp") },
-        "Plex" to { m.openLib("plex") },
-        "Lyrion" to {
-            val u = m.lyrionURL ?: if (m.demo) "http://192.168.1.42:9000/" else null
-            if (u != null) open(u) else Haptics.warning()
-        },
-        "AUX" to { m.pickInput(2); m.full = true },
-    )
-    if (node) list.removeAll { it.first == "AUX" }
-    return list
 }
