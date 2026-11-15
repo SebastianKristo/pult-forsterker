@@ -227,7 +227,7 @@ fun PlayerBar(
                     upd(x, true)
                     Haptics.sliderRelease()
                     local = null
-                },
+                }
             },
     ) {
         val h = height.toPx(); val cy = size.height / 2
