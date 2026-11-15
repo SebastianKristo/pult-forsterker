@@ -23,6 +23,17 @@ elif [ -f "$CFG" ] && ! grep -q "skjold-ui" "$CFG"; then   # S1: HDMI0 i 960 × 
   printf '\n# skjold-ui: 4,58" 960x320 på HDMI0\nhdmi_group:0=2\nhdmi_mode:0=87\nhdmi_cvt:0=960 320 60 6 0 0 0\ndisable_overscan=1\n' >> "$CFG"
 fi
 python3 "$SRC/pi/tools/blank_cursor.py" /usr/share/icons/skjold-blank >/dev/null   # ingen musepeker på skjermen
+# cage leser ikke alltid XCURSOR_THEME og faller da tilbake til temaet «default» – legg den usynlige pekeren der også (bare for brukeren)
+UHOME="$(getent passwd "$USR" | cut -d: -f6)"
+if [ -n "$UHOME" ] && [ ! -e "$UHOME/.icons/default/cursors/default" ]; then
+  sudo -u "$USR" python3 "$SRC/pi/tools/blank_cursor.py" "$UHOME/.icons/default" >/dev/null || true
+fi
+# 4,58″-panelet som melder 400 × 960 på HDMI: stående panel, dreid og tilpasset (målt på S1). Bare når ingenting er satt fra før.
+if [ "$LAYOUT" = s1 ] && [ -f /etc/ki-amp.env ] && ! grep -q '^SKJOLD_UI_PANEL=' /etc/ki-amp.env \
+   && grep -qs '^400x960$' /sys/class/drm/card*-HDMI-A-1/modes; then
+  sed -i '/^SKJOLD_UI_\(ROTATE\|H\|SHIFT\|FIT\)=/d' /etc/ki-amp.env
+  printf 'SKJOLD_UI_PANEL=400x960\nSKJOLD_UI_ROTATE=90\nSKJOLD_UI_H=332\nSKJOLD_UI_SHIFT=31\n' >> /etc/ki-amp.env
+fi
 sed -e "s#@USER@#$USR#g" -e "s#@UID@#$UIDN#g" -e "s#@SRC@#$SRC#g" "$SRC/pi/skjold-ui.service" > /etc/systemd/system/skjold-ui.service
 mkdir -p /etc/skjold && chown "$USR" /etc/skjold
 systemctl daemon-reload

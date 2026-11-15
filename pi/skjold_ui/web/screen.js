@@ -28,6 +28,13 @@
     // Under drawBar tegner designet 320 × 240-flaten (drawTFT0/1) for undersider og standby – samme som i prototypen
     try { drawTFT1(); } catch (e) { /* undersider uten data */ }
     drawBar();
+    // Standby på baren: designet tegner bare de brede stilene (6–15) der, så stil 0–5 ga svart skjerm.
+    // Tegn den kompakte varianten av samme klokke (SKJOLD.drawClock velger den selv for brede flater).
+    const stl = S.set.clockStyle | 0, nt = now() - (S.nightT || -1e9);
+    if (!S.power && S.main && S.set.clock && !S.rebootT && stl < 6 && nt > 6000 && window.SKJOLD && SKJOLD.drawClock) {
+      const g = cvb.getContext('2d'); g.setTransform(0.5, 0, 0, 0.5, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, 1920, 640);
+      if (S.night && nightLight) window.drawSaver(g, 14); else SKJOLD.drawClock(g, 1920, 640, stl, new Date());
+    }
   }
   setInterval(() => { const m = new Date().getMinutes(); if (m !== lastMin || busy()) { lastMin = m; wake(50); } }, 1000);
 
