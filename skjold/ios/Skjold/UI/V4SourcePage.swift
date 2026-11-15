@@ -11,7 +11,7 @@ struct V4SourcePage: View {
     private var n: String { ui.src ?? "" }
     private var lib: String? { V4Lib.id(n) }
     private var isRadio: Bool { n == "Radio" }
-    private var isInput: Bool { ["AirPlay", "Blåtann", "UPnP/DLNA", "AUX", "Spotify"].contains(n) }
+    private var isInput: Bool { ["AirPlay", "Blåtann", "UPnP/DLNA", "AUX", "USB", "Spotify"].contains(n) }
     private var q: String { ui.srcQ.trimmingCharacters(in: .whitespaces) }
 
     var body: some View {
@@ -102,18 +102,46 @@ struct V4SourcePage: View {
             return ("Skjold vises som høyttaler i apper som BubbleUPnP, foobar2000 og Plex.", [], "Vis navnet på nettverket")
         case "Spotify":
             return ("Åpne Spotify, trykk på høyttalerikonet og velg \(room). Skjold spiller via Spotify Connect.", [], "Bruk Spotify")
+        case "USB":
+            let cur = m.dev?.input == "usb"
+            if m.dev?.usbsw == true {
+                let names = m.dev?.usbNames ?? []
+                let rows = [1, 2].map { pc -> (String, String, String, Color) in
+                    let on = cur && m.dev?.usbPc == pc
+                    let nm = pc - 1 < names.count && !names[pc - 1].isEmpty ? names[pc - 1] : "PC \(pc)"
+                    return (nm, on ? "Spiller via USB" : "Trykk for å bytte", on ? "AKTIV" : "VELG", on ? V4.green : V4.muted)
+                }
+                return ("Lyd fra datamaskinen over USB. Med USB-switchen velger du hvilken PC som spiller.", rows, "Bytt til USB nå")
+            }
+            return ("Lyd fra datamaskinen over USB.",
+                    [("USB-lyd", cur ? "Aktiv" : "Ingen PC valgt", cur ? "AKTIV" : "LEDIG", cur ? V4.green : V4.muted)], "Bytt til USB nå")
         default:
+            let cur = m.dev?.input ?? ""
+            if m.dev?.inputs.contains("aux2") == true {
+                let rows = [("aux", 1), ("aux2", 2)].map { key, k -> (String, String, String, Color) in
+                    let on = cur == key
+                    let nm = (m.names["nAux\(k)"] ?? "").isEmpty ? "AUX \(k)" : (m.names["nAux\(k)"] ?? "")
+                    return (nm, on ? "Aktiv" : "Trykk for å bytte", on ? "AKTIV" : "VELG", on ? V4.green : V4.muted)
+                }
+                return ("Analog inngang bak på forsterkeren. Bytter automatisk når det kommer signal.", rows, "Bytt til AUX nå")
+            }
             return ("Analog inngang bak på forsterkeren. Bytter automatisk når det kommer signal.",
                     [("AUX-inngang", m.input == 2 ? "Aktiv" : "Ingen signal", m.input == 2 ? "AKTIV" : "LEDIG", m.input == 2 ? V4.green : V4.muted)],
                     "Bytt til AUX nå")
         }
     }
 
+    /// Trykk på en rad i inngangskortet: AUX 1/2 eller PC 1/2 (S1).
+    private func pickRow(_ i: Int) {
+        if n == "USB", m.dev?.usbsw == true { Haptics.tick(); m.setUsbPc(i + 1) }
+        else if n == "AUX", m.dev?.inputs.contains("aux2") == true { Haptics.tick(); m.pickInputName(i == 0 ? "aux" : "aux2") }
+    }
+
     private var inputCard: some View {
         let t = inputText
         return VStack(alignment: .leading, spacing: 14) {
             Text(t.0).sora(15, .regular, V4.ink2, lineHeight: 1.5).fixedSize(horizontal: false, vertical: true)
-            ForEach(t.1, id: \.0) { d in
+            ForEach(Array(t.1.enumerated()), id: \.offset) { idx, d in
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(d.0).sora(15).lineLimit(1)
@@ -124,6 +152,8 @@ struct V4SourcePage: View {
                 }
                 .padding(.top, 12)
                 .v4TopLine(V4.line)
+                .contentShape(Rectangle())
+                .onTapGesture { pickRow(idx) }
             }
             Button { use() } label: {
                 Text(t.2).sora(15, .semibold, V4.bg).frame(maxWidth: .infinity).frame(height: 48).background(Capsule().fill(V4.ink))
@@ -141,6 +171,7 @@ struct V4SourcePage: View {
         case "Blåtann": m.pickInput(1); if m.live { m.devSend("/api/bt", ["pairing": true]) }
         case "UPnP/DLNA": m.pickService("upnp")
         case "Spotify": m.pickService("spotify")
+        case "USB": m.pickInputName("usb")
         default: m.pickInput(2)
         }
     }

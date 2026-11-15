@@ -106,7 +106,7 @@ fun FullPlayerView(m: AppModel) {
                         scope.launch { drag.snapTo(new) }
                     },
                     Orientation.Vertical,
-                    enabled = !wide,
+                    enabled = !wide && !PlayerUi.sliding,   // ikke mens volumlinja dras
                     onDragStopped = { v ->
                         if (drag.value > closeAt || (drag.value > 20 && v > 1800f)) { close(m); delay(350); drag.snapTo(0f) }
                         else drag.animateTo(0f, spring(dampingRatio = 0.85f, stiffness = 380f))

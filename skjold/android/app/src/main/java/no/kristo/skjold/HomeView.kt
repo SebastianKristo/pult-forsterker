@@ -167,9 +167,9 @@ private fun RecentTile(r: HomeRecent) {
 fun homeAlleKilder(rom: String): List<Pair<String, String>> {
     val l = mutableListOf(
         "Radio" to "Radio", "AirPlay" to "AirPlay", "Blåtann" to "Blåtann", "Spotify" to "Spotify",
-        "YouTube Music" to "YT Music", "Navidrome" to "Navidrome", "Plex" to "Plex", "UPnP/DLNA" to "UPnP/DLNA", "AUX" to "AUX",
+        "YouTube Music" to "YT Music", "Navidrome" to "Navidrome", "Plex" to "Plex", "UPnP/DLNA" to "UPnP/DLNA", "AUX" to "AUX", "USB" to "USB",
     )
-    if (rom != "s1") l.removeAll { it.first == "AUX" }
+    if (rom != "s1") l.removeAll { it.first == "AUX" || it.first == "USB" }
     return l
 }
 

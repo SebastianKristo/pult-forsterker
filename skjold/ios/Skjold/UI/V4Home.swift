@@ -133,8 +133,8 @@ struct V4HomeTab: View {
     /// Alle kildene (navn, kort etikett). AUX bare på S1.
     static func alleKilder(rom: String) -> [(String, String)] {
         var l: [(String, String)] = [("Radio", "Radio"), ("AirPlay", "AirPlay"), ("Blåtann", "Blåtann"), ("Spotify", "Spotify"),
-                                     ("YouTube Music", "YT Music"), ("Navidrome", "Navidrome"), ("Plex", "Plex"), ("UPnP/DLNA", "UPnP/DLNA"), ("AUX", "AUX")]
-        if rom != "s1" { l.removeAll { $0.0 == "AUX" } }
+                                     ("YouTube Music", "YT Music"), ("Navidrome", "Navidrome"), ("Plex", "Plex"), ("UPnP/DLNA", "UPnP/DLNA"), ("AUX", "AUX"), ("USB", "USB")]
+        if rom != "s1" { l.removeAll { $0.0 == "AUX" || $0.0 == "USB" } }
         return l
     }
 

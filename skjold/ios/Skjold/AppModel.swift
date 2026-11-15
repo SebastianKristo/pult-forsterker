@@ -581,6 +581,26 @@ final class AppModel {
         if i < 2 { post(["type": "wl", "v": i == 1 ? "bt" : "air"]) } else { post(["type": "input", "i": i - 1]) }
     }
 
+    /// S1: velg inngang med navn (aux/aux2/usb …) – AUX 1 og 2 og USB, som knappene på forsterkeren.
+    func pickInputName(_ name: String) {
+        switch name {
+        case "airplay": input = 0
+        case "bt": input = 1
+        case "aux", "aux2": input = 2
+        case "radio": input = 3
+        case "usb": input = 4
+        default: break
+        }
+        svc = nil
+        if live { hold("input", 2.5); devSend("/api/input", ["input": name]) }
+    }
+
+    /// S1: USB-switchen – hvilken PC som er koblet til USB-lydinngangen (1 eller 2). Velger også USB som inngang.
+    func setUsbPc(_ pc: Int) {
+        if dev?.input != "usb" { pickInputName("usb") }
+        if live { devSend("/api/usbsw", ["pc": max(1, min(2, pc))]) }
+    }
+
     func togglePlay() {
         Haptics.thump()
         playing.toggle()

@@ -218,6 +218,8 @@ data class DevStatus(
     val listen: String = "",
     /** Vekkeklokka på enheten ringer (status.alarm). Slumre og slå av med POST /api/alarm. */
     val alarmRinging: Boolean = false, val alarmName: String = "",
+    /** S1: USB-switchen (to PC-er på én USB-lydinngang): på/av, valgt PC (1/2) og navnene. */
+    val usbsw: Boolean = false, val usbPc: Int = 1, val usbNames: List<String> = emptyList(),
 ) {
     data class RadioNow(val name: String = "", val genre: String = "", val now: String = "", val image: String = "", val url: String = "", val n: Int = 0, val playing: Boolean = false, val logo: String = "")
 
@@ -247,6 +249,8 @@ data class DevStatus(
                 presetsCount = j.num("presets_count"), btPairingLeft = j.num("bt_pairing_left"),
                 inputs = inputs, presetTitles = presets, radioNow = rn, listen = j.str("listen"),
                 alarmRinging = j.optJSONObject("alarm")?.bool("ringing") ?: false, alarmName = j.optJSONObject("alarm")?.str("name") ?: "",
+                usbsw = j.bool("usbsw"), usbPc = j.num("usb_pc").let { if (it == 2) 2 else 1 },
+                usbNames = j.optJSONArray("usb_pc_names")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList(),
             )
         }
     }
