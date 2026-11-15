@@ -11,6 +11,8 @@
 
   // skjermsparer-video (stille, i loop); spilles bare i standby
   const saver = document.createElement('video');
+  const saverFrame = document.createElement('canvas'); saverFrame.width = 960; saverFrame.height = 320;
+  const frameCtx = saverFrame.getContext('2d'); let saverHas = false;
   saver.src = 'media/fjord.webm'; saver.muted = true; saver.loop = true; saver.playsInline = true; saver.preload = 'auto';
   function standbyClock() {
     // standby, eller «Slukk etter» har slått av skjermen mens den står på: vis skjermspareren i stedet for svart
@@ -47,8 +49,11 @@
       const stl = S.set.clockStyle | 0, g = cvb.getContext('2d'); g.setTransform(0.5, 0, 0, 0.5, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, 1920, 640);
       if (S.night && nightLight) { saver.pause(); window.drawSaver(g, 14); return; }
       if (saver.paused) saver.play().catch(() => {});
-      if (saver.readyState >= 2) {
-        g.drawImage(saver, 0, 0, 1920, 640);
+      // siste bilde ligger i saverFrame: når videoen hopper til start har den et øyeblikk ingen ramme (readyState < 2),
+      // og da ble reserveklokka i midten tegnet i ett bilde. Nå vises forrige ramme til neste er klar.
+      if (saver.readyState >= 2) { frameCtx.drawImage(saver, 0, 0, 960, 320); saverHas = true; }
+      if (saverHas) {
+        g.drawImage(saverFrame, 0, 0, 1920, 640);
         g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 24; g.translate(60, 40);
         SKJOLD.drawClock(g, 720, 240, stl, new Date(), { color: 'rgba(255,255,255,.86)' }); g.restore();
       } else SKJOLD.drawClock(g, 1920, 640, stl, new Date());
