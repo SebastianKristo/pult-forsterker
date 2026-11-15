@@ -525,8 +525,11 @@ if HW:
         _release_early_leds()
         node_leds = {k: l for k, l in ((k, _mk(PWMLED, p, active_high=NODE["led_active_high"], frequency=NODE["led_hz"]))
                                        for k, p in NODE["led"].items()) if l}
-    leds = {k: l for k, l in ((k, _mk(GLED, v)) for k, v in LED.items()) if l}
-    led_power = _mk(PWMLED, LED_POWER, frequency=400) if LED_POWER is not None else None
+    # KI_AMP_LED_ACTIVE_LOW=1: ringene er koblet fra 5 V (LED +) til GPIO-en (LED −), som trekker lavt for å tenne.
+    # Gir full lysstyrke uten transistor for 3–6 V-ringer (GPIO-en ser aldri mer enn ca. 2 V når ringen er av).
+    _ah = os.environ.get("KI_AMP_LED_ACTIVE_LOW", "0") != "1"
+    leds = {k: l for k, l in ((k, _mk(GLED, v, active_high=_ah)) for k, v in LED.items()) if l}
+    led_power = _mk(PWMLED, LED_POWER, frequency=400, active_high=_ah) if LED_POWER is not None else None
 
 
 class Mcp23017:
