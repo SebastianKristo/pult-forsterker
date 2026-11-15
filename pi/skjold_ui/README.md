@@ -37,10 +37,12 @@ SKJOLD_UI_ROTATE=90
 ```
 
 Kiosken åpner vinduet i panelets størrelse, og S1-bildet (960 × 320) dreies i nettleseren og sentreres på panelet.
-Står bildet opp ned, bruk `SKJOLD_UI_ROTATE=270`. Start på nytt med `sudo systemctl restart skjold-ui`.
+Står bildet opp ned, bruk `SKJOLD_UI_ROTATE=270`. Panelet som melder `400x960` settes opp automatisk av
+`install_skjold_ui.sh` (målt på S1: `SKJOLD_UI_H=332`, `SKJOLD_UI_SHIFT=31`), med mindre `SKJOLD_UI_PANEL` alt står i fila. Start på nytt med `sudo systemctl restart skjold-ui`.
 
 `SKJOLD_UI_FIT=stretch` strekker bildet på tvers så det fyller panelets korte side (320 → 400) i stedet for svarte kanter.
-Musepekeren skjules med et usynlig pekertema (`pi/tools/blank_cursor.py`, `XCURSOR_THEME=skjold-blank` i tjenesten), og
+Musepekeren skjules med et usynlig pekertema (`pi/tools/blank_cursor.py`, `XCURSOR_THEME=skjold-blank` i tjenesten, og kopiert til
+`~/.icons/default` fordi cage ikke alltid leser `XCURSOR_THEME`), `WLR_NO_HARDWARE_CURSORS=1`, og
 Chromium startes uten oversettelsestilbud.
 
 Finjustering når kanten av panelet dekker en del av bildet: `SKJOLD_UI_H=380` setter bildets høyde i piksler (overstyrer
