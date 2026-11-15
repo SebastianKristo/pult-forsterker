@@ -108,7 +108,13 @@ fi
 if grep -qs "^KI_AMP_PRODUCT=touch" /etc/ki-amp.env && [ -f /etc/systemd/system/skjold-touch.service ]; then
   TU="$(sed -n 's/^User=//p' /etc/systemd/system/skjold-touch.service | head -1)"; TH="$(getent passwd "$TU" | cut -d: -f6)"
   sudo python3 "$SRC/tools/blank_cursor.py" /usr/share/icons/skjold-blank >/dev/null || true
+  [ -f /etc/udev/rules.d/90-skjold-no-cec-pointer.rules ] || { sudo bash "$SRC/tools/kiosk_hardening.sh" && sudo systemctl restart skjold-touch; } || true
   [ -n "$TH" ] && [ ! -e "$TH/.icons/default/cursors/default" ] && sudo -u "$TU" python3 "$SRC/tools/blank_cursor.py" "$TH/.icons/default" >/dev/null || true
+  # XDG_RUNTIME_DIR pekte på /run/user/0 (%U = root i en systemtjeneste) – skal være brukerens egen
+  if grep -q '^Environment=XDG_RUNTIME_DIR=/run/user/%U' /etc/systemd/system/skjold-touch.service && [ -n "$TU" ]; then
+    sudo sed -i "s#^Environment=XDG_RUNTIME_DIR=/run/user/%U#Environment=XDG_RUNTIME_DIR=/run/user/$(id -u "$TU")#" /etc/systemd/system/skjold-touch.service
+    sudo systemctl daemon-reload && sudo systemctl restart skjold-touch || true
+  fi
   # ingen Google Oversett-boks i kiosken (eldre installasjoner manglet --disable-translate)
   if [ -f /usr/local/bin/skjold-touch-ui ] && ! grep -q -- --disable-translate /usr/local/bin/skjold-touch-ui; then
     sudo sed -i 's/  --noerrdialogs --disable-infobars/  --disable-translate --lang=nb-NO \\\n  --noerrdialogs --disable-infobars/' /usr/local/bin/skjold-touch-ui
