@@ -363,6 +363,23 @@ BTN_POWER = {"radio": 3, "test": 26, "main": None, "kit": None}.get(BOARD, 16)
 _pp = os.environ.get("KI_AMP_POWER_PIN", "").strip()
 POWER_PIN_ENV = int(_pp) if _pp.isdigit() else None   # main: POWER via MCP23017 (GPIO16 er PGA2311 CS) + knapp bak GPIO 15
 
+
+def _pin_map(name):
+    """«airplay:5,bt:6,aux:13,usb:4» → {"airplay": 5, …} (BCM). Ugyldige deler hoppes over."""
+    out = {}
+    for part in os.environ.get(name, "").split(","):
+        k, _, v = part.partition(":")
+        if k.strip() and v.strip().isdigit():
+            out[k.strip()] = int(v.strip())
+    return out
+
+
+# Hovedkortet uten MCP23017: kildeknappene og ringene rett på GPIO. Navnene som på hovedkortet:
+# airplay = «BT/AirPlay», bt = «RADIO», aux = AUX (1/2), usb = USB. F.eks. KI_AMP_BTN_PINS=airplay:5,bt:6,aux:13,usb:4
+if BOARD == "main":
+    BTN = BTN or _pin_map("KI_AMP_BTN_PINS")
+    LED = LED or _pin_map("KI_AMP_LED_PINS")
+
 if S1F and S1F_PINS.get("relay") is not None:
     PIN_RELAY_AMP = int(S1F_PINS["relay"])   # BTN/LED/ENC håndteres av skjold_s1f (Kit-grenene ser ingen knapper)
 
@@ -1013,8 +1030,14 @@ def apply_input():
     elif BOARD != "kit":
         relay_aux.value = state["input"] == "aux"
     leds_on = led_scale() > 0
-    for k, led in leds.items():
-        led.value = state["power"] and k == state["input"] and leds_on
+    if BOARD == "main":   # ringer rett på GPIO (KI_AMP_LED_PINS): samme betydning som MCP-ringene
+        lit = {"airplay": state["input"] in ("airplay", "bt"), "bt": state["input"] == "radio",
+               "aux": state["input"] in ("aux", "aux2"), "usb": state["input"] == "usb"}
+        for k, led in leds.items():
+            led.value = state["power"] and lit.get(k, False) and leds_on
+    else:
+        for k, led in leds.items():
+            led.value = state["power"] and k == state["input"] and leds_on
     if USBSW_FRONT and usbsw.enabled and leds_on:   # PC 1/2-ringen lyser alltid når den er på, AIRPLAY/BT-ringen for AirPlay, BT og Radio
         if "airplay" in leds:
             leds["airplay"].value = state["power"]
@@ -2989,8 +3012,8 @@ async def pairing_task():
                 bt_pairing(False, "connected"); apply_input()
             elif HW and "airbt" in node_leds:
                 _led_wake.set()   # node_led_thread pulserer AIR·BT-ringen
-            elif HW and "bt" in leds:
-                leds["bt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 > 0.5 and led_scale() > 0
+            elif HW and ("airplay" if BOARD == "main" else "bt") in leds:   # hovedkortet: BT/AirPlay-ringen blinker
+                leds["airplay" if BOARD == "main" else "bt"].value = (math.sin(time.time() * 2 * math.pi * 1.1) + 1) / 2 > 0.5 and led_scale() > 0
         await asyncio.sleep(0.05)
 
 
