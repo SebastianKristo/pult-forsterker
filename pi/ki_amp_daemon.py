@@ -1614,8 +1614,10 @@ def save_state():
             fh.write(data); fh.flush(); os.fsync(fh.fileno())
         os.replace(tmp, STATE_FILE)
         _saved_state[0] = data
-    except Exception:
-        pass
+    except Exception as e:   # før: stille – da ble innstillinger og favoritter borte ved neste omstart uten at noe sa fra
+        if _saved_state[0] != "feil":
+            print("Kunne ikke lagre tilstanden (" + STATE_FILE + "):", repr(e), flush=True)
+            _saved_state[0] = "feil"
 
 
 def load_state():
