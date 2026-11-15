@@ -34,7 +34,7 @@ interface WakeData { ok: boolean; alarms: WakeAlarm[]; error?: string }
 interface Dev {
   alarm?: { ringing: boolean; snoozed: boolean; name: string; time: string };
   doorbell?: { t: number; camera: boolean; seconds: number } | null;
-  night?: { on: boolean };
+  night?: { on: boolean; src?: string; steps?: { name: string; done?: boolean }[]; t?: number };
   setup_net?: { active: boolean; ssid: string; password: string; url: string; joining: string; error: string } | null;
   touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string } };
 }
@@ -150,7 +150,7 @@ setInterval(() => { if (scr.value === 'smart' && !idle.value && !dimId.value) vo
 setInterval(() => void loadAlarms(), 60000);
 
 function nightNow(): boolean {
-  const S = settings.value, h = new Date(now.value).getHours(), m = S.tNightMode || (S.tNight ? 1 : 0), a = S.tNStart ?? 22, b = S.tNEnd ?? 7;
+  const S = settings.value, h = new Date(now.value).getHours(), m = S.tNightMode ?? (S.tNight ? 1 : 2), a = S.tNStart ?? 22, b = S.tNEnd ?? 7;
   return m === 3 || (m === 1 && (a > b ? h >= a || h < b : h >= a && h < b)) || (m === 2 && !!dev().night?.on);
 }
 // Bakgrunnslys: fullt når skjermen er i bruk, dempet i standby og om natten (skjermer uten styrbart lys overser dette)
@@ -1111,6 +1111,44 @@ function Boot() {
   );
 }
 
+// Nattmodus slått på/av (Home Assistant, Homey, appen, stemme): animasjon som på S1 – måne/sol, kilden og stegene
+// (lys av, dører låst …) som hakes av én etter én. Vises bare for hendelser som skjer mens skjermen er i gang.
+const nightAnim = signal<{ on: boolean; src: string; steps: { name: string; done?: boolean }[]; t0: number } | null>(null);
+let nightSeen = -1;
+effect(() => {
+  const n = dev().night; if (!n || !n.t) return;
+  if (nightSeen === -1) { nightSeen = n.t; return; }   // første status etter oppstart: ikke vis gammel hendelse
+  if (n.t === nightSeen) { if (nightAnim.peek() && n.steps) nightAnim.value = { ...nightAnim.peek()!, steps: n.steps }; return; }
+  nightSeen = n.t;
+  if (Date.now() / 1000 - n.t > 30) return;
+  nightAnim.value = { on: !!n.on, src: n.src || '', steps: n.steps || [], t0: Date.now() };
+  wake();
+  const ms = 2600 + (n.steps?.length ?? 0) * 450;
+  setTimeout(() => { if (nightAnim.peek()?.t0 && Date.now() - nightAnim.peek()!.t0 >= ms - 50) nightAnim.value = null; }, ms);
+});
+function NightAnim() {
+  const a = nightAnim.value; if (!a) return null;
+  const c = a.on ? '#e0a46a' : '#f0c46a', src = a.src && a.src !== 'Skjold Touch' ? 'Fra ' + a.src : '';
+  return (
+    <button class="flat" onPointerDown={(e) => { e.preventDefault(); nightAnim.value = null; }} aria-label="Lukk"
+      style="position:absolute;inset:0;z-index:40;border:none;padding:0;background:radial-gradient(ellipse at 50% 38%,#1a1210 0%,#060606 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;animation:tinn .35s ease both">
+      <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke={c} stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="animation:opp .6s cubic-bezier(.2,.8,.2,1) both">
+        {a.on ? <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
+          : <><circle cx="12" cy="12" r="4.2" /><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" /></>}
+      </svg>
+      <span style="font-size:34px;font-weight:300;letter-spacing:-.01em;color:#f2f2ee;animation:inn .5s .15s ease both">{a.on ? 'God natt' : 'God morgen'}</span>
+      <span style={`font-family:${MONO};font-size:11px;letter-spacing:.16em;color:#8b8b86;animation:inn .5s .25s ease both`}>{(a.on ? 'NATTMODUS PÅ' : 'NATTMODUS AV') + (src ? ' · ' + src.toUpperCase() : '')}</span>
+      {!!a.steps.length && <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;min-width:260px">
+        {a.steps.map((st, i) => (
+          <div key={i} style={`display:flex;align-items:center;gap:10px;font-size:15px;color:#c9c9c4;animation:inn .4s ${0.6 + i * 0.45}s ease both`}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+            {st.name}
+          </div>))}
+      </div>}
+    </button>
+  );
+}
+
 function App() {
   const s = status.value, d = new Date(now.value), S = settings.value, D = dev();
   const talking = !!D.touch?.voice && D.touch.voice.state !== 'idle';
@@ -1193,6 +1231,7 @@ function App() {
       {!!doorToast.value && !door.value && <DoorToast />}
       {!!door.value && <Door clock={clock} />}
       {!!D.alarm?.ringing && <AlarmRinging clock={clock} />}
+      <NightAnim />
       {boot.value.on && <Boot />}
     </div>
   );
