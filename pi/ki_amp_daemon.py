@@ -358,7 +358,10 @@ else:
     LED = {"airplay": 7, "bt": 8, "aux": 9, "usb": 10}
     LED_POWER = 11      # PWM
     PIN_DAC_XSMT = None
-BTN_POWER = {"radio": 3, "test": 26, "main": None, "kit": None}.get(BOARD, 16)   # main: POWER via MCP23017 (GPIO16 er PGA2311 CS) + knapp bak GPIO 15
+BTN_POWER = {"radio": 3, "test": 26, "main": None, "kit": None}.get(BOARD, 16)
+# KI_AMP_POWER_PIN=17: power-knappen på en annen GPIO (BCM), f.eks. når hovedkortet mangler MCP23017
+_pp = os.environ.get("KI_AMP_POWER_PIN", "").strip()
+POWER_PIN_ENV = int(_pp) if _pp.isdigit() else None   # main: POWER via MCP23017 (GPIO16 er PGA2311 CS) + knapp bak GPIO 15
 
 if S1F and S1F_PINS.get("relay") is not None:
     PIN_RELAY_AMP = int(S1F_PINS["relay"])   # BTN/LED/ENC håndteres av skjold_s1f (Kit-grenene ser ingen knapper)
@@ -2464,7 +2467,14 @@ def setup_buttons():
         else:
             b.when_pressed = lambda n=name: _safe(set_input, n)
         objs.append(b)
-    p = mcp_btns["power"] if mcp_btns else ((BTN_POWER is not None and _mk(Button, BTN_POWER, pull_up=True, bounce_time=0.05, hold_time=3.0)) or _Dummy())
+    pwr_pin = BTN_POWER
+    if BOARD == "main" and not mcp_btns:   # hovedkortet uten MCP23017: power rett på en GPIO (standard 15, «knapp bak»)
+        pwr_pin = POWER_PIN_ENV if POWER_PIN_ENV is not None else PIN_BTN_BAK
+    elif POWER_PIN_ENV is not None and not mcp_btns:
+        pwr_pin = POWER_PIN_ENV
+    p = mcp_btns["power"] if mcp_btns else ((pwr_pin is not None and _mk(Button, pwr_pin, pull_up=True, bounce_time=0.05, hold_time=3.0)) or _Dummy())
+    if not mcp_btns and pwr_pin is not None:
+        print(f"Power-knapp: GPIO{pwr_pin} (til GND, kort trykk = av/på, hold 3 s = omstart)", flush=True)
     _hold_btn(p, lambda: set_power(not state["power"]), lambda: system_reboot(why="POWER holdt"),   # hold 3 s = omstart
               key="reboot", info=lambda: ("Omstart", "Fortsett å holde"))
     objs.append(p)
