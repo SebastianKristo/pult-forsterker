@@ -9,6 +9,15 @@
   window.animate = () => wake(4000);
   window.refresh = () => { pushSettings(); wake(1500); };
 
+  // skjermsparer-video (stille, i loop); spilles bare i standby
+  const saver = document.createElement('video');
+  saver.src = 'media/fjord.webm'; saver.muted = true; saver.loop = true; saver.playsInline = true; saver.preload = 'auto';
+  function standbyClock() {
+    return !S.power && S.main && S.set.clock && !S.rebootT && (S.set.clockStyle | 0) < 6 && now() - (S.nightT || -1e9) > 6000
+      && window.SKJOLD && SKJOLD.drawClock;
+  }
+  const saverLive = () => standbyClock() && !(S.night && nightLight);
+
   // ---------- tegnesløyfe: 30 fps når noe beveger seg, ellers bare når klokka endres eller data kommer ----------
   let until = 0, raf = 0, lastMin = -1, lastDraw = 0;
   function wake(ms) { until = Math.max(until, now() + (ms || 1000)); if (!raf) raf = requestAnimationFrame(frame); }
@@ -16,7 +25,8 @@
     const n = now();
     return n < until || booting() || S.rebootT || S.pairT || S.knobHoldT || (S.set.open && n - S.set.t < 20000)
       || ((window.bdayOn && bdayOn()) && !S.bdayHide)
-      || (!S.power && S.main && S.set.clock && [6, 7].includes(S.set.clockStyle | 0));   // VU-metre og radioskala er animert
+      || (!S.power && S.main && S.set.clock && [6, 7].includes(S.set.clockStyle | 0))   // VU-metre og radioskala er animert
+      || saverLive();   // skjermsparer-videoen
   }
   function frame(t) {
     raf = 0;
@@ -29,12 +39,18 @@
     try { drawTFT1(); } catch (e) { /* undersider uten data */ }
     drawBar();
     // Standby på baren: designet tegner bare de brede stilene (6–15) der, så stil 0–5 ga svart skjerm.
-    // Tegn den kompakte varianten av samme klokke (SKJOLD.drawClock velger den selv for brede flater).
-    const stl = S.set.clockStyle | 0, nt = now() - (S.nightT || -1e9);
-    if (!S.power && S.main && S.set.clock && !S.rebootT && stl < 6 && nt > 6000 && window.SKJOLD && SKJOLD.drawClock) {
-      const g = cvb.getContext('2d'); g.setTransform(0.5, 0, 0, 0.5, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, 1920, 640);
-      if (S.night && nightLight) window.drawSaver(g, 14); else SKJOLD.drawClock(g, 1920, 640, stl, new Date());
-    }
+    // Stil 0–5: skjermsparer (fjord-loop, media/fjord.webm) med den valgte klokka over fjellet til venstre –
+    // et helt bilde skjuler baklyset, som gjør en svart flate grå. Uten video: bare den kompakte klokka.
+    if (standbyClock()) {
+      const stl = S.set.clockStyle | 0, g = cvb.getContext('2d'); g.setTransform(0.5, 0, 0, 0.5, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, 1920, 640);
+      if (S.night && nightLight) { saver.pause(); window.drawSaver(g, 14); return; }
+      if (saver.paused) saver.play().catch(() => {});
+      if (saver.readyState >= 2) {
+        g.drawImage(saver, 0, 0, 1920, 640);
+        g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 24; g.translate(60, 40);
+        SKJOLD.drawClock(g, 720, 240, stl, new Date(), { color: 'rgba(255,255,255,.86)' }); g.restore();
+      } else SKJOLD.drawClock(g, 1920, 640, stl, new Date());
+    } else if (!saver.paused) saver.pause();
   }
   setInterval(() => { const m = new Date().getMinutes(); if (m !== lastMin || busy()) { lastMin = m; wake(50); } }, 1000);
 
@@ -55,6 +71,7 @@
   let st = {}, prev = {};
   function apply(s) {
     prev = st; st = s || {}; const n = now();
+    if (!window.__demo) window.S1NET = Object.assign({ lyrion: !!st.lyrion }, st.net || {});   // systemsiden (IP, Wi-Fi, Lyrion)
     S.power = !!st.power; S.main = true;
     if (st.name) NAMES[S.set.name | 0] = st.name;   // enhetsnavnet fra daemonen (designets devName() leser NAMES)
     const inp = st.input || 'airplay';
