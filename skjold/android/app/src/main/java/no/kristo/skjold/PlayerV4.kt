@@ -68,6 +68,8 @@ object PlayerUi {
     /** "ctrl" | "queue" | "rooms" */
     var fm by mutableStateOf("ctrl")
     var more by mutableStateOf(false)
+    /** En glidebryter (volum) dras: da skal ikke «dra ned for å lukke» ta over. */
+    var sliding by mutableStateOf(false)
     /** Låten «Mer» gjelder (fra køen eller en liste). null = det som spiller. */
     var moreTrack by mutableStateOf<Track?>(null)
 
@@ -221,12 +223,17 @@ fun PlayerBar(
                     }
                     val down = awaitFirstDown(requireUnconsumed = false)
                     down.consume()
-                    upd(down.position.x, false)
-                    var x = down.position.x
-                    drag(down.id) { c -> x = c.position.x; upd(x, false); c.consume() }
-                    upd(x, true)
-                    Haptics.sliderRelease()
-                    local = null
+                    PlayerUi.sliding = true
+                    try {
+                        upd(down.position.x, false)
+                        var x = down.position.x
+                        drag(down.id) { c -> x = c.position.x; upd(x, false); c.consume() }
+                        upd(x, true)
+                        Haptics.sliderRelease()
+                    } finally {
+                        PlayerUi.sliding = false
+                        local = null
+                    }
                 }
             },
     ) {

@@ -344,7 +344,7 @@ fun SourcePage(m: AppModel, n: String, wide: Boolean = false) {
 fun SourceBody(m: AppModel, n: String, inset: Dp = 20.dp, close: () -> Unit) {
     val lib = SourceLib.id(n)
     val isRadio = n == "Radio"
-    val isInput = n in listOf("AirPlay", "Blåtann", "UPnP/DLNA", "AUX", "Spotify")
+    val isInput = n in listOf("AirPlay", "Blåtann", "UPnP/DLNA", "AUX", "USB", "Spotify")
     val q = SourceUi.srcQ.trim()
     var libHits by remember { mutableStateOf(listOf<Track>()) }
     var busy by remember { mutableStateOf(false) }
@@ -455,7 +455,7 @@ fun SourceSearchField(text: String, onChange: (String) -> Unit, placeholder: Str
 
 // MARK: Innganger
 
-private data class InputDev(val name: String, val sub: String, val badge: String, val color: Color)
+private data class InputDev(val name: String, val sub: String, val badge: String, val color: Color, val pick: (() -> Unit)? = null)
 
 @Composable
 private fun InputCard(m: AppModel, n: String) {
@@ -473,11 +473,29 @@ private fun InputCard(m: AppModel, n: String) {
         }
         "UPnP/DLNA" -> Triple("Skjold vises som høyttaler i apper som BubbleUPnP, foobar2000 og Plex.", emptyList(), "Vis navnet på nettverket")
         "Spotify" -> Triple("Åpne Spotify, trykk på høyttalerikonet og velg $room. Skjold spiller via Spotify Connect.", emptyList(), "Bruk Spotify")
+        "USB" -> {
+            // USB-lyd fra PC: med USB-switchen velges PC 1 eller PC 2 (samme som USB-knappen på forsterkeren)
+            val d = m.dev
+            val cur = d?.input == "usb"
+            val names = d?.usbNames.orEmpty()
+            val pcs = if (d?.usbsw == true) (1..2).map { pc ->
+                val on = cur && d.usbPc == pc
+                InputDev(names.getOrNull(pc - 1)?.takeIf { it.isNotBlank() } ?: "PC $pc", if (on) "Spiller via USB" else "Trykk for å bytte",
+                    if (on) "AKTIV" else "VELG", if (on) SourceTok.green else SourceTok.muted) { Haptics.tick(); m.setUsbPc(pc) }
+            } else listOf(InputDev("USB-lyd", if (cur) "Aktiv" else "Ingen PC valgt", if (cur) "AKTIV" else "LEDIG", if (cur) SourceTok.green else SourceTok.muted))
+            Triple("Lyd fra datamaskinen over USB. Med USB-switchen velger du hvilken PC som spiller.", pcs, "Bytt til USB nå")
+        }
         else -> {
-            val on = m.input == 2
-            Triple("Analog inngang bak på forsterkeren. Bytter automatisk når det kommer signal.",
-                listOf(InputDev("AUX-inngang", if (on) "Aktiv" else "Ingen signal", if (on) "AKTIV" else "LEDIG", if (on) SourceTok.green else SourceTok.muted)),
-                "Bytt til AUX nå")
+            // AUX 1 og AUX 2 (S1 har to analoge innganger; AUX-knappen veksler mellom dem)
+            val cur = m.dev?.input ?: ""
+            val two = m.dev?.inputs?.contains("aux2") == true
+            val rows = (if (two) listOf("aux" to 1, "aux2" to 2) else listOf("aux" to 1)).map { (key, k) ->
+                val on = cur == key || (!m.live && m.input == 2 && k == 1)
+                val name = m.names["nAux$k"]?.takeIf { it.isNotBlank() } ?: if (two) "AUX $k" else "AUX-inngang"
+                InputDev(name, if (on) "Aktiv" else if (two) "Trykk for å bytte" else "Ingen signal", if (on) "AKTIV" else if (two) "VELG" else "LEDIG",
+                    if (on) SourceTok.green else SourceTok.muted, if (two) ({ Haptics.tick(); m.pickInputName(key) }) else null)
+            }
+            Triple("Analog inngang bak på forsterkeren. Bytter automatisk når det kommer signal.", rows, "Bytt til AUX nå")
         }
     }
     val (text, devs, button) = r
@@ -487,7 +505,7 @@ private fun InputCard(m: AppModel, n: String) {
     ) {
         T(text, sora(15f, W.Regular, SourceTok.ink2, 1.5f))
         for (d in devs) {
-            Row(Modifier.fillMaxWidth().topLine(SourceTok.line).padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().topLine(SourceTok.line).let { mod -> d.pick?.let { p -> mod.press { p() } } ?: mod }.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     T(d.name, sora(15f), maxLines = 1)
                     T(d.sub, sora(12f, W.Regular, SourceTok.muted))
@@ -503,6 +521,7 @@ private fun InputCard(m: AppModel, n: String) {
                     "Blåtann" -> { m.pickInput(1); if (m.live) m.devSend("/api/bt", mapOf("pairing" to true)) }
                     "UPnP/DLNA" -> m.pickService("upnp")
                     "Spotify" -> m.pickService("spotify")
+                    "USB" -> m.pickInputName("usb")
                     else -> m.pickInput(2)
                 }
             },

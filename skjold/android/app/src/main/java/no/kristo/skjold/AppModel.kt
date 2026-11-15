@@ -783,6 +783,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (i < 2) post(mapOf("type" to "wl", "v" to if (i == 1) "bt" else "air")) else post(mapOf("type" to "input", "i" to i - 1))
     }
 
+    /** S1: velg inngang med navn (aux/aux2/usb …) – AUX 1 og 2 og USB, som knappene på forsterkeren. */
+    fun pickInputName(name: String) {
+        input = when (name) { "airplay" -> 0; "bt" -> 1; "aux", "aux2" -> 2; "radio" -> 3; "usb" -> 4; else -> input }
+        svc = null
+        if (live) { hold("input", 2.5); devSend("/api/input", mapOf("input" to name)) }
+    }
+
+    /** S1: USB-switchen – hvilken PC som er koblet til USB-lydinngangen (1 eller 2). Velger også USB som inngang. */
+    fun setUsbPc(pc: Int) {
+        if (dev?.input != "usb") pickInputName("usb")
+        if (live) devSend("/api/usbsw", mapOf("pc" to pc.coerceIn(1, 2)))
+    }
+
     fun togglePlay() {
         Haptics.thump()
         playing = !playing
