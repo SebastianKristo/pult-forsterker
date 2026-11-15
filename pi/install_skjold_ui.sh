@@ -22,6 +22,7 @@ if [ "$LAYOUT" = radio ]; then
 elif [ -f "$CFG" ] && ! grep -q "skjold-ui" "$CFG"; then   # S1: HDMI0 i 960 × 320 (HDMI-RGB21-driverkortet), uten overscan
   printf '\n# skjold-ui: 4,58" 960x320 på HDMI0\nhdmi_group:0=2\nhdmi_mode:0=87\nhdmi_cvt:0=960 320 60 6 0 0 0\ndisable_overscan=1\n' >> "$CFG"
 fi
+python3 "$SRC/pi/tools/blank_cursor.py" /usr/share/icons/skjold-blank >/dev/null   # ingen musepeker på skjermen
 sed -e "s#@USER@#$USR#g" -e "s#@UID@#$UIDN#g" -e "s#@SRC@#$SRC#g" "$SRC/pi/skjold-ui.service" > /etc/systemd/system/skjold-ui.service
 mkdir -p /etc/skjold && chown "$USR" /etc/skjold
 systemctl daemon-reload
