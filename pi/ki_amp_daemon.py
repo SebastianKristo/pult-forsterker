@@ -206,6 +206,8 @@ DSP_CAPTURE = os.environ.get("KI_AMP_DSP_CAPTURE", "hw:Loopback,1")
 DSP_PLAYBACK = os.environ.get("KI_AMP_DSP_PLAYBACK", "hw:sndrpihifiberry")
 DSP_FILE = os.environ.get("KI_AMP_DSP_FILE", "/etc/camilladsp/config.yml")
 DSP_FORMAT = os.environ.get("KI_AMP_DSP_FORMAT", "S32LE")   # S16LE for Pi-ens 3,5 mm-utgang (testmodus)
+# Lydtest: all lyd (etter EQ og volum) ut på Pi-ens 3,5 mm-kontakt i stedet for forsterkeren/DAC-en (pi/tools/lydtest_jack.sh)
+JACK_TEST = os.environ.get("KI_AMP_JACK_TEST", "0") == "1"
 # KI_AMP_MONO=1: L+R summeres (−6 dB hver) til begge utgangene i CamillaDSP – for apparater med ett element (Skjold Radio)
 
 # ---------- GPIO (BCM) ----------
@@ -837,6 +839,8 @@ def node_output():
 def dsp_playback():
     """S1 rev F: med hodetelefoner i går hele kjeden (EQ, volum) til UCA202 #1 i stedet for PCM5102.
     Node/Core: utgangen som er valgt i appen (f.eks. UCA222 på USB)."""
+    if JACK_TEST:
+        return "plughw:Headphones"
     if S1F and state.get("headphones"):
         return str((S1F_PINS.get("audio") or {}).get("headphones") or os.environ.get("KI_AMP_HP_DEV", "plughw:UCA_AUX1"))
     no = node_output()
@@ -844,6 +848,8 @@ def dsp_playback():
 
 
 def dsp_format():
+    if JACK_TEST:
+        return "S16LE"
     no = node_output()
     return no[1] if no else DSP_FORMAT
 
