@@ -53,6 +53,8 @@ def main(src):
                  ("velg den i Bluetooth på telefonen", "velg den i Blåtann på telefonen"),
                  ("S.wl==='bt'?'BLUETOOTH':'AIRPLAY'", "S.wl==='bt'?'BLÅTANN':'AIRPLAY'"),
                  ("dur=244, p=", "dur=(INPUTS[0].dur>1?INPUTS[0].dur:244), p="),
+                 ('PRESETS.forEach((q,i)=>{ const on=i===S.preset', 'PRESETS.slice(0,6).forEach((q,i)=>{ const on=i===S.preset'),
+                 ("o:['hold',PRESETS.map(p=>p[0])]", "o:['hold',PRESETS.slice(0,6).map(p=>p[0])]"),
                  ("['IP-adresse','192.168.1.42']", "['IP-adresse',window.S1NET?(S1NET.ip||'–'):'192.168.1.42']"),
                  ("['Lyrion',S.err===1?'Frakoblet':'Tilkoblet']", "['Lyrion',window.S1NET?(S1NET.lyrion?'Tilkoblet':'Frakoblet'):(S.err===1?'Frakoblet':'Tilkoblet')]"),
                  ("['Wi-Fi',S.err===2?'Ingen':'Hjemme · −52 dBm']", "['Wi-Fi',window.S1NET?(S1NET.ssid?S1NET.ssid+(S1NET.dbm!=null?' · '+String(S1NET.dbm).replace('-','−')+' dBm':''):'Ingen (kabel?)'):(S.err===2?'Ingen':'Hjemme · −52 dBm')]")):

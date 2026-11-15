@@ -73,6 +73,7 @@ echo "== Talemeldinger"
 bash "$SRC/ki-voice-setup.sh"
 
 echo "== Lyrion-radio (Squeezelite)"
+bash "$SRC/ensure_lyrion.sh" || true   # S1: egen Lyrion-server når ingen finnes på nettet (Node/Touch/Core hoppes over)
 command -v ffmpeg >/dev/null || sudo apt-get -y install --no-install-recommends ffmpeg >/dev/null   # /api/play announce, radioopptak
 command -v mount.cifs >/dev/null && command -v smbclient >/dev/null || sudo apt-get -y install --no-install-recommends cifs-utils smbclient >/dev/null   # radioopptak til SMB/NAS
 python3 -c "import paho.mqtt" 2>/dev/null || sudo apt-get -y install --no-install-recommends python3-paho-mqtt >/dev/null || true   # MQTT-bro

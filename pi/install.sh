@@ -270,6 +270,7 @@ elif [ "$BOARD_SEL" = main ]; then
   sudo sed -i -e "s#^KI_AMP_DSP_PLAYBACK=.*#KI_AMP_DSP_PLAYBACK=$PB_DEV#" -e 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=main/' -e "s/^KI_AMP_DISPLAY=.*/KI_AMP_DISPLAY=$DISPLAY_SEL/" -e "s/^KI_AMP_TFT=.*/KI_AMP_TFT=$TFT_SEL/" -e 's/^KI_AMP_LEVELS=.*/KI_AMP_LEVELS=1/' /etc/ki-amp.env
   echo "== TESTMODUS: lyd ut på 3,5 mm-kontakten. Sett volum på jacken: amixer -c Headphones sset PCM 100%"
 fi
+[ "$CORE" = 1 ] || [ "$TOUCH" = 1 ] || bash "$SRC/ensure_lyrion.sh"   # S1: egen Lyrion-server når ingen finnes på nettet
 sudo sed -i '/^KI_AMP_SPOTIFY=/d' /etc/ki-amp.env && echo "KI_AMP_SPOTIFY=$SPOTIFY" | sudo tee -a /etc/ki-amp.env >/dev/null
 if [ -n "$NAME_SEL" ]; then sudo sed -i '/^KI_AMP_NAME=/d' /etc/ki-amp.env && echo "KI_AMP_NAME=$NAME_SEL" | sudo tee -a /etc/ki-amp.env >/dev/null; fi
 # KI_AMP_MONO=1 (Skjold Radio, ett element): CamillaDSP summerer L+R. KI_AMP_MONO=0 slår det av igjen.

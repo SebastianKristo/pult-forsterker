@@ -13,7 +13,9 @@
   const saver = document.createElement('video');
   saver.src = 'media/fjord.webm'; saver.muted = true; saver.loop = true; saver.playsInline = true; saver.preload = 'auto';
   function standbyClock() {
-    return !S.power && S.main && S.set.clock && !S.rebootT && (S.set.clockStyle | 0) < 6 && now() - (S.nightT || -1e9) > 6000
+    // standby, eller «Slukk etter» har slått av skjermen mens den står på: vis skjermspareren i stedet for svart
+    const idleOff = S.power && !S.set.open && !S.setup.on && !booting() && screenDim() >= 1;
+    return (!S.power || idleOff) && S.main && S.set.clock && !S.rebootT && (S.set.clockStyle | 0) < 6 && now() - (S.nightT || -1e9) > 6000
       && window.SKJOLD && SKJOLD.drawClock;
   }
   const saverLive = () => standbyClock() && !(S.night && nightLight);
@@ -67,6 +69,7 @@
   };
 
   // ---------- data fra daemonen ----------
+  const DESIGN_P = PRESETS.map(p => p.slice());   // designets kanaler (for undertekstene)
   const INMAP = { airplay: 0, bt: 0, spotify: 0, upnp: 0, plex: 0, aux: 1, aux2: 1, radio: 2, usb: 3 };
   let st = {}, prev = {};
   function apply(s) {
@@ -91,8 +94,15 @@
       const dur = +st.duration || 0, pos = +st.position || 0; TRACKS[S.wl][S.trk[S.wl] || 0] = [w.t, w.s, dur || 1];
       S.playT = n - pos * 1000; S.pausedAt = S.paused ? n : 0;
     }
-    if (Array.isArray(st.presets)) st.presets.slice(0, 6).forEach((p, i) => { if (p && p.title) PRESETS[i] = [p.title, PRESETS[i] ? PRESETS[i][1] : '']; });
-    if (S.input === 2) { const rn = st.radio_now || {}; if (rn.n) S.preset = rn.n - 1; INPUTS[2].t = rn.name || st.station || INPUTS[2].t; INPUTS[2].s = rn.now || t || 'Lyrion · internettradio'; }
+    // radiokanalene: designets undertekst («Distriktsprogram» …) bare når kanalen er den samme som i designet
+    if (Array.isArray(st.presets)) st.presets.slice(0, 6).forEach((p, i) => { PRESETS[i] = p && p.title ? [p.title, DESIGN_P[i] && DESIGN_P[i][0] === p.title ? DESIGN_P[i][1] : 'Radio'] : ['–', 'Ledig plass']; });
+    if (S.input === 2) {
+      const rn = st.radio_now || {};
+      if (rn.n) S.preset = rn.n - 1;
+      else if (rn.name || st.station) { PRESETS[6] = [rn.name || st.station, rn.genre || 'Lyrion · internettradio']; S.preset = 6; }   // kanal utenfor favorittene (søk, app, bibliotek)
+      NOWP[S.preset] = [t || rn.now || 'Direkte', a];   // det som spilles nå, ikke designets eksempel
+      INPUTS[2].t = rn.name || st.station || INPUTS[2].t; INPUTS[2].s = rn.now || t || 'Lyrion · internettradio';
+    }
     // knapper som holdes inne (daemonen: hold {key,p}) → designets hold-ring
     const h = st.hold;
     if (h && h.key && !h.saved) { const kind = { knob: 'knob', src: 'pair', radio: 'radio', reboot: 'power' }[h.key] || h.key, ms = kind === 'power' ? 3000 : kind === 'radio' ? 3000 : kind === 'pair' ? 2000 : 1500;
