@@ -47,3 +47,9 @@ Chromium startes uten oversettelsestilbud.
 
 Finjustering når kanten av panelet dekker en del av bildet: `SKJOLD_UI_H=380` setter bildets høyde i piksler (overstyrer
 `SKJOLD_UI_FIT`), og `SKJOLD_UI_SHIFT=10` flytter bildet 10 piksler opp (negativt tall = ned).
+
+## Skjermsparer i standby
+
+Med «Klokke i standby» på og klokkestil 0–5 viser baren en stille fjord-loop (`web/media/fjord.webm`, 960 × 320, VP9)
+med klokka over fjellet til venstre. Et helt bilde skjuler baklyset, som ellers gjør en svart flate grå. Stil 6–15
+er designets egne brede skjermer, og nattmodus viser «Nattlys». «Klokke i standby» av gir svart skjerm.

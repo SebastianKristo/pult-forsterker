@@ -44,7 +44,7 @@ UI_H = os.environ.get("SKJOLD_UI_H", "").strip()
 SHIFT = os.environ.get("SKJOLD_UI_SHIFT", "0").strip() or "0"
 BACKLIGHT = os.environ.get("SKJOLD_BACKLIGHT", "/sys/class/backlight")
 RADIO_SRC = ("wheel", "preset", "power", "volume")   # Skjold Radio (skjold_radio_knapper.py)
-TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png", ".woff2": "font/woff2"}
+TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png", ".woff2": "font/woff2", ".webm": "video/webm"}
 
 ui = {"menu": False, "setup": False, "bday": False}   # rapportert av skjermen (POST /ui/state)
 lock = threading.Lock()

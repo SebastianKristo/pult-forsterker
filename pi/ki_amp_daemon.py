@@ -1671,7 +1671,7 @@ def read_status():
               "album": "", "duration": 0, "position": 0, "bt_device": st.get("bt_device", "")}
     extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", ""), "logo": _logos.path_for((p or {}).get("icon") or (p or {}).get("image") or "", (p or {}).get("title", "")) if p else ""} for i, p in enumerate(state["presets"])],
              "presets_count": sum(1 for p in state["presets"] if p), "presets_max": PRESETS_MAX, "radio_now": radio_now(),
-             "station": lyr.info.get("station", ""), "lyrion": lyr.connected,
+             "station": lyr.info.get("station", ""), "lyrion": lyr.connected, "net": net_info(),
              "source_label": (last_play.get("source") or "") if state["input"] == "radio" and last_play.get("source") and lyr.info.get("url") == last_play.get("url") else "",
              "lyrion_server": f"{lyr.host}:{lyr.port}" if lyr.host else "", "lyrion_player": lyr.player,
              # strømmen som spilles, for «Denne enheten» i appene (tom for AirPlay, Blåtann, Spotify, AUX …)
@@ -6680,6 +6680,37 @@ def transport(action):
         _busctl("call", "org.bluez", _bt_player(), "org.bluez.MediaPlayer1", BT_CMD[action])
     else:
         _busctl("call", SPS[0], SPS[1], SPS[2], SPS_CMD[action])
+
+
+_net_cache = {"t": 0.0, "v": {}}
+
+
+def net_info():
+    """IP, Wi-Fi-navn og signal (dBm) for systemsiden på skjermen. Hurtigbufret i 30 s."""
+    if time.time() - _net_cache["t"] < 30:
+        return _net_cache["v"]
+    ip, ssid, dbm = _local_ip(), "", None
+    try:
+        r = subprocess.run(["iwgetid", "-r"], capture_output=True, text=True, timeout=2)
+        ssid = r.stdout.strip()
+    except Exception:
+        pass
+    if not ssid:
+        try:
+            r = subprocess.run(["nmcli", "-t", "-f", "ACTIVE,SSID", "device", "wifi"], capture_output=True, text=True, timeout=3)
+            ssid = next((ln.split(":", 1)[1] for ln in r.stdout.splitlines() if ln.startswith("yes:")), "")
+        except Exception:
+            pass
+    try:
+        for ln in open("/proc/net/wireless").read().splitlines()[2:]:
+            f = ln.split()
+            if len(f) > 3:
+                dbm = int(float(f[3].rstrip(".")))
+                break
+    except Exception:
+        pass
+    _net_cache.update(t=time.time(), v={"ip": "" if ip == "127.0.0.1" else ip, "ssid": ssid, "dbm": dbm})
+    return _net_cache["v"]
 
 
 def _local_ip():
