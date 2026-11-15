@@ -421,15 +421,43 @@ export function LyricsPane({ pos }: { pos: number }) {
 // ---------- SUB/WAVE ----------
 function SubwavePanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: string, v: unknown) => void; saveBtn: preact.ComponentChildren }) {
   const [msg, setMsg] = useState('');
-  const test = async () => { setMsg('Tester …'); try { const r = await api.subwave(true); setMsg(!r.configured ? 'Slå på pluginen og lagre adressen først.' : r.error ? 'Feil: ' + r.error : 'Tilkoblet: ' + (typeof r.health === 'string' ? r.health : JSON.stringify(r.health)).slice(0, 160)); } catch (e) { setMsg('Feil: ' + (e instanceof Error ? e.message : String(e))); } };
+  const extra: Record<string, string>[] = Array.isArray(d.extra) ? d.extra : [];
+  const okUrl = (u: unknown) => /^https?:\/\//.test(String(u ?? '').trim());
+  // stasjonsnummeret hos Skjold = plassen blant stasjonene med gyldig adresse (stasjon 1 først)
+  const idx = (n: number) => [d.url, ...extra.map((x) => x.url)].slice(0, n + 1).filter(okUrl).length - 1;
+  const test = async (st: number) => { setMsg('Tester …'); try { const r = await req(st); setMsg(!r.configured ? 'Slå på pluginen og lagre adressen først.' : r.error ? 'Feil: ' + r.error : 'Tilkoblet: ' + (typeof r.health === 'string' ? r.health : JSON.stringify(r.health)).slice(0, 160)); } catch (e) { setMsg('Feil: ' + (e instanceof Error ? e.message : String(e))); } };
+  const req = (st: number) => api.subwaveAt(st, true);
   const act = async (b: Record<string, unknown>, ok: string) => { setMsg('…'); try { const r = await api.subwavePost(b); setMsg(r.error ? 'Feil: ' + r.error : ok); } catch (e) { setMsg('Feil: ' + (e instanceof Error ? e.message : String(e))); } };
+  const setX = (n: number, k: string, v: string) => up('extra', extra.map((x, m) => (m === n ? { ...x, [k]: v } : x)));
+  const knapper = (n: number, name: string) => { const st = idx(n), ok = n === 0 ? okUrl(d.url) : okUrl(extra[n - 1]?.url); return (
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:6px">
+      <button disabled={!ok} onClick={() => void test(st)} style={sbtn}>Test</button>
+      <button disabled={!ok} onClick={() => void act({ favorite: true, station: st }, name + ' er lagt til som radiofavoritt')} style={sbtn}>Legg til som radiofavoritt</button>
+      <button disabled={!ok} onClick={() => void act({ play: true, station: st }, 'Spiller ' + name)} style={pbtn}>Spill nå</button>
+    </div>); };
+  const tittel = (t: string, fjern?: () => void) => (
+    <div style="display:flex;align-items:center;gap:10px;padding-top:12px"><span style="font-size:13px;font-weight:600;color:#f2f2ee">{t}</span><div style="flex:1" />
+      {fjern && <button onClick={fjern} style={sbtn}>Fjern</button>}</div>);
   return (
     <>
+      {tittel('Stasjon 1')}
+      <Row label="Navn" hint="Vises i Skjold og som radiofavoritt"><Txt v={d.name ?? ''} ph="SUB/WAVE" w={200} on={(v) => up('name', v)} /></Row>
       <Row label="Stasjonsadresse" hint="For eksempel https://radio.dittdomene.no"><Txt v={d.url} ph="https://…" w={280} on={(v) => up('url', v)} /></Row>
       <Row label="Brukernavn" hint="Valgfritt. Brukes bare hvis stasjonen er bak passord."><Txt v={d.user} w={160} on={(v) => up('user', v)} /></Row>
       <Row label="Passord" hint="Lagres på Skjold. Gir også DJ-handlinger som «Hopp over»."><Txt v={d.password} pw w={160} on={(v) => up('password', v)} /></Row>
+      {knapper(0, d.name || 'SUB/WAVE')}
+      {extra.map((x, n) => (
+        <div key={n} style="display:flex;flex-direction:column;gap:2px;border-top:1px solid #1f1f21;margin-top:8px">
+          {tittel('Stasjon ' + (n + 2), () => up('extra', extra.filter((_, m) => m !== n)))}
+          <Row label="Navn"><Txt v={x.name ?? ''} ph={'SUB/WAVE ' + (n + 2)} w={200} on={(v) => setX(n, 'name', v)} /></Row>
+          <Row label="Stasjonsadresse"><Txt v={x.url ?? ''} ph="https://…" w={280} on={(v) => setX(n, 'url', v)} /></Row>
+          <Row label="Brukernavn"><Txt v={x.user ?? ''} w={160} on={(v) => setX(n, 'user', v)} /></Row>
+          <Row label="Passord"><Txt v={x.password ?? ''} pw w={160} on={(v) => setX(n, 'password', v)} /></Row>
+          {knapper(n + 1, x.name || 'SUB/WAVE ' + (n + 2))}
+        </div>))}
+      <div style="display:flex;gap:8px;padding-top:12px"><button onClick={() => up('extra', [...extra, { name: '', url: '', user: '', password: '' }])} style={sbtn}>+ Legg til stasjon</button></div>
       {saveBtn}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:6px"><button onClick={() => void test()} style={sbtn}>Test</button><button onClick={() => void act({ favorite: true }, 'Lagt til som radiofavoritt')} style={sbtn}>Legg til som radiofavoritt</button><button onClick={() => void act({ play: true }, 'Spiller SUB/WAVE')} style={pbtn}>Spill nå</button></div>
+      <span style="font-size:12px;color:#8b8b86">Lagre før du tester eller spiller en ny stasjon.</span>
       {msg && <span style={`font-size:12px;color:${msg.startsWith('Feil') ? '#ff8a7a' : '#a9a9a3'};word-break:break-word`}>{msg}</span>}
     </>
   );

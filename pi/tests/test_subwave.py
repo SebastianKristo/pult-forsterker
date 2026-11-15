@@ -92,3 +92,44 @@ class TestSubwave(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestFlereStasjoner(unittest.TestCase):
+    def setUp(self):
+        self._old = json.loads(json.dumps(d.state.get("settings") or {}))
+        d.state.setdefault("settings", {})["plugins"] = {"subwave": {
+            "enabled": True, "url": "https://radio.a.no/", "name": "Stua-DJ", "user": "", "password": "",
+            "extra": [{"name": "Kontor", "url": "https://b.no/radio", "user": "dj", "password": "pw"},
+                      {"name": "Uten adresse", "url": ""}]}}
+
+    def tearDown(self):
+        d.state["settings"] = self._old
+
+    def test_liste_og_url(self):
+        st = d.sw_stations()
+        self.assertEqual([x["name"] for x in st], ["Stua-DJ", "Kontor"])
+        self.assertEqual(d.subwave_stream_url("mp3", 0), "https://radio.a.no/stream.mp3")
+        self.assertEqual(d.subwave_stream_url("opus", 1), "https://dj:pw@b.no/radio/stream.opus")
+
+    def test_hvilken_spiller(self):
+        old_in, old_info = d.state.get("input"), dict(d.lyr.info or {})
+        try:
+            d.state["input"] = "radio"; d.lyr.info = {"url": "https://dj:pw@b.no/radio/stream.mp3"}
+            self.assertEqual(d.subwave_playing_idx(), 1)
+            self.assertEqual(d._sw_station()["name"], "Kontor")
+            d.lyr.info = {"url": "https://annen.no/stream.mp3"}
+            self.assertIsNone(d.subwave_playing_idx())
+        finally:
+            d.state["input"] = old_in; d.lyr.info = old_info
+
+
+class TestLagreStasjoner(unittest.TestCase):
+    def test_extra_renses(self):
+        old = json.loads(json.dumps(d.state.get("settings") or {}))
+        try:
+            d.plugin_update("subwave", {"enabled": True, "url": "https://a.no", "extra": [{"name": "B" * 60, "url": " https://b.no ", "x": 1}, "tull"]})
+            c = d.plug_cfg("subwave")
+            self.assertEqual(c["extra"], [{"name": "B" * 40, "url": "https://b.no", "user": "", "password": ""}])
+            self.assertEqual(len(d.sw_stations(c)), 2)
+        finally:
+            d.state["settings"] = old
