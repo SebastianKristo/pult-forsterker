@@ -2472,10 +2472,19 @@ def setup_buttons():
         pwr_pin = POWER_PIN_ENV if POWER_PIN_ENV is not None else PIN_BTN_BAK
     elif POWER_PIN_ENV is not None and not mcp_btns:
         pwr_pin = POWER_PIN_ENV
-    p = mcp_btns["power"] if mcp_btns else ((pwr_pin is not None and _mk(Button, pwr_pin, pull_up=True, bounce_time=0.05, hold_time=3.0)) or _Dummy())
+    p = mcp_btns["power"] if mcp_btns else ((pwr_pin is not None and _mk(Button, pwr_pin, pull_up=True, bounce_time=0.08, hold_time=3.0)) or _Dummy())
     if not mcp_btns and pwr_pin is not None:
         print(f"Power-knapp: GPIO{pwr_pin} (til GND, kort trykk = av/på, hold 3 s = omstart)", flush=True)
-    _hold_btn(p, lambda: set_power(not state["power"]), lambda: system_reboot(why="POWER holdt"),   # hold 3 s = omstart
+    _pw_last = [0.0]
+
+    def _power_short():
+        # billige trykknapper prellar ved slipp: to korte trykk etter hverandre slo strømmen på og straks av igjen
+        if time.time() - _pw_last[0] < 0.8:
+            print("Power: ignorerer prell", flush=True); return
+        _pw_last[0] = time.time()
+        print("Power: kort trykk →", "standby" if state["power"] else "på", flush=True)
+        set_power(not state["power"])
+    _hold_btn(p, _power_short, lambda: system_reboot(why="POWER holdt"),   # hold 3 s = omstart
               key="reboot", info=lambda: ("Omstart", "Fortsett å holde"))
     objs.append(p)
     vol = _mk(RotaryEncoder, ENC[0], ENC[1], max_steps=0, wrap=False) or _Dummy()
