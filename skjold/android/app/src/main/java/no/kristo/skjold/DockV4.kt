@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
@@ -145,6 +146,8 @@ private val GlassBase = hex(0x1c1c1e, 0.88f)
 private val BarH = 64.dp
 private val AccH = 48.dp
 private val Gap = 8.dp
+/** SKTabBar: 14 over, indikator 32, 4, etikett ~17, 12 under. */
+private val TabBarH = 79.dp
 private val LensEase = CubicBezierEasing(0.3f, 1.35f, 0.45f, 1f)
 private val PanelEase = CubicBezierEasing(0.2f, 0.7f, 0.2f, 1f)
 
@@ -159,7 +162,7 @@ private fun dockBottom(): Dp {
 @Composable
 fun dockContentInset(wide: Boolean): Dp =
     if (wide) AccH + 22.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    else AccH + Gap + BarH + dockBottom()
+    else AccH + 8.dp + TabBarH + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
 // MARK: - Glassflate
 
@@ -199,33 +202,15 @@ private class DockLongPress(base: ViewConfiguration) : ViewConfiguration by base
 
 // MARK: - Telefon: dokken
 
-/** Dokken nederst på telefon: minispiller + fanelinje, eller sammenslått ved rulling. Legges i en Box nederst. */
+/**
+ * Dokken nederst på telefon, Android-variant: minispilleren (samme innhold som iOS) som et flatt kort over Androids
+ * heldekkende fanelinje (SKTabBar: #161618, pilleindikator 64 × 32). Ingen Liquid Glass-kopi og ingen sammenslåing.
+ */
 @Composable
 fun BoxScope.DockV4(m: AppModel) {
-    AnimatedContent(
-        DockUi.col,
-        Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = dockBottom()),
-        transitionSpec = {
-            (fadeIn(spring(0.8f, 195f)) togetherWith fadeOut(spring(0.8f, 195f))) using SizeTransform(clip = false) { _, _ -> spring<IntSize>(0.8f, 195f) }
-        },
-        contentAlignment = Alignment.BottomCenter,
-        label = "dock",
-    ) { col ->
-        if (col) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                val t = dockTabs()[m.tab.coerceIn(0, 3)]
-                Box(
-                    Modifier.size(AccH).dockGlass().press(label = t.first) { DockUi.col = false },
-                    contentAlignment = Alignment.Center,
-                ) { SKIcon(t.second, 22.dp, 1.9f, Gold) }
-                DockMini(m, inline = true, Modifier.weight(1f))
-            }
-        } else {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Gap)) {
-                DockMini(m, inline = false, Modifier.fillMaxWidth())
-                DockTabBar(m)
-            }
-        }
+    Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+        DockMini(m, inline = false, Modifier.fillMaxWidth().padding(start = SkG.miniM, end = SkG.miniM, bottom = 8.dp))
+        SKTabBar(m.tab.coerceIn(0, 3)) { dockPick(m, it) }
     }
 }
 
@@ -246,7 +231,8 @@ private fun DockMini(m: AppModel, inline: Boolean, modifier: Modifier) {
     val vc = remember(base) { DockLongPress(base) }
     CompositionLocalProvider(LocalViewConfiguration provides vc) {
         Row(
-            modifier.height(AccH).dockGlass()
+            modifier.height(AccH)
+                .then(if (inline) Modifier.dockGlass() else Modifier.shadow(8.dp, RoundedCornerShape(SkG.miniR)).clip(RoundedCornerShape(SkG.miniR)).background(SkG.miniBg))
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = { Haptics.thump(); m.full = true },
