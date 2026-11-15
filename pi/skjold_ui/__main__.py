@@ -32,6 +32,10 @@ DAEMON = os.environ.get("SKJOLD_DAEMON", "127.0.0.1:8765")
 GREETING = os.environ.get("SKJOLD_GREETING", "/etc/skjold/greeting.json")
 LAYOUT = os.environ.get("SKJOLD_UI_LAYOUT", "s1").strip().lower() or "s1"   # s1 | radio
 SIZE = {"s1": (960, 320), "radio": (800, 480)}
+# Panel som står på høykant (for eksempel 4,58″ som melder 400 × 960 over HDMI): SKJOLD_UI_PANEL=400x960 gir
+# vindusstørrelsen, og SKJOLD_UI_ROTATE=90|270|180 dreier S1-bildet (960 × 320) i nettleseren og sentrerer det på panelet.
+ROTATE = (os.environ.get("SKJOLD_UI_ROTATE", "0").strip() or "0")
+PANEL = os.environ.get("SKJOLD_UI_PANEL", "").strip().lower()
 BACKLIGHT = os.environ.get("SKJOLD_BACKLIGHT", "/sys/class/backlight")
 RADIO_SRC = ("wheel", "preset", "power", "volume")   # Skjold Radio (skjold_radio_knapper.py)
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png", ".woff2": "font/woff2"}
@@ -295,6 +299,13 @@ def kiosk(port):
         return None
     w, h = SIZE.get(LAYOUT, SIZE["s1"])
     q = "" if LAYOUT == "s1" else f"?layout={LAYOUT}"
+    if LAYOUT == "s1" and "x" in PANEL:
+        try:
+            pw, ph = (int(v) for v in PANEL.split("x", 1))
+            w, h = pw, ph
+            q = f"?layout=s1&rot={ROTATE}&pw={pw}&ph={ph}"
+        except ValueError:
+            print(f"skjold-ui: ugyldig SKJOLD_UI_PANEL={PANEL!r} (bruk f.eks. 400x960)", file=sys.stderr)
     args = [cage, "-d", "-s", "--", chromium, "--kiosk", f"--app=http://127.0.0.1:{port}/{q}",
             "--ozone-platform=wayland", f"--window-size={w},{h}", "--force-device-scale-factor=1",
             "--noerrdialogs", "--disable-infobars", "--no-first-run", "--disable-pinch", "--overscroll-history-navigation=0",

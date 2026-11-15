@@ -25,3 +25,16 @@ Utvikling uten Pi: `python3 -m skjold_ui --no-kiosk` (i `pi/`) og åpne http://1
 `web/index.html?demo=1` direkte.
 
 Fonter: «Helvetica Neue»/Arial i designet → Liberation Sans (fonts-liberation, samme metrikk som Arial).
+
+## Panel på høykant (for eksempel 4,58″ som melder 400 × 960)
+
+Noen bar-paneler melder seg som stående over HDMI (`cat /sys/class/drm/card*-HDMI-A-1/modes` gir `400x960`). Legg da inn
+i `/etc/ki-amp.env`:
+
+```
+SKJOLD_UI_PANEL=400x960
+SKJOLD_UI_ROTATE=90
+```
+
+Kiosken åpner vinduet i panelets størrelse, og S1-bildet (960 × 320) dreies i nettleseren og sentreres på panelet.
+Står bildet opp ned, bruk `SKJOLD_UI_ROTATE=270`. Start på nytt med `sudo systemctl restart skjold-ui`.
