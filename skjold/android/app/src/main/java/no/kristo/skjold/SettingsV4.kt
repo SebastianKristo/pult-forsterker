@@ -59,7 +59,8 @@ object SettingsUi {
             if (c.id != "skjerm" || c.items.any { it.k == "disp" }) c
             else c.copy(
                 sub = "Skjermtype, dimming, klokke, LED",
-                items = listOfNotNull(dispItem(type)) + c.items.map {
+                // Node har bare skjermvelgeren; dimming, klokke og LED gjelder S1 (som dev-filtrene på iOS)
+                items = listOfNotNull(dispItem(type)) + if (type == "node") emptyList() else c.items.map {
                     if (it.k == "off") it.copy(hint = "Beskytter OLED-skjermen mot innbrenning. TFT-skjermer får ikke innbrenning") else it
                 },
             )
@@ -86,20 +87,14 @@ object SettingsUi {
 @Composable
 fun SettingsTop(m: AppModel) {
     val cats = SettingsUi.cats(m)
-    // ContentView gir 8 + 10 dp under tittelen; iOS har 6 mellom tittel og undertittel
-    Column(Modifier.fillMaxWidth().settingsPullUp(10.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
-        T(SettingsUi.subtitle(m), mono(11f, C.muted), maxLines = 1)
+    // tittelen og undertittelen («Stue · Skjold S1 · 1.4.2») tegnes av DockTitleRow i ContentView
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         if (m.sys.rooms.size > 1) DevicePicker(m)
         CategoryList(m, cats)
         AppCard(m)
     }
 }
 
-private fun Modifier.settingsPullUp(d: Dp): Modifier = layout { measurable, constraints ->
-    val p = measurable.measure(constraints)
-    val px = d.roundToPx()
-    layout(p.width, (p.height - px).coerceAtLeast(0)) { p.place(0, -px) }
-}
 
 @Composable
 private fun DevicePicker(m: AppModel) {

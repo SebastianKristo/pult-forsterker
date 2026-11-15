@@ -460,7 +460,7 @@ private data class InputDev(val name: String, val sub: String, val badge: String
 @Composable
 private fun InputCard(m: AppModel, n: String) {
     val room = "«Skjold " + m.actRoom.name + "»"
-    val (text, devs, button) = when (n) {
+    val r: Triple<String, List<InputDev>, String> = when (n) {
         "AirPlay" -> {
             val d = m.dev?.airplayDevice ?: ""
             Triple("Velg $room i kontrollsenteret på iPhone, iPad eller Mac. Lyden kommer uten tap i kvalitet.",
@@ -480,6 +480,7 @@ private fun InputCard(m: AppModel, n: String) {
                 "Bytt til AUX nå")
         }
     }
+    val (text, devs, button) = r
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(SourceTok.card).skBorder(SourceTok.line, 22.dp).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),

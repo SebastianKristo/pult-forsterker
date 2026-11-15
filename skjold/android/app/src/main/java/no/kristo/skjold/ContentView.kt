@@ -119,11 +119,11 @@ fun AppShell(m: AppModel) {
             if (wide) {
                 Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
                     DockTopNav(m)
-                    Box(Modifier.weight(1f).imePadding()) { Page(m, m.tab, true) }
+                    Box(Modifier.weight(1f).imePadding()) { if (SourceUi.active) SourceOverlays(m, true) else Page(m, m.tab, true) }
                 }
                 DockWideMini(m)
             } else {
-                Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).imePadding()) { Page(m, m.tab, false) }
+                Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).imePadding()) { if (SourceUi.active) SourceOverlays(m, false) else Page(m, m.tab, false) }
                 DockV4(m)
             }
             // «Hold på minispilleren for volumknotten» (første gang, på Hjem)
@@ -133,6 +133,8 @@ fun AppShell(m: AppModel) {
                 enter = fadeIn(tween(250)), exit = fadeOut(tween(250)),
             ) { Box(Modifier.fillMaxWidth().height(300.dp)) { DockHint() } }
         }
+        // søket (V4SearchPage) ligger over fanene og dokken; tegner ingenting når det er lukket
+        SearchPage(m)
         if (m.hjemLogin) HjemLoginView(m)
         if (m.showRoomEQ) RoomEQView(m)
         if (m.showKassett) KassettView(m)
@@ -160,6 +162,13 @@ fun AppShell(m: AppModel) {
             ) { FullPlayerView(m) }
         }
         AnimatedVisibility(DockUi.dial, enter = fadeIn(tween(250)), exit = fadeOut(tween(250))) { DockVolumeDial(m) }
+    }
+    // Radio og bibliotekene åpnes som kildesider (V4SourcePage), også når noe fortsatt setter m.sub
+    LaunchedEffect(m.sub, m.lib) {
+        when (m.sub) {
+            "radio" -> { m.sub = ""; m.openSource("Radio") }
+            "lib" -> { m.sub = ""; m.openSource(SK.lib[m.lib]?.name ?: "Navidrome") }
+        }
     }
     // hintet forsvinner for godt etter 4,5 s
     LaunchedEffect(Unit) {
