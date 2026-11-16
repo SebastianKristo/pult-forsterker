@@ -1,9 +1,11 @@
 [Unit]
 Description=Pultforsterker – AUX 1 (PCM1808 I2S-ADC på hovedkortet) -> miks
 After=sound.target
+# gi aldri opp: USB-kortet kan komme etter oppstart, og alsaloop avslutter ved underrun (f.eks. når CamillaDSP starter på nytt)
+StartLimitIntervalSec=0
 
 [Service]
-ExecStart=/usr/bin/alsaloop -C hw:pultamp -P aux1 -r 48000 -f S32_LE -t 50000 -S 0
+ExecStart=/usr/bin/alsaloop -C hw:pultamp -P aux1 -r 48000 -f S32_LE -t 100000 -S 0
 Restart=always
 RestartSec=3
 
