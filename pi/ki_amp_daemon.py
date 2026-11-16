@@ -496,6 +496,38 @@ except Exception as e:
     print("Kjører uten GPIO:", e)
     HW = False
 
+class _OpenDrainOut:
+    """Utgang for lavt-triggede relémoduler (IN til GND = på): på = trekk pinnen til 0 V, av = slipp den (høyimpedans).
+    En 5 V-modul slår da helt av – med vanlig 3,3 V høy på IN kan optokobleren lede litt og releet bli stående på."""
+    def __init__(self, pin):
+        import lgpio
+        self.pin, self.lg, self._v = pin, lgpio, False
+        self.h = lgpio.gpiochip_open(0)
+        lgpio.gpio_claim_input(self.h, pin, lgpio.SET_PULL_NONE)
+
+    @property
+    def value(self):
+        return self._v
+
+    @value.setter
+    def value(self, on):
+        on = bool(on)
+        if on == self._v:
+            return
+        self.lg.gpio_free(self.h, self.pin)
+        if on:
+            self.lg.gpio_claim_output(self.h, self.pin, 0)
+        else:
+            self.lg.gpio_claim_input(self.h, self.pin, self.lg.SET_PULL_NONE)
+        self._v = on
+
+    def on(self): self.value = True
+    def off(self): self.value = False
+
+
+# KI_AMP_AMP_RELAY_ACTIVE_LOW=1 (hovedkortet): forsterker-releet er en lavt-trigget modul (klikker når IN går til GND)
+AMP_RELAY_ACTIVE_LOW = os.environ.get("KI_AMP_AMP_RELAY_ACTIVE_LOW", "0") == "1"
+
 relay_amp = relay_aux = _Dummy()
 dac_xsmt = None
 led_power = None
@@ -505,7 +537,10 @@ if HW:
     if BOARD == "radio":
         fav_leds = [l for l in (_mk(GLED, p) for p in FAV_LED) if l]
     elif BOARD == "main":
-        relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=True, initial_value=False) or _Dummy()     # strømrelé + 5V_SW
+        if AMP_RELAY_ACTIVE_LOW:
+            relay_amp = _mk(_OpenDrainOut, PIN_RELAY_AMP) or _Dummy()   # lavt-trigget relémodul (IN til GND = på)
+        else:
+            relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=True, initial_value=False) or _Dummy()     # strømrelé + 5V_SW
         amp_sdz = _mk(OutputDevice, PIN_AMP_SDZ, active_high=True, initial_value=False) or _Dummy()         # TPA3116 SDZ: høy = på
         dac_xsmt = _mk(OutputDevice, PIN_DAC_XSMT, active_high=True, initial_value=False)
         # PGA2311 bit-banges (SPI0 er opptatt av TFT og touch): MOSI GPIO 0, SCLK GPIO 1, CS GPIO 16
