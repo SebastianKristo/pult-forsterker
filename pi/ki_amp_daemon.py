@@ -1821,6 +1821,41 @@ class _OpenDrain:
         self.lg.gpio_free(self.h, self.pin); self.lg.gpio_claim_input(self.h, self.pin, self.lg.SET_PULL_NONE)
 
 
+class _LcusRelay:
+    """USB-relé med CH340 (LCUS-1/2/4, 1a86:7523): kommandoen A0 <kanal> <0|1> <sum> på 9600 baud.
+    Brukes til å «trykke» på knappen til USB-switchen (KI_AMP_USBSW_MODE=lcus)."""
+    def __init__(self, dev, ch=1):
+        import termios
+        self.ch, self.ok = int(ch), False
+        try:
+            self.fd = os.open(dev, os.O_RDWR | os.O_NOCTTY)
+            a = termios.tcgetattr(self.fd)
+            a[0] = a[1] = a[3] = 0                      # rå: ingen tegnbehandling, ekko eller linjemodus
+            a[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
+            a[4] = a[5] = termios.B9600
+            termios.tcsetattr(self.fd, termios.TCSANOW, a)
+            self.ok = True
+            self.off()
+        except Exception as e:
+            print(f"USB-switch: fant ikke USB-releet på {dev}:", e, flush=True)
+
+    def _send(self, on):
+        b = bytes([0xA0, self.ch, 1 if on else 0, (0xA0 + self.ch + (1 if on else 0)) & 0xFF])
+        os.write(self.fd, b)
+
+    def on(self): self._send(True)
+    def off(self): self._send(False)
+
+
+def _lcus_dev():
+    import glob as _g
+    d = os.environ.get("KI_AMP_USBSW_DEV", "").strip()
+    if d:
+        return d
+    by_id = sorted(_g.glob("/dev/serial/by-id/usb-1a86*"))   # stabilt navn selv om ttyUSB-nummeret endrer seg
+    return by_id[0] if by_id else "/dev/ttyUSB0"
+
+
 class UsbSwitch:
     def __init__(self):
         self.pulse = self.sense = None
@@ -1837,6 +1872,21 @@ class UsbSwitch:
             self.pulse = "mux"; state["usbsw"] = True; state["usb_pc_names"] = USBSW_NAMES
             mcp.set_b(MCP_USB_SEL, state["usb_pc"] == 2)
             print(f"USB-switch: mux på hovedkortet, aktiv {USBSW_NAMES[state['usb_pc'] - 1]}", flush=True); return
+        if USBSW_MODE == "lcus":   # USB-relé (CH340) i en av Pi-ens USB-porter: ingen GPIO-pinne
+            r = _LcusRelay(_lcus_dev(), os.environ.get("KI_AMP_USBSW_CH", "1"))
+            if not r.ok:
+                return
+            self.pulse = r
+            if USBSW_SENSE and HW:
+                from gpiozero import DigitalInputDevice
+                self.sense = _mk(DigitalInputDevice, int(USBSW_SENSE), pull_up=True, bounce_time=0.05)
+                if self.sense:
+                    self.sense.when_activated = self.sense.when_deactivated = lambda: _safe(self._update)
+                    self._update()
+            state["usbsw"] = True; state["usb_pc_names"] = USBSW_NAMES
+            print(f"USB-switch: USB-relé (CH340) på {_lcus_dev()}, kanal {r.ch}, avlesning {'GPIO ' + USBSW_SENSE if self.sense else 'av'}, "
+                  f"aktiv {USBSW_NAMES[state['usb_pc'] - 1]}", flush=True)
+            return
         if not (HW and USBSW_PULSE):
             return
         if USBSW_MODE == "direct":
