@@ -1,0 +1,48 @@
+// Skjold S1 med frittstående PCM5102-modul (GY-PCM5102) og uten PCM1808-ADC: Pi-en er I2S-master (lager bitclock og
+// frame selv). Samme kortnavn som ki-pultamp-i2s («pultamp»), så resten av oppsettet (hw:pultamp) er uendret.
+// Bruk denne i stedet for ki-pultamp-i2s når det ikke finnes en ADC som gir klokka – ellers gir avspilling
+// «Input/output error» fordi Pi-en venter på en klokke som aldri kommer.
+// Bygg: dtc -@ -I dts -O dtb -o ki-pultamp-dac.dtbo ki-pultamp-dac.dts  ->  /boot/firmware/overlays/, config.txt: dtoverlay=ki-pultamp-dac
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    fragment@0 {
+        target = <&i2s_clk_producer>;
+        __overlay__ { status = "okay"; };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            pultamp_dac: pcm5102a-codec {
+                #sound-dai-cells = <0>;
+                compatible = "ti,pcm5102a";
+                status = "okay";
+            };
+        };
+    };
+
+    fragment@2 {
+        target = <&sound>;
+        __overlay__ {
+            compatible = "simple-audio-card";
+            simple-audio-card,name = "pultamp";
+            simple-audio-card,format = "i2s";
+            simple-audio-card,bitclock-master = <&pultamp_cpu>;
+            simple-audio-card,frame-master = <&pultamp_cpu>;
+            status = "okay";
+
+            pultamp_cpu: simple-audio-card,cpu {
+                sound-dai = <&i2s_clk_producer>;
+                dai-tdm-slot-num = <2>;
+                dai-tdm-slot-width = <32>;
+            };
+            simple-audio-card,codec {
+                sound-dai = <&pultamp_dac>;
+            };
+        };
+    };
+};
