@@ -69,8 +69,11 @@ elif [ "$OUT" = headphones ]; then
 elif [ "$BOARD_SEL" = main ]; then
   sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/; s/^dtoverlay=hifiberry-dac$/#dtoverlay=hifiberry-dac/; s/^dtoverlay=spi0-1cs,no_miso$/#dtoverlay=spi0-1cs,no_miso/' "$CFG"
   sudo apt-get -y install --no-install-recommends device-tree-compiler >/dev/null
-  dtc -@ -I dts -O dtb -o /tmp/ki-pultamp-i2s.dtbo "$SRC/ki-pultamp-i2s.dts" && sudo install -m 644 /tmp/ki-pultamp-i2s.dtbo /boot/firmware/overlays/
-  LINES='dtoverlay=ki-pultamp-i2s dtparam=i2c_arm=on dtparam=spi=on dtoverlay=dwc2,dr_mode=peripheral enable_uart=0'
+  # KI_AMP_I2S=dac: frittstående PCM5102-modul uten PCM1808 – Pi-en lager I2S-klokka selv (ki-pultamp-dac)
+  OV=ki-pultamp-i2s; [ "${KI_AMP_I2S:-}" = dac ] && OV=ki-pultamp-dac
+  sudo sed -i '/^dtoverlay=ki-pultamp-i2s$/d; /^dtoverlay=ki-pultamp-dac$/d' "$CFG"
+  dtc -@ -I dts -O dtb -o /tmp/$OV.dtbo "$SRC/$OV.dts" && sudo install -m 644 /tmp/$OV.dtbo /boot/firmware/overlays/
+  LINES="dtoverlay=$OV dtparam=i2c_arm=on dtparam=spi=on dtoverlay=dwc2,dr_mode=peripheral enable_uart=0"
   if [ "$DISPLAY_SEL" = tft ]; then   # TFT på SPI0 CE0 (DC 5, RST 6), touch på CE1 (IRQ 17)
     sudo sed -i '/^dtoverlay=fbtft,/d; /^dtoverlay=ads7846,/d' "$CFG"
     echo "dtoverlay=fbtft,spi0-0,$TFT_SEL,dc_pin=5,reset_pin=6,rotate=90,speed=32000000" | sudo tee -a "$CFG"
