@@ -208,6 +208,9 @@ DSP_FILE = os.environ.get("KI_AMP_DSP_FILE", "/etc/camilladsp/config.yml")
 DSP_FORMAT = os.environ.get("KI_AMP_DSP_FORMAT", "S32LE")   # S16LE for Pi-ens 3,5 mm-utgang (testmodus)
 # Lydtest: all lyd (etter EQ og volum) ut på Pi-ens 3,5 mm-kontakt i stedet for forsterkeren/DAC-en (pi/tools/lydtest_jack.sh)
 JACK_TEST = os.environ.get("KI_AMP_JACK_TEST", "0") == "1"
+# Hodetelefoner på et USB-lydkort (f.eks. Behringer UFO202/UCA202: KI_AMP_HP_DEV=plughw:CODEC): skrus av og på i appen/web
+# (POST /api/headphones) – hele kjeden (EQ, eget volum) går dit, og høyttalerne (relé/SDZ) slås av mens de er på.
+HP_DEV_ENV = os.environ.get("KI_AMP_HP_DEV", "").strip()
 # KI_AMP_MONO=1: L+R summeres (−6 dB hver) til begge utgangene i CamillaDSP – for apparater med ett element (Skjold Radio)
 
 # ---------- GPIO (BCM) ----------
@@ -864,6 +867,8 @@ def dsp_playback():
     Node/Core: utgangen som er valgt i appen (f.eks. UCA222 på USB)."""
     if JACK_TEST:
         return "plughw:Headphones"
+    if HP_DEV_ENV and not S1F and state.get("headphones"):
+        return HP_DEV_ENV
     if S1F and state.get("headphones"):
         return str((S1F_PINS.get("audio") or {}).get("headphones") or os.environ.get("KI_AMP_HP_DEV", "plughw:UCA_AUX1"))
     no = node_output()
@@ -879,7 +884,7 @@ def dsp_format():
 
 def eff_volume():
     """Volumet som brukes nå: eget hodetelefonvolum når det er slått på (S1 rev F)."""
-    if S1F and state.get("headphones") and settings().get("hpOwn", True):
+    if (S1F or HP_DEV_ENV) and state.get("headphones") and settings().get("hpOwn", True):
         return state.get("hp_volume", state["volume"])
     return state["volume"]
 
@@ -1219,7 +1224,7 @@ def speakers_on():
 def apply_headphones():
     """Hodetelefonforsterker (TPA6132A2 EN på MCP GPA6) følger jacken; høyttalerne dempes via SDZ hvis auto-demping er på."""
     dsp.update()   # egen EQ-profil for hodetelefoner (S1 rev F: også utgangen – CamillaDSP spiller til UCA202 #1)
-    if S1F and HW:   # høyttalerne av (relé) mens hodetelefonene står i
+    if (S1F or HP_DEV_ENV) and HW:   # høyttalerne av (relé) mens hodetelefonene står i
         relay_amp.value = bool(state["power"]) and not (state["headphones"] and state["hp_automute"]) and not state["overtemp"]
     if not (HW and BOARD == "main"):
         return
@@ -1741,7 +1746,7 @@ def read_status():
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
             "menu": dict(menu) if menu["open"] else None, "hold": s1f_hold() or hold_status(), "settings_menu": smenu_status(),
             "sky": sky.kort(), "sleep": sleep_left(), "autostandby": autostandby_left(), "kids": plug_on("kids"), "subwave": subwave_playing(),
-            "ui": s1f_ui(), "hw_rev": "F" if S1F else "",
+            "ui": s1f_ui(), "hw_rev": "F" if S1F else "", "hp_switch": bool(HP_DEV_ENV) and not S1F,
             "night": {"on": bool(state.get("night")), "src": (state.get("night_ev") or {}).get("src", ""),
                       "steps": (state.get("night_ev") or {}).get("steps") or [], "t": (state.get("night_ev") or {}).get("t", 0)},
             **feat_status()}
@@ -2005,7 +2010,7 @@ def _warm_tick():
 
 def set_volume(v):
     v = min(int(v), volume_cap())   # gjelder alle veier inn: appen, AirPlay-volum, Lyrion, MQTT, vekking
-    if S1F and state.get("headphones") and settings().get("hpOwn", True):
+    if (S1F or HP_DEV_ENV) and state.get("headphones") and settings().get("hpOwn", True):
         state["hp_volume"] = max(0, min(100, int(v)))
         if state["hp_volume"] > 0: state["mute"] = False
         apply_volume(vol_only=True); changed(); return
@@ -4033,6 +4038,15 @@ def save_preset(n):
 
 async def h_auto_input(r):
     state["auto_input"] = bool((await r.json()).get("on", True)); changed(); return j()
+
+
+async def h_headphones(r):
+    """POST /api/headphones {"on": bool} – lyden til hodetelefonutgangen på USB-lydkortet (KI_AMP_HP_DEV)."""
+    if not (HP_DEV_ENV or S1F):
+        return web.json_response({"error": "ingen hodetelefonutgang satt opp (KI_AMP_HP_DEV)"}, status=409)
+    b = await _obj(r)
+    await asyncio.to_thread(set_headphones, bool(b.get("on")))
+    return j()
 
 
 async def h_usbsw(r):
@@ -8610,7 +8624,7 @@ def _hjul_forward(base, body):
 
 
 def _hjul_volume():
-    return state["hp_volume"] if (S1F and state.get("headphones") and settings().get("hpOwn", True)) else state["volume"]
+    return state["hp_volume"] if ((S1F or HP_DEV_ENV) and state.get("headphones") and settings().get("hpOwn", True)) else state["volume"]
 
 
 hjul = _hjmod.Hjul({"get_volume": _hjul_volume, "set_volume": set_volume, "transport": lambda a: transport(a),
@@ -9078,7 +9092,7 @@ def main():
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
-                    web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
+                    web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/headphones", h_headphones), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
                     web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post),
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
                     web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test),
