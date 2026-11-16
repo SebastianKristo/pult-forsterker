@@ -248,7 +248,8 @@ function grad(key: string, i?: number): string {
   let h = 0; for (const c of key) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   const [a, b] = PAL[(i ?? h) % PAL.length]!; return 'linear-gradient(135deg,' + a + ',' + b + ')';
 }
-function artBg(key: string, image?: string, i?: number): string { return image && /^(https?:)?\/\//i.test(image) ? art(key, image).bg : grad(key, i); }
+// også lokale adresser (/api/logo?k=… for radiologoene fra enheten), ikke bare http(s)
+function artBg(key: string, image?: string, i?: number): string { return image && /^((https?:)?\/\/|\/)/i.test(image) ? art(key, image).bg : grad(key, i); }
 const fmt = (s: number) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 const PLAY_D = 'M8 5.2v13.6a1 1 0 0 0 1.52.85l10.6-6.8a1 1 0 0 0 0-1.7L9.52 4.35A1 1 0 0 0 8 5.2z', PAUSE_D = 'M6 4.5h4v15H6zM14 4.5h4v15h-4z';
 function artOf(s: Status | null, base = ''): string {
@@ -442,10 +443,10 @@ function Library() {
         <button onClick={() => { searchOpen.value = true; }} aria-label="Søk" style="height:44px;width:190px;border-radius:22px;border:1px solid #2e2e30;background:#141415;display:flex;align-items:center;gap:8px;padding:0 16px;box-sizing:border-box;color:#8b8b86;font-size:13px;text-align:left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>Søk</button>
       </div>
       <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>{kicker}</span>
-      <div style="display:flex;gap:16px;overflow-x:auto;scrollbar-width:none;padding-bottom:6px;touch-action:pan-x">
+      <div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y;display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:16px 14px;align-content:start;padding-bottom:14px">
         {items.map((it, i) => (
-          <button key={i} onClick={it.play} style="flex-shrink:0;width:148px;border:none;background:none;padding:0;text-align:left;display:flex;flex-direction:column;gap:8px">
-            <div style={`position:relative;width:148px;height:148px;border-radius:12px;background:${it.art}`}>{it.live && <span style={`position:absolute;left:8px;top:8px;height:18px;padding:0 6px;border-radius:4px;background:#e05a4a;color:#fff;font-family:${MONO};font-size:9px;display:flex;align-items:center`}>DIREKTE</span>}</div>
+          <button key={i} onClick={it.play} style="min-width:0;border:none;background:none;padding:0;text-align:left;display:flex;flex-direction:column;gap:8px">
+            <div style={`position:relative;width:100%;aspect-ratio:1;border-radius:12px;background:${it.art}`}>{it.live && <span style={`position:absolute;left:8px;top:8px;height:18px;padding:0 6px;border-radius:4px;background:#e05a4a;color:#fff;font-family:${MONO};font-size:9px;display:flex;align-items:center`}>DIREKTE</span>}</div>
             <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{it.t}</span><span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{it.s}</span></span>
           </button>
         ))}
