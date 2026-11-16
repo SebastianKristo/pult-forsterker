@@ -197,11 +197,13 @@ function Row({ it, i }: { it: Item; i: number }) {
     case 'svc':
       return <Line i={i} n={it.n}><SvcTest id={it.id} label={it.label} /></Line>;
     case 'api-bool': {
+      if (it.id === 'hpOn' && !s?.hp_switch) return null;   // bare når enheten har hodetelefoner på et USB-lydkort (KI_AMP_HP_DEV)
       const map = {
         loudness: [!!s?.loudness, (v: boolean) => act(() => api.loudness(v), { loudness: v })],
         mix: [!!s?.mix, (v: boolean) => act(() => api.mix(v), { mix: v })],
         autoInput: [!!s?.auto_input, (v: boolean) => act(() => api.autoInput(v), { auto_input: v })],
         hpAutomute: [!!s?.hp_automute, (v: boolean) => act(() => api.hpAutomute(v), { hp_automute: v })],
+        hpOn: [!!s?.headphones, (v: boolean) => act(() => api.headphones(v), { headphones: v })],
         voiceOn: [!!s?.voice, (v: boolean) => act(() => api.voice({ on: v }), { voice: v })]
       } as const;
       const [on, fn] = map[it.id];

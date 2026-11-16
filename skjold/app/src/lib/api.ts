@@ -15,7 +15,7 @@ export interface Status {
   listen?: string;
   loudness: boolean; loudness_level: number; voice: boolean; voice_profile: string; voice_profiles: Record<string, string>;
   presets: Preset[]; preset: number; auto_input: boolean; mix: boolean; usb_pc: number; usb_names: string[];
-  headphones: boolean; hp_automute: boolean; overtemp: boolean; levels: Record<string, number>;
+  headphones: boolean; hp_automute: boolean; hp_switch?: boolean; overtemp: boolean; levels: Record<string, number>;
   playing: boolean; paused: boolean; source: string; cover: string; title: string; artist: string; album: string;
   duration: number; position: number; bt_device: string; name: string; version: string; id: string;
   inputs: InputId[]; board: string; lyrion: boolean; station: string;
@@ -247,6 +247,7 @@ export const api = {
   usbsw: (pc: 1 | 2) => post('/api/usbsw', { pc }),
   level: (source: LevelSource, level: number) => post('/api/level', { source, level }),
   hpAutomute: (on: boolean) => post('/api/hp_automute', { on }),
+  headphones: (on: boolean) => post('/api/headphones', { on }),
   // Nytt endepunkt (legges til i daemonen): GET/POST /api/settings
   getSettings: () => req<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings'),
   setSettings: (patch: Record<string, unknown>) => post<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings', patch),
