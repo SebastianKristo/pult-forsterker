@@ -157,7 +157,8 @@ function nightNow(): boolean {
 let blLast = -1;
 function backlight(): void {
   const n = nightNow(), full = Math.max(20, Math.min(100, settings.value.tBright ?? 100));
-  const lvl = idle.value ? ((settings.value.tIdle ?? 0) === 2 ? 0 : n ? 3 : Math.min(30, full)) : n ? Math.min(25, full) : full;
+  // nattmodus: skjermen av i standby (et trykk vekker den, dempet); ellers som valgt under «I standby»
+  const lvl = idle.value ? ((settings.value.tIdle ?? 0) === 2 || n ? 0 : Math.min(30, full)) : n ? Math.min(25, full) : full;
   if (lvl !== blLast) { blLast = lvl; void postAt('', '/api/touch/backlight', { level: lvl }).catch(() => undefined); }
 }
 
