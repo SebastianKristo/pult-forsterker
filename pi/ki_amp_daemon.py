@@ -7799,12 +7799,103 @@ def s1_hold_routine(btn):
     return False
 
 
+# --- Home Assistant: finn servere, logg inn (OAuth → langtidstoken), entiteter og kamerabilder (pi/skjold_ha.py) ---
+import skjold_ha as _hamod   # noqa: E402
+
+
+def _ha_cfg():
+    c = doorbell.cfg if doorbell.cfg.get("ha_url") else (feat_cfg().get("doorbell") or {})
+    return str(c.get("ha_url") or ""), str(c.get("ha_token") or "")
+
+
+async def h_ha(r):
+    loop = asyncio.get_running_loop()
+    if r.method == "POST":
+        b = await _json(r)
+        if b.get("logout"):
+            doorbell.save({"ha_url": "", "ha_token": ""}); return web.json_response({"connected": False})
+        url, tok = _hamod._norm(b.get("url")), str(b.get("token") or "").strip()
+        if not url or not tok:
+            return web.json_response({"error": "adresse og token må fylles ut"}, status=400)
+        try:
+            inf = await loop.run_in_executor(None, _hamod.info, url, tok)
+        except RuntimeError as e:
+            return web.json_response({"error": str(e)}, status=400)
+        doorbell.save({"ha_url": url, "ha_token": tok})
+        return web.json_response({"connected": True, **inf})
+    url, tok = _ha_cfg()
+    if not (url and tok):
+        return web.json_response({"connected": False, "url": url})
+    try:
+        inf = await loop.run_in_executor(None, _hamod.info, url, tok)
+        return web.json_response({"connected": True, **inf, "camera_entity": doorbell.cfg.get("camera_entity", ""),
+                                  "trigger_entity": doorbell.cfg.get("trigger_entity", "")})
+    except RuntimeError as e:
+        return web.json_response({"connected": False, "url": url, "error": str(e)})
+
+
+async def h_ha_discover(_r):
+    return web.json_response({"servers": await asyncio.get_running_loop().run_in_executor(None, _hamod.discover, 3.0)})
+
+
+async def h_ha_login(r):
+    url = r.query.get("url", "")
+    if not url:
+        return web.json_response({"error": "url mangler"}, status=400)
+    origin = f"{r.scheme}://{r.host}"
+    raise web.HTTPFound(_hamod.login_url(url, origin, r.query.get("back", "")))
+
+
+async def h_ha_callback(r):
+    try:
+        url, tok, back = await asyncio.get_running_loop().run_in_executor(
+            None, _hamod.finish_login, r.query.get("state", ""), r.query.get("code", ""), "Skjold " + NAME)
+        doorbell.save({"ha_url": url, "ha_token": tok})
+        msg, ok = "Innlogget i Home Assistant. Du kan lukke dette vinduet.", True
+    except Exception as e:
+        back, msg, ok = "/", "Innloggingen feilet: " + str(e)[:160], False
+    sep = "&" if "?" in back else "?"
+    html = ("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
+            "<body style='background:#0b0b0c;color:#f2f2ee;font-family:sans-serif;padding:40px'>"
+            f"<h2>{'✓' if ok else '✗'} {msg}</h2><script>setTimeout(()=>location.href={json.dumps(back + sep + 'ha=' + ('ok' if ok else 'feil'))},1200)</script>")
+    return web.Response(text=html, content_type="text/html")
+
+
+async def h_ha_entities(r):
+    url, tok = _ha_cfg()
+    if not (url and tok):
+        return web.json_response({"error": "Home Assistant er ikke koblet til"}, status=409)
+    try:
+        ents = await asyncio.get_running_loop().run_in_executor(None, _hamod.entities, url, tok, r.query.get("domains", ""), r.query.get("q", ""))
+    except Exception as e:
+        return web.json_response({"error": "Får ikke hentet entitetene: " + str(e)[:120]}, status=502)
+    return web.json_response({"entities": ents})
+
+
+async def h_ha_camera(r):
+    url, tok = _ha_cfg()
+    ent = r.query.get("entity", "")
+    if not (url and tok and ent.startswith("camera.")):
+        return web.json_response({"error": "ukjent kamera"}, status=400)
+    try:
+        data, ct = await asyncio.get_running_loop().run_in_executor(None, _hamod.camera, url, tok, ent)
+    except Exception as e:
+        return web.json_response({"error": f"fikk ikke kamerabildet: {e}"}, status=502)
+    return web.Response(body=data, content_type=ct.split(";")[0], headers={"Cache-Control": "no-store"})
+
+
+HA_ROUTES = [("GET", "/api/ha", h_ha), ("POST", "/api/ha", h_ha), ("GET", "/api/ha/discover", h_ha_discover),
+             ("GET", "/api/ha/login", h_ha_login), ("GET", "/api/ha/callback", h_ha_callback),
+             ("GET", "/api/ha/entities", h_ha_entities), ("GET", "/api/ha/camera", h_ha_camera)]
+
+
 FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h_features),
                ("POST", "/api/intercom", h_intercom), ("GET", "/api/recognize", h_recognize), ("POST", "/api/recognize", h_recognize),
                ("GET", "/api/doorbell", h_doorbell), ("POST", "/api/doorbell", h_doorbell), ("GET", "/api/doorbell/camera", h_doorbell_camera),
                ("GET", "/api/routines", h_routines), ("POST", "/api/routines", h_routines), ("POST", "/api/routines/steps", h_routines),
                ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
 FEAT_ROUTES += DUCK_ROUTES
+FEAT_ROUTES += HA_ROUTES
 
 # --- Skjold Touch: smarthusfliser, vekkeklokke som ringer, stemmeoverlegg og skjermkommandoer (pi/skjold_touch.py) ---
 import skjold_touch as _tmod      # noqa: E402

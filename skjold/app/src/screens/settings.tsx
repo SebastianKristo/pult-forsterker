@@ -6,6 +6,7 @@ import { ChangelogPanel } from './programs';
 import { HomeEditor } from './homeedit';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { DoorbellPanel, DuckPanel, RecognizeSettingsPanel, RoutinesPanel, WishlistPanel } from './features';
+import { HomeAssistantPanel } from './homeassistant';
 import { SecurityPanel } from './lyd';
 import { api, type RemoteStatus, hostLabel, isNative, REPO, type LevelSource, type UpdateInfo } from '../lib/api';
 import { act, applied, go, loadSettings, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status, everyVisible } from '../lib/store';
@@ -121,7 +122,7 @@ export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) 
       <SubHead n="Skjold Cloud" sub="Kryptert synk av favoritter, rutiner og EQ mellom hjem" /><Boundary><CloudPanel /></Boundary>
     </div>
   );
-  if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><Boundary><RoutinesPanel /></Boundary><Boundary><DoorbellPanel /></Boundary><Boundary><DuckPanel /></Boundary><Boundary><SecurityPanel /></Boundary><Boundary><RecognizeSettingsPanel /></Boundary><Boundary><WishlistPanel /></Boundary><Boundary><RadioListPanel source="wishlist" /></Boundary></div>;
+  if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><Boundary><HomeAssistantPanel /></Boundary><Boundary><RoutinesPanel /></Boundary><Boundary><DoorbellPanel /></Boundary><Boundary><DuckPanel /></Boundary><Boundary><SecurityPanel /></Boundary><Boundary><RecognizeSettingsPanel /></Boundary><Boundary><WishlistPanel /></Boundary><Boundary><RadioListPanel source="wishlist" /></Boundary></div>;
   if (cat.id === 'bibliotek') return <div style="display:flex;flex-direction:column;gap:14px"><Boundary><LibraryTagsPanel /></Boundary><Boundary><AiSettingsPanel /></Boundary></div>;
   const extra = cat.id === 'system' ? <><Boundary><HealthPanel /></Boundary><Boundary><BackupPanel /></Boundary></> : null;
   if (cat.id === 'hjemskjerm') return <HomeEditor />;
