@@ -522,22 +522,27 @@ struct SKSourceLogo: View {
 
 // MARK: - Logo text (5 bars + SKJOLD)
 
+/// Skjold Lab-logoen: fem stolper som henger fra samme topplinje, gyllen midtstolpe, «SKJOLD» + «LAB».
 struct SKLogo: View {
     var barW: CGFloat = 2.5
     var gap: CGFloat = 2
     var size: CGFloat = 15
     var tracking: CGFloat = 1.8
-    var bottomAligned = true
+    var bottomAligned = false
     var spacing: CGFloat = 9
+    var lab = true
     var body: some View {
         HStack(spacing: spacing) {
             HStack(alignment: bottomAligned ? .bottom : .top, spacing: gap) {
-                ForEach(Array([8, 12, 16, 12, 8].enumerated()), id: \.offset) { _, h in
-                    RoundedRectangle(cornerRadius: 2).fill(Color.ink).frame(width: barW, height: CGFloat(h))
+                ForEach(Array([8, 12, 16, 12, 8].enumerated()), id: \.offset) { i, h in
+                    RoundedRectangle(cornerRadius: 2).fill(i == 2 ? Color(red: 217 / 255, green: 164 / 255, blue: 65 / 255) : Color.ink).frame(width: barW, height: CGFloat(h))
                 }
             }
             .frame(height: 16, alignment: bottomAligned ? .bottom : .top)
-            Text("SKJOLD").sora(size, .semibold).tracking(tracking)
+            HStack(spacing: 0) {
+                Text("SKJOLD").sora(size, .semibold).tracking(tracking)
+                if lab { Text(" LAB").sora(size, .regular).tracking(tracking).foregroundStyle(Color(red: 220 / 255, green: 205 / 255, blue: 170 / 255)) }
+            }
         }
     }
 }
