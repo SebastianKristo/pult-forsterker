@@ -14,6 +14,8 @@
     <uses-permission android:name="android.permission.NFC" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Oppdatere Skjold-appen selv fra GitHub (AppUpdate.kt) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
@@ -47,6 +49,9 @@
             </intent-filter>
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Svar fra pakkeinstallereren når appen oppdaterer seg selv (AppUpdate.kt) -->
+        <receiver android:name=".AppUpdateReceiver" android:exported="false" />
 
         <!-- Skjold Touch på et nettbrett (TouchModeActivity.kt): eget ikon i appskuffen, fullskjerm, liggende -->
         <activity

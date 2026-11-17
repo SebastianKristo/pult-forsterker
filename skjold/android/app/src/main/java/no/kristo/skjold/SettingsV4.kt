@@ -16,6 +16,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -152,6 +157,7 @@ private fun openCategory(m: AppModel, i: Int, c: SettingCategory) {
 private fun AppCard(m: AppModel) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SKMonoLabel("APPEN")
+        AppUpdateBox()
         AppToggle("Vis andre Lyrion-spillere", "Ta med spillere som ikke er Skjold (for eksempel max2play eller TV-bokser) under Rom.", m.showLyrionPlayers) {
             m.setShowLyrion(!m.showLyrionPlayers)
         }
@@ -170,6 +176,55 @@ private fun AppCard(m: AppModel) {
                 (ctx as? android.app.Activity)?.requestPermissions(arrayOf(android.Manifest.permission.READ_PHONE_STATE), 11)
             }
             CallDuck.setEnabled(ctx, callDuck)
+        }
+    }
+}
+
+/** Oppdater selve Skjold-appen fra GitHub (app-v*-utgivelsene), uten Play Butikk. */
+@Composable
+private fun AppUpdateBox() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val har = remember { AppUpdate.installert(ctx) }
+    var ny by remember { mutableStateOf<AppUpdate.Ny?>(null) }
+    var msg by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var prog by remember { mutableStateOf(-1f) }
+    fun sjekk() {
+        busy = true; msg = "Ser etter ny versjon …"
+        scope.launch {
+            try {
+                val r = withContext(Dispatchers.IO) { AppUpdate.sjekk(ctx) }
+                ny = r; msg = if (r == null) "Du har nyeste versjon." else ""
+            } catch (e: Exception) { msg = e.message ?: "Fikk ikke sjekket" }
+            busy = false
+        }
+    }
+    LaunchedEffect(Unit) { sjekk() }
+    Column(
+        Modifier.fillMaxWidth().skBox(C.card, C.line, 22.dp).padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        T("Skjold-appen $har", sora(15f))
+        val n = ny
+        if (n != null) T("Versjon ${n.versjon} er klar (${String.format(java.util.Locale.US, "%.1f", n.bytes / 1_048_576.0).replace('.', ',')} MB, ${n.dato}).", sora(12f, W.Regular, C.muted, 1.4f))
+        if (msg.isNotEmpty()) T(msg, sora(12f, W.Regular, C.muted, 1.4f))
+        if (prog >= 0f) T("Laster ned … ${(prog * 100).toInt()} %", sora(12f, W.Regular, C.accent, 1.4f))
+        if (n != null) {
+            SKButton(if (busy) "Laster ned …" else "Oppdater til ${n.versjon}", if (busy) SKButtonKind.DISABLED else SKButtonKind.PRIMARY, height = 46.dp, size = 14f) {
+                if (busy) return@SKButton
+                if (!AppUpdate.kanInstallere(ctx)) { msg = "Gi Skjold lov til å installere apper (slå på bryteren), og trykk Oppdater igjen."; AppUpdate.aapneTillatelse(ctx); return@SKButton }
+                busy = true; prog = 0f; msg = ""
+                scope.launch {
+                    try {
+                        withContext(Dispatchers.IO) { AppUpdate.installer(ctx, n) { p -> scope.launch { prog = p } } }
+                        msg = "Bekreft oppdateringen i vinduet fra Android."
+                    } catch (e: Exception) { msg = e.message ?: "Oppdateringen feilet" }
+                    busy = false; prog = -1f
+                }
+            }
+        } else {
+            SKButton(if (busy) "Sjekker …" else "Se etter oppdatering", if (busy) SKButtonKind.DISABLED else SKButtonKind.SECONDARY, height = 42.dp, size = 13.5f) { if (!busy) sjekk() }
         }
     }
 }
