@@ -177,6 +177,7 @@
     const n = now(); S.lastAct = n;
     screenPower();   // vekk panelet straks
     if (ev.ev === 'dismiss_greeting') { S.bdayHide = true; postUi(); wake(300); return; }
+    if (window.S1MENY && S1MENY.ui(ev)) { postUi(); wake(1500); return; }   // sidene i s1_meny.js (Wi-Fi, skjermsparer, oppsett …)
     if (ev.ev === 'menu_toggle') { S.power = true; toggleSettings(); postUi(); return; }
     if (!S.set.open) return;
     S.set.t = n;
@@ -203,9 +204,9 @@
 
   // Forhåndsvisning/test: ?demo=<tilstand> tegner uten daemon (brukes av test_render.js)
   const demo = new URLSearchParams(location.search).get('demo');
-  if (demo !== null) { window.__demo = true; window.SKJOLD_SCREEN = { apply, applySettings, onUi, S, wake, status: () => st }; startBoot(); wake(3000); return; }
+  if (demo !== null) { window.__demo = true; window.SKJOLD_SCREEN = { apply, applySettings, onUi, S, wake, postUi, status: () => st }; startBoot(); wake(3000); return; }
   startBoot(); wake(3000);
   greeting(); loadSettings(); poll(); events(); uiStream();
   setInterval(loadSettings, 30000);
-  window.SKJOLD_SCREEN = { apply, applySettings, onUi, S, wake, status: () => st };
+  window.SKJOLD_SCREEN = { apply, applySettings, onUi, S, wake, postUi, status: () => st };
 })();
