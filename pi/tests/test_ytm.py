@@ -1,4 +1,5 @@
 """YouTube Music innebygd (skjold_ytm): mapping fra ytmusicapi, strøm-URL-cache, kassetter og HTTP-rutene."""
+import re
 import asyncio
 import os
 import sys
@@ -166,12 +167,12 @@ def test_ruter():
             h = await (await c.get("/api/ytm/home")).json()
             assert h["playlists"][0]["id"] == "pl:LM"
             t = await (await c.get("/api/ytm/tracks", params={"id": "al:MPREb_a1"})).json()
-            assert t["tracks"][0]["stream"] == "http://10.0.0.5:8765/api/ytm/stream/aaaaaaaaaaa.m4a"
+            assert re.match(r"http://10\.0\.0\.5:8765/api/ytm/stream/aaaaaaaaaaa\.(m4a|aac)$", t["tracks"][0]["stream"])
             assert (await c.get("/api/ytm/tracks", params={"id": "zz"})).status == 400
             s = await (await c.get("/api/ytm/search", params={"q": "x"})).json()
-            assert s["tracks"][0]["stream"].endswith("/ddddddddddd.m4a")
+            assert s["tracks"][0]["stream"].rsplit(".", 1)[0].endswith("/ddddddddddd")
             r = await c.post("/api/ytm/play", json={"id": "pl:PL1", "index": 0})
-            assert (await r.json())["count"] == 1 and played[0][0][0]["stream"].endswith("/bbbbbbbbbbb.m4a")
+            assert (await r.json())["count"] == 1 and played[0][0][0]["stream"].rsplit(".", 1)[0].endswith("/bbbbbbbbbbb")
             assert (await c.get("/api/ytm/stream/kort")).status == 400
             assert (await c.get("/api/ytm/stream/aaaaaaaaaaa.m4a")).status == 502   # upstream nås ikke
     asyncio.run(go())
@@ -234,3 +235,47 @@ def test_strommen_hentes_i_biter_og_tar_imot_range():
     assert seen["expired_once"] and len(seen["ranges"]) >= 3
     assert all(b - a + 1 <= (1 << 20) for a, b in seen["ranges"])
     assert part[0] == 206 and part[1] == f"bytes 100-199/{len(data)}" and part[2] == data[100:200]
+
+
+def test_aac_strommen_pakker_fragmentert_m4a_om_til_adts():
+    """YouTubes m4a er fragmentert (DASH): Lyrion stoppet etter noen sekunder. .aac gir hele låten som ADTS."""
+    import shutil
+    import subprocess
+    import pytest
+    if not shutil.which("ffmpeg"):
+        pytest.skip("ffmpeg mangler")
+    from aiohttp import web, ClientSession
+    with tempfile.TemporaryDirectory() as d:
+        f = os.path.join(d, "x.m4a")
+        subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=8",
+                        "-c:a", "aac", "-b:a", "128k", "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+                        "-frag_duration", "500000", f], check=True)
+        data = open(f, "rb").read()
+
+    async def upstream(r):
+        a, b = Y.re.match(r"bytes=(\d+)-(\d+)", r.headers["Range"]).groups()
+        a, b = int(a), min(int(b), len(data) - 1)
+        return web.Response(status=206, body=data[a:b + 1], content_type="audio/mp4",
+                            headers={"Content-Range": f"bytes {a}-{b}/{len(data)}"})
+
+    async def main():
+        up_app = web.Application(); up_app.router.add_get("/vp", upstream)
+        r1 = web.AppRunner(up_app); await r1.setup(); s1 = web.TCPSite(r1, "127.0.0.1", 0); await s1.start()
+        port = s1._server.sockets[0].getsockname()[1]
+        y, _f, _n = mk(extract=lambda vid: {"url": f"http://127.0.0.1:{port}/vp?expire={int(time.time()) + 7200}", "http_headers": {}})
+        base = {"v": ""}
+        app = web.Application(); app.add_routes(Y.routes(y, {"stream_base": lambda: base["v"], "play": lambda ts, i: None}))
+        r2 = web.AppRunner(app); await r2.setup(); s2 = web.TCPSite(r2, "127.0.0.1", 0); await s2.start()
+        base["v"] = f"http://127.0.0.1:{s2._server.sockets[0].getsockname()[1]}"
+        async with ClientSession() as c:
+            async with c.get(base["v"] + "/api/ytm/stream/aaaaaaaaaaa.aac") as resp:
+                out = (resp.status, resp.headers.get("Content-Type"), await resp.read())
+        await r2.cleanup(); await r1.cleanup()
+        return out
+    st, ct, body = asyncio.run(main())
+    assert st == 200 and ct == "audio/aac" and body[:2] == b"\xff\xf1"
+    with tempfile.NamedTemporaryFile(suffix=".aac") as t:
+        t.write(body); t.flush()
+        dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", t.name],
+                                   capture_output=True, text=True).stdout.strip() or 0)
+    assert dur > 7.5   # hele låten, ikke bare første fragment

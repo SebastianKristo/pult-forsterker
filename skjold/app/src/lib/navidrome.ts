@@ -97,6 +97,23 @@ export async function ndAlbumList(type: 'newest' | 'frequent' | 'random' | 'rece
   const r = await call<{ albumList2?: { album?: Record<string, unknown>[] } }>('getAlbumList2', { type, size });
   return arr(r.albumList2?.album).map(album);
 }
+export interface NdArtist { id: string; name: string; albumCount: number; coverArt?: string }
+const artist = (a: Record<string, unknown>): NdArtist => ({ id: String(a['id']), name: String(a['name'] ?? ''), albumCount: Number(a['albumCount'] ?? 0), ...(a['coverArt'] ? { coverArt: String(a['coverArt']) } : {}) });
+/** Alle artistene i biblioteket, A–Å (Subsonic getArtists er gruppert på forbokstav). */
+export async function ndArtists(): Promise<NdArtist[]> {
+  const r = await call<{ artists?: { index?: { artist?: Record<string, unknown>[] }[] } }>('getArtists');
+  return arr(r.artists?.index).flatMap((ix) => arr(ix.artist).map(artist));
+}
+/** Albumene til én artist, eldste først. */
+export async function ndArtist(id: string): Promise<{ artist: NdArtist; albums: NdAlbum[] }> {
+  const r = await call<{ artist: Record<string, unknown> & { album?: Record<string, unknown>[] } }>('getArtist', { id });
+  return { artist: artist(r.artist), albums: arr(r.artist.album).map(album).sort((a, b) => (a.year ?? 9999) - (b.year ?? 9999) || a.name.localeCompare(b.name)) };
+}
+/** Alle album A–Å, side for side (rulles inn etter hvert). */
+export async function ndAlbumsAlpha(offset = 0, size = 120): Promise<NdAlbum[]> {
+  const r = await call<{ albumList2?: { album?: Record<string, unknown>[] } }>('getAlbumList2', { type: 'alphabeticalByName', size, offset });
+  return arr(r.albumList2?.album).map(album);
+}
 export async function ndAlbum(id: string): Promise<{ album: NdAlbum; songs: NdSong[] }> {
   const r = await call<{ album: Record<string, unknown> & { song?: Record<string, unknown>[] } }>('getAlbum', { id });
   return { album: album(r.album), songs: arr(r.album.song).map(song) };

@@ -86,3 +86,29 @@ def test_kassetter_er_felles_for_systemet(tmp_path):
         asyncio.run(main())
     finally:
         d._nfc_til_andre, d.nfc = gammel_til, gammel_nfc
+
+
+def test_kassett_med_en_laat_eller_hel_artist_fra_navidrome():
+    """Biblioteket i Kassett-siden: én låt (getSong) eller hele artisten (alle album, eldste først)."""
+    import skjold_nfc as N
+    seen = []
+
+    def opener(url):
+        m = url.split("/rest/")[1].split(".view")[0]
+        seen.append(m)
+        if m == "getSong":
+            return {"subsonic-response": {"status": "ok", "song": {"id": "s1", "title": "Substitute", "artist": "Gloria Gaynor", "album": "I Will Survive"}}}
+        if m == "getArtist":
+            return {"subsonic-response": {"status": "ok", "artist": {"album": [{"id": "b", "name": "B", "year": 1980}, {"id": "a", "name": "A", "year": 1975}]}}}
+        if m == "getAlbum":
+            aid = url.split("id=")[1].split("&")[0]
+            return {"subsonic-response": {"status": "ok", "album": {"name": aid, "song": [{"id": aid + "1", "title": aid + "-1"}, {"id": aid + "2", "title": aid + "-2"}]}}}
+        raise AssertionError(m)
+    t = N.subsonic_tracks("http://nd", "u", "p", "song", "s1", opener)
+    assert [x["title"] for x in t] == ["Substitute"] and "id=s1" in t[0]["url"]
+    t = N.subsonic_tracks("http://nd", "u", "p", "artist", "ar1", opener)
+    assert [x["title"] for x in t] == ["a-1", "a-2", "b-1", "b-2"]
+    for h, typ in (("navidrome_song", "nd_song"), ("navidrome_artist", "nd_artist")):
+        kort = N.clean_card({"uid": "04A9F2", "navn": "x", "handling": h, "verdi": "id1"})
+        assert kort["handling"] == h and N.steps_for(kort)[-1] == {"type": typ, "verdi": "id1"}
+        assert N.kilde_for(kort) == "Navidrome"

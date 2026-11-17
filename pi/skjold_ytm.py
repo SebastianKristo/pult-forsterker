@@ -381,9 +381,13 @@ def routes(ytm, ctx):
     import asyncio
     from aiohttp import web, ClientSession, ClientTimeout
 
+    import shutil
+
     def with_stream(ts):
-        base = ctx["stream_base"]()
-        return [{**t, "stream": f"{base}/api/ytm/stream/{t['id']}.m4a"} for t in ts]
+        # .aac (ADTS, pakket om av ffmpeg uten omkoding) når ffmpeg finnes: YouTubes m4a er fragmentert (DASH), og
+        # Lyrion/squeezelite spiller da ofte bare de første sekundene før låten stopper. ADTS er en ren lydstrøm.
+        base, ext = ctx["stream_base"](), ("aac" if shutil.which("ffmpeg") else "m4a")
+        return [{**t, "stream": f"{base}/api/ytm/stream/{t['id']}.{ext}"} for t in ts]
 
     async def run(fn, *a):
         return await asyncio.get_running_loop().run_in_executor(None, fn, *a)
@@ -456,8 +460,49 @@ def routes(ytm, ctx):
             return 0, None
         return int(m.group(1)), (int(m.group(2)) if m.group(2) else None)
 
+    async def h_stream_adts(r, vid):
+        """AAC fra YouTubes fragmenterte m4a, pakket om til ADTS (-c copy: ingen omkoding, lite CPU)."""
+        try:
+            await run(ytm.stream_url, vid)    # slå opp først, så ffmpeg ikke venter på yt-dlp
+        except ValueError:
+            return web.Response(status=400)
+        except Exception as e:
+            print("YouTube Music: fant ikke lyden til", vid, repr(e), flush=True)
+            return web.Response(status=502)
+        src = f"{ctx['stream_base']()}/api/ytm/stream/{vid}.m4a"
+        p = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-nostdin", "-loglevel", "error", "-reconnect", "1", "-reconnect_streamed", "1",
+            "-i", src, "-vn", "-c:a", "copy", "-f", "adts", "pipe:1",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        out = web.StreamResponse(status=200, headers={"Content-Type": "audio/aac", "Cache-Control": "no-cache"})
+        n = 0
+        try:
+            await out.prepare(r)
+            while True:
+                b = await p.stdout.read(65536)
+                if not b:
+                    break
+                await out.write(b); n += len(b)
+            await out.write_eof()
+        except (ConnectionResetError, asyncio.CancelledError):
+            pass
+        finally:
+            if p.returncode is None:
+                try:
+                    p.kill()
+                except ProcessLookupError:
+                    pass
+            err = (await p.stderr.read()).decode(errors="replace").strip()
+            await p.wait()
+            if err and n == 0:
+                print("YouTube Music: ffmpeg", vid, err[-300:], flush=True)
+        return out
+
     async def h_stream(r):
-        vid = r.match_info["vid"].split(".")[0]
+        name = r.match_info["vid"]
+        vid = name.split(".")[0]
+        if name.endswith(".aac") and VID_RE.match(vid) and shutil.which("ffmpeg"):
+            return await h_stream_adts(r, vid)
         try:
             url, hdr = await run(ytm.stream_url, vid)
         except ValueError:
