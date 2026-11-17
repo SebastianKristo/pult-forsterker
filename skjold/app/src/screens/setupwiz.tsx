@@ -69,8 +69,9 @@ textarea.swz-in{height:120px;padding:14px 16px;resize:none;font:400 13px/1.45 ui
 .swz-mini{width:42px;height:42px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font:700 14px ${FONT};color:#fff}
 .swz-ok{width:22px;height:22px;border-radius:50%;background:#30d158;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .swz-num{display:flex;gap:14px;align-items:flex-start;text-align:left;padding:12px 2px}
-.swz-num b{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);font:600 13px ${FONT};display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.swz-num > b{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);font:600 13px ${FONT};display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .swz-num span{font:400 15px/1.45 ${FONT};color:#d1d1d6}
+.swz-num span b{font-weight:600;color:#f5f5f7}
 .swz-num code{font:500 13px ui-monospace,Menlo,monospace;color:#f5f5f7;background:rgba(255,255,255,.08);padding:1px 6px;border-radius:6px}
 .swz-spin{width:54px;height:54px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:#f5f5f7;animation:swzr .9s linear infinite;margin:30px 0 22px}
 .swz-big-ok{width:84px;height:84px;border-radius:50%;background:#30d158;display:flex;align-items:center;justify-content:center;margin:20px 0 22px;animation:swzp .5s cubic-bezier(.2,1.4,.4,1) both;box-shadow:0 14px 40px rgba(48,209,88,.35)}
