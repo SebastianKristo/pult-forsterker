@@ -85,6 +85,18 @@ class Beslutning(unittest.TestCase):
         self.assertEqual(s.decide(sn.RETRY_S + 1, False, False), "")    # uten lagrede nett står det på til det er satt opp
 
 
+class ForHaand(unittest.TestCase):
+    def test_startet_fra_touch_staar_selv_om_enheten_er_paa_nett(self):
+        nm = Nm(); now = [100.0]; s, _ = ny(nm, now)
+        self.assertTrue(s.start_manual())
+        self.assertTrue(s.manual and s.active)
+        self.assertEqual(s.decide(200, True, True), "")                 # på nett via kabel: står likevel
+        self.assertEqual(s.decide(100 + sn.MANUAL_S + 1, True, True), "stop")
+        self.assertTrue(s.status()["manual"])
+        s.stop()
+        self.assertFalse(s.manual)
+
+
 class Nettet(unittest.TestCase):
     def test_start_lager_aksesspunkt_og_status(self):
         nm = Nm(); now = [50.0]; s, endret = ny(nm, now)

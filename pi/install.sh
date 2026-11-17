@@ -242,6 +242,7 @@ sudo mkdir -p /usr/local/share/ki-amp/logos/nrk /var/lib/ki-amp/logos && sudo in
 sudo install -m 644 "$SRC/skjold_s1f.py" /usr/local/bin/skjold_s1f.py   # Skjold S1 rev F: knapper, LED, nattmodus
 sudo mkdir -p /usr/local/share/ki-amp && sudo install -m 644 "$SRC/config/s1f_pins.yaml" /usr/local/share/ki-amp/s1f_pins.yaml
 sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || echo "HAP-python ble ikke installert – Apple Hjem er av"
+python3 -c "import bluezero" 2>/dev/null || sudo pip3 install --break-system-packages -q "bluezero==0.9.1" >/dev/null 2>&1 || true   # Wi-Fi-oppsett over Bluetooth (Improv)
 python3 -c "import cryptography" 2>/dev/null || sudo apt-get install -y -q python3-cryptography >/dev/null 2>&1 || true   # Skjold Cloud (AES-GCM)
 python3 -c "import mutagen" 2>/dev/null || sudo apt-get install -y -q python3-mutagen >/dev/null 2>&1 || true   # Platesamling (FLAC-tagger)
 bash "$SRC/ki-ytm-setup.sh"   # YouTube Music innebygd (ytmusicapi + yt-dlp + deno)

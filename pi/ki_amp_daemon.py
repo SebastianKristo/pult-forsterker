@@ -2381,8 +2381,60 @@ def _setupnet_loop():
         setupnet.tick()
 
 
+_ble = {"proc": None, "state": "", "error": "", "ssid": "", "url": ""}
+
+
+def _ble_read(proc):
+    for line in proc.stdout:
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        _ble.update(state=ev.get("state", ""), error=ev.get("error", ""), ssid=ev.get("ssid", _ble["ssid"]), url=ev.get("url", ""))
+        print("Bluetooth-oppsett:", ev, flush=True)
+        changed()
+    proc.wait()
+    if _ble["state"] not in ("done", "error"):
+        _ble["state"] = "stopped"
+    changed()
+
+
+def ble_setup(on: bool):
+    """Start/stopp Wi-Fi-oppsett over Bluetooth (pi/skjold_improv.py som egen prosess, Improv Wi-Fi)."""
+    p = _ble["proc"]
+    if p and p.poll() is None:
+        p.terminate()
+    _ble.update(proc=None, state="", error="", ssid="", url="")
+    if on:
+        p = subprocess.Popen([sys.executable, "-m", "skjold_improv", (NAME or "Skjold")[:20], str(PORT)], cwd=SRC_DIR,
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        _ble.update(proc=p, state="starting")
+        threading.Thread(target=_ble_read, args=(p,), daemon=True).start()
+    changed()
+
+
+def ble_status():
+    return {k: v for k, v in _ble.items() if k != "proc"} if _ble["state"] else None
+
+
 async def h_oppsett(r):
-    """GET /oppsett → oppsettsiden (velg Wi-Fi). GET /api/oppsett → tilstanden til oppsett-nettet."""
+    """GET /oppsett → oppsettsiden (velg Wi-Fi). GET /api/oppsett → tilstanden til oppsett-nettet.
+    POST /api/oppsett {start|stop|ble|ble_stop}: oppsett-nett for mobilen (QR) eller Bluetooth, startet fra Touch/appen."""
+    if r.method == "POST":
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        loop = asyncio.get_running_loop()
+        if b.get("start"):
+            ok = await loop.run_in_executor(None, setupnet.start_manual)
+            if not ok:
+                return web.json_response({"error": "fikk ikke startet oppsett-nettet (ingen Wi-Fi-brikke?)"}, status=502)
+        elif b.get("stop"):
+            await loop.run_in_executor(None, setupnet.stop)
+        if "ble" in b:
+            await loop.run_in_executor(None, ble_setup, bool(b["ble"]))
+        return web.json_response({**(setupnet.status() or {"active": False}), "ble": ble_status()})
     setupnet.hit()
     if r.path.startswith("/api/"):
         return web.json_response(setupnet.status() or {"active": False})
@@ -6529,6 +6581,14 @@ def _sw_img_ok(v):
     return v if (v.startswith(("http://", "https://")) and len(v) <= 500) or (v.startswith("data:image/") and len(v) <= 300000) else ""
 
 
+def sw_base(url):
+    """Stasjonsadressen uten sider bak: «http://x:7700/admin», «…/stream.mp3», «…/api/mcp» → «http://x:7700».
+    Det er lett å lime inn adressen til admin-siden eller strømmen; Skjold trenger roten."""
+    u = str(url or "").strip().rstrip("/")
+    u = re.sub(r"/(admin|dashboard|login|listen|player|api/mcp|api|stream\.\w+)(/.*)?$", "", u, flags=re.I)
+    return u.rstrip("/")
+
+
 def sw_stations(c=None):
     """Alle SUB/WAVE-stasjonene: den første (url/user/password/name) og «extra». Bare de med gyldig adresse."""
     c = c or plug_cfg("subwave")
@@ -6536,7 +6596,7 @@ def sw_stations(c=None):
     raw += [x for x in (c.get("extra") or []) if isinstance(x, dict)]
     out = []
     for n, x in enumerate(raw):
-        u = str(x.get("url") or "").strip().rstrip("/")
+        u = sw_base(x.get("url"))
         if u.startswith(("http://", "https://")):
             out.append({"i": len(out), "name": str(x.get("name") or "").strip() or ("SUB/WAVE" if not out else f"SUB/WAVE {len(out) + 1}"),
                         "url": u, "user": str(x.get("user") or ""), "password": str(x.get("password") or ""),
@@ -7134,7 +7194,9 @@ def _bt_player():
 
 def transport(action):
     if state["input"] == "radio":
-        if action == "next" and subwave_skip():   # SUB/WAVE med admin-passord: «neste» hopper over låten på stasjonen
+        if action == "next" and subwave_playing():   # SUB/WAVE: «neste» hopper over låten på stasjonen, bytter ikke kanal
+            if not subwave_skip():
+                raise RuntimeError("For å hoppe over låter på SUB/WAVE trenger Skjold admin-passordet: Integrasjoner → SUB/WAVE → Admin")
             return
         if action in ("next", "previous"):
             step_preset(1 if action == "next" else -1); return
@@ -8177,6 +8239,7 @@ def feat_status():
     out = {"doorbell": doorbell.status(), "recognized": _feat["last_hit"] if _feat["last_hit"] and time.time() - _feat["last_hit"].get("t", 0) < 600 else None}
     out.update(touch.status())
     out["setup_net"] = setupnet.status()
+    out["ble_setup"] = ble_status()
     out["home"] = touch.home()      # vær, sol, kalender og neste alarm til standby-stilene (tom uten Home Assistant)
     m = _feat["vinyl"]
     if m and state.get("input") in ("aux", "aux2", "usb"):
@@ -8430,7 +8493,7 @@ touch = _tmod.Touch({"changed": lambda: changed(), "pause": lambda: transport("p
                      "volume_step": lambda d: set_volume(max(0, min(100, int(state["volume"]) + d))),
                      "playpause": lambda: transport("playpause")}, os.path.join(FEAT_DIR, "touch.json"))
 FEAT_ROUTES += _tmod.routes(touch)
-FEAT_ROUTES += [("GET", "/oppsett", h_oppsett), ("GET", "/api/oppsett", h_oppsett)]
+FEAT_ROUTES += [("GET", "/oppsett", h_oppsett), ("GET", "/api/oppsett", h_oppsett), ("POST", "/api/oppsett", h_oppsett)]
 if os.environ.get("KI_TOUCH_ENC", "").strip():
     try:
         _touch_enc = _tmod.start_encoder(touch.ctx, os.environ["KI_TOUCH_ENC"])

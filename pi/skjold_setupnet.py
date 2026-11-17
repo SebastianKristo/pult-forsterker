@@ -23,6 +23,7 @@ DNS_CONF = "/etc/NetworkManager/dnsmasq-shared.d/skjold-oppsett.conf"
 BOOT_GRACE_S = 45                            # gi vanlig Wi-Fi tid til å koble til etter oppstart
 OFFLINE_S = 180                              # har enheten lagrede nett, venter vi så lenge uten nett før oppsett-nettet
 RETRY_S = 300                                # med lagrede nett: slå av oppsett-nettet så ofte for å prøve dem igjen
+MANUAL_S = 900                               # oppsett-nett startet for hånd: slås av etter så lang tid uten bruk
 IDLE_S = 120                                 # … men ikke mens noen bruker oppsettsiden
 
 
@@ -59,6 +60,7 @@ class SetupNet:
         self.error = ""               # siste mislykkede tilkobling, vises på siden
         self.joining = ""             # nettet vi prøver å koble til akkurat nå
         self.networks: list = []      # skannet rett før aksesspunktet startet (radioen kan ikke alltid skanne etterpå)
+        self.manual = False           # startet fra Touch/appen («Koble til nytt Wi-Fi»), ikke fordi nettet var borte
         self.lock = threading.RLock()
 
     # --- nmcli
@@ -135,6 +137,7 @@ class SetupNet:
             except OSError:
                 pass
             self.active = False
+            self.manual = False
         if was:
             self.ctx["changed"]()
 
@@ -167,6 +170,14 @@ class SetupNet:
         self.ctx["changed"]()
         return ok
 
+    def start_manual(self) -> bool:
+        """Start oppsett-nettet på forespørsel (også når enheten er på nett), så telefonen kan velge et nytt Wi-Fi."""
+        ok = self.start()
+        if ok:
+            with self.lock:
+                self.manual, self.t_hit = True, self.clock()
+        return ok
+
     def connect_async(self, ssid: str, psk: str = "", hidden: bool = False):
         threading.Thread(target=self.connect, args=(ssid, psk, hidden), daemon=True).start()
 
@@ -179,6 +190,8 @@ class SetupNet:
         if self.joining:
             return ""
         if self.active:
+            if self.manual:   # startet for hånd: stå til noen kobler til, eller 15 min uten at siden er i bruk
+                return "stop" if now - max(self.t_start, self.t_hit) > MANUAL_S else ""
             if online:
                 return "stop"                                  # kabel satt i, eller koblet til på annen måte
             if profiles and now - self.t_start > RETRY_S and now - self.t_hit > IDLE_S:
@@ -211,7 +224,7 @@ class SetupNet:
         if not (self.active or self.joining or self.error):
             return None
         port = self.ctx.get("port", 8765)
-        return {"active": self.active, "ssid": self.ssid(), "password": PASSWORD, "ip": IP, "url": f"http://{IP}:{port}/oppsett",
+        return {"active": self.active, "manual": self.manual, "ssid": self.ssid(), "password": PASSWORD, "ip": IP, "url": f"http://{IP}:{port}/oppsett",
                 "qr": wifi_qr(self.ssid(), PASSWORD), "joining": self.joining, "error": self.error}
 
 
