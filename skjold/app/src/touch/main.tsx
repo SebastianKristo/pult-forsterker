@@ -50,6 +50,15 @@ const peers = signal<Peer[]>([]);
 const peerSt = signal<Record<string, Status | null>>({});
 const ctl = signal('');           // '' = denne enheten, ellers base til rommet som styres
 const local = signal<Status | null>(null);
+// Ny versjon installert (Innstillinger → Oppdatering): last skjermen på nytt, ellers kjører kiosken den gamle koden
+// til nettleseren startes på nytt. Litt pause først, så daemonen er helt oppe igjen etter omstarten.
+let forsteVersjon = '';
+effect(() => {
+  const v = local.value?.version;
+  if (!v) return;
+  if (!forsteVersjon) { forsteVersjon = v; return; }
+  if (v !== forsteVersjon) window.setTimeout(() => location.reload(), 4000);
+});
 const boot = signal({ on: true, step: 0, op: 1 });
 const now = signal(Date.now());
 let lastAct = Date.now() + 4500;
