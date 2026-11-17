@@ -134,6 +134,27 @@ SSD1306 128×32 via luma.oled (I²C 1, 0x3C, rotate=2 fordi skjermen står opp-n
 på pause) og klokke. Tittel stor (ruller når den er lang), artist under. Volum («VOL 42» + stolpe) i 1,5 s når potmeteret vris.
 Lysstyrke/dimming = OLED-kontrast. Den gamle ST7735-layouten finnes fortsatt (`--layout node`).
 
+## 1,8″ TFT i stedet for OLED (valgfritt, Pi 3/4)
+En 1,8″ ST7735S 128 × 160 (SPI, 8 pinner: GND VCC SCL SDA RES DC CS BL) kan brukes i stedet for OLED-en. Pinnene er valgt
+så de ikke kolliderer med knappene, LED-ringene eller potmeteret (`skjerm_tft` i `config/node_pins.json`). SCL/SDA på
+modulen er SPI (klokke/data), ikke I²C.
+
+| Skjerm | Pi (BCM) | Fysisk pinne |
+|---|---|---|
+| GND | GND | 20 |
+| VCC | 3V3 | 17 |
+| SCL | GPIO11 (SPI0 SCLK) | 23 |
+| SDA | GPIO10 (SPI0 MOSI) | 19 |
+| RES | GPIO6 | 31 |
+| DC | GPIO5 | 29 |
+| CS | GPIO8 (SPI0 CE0) | 24 |
+| BL | GPIO13 (aktiv høy, PWM-dimming) | 33 |
+
+Slå den på med `sudo SKJOLD_NODE_SKJERM=tft bash skjold/node/driver/installer_node.sh`. Det setter `dtparam=spi=on` og
+`dtoverlay=spi0-1cs` i config.txt (bare CE0, så GPIO7/CE1 fortsatt er knappen ▶▶), installerer luma.lcd og setter
+`SKJOLD_OS_ARGS=--layout node` i `/etc/default/skjold-os`. Valget huskes ved senere oppdateringer. Start Pi-en på nytt etterpå. Trekker bakgrunnslyset mer enn ~15 mA, sett en NPN/MOSFET mellom
+GPIO13 og BL, eller koble BL rett til 3V3 (alltid på). [bekreft] rotasjon (rotate=2) og farger (bgr) på den faktiske modulen.
+
 ## Må bekreftes på maskinvare
 1. `rotate=2` (skjermen opp-ned i lokket) – se testbildet (pil nede til venstre).
 2. Potmeterets retning (med klokka = høyere) og at 0/100 nås i endestoppene.

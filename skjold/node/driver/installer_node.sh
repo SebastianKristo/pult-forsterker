@@ -13,12 +13,18 @@ HER="$(cd "$(dirname "$0")/.." && pwd)"
 CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
 START="# >>> skjold-node >>>"; SLUTT="# <<< skjold-node <<<"
 VENV=/opt/skjold/venv
+# Skjerm: OLED (standard) eller 1,8" ST7735-TFT (SKJOLD_NODE_SKJERM=tft, eller allerede valgt i /etc/default/skjold-os)
+SKJERM="${SKJOLD_NODE_SKJERM:-}"
+if [ -z "$SKJERM" ] && grep -qE '^SKJOLD_OS_ARGS=.*--layout node( |$)' /etc/default/skjold-os 2>/dev/null; then SKJERM=tft; fi
 
 if [ -f "$CFG" ]; then
   sed -i "/^$START\$/,/^$SLUTT\$/d" "$CFG"
   # dtparam=spi/audio/i2c fjernes fra resten av fila så blokken vår gjelder alene (rev A/B hadde spi=on – må bort)
   sed -i -E '/^dtparam=(spi|audio|i2c_arm|i2c_arm_baudrate)=/d' "$CFG"
-  { echo "$START"; cat "$HER/config/config.txt.node"; echo "$SLUTT"; } >> "$CFG"
+  { echo "$START"; cat "$HER/config/config.txt.node"
+    # TFT: SPI på, men bare CE0 (GPIO8) – GPIO7/CE1 er knappen ▶▶
+    [ "$SKJERM" = tft ] && printf 'dtparam=spi=on\ndtoverlay=spi0-1cs\n'
+    echo "$SLUTT"; } >> "$CFG"
   echo "config.txt oppdatert ($CFG)"
 else
   echo "ADVARSEL: fant ikke config.txt – hopper over" >&2
@@ -34,17 +40,19 @@ modprobe i2c-dev 2>/dev/null || true
 python3 -m venv --system-site-packages "$VENV"
 # luma.oled: SSD1306 128×32 over I²C. smbus2: ADS1115 (potmeteret) leses direkte med registerskriv/-les (ingen Blinka).
 "$VENV/bin/pip" install --no-cache-dir "luma.oled==3.14.0" "smbus2>=0.4.3"
+[ "$SKJERM" = tft ] && "$VENV/bin/pip" install --no-cache-dir "luma.lcd>=2.10"
 
 install -d /etc/skjold
 install -m 0644 "$HER/config/node_pins.json" /etc/skjold/node_pins.json
 # I²C/GPIO-tilgang for tjenestebrukeren (standard i Pi OS: gruppene i2c og gpio)
 if id skjold >/dev/null 2>&1; then usermod -aG i2c,gpio skjold || true; fi
 
-# Skjold OS: OLED-layouten. Den gamle ST7735-layouten finnes fortsatt (SKJOLD_OS_ARGS=--layout node).
+# Skjold OS: OLED-layouten, eller ST7735-layouten for 1,8"-TFT-en (pinnene i node_pins.json → skjerm_tft)
+LAYOUT=node-oled32; [ "$SKJERM" = tft ] && LAYOUT=node
 if [ -f /etc/default/skjold-os ] && grep -q '^SKJOLD_OS_ARGS=' /etc/default/skjold-os; then
-  sed -i -E 's/^SKJOLD_OS_ARGS=.*/SKJOLD_OS_ARGS=--layout node-oled32/' /etc/default/skjold-os
+  sed -i -E "s/^SKJOLD_OS_ARGS=.*/SKJOLD_OS_ARGS=--layout $LAYOUT/" /etc/default/skjold-os
 else
-  printf '# Skrevet av skjold/node/driver/installer_node.sh\nSKJOLD_OS_ARGS=--layout node-oled32\n' > /etc/default/skjold-os
+  printf '# Skrevet av skjold/node/driver/installer_node.sh\nSKJOLD_OS_ARGS=--layout %s\n' "$LAYOUT" > /etc/default/skjold-os
 fi
 bash "$HER/../os/install.sh" || echo "ADVARSEL: Skjold OS ble ikke installert" >&2
 bash "$HER/early/install_early.sh" || echo "ADVARSEL: skjold-early/skjold-shutdown ble ikke installert" >&2   # oppstarts-/avslutningsskjerm + LED-jag
