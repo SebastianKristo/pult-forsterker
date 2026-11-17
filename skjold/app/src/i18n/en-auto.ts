@@ -1915,4 +1915,7 @@ export const EN_AUTO: Record<string, string> = {
   'Søk i Navidrome': 'Search Navidrome',
   'Søk etter radiokanaler': 'Search radio stations',
   'Søk etter podkaster': 'Search podcasts',
+  'Forslag på skjermspareren': 'Suggestions on the screensaver',
+  'Radiokanalen du pleier å høre på nå, og nye podkastepisoder': 'The station you usually play now, and new podcast episodes',
+  'Skjul forslaget': 'Hide suggestion',
 };
