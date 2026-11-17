@@ -11,6 +11,7 @@ if [ -f /etc/ki-amp.env ]; then   # husk oppsettet, så update.sh og tjenesten (
   sed -i '/^SKJOLD_UI_LAYOUT=/d' /etc/ki-amp.env && echo "SKJOLD_UI_LAYOUT=$LAYOUT" >> /etc/ki-amp.env
 fi
 apt-get install -y -qq --no-install-recommends cage seatd fonts-liberation >/dev/null
+apt-get install -y -qq --no-install-recommends xwayland >/dev/null 2>&1 || true   # nyere cage avslutter uten Xwayland
 # sway: kiosken kan slå HDMI-panelet av (DPMS) – cage avslutter når skjermen slås av. cage står igjen som reserve (SKJOLD_UI_WM=cage).
 apt-get install -y -qq --no-install-recommends sway >/dev/null 2>&1 || echo "ADVARSEL: sway ble ikke installert – bruker cage (skjermen kan ikke slås av)" >&2
 # S1-panelet får strøm fra USB: uhubctl slår portene av når skjermen skal være helt mørk (bare når ingen andre USB-enheter er koblet til)

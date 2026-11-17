@@ -10,6 +10,7 @@ URL="${KI_TOUCH_URL:-http://127.0.0.1:8765/touch.html}"
 
 apt-get update -qq
 apt-get install -y -qq cage seatd libinput-tools fonts-ibm-plex >/dev/null 2>&1 || apt-get install -y -qq cage seatd libinput-tools
+apt-get install -y -qq xwayland >/dev/null 2>&1 || true   # nyere cage avslutter uten Xwayland
 apt-get install -y -qq chromium >/dev/null 2>&1 || apt-get install -y -qq chromium-browser
 CHR="$(command -v chromium || command -v chromium-browser)"
 usermod -aG video,input,render "$USR" || true
