@@ -356,5 +356,64 @@
     "bla": "#2f6fd0",
     "gronn": "#3a9a4c",
     "oransje": "#e8742a"
+  },
+  "skjerm_tft": {
+    "_kommentar": "Valgfri 1,8\" ST7735S 128×160 TFT (SPI) i stedet for OLED-en. Brukes med Skjold OS --layout node. Pinnene er valgt så de ikke kolliderer med knapper/LED-ringer/potmeter i rev C. Krever i config.txt: dtparam=spi=on og dtoverlay=spi0-1cs (bare CE0 – GPIO7/CE1 er knappen ▶▶). [bekreft] på maskinvare.",
+    "modul": "1,8\" ST7735S 128×160 RGB TFT, SPI, 8 pinner (GND VCC SCL SDA RES DC CS BL)",
+    "width": 160,
+    "height": 128,
+    "rotate": 2,
+    "bgr": false,
+    "h_offset": 0,
+    "v_offset": 0,
+    "spi_port": 0,
+    "spi_device": 0,
+    "bus_speed_hz": 16000000,
+    "pinner": {
+      "GND": {
+        "gpio": null,
+        "pin": 20,
+        "nett": "GND"
+      },
+      "VCC": {
+        "gpio": null,
+        "pin": 17,
+        "nett": "3V3"
+      },
+      "SCL": {
+        "gpio": 11,
+        "pin": 23,
+        "nett": "SPI0 SCLK"
+      },
+      "SDA": {
+        "gpio": 10,
+        "pin": 19,
+        "nett": "SPI0 MOSI"
+      },
+      "RESET": {
+        "gpio": 6,
+        "pin": 31
+      },
+      "A0": {
+        "gpio": 5,
+        "pin": 29,
+        "nett": "DC"
+      },
+      "CS": {
+        "gpio": 8,
+        "pin": 24,
+        "nett": "SPI0 CE0"
+      },
+      "BL": {
+        "gpio": 13,
+        "pin": 33
+      }
+    },
+    "bakgrunnslys": {
+      "gpio": 13,
+      "pwm_hz": 500,
+      "aktiv_hoy": true,
+      "_merknad": "BL på modulen er aktiv høy. De fleste slike moduler har egen transistor/motstand for lyset; trekker den mer enn ~15 mA rett fra GPIO-en, sett en NPN/MOSFET imellom eller koble BL til 3V3 (alltid på)."
+    }
   }
 }

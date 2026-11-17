@@ -31,7 +31,9 @@ def main(argv=None):
 
     sk, src = config.screen_cfg()
     if a.layout == "node-oled32" and sk.get("kontroller") != "ssd1306": sk = dict(config.DEFAULT_OLED)
-    if a.layout == "node" and sk.get("kontroller") == "ssd1306": sk = dict(config.DEFAULT_SCREEN)   # gammel TFT-Node, nye pinner
+    if a.layout == "node" and sk.get("kontroller") == "ssd1306":   # TFT på en rev C-Node: egne pinner (skjerm_tft), ellers rev A/B
+        tft = (config.load_pins()[0] or {}).get("skjerm_tft")
+        sk = {**config.DEFAULT_SCREEN, **tft} if isinstance(tft, dict) else dict(config.DEFAULT_SCREEN)
     if a.demo:
         from .demo import DemoClient
         client = DemoClient()
