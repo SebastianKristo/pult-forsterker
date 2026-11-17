@@ -104,3 +104,11 @@ ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 
 .mini.danger { color: #ff8a7a; }
 .mini.danger:hover { border-color: #e05a4a; }
 .badge.ok { background: rgba(62,207,110,.14); color: #3ecf6e; border-color: transparent; }
+
+/* ESP-tilbehør: åpner nettleserflasheren for Røst og kassettspilleren (Web Serial) i eget vindu */
+.esp { display: flex; flex-direction: column; gap: 6px; }
+.esp-t { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--mute2); }
+.esp-b { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; text-align: left; font: inherit; }
+.esp-b:hover { border-color: #d9a441; }
+.esp-b b { font-size: 13px; font-weight: 600; }
+.esp-b span { font-size: 11px; color: var(--mute2); }

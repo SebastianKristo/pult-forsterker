@@ -8869,6 +8869,24 @@ def _nfc_hent_fra_andre():
 
 threading.Thread(target=lambda: _safe(_nfc_hent_fra_andre), daemon=True).start()
 
+# Kassettspillere (ESPHome) uten fungerende Skjold-adresse får adressen til denne Skjold-en (pi/skjold_esphome.py):
+# ingen IP å taste inn, og spilleren finner tilbake når en Skjold får ny adresse. KI_AMP_KASSETT_AUTO=0 slår av.
+import skjold_esphome as _espmod   # noqa: E402
+
+
+def _kassett_auto():
+    time.sleep(30)
+    while True:
+        try:
+            _espmod.pass_paa(_local_ip(), logg=lambda m: print("Skjold Kassett:", m, flush=True))
+        except Exception as e:
+            print("Skjold Kassett: automatisk adresse feilet:", str(e)[:120], flush=True)
+        time.sleep(60)
+
+
+if os.environ.get("KI_AMP_KASSETT_AUTO", "1") != "0" and (HW or os.path.exists("/etc/ki-amp.env")):
+    threading.Thread(target=_kassett_auto, daemon=True).start()
+
 
 async def h_nfc(r):
     """POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}

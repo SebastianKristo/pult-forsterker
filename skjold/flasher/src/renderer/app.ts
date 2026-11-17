@@ -19,6 +19,7 @@ interface SkjoldApi {
   hostname(name: string): Promise<string>;
   open(url: string): Promise<void>;
   version(): Promise<string>;
+  espFlash(hva: string): Promise<void>;
   platform: string;
   onProgress(cb: (p: Progress) => void): () => void;
 }
@@ -387,6 +388,8 @@ function bind() {
 
 async function init() {
   document.body.classList.add(skjold.platform);
+  $('esp-kassett').onclick = () => void skjold.espFlash('kassett');
+  $('esp-rost').onclick = () => void skjold.espFlash('rost');
   skjold.version().then(v => { $('ver').textContent = 'FLASHER ' + v.replace(/\.0$/, ''); }).catch(() => undefined);
   bind();
   render();

@@ -386,7 +386,7 @@ export function SpillerStatus({ st }: { st: NfcStatus | null }) {
     </div>); }
   return (
     <div style={box + ';display:flex;align-items:center;gap:10px;padding:12px 16px'}>
-      {dot('#8b8b86')}<span style="font-size:13px;color:#9a9a96">Ingen kassettspiller har kontakt med denne Skjold-en. Sjekk at den er på og at <code>skjold_host</code> i ESPHome er IP-adressen til denne enheten.</span>
+      {dot('#8b8b86')}<span style="font-size:13px;color:#9a9a96">Ingen kassettspiller har kontakt ennå. Er den ny: installer fastvaren fra <a href="https://skjold-lab.com/flasher/kassett/" target="_blank" rel="noopener" style={'color:' + A}>skjold-lab.com/flasher/kassett</a> og velg Wi-Fi – Skjold finner den selv i løpet av et minutt.</span>
     </div>);
 }
 
