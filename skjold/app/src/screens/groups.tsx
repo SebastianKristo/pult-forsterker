@@ -22,6 +22,16 @@ const MODES: [('sync' | 'surround'), string, string, string][] = [
   ['sync', 'Synkron', 'Samme musikk i flere rom, i takt. Hvert rom har eget volum.', 'M4 7h6v10H4zM14 7h6v10h-6zM10 12h4'],
   ['surround', 'Surround', 'Flere Skjold i samme rom deler ett lydbilde, med plass, avstand og nivå per høyttaler.', 'M12 13a2 2 0 1 0 0-4a2 2 0 1 0 0 4M4 5h3v4H4zM17 5h3v4h-3zM4 16h3v4H4zM17 16h3v4h-3z']];
 
+/** Overskrift for et steg på siden: nummer, tittel og én linje som sier hva steget gjør. */
+function Hd({ n, t, sub, right }: { n: number; t: string; sub: string; right?: string }) {
+  return (
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <span style="width:26px;height:26px;border-radius:50%;background:#1f1a10;border:1px solid #3a2e17;color:#f0c46a;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">{n}</span>
+      <span style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0"><span style="font-size:17px;font-weight:600;letter-spacing:-.01em">{t}</span><span style="font-size:13px;color:#8b8b86;line-height:1.45;text-wrap:pretty">{sub}</span></span>
+      {right && <span style="font-size:12px;color:#c9b48a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40%;margin-top:4px">{right}</span>}
+    </div>);
+}
+
 function PmBtn({ on, children }: { on: () => void; children: string }) {
   return <button onClick={on} style="width:30px;height:30px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;cursor:pointer;font-size:15px;padding:0">{children}</button>;
 }
@@ -50,9 +60,9 @@ export function GroupsPage() {
   const card = 'display:flex;flex-direction:column;border-radius:14px;border:1px solid #242426;background:#141415';
   const segWrap = 'gap:4px;padding:3px;border-radius:10px;background:#0b0b0c';
   return (
-    <div style="display:flex;flex-direction:column;gap:18px" data-testid="grp-page">
-      <section style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:15px;font-weight:600;white-space:nowrap">Rom i gruppen</span><span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 0;text-align:right">{has ? mem.map((r) => r.name).join(' + ') : act.name}</span></div>
+    <div style="display:flex;flex-direction:column;gap:34px;max-width:980px;width:100%" data-testid="grp-page">
+      <section style="display:flex;flex-direction:column;gap:14px">
+        <Hd n={1} t="Velg rommene" sub="Trykk på Skjold-enhetene som skal spille sammen med denne. Lagre gruppen for å bruke den igjen." right={has ? mem.map((r) => r.name).join(' + ') : 'Bare ' + act.name} />
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           {presets.map((p) => { const c = seg(p.on); return <button key={p.n} onClick={p.pick} style={`height:34px;padding:0 14px;border-radius:999px;border:1px solid ${p.on ? A : '#2e2e30'};background:${c.bg};color:${c.fg};font-size:12.5px;cursor:pointer;white-space:nowrap`}>{p.n}</button>; })}
           {canSave && <button onClick={() => savePreset(mem.map((r) => r.name).join(' + '), mem.map((r) => r.key))} style="height:34px;padding:0 14px;border-radius:999px;border:1px dashed #5a4420;background:transparent;color:#f0c46a;font-size:12.5px;cursor:pointer;white-space:nowrap">+ Lagre gruppen</button>}
@@ -70,15 +80,17 @@ export function GroupsPage() {
           })}
         </div>
       </section>
-      <section style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+      <section style="display:flex;flex-direction:column;gap:14px">
+      <Hd n={2} t="Slik spiller de" sub={has ? 'Synkron for flere rom, surround når flere Skjold står i samme rom.' : 'Velg minst ett rom til i steg 1 først.'} />
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
         {MODES.map(([m, n, d, ic]) => { const c = sel(has && mode === m); return (
           <button key={m} onClick={() => { if (has) setMode(m); }} style={`display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border-radius:14px;border:1px solid ${c.bd};background:${c.bg};cursor:pointer;text-align:left;opacity:${has ? 1 : 0.45}`}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={c.fg} stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d={ic} /></svg>
             <span style={`font-size:15px;font-weight:600;color:${c.fg}`}>{n}</span>
             <span style="font-size:12px;color:#8b8b86;line-height:1.45;text-wrap:pretty">{d}</span>
           </button>); })}
+      </div>
       </section>
-      {!has && <span style="font-size:12.5px;color:#8b8b86;line-height:1.5">Velg minst ett rom til for å spille synkront eller sette opp surround.</span>}
       {has && mode === 'sync' && (
         <section style="display:flex;flex-direction:column;gap:12px">
           <div style={card}>
@@ -162,11 +174,20 @@ export function GroupsPage() {
           )}
         </section>
       )}
-      <span style="font-size:11px;color:#c9b48a;line-height:1.45">Gruppen lagres i appen. Synk-motoren under spiller i takt uten Lyrion.</span>
-      <SyncSubCard />
-      <BassCard />
-      <PlacementCard />
-      <RostCard />
+      <section style="display:flex;flex-direction:column;gap:14px">
+        <Hd n={3} t="Trådløse høyttalere" sub="Skjold Røst-høyttalere i huset. De spiller i takt med rommet du kobler dem til." />
+        <RostCard />
+      </section>
+      <details class="grp-adv">
+        <summary><span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:600">Avansert: synk-motor, sub og høyttalerplassering</span><span style="font-size:12.5px;color:#8b8b86">For deg som vil finjustere. Standardvalgene passer de fleste hjem.</span></span><span class="chev">›</span></summary>
+        <div style="display:flex;flex-direction:column;gap:12px;padding-top:12px">
+          <SyncSubCard />
+          <BassCard />
+          <PlacementCard />
+          <span style="font-size:11.5px;color:#8b8b86;line-height:1.45">Gruppen lagres i appen. Synk-motoren spiller i takt uten Lyrion.</span>
+        </div>
+      </details>
+      <style>{`.grp-adv{border:1px solid #242426;border-radius:16px;background:#121213;padding:16px 18px}.grp-adv summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.grp-adv summary::-webkit-details-marker{display:none}.grp-adv .chev{color:#8b8b86;font-size:20px;transition:transform .2s}.grp-adv[open] .chev{transform:rotate(90deg)}`}</style>
     </div>
   );
 }
