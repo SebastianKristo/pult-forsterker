@@ -57,7 +57,7 @@ UHOME="$(getent passwd "$USR" | cut -d: -f6)"
 cat > /etc/systemd/system/skjold-touch.service <<S
 [Unit]
 Description=Skjold Touch skjerm (cage kiosk)
-After=systemd-user-sessions.service seatd.service ki-amp.service
+After=systemd-user-sessions.service seatd.service ki-amp.service plymouth-quit.service plymouth-quit-wait.service
 Wants=ki-amp.service
 Conflicts=getty@tty1.service
 
@@ -66,6 +66,8 @@ User=$USR
 PAMName=login
 TTYPath=/dev/tty1
 StandardInput=tty
+StandardOutput=journal
+StandardError=journal
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u "$USR")
 Environment=WLR_LIBINPUT_NO_DEVICES=1
 Environment=XCURSOR_THEME=skjold-blank
@@ -73,6 +75,7 @@ Environment=XCURSOR_SIZE=1
 Environment=WLR_NO_HARDWARE_CURSORS=1
 RuntimeDirectory=skjold-touch
 ExecStartPre=+/bin/sh -c 'mkdir -p /run/user/\$(id -u $USR) && chown $USR /run/user/\$(id -u $USR) && chmod 700 /run/user/\$(id -u $USR)'
+ExecStartPre=-+/bin/sh -c 'command -v plymouth >/dev/null && plymouth quit --retain-splash || true'
 # -d: ingen dekorasjoner, -s: tillat VT-bytte
 ExecStart=/usr/bin/cage -d -s -- /usr/local/bin/skjold-touch-ui
 Restart=always
