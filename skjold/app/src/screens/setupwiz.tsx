@@ -1,6 +1,7 @@
 // Oppsett av musikktjenester, steg for steg (som oppsettet av en ny telefon): velg tjeneste → ett spørsmål per skjerm →
 // Skjold tester tilkoblingen → ferdig. Åpnes med openSetup('ytm' | 'nd' | 'ma' | 'sp' | 'sw') eller openSetup() for oversikten.
 // Innloggingene lagres på Skjold-enheten (/api/settings) og deles med de andre Skjold-enhetene på nettet.
+import { t } from '../i18n';
 import { signal } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
@@ -37,7 +38,7 @@ function isOn(id: SvcId): boolean {
 // ---------- utseende ----------
 const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Segoe UI',system-ui,sans-serif";
 const css = `
-.swz-bg{position:fixed;inset:0;z-index:60;background:rgba(6,6,8,.55);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));animation:swzf .25s ease both}
+.swz-bg{position:fixed;inset:0;z-index:60;overscroll-behavior:contain;background:rgba(6,6,8,.55);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));animation:swzf .25s ease both}
 .swz{position:relative;width:min(560px,100%);max-height:min(760px,100%);display:flex;flex-direction:column;border-radius:30px;background:linear-gradient(180deg,#1c1c1f,#141416);border:1px solid rgba(255,255,255,.08);box-shadow:0 40px 120px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);color:#f5f5f7;font-family:${FONT};overflow:hidden;animation:swzu .38s cubic-bezier(.2,.9,.25,1) both}
 .swz-top{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 0;min-height:44px}
 .swz-x{width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:#d1d1d6;display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -46,7 +47,7 @@ const css = `
 .swz-dots{display:flex;gap:6px}
 .swz-dots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.18);transition:all .3s}
 .swz-dots i.on{width:18px;background:#f5f5f7}
-.swz-body{flex:1;min-height:0;overflow-y:auto;padding:8px 36px 8px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.swz-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:8px 36px 8px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .swz-step{display:flex;flex-direction:column;align-items:center;width:100%;animation:swzs .35s cubic-bezier(.2,.9,.25,1) both}
 .swz-ic{width:84px;height:84px;border-radius:22px;display:flex;align-items:center;justify-content:center;font:700 28px ${FONT};letter-spacing:-.02em;color:#fff;box-shadow:0 14px 34px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.25);margin:10px 0 22px}
 .swz h2{margin:0;font:600 28px/1.15 ${FONT};letter-spacing:-.02em;text-wrap:balance}
@@ -113,7 +114,7 @@ function useFlow(svc: SvcId, done: () => void): Step[] {
     body: test === 'busy' || test === ''
       ? <><div class="swz-spin" /><h2>Kobler til …</h2><p class="sub">Skjold prøver innloggingen.</p></>
       : test === 'ok'
-        ? <><div class="swz-big-ok"><Check size={40} /></div><h2>Ferdig</h2><p class="sub">{testMsg || S.name + ' er klar.'} Innloggingen deles med de andre Skjold-enhetene på nettet.</p></>
+        ? <><div class="swz-big-ok"><Check size={40} /></div><h2>Ferdig</h2><p class="sub">{testMsg || t('{navn} er klar.', { navn: S.name })} Innloggingen deles med de andre Skjold-enhetene på nettet.</p></>
         : <><Icon s={S} big /><h2>Fikk ikke kontakt</h2><p class="sub">{test}</p></>,
     next: test === 'ok' ? 'Ferdig' : test === 'busy' || test === '' ? 'Kobler til …' : 'Prøv igjen',
     can: test !== 'busy' && test !== '',
@@ -245,7 +246,7 @@ function Overview({ pick, onClose }: { pick: (s: SvcId) => void; onClose: () => 
       <div class="swz-body"><div class="swz-step">
         <div class="swz-ic" style="background:linear-gradient(145deg,#f0c46a,#b9832a);color:#0b0b0c"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg></div>
         <h2>Musikktjenester</h2>
-        <p class="sub">{n ? n + ' av ' + SVCS.length + ' er satt opp. Velg en for å endre den.' : 'Velg tjenestene du bruker. Det tar et minutt per tjeneste.'}</p>
+        <p class="sub">{n ? t('{n} av {av} er satt opp. Velg en for å endre den.', { n, av: SVCS.length }) : 'Velg tjenestene du bruker. Det tar et minutt per tjeneste.'}</p>
         <div class="swz-list">
           {SVCS.map((s) => (
             <button key={s.id} class="swz-row" onClick={() => pick(s.id)}>
@@ -267,7 +268,11 @@ export function SetupWizard() {
   useEffect(() => {
     if (v === null) return;
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setupOpen.value = null; };
-    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
+    // Siden bak skal stå stille mens oppsettet er åpent (hjul og sveip ruller bare innholdet i vinduet)
+    const h = document.documentElement, b = document.body, ho = h.style.overflow, bo = b.style.overflow;
+    h.style.overflow = 'hidden'; b.style.overflow = 'hidden';
+    window.addEventListener('keydown', k);
+    return () => { window.removeEventListener('keydown', k); h.style.overflow = ho; b.style.overflow = bo; };
   }, [v === null]);
   if (v === null) return null;
   const close = () => { setupOpen.value = null; };
