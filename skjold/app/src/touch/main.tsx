@@ -161,7 +161,7 @@ function backlight(): void {
   const n = nightNow(), full = Math.max(20, Math.min(100, settings.value.tBright ?? 100));
   // nattmodus: skjermen av i standby (et trykk vekker den, dempet); ellers som valgt under «I standby»
   const ti = settings.value.tIdle ?? 0;
-  const lvl = idle.value ? (ti === 2 || n ? 0 : Math.min(ti === 3 ? 60 : 30, full)) : n ? Math.min(25, full) : full;   // fjord-videoen trenger litt mer lys
+  const lvl = idle.value ? (ti === 2 || n ? 0 : Math.min(ti >= 3 ? 60 : 30, full)) : n ? Math.min(25, full) : full;   // fjord-videoen trenger litt mer lys
   if (lvl !== blLast) { blLast = lvl; void postAt('', '/api/touch/backlight', { level: lvl }).catch(() => undefined); }
 }
 
@@ -1197,6 +1197,22 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
           </div>
         </div>
       </>}
+      {m === 4 && !night && <>
+        <video autoplay muted loop playsInline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
+          <source src="./media/fjord.mp4" type="video/mp4" /><source src="./media/fjord.webm" type="video/webm" />
+        </video>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,.72) 100%)" />
+        <div style="position:absolute;left:36px;right:36px;bottom:34px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+          <span style="display:flex;flex-direction:column;gap:4px;text-align:left">
+            <span style="font-size:64px;font-weight:300;letter-spacing:-.02em;color:#f2f2ee;line-height:1;text-shadow:0 2px 18px rgba(0,0,0,.5)">{clock}</span>
+            <span style="font-size:15px;color:#d8d8d2">{dateTxt}</span>
+          </span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0">
+            {playing && <span style="font-size:13px;color:#f2f2ee;max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{[s?.artist, s?.title || s?.station].filter(Boolean).join(' – ')}</span>}
+            {nx && <span style={`font-family:${MONO};font-size:11px;letter-spacing:.12em;color:#f0c46a`}>ALARM {nx.time}</span>}
+          </span>
+        </div>
+      </>}
       {m === 3 && !night && (
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:22px">
           <video autoplay muted loop playsInline style="width:100%;aspect-ratio:3/1;object-fit:cover;display:block">
@@ -1212,7 +1228,7 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
           </div>
         </div>
       )}
-      {(m === 0 || (m === 1 && night) || (m === 3 && night)) && (
+      {(m === 0 || (m === 1 && night) || (m >= 3 && night)) && (
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
           <span style={`font-size:132px;font-weight:300;letter-spacing:-.03em;color:${night ? '#7a2a20' : '#f2f2ee'};line-height:1`}>{clock}</span>
           <span style={`font-size:17px;color:${night ? '#5a211a' : '#8b8b86'};white-space:nowrap`}>{dateTxt}</span>
@@ -1220,7 +1236,7 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
           {playing && !night && <span style="margin-top:26px;display:flex;align-items:center;gap:10px;font-size:13px;color:#8b8b86"><div style={`width:24px;height:24px;border-radius:5px;background:${bg}`} />{(s?.title || s?.station) + (s?.artist ? ' · ' + s.artist : '')}</span>}
         </div>
       )}
-      {m !== 2 && !night && <span style={`position:absolute;left:0;right:0;bottom:16px;text-align:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#3a3a37`}>TRYKK FOR Å VEKKE</span>}
+      {m !== 2 && m !== 4 && !night && <span style={`position:absolute;left:0;right:0;bottom:16px;text-align:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#3a3a37`}>TRYKK FOR Å VEKKE</span>}
     </button>
   );
 }
