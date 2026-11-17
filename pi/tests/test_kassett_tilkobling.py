@@ -42,3 +42,47 @@ def test_airplay_volum_speiles_uten_sloyfe():
         assert -30 <= av <= 0
         assert round(100 * (av + 30) / 30) == v
     assert d.airplay_db(0) == -144.0
+
+
+def test_kassetter_er_felles_for_systemet(tmp_path):
+    """Koble ny kassett fra Touch mens kassettspilleren er koblet til S1: S1 lærer brikken, sender kassetten til Touch,
+    og Touch avslutter ventingen (som om spilleren var koblet dit)."""
+    import asyncio
+    import json as _j
+    from aiohttp import web
+    from aiohttp.test_utils import TestClient, TestServer
+    import skjold_nfc as N
+
+    sendt = []
+
+    def fanget(metode, sti, body=None):
+        sendt.append((metode, sti, body))
+    gammel_til, gammel_nfc = d._nfc_til_andre, d.nfc
+    d._nfc_til_andre = fanget
+    d.nfc = N.NfcStore(str(tmp_path / "kort.json"))
+
+    async def main():
+        app = web.Application()
+        app.router.add_route("*", "/api/nfc/{act}", d.h_nfc)
+        app.router.add_route("DELETE", "/api/nfc/{act}/{uid}", d.h_nfc)
+        async with TestClient(TestServer(app)) as c:
+            kort = {"handling": "play_url", "verdi": "http://x/stream", "navn": "P3"}
+            # Touch: start læring – sendes videre til de andre enhetene
+            await c.post("/api/nfc/learn", json={"timeout": 60, "kort": kort})
+            assert d.nfc.learning() and sendt[-1][1] == "/api/nfc/learn" and sendt[-1][2]["kort"]["navn"] == "P3"
+            # S1 har lært brikken og sender kassetten hit med _laert
+            r = await c.post("/api/nfc/cards", json={**kort, "uid": "04-A9-F2", "_laert": True}, headers={"X-Skjold-Peer": "s1"})
+            assert r.status == 200
+            assert not d.nfc.learning() and d.nfc.last["known"] and d.nfc.last["uid"] == d.nfc.get("04-A9-F2")["uid"]
+            n = len(sendt)
+            # endring fra en annen enhet sendes ikke videre (ingen sløyfe) …
+            await c.post("/api/nfc/cards", json={**kort, "uid": "04-A9-F2", "navn": "P3 ny"}, headers={"X-Skjold-Peer": "s1"})
+            assert len(sendt) == n
+            # … men endringer gjort her gjør det, også sletting
+            await c.post("/api/nfc/cards", json={**kort, "uid": "04-A9-F2", "navn": "P3 igjen"})
+            await c.delete("/api/nfc/cards/04-A9-F2")
+            assert [m for m, _s, _b in sendt[n:]] == ["POST", "DELETE"]
+    try:
+        asyncio.run(main())
+    finally:
+        d._nfc_til_andre, d.nfc = gammel_til, gammel_nfc

@@ -1,7 +1,6 @@
 /** Skjold Kassett: NFC-kassetter koblet til radio, NRK, Navidrome, Music Assistant eller rutiner. */
 import { useEffect, useState } from 'preact/hooks';
-import { everyVisible, setSetting, settings } from '../lib/store';
-import { switchRoom } from './phone';
+import { deviceName, everyVisible, setSetting, settings } from '../lib/store';
 import { api, getBase, type NfcCard, type NfcDeling, type NfcHandling, type NfcOppsett, type NfcStats, type NfcStatus, type NfcVentende, type Routine, type Spoler } from '../lib/api';
 import { QR } from './platform';
 import { HyllePanel } from './hylle';
@@ -347,6 +346,29 @@ function AlbumPanel() {
 
 const siden = (t: number) => { const d = Math.max(0, Math.round(Date.now() / 1000 - t)); return d < 60 ? d + ' s siden' : d < 3600 ? Math.round(d / 60) + ' min siden' : Math.round(d / 3600) + ' t siden'; };
 
+/** «Spilles på»: hvilken Skjold kassettene spilles på. base = '' er denne enheten, ellers enheten spilleren sender til
+ *  (oppsettet ligger der). Verdien «» betyr enheten selv. */
+function SpillesPaa({ base, mottaker }: { base: string; mottaker: string }) {
+  const [o, setO] = useState<NfcOppsett | null>(null), [msg, setMsg] = useState('');
+  const hent = (): Promise<NfcOppsett> => (base ? fetch(base + '/api/nfc/oppsett').then((r) => r.json() as Promise<NfcOppsett>) : api.nfcOppsett());
+  const lagre = (paret: string): Promise<NfcOppsett> => (base
+    ? fetch(base + '/api/nfc/oppsett', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paret }) }).then((r) => r.json() as Promise<NfcOppsett>)
+    : api.nfcSettOppsett({ paret }));
+  useEffect(() => { setO(null); hent().then(setO).catch((e) => setMsg(String((e as Error).message || e))); }, [base]);
+  if (!o) return msg ? <small style="color:#e06c5a">{msg}</small> : null;
+  const valg: [string, string][] = [['', mottaker], ...(o.enheter ?? []).filter((x) => !x.her).map((x) => [x.navn, x.navn] as [string, string])];
+  if (o.paret && !valg.some(([v]) => v === o.paret)) valg.push([o.paret, o.paret + ' (ikke funnet nå)']);
+  return (
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:13px;color:#c9c9c4">Spilles på</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        {valg.map(([v, n]) => <button key={v || 'her'} style={btn(o.paret === v)} onClick={() => void lagre(v).then((r) => { setO({ ...o, ...r }); setMsg(''); }).catch((e) => setMsg(String((e as Error).message || e)))}>{n}</button>)}
+      </div>
+      {msg && <small style="color:#e06c5a">{msg}</small>}
+    </div>
+  );
+}
+
 /** Hvilken Skjold kassettspilleren har kontakt med: her (grønn), en annen enhet (bytt dit), eller ingen. */
 export function SpillerStatus({ st }: { st: NfcStatus | null }) {
   if (!st) return null;
@@ -355,11 +377,12 @@ export function SpillerStatus({ st }: { st: NfcStatus | null }) {
   if (her.length) return (
     <div style={box + ';display:flex;flex-direction:column;gap:6px;padding:12px 16px'}>
       {her.map((x) => <div key={x.ip} style="display:flex;align-items:center;gap:8px;font-size:13px">{dot('#6fcf7f')}<b>{x.navn || 'Skjold Kassett'}</b><span style="color:#9a9a96">tilkoblet · {x.ip} · hørt {siden(x.sist)}{x.sist_uid ? ' · siste brikke ' + x.sist_uid + ' (' + siden(x.sist_brikke) + ')' : ''}</span></div>)}
+      <SpillesPaa base="" mottaker={'Denne (' + (deviceName.value || 'Skjold') + ')'} />
     </div>);
-  if (andre.length) { const a = andre[0]!; return (
-    <div style={box + ';display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border-color:' + A}>
-      {dot(A)}<span style="font-size:13px;flex:1;min-width:200px">Kassettspilleren sender til <b>{a.enhet}</b>, ikke til denne enheten. Kassetter kobles og spilles der.</span>
-      <button style={btn(true)} onClick={() => void switchRoom(a.base)}>Bytt til {a.enhet}</button>
+  if (andre.length) { const a = andre[0]!, x = a.spillere[0]; return (
+    <div style={box + ';display:flex;flex-direction:column;gap:8px;padding:12px 16px'}>
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px">{dot('#6fcf7f')}<b>{x?.navn || 'Skjold Kassett'}</b><span style="color:#9a9a96">tilkoblet via {a.enhet}{x ? ' · hørt ' + siden(x.sist) : ''}{x?.sist_uid ? ' · siste brikke ' + x.sist_uid : ''}</span></div>
+      <SpillesPaa base={a.base} mottaker={a.enhet} />
     </div>); }
   return (
     <div style={box + ';display:flex;align-items:center;gap:10px;padding:12px 16px'}>
