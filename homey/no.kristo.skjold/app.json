@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.21.0",
+  "version": "2.22.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -745,6 +745,71 @@
           "INTERNAL"
         ]
       }
+    },
+    {
+      "id": "stav",
+      "name": {
+        "en": "Skjold Stav",
+        "no": "Skjold Stav"
+      },
+      "class": "remote",
+      "capabilities": [
+        "measure_battery",
+        "alarm_battery",
+        "ki_stav_lader",
+        "ki_stav_tast"
+      ],
+      "capabilitiesOptions": {},
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "kipultamp",
+      "images": {
+        "small": "/drivers/stav/assets/images/small.png",
+        "large": "/drivers/stav/assets/images/large.png",
+        "xlarge": "/drivers/stav/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "host",
+          "type": "text",
+          "label": {
+            "en": "Skjold IP address",
+            "no": "IP-adressen til Skjold"
+          },
+          "value": ""
+        },
+        {
+          "id": "port",
+          "type": "number",
+          "label": {
+            "en": "Port",
+            "no": "Port"
+          },
+          "value": 8765
+        }
+      ],
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      }
     }
   ],
   "discovery": {
@@ -1412,6 +1477,28 @@
       "insights": true,
       "uiComponent": "sensor",
       "icon": "/assets/icon.svg"
+    },
+    "ki_stav_lader": {
+      "type": "boolean",
+      "title": {
+        "en": "Charging",
+        "no": "Lader"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/drivers/stav/assets/icon.svg"
+    },
+    "ki_stav_tast": {
+      "type": "string",
+      "title": {
+        "en": "Last key",
+        "no": "Siste tast"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/drivers/stav/assets/icon.svg"
     }
   },
   "flow": {
@@ -1670,6 +1757,285 @@
               "en": "Device",
               "no": "Enhet"
             }
+          }
+        ]
+      },
+      {
+        "id": "ki_stav_tast",
+        "title": {
+          "en": "A key was pressed",
+          "no": "En tast ble trykket"
+        },
+        "hint": {
+          "en": "Any key on Skjold Stav. «type» is kort (short), lang (long) or dobbel (double).",
+          "no": "Hvilken som helst tast på Skjold Stav. «type» er kort, lang eller dobbel."
+        },
+        "tokens": [
+          {
+            "name": "knapp",
+            "type": "string",
+            "title": {
+              "en": "Key",
+              "no": "Tast"
+            },
+            "example": "ok"
+          },
+          {
+            "name": "type",
+            "type": "string",
+            "title": {
+              "en": "Press",
+              "no": "Trykk"
+            },
+            "example": "kort"
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stav",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_stav_tast_knapp",
+        "title": {
+          "en": "Key was pressed",
+          "no": "Tast ble trykket"
+        },
+        "titleFormatted": {
+          "en": "[[knapp]] was pressed ([[type]])",
+          "no": "[[knapp]] ble trykket ([[type]])"
+        },
+        "tokens": [
+          {
+            "name": "knapp",
+            "type": "string",
+            "title": {
+              "en": "Key",
+              "no": "Tast"
+            },
+            "example": "ok"
+          },
+          {
+            "name": "type",
+            "type": "string",
+            "title": {
+              "en": "Press",
+              "no": "Trykk"
+            },
+            "example": "kort"
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stav",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "knapp",
+            "title": {
+              "en": "Key",
+              "no": "Tast"
+            },
+            "values": [
+              {
+                "id": "alle",
+                "title": {
+                  "en": "Any key",
+                  "no": "Hvilken som helst"
+                }
+              },
+              {
+                "id": "ok",
+                "title": {
+                  "en": "OK",
+                  "no": "OK"
+                }
+              },
+              {
+                "id": "opp",
+                "title": {
+                  "en": "Up",
+                  "no": "Opp"
+                }
+              },
+              {
+                "id": "ned",
+                "title": {
+                  "en": "Down",
+                  "no": "Ned"
+                }
+              },
+              {
+                "id": "venstre",
+                "title": {
+                  "en": "Left",
+                  "no": "Venstre"
+                }
+              },
+              {
+                "id": "hoyre",
+                "title": {
+                  "en": "Right",
+                  "no": "Høyre"
+                }
+              },
+              {
+                "id": "spill_pause",
+                "title": {
+                  "en": "Play/pause",
+                  "no": "Spill/pause"
+                }
+              },
+              {
+                "id": "spol_frem",
+                "title": {
+                  "en": "Fast forward",
+                  "no": "Spol frem"
+                }
+              },
+              {
+                "id": "spol_tilbake",
+                "title": {
+                  "en": "Rewind",
+                  "no": "Spol tilbake"
+                }
+              },
+              {
+                "id": "vol_opp",
+                "title": {
+                  "en": "Volume up",
+                  "no": "Volum opp"
+                }
+              },
+              {
+                "id": "vol_ned",
+                "title": {
+                  "en": "Volume down",
+                  "no": "Volum ned"
+                }
+              },
+              {
+                "id": "demp",
+                "title": {
+                  "en": "Mute",
+                  "no": "Demp"
+                }
+              },
+              {
+                "id": "av",
+                "title": {
+                  "en": "Power",
+                  "no": "Av/på"
+                }
+              },
+              {
+                "id": "hjem",
+                "title": {
+                  "en": "Skjold",
+                  "no": "Skjold"
+                }
+              },
+              {
+                "id": "meny",
+                "title": {
+                  "en": "Menu",
+                  "no": "Meny"
+                }
+              },
+              {
+                "id": "tilbake",
+                "title": {
+                  "en": "Back",
+                  "no": "Tilbake"
+                }
+              },
+              {
+                "id": "avslutt",
+                "title": {
+                  "en": "Exit",
+                  "no": "Avslutt"
+                }
+              },
+              {
+                "id": "lys",
+                "title": {
+                  "en": "Light",
+                  "no": "Lys"
+                }
+              },
+              {
+                "id": "stikk",
+                "title": {
+                  "en": "Plug",
+                  "no": "Stikk"
+                }
+              },
+              {
+                "id": "pluss",
+                "title": {
+                  "en": "Plus",
+                  "no": "Pluss"
+                }
+              },
+              {
+                "id": "minus",
+                "title": {
+                  "en": "Minus",
+                  "no": "Minus"
+                }
+              }
+            ]
+          },
+          {
+            "type": "dropdown",
+            "name": "type",
+            "title": {
+              "en": "Press",
+              "no": "Trykk"
+            },
+            "values": [
+              {
+                "id": "alle",
+                "title": {
+                  "en": "Any",
+                  "no": "Alle"
+                }
+              },
+              {
+                "id": "kort",
+                "title": {
+                  "en": "Short",
+                  "no": "Kort"
+                }
+              },
+              {
+                "id": "lang",
+                "title": {
+                  "en": "Long",
+                  "no": "Langt"
+                }
+              },
+              {
+                "id": "dobbel",
+                "title": {
+                  "en": "Double",
+                  "no": "Dobbelt"
+                }
+              }
+            ]
           }
         ]
       }

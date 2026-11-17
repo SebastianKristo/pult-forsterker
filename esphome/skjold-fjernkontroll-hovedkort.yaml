@@ -941,6 +941,7 @@ script:
                   knapp: !lambda "return navn;"
                   type: !lambda "return type;"
                   enhet: !lambda "return to_string(id(enhet));"
+            - script.execute: { id: stav_meld, tast: !lambda "return navn;", type: !lambda "return type;" }
             - delay: 25ms
             - output.turn_off: vibrator
       - lambda: |-
@@ -1084,6 +1085,27 @@ script:
 # <<< vekking
 
   # POST til valgt Skjold (venter på Wi-Fi etter søvn). Svaret er full status, så skjermen oppdateres med en gang.
+  # Skjold Stav melder seg hos Skjold-en den styrer (POST /api/stav): navn, batteri, lader og siste tast.
+  # Skjold viser den da som egen enhet i Home Assistant (Skjold-integrasjonen) og i Homey-appen.
+  - id: stav_meld
+    mode: queued
+    max_runs: 4
+    parameters: { tast: string, type: string }
+    then:
+      - if:
+          condition: wifi.connected
+          then:
+            - http_request.post:
+                url: !lambda 'return id(skjold_base) + "/api/stav";'
+                request_headers: { Content-Type: application/json }
+                body: !lambda |-
+                  char b[320];
+                  float bat = id(batteri).state;
+                  snprintf(b, sizeof b, "{\"id\":\"%s\",\"navn\":\"%s\",\"batteri\":%d,\"lader\":%s,\"versjon\":\"%s\",\"tast\":\"%s\",\"type\":\"%s\"}",
+                           get_mac_address().c_str(), App.get_friendly_name().c_str(), std::isnan(bat) ? -1 : (int) bat,
+                           id(lader).state ? "true" : "false", ESPHOME_VERSION, tast.c_str(), type.c_str());
+                  return std::string(b);
+
   - id: skjold_post
     mode: queued
     max_runs: 6
@@ -1843,6 +1865,9 @@ script:
       - deep_sleep.enter: dyp_sovn
 
 interval:
+  - interval: 5min                   # Skjold Stav: batteri og lader til Skjold (/api/stav)
+    then:
+      - script.execute: { id: stav_meld, tast: "", type: "" }
   - interval: 20ms                   # tastaturet: lange trykk, dobbelttrykk og gjentak
     then:
       - lambda: 'skjold::tastatur.tikk(millis());'

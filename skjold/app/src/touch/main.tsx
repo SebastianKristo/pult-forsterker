@@ -294,6 +294,37 @@ const gestSlutt = (e: PointerEvent) => {
 };
 addEventListener('pointerup', gestSlutt, { capture: true });
 addEventListener('pointercancel', (e) => { gest.ptr.delete(e.pointerId); }, { capture: true });
+
+// Volum i skjermspareren: én finger i den øverste centimeteren, dra mot høyre (opp) eller venstre (ned). Volumet følger
+// fingeren (hele bredden ≈ 70 trinn) og vises som en linje øverst. Drar du nedover i stedet, kommer hurtigpanelet.
+const gestVol = signal<number | null>(null);
+const vDrag = { id: -1, x0: 0, y0: 0, v0: 0, aktiv: false, t: 0 };
+addEventListener('pointerdown', (e) => {
+  if (!idle.value || e.clientY > Q_KANT || vDrag.id >= 0) return;
+  Object.assign(vDrag, { id: e.pointerId, x0: e.clientX, y0: e.clientY, v0: status.value?.volume ?? 0, aktiv: false });
+}, { capture: true });
+addEventListener('pointermove', (e) => {
+  if (e.pointerId !== vDrag.id) return;
+  const dx = e.clientX - vDrag.x0, dy = e.clientY - vDrag.y0;
+  if (!vDrag.aktiv) {
+    if (qDrag.aktiv || gest.ptr.size > 1) { vDrag.id = -1; return; }   // hurtigpanel eller tofingersveip
+    if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) { vDrag.aktiv = true; qDrag.y0 = -1; qDrag.id = -1; }   // ikke hurtigpanelet
+    else return;
+  }
+  const v = Math.max(0, Math.min(100, Math.round(vDrag.v0 + dx / Math.max(320, innerWidth) * 70)));
+  if (v !== gestVol.value) { gestVol.value = v; if (Date.now() - vDrag.t > 60) { vDrag.t = Date.now(); setVolume(v); } }
+  e.preventDefault();
+}, { capture: true, passive: false });
+const vSlipp = (e: PointerEvent) => {
+  if (e.pointerId !== vDrag.id) return;
+  if (vDrag.aktiv && gestVol.value !== null) {
+    setVolume(gestVol.value, true); clearTimeout(gest.vekkT); gest.sisteTrykk = 0;
+    const v = gestVol.value; window.setTimeout(() => { if (gestVol.value === v) gestVol.value = null; }, 900);
+  }
+  vDrag.id = -1; vDrag.aktiv = false;
+};
+addEventListener('pointerup', vSlipp, { capture: true });
+addEventListener('pointercancel', vSlipp, { capture: true });
 addEventListener('contextmenu', (e) => e.preventDefault());
 setInterval(() => {
   now.value = Date.now();
@@ -1316,31 +1347,73 @@ function DoorToast() {
 // ---------- hurtigpanel: dra ned fra toppkanten ----------
 // Start i den øverste centimeteren (≈ 40 px på 7″-skjermen) og dra nedover: panelet følger fingeren og blir liggende
 // åpent. Lysstyrke, volum og snarveier (skjermsparer, nattmodus, rom, søk, kameraer, Wi-Fi, lås opp).
-const quick = signal(0);   // 0 = lukket, 0–1 = følger fingeren, 1 = åpent
-const qDrag = { y0: -1, id: -1, aktiv: false };
-const Q_KANT = 40, Q_H = 300;
+const quick = signal(0);   // 0 = lukket (ikke montert), > 0 = montert. Posisjonen styres direkte i DOM-en (qSett).
+// Fingeren flytter panelet uten å tegne Preact på nytt (jevnt også på Pi-en): transform og mørkleggingen settes rett på
+// elementene. Slipp: fart og retning avgjør (et raskt drag opp lukker selv om panelet er nesten helt nede), ellers halvveis.
+const qEl: { panel: HTMLDivElement | null; dim: HTMLDivElement | null } = { panel: null, dim: null };
+let qP = 0, qAnim = false, qLukkT = 0;
+const Q_KURVE = 'cubic-bezier(.32,.72,0,1)', Q_MS = 380;
+function qStil(p: number): string {
+  const over = Math.max(0, p - 1) * 36;   // gummistrikk når du drar forbi helt åpent
+  return `translateY(calc(${(Math.min(1, p) - 1) * 100}% + ${over}px))`;
+}
+function qSett(p: number, anim: boolean): void {
+  qP = p; qAnim = anim;
+  const pa = qEl.panel, d = qEl.dim;
+  if (pa) { pa.style.transition = anim ? `transform ${Q_MS}ms ${Q_KURVE}` : 'none'; pa.style.transform = qStil(p); }
+  if (d) { d.style.transition = anim ? `opacity ${Q_MS}ms ease` : 'none'; d.style.opacity = String(Math.max(0, Math.min(1, p))); }
+}
+function qÅpne(): void { clearTimeout(qLukkT); if (!quick.value) quick.value = 1; requestAnimationFrame(() => qSett(1, true)); }
+function qLukk(): void {
+  qSett(0, true); clearTimeout(qLukkT);
+  qLukkT = window.setTimeout(() => { if (qP <= 0) quick.value = 0; }, Q_MS);
+}
+const qDrag = { y0: -1, id: -1, aktiv: false, lukk: false, p0: 0, ly: 0, lt: 0, v: 0 };
+const Q_KANT = 40;
+const qHøyde = (): number => qEl.panel?.offsetHeight || 300;
 addEventListener('pointerdown', (e) => {
-  if (boot.value.on || quick.value >= 1 || e.clientY > Q_KANT || door.value) return;   // også i skjermspareren (volum)
-  qDrag.y0 = e.clientY; qDrag.id = e.pointerId; qDrag.aktiv = false;
+  if (boot.value.on || door.value) return;
+  const grep = (e.target as HTMLElement | null)?.closest?.('[data-qgrip]');
+  if (quick.value && qP >= 0.99) {   // åpent: dra opp fra pillen (eller den mørke flaten) for å lukke
+    if (!grep) return;
+    Object.assign(qDrag, { y0: e.clientY, id: e.pointerId, aktiv: false, lukk: true, p0: qP, ly: e.clientY, lt: e.timeStamp, v: 0 });
+    return;
+  }
+  if (e.clientY > Q_KANT) return;   // lukket: start i den øverste centimeteren (også i skjermspareren)
+  Object.assign(qDrag, { y0: e.clientY, id: e.pointerId, aktiv: false, lukk: false, p0: 0, ly: e.clientY, lt: e.timeStamp, v: 0 });
 }, { capture: true });
 addEventListener('pointermove', (e) => {
   if (e.pointerId !== qDrag.id || qDrag.y0 < 0) return;
   const dy = e.clientY - qDrag.y0;
-  if (!qDrag.aktiv && dy > 14) qDrag.aktiv = true;
-  if (qDrag.aktiv) { quick.value = Math.max(0.01, Math.min(1, dy / Q_H)); e.preventDefault(); }
+  if (!qDrag.aktiv && (qDrag.lukk ? Math.abs(dy) > 8 : dy > 8)) {
+    qDrag.aktiv = true; clearTimeout(qLukkT);
+    if (!quick.value) { qP = 0; quick.value = 1; }   // monter panelet; posisjonen settes under
+  }
+  if (!qDrag.aktiv) return;
+  const dt = Math.max(1, e.timeStamp - qDrag.lt);
+  qDrag.v = qDrag.v * 0.6 + ((e.clientY - qDrag.ly) / dt) * 0.4;   // px/ms, glattet
+  qDrag.ly = e.clientY; qDrag.lt = e.timeStamp;
+  let p = qDrag.p0 + dy / qHøyde();
+  if (p > 1) p = 1 + (p - 1) * 0.35;
+  qSett(Math.max(0, p), false);
+  e.preventDefault();
 }, { capture: true, passive: false });
 const qSlipp = (e: PointerEvent) => {
   if (e.pointerId !== qDrag.id) return;
-  if (qDrag.aktiv) { quick.value = quick.value > 0.3 ? 1 : 0; sluk = Date.now() + 350; }   // svelg klikket som følger
+  if (qDrag.aktiv) {
+    const v = qDrag.v, åpne = v > 0.45 ? true : v < -0.45 ? false : qP > 0.5;
+    if (åpne) qÅpne(); else qLukk();
+    sluk = Date.now() + 350;   // svelg klikket som følger
+  }
   qDrag.y0 = -1; qDrag.id = -1; qDrag.aktiv = false;
 };
 addEventListener('pointerup', qSlipp, { capture: true });
 addEventListener('pointercancel', qSlipp, { capture: true });
 
 function QuickPanel() {
-  const p = quick.value, S = settings.value, st = status.value;
+  const S = settings.value, st = status.value;
   const night = (S.tNightMode ?? 0) === 3;
-  const lukk = () => { quick.value = 0; };
+  const lukk = () => { qLukk(); };
   const knapp = (navn: string, d: string, gjor: () => void, på = false) => (
     <button onClick={() => { gjor(); }} style={`display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:78px;border-radius:16px;border:1px solid ${på ? '#d9a441' : '#2a2a2c'};background:${på ? '#1c170d' : '#161617'};color:${på ? '#f0c46a' : '#f2f2ee'};font-size:12px;font-weight:600;min-width:0`}>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={d} /></svg>{navn}</button>);
@@ -1354,8 +1427,8 @@ function QuickPanel() {
     </div>);
   return (
     <div data-ss-tip style="position:absolute;inset:0;z-index:40">
-      <div onClick={lukk} style={`position:absolute;inset:0;background:rgba(0,0,0,${0.55 * p})`} />
-      <div style={`position:absolute;left:0;right:0;top:0;transform:translateY(${(p - 1) * 100}%);transition:${qDrag.aktiv ? 'none' : 'transform .22s cubic-bezier(.2,.8,.2,1)'};background:#0f0f10;border-bottom:1px solid #2a2a2c;border-radius:0 0 22px 22px;padding:14px 18px 10px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 50px rgba(0,0,0,.6)`}>
+      <div data-qgrip ref={(el) => { qEl.dim = el; }} onClick={lukk} style={`position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:${Math.max(0, Math.min(1, qP))};transition:${qAnim ? `opacity ${Q_MS}ms ease` : 'none'};touch-action:none`} />
+      <div ref={(el) => { qEl.panel = el; }} style={`position:absolute;left:0;right:0;top:0;transform:${qStil(qP)};transition:${qAnim ? `transform ${Q_MS}ms ${Q_KURVE}` : 'none'};will-change:transform;background:#0f0f10;border-bottom:1px solid #2a2a2c;border-radius:0 0 22px 22px;padding:14px 18px 10px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 50px rgba(0,0,0,.6)`}>
         {glid('M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', lys, (n) => setSetting('tBright', Math.max(20, n)))}
         {glid('M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6', vol, (n) => setVolume(n, true), (n) => setVolume(n))}
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
@@ -1368,7 +1441,9 @@ function QuickPanel() {
           {knapp('Smarthus', 'M3 11l9-7 9 7v9H3zM9 20v-6h6v6', gå('smart'))}
           {knapp('Oppsett', 'M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4', gå('set'))}
         </div>
-        <div style="align-self:center;width:44px;height:5px;border-radius:3px;background:#3a3a3c;margin-top:2px" />
+        <div data-qgrip style="align-self:stretch;display:flex;justify-content:center;align-items:center;height:34px;margin:-4px -18px -10px;touch-action:none;cursor:grab" aria-label="Dra opp for å lukke">
+          <div style="width:52px;height:5px;border-radius:3px;background:#4a4a4e" />
+        </div>
       </div>
     </div>
   );
@@ -1726,6 +1801,13 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
         </div>
       )}
       {m !== 2 && !night && <TipCard />}
+      {gestVol.value !== null && (
+        <div style="position:absolute;left:50%;top:22px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;padding:12px 20px;border-radius:999px;background:rgba(20,20,22,.82);border:1px solid #3a2e17;animation:tinn .2s ease both">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0c46a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6" /></svg>
+          <div style="width:260px;height:6px;border-radius:3px;background:#2a2a2c;overflow:hidden"><div style={`width:${gestVol.value}%;height:100%;background:#f0c46a;transition:width .08s linear`} /></div>
+          <span style={`font-family:${MONO};font-size:16px;color:#f0c46a;width:34px;text-align:right`}>{gestVol.value}</span>
+        </div>
+      )}
       {!!gestTxt.value && <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 26px;border-radius:999px;background:rgba(20,20,22,.82);border:1px solid #3a2e17;color:#f0c46a;font-size:22px;font-weight:600;white-space:nowrap;animation:tinn .2s ease both">{gestTxt.value}</span>}
       {m !== 2 && m !== 4 && !night && <span style={`position:absolute;left:0;right:0;bottom:16px;text-align:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#3a3a37`}>TRYKK FOR Å VEKKE</span>}
     </button>

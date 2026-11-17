@@ -122,6 +122,15 @@
       },
       "kassett_tag": {
         "name": "Siste brikke"
+      },
+      "stav_battery": {
+        "name": "Batteri"
+      },
+      "stav_key": {
+        "name": "Siste tast"
+      },
+      "stav_last": {
+        "name": "Sist hørt fra"
       }
     },
     "binary_sensor": {
@@ -144,6 +153,12 @@
         "name": "Strømproblem"
       },
       "kassett_connected": {
+        "name": "Tilkoblet"
+      },
+      "stav_charging": {
+        "name": "Lader"
+      },
+      "stav_connected": {
         "name": "Tilkoblet"
       }
     },
@@ -241,6 +256,18 @@
               "single_press": "Ett trykk",
               "double_press": "Dobbelttrykk",
               "long_press": "Holdt inne"
+            }
+          }
+        }
+      },
+      "stav_key": {
+        "name": "Tast",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "kort": "Kort trykk",
+              "lang": "Langt trykk",
+              "dobbel": "Dobbelttrykk"
             }
           }
         }

@@ -25,8 +25,8 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         self.entry = entry
         self.presets: list[dict] = []   # fylte favoritter fra /api/presets: [{n, title, genre, image…}]
         self._presets_sig: object = None
-        # tilbehør (Skjold Røst, Kassett, Hjul): hentes sjeldnere enn status, og feil (eldre daemon) ignoreres
-        self.extras: dict = {"rost": None, "nfc": None, "spoler": None, "hjul": None}
+        # tilbehør (Skjold Røst, Kassett, Hjul, Stav): hentes sjeldnere enn status, og feil (eldre daemon) ignoreres
+        self.extras: dict = {"rost": None, "nfc": None, "spoler": None, "hjul": None, "stav": None}
         self._extras_n = 0
         self.settings: dict = {}             # /api/settings (EQ-profiler til Skjold-kortet)
         self.perf: dict | None = None        # /api/health/perf (ytelse på Pi-en), hentes ca. hvert 30. s
@@ -55,7 +55,7 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         return data
 
     async def refresh_extras(self) -> None:
-        for key, fn in (("rost", self.api.rost), ("nfc", self.api.nfc), ("spoler", self.api.spoler), ("hjul", self.api.hjul)):
+        for key, fn in (("rost", self.api.rost), ("nfc", self.api.nfc), ("spoler", self.api.spoler), ("hjul", self.api.hjul), ("stav", self.api.stav)):
             try:
                 self.extras[key] = await fn()
             except KiAmpError:

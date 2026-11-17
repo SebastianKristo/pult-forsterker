@@ -8,6 +8,7 @@ const App = require('../app');
 const RostDevice = require('../drivers/rost/device');
 const KassettDevice = require('../drivers/kassett/device');
 const HjulDevice = require('../drivers/hjul/device');
+const StavDevice = require('../drivers/stav/device');
 const RostDriver = require('../drivers/rost/driver');
 const appJson = require('../app.json');
 
@@ -16,6 +17,7 @@ const st = {
   nfc: { cards: [{ uid: '04A1', navn: 'NRK Jazz' }], active: '', last: { uid: '', t: 0 } },
   spoler: { på: true },
   hjul: { rom: ['Dette rommet', 'Kjøkken'], enheter: { 'hjul-1': { navn: 'Stuehjul', batteri: 77, sist: 100, rom: 'Dette rommet' } } },
+  stav: { seq: 3, enheter: { 'aa:cc': { navn: 'Stav stue', batteri: 64, lader: false, sist: 100, tilkoblet: true, tast: { knapp: 'ok', type: 'kort', t: 100, seq: 3 } } } },
 };
 const posts = [];
 let srv; let port;
@@ -35,6 +37,7 @@ before(async () => {
       if (req.url === '/api/nfc/spoler') { if (req.method === 'POST') st.spoler.på = body.på; return send(st.spoler); }
       if (req.url === '/api/nfc/scan') { st.nfc.active = body.uid; st.nfc.last = { uid: body.uid, t: 200, known: true, navn: 'NRK Jazz' }; return send({ known: true }); }
       if (req.url === '/api/hjul') return send(st.hjul);
+      if (req.url === '/api/stav') return send(st.stav);
       res.writeHead(404); res.end('{}');
     });
   });
@@ -50,7 +53,7 @@ const mk = async (Dev, id, acc, homey) => {
 };
 
 test('app.json: tre nye drivere med bilder og ikon', () => {
-  for (const id of ['rost', 'kassett', 'hjul']) {
+  for (const id of ['rost', 'kassett', 'hjul', 'stav']) {
     const d = appJson.drivers.find((x) => x.id === id);
     assert.ok(d, id); assert.equal(d.images.large, `/drivers/${id}/assets/images/large.png`);
   }
@@ -83,6 +86,18 @@ test('Hjul: batteri, rom og «brukt»-trigger', async () => {
   assert.equal(d.getCapabilityValue('measure_battery'), 77); assert.equal(d.getCapabilityValue('ki_hjul_room'), 'Dette rommet');
   st.hjul.enheter['hjul-1'].sist = 300; await d.refresh();
   assert.equal(homey.flow.cards.ki_hjul_used.triggered.length, 1);
+});
+
+test('Stav: batteri, lading, siste tast og tastetrigger', async () => {
+  const homey = new Homey.HomeyCtx(); await new App({ homey }).onInit();
+  const d = await mk(StavDevice, 'stav', 'aa:cc', homey);
+  assert.equal(d.getCapabilityValue('measure_battery'), 64); assert.equal(d.getCapabilityValue('ki_stav_lader'), false);
+  assert.equal(d.getCapabilityValue('ki_stav_tast'), 'ok');
+  assert.equal((homey.flow.cards.ki_stav_tast?.triggered ?? []).length, 0);   // første henting: ingen gammel tast som trigger
+  st.stav.enheter['aa:cc'].tast = { knapp: 'vol_opp', type: 'lang', t: 200, seq: 4 }; await d.refresh();
+  assert.equal(d.getCapabilityValue('ki_stav_tast'), 'vol_opp (lang)');
+  assert.deepEqual(homey.flow.cards.ki_stav_tast.triggered.at(-1).tokens, { knapp: 'vol_opp', type: 'lang' });
+  assert.equal(homey.flow.cards.ki_stav_tast_knapp.triggered.length, 1);
 });
 
 test('paring: tilbehør hentes fra Skjold-verter Homey kjenner', async () => {

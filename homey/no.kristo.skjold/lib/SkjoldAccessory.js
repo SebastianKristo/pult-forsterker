@@ -80,7 +80,7 @@ class AccessoryDevice extends Homey.Device {
 
   async onInit() {
     await this.refresh();
-    this._timer = this.homey.setInterval(() => this.refresh().catch(() => {}), POLL_MS);
+    this._timer = this.homey.setInterval(() => this.refresh().catch(() => {}), this.constructor.POLL_MS || POLL_MS);   // Stav: oftere (tastene)
   }
 
   onDeleted() { if (this._timer) this.homey.clearInterval(this._timer); }
