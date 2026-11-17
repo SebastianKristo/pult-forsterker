@@ -9,7 +9,7 @@ import { DoorbellPanel, DuckPanel, RecognizeSettingsPanel, RoutinesPanel, Wishli
 import { HomeAssistantPanel } from './homeassistant';
 import { SecurityPanel } from './lyd';
 import { api, type RemoteStatus, hostLabel, isNative, REPO, type LevelSource, type UpdateInfo } from '../lib/api';
-import { act, applied, go, loadSettings, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status, everyVisible } from '../lib/store';
+import { act, applied, deviceName, go, loadSettings, localOnly, mode, product, route, setSetting, settings, settingsSource, showToast, status, everyVisible } from '../lib/store';
 import { computed } from '@preact/signals';
 import { CAT_ALIAS, CAT_GROUPS, CAT_TILE, ICONS, LED_MODES, LED_MODE_NAMES, catsFor, fmt, type Category, type Item } from '../lib/settings';
 
@@ -350,6 +350,34 @@ function ClockPicker() {
   );
 }
 
+const vnum = (t?: string | null) => (t && t !== 'lokal' ? t.replace(/^skjold-v?/, '') : t === 'lokal' ? 'lokal' : '');
+const UPD_CSS = `
+.upd-hero{position:relative;overflow:hidden;border-radius:26px;padding:34px 34px 30px;min-height:300px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;color:#f5f1e8;
+  background:radial-gradient(120% 90% at 0% 100%,rgba(217,164,65,.55),transparent 55%),radial-gradient(90% 80% at 100% 0%,rgba(120,84,40,.55),transparent 60%),radial-gradient(70% 70% at 100% 100%,rgba(176,66,40,.35),transparent 60%),linear-gradient(160deg,#141416,#0b0b0c 60%,#17120a)}
+.upd-hero[data-state=ok]{background:radial-gradient(120% 90% at 0% 100%,rgba(111,207,127,.28),transparent 55%),radial-gradient(90% 80% at 100% 0%,rgba(217,164,65,.30),transparent 60%),linear-gradient(160deg,#141416,#0b0b0c 60%,#0f1510)}
+.upd-arcs{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.upd-arcs circle{fill:none;stroke:rgba(255,255,255,.08);stroke-width:1.2}
+.upd-check{position:absolute;z-index:2;top:24px;right:24px;height:40px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:#f5f1e8;font:600 13.5px Sora,system-ui,sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
+.upd-check:hover{background:rgba(255,255,255,.12)}
+.upd-num{position:relative;font:700 clamp(64px,10vw,120px)/0.95 Sora,system-ui,sans-serif;letter-spacing:-.05em;margin-bottom:auto;padding-top:18px;background:linear-gradient(180deg,#fff7e8,#f0c46a 70%,#d9a441);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.upd-state{position:relative;margin-top:28px;font-size:19px;font-weight:500;color:rgba(245,241,232,.92)}
+.upd-name{position:relative;font:700 clamp(36px,5vw,52px)/1.05 Sora,system-ui,sans-serif;letter-spacing:-.03em}
+.upd-name span{font-weight:300;color:rgba(245,241,232,.7);margin-left:2px}
+.upd-sub{position:relative;font-size:13.5px;font-weight:500;color:#f0c46a}
+.upd-bar{position:relative;display:block;height:4px;margin-top:16px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.upd-bar i{position:absolute;inset:0 auto 0 0;width:35%;border-radius:2px;background:#f0c46a;animation:updBar 1.6s ease-in-out infinite}
+@keyframes updBar{0%{left:-35%}100%{left:100%}}
+.upd-go{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.upd-go button{height:60px;padding:0 44px;min-width:240px;border-radius:999px;border:none;background:#d9a441;color:#0b0b0c;font:700 17px Sora,system-ui,sans-serif;cursor:pointer;box-shadow:0 14px 34px rgba(217,164,65,.28)}
+.upd-go button:hover{filter:brightness(1.06)}
+.upd-go span{font-size:13.5px;color:#a9a9a3}
+.upd-rows{display:flex;flex-direction:column;border-top:1px solid #242426}
+.upd-rows>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 2px;border-bottom:1px solid #242426;font-size:14.5px}
+.upd-rows>div>span:first-child{font-weight:600}
+.upd-rows .v{font-size:14px;color:#a9a9a3;text-decoration:none}
+@media (max-width:560px){.upd-hero{padding:18px 22px 22px;min-height:260px}.upd-check{position:relative;top:auto;right:auto;align-self:flex-end;height:36px;padding:0 14px;font-size:12.5px}.upd-num{padding-top:10px}.upd-go button{width:100%}}
+`;
+
 function UpdatePanel() {
   const st = settings.value;
   const [info, setInfo] = useState<UpdateInfo | null | undefined>(undefined);
@@ -398,29 +426,30 @@ function UpdatePanel() {
   const mono = "font-family:'IBM Plex Mono',monospace";
   return (
     <div style="display:flex;flex-direction:column;gap:14px">
-      <div style="background:#141415;border:1px solid #242426;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:#8b8b86">Installert</span><span style="font-size:22px;font-weight:600" data-testid="upd-current">{info === undefined ? '…' : cur}</span>
-            {info?.latest && <span style={`font-size:11px;color:#8b8b86;${mono}`}>NYESTE: {info.latest}</span>}</div>
-          <a href={`https://github.com/${REPO}/releases`} target="_blank" rel="noreferrer" style="font-size:12px;white-space:nowrap">github.com/{REPO} ↗</a>
-        </div>
-        {info && !working && phase !== 'done' && (info.available
-          ? <div style="display:flex;flex-direction:column;gap:8px">
-              <span style="font-size:13px;color:#e8dcc4">En ny versjon er klar: <b>{info.latest}</b></span>
-              {info.can_update
-                ? <button onClick={start} style={`height:44px;border-radius:14px;border:none;background:${A};color:#0b0b0c;font-size:14px;font-weight:600;cursor:pointer`} data-testid="upd-start">Oppdater til {info.latest}</button>
-                : <span style="font-size:12px;color:#c9b48a;line-height:1.5">Denne enheten må oppdateres fra terminalen én gang før den kan oppdateres herfra:<br /><code style={`${mono};font-size:11px;color:#f2f2ee`}>git pull && sudo bash pi/update.sh</code></span>}
-            </div>
-          : <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#6fcf7f" /><span style="font-size:13px">Skjold er oppdatert</span></div>)}
-        {working && <div style="display:flex;align-items:center;gap:8px"><span class="spin" style={`width:14px;height:14px;border-radius:50%;border:2px solid #3a3a37;border-top-color:${A};animation:spin 1s linear infinite`} /><span style="font-size:13px">{phase === 'gone' ? 'Starter Skjold på nytt … venter på enheten' : 'Oppdaterer … ikke slå av enheten'}</span></div>}
-        {phase === 'done' && <div style="padding:10px 12px;border-radius:8px;background:#16201a;border:1px solid #2a4a33;font-size:13px;color:#9be0a8">Oppdatert{info?.current ? ' til ' + info.current : ''}. Last siden på nytt for å få det nyeste web-grensesnittet.</div>}
-        {phase === 'failed' && <div style="padding:10px 12px;border-radius:8px;background:#2a1412;border:1px solid #5a2620;font-size:13px;color:#ff9a8a">Oppdateringen feilet. Se loggen under.</div>}
-        {info?.channel === 'beta' && <span style="font-size:11px;color:#f0c46a">Beta-kanal: får prerelease-versjoner</span>}
-        {info?.rolled_back && <span style="font-size:12px;color:#c9b48a">Rullet tilbake til {info.rolled_back}</span>}
-        {!working && info?.can_rollback && <button onClick={async () => { if (!confirm('Rull tilbake til forrige versjon?')) return; setErr(''); try { const r = await api.rollback(); setLog(r.log); void follow(); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } }} style="height:38px;border-radius:14px;border:1px solid #5a2620;background:#1b1b1c;color:#ff9a8a;font-size:13px;cursor:pointer" data-testid="upd-rollback">Rull tilbake til forrige versjon</button>}
-        {!working && <button onClick={() => { setPhase(''); void load(); }} disabled={busy} style="height:42px;border-radius:14px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;cursor:pointer">{busy ? 'Sjekker …' : 'Se etter oppdateringer'}</button>}
-        {(err || info?.error) && <div style="padding:10px 12px;border-radius:8px;background:#2a1412;border:1px solid #5a2620;font-size:13px;color:#ff9a8a;line-height:1.45">{err || info?.error}</div>}
-        {log.length > 0 && (working || phase === 'failed' || phase === 'done') && <pre style={`margin:0;max-height:220px;overflow:auto;padding:10px 12px;border-radius:10px;background:#0f0f10;border:1px solid #242426;${mono};font-size:11px;color:#c9c9c4;white-space:pre-wrap;line-height:1.5`}>{log.slice(-30).join('\n')}</pre>}
+      <style>{UPD_CSS}</style>
+      <div class="upd-hero" data-state={working ? 'run' : phase === 'done' ? 'ok' : info?.available ? 'new' : 'ok'}>
+        <svg class="upd-arcs" viewBox="0 0 800 400" preserveAspectRatio="none" aria-hidden="true"><circle cx="760" cy="420" r="380" /><circle cx="120" cy="560" r="420" /></svg>
+        <button class="upd-check" onClick={() => { setPhase(''); void load(); }} disabled={busy || working}>{busy ? 'Sjekker …' : 'Se etter oppdatering'}</button>
+        <span class="upd-num" data-testid="upd-big">{info === undefined ? '…' : vnum(info?.available && !working && phase !== 'done' ? info.latest : info?.current) || '–'}</span>
+        <span class="upd-state">{working ? (phase === 'gone' ? 'Starter på nytt …' : 'Oppdaterer …') : phase === 'done' ? 'Oppdatert' : phase === 'failed' ? 'Oppdateringen feilet' : info === undefined ? 'Sjekker …' : info?.available ? 'Oppdatering tilgjengelig' : info ? 'Du har nyeste versjon' : 'Får ikke svar'}</span>
+        <span class="upd-name"><b>Skjold</b><span>OS</span></span>
+        <span class="upd-sub">{deviceName.value}{info?.channel === 'beta' ? ' · beta-kanal' : ' · stabil kanal'}</span>
+        {working && <span class="upd-bar"><i /></span>}
+      </div>
+      {info && !working && phase !== 'done' && info.available && (info.can_update
+        ? <div class="upd-go"><button onClick={start} data-testid="upd-start">Oppdater nå</button><span>Ca. 2 minutter · Skjold starter på nytt, og musikken stopper kort</span></div>
+        : <div style="padding:12px 14px;border-radius:12px;background:#1c170d;border:1px solid #3a2e17;font-size:12.5px;color:#e8dcc4;line-height:1.5">Denne enheten må oppdateres fra terminalen én gang før den kan oppdateres herfra:<br /><code style={`${mono};font-size:11.5px;color:#f2f2ee`}>cd /opt/skjold/src && sudo bash pi/update.sh</code></div>)}
+      {working && <span style="font-size:12.5px;color:#a9a9a3">{phase === 'gone' ? 'Venter på at enheten skal svare igjen. Siden oppdateres av seg selv.' : 'Ikke slå av enheten mens den oppdaterer.'}</span>}
+      {phase === 'done' && <div style="padding:12px 14px;border-radius:12px;background:#16201a;border:1px solid #2a4a33;font-size:13px;color:#9be0a8">Oppdatert{info?.current ? ' til ' + vnum(info.current) : ''}. Last siden på nytt for å få det nyeste web-grensesnittet. <button onClick={() => location.reload()} style="margin-left:6px;border:none;background:none;color:#f0c46a;cursor:pointer;font:inherit;padding:0">Last på nytt ›</button></div>}
+      {phase === 'failed' && <div style="padding:12px 14px;border-radius:12px;background:#2a1412;border:1px solid #5a2620;font-size:13px;color:#ff9a8a">Oppdateringen feilet. Se loggen under.</div>}
+      {(err || info?.error) && <div style="padding:12px 14px;border-radius:12px;background:#2a1412;border:1px solid #5a2620;font-size:13px;color:#ff9a8a;line-height:1.45">{err || info?.error}</div>}
+      {log.length > 0 && (working || phase === 'failed' || phase === 'done') && <pre style={`margin:0;max-height:220px;overflow:auto;padding:10px 12px;border-radius:12px;background:#0f0f10;border:1px solid #242426;${mono};font-size:11px;color:#c9c9c4;white-space:pre-wrap;line-height:1.5`}>{log.slice(-30).join('\n')}</pre>}
+      <div class="upd-rows">
+        <div><span>Programvareversjon</span><span class="v">Du har {info === undefined ? '…' : vnum(info?.current) || cur}</span></div>
+        {info?.latest && <div><span>Nyeste versjon</span><span class="v">{vnum(info.latest)}</span></div>}
+        {info?.rolled_back && <div><span>Rullet tilbake</span><span class="v">til {vnum(info.rolled_back)}</span></div>}
+        <div><span>Utgivelser</span><a href={`https://github.com/${REPO}/releases`} target="_blank" rel="noreferrer" class="v">GitHub ↗</a></div>
+        {!working && info?.can_rollback && <div><span>Noe galt etter oppdateringen?</span><button class="v" onClick={async () => { if (!confirm('Rull tilbake til forrige versjon?')) return; setErr(''); try { const r = await api.rollback(); setLog(r.log); void follow(); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } }} data-testid="upd-rollback" style="border:none;background:none;color:#ff9a8a;cursor:pointer;font:inherit;padding:0">Rull tilbake</button></div>}
       </div>
       <div style="background:#141415;border:1px solid #242426;border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:13px">Kanal</span><div style="display:flex;gap:6px">
@@ -428,8 +457,6 @@ function UpdatePanel() {
         </div></div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px">Installer automatisk om natten</span>{pending('updAuto') && <span style="font-size:11px;color:#c9b48a">{pending('updAuto')}</span>}</span>{tog(st.updAuto, () => setSetting('updAuto', !st.updAuto))}</div>
       </div>
-      <span style="font-size:14px;font-weight:600">Backup</span>
-      <div style="background:#141415;border:1px solid #242426;border-radius:14px;padding:12px 14px"><span style="font-size:12px;color:#8b8b86;line-height:1.45">Backup og gjenoppretting er ikke koblet til forsterkeren ennå.</span></div>
     </div>
   );
 }
