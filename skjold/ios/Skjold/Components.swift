@@ -83,6 +83,34 @@ struct SKBackButton: View {
     }
 }
 
+/// Tilbakeknapp med sidetittel ved siden av (kompakt navigasjonslinje).
+struct SKPageHeader: View {
+    let back: String
+    let title: String
+    var sub: String = ""
+    let action: () -> Void
+    var body: some View {
+        HStack(spacing: 14) {
+            Button { Haptics.tick(); action() } label: {
+                Image(systemName: "chevron.backward")
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(Color.ink)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.regular.interactive(), in: Circle())
+            .accessibilityLabel("Tilbake til " + back)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).sora(24, .semibold).tracking(-0.48).lineLimit(1).minimumScaleFactor(0.7)
+                    .accessibilityAddTraits(.isHeader)
+                if !sub.isEmpty { Text(sub).sora(12, .regular, .muted).lineLimit(1) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
 /// Stor sidetittel under tilbakeknappen (som navigasjonstitler i iOS).
 struct SKPageTitle: View {
     let text: String
