@@ -12,7 +12,7 @@ export interface Settings {
   name: number; nameCustom: string; nAux1: string; nAux2: string; nUsb1: string; nUsb2: string;
   hold: number;
   voice: boolean; lang: number; vv: number;
-  dim: number; off: number; clock: boolean; clockStyle: number; led: number;
+  dim: number; off: number; clock: boolean; clockStyle: number; saver: number; led: number;
   /** LED-ringer: opplevd lysstyrke 0–100 % (daemonen bruker gamma 2,2). «led» holdes i takt av daemonen. */
   ledLevel: number;
   /** LED-modus: 'press' = lyser ved trykk og toner ut, 'always' = aktiv kilde lyser, 'off' = av. */
@@ -66,7 +66,7 @@ export function defaultEq(): EqProfiles {
 export const DEF: Settings = {
   bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, lvlAux: 0, lvlUsb: 0,
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
-  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '', maEn: false, maUrl: '', maToken: '', esphomeKey: '',
+  hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, saver: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '', maEn: false, maUrl: '', maToken: '', esphomeKey: '',
   tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false, tTips: true,
   tStart: 0, tBell: 0, tNightMode: 0, tNStart: 22, tNEnd: 7, tVoice: false, tWake: 0, tMic: true, tBright: 100,
   dblPower: 0, nightLight: true, out: 3,
@@ -81,7 +81,7 @@ export const fmt = {
 } as const;
 
 export type NumKey = 'bass' | 'treb' | 'bal' | 'lvlAux' | 'lvlUsb';
-export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle' | 'tStart' | 'tNightMode' | 'tBell' | 'dblPower' | 'out';
+export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle' | 'tStart' | 'tNightMode' | 'tBell' | 'dblPower' | 'out' | 'saver';
 export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn' | 'castEn' | 'ytmEn' | 'ndEn' | 'tNight' | 'nightLight';
 /** Lagres bare på denne telefonen (innlogginger til musikktjenester sendes ikke til forsterkeren). */
 export type LocalKey = 'ytmUser' | 'ytmCookie' | 'ndUrl' | 'ndUser' | 'ndPass';
@@ -191,6 +191,7 @@ export const CATS: Category[] = [
   { id: 'skjerm', n: 'Skjerm og lys', sub: 'Dimming, klokke, LED', items: [
     opt('dim', 'Dimme skjermen etter', ['Av', '30 s', '1 min']), opt('off', 'Slukk skjermen etter', ['Av', '2 min', '5 min'], 'Beskytter OLED-skjermen mot innbrenning'),
     bool('clock', 'Klokke i standby'), { kind: 'clocks', n: 'Klokke i standby' },
+    opt('saver', 'Skjermsparer', ['Omslag og klokke', 'Klokke på svart', 'Svart, lyset av'], 'Når knappene ikke er rørt på en stund'),
     { kind: 'range', k: 'ledLevel', n: 'LED-lysstyrke', mn: 0, mx: 100, step: 5, unit: ' %', hint: 'Lysstyrken på LED-ringene rundt knappene' },
     { kind: 'ledMode', k: 'ledMode', n: 'LED-modus', hint: 'Ved trykk: ringen lyser når du trykker og toner ut. Alltid: aktiv kilde lyser.' }] },
   { id: 'strom', n: 'Strøm', sub: 'Standby og påslag', items: [
@@ -311,7 +312,7 @@ const NO_DISPLAY = new Set(['skjerm']);
 const AUX_USB = new Set(['nAux1', 'nAux2', 'nUsb1', 'nUsb2', 'usbPc', 'lvlAux', 'lvlUsb']);
 const HEADPHONES = new Set(['hpAutomute', 'headphones', 'hpOwn', 'hpOn']);
 const BUTTONS = new Set(['hold', 'ledLevel']);
-const NODE_ONLY = new Set(['ledMode']);
+const NODE_ONLY = new Set(['ledMode', 'saver']);
 const S1_ONLY = new Set(['dblPower', 'nightLight']);
 function itemKey(it: Item): string {
   if ('k' in it) return it.k;

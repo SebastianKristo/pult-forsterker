@@ -24,6 +24,7 @@ class NodeLayout(Layout):
     # Omslaget (eller kildefargene) uskarpt og mørkt, som glir sakte frem og tilbake, med stor klokke og dato.
     # Spiller noe, står låten nederst med et lite omslag. Bakgrunnen lages én gang per omslag (Pi-en har lite CPU).
     def draw_saver(self, c, vm):
+        if vm.get("saver_style") == 1: return self._saver_klokke(c, vm)
         from PIL import ImageFilter, ImageEnhance
         W_, H_ = c.img.size; s = sources.src(vm["input"])
         key = (id(vm.get("cover")), vm["input"])
@@ -52,6 +53,18 @@ class NodeLayout(Layout):
             tx = 36; tw = c.w - 8 - tx
             c.text(tx, 107, c.ellipsize(vm.get("title") or "", "bold", 9.5, tw), W, "bold", 9.5, "ls")
             c.text(tx, 118, c.ellipsize(vm.get("sub") or vm.get("kicker") or "", "regular", 8, tw), DIM2, "regular", 8, "ls")
+
+    # «Klokke på svart»: helt sort bakgrunn, stor klokke og dato. Spiller noe, står låten nederst i grått.
+    # Klokken flytter seg et par piksler hvert minutt så TFT-en ikke får et fast bilde.
+    def _saver_klokke(self, c, vm):
+        d = vm["now"]; playing = vm.get("saver_playing")
+        dx = (d.minute % 5) - 2; dy = (d.minute // 5 % 3) - 1
+        cy = (50 if playing else 60) + dy
+        c.text(80 + dx, cy, "%02d:%02d" % (d.hour, d.minute), W, "light", 44, "mm", -1)
+        c.text(80 + dx, cy + 27, fx.date_long(d).upper(), DIM2, "regular", 7.5, "ms", 1.2)
+        if playing:
+            tw = c.w - 16
+            c.text(80, 110, c.ellipsize(vm.get("title") or "", "regular", 8.5, tw), DIM2, "regular", 8.5, "ms")
 
     # ---------- animasjoner (node_fx.js / skjold_welcome.js) ----------
     def draw_boot(self, c, vm): fx.splash(c, vm["t_ms"], vm.get("model", "NODE"))

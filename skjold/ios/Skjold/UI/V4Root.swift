@@ -170,8 +170,21 @@ struct V4TabPage: View {
             .padding(.bottom, 40)
         }
         .scrollDismissesKeyboard(.interactively)
+        .overlay(alignment: .leading) { if tab == 3 && m.setCat >= 0 { edgeBack } }
         .background(V4.bg.ignoresSafeArea())
         .id("tab-\(tab)-\(m.setCat)")
+    }
+
+    /// Sveip fra venstre kant for å gå tilbake i innstillingene, som i iOS.
+    private var edgeBack: some View {
+        Color.clear.frame(width: 22).contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 12).onEnded { g in
+                guard g.translation.width > 70, abs(g.translation.height) < 80 else { return }
+                Haptics.tick()
+                withAnimation(.snappy) {
+                    if m.rAdd { m.rAdd = false } else { m.setCat = -1; m.openK = "" }
+                }
+            })
     }
 }
 

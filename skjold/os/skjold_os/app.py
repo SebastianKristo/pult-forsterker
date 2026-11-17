@@ -174,7 +174,10 @@ class Ui:
             if not playing and (not st.get("power", True) or idle > SAVER_OFF_S) and idle > 30:
                 vm.update(screen="off", vol_overlay=False); return vm
             if idle > (SAVER_AFTER_S if playing else CLOCK_AFTER_S) and not vm["vol_overlay"]:
-                vm.update(screen="saver", saver_playing=playing, **self._nowplaying(st, now, cover)); return vm
+                style = int(se.get("saver") or 0) if str(se.get("saver") or 0).isdigit() else 0
+                if style == 2:   # «Svart»: ingenting på skjermen, bakgrunnslyset av
+                    vm.update(screen="off", vol_overlay=False); return vm
+                vm.update(screen="saver", saver_playing=playing, saver_style=style, **self._nowplaying(st, now, cover)); return vm
         if not st.get("power", True):
             vm.update(screen="clock" if clock_on else "off", vol_overlay=False); return vm
         if not playing and idle > CLOCK_AFTER_S and clock_on:
@@ -235,7 +238,9 @@ class Ui:
         idle = self.clock() - self.last_act
         off = OFF_AFTER[se.get("off")] if isinstance(se.get("off"), int) and 0 <= se.get("off") < 3 else None
         dim = DIM_AFTER[se.get("dim")] if isinstance(se.get("dim"), int) and 0 <= se.get("dim") < 3 else None
-        if vm["screen"] == "saver": return b * (0.55 if vm.get("saver_playing") else 0.35)   # skjermsparer: dempet
+        if vm["screen"] == "saver":   # skjermsparer: dempet (klokke på svart trenger enda mindre lys)
+            if vm.get("saver_style") == 1: return b * (0.4 if vm.get("saver_playing") else 0.25)
+            return b * (0.55 if vm.get("saver_playing") else 0.35)
         if vm.get("vol_overlay"): return b
         playing = vm["screen"] == "play" and not vm.get("paused") and (self.prev or {}).get("playing")
         if off and idle > off and not playing: return 0.0

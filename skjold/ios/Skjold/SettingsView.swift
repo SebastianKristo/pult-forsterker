@@ -13,11 +13,16 @@ struct SettingsView: View {
             top(cats)
         } else {
             let cat = cats[m.setCat]
-            SKBackButton(title: "Innstillinger") { m.setCat = -1; m.openK = "" }
+            if !m.rAdd || cat.id != "radio" {
+                SKBackButton(title: "Innstillinger") { m.setCat = -1; m.openK = "" }
+                SKPageTitle(text: cat.n, sub: cat.sub)
+            }
             if cat.id == "radio" {
-                Text("Favoritter").sora(17, .semibold)
-                if m.rAdd { RadioAddView() } else { RadioFavoritesView() }
-                Text("Knapper og oppstart").sora(17, .semibold).padding(.top, 6)
+                if m.rAdd { RadioAddView() } else {
+                    Text("Favoritter").sora(17, .semibold)
+                    RadioFavoritesView()
+                    Text("Knapper og oppstart").sora(17, .semibold).padding(.top, 6)
+                }
             }
             if cat.id == "oppdatering" {
                 DeviceUpdateView()
@@ -425,6 +430,7 @@ struct RadioAddView: View {
     var body: some View {
         @Bindable var m = m
         SKBackButton(title: "Favoritter") { m.rAdd = false }
+        SKPageTitle(text: "Legg til kanal")
         SKSegmented(items: ["Søk", "Fra URL"], selected: m.rMode == "url" ? 1 : 0) { i in m.rMode = i == 1 ? "url" : "sok" }
         if m.rMode == "sok" {
             let ql = m.q.trimmingCharacters(in: .whitespaces).lowercased()

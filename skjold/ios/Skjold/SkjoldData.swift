@@ -139,7 +139,7 @@ enum SK {
             .opt("disp", "Skjerm", ["1,3″ OLED", "2,42″ OLED", "2,0″ TFT"], "Menyene og klokkene tilpasses skjermen. OLED: 128 × 64, TFT: 320 × 240 med bakgrunnslys og farge", dev: ["s1"]),
             .opt("disp", "Skjerm", ["0,91″ OLED", "1,3″ OLED", "1,8″ TFT", "Ingen skjerm"], "Menyene og klokkene tilpasses skjermen. Den lille 0,91″ OLED-en (128 × 32) får kompakte klokker", dev: ["node"]),
             .opt("dim", "Dimme skjermen etter", ["Av", "30 s", "1 min"], dev: ["s1"]), .opt("off", "Slukk skjermen etter", ["Av", "2 min", "5 min"], "Beskytter OLED-skjermen mot innbrenning. TFT-skjermer får ikke innbrenning", dev: ["s1"]),
-            .bool("clock", "Klokke i standby", dev: ["s1"]), SettingItem(kind: .clocks, k: "clockStyle", n: "Klokkestil i standby", dev: ["s1"]), .opt("led", "LED-ringer", ["Høy", "Middels", "Lav", "Av"], dev: ["s1"])]),
+            .bool("clock", "Klokke i standby", dev: ["s1"]), SettingItem(kind: .clocks, k: "clockStyle", n: "Klokkestil i standby", dev: ["s1"]), .opt("saver", "Skjermsparer", ["Omslag og klokke", "Klokke på svart", "Svart, lyset av"], "Når knappene ikke er rørt på en stund", dev: ["node"]), .opt("led", "LED-ringer", ["Høy", "Middels", "Lav", "Av"], dev: ["s1"])]),
         SettingCategory(id: "strom", n: "Strøm", sub: "Standby og påslag", items: [
             .opt("auto", "Auto-standby uten lyd", ["Av", "20 min", "60 min"]), .bool("wake", "Slå på ved signal", "AirPlay, Blåtann eller Spotify slår forsterkeren på fra standby")]),
         SettingCategory(id: "oppdatering", n: "Oppdatering", sub: "GitHub, backup og gjenoppretting", items: [SettingItem(kind: .update, k: "update", n: "Oppdatering")]),
@@ -155,7 +155,7 @@ enum SK {
     ]
 
     /// Default setting values. Booleans are stored as 0/1.
-    static let def: [String: Int] = ["nodeStart": 0, "btAuto": 0, "out": 3, "hat": 0, "rate": 3, "mixer": 0, "clockStyle": 0, "disp": 0, "name": 0, "lvlAux": 0, "lvlUsb": 0, "led": 0, "voice": 0, "lang": 0, "vv": 1, "hold": 2, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": 1, "hpOwn": 1, "dim": 1, "off": 1, "clock": 1, "auto": 1, "wake": 1, "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": 0]
+    static let def: [String: Int] = ["nodeStart": 0, "btAuto": 0, "out": 3, "hat": 0, "rate": 3, "mixer": 0, "clockStyle": 0, "saver": 0, "disp": 0, "name": 0, "lvlAux": 0, "lvlUsb": 0, "led": 0, "voice": 0, "lang": 0, "vv": 1, "hold": 2, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": 1, "hpOwn": 1, "dim": 1, "off": 1, "clock": 1, "auto": 1, "wake": 1, "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": 0]
 
     static func forDev(_ dev: [String]?, _ type: String) -> Bool { dev == nil || dev!.contains(type) }
 

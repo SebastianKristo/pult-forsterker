@@ -202,7 +202,7 @@ object SK {
             S.act("Test stemme", "testVoice", "Spill av", true))),
         SettingCategory("skjerm", "Skjerm og lys", "Skjermtype, dimming, klokke, LED", dev = listOf("s1", "node"), items = listOf(
             S.opt("dim", "Dimme skjermen etter", listOf("Av", "30 s", "1 min")), S.opt("off", "Slukk skjermen etter", listOf("Av", "2 min", "5 min"), "Beskytter OLED-skjermen mot innbrenning"),
-            S.bool("clock", "Klokke i standby"), SettingItem(SettingKind.Clocks, "clockStyle", "Klokke i standby"), S.opt("led", "LED-ringer", listOf("Høy", "Middels", "Lav", "Av")))),
+            S.bool("clock", "Klokke i standby"), SettingItem(SettingKind.Clocks, "clockStyle", "Klokke i standby"), S.opt("saver", "Skjermsparer", listOf("Omslag og klokke", "Klokke på svart", "Svart, lyset av"), "Når knappene ikke er rørt på en stund", dev = listOf("node")), S.opt("led", "LED-ringer", listOf("Høy", "Middels", "Lav", "Av")))),
         SettingCategory("strom", "Strøm", "Standby og påslag", items = listOf(
             S.opt("auto", "Auto-standby uten lyd", listOf("Av", "20 min", "60 min")), S.bool("wake", "Slå på ved signal", "AirPlay, Blåtann eller Spotify slår forsterkeren på fra standby"))),
         SettingCategory("oppdatering", "Oppdatering", "GitHub, backup og gjenoppretting", items = listOf(SettingItem(SettingKind.Update, "update", "Oppdatering"))),
@@ -218,7 +218,7 @@ object SK {
     )
 
     /** Default setting values. Booleans are stored as 0/1. */
-    val def: Map<String, Int> = mapOf("nodeStart" to 0, "btAuto" to 0, "out" to 3, "hat" to 0, "rate" to 3, "mixer" to 0, "clockStyle" to 0, "name" to 0, "lvlAux" to 0, "lvlUsb" to 0, "led" to 0, "voice" to 0, "lang" to 0, "vv" to 1, "hold" to 2, "bass" to 0, "treb" to 0, "bal" to 0, "vstart" to 0, "vmax" to 0, "perIn" to 1, "hpOwn" to 1, "dim" to 1, "off" to 1, "clock" to 1, "auto" to 1, "wake" to 1, "tRole" to 0, "tOut" to 2, "tStandby" to 1, "tIdle" to 0, "tNight" to 0)
+    val def: Map<String, Int> = mapOf("nodeStart" to 0, "btAuto" to 0, "out" to 3, "hat" to 0, "rate" to 3, "mixer" to 0, "clockStyle" to 0, "saver" to 0, "name" to 0, "lvlAux" to 0, "lvlUsb" to 0, "led" to 0, "voice" to 0, "lang" to 0, "vv" to 1, "hold" to 2, "bass" to 0, "treb" to 0, "bal" to 0, "vstart" to 0, "vmax" to 0, "perIn" to 1, "hpOwn" to 1, "dim" to 1, "off" to 1, "clock" to 1, "auto" to 1, "wake" to 1, "tRole" to 0, "tOut" to 2, "tStandby" to 1, "tIdle" to 0, "tNight" to 0)
 
     fun forDev(dev: List<String>?, type: String) = dev == null || dev.contains(type)
 
