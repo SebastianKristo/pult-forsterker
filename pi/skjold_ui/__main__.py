@@ -380,7 +380,13 @@ def _sway_config(cmd, path):
     os.makedirs(d, exist_ok=True)
     launch = os.path.join(d, "kiosk.sh")
     with open(launch, "w") as f:
-        f.write("#!/bin/sh\n# laget av skjold-ui – endres ved hver start\n" + " ".join(shlex.quote(a) for a in cmd) + "\nswaymsg exit\n")
+        # Nettleserens utskrift til journalen (journalctl -t skjold-kiosk): sway sender den ellers ingen steder, så en
+        # Chromium som avslutter med en gang ga bare en blank skjerm i omstartsløkke uten forklaring.
+        log = os.path.join(d, "chromium.log")
+        f.write("#!/bin/sh\n# laget av skjold-ui – endres ved hver start\n"
+                + " ".join(shlex.quote(a) for a in cmd) + f" >{shlex.quote(log)} 2>&1\nrc=$?\n"
+                + f"tail -n 25 {shlex.quote(log)} | logger -t skjold-kiosk\nlogger -t skjold-kiosk \"Chromium avsluttet ($rc)\"\n"
+                + "swaymsg exit\n")
     os.chmod(launch, 0o755)
     with open(path, "w") as f:
         f.write("# laget av skjold-ui – endres ved hver start\n"
