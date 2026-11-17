@@ -51,16 +51,27 @@ class LumaSSD1306:
         except Exception: pass
 
 
+class _IngenGPIO:
+    """Stand-in for RPi.GPIO som luma.lcd bare bruker til bakgrunnslyset. Nyere luma.lcd godtar ikke gpio_LIGHT=None
+    (GPIO.setup(None) → «Channel must be an integer»), og vi styrer lyset selv med Backlight (PWM på GPIO 13)."""
+    OUT, IN, HIGH, LOW, BCM = 0, 1, 1, 0, 11
+    def setmode(self, *a, **k): pass
+    def setwarnings(self, *a, **k): pass
+    def setup(self, *a, **k): pass
+    def output(self, *a, **k): pass
+    def cleanup(self, *a, **k): pass
+
+
 class LumaST7735:
     def __init__(self, sk):
         from luma.core.interface.serial import spi
         from luma.lcd.device import st7735
         ser = spi(port=sk["spi_port"], device=sk["spi_device"], gpio_DC=sk["pinner"]["A0"]["gpio"],
                   gpio_RST=sk["pinner"]["RESET"]["gpio"], bus_speed_hz=sk["bus_speed_hz"])
-        # Bakgrunnslyset styres av Backlight under (Q1 high-side, aktiv lav), ikke av luma (gpio_LIGHT=None,
-        # ellers tar luma GPIO18 som er reservert for I²S).
+        # Bakgrunnslyset styres av Backlight under, ikke av luma: luma får en GPIO-stand-in som ikke gjør noe
+        # (ellers tar luma GPIO18, som er reservert for I²S, eller krasjer på gpio_LIGHT=None).
         self.dev = st7735(ser, width=sk["width"], height=sk["height"], rotate=sk["rotate"], bgr=sk["bgr"],
-                          h_offset=sk["h_offset"], v_offset=sk["v_offset"], gpio_LIGHT=None)
+                          h_offset=sk["h_offset"], v_offset=sk["v_offset"], gpio=_IngenGPIO(), gpio_LIGHT=0)
 
     def show(self, img, tag=""): self.dev.display(img)
     def close(self):
