@@ -16,9 +16,9 @@ class KiAmpApi:
         self._session = session
         self._base = f"http://{host}:{port}/api"
 
-    async def _req(self, method: str, path: str, json: dict | None = None) -> dict[str, Any]:
+    async def _req(self, method: str, path: str, json: dict | None = None, timeout: float = 5) -> dict[str, Any]:
         try:
-            async with asyncio.timeout(5):
+            async with asyncio.timeout(timeout):
                 async with self._session.request(method, f"{self._base}{path}", json=json) as resp:
                     resp.raise_for_status()
                     return await resp.json()
@@ -162,7 +162,7 @@ class KiAmpApi:
     # --- tilbehør: Skjold Røst, Skjold Kassett og Skjold Hjul ---
     async def perf(self) -> dict[str, Any]:
         """CPU, temperatur, minne, disk, oppetid og strømproblem (vcgencmd) fra /api/health/perf."""
-        return await self._req("GET", "/api/health/perf")
+        return await self._req("GET", "/health/perf", timeout=15)   # _base slutter allerede på /api
 
     async def rost(self) -> dict[str, Any]:
         return await self._req("GET", "/rost")
