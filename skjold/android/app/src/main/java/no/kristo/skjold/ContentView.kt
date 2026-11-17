@@ -123,7 +123,9 @@ fun AppShell(m: AppModel) {
                 }
                 DockWideMini(m)
             } else {
-                Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).imePadding()) { if (SourceUi.active) SourceOverlays(m, false) else Page(m, m.tab, false) }
+                // Kildesidene (Spotify, Radio …) tegner fargegløden helt opp under statuslinjen og legger selv på luften for den
+                if (SourceUi.active) Box(Modifier.fillMaxSize().imePadding()) { SourceOverlays(m, false) }
+                else Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).imePadding()) { Page(m, m.tab, false) }
                 DockV4(m)
             }
             // «Hold på minispilleren for volumknotten» (første gang, på Hjem)

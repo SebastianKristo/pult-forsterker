@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -328,7 +329,8 @@ fun SourcePage(m: AppModel, n: String, wide: Boolean = false) {
     BackHandler(enabled = SourceUi.pl == null) { SourceUi.src = null; SourceUi.srcQ = "" }
     Box(Modifier.fillMaxSize().background(SourceTok.bg)) {
         // radial-gradient(90% 70% at 20% 0%, kildefarge55 0%, transparent 70%), 420 høy, ligger fast bak rullingen
-        Box(Modifier.fillMaxWidth().height(420.dp).radialGlow(SourceTok.color(n).copy(alpha = 0.33f), 0.2f, 0f, 330.dp))
+        val topp = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        Box(Modifier.fillMaxWidth().height(420.dp + topp).radialGlow(SourceTok.color(n).copy(alpha = 0.33f), 0.2f, 0f, 330.dp + topp))
         Column(
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).verticalScroll(rememberScrollState())
                 .padding(start = if (wide) 40.dp else 20.dp, end = if (wide) 40.dp else 20.dp, top = 6.dp, bottom = if (wide) 130.dp else 230.dp),
