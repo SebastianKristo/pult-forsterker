@@ -3825,6 +3825,12 @@ class Lyrion:
                 self.connected = False; self.info = {}
                 if not LMS_SERVER:
                     self.host = None
+                elif time.time() - last_try > 30:
+                    # Den faste adressen svarer ikke (f.eks. serveren har fått ny IP): let på nettet i stedet.
+                    last_try = time.time(); old = self.host
+                    self.discover()
+                    if self.host != old:
+                        print(f"Lyrion: {old} svarer ikke, bruker {self.host} (oppdater KI_AMP_LMS_SERVER)", flush=True)
 
     def _sync_volume(self, r):
         """Volumet ligger i CamillaDSP. Lyrion settes til «fast utnivå» (Squeezelite får alltid 100 %), men glideren i
