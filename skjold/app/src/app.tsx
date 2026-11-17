@@ -12,6 +12,7 @@ import { setVolume } from './lib/store';
 import { atRoot, closeFull, deviceName, fullPlayer, go, lastError, mode, online, product, queueOpen, route, srcOpen, status, toast, type Page } from './lib/store';
 import { Welcome } from './screens/welcome';
 import { HomePhone, MiniPhone, FullSheet, RoomsPhone, useRooms, switchRoom } from './screens/phone';
+import { PowerMenu } from './screens/powermenu';
 import { DeskHome, DeskLibrary, DeskPlayer, DeskRadio } from './screens/desk';
 import { LibraryPage, libBack, libTitle, libUi } from './screens/library';
 import { ob, obBack } from './screens/onboard';
@@ -30,7 +31,7 @@ import { MaPage } from './screens/ma';
 import { NrkPanel } from './screens/nrk';
 import { SettingsPage, CategoryDetail } from './screens/settings';
 import { DoorbellOverlay, TalkButton } from './screens/features';
-import { PowerButton, Transport, artFor, nowTitle, subLine } from './screens/player';
+import { Transport, artFor, nowTitle, subLine } from './screens/player';
 import { openFull } from './lib/store';
 import { FindDevice, Setup } from './screens/onboard';
 import { showToast, settings } from './lib/store';
@@ -224,7 +225,7 @@ function Desktop() {
           <div class="row gap10">
             <span class="link-pill"><i style={{ background: online.value ? 'var(--green)' : 'var(--red)' }} />{online.value ? (s?.power ? 'På' : 'Standby') : 'Frakoblet'}</span>
             {!noRcol && <button class={'rc-toggle' + (rcol ? ' on' : '')} onClick={toggleRcol} aria-pressed={rcol} title={rcol ? 'Skjul rom' : 'Vis rom'}><Icon d="M4 5h16v14H4zM15 5v14" size={18} sw={1.6} /><span>Rom</span></button>}
-            <PowerButton s={s} />
+            <PowerMenu s={s} />
           </div>
         </header>
         <Offline />
