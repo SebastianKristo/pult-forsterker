@@ -113,7 +113,21 @@ export async function ndSearch(q: string): Promise<NdSong[]> {
   const r = await call<{ searchResult3?: { song?: Record<string, unknown>[] } }>('search3', { query: q, songCount: 30, albumCount: 0, artistCount: 0 });
   return arr(r.searchResult3?.song).map(song);
 }
-export const ndCover = (id?: string, size = 300): string => (id && /^https?:\/\//i.test(id) ? id : id && ndConfigured() ? ndUrl('getCoverArt', { id, size }) : '');
+// Samme cover skal ha samme adresse: auth() lager nytt salt hver gang, og da lastet nettleseren alle coverne på nytt
+// ved hver omtegning (de blinket hvert sekund på Bibliotek-siden). Nullstilles når innloggingen endres.
+const coverCache = new Map<string, string>();
+let coverKey = '';
+export const ndCover = (id?: string, size = 300): string => {
+  if (!id) return '';
+  if (/^https?:\/\//i.test(id)) return id;
+  if (!ndConfigured()) return '';
+  const c = ndConf.value, k = c.url + '|' + c.user + '|' + c.pass;
+  if (k !== coverKey) { coverCache.clear(); coverKey = k; }
+  const ck = id + '@' + size;
+  let u = coverCache.get(ck);
+  if (!u) { u = ndUrl('getCoverArt', { id, size }); coverCache.set(ck, u); if (coverCache.size > 2000) coverCache.delete(coverCache.keys().next().value as string); }
+  return u;
+};
 // Lyrion/squeezelite spiller ikke alle formater (f.eks. ALAC/opus) og gjetter type fra adressen:
 // be Navidrome omkode til MP3 320 og la adressen slutte på .mp3.
 export const ndStream = (id: string): string => ndUrl('stream', { id, format: 'mp3', maxBitRate: 320 }).replace('&f=json', '') + '&_=.mp3';

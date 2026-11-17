@@ -175,3 +175,62 @@ def test_ruter():
             assert (await c.get("/api/ytm/stream/kort")).status == 400
             assert (await c.get("/api/ytm/stream/aaaaaaaaaaa.m4a")).status == 502   # upstream nås ikke
     asyncio.run(go())
+
+
+def test_ett_oppslag_om_gangen_per_lat():
+    """Forhåndshenting, strømmen og strømtesten samtidig: yt-dlp skal bare kjøre én gang (Pi-en ble for treg)."""
+    import threading
+    calls = {"n": 0}
+
+    def slow(vid):
+        calls["n"] += 1
+        time.sleep(0.3)
+        return {"url": f"https://x/videoplayback?expire={int(time.time()) + 7200}", "http_headers": {}}
+    y, _f, _n = mk(extract=slow)
+    ts = [threading.Thread(target=y.stream_url, args=("aaaaaaaaaaa",)) for _ in range(3)]
+    [t.start() for t in ts]; [t.join() for t in ts]
+    assert calls["n"] == 1
+
+
+def test_strommen_hentes_i_biter_og_tar_imot_range():
+    """YouTube kutter lange forespørsler: Skjold henter 1 MB om gangen og fornyer en utløpt adresse underveis."""
+    from aiohttp import web, ClientSession
+    data = bytes(i % 251 for i in range(int(2.5 * (1 << 20))))
+    seen = {"ranges": [], "expired_once": False}
+
+    async def upstream(r):
+        if r.query.get("v") == "1" and len(seen["ranges"]) >= 1 and not seen["expired_once"]:
+            seen["expired_once"] = True
+            return web.Response(status=403)
+        a, b = Y.re.match(r"bytes=(\d+)-(\d+)", r.headers["Range"]).groups()
+        a, b = int(a), min(int(b), len(data) - 1)
+        seen["ranges"].append((a, b))
+        return web.Response(status=206, body=data[a:b + 1], content_type="audio/mp4",
+                            headers={"Content-Range": f"bytes {a}-{b}/{len(data)}"})
+
+    async def main():
+        up_app = web.Application(); up_app.router.add_get("/vp", upstream)
+        r1 = web.AppRunner(up_app); await r1.setup(); s1 = web.TCPSite(r1, "127.0.0.1", 0); await s1.start()
+        port = s1._server.sockets[0].getsockname()[1]
+        n = {"v": 0}
+
+        def ex(vid):
+            n["v"] += 1
+            return {"url": f"http://127.0.0.1:{port}/vp?v={n['v']}&expire={int(time.time()) + 7200}", "http_headers": {}}
+        y, _f, _n = mk(extract=ex)
+        app = web.Application(); app.add_routes(Y.routes(y, {"stream_base": lambda: "", "play": lambda ts, i: None}))
+        r2 = web.AppRunner(app); await r2.setup(); s2 = web.TCPSite(r2, "127.0.0.1", 0); await s2.start()
+        p2 = s2._server.sockets[0].getsockname()[1]
+        async with ClientSession() as c:
+            async with c.get(f"http://127.0.0.1:{p2}/api/ytm/stream/aaaaaaaaaaa.m4a") as resp:
+                body = await resp.read()
+                full = (resp.status, int(resp.headers["Content-Length"]), body)
+            async with c.get(f"http://127.0.0.1:{p2}/api/ytm/stream/aaaaaaaaaaa.m4a", headers={"Range": "bytes=100-199"}) as resp:
+                part = (resp.status, resp.headers.get("Content-Range"), await resp.read())
+        await r2.cleanup(); await r1.cleanup()
+        return full, part
+    full, part = asyncio.run(main())
+    assert full[0] == 200 and full[1] == len(data) and full[2] == data
+    assert seen["expired_once"] and len(seen["ranges"]) >= 3
+    assert all(b - a + 1 <= (1 << 20) for a, b in seen["ranges"])
+    assert part[0] == 206 and part[1] == f"bytes 100-199/{len(data)}" and part[2] == data[100:200]
