@@ -5144,7 +5144,7 @@ def fetch_lyrics(artist, title, duration=0):
 
 
 async def h_lyrics(_r):
-    if not plug_on("lyrics"):
+    if not (plug_on("lyrics") or subwave_playing()):   # SUB/WAVE viser alltid tekst, som i SUB/WAVE sin egen spiller
         return web.json_response({"enabled": False, "found": False})
     s = read_status()
     title, artist = str(s.get("title") or ""), str(s.get("artist") or "")

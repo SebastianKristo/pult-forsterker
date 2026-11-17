@@ -206,7 +206,7 @@ export function DeskPlayer() {
       <div class="glow" style={{ background: a.bg }} />
       <div class="cvwrap"><div class="cv" style={{ background: a.bg, color: a.ink }}>{!a.img && <span>{t.title}</span>}</div></div>
       <div class="info">
-        <div class="seg">{((s?.subwave ? [['song', 'Låt'], ['booth', 'Booth'], ['queue', 'Kø']] : [['song', 'Låt'], ['queue', 'Kø'], ['lyrics', 'Tekst']]) as ['song' | 'queue' | 'lyrics' | 'booth', string][]).map(([k, n]) => <button key={k} class={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}</div>
+        <div class="seg">{((s?.subwave ? [['song', 'Låt'], ['lyrics', 'Tekst'], ['booth', 'Booth'], ['queue', 'Kø']] : [['song', 'Låt'], ['queue', 'Kø'], ['lyrics', 'Tekst']]) as ['song' | 'queue' | 'lyrics' | 'booth', string][]).map(([k, n]) => <button key={k} class={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}</div>
         {tab === 'song' ? <>
           <RecognizeBox />
           <SmartRadioBox seed={libQ && lq.value[li.value] ? { source: 'navidrome', id: lq.value[li.value]!.id, title: lq.value[li.value]!.title, artist: lq.value[li.value]!.artist } : s?.playing && s.artist ? { title: t.title, artist: s.artist } : null} />
