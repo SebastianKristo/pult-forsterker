@@ -67,7 +67,7 @@ const dev = (): Dev => (local.value ?? {}) as Dev;
 
 // Kiosken kjører på enheten selv: start alltid på denne enheten (en lagret host fra fjernstyring nullstilles).
 setBase(null);
-startPolling(); void loadSettings(); void loadFavs();
+startPolling(); void loadSettings(); void loadFavs(); loadSwT();
 
 const here = (): string => location.origin;
 async function getAt<T>(base: string, path: string): Promise<T> { const r = await fetch((base || here()) + path, { cache: 'no-store' }); if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<T>; }
@@ -482,6 +482,20 @@ function Home() {
 
 interface Card { t: string; s: string; art: string; live?: boolean; play: () => void }
 
+/** SUB/WAVE-stasjonene huskes fra forrige gang og hentes ved oppstart, så fanen står klar sammen med de andre i Bibliotek. */
+type SwT = { i: number; name: string; image?: string };
+const swT = signal<SwT[]>((() => { try { return JSON.parse(localStorage.getItem('skjold-touch-sw') || '[]') as SwT[]; } catch { return []; } })());
+const swNowT = signal<number | null>(null);
+function loadSwT(): void {
+  api.subwave(true).then((r) => {
+    const l = ((r.configured ? r.stations ?? [] : []) as SwT[]).map((x) => ({ i: x.i, name: x.name, image: x.image }));
+    swNowT.value = r.playing_station ?? null;
+    if (JSON.stringify(l) === JSON.stringify(swT.value)) return;
+    swT.value = l;
+    try { localStorage.setItem('skjold-touch-sw', JSON.stringify(l)); } catch { /* full lagring: hentes på nytt neste gang */ }
+  }).catch(() => {});
+}
+
 /** Podkaster på Touch: favorittene (lagt til i appen eller web-UI) og episodene deres. */
 const podTouch = signal<PodShow | null>(null);
 const pmin = (s: number) => (s >= 3600 ? Math.floor(s / 3600) + ' t ' : '') + Math.round((s % 3600) / 60) + ' min';
@@ -529,8 +543,8 @@ function Library() {
     ytmHomeCached().then((h) => { const l = [...h.playlists, ...h.frequent, ...h.other, ...h.newest]; setYt(l.filter((x, i) => l.findIndex((y) => y.id === x.id) === i).slice(0, 24)); })
       .catch(async (e: unknown) => { setYtErr((await ytmWhy(e)).toUpperCase()); setYt([]); });
   }, [lib.value]);
-  const [sw, setSw] = useState<{ i: number; name: string }[]>([]), [swNow, setSwNow] = useState<number | null>(null);
-  useEffect(() => { api.subwave(true).then((r) => { setSw(r.configured ? r.stations ?? [] : []); setSwNow(r.playing_station ?? null); }).catch(() => setSw([])); }, [lib.value]);
+  const sw = swT.value, swNow = swNowT.value;
+  useEffect(() => { loadSwT(); }, [lib.value]);   // i bakgrunnen: fanen vises med en gang fra det som er husket
   const [pf, setPf] = useState<PodShow[] | null>(null), [pn, setPn] = useState<PodEpisode[]>([]);
   const st = status.value;
   const TABS = ['YouTube Music', 'Navidrome', 'Radio', ...(sw.length ? ['SUB/WAVE'] : []), 'Podkaster'];
@@ -550,8 +564,8 @@ function Library() {
     items = [...nyest, ...(pf ?? []).map((f) => ({ t: f.title, s: f.author || 'Podkast', art: artBg(f.title, f.image), play: () => { podTouch.value = f; } }))];
   } else if (tab === 'SUB/WAVE') {
     kicker = 'SUB/WAVE · AI-DJ-STASJONER';
-    items = sw.map((x) => ({ t: x.name, s: 'SUB/WAVE', art: artBg(x.name, undefined, x.i), live: swNow === x.i && !!st?.playing,
-      play: () => { void api.subwavePost({ station: x.i, play: true }).catch(() => {}); setSwNow(x.i); scr.value = 'now'; } }));
+    items = sw.map((x) => ({ t: x.name, s: 'SUB/WAVE', art: artBg(x.name, x.image, x.i), live: swNow === x.i && !!st?.playing,
+      play: () => { void api.subwavePost({ station: x.i, play: true }).catch(() => {}); swNowT.value = x.i; scr.value = 'now'; } }));
   } else {
     kicker = 'DINE FAVORITTER';
     items = favs.value.map((f, i) => ({ t: f.title, s: f.genre || 'Radio', art: artBg(f.title, f.image, i), live: st?.input === 'radio' && !!st.playing && (st.radio_now?.url === f.url || st.preset === f.n), play: () => { playFav(f); scr.value = 'now'; } }));
