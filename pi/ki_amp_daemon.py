@@ -4724,6 +4724,18 @@ def update_info(check=True):
             "rolled_back": (cur or "forrige versjon") if last and "rullet tilbake" in last else None}   # tekst: appen viser versjonen
 
 
+# Kildetreet kan bli skadet hvis enheten mister strømmen midt i en nedlasting («object file … is empty», en gammel
+# index.lock). Rydd opp før oppdateringen; går git fortsatt ikke, hentes .git på nytt fra GitHub (filene blir der).
+GIT_REPAIR = (
+    "if ! pgrep -x git >/dev/null; then rm -f .git/index.lock .git/HEAD.lock .git/refs/heads/*.lock; fi; "
+    "find .git/objects -type f -empty -delete 2>/dev/null; "
+    "if ! git -c safe.directory='*' fsck --connectivity-only -q >/dev/null 2>&1 || ! git -c safe.directory='*' fetch -q --tags origin; then "
+    "echo '== Kildetreet er skadet – henter det på nytt fra GitHub'; "
+    "U=$(git -c safe.directory='*' remote get-url origin 2>/dev/null || echo https://github.com/SebastianKristo/pult-forsterker.git); "
+    "N=\"$PWD.ny-git\"; rm -rf \"$N\" && git clone -q --depth 50 --no-checkout \"$U\" \"$N\" && rm -rf .git && mv \"$N/.git\" .git && rm -rf \"$N\" "
+    "&& git -c safe.directory='*' reset -q --hard && echo '== Kildetreet er reparert'; fi; ")
+
+
 def start_update():
     src = _upd_src()
     if not src:
@@ -4744,6 +4756,7 @@ def start_update():
               f"KILDE={shlex.quote(src)}; EIER=$(stat -c %U:%G \"$KILDE\"); chown -R \"$EIER\" \"$KILDE\" 2>/dev/null || true; "
               f"cd {shlex.quote(src)} && echo \"== $(date '+%F %T') Henter nyeste versjon ({'beta' if _beta() else 'stabil'})\" && "
               "{ python3 /usr/local/bin/skjold_safeupdate.py snapshot \"$PWD\" >/dev/null 2>&1 || python3 pi/skjold_safeupdate.py snapshot \"$PWD\" >/dev/null 2>&1 || true; } && "
+              + GIT_REPAIR +
               "git -c safe.directory='*' fetch -q --tags origin && " + target + " && "
               f"echo '== Installerer' && SKJOLD_CHANNEL={'beta' if _beta() else 'stabil'} bash pi/update.sh && "
               "{ [ -f /etc/systemd/system/skjold-os.service ] && [ -f skjold/os/install.sh ] && bash skjold/os/install.sh || true; }; "
