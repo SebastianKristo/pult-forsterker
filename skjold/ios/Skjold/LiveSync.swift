@@ -150,6 +150,9 @@ extension AppModel {
 
     func apply(_ st: DevStatus, host h: String) {
         devStats[h] = st
+        // omslaget til låten hvert rom spiller (romkortene viser det også for rom som ikke er aktive)
+        let romCover = DeviceLink.shared.coverURL(st.coverURL, on: h)
+        if !romCover.isEmpty { CoverStore.shared.set(st.title, romCover) }
         guard h == activeHost else { rebuildRooms(); return }   // et annet rom: vis ny tilstand med en gang
         let first = dev == nil || link != .online
         dev = st

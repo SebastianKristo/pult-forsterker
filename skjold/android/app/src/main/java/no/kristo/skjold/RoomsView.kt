@@ -145,6 +145,13 @@ private fun RoomCard(m: AppModel, c: RoomCardData) {
             Haptics.tick(); m.v4Activate(c.room)
         }
     }
+    // trykk på omslaget: spilleren med rompanelet, der du legger flere rom i gruppen
+    val openGroup: () -> Unit = {
+        Haptics.tick()
+        if (!c.isMain) m.v4Activate(c.room)
+        PlayerUi.fm = "rooms"
+        m.full = true
+    }
     Box(
         Modifier.fillMaxWidth().alpha(if (c.playing) 1f else 0.78f).clip(RoundedCornerShape(24.dp))
             .cssGradient(150.0, a.stops)
@@ -168,7 +175,7 @@ private fun RoomCard(m: AppModel, c: RoomCardData) {
             }
             // omslag, tittel og kilde, spill/pause
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ArtFill(a, Modifier.size(52.dp).shadow(8.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).press(label = "Åpne " + c.name) { open() })
+                ArtFill(a, Modifier.size(52.dp).shadow(8.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).press(label = "Velg rom i gruppen med " + c.name) { openGroup() })
                 Column(Modifier.weight(1f).press { open() }, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     T(c.t, sora(14f, W.Semibold), maxLines = 1)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -77,6 +77,7 @@ struct V4RoomCardData {
 /// Romkort: radius 24, farget fra omslaget (romfarger), kant .1, innerlys.
 struct V4RoomCard: View {
     @Environment(AppModel.self) private var m
+    @Environment(V4State.self) private var ui
     let card: V4RoomCardData
 
     private var vol: Int { card.isMain ? m.v4GroupVol : m.v4RoomVol(card.room) }
@@ -86,13 +87,13 @@ struct V4RoomCard: View {
         VStack(alignment: .leading, spacing: 12) {
             head
             HStack(spacing: 12) {
-                Button { open() } label: {
+                Button { openGroup() } label: {
                     ArtFill(a).frame(width: 52, height: 52)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .shadow(color: .black.opacity(0.35), radius: 8, y: 6)
                 }
                 .plain()
-                .accessibilityLabel("Åpne " + card.name)
+                .accessibilityLabel("Velg rom i gruppen med " + card.name)
                 Button { open() } label: {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(card.t).sora(14, .semibold).lineLimit(1)
@@ -156,6 +157,16 @@ struct V4RoomCard: View {
         ZStack {
             CSSLinearGradient(angle: 150, stops: a.stops)
             Color.black.opacity(a.hasLogo ? 0.55 : 0.32)
+        }
+    }
+
+    /// Trykk på omslaget: åpne spilleren med rompanelet, der du legger flere rom i gruppen.
+    private func openGroup() {
+        Haptics.tick()
+        withAnimation(.snappy) {
+            if !card.isMain { m.v4Activate(card.room) }
+            ui.fm = "rooms"
+            m.full = true
         }
     }
 

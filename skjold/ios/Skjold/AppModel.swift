@@ -519,7 +519,9 @@ final class AppModel {
         let n = np
         let big = input == 3 ? curRadio.name : n.t
         let kicker = input == 3 ? "RADIO · " + curRadio.genre.uppercased() : input == 2 ? "AUX" : input == 4 ? "USB-LYD" : n.s.uppercased()
-        return PlayerArt(key: big, kicker: kicker, big: big, size: big.count > 14 ? 30 : 40, live: input == 3)
+        // radio/Lyrion: vis omslaget til låten når enheten har et, ellers kanallogoen
+        let key = input == 3 && !n.t.isEmpty && CoverStore.shared.url(for: n.t) != nil ? n.t : big
+        return PlayerArt(key: key, kicker: kicker, big: big, size: big.count > 14 ? 30 : 40, live: input == 3)
     }
 
     var duration: Int {

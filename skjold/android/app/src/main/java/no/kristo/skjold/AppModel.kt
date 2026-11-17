@@ -724,7 +724,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val n = np
             val big = if (input == 3) curRadio.name else n.t
             val kicker = when (input) { 3 -> "RADIO · " + curRadio.genre.uppercase(); 2 -> "AUX"; 4 -> "USB-LYD"; else -> n.s.uppercase() }
-            return PlayerArt(big, kicker, big, if (big.length > 14) 30f else 40f, input == 3)
+            // radio/Lyrion: vis omslaget til låten når enheten har et, ellers kanallogoen
+            val key = if (input == 3 && n.t.isNotEmpty() && CoverStore.url(n.t) != null) n.t else big
+            return PlayerArt(key, kicker, big, if (big.length > 14) 30f else 40f, input == 3)
         }
 
     val duration: Int
@@ -1181,6 +1183,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun apply(st: DevStatus, h: String) {
         devStats[h] = st
+        // omslaget til låten hvert rom spiller (romkortene viser det også for rom som ikke er aktive)
+        DeviceLink.coverURL(st.coverURL, h).let { if (it.isNotEmpty()) CoverStore.set(st.title, it) }
         if (h != activeHost) return
         val first = dev == null || link != Link.ONLINE
         dev = st
