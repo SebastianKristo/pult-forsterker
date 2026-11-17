@@ -5,6 +5,10 @@
 # ---------------------------------------------------------------------------
 
 [all]
+# Tom dtoverlay= først: blokken havner nederst i config.txt, etter andre dtoverlay-linjer (f.eks. vc4-kms-v3d).
+# Uten den gjelder dtparam-linjene under den forrige overlayen i stedet for Pi-en – da kom verken 3,5 mm-lyden
+# (dtparam=audio=on) eller I²C/SPI opp.
+dtoverlay=
 # I²C1 (GPIO2/3, pinne 3/5): 0,91" SSD1306 OLED på 0x3C og ADS1115 (potmeter) på 0x48.
 # Uten ADS1115 leses potmeteret med RC-tidsmåling på GPIO17 (se under).
 # 400 kHz gir ~25 bilder/s på 128×32 uten å stresse ADS1115 (tåler 400 kHz fast mode).
