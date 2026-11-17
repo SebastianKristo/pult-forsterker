@@ -56,6 +56,7 @@ export function SpeakerCard() {
   const [err, setErr] = useState(''), [busy, setBusy] = useState('');
   const [q, setQ] = useState(''), [hits, setHits] = useState<{ results: P[]; offline: boolean } | null>(null);
   const [mode, setMode] = useState<'' | 'measure'>('');
+  const [finn, setFinn] = useState(false);
   const [sess] = useState(() => 'w' + Math.random().toString(36).slice(2, 10));
   const [prev, setPrev] = useState<P | null>(null);
   const [form, setForm] = useState({ brand: '', model: '', sensitivity: '', impedance: '', share: true });
@@ -79,7 +80,7 @@ export function SpeakerCard() {
   return (
     <div style={box} data-testid="speaker-card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px">Høyttalerprofil</span><span style={lbl}>Retter høyttalernes egen frekvensgang. Romkorreksjonen tar seg av bassen i rommet{c.roomeq_on ? ' (på – profilen bruker bare filtre over 300 Hz)' : ''}.</span></div>
+        <div class="fx-hd"><span class="fx-ic" style="background:#2a2112;color:#f0c46a"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v18H7zM12 7.5h.01M12 11.5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" /></svg></span><span class="fx-tx"><b>Høyttalerprofil</b><span>{prof.model ? `${prof.brand} ${prof.model}` : 'Retter høyttalernes egen klang. Finn modellen din eller mål dem selv.'}{c.roomeq_on ? ' Romkorreksjon er på, så profilen tar seg bare av området over 300 Hz.' : ''}</span></span></div>
         <button role="switch" aria-checked={!!c.enabled} aria-label="Høyttalerprofil" disabled={!prof.filters?.length} onClick={() => void run(async () => setC(await speakersApi.set({ enabled: !c.enabled })))} style={`width:44px;height:26px;border-radius:13px;border:none;background:${c.enabled ? A : '#3a3a3c'};position:relative;cursor:pointer;flex-shrink:0`}><i style={`position:absolute;top:3px;left:${c.enabled ? 21 : 3}px;width:20px;height:20px;border-radius:50%;background:#fff`} /></button>
       </div>
 
@@ -94,7 +95,8 @@ export function SpeakerCard() {
         </div>
       </div>}
 
-      <div style="display:flex;gap:6px"><input style={inp + ';flex:1'} placeholder="Søk: merke eller modell (f.eks. Dali Oberon)" value={q} onInput={(e) => setQ(e.currentTarget.value)} onKeyDown={(e) => { if (e.key === 'Enter') void run(async () => setHits(await speakersApi.search(q))); }} /><button style={btn()} onClick={() => void run(async () => setHits(await speakersApi.search(q)))}>Søk</button></div>
+      {!finn && mode !== 'measure' ? <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><button style={btn(true)} onClick={() => setFinn(true)}>Finn modellen</button><button style={btn()} onClick={() => setMode('measure')}>Mål selv</button></div> : null}
+      {finn && <div style="display:flex;gap:6px"><input style={inp + ';flex:1;min-width:0'} autoFocus placeholder="Merke eller modell, f.eks. Dali Oberon" value={q} onInput={(e) => setQ(e.currentTarget.value)} onKeyDown={(e) => { if (e.key === 'Enter') void run(async () => setHits(await speakersApi.search(q))); }} /><button style={btn()} onClick={() => void run(async () => setHits(await speakersApi.search(q)))}>Søk</button></div>}
       {hits && <div style="display:flex;flex-direction:column;gap:4px">
         {hits.offline && <span style={lbl}>Uten nett – viser bare profiler du har brukt før.</span>}
         {!hits.results.length && <span style={lbl}>Ingen treff. Mål høyttalerne selv og del profilen – da får neste person den.</span>}
@@ -105,7 +107,7 @@ export function SpeakerCard() {
         </div>)}
       </div>}
 
-      {mode !== 'measure' ? <button style={btn()} onClick={() => setMode('measure')}>Mål høyttalerne mine</button> : <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid #242426;padding-top:10px">
+      {mode !== 'measure' ? (finn ? <button style={btn()} onClick={() => setMode('measure')}>Finner du den ikke? Mål høyttalerne selv</button> : null) : <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid #242426;padding-top:10px">
         <span style={lbl}>1) Spill én høyttaler (koble fra den andre eller sett balansen helt over). 2) Hold mikrofonen 1 m foran høyttaleren, i høyde med diskanten, minst 1 m fra vegger og gulv – «Gated» 3–5 ganger fra litt ulike vinkler. 3) Valgfritt: «Nærfelt» med mikrofonen 1–2 cm foran basselementet for en riktig bass. En kalibrert USB-mikrofon gir best resultat; last opp kalibreringsfilen under.</span>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <input style={inp} placeholder="Merke" value={form.brand} onInput={(e) => setForm({ ...form, brand: e.currentTarget.value })} />

@@ -873,3 +873,27 @@ html.kiosk body { overscroll-behavior: none; }
 .eqx-help summary::-webkit-details-marker { display: none; }
 @media (max-width: 1100px) { .eqx { grid-template-columns: minmax(0, 1fr); } .eqx-graph { height: clamp(160px, 34vh, 280px); } }
 @media (max-width: 520px) { .eqx-card { padding: 14px 12px; } .eqx-bands { padding-left: 0; gap: 4px; } .eqx-band .nm { font-size: 11px; } .eqx-band .st button { display: none; } .eqx-band .v { min-width: 0; font-size: 13px; } .eqx-band .hz { font-size: 9.5px; } .eqx-graph { grid-template-columns: 0 minmax(0, 1fr); gap: 0; } .eqx-db { visibility: hidden; } }
+
+/* Tone-kortet (bass/diskant/balanse fra midten) og kortene for romlig lyd og høyttalerprofil */
+.tn-card { border-radius: 18px; border: 1px solid #242426; background: #141415; padding: 16px 16px 6px; display: flex; flex-direction: column; gap: 4px; }
+.tn-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.tn-row { display: flex; flex-direction: column; gap: 2px; padding: 8px 0 6px; }
+.tn-hd { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+.tn-v { min-width: 58px; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid #2e2e30; background: #1a1a1b; color: #a9a9a3; font-family: var(--mono); font-size: 12px; cursor: pointer; }
+.tn-v.on { border-color: #5a4420; background: #1c170d; color: #f0c46a; }
+.tn-sl { position: relative; height: 30px; }
+.tn-tr { position: absolute; left: 10px; right: 10px; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: #2c2c2e; }
+.tn-mid { position: absolute; left: 50%; top: 50%; width: 2px; height: 12px; margin: -6px 0 0 -1px; border-radius: 1px; background: #55554f; }
+.tn-fill { position: absolute; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: #d9a441; }
+.tn-ends { display: flex; justify-content: space-between; padding: 0 4px; font-family: var(--mono); font-size: 9.5px; color: #5f5f5b; }
+input.range.bi { position: relative; -webkit-appearance: none; appearance: none; background: transparent; height: 30px; }
+input.range.bi::-webkit-slider-runnable-track { background: transparent; height: 30px; }
+input.range.bi::-moz-range-track { background: transparent; height: 30px; }
+input.range.bi::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; margin-top: 5px; border-radius: 50%; background: #f0c46a; border: 3px solid #141415; box-shadow: 0 0 0 1px #d9a441, 0 2px 6px rgba(0,0,0,.5); cursor: grab; }
+input.range.bi::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #f0c46a; border: 3px solid #141415; box-shadow: 0 0 0 1px #d9a441; }
+.tn-loud { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0 12px; margin-top: 4px; border-top: 1px solid #222224; }
+.fx-hd { display: flex; align-items: flex-start; gap: 12px; }
+.fx-ic { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.fx-tx { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.fx-tx b { font-size: 14px; font-weight: 600; }
+.fx-tx span { font-size: 12px; color: #8b8b86; line-height: 1.45; text-wrap: pretty; }

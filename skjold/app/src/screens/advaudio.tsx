@@ -73,7 +73,7 @@ export function SpatialCard() {
   return (
     <div style={box} data-testid="xtc-card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px">Romlig lyd</span><span style={lbl}>{sur ? 'Virtuell surround: HRTF plasserer lyden rundt deg, krysstalekansellering gjør det hørbart fra to høyttalere.' : 'Krysstalekansellering for skrivebordet – bredere lydbilde når du sitter midt foran høyttalerne.'}</span></div>
+        <div class="fx-hd"><span class="fx-ic" style="background:#1d1a2e;color:#b9a8ff"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 12h.01M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13" /></svg></span><span class="fx-tx"><b>Romlig lyd</b><span>{sur ? 'Virtuell surround: HRTF plasserer lyden rundt deg, krysstalekansellering gjør det hørbart fra to høyttalere.' : 'Bredere lydbilde når du sitter midt foran høyttalerne (krysstalekansellering).'}</span></span></div>
         <Switch on={!!c.enabled} set={(v) => set({ enabled: v })} label="Romlig lyd" />
       </div>
       {c.enabled && <>
