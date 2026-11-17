@@ -176,6 +176,9 @@ struct V4NowPlaying: View {
         .frame(width: cover, height: cover)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .shadow(color: .black.opacity(0.45), radius: 30, y: 30)
+        // Trykk på omslaget når «Spill på» er åpent: tilbake til vanlig spillervisning
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .onTapGesture { if ui.fm != "ctrl" { Haptics.tick(); withAnimation(V4.segLens) { ui.fm = "ctrl" } } }
         .frame(maxWidth: .infinity)
     }
 
@@ -395,13 +398,11 @@ struct V4NowPlaying: View {
                 }
                 HStack(spacing: 10) {
                     stepCircle("−", "Senk alle") { m.v4SetGroupVol(m.v4GroupVol - 5) }
-                    GeometryReader { g in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(V4.ink.opacity(0.18))
-                            Capsule().fill(V4.ink).frame(width: g.size.width * CGFloat(m.v4GroupVol) / 100)
-                        }
+                    // dra med fingeren (som volumet per rom), ikke bare − og +
+                    V4Bar(value: Double(m.v4GroupVol) / 100, height: 12, trackColor: V4.ink.opacity(0.18), label: "Volum for hele gruppen") { v in
+                        m.v4SetGroupVol(Int((v * 100).rounded()))
                     }
-                    .frame(height: 12)
+                    .frame(height: 32)
                     stepCircle("+", "Øk alle") { m.v4SetGroupVol(m.v4GroupVol + 5) }
                     Text("\(m.v4GroupVol)").mono(13, V4.ink).frame(width: 24, alignment: .trailing)
                 }

@@ -244,7 +244,9 @@ private fun Cover(m: AppModel, a: ArtInfo, wide: Boolean) {
         val target = if (rooms) (base.value * 0.62f).roundToInt().dp else base
         val side by animateDpAsState(target, tween(350, easing = FastOutSlowInEasing), label = "cover")
         val shape = RoundedCornerShape(22.dp)
-        Box(Modifier.size(side).shadow(30.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape)) {
+        // trykk på omslaget når «Spill på» er åpent: tilbake til vanlig spillervisning
+        Box(Modifier.size(side).shadow(30.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape)
+            .then(if (PlayerUi.fm != "ctrl") Modifier.press { Haptics.tick(); PlayerUi.fm = "ctrl" } else Modifier)) {
             ArtFill(a)
             if (!a.hasLogo) Column(Modifier.fillMaxSize().padding(22.dp)) {
                 T(pa.kicker, mono(11f, a.ink.copy(alpha = 0.8f), 0.14f), maxLines = 1)
@@ -490,10 +492,9 @@ private fun RoomsPanel(m: AppModel) {
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StepCircle("−", "Senk alle") { m.v4SetGroupVol(m.v4GroupVol - 5) }
-                BoxWithConstraints(Modifier.weight(1f).height(12.dp)) {
-                    Box(Modifier.fillMaxSize().clip(CircleShape).background(C.ink.copy(alpha = 0.18f)))
-                    Box(Modifier.width(maxWidth * (m.v4GroupVol / 100f)).fillMaxSize().clip(CircleShape).background(C.ink))
-                }
+                // dra med fingeren (som volumet per rom), ikke bare − og +
+                PlayerBar(m.v4GroupVol / 100.0, { m.v4SetGroupVol((it * 100).roundToInt()) }, Modifier.weight(1f), height = 12.dp,
+                    track = C.ink.copy(alpha = 0.18f), label = "Volum for hele gruppen")
                 StepCircle("+", "Øk alle") { m.v4SetGroupVol(m.v4GroupVol + 5) }
                 T("${m.v4GroupVol}", mono(13f, C.ink), Modifier.width(24.dp), align = TextAlign.End)
             }
