@@ -33,6 +33,7 @@ cat > /usr/local/bin/skjold-touch-ui <<S
 # venter til daemonen svarer, så Chromium ikke viser feilside
 # --use-fake-ui-for-media-stream: intercom får bruke mikrofonen uten spørsmål (kiosken har ingen dialogruter)
 for i in \$(seq 60); do curl -fs -o /dev/null http://127.0.0.1:8765/api/status && break; sleep 1; done
+rm -f /home/$USR/.cache/skjold-touch/Singleton*   # profillåsen har vertsnavnet: nytt navn/krasj → Chromium avslutter straks
 [ "$ROT" != 0 ] && command -v wlr-randr >/dev/null && wlr-randr --output "\$(wlr-randr | head -1 | cut -d' ' -f1)" --transform $ROT || true
 exec "$CHR" --kiosk --app="$URL" \\
   --ozone-platform=wayland --enable-features=UseOzonePlatform,OverlayScrollbar \\

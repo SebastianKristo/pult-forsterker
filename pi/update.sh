@@ -130,6 +130,10 @@ if grep -qs "^KI_AMP_PRODUCT=touch" /etc/ki-amp.env && [ -f /etc/systemd/system/
     sudo sed -i "s#^Environment=XDG_RUNTIME_DIR=/run/user/%U#Environment=XDG_RUNTIME_DIR=/run/user/$(id -u "$TU")#" /etc/systemd/system/skjold-touch.service
     sudo systemctl daemon-reload && sudo systemctl restart skjold-touch || true
   fi
+  # Chromium-profillåsen har vertsnavnet: fjern den før start, ellers går kiosken i løkke etter navnebytte eller krasj
+  if [ -f /usr/local/bin/skjold-touch-ui ] && ! grep -q 'Singleton' /usr/local/bin/skjold-touch-ui; then
+    sudo sed -i "0,/^exec /s|^exec |rm -f $TH/.cache/skjold-touch/Singleton*\nexec |" /usr/local/bin/skjold-touch-ui
+  fi
   # ingen Google Oversett-boks i kiosken (eldre installasjoner manglet --disable-translate)
   if [ -f /usr/local/bin/skjold-touch-ui ] && ! grep -q -- --disable-translate /usr/local/bin/skjold-touch-ui; then
     sudo sed -i 's/  --noerrdialogs --disable-infobars/  --disable-translate --lang=nb-NO \\\n  --noerrdialogs --disable-infobars/' /usr/local/bin/skjold-touch-ui

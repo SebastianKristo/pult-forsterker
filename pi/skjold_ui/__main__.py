@@ -417,6 +417,14 @@ def kiosk(port):
           "--noerrdialogs", "--disable-infobars", "--no-first-run", "--disable-pinch", "--overscroll-history-navigation=0",
           "--disable-translate", "--lang=nb-NO", "--disable-features=Translate,TranslateUI,HardwareMediaKeyHandling", "--check-for-update-interval=31536000",
           "--password-store=basic", f"--user-data-dir={os.path.expanduser('~')}/.cache/skjold-ui"]
+    # Chromium låser profilen med vertsnavnet (SingletonLock → «vertsnavn-pid»). Byttes vertsnavnet (pultamp → skjold-s1)
+    # eller krasjer den, tror den at profilen er i bruk på en annen maskin og avslutter med en gang – kiosken går i løkke.
+    # Bare skjold-ui bruker denne profilen, så låsen kan alltid fjernes før start.
+    for n in ("SingletonLock", "SingletonSocket", "SingletonCookie"):
+        try:
+            os.unlink(os.path.join(os.path.expanduser("~"), ".cache", "skjold-ui", n))
+        except OSError:
+            pass
     if use_sway:
         conf = _sway_config(br, os.path.expanduser("~/.cache/skjold-ui/sway.conf"))
         p = subprocess.Popen([sway, "-c", conf])
