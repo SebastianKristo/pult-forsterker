@@ -27,6 +27,8 @@ esp32:
   framework: { type: esp-idf }
 
 logger:
+  logs:
+    http_request: INFO   # spolene spørs hvert 0,6 s – ellers drukner loggen i svarhoder
 api:
   encryption:
     key: !secret skjold_kassett_api_key
