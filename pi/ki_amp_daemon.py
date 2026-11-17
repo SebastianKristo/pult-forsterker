@@ -4847,7 +4847,7 @@ PLUGIN_DEFS = [
     ("lastfm", "Last.fm", "skjold", "Verktøy", "Registrerer det du spiller på Last.fm. Krever egen API-nøkkel, hemmelighet og sesjonsnøkkel.", {"key": "", "secret": "", "session": ""}),
     ("webhook", "Webhooks", "skjold", "Verktøy", "Sender en JSON-melding til din adresse når låt, avspilling eller kilde endres.", {"url": ""}),
     ("subwave", "SUB/WAVE", "skjold", "Radio og podkast", "Selvhostet AI-DJ-radio (getsubwave.com). Spill stasjonen, se DJ-loggen og køen, og ønsk deg låter.",
-     {"url": "", "user": "", "password": "", "name": "", "extra": []}),   # extra: flere stasjoner [{name,url,user,password}]
+     {"url": "", "user": "", "password": "", "name": "", "image": "", "extra": []}),   # extra: flere stasjoner [{name,url,user,password,image}]
     ("spotty", "Spotty", "lyrion", "Musikk", "Spotify i Lyrion, med søk, spillelister og Spotify Connect. Krever Spotify Premium.", {}),
     ("tidal", "TIDAL", "lyrion", "Musikk", "Strømming i FLAC fra TIDAL. Krever abonnement.", {}),
     ("qobuz", "Qobuz", "lyrion", "Musikk", "Hi-res opptil 24-bit / 192 kHz. Krever abonnement.", {}),
@@ -6520,8 +6520,40 @@ def sw_stations(c=None):
         u = str(x.get("url") or "").strip().rstrip("/")
         if u.startswith(("http://", "https://")):
             out.append({"i": len(out), "name": str(x.get("name") or "").strip() or ("SUB/WAVE" if not out else f"SUB/WAVE {len(out) + 1}"),
-                        "url": u, "user": str(x.get("user") or ""), "password": str(x.get("password") or "")})
+                        "url": u, "user": str(x.get("user") or ""), "password": str(x.get("password") or ""),
+                        "image": str(x.get("image") or "").strip()})
     return out
+
+
+_sw_img = {}   # stasjonsadresse -> (tid, bilde)
+SW_IMG_KEYS = ("station_image", "stationImage", "image", "image_url", "imageUrl", "logo", "logo_url", "artwork", "artwork_url", "cover", "cover_url", "picture", "icon")
+
+
+def sw_station_image(x):
+    """Bildet til en SUB/WAVE-stasjon: det du har lagt inn selv, ellers det stasjonen oppgir (stasjonstilstand/helse),
+    ellers ingenting. Relative adresser gjøres om til fulle mot stasjonen. Hurtigbuffer i 10 min per stasjon."""
+    if x.get("image"):
+        return x["image"]
+    hit = _sw_img.get(x["url"])
+    if hit and time.time() - hit[0] < 600:
+        return hit[1]
+    img = ""
+    try:
+        cl = subwave(x["i"])
+        for tool in ("subwave_station_state", "subwave_health"):
+            try:
+                d = cl.call(tool, cache=True) if cl else None
+            except Exception:
+                d = None
+            st = d.get("station") if isinstance(d, dict) and isinstance(d.get("station"), dict) else d
+            v = _find(st, *SW_IMG_KEYS) if isinstance(st, (dict, list)) else None
+            if isinstance(v, str) and v.strip():
+                img = urllib.parse.urljoin(x["url"] + "/", v.strip())
+                break
+    except Exception:
+        pass
+    _sw_img[x["url"]] = (time.time(), img)
+    return img
 
 
 def _sw_station(i=None):
@@ -6632,7 +6664,7 @@ async def h_subwave(r):
                 fmt = "opus" if b.get("opus") else "mp3"
                 url = subwave_stream_url(fmt, stn["i"])
                 if not any(p and p.get("url") == url for p in state["presets"]):
-                    lst = list(state["presets"]); item = {"title": stn["name"], "url": url, "icon": "", "genre": "AI-DJ"}
+                    lst = list(state["presets"]); item = {"title": stn["name"], "url": url, "icon": await loop.run_in_executor(None, sw_station_image, stn), "genre": "AI-DJ"}
                     k = next((i for i, p in enumerate(lst) if not p), None)
                     if k is None: lst.append(item)
                     else: lst[k] = item
@@ -6655,7 +6687,7 @@ async def h_subwave(r):
         return web.json_response({"error": "ukjent handling"}, status=400)
     pi_ = subwave_playing_idx()
     out = {"configured": True, "playing": pi_ == stn["i"], "admin": bool(stn.get("password")), "station": stn["i"], "name": stn["name"],
-           "playing_station": pi_, "stations": [{"i": x["i"], "name": x["name"]} for x in sw_stations()]}
+           "playing_station": pi_, "stations": [{"i": x["i"], "name": x["name"], "image": await loop.run_in_executor(None, sw_station_image, x)} for x in sw_stations()]}
     for k, tool in (("health", "subwave_health"), ("now_playing", "subwave_now_playing"), ("state", "subwave_station_state"), ("schedule", "subwave_schedule")):
         if k != "health" and r.query.get("health") == "1":
             continue

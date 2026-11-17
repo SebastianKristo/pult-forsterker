@@ -1852,4 +1852,9 @@ export const EN_AUTO: Record<string, string> = {
   'Ny stasjon': 'New station',
   'Fjern': 'Remove',
   'Spill': 'Play',
+  'Bilde valgt': 'Image chosen',
+  'Velg et bilde': 'Choose an image',
+  'Vises på stasjonen og som radiofavoritt. Valgfritt.': 'Shown on the station and as a radio favourite. Optional.',
+  'Fjern bildet': 'Remove image',
+  'Velg bilde': 'Choose image',
 };
