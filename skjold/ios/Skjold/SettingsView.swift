@@ -14,8 +14,7 @@ struct SettingsView: View {
         } else {
             let cat = cats[m.setCat]
             if !m.rAdd || cat.id != "radio" {
-                SKBackButton(title: "Innstillinger") { m.setCat = -1; m.openK = "" }
-                SKPageTitle(text: cat.n, sub: cat.sub)
+                SKPageHeader(back: "Innstillinger", title: cat.n, sub: cat.sub) { m.setCat = -1; m.openK = "" }
             }
             if cat.id == "radio" {
                 if m.rAdd { RadioAddView() } else {
@@ -442,8 +441,7 @@ struct RadioAddView: View {
 
     var body: some View {
         @Bindable var m = m
-        SKBackButton(title: "Favoritter") { m.rAdd = false }
-        SKPageTitle(text: "Legg til kanal")
+        SKPageHeader(back: "Favoritter", title: "Legg til kanal") { m.rAdd = false }
         SKSegmented(items: ["Søk", "Fra URL"], selected: m.rMode == "url" ? 1 : 0) { i in m.rMode = i == 1 ? "url" : "sok" }
         if m.rMode == "sok" {
             let ql = m.q.trimmingCharacters(in: .whitespaces).lowercased()
