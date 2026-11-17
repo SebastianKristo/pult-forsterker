@@ -100,7 +100,8 @@ bash "$SRC/ki-diag.sh" 2>/dev/null | sed -n '1,12p' || true   # bare visning: se
 echo "Ferdig."
 
 # skjold-ui: S1 rev F (960 × 320, designets tegnekode) og Skjold Radio (800 × 480, SKJOLD_UI_LAYOUT=radio) – cage + Chromium (pi/skjold_ui)
-if [ "${KI_AMP_DISPLAY:-}" = bar958 ] || [ "${KI_AMP_BOARD:-}" = s1f ] || [ "${SKJOLD_UI_LAYOUT:-}" = radio ] || grep -qsE "^(KI_AMP_DISPLAY=bar958|KI_AMP_BOARD=s1f|SKJOLD_UI_LAYOUT=radio)" /etc/ki-amp.env; then
+# (også når skjold-ui allerede er installert for hånd, så tjenestefila følger med oppdateringene)
+if [ "${KI_AMP_DISPLAY:-}" = bar958 ] || [ "${KI_AMP_BOARD:-}" = s1f ] || [ "${SKJOLD_UI_LAYOUT:-}" = radio ] || grep -qsE "^(KI_AMP_DISPLAY=bar958|KI_AMP_BOARD=s1f|SKJOLD_UI_LAYOUT=radio)" /etc/ki-amp.env || [ -f /etc/systemd/system/skjold-ui.service ]; then
   sudo bash "$(cd "$(dirname "$0")" && pwd)/install_skjold_ui.sh" "${SUDO_USER:-$USER}" || echo "ADVARSEL: skjold-ui ble ikke installert" >&2
 fi
 

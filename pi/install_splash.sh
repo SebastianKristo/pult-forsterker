@@ -6,7 +6,10 @@
 set -uo pipefail
 [ "$(id -u)" = 0 ] || { echo "Kjør som root (sudo)" >&2; exit 1; }
 HER="$(cd "$(dirname "$0")" && pwd)"
-LOGO="$HER/touch/oppstart.png"
+# Panelet kan stå på høykant (S1: 400 × 960, dreid 90° i nettleseren): bruk logoen dreid likt, så den er vannrett
+ROT="$(sed -n 's/^KI_SPLASH_ROTATE=//p' /etc/ki-amp.env 2>/dev/null | tail -1)"
+[ -n "$ROT" ] || ROT="$(sed -n 's/^SKJOLD_UI_ROTATE=//p' /etc/ki-amp.env 2>/dev/null | tail -1)"
+case "$ROT" in 90|180|270) LOGO="$HER/touch/oppstart-$ROT.png" ;; *) LOGO="$HER/touch/oppstart.png" ;; esac
 [ -f "$LOGO" ] || { echo "Oppstartsskjerm: mangler $LOGO" >&2; exit 0; }
 grep -q '^KI_SPLASH=0' /etc/ki-amp.env 2>/dev/null && { echo "  Oppstartsskjerm: slått av (KI_SPLASH=0)"; exit 0; }
 
@@ -24,9 +27,9 @@ cat > "$T/skjold.script.ny" <<'P'
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
 logo = Image("logo.png");
-skala = Window.GetWidth() / 3 / logo.GetWidth();
+// ca. 42 % av skjermen langs logoens lange side, uansett om panelet står eller ligger
+skala = Math.Min(Window.GetWidth() * 0.42 / logo.GetWidth(), Window.GetHeight() * 0.42 / logo.GetHeight());
 if (skala > 1) skala = 1;
-if (skala < 0.45) skala = 0.45;
 logo = logo.Scale(logo.GetWidth() * skala, logo.GetHeight() * skala);
 s = Sprite(logo);
 s.SetX(Window.GetWidth() / 2 - logo.GetWidth() / 2);
@@ -57,6 +60,17 @@ if [ -f "$CMD" ]; then
 fi
 CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
 [ -f "$CFG" ] && { grep -q '^disable_splash=' "$CFG" || { echo 'disable_splash=1' >> "$CFG"; endret=1; }; }
+
+# Kiosken må få skjermen fra oppstartsskjermen: en eldre tjenestefil uten «plymouth quit» krasjer i en løkke
+# (Plymouth holder skjermen). Rett den på stedet, og logg til journalen i stedet for til skjermen.
+for U in /etc/systemd/system/skjold-ui.service /etc/systemd/system/skjold-touch.service; do
+  [ -f "$U" ] || continue
+  if ! grep -q 'plymouth quit' "$U"; then
+    sed -i "0,/^ExecStart=/s|^ExecStart=|ExecStartPre=-+/bin/sh -c 'command -v plymouth >/dev/null \&\& plymouth quit --retain-splash \|\| true'\nExecStart=|" "$U"
+    grep -q '^StandardOutput=journal' "$U" || sed -i 's/^StandardInput=tty$/StandardInput=tty\nStandardOutput=journal\nStandardError=journal/' "$U"
+    systemctl daemon-reload; endret=1
+  fi
+done
 
 # Ingen påloggingstekst på skjermen når kiosken starter på nytt (oppdatering): tom, svart tty1 uten markør
 systemctl disable getty@tty1.service >/dev/null 2>&1 || true
