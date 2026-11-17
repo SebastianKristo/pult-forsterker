@@ -217,7 +217,7 @@ function Desktop() {
         <header class="hdr">
           <div class="row" style={{ minWidth: 0, gap: '14px' }}>
             <div class="col" style={{ minWidth: 0 }}>
-              <span class="row" style={{ gap: '10px', position: 'relative', flexWrap: 'wrap' }}><PlayerPicker /><StedPicker /><TalkButton compact /><span class="type-badge" data-testid="type-badge"><Icon d={PRODUCT_ICON[p]} size={15} sw={1.5} />{PRODUCT_LABEL[p]}</span></span>
+              <span class="row" style={{ gap: '10px', position: 'relative', flexWrap: 'wrap' }}><PlayerPicker /><StedPicker /><TalkButton compact /></span>
               <span class="sub ellip">{PRODUCT_HW[p]}{s?.version ? ' · v' + s.version : ''}</span>
             </div>
           </div>
