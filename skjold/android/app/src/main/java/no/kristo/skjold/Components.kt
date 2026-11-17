@@ -371,15 +371,20 @@ fun SKSourceLogo(label: String, action: () -> Unit) {
     }
 }
 
-// MARK: - Logo text (5 bars + SKJOLD)
+// MARK: - Logo (Skjold Lab): fem stolper som henger fra samme topplinje, gyllen midtstolpe, «SKJOLD» + «LAB»
 
 @Composable
-fun SKLogo(barW: Dp = 2.5.dp, gap: Dp = 2.dp, size: Float = 15f, tracking: Float = 1.8f, bottomAligned: Boolean = true, spacing: Dp = 9.dp) {
+fun SKLogo(barW: Dp = 2.5.dp, gap: Dp = 2.dp, size: Float = 15f, tracking: Float = 1.8f, bottomAligned: Boolean = false, spacing: Dp = 9.dp, lab: Boolean = true) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing)) {
         Row(Modifier.height(16.dp), verticalAlignment = if (bottomAligned) Alignment.Bottom else Alignment.Top, horizontalArrangement = Arrangement.spacedBy(gap)) {
-            for (h in listOf(8, 12, 16, 12, 8)) Box(Modifier.size(barW, h.dp).clip(RoundedCornerShape(2.dp)).background(C.ink))
+            listOf(8, 12, 16, 12, 8).forEachIndexed { i, h ->
+                Box(Modifier.size(barW, h.dp).clip(RoundedCornerShape(2.dp)).background(if (i == 2) C.accent else C.ink))
+            }
         }
-        T("SKJOLD", sora(size, W.Semibold).copy(letterSpacing = (tracking / size).em))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            T("SKJOLD", sora(size, W.Semibold).copy(letterSpacing = (tracking / size).em))
+            if (lab) T(" LAB", sora(size, W.Regular, Color(0xFFDCCDAA)).copy(letterSpacing = (tracking / size).em))
+        }
     }
 }
 
