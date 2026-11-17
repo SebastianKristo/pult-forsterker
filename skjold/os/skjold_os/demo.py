@@ -92,6 +92,10 @@ def shots(layout, outdir, live_client=None):
         shot("16_clock_style%d" % sty, FakeClient(st(power=False), {"clockStyle": sty}))
     shot("17_standby_idle", FakeClient(st(**AIRPLAY, playing=False, paused=True)), lambda ui, ck: setattr(ui, "last_act", ck.t - 200))
     shot("18_offline", FakeClient(online=False), advance=7)
+    shot("35_saver_airplay", FakeClient(st(**AIRPLAY)), lambda ui, ck: setattr(ui, "last_act", ck.t - 90))
+    shot("36_saver_radio", FakeClient(st()), lambda ui, ck: setattr(ui, "last_act", ck.t - 90))
+    shot("37_saver_pause", FakeClient(st(paused=True)), lambda ui, ck: setattr(ui, "last_act", ck.t - 150))
+    shot("38_saver_av", FakeClient(st(paused=True)), lambda ui, ck: setattr(ui, "last_act", ck.t - 400))
     shot("19_play_aux_idle", FakeClient(st(input="aux", inputs=["radio", "airplay", "bt", "aux", "usb"], title="", artist="", station="", playing=False)))
     saved = {"title": "Lagret", "sub": "Favoritt 2 · P4 Norge", "saved": 2, "p": 1}
     shot("21_lagret_pop", FakeClient(), pre=lambda c: c.status.update(hold=saved), advance=0.1)
