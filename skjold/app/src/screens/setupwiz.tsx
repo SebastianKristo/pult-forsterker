@@ -12,6 +12,7 @@ import { ndPing } from '../lib/navidrome';
 import { ytmTest } from '../lib/ytm';
 import { loadSw, swStations } from '../lib/subwave';
 import { SubwaveMark } from '../components/brandmarks';
+import { pickImage } from '../lib/pickimage';
 
 export type SvcId = 'ytm' | 'nd' | 'ma' | 'sp' | 'sw';
 /** null = lukket, '' = oversikten, ellers rett inn i én tjeneste. */
@@ -100,6 +101,7 @@ function useFlow(svc: SvcId, done: () => void): Step[] {
   const s = settings.value;
   const [a, setA] = useState(''), [b, setB] = useState(''), [c, setC] = useState(''), [err, setErr] = useState('');
   const [test, setTest] = useState<'' | 'busy' | 'ok' | string>(''), [testMsg, setTestMsg] = useState('');
+  const [img, setImg] = useState('');
   const [sw, setSw] = useState<{ name?: string; url?: string; user?: string; password?: string; extra?: Record<string, string>[]; enabled?: boolean } | null>(null);
   const S = SVCS.find((x) => x.id === svc)!;
   useEffect(() => {   // forhåndsutfyll det som allerede er lagret
@@ -107,7 +109,7 @@ function useFlow(svc: SvcId, done: () => void): Step[] {
     if (svc === 'nd') { setA(s.ndUrl); setB(s.ndUser); setC(s.ndPass); }
     if (svc === 'ma') { setA(s.maUrl); setB(s.maToken); }
     if (svc === 'ytm') { setA(s.ytmCookie); }
-    if (svc === 'sw') { setA(''); setB(''); setC(''); api.plugins().then((r) => { const p = r.plugins.find((x) => x.id === 'subwave'); setSw(p ? { ...(p.cfg as object), enabled: p.enabled } : {}); }).catch(() => setSw({})); }
+    if (svc === 'sw') { setA(''); setB(''); setC(''); setImg(''); api.plugins().then((r) => { const p = r.plugins.find((x) => x.id === 'subwave'); setSw(p ? { ...(p.cfg as object), enabled: p.enabled } : {}); }).catch(() => setSw({})); }
   }, [svc]);
   const intro = (extra?: ComponentChildren): Step => ({
     body: <><Icon s={S} big /><h2>{S.name}</h2><p class="sub">{S.what}.</p>{extra}</>, next: 'Fortsett'
@@ -202,15 +204,20 @@ function useFlow(svc: SvcId, done: () => void): Step[] {
   return [
     intro(<p class="sub" style="margin-top:14px">{swHar ? `Du har ${swAntall} ${swAntall === 1 ? 'stasjon' : 'stasjoner'}. Legg til en til – alle vises under Bibliotek → SUB/WAVE.` : 'Selvhostet radio der en AI-DJ velger låtene. Du trenger adressen til stasjonen din.'}</p>),
     { body: <><h2>{swHar ? 'Ny stasjon' : 'Adressen til stasjonen'}</h2><p class="sub">For eksempel <b>https://radio.eksempel.no</b>.</p>
-      <div class="swz-field"><input class="swz-in" placeholder={'Navn, f.eks. ' + (swHar ? 'Morgenradio' : 'SUB/WAVE')} value={c} onInput={(e) => setC(e.currentTarget.value)} />
+      <div class="swz-field">
+        <div style="display:flex;align-items:center;gap:14px">
+          <button type="button" onClick={() => void pickImage().then((d) => { if (d) setImg(d); })} aria-label="Velg bilde for stasjonen" style={`width:72px;height:72px;flex-shrink:0;border-radius:16px;border:1px dashed rgba(255,255,255,.25);background:${img ? `url("${img}") center / cover no-repeat` : 'rgba(255,255,255,.05)'};color:#a1a1a6;font-size:24px;cursor:pointer`}>{img ? '' : '+'}</button>
+          <span style="display:flex;flex-direction:column;gap:2px;text-align:left"><span style="font-size:15px;color:#f5f5f7">{img ? 'Bilde valgt' : 'Velg et bilde'}</span><span style="font-size:13px;color:#8e8e93">Vises på stasjonen og som radiofavoritt. Valgfritt.</span>{img && <button type="button" onClick={() => setImg('')} style="align-self:flex-start;border:none;background:none;color:#d9a441;padding:0;font-size:13px;cursor:pointer">Fjern bildet</button>}</span>
+        </div>
+        <input class="swz-in" placeholder={'Navn, f.eks. ' + (swHar ? 'Morgenradio' : 'SUB/WAVE')} value={c} onInput={(e) => setC(e.currentTarget.value)} />
         <input class="swz-in" autoFocus inputMode="url" autoCapitalize="off" autoCorrect="off" placeholder="https://…" value={a} onInput={(e) => { setA(e.currentTarget.value); setErr(''); }} />
         <input class="swz-in" type="password" placeholder="Admin-passord (valgfritt – for å hoppe over låter)" value={b} onInput={(e) => setB(e.currentTarget.value)} />
         {err && <span class="swz-err">{err}</span>}</div></>,
       next: 'Koble til', can: /^https?:\/\/\S+/.test(a.trim()),
       onNext: async () => {
         try {
-          if (swHar && sw) { const ny = { name: c.trim(), url: a.trim(), user: '', password: b }; await api.setPlugin('subwave', { enabled: true, extra: [...(sw.extra ?? []), ny] }); }
-          else await api.setPlugin('subwave', { enabled: true, url: a.trim(), ...(c.trim() ? { name: c.trim() } : {}), ...(b ? { password: b } : {}) });
+          if (swHar && sw) { const ny = { name: c.trim(), url: a.trim(), user: '', password: b, image: img }; await api.setPlugin('subwave', { enabled: true, extra: [...(sw.extra ?? []), ny] }); }
+          else await api.setPlugin('subwave', { enabled: true, url: a.trim(), image: img, ...(c.trim() ? { name: c.trim() } : {}), ...(b ? { password: b } : {}) });
         }
         catch (e) { setErr(e instanceof Error ? e.message : String(e)); throw e; }
         setTimeout(() => void startTest(runSw), 400);

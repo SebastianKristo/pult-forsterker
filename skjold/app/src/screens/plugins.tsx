@@ -445,6 +445,7 @@ function SubwavePanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: stri
       <Row label="Stasjonsadresse" hint="For eksempel https://radio.dittdomene.no"><Txt v={d.url} ph="https://…" w={280} on={(v) => up('url', v)} /></Row>
       <Row label="Brukernavn" hint="Valgfritt. Brukes bare hvis stasjonen er bak passord."><Txt v={d.user} w={160} on={(v) => up('user', v)} /></Row>
       <Row label="Passord" hint="Lagres på Skjold. Gir også DJ-handlinger som «Hopp over»."><Txt v={d.password} pw w={160} on={(v) => up('password', v)} /></Row>
+      <Row label="Bilde" hint="Valgfritt. Adressen til stasjonsbildet. Tom = det stasjonen selv oppgir."><Txt v={d.image ?? ''} ph="https://…/bilde.jpg" w={280} on={(v) => up('image', v)} /></Row>
       {knapper(0, d.name || 'SUB/WAVE')}
       {extra.map((x, n) => (
         <div key={n} style="display:flex;flex-direction:column;gap:2px;border-top:1px solid #1f1f21;margin-top:8px">
@@ -453,9 +454,10 @@ function SubwavePanel({ d, up, saveBtn }: { d: Record<string, any>; up: (k: stri
           <Row label="Stasjonsadresse"><Txt v={x.url ?? ''} ph="https://…" w={280} on={(v) => setX(n, 'url', v)} /></Row>
           <Row label="Brukernavn"><Txt v={x.user ?? ''} w={160} on={(v) => setX(n, 'user', v)} /></Row>
           <Row label="Passord"><Txt v={x.password ?? ''} pw w={160} on={(v) => setX(n, 'password', v)} /></Row>
+          <Row label="Bilde"><Txt v={x.image ?? ''} ph="https://…/bilde.jpg" w={280} on={(v) => setX(n, 'image', v)} /></Row>
           {knapper(n + 1, x.name || 'SUB/WAVE ' + (n + 2))}
         </div>))}
-      <div style="display:flex;gap:8px;padding-top:12px"><button onClick={() => up('extra', [...extra, { name: '', url: '', user: '', password: '' }])} style={sbtn}>+ Legg til stasjon</button></div>
+      <div style="display:flex;gap:8px;padding-top:12px"><button onClick={() => up('extra', [...extra, { name: '', url: '', user: '', password: '', image: '' }])} style={sbtn}>+ Legg til stasjon</button></div>
       {saveBtn}
       <span style="font-size:12px;color:#8b8b86">Lagre før du tester eller spiller en ny stasjon.</span>
       {msg && <span style={`font-size:12px;color:${msg.startsWith('Feil') ? '#ff8a7a' : '#a9a9a3'};word-break:break-word`}>{msg}</span>}

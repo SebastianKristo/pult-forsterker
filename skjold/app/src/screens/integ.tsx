@@ -1,5 +1,6 @@
 import { openSetup } from './setupwiz';
 import { SubwaveMark } from '../components/brandmarks';
+import { pickImage } from '../lib/pickimage';
 import { loadSw, swStations } from '../lib/subwave';
 import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
@@ -116,7 +117,7 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
         { n: 'Passord', hint: 'Settes under Innstillinger → Musikktjenester', el: btn('Åpne', () => openSetup('nd')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'nd')) }] };
     case 'subwave': return { links: [],
-      rows: [...swStations.value.map((x) => ({ n: x.name, hint: 'Stasjon ' + (x.i + 1), el: <span style="display:flex;gap:6px">{btn('Spill', () => void api.subwavePost({ play: true, station: x.i }).then(() => go('play')).catch(() => {}))}{btn('Fjern', () => void fjernSw(x.i))}</span> })),
+      rows: [...swStations.value.map((x) => ({ n: x.name, hint: 'Stasjon ' + (x.i + 1) + (x.image ? '' : ' · trykk + for å velge bilde'), el: <span style="display:flex;gap:6px;align-items:center"><button onClick={() => void bildeSw(x.i)} title="Velg bilde" aria-label={'Velg bilde for ' + x.name} style={`width:36px;height:36px;border-radius:8px;border:1px solid #2e2e30;background:${x.image ? `url("${x.image.replace(/"/g, '')}") center / cover no-repeat` : '#1b1b1c'};color:#8b8b86;cursor:pointer;flex-shrink:0`}>{x.image ? '' : '+'}</button>{btn('Spill', () => void api.subwavePost({ play: true, station: x.i }).then(() => go('play')).catch(() => {}))}{btn('Fjern', () => void fjernSw(x.i))}</span> })),
         { n: swStations.value.length ? 'Legg til en stasjon til' : 'Ingen stasjon ennå', hint: 'Du kan ha så mange stasjoner du vil. Alle vises under Bibliotek → SUB/WAVE.', el: btn('+ Legg til stasjon', () => openSetup('sw')) },
         { n: 'Navn, brukernavn og passord', hint: 'Endres under Plugins → SUB/WAVE', el: btn('Åpne', () => go('plug')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'sw')) }] };
@@ -226,6 +227,19 @@ export { PluginsPage, plugCount } from './plugins';
 const INT_SRC: Record<string, string> = { lyrion: 'Lyrion', spotify: 'Spotify', ytmusic: 'YouTube Music', navidrome: 'Navidrome', upnp: 'UPnP/DLNA' };
 const HA_PATH = 'M22.939 10.627 13.061.749a1.505 1.505 0 0 0-2.121 0l-9.879 9.878C.478 11.21 0 12.363 0 13.187v9c0 .826.675 1.5 1.5 1.5h9.227l-4.063-4.062a2.034 2.034 0 0 1-.664.113c-1.13 0-2.05-.92-2.05-2.05s.92-2.05 2.05-2.05 2.05.92 2.05 2.05c0 .233-.041.456-.113.665l3.163 3.163V9.928a2.05 2.05 0 0 1-1.15-1.84c0-1.13.92-2.05 2.05-2.05s2.05.92 2.05 2.05a2.05 2.05 0 0 1-1.15 1.84v8.127l3.146-3.146A2.051 2.051 0 0 1 18 12.239c1.13 0 2.05.92 2.05 2.05s-.92 2.05-2.05 2.05c-.25 0-.488-.047-.709-.13L12.9 20.602v3.088h9.6c.825 0 1.5-.675 1.5-1.5v-9c0-.825-.477-1.977-1.061-2.561z';
 /** Fjern SUB/WAVE-stasjon nummer i (blant stasjonene med gyldig adresse). Fjernes den første, rykker neste opp. */
+/** Velg bilde for SUB/WAVE-stasjon nummer i (blant stasjonene med gyldig adresse). */
+async function bildeSw(i: number): Promise<void> {
+  const d = await pickImage(); if (!d) return;
+  const r = await api.plugins(); const p = r.plugins.find((x) => x.id === 'subwave'); if (!p) return;
+  const c = p.cfg as { url?: string; extra?: { url?: string; image?: string }[] };
+  const ok = (u?: string) => /^https?:\/\//.test(String(u ?? '').trim());
+  const idx: (number | 'top')[] = [...(ok(c.url) ? ['top' as const] : []), ...(c.extra ?? []).map((x, n) => (ok(x.url) ? n : -1)).filter((n) => n >= 0)];
+  const hvor = idx[i]; if (hvor === undefined) return;
+  if (hvor === 'top') await api.setPlugin('subwave', { image: d });
+  else await api.setPlugin('subwave', { extra: (c.extra ?? []).map((x, n) => (n === hvor ? { ...x, image: d } : x)) });
+  loadSw(true);
+}
+
 async function fjernSw(i: number): Promise<void> {
   if (!confirm('Fjerne stasjonen fra Skjold?')) return;
   const r = await api.plugins(); const p = r.plugins.find((x) => x.id === 'subwave'); if (!p) return;

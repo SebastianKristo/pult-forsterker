@@ -160,7 +160,7 @@ function SubwaveLib() {
   return (
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
       {list.map((x) => { const on = !!st?.subwave && swPlaying.value === x.i; return (
-        <button key={x.i} onClick={() => void playSw(x.i).then(() => openFull()).catch(() => {})} style={`display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:14px;border:1px solid ${on ? '#f0c46a' : '#242426'};background:linear-gradient(135deg,#1d1730,#141415);color:#f2f2ee;text-align:left;cursor:pointer`}>
+        <button key={x.i} onClick={() => void playSw(x.i).then(() => openFull()).catch(() => {})} style={`display:flex;flex-direction:column;justify-content:flex-end;gap:8px;min-height:${x.image ? 150 : 0}px;padding:16px;border-radius:14px;border:1px solid ${on ? '#f0c46a' : '#242426'};background:${x.image ? `linear-gradient(180deg,rgba(11,11,12,.05) 20%,rgba(11,11,12,.88)),url("${x.image.replace(/"/g, '')}") center / cover no-repeat,#141415` : 'linear-gradient(135deg,#1a1712,#141415)'};color:#f2f2ee;text-align:left;cursor:pointer`}>
           <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:#8b8b86">{on ? 'SPILLER NÅ' : 'SUB/WAVE · AI-DJ'}</span>
           <span style="font-size:17px;font-weight:600">{x.name}</span>
           {on && st?.title && <span style="font-size:12.5px;color:#c9c9c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{[st.artist, st.title].filter(Boolean).join(' – ')}</span>}
