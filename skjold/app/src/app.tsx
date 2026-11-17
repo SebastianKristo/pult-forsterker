@@ -199,7 +199,7 @@ function Desktop() {
   return (
     <div class={'desktop dk2' + (showRcol ? '' : ' norc') + (railx ? ' railx' : '')}>
       <aside class="rail" aria-label="Meny">
-        <div class="rlogo" aria-hidden="true">{[9, 15, 21, 15, 9].map((h, i) => <i key={i} style={{ height: h + 'px' }} />)}</div>
+        <div class="rlogo" aria-label="Skjold Lab"><span class="bars" aria-hidden="true">{[11, 16, 24, 16, 11].map((h, i) => <i key={i} class={i === 2 ? 'g' : ''} style={{ height: h + 'px' }} />)}</span>{railx && <span class="nm">SKJOLD <b>LAB</b></span>}</div>
         <span class="rhead">{tr("LYTT")}</span>
         {NAV.filter(([id]) => id !== 'eq').map(([id, n]) => rb(id, n, r.page === id, () => go(id)))}
         {libs.map(([id, n]) => rb(id, n, r.page === 'lib' && r.cat === id, () => go('lib', id)))}
