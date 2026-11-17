@@ -18,7 +18,7 @@ export interface Status {
   headphones: boolean; hp_automute: boolean; hp_switch?: boolean; overtemp: boolean; levels: Record<string, number>;
   playing: boolean; paused: boolean; source: string; cover: string; title: string; artist: string; album: string;
   duration: number; position: number; bt_device: string; name: string; version: string; id: string;
-  inputs: InputId[]; board: string; lyrion: boolean; station: string;
+  inputs: InputId[]; board: string; lyrion: boolean; lyrion_server?: string; station: string;
   /** Nyere daemon: relativ /api/cover?v=<hash> eller full URL (Spotify). */
   cover_url?: string;
   /** Nyere daemon: s1 | node | core (eldre: utledes fra board). */
