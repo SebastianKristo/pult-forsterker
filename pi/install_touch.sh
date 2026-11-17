@@ -95,32 +95,9 @@ if [ -n "${KI_TOUCH_ENC:-}" ]; then
   grep -q '^KI_TOUCH_ENC=' "$ENV" && sed -i "s/^KI_TOUCH_ENC=.*/KI_TOUCH_ENC=$KI_TOUCH_ENC/" "$ENV" || echo "KI_TOUCH_ENC=$KI_TOUCH_ENC" >> "$ENV"
 fi
 
-# --- Oppstartslogo: Skjold-stolpene i stedet for regnbuen og oppstartsteksten (KI_TOUCH_SPLASH=0 hopper over) ---
-if [ "${KI_TOUCH_SPLASH:-1}" = 1 ] && [ -f "$HER/touch/oppstart.png" ]; then
-  if apt-get install -y -qq plymouth plymouth-themes >/dev/null 2>&1; then
-    T=/usr/share/plymouth/themes/skjold; mkdir -p "$T"; cp "$HER/touch/oppstart.png" "$T/logo.png"
-    printf '[Plymouth Theme]\nName=Skjold\nDescription=Skjold Touch\nModuleName=script\n\n[script]\nImageDir=%s\nScriptFile=%s/skjold.script\n' "$T" "$T" > "$T/skjold.plymouth"
-    cat > "$T/skjold.script" <<'P'
-Window.SetBackgroundTopColor(0, 0, 0);
-Window.SetBackgroundBottomColor(0, 0, 0);
-logo = Image("logo.png");
-s = Sprite(logo);
-s.SetX(Window.GetWidth() / 2 - logo.GetWidth() / 2);
-s.SetY(Window.GetHeight() / 2 - logo.GetHeight() / 2);
-P
-    plymouth-set-default-theme skjold >/dev/null 2>&1 || true
-    CMD=/boot/firmware/cmdline.txt; [ -f "$CMD" ] || CMD=/boot/cmdline.txt
-    if [ -f "$CMD" ]; then
-      for o in quiet splash plymouth.ignore-serial-consoles logo.nologo vt.global_cursor_default=0; do
-        grep -qw -- "$o" "$CMD" || sed -i "1 s/\$/ $o/" "$CMD"
-      done
-    fi
-    CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
-    [ -f "$CFG" ] && { grep -q '^disable_splash=' "$CFG" || echo 'disable_splash=1' >> "$CFG"; }
-    command -v update-initramfs >/dev/null && update-initramfs -u >/dev/null 2>&1 || true
-  else
-    echo "Oppstartslogo: fikk ikke installert plymouth – hopper over."
-  fi
+# --- Oppstartsskjerm: Skjold-logoen i stedet for regnbuen og oppstartsteksten (KI_TOUCH_SPLASH=0 hopper over) ---
+if [ "${KI_TOUCH_SPLASH:-1}" = 1 ]; then
+  bash "$HER/install_splash.sh" || true
 fi
 
 # --- Stemmeassistent (valgfritt): KI_TOUCH_VOICE=1 ---

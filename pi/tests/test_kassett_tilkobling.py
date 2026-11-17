@@ -33,3 +33,12 @@ def test_esphome_nokkel_valideres_og_deles():
         assert "esphomeKey" in d.SHARED_SETTINGS
     finally:
         d.state["settings"] = old
+
+
+def test_airplay_volum_speiles_uten_sloyfe():
+    """Skjold-volum → AirPlay-dB → tilbake via pvol-formelen i oled_display gir samme volum (telefonen hopper ikke)."""
+    for v in range(1, 101):
+        av = d.airplay_db(v)
+        assert -30 <= av <= 0
+        assert round(100 * (av + 30) / 30) == v
+    assert d.airplay_db(0) == -144.0

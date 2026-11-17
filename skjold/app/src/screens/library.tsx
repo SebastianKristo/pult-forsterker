@@ -1,6 +1,7 @@
 // Biblioteker (Skjold App v2 · tLib): YouTube Music og Navidrome. Malen er portert 1:1 fra designfilen.
 // Navidrome er ekte (Subsonic-API direkte fra appen). YouTube Music hentes fra Skjold-enheten (/api/ytm/*, lib/ytm.ts);
 // svarer den ikke, vises samme skall med en tydelig «ikke tilkoblet»-tilstand i stedet for eksempeldata.
+import { openSetup } from './setupwiz';
 import { loadSw, playSw, swPlaying, swStations } from '../lib/subwave';
 import { useEffect, useState } from 'preact/hooks';
 import { go, openFull, route, status, trackSub } from '../lib/store';
@@ -73,7 +74,7 @@ function NotConnected({ lib, err, retry }: { lib: LibId; err?: string; retry?: (
         <span style="font-size:19px;font-weight:600;line-height:1.15">{lib === 'ytm' ? 'YouTube Music er ikke tilgjengelig' : 'Ikke tilkoblet – sett opp i Innstillinger → Musikktjenester'}</span>
         <span style="font-size:12px;color:#c9c9c4;line-height:1.45;text-wrap:pretty">{why}</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button onClick={() => go('settings', 'tjenester')} style="align-self:flex-start;height:38px;padding:0 16px;border-radius:999px;border:none;background:#d9a441;color:#0b0b0c;font-size:13px;font-weight:600;cursor:pointer">Åpne Musikktjenester</button>
+          <button onClick={() => openSetup(lib === 'ytm' ? 'ytm' : 'nd')} style="align-self:flex-start;height:38px;padding:0 16px;border-radius:999px;border:none;background:#d9a441;color:#0b0b0c;font-size:13px;font-weight:600;cursor:pointer">Åpne Musikktjenester</button>
           {retry && <button onClick={retry} style="height:38px;padding:0 14px;border-radius:999px;border:1px solid #2e2e30;background:transparent;font-size:13px;cursor:pointer">Prøv igjen</button>}
         </div>
       </div>

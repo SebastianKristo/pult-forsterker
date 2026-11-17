@@ -1,3 +1,4 @@
+import { openSetup } from './setupwiz';
 import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
 import { signal } from '@preact/signals';
@@ -99,7 +100,7 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
       rows: [{ n: 'Spotify Connect', hint: 'Vises som egen inngang', el: tog('spEn', s.spEn) }, { n: 'Versjon', el: txt('librespot') }] };
     case 'ytmusic': return { links: [['Åpne YouTube Music', 'https://music.youtube.com/']],
       rows: [{ n: 'YouTube Music', hint: 'Vises i menyen og under Kilder', el: tog('ytmEn', s.ytmEn) },
-        { n: 'Innlogging', hint: s.ytmCookie ? 'Innlogget med cookie' + (s.ytmUser ? ' · ' + s.ytmUser : '') : 'Krever Premium. Logges inn med en cookie fra nettleseren, slik Music Assistant gjør.', el: btn(s.ytmCookie ? 'Endre' : 'Sett opp', () => go('settings', 'tjenester')) },
+        { n: 'Innlogging', hint: s.ytmCookie ? 'Innlogget med cookie' + (s.ytmUser ? ' · ' + s.ytmUser : '') : 'Krever Premium. Logges inn med en cookie fra nettleseren, slik Music Assistant gjør.', el: btn(s.ytmCookie ? 'Endre' : 'Sett opp', () => openSetup('ytm')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'ytm')) }] };
     case 'ma': return { links: s.maUrl ? [['Åpne Music Assistant', maHttp(s.maUrl)]] : [['Om Music Assistant', 'https://music-assistant.io/']],
       rows: [{ n: 'Adresse', hint: 'For eksempel 192.168.1.5 eller homeassistant.local:8095', el: <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><input value={s.maUrl} placeholder="192.168.1.5:8095" onChange={(e) => { setSetting('maUrl', (e.currentTarget as HTMLInputElement).value.trim()); setTimeout(checkMa, 300); }} style={`height:36px;width:200px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-family:${MONO};font-size:12px;outline:none;color:#f2f2ee`} />{btn('Finn automatisk', () => void findMa())}</span> },
@@ -110,7 +111,7 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
       rows: [{ n: 'Navidrome', hint: 'Vises i menyen og under Kilder', el: tog('ndEn', s.ndEn) },
         { n: 'Server', el: inp('ndUrl', s.ndUrl, 'http://192.168.1.10:4533') },
         { n: 'Brukernavn', el: inp('ndUser', s.ndUser, 'brukernavn') },
-        { n: 'Passord', hint: 'Settes under Innstillinger → Musikktjenester', el: btn('Åpne', () => go('settings', 'tjenester')) },
+        { n: 'Passord', hint: 'Settes under Innstillinger → Musikktjenester', el: btn('Åpne', () => openSetup('nd')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'nd')) }] };
     case 'upnp': return { links: [],
       rows: [{ n: 'UPnP/DLNA-mottaker', hint: 'Lyden går via Lyrion, så rom kan grupperes som vanlig.', el: tog('upnpEn', s.upnpEn) },
@@ -142,6 +143,11 @@ export function IntegrationsPage() {
   const s = settings.value, sel = intSel.value, list = ints(s), cur = list.find((x) => x.id === sel) ?? list[0]!, d = detail(cur.id, s);
   return (
     <>
+      <button onClick={() => openSetup()} style="display:flex;align-items:center;gap:14px;margin-bottom:12px;padding:16px 18px;border-radius:18px;border:1px solid #3a2e17;background:linear-gradient(135deg,#2a1f0c,#141415);color:#f2f2ee;cursor:pointer;text-align:left">
+        <span style="width:44px;height:44px;border-radius:12px;flex-shrink:0;background:linear-gradient(145deg,#f0c46a,#b9832a);display:flex;align-items:center;justify-content:center;color:#0b0b0c"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg></span>
+        <span style="display:flex;flex-direction:column;gap:2px;flex:1"><b style="font-size:15px">Sett opp musikktjenester</b><span style="font-size:12.5px;color:#a9a9a3">YouTube Music, Navidrome, Music Assistant, Spotify og SUB/WAVE – steg for steg</span></span>
+        <span style="color:#d9a441;font-size:20px">›</span>
+      </button>
       <button onClick={() => go('kass')} style="align-self:flex-start;margin-bottom:12px;padding:10px 16px;border-radius:12px;border:1px solid #242426;background:#141415;color:#f2f2ee;cursor:pointer">Skjold Kassett – NFC-kassetter ›</button>
       <button onClick={() => go('vinyl')} style="align-self:flex-start;margin-bottom:12px;padding:10px 16px;border-radius:12px;border:1px solid #242426;background:#141415;color:#f2f2ee;cursor:pointer">Platesamling – vinyl til FLAC ›</button>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">

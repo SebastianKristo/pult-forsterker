@@ -104,6 +104,11 @@ if [ "${KI_AMP_DISPLAY:-}" = bar958 ] || [ "${KI_AMP_BOARD:-}" = s1f ] || [ "${S
   sudo bash "$(cd "$(dirname "$0")" && pwd)/install_skjold_ui.sh" "${SUDO_USER:-$USER}" || echo "ADVARSEL: skjold-ui ble ikke installert" >&2
 fi
 
+# Oppstartsskjerm med Skjold-logoen (Touch og enheter med skjold-ui-skjerm): ingen Linux-tekst ved oppstart og oppdatering
+if grep -qsE "^(KI_AMP_PRODUCT=touch|KI_AMP_DISPLAY=bar958|KI_AMP_BOARD=s1f|SKJOLD_UI_LAYOUT=radio)" /etc/ki-amp.env || [ -f /etc/systemd/system/skjold-ui.service ]; then
+  sudo bash "$SRC/install_splash.sh" || true
+fi
+
 # Skjold Touch: usynlig musepeker i kiosken (uten å kjøre install_touch.sh på nytt, som ville nullstilt rotasjonen)
 if grep -qs "^KI_AMP_PRODUCT=touch" /etc/ki-amp.env && [ -f /etc/systemd/system/skjold-touch.service ]; then
   TU="$(sed -n 's/^User=//p' /etc/systemd/system/skjold-touch.service | head -1)"; TH="$(getent passwd "$TU" | cut -d: -f6)"

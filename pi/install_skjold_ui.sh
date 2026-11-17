@@ -51,3 +51,6 @@ systemctl set-default graphical.target
 systemctl enable skjold-ui.service
 systemctl restart skjold-ui.service || true
 echo "skjold-ui installert ($LAYOUT): skjermen viser http://127.0.0.1:8766/ (logg: journalctl -u skjold-ui -f)"
+
+# Oppstartsskjerm med Skjold-logoen i stedet for Linux-tekst
+bash "$(cd "$(dirname "$0")" && pwd)/install_splash.sh" || true
