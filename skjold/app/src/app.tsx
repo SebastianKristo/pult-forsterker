@@ -229,7 +229,7 @@ function Desktop() {
         </header>
         <Offline />
         <main class="main">
-          {r.page !== 'home' && <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>}
+          {r.page !== 'home' && r.page !== 'play' && <div class="pgh"><h1>{title}</h1>{cat ? <span class="sub">Endringer lagres på forsterkeren med en gang</span> : PAGE_SUB[r.page] ? <span class="sub">{PAGE_SUB[r.page]}</span> : null}</div>}
           <Boundary key={r.page + (r.cat ?? '')}>
           {r.page === 'home' && <DeskHome />}
           {r.page === 'play' && <DeskPlayer />}

@@ -752,19 +752,22 @@ html.kiosk body { overscroll-behavior: none; }
 @media (max-width: 1150px) { .dkx-home { grid-template-columns: minmax(0, 1fr); } .dkx-side { position: static; display: grid; grid-template-columns: 1fr 1fr; } }
 
 /* Spiller */
-.dkx-player { position: relative; display: grid; grid-template-columns: minmax(280px, 520px) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); align-items: start; padding: 8px 0 20px; }
+.dkx-player { --cv: clamp(220px, min(calc(100dvh - 250px), 42vw), 680px); position: relative; display: grid; grid-template-columns: var(--cv) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); align-items: start; padding: 0 0 12px; }
 .dkx-player .glow { position: absolute; inset: -40px -20px auto -20px; height: 420px; filter: blur(90px); opacity: .28; pointer-events: none; border-radius: 40%; }
 .dkx-player .cvwrap { position: relative; }
 .dkx-player .cv { width: 100%; aspect-ratio: 1; border-radius: 20px; box-shadow: 0 30px 70px rgba(0,0,0,.55); display: flex; align-items: flex-end; padding: 24px; font-size: 28px; font-weight: 600; line-height: 1.05; }
-.dkx-player .info { position: relative; display: flex; flex-direction: column; gap: 22px; min-width: 0; max-width: 620px; }
+.dkx-player .info { position: relative; display: flex; flex-direction: column; gap: clamp(10px, 2.2dvh, 22px); min-width: 0; max-width: 620px; }
+.dkx-player .top { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.dkx-player .top > .col { flex: 1 1 auto; min-width: 0; }
 .dkx-player .seg { align-self: flex-start; display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
 .dkx-player .seg button { height: 32px; padding: 0 18px; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
 .dkx-player .seg button.on { background: var(--card-3); color: var(--text); }
-.dkx-player .tt { margin: 0; font-size: clamp(28px, 3vw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.08; text-wrap: balance; }
+.dkx-player .tt { margin: 0; font-size: clamp(24px, min(3vw, 4.6dvh), 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.08; text-wrap: balance; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .dkx-player .sub { font-size: 17px; color: var(--text-2); }
 .dkx-player .bar.live i { width: 100%; background: linear-gradient(90deg, var(--accent-line), var(--accent)); }
 .dkx-player .ctl .tbtn { width: 46px; height: 46px; }
 .dkx-player .ctl .tbtn.main { width: 64px; height: 64px; }
+@media (max-height: 820px) { .dkx-player .ctl .tbtn { width: 40px; height: 40px; } .dkx-player .ctl .tbtn.main { width: 54px; height: 54px; } .dkx-player .sub { font-size: 15px; } }
 .dkx-player .vol { display: flex; align-items: center; gap: 14px; color: var(--text-2); }
 .dkx-player .vol .num { font-family: var(--mono); font-size: 22px; color: var(--accent-2); width: 2.4ch; text-align: right; font-variant-numeric: tabular-nums; }
 .dkx-queue { display: flex; flex-direction: column; border-radius: var(--r-card); border: 1px solid var(--line); background: var(--card); overflow: hidden; }
@@ -773,7 +776,8 @@ html.kiosk body { overscroll-behavior: none; }
 .dkx-queue > button.on b { color: var(--accent-2); }
 .dkx-queue .qc, .dkx-tt .qc { width: 44px; height: 44px; border-radius: 6px; flex-shrink: 0; }
 .dkx-queue .dkx-empty { border: none; }
-@media (max-width: 1000px) { .dkx-player { grid-template-columns: minmax(0, 1fr); } .dkx-player .cvwrap { max-width: 380px; } }
+@media (max-width: 1000px) { .dkx-player { --cv: clamp(140px, 30vw, 260px); gap: 20px; } }
+@media (max-width: 640px) { .dkx-player { grid-template-columns: minmax(0, 1fr); } .dkx-player .cvwrap { width: min(240px, 60vw); } }
 
 /* Radio */
 .dkx-radio { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }

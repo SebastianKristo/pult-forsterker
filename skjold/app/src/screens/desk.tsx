@@ -206,15 +206,14 @@ export function DeskPlayer() {
       <div class="glow" style={{ background: a.bg }} />
       <div class="cvwrap"><div class="cv" style={{ background: a.bg, color: a.ink }}>{!a.img && <span>{t.title}</span>}</div></div>
       <div class="info">
-        <div class="seg">{((s?.subwave ? [['song', 'Låt'], ['lyrics', 'Tekst'], ['booth', 'Booth'], ['queue', 'Kø']] : [['song', 'Låt'], ['queue', 'Kø'], ['lyrics', 'Tekst']]) as ['song' | 'queue' | 'lyrics' | 'booth', string][]).map(([k, n]) => <button key={k} class={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}</div>
+        <div class="top"><div class="seg">{((s?.subwave ? [['song', 'Låt'], ['lyrics', 'Tekst'], ['booth', 'Booth'], ['queue', 'Kø']] : [['song', 'Låt'], ['queue', 'Kø'], ['lyrics', 'Tekst']]) as ['song' | 'queue' | 'lyrics' | 'booth', string][]).map(([k, n]) => <button key={k} class={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}</div>{tab === 'song' && <RecognizeBox />}</div>
         {tab === 'song' ? <>
-          <RecognizeBox />
           <SmartRadioBox seed={libQ && lq.value[li.value] ? { source: 'navidrome', id: lq.value[li.value]!.id, title: lq.value[li.value]!.title, artist: lq.value[li.value]!.artist } : s?.playing && s.artist ? { title: t.title, artist: s.artist } : null} />
           <div class="col" style={{ gap: '6px', minWidth: 0 }}>
             <span class="kicker">{live ? <span class="live">DIREKTE</span> : sourceLine(s).toUpperCase()}</span>
             <h1 class="tt" data-testid="now-title">{t.title}</h1>
-            <span class="sub">{t.sub}</span>
-            {t.album && <span class="muted" data-testid="album">{t.album}</span>}
+            {t.sub && t.sub !== t.title && <span class="sub">{t.sub}</span>}
+            {t.album && t.album !== t.title && <span class="muted" data-testid="album">{t.album}</span>}
             {s?.input === 'airplay' && s.airplay_device && <span class="muted" style={{ fontSize: '12px' }}>Fra {s.airplay_device}</span>}
           </div>
           {dur > 0 ? (
