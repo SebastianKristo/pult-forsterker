@@ -19,7 +19,7 @@ export interface Settings {
   ledMode: LedMode;
   auto: number; wake: boolean; spEn: boolean; upnpEn: boolean; castEn: boolean; ytmEn: boolean; ndEn: boolean; ytmUser: string; ytmCookie: string; ndUrl: string; ndUser: string; ndPass: string; plexEn: boolean; plexUrl: string; plexToken: string; maEn: boolean; maUrl: string; maToken: string; esphomeKey: string;
   /** Skjold Touch-skjermen: rolle, lydutgang, standby etter, standby-visning, nattmodus. */
-  tRole: number; tOut: number; tStandby: number; tIdle: number; tNight: boolean;
+  tRole: number; tOut: number; tStandby: number; tIdle: number; tNight: boolean; tTips: boolean;
   tStart: number; tBell: number; tNightMode: number; tNStart: number; tNEnd: number; tVoice: boolean; tWake: number; tMic: boolean; tBright: number;
   dblPower: number; nightLight: boolean;
   /** Node/Core: lydutgang (indeks i OUT_LIST). 3 = I²S/som installert. USB-lydkort (UCA222/UCA202) finnes automatisk. */
@@ -67,7 +67,7 @@ export const DEF: Settings = {
   bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, lvlAux: 0, lvlUsb: 0,
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
   hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '', maEn: false, maUrl: '', maToken: '', esphomeKey: '',
-  tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false,
+  tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false, tTips: true,
   tStart: 0, tBell: 0, tNightMode: 0, tNStart: 22, tNEnd: 7, tVoice: false, tWake: 0, tMic: true, tBright: 100,
   dblPower: 0, nightLight: true, out: 3,
   updChannel: 0, updAuto: true, setupDone: false,

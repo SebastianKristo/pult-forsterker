@@ -216,7 +216,10 @@ function SaverSheet() {
           </button>); })}
       </div>
       <div style="display:flex;gap:10px;align-items:center;padding:0 16px 14px">
-        <span style="flex:1;font-size:12px;color:#8b8b86">Trykk hvor som helst for å vekke skjermen. Med skjermspareren på: dobbelttrykk spiller/pauser, sveip med to fingre bytter låt.</span>
+        <button onClick={() => setSetting('tTips', settings.value.tTips === false)} aria-pressed={settings.value.tTips !== false} style="flex:1;min-width:0;border:none;background:none;padding:0;display:flex;align-items:center;gap:10px;text-align:left">
+          <span style={`width:40px;height:24px;border-radius:12px;background:${settings.value.tTips !== false ? '#f0c46a' : '#3a3a3c'};position:relative;flex-shrink:0;transition:background .2s`}><i style={`position:absolute;top:3px;left:${settings.value.tTips !== false ? 19 : 3}px;width:18px;height:18px;border-radius:9px;background:#fff;transition:left .2s`} /></span>
+          <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13px;font-weight:600;color:#f2f2ee">Forslag på skjermspareren</span><span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Radiokanalen du pleier å høre på nå, og nye podkastepisoder</span></span>
+        </button>
         <button onClick={() => { saverOpen.value = false; goIdle(); }} style="height:44px;padding:0 20px;border-radius:22px;border:none;background:#f2f2ee;color:#0b0b0c;font-size:13.5px;font-weight:600;white-space:nowrap">Start nå</button>
       </div>
     </Sheet>
@@ -228,7 +231,8 @@ function wake(): void { lastAct = Date.now(); if (idle.value) { idle.value = fal
 // Trykket som vekker skjermen skal bare vekke: standby-laget forsvinner allerede ved pointerdown, så uten dette landet
 // pointerup/click på knappen som lå bak (f.eks. en radiostasjon som byttet kanal).
 let sluk = 0;
-const slukk = (e: Event) => { if (idle.value || Date.now() < sluk) { e.stopPropagation(); e.preventDefault(); } };
+const iTips = (e: Event) => !!(e.target as Element | null)?.closest?.('[data-ss-tip]');   // forslagene på skjermspareren kan trykkes
+const slukk = (e: Event) => { if ((idle.value || Date.now() < sluk) && !iTips(e)) { e.stopPropagation(); e.preventDefault(); } };
 for (const t of ['pointerup', 'click', 'mouseup', 'touchend']) addEventListener(t, slukk, { capture: true, passive: false });
 
 // Bevegelser på skjermspareren (skjermen blir stående i standby): to fingre sveip ← neste / → forrige, dobbelttrykk =
@@ -237,7 +241,7 @@ const gestTxt = signal('');
 const gest = { ptr: new Map<number, { x0: number; y0: number; x: number; y: number }>(), maks: 0, t0: 0, sisteTrykk: 0, vekkT: 0, gT: 0 };
 function gestVis(t: string): void { gestTxt.value = t; clearTimeout(gest.gT); gest.gT = window.setTimeout(() => { gestTxt.value = ''; }, 1100); }
 addEventListener('pointerdown', (e) => {
-  if (idle.value) {
+  if (idle.value && !iTips(e)) {
     e.stopPropagation(); e.preventDefault();
     if (!gest.ptr.size) { gest.maks = 0; gest.t0 = Date.now(); }
     gest.ptr.set(e.pointerId, { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY });
@@ -1357,6 +1361,79 @@ function RebootLayer() {
   );
 }
 
+// ---------- Forslag på skjermspareren ----------
+// «Vil du høre på P3?» (kanalen du pleier å høre på denne tiden av døgnet) og «2 nye episoder av …» (favorittpodkastene).
+// Trykk på forslaget spiller uten å vekke skjermen; krysset skjuler det. Av/på under Oppsett → Skjermsparer.
+interface Tip { key: string; kicker: string; text: string; art: string; go: () => void }
+const tips = signal<Tip[]>([]), tipI = signal(0);
+const TIP_SEEN = 'skjold-touch-tips-sett', RADIO_LOG = 'skjold-touch-radiotimer';
+const lsGet = <T,>(k: string, d: T): T => { try { return (JSON.parse(localStorage.getItem(k) || 'null') as T) ?? d; } catch { return d; } };
+const lsSet = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* full lagring */ } };
+// Husk hvilken kanal som spilles når på døgnet (teller per time), så forslaget passer tiden
+let radioLogT = 0;
+effect(() => {
+  const st = local.value;
+  if (!st?.playing || st.input !== 'radio' || !st.preset || Date.now() - radioLogT < 5 * 60000) return;
+  radioLogT = Date.now();
+  const log = lsGet<Record<string, Record<string, number>>>(RADIO_LOG, {}), h = String(new Date().getHours());
+  log[h] = { ...(log[h] ?? {}), [String(st.preset)]: (log[h]?.[String(st.preset)] ?? 0) + 1 };
+  lsSet(RADIO_LOG, log);
+});
+function radioTip(): Tip | null {
+  const f = favs.value.filter((x) => x.url || x.n);
+  if (!f.length) return null;
+  const log = lsGet<Record<string, Record<string, number>>>(RADIO_LOG, {}), h = new Date().getHours(), sc: Record<string, number> = {};
+  for (const d of [-1, 0, 1]) for (const [n, c] of Object.entries(log[String((h + d + 24) % 24)] ?? {})) sc[n] = (sc[n] ?? 0) + c * (d ? 1 : 2);
+  const best = Object.entries(sc).sort((a, b) => b[1] - a[1])[0];
+  const fav = (best && f.find((x) => String(x.n) === best[0])) || f[0]!;
+  return { key: 'radio:' + fav.n, kicker: best ? 'RADIO · DU PLEIER Å HØRE PÅ DENNE NÅ' : 'RADIO', text: 'Vil du høre på ' + fav.title + '?', art: artBg(fav.title, fav.image), go: () => { playFav(fav); gestVis('Spiller ' + fav.title); } };
+}
+async function loadTips(): Promise<void> {
+  if (settings.value.tTips === false) { tips.value = []; return; }
+  const sett = new Set(lsGet<string[]>(TIP_SEEN, [])), out: Tip[] = [];
+  try {
+    const nye = (await api.podNew()).items.filter((e) => !e.heard && !e.pos && !sett.has('ep:' + e.id) && (!e.ts || Date.now() / 1000 - e.ts < 7 * 86400));
+    const per = new Map<string, PodEpisode[]>();
+    for (const e of nye) per.set(e.show, [...(per.get(e.show) ?? []), e]);
+    for (const [show, eps] of per) {
+      const e = eps[0]!;
+      out.push({ key: 'ep:' + e.id, kicker: 'PODKAST · ' + (eps.length > 1 ? eps.length + ' NYE EPISODER' : 'NY EPISODE'),
+        text: eps.length > 1 ? 'Du har ' + eps.length + ' nye episoder av «' + show + '»' : 'Ny episode av «' + show + '»: ' + e.title,
+        art: artBg(show, e.image), go: () => { void playPodTouch(e); gestVis('Spiller ' + show); eps.forEach((x) => sett.add('ep:' + x.id)); lsSet(TIP_SEEN, [...sett].slice(-300)); } });
+    }
+  } catch { /* uten podkaster */ }
+  const r = radioTip();
+  if (r && !sett.has(r.key + ':' + new Date().toDateString())) out.push(r);
+  tips.value = out; tipI.value = 0;
+}
+function skjulTip(t: Tip): void {
+  const sett = lsGet<string[]>(TIP_SEEN, []);
+  sett.push(t.key.startsWith('radio:') ? t.key + ':' + new Date().toDateString() : t.key);   // radioforslaget kommer igjen i morgen
+  lsSet(TIP_SEEN, sett.slice(-300));
+  tips.value = tips.value.filter((x) => x.key !== t.key);
+}
+effect(() => { if (idle.value) void loadTips(); });
+setInterval(() => { if (idle.value) { if (tips.value.length > 1) tipI.value = (tipI.value + 1) % tips.value.length; } }, 20000);
+setInterval(() => { if (idle.value) void loadTips(); }, 10 * 60000);
+
+function TipCard() {
+  const s = status.value, t = tips.value[tipI.value % Math.max(1, tips.value.length)];
+  if (!t || (s?.playing && t.key.startsWith('radio:'))) return null;
+  return (
+    <div data-ss-tip style="position:absolute;top:20px;right:20px;max-width:380px;display:flex;align-items:center;gap:12px;padding:10px 10px 10px 10px;border-radius:16px;background:rgba(20,20,22,.78);border:1px solid #2e2e30;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 10px 30px rgba(0,0,0,.45);animation:tinn .5s ease both;z-index:3;text-align:left">
+      <div role="button" tabIndex={0} onClick={() => { t.go(); skjulTip(t); }} style="display:flex;align-items:center;gap:12px;min-width:0;cursor:pointer">
+        <div style={`width:52px;height:52px;border-radius:10px;background:${t.art};flex-shrink:0`} />
+        <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+          <span style={`font-family:${MONO};font-size:9.5px;letter-spacing:.12em;color:#f0c46a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{t.kicker}</span>
+          <span style="font-size:14.5px;font-weight:600;color:#f2f2ee;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{t.text}</span>
+        </span>
+        <span style="height:36px;padding:0 14px;border-radius:18px;background:#f2f2ee;color:#0b0b0c;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="#0b0b0c"><path d={PLAY_D} /></svg>Spill</span>
+      </div>
+      <div role="button" tabIndex={0} aria-label="Skjul forslaget" onClick={() => skjulTip(t)} style="width:32px;height:36px;display:flex;align-items:center;justify-content:center;color:#8b8b86;flex-shrink:0;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></div>
+    </div>
+  );
+}
+
 function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
   const s = status.value, m = settings.value.tIdle ?? 0, night = nightNow(), nx = nextAlarm();
   const bg = artOf(s), playing = !!s?.playing;
@@ -1414,6 +1491,7 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
           {playing && !night && <span style="margin-top:26px;display:flex;align-items:center;gap:10px;font-size:13px;color:#8b8b86"><div style={`width:24px;height:24px;border-radius:5px;background:${bg}`} />{(s?.title || s?.station) + (s?.artist ? ' · ' + s.artist : '')}</span>}
         </div>
       )}
+      {m !== 2 && !night && <TipCard />}
       {!!gestTxt.value && <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 26px;border-radius:999px;background:rgba(20,20,22,.82);border:1px solid #3a2e17;color:#f0c46a;font-size:22px;font-weight:600;white-space:nowrap;animation:tinn .2s ease both">{gestTxt.value}</span>}
       {m !== 2 && m !== 4 && !night && <span style={`position:absolute;left:0;right:0;bottom:16px;text-align:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#3a3a37`}>TRYKK FOR Å VEKKE</span>}
     </button>
