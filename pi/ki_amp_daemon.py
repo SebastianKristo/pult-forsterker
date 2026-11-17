@@ -9718,10 +9718,19 @@ def main():
         import skjold_ma as _ma, skjold_nrk as _nrk
         _ma_ctx = {"settings": settings, "name": lambda: NAME, "mac": lambda: lyr.player}
         app.add_routes(_ma.routes(_ma_ctx)); _HX["ma"] = _ma_ctx.get("ma")
-        app.add_routes(_nrk.routes({"play_url": play_url, "lyr_cmd": lyr.cmd, "lyr_info": lambda: lyr.info,
+        _nrk_ctx = {"play_url": play_url, "lyr_cmd": lyr.cmd, "lyr_info": lambda: lyr.info,
+                    "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp"}
+        app.add_routes(_nrk.routes(_nrk_ctx))
+    except Exception as e:
+        _nrk_ctx = {}
+        print("Music Assistant/NRK ikke tilgjengelig:", e, flush=True)
+    # Podkaster: Apple Podcasts-katalogen, NRK og egne RSS-adresser, med favoritter (pi/skjold_pod.py)
+    try:
+        import skjold_pod as _pod
+        app.add_routes(_pod.routes({"play_url": play_url, "lyr_cmd": lyr.cmd, "lyr_info": lambda: lyr.info, "nrk": _nrk_ctx.get("nrk"),
                                     "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp"}))
     except Exception as e:
-        print("Music Assistant/NRK ikke tilgjengelig:", e, flush=True)
+        print("Podkaster ikke tilgjengelig:", e, flush=True)
     # YouTube Music innebygd (pi/skjold_ytm.py) – ytmusicapi + yt-dlp, ingen Music Assistant
     try:
         app.add_routes(_ytmmod.routes(ytm, {"stream_base": lambda: f"http://{_local_ip()}:{PORT}", "play": ytm_play_queue}))
