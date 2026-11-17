@@ -232,6 +232,7 @@ sudo install -m 644 "$SRC/skjold_xtc.py" "$SRC/skjold_spatial.py" "$SRC/skjold_p
 sudo install -m 644 "$SRC/skjold_extras.py" /usr/local/bin/   # Roon, Plexamp, backup, automatisk standby, Skjold Wrapped
 sudo install -m 644 "$SRC/skjold_smartradio.py" "$SRC/skjold_home_extras.py" "$SRC/skjold_pluginstore.py" "$SRC/skjold_health.py" "$SRC/skjold_libtag.py" "$SRC/skjold_ask.py" "$SRC/skjold_podsum.py" "$SRC/skjold_vinyl.py" /usr/local/bin/   # smart radio, helse, lydtagger, «Spill noe til …», podkastsammendrag
 sudo install -m 644 "$SRC/skjold_nfc.py" "$SRC/skjold_hjul.py" "$SRC/skjold_hylle.py" "$SRC/skjold_rost.py" "$SRC/skjold_medialib.py" "$SRC/skjold_duck.py" "$SRC/skjold_security.py" "$SRC/skjold_quiz.py" "$SRC/skjold_abs.py" "$SRC/skjold_qhist.py" "$SRC/skjold_bassmgmt.py" "$SRC/skjold_airplay.py" "$SRC/skjold_ytm.py" "$SRC/skjold_touch.py" "$SRC/skjold_setupnet.py" "$SRC/skjold_ha.py" /usr/local/bin/   # Skjold Kassett (NFC) og Skjold Hjul (fjernkontroll)
+sudo install -m 644 "$SRC"/skjold_*.py /usr/local/bin/   # alle Skjold-modulene, så en ny modul aldri glemmes (skjold_esphome manglet og stoppet ki-amp)
 
 # Intercom, låtgjenkjenning (fpcalc/Chromaprint), dørklokke, rutiner og trygg oppdatering (helsesjekk + tilbakerulling)
 command -v fpcalc >/dev/null || sudo apt-get -y install --no-install-recommends libchromaprint-tools >/dev/null 2>&1 || true
