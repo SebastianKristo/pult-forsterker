@@ -196,6 +196,7 @@ export const api = {
   nrkContinue: () => req<{ items: NrkProg[] }>('/api/nrk/continue'),
   nrkPlay: (e: { id: string; title?: string; series?: string; image?: string; duration?: number; podcast?: boolean; restart?: boolean }) => post<{ ok: boolean; resume: number }>('/api/nrk/play', e),
   /** Grupper (Lyrion-synk): denne enheten leder, members er adressene til de andre rommene. [] løser opp. */
+  groupGet: () => req<{ leader: string; followers: string[]; bases: string[] }>('/api/group', undefined, undefined, 15000),
   group: (members: string[]) => req<{ ok: boolean; members: { base: string; name?: string; ok: boolean; error?: string }[] }>('/api/group', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ members }) }, undefined, 60000),
   podGenres: () => req<{ genres: { id: number; name: string }[] }>('/api/pod/genres'),
   podTop: (genre = 0) => req<{ shows: PodShow[] }>('/api/pod/top?genre=' + genre, undefined, undefined, 15000),

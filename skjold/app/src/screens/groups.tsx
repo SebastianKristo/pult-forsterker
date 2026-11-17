@@ -1,5 +1,5 @@
 // «Grupper og surround» (PC, S1 Web v3: grpPage) og «Spill på»-arket i docken (spkSheet).
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { PRODUCT_LABEL, type Status } from '../lib/api';
 import { go, setVolume } from '../lib/store';
 import { ListenHere } from './listenhere';
@@ -8,7 +8,7 @@ import { PlacementCard, SyncSubCard } from './advaudio';
 import { BassCard } from './lyd';
 import { RostCard } from './rost';
 import { activeKey, setVolAt, useRooms, type Room } from './phone';
-import { applyLayout, delayMs, groupAll, groupNone, groups, inGroup, LAYOUTS, members, placeRoom, ROLE_FULL, ROLES, savePreset, setGset, setMembers, setMode, SLOT_POS, toggleMember } from '../lib/groups';
+import { applyLayout, delayMs, groupAll, groupNone, groups, inGroup, LAYOUTS, loadGroup, members, placeRoom, ROLE_FULL, ROLES, savePreset, setGset, setMembers, setMode, SLOT_POS, toggleMember } from '../lib/groups';
 
 const A = '#d9a441';
 const sel = (on: boolean) => ({ bd: on ? A : '#242426', bg: on ? '#1c170d' : '#141415', fg: on ? '#f0c46a' : '#f2f2ee' });
@@ -38,6 +38,7 @@ function PmBtn({ on, children }: { on: () => void; children: string }) {
 
 export function GroupsPage() {
   const rooms = useRooms(), ak = activeKey(), g = groups.value, G = g.gset;
+  useEffect(() => { void loadGroup(); }, [ak]);   // vis gruppen slik Lyrion faktisk har den
   const act = rooms[0]!;
   const memK = members(ak), mem = rooms.filter((r) => memK.includes(r.key)), has = mem.length > 1, mode = g.mode;
   const [slot, setSlot] = useState<number | null>(null);

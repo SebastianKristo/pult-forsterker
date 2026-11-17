@@ -7948,6 +7948,19 @@ async def h_group(r):
             return web.json_response({"error": str(e)}, status=502)
         return web.json_response({"ok": all(x["ok"] for x in res), "members": res})
     f = await loop.run_in_executor(None, group_followers)
+    # Lyrion husker synkroniseringen også etter omstart, mens _group bare husker det denne økten har gjort: finn
+    # adressen til de andre rommene i gruppen ved å spørre Skjold-enhetene på nettet hvilken spiller de har.
+    ukjent = [m for m in f if m not in _group["bases"]]
+    if ukjent:
+        def finn():
+            for p in _peers():
+                try:
+                    mac = str(_peer_json(p["base"], "/api/status", timeout=3).get("lms_player") or "").lower()
+                except Exception:
+                    continue
+                if mac in ukjent:
+                    _group["bases"][mac] = p["base"]
+        await loop.run_in_executor(None, finn)
     return web.json_response({"leader": lyr.player, "followers": sorted(f), "bases": [b for m, b in _group["bases"].items() if m in f]})
 
 
