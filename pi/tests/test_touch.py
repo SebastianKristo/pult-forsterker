@@ -369,3 +369,23 @@ def test_wake_without_home_assistant_explains(tmp_path):
     x = T.Touch({"changed": lambda: None, "ha": lambda: {}, "alarms": lambda: []}, str(tmp_path / "t.json"))
     w = x.wake()
     assert not w["ok"] and "Home Assistant" in w["error"]
+
+
+def test_kameraer_valgte_eller_alle(tmp_path):
+    """Kamera-knappen på Smarthus: valgte kamerafliser, ellers alle kameraene i Home Assistant (UniFi Protect m.fl.)."""
+    import skjold_touch as TT
+    x = TT.Touch({"changed": lambda: None, "ha": lambda: {"ha_url": "http://ha", "ha_token": "x"}, "alarms": lambda: []}, str(tmp_path / "t.json"))
+    states = [{"entity_id": "camera.inngang", "state": "idle", "attributes": {"friendly_name": "Inngang"}},
+              {"entity_id": "camera.hage", "state": "unavailable", "attributes": {}},
+              {"entity_id": "light.stue", "state": "on", "attributes": {}}]
+    x._get = lambda path, timeout=5.0: states
+    r = x.cameras()
+    assert r["ok"] and [c["id"] for c in r["cameras"]] == ["camera.inngang", "camera.hage"] and r["cameras"][1]["on"] is False
+    x.cfg["tiles"] = ["light.stue", "camera.inngang"]
+    x._state = lambda e: next(s for s in states if s["entity_id"] == e)
+    assert [c["id"] for c in x.cameras()["cameras"]] == ["camera.inngang"]
+    import pytest
+    with pytest.raises(ValueError):
+        x.camera_image("light.stue")
+    y = TT.Touch({"changed": lambda: None, "ha": lambda: {}, "alarms": lambda: []}, str(tmp_path / "u.json"))
+    assert y.cameras()["ok"] is False

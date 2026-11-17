@@ -15,6 +15,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import subprocess
 import threading
 import time
@@ -683,6 +684,35 @@ class Touch:
         self._cache = {"t": now, "data": out}
         return out
 
+    def cameras(self) -> dict:
+        """Kameraene til Kamera-knappen på Smarthus-siden: de du har valgt som fliser i appen, ellers alle kameraene
+        Home Assistant kjenner (også UniFi Protect, som legger kameraene inn i Home Assistant)."""
+        url, tok = self.ha()
+        if not (url and tok):
+            return {"ok": False, "cameras": [], "error": "Koble til Home Assistant i appen for å se kameraene."}
+        try:
+            valgt = [e for e in self.cfg["tiles"] if str(e).startswith("camera.")]
+            if valgt:
+                states = [self._state(e) for e in valgt]
+            else:
+                states = [s for s in self._get("/api/states", 10) if str(s.get("entity_id", "")).startswith("camera.")]
+            cams = [{"id": s["entity_id"], "name": str((s.get("attributes") or {}).get("friendly_name") or s["entity_id"].split(".", 1)[1])[:40],
+                     "on": s.get("state") not in ("unavailable", "off")} for s in states if s]
+            return {"ok": True, "cameras": cams, "valgt": bool(valgt)}
+        except Exception as e:
+            return {"ok": False, "cameras": [], "error": "Får ikke kontakt med Home Assistant: " + str(e)[:120]}
+
+    def camera_image(self, eid: str):
+        """Stillbilde fra et kamera i Home Assistant: (bytes, content-type)."""
+        if not re.match(r"^camera\.[a-z0-9_]+$", eid or ""):
+            raise ValueError("ugyldig kamera")
+        url, tok = self.ha()
+        if not (url and tok):
+            raise RuntimeError("Home Assistant er ikke koblet til")
+        req = urllib.request.Request(url + "/api/camera_proxy/" + eid, headers={"Authorization": "Bearer " + tok})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            return r.read(), (r.headers.get("Content-Type") or "image/jpeg").split(";")[0]
+
     def press(self, eid: str, action: str, value=None) -> dict:
         if eid.startswith("homey:"):
             return self._homey_press(eid, action, value)
@@ -976,7 +1006,20 @@ def routes(touch: Touch):
             return fail("level må være 0–100")
         return web.json_response({"ok": await bg(set_backlight, lvl), "level": max(0, min(100, lvl))})
 
-    return [("GET", "/api/touch", h_touch), ("POST", "/api/touch", h_touch), ("GET", "/api/touch/smart", h_smart),
+    async def h_cameras(_r):
+        return web.json_response(await bg(touch.cameras))
+
+    async def h_camera(r):
+        try:
+            data, ct = await bg(touch.camera_image, r.match_info.get("eid", ""))
+        except ValueError as e:
+            return fail(e)
+        except Exception as e:
+            return fail("fikk ikke kamerabildet: " + str(e)[:120], 502)
+        return web.Response(body=data, content_type=ct, headers={"Cache-Control": "no-store"})
+
+    return [("GET", "/api/touch/cameras", h_cameras), ("GET", "/api/touch/camera/{eid}", h_camera),
+            ("GET", "/api/touch", h_touch), ("POST", "/api/touch", h_touch), ("GET", "/api/touch/smart", h_smart),
             ("POST", "/api/touch/smart", h_smart), ("GET", "/api/touch/wake", h_wake), ("POST", "/api/touch/wake", h_wake), ("POST", "/api/touch/unlock", h_unlock), ("GET", "/api/touch/morning", h_morning),
             ("GET", "/api/alarm", h_alarm), ("POST", "/api/alarm", h_alarm), ("GET", "/api/touch/voice", h_voice),
             ("POST", "/api/touch/voice", h_voice), ("POST", "/api/touch/cmd", h_cmd), ("POST", "/api/touch/backlight", h_backlight)]

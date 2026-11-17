@@ -640,6 +640,7 @@ function SmartHome() {
   return (
     <section class="inn" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 18px 10px;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y">
       <div style="display:flex;align-items:center;gap:10px;min-height:36px"><span style="font-size:20px;font-weight:600">Smarthus</span><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>VIA {(sm?.hub ?? 'Home Assistant').toUpperCase()}</span><div style="flex:1" />
+        {sm?.hub !== 'Homey' && <button onClick={() => { camOpen.value = true; }} aria-label="Kameraer" style="height:44px;padding:0 14px;border-radius:22px;border:1px solid #2e2e30;background:#141415;color:#f2f2ee;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;white-space:nowrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h12v10H3zM15 10l6-3v10l-6-3" /></svg>Kameraer</button>}
         {(sm?.scenes ?? []).map((sc) => { const on = sceneOn.value === sc.id; return <button key={sc.id} onClick={() => { sceneOn.value = sc.id; void press(sc.id, 'scene'); }} style={`height:44px;padding:0 14px;border-radius:22px;border:1px solid ${on ? '#f2f2ee' : '#2e2e30'};background:${on ? '#f2f2ee' : '#161617'};color:${on ? '#0b0b0c' : '#f2f2ee'};font-size:12px;font-weight:600;white-space:nowrap`}>{sc.name}</button>; })}</div>
       {!sm && <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>HENTER …</span>}
       {sm && !sm.ok && (
@@ -653,6 +654,38 @@ function SmartHome() {
         {(sm?.tiles ?? []).map((t) => <TileCard key={t.id} t={t} />)}
       </div>
     </section>
+  );
+}
+
+// ---------- kameraer (Home Assistant / UniFi Protect) ----------
+const camOpen = signal(false);
+interface Cam { id: string; name: string; on: boolean }
+function CamView() {
+  const [cams, setCams] = useState<Cam[] | null>(null), [err, setErr] = useState(''), [en, setEn] = useState(''), [tick, setTick] = useState(0);
+  useEffect(() => { getAt<{ ok: boolean; cameras: Cam[]; error?: string }>('', '/api/touch/cameras').then((r) => { setCams(r.cameras || []); setErr(r.ok ? '' : r.error || 'Fikk ikke hentet kameraene'); }).catch(() => { setCams([]); setErr('Krever nyere Skjold-programvare'); }); }, []);
+  useEffect(() => { const t = setInterval(() => setTick((x) => x + 1), en ? 1000 : 2500); return () => clearInterval(t); }, [en]);
+  const img = (id: string) => here() + '/api/touch/camera/' + encodeURIComponent(id) + '?t=' + tick;
+  const lukk = () => { if (en) setEn(''); else camOpen.value = false; };
+  const liste = (cams ?? []).filter((c) => c.on), n = liste.length, kol = n <= 1 ? 1 : n <= 4 ? 2 : 3;
+  const valgt = en ? liste.find((c) => c.id === en) : undefined;
+  return (
+    <div style="position:absolute;inset:0;z-index:25;background:#050506;display:flex;flex-direction:column;animation:tinn .25s ease both">
+      <div style="height:52px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 14px">
+        <button onClick={lukk} aria-label="Tilbake" style="height:40px;padding:0 14px;border-radius:20px;border:1px solid #2e2e30;background:#141415;color:#f2f2ee;font-size:13px;font-weight:600">‹ {valgt ? 'Alle kameraer' : 'Smarthus'}</button>
+        <span style="font-size:17px;font-weight:600">{valgt ? valgt.name : 'Kameraer'}</span>
+        <span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>{valgt ? 'OPPDATERES HVERT SEKUND' : n ? n + ' KAMERA' + (n === 1 ? '' : 'ER') : ''}</span>
+      </div>
+      {cams === null ? <span style={`margin:auto;font-family:${MONO};font-size:11px;letter-spacing:.14em;color:#8b8b86`}>HENTER …</span>
+        : !n ? <span style="margin:auto;max-width:520px;text-align:center;font-size:15px;line-height:1.5;color:#a9a9a3">{err || 'Fant ingen kameraer i Home Assistant. Legg til UniFi Protect (eller et annet kamera) i Home Assistant, eller velg kameraer som fliser i appen.'}</span>
+          : valgt ? <button onClick={() => setEn('')} style="flex:1;min-height:0;margin:0 10px 10px;border:none;padding:0;border-radius:12px;overflow:hidden;background:#000"><img src={img(valgt.id)} alt={valgt.name} style="width:100%;height:100%;object-fit:contain;display:block" /></button>
+            : <div style={`flex:1;min-height:0;display:grid;grid-template-columns:repeat(${kol},minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:6px;padding:0 10px 10px`}>
+              {liste.map((c) => (
+                <button key={c.id} onClick={() => setEn(c.id)} style="position:relative;border:none;padding:0;border-radius:10px;overflow:hidden;background:#111;min-height:0">
+                  <img src={img(c.id)} alt={c.name} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" />
+                  <span style="position:absolute;left:8px;bottom:8px;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.6);font-size:12px;color:#f2f2ee">{c.name}</span>
+                </button>))}
+            </div>}
+    </div>
   );
 }
 
@@ -1415,6 +1448,7 @@ function App() {
         {queueOpen.value && cur === 'now' && <QueueSheet />}
         {lyricsOpen.value && cur === 'now' && <LyricsSheet />}
         {!!dimId.value && cur === 'smart' && <DimSheet />}
+        {camOpen.value && cur === 'smart' && <CamView />}
         {talkOpen.value && <Intercom />}
         {talking && <Voice />}
       </main>
