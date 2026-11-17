@@ -3878,6 +3878,7 @@ class Lyrion:
         self._lms_vol = None
         self._lms_mute = None
         self.pinned = False   # med i en gruppe på en annen enhets Lyrion: ikke gå tilbake til hovedserveren
+        self.resume = None    # strømmen som spilte da serveren forsvant (startes igjen når den er tilbake)
         if os.environ.get("KI_AMP_LMS", "1") == "1":
             if LMS_SERVER and os.path.exists(LMS_ACTIVE_FILE):   # daemonen startet på nytt mens spilleren var på reserve
                 threading.Thread(target=_lms_active, args=(LMS_SERVER,), daemon=True).start()
@@ -3924,6 +3925,35 @@ class Lyrion:
             self.rpc(c)
         except Exception as e:
             print("Lyrion:", e, flush=True)
+
+    # Lyrion-serveren kan forsvinne mens noe spiller (S1 med serveren starter på nytt, eller nettet faller ut).
+    # Radio og andre direktestrømmer (SUB/WAVE, nettradio) startes da igjen av seg selv når en server svarer –
+    # den samme etter omstarten, eller reserveserveren. Låter fra et bibliotek fortsetter ikke (køen ligger i Lyrion).
+    RESUME_S = 900
+    RESUME_WAIT = 6
+
+    def _husk_avspilling(self):
+        lp = last_play
+        if self.info.get("mode") == "play" and lp.get("url") and not lp.get("source") and state.get("input") == "radio":
+            self.resume = {"url": lp["url"], "title": lp.get("title", ""), "art": lp.get("art", ""), "t": time.time()}
+            print("Lyrion: husker", lp.get("title") or lp["url"], "– fortsetter når serveren er tilbake", flush=True)
+
+    def _gjenoppta(self):
+        r, self.resume = self.resume, None
+        if not r or time.time() - r["t"] > self.RESUME_S:
+            return
+        if not state.get("power") or state.get("input") != "radio" or self.info.get("mode") == "play":
+            return
+        if last_play.get("url") and last_play.get("t", 0) > r["t"]:
+            return   # noe annet er startet siden
+        def igjen():   # spilleren (squeezelite) kobler seg til serveren litt etter daemonen: prøv noen ganger
+            for _ in range(4):
+                time.sleep(self.RESUME_WAIT)
+                if self.info.get("mode") == "play" or state.get("input") != "radio":
+                    return
+                print("Lyrion: fortsetter", r["title"] or r["url"], flush=True)
+                _trygt(play_url, r["url"], r["title"], r["art"])
+        threading.Thread(target=igjen, daemon=True).start()
 
     def url(self, path):
         if not path:
@@ -3984,6 +4014,7 @@ class Lyrion:
                 if not self.connected:
                     print("Lyrion tilkoblet, spiller", self.player, flush=True)
                 self.connected = True
+                self._gjenoppta()
                 self._sync_volume(r)
                 self._fetch_art()
                 if not any(state["presets"]):
@@ -3998,6 +4029,7 @@ class Lyrion:
             except Exception as e:
                 if self.connected:
                     print("Lyrion borte:", e, flush=True)
+                    self._husk_avspilling()
                 self.connected = False; self.info = {}
                 if not LMS_SERVER:
                     self.host = None
@@ -4257,6 +4289,13 @@ def _diag_stream(url):
         print(f"  Lyrion etter 3 s: mode={st.get('mode')} tid={st.get('time')} låt={pl.get('title')!r} type={pl.get('type')!r} feil={st.get('error') or st.get('player_connected')}", flush=True)
     except Exception as e:
         print("  Lyrion-status feilet:", repr(e), flush=True)
+
+
+def _trygt(fn, *a, **kw):
+    try:
+        return fn(*a, **kw)
+    except Exception as e:
+        print(f"{getattr(fn, '__name__', fn)}:", e, flush=True)
 
 
 def play_url(url, title="", image="", genre="", meta=None):
