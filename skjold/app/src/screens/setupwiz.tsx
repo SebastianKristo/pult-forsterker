@@ -24,7 +24,7 @@ const SVCS: Svc[] = [
   { id: 'nd', name: 'Navidrome', mono: 'N', c1: '#6aa9ff', c2: '#2b5fb8', what: 'Ditt eget musikkbibliotek på hjemmenettet' },
   { id: 'ma', name: 'Music Assistant', mono: 'MA', c1: '#3cc8f5', c2: '#0b7fb0', what: 'TIDAL, Qobuz, Deezer, Plex og mer i ett' },
   { id: 'sp', name: 'Spotify Connect', mono: 'S', c1: '#3be27a', c2: '#139c48', what: 'Spill fra Spotify-appen rett til Skjold' },
-  { id: 'sw', name: 'SUB/WAVE', mono: 'SW', c1: '#a98bff', c2: '#5a3fc0', what: 'Din egen AI-DJ-radio' },
+  { id: 'sw', name: 'SUB/WAVE', mono: 'SW', c1: '#26262a', c2: '#111113', what: 'Din egen AI-DJ-radio' },
 ];
 
 function isOn(id: SvcId): boolean {

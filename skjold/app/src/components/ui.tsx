@@ -1,3 +1,4 @@
+import { SubwaveMark } from './brandmarks';
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 
@@ -139,6 +140,7 @@ export { SRC_ICON } from '../lib/srcicons';
 import { SRC_ICON } from '../lib/srcicons';
 import { confirmTap, sliderStep } from '../lib/haptics';
 export function SrcCircle({ label, size = 64 }: { label: string; size?: number }) {
+  if (label === 'SUB/WAVE') return <div class="src-circle" style={{ width: size + 'px', height: size + 'px', borderRadius: '50%', overflow: 'hidden', background: '#1a1a1b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><SubwaveMark size="100%" /></div>;
   const ic = SRC_ICON[label] ?? { bg: '#2a2a2c', fg: '#f2f2ee', st: '', fi: '', fp: '', sz: '47%' };
   return (
     <div class="src-circle" style={{ width: size + 'px', height: size + 'px', borderRadius: '50%', overflow: 'hidden', background: ic.bg, color: ic.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
