@@ -298,7 +298,7 @@ addEventListener('contextmenu', (e) => e.preventDefault());
 setInterval(() => {
   now.value = Date.now();
   const ms = (TOUCH_STANDBY_S[settings.value.tStandby] ?? 30) * 1000;
-  if (!idle.value && !boot.value.on && !dev().alarm?.ringing && !door.value && !camOpen.value && !wifiOpen.value && !dev().setup_net?.active && ms > 0 && Date.now() - lastAct > ms) goIdle();
+  if (!idle.value && !boot.value.on && !dev().alarm?.ringing && !door.value && !camOpen.value && !wifiOpen.value && !quick.value && !dev().setup_net?.active && ms > 0 && Date.now() - lastAct > ms) goIdle();
   if (!boot.value.on) backlight();
 }, 1000);
 
@@ -1312,6 +1312,67 @@ function DoorToast() {
 }
 
 // ---------- oppsett-nett (enheten har ikke nett) ----------
+// ---------- hurtigpanel: dra ned fra toppkanten ----------
+// Start i den øverste centimeteren (≈ 40 px på 7″-skjermen) og dra nedover: panelet følger fingeren og blir liggende
+// åpent. Lysstyrke, volum og snarveier (skjermsparer, nattmodus, rom, søk, kameraer, Wi-Fi, lås opp).
+const quick = signal(0);   // 0 = lukket, 0–1 = følger fingeren, 1 = åpent
+const qDrag = { y0: -1, id: -1, aktiv: false };
+const Q_KANT = 40, Q_H = 300;
+addEventListener('pointerdown', (e) => {
+  if (idle.value || boot.value.on || quick.value >= 1 || e.clientY > Q_KANT || door.value) return;
+  qDrag.y0 = e.clientY; qDrag.id = e.pointerId; qDrag.aktiv = false;
+}, { capture: true });
+addEventListener('pointermove', (e) => {
+  if (e.pointerId !== qDrag.id || qDrag.y0 < 0) return;
+  const dy = e.clientY - qDrag.y0;
+  if (!qDrag.aktiv && dy > 14) qDrag.aktiv = true;
+  if (qDrag.aktiv) { quick.value = Math.max(0.01, Math.min(1, dy / Q_H)); e.preventDefault(); }
+}, { capture: true, passive: false });
+const qSlipp = (e: PointerEvent) => {
+  if (e.pointerId !== qDrag.id) return;
+  if (qDrag.aktiv) { quick.value = quick.value > 0.3 ? 1 : 0; sluk = Date.now() + 350; }   // svelg klikket som følger
+  qDrag.y0 = -1; qDrag.id = -1; qDrag.aktiv = false;
+};
+addEventListener('pointerup', qSlipp, { capture: true });
+addEventListener('pointercancel', qSlipp, { capture: true });
+
+function QuickPanel() {
+  const p = quick.value, S = settings.value, st = status.value;
+  const night = (S.tNightMode ?? 0) === 3;
+  const lukk = () => { quick.value = 0; };
+  const knapp = (navn: string, d: string, gjor: () => void, på = false) => (
+    <button onClick={() => { gjor(); }} style={`display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:78px;border-radius:16px;border:1px solid ${på ? '#d9a441' : '#2a2a2c'};background:${på ? '#1c170d' : '#161617'};color:${på ? '#f0c46a' : '#f2f2ee'};font-size:12px;font-weight:600;min-width:0`}>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={d} /></svg>{navn}</button>);
+  const gå = (sk: Scr, f?: () => void) => () => { lukk(); scr.value = sk; f?.(); };
+  const lys = S.tBright ?? 100, vol = st?.volume ?? 0;
+  const glid = (ikon: string, v: number, sett: (n: number) => void, live?: (n: number) => void) => (
+    <div style="display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;border-radius:16px;background:#161617;border:1px solid #2a2a2c">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9c9c4" stroke-width="1.8" stroke-linecap="round"><path d={ikon} /></svg>
+      <input type="range" min={0} max={100} value={v} onInput={(e) => live?.(+(e.currentTarget as HTMLInputElement).value)} onChange={(e) => sett(+(e.currentTarget as HTMLInputElement).value)} style="flex:1;accent-color:#f0c46a;height:30px" />
+      <span style={`font-family:${MONO};font-size:12px;color:#c9c9c4;width:34px;text-align:right`}>{v}</span>
+    </div>);
+  return (
+    <div style="position:absolute;inset:0;z-index:40">
+      <div onClick={lukk} style={`position:absolute;inset:0;background:rgba(0,0,0,${0.55 * p})`} />
+      <div style={`position:absolute;left:0;right:0;top:0;transform:translateY(${(p - 1) * 100}%);transition:${qDrag.aktiv ? 'none' : 'transform .22s cubic-bezier(.2,.8,.2,1)'};background:#0f0f10;border-bottom:1px solid #2a2a2c;border-radius:0 0 22px 22px;padding:14px 18px 10px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 50px rgba(0,0,0,.6)`}>
+        {glid('M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', lys, (n) => setSetting('tBright', Math.max(20, n)))}
+        {glid('M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6', vol, (n) => setVolume(n, true), (n) => setVolume(n))}
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
+          {knapp('Skjermsparer', 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', () => { lukk(); goIdle(); })}
+          {knapp('Nattmodus', 'M12 3v2M5 12H3M21 12h-2M7 7L5.6 5.6M17 7l1.4-1.4M8 16a4 4 0 1 1 8 0', () => { setSetting('tNightMode', night ? 0 : 3); setSetting('tNight', false); }, night)}
+          {knapp('Rom', 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', gå('rooms'))}
+          {knapp('Søk', 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', gå('lib', () => { searchOpen.value = true; }))}
+          {knapp('Kameraer', 'M3 7h12v10H3zM15 10l6-3v10l-6-3', gå('smart', () => { camOpen.value = true; }))}
+          {knapp('Wi-Fi', 'M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01', gå('set', () => { wifiOpen.value = true; }))}
+          {knapp('Smarthus', 'M3 11l9-7 9 7v9H3zM9 20v-6h6v6', gå('smart'))}
+          {knapp('Oppsett', 'M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4', gå('set'))}
+        </div>
+        <div style="align-self:center;width:44px;height:5px;border-radius:3px;background:#3a3a3c;margin-top:2px" />
+      </div>
+    </div>
+  );
+}
+
 // ---------- Dørlås (Home Assistant) til «Lås opp» når det ringer på ----------
 interface LasVal { ok: boolean; locks: { id: string; name: string }[]; valgt: string; bruker: string; error?: string }
 const lasVal = signal<LasVal | null>(null);
@@ -1807,6 +1868,7 @@ function App() {
         {camOpen.value && cur === 'smart' && <CamView />}
         {saverOpen.value && cur === 'set' && <SaverSheet />}
         {wifiOpen.value && cur === 'set' && <WifiSetup />}
+        {quick.value > 0 && <QuickPanel />}
         {talkOpen.value && <Intercom />}
         {talking && <Voice />}
         {!!toast.value && <div role="status" style="position:absolute;left:50%;bottom:78px;transform:translateX(-50%);z-index:9;max-width:620px;padding:12px 20px;border-radius:14px;background:rgba(24,24,26,.96);border:1px solid #3a2e17;color:#f2f2ee;font-size:14px;line-height:1.35;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:tinn .2s ease both">{toast.value.replace(/^Forsterkeren svarte: /, '')}</div>}

@@ -1958,4 +1958,7 @@ export const EN_AUTO: Record<string, string> = {
   'Skjold-enhet': 'Skjold device',
   'Bytt': 'Change',
   'Skjold-appen': 'The Skjold app',
+  'Kameraer': 'Cameras',
+  'Rom': 'Rooms',
+  'Søk': 'Search',
 };
