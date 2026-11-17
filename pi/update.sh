@@ -109,6 +109,15 @@ if grep -qsE "^(KI_AMP_PRODUCT=touch|KI_AMP_DISPLAY=bar958|KI_AMP_BOARD=s1f|SKJO
   sudo bash "$SRC/install_splash.sh" || true
 fi
 
+# Kiosk-tjenestene (Touch) skal logge til journalen, ikke til skjermen, og ta over bildet fra oppstartsskjermen
+if [ -f /etc/systemd/system/skjold-touch.service ] && ! grep -q '^StandardOutput=journal' /etc/systemd/system/skjold-touch.service; then
+  sudo sed -i -e 's/^StandardInput=tty$/StandardInput=tty\nStandardOutput=journal\nStandardError=journal/' \
+    -e 's/^After=systemd-user-sessions.service seatd.service ki-amp.service$/& plymouth-quit.service plymouth-quit-wait.service/' \
+    -e "s|^ExecStart=/usr/bin/cage|ExecStartPre=-+/bin/sh -c 'command -v plymouth >/dev/null \&\& plymouth quit --retain-splash \|\| true'\nExecStart=/usr/bin/cage|" \
+    /etc/systemd/system/skjold-touch.service
+  sudo systemctl daemon-reload
+fi
+
 # Skjold Touch: usynlig musepeker i kiosken (uten å kjøre install_touch.sh på nytt, som ville nullstilt rotasjonen)
 if grep -qs "^KI_AMP_PRODUCT=touch" /etc/ki-amp.env && [ -f /etc/systemd/system/skjold-touch.service ]; then
   TU="$(sed -n 's/^User=//p' /etc/systemd/system/skjold-touch.service | head -1)"; TH="$(getent passwd "$TU" | cut -d: -f6)"

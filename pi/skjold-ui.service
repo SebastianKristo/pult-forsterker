@@ -1,6 +1,6 @@
 [Unit]
 Description=Skjold-skjerm (S1 960 × 320 eller Radio 800 × 480, cage + Chromium)
-After=systemd-user-sessions.service seatd.service ki-amp.service
+After=systemd-user-sessions.service seatd.service ki-amp.service plymouth-quit.service plymouth-quit-wait.service
 Wants=ki-amp.service
 Conflicts=getty@tty1.service
 
@@ -10,6 +10,9 @@ User=@USER@
 PAMName=login
 TTYPath=/dev/tty1
 StandardInput=tty
+# loggen til journalen, aldri til skjermen (journalctl -u skjold-ui)
+StandardOutput=journal
+StandardError=journal
 WorkingDirectory=@SRC@/pi
 Environment=XDG_RUNTIME_DIR=/run/user/@UID@
 Environment=WLR_LIBINPUT_NO_DEVICES=1
@@ -21,6 +24,8 @@ Environment=WLR_NO_HARDWARE_CURSORS=1
 Environment=SKJOLD_DAEMON=127.0.0.1:8765
 EnvironmentFile=-/etc/ki-amp.env
 ExecStartPre=+/bin/sh -c 'mkdir -p /run/user/@UID@ /etc/skjold && chown @USER@ /run/user/@UID@ && chmod 700 /run/user/@UID@ && chown @USER@ /etc/skjold'
+# oppstartsskjermen (Plymouth) slipper skjermen, men bildet står til kiosken tegner – ingen svart blink eller tekst
+ExecStartPre=-+/bin/sh -c 'command -v plymouth >/dev/null && plymouth quit --retain-splash || true'
 ExecStart=/usr/bin/python3 -m skjold_ui
 Restart=always
 RestartSec=3
