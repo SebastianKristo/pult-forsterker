@@ -79,6 +79,7 @@ command -v ffmpeg >/dev/null || sudo apt-get -y install --no-install-recommends 
 command -v mount.cifs >/dev/null && command -v smbclient >/dev/null || sudo apt-get -y install --no-install-recommends cifs-utils smbclient >/dev/null   # radioopptak til SMB/NAS
 python3 -c "import paho.mqtt" 2>/dev/null || sudo apt-get -y install --no-install-recommends python3-paho-mqtt >/dev/null || true   # MQTT-bro
 python3 -c "import pyhap" 2>/dev/null || sudo pip3 install --break-system-packages -q "HAP-python==4.9.2" >/dev/null 2>&1 || true   # Apple Hjem (HomeKit)
+python3 -c "import bluezero" 2>/dev/null || sudo pip3 install --break-system-packages -q "bluezero==0.9.1" >/dev/null 2>&1 || true   # Wi-Fi-oppsett over Bluetooth (Improv)
 python3 -c "import cryptography" 2>/dev/null || sudo apt-get install -y -q python3-cryptography >/dev/null 2>&1 || true   # Skjold Cloud (AES-GCM)
 python3 -c "import cairosvg" 2>/dev/null || sudo apt-get install -y -q python3-cairosvg >/dev/null 2>&1 || true   # SVG-logoer → PNG for appene
 python3 -c "import mutagen" 2>/dev/null || sudo apt-get install -y -q python3-mutagen >/dev/null 2>&1 || true   # Platesamling (FLAC-tagger)

@@ -148,17 +148,29 @@ class TestAdminHopp(TestFlereStasjoner):
         finally:
             d.subwave = old; self._stopp()
 
-    def test_uten_admin_bytter_stasjon(self):
+    def test_uten_admin_sier_fra_og_bytter_ikke_kanal(self):
         self._spill("https://radio.a.no/stream.mp3")
         steg = []
         old = d.step_preset
         try:
             d.step_preset = lambda n: steg.append(n)
             self.assertFalse(d.subwave_admin())
-            d.transport("next")
-            self.assertEqual(steg, [1])
+            with self.assertRaises(RuntimeError):
+                d.transport("next")
+            self.assertEqual(steg, [])
+            d.transport("previous")   # forrige bytter fortsatt kanal
+            self.assertEqual(steg, [-1])
         finally:
             d.step_preset = old; self._stopp()
+
+
+class TestAdresse(unittest.TestCase):
+    def test_admin_og_stroem_fjernes(self):
+        self.assertEqual(d.sw_base("http://10.69.1.170:7700/admin"), "http://10.69.1.170:7700")
+        self.assertEqual(d.sw_base("http://10.69.1.170:7700/admin/"), "http://10.69.1.170:7700")
+        self.assertEqual(d.sw_base("https://radio.no/stream.mp3"), "https://radio.no")
+        self.assertEqual(d.sw_base("https://x.no/radio/api/mcp"), "https://x.no/radio")
+        self.assertEqual(d.sw_base("https://x.no/radio/"), "https://x.no/radio")
 
 
 class TestLagreStasjoner(unittest.TestCase):

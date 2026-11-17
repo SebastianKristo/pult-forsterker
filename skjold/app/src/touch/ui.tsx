@@ -31,16 +31,18 @@ export function Slider({ value, max = 100, onInput, onCommit, color = '#f0c46a',
 
 const ROWS = ['qwertyuiopå', 'asdfghjkløæ', 'zxcvbnm'];
 const NUM = ['1234567890', '-/:;()&@"', ".,?!'"];
+const SYM = ['[]{}#%^*+=', '_\\|~<>€$£', ".,?!'"];   // flere tegn (passord)
 /** Skjermtastatur (norsk). Enheten har ikke noe annet tastatur. */
-export function Keyboard({ onKey, onBack, onEnter, enter = 'Søk' }: { onKey: (c: string) => void; onBack: () => void; onEnter: () => void; enter?: string }) {
-  const [num, setNum] = useState(false);
-  const rows = num ? NUM : ROWS;
+export function Keyboard({ onKey, onBack, onEnter, enter = 'Søk', pw = false }: { onKey: (c: string) => void; onBack: () => void; onEnter: () => void; enter?: string; pw?: boolean }) {
+  const [num, setNum] = useState(false), [caps, setCaps] = useState(false), [sym, setSym] = useState(false);
+  const rows = num ? (sym ? SYM : NUM) : caps ? ROWS.map((r) => r.toUpperCase()) : ROWS;
   const key = 'height:42px;border-radius:9px;border:none;background:#242426;color:#f2f2ee;font-size:17px;padding:0;flex:1;min-width:0';
   const wide = 'height:42px;border-radius:9px;border:none;background:#1a1a1c;color:#c9c9c4;font-size:12.5px;font-weight:600;padding:0';
   return (
     <div class="kb" style="flex-shrink:0;display:flex;flex-direction:column;gap:5px;padding:8px 10px 10px;background:#101011;border-top:1px solid #1f1f21">
       {rows.map((r, i) => (
         <div key={i + (num ? 'n' : 'a')} style="display:flex;gap:5px">
+          {i === 1 && pw && <button onClick={() => (num ? setSym(!sym) : setCaps(!caps))} aria-label={num ? 'Flere tegn' : 'Store bokstaver'} aria-pressed={num ? sym : caps} style={wide + `;width:52px;flex-shrink:0;${(num ? sym : caps) ? 'background:#f2f2ee;color:#0b0b0c' : ''}`}>{num ? (sym ? '123' : '#+=') : '⇧'}</button>}
           {i === 2 && <button onClick={() => setNum(!num)} aria-label={num ? 'Bokstaver' : 'Tall og tegn'} style={wide + ';width:74px;flex-shrink:0'}>{num ? 'abc' : '123'}</button>}
           {[...r].map((c) => <button key={c} onClick={() => onKey(c)} style={key}>{c}</button>)}
           {i === 2 && <button onClick={onBack} aria-label="Slett" style={wide + ';width:74px;flex-shrink:0;display:flex;align-items:center;justify-content:center'}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h12v14H8l-6-7zM12 9.5l5 5M17 9.5l-5 5" /></svg></button>}

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { effect, signal } from '@preact/signals';
 import './touch.css';
 import { api, coverUrl, getBase, INPUT_LABEL, PRODUCT_SHORT, productOf, setBase, type InputId, type Lyrics, type PodEpisode, type PodShow, type Status } from '../lib/api';
-import { loadSettings, playPause, reconnect, setSetting, setVolume, settings, startPolling, status, act, online } from '../lib/store';
+import { loadSettings, playPause, reconnect, setSetting, setVolume, settings, startPolling, status, act, online, toast } from '../lib/store';
 import { art, TOUCH_BELL, TOUCH_IDLE, TOUCH_OUT, TOUCH_ROLES, TOUCH_STANDBY_S, TOUCH_START, TOUCH_WAKE, TOUCH_WAKE_ID } from '../lib/settings';
 import { favs, loadFavs, playFav, playStation } from '../lib/radio';
 import { ndAlbum, ndAlbumList, ndConfigured, ndCover, ndSearch, type NdAlbum } from '../lib/navidrome';
@@ -14,6 +14,7 @@ import { li, lq, lsvc, playNd } from '../lib/library';
 import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 import '../lib/services';   // innloggingene (Navidrome, YouTube Music) hentes fra enheten – kiosken har ingen egne
 import { groupAll } from '../lib/groups';
+import { qrMatrix } from '../lib/qr';
 import { canSeek, seekTo } from '../screens/player';
 import { Keyboard, MONO, Sheet, Slider, useLongPress, Wheel } from './ui';
 
@@ -35,7 +36,8 @@ interface Dev {
   alarm?: { ringing: boolean; snoozed: boolean; name: string; time: string };
   doorbell?: { t: number; camera: boolean; seconds: number; v0?: number | null } | null;
   night?: { on: boolean; src?: string; steps?: { name: string; done?: boolean }[]; t?: number };
-  setup_net?: { active: boolean; ssid: string; password: string; url: string; joining: string; error: string } | null;
+  setup_net?: { active: boolean; manual?: boolean; ssid: string; password: string; url: string; qr?: string; joining: string; error: string } | null;
+  ble_setup?: { state: string; error: string; ssid: string; url: string } | null;   // Wi-Fi over Bluetooth (Improv)
   touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string } };
   hold?: { key: string; p: number; title: string; sub: string } | null;   // fysisk knapp som holdes (POWER = omstart)
   rebooting?: boolean; poweroff?: boolean;
@@ -693,6 +695,7 @@ function Setup() {
     ['Lydutgang', 'PCM5122 HIFI HAT', seg(TOUCH_OUT, S.tOut ?? 2, (i) => setSetting('tOut', i))],
     ['Lysstyrke', 'Skjermen når den er i bruk', stepper((S.tBright ?? 100) + ' %', () => setSetting('tBright', Math.max(20, (S.tBright ?? 100) - 20)), () => setSetting('tBright', Math.min(100, (S.tBright ?? 100) + 20)))],
     ['Dimme skjermen', 'Etter siste trykk', seg(['30 s', '1 min', '5 min'], Math.max(0, (S.tStandby ?? 1) - 1), (i) => setSetting('tStandby', i + 1))],
+    ['Wi-Fi', wifiNow.value ? 'Koblet til «' + wifiNow.value + '»' : 'Velg nett her, med mobilen (QR) eller over Bluetooth', one('Koble til nytt', () => { wifiOpen.value = true; })],
     ['Skjermsparer', 'Vises når skjermen hviler: ' + (TOUCH_IDLE[S.tIdle ?? 0] ?? '').toLowerCase(), <div style={SEGBOX}>
       <button onClick={() => { saverOpen.value = true; }} style="height:34px;padding:0 14px;border-radius:9px;border:none;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">Velg</button>
       <button onClick={goIdle} style="height:34px;padding:0 14px;border-radius:9px;border:none;background:transparent;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">Start nå</button></div>],
@@ -1260,6 +1263,103 @@ function DoorToast() {
 }
 
 // ---------- oppsett-nett (enheten har ikke nett) ----------
+// ---------- Wi-Fi: koble til et nytt nett ----------
+const wifiOpen = signal(false), wifiNow = signal('');
+function hentWifiNå(): void { getAt<{ networks: { ssid: string; active?: boolean }[] }>('', '/api/wifi').then((r) => { wifiNow.value = r.networks.find((n) => n.active)?.ssid ?? ''; }).catch(() => {}); }
+effect(() => { if (scr.value === 'set') hentWifiNå(); });
+
+function Qr({ text, size }: { text: string; size: number }) {
+  let m: boolean[][];
+  try { m = qrMatrix(text); } catch { return null; }
+  const n = m.length, q = 2, d: string[] = [];
+  m.forEach((row, y) => row.forEach((on, x) => { if (on) d.push(`M${x + q} ${y + q}h1v1h-1z`); }));
+  return <svg width={size} height={size} viewBox={`0 0 ${n + q * 2} ${n + q * 2}`} shape-rendering="crispEdges" style="background:#fff;border-radius:10px;display:block;flex-shrink:0"><path d={d.join('')} fill="#0b0b0c" /></svg>;
+}
+
+type WNet = { ssid: string; security?: string; signal?: number; active?: boolean };
+function WifiSetup() {
+  const [tab, setTab] = useState(0);
+  const [nets, setNets] = useState<WNet[] | null>(null), [valgt, setValgt] = useState<WNet | null>(null);
+  const [pw, setPw] = useState(''), [vis, setVis] = useState(false), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false);
+  const ble = dev().ble_setup;
+  const skann = () => { setNets(null); getAt<{ networks: WNet[] }>('', '/api/wifi').then((r) => { const sett = new Set<string>(); setNets(r.networks.filter((n) => n.ssid && !n.ssid.startsWith('Skjold-oppsett-') && !sett.has(n.ssid) && !!sett.add(n.ssid))); }).catch(() => setNets([])); };
+  useEffect(() => { skann(); }, []);
+  const koble = async (n: WNet, psk: string) => {
+    setBusy(true); setMsg('Kobler til «' + n.ssid + '» …');
+    try {
+      const r = await fetch(here() + '/api/wifi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid: n.ssid, psk }) });
+      const j = await r.json().catch(() => ({})) as { error?: string };
+      if (r.ok) { setMsg('Koblet til «' + n.ssid + '»'); wifiNow.value = n.ssid; setValgt(null); setPw(''); window.setTimeout(() => { wifiOpen.value = false; }, 1500); }
+      else setMsg(j.error || 'Fikk ikke koblet til. Sjekk passordet.');
+    } catch { setMsg('Fikk ikke svar. Touch bytter kanskje nett – vent litt.'); }
+    setBusy(false);
+  };
+  const åpent = (n: WNet) => (n.security ?? '') === 'open';
+  const TABS = ['På skjermen', 'Med mobilen', 'Bluetooth'];
+  const bar = (p: number) => <span style="display:flex;gap:2px;align-items:flex-end;height:14px">{[0, 1, 2, 3].map((i) => <i key={i} style={`width:3px;height:${4 + i * 3}px;border-radius:1px;background:${(p ?? 0) > i * 25 ? '#f2f2ee' : '#3a3a37'}`} />)}</span>;
+  const steg = (i: number, t: string, b: preact.ComponentChildren) => <div style="display:flex;gap:12px;align-items:flex-start"><span style={`width:26px;height:26px;flex-shrink:0;border-radius:13px;background:#1c170d;border:1px solid #d9a441;color:#f0c46a;font-family:${MONO};font-size:12px;display:flex;align-items:center;justify-content:center`}>{i}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">{t}</span><span style="font-size:12.5px;line-height:1.4;color:#a8a8a3">{b}</span></span></div>;
+  return (
+    <div class="inn" style="position:absolute;inset:52px 0 0 0;z-index:6;background:#0b0b0c;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px 8px 6px;flex-shrink:0">
+        <button onClick={() => { if (valgt) { setValgt(null); setPw(''); setMsg(''); } else wifiOpen.value = false; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
+        <span style="font-size:19px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{valgt ? 'Passord for «' + valgt.ssid + '»' : 'Koble til Wi-Fi'}</span>
+        {!valgt && TABS.map((n, i) => <button key={n} onClick={() => setTab(i)} style={`height:40px;padding:0 14px;border-radius:20px;border:1px solid ${tab === i ? '#f2f2ee' : '#2e2e30'};background:${tab === i ? '#f2f2ee' : '#161617'};color:${tab === i ? '#0b0b0c' : '#c9c9c4'};font-size:12.5px;font-weight:600;white-space:nowrap`}>{n}</button>)}
+      </div>
+      {valgt ? <>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:0 20px">
+          <div style="display:flex;align-items:center;gap:10px;height:48px;border-radius:12px;border:1px solid #2e2e30;background:#141415;padding:0 14px">
+            <span style={`flex:1;min-width:0;font-size:17px;letter-spacing:${vis ? 0 : '.15em'};white-space:pre;overflow:hidden;color:${pw ? '#f2f2ee' : '#6b6b67'}`}>{pw ? (vis ? pw : '•'.repeat(pw.length)) : 'Passord'}</span>
+            <button onClick={() => setVis(!vis)} style="height:34px;padding:0 12px;border-radius:9px;border:none;background:#242426;color:#c9c9c4;font-size:12px;font-weight:600">{vis ? 'Skjul' : 'Vis'}</button>
+          </div>
+          {msg && <span style={`font-size:13px;color:${/Koblet til/.test(msg) ? '#6fcf7f' : /Kobler/.test(msg) ? '#c9c9c4' : '#ff8a7a'}`}>{msg}</span>}
+        </div>
+        <Keyboard pw enter={busy ? 'Kobler til …' : 'Koble til'} onKey={(c) => setPw((p) => (p + c).slice(0, 63))} onBack={() => setPw((p) => p.slice(0, -1))} onEnter={() => { if (!busy && pw.length >= 8) void koble(valgt, pw); else if (pw.length < 8) setMsg('Passordet må ha minst 8 tegn'); }} />
+      </> : tab === 0 ? (
+        <div style="flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:6px;padding:4px 14px 14px">
+          {msg && <span style="font-size:13px;color:#c9c9c4;padding:2px 4px">{msg}</span>}
+          {nets === null && <span style={`padding:12px 4px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>SØKER ETTER NETT …</span>}
+          {nets?.length === 0 && <span style="padding:12px 4px;font-size:13.5px;color:#8b8b86">Fant ingen nett. Prøv igjen, eller bruk mobilen.</span>}
+          {(nets ?? []).map((n) => (
+            <button key={n.ssid} onClick={() => { setMsg(''); if (n.active) return; if (åpent(n)) void koble(n, ''); else { setValgt(n); setPw(''); } }} style={`min-height:52px;flex-shrink:0;border-radius:12px;border:1px solid ${n.active ? '#d9a441' : '#242426'};background:${n.active ? '#1c170d' : '#141415'};display:flex;align-items:center;gap:12px;padding:0 16px;text-align:left`}>
+              {bar(n.signal ?? 0)}
+              <span style={`flex:1;min-width:0;font-size:15px;font-weight:600;color:${n.active ? '#f0c46a' : '#f2f2ee'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{n.ssid}</span>
+              <span style="font-size:11.5px;color:#8b8b86">{n.active ? 'Tilkoblet' : åpent(n) ? 'Åpent' : '🔒'}</span>
+            </button>))}
+          {nets !== null && <button onClick={skann} style="align-self:flex-start;margin-top:4px;height:40px;padding:0 16px;border-radius:20px;border:1px solid #2e2e30;background:#161617;font-size:12.5px;font-weight:600">Søk på nytt</button>}
+        </div>
+      ) : tab === 1 ? (
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:24px;align-items:center;padding:0 24px 14px">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            {steg(1, 'Trykk «Start» her', 'Touch lager sitt eget oppsett-nett. Mens du gjør dette, er Touch ikke på hjemmenettet.')}
+            {steg(2, 'Skann QR-koden med mobilen', 'Mobilen kobler seg til oppsett-nettet, og siden for å velge nett åpner seg av seg selv.')}
+            {steg(3, 'Velg nett på mobilen', 'Mobilen viser nettene Touch ser. Velg ditt, skriv passordet med mobilens tastatur – ferdig.')}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+            <button onClick={() => { setBusy(true); void postAt('', '/api/oppsett', { start: true }).finally(() => { setBusy(false); wifiOpen.value = false; }); }} style="height:52px;width:100%;border-radius:26px;border:none;background:#f0c46a;color:#0b0b0c;font-size:15px;font-weight:600">{busy ? 'Starter …' : 'Start'}</button>
+            <span style="font-size:12px;color:#8b8b86;text-align:center;line-height:1.4">QR-koden vises på skjermen når oppsett-nettet er klart. Avbryt når som helst.</span>
+          </div>
+        </div>
+      ) : (
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:24px;align-items:center;padding:0 24px 14px">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            {steg(1, 'Trykk «Start Bluetooth»', 'Touch blir synlig over Bluetooth som «' + (local.value?.name || 'Skjold') + '» i 10 minutter.')}
+            {steg(2, 'Åpne improv-wifi.com på mobilen', 'Skann QR-koden, trykk «Connect device to Wi-Fi» og velg Touch. Virker i Chrome på Android (ikke Safari på iPhone – bruk «Med mobilen» der).')}
+            {steg(3, 'Velg nett og skriv passordet', 'Mobilen sender det til Touch over Bluetooth. Touch kobler til og viser når den er ferdig.')}
+            {ble && <span style={`font-size:13.5px;font-weight:600;color:${ble.state === 'done' ? '#6fcf7f' : ble.state === 'error' ? '#ff8a7a' : '#f0c46a'}`}>
+              {ble.state === 'ready' ? 'Synlig over Bluetooth – venter på mobilen …' : ble.state === 'starting' ? 'Starter Bluetooth …' : ble.state === 'connecting' ? 'Kobler til «' + ble.ssid + '» …' : ble.state === 'done' ? 'Koblet til «' + ble.ssid + '»' : ble.state === 'error' ? (ble.error || 'Noe gikk galt') : 'Bluetooth-oppsettet er stoppet'}</span>}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+            <Qr text="https://www.improv-wifi.com/" size={150} />
+            {ble && ['starting', 'ready', 'connecting'].includes(ble.state)
+              ? <button onClick={() => void postAt('', '/api/oppsett', { ble: false })} style="height:46px;width:100%;border-radius:23px;border:1px solid #2e2e30;background:#161617;color:#f2f2ee;font-size:14px;font-weight:600">Stopp</button>
+              : <button onClick={() => void postAt('', '/api/oppsett', { ble: true })} style="height:46px;width:100%;border-radius:23px;border:none;background:#f0c46a;color:#0b0b0c;font-size:14px;font-weight:600">Start Bluetooth</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SetupNet() {
   const n = dev().setup_net!;
   const steg = (i: number, a: string, b: preact.ComponentChildren) => (
@@ -1272,14 +1372,18 @@ function SetupNet() {
     <div style="position:absolute;inset:0;z-index:22;background:#0b0b0c;display:grid;grid-template-columns:300px minmax(0,1fr);animation:tinn .4s ease both">
       <div style="display:flex;flex-direction:column;justify-content:center;gap:14px;padding:0 30px;background:#101011;border-right:1px solid #1f1f21">
         <div style="display:flex;gap:5px;align-items:flex-start;height:52px">{BARS.map((h, i) => <div key={i} style={`width:8px;height:${h * 2}px;border-radius:4px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</div>
-        <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#f0c46a`}>{n.joining ? 'KOBLER TIL' : 'IKKE PÅ NETT'}</span>
+        <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#f0c46a`}>{n.joining ? 'KOBLER TIL' : n.manual ? 'NYTT WI-FI' : 'IKKE PÅ NETT'}</span>
         <span style="font-size:28px;font-weight:600;line-height:1.12;letter-spacing:-.01em">{n.joining ? 'Kobler til «' + n.joining + '»' : 'Koble Touch til Wi-Fi'}</span>
         {!!n.error && !n.joining && <span style="font-size:13px;line-height:1.4;color:#e05a4a">{n.error}</span>}
       </div>
       <div style="display:flex;flex-direction:column;justify-content:center;gap:18px;padding:0 32px">
-        {steg(1, 'Koble telefonen til dette nettet', <>Nett: <span style={kode}>{n.ssid}</span><br />Passord: <span style={kode}>{n.password}</span></>)}
+        <div style="display:flex;gap:16px;align-items:center">
+          {!!n.qr && !n.joining && <Qr text={n.qr} size={120} />}
+          {steg(1, 'Skann QR-koden med mobilen', <>Eller koble til nettet <span style={kode}>{n.ssid}</span> med passordet <span style={kode}>{n.password}</span></>)}
+        </div>
         {steg(2, 'Velg hjemmenettet ditt', <>Oppsettsiden åpner seg selv. Skjer det ikke, gå til <span style={kode}>{n.url.replace('http://', '')}</span></>)}
         {steg(3, 'Ferdig', 'Touch slår av oppsett-nettet og kobler til. Denne siden forsvinner av seg selv.')}
+        {n.manual && !n.joining && <button onClick={() => void postAt('', '/api/oppsett', { stop: true })} style="align-self:flex-start;height:44px;padding:0 20px;border-radius:22px;border:1px solid #2e2e30;background:#161617;color:#f2f2ee;font-size:13.5px;font-weight:600">Avbryt – bruk nettet som før</button>}
       </div>
     </div>
   );
@@ -1634,8 +1738,10 @@ function App() {
         {!!dimId.value && cur === 'smart' && <DimSheet />}
         {camOpen.value && cur === 'smart' && <CamView />}
         {saverOpen.value && cur === 'set' && <SaverSheet />}
+        {wifiOpen.value && cur === 'set' && <WifiSetup />}
         {talkOpen.value && <Intercom />}
         {talking && <Voice />}
+        {!!toast.value && <div role="status" style="position:absolute;left:50%;bottom:78px;transform:translateX(-50%);z-index:9;max-width:620px;padding:12px 20px;border-radius:14px;background:rgba(24,24,26,.96);border:1px solid #3a2e17;color:#f2f2ee;font-size:14px;line-height:1.35;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:tinn .2s ease both">{toast.value.replace(/^Forsterkeren svarte: /, '')}</div>}
       </main>
       {idle.value && <Standby clock={clock} dateTxt={dateTxt} />}
       {(!!D.setup_net?.active || !!D.setup_net?.joining) && !boot.value.on && <SetupNet />}
