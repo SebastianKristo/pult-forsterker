@@ -11,7 +11,7 @@ import { Transport, artFor, nowTitle, sourceLine, subLine } from './player';
 import { useRooms } from './phone';
 import { SpatialCard } from './advaudio';
 import { SpeakerCard } from './speakers';
-import { confirmTap, hapticsOn, setHapticsOn } from '../lib/haptics';
+import { confirmTap, hapticsOn, setHapticsOn, tick } from '../lib/haptics';
 
 /** Ikke-brytende mellomrom før enheter, som i designet (2 × 50 W). */
 export const nbHw = (s: string) => s.replace(/ (×|W\b|kHz|mm)/g, ' $1').replace(/(\d) ×/g, '$1 ×');
@@ -194,13 +194,52 @@ function HomeWide() {
 }
 
 // ---------- Lyd (EQ) ----------
-function curve(eq: number[]): { line: string; area: string } {
-  const xs = [15, 82.5, 150, 217.5, 285], ys = eq.map((v) => 45 - v * 3.2);
-  const y = (i: number) => (ys[i] ?? 45).toFixed(1);
-  let d = 'M0 ' + y(0) + ' L' + xs[0] + ' ' + y(0);
-  for (let i = 0; i < 4; i++) { const mx = ((xs[i] ?? 0) + (xs[i + 1] ?? 0)) / 2; d += ' C' + mx + ' ' + y(i) + ' ' + mx + ' ' + y(i + 1) + ' ' + xs[i + 1] + ' ' + y(i + 1); }
-  d += ' L300 ' + y(4);
-  return { line: d, area: d + ' L300 45 L0 45 Z' };
+const EQ_MAX = 12;
+/** Jevn kurve gjennom båndpunktene (x i 0–1000, y i 0–H), med flate ender ut mot kantene. */
+function eqPath(pts: [number, number][], W: number): string {
+  let d = `M0 ${pts[0]![1].toFixed(1)} L${pts[0]![0]} ${pts[0]![1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) { const [x0, y0] = pts[i]!, [x1, y1] = pts[i + 1]!, mx = (x0 + x1) / 2; d += ` C${mx} ${y0.toFixed(1)} ${mx} ${y1.toFixed(1)} ${x1} ${y1.toFixed(1)}`; }
+  return d + ` L${W} ${pts[pts.length - 1]![1].toFixed(1)}`;
+}
+
+/** Interaktiv EQ-kurve: dra punktene opp og ned (mus, finger eller piltaster). Høyden følger skjermen. */
+function EqGraph({ eq, onSet }: { eq: number[]; onSet: (i: number, v: number, fin: boolean) => void }) {
+  const ref = useRef<SVGSVGElement>(null);
+  const [drag, setDrag] = useState<number | null>(null);
+  const [live, setLive] = useState<number[] | null>(null);
+  const [size, setSize] = useState<[number, number]>([1000, 300]);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const ro = new ResizeObserver(([e]) => { const r = e!.contentRect; if (r.width > 0 && r.height > 0) setSize([Math.round(r.width), Math.round(r.height)]); });
+    ro.observe(el); return () => ro.disconnect();
+  }, []);
+  const vals = live ?? eq;
+  const [W, H] = size, pad = 18, n = vals.length, edge = Math.min(70, W * 0.07);
+  const xOf = (i: number) => edge + (i * (W - 2 * edge)) / (n - 1);
+  const yOf = (v: number) => pad + ((EQ_MAX - v) / (2 * EQ_MAX)) * (H - 2 * pad);
+  const pts = vals.map((v, i) => [xOf(i), yOf(v)] as [number, number]);
+  const line = eqPath(pts, W), y0 = yOf(0);
+  const valAt = (clientY: number) => { const r = ref.current!.getBoundingClientRect(); const y = ((clientY - r.top) / r.height) * H; return Math.max(-EQ_MAX, Math.min(EQ_MAX, Math.round(EQ_MAX - ((y - pad) / (H - 2 * pad)) * 2 * EQ_MAX))); };
+  const move = (e: PointerEvent, i: number, fin: boolean) => { const v = valAt(e.clientY); const nx = [...vals]; if (nx[i] !== v) { nx[i] = v; setLive(nx); onSet(i, v, false); if (!fin) tick(); } if (fin) { onSet(i, v, true); setLive(null); setDrag(null); } };
+  return (
+    <svg ref={ref} class="eqg" viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Equalizer-kurve"
+      onPointerMove={(e) => { if (drag !== null) move(e as unknown as PointerEvent, drag, false); }}
+      onPointerUp={(e) => { if (drag !== null) move(e as unknown as PointerEvent, drag, true); }}
+      onPointerCancel={() => { setDrag(null); setLive(null); }}>
+      <defs><linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9a441" stop-opacity=".32" /><stop offset="1" stop-color="#d9a441" stop-opacity="0" /></linearGradient></defs>
+      {[12, 6, 0, -6, -12].map((d) => <g key={d}><line x1="0" x2={W} y1={yOf(d)} y2={yOf(d)} class={d === 0 ? 'g0' : 'g'} vector-effect="non-scaling-stroke" /></g>)}
+      {vals.map((_, i) => <line key={'v' + i} x1={xOf(i)} x2={xOf(i)} y1={pad} y2={H - pad} class="gv" vector-effect="non-scaling-stroke" />)}
+      <path d={`${line} L${W} ${y0} L0 ${y0} Z`} fill="url(#eqfill)" />
+      <path d={line} class="ln" vector-effect="non-scaling-stroke" />
+      {pts.map(([x, y], i) => (
+        <g key={i} class={'nd' + (drag === i ? ' on' : '')} tabIndex={0} role="slider" aria-label={EQ_NAMES[i] + ' ' + EQ.bands[i] + ' Hz'} aria-valuemin={-EQ_MAX} aria-valuemax={EQ_MAX} aria-valuenow={vals[i]}
+          onPointerDown={(e) => { (e.currentTarget as Element).closest('svg')!.setPointerCapture(e.pointerId); setDrag(i); setLive([...vals]); }}
+          onKeyDown={(e) => { const d = e.key === 'ArrowUp' ? 1 : e.key === 'ArrowDown' ? -1 : 0; if (d) { e.preventDefault(); onSet(i, Math.max(-EQ_MAX, Math.min(EQ_MAX, (vals[i] ?? 0) + d)), true); } }}>
+          <rect x={x - (W - 2 * edge) / (2 * (n - 1))} y={0} width={(W - 2 * edge) / (n - 1)} height={H} fill="transparent" />
+          <circle cx={x} cy={y} r="10" class="dot" />
+        </g>))}
+    </svg>
+  );
 }
 
 export function EqPage() {
@@ -208,62 +247,67 @@ export function EqPage() {
   const [src, setSrc] = useState<EqSource>(act0);
   const prof = settings.value.eq[src];
   const st = settings.value;
-  const c = curve(prof.eq);
   const name = (k: EqSource) => EQ.sources.find((x) => x[0] === k)?.[1] ?? '';
   const tone: [string, 'bass' | 'treb' | 'bal', number, number, (v: number) => string][] = [['Bass', 'bass', -6, 6, fmt.dB], ['Diskant', 'treb', -6, 6, fmt.dB], ['Balanse', 'bal', -5, 5, fmt.bal]];
+  const setBand = (i: number, v: number, fin: boolean) => { if (!fin) return; const eq = [...prof.eq]; eq[i] = v; setEqProfile(src, { eq, preset: -1 }); };
+  const step = (i: number, d: number) => { confirmTap(); setBand(i, Math.max(-EQ_MAX, Math.min(EQ_MAX, (prof.eq[i] ?? 0) + d)), true); };
+  const presetName = prof.preset >= 0 ? EQ.presets[prof.preset]?.[0] : 'Egendefinert';
   return (
-    <div class="eq-page">
-      <div class="col gap8">
-        <span class="lbl11">Profil for</span>
-        <div class="hscroll" style={{ gap: '6px' }}>
-          {EQ.sources.map(([k, n]) => <button key={k} class={'pchip' + (src === k ? ' on' : '')} onClick={() => setSrc(k)}><span>{n}</span><i style={{ background: act0 === k ? '#6fcf7f' : 'transparent' }} /></button>)}
+    <div class="eqx">
+      <div class="eqx-main">
+        <div class="eqx-src">
+          <span class="lbl11">Profil for</span>
+          <div class="hscroll" style={{ gap: '6px' }}>
+            {EQ.sources.map(([k, n]) => <button key={k} class={'pchip' + (src === k ? ' on' : '')} onClick={() => setSrc(k)}><span>{n}</span><i style={{ background: act0 === k ? '#6fcf7f' : 'transparent' }} /></button>)}
+          </div>
+          <span class="lbl11">{src === act0 ? 'Aktiv nå · følger inngangen automatisk' : 'Aktiv nå er ' + name(act0) + ' · du redigerer ' + name(src)}</span>
         </div>
-        <span class="lbl11">{src === act0 ? 'Aktiv nå · følger inngangen automatisk' : 'Aktiv nå er ' + name(act0) + ' · du redigerer ' + name(src)}</span>
+        <section class="eqx-card">
+          <div class="eqx-hd">
+            <span class="col" style={{ gap: '2px', minWidth: 0 }}><span class="kicker">{name(src).toUpperCase()}</span><b>{presetName}</b></span>
+            <button class="pchip sm" onClick={() => { confirmTap(); setEqProfile(src, { preset: 0, eq: [...EQ.presets[0]![1]] }); }} disabled={prof.eq.every((v) => v === 0)}>Nullstill</button>
+          </div>
+          <div class="eqx-graph">
+            <span class="eqx-db" aria-hidden="true"><i>+12</i><i>+6</i><i>0</i><i>−6</i><i>−12</i></span>
+            <EqGraph eq={prof.eq} onSet={setBand} />
+          </div>
+          <div class="eqx-bands">
+            {EQ.bands.map((b, i) => { const v = prof.eq[i] ?? 0; return (
+              <div class="eqx-band" key={b}>
+                <span class="nm">{EQ_NAMES[i]}</span>
+                <span class="hz">{b} Hz</span>
+                <div class="st"><button onClick={() => step(i, -1)} aria-label={'Mindre ' + EQ_NAMES[i]}>−</button><span class={'v' + (v ? ' on' : '')}>{v > 0 ? '+' : v < 0 ? '−' : ''}{Math.abs(v)}</span><button onClick={() => step(i, 1)} aria-label={'Mer ' + EQ_NAMES[i]}>+</button></div>
+              </div>); })}
+          </div>
+          <div class="eqx-presets">{EQ.presets.map(([n, v], i) => <button key={n} class={'pchip sm' + (prof.preset === i ? ' on' : '')} onClick={() => { confirmTap(); setEqProfile(src, { preset: i, eq: [...v] }); }}>{n}</button>)}</div>
+        </section>
       </div>
-      <div class="row" style={{ gap: '6px', flexWrap: 'wrap' }}>
-        {EQ.presets.map(([n, v], i) => <button key={n} class={'pchip sm' + (prof.preset === i ? ' on' : '')} onClick={() => { confirmTap(); setEqProfile(src, { preset: i, eq: [...v] }); }}>{n}</button>)}
-        {prof.preset < 0 && <button class="pchip sm on">Egendefinert</button>}
-      </div>
-      <div class="eq-card">
-        <svg viewBox="0 0 300 90" style={{ width: '100%', height: '80px', display: 'block' }}>
-          <line x1="0" y1="45" x2="300" y2="45" stroke="#2a2a28" stroke-width="1" />
-          <path d={c.area} fill="rgba(217,164,65,0.14)" />
-          <path d={c.line} fill="none" stroke="#d9a441" stroke-width="2" />
-        </svg>
-        <div class="eq-bands">
-          {EQ.bands.map((b, i) => (
-            <div class="eq-band" key={b}>
-              <span class="v">{(prof.eq[i] ?? 0) > 0 ? '+' : ''}{prof.eq[i] ?? 0}</span>
-              <Slider vertical haptic min={-12} max={12} value={prof.eq[i] ?? 0} label={b + ' Hz'}
-                onCommit={(v) => { const eq = [...prof.eq]; eq[i] = v; setEqProfile(src, { eq, preset: -1 }); }} />
-              <span class="f">{b}</span>
-              <span style="font-size:10px;color:#c9c9c4;white-space:nowrap">{EQ_NAMES[i]}</span>
+      <aside class="eqx-side">
+        <div class="list">
+          {tone.map(([n, k, mn, mx, f]) => (
+            <div class="tone" key={k}>
+              <span style={{ fontSize: '13px' }}>{n}</span>
+              <Slider haptic min={mn} max={mx} value={st[k]} label={n} onCommit={(v, fin) => { if (fin) setSetting(k, v); }} />
+              <span class="mono" style={{ fontSize: '12px', textAlign: 'right' }}>{f(st[k])}</span>
             </div>
           ))}
-        </div>
-        <div class="eq-what">
-          <span class="kicker">HVA BÅNDENE GJØR</span>
-          {EQ.bands.map((b, i) => (
-            <div class="w" key={b}><span class="row" style={{ gap: '6px', alignItems: 'baseline' }}><span class="nm">{EQ_NAMES[i]}</span><span class="hz">{EQ_HZ[i]}</span></span><span class="d">{EQ_DESC[i]}</span></div>
-          ))}
-        </div>
-        <HapticToggle />
-      </div>
-      <div class="list">
-        {tone.map(([n, k, mn, mx, f]) => (
-          <div class="tone" key={k}>
-            <span style={{ fontSize: '13px' }}>{n}</span>
-            <Slider haptic min={mn} max={mx} value={st[k]} label={n} onCommit={(v, fin) => { if (fin) setSetting(k, v); }} />
-            <span class="mono" style={{ fontSize: '12px', textAlign: 'right' }}>{f(st[k])}</span>
+          <div class="row between" style={{ padding: '12px 14px' }}>
+            <div class="col" style={{ gap: '2px' }}><span style={{ fontSize: '13px' }}>Loudness</span><span class="lbl11">Mer bass og diskant ved lavt volum</span></div>
+            <Toggle on={prof.loud} label="Loudness" onChange={(v) => setEqProfile(src, { loud: v })} />
           </div>
-        ))}
-        <div class="row between" style={{ padding: '12px 14px' }}>
-          <div class="col" style={{ gap: '2px' }}><span style={{ fontSize: '13px' }}>Loudness</span><span class="lbl11">Mer bass og diskant ved lavt volum</span></div>
-          <Toggle on={prof.loud} label="Loudness" onChange={(v) => setEqProfile(src, { loud: v })} />
         </div>
-      </div>
-      <SpatialCard />
-      <SpeakerCard />
+        <details class="eqx-help">
+          <summary>Hva båndene gjør</summary>
+          <div class="eq-what" style={{ borderTop: 'none', paddingTop: '6px' }}>
+            {EQ.bands.map((b, i) => (
+              <div class="w" key={b}><span class="row" style={{ gap: '6px', alignItems: 'baseline' }}><span class="nm">{EQ_NAMES[i]}</span><span class="hz">{EQ_HZ[i]}</span></span><span class="d">{EQ_DESC[i]}</span></div>
+            ))}
+          </div>
+          <HapticToggle />
+        </details>
+        <SpatialCard />
+        <SpeakerCard />
+      </aside>
     </div>
   );
 }
