@@ -5,7 +5,7 @@ import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { effect, signal } from '@preact/signals';
 import './touch.css';
-import { api, coverUrl, getBase, INPUT_LABEL, PRODUCT_SHORT, productOf, setBase, type InputId, type Lyrics, type Status } from '../lib/api';
+import { api, coverUrl, getBase, INPUT_LABEL, PRODUCT_SHORT, productOf, setBase, type InputId, type Lyrics, type PodEpisode, type PodShow, type Status } from '../lib/api';
 import { loadSettings, playPause, reconnect, setSetting, setVolume, settings, startPolling, status, act, online } from '../lib/store';
 import { art, TOUCH_BELL, TOUCH_IDLE, TOUCH_OUT, TOUCH_ROLES, TOUCH_STANDBY_S, TOUCH_START, TOUCH_WAKE, TOUCH_WAKE_ID } from '../lib/settings';
 import { favs, loadFavs, playFav, playStation } from '../lib/radio';
@@ -481,6 +481,43 @@ function Home() {
 }
 
 interface Card { t: string; s: string; art: string; live?: boolean; play: () => void }
+
+/** Podkaster på Touch: favorittene (lagt til i appen eller web-UI) og episodene deres. */
+const podTouch = signal<PodShow | null>(null);
+const pmin = (s: number) => (s >= 3600 ? Math.floor(s / 3600) + ' t ' : '') + Math.round((s % 3600) / 60) + ' min';
+async function playPodTouch(e: PodEpisode, show?: PodShow): Promise<void> {
+  try {
+    if (e.nrk) await api.nrkPlay({ id: e.id, title: e.title, series: e.show, image: e.image, duration: e.duration, podcast: e.podcast });
+    else await api.podPlay({ id: e.id, url: e.url ?? '', title: e.title, show: show?.title ?? e.show, image: e.image || show?.image, duration: e.duration, pid: show?.id ?? e.pid });
+    scr.value = 'now';
+  } catch { /* vises ikke: Touch har ingen feilmelding her */ }
+}
+function PodEpisodes({ s }: { s: PodShow }) {
+  const [d, setD] = useState<PodEpisode[] | null>(null), [err, setErr] = useState('');
+  useEffect(() => { setD(null); setErr(''); api.podShow(s.id).then((r) => setD(r.episodes)).catch((e) => { setErr(e instanceof Error ? e.message : String(e)); setD([]); }); }, [s.id]);
+  return (
+    <div style="flex:1;min-height:0;display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px">
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;overflow:hidden">
+        <button onClick={() => { podTouch.value = null; }} style="height:40px;border-radius:20px;border:1px solid #2e2e30;background:#161617;font-size:13px;font-weight:600;flex-shrink:0">‹ Tilbake</button>
+        <div style={`width:150px;height:150px;flex-shrink:0;border-radius:12px;background:${artBg(s.title, s.image)}`} />
+        <span style="font-size:15px;font-weight:600;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{s.title}</span>
+        <span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{s.author}</span>
+      </div>
+      <div style="min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y;display:flex;flex-direction:column;gap:8px;padding-bottom:14px">
+        {d === null && <span style="color:#8b8b86;font-size:14px">Henter episoder …</span>}
+        {err && <span style="color:#ff8a7a;font-size:14px">{err}</span>}
+        {(d ?? []).slice(0, 60).map((e) => (
+          <button key={e.id} onClick={() => void playPodTouch(e, s)} style="min-height:64px;border-radius:12px;border:1px solid #242426;background:#141415;padding:10px 14px;text-align:left;display:flex;flex-direction:column;gap:4px;justify-content:center;flex-shrink:0">
+            <span style={`font-size:15px;font-weight:600;color:${e.heard ? '#8b8b86' : '#f2f2ee'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{e.title}</span>
+            <span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{[e.date, e.duration ? pmin(e.duration) : '', e.heard ? 'Hørt' : e.pos ? 'Fortsett der du slapp' : ''].filter(Boolean).join(' · ')}</span>
+            {!!e.pos && !!e.duration && !e.heard && <div style="height:3px;border-radius:2px;background:#2e2e30;overflow:hidden"><i style={`display:block;height:100%;width:${Math.min(100, (e.pos / e.duration) * 100)}%;background:#d9a441`} /></div>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Library() {
   const [nd, setNd] = useState<NdAlbum[] | null>(null);
   const [yt, setYt] = useState<NdAlbum[] | null>(null), [ytErr, setYtErr] = useState('');
@@ -494,8 +531,11 @@ function Library() {
   }, [lib.value]);
   const [sw, setSw] = useState<{ i: number; name: string }[]>([]), [swNow, setSwNow] = useState<number | null>(null);
   useEffect(() => { api.subwave(true).then((r) => { setSw(r.configured ? r.stations ?? [] : []); setSwNow(r.playing_station ?? null); }).catch(() => setSw([])); }, [lib.value]);
+  const [pf, setPf] = useState<PodShow[] | null>(null), [pn, setPn] = useState<PodEpisode[]>([]);
   const st = status.value;
-  const TABS = ['YouTube Music', 'Navidrome', 'Radio', ...(sw.length ? ['SUB/WAVE'] : [])];
+  const TABS = ['YouTube Music', 'Navidrome', 'Radio', ...(sw.length ? ['SUB/WAVE'] : []), 'Podkaster'];
+  const tab = TABS[lib.value] ?? 'Radio';
+  useEffect(() => { if (tab !== 'Podkaster') return; api.podFavs().then((r) => setPf(r.items.slice().reverse())).catch(() => setPf([])); api.podNew().then((r) => setPn(r.items)).catch(() => setPn([])); }, [tab]);
   let kicker = '', items: Card[] = [];
   if (lib.value === 0) {
     kicker = ytErr || (yt === null ? 'HENTER …' : yt.length ? 'SPILLELISTER OG MIKSER' : 'FANT INGENTING · LEGG INN COOKIEN I APPEN');
@@ -504,7 +544,11 @@ function Library() {
   else if (lib.value === 1) {
     kicker = ndOk ? 'NYLIG LAGT TIL' : 'IKKE TILKOBLET · LOGG INN PÅ NAVIDROME I APPEN';
     items = (nd ?? []).map((a) => ({ t: a.name, s: a.artist, art: artBg(a.name, ndCover(a.coverArt, 300)), play: () => { void ndAlbum(a.id).then((r) => { playNd(r.songs, 0); scr.value = 'now'; }); } }));
-  } else if (lib.value === 3) {
+  } else if (tab === 'Podkaster') {
+    kicker = pf === null ? 'HENTER …' : pf.length ? 'FAVORITTPODKASTER' + (pn.length ? ' · NYESTE EPISODER FØRST' : '') : 'INGEN FAVORITTER · LEGG TIL I APPEN UNDER RADIO → PODKASTER';
+    const nyest = pn.slice(0, 6).map((e) => ({ t: e.title, s: 'NY · ' + e.show, art: artBg(e.show, e.image), play: () => void playPodTouch(e) }));
+    items = [...nyest, ...(pf ?? []).map((f) => ({ t: f.title, s: f.author || 'Podkast', art: artBg(f.title, f.image), play: () => { podTouch.value = f; } }))];
+  } else if (tab === 'SUB/WAVE') {
     kicker = 'SUB/WAVE · AI-DJ-STASJONER';
     items = sw.map((x) => ({ t: x.name, s: 'SUB/WAVE', art: artBg(x.name, undefined, x.i), live: swNow === x.i && !!st?.playing,
       play: () => { void api.subwavePost({ station: x.i, play: true }).catch(() => {}); setSwNow(x.i); scr.value = 'now'; } }));
@@ -519,6 +563,7 @@ function Library() {
         <div style="flex:1" />
         <button onClick={() => { searchOpen.value = true; }} aria-label="Søk" style="height:44px;width:190px;border-radius:22px;border:1px solid #2e2e30;background:#141415;display:flex;align-items:center;gap:8px;padding:0 16px;box-sizing:border-box;color:#8b8b86;font-size:13px;text-align:left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>Søk</button>
       </div>
+      {tab === 'Podkaster' && podTouch.value ? <PodEpisodes s={podTouch.value} /> : <>
       <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>{kicker}</span>
       <div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y;display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:16px 14px;align-content:start;padding-bottom:14px">
         {items.map((it, i) => (
@@ -527,7 +572,7 @@ function Library() {
             <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{it.t}</span><span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{it.s}</span></span>
           </button>
         ))}
-      </div>
+      </div></>}
     </section>
   );
 }

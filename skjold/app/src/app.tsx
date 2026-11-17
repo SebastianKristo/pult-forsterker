@@ -28,7 +28,7 @@ import { VinylPage } from './screens/vinyl';
 import { AbsPage, QhistPage, QuizPage } from './screens/lyd';
 import { IntegrationsPage, PluginsPage, intCount, plugCount } from './screens/integ';
 import { MaPage } from './screens/ma';
-import { NrkPanel } from './screens/nrk';
+import { PodPanel } from './screens/podcasts';
 import { SettingsPage, CategoryDetail } from './screens/settings';
 import { DoorbellOverlay, TalkButton } from './screens/features';
 import { Transport, artFor, nowTitle, subLine } from './screens/player';
@@ -296,15 +296,15 @@ function PlayerPicker() {
 }
 
 const radioTab = signal(0);
-/** Radio-siden: kanaler (som før) og NRK «Program og podkaster». */
+/** Radio-siden: kanaler og podkaster (alle podkaster, NRK og favoritter). */
 function RadioTabs({ phone }: { phone?: boolean }) {
   const t = radioTab.value;
   return (
     <div class="col gap16">
       <div style="display:flex;gap:6px">
-        {['Kanaler', 'Program og podkaster'].map((n, i) => <button key={n} onClick={() => (radioTab.value = i)} style={`height:36px;padding:0 14px;border-radius:999px;border:1px solid ${t === i ? '#f2f2ee' : '#2e2e30'};background:${t === i ? '#f2f2ee' : 'transparent'};color:${t === i ? '#0b0b0c' : '#c9c9c4'};font-size:13px;cursor:pointer`}>{n}</button>)}
+        {['Kanaler', 'Podkaster'].map((n, i) => <button key={n} onClick={() => (radioTab.value = i)} style={`height:36px;padding:0 14px;border-radius:999px;border:1px solid ${t === i ? '#f2f2ee' : '#2e2e30'};background:${t === i ? '#f2f2ee' : 'transparent'};color:${t === i ? '#0b0b0c' : '#c9c9c4'};font-size:13px;cursor:pointer`}>{n}</button>)}
       </div>
-      {t === 1 ? <NrkPanel /> : phone ? <RadioPage /> : <DeskRadio />}
+      {t === 1 ? <PodPanel /> : phone ? <RadioPage /> : <DeskRadio />}
     </div>
   );
 }
