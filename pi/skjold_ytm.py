@@ -119,6 +119,7 @@ class Ytm:
         self._lock = threading.Lock()
         self._client, self._key = None, None
         self._urls = {}            # videoId → (url, utløper, headers)
+        self._busy = {}            # videoId → Lock: én yt-dlp-oppslag per låt om gangen (forhåndshenting + strøm + test)
         self._home = (0.0, None)   # (tid, svar)
         self._dir = cache_dir or os.path.join(tempfile.gettempdir(), "skjold-ytm")
         self._tracks = {}          # samlings-id → (tid, låter)
@@ -337,6 +338,16 @@ class Ytm:
         hit = self._urls.get(vid)
         if hit and hit[1] > time.time():
             return hit[0], hit[2]
+        # Pi-en har ikke kraft til flere yt-dlp samtidig for samme låt: vent på den som allerede slår opp
+        with self._lock:
+            lk = self._busy.setdefault(vid, threading.Lock())
+        with lk:
+            hit = self._urls.get(vid)
+            if hit and hit[1] > time.time():
+                return hit[0], hit[2]
+            return self._resolve(vid)
+
+    def _resolve(self, vid):
         info = self._extract(vid) if self._extract else self._ydl(vid)
         url = info["url"]
         m = re.search(r"[?&]expire=(\d+)", url)
@@ -423,13 +434,27 @@ def routes(ytm, ctx):
             if not ts:
                 return fail("tom samling", 404)
             i = int(b.get("index") or 0)
-            ytm.prefetch([t["id"] for t in ts[i:i + 3]])   # denne og de neste to – neste låt starter uten pause
+            # Slå opp den første låten FØR Lyrion får beskjed: ellers venter Lyrion på yt-dlp og gir opp (tidsavbrudd)
+            if 0 <= i < len(ts):
+                try:
+                    await run(ytm.stream_url, ts[i]["id"])
+                except Exception as e:
+                    print("YouTube Music: fant ikke lyden til", ts[i]["id"], repr(e), flush=True)
+            ytm.prefetch([t["id"] for t in ts[i + 1:i + 3]])   # de neste to – neste låt starter uten pause
             await run(ctx["play"], with_stream(ts), i)
             return web.json_response({"ok": True, "count": len(ts)})
         except ValueError as e:
             return fail(e, 400)
         except Exception as e:
             return fail(e)
+
+    CHUNK = 1 << 20   # 1 MB per forespørsel: YouTube struper eller kutter lange enkeltforespørsler (som yt-dlp, http_chunk_size)
+
+    def parse_range(v):
+        m = re.match(r"bytes=(\d*)-(\d*)", v or "")
+        if not m or not m.group(1):
+            return 0, None
+        return int(m.group(1)), (int(m.group(2)) if m.group(2) else None)
 
     async def h_stream(r):
         vid = r.match_info["vid"].split(".")[0]
@@ -440,32 +465,67 @@ def routes(ytm, ctx):
         except Exception as e:
             print("YouTube Music: fant ikke lyden til", vid, repr(e), flush=True)
             return web.Response(status=502)
-        hdr = dict(hdr)
-        if r.headers.get("Range"):
-            hdr["Range"] = r.headers["Range"]
-        sess = ClientSession(timeout=ClientTimeout(total=None, sock_connect=8, sock_read=60))
+        want = r.headers.get("Range")
+        start, end = parse_range(want)
+        sess = ClientSession(timeout=ClientTimeout(total=None, sock_connect=8, sock_read=30))
+        state = {"url": url, "hdr": dict(hdr)}
+
+        async def piece(a, b):
+            """Hent bytes a..b (med nytt oppslag én gang hvis adressen er utløpt/avvist)."""
+            for attempt in range(3):
+                up = await sess.get(state["url"], headers={**state["hdr"], "Range": f"bytes={a}-{b}"})
+                if up.status in (200, 206):
+                    return up
+                up.release()
+                if up.status in (403, 410) and attempt == 0:
+                    ytm._urls.pop(vid, None)
+                    state["url"], h2 = await run(ytm.stream_url, vid); state["hdr"] = dict(h2)
+                    continue
+                if up.status == 416:
+                    return None
+                await asyncio.sleep(0.5)
+            raise RuntimeError(f"YouTube svarte {up.status}")
+
         try:
-            up = await sess.get(url, headers=hdr)
-            if up.status == 403:   # adressen er utløpt eller avvist: slå opp på nytt én gang
-                up.release(); ytm._urls.pop(vid, None)
-                url, hdr2 = await run(ytm.stream_url, vid)
-                up = await sess.get(url, headers={**hdr2, **({"Range": hdr["Range"]} if "Range" in hdr else {})})
+            first = await piece(start, start + CHUNK - 1 if end is None else min(end, start + CHUNK - 1))
+            if first is None:
+                await sess.close(); return web.Response(status=416)
+            cr = first.headers.get("Content-Range", "")
+            m = re.search(r"/(\d+)$", cr)
+            total = int(m.group(1)) if m else (start + int(first.headers.get("Content-Length") or 0))
         except Exception as e:
             print("YouTube Music: strømmen feilet", vid, repr(e), flush=True)
             await sess.close()
             return web.Response(status=502)
-        out = web.StreamResponse(status=up.status, headers={k: v for k, v in up.headers.items()
-                                                            if k in ("Content-Length", "Content-Range", "Accept-Ranges")})
-        out.content_type = "audio/mp4" if "mp4" in up.headers.get("Content-Type", "audio/mp4") else up.headers.get("Content-Type", "audio/mp4")
+        last = total - 1 if end is None else min(end, total - 1)
+        heads = {"Accept-Ranges": "bytes", "Content-Length": str(last - start + 1)}
+        if want:
+            heads["Content-Range"] = f"bytes {start}-{last}/{total}"
+        out = web.StreamResponse(status=206 if want else 200, headers=heads)
+        out.content_type = "audio/mp4" if "mp4" in first.headers.get("Content-Type", "audio/mp4") else first.headers.get("Content-Type", "audio/mp4")
+        pos, up = start, first
         try:
             await out.prepare(r)
-            async for chunk in up.content.iter_chunked(65536):
-                await out.write(chunk)
+            while True:
+                async for chunk in up.content.iter_chunked(65536):
+                    await out.write(chunk); pos += len(chunk)
+                up.release()
+                if pos > last:
+                    break
+                up = await piece(pos, min(last, pos + CHUNK - 1))
+                if up is None:
+                    break
             await out.write_eof()
         except (ConnectionResetError, asyncio.CancelledError):
             pass
+        except Exception as e:
+            print("YouTube Music: strømmen stoppet ved", pos, "av", total, vid, repr(e), flush=True)
         finally:
-            up.release(); await sess.close()
+            try:
+                up.release()
+            except Exception:
+                pass
+            await sess.close()
         return out
 
     return [web.get("/api/ytm/status", h_status), web.get("/api/ytm/home", h_home), web.get("/api/ytm/tracks", h_tracks),
