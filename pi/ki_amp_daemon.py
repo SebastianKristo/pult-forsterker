@@ -1635,10 +1635,55 @@ async def h_settings_reset(r):
     return await h_settings_get(r)
 
 
+# Innlogginger til musikktjenester deles med de andre Skjold-enhetene på nettet (S1, Touch, Node …): logger du inn
+# YouTube Music på én, virker det på alle. KI_AMP_SHARE_SETTINGS=0 slår det av.
+SHARED_SETTINGS = ("ytmEn", "ytmUser", "ytmCookie", "ndEn", "ndUrl", "ndUser", "ndPass", "plexEn", "plexUrl", "plexToken", "maEn", "maUrl", "maToken")
+SHARE_SETTINGS = os.environ.get("KI_AMP_SHARE_SETTINGS", "1") != "0"
+
+
+def _push_shared(patch):
+    """Send de delte innstillingene til de andre Skjold-enhetene (bakgrunnstråd; feiler stille for enheter som er av)."""
+    for p in _peers():
+        if p.get("id") == device_id():
+            continue
+        try:
+            req = urllib.request.Request(p["base"] + "/api/settings", data=json.dumps(patch).encode(), method="POST",
+                                         headers={"Content-Type": "application/json", "X-Skjold-Peer": device_id()})
+            urllib.request.urlopen(req, timeout=5).read()
+        except Exception as e:
+            print("Deling av innstillinger til", p.get("navn") or p["base"], "feilet:", e, flush=True)
+
+
+def _pull_shared():
+    """Ved oppstart: hent innlogginger denne enheten mangler fra en annen Skjold (f.eks. ny Touch ved siden av S1)."""
+    time.sleep(45)   # la LAN-oppdagelsen finne de andre først
+    for p in _peers():
+        if p.get("id") == device_id():
+            continue
+        try:
+            with urllib.request.urlopen(p["base"] + "/api/settings", timeout=5) as r:
+                theirs = (json.loads(r.read()) or {}).get("settings") or {}
+        except Exception:
+            continue
+        mine = settings()
+        patch = {}
+        for svc, keys in (("ytmCookie", ("ytmEn", "ytmUser", "ytmCookie")), ("ndUrl", ("ndEn", "ndUrl", "ndUser", "ndPass")),
+                          ("plexUrl", ("plexEn", "plexUrl", "plexToken")), ("maUrl", ("maEn", "maUrl", "maToken"))):
+            if not mine.get(svc) and theirs.get(svc):
+                patch.update({k: theirs[k] for k in keys if k in theirs})
+        if patch:
+            print("Hentet innlogginger fra", p.get("navn") or p["base"] + ":", ", ".join(sorted(patch)), flush=True)
+            update_settings(patch)
+
+
 async def h_settings_post(r):
     body = await r.json()
     if not isinstance(body, dict): return web.json_response({"error": "forventer et objekt med nøkler"}, status=400)
-    update_settings(body); return await h_settings_get(r)
+    update_settings(body)
+    shared = {k: body[k] for k in SHARED_SETTINGS if k in body}
+    if shared and SHARE_SETTINGS and not r.headers.get("X-Skjold-Peer"):   # ikke send videre det som kom fra en annen enhet
+        threading.Thread(target=_push_shared, args=(shared,), daemon=True).start()
+    return await h_settings_get(r)
 
 
 _saved_state = [""]
@@ -3699,6 +3744,47 @@ def _player_mac():
         return "00:00:00:00:00:01"
 
 
+def _lms_alive(host, port):
+    """Svarer Lyrion på host:port? (rask sjekk av JSON-RPC)"""
+    try:
+        body = json.dumps({"id": 1, "method": "slim.request", "params": ["", ["serverstatus", 0, 0]]}).encode()
+        req = urllib.request.Request(f"http://{host}:{port}/jsonrpc.js", data=body, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=3) as r:
+            return "result" in json.loads(r.read())
+    except Exception:
+        return False
+
+
+LMS_ACTIVE_FILE = "/run/ki-amp-lms"
+
+
+def _ip_of(host):
+    try:
+        return socket.gethostbyname(host)
+    except OSError:
+        return host
+
+
+def _same_lms(a, b):
+    """Samme server? (KI_AMP_LMS_SERVER kan være et navn som skjold-s1.local, oppdagelsen gir IP-en)"""
+    return bool(a and b) and (a == b or _ip_of(a) == _ip_of(b))
+
+
+def _lms_active(host):
+    """Squeezelite må spille fra samme server som daemonen styrer: skriv den aktive serveren og start spilleren på nytt
+    (ki-squeezelite-start leser fila før KI_AMP_LMS_SERVER)."""
+    try:
+        if host == LMS_SERVER:
+            os.remove(LMS_ACTIVE_FILE)
+        else:
+            with open(LMS_ACTIVE_FILE, "w") as fh:
+                fh.write(host)
+    except OSError:
+        pass
+    if os.path.exists("/usr/local/bin/ki-squeezelite-start"):
+        subprocess.run(["systemctl", "try-restart", "ki-squeezelite"], capture_output=True, timeout=20, check=False)
+
+
 class Lyrion:
     """Tynn JSON-RPC-klient mot Lyrion + poller for stasjon, låt og stasjonsbilde."""
 
@@ -3714,6 +3800,8 @@ class Lyrion:
         self._lms_vol = None
         self._lms_mute = None
         if os.environ.get("KI_AMP_LMS", "1") == "1":
+            if LMS_SERVER and os.path.exists(LMS_ACTIVE_FILE):   # daemonen startet på nytt mens spilleren var på reserve
+                threading.Thread(target=_lms_active, args=(LMS_SERVER,), daemon=True).start()
             threading.Thread(target=self._run, daemon=True).start()
 
     def discover(self):
@@ -3763,7 +3851,7 @@ class Lyrion:
         return out
 
     def _run(self):
-        last_try = 0
+        last_try = last_home = 0
         while True:
             time.sleep(1.5)
             if not self.host:
@@ -3826,11 +3914,24 @@ class Lyrion:
                 if not LMS_SERVER:
                     self.host = None
                 elif time.time() - last_try > 30:
-                    # Den faste adressen svarer ikke (f.eks. serveren har fått ny IP): let på nettet i stedet.
+                    # Den faste adressen svarer ikke (f.eks. serveren har fått ny IP): let på nettet, og bruk ellers
+                    # den innebygde Lyrion-serveren (Pi 4/5 installerer den som reserve, pi/ensure_lyrion.sh).
                     last_try = time.time(); old = self.host
                     self.discover()
-                    if self.host != old:
-                        print(f"Lyrion: {old} svarer ikke, bruker {self.host} (oppdater KI_AMP_LMS_SERVER)", flush=True)
+                    if self.host == old and old not in ("127.0.0.1", "localhost") and _lms_alive("127.0.0.1", LMS_PORT):
+                        self.host, self.port = "127.0.0.1", LMS_PORT
+                    if self.host != old and not _same_lms(self.host, old):
+                        print(f"Lyrion: {old} svarer ikke, bruker {self.host}", flush=True)
+                        _lms_active(self.host)
+            if LMS_SERVER and self.host != LMS_SERVER and self.connected and time.time() - last_home > 60:
+                last_home = time.time()
+                if _same_lms(self.host, LMS_SERVER):   # oppdagelsen fant hovedserveren under en annen adresse
+                    continue
+                # på reserve: gå tilbake til hovedserveren når den svarer igjen (rom grupperes på samme server)
+                if _lms_alive(LMS_SERVER, LMS_PORT):
+                    print("Lyrion: hovedserveren", LMS_SERVER, "svarer igjen", flush=True)
+                    self.host, self.port = LMS_SERVER, LMS_PORT; self.connected = False
+                    _lms_active(LMS_SERVER)
 
     def _sync_volume(self, r):
         """Volumet ligger i CamillaDSP. Lyrion settes til «fast utnivå» (Squeezelite får alltid 100 %), men glideren i
@@ -9299,6 +9400,8 @@ def main():
         app.add_routes(_ytmmod.routes(ytm, {"stream_base": lambda: f"http://{_local_ip()}:{PORT}", "play": ytm_play_queue}))
         # hent YouTube Music-forsiden i bakgrunnen etter oppstart, så Bibliotek er klart når noen åpner det
         threading.Timer(20, lambda: ytm.signed_in() and not ytm.missing() and ytm.refresh_home_bg()).start()
+        if SHARE_SETTINGS:
+            threading.Thread(target=lambda: _safe(_pull_shared), daemon=True).start()
     except Exception as e:
         print("YouTube Music ikke tilgjengelig:", e, flush=True)
     # Smart radio, Oppdag-liste, hjem-ekstra, plugin-butikk og helsesjekk (egne moduler, minimale kroker her)
