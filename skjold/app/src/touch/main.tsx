@@ -1217,8 +1217,8 @@ function App() {
   return (
     <div style="position:relative;width:800px;height:480px;background:#0b0b0c;overflow:hidden;display:grid;grid-template-columns:76px minmax(0,1fr);grid-template-rows:480px">
       <nav style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;background:#101011;border-right:1px solid #1f1f21">
-        {/* Skjold-logoen: hvite stolper med den høye gylne i midten (som favicon og oppstartsskjermen) */}
-        <div aria-label="Skjold" style="display:flex;gap:3px;align-items:flex-end;height:28px;margin:2px 0 6px">{[13, 19, 28, 19, 13].map((h, i) => <div key={i} style={`width:4.5px;height:${h}px;border-radius:2.25px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</div>
+        {/* Skjold-logoen: hvite stolper som henger fra toppen, den lange gylne i midten (som appikonet og oppstartsskjermen) */}
+        <div aria-label="Skjold" style="display:flex;gap:3.3px;align-items:flex-start;height:28px;margin:2px 0 6px">{[14.7, 22, 28, 22, 14.7].map((h, i) => <div key={i} style={`width:4.5px;height:${h}px;border-radius:2.25px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</div>
         {NAV.map(([k, label]) => { const on = cur === k; return (
           <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; lyricsOpen.value = false; dimId.value = ''; editAlarm.value = -1; wakeOpen.value = false; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={IC[k]} /></svg>
