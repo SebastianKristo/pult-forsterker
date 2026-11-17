@@ -135,6 +135,26 @@ class TouchModeActivity : Activity() {
 
         @JavascriptInterface
         fun navn(): String = android.os.Build.MODEL ?: "Nettbrett"
+
+        @JavascriptInterface
+        fun appVersjon(): String = AppUpdate.installert(this@TouchModeActivity)
+
+        /** «Oppdater appen» under Oppsett: sjekk GitHub, last ned og installer (Android ber om bekreftelse). */
+        @JavascriptInterface
+        fun oppdaterApp() {
+            val ctx = this@TouchModeActivity
+            Thread {
+                val melding: String = try {
+                    val ny = AppUpdate.sjekk(ctx)
+                    when {
+                        ny == null -> "Skjold-appen er oppdatert (${AppUpdate.installert(ctx)})"
+                        !AppUpdate.kanInstallere(ctx) -> { main.post { AppUpdate.aapneTillatelse(ctx) }; "Gi Skjold lov til å installere apper, og trykk Oppdater igjen" }
+                        else -> { main.post { Toast.makeText(ctx, "Laster ned Skjold ${ny.versjon} …", Toast.LENGTH_SHORT).show() }; AppUpdate.installer(ctx, ny) {}; "Bekreft oppdateringen" }
+                    }
+                } catch (e: Exception) { e.message ?: "Oppdateringen feilet" }
+                main.post { Toast.makeText(ctx, melding, Toast.LENGTH_LONG).show() }
+            }.start()
+        }
     }
 
     // ---------- velg Skjold-enhet ----------

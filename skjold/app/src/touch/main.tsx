@@ -47,7 +47,7 @@ interface Dev {
 // Appen laster touch.html?fluid=1 fra en Skjold-enhet og gir et lite grensesnitt (window.SkjoldTablet).
 // Da fyller grensesnittet hele skjermen (ikke fast 800 × 480), lysstyrken styres av nettbrettet selv,
 // og av/på-knappen starter ikke Skjold-enheten på nytt.
-interface SkjoldTabletApi { setBrightness(level: number): void; velgEnhet(): void; navn?(): string }
+interface SkjoldTabletApi { setBrightness(level: number): void; velgEnhet(): void; navn?(): string; appVersjon?(): string; oppdaterApp?(): void }
 const TABLET = (window as unknown as { SkjoldTablet?: SkjoldTabletApi }).SkjoldTablet;
 const FLUID = !!TABLET || /[?&]fluid=1\b/.test(location.search);
 /** Omslaget på Spiller-siden: 244 px på Touch, større på et nettbrett. */
@@ -746,6 +746,7 @@ function Setup() {
         <button onClick={goIdle} style="height:34px;padding:0 12px;border-radius:9px;border:none;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">Standby</button>
         <button onClick={runBoot} style="height:34px;padding:0 12px;border-radius:9px;border:none;background:transparent;color:#8b8b86;font-size:12px;font-weight:600;white-space:nowrap">Start på nytt</button>
       </div>)],
+    ...(TABLET?.oppdaterApp ? [['Skjold-appen', 'Versjon ' + (TABLET.appVersjon?.() ?? '?') + ' på nettbrettet', one('Oppdater', () => { try { TABLET.oppdaterApp?.(); } catch { /* */ } })] as [string, string, preact.ComponentChildren]] : []),
     ...(TABLET ? [['Skjold-enhet', 'Nettbrettet styrer ' + (local.value?.name || location.hostname) + ' (' + location.host + ')', one('Bytt', () => { try { TABLET.velgEnhet(); } catch { /* */ } })] as [string, string, preact.ComponentChildren]] : []),
     ['Om enheten', [local.value?.name, location.hostname, local.value?.version ? 'versjon ' + local.value.version : ''].filter(Boolean).join(' · '), <span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#6b6b67;white-space:nowrap`}>SKJOLD TOUCH</span>]
   ];
