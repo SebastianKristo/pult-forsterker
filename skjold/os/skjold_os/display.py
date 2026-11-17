@@ -95,22 +95,34 @@ class PngSink:
 
 
 class Backlight:
-    """PWM-dimming med gpiozero (programvare-PWM, 500 Hz). Uten maskinvare: bare husker nivået."""
+    """Bakgrunnslyset med gpiozero. Fullt lys og av er en fast utgang (ingen PWM); bare dimming bruker PWM.
+    Node har ikke maskinvare-PWM ledig (3,5 mm-lyden bruker PWM0/1), og programvare-PWM får ujevne pulser når CPU-en
+    har mye å gjøre – det ga flimring og svakere lys også på «fullt». Uten maskinvare: bare husker nivået."""
     def __init__(self, cfg, sim=False):
         self.level, self.led = None, None
+        self.hz, self.high = cfg.get("pwm_hz", 500), bool(cfg.get("aktiv_hoy", False))
         if not sim:
             try:
                 import gpiozero
-                self.led = gpiozero.PWMLED(cfg.get("gpio", 23), active_high=bool(cfg.get("aktiv_hoy", False)),
-                                           frequency=cfg.get("pwm_hz", 500))
+                self.led = gpiozero.PWMLED(cfg.get("gpio", 23), active_high=self.high, frequency=self.hz)
             except Exception as e:
                 print("Bakgrunnslys utilgjengelig:", e, flush=True)
 
     def set(self, v):
         v = round(max(0.0, min(1.0, v)), 3)
+        if v >= 0.97: v = 1.0                     # «nesten fullt» = fullt: fast utgang, ingen flimring
         if v == self.level: return
         self.level = v
-        if self.led is not None:
+        if self.led is None: return
+        try:
+            pin = self.led.pin
+            if v in (0.0, 1.0):
+                if pin.frequency: pin.frequency = None    # PWM av
+                pin.state = int(bool(v) == self.high)     # fast på/av (aktiv høy eller lav)
+            else:
+                if not pin.frequency: pin.frequency = self.hz
+                self.led.value = v
+        except Exception:
             try: self.led.value = v
             except Exception: pass
 
