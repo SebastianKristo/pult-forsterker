@@ -68,14 +68,31 @@ struct SKBackButton: View {
     let title: String
     let action: () -> Void
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                SKIcon(d: Icons.back, size: 16, stroke: 2)
-                Text(title).sora(14, .regular, .accent)
-            }
-            .foregroundStyle(Color.accent)
+        // Liquid Glass som systemets tilbakeknapp i iOS 26: rund glassknapp med chevron, sidenavnet leses opp
+        Button { Haptics.tick(); action() } label: {
+            Image(systemName: "chevron.backward")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(Color.ink)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
-        .plain()
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: Circle())
+        .accessibilityLabel("Tilbake til " + title)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Stor sidetittel under tilbakeknappen (som navigasjonstitler i iOS).
+struct SKPageTitle: View {
+    let text: String
+    var sub: String = ""
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(text).sora(32, .semibold).tracking(-0.64).lineLimit(1).minimumScaleFactor(0.7)
+                .accessibilityAddTraits(.isHeader)
+            if !sub.isEmpty { Text(sub).sora(13, .regular, .muted).lineLimit(2) }
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
