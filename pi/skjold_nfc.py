@@ -15,7 +15,8 @@ import threading
 import time
 import urllib.parse
 
-HANDLINGER = ("preset", "play_url", "nrk", "ma_uri", "navidrome_album", "navidrome_playlist", "routine", "album")
+HANDLINGER = ("preset", "play_url", "nrk", "ma_uri", "navidrome_album", "navidrome_playlist", "navidrome_song", "navidrome_artist",
+              "routine", "album")
 UTTAK = ("pause", "ingenting")
 
 
@@ -187,7 +188,8 @@ def steps_for(card: dict, standard_rom: str = "") -> list[dict]:
         else:
             raise ValueError(f"fant ikke «{(v or {}).get('album', '')}» i Navidrome eller YouTube Music")
     typ = {"preset": "preset", "play_url": "play_url", "nrk": "nrk", "ma_uri": "ma", "ytm_samling": "ytm",
-           "navidrome_album": "nd_album", "navidrome_playlist": "nd_playlist"}[h]
+           "navidrome_album": "nd_album", "navidrome_playlist": "nd_playlist", "navidrome_song": "nd_song",
+           "navidrome_artist": "nd_artist"}[h]
     base: list[dict] = []
     if card.get("volum") is not None:
         base.append({"type": "volume", "verdi": card["volum"]})
@@ -212,7 +214,8 @@ def kilde_for(card: dict) -> str:
         k = lo.get("kilde") or ""
         return KILDE_KORT.get(k, "YouTube Music" if lo.get("uri") or lo.get("ytm_id") else "ukjent")
     return {"preset": "radio", "play_url": "radio", "nrk": "NRK", "ma_uri": "Music Assistant", "navidrome_album": "Navidrome",
-            "navidrome_playlist": "Navidrome", "routine": "rutine"}.get(card.get("handling"), "annet")
+            "navidrome_playlist": "Navidrome", "navidrome_song": "Navidrome", "navidrome_artist": "Navidrome",
+            "routine": "rutine"}.get(card.get("handling"), "annet")
 
 
 class KassettLogg:
@@ -704,12 +707,29 @@ def subsonic_tracks(url: str, user: str, pw: str, kind: str, item_id: str, opene
         p.update(extra)
         return urllib.parse.urlencode(p)
     base = url.rstrip("/")
-    method = "getAlbum" if kind == "album" else "getPlaylist"
-    d = opener(f"{base}/rest/{method}.view?" + q(id=item_id)).get("subsonic-response") or {}
-    if d.get("status") != "ok":
-        raise RuntimeError("Navidrome: " + str((d.get("error") or {}).get("message") or "feil"))
-    holder = d.get("album") or d.get("playlist") or {}
-    songs = holder.get("song") or holder.get("entry") or []
+
+    def call(method, **kw):
+        d = opener(f"{base}/rest/{method}.view?" + q(**kw)).get("subsonic-response") or {}
+        if d.get("status") != "ok":
+            raise RuntimeError("Navidrome: " + str((d.get("error") or {}).get("message") or "feil"))
+        return d
+    if kind == "song":            # én låt
+        holder = {}
+        songs = [call("getSong", id=item_id).get("song") or {}]
+        songs = [x for x in songs if x.get("id")]
+    elif kind == "artist":        # alle albumene til artisten, eldste først (maks 300 låter)
+        holder, songs = {}, []
+        albums = sorted((call("getArtist", id=item_id).get("artist") or {}).get("album") or [],
+                        key=lambda a: (a.get("year") or 9999, a.get("name") or ""))
+        for a in albums:
+            songs += call("getAlbum", id=a["id"]).get("album", {}).get("song") or []
+            if len(songs) >= 300:
+                break
+        songs = songs[:300]
+    else:
+        d = call("getAlbum" if kind == "album" else "getPlaylist", id=item_id)
+        holder = d.get("album") or d.get("playlist") or {}
+        songs = holder.get("song") or holder.get("entry") or []
     out = []
     for s in songs:
         out.append({"url": f"{base}/rest/stream.view?" + q(id=s["id"], format="mp3", maxBitRate=320),

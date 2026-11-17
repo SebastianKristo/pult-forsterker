@@ -143,7 +143,7 @@ export interface NrkEpisode { id: string; title: string; subtitle: string; date:
 export interface NrkProg { id: string; title?: string; series?: string; image?: string; pos: number; dur?: number; t?: number }
 export interface HomeKitInfo { enabled: boolean; available: boolean; running: boolean; paired: boolean; pin: string; setup_uri: string; port: number; error: string | null }
 /** Skjold Kassett (/api/nfc/*): kassetter med NFC-brikke, koblet til det som skal spilles. */
-export type NfcHandling = 'preset' | 'play_url' | 'nrk' | 'ma_uri' | 'navidrome_album' | 'navidrome_playlist' | 'routine' | 'album';
+export type NfcHandling = 'preset' | 'play_url' | 'nrk' | 'ma_uri' | 'navidrome_album' | 'navidrome_playlist' | 'navidrome_song' | 'navidrome_artist' | 'routine' | 'album';
 export interface NfcLosning { kilde: 'navidrome' | 'ytmusic' | 'ma'; id?: string; uri?: string; navn?: string; artist?: string; t?: number }
 export interface NfcAlbum { artist: string; album: string }
 /** Kassett-Wrapped (GET /api/nfc/stats). Tider i sekunder (unix). */

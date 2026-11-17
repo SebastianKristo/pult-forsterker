@@ -7687,8 +7687,8 @@ def routine_step(st):
         night_set(bool(v), "Rutine")
     elif t == "podsum" and _HX.get("podsum"):
         _HX["podsum"].run()
-    elif t in ("nd_album", "nd_playlist"):
-        set_power(True); nfc_play_navidrome("album" if t == "nd_album" else "playlist", str(v))
+    elif t in ("nd_album", "nd_playlist", "nd_song", "nd_artist"):
+        set_power(True); nfc_play_navidrome(t[3:], str(v))
     elif t == "ytm":   # YouTube Music-samling («al:…» / «pl:…»), innebygd
         set_power(True); ytm_play_queue(ytm.tracks(str(v)), 0, with_stream=True)
 
@@ -8659,7 +8659,13 @@ def ytm_play_queue(tracks, index=0, with_stream=False):
     """YouTube Music-låter → Lyrion: første spilles straks, resten legges i køen (som Navidrome-kassetter)."""
     if with_stream:
         base = f"http://{_local_ip()}:{PORT}"
-        tracks = [{**t, "stream": f"{base}/api/ytm/stream/{t['id']}.m4a"} for t in tracks]
+        ext = "aac" if shutil.which("ffmpeg") else "m4a"   # ADTS: fragmentert m4a stoppet etter noen sekunder i Lyrion
+        tracks = [{**t, "stream": f"{base}/api/ytm/stream/{t['id']}.{ext}"} for t in tracks]
+    if tracks:
+        try:   # slå opp første låt før Lyrion får adressen (ellers gir Lyrion opp mens yt-dlp jobber)
+            ytm.stream_url(tracks[max(0, min(len(tracks) - 1, int(index or 0)))]["id"])
+        except Exception as e:
+            print("YouTube Music: fant ikke lyden til første låt", repr(e), flush=True)
     if not tracks:
         raise RuntimeError("tom samling")
     index = max(0, min(len(tracks) - 1, int(index or 0)))

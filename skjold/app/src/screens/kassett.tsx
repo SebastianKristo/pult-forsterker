@@ -6,17 +6,18 @@ import { QR } from './platform';
 import { HyllePanel } from './hylle';
 import { HjulPanel } from './hjul';
 import { ndCover, ndConfigured, ndPlaylists, ndSearch } from '../lib/navidrome';
+import { KassettBibliotek } from './kassettbib';
 
 const A = '#e8b04a';
 const box = 'background:#141415;border:1px solid #242426;border-radius:14px;padding:14px';
 const inp = 'background:#0e0e0f;border:1px solid #2a2a2c;border-radius:8px;color:#f2f2ee;padding:8px 10px;font:inherit';
 const btn = (on = false) => `padding:8px 14px;border-radius:9px;border:1px solid ${on ? A : '#2a2a2c'};background:${on ? '#1c170d' : '#1a1a1b'};color:#f2f2ee;cursor:pointer;font:inherit`;
-const LABEL: Record<NfcHandling, string> = { preset: 'Radio', play_url: 'Strøm', nrk: 'NRK', ma_uri: 'Music Assistant', navidrome_album: 'Navidrome-album', navidrome_playlist: 'Navidrome-spilleliste', routine: 'Rutine', album: 'Album' };
+const LABEL: Record<NfcHandling, string> = { preset: 'Radio', play_url: 'Strøm', nrk: 'NRK', ma_uri: 'Music Assistant', navidrome_album: 'Navidrome-album', navidrome_playlist: 'Navidrome-spilleliste', navidrome_song: 'Låt', navidrome_artist: 'Artist', routine: 'Rutine', album: 'Album' };
 const KILDE: Record<string, string> = { navidrome: 'Navidrome', ytmusic: 'YouTube Music', ma: 'Music Assistant' };
 /** Relative bilder fra Skjold (/api/nfc/cover, /api/logo) må ha enhetens adresse foran når appen kjører et annet sted. */
 const img = (u: string) => (u && u.startsWith('/') ? getBase() + u : u);
 
-type Src = 'nå' | 'album' | 'radio' | 'nrk' | 'nd' | 'ma' | 'rutine';
+type Src = 'nå' | 'bib' | 'album' | 'radio' | 'nrk' | 'nd' | 'ma' | 'rutine';
 interface Hit { navn: string; undertittel: string; omslag: string; handling: NfcHandling; verdi: unknown }
 
 async function search(src: Src, q: string, routines: Routine[]): Promise<Hit[]> {
@@ -59,6 +60,19 @@ function printLabels(cards: NfcCard[], start = 0): void {
   w.document.close();
 }
 
+const velgStart = () => Math.max(0, Math.min(14, +(prompt('Hopp over hvor mange ruter på arket? (0 = start øverst, 15 ruter per A4)', '0') || 0)));
+
+/** Forhåndsvisning av etiketten (samme oppsett som utskriften fra /api/nfc/label, 43,2 × 51,2 mm). */
+function Etikett({ c }: { c: { navn: string; undertittel: string; omslag: string } }) {
+  return (
+    <div style="width:130px;height:154px;border-radius:6px;background:#f6f3ee;padding:9px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;box-shadow:0 6px 20px rgba(0,0,0,.4);flex-shrink:0">
+      {c.omslag ? <img src={img(c.omslag)} style="width:112px;height:112px;border-radius:3px;object-fit:cover" />
+        : <div style={`width:112px;height:112px;border-radius:3px;background:#141415;color:${A};display:grid;place-items:center;font-size:12px;font-weight:700;letter-spacing:1px;text-align:center`}>{c.navn.toUpperCase().slice(0, 14)}</div>}
+      <div style="font-size:9.5px;font-weight:600;color:#1b1b1c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1">{c.navn}</div>
+      <div style="font-size:7.5px;color:#6a6a65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1">{c.undertittel}</div>
+    </div>);
+}
+
 function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) {
   const [src, setSrc] = useState<Src>(init ? 'radio' : 'nå');
   const [q, setQ] = useState('');
@@ -71,6 +85,7 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
   const [uttak, setUttak] = useState<'pause' | 'ingenting'>(init?.ved_uttak ?? 'pause');
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [learn, setLearn] = useState<'' | 'venter' | 'ok' | string>('');
+  const [nyttKort, setNyttKort] = useState<NfcCard | null>(null);
   const [ls, setLs] = useState<NfcStatus | null>(null);
   const [err, setErr] = useState('');
   const initAlbum = init?.handling === 'album' ? (init.verdi as { artist?: string; album?: string }) : null;
@@ -78,7 +93,7 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
   const [album, setAlbum] = useState(initAlbum?.album ?? '');
   const [forslag, setForslag] = useState<{ artist: string; album: string; kilde: string }[]>([]);
   const [kilde, setKilde] = useState('');
-  useEffect(() => { if (initAlbum) setSrc('album'); }, []);
+  useEffect(() => { if (initAlbum) setSrc('album'); else if (init?.handling.startsWith('navidrome_')) setSrc('bib'); }, []);
   useEffect(() => {
     if (src !== 'album') return;
     setPick(album.trim() ? { navn: album.trim(), undertittel: artist.trim(), omslag: `/api/nfc/cover?artist=${encodeURIComponent(artist.trim())}&album=${encodeURIComponent(album.trim())}`, handling: 'album', verdi: { artist: artist.trim(), album: album.trim() } } : null);
@@ -93,7 +108,7 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
   }, [src, artist, album]);
   useEffect(() => { api.routines().then((r) => setRoutines(Array.isArray(r) ? r : r.routines ?? [])).catch(() => {}); }, []);
   useEffect(() => {
-    if (src === 'nå' || src === 'album' || (src !== 'rutine' && src !== 'nd' && q.trim().length < 2)) { setHits([]); return; }
+    if (src === 'nå' || src === 'bib' || src === 'album' || (src !== 'rutine' && src !== 'nd' && q.trim().length < 2)) { setHits([]); return; }
     const t = setTimeout(() => { setBusy(true); search(src, q.trim(), routines).then(setHits).catch(() => setHits([])).finally(() => setBusy(false)); }, 350);
     return () => clearTimeout(t);
   }, [src, q, routines]);
@@ -120,7 +135,7 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
         await new Promise((r) => setTimeout(r, 1000));
         const s = await api.nfc();
         setLs(s);
-        if (s.last && s.last.t > before && s.last.known) { setLearn('ok'); setTimeout(onDone, 1200); return; }
+        if (s.last && s.last.t > before && s.last.known) { setNyttKort(s.cards.find((c) => c.uid === s.last!.uid) ?? null); setLearn('ok'); return; }
         if (!s.learning) break;
       }
       setLearn('Fant ingen kassett. Prøv igjen.');
@@ -128,9 +143,17 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
   }
 
   if (learn === 'venter') return <div style={box + ';text-align:center;padding:40px'}><div style={`font-size:22px;color:${A}`}>Sett inn kassetten nå</div><p style="color:#9a9a96">{ls?.last && ls.last.t * 1000 > Date.now() - 60000 && !ls.last.known ? 'Leste brikken ' + ls.last.uid + ' – kobler …' : 'Venter på NFC-brikken (60 s) …'}</p><div style="text-align:left;margin:0 auto 12px;max-width:640px"><SpillerStatus st={ls} /></div><button style={btn()} onClick={() => { void api.nfcLearnStop(); setLearn(''); }}>Avbryt</button></div>;
-  if (learn === 'ok') return <div style={box + ';text-align:center;padding:40px;color:' + A}>✓ Kassetten er koblet</div>;
+  if (learn === 'ok') return (
+    <div style={box + ';text-align:center;padding:32px;display:flex;flex-direction:column;align-items:center;gap:14px'}>
+      <div style={'font-size:20px;color:' + A}>✓ Kassetten er koblet</div>
+      {nyttKort && <Etikett c={nyttKort} />}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        {nyttKort && <button style={btn(true)} onClick={() => printLabels([nyttKort], velgStart())}>Skriv ut etikett</button>}
+        <button style={btn()} onClick={onDone}>Ferdig</button>
+      </div>
+    </div>);
 
-  const SRC: [Src, string][] = [['nå', 'Det som spiller nå'], ['album', 'Album (Navidrome / YouTube Music)'], ['radio', 'Radio'], ['nrk', 'NRK'], ['nd', 'Navidrome'], ['ma', 'Music Assistant'], ['rutine', 'Rutine']];
+  const SRC: [Src, string][] = [['nå', 'Det som spiller nå'], ['bib', 'Bibliotek'], ['album', 'Album (Navidrome / YouTube Music)'], ['radio', 'Radio'], ['nrk', 'NRK'], ['nd', 'Navidrome'], ['ma', 'Music Assistant'], ['rutine', 'Rutine']];
   return (
     <div style={box + ';display:flex;flex-direction:column;gap:12px'}>
       <b>{init?.uid ? 'Rediger kassett' : 'Koble ny kassett'}</b>
@@ -144,7 +167,8 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
         {kilde && <small style={'color:' + (kilde === 'ikke funnet' ? '#e06c5a' : A)}>{kilde === 'ikke funnet' ? 'Fant det ikke i Navidrome eller YouTube Music nå – kassetten lagres likevel og prøver igjen når den settes inn.' : 'Spilles fra ' + kilde}</small>}
         {forslag.length > 0 && <div style="display:flex;flex-wrap:wrap;gap:6px">{forslag.map((f, i) => <button key={i} style={btn(f.album === album && f.artist === artist)} onClick={() => { setArtist(f.artist); setAlbum(f.album); if (!navn) setNavn(f.album); }}>{f.album} <small style="color:#9a9a96">· {f.artist} · {f.kilde}</small></button>)}</div>}
       </>}
-      {src !== 'nå' && src !== 'album' && <input style={inp} placeholder="Søk …" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />}
+      {src === 'bib' && <KassettBibliotek valgt={pick} onVelg={(h) => { setPick(h); setNavn(h.navn); }} />}
+      {src !== 'nå' && src !== 'album' && src !== 'bib' && <input style={inp} placeholder="Søk …" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />}
       {src === 'nd' && !ndConfigured() && <small style="color:#9a9a96">Navidrome er ikke satt opp.</small>}
       {busy && <small style="color:#9a9a96">Søker …</small>}
       {hits.length > 0 && <div style="max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:4px">{hits.map((h, i) => (
@@ -152,7 +176,7 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
           {h.omslag ? <img src={img(h.omslag)} style="width:36px;height:36px;border-radius:6px;object-fit:cover" /> : <span style="width:36px;height:36px;border-radius:6px;background:#222" />}
           <span><div>{h.navn}</div><small style="color:#9a9a96">{h.undertittel} · {LABEL[h.handling]}</small></span>
         </button>))}</div>}
-      {pick && src !== 'nå' && src !== 'album' && <small style={'color:' + A}>Valgt: {pick.navn} ({LABEL[pick.handling]})</small>}
+      {pick && src !== 'nå' && src !== 'album' && <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><Etikett c={{ navn: navn || pick.navn, undertittel: pick.undertittel, omslag: pick.omslag }} /><small style={'color:' + A}>Valgt: {pick.navn} ({LABEL[pick.handling]})<br /><span style="color:#9a9a96">Slik blir etiketten. Du kan endre navnet under.</span></small></div>}
       <label>Navn på etiketten<br /><input style={inp + ';width:100%'} value={navn} placeholder={src === 'nå' ? 'Tas fra det som spiller' : ''} onInput={(e) => setNavn((e.target as HTMLInputElement).value)} /></label>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <label>Rom (kommaliste, tom = dette)<br /><input style={inp} value={rom} onInput={(e) => setRom((e.target as HTMLInputElement).value)} /></label>
@@ -449,7 +473,7 @@ export function KassettPage() {
       <small style="color:#9a9a96">Lag kassetter uten leser: velg «Lag kassett» i Skjold-appen på mobilen og hold telefonen mot NFC-brikken. Her kan du også koble med Kassett-spilleren (læremodus).</small>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button style={btn(true)} onClick={() => setEdit('ny')}>+ Koble ny kassett</button>
-        <button style={btn()} disabled={!cards.length} onClick={() => printLabels(sel.size ? cards.filter((c) => sel.has(c.uid!)) : cards, Math.max(0, Math.min(14, +(prompt('Hopp over hvor mange ruter på arket? (0 = start øverst)', '0') || 0))))}>Skriv ut etiketter{sel.size ? ` (${sel.size})` : ''}</button>
+        <button style={btn()} disabled={!cards.length} onClick={() => printLabels(sel.size ? cards.filter((c) => sel.has(c.uid!)) : cards, velgStart())}>Skriv ut etiketter{sel.size ? ` (${sel.size})` : ''}</button>
         <button style={btn()} disabled={!cards.length} onClick={() => setDel(sel.size ? [...sel] : cards.map((c) => c.uid!))}>Del{sel.size ? ` (${sel.size})` : ' alle'}</button>
         {st?.active && <small style={'color:' + A}>I spilleren: {cards.find((c) => c.uid === st.active)?.navn ?? st.active}</small>}
       </div>
@@ -468,8 +492,9 @@ export function KassettPage() {
             <div style="flex:1;min-width:0">
               <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{c.navn}</div>
               <small style="color:#9a9a96">{c.undertittel || LABEL[c.handling]}{c.fra ? ` · fra ${c.fra}` : ''} · spilt {c.spilt ?? 0}×{c.handling === 'album' ? ' · ' + (c.losning?.kilde ? KILDE[c.losning.kilde] : 'ikke slått opp ennå') : ''}</small>
-              <div style="display:flex;gap:6px;margin-top:6px">
+              <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
                 <button style={btn()} onClick={() => setEdit(c)}>Endre</button>
+                <button style={btn()} onClick={() => printLabels([c], velgStart())}>Etikett</button>
                 <button style={btn()} onClick={() => setDel([c.uid!])}>Del</button>
                 <button style={btn()} onClick={() => { if (confirm(`Slette «${c.navn}»?`)) void api.nfcDelete(c.uid!).then(load); }}>Slett</button>
               </div>
