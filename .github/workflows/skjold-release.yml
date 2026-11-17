@@ -1,12 +1,9 @@
 #
-# Skjold – bygg og publiser app (Android APK, iOS IPA usignert), web-UI, Flasher (dmg/exe/AppImage) og bruksanvisning (PDF)
+# Skjold – bygg og publiser det Skjold-enhetene trenger: web-UI (dist), fastvare for Røst og Kassett, Skjold-kortet for
+# Home Assistant, bruksanvisning (PDF) og 3D-filer. Appene (Android/iOS) og Skjold Flasher har egne utgivelser:
+# app-release.yml (app-v*) og flasher-release.yml (flasher-v*). Start alle tre fra «Ny release».
 #
-# Utløses av en tag på formen  skjold-v1.2.3   (git tag skjold-v1.0.0 && git push origin skjold-v1.0.0)
-# eller manuelt fra Actions-fanen («Run workflow»). Alle artefakter legges på en GitHub Release med samme navn som taggen.
-#
-# Signering: ingen sertifikater er lagt inn. APK signeres med debug-nøkkel (kan installeres direkte på Android),
-# IPA er usignert (installeres med Sideloadly/AltStore med egen Apple-ID, eller signeres i Xcode), Mac-appen er
-# usignert (høyreklikk → Åpne første gang). Se skjold/RELEASE.md.
+# Utløses av en tag på formen  skjold-v1.2.3  eller manuelt fra Actions-fanen («Run workflow»).
 #
 name: Skjold release
 
@@ -29,7 +26,7 @@ env:
 
 jobs:
   web:
-    name: Web-UI (dist) og Android APK
+    name: Web-UI (dist)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,221 +35,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: skjold/app/package-lock.json
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 21 }   # Capacitor 8 krever Java 21
       - name: Installer og bygg web
         working-directory: skjold/app
         run: |
           npm ci
           npm run build
           cd dist && zip -r ../../../skjold-web-${GITHUB_REF_NAME}.zip . && cd ..
-      - name: Synkroniser Capacitor (Android)
-        working-directory: skjold/app
-        run: npx cap sync android
-      - name: Versjon fra taggen
-        id: ver
-        run: |
-          # skjold-v1.2.3 -> 1.2.3 / 10203; uten tag (manuell kjøring): versjonen i package.json
-          V="${GITHUB_REF_NAME#skjold-v}"
-          if ! echo "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then V=$(node -p "require('./skjold/app/package.json').version"); fi
-          IFS=. read -r MA MI PA <<< "$V"
-          echo "name=$V" >> "$GITHUB_OUTPUT"
-          echo "code=$((MA*10000 + MI*100 + PA))" >> "$GITHUB_OUTPUT"
-      - name: Signeringsnøkkel (fast, så appen kan oppdatere seg selv)
-        env:
-          KS_B64: ${{ secrets.SKJOLD_KEYSTORE_B64 }}
-        run: |
-          if [ -n "$KS_B64" ]; then
-            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/skjold.jks"
-            echo "SKJOLD_KEYSTORE=$RUNNER_TEMP/skjold.jks" >> "$GITHUB_ENV"
-          else
-            echo "::warning::SKJOLD_KEYSTORE_B64 mangler – APK-en signeres med en tilfeldig debug-nøkkel og kan ikke installeres over forrige versjon"
-          fi
-      - name: Bygg APK (installerbar, fast nøkkel hvis satt)
-        working-directory: skjold/app/android
-        env:
-          SKJOLD_KEYSTORE_PASSWORD: ${{ secrets.SKJOLD_KEYSTORE_PASSWORD }}
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon -PskjoldVersionName=${{ steps.ver.outputs.name }} -PskjoldVersionCode=${{ steps.ver.outputs.code }}
-          cp app/build/outputs/apk/debug/app-debug.apk ../../../skjold-app-${GITHUB_REF_NAME}.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: web-og-android
-          path: |
-            skjold-web-*.zip
-            skjold-app-*.apk
-
-  android-native:
-    name: Android-app (Kotlin/Compose)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 21 }
-      - name: Versjon fra taggen
-        id: ver
-        run: |
-          # skjold-v1.2.3 -> 1.2.3 / 10203; uten gyldig tag (manuell kjøring): 0.0.0 / 1
-          V="${GITHUB_REF_NAME#skjold-v}"
-          if ! echo "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then V="0.0.1"; fi
-          IFS=. read -r MA MI PA <<< "$V"
-          echo "name=$V" >> "$GITHUB_OUTPUT"
-          echo "code=$((MA*10000 + MI*100 + PA))" >> "$GITHUB_OUTPUT"
-      - name: Signeringsnøkkel (fast, så appen kan oppdatere seg selv)
-        env:
-          KS_B64: ${{ secrets.SKJOLD_KEYSTORE_B64 }}
-        run: |
-          if [ -n "$KS_B64" ]; then
-            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/skjold.jks"
-            echo "SKJOLD_KEYSTORE=$RUNNER_TEMP/skjold.jks" >> "$GITHUB_ENV"
-          else
-            echo "::warning::SKJOLD_KEYSTORE_B64 mangler – APK-en signeres med debug-nøkkelen"
-          fi
-      - name: Bygg APK (release, signert med fast nøkkel hvis satt)
-        working-directory: skjold/android
-        env:
-          SKJOLD_KEYSTORE_PASSWORD: ${{ secrets.SKJOLD_KEYSTORE_PASSWORD }}
-        run: |
-          chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon -PskjoldVersionName=${{ steps.ver.outputs.name }} -PskjoldVersionCode=${{ steps.ver.outputs.code }}
-          cp app/build/outputs/apk/release/app-release.apk ../../skjold-android-${GITHUB_REF_NAME}.apk
-      - name: Bygg Wear OS-appen (feil her stopper ikke telefonappen)
-        continue-on-error: true
-        working-directory: skjold/android
-        env:
-          SKJOLD_KEYSTORE_PASSWORD: ${{ secrets.SKJOLD_KEYSTORE_PASSWORD }}
-        run: |
-          ./gradlew :wear:assembleRelease --no-daemon -PskjoldVersionName=${{ steps.ver.outputs.name }} -PskjoldVersionCode=${{ steps.ver.outputs.code }}
-          cp wear/build/outputs/apk/release/wear-release.apk ../../skjold-wear-${GITHUB_REF_NAME}.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-native
-          path: |
-            skjold-android-*.apk
-            skjold-wear-*.apk
-
-  ios:
-    name: iOS IPA (gammel web-app, usignert)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: skjold/app/package-lock.json
-      - name: Installer, bygg web og synkroniser iOS
-        working-directory: skjold/app
-        run: |
-          npm ci
-          npm run build
-          npx cap sync ios
-      - name: Bygg .app uten signering
-        working-directory: skjold/app/ios/App
-        run: |
-          xcodebuild -project App.xcodeproj -scheme App -configuration Release -sdk iphoneos \
-            -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
-      - name: Pakk som IPA
-        working-directory: skjold/app/ios/App
-        run: |
-          mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
-          zip -qr ../../../../skjold-app-${GITHUB_REF_NAME}-usignert.ipa Payload
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ios
-          path: skjold-app-*.ipa
-
-  ios-native:
-    name: iOS-app (SwiftUI, usignert)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Velg nyeste Xcode (prosjektet bruker Xcode 27-formatet og iOS 26-SDK)
-        run: |
-          X="$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"; echo "Bruker $X"
-          sudo xcode-select -s "$X/Contents/Developer"; xcodebuild -version
-      - name: Lag Xcode-prosjekt for byggeserveren (XcodeGen – Skjold.xcodeproj er Xcode 27-format)
-        working-directory: skjold/ios
-        run: |
-          brew install xcodegen
-          xcodegen generate --spec ci-project.yml
-      - name: Bygg .app uten signering
-        working-directory: skjold/ios
-        run: |
-          xcodebuild -project SkjoldCI.xcodeproj -scheme Skjold -configuration Release -sdk iphoneos \
-            -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM=""
-      - name: Bygg Apple Watch-appen (egen jobb-del – feil her stopper ikke iOS-appen)
-        id: watch
-        continue-on-error: true
-        working-directory: skjold/ios
-        run: |
-          xcodebuild -project SkjoldCI.xcodeproj -scheme SkjoldWatch -configuration Release -destination 'generic/platform=watchOS' \
-            -derivedDataPath build-watch CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM=""
-      - name: Pakk som IPA
-        working-directory: skjold/ios
-        run: |
-          # Standard-IPA uten Apple Watch: sideloading (Sideloadly/AltStore) gir appen ny bundle-id med team-suffiks,
-          # men endrer ikke WKCompanionAppBundleIdentifier i klokke-appen – da avviser iPhone hele installasjonen
-          # (InvalidCompanionAppBundleIdentifier). Klokke-utgaven legges ved som egen IPA for signering i Xcode.
-          mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/Skjold.app Payload/
-          zip -qr ../../skjold-ios-${GITHUB_REF_NAME}-usignert.ipa Payload
-          W=build-watch/Build/Products/Release-watchos/SkjoldWatch.app
-          if [ "${{ steps.watch.outcome }}" = "success" ] && [ -d "$W" ]; then
-            mkdir -p Payload/Skjold.app/Watch && cp -r "$W" Payload/Skjold.app/Watch/
-            zip -qr ../../skjold-ios-${GITHUB_REF_NAME}-med-klokke-usignert.ipa Payload && echo "Egen IPA med Apple Watch-appen laget"
-          else
-            echo "::warning::Apple Watch-appen ble ikke bygget – bare IPA uten klokke"
-          fi
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ios-native
-          path: skjold-ios-*.ipa
-
-  flasher:
-    name: Flasher (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    env:
-      CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: skjold/flasher/package-lock.json
-      - name: libudev (usb-modulen bygges fra kilde på Linux)
-        if: runner.os == 'Linux'
-        # Ubuntus pakkeservere svarer ikke alltid fra byggemaskinene. Hopp over apt når pakken finnes fra før, og gi
-        # hvert forsøk kort tidsfrist så jobben ikke blir stående i en halvtime.
-        run: |
-          dpkg -s libudev-dev >/dev/null 2>&1 && { echo "libudev-dev finnes fra før"; exit 0; }
-          APT="-o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::Retries=1"
-          for i in 1 2 3 4 5; do
-            timeout 180 sudo apt-get $APT update && timeout 180 sudo apt-get $APT install -y libudev-dev && exit 0
-            echo "apt feilet (forsøk $i av 5) – venter 20 s"; sleep 20
-          done
-          exit 1
-      - name: Installer og bygg installasjonsfiler
-        working-directory: skjold/flasher
-        run: |
-          npm ci
-          npm run dist
-      - uses: actions/upload-artifact@v4
-        with:
-          name: flasher-${{ matrix.os }}
-          path: |
-            skjold/flasher/release/*.dmg
-            skjold/flasher/release/*.exe
-            skjold/flasher/release/*.AppImage
-            skjold/flasher/release/*.zip
+          name: web
+          path: skjold-web-*.zip
 
   manual:
     name: Bruksanvisning (PDF)
@@ -360,9 +152,8 @@ jobs:
 
   release:
     name: GitHub Release
-    needs: [web, android-native, ios, ios-native, flasher, manual, print3d, rostfw, kassettfw, hakort]
-    # macOS-jobbene (iOS og Flasher for Mac) blir ofte avbrutt uten maskin (eller når macOS-minuttene er brukt opp) –
-    # releasen publiseres likevel når web/Android og PDF gikk gjennom; filene som ble bygget kommer med.
+    needs: [web, manual, print3d, rostfw, kassettfw, hakort]
+    # Releasen publiseres når web og PDF gikk gjennom; fastvare/3D/HA-kort som ble bygget kommer med.
     if: >-
       always() && startsWith(github.ref, 'refs/tags/') &&
       needs.web.result == 'success' && needs.manual.result == 'success'
@@ -377,6 +168,7 @@ jobs:
           name: Skjold ${{ github.ref_name }}
           generate_release_notes: true
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          make_latest: ${{ github.event.inputs.prerelease != 'true' }}   # «latest» er alltid enhetsutgivelsen (nettsiden og web-UI leser den)
           files: artefakter/**
       - name: Oppdater nettsiden (Røst- og Kassett-fastvaren til nettleserflashing)
         if: ${{ github.event.inputs.prerelease != 'true' }}

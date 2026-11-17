@@ -1,0 +1,80 @@
+#
+# Skjold Flasher: installasjonsfiler for macOS (dmg), Windows (exe) og Linux (AppImage). Egen utgivelse med tag
+# flasher-v1.2.3 (versjonen fra skjold/flasher/package.json) – start den fra «Ny release» (hva = flasher). Markeres ikke
+# som «latest».
+#
+name: Skjold Flasher
+
+on:
+  push:
+    tags: ["flasher-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  flasher:
+    name: Flasher (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: skjold/flasher/package-lock.json
+      - name: libudev (usb-modulen bygges fra kilde på Linux)
+        if: runner.os == 'Linux'
+        # Ubuntus pakkeservere svarer ikke alltid fra byggemaskinene. Hopp over apt når pakken finnes fra før, og gi
+        # hvert forsøk kort tidsfrist så jobben ikke blir stående i en halvtime.
+        run: |
+          dpkg -s libudev-dev >/dev/null 2>&1 && { echo "libudev-dev finnes fra før"; exit 0; }
+          APT="-o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::Retries=1"
+          for i in 1 2 3 4 5; do
+            timeout 180 sudo apt-get $APT update && timeout 180 sudo apt-get $APT install -y libudev-dev && exit 0
+            echo "apt feilet (forsøk $i av 5) – venter 20 s"; sleep 20
+          done
+          exit 1
+      - name: Installer og bygg installasjonsfiler
+        working-directory: skjold/flasher
+        run: |
+          npm ci
+          npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flasher-${{ matrix.os }}
+          path: |
+            skjold/flasher/release/*.dmg
+            skjold/flasher/release/*.exe
+            skjold/flasher/release/*.AppImage
+            skjold/flasher/release/*.zip
+
+  release:
+    name: GitHub Release
+    needs: [flasher]
+    if: always() && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artefakter, merge-multiple: true }
+      - name: Liste
+        run: |
+          ls -la artefakter
+          [ -n "$(ls artefakter 2>/dev/null)" ] || { echo "::error::Ingen installasjonsfiler ble bygget"; exit 1; }
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Skjold Flasher ${{ github.ref_name }}
+          generate_release_notes: true
+          make_latest: false
+          files: artefakter/**

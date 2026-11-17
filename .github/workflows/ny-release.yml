@@ -1,6 +1,7 @@
 #
-# Lag en ny Skjold-release uten å pushe tag selv: finner høyeste skjold-v*-tag, lager neste (patch +1, eller
-# versjonen du oppgir) på main, og starter «Skjold release» på den taggen. Tagger pushet med GITHUB_TOKEN starter
+# Lag en ny utgivelse uten å pushe tag selv. hva = enheter (skjold-v*, «Skjold release»), app (app-v*, «Skjold-appen»)
+# eller flasher (flasher-v*, «Skjold Flasher», versjonen fra skjold/flasher/package.json). Neste versjon er patch +1
+# (eller versjonen du oppgir), taggen lages på main og utgivelsen startes på den. Tagger pushet med GITHUB_TOKEN starter
 # ikke andre workflows av seg selv, men workflow_dispatch gjør det – derfor startes release-jobben eksplisitt.
 #
 name: Ny release
@@ -8,6 +9,11 @@ name: Ny release
 on:
   workflow_dispatch:
     inputs:
+      hva:
+        description: "Hva som skal ut: enheter (skjold-v*), app (Android/iOS, app-v*) eller flasher (flasher-v*)"
+        type: choice
+        options: [enheter, app, flasher]
+        default: enheter
       beta:
         description: "Beta-release (prerelease) – går bare til enheter på beta-kanalen"
         type: boolean
@@ -33,18 +39,35 @@ jobs:
         id: v
         env:
           WANT: ${{ inputs.version }}
+          HVA: ${{ inputs.hva || 'enheter' }}
         run: |
           git fetch --tags --force
-          LAST=$(git tag -l 'skjold-v*' | sed 's/^skjold-v//' | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1)
-          if [ -n "$WANT" ]; then NEXT="${WANT#skjold-v}"; else
+          siste() { git tag -l "$1*" | sed "s/^$1//" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1; }
+          case "$HVA" in
+            app)     PRE=app-v;     WF=app-release.yml
+                     # appens versjonskode må alltid øke: start etter den nyeste skjold-v*-versjonen første gang
+                     LAST=$(siste app-v); [ -n "$LAST" ] || LAST=$(siste skjold-v) ;;
+            flasher) PRE=flasher-v; WF=flasher-release.yml
+                     LAST=""; [ -n "$WANT" ] || WANT=$(node -p "require('./skjold/flasher/package.json').version") ;;
+            *)       PRE=skjold-v;  WF=skjold-release.yml; LAST=$(siste skjold-v) ;;
+          esac
+          if [ -n "$WANT" ]; then NEXT="${WANT#$PRE}"; else
             IFS=. read -r A B C <<< "${LAST:-0.1.0}"; NEXT="$A.$B.$((C+1))"; fi
-          TAG="skjold-v$NEXT"
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then echo "::error::$TAG finnes allerede"; exit 1; fi
+          TAG="$PRE$NEXT"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            [ "$HVA" = flasher ] && echo "::error::$TAG finnes allerede – øk versjonen i skjold/flasher/package.json" || echo "::error::$TAG finnes allerede"
+            exit 1
+          fi
           git tag "$TAG" origin/main
           git push origin "$TAG"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Laget $TAG (forrige: skjold-v$LAST) på $(git rev-parse --short origin/main)"
-      - name: Start «Skjold release» på taggen
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"; echo "wf=$WF" >> "$GITHUB_OUTPUT"
+          echo "Laget $TAG på $(git rev-parse --short origin/main)"
+      - name: Start utgivelsen på taggen
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run skjold-release.yml --ref "${{ steps.v.outputs.tag }}" -R "${{ github.repository }}" -f prerelease=${{ inputs.beta && 'true' || 'false' }}
+        run: |
+          if [ "${{ steps.v.outputs.wf }}" = flasher-release.yml ]; then
+            gh workflow run flasher-release.yml --ref "${{ steps.v.outputs.tag }}" -R "${{ github.repository }}"
+          else
+            gh workflow run "${{ steps.v.outputs.wf }}" --ref "${{ steps.v.outputs.tag }}" -R "${{ github.repository }}" -f prerelease=${{ inputs.beta && 'true' || 'false' }}
+          fi

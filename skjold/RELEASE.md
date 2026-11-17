@@ -1,15 +1,17 @@
 # Skjold – bygg, release og installasjon, steg for steg
 
-Alt under `skjold/` bygges av GitHub Actions (`.github/workflows/skjold-release.yml`) på GitHubs egne Mac-, Windows- og
-Linux-maskiner. Du trenger ikke Xcode, Android Studio eller en Mac for å lage filene – bare for å *signere* dem (se del 4).
+Alt under `skjold/` bygges av GitHub Actions på GitHubs egne Mac-, Windows- og Linux-maskiner, i tre separate utgivelser.
+Start dem fra Actions → **Ny release** og velg *hva* (enheter, app eller flasher). Du trenger ikke Xcode, Android Studio
+eller en Mac for å lage filene – bare for å *signere* dem (se del 4).
 
-| Fil | Hva | Lages av |
+| Utgivelse (tag) | Filer | Workflow |
 |---|---|---|
-| `skjold-app-<tag>.apk` | Android-appen (debug-signert, installerbar) | ubuntu-runner |
-| `skjold-app-<tag>-usignert.ipa` | iOS-appen, usignert | macos-runner |
-| `skjold-web-<tag>.zip` | Web-UI-et som Pi-en serverer på `http://<navn>.local:8765/` | ubuntu-runner |
-| `Skjold Flasher-<ver>.dmg` / `.exe` / `.AppImage` | SD-kort-flasheren for Mac / Windows / Linux | én runner per OS |
-| `Skjold_S1_Bruksanvisning.pdf` | Bruksanvisningen | ubuntu-runner |
+| **Enheter** (`skjold-v*`, «latest») | `skjold-web-<tag>.zip` (web-UI-et enhetene serverer), `skjold-rost-firmware.bin`, `skjold-kassett-firmware.bin`, `skjold-card.js`, bruksanvisning (PDF), `skjold-3d-print.zip` | `skjold-release.yml` |
+| **App** (`app-v*`) | `skjold-android-<tag>.apk` (+ `skjold-wear-<tag>.apk`), `skjold-ios-<tag>-usignert.ipa` (+ `-med-klokke-`) | `app-release.yml` |
+| **Flasher** (`flasher-v*`) | `Skjold Flasher-<ver>.dmg` / `.exe` / `.AppImage` | `flasher-release.yml` |
+
+Enhetsutgivelsen er alltid «latest» (nettsiden og web-UI leser den). App- og Flasher-utgivelsene markeres ikke som latest.
+De gamle web-app-filene (`skjold-app-<tag>.apk` / `-usignert.ipa`, Capacitor) bygges ikke lenger.
 
 ## 1. Lag en release
 
