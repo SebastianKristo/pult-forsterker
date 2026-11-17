@@ -7932,8 +7932,18 @@ async def h_group(r):
             b = await r.json()
         except Exception:
             b = {}
+        # Touch sender sin egen adresse som http://localhost:8765 (kiosken kjører på enheten selv). Kommer kallet fra en
+        # annen maskin, er «localhost» den som spør – ikke denne enheten. Bytt den ut med avsenderens adresse.
+        rem = (r.remote or "").split("%")[0]
+        def _fra(m):
+            u = urllib.parse.urlsplit(str(m or ""))
+            if u.hostname in ("localhost", "127.0.0.1", "::1") and rem and rem not in ("127.0.0.1", "::1"):
+                host = f"[{rem}]" if ":" in rem else rem
+                return urllib.parse.urlunsplit((u.scheme or "http", f"{host}:{u.port or PORT}", "", "", ""))
+            return m
+        members = [_fra(m) for m in (b.get("members") or [])]
         try:
-            res = await loop.run_in_executor(None, group_set, list(b.get("members") or []))
+            res = await loop.run_in_executor(None, group_set, members)
         except Exception as e:
             return web.json_response({"error": str(e)}, status=502)
         return web.json_response({"ok": all(x["ok"] for x in res), "members": res})

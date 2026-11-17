@@ -13,7 +13,7 @@ import { ndAlbum, ndAlbumList, ndConfigured, ndCover, ndSearch, type NdAlbum } f
 import { li, lq, lsvc, playNd } from '../lib/library';
 import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 import '../lib/services';   // innloggingene (Navidrome, YouTube Music) hentes fra enheten – kiosken har ingen egne
-import { groupAll } from '../lib/groups';
+import { groupAll, groupBusy, groupNone, groups, inGroup, toggleMember } from '../lib/groups';
 import { qrMatrix } from '../lib/qr';
 import { canSeek, seekTo } from '../screens/player';
 import { Keyboard, MONO, Sheet, Slider, useLongPress, Wheel } from './ui';
@@ -666,15 +666,22 @@ function roomList(): RoomRow[] {
 
 function Rooms() {
   const rows = roomList();
+  // Grupper: rommet du styrer leder, trykk på sirkelen for å ta et rom med i gruppen (spiller det samme, synkront)
+  const lederKey = ctl.value || here(), keyOf = (r: RoomRow) => r.base || here();
+  void groups.value;   // tegn på nytt når gruppen endres
+  const med = (r: RoomRow) => inGroup(keyOf(r), lederKey);
+  const antall = rows.filter(med).length;
   return (
     <section style="flex:1;display:flex;flex-direction:column;gap:12px;padding:18px 22px;min-height:0">
       <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px;font-weight:600">Rom</span><div style="flex:1" />
-        <button onClick={() => { groupAll(rows.map((r) => r.base || here())); scr.value = 'now'; }} style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #2e2e30;background:#161617;font-size:12.5px">Spill i alle rom</button></div>
+        {antall > 1 && <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.1em;color:#f0c46a`}>{antall} ROM SPILLER SAMMEN{groupBusy.value ? ' …' : ''}</span>}
+        {antall > 1 && <button onClick={() => groupNone()} style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #2e2e30;background:#161617;font-size:12.5px">Løs opp</button>}
+        <button onClick={() => { groupAll(rows.map(keyOf)); }} style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #2e2e30;background:#161617;font-size:12.5px">Spill i alle rom</button></div>
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow-y:auto;min-height:0">
         {rows.map((r) => {
           const on = r.base === ctl.value, pick = () => { control(r.base); scr.value = 'now'; };
           return (
-            <div key={r.base} style={`display:grid;grid-template-columns:40px minmax(0,1fr) 120px;gap:12px;align-items:center;height:72px;padding:0 14px;border-radius:14px;border:1px solid ${on ? '#d9a441' : '#242426'};background:${on ? '#1c170d' : '#141415'};box-sizing:border-box`}>
+            <div key={r.base} style={`display:grid;grid-template-columns:40px minmax(0,1fr) 110px 44px;gap:12px;align-items:center;height:72px;padding:0 14px;border-radius:14px;border:1px solid ${on ? '#d9a441' : '#242426'};background:${on ? '#1c170d' : '#141415'};box-sizing:border-box`}>
               <button onClick={pick} style={`width:40px;height:40px;border-radius:10px;border:none;background:${r.st?.playing ? artOf(r.st, r.base) : '#1b1b1c'};padding:0`} />
               <button onClick={pick} style="border:none;background:none;padding:0;text-align:left;display:flex;flex-direction:column;gap:2px;min-width:0">
                 <span style={`font-size:14px;font-weight:600;color:${on ? '#f0c46a' : '#f2f2ee'};white-space:nowrap`}>{r.name}</span>
@@ -684,7 +691,10 @@ function Rooms() {
               <input type="range" min={0} max={100} value={(on ? status.value?.volume : r.st?.volume) ?? 0}
                 onChange={(e) => { const v = +(e.currentTarget as HTMLInputElement).value; if (on) setVolume(v, true); else void postAt(r.base, '/api/volume', { volume: v }); }}
                 onInput={(e) => { if (on) setVolume(+(e.currentTarget as HTMLInputElement).value); }}
-                style="width:120px;accent-color:#f0c46a;height:28px" />
+                style="width:110px;accent-color:#f0c46a;height:28px" />
+              {(() => { const m = med(r), leder = keyOf(r) === lederKey; return (
+                <button onClick={() => { if (!leder) toggleMember(lederKey, keyOf(r)); }} aria-pressed={m} aria-label={leder ? 'Rommet du styrer' : m ? 'Ta ut av gruppen' : 'Spill her også'}
+                  style={`width:40px;height:40px;border-radius:20px;border:1.5px solid ${m ? '#f0c46a' : '#3a3a3c'};background:${m ? '#f0c46a' : 'transparent'};color:#0b0b0c;font-size:17px;font-weight:700;padding:0;opacity:${leder && !m ? 0.35 : 1}`}>{m ? '✓' : ''}</button>); })()}
             </div>
           );
         })}
