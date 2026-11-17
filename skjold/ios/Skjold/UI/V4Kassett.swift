@@ -20,44 +20,143 @@ struct V4KassettSheet: View {
     @State private var hits: [Pick] = []
     @State private var pick: Pick?
     @State private var navn = ""
-    @State private var phase: Phase = .velg
+    @State private var phase: Phase = .intro
     @State private var status = ""
     @State private var pdf: URL?
     @State private var busy = false
     @State private var showDel = false
 
-    enum Phase { case velg, skriv, ferdig }
+    @State private var avbrutt = false
+
+    /// Stegene i veiviseren (som Apples oppsettsflyter: én ting per side, stor tittel, forklaring, én hovedknapp).
+    enum Phase: Int { case intro, velg, navn, skriv, ferdig }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    Text("Lag kassett").sora(24, .semibold)
-                    Spacer()
-                    Button { dismiss() } label: { Text("Lukk").sora(15, .regular, V4.gold) }.plain()
+        VStack(spacing: 0) {
+            topBar
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    switch phase {
+                    case .intro: intro
+                    case .velg: chooser
+                    case .navn: naming
+                    case .skriv: writing
+                    case .ferdig: done
+                    }
                 }
-                switch phase {
-                case .velg: chooser
-                case .skriv: writing
-                case .ferdig: done
-                }
+                .padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 24)
+                .frame(maxWidth: 560).frame(maxWidth: .infinity)
+                .id(phase)
+                .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
             }
-            .padding(20)
+            .scrollDismissesKeyboard(.interactively)
+            bottomBar
         }
-        .background(V4.bg.ignoresSafeArea())
+        .background(V4.sheet.ignoresSafeArea())
         .presentationDragIndicator(.visible)
+        .presentationBackground(V4.sheet)
+        .interactiveDismissDisabled(phase == .skriv)
         .task(id: src) { await load() }
         .sheet(isPresented: $showDel) { V4KassettDelSheet().environment(m) }
+    }
+
+    private func go(_ p: Phase) {
+        Haptics.tick()
+        withAnimation(.snappy(duration: 0.35)) { phase = p }
+    }
+
+    // MARK: Topp og bunn
+
+    private var topBar: some View {
+        HStack {
+            if phase == .velg || phase == .navn {
+                glassCircle("chevron.backward", "Tilbake") { go(phase == .navn ? .velg : .intro) }
+            } else {
+                Color.clear.frame(width: 44, height: 44)
+            }
+            Spacer()
+            if phase != .intro { KassettStegPrikker(steg: phase.rawValue - 1, antall: 4) }
+            Spacer()
+            glassCircle("xmark", "Lukk") { avbrutt = true; dismiss() }
+        }
+        .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 6)
+    }
+
+    private func glassCircle(_ ikon: String, _ label: String, _ act: @escaping () -> Void) -> some View {
+        Button { act() } label: {
+            Image(systemName: ikon).font(.system(size: 17, weight: .semibold)).foregroundStyle(V4.ink)
+                .frame(width: 44, height: 44).contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: Circle())
+        .accessibilityLabel(label)
+    }
+
+    @ViewBuilder private var bottomBar: some View {
+        VStack(spacing: 10) {
+            switch phase {
+            case .intro:
+                primary("Kom i gang") { go(.velg) }
+            case .velg:
+                primary("Fortsett", enabled: pick != nil) { go(.navn) }
+            case .navn:
+                primary(NFCWriter.available ? "Skriv kassetten" : "Koble kassetten") { start() }
+            case .skriv:
+                if !NFCWriter.available { secondary("Avbryt") { avbrutt = true } }
+            case .ferdig:
+                if let pdf {
+                    ShareLink(item: pdf) {
+                        Label("Skriv ut eller del etiketten", systemImage: "printer")
+                            .font(.sora(16, .semibold)).foregroundStyle(V4.bg)
+                            .frame(maxWidth: .infinity).frame(height: 52)
+                            .background(Capsule().fill(V4.goldDark))
+                    }
+                }
+                secondary("Lag en kassett til") {
+                    pick = nil; navn = ""; pdf = nil; status = ""; go(.velg)
+                }
+            }
+        }
+        .padding(.horizontal, 24).padding(.top, 10).padding(.bottom, 12)
+        .frame(maxWidth: 560).frame(maxWidth: .infinity)
+    }
+
+    // MARK: 0 – introduksjon
+
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            KassettHelt(etikett: "Skjold", under: "Lag din egen").padding(.vertical, 18)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Lag en kassett").sora(30, .semibold).tracking(-0.6)
+                Text("Gjør et album, en radiokanal, en spilleliste eller en podkast om til en kassett. Sett den i Skjold Kassett, så begynner musikken.")
+                    .sora(15, .regular, V4.body, lineHeight: 1.45).fixedSize(horizontal: false, vertical: true)
+            }
+            VStack(alignment: .leading, spacing: 18) {
+                KassettForklaring(ikon: "music.note.list", tittel: "Velg hva den skal spille",
+                                  tekst: "Album, radiokanal, spilleliste fra Navidrome eller podkast fra NRK.")
+                KassettForklaring(ikon: NFCWriter.available ? "wave.3.right" : "rectangle.portrait.and.arrow.forward",
+                                  tittel: NFCWriter.available ? "Hold telefonen mot kassetten" : "Sett kassetten i spilleren",
+                                  tekst: NFCWriter.available ? "Toppen av iPhone mot brikken i kassetten. Det tar et par sekunder."
+                                                             : "Skjold Kassett leser brikken og husker hva den skal spille.")
+                KassettForklaring(ikon: "printer", tittel: "Skriv ut etiketten",
+                                  tekst: "Du får en ferdig etikett med omslag og navn som limes på kassetten.")
+            }
+            Divider().overlay(V4.line)
+            V4KassettWrappedCard()
+            Button { showDel = true } label: {
+                Label("Del kassettene med en venn", systemImage: "square.and.arrow.up").sora(14, .regular, V4.gold)
+            }.plain()
+        }
     }
 
     // MARK: 1 – velg hva kassetten skal spille
 
     private var chooser: some View {
         VStack(alignment: .leading, spacing: 14) {
-            V4KassettWrappedCard()
-            Button { showDel = true } label: {
-                Text("Del kassettene med en venn").sora(14, .regular, V4.gold)
-            }.plain()
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Hva skal den spille?").sora(28, .semibold).tracking(-0.56)
+                Text("Velg én ting. Du kan lage så mange kassetter du vil.").sora(14, .regular, V4.body)
+            }
             HStack(spacing: 8) {
                 ForEach(Src.allCases, id: \.self) { s in
                     Button { src = s; pick = nil } label: {
@@ -88,7 +187,7 @@ struct V4KassettSheet: View {
             }
             VStack(spacing: 0) {
                 ForEach(hits, id: \.self) { h in
-                    Button { pick = h; navn = h.navn } label: {
+                    Button { Haptics.tick(); pick = h; navn = h.navn } label: {
                         HStack(spacing: 12) {
                             AsyncImage(url: URL(string: DeviceLink.shared.coverURL(h.omslag, on: m.settingsHost))) { img in
                                 img.resizable().scaledToFill()
@@ -99,20 +198,13 @@ struct V4KassettSheet: View {
                                 Text(h.under).sora(12, .regular, V4.muted).lineLimit(1)
                             }
                             Spacer()
-                            if pick == h { Text("Valgt").sora(13, .regular, V4.gold) }
+                            Image(systemName: pick == h ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 22)).foregroundStyle(pick == h ? V4.gold : V4.dim)
                         }
                         .padding(.horizontal, 14).padding(.vertical, 10).contentShape(Rectangle())
                     }.plain()
                 }
             }.v4Card()
-            if pick != nil {
-                TextField("Navn på etiketten", text: $navn).padding(12).v4Card(radius: 12)
-                primary(NFCWriter.available ? "Hold telefonen mot brikken" : "Koble med Kassett-spilleren") { start() }
-                if !NFCWriter.available {
-                    Text("Denne versjonen av appen har ikke NFC-tillatelse. Sett kassetten i Skjold Kassett-spilleren når du blir bedt om det.")
-                        .sora(12, .regular, V4.muted)
-                }
-            }
             if !status.isEmpty { Text(status).sora(13, .regular, V4.red) }
         }
     }
@@ -183,21 +275,58 @@ struct V4KassettSheet: View {
         return c
     }
 
-    // MARK: 2 – skriv brikken
+    // MARK: 2 – navn og forhåndsvisning
+
+    private var naming: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            KassettFigur(etikett: navn.isEmpty ? (pick?.navn ?? "") : navn, under: pick?.under ?? "", spinn: 0)
+                .frame(width: 240).frame(maxWidth: .infinity).padding(.vertical, 8)
+                .animation(.snappy, value: navn)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Gi den et navn").sora(28, .semibold).tracking(-0.56)
+                Text("Navnet står på etiketten. Slik ser kassetten ut når den er ferdig.").sora(14, .regular, V4.body)
+            }
+            TextField("Navn på etiketten", text: $navn)
+                .font(.sora(17)).foregroundStyle(V4.ink)
+                .padding(.horizontal, 16).frame(height: 52)
+                .v4Card(radius: 14)
+                .submitLabel(.done)
+            if !NFCWriter.available {
+                KassettForklaring(ikon: "info.circle", tittel: "Kassetten kobles med spilleren",
+                                  tekst: "Denne versjonen av appen kan ikke skrive NFC selv. Du setter kassetten i Skjold Kassett i neste steg.")
+            }
+            if !status.isEmpty { Text(status).sora(13, .regular, V4.red) }
+        }
+    }
+
+    // MARK: 3 – skriv brikken
 
     private var writing: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            V4Kicker(text: NFCWriter.available ? "NFC" : "LÆREMODUS")
-            Text(NFCWriter.available ? "Hold toppen av telefonen mot kassetten." : "Sett kassetten inn i Skjold Kassett-spilleren nå.")
-                .sora(15, .regular, V4.ink)
-            HStack(spacing: 10) { ProgressView().tint(V4.gold); Text(status).sora(13, .regular, V4.muted) }
+        VStack(alignment: .center, spacing: 18) {
+            if NFCWriter.available {
+                KassettNFCAnimasjon(etikett: navn)
+            } else {
+                KassettSpillerAnimasjon(etikett: navn)
+            }
+            Text(NFCWriter.available ? "Hold telefonen mot kassetten" : "Sett kassetten i spilleren")
+                .sora(26, .semibold).tracking(-0.5).multilineTextAlignment(.center)
+            Text(NFCWriter.available
+                 ? "Hold toppen av iPhone helt inntil kassetten, midt på etiketten. Hold den stille til den sier fra."
+                 : "Skyv kassetten ned i luka på Skjold Kassett. Lampen blir grønn når brikken er lest.")
+                .sora(15, .regular, V4.body, lineHeight: 1.45).multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                ProgressView().tint(V4.gold)
+                Text(status).sora(13, .regular, V4.muted)
+            }
+            .padding(.top, 4)
         }
-        .padding(16).v4Card()
+        .frame(maxWidth: .infinity)
     }
 
     private func start() {
         guard let draft = card(uid: nil) else { return }
-        status = ""; phase = .skriv
+        status = ""; avbrutt = false; go(.skriv)
         let host = m.settingsHost
         Task {
             if NFCWriter.available {
@@ -210,19 +339,19 @@ struct V4KassettSheet: View {
                     }
                     await finish(uid: uid, host: host)
                 } catch {
-                    status = error.localizedDescription; phase = .velg
+                    status = error.localizedDescription; go(.navn)
                 }
             } else {
                 status = "Venter på kassetten (60 s) …"
                 let before = await lastScan(host)
                 _ = await DeviceLink.shared.send("/api/nfc/learn", ["timeout": 60, "kort": draft], on: host)
                 let until = Date().addingTimeInterval(60)
-                while Date() < until {
+                while Date() < until && !avbrutt {
                     try? await Task.sleep(for: .seconds(1))
                     if let s = await lastScanFull(host), s.1 > before, s.2 { await finish(uid: s.0, host: host); return }
                 }
                 _ = await DeviceLink.shared.send("/api/nfc/learn", ["stop": true], on: host)
-                status = "Fant ingen kassett. Prøv igjen."; phase = .velg
+                status = avbrutt ? "" : "Fant ingen kassett. Prøv igjen."; go(.navn)
             }
         }
     }
@@ -240,38 +369,46 @@ struct V4KassettSheet: View {
         Haptics.success()
         status = "Lager etiketten …"
         pdf = await LabelPDF.make(host: host, uid: uid, name: navn.isEmpty ? (pick?.navn ?? "Kassett") : navn)
-        phase = .ferdig
+        go(.ferdig)
     }
 
-    // MARK: 3 – ferdig: etikett
+    // MARK: 4 – ferdig: etikett
 
     private var done: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("✓ Kassetten er klar").sora(18, .semibold, V4.green)
-            Text("Skriv ut etiketten på A4 (100 %), klipp langs den røde linja og lim den i forsenkningen.").sora(13, .regular, V4.ink)
-            if let pdf {
-                ShareLink(item: pdf) {
-                    Text("Del eller skriv ut etikett").sora(15, .semibold, V4.bg).frame(maxWidth: .infinity).frame(height: 48)
-                        .background(Capsule().fill(V4.goldDark))
-                }
-            } else {
-                Text("Fikk ikke laget PDF – skriv ut fra Kassetter i web-appen.").sora(13, .regular, V4.muted)
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(spacing: 14) {
+                KassettFerdigHake()
+                Text("Kassetten er klar").sora(28, .semibold).tracking(-0.56)
+                Text("Sett den i Skjold Kassett, så spiller den «\(navn.isEmpty ? (pick?.navn ?? "kassetten") : navn)».")
+                    .sora(15, .regular, V4.body, lineHeight: 1.45).multilineTextAlignment(.center)
             }
-            secondary("Lag en kassett til") { pick = nil; navn = ""; pdf = nil; status = ""; phase = .velg }
+            .frame(maxWidth: .infinity)
+            KassettEtikettAnimasjon(etikett: navn.isEmpty ? (pick?.navn ?? "") : navn, under: pick?.under ?? "")
+            VStack(alignment: .leading, spacing: 18) {
+                KassettForklaring(ikon: "1.circle", tittel: "Skriv ut på A4", tekst: "Velg 100 % (faktisk størrelse), ikke «tilpass siden».")
+                KassettForklaring(ikon: "2.circle", tittel: "Klipp langs den røde linja", tekst: "Etiketten passer akkurat i forsenkningen på kassetten.")
+                KassettForklaring(ikon: "3.circle", tittel: "Lim den på", tekst: "Midt i forsenkningen, med den gule kanten opp.")
+            }
+            if pdf == nil {
+                Text("Fikk ikke laget etiketten her. Skriv den ut fra Kassetter i web-appen.").sora(13, .regular, V4.muted)
+            }
         }
-        .padding(16).v4Card()
     }
 
-    private func primary(_ t: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(t).sora(15, .semibold, V4.bg).frame(maxWidth: .infinity).frame(height: 48).background(Capsule().fill(V4.goldDark))
-        }.plain()
+    private func primary(_ t: String, enabled: Bool = true, _ action: @escaping () -> Void) -> some View {
+        Button { if enabled { action() } } label: {
+            Text(t).sora(16, .semibold, V4.bg).frame(maxWidth: .infinity).frame(height: 52)
+                .background(Capsule().fill(enabled ? V4.goldDark : V4.dim))
+        }
+        .plain()
+        .disabled(!enabled)
+        .animation(.snappy, value: enabled)
     }
 
     private func secondary(_ t: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(t).sora(14, .regular, V4.ink).frame(maxWidth: .infinity).frame(height: 44)
-                .overlay(Capsule().strokeBorder(V4.line2, lineWidth: 1))
+            Text(t).sora(15, .regular, V4.ink).frame(maxWidth: .infinity).frame(height: 48)
+                .glassEffect(.regular.interactive(), in: Capsule())
         }.plain()
     }
 }

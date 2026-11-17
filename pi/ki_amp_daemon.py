@@ -93,7 +93,7 @@ KI_AMP_BOARD=node (Skjold Node, OLED-utgave: Pi 4/3B, lyd på 3,5 mm, 0,91" SSD1
   AIR·BT: trykk = bytt AirPlay ↔ Bluetooth, hold 2 s = BT-paring av/på.
   ◀◀/▶▶: forrige/neste spor (neste/forrige favoritt i radio). ▶▶ hold 1 s = spill/pause.
   ◀◀ hold 3 s = innstillingsmenyen (status["settings_menu"], og ui_event for eldre skjermprosesser): ◀◀/▶▶ = flytt,
-  RADIO = endre verdi, AIR·BT = lukk; 20 s uten aktivitet / «Lukk» / ◀◀ hold 3 s = ut. Hold ◀◀ + ▶▶ 3 s = omstart.
+  RADIO = endre verdi, AIR·BT = lukk, volumknotten blar (endrer ikke volumet mens menyen er åpen); 20 s uten aktivitet / «Lukk» / ◀◀ hold 3 s = ut. Hold ◀◀ + ▶▶ 3 s = omstart.
   Standardnavn «Skjold Node» (KI_AMP_NAME overstyrer).
 Felter i /api/status for skjermen (Skjold OS):
   rebooting: true          ~1,5 s før daemonen kjører systemctl reboot/poweroff (hold ◀◀+▶▶, hold POWER, POST /api/reboot)
@@ -2543,6 +2543,7 @@ SMENU_ITEMS = [("bright", "Lysstyrke", "▣", ["Auto", "Høy", "Middels", "Lav"]
                ("clockStyle", "Klokkestil", "▣", ["Node", "Stor", "Analog", "Ord", "Linje", "Dato"]),
                ("dim", "Dimme etter", "▣", ["Av", "30 s", "1 min"]),
                ("off", "Slukk etter", "▣", ["Av", "2 min", "5 min"]),
+               ("saver", "Skjermsparer", "▣", ["Omslag og klokke", "Klokke på svart", "Svart"]),
                ("ledLevel", "LED-lysstyrke", "○", ["100 %", "75 %", "50 %", "25 %", "10 %", "0 %"]),
                ("ledMode", "LED-modus", "○", ["Ved trykk", "Alltid", "Av"]),
                ("auto_input", "Auto-kilde", "⇄", bool),
@@ -2608,6 +2609,29 @@ def smenu_press():
         try: new = (int(cur) + 1) % len(kind)
         except (TypeError, ValueError): new = 0
     update_settings({k: new})
+
+
+# Volumknotten som rullehjul mens innstillingsmenyen er åpen: knotten endrer ikke volumet da, men flytter markøren ett
+# hakk per POT_MENU_STEP volumprosent. Når menyen lukkes, gjelder knotten volum igjen fra der den står (soft takeover).
+POT_MENU_STEP = 6
+_pot_menu = {"ref": None, "last": None}
+
+
+def pot_volume(new):
+    """Kalles av potmeter-trådene (ADS1115 og RC) med knottens nye verdi 0–100."""
+    last, _pot_menu["last"] = _pot_menu["last"], new
+    if smenu["open"]:
+        ref = _pot_menu["ref"]
+        if ref is None:
+            ref = _pot_menu["ref"] = last if last is not None else new
+        d = int((new - ref) / POT_MENU_STEP)
+        if d:
+            _pot_menu["ref"] = ref + d * POT_MENU_STEP
+            input_event(); smenu_step(max(-3, min(3, d)))
+        return
+    _pot_menu["ref"] = None
+    if new != state["volume"]:
+        input_event(); _safe(set_volume, new)
 
 
 def setup_buttons():
@@ -2991,8 +3015,8 @@ def node_pot_thread(make_adc=None, stop=None, make_rc=None):
         try:
             v = adc.volts(); errs = 0
             new = pot.update(v)
-            if new is not None and new != state["volume"]:
-                input_event(); _safe(set_volume, new)
+            if new is not None:
+                pot_volume(new)
         except Exception as e:
             errs += 1
             if errs >= 10:   # modulen forsvant (løs ledning) – start på nytt
@@ -3169,8 +3193,8 @@ def node_rc_thread(make_rc=None, stop=None, cal_file=None):
             print("Potmeter (RC): måler igjen", flush=True); warned = False
         meter.learn(t)
         new = pot.update(meter.frac(t) * pc["vref"])
-        if new is not None and new != state["volume"]:
-            input_event(); _safe(set_volume, new)
+        if new is not None:
+            pot_volume(new)
         if meter.dirty and time.monotonic() - saved > 30:
             try:
                 os.makedirs(os.path.dirname(cal_file), exist_ok=True)

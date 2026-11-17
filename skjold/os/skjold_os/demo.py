@@ -108,6 +108,11 @@ def shots(layout, outdir, live_client=None):
     smenu = {"open": True, "cat": "INNSTILLINGER", "idx": 1, "rows": [{"k": "bright", "n": "Lysstyrke", "icon": "▣", "v": "Auto"},
              {"k": "vmax", "n": "Maks volum", "icon": "♪", "v": "90 %"}, {"k": "voice", "n": "Talebeskjed", "icon": "♪", "v": "På"}]}
     shot("25_settings_menu", FakeClient(st(settings_menu=smenu)))
+    for i, (k, v, n) in enumerate([("saver", "Omslag og klokke", "Skjermsparer"), ("saver", "Klokke på svart", "Skjermsparer"),
+                                   ("saver", "Svart", "Skjermsparer"), ("clockStyle", "Analog", "Klokkestil")]):
+        pm = {"open": True, "cat": "INNSTILLINGER", "idx": 0, "rows": [{"k": k, "n": n, "icon": "▣", "v": v}]}
+        sty = {"Omslag og klokke": 0, "Klokke på svart": 1, "Svart": 2, "Analog": 2}[v]
+        shot("25%s_meny_forhand_%s%d" % ("abcd"[i], k, sty), FakeClient(st(settings_menu=pm), {k: sty}))
     long_t = dict(AIRPLAY, title="Midnight City (Eric Prydz Private Remix) – Extended", artist="M83")
     shot("26_play_long_title_start", FakeClient(st(**long_t)), pre=lambda c: None, advance=0.5)
     shot("27_play_long_title_scrolled", FakeClient(st(**long_t)), pre=lambda c: None, advance=4.0)

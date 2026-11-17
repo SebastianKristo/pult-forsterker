@@ -153,8 +153,14 @@ class Ui:
         sm = st.get("settings_menu")   # navigering med encoderen (daemonen): rader + valgt indeks
         if sm and sm.get("open"):
             rows = sm.get("rows") or [{"n": "–"}]
-            vm.update(screen="menu", menu_head=sm.get("cat") or "INNSTILLINGER", menu_rows=rows,
-                      menu_idx=max(0, min(len(rows) - 1, int(sm.get("idx") or 0))), vol_overlay=False); return vm
+            idx = max(0, min(len(rows) - 1, int(sm.get("idx") or 0)))
+            vm.update(screen="menu", menu_head=sm.get("cat") or "INNSTILLINGER", menu_rows=rows, menu_idx=idx, vol_overlay=False)
+            k = rows[idx].get("k")
+            if k in ("saver", "clockStyle"):   # forhåndsvisning av det valgte: skjermspareren eller klokkestilen
+                playing = bool(st.get("playing")) and not st.get("paused")
+                vm["menu_preview"] = {"k": k, "style": int(se.get(k) or 0), "playing": playing,
+                                      "np": self._nowplaying(st, now, cover) if k == "saver" else {}}
+            return vm
         if self.settings_t0 and now - self.settings_t0 < SETTINGS_S:
             rows = self._settings_rows(st, se); n = len(rows)
             vm.update(screen="menu", menu_head="INNSTILLINGER", menu_rows=rows,
