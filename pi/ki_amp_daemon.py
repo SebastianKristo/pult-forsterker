@@ -8877,7 +8877,11 @@ threading.Thread(target=lambda: _safe(_nfc_hent_fra_andre), daemon=True).start()
 
 # Kassettspillere (ESPHome) uten fungerende Skjold-adresse får adressen til denne Skjold-en (pi/skjold_esphome.py):
 # ingen IP å taste inn, og spilleren finner tilbake når en Skjold får ny adresse. KI_AMP_KASSETT_AUTO=0 slår av.
-import skjold_esphome as _espmod   # noqa: E402
+try:   # valgfri: mangler modulen (eldre installasjon), skal resten av Skjold likevel starte
+    import skjold_esphome as _espmod   # noqa: E402
+except ImportError as _e:
+    _espmod = None
+    print("Skjold Kassett: automatisk adresse er av –", _e, flush=True)
 
 
 def _kassett_auto():
@@ -8890,7 +8894,7 @@ def _kassett_auto():
         time.sleep(60)
 
 
-if os.environ.get("KI_AMP_KASSETT_AUTO", "1") != "0" and (HW or os.path.exists("/etc/ki-amp.env")):
+if _espmod and os.environ.get("KI_AMP_KASSETT_AUTO", "1") != "0" and (HW or os.path.exists("/etc/ki-amp.env")):
     threading.Thread(target=_kassett_auto, daemon=True).start()
 
 
