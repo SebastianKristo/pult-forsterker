@@ -1,4 +1,5 @@
 import { openSetup } from './setupwiz';
+import { HomeyMark, SubwaveMark } from '../components/brandmarks';
 import { loadSw, swStations } from '../lib/subwave';
 import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
@@ -115,7 +116,9 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
         { n: 'Passord', hint: 'Settes under Innstillinger → Musikktjenester', el: btn('Åpne', () => openSetup('nd')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'nd')) }] };
     case 'subwave': return { links: [],
-      rows: [{ n: 'Stasjoner', hint: swStations.value.length ? swStations.value.map((x) => x.name).join(', ') : 'Ingen stasjon lagt inn ennå.', el: btn(swStations.value.length ? 'Endre' : 'Sett opp', () => openSetup('sw')) },
+      rows: [...swStations.value.map((x) => ({ n: x.name, hint: 'Stasjon ' + (x.i + 1), el: <span style="display:flex;gap:6px">{btn('Spill', () => void api.subwavePost({ play: true, station: x.i }).then(() => go('play')).catch(() => {}))}{btn('Fjern', () => void fjernSw(x.i))}</span> })),
+        { n: swStations.value.length ? 'Legg til en stasjon til' : 'Ingen stasjon ennå', hint: 'Du kan ha så mange stasjoner du vil. Alle vises under Bibliotek → SUB/WAVE.', el: btn('+ Legg til stasjon', () => openSetup('sw')) },
+        { n: 'Navn, brukernavn og passord', hint: 'Endres under Plugins → SUB/WAVE', el: btn('Åpne', () => go('plug')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'sw')) }] };
     case 'upnp': return { links: [],
       rows: [{ n: 'UPnP/DLNA-mottaker', hint: 'Lyden går via Lyrion, så rom kan grupperes som vanlig.', el: tog('upnpEn', s.upnpEn) },
@@ -222,6 +225,19 @@ export { PluginsPage, plugCount } from './plugins';
 /** Ekte logo per integrasjon: merkene fra kildeikonene, Home Assistant fra Simple Icons, Homey som ordmerke. */
 const INT_SRC: Record<string, string> = { lyrion: 'Lyrion', spotify: 'Spotify', ytmusic: 'YouTube Music', navidrome: 'Navidrome', upnp: 'UPnP/DLNA' };
 const HA_PATH = 'M22.939 10.627 13.061.749a1.505 1.505 0 0 0-2.121 0l-9.879 9.878C.478 11.21 0 12.363 0 13.187v9c0 .826.675 1.5 1.5 1.5h9.227l-4.063-4.062a2.034 2.034 0 0 1-.664.113c-1.13 0-2.05-.92-2.05-2.05s.92-2.05 2.05-2.05 2.05.92 2.05 2.05c0 .233-.041.456-.113.665l3.163 3.163V9.928a2.05 2.05 0 0 1-1.15-1.84c0-1.13.92-2.05 2.05-2.05s2.05.92 2.05 2.05a2.05 2.05 0 0 1-1.15 1.84v8.127l3.146-3.146A2.051 2.051 0 0 1 18 12.239c1.13 0 2.05.92 2.05 2.05s-.92 2.05-2.05 2.05c-.25 0-.488-.047-.709-.13L12.9 20.602v3.088h9.6c.825 0 1.5-.675 1.5-1.5v-9c0-.825-.477-1.977-1.061-2.561z';
+/** Fjern SUB/WAVE-stasjon nummer i (blant stasjonene med gyldig adresse). Fjernes den første, rykker neste opp. */
+async function fjernSw(i: number): Promise<void> {
+  if (!confirm('Fjerne stasjonen fra Skjold?')) return;
+  const r = await api.plugins(); const p = r.plugins.find((x) => x.id === 'subwave'); if (!p) return;
+  const c = p.cfg as { name?: string; url?: string; user?: string; password?: string; extra?: { name?: string; url?: string; user?: string; password?: string }[] };
+  const ok = (u?: string) => /^https?:\/\//.test(String(u ?? '').trim());
+  const alle = [{ name: c.name ?? '', url: c.url ?? '', user: c.user ?? '', password: c.password ?? '' }, ...(c.extra ?? [])].filter((x) => ok(x.url));
+  alle.splice(i, 1);
+  const [f, ...rest] = alle;
+  await api.setPlugin('subwave', f ? { enabled: true, name: f.name ?? '', url: f.url ?? '', user: f.user ?? '', password: f.password ?? '', extra: rest } : { enabled: false, url: '', name: '', extra: [] });
+  loadSw(true);
+}
+
 function IntLogo({ id, mono, tile }: { id: string; mono: string; tile: string }) {
   const box = 'width:44px;height:44px;border-radius:11px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0';
   const src = INT_SRC[id] ? SRC_ICON[INT_SRC[id]] : undefined;
@@ -232,7 +248,8 @@ function IntLogo({ id, mono, tile }: { id: string; mono: string; tile: string })
   );
   if (id === 'ha') return <span style={`${box};background:#18bcf2;color:#fff`}><svg viewBox="0 0 24 24" style="width:60%;height:60%;display:block"><path d={HA_PATH} fill="currentColor" /></svg></span>;
   if (id === 'homekit') return <span style={`${box};background:#fff`}><img src="./logo/brands/apple-home.png" alt="" style="width:74%;height:74%;object-fit:contain" /></span>;
-  if (id === 'homey') return <span style={`${box};background:#fff;color:#1d1d1f;font-weight:700;font-size:11px;letter-spacing:-.03em;padding:0 4px;box-sizing:border-box`}>homey</span>;
+  if (id === 'homey') return <span style={`${box};background:#fff`}><HomeyMark /></span>;
+  if (id === 'subwave') return <span style={`${box};background:linear-gradient(145deg,#a98bff,#5a3fc0)`}><SubwaveMark /></span>;
   // Offisielle merker (fra Home Assistants merkebibliotek): Music Assistant på mørk flis, Matter på hvit
   if (id === 'ma') return <span style={`${box};background:#0e2a36`}><img src="./logo/brands/music-assistant.png" alt="" style="width:72%;height:72%;object-fit:contain" /></span>;
   if (id === 'matter') return <span style={`${box};background:#fff`}><img src="./logo/brands/matter.png" alt="" style="width:66%;height:66%;object-fit:contain" /></span>;
