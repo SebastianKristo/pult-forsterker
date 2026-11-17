@@ -1955,4 +1955,6 @@ export const EN_AUTO: Record<string, string> = {
   'Fant ingen lås i Home Assistant': 'No lock found in Home Assistant',
   'Fikk ikke låst opp': 'Could not unlock',
   'Fikk ikke kontakt med låsen': 'Could not reach the lock',
+  'Skjold-enhet': 'Skjold device',
+  'Bytt': 'Change',
 };

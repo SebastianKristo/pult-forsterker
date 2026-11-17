@@ -48,6 +48,23 @@
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- Skjold Touch på et nettbrett (TouchModeActivity.kt): eget ikon i appskuffen, fullskjerm, liggende -->
+        <activity
+            android:name=".TouchModeActivity"
+            android:exported="true"
+            android:label="Skjold Touch"
+            android:icon="@mipmap/ic_launcher"
+            android:taskAffinity="no.kristo.skjold.touch"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|smallestScreenSize|uiMode|density"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <!-- Delte kassetter fra en venn (KassettDel.kt): spør før kassettene legges som ventende.
              BROWSABLE: lenken kommer fra en QR-kode eller melding. -->
         <activity
