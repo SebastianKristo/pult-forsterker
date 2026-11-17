@@ -1,4 +1,5 @@
 import { openSetup } from './setupwiz';
+import { loadSw, swStations } from '../lib/subwave';
 import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
 import { signal } from '@preact/signals';
@@ -68,9 +69,10 @@ function ints(s: Settings): Int[] {
   return [
     { id: 'lyrion', name: 'Lyrion', mono: 'L', tile: '#f2f2ee', status: ly.text, ok: ly.ok, desc: 'Radio, favoritter og musikkbibliotek. Styrer også flere rom samtidig.' },
     { id: 'spotify', name: 'Spotify Connect', mono: 'S', tile: '#6fcf7f', status: s.spEn ? 'Installert · på' : 'Installert · av', ok: s.spEn, desc: 'Spill fra Spotify-appen rett til forsterkeren. Krever Spotify Premium.' },
-    { id: 'ytmusic', name: 'YouTube Music', mono: 'YT', tile: '#e86a6a', status: ytm ? (s.ytmEn ? 'Innlogget · på' : 'Innlogget · av') : 'Ikke innlogget', ok: ytm && s.ytmEn, desc: 'Spillelister, mikser og historikk fra Google-kontoen din. Via Music Assistant.' },
+    { id: 'ytmusic', name: 'YouTube Music', mono: 'YT', tile: '#e86a6a', status: ytm ? (s.ytmEn ? 'Innlogget · på' : 'Innlogget · av') : 'Ikke innlogget', ok: ytm && s.ytmEn, desc: 'Spillelister, mikser og album fra kontoen din, innebygd i Skjold. Krever Premium.' },
     { id: 'ma', name: 'Music Assistant', mono: 'MA', tile: '#18bcf2', status: s.maUrl ? (maSt.value?.ok ? 'Tilkoblet' + (maSt.value.player ? ' · ' + maSt.value.player : '') : maSt.value ? 'Feil' : 'Sjekker …') : 'Ikke satt opp', ok: !!s.maUrl && !!maSt.value?.ok, desc: 'TIDAL, Qobuz, Deezer, Spotify, YouTube Music, Plex, Jellyfin og podkaster i ett bibliotek, med søk i Skjold.' },
     { id: 'navidrome', name: 'Navidrome', mono: 'N', tile: '#7fa8e8', status: nd ? (s.ndEn ? 'Tilkoblet · på' : 'Tilkoblet · av') : 'Ikke tilkoblet', ok: nd && s.ndEn, desc: 'Ditt eget musikkbibliotek på hjemmenettet, i FLAC. Bruker Subsonic-API.' },
+    { id: 'subwave', name: 'SUB/WAVE', mono: 'SW', tile: '#a98bff', status: swStations.value.length ? swStations.value.length + (swStations.value.length === 1 ? ' stasjon' : ' stasjoner') : 'Ikke satt opp', ok: swStations.value.length > 0, desc: 'Din egen AI-DJ-radio: selvhostede stasjoner der en AI-DJ velger låtene. Vises i Bibliotek og Kilder.' },
     { id: 'upnp', name: 'UPnP/DLNA', mono: 'DL', tile: '#ffffff', status: s.upnpEn ? 'På · venter' : 'Av', ok: s.upnpEn, desc: 'Ta imot lyd fra Android-apper, PC og NAS. Forsterkeren vises som en vanlig DLNA-høyttaler.' },
     { id: 'homekit', name: 'Apple Hjem (HomeKit)', mono: 'H', tile: '#f5a623', status: hkStatus(), ok: !!hk.value?.enabled && !!hk.value?.running, desc: 'Skjold som TV-tilbehør i Hjem-appen: av/på, kilder, radiofavoritter og volum. Med Siri og automasjoner.' },
     { id: 'matter', name: 'Matter', mono: 'M', tile: '#9b8cf2', status: matterStatus(), ok: !!matter.value?.enabled && !!matter.value?.commissioned, desc: 'Skjold som Matter-høyttaler i Apple Hjem, Google Home, Alexa og SmartThings: av/på, volum, demp, radiofavoritter og kilde.' },
@@ -113,6 +115,9 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
         { n: 'Brukernavn', el: inp('ndUser', s.ndUser, 'brukernavn') },
         { n: 'Passord', hint: 'Settes under Innstillinger → Musikktjenester', el: btn('Åpne', () => openSetup('nd')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'nd')) }] };
+    case 'subwave': return { links: [],
+      rows: [{ n: 'Stasjoner', hint: swStations.value.length ? swStations.value.map((x) => x.name).join(', ') : 'Ingen stasjon lagt inn ennå.', el: btn(swStations.value.length ? 'Endre' : 'Sett opp', () => openSetup('sw')) },
+        { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'sw')) }] };
     case 'upnp': return { links: [],
       rows: [{ n: 'UPnP/DLNA-mottaker', hint: 'Lyden går via Lyrion, så rom kan grupperes som vanlig.', el: tog('upnpEn', s.upnpEn) },
         { n: 'Format', el: txt('FLAC, WAV, ALAC, MP3, AAC og OGG') },
@@ -139,7 +144,7 @@ function checkMa() { if (!settings.value.maUrl) { maSt.value = null; return; } m
 async function findMa() { try { const r = await api.maDiscover(); if (r.found[0]) { setSetting('maUrl', r.found[0]); setTimeout(checkMa, 300); showToast('Fant Music Assistant på ' + r.found[0]); } else showToast('Fant ingen Music Assistant på nettet'); } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } }
 
 export function IntegrationsPage() {
-  useEffect(() => { checkMa(); void hkLoad(); void matterLoad(); const t = everyVisible(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); if (matter.value?.enabled && !matter.value.commissioned) void matterLoad(); }, 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { checkMa(); loadSw(true); void hkLoad(); void matterLoad(); const t = everyVisible(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); if (matter.value?.enabled && !matter.value.commissioned) void matterLoad(); }, 5000); return () => clearInterval(t); }, []);
   const s = settings.value, sel = intSel.value, list = ints(s), cur = list.find((x) => x.id === sel) ?? list[0]!, d = detail(cur.id, s);
   return (
     <>
@@ -195,7 +200,7 @@ function IntLogo({ id, mono, tile }: { id: string; mono: string; tile: string })
     </span>
   );
   if (id === 'ha') return <span style={`${box};background:#18bcf2;color:#fff`}><svg viewBox="0 0 24 24" style="width:60%;height:60%;display:block"><path d={HA_PATH} fill="currentColor" /></svg></span>;
-  if (id === 'homekit') return <span style={`${box};background:linear-gradient(160deg,#ffb340,#f5761a);color:#fff`}><svg viewBox="0 0 24 24" style="width:62%;height:62%;display:block" fill="currentColor"><path d="M12 3.2 2.6 11a1 1 0 0 0 1.3 1.5l.6-.5V20a1 1 0 0 0 1 1h4.5v-5.5h4V21h4.5a1 1 0 0 0 1-1v-8l.6.5a1 1 0 0 0 1.3-1.5z" /></svg></span>;
+  if (id === 'homekit') return <span style={`${box};background:#fff`}><img src="./logo/brands/apple-home.png" alt="" style="width:74%;height:74%;object-fit:contain" /></span>;
   if (id === 'homey') return <span style={`${box};background:#fff;color:#1d1d1f;font-weight:700;font-size:11px;letter-spacing:-.03em;padding:0 4px;box-sizing:border-box`}>homey</span>;
   // Offisielle merker (fra Home Assistants merkebibliotek): Music Assistant på mørk flis, Matter på hvit
   if (id === 'ma') return <span style={`${box};background:#0e2a36`}><img src="./logo/brands/music-assistant.png" alt="" style="width:72%;height:72%;object-fit:contain" /></span>;
