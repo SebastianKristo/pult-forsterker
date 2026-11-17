@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generate the Skjold logo SVG + PNG icons (PWA, Capacitor) from the design tokens.
 
-Logo: five rounded bars, heights 22/33/42/33/22, width 4.6 (ratio), top-aligned.
+Logo: five rounded bars, heights 22/33/42/33/22, width 4.6 (ratio), hanging from the same top line,
+the long middle bar gold (#d9a441). Also writes favicon.ico (16/32/48/64).
 Run: python3 tools/make_icons.py   (needs cairosvg)
 """
 import os, sys
@@ -14,10 +15,11 @@ def bars(x0, y0, scale, color):
     parts = []
     for i, h in enumerate(hs):
         x = x0 + i * (w + gap) * scale
-        parts.append(f'<rect x="{x:.2f}" y="{y0:.2f}" width="{w*scale:.2f}" height="{h*scale:.2f}" rx="{w*scale/2:.2f}" fill="{color}"/>')
+        fill = '#d9a441' if i == 2 else color
+        parts.append(f'<rect x="{x:.2f}" y="{y0:.2f}" width="{w*scale:.2f}" height="{h*scale:.2f}" rx="{w*scale/2:.2f}" fill="{fill}"/>')
     return '\n'.join(parts)
 
-def icon_svg(size=512, bg='#0b0b0c', fg='#f2f2ee', pad=0.22, maskable=False):
+def icon_svg(size=512, bg='#151516', fg='#f2f2ee', pad=0.22, maskable=False):
     # total logo width = 5*4.6 + 4*3.4 = 36.6 units, height 42 units
     r = 0 if maskable else size * 0.22
     scale = size * (1 - 2 * pad) / 42
@@ -36,6 +38,11 @@ def main():
     cairosvg.svg2png(bytestring=icon_svg(1024, pad=0.28, maskable=True).encode(), write_to=os.path.join(OUT, 'icon-1024.png'), output_width=1024, output_height=1024)
     # favicon
     cairosvg.svg2png(bytestring=icon_svg(64).encode(), write_to=os.path.join(OUT, 'favicon-64.png'), output_width=64, output_height=64)
+    # favicon.ico (nettlesere som ikke bruker SVG-ikonet) – ved siden av index.html
+    import io
+    from PIL import Image
+    big = Image.open(io.BytesIO(cairosvg.svg2png(bytestring=icon_svg(256).encode(), output_width=256, output_height=256)))
+    big.save(os.path.join(HERE, '..', 'public', 'favicon.ico'), sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
     print('icons written to', os.path.abspath(OUT))
 
 if __name__ == '__main__':

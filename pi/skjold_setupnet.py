@@ -231,6 +231,7 @@ class SetupNet:
 PAGE = """<!doctype html>
 <html lang="nb"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sett opp Skjold</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23151516'/%3E%3Crect x='17.36' y='15.20' width='3.68' height='17.60' rx='1.84' fill='%23f2f2ee'/%3E%3Crect x='23.76' y='15.20' width='3.68' height='26.40' rx='1.84' fill='%23f2f2ee'/%3E%3Crect x='30.16' y='15.20' width='3.68' height='33.60' rx='1.84' fill='%23d9a441'/%3E%3Crect x='36.56' y='15.20' width='3.68' height='26.40' rx='1.84' fill='%23f2f2ee'/%3E%3Crect x='42.96' y='15.20' width='3.68' height='17.60' rx='1.84' fill='%23f2f2ee'/%3E%3C/svg%3E">
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}

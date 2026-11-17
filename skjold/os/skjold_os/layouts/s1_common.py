@@ -351,14 +351,14 @@ def draw_offline(c, now_ms, secs, clock):
 def splash(c, ms, model="S1"):
     """drawSplash: stolpene vokser inn én etter én, så SKJOLD + STREAMING AMPLIFIER (2,6 s)."""
     w, h = c.w, c.h; t = ms / fx.BOOT; c.clear(); mono = is_mono(c)
-    tw0 = c.text_w("SKJOLD", "bold", 13, 2); unit = 41 * 0.62 + 6 + tw0
-    sc = min(w * 0.78 / unit, h * 0.5 / (42 * 0.62)); k = sc * 0.62; mw = 41 * k
+    tw0 = c.text_w("SKJOLD", "bold", 13, 2); unit = fx.LOGO_W * 0.62 + 6 + tw0
+    sc = min(w * 0.78 / unit, h * 0.5 / (42 * 0.62)); k = sc * 0.62; mw = fx.LOGO_W * k
     tw = c.text_w("SKJOLD", "bold", 13 * sc, 2 * sc); gap = 6 * sc; x0 = (w - (mw + gap + tw)) / 2; y0 = h / 2 - 21 * k
     for i, (x, bh) in enumerate(fx.BARS):
         a = max(0, min(1, t * 5 - i * 0.45))
         if a > 0:
             if mono: c.rect(int(round(x0 + x * k)), int(round(y0)), max(2, int(round(4.6 * k))), max(1, int(round(bh * k * a))), W)
-            else: c.rrect(x0 + x * k, y0, 4.6 * k, bh * k * a, 2.3 * k, mix(W, a))
+            else: c.rrect(x0 + x * k, y0, 4.6 * k, bh * k * a, 2.3 * k, fx.bar_col(i, a))
     ta = max(0, min(1, (t - 0.45) * 3))
     if mono and ta < 0.5: return
     c.text(x0 + mw + gap, h / 2 - 2 * sc, "SKJOLD", mix(W, ta), "bold", 13 * sc, "lm", 2 * sc)

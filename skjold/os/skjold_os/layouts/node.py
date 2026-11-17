@@ -27,45 +27,67 @@ class NodeLayout(Layout):
         fx.welcome(c, vm["t_ms"], w.get("tittel") or "Gratulerer med dagen", w.get("navn") or "Pappa",
                    w.get("hint") or "Trykk en knapp for å starte")
 
-    # ---------- spiller nå (scrPlay) ----------
+    # ---------- spiller nå ----------
+    # Hele skjermen brukes: omslaget uskarpt og mørkt som bakgrunn (skjermen får omslagets farger), stort omslag til
+    # venstre, tittel i opptil tre linjer, og en bunnlinje med fremdrift eller radiokanalene.
+    def _bakgrunn(self, c, vm, s):
+        from PIL import ImageFilter, ImageEnhance
+        W_, H_ = c.img.size
+        if vm.get("cover") is not None:
+            im = vm["cover"].convert("RGB")
+            n = max(W_, H_); im = im.resize((n // 6 or 1, n // 6 or 1)).filter(ImageFilter.GaussianBlur(3)).resize((n, n), Image.BILINEAR)
+            im = im.crop(((n - W_) // 2, (n - H_) // 2, (n - W_) // 2 + W_, (n - H_) // 2 + H_))
+            im = ImageEnhance.Color(im).enhance(1.25)
+            im = ImageEnhance.Brightness(im).enhance(0.32)
+        else:
+            c0, c1 = (hexc(x) for x in s["art"])
+            v = Image.linear_gradient("L").resize((W_, H_))
+            im = Image.composite(Image.new("RGB", (W_, H_), mix(c0, 0.30)), Image.new("RGB", (W_, H_), mix(c1, 0.14)), v.transpose(Image.FLIP_TOP_BOTTOM))
+        c.img.paste(im, (0, 0)); c.d = ImageDraw.Draw(c.img)
+
     def draw_play(self, c, vm):
         s = sources.src(vm["input"]); col = s["c"]
-        # topplinje: ● KILDE ............ [volum] 12:34
-        c.circle(10.5, 11, 2.5, col)
-        c.text(16, 11, s["k"], DIM, "bold", 7, "lm", 1)
-        x = c.w - 8
-        c.text(x, 11, vm["clock"], DIM, "bold", 7, "rm"); x -= c.text_w(vm["clock"], "bold", 7) + 5
-        if vm["input"] != "radio":
-            c.rrect(x - 22, 9.5, 22, 3, 1.5, TRACK)
-            if vm["volume"] > 0: c.rrect(x - 22, 9.5, 22 * vm["volume"] / 100, 3, 1.5, DIM if vm["mute"] else W)
-        # albumbilde 58×58
-        ax, ay = 8, 23
+        self._bakgrunn(c, vm, s)
+        # topplinje: ● KILDE ......... 12:34
+        c.circle(9.5, 9.5, 2.6, col)
+        c.text(15, 9.5, s["k"], W, "bold", 7.5, "lm", 1)
+        c.text(c.w - 6, 9.5, vm["clock"], W, "bold", 8, "rm")
+        # omslaget 72×72
+        ax, ay, aw = 6, 19, 72
         if vm.get("cover") is not None:
-            c.image(vm["cover"], ax, ay, 58, 58, 6)
+            c.image(vm["cover"], ax, ay, aw, aw, 7)
         else:
-            c0, c1 = s["art"]; c.gradient_tile(ax, ay, 58, 58, 6, hexc(c0), hexc(c1))
-            c.text(ax + 5, ay + 58 - 6, vm["art_txt"], (235, 235, 235), "bold", 17, "ls")
-        # tekst
-        tx, tw = 74, c.w - 8 - 74
-        c.text(tx, 29.5, c.ellipsize(vm["kicker"], "bold", 7, tw, 0.5), col, "bold", 7, "ls", 0.5)
-        lines = c.wrap(vm["title"], "bold", 13, tw, 2); y = 44
-        for ln in lines: c.text(tx, y, ln, W, "bold", 13); y += 14
-        c.text(tx, y + 1, c.ellipsize(vm["sub"], "regular", 9, tw), DIM2, "regular", 9)
-        # bunn: favoritt-prikker (radio) eller fremdrift
+            c0, c1 = s["art"]; c.gradient_tile(ax, ay, aw, aw, 7, hexc(c0), hexc(c1))
+            c.text(ax + 6, ay + aw - 7, vm["art_txt"], (240, 240, 236), "bold", 22, "ls")
+        if vm.get("paused"):
+            _darken(c, lambda d, ss: d.rounded_rectangle([ax * ss, ay * ss, (ax + aw) * ss, (ay + aw) * ss], radius=7 * ss, fill=140))
+            cx, cy = ax + aw / 2, ay + aw / 2
+            c.rect(cx - 6, cy - 8, 4, 16, W); c.rect(cx + 2, cy - 8, 4, 16, W)
+        # tekst til høyre for omslaget
+        tx = ax + aw + 7; tw = c.w - 6 - tx
+        c.text(tx, 26, c.ellipsize(vm["kicker"], "bold", 7.5, tw, 0.5), col, "bold", 7.5, "ls", 0.5)
+        lines = c.wrap(vm["title"], "bold", 13.5, tw, 3); y = 40
+        for ln in lines: c.text(tx, y, ln, W, "bold", 13.5); y += 14
+        if vm.get("sub"):
+            for ln in c.wrap(vm["sub"], "regular", 10, tw, 4 - len(lines)): c.text(tx, y + 1, ln, DIM2, "regular", 10); y += 11.5
+        # bunnlinje
         if vm["input"] == "radio":
-            ws = [10 if i == vm["preset_idx"] else 3 for i in range(6)]; x = (c.w - (sum(ws) + 3 * 5)) / 2
+            n = 6; ws = [14 if i == vm["preset_idx"] else 5 for i in range(n)]; x = (c.w - (sum(ws) + (n - 1) * 4)) / 2
             for i, w in enumerate(ws):
-                c.rrect(x, 116, w, 4, 2, col if i == vm["preset_idx"] else OFFDOT); x += w + 3
+                c.rrect(x, 108, w, 5, 2.5, col if i == vm["preset_idx"] else mix(W, 0.28)); x += w + 4
+            if vm.get("bottom"): c.text(80, 124, vm["bottom"], DIM, "regular", 7.5, "ms")
         elif vm.get("duration"):
             p = max(0, min(1, vm["position"] / vm["duration"]))
-            c.rrect(8, 106, 144, 3, 1.5, TRACK); c.rrect(8, 106, max(3, 144 * p), 3, 1.5, W) if p > 0 else None
-            c.text(8, 118, fx_fmt(vm["position"]), DIM, "regular", 7)
-            c.text(152, 118, "−" + fx_fmt(vm["duration"] - vm["position"]), DIM, "regular", 7, "rs")
+            c.rrect(6, 104, 148, 4, 2, mix(W, 0.22))
+            if p > 0: c.rrect(6, 104, max(4, 148 * p), 4, 2, W)
+            c.text(6, 122, fx_fmt(vm["position"]), DIM2, "bold", 8.5)
+            c.text(154, 122, "−" + fx_fmt(vm["duration"] - vm["position"]), DIM2, "bold", 8.5, "rs")
         elif vm.get("bottom"):
-            c.text(80, 118, vm["bottom"], DIM, "regular", 7, "ms")
-        if vm.get("paused"):
-            _darken(c, lambda d, ss: d.ellipse([22 * ss, 41 * ss, 50 * ss, 69 * ss], fill=153))
-            c.rect(32, 51, 2.5, 8, W); c.rect(37.5, 51, 2.5, 8, W)
+            c.text(80, 118, vm["bottom"], DIM2, "regular", 8.5, "ms")
+        # volum (ikke på radio, der hjulet bytter kanal): tynn stripe nederst
+        if vm["input"] != "radio" and not vm.get("duration"):
+            c.rrect(6, 108, 148, 3, 1.5, mix(W, 0.18))
+            if vm["volume"] > 0: c.rrect(6, 108, 148 * vm["volume"] / 100, 3, 1.5, DIM if vm["mute"] else W)
 
     # ---------- volum nederst i 1,5 s (showVol) ----------
     def draw_volume(self, c, vm):
@@ -147,8 +169,8 @@ class NodeLayout(Layout):
 
     # ---------- ingen kontakt med daemonen (ikke i designet; samme formspråk) ----------
     def draw_offline(self, c, vm):
-        k = 0.42; bx = 80 - 20.5 * k
-        for x, bh in fx.BARS: c.rrect(bx + x * k, 22, 4.6 * k, bh * k, 2.3 * k, mix(W, 0.35))
+        k = 0.42; bx = 80 - fx.LOGO_W / 2 * k
+        for i, (x, bh) in enumerate(fx.BARS): c.rrect(bx + x * k, 22, 4.6 * k, bh * k, 2.3 * k, fx.bar_col(i, 0.35))
         c.text(80, 62, "Ingen kontakt", W, "bold", 12, "ms")
         c.text(80, 75, "Lydtjenesten (ki-amp) svarer ikke", DIM, "regular", 8, "ms")
         c.text(80, 85.5, "Prøver igjen …", DIM, "regular", 8, "ms")
