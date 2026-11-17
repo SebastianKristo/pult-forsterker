@@ -871,7 +871,10 @@ interface Hit { key: string; t: string; s: string; art: string; play: () => void
 function Search() {
   const [q, setQ] = useState(''), [kb, setKb] = useState(true), [busy, setBusy] = useState(false);
   const [hits, setHits] = useState<Hit[] | null>(null), [err, setErr] = useState('');
-  const src = lib.value, seq = useRef(0);
+  // Søkekilde: fanen du kom fra (SUB/WAVE har ikke søk, så da søkes det i YouTube Music). 3 = podkaster.
+  const podIdx = 3 + (swT.value.length ? 1 : 0);
+  const [src, setSrc] = useState(lib.value <= 2 ? lib.value : lib.value === podIdx ? 3 : 0);
+  const seq = useRef(0);
   const go = (it: () => void) => () => { it(); searchOpen.value = false; scr.value = 'now'; };
   useEffect(() => {
     const t = q.trim(), n = ++seq.current;
@@ -880,7 +883,8 @@ function Search() {
     const id = window.setTimeout(async () => {
       try {
         let l: Hit[];
-        if (src === 2) { const r = await api.radioSearch(t); l = [...(r.norway ?? []), ...(r.world ?? [])].slice(0, 30).map((st, i) => ({ key: st.url + i, t: st.name, s: st.genre || st.country || 'Radio', art: artBg(st.name, st.image, i), play: () => playStation(st) })); }
+        if (src === 3) { const r = await api.podSearch(t); l = r.shows.slice(0, 30).map((x, i) => ({ key: x.id, t: x.title, s: x.author || 'Podkast', art: artBg(x.title, x.image, i), play: () => { podTouch.value = x; lib.value = podIdx; window.setTimeout(() => { scr.value = 'lib'; }, 0); } })); }
+        else if (src === 2) { const r = await api.radioSearch(t); l = [...(r.norway ?? []), ...(r.world ?? [])].slice(0, 30).map((st, i) => ({ key: st.url + i, t: st.name, s: st.genre || st.country || 'Radio', art: artBg(st.name, st.image, i), play: () => playStation(st) })); }
         else { const r = src === 0 ? await ytmSearch(t) : await ndSearch(t); l = r.slice(0, 30).map((x, i) => ({ key: x.id + i, t: x.title, s: [x.artist, x.album].filter(Boolean).join(' · '), art: artBg(x.title, ndCover(x.coverArt, 120)), play: () => playNd(r, i, src === 0 ? 'ytm' : 'nd') })); }
         if (n === seq.current) { setHits(l); setErr(''); }
       } catch (e) { if (n === seq.current) { setHits([]); setErr(src === 0 ? await ytmWhy(e) : src === 1 && !ndConfigured() ? 'Navidrome er ikke koblet til. Logg inn i appen.' : 'Søket svarte ikke'); } }
@@ -888,16 +892,17 @@ function Search() {
     }, 500);
     return () => clearTimeout(id);
   }, [q, src]);
-  const NAMES = ['YouTube Music', 'Navidrome', 'Radio'];
+  const NAMES = ['YouTube Music', 'Navidrome', 'Radio', 'Podkaster'];
   return (
     <div class="inn" style="position:absolute;inset:52px 0 0 0;z-index:6;background:#0b0b0c;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;gap:8px;padding:8px 10px 8px 6px;flex-shrink:0">
         <button onClick={() => { searchOpen.value = false; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
         <button class="flat" onClick={() => setKb(true)} aria-label="Søkefelt" style="flex:1;min-width:0;height:44px;border-radius:22px;border:1px solid #2e2e30;background:#141415;display:flex;align-items:center;gap:8px;padding:0 16px;text-align:left;font-size:15px">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-          <span style={`white-space:pre;overflow:hidden;color:${q ? '#f2f2ee' : '#6b6b67'}`}>{q || 'Søk i ' + NAMES[src]}</span>{kb && <span class="caret" style="width:2px;height:20px;background:#f0c46a;margin-left:-6px;flex-shrink:0" />}
+          {kb && !q && <span class="caret" style="width:2px;height:20px;background:#f0c46a;margin-right:-6px;flex-shrink:0" />}
+          <span style={`white-space:pre;overflow:hidden;text-overflow:ellipsis;color:${q ? '#f2f2ee' : '#6b6b67'}`}>{q || (['Søk i YouTube Music', 'Søk i Navidrome', 'Søk etter radiokanaler', 'Søk etter podkaster'][src] ?? 'Søk')}</span>{kb && !!q && <span class="caret" style="width:2px;height:20px;background:#f0c46a;margin-left:-6px;flex-shrink:0" />}
         </button>
-        {NAMES.map((n, i) => <button key={n} onClick={() => { lib.value = i; }} style={`height:44px;padding:0 12px;border-radius:22px;border:1px solid ${src === i ? '#f2f2ee' : '#2e2e30'};background:${src === i ? '#f2f2ee' : '#161617'};color:${src === i ? '#0b0b0c' : '#c9c9c4'};font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0`}>{n.replace('YouTube Music', 'YouTube')}</button>)}
+        {NAMES.map((n, i) => <button key={n} onClick={() => setSrc(i)} style={`height:44px;padding:0 12px;border-radius:22px;border:1px solid ${src === i ? '#f2f2ee' : '#2e2e30'};background:${src === i ? '#f2f2ee' : '#161617'};color:${src === i ? '#0b0b0c' : '#c9c9c4'};font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0`}>{n.replace('YouTube Music', 'YouTube')}</button>)}
       </div>
       <div class="rull" onPointerDown={() => { if (hits?.length) setKb(false); }} style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:0 10px 8px;touch-action:pan-y">
         {hits === null && !busy && <span style="padding:14px 10px;font-size:13.5px;color:#6b6b67">Skriv minst to bokstaver.</span>}
