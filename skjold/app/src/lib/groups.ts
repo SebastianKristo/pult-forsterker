@@ -29,6 +29,18 @@ function save(g: Groups): void {
   if (g.members.join(',') !== før) syncLater();
 }
 
+/** Hent gruppen slik den faktisk er i Lyrion (synkroniseringen huskes der, også etter omstart), uten å sende noe. */
+export async function loadGroup(): Promise<void> {
+  try {
+    const me = getBase() || location.origin;
+    const r = await api.groupGet();
+    const m = r.bases.length ? [me, ...r.bases.filter((b) => b !== me)] : [];
+    if (m.join(',') === groups.value.members.join(',')) return;
+    const g = { ...groups.value, members: m };
+    groups.value = g; try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* ignore */ }
+  } catch { /* eldre enhet uten /api/group */ }
+}
+
 /** Send gruppen til enheten (litt forsinket, så flere trykk blir én endring). Lederen er enheten du styrer. */
 let syncT = 0;
 export const groupBusy = signal(false);

@@ -13,7 +13,7 @@ import { ndAlbum, ndAlbumList, ndConfigured, ndCover, ndSearch, type NdAlbum } f
 import { li, lq, lsvc, playNd } from '../lib/library';
 import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 import '../lib/services';   // innloggingene (Navidrome, YouTube Music) hentes fra enheten – kiosken har ingen egne
-import { groupAll, groupBusy, groupNone, groups, inGroup, toggleMember } from '../lib/groups';
+import { groupAll, groupBusy, groupNone, groups, inGroup, loadGroup, toggleMember } from '../lib/groups';
 import { qrMatrix } from '../lib/qr';
 import { canSeek, seekTo } from '../screens/player';
 import { Keyboard, MONO, Sheet, Slider, useLongPress, Wheel } from './ui';
@@ -671,6 +671,7 @@ function Rooms() {
   void groups.value;   // tegn på nytt når gruppen endres
   const med = (r: RoomRow) => inGroup(keyOf(r), lederKey);
   const antall = rows.filter(med).length;
+  useEffect(() => { void loadGroup(); }, [ctl.value]);   // vis gruppen slik Lyrion har den
   return (
     <section style="flex:1;display:flex;flex-direction:column;gap:12px;padding:18px 22px;min-height:0">
       <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px;font-weight:600">Rom</span><div style="flex:1" />
@@ -1319,7 +1320,7 @@ const quick = signal(0);   // 0 = lukket, 0–1 = følger fingeren, 1 = åpent
 const qDrag = { y0: -1, id: -1, aktiv: false };
 const Q_KANT = 40, Q_H = 300;
 addEventListener('pointerdown', (e) => {
-  if (idle.value || boot.value.on || quick.value >= 1 || e.clientY > Q_KANT || door.value) return;
+  if (boot.value.on || quick.value >= 1 || e.clientY > Q_KANT || door.value) return;   // også i skjermspareren (volum)
   qDrag.y0 = e.clientY; qDrag.id = e.pointerId; qDrag.aktiv = false;
 }, { capture: true });
 addEventListener('pointermove', (e) => {
@@ -1343,7 +1344,7 @@ function QuickPanel() {
   const knapp = (navn: string, d: string, gjor: () => void, på = false) => (
     <button onClick={() => { gjor(); }} style={`display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:78px;border-radius:16px;border:1px solid ${på ? '#d9a441' : '#2a2a2c'};background:${på ? '#1c170d' : '#161617'};color:${på ? '#f0c46a' : '#f2f2ee'};font-size:12px;font-weight:600;min-width:0`}>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={d} /></svg>{navn}</button>);
-  const gå = (sk: Scr, f?: () => void) => () => { lukk(); scr.value = sk; f?.(); };
+  const gå = (sk: Scr, f?: () => void) => () => { lukk(); wake(); scr.value = sk; f?.(); };   // snarveier vekker skjermen
   const lys = S.tBright ?? 100, vol = st?.volume ?? 0;
   const glid = (ikon: string, v: number, sett: (n: number) => void, live?: (n: number) => void) => (
     <div style="display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;border-radius:16px;background:#161617;border:1px solid #2a2a2c">
@@ -1352,7 +1353,7 @@ function QuickPanel() {
       <span style={`font-family:${MONO};font-size:12px;color:#c9c9c4;width:34px;text-align:right`}>{v}</span>
     </div>);
   return (
-    <div style="position:absolute;inset:0;z-index:40">
+    <div data-ss-tip style="position:absolute;inset:0;z-index:40">
       <div onClick={lukk} style={`position:absolute;inset:0;background:rgba(0,0,0,${0.55 * p})`} />
       <div style={`position:absolute;left:0;right:0;top:0;transform:translateY(${(p - 1) * 100}%);transition:${qDrag.aktiv ? 'none' : 'transform .22s cubic-bezier(.2,.8,.2,1)'};background:#0f0f10;border-bottom:1px solid #2a2a2c;border-radius:0 0 22px 22px;padding:14px 18px 10px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 50px rgba(0,0,0,.6)`}>
         {glid('M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', lys, (n) => setSetting('tBright', Math.max(20, n)))}
@@ -1868,12 +1869,12 @@ function App() {
         {camOpen.value && cur === 'smart' && <CamView />}
         {saverOpen.value && cur === 'set' && <SaverSheet />}
         {wifiOpen.value && cur === 'set' && <WifiSetup />}
-        {quick.value > 0 && <QuickPanel />}
         {talkOpen.value && <Intercom />}
         {talking && <Voice />}
         {!!toast.value && <div role="status" style="position:absolute;left:50%;bottom:78px;transform:translateX(-50%);z-index:9;max-width:620px;padding:12px 20px;border-radius:14px;background:rgba(24,24,26,.96);border:1px solid #3a2e17;color:#f2f2ee;font-size:14px;line-height:1.35;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:tinn .2s ease both">{toast.value.replace(/^Forsterkeren svarte: /, '')}</div>}
       </main>
       {idle.value && <Standby clock={clock} dateTxt={dateTxt} />}
+      {quick.value > 0 && <QuickPanel />}
       {(!!D.setup_net?.active || !!D.setup_net?.joining) && !boot.value.on && <SetupNet />}
       {!!doorToast.value && !door.value && <DoorToast />}
       {!!door.value && <Door clock={clock} />}
