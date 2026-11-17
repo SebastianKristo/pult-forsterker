@@ -148,27 +148,28 @@ struct IntroView: View {
                 .opacity(glow)
                 .offset(y: -40)
             VStack(spacing: 0) {
-                HStack(alignment: .bottom, spacing: 6) {
-                    ForEach(Array([26.0, 40, 56, 40, 26].enumerated()), id: \.offset) { i, h in
+                // Skjold-logoen: stolpene henger fra samme topplinje (22/33/42/33/22), den lange midtstolpen er gyllen
+                HStack(alignment: .top, spacing: 6) {
+                    ForEach(Array([29.0, 44, 56, 44, 29].enumerated()), id: \.offset) { i, h in
                         let d = 1.05 + Double(i) * 0.1
                         let b = Ease.p(t, dur: 0.5, delay: d)
                         let bx = Ease.p(t, dur: 0.5, delay: d, nil)
                         let ink = Ease.p(t, dur: 1.6, delay: d, Ease.ease)
                         let toInk = max(0, (ink - 0.7) / 0.3)
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.accent.mix(with: .ink, by: toInk))
+                            .fill(i == 2 ? Color.accent : Color.accent.mix(with: .ink, by: toInk))
                             .frame(width: 7, height: h)
-                            .scaleEffect(x: 1, y: b, anchor: .bottom)
+                            .scaleEffect(x: 1, y: b, anchor: .top)
                             .opacity(t < d ? 0 : min(1, bx / 0.6))
                     }
                 }
-                .frame(height: 56)
+                .frame(height: 56, alignment: .top)
                 .offset(x: sx, y: sy)
                 .padding(.top, -80)
-                Text("SKJOLD")
-                    .font(.sora(30, .semibold))
-                    .tracking(30 * (0.9 - 0.66 * word))
-                    .foregroundStyle(Color.ink)
+                HStack(spacing: 30 * 0.42) {
+                    Text("SKJOLD").font(.sora(30, .semibold)).tracking(30 * (0.9 - 0.66 * word)).foregroundStyle(Color.ink)
+                    Text("LAB").font(.sora(30, .light)).tracking(30 * (0.9 - 0.66 * word)).foregroundStyle(Color.accent2)
+                }
                     .padding(.leading, 30 * 0.24)
                     .blur(radius: 8 * (1 - word))
                     .opacity(word)

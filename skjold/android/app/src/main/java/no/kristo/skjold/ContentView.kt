@@ -281,21 +281,25 @@ fun IntroView(m: AppModel) {
         Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
             val shake = ((s - 0.82f) / 0.35f).coerceIn(0f, 1f)
             val sx = if (s < 0.82f) 0f else keys(shake, listOf(0f to 0f, 0.2f to -2f, 0.4f to 2f, 0.6f to -1f, 1f to 0f))
-            Row(Modifier.height(56.dp).offset(x = sx.dp, y = (-80).dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(26, 40, 56, 40, 26).forEachIndexed { i, hh ->
+            // Skjold-logoen: stolpene henger fra samme topplinje (22/33/42/33/22), den lange midtstolpen er gyllen
+            Row(Modifier.height(56.dp).offset(x = sx.dp, y = (-80).dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(29, 44, 56, 44, 29).forEachIndexed { i, hh ->
                     val d = 1.05f + i * 0.1f
                     val b = ease(s, 0.5f, d)
                     val inkT = ((ease(s, 1.6f, d) - 0.7f) / 0.3f).coerceIn(0f, 1f)
                     Box(
                         Modifier.width(7.dp).height(hh.dp).graphicsLayer {
-                            scaleY = b; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)
+                            scaleY = b; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
                             alpha = if (s < d) 0f else min(1f, ((s - d) / 0.5f) / 0.6f)
-                        }.clip(RoundedCornerShape(4.dp)).background(mix(C.accent, C.ink, inkT)),
+                        }.clip(RoundedCornerShape(4.dp)).background(if (i == 2) C.accent else mix(C.accent, C.ink, inkT)),
                     )
                 }
             }
             val word = ease(s, 1.3f, 1.6f)
-            T("SKJOLD", sora(30f, W.Semibold).copy(letterSpacing = (0.9f - 0.66f * word).em), Modifier.padding(top = 30.dp).offset(y = (-80).dp).alpha(word))
+            Row(Modifier.padding(top = 30.dp).offset(y = (-80).dp).alpha(word), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                T("SKJOLD", sora(30f, W.Semibold).copy(letterSpacing = (0.9f - 0.66f * word).em))
+                T("LAB", sora(30f, W.Light, C.accent2).copy(letterSpacing = (0.9f - 0.66f * word).em))
+            }
             val line = ease(s, 1f, 2.4f)
             Box(
                 Modifier.padding(top = 18.dp).offset(y = (-80).dp).width(150.dp).height(1.dp).graphicsLayer { scaleX = line; alpha = line }
