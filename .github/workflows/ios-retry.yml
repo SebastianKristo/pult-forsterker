@@ -1,5 +1,5 @@
 #
-# iOS-jobbene i «Skjold release» blir av og til avbrutt fordi GitHub ikke finner en ledig Mac-maskin i tide
+# Mac-jobbene i «Skjold-appen» og «Skjold Flasher» blir av og til avbrutt fordi GitHub ikke finner en ledig Mac-maskin i tide
 # (jobben står i kø og avsluttes som «cancelled» uten at noe er kjørt). Denne workflowen ser etter det når
 # release-kjøringen er ferdig, og kjører de avbrutte jobbene på nytt – opptil 3 forsøk. Release-jobben kjøres
 # da også på nytt og legger iOS-filene til i releasen.
@@ -8,7 +8,7 @@ name: Prøv iOS på nytt
 
 on:
   workflow_run:
-    workflows: ["Skjold release"]
+    workflows: ["Skjold-appen", "Skjold Flasher"]
     types: [completed]
 
 permissions:
