@@ -123,13 +123,54 @@ class TestFlereStasjoner(unittest.TestCase):
             d.state["input"] = old_in; d.lyr.info = old_info
 
 
+class TestAdminHopp(TestFlereStasjoner):
+    """«Neste» på Touch/knotten hopper over låten når SUB/WAVE-stasjonen som spiller har admin-passord."""
+
+    def _spill(self, url):
+        self._oi, self._ol = d.state.get("input"), dict(d.lyr.info or {})
+        d.state["input"] = "radio"; d.lyr.info = {"url": url}
+
+    def _stopp(self):
+        d.state["input"] = self._oi; d.lyr.info = self._ol
+
+    def test_admin_hopper_over(self):
+        self._spill("https://dj:pw@b.no/radio/stream.mp3")
+        kall = []
+        class Falsk:
+            _cache = {"x": 1}
+            def call(self, tool, values=None, cache=False): kall.append(tool)
+        old = d.subwave
+        try:
+            d.subwave = lambda i=None: Falsk()
+            self.assertTrue(d.subwave_admin())
+            d.transport("next")
+            self.assertEqual(kall, ["subwave_skip_track"])
+        finally:
+            d.subwave = old; self._stopp()
+
+    def test_uten_admin_bytter_stasjon(self):
+        self._spill("https://radio.a.no/stream.mp3")
+        steg = []
+        old = d.step_preset
+        try:
+            d.step_preset = lambda n: steg.append(n)
+            self.assertFalse(d.subwave_admin())
+            d.transport("next")
+            self.assertEqual(steg, [1])
+        finally:
+            d.step_preset = old; self._stopp()
+
+
 class TestLagreStasjoner(unittest.TestCase):
     def test_extra_renses(self):
         old = json.loads(json.dumps(d.state.get("settings") or {}))
         try:
             d.plugin_update("subwave", {"enabled": True, "url": "https://a.no", "extra": [{"name": "B" * 60, "url": " https://b.no ", "x": 1}, "tull"]})
             c = d.plug_cfg("subwave")
-            self.assertEqual(c["extra"], [{"name": "B" * 40, "url": "https://b.no", "user": "", "password": ""}])
+            self.assertEqual(c["extra"], [{"name": "B" * 40, "url": "https://b.no", "user": "", "password": "", "image": ""}])
+            self.assertEqual(len(d.sw_stations(c)), 2)
+            d.plugin_update("subwave", {"extra": [{"url": "https://b.no", "image": "data:image/jpeg;base64,AAAA"}, {"url": "https://c.no", "image": "javascript:x"}]})
+            self.assertEqual([x["image"] for x in d.plug_cfg("subwave")["extra"]], ["data:image/jpeg;base64,AAAA", ""])
             self.assertEqual(len(d.sw_stations(c)), 2)
         finally:
             d.state["settings"] = old

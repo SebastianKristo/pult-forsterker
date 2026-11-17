@@ -10,6 +10,8 @@ export interface FullPreset { title: string; url: string; icon?: string }
 
 export interface Status {
   kids?: boolean; sleep?: number; subwave?: boolean;
+  /** SUB/WAVE-stasjonen som spiller har admin-passord: «neste» hopper over låten i stedet for å bytte stasjon. */
+  subwave_admin?: boolean;
   power: boolean; input: InputId; volume: number; mute: boolean; bt_pairing: boolean; source_label?: string;
   /** Strømmen som spilles, via Skjold (/api/stream/…), for «Denne enheten». Tom når kilden ikke kan spilles her. */
   listen?: string;

@@ -215,7 +215,7 @@ const gestSlutt = (e: PointerEvent) => {
   if (!idle.value) return;
   if (gest.maks >= 2 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.3) {
     clearTimeout(gest.vekkT); gest.sisteTrykk = 0;
-    if (dx < 0) { void api.transport('next').catch(() => {}); gestVis('Neste låt ›'); } else { void api.transport('previous').catch(() => {}); gestVis('‹ Forrige låt'); }
+    if (dx < 0) { void api.transport('next').catch(() => {}); gestVis(status.value?.subwave_admin ? 'Hopper over låten ›' : 'Neste låt ›'); } else { void api.transport('previous').catch(() => {}); gestVis('‹ Forrige låt'); }
     return;
   }
   if (gest.maks >= 2 || Math.hypot(dx, dy) > 24) return;   // annen bevegelse: ingenting
@@ -373,7 +373,7 @@ function NowPlaying() {
           <div style="display:flex;align-items:center;gap:6px">
             <button onClick={() => void act(() => api.transport('previous'))} aria-label="Forrige" style="width:56px;height:56px;border-radius:28px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="26" height="26" viewBox="0 0 24 24" fill="#f2f2ee"><path d="M19 18.5v-13a.8.8 0 0 0-1.25-.66L9 10.9V6a1 1 0 0 0-2 0v12a1 1 0 0 0 2 0v-4.9l8.75 6.06A.8.8 0 0 0 19 18.5z" /></svg></button>
             <button onClick={playPause} aria-label={s?.playing ? 'Pause' : 'Spill'} style="width:72px;height:72px;flex-shrink:0;border-radius:36px;border:none;background:#f2f2ee;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 8px 24px rgba(0,0,0,.4)"><svg width="28" height="28" viewBox="0 0 24 24" fill="#0b0b0c"><path d={s?.playing ? PAUSE_D : PLAY_D} /></svg></button>
-            <button onClick={() => void act(() => api.transport('next'))} aria-label="Neste" style="width:56px;height:56px;border-radius:28px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="26" height="26" viewBox="0 0 24 24" fill="#f2f2ee"><path d="M5 5.5v13a.8.8 0 0 0 1.25.66L15 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.25 4.84A.8.8 0 0 0 5 5.5z" /></svg></button>
+            <button onClick={() => void act(() => api.transport('next'))} aria-label={s?.subwave_admin ? 'Hopp over låten' : 'Neste'} style="width:56px;height:56px;border-radius:28px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="26" height="26" viewBox="0 0 24 24" fill="#f2f2ee"><path d="M5 5.5v13a.8.8 0 0 0 1.25.66L15 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.25 4.84A.8.8 0 0 0 5 5.5z" /></svg></button>
             <div style="flex:1" />
             {!has && <button onClick={() => { lib.value = 2; scr.value = 'lib'; }} style="height:48px;padding:0 18px;border-radius:24px;border:1px solid #2e2e30;background:rgba(22,22,23,.7);font-size:13px;font-weight:600">Radio</button>}
             {has && !!s?.artist && !!s?.title && <button onClick={() => { lyricsOpen.value = true; }} aria-label="Sangtekst" style={ROUND}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 10h16M4 14h10M4 18h7" /></svg></button>}
