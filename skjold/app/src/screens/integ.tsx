@@ -1,5 +1,5 @@
 import { openSetup } from './setupwiz';
-import { HomeyMark, SubwaveMark } from '../components/brandmarks';
+import { SubwaveMark } from '../components/brandmarks';
 import { loadSw, swStations } from '../lib/subwave';
 import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
@@ -248,7 +248,7 @@ function IntLogo({ id, mono, tile }: { id: string; mono: string; tile: string })
   );
   if (id === 'ha') return <span style={`${box};background:#18bcf2;color:#fff`}><svg viewBox="0 0 24 24" style="width:60%;height:60%;display:block"><path d={HA_PATH} fill="currentColor" /></svg></span>;
   if (id === 'homekit') return <span style={`${box};background:#fff`}><img src="./logo/brands/apple-home.png" alt="" style="width:74%;height:74%;object-fit:contain" /></span>;
-  if (id === 'homey') return <span style={`${box};background:#fff`}><HomeyMark /></span>;
+  if (id === 'homey') return <span style={`${box};background:#fff`}><img src="./logo/brands/homey.png" alt="" style="width:76%;height:76%;object-fit:contain" /></span>;
   if (id === 'subwave') return <span style={`${box};background:linear-gradient(145deg,#a98bff,#5a3fc0)`}><SubwaveMark /></span>;
   // Offisielle merker (fra Home Assistants merkebibliotek): Music Assistant på mørk flis, Matter på hvit
   if (id === 'ma') return <span style={`${box};background:#0e2a36`}><img src="./logo/brands/music-assistant.png" alt="" style="width:72%;height:72%;object-fit:contain" /></span>;
