@@ -350,7 +350,7 @@ function ClockPicker() {
   );
 }
 
-const vnum = (t?: string | null) => (t && t !== 'lokal' ? t.replace(/^skjold-v?/, '') : t === 'lokal' ? 'lokal' : '');
+const vnum = (t?: unknown) => (typeof t === 'string' && t && t !== 'lokal' ? t.replace(/^skjold-v?/, '') : t === 'lokal' ? 'lokal' : '');   // tåler true/null fra eldre enheter
 const UPD_CSS = `
 .upd-hero{position:relative;overflow:hidden;border-radius:26px;padding:34px 34px 30px;min-height:300px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;color:#f5f1e8;
   background:radial-gradient(120% 90% at 0% 100%,rgba(217,164,65,.55),transparent 55%),radial-gradient(90% 80% at 100% 0%,rgba(120,84,40,.55),transparent 60%),radial-gradient(70% 70% at 100% 100%,rgba(176,66,40,.35),transparent 60%),linear-gradient(160deg,#141416,#0b0b0c 60%,#17120a)}

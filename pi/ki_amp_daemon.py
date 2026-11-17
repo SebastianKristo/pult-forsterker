@@ -4721,7 +4721,7 @@ def update_info(check=True):
             "running": _upd_running(), "result": last.split(":", 1)[1].strip() if last else None,
             "log": [l for l in log if not l.startswith("SKJOLD-RESULTAT:")][-30:], "can_update": bool(src), "error": err or None,
             "channel": "beta" if _beta() else "stabil", "can_rollback": bool(glob.glob("/var/lib/skjold/rollback/2*")),
-            "rolled_back": bool(last) and "rullet tilbake" in last}
+            "rolled_back": (cur or "forrige versjon") if last and "rullet tilbake" in last else None}   # tekst: appen viser versjonen
 
 
 def start_update():
