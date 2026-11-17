@@ -8836,6 +8836,40 @@ def _nfc_andre_spillere():
     return ut
 
 
+def _nfc_til_andre(metode, sti, body=None):
+    """Kassettene er felles for hele Skjold-systemet: send endringen til de andre enhetene (bakgrunn, feiler stille)."""
+    def jobb():
+        for p in _peers():
+            if p.get("id") == device_id():
+                continue
+            try:
+                req = urllib.request.Request(p["base"] + sti, method=metode, data=json.dumps(body or {}).encode() if body is not None else None,
+                                             headers={"Content-Type": "application/json", "X-Skjold-Peer": device_id()})
+                urllib.request.urlopen(req, timeout=4).read()
+            except Exception as e:
+                print("Kassett-synk til", p.get("navn") or p["base"], "feilet:", str(e)[:80], flush=True)
+    threading.Thread(target=jobb, daemon=True).start()
+
+
+def _nfc_hent_fra_andre():
+    """Ved oppstart: kassetter denne enheten mangler hentes fra de andre (ny Touch får kassettene til S1)."""
+    time.sleep(50)
+    mine = {c["uid"] for c in nfc.list()}
+    for p in _peers():
+        if p.get("id") == device_id():
+            continue
+        try:
+            with urllib.request.urlopen(p["base"] + "/api/nfc/cards", timeout=5) as r:
+                for c in (json.loads(r.read()) or {}).get("cards") or []:
+                    if c.get("uid") and c["uid"] not in mine:
+                        nfc.put(c); mine.add(c["uid"])
+        except Exception:
+            pass
+
+
+threading.Thread(target=lambda: _safe(_nfc_hent_fra_andre), daemon=True).start()
+
+
 async def h_nfc(r):
     """POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
     · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet)."""
@@ -8926,11 +8960,25 @@ async def h_nfc(r):
             if not res:
                 raise web.HTTPNotFound()
             return web.Response(body=res[0], content_type=res[1], headers={"Cache-Control": "max-age=604800"})
+        fra_peer = bool(r.headers.get("X-Skjold-Peer"))
         if act == "cards":
             if r.method == "DELETE":
-                return web.json_response({"ok": nfc.delete(r.match_info.get("uid", "")), "cards": nfc.list()})
+                uid = r.match_info.get("uid", "")
+                ok = nfc.delete(uid)
+                if not fra_peer:
+                    _nfc_til_andre("DELETE", "/api/nfc/cards/" + urllib.parse.quote(uid))
+                changed()
+                return web.json_response({"ok": ok, "cards": nfc.list()})
             if r.method == "POST":
-                return web.json_response({"card": nfc.put(b), "cards": nfc.list()})
+                card = nfc.put(b)
+                if fra_peer and b.get("_laert") and nfc.learning():
+                    # kassetten ble koblet på enheten som har kassettspilleren, mens denne ventet: ferdig her også
+                    nfc.learn_until = 0.0; nfc.learn_draft = None
+                    nfc.last = {"uid": card["uid"], "t": time.time(), "known": True, "navn": card["navn"]}
+                elif not fra_peer:
+                    _nfc_til_andre("POST", "/api/nfc/cards", card)
+                changed()
+                return web.json_response({"card": card, "cards": nfc.list()})
             return web.json_response({"cards": nfc.list()})
         if act == "spoler":
             # Spolene i Kassett-spillerens vindu. GET: hva motoren skal gjøre nå (ESP-en spør ofte) · POST: innstillinger.
@@ -8961,15 +9009,28 @@ async def h_nfc(r):
             uid = (r.query.get("uid") if r.method == "GET" else b.get("uid")) or ""
             return web.json_response({"url": _nfcmod.ndef_url(uid), "uid": _nfcmod.norm_uid(uid)})
         if act == "learn":
+            # Lær-modus gjelder hele systemet: kassettspilleren kan være koblet til en annen Skjold enn den du står på
             if b.get("stop"):
                 nfc.learn_until = 0.0
+                if not fra_peer:
+                    _nfc_til_andre("POST", "/api/nfc/learn", {"stop": True})
                 return web.json_response({"learning": False})
-            return web.json_response(nfc.learn(b.get("timeout") or 30, b.get("kort")))
+            kort = b.get("kort") or None
+            if not fra_peer and not (kort or {}).get("handling"):
+                cur = await loop.run_in_executor(None, nfc_current)   # «det som spiller nå» her, ikke der spilleren er
+                if cur:
+                    kort = {**cur, **(kort or {})}
+            res = nfc.learn(b.get("timeout") or 30, kort)
+            if not fra_peer:
+                _nfc_til_andre("POST", "/api/nfc/learn", {"timeout": b.get("timeout") or 30, "kort": kort})
+            return web.json_response(res)
         if act == "scan":
             _nfc_spiller_sett(r.remote, b.get("device") or "", b.get("uid") or "")
             res = await loop.run_in_executor(None, lambda: nfc.scan(b.get("uid", ""), nfc_current, nfc_resolve,
                                                                     nfc.oppsett().get("paret") or ""))
             card = res["card"]
+            if card and res["learned"]:   # ny kassett: til alle Skjold-enhetene (og avslutt ventingen der)
+                _nfc_til_andre("POST", "/api/nfc/cards", {**card, "_laert": True})
             if card and not res["learned"]:
                 if card["handling"] == "routine":
                     routines.run(str(card.get("verdi") or card.get("navn")))
