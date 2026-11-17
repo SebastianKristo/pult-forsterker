@@ -1772,4 +1772,8 @@ export const EN_AUTO: Record<string, string> = {
   'Skriv ut etikett': 'Print label',
   'Etikett': 'Label',
   'Ferdig': 'Done',
+  'Spillelister, mikser og album fra kontoen din, innebygd i Skjold. Krever Premium.': 'Playlists, mixes and albums from your account, built into Skjold. Requires Premium.',
+  'Din egen AI-DJ-radio: selvhostede stasjoner der en AI-DJ velger låtene. Vises i Bibliotek og Kilder.': 'Your own AI DJ radio: self-hosted stations where an AI DJ picks the songs. Shows up in Library and Sources.',
+  'Ingen stasjon lagt inn ennå.': 'No station added yet.',
+  'Stasjoner': 'Stations',
 };

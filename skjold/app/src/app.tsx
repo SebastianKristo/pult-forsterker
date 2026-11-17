@@ -236,7 +236,7 @@ function Desktop() {
           {r.page === 'radio' && <RadioTabs />}
           {r.page === 'ma' && <MaPage />}
           {r.page === 'rooms' && <RoomsPhone wide />}
-          {r.page === 'lib' && <DeskLibrary key={r.cat} lib={r.cat === 'ytm' ? 'ytm' : 'nd'} />}
+          {r.page === 'lib' && (r.cat === 'sw' ? <LibraryPage /> : <DeskLibrary key={r.cat} lib={r.cat === 'ytm' ? 'ytm' : 'nd'} />)}
           {r.page === 'grp' && <GroupsPage />}
           {r.page === 'int' && <IntegrationsPage />}
           {r.page === 'kass' && <KassettPage />}
