@@ -4,8 +4,8 @@
 substitutions:
   name: skjold-kassett
   friendly_name: Skjold Kassett
-  # Adressen til Skjold-enheten som skal spille (mDNS-navn eller IP). ESPHome kan ikke bla i mDNS-tjenester,
-  # så bruk <navn>.local som Skjold annonserer (_kipultamp._tcp → vertsnavnet), f.eks. skjold-stue.local.
+  # IP-adressen til Skjold-enheten som skal spille, f.eks. 10.69.1.189. Bruk IP, ikke <navn>.local: ESP-IDF slår
+  # ikke opp .local-navn (getaddrinfo() returns 202). Gi Skjold en fast adresse (DHCP-reservasjon) i ruteren.
   skjold_host: skjold.local
   skjold_port: "8765"
   pause_on_remove: "true"

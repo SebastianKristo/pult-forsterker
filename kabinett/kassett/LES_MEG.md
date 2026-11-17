@@ -191,7 +191,7 @@ etikettvinduet og holdes av rammen og bakplaten – se «Cover til kassettene».
 
 ## Fastvare
 
-`esphome/skjold-kassett.yaml`. Fyll inn Wi-Fi og adressen til Skjold (`skjold_host`), og flash:
+`esphome/skjold-kassett.yaml`. Fyll inn Wi-Fi og IP-adressen til Skjold (`skjold_host`, ikke `.local`-navn: ESP-IDF slår dem ikke opp), og flash:
 
 ```bash
 esphome run esphome/skjold-kassett.yaml
