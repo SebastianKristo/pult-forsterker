@@ -26,7 +26,7 @@
     var fit = (pw && ph) ? '<style>html{width:' + pw + 'px!important;height:' + ph + 'px!important;overflow:hidden;background:#000}' +
       'body{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(' + rot + 'deg) translateY(' + (-shift) + 'px) scale(1,' + sy + ');transform-origin:50% 50%}</style>' : '';
     document.write('<style>@font-face{font-family:Sora;font-weight:400;src:url(fonts/sora-latin-400-normal.woff2) format("woff2")}@font-face{font-family:Sora;font-weight:600;src:url(fonts/sora-latin-600-normal.woff2) format("woff2")}@font-face{font-family:"IBM Plex Mono";font-weight:400;src:url(fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2")}@font-face{font-family:"IBM Plex Mono";font-weight:500;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}html,body{margin:0;width:960px;height:320px;overflow:hidden;background:#000;cursor:none}canvas{display:block}</style>' + fit +
-      ['qrcode.js', 'skjold_settings.js', 'skjold_welcome.js', 's1_draw.js', 'night.js', 'screen.js', 'system.js']
+      ['qrcode.js', 'skjold_settings.js', 'skjold_welcome.js', 's1_draw.js', 'night.js', 'screen.js', 'system.js', 's1_meny.js']
         .map(function (s) { return '<script src="' + s + '"><\/script>'; }).join(''));
   }
 })();

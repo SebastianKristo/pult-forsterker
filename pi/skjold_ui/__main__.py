@@ -103,7 +103,7 @@ def handle_input(ev):
         broadcast({"ev": "menu_toggle"})
         return {"consumed": True}
     with lock:
-        menu = ui["menu"]
+        menu = ui["menu"] or ui["setup"]   # oppsettet på skjermen (s1_meny.js) bruker hjulet og knappene som menyen
     if menu and src == "knob" and e in ("turn", "press", "back"):
         broadcast(dict(ev))
         return {"consumed": True}
