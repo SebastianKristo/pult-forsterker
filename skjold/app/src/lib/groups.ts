@@ -1,6 +1,8 @@
 // Grupper av rom: hvem som er med, «Synkron» / «Surround», oppsett (2.1–5.1), plasser, avstand, nivå og synk-innstillinger.
-// Forsterkeren har ikke API for synkronisert avspilling (Lyrion-synk) ennå, så gruppene lagres bare i appen.
+// Medlemmene sendes til enheten du styrer (/api/group), som synker rommene i Lyrion – de spiller da det samme.
 import { signal } from '@preact/signals';
+import { api, getBase } from './api';
+import { showToast } from './store';
 
 export interface Gset { layout: string; vol: 'rel' | 'abs'; buf: number; lead?: string; xo: number; phase: number; dist: Record<string, number>; lvl: Record<string, number>; trim: Record<string, number> }
 export interface Groups { members: string[]; mode: 'sync' | 'surround'; roles: Record<string, number | null>; gset: Gset; presets: { n: string; ids: string[] }[] }
@@ -21,7 +23,30 @@ function load(): Groups {
   return { members: [], mode: 'sync', roles: {}, gset: { ...GSET_DEF }, presets: [] };
 }
 export const groups = signal<Groups>(load());
-function save(g: Groups): void { groups.value = g; try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* ignore */ } }
+function save(g: Groups): void {
+  const før = groups.value.members.join(',');
+  groups.value = g; try { localStorage.setItem(KEY, JSON.stringify(g)); } catch { /* ignore */ }
+  if (g.members.join(',') !== før) syncLater();
+}
+
+/** Send gruppen til enheten (litt forsinket, så flere trykk blir én endring). Lederen er enheten du styrer. */
+let syncT = 0;
+export const groupBusy = signal(false);
+function syncLater(): void {
+  clearTimeout(syncT);
+  syncT = window.setTimeout(() => {
+    const me = getBase() || location.origin;
+    const m = groups.value.members.filter((k) => k !== me);
+    groupBusy.value = true;
+    if (m.length) showToast('Grupperer rommene …');
+    api.group(m).then((r) => {
+      const feil = r.members.filter((x) => !x.ok);
+      if (feil.length) showToast(feil.map((x) => (x.name || x.base.replace(/^https?:\/\//, '')) + ': ' + (x.error || 'feilet')).join(' · '));
+      else showToast(m.length ? 'Rommene spiller sammen' : 'Gruppen er løst opp');
+    }).catch((e: unknown) => showToast('Gruppering: ' + (e instanceof Error ? e.message : String(e))))
+      .finally(() => { groupBusy.value = false; });
+  }, 700);
+}
 
 /** Er rommet med i gruppen til det aktive rommet? (Det aktive er alltid med.) */
 export const inGroup = (key: string, activeKey: string): boolean => key === activeKey || (groups.value.members.includes(key) && groups.value.members.includes(activeKey));

@@ -1848,7 +1848,7 @@ def read_status():
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
             "menu": dict(menu) if menu["open"] else None, "hold": s1f_hold() or hold_status(), "settings_menu": smenu_status(),
-            "sky": sky.kort(), "sleep": sleep_left(), "autostandby": autostandby_left(), "kids": plug_on("kids"), "subwave": subwave_playing(), "subwave_admin": subwave_admin(),
+            "sky": sky.kort(), "sleep": sleep_left(), "autostandby": autostandby_left(), "kids": plug_on("kids"), "subwave": subwave_playing(), "subwave_admin": subwave_admin(), "lms_player": lyr.player, "lms_host": lyr.host or "",
             "ui": s1f_ui(), "hw_rev": "F" if S1F else "", "hp_switch": bool(HP_DEV_ENV) and not S1F,
             "night": {"on": bool(state.get("night")), "src": (state.get("night_ev") or {}).get("src", ""),
                       "steps": (state.get("night_ev") or {}).get("steps") or [], "t": (state.get("night_ev") or {}).get("t", 0)},
@@ -3825,6 +3825,7 @@ class Lyrion:
         self._vol_ok = False
         self._lms_vol = None
         self._lms_mute = None
+        self.pinned = False   # med i en gruppe på en annen enhets Lyrion: ikke gå tilbake til hovedserveren
         if os.environ.get("KI_AMP_LMS", "1") == "1":
             if LMS_SERVER and os.path.exists(LMS_ACTIVE_FILE):   # daemonen startet på nytt mens spilleren var på reserve
                 threading.Thread(target=_lms_active, args=(LMS_SERVER,), daemon=True).start()
@@ -3853,6 +3854,15 @@ class Lyrion:
         if not self.host:
             raise RuntimeError("Lyrion ikke funnet (sett KI_AMP_LMS_SERVER)")
         body = json.dumps({"id": 1, "method": "slim.request", "params": [self.player if player else "", cmd]}).encode()
+        req = urllib.request.Request(f"http://{self.host}:{self.port}/jsonrpc.js", data=body, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=4) as r:
+            return json.loads(r.read()).get("result", {})
+
+    def rpc_as(self, player, cmd):
+        """Kommando for en annen spiller på samme server (gruppering)."""
+        if not self.host:
+            raise RuntimeError("Lyrion ikke funnet")
+        body = json.dumps({"id": 1, "method": "slim.request", "params": [player, cmd]}).encode()
         req = urllib.request.Request(f"http://{self.host}:{self.port}/jsonrpc.js", data=body, headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=4) as r:
             return json.loads(r.read()).get("result", {})
@@ -3949,7 +3959,7 @@ class Lyrion:
                     if self.host != old and not _same_lms(self.host, old):
                         print(f"Lyrion: {old} svarer ikke, bruker {self.host}", flush=True)
                         _lms_active(self.host)
-            if LMS_SERVER and self.host != LMS_SERVER and self.connected and time.time() - last_home > 60:
+            if LMS_SERVER and not self.pinned and self.host != LMS_SERVER and self.connected and time.time() - last_home > 60:
                 last_home = time.time()
                 if _same_lms(self.host, LMS_SERVER):   # oppdagelsen fant hovedserveren under en annen adresse
                     continue
@@ -7723,6 +7733,127 @@ def _peers():
             for p in (lan.peers.values() if lan else []) if p.get("ip") and p.get("port")]
 
 
+# ---------- Grupper: spill det samme i flere rom (Lyrion-synk) ----------
+# Lederen er enheten du styrer. Rommene i gruppen må spille fra samme Lyrion-server: bruker et rom en annen server,
+# bes det om å koble spilleren sin til lederens server (/api/group/join) før det synkroniseres. Kilder som går via
+# Lyrion (radio, Navidrome, YouTube Music, podkaster) følger gruppen; AirPlay, Blåtann og Spotify gjør det ikke.
+
+def _peer_json(base, path, body=None, timeout=5):
+    req = urllib.request.Request(base.rstrip("/") + path, data=None if body is None else json.dumps(body).encode(),
+                                 method="GET" if body is None else "POST", headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read() or b"{}")
+
+
+def _lms_players():
+    try:
+        return {str(p.get("playerid", "")).lower() for p in lyr.rpc(["players", 0, 100], player=False).get("players_loop", [])}
+    except Exception:
+        return set()
+
+
+def group_followers():
+    """Spillerne som er synket med denne (MAC-adresser), uten denne selv."""
+    try:
+        r = lyr.rpc(["status", "-", 1])
+    except Exception:
+        return set()
+    ids = set()
+    for k in ("sync_master", "sync_slaves"):
+        ids |= {x.strip().lower() for x in str(r.get(k) or "").split(",") if x.strip()}
+    ids.discard(lyr.player)
+    return ids
+
+
+def group_set(bases):
+    """Gjør rommene (adresser til andre Skjold-enheter) til én gruppe med denne som leder. Tom liste = løs opp."""
+    if not lyr.host:
+        raise RuntimeError("Lyrion er ikke tilkoblet – gruppering bruker Lyrion")
+    want, res = {}, []
+    for b in bases:
+        b = str(b or "").strip().rstrip("/")
+        if not b.startswith(("http://", "https://")):
+            continue
+        try:
+            st = _peer_json(b, "/api/status")
+        except Exception:
+            res.append({"base": b, "ok": False, "error": "svarer ikke"}); continue
+        mac = str(st.get("lms_player") or "").lower()
+        if not mac or mac == lyr.player:
+            continue   # denne enheten selv
+        if not _same_lms(str(st.get("lms_host") or ""), lyr.host) or mac not in _lms_players():
+            try:
+                _peer_json(b, "/api/group/join", {"host": lyr.host if lyr.host not in ("127.0.0.1", "localhost") else _local_ip(), "port": lyr.port})
+            except Exception as e:
+                res.append({"base": b, "name": st.get("name"), "ok": False, "error": f"kunne ikke koble til Lyrion her: {e}"}); continue
+            for _ in range(25):   # squeezelite starter på nytt mot vår server
+                if mac in _lms_players():
+                    break
+                time.sleep(1)
+        if mac not in _lms_players():
+            res.append({"base": b, "name": st.get("name"), "ok": False, "error": "spilleren dukket ikke opp i Lyrion"}); continue
+        want[mac] = b; res.append({"base": b, "name": st.get("name"), "ok": True})
+    cur = group_followers()
+    for m in cur - set(want):
+        try: lyr.rpc_as(m, ["sync", "-"])
+        except Exception as e: print("Gruppe: løs opp", m, e, flush=True)
+        if _group["bases"].get(m):   # rommet ble flyttet hit for gruppen: la det gå tilbake til sin egen Lyrion
+            try: _peer_json(_group["bases"][m], "/api/group/join", {"leave": True})
+            except Exception: pass
+    for m in set(want) - cur:
+        lyr.rpc(["sync", m])
+    _group["bases"] = dict(want)
+    print("Gruppe:", ", ".join(x.get("name") or x["base"] for x in res if x.get("ok")) or "ingen", flush=True)
+    return res
+
+
+_group = {"bases": {}}
+
+
+async def h_group(r):
+    """GET /api/group → rommene i gruppen. POST {members:[base…]} lager gruppen (denne enheten leder), [] løser opp."""
+    loop = asyncio.get_running_loop()
+    if r.method == "POST":
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        try:
+            res = await loop.run_in_executor(None, group_set, list(b.get("members") or []))
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=502)
+        return web.json_response({"ok": all(x["ok"] for x in res), "members": res})
+    f = await loop.run_in_executor(None, group_followers)
+    return web.json_response({"leader": lyr.player, "followers": sorted(f), "bases": [b for m, b in _group["bases"].items() if m in f]})
+
+
+async def h_group_join(r):
+    """POST {host, port}: koble spilleren til lederens Lyrion-server så den kan gruppes. {leave:true} = tilbake."""
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    loop = asyncio.get_running_loop()
+    if b.get("leave"):
+        lyr.pinned = False
+        home = LMS_SERVER or None
+        if home and not _same_lms(lyr.host or "", home):
+            lyr.host, lyr.port = home, LMS_PORT
+            await loop.run_in_executor(None, _lms_active, home)
+        return web.json_response({"ok": True})
+    host = str(b.get("host") or "").strip()
+    if not re.match(r"^[\w.-]+$", host):
+        return web.json_response({"error": "ugyldig server"}, status=400)
+    port = int(b.get("port") or LMS_PORT)
+    if not await loop.run_in_executor(None, _lms_alive, host, port):
+        return web.json_response({"error": f"Lyrion svarer ikke på {host}"}, status=502)
+    lyr.pinned = True
+    if not _same_lms(lyr.host or "", host):
+        lyr.host, lyr.port = host, port
+        await loop.run_in_executor(None, _lms_active, host)
+    return web.json_response({"ok": True})
+
+
 async def h_peers(_r):
     """GET /api/peers → andre Skjold-enheter denne enheten ser på LAN-et (mDNS), så web-UI kan liste dem uten at
     nettleseren har vært innom dem før: [{id, navn, base}]."""
@@ -8281,7 +8412,7 @@ FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h
                ("GET", "/api/doorbell", h_doorbell), ("POST", "/api/doorbell", h_doorbell), ("GET", "/api/doorbell/camera", h_doorbell_camera),
                ("GET", "/api/routines", h_routines), ("POST", "/api/routines", h_routines), ("POST", "/api/routines/steps", h_routines),
                ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
-FEAT_ROUTES += [("GET", "/api/peers", h_peers)]
+FEAT_ROUTES += [("GET", "/api/peers", h_peers), ("GET", "/api/group", h_group), ("POST", "/api/group", h_group), ("POST", "/api/group/join", h_group_join)]
 FEAT_ROUTES += DUCK_ROUTES
 FEAT_ROUTES += HA_ROUTES
 

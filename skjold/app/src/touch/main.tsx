@@ -336,7 +336,7 @@ function grad(key: string, i?: number): string {
   const [a, b] = PAL[(i ?? h) % PAL.length]!; return 'linear-gradient(135deg,' + a + ',' + b + ')';
 }
 // også lokale adresser (/api/logo?k=… for radiologoene fra enheten), ikke bare http(s)
-function artBg(key: string, image?: string, i?: number): string { return image && /^((https?:)?\/\/|\/)/i.test(image) ? art(key, image).bg : grad(key, i); }
+function artBg(key: string, image?: string, i?: number): string { return image && /^((https?:)?\/\/|\/|data:image\/)/i.test(image) ? art(key, image).bg : grad(key, i); }
 const fmt = (s: number) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 const PLAY_D = 'M8 5.2v13.6a1 1 0 0 0 1.52.85l10.6-6.8a1 1 0 0 0 0-1.7L9.52 4.35A1 1 0 0 0 8 5.2z', PAUSE_D = 'M6 4.5h4v15H6zM14 4.5h4v15h-4z';
 function artOf(s: Status | null, base = ''): string {
