@@ -2284,8 +2284,8 @@ def _nm_fields(line):
     return out
 
 
-def _wifi_scan():
-    r = subprocess.run(["nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "auto"],
+def _wifi_scan(rescan="auto"):
+    r = subprocess.run(["nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", rescan],
                        capture_output=True, text=True, timeout=20)
     if r.returncode:
         raise RuntimeError((r.stderr or r.stdout or "nmcli feilet").strip()[:200])
@@ -2303,7 +2303,7 @@ def _wifi_scan():
 
 # --- Oppsett-nett: eget Wi-Fi med oppsettside når enheten ikke har nett (pi/skjold_setupnet.py) ---
 import skjold_setupnet as _snmod      # noqa: E402
-setupnet = _snmod.SetupNet({"device_id": lambda: device_id(), "changed": lambda: changed(), "scan": lambda: _wifi_scan(), "port": PORT})
+setupnet = _snmod.SetupNet({"device_id": lambda: device_id(), "changed": lambda: changed(), "scan": lambda: _wifi_scan("yes"), "port": PORT})
 SETUP_NET_ON = os.environ.get("KI_AMP_SETUP_NET", "1").strip() not in ("0", "false", "nei")
 
 
@@ -2333,12 +2333,18 @@ async def h_port80(r):
 
 async def h_wifi_get(_r):
     """GET /api/wifi → {"networks":[{ssid,signal 0-100,security open|wpa2|wpa3,active}]} via NetworkManager (nmcli)."""
-    if setupnet.active:      # radioen er aksesspunkt: bruk skanningen fra rett før, hvis en ny ikke gir noe
+    if setupnet.active:
+        # Radioen er aksesspunkt: en ny skanning gir ofte bare vårt eget oppsett-nett (som siden filtrerer bort), så
+        # listen ble tom. Slå sammen det som ses nå med skanningen fra rett før oppsett-nettet startet.
         try:
             n = await asyncio.to_thread(_wifi_scan)
         except Exception:
             n = []
-        return web.json_response({"networks": n or setupnet.networks})
+        seen, out = set(), []
+        for x in [x for x in n if not str(x.get("ssid", "")).startswith("Skjold-oppsett-")] + list(setupnet.networks):
+            if x.get("ssid") and x["ssid"] not in seen:
+                seen.add(x["ssid"]); out.append(x)
+        return web.json_response({"networks": sorted(out, key=lambda x: -int(x.get("signal") or 0))})
     try:
         return web.json_response({"networks": await asyncio.to_thread(_wifi_scan)})
     except FileNotFoundError:

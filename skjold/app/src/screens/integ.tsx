@@ -5,7 +5,7 @@ import { useEffect } from 'preact/hooks';
 import { api, type HomeKitInfo, type MaStatus } from '../lib/api';
 import { qrMatrix } from '../lib/qr';
 import { matter, matterLoad, matterRows, matterStatus } from './platform';
-import { go, setSetting, settings, showToast, everyVisible } from '../lib/store';
+import { go, setSetting, settings, showToast, everyVisible, status } from '../lib/store';
 import { Toggle } from '../components/ui';
 import type { Settings } from '../lib/settings';
 
@@ -53,10 +53,19 @@ function homekitRows(): Row[] {
 // ---------- Integrasjoner ----------
 interface Int { id: string; name: string; mono: string; tile: string; status: string; ok: boolean; desc: string }
 
+/** Lyrion slik daemonen faktisk ser den: innebygd (på denne enheten), ekstern server, eller ikke funnet. */
+function lyrionState(): { ok: boolean; local: boolean; server: string; text: string } {
+  const st = status.value, server = st?.lyrion_server || '', ok = !!st?.lyrion;
+  const ip = server.split(':')[0] || '', local = !!ip && (ip === '127.0.0.1' || ip === 'localhost' || ip === host());
+  const text = !st ? 'Sjekker …' : !server ? 'Ikke funnet' : !ok ? (local ? 'Innebygd · svarer ikke' : 'Ekstern · svarer ikke') : local ? 'Innebygd · kjører' : 'Ekstern server · ' + ip;
+  return { ok, local, server, text };
+}
+
 function ints(s: Settings): Int[] {
+  const ly = lyrionState();
   const nd = !!s.ndUrl, ytm = !!s.ytmCookie;
   return [
-    { id: 'lyrion', name: 'Lyrion', mono: 'L', tile: '#f2f2ee', status: 'Innebygd · kjører', ok: true, desc: 'Radio, favoritter og musikkbibliotek. Styrer også flere rom samtidig.' },
+    { id: 'lyrion', name: 'Lyrion', mono: 'L', tile: '#f2f2ee', status: ly.text, ok: ly.ok, desc: 'Radio, favoritter og musikkbibliotek. Styrer også flere rom samtidig.' },
     { id: 'spotify', name: 'Spotify Connect', mono: 'S', tile: '#6fcf7f', status: s.spEn ? 'Installert · på' : 'Installert · av', ok: s.spEn, desc: 'Spill fra Spotify-appen rett til forsterkeren. Krever Spotify Premium.' },
     { id: 'ytmusic', name: 'YouTube Music', mono: 'YT', tile: '#e86a6a', status: ytm ? (s.ytmEn ? 'Innlogget · på' : 'Innlogget · av') : 'Ikke innlogget', ok: ytm && s.ytmEn, desc: 'Spillelister, mikser og historikk fra Google-kontoen din. Via Music Assistant.' },
     { id: 'ma', name: 'Music Assistant', mono: 'MA', tile: '#18bcf2', status: s.maUrl ? (maSt.value?.ok ? 'Tilkoblet' + (maSt.value.player ? ' · ' + maSt.value.player : '') : maSt.value ? 'Feil' : 'Sjekker …') : 'Ikke satt opp', ok: !!s.maUrl && !!maSt.value?.ok, desc: 'TIDAL, Qobuz, Deezer, Spotify, YouTube Music, Plex, Jellyfin og podkaster i ett bibliotek, med søk i Skjold.' },
@@ -70,9 +79,9 @@ function ints(s: Settings): Int[] {
   ];
 }
 
-/** Antall aktive integrasjoner (badge i sidemenyen): Lyrion + de som er slått på. */
+/** Antall aktive integrasjoner (badge i sidemenyen): Lyrion hvis tilkoblet + de som er slått på. */
 export function intCount(s: Settings): number {
-  return 1 + [s.spEn, !!s.ytmCookie && s.ytmEn, !!s.ndUrl && s.ndEn, s.upnpEn, !!hk.value?.enabled, !!matter.value?.enabled].filter(Boolean).length;
+  return [!!status.value?.lyrion, s.spEn, !!s.ytmCookie && s.ytmEn, !!s.ndUrl && s.ndEn, s.upnpEn, !!hk.value?.enabled, !!matter.value?.enabled].filter(Boolean).length;
 }
 
 type Row = { n: string; hint?: string; el: preact.ComponentChildren };
@@ -84,8 +93,8 @@ const btn = (label: string, f: () => void) => <button onClick={f} style="height:
 function detail(id: string, s: Settings): { links: [string, string][]; rows: Row[] } {
   const h = host();
   switch (id) {
-    case 'lyrion': return { links: [['Åpne Lyrion', `http://${h}:9000/`], ['Lyrion-innstillinger', `http://${h}:9000/settings/index.html`]],
-      rows: [{ n: 'Server', el: txt('Innebygd · port 9000') }, { n: 'Synkroniser med andre rom', hint: 'Rom med hake i «Ditt system» spiller det samme', el: btn('Grupper og surround', () => go('grp')) }] };
+    case 'lyrion': { const ly = lyrionState(), lh = ly.server || `${h}:9000`; return { links: ly.server ? [['Åpne Lyrion', `http://${lh}/`], ['Lyrion-innstillinger', `http://${lh}/settings/index.html`]] : [],
+      rows: [{ n: 'Server', hint: ly.server ? '' : 'Fant ingen Lyrion-server. Installer Lyrion på denne enheten, eller sett KI_AMP_LMS_SERVER til adressen til en annen Skjold eller server.', el: txt(ly.server ? (ly.local ? 'Innebygd · ' : 'Ekstern · ') + ly.server + (ly.ok ? '' : ' · svarer ikke') : 'Ikke funnet') }, { n: 'Synkroniser med andre rom', hint: 'Rom med hake i «Ditt system» spiller det samme', el: btn('Grupper og surround', () => go('grp')) }] }; }
     case 'spotify': return { links: [['Åpne Spotify', 'https://open.spotify.com/']],
       rows: [{ n: 'Spotify Connect', hint: 'Vises som egen inngang', el: tog('spEn', s.spEn) }, { n: 'Versjon', el: txt('librespot') }] };
     case 'ytmusic': return { links: [['Åpne YouTube Music', 'https://music.youtube.com/']],

@@ -95,10 +95,18 @@ class SetupNet:
             dev = self.wifi_dev()
             if not dev:
                 return False
-            try:
-                self.networks = list(self.ctx["scan"]() or [])
-            except Exception:
-                self.networks = []
+            # skann grundig før radioen blir aksesspunkt (etterpå ser den som regel bare seg selv); prøv igjen hvis tomt
+            nets = []
+            for _ in range(3):
+                try:
+                    nets = [n for n in (self.ctx["scan"]() or []) if not str(n.get("ssid", "")).startswith("Skjold-oppsett-")]
+                except Exception:
+                    nets = []
+                if nets:
+                    break
+                self.sleep(3)
+            if nets or not self.networks:
+                self.networks = nets   # behold forrige liste hvis denne skanningen ble tom
             try:      # alle navn peker hit, så telefonen ser en «logg inn på nettverket»-side
                 os.makedirs(os.path.dirname(DNS_CONF), exist_ok=True)
                 with open(DNS_CONF, "w") as f:
