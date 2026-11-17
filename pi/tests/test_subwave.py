@@ -133,3 +133,31 @@ class TestLagreStasjoner(unittest.TestCase):
             self.assertEqual(len(d.sw_stations(c)), 2)
         finally:
             d.state["settings"] = old
+
+
+class SubwavePosisjon(unittest.TestCase):
+    """Sangteksten på SUB/WAVE gikk ikke i takt: Lyrion kjenner bare tiden siden radiostrømmen startet."""
+
+    def test_starttid_gir_posisjon_minus_strømforsinkelse(self):
+        now = 1_800_000_000.0
+        r = d.subwave_pos({"track": {"duration": 200}, "started_at": now - 50}, {"duration": 200}, "Låt", now=now)
+        self.assertAlmostEqual(r["position"], 50 - d.SW_DELAY, places=3)
+        self.assertEqual(r["duration"], 200)
+
+    def test_iso_starttid_og_millisekunder(self):
+        r = d.subwave_pos({"started_at": "2027-01-15T08:00:00Z"}, {"duration": 180000}, "x", now=1_800_000_000.0 + 0)
+        self.assertEqual(r["duration"], 180.0)
+
+    def test_elapsed_teller_videre_mellom_svar(self):
+        d._swpos.update(key=None, t=0.0)
+        a = d.subwave_pos({"elapsed": 30}, {"duration": 240}, "Sang", now=1000.0)
+        b = d.subwave_pos({"elapsed": 30}, {"duration": 240}, "Sang", now=1008.0)   # samme hurtigbufrede svar 8 s senere
+        self.assertAlmostEqual(b["position"] - a["position"], 8.0, places=3)
+
+    def test_uten_tid_regner_fra_tittelbyttet(self):
+        d._swpos.update(title=None, first=0.0)
+        a = d.subwave_pos({"title": "x"}, {"title": "x"}, "x", now=500.0)
+        b = d.subwave_pos({"title": "x"}, {"title": "x"}, "x", now=530.0)
+        self.assertAlmostEqual(a["position"], 0.0, places=3)
+        self.assertAlmostEqual(b["position"], 30.0, places=3)
+        self.assertEqual(d.subwave_pos({}, {}, ""), {})

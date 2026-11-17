@@ -1835,6 +1835,9 @@ def read_status():
     swm = subwave_meta() if st.get("source") == "radio" else None   # SUB/WAVE: låtinfo fra stasjonens API
     if swm and swm["title"]:
         st = {**st, "title": swm["title"], "artist": swm["artist"] or st.get("artist", ""), "album": swm["album"] or swm.get("station") or "SUB/WAVE"}
+        if "position" in swm:   # posisjonen i låten (ikke tiden siden radiostrømmen startet), så sangteksten går i takt
+            st["position"] = swm["position"]
+            st["duration"] = swm.get("duration") or st.get("duration", 0)
         if swm["cover"].startswith(("http://", "https://")): cover = swm["cover"]
     cover_url = cover if cover.startswith(("http://", "https://")) else (f"/api/cover?v={cover}" if cover else "")
     return {**state, "settings": public_settings(), **extra, "playing": playing, "paused": paused, "cover_url": cover_url, "product": PRODUCT, "eff_volume": eff_volume(), "source": st.get("source", ""), "cover": cover, "title": st.get("title", ""), "artist": st.get("artist", ""), "album": st.get("album", ""),
@@ -6640,8 +6643,71 @@ def subwave_meta():
     if not isinstance(np, dict):
         return None
     tr = np.get("track") if isinstance(np.get("track"), dict) else np
-    return {"title": str(_find(tr, "title", "name", "track") or ""), "artist": str(_find(tr, "artist", "artists") or ""),
-            "station": (_sw_station() or {}).get("name", ""), "album": str(_find(tr, "album") or ""), "cover": str(_find(tr, "cover_url", "coverUrl", "artwork_url", "artwork", "art", "cover", "image") or "")}
+    out = {"title": str(_find(tr, "title", "name", "track") or ""), "artist": str(_find(tr, "artist", "artists") or ""),
+           "station": (_sw_station() or {}).get("name", ""), "album": str(_find(tr, "album") or ""), "cover": str(_find(tr, "cover_url", "coverUrl", "artwork_url", "artwork", "art", "cover", "image") or "")}
+    out.update(subwave_pos(np, tr, out["title"]))
+    return out
+
+
+SW_DELAY = float(os.environ.get("KI_AMP_SW_DELAY", "2.5"))   # det du hører ligger litt etter stasjonen (strøm- og Lyrion-buffer)
+_swpos = {"key": None, "t": 0.0, "title": None, "first": 0.0}
+
+
+def _sekunder(v):
+    """Tall eller «m:ss» → sekunder; svært store tall regnes som millisekunder."""
+    if isinstance(v, str) and re.match(r"^\d+:\d{2}(:\d{2})?$", v.strip()):
+        n = 0.0
+        for x in v.strip().split(":"):
+            n = n * 60 + float(x)
+        return n
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f / 1000.0 if f > 36000 else f
+
+
+def _tidspunkt(v):
+    """Starttid (epoch s/ms eller ISO 8601) → epoch sekunder."""
+    if isinstance(v, (int, float)):
+        return float(v) / 1000.0 if v > 1e11 else float(v)
+    if isinstance(v, str) and v.strip():
+        try:
+            import datetime
+            return datetime.datetime.fromisoformat(v.strip().replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return None
+    return None
+
+
+def subwave_pos(np, tr, title, now=None):
+    """Posisjon og lengde i låten SUB/WAVE spiller (for sangteksten i takt). Lyrion kjenner bare tiden siden strømmen
+    startet. Bruker starttid hvis stasjonen oppgir den, ellers «elapsed» pluss tiden siden svaret kom (svaret caches
+    i 10 s), minus forsinkelsen i strømmen. {} hvis stasjonen ikke oppgir noe."""
+    now = now or time.time()
+    dur = _sekunder(_find(tr, "duration", "duration_s", "length", "dur") or _find(np, "duration", "duration_s"))
+    start = _tidspunkt(_find(np, "started_at", "startedAt", "start_time", "started", "start") or _find(tr, "started_at", "startedAt"))
+    pos = None
+    if start:
+        pos = now - start
+    else:
+        el = _sekunder(_find(np, "elapsed", "elapsed_s", "position", "progress", "pos") or _find(tr, "elapsed", "position", "progress"))
+        if el is not None:
+            key = (title, el)
+            if _swpos["key"] != key:
+                _swpos["key"], _swpos["t"] = key, now
+            pos = el + (now - _swpos["t"])
+    if pos is None and title:   # stasjonen oppgir ingen tid: regn fra da Skjold så at låten byttet (grovere, opptil ~10 s)
+        if _swpos.get("title") != title:
+            _swpos["title"], _swpos["first"] = title, now
+        pos = now - _swpos["first"] + SW_DELAY   # bytte sett på stasjonen = starten på det du hører om litt
+    out = {}
+    if pos is not None:
+        pos = max(0.0, pos - SW_DELAY)
+        out["position"] = min(pos, dur) if dur else pos
+    if dur:
+        out["duration"] = dur
+    return out
 
 
 async def h_subwave(r):
