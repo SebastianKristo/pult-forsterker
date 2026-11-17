@@ -298,9 +298,13 @@ module spiller_topp(){
     translate([espX,pD-wall-1,usbZ]) rotate([-90,0,0]) linear_extrude(wall+2)        // USB-C (plass til pluggen)
       offset(r=2) square([12.5-4,7-4],center=true);
     translate([pW/2,0.6,(2.4+winZ0)/2+0.5]) rotate([90,0,0]) linear_extrude(1)       // SKJOLD gravert under vinduet
-      text("SKJOLD",size=4.37,font="Inter:style=Bold",halign="center",valign="center",spacing=1.3);
+      logo_tekst2d();
   }
 }
+// SKJOLD-logoen som eget innlegg i en annen farge: printes flatt (forsiden opp) og trykkes inn i graveringen under
+// vinduet (1 mm dyp). 0,1 mm klaring rundt, 0,9 mm tykk, så den står 0,1 mm innenfor fronten. En dråpe lim holder den.
+module logo_tekst2d(){ text("SKJOLD",size=4.37,font="Inter:style=Bold",halign="center",valign="center",spacing=1.3); }
+module logo_innlegg(){ linear_extrude(0.9) offset(delta=-0.1) logo_tekst2d(); }
 module vindu(){ // klar rute (PETG), 1,5 mm – printes flatt, 100 % fyll; skyves opp i sporet før bunnen skrus på
   translate([pW/2-paneW/2, chY0+0.05, paneZ0]) rotate([90,0,0]) translate([0,0,-paneT])
     linear_extrude(paneT) translate([1,1]) offset(r=1) square([paneW-2, paneZ1-paneZ0-2]);
@@ -417,6 +421,7 @@ else if(part=="kassett_front") kassett_halv(true);
 else if(part=="kassett_bak") kassett_halv(false);
 else if(part=="spole") spole();
 else if(part=="etikettplate") etikettplate();
+else if(part=="logo") logo_innlegg();
 else if(part=="kassett_samlet") kassett_samlet();
 else if(part=="kassett_bakside") translate([kW,0,kT]) rotate([0,180,0]) kassett_samlet(); // baksiden (spolene ned)
 else if(part=="med_kassett") med_kassett();
