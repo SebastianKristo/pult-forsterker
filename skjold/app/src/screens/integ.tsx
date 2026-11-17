@@ -117,7 +117,7 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
         { n: 'Passord', hint: 'Settes under Innstillinger → Musikktjenester', el: btn('Åpne', () => openSetup('nd')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'nd')) }] };
     case 'subwave': return { links: [],
-      rows: [...swStations.value.map((x) => ({ n: x.name, hint: 'Stasjon ' + (x.i + 1) + (x.image ? '' : ' · trykk + for å velge bilde'), el: <span style="display:flex;gap:6px;align-items:center"><button onClick={() => void bildeSw(x.i)} title="Velg bilde" aria-label={'Velg bilde for ' + x.name} style={`width:36px;height:36px;border-radius:8px;border:1px solid #2e2e30;background:${x.image ? `url("${x.image.replace(/"/g, '')}") center / cover no-repeat` : '#1b1b1c'};color:#8b8b86;cursor:pointer;flex-shrink:0`}>{x.image ? '' : '+'}</button>{btn('Spill', () => void api.subwavePost({ play: true, station: x.i }).then(() => go('play')).catch(() => {}))}{btn('Fjern', () => void fjernSw(x.i))}</span> })),
+      rows: [...swStations.value.map((x) => ({ n: x.name, hint: x.admin ? 'Admin · kan hoppe over' : 'Stasjon ' + (x.i + 1), el: swAdm.value === x.i ? <SwAdminFelt i={x.i} /> : <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><button onClick={() => void bildeSw(x.i)} title="Velg bilde" aria-label={'Velg bilde for ' + x.name} style={`width:36px;height:36px;border-radius:8px;border:1px solid #2e2e30;background:${x.image ? `url("${x.image.replace(/"/g, '')}") center / cover no-repeat` : '#1b1b1c'};color:#8b8b86;cursor:pointer;flex-shrink:0`}>{x.image ? '' : '+'}</button>{btn('Spill', () => void api.subwavePost({ play: true, station: x.i }).then(() => go('play')).catch(() => {}))}{btn(x.admin ? 'Admin ✓' : 'Admin', () => { swAdm.value = x.i; })}{btn('Fjern', () => void fjernSw(x.i))}</span> })),
         { n: swStations.value.length ? 'Legg til en stasjon til' : 'Ingen stasjon ennå', hint: 'Du kan ha så mange stasjoner du vil. Alle vises under Bibliotek → SUB/WAVE.', el: btn('+ Legg til stasjon', () => openSetup('sw')) },
         { n: 'Navn, brukernavn og passord', hint: 'Endres under Plugins → SUB/WAVE', el: btn('Åpne', () => go('plug')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'sw')) }] };
@@ -238,6 +238,38 @@ async function bildeSw(i: number): Promise<void> {
   if (hvor === 'top') await api.setPlugin('subwave', { image: d });
   else await api.setPlugin('subwave', { extra: (c.extra ?? []).map((x, n) => (n === hvor ? { ...x, image: d } : x)) });
   loadSw(true);
+}
+
+/** Stasjonsindeks i → hvor den ligger i pluginoppsettet ('top' = den første, ellers indeks i extra). */
+async function swPlass(i: number): Promise<{ hvor: number | 'top'; extra: Record<string, unknown>[] } | null> {
+  const r = await api.plugins(); const p = r.plugins.find((x) => x.id === 'subwave'); if (!p) return null;
+  const c = p.cfg as { url?: string; extra?: Record<string, unknown>[] };
+  const ok = (u?: unknown) => /^https?:\/\//.test(String(u ?? '').trim());
+  const idx: (number | 'top')[] = [...(ok(c.url) ? ['top' as const] : []), ...(c.extra ?? []).map((x, n) => (ok(x.url) ? n : -1)).filter((n) => n >= 0)];
+  const hvor = idx[i]; return hvor === undefined ? null : { hvor, extra: c.extra ?? [] };
+}
+
+const swAdm = signal<number | null>(null);
+
+/** Admin-passordet til en SUB/WAVE-stasjon. Med det kan Skjold hoppe over låter («neste» på Touch, knotten og appen). */
+function SwAdminFelt({ i }: { i: number }) {
+  const lagre = async (pw: string) => {
+    const pl = await swPlass(i); if (!pl) return;
+    if (pl.hvor === 'top') await api.setPlugin('subwave', { password: pw });
+    else await api.setPlugin('subwave', { extra: pl.extra.map((x, n) => (n === pl.hvor ? { ...x, password: pw } : x)) });
+    swAdm.value = null; loadSw(true); showToast(pw ? 'Admin er koblet til – «neste» hopper nå over låten' : 'Admin er fjernet');
+  };
+  let felt: HTMLInputElement | null = null;
+  return (
+    <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+      <input ref={(e) => { felt = e; e?.focus(); }} type="password" autocomplete="off" placeholder="Admin-passord" aria-label="Admin-passord for stasjonen"
+        onKeyDown={(e) => { if (e.key === 'Enter') void lagre((e.currentTarget as HTMLInputElement).value); if (e.key === 'Escape') swAdm.value = null; }}
+        style={`height:36px;width:150px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-family:${MONO};font-size:12px;outline:none;color:#f2f2ee`} />
+      {btn('Lagre', () => void lagre(felt?.value ?? ''))}
+      {swStations.value[i]?.admin && btn('Fjern admin', () => void lagre(''))}
+      {btn('Avbryt', () => { swAdm.value = null; })}
+    </span>
+  );
 }
 
 async function fjernSw(i: number): Promise<void> {

@@ -1848,7 +1848,7 @@ def read_status():
             "spotify": dict(spotify), "plex": dict(plex), "airplay_device": raw_ap or "",
             "bt_pairing_left": max(0, int(round(_pairing_until - time.time()))) if state["bt_pairing"] else 0,
             "menu": dict(menu) if menu["open"] else None, "hold": s1f_hold() or hold_status(), "settings_menu": smenu_status(),
-            "sky": sky.kort(), "sleep": sleep_left(), "autostandby": autostandby_left(), "kids": plug_on("kids"), "subwave": subwave_playing(),
+            "sky": sky.kort(), "sleep": sleep_left(), "autostandby": autostandby_left(), "kids": plug_on("kids"), "subwave": subwave_playing(), "subwave_admin": subwave_admin(),
             "ui": s1f_ui(), "hw_rev": "F" if S1F else "", "hp_switch": bool(HP_DEV_ENV) and not S1F,
             "night": {"on": bool(state.get("night")), "src": (state.get("night_ev") or {}).get("src", ""),
                       "steps": (state.get("night_ev") or {}).get("steps") or [], "t": (state.get("night_ev") or {}).get("t", 0)},
@@ -6513,6 +6513,12 @@ class SubwaveClient:
 _sw = {}   # sig -> SubwaveClient
 
 
+def _sw_img_ok(v):
+    """Stasjonsbilde: http(s)-adresse eller et lite data:image (valgt i appen). Ellers tomt."""
+    v = str(v or "").strip()
+    return v if (v.startswith(("http://", "https://")) and len(v) <= 500) or (v.startswith("data:image/") and len(v) <= 300000) else ""
+
+
 def sw_stations(c=None):
     """Alle SUB/WAVE-stasjonene: den første (url/user/password/name) og «extra». Bare de med gyldig adresse."""
     c = c or plug_cfg("subwave")
@@ -6611,6 +6617,23 @@ def subwave_playing_idx():
 
 def subwave_playing():
     return subwave_playing_idx() is not None
+
+
+def subwave_admin():
+    """True når SUB/WAVE-stasjonen som spiller har admin-passord (da kan låten hoppes over)."""
+    i = subwave_playing_idx()
+    x = _sw_station(i) if i is not None else None
+    return bool(x and x.get("password"))
+
+
+def subwave_skip():
+    """Hopp over låten på SUB/WAVE-stasjonen som spiller (krever admin-passord). True hvis det ble gjort."""
+    if not subwave_admin():
+        return False
+    cl = subwave()
+    cl.call("subwave_skip_track")
+    cl._cache.clear()   # ny låt: ikke vis den gamle fra cachen
+    return True
 
 
 def _find(d, *names):
@@ -6753,7 +6776,7 @@ async def h_subwave(r):
         return web.json_response({"error": "ukjent handling"}, status=400)
     pi_ = subwave_playing_idx()
     out = {"configured": True, "playing": pi_ == stn["i"], "admin": bool(stn.get("password")), "station": stn["i"], "name": stn["name"],
-           "playing_station": pi_, "stations": [{"i": x["i"], "name": x["name"], "image": await loop.run_in_executor(None, sw_station_image, x)} for x in sw_stations()]}
+           "playing_station": pi_, "stations": [{"i": x["i"], "name": x["name"], "admin": bool(x.get("password")), "image": await loop.run_in_executor(None, sw_station_image, x)} for x in sw_stations()]}
     for k, tool in (("health", "subwave_health"), ("now_playing", "subwave_now_playing"), ("state", "subwave_station_state"), ("schedule", "subwave_schedule")):
         if k != "health" and r.query.get("health") == "1":
             continue
@@ -7027,7 +7050,7 @@ def plugin_update(pid, body):
             v = max(-3.0, min(3.0, float(v)))
         if k == "extra" and pid == "subwave":   # flere SUB/WAVE-stasjoner
             v = [{"name": str(x.get("name") or "")[:40], "url": str(x.get("url") or "").strip()[:300], "user": str(x.get("user") or "")[:100],
-                  "password": str(x.get("password") or "")[:200]} for x in (v or [])[:10] if isinstance(x, dict)]
+                  "password": str(x.get("password") or "")[:200], "image": _sw_img_ok(x.get("image"))} for x in (v or [])[:10] if isinstance(x, dict)]
         if k == "alarms":
             al = []
             for a in (v or [])[:10]:
@@ -7101,6 +7124,8 @@ def _bt_player():
 
 def transport(action):
     if state["input"] == "radio":
+        if action == "next" and subwave_skip():   # SUB/WAVE med admin-passord: «neste» hopper over låten på stasjonen
+            return
         if action in ("next", "previous"):
             step_preset(1 if action == "next" else -1); return
         lyr.cmd({"play": ["play"], "pause": ["pause", "1"], "playpause": ["pause"], "stop": ["stop"]}[action])

@@ -2,7 +2,7 @@
 import { signal } from '@preact/signals';
 import { api } from './api';
 
-export interface SwStation { i: number; name: string; image?: string }
+export interface SwStation { i: number; name: string; image?: string; admin?: boolean }
 export const swStations = signal<SwStation[]>([]);
 export const swPlaying = signal<number | null>(null);
 let loaded = 0;
