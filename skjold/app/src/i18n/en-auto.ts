@@ -1911,4 +1911,8 @@ export const EN_AUTO: Record<string, string> = {
   'VISES NÅR SKJERMEN HVILER': 'SHOWN WHEN THE SCREEN RESTS',
   'Start nå': 'Start now',
   'Trykk hvor som helst for å vekke skjermen. Med skjermspareren på: dobbelttrykk spiller/pauser, sveip med to fingre bytter låt.': 'Tap anywhere to wake the screen. While the screensaver is on: double-tap plays/pauses, swipe with two fingers changes track.',
+  'Søk i YouTube Music': 'Search YouTube Music',
+  'Søk i Navidrome': 'Search Navidrome',
+  'Søk etter radiokanaler': 'Search radio stations',
+  'Søk etter podkaster': 'Search podcasts',
 };
