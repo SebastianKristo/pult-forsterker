@@ -65,7 +65,7 @@ pn532_i2c:
             device: ${name}
             ndef: !lambda |-
               if (tag.has_ndef_message()) {
-                auto recs = tag.get_ndef_message()->get_records();
+                const auto &recs = tag.get_ndef_message()->get_records();
                 if (!recs.empty()) return recs[0]->get_payload();
               }
               return std::string("");
