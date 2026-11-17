@@ -1825,4 +1825,6 @@ export const EN_AUTO: Record<string, string> = {
   'Ikke slå av enheten mens den oppdaterer.': 'Do not turn off the device while it updates.',
   'Venter på at enheten skal svare igjen. Siden oppdateres av seg selv.': 'Waiting for the device to respond again. The page updates by itself.',
   'Last på nytt ›': 'Reload ›',
+  'Hva båndene gjør': 'What the bands do',
+  'Equalizer-kurve': 'Equalizer curve',
 };

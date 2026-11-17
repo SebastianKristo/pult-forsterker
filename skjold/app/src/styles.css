@@ -835,3 +835,41 @@ html.kiosk body { overscroll-behavior: none; }
 @media (max-width: 760px) { .dkx-tt .hd, .dkx-tt > button { grid-template-columns: 28px minmax(0, 1fr) 56px; } .dkx-tt .hd span:nth-child(3), .dkx-tt > button > span:nth-child(3) { display: none; } }
 .dkx-tile .sq.rnd { border-radius: 50%; justify-content: center; align-items: center; text-align: center; padding: 18px; }
 .dkx-tile .sq.rnd b { max-width: 100%; }
+
+/* Equalizer: kurven er hovedelementet og følger skjermhøyden; innstillinger i egen kolonne på brede skjermer */
+.eqx { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: 22px; align-items: start; }
+.eqx-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.eqx-src { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.eqx-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.eqx-card { border-radius: 20px; border: 1px solid #242426; background: radial-gradient(120% 80% at 50% 0%, rgba(217,164,65,.07), transparent 60%), #121213; padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.eqx-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.eqx-hd b { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.eqx-graph { position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 6px; height: clamp(170px, calc(100dvh - 520px), 340px); }
+.eqx-db { display: flex; flex-direction: column; justify-content: space-between; padding: 12px 0; font-family: var(--mono); font-size: 10px; color: #6b6b67; text-align: right; }
+.eqx-db i { font-style: normal; line-height: 1; }
+.eqg { width: 100%; height: 100%; display: block; touch-action: none; overflow: visible; cursor: ns-resize; }
+.eqg .g { stroke: #222224; stroke-width: 1; }
+.eqg .g0 { stroke: #3a3a37; stroke-width: 1; stroke-dasharray: 4 4; }
+.eqg .gv { stroke: #1c1c1e; stroke-width: 1; }
+.eqg .ln { fill: none; stroke: #d9a441; stroke-width: 2.5; }
+.eqg .nd { outline: none; cursor: grab; }
+.eqg .dot { fill: #121213; stroke: #f0c46a; stroke-width: 2.5; transition: stroke-width .12s; }
+.eqg .nd:hover .dot, .eqg .nd:focus-visible .dot, .eqg .nd.on .dot { fill: #f0c46a; stroke-width: 4; }
+.eqg .nd.on { cursor: grabbing; }
+.eqx-bands { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding-left: 36px; }
+.eqx-band { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.eqx-band .nm { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.eqx-band .hz { font-family: var(--mono); font-size: 10px; color: #8b8b86; }
+.eqx-band .st { display: flex; align-items: center; gap: 2px; margin-top: 6px; }
+.eqx-band .st button { width: 28px; height: 28px; border-radius: 8px; border: 1px solid #2e2e30; background: #1a1a1b; color: #f2f2ee; font-size: 15px; line-height: 1; padding: 0; cursor: pointer; }
+.eqx-band .v { min-width: 30px; font-family: var(--mono); font-size: 13px; color: #a9a9a3; font-variant-numeric: tabular-nums; }
+.eqx-band .v.on { color: #f0c46a; }
+.eqx-presets { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-top: 12px; border-top: 1px solid #222224; margin: 0 -2px; }
+.eqx-presets::-webkit-scrollbar { display: none; }
+.eqx-help { border-radius: 14px; border: 1px solid #242426; background: #141415; padding: 12px 14px; }
+.eqx-help summary { cursor: pointer; font-size: 13px; color: #c9c9c4; list-style: none; display: flex; justify-content: space-between; }
+.eqx-help summary::after { content: '›'; color: #8b8b86; transition: transform .2s; }
+.eqx-help[open] summary::after { transform: rotate(90deg); }
+.eqx-help summary::-webkit-details-marker { display: none; }
+@media (max-width: 1100px) { .eqx { grid-template-columns: minmax(0, 1fr); } .eqx-graph { height: clamp(160px, 34vh, 280px); } }
+@media (max-width: 520px) { .eqx-card { padding: 14px 12px; } .eqx-bands { padding-left: 0; gap: 4px; } .eqx-band .nm { font-size: 11px; } .eqx-band .st button { display: none; } .eqx-band .v { min-width: 0; font-size: 13px; } .eqx-band .hz { font-size: 9.5px; } .eqx-graph { grid-template-columns: 0 minmax(0, 1fr); gap: 0; } .eqx-db { visibility: hidden; } }
