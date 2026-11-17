@@ -17,6 +17,41 @@ def _darken(c, box_fn):
 
 class NodeLayout(Layout):
     W, H, name = 160, 128, "node"
+    has_saver = True
+    _saver_bg = (None, None)
+
+    # ---------- skjermsparer ----------
+    # Omslaget (eller kildefargene) uskarpt og mørkt, som glir sakte frem og tilbake, med stor klokke og dato.
+    # Spiller noe, står låten nederst med et lite omslag. Bakgrunnen lages én gang per omslag (Pi-en har lite CPU).
+    def draw_saver(self, c, vm):
+        from PIL import ImageFilter, ImageEnhance
+        W_, H_ = c.img.size; s = sources.src(vm["input"])
+        key = (id(vm.get("cover")), vm["input"])
+        if self._saver_bg[0] != key:
+            if vm.get("cover") is not None:
+                big = vm["cover"].convert("RGB").resize((48, 48)).filter(ImageFilter.GaussianBlur(4)).resize((int(W_ * 1.35), int(W_ * 1.35)), Image.BILINEAR)
+                big = ImageEnhance.Brightness(ImageEnhance.Color(big).enhance(1.3)).enhance(0.38)
+            else:
+                c0, c1 = (hexc(x) for x in s["art"])
+                v = Image.linear_gradient("L").resize((int(W_ * 1.35), int(W_ * 1.35)))
+                big = Image.composite(Image.new("RGB", v.size, mix(c0, 0.26)), Image.new("RGB", v.size, mix(c1, 0.08)), Image.blend(v, v.transpose(Image.TRANSPOSE), 0.5))
+            self._saver_bg = (key, big)
+        big = self._saver_bg[1]
+        t = vm["now_ms"] / 1000.0
+        dx = (math.sin(t / 23.0) * 0.5 + 0.5) * (big.width - W_); dy = (math.cos(t / 31.0) * 0.5 + 0.5) * (big.height - H_)
+        c.img.paste(big.crop((int(dx), int(dy), int(dx) + W_, int(dy) + H_)), (0, 0)); c.d = ImageDraw.Draw(c.img)
+        d = vm["now"]
+        playing = vm.get("saver_playing")
+        cy = 50 if playing else 60
+        c.text(80, cy, "%02d:%02d" % (d.hour, d.minute), W, "light", 44, "mm", -1)
+        c.text(80, cy + 27, fx.date_long(d).upper(), DIM2, "regular", 7.5, "ms", 1.2)
+        if playing:
+            if vm.get("cover") is not None: c.image(vm["cover"], 8, 98, 22, 22, 4)
+            else:
+                c0, c1 = s["art"]; c.gradient_tile(8, 98, 22, 22, 4, hexc(c0), hexc(c1))
+            tx = 36; tw = c.w - 8 - tx
+            c.text(tx, 107, c.ellipsize(vm.get("title") or "", "bold", 9.5, tw), W, "bold", 9.5, "ls")
+            c.text(tx, 118, c.ellipsize(vm.get("sub") or vm.get("kicker") or "", "regular", 8, tw), DIM2, "regular", 8, "ls")
 
     # ---------- animasjoner (node_fx.js / skjold_welcome.js) ----------
     def draw_boot(self, c, vm): fx.splash(c, vm["t_ms"], vm.get("model", "NODE"))

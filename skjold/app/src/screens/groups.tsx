@@ -1,7 +1,7 @@
 // «Grupper og surround» (PC, S1 Web v3: grpPage) og «Spill på»-arket i docken (spkSheet).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { PRODUCT_LABEL, type Status } from '../lib/api';
-import { go, setVolume } from '../lib/store';
+import { go, route, setVolume } from '../lib/store';
 import { ListenHere } from './listenhere';
 import { PRODUCT_ICON } from '../components/ui';
 import { PlacementCard, SyncSubCard } from './advaudio';
@@ -196,6 +196,17 @@ export function GroupsPage() {
 /** «Spill på»-arket over volumet i docken. */
 export function SpeakerButton() {
   const [open, setOpen] = useState(false);
+  const boks = useRef<HTMLDivElement>(null);
+  // Lukk når du går til en annen side, eller trykker utenfor arket
+  const side = route.value.page + '/' + (route.value.cat ?? '');
+  useEffect(() => { setOpen(false); }, [side]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const ute = (e: PointerEvent) => { if (boks.current && !boks.current.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', ute, true); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', ute, true); document.removeEventListener('keydown', esc); };
+  }, [open]);
   const rooms = useRooms(), ak = activeKey(), g = groups.value;
   const memK = members(ak), mem = rooms.filter((r) => memK.includes(r.key)), has = mem.length > 1, mode = g.mode;
   const L = has && mode === 'surround' ? (LAYOUTS.find((l) => l[0] === g.gset.layout) ?? LAYOUTS[0]!) : null;
@@ -204,7 +215,7 @@ export function SpeakerButton() {
   const label = has ? mem.map((r) => r.name).join(' + ') : rooms[0]?.name ?? '';
   const pill = 'height:30px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;background:#1b1b1c;color:#f2f2ee;font-size:12px;cursor:pointer;white-space:nowrap';
   return (
-    <div style="position:relative;display:flex;min-width:0">
+    <div ref={boks} style="position:relative;display:flex;min-width:0">
       <button onClick={() => setOpen(!open)} aria-label="Høyttalere" data-testid="spk-btn" style={`height:36px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:999px;border:1px solid ${open ? A : '#2e2e30'};background:${open ? '#1c170d' : 'transparent'};color:#f2f2ee;cursor:pointer;flex-shrink:1;min-width:0;max-width:220px`}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M6 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM11 17.5a2.5 2.5 0 1 0 0-5a2.5 2.5 0 1 0 0 5M11 8.5h.01" /></svg><span style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{label}</span></button>
       {open && (
         <div style="position:absolute;right:0;bottom:56px;width:360px;max-width:calc(100vw - 40px);max-height:70vh;overflow:auto;border-radius:16px;background:#18181a;border:1px solid #2e2e30;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:14px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box">

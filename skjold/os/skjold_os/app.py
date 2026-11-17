@@ -6,6 +6,8 @@ PORT = int(os.environ.get("KI_AMP_PORT", "8765"))
 
 WELCOME_FILE = os.environ.get("SKJOLD_WELCOME_FILE", "/var/lib/skjold/velkomst.json")
 CLOCK_AFTER_S = 120          # design: «Etter 2 min på pause viser skjermen standby-klokke»
+SAVER_AFTER_S = 60           # fargeskjermer (Node-TFT): skjermsparer når ingen har rørt knappene på 1 min
+SAVER_OFF_S = 300            # … og helt svart med bakgrunnslyset av når ingenting har spilt på 5 min
 VOL_SHOW_S = 1.5             # design: volum vises nederst i 1,5 s
 PAIR_S = 120                 # daemon: bt_pairing varer 2 min (_pairing_until)
 OFFLINE_AFTER_S = 3.0
@@ -167,6 +169,12 @@ class Ui:
         playing = bool(st.get("playing")) and not st.get("paused")
         idle = now - self.last_act
         clock_on = bool(se.get("clock", True))
+        if getattr(self.lay, "has_saver", False):
+            # fargeskjermen: skjermsparer (omslaget glir, stor klokke) – og svart med lyset av når ingenting spiller
+            if not playing and (not st.get("power", True) or idle > SAVER_OFF_S) and idle > 30:
+                vm.update(screen="off", vol_overlay=False); return vm
+            if idle > (SAVER_AFTER_S if playing else CLOCK_AFTER_S) and not vm["vol_overlay"]:
+                vm.update(screen="saver", saver_playing=playing, **self._nowplaying(st, now, cover)); return vm
         if not st.get("power", True):
             vm.update(screen="clock" if clock_on else "off", vol_overlay=False); return vm
         if not playing and idle > CLOCK_AFTER_S and clock_on:
@@ -227,6 +235,7 @@ class Ui:
         idle = self.clock() - self.last_act
         off = OFF_AFTER[se.get("off")] if isinstance(se.get("off"), int) and 0 <= se.get("off") < 3 else None
         dim = DIM_AFTER[se.get("dim")] if isinstance(se.get("dim"), int) and 0 <= se.get("dim") < 3 else None
+        if vm["screen"] == "saver": return b * (0.55 if vm.get("saver_playing") else 0.35)   # skjermsparer: dempet
         if vm.get("vol_overlay"): return b
         playing = vm["screen"] == "play" and not vm.get("paused") and (self.prev or {}).get("playing")
         if off and idle > off and not playing: return 0.0
