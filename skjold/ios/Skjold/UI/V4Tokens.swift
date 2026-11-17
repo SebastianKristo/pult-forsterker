@@ -310,10 +310,24 @@ struct V4Mosaic: View {
     var size: CGFloat = 148
     var radius: CGFloat = 14
     var body: some View {
-        let k = keys + Array(repeating: "", count: max(0, 4 - keys.count))
-        VStack(spacing: 0) {
-            HStack(spacing: 0) { cell(k[0]); cell(k[1]) }
-            HStack(spacing: 0) { cell(k[2]); cell(k[3]) }
+        // Bare ruter med ekte omslag: har spillelisten færre enn fire (typisk YouTube Music, som gir ett bilde per liste),
+        // vises det ene omslaget over hele flisen i stedet for tre tomme fargeruter.
+        let ekte = Array(NSOrderedSet(array: keys.filter { !$0.isEmpty && art($0).hasLogo })) as? [String] ?? []
+        Group {
+            if ekte.count >= 4 {
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) { cell(ekte[0]); cell(ekte[1]) }
+                    HStack(spacing: 0) { cell(ekte[2]); cell(ekte[3]) }
+                }
+            } else if let en = ekte.first {
+                ArtFill(en)
+            } else {
+                let k = keys + Array(repeating: "", count: max(0, 4 - keys.count))
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) { cell(k[0]); cell(k[1]) }
+                    HStack(spacing: 0) { cell(k[2]); cell(k[3]) }
+                }
+            }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))

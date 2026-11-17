@@ -128,7 +128,10 @@ fun HomeArt(key: String, size: Dp, radius: Dp, ring: Dp = 0.dp) {
 /** 2 × 2-mosaikk for spillelister (V4Mosaic). */
 @Composable
 fun HomeMosaic(keys: List<String>, size: Dp = 148.dp, radius: Dp = 14.dp) {
-    val k = keys.take(4) + List(maxOf(0, 4 - keys.size)) { "" }
+    // Bare ruter med ekte omslag. Færre enn fire (typisk YouTube Music: ett bilde per liste) → ett omslag over hele flisen.
+    val ekte = keys.filter { it.isNotEmpty() && art(it).hasLogo }.distinct()
+    if (ekte.size in 1..3) { HomeArt(ekte[0], size, radius); return }
+    val k = (if (ekte.size >= 4) ekte else keys).take(4).let { it + List(maxOf(0, 4 - it.size)) { "" } }
     val cell = size / 2
     Column(Modifier.size(size).clip(RoundedCornerShape(radius))) {
         for (r in 0 until 2) Row {

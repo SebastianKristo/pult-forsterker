@@ -225,11 +225,30 @@ struct SettingItemsCard: View {
                 stepButton("+") { m.setS(d.k, min(mx, v + 1)) }
             }
         case let .opt(list):
-            let open = m.openK == d.k
-            Button { m.openK = open ? "" : d.k } label: {
-                Text("\(list[min(max(0, v), list.count - 1)]) \(open ? "⌃" : "›")").sora(13, .regular, .muted).lineLimit(1)
+            // Valgmeny som i iOS: verdien i en glasskapsel med ⌃⌄, trykk gir systemmenyen med hake på det som er valgt
+            let cur = list.isEmpty ? "" : list[min(max(0, v), list.count - 1)]
+            Menu {
+                ForEach(Array(list.enumerated()), id: \.offset) { j, label in
+                    Button {
+                        Haptics.tick(); m.setS(d.k, j)
+                    } label: {
+                        if v == j { Label(label, systemImage: "checkmark") } else { Text(label) }
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(cur).sora(13, .regular, .ink).lineLimit(1).truncationMode(.middle)
+                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.muted)
+                }
+                .padding(.horizontal, 12).frame(height: 34)
+                .glassEffect(.regular.interactive(), in: Capsule())
+                .contentShape(Capsule())
             }
-            .plain()
+            .menuOrder(.fixed)
+            .buttonStyle(.plain)
+            .frame(maxWidth: 190, alignment: .trailing)
+            .accessibilityLabel(d.n)
+            .accessibilityValue(cur)
         case let .info(val, key):
             Text(val ?? info(key)).mono(12, .ink2).multilineTextAlignment(.trailing)
         case let .act(id, label, safe):
@@ -268,12 +287,6 @@ struct SettingItemsCard: View {
                         Text("\(j + 1)").mono(12, .accent).frame(width: 18, alignment: .leading)
                         Text(t).sora(12, .regular, .ink2, lineHeight: 1.45).fixedSize(horizontal: false, vertical: true)
                     }
-                }
-            }
-        case let .opt(list) where m.openK == d.k:
-            FlowLayout(spacing: 6) {
-                ForEach(Array(list.enumerated()), id: \.offset) { j, label in
-                    SKChip(label: label, on: v == j, height: 34) { m.setS(d.k, j); m.openK = "" }
                 }
             }
         default:

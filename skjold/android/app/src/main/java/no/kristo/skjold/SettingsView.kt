@@ -122,8 +122,31 @@ private fun Control(m: AppModel, d: SettingItem, v: Int) {
             StepButton("+") { m.setS(d.k, minOf(k.max, v + 1)) }
         }
         is SettingKind.Opt -> {
-            val open = m.openK == d.k
-            T("${k.list[v.coerceIn(0, k.list.size - 1)]} ${if (open) "⌃" else "›"}", sora(13f, W.Regular, C.muted), Modifier.press { m.openK = if (open) "" else d.k }, maxLines = 1)
+            // Valgmeny: verdien i en kapsel med ⌃⌄, trykk åpner en meny med hake ved det som er valgt
+            var open by remember(d.k) { mutableStateOf(false) }
+            val cur = if (k.list.isEmpty()) "" else k.list[v.coerceIn(0, k.list.size - 1)]
+            Box {
+                Row(
+                    Modifier.widthIn(max = 200.dp).height(34.dp).clip(RoundedCornerShape(17.dp)).background(C.card2).skBorder(C.line2, 17.dp)
+                        .press(label = d.n + ": " + cur) { open = true }.padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    T(cur, sora(13f, W.Regular, C.ink), Modifier.weight(1f, fill = false), maxLines = 1)
+                    T("⌃⌄", sora(10f, W.Regular, C.muted))
+                }
+                androidx.compose.material3.DropdownMenu(
+                    expanded = open, onDismissRequest = { open = false },
+                    containerColor = C.card2, shape = RoundedCornerShape(14.dp),
+                ) {
+                    k.list.forEachIndexed { j, label ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { T(label, sora(14f, if (v == j) W.Semibold else W.Regular, if (v == j) C.accent else C.ink)) },
+                            trailingIcon = if (v == j) ({ T("✓", sora(14f, W.Semibold, C.accent)) }) else null,
+                            onClick = { Haptics.tick(); m.setS(d.k, j); open = false },
+                        )
+                    }
+                }
+            }
         }
         is SettingKind.Info -> T(k.value ?: m.infoText(k.key), mono(12f, C.ink2), align = TextAlign.End)
         is SettingKind.Act -> {
@@ -159,9 +182,6 @@ private fun Extra(m: AppModel, d: SettingItem, v: Int) {
                     T(t, sora(12f, W.Regular, C.ink2, 1.45f))
                 }
             }
-        }
-        is SettingKind.Opt -> if (m.openK == d.k) Flow(6.dp) {
-            k.list.forEachIndexed { j, label -> SKChip(label, on = v == j, height = 34.dp) { m.setS(d.k, j); m.openK = "" } }
         }
         else -> {}
     }
