@@ -37,6 +37,8 @@ interface Dev {
   night?: { on: boolean; src?: string; steps?: { name: string; done?: boolean }[]; t?: number };
   setup_net?: { active: boolean; ssid: string; password: string; url: string; joining: string; error: string } | null;
   touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string } };
+  hold?: { key: string; p: number; title: string; sub: string } | null;   // fysisk knapp som holdes (POWER = omstart)
+  rebooting?: boolean; poweroff?: boolean;
 }
 
 // ---------- tilstand ----------
@@ -181,8 +183,13 @@ function control(base: string): void {
 
 // ---------- standby og oppstart ----------
 function goIdle(): void { idle.value = true; idleOp.value = 0; setTimeout(() => { idleOp.value = 1; }, 30); backlight(); }
-function wake(): void { lastAct = Date.now(); if (idle.value) { idle.value = false; backlight(); } }
-addEventListener('pointerdown', () => { lastAct = Date.now(); }, true);
+function wake(): void { lastAct = Date.now(); if (idle.value) { idle.value = false; backlight(); sluk = Date.now() + 700; } }
+// Trykket som vekker skjermen skal bare vekke: standby-laget forsvinner allerede ved pointerdown, så uten dette landet
+// pointerup/click på knappen som lå bak (f.eks. en radiostasjon som byttet kanal).
+let sluk = 0;
+const slukk = (e: Event) => { if (Date.now() < sluk) { e.stopPropagation(); e.preventDefault(); } };
+for (const t of ['pointerup', 'click', 'mouseup', 'touchend']) addEventListener(t, slukk, { capture: true, passive: false });
+addEventListener('pointerdown', (e) => { if (idle.value) { slukk(e); wake(); e.stopPropagation(); e.preventDefault(); } lastAct = Date.now(); }, { capture: true, passive: false });
 addEventListener('contextmenu', (e) => e.preventDefault());
 setInterval(() => {
   now.value = Date.now();
@@ -288,7 +295,7 @@ const SRC: Src[] = [
 
 // ---------- skjermer ----------
 // ---------- spiller ----------
-const BARS = [14, 20, 26, 20, 14];
+const BARS = [14, 21, 26, 21, 14];   // Skjold-logoen: 22/33/42/33/22, stolpene henger fra toppen
 const ROUND = 'width:48px;height:48px;flex-shrink:0;border-radius:24px;border:1px solid #2e2e30;background:rgba(22,22,23,.7);color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0';
 function NowPlaying() {
   const s = status.value, remote = !!ctl.value, out = settings.value.tOut ?? 2;
@@ -314,7 +321,7 @@ function NowPlaying() {
       </>}
       <div style="position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:244px minmax(0,1fr);grid-template-rows:244px auto auto;column-gap:24px;row-gap:4px;padding:14px 22px 8px;align-content:center">
         <div style={`position:relative;width:244px;height:244px;border-radius:14px;background:${has ? bg : '#141415'};box-shadow:0 18px 44px rgba(0,0,0,.55);overflow:hidden;display:flex;align-items:center;justify-content:center`}>
-          {!has && <div style="display:flex;gap:6px;align-items:flex-end;height:60px;opacity:.5">{BARS.map((h, i) => <div key={i} style={`width:9px;height:${h * 2.2}px;border-radius:5px;background:#3a3a37`} />)}</div>}
+          {!has && <div style="display:flex;gap:6px;align-items:flex-start;height:60px;opacity:.5">{BARS.map((h, i) => <div key={i} style={`width:9px;height:${h * 2.2}px;border-radius:5px;background:${i === 2 ? '#7a5c26' : '#3a3a37'}`} />)}</div>}
           {has && <span style={`position:absolute;left:10px;bottom:10px;height:22px;padding:0 8px;border-radius:6px;background:rgba(0,0,0,.55);font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#f2f2ee;display:flex;align-items:center`}>{srcName(s)}</span>}
         </div>
         <div style="display:flex;flex-direction:column;min-width:0;padding-top:2px">
@@ -1081,7 +1088,7 @@ function SetupNet() {
   return (
     <div style="position:absolute;inset:0;z-index:22;background:#0b0b0c;display:grid;grid-template-columns:300px minmax(0,1fr);animation:tinn .4s ease both">
       <div style="display:flex;flex-direction:column;justify-content:center;gap:14px;padding:0 30px;background:#101011;border-right:1px solid #1f1f21">
-        <div style="display:flex;gap:5px;align-items:flex-end;height:52px">{BARS.map((h, i) => <div key={i} style={`width:8px;height:${h * 2}px;border-radius:4px;background:#f0c46a`} />)}</div>
+        <div style="display:flex;gap:5px;align-items:flex-start;height:52px">{BARS.map((h, i) => <div key={i} style={`width:8px;height:${h * 2}px;border-radius:4px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</div>
         <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#f0c46a`}>{n.joining ? 'KOBLER TIL' : 'IKKE PÅ NETT'}</span>
         <span style="font-size:28px;font-weight:600;line-height:1.12;letter-spacing:-.01em">{n.joining ? 'Kobler til «' + n.joining + '»' : 'Koble Touch til Wi-Fi'}</span>
         {!!n.error && !n.joining && <span style="font-size:13px;line-height:1.4;color:#e05a4a">{n.error}</span>}
@@ -1109,6 +1116,64 @@ function Voice() {
       <span style="font-size:15px;line-height:1.45;color:#c9c9c4;text-wrap:pretty;max-width:520px;min-height:22px">{st === 'reply' ? v?.reply : ''}</span>
       <button onClick={() => void postAt('', '/api/touch/voice', { state: 'idle' })} style="height:44px;padding:0 20px;border-radius:22px;border:1px solid #2e2e30;background:#161617;font-size:13px;font-weight:600;margin-top:6px">Lukk</button>
       <span style={`position:absolute;bottom:14px;left:0;right:0;font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#6b6b67`}>HOME ASSISTANT ASSIST · {(TOUCH_WAKE[settings.value.tWake ?? 0] ?? '').toUpperCase()}</span>
+    </div>
+  );
+}
+
+// ---------- omstart: hold av/på-knappen (på skjermen nederst til venstre, eller den fysiske) i 3 s ----------
+const HOLD_MS = 3000;
+const pwrHold = signal(0);          // 0 = ikke holdt, ellers fremdrift 0–1 fra skjermknappen
+const restarting = signal(false);   // omstart er sendt fra skjermen
+let holdT = 0, holdStart = 0, holdDone = false;
+function holdTick(): void {
+  const p = Math.min(1, (Date.now() - holdStart) / HOLD_MS);
+  pwrHold.value = p;
+  if (p >= 1 && !holdDone) {
+    holdDone = true; restarting.value = true; void postAt('', '/api/reboot', {}).catch(() => {});
+    setTimeout(() => { restarting.value = false; }, 90000);   // startet den likevel ikke på nytt: tilbake til skjermen
+    return;
+  }
+  if (!holdDone) holdT = requestAnimationFrame(holdTick);
+}
+
+function PowerHold() {
+  const p = pwrHold.value, R = 20, C = 2 * Math.PI * R;
+  const start = (e: PointerEvent) => { e.preventDefault(); holdStart = Date.now(); holdDone = false; cancelAnimationFrame(holdT); holdT = requestAnimationFrame(holdTick); };
+  const end = (kort: boolean) => { cancelAnimationFrame(holdT); const holdt = Date.now() - holdStart; const ferdig = holdDone; pwrHold.value = 0; holdStart = 0; if (kort && !ferdig && holdt < 600) goIdle(); };
+  return (
+    <button onPointerDown={start} onPointerUp={() => end(true)} onPointerCancel={() => end(false)} onPointerLeave={() => { if (holdStart) end(false); }}
+      aria-label="Standby (hold for å starte på nytt)" style="position:relative;width:44px;height:44px;margin-bottom:-2px;border-radius:22px;border:1px solid #2e2e30;background:transparent;color:#8b8b86;display:flex;align-items:center;justify-content:center;padding:0;touch-action:none">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0" /></svg>
+      {p > 0 && <svg width="48" height="48" viewBox="0 0 48 48" style="position:absolute;left:-3px;top:-3px;transform:rotate(-90deg);pointer-events:none"><circle cx="24" cy="24" r={R} fill="none" stroke="#d9a441" stroke-width="3" stroke-linecap="round" stroke-dasharray={`${(C * p).toFixed(1)} ${C.toFixed(1)}`} /></svg>}
+    </button>
+  );
+}
+
+/** Fullskjerm mens knappen holdes (fyller en ring rundt logoen) og når Skjold starter på nytt (stolpene toner ut én etter én). */
+function RebootLayer() {
+  const D = dev(), fys = D.hold?.key === 'reboot' ? D.hold.p : 0;
+  const p = Math.max(pwrHold.value, fys), gaar = restarting.value || !!D.rebooting, av = !!D.poweroff;
+  const [t, setT] = useState(0);
+  useEffect(() => { if (!gaar) { setT(0); return undefined; } const t0 = Date.now(); const id = setInterval(() => setT(Date.now() - t0), 50); return () => clearInterval(id); }, [gaar]);
+  if (!gaar && p < 0.12) return null;
+  const R = 92, C = 2 * Math.PI * R, BH = [30, 46, 58, 46, 30];
+  const vis = gaar ? 1 : Math.min(1, (p - 0.12) / 0.15);
+  return (
+    <div style={`position:absolute;inset:0;z-index:40;background:rgba(0,0,0,${gaar ? 1 : 0.86});display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;opacity:${vis};transition:background .5s ease`}>
+      <div style="position:relative;width:220px;height:220px;display:flex;align-items:center;justify-content:center">
+        <svg width="220" height="220" viewBox="0 0 220 220" style="position:absolute;inset:0;transform:rotate(-90deg)">
+          <circle cx="110" cy="110" r={R} fill="none" stroke="#1c1c1e" stroke-width="4" style={`opacity:${gaar ? Math.max(0, 1 - t / 1400) : 1}`} />
+          <circle cx="110" cy="110" r={R} fill="none" stroke="#d9a441" stroke-width="4" stroke-linecap="round" stroke-dasharray={`${(C * (gaar ? 1 : p)).toFixed(1)} ${C.toFixed(1)}`} style={`opacity:${gaar ? Math.max(0, 1 - t / 1400) : 1};transition:opacity .3s`} />
+        </svg>
+        <div style="display:flex;align-items:flex-start;gap:7px;height:58px">
+          {BH.map((h, i) => { const ut = gaar ? Math.min(1, Math.max(0, (t - 500 - i * 220) / 420)) : 0; return (
+            <div key={i} style={`width:10px;height:${h * (1 - ut * 0.85)}px;border-radius:5px;background:${i === 2 ? '#d9a441' : '#f2f2ee'};opacity:${1 - ut};transition:height .2s linear`} />); })}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <span style="font-size:24px;font-weight:600;color:#f2f2ee">{gaar ? (av ? 'Slår av …' : 'Starter på nytt …') : p >= 1 ? 'Slipp' : 'Hold for å starte på nytt'}</span>
+        <span style={`font-family:${MONO};font-size:11px;letter-spacing:.14em;color:#8b8b86`}>{gaar ? (av ? 'SKJOLD SLÅS AV' : 'TILBAKE OM ET MINUTT') : 'SLIPP FOR Å AVBRYTE'}</span>
+      </div>
     </div>
   );
 }
@@ -1145,13 +1210,13 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
 }
 
 function Boot() {
-  const b = boot.value, bs = b.step, BH = [26, 38, 58, 38, 26];
+  const b = boot.value, bs = b.step, BH = [30, 46, 58, 46, 30];   // samme forhold som logoen (22/33/42/33/22)
   const names = peers.value.map((p) => p.navn).slice(0, 3).join(', ');
   const msgs = ['', '', '', '', '', '', 'Starter lydmotoren …', 'Kobler til Skjold-nettverket …', names ? 'Finner rom: ' + names + ' …' : 'Finner rom …', 'Klar'];
   const txt = bs >= 6 ? 1 : 0;
   return (
     <div style={`position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;opacity:${b.op};transition:opacity .6s ease;z-index:30`}>
-      <div style="display:flex;align-items:flex-end;gap:7px;height:64px">
+      <div style="display:flex;align-items:flex-start;gap:7px;height:64px">
         {BH.map((h, i) => <div key={i} style={`width:10px;height:${bs > i ? h : 4}px;border-radius:5px;background:${i === 2 ? '#d9a441' : '#f2f2ee'};opacity:${bs > i ? 1 : 0.15};transition:height .5s cubic-bezier(.2,.8,.2,1),opacity .4s ease`} />)}
       </div>
       <div style={`display:flex;flex-direction:column;align-items:center;gap:6px;opacity:${txt};transform:translateY(${txt ? 0 : 10}px);transition:opacity .6s ease,transform .6s ease`}>
@@ -1225,7 +1290,7 @@ function App() {
             <span style={`font-size:9px;font-weight:${on ? 600 : 400}`}>{label}</span>
           </button>); })}
         <div style="flex:1" />
-        <button onClick={goIdle} aria-label="Standby" style="width:44px;height:44px;margin-bottom:-2px;border-radius:22px;border:1px solid #2e2e30;background:transparent;color:#8b8b86;display:flex;align-items:center;justify-content:center;padding:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0" /></svg></button>
+        <PowerHold />
       </nav>
       <main style="position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden">
         <header style="height:52px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid #1a1a1c">
@@ -1288,6 +1353,7 @@ function App() {
       {!!D.alarm?.ringing && <AlarmRinging clock={clock} />}
       <NightAnim />
       {boot.value.on && <Boot />}
+      <RebootLayer />
     </div>
   );
 }
