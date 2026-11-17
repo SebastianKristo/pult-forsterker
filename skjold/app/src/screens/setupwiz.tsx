@@ -11,6 +11,7 @@ import { setLocal } from '../lib/services';
 import { ndPing } from '../lib/navidrome';
 import { ytmTest } from '../lib/ytm';
 import { loadSw, swStations } from '../lib/subwave';
+import { SubwaveMark } from '../components/brandmarks';
 
 export type SvcId = 'ytm' | 'nd' | 'ma' | 'sp' | 'sw';
 /** null = lukket, '' = oversikten, ellers rett inn i én tjeneste. */
@@ -88,7 +89,7 @@ textarea.swz-in{height:120px;padding:14px 16px;resize:none;font:400 13px/1.45 ui
 `;
 
 const Check = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
-const Icon = ({ s, big }: { s: Svc; big?: boolean }) => <div class={big ? 'swz-ic' : 'swz-mini'} style={`background:linear-gradient(145deg,${s.c1},${s.c2})`}>{s.mono}</div>;
+const Icon = ({ s, big }: { s: Svc; big?: boolean }) => <div class={big ? 'swz-ic' : 'swz-mini'} style={`background:linear-gradient(145deg,${s.c1},${s.c2})`}>{s.id === 'sw' ? <SubwaveMark /> : s.mono}</div>;
 const Steps = ({ items }: { items: ComponentChildren[] }) => <div style="width:100%;margin-top:18px">{items.map((t, i) => <div key={i} class="swz-num"><b>{i + 1}</b><span>{t}</span></div>)}</div>;
 
 /** Ett steg: innholdet i midten, hovedknappen nederst. */
@@ -99,13 +100,14 @@ function useFlow(svc: SvcId, done: () => void): Step[] {
   const s = settings.value;
   const [a, setA] = useState(''), [b, setB] = useState(''), [c, setC] = useState(''), [err, setErr] = useState('');
   const [test, setTest] = useState<'' | 'busy' | 'ok' | string>(''), [testMsg, setTestMsg] = useState('');
+  const [sw, setSw] = useState<{ name?: string; url?: string; user?: string; password?: string; extra?: Record<string, string>[]; enabled?: boolean } | null>(null);
   const S = SVCS.find((x) => x.id === svc)!;
   useEffect(() => {   // forhåndsutfyll det som allerede er lagret
     setErr(''); setTest('');
     if (svc === 'nd') { setA(s.ndUrl); setB(s.ndUser); setC(s.ndPass); }
     if (svc === 'ma') { setA(s.maUrl); setB(s.maToken); }
     if (svc === 'ytm') { setA(s.ytmCookie); }
-    if (svc === 'sw') { setA(''); setB(''); }
+    if (svc === 'sw') { setA(''); setB(''); setC(''); api.plugins().then((r) => { const p = r.plugins.find((x) => x.id === 'subwave'); setSw(p ? { ...(p.cfg as object), enabled: p.enabled } : {}); }).catch(() => setSw({})); }
   }, [svc]);
   const intro = (extra?: ComponentChildren): Step => ({
     body: <><Icon s={S} big /><h2>{S.name}</h2><p class="sub">{S.what}.</p>{extra}</>, next: 'Fortsett'
@@ -190,19 +192,26 @@ function useFlow(svc: SvcId, done: () => void): Step[] {
   ];
 
   // SUB/WAVE
+  const swOk = (u?: string) => /^https?:\/\//.test(String(u ?? '').trim());
+  const swHar = !!sw?.enabled && swOk(sw?.url);
+  const swAntall = sw ? [sw.url, ...(sw.extra ?? []).map((x) => x.url)].filter(swOk).length : 0;
   const runSw = async (): Promise<[string, boolean]> => {
-    try { loadSw(true); const r = await api.subwave(true); return r.configured && !r.error ? ['Stasjonen svarer. Den ligger under Bibliotek → SUB/WAVE.', true] : [String(r.error || 'Stasjonen svarte ikke. Sjekk adressen.'), false]; }
+    try { loadSw(true); const r = swHar ? await api.subwaveAt(swAntall, true) : await api.subwave(true); return r.configured && !r.error ? ['Stasjonen svarer. Den ligger under Bibliotek → SUB/WAVE.', true] : [String(r.error || 'Stasjonen svarte ikke. Sjekk adressen.'), false]; }
     catch (e) { return [e instanceof Error ? e.message : String(e), false]; }
   };
   return [
-    intro(<p class="sub" style="margin-top:14px">Selvhostet radio der en AI-DJ velger låtene. Du trenger adressen til stasjonen din.</p>),
-    { body: <><h2>Adressen til stasjonen</h2><p class="sub">For eksempel <b>https://radio.eksempel.no</b>.</p>
-      <div class="swz-field"><input class="swz-in" autoFocus inputMode="url" autoCapitalize="off" autoCorrect="off" placeholder="https://…" value={a} onInput={(e) => { setA(e.currentTarget.value); setErr(''); }} />
+    intro(<p class="sub" style="margin-top:14px">{swHar ? `Du har ${swAntall} ${swAntall === 1 ? 'stasjon' : 'stasjoner'}. Legg til en til – alle vises under Bibliotek → SUB/WAVE.` : 'Selvhostet radio der en AI-DJ velger låtene. Du trenger adressen til stasjonen din.'}</p>),
+    { body: <><h2>{swHar ? 'Ny stasjon' : 'Adressen til stasjonen'}</h2><p class="sub">For eksempel <b>https://radio.eksempel.no</b>.</p>
+      <div class="swz-field"><input class="swz-in" placeholder={'Navn, f.eks. ' + (swHar ? 'Morgenradio' : 'SUB/WAVE')} value={c} onInput={(e) => setC(e.currentTarget.value)} />
+        <input class="swz-in" autoFocus inputMode="url" autoCapitalize="off" autoCorrect="off" placeholder="https://…" value={a} onInput={(e) => { setA(e.currentTarget.value); setErr(''); }} />
         <input class="swz-in" type="password" placeholder="Admin-passord (valgfritt – for å hoppe over låter)" value={b} onInput={(e) => setB(e.currentTarget.value)} />
         {err && <span class="swz-err">{err}</span>}</div></>,
       next: 'Koble til', can: /^https?:\/\/\S+/.test(a.trim()),
       onNext: async () => {
-        try { await api.setPlugin('subwave', { enabled: true, url: a.trim(), ...(b ? { password: b } : {}) }); }
+        try {
+          if (swHar && sw) { const ny = { name: c.trim(), url: a.trim(), user: '', password: b }; await api.setPlugin('subwave', { enabled: true, extra: [...(sw.extra ?? []), ny] }); }
+          else await api.setPlugin('subwave', { enabled: true, url: a.trim(), ...(c.trim() ? { name: c.trim() } : {}), ...(b ? { password: b } : {}) });
+        }
         catch (e) { setErr(e instanceof Error ? e.message : String(e)); throw e; }
         setTimeout(() => void startTest(runSw), 400);
       } },
