@@ -9680,6 +9680,43 @@ async def h_hjul(r):
 FEAT_ROUTES += [("GET", "/api/hjul", h_hjul), ("POST", "/api/hjul", h_hjul), ("POST", "/api/hjul/{act}", h_hjul)]
 
 
+# ---------- Skjold Stav: fjernkontrollen melder seg (pi/skjold_stav.py, esphome/skjold-fjernkontroll*.yaml) ----------
+import skjold_stav as _stavmod   # noqa: E402
+
+
+def _stav_tast(ev):
+    # egen hendelse i /api/status (ikke last_event, som er power-knappen): integrasjonene avfyrer når seq endres
+    state["stav_event"] = {**ev, "t": time.time(), "seq": int((state.get("stav_event") or {}).get("seq", 0)) + 1}
+    _webhook("stav_tast", ev)
+    changed()
+
+
+stav = _stavmod.Stav({"on_tast": _stav_tast}, os.path.join(FEAT_DIR, "stav.json"))
+
+
+async def h_stav(r):
+    """GET /api/stav → {seq, enheter:{id:{navn,batteri,lader,versjon,sist,tilkoblet,tast:{knapp,type,t,seq}}}}
+    · POST /api/stav {id, navn, batteri, lader, versjon, tast?, type?} (fra Staven) · POST /api/stav {glem: id}."""
+    if r.method == "GET":
+        return web.json_response(stav.config())
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    if not isinstance(b, dict):
+        return web.json_response({"error": "forventer et objekt"}, status=400)
+    if b.get("glem"):
+        res = stav.glem(b["glem"]); changed()
+        return web.json_response(res)
+    try:
+        return web.json_response(stav.meld(b, r.remote or ""))
+    except ValueError as e:
+        return web.json_response({"error": str(e)}, status=400)
+
+
+FEAT_ROUTES += [("GET", "/api/stav", h_stav), ("POST", "/api/stav", h_stav)]
+
+
 # ---------- Skjold Kassetthylle: ta ut en kassett = spill den (pi/skjold_hylle.py, esphome/skjold-hylle.yaml) ----------
 import skjold_hylle as _hymod   # noqa: E402
 

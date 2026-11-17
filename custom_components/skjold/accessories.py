@@ -17,7 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .entity import _NAMES
-from .devices import ACCESSORY_MODELS, card_option_names, hjul_devices, kassett_state, rost_devices
+from .devices import ACCESSORY_MODELS, card_option_names, hjul_devices, kassett_state, rost_devices, stav_devices
 
 
 def _uid(c) -> str:
@@ -320,12 +320,76 @@ class HjulRoom(_Acc, SelectEntity):
         self.async_write_ha_state()
 
 
+# ---------- Skjold Stav (fjernkontrollen) ----------
+def _stav(c, dev):
+    return next((h for h in stav_devices(c.extras.get("stav")) if h["id"] == dev), None)
+
+
+class StavBattery(_Acc, SensorEntity):
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_native_unit_of_measurement = PERCENTAGE
+
+    def __init__(self, c, h) -> None:
+        super().__init__(c, "stav", h["id"], h["name"], "battery", "Batteri")
+
+    @property
+    def native_value(self):
+        return (_stav(self.coordinator, self._dev) or {}).get("battery")
+
+
+class StavLastKey(_Acc, SensorEntity):
+    def __init__(self, c, h) -> None:
+        super().__init__(c, "stav", h["id"], h["name"], "key", "Siste tast")
+
+    @property
+    def native_value(self):
+        return (_stav(self.coordinator, self._dev) or {}).get("key")
+
+
+class StavLastUsed(_Acc, SensorEntity):
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, c, h) -> None:
+        super().__init__(c, "stav", h["id"], h["name"], "last", "Sist hørt fra")
+
+    @property
+    def native_value(self):
+        t = (_stav(self.coordinator, self._dev) or {}).get("last")
+        return datetime.fromtimestamp(t, timezone.utc) if t else None
+
+
+class StavCharging(_Acc, BinarySensorEntity):
+    _attr_device_class = BinarySensorDeviceClass.BATTERY_CHARGING
+
+    def __init__(self, c, h) -> None:
+        super().__init__(c, "stav", h["id"], h["name"], "charging", "Lader")
+
+    @property
+    def is_on(self):
+        return (_stav(self.coordinator, self._dev) or {}).get("charging")
+
+
+class StavConnected(_Acc, BinarySensorEntity):
+    """Hørt fra det siste kvarteret (Staven sover mellom trykk og melder seg hvert 5. minutt når den er våken)."""
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, c, h) -> None:
+        super().__init__(c, "stav", h["id"], h["name"], "connected", "Tilkoblet")
+
+    @property
+    def is_on(self):
+        return bool((_stav(self.coordinator, self._dev) or {}).get("connected"))
+
+
 def entities(c, platform: str) -> list:
     """Tilbehørsentitetene for én plattform (kalles fra switch.py, number.py, sensor.py, select.py, binary_sensor.py)."""
     out: list = []
     minis = rost_devices(c.extras.get("rost"))
     kas = kassett_state(c.extras.get("nfc"), c.extras.get("spoler"))
     hjul = hjul_devices(c.extras.get("hjul"))
+    staver = stav_devices(c.extras.get("stav"))
     if platform == "switch":
         out += [x for m in minis for x in (RostPower(c, m), RostSynced(c, m))]
         if kas and kas["spoler"] is not None:
@@ -336,10 +400,12 @@ def entities(c, platform: str) -> list:
         out += [x for m in minis for x in (RostPlaying(c, m), RostConnected(c, m))]
         if kas:
             out.append(KassettConnected(c))
+        out += [x for h in staver for x in (StavCharging(c, h), StavConnected(c, h))]
     elif platform == "sensor":
         if kas:
             out += [KassettActive(c), KassettLast(c), KassettVentende(c), KassettTag(c)]
         out += [x for h in hjul for x in (HjulBattery(c, h), HjulLastUsed(c, h))]
+        out += [x for h in staver for x in (StavBattery(c, h), StavLastKey(c, h), StavLastUsed(c, h))]
     elif platform == "select":
         if kas:
             out.append(KassettPlay(c))

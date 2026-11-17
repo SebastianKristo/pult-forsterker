@@ -6,9 +6,9 @@ from __future__ import annotations
 MODELS = {"s1": "Skjold S1", "node": "Skjold Node", "core": "Skjold Core", "touch": "Skjold Touch"}
 BOARD_LABELS = {"s1f": "rev F", "main": "rev B", "kit": "Kit", "modules": "Moduler", "node": "Node", "touch": "Touch",
                 "core": "Core"}
-ACCESSORY_MODELS = {"rost": "Skjold Røst", "kassett": "Skjold Kassett", "hjul": "Skjold Hjul"}
+ACCESSORY_MODELS = {"rost": "Skjold Røst", "kassett": "Skjold Kassett", "hjul": "Skjold Hjul", "stav": "Skjold Stav"}
 ICONS = {"s1": "mdi:amplifier", "node": "mdi:speaker-wireless", "core": "mdi:raspberry-pi", "touch": "mdi:tablet-dashboard",
-         "rost": "mdi:speaker", "kassett": "mdi:cassette", "hjul": "mdi:knob"}
+         "rost": "mdi:speaker", "kassett": "mdi:cassette", "hjul": "mdi:knob", "stav": "mdi:remote-tv"}
 
 
 def main_model(data: dict | None, product: str) -> tuple[str, str, str | None]:
@@ -83,4 +83,18 @@ def hjul_devices(cfg: dict | None) -> list[dict]:
             continue
         out.append({"id": str(dev), "name": str(e.get("navn") or "Skjold Hjul"), "battery": e.get("batteri"),
                     "last": e.get("sist"), "room": str(e.get("rom") or (rooms[0] if rooms else "")), "rooms": rooms})
+    return sorted(out, key=lambda d: d["name"].lower())
+
+
+def stav_devices(cfg: dict | None) -> list[dict]:
+    """GET /api/stav → [{id, name, battery, charging, connected, last, key, version}] for staver som har meldt seg."""
+    out = []
+    for dev, e in ((cfg or {}).get("enheter") or {}).items():
+        if not isinstance(e, dict):
+            continue
+        t = e.get("tast") or {}
+        out.append({"id": str(dev), "name": str(e.get("navn") or "Skjold Stav"), "battery": e.get("batteri"),
+                    "charging": e.get("lader"), "connected": bool(e.get("tilkoblet")), "last": e.get("sist"),
+                    "key": (t.get("knapp") + ("" if t.get("type") in (None, "kort") else " (" + t["type"] + ")")) if t.get("knapp") else None,
+                    "version": e.get("versjon")})
     return sorted(out, key=lambda d: d["name"].lower())

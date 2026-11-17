@@ -106,7 +106,7 @@ test('paring: manuell IP validerer /api/status og produktet', async () => {
 
 test('app.json: fire produktdrivere (+ tilbehør) med egen paring, gammel driver deprecated, flytkort filtrert', () => {
   const ids = appJson.drivers.map((d) => d.id);
-  assert.deepEqual(ids, ['s1', 'node', 'touch', 'core', 'pultforsterker', 'rost', 'kassett', 'hjul']);   // + tilbehøret (test/accessories.test.js)
+  assert.deepEqual(ids, ['s1', 'node', 'touch', 'core', 'pultforsterker', 'rost', 'kassett', 'hjul', 'stav']);   // + tilbehøret (test/accessories.test.js)
   assert.equal(appJson.drivers.find((d) => d.id === 'pultforsterker').deprecated, true);
   for (const id of ['s1', 'node', 'touch', 'core']) {
     const d = appJson.drivers.find((x) => x.id === id);

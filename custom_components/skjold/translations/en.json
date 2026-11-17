@@ -122,6 +122,15 @@
       },
       "kassett_tag": {
         "name": "Last tag"
+      },
+      "stav_battery": {
+        "name": "Battery"
+      },
+      "stav_key": {
+        "name": "Last key"
+      },
+      "stav_last": {
+        "name": "Last heard from"
       }
     },
     "binary_sensor": {
@@ -144,6 +153,12 @@
         "name": "Power problem"
       },
       "kassett_connected": {
+        "name": "Connected"
+      },
+      "stav_charging": {
+        "name": "Charging"
+      },
+      "stav_connected": {
         "name": "Connected"
       }
     },
@@ -241,6 +256,18 @@
               "single_press": "Single press",
               "double_press": "Double press",
               "long_press": "Long press"
+            }
+          }
+        }
+      },
+      "stav_key": {
+        "name": "Key",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "kort": "Short press",
+              "lang": "Long press",
+              "dobbel": "Double press"
             }
           }
         }

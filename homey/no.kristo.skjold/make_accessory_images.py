@@ -1,11 +1,11 @@
-"""Driverbilder (small 75, large 500, xlarge 1000) for tilbehøret Skjold Røst, Kassett og Hjul, laget fra renderne i
+"""Driverbilder (small 75, large 500, xlarge 1000) for tilbehøret Skjold Røst, Kassett, Hjul og Stav, laget fra renderne i
 kabinett/*/render: lys bakgrunn fjernes, produktet sentreres på hvit bakgrunn som S1/Node/Core/Touch-bildene.
 Kjør fra repo-roten: python3 homey/no.kristo.skjold/make_accessory_images.py"""
 from PIL import Image, ImageChops, ImageFilter
 
 BG = (255, 255, 255)   # samme hvite bakgrunn som S1, Node, Core og Touch
 SRC = {"rost": "kabinett/rost/render/01_rost.png", "kassett": "kabinett/kassett/render/02_med_kassett.png",
-       "hjul": "kabinett/hjul/render/01_hjul.png"}
+       "hjul": "kabinett/hjul/render/01_hjul.png", "stav": "kabinett/fjernkontroll/render/02_ovenfra_lys.png"}
 OUT = "homey/no.kristo.skjold/drivers/{}/assets/images/{}.png"
 
 

@@ -1181,6 +1181,15 @@ Standard: **Se TV** (TV på, TV-tuner, Skjold aux, scene tv), **Apple TV** (TV p
 
 ## Home Assistant
 
+**Via Skjold-integrasjonen (uten ESPHome i Home Assistant).** Staven melder seg hos Skjold-en den styrer (`POST /api/stav`
+hvert 5. minutt og ved hver tast). Skjold-integrasjonen viser den da som egen enhet, «Skjold Stav», under Skjold-enheten:
+batteri, lader, tilkoblet, siste tast og hendelsesentiteten «Tast» (kort, lang eller dobbel, med tasten i `knapp`).
+Hver tast avfyrer også `skjold_stav_tast` {enhet, navn, knapp, type} på hendelsesbussen. Last integrasjonen på nytt etter
+at en ny Stav har meldt seg første gang. I Homey heter enheten også «Skjold Stav», med flytkortene «En tast ble trykket»
+og «[tast] ble trykket ([type])».
+
+**Via ESPHome (som før):**
+
 ESPHome-integrasjonen finner fjernkontrollen. Slå på **«Tillat enheten å utføre handlinger i Home Assistant»** i integrasjonsvalgene, ellers virker ikke lys, stikk og scener.
 
 **Hver tast er en hendelse** (`esphome.skjold_fjernkontroll`), med samme form for alle taster:
