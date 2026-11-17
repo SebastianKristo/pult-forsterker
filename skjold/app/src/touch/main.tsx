@@ -188,9 +188,48 @@ function wake(): void { lastAct = Date.now(); if (idle.value) { idle.value = fal
 // Trykket som vekker skjermen skal bare vekke: standby-laget forsvinner allerede ved pointerdown, så uten dette landet
 // pointerup/click på knappen som lå bak (f.eks. en radiostasjon som byttet kanal).
 let sluk = 0;
-const slukk = (e: Event) => { if (Date.now() < sluk) { e.stopPropagation(); e.preventDefault(); } };
+const slukk = (e: Event) => { if (idle.value || Date.now() < sluk) { e.stopPropagation(); e.preventDefault(); } };
 for (const t of ['pointerup', 'click', 'mouseup', 'touchend']) addEventListener(t, slukk, { capture: true, passive: false });
-addEventListener('pointerdown', (e) => { if (idle.value) { slukk(e); wake(); e.stopPropagation(); e.preventDefault(); } lastAct = Date.now(); }, { capture: true, passive: false });
+
+// Bevegelser på skjermspareren (skjermen blir stående i standby): to fingre sveip ← neste / → forrige, dobbelttrykk =
+// spill/pause, ett trykk = vekk. Alt i skjermspareren svelges, så ingenting bak den trykkes.
+const gestTxt = signal('');
+const gest = { ptr: new Map<number, { x0: number; y0: number; x: number; y: number }>(), maks: 0, t0: 0, sisteTrykk: 0, vekkT: 0, gT: 0 };
+function gestVis(t: string): void { gestTxt.value = t; clearTimeout(gest.gT); gest.gT = window.setTimeout(() => { gestTxt.value = ''; }, 1100); }
+addEventListener('pointerdown', (e) => {
+  if (idle.value) {
+    e.stopPropagation(); e.preventDefault();
+    if (!gest.ptr.size) { gest.maks = 0; gest.t0 = Date.now(); }
+    gest.ptr.set(e.pointerId, { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY });
+    gest.maks = Math.max(gest.maks, gest.ptr.size);
+  }
+  lastAct = Date.now();
+}, { capture: true, passive: false });
+addEventListener('pointermove', (e) => { const p = gest.ptr.get(e.pointerId); if (p) { p.x = e.clientX; p.y = e.clientY; } }, { capture: true });
+const gestSlutt = (e: PointerEvent) => {
+  const p = gest.ptr.get(e.pointerId); if (!p) return;
+  p.x = e.clientX; p.y = e.clientY;
+  if (gest.ptr.size > 1) { (p as { ferdig?: boolean }).ferdig = true; if ([...gest.ptr.values()].some((q) => !(q as { ferdig?: boolean }).ferdig)) return; }
+  const alle = [...gest.ptr.values()]; gest.ptr.clear();
+  const dx = alle.reduce((a, q) => a + q.x - q.x0, 0) / alle.length, dy = alle.reduce((a, q) => a + q.y - q.y0, 0) / alle.length;
+  if (!idle.value) return;
+  if (gest.maks >= 2 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+    clearTimeout(gest.vekkT); gest.sisteTrykk = 0;
+    if (dx < 0) { void api.transport('next').catch(() => {}); gestVis('Neste låt ›'); } else { void api.transport('previous').catch(() => {}); gestVis('‹ Forrige låt'); }
+    return;
+  }
+  if (gest.maks >= 2 || Math.hypot(dx, dy) > 24) return;   // annen bevegelse: ingenting
+  const nå = Date.now();
+  if (nå - gest.sisteTrykk < 330) {   // dobbelttrykk
+    clearTimeout(gest.vekkT); gest.sisteTrykk = 0;
+    const spiller = !!status.value?.playing; playPause(); gestVis(spiller ? 'Pause' : 'Spiller');
+    return;
+  }
+  gest.sisteTrykk = nå;
+  clearTimeout(gest.vekkT); gest.vekkT = window.setTimeout(() => { gest.sisteTrykk = 0; wake(); }, 340);
+};
+addEventListener('pointerup', gestSlutt, { capture: true });
+addEventListener('pointercancel', (e) => { gest.ptr.delete(e.pointerId); }, { capture: true });
 addEventListener('contextmenu', (e) => e.preventDefault());
 setInterval(() => {
   now.value = Date.now();
@@ -1183,7 +1222,7 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
   const s = status.value, m = settings.value.tIdle ?? 0, night = nightNow(), nx = nextAlarm();
   const bg = artOf(s), playing = !!s?.playing;
   return (
-    <button class="flat" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); wake(); }} aria-label="Vekk skjermen" style={`position:absolute;inset:0;border:none;background:#000;padding:0;overflow:hidden;opacity:${idleOp.value};transition:opacity .8s ease;z-index:20`}>
+    <button class="flat" aria-label="Vekk skjermen" style={`position:absolute;inset:0;touch-action:none;border:none;background:#000;padding:0;overflow:hidden;opacity:${idleOp.value};transition:opacity .8s ease;z-index:20`}>
       {m === 1 && !night && <>
         <div style={`position:absolute;inset:-60px;background:${bg};filter:blur(60px);opacity:.55`} />
         <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85),rgba(0,0,0,.35))" />
@@ -1236,6 +1275,7 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
           {playing && !night && <span style="margin-top:26px;display:flex;align-items:center;gap:10px;font-size:13px;color:#8b8b86"><div style={`width:24px;height:24px;border-radius:5px;background:${bg}`} />{(s?.title || s?.station) + (s?.artist ? ' · ' + s.artist : '')}</span>}
         </div>
       )}
+      {!!gestTxt.value && <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 26px;border-radius:999px;background:rgba(20,20,22,.82);border:1px solid #3a2e17;color:#f0c46a;font-size:22px;font-weight:600;white-space:nowrap;animation:tinn .2s ease both">{gestTxt.value}</span>}
       {m !== 2 && m !== 4 && !night && <span style={`position:absolute;left:0;right:0;bottom:16px;text-align:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#3a3a37`}>TRYKK FOR Å VEKKE</span>}
     </button>
   );

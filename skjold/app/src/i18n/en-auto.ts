@@ -1857,4 +1857,10 @@ export const EN_AUTO: Record<string, string> = {
   'Vises på stasjonen og som radiofavoritt. Valgfritt.': 'Shown on the station and as a radio favourite. Optional.',
   'Fjern bildet': 'Remove image',
   'Velg bilde': 'Choose image',
+  'Neste låt ›': 'Next track ›',
+  '‹ Forrige låt': '‹ Previous track',
+  'Pause': 'Pause',
+  'Spiller': 'Playing',
+  'Fjord fullskjerm': 'Fjord full screen',
+  'Fjord': 'Fjord',
 };
