@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, coverUrl, type InputId, type Status } from '../lib/api';
 import { act, hold, inputLabel, showToast, status, playPause, setVolume } from '../lib/store';
 import { art } from '../lib/settings';
+import { openArtist } from './library';
 import { Chip, MuteIcon, NextIcon, PlayPauseIcon, PowerIcon, PrevIcon, Slider } from '../components/ui';
 
 export const SRC_COLOR: Record<string, string> = {
@@ -113,14 +114,15 @@ export function sourceLine(s: Status | null): string {
 export function PlayerBody() {
   const s = status.value;
   const t = nowTitle(s);
+  const arLink = (s?.artist || '').trim() && t.sub === (s?.artist || '').trim() ? (s?.artist || '').trim() : '';
   const dur = s?.duration ?? 0, pos = s?.position ?? 0;
   return (
     <div class="col gap16">
       <Art s={s} />
       <div class="col gap4">
         <span class="ellip" style={{ fontSize: '22px', fontWeight: 600 }} data-testid="now-title">{t.title}</span>
-        <span class="ellip muted">{t.sub}</span>
-        {t.album && <span class="ellip muted" style={{ fontSize: '13px', opacity: 0.8 }} data-testid="album">{t.album}</span>}
+        {arLink ? <button class="lnk ellip muted" onClick={() => openArtist(arLink)}>{t.sub}</button> : <span class="ellip muted">{t.sub}</span>}
+        {t.album && (arLink ? <button class="lnk ellip muted" style={{ fontSize: '13px', opacity: 0.8 }} data-testid="album" onClick={() => openArtist(arLink, t.album)}>{t.album}</button> : <span class="ellip muted" style={{ fontSize: '13px', opacity: 0.8 }} data-testid="album">{t.album}</span>)}
         {s?.input === 'airplay' && s.airplay_device && <span class="ellip muted" style={{ fontSize: '11px' }}>Fra {s.airplay_device}</span>}
       </div>
       {dur > 0 && (

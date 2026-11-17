@@ -1,10 +1,11 @@
 // Biblioteker (Skjold App v2 · tLib): YouTube Music og Navidrome. Malen er portert 1:1 fra designfilen.
 // Navidrome er ekte (Subsonic-API direkte fra appen). YouTube Music hentes fra Skjold-enheten (/api/ytm/*, lib/ytm.ts);
 // svarer den ikke, vises samme skall med en tydelig «ikke tilkoblet»-tilstand i stedet for eksempeldata.
+import { ArtistView } from './desk';
 import { openSetup } from './setupwiz';
 import { loadSw, playSw, swPlaying, swStations } from '../lib/subwave';
 import { useEffect, useState } from 'preact/hooks';
-import { go, openFull, route, status, trackSub } from '../lib/store';
+import { closeFull, go, openFull, route, status, trackSub } from '../lib/store';
 import { art } from '../lib/settings';
 import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, LIB_TABS, lq, lsvc, playNd, whenText, type LibId } from '../lib/library';
 import { MediaLibSection } from './medialib';
@@ -15,9 +16,17 @@ import { AskBox, TagFilterBar } from './ai';
 import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 
 /** Tilstand per bibliotek-side (signaler, så tilbake-knappen og skjermbildeskriptet kan styre den). */
+/** Artistsiden (eller et album som skal slås opp) åpnet fra spilleren: navn som trykkes på. */
+export const artistView = signal<{ name: string; album?: string } | null>(null);
+/** Åpne artistsiden (eller albumet) fra et navn i spilleren. Navidrome først når det er satt opp. */
+export function openArtist(name: string, album?: string): void {
+  libUi.pl.value = null; libUi.q.value = ''; closeFull();
+  artistView.value = { name: name.trim(), ...(album ? { album: album.trim() } : {}) };
+  go('lib', ndConfigured() ? 'nd' : 'ytm');
+}
 export const libUi = { tab: signal(0), pl: signal<{ kind: 'album' | 'pl'; id: string; name: string } | null>(null), q: signal(''), hero: signal(0), mood: signal<number | null>(null) };
 trackSub(libUi.pl, () => { libUi.pl.value = null; });   // album/spilleliste: tilbake lukker den
-export function libBack(): boolean { if (libUi.pl.value) { libUi.pl.value = null; return true; } return false; }
+export function libBack(): boolean { if (libUi.pl.value) { libUi.pl.value = null; return true; } if (artistView.value) { artistView.value = null; return true; } return false; }
 
 const cover = (id: string | undefined, key: string, size = 300) => { const u = ndCover(id, size), a = art(key); return { bg: u ? 'url("' + u.replace(/"/g, '') + '") center / cover no-repeat, ' + a.bg : a.bg, ink: u ? 'transparent' : a.ink }; };
 const MOODS = ['Ny energi', 'Godfølelse', 'Avslapping', 'Trening', 'Fest', 'Fokus', 'Søvn'];
@@ -161,6 +170,7 @@ function SubwaveLib() {
 }
 
 export function LibraryPage() {
+  if (artistView.value && route.value.cat !== 'sw') return <div style="padding:0 16px"><ArtistView lib={route.value.cat === 'ytm' ? 'ytm' : 'nd'} /></div>;
   return route.value.cat === 'sw' ? <SubwaveLib /> : <LibraryMain />;
 }
 

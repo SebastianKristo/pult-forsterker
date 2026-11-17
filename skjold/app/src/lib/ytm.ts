@@ -42,6 +42,11 @@ export function ytmForget(): void { cache = null; }
 export async function ytmTracks(id: string): Promise<NdSong[]> {
   return ytmSongs((await apiReq<Obj>('/api/ytm/tracks?id=' + encodeURIComponent(id), undefined, undefined, 20000))['tracks']);
 }
+/** Søk som også gir album (artistsiden og «trykk på albumet» i spilleren). */
+export async function ytmSearchAll(q: string): Promise<{ tracks: NdSong[]; albums: NdAlbum[] }> {
+  const r = await apiReq<Obj>('/api/ytm/search?q=' + encodeURIComponent(q), undefined, undefined, 15000);
+  return { tracks: ytmSongs(r['tracks']), albums: ytmColls(r['albums']).filter((a) => !a.playlist) };
+}
 export async function ytmSearch(q: string): Promise<NdSong[]> {
   return ytmSongs((await apiReq<Obj>('/api/ytm/search?q=' + encodeURIComponent(q), undefined, undefined, 15000))['tracks']);
 }
