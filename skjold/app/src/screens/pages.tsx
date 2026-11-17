@@ -242,13 +242,42 @@ function EqGraph({ eq, onSet }: { eq: number[]; onSet: (i: number, v: number, fi
   );
 }
 
+/** Bass, diskant og balanse: fylles fra midten (0), med verdien i en egen brikke. Loudness i samme kort. */
+function ToneRow({ n, k, mn, mx, f }: { n: string; k: 'bass' | 'treb' | 'bal'; mn: number; mx: number; f: (v: number) => string }) {
+  const v0 = settings.value[k];
+  const [live, setLive] = useState<number | null>(null);
+  const v = live ?? v0, pct = (v - mn) / (mx - mn);
+  return (
+    <div class="tn-row">
+      <div class="tn-hd"><span>{n}</span><button class={'tn-v' + (v ? ' on' : '')} title="Tilbake til midten" onClick={() => { if (v) { confirmTap(); setSetting(k, 0); } }}>{f(v)}</button></div>
+      <div class="tn-sl">
+        <i class="tn-tr" /><i class="tn-mid" />
+        <i class="tn-fill" style={{ left: `calc(10px + (100% - 20px) * ${Math.min(pct, 0.5)})`, width: `calc((100% - 20px) * ${Math.abs(pct - 0.5)})` }} />
+        <Slider className="range bi" haptic min={mn} max={mx} value={v0} label={n} onCommit={(x, fin) => { setLive(fin ? null : x); if (fin) setSetting(k, x); }} />
+      </div>
+      <div class="tn-ends"><span>{k === 'bal' ? 'V' : mn}</span><span>{k === 'bal' ? 'H' : '+' + mx}</span></div>
+    </div>);
+}
+
+function ToneCard({ src, loud }: { src: EqSource; loud: boolean }) {
+  return (
+    <section class="tn-card">
+      <div class="tn-top"><span class="kicker">TONE</span><span class="lbl11">Gjelder alle innganger</span></div>
+      <ToneRow n="Bass" k="bass" mn={-6} mx={6} f={fmt.dB} />
+      <ToneRow n="Diskant" k="treb" mn={-6} mx={6} f={fmt.dB} />
+      <ToneRow n="Balanse" k="bal" mn={-5} mx={5} f={fmt.bal} />
+      <div class="tn-loud">
+        <div class="col" style={{ gap: '2px', minWidth: 0 }}><span style={{ fontSize: '14px', fontWeight: 600 }}>Loudness</span><span class="lbl11">Mer bass og diskant ved lavt volum</span></div>
+        <Toggle on={loud} label="Loudness" onChange={(v) => setEqProfile(src, { loud: v })} />
+      </div>
+    </section>);
+}
+
 export function EqPage() {
   const act0 = eqActiveSource.value;
   const [src, setSrc] = useState<EqSource>(act0);
   const prof = settings.value.eq[src];
-  const st = settings.value;
   const name = (k: EqSource) => EQ.sources.find((x) => x[0] === k)?.[1] ?? '';
-  const tone: [string, 'bass' | 'treb' | 'bal', number, number, (v: number) => string][] = [['Bass', 'bass', -6, 6, fmt.dB], ['Diskant', 'treb', -6, 6, fmt.dB], ['Balanse', 'bal', -5, 5, fmt.bal]];
   const setBand = (i: number, v: number, fin: boolean) => { if (!fin) return; const eq = [...prof.eq]; eq[i] = v; setEqProfile(src, { eq, preset: -1 }); };
   const step = (i: number, d: number) => { confirmTap(); setBand(i, Math.max(-EQ_MAX, Math.min(EQ_MAX, (prof.eq[i] ?? 0) + d)), true); };
   const presetName = prof.preset >= 0 ? EQ.presets[prof.preset]?.[0] : 'Egendefinert';
@@ -283,19 +312,7 @@ export function EqPage() {
         </section>
       </div>
       <aside class="eqx-side">
-        <div class="list">
-          {tone.map(([n, k, mn, mx, f]) => (
-            <div class="tone" key={k}>
-              <span style={{ fontSize: '13px' }}>{n}</span>
-              <Slider haptic min={mn} max={mx} value={st[k]} label={n} onCommit={(v, fin) => { if (fin) setSetting(k, v); }} />
-              <span class="mono" style={{ fontSize: '12px', textAlign: 'right' }}>{f(st[k])}</span>
-            </div>
-          ))}
-          <div class="row between" style={{ padding: '12px 14px' }}>
-            <div class="col" style={{ gap: '2px' }}><span style={{ fontSize: '13px' }}>Loudness</span><span class="lbl11">Mer bass og diskant ved lavt volum</span></div>
-            <Toggle on={prof.loud} label="Loudness" onChange={(v) => setEqProfile(src, { loud: v })} />
-          </div>
-        </div>
+        <ToneCard src={src} loud={prof.loud} />
         <details class="eqx-help">
           <summary>Hva båndene gjør</summary>
           <div class="eq-what" style={{ borderTop: 'none', paddingTop: '6px' }}>
