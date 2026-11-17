@@ -7917,11 +7917,121 @@ def group_set(bases):
     for m in set(want) - cur:
         lyr.rpc(["sync", m])
     _group["bases"] = dict(want)
+    _justert.clear()
+    threading.Timer(8, lambda: _trygt(group_align)).start()   # når spillerne har kommet i gang
     print("Gruppe:", ", ".join(x.get("name") or x["base"] for x in res if x.get("ok")) or "ingen", flush=True)
     return res
 
 
 _group = {"bases": {}}
+
+
+# ---------- Skjold Synk: rommene i en gruppe høres samtidig (pi/skjold_synk.py) ----------
+import skjold_synk as _synk   # noqa: E402
+_maaler = _synk.Maaler(DSP_WS)
+SYNK_FILE = os.path.join(FEAT_DIR, "synk.json")
+_justert = {}   # spiller-MAC → playDelay (ms) vi sist satte i Lyrion
+
+
+def synk_trim():
+    try:
+        with open(SYNK_FILE) as f:
+            return float(json.load(f).get("trim_ms") or 0)
+    except Exception:
+        return 0.0
+
+
+def output_latency():
+    """Denne enhetens forsinkelse fra squeezelite til høyttaleren (ms), målt mens den spiller."""
+    return _maaler.maal(synk_trim())
+
+
+def _finn_baser(macs):
+    """Adressen til Skjold-enhetene med disse Lyrion-spillerne (spør enhetene på nettet)."""
+    mangler = [m for m in macs if m not in _group["bases"]]
+    if not mangler:
+        return
+    for p in _peers():
+        try:
+            mac = str(_peer_json(p["base"], "/api/status", timeout=3).get("lms_player") or "").lower()
+        except Exception:
+            continue
+        if mac in mangler:
+            _group["bases"][mac] = p["base"]
+
+
+def group_align():
+    """Lederen: sett Lyrions playDelay for hver spiller i gruppen lik spillerens målte utgangsforsinkelse."""
+    if not lyr.host:
+        return []
+    try:
+        r = lyr.rpc(["status", "-", 1])
+    except Exception:
+        return []
+    if str(r.get("sync_master") or "").lower() != lyr.player:
+        return []   # ikke med i en gruppe, eller en annen enhet leder
+    f = group_followers()
+    _finn_baser(f)
+    maal = {lyr.player: output_latency()}
+    for m in f:
+        b = _group["bases"].get(m)
+        if not b:
+            continue
+        try:
+            maal[m] = _peer_json(b, "/api/sync/latency", timeout=4)
+        except Exception:
+            pass
+    ut = []
+    for mac, x in maal.items():
+        ms = (x or {}).get("ms")
+        if ms is None:
+            continue
+        ms = max(0, int(round(ms)))
+        if _synk.trenger_endring(_justert.get(mac), ms):
+            try:
+                (lyr.rpc(["playerpref", "playDelay", str(ms)]) if mac == lyr.player else lyr.rpc_as(mac, ["playerpref", "playDelay", str(ms)]))
+                _justert[mac] = ms
+                print(f"Synk: {mac} playDelay {ms} ms", flush=True)
+            except Exception as e:
+                print("Synk:", e, flush=True)
+        ut.append({"player": mac, "ms": ms, "running": bool((x or {}).get("running"))})
+    return ut
+
+
+def _synk_loop():
+    time.sleep(40)
+    while True:
+        try:
+            if lyr.host and lyr.connected:
+                group_align()
+        except Exception as e:
+            print("Synk:", e, flush=True)
+        time.sleep(15)
+
+
+if os.environ.get("KI_AMP_LMS", "1") == "1":
+    threading.Thread(target=_synk_loop, daemon=True).start()
+
+
+async def h_sync_latency(r):
+    """GET /api/sync/latency → {ms, running, deler}. POST {trim_ms} finjusterer rommet (ms, + = senere ut, − = tidligere)."""
+    loop = asyncio.get_running_loop()
+    if r.method == "POST":
+        try:
+            b = await r.json()
+            trim = max(-2000.0, min(2000.0, float(b.get("trim_ms", 0))))
+        except Exception:
+            return web.json_response({"error": "trim_ms må være et tall"}, status=400)
+        os.makedirs(os.path.dirname(SYNK_FILE) or ".", exist_ok=True)
+        with open(SYNK_FILE, "w") as f:
+            json.dump({"trim_ms": trim}, f)
+        _justert.clear()   # la lederen sette playDelay på nytt
+    return web.json_response({**await loop.run_in_executor(None, output_latency), "trim_ms": synk_trim()})
+
+
+async def h_sync_align(_r):
+    """POST /api/sync/align: juster gruppen nå (lederen)."""
+    return web.json_response({"rom": await asyncio.get_running_loop().run_in_executor(None, group_align)})
 
 
 async def h_group(r):
@@ -8550,7 +8660,8 @@ FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h
                ("GET", "/api/doorbell", h_doorbell), ("POST", "/api/doorbell", h_doorbell), ("GET", "/api/doorbell/camera", h_doorbell_camera),
                ("GET", "/api/routines", h_routines), ("POST", "/api/routines", h_routines), ("POST", "/api/routines/steps", h_routines),
                ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
-FEAT_ROUTES += [("GET", "/api/peers", h_peers), ("GET", "/api/group", h_group), ("POST", "/api/group", h_group), ("POST", "/api/group/join", h_group_join)]
+FEAT_ROUTES += [("GET", "/api/peers", h_peers), ("GET", "/api/group", h_group), ("POST", "/api/group", h_group), ("POST", "/api/group/join", h_group_join),
+                ("GET", "/api/sync/latency", h_sync_latency), ("POST", "/api/sync/latency", h_sync_latency), ("POST", "/api/sync/align", h_sync_align)]
 FEAT_ROUTES += DUCK_ROUTES
 FEAT_ROUTES += HA_ROUTES
 
