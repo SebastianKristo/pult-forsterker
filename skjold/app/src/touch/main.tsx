@@ -544,6 +544,7 @@ function loadSwT(): void {
 
 /** Podkaster på Touch: favorittene (lagt til i appen eller web-UI) og episodene deres. */
 const podTouch = signal<PodShow | null>(null);
+let podFraSok = false;   // podkasten ble åpnet fra søket: «Tilbake» går tilbake dit
 const pmin = (s: number) => (s >= 3600 ? Math.floor(s / 3600) + ' t ' : '') + Math.round((s % 3600) / 60) + ' min';
 async function playPodTouch(e: PodEpisode, show?: PodShow): Promise<void> {
   try {
@@ -558,7 +559,7 @@ function PodEpisodes({ s }: { s: PodShow }) {
   return (
     <div style="flex:1;min-height:0;display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px">
       <div style="display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;overflow:hidden">
-        <button onClick={() => { podTouch.value = null; }} style="height:40px;border-radius:20px;border:1px solid #2e2e30;background:#161617;font-size:13px;font-weight:600;flex-shrink:0">‹ Tilbake</button>
+        <button onClick={() => { podTouch.value = null; if (podFraSok) { podFraSok = false; sokHusk.fraSok = true; searchOpen.value = true; } }} style="height:40px;border-radius:20px;border:1px solid #2e2e30;background:#161617;font-size:13px;font-weight:600;flex-shrink:0">‹ Tilbake</button>
         <div style={`width:150px;height:150px;flex-shrink:0;border-radius:12px;background:${artBg(s.title, s.image)}`} />
         <span style="font-size:15px;font-weight:600;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{s.title}</span>
         <span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{s.author}</span>
@@ -607,7 +608,7 @@ function Library() {
   } else if (tab === 'Podkaster') {
     kicker = pf === null ? 'HENTER …' : pf.length ? 'FAVORITTPODKASTER' + (pn.length ? ' · NYESTE EPISODER FØRST' : '') : 'INGEN FAVORITTER · LEGG TIL I APPEN UNDER RADIO → PODKASTER';
     const nyest = pn.slice(0, 6).map((e) => ({ t: e.title, s: 'NY · ' + e.show, art: artBg(e.show, e.image), play: () => void playPodTouch(e) }));
-    items = [...nyest, ...(pf ?? []).map((f) => ({ t: f.title, s: f.author || 'Podkast', art: artBg(f.title, f.image), play: () => { podTouch.value = f; } }))];
+    items = [...nyest, ...(pf ?? []).map((f) => ({ t: f.title, s: f.author || 'Podkast', art: artBg(f.title, f.image), play: () => { podFraSok = false; podTouch.value = f; } }))];
   } else if (tab === 'SUB/WAVE') {
     kicker = 'SUB/WAVE · AI-DJ-STASJONER';
     items = sw.map((x) => ({ t: x.name, s: 'SUB/WAVE', art: artBg(x.name, x.image, x.i), live: swNow === x.i && !!st?.playing,
@@ -875,12 +876,15 @@ function Intercom() {
 
 // ---------- søk ----------
 interface Hit { key: string; t: string; s: string; art: string; play: () => void }
+// Husket søk: åpner du en podkast fra søket, tar «Tilbake» deg til søket med det du skrev og samme kilde.
+const sokHusk = { q: '', src: -1, fraSok: false };
 function Search() {
-  const [q, setQ] = useState(''), [kb, setKb] = useState(true), [busy, setBusy] = useState(false);
+  const [q, setQ] = useState(sokHusk.fraSok ? sokHusk.q : ''), [kb, setKb] = useState(!sokHusk.fraSok), [busy, setBusy] = useState(false);
   const [hits, setHits] = useState<Hit[] | null>(null), [err, setErr] = useState('');
   // Søkekilde: fanen du kom fra (SUB/WAVE har ikke søk, så da søkes det i YouTube Music). 3 = podkaster.
   const podIdx = 3 + (swT.value.length ? 1 : 0);
-  const [src, setSrc] = useState(lib.value <= 2 ? lib.value : lib.value === podIdx ? 3 : 0);
+  const [src, setSrc] = useState(sokHusk.fraSok && sokHusk.src >= 0 ? sokHusk.src : lib.value <= 2 ? lib.value : lib.value === podIdx ? 3 : 0);
+  useEffect(() => { sokHusk.fraSok = false; }, []);
   const seq = useRef(0);
   const go = (it: () => void) => () => { it(); searchOpen.value = false; scr.value = 'now'; };
   useEffect(() => {
@@ -890,7 +894,7 @@ function Search() {
     const id = window.setTimeout(async () => {
       try {
         let l: Hit[];
-        if (src === 3) { const r = await api.podSearch(t); l = r.shows.slice(0, 30).map((x, i) => ({ key: x.id, t: x.title, s: x.author || 'Podkast', art: artBg(x.title, x.image, i), play: () => { podTouch.value = x; lib.value = podIdx; window.setTimeout(() => { scr.value = 'lib'; }, 0); } })); }
+        if (src === 3) { const r = await api.podSearch(t); l = r.shows.slice(0, 30).map((x, i) => ({ key: x.id, t: x.title, s: x.author || 'Podkast', art: artBg(x.title, x.image, i), play: () => { sokHusk.q = t; sokHusk.src = 3; podFraSok = true; podTouch.value = x; lib.value = podIdx; window.setTimeout(() => { scr.value = 'lib'; }, 0); } })); }
         else if (src === 2) { const r = await api.radioSearch(t); l = [...(r.norway ?? []), ...(r.world ?? [])].slice(0, 30).map((st, i) => ({ key: st.url + i, t: st.name, s: st.genre || st.country || 'Radio', art: artBg(st.name, st.image, i), play: () => playStation(st) })); }
         else { const r = src === 0 ? await ytmSearch(t) : await ndSearch(t); l = r.slice(0, 30).map((x, i) => ({ key: x.id + i, t: x.title, s: [x.artist, x.album].filter(Boolean).join(' · '), art: artBg(x.title, ndCover(x.coverArt, 120)), play: () => playNd(r, i, src === 0 ? 'ytm' : 'nd') })); }
         if (n === seq.current) { setHits(l); setErr(''); }
