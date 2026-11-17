@@ -1837,4 +1837,9 @@ export const EN_AUTO: Record<string, string> = {
   'Retter høyttalernes egen klang. Finn modellen din eller mål dem selv.': 'Corrects the speakers\' own sound. Find your model or measure them yourself.',
   'Bredere lydbilde når du sitter midt foran høyttalerne (krysstalekansellering).': 'A wider soundstage when you sit centred in front of the speakers (crosstalk cancellation).',
   ' Romkorreksjon er på, så profilen tar seg bare av området over 300 Hz.': ' Room correction is on, so the profile only handles the range above 300 Hz.',
+  'ARTIST': 'ARTIST',
+  'Album': 'Albums',
+  'Leter etter albumet …': 'Looking for the album …',
+  'Mer fra ': 'More from ',
+  'Åpne albumet ': 'Open the album ',
 };

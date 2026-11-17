@@ -11,13 +11,13 @@ import { act, deviceName, eqActiveSource, go, inputLabel, recent, setVolume, set
 import { art, EQ } from '../lib/settings';
 import { Icon, PRODUCT_ICON, Slider, SrcCircle } from '../components/ui';
 import { browseState, currentStation, favOf, favs, favsLoaded, loadBrowse, loadFavs, norm, playFav, playStation, search, searchBusy, searchRes, shelves, toggleFav } from '../lib/radio';
-import { ndAlbumList, ndConf, ndConfigured, ndCover, ndPlaylists, ndSearch, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
+import { ndAlbumList, ndArtist, ndConf, ndConfigured, ndCover, ndPlaylists, ndSearch, ndSearchAll, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
 import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, lq, lsvc, playNd, whenText, type LibId } from '../lib/library';
 import { InputChips, SeekBar, Transport, artFor, canSeek, nowTitle, seekTo, sourceLine, subLine } from './player';
 import { useRooms } from './phone';
 import { SpeakerButton } from './groups';
-import { collSongs, libUi } from './library';
-import { ytmHomeCached, ytmSearch, ytmWhy } from '../lib/ytm';
+import { artistView, collSongs, libUi, openArtist } from './library';
+import { ytmHomeCached, ytmSearch, ytmSearchAll, ytmWhy } from '../lib/ytm';
 import { LyricsPane, SubwavePane } from './plugins';
 import { WrappedTeaser } from './extras';
 import { RecognizeBox, RoutinesShelf } from './features';
@@ -200,6 +200,7 @@ export function DeskPlayer() {
   const [tab, setTab] = useState<'song' | 'queue' | 'lyrics' | 'booth'>('song');
   const dur = s?.duration ?? 0, pos = s?.position ?? 0;
   const live = s?.input === 'radio' && !s.source_label;
+  const arLink = (s?.artist || '').trim() && t.sub === (s?.artist || '').trim() ? (s?.artist || '').trim() : '';
   const libQ = !!lsvc.value && lq.value.length > 0;
   return (
     <div class="dkx-player">
@@ -212,8 +213,8 @@ export function DeskPlayer() {
           <div class="col" style={{ gap: '6px', minWidth: 0 }}>
             <span class="kicker">{live ? <span class="live">DIREKTE</span> : sourceLine(s).toUpperCase()}</span>
             <h1 class="tt" data-testid="now-title">{t.title}</h1>
-            {t.sub && t.sub !== t.title && <span class="sub">{t.sub}</span>}
-            {t.album && t.album !== t.title && <span class="muted" data-testid="album">{t.album}</span>}
+            {t.sub && t.sub !== t.title && (arLink ? <button class="lnk sub" title={'Mer fra ' + arLink} onClick={() => openArtist(arLink)}>{t.sub}</button> : <span class="sub">{t.sub}</span>)}
+            {t.album && t.album !== t.title && (arLink ? <button class="lnk muted" title={'Åpne albumet ' + t.album} data-testid="album" onClick={() => openArtist(arLink, t.album)}>{t.album}</button> : <span class="muted" data-testid="album">{t.album}</span>)}
             {s?.input === 'airplay' && s.airplay_device && <span class="muted" style={{ fontSize: '12px' }}>Fra {s.airplay_device}</span>}
           </div>
           {dur > 0 ? (
@@ -393,6 +394,73 @@ function TrackTable({ list, onPick, meta }: { list: NdSong[]; onPick: (i: number
   );
 }
 
+const same = (a: string, b: string) => { const n = (x: string) => x.toLowerCase().replace(/[^a-z0-9æøå]+/g, ' ').trim(); const x = n(a), y = n(b); return !!x && !!y && (x === y || x.includes(y) || y.includes(x)); };
+const ARTSPLIT = /\s*(?:\/|,|&| feat\.? | ft\.? | og | x )\s*/i;
+const hovedArtist = (a: string) => a.split(ARTSPLIT)[0] || a;
+
+/** Mer fra artisten (album og låter), eller rett til albumet når et album ble trykket i spilleren. Navidrome først, YouTube Music som reserve. */
+export function ArtistView({ lib }: { lib: LibId }) {
+  const v = artistView.value!;
+  const [data, setData] = useState<{ lib: LibId; albums: NdAlbum[]; songs: NdSong[]; navn?: string } | null>(null);
+  const [err, setErr] = useState('');
+  const navn = v.name;
+  useEffect(() => {
+    let stop = false; setData(null); setErr('');
+    const viaNd = async () => {
+      if (!ndConfigured()) return null;
+      const r = await ndSearchAll(v.album ? v.album : navn);
+      if (v.album) { const al = r.albums.find((a) => same(a.name, v.album!) && (!navn || same(a.artist, navn) || same(a.artist, hovedArtist(navn)))) ?? r.albums.find((a) => same(a.name, v.album!)); if (al) return { open: al } as const; }
+      const ar = r.artists.find((a) => same(a.name, navn)) ?? r.artists.find((a) => same(a.name, hovedArtist(navn)));
+      const albums = ar ? (await ndArtist(ar.id)).albums : r.albums.filter((a) => same(a.artist, navn));
+      const songs = (v.album ? (await ndSearchAll(navn)).songs : r.songs).filter((x) => same(x.artist, navn) || same(x.artist, hovedArtist(navn)));
+      return albums.length || songs.length ? { lib: 'nd' as LibId, albums, songs, ...(ar ? { navn: ar.name } : {}) } : null;
+    };
+    const viaYtm = async () => {
+      const r = await ytmSearchAll(v.album ? hovedArtist(navn) + ' ' + v.album : navn);
+      if (v.album) { const al = r.albums.find((a) => same(a.name, v.album!)); if (al) return { open: al, lib: 'ytm' as LibId } as const; }
+      const r2 = v.album ? await ytmSearchAll(navn) : r;
+      return { lib: 'ytm' as LibId, albums: r2.albums.filter((a) => same(a.artist, navn) || same(a.artist, hovedArtist(navn))), songs: r2.tracks.filter((x) => same(x.artist, navn) || same(x.artist, hovedArtist(navn))) };
+    };
+    (async () => {
+      const order = lib === 'ytm' ? [viaYtm, viaNd] : [viaNd, viaYtm];
+      for (const f of order) {
+        try {
+          const r = await f(); if (stop) return;
+          if (r && 'open' in r && r.open) { const l = ('lib' in r && r.lib) || 'nd'; artistView.value = null; libUi.pl.value = { kind: 'album', id: r.open.id, name: r.open.name }; if (l !== lib) go('lib', l); return; }
+          if (r && 'albums' in r && (r.albums.length || r.songs.length)) { setData(r); return; }
+        } catch { /* prøv neste kilde */ }
+      }
+      if (!stop) { setData({ lib, albums: [], songs: [] }); setErr(v.album ? `Fant ikke albumet «${v.album}» i biblioteket.` : `Fant ikke ${navn} i Navidrome eller YouTube Music.`); }
+    })();
+    return () => { stop = true; };
+  }, [navn, v.album, lib]);
+  const l = data?.lib ?? lib, songs = data?.songs ?? [];
+  const play = (list: NdSong[], i: number) => { playNd(list, i, l); go('play'); };
+  const cover = data?.albums[0]?.coverArt ?? songs[0]?.coverArt;
+  return (
+    <div class="col gap24">
+      <div class="dkx-alhead">
+        <div class="glow" style={{ background: ndBg(cover, navn, 400) }} />
+        <div class="cv" style={{ background: ndBg(cover, navn, 400), borderRadius: '50%' }} />
+        <div class="col" style={{ gap: '8px', minWidth: 0, position: 'relative' }}>
+          <span class="kicker">ARTIST{data ? ' · ' + LIB_NAME[l].toUpperCase() : ''}</span>
+          <h1>{data?.navn || navn}</h1>
+          {navn.split(ARTSPLIT).filter(Boolean).length > 1 && <div class="row gap8" style={{ flexWrap: 'wrap' }}>{navn.split(ARTSPLIT).filter(Boolean).map((a) => <button key={a} class="pchip sm" onClick={() => { artistView.value = { name: a }; }}>{a}</button>)}</div>}
+          <span class="muted">{!data ? (v.album ? 'Leter etter albumet …' : 'Henter …') : err || [data.albums.length ? data.albums.length + ' album' : '', songs.length ? songs.length + ' låter' : ''].filter(Boolean).join(' · ')}</span>
+          {songs.length > 0 && <div class="row gap10" style={{ marginTop: '6px' }}>
+            <button class="btn primary" onClick={() => play(songs, 0)}>Spill</button>
+            <button class="btn" onClick={() => play([...songs].sort(() => Math.random() - 0.5), 0)}>Tilfeldig</button>
+          </div>}
+        </div>
+      </div>
+      {data && data.albums.length > 0 && <section class="col gap12"><SecHead title="Album" />
+        <div class="dkx-grid">{data.albums.map((al) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.year ? String(al.year) : al.artist} onClick={() => { artistView.value = null; libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; if (l !== lib) go('lib', l); }} />)}</div>
+      </section>}
+      {songs.length > 0 && <section class="col gap12"><SecHead title="Låter" /><TrackTable list={songs.slice(0, 30)} onPick={(i) => play(songs.slice(0, 30), i)} /></section>}
+    </div>
+  );
+}
+
 function OpenList({ lib }: { lib: LibId }) {
   const pl = libUi.pl.value!;
   const [songs, setSongs] = useState<NdSong[] | null>(null), [err, setErr] = useState('');
@@ -445,12 +513,12 @@ export function DeskLibrary({ lib }: { lib: LibId }) {
   return (
     <div class="dkx-lib">
       <div class="dkx-libbar">
-        {open ? <button class="link0" onClick={() => { libUi.pl.value = null; }}>‹ Tilbake</button> : (
+        {artistView.value && !open ? <button class="link0" onClick={() => { artistView.value = null; }}>‹ Tilbake</button> : open ? <button class="link0" onClick={() => { libUi.pl.value = null; }}>‹ Tilbake</button> : (
           <div class="dkx-tabs" role="tablist">{tabs.map((n, i) => <button key={n} role="tab" aria-selected={tab === i} class={tab === i ? 'on' : ''} onClick={() => { libUi.tab.value = i; libUi.pl.value = null; }}>{n}</button>)}</div>
         )}
         <div class="dkx-search sm"><Icon d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4" size={16} sw={1.8} /><input value={libUi.q.value} onInput={(e) => { libUi.q.value = e.currentTarget.value; }} placeholder={'Søk i ' + LIB_NAME[lib]} aria-label={'Søk i ' + LIB_NAME[lib]} />{q && <button class="x" onClick={() => { libUi.q.value = ''; }} aria-label="Tøm søket">×</button>}</div>
       </div>
-      {off ? <NotConnected lib={lib} err={data.err} {...(data.retry ? { retry: data.retry } : {})} /> : q ? (
+      {artistView.value && !open ? <ArtistView lib={lib} /> : off ? <NotConnected lib={lib} err={data.err} {...(data.retry ? { retry: data.retry } : {})} /> : q ? (
         <div class="col gap12">
           <SecHead title={'Treff for «' + q + '»'} kicker="LÅTER" />
           {!res && <span class="muted" style={{ fontSize: '13px' }}>Søker …</span>}

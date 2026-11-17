@@ -126,6 +126,11 @@ export async function ndPlaylist(id: string): Promise<NdSong[]> {
   const r = await call<{ playlist: { entry?: Record<string, unknown>[] } }>('getPlaylist', { id });
   return arr(r.playlist.entry).map(song);
 }
+/** Søk etter artist, album og låter på én gang. */
+export async function ndSearchAll(q: string): Promise<{ artists: NdArtist[]; albums: NdAlbum[]; songs: NdSong[] }> {
+  const r = await call<{ searchResult3?: { artist?: Record<string, unknown>[]; album?: Record<string, unknown>[]; song?: Record<string, unknown>[] } }>('search3', { query: q, artistCount: 5, albumCount: 30, songCount: 50 });
+  return { artists: arr(r.searchResult3?.artist).map(artist), albums: arr(r.searchResult3?.album).map(album), songs: arr(r.searchResult3?.song).map(song) };
+}
 export async function ndSearch(q: string): Promise<NdSong[]> {
   const r = await call<{ searchResult3?: { song?: Record<string, unknown>[] } }>('search3', { query: q, songCount: 30, albumCount: 0, artistCount: 0 });
   return arr(r.searchResult3?.song).map(song);
