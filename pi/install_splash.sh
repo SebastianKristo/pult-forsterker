@@ -61,6 +61,17 @@ fi
 CFG=/boot/firmware/config.txt; [ -f "$CFG" ] || CFG=/boot/config.txt
 [ -f "$CFG" ] && { grep -q '^disable_splash=' "$CFG" || { echo 'disable_splash=1' >> "$CFG"; endret=1; }; }
 
+# Kiosken må få skjermen fra oppstartsskjermen: en eldre tjenestefil uten «plymouth quit» krasjer i en løkke
+# (Plymouth holder skjermen). Rett den på stedet, og logg til journalen i stedet for til skjermen.
+for U in /etc/systemd/system/skjold-ui.service /etc/systemd/system/skjold-touch.service; do
+  [ -f "$U" ] || continue
+  if ! grep -q 'plymouth quit' "$U"; then
+    sed -i "0,/^ExecStart=/s|^ExecStart=|ExecStartPre=-+/bin/sh -c 'command -v plymouth >/dev/null \&\& plymouth quit --retain-splash \|\| true'\nExecStart=|" "$U"
+    grep -q '^StandardOutput=journal' "$U" || sed -i 's/^StandardInput=tty$/StandardInput=tty\nStandardOutput=journal\nStandardError=journal/' "$U"
+    systemctl daemon-reload; endret=1
+  fi
+done
+
 # Ingen påloggingstekst på skjermen når kiosken starter på nytt (oppdatering): tom, svart tty1 uten markør
 systemctl disable getty@tty1.service >/dev/null 2>&1 || true
 mkdir -p /etc/systemd/system/getty@tty1.service.d
