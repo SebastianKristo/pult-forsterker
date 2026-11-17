@@ -4,7 +4,16 @@
 # via libinput – ikke som en emulert musepeker. Pekeren vises aldri med bare touch.
 #   sudo bash pi/install_touch.sh [bruker]      (KI_TOUCH_ROTATE=0|90|180|270)
 set -euo pipefail
-USR="${1:-${SUDO_USER:-pi}}"
+USR="${1:-${SUDO_USER:-}}"
+# Kiosken kan ikke kjøre som root (Chromium nekter). Oppdateringen fra appen kjører som root uten SUDO_USER, så
+# «root» her ga User=root og blank skjerm. Bruk da brukeren fra den eksisterende tjenesten, eieren av kildetreet,
+# eller brukeren med UID 1000.
+if [ -z "$USR" ] || [ "$USR" = root ]; then
+  USR="$(sed -n 's/^User=//p' /etc/systemd/system/skjold-touch.service 2>/dev/null | head -1)"
+  [ -z "$USR" ] || [ "$USR" = root ] && USR="$(stat -c %U "$(dirname "$0")/.." 2>/dev/null)"
+  [ -z "$USR" ] || [ "$USR" = root ] && USR="$(getent passwd 1000 | cut -d: -f1)"
+  [ -z "$USR" ] || [ "$USR" = root ] && USR=pi
+fi
 ROT="${KI_TOUCH_ROTATE:-0}"
 URL="${KI_TOUCH_URL:-http://127.0.0.1:8765/touch.html}"
 
