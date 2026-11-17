@@ -1372,6 +1372,9 @@ SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0
                 "plexEn": False, "plexUrl": "", "plexToken": "",
                 # Music Assistant (bibliotek for TIDAL/Qobuz/Deezer/Spotify/YouTube Music/Plex/Jellyfin/podkaster)
                 "maEn": False, "maUrl": "", "maToken": "",
+                # ESPHome-nøkkelen (api: encryption: key) for Skjold-tilbehøret (Kassett, Hjul, Hylle, Fjernkontroll …):
+                # én felles nøkkel, delt med alle Skjold-enhetene, vist i web-UI-et for secrets.yaml og Home Assistant
+                "esphomeKey": "",
                 # Skjold Touch-skjermen (synkes med app og web-UI)
                 "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False,
                 # Skjold Touch: startside, ringeklokke (0 kamera, 1 bare varsel, 2 av), nattmodus (0 av, 1 tidsplan, 2 HA/Homey, 3 på)
@@ -1535,6 +1538,15 @@ def update_settings(patch):
                     eq.setdefault(src, {}).update(cl)
         elif k == "homeLayout":
             cur[k] = _homelayout.clean(v)
+        elif k == "esphomeKey":   # ESPHome krever base64 av nøyaktig 32 byte; ugyldig nøkkel lagres ikke
+            import base64 as _b64
+            v = str(v or "").strip()
+            try:
+                if v and len(_b64.b64decode(v, validate=True)) != 32:
+                    continue
+            except Exception:
+                continue
+            cur[k] = v
         else:
             cur[k] = v
     apply_settings(set(patch)); changed()
@@ -1637,7 +1649,7 @@ async def h_settings_reset(r):
 
 # Innlogginger til musikktjenester deles med de andre Skjold-enhetene på nettet (S1, Touch, Node …): logger du inn
 # YouTube Music på én, virker det på alle. KI_AMP_SHARE_SETTINGS=0 slår det av.
-SHARED_SETTINGS = ("ytmEn", "ytmUser", "ytmCookie", "ndEn", "ndUrl", "ndUser", "ndPass", "plexEn", "plexUrl", "plexToken", "maEn", "maUrl", "maToken")
+SHARED_SETTINGS = ("esphomeKey", "ytmEn", "ytmUser", "ytmCookie", "ndEn", "ndUrl", "ndUser", "ndPass", "plexEn", "plexUrl", "plexToken", "maEn", "maUrl", "maToken")
 SHARE_SETTINGS = os.environ.get("KI_AMP_SHARE_SETTINGS", "1") != "0"
 
 
@@ -1668,12 +1680,20 @@ def _pull_shared():
         mine = settings()
         patch = {}
         for svc, keys in (("ytmCookie", ("ytmEn", "ytmUser", "ytmCookie")), ("ndUrl", ("ndEn", "ndUrl", "ndUser", "ndPass")),
-                          ("plexUrl", ("plexEn", "plexUrl", "plexToken")), ("maUrl", ("maEn", "maUrl", "maToken"))):
+                          ("plexUrl", ("plexEn", "plexUrl", "plexToken")), ("maUrl", ("maEn", "maUrl", "maToken")),
+                          ("esphomeKey", ("esphomeKey",))):
             if not mine.get(svc) and theirs.get(svc):
                 patch.update({k: theirs[k] for k in keys if k in theirs})
         if patch:
             print("Hentet innlogginger fra", p.get("navn") or p["base"] + ":", ", ".join(sorted(patch)), flush=True)
             update_settings(patch)
+    # Ingen Skjold på nettet har en ESPHome-nøkkel ennå: lag én og del den
+    if not settings().get("esphomeKey"):
+        import base64 as _b64
+        key = _b64.b64encode(os.urandom(32)).decode()
+        update_settings({"esphomeKey": key})
+        _push_shared({"esphomeKey": key})
+        print("Laget ny ESPHome-nøkkel for Skjold-tilbehøret (delt med de andre Skjold-enhetene)", flush=True)
 
 
 async def h_settings_post(r):
@@ -8735,6 +8755,47 @@ def _kassett_sky(metode, sti, kropp=None):
         raise ValueError(msg or f"Skjold Cloud svarte {e.code}")
 
 
+# Kassettspillere som har kontakt med denne Skjold-en (ESP-en spør /api/nfc/spoler ofte og sender /api/nfc/scan):
+# vises på Kassetter-siden, så du ser hvilken Skjold spilleren er koblet til.
+nfc_spillere = {}   # ip → {"navn", "ip", "sist", "sist_brikke", "sist_uid"}
+_nfc_andre = {"t": 0.0, "liste": []}
+
+
+def _nfc_spiller_sett(ip, navn="", uid=""):
+    if not ip or ip in ("127.0.0.1", "::1"):
+        return
+    x = nfc_spillere.setdefault(ip, {"navn": "", "ip": ip, "sist": 0.0, "sist_brikke": 0.0, "sist_uid": ""})
+    x["sist"] = time.time()
+    if navn:
+        x["navn"] = str(navn)[:40]
+    if uid:
+        x["sist_brikke"], x["sist_uid"] = time.time(), str(uid)
+
+
+def _nfc_spillere_her():
+    nå = time.time()
+    return [{**x, "aktiv": nå - x["sist"] < 15} for x in sorted(nfc_spillere.values(), key=lambda v: -v["sist"]) if nå - x["sist"] < 86400]
+
+
+def _nfc_andre_spillere():
+    """Kassettspillere som har kontakt med en annen Skjold på nettet (cache 15 s)."""
+    if time.time() - _nfc_andre["t"] < 15:
+        return _nfc_andre["liste"]
+    ut = []
+    for p in _peers():
+        if p.get("id") == device_id():
+            continue
+        try:
+            with urllib.request.urlopen(p["base"] + "/api/nfc/spillere", timeout=1.5) as r:
+                sp = [x for x in (json.loads(r.read()) or {}).get("spillere") or [] if x.get("aktiv")]
+            if sp:
+                ut.append({"enhet": p.get("navn") or p["base"], "base": p["base"], "spillere": sp})
+        except Exception:
+            pass
+    _nfc_andre.update(t=time.time(), liste=ut)
+    return ut
+
+
 async def h_nfc(r):
     """POST /api/nfc/scan {uid,device} · POST /api/nfc/remove {uid} · GET/POST /api/nfc/cards · DELETE /api/nfc/cards/{uid}
     · POST /api/nfc/learn {timeout, kort?} · GET /api/nfc (status) · GET/POST /api/nfc/spoler (spolene i vinduet)."""
@@ -8779,9 +8840,14 @@ async def h_nfc(r):
                 _toast_safe(f"{res['lagt_til']} delt{'e' if res['lagt_til'] > 1 else ''} kassett{'er' if res['lagt_til'] > 1 else ''}"
                             + (f" fra {res['fra']}" if res.get("fra") else "") + " venter på en NFC-brikke")
             return web.json_response(res)
+        if act == "spillere":
+            return web.json_response({"spillere": _nfc_spillere_her()})
         if act == "" and r.method == "GET":
+            her = _nfc_spillere_her()
+            andre = [] if any(x["aktiv"] for x in her) else await loop.run_in_executor(None, _nfc_andre_spillere)
             return web.json_response({"learning": nfc.learning(), "learn_until": nfc.learn_until, "last": nfc.last,
-                                      "active": nfc.active_uid, "cards": nfc.list(), **nfc.oppsett()})
+                                      "active": nfc.active_uid, "cards": nfc.list(), "spillere": her, "andre_spillere": andre,
+                                      **nfc.oppsett()})
         if act == "oppsett":
             # Paring (hvilken Skjold spiller kassettene) og ventende album. GET: også enhetene som kan velges.
             if r.method == "POST":
@@ -8830,6 +8896,7 @@ async def h_nfc(r):
             # Spolene i Kassett-spillerens vindu. GET: hva motoren skal gjøre nå (ESP-en spør ofte) · POST: innstillinger.
             if r.method == "POST":
                 return web.json_response(spoler.sett(b))
+            _nfc_spiller_sett(r.remote)
             base = nfc_paret_base()   # paret med en annen Skjold: spolene følger den enhetens avspilling
             try:
                 st = await loop.run_in_executor(None, _remote_status, base) if base else await loop.run_in_executor(None, read_status)
@@ -8859,6 +8926,7 @@ async def h_nfc(r):
                 return web.json_response({"learning": False})
             return web.json_response(nfc.learn(b.get("timeout") or 30, b.get("kort")))
         if act == "scan":
+            _nfc_spiller_sett(r.remote, b.get("device") or "", b.get("uid") or "")
             res = await loop.run_in_executor(None, lambda: nfc.scan(b.get("uid", ""), nfc_current, nfc_resolve,
                                                                     nfc.oppsett().get("paret") or ""))
             card = res["card"]

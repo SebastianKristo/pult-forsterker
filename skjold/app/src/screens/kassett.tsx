@@ -1,6 +1,7 @@
 /** Skjold Kassett: NFC-kassetter koblet til radio, NRK, Navidrome, Music Assistant eller rutiner. */
 import { useEffect, useState } from 'preact/hooks';
-import { everyVisible } from '../lib/store';
+import { everyVisible, setSetting, settings } from '../lib/store';
+import { switchRoom } from './phone';
 import { api, getBase, type NfcCard, type NfcDeling, type NfcHandling, type NfcOppsett, type NfcStats, type NfcStatus, type NfcVentende, type Routine, type Spoler } from '../lib/api';
 import { QR } from './platform';
 import { HyllePanel } from './hylle';
@@ -71,6 +72,7 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
   const [uttak, setUttak] = useState<'pause' | 'ingenting'>(init?.ved_uttak ?? 'pause');
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [learn, setLearn] = useState<'' | 'venter' | 'ok' | string>('');
+  const [ls, setLs] = useState<NfcStatus | null>(null);
   const [err, setErr] = useState('');
   const initAlbum = init?.handling === 'album' ? (init.verdi as { artist?: string; album?: string }) : null;
   const [artist, setArtist] = useState(initAlbum?.artist ?? '');
@@ -118,6 +120,7 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
       while (Date.now() < until) {
         await new Promise((r) => setTimeout(r, 1000));
         const s = await api.nfc();
+        setLs(s);
         if (s.last && s.last.t > before && s.last.known) { setLearn('ok'); setTimeout(onDone, 1200); return; }
         if (!s.learning) break;
       }
@@ -125,7 +128,7 @@ function Editor({ init, onDone }: { init: NfcCard | null; onDone: () => void }) 
     } catch (e) { setErr(String((e as Error).message || e)); setLearn(''); }
   }
 
-  if (learn === 'venter') return <div style={box + ';text-align:center;padding:40px'}><div style={`font-size:22px;color:${A}`}>Sett inn kassetten nå</div><p style="color:#9a9a96">Venter på NFC-brikken (60 s) …</p><button style={btn()} onClick={() => { void api.nfcLearnStop(); setLearn(''); }}>Avbryt</button></div>;
+  if (learn === 'venter') return <div style={box + ';text-align:center;padding:40px'}><div style={`font-size:22px;color:${A}`}>Sett inn kassetten nå</div><p style="color:#9a9a96">{ls?.last && ls.last.t * 1000 > Date.now() - 60000 && !ls.last.known ? 'Leste brikken ' + ls.last.uid + ' – kobler …' : 'Venter på NFC-brikken (60 s) …'}</p><div style="text-align:left;margin:0 auto 12px;max-width:640px"><SpillerStatus st={ls} /></div><button style={btn()} onClick={() => { void api.nfcLearnStop(); setLearn(''); }}>Avbryt</button></div>;
   if (learn === 'ok') return <div style={box + ';text-align:center;padding:40px;color:' + A}>✓ Kassetten er koblet</div>;
 
   const SRC: [Src, string][] = [['nå', 'Det som spiller nå'], ['album', 'Album (Navidrome / YouTube Music)'], ['radio', 'Radio'], ['nrk', 'NRK'], ['nd', 'Navidrome'], ['ma', 'Music Assistant'], ['rutine', 'Rutine']];
@@ -342,6 +345,62 @@ function AlbumPanel() {
   );
 }
 
+const siden = (t: number) => { const d = Math.max(0, Math.round(Date.now() / 1000 - t)); return d < 60 ? d + ' s siden' : d < 3600 ? Math.round(d / 60) + ' min siden' : Math.round(d / 3600) + ' t siden'; };
+
+/** Hvilken Skjold kassettspilleren har kontakt med: her (grønn), en annen enhet (bytt dit), eller ingen. */
+export function SpillerStatus({ st }: { st: NfcStatus | null }) {
+  if (!st) return null;
+  const her = (st.spillere ?? []).filter((x) => x.aktiv), andre = st.andre_spillere ?? [];
+  const dot = (c: string) => <span style={`width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0`} />;
+  if (her.length) return (
+    <div style={box + ';display:flex;flex-direction:column;gap:6px;padding:12px 16px'}>
+      {her.map((x) => <div key={x.ip} style="display:flex;align-items:center;gap:8px;font-size:13px">{dot('#6fcf7f')}<b>{x.navn || 'Skjold Kassett'}</b><span style="color:#9a9a96">tilkoblet · {x.ip} · hørt {siden(x.sist)}{x.sist_uid ? ' · siste brikke ' + x.sist_uid + ' (' + siden(x.sist_brikke) + ')' : ''}</span></div>)}
+    </div>);
+  if (andre.length) { const a = andre[0]!; return (
+    <div style={box + ';display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border-color:' + A}>
+      {dot(A)}<span style="font-size:13px;flex:1;min-width:200px">Kassettspilleren sender til <b>{a.enhet}</b>, ikke til denne enheten. Kassetter kobles og spilles der.</span>
+      <button style={btn(true)} onClick={() => void switchRoom(a.base)}>Bytt til {a.enhet}</button>
+    </div>); }
+  return (
+    <div style={box + ';display:flex;align-items:center;gap:10px;padding:12px 16px'}>
+      {dot('#8b8b86')}<span style="font-size:13px;color:#9a9a96">Ingen kassettspiller har kontakt med denne Skjold-en. Sjekk at den er på og at <code>skjold_host</code> i ESPHome er IP-adressen til denne enheten.</span>
+    </div>);
+}
+
+const ESP_SECRETS = ['skjold_kassett_api_key', 'skjold_hjul_api_key', 'skjold_hjul_s_api_key', 'skjold_hylle_api_key', 'skjold_fjernkontroll_api_key', 'skjold_sans_api_key'];
+const keyOk = (k: string) => { try { return atob(k.trim()).length === 32; } catch { return false; } };
+
+/** ESPHome-nøkkelen for Skjold-tilbehøret: samme på alle Skjold-enhetene (deles automatisk), brukes i secrets.yaml og
+ *  når Home Assistant ber om «encryption key» for kassettspilleren, hjulet osv. */
+export function EspNokkel() {
+  const key = settings.value.esphomeKey || '';
+  const [vis, setVis] = useState(false), [ny, setNy] = useState(''), [msg, setMsg] = useState('');
+  const kopier = (t: string, hva: string) => { navigator.clipboard?.writeText(t).then(() => setMsg(hva + ' kopiert.')).catch(() => setMsg('Marker teksten og kopier den.')); };
+  const yaml = ESP_SECRETS.map((n) => `${n}: "${key}"`).join('\n');
+  return (
+    <div style={box + ';display:flex;flex-direction:column;gap:10px'}>
+      <b>ESPHome-nøkkel for tilbehøret</b>
+      <small style="color:#9a9a96">Kassettspilleren, hjulet, hylla og fjernkontrollen krypterer kontakten med Home Assistant med denne nøkkelen. Den er lik på alle Skjold-enhetene på nettet. Lim den inn i <code>secrets.yaml</code> før du flasher, og i Home Assistant når den spør om «encryption key».</small>
+      {key ? <>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <code style="font-size:13px;padding:8px 10px;border-radius:8px;background:#0f0f10;border:1px solid #2e2e30;word-break:break-all;flex:1;min-width:220px">{vis ? key : '•'.repeat(24)}</code>
+          <button style={btn()} onClick={() => setVis(!vis)}>{vis ? 'Skjul' : 'Vis'}</button>
+          <button style={btn(true)} onClick={() => kopier(key, 'Nøkkelen')}>Kopier</button>
+        </div>
+        <details><summary style="cursor:pointer;font-size:13px;color:#c9c9c4">secrets.yaml for alle tilbehørene</summary>
+          <pre style="margin:8px 0 0;font-size:12px;white-space:pre-wrap;word-break:break-all;padding:10px;border-radius:8px;background:#0f0f10;border:1px solid #2e2e30">{vis ? yaml : 'Trykk «Vis» for å se nøkkelen.'}</pre>
+          <button style={btn() + ';margin-top:8px'} onClick={() => kopier(yaml, 'secrets.yaml-linjene')}>Kopier linjene</button>
+        </details>
+      </> : <small style="color:#9a9a96">Ingen nøkkel ennå. Skjold lager en av seg selv kort tid etter oppstart, eller du kan lime inn din egen under.</small>}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input value={ny} placeholder="Lim inn nøkkelen du allerede har brukt (base64, 44 tegn)" onInput={(e) => setNy(e.currentTarget.value)} style="flex:1;min-width:220px;height:36px;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;color:#f2f2ee;font-size:13px" />
+        <button style={btn()} disabled={!ny.trim()} onClick={() => { if (!keyOk(ny)) { setMsg('Ugyldig nøkkel: den skal være base64 av 32 byte (44 tegn, slutter ofte på «=»).'); return; } setSetting('esphomeKey', ny.trim()); setNy(''); setMsg('Lagret. Deles med de andre Skjold-enhetene.'); }}>Bruk denne</button>
+      </div>
+      {msg && <small style={'color:' + A}>{msg}</small>}
+    </div>
+  );
+}
+
 export function KassettPage() {
   const [tab, setTab] = useState<'k' | 'h' | 'w' | 'y'>(() => (/kassett-del=/.test(location.hash) ? 'k' : 'k'));
   const [del, setDel] = useState<string[] | null>(null);
@@ -362,6 +421,8 @@ export function KassettPage() {
   return (
     <div style="display:flex;flex-direction:column;gap:12px">
       {tabs}
+      <SpillerStatus st={st} />
+      <EspNokkel />
       <small style="color:#9a9a96">Lag kassetter uten leser: velg «Lag kassett» i Skjold-appen på mobilen og hold telefonen mot NFC-brikken. Her kan du også koble med Kassett-spilleren (læremodus).</small>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button style={btn(true)} onClick={() => setEdit('ny')}>+ Koble ny kassett</button>

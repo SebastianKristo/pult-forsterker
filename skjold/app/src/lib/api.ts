@@ -155,7 +155,8 @@ export interface NfcDeling { kode: string; lenke: string; web: string; delt: num
 export interface NfcVentende { artist?: string; album?: string; handling?: NfcHandling; verdi?: unknown; navn?: string; undertittel?: string; fra?: string }
 export interface NfcOppsett { ventende: NfcVentende[]; paret: string; koble_ventende: boolean; enheter?: { navn: string; her: boolean }[] }
 export interface NfcCard { uid?: string; navn: string; handling: NfcHandling; verdi: unknown; rom: string[]; volum: number | null; ved_uttak: 'pause' | 'ingenting'; omslag: string; undertittel: string; spilt?: number; sist?: number; losning?: NfcLosning; fra?: string }
-export interface NfcStatus { learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[]; ventende?: NfcVentende[]; paret?: string; koble_ventende?: boolean }
+export interface NfcSpiller { navn: string; ip: string; sist: number; sist_brikke: number; sist_uid: string; aktiv: boolean }
+export interface NfcStatus { spillere?: NfcSpiller[]; andre_spillere?: { enhet: string; base: string; spillere: NfcSpiller[] }[]; learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[]; ventende?: NfcVentende[]; paret?: string; koble_ventende?: boolean }
 export interface Spoler { 'på': boolean; fart: number; spol: number; bare_kassett: boolean; vent?: number; modus?: 'spill' | 'spol' | 'tilbake' | 'stopp'; rps?: number }
 export interface Routine { id: string; navn: string; ikon?: string }
 export const api = {

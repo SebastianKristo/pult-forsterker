@@ -38,8 +38,9 @@ def kassett_state(nfc: dict | None, spoler: dict | None) -> dict | None:
         return None
     cards = [c for c in nfc.get("cards") or [] if isinstance(c, dict) and c.get("uid")]
     last = nfc.get("last") or {}
-    if not cards and not last.get("uid"):
-        return None   # ingen Kassett-spiller har vært i bruk
+    spillere = [x for x in nfc.get("spillere") or [] if isinstance(x, dict)]
+    if not cards and not last.get("uid") and not spillere:
+        return None   # ingen Kassett-spiller har vært i bruk eller har kontakt
     active = str(nfc.get("active") or "")
     by_uid = {c["uid"]: c for c in cards}
     return {
@@ -49,6 +50,10 @@ def kassett_state(nfc: dict | None, spoler: dict | None) -> dict | None:
         "spoler": None if not isinstance(spoler, dict) else bool(spoler.get("på", True)),
         "kilde": _KILDE.get(((by_uid.get(active) or {}).get("losning") or {}).get("kilde"), "") if active else "",
         "paret": str(nfc.get("paret") or ""),
+        # kassettspilleren som har kontakt med denne Skjold-en (ESP-en spør hvert 0,6 s)
+        "tilkoblet": any(x.get("aktiv") for x in spillere),
+        "spiller_ip": (spillere[0].get("ip") if spillere else "") or "",
+        "siste_brikke": (spillere[0].get("sist_uid") if spillere else "") or last.get("uid") or "",
         "ventende": len(nfc.get("ventende") or []),
         # delte kassetter fra venner (QR/lenke/Skjold Cloud) som venter på en NFC-brikke
         "ventende_delte": len([v for v in nfc.get("ventende") or [] if isinstance(v, dict) and (v.get("fra") or v.get("handling"))]),

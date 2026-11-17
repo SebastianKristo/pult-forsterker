@@ -119,6 +119,9 @@
       },
       "perf_uptime": {
         "name": "Oppetid"
+      },
+      "kassett_tag": {
+        "name": "Siste brikke"
       }
     },
     "binary_sensor": {
@@ -139,6 +142,9 @@
       },
       "power_problem": {
         "name": "Strømproblem"
+      },
+      "kassett_connected": {
+        "name": "Tilkoblet"
       }
     },
     "media_player": {
