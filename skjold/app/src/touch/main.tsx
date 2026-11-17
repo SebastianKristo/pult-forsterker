@@ -160,7 +160,8 @@ let blLast = -1;
 function backlight(): void {
   const n = nightNow(), full = Math.max(20, Math.min(100, settings.value.tBright ?? 100));
   // nattmodus: skjermen av i standby (et trykk vekker den, dempet); ellers som valgt under «I standby»
-  const lvl = idle.value ? ((settings.value.tIdle ?? 0) === 2 || n ? 0 : Math.min(30, full)) : n ? Math.min(25, full) : full;
+  const ti = settings.value.tIdle ?? 0;
+  const lvl = idle.value ? (ti === 2 || n ? 0 : Math.min(ti === 3 ? 60 : 30, full)) : n ? Math.min(25, full) : full;   // fjord-videoen trenger litt mer lys
   if (lvl !== blLast) { blLast = lvl; void postAt('', '/api/touch/backlight', { level: lvl }).catch(() => undefined); }
 }
 
@@ -1196,7 +1197,22 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
           </div>
         </div>
       </>}
-      {(m === 0 || (m === 1 && night)) && (
+      {m === 3 && !night && (
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:22px">
+          <video autoplay muted loop playsInline style="width:100%;aspect-ratio:3/1;object-fit:cover;display:block">
+            <source src="./media/fjord.mp4" type="video/mp4" /><source src="./media/fjord.webm" type="video/webm" />
+          </video>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 40px">
+            <span style="font-size:58px;font-weight:300;letter-spacing:-.02em;color:#f2f2ee;line-height:1">{clock}</span>
+            <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0">
+              <span style="font-size:15px;color:#8b8b86;white-space:nowrap">{dateTxt}</span>
+              {playing && <span style="font-size:13px;color:#c9c9c4;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{[s?.artist, s?.title || s?.station].filter(Boolean).join(' – ')}</span>}
+              {nx && <span style={`font-family:${MONO};font-size:11px;letter-spacing:.12em;color:#f0c46a`}>ALARM {nx.time}</span>}
+            </span>
+          </div>
+        </div>
+      )}
+      {(m === 0 || (m === 1 && night) || (m === 3 && night)) && (
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
           <span style={`font-size:132px;font-weight:300;letter-spacing:-.03em;color:${night ? '#7a2a20' : '#f2f2ee'};line-height:1`}>{clock}</span>
           <span style={`font-size:17px;color:${night ? '#5a211a' : '#8b8b86'};white-space:nowrap`}>{dateTxt}</span>
