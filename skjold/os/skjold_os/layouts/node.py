@@ -191,6 +191,7 @@ class NodeLayout(Layout):
 
     # ---------- meny (scrSet) – brukes til daemonens radiomeny ----------
     def draw_menu(self, c, vm):
+        if vm.get("menu_preview"): return self._menu_preview(c, vm)
         rows, idx = vm["menu_rows"], vm["menu_idx"]
         c.text(6, 10, vm["menu_head"], DIM, "bold", 7, "lm", 1)
         c.text(154, 10, "%d/%d" % (idx + 1, len(rows)), DIM, "bold", 7, "rm")
@@ -205,6 +206,30 @@ class NodeLayout(Layout):
             c.text(26, y + 10, c.ellipsize(it["n"], "bold" if sel else "regular", 9.5, 148 - 25 - vw - 8),
                    fg, "bold" if sel else "regular", 9.5, "lm")
             c.text(149, y + 10, it.get("v", ""), (51, 51, 51) if sel else DIM, "regular", 8.5, "rm")
+
+    # Innstilling med forhåndsvisning (Skjermsparer, Klokkestil): skjermen slik den blir, i miniatyr, med navnet på
+    # valget under. ◀◀/▶▶ eller volumknotten blar til neste innstilling, RADIO bytter valg.
+    def _menu_preview(self, c, vm):
+        rows, idx, pv = vm["menu_rows"], vm["menu_idx"], vm["menu_preview"]
+        it = rows[idx]
+        c.text(6, 10, it.get("n", "").upper(), DIM, "bold", 7, "lm", 1)
+        c.text(154, 10, "%d/%d" % (idx + 1, len(rows)), DIM, "bold", 7, "rm")
+        sub = {k: vm[k] for k in ("now", "now_ms", "clock", "model", "name", "input", "volume", "mute", "inputs", "presets", "headphones") if k in vm}
+        if pv["k"] == "saver":
+            if pv["style"] == 2: sub.update(screen="off")
+            else: sub.update(pv.get("np") or {}, screen="saver", saver_style=pv["style"], saver_playing=pv.get("playing"))
+        else:
+            sub.update(screen="clock", clock_style=pv["style"])
+        mini = self.render(sub)
+        pw, ph = 104, 83; x0, y0 = (160 - pw) / 2, 16
+        c.rrect(x0 - 1, y0 - 1, pw + 2, ph + 2, 6, TRACK)
+        c.image(mini, x0, y0, pw, ph, 5)
+        if pv["k"] == "saver" and pv["style"] == 2:
+            c.text(80, y0 + ph / 2, "Lyset slås av", DIM, "regular", 8, "mm")
+        v = it.get("v", "")
+        c.text(10, 112, "‹", DIM, "regular", 11, "lm"); c.text(150, 112, "›", DIM, "regular", 11, "rm")
+        c.text(80, 112, c.ellipsize(v, "bold", 10, 124), W, "bold", 10, "mm")
+        c.text(80, 123, "RADIO bytter · vri knotten for å bla", mix(DIM, 0.8), "regular", 6.5, "mm")
 
     # ---------- standby-klokke (scrClock + klokkestilene i felles/skjold_settings.js) ----------
     def draw_clock(self, c, vm):
