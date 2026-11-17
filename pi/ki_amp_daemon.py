@@ -7600,6 +7600,12 @@ def _peers():
             for p in (lan.peers.values() if lan else []) if p.get("ip") and p.get("port")]
 
 
+async def h_peers(_r):
+    """GET /api/peers → andre Skjold-enheter denne enheten ser på LAN-et (mDNS), så web-UI kan liste dem uten at
+    nettleseren har vært innom dem før: [{id, navn, base}]."""
+    return web.json_response({"peers": _peers()})
+
+
 def _local(path, body=None):
     req = urllib.request.Request(f"http://127.0.0.1:{PORT}{path}", data=json.dumps(body or {}).encode(), method="POST",
                                  headers={"Content-Type": "application/json"})
@@ -8152,6 +8158,7 @@ FEAT_ROUTES = [("GET", "/api/features", h_features), ("POST", "/api/features", h
                ("GET", "/api/doorbell", h_doorbell), ("POST", "/api/doorbell", h_doorbell), ("GET", "/api/doorbell/camera", h_doorbell_camera),
                ("GET", "/api/routines", h_routines), ("POST", "/api/routines", h_routines), ("POST", "/api/routines/steps", h_routines),
                ("POST", "/api/routines/{rid}/run", h_routines), ("DELETE", "/api/routines/{rid}", h_routines)]
+FEAT_ROUTES += [("GET", "/api/peers", h_peers)]
 FEAT_ROUTES += DUCK_ROUTES
 FEAT_ROUTES += HA_ROUTES
 

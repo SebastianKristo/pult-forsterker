@@ -1,6 +1,7 @@
 // Skjold-hjem: stedsvelger (topp), Innstillinger → Steder (skyen) og Innstillinger → Skjold-hjem (enheten selv).
 import { useEffect, useState } from 'preact/hooks';
-import { api, ApiError, type SkyStatus } from '../lib/api';
+import { api, ApiError, PRODUCT_LABEL, type SkyStatus } from '../lib/api';
+import { switchRoom, useRooms } from './phone';
 import { go, showToast, everyVisible } from '../lib/store';
 import {
   hjem, hjemErr, hjemState, loadEnheter, loadSteder, loginUrl, rolleMerke, sameOrigin, selectSted, setSkyUrl,
@@ -27,6 +28,18 @@ export function RolleMerker({ e }: { e: Enhet }) {
 }
 
 /** Stedsvelger: «Hytta ▾». `big` = tittelrad på telefon (Hjem/Rom), ellers liten (PC-header). */
+/** Enhetene på dette nettverket (S1, Touch, Node …): trykk for å styre en annen. */
+function LanEnheter({ lukk }: { lukk: () => void }) {
+  const rooms = useRooms();
+  return <>{rooms.map((r) => (
+    <button key={r.key} data-testid="sted-enhet" onClick={() => { lukk(); if (!r.active) void switchRoom(r.base, r.enhet).catch((e) => showToast(msg(e))); }}
+      style={`display:flex;align-items:center;gap:10px;min-height:42px;padding:0 14px 0 24px;border:none;border-top:1px solid #1d1d1f;background:transparent;cursor:pointer;text-align:left;color:#f2f2ee`}>
+      <i style={`width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${r.active || r.st ? '#6fcf7f' : '#3a3a37'}`} />
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style={`font-size:13.5px;${r.active ? 'color:#f0c46a' : ''}`}>{r.name}</span><span style={`${MONO};font-size:10px;color:#8b8b86`}>{PRODUCT_LABEL[r.product]}{r.active ? ' · styres nå' : r.st ? '' : ' · svarer ikke'}</span></span>
+      {r.active && <span style={`color:${A};font-size:13px`}>✓</span>}
+    </button>))}</>;
+}
+
 export function StedPicker({ big = false }: { big?: boolean }) {
   const [open, setOpen] = useState(false);
   const toggle = () => { if (!open) void loadSteder(); setOpen(!open); };
@@ -48,6 +61,7 @@ export function StedPicker({ big = false }: { big?: boolean }) {
         <div style="position:absolute;top:calc(100% + 8px);left:0;z-index:41;width:300px;max-width:calc(100vw - 40px);background:#141415;border:1px solid #2e2e30;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden" data-testid="sted-menu">
           <span style={`padding:12px 14px 8px;${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>VELG STED</span>
           {!sameOrigin.value && row('', 'Dette nettverket', 'Skjold-enheter på LAN', !stedId.value)}
+          {!stedId.value && <LanEnheter lukk={() => setOpen(false)} />}
           {steder.value.map((s) => row(s.id, s.navn, `${s.enheter} enhet${s.enheter === 1 ? '' : 'er'}${typeof s.online === 'number' ? ' · ' + s.online + ' online' : s.online ? ' · online' : ''}`, s.id === stedId.value))}
           {st === 'laster' && !steder.value.length && <span style="padding:12px 14px;border-top:1px solid #242426;font-size:12px;color:#8b8b86">Henter steder …</span>}
           {st === 'login' && <a href={loginUrl()} target="_blank" rel="noreferrer" onClick={() => setOpen(false)} data-testid="hjem-login" style={`padding:14px;border-top:1px solid #242426;font-size:13px;color:${A}`}>Logg inn på Skjold-hjem ↗</a>}

@@ -7,7 +7,7 @@ import { homeOrder, orderSources } from '../lib/homelayout';
 import { Boundary } from '../components/boundary';
 import { api, credFor, getBase, PRODUCT_HW, PRODUCT_LABEL, productOf, setBase, type InputId, type Product, type Status } from '../lib/api';
 import { act, deviceName, eqActiveProfile, go, inputLabel, loadSettings, mode, online, openFull, closeFull, playPause, product, queueOpen, reconnect, recent, setVolume, showToast, srcOpen, status, everyVisible } from '../lib/store';
-import { knownDevices } from '../lib/discover';
+import { knownDevices, remember } from '../lib/discover';
 import { aktivEnhet, enheter, relayBase, stedId, velgEnhet, visSted, type Enhet } from '../lib/hjem';
 import { RolleMerker, StedPicker } from './hjem';
 import { art } from '../lib/settings';
@@ -32,16 +32,33 @@ export function useRooms(): Room[] {
   const s = status.value, cur = getBase(), sid = stedId.value, ens = enheter.value, akt = aktivEnhet.value;
   const [others, setOthers] = useState<Record<string, Status | null>>({});
   // Valgt sted: stedets enheter (status via relé, bare de som er online). Ellers: kjente enheter på LAN.
+  const [peers, setPeers] = useState<{ base: string; name: string }[]>([]);
+  // Enhetene Skjold selv ser på nettet (mDNS), så S1/Touch/Node dukker opp uten at nettleseren har vært innom dem
+  useEffect(() => {
+    if (sid) return undefined;
+    let stop = false;
+    const hent = () => api.peers().then((r) => { if (!stop) setPeers((r.peers || []).map((p) => ({ base: p.base, name: p.navn || '' }))); }).catch(() => {});
+    void hent(); const t = everyVisible(hent, 20000);
+    return () => { stop = true; clearInterval(t); };
+  }, [sid, cur]);
+  const lan = (() => {
+    const her = (b: string) => b === cur || b === location.origin || b.replace(/^https?:\/\//, '') === location.host;
+    const out = peers.filter((p) => !her(p.base));
+    const navn = new Set(out.map((p) => p.name.toLowerCase()).filter(Boolean));
+    // en enhet som har fått ny adresse, står bare én gang: adressen Skjold ser nå vinner over den lagrede
+    for (const d of knownDevices()) if (!her(d.base) && !out.some((p) => p.base === d.base) && !navn.has((d.name || '').toLowerCase())) out.push(d);
+    return out;
+  })();
   const known: { base: string; name: string; product?: string; enhet?: Enhet; skip?: boolean }[] = sid
     ? ens.filter((e) => e.id !== akt).map((e) => ({ base: relayBase(sid, e.id), name: e.navn, product: e.produkt, enhet: e, skip: !e.online }))
-    : knownDevices().filter((d) => d.base !== cur && d.base !== location.origin && d.base.replace(/^https?:\/\//, '') !== location.host);
+    : lan;
   const knownKey = known.map((d) => d.base + (d.skip ? '-' : '')).join(',');
   useEffect(() => {
     if (!known.length) return undefined;
     let stop = false;
     const poll = async () => {
       const res: Record<string, Status | null> = {};
-      await Promise.all(known.map(async (d) => { if (d.skip) { res[d.base] = null; return; } try { res[d.base] = await api.statusAt(d.base, sid ? 5000 : 2500); } catch { res[d.base] = null; } }));
+      await Promise.all(known.map(async (d) => { if (d.skip) { res[d.base] = null; return; } try { res[d.base] = await api.statusAt(d.base, sid ? 5000 : 2500); if (!sid && res[d.base]) remember(d.base, res[d.base]!); } catch { res[d.base] = null; } }));
       if (!stop) setOthers(res);
     };
     void poll(); const t = everyVisible(poll, sid ? 8000 : 5000);

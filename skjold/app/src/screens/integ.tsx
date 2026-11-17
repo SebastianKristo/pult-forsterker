@@ -196,6 +196,9 @@ function IntLogo({ id, mono, tile }: { id: string; mono: string; tile: string })
   );
   if (id === 'ha') return <span style={`${box};background:#18bcf2;color:#fff`}><svg viewBox="0 0 24 24" style="width:60%;height:60%;display:block"><path d={HA_PATH} fill="currentColor" /></svg></span>;
   if (id === 'homekit') return <span style={`${box};background:linear-gradient(160deg,#ffb340,#f5761a);color:#fff`}><svg viewBox="0 0 24 24" style="width:62%;height:62%;display:block" fill="currentColor"><path d="M12 3.2 2.6 11a1 1 0 0 0 1.3 1.5l.6-.5V20a1 1 0 0 0 1 1h4.5v-5.5h4V21h4.5a1 1 0 0 0 1-1v-8l.6.5a1 1 0 0 0 1.3-1.5z" /></svg></span>;
-  if (id === 'homey') return <span style={`${box};background:#fff;color:#1d1d1f;font-weight:700;font-size:12.5px;letter-spacing:-.02em`}>homey</span>;
+  if (id === 'homey') return <span style={`${box};background:#fff;color:#1d1d1f;font-weight:700;font-size:11px;letter-spacing:-.03em;padding:0 4px;box-sizing:border-box`}>homey</span>;
+  // Offisielle merker (fra Home Assistants merkebibliotek): Music Assistant på mørk flis, Matter på hvit
+  if (id === 'ma') return <span style={`${box};background:#0e2a36`}><img src="./logo/brands/music-assistant.png" alt="" style="width:72%;height:72%;object-fit:contain" /></span>;
+  if (id === 'matter') return <span style={`${box};background:#fff`}><img src="./logo/brands/matter.png" alt="" style="width:66%;height:66%;object-fit:contain" /></span>;
   return <span style={`${box};background:${tile};color:#0b0b0c;font-weight:700;font-size:14px`}>{mono}</span>;
 }

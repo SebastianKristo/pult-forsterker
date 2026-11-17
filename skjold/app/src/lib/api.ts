@@ -217,6 +217,8 @@ export const api = {
   setRemote: (b: { enable: boolean; token?: string; host?: string }) => post<RemoteStatus>('/api/remote', b),
   status: () => req<Status>('/api/status'),
   statusAt: (base: string, timeoutMs = 2500) => req<Status>('/api/status', undefined, base, timeoutMs),
+  /** Andre Skjold-enheter enheten ser på LAN-et (mDNS) – også de nettleseren aldri har vært innom. */
+  peers: () => req<{ peers: { id?: string; navn?: string; base: string }[] }>('/api/peers', undefined, getBase(), 3000),
   power: (on: boolean) => post('/api/power', { on }),
   toggle: () => post('/api/toggle', {}),
   input: (input: InputId) => post('/api/input', { input }),
