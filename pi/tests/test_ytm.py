@@ -2,6 +2,7 @@
 import asyncio
 import os
 import sys
+import tempfile
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -55,7 +56,7 @@ def mk(cookie="SAPISID=abc; HSID=x", extract=None):
         n["x"] += 1
         return {"url": f"https://rr1.googlevideo.com/videoplayback?id={vid}&expire={int(time.time()) + 7200}&n={n['x']}",
                 "http_headers": {"User-Agent": "UA", "Accept": "x"}}
-    y = Y.Ytm(lambda: {"ytmCookie": cookie, "ytmUser": ""}, make_client=lambda c, u: fake, extract=extract or ex)
+    y = Y.Ytm(lambda: {"ytmCookie": cookie, "ytmUser": ""}, cache_dir=tempfile.mkdtemp(prefix="ytm-"), make_client=lambda c, u: fake, extract=extract or ex)
     return y, fake, n
 
 
@@ -70,6 +71,27 @@ def test_hjem_mapping():
                               "cover": "https://lh3.googleusercontent.com/a=w544-h544", "count": 0, "playlist": False}
     assert [c["id"] for c in h["other"]] == ["al:MPREb_b2"] and [c["id"] for c in h["frequent"]] == ["pl:RDMix"]
     assert y.home() is h   # cache
+
+
+def test_forsiden_lagres_og_vises_straks():
+    y, fake, _n = mk()
+    h = y.home()
+    # ny Ytm med samme mappe (som etter en omstart): forsiden kommer fra disk uten å spørre YouTube
+    y2 = Y.Ytm(lambda: {"ytmCookie": "SAPISID=abc; HSID=x", "ytmUser": ""}, cache_dir=y._dir,
+               make_client=lambda c, u: (_ for _ in ()).throw(AssertionError("skal ikke spørre YouTube")))
+    assert y2.home() == h
+    # gammel kopi: vises straks, ny hentes i bakgrunnen
+    y._home = (time.time() - 3600, h)
+    started = []
+    y.refresh_home_bg = lambda: started.append(1)
+    assert y.home() is h and started == [1]
+
+
+def test_spor_caches():
+    y, fake, _n = mk()
+    a = y.tracks("al:MPREb_a1")
+    y.client = lambda: (_ for _ in ()).throw(AssertionError("skal komme fra minnet"))
+    assert y.tracks("al:MPREb_a1") == a
 
 
 def test_uten_innlogging_bare_forsiden():

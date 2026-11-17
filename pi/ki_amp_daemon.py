@@ -9285,6 +9285,8 @@ def main():
     # YouTube Music innebygd (pi/skjold_ytm.py) – ytmusicapi + yt-dlp, ingen Music Assistant
     try:
         app.add_routes(_ytmmod.routes(ytm, {"stream_base": lambda: f"http://{_local_ip()}:{PORT}", "play": ytm_play_queue}))
+        # hent YouTube Music-forsiden i bakgrunnen etter oppstart, så Bibliotek er klart når noen åpner det
+        threading.Timer(20, lambda: ytm.signed_in() and not ytm.missing() and ytm.refresh_home_bg()).start()
     except Exception as e:
         print("YouTube Music ikke tilgjengelig:", e, flush=True)
     # Smart radio, Oppdag-liste, hjem-ekstra, plugin-butikk og helsesjekk (egne moduler, minimale kroker her)

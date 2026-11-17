@@ -121,6 +121,9 @@ class Ytm:
         self._urls = {}            # videoId → (url, utløper, headers)
         self._home = (0.0, None)   # (tid, svar)
         self._dir = cache_dir or os.path.join(tempfile.gettempdir(), "skjold-ytm")
+        self._tracks = {}          # samlings-id → (tid, låter)
+        self._refreshing = False
+        self._load_home()
         self._make_client = make_client
         self._extract = extract
         self.error = ""
@@ -165,7 +168,8 @@ class Ytm:
                 else:
                     self._client = YTMusic(language="en", location="NO")
             self._key = key
-            self._home = (0.0, None)
+            self._home = (0.0, None); self._tracks = {}
+            self._load_home()   # forsiden fra disk hvis den hører til samme innlogging
             return self._client
 
     def status(self):
@@ -173,10 +177,61 @@ class Ytm:
         return {"available": not miss, "signed_in": self.signed_in(), "missing": miss, "error": self.error}
 
     # ---------- bibliotek ----------
+    # Forsiden lagres på disk og vises straks (også etter omstart); er den eldre enn max_age, hentes den på nytt i
+    # bakgrunnen. Bibliotek-spillelister, album og «Til deg» hentes samtidig (før: etter hverandre, 5–15 s på en Pi).
+    def _home_file(self):
+        return os.path.join(self._dir, "home.json")
+
+    def _load_home(self):
+        try:
+            with open(self._home_file()) as f:
+                d = json.load(f)
+            if d.get("key") == self._key_hash():
+                self._home = (float(d.get("t", 0)), d.get("home"))
+        except Exception:
+            pass
+
+    def _key_hash(self):
+        import hashlib
+        c, u = self._cfg()
+        return hashlib.sha256((c + "|" + u).encode()).hexdigest()[:16]
+
+    def _save_home(self, t, out):
+        try:
+            os.makedirs(self._dir, exist_ok=True)
+            tmp = self._home_file() + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump({"t": t, "key": self._key_hash(), "home": out}, f)
+            os.replace(tmp, self._home_file())
+        except Exception:
+            pass
+
     def home(self, max_age=300):
         t, cached = self._home
-        if cached is not None and time.time() - t < max_age:
+        age = time.time() - t
+        if cached is not None and age < max_age:
             return cached
+        if cached is not None and max_age > 0 and age < 7 * 86400:
+            self.refresh_home_bg()   # gammel, men vis den straks – ny kommer i bakgrunnen
+            return cached
+        return self._fetch_home()
+
+    def refresh_home_bg(self):
+        if self._refreshing:
+            return
+        self._refreshing = True
+
+        def job():
+            try:
+                self._fetch_home()
+            except Exception as e:
+                self.error = f"forside: {e}"
+            finally:
+                self._refreshing = False
+        threading.Thread(target=job, daemon=True).start()
+
+    def _fetch_home(self):
+        from concurrent.futures import ThreadPoolExecutor
         yt = self.client()
         out = {"newest": [], "other": [], "frequent": [], "playlists": []}
         seen = set()
@@ -184,34 +239,68 @@ class Ytm:
         def add(lst, c):
             if c and c["id"] not in seen:
                 seen.add(c["id"]); lst.append(c)
-        if self.signed_in():
+
+        def safe(fn, *a, **k):
             try:
-                add(out["playlists"], {"id": "pl:LM", "name": "Likte låter", "artist": "YouTube Music", "cover": "", "count": 0, "playlist": True})
-                for p in yt.get_library_playlists(limit=50) or []:
-                    if (p.get("playlistId") or "") != "LM":
-                        add(out["playlists"], coll_playlist(p))
-                for a in yt.get_library_albums(limit=50, order="recently_added") or []:
-                    add(out["newest"], coll_album(a))
+                return fn(*a, **k) or [], None
             except Exception as e:
-                self.error = f"bibliotek: {e}"
-        try:   # «Til deg»: mikser, anbefalte album og spillelister fra forsiden
-            for sec in yt.get_home(limit=6) or []:
-                for it in sec.get("contents") or []:
-                    if not isinstance(it, dict):
-                        continue
-                    if it.get("browseId", "").startswith("MPRE") or it.get("type") in ("Album", "Single", "EP"):
-                        add(out["other"], coll_album(it))
-                    elif it.get("playlistId"):
-                        add(out["frequent"], coll_playlist(it))
-        except Exception as e:
-            if not out["playlists"]:
-                self.error = f"forside: {e}"
+                return [], e
+        signed = self.signed_in()
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            f_pl = ex.submit(safe, yt.get_library_playlists, limit=50) if signed else None
+            f_al = ex.submit(safe, yt.get_library_albums, limit=50, order="recently_added") if signed else None
+            f_home = ex.submit(safe, yt.get_home, limit=6)
+            pls, e_pl = f_pl.result() if f_pl else ([], None)
+            als, e_al = f_al.result() if f_al else ([], None)
+            secs, e_home = f_home.result()
+        if signed:
+            add(out["playlists"], {"id": "pl:LM", "name": "Likte låter", "artist": "YouTube Music", "cover": "", "count": 0, "playlist": True})
+            for p in pls:
+                if (p.get("playlistId") or "") != "LM":
+                    add(out["playlists"], coll_playlist(p))
+            for a in als:
+                add(out["newest"], coll_album(a))
+            if e_pl or e_al:
+                self.error = f"bibliotek: {e_pl or e_al}"
+        for sec in secs:   # «Til deg»: mikser, anbefalte album og spillelister fra forsiden
+            for it in sec.get("contents") or []:
+                if not isinstance(it, dict):
+                    continue
+                if it.get("browseId", "").startswith("MPRE") or it.get("type") in ("Album", "Single", "EP"):
+                    add(out["other"], coll_album(it))
+                elif it.get("playlistId"):
+                    add(out["frequent"], coll_playlist(it))
+        if e_home and not out["playlists"]:
+            self.error = f"forside: {e_home}"
         if any(out.values()):
             self.error = "" if not self.error.startswith("bibliotek") else self.error
-        self._home = (time.time(), out)
+            t = time.time()
+            self._home = (t, out)
+            self._save_home(t, out)
         return out
 
     def tracks(self, cid, limit=200):
+        hit = self._tracks.get(cid)
+        if hit and time.time() - hit[0] < 600:   # samme album/spilleliste åpnet igjen: fra minnet
+            return hit[1]
+        out = self._tracks_fetch(cid, limit)
+        self._tracks[cid] = (time.time(), out)
+        while len(self._tracks) > 60:
+            self._tracks.pop(next(iter(self._tracks)))
+        return out
+
+    def prefetch(self, vids):
+        """Slå opp lyd-adressene i bakgrunnen (yt-dlp tar noen sekunder per låt), så avspillingen starter med en gang."""
+        def job():
+            for v in vids:
+                try:
+                    self.stream_url(v)
+                except Exception:
+                    pass
+        if vids:
+            threading.Thread(target=job, daemon=True).start()
+
+    def _tracks_fetch(self, cid, limit=200):
         yt = self.client()
         kind, _, rid = str(cid).partition(":")
         if kind == "al":
@@ -305,7 +394,9 @@ def routes(ytm, ctx):
 
     async def h_tracks(r):
         try:
-            return web.json_response({"tracks": with_stream(await run(ytm.tracks, r.query.get("id", "")))})
+            ts = await run(ytm.tracks, r.query.get("id", ""))
+            ytm.prefetch([t["id"] for t in ts[:2]])   # de første låtene er klare når du trykker spill
+            return web.json_response({"tracks": with_stream(ts)})
         except ValueError as e:
             return fail(e, 400)
         except Exception as e:
@@ -331,7 +422,9 @@ def routes(ytm, ctx):
                 ts = await run(ytm.tracks, str(b.get("id") or ""))
             if not ts:
                 return fail("tom samling", 404)
-            await run(ctx["play"], with_stream(ts), int(b.get("index") or 0))
+            i = int(b.get("index") or 0)
+            ytm.prefetch([t["id"] for t in ts[i:i + 3]])   # denne og de neste to – neste låt starter uten pause
+            await run(ctx["play"], with_stream(ts), i)
             return web.json_response({"ok": True, "count": len(ts)})
         except ValueError as e:
             return fail(e, 400)
