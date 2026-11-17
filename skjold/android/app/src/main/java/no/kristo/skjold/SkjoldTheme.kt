@@ -15,7 +15,7 @@ object SkG {
     val barOn = hex(0xf0c46a)
     val barOff = hex(0xc9c9c4)
     val barLabel = hex(0xe4e4df)
-    val barPadTop = 14.dp
+    val barPadTop = 18.dp
     val barIndW = 64.dp
     val barIndH = 32.dp
 

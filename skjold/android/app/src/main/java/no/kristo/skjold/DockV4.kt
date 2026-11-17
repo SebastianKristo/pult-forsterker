@@ -146,8 +146,8 @@ private val GlassBase = hex(0x1c1c1e, 0.88f)
 private val BarH = 64.dp
 private val AccH = 48.dp
 private val Gap = 8.dp
-/** SKTabBar: 14 over, indikator 32, 4, etikett ~17, 12 under. */
-private val TabBarH = 79.dp
+/** SKTabBar: 18 over, indikator 32, 4, etikett ~17, 18 under (litt høyere enn før – lettere å treffe). */
+private val TabBarH = 89.dp
 private val LensEase = CubicBezierEasing(0.3f, 1.35f, 0.45f, 1f)
 private val PanelEase = CubicBezierEasing(0.2f, 0.7f, 0.2f, 1f)
 

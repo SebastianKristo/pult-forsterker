@@ -391,7 +391,7 @@ fun SKTabBar(selected: Int, pick: (Int) -> Unit) {
     val items = listOf(Icons.tabHome to stringResource(R.string.tab_home), Icons.tabSound to stringResource(R.string.tab_sound),
         Icons.tabRooms to stringResource(R.string.tab_rooms), Icons.tabSettings to stringResource(R.string.tab_settings))
     Column(Modifier.fillMaxWidth().background(SkG.barBg).topLine(SkG.barLine).windowInsetsPadding(WindowInsets.navigationBars)) {
-        Row(Modifier.fillMaxWidth().padding(top = SkG.barPadTop, bottom = 12.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = SkG.barPadTop, bottom = 18.dp)) {
             items.forEachIndexed { i, it ->
                 val on = i == selected
                 Column(
