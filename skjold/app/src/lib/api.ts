@@ -261,7 +261,7 @@ export const api = {
   wifiScan: () => req<{ networks: { ssid: string; security?: string; signal?: number; active?: boolean }[] }>('/api/wifi', undefined, getBase(), 25000),
   wifiConnect: (ssid: string, psk: string, hidden = false, security?: 'wpa2' | 'wpa3' | 'open') => req<{ ok: boolean }>('/api/wifi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid, psk, hidden, ...(security ? { security } : {}) }) }, getBase(), 50000),
   speakerTest: (channel: 'L' | 'R') => post<{ ok: boolean }>('/api/test', { channel }),
-  reboot: () => post<{ ok: boolean }>('/api/reboot', {}),
+  reboot: (poweroff = false) => post<{ ok: boolean }>('/api/reboot', poweroff ? { poweroff: true } : {}),
   factoryReset: () => post<{ ok: boolean }>('/api/reset', {}),
   forgetBt: () => post<{ ok: boolean }>('/api/bt', { forget: true })
 };

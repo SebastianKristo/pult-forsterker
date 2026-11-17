@@ -69,7 +69,7 @@ export async function loadPlugins(): Promise<void> {
   try { const r = await api.plugins(); plugList.value = r.plugins; sleepLeft.value = r.sleep; plugErr.value = ''; } catch (e) { plugErr.value = e instanceof Error ? e.message : String(e); }
 }
 export const plugCount = (): number => (plugList.value ?? []).filter((p) => p.enabled).length;
-async function setPlugin(id: string, b: Record<string, unknown>): Promise<string> {
+export async function setPlugin(id: string, b: Record<string, unknown>): Promise<string> {
   try { const r = await api.setPlugin(id, b); plugList.value = r.plugins; sleepLeft.value = r.sleep; return ''; } catch (e) { return e instanceof Error ? e.message : String(e); }
 }
 
