@@ -280,7 +280,7 @@ addEventListener('contextmenu', (e) => e.preventDefault());
 setInterval(() => {
   now.value = Date.now();
   const ms = (TOUCH_STANDBY_S[settings.value.tStandby] ?? 30) * 1000;
-  if (!idle.value && !boot.value.on && !dev().alarm?.ringing && !door.value && !dev().setup_net?.active && ms > 0 && Date.now() - lastAct > ms) goIdle();
+  if (!idle.value && !boot.value.on && !dev().alarm?.ringing && !door.value && !camOpen.value && !wifiOpen.value && !dev().setup_net?.active && ms > 0 && Date.now() - lastAct > ms) goIdle();
   if (!boot.value.on) backlight();
 }, 1000);
 
@@ -696,6 +696,7 @@ function Setup() {
     ['Lydutgang', 'PCM5122 HIFI HAT', seg(TOUCH_OUT, S.tOut ?? 2, (i) => setSetting('tOut', i))],
     ['Lysstyrke', 'Skjermen når den er i bruk', stepper((S.tBright ?? 100) + ' %', () => setSetting('tBright', Math.max(20, (S.tBright ?? 100) - 20)), () => setSetting('tBright', Math.min(100, (S.tBright ?? 100) + 20)))],
     ['Dimme skjermen', 'Etter siste trykk', seg(['30 s', '1 min', '5 min'], Math.max(0, (S.tStandby ?? 1) - 1), (i) => setSetting('tStandby', i + 1))],
+    ...(lasVal.value ? [['Dørlås', lasVal.value.valgt === '-' ? 'Av – «Lås opp» vises ikke når det ringer på' : lasVal.value.bruker ? 'Vises når det ringer på' + (lasVal.value.valgt ? '' : ' (valgt automatisk)') : lasVal.value.error || (lasVal.value.locks.length ? 'Velg låsen som skal låses opp fra Touch' : 'Fant ingen lås i Home Assistant'), stepper(lasNavn(), () => byttLas(-1), () => byttLas(1), 130)] as [string, string, preact.ComponentChildren]] : []),
     ['Wi-Fi', wifiNow.value ? 'Koblet til «' + wifiNow.value + '»' : 'Velg nett her, med mobilen (QR) eller over Bluetooth', one('Koble til nytt', () => { wifiOpen.value = true; })],
     ['Skjermsparer', 'Vises når skjermen hviler: ' + (TOUCH_IDLE[S.tIdle ?? 0] ?? '').toLowerCase(), <div style={SEGBOX}>
       <button onClick={() => { saverOpen.value = true; }} style="height:34px;padding:0 14px;border-radius:9px;border:none;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">Velg</button>
@@ -1236,7 +1237,20 @@ effect(() => {
 function Door({ clock }: { clock: string }) {
   const [tick, setTick] = useState(0), [noCam, setNoCam] = useState(false);
   useEffect(() => { const iv = setInterval(() => setTick((x) => x + 1), 1000); return () => clearInterval(iv); }, []);
-  const unlock = () => { void fetch(here() + '/api/touch/unlock', { method: 'POST' }).then((r) => { unlocked.value = r.ok; }).catch(() => undefined); };
+  // To trykk for å låse opp (så døren ikke åpnes ved et uhell): første trykk ber om bekreftelse i 4 sekunder
+  const [bekreft, setBekreft] = useState(false), [lasFeil, setLasFeil] = useState('');
+  useEffect(() => { if (!smart.value) void loadSmart(); }, []);
+  useEffect(() => { if (!bekreft) return; const t = setTimeout(() => setBekreft(false), 4000); return () => clearTimeout(t); }, [bekreft]);
+  const unlock = () => {
+    if (unlocked.value) return;
+    if (!bekreft) { setBekreft(true); setLasFeil(''); return; }
+    setBekreft(false);
+    void fetch(here() + '/api/touch/unlock', { method: 'POST' }).then(async (r) => {
+      unlocked.value = r.ok;
+      if (!r.ok) setLasFeil(((await r.json().catch(() => ({}))) as { error?: string }).error || 'Fikk ikke låst opp');
+      else window.setTimeout(() => { unlocked.value = false; }, 8000);
+    }).catch(() => setLasFeil('Fikk ikke kontakt med låsen'));
+  };
   const close = () => { clearTimeout(doorT); door.value = 0; };
   return (
     <div style="position:absolute;inset:0;z-index:24;background:#050506;overflow:hidden;animation:tinn .3s ease both">
@@ -1250,7 +1264,8 @@ function Door({ clock }: { clock: string }) {
         <span style={`font-family:${MONO};font-size:14px;color:#f2f2ee`}>{clock}</span>
       </div>
       <div style="position:absolute;left:0;right:0;bottom:0;padding:18px 20px;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,0))">
-        {!!smart.value?.lock && <button onClick={unlock} style={`height:56px;padding:0 22px;border-radius:28px;border:1px solid #f0c46a;background:${unlocked.value ? '#f0c46a' : 'rgba(22,22,23,.85)'};color:${unlocked.value ? '#0b0b0c' : '#f0c46a'};display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600`}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 7.5-2" /></svg>{unlocked.value ? 'Låst opp' : 'Lås opp'}</button>}
+        {!!smart.value?.lock && <button onClick={unlock} style={`height:56px;padding:0 22px;border-radius:28px;border:1px solid #f0c46a;background:${unlocked.value ? '#6fcf7f' : bekreft ? '#f0c46a' : 'rgba(22,22,23,.85)'};color:${unlocked.value || bekreft ? '#0b0b0c' : '#f0c46a'};display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600`}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 7.5-2" /></svg>{unlocked.value ? 'Døren er låst opp' : bekreft ? 'Trykk igjen for å låse opp' : 'Lås opp døren'}</button>}
+        {!!lasFeil && <span style="position:absolute;bottom:84px;left:0;right:0;text-align:center;font-size:13px;color:#ff8a7a">{lasFeil}</span>}
         <button onClick={close} style="height:56px;padding:0 28px;border-radius:28px;border:1px solid #3a3a37;background:rgba(22,22,23,.85);color:#f2f2ee;font-size:14px;font-weight:600">Lukk</button>
       </div>
     </div>
@@ -1267,6 +1282,24 @@ function DoorToast() {
 }
 
 // ---------- oppsett-nett (enheten har ikke nett) ----------
+// ---------- Dørlås (Home Assistant) til «Lås opp» når det ringer på ----------
+interface LasVal { ok: boolean; locks: { id: string; name: string }[]; valgt: string; bruker: string; error?: string }
+const lasVal = signal<LasVal | null>(null);
+function hentLaser(): void { getAt<LasVal>('', '/api/touch/locks').then((r) => { lasVal.value = r; }).catch(() => {}); }
+effect(() => { if (scr.value === 'set') hentLaser(); });
+const lasValg = (): string[] => ['', '-', ...(lasVal.value?.locks ?? []).map((l) => l.id)];   // '' = automatisk, '-' = av
+function lasNavn(): string {
+  const v = lasVal.value; if (!v) return '…';
+  if (v.valgt === '-') return 'Av';
+  if (!v.valgt) return v.bruker ? 'Auto · ' + (v.locks.find((l) => l.id === v.bruker)?.name ?? v.bruker) : 'Auto';
+  return v.locks.find((l) => l.id === v.valgt)?.name ?? v.valgt.replace('lock.', '');
+}
+function byttLas(d: number): void {
+  const o = lasValg(), i = Math.max(0, o.indexOf(lasVal.value?.valgt ?? '')), ny = o[(i + d + o.length) % o.length] ?? '';
+  if (lasVal.value) lasVal.value = { ...lasVal.value, valgt: ny };
+  void postAt('', '/api/touch', { lock_entity: ny }).then(() => { hentLaser(); void loadSmart(); });
+}
+
 // ---------- Wi-Fi: koble til et nytt nett ----------
 const wifiOpen = signal(false), wifiNow = signal('');
 function hentWifiNå(): void { getAt<{ networks: { ssid: string; active?: boolean }[] }>('', '/api/wifi').then((r) => { wifiNow.value = r.networks.find((n) => n.active)?.ssid ?? ''; }).catch(() => {}); }

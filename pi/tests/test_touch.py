@@ -389,3 +389,27 @@ def test_kameraer_valgte_eller_alle(tmp_path):
         x.camera_image("light.stue")
     y = TT.Touch({"changed": lambda: None, "ha": lambda: {}, "alarms": lambda: []}, str(tmp_path / "u.json"))
     assert y.cameras()["ok"] is False
+
+
+def test_dorlas_automatisk_eller_valgt(tmp_path):
+    """«Lås opp» ved ringeklokken: den eneste låsen i Home Assistant brukes av seg selv; med flere må du velge én."""
+    import pytest
+    import skjold_touch as TT
+    x = TT.Touch({"changed": lambda: None, "ha": lambda: {"ha_url": "http://ha", "ha_token": "x"}, "alarms": lambda: []}, str(tmp_path / "t.json"))
+    states = [{"entity_id": "lock.inngang", "state": "locked", "attributes": {"friendly_name": "Inngangsdør"}},
+              {"entity_id": "light.stue", "state": "on", "attributes": {}}]
+    x._get = lambda path, timeout=5.0: states
+    kall = []
+    x._call = lambda *a: kall.append(a)
+    assert x.lock_id() == "lock.inngang"
+    assert x.locks()["locks"] == [{"id": "lock.inngang", "name": "Inngangsdør", "state": "locked"}]
+    assert x.unlock()["ok"] and kall == [("lock", "unlock", {"entity_id": "lock.inngang"})]
+    states.append({"entity_id": "lock.garasje", "state": "locked", "attributes": {}})
+    x._locks = (0.0, None)
+    assert x.lock_id() == ""                       # to låser: må velges
+    with pytest.raises(ValueError):
+        x.unlock()
+    x.save({"lock_entity": "lock.garasje"})
+    assert x.lock_id() == "lock.garasje"
+    x.save({"lock_entity": "-"})
+    assert x.lock_id() == ""                       # slått av med vilje

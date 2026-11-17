@@ -1946,4 +1946,13 @@ export const EN_AUTO: Record<string, string> = {
   'Bluetooth-oppsettet er stoppet': 'Bluetooth setup has stopped',
   'Avbryt – bruk nettet som før': 'Cancel – keep the current network',
   'Velg nett her, med mobilen (QR) eller over Bluetooth': 'Choose a network here, with your phone (QR) or over Bluetooth',
+  'Dørlås': 'Door lock',
+  'Lås opp døren': 'Unlock the door',
+  'Trykk igjen for å låse opp': 'Tap again to unlock',
+  'Døren er låst opp': 'The door is unlocked',
+  'Vises når det ringer på': 'Shown when the doorbell rings',
+  'Velg låsen som skal låses opp fra Touch': 'Choose the lock Touch can unlock',
+  'Fant ingen lås i Home Assistant': 'No lock found in Home Assistant',
+  'Fikk ikke låst opp': 'Could not unlock',
+  'Fikk ikke kontakt med låsen': 'Could not reach the lock',
 };

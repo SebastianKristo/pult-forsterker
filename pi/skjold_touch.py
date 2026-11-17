@@ -75,7 +75,7 @@ def clean(cfg: dict, body: dict) -> dict:
             v = [str(x).strip()[:120] for x in v if "." in str(x)][:12 if k == "tiles" else 4]
         else:
             v = str(v or "").strip()[:120]
-            if v and "." not in v:
+            if v and "." not in v and not (k == "lock_entity" and v == "-"):   # «-» = ingen dørlås
                 raise ValueError(f"{k} må være en entitet, f.eks. lock.inngang")
         out[k] = v
     return out
@@ -678,7 +678,7 @@ class Touch:
             tiles = [tile_of(s) for s in (self._state(e) for e in want) if s]
             sc = [{"id": e, "name": str(((self._state(e) or {}).get("attributes") or {}).get("friendly_name") or e.split(".", 1)[1])[:18]} for e in scenes]
             out = {"ok": True, "hub": "Home Assistant", "tiles": tiles, "scenes": sc, "auto": not self.cfg["tiles"],
-                   "lock": bool(self.cfg["lock_entity"])}
+                   "lock": bool(self.lock_id())}
         except Exception as e:
             out = {"ok": False, "hub": "Home Assistant", "tiles": [], "scenes": [], "error": "Får ikke kontakt med Home Assistant: " + str(e)[:120]}
         self._cache = {"t": now, "data": out}
@@ -756,10 +756,43 @@ class Touch:
         time.sleep(0.3)
         return self.wake(fresh=True)
 
-    def unlock(self) -> dict:
+    def locks(self) -> dict:
+        """Låsene Home Assistant kjenner (til valget «Dørlås» på Touch) og hvilken som brukes nå."""
+        url, tok = self.ha()
+        if not (url and tok):
+            return {"ok": False, "locks": [], "valgt": self.cfg["lock_entity"], "bruker": "", "error": "Koble til Home Assistant i appen."}
+        try:
+            ls = [{"id": s["entity_id"], "name": str((s.get("attributes") or {}).get("friendly_name") or s["entity_id"].split(".", 1)[1])[:40],
+                   "state": s.get("state")} for s in self._get("/api/states", 10) if str(s.get("entity_id", "")).startswith("lock.")]
+        except Exception as e:
+            return {"ok": False, "locks": [], "valgt": self.cfg["lock_entity"], "bruker": "", "error": "Får ikke kontakt med Home Assistant: " + str(e)[:120]}
+        self._locks = (time.time(), [x["id"] for x in ls])
+        return {"ok": True, "locks": ls, "valgt": self.cfg["lock_entity"], "bruker": self.lock_id()}
+
+    def lock_id(self) -> str:
+        """Låsen «Lås opp» bruker: den du har valgt, ellers (automatisk) den eneste låsen i Home Assistant.
+        «-» = ingen lås (slått av med vilje)."""
         eid = self.cfg["lock_entity"]
+        if eid == "-":
+            return ""
+        if eid.startswith("lock."):
+            return eid
+        t, ids = getattr(self, "_locks", (0.0, None))
+        if ids is None or time.time() - t > 600:
+            url, tok = self.ha()
+            if not (url and tok):
+                return ""
+            try:
+                ids = [s["entity_id"] for s in self._get("/api/states", 10) if str(s.get("entity_id", "")).startswith("lock.")]
+            except Exception:
+                ids = []
+            self._locks = (time.time(), ids)
+        return ids[0] if len(ids) == 1 else ""
+
+    def unlock(self) -> dict:
+        eid = self.lock_id()
         if not eid.startswith("lock."):
-            raise ValueError("ingen lås er satt opp")
+            raise ValueError("ingen lås er satt opp – velg den under Oppsett → Dørlås")
         self._call("lock", "unlock", {"entity_id": eid})
         return {"ok": True}
 
@@ -1018,7 +1051,10 @@ def routes(touch: Touch):
             return fail("fikk ikke kamerabildet: " + str(e)[:120], 502)
         return web.Response(body=data, content_type=ct, headers={"Cache-Control": "no-store"})
 
-    return [("GET", "/api/touch/cameras", h_cameras), ("GET", "/api/touch/camera/{eid}", h_camera),
+    async def h_locks(_r):
+        return web.json_response(await bg(touch.locks))
+
+    return [("GET", "/api/touch/locks", h_locks), ("GET", "/api/touch/cameras", h_cameras), ("GET", "/api/touch/camera/{eid}", h_camera),
             ("GET", "/api/touch", h_touch), ("POST", "/api/touch", h_touch), ("GET", "/api/touch/smart", h_smart),
             ("POST", "/api/touch/smart", h_smart), ("GET", "/api/touch/wake", h_wake), ("POST", "/api/touch/wake", h_wake), ("POST", "/api/touch/unlock", h_unlock), ("GET", "/api/touch/morning", h_morning),
             ("GET", "/api/alarm", h_alarm), ("POST", "/api/alarm", h_alarm), ("GET", "/api/touch/voice", h_voice),
