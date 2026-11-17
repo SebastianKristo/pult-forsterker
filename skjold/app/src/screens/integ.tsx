@@ -11,7 +11,6 @@ import { go, setSetting, settings, showToast, everyVisible, status } from '../li
 import { Toggle } from '../components/ui';
 import type { Settings } from '../lib/settings';
 
-const A = '#d9a441';
 const MONO = "'IBM Plex Mono',monospace";
 const host = (): string => (typeof location !== 'undefined' && location.hostname) || 'skjold.local';
 
@@ -147,33 +146,39 @@ export function IntegrationsPage() {
   useEffect(() => { checkMa(); loadSw(true); void hkLoad(); void matterLoad(); const t = everyVisible(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); if (matter.value?.enabled && !matter.value.commissioned) void matterLoad(); }, 5000); return () => clearInterval(t); }, []);
   const s = settings.value, sel = intSel.value, list = ints(s), cur = list.find((x) => x.id === sel) ?? list[0]!, d = detail(cur.id, s);
   return (
-    <>
-      <button onClick={() => openSetup()} style="display:flex;align-items:center;gap:14px;margin-bottom:12px;padding:16px 18px;border-radius:18px;border:1px solid #3a2e17;background:linear-gradient(135deg,#2a1f0c,#141415);color:#f2f2ee;cursor:pointer;text-align:left">
-        <span style="width:44px;height:44px;border-radius:12px;flex-shrink:0;background:linear-gradient(145deg,#f0c46a,#b9832a);display:flex;align-items:center;justify-content:center;color:#0b0b0c"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg></span>
-        <span style="display:flex;flex-direction:column;gap:2px;flex:1"><b style="font-size:15px">Sett opp musikktjenester</b><span style="font-size:12.5px;color:#a9a9a3">YouTube Music, Navidrome, Music Assistant, Spotify og SUB/WAVE – steg for steg</span></span>
-        <span style="color:#d9a441;font-size:20px">›</span>
-      </button>
-      <button onClick={() => go('kass')} style="align-self:flex-start;margin-bottom:12px;padding:10px 16px;border-radius:12px;border:1px solid #242426;background:#141415;color:#f2f2ee;cursor:pointer">Skjold Kassett – NFC-kassetter ›</button>
-      <button onClick={() => go('vinyl')} style="align-self:flex-start;margin-bottom:12px;padding:10px 16px;border-radius:12px;border:1px solid #242426;background:#141415;color:#f2f2ee;cursor:pointer">Platesamling – vinyl til FLAC ›</button>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
-        {list.map((x) => { const on = x.id === cur.id; return (
-          <button key={x.id} onClick={() => { intSel.value = x.id; }} style={`display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:18px;border-radius:14px;border:1px solid ${on ? A : '#242426'};background:${on ? '#1c170d' : '#141415'};cursor:pointer;text-align:left;color:#f2f2ee`}>
-            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px">
-              <IntLogo id={x.id} mono={x.mono} tile={x.tile} />
-              <span style={`display:flex;align-items:center;gap:6px;font-size:11px;color:${x.ok ? '#6fcf7f' : '#8b8b86'}`}><i style={`width:6px;height:6px;border-radius:50%;background:${x.ok ? '#6fcf7f' : '#8b8b86'}`} />{x.status}</span>
+    <div class="int-wrap">
+      <style>{INT_CSS}</style>
+      <div class="int-list">
+        {GRUPPER.map(([tittel, ids, ekstra]) => (
+          <section key={tittel} class="int-grp">
+            <div class="int-gh"><span>{tittel}</span>{ekstra === 'oppsett' && <button class="int-setup" onClick={() => openSetup()}>Sett opp steg for steg ›</button>}</div>
+            <div class="int-grid">
+              {list.filter((x) => ids.includes(x.id)).map((x) => { const on = x.id === cur.id; return (
+                <button key={x.id} class={'int-card' + (on ? ' on' : '')} onClick={() => { intSel.value = x.id; }}>
+                  <IntLogo id={x.id} mono={x.mono} tile={x.tile} />
+                  <span class="int-tx"><b>{x.name}</b><span class={'int-st' + (x.ok ? ' ok' : '')}><i />{x.status}</span></span>
+                </button>
+              ); })}
             </div>
-            <span style="font-size:15px;font-weight:600">{x.name}</span>
-            <span style="font-size:12px;color:#8b8b86;line-height:1.45;text-wrap:pretty">{x.desc}</span>
-          </button>
-        ); })}
-      </div>
-      <section style="background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column">
-        <div style="padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-          <span style="font-size:17px;font-weight:600">{cur.name}</span>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            {d.links.map(([l, h]) => <a key={l} href={h} target="_blank" rel="noreferrer" style="display:flex;align-items:center;height:34px;padding:0 12px;border-radius:8px;border:1px solid #3a2e17;background:#1c170d;font-size:12px;white-space:nowrap;color:#f2f2ee;text-decoration:none">{l} ↗</a>)}
+          </section>
+        ))}
+        <section class="int-grp">
+          <div class="int-gh"><span>Skjold-tilbehør</span></div>
+          <div class="int-grid">
+            <button class="int-card" onClick={() => go('kass')}><span class="int-ic">▭</span><span class="int-tx"><b>Skjold Kassett</b><span class="int-st">NFC-kassetter ›</span></span></button>
+            <button class="int-card" onClick={() => go('vinyl')}><span class="int-ic">◎</span><span class="int-tx"><b>Platesamling</b><span class="int-st">Vinyl til FLAC ›</span></span></button>
           </div>
+        </section>
+      </div>
+      <section class="int-det">
+        <div class="int-dh">
+          <IntLogo id={cur.id} mono={cur.mono} tile={cur.tile} />
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:17px;font-weight:600">{cur.name}</span><span class={'int-st' + (cur.ok ? ' ok' : '')}><i />{cur.status}</span></div>
         </div>
+        <p class="int-desc">{cur.desc}</p>
+        {d.links.length > 0 && <div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 20px 14px">
+          {d.links.map(([l, h]) => <a key={l} href={h} target="_blank" rel="noreferrer" style="display:flex;align-items:center;height:32px;padding:0 12px;border-radius:8px;border:1px solid #3a2e17;background:#1c170d;font-size:12px;white-space:nowrap;color:#f2f2ee;text-decoration:none">{l} ↗</a>)}
+        </div>}
         {d.rows.map((r) => (
           <div key={r.n} style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 20px;border-top:1px solid #242426">
             <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:14px">{r.n}</span>{r.hint && <span style="font-size:12px;color:#8b8b86;text-wrap:pretty">{r.hint}</span>}</div>
@@ -181,9 +186,35 @@ export function IntegrationsPage() {
           </div>
         ))}
       </section>
-    </>
+    </div>
   );
 }
+
+const GRUPPER: [string, string[], string?][] = [
+  ['Musikk', ['lyrion', 'spotify', 'ytmusic', 'navidrome', 'ma', 'subwave', 'upnp'], 'oppsett'],
+  ['Smarthjem og styring', ['homekit', 'matter', 'ha', 'homey', 'api']],
+];
+const INT_CSS = `
+.int-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);gap:24px;align-items:start}
+.int-list{display:flex;flex-direction:column;gap:22px;min-width:0}
+.int-grp{display:flex;flex-direction:column;gap:10px}
+.int-gh{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8b8b86}
+.int-setup{border:none;background:none;color:#d9a441;font:600 12.5px Sora,system-ui,sans-serif;letter-spacing:0;text-transform:none;cursor:pointer;padding:0}
+.int-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.int-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;border:1px solid #242426;background:#141415;cursor:pointer;text-align:left;color:#f2f2ee;min-width:0}
+.int-card:hover{border-color:#34342f}
+.int-card.on{border-color:#d9a441;background:#1c170d}
+.int-tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.int-tx b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.int-st{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.int-st.ok{color:#6fcf7f}
+.int-st i{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.int-ic{width:44px;height:44px;border-radius:11px;background:#1f1f21;color:#d9a441;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.int-det{position:sticky;top:16px;background:#141415;border:1px solid #242426;border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.int-dh{display:flex;align-items:center;gap:14px;padding:18px 20px 10px}
+.int-desc{margin:0;padding:0 20px 14px;font-size:13px;line-height:1.5;color:#a9a9a3;text-wrap:pretty}
+@media (max-width:1100px){.int-wrap{grid-template-columns:minmax(0,1fr)}.int-det{position:static}}
+`;
 
 // ---------- Plugins ----------
 export { PluginsPage, plugCount } from './plugins';

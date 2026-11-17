@@ -1776,4 +1776,11 @@ export const EN_AUTO: Record<string, string> = {
   'Din egen AI-DJ-radio: selvhostede stasjoner der en AI-DJ velger låtene. Vises i Bibliotek og Kilder.': 'Your own AI DJ radio: self-hosted stations where an AI DJ picks the songs. Shows up in Library and Sources.',
   'Ingen stasjon lagt inn ennå.': 'No station added yet.',
   'Stasjoner': 'Stations',
+  'Musikktjenester og smarthjem. Velg en for å se innstillingene': 'Music services and smart home. Pick one to see its settings',
+  'Sett opp steg for steg ›': 'Set up step by step ›',
+  'Smarthjem og styring': 'Smart home and control',
+  'Skjold-tilbehør': 'Skjold accessories',
+  'NFC-kassetter ›': 'NFC cassettes ›',
+  'Vinyl til FLAC ›': 'Vinyl to FLAC ›',
+  'Platesamling': 'Record collection',
 };
