@@ -192,6 +192,37 @@ function control(base: string): void {
 }
 
 // ---------- standby og oppstart ----------
+const saverOpen = signal(false);
+
+/** Velg skjermsparer med forhåndsvisning, og start den med en gang. */
+function SaverSheet() {
+  const cur = settings.value.tIdle ?? 0;
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 15000); return () => clearInterval(t); }, []);
+  const d = new Date(), hhmm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const vid = (cover: boolean) => <video autoplay muted loop playsInline style={`position:absolute;${cover ? 'inset:0;width:100%;height:100%;object-fit:cover' : 'left:0;right:0;top:50%;transform:translateY(-50%);width:100%;height:auto'}`}><source src="./media/fjord.mp4" type="video/mp4" /><source src="./media/fjord.webm" type="video/webm" /></video>;
+  const preview = (i: number) => i === 0 ? <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:300;color:#f2f2ee;letter-spacing:.02em">{hhmm}</span>
+    : i === 1 ? <span style={`position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:58%;aspect-ratio:1;border-radius:8px;background:${local.value?.playing ? artOf(local.value) : 'linear-gradient(135deg,#7a5c26,#2a2a2c)'}`} />
+    : i === 2 ? <span style={`position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#4a4a47`}>AV</span>
+    : vid(i === 4);
+  const pick = (i: number) => setSetting('tIdle', i);
+  return (
+    <Sheet title="Skjermsparer" kicker="VISES NÅR SKJERMEN HVILER" onClose={() => { saverOpen.value = false; }} height={330}>
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:6px 16px 12px">
+        {TOUCH_IDLE.map((n, i) => { const on = i === cur; return (
+          <button key={n} onClick={() => pick(i)} aria-pressed={on} style="border:none;background:none;padding:0;display:flex;flex-direction:column;gap:7px;min-width:0;text-align:left">
+            <div style={`position:relative;width:100%;aspect-ratio:5/3;border-radius:10px;overflow:hidden;background:#050505;box-shadow:0 0 0 ${on ? '2px #f0c46a' : '1px #2e2e30'}`}>{preview(i)}</div>
+            <span style={`font-size:12.5px;font-weight:600;color:${on ? '#f0c46a' : '#f2f2ee'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{n}</span>
+          </button>); })}
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;padding:0 16px 14px">
+        <span style="flex:1;font-size:12px;color:#8b8b86">Trykk hvor som helst for å vekke skjermen. Med skjermspareren på: dobbelttrykk spiller/pauser, sveip med to fingre bytter låt.</span>
+        <button onClick={() => { saverOpen.value = false; goIdle(); }} style="height:44px;padding:0 20px;border-radius:22px;border:none;background:#f2f2ee;color:#0b0b0c;font-size:13.5px;font-weight:600;white-space:nowrap">Start nå</button>
+      </div>
+    </Sheet>
+  );
+}
+
 function goIdle(): void { idle.value = true; idleOp.value = 0; setTimeout(() => { idleOp.value = 1; }, 30); backlight(); }
 function wake(): void { lastAct = Date.now(); if (idle.value) { idle.value = false; backlight(); sluk = Date.now() + 700; } }
 // Trykket som vekker skjermen skal bare vekke: standby-laget forsvinner allerede ved pointerdown, så uten dette landet
@@ -658,7 +689,9 @@ function Setup() {
     ['Lydutgang', 'PCM5122 HIFI HAT', seg(TOUCH_OUT, S.tOut ?? 2, (i) => setSetting('tOut', i))],
     ['Lysstyrke', 'Skjermen når den er i bruk', stepper((S.tBright ?? 100) + ' %', () => setSetting('tBright', Math.max(20, (S.tBright ?? 100) - 20)), () => setSetting('tBright', Math.min(100, (S.tBright ?? 100) + 20)))],
     ['Dimme skjermen', 'Etter siste trykk', seg(['30 s', '1 min', '5 min'], Math.max(0, (S.tStandby ?? 1) - 1), (i) => setSetting('tStandby', i + 1))],
-    ['I standby', 'Når skjermen hviler', seg(TOUCH_IDLE, S.tIdle ?? 0, (i) => setSetting('tIdle', i))],
+    ['Skjermsparer', 'Vises når skjermen hviler: ' + (TOUCH_IDLE[S.tIdle ?? 0] ?? '').toLowerCase(), <div style={SEGBOX}>
+      <button onClick={() => { saverOpen.value = true; }} style="height:34px;padding:0 14px;border-radius:9px;border:none;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">Velg</button>
+      <button onClick={goIdle} style="height:34px;padding:0 14px;border-radius:9px;border:none;background:transparent;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">Start nå</button></div>],
     ['Startside', 'Siden som vises etter oppstart', stepper(TOUCH_START[S.tStart ?? 0] ?? '', () => setSetting('tStart', ((S.tStart ?? 0) + TOUCH_START.length - 1) % TOUCH_START.length), () => setSetting('tStart', ((S.tStart ?? 0) + 1) % TOUCH_START.length), 104)],
     ['Nattmodus', 'Svakt, rødlig lys og dempet skjerm', seg(['Av', 'Tidsplan', 'HA/Homey', 'På'], nMode, (i) => { setSetting('tNightMode', i); setSetting('tNight', i === 1); })],
     ['Natt fra', 'Brukes når nattmodus står på Tidsplan', stepper(String(S.tNStart ?? 22).padStart(2, '0') + ':00', () => setSetting('tNStart', ((S.tNStart ?? 22) + 23) % 24), () => setSetting('tNStart', ((S.tNStart ?? 22) + 1) % 24))],
@@ -1517,6 +1550,7 @@ function App() {
         {lyricsOpen.value && cur === 'now' && <LyricsSheet />}
         {!!dimId.value && cur === 'smart' && <DimSheet />}
         {camOpen.value && cur === 'smart' && <CamView />}
+        {saverOpen.value && cur === 'set' && <SaverSheet />}
         {talkOpen.value && <Intercom />}
         {talking && <Voice />}
       </main>
