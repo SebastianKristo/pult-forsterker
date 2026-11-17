@@ -15,6 +15,8 @@ final class WidgetBridge {
     private var lastVolume = -1
     private var lastReload = Date.distantPast
     private var coverSource = ""
+    private var artKey = ""          // omslaget som er lagt rett i Live Activity-tilstanden (se ContentState.art)
+    private var artData: Data? = nil
     private var activity: Activity<SkjoldNowPlayingAttributes>? = Activity<SkjoldNowPlayingAttributes>.activities.first
     private var activityState: SkjoldNowPlayingAttributes.ContentState?
     private var endTask: Task<Void, Never>?
@@ -77,6 +79,7 @@ final class WidgetBridge {
         guard src != coverSource else { return }
         coverSource = src
         guard src.lowercased().hasPrefix("http"), let url = URL(string: src) else {
+            artKey = ""; artData = nil
             SkjoldShared.mutate { $0.hasCover = false; $0.coverKey = nil }
             reload()
             refreshActivity()
@@ -84,6 +87,7 @@ final class WidgetBridge {
         }
         let key = Self.key(src)
         if let f = SkjoldShared.coverFileFor(key: key), FileManager.default.fileExists(atPath: f.path) {   // allerede hentet
+            if artKey != key, let d = try? Data(contentsOf: f) { artKey = key; artData = Self.tiny(d) }
             SkjoldShared.mutate { $0.hasCover = true; $0.coverKey = key }
             reload()
             refreshActivity()
@@ -92,6 +96,7 @@ final class WidgetBridge {
         Task { [weak self] in
             let jpeg = await Self.thumbnail(url)
             guard let self, self.coverSource == src else { return }
+            if let jpeg { self.artKey = key; self.artData = Self.tiny(jpeg) }   // også uten App Group
             if let jpeg, let f = SkjoldShared.coverFileFor(key: key), (try? jpeg.write(to: f, options: .atomic)) != nil {
                 if let old = SkjoldShared.coverFile { try? jpeg.write(to: old, options: .atomic) }   // eldre widgets
                 SkjoldShared.mutate { $0.hasCover = true; $0.coverKey = key }
@@ -142,13 +147,31 @@ final class WidgetBridge {
         return out.jpegData(compressionQuality: 0.8)
     }
 
+    /// Omslaget som et lite JPEG (48 × 48) til Live Activity-tilstanden, under ~2,5 kB (ActivityKit tillater 4 kB i alt).
+    nonisolated private static func tiny(_ jpeg: Data) -> Data? {
+        guard let img = UIImage(data: jpeg) else { return nil }
+        let side: CGFloat = 48
+        let fmt = UIGraphicsImageRendererFormat()
+        fmt.scale = 1
+        let out = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: fmt).image { _ in
+            let w = img.size.width, h = img.size.height
+            let scale = max(side / max(w, 1), side / max(h, 1))
+            img.draw(in: CGRect(x: (side - w * scale) / 2, y: (side - h * scale) / 2, width: w * scale, height: h * scale))
+        }
+        for q in [0.6, 0.4, 0.25] as [CGFloat] {
+            if let d = out.jpegData(compressionQuality: q), d.count <= 2500 { return d }
+        }
+        return nil
+    }
+
     // MARK: Live Activity
 
     private func updateActivity(_ s: SharedNowPlaying) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         let state = SkjoldNowPlayingAttributes.ContentState(title: s.title, subtitle: s.subtitle, source: s.source,
                                                             playing: s.playing, volume: s.volume,
-                                                            cover: s.hasCover ? s.coverKey : nil)
+                                                            cover: s.hasCover ? s.coverKey : nil,
+                                                            art: (!artKey.isEmpty && artKey == Self.key(coverSource)) ? artData : nil)
         if s.playing {
             endTask?.cancel()
             endTask = nil

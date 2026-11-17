@@ -163,6 +163,9 @@ nonisolated struct SkjoldNowPlayingAttributes: ActivityAttributes {
         var playing: Bool
         var volume: Int
         var cover: String? = nil   // nøkkel til bildet i App Group (cover-<nøkkel>.jpg), ikke selve bildet
+        /// Lite omslag (48 × 48 JPEG, ~1–2 kB) rett i tilstanden. Brukes når App Group ikke er tilgjengelig – en usignert
+        /// IPA som signeres på nytt (AltStore, Sideloadly …) mister ofte App Group, og da fant aktiviteten ikke bildet.
+        var art: Data? = nil
     }
     var room: String
 }
