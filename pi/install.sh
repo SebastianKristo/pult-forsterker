@@ -35,6 +35,10 @@ elif [ "$BOARD_SEL" = main ]; then PB_CARD=pultamp; PB_DEV="hw:pultamp"; PB_FMT=
 else PB_CARD=sndrpihifiberry; PB_DEV="hw:sndrpihifiberry"; PB_FMT=S32LE; fi
 
 echo "== 1/9  Oppdaterer systemet"
+# En installasjon som ble avbrutt (strøm, omstart midt i apt) etterlater dpkg halvferdig – da feiler alt med
+# «dpkg was interrupted». Rydd opp først, så installasjonen ved første oppstart kommer seg videre av seg selv.
+sudo DEBIAN_FRONTEND=noninteractive dpkg --configure -a || true
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y -f install || true
 sudo apt-get update && sudo apt-get -y full-upgrade
 sudo timedatectl set-timezone Europe/Oslo 2>/dev/null || true
 
