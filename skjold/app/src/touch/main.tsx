@@ -43,6 +43,20 @@ interface Dev {
   rebooting?: boolean; poweroff?: boolean;
 }
 
+// ---------- nettbrett (Skjold Touch-appen for Android) ----------
+// Appen laster touch.html?fluid=1 fra en Skjold-enhet og gir et lite grensesnitt (window.SkjoldTablet).
+// Da fyller grensesnittet hele skjermen (ikke fast 800 × 480), lysstyrken styres av nettbrettet selv,
+// og av/på-knappen starter ikke Skjold-enheten på nytt.
+interface SkjoldTabletApi { setBrightness(level: number): void; velgEnhet(): void; navn?(): string }
+const TABLET = (window as unknown as { SkjoldTablet?: SkjoldTabletApi }).SkjoldTablet;
+const FLUID = !!TABLET || /[?&]fluid=1\b/.test(location.search);
+/** Omslaget på Spiller-siden: 244 px på Touch, større på et nettbrett. */
+const COVER = FLUID ? 'min(52vh, 40vw)' : '244px';
+if (FLUID) {
+  const m = document.querySelector('meta[name="viewport"]');
+  if (m) m.setAttribute('content', 'width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover');
+}
+
 // ---------- tilstand ----------
 const scr = signal<Scr>('now');
 const roomsOpen = signal(false);
@@ -173,7 +187,11 @@ function backlight(): void {
   // nattmodus: skjermen av i standby (et trykk vekker den, dempet); ellers som valgt under «I standby»
   const ti = settings.value.tIdle ?? 0;
   const lvl = idle.value ? (ti === 2 || n ? 0 : Math.min(ti >= 3 ? 60 : 30, full)) : n ? Math.min(25, full) : full;   // fjord-videoen trenger litt mer lys
-  if (lvl !== blLast) { blLast = lvl; void postAt('', '/api/touch/backlight', { level: lvl }).catch(() => undefined); }
+  if (lvl !== blLast) {
+    blLast = lvl;
+    if (TABLET) { try { TABLET.setBrightness(lvl); } catch { /* eldre app */ } }
+    else void postAt('', '/api/touch/backlight', { level: lvl }).catch(() => undefined);
+  }
 }
 
 // ---------- ringeklokke ----------
@@ -405,8 +423,8 @@ function NowPlaying() {
         {/* toner helt ut mot topplinja (ingen kant), og mørkner nedover så teksten står tydelig */}
         <div style="position:absolute;inset:0;background:linear-gradient(180deg,#0b0b0c 0%,rgba(11,11,12,.72) 14%,rgba(11,11,12,.5) 34%,rgba(11,11,12,.94) 100%)" />
       </>}
-      <div style="position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:244px minmax(0,1fr);grid-template-rows:244px auto auto;column-gap:24px;row-gap:4px;padding:14px 22px 8px;align-content:center">
-        <div style={`position:relative;width:244px;height:244px;border-radius:14px;background:${has ? bg : '#141415'};box-shadow:0 18px 44px rgba(0,0,0,.55);overflow:hidden;display:flex;align-items:center;justify-content:center`}>
+      <div style={`position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:${COVER} minmax(0,1fr);grid-template-rows:${COVER} auto auto;column-gap:24px;row-gap:4px;padding:14px 22px 8px;align-content:center`}>
+        <div style={`position:relative;width:${COVER};height:${COVER};border-radius:14px;background:${has ? bg : '#141415'};box-shadow:0 18px 44px rgba(0,0,0,.55);overflow:hidden;display:flex;align-items:center;justify-content:center`}>
           {!has && <div style="display:flex;gap:6px;align-items:flex-start;height:60px;opacity:.5">{BARS.map((h, i) => <div key={i} style={`width:9px;height:${h * 2.2}px;border-radius:5px;background:${i === 2 ? '#7a5c26' : '#3a3a37'}`} />)}</div>}
           {has && <span style={`position:absolute;left:10px;bottom:10px;height:22px;padding:0 8px;border-radius:6px;background:rgba(0,0,0,.55);font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#f2f2ee;display:flex;align-items:center`}>{srcName(s)}</span>}
         </div>
@@ -718,6 +736,7 @@ function Setup() {
         <button onClick={goIdle} style="height:34px;padding:0 12px;border-radius:9px;border:none;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">Standby</button>
         <button onClick={runBoot} style="height:34px;padding:0 12px;border-radius:9px;border:none;background:transparent;color:#8b8b86;font-size:12px;font-weight:600;white-space:nowrap">Start på nytt</button>
       </div>)],
+    ...(TABLET ? [['Skjold-enhet', 'Nettbrettet styrer ' + (local.value?.name || location.hostname) + ' (' + location.host + ')', one('Bytt', () => { try { TABLET.velgEnhet(); } catch { /* */ } })] as [string, string, preact.ComponentChildren]] : []),
     ['Om enheten', [local.value?.name, location.hostname, local.value?.version ? 'versjon ' + local.value.version : ''].filter(Boolean).join(' · '), <span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#6b6b67;white-space:nowrap`}>SKJOLD TOUCH</span>]
   ];
   return (
@@ -1462,7 +1481,8 @@ function holdTick(): void {
 
 function PowerHold() {
   const p = pwrHold.value, R = 20, C = 2 * Math.PI * R;
-  const start = (e: PointerEvent) => { e.preventDefault(); holdStart = Date.now(); holdDone = false; cancelAnimationFrame(holdT); holdT = requestAnimationFrame(holdTick); };
+  // På nettbrettet starter ikke et langt trykk Skjold-enheten på nytt – knappen viser bare skjermspareren
+  const start = (e: PointerEvent) => { e.preventDefault(); holdStart = Date.now(); holdDone = false; cancelAnimationFrame(holdT); if (!TABLET) holdT = requestAnimationFrame(holdTick); };
   const end = (kort: boolean) => { cancelAnimationFrame(holdT); const holdt = Date.now() - holdStart; const ferdig = holdDone; pwrHold.value = 0; holdStart = 0; if (kort && !ferdig && holdt < 600) goIdle(); };
   return (
     <button onPointerDown={start} onPointerUp={() => end(true)} onPointerCancel={() => end(false)} onPointerLeave={() => { if (holdStart) end(false); }}
@@ -1710,7 +1730,7 @@ function App() {
   const curRoom = rows.find((x) => x.base === ctl.value);
   const roomLabel = curRoom?.name ?? s?.name ?? 'Skjold Touch', roomSub = (curRoom?.model ?? 'Skjold Touch').replace('Skjold ', '');
   return (
-    <div style="position:relative;width:800px;height:480px;background:#0b0b0c;overflow:hidden;display:grid;grid-template-columns:76px minmax(0,1fr);grid-template-rows:480px">
+    <div style={`position:relative;width:${FLUID ? '100vw' : '800px'};height:${FLUID ? '100vh' : '480px'};background:#0b0b0c;overflow:hidden;display:grid;grid-template-columns:${FLUID ? '88px' : '76px'} minmax(0,1fr);grid-template-rows:${FLUID ? '100vh' : '480px'}`}>
       <nav style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;background:#101011;border-right:1px solid #1f1f21">
         {/* Skjold-logoen: hvite stolper som henger fra toppen, den lange gylne i midten (som appikonet og oppstartsskjermen) */}
         <div aria-label="Skjold" style="display:flex;gap:3.3px;align-items:flex-start;height:28px;margin:2px 0 6px">{[14.7, 22, 28, 22, 14.7].map((h, i) => <div key={i} style={`width:4.5px;height:${h}px;border-radius:2.25px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</div>
