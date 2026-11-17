@@ -3219,7 +3219,10 @@ async def h_volume(r):
         v = eff_volume() + int(b["delta"]) if "delta" in b else int(b.get("volume", eff_volume()))
     except (TypeError, ValueError):
         return web.json_response({"error": "volume/delta må være et heltall"}, status=400)
-    set_volume(v); return j()
+    set_volume(v)
+    if b.get("source") == "airplay":
+        _ap_vol["fra_ap"] = state["volume"]   # kom fra iPhone: ikke send det tilbake
+    return j()
 async def h_mute(r): await asyncio.to_thread(set_mute, (await _obj(r)).get("mute", True)); return j()
 async def h_bt(r):
     """POST /api/bt {"pairing": bool} starter/stopper paring · {"forget": true} glemmer alle parede enheter."""
@@ -7027,6 +7030,43 @@ def transport(action):
 
 
 _net_cache = {"t": 0.0, "v": {}}
+
+# AirPlay-volumet speiles til iPhone/Mac: endres volumet på Skjold (Touch, appen, knotten, HA …) mens AirPlay spiller,
+# flyttes glideren på telefonen også. shairport-sync sender det over DACP (D-Bus SetAirplayVolume, −30…0 dB).
+# Samme lineære skala som pvol → /api/volume i oled_display.py, så verdien som kommer tilbake er den samme (ingen sløyfe).
+_ap_vol = {"fra_ap": None}
+
+
+def airplay_db(v):
+    v = max(0, min(100, int(v)))
+    return -144.0 if v == 0 else round(v * 30 / 100 - 30, 2)
+
+
+def _airplay_vol_sync():
+    sist, endret, venter = state["volume"], 0.0, False
+    while True:
+        time.sleep(0.25)
+        try:
+            cur = state["volume"]
+            if cur != sist:
+                sist, endret, venter = cur, time.time(), True
+            if not venter or time.time() - endret < 0.35:
+                continue
+            venter = False
+            if cur == _ap_vol["fra_ap"]:
+                continue
+            st = read_status()
+            if not (state["input"] == "airplay" or (state["auto_input"] and st.get("source") == "airplay")) or not st.get("playing"):
+                continue
+            _busctl("call", SPS[0], SPS[1], SPS[2], "SetAirplayVolume", "d", str(airplay_db(cur)))
+            _ap_vol["fra_ap"] = cur
+        except Exception as e:
+            print("AirPlay-volum til telefonen:", str(e)[:120], flush=True)
+            time.sleep(30)   # eldre shairport-sync uten SetAirplayVolume: ikke mas
+
+
+if HW or os.path.exists("/etc/shairport-sync.conf"):
+    threading.Thread(target=_airplay_vol_sync, daemon=True).start()
 
 
 def net_info():

@@ -1145,17 +1145,17 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
 }
 
 function Boot() {
-  const b = boot.value, bs = b.step, BH = [26, 40, 56, 40, 26];
+  const b = boot.value, bs = b.step, BH = [26, 38, 58, 38, 26];
   const names = peers.value.map((p) => p.navn).slice(0, 3).join(', ');
   const msgs = ['', '', '', '', '', '', 'Starter lydmotoren …', 'Kobler til Skjold-nettverket …', names ? 'Finner rom: ' + names + ' …' : 'Finner rom …', 'Klar'];
   const txt = bs >= 6 ? 1 : 0;
   return (
     <div style={`position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;opacity:${b.op};transition:opacity .6s ease;z-index:30`}>
       <div style="display:flex;align-items:flex-end;gap:7px;height:64px">
-        {BH.map((h, i) => <div key={i} style={`width:10px;height:${bs > i ? h : 4}px;border-radius:5px;background:#f0c46a;opacity:${bs > i ? 1 : 0.15};transition:height .5s cubic-bezier(.2,.8,.2,1),opacity .4s ease`} />)}
+        {BH.map((h, i) => <div key={i} style={`width:10px;height:${bs > i ? h : 4}px;border-radius:5px;background:${i === 2 ? '#d9a441' : '#f2f2ee'};opacity:${bs > i ? 1 : 0.15};transition:height .5s cubic-bezier(.2,.8,.2,1),opacity .4s ease`} />)}
       </div>
       <div style={`display:flex;flex-direction:column;align-items:center;gap:6px;opacity:${txt};transform:translateY(${txt ? 0 : 10}px);transition:opacity .6s ease,transform .6s ease`}>
-        <span style="font-size:34px;font-weight:600;letter-spacing:.06em;color:#f2f2ee">SKJOLD</span>
+        <span style="font-size:34px;font-weight:700;letter-spacing:.16em;padding-left:.16em;color:#f2f2ee">SKJOLD</span>
         <span style={`font-family:${MONO};font-size:12px;letter-spacing:.5em;color:#8b8b86;padding-left:.5em`}>TOUCH</span>
       </div>
       <div style={`width:180px;height:3px;border-radius:2px;background:#1c1c1e;overflow:hidden;opacity:${txt}`}><div style={`width:${Math.max(0, (bs - 5) / 4 * 100).toFixed(0)}%;height:100%;background:#f0c46a;transition:width .5s linear`} /></div>
@@ -1217,7 +1217,8 @@ function App() {
   return (
     <div style="position:relative;width:800px;height:480px;background:#0b0b0c;overflow:hidden;display:grid;grid-template-columns:76px minmax(0,1fr);grid-template-rows:480px">
       <nav style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;background:#101011;border-right:1px solid #1f1f21">
-        <div style="display:flex;gap:2.5px;align-items:flex-end;height:26px;margin-bottom:4px">{[14, 20, 26, 20, 14].map((h, i) => <div key={i} style={`width:4px;height:${h}px;border-radius:2px;background:#f0c46a`} />)}</div>
+        {/* Skjold-logoen: hvite stolper med den høye gylne i midten (som favicon og oppstartsskjermen) */}
+        <div aria-label="Skjold" style="display:flex;gap:3px;align-items:flex-end;height:28px;margin:2px 0 6px">{[13, 19, 28, 19, 13].map((h, i) => <div key={i} style={`width:4.5px;height:${h}px;border-radius:2.25px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</div>
         {NAV.map(([k, label]) => { const on = cur === k; return (
           <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; lyricsOpen.value = false; dimId.value = ''; editAlarm.value = -1; wakeOpen.value = false; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={IC[k]} /></svg>

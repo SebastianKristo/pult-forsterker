@@ -1,3 +1,4 @@
+import { SetupWizard } from './screens/setupwiz';
 import { signal } from '@preact/signals';
 // Skall: telefon (App v2) under 900 px eller i Capacitor, ellers PC (S1 Web v3).
 import { t as tr } from './i18n';
@@ -72,7 +73,7 @@ export function App() {
   else if (mode.value === 'find') body = <FindDevice />;
   else if (mode.value === 'setup') body = <Setup />;
   else body = wide ? <Desktop /> : <Phone />;
-  return <>{body}<DoorbellOverlay /><WhatsNewSheet />{toast.value && <div class="toast fade" role="status">{toast.value}</div>}</>;
+  return <>{body}<DoorbellOverlay /><WhatsNewSheet /><SetupWizard />{toast.value && <div class="toast fade" role="status">{toast.value}</div>}</>;
 }
 
 function Offline() {
