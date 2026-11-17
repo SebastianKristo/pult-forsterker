@@ -31,6 +31,8 @@ for i in range(4):
                   ("kassett_front", f"Kassett {i + 1} – front (etikettvindu)", 3, 3 + 62 * i, 78),
                   ("etikettplate", f"Kassett {i + 1} – bakplate for coveret (platen ned)", 2, 6 + 62 * i, 153),
                   ("spole", f"Kassett {i + 1} – spole 1", 1, 6 + 62 * i, 208), ("spole", f"Kassett {i + 1} – spole 2", 1, 26 + 62 * i, 208)]
+# SKJOLD-logoen på lokket som innlegg i kassettfargen (6 bokstaver, trykkes inn i graveringen under vinduet)
+KASSETTER.append(("logo", "SKJOLD-logo – innlegg til lokket (6 bokstaver)", 3, 200, 232))
 KLAR = [("vindu", "Rute (klar PETG, 100 % fyll)", 4, 10, 10), ("lysleder", "Lysleder (klar PETG)", 4, 70, 10)]
 
 
@@ -45,7 +47,10 @@ def model_xml(items, title):
         res.append(f'<object id="{oid}" name="{escape(navn)}" type="model"><mesh><vertices>{v}</vertices>'
                    f'<triangles>{t}</triangles></mesh></object>')
         build.append(f'<item objectid="{oid}" transform="1 0 0 0 1 0 0 0 1 {x:.3f} {y:.3f} 0" printable="1"/>')
+        # støtte av for hvert objekt: delene er tegnet uten støtte (broer ≤ 12 mm), og slicere med automatisk støtte
+        # fylte ellers kassettsporet med en stor støtteblokk som er vond å få ut
         cfg.append(f'<object id="{oid}"><metadata key="name" value="{escape(navn)}"/><metadata key="extruder" value="{ext}"/>'
+                   '<metadata key="enable_support" value="0"/>'
                    f'<part id="{oid}" subtype="normal_part"><metadata key="name" value="{escape(navn)}"/>'
                    f'<metadata key="extruder" value="{ext}"/></part></object>')
         assert x + m.extents[0] <= 250 and y + m.extents[1] <= 250, f"{navn} er utenfor 250 × 250 mm"

@@ -143,6 +143,9 @@ Hvis slicer-en ikke henter filamentnummeret fra fila, setter du det per objekt i
 | PETG | 235–245 °C, plate 70 °C, kjøling 40–60 % |
 | Plate | teksturert PEI gir en matt, jevn toppflate på lokket |
 
+- **Støtte skal være av.** Platene har støtte slått av per objekt. Slår slicer-en den på likevel (eller du laster inn
+  STL-ene), fylles kassettsporet med en stor støtteblokk som er vond å få ut – sporbunnen er en kort bro (11 mm) og
+  trenger den ikke.
 - **Lokket printes med toppen ned.** Vinduskanten, sporbunnen og LED-kassens gulv er broer (maks ca. 12 mm). Toppkanten
   har 45°-fas.
 - **Bunnen** printes flat. Akselhullene i stolpene er dråpeformet, så de printes uten støtte.
@@ -151,6 +154,14 @@ Hvis slicer-en ikke henter filamentnummeret fra fila, setter du det per objekt i
 - **Kassetthalvdelene** printes med utsiden ned.
 
 Ingen pause trengs: magnetene og NFC-brikken legges i etter print.
+
+### SKJOLD-logoen i en annen farge
+
+Logoen under vinduet er gravert 1 mm inn i fronten. Fordi den står på en loddrett flate, ville et fargebytte i selve
+lokket gi et bytte per lag gjennom hele teksthøyden (mye spill og tid). I stedet printes logoen som et eget **innlegg**:
+`stl/logo.stl` (seks bokstaver, 0,9 mm tykke, 0,1 mm klaring) ligger på kassettplata i kassettfargen (filament 3).
+Trykk bokstavene inn i graveringen med en pinsett, gjerne med en liten dråpe lim. Alternativt: fyll graveringen med en
+lakk-/malingspenn og tørk av overskuddet.
 
 Vekt (fra STL-volum, 100 % fylt): lokk ≈ 135 g, bunn med drivverk ≈ 35 g, kassett med spoler ≈ 18 g, rute ≈ 6 g.
 
