@@ -5,7 +5,17 @@
 # Kalles av install.sh og update.sh når KI_AMP_DISPLAY=bar958, KI_AMP_BOARD=s1f eller SKJOLD_UI_LAYOUT=radio (i /etc/ki-amp.env).
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
-USR="${1:-${SUDO_USER:-pi}}"; UIDN="$(id -u "$USR")"
+USR="${1:-${SUDO_USER:-}}"
+# Kiosken kan ikke kjøre som root (Chromium nekter). Oppdateringen fra appen kjører som root uten SUDO_USER, så
+# «root» her ga User=root og blank skjerm. Bruk da brukeren fra den eksisterende tjenesten, eieren av kildetreet,
+# eller brukeren med UID 1000.
+if [ -z "$USR" ] || [ "$USR" = root ]; then
+  USR="$(sed -n 's/^User=//p' /etc/systemd/system/skjold-ui.service 2>/dev/null | head -1)"
+  [ -z "$USR" ] || [ "$USR" = root ] && USR="$(stat -c %U "$(dirname "$0")/.." 2>/dev/null)"
+  [ -z "$USR" ] || [ "$USR" = root ] && USR="$(getent passwd 1000 | cut -d: -f1)"
+  [ -z "$USR" ] || [ "$USR" = root ] && USR=pi
+fi
+UIDN="$(id -u "$USR")"
 LAYOUT="${SKJOLD_UI_LAYOUT:-$(sed -n 's/^SKJOLD_UI_LAYOUT=//p' /etc/ki-amp.env 2>/dev/null | tail -1)}"; LAYOUT="${LAYOUT:-s1}"
 if [ -f /etc/ki-amp.env ]; then   # husk oppsettet, så update.sh og tjenesten (EnvironmentFile) bruker det
   sed -i '/^SKJOLD_UI_LAYOUT=/d' /etc/ki-amp.env && echo "SKJOLD_UI_LAYOUT=$LAYOUT" >> /etc/ki-amp.env
