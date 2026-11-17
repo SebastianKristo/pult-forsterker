@@ -5,7 +5,7 @@ import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { effect, signal } from '@preact/signals';
 import './touch.css';
-import { api, coverUrl, getBase, INPUT_LABEL, PRODUCT_SHORT, productOf, setBase, type InputId, type Status } from '../lib/api';
+import { api, coverUrl, getBase, INPUT_LABEL, PRODUCT_SHORT, productOf, setBase, type InputId, type Lyrics, type Status } from '../lib/api';
 import { loadSettings, playPause, reconnect, setSetting, setVolume, settings, startPolling, status, act, online } from '../lib/store';
 import { art, TOUCH_BELL, TOUCH_IDLE, TOUCH_OUT, TOUCH_ROLES, TOUCH_STANDBY_S, TOUCH_START, TOUCH_WAKE, TOUCH_WAKE_ID } from '../lib/settings';
 import { favs, loadFavs, playFav, playStation } from '../lib/radio';
@@ -58,7 +58,7 @@ const door = signal(0);        // tidsstempelet til ringingen som vises i fullsk
 const doorToast = signal(0);
 const unlocked = signal(false);
 const morning = signal('');
-const queueOpen = signal(false), talkOpen = signal(false), searchOpen = signal(false), dimId = signal('');
+const queueOpen = signal(false), talkOpen = signal(false), searchOpen = signal(false), dimId = signal(''), lyricsOpen = signal(false);
 const wakeData = signal<WakeData | null>(null), wakeOpen = signal(false), wakeSel = signal('');
 const editAlarm = signal(-1);      // indeksen til alarmen som redigeres (-1 = ingen)
 const dev = (): Dev => (local.value ?? {}) as Dev;
@@ -329,6 +329,7 @@ function NowPlaying() {
             <button onClick={() => void act(() => api.transport('next'))} aria-label="Neste" style="width:56px;height:56px;border-radius:28px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="26" height="26" viewBox="0 0 24 24" fill="#f2f2ee"><path d="M5 5.5v13a.8.8 0 0 0 1.25.66L15 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.25 4.84A.8.8 0 0 0 5 5.5z" /></svg></button>
             <div style="flex:1" />
             {!has && <button onClick={() => { lib.value = 2; scr.value = 'lib'; }} style="height:48px;padding:0 18px;border-radius:24px;border:1px solid #2e2e30;background:rgba(22,22,23,.7);font-size:13px;font-weight:600">Radio</button>}
+            {has && !!s?.artist && !!s?.title && <button onClick={() => { lyricsOpen.value = true; }} aria-label="Sangtekst" style={ROUND}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 10h16M4 14h10M4 18h7" /></svg></button>}
             {list && <button onClick={() => { queueOpen.value = true; }} aria-label={libQ ? 'Vis køen' : 'Vis kanalene'} style={ROUND}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h12M4 12h12M4 18h8M19 15v6M16 18h6" /></svg></button>}
             {role() !== 1 && peers.value.length > 0 && <button onClick={() => { scr.value = 'rooms'; }} aria-label="Velg rom" style={ROUND}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h10v12H5zM9 8V4h10v12h-4M10 15.5a.1.1 0 1 0 0 .01" /></svg></button>}
           </div>
@@ -351,6 +352,29 @@ function NowPlaying() {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Sangtekst (lrclib.net via /api/lyrics) – synkronisert linje for linje når teksten har tidskoder, som i SUB/WAVE. */
+function LyricsSheet() {
+  const s = status.value, key = (s?.artist ?? '') + '|' + (s?.title ?? '');
+  const [l, setL] = useState<Lyrics | null>(null), [pos, setPos] = useState(s?.position ?? 0);
+  useEffect(() => { setL(null); api.lyrics().then(setL).catch(() => setL({ enabled: true, found: false, error: 'Får ikke kontakt med Skjold' })); }, [key]);
+  useEffect(() => { setPos(status.value?.position ?? 0); }, [s?.position, s?.title]);
+  useEffect(() => { const t = setInterval(() => { if (status.value?.playing) setPos((p) => p + 0.5); }, 500); return () => clearInterval(t); }, []);
+  const ref = useRef<HTMLDivElement>(null), syn = l?.synced ?? [];
+  let cur = -1; for (let i = 0; i < syn.length; i++) if (syn[i]!.t <= pos + 0.3) cur = i;
+  useEffect(() => { (ref.current?.querySelector('[data-cur="1"]') as HTMLElement | null)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, [cur, l]);
+  const msg = !l ? 'Henter tekst …' : !l.enabled ? 'Slå på pluginen Sangtekster i appen for å se teksten her.' : !l.found ? (l.instrumental ? 'Instrumental låt.' : l.error ? 'Fant ikke teksten (' + l.error + ').' : 'Fant ingen tekst for denne låten.') : '';
+  return (
+    <Sheet title={s?.title ?? ''} kicker={(s?.artist ?? '').toUpperCase()} onClose={() => { lyricsOpen.value = false; }} height={430}>
+      <div ref={ref} style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y;display:flex;flex-direction:column;gap:12px;padding:6px 22px 20px">
+        {msg ? <span style="font-size:15px;color:#a9a9a3;padding:20px 0">{msg}</span>
+          : syn.length ? syn.map((x, i) => <span key={i} data-cur={i === cur ? '1' : '0'} style={`font-size:${i === cur ? 26 : 20}px;font-weight:${i === cur ? 700 : 500};line-height:1.25;color:${i === cur ? '#f2f2ee' : i < cur ? '#5a5a56' : '#9a9a94'};transition:all .25s`}>{x.l || '♪'}</span>)
+          : <pre style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:18px;line-height:1.55;color:#c9c9c4">{l?.plain}</pre>}
+        {!msg && <span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#5a5a56`}>TEKST FRA LRCLIB.NET</span>}
+      </div>
+    </Sheet>
   );
 }
 
@@ -421,8 +445,10 @@ function Library() {
     ytmHomeCached().then((h) => { const l = [...h.playlists, ...h.frequent, ...h.other, ...h.newest]; setYt(l.filter((x, i) => l.findIndex((y) => y.id === x.id) === i).slice(0, 24)); })
       .catch(async (e: unknown) => { setYtErr((await ytmWhy(e)).toUpperCase()); setYt([]); });
   }, [lib.value]);
+  const [sw, setSw] = useState<{ i: number; name: string }[]>([]), [swNow, setSwNow] = useState<number | null>(null);
+  useEffect(() => { api.subwave(true).then((r) => { setSw(r.configured ? r.stations ?? [] : []); setSwNow(r.playing_station ?? null); }).catch(() => setSw([])); }, [lib.value]);
   const st = status.value;
-  const TABS = ['YouTube Music', 'Navidrome', 'Radio'];
+  const TABS = ['YouTube Music', 'Navidrome', 'Radio', ...(sw.length ? ['SUB/WAVE'] : [])];
   let kicker = '', items: Card[] = [];
   if (lib.value === 0) {
     kicker = ytErr || (yt === null ? 'HENTER …' : yt.length ? 'SPILLELISTER OG MIKSER' : 'FANT INGENTING · LEGG INN COOKIEN I APPEN');
@@ -431,6 +457,10 @@ function Library() {
   else if (lib.value === 1) {
     kicker = ndOk ? 'NYLIG LAGT TIL' : 'IKKE TILKOBLET · LOGG INN PÅ NAVIDROME I APPEN';
     items = (nd ?? []).map((a) => ({ t: a.name, s: a.artist, art: artBg(a.name, ndCover(a.coverArt, 300)), play: () => { void ndAlbum(a.id).then((r) => { playNd(r.songs, 0); scr.value = 'now'; }); } }));
+  } else if (lib.value === 3) {
+    kicker = 'SUB/WAVE · AI-DJ-STASJONER';
+    items = sw.map((x) => ({ t: x.name, s: 'SUB/WAVE', art: artBg(x.name, undefined, x.i), live: swNow === x.i && !!st?.playing,
+      play: () => { void api.subwavePost({ station: x.i, play: true }).catch(() => {}); setSwNow(x.i); scr.value = 'now'; } }));
   } else {
     kicker = 'DINE FAVORITTER';
     items = favs.value.map((f, i) => ({ t: f.title, s: f.genre || 'Radio', art: artBg(f.title, f.image, i), live: st?.input === 'radio' && !!st.playing && (st.radio_now?.url === f.url || st.preset === f.n), play: () => { playFav(f); scr.value = 'now'; } }));
@@ -1189,7 +1219,7 @@ function App() {
       <nav style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;background:#101011;border-right:1px solid #1f1f21">
         <div style="display:flex;gap:2.5px;align-items:flex-end;height:26px;margin-bottom:4px">{[14, 20, 26, 20, 14].map((h, i) => <div key={i} style={`width:4px;height:${h}px;border-radius:2px;background:#f0c46a`} />)}</div>
         {NAV.map(([k, label]) => { const on = cur === k; return (
-          <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; dimId.value = ''; editAlarm.value = -1; wakeOpen.value = false; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
+          <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; lyricsOpen.value = false; dimId.value = ''; editAlarm.value = -1; wakeOpen.value = false; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={IC[k]} /></svg>
             <span style={`font-size:9px;font-weight:${on ? 600 : 400}`}>{label}</span>
           </button>); })}
@@ -1245,6 +1275,7 @@ function App() {
         {wakeOpen.value && cur === 'alarm' && <WakeMenu />}
         {searchOpen.value && cur === 'lib' && <Search />}
         {queueOpen.value && cur === 'now' && <QueueSheet />}
+        {lyricsOpen.value && cur === 'now' && <LyricsSheet />}
         {!!dimId.value && cur === 'smart' && <DimSheet />}
         {talkOpen.value && <Intercom />}
         {talking && <Voice />}

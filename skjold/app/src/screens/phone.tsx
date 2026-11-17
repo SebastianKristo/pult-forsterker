@@ -1,5 +1,6 @@
 // Telefon (Skjold App v2): Hjem, fullskjermspiller med kø, og Rom («Ditt system»). Malen er portert 1:1 fra
 // designfilen (samme mål, farger og tekster); dataene kommer fra forsterkeren (/api/status, /api/presets).
+import { swLibs } from '../lib/subwave';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { type ComponentChildren } from 'preact';
 import { homeOrder, orderSources } from '../lib/homelayout';
@@ -76,6 +77,7 @@ export function HomePhone() {
     ['UPnP/DLNA', () => go('settings', 'tjenester')],
     ['YT Music', () => go('lib', 'ytm')],
     ['Navidrome', () => go('lib', 'nd')],
+    ...swLibs().map(([id, n]) => [n, () => go('lib', id)] as Svc),
     ['Lyrion', lyrion],
     ...(inputs.includes('aux') ? [['AUX', () => pick('aux')] as Svc] : []),
     ...(inputs.includes('usb') ? [['USB', () => pick('usb')] as Svc] : [])

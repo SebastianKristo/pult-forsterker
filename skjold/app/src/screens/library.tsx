@@ -1,8 +1,9 @@
 // Biblioteker (Skjold App v2 · tLib): YouTube Music og Navidrome. Malen er portert 1:1 fra designfilen.
 // Navidrome er ekte (Subsonic-API direkte fra appen). YouTube Music hentes fra Skjold-enheten (/api/ytm/*, lib/ytm.ts);
 // svarer den ikke, vises samme skall med en tydelig «ikke tilkoblet»-tilstand i stedet for eksempeldata.
+import { loadSw, playSw, swPlaying, swStations } from '../lib/subwave';
 import { useEffect, useState } from 'preact/hooks';
-import { go, openFull, route, trackSub } from '../lib/store';
+import { go, openFull, route, status, trackSub } from '../lib/store';
 import { art } from '../lib/settings';
 import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, LIB_TABS, lq, lsvc, playNd, whenText, type LibId } from '../lib/library';
 import { MediaLibSection } from './medialib';
@@ -141,7 +142,28 @@ function OpenList({ lib }: { lib: LibId }) {
   );
 }
 
+/** SUB/WAVE i Bibliotek: stasjonene fra pluginen, med det som spilles nå på den som er i gang. */
+function SubwaveLib() {
+  useEffect(() => { loadSw(true); }, []);
+  const st = status.value, list = swStations.value;
+  if (!list.length) return <span style="font-size:13px;color:#a9a9a3">Ingen SUB/WAVE-stasjoner. Legg dem inn under Innstillinger → Plugins → SUB/WAVE.</span>;
+  return (
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+      {list.map((x) => { const on = !!st?.subwave && swPlaying.value === x.i; return (
+        <button key={x.i} onClick={() => void playSw(x.i).then(() => openFull()).catch(() => {})} style={`display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:14px;border:1px solid ${on ? '#f0c46a' : '#242426'};background:linear-gradient(135deg,#1d1730,#141415);color:#f2f2ee;text-align:left;cursor:pointer`}>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:#8b8b86">{on ? 'SPILLER NÅ' : 'SUB/WAVE · AI-DJ'}</span>
+          <span style="font-size:17px;font-weight:600">{x.name}</span>
+          {on && st?.title && <span style="font-size:12.5px;color:#c9c9c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{[st.artist, st.title].filter(Boolean).join(' – ')}</span>}
+        </button>); })}
+    </div>
+  );
+}
+
 export function LibraryPage() {
+  return route.value.cat === 'sw' ? <SubwaveLib /> : <LibraryMain />;
+}
+
+function LibraryMain() {
   const lib = (route.value.cat === 'ytm' ? 'ytm' : 'nd') as LibId;
   const nd = lib === 'nd' && ndConfigured();
   const ytm = lib === 'ytm';
@@ -239,4 +261,4 @@ export function LibraryPage() {
     </>
   );
 }
-export const libTitle = () => LIB_NAME[(route.value.cat === 'ytm' ? 'ytm' : 'nd') as LibId];
+export const libTitle = () => (route.value.cat === 'sw' ? 'SUB/WAVE' : LIB_NAME[(route.value.cat === 'ytm' ? 'ytm' : 'nd') as LibId]);

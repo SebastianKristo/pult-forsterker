@@ -1,4 +1,5 @@
 // Sider som deles av telefon- og PC-skallet: Hjem, Lyd (EQ) og Rom (etter Skjold App v2 / S1 Web v3).
+import { swLibs } from '../lib/subwave';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, PRODUCT_HW, PRODUCT_LABEL, type InputId } from '../lib/api';
 import { act, deviceName, eqActiveSource, go, inputLabel, online, openFull, product, recent, setEqProfile, setSetting, settings, status } from '../lib/store';
@@ -50,7 +51,7 @@ function HomeBody({ wide = false }: { wide?: boolean }) {
   const inputs = s?.inputs?.length ? s.inputs : ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
   const services = SRC_ORDER.filter(([id]) => inputs.includes(id));
   const st0 = settings.value;
-  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : [])];
+  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : []), ...swLibs()];
   const pickSrc = (id: InputId) => {
     if (id === 'radio') { go('radio'); return; }
     void act(() => api.input(id), { input: id }); openFull();
@@ -124,7 +125,7 @@ function HomeWide() {
   const inputs = s?.inputs?.length ? s.inputs : ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
   const services = SRC_ORDER.filter(([id]) => inputs.includes(id));
   const st0 = settings.value;
-  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : [])];
+  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : []), ...swLibs()];
   const pickSrc = (id: InputId) => { if (id === 'radio') { go('radio'); return; } void act(() => api.input(id), { input: id }); openFull(); };
   const eqSrc = eqActiveSource.value, eq = st0.eq[eqSrc]?.eq ?? [0, 0, 0, 0, 0];
   const live = s?.input === 'radio' && !s.source_label && s.playing;
