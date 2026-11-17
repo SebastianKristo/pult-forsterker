@@ -191,11 +191,20 @@ etikettvinduet og holdes av rammen og bakplaten – se «Cover til kassettene».
 
 ## Fastvare
 
-`esphome/skjold-kassett.yaml`. Fyll inn Wi-Fi og IP-adressen til Skjold (`skjold_host`, ikke `.local`-navn: ESP-IDF slår dem ikke opp), og flash:
+**Enklest – ferdig fastvare:** åpne <https://skjold-lab.com/flasher/kassett/> i Chrome eller Edge (eller trykk
+**Skjold Spole** under ESP-tilbehør i Skjold Flasher), koble ESP32-S3 Zero til med USB-C og trykk **Installer**.
+Wi-Fi velges rett etterpå. Du trenger ikke skrive inn noen Skjold-adresse: en Skjold på nettet finner spilleren
+(mDNS) og skriver adressen sin i «Skjold adresse» (spillerens web_server), og gjør det igjen hvis adressen slutter å
+svare. Den ferdige fastvaren har ikke egen krypteringsnøkkel for Home Assistant.
+
+**Bygg selv** (med krypteringsnøkkelen fra Skjold → Kassetter → ESPHome-nøkkel i `secrets.yaml`):
 
 ```bash
 esphome run esphome/skjold-kassett.yaml
 ```
+
+`-s skjold_host <IP>` låser adressen hvis du ikke vil at Skjold skal fylle den inn (ikke `.local`-navn: ESP-IDF slår
+dem ikke opp).
 
 Spilleren sender `POST /api/nfc/scan` og `/api/nfc/remove` til Skjold-daemonen, og spør `GET /api/nfc/spoler` om
 hva spolene skal gjøre. `spole_max_rps` og `spole_min_duty` øverst i fila justerer motoren.

@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('skjold', {
   hostname: (name: string) => ipcRenderer.invoke('hostname', name),
   open: (url: string) => ipcRenderer.invoke('open', url),
   version: () => ipcRenderer.invoke('app:version'),
+  espFlash: (hva: string) => ipcRenderer.invoke('esp:open', hva),
   platform: process.platform,
   onProgress: (cb: (p: FlashProgress) => void) => {
     const h = (_e: unknown, p: FlashProgress) => cb(p);

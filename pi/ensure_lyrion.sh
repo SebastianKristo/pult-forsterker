@@ -17,9 +17,16 @@ LMS="$(val KI_AMP_LMS_SERVER)"
 # Pi 4/5 (nok minne): installer Lyrion her også som reserve. Når hovedserveren (KI_AMP_LMS_SERVER) ikke svarer,
 # bytter daemonen og Squeezelite til den innebygde, og tilbake når hovedserveren er der igjen.
 PI45=0; grep -qE "Raspberry Pi (4|5|Compute Module (4|5))" /proc/device-tree/model 2>/dev/null && PI45=1
+# bare med nok minne (≥ 3 GB): Lyrion bruker ~300 MB, og Touch/Node trenger resten til Chromium og YouTube Music (yt-dlp)
+MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)
+[ "${MEM_MB:-0}" -ge 2900 ] || PI45=0
 if [ "$PI45" = 1 ] && ! dpkg -s lyrionmusicserver >/dev/null 2>&1; then
   echo "  Pi 4/5: installerer Lyrion Music Server som reserve (innebygd)"
   sudo bash "$SRC/install_lyrion.sh" || echo "ADVARSEL: Lyrion ble ikke installert – prøv: sudo bash pi/install_lyrion.sh" >&2
+fi
+# Reserve-Lyrion som ble installert på en Pi med lite minne (før grensa over): slå den av på Touch/Node, som bruker S1
+if [ "$PI45" = 0 ] && { [ "$PRODUCT" = touch ] || [ "$BOARD" = node ]; } && systemctl is-enabled lyrionmusicserver >/dev/null 2>&1; then
+  sudo systemctl disable --now lyrionmusicserver >/dev/null 2>&1 && echo "  Lyrion: reserveserveren er slått av (for lite minne, ${MEM_MB} MB)"
 fi
 case "$BOARD" in node) echo "  Lyrion: Node bruker en server på nettet"; exit 0 ;; esac
 [ "$PRODUCT" = touch ] && { echo "  Lyrion: Touch bruker en server på nettet${LMS:+ ($LMS)}"; exit 0; }

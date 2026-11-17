@@ -126,7 +126,57 @@ async function runWriterWithProgress(image: string, device: string): Promise<voi
   }
 }
 
+// ---------- ESP-tilbehør (Skjold Røst og kassettspilleren Spole): nettleserflasheren i et eget vindu med Web Serial ----------
+const ESP_SIDER: Record<string, { url: string; tittel: string }> = {
+  rost: { url: 'https://skjold-lab.com/flasher/rost/', tittel: 'Skjold Røst – fastvare' },
+  kassett: { url: 'https://skjold-lab.com/flasher/kassett/', tittel: 'Skjold Spole (kassettspiller) – fastvare' },
+};
+// Kjente USB-brikker på ESP-kort: Espressif (innebygd USB), CH340/CH9102, CP210x og FTDI
+const ESP_VID = new Set(['303a', '1a86', '10c4', '0403']);
+const espVinduer = new Set<number>();
+
+function openEspFlasher(hva: string): void {
+  const side = ESP_SIDER[hva];
+  if (!side) return;
+  const w = new BrowserWindow({
+    width: 980, height: 780, minWidth: 720, minHeight: 560, parent: win ?? undefined,
+    backgroundColor: '#000000', title: side.tittel, autoHideMenuBar: true,
+    icon: path.join(__dirname, '..', 'renderer', 'icon.png'),
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  espVinduer.add(w.webContents.id);
+  w.on('closed', () => espVinduer.delete(w.webContents.id));
+  w.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+  w.webContents.on('will-navigate', (e, url) => { if (!url.startsWith('https://skjold-lab.com/')) { e.preventDefault(); shell.openExternal(url); } });
+  w.loadURL(side.url);
+}
+
+function espSerial(): void {
+  const ses = (win ?? BrowserWindow.getAllWindows()[0])!.webContents.session;
+  const espOrigin = (o: string) => o.startsWith('https://skjold-lab.com');
+  // Bare flashervinduene (skjold-lab.com) får bruke serieporter
+  ses.setPermissionCheckHandler((_wc, perm, origin) => perm === 'serial' ? espOrigin(origin) : false);
+  ses.setDevicePermissionHandler(d => d.deviceType === 'serial' && espOrigin(d.origin));
+  ses.on('select-serial-port', (e, ports, wc, cb) => {
+    e.preventDefault();
+    if (!espVinduer.has(wc.id) || !ports.length) {
+      if (!ports.length) dialog.showMessageBox({ type: 'info', message: 'Fant ingen USB-port.',
+        detail: 'Koble ESP-kortet til med en USB-kabel som overfører data. Finner den ikke kortet: hold BOOT inne mens du setter i kabelen.' });
+      cb(''); return;
+    }
+    const esp = ports.filter(p => ESP_VID.has(String(p.vendorId || '').toLowerCase()));
+    if (esp.length === 1) { cb(esp[0].portId); return; }
+    const valg = (esp.length ? esp : ports);
+    const navn = valg.map(p => (p.displayName || p.portName || 'Port') + (p.vendorId ? ` (${p.vendorId}:${p.productId})` : ''));
+    const r = dialog.showMessageBoxSync(BrowserWindow.fromWebContents(wc) ?? win!, {
+      type: 'question', buttons: [...navn, 'Avbryt'], cancelId: navn.length, defaultId: 0,
+      message: 'Hvilken USB-port er ESP-kortet?', detail: 'Er du usikker: trekk ut kabelen, se hvilken som forsvinner, og sett den i igjen.' });
+    cb(r < valg.length ? valg[r].portId : '');
+  });
+}
+
 app.whenReady().then(() => {
+  ipcMain.handle('esp:open', (_e, hva: string) => openEspFlasher(String(hva)));
   ipcMain.handle('drives:list', () => listDrives());
   ipcMain.handle('release:latest', () => latestImage());
   const cacheDir = () => path.join(app.getPath('userData'), 'cache');
@@ -145,6 +195,7 @@ app.whenReady().then(() => {
   ipcMain.handle('open', (_e, url: string) => { if (/^https?:\/\//.test(url)) shell.openExternal(url); });
   ipcMain.handle('app:version', () => app.getVersion());
   createWindow();
+  espSerial();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on('window-all-closed', () => app.quit());
