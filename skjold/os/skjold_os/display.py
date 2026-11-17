@@ -73,10 +73,40 @@ class LumaST7735:
         self.dev = st7735(ser, width=sk["width"], height=sk["height"], rotate=sk["rotate"], bgr=sk["bgr"],
                           h_offset=sk["h_offset"], v_offset=sk["v_offset"], gpio=_IngenGPIO(), gpio_LIGHT=0)
 
-    def show(self, img, tag=""): self.dev.display(img)
+        # Billige ST7735-paneler gir bleke, gråaktige farger. Litt mer metning og kontrast (justeres i node_pins.json →
+        # skjerm_tft.farge: {"metning", "kontrast", "gamma"}; 1.0 = av).
+        f = sk.get("farge") if isinstance(sk.get("farge"), dict) else {}
+        self.metning, self.kontrast, self.gamma = float(f.get("metning", 1.25)), float(f.get("kontrast", 1.1)), float(f.get("gamma", 0.9))
+        self._lut = None
+        if abs(self.gamma - 1.0) > 0.01:
+            self._lut = [int(round(255 * (i / 255) ** self.gamma)) for i in range(256)] * 3
+
+    def _farge(self, img):
+        from PIL import ImageEnhance
+        img = img.convert("RGB")
+        if abs(self.metning - 1.0) > 0.01: img = ImageEnhance.Color(img).enhance(self.metning)
+        if abs(self.kontrast - 1.0) > 0.01: img = ImageEnhance.Contrast(img).enhance(self.kontrast)
+        if self._lut: img = img.point(self._lut)
+        return img
+
+    def show(self, img, tag=""): self.dev.display(self._farge(img))
     def close(self):
         try: self.dev.cleanup()
         except Exception: pass
+
+
+def fargetest(w=160, h=128):
+    """Testbilde for TFT-en: rød, grønn, blå, hvit og Skjold-gull med navn. Er rød og blå byttet, sett bgr i
+    skjerm_tft i /etc/skjold/node_pins.json til motsatt verdi."""
+    from PIL import Image, ImageDraw
+    from .gfx import font
+    im = Image.new("RGB", (w, h), (0, 0, 0)); d = ImageDraw.Draw(im)
+    felt = [("RØD", (255, 0, 0)), ("GRØNN", (0, 255, 0)), ("BLÅ", (0, 0, 255)), ("HVIT", (255, 255, 255)), ("GULL", (217, 164, 65))]
+    bh = h // len(felt)
+    for i, (n, c) in enumerate(felt):
+        d.rectangle([0, i * bh, w, (i + 1) * bh - 1], fill=c)
+        d.text((6, i * bh + bh // 2), n, fill=(0, 0, 0) if sum(c) > 300 else (255, 255, 255), font=font("bold", 12), anchor="lm")
+    return im
 
 
 class PngSink:

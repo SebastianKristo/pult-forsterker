@@ -43,23 +43,33 @@ ICONS = {"plex": ico_plex, "air": ico_air, "bt": ico_bt, "radio": ico_radio, "sp
 
 def icon(c, key, x, y, k, col): ICONS.get(sources.src(key)["ico"], ico_aux)(c, x, y, k, col)
 
-# ---------- logo (fem stolper 22/33/42/33/22, bredde 4,6) ----------
-BARS = [(0, 22), (9, 33), (18.7, 42), (28.4, 33), (36.4, 22)]
+# ---------- logo: fem stolper som henger fra samme topplinje (22/33/42/33/22, bredde 4,6, mellom 3,4), den lange
+# midtstolpen gyllen, «SKJOLD» i hvitt og «LAB» i lys gull – samme mål som appikonet og pi/touch/lag_oppstart.py ----------
+BARS = [(0, 22), (8, 33), (16, 42), (24, 33), (32, 22)]
+LOGO_W = 36.6
+GOLD = (217, 164, 65)       # #d9a441
+LYS_GULL = (220, 205, 170)  # «LAB»
+def bar_col(i, a=1.0, mono=False):
+    """Fargen på stolpe i (midtstolpen gyllen, bortsett fra på svart-hvitt-skjermer)."""
+    return mix(GOLD if i == 2 and not mono else W, a)
 
 # ---------- oppstart ----------
 BOOT = 2600
 def splash(c, ms, name="NODE"):
     w, h = c.w, c.h; t = ms / BOOT; c.clear()
-    tw0 = c.text_w("SKJOLD", "bold", 13, 2)
-    unit = 41 * 0.62 + 6 + tw0; sc = min(w * 0.84 / unit, h * 0.5 / (42 * 0.62))
-    k = sc * 0.62; mw = 41 * k; tw = c.text_w("SKJOLD", "bold", 13 * sc, 2 * sc); gap = 6 * sc
-    x0 = (w - (mw + gap + tw)) / 2; y0 = h / 2 - 21 * k - 4
+    # stolpene til venstre, «SKJOLD LAB» midt på de korte stolpene (som i merket), modellnavnet under
+    tw0 = c.text_w("SKJOLD", "bold", 13, 1.6) + c.text_w(" LAB", "regular", 13, 1.6)
+    unit = LOGO_W * 0.62 + 6 + tw0; sc = min(w * 0.88 / unit, h * 0.42 / (42 * 0.62))
+    k = sc * 0.62; mw = LOGO_W * k; gap = 6 * sc
+    tw = c.text_w("SKJOLD", "bold", 13 * sc, 1.6 * sc); tl = c.text_w(" LAB", "regular", 13 * sc, 1.6 * sc)
+    x0 = (w - (mw + gap + tw + tl)) / 2; y0 = h / 2 - 21 * k - 6
     for i, (x, bh) in enumerate(BARS):
         a = max(0, min(1, t * 5 - i * 0.45))
-        if a > 0: c.rrect(x0 + x * k, y0, 4.6 * k, bh * k * a, 2.3 * k, mix(W, a))
-    ta = max(0, min(1, (t - 0.45) * 3))
-    c.text(x0 + mw + gap, h / 2 - 4 - 2 * sc, "SKJOLD", mix(W, ta), "bold", 13 * sc, "lm", 2 * sc)
-    c.text(x0 + mw + gap + 1, h / 2 - 4 + 10.5 * sc, name, mix(DIM, ta), "mono", 4.6 * sc, "lm", 1.6 * sc)
+        if a > 0: c.rrect(x0 + x * k, y0, 4.6 * k, bh * k * a, 2.3 * k, bar_col(i, a))
+    ta = max(0, min(1, (t - 0.45) * 3)); ty = y0 + 22 * k * 0.62
+    c.text(x0 + mw + gap, ty, "SKJOLD", mix(W, ta), "bold", 13 * sc, "lm", 1.6 * sc)
+    c.text(x0 + mw + gap + tw, ty, " LAB", mix(LYS_GULL, ta), "regular", 13 * sc, "lm", 1.6 * sc)
+    c.text(w / 2, y0 + 42 * k + 12, name, mix(DIM, ta), "mono", 6.5, "mm", 2.2)
     p = max(0, min(1, (t - 0.6) / 0.4))
     c.rect(40, 104, 80, 2, mix(TRACK, ta)); c.rect(40, 104, 80 * p, 2, mix(W, ta))
     return ms < BOOT
@@ -117,10 +127,10 @@ def welcome(c, ms, title="Gratulerer med dagen", name="Pappa", hint="Trykk en kn
         al = min(1, t * 2) * (0.8 if mono else 0.95); col = mix(W if mono else COLS[i % len(COLS)], al)
         hw, hh = sz / 2, (sz * 0.6 * abs(math.cos(a)) + 0.4) / 2; ca, sa = math.cos(a), math.sin(a)
         c.poly([(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in ((-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh))], col)
-    k = (0.32 if wide else 0.42) * s; bx = w / 2 - 20.5 * k; by = h * (0.12 if wide else 0.14); inn = min(1, t / 0.6)
+    k = (0.32 if wide else 0.42) * s; bx = w / 2 - LOGO_W / 2 * k; by = h * (0.12 if wide else 0.14); inn = min(1, t / 0.6)
     for i, (x, bh) in enumerate(BARS):
         dance = 0.65 + 0.35 * abs(math.sin(t * 4.2 + i * 0.9))
-        if inn > 0: c.rrect(bx + x * k, by, 4.6 * k, bh * k * dance * inn, 2.3 * k, mix(W, inn))
+        if inn > 0: c.rrect(bx + x * k, by, 4.6 * k, bh * k * dance * inn, 2.3 * k, bar_col(i, inn, mono))
     ta = max(0, min(1, (t - 0.5) / 0.5)); ty = (1 - ta) * 6 * s
     tY = h * (0.62 if wide else 0.58); nY = h * (0.86 if wide else 0.80)
     c.text(w / 2, tY + ty, title, mix(DIM if mono else KHAKI, ta), "bold", (6.5 if wide else 9) * s, "ms", (0.6 if wide else 0.8) * s)

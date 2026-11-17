@@ -14,6 +14,7 @@ def main(argv=None):
     ap.add_argument("--api", default=os.environ.get("SKJOLD_API", "http://127.0.0.1:%s" % os.environ.get("KI_AMP_PORT", "8765")))
     ap.add_argument("--hz", type=float, default=8.0, help="poll-frekvens mot /api/status")
     ap.add_argument("--no-boot", action="store_true", help="hopp over oppstartsanimasjonen")
+    ap.add_argument("--fargetest", action="store_true", help="TFT: vis rød/grønn/blå/hvit/gull i 20 s og avslutt")
     a = ap.parse_args(argv)
 
     from . import layouts, config
@@ -50,6 +51,15 @@ def main(argv=None):
         sink, bl = open_s1(a.layout)
     else:
         sink = LumaST7735(sk); bl = Backlight(sk.get("bakgrunnslys", {}))
+    if a.fargetest:
+        import time
+        from .display import fargetest
+        img = fargetest(lay.W, lay.H)
+        if a.sim: img.save(os.path.join(a.sim, "fargetest.png"))
+        else:
+            bl.set(1.0); sink.show(img); print("Fargetest i 20 s: står fargene i riktig rekkefølge (rød, grønn, blå)?", flush=True); time.sleep(20)
+            bl.set(0); sink.close()
+        return 0
     print("Skjold OS: layout=%s api=%s pins=%s %s" % (a.layout, a.api, src, "sim→" + a.sim if a.sim else ("ssd1306 i2c" if a.layout == "node-oled32" else "st7735" if a.layout == "node" else a.layout)), flush=True)
     real = not (a.sim or a.demo)
     if real:   # overta skjermen fra skjold-early.service og mål oppstartstiden når daemonen svarer
