@@ -152,6 +152,35 @@ def _kas(c):
     return kassett_state(c.extras.get("nfc"), c.extras.get("spoler")) or {"cards": [], "active": None, "last": None, "spoler": None}
 
 
+class KassettConnected(_Acc, BinarySensorEntity):
+    """Har kassettspilleren (ESP32) kontakt med denne Skjold-en?"""
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, c) -> None:
+        super().__init__(c, "kassett", "spiller", "Skjold Kassett", "connected", "Tilkoblet")
+
+    @property
+    def is_on(self) -> bool:
+        return bool(_kas(self.coordinator).get("tilkoblet"))
+
+    @property
+    def extra_state_attributes(self):
+        return {"ip": _kas(self.coordinator).get("spiller_ip") or None}
+
+
+class KassettTag(_Acc, SensorEntity):
+    """UID-en til den siste NFC-brikken spilleren leste (nyttig når du kobler nye kassetter)."""
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, c) -> None:
+        super().__init__(c, "kassett", "spiller", "Skjold Kassett", "tag", "Siste brikke")
+
+    @property
+    def native_value(self):
+        return _kas(self.coordinator).get("siste_brikke") or None
+
+
 class KassettActive(_Acc, SensorEntity):
 
     def __init__(self, c) -> None:
@@ -305,9 +334,11 @@ def entities(c, platform: str) -> list:
         out += [RostVolume(c, m) for m in minis]
     elif platform == "binary_sensor":
         out += [x for m in minis for x in (RostPlaying(c, m), RostConnected(c, m))]
+        if kas:
+            out.append(KassettConnected(c))
     elif platform == "sensor":
         if kas:
-            out += [KassettActive(c), KassettLast(c), KassettVentende(c)]
+            out += [KassettActive(c), KassettLast(c), KassettVentende(c), KassettTag(c)]
         out += [x for h in hjul for x in (HjulBattery(c, h), HjulLastUsed(c, h))]
     elif platform == "select":
         if kas:

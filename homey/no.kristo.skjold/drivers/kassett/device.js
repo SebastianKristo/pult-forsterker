@@ -32,6 +32,15 @@ class KassettDevice extends AccessoryDevice {
       await this.homey.flow.getDeviceTriggerCard('ki_kassett_inserted').trigger(this, { navn: last.navn || '' }).catch(this.error);
     }
     this._lastT = last.t || 0;
+    // Viser et varsel på enheten når kassettspilleren ikke har kontakt med Skjold (av, feil Wi-Fi eller feil skjold_host)
+    const sp = r.spillere;
+    if (Array.isArray(sp)) {
+      const på = sp.some((x) => x && x.aktiv);
+      if (på !== this._på) {
+        this._på = på;
+        await (på ? this.unsetWarning() : this.setWarning(this.homey.__('kassett.offline') || 'Kassettspilleren har ikke kontakt med Skjold')).catch(this.error);
+      }
+    }
     try {
       const sp = await this.request('GET', '/nfc/spoler');
       await this.setIf('ki_spoler', sp.på !== false);

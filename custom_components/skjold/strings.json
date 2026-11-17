@@ -119,6 +119,9 @@
       },
       "perf_uptime": {
         "name": "Uptime"
+      },
+      "kassett_tag": {
+        "name": "Last tag"
       }
     },
     "binary_sensor": {
@@ -139,6 +142,9 @@
       },
       "power_problem": {
         "name": "Power problem"
+      },
+      "kassett_connected": {
+        "name": "Connected"
       }
     },
     "media_player": {
