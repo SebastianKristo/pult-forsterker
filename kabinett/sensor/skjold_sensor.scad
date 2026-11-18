@@ -100,14 +100,22 @@ usbB = 12; usbH = ESP ? 8 : 7.5;         // åpning for pluggen (referansen: 12 
 // under, på den ene kortenden. Kortet står på høykant til høyre i hovedrommet med USB-enden ned mot skilleveggen.
 // Lommen er 40,4 × 32,4 mm, så kort fra ulike leverandører (39–40 × 31–32 mm) passer.
 // Wemos D1 mini med USB-C (d1mini_bak): 34,2 × 25,6 mm, ESP-12F og USB-C oppå (fram), CH340 under. Antenneenden opp.
-vL = D1BAK ? 34.8 : 40.4; vB = D1BAK ? 26.4 : 32.4;   // lommens lengde (y) og bredde (x)
+// D1 mini med USB bak: lomma er bare 0,3 mm større enn kortet, så kortet ikke kan flytte seg mer enn 0,3 mm
+vL = D1BAK ? 34.5 : 40.4; vB = D1BAK ? 25.9 : 32.4;   // lommens lengde (y) og bredde (x)
 vPL = D1BAK ? 34.2 : 39.0; vPB = D1BAK ? 25.6 : 31.4; // selve kortet
+vT = D1BAK ? 1.0 : bT;                   // kortets tykkelse (Wemos D1 mini: ca. 1,0 mm – mål ditt kort)
 vZ = D1BAK ? 6.6 : 6.4;                  // kortets underside over bakveggens bakside (brikkene under går klar av nøkkelhullsputene)
 vx1 = W/2 - t - (D1BAK ? 2.5 : 2.0); vx0 = vx1 - vB;  // kortets kanter i x (holdt unna det runde hjørnet oppe til høyre)
 vy1 = H - t - 1.2;   vy0 = vy1 - vL;     // kortets kanter i y (USB nede ved vy0)
 vcx = (vx0 + vx1)/2;                     // midt i kortet = midt i USB-kanalen
-vUsbZ = D1BAK ? vZ + bT + 1.6 : vZ - 1.4;   // midt i kontakten: USB-C oppå (D1 mini), micro-USB under (MiniKit)
+vUsbZ = D1BAK ? vZ + vT + 1.6 : vZ - 1.4;   // midt i kontakten: USB-C oppå (D1 mini), micro-USB under (MiniKit)
 vMunn = D1BAK ? vy0 + (vL - vPL)/2 - 1.0 : vy0 - 0.3;   // munningen: USB-C stikker ca. 1 mm ut over kortkanten
+// selve kontakten (huset som stikker ut over kortkanten): USB-C 8,9 × 3,2 mm, micro-USB ca. 8 × 2,8 mm
+kontB = D1BAK ? 8.9 : 8.0; kontH = D1BAK ? 3.2 : 2.8; kontUt = D1BAK ? 1.0 : 0.6;
+// tett vegg (bunn) rundt kontakten der kanalen møter innsiden: bare et hakk på kontB + 0,6 × kontH + 0,6, åpent fram;
+// en tunge på lokket fyller hakket over kontakten og holder kortet nede i den enden
+platT = kontUt - 0.1;                    // veggens tykkelse (fra munningen til like under kortkanten)
+hakkB = kontB + 0.6; hakkZ0 = vUsbZ - kontH/2 - 0.3;
 pluggB = D1BAK ? 12.5 : 10.5; pluggH = D1BAK ? 7.0 : 6.5; pluggL = D1BAK ? 20 : 18;   // pluggen i bildene og sjekken
 // kanalen i baksiden: åpen mot veggen og nedover, fra underkanten opp til kontakten. Pluggen (inntil 13 × 12 mm
 // tverrsnitt, inntil ca. 21 mm lang) skyves opp i den nedenfra, også når sensoren henger på veggen.
@@ -166,11 +174,15 @@ module bunn() {
       // ESP-kortet: hjørnestøtter, med kanter som holder det på plass (ikke ved USB-enden, der veggen gjør jobben)
       if (VERT) for (sx = [-1, 1], sy = [-1, 1]) let(x = sx < 0 ? vx0 : vx1, y = sy < 0 ? vy0 : vy1) {
         translate([x - (sx < 0 ? 0 : 3), y - (sy < 0 ? 0 : 3), tb - 0.01]) cube([3, 3, vZ - tb + 0.01]);
+        // D1 mini med USB bak: kanter på begge sider og en stopp under kortet (tar trekket når pluggen tas ut);
+        // stoppen øverst tar trykket når pluggen settes inn
+        if (D1BAK && sx > 0) translate([x - 0.05, y - (sy < 0 ? 0.3 : 4.7), tb - 0.01]) cube([1.25, 5, vZ - tb + vT + 1]);   // høyre kant
+        if (D1BAK && sy < 0) translate([x - (sx < 0 ? 0.3 : 4.7), y - 2, tb - 0.01]) cube([5, 2.05, vZ - tb + vT + 0.5]);     // stopp nederst
         if (sx < 0) translate([x - 1.2, y - (sy < 0 ? 0.3 : 4.7), tb - 0.01]) cube([1.25, 5, vZ - tb + bT + 1]);   // venstre kant
         if (sy > 0) translate([x - (sx < 0 ? 0.3 : 4.7), y - 0.05, tb - 0.01]) cube([5, 1.6, vZ - tb + bT + 1]);   // øverst (inn i veggen)
       }
       // USB-kanalen: vegger og tak rundt kanalen fra underkanten opp gjennom sensorkammeret og skilleveggen
-      if (VERT) translate([vcx - kanB/2 - kanV, 1, 0]) cube([kanB + 2*kanV, vy0 - 1, kanZ + kanV]);
+      if (VERT) translate([vcx - kanB/2 - kanV, 1, 0]) cube([kanB + 2*kanV, max(vy0, vMunn + platT) - 1, kanZ + kanV]);
       if (!VERT) for (sx = [0, 1], sy = [-1, 1]) let(x = sx == 0 ? bX0 : bX1, y = cy + sy*bW/2) {
         translate([x - (sx == 0 ? 0 : 3), y - (sy < 0 ? 0 : 3), tb - 0.01]) cube([3, 3, bZ - tb + 0.01]);
         if (sx == 0) translate([x - 1.2, y - (sy < 0 ? 0.3 : 4.7), tb - 0.01]) cube([1.25, 5, bZ - tb + bT + 1]);
@@ -197,7 +209,9 @@ module bunn() {
     }
     // USB i høyre vegg, eller (ESP32 D1 mini) kanalen i baksiden: åpen bak og nede, opp til kontakten
     if (!VERT) translate([W/2 - t - 1, cy, usbZ]) rotate([0, 90, 0]) linear_extrude(t + 2) rrect(usbH, usbB, 1.5);
-    if (VERT) translate([vcx - kanB/2, -1, -1]) cube([kanB, vy0 + 1.5, kanZ + 1]);
+    // kanalen slutter ved kontaktens munning; derfra er det bare hakket rundt kontakten (åpent fram, tunga på lokket fyller resten)
+    if (VERT) translate([vcx - kanB/2, -1, -1]) cube([kanB, vMunn + 1, kanZ + 1]);
+    if (VERT) translate([vcx - hakkB/2, vMunn - 0.01, hakkZ0]) cube([hakkB, platT + 0.02 + (vy0 > vMunn + platT ? vy0 - vMunn - platT : 0), kanZ + kanV + 1 - hakkZ0]);
     // sensorkammeret: spalter i bunnen (luft inn nedenfra) og i begge ender
     for (x = [-W/2 + 7 : 3.4 : W/2 - 9]) if ((!VERT || abs(x - vcx) > kanB/2 + kanV + 1.2) && (!DHT || abs(x - dhtHx) > 4))
       translate([x - 0.8, -1, tb + 1.5]) cube([1.6, t + 2, Db - tb - 4.5]);
@@ -238,7 +252,13 @@ module lokk() {
       if (led) translate([ledX, cy, Db - 4]) cylinder(d = ledFlens + 2.4, h = 4.01);
       // pinner som holder ESP-kortet nede (bare i enden uten USB – knappene sitter ved USB)
       if (!VERT) for (sy = [-1, 1]) translate([bX0 + 1.8 - 1.4, cy + sy*(bW/2 - 1.8) - 1.4, bZ + bT + 0.3]) cube([2.8, 2.8, Db - bZ - bT - 0.3 + 0.01]);
-      if (VERT) for (x = [vx0 + 1.8, vx1 - 1.8]) translate([x - 1.4, vy1 - 1.8 - 1.4, vZ + bT + 0.3]) cube([2.8, 2.8, Db - vZ - bT - 0.3 + 0.01]);
+      if (VERT) for (x = [vx0 + 1.8, vx1 - 1.8]) translate([x - 1.4, vy1 - 1.8 - 1.4, vZ + vT + (D1BAK ? 0.1 : 0.3)]) cube([2.8, 2.8, Db - vZ - vT - (D1BAK ? 0.1 : 0.3) + 0.01]);
+      // tunge ned i hakket over USB-kontakten: tetter rundt kontakten og holder kortenden nede
+      if (VERT) {
+        tB = hakkB - 0.3;
+        translate([vcx - tB/2, vMunn + 0.05, vUsbZ + kontH/2 + 0.15]) cube([tB, D1BAK ? 2.5 : kontUt - 0.1, Db - vUsbZ - kontH/2 - 0.15 + 0.01]);
+        if (E32D1) translate([vcx - tB/2, vMunn + 0.05, vZ + bT + 0.15]) cube([tB, 3, Db - vZ - bT - 0.15 + 0.01]);   // over kortet
+      }
     }
     // PIR-hull med 45° fas utover
     if (pir) {
@@ -294,9 +314,9 @@ module stativ() {
 module esp() {
   if (D1BAK) {
     py0 = vy0 + (vL - vPL)/2;
-    color("#1f1f22") translate([vcx - vPB/2, py0, vZ]) cube([vPB, vPL, bT]);
-    color("#b8b8bc") translate([vcx - 8, py0 + vPL - 24, vZ + bT]) cube([16, 24, 3.2]);              // ESP-12F (antennen opp)
-    color("#c8c8cc") translate([vcx - 4.45, vMunn, vZ + bT]) cube([8.9, 7.3, 3.2]);                 // USB-C (oppå)
+    color("#1f1f22") translate([vcx - vPB/2, py0, vZ]) cube([vPB, vPL, vT]);
+    color("#b8b8bc") translate([vcx - 8, py0 + vPL - 24, vZ + vT]) cube([16, 24, 3.2]);              // ESP-12F (antennen opp)
+    color("#c8c8cc") translate([vcx - kontB/2, vMunn, vZ + vT]) cube([kontB, 7.3, kontH]);           // USB-C (oppå)
     color("#333") translate([vcx - 4.5, py0 + 9, vZ - 1.2]) cube([9, 9, 1.2]);                       // CH340 (undersiden)
   } else if (E32D1) {
     color("#1f1f22") translate([vx0 + 0.5, vy0 + 0.3, vZ]) cube([vB - 1, vL - 1.4, bT]);

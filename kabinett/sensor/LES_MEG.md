@@ -98,6 +98,9 @@ gullist og stativ i `stl/<kort>/sht40/`. Der er sensorkammeret 10 mm lavere, ell
 - **Kortet står på høykant** til høyre i ESP-rommet, med USB-enden ned mot skilleveggen og WROOM-modulen fram. Lomma
   er 40,4 × 32,4 mm, så kort på 39–40 × 31–32 mm passer. Det ligger på fire hjørnestøtter 6,4 mm fra baksiden, med
   plass til USB-brikka under. To pinner på lokket holder den øvre enden nede.
+- **Tett rundt kontakten:** kanalen slutter ved munningen på micro-USB-kontakten med en tett vegg. Den har bare et hakk
+  på 8,6 × 3,4 mm rundt kontakthuset, og en tunge på lokket fyller resten over kontakten og kortkanten. Spaltene inn
+  til elektronikken er på høyst 0,3 mm.
 - **USB-kanalen** er en lukket kanal i baksiden, 13 mm bred og 12,5 mm dyp. Den går fra underkanten, gjennom
   sensorkammeret og skilleveggen, og opp til kontakten. Kanalen er **åpen mot veggen og nedover**, men lukket mot
   sensorkammeret, så kammeret holdes rent.
@@ -121,10 +124,23 @@ Den samme løsningen som ESP32 D1 mini, for en vanlig Wemos D1 mini med USB-C. K
 ESP-12F og USB-C på samme side og CH340 under.
 
 - **Kortet står på høykant** til høyre i ESP-rommet. USB-C-enden vender ned og antenneenden (ESP-12F) opp, bort fra
-  sensorkammeret. Komponentsiden med ESP-12F og USB-C vender fram. Lomma er 34,8 × 26,4 mm. Kortet ligger 6,6 mm fra
-  baksiden, så CH340 under kortet går 0,4 mm klar av den høyre nøkkelhullsputa.
-- **USB-kanalen** er 13,5 mm bred og 13,8 mm dyp fra veggen. Den går fra underkanten opp til kontakten og er åpen mot
-  veggen og nedover. Midt i USB-C-kontakten er 9,8 mm fra veggen.
+  sensorkammeret. Komponentsiden med ESP-12F og USB-C vender fram. Kortet ligger 6,6 mm fra baksiden, så CH340 under
+  kortet går 0,4 mm klar av den høyre nøkkelhullsputa.
+- **Kortet sitter fast:**
+  - Lomma er 34,5 × 25,9 mm, bare 0,3 mm større enn kortet (34,2 × 25,6 × ca. 1,0 mm).
+  - Kortet ligger mellom kanter på begge sider, en stopp i hver ende og fire hjørnestøtter bak. Det skyves rett inn
+    forfra.
+  - Når lokket er på, holder to pinner den øvre enden og en tunge den nedre. Tunga presser på USB-C-kontakten og har
+    0,1–0,15 mm klaring.
+  - Kortet kan altså ikke flytte seg mer enn 0,3 mm noen vei.
+- **Trykket fra pluggen tas av boksen.** Når du skyver USB-C-pluggen opp, presses kortet mot stoppene øverst. Når du
+  drar den ut, holdes kortet av stoppene nederst og veggen rundt kontakten. Kortet henger aldri i loddingen, og pinnene
+  på lokket tar ingen kraft.
+- **Tett rundt kontakten.** Kanalen slutter ved kontaktens munning med en tett vegg. Den har bare et hakk på 9,5 × 3,8 mm
+  rundt USB-C-huset (som stikker 1 mm ut over kortkanten). Tunga på lokket fyller hakket over kontakten. Innsiden av
+  boksen er lukket mot kanalen, med spalter på høyst 0,3 mm rundt kontakten.
+- **USB-kanalen** er 13,5 mm bred og 13,2 mm dyp fra veggen. Den går fra underkanten opp til kontakten og er åpen mot
+  veggen og nedover. Midt i USB-C-kontakten er 9,2 mm fra veggen.
   - **Pluggen kan være inntil ca. 13 × 8 mm** i tverrsnitt og **inntil ca. 31 mm** lang fra munningen. Vanlige rette
     USB-C-plugger er ca. 12,5 × 7 × 15–25 mm.
   - Pluggen skyves opp nedenfra, også mens sensoren henger på veggen. Kabelen går rett ned langs veggen bak sensoren.
@@ -282,7 +298,12 @@ Filament 1 = lys (bunn, lokk), 2 = sort (stativ), 3 = gull (gullist og SKJOLD). 
    (SHT40: skyv kortet inn i sporene forfra med sensorbrikka ned, og før ledningene under skilleveggen.)
 3. **ESP-kortet:** legg det på hjørnestøttene med USB-enden mot åpningen i høyre vegg. ESP32 D1 mini: legg det på
    høykant med USB-enden ned, rett over USB-kanalen, og WROOM-modulen fram. D1 mini med USB bak: på høykant med
-   USB-C ned og ESP-12F fram og opp. DHT11-modulen skrus her med 2 × M2,5 × 6, og GY-302 snus så den henger ned.
+   USB-C ned og ESP-12F fram og opp:
+   - Skyv kortet rett inn forfra mellom kantene og stoppene, slik at USB-C-huset går ned i hakket i veggen nederst.
+   - Kortet skal ligge flatt på de fire hjørnestøttene. Det skal ikke kunne skyves opp eller ned.
+   - Lokket låser det: pinnene holder den øvre enden og tunga den nedre.
+   - Sett i USB-C-kabelen nedenfra først når lokket er skrudd på. Trykket tas av stoppene øverst i lomma.
+   - DHT11-modulen skrus her med 2 × M2,5 × 6, og GY-302 snus så den henger ned.
 4. **Lokket:** trykk AM312 inn i røret bakfra (kuppelen ut). Skru GY-302 mot lysblokka med to M2,5 × 6, med
    BH1750-brikka over kanalen. Trykk LED-en inn i holderen og lim den med en dråpe lim.
 5. Sett lokket på (ribba går ned i luftspalten i skilleveggen) og skru det fast bakfra med 2 × M3 × 12 senkeskruer.
@@ -304,7 +325,8 @@ Alle mål står øverst i `skjold_sensor.scad`:
 - `bL`/`bW`: ESP-kortets lengde og bredde. ESP32 DevKit V1 (30 pinner) er 51,5 × 28,3 mm, DevKitC (38 pinner) er
   54,4 × 27,9 mm, og D1 mini er 34,2 × 25,6 mm. Standard er 55,0 × 28,6 og 34,6 × 26,0.
 - `vL`/`vB`: lomma for ESP32 D1 mini (standard 40,4 × 32,4 mm; MH-ET LIVE MiniKit er 39,0 × 31,4 mm) og for D1 mini
-  med USB bak (34,8 × 26,4 mm; kortet er 34,2 × 25,6 mm). `pluggB`/`pluggH`/`pluggL`: USB-pluggen i sjekken.
+  med USB bak (34,5 × 25,9 mm; kortet er 34,2 × 25,6 mm). `vT`: kortets tykkelse (D1 mini 1,0 mm, **mål ditt kort**).
+  `kontB`/`kontH`/`kontUt`: USB-kontakthuset (USB-C 8,9 × 3,2 mm, stikker 1 mm ut over kortkanten). `pluggB`/`pluggH`/`pluggL`: USB-pluggen i sjekken.
   `kanB`/`kanZ`: USB-kanalens bredde og dybde (standard 13 × 12,5 mm). Mål pluggen på kabelen din.
 - `dhtHullX`/`dhtHullA`/`dhtHullD`: DHT11-modulens festehull. Avstanden fra venstre kortkant, avstanden mellom hullene
   og Ø (standard 24, 18,5 og 3 mm). **Usikkert:** anslått fra et produktbilde. Mål ditt kort. `dhtL`/`dhtB`:
