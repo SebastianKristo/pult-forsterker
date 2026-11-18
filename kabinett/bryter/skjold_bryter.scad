@@ -7,12 +7,12 @@
 // toppen av boksen = H, bordplata = H + festeT).
 //
 // Deler:
-//   kasse  – topp, front med bryterhull og sider med en 45°-fure langs overkanten. Åpen nedover og bakover.
+//   kasse  – topp med to svalehalespor, front med bryterhull og sider. Åpen nedover og bakover.
 //            To fjærtunger i toppen. Printes med fronten ned (glatt front med innfelt gull), ingen støtte.
 //   bunn   – bunnplata og bakveggen (med USB-hullet) i ett, med holderen for ESP-kortet. Klikkes i med fire klips
 //            (vinduer i sideveggene); trykk klipsene inn for å ta den ut igjen.
-//   feste  – skrus under bordplata med fire treskruer. To skinner går ned langs sidene av boksen, og en 45°-tunge
-//            på hver skinne går inn i fura i sideveggen. To knotter i festet klikker i hull i fjærtungene i toppen
+//   feste  – skrus under bordplata med fire treskruer. Det er mindre enn toppen av boksen og synes ikke: to
+//            svalehaletunger under festet går inn i sporene i toppen. To knotter klikker i hull i fjærtungene i toppen
 //            av boksen når den er skjøvet helt inn.
 //            Printes med bordsiden ned, ingen støtte.
 //   gull   – gullisten og SKJOLD i fronten (filament 2, samme utskrift som kassa).
@@ -89,27 +89,28 @@ vinduH = hakeFlat + hakeUt + klar + 0.5;
 klips = [[xL, yF + 14, [-1, 0]], [xL, yB - 14, [-1, 0]], [xR, yF + 14, [1, 0]], [xR, yB - 14, [1, 0]]];
 stoppB = 1.2;                      // listene som stopper plata (innsiden av veggene, rett over plata)
 
-// ---------- festet: furer i sidene, skinner og fjærtunger ----------
-c = 0.3;                           // klaring i skinnene
-festeT = 4;                        // festets plate (mot bordplata)
-skinneV = 3;                       // skinnenes vegg utenfor boksen
-fureD = 3;                         // fura i sideveggene: 45° opp og ned, så dyp
-fureZ = H - 7;                     // midt i fura (åpningen går fra fureZ − fureD til fureZ + fureD)
-blokkB = 2.6;                      // sideveggene er tykkere innvendig der fura går
-blokkZ0 = fureZ - fureD - 2;       // … fra hit og opp til toppen
-skinneZ0 = fureZ - fureD - 1.5;    // skinnenes underkant
-FW = W + 2*(c + skinneV);          // festets bredde
-stopp = 6;                         // festet er så mye lengre enn boksen; halvparten er stoppen bak
+// ---------- festet: svalehalespor i toppen, tunger og fjærtunger ----------
+c = 0.3;                           // klaring i sporene
+festeT = 4;                        // festets plate (mot bordplata); ligger skjult over boksen
+festeInn = 3;                      // festet slutter så langt innenfor kantene av toppen
+// svalehalen (x, z ned fra toppen): hals 5 mm bred og 1,5 mm høy, så 45° ut til 10 mm, så 1 mm rett
+halsB = 5; halsH = 1.5; hodeB = 10; hodeH = 1;
+sporDyp = halsH + (hodeB - halsB)/2 + hodeH;   // 5 mm
+ribbeH = sporDyp + c + 1.2 - tTop;             // ribba under toppen der sporet går (1,2 mm bunn under sporet)
+// sporene: venstre ved sideveggen (foran bryter 1), høyre over kortet
+spor = [xL + 6.5, kcx];
+ribbe = [[xL - 0.01, xL + 13.5], [kcx - 7.5, kcx + 7.5]];   // ribbenes x-område
+sporY0 = 8;                        // sporene er lukket foran (stoppen) og åpne bak
 // fjærtungene i toppen: festet ved roten foran, fri ende bak, med hull som knotten i festet klikker i
-tunger = [(bx[0] + bx[1])/2, kcx]; // x: mellom bryter 1 og 2, og over kortet
+tunger = [(bx[0] + bx[1])/2, (bx[N-2] + bx[N-1])/2];   // x: mellom bryter 1 og 2, og mellom de to siste
 tungeB = 7; tungeL = 22;           // bredde og lengde (hele toppens tykkelse)
 tungeY1 = Dy - 12; tungeY0 = tungeY1 - tungeL;   // fri ende og rot
 spalte = 1.0;                      // spalten rundt tunga
 knottH = 1.2; knottD = 4.4;        // knotten i festet (kjegle 45°)
 hullY = tungeY1 - 3.5; knottHull = 4.8;
-spor = 1.4; sporB = 5.4;           // sporet i toppen som knotten går i fram til tunga
+knSpor = 1.4; knSporB = 5.4;       // sporet i toppen som knotten går i fram til tunga
 festeHull = 4.6; festeSenk = 9.2;  // treskrue 4 × 16 med senkehode
-festeSkruer = [for (sx = [-1, 1], y = [Dy*0.25, Dy*0.75]) [sx*(W/2 - 10), y]];
+festeSkruer = [for (x = [bx[1] + P/2, bx[2] + P/2], y = [Dy*0.27, Dy*0.73]) [x, y]];
 
 // gull og tekst
 gullB = 1.2; gullT = 0.6; gullZ = 6.0;
@@ -127,14 +128,12 @@ module ytre() {
   }
 }
 
-// fura i høyre sidevegg (x, z): 45° opp og ned fra ytterflaten, fureD dyp
-module fure2d() {
-  polygon([[W/2 + 1, fureZ + fureD + 1], [W/2 - fureD, fureZ], [W/2 + 1, fureZ - fureD - 1]]);
+// svalehaletunga under festet (x, z), sentrert i x = 0, fra toppen av boksen (z = H) og ned
+module tunge2d(o = 0) {
+  offset(delta = o) polygon([[-halsB/2, H + 0.01], [-halsB/2, H - halsH], [-hodeB/2, H - halsH - (hodeB - halsB)/2],
+    [-hodeB/2, H - sporDyp], [hodeB/2, H - sporDyp], [hodeB/2, H - halsH - (hodeB - halsB)/2], [halsB/2, H - halsH], [halsB/2, H + 0.01]]);
 }
-// tunga på skinna (x, z): fura minus klaringen, pluss skinneveggen
-module tunge2d() {
-  intersection() { offset(delta = -c) fure2d(); translate([W/2 - fureD - 1, fureZ - fureD - 2]) square([fureD + 1 + c + 0.01, 2*fureD + 4]); }
-}
+module langs_y(y0, y1) { translate([0, y1, 0]) rotate([90, 0, 0]) linear_extrude(y1 - y0) children(); }
 
 // bryterhull: rett gjennom fronten (står loddrett i printen)
 module bryterhull() { rotate([-90, 0, 0]) cylinder(d = hullD, h = tf + 2); }
@@ -170,8 +169,8 @@ module kasse() {
         for (sx = [-1, 1]) translate([sx > 0 ? xR - stoppB : xL, yF + 4, zB]) cube([stoppB, Di - 8, 2]);
         for (k = klips) ved_klips(k) translate([-(klipsB + 2)/2, -4, zB - 1]) cube([klipsB + 2, 5, 4]);   // klipsarmene går forbi
       }
-      // sideveggene tykkere innvendig der fura går
-      for (sx = [-1, 1]) translate([sx > 0 ? xR - blokkB : xL, yF, blokkZ0]) cube([blokkB, Di, zT - blokkZ0 + 0.01]);
+      // ribber under toppen der svalehalesporene går (slutter foran bakveggen)
+      for (r = ribbe) translate([r[0], yF - 0.01, zT - ribbeH]) cube([r[1] - r[0], yB - c - 0.3 - yF, ribbeH + 0.02]);
       // to finner fra toppen som presser USB-enden av kortet ned (45° foran, så de printes uten støtte)
       for (sx = [-1, 1]) translate([kcx + sx*(vB/2 - 2) - 0.8, 0, 0]) rotate([90, 0, 90]) linear_extrude(1.6)
         polygon([[ky1 - 3, kz1], [yB - 0.4, kz1], [yB - 0.4, zT + 0.01], [ky1 - 3 - (zT - kz1), zT + 0.01]]);
@@ -183,8 +182,8 @@ module kasse() {
     for (x = bx) translate([x, -1, bz]) bryterhull();
     // vinduene for klipsene
     for (k = klips) ved_klips(k) translate([-(klipsB + 1)/2, -1, hakeZ]) cube([klipsB + 1, t + 2, vinduH]);
-    // furene i sideveggene (gjennom fronten og bakveggen)
-    for (sx = [-1, 1]) mirror([sx < 0 ? 1 : 0, 0, 0]) translate([0, -1, 0]) rotate([90, 0, 0]) translate([0, 0, -Dy - 2]) linear_extrude(Dy + 2) fure2d();
+    // svalehalesporene i toppen: lukket foran, åpne bak
+    for (x = spor) translate([x, 0, 0]) langs_y(sporY0, Dy + 1) tunge2d(c);
     // fjærtungene i toppen
     for (x = tunger) {
       // spalten rundt tunga (gjennom toppen), roten foran står igjen
@@ -196,7 +195,7 @@ module kasse() {
       translate([x, hullY, zT - 1]) cylinder(d = knottHull, h = tTop + 2, $fn = 32);
       translate([x - tungeB/2 - 0.01, tungeY1, H]) rotate([-45, 0, 0]) translate([0, -2, -2]) cube([tungeB + 0.02, 2, 2]);
       // sporet bak tunga (knotten går i det til den når tunga)
-      translate([x - sporB/2, tungeY1 - 0.01, H - spor]) cube([sporB, Dy, spor + 1]);
+      translate([x - knSporB/2, tungeY1 - 0.01, H - knSpor]) cube([knSporB, Dy, knSpor + 1]);
     }
     // gullisten og SKJOLD
     gull(0.01);
@@ -228,6 +227,8 @@ module bunn() {
       // klipsene
       for (k = klips) ved_klips(k) klips_arm();
     }
+    // hakk i overkanten av bakveggen der svalehaletungene går inn
+    for (x = spor) translate([x - hodeB/2 - 1, yB - 1, H - sporDyp - c - 0.8]) cube([hodeB + 2, tr + 2, 20]);
     // USB-hull i bakveggen (avrundet), med fas utover
     translate([kcx, yB - 1, usbZ]) rotate([-90, 0, 0]) linear_extrude(tr + 2) rrect(usbB, usbH, 2);
     translate([kcx, Dy - 0.8, usbZ]) rotate([-90, 0, 0]) linear_extrude(1, scale = 1.15) rrect(usbB, usbH, 2);
@@ -240,16 +241,12 @@ module bunn() {
 
 // ---------- feste (skrus under bordplata) ----------
 module feste() {
+  y1 = Dy - festeInn;
   difference() {
     union() {
-      translate([0, Dy/2, H]) linear_extrude(festeT) rrect(FW, Dy + stopp, 3);
-      // skinnene langs sidene av boksen, med 45°-tunga som går inn i fura
-      for (sx = [-1, 1]) mirror([sx < 0 ? 1 : 0, 0, 0]) {
-        translate([W/2 + c, -0.01 + 0, skinneZ0]) cube([skinneV, Dy + stopp/2, H - skinneZ0 + 0.01]);
-        translate([0, Dy + stopp/2, 0]) rotate([90, 0, 0]) linear_extrude(Dy + stopp/2) tunge2d();
-      }
-      // stoppen bak: en list på tvers som boksen skyves inn mot
-      translate([-W/2 - c, Dy + c, H - 4]) cube([W + 2*c, stopp/2 - c, 4.01]);
+      translate([0, (festeInn + y1)/2, H]) linear_extrude(festeT) crect(W - 2*festeInn, y1 - festeInn, 2);
+      // svalehaletungene som går inn i sporene i toppen av boksen
+      for (x = spor) translate([x, 0, 0]) langs_y(sporY0 + c, y1) tunge2d();
       // knottene som klikker i hullene i fjærtungene
       for (x = tunger) translate([x, hullY, H + 0.01]) mirror([0, 0, 1]) cylinder(d1 = knottD, d2 = knottD - 2*knottH, h = knottH + 0.01, $fn = 32);
     }

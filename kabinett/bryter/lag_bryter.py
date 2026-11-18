@@ -80,11 +80,15 @@ for k in KORT:
             if A["kort"].copy().apply_translation(d).intersection(holder, engine="manifold").volume < 1e-3:
                 fri.append("−+"[fortegn > 0] + "xyz"[akse])
     meld(not fri, "kortet ligger fast i holderen" + ("" if not fri else " – FRITT mot " + ", ".join(fri)))
-    # boksen henger i festet (flyttet 0,6 mm ned treffer den skinnene) og bunnplata i klipsene (0,4 mm ned treffer den kassa)
+    # boksen henger i festet (flyttet 0,6 mm ned treffer den svalehaletungene) og bunnplata i klipsene (0,4 mm ned treffer den kassa)
     # (45°-tungene: klaringen 0,3 mm vinkelrett er 0,42 mm loddrett)
     for x, y, tekst, d in (("kasse", "feste", "boksen henger i festet", 0.6), ("bunn", "kasse", "bunnplata henger i klipsene", 0.4)):
         v = A[x].copy().apply_translation([0, 0, -d]).intersection(A[y], engine="manifold").volume
         meld(v > 0.5, f"{tekst} ({v:.1f} mm³ når den flyttes {d} mm ned)")
+    # boksen kan skyves inn i festet: ingenting kolliderer på veien (de siste 6 mm trykker knottene fjærtungene ned)
+    boks = A["kasse"].union(A["bunn"], engine="manifold")
+    vei = [d for d in range(6, 62, 4) if boks.copy().apply_translation([0, -d, 0]).intersection(A["feste"], engine="manifold").volume > 0.02]
+    meld(not vei, "boksen glir inn i festet uten å kollidere" + ("" if not vei else f" – kolliderer {vei} mm før den er inne"))
     for p in ("kasse", "bunn", "feste"):
         m = trimesh.load(f"stl/{k}/{p}.stl")
         nz, z = m.face_normals[:, 2], m.triangles_center[:, 2]
