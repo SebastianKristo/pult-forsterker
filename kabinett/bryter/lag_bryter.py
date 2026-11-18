@@ -4,8 +4,8 @@
     python3 lag_bryter.py            STL + kontroll + 3MF (krever openscad og trimesh med manifold3d)
     python3 lag_bryter.py bilder     også bildene i render/ (uten skjerm: starter en egen Xvfb om DISPLAY mangler)
 
-  stl/<kort>/kasse.stl   kassa (toppen ned, vingene på plata)
-  stl/<kort>/bunn.stl    bunnplata med kortholderen og klipsene
+  stl/<kort>/kasse.stl   kassa (fronten ned)
+  stl/<kort>/bunn.stl    bunnplata med bakveggen, kortholderen og klipsene
   stl/<kort>/feste.stl   festet som skrus under bordplata (bordsiden ned)
   stl/<kort>/gull.stl    gullisten og SKJOLD (felt inn i fronten, filament 2)
 kort = esp32d1 (ESP32 D1 mini / MH-ET LIVE MiniKit) | d1mini (Wemos D1 mini)
@@ -80,16 +80,17 @@ for k in KORT:
             if A["kort"].copy().apply_translation(d).intersection(holder, engine="manifold").volume < 1e-3:
                 fri.append("−+"[fortegn > 0] + "xyz"[akse])
     meld(not fri, "kortet ligger fast i holderen" + ("" if not fri else " – FRITT mot " + ", ".join(fri)))
-    # boksen henger i festet (flyttet 0,4 mm ned treffer den skinnene) og bunnplata i klipsene (0,4 mm ned treffer den kassa)
-    for x, y, tekst in (("kasse", "feste", "boksen henger i festet"), ("bunn", "kasse", "bunnplata henger i klipsene")):
-        v = A[x].copy().apply_translation([0, 0, -0.4]).intersection(A[y], engine="manifold").volume
-        meld(v > 0.5, f"{tekst} ({v:.1f} mm³ når den flyttes 0,4 mm ned)")
+    # boksen henger i festet (flyttet 0,6 mm ned treffer den skinnene) og bunnplata i klipsene (0,4 mm ned treffer den kassa)
+    # (45°-tungene: klaringen 0,3 mm vinkelrett er 0,42 mm loddrett)
+    for x, y, tekst, d in (("kasse", "feste", "boksen henger i festet", 0.6), ("bunn", "kasse", "bunnplata henger i klipsene", 0.4)):
+        v = A[x].copy().apply_translation([0, 0, -d]).intersection(A[y], engine="manifold").volume
+        meld(v > 0.5, f"{tekst} ({v:.1f} mm³ når den flyttes {d} mm ned)")
     for p in ("kasse", "bunn", "feste"):
         m = trimesh.load(f"stl/{k}/{p}.stl")
         nz, z = m.face_normals[:, 2], m.triangles_center[:, 2]
         ned = (nz < -np.sin(np.radians(50))) & (z > 0.05)
-        if p == "kasse":   # taket i gullsporet fylles av gullet i samme utskrift
-            ned &= ~((np.abs(m.triangles_center[:, 1]) < 0.7) & (nz < -0.99))
+        if p == "kasse":   # taket i gullsporet (fronten ligger på plata) fylles av gullet i samme utskrift
+            ned &= ~((z < 0.7) & (nz < -0.99))
         stor = 0.0
         if ned.any():
             for f in m.submesh([np.where(ned)[0]], append=True).split(only_watertight=False):
@@ -106,7 +107,7 @@ BRIM = {"enable_support": "0", "initial_layer_speed": "20", "initial_layer_infil
 for k, tittel in (("esp32d1", "ESP32 D1 mini"), ("d1mini", "Wemos D1 mini")):
     L.OBJ_INNST = {f"{k}/kasse": BRIM, f"{k}/bunn": BRIM, f"{k}/feste": BRIM}
     L.write(f"skjold-bryter-{k}-k2.3mf", f"Skjold Bryter ({tittel}) – kasse med gullist, bunnplate og pultfeste (PETG/PLA)", [
-        (f"{k}/kasse", "Kasse (toppen ned)", 1, (12, 12), None),
+        (f"{k}/kasse", "Kasse (fronten ned)", 1, (12, 12), None),
         (f"{k}/gull", "Gullist og SKJOLD (felt inn i fronten)", 2, None, f"{k}/kasse"),
         (f"{k}/bunn", "Bunnplate med kortholder og klips", 1, (30, 82), None),
         (f"{k}/feste", "Feste under bordplata (bordsiden ned)", 1, (8, 150), None)], {1: "#ECE9E3", 2: "#D99E40"})
