@@ -25,6 +25,13 @@ De to lydkortene er like for systemet, så de får faste navn etter USB-port: `s
 `/etc/udev/rules.d/85-skjold-uca202.rules` (`UCA_AUX1` i laveste port, `UCA_AUX2` i den andre). Bytt med `--swap`.
 Overstyr med `KI_AMP_AUX1_DEV`, `KI_AMP_AUX2_DEV` og `KI_AMP_HP_DEV` i `/etc/ki-amp.env`.
 
+## Strøm
+
+24 V inn → sikring 5 A → vippebryter → relé (forsterkeren) og omformer 24 → 5,1 V (Pi, skjerm, relé). Fullt skjema,
+deleliste, koblingstabeller og rekkefølge: [kabinett/skjold-s1/STROM_REV_F.md](../kabinett/skjold-s1/STROM_REV_F.md).
+
+![Strømskjema S1 rev F](../kabinett/skjold-s1/strom_rev_f.png)
+
 ## Pinner (forslag, `pi/config/s1f_pins.yaml`)
 
 Knapper til GND (intern pull-up), LED-ringer via transistor. Opptatt: I²S 18/19/21, I²C 2/3 og 0/1 holdes ledige.
