@@ -9717,6 +9717,55 @@ async def h_stav(r):
 FEAT_ROUTES += [("GET", "/api/stav", h_stav), ("POST", "/api/stav", h_stav)]
 
 
+# ---------- Skjold IR: send en IR-kode via dokka eller en Skjold IR-sender (esphome/skjold-ir.yaml) ----------
+IR_PORT = 4747
+IR_PROT = {"nec": 1, "samsung": 2, "sony": 3, "rc5": 4, "lg": 5}
+
+
+def ir_pakke(maal, prot, data, bits=0) -> bytes:
+    """«SKIR1 <mål> <protokoll> <hex> <bits>» – samme pakke som Skjold Stav sender."""
+    maal = str(maal or "alle").strip().lower().replace(" ", "")[:23] or "alle"
+    p = IR_PROT.get(str(prot).lower(), prot)
+    p = int(p)
+    if not 1 <= p <= 5:
+        raise ValueError("protokoll må være 1–5 (nec, samsung, sony, rc5, lg)")
+    d = int(str(data), 16) if isinstance(data, str) else int(data)
+    if not 0 <= d <= 0xFFFFFFFF:
+        raise ValueError("data utenfor 32 bit")
+    return f"SKIR1 {maal} {p} {d:08X} {int(bits or 0)}".encode()
+
+
+def ir_send(maal, prot, data, bits=0):
+    pk = ir_pakke(maal, prot, data, bits)
+    sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sk.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sk.sendto(pk, ("255.255.255.255", IR_PORT))   # én gang: en kode sendt to ganger ville slått TV-en av og på
+    finally:
+        sk.close()
+    return pk.decode()
+
+
+async def h_ir(r):
+    """POST /api/ir {mål: "dokk"|"skap"|"alle", protokoll: 1–5|"nec"…, data: "00FF02FD"|int, bits: 0}
+    → sender koden som UDP-kringkasting til Skjold IR-senderne (og dokka)."""
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    try:
+        sendt = ir_send(b.get("mål") or b.get("maal") or b.get("target") or "alle", b.get("protokoll") or b.get("protocol") or 1,
+                        b.get("data", 0), b.get("bits") or 0)
+    except (ValueError, TypeError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+    except OSError as e:
+        return web.json_response({"error": str(e)}, status=503)
+    return web.json_response({"ok": True, "sendt": sendt})
+
+
+FEAT_ROUTES += [("POST", "/api/ir", h_ir)]
+
+
 # ---------- Skjold Kassetthylle: ta ut en kassett = spill den (pi/skjold_hylle.py, esphome/skjold-hylle.yaml) ----------
 import skjold_hylle as _hymod   # noqa: E402
 

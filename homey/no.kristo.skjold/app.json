@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.22.0",
+  "version": "2.23.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -810,6 +810,45 @@
           "INTERNAL"
         ]
       }
+    },
+    {
+      "id": "sensor",
+      "name": {
+        "en": "Skjold Sensor",
+        "no": "Skjold Sensor"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "measure_temperature",
+        "measure_humidity",
+        "measure_luminance",
+        "alarm_motion"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "skjoldsensor",
+      "images": {
+        "small": "/drivers/sensor/assets/images/small.png",
+        "large": "/drivers/sensor/assets/images/large.png",
+        "xlarge": "/drivers/sensor/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
     }
   ],
   "discovery": {
@@ -827,6 +866,25 @@
             "match": {
               "type": "string",
               "value": "pultforsterker"
+            }
+          }
+        ]
+      ]
+    },
+    "skjoldsensor": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "esphomelib",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.mac}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.project_name",
+            "match": {
+              "type": "string",
+              "value": "skjold.sensor"
             }
           }
         ]
@@ -3505,6 +3563,101 @@
             "title": {
               "en": "Device",
               "no": "Enhet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_send_ir",
+        "title": {
+          "en": "Send IR code",
+          "no": "Send IR-kode"
+        },
+        "titleFormatted": {
+          "en": "Send IR code [[kode]] ([[protokoll]]) from [[mal]]",
+          "no": "Send IR-kode [[kode]] ([[protokoll]]) fra [[mal]]"
+        },
+        "hint": {
+          "en": "Sends the code from Skjold Dokk or a Skjold IR transmitter (e.g. in the stereo cabinet). Transmitter: its name, «dokk» or «alle».",
+          "no": "Sender koden fra Skjold Dokk eller en Skjold IR-sender (f.eks. i stereoskapet). Sender: navnet, «dokk» eller «alle»."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=pultforsterker|s1|node|core|touch",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          },
+          {
+            "type": "text",
+            "name": "mal",
+            "title": {
+              "en": "Transmitter",
+              "no": "Sender"
+            },
+            "placeholder": {
+              "en": "alle",
+              "no": "alle"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "protokoll",
+            "title": {
+              "en": "Protocol",
+              "no": "Protokoll"
+            },
+            "values": [
+              {
+                "id": "nec",
+                "label": {
+                  "en": "NEC",
+                  "no": "NEC"
+                }
+              },
+              {
+                "id": "samsung",
+                "label": {
+                  "en": "Samsung",
+                  "no": "Samsung"
+                }
+              },
+              {
+                "id": "sony",
+                "label": {
+                  "en": "Sony",
+                  "no": "Sony"
+                }
+              },
+              {
+                "id": "rc5",
+                "label": {
+                  "en": "RC5",
+                  "no": "RC5"
+                }
+              },
+              {
+                "id": "lg",
+                "label": {
+                  "en": "LG",
+                  "no": "LG"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "name": "kode",
+            "title": {
+              "en": "Code (hex)",
+              "no": "Kode (hex)"
+            },
+            "placeholder": {
+              "en": "00FF02FD",
+              "no": "00FF02FD"
             }
           }
         ]

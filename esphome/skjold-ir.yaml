@@ -1,0 +1,207 @@
+# Skjold IR – IR-sender på Wi-Fi (kabinett/ir/, og i Skjold Dokk: esphome/skjold-dokk.yaml)
+#
+# Står der fjernkontrollen ikke når frem: i stereoskapet, bak TV-en, i dokka. Sender IR når
+#   · Skjold Stav ber om det over Wi-Fi (UDP, «Skjold IR-protokollen» under), eller
+#   · Home Assistant kaller handlingene send_kode / send_nec (ESPHome-integrasjonen), eller
+#   · Homey/andre sender den samme UDP-pakken.
+#
+# Skjold IR-protokollen (UDP, port 4747, kringkasting på hjemmenettet, ren tekst):
+#   SKIR1 <mål> <protokoll> <data i hex> <bits>
+#     mål        «alle», eller navnet på senderen (ir_navn under, f.eks. dokk, skap, tv)
+#     protokoll  1 NEC (data = adresse << 16 | kommando) · 2 Samsung · 3 Sony · 4 RC5 (adresse << 8 | kommando) · 5 LG
+#     bits       0 = standard for protokollen
+#   Eksempel: «SKIR1 skap 1 00FF02FD 0» = NEC adresse 0x00FF, kommando 0x02FD fra senderen som heter «skap».
+#   Kodene er de samme som Staven lærer (plassene i fjernkontrollen), så en kode lært på Staven kan sendes herfra.
+#
+# Maskinvare (ESP32-C3 SuperMini):
+#   GPIO4  → 1 kΩ → AO3400 (gate) · drain → 2–3 × IR-diode 940 nm med 22–33 Ω hver fra 5 V · source → GND
+#   GPIO3  ← VS1838B OUT (valgfri, for å lære koder direkte på senderen)
+#   GPIO8  blå lysdiode på kortet (blinker når den sender)
+# D1 mini: se skjold-ir-d1mini.yaml.
+
+substitutions:
+  name: skjold-ir
+  friendly_name: Skjold IR
+  ir_navn: skap                      # navnet Staven bruker for å nå denne senderen (små bokstaver, uten mellomrom)
+  ir_port: "4747"
+  ir_tx_pin: GPIO4
+  ir_rx_pin: GPIO3
+  led_pin: GPIO8
+  ir_non_blocking: "true"            # D1 mini (ESP8266) støtter bare blokkerende sending
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  project:
+    name: skjold.ir
+    version: "1.0.0"
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework: { type: esp-idf }
+
+logger:
+api:
+  encryption:
+    key: !secret skjold_ir_api_key
+  actions:
+    # Home Assistant: send en kode i Skjold-formatet (samme som Staven lærer)
+    - action: send_kode
+      variables: { protokoll: int, data: int, bits: int }
+      then:
+        - script.execute: { id: ir_send, prot: !lambda "return protokoll;", data: !lambda "return (uint32_t) data;", bits: !lambda "return bits;" }
+    - action: send_nec
+      variables: { adresse: int, kommando: int }
+      then:
+        - remote_transmitter.transmit_nec:
+            address: !lambda "return adresse;"
+            command: !lambda "return kommando;"
+        - script.execute: blink
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: { ssid: "${friendly_name}" }
+captive_portal:
+improv_serial:
+
+globals:
+  - { id: sendt, type: int, initial_value: "0" }
+
+remote_transmitter:
+  id: ir_tx
+  pin: ${ir_tx_pin}
+  carrier_duty_percent: 33%
+  non_blocking: ${ir_non_blocking}
+
+# Lære koder: slå på «Lær IR-kode», pek den gamle fjernkontrollen mot senderen og trykk. Koden vises i «Siste IR-kode»
+# i Skjold-formatet (protokoll, hex, bits) og sendes som hendelsen esphome.skjold_ir_laert til Home Assistant.
+remote_receiver:
+  id: ir_rx
+  pin: { number: "${ir_rx_pin}", inverted: true, mode: { input: true, pullup: true } }
+  dump: []
+  tolerance: 25%
+  on_nec:
+    - lambda: "id(ir_laert)->execute(1, ((uint32_t) x.address << 16) | x.command, 0);"
+  on_samsung:
+    - lambda: "id(ir_laert)->execute(2, (uint32_t) x.data, x.nbits);"
+  on_sony:
+    - lambda: "id(ir_laert)->execute(3, (uint32_t) x.data, x.nbits);"
+  on_rc5:
+    - lambda: "id(ir_laert)->execute(4, ((uint32_t) x.address << 8) | x.command, 0);"
+  on_lg:
+    - lambda: "id(ir_laert)->execute(5, (uint32_t) x.data, x.nbits);"
+
+udp:
+  id: ir_udp
+  port: ${ir_port}
+  on_receive:
+    - lambda: |-
+        // «SKIR1 <mål> <protokoll> <hex> <bits>»
+        std::string s(data.begin(), data.end());
+        char maal[24] = {0}; int prot = 0, bits = 0; unsigned int kode = 0;
+        if (sscanf(s.c_str(), "SKIR1 %23s %d %x %d", maal, &prot, &kode, &bits) < 3) return;
+        std::string m(maal);
+        if (m != "alle" && m != "${ir_navn}") return;
+        ESP_LOGI("skjold_ir", "UDP: %s → protokoll %d kode 0x%08X", maal, prot, kode);
+        id(ir_send)->execute(prot, (uint32_t) kode, bits);
+
+script:
+  - id: ir_send
+    mode: queued
+    max_runs: 8
+    parameters: { prot: int, data: uint32_t, bits: int }
+    then:
+      - lambda: |-
+          auto call = id(ir_tx).transmit();
+          switch (prot) {
+            case 1: { remote_base::NECData x{}; x.address = data >> 16; x.command = data & 0xFFFF; x.command_repeats = 1;
+                      remote_base::NECProtocol().encode(call.get_data(), x); break; }
+            case 2: { remote_base::SamsungData x{}; x.data = data; x.nbits = bits ? bits : 32;
+                      remote_base::SamsungProtocol().encode(call.get_data(), x); break; }
+            case 3: { remote_base::SonyData x{}; x.data = data; x.nbits = bits ? bits : 12;
+                      remote_base::SonyProtocol().encode(call.get_data(), x); call.set_send_times(3); call.set_send_wait(45000); break; }
+            case 4: { remote_base::RC5Data x{}; x.address = data >> 8; x.command = data & 0xFF;
+                      remote_base::RC5Protocol().encode(call.get_data(), x); break; }
+            case 5: { remote_base::LGData x{}; x.data = data; x.nbits = bits ? bits : 28;
+                      remote_base::LGProtocol().encode(call.get_data(), x); break; }
+            default: ESP_LOGW("skjold_ir", "ukjent protokoll %d", prot); return;
+          }
+          call.perform();
+          id(sendt) += 1;
+          id(ir_sendt).publish_state(id(sendt));
+      - script.execute: blink
+
+  - id: ir_laert
+    parameters: { prot: int, data: uint32_t, bits: int }
+    then:
+      - if:
+          condition: { switch.is_on: laer }
+          then:
+            - lambda: |-
+                static const char *P[] = {"?", "NEC", "Samsung", "Sony", "RC5", "LG"};
+                char t[48]; snprintf(t, sizeof t, "%s %d %08X %d", P[prot], prot, (unsigned) data, bits);
+                id(siste_kode).publish_state(t);
+            - homeassistant.event:
+                event: esphome.skjold_ir_laert
+                data:
+                  protokoll: !lambda "return to_string(prot);"
+                  data: !lambda "char h[12]; snprintf(h, sizeof h, \"%08X\", (unsigned) data); return std::string(h);"
+                  bits: !lambda "return to_string(bits);"
+                  sender: ${ir_navn}
+            - script.execute: blink
+
+  - id: blink
+    mode: restart
+    then:
+      - output.turn_on: status_led
+      - delay: 120ms
+      - output.turn_off: status_led
+
+output:
+  - platform: gpio
+    id: status_led
+    pin: { number: "${led_pin}", inverted: true }   # C3 SuperMini: GPIO8 (strapping-pinne, bare utgang her – advarselen er ufarlig)
+
+switch:
+  - platform: template
+    id: laer
+    name: Lær IR-kode
+    icon: mdi:remote
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    entity_category: config
+    on_turn_on:
+      - delay: 2min                  # slår seg av selv
+      - switch.turn_off: laer
+
+text_sensor:
+  - platform: template
+    id: siste_kode
+    name: Siste IR-kode
+    icon: mdi:remote
+  - platform: template
+    name: IR-navn
+    icon: mdi:tag-outline
+    entity_category: diagnostic
+    lambda: 'return std::string("${ir_navn}");'
+    update_interval: never
+  - platform: wifi_info
+    ip_address: { name: IP-adresse, entity_category: diagnostic }
+
+sensor:
+  - platform: template
+    id: ir_sendt
+    name: IR-koder sendt
+    icon: mdi:counter
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: never
+  - platform: wifi_signal
+    name: Wi-Fi-signal
+    entity_category: diagnostic
+    update_interval: 60s
+  - platform: uptime
+    name: Oppetid
+    entity_category: diagnostic

@@ -1,0 +1,11 @@
+# Skjold Dokk med IR – ESP32-C3 SuperMini i sokkelen til fjernkontrolldokka (kabinett/fjernkontroll/dokk, «IR i dokka»).
+# Samme fastvare som Skjold IR (skjold-ir.yaml), med navnet «dokk»: Skjold Stav sender IR-kodene hit når en
+# IR-blokk er satt til «Dokken», så TV-en og TV-boksen styres fra dokka selv om fjernkontrollen ikke peker mot dem.
+# Strøm: 5 V fra dokkas USB-C-brikke (samme som ladingen av fjernkontrollen).
+substitutions:
+  name: skjold-dokk
+  friendly_name: Skjold Dokk
+  ir_navn: dokk
+
+packages:
+  ir: !include skjold-ir.yaml

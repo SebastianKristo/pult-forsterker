@@ -1,0 +1,136 @@
+# Skjold Sensor (Wemos D1 mini) – liten romsensor: temperatur, luftfuktighet, lys (lux, valgfritt) og bevegelse
+# (valgfritt). Wemos D1 mini (ESP8266) + SHT40 (eller SHT31 / AHT20+BMP280) + BH1750 (GY-302) + AM312 mini-PIR.
+# Kabinett, deler og kobling: kabinett/sensor/LES_MEG.md. ESP32-utgaven: skjold-sensor.yaml.
+# Flash første gang med https://web.esphome.io (USB, Wi-Fi settes med Improv), deretter OTA.
+#
+# Kobling (D1 mini):
+#   SHT40   VIN → 3V3   GND → G   SDA → D2 (GPIO4)   SCL → D1 (GPIO5)
+#   BH1750  VCC → 3V3   GND → G   SDA → D2 (GPIO4)   SCL → D1 (GPIO5)   ADDR → G (0x23)
+#   AM312   VCC → 3V3   GND → G   OUT → D5 (GPIO14)
+#   LED 3 mm (statuslys): 3V3 → 330 Ω → LED → D4 (GPIO2)   (aktiv lav, som den blå LED-en på kortet; D4 må være høy
+#   ved oppstart, og det er den med LED-en koblet slik)
+#   HC-SR501 i stedet for AM312: VCC → 5V, OUT → D5. LD2410 (mmWave): VCC → 5V, OUT → D5.
+#
+# Uten lyssensor eller PIR: kommenter ut blokken for bh1750 eller bevegelse under. En sensor som ikke svarer, får
+# statuslyset til å blinke.
+substitutions:
+  name: skjold-sensor
+  friendly_name: Skjold Sensor
+  # sensoren sitter i eget kammer bak en dobbel skillevegg, men D1 mini varmer litt likevel:
+  # juster mot et kjent termometer etter en time i drift
+  temp_offset: "-0.3"
+  bevegelse_av: 30s
+  oppdatering: 30s
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  project:                           # Homey-appen finner sensoren på dette (mDNS: project_name)
+    name: skjold.sensor
+    version: "1.0.0"
+
+esp8266:
+  board: d1_mini
+
+logger:
+  level: INFO
+api:
+  encryption:
+    key: !secret skjold_sensor_api_key
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: { ssid: "Skjold Sensor" }
+captive_portal:
+improv_serial:
+# REST og hendelser på port 80: Homey-appen (driveren «Skjold Sensor») leser verdiene herfra
+web_server:
+  port: 80
+  version: 3
+
+# blinker ved feil (ingen Wi-Fi, sensor som ikke svarer), ellers av – så det ikke lyser inn i lyssensoren
+status_led:
+  pin: { number: D4, inverted: true }
+
+i2c:
+  sda: D2
+  scl: D1
+  scan: true
+  frequency: 100kHz
+
+sensor:
+  # --- temperatur og luftfuktighet: SHT40 (anbefalt: ±0,2 °C, ±1,8 %RH, tåler kondens) ---
+  - platform: sht4x
+    address: 0x44
+    temperature:
+      name: Temperatur
+      id: temp
+      filters:
+        - offset: ${temp_offset}
+    humidity:
+      name: Luftfuktighet
+      id: fukt
+    update_interval: ${oppdatering}
+  # --- SHT31 i stedet for SHT40 ---
+  # - platform: sht3xd
+  #   address: 0x44
+  #   temperature: { name: Temperatur, id: temp, filters: [ offset: "${temp_offset}" ] }
+  #   humidity: { name: Luftfuktighet, id: fukt }
+  #   update_interval: ${oppdatering}
+  # --- AHT20 + BMP280 (kombikort) i stedet for SHT40: fukt fra AHT20, temperatur og lufttrykk fra BMP280 ---
+  # - platform: aht10
+  #   variant: AHT20
+  #   temperature: { name: Temperatur (AHT20), id: temp, filters: [ offset: "${temp_offset}" ] }
+  #   humidity: { name: Luftfuktighet, id: fukt }
+  #   update_interval: ${oppdatering}
+  # - platform: bmp280_i2c
+  #   address: 0x77
+  #   temperature: { name: Temperatur (BMP280), internal: true }
+  #   pressure: { name: Lufttrykk }
+  #   update_interval: 60s
+
+  # --- lys: BH1750 (GY-302) bak lysvinduet ---
+  - platform: bh1750
+    name: Lys
+    address: 0x23
+    update_interval: ${oppdatering}
+
+  - platform: template
+    name: Duggpunkt
+    unit_of_measurement: °C
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      const float t = id(temp).state, rh = id(fukt).state;
+      if (isnan(t) || isnan(rh) || rh <= 0) return {};
+      const float a = 17.62f, b = 243.12f, g = logf(rh / 100.0f) + a * t / (b + t);
+      return b * g / (a - g);
+
+  - platform: wifi_signal
+    name: Wi-Fi-signal
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: Oppetid
+    entity_category: diagnostic
+
+binary_sensor:
+  # --- bevegelse: AM312 (eller HC-SR501 / LD2410 OUT). D5 har ingen intern pulldown på ESP8266. ---
+  - platform: gpio
+    pin: D5
+    name: Bevegelse
+    id: bevegelse
+    device_class: motion
+    filters:
+      - delayed_off: ${bevegelse_av}
+  - platform: status
+    name: Status
+
+button:
+  - platform: restart
+    name: Start på nytt
+    entity_category: config

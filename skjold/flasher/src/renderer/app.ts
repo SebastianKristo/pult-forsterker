@@ -389,6 +389,8 @@ function bind() {
 async function init() {
   document.body.classList.add(skjold.platform);
   $('esp-kassett').onclick = () => void skjold.espFlash('kassett');
+  $('esp-sensor').onclick = () => void skjold.espFlash('sensor');
+  $('esp-ir').onclick = () => void skjold.espFlash('ir');
   $('esp-rost').onclick = () => void skjold.espFlash('rost');
   skjold.version().then(v => { $('ver').textContent = 'FLASHER ' + v.replace(/\.0$/, ''); }).catch(() => undefined);
   bind();

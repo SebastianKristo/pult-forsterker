@@ -1,0 +1,20 @@
+# Skjold IR på Wemos D1 mini (ESP8266). Samme protokoll og funksjoner som skjold-ir.yaml (ESP32-C3 SuperMini).
+#   D2 (GPIO4) → 1 kΩ → AO3400/S8050 → IR-dioder fra 5 V · D5 (GPIO14) ← VS1838B · D4 (GPIO2) blå lysdiode på kortet
+substitutions:
+  name: skjold-ir
+  friendly_name: Skjold IR
+  ir_navn: skap
+  ir_tx_pin: GPIO4
+  ir_rx_pin: GPIO14
+  led_pin: GPIO2
+
+packages:
+  ir: !include skjold-ir.yaml
+
+esp32: !remove
+esp8266:
+  board: d1_mini
+
+remote_transmitter:                  # ESP8266 sender blokkerende (non_blocking finnes bare på ESP32)
+  id: ir_tx
+  non_blocking: !remove

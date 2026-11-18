@@ -162,6 +162,14 @@ def _register_services(hass: HomeAssistant) -> None:
         for c in _targets(call):
             await c.api.doorbell()
 
+    async def _send_ir(call) -> None:
+        """skjold.send_ir: én Skjold er nok – pakken kringkastes på hjemmenettet til dokka og IR-senderne."""
+        body = {"mål": call.data.get("mal") or "alle", "protokoll": call.data.get("protokoll") or "nec",
+                "data": str(call.data.get("data") or "0"), "bits": int(call.data.get("bits") or 0)}
+        for c in _targets(call):
+            await c.api.ir(body)
+            return
+
     async def _duck(call) -> None:
         body = {"kilde": "ha"}
         for k in ("tekst", "lyd", "db", "sekunder"):
@@ -225,6 +233,7 @@ def _register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, "doorbell", _doorbell)
     hass.services.async_register(DOMAIN, "run_routine", _routine)
     hass.services.async_register(DOMAIN, "duck", _duck)
+    hass.services.async_register(DOMAIN, "send_ir", _send_ir)
     hass.services.async_register(DOMAIN, "security_trigger", _security_trigger)
     hass.services.async_register(DOMAIN, "security_stop", _security_stop)
 
