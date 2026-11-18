@@ -25,6 +25,7 @@ OFFLINE_S = 180                              # har enheten lagrede nett, venter 
 RETRY_S = 300                                # med lagrede nett: slå av oppsett-nettet så ofte for å prøve dem igjen
 MANUAL_S = 900                               # oppsett-nett startet for hånd: slås av etter så lang tid uten bruk
 IDLE_S = 120                                 # … men ikke mens noen bruker oppsettsiden
+KABEL_S = 600                                # «Bruk kabel» på Touch: vent så lenge på Ethernet før oppsett-nettet kommer igjen
 
 
 def ssid_for(device_id: str) -> str:
@@ -61,6 +62,7 @@ class SetupNet:
         self.joining = ""             # nettet vi prøver å koble til akkurat nå
         self.networks: list = []      # skannet rett før aksesspunktet startet (radioen kan ikke alltid skanne etterpå)
         self.manual = False           # startet fra Touch/appen («Koble til nytt Wi-Fi»), ikke fordi nettet var borte
+        self.kabel_til = 0.0          # «Bruk kabel» valgt: oppsett-nettet er av, og vi venter på Ethernet til dette tidspunktet
         self.lock = threading.RLock()
 
     # --- nmcli
@@ -83,6 +85,27 @@ class SetupNet:
         """Har enheten et vanlig nett (kabel eller Wi-Fi som ikke er vårt eget oppsett-nett)?"""
         return any(d["type"] in ("wifi", "ethernet") and d["state"].startswith("connected") and d["connection"] != CON
                    for d in self.devices())
+
+    def ethernet(self) -> dict | None:
+        """Ethernet-porten, hvis enheten har en: {device, state}. state fra nmcli: unavailable (ingen kabel),
+        connecting (…) (kabel, henter adresse), connected, disconnected."""
+        d = next((d for d in self.devices() if d["type"] == "ethernet"), None)
+        return {"device": d["device"], "state": d["state"]} if d else None
+
+    def bruk_kabel(self, on: bool = True):
+        """Touch: «Bruk kabel». Slår av oppsett-nettet og venter på Ethernet i KABEL_S sekunder (av = oppsett-nettet igjen)."""
+        if on:
+            with self.lock:
+                self.kabel_til, self.error = self.clock() + KABEL_S, ""
+            self.stop()
+            dev = (self.ethernet() or {}).get("device")
+            if dev:
+                self._nm("device", "connect", dev)       # be NetworkManager prøve kabelen med en gang
+        else:
+            with self.lock:
+                self.kabel_til = 0.0
+            self.start()
+        self.ctx["changed"]()
 
     def has_profiles(self) -> bool:
         out = self._nm("-t", "-f", "TYPE,NAME", "connection", "show")[1]
@@ -189,6 +212,15 @@ class SetupNet:
         """Hva skal skje nå? «start», «stop» eller «». Ren funksjon av tilstanden, for testing."""
         if self.joining:
             return ""
+        if self.kabel_til and not self.active:   # venter på kabel (valgt på Touch)
+            if online or now >= self.kabel_til:
+                self.kabel_til = 0.0
+                if online:
+                    self.t_offline = 0.0
+                    return ""
+                self.t_offline = now - OFFLINE_S      # ingen kabel kom: oppsett-nettet igjen med en gang
+            else:
+                return ""
         if self.active:
             if self.manual:   # startet for hånd: stå til noen kobler til, eller 15 min uten at siden er i bruk
                 return "stop" if now - max(self.t_start, self.t_hit) > MANUAL_S else ""
@@ -221,11 +253,12 @@ class SetupNet:
             self.t_offline = self.clock()      # tell ventetiden på nytt før oppsett-nettet eventuelt kommer tilbake
 
     def status(self) -> dict | None:
-        if not (self.active or self.joining or self.error):
+        if not (self.active or self.joining or self.error or self.kabel_til):
             return None
         port = self.ctx.get("port", 8765)
         return {"active": self.active, "manual": self.manual, "ssid": self.ssid(), "password": PASSWORD, "ip": IP, "url": f"http://{IP}:{port}/oppsett",
-                "qr": wifi_qr(self.ssid(), PASSWORD), "joining": self.joining, "error": self.error}
+                "qr": wifi_qr(self.ssid(), PASSWORD), "joining": self.joining, "error": self.error,
+                "kabel": bool(self.kabel_til), "ethernet": self.ethernet()}
 
 
 PAGE = """<!doctype html>

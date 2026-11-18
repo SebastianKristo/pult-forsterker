@@ -36,7 +36,8 @@ interface Dev {
   alarm?: { ringing: boolean; snoozed: boolean; name: string; time: string };
   doorbell?: { t: number; camera: boolean; seconds: number; v0?: number | null } | null;
   night?: { on: boolean; src?: string; steps?: { name: string; done?: boolean }[]; t?: number };
-  setup_net?: { active: boolean; manual?: boolean; ssid: string; password: string; url: string; qr?: string; joining: string; error: string } | null;
+  setup_net?: { active: boolean; manual?: boolean; ssid: string; password: string; url: string; qr?: string; joining: string; error: string;
+    kabel?: boolean; ethernet?: { device: string; state: string } | null } | null;
   ble_setup?: { state: string; error: string; ssid: string; url: string } | null;   // Wi-Fi over Bluetooth (Improv)
   touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string } };
   hold?: { key: string; p: number; title: string; sub: string } | null;   // fysisk knapp som holdes (POWER = omstart)
@@ -329,7 +330,7 @@ addEventListener('contextmenu', (e) => e.preventDefault());
 setInterval(() => {
   now.value = Date.now();
   const ms = (TOUCH_STANDBY_S[settings.value.tStandby] ?? 30) * 1000;
-  if (!idle.value && !boot.value.on && !dev().alarm?.ringing && !door.value && !camOpen.value && !wifiOpen.value && !quick.value && !dev().setup_net?.active && ms > 0 && Date.now() - lastAct > ms) goIdle();
+  if (!idle.value && !boot.value.on && !dev().alarm?.ringing && !door.value && !camOpen.value && !wifiOpen.value && !quick.value && !dev().setup_net?.active && !dev().setup_net?.kabel && ms > 0 && Date.now() - lastAct > ms) goIdle();
   if (!boot.value.on) backlight();
 }, 1000);
 
@@ -1481,7 +1482,7 @@ function Qr({ text, size }: { text: string; size: number }) {
 }
 
 type WNet = { ssid: string; security?: string; signal?: number; active?: boolean };
-function WifiSetup() {
+function WifiSetup({ innebygd, onLukk }: { innebygd?: boolean; onLukk?: () => void } = {}) {
   const [tab, setTab] = useState(0);
   const [nets, setNets] = useState<WNet[] | null>(null), [valgt, setValgt] = useState<WNet | null>(null);
   const [pw, setPw] = useState(''), [vis, setVis] = useState(false), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false);
@@ -1492,8 +1493,10 @@ function WifiSetup() {
     setBusy(true); setMsg('Kobler til «' + n.ssid + '» …');
     try {
       const r = await fetch(here() + '/api/wifi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid: n.ssid, psk }) });
-      const j = await r.json().catch(() => ({})) as { error?: string };
-      if (r.ok) { setMsg('Koblet til «' + n.ssid + '»'); wifiNow.value = n.ssid; setValgt(null); setPw(''); window.setTimeout(() => { wifiOpen.value = false; }, 1500); }
+      const j = await r.json().catch(() => ({})) as { error?: string; pending?: boolean };
+      const jj = j as { pending?: boolean };
+      if (r.ok && jj.pending) { setMsg('Kobler til «' + n.ssid + '» …'); onLukk?.(); }   // fra oppsett-nettet: Touch bytter nett nå
+      else if (r.ok) { setMsg('Koblet til «' + n.ssid + '»'); wifiNow.value = n.ssid; setValgt(null); setPw(''); window.setTimeout(() => { wifiOpen.value = false; onLukk?.(); }, 1500); }
       else setMsg(j.error || 'Fikk ikke koblet til. Sjekk passordet.');
     } catch { setMsg('Fikk ikke svar. Touch bytter kanskje nett – vent litt.'); }
     setBusy(false);
@@ -1503,11 +1506,11 @@ function WifiSetup() {
   const bar = (p: number) => <span style="display:flex;gap:2px;align-items:flex-end;height:14px">{[0, 1, 2, 3].map((i) => <i key={i} style={`width:3px;height:${4 + i * 3}px;border-radius:1px;background:${(p ?? 0) > i * 25 ? '#f2f2ee' : '#3a3a37'}`} />)}</span>;
   const steg = (i: number, t: string, b: preact.ComponentChildren) => <div style="display:flex;gap:12px;align-items:flex-start"><span style={`width:26px;height:26px;flex-shrink:0;border-radius:13px;background:#1c170d;border:1px solid #d9a441;color:#f0c46a;font-family:${MONO};font-size:12px;display:flex;align-items:center;justify-content:center`}>{i}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:600">{t}</span><span style="font-size:12.5px;line-height:1.4;color:#a8a8a3">{b}</span></span></div>;
   return (
-    <div class="inn" style="position:absolute;inset:52px 0 0 0;z-index:6;background:#0b0b0c;display:flex;flex-direction:column">
+    <div class="inn" style={`position:absolute;inset:${innebygd ? '0' : '52px 0 0 0'};z-index:${innebygd ? 23 : 6};background:#0b0b0c;display:flex;flex-direction:column`}>
       <div style="display:flex;align-items:center;gap:8px;padding:8px 14px 8px 6px;flex-shrink:0">
-        <button onClick={() => { if (valgt) { setValgt(null); setPw(''); setMsg(''); } else wifiOpen.value = false; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
+        <button onClick={() => { if (valgt) { setValgt(null); setPw(''); setMsg(''); } else if (onLukk) onLukk(); else wifiOpen.value = false; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
         <span style="font-size:19px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{valgt ? 'Passord for «' + valgt.ssid + '»' : 'Koble til Wi-Fi'}</span>
-        {!valgt && TABS.map((n, i) => <button key={n} onClick={() => setTab(i)} style={`height:40px;padding:0 14px;border-radius:20px;border:1px solid ${tab === i ? '#f2f2ee' : '#2e2e30'};background:${tab === i ? '#f2f2ee' : '#161617'};color:${tab === i ? '#0b0b0c' : '#c9c9c4'};font-size:12.5px;font-weight:600;white-space:nowrap`}>{n}</button>)}
+        {!valgt && !innebygd && TABS.map((n, i) => <button key={n} onClick={() => setTab(i)} style={`height:40px;padding:0 14px;border-radius:20px;border:1px solid ${tab === i ? '#f2f2ee' : '#2e2e30'};background:${tab === i ? '#f2f2ee' : '#161617'};color:${tab === i ? '#0b0b0c' : '#c9c9c4'};font-size:12.5px;font-weight:600;white-space:nowrap`}>{n}</button>)}
       </div>
       {valgt ? <>
         <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:0 20px">
@@ -1518,7 +1521,7 @@ function WifiSetup() {
           {msg && <span style={`font-size:13px;color:${/Koblet til/.test(msg) ? '#6fcf7f' : /Kobler/.test(msg) ? '#c9c9c4' : '#ff8a7a'}`}>{msg}</span>}
         </div>
         <Keyboard pw enter={busy ? 'Kobler til …' : 'Koble til'} onKey={(c) => setPw((p) => (p + c).slice(0, 63))} onBack={() => setPw((p) => p.slice(0, -1))} onEnter={() => { if (!busy && pw.length >= 8) void koble(valgt, pw); else if (pw.length < 8) setMsg('Passordet må ha minst 8 tegn'); }} />
-      </> : tab === 0 ? (
+      </> : tab === 0 || innebygd ? (
         <div style="flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:6px;padding:4px 14px 14px">
           {msg && <span style="font-size:13px;color:#c9c9c4;padding:2px 4px">{msg}</span>}
           {nets === null && <span style={`padding:12px 4px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>SØKER ETTER NETT …</span>}
@@ -1566,29 +1569,59 @@ function WifiSetup() {
 
 function SetupNet() {
   const n = dev().setup_net!;
+  const [skjerm, setSkjerm] = useState(false), [busy, setBusy] = useState(false);
+  const eth = n.ethernet, kabel = !!n.kabel && !n.joining;
   const steg = (i: number, a: string, b: preact.ComponentChildren) => (
     <div style="display:flex;gap:14px;align-items:flex-start">
       <span style={`width:30px;height:30px;flex-shrink:0;border-radius:15px;background:#1c170d;border:1px solid #d9a441;color:#f0c46a;font-family:${MONO};font-size:13px;display:flex;align-items:center;justify-content:center`}>{i}</span>
       <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;font-weight:600">{a}</span><span style="font-size:13px;line-height:1.4;color:#a8a8a3">{b}</span></span>
     </div>);
   const kode = `font-family:${MONO};color:#f0c46a`;
+  const send = (b: Record<string, unknown>) => { setBusy(true); void postAt('', '/api/oppsett', b).finally(() => setBusy(false)); };
+  // valgene øverst til høyre: på skjermen, med mobilen (standard, QR) og kabel (bare når Touch har Ethernet-port)
+  const valg = (navn: string, ikon: string, på: boolean, gjør: () => void) => (
+    <button onClick={gjør} disabled={busy} style={`height:44px;padding:0 16px 0 12px;border-radius:22px;border:1px solid ${på ? '#d9a441' : '#2e2e30'};background:${på ? '#1c170d' : '#161617'};color:${på ? '#f0c46a' : '#f2f2ee'};display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;white-space:nowrap`}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={ikon} /></svg>{navn}</button>);
+  const IK_SKJERM = 'M3 5h18v11H3zM8 20h8M12 16v4', IK_MOBIL = 'M7 2h10v20H7zM11 18h2', IK_KABEL = 'M6 3v5M10 3v5M4 8h8v4a4 4 0 0 1-8 0zM8 16v5h9a3 3 0 0 0 3-3v-6';
+  const ethTekst = !eth ? '' : eth.state.startsWith('connected') ? 'Tilkoblet med kabel – et øyeblikk …'
+    : eth.state.startsWith('connecting') ? 'Kabel funnet – henter adresse fra ruteren …'
+    : eth.state === 'unavailable' ? 'Ingen kabel ennå' : 'Kabel funnet – venter på ruteren …';
   return (
     <div style="position:absolute;inset:0;z-index:22;background:#0b0b0c;display:grid;grid-template-columns:300px minmax(0,1fr);animation:tinn .4s ease both">
       <div style="display:flex;flex-direction:column;justify-content:center;gap:14px;padding:0 30px;background:#101011;border-right:1px solid #1f1f21">
         <div style="display:flex;gap:5px;align-items:flex-start;height:52px">{BARS.map((h, i) => <div key={i} style={`width:8px;height:${h * 2}px;border-radius:4px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</div>
-        <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#f0c46a`}>{n.joining ? 'KOBLER TIL' : n.manual ? 'NYTT WI-FI' : 'IKKE PÅ NETT'}</span>
-        <span style="font-size:28px;font-weight:600;line-height:1.12;letter-spacing:-.01em">{n.joining ? 'Kobler til «' + n.joining + '»' : 'Koble Touch til Wi-Fi'}</span>
+        <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#f0c46a`}>{n.joining ? 'KOBLER TIL' : kabel ? 'KABEL' : n.manual ? 'NYTT WI-FI' : 'IKKE PÅ NETT'}</span>
+        <span style="font-size:28px;font-weight:600;line-height:1.12;letter-spacing:-.01em">{n.joining ? 'Kobler til «' + n.joining + '»' : kabel ? 'Koble til med kabel' : 'Koble Touch til nettet'}</span>
         {!!n.error && !n.joining && <span style="font-size:13px;line-height:1.4;color:#e05a4a">{n.error}</span>}
       </div>
       <div style="display:flex;flex-direction:column;justify-content:center;gap:18px;padding:0 32px">
-        <div style="display:flex;gap:16px;align-items:center">
-          {!!n.qr && !n.joining && <Qr text={n.qr} size={120} />}
-          {steg(1, 'Skann QR-koden med mobilen', <>Eller koble til nettet <span style={kode}>{n.ssid}</span> med passordet <span style={kode}>{n.password}</span></>)}
-        </div>
-        {steg(2, 'Velg hjemmenettet ditt', <>Oppsettsiden åpner seg selv. Skjer det ikke, gå til <span style={kode}>{n.url.replace('http://', '')}</span></>)}
-        {steg(3, 'Ferdig', 'Touch slår av oppsett-nettet og kobler til. Denne siden forsvinner av seg selv.')}
-        {n.manual && !n.joining && <button onClick={() => void postAt('', '/api/oppsett', { stop: true })} style="align-self:flex-start;height:44px;padding:0 20px;border-radius:22px;border:1px solid #2e2e30;background:#161617;color:#f2f2ee;font-size:13.5px;font-weight:600">Avbryt – bruk nettet som før</button>}
+        {n.joining ? <>
+          {steg(1, 'Touch kobler til «' + n.joining + '»', 'Det tar opptil et halvt minutt. Går det ikke, kommer denne siden tilbake med en melding.')}
+        </> : <>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            {valg('På skjermen', IK_SKJERM, false, () => { if (kabel) send({ kabel: false }); setSkjerm(true); })}
+            {valg('Med mobilen', IK_MOBIL, !kabel, () => { if (kabel) send({ kabel: false }); })}
+            {!!eth && valg('Kabel', IK_KABEL, kabel, () => { if (!kabel) send({ kabel: true }); })}
+          </div>
+          {kabel ? <>
+            {steg(1, 'Sett en nettverkskabel i Ethernet-porten', 'Den andre enden i ruteren eller en svitsj. Wi-Fi-oppsettet er slått av så lenge.')}
+            {steg(2, 'Touch kobler til av seg selv', 'Denne siden forsvinner når Touch er på nett. Wi-Fi kan du sette opp senere under Innstillinger.')}
+            <span style={`font-size:14px;font-weight:600;color:${eth?.state.startsWith('connected') ? '#6fcf7f' : eth?.state === 'unavailable' ? '#a8a8a3' : '#f0c46a'}`}>{ethTekst}</span>
+            <span style="font-size:12px;color:#6b6b67">Kommer det ingen kabel innen 10 minutter, slås Wi-Fi-oppsettet på igjen.</span>
+          </> : !n.active ? (
+            <span style="font-size:14px;color:#a8a8a3">Starter oppsett-nettet …</span>
+          ) : <>
+            <div style="display:flex;gap:16px;align-items:center">
+              {!!n.qr && <Qr text={n.qr} size={120} />}
+              {steg(1, 'Skann QR-koden med mobilen', <>Eller koble til nettet <span style={kode}>{n.ssid}</span> med passordet <span style={kode}>{n.password}</span></>)}
+            </div>
+            {steg(2, 'Velg hjemmenettet ditt', <>Oppsettsiden åpner seg selv. Skjer det ikke, gå til <span style={kode}>{n.url.replace('http://', '')}</span></>)}
+            {steg(3, 'Ferdig', 'Touch slår av oppsett-nettet og kobler til. Denne siden forsvinner av seg selv.')}
+          </>}
+          {n.manual && <button onClick={() => send({ stop: true })} style="align-self:flex-start;height:44px;padding:0 20px;border-radius:22px;border:1px solid #2e2e30;background:#161617;color:#f2f2ee;font-size:13.5px;font-weight:600">Avbryt – bruk nettet som før</button>}
+        </>}
       </div>
+      {skjerm && !n.joining && <WifiSetup innebygd onLukk={() => setSkjerm(false)} />}
     </div>
   );
 }
@@ -1957,7 +1990,7 @@ function App() {
       </main>
       {idle.value && <Standby clock={clock} dateTxt={dateTxt} />}
       {quick.value > 0 && <QuickPanel />}
-      {(!!D.setup_net?.active || !!D.setup_net?.joining) && !boot.value.on && <SetupNet />}
+      {(!!D.setup_net?.active || !!D.setup_net?.joining || !!D.setup_net?.kabel) && !boot.value.on && <SetupNet />}
       {!!doorToast.value && !door.value && <DoorToast />}
       {!!door.value && <Door clock={clock} />}
       {!!D.alarm?.ringing && <AlarmRinging clock={clock} />}
