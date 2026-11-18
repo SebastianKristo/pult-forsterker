@@ -285,6 +285,25 @@ Entiteter i Home Assistant: **Temperatur**, **Luftfuktighet**, **Duggpunkt**, **
 - `temp_offset` (standard 0 °C): juster mot et kjent termometer etter en time i drift.
 - `bevegelse_av` (standard 30 s): hvor lenge «Bevegelse» står på etter siste utløsning.
 
+### Utledede sensorer
+
+Fastvaren regner ut flere verdier fra de fysiske sensorene. De vises i Home Assistant (ESPHome) og i Homey-appen:
+
+| Entitet | Regnes fra | Hva |
+|---|---|---|
+| Duggpunkt | temperatur + fukt | Temperaturen der det blir kondens |
+| Føles som | temperatur + fukt | Varmeindeks. Under ca. 27 °C er den lik temperaturen |
+| Absolutt fuktighet | temperatur + fukt | Gram vann per m³ luft. Fint til å avgjøre om lufting hjelper |
+| Komfort | temperatur + fukt | Kaldt (under 18 °C), Varmt (over 26 °C), Tørt (under 30 %), Fuktig (over 60 %) eller Behagelig |
+| Høy fuktighet | fukt | På over `fukt_hoy` (70 %), av under 65 % |
+| Lysnivå | lys | Mørkt (under 10 lux), Dempet, Lyst eller Sollys (over 1000 lux) |
+| Mørkt | lys | På under `mork_lux` (10 lux), av over 15 lux |
+| Tilstedeværelse | bevegelse | Står på i `tilstede_av` (10 min) etter siste bevegelse. Bedre enn Bevegelse til lys som skal være på mens noen er i rommet |
+| Bevegelser | bevegelse | Antall utløsninger siden oppstart. Bruk statistikken i HA for per time eller per dag |
+| Minutter siden bevegelse | bevegelse | 0 mens det er bevegelse |
+
+Grensene står øverst i ESPHome-fila under `substitutions` og kan endres når du bygger selv.
+
 ## Print (Creality K2)
 
 Velg 3MF-fila etter kortet (alle er for DHT11-modulen; for SHT40, bruk STL-ene i `stl/<kort>/sht40/`): `skjold-sensor-esp32-k2.3mf` (ESP32 DevKit), `skjold-sensor-d1mini-k2.3mf` (Wemos D1 mini)
