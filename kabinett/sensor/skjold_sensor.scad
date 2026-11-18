@@ -29,6 +29,9 @@ kort  = "esp32";      // "esp32" (ESP32-WROOM DevKit, 30 eller 38 pinner) | "d1m
 pir   = true;         // hull og holder for AM312 mini-PIR
 lux   = true;         // lysvindu og feste for BH1750 (GY-302)
 led   = true;         // 3 mm statuslys i fronten
+dhtFeste = "pinne";   // DHT11-modulen: "pinne" (trykkes på to styrepinner, låses av lokket – ingen skruer) | "skrue" (2 × M2,5)
+luxFeste = "klikk";   // GY-302: "klikk" (styrepinner + to klikkarmer i lokket – ingen skruer) | "skrue" (2 × M2,5 × 6)
+pirSenk  = 1.5;       // AM312-kuppelen senkes så mye (mm) inn i lokket; kuppelen stikker ca. 2,5 − pirSenk mm ut
 th    = "dht11mod";   // temperatur/fukt: "dht11mod" (DHT11-modul 35 × 23 mm med PH2.0, standard) | "sht40" (lite I²C-kort)
 farge = "lys";        // lys | mork (bare for bildene)
 $fn = 64;
@@ -69,7 +72,7 @@ sporB = 1.9; sporD = 1.2;     // sporene: bredde og dybde
 dhtL = 35; dhtB = 23; dhtT = 1.6;            // kortet (x × y × tykkelse)
 // dhtSnu = true snur modulen (DHT11 til høyre, PH2.0 til venstre). Brukes ikke nå, men er beholdt for andre oppsett.
 dhtSnu = false;
-dhtX0 = dhtSnu ? W/2 - t - 3.4 - 35 : -W/2 + t + 2.2;   // kortets venstre kant, klar av de runde hjørnene
+dhtX0 = dhtSnu ? W/2 - t - 3.4 - 35 : -W/2 + t + 2.6;   // kortets venstre kant, klar av de runde hjørnene
 dhtY = t + kamH/2;                           // midt på kortet
 dhtFront = Db - 1.0;                         // DHT11-gitteret, 1 mm bak lokket
 dhtH = 5.5;                                  // DHT11-hus (15,5 × 12 × 5,5 mm)
@@ -78,7 +81,7 @@ dhtHullX = 24; dhtHullA = 18.5; dhtHullD = 3.0;  // festehullene: fra venstre ka
 dhtPilot = 2.2;                              // M2,5 selvgjengende
 // D1 mini med USB bak: den høyre tappen står delvis på taket over USB-kanalen, så hullet er bare 4,4 mm dypt (M2,5 × 6)
 dhtPilotDybde = D1BAK ? 4.4 : 9;
-dhtKabU = dhtSnu ? 8.0 : 9;                  // kabelen går opp gjennom skilleveggen så langt forbi kontakten
+dhtKabU = dhtSnu ? 8.0 : 8.6;                  // kabelen går opp gjennom skilleveggen så langt forbi kontakten
 dhtKabX = dhtSnu ? dhtX0 - dhtKabU : dhtX0 + dhtL + dhtKabU;
 dhtHx = dhtSnu ? dhtX0 + dhtL - dhtHullX : dhtX0 + dhtHullX;   // festehullenes x (montert)
 dhtKabZ = [dhtZ1 - 1.5, dhtZ1 + 4.5];        // hullet i skilleveggen (z)
@@ -122,9 +125,16 @@ pluggB = D1BAK ? 12.5 : 10.5; pluggH = D1BAK ? 7.0 : 6.5; pluggL = D1BAK ? 20 : 
 kanB = D1BAK ? 13.5 : 13.0; kanZ = D1BAK ? vUsbZ + pluggH/2 + 0.5 : 12.5; kanV = 1.2;
 
 // ---------- fronten ----------
-pirX = 0;   pirHull = 12.2; pirFasD = 14.6; pirRorD = 10.5; pirRorL = 9;   // AM312: kuppel gjennom Ø12,2, kropp i Ø10,5-røret
+pirX = 0;   pirHull = 12.2; pirRorD = 10.5; pirRorL = 9;   // AM312: kuppel gjennom Ø12,2, kropp i Ø10,5-røret
+pirFasH = pirSenk + 0.8;                                    // 45° fas fra kuppelens ekvator (z = D − 0,8 − pirSenk) ut til fronten
+pirFasD = pirHull + 2*pirFasH;                              // Ø ved fronten (16,8 mm med pirSenk = 1,5)
+pirRorOD = pirRorD + 3.5;                                   // røret, med Ø12,2-sete for kuppelkanten de første pirSenk mm
 luxX = 14;  luxSpaltX = 2.5; luxSpaltY = 5; luxFasX = 8.5; luxFasY = 11;   // lysvindu som referansen
 luxBlokk = [14, 6.5, 4.2]; luxHull = 4.45; luxPilot = 2.2;                 // GY-302: hullene ±4,45 mm fra BH1750-brikka, M2,5 selvgjengende
+luxKort = [13.9, 18.5, 1.6]; luxHullD = 3.0;                                // GY-302-kortet (mål ditt) og hullene
+luxY0 = D1BAK ? cy + 3 - luxKort[1] : cy - 3;                               // kortets nedre kant (D1 mini med USB bak: snudd, henger ned)
+luxYm = luxY0 + luxKort[1]/2;                                               // midt på kortet (klikkarmene)
+styreD = 2.75;                                                              // styrepinner i Ø3-hull: 0,25 mm klaring
 ledX = -14; ledHull = 3.1; ledFlens = 4.0;                                 // 3 mm LED
 ventY = [for (i = [0 : floor((kamH - 4)/4.1)]) t + 3.4 + 4.1*i]; ventH = 1.6;                         // spalter foran sensorkammeret
 gullB = 1.2; gullT = 0.6;                                                   // gullisten foran skilleveggen
@@ -190,6 +200,11 @@ module bunn() {
       }
       // DHT11-modulen: to tapper fra bakveggen til kortets bakside
       if (DHT) for (s = [-1, 1]) translate([dhtHx, dhtY + s*dhtHullA/2, tb - 0.01]) cylinder(d = 6, h = dhtZ0 - tb + 0.01);
+      // styrepinner gjennom DHT11-kortets hull (ingen skruer); hylsene på lokket holder kortet mot tappene
+      if (DHT && dhtFeste == "pinne") for (s = [-1, 1]) translate([dhtHx, dhtY + s*dhtHullA/2, dhtZ0 - 0.01]) {
+        cylinder(d = styreD, h = dhtT + 0.4, $fn = 24);
+        translate([0, 0, dhtT + 0.4]) cylinder(d1 = styreD, d2 = styreD - 0.8, h = 0.4, $fn = 24);
+      }
       // sensorkortet (SHT40 o.l.): to stolper med spor, kortet skyves inn forfra og ligger vannrett midt i kammeret
       if (!DHT) for (s = [-1, 1]) translate([sensX + s*(sensW/2 + 0.3 - sporD + 1.5), sensY, tb - 0.01]) difference() {
         translate([-1.5, -2.5, 0]) cube([3, 5, Db - 1.5 - tb]);
@@ -222,7 +237,7 @@ module bunn() {
     if (!DHT) translate([sensX - 4, yD0 - 0.5, tb - 0.01]) cube([8, yD1 - yD0 + 1, 3.5]);
     if (DHT) translate([dhtKabX - 3, yD0 - 0.5, dhtKabZ[0]]) cube([6, yD1 - yD0 + 1, dhtKabZ[1] - dhtKabZ[0]]);
     // pilothull i DHT11-tappene
-    if (DHT) for (s = [-1, 1]) translate([dhtHx, dhtY + s*dhtHullA/2, dhtZ0 - dhtPilotDybde]) cylinder(d = dhtPilot, h = dhtPilotDybde + 1, $fn = 24);
+    if (DHT && dhtFeste == "skrue") for (s = [-1, 1]) translate([dhtHx, dhtY + s*dhtHullA/2, dhtZ0 - dhtPilotDybde]) cylinder(d = dhtPilot, h = dhtPilotDybde + 1, $fn = 24);
   }
 }
 
@@ -241,13 +256,25 @@ module lokk() {
       // tapper for skruene bakfra
       for (p = skrue) translate([p[0], p[1], tb + 0.2]) cylinder(d = tappD, h = Db - tb - 0.2 + 0.01);
       // PIR-rør (C-form, fjærer om AM312-kroppen)
-      if (pir) translate([pirX, cy, Db - pirRorL]) difference() {
-        cylinder(d = pirRorD + 3, h = pirRorL + 0.01);
-        translate([0, 0, -1]) cylinder(d = pirRorD, h = pirRorL + 2);
-        translate([0, -0.75, -1]) cube([pirRorD, 1.5, pirRorL - 1]);
+      if (pir) translate([pirX, cy, Db - pirRorL - pirSenk]) difference() {
+        cylinder(d = pirRorOD, h = pirRorL + pirSenk + 0.01);
+        translate([0, 0, -1]) cylinder(d = pirRorD, h = pirRorL + pirSenk + 2);
+        translate([0, 0, pirRorL]) cylinder(d = pirHull, h = pirSenk + 1);   // setet for kuppelkanten
+        translate([0, -0.75, -1]) cube([pirRorOD, 1.5, pirRorL]);
       }
       // lysblokk: kanal fra vinduet og to skruetapper for GY-302
       if (lux) translate([luxX - luxBlokk[0]/2, cy - luxBlokk[1]/2, Db - luxBlokk[2]]) cube([luxBlokk[0], luxBlokk[1], luxBlokk[2] + 0.01]);
+      // GY-302 uten skruer: to styrepinner fra blokka gjennom hullene og to klikkarmer som griper bak kortet
+      if (lux && luxFeste == "klikk") {
+        for (s = [-1, 1]) translate([luxX + s*luxHull, cy, Db - luxBlokk[2] - luxKort[2] - 0.6]) {
+          cylinder(d = styreD, h = luxKort[2] + 0.61, $fn = 24);
+          translate([0, 0, -0.3]) cylinder(d1 = styreD - 0.8, d2 = styreD, h = 0.31, $fn = 24);
+        }
+        for (s = [-1, 1]) translate([luxX + s*(luxKort[0]/2 + 0.15), luxYm, 0]) klikkarm(s);
+      }
+      // DHT11 uten skruer: hylser på lokket presser kortet mot tappene rundt styrepinnene
+      if (DHT && dhtFeste == "pinne") for (s = [-1, 1]) translate([dhtHx, dhtY + s*dhtHullA/2, dhtZ1 + 0.1])
+        difference() { cylinder(d = 5.6, h = Db - dhtZ1 - 0.1 + 0.01); translate([0, 0, -1]) cylinder(d = 3.4, h = 2.5, $fn = 24); }
       // LED-holder
       if (led) translate([ledX, cy, Db - 4]) cylinder(d = ledFlens + 2.4, h = 4.01);
       // pinner som holder ESP-kortet nede (bare i enden uten USB – knappene sitter ved USB)
@@ -263,7 +290,7 @@ module lokk() {
     // PIR-hull med 45° fas utover
     if (pir) {
       translate([pirX, cy, Db - 1]) cylinder(d = pirHull, h = lokkT + 2);
-      translate([pirX, cy, D - (pirFasD - pirHull)/2]) cylinder(d1 = pirHull, d2 = pirFasD + 0.02, h = (pirFasD - pirHull)/2 + 0.01);
+      translate([pirX, cy, D - pirFasH]) cylinder(d1 = pirHull, d2 = pirFasD + 0.02, h = pirFasH + 0.01);
     }
     // lysvindu: 2,5 × 5 gjennom, 45° fas ut til 8,5 × 11, kanal gjennom blokka og pilothull ±4,45 mm
     if (lux) {
@@ -272,7 +299,7 @@ module lokk() {
         linear_extrude(0.01) square([luxSpaltX, luxSpaltY], center = true);
         translate([0, 0, lokkT + 0.05]) linear_extrude(0.01) square([luxFasX + 0.1, luxFasY + 0.1], center = true);
       }
-      for (s = [-1, 1]) translate([luxX + s*luxHull, cy, Db - luxBlokk[2] - 1]) cylinder(d = luxPilot, h = luxBlokk[2], $fn = 24);
+      if (luxFeste == "skrue") for (s = [-1, 1]) translate([luxX + s*luxHull, cy, Db - luxBlokk[2] - 1]) cylinder(d = luxPilot, h = luxBlokk[2], $fn = 24);
     }
     if (led) {
       translate([ledX, cy, Db - 5]) cylinder(d = ledHull, h = lokkT + 6, $fn = 32);
@@ -282,10 +309,19 @@ module lokk() {
     // pilothull i tappene
     for (p = skrue) translate([p[0], p[1], tb]) cylinder(d = pilot, h = 14, $fn = 24);
     // luftespalter foran sensorkammeret
-    for (y = ventY) translate([0, y, Db - 3]) linear_extrude(lokkT + 4) spalte2d(W - 20, ventH);
+    for (y = ventY) translate([0, y, Db - 0.01]) linear_extrude(lokkT + 1) spalte2d(W - 20, ventH);
     // gullisten og SKJOLD
     gull(0.01);
   }
+}
+// klikkarm for GY-302 (s = −1 venstre, +1 høyre side): 1 mm tykk, 4 mm bred, fra lokket ned forbi kortets bakside,
+// med en 0,5 mm kant (flat mot kortet, 45° innføring) som griper bak kortet. Printes stående uten støtte.
+module klikkarm(s) {
+  zb = Db - luxBlokk[2] - luxKort[2];           // kortets bakside
+  translate([s < 0 ? -1.0 : 0, -2, zb - 0.1 - 0.6]) cube([1.0, 4, Db - zb + 0.7 + 0.01]);
+  // kanten: flat oppe (mot kortet), skrå nede
+  translate([0, 2, zb - 0.1]) rotate([90, 0, 0]) linear_extrude(4)
+    polygon(s < 0 ? [[0, 0], [0.5, 0], [0, -0.6]] : [[0, 0], [-0.5, 0], [0, -0.6]]);
 }
 module gull2d() {
   translate([0, ySpalt]) square([W - 2*R, gullB], center = true);
@@ -351,16 +387,28 @@ module usbplugg() {
     color("#222") translate([bX1 + 16.6, cy, usbZ]) rotate([0, 90, 0]) cylinder(d = 3.6, h = 20);
   }
 }
-module am312() {
+module am312() { translate([0, 0, -pirSenk]) {   // senket pirSenk mm; kuppelkanten (Ø12) ligger på setet i røret
   color("#f4f4f2") translate([pirX, cy, D - 0.8]) scale([1, 1, 0.55]) sphere(d = 12);
   color("#f4f4f2") translate([pirX, cy, D - 3]) cylinder(d = 12, h = 2.2);
   color("#e8e8e6") translate([pirX, cy, Db - 9]) cylinder(d = 10, h = 9 + lokkT - 3);
-  color("#555") translate([pirX - 1.5, cy - 1.5, Db - 12]) cube([3, 3, 3]);
-}
+  color("#555") translate([pirX - 1.5, cy - 1.5, Db - 11]) cube([3, 3, 2]);   // beina, bøyd til siden
+} }
 module gy302() {
   // GY-302 henger opp fra brikka; på D1 mini med USB bak snus den (henger ned), så den går klar av pinnene på lokket
-  color("#5b2d86") translate([luxX - 6.95, D1BAK ? cy + 3 - 18.5 : cy - 3, Db - luxBlokk[2] - 1.6]) cube([13.9, 18.5, 1.6]);
+  luxkort();
   color("#111") translate([luxX - 1.5, cy - 0.8, Db - luxBlokk[2] - 0.01]) cube([3, 1.6, 0.01]);
+}
+module luxkort() {   // GY-302-kortet med festehullene
+  color("#5b2d86") difference() {
+    translate([luxX - luxKort[0]/2, luxY0, Db - luxBlokk[2] - luxKort[2]]) cube(luxKort);
+    for (s = [-1, 1]) translate([luxX + s*luxHull, cy, Db - luxBlokk[2] - luxKort[2] - 1]) cylinder(d = luxHullD, h = luxKort[2] + 2, $fn = 24);
+  }
+}
+module dhtkort() {   // bare DHT11-kortet (til klaringssjekken)
+  translate([dhtX0 + dhtL/2, 0, 0]) mirror([dhtSnu ? 1 : 0, 0, 0]) translate([-dhtX0 - dhtL/2, 0, 0]) difference() {
+    translate([dhtX0, dhtY - dhtB/2, dhtZ0]) cube([dhtL, dhtB, dhtT]);
+    for (s = [-1, 1]) translate([dhtX0 + dhtHullX, dhtY + s*dhtHullA/2, dhtZ0 - 1]) cylinder(d = dhtHullD, h = 4, $fn = 24);
+  }
 }
 module sensorkort() { if (DHT) dhtmod(); else shtkort(); }
 module dhtmod() {   // DHT11-modulen med PH2.0-plugg og kabel (forenklet); snudd for D1 mini med USB bak
@@ -416,6 +464,8 @@ else if (part == "a_bunn") bunn(); else if (part == "a_lokk") lokk(); else if (p
 else if (part == "a_esp") esp(); else if (part == "a_plugg") usbplugg(); else if (part == "a_pir") am312();
 else if (part == "a_lux") gy302(); else if (part == "a_sensor") sensorkort(); else if (part == "a_led") led3();
 else if (part == "a_stativ") stativ();
+else if (part == "lokk_inni") { lokk_alt(); if (pir) am312(); if (lux) gy302(); if (led) led3(); }   // lokket sett bakfra
+else if (part == "a_dhtkort") dhtkort(); else if (part == "a_luxkort") luxkort();
 else if (part == "eksplodert") V() samlet(32);
 else if (part == "inni") V() { color(c_kropp) bunn(); esp(); usbplugg(); sensorkort(); }
 else if (part == "stativ_samlet") V() { samlet(); color(c_stativ) stativ(); }

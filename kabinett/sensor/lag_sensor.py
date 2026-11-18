@@ -55,7 +55,7 @@ for k in KORT:
     procs += [scad(f"stl/{k}/sht40/{p}.stl", p, k, ekstra=("-D", 'th="sht40"')) for p in ("bunn", "lokk", "gull", "stativ")]
     # USB-kabelen sjekkes slik den går på bordstativet (for esp32d1 bøyd bakover gjennom stativet)
     procs += [scad(f"stl_asm/{k}/{p}.stl", f"a_{p}", k, ekstra=("-D", 'kabel="stativ"') if p == "plugg" else ())
-              for p in MONTERT + ["stativ"]]
+              for p in MONTERT + ["stativ", "dhtkort", "luxkort"]]
 kjor(procs)
 
 ok = True
@@ -88,6 +88,21 @@ for k in KORT:
             if v > (0.5 if (x, y) in LOV or (y, x) in LOV else 0.02):
                 feil.append(f"{x}×{y} {v:.2f} mm³")
     meld(not feil, "ingen overlapp i montert stilling (med stativet)" + ("" if not feil else ": " + "; ".join(feil)))
+
+    # 2b. holderne uten skruer: DHT11- og GY-302-kortet sitter fritt (ingen overlapp) og kan ikke flytte seg mer enn
+    #     0,3 mm noen vei – flyttet 0,35 mm i hver av de seks retningene skal kortet treffe bunnen eller lokket
+    holder = A["bunn"].union(A["lokk"], engine="manifold")
+    for kort in ("dhtkort", "luxkort"):
+        m = trimesh.load(f"stl_asm/{k}/{kort}.stl")
+        v0 = m.intersection(holder, engine="manifold").volume
+        fri = []
+        for akse in range(3):
+            for fortegn in (-1, 1):
+                d = np.zeros(3); d[akse] = 0.35 * fortegn
+                if m.copy().apply_translation(d).intersection(holder, engine="manifold").volume < 1e-3:
+                    fri.append("−+"[fortegn > 0] + "xyz"[akse])
+        meld(v0 < 0.02 and not fri, f"{kort}: sitter uten skruer, {v0:.3f} mm³ overlapp, klaring ≤ 0,3 mm i alle retninger"
+             + ("" if not fri else " – FRITT mot " + ", ".join(fri)))
 
     # 3. overheng i utskriftsretning: flater som peker mer enn 50° nedover; flate broer opp til 13 mm er greit på K2
     for p in ("bunn", "lokk", "stativ"):
@@ -150,7 +165,8 @@ if "bilder" in sys.argv:
               ("15_d1mini_bak_skra_lys", "samlet", "110,-180,125,0,-15,32", "lys", "d1mini_bak"),
               ("16_d1mini_bak_bak_lys", "samlet", "110,160,-35,0,-15,28", "lys", "d1mini_bak"),
               ("17_d1mini_bak_inni_lys", "inni", "35,-150,140,0,-5,32", "lys", "d1mini_bak"),
-              ("18_d1mini_bak_stativ_lys", "stativ_samlet", "170,-185,110,0,-10,24", "lys", "d1mini_bak")]
+              ("18_d1mini_bak_stativ_lys", "stativ_samlet", "170,-185,110,0,-10,24", "lys", "d1mini_bak"),
+              ("19_lokk_inni_lys", "lokk_inni", "70,-40,-120,0,30,24", "lys", "d1mini")]
     procs = []
     BILDER = [b for b in BILDER if not valg or any(b[0].startswith(v) for v in valg)]
     for fil, part, cam, farge, k in BILDER:
