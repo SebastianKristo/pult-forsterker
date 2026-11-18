@@ -11,6 +11,7 @@ import { qrMatrix } from '../lib/qr';
 import { matter, matterLoad, matterRows, matterStatus } from './platform';
 import { go, setSetting, settings, showToast, everyVisible, status } from '../lib/store';
 import { Toggle } from '../components/ui';
+import { settVises, skjult } from '../lib/meny';
 import type { Settings } from '../lib/settings';
 
 const MONO = "'IBM Plex Mono',monospace";
@@ -104,23 +105,27 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
     case 'ytmusic': return { links: [['Åpne YouTube Music', 'https://music.youtube.com/']],
       rows: [{ n: 'YouTube Music', hint: 'Vises i menyen og under Kilder', el: tog('ytmEn', s.ytmEn) },
         { n: 'Innlogging', hint: s.ytmCookie ? 'Innlogget med cookie' + (s.ytmUser ? ' · ' + s.ytmUser : '') : 'Krever Premium. Logges inn med en cookie fra nettleseren, slik Music Assistant gjør.', el: btn(s.ytmCookie ? 'Endre' : 'Sett opp', () => openSetup('ytm')) },
-        { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'ytm')) }] };
+        { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'ytm')) },
+        { n: 'Vis i menyen', hint: 'Skjul YouTube Music fra sidemenyen og kildene uten å logge ut', el: <Toggle on={!skjult('ytm')} onChange={(b) => settVises('ytm', b)} /> }] };
     case 'ma': return { links: s.maUrl ? [['Åpne Music Assistant', maHttp(s.maUrl)]] : [['Om Music Assistant', 'https://music-assistant.io/']],
       rows: [{ n: 'Adresse', hint: 'For eksempel 192.168.1.5 eller homeassistant.local:8095', el: <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><input value={s.maUrl} placeholder="192.168.1.5:8095" onChange={(e) => { setSetting('maUrl', (e.currentTarget as HTMLInputElement).value.trim()); setTimeout(checkMa, 300); }} style={`height:36px;width:200px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-family:${MONO};font-size:12px;outline:none;color:#f2f2ee`} />{btn('Finn automatisk', () => void findMa())}</span> },
         { n: 'Token', hint: 'Nyere Music Assistant krever en token (Innstillinger → Brukere i MA). Lagres på Skjold.', el: <input type="password" value={s.maToken} placeholder="valgfritt" onChange={(e) => { setSetting('maToken', (e.currentTarget as HTMLInputElement).value.trim()); setTimeout(checkMa, 300); }} style={`height:36px;width:220px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-family:${MONO};font-size:12px;outline:none;color:#f2f2ee`} /> },
         { n: 'Status', hint: maSt.value?.error || (maSt.value?.ok && !maSt.value.player ? 'Fant ikke denne Skjold-en som spiller i MA. Legg til Squeezelite-, AirPlay- eller DLNA-provideren i Music Assistant.' : ''), el: <span style="display:flex;gap:6px;align-items:center">{txt(maSt.value?.ok ? 'MA ' + (maSt.value.version || '') : s.maUrl ? 'Ikke tilkoblet' : '–')}{btn('Test', checkMa)}</span> },
-        { n: 'Bibliotek', el: btn('Åpne', () => go('ma')) }] };
+        { n: 'Bibliotek', el: btn('Åpne', () => go('ma')) },
+        { n: 'Vis i menyen', hint: 'Skjul Music Assistant fra sidemenyen og kildene uten å logge ut', el: <Toggle on={!skjult('ma')} onChange={(b) => settVises('ma', b)} /> }] };
     case 'navidrome': return { links: s.ndUrl ? [['Åpne Navidrome', s.ndUrl]] : [],
       rows: [{ n: 'Navidrome', hint: 'Vises i menyen og under Kilder', el: tog('ndEn', s.ndEn) },
         { n: 'Server', el: inp('ndUrl', s.ndUrl, 'http://192.168.1.10:4533') },
         { n: 'Brukernavn', el: inp('ndUser', s.ndUser, 'brukernavn') },
         { n: 'Passord', hint: 'Settes under Innstillinger → Musikktjenester', el: btn('Åpne', () => openSetup('nd')) },
-        { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'nd')) }] };
+        { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'nd')) },
+        { n: 'Vis i menyen', hint: 'Skjul Navidrome fra sidemenyen og kildene uten å logge ut', el: <Toggle on={!skjult('nd')} onChange={(b) => settVises('nd', b)} /> }] };
     case 'subwave': return { links: [],
       rows: [...swStations.value.map((x) => ({ n: x.name, hint: x.admin ? 'Admin · kan hoppe over' : 'Stasjon ' + (x.i + 1), el: swAdm.value === x.i ? <SwAdminFelt i={x.i} /> : <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><button onClick={() => void bildeSw(x.i)} title="Velg bilde" aria-label={'Velg bilde for ' + x.name} style={`width:36px;height:36px;border-radius:8px;border:1px solid #2e2e30;background:${x.image ? `url("${x.image.replace(/"/g, '')}") center / cover no-repeat` : '#1b1b1c'};color:#8b8b86;cursor:pointer;flex-shrink:0`}>{x.image ? '' : '+'}</button>{btn('Spill', () => void api.subwavePost({ play: true, station: x.i }).then(() => go('play')).catch(() => {}))}{btn(x.admin ? 'Admin ✓' : 'Admin', () => { swAdm.value = x.i; })}{btn('Fjern', () => void fjernSw(x.i))}</span> })),
         { n: swStations.value.length ? 'Legg til en stasjon til' : 'Ingen stasjon ennå', hint: 'Du kan ha så mange stasjoner du vil. Alle vises under Bibliotek → SUB/WAVE.', el: btn('+ Legg til stasjon', () => openSetup('sw')) },
         { n: 'Navn, brukernavn og passord', hint: 'Endres under Plugins → SUB/WAVE', el: btn('Åpne', () => go('plug')) },
-        { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'sw')) }] };
+        { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'sw')) },
+        { n: 'Vis i menyen', hint: 'Skjul SUB/WAVE fra sidemenyen og kildene uten å logge ut', el: <Toggle on={!skjult('sw')} onChange={(b) => settVises('sw', b)} /> }] };
     case 'upnp': return { links: [],
       rows: [{ n: 'UPnP/DLNA-mottaker', hint: 'Lyden går via Lyrion, så rom kan grupperes som vanlig.', el: tog('upnpEn', s.upnpEn) },
         { n: 'Format', el: txt('FLAC, WAV, ALAC, MP3, AAC og OGG') },

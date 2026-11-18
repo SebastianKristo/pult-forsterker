@@ -17,6 +17,8 @@ import { DeskHome, DeskLibrary, DeskPlayer, DeskRadio } from './screens/desk';
 import { LibraryPage, libBack, libTitle, libUi } from './screens/library';
 import { ob, obBack } from './screens/onboard';
 import { CAT_ALIAS, ICONS } from './lib/settings';
+import { MENY, settVises, skjult, vises } from './lib/meny';
+import { swLibs } from './lib/subwave';
 import { Boundary } from './components/boundary';
 import { cats } from './screens/settings';
 import { Icon, PRODUCT_ICON, Slider } from './components/ui';
@@ -173,6 +175,34 @@ const RCOL_KEY = 'skjold-rcol', RAIL_KEY = 'skjold-rail';
 function readRail(): boolean { try { return localStorage.getItem(RAIL_KEY) === '1'; } catch { return false; } }
 function readRcol(): boolean { try { return localStorage.getItem(RCOL_KEY) !== '0'; } catch { return true; } }
 
+/** «Tilpass menyen»: slå av og på musikktjenester og sider i sidemenyen (lagres på Skjold, gjelder alle skjermer). */
+function TilpassMeny({ vis }: { vis: boolean }) {
+  const [åpen, setÅpen] = useState(false);
+  const har = (id: string) => id !== 'sw' || swLibs().length > 0;
+  return (
+    <div style={{ position: 'relative' }}>
+      <button class="rb" onClick={() => setÅpen(!åpen)} aria-expanded={åpen} aria-label="Tilpass menyen" title="Tilpass menyen">
+        <Icon d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M16 4v4M10 10v4M18 16v4" size={18} sw={1.7} />
+        {vis && <span class="rl">Tilpass menyen</span>}
+        {!vis && <span class="tip">Tilpass menyen</span>}
+      </button>
+      {åpen && (
+        <div role="dialog" aria-label="Tilpass menyen" style={{ position: 'fixed', left: vis ? '240px' : '76px', bottom: '96px', zIndex: 60, width: '260px', padding: '10px', borderRadius: '14px', border: '1px solid #2e2e30', background: '#141415', boxShadow: '0 18px 40px rgba(0,0,0,.5)' }}>
+          <div style={{ fontSize: '12px', color: '#8b8b86', padding: '4px 6px 8px' }}>Vis i menyen og blant kildene. Gjelder appen og nettleseren på alle enhetene.</div>
+          {MENY.filter(([id]) => har(id)).map(([id, n]) => (
+            <label key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '40px', padding: '0 6px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', color: '#f2f2ee' }}>
+              <input type="checkbox" checked={!skjult(id)} onChange={(e) => settVises(id, (e.currentTarget as HTMLInputElement).checked)} style={{ width: '18px', height: '18px', accentColor: '#d9a441' }} />
+              <span style={{ flex: 1 }}>{n}</span>
+              {!skjult(id) && !vises(id) && <span style={{ fontSize: '11px', color: '#8b8b86' }}>slått av</span>}
+            </label>
+          ))}
+          <button class="btn" onClick={() => { setÅpen(false); go('int'); }} style={{ width: '100%', marginTop: '6px' }}>Slå av og på i Integrasjoner</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** PC-skall: ikonskinne (64 px) · innhold · romkolonne som kan skjules · kontrollstripe nederst. */
 function Desktop() {
   const s = status.value, r = route.value, p = product.value;
@@ -202,13 +232,14 @@ function Desktop() {
       <aside class="rail" aria-label="Meny">
         <div class="rlogo" aria-label="Skjold Lab"><span class="bars" aria-hidden="true">{[12, 18, 23, 18, 12].map((h, i) => <i key={i} class={i === 2 ? 'g' : ''} style={{ height: h + 'px' }} />)}</span>{railx && <span class="nm">SKJOLD <b>LAB</b></span>}</div>
         <span class="rhead">{tr("LYTT")}</span>
-        {NAV.filter(([id]) => id !== 'eq').map(([id, n]) => rb(id, n, r.page === id, () => go(id)))}
-        {libs.map(([id, n]) => rb(id, n, r.page === 'lib' && r.cat === id, () => go('lib', id)))}
-        {rb('ma', 'Music Assistant', r.page === 'ma', () => go('ma'))}
-        {rb('eq', 'Equalizer', r.page === 'eq', () => go('eq'))}
+        {NAV.filter(([id]) => id !== 'eq' && vises(id)).map(([id, n]) => rb(id, n, r.page === id, () => go(id)))}
+        {libs.filter(([id]) => vises(id)).map(([id, n]) => rb(id, n, r.page === 'lib' && r.cat === id, () => go('lib', id)))}
+        {vises('ma') && rb('ma', 'Music Assistant', r.page === 'ma', () => go('ma'))}
+        {vises('eq') && rb('eq', 'Equalizer', r.page === 'eq', () => go('eq'))}
         <hr />
         <span class="rhead">{tr("OPPSETT")}</span>
         {SETUP_NAV.map(([id, n]) => rb(id, n, id === 'set' ? r.page === 'settings' : r.page === id, () => go(id === 'set' ? 'settings' : id), id === 'int' ? intCount(st0) : id === 'plug' ? plugCount() : 0))}
+        <TilpassMeny vis={railx} />
         <button class="rb rexp" onClick={toggleRail} aria-expanded={railx} aria-label={railx ? 'Skjul navn' : 'Vis navn'} title={railx ? 'Skjul navn' : 'Vis navn'}>
           <Icon d={railx ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} size={18} sw={1.8} />
           {railx && <span class="rl">Skjul navn</span>}

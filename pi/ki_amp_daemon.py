@@ -1374,7 +1374,7 @@ SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0
                 "maEn": False, "maUrl": "", "maToken": "",
                 # ESPHome-nøkkelen (api: encryption: key) for Skjold-tilbehøret (Kassett, Hjul, Hylle, Fjernkontroll …):
                 # én felles nøkkel, delt med alle Skjold-enhetene, vist i web-UI-et for secrets.yaml og Home Assistant
-                "esphomeKey": "",
+                "navSkjul": [], "esphomeKey": "",
                 # Skjold Touch-skjermen (synkes med app og web-UI)
                 "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False, "tTips": True,
                 # Skjold Touch: startside, ringeklokke (0 kamera, 1 bare varsel, 2 av), nattmodus (0 av, 1 tidsplan, 2 HA/Homey, 3 på)
@@ -1523,6 +1523,9 @@ def _norm_led_patch(patch, cur):
 import skjold_homelayout as _homelayout   # noqa: E402  (hjemskjermens rekkefølge – validering)
 
 
+NAV_SKJUL_OK = {"radio", "ytm", "nd", "sw", "ma", "eq"}
+
+
 def update_settings(patch):
     cur = state.setdefault("settings", {})
     patch = _norm_led_patch(patch, cur)
@@ -1538,6 +1541,8 @@ def update_settings(patch):
                     eq.setdefault(src, {}).update(cl)
         elif k == "homeLayout":
             cur[k] = _homelayout.clean(v)
+        elif k == "navSkjul":   # skjult i sidemenyen (appen og nettleseren): bare kjente id-er
+            cur[k] = sorted({str(x) for x in (v if isinstance(v, list) else []) if str(x) in NAV_SKJUL_OK})
         elif k == "esphomeKey":   # ESPHome krever base64 av nøyaktig 32 byte; ugyldig nøkkel lagres ikke
             import base64 as _b64
             v = str(v or "").strip()
@@ -1696,13 +1701,59 @@ def _pull_shared():
         print("Laget ny ESPHome-nøkkel for Skjold-tilbehøret (delt med de andre Skjold-enhetene)", flush=True)
 
 
+# Delte innlogginger med tidsstempel (pi/skjold_innlogging.py): nyeste innlogging vinner på alle enhetene, også de som
+# var av da du logget inn. SUB/WAVE (plugin) er med. _push_shared over sender fortsatt til eldre Skjold-enheter.
+import skjold_innlogging as _innmod   # noqa: E402
+
+
+def _delt_les(t):
+    if t in _innmod.INNSTILLINGER:
+        s = settings()
+        return {k: s.get(k) for k in _innmod.INNSTILLINGER[t][0]}
+    c = plug_cfg(t)
+    return {k: c.get(k) for k in _innmod.PLUGINS[t][0]}
+
+
+def _delt_skriv(t, data):
+    if t in _innmod.INNSTILLINGER:
+        update_settings({k: v for k, v in (data or {}).items() if k in _innmod.INNSTILLINGER[t][0]})
+        return
+    c = plug_cfg(t)
+    c.update({k: v for k, v in (data or {}).items() if k in _innmod.PLUGINS[t][0]})
+    _plug_save(t, c)
+    changed()
+
+
+deling = _innmod.Deling(os.path.join(os.path.dirname(STATE_FILE), "delt_innlogging.json"), _delt_les, _delt_skriv,
+                        lambda: _peers(), lambda: device_id(), aktiv=SHARE_SETTINGS)
+
+
+async def h_delt(r):
+    """GET /api/delt → innloggingene med tidsstempel. POST /api/delt (fra en annen Skjold) → ta imot det som er nyere."""
+    if r.method == "POST":
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        if not isinstance(b, dict):
+            return web.json_response({"error": "forventer et objekt"}, status=400)
+        nye = await asyncio.get_running_loop().run_in_executor(None, deling.ta_imot, b)
+        return web.json_response({"ok": True, "tatt_imot": nye})
+    return web.json_response(deling.alle())
+
+
 async def h_settings_post(r):
     body = await r.json()
     if not isinstance(body, dict): return web.json_response({"error": "forventer et objekt med nøkler"}, status=400)
+    fra_annen = bool(r.headers.get("X-Skjold-Peer"))   # ikke send videre det som kom fra en annen enhet
+    før = {} if fra_annen else {t: _delt_les(t) for t in _innmod.tjenester_for(body)}
     update_settings(body)
+    endret = {t for t, v in før.items() if _delt_les(t) != v}   # logget inn, ut eller endret her
     shared = {k: body[k] for k in SHARED_SETTINGS if k in body}
-    if shared and SHARE_SETTINGS and not r.headers.get("X-Skjold-Peer"):   # ikke send videre det som kom fra en annen enhet
+    if shared and SHARE_SETTINGS and not fra_annen:
         threading.Thread(target=_push_shared, args=(shared,), daemon=True).start()
+    if endret:
+        deling.endret(endret)
     return await h_settings_get(r)
 
 
@@ -7242,7 +7293,14 @@ async def h_plugin_post(r):
     except Exception:
         b = {}
     try:
-        return web.json_response(plugin_update(r.match_info["pid"], b if isinstance(b, dict) else {}))
+        pid = r.match_info["pid"]
+        delt = pid in _innmod.PLUGINS and not r.headers.get("X-Skjold-Peer") and isinstance(b, dict) \
+            and any(k in b for k in _innmod.PLUGINS[pid][0])
+        før = _delt_les(pid) if delt else None
+        out = plugin_update(pid, b if isinstance(b, dict) else {})
+        if delt and _delt_les(pid) != før:   # SUB/WAVE satt opp eller endret her: del med de andre Skjold-enhetene
+            deling.endret([pid])
+        return web.json_response(out)
     except KeyError:
         return web.json_response({"error": "ukjent plugin"}, status=404)
     except (ValueError, TypeError) as e:
@@ -10233,7 +10291,7 @@ def main():
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
                     web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/headphones", h_headphones), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
-                    web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post),
+                    web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post), web.get("/api/delt", h_delt), web.post("/api/delt", h_delt),
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
                     web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test),
                     web.get("/api/sky", h_sky_get), web.get("/api/rom", h_rom), web.post("/api/sky", h_sky_post)])
@@ -10260,10 +10318,11 @@ def main():
         app.add_routes(_ytmmod.routes(ytm, {"stream_base": lambda: f"http://{_local_ip()}:{PORT}", "play": ytm_play_queue}))
         # hent YouTube Music-forsiden i bakgrunnen etter oppstart, så Bibliotek er klart når noen åpner det
         threading.Timer(20, lambda: ytm.signed_in() and not ytm.missing() and ytm.refresh_home_bg()).start()
-        if SHARE_SETTINGS:
-            threading.Thread(target=lambda: _safe(_pull_shared), daemon=True).start()
     except Exception as e:
         print("YouTube Music ikke tilgjengelig:", e, flush=True)
+    if SHARE_SETTINGS:   # innlogginger delt med de andre Skjold-enhetene i hjemmet
+        threading.Thread(target=lambda: _safe(_pull_shared), daemon=True).start()
+        threading.Thread(target=deling.lokke, daemon=True, name="delte-innlogginger").start()
     # Smart radio, Oppdag-liste, hjem-ekstra, plugin-butikk og helsesjekk (egne moduler, minimale kroker her)
     _hx_ctx = {"settings": settings, "subsonic": _nd, "play_url": play_url, "lyr_info": lambda: lyr.info, "lyr_cmd": lyr.cmd,
                "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp", "history": lambda: list(_hist_load()),
