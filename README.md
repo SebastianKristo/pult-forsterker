@@ -29,6 +29,8 @@ dukker opp i samme app. Spill det samme i hele huset, eller noe forskjellig i hv
 | **[Skjold Stav](https://skjold-lab.com/stav/)** | Fjernkontroll med 2,8″ berøringsskjerm, IR og ladedokk. | ESP32 (ESPHome) |
 | **[Skjold Core](https://skjold-lab.com/core/)** | Bare programvaren, på en Raspberry Pi du allerede har. | Raspberry Pi 4 eller 3B |
 | **Kassett, Hjul, Radio, Sans** | NFC-kassettspiller, dreieknapp-fjernkontroll, kjøkkenradio og romsensor. | ESP32 / Raspberry Pi |
+| **Skjold Sensor** | Romsensor i printbar boks: temperatur, luftfuktighet, lys og bevegelse ([kabinett/sensor](kabinett/sensor/LES_MEG.md)). | ESP32 eller D1 mini (ESPHome) |
+| **Skjold IR** | IR-sender på Wi-Fi for stereoskapet eller bak TV-en, og IR i Stav-dokka ([kabinett/ir](kabinett/ir/LES_MEG.md)). | ESP32-C3 eller D1 mini (ESPHome) |
 
 ## Dette kan den
 

@@ -126,10 +126,12 @@ async function runWriterWithProgress(image: string, device: string): Promise<voi
   }
 }
 
-// ---------- ESP-tilbehør (Skjold Røst og kassettspilleren Spole): nettleserflasheren i et eget vindu med Web Serial ----------
+// ---------- ESP-tilbehør (Skjold Røst, kassettspilleren Spole, Skjold Sensor og Skjold IR/Dokk): nettleserflasheren i et eget vindu med Web Serial ----------
 const ESP_SIDER: Record<string, { url: string; tittel: string }> = {
   rost: { url: 'https://skjold-lab.com/flasher/rost/', tittel: 'Skjold Røst – fastvare' },
   kassett: { url: 'https://skjold-lab.com/flasher/kassett/', tittel: 'Skjold Spole (kassettspiller) – fastvare' },
+  sensor: { url: 'https://skjold-lab.com/flasher/sensor/', tittel: 'Skjold Sensor – fastvare' },
+  ir: { url: 'https://skjold-lab.com/flasher/ir/', tittel: 'Skjold IR og Skjold Dokk – fastvare' },
 };
 // Kjente USB-brikker på ESP-kort: Espressif (innebygd USB), CH340/CH9102, CP210x og FTDI
 const ESP_VID = new Set(['303a', '1a86', '10c4', '0403']);

@@ -107,3 +107,18 @@ test('paring: tilbehør hentes fra Skjold-verter Homey kjenner', async () => {
   const list = await drv.onPairListDevices();
   assert.equal(list.length, 1); assert.equal(list[0].name, 'Skjold Røst bad'); assert.equal(list[0].data.acc, 'aa:bb');
 });
+
+test('Sensor: hendelsesstrømmen fra ESPHome setter temperatur, fukt, lys og bevegelse', () => {
+  const SensorDevice = require('../drivers/sensor/device');
+  const sett = {};
+  const d = Object.create(SensorDevice.prototype);
+  d.hasCapability = () => true; d.getCapabilityValue = (c) => sett[c]; d.setCapabilityValue = async (c, v) => { sett[c] = v; }; d.error = () => {};
+  const rest = SensorDevice.parseSse(
+    'event: state\ndata: {"id":"sensor-temperatur","name":"Temperatur","value":21.4,"state":"21.4 °C"}\n\n'
+    + 'event: state\ndata: {"id":"sensor-luftfuktighet","name":"Luftfuktighet","value":43}\n\n'
+    + 'event: ping\ndata: {}\n\n'
+    + 'event: state\ndata: {"id":"binary_sensor-bevegelse","name":"Bevegelse","value":true,"state":"ON"}\n\n'
+    + 'event: state\ndata: {"id":"sensor-lys","name":"Lys","val', (ev, data) => d.onEvent(ev, data));
+  assert.deepEqual(sett, { measure_temperature: 21.4, measure_humidity: 43, alarm_motion: true });
+  assert.ok(rest.startsWith('event: state'));   // halv melding venter på resten
+});

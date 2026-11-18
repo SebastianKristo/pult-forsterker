@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.22.0",
+  "version": "2.23.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -810,6 +810,45 @@
           "INTERNAL"
         ]
       }
+    },
+    {
+      "id": "sensor",
+      "name": {
+        "en": "Skjold Sensor",
+        "no": "Skjold Sensor"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "measure_temperature",
+        "measure_humidity",
+        "measure_luminance",
+        "alarm_motion"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "discovery": "skjoldsensor",
+      "images": {
+        "small": "/drivers/sensor/assets/images/small.png",
+        "large": "/drivers/sensor/assets/images/large.png",
+        "xlarge": "/drivers/sensor/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
     }
   ],
   "discovery": {
@@ -827,6 +866,25 @@
             "match": {
               "type": "string",
               "value": "pultforsterker"
+            }
+          }
+        ]
+      ]
+    },
+    "skjoldsensor": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "esphomelib",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.mac}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.project_name",
+            "match": {
+              "type": "string",
+              "value": "skjold.sensor"
             }
           }
         ]
