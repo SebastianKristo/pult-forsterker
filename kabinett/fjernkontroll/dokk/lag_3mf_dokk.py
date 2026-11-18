@@ -27,6 +27,20 @@ lag_3mf.write(os.path.join(HER, "skjold-dokk-k2-sokkel-delt.3mf"), "Skjold Dokk 
     ("sokkel_topp", "Sokkel, toppdel (mørk, åpen under)", 2, (12, 20), None),
     ("gull", "Gullstripe (felt inn i sokkelen)", 3, None, "sokkel_topp"),
     ("sokkel_bunn", "Bunnplate (mørk)", 2, (110, 20), None)], {2: "#2E2D2C", 3: "#D99E40"})
+# IR-dokka: delt sokkel med lommer for ESP32-C3 SuperMini, IR-lysdiodene og VS1838B (toppdelen fra stl_ir/, gullstripa
+# og bunnplata er de vanlige). Tredje lysdiode bak (standard) eller på høyre side. Og en hel plate med vugga.
+lag_3mf.STL = HER
+for navn, topp, tekst in (("skjold-dokk-k2-sokkel-delt-ir.3mf", "stl_ir/sokkel_topp", "tredje lysdiode bak"),
+                          ("skjold-dokk-k2-sokkel-delt-ir-side.3mf", "stl_ir/sokkel_topp_side", "tredje lysdiode på høyre side")):
+    lag_3mf.write(os.path.join(HER, navn), f"Skjold Dokk med IR – delt sokkel ({tekst}): toppdel og bunnplate", [
+        (topp, "Sokkel med IR, toppdel (mørk, åpen under)", 2, (12, 20), None),
+        ("stl/gull", "Gullstripe (felt inn i sokkelen)", 3, None, topp),
+        ("stl/sokkel_bunn", "Bunnplate (mørk)", 2, (110, 20), None)], {2: "#2E2D2C", 3: "#D99E40"})
+lag_3mf.write(os.path.join(HER, "skjold-dokk-k2-ir.3mf"), "Skjold Dokk med IR – vugge, delt sokkel og bunnplate", [
+    ("stl/vugge", "Vugge (Bone White)", 1, (12, 20), None),
+    ("stl_ir/sokkel_topp", "Sokkel med IR, toppdel (mørk, åpen under)", 2, (95, 20), None),
+    ("stl/gull", "Gullstripe (felt inn i sokkelen)", 3, None, "stl_ir/sokkel_topp"),
+    ("stl/sokkel_bunn", "Bunnplate (mørk)", 2, (95, 130), None)], {1: "#CEC6B4", 2: "#2E2D2C", 3: "#D99E40"})
 # flat dokk (fjernkontrollen ligger flatt, f.eks. foran TV-en). Med magnetisk lading: brett med pogo-kontakt og
 # USB-C-brikke, gullstripe (samme modell) og bunnplate som skrus fast. Uten: bare brettet, lading med kabel i halen.
 lag_3mf.STL = os.path.join(HER, "stl_flat")

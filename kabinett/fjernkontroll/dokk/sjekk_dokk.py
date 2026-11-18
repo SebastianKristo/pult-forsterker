@@ -9,6 +9,7 @@
      eget tyngdepunkt ligger bak hylla, så den lener seg mot ryggen
   5. kan printes uten støtte: ingen nedovervendte flater brattere enn 45° på vugga og sokkelen (utenom bunnen og
      små broer over hull)
+  6. IR-dokka (stl_ir/): tett toppdel, C3, lysdiodene og mottakeren får plass, fri sikt for lysdiodene, ingen støtte
 
 Bruk:  python3 dokk/sjekk_dokk.py"""
 import os
@@ -155,6 +156,49 @@ for p in ("vugge", "sokkel"):
             spenn = max(spenn, 2 * lo)
     melding(m.area_faces[skraa].sum() < 30 and spenn <= 32,
             f"{p}: {m.area_faces[skraa].sum():.0f} mm² skrått overheng (krav < 30), lengste bro {spenn:.0f} mm (krav ≤ 32)")
+
+# 6. IR-dokka (stl_ir/ og asm/ir_deler*.stl fra lag_dokk.sh): tette deler, de kjøpte delene får plass, fri sikt for
+#    lysdiodene (kjegle ±17° som TSAL6200) og print uten støtte (toppdelen står på delingsflaten i z = 2)
+IR = os.path.join(HER, "stl_ir")
+if os.path.isdir(IR):
+    bunn = trimesh.load(os.path.join(STL, "sokkel_bunn.stl"))
+    vinkel, spre, irX, irz, inne = (tall(SC, n) for n in ("ir_vinkel", "ir_spre", "ir_X", "ir_z", "ir_inne"))
+    SY0, SY1, SB = tall(SC, "SY0"), tall(SC, "SY1"), tall(SC, "SB")
+    bakX, sideY = tall(SC, "ir_bak_X"), tall(SC, "ir_side_Y")
+    for navn, tredje in (("sokkel_topp", ("bak", [bakX, SY1, irz], 180)), ("sokkel_topp_side", ("side", [SB / 2, sideY, irz], 90))):
+        m = trimesh.load(os.path.join(IR, f"{navn}.stl"))
+        biter = [b for b in m.split(only_watertight=False) if abs(b.volume) >= 0.01]
+        melding(m.is_watertight and len(biter) == 1, f"IR ({tredje[0]}): {navn} er tett og ett legeme")
+        deler = trimesh.load(os.path.join(HER, "asm", "ir_deler" + ("_side" if tredje[0] == "side" else "") + ".stl"))
+        feil = []
+        for d in deler.split(only_watertight=False):
+            if d.volume < 0.05:
+                continue
+            v = max(overlapp(d, m), overlapp(d, bunn))
+            grense = 1.0 if (d.bounds[0][1] > 50 and abs(d.centroid[0]) < 8) else 0.05   # USB-C-kontakten stikker inn i åpningen
+            if v > grense:
+                feil.append(f"del ved {np.round(d.centroid, 1)}: {v:.2f} mm³")
+        melding(not feil, f"IR ({tredje[0]}): C3, lysdiodene, VS1838B og USB-C-brikken får plass" + ("" if not feil else ": " + "; ".join(feil)))
+        # fri sikt: stråler fra kuppelen i en kjegle på ±17° rundt aksen skal ikke treffe sokkelen eller vugga
+        hinder = trimesh.util.concatenate([m, D["vugge"]])
+        treff, n = 0, 0
+        for p0, yaw in ([[-irX, SY0, irz], -spre], [[irX, SY0, irz], spre], tredje[1:]):
+            y, v = np.radians(yaw), np.radians(vinkel)
+            akse = np.array([np.sin(y) * np.cos(v), -np.cos(y) * np.cos(v), np.sin(v)])
+            u = np.cross(akse, [0, 0, 1]); u /= np.linalg.norm(u); w = np.cross(akse, u)
+            start = np.array(p0, float) + akse * 0.4   # like foran ytterflaten (kuppelen ligger 0,3 mm inne)
+            for a in np.radians([0, 6, 12, 17]):
+                for b in np.radians(np.arange(0, 360, 30)):
+                    r = np.cos(a) * akse + np.sin(a) * (np.cos(b) * u + np.sin(b) * w)
+                    n += 1
+                    treff += len(hinder.ray.intersects_location([start], [r])[0]) > 0
+        melding(treff == 0, f"IR ({tredje[0]}): fri sikt fra alle tre lysdiodene (±17°): {treff} av {n} stråler treffer dokka")
+        z0 = m.bounds[0][2]
+        nz = m.face_normals[:, 2]
+        hoy = m.triangles_center[:, 2] > z0 + 0.3
+        skraa = (nz < -np.cos(np.radians(45))) & (nz > -0.996) & hoy
+        melding(m.area_faces[skraa].sum() < 30, f"IR ({tredje[0]}): {navn} har {m.area_faces[skraa].sum():.0f} mm² skrått overheng (krav < 30); "
+                "takene over lommene er flate broer ≤ 19 mm")
 
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)

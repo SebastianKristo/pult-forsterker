@@ -5,6 +5,13 @@ cd "$(dirname "$0")"
 mkdir -p stl asm render
 for p in vugge sokkel gull lokk led_propp sokkel_topp sokkel_bunn; do openscad -q -D "part=\"$p\"" -o "stl/$p.stl" skjold_dokk.scad & done
 openscad -q -D 'part="pogo_han"' -o asm/pogo_han.stl skjold_dokk.scad &
+# IR-dokka (delt sokkel med ESP32-C3, IR-lysdioder og VS1838B): toppdelen med tredje lysdiode bak eller på siden, og
+# de kjøpte delene i montert stilling til sjekken. Bunnplata og gullstripa er de samme som i stl/.
+mkdir -p stl_ir
+openscad -q -D 'part="sokkel_topp"' -D ir=true -o stl_ir/sokkel_topp.stl skjold_dokk.scad &
+openscad -q -D 'part="sokkel_topp"' -D ir=true -D 'ir_tredje="side"' -o stl_ir/sokkel_topp_side.stl skjold_dokk.scad &
+openscad -q -D 'part="ir_deler"' -D ir=true -o asm/ir_deler.stl skjold_dokk.scad &
+openscad -q -D 'part="ir_deler"' -D ir=true -D 'ir_tredje="side"' -o asm/ir_deler_side.stl skjold_dokk.scad &
 wait
 python3 sjekk_dokk.py || exit 1
 python3 lag_3mf_dokk.py
@@ -25,6 +32,13 @@ f() {   # navn kamera farge [variant]
 r 01_dokk_bone samlet 0,22,40,62,0,30,300 bone
 r 02_dokk_mork samlet 0,22,40,62,0,30,300 mork
 r 03_dokk_bak samlet 0,22,30,62,0,145,300 bone
+# IR-dokka: forfra (lysdiodene og mottakervinduet), inni (sokkelen kuttet i z = 4,6 med C3, lysdiodene og
+# USB-C-brikken på plass) og bakfra (tredje lysdiode og lyslederen)
+ir() { openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera="$3" -D "part=\"$2\"" -D ir=true \
+         -D "farge=\"$4\"" -o "render/$1.png" skjold_dokk.scad & }
+ir 16_ir_foran samlet 0,5,22,76,0,22,250 bone
+ir 17_ir_inni ir_inni 0,22,0,42,0,20,215 mork
+ir 18_ir_bak samlet 0,40,25,70,0,155,330 bone
 f 00_hero 0,45,108,68,0,30,650 bone
 f 04_med_fjernkontroll_bone 0,45,105,64,0,35,660 bone
 f 05_med_fjernkontroll_mork 0,45,105,64,0,35,660 mork

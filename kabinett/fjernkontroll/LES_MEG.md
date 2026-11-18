@@ -657,6 +657,55 @@ Har du printet sokkelen, trenger du bare vugga:
 
 **Mål:** sokkel 80 × 100 × 12 mm, vugge 62 mm bred og 92 mm høy over bordet, vinkel **65°**. Dokka passer både standard og full variant og alle tre tasteoppsettene (sjekket): bare halen og baksiden berører den, og leppa foran er 4 mm, så SKJOLD-logoen synes.
 
+### IR i dokka
+
+![IR-dokka forfra](dokk/render/16_ir_foran.png)
+
+Dokka kan få sin egen IR-sender i sokkelen: et ESP32-C3 SuperMini og tre IR-lysdioder. Skjold Stav sender IR-kommandoen over Wi-Fi til dokka, og dokka sender den til TV-en og TV-boksen. Da virker tastene selv om fjernkontrollen ikke peker mot TV-en. Det er den samme senderen som [Skjold IR](../ir/LES_MEG.md), bygget inn. **Status: ikke bygget eller testet.**
+
+Bilder: [forfra](dokk/render/16_ir_foran.png) · [inni (sokkelen kuttet, med delene)](dokk/render/17_ir_inni.png) · [bakfra](dokk/render/18_ir_bak.png).
+
+- **To lysdioder foran**, ±13 mm fra midten, vippet 12° opp mot TV-veggen og 8° utover. Kuppelen ligger 0,3 mm inne i et gjennomgående hull med fas, og flensen hviler mot et trinn innvendig.
+- **En tredje lysdiode bak** (til en boks bak TV-en) eller **på høyre side** (`ir_tredje = "side"`, til en boks i hylla ved siden av).
+- **VS1838B-vindu** midt foran (valgfritt), for å lære koder rett på dokka.
+- **C3 SuperMini** ligger flatt i en lomme bak til venstre, ved siden av USB-C-brikken, og får 5 V fra den. Den blå lysdioden på kortet (GPIO8) synes gjennom en lysleder i toppen: en bit klar filament (1,75 mm) i hullet bak til venstre. Flytt `c3_lys` om lysdioden sitter et annet sted på ditt kort.
+- **Bare med delt sokkel:** delene legges inn nedenfra. Vektlomma blir mindre (ca. 45 g i stedet for 70 g), fordi kammeret til lysdiodene står foran den. Dokka står fortsatt godt: tyngdepunktet ligger langt innenfor sokkelen.
+
+**Filer:**
+- `dokk/skjold-dokk-k2-ir.3mf`: vugga, IR-sokkelen (toppdel med gullstripe) og bunnplata. Tredje lysdiode bak.
+- `dokk/skjold-dokk-k2-sokkel-delt-ir.3mf`: bare IR-sokkelen og bunnplata (har du vugga). Tredje lysdiode bak.
+- `dokk/skjold-dokk-k2-sokkel-delt-ir-side.3mf`: det samme med tredje lysdiode på høyre side.
+- Hullkort-vugga (`skjold-dokk-hullkort-k2-vugge.3mf`) passer på IR-sokkelen.
+- Kilden er `dokk/skjold_dokk.scad` med `ir = true`. `dokk/lag_dokk.sh` lager STL-ene i `dokk/stl_ir/`, og `dokk/sjekk_dokk.py` sjekker at delene får plass, at lysdiodene ser fritt ut (±17°) og at toppdelen printes uten støtte.
+
+**Ekstra deler** (i tillegg til delene til dokka):
+
+| Del | Søkeord | Antall | Ca. pris |
+|---|---|---|---|
+| ESP32-C3 SuperMini | «ESP32-C3 SuperMini» | 1 | 25 kr |
+| IR-lysdiode 5 mm, 940 nm (TSAL6200 eller vanlig) | «940nm IR LED 5mm» | 3 | 10 kr (pose) |
+| AO3400 (eller S8050 / 2N2222) | «AO3400 SOT-23» | 1 | 10 kr (pose) |
+| Motstander 33 Ω (1 per lysdiode), 1 kΩ og 10 kΩ | | 3 + 1 + 1 | – |
+| VS1838B (valgfri) | «VS1838B» | 1 | 10 kr (pose) |
+| Klar filament, 1,75 mm (lysleder), ca. 12 mm | | 1 | – |
+
+**Kobling:**
+
+| Fra | Til |
+|---|---|
+| USB-C-brikke VBUS | C3 5V, lysdiodenes 33 Ω-motstander (og pogo + som før) |
+| USB-C-brikke GND | C3 GND, AO3400 source (og pogo − som før) |
+| C3 GPIO4 → 1 kΩ | AO3400 gate (10 kΩ fra gate til GND) |
+| 5V → 33 Ω → lysdiode (anode, langt bein) → katode | AO3400 drain, én motstand per lysdiode |
+| C3 3V3 / GND | VS1838B VCC / GND (ikke 5 V: utgangen går rett i en GPIO) |
+| VS1838B OUT | C3 GPIO3 |
+
+Driveren (AO3400 og motstandene på en liten bit hullkort) står i kammeret bak de fremre lysdiodene. Ledningene går i kanalen langs venstre side til C3-lomma, og fra C3 gjennom et spor til USB-C-brikken. Lysdioden bak kobles gjennom sporet mellom USB-lomma og lomma bak.
+
+**Montering:** last inn fastvaren på C3-en før den legges inn (siden over Wi-Fi). Skyv lysdiodene inn i hullene innenfra til flensen ligger an, legg VS1838B i lomma foran med kuppelen i vinduet, og lim C3-en i lomma med USB-C-en bakover. Fyll vektlomma og skru på bunnplata.
+
+**Fastvare:** `esphome/skjold-dokk.yaml` (Skjold IR med `ir_navn: dokk`). Velg «Dokken» som IR-mål på Staven.
+
 ### Flat dokk (foran TV-en)
 
 ![Flat dokk med fjernkontrollen](dokk/render/13_flat_med_fjernkontroll.png)
