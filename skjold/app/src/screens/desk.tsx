@@ -9,6 +9,7 @@ import { localOn, localVol, setLocalVol } from '../lib/localplay';
 import { api, PRODUCT_LABEL, type Fav, type InputId, type Station } from '../lib/api';
 import { act, deviceName, eqActiveSource, go, inputLabel, recent, setVolume, settings, status } from '../lib/store';
 import { art, EQ } from '../lib/settings';
+import { vises } from '../lib/meny';
 import { Icon, PRODUCT_ICON, Slider, SrcCircle } from '../components/ui';
 import { browseState, currentStation, favOf, favs, favsLoaded, loadBrowse, loadFavs, norm, playFav, playStation, search, searchBusy, searchRes, shelves, toggleFav } from '../lib/radio';
 import { ndAlbumList, ndArtist, ndConf, ndConfigured, ndCover, ndPlaylists, ndSearch, ndSearchAll, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
@@ -144,7 +145,7 @@ export function DeskHome() {
           <SecHead title="Dine tjenester" more="Rediger" onMore={() => go('settings', 'hjemskjerm')} />
           <div class="dkx-srcs">
             {services.map(([id, label]) => <button key={id} class={'svc' + (s?.input === id ? ' on' : '')} onClick={() => pickSrc(id)}><SrcCircle label={label} size={84} /><span>{id === 'aux' || id === 'aux2' ? inputLabel(id) : label}</span></button>)}
-            {(['ytm', 'nd'] as LibId[]).map((id) => <button key={id} class="svc" onClick={() => go('lib', id)}><SrcCircle label={LIB_NAME[id]} size={84} /><span>{LIB_NAME[id]}</span></button>)}
+            {(['ytm', 'nd'] as LibId[]).filter((id) => vises(id)).map((id) => <button key={id} class="svc" onClick={() => go('lib', id)}><SrcCircle label={LIB_NAME[id]} size={84} /><span>{LIB_NAME[id]}</span></button>)}
           </div>
         </section>
     )

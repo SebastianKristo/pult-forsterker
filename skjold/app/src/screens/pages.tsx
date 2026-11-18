@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, PRODUCT_HW, PRODUCT_LABEL, type InputId } from '../lib/api';
 import { act, deviceName, eqActiveSource, go, inputLabel, online, openFull, product, recent, setEqProfile, setSetting, settings, status } from '../lib/store';
 import { art, EQ, EQ_DESC, EQ_HZ, EQ_NAMES, fmt, type EqSource } from '../lib/settings';
+import { vises } from '../lib/meny';
 import { Chip, PRODUCT_ICON, Slider, SrcCircle, Toggle } from '../components/ui';
 import { favs, favsLoaded, loadFavs, playFav } from '../lib/radio';
 import { ndConfigured } from '../lib/navidrome';
@@ -51,7 +52,7 @@ function HomeBody({ wide = false }: { wide?: boolean }) {
   const inputs = s?.inputs?.length ? s.inputs : ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
   const services = SRC_ORDER.filter(([id]) => inputs.includes(id));
   const st0 = settings.value;
-  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : []), ...swLibs()];
+  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : []), ...swLibs()].filter(([id]) => vises(id));
   const pickSrc = (id: InputId) => {
     if (id === 'radio') { go('radio'); return; }
     void act(() => api.input(id), { input: id }); openFull();
@@ -125,7 +126,7 @@ function HomeWide() {
   const inputs = s?.inputs?.length ? s.inputs : ['airplay', 'bt', 'spotify', 'radio', 'aux', 'aux2', 'usb'];
   const services = SRC_ORDER.filter(([id]) => inputs.includes(id));
   const st0 = settings.value;
-  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : []), ...swLibs()];
+  const libs: [string, string][] = [...(st0.ytmEn ? [['ytm', 'YouTube Music'] as [string, string]] : []), ...(st0.ndEn || ndConfigured() ? [['nd', 'Navidrome'] as [string, string]] : []), ...swLibs()].filter(([id]) => vises(id));
   const pickSrc = (id: InputId) => { if (id === 'radio') { go('radio'); return; } void act(() => api.input(id), { input: id }); openFull(); };
   const eqSrc = eqActiveSource.value, eq = st0.eq[eqSrc]?.eq ?? [0, 0, 0, 0, 0];
   const live = s?.input === 'radio' && !s.source_label && s.playing;

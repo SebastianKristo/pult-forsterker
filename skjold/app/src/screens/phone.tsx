@@ -11,6 +11,7 @@ import { knownDevices, remember } from '../lib/discover';
 import { aktivEnhet, enheter, relayBase, stedId, velgEnhet, visSted, type Enhet } from '../lib/hjem';
 import { RolleMerker, StedPicker } from './hjem';
 import { art } from '../lib/settings';
+import { vises } from '../lib/meny';
 import { PRODUCT_ICON, SrcCircle, Slider } from '../components/ui';
 import { favs, favsLoaded, loadFavs, playFav } from '../lib/radio';
 import { groups, groupAll, groupCount, groupNone, inGroup, ROLES, setMode, setRole, toggleMember } from '../lib/groups';
@@ -86,15 +87,15 @@ export function HomePhone() {
   const pick = (id: InputId) => { void act(() => api.input(id), { input: id }); openFull(); };
   const lyrion = () => { const h = (getBase() || location.origin).replace(/:\d+$/, ''); window.open(h + ':9000/', '_blank'); };
   const services: Svc[] = [
-    ['Radio', () => go('radio')],
+    ...(vises('radio') ? [['Radio', () => go('radio')] as Svc] : []),
     ...(inputs.includes('airplay') ? [['AirPlay', () => pick('airplay')] as Svc] : []),
     ...(inputs.includes('bt') ? [['Blåtann', () => pick('bt')] as Svc] : []),
     ['Spotify', () => (inputs.includes('spotify') ? pick('spotify') : go('settings', 'tjenester'))],
     ...(inputs.includes('plex') ? [['Plex', () => pick('plex')] as Svc] : []),
     ['UPnP/DLNA', () => go('settings', 'tjenester')],
-    ['YT Music', () => go('lib', 'ytm')],
-    ['Navidrome', () => go('lib', 'nd')],
-    ...swLibs().map(([id, n]) => [n, () => go('lib', id)] as Svc),
+    ...(vises('ytm') ? [['YT Music', () => go('lib', 'ytm')] as Svc] : []),
+    ...(vises('nd') ? [['Navidrome', () => go('lib', 'nd')] as Svc] : []),
+    ...swLibs().filter(([id]) => vises(id)).map(([id, n]) => [n, () => go('lib', id)] as Svc),
     ['Lyrion', lyrion],
     ...(inputs.includes('aux') ? [['AUX', () => pick('aux')] as Svc] : []),
     ...(inputs.includes('usb') ? [['USB', () => pick('usb')] as Svc] : [])
