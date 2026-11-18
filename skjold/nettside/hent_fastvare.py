@@ -12,7 +12,8 @@ import urllib.request
 HER = os.path.dirname(os.path.abspath(__file__))
 # (mappe under flasher/, manifest-asset, filnavn på nettsiden)
 PRODUKTER = [("rost", "skjold-rost-manifest.json", "manifest.json"), ("kassett", "skjold-kassett-manifest.json", "manifest.json"),
-             ("sensor", "skjold-sensor-manifest.json", "manifest.json"), ("ir", "skjold-ir-manifest.json", "manifest.json"),
+             ("sensor", "skjold-sensor-manifest.json", "manifest.json"), ("bryter", "skjold-bryter-manifest.json", "manifest.json"),
+             ("ir", "skjold-ir-manifest.json", "manifest.json"),
              ("ir", "skjold-dokk-manifest.json", "dokk-manifest.json")]
 
 

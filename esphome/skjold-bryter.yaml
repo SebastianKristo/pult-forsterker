@@ -1,0 +1,163 @@
+# Skjold Bryter – boks under pulten med fem vippebrytere (KN3C-101 o.l., SPST av/på). ESP32 D1 mini (MH-ET LIVE
+# MiniKit o.l.). Hver bryter blir en egen bryter-sensor i Home Assistant («Bryter 1» … «Bryter 5») og en hendelse
+# («Vippet»: 1_pa, 1_av …) som automasjoner kan bruke. Wemos D1 mini (ESP8266)-utgaven: skjold-bryter-d1mini.yaml.
+# Kabinett og kobling: kabinett/bryter/LES_MEG.md. Flash første gang fra skjold-lab.com/flasher/bryter/ eller
+# https://web.esphome.io (USB, Wi-Fi settes med Improv), deretter OTA.
+#
+# Kobling (pinnene har samme D-navn som på Wemos D1 mini, silketrykket på den indre raden):
+#   Bryter 1 → D1 (IO22)   Bryter 2 → D2 (IO21)   Bryter 3 → D5 (IO18)   Bryter 4 → D6 (IO19)   Bryter 5 → D7 (IO23)
+#   Den andre pinnen på alle bryterne → GND (én felles ledning, ringet fra bryter til bryter)
+#   Ingen motstander: GPIO-ene har intern pull-up.
+substitutions:
+  name: skjold-bryter
+  friendly_name: Skjold Bryter
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  project:
+    name: skjold.bryter
+    version: "1.0.0"
+
+esp32:
+  board: esp32dev
+  framework: { type: esp-idf }
+
+logger:
+  level: INFO
+api:
+  encryption:
+    key: !secret skjold_bryter_api_key
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: { ssid: "Skjold Bryter" }
+captive_portal:
+improv_serial:
+# REST og hendelser på port 80 (nettsiden til boksen, og appene som leser den)
+web_server:
+  port: 80
+  version: 3
+
+# Lampen på kortet blinker når boksen mangler Wi-Fi. «Status-LED» av = alltid av.
+output:
+  - platform: gpio
+    id: led_ut
+    pin: { number: GPIO2, ignore_strapping_warning: true }
+
+switch:
+  - platform: template
+    name: Status-LED
+    id: led_pa
+    icon: mdi:led-on
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_off:
+      - output.turn_off: led_ut
+
+# Vippebryterne: én pinne til GND, den andre til en GPIO med intern pull-up. Bryter på (spaken opp) = GPIO til GND = «på».
+# 30 ms filter tar bort prell fra kontaktene. «Byttet» teller hvor mange ganger en bryter er vippet (for automasjoner).
+binary_sensor:
+  - platform: gpio
+    name: "Bryter 1"
+    id: bryter_1
+    icon: mdi:toggle-switch-variant
+    pin: { number: GPIO22, mode: { input: true, pullup: true }, inverted: true }   # D1
+    filters: [delayed_on: 30ms, delayed_off: 30ms]
+    on_press:
+      - event.trigger: { id: vippet, event_type: "1_pa" }
+    on_release:
+      - event.trigger: { id: vippet, event_type: "1_av" }
+  - platform: gpio
+    name: "Bryter 2"
+    id: bryter_2
+    icon: mdi:toggle-switch-variant
+    pin: { number: GPIO21, mode: { input: true, pullup: true }, inverted: true }   # D2
+    filters: [delayed_on: 30ms, delayed_off: 30ms]
+    on_press:
+      - event.trigger: { id: vippet, event_type: "2_pa" }
+    on_release:
+      - event.trigger: { id: vippet, event_type: "2_av" }
+  - platform: gpio
+    name: "Bryter 3"
+    id: bryter_3
+    icon: mdi:toggle-switch-variant
+    pin: { number: GPIO18, mode: { input: true, pullup: true }, inverted: true }   # D5
+    filters: [delayed_on: 30ms, delayed_off: 30ms]
+    on_press:
+      - event.trigger: { id: vippet, event_type: "3_pa" }
+    on_release:
+      - event.trigger: { id: vippet, event_type: "3_av" }
+  - platform: gpio
+    name: "Bryter 4"
+    id: bryter_4
+    icon: mdi:toggle-switch-variant
+    pin: { number: GPIO19, mode: { input: true, pullup: true }, inverted: true }   # D6
+    filters: [delayed_on: 30ms, delayed_off: 30ms]
+    on_press:
+      - event.trigger: { id: vippet, event_type: "4_pa" }
+    on_release:
+      - event.trigger: { id: vippet, event_type: "4_av" }
+  - platform: gpio
+    name: "Bryter 5"
+    id: bryter_5
+    icon: mdi:toggle-switch-variant
+    pin: { number: GPIO23, mode: { input: true, pullup: true }, inverted: true }   # D7
+    filters: [delayed_on: 30ms, delayed_off: 30ms]
+    on_press:
+      - event.trigger: { id: vippet, event_type: "5_pa" }
+    on_release:
+      - event.trigger: { id: vippet, event_type: "5_av" }
+  - platform: status
+    name: Tilkoblet
+    entity_category: diagnostic
+
+event:
+  - platform: template
+    name: Vippet
+    id: vippet
+    icon: mdi:toggle-switch
+    event_types: ["1_pa", "1_av", "2_pa", "2_av", "3_pa", "3_av", "4_pa", "4_av", "5_pa", "5_av"]
+
+sensor:
+  - platform: wifi_signal
+    name: Wi-Fi-signal
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: Oppetid
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: internal_temperature
+    name: Brikketemperatur
+    update_interval: 60s
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: wifi_info
+    ip_address: { name: IP-adresse, entity_category: diagnostic }
+    ssid: { name: Wi-Fi-nett, entity_category: diagnostic }
+    bssid: { name: Tilgangspunkt, entity_category: diagnostic }
+    mac_address: { name: MAC-adresse, entity_category: diagnostic }
+  - platform: version
+    name: ESPHome-versjon
+    hide_timestamp: true
+    entity_category: diagnostic
+
+interval:
+  - interval: 500ms
+    then:
+      - lambda: |-
+          static bool pa = false;
+          const bool feil = !wifi::global_wifi_component->is_connected();
+          if (!id(led_pa).state || !feil) { id(led_ut).turn_off(); pa = false; return; }
+          pa = !pa;
+          if (pa) id(led_ut).turn_on(); else id(led_ut).turn_off();
+
+button:
+  - platform: restart
+    name: Start på nytt
+    entity_category: config
