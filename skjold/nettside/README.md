@@ -12,6 +12,7 @@ Designreferansen ligger i `skjold/design/nettside/` (`*.dc.html`) og i `skjold/d
 | `s1/`, `node/`, `touch/`, `rost/`, `core/` | Produktsidene (hero-zoom, sticky bildesekvens, kilder, integrasjoner, spesifikasjoner). `touch/` har også en 3D-modell med `<model-viewer>` |
 | `spole/` | Skjold Spole, kassettspilleren fra `kabinett/kassett/` (NFC-kassetter, spoler som går rundt). `/kassett/` sender videre hit; `kassett/del/` er delesiden appen lenker til |
 | `brage/` | Skjold Brage, smartenhetene (ESPHome mot Home Assistant, uten sky). Første enhet er Brage Vippe 5. Bildene er konseptbilder; enheten er en prototype |
+| `sensor/`, `bryter/` | Skjold Sensor (romsensor, `kabinett/sensor/`) og Skjold Bryter (fem vippebrytere under pulten, `kabinett/bryter/`). Byggeprosjekter som ikke er bygget ennå; sidene sier det. Bildene er renders fra OpenSCAD |
 | `stav/` | Skjold Stav, fjernkontrollen fra `kabinett/fjernkontroll/` (med Skjold Dokk). Et byggeprosjekt som ikke er bygget eller testet ennå; siden sier det |
 | `programvare/`, `sammenlign/`, `stotte/`, `om/` | Øvrige sider |
 | `takk/`, `takk/feil/` | Svarsider for skjemaet uten JavaScript |
