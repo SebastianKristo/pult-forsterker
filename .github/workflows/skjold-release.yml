@@ -151,7 +151,7 @@ jobs:
             ut/skjold-kassett-manifest.json
 
   sensorfw:
-    name: Fastvare for Skjold Sensor (ESPHome, ESP32 og D1 mini)
+    name: Fastvare for Skjold Sensor og Skjold Bryter (ESPHome, ESP32 og D1 mini)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -161,7 +161,7 @@ jobs:
         with:
           path: ~/.cache/esphome
           key: esphome-2026.10.2-sensor
-      - name: Bygg skjold-sensor-*-firmware.bin
+      - name: Bygg skjold-sensor-*-firmware.bin og skjold-bryter-*-firmware.bin
         env:
           VERSJON: ${{ github.ref_name }}
         run: |
@@ -171,13 +171,20 @@ jobs:
           (cd ut && esphome compile skjold-sensor.yaml) && fw skjold-sensor skjold-sensor-esp32-firmware.bin
           rm -rf ut/.esphome/build/skjold-sensor
           (cd ut && esphome compile skjold-sensor-d1mini.yaml) && fw skjold-sensor skjold-sensor-d1mini-firmware.bin
-          ls -la ut/skjold-sensor-*-firmware.bin ut/skjold-sensor-manifest.json
+          # Skjold Bryter (vippebryterne under pulten) bygges i samme jobb: samme brikker, samme ESPHome-hurtiglager
+          python3 esphome/lag_ferdig.py bryter ut
+          (cd ut && esphome compile skjold-bryter.yaml) && fw skjold-bryter skjold-bryter-esp32-firmware.bin
+          rm -rf ut/.esphome/build/skjold-bryter
+          (cd ut && esphome compile skjold-bryter-d1mini.yaml) && fw skjold-bryter skjold-bryter-d1mini-firmware.bin
+          ls -la ut/skjold-sensor-*-firmware.bin ut/skjold-sensor-manifest.json ut/skjold-bryter-*-firmware.bin ut/skjold-bryter-manifest.json
       - uses: actions/upload-artifact@v4
         with:
           name: sensorfw
           path: |
             ut/skjold-sensor-*-firmware.bin
             ut/skjold-sensor-manifest.json
+            ut/skjold-bryter-*-firmware.bin
+            ut/skjold-bryter-manifest.json
 
   irfw:
     name: Fastvare for Skjold IR og Skjold Dokk (ESPHome, ESP32-C3 og D1 mini)

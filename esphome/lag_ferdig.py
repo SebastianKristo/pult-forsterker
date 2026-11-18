@@ -2,6 +2,7 @@
 """Ferdige fastvarer for nettleserflashing (skjold-lab.com/flasher/<produkt>/ og Skjold Flasher), uten egne hemmeligheter.
 
     python3 esphome/lag_ferdig.py sensor ut/   → skjold-sensor.yaml, skjold-sensor-d1mini.yaml, skjold-sensor-manifest.json
+    python3 esphome/lag_ferdig.py bryter ut/   → skjold-bryter.yaml, skjold-bryter-d1mini.yaml, skjold-bryter-manifest.json
     python3 esphome/lag_ferdig.py ir ut/       → skjold-ir.yaml, skjold-ir-d1mini.yaml, skjold-dokk.yaml,
                                                  skjold-ir-manifest.json, skjold-dokk-manifest.json
 Wi-Fi settes rett etter flashingen (Improv over USB i nettleseren) eller via tilgangspunktet. API-et er uten egen
@@ -21,6 +22,9 @@ PRODUKT = {
     "sensor": {"filer": ["skjold-sensor.yaml", "skjold-sensor-d1mini.yaml"], "kopier": [],
                "manifest": {"skjold-sensor-manifest.json": ("Skjold Sensor", [("ESP32", "skjold-sensor-esp32-firmware.bin"),
                                                                              ("ESP8266", "skjold-sensor-d1mini-firmware.bin")])}},
+    "bryter": {"filer": ["skjold-bryter.yaml", "skjold-bryter-d1mini.yaml"], "kopier": [],
+               "manifest": {"skjold-bryter-manifest.json": ("Skjold Bryter", [("ESP32", "skjold-bryter-esp32-firmware.bin"),
+                                                                             ("ESP8266", "skjold-bryter-d1mini-firmware.bin")])}},
     "ir": {"filer": ["skjold-ir.yaml"], "kopier": ["skjold-ir-d1mini.yaml", "skjold-dokk.yaml"],
            "manifest": {"skjold-ir-manifest.json": ("Skjold IR", [("ESP32-C3", "skjold-ir-c3-firmware.bin"),
                                                                  ("ESP8266", "skjold-ir-d1mini-firmware.bin")]),
@@ -47,7 +51,7 @@ def manifest(navn: str, builds, versjon: str) -> dict:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in PRODUKT:
-        raise SystemExit("bruk: lag_ferdig.py sensor|ir [ut]")
+        raise SystemExit("bruk: lag_ferdig.py sensor|bryter|ir [ut]")
     p, ut = PRODUKT[sys.argv[1]], sys.argv[2] if len(sys.argv) > 2 else "ut"
     os.makedirs(ut, exist_ok=True)
     for f in p["filer"]:

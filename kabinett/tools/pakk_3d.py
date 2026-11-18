@@ -41,6 +41,8 @@ PRODUKTER = [
     ("Skjold Hjul S", "hjul-s", [], ["esphome/skjold-hjul-s.yaml"]),
     ("Skjold Radio", "radio", [], ["pi/skjold_radio_knapper.py", "pi/skjold-radio-knapper.service", "pi/config/radio_pins.yaml"]),
     ("Skjold Sans", "sans", ["konsepter"], ["esphome/skjold-sans.yaml"]),
+    ("Skjold Sensor", "sensor", [], ["esphome/skjold-sensor.yaml", "esphome/skjold-sensor-d1mini.yaml"]),
+    ("Skjold Bryter", "bryter", [], ["esphome/skjold-bryter.yaml", "esphome/skjold-bryter-d1mini.yaml"]),
 ]
 KRETS = ("enkel", "hovedkort", "hullkort", "tastekort", "tastekort_a", "tastekort_full")   # under fjernkontroll/
 
