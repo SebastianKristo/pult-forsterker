@@ -1,6 +1,6 @@
 """Lag 3MF-platene for Skjold Røst (Creality K2 / K2 Pro / K2 Plus, 250 × 250 mm):
 
-  skjold-rost-k2.3mf        kropp med toppanel, frontplate med innfelt logo, knott og knappehetter (PETG/ASA, 3 farger)
+  skjold-rost-k2.3mf        kropp med toppanel, frontplate med innfelt logo, knott, knappehetter og knappeholder (PETG/ASA, 3 farger)
   skjold-rost-k2-bunn.3mf   grill (sort) og bunnplate (lys, som kroppen)
   skjold-rost-k2-tpu.3mf    pakninger i skjøtene, krage, DC-skive og USB-propp (TPU 95A)
 
@@ -20,6 +20,7 @@ PLATES = {
         ("logo", "Logo SKJOLD (innfelt i fronten)", 3, 0, None, "front"),
         ("knott", "Knott (toppen ned)", 3, 0, (4, 146), None),
         ("knapp", "Knappehetter av/på og 1–4 (toppen ned)", 2, 0, (4, 190), None),
+        ("knappeholder", "Knappeholder (bunnen ned)", 1, 0, (130, 152), None),
     ]),
     "skjold-rost-k2-bunn.3mf": ("Skjold Røst – grill og bunn (PETG/ASA)", [
         ("grill", "Grill (forsiden ned)", 2, 0, (4, 4), None),

@@ -6,7 +6,7 @@ Røst er laget for å tåle damp på badet. Skjøtene er pakket med TPU, men kna
 
 ![Skjold Røst](render/01_rost.png)
 
-Bilder: [Røst](render/01_rost.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [toppanelet](render/06_knapper_skjerm.png) · [skrått bakfra](render/07_bak_skra.png)
+Bilder: [Røst](render/01_rost.png) · [eksplodert](render/02_eksplodert.png) · [bak](render/03_bak.png) · [fra siden](render/04_side.png) · [skjøten](render/05_skjot.png) · [toppanelet](render/06_knapper_skjerm.png) · [skrått bakfra](render/07_bak_skra.png) · [takrommet i snitt](render/08_takrom.png) · [knappeholderen trukket ut](render/09_takrom_ut.png)
 
 Elementet: hullene i frontplata tegnes fra malen i [../elementer](../elementer/LES_MEG.md) (standard Dayton RS75-4: utsparing 54 mm, ramme 72 mm, hullsirkel 64 mm). Velg et annet med `element = "..."`.
 
@@ -33,7 +33,7 @@ Ytterformen er én glatt flate. Den er laget som en Minkowski-sum: et prisme (gr
 
 **Hjørnene foran** kunne vært større om fronten var smalere. Elementets ramme (inntil Ø86 i en forsenkning i fronten, RS75-4 er Ø72) og grillen (93 mm) trenger en flat front på minst ca. 90 mm, og med 112 mm bredde gir det høyst R11. Et mindre element (2,5″) ville gitt plass til R16–20, men koster bass og effekt. R8,5 er valgt fordi buen da ender nøyaktig i skjøten, og fordi den er lik radiusen på alle toppkantene. Volumet og tuningen er uendret (se [Akustikk](#akustikk)).
 
-**Toppen.** Knappelista og rammen rundt ruta er like brede (67,6 mm), har samme kantbredde (1,6 mm) og samme hjørneradius (3,8 mm), og står begge 0,5 mm over toppen. Knappene sitter med 13,7 mm mellomrom, så de fyller lista jevnt. Under dem ligger ruta, og bakerst volumhjulet, alt på midtlinjen.
+**Toppen.** Knappelista og rammen rundt ruta er like brede (65,6 mm), har samme kantbredde (1,6 mm) og samme hjørneradius (3,8 mm), og står begge 0,5 mm over toppen. Knappene sitter med 13,2 mm mellomrom, så de fyller lista jevnt. Bak dem ligger ruta, og bakerst volumhjulet, alt på midtlinjen. Fra forkanten: knappene (senter 11 mm bak skjøten), vinduet (senter 46,8 mm), knotten (senter 88 mm).
 
 **Baksiden.** Porten, DC-kontakten og USB-C sitter på én loddrett linje (x = −26, til siden for elementets magnet) med like store mellomrom (ca. 6 mm), og Skjold-merket (fem staver, 14 × 15 mm, preget 1 mm inn) sitter på samme linje over porten. Portens munning er en R8-bue som møter bakveggen i 45°, samme form som kantene rundt. DC- og USB-hullet har 0,6 mm fas. Den graverte teksten «SKJOLD RØST» er fjernet.
 
@@ -53,6 +53,7 @@ Det er ingen skjult bombering, så toppen er helt flat. Vann som ligger på topp
 - **ESP32-S3 N16R8:** PSRAM gir squeezelite-esp32 god buffer for strømming over Wi-Fi.
 - **2,42″ OLED 128×64, SSD1309, I²C (hvit tekst på svart):** stor og godt lesbar på avstand, og bare fire ledninger. squeezelite-esp32 driver den som SSD1306 (registerkompatibel). Den er monokrom, så den viser tekst og ikoner (kanal, låt, artist, volum), ikke cover eller kanallogo.
 - **Taktbrytere med printede knappehetter:** hettene går gjennom hull i toppen og har en flens under, så de ikke faller ut. Ikonene (av/på, 1–4) er preget i toppen av hettene. Enkelt å printe og bytte, men ikke tett.
+- **Printet knappeholder i stedet for hullkort:** de fem bryterne trykkes ned i lommer i en printet holder, og ledningene loddes rett på beina. Holderen skyves inn i takrommet forfra, ligger på gulvet der og trykker samtidig skjermkortet opp mot toppen, så verken knapper eller skjerm trenger skruer eller avstandsstykker. Frontplaten holder den på plass.
 - **12 V / 2 A-adapter** med en MP1584-nedtrapper til 5 V for ESP-en. 12 V er ufarlig å ta på, og adapteren kan stå utenfor badet.
 
 ## Deler
@@ -63,9 +64,9 @@ Det er ingen skjult bombering, så toppen er helt flat. Vann som ligger på topp
 | ESP32-S3-DevKitC-1 N16R8 | 1 | |
 | PCM5102A I²S DAC-kort | 1 | SCK til GND, XSMT til 3V3, FMT/FLT/DEMP til GND |
 | TPA3118D2 mono PBTL-forsterkerkort | 1 | 12–24 V inn. Sjekk at kortet er satt opp for PBTL (mono). |
-| 2,42″ OLED 128×64 SSD1309, «I2C interface, white» (AliExpress «Zave», ca. 105 kr) | 1 | Kort 70,08 × ca. 39 mm, 4 hull Ø3 (62 mm i bredden), glass ca. 60 × 30,5 × 3,25 mm, aktivt område 55,4 × 27,7 mm. Pinneraden (GND VDD SCK SDA) vender bakover, flatkabelen fremover. Mål din modul og juster `pcbH`, `dHoleV`, `glW`/`glH` og `glOffV`. **Bruk vinklede pinner eller lodd ledningene rett på kortet**: takrommet er bare 8,5 mm høyt, og rette pinner med plasthus får ikke plass. Noen moduler må loddes om fra SPI til I²C (motstander på baksiden). |
-| Taktbryter 6 × 6 × 5 mm | 5 | Loddes på et hullkort på ca. 86 × 14 mm, sentrert under knappene (13,7 mm mellom), skruehull ±38 mm |
-| M2 × 6 mm avstandsstykke + 4 M2 × 4 skruer | 2 | Holder knappekortet 6 mm bak frontplaten |
+| 2,42″ OLED 128×64 SSD1309, «I2C interface, white» (AliExpress «Zave», ca. 105 kr) | 1 | Fra tegningen: kort 70,08 × 48,04 × 1,0 mm, 5,25 mm tykk med glass, glass 62,64 × 39,18 mm, synlig område 57,80 × 29,70 mm, aktivt område 55,40 × 27,78 mm, 4 hull Ø3 (62,64 × 41,60 mm, 3,22 mm fra kanten). Pinneraden (GND VDD SCL SDA) vender bakover, flatkabelen (12,64 mm) fremover. **Lodd ledningene rett på kortet fra baksiden** (ingen pinner): takrommet er bare 8,5 mm høyt. Noen moduler må loddes om fra SPI til I²C (motstander på baksiden). Se [Skjermen](#skjermen) for hvilke mål som er tolket. |
+| Taktbryter 6 × 6 × 5 mm (THT, 4 bein) | 5 | Trykkes ned i den printede knappeholderen (`knappeholder.stl`), ingen hullkort |
+| Tynn kobbertråd, fortinnet (ca. 0,5 mm) + 6 tynne ledninger (f.eks. 28–30 AWG, ca. 20 cm) | – | GND-buss over bryterbeina, og ledninger fra bryterne og skjermen ned til ESP32 |
 | MP1584EN nedtrapper 12 V → 5 V | 1 | Still inn 5,0 V før du kobler til ESP-en |
 | DC-kontakt 5,5/2,1 mm for panel (Ø8 mm) | 1 | Med mutter. TPU-skiven legges under flensen utvendig. |
 | Strømadapter 12 V / 2 A | 1 | Skal stå utenfor badet (se under) |
@@ -76,8 +77,7 @@ Det er ingen skjult bombering, så toppen er helt flat. Vann som ligger på topp
 | M3 × 12 senkeskrue (bunnbrett) | 4 | gjennom brettet og inn i innpressmutterne |
 | Selvklebende gummiføtter Ø12 × 3 mm | 4 | i forsenkningene under brettet |
 | M3 × 10 selvgjengende (element) | 4 | |
-| M2 × 6 selvgjengende (skjerm) | 4 | Gjennom skjermkortets hull og rett i toppanelet |
-| Akryl 1,5 mm, 64 × 36 mm, hjørneradius 2 | 1 | Rute foran skjermen. Kan også printes i klar PETG (`stl/rute.stl`), men akryl er klarere. |
+| Akryl 1,5 mm, 62 × 34 mm, hjørneradius 2 | 1 | Rute foran skjermen. Kan også printes i klar PETG (`stl/rute.stl`), men akryl er klarere. |
 | TPU 95A filament | ca. 8 g | Pakninger i skjøtene, krage, DC-skive og USB-propp |
 | Tynn dobbeltsidig skumtape (ca. 0,2 mm) eller lim | – | Under skjermruta |
 | ePTFE trykkutjevningsventil M12 × 1,5 (med mutter) | 1 | Eller en selvklebende ePTFE-membran (Ø16 mm eller større) over hullet. Slipper ut damp og trykk, ikke vann. |
@@ -86,6 +86,42 @@ Det er ingen skjult bombering, så toppen er helt flat. Vann som ligger på topp
 | Beskyttelseslakk (conformal coating) | – | Akryl- eller silikonlakk på alle kretskortene. Ikke på kontakter, skjermglass og mikrofon. |
 | Silikon eller fleksibelt lim (f.eks. Sikaflex 11FC) | – | Kanten av ruta, kabelgjennomføringen og skruehodene i bunnen |
 | Polyfill / dempeull | ca. 5 g | Løst i kammeret, ikke foran porten |
+
+## Skjermen
+
+Toppanelet er tilpasset tegningen av 2,42″-modulen (alle mål er parametere øverst i `skjold_rost.scad`):
+
+| Mål | Verdi | Fra tegningen? |
+|---|---|---|
+| Kort (`pcbW` × `pcbH` × `pcbT`) | 70,08 × 48,04 × 1,00 mm | ja |
+| Total tykkelse med glass (`modT`) | 5,25 mm, dvs. 4,25 mm over kortet | ja |
+| Glass (`glW` × `glH`) | 62,64 × 39,18 mm | målene står på tegningen, men det er tolket at de gjelder glasset |
+| Synlig område (VA) | 57,80 × 29,70 mm | ja |
+| Aktivt område (`actW` × `actH`) | 55,40 × 27,78 mm | ja |
+| Hull Ø3 (`dHoleX`, `dHoleV`) | ±31,32 × ±20,80 mm (62,64 × 41,60 mm mellom sentrene) | 62,64 i bredden er tolket. 41,60 i høyden er regnet ut fra 3,22 mm fra nedre kant, og at hullene sitter likt oppe og nede |
+| Glassets plassering på kortet (`glOffV`) | midt på kortet i høyden | tolket |
+| VA/AA i glasset (`aaOffV`) | 2,32 mm mot pinneraden: smal kant (2,42 mm, som på sidene) mot pinneraden, bred kant (7,06 mm) mot flatkabelen | tolket |
+| Flatkabelen (`fpcW`, `fpcL`) | 12,64 mm bred, stikker ca. 2 mm ut over nedre kant og bretter rundt til baksiden | bredden fra tegningen, lengden tolket |
+| Pinneraden (`hdrFraKant`) | 4 × 2,54 mm, ca. 2,3 mm fra øvre kant | tolket |
+
+Slik sitter den:
+- Glasset ligger i en lomme i undersiden av toppanelet (0,4 mm klaring rundt, 0,15 mm over), og kortet ligger flatt mot undersiden av panelet. Det er utsparinger for flatkabelen (foran) og loddingen i pinneraden (bak).
+- Vinduet er 56,6 × 29,0 mm (det aktive området + 0,6 mm rundt, innenfor det synlige området), sentrert over det aktive området, med 45° fas opp mot ruta (62 × 34 mm).
+- Kortet holdes oppe av knappeholderens to sidevanger. De ligger under de ytterste 2 mm av kortet på hver side (x = ±33,0…35,0, utenfor hullene). Der må baksiden av kortet være fri for komponenter. Det er ingen skruer. Med `knappefeste = "hullkort"` får toppanelet i stedet fire Ø1,8-hull for M2 × 6 selvgjengende skruer i kortets hull.
+- **Mål din modul før du printer:** hvor langt det er fra kortets nedre kant (flatkabelsiden) til det aktive området, og hullavstanden i høyden. Avviker de, juster `glOffV`/`aaOffV` (vinduet følger det aktive området) og `hullKant`.
+
+## Knappeholderen
+
+Ingen hullkort: de fem taktbryterne (6 × 6 × 5 mm) sitter i en printet holder (`knappeholder.stl`, 78,9 × 63,7 × 8 mm, ca. 10 g PETG/ASA) som skyves inn i takrommet forfra:
+- **Lommene:** 6,4 mm firkantede lommer med fire klemribber (5,9 mm mellom), så bryterhuset sitter med presspasning. Bryteren står på bunnen av lomma, med stempelet 0,2 mm under hettens flens (`btnGap`). Da gir hetten et rent klikk uten forspenning, og hetten kan trykkes 0,25 mm forbi klikket uten å treffe noe annet.
+- **Beina:** snu bryteren så beina peker mot sidene (mot nabobryterne), og bøy alle fire rett ut før bryteren trykkes ned. Sporene i lommeveggene tar dem.
+- **Ledninger:** beina som står rett overfor hverandre (6,5 mm) er koblet sammen inne i bryteren, så de to fremre beina er den ene polen og de to bakre den andre (sjekk med et multimeter at det stemmer for dine brytere).
+  - **GND:** legg en bar, fortinnet tråd over de fremre beina på alle fem bryterne, og lodd. Det er GND-bussen. Før enden bakover gjennom sporet lengst til venstre i kammen.
+  - **Signal:** lodd én ledning på det bakre høyre beinet på hver bryter, og legg den i sporet i kammen rett bak. **Klipp av det bakre venstre beinet**, så det ikke kan berøre nabobryterens signalbein.
+  - Lodd raskt (PETG/ASA tåler kort varme), eller lodd bussen før bryterne trykkes helt ned.
+- **Festet:** holderen ligger på takrommets gulv, mellom to styrelister, og står 0,3 mm bak frontplaten, som holder den på plass. Sidevangene går bakover under skjermkortet og trykker det opp mot toppanelet (en klemribbe på 0,1 mm). Ingen skruer, avstandsstykker eller snepphaker.
+- **Printes** med bunnen ned, uten støtte. Ingen overheng.
+- **Hullkort i stedet:** sett `knappefeste = "hullkort"`. Da får hettene en nupp med 0,15 mm forspenning, toppanelet får hull for to M2 × 6-avstandsstykker (±38 mm) og fire skruehull for skjermkortet, og holderen og styrelistene blir borte. Kortet er ca. 86 × 14 mm, med bryterne sentrert under knappene (13,2 mm mellom).
 
 ## Kobling (ESP32-S3)
 
@@ -100,7 +136,7 @@ Det er ingen skjult bombering, så toppen er helt flat. Vann som ligger på topp
 | Skjerm SDA / SCK (I²C) | GPIO11 / GPIO12 |
 | Skjerm VDD / GND | 3V3 / GND |
 | (Skjerm RES, bare 7-pinners kort, valgfritt) | GPIO13 |
-| Knapp av/på / 1 / 2 / 3 / 4 (andre bein til GND) | GPIO8 / GPIO9 / GPIO18 / GPIO39 / GPIO47 |
+| Knapp av/på / 1 / 2 / 3 / 4 (bakre høyre bein; de fremre beina på GND-bussen) | GPIO8 / GPIO9 / GPIO18 / GPIO39 / GPIO47 |
 | EC11 A / B / trykk (C og trykk-retur til GND) | GPIO15 / GPIO16 / GPIO17 |
 | INMP441 SCK / WS / SD, L/R til GND | GPIO41 / GPIO42 / GPIO40 |
 | MP1584 ut 5 V | ESP32 5V |
@@ -109,9 +145,9 @@ Ikke bruk GPIO0, 3, 45 eller 46 (oppstartspinner), GPIO19/20 (USB), GPIO26–32 
 
 ## Akustikk
 
-- Lydkammer: ca. 1,02 l luft mellom vegger, front, gulv og takrommet, ca. 0,97 l netto når et element (ca. 50 cm³) er satt inn (målt på `asm/luft.stl` av `sjekk_modell.py`). Buene bak som går helt til 45°, uten fas, gir litt mer volum enn forrige utgave (1,01 l luft, 0,96 l netto).
-- Bassrefleks: port Ø16 mm, 78 mm lang, nede til venstre i bakveggen (til siden for elementets magnet) og vendt bakover. Munningen er en R8-bue. Det gir en beregnet tuning på ca. 83 Hz (forrige utgave ca. 84 Hz med samme formel og samme port).
-- **Takrommet:** skjermen og knappekortet ligger i et eget, lukket rom rett under toppen (ca. 56 cm³), adskilt fra lydkammeret av et 3 mm gulv. Da rasler ikke knappehettene med bassen, og takrommet påvirker ikke tuningen. Ledningene går gjennom et Ø6-hull i takrommets gulv og videre gjennom hullet i kammergulvet. Begge hullene tettes med silikon.
+- Lydkammer: ca. 0,94 l luft mellom vegger, front, gulv og takrommet, ca. 0,89 l netto når et element (ca. 50 cm³) er satt inn (målt på `asm/luft.stl` av `sjekk_modell.py`). **Rettet:** de tidligere tallene (1,02 l luft, 0,97 l netto, ca. 83 Hz) regnet med luften i takrommet ved en feil. Forrige utgave hadde egentlig 0,95 l luft og 0,90 l netto. Det større takrommet til den nye skjermen tar ca. 7 cm³.
+- Bassrefleks: port Ø16 mm, 78 mm lang, nede til venstre i bakveggen (til siden for elementets magnet) og vendt bakover. Munningen er en R8-bue. Det gir en beregnet tuning på ca. 86 Hz. Vil du ned mot 83 Hz, gjør porten ca. 84 mm lang (`portL`), men sjekk først at den ikke treffer kurven på elementet ditt.
+- **Takrommet:** skjermen og knappene ligger i et eget rom rett under toppen (ca. 60 cm³), adskilt fra lydkammeret av et 3 mm gulv. Da rasler ikke knappehettene med bassen, og takrommet påvirker ikke tuningen. Rommet er åpent forover, så skjermen og knappeholderen settes inn forfra, og frontplaten lukker det (`takAapen`). Ledningene går gjennom et Ø6-hull i takrommets gulv og videre gjennom hullet i kammergulvet. Begge hullene tettes med silikon.
 - Dette er beregnet ut fra volum og port, ikke målt. Simuler ditt element i WinISD eller VituixCAD. Endre `portL` (lengre port gir lavere tuning) eller tett porten for et lukket kabinett.
 - Porten peker bakover, så sprut forfra ikke kommer inn i kammeret. La det være minst 5 cm luft bak Røst.
 - Kammeret er skilt fra elektronikkrommet av et gulv. Elementkabelen går gjennom et Ø6-hull i gulvet, og det må tettes med silikon, ellers lekker kammeret.
@@ -121,7 +157,7 @@ Ikke bruk GPIO0, 3, 45 eller 46 (oppstartspinner), GPIO19/20 (USB), GPIO26–32 
 - **Skjøten front–kropp:** kropp og frontplate er skåret fra samme ytre form, så sidene og toppen flukter helt (ingen trinn eller spalte). En smal skyggefuge (0,5 mm inn, 0,8 mm bred) gjør skjøten til en ren linje. Bak den ligger en TPU-pakning i et spor i kroppen, langs sidene, forkanten av takrommets gulv og forkanten av kammergulvet. Frontplaten trykker den 0,2 mm sammen.
 - **Bunnen:** et lyst brett med TPU-pakning i et spor rundt kanten (også langs forkanten), tett mot kroppen. Skjøten mellom frontplaten og brettet har en hel vegg bak seg. Undersiden har en dryppnese innenfor buen, så vann som renner nedover sidene drypper av i stedet for å trekke inn under, og fire selvklebende gummiføtter (Ø12 × 3 mm) i forsenkninger holder Røst over vann.
 - **Knappene:** fem printede knappehetter (av/på og 1–4) i hull i toppen, med 0,25 mm klaring rundt. De står 1,1 mm over toppen (0,6 mm over knappelista) og har en flens under toppanelet. Lista leder vann på toppen rundt hullene. **Hullene er ikke tette.** Vann som kommer på toppen kan renne ned langs hettene til takrommet. Vil du ha det tettere, smør en tynn ring silikonfett rundt hver hette før du setter den i, eller legg en dråpe nøytral silikon mellom flensen og panelet.
-- **Skjermen:** klar rute (akryl 1,5 mm, 64 × 36 mm) i en forsenkning i toppen, over et vindu tilpasset det aktive området, med fas, lagt på tynn dobbeltsidig skumtape (0,2 mm) eller lim. Ruta flukter med toppen, og en 0,5 mm hevet ramme rundt den holder vann på toppen borte fra fugen. En tynn streng silikon langs kanten gjør den tett.
+- **Skjermen:** klar rute (akryl 1,5 mm, 62 × 34 mm) i en forsenkning i toppen, over et vindu tilpasset det aktive området, med fas, lagt på tynn dobbeltsidig skumtape (0,2 mm) eller lim. Ruta flukter med toppen, og en 0,5 mm hevet ramme rundt den holder vann på toppen borte fra fugen. En tynn streng silikon langs kanten gjør den tett.
 - **Toppen:** flat, med hevet knappelist og ramme rundt ruta og en hevet TPU-krage under knotten (se [Formen](#formen)). Vann som renner av går over de avrundede kantene. Av forkanten drypper det ned foran grillen, der den vannavstøtende duken stopper det.
 - **Grillen:** en løs del som står 3 mm foran frontplaten, som på første Røst. Den trykkes på med 4 tapper med små klemribber, så den sitter stramt uten å rasle og kan trekkes av for rengjøring. Den vannavstøtende duken klemmes mellom grillen og frontplaten.
 - **Dreieknappen:** TPU-krage rundt akselen i en forsenkning i toppen. Den står 0,5 mm over toppen, og knotten dekker den.
@@ -142,7 +178,7 @@ Det er tre 3MF-filer, alle innenfor 250 × 250 mm, så de passer K2, K2 Pro og K
 
 | Fil | Deler | Filament |
 |---|---|---|
-| `skjold-rost-k2.3mf` | Kropp (med toppanel og takrom), frontplate med innfelt logo, knott, 5 knappehetter | 1 = lys (kropp), 2 = sort (front, knappehetter), 3 = gull (logo, knott) |
+| `skjold-rost-k2.3mf` | Kropp (med toppanel og takrom), frontplate med innfelt logo, knott, 5 knappehetter, knappeholder | 1 = lys (kropp, knappeholder), 2 = sort (front, knappehetter), 3 = gull (logo, knott) |
 | `skjold-rost-k2-bunn.3mf` | Grill, bunn | 2 = sort (grill), 1 = lys (bunn) |
 | `skjold-rost-k2-tpu.3mf` | Pakning front, pakning bunn, krage, DC-skive, USB-propp | TPU 95A (egen utskrift; CFS mater ikke myk TPU, så bruk ekstern spole) |
 
@@ -150,12 +186,14 @@ Setter ikke Creality Print fargene selv, sett filament per del.
 
 | Del | Retning | Støtte |
 |---|---|---|
-| `kropp.stl` | Bakveggen ned, åpen front opp. Takrommets frontvegg printes som en kort bro (8,5 mm). | Nei |
+| `kropp.stl` | Bakveggen ned, åpen front opp. Takrommet er åpent forover, og styrelistene i gulvet står rett opp. | Nei |
 | `front.stl` + `logo.stl` | **Baksiden ned, forsiden opp** (logoen er åpen oppover) | Nei |
 | `grill.stl` | Forsiden ned, tappene opp | Nei |
 | `bunn.stl` | Innsiden ned, føttene opp | Nei |
 | `knott.stl` | Toppen ned | Nei |
 | `knapp.stl` | Fem hetter, toppen ned og flensen opp | Nei |
+| `knappeholder.stl` | Bunnen ned | Nei |
+| `rute.stl` | Flat (bare hvis du ikke bruker akryl; klar PETG) | Nei |
 | TPU-delene | Flate | Nei |
 
 **Innstillinger, PETG/ASA:** 0,2 mm lag, 0,4 mm dyse, 4 vegger (tette, stive vegger gir mindre resonans), 20 % gyroid fyll. PETG 240 °C / 75 °C seng, ASA 260 °C / 100 °C seng med lukket kammer. Teksturert PEI gir matt overflate.
@@ -177,41 +215,49 @@ SKJOLD-logoen er et eget legeme (`logo.stl`) som ligger 0,6 mm inn i frontplaten
 
 1. Varm inn 8 M3-innpressmuttere: 4 i fronten av kroppens skruetårn, 4 i tårnene under.
 2. Lakk kretskortene med beskyttelseslakk og la det tørke.
-3. Takrommet nås forfra før frontplaten er på. Lodd taktbryterne på hullkortet, og skru det på de to M2 × 6-avstandsstykkene under toppanelet, med bryterne opp mot hullene.
-4. Lodd fire ledninger (eller vinklede pinner) på skjermkortet. Legg skjermen med glasset opp i lomma under vinduet, med pinneraden bakover og flatkabelen fremover, og skru kortet fast med fire M2 × 6 selvgjengende skruer i hullene i toppanelet. Legg tynn skumtape i forsenkningen i toppen, og legg ruta oppå. En tynn streng silikon langs kanten gjør den tett.
-5. Sett de fem knappehettene i hullene fra undersiden, før knappekortet skrus på (punkt 3 kan gjøres etter dette): av/på til venstre, så 1–4. Flensen holder dem på plass. Smør gjerne litt silikonfett rundt hettene.
-6. Trekk ledningene fra skjerm og knapper gjennom hullet i takrommets gulv og ned i kammeret. Tett hullet med silikon.
-7. Monter EC11 gjennom toppen innenfra (bak takrommet). Trykk TPU-kragen ned over akselen i forsenkningen, og trykk på knotten.
-8. Legg elektronikken i rommet under gulvet:
+3. Takrommet nås forfra før frontplaten er på. Legg kroppen **opp-ned** (toppen ned på et mykt underlag), så knappehettene og skjermen blir liggende i hullene mens du jobber.
+4. Legg tynn skumtape i forsenkningen i toppen, og legg ruta (62 × 34 mm) oppå. En tynn streng silikon langs kanten gjør den tett.
+5. Lodd fire ledninger rett på pinneraden på skjermkortet, fra baksiden (ingen pinner). Legg skjermen med glasset ned i lomma under vinduet, med pinneraden bakover og flatkabelen fremover.
+6. Sett de fem knappehettene i hullene fra innsiden: av/på til venstre (sett forfra), så 1–4. Flensen holder dem. Smør gjerne litt silikonfett rundt hettene.
+7. Gjør klar knappeholderen (se [Knappeholderen](#knappeholderen)): bøy beina ut, trykk bryterne ned i lommene med stempelet opp, lodd GND-bussen over de fremre beina og én signalledning på hver bryter, klipp det bakre venstre beinet og legg ledningene i kammen.
+8. Skyv knappeholderen inn i takrommet forfra, med bryterne mot toppen, mellom styrelistene i gulvet, til forkanten er 0,3 mm innenfor kroppens forkant. Sidevangene glir inn under kanten av skjermkortet og trykker det opp. Holderen sitter stramt; frontplaten låser den.
+9. Trekk ledningene fra skjerm og knapper bakover under skjermkortet, gjennom hullet i takrommets gulv og ned i kammeret. Tett hullet med silikon.
+10. Monter EC11 gjennom toppen innenfra (bak takrommet). Trykk TPU-kragen ned over akselen i forsenkningen, og trykk på knotten.
+11. Legg elektronikken i rommet under gulvet:
    - DC-kontakten (med TPU-skiven utvendig) og ESP32 (USB-C) skal sitte mot hullene bak. Midten av USB-C-hullet er 7 mm over bunnen, så legg ESP32-kortet på et par millimeter tykk tape eller avstandsbiter.
    - Fest kortene med dobbeltsidig tape eller lim.
    - Skru inn ePTFE-ventilen i hullet i bunnplaten.
-9. Trekk elementkabelen og ledningene fra takrommet gjennom hullet i gulvet, og tett med silikon.
-10. Skru elementet fast i frontplaten, med rammen i forsenkningen.
-11. Legg TPU-pakningen i sporet i kroppens forkant. Legg litt dempeull i kammeret (ikke foran porten).
-12. Skru frontplaten fast med 4 senkeskruer. Hodene ligger bak grillen.
-13. Legg den akustiske duken over fronten, og trykk grillen på, slik at tappene går gjennom duken og inn i hullene. Klipp duken rundt grillen. Grillen kan trekkes av igjen.
-14. Legg TPU-pakningen i sporet i bunnbrettet, og skru brettet fast med 4 M3 × 12 senkeskruer. Sett på gummiføttene. En dråpe silikon på skruehodene holder vannet ute.
-15. Sett TPU-proppen i USB-C-hullet.
+12. Trekk elementkabelen og ledningene fra takrommet gjennom hullet i gulvet, og tett med silikon.
+13. Skru elementet fast i frontplaten, med rammen i forsenkningen.
+14. Legg TPU-pakningen i sporet i kroppens forkant. Legg litt dempeull i kammeret (ikke foran porten).
+15. Skru frontplaten fast med 4 senkeskruer. Hodene ligger bak grillen. Frontplaten lukker takrommet og holder knappeholderen på plass.
+16. Legg den akustiske duken over fronten, og trykk grillen på, slik at tappene går gjennom duken og inn i hullene. Klipp duken rundt grillen. Grillen kan trekkes av igjen.
+17. Legg TPU-pakningen i sporet i bunnbrettet, og skru brettet fast med 4 M3 × 12 senkeskruer. Sett på gummiføttene. En dråpe silikon på skruehodene holder vannet ute.
+18. Sett TPU-proppen i USB-C-hullet.
 
 ## Sjekket og ikke sjekket
 
 - `./lag_stl.sh` lager alle STL-er (utskrift i `stl/`, montert stilling i `asm/`), kjører sjekken og lager 3MF-filene. `xvfb-run -a ./lag_render.sh` lager bildene i `render/` (med OLED-bildet fra `lag_oled.py` lagt inn på skjermen), og `python3 lag_nettbilder.py` lager bildene til nettsiden fra dem.
 - Sjekket i modellen (`python3 sjekk_modell.py <mappe med monterte STL-er>`):
-  - alle 13 STL-er er vanntette, ett legeme hver (knapp.stl: fem hetter, logo.stl: bokstavene), ligger på platen og passer på 250 × 250 mm
-  - ingen deler overlapper når de er montert
+  - alle 14 STL-er er vanntette, ett legeme hver (knapp.stl: fem hetter, logo.stl: bokstavene), ligger på platen og passer på 250 × 250 mm
+  - ingen deler overlapper når de er montert, heller ikke med skjermmodulen (kort, glass, flatkabel, pinnerad) og de fem bryterne
+  - skjermen: kortet (70,08 × 48,04 mm) ligger i lomma uten kollisjon, hele det aktive området er synlig, og vinduet går like langt (0,6 mm) utenfor det på alle fire sider. Sidevangene klemmer kortet.
+  - knappene: bryterne sitter med presspasning i lommene, luften mellom flens og stempel er 0,20 mm på alle fem, og hettene kan trykkes 0,25 mm forbi klikket uten å treffe noe
+  - knappeholderen har ingen overheng (printes uten støtte)
+  - hyllen ruta ligger på (mellom forsenkningen og glasslomma) er minst 1,37 mm tykk
   - ytterveggen er minst 1,6 mm overalt, utenom de tiltenkte hullene
   - kropp og frontplate flukter i skjøten
   - pakningene følger formen hele veien rundt (minst 0,5 mm materiale på hver side av sporet)
-  - lydkammerets volum og porttuning (0,97 l netto, ca. 83 Hz)
+  - lydkammerets volum og porttuning (0,89 l netto, ca. 86 Hz, uten takrommet)
   - yttersiden av kropp, bunn og grill har ingen overheng brattere enn 50° i utskriftsretningen
 - Ikke testet: ingenting er printet eller bygget. Følgende må prøves:
   - passformen til element, innpressmuttere, grilltapper (klemribbene), knott, skjermlomme og knappehetter (0,25 mm klaring, flens)
-  - om det går greit å montere skjerm og knappekort i takrommet forfra (det er trangt: 8,5 mm høyt)
+  - om det går greit å skyve knappeholderen inn forfra med ledningene på (det er trangt: 8,5 mm høyt), og om klemribbene holder bryterne og skjermkortet passe stramt
+  - om baksiden av skjermkortet er fri for komponenter der sidevangene ligger (de ytterste 2 mm på hver side)
   - hvor tett pakningene faktisk er (knappene på toppen er ikke tette)
-  - om knappehettene får et godt klikk (forspenningen mot bryteren er 0,15 mm)
+  - om knappehettene får et godt klikk (0,2 mm luft mot stempelet; juster `btnGap` om det blir for slakt eller for stramt)
   - lyden og porttuningen
   - om squeezelite-esp32 driver SSD1309-skjermen som SSD1306 på 0x3C (ev. med HFlip/VFlip eller reset-pinne)
-  - de nøyaktige målene på skjermmodulen (høyden på kortet, hullavstanden i høyden og glassets plassering)
+  - de tolkede målene på skjermmodulen: glassets og det aktive områdets plassering i høyden, hullavstanden i høyden og flatkabelen (se [Skjermen](#skjermen))
 
 Lisens: CC BY-NC-SA 4.0.
