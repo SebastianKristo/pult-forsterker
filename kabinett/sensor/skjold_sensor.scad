@@ -28,6 +28,7 @@ kort  = "esp32";      // "esp32" (ESP32-WROOM DevKit, 30 eller 38 pinner) | "d1m
 pir   = true;         // hull og holder for AM312 mini-PIR
 lux   = true;         // lysvindu og feste for BH1750 (GY-302)
 led   = true;         // 3 mm statuslys i fronten
+th    = "dht11mod";   // temperatur/fukt: "dht11mod" (DHT11-modul 35 × 23 mm med PH2.0, standard) | "sht40" (lite I²C-kort)
 farge = "lys";        // lys | mork (bare for bildene)
 $fn = 64;
 
@@ -35,7 +36,9 @@ $fn = 64;
 ESP = kort == "esp32";
 E32D1 = kort == "esp32d1";   // kortet på høykant, USB ned i kanal i baksiden
 W = ESP ? 70 : E32D1 ? 62 : 54;    // bredde
-H = E32D1 ? 66 : 56;               // høyde
+DHT = th == "dht11mod";
+kamH = DHT ? 25 : 15;              // sensorkammerets innvendige høyde (DHT11-modulen er 23 mm høy)
+H = (E32D1 ? 66 : 56) + (kamH - 15);   // høyde: 66 / 76 med DHT11-modulen, 56 / 66 med SHT40
 D = 28;               // dybde (bunn + lokk)
 R = 8;                // hjørneradius sett forfra
 t = 2.2;              // sidevegger
@@ -47,7 +50,6 @@ bakFas = 0.6;         // liten fas mot veggen (og mot elefantfot)
 klar = 0.25;          // klaring lokk ↔ bunn
 
 // ---------- sensorkammeret (nederst, hele bredden) ----------
-kamH = 15;                    // innvendig høyde
 vW = 1.2; vG = 1.6;           // dobbel skillevegg: to vegger med luftspalte (termisk skille)
 yD0 = t + kamH;               // underkant av skilleveggen
 yD1 = yD0 + 2*vW + vG;        // overkant av skilleveggen
@@ -56,6 +58,21 @@ sensW = 13.6;                 // bredden på temp/fukt-kortet (SHT40/SHT31/AHT20
 sensX = -W/2 + t + 13;        // kortet står helt til venstre, lengst unna USB og ESP-varmen
 sensY = t + kamH/2;           // kortet ligger vannrett i midten av kammeret og skyves inn i to spor forfra
 sporB = 1.9; sporD = 1.2;     // sporene: bredde og dybde
+
+// DHT11-modul («DHT11 Temperature Humidity Sensor Module», sort kort 35 × 23 × 1,6 mm, PH2.0 3-pin G/V/D):
+// kortet står parallelt med veggen, helt fram i kammeret, med DHT11-gitteret mot spaltene i lokket. Det skrus med
+// to M2,5 × 8 selvgjengende i to tapper fra bakveggen (skrutrekkeren kommer forfra når lokket er av).
+// PH2.0-kontakten peker mot høyre; pluggen og kabelen har 10 mm fritt og går opp gjennom et hull i skilleveggen.
+dhtL = 35; dhtB = 23; dhtT = 1.6;            // kortet (x × y × tykkelse)
+dhtX0 = -W/2 + t + 2.2;                      // kortets venstre kant (DHT11 sitter på venstre del), klar av det runde hjørnet
+dhtY = t + kamH/2;                           // midt på kortet
+dhtFront = Db - 1.0;                         // DHT11-gitteret, 1 mm bak lokket
+dhtH = 5.5;                                  // DHT11-hus (15,5 × 12 × 5,5 mm)
+dhtZ1 = dhtFront - dhtH; dhtZ0 = dhtZ1 - dhtT;   // kortets forside / bakside (lodding bak, ca. 2 mm)
+dhtHullX = 24; dhtHullA = 18.5; dhtHullD = 3.0;  // festehullene: fra venstre kant, avstand (i y), Ø – MÅL DITT KORT
+dhtPilot = 2.2;                              // M2,5 selvgjengende
+dhtKabX = dhtX0 + dhtL + 9;                  // kabelen går opp gjennom skilleveggen her
+dhtKabZ = [dhtZ1 - 1.5, dhtZ1 + 4.5];        // hullet i skilleveggen (z)
 
 // ---------- hovedrommet ----------
 mainH = H - t - yD1;          // innvendig høyde over skilleveggen
@@ -89,7 +106,7 @@ pirX = 0;   pirHull = 12.2; pirFasD = 14.6; pirRorD = 10.5; pirRorL = 9;   // AM
 luxX = 14;  luxSpaltX = 2.5; luxSpaltY = 5; luxFasX = 8.5; luxFasY = 11;   // lysvindu som referansen
 luxBlokk = [14, 6.5, 4.2]; luxHull = 4.45; luxPilot = 2.2;                 // GY-302: hullene ±4,45 mm fra BH1750-brikka, M2,5 selvgjengende
 ledX = -14; ledHull = 3.1; ledFlens = 4.0;                                 // 3 mm LED
-ventY = [t + 3.4, t + 7.5, t + 11.6]; ventH = 1.6;                         // spalter foran sensorkammeret
+ventY = [for (i = [0 : floor((kamH - 4)/4.1)]) t + 3.4 + 4.1*i]; ventH = 1.6;                         // spalter foran sensorkammeret
 gullB = 1.2; gullT = 0.6;                                                   // gullisten foran skilleveggen
 tekst = "SKJOLD"; tekstY = yD1 + 3.4; tekstS = 2.6;
 
@@ -147,8 +164,10 @@ module bunn() {
         if (sx == 0) translate([x - 1.2, y - (sy < 0 ? 0.3 : 4.7), tb - 0.01]) cube([1.25, 5, bZ - tb + bT + 1]);
         translate([x - (sx == 0 ? 0 : 5), y - (sy < 0 ? 1.2 : 0.05), tb - 0.01]) cube([5, 1.25, bZ - tb + bT + 1]);
       }
-      // sensorkortet: to stolper med spor, kortet skyves inn forfra og ligger vannrett midt i kammeret
-      for (s = [-1, 1]) translate([sensX + s*(sensW/2 + 0.3 - sporD + 1.5), sensY, tb - 0.01]) difference() {
+      // DHT11-modulen: to tapper fra bakveggen til kortets bakside
+      if (DHT) for (s = [-1, 1]) translate([dhtX0 + dhtHullX, dhtY + s*dhtHullA/2, tb - 0.01]) cylinder(d = 6, h = dhtZ0 - tb + 0.01);
+      // sensorkortet (SHT40 o.l.): to stolper med spor, kortet skyves inn forfra og ligger vannrett midt i kammeret
+      if (!DHT) for (s = [-1, 1]) translate([sensX + s*(sensW/2 + 0.3 - sporD + 1.5), sensY, tb - 0.01]) difference() {
         translate([-1.5, -2.5, 0]) cube([3, 5, Db - 1.5 - tb]);
         translate([s < 0 ? 1.5 - sporD : -1.5 - 0.01, -sporB/2, -1]) cube([sporD + 0.01, sporB, Db + 2]);
       }
@@ -168,13 +187,16 @@ module bunn() {
     if (!E32D1) translate([W/2 - t - 1, cy, usbZ]) rotate([0, 90, 0]) linear_extrude(t + 2) rrect(usbH, usbB, 1.5);
     if (E32D1) translate([vcx - kanB/2, -1, -1]) cube([kanB, vy0 + 1.5, kanZ + 1]);
     // sensorkammeret: spalter i bunnen (luft inn nedenfra) og i begge ender
-    for (x = [-W/2 + 7 : 3.4 : W/2 - 9]) if (!E32D1 || abs(x - vcx) > kanB/2 + kanV + 1.2)
+    for (x = [-W/2 + 7 : 3.4 : W/2 - 9]) if ((!E32D1 || abs(x - vcx) > kanB/2 + kanV + 1.2) && (!DHT || abs(x - dhtX0 - dhtHullX) > 4))
       translate([x - 0.8, -1, tb + 1.5]) cube([1.6, t + 2, Db - tb - 4.5]);
-    for (s = [-1, 1], y = [t + 3.5, t + 7.5, t + 11.5]) translate([s < 0 ? -W/2 - 1 : W/2 - t - 1, y - 0.8, tb + 1.5]) cube([t + 2, 1.6, Db - tb - 4.5]);
+    for (s = [-1, 1], y = [for (i = [0 : floor((kamH - 4)/4)]) t + 3.5 + 4*i]) translate([s < 0 ? -W/2 - 1 : W/2 - t - 1, y - 0.8, tb + 1.5]) cube([t + 2, 1.6, Db - tb - 4.5]);
     // ESP-rommet: spalter i toppen (varmen ut, bort fra sensoren)
     for (x = [-W/2 + 12 : 3.4 : W/2 - 12]) translate([x - 0.8, H - t - 1, tb + 3]) cube([1.6, t + 2, Db - tb - 6]);
-    // ledningene fra sensoren går under skilleveggen ved sensoren
-    translate([sensX - 4, yD0 - 0.5, tb - 0.01]) cube([8, yD1 - yD0 + 1, 3.5]);
+    // ledningene fra sensoren går under skilleveggen ved sensoren (SHT40), eller PH2.0-kabelen gjennom et hull (DHT11)
+    if (!DHT) translate([sensX - 4, yD0 - 0.5, tb - 0.01]) cube([8, yD1 - yD0 + 1, 3.5]);
+    if (DHT) translate([dhtKabX - 3, yD0 - 0.5, dhtKabZ[0]]) cube([6, yD1 - yD0 + 1, dhtKabZ[1] - dhtKabZ[0]]);
+    // pilothull i DHT11-tappene
+    if (DHT) for (s = [-1, 1]) translate([dhtX0 + dhtHullX, dhtY + s*dhtHullA/2, dhtZ0 - 9]) cylinder(d = dhtPilot, h = 10, $fn = 24);
   }
 }
 
@@ -301,7 +323,23 @@ module gy302() {
   color("#5b2d86") translate([luxX - 6.95, cy - 3, Db - luxBlokk[2] - 1.6]) cube([13.9, 18.5, 1.6]);
   color("#111") translate([luxX - 1.5, cy - 0.8, Db - luxBlokk[2] - 0.01]) cube([3, 1.6, 0.01]);
 }
-module sensorkort() {
+module sensorkort() { if (DHT) dhtmod(); else shtkort(); }
+module dhtmod() {   // DHT11-modulen med PH2.0-plugg og kabel (forenklet)
+  difference() {
+    color("#1a1a1a") translate([dhtX0, dhtY - dhtB/2, dhtZ0]) cube([dhtL, dhtB, dhtT]);
+    for (s = [-1, 1]) translate([dhtX0 + dhtHullX, dhtY + s*dhtHullA/2, dhtZ0 - 1]) cylinder(d = dhtHullD, h = 4, $fn = 24);
+  }
+  color("#3a8fd0") translate([dhtX0 + 2, dhtY - 7.75, dhtZ1]) cube([12, 15.5, dhtH]);              // DHT11 (gitteret fram)
+  color("#ddd") translate([dhtX0 + dhtL - 6, dhtY - 3.5, dhtZ1]) cube([6, 7, 4.5]);                 // PH2.0-kontakten
+  color("#222") translate([dhtX0 + dhtL - 1, dhtY - 3, dhtZ1 + 0.25]) cube([8, 6, 4.2]);            // pluggen
+  color("#c33") hull() { translate([dhtX0 + dhtL + 7, dhtY, dhtZ1 + 2.3]) sphere(d = 1.8, $fn = 12);
+                         translate([dhtKabX, dhtY + 3, dhtZ1 + 2.3]) sphere(d = 1.8, $fn = 12); }
+  color("#c33") hull() { translate([dhtKabX, dhtY + 3, dhtZ1 + 2.3]) sphere(d = 1.8, $fn = 12);
+                         translate([dhtKabX, yD1 + 6, dhtZ1 + 2.3]) sphere(d = 1.8, $fn = 12); }
+  color("#888") translate([dhtX0 + 28, dhtY - 5, dhtZ0 - 2]) cube([6, 10, 2]);                       // lodding bak (kontakt og stiftrad)
+  color("#888") translate([dhtX0 + 4, dhtY - 7, dhtZ0 - 2]) cube([8, 3, 2]);                        // lodding bak (DHT11-beina)
+}
+module shtkort() {
   color("#2d6fb5") translate([sensX - sensW/2 + 0.2, sensY - 0.8, tb + 0.2]) cube([sensW - 0.4, 1.6, 12]);
   color("#ddd") translate([sensX - 1.5, sensY - 1.6, tb + 4.5]) cube([3, 0.8, 3]);
 }

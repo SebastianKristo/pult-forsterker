@@ -13,6 +13,8 @@ Varianter: kort = esp32 | d1mini | esp32d1 (ESP32 D1 mini, USB ut bak nede), og 
   stl/<kort>/lokk_enkel.stl              … bare temperatur og fukt
   stl/<kort>/gull.stl                    gullisten og SKJOLD (felt inn i lokket, filament 3)
   stl/<kort>/stativ.stl                  bordstativ (på siden)
+  stl/<kort>/sht40/                      bunn, lokk, gull og stativ med lite sensorkammer for SHT40 o.l. (th="sht40")
+Standard temperatur/fukt-sensor er DHT11-modulen (th="dht11mod", 35 × 23 mm med PH2.0).
 Kontroll: tette deler, ingen overlapp i montert stilling (kjøpte deler med), overheng i utskriftsretning, plass på K2."""
 import os
 import shutil
@@ -48,6 +50,8 @@ for k in KORT:
     os.makedirs(f"stl/{k}", exist_ok=True); os.makedirs(f"stl_asm/{k}", exist_ok=True)
     procs += [scad(f"stl/{k}/bunn.stl", "bunn", k), scad(f"stl/{k}/gull.stl", "gull", k), scad(f"stl/{k}/stativ.stl", "stativ", k)]
     procs += [scad(f"stl/{k}/{n}.stl", "lokk", k, p, l) for n, (p, l) in LOKK.items()]
+    os.makedirs(f"stl/{k}/sht40", exist_ok=True)   # lite sensorkammer for SHT40/SHT31-kort (5–10 mm lavere boks)
+    procs += [scad(f"stl/{k}/sht40/{p}.stl", p, k, ekstra=("-D", 'th="sht40"')) for p in ("bunn", "lokk", "gull", "stativ")]
     # USB-kabelen sjekkes slik den går på bordstativet (for esp32d1 bøyd bakover gjennom stativet)
     procs += [scad(f"stl_asm/{k}/{p}.stl", f"a_{p}", k, ekstra=("-D", 'kabel="stativ"') if p == "plugg" else ())
               for p in MONTERT + ["stativ"]]
@@ -63,7 +67,7 @@ def meld(god, tekst):
 for k in KORT:
     print(f"--- {k} ---")
     # 1. tette deler i ett legeme
-    for p in ["bunn", *LOKK, "gull", "stativ"]:
+    for p in ["bunn", *LOKK, "gull", "stativ", "sht40/bunn", "sht40/lokk", "sht40/stativ"]:
         m = trimesh.load(f"stl/{k}/{p}.stl")
         n = len(m.split(only_watertight=False))
         meld(m.is_watertight and (n == 1 or p == "gull"), f"{p:14s} tett={m.is_watertight} deler={n} {np.round(m.extents, 1)} mm, "
