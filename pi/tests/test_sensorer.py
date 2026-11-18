@@ -36,3 +36,16 @@ class TestSensorer(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_sti_for_innstillinger():
+    from skjold_sensorer import sti_for
+    assert sti_for("Oppdateringsintervall", 60) == "/number/Oppdateringsintervall/set?value=60"
+    assert sti_for("Tilstedeværelse av etter", "15") == "/number/Tilstedev%C3%A6relse%20av%20etter/set?value=15"
+    assert sti_for("Status-LED", False) == "/switch/Status-LED/turn_off"
+    assert sti_for("Status-LED", True) == "/switch/Status-LED/turn_on"
+    try:
+        sti_for("Temperatur", 1)
+        assert False
+    except ValueError:
+        pass

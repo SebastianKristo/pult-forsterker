@@ -31,6 +31,21 @@ Skjold Sans ([`../sans`](../sans/LES_MEG.md)) er en skjoldformet multisensor med
 Sensor er den enkle, rektangulære boksen. Den finnes for ESP32 DevKit, D1 mini og ESP32 D1 mini, med eller uten PIR
 og lysvindu, og med bordstativ.
 
+## Innstillinger og diagnostikk
+
+Disse kan endres uten å flashe på nytt, fra **Homey** (enhetens innstillinger), **Home Assistant** (Skjold-integrasjonen,
+under Konfigurasjon på Skjold Sensor-enheten) eller sensorens egen nettside. De huskes etter strømbrudd.
+
+| Innstilling | Standard | Hva |
+|---|---|---|
+| Oppdateringsintervall | 30 s (5–600) | Hvor ofte temperatur, fukt og lys måles |
+| Bevegelse av etter | 30 s (1–600) | Nedkjøling: hvor lenge bevegelse står på etter siste bevegelse PIR-en så |
+| Tilstedeværelse av etter | 10 min (1–240) | Hvor lenge tilstedeværelse står på etter at bevegelse gikk av |
+| Status-LED | på | Den blå LED-en på D1 mini / ESP32 blinker når sensoren mangler Wi-Fi. Av = lyser aldri |
+
+Diagnostikk (bare lesing): IP-adresse, MAC-adresse, Wi-Fi-nett, tilgangspunkt, Wi-Fi-signal, oppetid,
+ESPHome-versjon og (ESP32) brikketemperatur.
+
 ## Mål og varianter
 
 | | ESP32-WROOM DevKit | Wemos D1 mini | ESP32 D1 mini | Wemos D1 mini USB-C, USB bak |

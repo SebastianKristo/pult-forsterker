@@ -21,12 +21,12 @@ substitutions:
   # sensoren sitter i eget kammer bak en dobbel skillevegg, men D1 mini varmer litt likevel:
   # juster mot et kjent termometer etter en time i drift (DHT11 måler ±2 °C)
   temp_offset: "0.0"
-  bevegelse_av: 30s
+  bevegelse_av: "30"                # startverdi (s) – endres i «Bevegelse av etter» (HA, Homey, web)
   # utledede sensorer (regnes ut fra temperatur, fukt, lys og bevegelse)
-  tilstede_av: 10min                 # «Tilstedeværelse» står på så lenge etter siste bevegelse
+  tilstede_av: "10"                 # startverdi (min) for «Tilstedeværelse av etter»
   mork_lux: "10"                     # «Mørkt» under så mange lux
   fukt_hoy: "70"                     # «Høy fuktighet» over så mange % (mugg/kondens)
-  oppdatering: 30s
+  oppdatering: "30"                 # startverdi (s) for «Oppdateringsintervall»
 
 esphome:
   name: ${name}
@@ -56,9 +56,24 @@ web_server:
   port: 80
   version: 3
 
-# blinker ved feil (ingen Wi-Fi, sensor som ikke svarer), ellers av – så det ikke lyser inn i lyssensoren
-status_led:
-  pin: { number: D4, inverted: true }
+# Lampen på kortet (og evt. en egen LED): blinker når sensoren ikke har Wi-Fi eller ikke har kontakt med Home
+# Assistant/Skjold. «Status-LED» av = alltid av (den lyser ellers inn i lyssensoren om natta).
+output:
+  - platform: gpio
+    id: led_ut
+    pin: { number: D4, inverted: true }
+
+switch:
+  - platform: template
+    name: Status-LED
+    id: led_pa
+    icon: mdi:led-on
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_off:
+      - output.turn_off: led_ut
+
 
 i2c:
   sda: D2
@@ -71,6 +86,7 @@ sensor:
   # DHT11 måler ±2 °C og ±5 %RH med 1 °C / 1 % oppløsning, og tåler ikke avlesning oftere enn ca. hvert 2. sekund.
   # Pinnen får intern pull-up (standard i ESPHome for dht); modulen har som regel også sin egen 10 kΩ.
   - platform: dht
+    id: dht_kort
     model: DHT11
     pin: D6
     temperature:
@@ -81,25 +97,25 @@ sensor:
     humidity:
       name: Luftfuktighet
       id: fukt
-    update_interval: ${oppdatering}
+    update_interval: never               # styres av «Oppdateringsintervall» (interval under)
   # --- SHT40 i stedet for DHT11 (oppgradering: ±0,2 °C, ±1,8 %RH, tåler kondens; bygg kabinettet med th="sht40") ---
   # - platform: sht4x
   #   address: 0x44
   #   temperature: { name: Temperatur, id: temp, filters: [ offset: "${temp_offset}" ] }
   #   humidity: { name: Luftfuktighet, id: fukt }
-  #   update_interval: ${oppdatering}
+  #   update_interval: ${oppdatering}s
   # --- SHT31 i stedet for SHT40 ---
   # - platform: sht3xd
   #   address: 0x44
   #   temperature: { name: Temperatur, id: temp, filters: [ offset: "${temp_offset}" ] }
   #   humidity: { name: Luftfuktighet, id: fukt }
-  #   update_interval: ${oppdatering}
+  #   update_interval: ${oppdatering}s
   # --- AHT20 + BMP280 (kombikort) i stedet for SHT40: fukt fra AHT20, temperatur og lufttrykk fra BMP280 ---
   # - platform: aht10
   #   variant: AHT20
   #   temperature: { name: Temperatur (AHT20), id: temp, filters: [ offset: "${temp_offset}" ] }
   #   humidity: { name: Luftfuktighet, id: fukt }
-  #   update_interval: ${oppdatering}
+  #   update_interval: ${oppdatering}s
   # - platform: bmp280_i2c
   #   address: 0x77
   #   temperature: { name: Temperatur (BMP280), internal: true }
@@ -111,7 +127,7 @@ sensor:
     name: Lys
     id: lys
     address: 0x23
-    update_interval: ${oppdatering}
+    update_interval: never
 
   - platform: template
     name: Duggpunkt
@@ -188,15 +204,24 @@ binary_sensor:
   # --- bevegelse: AM312 (eller HC-SR501 / LD2410 OUT). D5 har ingen intern pulldown på ESP8266. ---
   - platform: gpio
     pin: D5
+    id: pir
+    internal: true                     # rått signal fra PIR-en; «Bevegelse» under har innstillbar av-tid
+    on_press:
+      - script.stop: bevegelse_av_om
+      - lambda: |-
+          if (!id(bevegelse).state) { id(bevegelser) += 1; id(bevegelse).publish_state(true); }
+    on_release:
+      - script.execute: bevegelse_av_om
+  - platform: template
     name: Bevegelse
     id: bevegelse
     device_class: motion
-    filters:
-      - delayed_off: ${bevegelse_av}
     on_press:
-      - lambda: 'id(bevegelser) += 1;'
+      - script.stop: tilstede_av_om
+      - binary_sensor.template.publish: { id: tilstede, state: ON }
     on_release:
       - lambda: 'id(sist_bevegelse) = millis();'
+      - script.execute: tilstede_av_om
   - platform: status
     name: Status
 
@@ -205,9 +230,6 @@ binary_sensor:
     name: Tilstedeværelse
     id: tilstede
     device_class: occupancy
-    lambda: 'return id(bevegelse).state;'
-    filters:
-      - delayed_off: ${tilstede_av}
   - platform: template
     name: Mørkt
     icon: mdi:weather-night
@@ -230,6 +252,16 @@ binary_sensor:
 
 
 text_sensor:
+  # --- diagnostikk ---
+  - platform: wifi_info
+    ip_address: { name: IP-adresse, entity_category: diagnostic }
+    ssid: { name: Wi-Fi-nett, entity_category: diagnostic }
+    bssid: { name: Tilgangspunkt, entity_category: diagnostic }
+    mac_address: { name: MAC-adresse, entity_category: diagnostic }
+  - platform: version
+    name: ESPHome-versjon
+    hide_timestamp: true
+    entity_category: diagnostic
   - platform: template
     name: Komfort
     icon: mdi:sofa-outline
@@ -257,6 +289,83 @@ text_sensor:
 globals:
   - { id: bevegelser, type: int, restore_value: false, initial_value: "0" }
   - { id: sist_bevegelse, type: uint32_t, initial_value: "0" }
+
+
+# Innstillinger: endres i Home Assistant, Homey-appen (enhetens innstillinger) eller sensorens web-side
+number:
+  - platform: template
+    name: Oppdateringsintervall
+    id: intervall
+    icon: mdi:timer-cog-outline
+    entity_category: config
+    unit_of_measurement: s
+    min_value: 5
+    max_value: 600
+    step: 5
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${oppdatering}
+  - platform: template
+    name: Bevegelse av etter
+    id: bev_av
+    icon: mdi:motion-sensor-off
+    entity_category: config
+    unit_of_measurement: s
+    min_value: 1
+    max_value: 600
+    step: 1
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${bevegelse_av}
+  - platform: template
+    name: Tilstedeværelse av etter
+    id: tils_av
+    icon: mdi:account-clock-outline
+    entity_category: config
+    unit_of_measurement: min
+    min_value: 1
+    max_value: 240
+    step: 1
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${tilstede_av}
+
+script:
+  - id: bevegelse_av_om
+    mode: restart
+    then:
+      - delay: !lambda 'return (uint32_t) (id(bev_av).state * 1000);'
+      - binary_sensor.template.publish: { id: bevegelse, state: OFF }
+  - id: tilstede_av_om
+    mode: restart
+    then:
+      - delay: !lambda 'return (uint32_t) (id(tils_av).state * 60000);'
+      - binary_sensor.template.publish: { id: tilstede, state: OFF }
+
+interval:
+  # målingene: hvert «Oppdateringsintervall» sekund (første gang 5 s etter oppstart)
+  - interval: 1s
+    then:
+      - lambda: |-
+          static uint32_t sist = 0;
+          const uint32_t n = millis();
+          if (sist != 0 && n - sist < (uint32_t) (id(intervall).state * 1000)) return;
+          if (sist == 0 && n < 5000) return;
+          sist = n;
+          id(dht_kort).update();
+          id(lys).update();
+  # status-LED: blink uten Wi-Fi eller uten kontakt med Home Assistant/Skjold, ellers av
+  - interval: 500ms
+    then:
+      - lambda: |-
+          static bool pa = false;
+          const bool feil = !wifi::global_wifi_component->is_connected();
+          if (!id(led_pa).state || !feil) { id(led_ut).turn_off(); pa = false; return; }
+          pa = !pa;
+          if (pa) id(led_ut).turn_on(); else id(led_ut).turn_off();
 
 button:
   - platform: restart

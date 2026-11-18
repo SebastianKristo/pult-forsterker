@@ -191,6 +191,9 @@ class KiAmpApi:
     async def sensorer(self) -> dict[str, Any]:
         return await self._req("GET", "/sensorer")
 
+    async def sensor_sett(self, mac: str, navn: str, verdi) -> dict[str, Any]:
+        return await self._req("POST", "/sensorer/sett", {"mac": mac, "navn": navn, "verdi": verdi}, timeout=10)
+
     async def stav(self) -> dict[str, Any]:
         return await self._req("GET", "/stav")
 
