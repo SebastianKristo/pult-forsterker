@@ -20,6 +20,23 @@ const MAP = {
 };
 const KAPASITETER = Object.values(MAP).map((m) => m[0]);
 
+// Innstillinger og diagnostikk: entitet i ESPHome → innstilling i Homey
+const INNST = {   // [nøkkel, ESPHome-domene] – kan endres fra Homey
+  Oppdateringsintervall: ['oppdatering', 'number'],
+  'Bevegelse av etter': ['bevegelse_av', 'number'],
+  'Tilstedeværelse av etter': ['tilstede_av', 'number'],
+  'Status-LED': ['led', 'switch'],
+};
+const tid = (s) => { s = Math.floor(Number(s) || 0); const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60); return (d ? d + ' d ' : '') + (d || h ? h + ' t ' : '') + m + ' min'; };
+const DIAG = {    // vises som etiketter (bare lesing)
+  'IP-adresse': ['ip', String],
+  'MAC-adresse': ['mac', String],
+  'Wi-Fi-nett': ['ssid', String],
+  'Wi-Fi-signal': ['signal', (v) => Math.round(Number(v)) + ' dBm'],
+  Oppetid: ['oppetid', tid],
+  'ESPHome-versjon': ['versjon', String],
+};
+
 // Navnet på entiteten: «name» kommer bare i første melding (alle verdier når strømmen starter). Senere endringer har
 // bare id, «binary_sensor/Bevegelse» (ESPHome 2025+) eller «binary_sensor-bevegelse» (eldre).
 function entNavn(o) {
@@ -52,6 +69,45 @@ class SensorDevice extends Homey.Device {
       if (!this.hasCapability(c)) await this.addCapability(c).catch(this.error);
     }
     this.connect();
+  }
+
+  // Endret i Homey → send til sensoren (ESPHome-webserveren: POST /number/<navn>/set?value= og /switch/<navn>/turn_on|off)
+  async onSettings({ newSettings, changedKeys }) {
+    for (const k of changedKeys) {
+      const navn = Object.keys(INNST).find((n) => INNST[n][0] === k);
+      if (!navn) continue;
+      const [, domene] = INNST[navn];
+      const sti = domene === 'switch'
+        ? `/switch/${encodeURIComponent(navn)}/${newSettings[k] ? 'turn_on' : 'turn_off'}`
+        : `/number/${encodeURIComponent(navn)}/set?value=${encodeURIComponent(newSettings[k])}`;
+      await this.post(sti);
+    }
+  }
+
+  post(sti) {
+    const host = this.getStoreValue('address');
+    if (!host) return Promise.reject(new Error('Fant ikke sensoren på nettet'));
+    return new Promise((ok, feil) => {
+      const req = http.request({ host, port: this.getStoreValue('port') || 80, path: sti, method: 'POST', headers: { 'Content-Length': 0 } }, (res) => {
+        res.resume();
+        if (res.statusCode >= 200 && res.statusCode < 300) ok(); else feil(new Error('Sensoren svarte ' + res.statusCode));
+      });
+      req.setTimeout(8000, () => req.destroy(new Error('Sensoren svarte ikke')));
+      req.on('error', feil);
+      req.end();
+    });
+  }
+
+  // Verdier fra sensoren som hører til innstillingene: samle og skriv dem samlet (setSettings utløser ikke onSettings)
+  settInnst(nokkel, verdi) {
+    this._innst = { ...(this._innst || {}), [nokkel]: verdi };
+    clearTimeout(this._innstT);
+    this._innstT = this.homey.setTimeout(() => {
+      const nye = this._innst; this._innst = {};
+      const gamle = this.getSettings();
+      const endret = Object.fromEntries(Object.entries(nye).filter(([k, v]) => gamle[k] !== v));
+      if (Object.keys(endret).length) this.setSettings(endret).catch(this.error);
+    }, 1500);
   }
 
   onDiscoveryResult(r) { return String((r.txt && r.txt.mac) || r.id) === String(this.getData().id); }
@@ -88,6 +144,13 @@ class SensorDevice extends Homey.Device {
     if (ev !== 'state' || !data) return;
     let o; try { o = JSON.parse(data); } catch (e) { return; }
     const navn = entNavn(o);
+    const rå = o.value !== undefined ? o.value : o.state;
+    const inn = INNST[navn], dia = DIAG[navn];
+    if ((inn || dia) && this.homey) {
+      if (inn) this.settInnst(inn[0], inn[1] === 'switch' ? PA(rå) : Number(rå));
+      else if (rå !== null && rå !== undefined && rå !== '') this.settInnst(dia[0], dia[1](rå));
+      return;
+    }
     const m = MAP[navn] || MAP[Object.keys(MAP).find((k) => k.toLowerCase() === String(navn).toLowerCase())];
     if (!m || !this.hasCapability(m[0])) return;
     const v = m[1](o.value !== undefined ? o.value : o.state);
@@ -108,3 +171,4 @@ class SensorDevice extends Homey.Device {
 module.exports = SensorDevice;
 module.exports.parseSse = parseSse;
 module.exports.entNavn = entNavn;
+module.exports.INNST = INNST;

@@ -9778,7 +9778,23 @@ async def h_sensorer(_r):
     return web.json_response(sensorer.status())
 
 
-FEAT_ROUTES += [("GET", "/api/sensorer", h_sensorer)]
+async def h_sensorer_sett(r):
+    """POST /api/sensorer/sett {mac, navn, verdi}: endrer Oppdateringsintervall, Bevegelse av etter,
+    Tilstedeværelse av etter eller Status-LED på en Skjold Sensor."""
+    try:
+        b = await r.json()
+        await asyncio.get_running_loop().run_in_executor(None, sensorer.sett, str(b["mac"]), str(b["navn"]), b["verdi"])
+    except (KeyError, ValueError, TypeError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+    except LookupError as e:
+        return web.json_response({"error": str(e)}, status=404)
+    except OSError as e:
+        return web.json_response({"error": str(e)}, status=502)
+    changed()
+    return web.json_response(sensorer.status())
+
+
+FEAT_ROUTES += [("GET", "/api/sensorer", h_sensorer), ("POST", "/api/sensorer/sett", h_sensorer_sett)]
 
 
 # ---------- Skjold Kassetthylle: ta ut en kassett = spill den (pi/skjold_hylle.py, esphome/skjold-hylle.yaml) ----------

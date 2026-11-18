@@ -397,6 +397,19 @@ SENSOR_VERDIER = [
     ("Bevegelser", "motion_count", None, None, "total_increasing", False),
     ("Minutter siden bevegelse", "minutes_since_motion", SensorDeviceClass.DURATION, "min", "measurement", False),
     ("Wi-Fi-signal", "wifi", SensorDeviceClass.SIGNAL_STRENGTH, "dBm", "measurement", True),
+    ("Oppetid", "uptime", SensorDeviceClass.DURATION, "s", None, True),
+    ("IP-adresse", "ip", None, None, None, True),
+    ("MAC-adresse", "mac", None, None, None, True),
+    ("Wi-Fi-nett", "ssid", None, None, None, True),
+    ("Tilgangspunkt", "bssid", None, None, None, True),
+    ("ESPHome-versjon", "esphome_version", None, None, None, True),
+    ("Brikketemperatur", "chip_temperature", SensorDeviceClass.TEMPERATURE, "°C", "measurement", True),
+]
+# Innstillinger (number): navn i ESPHome, nøkkel, min, maks, steg, enhet
+SENSOR_TALL = [
+    ("Oppdateringsintervall", "update_interval", 5, 600, 5, "s"),
+    ("Bevegelse av etter", "motion_cooldown", 1, 600, 1, "s"),
+    ("Tilstedeværelse av etter", "presence_timeout", 1, 240, 1, "min"),
 ]
 SENSOR_BINAERE = [
     ("Bevegelse", "motion", BinarySensorDeviceClass.MOTION),
@@ -441,6 +454,49 @@ class SkjoldSensorVerdi(_SensorVerdi, SensorEntity):
         return None if isinstance(v, bool) else v
 
 
+class SkjoldSensorTall(_SensorVerdi, NumberEntity):
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_mode = NumberMode.BOX
+
+    def __init__(self, c, h, spec) -> None:
+        navn, key, lo, hi, steg, enhet = spec
+        super().__init__(c, h, navn, key)
+        self._navn = navn
+        self._attr_native_min_value, self._attr_native_max_value, self._attr_native_step = lo, hi, steg
+        self._attr_native_unit_of_measurement = enhet
+
+    @property
+    def native_value(self):
+        v = self._v()
+        return None if isinstance(v, bool) or v is None else float(v)
+
+    async def async_set_native_value(self, value: float) -> None:
+        self.coordinator.extras["sensorer"] = await self.coordinator.api.sensor_sett(self._dev, self._navn, value)
+        self.async_write_ha_state()
+
+
+class SkjoldSensorLed(_SensorVerdi, SwitchEntity):
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, c, h) -> None:
+        super().__init__(c, h, "Status-LED", "status_led")
+
+    @property
+    def is_on(self):
+        v = self._v()
+        return None if v is None else bool(v)
+
+    async def _sett(self, on: bool) -> None:
+        self.coordinator.extras["sensorer"] = await self.coordinator.api.sensor_sett(self._dev, "Status-LED", on)
+        self.async_write_ha_state()
+
+    async def async_turn_on(self, **kw) -> None:
+        await self._sett(True)
+
+    async def async_turn_off(self, **kw) -> None:
+        await self._sett(False)
+
+
 class SkjoldSensorBinaer(_SensorVerdi, BinarySensorEntity):
     def __init__(self, c, h, spec) -> None:
         navn, key, dc = spec
@@ -477,8 +533,10 @@ def entities(c, platform: str) -> list:
         out += [x for m in minis for x in (RostPower(c, m), RostSynced(c, m))]
         if kas and kas["spoler"] is not None:
             out.append(KassettSpoler(c))
+        out += [SkjoldSensorLed(c, h) for h in sensorer]
     elif platform == "number":
         out += [RostVolume(c, m) for m in minis]
+        out += [SkjoldSensorTall(c, h, sp) for h in sensorer for sp in SENSOR_TALL]
     elif platform == "binary_sensor":
         out += [x for m in minis for x in (RostPlaying(c, m), RostConnected(c, m))]
         if kas:

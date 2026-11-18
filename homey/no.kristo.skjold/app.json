@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.24.0",
+  "version": "2.25.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -867,7 +867,150 @@
             "no": "Høy fuktighet"
           }
         }
-      }
+      },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Sensor",
+            "no": "Sensor"
+          },
+          "children": [
+            {
+              "id": "oppdatering",
+              "type": "number",
+              "label": {
+                "en": "Update interval",
+                "no": "Oppdateringsintervall"
+              },
+              "hint": {
+                "en": "How often temperature, humidity and light are measured.",
+                "no": "Hvor ofte temperatur, fukt og lys måles."
+              },
+              "value": 30,
+              "min": 5,
+              "max": 600,
+              "step": 5,
+              "units": {
+                "en": "s",
+                "no": "s"
+              }
+            },
+            {
+              "id": "bevegelse_av",
+              "type": "number",
+              "label": {
+                "en": "Motion off after",
+                "no": "Bevegelse av etter"
+              },
+              "hint": {
+                "en": "Cooldown: motion stays on this long after the last movement.",
+                "no": "Hvor lenge bevegelse står på etter siste bevegelse."
+              },
+              "value": 30,
+              "min": 1,
+              "max": 600,
+              "step": 1,
+              "units": {
+                "en": "s",
+                "no": "s"
+              }
+            },
+            {
+              "id": "tilstede_av",
+              "type": "number",
+              "label": {
+                "en": "Presence off after",
+                "no": "Tilstedeværelse av etter"
+              },
+              "value": 10,
+              "min": 1,
+              "max": 240,
+              "step": 1,
+              "units": {
+                "en": "min",
+                "no": "min"
+              }
+            },
+            {
+              "id": "led",
+              "type": "checkbox",
+              "label": {
+                "en": "Status LED",
+                "no": "Status-LED"
+              },
+              "hint": {
+                "en": "Blinks when the sensor has no Wi-Fi. Off = never lights.",
+                "no": "Blinker når sensoren mangler Wi-Fi. Av = lyser aldri."
+              },
+              "value": true
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Diagnostics",
+            "no": "Diagnostikk"
+          },
+          "children": [
+            {
+              "id": "ip",
+              "type": "label",
+              "label": {
+                "en": "IP address",
+                "no": "IP-adresse"
+              },
+              "value": "–"
+            },
+            {
+              "id": "mac",
+              "type": "label",
+              "label": {
+                "en": "MAC address",
+                "no": "MAC-adresse"
+              },
+              "value": "–"
+            },
+            {
+              "id": "ssid",
+              "type": "label",
+              "label": {
+                "en": "Wi-Fi network",
+                "no": "Wi-Fi-nett"
+              },
+              "value": "–"
+            },
+            {
+              "id": "signal",
+              "type": "label",
+              "label": {
+                "en": "Wi-Fi signal",
+                "no": "Wi-Fi-signal"
+              },
+              "value": "–"
+            },
+            {
+              "id": "oppetid",
+              "type": "label",
+              "label": {
+                "en": "Uptime",
+                "no": "Oppetid"
+              },
+              "value": "–"
+            },
+            {
+              "id": "versjon",
+              "type": "label",
+              "label": {
+                "en": "ESPHome version",
+                "no": "ESPHome-versjon"
+              },
+              "value": "–"
+            }
+          ]
+        }
+      ]
     }
   ],
   "discovery": {

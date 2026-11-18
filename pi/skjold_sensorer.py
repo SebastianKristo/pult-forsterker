@@ -16,8 +16,23 @@ import re
 import subprocess
 import threading
 import time
+import urllib.parse
 
 PROSJEKT = "skjold.sensor"
+# Innstillinger som kan endres utenfra: navn i ESPHome → domene (POST /number/<navn>/set?value= eller /switch/<navn>/turn_on|off)
+INNSTILLINGER = {"Oppdateringsintervall": "number", "Bevegelse av etter": "number",
+                 "Tilstedeværelse av etter": "number", "Status-LED": "switch"}
+
+
+def sti_for(navn: str, verdi) -> str:
+    """REST-stien i ESPHome-webserveren som setter innstillingen `navn` til `verdi`."""
+    domene = INNSTILLINGER.get(navn)
+    if not domene:
+        raise ValueError(f"ukjent innstilling: {navn}")
+    n = urllib.parse.quote(navn, safe="")
+    if domene == "switch":
+        return f"/switch/{n}/{'turn_on' if verdi in (True, 1, 'on', 'ON', 'true') else 'turn_off'}"
+    return f"/number/{n}/set?value={float(verdi):g}"
 SOK_S = 60
 
 
@@ -155,6 +170,25 @@ class Sensorer:
                 endret = False
         if endret and navn in ("Bevegelse", "Tilstedeværelse") and self.ctx.get("changed"):
             self.ctx["changed"]()
+
+    def sett(self, mac: str, navn: str, verdi) -> None:
+        """Endrer en innstilling på sensoren (se INNSTILLINGER). Den nye verdien kommer tilbake i hendelsesstrømmen."""
+        sti = sti_for(navn, verdi)
+        with self.lock:
+            e = self.enheter.get(mac) or {}
+            ip, port = e.get("ip"), e.get("port", 80)
+        if not ip:
+            raise LookupError("fant ikke sensoren")
+        c = http.client.HTTPConnection(ip, port, timeout=8)
+        try:
+            c.request("POST", sti, headers={"Content-Length": "0"})
+            r = c.getresponse()
+            r.read()
+            if not 200 <= r.status < 300:
+                raise OSError(f"sensoren svarte {r.status}")
+        finally:
+            c.close()
+        self._sett(mac, navn, (verdi in (True, 1, "on", "ON", "true")) if INNSTILLINGER[navn] == "switch" else float(verdi))
 
     def status(self) -> dict:
         with self.lock:
