@@ -28,6 +28,10 @@ class KiAmpApi:
     async def doorbell(self) -> dict[str, Any]:
         return await self._req("POST", "/doorbell", {"src": "Home Assistant"})
 
+    async def ir(self, body: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/ir: send en IR-kode via dokka eller en Skjold IR-sender (UDP fra Skjold)."""
+        return await self._req("POST", "/ir", body)
+
     async def duck(self, body: dict[str, Any]) -> dict[str, Any]:
         """POST /api/duck: senk musikken og les opp tekst / spill lyd."""
         return await self._req("POST", "/duck", body)

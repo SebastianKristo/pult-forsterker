@@ -62,6 +62,8 @@ class KiPultforsterkerApp extends Homey.App {
       .registerRunListener(async ({ device, bright }) => device.setBright(Number(bright)));
     this.homey.flow.getActionCard('ki_set_led')
       .registerRunListener(async ({ device, level, mode }) => device.setLed(Math.round(level), mode));
+    this.homey.flow.getActionCard('ki_send_ir')   // Skjold Dokk / Skjold IR-sender (UDP fra Skjold, /api/ir)
+      .registerRunListener(async ({ device, mal, protokoll, kode }) => device.request('POST', '/ir', { mål: mal || 'alle', protokoll, data: String(kode || '').trim() }));
     this.homey.flow.getActionCard('ki_set_loudness')
       .registerRunListener(async ({ device, on, level }) => device.setLoudness(on === 'on', level));
 

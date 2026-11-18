@@ -273,5 +273,33 @@
         }
       }
     }
+  },
+  "services": {
+    "send_ir": {
+      "name": "Send IR code",
+      "description": "Send an IR code from Skjold Dokk or a Skjold IR transmitter.",
+      "fields": {
+        "mal": {
+          "name": "Transmitter",
+          "description": "The transmitter name, «dokk» or «alle» (all)."
+        },
+        "protokoll": {
+          "name": "Protocol",
+          "description": "nec, samsung, sony, rc5, lg"
+        },
+        "data": {
+          "name": "Code (hex)",
+          "description": "E.g. 00FF02FD"
+        },
+        "bits": {
+          "name": "Bits",
+          "description": "0 = default"
+        },
+        "entry_id": {
+          "name": "Skjold device",
+          "description": "Optional"
+        }
+      }
+    }
   }
 }

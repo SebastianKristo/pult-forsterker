@@ -137,3 +137,42 @@ security_stop:
       selector:
         config_entry:
           integration: skjold
+
+send_ir:
+  name: Send IR-kode
+  description: Send en IR-kode fra Skjold Dokk eller en Skjold IR-sender (i stereoskapet, bak TV-en …). Kodene er de samme som Skjold Stav lærer, og «Siste IR-kode» på en IR-sender viser koden når du lærer den der.
+  fields:
+    mal:
+      name: Sender
+      description: Navnet på IR-senderen (ir_navn), «dokk» for dokka, eller «alle».
+      required: true
+      default: alle
+      selector:
+        text:
+    protokoll:
+      name: Protokoll
+      required: true
+      default: nec
+      selector:
+        select:
+          options: ["nec", "samsung", "sony", "rc5", "lg"]
+    data:
+      name: Kode (hex)
+      description: For NEC adresse og kommando sammen, f.eks. 00FF02FD.
+      required: true
+      selector:
+        text:
+    bits:
+      name: Bits
+      description: 0 = standard for protokollen (Sony 12, Samsung 32, LG 28).
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 32
+    entry_id:
+      name: Skjold-enhet
+      description: Valgfritt – hvilken Skjold som sender pakken. Tom = den første.
+      selector:
+        config_entry:
+          integration: skjold

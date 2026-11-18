@@ -270,6 +270,11 @@ touchscreen:
       - script.execute: sovn_teller
 
 # ---------- IR ----------
+# Skjold IR-protokollen: lærte koder til dokka og Skjold IR-sendere (esphome/skjold-ir.yaml) som UDP-kringkasting
+udp:
+  id: ir_udp
+  port: 4747
+
 remote_transmitter:
   id: ir_tx
   pin: GPIO43                        # → 1 kΩ → AO3400 → 3 × IR-diode 940 nm (hver med 10 Ω fra batteriet)
@@ -314,6 +319,8 @@ switch:
 
 # ---------- tilstand ----------
 globals:
+  - { id: ir_pakke, type: std::string }    # UDP-pakken til dokka/IR-senderne (ir_send)
+  - { id: ir_via, type: bool, initial_value: "false" }
   - { id: skjold_base, type: std::string, initial_value: '"http://${skjold_host}:${skjold_port}"' }
   - { id: rom_valgt, type: int, restore_value: true, initial_value: "-1" }   # -1 = ${skjold_host}
   - { id: rom_navn, type: std::vector<std::string>, initial_value: "{}" }
@@ -489,6 +496,27 @@ text_sensor:
 
 # Apple TV-favorittene: lagres i fastvaren og kan endres i HA («a|b|c», rekkefølgen = plassen i rutenettet)
 text:
+  # navnet på Skjold IR-senderen (ir_navn i skjold-ir.yaml) når «IR-sender (navnet under)» er valgt
+  - platform: template
+    id: ir_sender_0
+    name: IR-sender for ${enhet_0}
+    icon: mdi:access-point
+    entity_category: config
+    mode: text
+    max_length: 20
+    optimistic: true
+    restore_value: true
+    initial_value: "skap"
+  - platform: template
+    id: ir_sender_1
+    name: IR-sender for ${enhet_3}
+    icon: mdi:access-point
+    entity_category: config
+    mode: text
+    max_length: 20
+    optimistic: true
+    restore_value: true
+    initial_value: "skap"
   - platform: template
     id: atv_fav
     name: Apple TV-favoritter
@@ -1010,14 +1038,29 @@ script:
 
   # ---------- IR ----------
   # send lært kode fra plass 0–111
+  # Send en lært IR-kode. Hver blokk (${enhet_0} / ${enhet_3}) kan sendes fra Staven selv, fra dokka (Skjold Dokk
+  # med IR) eller fra en Skjold IR-sender et annet sted (f.eks. i stereoskapet): «IR for … sendes fra» i HA/web-UI-et.
+  # Til dokka og IR-senderne går koden som UDP-kringkasting «SKIR1 <mål> <protokoll> <hex> <bits>» på port 4747
+  # (esphome/skjold-ir.yaml), så de trenger ingen paring: de svarer på sitt eget navn og på «alle».
   - id: ir_send
     mode: queued
     parameters: { plass: int }
     then:
       - lambda: |-
+          id(ir_via) = false;
           if (plass < 0 || plass >= 112 || id(ir_prot)[plass] == 0) { ESP_LOGW("ir", "ingen kode på plass %d", plass); return; }
           uint32_t d = id(ir_data)[plass];
           uint8_t nb = id(ir_bits)[plass];
+          int blokk = plass / 56;
+          std::string fra = blokk == 0 ? id(ir_fra_0).current_option() : id(ir_fra_1).current_option();
+          std::string navn = blokk == 0 ? id(ir_sender_0).state : id(ir_sender_1).state;
+          bool lokalt = fra == "Staven" || fra == "Staven og alle IR-sendere";
+          std::string maal = fra == "Dokken" ? "dokk" : fra == "IR-sender (navnet under)" ? (navn.empty() ? "alle" : navn) : "alle";
+          if (fra != "Staven") {
+            char p[64]; snprintf(p, sizeof p, "SKIR1 %s %d %08X %d", maal.c_str(), (int) id(ir_prot)[plass], (unsigned) d, (int) nb);
+            id(ir_pakke) = p; id(ir_via) = true;
+          }
+          if (!lokalt) return;
           auto call = id(ir_tx).transmit();
           switch (id(ir_prot)[plass]) {
             case 1: { remote_base::NECData x{}; x.address = d >> 16; x.command = d & 0xFFFF; x.command_repeats = 1;
@@ -1033,6 +1076,15 @@ script:
             default: return;
           }
           call.perform();
+      - if:
+          condition:
+            lambda: "return id(ir_via);"
+          then:
+            - wait_until: { condition: wifi.connected, timeout: 4s }   # etter søvn kobler Wi-Fi seg på igjen først
+            - udp.write:
+                id: ir_udp
+                data: !lambda "return std::vector<uint8_t>(id(ir_pakke).begin(), id(ir_pakke).end());"
+            - lambda: 'ESP_LOGI("ir", "via Wi-Fi: %s", id(ir_pakke).c_str());'
 
   # IR mottatt (bare under læring): vis koden, «Lagre» skriver den til plassen
   - id: ir_mottatt
@@ -2182,6 +2234,25 @@ lvgl:
 
 # ---------- tasteoppsett ----------
 select:
+  # Hvor IR-kodene sendes fra (se ir_send): Staven, dokka, en navngitt Skjold IR-sender eller alle
+  - platform: template
+    id: ir_fra_0
+    name: IR for ${enhet_0} sendes fra
+    icon: mdi:remote
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    options: ["Staven", "Dokken", "IR-sender (navnet under)", "Alle IR-sendere", "Staven og alle IR-sendere"]
+    initial_option: "Staven"
+  - platform: template
+    id: ir_fra_1
+    name: IR for ${enhet_3} sendes fra
+    icon: mdi:remote
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    options: ["Staven", "Dokken", "IR-sender (navnet under)", "Alle IR-sendere", "Staven og alle IR-sendere"]
+    initial_option: "Staven"
 # >>> oppsettvalg (laget av kabinett/fjernkontroll/taster.py – ikke rediger mellom merkene)
   - platform: template
     id: oppsett_valg
