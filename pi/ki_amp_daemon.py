@@ -2419,7 +2419,8 @@ def ble_status():
 
 async def h_oppsett(r):
     """GET /oppsett → oppsettsiden (velg Wi-Fi). GET /api/oppsett → tilstanden til oppsett-nettet.
-    POST /api/oppsett {start|stop|ble|ble_stop}: oppsett-nett for mobilen (QR) eller Bluetooth, startet fra Touch/appen."""
+    POST /api/oppsett {start|stop|ble|kabel}: oppsett-nett for mobilen (QR), Bluetooth eller Ethernet («kabel»: true =
+    slå av oppsett-nettet og vent på kabelen, false = oppsett-nettet igjen), startet fra Touch/appen."""
     if r.method == "POST":
         try:
             b = await r.json()
@@ -2432,6 +2433,8 @@ async def h_oppsett(r):
                 return web.json_response({"error": "fikk ikke startet oppsett-nettet (ingen Wi-Fi-brikke?)"}, status=502)
         elif b.get("stop"):
             await loop.run_in_executor(None, setupnet.stop)
+        if "kabel" in b:   # Touch: «Bruk kabel» (oppsett-nettet av, vent på Ethernet) eller tilbake til oppsett-nettet
+            await loop.run_in_executor(None, setupnet.bruk_kabel, bool(b["kabel"]))
         if "ble" in b:
             await loop.run_in_executor(None, ble_setup, bool(b["ble"]))
         return web.json_response({**(setupnet.status() or {"active": False}), "ble": ble_status()})

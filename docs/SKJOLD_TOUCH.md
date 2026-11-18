@@ -78,6 +78,18 @@ Begge tjenestene skal være `active`.
 
 Menyen til venstre: **Spiller · Hjem · Smarthus · Alarm · Bibliotek · Rom · Oppsett**.
 
+### Uten nett: Wi-Fi eller kabel
+
+Mister Touch nettet (eller er den ny), viser skjermen «Koble Touch til nettet» med tre valg:
+
+- **På skjermen:** velg nettet i lista og skriv passordet med tastaturet på skjermen.
+- **Med mobilen:** skann QR-koden, og velg nettet på oppsettsiden som åpner seg på mobilen.
+- **Kabel:** (bare når Touch har Ethernet-port) sett en nettverkskabel fra ruteren i porten. Touch slår av
+  Wi-Fi-oppsettet og kobler til så snart kabelen er inne; skjermen viser om kabelen er funnet. Kommer det ingen kabel
+  innen 10 minutter, kommer Wi-Fi-oppsettet tilbake.
+
+Wi-Fi kan også byttes senere under Oppsett → Wi-Fi → Koble til nytt.
+
 ### Smarthus
 
 Viser fliser fra Home Assistant: lys, brytere, porter, varme, sensorer og kamera, og opptil fire scener øverst.

@@ -97,6 +97,36 @@ class ForHaand(unittest.TestCase):
         self.assertFalse(s.manual)
 
 
+class Kabel(unittest.TestCase):
+    def test_bruk_kabel_slaar_av_oppsettnettet_og_venter(self):
+        nm = Nm(); now = [500.0]; s, endret = ny(nm, now); s.active = True
+        with mock.patch.object(sn, "DNS_CONF", os.path.join(self.tmp(), "x.conf")):
+            s.bruk_kabel(True)
+        self.assertFalse(s.active)
+        self.assertTrue(nm.har("device", "connect", "eth0"))            # NetworkManager prøver kabelen med en gang
+        st = s.status()
+        self.assertTrue(st["kabel"]); self.assertEqual(st["ethernet"], {"device": "eth0", "state": "unavailable"})
+        self.assertEqual(s.decide(600, False, True), "")                # venter på kabelen, ikke oppsett-nett
+        self.assertEqual(s.decide(500 + sn.KABEL_S, False, True), "start")   # ingen kabel kom: oppsett-nettet igjen
+        self.assertEqual(s.kabel_til, 0.0)
+
+    def test_kabel_satt_i_avslutter_ventingen(self):
+        nm = Nm(); now = [500.0]; s, _ = ny(nm, now); s.kabel_til = 1000
+        self.assertEqual(s.decide(600, True, True), "")
+        self.assertEqual(s.kabel_til, 0.0)
+        self.assertIsNone(s.status())
+
+    def test_tilbake_til_oppsettnettet(self):
+        nm = Nm(); s, _ = ny(nm, [0.0]); s.kabel_til = 900
+        with mock.patch.object(sn, "DNS_CONF", os.path.join(self.tmp(), "x.conf")):
+            s.bruk_kabel(False)
+        self.assertTrue(s.active); self.assertEqual(s.kabel_til, 0.0)
+
+    def tmp(self):
+        import tempfile
+        return tempfile.mkdtemp()
+
+
 class Nettet(unittest.TestCase):
     def test_start_lager_aksesspunkt_og_status(self):
         nm = Nm(); now = [50.0]; s, endret = ny(nm, now)
