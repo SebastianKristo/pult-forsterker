@@ -77,9 +77,13 @@ gullist og stativ i `stl/<kort>/sht40/`. Der er sensorkammeret 10 mm lavere, ell
   forbi temperatur- og fuktsensoren. Varmen fra ESP-en går ut gjennom spaltene på toppen, altså bort fra sensoren.
   Heng derfor sensoren med spaltene i bunnen ned.
 - **DHT11-modulen står parallelt med veggen, helt fram i kammeret**, med det blå DHT11-gitteret 1 mm bak de seks
-  spaltene i lokket. Romluften kommer nedenfra og fra endene og går rett forbi gitteret og ut foran. Kortet skrus
-  med to M2,5 × 8 selvgjengende skruer gjennom festehullene, i to tapper fra bakveggen. Skrutrekkeren kommer forfra
-  mens lokket er av. Loddingen bak kortet har 13 mm klaring til bakveggen.
+  spaltene i lokket. Romluften kommer nedenfra og fra endene og går rett forbi gitteret og ut foran.
+  - **Ingen skruer:** kortet trykkes forfra inn på to styrepinner (Ø2,75 mm, i festehullene Ø3) på to tapper fra
+    bakveggen.
+  - Når lokket settes på, presser to hylser på lokket kortet mot tappene, med 0,1 mm klaring. Kortet kan da ikke
+    flytte seg mer enn 0,3 mm noen vei.
+  - Loddingen bak kortet har 13 mm klaring til bakveggen.
+  - Vil du heller skru: `dhtFeste = "skrue"` gir de gamle tappene for 2 × M2,5 × 8.
 - **PH2.0-kontakten** peker mot høyre. Pluggen har plass med ca. 9 mm fritt foran kontakten (12 mm til veggen på
   D1 mini). Kabelen bøyes opp og går gjennom et hull på 6 × 6 mm i skilleveggen til ESP-rommet. Tett hullet gjerne
   med litt Blu Tack, så varm luft ikke siver ned i kammeret. Du kan også lodde ledninger på stiftraden ved siden av.
@@ -112,9 +116,19 @@ gullist og stativ i `stl/<kort>/sht40/`. Der er sensorkammeret 10 mm lavere, ell
 - **Nøkkelhullene** sitter høyere opp (40 mm avstand, 56 mm over underkanten; 46 mm med SHT40) og er godt klar av kanalen.
 - **På bordstativet** bøyes kabelen bakover under sensoren, gjennom et hakk i ryggen og i et spor i foten
   ([bilde](render/14_esp32d1_stativ_lys.png)). Det trengs en myk kabel, for bøyen er krapp.
-- **PIR-en (AM312)** sitter i et C-formet rør på lokket. Kuppelen stikker ut gjennom hullet i fronten.
-- **Lyssensoren (GY-302)** skrus med to M2,5-skruer mot en blokk bak lysvinduet. BH1750-brikka ser ut gjennom en
-  kanal på 2,5 × 5 mm.
+- **PIR-en (AM312)** sitter i et C-formet rør på lokket.
+  - Kuppelen er senket 1,5 mm (`pirSenk`), så den bare stikker ca. 1 mm ut av fronten (før 2,5 mm).
+  - Kuppelkanten (Ø12) ligger på et sete i røret, så AM312 havner alltid like dypt.
+  - Hullet har en 45° fas fra kuppelens ekvator ut til Ø16,8 mm i fronten. Fra sensorens midte er synsfeltet ca.
+    150° fritt, godt over AM312s ca. 100°.
+- **Lyssensoren (GY-302) uten skruer:** kortet trykkes inn på to styrepinner på lysblokka bak lysvinduet.
+  - To klikkarmer på lokket griper bak kortet, så det ikke faller ut når lokket snus.
+  - Klaringen er 0,1 mm mot armene og 0,25 mm i hullene.
+  - BH1750-brikka ser ut gjennom en kanal på 2,5 × 5 mm.
+  - Ta det ut ved å bøye armene litt ut.
+  - Skruer i stedet: `luxFeste = "skrue"` (2 × M2,5 × 6).
+
+![Lokket sett bakfra](render/19_lokk_inni_lys.png)
 
 ### Wemos D1 mini med USB-C: USB ut bak, nederst
 
@@ -147,8 +161,8 @@ ESP-12F og USB-C på samme side og CH340 under.
 - **Boksen er 54 × 70 × 30 mm**, mot 54 × 66 × 28 mm for vanlig D1 mini:
   - 4 mm høyere, fordi kortet (35 mm) står på høykant over sensorkammeret.
   - 2 mm dypere, så loddingen bak DHT11-modulen går 1,9 mm klar av taket over USB-kanalen.
-- **DHT11-modulen** sitter som i de andre utgavene. Den høyre tappen står delvis på taket over USB-kanalen, så begge
-  hullene er bare 4,4 mm dype: bruk **2 × M2,5 × 6**.
+- **DHT11-modulen** sitter som i de andre utgavene, på styrepinner uten skruer. Den høyre tappen står delvis på taket
+  over USB-kanalen. Velger du skruer (`dhtFeste = "skrue"`), er hullene bare 4,4 mm dype: bruk 2 × M2,5 × 6.
 - **GY-302 (lys) snus 180°**, slik at kortet henger ned fra brikka og går klar av pinnene på lokket.
 - **Nøkkelhullene** har 26 mm avstand, 53,5 mm over underkanten. Det er ca. 10 mm over toppen av USB-kanalen.
 - **Bordstativet** har hakk og spor for kabelen som for ESP32 D1 mini ([bilde](render/18_d1mini_bak_stativ_lys.png)).
@@ -161,7 +175,7 @@ STL-fila:
 
 | Hull i referansen | Mål | Passer til | I Skjold Sensor |
 |---|---|---|---|
-| Rundt hull i lokket | Ø12,2 gjennom, 45° fas ut til Ø14,6. 3 mm lokk | **AM312** mini-PIR (kuppel ca. Ø12) | samme hull og fas |
+| Rundt hull i lokket | Ø12,2 gjennom, 45° fas ut til Ø14,6. 3 mm lokk | **AM312** mini-PIR (kuppel ca. Ø12) | samme hull, kuppelen senket 1,5 mm og fasen ut til Ø16,8 |
 | Rør i boksen under PIR-hullet | Ø10,5 innvendig, ca. Ø13 utvendig, 23 mm høyt, C-form med spalte | AM312-kroppen (ca. Ø10) | samme rør, men på lokket (9 mm) |
 | Rektangulært vindu i lokket | 2,5 × 5 mm gjennom, fas ut til 8,9 × 11,4 mm; kanal 2,5 × 5 mm gjennom en 4,2 mm blokk | **BH1750** (GY-302) | samme kanal og blokk, fas 8,5 × 11 (45°) |
 | Skruetapp ved vinduet | Ø2,7 pilot, 4,2 mm fra vinduets senter | det ene festehullet på GY-302 (Ø3) | to tapper ±4,45 mm, Ø2,2 for M2,5 |
@@ -183,7 +197,7 @@ Typiske priser på AliExpress (2026), inkl. frakt til Norge.
 | **Wemos D1 mini USB-C** (ESP8266, ESP-12F, 34,2 × 25,6 mm, én rad med 8 pinner på hver side) | 1 | 25–40 kr | med USB ut bak (`kort = "d1mini_bak"`). Uten stiftlister |
 | **ESP32 D1 mini** / **MH-ET LIVE MiniKit** (ESP32-WROOM-32, 39 × 31,4 mm, to rader på hver side) | 1 | 40–60 kr | *eller* de to over. USB ut bak (`kort = "esp32d1"`). Uten stiftlister |
 | **DHT11 Temperature Humidity Sensor Module 3.3V/5V** (EC Buying o.l.: sort kort 35 × 23 mm, PH2.0 3-pin G/V/D, stiftrad, PWR-LED, to Ø3-hull) | 1 | 15–30 kr | **standard.** ±2 °C, ±5 %RH. Kabel med PH2.0-plugg følger ofte med |
-| Selvgjengende skrue **M2,5 × 8** | 2 | – | DHT11-modulen |
+| *bare med skruefeste:* selvgjengende skrue **M2,5 × 8** | 2 | – | DHT11-modulen (`dhtFeste = "skrue"`). Standard er uten skruer |
 | *oppgradering:* **SHT40 module** (I²C, ca. 10 × 10–13 mm) | 1 | 25–45 kr | ±0,2 °C, ±1,8 %RH. Bygg kabinettet med `th = "sht40"` |
 | *alternativ:* **SHT31-D module** (GY-SHT31-D) | 1 | 30–50 kr | samme kobling, `sht3xd` i YAML |
 | *alternativ:* **AHT20 + BMP280** kombikort | 1 | 15–25 kr | gir også lufttrykk. Mindre nøyaktig fukt |
@@ -192,7 +206,7 @@ Typiske priser på AliExpress (2026), inkl. frakt til Norge.
 | *alternativ:* **HLK-LD2410C** mmWave | 1 | 30–50 kr | ser også folk som sitter stille. Bruk `lokk_uten_pir` |
 | LED 3 mm (hvit eller blå) + motstand 330 Ω | 1 | 2–5 kr | valgfritt statuslys |
 | Senkeskrue **M3 × 12**, selvgjengende for plast (eller vanlig M3 i Ø2,7-hull) | 2 | – | lokket, bakfra |
-| Selvgjengende skrue **M2,5 × 6** | 2 | – | GY-302 |
+| *bare med skruefeste:* selvgjengende skrue **M2,5 × 6** | 2 | – | GY-302 (`luxFeste = "skrue"`). Standard er uten skruer |
 | Silikonledning 26–28 AWG | ca. 1 m | 15–30 kr | |
 | Micro-USB- eller USB-C-kabel + 5 V-lader (1 A) | 1 | – | pluggen kan være inntil 11 × 7,5 mm (ESP32 D1 mini: 13 × 12 mm, inntil ca. 31 mm lang, rett plugg) |
 | *bordstativ:* skrue **M3 × 8** med flatt hode + 2 gummiføtter Ø10 mm | 2 + 2 | – | |
@@ -293,8 +307,8 @@ Filament 1 = lys (bunn, lokk), 2 = sort (stativ), 3 = gull (gullist og SKJOLD). 
 
 1. **Lodd ledninger** (ca. 8–10 cm) direkte i hullene på sensorene og ESP-kortet. Bruk ikke stiftlister, da blir det
    for trangt. Se [Kobling](#kobling).
-2. **DHT11-modulen:** sett PH2.0-kabelen i, før kabelen opp gjennom hullet i skilleveggen, og skru kortet fast i de
-   to tappene forfra med 2 × M2,5 × 8, med DHT11-gitteret fram. Tett hullet med litt Blu Tack.
+2. **DHT11-modulen:** sett PH2.0-kabelen i og før kabelen opp gjennom hullet i skilleveggen. Trykk så kortet forfra inn
+   på de to styrepinnene, med DHT11-gitteret fram. Ingen skruer: lokket låser kortet. Tett hullet med litt Blu Tack.
    (SHT40: skyv kortet inn i sporene forfra med sensorbrikka ned, og før ledningene under skilleveggen.)
 3. **ESP-kortet:** legg det på hjørnestøttene med USB-enden mot åpningen i høyre vegg. ESP32 D1 mini: legg det på
    høykant med USB-enden ned, rett over USB-kanalen, og WROOM-modulen fram. D1 mini med USB bak: på høykant med
@@ -303,9 +317,12 @@ Filament 1 = lys (bunn, lokk), 2 = sort (stativ), 3 = gull (gullist og SKJOLD). 
    - Kortet skal ligge flatt på de fire hjørnestøttene. Det skal ikke kunne skyves opp eller ned.
    - Lokket låser det: pinnene holder den øvre enden og tunga den nedre.
    - Sett i USB-C-kabelen nedenfra først når lokket er skrudd på. Trykket tas av stoppene øverst i lomma.
-   - DHT11-modulen skrus her med 2 × M2,5 × 6, og GY-302 snus så den henger ned.
-4. **Lokket:** trykk AM312 inn i røret bakfra (kuppelen ut). Skru GY-302 mot lysblokka med to M2,5 × 6, med
-   BH1750-brikka over kanalen. Trykk LED-en inn i holderen og lim den med en dråpe lim.
+   - GY-302 snus her, så den henger ned.
+4. **Lokket** (legg det med forsiden ned):
+   - Trykk AM312 inn i røret bakfra til kuppelkanten ligger på setet.
+   - Trykk GY-302 inn på de to styrepinnene på lysblokka, med BH1750-brikka mot kanalen, til klikkarmene smetter over
+     kortkanten.
+   - Trykk LED-en inn i holderen og lim den med en dråpe lim.
 5. Sett lokket på (ribba går ned i luftspalten i skilleveggen) og skru det fast bakfra med 2 × M3 × 12 senkeskruer.
 6. **Vegg:** sett to skruer i veggen med **40 mm** (ESP32 DevKit og ESP32 D1 mini) eller **26 mm** (D1 mini) avstand, vannrett, med ca. 1,8 mm
    luft under hodet (hodet høyst 2,2 mm høyt og Ø7,5). Heng sensoren på nøkkelhullene og trekk den ned. Spaltene i bunnen skal vende ned.
@@ -334,7 +351,11 @@ Alle mål står øverst i `skjold_sensor.scad`:
 - `th`: `"dht11mod"` (standard) eller `"sht40"`. `sensW`: bredden på SHT40-kortet (standard 13,6 mm).
 - `luxHull`: avstanden fra BH1750-brikka til festehullene på ditt GY-302-kort (standard 4,45 mm, fra referansen).
   **Usikkert:** kort fra ulike leverandører kan ha brikka litt forskjøvet. Sjekk at brikka havner rett bak kanalen.
-- `pirHull`/`pirRorD`: AM312-kuppelen og -kroppen (standard Ø12,2 og Ø10,5, fra referansen).
+- `pirHull`/`pirRorD`: AM312-kuppelen og -kroppen (standard Ø12,2 og Ø10,5, fra referansen). `pirSenk`: hvor mye
+  kuppelen er senket inn i lokket (standard 1,5 mm).
+- `dhtFeste` (`"pinne"` / `"skrue"`), `luxFeste` (`"klikk"` / `"skrue"`). `luxKort`/`luxHullD`: GY-302-kortet
+  (13,9 × 18,5 × 1,6 mm, hull Ø3). `styreD`: styrepinnene (Ø2,75). **Mål kortene dine.** Klikkarmene trenger
+  kortets bredde ± 0,15 mm.
 
 ## Bygg selv
 
@@ -345,8 +366,8 @@ python3 lag_sensor.py bilder 11 12   # bare bildene som begynner med 11 og 12
 ```
 
 Kontrollen sjekker at delene er tette, at ingen deler kolliderer i montert stilling (med kort, PIR, GY-302,
-sensorkort, LED, USB-plugg og stativ), at ingen flater trenger støtte i utskriftsretningen, og at alt får plass på
-K2-plata.
+sensorkort, LED, USB-plugg og stativ), at DHT11- og GY-302-kortet sitter uten skruer med høyst 0,3 mm klaring i alle
+retninger, at ingen flater trenger støtte i utskriftsretningen, og at alt får plass på K2-plata.
 
 ## Lisens
 
