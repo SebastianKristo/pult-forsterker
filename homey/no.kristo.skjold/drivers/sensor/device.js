@@ -5,14 +5,33 @@ const http = require('http');
 // Leser hendelsesstrømmen til ESPHome-webserveren (GET /events, server-sent events) og setter capabilities etter
 // navnet på entiteten: Temperatur, Luftfuktighet, Lys og Bevegelse. Bevegelse kommer da med en gang (ingen polling).
 // Strømmen kobles opp igjen etter brudd (strøm av, ny IP via mDNS).
+const PA = (v) => v === true || v === 1 || v === 'ON' || v === 'on' || v === 'true';
 const MAP = {
   Temperatur: ['measure_temperature', Number],
   Luftfuktighet: ['measure_humidity', Number],
   Lys: ['measure_luminance', Number],
-  Bevegelse: ['alarm_motion', (v) => v === true || v === 'ON' || v === 'on'],
+  Bevegelse: ['alarm_motion', PA],
+  // utledet i fastvaren (esphome/skjold-sensor*.yaml)
+  'Føles som': ['measure_temperature.foles', Number],
+  Tilstedeværelse: ['ki_tilstede', PA],
+  'Høy fuktighet': ['alarm_generic.fukt', PA],
+  Mørkt: ['ki_mork', PA],
+  Komfort: ['ki_komfort', String],
 };
+const KAPASITETER = Object.values(MAP).map((m) => m[0]);
+
+// Navnet på entiteten: «name» kommer bare i første melding (alle verdier når strømmen starter). Senere endringer har
+// bare id, «binary_sensor/Bevegelse» (ESPHome 2025+) eller «binary_sensor-bevegelse» (eldre).
+function entNavn(o) {
+  if (o.name) return o.name;
+  const id = String(o.id || '');
+  return id.includes('/') ? id.split('/').pop() : id.replace(/^[a-z_]+-/, '');
+}
 
 function parseSse(buf, onEvent) {
+  // ESPHome avslutter linjene med \r\n. Gjør dem om til \n, men vent med en \r helt til slutt (resten kommer i neste bit).
+  const hale = buf.endsWith('\r') ? '\r' : '';
+  buf = (hale ? buf.slice(0, -1) : buf).replace(/\r\n?/g, '\n');
   let i;
   while ((i = buf.indexOf('\n\n')) >= 0) {
     const block = buf.slice(0, i); buf = buf.slice(i + 2);
@@ -23,12 +42,15 @@ function parseSse(buf, onEvent) {
     }
     onEvent(ev, data);
   }
-  return buf;
+  return buf + hale;
 }
 
 class SensorDevice extends Homey.Device {
   async onInit() {
     this._req = null; this._retry = null; this._stopped = false;
+    for (const c of KAPASITETER) {   // enheter lagt til med en eldre versjon av appen får de nye verdiene
+      if (!this.hasCapability(c)) await this.addCapability(c).catch(this.error);
+    }
     this.connect();
   }
 
@@ -65,12 +87,19 @@ class SensorDevice extends Homey.Device {
   onEvent(ev, data) {
     if (ev !== 'state' || !data) return;
     let o; try { o = JSON.parse(data); } catch (e) { return; }
-    const navn = o.name || String(o.id || '').replace(/^[a-z_]+-/, '');
+    const navn = entNavn(o);
     const m = MAP[navn] || MAP[Object.keys(MAP).find((k) => k.toLowerCase() === String(navn).toLowerCase())];
     if (!m || !this.hasCapability(m[0])) return;
     const v = m[1](o.value !== undefined ? o.value : o.state);
     if (typeof v === 'number' && !Number.isFinite(v)) return;
-    if (this.getCapabilityValue(m[0]) !== v) this.setCapabilityValue(m[0], v).catch(this.error);
+    const gammel = this.getCapabilityValue(m[0]);
+    if (gammel === v) return;
+    this.setCapabilityValue(m[0], v).catch(this.error);
+    // flytkort for Tilstedeværelse og Mørkt (ikke ved første verdi etter oppkobling)
+    const kort = { ki_tilstede: ['ki_tilstede_pa', 'ki_tilstede_av'], ki_mork: ['ki_mork_pa', 'ki_mork_av'] }[m[0]];
+    if (kort && gammel !== null && gammel !== undefined && this.homey && this.homey.flow) {
+      this.homey.flow.getDeviceTriggerCard(kort[v ? 0 : 1]).trigger(this).catch(this.error);
+    }
   }
 
   onDeleted() { this._stopped = true; clearTimeout(this._retry); if (this._req) this._req.destroy(); }
@@ -78,3 +107,4 @@ class SensorDevice extends Homey.Device {
 }
 module.exports = SensorDevice;
 module.exports.parseSse = parseSse;
+module.exports.entNavn = entNavn;

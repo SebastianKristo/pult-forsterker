@@ -23,6 +23,10 @@ substitutions:
   temp_offset: "0.0"
   # hvor lenge «Bevegelse» står på etter siste utløsning (AM312 holder selv i ca. 2 s)
   bevegelse_av: 30s
+  # utledede sensorer (regnes ut fra temperatur, fukt, lys og bevegelse)
+  tilstede_av: 10min                 # «Tilstedeværelse» står på så lenge etter siste bevegelse
+  mork_lux: "10"                     # «Mørkt» under så mange lux
+  fukt_hoy: "70"                     # «Høy fuktighet» over så mange % (mugg/kondens)
   oppdatering: 30s
 
 esphome:
@@ -109,6 +113,7 @@ sensor:
   # --- lys: BH1750 (GY-302) bak lysvinduet ---
   - platform: bh1750
     name: Lys
+    id: lys
     address: 0x23
     update_interval: ${oppdatering}
 
@@ -124,6 +129,56 @@ sensor:
       if (isnan(t) || isnan(rh) || rh <= 0) return {};
       const float a = 17.62f, b = 243.12f, g = logf(rh / 100.0f) + a * t / (b + t);
       return b * g / (a - g);
+
+  # --- utledet fra temperatur og fukt ---
+  - platform: template
+    name: Føles som
+    id: foles_som
+    unit_of_measurement: °C
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      // varmeindeks (NOAA/Rothfusz); under ca. 27 °C er den lik temperaturen
+      const float t = id(temp).state, rh = id(fukt).state;
+      if (isnan(t) || isnan(rh)) return {};
+      if (t < 26.7f) return t;
+      const float f = t * 1.8f + 32.0f;
+      float hi = -42.379f + 2.04901523f*f + 10.14333127f*rh - 0.22475541f*f*rh - 0.00683783f*f*f
+                 - 0.05481717f*rh*rh + 0.00122874f*f*f*rh + 0.00085282f*f*rh*rh - 0.00000199f*f*f*rh*rh;
+      return (hi - 32.0f) / 1.8f;
+  - platform: template
+    name: Absolutt fuktighet
+    unit_of_measurement: g/m³
+    icon: mdi:water
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      const float t = id(temp).state, rh = id(fukt).state;
+      if (isnan(t) || isnan(rh)) return {};
+      return 6.112f * expf(17.67f * t / (t + 243.5f)) * rh * 2.1674f / (273.15f + t);
+
+  # --- utledet fra bevegelse ---
+  - platform: template
+    name: Bevegelser
+    icon: mdi:walk
+    state_class: total_increasing
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: 'return id(bevegelser);'
+  - platform: template
+    name: Minutter siden bevegelse
+    icon: mdi:timer-sand
+    unit_of_measurement: min
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      if (id(bevegelse).state) return 0;
+      if (id(sist_bevegelse) == 0) return {};
+      return (millis() - id(sist_bevegelse)) / 60000;
 
   - platform: wifi_signal
     name: Wi-Fi-signal
@@ -144,8 +199,70 @@ binary_sensor:
     device_class: motion
     filters:
       - delayed_off: ${bevegelse_av}
+    on_press:
+      - lambda: 'id(bevegelser) += 1;'
+    on_release:
+      - lambda: 'id(sist_bevegelse) = millis();'
   - platform: status
     name: Status
+
+  # --- utledet: tilstedeværelse (lengre enn bevegelse), mørkt, høy fuktighet ---
+  - platform: template
+    name: Tilstedeværelse
+    id: tilstede
+    device_class: occupancy
+    lambda: 'return id(bevegelse).state;'
+    filters:
+      - delayed_off: ${tilstede_av}
+  - platform: template
+    name: Mørkt
+    icon: mdi:weather-night
+    lambda: |-
+      const float l = id(lys).state;
+      if (isnan(l)) return {};
+      static bool mork = false;
+      const float g = ${mork_lux};
+      if (l < g) mork = true; else if (l > g * 1.5f) mork = false;   // hysterese mot flimring
+      return mork;
+  - platform: template
+    name: Høy fuktighet
+    device_class: moisture
+    lambda: |-
+      const float rh = id(fukt).state;
+      if (isnan(rh)) return {};
+      static bool hoy = false;
+      if (rh > ${fukt_hoy}) hoy = true; else if (rh < ${fukt_hoy} - 5) hoy = false;
+      return hoy;
+
+
+text_sensor:
+  - platform: template
+    name: Komfort
+    icon: mdi:sofa-outline
+    update_interval: 60s
+    lambda: |-
+      const float t = id(temp).state, rh = id(fukt).state;
+      if (isnan(t) || isnan(rh)) return {};
+      if (t < 18) return {"Kaldt"};
+      if (t > 26) return {"Varmt"};
+      if (rh < 30) return {"Tørt"};
+      if (rh > 60) return {"Fuktig"};
+      return {"Behagelig"};
+  - platform: template
+    name: Lysnivå
+    icon: mdi:brightness-6
+    update_interval: 30s
+    lambda: |-
+      const float l = id(lys).state;
+      if (isnan(l)) return {};
+      if (l < 10) return {"Mørkt"};
+      if (l < 100) return {"Dempet"};
+      if (l < 1000) return {"Lyst"};
+      return {"Sollys"};
+
+globals:
+  - { id: bevegelser, type: int, restore_value: false, initial_value: "0" }
+  - { id: sist_bevegelse, type: uint32_t, initial_value: "0" }
 
 button:
   - platform: restart

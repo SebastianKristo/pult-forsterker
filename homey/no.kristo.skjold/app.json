@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.23.0",
+  "version": "2.24.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -822,7 +822,12 @@
         "measure_temperature",
         "measure_humidity",
         "measure_luminance",
-        "alarm_motion"
+        "alarm_motion",
+        "ki_tilstede",
+        "measure_temperature.foles",
+        "alarm_generic.fukt",
+        "ki_mork",
+        "ki_komfort"
       ],
       "platforms": [
         "local"
@@ -848,7 +853,21 @@
           "id": "add_devices",
           "template": "add_devices"
         }
-      ]
+      ],
+      "capabilitiesOptions": {
+        "measure_temperature.foles": {
+          "title": {
+            "en": "Feels like",
+            "no": "Føles som"
+          }
+        },
+        "alarm_generic.fukt": {
+          "title": {
+            "en": "High humidity",
+            "no": "Høy fuktighet"
+          }
+        }
+      }
     }
   ],
   "discovery": {
@@ -1557,6 +1576,48 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/drivers/stav/assets/icon.svg"
+    },
+    "ki_tilstede": {
+      "type": "boolean",
+      "title": {
+        "en": "Presence",
+        "no": "Tilstedeværelse"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/drivers/sensor/assets/icon.svg",
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Someone present",
+        "no": "Noen til stede"
+      },
+      "insightsTitleFalse": {
+        "en": "Empty",
+        "no": "Tomt"
+      }
+    },
+    "ki_mork": {
+      "type": "boolean",
+      "title": {
+        "en": "Dark",
+        "no": "Mørkt"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/drivers/sensor/assets/icon.svg"
+    },
+    "ki_komfort": {
+      "type": "string",
+      "title": {
+        "en": "Comfort",
+        "no": "Komfort"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/drivers/sensor/assets/icon.svg"
     }
   },
   "flow": {
@@ -2094,6 +2155,86 @@
                 }
               }
             ]
+          }
+        ]
+      },
+      {
+        "id": "ki_tilstede_pa",
+        "title": {
+          "en": "Someone came",
+          "no": "Noen kom"
+        },
+        "hint": {
+          "en": "Presence turned on (Skjold Sensor).",
+          "no": "Tilstedeværelse ble slått på (Skjold Sensor)."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sensor",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_tilstede_av",
+        "title": {
+          "en": "Room became empty",
+          "no": "Rommet ble tomt"
+        },
+        "hint": {
+          "en": "No motion for the configured time.",
+          "no": "Ingen bevegelse på den innstilte tiden."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sensor",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_mork_pa",
+        "title": {
+          "en": "It got dark",
+          "no": "Det ble mørkt"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sensor",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ki_mork_av",
+        "title": {
+          "en": "It got light",
+          "no": "Det ble lyst"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sensor",
+            "title": {
+              "en": "Device",
+              "no": "Enhet"
+            }
           }
         ]
       }

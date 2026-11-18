@@ -121,4 +121,13 @@ test('Sensor: hendelsesstrømmen fra ESPHome setter temperatur, fukt, lys og bev
     + 'event: state\ndata: {"id":"sensor-lys","name":"Lys","val', (ev, data) => d.onEvent(ev, data));
   assert.deepEqual(sett, { measure_temperature: 21.4, measure_humidity: 43, alarm_motion: true });
   assert.ok(rest.startsWith('event: state'));   // halv melding venter på resten
+  // senere endringer: bare id med skråstrek, og \r\n-linjeskift (slik ESPHome sender) – også delt midt i et linjeskift
+  const del1 = 'event: state\r\ndata: {"id":"binary_sensor/Bevegelse","value":false,"state":"OFF"}\r';
+  const del2 = '\n\r\nevent: state\r\ndata: {"id":"sensor/Føles som","value":22.1,"state":"22.1 °C"}\r\n\r\n';
+  let b = SensorDevice.parseSse(del1, (ev, data) => d.onEvent(ev, data));
+  b = SensorDevice.parseSse(b + del2, (ev, data) => d.onEvent(ev, data));
+  assert.equal(sett.alarm_motion, false);
+  assert.equal(sett['measure_temperature.foles'], 22.1);
+  assert.equal(b, '');
+  assert.equal(SensorDevice.entNavn({ id: 'binary_sensor-bevegelse' }), 'bevegelse');
 });
