@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="nb" class="statisk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skjold Sensor – Romsensor for temperatur, fukt, lys og bevegelse – Skjold Lab</title>
+<meta name="description" content="Skjold Sensor er en liten romsensor du bygger selv: temperatur, fukt, lys og bevegelse, med utregnet komfort og tilstedeværelse, i Home Assistant, Homey og Skjold.">
+<link rel="canonical" href="https://skjold-lab.com/sensor/">
+<link rel="alternate" hreflang="nb" href="https://skjold-lab.com/sensor/">
+<link rel="alternate" hreflang="en" href="https://skjold-lab.com/en/sensor/">
+<link rel="alternate" hreflang="x-default" href="https://skjold-lab.com/sensor/">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nb_NO">
+<meta property="og:locale:alternate" content="en_GB">
+<meta property="og:site_name" content="Skjold Lab">
+<meta property="og:title" content="Skjold Sensor – Romsensor for temperatur, fukt, lys og bevegelse – Skjold Lab">
+<meta property="og:description" content="Skjold Sensor er en liten romsensor du bygger selv: temperatur, fukt, lys og bevegelse, med utregnet komfort og tilstedeværelse, i Home Assistant, Homey og Skjold.">
+<meta property="og:url" content="https://skjold-lab.com/sensor/">
+<meta property="og:image" content="https://skjold-lab.com/assets/img/sensor-skra.jpg">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="1100">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico?v=2" sizes="48x48">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="icon" href="/favicon-32.png?v=2" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+<link rel="preload" href="/assets/fonter/sora-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonter/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/skjold.css?v=6a6d0fc5">
+<script src="/assets/skjold.js?v=208a3850" defer></script>
+</head>
+<body>
+<a class="hopp" href="#hoved">Hopp til innholdet</a>
+<header class="nav">
+  <div class="nav-inn">
+    <a class="logo" href="/" aria-label="Skjold Lab – forsiden"><span class="logo-stolper" aria-hidden="true"><i style="height:8px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:12px"></i><i style="height:8px"></i></span><span class="logo-ord">SKJOLD<span class="logo-lab">LAB</span></span></a>
+    <nav class="nav-lenker" aria-label="Hovedmeny"><div class="nav-gruppe"><button type="button" class="nav-gruppe-knapp" aria-expanded="false" aria-controls="nav-produkter" data-her>Produkter<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg></button><div class="nav-under" id="nav-produkter"><a href="/s1/"><b>S1</b><span>Forsterker med skjerm</span></a><a href="/node/"><b>Node</b><span>Strømmer til eget anlegg</span></a><a href="/touch/"><b>Touch</b><span>7″ berøringsskjerm</span></a><a href="/rost/"><b>Røst</b><span>Liten aktiv høyttaler</span></a><a href="/sensor/" aria-current="page"><b>Stav</b><span>Fjernkontroll med skjerm</span></a><a href="/spole/"><b>Spole</b><span>Kassettspiller uten bånd</span></a><a href="/brage/"><b>Brage</b><span>Smartenheter uten sky</span></a><a href="/sensor/" aria-current="page"><b>Sensor</b><span>Romsensor</span></a><a href="/bryter/"><b>Bryter</b><span>Brytere under pulten</span></a><a href="/core/"><b>Core</b><span>Programvaren alene</span></a></div></div><a href="/programvare/">Programvare</a><a href="/software/">Software</a><a href="/sammenlign/">Sammenlign</a><a href="/stotte/">Støtte</a><a href="/bruksanvisning/">Bruksanvisning</a><a href="/om/">Om Skjold Lab</a><a href="mailto:jemtlands@proton.me">Kontakt</a></nav>
+    <div class="spraak" role="group" aria-label="Språk"><a href="/sensor/" lang="nb" hreflang="nb" aria-current="true">NO</a><span aria-hidden="true">|</span><a href="/en/sensor/" lang="en" hreflang="en">EN</a></div>
+  </div>
+</header>
+<main id="hoved">
+<section class="p-hero node-bg">
+  <div class="k" data-reveal="0">Skjold Sensor</div>
+  <h1 data-reveal="80">Vet hvordan rommet har det</h1>
+  <p data-reveal="160">Sensor er en liten romsensor for vegg, tak eller bord. Den måler temperatur og luftfuktighet, og kan også måle lys og se bevegelse. Den regner selv ut «føles som», komfort, tilstedeværelse og om det er mørkt, og dukker opp i Home Assistant, Homey og Skjold av seg selv.</p>
+  <div class="knapper" data-reveal="240"><a class="knapp knapp-m" href="/flasher/sensor/">Installer fastvaren ›</a><a class="knapp knapp-o" href="https://github.com/SebastianKristo/pult-forsterker/blob/main/kabinett/sensor/LES_MEG.md">Byggeveiledning ›</a></div>
+  <div style="width:min(92%,1000px);margin:44px auto 64px"><picture><source srcset="/assets/img/sensor-skra.webp" type="image/webp"><img src="/assets/img/sensor-skra.jpg" alt="Skjold Sensor skrått forfra: hvit boks med PIR-kuppel, lysvindu og gullist" width="1600" height="1100" class="foto" style="border-radius:24px;width:100%;height:auto" fetchpriority="high"></picture></div>
+</section>
+<section class="seksjon" style="padding-bottom:0"><div class="status-boks" data-reveal="0"><div class="k">STATUS · IKKE BYGGET ENNÅ</div><p>Sensor er tegnet og kontrollert, men ikke printet eller testet på maskinvare. Kabinettet er sjekket for kollisjoner og overheng, og fastvaren bygges for ESP32 og D1 mini i hver utgivelse. Følg arbeidet i <a href="https://github.com/SebastianKristo/pult-forsterker/blob/main/kabinett/sensor/LES_MEG.md">byggeveiledningen på GitHub</a>.</p></div></section>
+<section class="seksjon"><div class="innhold fliser"><div class="flis" data-reveal="0"><div class="k">TEMPERATUR · FUKT</div><h3 class="h">Måler hele tiden</h3><p class="p">DHT11-modulen som standard, SHT40 som oppgradering. Luften rundt sensoren er skilt fra ESP-varmen med en dobbel vegg.</p></div><div class="flis" data-reveal="90"><div class="k">LYS</div><h3 class="h">Lux, og om det er mørkt</h3><p class="p">BH1750 bak et lite vindu i fronten gir lysstyrken i lux, et lysnivå i ord og «Mørkt» av/på.</p></div><div class="flis" data-reveal="180"><div class="k">BEVEGELSE</div><h3 class="h">Bevegelse og tilstedeværelse</h3><p class="p">AM312-kuppelen ser bevegelse. Sensoren holder «Tilstedeværelse» på en stund etter siste bevegelse, så lyset ikke slukker mens du sitter stille.</p></div><div class="flis" data-reveal="270"><div class="k">UTREGNET</div><h3 class="h">Føles som og komfort</h3><p class="p">Føles som, duggpunkt, absolutt fuktighet, komfort (kaldt, behagelig, varmt, fuktig) og «Høy fuktighet» for bad og kjeller.</p></div><div class="flis" data-reveal="0"><div class="k">INNSTILLINGER</div><h3 class="h">Fra Homey og Home Assistant</h3><p class="p">Oppdateringsintervall, hvor lenge bevegelse står på og om status-LED-en skal lyse, uten å flashe på nytt.</p></div><div class="flis" data-reveal="90"><div class="k">OPPDATERES TRÅDLØST</div><h3 class="h">Ny fastvare med ett trykk</h3><p class="p">«Fastvare» med Installer-knapp i Home Assistant, og Oppdater fastvare under Vedlikehold i Homey.</p></div></div></section>
+<section class="seksjon" id="design" aria-labelledby="design-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">DESIGNET</div><h2 class="h2" id="design-h" data-reveal="60">Liten boks, eget kammer for lufta</h2>
+  <p class="lead-p" data-reveal="100">Sensoren sitter nederst i et eget kammer med luftespalter, skilt fra ESP-kortet med en dobbel vegg med luftspalte, så varmen fra kortet ikke påvirker målingen. Lokket har PIR-kuppel, lysvindu og en gullist, og festes med to skruer bakfra. Den henger på veggen i to nøkkelhull, eller står på et bordstativ.</p>
+  <div class="skjermrad" data-reveal="120"><figure><picture><source srcset="/assets/img/sensor-eksplodert.webp" type="image/webp"><img src="/assets/img/sensor-eksplodert.jpg" alt="Skjold Sensor delt opp: bunn, kort, sensorer og lokk" width="1600" height="1100" class="foto" loading="lazy"></picture><figcaption>Delt opp: bunn, ESP-kort, sensorer og lokk</figcaption></figure><figure><picture><source srcset="/assets/img/sensor-inni.webp" type="image/webp"><img src="/assets/img/sensor-inni.jpg" alt="Skjold Sensor uten lokk, med ESP-kortet og sensorkammeret" width="1600" height="1100" class="foto" loading="lazy"></picture><figcaption>Inni: ESP-kortet øverst, sensorkammeret nederst</figcaption></figure><figure><picture><source srcset="/assets/img/sensor-stativ.webp" type="image/webp"><img src="/assets/img/sensor-stativ.jpg" alt="Skjold Sensor på bordstativet" width="1600" height="1100" class="foto" loading="lazy"></picture><figcaption>På bordstativet</figcaption></figure><figure><picture><source srcset="/assets/img/sensor-mork.webp" type="image/webp"><img src="/assets/img/sensor-mork.jpg" alt="Skjold Sensor i mørk utgave" width="1600" height="1100" class="foto" loading="lazy"></picture><figcaption>Mørk utgave</figcaption></figure></div>
+</div></section>
+<section class="seksjon" id="varianter" aria-labelledby="varianter-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">VARIANTER</div><h2 class="h2" id="varianter-h" data-reveal="60">Velg kortet du har</h2>
+  <p class="lead-p" data-reveal="100">Kabinettet finnes for ESP32-WROOM DevKit, Wemos D1 mini og ESP32 D1 mini. På ESP32 D1 mini og D1 mini med USB-C går kabelen ut bak, nederst, rett ned langs veggen. Lokket finnes med og uten PIR og lysvindu, og fuktsensoren kan være en DHT11-modul eller et lite SHT40-kort.</p>
+  <div class="skjermrad" data-reveal="120"><figure><picture><source srcset="/assets/img/sensor-bak.webp" type="image/webp"><img src="/assets/img/sensor-bak.jpg" alt="Skjold Sensor bakfra med USB-kabelen ut nederst" width="1600" height="1100" class="foto" loading="lazy"></picture><figcaption>ESP32 D1 mini: USB ut bak, nederst</figcaption></figure></div>
+  <div class="lenkerad" data-reveal="0"><a href="https://github.com/SebastianKristo/pult-forsterker/blob/main/kabinett/sensor/LES_MEG.md">Byggeveiledning og deleliste</a><a href="https://github.com/SebastianKristo/pult-forsterker/tree/main/kabinett/sensor">Alle filene på GitHub</a><a href="https://github.com/SebastianKristo/pult-forsterker/releases/latest">3D-filene i siste utgivelse</a></div>
+</div></section>
+<section class="seksjon" id="oppsett" aria-labelledby="oppsett-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">SLIK SETTER DU DEN OPP</div><h2 class="h2" id="oppsett-h" data-reveal="60">Fra USB til smarthus på fem minutter</h2>
+  <p class="lead-p" data-reveal="100">Fastvaren er ESPHome og installeres fra nettleseren. Du trenger ikke bygge noe selv.</p>
+  <div class="steg"><div data-reveal="0"><div class="n">1</div><h3>Installer fastvaren</h3><p>Koble kortet til PC-en og trykk Installer på <a href="/flasher/sensor/">skjold-lab.com/flasher/sensor</a> (Chrome eller Edge).</p></div><div data-reveal="80"><div class="n">2</div><h3>Velg Wi-Fi</h3><p>Rett etter flashingen, eller fra mobilen via nettet «Skjold Sensor».</p></div><div data-reveal="160"><div class="n">3</div><h3>Den dukker opp</h3><p>Home Assistant finner den med ESPHome, Skjold-integrasjonen viser den som Skjold-enhet, og i Homey legger du den til under Skjold.</p></div><div data-reveal="240"><div class="n">4</div><h3>Bruk verdiene</h3><p>Lys som slår seg på ved bevegelse i mørket, varsel ved høy fuktighet, eller bare se temperaturen på Touch.</p></div></div>
+</div></section>
+<section id="integrasjoner" class="seksjon hvit lys" aria-labelledby="ha-h"><div class="innhold">
+  <div class="etikett" data-reveal="0">HOME ASSISTANT · HOMEY · SKJOLD</div><h2 class="h2" id="ha-h" data-reveal="60">Verdiene der du trenger dem</h2>
+  <p class="lead-p" data-reveal="100">I Home Assistant kommer Sensor både gjennom ESPHome og som en egen Skjold Sensor-enhet i Skjold-integrasjonen, med temperatur, fukt, lys, bevegelse, tilstedeværelse, komfort og diagnostikk (IP, Wi-Fi, oppetid). I Homey får du de samme verdiene, flytkort for tilstedeværelse og mørke, og innstillingene på enheten.</p>
+</div></section>
+<section id="spec" class="seksjon hvit"><div class="spes">
+  <h2 data-reveal="0">Tekniske spesifikasjoner</h2><dl><div class="rad" data-reveal="0"><dt>Status</dt><dd>Tegnet og kontrollert. Ikke bygget eller testet.</dd></div><div class="rad" data-reveal="0"><dt>Mål</dt><dd>Ca. 54–70 × 66–76 × 28–30 mm, etter kort og sensor</dd></div><div class="rad" data-reveal="0"><dt>Kort</dt><dd>ESP32-WROOM DevKit, Wemos D1 mini (ESP8266) eller ESP32 D1 mini</dd></div><div class="rad" data-reveal="0"><dt>Temperatur og fukt</dt><dd>DHT11-modul (standard) eller SHT40 / SHT31 / AHT20</dd></div><div class="rad" data-reveal="0"><dt>Lys</dt><dd>BH1750 (GY-302), valgfritt</dd></div><div class="rad" data-reveal="0"><dt>Bevegelse</dt><dd>AM312 mini-PIR, valgfritt (HC-SR501 eller LD2410 går også)</dd></div><div class="rad" data-reveal="0"><dt>Utregnet</dt><dd>Føles som, duggpunkt, absolutt fuktighet, komfort, lysnivå, mørkt, høy fuktighet, tilstedeværelse, antall bevegelser</dd></div><div class="rad" data-reveal="0"><dt>Strøm</dt><dd>5 V over USB</dd></div><div class="rad" data-reveal="0"><dt>Fastvare</dt><dd>ESPHome, fra nettleseren, oppdateres over Wi-Fi</dd></div><div class="rad" data-reveal="0"><dt>Integrasjoner</dt><dd><span class="merke"><img src="/assets/logo/homeassistant.svg" alt="" width="18" height="18" loading="lazy">Home Assistant</span>, <span class="merke"><img src="/assets/logo/homey.svg" alt="" width="18" height="18" loading="lazy">Homey</span>, Skjold</dd></div></dl>
+  <div class="knapper"><a class="knapp knapp-m" href="/flasher/sensor/">Installer fastvaren ›</a><a class="knapp knapp-o" href="https://github.com/SebastianKristo/pult-forsterker/blob/main/kabinett/sensor/LES_MEG.md">Byggeveiledning ›</a></div>
+</div></section>
+<section id="interesse" class="seksjon interesse" aria-labelledby="int-h">
+  <div class="innhold">
+    <div class="etikett">MELD INTERESSE</div>
+    <h2 class="h2" id="int-h">Ikke til salgs ennå</h2>
+    <p class="ingress">Sensor er ikke bygget ennå, og det finnes ingen ferdige å kjøpe. Alt for å bygge den selv ligger åpent på GitHub. Legg igjen navn og e-post, så sier jeg fra når den første er bygget og testet, eller hvis det blir et byggesett.</p>
+    <form class="skjema" data-interesse method="post" action="/api/interesse" data-bad="Skriv inn navn og en gyldig e-post." data-err="Det gikk ikke å sende. Prøv igjen, eller send en e-post." novalidate>
+      <div class="to-felt">
+        <label class="felt">Navn<input name="navn" autocomplete="name" required maxlength="120"></label>
+        <label class="felt">E-post<input name="epost" type="email" autocomplete="email" required maxlength="200" inputmode="email"></label>
+      </div>
+      <fieldset><legend>Hvilken?</legend><div class="piller"><label class="pille"><input type="radio" name="produkt" value="Sensor" checked><span>Skjold Sensor</span></label><label class="pille"><input type="radio" name="produkt" value="Bryter"><span>Skjold Bryter</span></label><label class="pille"><input type="radio" name="produkt" value="Stav"><span>Skjold Stav</span></label><label class="pille"><input type="radio" name="produkt" value="Flere"><span>Flere</span></label></div></fieldset>
+      <fieldset><legend class="sr">Ferdig eller byggesett?</legend><div class="piller"><label class="pille"><input type="radio" name="type" value="done" checked><span>Ferdig bygget</span></label><label class="pille"><input type="radio" name="type" value="kit"><span>Byggesett</span></label></div></fieldset>
+      <label class="felt">Melding (valgfritt)<textarea name="melding" rows="3" maxlength="2000"></textarea></label>
+      <div class="honning" aria-hidden="true"><label>Nettsted (la stå tomt)<input name="nettsted" tabindex="-1" autocomplete="off"></label></div>
+      <div class="feil" role="alert" aria-live="polite"></div>
+      <div class="send"><button class="knapp" type="submit">Meld interesse</button><small>E-posten brukes bare til å si fra om Skjold.</small></div>
+    </form>
+    <div class="takk" id="interesse-takk" tabindex="-1" hidden><b aria-hidden="true">✓</b><span>Takk! Du hører fra meg.</span></div>
+  </div>
+</section>
+</main>
+<footer class="bunn"><div class="innhold"><div>Skjold Lab · Designet av Sebastian Kristo Jemtland i Norge</div><div class="kopi">© 2026 Sebastian Kristo Jemtland. Nettsiden, tekstene, bildene, designet og produktene Skjold S1, Skjold Node, Skjold Touch, Skjold Røst, Skjold Stav, Skjold Spole, Skjold Brage, Skjold Sensor og Skjold Bryter er beskyttet av opphavsrett. Programvaren er åpen kildekode (MIT). Kasse, kretskort og design: CC BY-NC-SA 4.0 – bygg selv, men ikke for salg. Kontakt: <a href="mailto:jemtlands@proton.me">jemtlands@proton.me</a></div><div class="mono">skjold-lab.com</div></div></footer>
+</body>
+</html>
