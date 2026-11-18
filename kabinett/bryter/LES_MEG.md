@@ -2,8 +2,8 @@
 
 En boks som henger **under pulten**, med **fem vippebrytere** som peker mot deg. Et eget **feste** skrus opp under
 bordplata; boksen skyves inn i festet forfra og klikker på plass, og kan tas ut igjen uten verktøy. Selve boksen har
-ingen skruer og ingenting som stikker ut på sidene: festet griper i en 45°-fure langs overkanten av sideveggene, og
-bunnplata (med bakveggen) klikkes i. Fronten har Skjold-merket og SKJOLD innfelt i gull. Inni sitter en **ESP32 D1 mini**
+ingen skruer, og festet synes ikke: det er mindre enn toppen av boksen, og to svalehaletunger under det går inn i
+spor i toppen. Bunnplata (med bakveggen) klikkes i. Fronten har Skjold-merket og SKJOLD innfelt i gull. Inni sitter en **ESP32 D1 mini**
 (MH-ET LIVE MiniKit o.l.) eller en **Wemos D1 mini** med ESPHome. Hver bryter blir en egen bryter i Home Assistant
 («Bryter 1» … «Bryter 5»), som du kan bruke til å slå av og på lys, forsterker, skjermer, scener eller hva du vil.
 USB-kabelen går ut bak, inn under pulten.
@@ -16,14 +16,14 @@ Bilder: [forfra, lys](render/01_forfra_under_lys.png) · [forfra, mørk](render/
 
 Status: **ikke printet, bygget eller testet på maskinvare.** Modellen er sjekket med `lag_bryter.py`: alle delene er
 tette, ingenting kolliderer (feste, brytere, kort og USB-plugg er med i sjekken), boksen henger i festet og bunnplata i
-klipsene, kortet ligger fast, ingen overheng trenger støtte, og alt får plass på K2. ESPHome-filene validerer med `esphome config`. Mål bryterne og kortet ditt før du printer.
+klipsene, boksen glir inn i festet uten å kollidere, kortet ligger fast, ingen overheng trenger støtte, og alt får plass på K2. ESPHome-filene validerer med `esphome config`. Mål bryterne og kortet ditt før du printer.
 
 ## Mål
 
 | | |
 |---|---|
 | Boksen | 182 × 55 × 41 mm (b × d × h) |
-| Festet | 188 × 61 mm, skinnene går 12 mm ned langs sidene; boksen henger 4 mm under bordplata |
+| Festet | 176 × 49 × 4 mm, skjult over boksen; boksen henger 4 mm under bordplata |
 | Bryterne | 5 stk med 25 mm mellomrom, hull Ø12,2 mm, front 3 mm |
 | Plass bak fronten | 50 mm (bryteren er ca. 29 mm lang med skrueklemmene) |
 | Feste | 4 treskruer 4 × 16 mm med senkehode gjennom festet, opp i bordplata |
@@ -79,7 +79,7 @@ Flash første gang fra **https://skjold-lab.com/flasher/bryter/** (Chrome eller 
 |---|---|---|
 | `kasse.stl` | **fronten ned** | Ingen støtte. Glatt front; gullisten, merket og SKJOLD er en egen del i de første lagene (filament 2) |
 | `bunn.stl` | flat | Bakveggen, kortholderen og klipsene opp |
-| `feste.stl` | bordsiden ned | Ingen støtte (45°-tungene på skinnene) |
+| `feste.stl` | bordsiden ned | Ingen støtte (svalehaletungene har 45° skuldre) |
 | `gull.stl` | sammen med kassa | Ligger allerede riktig i 3MF-fila |
 
 Ferdige plater for Creality K2: `skjold-bryter-esp32d1-k2.3mf` og `skjold-bryter-d1mini-k2.3mf`, med alle tre
@@ -100,12 +100,12 @@ sprøtt. 0,2 mm lag, 3 vegger, 20 % fyll. Kassa har faser i stedet for runde hj�
    vinduene i sideveggene. Overkanten av bakveggen går inn bak en skrå list under toppen.
    *Åpne:* trykk mothakene inn gjennom vinduene (en liten skrutrekker eller en negl), side for side, og dra plata ned
    i fingergrepet.
-5. **Festet under pulten:** hold festet opp under bordplata med skinnene ned og den åpne enden mot deg, 1–2 cm
-   innenfor forkanten. Skru det fast med 4 treskruer 4 × 16 mm (senkehodene må ligge i flukt, ellers stopper de
+5. **Festet under pulten:** hold festet opp under bordplata med tungene ned og den lukkede enden av tungene mot
+   deg. Forkanten av festet skal ligge 1–2 cm innenfor forkanten av bordet (boksen stikker 3 mm lenger fram). Skru det fast med 4 treskruer 4 × 16 mm (senkehodene må ligge i flukt, ellers stopper de
    boksen). Har du en tynn plate (under 18 mm), bruk kortere skruer.
-6. **Heng i boksen:** sett bakkanten av boksen inn mellom skinnene forfra, med tungene på skinnene i furene i
-   sideveggene, og skyv boksen innover til den klikker. De to knottene i festet går da i hullene i fjærtungene i
-   toppen av boksen, og boksen står mot stoppen bak.
+6. **Heng i boksen:** hold boksen opp under festet, sett de åpne endene av sporene bak i toppen inn på tungene, og
+   skyv boksen innover til den klikker. Sporene er lukket foran, så boksen stopper av seg selv; de to knottene i
+   festet går da i hullene i fjærtungene i toppen.
    *Ta ut:* dra boksen bestemt mot deg; knottene presser tungene ned og slipper.
 7. Koble til USB og en 5 V-lader.
 
@@ -115,7 +115,7 @@ sprøtt. 0,2 mm lag, 3 vegger, 20 % fyll. Kassa har faser i stedet for runde hj�
     python3 lag_bryter.py bilder     også bildene i render/
 
 Mål i toppen av `skjold_bryter.scad`: `N` (antall brytere), `P` (avstanden mellom dem), `kort` (`esp32d1` eller
-`d1mini`), `Hi`/`Di` (innvendig høyde/dybde), `hullD` (bryterhullet), `c` (klaringen i skinnene: øk til 0,4 hvis
+`d1mini`), `Hi`/`Di` (innvendig høyde/dybde), `hullD` (bryterhullet), `c` (klaringen i sporene: øk til 0,4 hvis
 boksen går tungt inn) og `knottH` (hvor hardt boksen klikker). Med flere eller færre brytere må du også legge
 til eller fjerne brytere i ESPHome-fila. Merket ved siden av SKJOLD er Skjold-merket fra
 `branding/skjold/skjold_merke.svg` (`merkeH` = høyden).
