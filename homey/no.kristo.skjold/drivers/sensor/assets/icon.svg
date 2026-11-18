@@ -1,8 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" fill="none" stroke="#000" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960">
+<g fill="none" stroke="#000" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
 <!-- Skjold Sensor: liten boks forfra – PIR-kuppel i midten, lysvindu og ventilasjonsspalter under -->
 <rect x="150" y="230" width="660" height="500" rx="90"/>
 <circle cx="480" cy="400" r="78"/>
 <rect x="620" y="370" width="60" height="60" rx="10"/>
 <path d="M180 540H780" stroke-width="16"/>
 <path d="M330 610H630M330 660H630"/>
+</g>
 </svg>

@@ -188,6 +188,9 @@ class KiAmpApi:
     async def set_spoler(self, on: bool) -> dict[str, Any]:
         return await self._req("POST", "/nfc/spoler", {"på": on})
 
+    async def sensorer(self) -> dict[str, Any]:
+        return await self._req("GET", "/sensorer")
+
     async def stav(self) -> dict[str, Any]:
         return await self._req("GET", "/stav")
 

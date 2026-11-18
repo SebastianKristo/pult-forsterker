@@ -26,7 +26,7 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         self.presets: list[dict] = []   # fylte favoritter fra /api/presets: [{n, title, genre, image…}]
         self._presets_sig: object = None
         # tilbehør (Skjold Røst, Kassett, Hjul, Stav): hentes sjeldnere enn status, og feil (eldre daemon) ignoreres
-        self.extras: dict = {"rost": None, "nfc": None, "spoler": None, "hjul": None, "stav": None}
+        self.extras: dict = {"rost": None, "nfc": None, "spoler": None, "hjul": None, "stav": None, "sensorer": None}
         self._extras_n = 0
         self.settings: dict = {}             # /api/settings (EQ-profiler til Skjold-kortet)
         self.perf: dict | None = None        # /api/health/perf (ytelse på Pi-en), hentes ca. hvert 30. s
@@ -38,6 +38,10 @@ class KiAmpCoordinator(DataUpdateCoordinator[dict]):
         except KiAmpError as err:
             raise UpdateFailed(err) from err
         await self._refresh_presets(data)
+        try:   # Skjold Sensor: hver oppdatering, så bevegelse kommer raskt (lokalt og lite)
+            self.extras["sensorer"] = await self.api.sensorer()
+        except KiAmpError:
+            self.extras["sensorer"] = None   # eldre daemon
         if self._extras_n % 6 == 0:   # ca. hvert 30. sekund
             await self.refresh_extras()
             try:
