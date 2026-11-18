@@ -10,8 +10,13 @@ Krever trimesh og manifold3d. Sjekker:
   4. kroppen og frontplaten flukter i skjøten (samme ytterkant på begge sider av y = 0)
   5. pakningene følger den nye formen: frontpakningen ligger innenfor kroppens snitt i skjøten, bunnpakningen innenfor
      kroppens grunnriss, begge med ≥ 0,5 mm til yttersiden
-  6. lydkammeret: netto volum og porttuning (fb) holdes nær forrige utgave (0,92–1,05 l netto, 80–86 Hz)
-  7. utskrift uten støtte: kroppens, bunnens og grillens yttersider har ingen flater brattere enn 50° i printretningen"""
+  6. lydkammeret (uten takrommet): netto volum og porttuning (fb) (0,86–1,00 l netto, 80–88 Hz)
+  7. utskrift uten støtte: kroppens, bunnens og grillens yttersider har ingen flater brattere enn 50° i printretningen,
+     og knappeholderen har ingen overheng i det hele tatt
+  8. skjermen: modulen (kort 70,08 × 48,04, glass, flatkabel, pinnerad) ligger i lomma uten å kollidere, knappeholderens
+     sidevanger klemmer kortet, og vinduet ligger over hele det aktive området med jevn kant rundt (sentrert)
+  9. knappene: bryterne sitter i lommene med presspasning (klemribbene), luften mellom hetteflensen og stempelet er
+     btnGap (0,2 mm), og hettene kan trykkes helt ned uten å treffe noe annet enn bryteren"""
 import itertools
 import sys
 
@@ -20,7 +25,7 @@ import trimesh
 
 ASM = sys.argv[1]
 ok = True
-PRINT = ["kropp", "front", "logo", "grill", "bunn", "knott", "rute", "knapp",
+PRINT = ["kropp", "front", "logo", "grill", "bunn", "knott", "rute", "knapp", "knappeholder",
          "pakning_front", "pakning_bunn", "krage", "dc_skive", "usb_propp"]
 MULTI = {"logo": None, "knapp": 5}   # logo: flere bokstaver; knapp: fem hetter i én fil
 for n in PRINT:
@@ -38,7 +43,7 @@ A = {n: trimesh.load(f"{ASM}/{n}.stl") for n in PRINT}
 TOUCH = {("kropp", "front"), ("kropp", "bunn"), ("front", "bunn"), ("front", "logo"),
          ("kropp", "pakning_front"), ("front", "pakning_front"), ("kropp", "pakning_bunn"), ("bunn", "pakning_bunn"),
          ("front", "pakning_bunn"), ("bunn", "pakning_front"), ("kropp", "rute"), ("kropp", "knapp"), ("kropp", "krage"), ("kropp", "dc_skive"),
-         ("kropp", "usb_propp"), ("dc_skive", "usb_propp")}
+         ("kropp", "usb_propp"), ("dc_skive", "usb_propp"), ("kropp", "knappeholder")}
 # grillens tapper har klemribber som skal klemme mot hullene i fronten (tilsiktet presspasning)
 PRESS = {("front", "grill"): 6.0}
 
@@ -59,14 +64,15 @@ for x, y in itertools.combinations(PRINT, 2):
     if not v <= lim:
         olap.append(f"{x} × {y}: {v:.3f} mm³")
 ok &= not olap
-# skjermmodulen (kjøpt del) skal ligge i lomma uten å kollidere med kroppen
-try:
-    sk = trimesh.load(f"{ASM}/skjerm.stl")
-    v = overlap(A["kropp"], sk)
-    if not v <= 0.05:
-        olap.append(f"kropp × skjermmodul: {v:.3f} mm³")
-except Exception as e:
-    print("(skjermmodul ikke sjekket:", e, ")")
+# kjøpte deler: skjermmodulen og taktbryterne skal ligge i lommene uten å kollidere med noe (bortsett fra klemribbene)
+sk = trimesh.load(f"{ASM}/skjerm.stl")
+br = trimesh.load(f"{ASM}/bryter.stl")
+for n in PRINT:
+    for navn, m in (("skjermmodul", sk), ("taktbrytere", br)):
+        v = overlap(A[n], m)
+        lim = {("knappeholder", "skjermmodul"): 8.0, ("knappeholder", "taktbrytere"): 8.0}.get((n, navn), 0.05)
+        if not v <= lim:
+            olap.append(f"{n} × {navn}: {v:.3f} mm³")
 print("OK  ingen overlapp i montert stilling" if not olap else "FEIL overlapp: " + "; ".join(olap))
 
 # --- yttervegg ---
@@ -74,8 +80,16 @@ k = A["kropp"]
 W, D, H, t = 112, 113, 134, 2.6
 # (flate, senter u, senter v, radius) – tiltenkte åpninger. Toppen: v = y (flat topp).
 # Bak: port, DC, USB-C og Skjold-merket på én linje (x = −26).
+AA = trimesh.load(f"{ASM}/skjermflate.stl").bounds        # aktivt område på glasset (montert)
+aaC = AA.mean(axis=0)
+RUTE = A["rute"].bounds                                     # ruta i forsenkningen (montert)
+KAPPER = [b for b in A["knapp"].split(only_watertight=False)]
 HOLES = [("bak", -26, 40, 11.5), ("bak", -26, 19.5, 5.3), ("bak", -26, 7, 6.4), ("bak", -26, 64, 9.5),
-         ("topp", 0, 88, 6.6), ("topp", 0, 43, 33.0)] + [("topp", (i - 2) * 13.725, 11, 5.6) for i in range(5)]
+         ("topp", 0, 88, 6.6)] + [("topp", c.bounds.mean(axis=0)[0], c.bounds.mean(axis=0)[1], 5.6) for c in KAPPER]
+
+
+def under_ruta(face, u, v):   # forsenkningen for ruta (og hyllen den ligger på) regnes for seg under
+    return face == "topp" and RUTE[0][0] - 0.3 <= u <= RUTE[1][0] + 0.3 and RUTE[0][1] - 0.3 <= v <= RUTE[1][1] + 0.3
 
 
 def wall(face, u, v):
@@ -101,7 +115,7 @@ for face, us, vs in [("side+", np.arange(9, D - 13, 3), np.arange(3, H - 4, 3)),
                      ("topp", np.arange(-36, 37, 3), np.arange(9, D - 13, 3)), ("bak", np.arange(-36, 37, 3), np.arange(3, H - 4, 3))]:
     for u in us:
         for v in vs:
-            if any(f == face and np.hypot(u - a, v - b) < r for f, a, b, r in HOLES):
+            if any(f == face and np.hypot(u - a, v - b) < r for f, a, b, r in HOLES) or under_ruta(face, u, v):
                 continue
             w = wall(face, u, v)
             if w < 1.59:
@@ -111,6 +125,18 @@ if bad:
     print(f"FEIL yttervegg tynnere enn 1,6 mm på {len(bad)} punkter, f.eks. {bad[:6]}")
 else:
     print("OK  yttervegg ≥ 1,6 mm overalt utenom tiltenkte hull")
+# hyllen under ruta (mellom forsenkningen og glasslomma): ruta ligger på den, minst 1,3 mm
+hylle = []
+for u in np.arange(RUTE[0][0] + 0.4, RUTE[1][0] - 0.3, 0.5):
+    for v in np.arange(RUTE[0][1] + 0.4, RUTE[1][1] - 0.3, 0.5):
+        if min(u - RUTE[0][0], RUTE[1][0] - u, v - RUTE[0][1], RUTE[1][1] - v) > 1.0:
+            continue   # (innenfor er vinduet med fas; hyllen er de ytterste 1–1,5 mm)
+        w = wall("topp", u, v)
+        if w > 0:
+            hylle.append(w)
+good = min(hylle) >= 1.3
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} hyllen under ruta er minst {min(hylle):.2f} mm tykk (≥ 1,3 mm)")
 
 # --- skjøten flukter: tverrsnitt av kropp og front like ved y = 0 har samme ytterkant ---
 fr = A["front"]
@@ -150,10 +176,10 @@ luft = trimesh.load(f"{ASM}/luft.stl").volume / 1e6        # liter luft mellom v
 netto = luft - 0.05                                         # elementet (ca. 50 cm³)
 PORT_D, PORT_L = 0.016, 0.078                               # Ø16 mm, 78 mm (portL i skjold_rost.scad)
 fb = 343 / (2 * np.pi) * np.sqrt(np.pi * (PORT_D / 2) ** 2 / (netto / 1000 * (PORT_L + 0.732 * PORT_D)))
-good = 0.92 < netto < 1.05 and 80 < fb < 86
+good = 0.86 < netto < 1.00 and 80 < fb < 88
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} lydkammer: {luft:.2f} l luft, {netto:.2f} l netto, port Ø16 × 78 mm → fb ≈ {fb:.0f} Hz "
-      f"(forrige utgave med fas bak: 1,01 l luft, 0,96 l netto → ca. 84 Hz)")
+      f"(forrige utgave, også uten takrommet: 0,95 l luft, 0,90 l netto → ca. 86 Hz)")
 
 # --- utskrift uten støtte: yttersidene (nær det konvekse skallet) har ingen flater brattere enn 50° ---
 res = []
@@ -166,6 +192,62 @@ for n, maxz in (("kropp", 134 - 0.1), ("bunn", 99), ("grill", 99)):   # kropp: l
 good = all(v < 1.0 for _, v in res)
 ok &= good
 print(f"{'OK ' if good else 'FEIL'} printes uten støtte: " + ", ".join(f"{n} {v:.1f} mm²" for n, v in res) + " brattere enn 50° på yttersiden")
+m = trimesh.load("stl/knappeholder.stl")
+ned = (m.face_normals[:, 2] < -0.5) & (m.triangles_center[:, 2] > 0.05)
+good = m.area_faces[ned].sum() < 0.5
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} knappeholderen har {m.area_faces[ned].sum():.1f} mm² overheng (printes med bunnen ned)")
+
+# --- skjermen ---
+glass_top = sk.bounds[1][2]
+pz = sk.bounds[1][2] - 5.25 + 0.5                            # midt i kortet (kort 1,0 + glass 4,25)
+pv = np.array([p for e in sk.section(plane_origin=[0, 0, pz], plane_normal=[0, 0, 1]).discrete for p in e])
+pcbB = pv[:, 0].max() - pv[:, 0].min()
+pcbH = np.ptp(pv[np.abs(pv[:, 0]) > 10][:, 1])
+
+
+def fri(x, y):   # ingen del av kroppen over glasset i dette punktet (stråle ovenfra)
+    loc, _, _ = k.ray.intersects_location([[x, y, 200]], [[0, 0, -1]])
+    return not np.any(loc[:, 2] > glass_top + 0.01) if len(loc) else True
+
+
+blokk = [(x, y) for x in np.linspace(AA[0][0], AA[1][0], 23) for y in np.linspace(AA[0][1], AA[1][1], 12) if not fri(x, y)]
+
+
+def kant(x0, y0, dx, dy):   # hvor langt fra AA-kanten vinduet er fritt (ved glasset)
+    for d in np.arange(0, 6, 0.02):
+        if not fri(x0 + dx * d, y0 + dy * d):
+            return d
+    return 6
+
+
+mx = [kant(AA[0][0], aaC[1], -1, 0), kant(AA[1][0], aaC[1], 1, 0)]
+my = [kant(aaC[0], AA[0][1], 0, -1), kant(aaC[0], AA[1][1], 0, 1)]
+klem = overlap(A["knappeholder"], sk)
+good = not blokk and min(mx + my) >= 0.3 and abs(mx[0] - mx[1]) < 0.1 and abs(my[0] - my[1]) < 0.1 and 0.05 < klem < 8
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} skjerm: kort {pcbB:.2f} × {pcbH:.2f} mm i lomma uten kollisjon, aktivt område "
+      f"{AA[1][0]-AA[0][0]:.1f} × {AA[1][1]-AA[0][1]:.2f} mm helt synlig ({len(blokk)} punkter dekket), vinduet går "
+      f"{mx[0]:.2f}/{mx[1]:.2f} mm (venstre/høyre) og {my[0]:.2f}/{my[1]:.2f} mm (foran/bak) utenfor det; "
+      f"sidevangene klemmer kortet ({klem:.2f} mm³ klemribbe)")
+
+# --- knappene: presspasning, luft til stempelet og vandring ---
+hus = stempel = sorted(br.split(only_watertight=False), key=lambda b: b.bounds[0][0])   # hus, stempel og bein
+kapper = sorted(KAPPER, key=lambda b: b.bounds[0][0])
+press = [overlap(A["knappeholder"], h) for h in hus]
+gap = [c.bounds[0][2] - s_.bounds[1][2] for c, s_ in zip(kapper, stempel)]
+TRAVEL = 0.25                                    # bryterens vandring
+fritt = []
+for c, g in zip(kapper, gap):
+    ned_ = c.copy()
+    ned_.apply_translation([0, 0, -(g + TRAVEL)])
+    fritt.append(sum(overlap(A[n], ned_) for n in ("kropp", "knappeholder")) + overlap(sk, ned_))
+good = len(hus) == 5 and len(stempel) == 5 and all(0.1 < p < 2.0 for p in press) and all(0.1 <= g <= 0.3 for g in gap) \
+    and all(f < 0.01 for f in fritt)
+ok &= good
+print(f"{'OK ' if good else 'FEIL'} knapper: bryterne klemmes i lommene ({', '.join(f'{p:.2f}' for p in press)} mm³ klemribbe), "
+      f"luft flens–stempel {', '.join(f'{g:.2f}' for g in gap)} mm, hettene går {TRAVEL} mm forbi klikket uten å treffe noe "
+      f"({max(fritt):.3f} mm³)")
 
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)

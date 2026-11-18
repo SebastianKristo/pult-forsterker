@@ -24,5 +24,8 @@ g 03_bak         samlet     -230,660,330,0,55,64
 g 07_bak_skra    samlet     -405,629,356,0,55,62
 g 04_side        samlet     580,36,98,0,52,66
 g 05_skjot       samlet     -150,-190,230,0,5,118
-r 06_knapper_skjerm samlet  0,-149,408,0,40,134
+r 06_knapper_skjerm samlet  0,-149,408,0,44,134
+# snitt gjennom toppen (x = 0): skjermen og knappeholderen på plass, og med holderen trukket ut forover
+g 08_takrom      takrom     -95,-105,215,24,40,120
+g 09_takrom_ut   takrom_ut  -95,-200,235,34,8,114
 wait
