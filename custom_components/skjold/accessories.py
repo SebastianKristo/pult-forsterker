@@ -17,7 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .entity import _NAMES
-from .devices import ACCESSORY_MODELS, card_option_names, hjul_devices, kassett_state, rost_devices, stav_devices
+from .devices import ACCESSORY_MODELS, card_option_names, hjul_devices, kassett_state, rost_devices, sensor_devices, stav_devices
 
 
 def _uid(c) -> str:
@@ -383,6 +383,88 @@ class StavConnected(_Acc, BinarySensorEntity):
         return bool((_stav(self.coordinator, self._dev) or {}).get("connected"))
 
 
+# ---------- Skjold Sensor (romsensoren, esphome/skjold-sensor*.yaml) ----------
+# (navn i ESPHome, nøkkel, device_class, enhet, state_class, diagnostikk)
+SENSOR_VERDIER = [
+    ("Temperatur", "temperature", SensorDeviceClass.TEMPERATURE, "°C", "measurement", False),
+    ("Luftfuktighet", "humidity", SensorDeviceClass.HUMIDITY, PERCENTAGE, "measurement", False),
+    ("Lys", "illuminance", SensorDeviceClass.ILLUMINANCE, "lx", "measurement", False),
+    ("Duggpunkt", "dew_point", SensorDeviceClass.TEMPERATURE, "°C", "measurement", False),
+    ("Føles som", "feels_like", SensorDeviceClass.TEMPERATURE, "°C", "measurement", False),
+    ("Absolutt fuktighet", "abs_humidity", None, "g/m³", "measurement", False),
+    ("Komfort", "comfort", None, None, None, False),
+    ("Lysnivå", "light_level", None, None, None, False),
+    ("Bevegelser", "motion_count", None, None, "total_increasing", False),
+    ("Minutter siden bevegelse", "minutes_since_motion", SensorDeviceClass.DURATION, "min", "measurement", False),
+    ("Wi-Fi-signal", "wifi", SensorDeviceClass.SIGNAL_STRENGTH, "dBm", "measurement", True),
+]
+SENSOR_BINAERE = [
+    ("Bevegelse", "motion", BinarySensorDeviceClass.MOTION),
+    ("Tilstedeværelse", "presence", BinarySensorDeviceClass.OCCUPANCY),
+    ("Mørkt", "dark", None),
+    ("Høy fuktighet", "high_humidity", BinarySensorDeviceClass.MOISTURE),
+]
+
+
+def _sens(c, dev):
+    return next((h for h in sensor_devices(c.extras.get("sensorer")) if h["id"] == dev), None)
+
+
+class _SensorVerdi(_Acc):
+    def __init__(self, c, h, esp_navn: str, key: str) -> None:
+        super().__init__(c, "sensor", h["id"], h["name"], key, esp_navn)
+        self._esp = esp_navn.lower()
+
+    def _v(self):
+        h = _sens(self.coordinator, self._dev) or {}
+        return h.get("values", {}).get(self._esp)
+
+    @property
+    def available(self) -> bool:
+        h = _sens(self.coordinator, self._dev)
+        return bool(super().available and h and self._esp in h["values"])
+
+
+class SkjoldSensorVerdi(_SensorVerdi, SensorEntity):
+    def __init__(self, c, h, spec) -> None:
+        navn, key, dc, enhet, sc, diag = spec
+        super().__init__(c, h, navn, key)
+        self._attr_device_class = dc
+        self._attr_native_unit_of_measurement = enhet
+        self._attr_state_class = sc
+        if diag:
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def native_value(self):
+        v = self._v()
+        return None if isinstance(v, bool) else v
+
+
+class SkjoldSensorBinaer(_SensorVerdi, BinarySensorEntity):
+    def __init__(self, c, h, spec) -> None:
+        navn, key, dc = spec
+        super().__init__(c, h, navn, key)
+        self._attr_device_class = dc
+
+    @property
+    def is_on(self):
+        v = self._v()
+        return None if v is None else bool(v)
+
+
+class SkjoldSensorTilkoblet(_Acc, BinarySensorEntity):
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, c, h) -> None:
+        super().__init__(c, "sensor", h["id"], h["name"], "connected", "Tilkoblet")
+
+    @property
+    def is_on(self):
+        return bool((_sens(self.coordinator, self._dev) or {}).get("connected"))
+
+
 def entities(c, platform: str) -> list:
     """Tilbehørsentitetene for én plattform (kalles fra switch.py, number.py, sensor.py, select.py, binary_sensor.py)."""
     out: list = []
@@ -390,6 +472,7 @@ def entities(c, platform: str) -> list:
     kas = kassett_state(c.extras.get("nfc"), c.extras.get("spoler"))
     hjul = hjul_devices(c.extras.get("hjul"))
     staver = stav_devices(c.extras.get("stav"))
+    sensorer = sensor_devices(c.extras.get("sensorer"))
     if platform == "switch":
         out += [x for m in minis for x in (RostPower(c, m), RostSynced(c, m))]
         if kas and kas["spoler"] is not None:
@@ -401,11 +484,13 @@ def entities(c, platform: str) -> list:
         if kas:
             out.append(KassettConnected(c))
         out += [x for h in staver for x in (StavCharging(c, h), StavConnected(c, h))]
+        out += [x for h in sensorer for x in [SkjoldSensorTilkoblet(c, h)] + [SkjoldSensorBinaer(c, h, sp) for sp in SENSOR_BINAERE]]
     elif platform == "sensor":
         if kas:
             out += [KassettActive(c), KassettLast(c), KassettVentende(c), KassettTag(c)]
         out += [x for h in hjul for x in (HjulBattery(c, h), HjulLastUsed(c, h))]
         out += [x for h in staver for x in (StavBattery(c, h), StavLastKey(c, h), StavLastUsed(c, h))]
+        out += [SkjoldSensorVerdi(c, h, sp) for h in sensorer for sp in SENSOR_VERDIER]
     elif platform == "select":
         if kas:
             out.append(KassettPlay(c))

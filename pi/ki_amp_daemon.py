@@ -9766,6 +9766,21 @@ async def h_ir(r):
 FEAT_ROUTES += [("POST", "/api/ir", h_ir)]
 
 
+# ---------- Skjold Sensor: romsensorene på nettet (pi/skjold_sensorer.py) til Home Assistant og appene ----------
+import skjold_sensorer as _sensmod   # noqa: E402
+sensorer = _sensmod.Sensorer({"changed": lambda: changed()})
+if os.environ.get("KI_AMP_SENSORER", "1") != "0":   # finnes ikke avahi-browse, stopper søket stille
+    sensorer.start()
+
+
+async def h_sensorer(_r):
+    """GET /api/sensorer → {enheter: {mac: {navn, ip, tilkoblet, sist, verdier: {Temperatur, Luftfuktighet, Lys, Bevegelse, …}}}}"""
+    return web.json_response(sensorer.status())
+
+
+FEAT_ROUTES += [("GET", "/api/sensorer", h_sensorer)]
+
+
 # ---------- Skjold Kassetthylle: ta ut en kassett = spill den (pi/skjold_hylle.py, esphome/skjold-hylle.yaml) ----------
 import skjold_hylle as _hymod   # noqa: E402
 

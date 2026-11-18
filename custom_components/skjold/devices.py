@@ -6,9 +6,9 @@ from __future__ import annotations
 MODELS = {"s1": "Skjold S1", "node": "Skjold Node", "core": "Skjold Core", "touch": "Skjold Touch"}
 BOARD_LABELS = {"s1f": "rev F", "main": "rev B", "kit": "Kit", "modules": "Moduler", "node": "Node", "touch": "Touch",
                 "core": "Core"}
-ACCESSORY_MODELS = {"rost": "Skjold Røst", "kassett": "Skjold Kassett", "hjul": "Skjold Hjul", "stav": "Skjold Stav"}
+ACCESSORY_MODELS = {"rost": "Skjold Røst", "kassett": "Skjold Kassett", "hjul": "Skjold Hjul", "stav": "Skjold Stav", "sensor": "Skjold Sensor"}
 ICONS = {"s1": "mdi:amplifier", "node": "mdi:speaker-wireless", "core": "mdi:raspberry-pi", "touch": "mdi:tablet-dashboard",
-         "rost": "mdi:speaker", "kassett": "mdi:cassette", "hjul": "mdi:knob", "stav": "mdi:remote-tv"}
+         "rost": "mdi:speaker", "kassett": "mdi:cassette", "hjul": "mdi:knob", "stav": "mdi:remote-tv", "sensor": "mdi:home-thermometer-outline"}
 
 
 def main_model(data: dict | None, product: str) -> tuple[str, str, str | None]:
@@ -97,4 +97,14 @@ def stav_devices(cfg: dict | None) -> list[dict]:
                     "charging": e.get("lader"), "connected": bool(e.get("tilkoblet")), "last": e.get("sist"),
                     "key": (t.get("knapp") + ("" if t.get("type") in (None, "kort") else " (" + t["type"] + ")")) if t.get("knapp") else None,
                     "version": e.get("versjon")})
+    return sorted(out, key=lambda d: d["name"].lower())
+
+
+def sensor_devices(cfg: dict | None) -> list[dict]:
+    """GET /api/sensorer → [{id, name, connected, values}] for Skjold Sensor-ene Skjold har funnet på nettet."""
+    out = []
+    for mac, e in ((cfg or {}).get("enheter") or {}).items():
+        if isinstance(e, dict):
+            out.append({"id": str(mac), "name": str(e.get("navn") or "Skjold Sensor"), "connected": bool(e.get("tilkoblet")),
+                        "values": {str(k).lower(): v for k, v in (e.get("verdier") or {}).items()}})
     return sorted(out, key=lambda d: d["name"].lower())
