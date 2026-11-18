@@ -52,36 +52,40 @@ bak_y = 52;                      // finnen skråner ned til hit bak på sokkelen
 finne_b = 36;                    // den smale ryggen («finnen») bak – pogo-kontakten sitter i den
 skaal_l = 44;                    // skåla foran (full bredde, med hylle, leppe og vanger) langs fjernkontrollen
 skaal_bak = 34;                  // skåla skråner ned til hit
-// ---------- IR i dokka (bare med delt sokkel: delene legges inn nedenfra) ----------
-// Sokkelen får en lomme for et ESP32-C3 SuperMini ved siden av USB-C-brikken (5 V fra samme brikke), to 5 mm
-// IR-lysdioder foran (vippet opp mot TV-veggen og litt utover), en tredje bak eller på høyre side (til en boks bak
-// TV-en eller i en hylle ved siden av), og et vindu for en VS1838B-mottaker (lære koder rett på dokka).
-// Lysdiodene står i gjennomgående hull med fas: kuppelen ligger 0,3 mm inne i fronten, og flensen hviler mot et
-// trinn innvendig. Fastvare: esphome/skjold-dokk.yaml.
+// ---------- IR i dokka (bare med delt sokkel: alt legges inn nedenfra før bunnplata skrus på) ----------
+// Dokka står på bordet foran sofaen, så TV-en og TV-boksen står BAK den. To 5 mm IR-lysdioder peker derfor bakover
+// (vippet ir_vinkel opp mot TV-veggen og ±ir_spre utover), på hver side av USB-C-en. En tredje kan peke ut til høyre
+// (ir_tredje = "side"), til en boks i hylla ved siden av. VS1838B-mottakeren (lære koder) ser fram, dit du peker den
+// gamle fjernkontrollen. ESP32-C3 SuperMini ligger i en romslig lomme til venstre og får 5 V fra USB-C-brikken.
+// Lysdiodene står i gjennomgående hull med fas: kuppelen ligger 0,3 mm inne, og flensen hviler mot et trinn innvendig.
+// Bak lysdiodene er det et stort kammer (driver og motstander), og brede kanaler (4,5 × 4,5 mm) til C3 og mottakeren.
+// Fastvare: esphome/skjold-dokk.yaml.
 ir = false;
-ir_tredje = "bak";               // tredje IR-lysdiode: "bak" | "side" (høyre) | "ingen"
-ir_mottaker = true;              // vindu og lomme for VS1838B
-ir_X = 13;                       // de to fremre lysdiodene står ±ir_X fra midten
-ir_z = 6.6;                      // høyden på hullsenteret i ytterflaten
-ir_vinkel = 12;                  // vippet opp (grader)
+ir_tredje = "ingen";             // tredje IR-lysdiode: "ingen" | "side" (høyre)
+ir_mottaker = true;              // vindu og lomme for VS1838B (foran)
+ir_X = 18;                       // de to lysdiodene bak står ±ir_X fra midten (USB-C-en er i midten)
+ir_z = 7.0;                      // høyden på hullsenteret i ytterflaten
+ir_vinkel = 10;                  // vippet opp (grader)
 ir_spre = 8;                     // vridd utover, hver sin vei (grader), for bredere kjegle
 ir_d = 5.1;                      // hullet til 5 mm lysdiode (TSAL6200 eller vanlig 940 nm)
 ir_fas = 0.7;                    // fas ytterst i hullet
 ir_l = 8.6;                      // lysdiodens lengde fra flensen til tuppen (TSAL6200: 8,6)
 ir_inne = 0.3;                   // kuppelen ligger så langt inne
-ir_flens = 6.4;                  // trinnet innvendig (flensen er 5,8–6,0)
-ir_kam = [36, 8.4, 8.0];         // kammeret bak de fremre lysdiodene: bredde, fra fronten, dybde (transistor og motstander)
+ir_flens = 6.4;                  // plassen bak trinnet (flensen er 5,8–6,0)
+ir_tak = 10;                     // taket i kamrene og lommene (z); toppen er 2 mm
+ir_kanal_b = 4.5;                // ledningskanalene: bredde og høyde (avrundet i hjørnene)
 mott = [9.4, 5.8, 7.4];          // VS1838B liggende på siden (b × d × h, kuppelen fram) – mål din
 mott_vindu = 4.4;                // vinduet foran kuppelen
-c3 = [18.0, 22.5, 3.6];          // ESP32-C3 SuperMini: b × l × tykkelse med komponenter (USB-C på kortenden)
-c3_X = -18; c3_Y = 50.5;         // senter i sokkelen, USB-enden bakover (mot USB-C-brikken)
-c3_lys = [-6, 9];                // den blå lysdioden (GPIO8) i forhold til kortets senter – lyslederen står over den
+c3 = [22.5, 18.0, 3.6];          // ESP32-C3 SuperMini liggende på tvers: l × b × tykkelse med komponenter
+c3_X = -20; c3_Y = 26;           // kortets senter; USB-C-enden mot venstre, antennen mot høyre (bort fra vekten)
+c3_lomme = [25, 26];             // lomma: 1,25 mm ved endene og 4 mm langs pinneradene til ledningene
+c3_lys = [-7, 5];                // den blå lysdioden (GPIO8) i forhold til kortets senter – lyslederen står over den
 lysleder_d = 1.9;                // hull for en bit klar filament (1,75 mm) opp til toppen
-ir_bak_X = 17;                   // tredje lysdiode bak (X), eller …
-ir_side_Y = 26;                  // … på høyre side (Y)
+ir_kam = [-14, 36, 14, 53];      // driverkammeret: x0, y0, x1, y1 (foran USB-C-brikken, 28 × 17 × 8 mm)
+ir_side_Y = 26;                  // tredje lysdiode på høyre side (Y)
 // vekt og føtter
-vekt = ir ? [36, 23, 7] : [48, 30, 7];   // lomme foran for stålkuler eller skiver (ca. 60–90 g, med IR ca. 45 g)
-vekt_Y = ir ? 2.5 : -7;          // lommens senter (Y); med IR flyttes den bakover og krymper (IR-kammeret står foran)
+vekt = ir ? [48, 25, 7] : [48, 30, 7];   // lomme foran for stålkuler eller skiver (ca. 60–90 g, med IR ca. 60 g)
+vekt_Y = ir ? -3.5 : -7;         // lommens senter (Y); med IR litt kortere (mottakeren og kanalen står foran)
 led_X = 31;                      // lysdioden foran til høyre
 fot_d = 10; fot_h = 1.0;         // gummiføtter
 // USB-C-brikke (vanlig 6-pinners «Type-C breakout» med 5,1 kΩ på CC), bakerst
@@ -309,6 +313,7 @@ module sokkel_topp() {
     translate([-200, -200, -1]) cube([400, 400, delt_z + 1]);
     for (p = skruer) translate([p[0], p[1], delt_z - 0.01]) cylinder(d = 2.6, h = 7, $fn = 20);   // forboring for skruene
   }
+  ir_tapp();
 }
 module sokkel_bunn() {
   difference() {
@@ -325,71 +330,102 @@ module sokkel_bunn() {
 // yaw: 0 = fram (−Y), 180 = bak, 90 = høyre (+X); vippes ir_vinkel opp.
 module ir_plass(p, yaw) { translate(p) rotate([0, 0, yaw]) rotate([90 - ir_vinkel, 0, 0]) children(); }
 module draape2(d) { hull() { circle(d = d, $fn = 32); translate([0, d/2 * sqrt(2)]) circle(d = 0.05, $fn = 8); } }
+ir_trinn = ir_inne + ir_l - 1.0;                 // flensens forside (trinnet), målt innover fra ytterflaten
 module ir_hull_lokal() {
-  trinn = ir_inne + ir_l - 1.0;                  // flensens forside (trinnet) fra ytterflaten
-  translate([0, 0, -trinn]) linear_extrude(trinn + 3) draape2(ir_d);                          // gjennom
+  translate([0, 0, -ir_trinn]) linear_extrude(ir_trinn + 3) draape2(ir_d);                    // gjennom
   translate([0, 0, -ir_fas]) cylinder(h = ir_fas + 3, d1 = ir_d, d2 = ir_d + 2*(ir_fas + 3), $fn = 32);   // fas
-  translate([0, 0, -trinn - 10]) linear_extrude(10) draape2(ir_flens);                        // plass til flensen
+  translate([0, 0, -ir_trinn - 10]) linear_extrude(10) draape2(ir_flens);                     // plass til flensen
 }
-module ir_led_lokal() {                          // lysdioden (bare for bildene og kollisjonssjekken)
+module ir_led_lokal(bein = 4) {                  // lysdioden (bare for bildene og kollisjonssjekken)
   z0 = -ir_inne - ir_l;
   color([0.32, 0.36, 0.52, 0.95]) {
     translate([0, 0, z0]) cylinder(d = 5.8, h = 1.0, $fn = 32);
     translate([0, 0, z0 + 1]) cylinder(d = 4.95, h = ir_l - 1 - 2.47, $fn = 32);
     translate([0, 0, -ir_inne - 2.47]) sphere(d = 4.95, $fn = 32);
   }
-  color([0.75, 0.75, 0.78]) for (x = [-1.27, 1.27]) translate([x, 0, z0 - 4]) cylinder(d = 0.5, h = 4, $fn = 8);
+  if (bein > 0) color([0.75, 0.75, 0.78]) for (x = [-1.27, 1.27]) translate([x, 0, z0 - bein]) cylinder(d = 0.5, h = bein, $fn = 8);
 }
-// plasseringen av lysdiodene (punkt i ytterflaten, yaw)
-ir_front = [[[-ir_X, SY0, ir_z], -ir_spre], [[ir_X, SY0, ir_z], ir_spre]];
-ir_ekstra = ir_tredje == "bak" ? [[[ir_bak_X, SY1, ir_z], 180]] : ir_tredje == "side" ? [[[SB/2, ir_side_Y, ir_z], 90]] : [];
-ir_alle = concat(ir_front, ir_ekstra);
+// plasseringen av lysdiodene (punkt i ytterflaten, yaw): to bak, og en valgfri på høyre side
+ir_bak = [[[-ir_X, SY1, ir_z], 180 + ir_spre], [[ir_X, SY1, ir_z], 180 - ir_spre]];
+ir_ekstra = ir_tredje == "side" ? [[[SB/2, ir_side_Y, ir_z], 90]] : [];
+ir_alle = concat(ir_bak, ir_ekstra);
 mott_z = delt_z + mott[2]/2 + 0.2;               // kuppelens senter (høyde)
-module ir_kanal(a, b) { hull() { translate([a[0], a[1], delt_z + 1.5]) cube([4, 4, 3.02], center = true);
-                                 translate([b[0], b[1], delt_z + 1.5]) cube([4, 4, 3.02], center = true); } }
+// ledningskanal: avrundet i planet, ir_kanal_b bred og høy, flatt tak (bro)
+module ir_kanal(a, b, o = 0) {
+  hull() for (p = [a, b]) translate([p[0], p[1], delt_z - 0.01 + o]) cylinder(r = ir_kanal_b/2 - o, h = ir_kanal_b + 0.01 - 2*o, $fn = 24);
+}
+module rboks(x0, y0, x1, y1, z1, r = 1.5, o = 0) {   // lomme med avrundede hjørner fra delt_z og opp til z1
+  translate([0, 0, delt_z - 0.01 + o]) linear_extrude(z1 - delt_z + 0.01 - 2*o)
+    translate([x0 + o, y0 + o]) offset(r) offset(-r) square([x1 - x0 - 2*o, y1 - y0 - 2*o]);
+}
+// alle ledningsveiene (o > 0 gir en krympet utgave til sjekken: «er kanalene frie»)
+module ir_kanaler(o = 0) {
+  // mottakeren foran → venstre → bakover til C3
+  if (ir_mottaker) {
+    ir_kanal([-3, SY0 + 5.5], [-29, SY0 + 5.5], o);
+    ir_kanal([-29, SY0 + 5.5], [-29, c3_Y - c3_lomme[1]/2 + 2], o);
+  }
+  // C3 → driverkammeret (bred åpning)
+  ir_kanal([c3_X + c3_lomme[0]/2 - 3, c3_Y + c3_lomme[1]/2 - 3], [ir_kam[0] + 3, ir_kam[1] + 3], o);
+  // tredje lysdiode (side) → pogo-kanalen → diagonalen til USB-C-lomma, som går inn i kammeret
+  if (ir_tredje == "side") ir_kanal([SB/2 - ir_trinn - 4, ir_side_Y], [kanal_X, kanal_Y], o);
+}
+// lommene (åpne ned mot bunnplata); kanalene går mellom dem
+module ir_lommer() {
+  // driverkammeret foran USB-C-brikken, og en lomme bak hver lysdiode (beina bøyes og loddes her) – en U rundt
+  // USB-lomma. En åpning (6 mm) i veggen mot USB-lomma til VBUS og GND.
+  rboks(ir_kam[0], ir_kam[1], ir_kam[2], ir_kam[3], ir_tak);
+  for (s = [-1, 1]) rboks(s > 0 ? 11 : -25, 46, s > 0 ? 25 : -11, SY1 - ir_trinn * cos(ir_vinkel) + 1.2, ir_tak);
+  rboks(-3, ir_kam[3] - 1, 3, SY1 - 2.5 - usb_kort[1] + 0.5, delt_z + usb_kort[2] + usb_k[2] + 0.4, 0.5);
+  // tredje lysdiode: en lomme bak hullet
+  if (ir_tredje == "side") rboks(SB/2 - ir_trinn - 7.5, ir_side_Y - 6, SB/2 - ir_trinn * cos(ir_vinkel) + 1.2, ir_side_Y + 6, ir_tak);
+  // VS1838B: lomme bak vinduet foran, og vindu med fas foran kuppelen
+  if (ir_mottaker) {
+    rboks(-mott[0]/2 - 0.3, SY0 + 1.6, mott[0]/2 + 0.3, SY0 + 1.6 + mott[1] + 2.5, mott_z + mott[2]/2 + 0.6, 0.5);
+  }
+  // ESP32-C3 SuperMini: flatt på bunnplata i en romslig lomme (4 mm langs pinneradene, 6 mm over loddepunktene)
+  rboks(c3_X - c3_lomme[0]/2, c3_Y - c3_lomme[1]/2, c3_X + c3_lomme[0]/2, c3_Y + c3_lomme[1]/2, ir_tak, 0.8);
+  // USB-C-brikkens lomme (den samme som i sokkel())
+  translate([usb_X - usb_kort[0]/2 - 0.2, SY1 - 2.5 - usb_kort[1], 2]) cube([usb_kort[0] + 0.4, usb_kort[1] + 0.2, usb_kort[2] + usb_k[2] + 0.4]);
+}
 module ir_rom() {
-  z0 = delt_z - 0.01;
   // lysdiodene
   for (l = ir_alle) ir_plass(l[0], l[1]) ir_hull_lokal();
-  // kammeret bak de fremre lysdiodene (transistor, motstander og ledninger)
-  translate([-ir_kam[0]/2, SY0 + ir_kam[1], z0]) cube([ir_kam[0], ir_kam[2], 10 - delt_z]);
-  // VS1838B: lomme fra kammeret og fram, og vindu med fas foran kuppelen
-  if (ir_mottaker) {
-    translate([-mott[0]/2 - 0.2, SY0 + 1.6, z0]) cube([mott[0] + 0.4, ir_kam[1] - 1.6 + 0.01, mott[2] + 0.4 + 0.01]);
-    translate([0, SY0, mott_z]) rotate([90, 0, 0]) {
-      translate([0, 0, -2]) linear_extrude(4) draape2(mott_vindu);
-      translate([0, 0, -0.6]) cylinder(h = 3.6, d1 = mott_vindu, d2 = mott_vindu + 7.2, $fn = 32);
-    }
+  ir_lommer();
+  if (ir_mottaker) translate([0, SY0, mott_z]) rotate([90, 0, 0]) {   // vinduet foran kuppelen, med fas
+    translate([0, 0, -2]) linear_extrude(4) draape2(mott_vindu);
+    translate([0, 0, -0.6]) cylinder(h = 3.6, d1 = mott_vindu, d2 = mott_vindu + 7.2, $fn = 32);
   }
-  // tredje lysdiode: et lite kammer bak hullet
-  if (ir_tredje == "bak")
-    translate([ir_bak_X - 4.5, SY1 - ir_kam[1] - 7, z0]) cube([9, 7.01, 10 - delt_z]);
-  if (ir_tredje == "side")
-    translate([SB/2 - ir_kam[1] - 7, ir_side_Y - 4.5, z0]) cube([7.01, 9, 10 - delt_z]);
-  // ESP32-C3 SuperMini: flatt på bunnplata, USB-enden bakover; ledningene loddes ovenfra
-  translate([c3_X - c3[0]/2 - 0.2, c3_Y - c3[1]/2 - 0.2, z0]) cube([c3[0] + 0.4, c3[1] + 1.6, c3[2] + 2.5]);   // + 1,2 for USB-C-en
   // lysleder over den blå lysdioden (en bit klar filament, 1,75 mm)
   translate([c3_X + c3_lys[0], c3_Y + c3_lys[1], 2]) cylinder(d = lysleder_d, h = SH, $fn = 16);
-  // ledningskanaler (z 2–5): kammeret foran → langs venstre side → C3; C3 → USB-C-brikken (5 V og GND)
-  ir_kanal([-ir_kam[0]/2 + 1, SY0 + ir_kam[1] + 2], [-22, SY0 + ir_kam[1] + 2]);
-  ir_kanal([-22, SY0 + ir_kam[1] + 2], [-22, c3_Y - c3[1]/2 + 2]);
-  ir_kanal([c3_X + c3[0]/2 - 1, SY1 - 13], [usb_X - usb_kort[0]/2 + 1, SY1 - 13]);
-  if (ir_tredje == "bak") ir_kanal([usb_X + usb_kort[0]/2 - 1, SY1 - 13], [ir_bak_X, SY1 - 13]);
-  if (ir_tredje == "side") ir_kanal([SB/2 - ir_kam[1] - 5, ir_side_Y], [kanal_X, kanal_Y]);
+  ir_kanaler();
+}
+// strekkavlastning: en tapp i åpningen fra C3 til kammeret – ledningene legges i en S rundt den (og en dråpe lim)
+ir_tapp = [ir_kam[0] + 1.7, (ir_kam[1] + ir_kam[3])/2];
+module ir_tapp() { if (ir) translate([ir_tapp[0], ir_tapp[1], delt_z]) cylinder(d = 3, h = ir_tak - delt_z + 0.1, $fn = 20); }
+// bunnplata med IR: lave kanter (1 mm) som holder C3, driverkortet og USB-C-brikken på plass når den skrus på
+module sokkel_bunn_ir() {
+  sokkel_bunn();
+  translate([0, 0, delt_z - 0.01]) linear_extrude(1.0) {
+    translate([c3_X, c3_Y]) difference() { square([c3[0] + 0.6 + 1.6, c3[1] + 0.6 + 1.6], center = true);
+      square([c3[0] + 0.6, c3[1] + 0.6], center = true); square([c3[0] - 6, 40], center = true); square([40, c3[1] - 6], center = true); }
+    translate([0, (ir_kam[1] + ir_kam[3])/2]) difference() { square([20 + 2.4, 12 + 2.4], center = true); square([20.6, 12.6], center = true);
+      square([14, 40], center = true); square([40, 6], center = true); }
+  }
 }
 // de kjøpte delene i IR-dokka (for bildene og kollisjonssjekken)
-module ir_deler() {
-  for (l = ir_alle) ir_plass(l[0], l[1]) ir_led_lokal();
+module ir_deler(bein = 4) {
+  for (l = ir_alle) ir_plass(l[0], l[1]) ir_led_lokal(bein);
   if (ir_mottaker) translate([0, SY0 + 1.6 + 0.05, delt_z + 0.2]) {            // VS1838B liggende, kuppelen fram
     color([0.08, 0.08, 0.09]) translate([-mott[0]/2 + 0.1, 0.9, 0]) cube([mott[0] - 0.2, mott[1] - 0.9, mott[2]]);
     color([0.08, 0.08, 0.09]) translate([0, 0.9, mott[2]/2]) rotate([90, 0, 0]) cylinder(d = 3.6, h = 0.9, $fn = 24);
   }
-  // ESP32-C3 SuperMini
+  // ESP32-C3 SuperMini, på tvers: USB-C mot venstre (−X), antennen mot høyre
   translate([c3_X, c3_Y, delt_z]) {
     color([0.12, 0.18, 0.40]) translate([-c3[0]/2, -c3[1]/2, 0]) cube([c3[0], c3[1], 1.0]);
     color([0.15, 0.15, 0.16]) translate([-2.5, -2.5, 1]) cube([5, 5, 0.9]);                            // ESP32-C3
-    color([0.75, 0.75, 0.78]) translate([-4.5, c3[1]/2 - 7.3 + 1.0, 1]) cube([9, 7.3, 3.2]);           // USB-C
-    color([0.85, 0.85, 0.82]) translate([-5, -c3[1]/2 + 0.5, 1]) cube([10, 2.5, 1]);                   // antenne
+    color([0.75, 0.75, 0.78]) translate([-c3[0]/2 - 1.0, -4.5, 1]) cube([7.3, 9, 3.2]);                // USB-C
+    color([0.85, 0.85, 0.82]) translate([c3[0]/2 - 3, -5, 1]) cube([2.5, 10, 1]);                      // antenne
     color([0.3, 0.5, 1.0]) translate([c3_lys[0] - 0.5, c3_lys[1] - 0.4, 1]) cube([1, 0.8, 0.5]);       // blå lysdiode
   }
   // USB-C-brikken (til strøm for både dokka og C3)
@@ -397,8 +433,12 @@ module ir_deler() {
     color([0.15, 0.35, 0.2]) translate([-usb_kort[0]/2, -usb_kort[1]/2, 0]) cube(usb_kort);
     color([0.75, 0.75, 0.78]) translate([-usb_k[0]/2, usb_kort[1]/2 - usb_k[1] + 0.6, usb_kort[2]]) cube(usb_k);
   }
-  // driverkort (AO3400 + motstander på et lite hullkort), stående mot bakveggen i kammeret
-  color([0.15, 0.35, 0.2]) translate([-8, SY0 + ir_kam[1] + ir_kam[2] - 1.8, delt_z + 0.3]) cube([16, 1.6, 6]);
+  // driverkort (AO3400 + motstander på et hullkort, 20 × 12 mm), flatt på bunnplata midt i kammeret
+  translate([0, (ir_kam[1] + ir_kam[3])/2, delt_z]) {
+    color([0.15, 0.35, 0.2]) translate([-10, -6, 0]) cube([20, 12, 1.6]);
+    color([0.1, 0.1, 0.1]) translate([-1.5, -1.5, 1.6]) cube([3, 2.9, 1.1]);
+    color([0.8, 0.7, 0.5]) for (i = [-1, 0, 1]) translate([-8, 2 + i * 2.6, 1.6 + 1.2]) rotate([0, 90, 0]) cylinder(d = 2.4, h = 6.3, $fn = 12);   // 33 Ω
+  }
 }
 
 module gull() { translate([0, 0, SH - gull_d]) linear_extrude(gull_d) difference() { sokkel_2d(gull_inn + 0.08); sokkel_2d(gull_inn + gull_b - 0.08); } }
@@ -412,10 +452,10 @@ c_topp = farge == "bone" ? [0.81, 0.78, 0.71] : [0.17, 0.17, 0.18];
 c_sokkel = farge == "bone" ? [0.17, 0.17, 0.18] : [0.82, 0.80, 0.75];
 c_gull = [0.85, 0.62, 0.25];
 module samlet() { color(c_topp) vugge(); color(c_sokkel) sokkel(); color(c_gull) gull(); pogo_han(); if (ir) ir_deler(); }
-// IR-dokka sett inni: sokkelen kuttet i z = 4,6 (lommene og kanalene synes) med bunnplata og delene på plass
+// IR-dokka sett inni: sokkelen kuttet i z = 5,5 (lommene og kanalene synes) med bunnplata og delene på plass
 module ir_inni() {
-  color(c_sokkel) intersection() { sokkel_topp(); translate([-100, -100, 0]) cube([200, 200, 4.6]); }
-  color(c_sokkel * 0.85) translate([0, 0, -0.02]) sokkel_bunn();
+  color(c_sokkel) render() intersection() { sokkel_topp(); translate([-100, -100, 0]) cube([200, 200, 5.5]); }
+  color(c_sokkel * 0.85) translate([0, 0, -0.02]) render() sokkel_bunn_ir();
   ir_deler();
 }
 
@@ -428,7 +468,9 @@ else if (part == "led_propp") led_propp();
 else if (part == "sokkel_topp") sokkel_topp();
 else if (part == "sokkel_bunn") sokkel_bunn();
 else if (part == "samlet") samlet();
-else if (part == "ir_deler") ir_deler();
+else if (part == "ir_deler") ir_deler(0);           // uten bein (de bøyes uansett) – til sjekken
+else if (part == "ir_kanaler") difference() { ir_kanaler(0.3); ir_lommer(); }   // krympet 0,3 mm, utenfor lommene – til sjekken
+else if (part == "sokkel_bunn_ir") sokkel_bunn_ir();
 else if (part == "ir_inni") ir_inni();
 else if (part == "med_fjernkontroll") {
   samlet();
