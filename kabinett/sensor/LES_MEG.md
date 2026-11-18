@@ -1,8 +1,9 @@
 # Skjold Sensor
 
 En liten romsensor for vegg, tak eller bord. Den måler **temperatur og luftfuktighet**, og kan også måle **lys (lux)**
-og se **bevegelse (PIR)**. Inni sitter enten en **ESP32-WROOM DevKit** eller en **Wemos D1 mini (ESP8266)** med
-ESPHome, så den dukker opp i Home Assistant av seg selv.
+og se **bevegelse (PIR)**. Inni sitter en **ESP32-WROOM DevKit**, en **Wemos D1 mini (ESP8266)** eller en
+**ESP32 D1 mini** (MH-ET LIVE MiniKit o.l.) med ESPHome, så den dukker opp i Home Assistant av seg selv. I
+ESP32 D1 mini-utgaven går USB-kabelen ut **bak, nederst**, rett ned langs veggen.
 
 ![Skjold Sensor, lys](render/01_skra_lys.png)
 
@@ -10,24 +11,29 @@ Bilder: [skrått, lys](render/01_skra_lys.png) · [ovenfra, lys](render/02_ovenf
 [eksplodert, lys](render/03_eksplodert_lys.png) · [skrått, mørk](render/04_skra_mork.png) ·
 [ovenfra, mørk](render/05_ovenfra_mork.png) · [eksplodert, mørk](render/06_eksplodert_mork.png) ·
 [forfra](render/07_forfra_lys.png) · [D1 mini-utgaven](render/08_d1mini_skra_lys.png) ·
-[på bordstativet](render/09_stativ_lys.png) · [inni](render/10_inni_lys.png)
+[på bordstativet](render/09_stativ_lys.png) · [inni](render/10_inni_lys.png) ·
+[ESP32 D1 mini, skrått](render/11_esp32d1_skra_lys.png) · [ESP32 D1 mini, bakfra](render/12_esp32d1_bak_lys.png) ·
+[ESP32 D1 mini, inni](render/13_esp32d1_inni_lys.png) · [ESP32 D1 mini på stativet](render/14_esp32d1_stativ_lys.png)
 
 Status: **ikke printet, bygget eller testet på maskinvare.** Modellen er sjekket med `lag_sensor.py` (tette STL-er,
 ingen kollisjoner med de kjøpte delene, ingen overheng som trenger støtte). Begge ESPHome-filene validerer med
-`esphome config`. Målene på kjøpte moduler varierer mellom leverandører, så mål dine før du printer (se
+`esphome config`, men er ikke kompilert. Målene på kjøpte moduler varierer mellom leverandører, så mål dine før du printer (se
 [Mål før print](#mål-før-print)).
 
 Skjold Sans ([`../sans`](../sans/LES_MEG.md)) er en skjoldformet multisensor med D1 mini, laget for bad. Skjold
-Sensor er den enkle, rektangulære boksen. Den finnes for både ESP32 og D1 mini, med eller uten PIR og lysvindu, og
-med bordstativ.
+Sensor er den enkle, rektangulære boksen. Den finnes for ESP32 DevKit, D1 mini og ESP32 D1 mini, med eller uten PIR
+og lysvindu, og med bordstativ.
 
 ## Mål og varianter
 
-| | ESP32-WROOM DevKit | Wemos D1 mini |
-|---|---|---|
-| Ytre mål (B × H × D) | 70 × 56 × 28 mm | 54 × 56 × 28 mm |
-| Filament (bunn + lokk) | ca. 30 + 16 g | ca. 25 + 13 g |
-| ESPHome | [`esphome/skjold-sensor.yaml`](../../esphome/skjold-sensor.yaml) | [`esphome/skjold-sensor-d1mini.yaml`](../../esphome/skjold-sensor-d1mini.yaml) |
+| | ESP32-WROOM DevKit | Wemos D1 mini | ESP32 D1 mini |
+|---|---|---|---|
+| `kort` i `skjold_sensor.scad` | `"esp32"` | `"d1mini"` | `"esp32d1"` |
+| Ytre mål (B × H × D) | 70 × 56 × 28 mm | 54 × 56 × 28 mm | 62 × 66 × 28 mm |
+| USB-kabelen | ut i høyre side | ut i høyre side | **ut bak, nederst** (kanal i baksiden) |
+| Filament (bunn + lokk) | ca. 30 + 16 g | ca. 25 + 13 g | ca. 30 + 17 g |
+| 3MF (Creality K2) | `skjold-sensor-esp32-k2.3mf` | `skjold-sensor-d1mini-k2.3mf` | `skjold-sensor-esp32d1-k2.3mf` |
+| ESPHome | [`esphome/skjold-sensor.yaml`](../../esphome/skjold-sensor.yaml) | [`esphome/skjold-sensor-d1mini.yaml`](../../esphome/skjold-sensor-d1mini.yaml) | samme som ESP32 DevKit: [`esphome/skjold-sensor.yaml`](../../esphome/skjold-sensor.yaml) |
 
 Lokket finnes i fire utgaver for hvert kort (`stl/<kort>/`):
 
@@ -65,6 +71,25 @@ Alle lokkene har statuslyset (3 mm LED). Den kan sløyfes: hullet er lite og ser
   gjerne med litt Blu Tack, så varm luft ikke siver ned i kammeret.
 - **ESP-kortet ligger flatt** på fire hjørnestøtter, med USB-enden inn mot høyre vegg. To pinner på lokket holder den
   andre enden nede. USB-kabelen går ut i høyre side.
+- **ESP32 D1 mini-utgaven** er annerledes, se under.
+
+### ESP32 D1 mini: USB ut bak, nederst
+
+![ESP32 D1 mini bakfra](render/12_esp32d1_bak_lys.png) ![ESP32 D1 mini inni](render/13_esp32d1_inni_lys.png)
+
+- **Kortet står på høykant** til høyre i ESP-rommet, med USB-enden ned mot skilleveggen og WROOM-modulen fram. Lomma
+  er 40,4 × 32,4 mm, så kort på 39–40 × 31–32 mm passer. Det ligger på fire hjørnestøtter 6,4 mm fra baksiden, med
+  plass til USB-brikka under. To pinner på lokket holder den øvre enden nede.
+- **USB-kanalen** er en lukket kanal i baksiden, 13 mm bred og 12,5 mm dyp. Den går fra underkanten, gjennom
+  sensorkammeret og skilleveggen, og opp til kontakten. Kanalen er **åpen mot veggen og nedover**, men lukket mot
+  sensorkammeret, så kammeret holdes rent.
+- **Pluggen skyves opp i kanalen nedenfra**, også mens sensoren henger på veggen. Kabelen går rett ned langs veggen
+  bak sensoren. Pluggen kan være **inntil 13 × 12 mm** i tverrsnitt og **inntil ca. 21 mm** lang (fra munningen). Det
+  passer vanlige rette micro-USB- og USB-C-plugger. Kontakten kan sitte under kortet (micro-USB på MH-ET LIVE MiniKit)
+  eller oppå (enkelte USB-C-utgaver), for kanalen tar begge.
+- **Nøkkelhullene** sitter høyere opp (40 mm avstand, 46 mm over underkanten) og er godt klar av kanalen.
+- **På bordstativet** bøyes kabelen bakover under sensoren, gjennom et hakk i ryggen og i et spor i foten
+  ([bilde](render/14_esp32d1_stativ_lys.png)). Det trengs en myk kabel, for bøyen er krapp.
 - **PIR-en (AM312)** sitter i et C-formet rør på lokket. Kuppelen stikker ut gjennom hullet i fronten.
 - **Lyssensoren (GY-302)** skrus med to M2,5-skruer mot en blokk bak lysvinduet. BH1750-brikka ser ut gjennom en
   kanal på 2,5 × 5 mm.
@@ -96,6 +121,7 @@ Typiske priser på AliExpress (2026), inkl. frakt til Norge.
 |---|---|---|---|
 | **ESP32 DevKit V1 / ESP32-WROOM-32 DevKitC** (30 eller 38 pinner) | 1 | 40–60 kr | *eller* D1 mini under. Uten stiftlister, eller med dem fjernet |
 | **Wemos D1 mini** (ESP8266, CH340) | 1 | 25–40 kr | *eller* ESP32 over |
+| **ESP32 D1 mini** / **MH-ET LIVE MiniKit** (ESP32-WROOM-32, 39 × 31,4 mm, to rader på hver side) | 1 | 40–60 kr | *eller* de to over. USB ut bak (`kort = "esp32d1"`). Uten stiftlister |
 | **SHT40 module** (I²C, ca. 10 × 10–13 mm) | 1 | 25–45 kr | anbefalt: ±0,2 °C, ±1,8 %RH |
 | *alternativ:* **SHT31-D module** (GY-SHT31-D) | 1 | 30–50 kr | samme kobling, `sht3xd` i YAML |
 | *alternativ:* **AHT20 + BMP280** kombikort | 1 | 15–25 kr | gir også lufttrykk. Mindre nøyaktig fukt |
@@ -106,7 +132,7 @@ Typiske priser på AliExpress (2026), inkl. frakt til Norge.
 | Senkeskrue **M3 × 12**, selvgjengende for plast (eller vanlig M3 i Ø2,7-hull) | 2 | – | lokket, bakfra |
 | Selvgjengende skrue **M2,5 × 6** | 2 | – | GY-302 |
 | Silikonledning 26–28 AWG | ca. 1 m | 15–30 kr | |
-| Micro-USB- eller USB-C-kabel + 5 V-lader (1 A) | 1 | – | pluggen kan være inntil 11 × 7,5 mm |
+| Micro-USB- eller USB-C-kabel + 5 V-lader (1 A) | 1 | – | pluggen kan være inntil 11 × 7,5 mm (ESP32 D1 mini: 13 × 12 mm, inntil ca. 21 mm lang, rett plugg) |
 | *bordstativ:* skrue **M3 × 8** med flatt hode + 2 gummiføtter Ø10 mm | 2 + 2 | – | |
 
 Totalt ca. **100–200 kr** med alle sensorene.
@@ -119,15 +145,21 @@ er tregere og mindre nøyaktig enn SHT40, og den driver over tid.
 
 Alle sensorene får 3,3 V. Lys- og fuktsensoren deler I²C-bussen.
 
-| Fra | ESP32 DevKit | Wemos D1 mini |
-|---|---|---|
-| SHT40 / SHT31 / AHT20 SDA · BH1750 SDA | GPIO21 | D2 (GPIO4) |
-| SHT40 / SHT31 / AHT20 SCL · BH1750 SCL | GPIO22 | D1 (GPIO5) |
-| BH1750 ADDR | GND (adresse 0x23) | G (0x23) |
-| AM312 OUT (eller LD2410 OUT / HC-SR501 OUT) | GPIO27 | D5 (GPIO14) |
-| VCC på alle sensorene | 3V3 (LD2410 og HC-SR501: VIN 5 V) | 3V3 (LD2410 og HC-SR501: 5V) |
-| GND på alle | GND | G |
-| Statuslys (3 mm LED) | GPIO2 → 330 Ω → LED → GND | 3V3 → 330 Ω → LED → D4 (GPIO2), aktiv lav |
+| Fra | ESP32 DevKit | Wemos D1 mini | ESP32 D1 mini (pinne på kortet) |
+|---|---|---|---|
+| SHT40 / SHT31 / AHT20 SDA · BH1750 SDA | GPIO21 | D2 (GPIO4) | **IO21**: ytre rad på TXD-siden, 4. pinne fra enden uten USB (der D1 mini har D2) |
+| SHT40 / SHT31 / AHT20 SCL · BH1750 SCL | GPIO22 | D1 (GPIO5) | **IO22**: ytre rad på TXD-siden, 3. pinne (der D1 mini har D1) |
+| BH1750 ADDR | GND (adresse 0x23) | G (0x23) | GND |
+| AM312 OUT (eller LD2410 OUT / HC-SR501 OUT) | GPIO27 | D5 (GPIO14) | **IO27**: indre rad på TXD-siden, 2. pinne |
+| VCC på alle sensorene | 3V3 (LD2410 og HC-SR501: VIN 5 V) | 3V3 (LD2410 og HC-SR501: 5V) | **3V3**: ytre rad på RST-siden, 8. pinne (LD2410 / HC-SR501: **VCC** (5 V), ytre rad på TXD-siden, 8. pinne) |
+| GND på alle | GND | G | **GND**: ytre rad på TXD-siden, 7. pinne, eller 1. pinne i begge indre rader |
+| Statuslys (3 mm LED) | GPIO2 → 330 Ω → LED → GND | 3V3 → 330 Ω → LED → D4 (GPIO2), aktiv lav | **IO2** → 330 Ω → LED → GND. IO2 er indre rad på TXD-siden, 8. pinne |
+
+**ESP32 D1 mini bruker de samme GPIO-ene som ESP32 DevKit**, så samme fastvare (`skjold-sensor.yaml`, `board:
+esp32dev`) virker på begge. Alle fire pinnene (IO21, IO22, IO27, IO2) finnes på pinneradene, og IO2 er også den blå
+LED-en på kortet. Pinneplasseringen over gjelder MH-ET LIVE MiniKit, talt fra enden uten USB (antenneenden), med
+WROOM-modulen opp. De ytre radene er D1 mini-kompatible. **Kloner kan ha en annen rekkefølge, så sjekk alltid
+silketrykket på ditt kort.**
 
 Statuslyset blinker bare ved feil (ingen Wi-Fi, en sensor som ikke svarer), og er ellers av. Da lyser det ikke inn i
 lyssensoren. GPIO2/D4 er også den blå LED-en på kortet. På ESP32 er GPIO2 en oppstartspinne, men en LED til GND er
@@ -137,7 +169,7 @@ fra 3V3 som over.
 ## Fastvare (ESPHome)
 
 ```bash
-esphome run esphome/skjold-sensor.yaml          # ESP32 DevKit
+esphome run esphome/skjold-sensor.yaml          # ESP32 DevKit og ESP32 D1 mini
 esphome run esphome/skjold-sensor-d1mini.yaml   # Wemos D1 mini
 ```
 
@@ -157,13 +189,16 @@ Entiteter i Home Assistant: **Temperatur**, **Luftfuktighet**, **Duggpunkt**, **
 
 ## Print (Creality K2)
 
-`skjold-sensor-esp32-k2.3mf` og `skjold-sensor-d1mini-k2.3mf` har bunn, lokk med gullist og bordstativ på én plate.
+Velg 3MF-fila etter kortet: `skjold-sensor-esp32-k2.3mf` (ESP32 DevKit), `skjold-sensor-d1mini-k2.3mf` (Wemos D1 mini)
+eller `skjold-sensor-esp32d1-k2.3mf` (ESP32 D1 mini, USB ut bak). Hver har bunn, lokk med gullist og bordstativ på én
+plate.
 Filament 1 = lys (bunn, lokk), 2 = sort (stativ), 3 = gull (gullist og SKJOLD). Andre lokk ligger som STL i
 `stl/<kort>/`.
 
 - **PETG** (eller ASA), 0,2 mm lag, 3 vegger, 15 % fyll, **ingen støtte** (støtte er slått av i 3MF-fila).
   PLA går fint i stue og soverom, men ikke i sola i et vindu eller på bad.
-- **Bunn:** baksiden ned. Taket over nøkkelhullslommene er en bro på 8 mm, og over USB-åpningen 12 mm.
+- **Bunn:** baksiden ned. Taket over nøkkelhullslommene er en bro på 8 mm, og over USB-åpningen 12 mm. På ESP32 D1
+  mini er taket over USB-kanalen en bro på 13 mm, 12,5 mm over plata.
 - **Lokk:** forsiden ned. Gullista og SKJOLD er 0,6 mm dype, så det blir ett filamentbytte i de første lagene. Med
   én farge blir de stående som spor.
 - **Stativ:** ligger på siden.
@@ -175,12 +210,14 @@ Filament 1 = lys (bunn, lokk), 2 = sort (stativ), 3 = gull (gullist og SKJOLD). 
    for trangt. Se [Kobling](#kobling).
 2. **Temperatur- og fuktkortet:** skyv det inn i sporene i sensorkammeret forfra, med sensorbrikka ned. Før
    ledningene under skilleveggen og opp i ESP-rommet. Tett åpningen med litt Blu Tack.
-3. **ESP-kortet:** legg det på hjørnestøttene med USB-enden mot åpningen i høyre vegg.
+3. **ESP-kortet:** legg det på hjørnestøttene med USB-enden mot åpningen i høyre vegg. ESP32 D1 mini: legg det på
+   høykant med USB-enden ned, rett over USB-kanalen, og WROOM-modulen fram.
 4. **Lokket:** trykk AM312 inn i røret bakfra (kuppelen ut). Skru GY-302 mot lysblokka med to M2,5 × 6, med
    BH1750-brikka over kanalen. Trykk LED-en inn i holderen og lim den med en dråpe lim.
 5. Sett lokket på (ribba går ned i luftspalten i skilleveggen) og skru det fast bakfra med 2 × M3 × 12 senkeskruer.
-6. **Vegg:** sett to skruer i veggen med **40 mm** (ESP32) eller **26 mm** (D1 mini) avstand, vannrett, med ca. 1,8 mm
+6. **Vegg:** sett to skruer i veggen med **40 mm** (ESP32 DevKit og ESP32 D1 mini) eller **26 mm** (D1 mini) avstand, vannrett, med ca. 1,8 mm
    luft under hodet (hodet høyst 2,2 mm høyt og Ø7,5). Heng sensoren på nøkkelhullene og trekk den ned. Spaltene i bunnen skal vende ned.
+   ESP32 D1 mini: skyv USB-pluggen opp i kanalen nedenfra når sensoren henger, og la kabelen gå rett ned.
    **Tak:** det samme, men PIR-en ser da rett ned, og luften i kammeret byttes litt saktere.
    **Bord:** skru 2 × M3 × 8 inn i stativet, med ca. 1,8 mm under hodet, og heng sensoren på dem. Den står 4 mm over
    foten, så bunnspaltene får luft.
@@ -194,6 +231,8 @@ Alle mål står øverst i `skjold_sensor.scad`:
 
 - `bL`/`bW`: ESP-kortets lengde og bredde. ESP32 DevKit V1 (30 pinner) er 51,5 × 28,3 mm, DevKitC (38 pinner) er
   54,4 × 27,9 mm, og D1 mini er 34,2 × 25,6 mm. Standard er 55,0 × 28,6 og 34,6 × 26,0.
+- `vL`/`vB`: lomma for ESP32 D1 mini (standard 40,4 × 32,4 mm; MH-ET LIVE MiniKit er 39,0 × 31,4 mm).
+  `kanB`/`kanZ`: USB-kanalens bredde og dybde (standard 13 × 12,5 mm). Mål pluggen på kabelen din.
 - `sensW`: bredden på temperatur- og fuktkortet (standard 13,6 mm).
 - `luxHull`: avstanden fra BH1750-brikka til festehullene på ditt GY-302-kort (standard 4,45 mm, fra referansen).
   **Usikkert:** kort fra ulike leverandører kan ha brikka litt forskjøvet. Sjekk at brikka havner rett bak kanalen.
@@ -203,7 +242,8 @@ Alle mål står øverst i `skjold_sensor.scad`:
 
 ```bash
 python3 lag_sensor.py          # STL-er for alle varianter, kontroll og 3MF
-python3 lag_sensor.py bilder   # også bildene i render/ (bruker xvfb-run om det ikke er noen skjerm)
+python3 lag_sensor.py bilder   # også bildene i render/ (starter en egen Xvfb om det ikke er noen skjerm)
+python3 lag_sensor.py bilder 11 12   # bare bildene som begynner med 11 og 12
 ```
 
 Kontrollen sjekker at delene er tette, at ingen deler kolliderer i montert stilling (med kort, PIR, GY-302,

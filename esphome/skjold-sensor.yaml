@@ -1,9 +1,11 @@
 # Skjold Sensor – liten romsensor: temperatur, luftfuktighet, lys (lux, valgfritt) og bevegelse (valgfritt).
-# ESP32-WROOM DevKit (30 eller 38 pinner) + SHT40 (eller SHT31 / AHT20+BMP280) + BH1750 (GY-302) + AM312 mini-PIR.
+# ESP32-WROOM DevKit (30 eller 38 pinner) eller ESP32 D1 mini (MH-ET LIVE MiniKit o.l.) + SHT40 (eller SHT31 /
+# AHT20+BMP280) + BH1750 (GY-302) + AM312 mini-PIR. Samme fil og samme GPIO-er for begge kortene (IO21, IO22, IO27 og
+# IO2 finnes på pinneradene på ESP32 D1 mini). Sjekk silketrykket på ditt kort.
 # Kabinett, deler og kobling: kabinett/sensor/LES_MEG.md. Wemos D1 mini-utgaven: skjold-sensor-d1mini.yaml.
 # Flash første gang med https://web.esphome.io (USB, Wi-Fi settes med Improv), deretter OTA.
 #
-# Kobling (ESP32 DevKit):
+# Kobling (ESP32 DevKit og ESP32 D1 mini):
 #   SHT40   VIN → 3V3   GND → GND   SDA → GPIO21   SCL → GPIO22
 #   BH1750  VCC → 3V3   GND → GND   SDA → GPIO21   SCL → GPIO22   ADDR → GND (0x23)
 #   AM312   VCC → 3V3   GND → GND   OUT → GPIO27

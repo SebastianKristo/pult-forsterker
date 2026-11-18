@@ -1,5 +1,5 @@
 // Skjold Sensor – liten romsensor for vegg, tak eller bord: temperatur og luftfuktighet, valgfritt lys (lux) og
-// bevegelse (PIR). ESP32-WROOM DevKit eller Wemos D1 mini (ESP8266), ESPHome.
+// bevegelse (PIR). ESP32-WROOM DevKit, Wemos D1 mini (ESP8266) eller ESP32 D1 mini (MH-ET LIVE MiniKit), ESPHome.
 // Lisens: CC BY-NC-SA 4.0 (se LISENS-MASKINVARE.md).
 //
 // Bygget på målene fra en eksisterende sensorboks (HA_Sensor_V2): samme PIR-hull (Ø12,2 med fas til Ø14,6, AM312),
@@ -15,12 +15,16 @@
 //   gull     – gullisten og SKJOLD, felt inn i fronten (samme utskrift som lokket, filament 3).
 //   stativ   – bordstativ: to skruer i stativet, sensoren henges på dem med nøkkelhullene. Printes på siden.
 //
+// ESP32 D1 mini (kort = "esp32d1"): kortet står på høykant med USB ned, og pluggen skyves opp i en kanal i baksiden
+// fra underkanten. Kabelen går rett ned bak sensoren, og den kan settes i mens sensoren henger på veggen.
+//
 // Bruk: openscad -D 'kort="d1mini"' -D 'pir=false' -D 'part="lokk"' -o lokk.stl skjold_sensor.scad
 // part: bunn | lokk | gull | stativ | samlet | eksplodert | stativ_samlet | a_<del> (montert stilling, for sjekken)
 use <../fonter/Inter-Bold.otf>     // SKJOLD-logoen: Inter (ligger i repoet, ren J)
 
 part  = "samlet";
 kort  = "esp32";      // "esp32" (ESP32-WROOM DevKit, 30 eller 38 pinner) | "d1mini" (Wemos D1 mini, ESP8266)
+                     // | "esp32d1" (ESP32 D1 mini / MH-ET LIVE MiniKit, 39 × 31,4 mm, USB ut bak nede)
 pir   = true;         // hull og holder for AM312 mini-PIR
 lux   = true;         // lysvindu og feste for BH1750 (GY-302)
 led   = true;         // 3 mm statuslys i fronten
@@ -29,8 +33,9 @@ $fn = 64;
 
 // ---------- ytre mål ----------
 ESP = kort == "esp32";
-W = ESP ? 70 : 54;    // bredde
-H = 56;               // høyde
+E32D1 = kort == "esp32d1";   // kortet på høykant, USB ned i kanal i baksiden
+W = ESP ? 70 : E32D1 ? 62 : 54;    // bredde
+H = E32D1 ? 66 : 56;               // høyde
 D = 28;               // dybde (bunn + lokk)
 R = 8;                // hjørneradius sett forfra
 t = 2.2;              // sidevegger
@@ -65,6 +70,20 @@ bX0 = bX1 - bL;
 usbZ = ESP ? bZ + bT + 1.5 : bZ - 1.4;   // midt i micro-USB-kontakten
 usbB = 12; usbH = ESP ? 8 : 7.5;         // åpning for pluggen (referansen: 12 × 7)
 
+// ESP32 D1 mini (MH-ET LIVE MiniKit o.l.): 39,0 × 31,4 mm, WROOM-modulen oppå, micro-USB (eller USB-C) og USB-brikka
+// under, på den ene kortenden. Kortet står på høykant til høyre i hovedrommet med USB-enden ned mot skilleveggen.
+// Lommen er 40,4 × 32,4 mm, så kort fra ulike leverandører (39–40 × 31–32 mm) passer.
+vL = 40.4; vB = 32.4;                    // lommens lengde (y) og bredde (x)
+vZ = 6.4;                                // kortets underside over bakveggens bakside (USB-brikka under går klar av nøkkelhullsputene)
+vx1 = W/2 - t - 2.0; vx0 = vx1 - vB;     // kortets kanter i x (holdt unna det runde hjørnet oppe til høyre)
+vy1 = H - t - 1.2;   vy0 = vy1 - vL;     // kortets kanter i y (USB nede ved vy0)
+vcx = (vx0 + vx1)/2;                     // midt i kortet = midt i USB-kanalen
+vUsbZ = vZ - 1.4;                        // micro-USB under kortet; USB-C oppå havner høyere, kanalen tar begge
+vMunn = vy0 - 0.3;                       // kontaktens munning (stikker 0,6 mm ut over kortkanten)
+// kanalen i baksiden: åpen mot veggen og nedover, fra underkanten opp til kontakten. Pluggen (inntil 13 × 12 mm
+// tverrsnitt, inntil ca. 21 mm lang) skyves opp i den nedenfra, også når sensoren henger på veggen.
+kanB = 13.0; kanZ = 12.5; kanV = 1.2;
+
 // ---------- fronten ----------
 pirX = 0;   pirHull = 12.2; pirFasD = 14.6; pirRorD = 10.5; pirRorL = 9;   // AM312: kuppel gjennom Ø12,2, kropp i Ø10,5-røret
 luxX = 14;  luxSpaltX = 2.5; luxSpaltY = 5; luxFasX = 8.5; luxFasY = 11;   // lysvindu som referansen
@@ -77,7 +96,7 @@ tekst = "SKJOLD"; tekstY = yD1 + 3.4; tekstS = 2.6;
 // ---------- feste ----------
 skrue = [[-W/2 + t + 4.3, H - t - 4.3], [W/2 - t - 4.3, t + 4.3]];   // M3 × 12 senkeskrue bakfra inn i lokkets tapper
 tappD = 6.2; pilot = 2.7;
-kS = ESP ? 40 : 26;           // nøkkelhull: avstand mellom skruene
+kS = ESP || E32D1 ? 40 : 26;  // nøkkelhull: avstand mellom skruene
 kY = cy + 4;                  // skruens stilling når sensoren henger (i toppen av sporet)
 kSpor = 6; kHode = 7.6; kSkaft = 4.2;
 kHud = 1.6; kLomme = 2.2; kTak = 1.2;   // bakvegg under lomma, lommas høyde (skruehodet), tak over lomma
@@ -116,7 +135,14 @@ module bunn() {
         translate([0, kY]) circle(d = kHode + 3.2); translate([0, kY - kSpor]) circle(d = kHode + 3.2);
       }
       // ESP-kortet: hjørnestøtter, med kanter som holder det på plass (ikke ved USB-enden, der veggen gjør jobben)
-      for (sx = [0, 1], sy = [-1, 1]) let(x = sx == 0 ? bX0 : bX1, y = cy + sy*bW/2) {
+      if (E32D1) for (sx = [-1, 1], sy = [-1, 1]) let(x = sx < 0 ? vx0 : vx1, y = sy < 0 ? vy0 : vy1) {
+        translate([x - (sx < 0 ? 0 : 3), y - (sy < 0 ? 0 : 3), tb - 0.01]) cube([3, 3, vZ - tb + 0.01]);
+        if (sx < 0) translate([x - 1.2, y - (sy < 0 ? 0.3 : 4.7), tb - 0.01]) cube([1.25, 5, vZ - tb + bT + 1]);   // venstre kant
+        if (sy > 0) translate([x - (sx < 0 ? 0.3 : 4.7), y - 0.05, tb - 0.01]) cube([5, 1.6, vZ - tb + bT + 1]);   // øverst (inn i veggen)
+      }
+      // USB-kanalen: vegger og tak rundt kanalen fra underkanten opp gjennom sensorkammeret og skilleveggen
+      if (E32D1) translate([vcx - kanB/2 - kanV, 1, 0]) cube([kanB + 2*kanV, vy0 - 1, kanZ + kanV]);
+      if (!E32D1) for (sx = [0, 1], sy = [-1, 1]) let(x = sx == 0 ? bX0 : bX1, y = cy + sy*bW/2) {
         translate([x - (sx == 0 ? 0 : 3), y - (sy < 0 ? 0 : 3), tb - 0.01]) cube([3, 3, bZ - tb + 0.01]);
         if (sx == 0) translate([x - 1.2, y - (sy < 0 ? 0.3 : 4.7), tb - 0.01]) cube([1.25, 5, bZ - tb + bT + 1]);
         translate([x - (sx == 0 ? 0 : 5), y - (sy < 0 ? 1.2 : 0.05), tb - 0.01]) cube([5, 1.25, bZ - tb + bT + 1]);
@@ -138,10 +164,12 @@ module bunn() {
       translate([0, 0, -1]) cylinder(d = 3.4, h = tb + 2, $fn = 32);
       translate([0, 0, -0.01]) cylinder(d1 = 6.8, d2 = 3.4, h = 1.71, $fn = 32);
     }
-    // USB i høyre vegg
-    translate([W/2 - t - 1, cy, usbZ]) rotate([0, 90, 0]) linear_extrude(t + 2) rrect(usbH, usbB, 1.5);
+    // USB i høyre vegg, eller (ESP32 D1 mini) kanalen i baksiden: åpen bak og nede, opp til kontakten
+    if (!E32D1) translate([W/2 - t - 1, cy, usbZ]) rotate([0, 90, 0]) linear_extrude(t + 2) rrect(usbH, usbB, 1.5);
+    if (E32D1) translate([vcx - kanB/2, -1, -1]) cube([kanB, vy0 + 1.5, kanZ + 1]);
     // sensorkammeret: spalter i bunnen (luft inn nedenfra) og i begge ender
-    for (x = [-W/2 + 7 : 3.4 : W/2 - 9]) translate([x - 0.8, -1, tb + 1.5]) cube([1.6, t + 2, Db - tb - 4.5]);
+    for (x = [-W/2 + 7 : 3.4 : W/2 - 9]) if (!E32D1 || abs(x - vcx) > kanB/2 + kanV + 1.2)
+      translate([x - 0.8, -1, tb + 1.5]) cube([1.6, t + 2, Db - tb - 4.5]);
     for (s = [-1, 1], y = [t + 3.5, t + 7.5, t + 11.5]) translate([s < 0 ? -W/2 - 1 : W/2 - t - 1, y - 0.8, tb + 1.5]) cube([t + 2, 1.6, Db - tb - 4.5]);
     // ESP-rommet: spalter i toppen (varmen ut, bort fra sensoren)
     for (x = [-W/2 + 12 : 3.4 : W/2 - 12]) translate([x - 0.8, H - t - 1, tb + 3]) cube([1.6, t + 2, Db - tb - 6]);
@@ -175,7 +203,8 @@ module lokk() {
       // LED-holder
       if (led) translate([ledX, cy, Db - 4]) cylinder(d = ledFlens + 2.4, h = 4.01);
       // pinner som holder ESP-kortet nede (bare i enden uten USB – knappene sitter ved USB)
-      for (sy = [-1, 1]) translate([bX0 + 1.8 - 1.4, cy + sy*(bW/2 - 1.8) - 1.4, bZ + bT + 0.3]) cube([2.8, 2.8, Db - bZ - bT - 0.3 + 0.01]);
+      if (!E32D1) for (sy = [-1, 1]) translate([bX0 + 1.8 - 1.4, cy + sy*(bW/2 - 1.8) - 1.4, bZ + bT + 0.3]) cube([2.8, 2.8, Db - bZ - bT - 0.3 + 0.01]);
+      if (E32D1) for (x = [vx0 + 1.8, vx1 - 1.8]) translate([x - 1.4, vy1 - 1.8 - 1.4, vZ + bT + 0.3]) cube([2.8, 2.8, Db - vZ - bT - 0.3 + 0.01]);
     }
     // PIR-hull med 45° fas utover
     if (pir) {
@@ -220,6 +249,8 @@ module stativ() {
       hull() { translate([-29, -6]) circle(d = 4); translate([-4, kY - 4]) circle(d = 4); }   // stag
     }
     for (s = [-1, 1]) translate([s*kS/2, kY, -6]) cylinder(d = pilot, h = 7, $fn = 24);
+    // ESP32 D1 mini: kabelen bøyes bakover under sensoren, gjennom ryggen og i et spor i foten
+    if (E32D1) translate([vcx - 4, -5.5, -31]) cube([8, 7.5, 40]);
     // gummiføtter Ø10
     for (s = [-1, 1], z = [-22, D]) translate([s*(sB/2 - 8), -8.01, z]) rotate([-90, 0, 0]) cylinder(d = 10.4, h = 0.8);
   }
@@ -227,6 +258,14 @@ module stativ() {
 
 // ---------- kjøpte deler (for bildene og kollisjonssjekken) ----------
 module esp() {
+  if (E32D1) {
+    color("#1f1f22") translate([vx0 + 0.5, vy0 + 0.3, vZ]) cube([vB - 1, vL - 1.4, bT]);
+    color("#b8b8bc") translate([vcx - 9, vy1 - 1.1 - 25.2, vZ + bT]) cube([18, 25.2, 3.1]);              // WROOM-modulen
+    color("#c8c8cc") translate([vcx - 4, vMunn, vZ - 2.8]) cube([8, 5.6, 2.8]);                     // micro-USB (undersiden)
+    color("#333") translate([vcx - 3, vy0 + 10, vZ - 1.2]) cube([6, 6, 1.2]);                       // USB-brikka (undersiden)
+  } else esp_flat();
+}
+module esp_flat() {
   color("#1f1f22") translate([bX0 + 0.3, cy - bW/2 + 0.3, bZ]) cube([bL - 0.6, bW - 0.6, bT]);
   if (ESP) {
     color("#b8b8bc") translate([bX0 + 6.5, cy - 8, bZ + bT]) cube([17.8, 16, 3.1]);          // WROOM-modulen
@@ -239,9 +278,18 @@ module esp() {
     color("#333") translate([bX0 + 12, cy - 4.5, bZ - 1.5]) cube([9, 9, 1.5]);               // CH340 (undersiden)
   }
 }
+kabel = part == "stativ_samlet" ? "stativ" : "vegg";   // ESP32 D1 mini: "vegg" (rett ned) | "stativ" (bøyd bakover gjennom stativet)
 module usbplugg() {
-  color("#222") translate([bX1 + 0.6, cy - 5.25, usbZ - 3.25]) cube([16, 10.5, 6.5]);
-  color("#222") translate([bX1 + 16.6, cy, usbZ]) rotate([0, 90, 0]) cylinder(d = 3.6, h = 20);
+  if (E32D1) {
+    color("#222") translate([vcx - 5.25, vMunn - 18, vUsbZ - 3.25]) cube([10.5, 18, 6.5]);
+    if (kabel == "stativ") {
+      color("#222") translate([vcx, vMunn - 18 + 0.01, vUsbZ]) rotate([90, 0, 0]) cylinder(d = 3.6, h = vMunn - 18 + 3.2);
+      color("#222") hull() { translate([vcx, -3.2, vUsbZ]) sphere(d = 3.6, $fn = 24); translate([vcx, -3.2, -40]) sphere(d = 3.6, $fn = 24); }
+    } else color("#222") translate([vcx, vMunn - 18 + 0.01, vUsbZ]) rotate([90, 0, 0]) cylinder(d = 3.6, h = vMunn - 18 + 20);
+  } else {
+    color("#222") translate([bX1 + 0.6, cy - 5.25, usbZ - 3.25]) cube([16, 10.5, 6.5]);
+    color("#222") translate([bX1 + 16.6, cy, usbZ]) rotate([0, 90, 0]) cylinder(d = 3.6, h = 20);
+  }
 }
 module am312() {
   color("#f4f4f2") translate([pirX, cy, D - 0.8]) scale([1, 1, 0.55]) sphere(d = 12);
@@ -267,7 +315,7 @@ module samlet(ex = 0) {
   color(c_kropp) bunn();
   translate([0, 0, ex]) { lokk_alt(); if (pir) am312(); if (lux) gy302(); if (led) led3(); }
   translate([0, 0, ex * 0.45]) esp();
-  translate([ex * 0.5, 0, ex * 0.45]) usbplugg();
+  translate(E32D1 ? [0, -ex * 0.5, 0] : [ex * 0.5, 0, ex * 0.45]) usbplugg();
   translate([0, 0, ex * 0.2]) sensorkort();
 }
 
