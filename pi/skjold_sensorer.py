@@ -21,7 +21,8 @@ import urllib.parse
 PROSJEKT = "skjold.sensor"
 # Innstillinger som kan endres utenfra: navn i ESPHome → domene (POST /number/<navn>/set?value= eller /switch/<navn>/turn_on|off)
 INNSTILLINGER = {"Oppdateringsintervall": "number", "Bevegelse av etter": "number",
-                 "Tilstedeværelse av etter": "number", "Status-LED": "switch"}
+                 "Tilstedeværelse av etter": "number", "Status-LED": "switch",
+                 "Fastvare": "update"}   # ny fastvare fra skjold-lab.com (bare i de ferdige byggene)
 
 
 def sti_for(navn: str, verdi) -> str:
@@ -30,6 +31,8 @@ def sti_for(navn: str, verdi) -> str:
     if not domene:
         raise ValueError(f"ukjent innstilling: {navn}")
     n = urllib.parse.quote(navn, safe="")
+    if domene == "update":
+        return f"/update/{n}/install"
     if domene == "switch":
         return f"/switch/{n}/{'turn_on' if verdi in (True, 1, 'on', 'ON', 'true') else 'turn_off'}"
     return f"/number/{n}/set?value={float(verdi):g}"
@@ -62,6 +65,9 @@ def ent_navn(o: dict) -> str:
 
 
 def verdi(o: dict):
+    if "current_version" in o or str(o.get("id", "")).startswith("update"):   # «Fastvare» (update)
+        return {"installert": o.get("current_version"), "siste": o.get("latest_version") or o.get("value"),
+                "tilstand": o.get("state")}
     v = o.get("value", o.get("state"))
     if isinstance(v, str):
         if v in ("ON", "on", "true"):
@@ -188,7 +194,8 @@ class Sensorer:
                 raise OSError(f"sensoren svarte {r.status}")
         finally:
             c.close()
-        self._sett(mac, navn, (verdi in (True, 1, "on", "ON", "true")) if INNSTILLINGER[navn] == "switch" else float(verdi))
+        if INNSTILLINGER[navn] != "update":   # oppdateringen melder fra selv i hendelsesstrømmen
+            self._sett(mac, navn, (verdi in (True, 1, "on", "ON", "true")) if INNSTILLINGER[navn] == "switch" else float(verdi))
 
     def status(self) -> dict:
         with self.lock:

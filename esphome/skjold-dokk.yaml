@@ -6,6 +6,7 @@ substitutions:
   name: skjold-dokk
   friendly_name: Skjold Dokk
   ir_navn: dokk
+  fastvare_kilde: https://skjold-lab.com/flasher/ir/dokk-manifest.json   # «Fastvare» i de ferdige byggene
 
 packages:
   ir: !include skjold-ir.yaml

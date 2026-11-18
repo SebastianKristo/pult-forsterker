@@ -11,6 +11,7 @@ from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.update import UpdateEntity, UpdateEntityFeature
 from homeassistant.const import PERCENTAGE, EntityCategory
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -497,6 +498,44 @@ class SkjoldSensorLed(_SensorVerdi, SwitchEntity):
         await self._sett(False)
 
 
+class SkjoldSensorFastvare(_SensorVerdi, UpdateEntity):
+    """«Fastvare» på sensoren (ESPHome update): installert og nyeste versjon fra skjold-lab.com, og Installer-knappen.
+    Finnes bare i fastvaren fra flasheren/releasen (ikke i en du har bygget selv)."""
+    _attr_supported_features = UpdateEntityFeature.INSTALL | UpdateEntityFeature.RELEASE_NOTES
+
+    def __init__(self, c, h) -> None:
+        super().__init__(c, h, "Fastvare", "firmware")
+        self._attr_title = "Skjold Sensor"
+
+    def _f(self) -> dict:
+        v = self._v()
+        return v if isinstance(v, dict) else {}
+
+    @property
+    def installed_version(self):
+        return self._f().get("installert")
+
+    @property
+    def latest_version(self):
+        return self._f().get("siste") or self.installed_version
+
+    @property
+    def in_progress(self) -> bool:
+        return str(self._f().get("tilstand") or "").upper() == "INSTALLING"
+
+    @property
+    def release_url(self):
+        v = self.latest_version
+        return f"https://github.com/SebastianKristo/pult-forsterker/releases/tag/{v}" if v else None
+
+    async def async_release_notes(self):
+        return f"Ny fastvare for Skjold Sensor: {self.latest_version}. Sensoren laster den ned fra skjold-lab.com og starter på nytt."
+
+    async def async_install(self, version, backup, **kw) -> None:
+        self.coordinator.extras["sensorer"] = await self.coordinator.api.sensor_sett(self._dev, "Fastvare", 1)
+        self.async_write_ha_state()
+
+
 class SkjoldSensorBinaer(_SensorVerdi, BinarySensorEntity):
     def __init__(self, c, h, spec) -> None:
         navn, key, dc = spec
@@ -549,6 +588,8 @@ def entities(c, platform: str) -> list:
         out += [x for h in hjul for x in (HjulBattery(c, h), HjulLastUsed(c, h))]
         out += [x for h in staver for x in (StavBattery(c, h), StavLastKey(c, h), StavLastUsed(c, h))]
         out += [SkjoldSensorVerdi(c, h, sp) for h in sensorer for sp in SENSOR_VERDIER]
+    elif platform == "update":
+        out += [SkjoldSensorFastvare(c, h) for h in sensorer]   # utilgjengelig til sensoren har fastvaren fra releasen
     elif platform == "select":
         if kas:
             out.append(KassettPlay(c))

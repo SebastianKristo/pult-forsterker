@@ -44,6 +44,11 @@ def test_sti_for_innstillinger():
     assert sti_for("Tilstedeværelse av etter", "15") == "/number/Tilstedev%C3%A6relse%20av%20etter/set?value=15"
     assert sti_for("Status-LED", False) == "/switch/Status-LED/turn_off"
     assert sti_for("Status-LED", True) == "/switch/Status-LED/turn_on"
+    assert sti_for("Fastvare", 1) == "/update/Fastvare/install"
+    from skjold_sensorer import verdi
+    assert verdi({"id": "update/Fastvare", "value": "skjold-v0.1.262", "state": "UPDATE AVAILABLE",
+                  "current_version": "skjold-v0.1.261", "latest_version": "skjold-v0.1.262"}) == {
+        "installert": "skjold-v0.1.261", "siste": "skjold-v0.1.262", "tilstand": "UPDATE AVAILABLE"}
     try:
         sti_for("Temperatur", 1)
         assert False

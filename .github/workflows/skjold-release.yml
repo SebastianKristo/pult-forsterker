@@ -142,12 +142,16 @@ jobs:
           python3 esphome/lag_kassett_ferdig.py ut
           (cd ut && esphome compile skjold-kassett.yaml)
           cp ut/.esphome/build/skjold-kassett/build/firmware.factory.bin ut/skjold-kassett-firmware.bin
+          o=$(find ut/.esphome/build/skjold-kassett -name firmware.ota.bin | head -1); [ -n "$o" ] || o=ut/.esphome/build/skjold-kassett/build/firmware.bin
+          cp "$o" ut/skjold-kassett-ota.bin
+          python3 esphome/lag_ferdig.py ota ut
           ls -la ut/skjold-kassett-firmware.bin ut/skjold-kassett-manifest.json
       - uses: actions/upload-artifact@v4
         with:
           name: kassettfw
           path: |
             ut/skjold-kassett-firmware.bin
+            ut/skjold-kassett-ota.bin
             ut/skjold-kassett-manifest.json
 
   sensorfw:
@@ -167,7 +171,8 @@ jobs:
         run: |
           pip install -q esphome==2026.10.2
           python3 esphome/lag_ferdig.py sensor ut
-          fw() { f=$(find "ut/.esphome/build/$1" -name firmware.factory.bin | head -1); [ -n "$f" ] || f=$(find "ut/.esphome/build/$1" -name firmware.bin | head -1); cp "$f" "ut/$2"; }
+          fw() { f=$(find "ut/.esphome/build/$1" -name firmware.factory.bin | head -1); [ -n "$f" ] || f=$(find "ut/.esphome/build/$1" -name firmware.bin | head -1); cp "$f" "ut/$2"
+                 o=$(find "ut/.esphome/build/$1" -name firmware.ota.bin | head -1); [ -n "$o" ] || o=$(find "ut/.esphome/build/$1" -name firmware.bin | head -1); cp "$o" "ut/${2%-firmware.bin}-ota.bin"; }
           (cd ut && esphome compile skjold-sensor.yaml) && fw skjold-sensor skjold-sensor-esp32-firmware.bin
           rm -rf ut/.esphome/build/skjold-sensor
           (cd ut && esphome compile skjold-sensor-d1mini.yaml) && fw skjold-sensor skjold-sensor-d1mini-firmware.bin
@@ -176,14 +181,17 @@ jobs:
           (cd ut && esphome compile skjold-bryter.yaml) && fw skjold-bryter skjold-bryter-esp32-firmware.bin
           rm -rf ut/.esphome/build/skjold-bryter
           (cd ut && esphome compile skjold-bryter-d1mini.yaml) && fw skjold-bryter skjold-bryter-d1mini-firmware.bin
+          python3 esphome/lag_ferdig.py ota ut
           ls -la ut/skjold-sensor-*-firmware.bin ut/skjold-sensor-manifest.json ut/skjold-bryter-*-firmware.bin ut/skjold-bryter-manifest.json
       - uses: actions/upload-artifact@v4
         with:
           name: sensorfw
           path: |
             ut/skjold-sensor-*-firmware.bin
+            ut/skjold-sensor-*-ota.bin
             ut/skjold-sensor-manifest.json
             ut/skjold-bryter-*-firmware.bin
+            ut/skjold-bryter-*-ota.bin
             ut/skjold-bryter-manifest.json
 
   irfw:
@@ -203,18 +211,22 @@ jobs:
         run: |
           pip install -q esphome==2026.10.2
           python3 esphome/lag_ferdig.py ir ut
-          fw() { f=$(find "ut/.esphome/build/$1" -name firmware.factory.bin | head -1); [ -n "$f" ] || f=$(find "ut/.esphome/build/$1" -name firmware.bin | head -1); cp "$f" "ut/$2"; }
+          fw() { f=$(find "ut/.esphome/build/$1" -name firmware.factory.bin | head -1); [ -n "$f" ] || f=$(find "ut/.esphome/build/$1" -name firmware.bin | head -1); cp "$f" "ut/$2"
+                 o=$(find "ut/.esphome/build/$1" -name firmware.ota.bin | head -1); [ -n "$o" ] || o=$(find "ut/.esphome/build/$1" -name firmware.bin | head -1); cp "$o" "ut/${2%-firmware.bin}-ota.bin"; }
           (cd ut && esphome compile skjold-ir.yaml) && fw skjold-ir skjold-ir-c3-firmware.bin
           rm -rf ut/.esphome/build/skjold-ir
           (cd ut && esphome compile skjold-ir-d1mini.yaml) && fw skjold-ir skjold-ir-d1mini-firmware.bin
           (cd ut && esphome compile skjold-dokk.yaml) && fw skjold-dokk skjold-dokk-firmware.bin
+          python3 esphome/lag_ferdig.py ota ut
           ls -la ut/skjold-ir-*-firmware.bin ut/skjold-dokk-firmware.bin ut/skjold-ir-manifest.json ut/skjold-dokk-manifest.json
       - uses: actions/upload-artifact@v4
         with:
           name: irfw
           path: |
             ut/skjold-ir-*-firmware.bin
+            ut/skjold-ir-*-ota.bin
             ut/skjold-dokk-firmware.bin
+            ut/skjold-dokk-ota.bin
             ut/skjold-ir-manifest.json
             ut/skjold-dokk-manifest.json
 
