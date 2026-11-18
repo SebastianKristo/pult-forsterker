@@ -2,12 +2,14 @@
 // Eget design i Skjolds formspråk (sekskantgrill, gullknott, SKJOLD i gull foran nede). Lisens: CC BY-NC-SA 4.0.
 //
 // Oppbygging (alt holdes sammen av fire M3-gjengestenger fra lokket ned gjennom kjernen til bunnplaten, ingen synlige skruer):
-//   lokk    – topp med fem knapper (av/på, favoritt 1–4) og EC11-volumknott; printes med toppen ned
+//   lokk    – topp med fem knapper (av/på, favoritt 1–4), 2,42″ OLED og EC11-volumknott; printes med toppen ned
+//   knappeholder – under lokket: lommer for de fem bryterne og to skinner som klemmer skjermkortet; bunnen ned
 //   kjerne  – mørk indre kasse: rør med frontblokk for 3″-elementet, tunnel og stangtårn; printes stående
 //   hylse   – grillen rundt hele kroppen (lages av lag_hylse.py, manifold3d), med helt bånd og SKJOLD nederst foran
 //   bunn    – bunnplate med bassrefleksport ned, avstandstapper for elektronikken og forsenkninger for gummiføtter
 // Koordinater: x tvers, y fra front (−) til bak (+), z opp (0 = bordet, uten føtter).
-// part: lokk | kjerne | bunn | knott | knapp | samlet | eksplodert | a_<del> (montert stilling)
+// part: lokk | kjerne | bunn | knott | knapp | knappeholder | rute | elementplate | samlet | eksplodert | under |
+//       a_<del> (montert stilling)
 part = "samlet";
 include <../elementer/elementer.scad>
 element = "rs75_4";                // se ../elementer/elementer.scad: rs75_4 | frs8_4 | grs3fr4 | faital3fe22 | egen
@@ -39,19 +41,60 @@ ioW = 32; ioH = 28;                 // utsparingen i hylsa: bredde og høyde til
 // topp: fem knapper foran, skjerm i midten, knott bak
 btnY = -40; btnX = [-26, -13, 0, 13, 26]; capD = 9.0; capHole = 9.5; flD = 12; flT = 0.9; capUp = 1.1;
 encY = 34; ec11D = 7.2; knobD = 30; knobH = 13; shaftD = 6.1; shaftFlat = 4.6;
-// skjerm: 2,42″ OLED 128×64 (SSD1309, I²C, hvit), samme modul som Røst. Toppen av modulen (pinneraden) vender bakover
-// mot knotten, flatkabelen foran mot knappene. Glasset ligger i en lomme i en skjermramme under lokket (lokket er bare
-// 5 mm: rammen gir 7,5 mm til toppen som på Røst), kortet skrus i fire tårn med M2 × 6 selvgjengende.
-dispY = -6;                              // senter av det aktive området
-actW = 55.4; actH = 27.7; winW = actW + 0.6; winH = actH + 0.6;
-glW = 60.0; glH = 30.5; glT = 3.25; skD = 7.5;   // glass, og glassets underside under toppen
-pcbW = 70.08; pcbH = 39.0; dHoleX = 31.0; dHoleV = 16.5;
-fpcW = 12.6; fpcL = 3.0;
+// skjerm: 2,42″ OLED 128×64 (SSD1309, I²C, hvit), samme modul og samme mål som Røst (se ../rost/LES_MEG.md, «Skjermen»):
+//   kort 70,08 × 48,04 × 1,00 mm, 5,25 mm tykk med glass, glass 62,64 × 39,18, synlig område 57,80 × 29,70,
+//   aktivt område 55,40 × 27,78 (128 × 64), 4 hull Ø3 (62,64 × 41,60), pinnerad (GND VDD SCL SDA) langs øvre kant,
+//   flatkabel (12,64 mm) ut over nedre kant. Tolket (ikke målsatt): glassets og det aktive områdets plassering i høyden,
+//   hullavstanden i høyden og hvor langt flatkabelen stikker ut. Mål din modul og juster.
+// Pinneraden vender bakover mot knotten, flatkabelen foran mot knappene. Lokket er bare 5 mm, så glasset ligger i en
+// lomme i en skjermramme under lokket (7,5 mm fra toppen til kortet, som på Røst). Kortet ligger flatt mot rammen og
+// klemmes opp av knappeholderens to skinner – ingen skruer i skjermen.
+dispY = -4;                              // senter av det aktive området = vinduets senter
+pcbW = 70.08; pcbH = 48.04; pcbT = 1.0;  // kretskort
+modT = 5.25; glT = modT - pcbT;          // kort + glass; glass (med tape/ramme) over kortet: 4,25
+glW = 62.64; glH = 39.18;                // glass
+vaW = 57.80; vaH = 29.70;                // synlig område
+actW = 55.40; actH = 27.78;              // aktivt område (128 × 64)
+hullD = 3.0; dHoleX = 62.64 / 2; hullKant = 3.22; dHoleV = pcbH / 2 - hullKant;   // hullene (brukes ikke til skruer)
+glOffV = 0;                              // glassets senter i forhold til kortets senter (+ = bakover, mot pinneraden)
+aaOffV = ((glH - vaH) - (glW - vaW)) / 2;   // det aktive området 2,32 mm bakover i glasset (smal kant mot pinneraden)
+fpcW = 12.64; fpcL = 2.0;                // flatkabelen: bredde, og hvor langt den stikker ut forbi kortets nedre kant
+hdrN = 4; hdrFraKant = 2.3;              // pinneraden: 4 × 2,54 mm, ca. 2,3 mm fra kortets øvre kant
+skD = 7.5;                               // fra toppen til oversiden av kortet (= skjermrammens underkant)
+pcbY = dispY - glOffV - aaOffV;          // kortets senter
+glY = pcbY + glOffV;                     // glassets senter
+pcbBot = pcbY - pcbH / 2; pcbTopp = pcbY + pcbH / 2;   // nedre kant (flatkabelen, foran) og øvre kant (pinneraden, bak)
+pcbZ = H - skD;                          // kortets overside
+glKl = 0.4; glTak = pcbZ + glT + 0.15;   // klaring rundt glasset i lomma, og taket i lomma (0,15 mm over glasset)
+rammeV = 2.5;                            // skjermrammens vegg rundt glasslomma
+winW = actW + 1.2; winH = actH + 1.2;    // vindu: 0,6 mm utenfor det aktive området (innenfor VA), 45° fas opp mot ruta
 ruteW = 64; ruteH = 36; ruteT = 1.5; ruteRec = ruteT + 0.2;   // klar rute i flukt med toppen (0,2 mm tape under)
 // (ingen hevet ramme rundt ruta: lokket printes med toppen ned, så toppen må være helt flat)
-boardZ = z1 - 6.7;                 // knappekortets overside: 6 × 6 × 5 mm-bryterne står 0,2 mm under hettenes nupp
-// knappekortet: hullkort 64 × 20 mm, bryterne sentrert under hettene, to M2-hull bak knapperaden (fri for stangtårnene)
-kortW = 64; kortH = 20; kortY = btnY + 3; kortHull = [[-29.5, btnY + 9], [29.5, btnY + 9]];
+// knappene: 6 × 6 × 5 mm-bryterne står med stempelet 0,2 mm under hettenes nupp
+knappefeste = "holder";            // holder: printet knappeholder med lommer for bryterne (ingen hullkort)
+                                   // hullkort: bryterne loddet på et hullkort 64 × 20 mm, som skrus på holderens dekk
+boardZ = z1 - 6.7;                 // bryternes underkant (= hullkortets overside)
+tactB = 6.0; tactH = 5.0; tactHus = 3.5; stempD = 3.5;   // taktbryter: hus 6 × 6 × 3,5, stempel Ø3,5, 5 mm totalt
+kortW = 64; kortH = 20; kortT = 1.6; kortY = btnY + 3; kortHull = [[-29.5, btnY + 9], [29.5, btnY + 9]];
+// knappeholder (PETG/ASA, printes med bunnen ned, uten støtte): ligger under lokket, skrudd i fire tapper med
+// M2 × 6 selvgjengende (ørene nederst). Foran: fem lommer med klemribber for bryterne, spor for beina og en kam for
+// ledningene. To skinner går bakover under kantene av skjermkortet og trykker det opp mot skjermrammen.
+lommeB = 6.4; lommeRib = 0.25;     // lomme for bryterhuset, klemribber (5,9 mm mellom ribbene: presspasning)
+khVegg = 1.2; khVeggH = 3.0;       // lommeveggene (bryterhuset er 3,5 mm høyt)
+benV = 2.25; benSpor = 1.3;        // beina: ±2,25 mm fra senter, bøyd ut mot sidene (±x), spor i lommeveggen
+dekkT = 2.0;                       // hullkort: dekket kortet skrus på (over spissen av elementplatas krage)
+khB0 = knappefeste == "holder" ? boardZ - 2.0 : boardZ - kortT - dekkT;   // holderens underside
+khXi = dHoleX + hullD / 2 + 0.2;   // skinnene: innenfor kortets kant, utenfor hullene (33,0) …
+khXo = khXi + 3.6;                 // … til 36,6
+khTop = pcbZ - pcbT - 0.1;         // skinnenes overside, 0,1 mm under kortet, med en klemribbe som står 0,1 mm opp i det
+klemH = 0.2;
+khY0 = -38;                        // skinnene: fra like bak de fremre stangtårnene …
+khY1 = pcbTopp + 1.5;              // … til bak kortet
+kamY = btnY + lommeB / 2 + khVegg + 0.3; ribT = 1.4;   // kammen bak lommene
+barX = btnX[4] + lommeB / 2 + khVegg + 0.6;            // lommelista: ±31 (fri for de fremre stangtårnene)
+barY0 = btnY - lommeB / 2 - khVegg - 0.8;
+khOre = [for (sx = [-1, 1], y = [-31, pcbTopp - 4]) [sx * 40, y]];   // ører og lokkets tapper for M2 × 6
+oreD = 8; tappD = 6;
 // EC11: mutteren (M7 × 0,75, Ø12 × 2 mm) ligger i en forsenkning i toppen under knotten, låsetappen i en spalte
 ec11Mut = 12.6; ec11MutH = 2.2; ec11Tapp = [0, -7.8];   // tappen (ca. 1,2 × 1 mm) 7,8 mm fra akselen, mot skjermen
 
@@ -133,10 +176,9 @@ module lokk() {
         for (p = rodP) translate([p[0], p[1], z1 - 8]) cylinder(d = bossD, h = 8.01);
         translate([0, 0, z1 - 9]) linear_extrude(10) plan(inn - t - 0.25);
       }
-      for (k = kortHull) translate([k[0], k[1], boardZ]) cylinder(d = 6, h = z1 - boardZ + 0.01);          // knappekortets tapper
-      // skjermramme under lokket: rundt glasset og ned til kortet, med tårn for kortets fire skruer
-      translate([0, dispY, H - skD]) linear_extrude(skD - capT + 0.01) rr(glW + 0.8 + 6, glH + 0.8 + 6, 3);
-      for (sx = [-1, 1], sv = [-1, 1]) translate([sx * dHoleX, dispY + sv * dHoleV, H - skD]) cylinder(d = 5.5, h = skD - capT + 0.01);
+      for (k = khOre) translate([k[0], k[1], khB0 + 2]) cylinder(d = tappD, h = z1 - khB0 - 2 + 0.01);    // knappeholderens tapper
+      // skjermramme under lokket: rundt glasslomma og ned til kortet (kortet ligger flatt mot undersiden av rammen)
+      translate([0, glY, pcbZ]) linear_extrude(z1 - pcbZ + 0.01) rr(glW + 2 * glKl + 2 * rammeV, glH + 2 * glKl + 2 * rammeV, 3);
     }
     for (p = rodP) translate([p[0], p[1], z1 - 8.1]) cylinder(d = ins, h = insL);
     for (x = btnX) translate([x, btnY, z1 - 1]) cylinder(d = capHole, h = capT + 2);
@@ -144,27 +186,29 @@ module lokk() {
     translate([0, encY, z1 - 1]) cylinder(d = ec11D, h = capT + 2);
     translate([0, encY, H - ec11MutH]) cylinder(d = ec11Mut, h = ec11MutH + 1);              // EC11-mutteren i toppen, under knotten
     translate([ec11Tapp[0], encY + ec11Tapp[1], z1 - 0.01]) translate([-0.8, -0.7, 0]) cube([1.6, 1.4, 2.0]);   // låsetappen (blind spalte)
-    for (k = kortHull) translate([k[0], k[1], boardZ - 0.1]) cylinder(d = 1.8, h = 5);           // M2 × 6 selvgjengende
-    // skjerm: forsenkning for ruta, vindu med 45° fas, glasslomme og flatkabel nedenfra, skruehull
+    for (k = khOre) translate([k[0], k[1], khB0 + 2 - 0.1]) cylinder(d = 1.8, h = 5.5);       // M2 × 6 selvgjengende
+    // skjerm: forsenkning for ruta, vindu med 45° fas, lomme nedenfra for glasset, flatkabelen og pinneraden
     translate([0, dispY, H - ruteRec]) linear_extrude(ruteRec + 1) rr(ruteW + 0.4, ruteH + 0.4, 2.2);
     hull() {
-      translate([0, dispY, H - skD + glT - 0.01]) linear_extrude(0.01) square([winW, winH], center = true);
-      translate([0, dispY, H - ruteRec - 0.01]) linear_extrude(0.02) square([winW + 2 * (skD - glT - ruteRec), winH + 2 * (skD - glT - ruteRec)], center = true);
+      translate([0, dispY, glTak - 0.01]) linear_extrude(0.01) square([winW, winH], center = true);
+      translate([0, dispY, H - ruteRec - 0.01]) linear_extrude(0.02) square([winW + 2 * (H - ruteRec - glTak), winH + 2 * (H - ruteRec - glTak)], center = true);
     }
-    translate([0, dispY, H - skD - 0.01]) linear_extrude(glT + 0.01) square([glW + 0.8, glH + 0.8], center = true);
-    translate([0, dispY - glH/2 - fpcL/2, H - skD - 0.01]) linear_extrude(glT + 0.01) square([fpcW + 1.0, fpcL + 1.0], center = true);
-    for (sx = [-1, 1], sv = [-1, 1]) translate([sx * dHoleX, dispY + sv * dHoleV, H - skD - 0.01]) cylinder(d = 1.8, h = 4.5);
+    translate([0, glY, pcbZ - 0.01]) linear_extrude(glTak - pcbZ + 0.01) square([glW + 2 * glKl, glH + 2 * glKl], center = true);
+    translate([-fpcW/2 - 0.6, pcbBot - fpcL - 0.6, pcbZ - 0.01]) cube([fpcW + 1.2, glY - glH/2 - pcbBot + fpcL + 0.6 + 0.1, glTak - pcbZ + 0.01]);   // flatkabelen
+    translate([0, pcbTopp - hdrFraKant, pcbZ - 0.01]) linear_extrude(1.5) square([hdrN * 2.54 + 2.4, 3.6], center = true);   // pinnestumpene i pinneraden
   }
 }
 module rute() { translate([0, dispY, H - ruteRec]) linear_extrude(ruteT) rr(ruteW, ruteH, 2); }
-module skjerm() {   // modulen (bare for bildene og kollisjonssjekken)
-  translate([0, dispY, H - skD]) linear_extrude(glT) square([glW, glH], center = true);
-  translate([0, dispY, H - skD - 1.6]) difference() {
-    linear_extrude(1.6) square([pcbW, pcbH], center = true);
-    for (sx = [-1, 1], sv = [-1, 1]) translate([sx * dHoleX, sv * dHoleV, -1]) cylinder(d = 3, h = 4);
+module skjerm() {   // modulen (bare for bildene og kollisjonssjekken): glass, kort, flatkabel og ledninger i pinneraden
+  translate([0, glY, pcbZ]) linear_extrude(glT) square([glW, glH], center = true);
+  translate([0, pcbY, pcbZ - pcbT]) difference() {
+    linear_extrude(pcbT) square([pcbW, pcbH], center = true);
+    for (sx = [-1, 1], sv = [-1, 1]) translate([sx * dHoleX, sv * dHoleV, -1]) cylinder(d = hullD, h = 4);
   }
+  translate([-fpcW/2, pcbBot - fpcL, pcbZ - pcbT - 0.4]) cube([fpcW, fpcL + 3, pcbT + 0.4 + 2.0]);   // flatkabelen rundt nedre kant
+  for (i = [0:hdrN - 1]) translate([(i - (hdrN - 1) / 2) * 2.54, pcbTopp - hdrFraKant, pcbZ - pcbT - 1.5]) cylinder(d = 1.6, h = 1.5 + pcbT + 0.5, $fn = 16);
 }
-module skjermflate() { translate([0, dispY, H - skD + glT + 0.02]) linear_extrude(0.02) square([actW, actH], center = true); }
+module skjermflate() { translate([0, dispY, pcbZ + glT + 0.02]) linear_extrude(0.02) square([actW, actH], center = true); }
 
 // ---------- knott og knapper ----------
 module knott_lok() {
@@ -232,14 +276,57 @@ module plate_pos() { translate([0, -Dp/2 + blk, drvZ]) rotate([-90, 0, 0]) mirro
 module elementplate() { plate_pos() elementplate_lok(); }
 // elementet (bare for bildene og kollisjonssjekken): rammen mot elementplata bakfra
 module element() { plate_pos() translate([0, 0, plT]) el_modell(E); }
-// knappekortet og EC11 (bare for bildene og kollisjonssjekken)
-module knappekort() {
-  translate([0, kortY, boardZ - 1.6]) difference() {
-    linear_extrude(1.6) square([kortW, kortH], center = true);
+// taktbryterne, hullkortet og EC11 (kjøpte deler, bare for bildene og kollisjonssjekken)
+module brytere() {
+  for (x = btnX) translate([x, btnY, boardZ]) {
+    translate([-tactB/2, -tactB/2, 0]) cube([tactB, tactB, tactHus]);                     // bryterhus
+    cylinder(d = stempD, h = tactH, $fn = 24);                                               // stempel (5 mm)
+    if (knappefeste == "holder")                                                             // beina bøyd ut mot sidene
+      for (sx = [-1, 1], sv = [-1, 1]) translate([sx * (tactB/2 + 1.5) - 1.5, sv * benV - 0.35, 0]) cube([3.0, 0.7, 0.3]);
+  }
+}
+module knappekort() {   // bare med knappefeste = "hullkort"
+  translate([0, kortY, boardZ - kortT]) difference() {
+    linear_extrude(kortT) square([kortW, kortH], center = true);
     for (k = kortHull) translate([k[0], k[1] - kortY, -1]) cylinder(d = 2.4, h = 4);
   }
-  for (x = btnX) translate([x - 3, btnY - 3, boardZ]) cube([6, 6, 3.5]);                  // bryterhus
-  for (x = btnX) translate([x, btnY, boardZ]) cylinder(d = 3.5, h = 5.0);                  // stempel (5 mm)
+}
+// ---------- knappeholder (printes, PETG/ASA, bunnen ned) ----------
+module knappeholder() {
+  holder = knappefeste == "holder";
+  difference() {
+    union() {
+      if (holder) {
+        translate([-barX, barY0, khB0]) cube([2 * barX, kamY + ribT - barY0, boardZ - khB0]);              // lommelista
+        for (x = btnX) translate([x, btnY, boardZ - 0.01]) linear_extrude(khVeggH + 0.01) difference() {
+          square(lommeB + 2 * khVegg, center = true); square(lommeB, center = true); }                        // lommer
+        for (x = btnX) translate([x, btnY, boardZ - 0.01]) linear_extrude(khVeggH + 0.01)                   // klemribber
+          for (a = [0:90:270]) rotate(a) translate([lommeB/2 - lommeRib, -0.5]) square([lommeRib + 0.01, 1.0]);
+        translate([-barX, kamY, khB0]) cube([2 * barX, ribT, boardZ + khVeggH - khB0]);                     // kam bak lommene
+      } else
+        translate([-kortW/2, kortY - kortH/2, khB0]) cube([kortW, kortH, dekkT]);                           // dekk for hullkortet
+      translate([-khXo, khY0, khB0]) cube([2 * khXo, (holder ? kamY + ribT : kortY + kortH/2) - khY0, 2.0]); // tverrstykke til skinnene
+      for (sx = [-1, 1]) {
+        translate([sx > 0 ? khXi : -khXo, khY0, khB0]) cube([khXo - khXi, khY1 - khY0, khTop - khB0]);      // skinner
+        translate([sx * (khXi + 0.6), 0, 0]) hull() {                                                         // klemribbe med skrå ender
+          translate([-0.4, pcbBot + 3, khTop - 0.01]) cube([0.8, pcbH - 6, 0.01]);
+          translate([-0.15, pcbBot + 4.5, khTop - 0.01]) cube([0.3, pcbH - 9, klemH + 0.01]);
+        }
+      }
+      for (k = khOre) hull() {                                                                              // ører
+        translate([k[0], k[1], khB0]) cylinder(d = oreD, h = 2.0);
+        translate([sign(k[0]) * khXo - (k[0] > 0 ? 1 : 0), k[1] - oreD/2, khB0]) cube([1, oreD, 2.0]);
+      }
+    }
+    for (k = khOre) translate([k[0], k[1], khB0 - 1]) cylinder(d = 2.4, h = 4);                            // M2 × 6
+    if (holder) {
+      for (x = btnX, sx = [-1, 1], sv = [-1, 1])                                                            // spor for beina
+        translate([x + sx * (lommeB/2 + khVegg/2) - khVegg/2 - 0.1, btnY + sv * benV - benSpor/2, boardZ]) cube([khVegg + 0.2, benSpor, khVeggH + 1]);
+      for (x = concat([btnX[0] - 4.0], [for (i = [0:4]) btnX[i] + 4.0]))                  // kam: én ledning per spor (GND lengst til venstre)
+        translate([x - 0.7, kamY - 0.1, boardZ]) cube([1.4, ribT + 0.2, 10]);
+    } else
+      for (k = kortHull) translate([k[0], k[1], khB0 - 1]) cylinder(d = 1.8, h = dekkT + 2);                // M2 × 6 for hullkortet
+  }
 }
 module ec11() {
   translate([0, encY, z1 - 6.5]) translate([-6.2, -6.7, 0]) cube([12.4, 13.4, 6.5]);       // hus under lokket
@@ -262,6 +349,7 @@ module samlet(ex = 0) {
   color(c_lys) translate([0, 0, 1.4 * ex]) lokk();
   color(c_gull) translate([0, 0, 2.2 * ex]) knott();
   color(c_mork) translate([0, 0, 1.8 * ex]) knapper();
+  translate([0, 0, 0.9 * ex]) { color([0.05, 0.05, 0.06]) skjerm(); color(c_mork) brytere(); color([0.55, 0.62, 0.70]) knappeholder(); if (knappefeste == "hullkort") color([0.18, 0.42, 0.24]) knappekort(); }
   color(c_lys) translate([0, -ex, 0]) hylse_stl();
   color(c_gull) translate([0, -ex, 0]) logo_stl();
 }
@@ -279,6 +367,10 @@ else if (part == "a_element") element();
 else if (part == "elementplate") translate([0, 0, plT]) mirror([0, 0, 1]) elementplate_lok();   // baksiden ned, kragen opp
 else if (part == "a_elementplate") elementplate();
 else if (part == "a_knappekort") knappekort(); else if (part == "a_ec11") ec11();
+else if (part == "knappeholder") translate([0, 0, -khB0]) knappeholder();   // bunnen ned
+else if (part == "a_knappeholder") knappeholder(); else if (part == "a_bryter") brytere();
+else if (part == "under") { color(c_lys) lokk(); color(c_mork) knapper(); color([0.05, 0.05, 0.06]) skjerm(); color(c_mork) brytere();
+  color([0.55, 0.62, 0.70]) knappeholder(); if (knappefeste == "hullkort") color([0.18, 0.42, 0.24]) knappekort(); ec11(); }
 else if (part == "a_logo") logo_form(0); else if (part == "logo_kutt") logo_form(0.01);
 else if (part == "eksplodert") samlet(30);
 else samlet();

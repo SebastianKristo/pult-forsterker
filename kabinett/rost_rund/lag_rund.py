@@ -7,7 +7,12 @@ Hylsa (grillen hele veien rundt) lages her med manifold3d: rundt 2400 sekskanthu
 Hullene står med en spiss opp (sidene 30° fra loddrett), så hylsa printes stående uten støtte. Nederst er et helt
 bånd med SKJOLD i gull foran, øverst et smalt bånd, og bak nede en spiss utsparing rundt DC og USB-C.
 Kontroll: tette deler, ingen overlapp i montert stilling, overheng ≤ 50° på yttersidene, plass på K2 (250 × 250),
-lydkammerets volum og porttuning."""
+lydkammerets volum og porttuning, og (som sjekk_modell.py for Røst) skjermen, vinduet, knappeholderen og knappevandringen:
+  - skjermmodulen (kort 70,08 × 48,04, glass, flatkabel, pinnerad) ligger i lomma uten kollisjon, skinnene klemmer kortet,
+    vinduet ligger over hele det aktive området med like stor kant rundt, og hyllen under ruta er minst 1,3 mm
+  - bryterne sitter i lommene med presspasning, luften mellom hettenes nupp og stempelet er 0,1–0,3 mm, og hettene kan
+    trykkes 0,25 mm forbi klikket uten å treffe noe annet enn bryteren
+  - knappeholderen har ingen overheng (printes med bunnen ned uten støtte)"""
 import math
 import os
 import re
@@ -35,6 +40,7 @@ bpT, capT, sl, sg, t = tall("bpT"), tall("capT"), tall("sl"), tall("sg"), tall("
 z0, z1 = bpT, H - capT
 ioX, ioW, ioH = tall("ioX"), tall("ioW"), tall("ioH")
 portD, portL = tall("portD"), tall("portL")
+KNAPPEFESTE = re.search(r'^knappefeste\s*=\s*"(\w+)"', src, re.M).group(1)   # holder | hullkort
 os.makedirs("stl", exist_ok=True); os.makedirs("stl_asm", exist_ok=True)
 
 
@@ -44,9 +50,13 @@ def scad(part, ut):
 
 # ---------- 1. OpenSCAD-delene ----------
 procs = []
-for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "rute", "elementplate"):
+for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "rute", "elementplate", "knappeholder"):
     procs.append(subprocess.Popen(["openscad", "-q", "-D", f'part="{p}"', "-o", f"stl/{p}.stl", SC]))
-for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "logo", "stenger", "rute", "skjerm", "skjermflate", "element", "knappekort", "ec11", "elementplate"):
+ASM_EKSTRA = ("knappekort",) if KNAPPEFESTE == "hullkort" else ()
+if not ASM_EKSTRA and os.path.exists("stl_asm/knappekort.stl"):
+    os.remove("stl_asm/knappekort.stl")
+for p in ("kjerne", "bunn", "lokk", "knott", "knapp", "logo", "stenger", "rute", "skjerm", "skjermflate", "element", "ec11", "elementplate",
+          "knappeholder", "bryter") + ASM_EKSTRA:
     procs.append(subprocess.Popen(["openscad", "-q", "-D", f'part="a_{p}"', "-o", f"stl_asm/{p}.stl", SC]))
 procs.append(subprocess.Popen(["openscad", "-q", "-D", 'part="logo_kutt"', "-o", "stl_asm/logo_kutt.stl", SC]))
 for pr in procs:
@@ -135,7 +145,7 @@ def meld(god, tekst):
     global ok
     ok &= bool(god); print(("OK   " if god else "FEIL ") + tekst)
 
-DELER = ["kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "elementplate"]
+DELER = ["kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "elementplate", "knappeholder"]
 FLERE = {"knapp": 5, "logo": None}
 for n in DELER:
     m = trimesh.load(f"stl/{n}.stl")
@@ -144,13 +154,26 @@ for n in DELER:
         and m.extents[0] <= 250 and m.extents[1] <= 250 and m.extents[2] <= 250
     meld(god, f"{n:7s} tett={m.is_watertight} deler={k} {m.volume / 1000:6.1f} cm³ {m.extents.round(1)} mm")
 
-A = {n: trimesh.load(f"stl_asm/{n}.stl") for n in ("kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "skjerm", "element", "knappekort", "ec11", "elementplate")}
+A = {n: trimesh.load(f"stl_asm/{n}.stl") for n in ("kjerne", "bunn", "lokk", "knott", "knapp", "hylse", "logo", "rute", "skjerm", "element",
+                                                   "ec11", "elementplate", "knappeholder", "bryter") + ASM_EKSTRA}
 LOV = {("kjerne", "bunn"), ("kjerne", "lokk"), ("bunn", "hylse"), ("lokk", "hylse"), ("lokk", "knapp"), ("hylse", "logo"), ("lokk", "knott"),
-       ("lokk", "rute"), ("lokk", "skjerm"), ("lokk", "knappekort"), ("lokk", "ec11"), ("knapp", "knappekort"), ("knott", "ec11"), ("kjerne", "elementplate"), ("elementplate", "element")}
+       ("lokk", "rute"), ("lokk", "skjerm"), ("lokk", "ec11"), ("knott", "ec11"), ("kjerne", "elementplate"), ("elementplate", "element"),
+       ("lokk", "knappeholder"), ("knappeholder", "knappekort"), ("knappekort", "bryter")}
+# tilsiktet presspasning: skinnenes klemribbe i skjermkortet og klemribbene i lommene mot bryterhusene (sjekkes for seg under)
+PRESS = {("knappeholder", "skjerm"), ("knappeholder", "bryter")}
+
+
+def overlapp(a, b):
+    try:
+        return a.intersection(b, engine="manifold").volume
+    except Exception:
+        return 0.0
+
+
 import itertools
 feil = []
 for x, y in itertools.combinations(A, 2):
-    if (x, y) in LOV or (y, x) in LOV:
+    if (x, y) in LOV or (y, x) in LOV or (x, y) in PRESS or (y, x) in PRESS:
         continue
     ax, ay = A[x].bounds, A[y].bounds
     if np.any(ax[1] < ay[0]) or np.any(ay[1] < ax[0]):
@@ -162,6 +185,8 @@ for x, y in itertools.combinations(A, 2):
     if v > 0.05:
         feil.append(f"{x}×{y} {v:.2f} mm³")
 for x, y in LOV:   # kontaktpar: bare berøring
+    if x not in A or y not in A:
+        continue
     try:
         v = A[x].intersection(A[y], engine="manifold").volume
     except Exception:
@@ -180,10 +205,80 @@ for n in ("kjerne", "hylse", "bunn", "lokk"):
         bratt &= ~np.all((c > lb[0] - 0.5) & (c < lb[1] + 0.5), axis=1)
         bratt &= ar > 0.1   # og der de rette hullene skjærer den buede veggen blir det fliser på ~0,02 mm² (under én linje)
     meld(ar[bratt].sum() < 1.0, f"{n}: {ar[bratt].sum():.1f} mm² overheng brattere enn 50° på yttersiden")
+m = trimesh.load("stl/knappeholder.stl")
+ned = (m.face_normals[:, 2] < -0.5) & (m.triangles_center[:, 2] > 0.05)
+meld(m.area_faces[ned].sum() < 0.5, f"knappeholder: {m.area_faces[ned].sum():.1f} mm² overheng (printes med bunnen ned, uten støtte)")
+
+# ---------- skjermen ----------
+lk, sk, hd = A["lokk"], A["skjerm"], A["knappeholder"]
+AA = trimesh.load("stl_asm/skjermflate.stl").bounds        # aktivt område på glasset (montert)
+aaC = AA.mean(axis=0)
+glass_top = sk.bounds[1][2]
+pz = glass_top - 5.25 + 0.5                                 # midt i kortet (kort 1,0 + glass 4,25)
+pv = np.array([p for e in sk.section(plane_origin=[0, 0, pz], plane_normal=[0, 0, 1]).discrete for p in e])
+pcbB = np.ptp(pv[:, 0])
+pcbH = np.ptp(pv[np.abs(pv[:, 0]) > 10][:, 1])
+
+
+def treff(x, y):   # z-ene der en stråle ovenfra treffer lokket, ovenfra og ned
+    loc, _, _ = lk.ray.intersects_location([[x, y, 200]], [[0, 0, -1]])
+    return sorted(loc[:, 2], reverse=True) if len(loc) else []
+
+
+def fri(x, y):     # ingen del av lokket over glasset i dette punktet
+    return not any(z > glass_top + 0.01 for z in treff(x, y))
+
+
+blokk = [(x, y) for x in np.linspace(AA[0][0], AA[1][0], 23) for y in np.linspace(AA[0][1], AA[1][1], 12) if not fri(x, y)]
+
+
+def kant(x0, y0, dx, dy):   # hvor langt fra kanten av det aktive området vinduet er fritt (ved glasset)
+    for d in np.arange(0, 6, 0.02):
+        if not fri(x0 + dx * d, y0 + dy * d):
+            return d
+    return 6
+
+
+mx = [kant(AA[0][0], aaC[1], -1, 0), kant(AA[1][0], aaC[1], 1, 0)]
+my = [kant(aaC[0], AA[0][1], 0, -1), kant(aaC[0], AA[1][1], 0, 1)]
+klem = overlapp(hd, sk)
+meld(not blokk and min(mx + my) >= 0.3 and abs(mx[0] - mx[1]) < 0.1 and abs(my[0] - my[1]) < 0.1 and 0.05 < klem < 8 and abs(pcbB - 70.08) < 0.05
+     and abs(pcbH - 48.04) < 0.05,
+     f"skjerm: kort {pcbB:.2f} × {pcbH:.2f} mm i lomma uten kollisjon, aktivt område {AA[1][0]-AA[0][0]:.1f} × {AA[1][1]-AA[0][1]:.2f} mm "
+     f"helt synlig ({len(blokk)} punkter dekket), vinduet går {mx[0]:.2f}/{mx[1]:.2f} mm (venstre/høyre) og {my[0]:.2f}/{my[1]:.2f} mm "
+     f"(foran/bak) utenfor det; skinnene klemmer kortet ({klem:.2f} mm³ klemribbe)")
+# hyllen ruta ligger på (mellom forsenkningen og glasslomma): rammen rundt vinduet, utenfor fasen
+RUTE = A["rute"].bounds
+hylle = []
+for u in np.arange(RUTE[0][0] + 0.4, RUTE[1][0] - 0.3, 0.5):
+    for v in np.arange(RUTE[0][1] + 0.4, RUTE[1][1] - 0.3, 0.5):
+        if min(u - RUTE[0][0], RUTE[1][0] - u, v - RUTE[0][1], RUTE[1][1] - v) > 1.0:
+            continue
+        z = treff(u, v)
+        if len(z) >= 2 and z[0] < RUTE[0][2] + 0.01:
+            hylle.append(z[0] - z[1])
+meld(hylle and min(hylle) >= 1.3, f"hyllen under ruta er minst {min(hylle):.2f} mm tykk (≥ 1,3 mm)")
+
+# ---------- knappene: presspasning, luft til stempelet og vandring ----------
+br = A["bryter"]
+brytere = sorted(br.split(only_watertight=False), key=lambda b: b.bounds[0][0])   # hus, stempel og bein, én per bryter
+kapper = sorted(A["knapp"].split(only_watertight=False), key=lambda b: b.bounds[0][0])
+press = [overlapp(hd, b) for b in brytere] if KNAPPEFESTE == "holder" else [1.0] * len(brytere)
+gap = [c.bounds[0][2] - b.bounds[1][2] for c, b in zip(kapper, brytere)]
+TRAVEL = 0.25                                    # bryterens vandring forbi klikket
+fritt = []
+for c, g in zip(kapper, gap):
+    ned_ = c.copy()
+    ned_.apply_translation([0, 0, -(g + TRAVEL)])
+    fritt.append(sum(overlapp(A[n], ned_) for n in ("lokk", "knappeholder", "skjerm", "ec11") + ASM_EKSTRA))
+meld(len(brytere) == 5 and len(kapper) == 5 and all(0.1 < p < 2.0 for p in press) and all(0.1 <= g <= 0.3 for g in gap) and max(fritt) < 0.01,
+     f"knapper ({KNAPPEFESTE}): " + (f"bryterne klemmes i lommene ({', '.join(f'{p:.2f}' for p in press)} mm³ klemribbe)" if KNAPPEFESTE == "holder"
+     else "bryterne på hullkortet") + ", luft nupp–stempel "
+     f"{', '.join(f'{g:.2f}' for g in gap)} mm, hettene går {TRAVEL} mm forbi klikket uten å treffe noe ({max(fritt):.3f} mm³)")
 
 # lydkammeret: luft innenfor kjernen, minus frontblokk, tårn, port, krage
 inner = rr(W - 2 * (sl + sg + t), Dp - 2 * (sl + sg + t), R - (sl + sg + t)).extrude(z1 - z0).translate([0, 0, z0])
-luft = inner - to_manifold(A["kjerne"]) - to_manifold(A["bunn"]) - to_manifold(A["lokk"])
+luft = inner - to_manifold(A["kjerne"]) - to_manifold(A["bunn"]) - to_manifold(A["lokk"]) - to_manifold(A["knappeholder"])
 V = luft.volume() / 1e6
 netto = V - 0.05 - 0.05            # element ca. 50 cm³, elektronikk og knappekort ca. 50 cm³
 Sp = math.pi * (portD / 2000) ** 2
@@ -210,7 +305,7 @@ L.OBJ_INNST = {
     "rute": {"enable_support": "0", "sparse_infill_density": "100%", "wall_loops": "1", "top_shell_layers": "0", "bottom_shell_layers": "0",
              "initial_layer_speed": "15", "outer_wall_speed": "30", "inner_wall_speed": "30", "sparse_infill_speed": "30"},
     # kjernen og hylsa er 140 mm høye med tynne vegger (ca. 1 080 og 620 mm² mot plata): 5 mm brim og sakte første lag
-    "kjerne": {"enable_support": "0", **BRIM}, "elementplate": {"enable_support": "0"},
+    "kjerne": {"enable_support": "0", **BRIM}, "elementplate": {"enable_support": "0"}, "knappeholder": {"enable_support": "0"},
     # hylsa: 2 667 små hull blir «små omkretser» som sliceren ellers printer på halv fart. Full fart på dem, to vegger
     # (1,8 mm vegg = 4 linjer, helt fylt) og 0,24 mm lag kutter tiden kraftig uten å endre utseendet nevneverdig.
     "hylse": {"enable_support": "0", "layer_height": "0.24", "wall_loops": "2", "small_perimeter_speed": "100%",
@@ -253,7 +348,9 @@ L.write("skjold-rost-rund-k2-kjerne.3mf", "Skjold Røst Rund – kjerne, knapper
     ("kjerne", "Kjerne (mørk, stående)", 2, (10, 10), None),
     ("knapp", "Knappehetter (mørke, toppen ned)", 2, (130, 118), None),
     ("knott", "Knott (gull, toppen ned)", 3, (130, 138), None),
-    ("elementplate", "Elementplate med krage (mørk, baksiden ned) – lag ny for et annet element", 2, (130, 10), None)], {2: "#232325", 3: "#D99E40"})
+    ("elementplate", "Elementplate med krage (mørk, baksiden ned) – lag ny for et annet element", 2, (130, 10), None),
+    ("knappeholder", "Knappeholder for bryterne og skjermen (mørk, bunnen ned)" if KNAPPEFESTE == "holder"
+     else "Knappeholder med dekk for hullkortet (mørk, bunnen ned)", 2, (10, 128), None)], {2: "#232325", 3: "#D99E40"})
 L.write("skjold-rost-rund-k2-hylse.3mf", "Skjold Røst Rund – grillhylse med SKJOLD i gull", [
     ("hylse", "Grillhylse (lys, stående)", 1, (70, 70), None),
     ("hylse_orer", "Museører til hylsa (vris av etter print)", 1, None, "hylse"),
