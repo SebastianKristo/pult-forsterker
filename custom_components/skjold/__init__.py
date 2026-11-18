@@ -15,7 +15,7 @@ from .api import KiAmpApi, KiAmpError
 from .const import CONF_HOST, CONF_PORT, DOMAIN, SCAN_INTERVAL_S
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.MEDIA_PLAYER, Platform.SWITCH, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON, Platform.NUMBER, Platform.SELECT, Platform.EVENT]
+PLATFORMS = [Platform.MEDIA_PLAYER, Platform.SWITCH, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON, Platform.NUMBER, Platform.SELECT, Platform.EVENT, Platform.UPDATE]
 
 
 class KiAmpCoordinator(DataUpdateCoordinator[dict]):

@@ -7,6 +7,7 @@ substitutions:
   ir_tx_pin: GPIO4
   ir_rx_pin: GPIO14
   led_pin: GPIO2
+  fastvare_tls: "false"             # «Fastvare» i de ferdige byggene: ESP8266 kan ikke sjekke sertifikatet
 
 packages:
   ir: !include skjold-ir.yaml

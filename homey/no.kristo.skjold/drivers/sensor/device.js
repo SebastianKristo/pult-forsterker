@@ -68,7 +68,26 @@ class SensorDevice extends Homey.Device {
     for (const c of KAPASITETER) {   // enheter lagt til med en eldre versjon av appen får de nye verdiene
       if (!this.hasCapability(c)) await this.addCapability(c).catch(this.error);
     }
+    if (!this.hasCapability('button.fastvare')) await this.addCapability('button.fastvare').catch(this.error);
+    this.registerCapabilityListener('button.fastvare', async () => {
+      if (!this._fastvare) throw new Error('Sensoren har ikke fastvaren fra skjold-lab.com. Flash den én gang med USB fra skjold-lab.com/flasher/sensor/.');
+      if (this._fastvare.installert && this._fastvare.installert === this._fastvare.siste) throw new Error(`Sensoren har allerede nyeste fastvare (${this._fastvare.installert}).`);
+      await this.post('/update/Fastvare/install');
+    });
     this.connect();
+  }
+
+  // «Fastvare» (ESPHome update): installert og nyeste versjon, og et varsel i Homey én gang per ny versjon
+  fastvare(o) {
+    const f = { installert: o.current_version || '', siste: o.latest_version || o.value || '', tilstand: String(o.state || '') };
+    this._fastvare = f;
+    const tekst = !f.installert ? '–' : f.tilstand.toUpperCase() === 'INSTALLING' ? 'Oppdaterer …'
+      : (f.siste && f.siste !== f.installert ? `${f.installert} → ${f.siste} finnes` : `${f.installert} (nyeste)`);
+    this.settInnst('fastvare', tekst);
+    if (f.siste && f.installert && f.siste !== f.installert && this.getStoreValue('varslet') !== f.siste) {
+      this.setStoreValue('varslet', f.siste).catch(this.error);
+      this.homey.notifications.createNotification({ excerpt: `Ny fastvare for **${this.getName()}**: ${f.siste}. Oppdater under Vedlikehold på enheten.` }).catch(this.error);
+    }
   }
 
   // Endret i Homey → send til sensoren (ESPHome-webserveren: POST /number/<navn>/set?value= og /switch/<navn>/turn_on|off)
@@ -144,6 +163,7 @@ class SensorDevice extends Homey.Device {
     if (ev !== 'state' || !data) return;
     let o; try { o = JSON.parse(data); } catch (e) { return; }
     const navn = entNavn(o);
+    if (navn === 'Fastvare') { if (this.homey) this.fastvare(o); return; }
     const rå = o.value !== undefined ? o.value : o.state;
     const inn = INNST[navn], dia = DIAG[navn];
     if ((inn || dia) && this.homey) {

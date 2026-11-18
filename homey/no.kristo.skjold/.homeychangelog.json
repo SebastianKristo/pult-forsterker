@@ -90,5 +90,9 @@
   "2.25.0": {
     "en": "Skjold Sensor: settings for update interval, motion cooldown, presence time and status LED, and diagnostics (IP, MAC, Wi-Fi, uptime, version).",
     "no": "Skjold Sensor: innstillinger for oppdateringsintervall, bevegelse av etter, tilstedeværelse og status-LED, og diagnostikk (IP, MAC, Wi-Fi, oppetid, versjon)."
+  },
+  "2.26.0": {
+    "en": "Skjold Sensor: update the firmware from Homey (Maintenance → Update firmware), and see the installed and newest version.",
+    "no": "Skjold Sensor: oppdater fastvaren fra Homey (Vedlikehold → Oppdater fastvare), og se installert og nyeste versjon."
   }
 }

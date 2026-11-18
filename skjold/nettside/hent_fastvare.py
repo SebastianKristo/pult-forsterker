@@ -43,8 +43,7 @@ def main():
         m = json.loads(get(a[asset], raw=True))
         ok = True
         for b in m.get("builds", []):
-            for part in b.get("parts", []):
-                fil = part["path"]
+            for fil in [p["path"] for p in b.get("parts", [])] + ([b["ota"]["path"]] if b.get("ota") else []):   # OTA: «Fastvare»
                 if fil not in a:
                     print(f"::warning::{fil} mangler på {r['tag_name']}"); ok = False; continue
                 open(os.path.join(d, fil), "wb").write(get(a[fil], raw=True))

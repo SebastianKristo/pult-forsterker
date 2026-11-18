@@ -32,6 +32,39 @@ PRODUKT = {
 }
 
 
+# Fastvareoppdatering fra nettsiden: «Fastvare» (update) i Home Assistant og Homey. Bare i de ferdige byggene: en
+# fastvare du har bygget selv (med Wi-Fi i secrets.yaml) skal ikke byttes ut med en som mangler Wi-Fi-oppsettet.
+NETT = "https://skjold-lab.com/flasher"
+KILDE = {"skjold-sensor": f"{NETT}/sensor/manifest.json", "skjold-bryter": f"{NETT}/bryter/manifest.json",
+         "skjold-ir": f"{NETT}/ir/manifest.json", "skjold-kassett": f"{NETT}/kassett/manifest.json"}
+
+
+def med_oppdatering(s: str, navn: str, versjon: str) -> str:
+    """Legger til OTA fra nettsiden (http_request) og en «Fastvare»-oppdatering som sjekker manifestet hver 6. time.
+    Prosjektversjonen settes til utgivelsen (skjold-v…), så oppdateringen vet hva som er installert."""
+    kilde = next(v for k, v in KILDE.items() if navn.startswith(k))
+    tls = "false" if re.search(r"^esp8266:", s, flags=re.M) else "true"   # ESP8266 kan ikke sjekke sertifikatet
+    s, n = re.subn(r"^substitutions:\n", f'substitutions:\n  fastvare_kilde: {kilde}\n  fastvare_tls: "{tls}"\n', s, count=1, flags=re.M)
+    if n != 1:
+        raise SystemExit(f"fant ikke substitutions i {navn}")
+    if re.search(r"^  project:.*\n    name: .+\n    version: .+\n", s, flags=re.M):
+        s = re.sub(r"^(  project:.*\n    name: .+\n    version: ).+\n", lambda m: f'{m.group(1)}"{versjon}"\n', s, count=1, flags=re.M)
+    else:
+        s, n = re.subn(r"^(esphome:\n  name: .+\n  friendly_name: .+\n)",
+                       lambda m: m.group(1) + f'  project:\n    name: {navn.replace("-", ".", 1)}\n    version: "{versjon}"\n', s, count=1, flags=re.M)
+        if n != 1:
+            raise SystemExit(f"fant ikke esphome-blokken i {navn}")
+    s, n = re.subn(r"^ota:\n  - platform: esphome\n", "ota:\n  - platform: esphome\n  - platform: http_request\n", s, count=1, flags=re.M)
+    if n != 1:
+        raise SystemExit(f"fant ikke ota-blokken i {navn}")
+    if not re.search(r"^http_request:", s, flags=re.M):
+        s += "\nhttp_request:\n  verify_ssl: ${fastvare_tls}\n  timeout: 20s\n"
+    s += ("\n# Ny fastvare fra skjold-lab.com: vises som «Fastvare» med Installer-knapp i Home Assistant og Homey\n"
+          "update:\n  - platform: http_request\n    name: Fastvare\n    id: fastvare\n    source: ${fastvare_kilde}\n"
+          "    update_interval: 6h\n")
+    return s
+
+
 def lag(kilde: str, navn: str) -> str:
     s, n = re.subn(r"^api:\n  encryption:\n    key: !secret \w+\n", "api:\n", kilde, flags=re.M)
     if n != 1:
@@ -41,6 +74,7 @@ def lag(kilde: str, navn: str) -> str:
         raise SystemExit(f"fant ikke wifi-hemmelighetene i {navn}")
     if "!secret" in s:
         raise SystemExit(f"{navn} har fortsatt !secret: " + ", ".join(sorted(set(re.findall(r"!secret (\w+)", s)))))
+    s = med_oppdatering(s, navn, os.environ.get("VERSJON", "dev"))
     return f"# LAGET AV lag_ferdig.py – ikke rediger (kilde: esphome/{navn})\n" + s
 
 
@@ -49,7 +83,27 @@ def manifest(navn: str, builds, versjon: str) -> dict:
             "builds": [{"chipFamily": chip, "improv": True, "parts": [{"path": fil, "offset": 0}]} for chip, fil in builds]}
 
 
+def ota(ut: str) -> None:
+    """Etter kompileringen: legger OTA-fila (skjold-…-ota.bin) og MD5-summen inn i manifestene, så «Fastvare» kan
+    hente den. Nettleserflashingen bruker fortsatt hele fila (…-firmware.bin)."""
+    import hashlib
+    for mf in sorted(f for f in os.listdir(ut) if f.endswith("-manifest.json")):
+        sti = os.path.join(ut, mf)
+        m = json.load(open(sti, encoding="utf-8"))
+        for b in m["builds"]:
+            fil = b["parts"][0]["path"].replace("-firmware.bin", "-ota.bin")
+            if os.path.exists(os.path.join(ut, fil)):
+                md5 = hashlib.md5(open(os.path.join(ut, fil), "rb").read()).hexdigest()
+                b["ota"] = {"path": fil, "md5": md5, "summary": f"{m['name']} {m['version']}",
+                            "release_url": f"https://github.com/SebastianKristo/pult-forsterker/releases/tag/{m['version']}"}
+        json.dump(m, open(sti, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        print(mf, "OTA:", ", ".join(b.get("ota", {}).get("path", "–") for b in m["builds"]))
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "ota":
+        ota(sys.argv[2] if len(sys.argv) > 2 else "ut")
+        raise SystemExit(0)
     if len(sys.argv) < 2 or sys.argv[1] not in PRODUKT:
         raise SystemExit("bruk: lag_ferdig.py sensor|bryter|ir [ut]")
     p, ut = PRODUKT[sys.argv[1]], sys.argv[2] if len(sys.argv) > 2 else "ut"

@@ -1,6 +1,6 @@
 {
   "id": "no.kristo.skjold",
-  "version": "2.25.0",
+  "version": "2.26.0",
   "compatibility": ">=12.1.0",
   "sdk": 3,
   "platforms": [
@@ -827,7 +827,8 @@
         "measure_temperature.foles",
         "alarm_generic.fukt",
         "ki_mork",
-        "ki_komfort"
+        "ki_komfort",
+        "button.fastvare"
       ],
       "platforms": [
         "local"
@@ -865,6 +866,17 @@
           "title": {
             "en": "High humidity",
             "no": "Høy fuktighet"
+          }
+        },
+        "button.fastvare": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "Update firmware",
+            "no": "Oppdater fastvare"
+          },
+          "desc": {
+            "en": "Downloads the newest Skjold Sensor firmware from skjold-lab.com. The sensor restarts when it is done.",
+            "no": "Henter nyeste fastvare for Skjold Sensor fra skjold-lab.com. Sensoren starter på nytt når den er ferdig."
           }
         }
       },
@@ -1007,6 +1019,19 @@
                 "no": "ESPHome-versjon"
               },
               "value": "–"
+            },
+            {
+              "id": "fastvare",
+              "type": "label",
+              "label": {
+                "en": "Firmware",
+                "no": "Fastvare"
+              },
+              "value": "–",
+              "hint": {
+                "en": "Installed version, and the newest on skjold-lab.com. Update under Maintenance.",
+                "no": "Installert versjon, og den nyeste på skjold-lab.com. Oppdater under Vedlikehold."
+              }
             }
           ]
         }

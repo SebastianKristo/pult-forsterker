@@ -5,7 +5,8 @@
     python3 lag_bryter.py bilder     også bildene i render/ (uten skjerm: starter en egen Xvfb om DISPLAY mangler)
 
   stl/<kort>/kasse.stl   kassa (toppen ned, vingene på plata)
-  stl/<kort>/bunn.stl    bunnplata med kortholderen
+  stl/<kort>/bunn.stl    bunnplata med kortholderen og klipsene
+  stl/<kort>/feste.stl   festet som skrus under bordplata (bordsiden ned)
   stl/<kort>/gull.stl    gullisten og SKJOLD (felt inn i fronten, filament 2)
 kort = esp32d1 (ESP32 D1 mini / MH-ET LIVE MiniKit) | d1mini (Wemos D1 mini)
 Kontroll: tette deler, ingen overlapp i montert stilling (brytere, kort og USB-plugg med), overheng i
@@ -24,8 +25,8 @@ HER = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HER)
 SC = "skjold_bryter.scad"
 KORT = ["esp32d1", "d1mini"]
-DELER = ["kasse", "bunn", "gull"]
-MONTERT = ["kasse", "bunn", "gull", "bryter", "kort", "plugg"]
+DELER = ["kasse", "bunn", "feste", "gull"]
+MONTERT = ["kasse", "bunn", "feste", "gull", "bryter", "kort", "plugg"]
 
 
 def scad(out, part, kort):
@@ -58,7 +59,7 @@ for k in KORT:
              f"ca. {m.volume / 1000 * 1.27 * 0.6 + m.area / 100 * 0.04 * 1.27:.0f} g PETG")
         meld(m.extents[0] <= 245 and m.extents[1] <= 245, f"{p}: får plass på K2")
     A = {p: trimesh.load(f"stl_asm/{k}/{p}.stl") for p in MONTERT}
-    LOV = {("kasse", "gull"), ("bunn", "kort"), ("kasse", "kort"), ("kort", "plugg")}   # kontaktflater
+    LOV = {("kasse", "gull"), ("bunn", "kort"), ("kasse", "kort"), ("kort", "plugg"), ("kasse", "feste"), ("kasse", "bunn")}   # kontaktflater
     feil = []
     for i, x in enumerate(MONTERT):
         for y in MONTERT[i + 1:]:
@@ -79,7 +80,11 @@ for k in KORT:
             if A["kort"].copy().apply_translation(d).intersection(holder, engine="manifold").volume < 1e-3:
                 fri.append("−+"[fortegn > 0] + "xyz"[akse])
     meld(not fri, "kortet ligger fast i holderen" + ("" if not fri else " – FRITT mot " + ", ".join(fri)))
-    for p in ("kasse", "bunn"):
+    # boksen henger i festet (flyttet 0,4 mm ned treffer den skinnene) og bunnplata i klipsene (0,4 mm ned treffer den kassa)
+    for x, y, tekst in (("kasse", "feste", "boksen henger i festet"), ("bunn", "kasse", "bunnplata henger i klipsene")):
+        v = A[x].copy().apply_translation([0, 0, -0.4]).intersection(A[y], engine="manifold").volume
+        meld(v > 0.5, f"{tekst} ({v:.1f} mm³ når den flyttes 0,4 mm ned)")
+    for p in ("kasse", "bunn", "feste"):
         m = trimesh.load(f"stl/{k}/{p}.stl")
         nz, z = m.face_normals[:, 2], m.triangles_center[:, 2]
         ned = (nz < -np.sin(np.radians(50))) & (z > 0.05)
@@ -99,11 +104,12 @@ import lag_3mf as L   # noqa: E402
 L.STL = "stl"
 BRIM = {"enable_support": "0", "initial_layer_speed": "20", "initial_layer_infill_speed": "30", "elefant_foot_compensation": "0.15"}
 for k, tittel in (("esp32d1", "ESP32 D1 mini"), ("d1mini", "Wemos D1 mini")):
-    L.OBJ_INNST = {f"{k}/kasse": BRIM, f"{k}/bunn": BRIM}
-    L.write(f"skjold-bryter-{k}-k2.3mf", f"Skjold Bryter ({tittel}) – kasse med gullist og bunnplate (PETG/PLA)", [
+    L.OBJ_INNST = {f"{k}/kasse": BRIM, f"{k}/bunn": BRIM, f"{k}/feste": BRIM}
+    L.write(f"skjold-bryter-{k}-k2.3mf", f"Skjold Bryter ({tittel}) – kasse med gullist, bunnplate og pultfeste (PETG/PLA)", [
         (f"{k}/kasse", "Kasse (toppen ned)", 1, (12, 12), None),
         (f"{k}/gull", "Gullist og SKJOLD (felt inn i fronten)", 2, None, f"{k}/kasse"),
-        (f"{k}/bunn", "Bunnplate med kortholder", 1, (30, 90), None)], {1: "#ECE9E3", 2: "#D99E40"})
+        (f"{k}/bunn", "Bunnplate med kortholder og klips", 1, (30, 82), None),
+        (f"{k}/feste", "Feste under bordplata (bordsiden ned)", 1, (8, 150), None)], {1: "#ECE9E3", 2: "#D99E40"})
 
 if "bilder" in sys.argv:
     os.makedirs("render", exist_ok=True)
@@ -116,7 +122,8 @@ if "bilder" in sys.argv:
               ("02_forfra_under_mork", "samlet", "120,-260,-90,0,28,20", "mork"),
               ("03_inni", "inni", "60,-60,300,0,28,20", "lys"),
               ("04_eksplodert", "eksplodert", "200,-280,120,0,28,10", "lys"),
-              ("05_bakfra", "samlet", "-140,300,-60,0,28,20", "lys")]
+              ("05_bakfra", "samlet", "-140,300,-60,0,28,20", "lys"),
+              ("06_uttrukket", "uttrukket", "230,-300,-40,0,10,30", "lys")]
     ps = [subprocess.Popen(["openscad", "-q", "--colorscheme=Tomorrow", "--imgsize=1600,1000", "--projection=p", f"--camera={cam}",
                             "-D", f'part="{part}"', "-D", f'farge="{farge}"', "-o", f"render/{fil}.png", SC], env=env)
           for fil, part, cam, farge in BILDER]

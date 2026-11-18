@@ -27,6 +27,8 @@ def lag(kilde: str) -> str:
         raise SystemExit("fant ikke wifi-blokken i skjold-kassett.yaml")
     if "!secret" in s:
         raise SystemExit("ferdig-utgaven har fortsatt !secret: " + ", ".join(sorted(set(re.findall(r"!secret (\w+)", s)))))
+    from lag_ferdig import med_oppdatering
+    s = med_oppdatering(s, "skjold-kassett", os.environ.get("VERSJON", "dev"))
     return "# LAGET AV lag_kassett_ferdig.py – ikke rediger (kilde: esphome/skjold-kassett.yaml)\n" + s
 
 
