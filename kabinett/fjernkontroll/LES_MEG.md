@@ -659,50 +659,94 @@ Har du printet sokkelen, trenger du bare vugga:
 
 ### IR i dokka
 
-![IR-dokka forfra](dokk/render/16_ir_foran.png)
+![IR-dokka bakfra](dokk/render/16_ir_bak.png)
 
-Dokka kan få sin egen IR-sender i sokkelen: et ESP32-C3 SuperMini og tre IR-lysdioder. Skjold Stav sender IR-kommandoen over Wi-Fi til dokka, og dokka sender den til TV-en og TV-boksen. Da virker tastene selv om fjernkontrollen ikke peker mot TV-en. Det er den samme senderen som [Skjold IR](../ir/LES_MEG.md), bygget inn. **Status: ikke bygget eller testet.**
+Begge dokkene kan få sin egen IR-sender: et ESP32-C3 SuperMini og to IR-lysdioder (tre med en på siden). Skjold Stav sender IR-kommandoen over Wi-Fi til dokka, og dokka sender den videre til TV-en og TV-boksen. Da virker tastene selv om fjernkontrollen ligger i dokka eller ikke peker mot TV-en. Det er den samme senderen som [Skjold IR](../ir/LES_MEG.md), bygget inn. **Status: ikke bygget eller testet.**
 
-Bilder: [forfra](dokk/render/16_ir_foran.png) · [inni (sokkelen kuttet, med delene)](dokk/render/17_ir_inni.png) · [bakfra](dokk/render/18_ir_bak.png).
+**Lysdiodene peker bakover.** Dokka står på bordet foran sofaen med fronten mot deg, så TV-en og TV-boksen står bak den. Derfor sitter de to lysdiodene bak, på hver side av USB-C-en (±18 mm), vippet 10° opp mot TV-veggen og 8° utover hver sin vei. Det er ingen lysdioder foran. VS1838B-mottakeren (valgfri, for å lære koder) ser fram, for det er dit du peker den gamle fjernkontrollen når du lærer en kode.
 
-- **To lysdioder foran**, ±13 mm fra midten, vippet 12° opp mot TV-veggen og 8° utover. Kuppelen ligger 0,3 mm inne i et gjennomgående hull med fas, og flensen hviler mot et trinn innvendig.
-- **En tredje lysdiode bak** (til en boks bak TV-en) eller **på høyre side** (`ir_tredje = "side"`, til en boks i hylla ved siden av).
-- **VS1838B-vindu** midt foran (valgfritt), for å lære koder rett på dokka.
-- **C3 SuperMini** ligger flatt i en lomme bak til venstre, ved siden av USB-C-brikken, og får 5 V fra den. Den blå lysdioden på kortet (GPIO8) synes gjennom en lysleder i toppen: en bit klar filament (1,75 mm) i hullet bak til venstre. Flytt `c3_lys` om lysdioden sitter et annet sted på ditt kort.
-- **Bare med delt sokkel:** delene legges inn nedenfra. Vektlomma blir mindre (ca. 45 g i stedet for 70 g), fordi kammeret til lysdiodene står foran den. Dokka står fortsatt godt: tyngdepunktet ligger langt innenfor sokkelen.
+Bilder: [bakfra](dokk/render/16_ir_bak.png) · [inni (sokkelen kuttet, med delene)](dokk/render/17_ir_inni.png) · [med tredje lysdiode på siden](dokk/render/18_ir_side.png) · [flat dokk bakfra](dokk/render/19_flat_ir_bak.png) · [flat dokk inni](dokk/render/20_flat_ir_inni.png).
 
-**Filer:**
-- `dokk/skjold-dokk-k2-ir.3mf`: vugga, IR-sokkelen (toppdel med gullstripe) og bunnplata. Tredje lysdiode bak.
-- `dokk/skjold-dokk-k2-sokkel-delt-ir.3mf`: bare IR-sokkelen og bunnplata (har du vugga). Tredje lysdiode bak.
-- `dokk/skjold-dokk-k2-sokkel-delt-ir-side.3mf`: det samme med tredje lysdiode på høyre side.
-- Hullkort-vugga (`skjold-dokk-hullkort-k2-vugge.3mf`) passer på IR-sokkelen.
-- Kilden er `dokk/skjold_dokk.scad` med `ir = true`. `dokk/lag_dokk.sh` lager STL-ene i `dokk/stl_ir/`, og `dokk/sjekk_dokk.py` sjekker at delene får plass, at lysdiodene ser fritt ut (±17°) og at toppdelen printes uten støtte.
+**Hva du printer:**
+
+| Dokk | Fil |
+|---|---|
+| Stående, alt på én plate | `dokk/skjold-dokk-k2-ir.3mf`: vugga, IR-sokkelen (toppdel med gullstripe) og bunnplata |
+| Stående, har vugga | `dokk/skjold-dokk-k2-sokkel-delt-ir.3mf`: IR-sokkelen og bunnplata |
+| Stående, tredje lysdiode ut til høyre (til en boks i hylla ved siden av) | `dokk/skjold-dokk-k2-sokkel-delt-ir-side.3mf` |
+| Flat (under TV-en) | `dokk/skjold-dokk-flat-ir-k2.3mf`: brettet med pogo og IR, og bunnplata |
+
+Hullkort-vugga (`skjold-dokk-hullkort-k2-vugge.3mf`) passer på IR-sokkelen. Bunnplatene til IR har lave kanter (1 mm) som holder C3-en og driverkortet på plass. Kilden er `dokk/skjold_dokk.scad` og `dokk/skjold_dokk_flat.scad` med `ir = true`. `dokk/lag_dokk.sh` lager STL-ene (`dokk/stl_ir/`, `dokk/stl_flat_ir/`). `dokk/sjekk_dokk.py` sjekker for begge dokkene at:
+- delene får plass;
+- ledningskanalene er frie;
+- lysdiodene står minst 0,5 mm fra bunnplata (0,6 mm);
+- lysdiodene ser fritt bakover (±17°);
+- alt printes uten støtte.
+
+**Plass til å koble:** alt ligger i lommer som er åpne nedover, så du gjør alt med bunnplata av, og ingenting skal tres inn i et lukket rom.
+- **Lysdiodene** skyves inn i hullene innenfra til flensen ligger an mot trinnet. Beina bøyes og loddes i lomma bak.
+- **Driverkammeret:** 28 × 17 × 8 mm i den stående dokka, rett foran USB-C-brikken, og 23 × 17 × 7,5 mm i den flate dokka, bak lysdiodene. Det rommer en AO3400 på en bit hullkort (20 × 12 mm) med motstandene, eller en TO-92-transistor og motstandene med krympestrømpe.
+- **C3-lomma** har 4 mm langs pinneradene og 7 mm over loddepunktene. En tapp ved åpningen til kammeret er strekkavlastning: legg ledningene i en S rundt den.
+- **Ledningskanalene** er 4,5 × 4,5 mm med avrundede hjørner.
+- **USB-C-brikken** ligger i lomma ved endeveggen, med en åpning inn til kammeret for VBUS og GND.
+
+**Stående dokk:**
+- **C3** ligger på tvers i en lomme til venstre, med USB-C-enden mot venstre og antennen mot høyre (bort fra vekten). Den får 5 V fra USB-C-brikken.
+- **Den blå lysdioden** (GPIO8) synes gjennom en lysleder i toppen, til venstre bak vugga: en bit klar filament (1,75 mm). Flytt `c3_lys` om lysdioden sitter et annet sted på ditt kort.
+- **Mottakeren** kobles gjennom en kanal langs venstre side.
+- **Vektlomma** er 48 × 25 mm (ca. 60 g), litt kortere enn før fordi mottakeren og kanalen står foran den.
+
+**Flat dokk:**
+- **Plassering:** brettet ligger med halen og USB-kabelen bakover mot TV-veggen, og lysdiodene sitter i halen til høyre for sporet til fjernkontrollens USB-plugg.
+- **Gulvet** er 2 mm høyere med IR (brettet er 18 mm, fjernkontrollen ligger 27 mm over bordet), så lommene får plass under.
+- **C3** ligger under høyre kant, og lyset kommer opp gjennom gullstripa der.
+- **VS1838B** ser ut av høyre side under grepet. Pek den gamle fjernkontrollen dit når du lærer koder.
 
 **Ekstra deler** (i tillegg til delene til dokka):
 
 | Del | Søkeord | Antall | Ca. pris |
 |---|---|---|---|
 | ESP32-C3 SuperMini | «ESP32-C3 SuperMini» | 1 | 25 kr |
-| IR-lysdiode 5 mm, 940 nm (TSAL6200 eller vanlig) | «940nm IR LED 5mm» | 3 | 10 kr (pose) |
+| IR-lysdiode 5 mm, 940 nm (TSAL6200 eller vanlig) | «940nm IR LED 5mm» | 2 (3 med siden) | 10 kr (pose) |
 | AO3400 (eller S8050 / 2N2222) | «AO3400 SOT-23» | 1 | 10 kr (pose) |
-| Motstander 33 Ω (1 per lysdiode), 1 kΩ og 10 kΩ | | 3 + 1 + 1 | – |
+| Motstander 33 Ω (1 per lysdiode), 1 kΩ og 10 kΩ | | 2–3 + 1 + 1 | – |
+| Hullkort, 20 × 12 mm (kuttes fra et større) | «perfboard» | 1 | 5 kr |
 | VS1838B (valgfri) | «VS1838B» | 1 | 10 kr (pose) |
+| Silikontråd 28–30 AWG, 4–5 farger | | 1 m | – |
 | Klar filament, 1,75 mm (lysleder), ca. 12 mm | | 1 | – |
 
 **Kobling:**
 
+```
+USB-C-brikke VBUS ──┬── pogo +  (som før)
+                    ├── C3 5V
+                    └── 33 Ω ──▶|── LED 1 ──┐
+                        33 Ω ──▶|── LED 2 ──┤      (LED 3 på siden: én til i parallell)
+                                            │
+                                          drain
+C3 GPIO4 ── 1 kΩ ────────────────────── gate   AO3400
+                  └── 10 kΩ ── GND             source ── GND
+USB-C-brikke GND ── pogo −, C3 GND, AO3400 source
+
+C3 3V3 ── VS1838B VCC     VS1838B OUT ── C3 GPIO3     VS1838B GND ── GND
+```
+
 | Fra | Til |
 |---|---|
-| USB-C-brikke VBUS | C3 5V, lysdiodenes 33 Ω-motstander (og pogo + som før) |
+| USB-C-brikke VBUS | C3 5V, motstandene til lysdiodene (og pogo + som før) |
 | USB-C-brikke GND | C3 GND, AO3400 source (og pogo − som før) |
 | C3 GPIO4 → 1 kΩ | AO3400 gate (10 kΩ fra gate til GND) |
 | 5V → 33 Ω → lysdiode (anode, langt bein) → katode | AO3400 drain, én motstand per lysdiode |
 | C3 3V3 / GND | VS1838B VCC / GND (ikke 5 V: utgangen går rett i en GPIO) |
 | VS1838B OUT | C3 GPIO3 |
 
-Driveren (AO3400 og motstandene på en liten bit hullkort) står i kammeret bak de fremre lysdiodene. Ledningene går i kanalen langs venstre side til C3-lomma, og fra C3 gjennom et spor til USB-C-brikken. Lysdioden bak kobles gjennom sporet mellom USB-lomma og lomma bak.
-
-**Montering:** last inn fastvaren på C3-en før den legges inn (siden over Wi-Fi). Skyv lysdiodene inn i hullene innenfra til flensen ligger an, legg VS1838B i lomma foran med kuppelen i vinduet, og lim C3-en i lomma med USB-C-en bakover. Fyll vektlomma og skru på bunnplata.
+**Montering** (snu toppdelen opp ned, med bunnplata av):
+1. Last inn fastvaren på C3-en mens den ligger løst, siden går det over Wi-Fi.
+2. Lodd AO3400, 1 kΩ, 10 kΩ og motstandene på hullkortet. Lodd på ledninger (5V, GND, GPIO4) som er lange nok til å nå C3-lomma, pluss 3 cm.
+3. Skyv lysdiodene inn i hullene til flensen ligger an, med en dråpe lim. Bøy beina mot kammeret, og lodd anodene til motstandene og katodene til drain.
+4. Legg VS1838B i lomma bak vinduet, og trekk de tre ledningene gjennom kanalen til C3-lomma.
+5. Trekk ledningene fra kammeret inn i C3-lomma rundt tappen. Lodd C3: 5V, GND, GPIO4, GPIO3 og 3V3. Ta VBUS og GND fra USB-C-brikken gjennom åpningen.
+6. Legg C3-en og driverkortet mellom kantene på bunnplata (gjerne med dobbeltsidig tape), fyll vektlomma (stående dokk), og skru på bunnplata.
 
 **Fastvare:** `esphome/skjold-dokk.yaml` (Skjold IR med `ir_navn: dokk`). Velg «Dokken» som IR-mål på Staven.
 
@@ -713,12 +757,13 @@ Driveren (AO3400 og motstandene på en liten bit hullkort) står i kammeret bak 
 Et lavt brett der fjernkontrollen ligger flatt med skjermen opp, så den går under TV-en. Passer standard og Hullkort (55 × 202,5 mm). Full variant (245,5 mm) er for lang.
 
 - **`dokk/skjold-dokk-flat-k2.3mf`, med magnetisk lading:**
-  - Brettet er 69 × 230,5 × 16 mm, og fjernkontrollen ligger 25 mm over bordet (Hullkort).
+  - Brettet er 83 × 230,5 × 16 mm, og fjernkontrollen ligger 25 mm over bordet (Hullkort).
   - **Handelen av pogo-kontakten** sitter i gulvet med flaten i flukt, rett under hunndelen i fjernkontrollens bunn. Bunnen må være `bunn_dokk`, som på den stående dokka. Magnetene trekker den på plass, og pinnene presses 0,9 mm.
   - **USB-C-brikken** sitter i halen til venstre, med kontakten ut gjennom endeveggen. Ledningskanalen går under gulvet.
   - **Bunnplata** (2 mm) skrus fast med 4 × selvgjengende M3 × 8 i forboringene. Gummiføttene sitter under den.
   - Kobling som på den stående dokka: VBUS til handelen +, GND til handelen −. Sjekk polariteten med multimeter før du lukker.
 - **`dokk/skjold-dokk-flat-uten-pogo-k2.3mf`, uten magnetisk lading:** brettet er 10 mm høyt, og du lader med kabel i halen.
+- **`dokk/skjold-dokk-flat-ir-k2.3mf`, med magnetisk lading og IR-sender:** se «IR i dokka» over.
 
 Felles for begge:
 - **Forsenkning:** følger omrisset med 0,6 mm klaring og 45° fas.

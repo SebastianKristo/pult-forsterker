@@ -9,7 +9,8 @@
      eget tyngdepunkt ligger bak hylla, så den lener seg mot ryggen
   5. kan printes uten støtte: ingen nedovervendte flater brattere enn 45° på vugga og sokkelen (utenom bunnen og
      små broer over hull)
-  6. IR-dokka (stl_ir/): tett toppdel, C3, lysdiodene og mottakeren får plass, fri sikt for lysdiodene, ingen støtte
+  6. IR i den stående og den flate dokka (stl_ir/, stl_flat_ir/): tette deler, delene får plass, frie ledningskanaler,
+     lysdiodene ≥ 0,5 mm fra bunnplata, fri sikt bakover, romslige lommer, ingen støtte; USB-C-åpningene i den flate går gjennom
 
 Bruk:  python3 dokk/sjekk_dokk.py"""
 import os
@@ -157,48 +158,101 @@ for p in ("vugge", "sokkel"):
     melding(m.area_faces[skraa].sum() < 30 and spenn <= 32,
             f"{p}: {m.area_faces[skraa].sum():.0f} mm² skrått overheng (krav < 30), lengste bro {spenn:.0f} mm (krav ≤ 32)")
 
-# 6. IR-dokka (stl_ir/ og asm/ir_deler*.stl fra lag_dokk.sh): tette deler, de kjøpte delene får plass, fri sikt for
-#    lysdiodene (kjegle ±17° som TSAL6200) og print uten støtte (toppdelen står på delingsflaten i z = 2)
-IR = os.path.join(HER, "stl_ir")
-if os.path.isdir(IR):
-    bunn = trimesh.load(os.path.join(STL, "sokkel_bunn.stl"))
-    vinkel, spre, irX, irz, inne = (tall(SC, n) for n in ("ir_vinkel", "ir_spre", "ir_X", "ir_z", "ir_inne"))
-    SY0, SY1, SB = tall(SC, "SY0"), tall(SC, "SY1"), tall(SC, "SB")
-    bakX, sideY = tall(SC, "ir_bak_X"), tall(SC, "ir_side_Y")
-    for navn, tredje in (("sokkel_topp", ("bak", [bakX, SY1, irz], 180)), ("sokkel_topp_side", ("side", [SB / 2, sideY, irz], 90))):
-        m = trimesh.load(os.path.join(IR, f"{navn}.stl"))
-        biter = [b for b in m.split(only_watertight=False) if abs(b.volume) >= 0.01]
-        melding(m.is_watertight and len(biter) == 1, f"IR ({tredje[0]}): {navn} er tett og ett legeme")
-        deler = trimesh.load(os.path.join(HER, "asm", "ir_deler" + ("_side" if tredje[0] == "side" else "") + ".stl"))
-        feil = []
-        for d in deler.split(only_watertight=False):
-            if d.volume < 0.05:
-                continue
-            v = max(overlapp(d, m), overlapp(d, bunn))
-            grense = 1.0 if (d.bounds[0][1] > 50 and abs(d.centroid[0]) < 8) else 0.05   # USB-C-kontakten stikker inn i åpningen
-            if v > grense:
-                feil.append(f"del ved {np.round(d.centroid, 1)}: {v:.2f} mm³")
-        melding(not feil, f"IR ({tredje[0]}): C3, lysdiodene, VS1838B og USB-C-brikken får plass" + ("" if not feil else ": " + "; ".join(feil)))
-        # fri sikt: stråler fra kuppelen i en kjegle på ±17° rundt aksen skal ikke treffe sokkelen eller vugga
-        hinder = trimesh.util.concatenate([m, D["vugge"]])
-        treff, n = 0, 0
-        for p0, yaw in ([[-irX, SY0, irz], -spre], [[irX, SY0, irz], spre], tredje[1:]):
-            y, v = np.radians(yaw), np.radians(vinkel)
-            akse = np.array([np.sin(y) * np.cos(v), -np.cos(y) * np.cos(v), np.sin(v)])
-            u = np.cross(akse, [0, 0, 1]); u /= np.linalg.norm(u); w = np.cross(akse, u)
-            start = np.array(p0, float) + akse * 0.4   # like foran ytterflaten (kuppelen ligger 0,3 mm inne)
-            for a in np.radians([0, 6, 12, 17]):
-                for b in np.radians(np.arange(0, 360, 30)):
-                    r = np.cos(a) * akse + np.sin(a) * (np.cos(b) * u + np.sin(b) * w)
-                    n += 1
-                    treff += len(hinder.ray.intersects_location([start], [r])[0]) > 0
-        melding(treff == 0, f"IR ({tredje[0]}): fri sikt fra alle tre lysdiodene (±17°): {treff} av {n} stråler treffer dokka")
-        z0 = m.bounds[0][2]
-        nz = m.face_normals[:, 2]
-        hoy = m.triangles_center[:, 2] > z0 + 0.3
-        skraa = (nz < -np.cos(np.radians(45))) & (nz > -0.996) & hoy
-        melding(m.area_faces[skraa].sum() < 30, f"IR ({tredje[0]}): {navn} har {m.area_faces[skraa].sum():.0f} mm² skrått overheng (krav < 30); "
-                "takene over lommene er flate broer ≤ 19 mm")
+# 6. IR i dokkene (stl_ir/, stl_flat_ir/ og asm/*ir_*.stl fra lag_dokk.sh): tette deler, de kjøpte delene får plass,
+#    ledningskanalene er frie, flensen på lysdiodene står ≥ 0,5 mm fra bunnplata, fri sikt bakover (kjegle ±17° som
+#    TSAL6200), romslige lommer (C3: ≥ 4 mm til pinneradene og over loddepunktene, driverkammer ≥ 20 × 12 × 7,5 mm),
+#    og print uten støtte (toppdelen står på delingsflaten i z = 2)
+def bro(m):
+    """bredeste flate bro (2 × største innskrevne radius i takflatene, sett ovenfra) og skrått overheng i mm²"""
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+    z0 = m.bounds[0][2]
+    nz = m.face_normals[:, 2]
+    hoy = m.triangles_center[:, 2] > z0 + 0.3
+    skraa = m.area_faces[(nz < -np.cos(np.radians(45))) & (nz > -0.996) & hoy].sum()
+    tri = m.triangles[(nz <= -0.996) & hoy]
+    spenn = 0.0
+    for z in np.unique(np.round(tri[:, 0, 2], 1)):
+        tak = unary_union([Polygon(t[:, :2]).buffer(0.01) for t in tri if abs(t[0, 2] - z) < 0.06])
+        lo, hi = 0.0, 50.0
+        for _ in range(20):
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if not tak.buffer(-mid).is_empty else (lo, mid)
+        spenn = max(spenn, 2 * lo)
+    return skraa, spenn
+
+
+def kjegle(starter, hinder, halv=17):
+    treff = n = 0
+    for start, akse in starter:
+        u = np.cross(akse, [0, 0, 1]); u /= np.linalg.norm(u); w = np.cross(akse, u)
+        for a in np.radians([0, 6, 12, halv]):
+            for b in np.radians(np.arange(0, 360, 30)):
+                r = np.cos(a) * akse + np.sin(a) * (np.cos(b) * u + np.sin(b) * w)
+                n += 1
+                treff += len(hinder.ray.intersects_location([start], [r])[0]) > 0
+    return treff, n
+
+
+def ir_sjekk(navn, topp, bunn, deler, kanaler, leds, hinder_ekstra, fil):
+    m = trimesh.load(topp)
+    bunn = trimesh.load(bunn)
+    biter = [b for b in m.split(only_watertight=False) if abs(b.volume) >= 0.01]
+    melding(m.is_watertight and len(biter) == 1, f"IR {navn}: {os.path.basename(topp)} er tett og ett legeme")
+    d_alle = trimesh.load(deler)
+    feil, flens = [], 99.0
+    for d in d_alle.split(only_watertight=False):
+        if d.volume < 0.05:
+            continue
+        v = max(overlapp(d, m), overlapp(d, bunn))
+        if v > 0.6:   # USB-C-kontaktene stikker litt inn i åpningen (0,1–0,5 mm³)
+            feil.append(f"del ved {np.round(d.centroid, 1)}: {v:.2f} mm³")
+    for p0, akse in leds:   # lysdiodene: delene nær hullet i ytterflaten
+        nær = [d for d in d_alle.split(only_watertight=False) if np.linalg.norm(d.centroid - p0) < 9]
+        for d in nær:
+            flens = min(flens, trimesh.proximity.closest_point(bunn, d.vertices)[1].min())
+    melding(not feil, f"IR {navn}: C3, lysdiodene, VS1838B, driverkortet og USB-C-brikken får plass" + ("" if not feil else ": " + "; ".join(feil)))
+    melding(flens >= 0.5, f"IR {navn}: lysdiodene står {flens:.2f} mm fra bunnplata (krav ≥ 0,5)")
+    k = trimesh.load(kanaler)
+    vk = overlapp(k, m) + overlapp(k, d_alle)
+    melding(vk < 0.05, f"IR {navn}: ledningskanalene ({tall(fil, 'ir_kanal_b')} mm, avrundet) er frie hele veien ({vk:.3f} mm³ i veien)")
+    t, n = kjegle([(p0 + akse * 0.4, akse) for p0, akse in leds], trimesh.util.concatenate([m] + hinder_ekstra))
+    melding(t == 0, f"IR {navn}: fri sikt fra lysdiodene (±17°): {t} av {n} stråler treffer dokka")
+    skraa, spenn = bro(m)
+    melding(skraa < 30 and spenn <= 32, f"IR {navn}: {skraa:.0f} mm² skrått overheng (krav < 30), lengste bro {spenn:.0f} mm (krav ≤ 32)")
+
+
+def akse(yaw, vinkel):
+    y, v = np.radians(yaw), np.radians(vinkel)
+    return np.array([np.sin(y) * np.cos(v), -np.cos(y) * np.cos(v), np.sin(v)])
+
+
+if os.path.isdir(os.path.join(HER, "stl_ir")):
+    vk, sp, irX, irz = (tall(SC, n) for n in ("ir_vinkel", "ir_spre", "ir_X", "ir_z"))
+    SY1, SB, sideY = tall(SC, "SY1"), tall(SC, "SB"), tall(SC, "ir_side_Y")
+    bak = [(np.array([-irX, SY1, irz]), akse(180 + sp, vk)), (np.array([irX, SY1, irz]), akse(180 - sp, vk))]
+    for v, ekstra in (("", []), ("_side", [(np.array([SB / 2, sideY, irz]), akse(90, vk))])):
+        ir_sjekk("stående" + (" (side)" if v else ""), os.path.join(HER, "stl_ir", f"sokkel_topp{v}.stl"), os.path.join(HER, "stl_ir", "sokkel_bunn.stl"),
+                 os.path.join(HER, "asm", f"ir_deler{v}.stl"), os.path.join(HER, "asm", f"ir_kanaler{v}.stl"), bak + ekstra, [D["vugge"]], SC)
+    tak, dz, c3b, lomme = tall(SC, "ir_tak"), tall(SC, "delt_z"), 18.0, 26.0
+    kx0, ky0, kx1, ky1 = (float(x) for x in re.search(r"ir_kam = \[([-\d., ]+)\]", open(SC).read()).group(1).split(","))
+    melding(tak - dz - 1.0 >= 4 and (lomme - c3b) / 2 >= 4 and kx1 - kx0 >= 20 and ky1 - ky0 >= 12 and tak - dz >= 7.5,
+            f"IR stående: C3-lomma har {(lomme - c3b) / 2:.1f} mm langs pinneradene og {tak - dz - 1.0:.1f} mm over loddepunktene; "
+            f"driverkammeret er {kx1 - kx0:.0f} × {ky1 - ky0:.0f} × {tak - dz:.0f} mm")
+FL_SC = os.path.join(HER, "skjold_dokk_flat.scad")
+if os.path.isdir(os.path.join(HER, "stl_flat_ir")):
+    kant = tall(FL_SC, "kant")
+    vk, sp, irz = (tall(FL_SC, n) for n in ("ir_vinkel", "ir_spre", "ir_z"))
+    xs = [float(x) for x in re.search(r"ir_x = \[([-\d., ]+)\]", open(FL_SC).read()).group(1).split(",")]
+    hale = [(np.array([xs[0], -2 * kant, irz]), akse(-sp, vk)), (np.array([xs[1], -2 * kant, irz]), akse(sp, vk))]
+    ir_sjekk("flat", os.path.join(HER, "stl_flat_ir", "brett.stl"), os.path.join(HER, "stl_flat_ir", "bunnplate.stl"),
+             os.path.join(HER, "asm", "flat_ir_deler.stl"), os.path.join(HER, "asm", "flat_ir_kanaler.stl"), hale, [], FL_SC)
+    # USB-C-åpningene går gjennom endeveggen (brikken i dokka og sporet for fjernkontrollens plugg)
+    for d in ("stl_flat", "stl_flat_ir"):
+        b = trimesh.load(os.path.join(HER, d, "brett.stl"))
+        gulv = 11.0 if d == "stl_flat_ir" else 9.0
+        apen = not b.contains([[10, -2 * kant + 0.3, 5.5], [27.5, -2 * kant + 0.3, gulv + 4.7]]).any()
+        melding(apen, f"{d}: USB-C-åpningene går gjennom endeveggen")
 
 print("ALT OK" if ok else "NOE FEILET")
 sys.exit(0 if ok else 1)

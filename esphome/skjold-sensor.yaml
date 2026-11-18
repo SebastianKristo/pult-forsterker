@@ -1,12 +1,13 @@
 # Skjold Sensor – liten romsensor: temperatur, luftfuktighet, lys (lux, valgfritt) og bevegelse (valgfritt).
-# ESP32-WROOM DevKit (30 eller 38 pinner) eller ESP32 D1 mini (MH-ET LIVE MiniKit o.l.) + SHT40 (eller SHT31 /
-# AHT20+BMP280) + BH1750 (GY-302) + AM312 mini-PIR. Samme fil og samme GPIO-er for begge kortene (IO21, IO22, IO27 og
-# IO2 finnes på pinneradene på ESP32 D1 mini). Sjekk silketrykket på ditt kort.
+# ESP32-WROOM DevKit (30 eller 38 pinner) eller ESP32 D1 mini (MH-ET LIVE MiniKit o.l.) + DHT11-modul (eller SHT40 /
+# SHT31 / AHT20+BMP280) + BH1750 (GY-302) + AM312 mini-PIR. Samme fil og samme GPIO-er for begge kortene (IO26, IO21,
+# IO22, IO27 og IO2 finnes på pinneradene på ESP32 D1 mini). Sjekk silketrykket på ditt kort.
 # Kabinett, deler og kobling: kabinett/sensor/LES_MEG.md. Wemos D1 mini-utgaven: skjold-sensor-d1mini.yaml.
 # Flash første gang med https://web.esphome.io (USB, Wi-Fi settes med Improv), deretter OTA.
 #
 # Kobling (ESP32 DevKit og ESP32 D1 mini):
-#   SHT40   VIN → 3V3   GND → GND   SDA → GPIO21   SCL → GPIO22
+#   DHT11-modul (PH2.0)   G → GND   V → 3V3   D → GPIO26
+#   SHT40 (i stedet)      VIN → 3V3   GND → GND   SDA → GPIO21   SCL → GPIO22
 #   BH1750  VCC → 3V3   GND → GND   SDA → GPIO21   SCL → GPIO22   ADDR → GND (0x23)
 #   AM312   VCC → 3V3   GND → GND   OUT → GPIO27
 #   LED 3 mm (statuslys): GPIO2 → 330 Ω → LED → GND   (GPIO2 er også den blå LED-en på kortet)
@@ -17,9 +18,9 @@
 substitutions:
   name: skjold-sensor
   friendly_name: Skjold Sensor
-  # sensoren sitter i eget kammer bak en dobbel skillevegg, men ESP32 varmer litt likevel:
-  # juster mot et kjent termometer etter en time i drift
-  temp_offset: "-0.3"
+  # sensoren sitter i eget kammer bak en dobbel skillevegg, men ESP-en varmer litt likevel:
+  # juster mot et kjent termometer etter en time i drift (DHT11 måler ±2 °C)
+  temp_offset: "0.0"
   # hvor lenge «Bevegelse» står på etter siste utløsning (AM312 holder selv i ca. 2 s)
   bevegelse_av: 30s
   oppdatering: 30s
@@ -66,9 +67,12 @@ i2c:
   frequency: 100kHz
 
 sensor:
-  # --- temperatur og luftfuktighet: SHT40 (anbefalt: ±0,2 °C, ±1,8 %RH, tåler kondens) ---
-  - platform: sht4x
-    address: 0x44
+  # --- temperatur og luftfuktighet: DHT11-modul (standard, PH2.0 G/V/D, D → GPIO26) ---
+  # DHT11 måler ±2 °C og ±5 %RH med 1 °C / 1 % oppløsning, og tåler ikke avlesning oftere enn ca. hvert 2. sekund.
+  # Pinnen får intern pull-up (standard i ESPHome for dht); modulen har som regel også sin egen 10 kΩ.
+  - platform: dht
+    model: DHT11
+    pin: GPIO26
     temperature:
       name: Temperatur
       id: temp
@@ -78,6 +82,12 @@ sensor:
       name: Luftfuktighet
       id: fukt
     update_interval: ${oppdatering}
+  # --- SHT40 i stedet for DHT11 (oppgradering: ±0,2 °C, ±1,8 %RH, tåler kondens; bygg kabinettet med th="sht40") ---
+  # - platform: sht4x
+  #   address: 0x44
+  #   temperature: { name: Temperatur, id: temp, filters: [ offset: "${temp_offset}" ] }
+  #   humidity: { name: Luftfuktighet, id: fukt }
+  #   update_interval: ${oppdatering}
   # --- SHT31 i stedet for SHT40 ---
   # - platform: sht3xd
   #   address: 0x44

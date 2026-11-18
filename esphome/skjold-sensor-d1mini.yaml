@@ -1,10 +1,12 @@
 # Skjold Sensor (Wemos D1 mini) – liten romsensor: temperatur, luftfuktighet, lys (lux, valgfritt) og bevegelse
-# (valgfritt). Wemos D1 mini (ESP8266) + SHT40 (eller SHT31 / AHT20+BMP280) + BH1750 (GY-302) + AM312 mini-PIR.
+# (valgfritt). Wemos D1 mini (ESP8266) + DHT11-modul (eller SHT40 / SHT31 / AHT20+BMP280) + BH1750 (GY-302) +
+# AM312 mini-PIR.
 # Kabinett, deler og kobling: kabinett/sensor/LES_MEG.md. ESP32-utgaven: skjold-sensor.yaml.
 # Flash første gang med https://web.esphome.io (USB, Wi-Fi settes med Improv), deretter OTA.
 #
 # Kobling (D1 mini):
-#   SHT40   VIN → 3V3   GND → G   SDA → D2 (GPIO4)   SCL → D1 (GPIO5)
+#   DHT11-modul (PH2.0)   G → G   V → 3V3   D → D6 (GPIO12)
+#   SHT40 (i stedet)      VIN → 3V3   GND → G   SDA → D2 (GPIO4)   SCL → D1 (GPIO5)
 #   BH1750  VCC → 3V3   GND → G   SDA → D2 (GPIO4)   SCL → D1 (GPIO5)   ADDR → G (0x23)
 #   AM312   VCC → 3V3   GND → G   OUT → D5 (GPIO14)
 #   LED 3 mm (statuslys): 3V3 → 330 Ω → LED → D4 (GPIO2)   (aktiv lav, som den blå LED-en på kortet; D4 må være høy
@@ -17,8 +19,8 @@ substitutions:
   name: skjold-sensor
   friendly_name: Skjold Sensor
   # sensoren sitter i eget kammer bak en dobbel skillevegg, men D1 mini varmer litt likevel:
-  # juster mot et kjent termometer etter en time i drift
-  temp_offset: "-0.3"
+  # juster mot et kjent termometer etter en time i drift (DHT11 måler ±2 °C)
+  temp_offset: "0.0"
   bevegelse_av: 30s
   oppdatering: 30s
 
@@ -61,9 +63,12 @@ i2c:
   frequency: 100kHz
 
 sensor:
-  # --- temperatur og luftfuktighet: SHT40 (anbefalt: ±0,2 °C, ±1,8 %RH, tåler kondens) ---
-  - platform: sht4x
-    address: 0x44
+  # --- temperatur og luftfuktighet: DHT11-modul (standard, PH2.0 G/V/D, D → D6 (GPIO12)) ---
+  # DHT11 måler ±2 °C og ±5 %RH med 1 °C / 1 % oppløsning, og tåler ikke avlesning oftere enn ca. hvert 2. sekund.
+  # Pinnen får intern pull-up (standard i ESPHome for dht); modulen har som regel også sin egen 10 kΩ.
+  - platform: dht
+    model: DHT11
+    pin: D6
     temperature:
       name: Temperatur
       id: temp
@@ -73,6 +78,12 @@ sensor:
       name: Luftfuktighet
       id: fukt
     update_interval: ${oppdatering}
+  # --- SHT40 i stedet for DHT11 (oppgradering: ±0,2 °C, ±1,8 %RH, tåler kondens; bygg kabinettet med th="sht40") ---
+  # - platform: sht4x
+  #   address: 0x44
+  #   temperature: { name: Temperatur, id: temp, filters: [ offset: "${temp_offset}" ] }
+  #   humidity: { name: Luftfuktighet, id: fukt }
+  #   update_interval: ${oppdatering}
   # --- SHT31 i stedet for SHT40 ---
   # - platform: sht3xd
   #   address: 0x44

@@ -5,6 +5,10 @@ og se **bevegelse (PIR)**. Inni sitter en **ESP32-WROOM DevKit**, en **Wemos D1 
 **ESP32 D1 mini** (MH-ET LIVE MiniKit o.l.) med ESPHome, så den dukker opp i Home Assistant av seg selv. I
 ESP32 D1 mini-utgaven går USB-kabelen ut **bak, nederst**, rett ned langs veggen.
 
+Standard temperatur- og fuktsensor er en vanlig **DHT11-modul** (sort kort 35 × 23 mm med PH2.0-kontakt). Den er
+billig og enkel å koble, men unøyaktig (±2 °C, ±5 %RH). **SHT40 er oppgraderingen**, og kabinettet finnes i en
+lavere utgave for den (`th = "sht40"`).
+
 ![Skjold Sensor, lys](render/01_skra_lys.png)
 
 Bilder: [skrått, lys](render/01_skra_lys.png) · [ovenfra, lys](render/02_ovenfra_lys.png) ·
@@ -29,9 +33,10 @@ og lysvindu, og med bordstativ.
 | | ESP32-WROOM DevKit | Wemos D1 mini | ESP32 D1 mini |
 |---|---|---|---|
 | `kort` i `skjold_sensor.scad` | `"esp32"` | `"d1mini"` | `"esp32d1"` |
-| Ytre mål (B × H × D) | 70 × 56 × 28 mm | 54 × 56 × 28 mm | 62 × 66 × 28 mm |
+| Ytre mål (B × H × D), DHT11-modul (standard) | 70 × 66 × 28 mm | 54 × 66 × 28 mm | 62 × 76 × 28 mm |
+| Ytre mål med SHT40 (`th = "sht40"`, `stl/<kort>/sht40/`) | 70 × 56 × 28 mm | 54 × 56 × 28 mm | 62 × 66 × 28 mm |
 | USB-kabelen | ut i høyre side | ut i høyre side | **ut bak, nederst** (kanal i baksiden) |
-| Filament (bunn + lokk) | ca. 30 + 16 g | ca. 25 + 13 g | ca. 30 + 17 g |
+| Filament (bunn + lokk) | ca. 33 + 18 g | ca. 28 + 15 g | ca. 34 + 19 g |
 | 3MF (Creality K2) | `skjold-sensor-esp32-k2.3mf` | `skjold-sensor-d1mini-k2.3mf` | `skjold-sensor-esp32d1-k2.3mf` |
 | ESPHome | [`esphome/skjold-sensor.yaml`](../../esphome/skjold-sensor.yaml) | [`esphome/skjold-sensor-d1mini.yaml`](../../esphome/skjold-sensor-d1mini.yaml) | samme som ESP32 DevKit: [`esphome/skjold-sensor.yaml`](../../esphome/skjold-sensor.yaml) |
 
@@ -46,11 +51,15 @@ Lokket finnes i fire utgaver for hvert kort (`stl/<kort>/`):
 
 Alle lokkene har statuslyset (3 mm LED). Den kan sløyfes: hullet er lite og ser ut som en prikk.
 
+3MF-filene og STL-ene rett i `stl/<kort>/` er for DHT11-modulen. For SHT40 (eller SHT31 / AHT20) ligger bunn, lokk,
+gullist og stativ i `stl/<kort>/sht40/`. Der er sensorkammeret 10 mm lavere, ellers er alt likt.
+
 ## Designet
 
 - **Rolig, avrundet boks** (R8 sett forfra) med 1,5 mm fas på forkanten, som de andre Skjold-produktene.
 - **Fronten er delt i to av en tynn gullist.** Over lista sitter PIR-kuppelen i midten, statuslyset til venstre og
-  lysvinduet til høyre, med SKJOLD i gull under. Under lista er tre vannrette luftespalter foran sensorkammeret.
+  lysvinduet til høyre, med SKJOLD i gull under. Under lista er seks vannrette luftespalter foran sensorkammeret (tre med
+  SHT40).
 - **Gullista ligger rett foran den doble skilleveggen** inni. Den viser hvor det varme ESP-rommet slutter og
   sensorkammeret begynner.
 - **Mørk variant:** sort kropp og lokk, samme gull. Bare filamentet byttes.
@@ -64,11 +73,17 @@ Alle lokkene har statuslyset (3 mm LED). Den kan sløyfes: hullet er lite og ser
 - **Luften går nedenfra og opp.** Romluft kommer inn gjennom spaltene i bunnen, i begge endene og foran, og går rett
   forbi temperatur- og fuktsensoren. Varmen fra ESP-en går ut gjennom spaltene på toppen, altså bort fra sensoren.
   Heng derfor sensoren med spaltene i bunnen ned.
-- **Temperatur- og fuktkortet ligger vannrett** midt i kammeret, i to spor. Det skyves inn forfra før lokket settes på.
+- **DHT11-modulen står parallelt med veggen, helt fram i kammeret**, med det blå DHT11-gitteret 1 mm bak de seks
+  spaltene i lokket. Romluften kommer nedenfra og fra endene og går rett forbi gitteret og ut foran. Kortet skrus
+  med to M2,5 × 8 selvgjengende skruer gjennom festehullene, i to tapper fra bakveggen. Skrutrekkeren kommer forfra
+  mens lokket er av. Loddingen bak kortet har 13 mm klaring til bakveggen.
+- **PH2.0-kontakten** peker mot høyre. Pluggen har plass med ca. 9 mm fritt foran kontakten (12 mm til veggen på
+  D1 mini). Kabelen bøyes opp og går gjennom et hull på 6 × 6 mm i skilleveggen til ESP-rommet. Tett hullet gjerne
+  med litt Blu Tack, så varm luft ikke siver ned i kammeret. Du kan også lodde ledninger på stiftraden ved siden av.
+  Dupont-plugger passer bare hvis stiftene peker mot høyre, ikke fram mot lokket.
+- **SHT40-utgaven** (`th = "sht40"`): kortet ligger vannrett midt i kammeret, i to spor, og skyves inn forfra.
   Sensorbrikka bør vende ned mot bunnspaltene. Sporene passer kort som er inntil 13,6 mm brede (`sensW`) og
-  10–20 mm lange.
-- **Ledningene fra sensorkortet** går under skilleveggen gjennom en åpning på 8 × 3,5 mm ved sensoren. Tett den
-  gjerne med litt Blu Tack, så varm luft ikke siver ned i kammeret.
+  10–20 mm lange. Ledningene går under skilleveggen gjennom en åpning på 8 × 3,5 mm.
 - **ESP-kortet ligger flatt** på fire hjørnestøtter, med USB-enden inn mot høyre vegg. To pinner på lokket holder den
   andre enden nede. USB-kabelen går ut i høyre side.
 - **ESP32 D1 mini-utgaven** er annerledes, se under.
@@ -84,10 +99,11 @@ Alle lokkene har statuslyset (3 mm LED). Den kan sløyfes: hullet er lite og ser
   sensorkammeret og skilleveggen, og opp til kontakten. Kanalen er **åpen mot veggen og nedover**, men lukket mot
   sensorkammeret, så kammeret holdes rent.
 - **Pluggen skyves opp i kanalen nedenfra**, også mens sensoren henger på veggen. Kabelen går rett ned langs veggen
-  bak sensoren. Pluggen kan være **inntil 13 × 12 mm** i tverrsnitt og **inntil ca. 21 mm** lang (fra munningen). Det
+  bak sensoren. Pluggen kan være **inntil 13 × 12 mm** i tverrsnitt og **inntil ca. 31 mm** lang (fra munningen; ca.
+  21 mm i SHT40-utgaven). Det
   passer vanlige rette micro-USB- og USB-C-plugger. Kontakten kan sitte under kortet (micro-USB på MH-ET LIVE MiniKit)
   eller oppå (enkelte USB-C-utgaver), for kanalen tar begge.
-- **Nøkkelhullene** sitter høyere opp (40 mm avstand, 46 mm over underkanten) og er godt klar av kanalen.
+- **Nøkkelhullene** sitter høyere opp (40 mm avstand, 56 mm over underkanten; 46 mm med SHT40) og er godt klar av kanalen.
 - **På bordstativet** bøyes kabelen bakover under sensoren, gjennom et hakk i ryggen og i et spor i foten
   ([bilde](render/14_esp32d1_stativ_lys.png)). Det trengs en myk kabel, for bøyen er krapp.
 - **PIR-en (AM312)** sitter i et C-formet rør på lokket. Kuppelen stikker ut gjennom hullet i fronten.
@@ -122,7 +138,9 @@ Typiske priser på AliExpress (2026), inkl. frakt til Norge.
 | **ESP32 DevKit V1 / ESP32-WROOM-32 DevKitC** (30 eller 38 pinner) | 1 | 40–60 kr | *eller* D1 mini under. Uten stiftlister, eller med dem fjernet |
 | **Wemos D1 mini** (ESP8266, CH340) | 1 | 25–40 kr | *eller* ESP32 over |
 | **ESP32 D1 mini** / **MH-ET LIVE MiniKit** (ESP32-WROOM-32, 39 × 31,4 mm, to rader på hver side) | 1 | 40–60 kr | *eller* de to over. USB ut bak (`kort = "esp32d1"`). Uten stiftlister |
-| **SHT40 module** (I²C, ca. 10 × 10–13 mm) | 1 | 25–45 kr | anbefalt: ±0,2 °C, ±1,8 %RH |
+| **DHT11 Temperature Humidity Sensor Module 3.3V/5V** (EC Buying o.l.: sort kort 35 × 23 mm, PH2.0 3-pin G/V/D, stiftrad, PWR-LED, to Ø3-hull) | 1 | 15–30 kr | **standard.** ±2 °C, ±5 %RH. Kabel med PH2.0-plugg følger ofte med |
+| Selvgjengende skrue **M2,5 × 8** | 2 | – | DHT11-modulen |
+| *oppgradering:* **SHT40 module** (I²C, ca. 10 × 10–13 mm) | 1 | 25–45 kr | ±0,2 °C, ±1,8 %RH. Bygg kabinettet med `th = "sht40"` |
 | *alternativ:* **SHT31-D module** (GY-SHT31-D) | 1 | 30–50 kr | samme kobling, `sht3xd` i YAML |
 | *alternativ:* **AHT20 + BMP280** kombikort | 1 | 15–25 kr | gir også lufttrykk. Mindre nøyaktig fukt |
 | **BH1750 GY-302** | 1 | 10–20 kr | valgfritt (lux) |
@@ -132,21 +150,29 @@ Typiske priser på AliExpress (2026), inkl. frakt til Norge.
 | Senkeskrue **M3 × 12**, selvgjengende for plast (eller vanlig M3 i Ø2,7-hull) | 2 | – | lokket, bakfra |
 | Selvgjengende skrue **M2,5 × 6** | 2 | – | GY-302 |
 | Silikonledning 26–28 AWG | ca. 1 m | 15–30 kr | |
-| Micro-USB- eller USB-C-kabel + 5 V-lader (1 A) | 1 | – | pluggen kan være inntil 11 × 7,5 mm (ESP32 D1 mini: 13 × 12 mm, inntil ca. 21 mm lang, rett plugg) |
+| Micro-USB- eller USB-C-kabel + 5 V-lader (1 A) | 1 | – | pluggen kan være inntil 11 × 7,5 mm (ESP32 D1 mini: 13 × 12 mm, inntil ca. 31 mm lang, rett plugg) |
 | *bordstativ:* skrue **M3 × 8** med flatt hode + 2 gummiføtter Ø10 mm | 2 + 2 | – | |
 
 Totalt ca. **100–200 kr** med alle sensorene.
 
 **HC-SR501 passer ikke i hullet.** Kuppelen er Ø23 mm og kortet 32 × 24 mm. Den virker med samme fastvare (OUT til
-samme pinne, VCC til 5 V), men trenger et større hull. Bruk heller AM312 eller LD2410. **DHT22 anbefales ikke.** Den
-er tregere og mindre nøyaktig enn SHT40, og den driver over tid.
+samme pinne, VCC til 5 V), men trenger et større hull. Bruk heller AM312 eller LD2410.
+
+**DHT11 er det enkle valget, SHT40 er oppgraderingen.** DHT11 måler ±2 °C og ±5 %RH, med 1 °C og 1 % oppløsning.
+Den måler bare 20–90 %RH, og den tåler ikke å bli lest oftere enn ca. hvert 2. sekund (fastvaren leser hvert
+30. sekund). Fint for å se trender i et rom, men ikke til bad eller presis styring. SHT40 er ti ganger mer nøyaktig, tåler
+kondens og koster omtrent det samme. DHT22 anbefales ikke: den er tregere enn SHT40 og driver over tid.
 
 ## Kobling
 
-Alle sensorene får 3,3 V. Lys- og fuktsensoren deler I²C-bussen.
+Alle sensorene får 3,3 V. DHT11-modulen bruker én datapinne (enkeltbuss). Lyssensoren (og SHT40, om du bruker den)
+går på I²C-bussen.
 
 | Fra | ESP32 DevKit | Wemos D1 mini | ESP32 D1 mini (pinne på kortet) |
 |---|---|---|---|
+| DHT11-modul, PH2.0 **D** (data) | GPIO26 | D6 (GPIO12) | **IO26**: ytre rad på RST-siden, 3. pinne fra enden uten USB (der D1 mini har D0) |
+| DHT11-modul, PH2.0 **V** (VCC) | 3V3 | 3V3 | **3V3**: ytre rad på RST-siden, 8. pinne |
+| DHT11-modul, PH2.0 **G** (GND) | GND | G | **GND**: se under |
 | SHT40 / SHT31 / AHT20 SDA · BH1750 SDA | GPIO21 | D2 (GPIO4) | **IO21**: ytre rad på TXD-siden, 4. pinne fra enden uten USB (der D1 mini har D2) |
 | SHT40 / SHT31 / AHT20 SCL · BH1750 SCL | GPIO22 | D1 (GPIO5) | **IO22**: ytre rad på TXD-siden, 3. pinne (der D1 mini har D1) |
 | BH1750 ADDR | GND (adresse 0x23) | G (0x23) | GND |
@@ -156,7 +182,7 @@ Alle sensorene får 3,3 V. Lys- og fuktsensoren deler I²C-bussen.
 | Statuslys (3 mm LED) | GPIO2 → 330 Ω → LED → GND | 3V3 → 330 Ω → LED → D4 (GPIO2), aktiv lav | **IO2** → 330 Ω → LED → GND. IO2 er indre rad på TXD-siden, 8. pinne |
 
 **ESP32 D1 mini bruker de samme GPIO-ene som ESP32 DevKit**, så samme fastvare (`skjold-sensor.yaml`, `board:
-esp32dev`) virker på begge. Alle fire pinnene (IO21, IO22, IO27, IO2) finnes på pinneradene, og IO2 er også den blå
+esp32dev`) virker på begge. Alle fem pinnene (IO26, IO21, IO22, IO27, IO2) finnes på pinneradene, og IO2 er også den blå
 LED-en på kortet. Pinneplasseringen over gjelder MH-ET LIVE MiniKit, talt fra enden uten USB (antenneenden), med
 WROOM-modulen opp. De ytre radene er D1 mini-kompatible. **Kloner kan ha en annen rekkefølge, så sjekk alltid
 silketrykket på ditt kort.**
@@ -183,13 +209,17 @@ Entiteter i Home Assistant: **Temperatur**, **Luftfuktighet**, **Duggpunkt**, **
 
 - Uten lyssensor eller PIR: kommenter ut `bh1750`- eller `Bevegelse`-blokken. Ellers blinker statuslyset fordi en
   sensor ikke svarer.
-- SHT31 eller AHT20 + BMP280: bytt til den kommenterte blokken i YAML-fila.
-- `temp_offset` (standard −0,3 °C): juster mot et kjent termometer etter en time i drift.
+- **DHT11 (standard)** leses med `platform: dht`, `model: DHT11` på GPIO26 (ESP32) eller D6 (D1 mini), hvert
+  30. sekund. Pinnen får intern pull-up i tillegg til modulens egen. Vi antar at modulen har 10 kΩ, slik de fleste har;
+  det er ikke sjekket.
+- SHT40, SHT31 eller AHT20 + BMP280: kommenter ut `dht`-blokken og bruk den kommenterte blokken i YAML-fila. Duggpunkt
+  virker med alle, siden de bruker de samme id-ene (`temp`, `fukt`).
+- `temp_offset` (standard 0 °C): juster mot et kjent termometer etter en time i drift.
 - `bevegelse_av` (standard 30 s): hvor lenge «Bevegelse» står på etter siste utløsning.
 
 ## Print (Creality K2)
 
-Velg 3MF-fila etter kortet: `skjold-sensor-esp32-k2.3mf` (ESP32 DevKit), `skjold-sensor-d1mini-k2.3mf` (Wemos D1 mini)
+Velg 3MF-fila etter kortet (alle er for DHT11-modulen; for SHT40, bruk STL-ene i `stl/<kort>/sht40/`): `skjold-sensor-esp32-k2.3mf` (ESP32 DevKit), `skjold-sensor-d1mini-k2.3mf` (Wemos D1 mini)
 eller `skjold-sensor-esp32d1-k2.3mf` (ESP32 D1 mini, USB ut bak). Hver har bunn, lokk med gullist og bordstativ på én
 plate.
 Filament 1 = lys (bunn, lokk), 2 = sort (stativ), 3 = gull (gullist og SKJOLD). Andre lokk ligger som STL i
@@ -208,8 +238,9 @@ Filament 1 = lys (bunn, lokk), 2 = sort (stativ), 3 = gull (gullist og SKJOLD). 
 
 1. **Lodd ledninger** (ca. 8–10 cm) direkte i hullene på sensorene og ESP-kortet. Bruk ikke stiftlister, da blir det
    for trangt. Se [Kobling](#kobling).
-2. **Temperatur- og fuktkortet:** skyv det inn i sporene i sensorkammeret forfra, med sensorbrikka ned. Før
-   ledningene under skilleveggen og opp i ESP-rommet. Tett åpningen med litt Blu Tack.
+2. **DHT11-modulen:** sett PH2.0-kabelen i, før kabelen opp gjennom hullet i skilleveggen, og skru kortet fast i de
+   to tappene forfra med 2 × M2,5 × 8, med DHT11-gitteret fram. Tett hullet med litt Blu Tack.
+   (SHT40: skyv kortet inn i sporene forfra med sensorbrikka ned, og før ledningene under skilleveggen.)
 3. **ESP-kortet:** legg det på hjørnestøttene med USB-enden mot åpningen i høyre vegg. ESP32 D1 mini: legg det på
    høykant med USB-enden ned, rett over USB-kanalen, og WROOM-modulen fram.
 4. **Lokket:** trykk AM312 inn i røret bakfra (kuppelen ut). Skru GY-302 mot lysblokka med to M2,5 × 6, med
@@ -233,7 +264,10 @@ Alle mål står øverst i `skjold_sensor.scad`:
   54,4 × 27,9 mm, og D1 mini er 34,2 × 25,6 mm. Standard er 55,0 × 28,6 og 34,6 × 26,0.
 - `vL`/`vB`: lomma for ESP32 D1 mini (standard 40,4 × 32,4 mm; MH-ET LIVE MiniKit er 39,0 × 31,4 mm).
   `kanB`/`kanZ`: USB-kanalens bredde og dybde (standard 13 × 12,5 mm). Mål pluggen på kabelen din.
-- `sensW`: bredden på temperatur- og fuktkortet (standard 13,6 mm).
+- `dhtHullX`/`dhtHullA`/`dhtHullD`: DHT11-modulens festehull. Avstanden fra venstre kortkant, avstanden mellom hullene
+  og Ø (standard 24, 18,5 og 3 mm). **Usikkert:** anslått fra et produktbilde. Mål ditt kort. `dhtL`/`dhtB`:
+  kortet (35 × 23 mm).
+- `th`: `"dht11mod"` (standard) eller `"sht40"`. `sensW`: bredden på SHT40-kortet (standard 13,6 mm).
 - `luxHull`: avstanden fra BH1750-brikka til festehullene på ditt GY-302-kort (standard 4,45 mm, fra referansen).
   **Usikkert:** kort fra ulike leverandører kan ha brikka litt forskjøvet. Sjekk at brikka havner rett bak kanalen.
 - `pirHull`/`pirRorD`: AM312-kuppelen og -kroppen (standard Ø12,2 og Ø10,5, fra referansen).
