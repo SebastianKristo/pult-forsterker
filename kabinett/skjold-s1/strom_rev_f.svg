@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 980" width="1640" height="980" font-family="Sora, 'IBM Plex Sans', Arial, sans-serif">
+  <!-- Skjold S1 rev F – strøm: 24 V inn → sikring → vippebryter → relé (forsterker) og omformer 24 → 5,1 V (Pi, skjerm, relé).
+       Rød = 24 V, oransje = 24 V via reléet, blå = 5,1 V, sort = GND (felles), grå stiplet = styresignal fra GPIO.
+       Ledningene tegnes først, boksene over. -->
+  <defs>
+    <style>
+      .boks{fill:#ffffff;stroke:#1d1d1f;stroke-width:2.5}
+      .gull{fill:#fbf3e2;stroke:#d9a441;stroke-width:2.5}
+      .t{font-size:22px;font-weight:600;fill:#1d1d1f}
+      .s{font-size:16px;fill:#55554f}
+      .m{font-family:'IBM Plex Mono',monospace;font-size:14px;fill:#55554f}
+      .v24{stroke:#d63b2f;stroke-width:5;fill:none}
+      .v24r{stroke:#e8862a;stroke-width:5;fill:none}
+      .v5{stroke:#2f6fd6;stroke-width:4;fill:none}
+      .gnd{stroke:#1d1d1f;stroke-width:4;fill:none}
+      .sig{stroke:#8b8b86;stroke-width:2.5;fill:none;stroke-dasharray:8 6}
+      .lab{font-size:15px;font-weight:600}
+    </style>
+    <marker id="pil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8b8b86"/></marker>
+  </defs>
+  <rect width="1640" height="980" fill="#f7f6f2"/>
+  <text x="40" y="58" font-size="34" font-weight="600" fill="#1d1d1f">Skjold S1 rev F · strøm</text>
+  <text x="40" y="92" class="s">24 V inn → sikring → vippebryter → relé til forsterkeren, og omformer 24 → 5,1 V til Pi, skjerm og relé. All GND er felles.</text>
+
+  <!-- ===== ledninger ===== -->
+  <!-- 24 V hovedlinje -->
+  <path class="v24" d="M230 225H290M460 225H520M670 225H730M900 225H990"/>
+  <!-- etter bryteren: relé COM, omformer IN+, LED-ringer + -->
+  <path class="v24" d="M990 225V235H1060"/>
+  <path class="v24" d="M990 225V470H1080"/>
+  <path class="v24" d="M990 360H570V420"/>
+  <!-- relé NO → forsterker -->
+  <path class="v24r" d="M1270 258H1360"/>
+  <!-- høyttalere -->
+  <path d="M1470 150V118H1600" stroke="#1d1d1f" stroke-width="3" fill="none"/>
+  <!-- 5,1 V: omformer → Pi, skjerm, relé VCC -->
+  <path class="v5" d="M1310 470H1345V440H1390M1345 470V545H1390M1345 440V310H1240V280"/>
+  <!-- styresignal GPIO27 → relé IN, og LED-transistorer -->
+  <path class="sig" d="M360 470H390V650H1030V265H1058" marker-end="url(#pil)"/>
+  <path class="sig" d="M360 520H418" marker-end="url(#pil)"/>
+  <!-- GND -->
+  <path class="gnd" d="M375 280V730H1600V258H1580M200 570V730H375M570 570V730M1195 570V730"/>
+  <circle cx="1195" cy="730" r="10" fill="#1d1d1f"/>
+
+  <!-- ===== bokser ===== -->
+  <rect x="40" y="170" width="190" height="110" rx="14" class="boks"/>
+  <text x="135" y="212" text-anchor="middle" class="t">Adapter</text>
+  <text x="135" y="238" text-anchor="middle" class="s">24 V DC · 5 A</text>
+  <text x="135" y="262" text-anchor="middle" class="m">≥ 120 W</text>
+
+  <rect x="290" y="170" width="170" height="110" rx="14" class="boks"/>
+  <text x="375" y="212" text-anchor="middle" class="t">DC-kontakt</text>
+  <text x="375" y="238" text-anchor="middle" class="s">bak, 5,5 × 2,5</text>
+  <text x="375" y="262" text-anchor="middle" class="m">senter = +</text>
+
+  <rect x="520" y="170" width="150" height="110" rx="14" class="boks"/>
+  <text x="595" y="212" text-anchor="middle" class="t">Sikring</text>
+  <text x="595" y="238" text-anchor="middle" class="s">5 A, træg</text>
+  <text x="595" y="262" text-anchor="middle" class="m">i +-ledningen</text>
+
+  <rect x="730" y="170" width="170" height="110" rx="14" class="boks"/>
+  <text x="815" y="212" text-anchor="middle" class="t">Vippebryter</text>
+  <text x="815" y="238" text-anchor="middle" class="s">KCD1, bak</text>
+  <text x="815" y="262" text-anchor="middle" class="m">bryter +</text>
+
+  <circle cx="990" cy="225" r="8" fill="#d63b2f"/>
+  <text x="1002" y="410" class="lab" fill="#d63b2f">+24 V etter bryteren</text>
+
+  <rect x="1060" y="150" width="210" height="130" rx="14" class="gull"/>
+  <text x="1165" y="188" text-anchor="middle" class="t">Relémodul 5 V</text>
+  <text x="1165" y="212" text-anchor="middle" class="s">1 kanal, optokobler</text>
+  <text x="1078" y="240" class="m">COM ← +24 V</text>
+  <text x="1078" y="262" class="m">NO → forsterker</text>
+
+  <rect x="1360" y="150" width="220" height="130" rx="14" class="boks"/>
+  <text x="1470" y="188" text-anchor="middle" class="t">TPA3116D2</text>
+  <text x="1470" y="212" text-anchor="middle" class="s">2 × 50 W</text>
+  <text x="1378" y="240" class="m">VCC ← NO · GND</text>
+  <text x="1378" y="262" class="m">+ 2200 µF / 35 V</text>
+  <text x="1470" y="108" text-anchor="middle" class="s">høyttalere L / R</text>
+  <text x="1282" y="300" class="lab" fill="#e8862a">24 V bare når S1 er på</text>
+
+  <rect x="40" y="420" width="320" height="150" rx="14" class="boks"/>
+  <text x="200" y="460" text-anchor="middle" class="t">Pi GPIO (BCM)</text>
+  <text x="58" y="494" class="m">27 → relé IN (høy = på)</text>
+  <text x="58" y="516" class="m">22/23/24/25/12 → LED-ringer</text>
+  <text x="58" y="538" class="m">4 → PCM5102 XSMT</text>
+
+  <rect x="420" y="420" width="300" height="150" rx="14" class="boks"/>
+  <text x="570" y="460" text-anchor="middle" class="t">LED-ringer (5 knapper)</text>
+  <text x="570" y="486" text-anchor="middle" class="s">12–24 V-ringer: + til +24 V</text>
+  <text x="438" y="518" class="m">− → transistor → GND</text>
+  <text x="438" y="540" class="m">styres fra GPIO via 1 kΩ</text>
+  <text x="590" y="350" class="lab" fill="#d63b2f">før reléet: lyser også i standby</text>
+
+  <rect x="1080" y="420" width="230" height="150" rx="14" class="gull"/>
+  <text x="1195" y="460" text-anchor="middle" class="t">Omformer</text>
+  <text x="1195" y="486" text-anchor="middle" class="s">24 → 5,1 V · 5 A</text>
+  <text x="1098" y="518" class="m">IN+ ← +24 V</text>
+  <text x="1098" y="540" class="m">OUT+ → 5,1 V</text>
+  <text x="1250" y="330" class="lab" fill="#2f6fd6">5,1 V til reléets VCC</text>
+
+  <rect x="1390" y="400" width="210" height="80" rx="14" class="boks"/>
+  <text x="1495" y="434" text-anchor="middle" class="t">Raspberry Pi 4</text>
+  <text x="1495" y="460" text-anchor="middle" class="s">USB-C-hale</text>
+
+  <rect x="1390" y="505" width="210" height="80" rx="14" class="boks"/>
+  <text x="1495" y="539" text-anchor="middle" class="t">Skjermkort</text>
+  <text x="1495" y="563" text-anchor="middle" class="s">HDMI-RGB21, 5 V</text>
+
+  <text x="1215" y="765" class="lab" fill="#1d1d1f">stjernepunkt GND</text>
+  <text x="40" y="722" class="lab" fill="#1d1d1f">GND / −</text>
+
+  <!-- ===== forklaring ===== -->
+  <g transform="translate(40,820)">
+    <path class="v24" d="M0 10H50"/><text x="62" y="16" class="s">24 V, 18 AWG</text>
+    <path class="v24r" d="M250 10H300"/><text x="312" y="16" class="s">24 V via reléet, 18 AWG</text>
+    <path class="v5" d="M560 10H610"/><text x="622" y="16" class="s">5,1 V, 18–20 AWG, kort</text>
+    <path class="gnd" d="M880 10H930"/><text x="942" y="16" class="s">GND</text>
+    <path class="sig" d="M1030 10H1080"/><text x="1092" y="16" class="s">styresignal, 26 AWG</text>
+    <text x="0" y="60" class="s">Mål 5,1 V på omformerens utgang uten last før Pi-en kobles til (Pi 4 tåler maks 5,25 V). USB-lydkortene, USB-switchen og PCM5102 får strøm fra Pi-en.</text>
+    <text x="0" y="88" class="s">Reléet er NO (åpent uten strøm): forsterkeren er av til Skjold har startet, så det smeller ikke i høyttalerne. Standby slår av reléet, Pi-en går videre.</text>
+  </g>
+</svg>
