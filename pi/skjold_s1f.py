@@ -9,6 +9,7 @@ Daemonen (ki_amp_daemon.py) gir et `api`-objekt med handlingene (set_input, set_
 """
 import json
 import os
+import re
 import threading
 import time
 
@@ -68,6 +69,238 @@ def load_pins(path=None):
             cfg["timing"] = {**DEFAULT_TIMING, **(cfg.get("timing") or {})}
             return cfg
     raise FileNotFoundError("fant ingen s1f_pins.yaml")
+
+
+# ---------------------------------------------------------------- pinne-editoren (web-UI → /api/s1f/pins)
+
+ETC_PINS = PIN_FILES[0]          # brukerens egne pinner – vinner over standardfila og overskrives ikke av oppdateringer
+
+# Den 40-pinners headeren på Pi 4: fysisk pinne → "3V3" | "5V" | "GND" | BCM-nummer (int). 27/28 er ID_SD/ID_SC (GPIO0/1).
+HEADER = {1: "3V3", 2: "5V", 3: 2, 4: "5V", 5: 3, 6: "GND", 7: 4, 8: 14, 9: "GND", 10: 15, 11: 17, 12: 18, 13: 27, 14: "GND",
+          15: 22, 16: 23, 17: "3V3", 18: 24, 19: 10, 20: "GND", 21: 9, 22: 25, 23: 11, 24: 8, 25: "GND", 26: 7, 27: 0, 28: 1,
+          29: 5, 30: "GND", 31: 6, 32: 12, 33: 13, 34: "GND", 35: 19, 36: 16, 37: 26, 38: 20, 39: "GND", 40: 21}
+FYSISK = {g: p for p, g in HEADER.items() if isinstance(g, int)}          # BCM → fysisk pinne
+LYDKORT_FYS = (31, 40)                                                   # holdes fri til lydkortet (og GND)
+RESERVERT = {0: "HAT-EEPROM (ID_SD)", 1: "HAT-EEPROM (ID_SC)", 18: "I²S BCK til lydkortet (PCM5102)",
+             19: "I²S LRCK til lydkortet (PCM5102)", 21: "I²S DIN til lydkortet (PCM5102)"}
+ALT_NAVN = {2: "I²C SDA", 3: "I²C SCL", 4: "GPCLK0", 7: "SPI CE1", 8: "SPI CE0", 9: "SPI MISO", 10: "SPI MOSI", 11: "SPI SCLK",
+            14: "UART TXD", 15: "UART RXD", 18: "PCM CLK", 19: "PCM FS", 20: "PCM DIN", 21: "PCM DOUT"}
+_I2C = "I²C må være av (ingen dtparam=i2c_arm=on i /boot/firmware/config.txt). Pinnen har fast pull-up til 3,3 V"
+_UART = "UART må være av (enable_uart=0 og ingen seriell konsoll i cmdline.txt)"
+_SPI = "SPI må være av (ingen dtparam=spi=on i /boot/firmware/config.txt)"
+VARSEL = {2: _I2C, 3: _I2C, 14: _UART, 15: _UART, 7: _SPI, 8: _SPI, 9: _SPI, 10: _SPI, 11: _SPI}
+
+# Funksjonene en pinne kan ha. id = «seksjon.nøkkel» (eller bare «nøkkel» på toppnivå) i s1f_pins.yaml.
+FUNKSJONER = [
+    {"id": "buttons.bt", "navn": "Knapp BT/AirPlay", "gruppe": "knapp"},
+    {"id": "buttons.aux", "navn": "Knapp AUX", "gruppe": "knapp"},
+    {"id": "buttons.radio", "navn": "Knapp RADIO", "gruppe": "knapp"},
+    {"id": "buttons.usb", "navn": "Knapp USB", "gruppe": "knapp"},
+    {"id": "buttons.power", "navn": "Knapp av/på", "gruppe": "knapp"},
+    {"id": "leds.bt", "navn": "Lys BT/AirPlay", "gruppe": "lys"},
+    {"id": "leds.aux", "navn": "Lys AUX", "gruppe": "lys"},
+    {"id": "leds.radio", "navn": "Lys RADIO", "gruppe": "lys"},
+    {"id": "leds.usb", "navn": "Lys USB", "gruppe": "lys"},
+    {"id": "leds.power", "navn": "Lys av/på", "gruppe": "lys"},
+    {"id": "encoder.a", "navn": "Volumhjul A", "gruppe": "hjul"},
+    {"id": "encoder.b", "navn": "Volumhjul B", "gruppe": "hjul"},
+    {"id": "encoder.sw", "navn": "Volumhjul trykk", "gruppe": "hjul"},
+    {"id": "relay", "navn": "Relé (24 V til forsterkeren)", "gruppe": "rele"},
+    {"id": "headphone_detect", "navn": "Hodetelefondetekt", "gruppe": "hp"},
+    {"id": "usb_switch.pulse", "navn": "USB-switch puls", "gruppe": "usbsw"},
+    {"id": "usb_switch.sense", "navn": "USB-switch PC 1-lys (valgfri)", "gruppe": "usbsw"},
+    {"id": "dac_xsmt", "navn": "DAC XSMT (demping)", "gruppe": "dac"},
+]
+FUNK_IDS = [f["id"] for f in FUNKSJONER]
+FUNK_NAVN = {f["id"]: f["navn"] for f in FUNKSJONER}
+# Uten disse virker ikke S1 som den skal – gir en advarsel (ikke feil) når de står uten pinne
+VIKTIGE = ["buttons.bt", "buttons.aux", "buttons.radio", "buttons.usb", "buttons.power", "encoder.a", "encoder.b", "encoder.sw", "relay"]
+
+
+def standard_fil():
+    """Standardfila (fra repoet eller /usr/local/share/ki-amp), uten brukerens /etc/skjold-fil."""
+    for p in PIN_FILES[1:]:
+        if os.path.exists(p):
+            return p
+    raise FileNotFoundError("fant ingen standard s1f_pins.yaml")
+
+
+def _del(fid):
+    return fid.split(".", 1) if "." in fid else (None, fid)
+
+
+def pin_bruk(cfg):
+    """{funksjon-id: BCM-nummer eller None} fra en innlest pinnefil."""
+    out = {}
+    for fid in FUNK_IDS:
+        sek, key = _del(fid)
+        v = (cfg.get(sek) or {}).get(key) if sek else cfg.get(key)
+        out[fid] = v if isinstance(v, int) and not isinstance(v, bool) else None
+    return out
+
+
+def _norm(v):
+    """Pinneverdi fra JSON: int, «17», «GPIO17», None/«»/«null» → int eller None. Ugyldig → ValueError."""
+    if v is None or isinstance(v, bool) and v is False:
+        return None
+    if isinstance(v, bool):
+        raise ValueError("ugyldig pinne: true")
+    if isinstance(v, int):
+        return v
+    s = str(v).strip().lower()
+    if s in ("", "null", "none", "ingen", "~"):
+        return None
+    if s.startswith("gpio"):
+        s = s[4:]
+    if not s.isdigit():
+        raise ValueError(f"ugyldig pinne: {v!r}")
+    return int(s)
+
+
+def valider_pinner(tildeling):
+    """Sjekk en full tildeling {funksjon-id: BCM|None} mot reglene i pi/tests/test_s1f.py.
+
+    Feil (lagres ikke): ukjent funksjon, ugyldig nummer, reservert pinne (0/1 HAT-EEPROM, 18/19/21 I²S), fysisk pinne
+    31–40 (lydkortet), samme pinne brukt to ganger. Advarsler (lagres): I²C/UART/SPI må være av, viktig funksjon uten pinne.
+    Returnerer {"ok", "feil": [str], "advarsler": [str], "pinner": normalisert tildeling}."""
+    feil, adv, ren = [], [], {}
+    for fid, v in (tildeling or {}).items():
+        if fid not in FUNK_NAVN:
+            feil.append(f"ukjent funksjon: {fid}")
+            continue
+        try:
+            ren[fid] = _norm(v)
+        except ValueError as e:
+            feil.append(f"{FUNK_NAVN[fid]}: {e}")
+    brukt = {}
+    for fid in FUNK_IDS:
+        g = ren.get(fid)
+        if g is None:
+            continue
+        navn = FUNK_NAVN[fid]
+        if g not in FYSISK:
+            feil.append(f"{navn}: GPIO{g} finnes ikke (0–27)")
+            continue
+        if g in RESERVERT:
+            feil.append(f"{navn}: GPIO{g} er reservert – {RESERVERT[g]}")
+        elif LYDKORT_FYS[0] <= FYSISK[g] <= LYDKORT_FYS[1]:
+            feil.append(f"{navn}: GPIO{g} er fysisk pinne {FYSISK[g]} – pinne 31–40 holdes fri til lydkortet")
+        brukt.setdefault(g, []).append(fid)
+    for g, fids in sorted(brukt.items()):
+        if len(fids) > 1:
+            feil.append(f"GPIO{g} er brukt to ganger: " + " og ".join(FUNK_NAVN[f] for f in fids))
+    for g, fids in sorted(brukt.items()):
+        if g in VARSEL and g not in RESERVERT:
+            adv.append(f"GPIO{g} ({ALT_NAVN[g]}, {FUNK_NAVN[fids[0]]}): {VARSEL[g]}")
+    for fid in VIKTIGE:
+        if fid in ren and ren[fid] is None:
+            adv.append(f"{FUNK_NAVN[fid]} har ingen pinne")
+    return {"ok": not feil, "feil": feil, "advarsler": adv, "pinner": ren}
+
+
+def _yaml_verdi(v):
+    return "null" if v is None else str(v)
+
+
+def _ny_linje(innrykk, key, v, fid):
+    venstre = f"{innrykk}{key}: {_yaml_verdi(v)}"
+    if v is None:
+        kom = f"{FUNK_NAVN[fid]} – ikke i bruk"
+    else:
+        kom = f"{FUNK_NAVN[fid]} (pinne {FYSISK.get(v, '?')}" + (f", {ALT_NAVN[v]} – {VARSEL[v].split(' (')[0]}" if v in VARSEL else "") + ")"
+    return f"{venstre:<16} # {kom}"
+
+
+MERKE = "# Endret i web-UI-et (Innstillinger → Maskinvare → Pinner). Slett fila (eller trykk «Tilbakestill») for standardpinnene."
+
+
+def skriv_pinner(tekst, tildeling):
+    """Sett pinneverdiene i teksten til en s1f_pins.yaml og behold resten (kommentarer, timing, lyd).
+
+    Linjer der verdien er uendret, røres ikke. Endrede linjer får en ny kommentar (funksjon + fysisk pinne). Mangler en
+    nøkkel (eldre fil), legges den til i seksjonen – eller seksjonen legges til nederst."""
+    linjer = tekst.splitlines()
+    for fid, v in tildeling.items():
+        sek, key = _del(fid)
+        rx = re.compile(r"^(\s+)" + re.escape(key) + r":(.*)$") if sek else re.compile(r"^()" + re.escape(key) + r":(.*)$")
+        inne, funnet, slutt = sek is None, False, None
+        for i, l in enumerate(linjer):
+            if re.match(r"^\S", l) and not l.startswith("#"):
+                if sek:
+                    if inne and slutt is None:
+                        slutt = i
+                    inne = l.split(":", 1)[0].strip() == sek
+                    continue
+            m = rx.match(l)
+            if inne and m and (sek is None or m.group(1)):
+                if m.group(2).split("#", 1)[0].strip() == "":
+                    continue                     # en seksjon med samme navn, ikke en verdi
+                funnet = True
+                if _scalar(m.group(2).split("#", 1)[0]) != v:
+                    linjer[i] = _ny_linje(m.group(1), key, v, fid)
+                break
+        if funnet:
+            continue
+        if sek is None:
+            linjer.append(_ny_linje("", key, v, fid))
+            continue
+        hode = next((i for i, l in enumerate(linjer) if re.match(r"^" + re.escape(sek) + r":\s*(#.*)?$", l)), None)
+        if hode is None:
+            linjer += [f"{sek}:", _ny_linje("  ", key, v, fid)]
+        else:
+            j = hode + 1
+            while j < len(linjer) and (linjer[j].startswith((" ", "\t")) or not linjer[j].strip()):
+                j += 1
+            while j > hode + 1 and not linjer[j - 1].strip():
+                j -= 1
+            linjer.insert(j, _ny_linje("  ", key, v, fid))
+    if MERKE not in linjer:
+        linjer.insert(0, MERKE)
+    return "\n".join(linjer) + "\n"
+
+
+def lagre_pinner(tildeling, ut=None, kilde=None):
+    """Valider og skriv pinnene til /etc/skjold/s1f_pins.yaml (atomisk). `tildeling` kan være delvis: det som mangler,
+    beholdes fra fila som brukes nå. Teksten tas fra `ut` hvis den finnes (brukerens egne endringer i timing o.l.
+    beholdes), ellers fra standardfila. Ugyldig → ValueError med valideringen som args[1]. Returnerer valideringen + "fil"."""
+    ut = ut or ETC_PINS
+    if kilde is None:
+        kilde = ut if os.path.exists(ut) else standard_fil()
+    with open(kilde) as fh:
+        tekst = fh.read()
+    full = {**pin_bruk(parse_yaml(tekst)), **(tildeling or {})}
+    res = valider_pinner(full)
+    if not res["ok"]:
+        raise ValueError("; ".join(res["feil"]), res)
+    ny = skriv_pinner(tekst, res["pinner"])
+    if pin_bruk(parse_yaml(ny)) != res["pinner"]:      # skal aldri skje – men skriv aldri en fil som ikke leses tilbake likt
+        raise ValueError("pinnefila ble ikke som forventet", res)
+    d = os.path.dirname(ut)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    tmp = ut + ".tmp"
+    with open(tmp, "w") as fh:
+        fh.write(ny); fh.flush(); os.fsync(fh.fileno())
+    os.replace(tmp, ut)
+    return {**res, "fil": ut}
+
+
+def tilbakestill_pinner(ut=None):
+    """Slett /etc/skjold/s1f_pins.yaml, så standardfila brukes igjen. True hvis det fantes en fil."""
+    ut = ut or ETC_PINS
+    if os.path.exists(ut):
+        os.remove(ut)
+        return True
+    return False
+
+
+def pinne_regler():
+    """Reglene og headeren til web-UI-et (samme data som valider_pinner bruker)."""
+    return {"header": [{"fys": p, "type": g if isinstance(g, str) else ("id" if g in (0, 1) else "gpio"),
+                        "gpio": g if isinstance(g, int) else None} for p, g in sorted(HEADER.items())],
+            "reservert": {str(g): t for g, t in RESERVERT.items()}, "lydkort_fys": list(LYDKORT_FYS),
+            "varsel": {str(g): t for g, t in VARSEL.items()}, "alt": {str(g): t for g, t in ALT_NAVN.items()},
+            "funksjoner": FUNKSJONER, "viktige": VIKTIGE}
 
 
 # ---------------------------------------------------------------- knappelogikk (ren, tid sendes inn)
