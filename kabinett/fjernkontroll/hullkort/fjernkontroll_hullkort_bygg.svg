@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1900" width="2000" height="1900" font-family="Sora, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#f7f6f2"/>
+<text x="40" y="62" font-size="38" font-weight="700" fill="#1d1d1f">Skjold Fjernkontroll – hullkort-utgaven: slik bygges den</text>
+<text x="40" y="100" font-size="19" fill="#55554f">XIAO ESP32S3 + MCP23017-modul + 14 brytere på stripekort + 2,8″ skjerm + IR-kort + LiPo. Ingen kretskort å bestille. Detaljer: hullkort/tegning.pdf og skjema.pdf.</text>
+<rect x="40" y="130" width="600" height="620" rx="18" fill="#fff" stroke="#d6d4cc" stroke-width="2"/><text x="62" y="170" font-size="25" font-weight="700" fill="#1d1d1f">1 · Lagene, sett fra siden</text>
+<rect x="80" y="200" width="520" height="62" rx="8" fill="#d9a441" stroke="#8a6a1e" stroke-width="2.5"/>
+<text x="340.0" y="231.0" text-anchor="middle" font-size="18" font-weight="700" fill="#1d1d1f">Taster (hetter) + gullring</text>
+<text x="340.0" y="253.0" text-anchor="middle" font-size="13" fill="#1d1d1f">printes, settes ovenfra i toppen</text>
+<rect x="80" y="278" width="520" height="62" rx="8" fill="#e8e6df" stroke="#9a988f" stroke-width="2.5"/>
+<text x="340.0" y="309.0" text-anchor="middle" font-size="18" font-weight="700" fill="#1d1d1f">Topp (topp.stl)</text>
+<text x="340.0" y="331.0" text-anchor="middle" font-size="13" fill="#1d1d1f">skjermlomme + tastehull</text>
+<rect x="80" y="356" width="520" height="62" rx="8" fill="#2b2f3a" stroke="#111" stroke-width="2.5"/>
+<text x="340.0" y="387.0" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">2,8″ skjerm HP28030</text>
+<text x="340.0" y="409.0" text-anchor="middle" font-size="13" fill="#fff">i lomma øverst, flatkabler ned bak</text>
+<rect x="80" y="434" width="520" height="62" rx="8" fill="#c7a46a" stroke="#7a5a20" stroke-width="2.5"/>
+<text x="340.0" y="465.0" text-anchor="middle" font-size="18" font-weight="700" fill="#1d1d1f">Stripekort 19 × 47 hull</text>
+<text x="340.0" y="487.0" text-anchor="middle" font-size="13" fill="#1d1d1f">14 brytere 6×6 på oppsiden</text>
+<rect x="80" y="512" width="520" height="62" rx="8" fill="#7f65b8" stroke="#4a3680" stroke-width="2.5"/>
+<text x="340.0" y="543.0" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">Gulvet: XIAO, MCP, adaptere</text>
+<text x="340.0" y="565.0" text-anchor="middle" font-size="13" fill="#fff">på tynn tape, ledninger langs sidene</text>
+<rect x="80" y="590" width="520" height="62" rx="8" fill="#9aa3ad" stroke="#58616b" stroke-width="2.5"/>
+<text x="340.0" y="621.0" text-anchor="middle" font-size="18" font-weight="700" fill="#1d1d1f">Batteri + IR-kort</text>
+<text x="340.0" y="643.0" text-anchor="middle" font-size="13" fill="#1d1d1f">batteri i lomma, IR-kort i nesen</text>
+<rect x="80" y="668" width="520" height="62" rx="8" fill="#3a3a3c" stroke="#111" stroke-width="2.5"/>
+<text x="340.0" y="699.0" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">Bunn (bunn.stl / bunn_dokk.stl)</text>
+<text x="340.0" y="721.0" text-anchor="middle" font-size="13" fill="#fff">5 × M2×10 skrues inn nedenfra</text>
+<text x="80" y="764" font-size="15" fill="#55554f">16,0 mm tykk · stripene langs fjernkontrollen · USB-C ut i halen</text>
+<rect x="670" y="130" width="460" height="1000" rx="18" fill="#fff" stroke="#d6d4cc" stroke-width="2"/><text x="692" y="170" font-size="25" font-weight="700" fill="#1d1d1f">2 · I bunnen, ovenfra</text>
+<g transform="translate(720 215) scale(0.86)">
+<rect x="0" y="10" width="420" height="900" rx="40" fill="#ecebe5" stroke="#9a988f" stroke-width="3"/>
+<text x="210.0" y="80" text-anchor="middle" font-size="16" fill="#55554f">▲ nesen (IR peker hit)</text>
+<rect x="90" y="30" width="240" height="28" rx="8" fill="#3fae6a" stroke="#1f6e3e" stroke-width="2.5"/>
+<text x="210.0" y="50.0" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">IR-kortet</text>
+<rect x="100" y="100" width="220" height="320" rx="8" fill="#b9c0c7" stroke="#58616b" stroke-width="2.5"/>
+<text x="210.0" y="260.0" text-anchor="middle" font-size="19" font-weight="700" fill="#1d1d1f">LiPo 603450</text>
+<text x="210.0" y="282.0" text-anchor="middle" font-size="13" fill="#1d1d1f">1200 mAh, JST-PH</text>
+<rect x="200" y="490" width="90" height="95" rx="8" fill="#e3c79c" stroke="#9b6a2a" stroke-width="2.5"/>
+<text x="245.0" y="537.5" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">FPC 6p</text>
+<text x="245.0" y="559.5" text-anchor="middle" font-size="13" fill="#1d1d1f">berøring</text>
+<rect x="130" y="605" width="150" height="120" rx="8" fill="#e3c79c" stroke="#9b6a2a" stroke-width="2.5"/>
+<text x="205.0" y="665.0" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">FPC 18p</text>
+<text x="205.0" y="687.0" text-anchor="middle" font-size="13" fill="#1d1d1f">skjermen</text>
+<rect x="70" y="735" width="150" height="90" rx="8" fill="#9c86c9" stroke="#4a3680" stroke-width="2.5"/>
+<text x="145.0" y="780.0" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">MCP23017</text>
+<text x="145.0" y="802.0" text-anchor="middle" font-size="13" fill="#fff">CJMCU-2317</text>
+<rect x="270" y="710" width="50" height="140" rx="8" fill="#8b8b86" stroke="#444" stroke-width="2.5"/>
+<text x="295.0" y="786.0" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">pogo</text>
+<rect x="150" y="835" width="115" height="58" rx="8" fill="#4a4a4c" stroke="#111" stroke-width="2.5"/>
+<text x="207.5" y="864.0" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">XIAO</text>
+<text x="207.5" y="886.0" text-anchor="middle" font-size="13" fill="#fff">ESP32S3</text>
+<rect x="185" y="890" width="50" height="22" fill="#9a988f"/>
+<rect x="30" y="460" width="360" height="430" rx="6" fill="none" stroke="#7a5a20" stroke-width="2" stroke-dasharray="8 6"/><text x="40" y="480" font-size="14" fill="#7a5a20">stripekortet ligger over (stiplet)</text>
+<path d="M45 50 V865 H150" stroke="#2bb5b0" stroke-width="4" fill="none"/>
+<path d="M220 430 H370 V810 L270 850" stroke="#d63b2f" stroke-width="4" fill="none"/>
+</g>
+<text x="900" y="1022" text-anchor="middle" font-size="15" fill="#55554f">▼ halen: USB-C ut</text>
+<text x="690" y="1050" font-size="14" fill="#2b8f8a">turkis: IR-ledninger (5) langs venstre side</text>
+<text x="690" y="1070" font-size="14" fill="#b12a20">rød: batteri → XIAO BAT+ / BAT−</text>
+<text x="690" y="1090" font-size="14" fill="#55554f">alt på tynn tape; detaljer: tegning-side2.png</text>
+<rect x="1160" y="130" width="800" height="1000" rx="18" fill="#fff" stroke="#d6d4cc" stroke-width="2"/><text x="1182" y="170" font-size="25" font-weight="700" fill="#1d1d1f">3 · Hva kobles til hva</text>
+<rect x="1200" y="560" width="190" height="230" rx="8" fill="#4a4a4c" stroke="#111" stroke-width="2.5"/>
+<text x="1295.0" y="675.0" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">XIAO</text>
+<text x="1295.0" y="697.0" text-anchor="middle" font-size="13" fill="#fff">ESP32S3</text>
+<rect x="1500" y="190" width="200" height="150" rx="8" fill="#9c86c9" stroke="#4a3680" stroke-width="2.5"/>
+<text x="1600.0" y="265.0" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">MCP23017</text>
+<text x="1600.0" y="287.0" text-anchor="middle" font-size="13" fill="#fff">I²C 0x20</text>
+<rect x="1760" y="175" width="180" height="180" rx="8" fill="#c7a46a" stroke="#7a5a20" stroke-width="2.5"/>
+<text x="1850.0" y="265.0" text-anchor="middle" font-size="18" font-weight="700" fill="#1d1d1f">14 taster</text>
+<text x="1850.0" y="287.0" text-anchor="middle" font-size="13" fill="#1d1d1f">GPA0–7, GPB0–5</text>
+<polyline points="1700,265 1760,265" stroke="#1d1d1f" stroke-width="5" fill="none" stroke-linejoin="round"/>
+<text x="1745" y="380" font-size="13" fill="#55554f">GPA0 av · 1 Skjold · 2 meny</text>
+<text x="1745" y="399" font-size="13" fill="#55554f">3 opp · 4 ned · 5 venstre</text>
+<text x="1745" y="418" font-size="13" fill="#55554f">6 høyre · 7 OK</text>
+<text x="1745" y="437" font-size="13" fill="#55554f">GPB0 tilbake · 1 avslutt · 2 ⏯</text>
+<text x="1745" y="456" font-size="13" fill="#55554f">3 demp · 4 vol+ · 5 vol−</text>
+<text x="1745" y="475" font-size="13" fill="#55554f">andre bein → GND-stripe (E, I, O)</text>
+<polyline points="1375,560 1375,265 1500,265" stroke="#2f6fd6" stroke-width="7" fill="none" stroke-linejoin="round"/>
+<text x="1205" y="220" font-size="14" fill="#1d4f9c">XIAO → MCP (5 ledn.):</text>
+<text x="1205" y="239" font-size="14" fill="#1d4f9c">D4 → SDA · D5 → SCL</text>
+<text x="1205" y="258" font-size="14" fill="#1d4f9c">D1 → INTA · 3V3 → VCC</text>
+<text x="1205" y="277" font-size="14" fill="#1d4f9c">GND → GND</text>
+<rect x="1500" y="500" width="200" height="120" rx="8" fill="#e3c79c" stroke="#9b6a2a" stroke-width="2.5"/>
+<text x="1600.0" y="560.0" text-anchor="middle" font-size="18" font-weight="700" fill="#1d1d1f">FPC 18p</text>
+<text x="1600.0" y="582.0" text-anchor="middle" font-size="13" fill="#1d1d1f">skjermen (SPI)</text>
+<rect x="1500" y="690" width="200" height="100" rx="8" fill="#e3c79c" stroke="#9b6a2a" stroke-width="2.5"/>
+<text x="1600.0" y="740.0" text-anchor="middle" font-size="18" font-weight="700" fill="#1d1d1f">FPC 6p</text>
+<text x="1600.0" y="762.0" text-anchor="middle" font-size="13" fill="#1d1d1f">berøring (I²C)</text>
+<rect x="1760" y="560" width="180" height="190" rx="8" fill="#2b2f3a" stroke="#111" stroke-width="2.5"/>
+<text x="1850.0" y="655.0" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">2,8″ skjerm</text>
+<text x="1850.0" y="677.0" text-anchor="middle" font-size="13" fill="#fff">HP28030</text>
+<polyline points="1390,600 1500,600" stroke="#2bb54d" stroke-width="7" fill="none" stroke-linejoin="round"/>
+<polyline points="1390,740 1500,740" stroke="#e0a400" stroke-width="7" fill="none" stroke-linejoin="round"/>
+<polyline points="1700,560 1730,560 1730,620 1760,620" stroke="#555" stroke-width="4" fill="none" stroke-linejoin="round"/>
+<polyline points="1700,740 1730,740 1730,700 1760,700" stroke="#555" stroke-width="4" fill="none" stroke-linejoin="round"/>
+<text x="1405" y="430" font-size="14" fill="#1f7a33">XIAO → 18p (skjerm):</text>
+<text x="1405" y="449" font-size="14" fill="#1f7a33">D8 SCK · D10 MOSI · D2 D/C</text>
+<text x="1405" y="468" font-size="14" fill="#1f7a33">D3 RES · D9 → AO3400A → baklys</text>
+<text x="1405" y="487" font-size="14" fill="#1f7a33">+ 3V3 og GND fra MCP-modulen</text>
+<text x="1405" y="815" font-size="14" fill="#8a6a00">→ 6p (berøring): SDA, SCL,</text>
+<text x="1405" y="834" font-size="14" fill="#8a6a00">RES, 3V3, GND</text>
+<rect x="1500" y="880" width="200" height="110" rx="8" fill="#3fae6a" stroke="#1f6e3e" stroke-width="2.5"/>
+<text x="1600.0" y="935.0" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">IR-kortet</text>
+<text x="1600.0" y="957.0" text-anchor="middle" font-size="13" fill="#fff">2 IR-dioder · VS1838B</text>
+<polyline points="1340,790 1340,935 1500,935" stroke="#2bb5b0" stroke-width="7" fill="none" stroke-linejoin="round"/>
+<text x="1720" y="915" font-size="14" fill="#2b8f8a">D6 → IR TX (AO3400A)</text>
+<text x="1720" y="934" font-size="14" fill="#2b8f8a">D7 ← IR RX (VS1838B)</text>
+<text x="1720" y="953" font-size="14" fill="#2b8f8a">BAT+ → 6,8 Ω → dioder</text>
+<text x="1720" y="972" font-size="14" fill="#2b8f8a">MCP GPB6 → VS1838B VCC</text>
+<rect x="1200" y="870" width="120" height="90" rx="8" fill="#b9c0c7" stroke="#58616b" stroke-width="2.5"/>
+<text x="1260.0" y="915.0" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">LiPo</text>
+<text x="1260.0" y="937.0" text-anchor="middle" font-size="13" fill="#1d1d1f">1200 mAh</text>
+<polyline points="1260,870 1260,790" stroke="#d63b2f" stroke-width="7" fill="none" stroke-linejoin="round"/>
+<rect x="1200" y="995" width="240" height="80" rx="8" fill="#8b8b86" stroke="#444" stroke-width="2.5"/>
+<text x="1320.0" y="1035.0" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">Pogo (dokk)</text>
+<text x="1320.0" y="1057.0" text-anchor="middle" font-size="13" fill="#fff">+ → 1N5819 → XIAO 5V</text>
+<text x="1460" y="1020" font-size="13" fill="#1d1d1f">Pogo+ → 68k/100k → MCP GPB7 (i dokken)</text>
+<text x="1460" y="1039" font-size="13" fill="#1d1d1f">D0: BAT+ → 1 MΩ → D0 → 1 MΩ + 100 nF → GND</text>
+<rect x="40" y="1160" width="1920" height="700" rx="18" fill="#fff" stroke="#d6d4cc" stroke-width="2"/><text x="62" y="1200" font-size="25" font-weight="700" fill="#1d1d1f">4 · Byggerekkefølge</text>
+<circle cx="80" cy="1244" r="15" fill="#d9a441"/><text x="80" y="1250" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">1</text><text x="108" y="1250" font-size="19" fill="#1d1d1f">Print topp.stl, bunn.stl (eller bunn_dokk.stl), hetter og IR-vindu fra stl_hu/ (PLA/PETG, 0,2 mm).</text>
+<circle cx="80" cy="1290" r="15" fill="#d9a441"/><text x="80" y="1296" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">2</text><text x="108" y="1296" font-size="19" fill="#1d1d1f">Skjær stripekortet til 19 × 47 hull (stripene på langs). Kutt 3 × 3 hull i hjørnene ved halen, bor Ø2,4 til midtskruen.</text>
+<circle cx="80" cy="1336" r="15" fill="#d9a441"/><text x="80" y="1342" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">3</text><text x="108" y="1342" font-size="19" fill="#1d1d1f">Kutt stripene i de 9 hullene på tegningen (3,5 mm bor vridd for hånd). Mål at ingen stripe henger sammen over et kutt.</text>
+<circle cx="80" cy="1382" r="15" fill="#d9a441"/><text x="80" y="1388" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">4</text><text x="108" y="1388" font-size="19" fill="#1d1d1f">Lodd de 14 bryterne på oppsiden. Klipp beina 0,8 mm under kortet. Lenk GND-stripene E, I og O, og ett svart til MCP GND.</text>
+<circle cx="80" cy="1428" r="15" fill="#d9a441"/><text x="80" y="1434" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">5</text><text x="108" y="1434" font-size="19" fill="#1d1d1f">Lodd 14 tasteledninger (30 AWG, én farge per pinne) i hullene på tegningen – til MCP GPA0–GPA7 og GPB0–GPB5.</text>
+<circle cx="80" cy="1474" r="15" fill="#d9a441"/><text x="80" y="1480" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">6</text><text x="108" y="1480" font-size="19" fill="#1d1d1f">XIAO: lodd batteriledningene på BAT-putene bak, R9/R10/C3 (batterimåling) og 1N5819 (dokk) før den limes. Så D0–D10, 3V3, GND, 5V.</text>
+<circle cx="80" cy="1520" r="15" fill="#d9a441"/><text x="80" y="1526" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">7</text><text x="108" y="1526" font-size="19" fill="#1d1d1f">MCP-modulen: R3 (VCC→INTA), R11/R12 (dokk→GPB7). Koble SDA, SCL, INTA, VCC, GND til XIAO, og GPB6 til IR-mottakerens VCC.</text>
+<circle cx="80" cy="1566" r="15" fill="#d9a441"/><text x="80" y="1572" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">8</text><text x="108" y="1572" font-size="19" fill="#1d1d1f">Skjermadapterne: R8, R16 og AO3400A (Q2) med R6/R7. Ledninger til XIAO (SCK, MOSI, D/C, RES, baklys) og MCP (SDA, SCL, 3V3, GND).</text>
+<circle cx="80" cy="1612" r="15" fill="#d9a441"/><text x="80" y="1618" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">9</text><text x="108" y="1618" font-size="19" fill="#1d1d1f">IR-kortet: 2 IR-dioder i serie + 6,8 Ω fra BAT+, AO3400A fra D6, 100 µF, VS1838B til D7. 5 ledninger langs venstre side.</text>
+<circle cx="80" cy="1658" r="15" fill="#d9a441"/><text x="80" y="1664" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">10</text><text x="108" y="1664" font-size="19" fill="#1d1d1f">Legg i bunnen: IR-kortet i sporet, batteriet i lomma, XIAO (USB-C i åpningen), MCP og adaptere på tape. Ledninger langs sidene.</text>
+<circle cx="80" cy="1704" r="15" fill="#d9a441"/><text x="80" y="1710" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">11</text><text x="108" y="1710" font-size="19" fill="#1d1d1f">Gjennomgangstest med multimeter FØR batteriet: ingen pip 3V3–GND/BAT+–BAT−, hver tast piper bare mot sin MCP-pinne.</text>
+<circle cx="80" cy="1750" r="15" fill="#d9a441"/><text x="80" y="1756" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">12</text><text x="108" y="1756" font-size="19" fill="#1d1d1f">Skjermen i lomma i toppen, flatkablene ned i adapterne (kontaktene ned). Hullkortet på stolpene, toppen på, 5 × M2×10 nedenfra.</text>
+<circle cx="80" cy="1796" r="15" fill="#d9a441"/><text x="80" y="1802" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">13</text><text x="108" y="1802" font-size="19" fill="#1d1d1f">Flash via USB-C: esphome run esphome/skjold-fjernkontroll-hullkort.yaml. Koble batteriet – sjekk + og − på pluggen først!</text>
+</svg>

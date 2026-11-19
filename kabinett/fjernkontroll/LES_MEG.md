@@ -138,6 +138,8 @@ Sjekken kontrollerer kollisjoner og at hver aktuator treffer sin bryter og ingen
 
 ![Innmaten i hullkort-utgaven](hullkort/render_inni.png)
 
+**Byggeoversikt på én side:** [hullkort/fjernkontroll_hullkort_bygg.png](hullkort/fjernkontroll_hullkort_bygg.png) viser lagene, delene i bunnen, hva som kobles til hva og byggerekkefølgen (laget av `hullkort/lag_byggeoversikt.py`).
+
 Denne utgaven har **ingen kretskort å bestille** og **ingen fin lodding**. Den passer hvis du ikke stoler på et kretskort du ikke kan rette opp selv. Alt kjøpes ferdig:
 
 - en Seeed XIAO ESP32S3,
