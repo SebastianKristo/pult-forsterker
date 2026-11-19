@@ -1527,6 +1527,23 @@ def _airplay_conf_name():
         return None
 
 
+def _splash_navn(navn):
+    """Skriv navnet til oppstartsskjermen (Plymouth) og lag bildet på nytt. install_splash.sh gjør ingenting
+    hvis bildet er det samme; ellers oppdateres initramfs (tar litt tid, i bakgrunnen)."""
+    try:
+        f = os.path.join(os.path.dirname(STATE_FILE), "navn")
+        if _read_text(f).strip() == navn:
+            return
+        with open(f, "w") as fh:
+            fh.write(navn + "\n")
+        src = _upd_src()
+        if src and os.path.isfile(os.path.join(src, "pi", "install_splash.sh")):
+            subprocess.run(["bash", os.path.join(src, "pi", "install_splash.sh")], timeout=600,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print("Oppstartsskjerm:", e, flush=True)
+
+
 def apply_name(force_services=False):
     """Sett spillernavnet. Tjenestene (AirPlay, Spotify, Blåtann) endres/restartes bare når navnet faktisk endres
     (ved oppstart kun hvis det avviker fra det installasjonen satte, dvs. KI_AMP_NAME)."""
@@ -1539,6 +1556,8 @@ def apply_name(force_services=False):
     if old == new or (old is None and new == NAME_ENV and not force_services):
         _name_applied[0] = new; return
     _name_applied[0] = new
+    if HW:
+        threading.Thread(target=_splash_navn, args=(new,), daemon=True).start()   # navnet på oppstartsskjermen
     if HW and os.path.exists(AVAHI_SVC):
         threading.Thread(target=start_mdns_avahi, daemon=True).start()   # nytt navn i mDNS-annonsen
     if not HW:

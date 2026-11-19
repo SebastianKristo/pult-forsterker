@@ -21,14 +21,22 @@ fi
 
 T=/usr/share/plymouth/themes/skjold
 mkdir -p "$T"
+# Større logo med enhetsnavnet under (skjold_splash.py). Navnet skriver daemonen i /var/lib/ki-amp/navn når det endres;
+# ellers KI_AMP_NAME. KI_SPLASH_NAVN=0 i /etc/ki-amp.env gir bare logoen.
+NAVN="$(cat /var/lib/ki-amp/navn 2>/dev/null | head -n1)"
+[ -n "$NAVN" ] || NAVN="$(sed -n 's/^KI_AMP_NAME=//p' /etc/ki-amp.env 2>/dev/null | tail -1 | tr -d '"')"
+grep -q '^KI_SPLASH_NAVN=0' /etc/ki-amp.env 2>/dev/null && NAVN=""
+NY="$(mktemp --suffix=.png)"
+if python3 "$HER/skjold_splash.py" "$HER/touch/oppstart.png" "$NY" --navn "$NAVN" --rot "${ROT:-0}" 2>/dev/null; then LOGO="$NY"; fi
 if ! cmp -s "$LOGO" "$T/logo.png"; then cp "$LOGO" "$T/logo.png"; endret=1; fi
+rm -f "$NY"
 cat > "$T/skjold.script.ny" <<'P'
 // Skjold: logoen midt på svart, og en rolig «pust» så det synes at noe skjer (oppstart og oppdatering)
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
 logo = Image("logo.png");
-// ca. 42 % av skjermen langs logoens lange side, uansett om panelet står eller ligger
-skala = Math.Min(Window.GetWidth() * 0.42 / logo.GetWidth(), Window.GetHeight() * 0.42 / logo.GetHeight());
+// ca. 88 % av skjermen langs logoens lange side, uansett om panelet står eller ligger
+skala = Math.Min(Window.GetWidth() * 0.88 / logo.GetWidth(), Window.GetHeight() * 0.8 / logo.GetHeight());
 if (skala > 1) skala = 1;
 logo = logo.Scale(logo.GetWidth() * skala, logo.GetHeight() * skala);
 s = Sprite(logo);
