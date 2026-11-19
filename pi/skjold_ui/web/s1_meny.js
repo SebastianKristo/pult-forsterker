@@ -428,6 +428,10 @@
   if (typeof S.set.hpDev !== 'number') S.set.hpDev = 0;
   if (typeof SDEF !== 'undefined' && !('hpDev' in SDEF)) SDEF.hpDev = 0;
   if (!SETS.some(x => x.o && x.o[0] === 'hpDev')) settInn('Eget volum hodetlf.', { s: 'LYD', n: 'Hodetelefoner i', o: ['hpDev', ['AUX 1', 'AUX 2']] });
+  // Høyttalerne (reléet til forsterkeren) av/på for seg – status().speakers fra daemonen, POST /api/speakers
+  if (!SETS.some(x => x.n === 'Høyttalere')) settInn('Hodetelefoner i', { s: 'LYD', n: 'Høyttalere',
+    act: () => { const på = status().speakers === false; api('/api/speakers', { on: på }).then(() => toast(på ? 'Høyttalerne er på' : 'Høyttalerne er av')).catch(e => toast(e.message)); },
+    v: () => status().speakers === false ? 'Av' : 'På' });
   bytt('Demo: feilmelding');
   bytt('Klokke i standby');
   bytt('Klokkestil', { s: 'SKJERM', n: 'Skjermsparer', act: () => { go('x:saver', saverIdx()); }, v: () => saverName() });

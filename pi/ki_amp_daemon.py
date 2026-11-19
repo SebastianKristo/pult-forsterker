@@ -34,6 +34,7 @@ API:
   GET/POST /api/settings  innstillingsmodellen til app/web (samme nøkler som skjold_settings.js); POST = delvis oppdatering
   GET/POST /api/s1f/pins  S1 rev F: GPIO-pinnene (pinne-editoren i web-UI-et); POST skriver /etc/skjold/s1f_pins.yaml og
                           starter ki-amp på nytt · POST /api/s1f/pins/reset sletter den (standardpinnene). Bare hjemmenettet.
+  POST /api/speakers {"on":bool} (høyttalerne av/på for seg; status har "speakers")
   POST /api/hp_automute {"on":bool} (demp høyttalerne når hodetelefoner er plugget i fronten; status har "headphones")
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay/Blåtann, eller Lyrion når Radio er valgt; jpg/png, ETag = status["cover"])
@@ -417,6 +418,7 @@ state = {"power": True, "input": "airplay", "volume": 30, "mute": False, "bt_pai
          "usb_pc": 1,   # usb_pc: aktiv PC på USB-delingsswitchen, 1 eller 2
          "headphones": False,   # hodetelefoner i front-jacken (hovedkortet)
          "last_wireless": "airplay",   # sist brukte trådløse kilde (airplay/bt) – «BT»-knappen på hovedkortet
+         "speakers": True,      # høyttalerne (reléet til forsterkeren) – kan slås av for seg, lyden går fortsatt til hodetelefoner/USB
          "hp_automute": os.environ.get("KI_AMP_HP_AUTOMUTE", "1") == "1",   # demp høyttalerne når hodetelefoner plugges i
          "warm": False,         # Pi-en er for varm (CPU ≥ 80 °C): volumet holdes på maks 60 til den er under 70 °C
          "overtemp": False,     # NTC på kjøleribben over ~75 °C (MCP GPA7) – TPA3116 dempes til den er under ~50 °C
@@ -1262,16 +1264,70 @@ def node_led_thread(stop=None):
         _led_wake.wait(0.02 if anim else 0.25); _led_wake.clear()
 
 
+# Oppstart: reléet til forsterkeren holdes av til CamillaDSP og lydkortet har startet, så det ikke kommer smell og
+# rare lyder fra høyttalerne mens Pi-en starter. KI_AMP_BOOT_RELAY_DELAY = sekunder etter at daemonen er klar.
+BOOT_RELAY_DELAY = float(os.environ.get("KI_AMP_BOOT_RELAY_DELAY", "4"))
+_boot_hold = [True]
+
+
 def speakers_on():
-    """TPA3116 skal være aktiv: på, og ikke dempet av hodetelefoner (auto-demping)."""
-    return state["power"] and not (state["headphones"] and state["hp_automute"]) and not state["overtemp"]
+    """TPA3116 skal være aktiv: på, høyttalerne ikke slått av, ikke dempet av hodetelefoner (auto-demping), og ferdig startet."""
+    return (bool(state["power"]) and state.get("speakers", True) is not False and not (state["headphones"] and state["hp_automute"])
+            and not state["overtemp"] and not _boot_hold[0])
+
+
+def apply_relay():
+    """Kit / S1 rev F: reléet følger speakers_on(). På: strøm først, la TPA3116 starte i stillhet, så XSMT høy.
+    Av: XSMT lav (myk demping i DAC-en), så brytes 24 V."""
+    if not HW:
+        return
+    want = speakers_on()
+    if bool(relay_amp.value) == want:
+        return
+    if want:
+        relay_amp.value = True; time.sleep(float(os.environ.get("KI_AMP_KIT_ON_DELAY", "0.8")))
+        if dac_xsmt: dac_xsmt.value = True
+    else:
+        if dac_xsmt: dac_xsmt.value = False
+        time.sleep(0.15); relay_amp.value = False
+
+
+def _boot_release():
+    """Slipp reléet når CamillaDSP kjører (eller etter maks 30 s) + BOOT_RELAY_DELAY."""
+    t0 = time.time()
+    while time.time() - t0 < 30:
+        try:
+            if subprocess.run(["systemctl", "is-active", "--quiet", "camilladsp"], timeout=5).returncode == 0:
+                break
+        except Exception:
+            break
+        time.sleep(0.5)
+    time.sleep(BOOT_RELAY_DELAY)
+    _boot_hold[0] = False
+    print("Høyttalere: oppstart ferdig, reléet kan slås på", flush=True)
+    _apply_speakers()
+
+
+def _apply_speakers():
+    if BOARD == "kit" or S1F or HP_DEV_ENV:
+        _safe(apply_relay)
+    elif BOARD == "main":   # hovedkortet: reléet er strøm til hele kortet; høyttalerne styres med SDZ (apply_headphones)
+        _safe(apply_headphones)
+    elif HW:
+        _safe(lambda: setattr(relay_amp, "value", speakers_on()))
+
+
+def set_speakers(on):
+    state["speakers"] = bool(on)
+    _apply_speakers()
+    changed()
 
 
 def apply_headphones():
     """Hodetelefonforsterker (TPA6132A2 EN på MCP GPA6) følger jacken; høyttalerne dempes via SDZ hvis auto-demping er på."""
     dsp.update()   # egen EQ-profil for hodetelefoner (S1 rev F: også utgangen – CamillaDSP spiller til UCA202 #1)
-    if (S1F or HP_DEV_ENV) and HW:   # høyttalerne av (relé) mens hodetelefonene står i
-        relay_amp.value = bool(state["power"]) and not (state["headphones"] and state["hp_automute"]) and not state["overtemp"]
+    if (S1F or HP_DEV_ENV) and HW:   # høyttalerne av (relé) mens hodetelefonene står i, eller når de er slått av
+        apply_relay()
     if not (HW and BOARD == "main"):
         return
     if mcp:
@@ -1317,15 +1373,13 @@ def apply_power():
             time.sleep(0.1); relay_amp.value = False
     elif HW and BOARD == "kit":   # modulene har ingen SDZ: demp digitalt og i DAC-en (XSMT, myk rampe) før 24 V brytes
         if state["power"]:
-            relay_amp.value = True; time.sleep(float(os.environ.get("KI_AMP_KIT_ON_DELAY", "0.8")))   # TPA3116 får starte i stillhet
-            if dac_xsmt: dac_xsmt.value = True
+            apply_relay()   # bare hvis høyttalerne er på, ikke hodetelefoner med auto-demping, og oppstarten er ferdig
             time.sleep(0.05)
         else:
             dsp.update(); time.sleep(0.15)   # CamillaDSP demper (power av) – lyden er borte før noe slås av
-            if dac_xsmt: dac_xsmt.value = False
-            time.sleep(0.25); relay_amp.value = False
+            apply_relay()
     elif HW:
-        relay_amp.value = state["power"]
+        relay_amp.value = speakers_on()
     if HW:
         if led_power:
             led_power.value = (1.0 if state["power"] else 0.1) * led_scale()
@@ -1781,7 +1835,7 @@ def save_state():
         return
     try:
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
-        data = json.dumps({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute", "settings", "night", "hp_volume")})
+        data = json.dumps({k: state[k] for k in ("input", "volume", "mute", "loudness", "loudness_level", "voice", "presets", "preset", "auto_input", "mix", "usb_pc", "voice_profile", "levels", "hp_automute", "speakers", "settings", "night", "hp_volume")})
         if data == _saved_state[0]:
             return
         # atomisk: skriv ferdig til en midlertidig fil og bytt – et strømbrudd midt i skrivingen gir aldri en halv fil
@@ -4489,6 +4543,11 @@ async def h_level(r):
     except (ValueError, TypeError) as e:
         return web.json_response({"error": str(e)}, status=400)
     return j()
+
+
+async def h_speakers(r):
+    """POST /api/speakers {"on": bool} – høyttalerne (reléet til forsterkeren) av eller på, uten å slå av resten."""
+    set_speakers(bool((await _obj(r)).get("on", True))); return j()
 
 
 async def h_hp_automute(r):
@@ -10366,6 +10425,7 @@ def main():
     if settings()["vstart"] and str(settings()["vstart"]).isdigit() and VSTART[int(settings()["vstart"])]:
         state["volume"] = VSTART[int(settings()["vstart"])]   # startvolum
     apply_power(); changed()
+    threading.Thread(target=_boot_release, daemon=True).start()   # høyttalerne på først når lyden er klar
     if BOARD == "node" and HW and NAME == NAME_ENV:   # Blåtann-navnet følger spillernavnet («Skjold Node»); ellers apply_name
         threading.Thread(target=lambda: subprocess.run(["bluetoothctl", "system-alias", NAME], check=False, timeout=10,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL), daemon=True).start()
@@ -10385,7 +10445,7 @@ def main():
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
-                    web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/headphones", h_headphones), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
+                    web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/headphones", h_headphones), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute), web.post("/api/speakers", h_speakers),
                     web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post), web.get("/api/s1f/pins", h_s1f_pins), web.post("/api/s1f/pins", h_s1f_pins), web.post("/api/s1f/pins/reset", h_s1f_pins_reset), web.get("/api/delt", h_delt), web.post("/api/delt", h_delt),
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
                     web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test),
