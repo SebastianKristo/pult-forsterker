@@ -307,9 +307,9 @@ function Guide() {
         <Num i={1}>Sett Røst i strømmen og vent til skjermen viser <B>RECOVERY</B>.</Num>
         <Num i={2}>Koble telefonen eller PC-en til Wi-Fi-nettet <B>{ROST_AP.ssid}</B>. Passordet er <span style="font-family:'IBM Plex Mono',monospace;color:#f0c46a">{ROST_AP.password}</span>.</Num>
         <Num i={3}>Oppsettsiden åpner seg som regel av seg selv. Hvis ikke, åpne <span style="font-family:'IBM Plex Mono',monospace;color:#f0c46a">http://{ROST_AP.ip}</span>.</Num>
-        <Num i={4}>Velg Wi-Fi-nettet ditt og skriv passordet. Vil du ha romnavn, skriv for eksempel <span style="font-family:'IBM Plex Mono',monospace">Skjold-Rost-Bad</span> under «Set the player name».</Num>
+        <Num i={4}>Velg Wi-Fi-nettet ditt og skriv passordet. Vent til siden viser at Røst er tilkoblet.</Num>
         <Num i={5}>Trykk <B>Exit Recovery</B> nederst, så starter Røst som høyttaler.</Num>
-        <Num i={6}>Koble deg tilbake til hjemmenettet. Røst dukker opp under Grupper → Skjold Røst.</Num>
+        <Num i={6}>Koble deg tilbake til hjemmenettet. Røst dukker opp under Grupper → Skjold Røst. Har du flere, gi hver sitt navn på Røst-siden (fanen Squeezelite, for eksempel <span style="font-family:'IBM Plex Mono',monospace">-n Skjold-Rost-Bad</span>).</Num>
       </div>
       {looking && <SearchOnly onDone={() => setLooking(false)} />}
       <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
