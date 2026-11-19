@@ -1079,7 +1079,7 @@ class Dsp:
                 if cfg is not None and cfg != self._last_cfg:
                     self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg; self._sent = (None, None)
                 db = (vol_db(eff_volume()) if (state["input"] != "aux" or BOARD in ("main", "kit")) else 0.0) + spk_trim_db()
-                mute = bool(state["mute"]) or not state["power"]
+                mute = bool(state["mute"]) or not state["power"] or _rele_demp[0]
                 if full or self._sent[0] != db:
                     self._send(ws, {"SetVolume": db})
                 if full or self._sent[1] != mute:
@@ -1287,6 +1287,8 @@ def node_led_thread(stop=None):
 # rare lyder fra høyttalerne mens Pi-en starter. KI_AMP_BOOT_RELAY_DELAY = sekunder etter at daemonen er klar.
 BOOT_RELAY_DELAY = float(os.environ.get("KI_AMP_BOOT_RELAY_DELAY", "4"))
 _boot_hold = [True]
+_rele_demp = [False]   # demp i CamillaDSP mens reléet slår av/på, så høyttalerne ikke smeller
+RELE_DEMP_S = float(os.environ.get("KI_AMP_RELAY_MUTE_S", "0.3"))   # ventetid etter demping før reléet brytes
 
 
 def speakers_on():
@@ -1303,12 +1305,18 @@ def apply_relay():
     want = speakers_on()
     if bool(relay_amp.value) == want:
         return
-    if want:
-        relay_amp.value = True; time.sleep(float(os.environ.get("KI_AMP_KIT_ON_DELAY", "0.8")))
-        if dac_xsmt: dac_xsmt.value = True
-    else:
-        if dac_xsmt: dac_xsmt.value = False
-        time.sleep(0.15); relay_amp.value = False
+    _rele_demp[0] = True; _safe(dsp.update_volume)   # lyden dempes mykt (CamillaDSP-rampe) før noe slås av eller på
+    try:
+        if want:
+            relay_amp.value = True; time.sleep(float(os.environ.get("KI_AMP_KIT_ON_DELAY", "0.8")))   # TPA3116 starter i stillhet
+            if dac_xsmt: dac_xsmt.value = True
+            time.sleep(0.05)
+        else:
+            time.sleep(RELE_DEMP_S)
+            if dac_xsmt: dac_xsmt.value = False
+            time.sleep(0.1); relay_amp.value = False
+    finally:
+        _rele_demp[0] = False; _safe(dsp.update_volume)
 
 
 def _boot_release():
