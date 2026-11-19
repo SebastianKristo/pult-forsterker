@@ -97,6 +97,49 @@
   const DESIGN_P = PRESETS.map(p => p.slice());   // designets kanaler (for undertekstene)
   const INMAP = { airplay: 0, bt: 0, spotify: 0, upnp: 0, plex: 0, aux: 1, aux2: 1, radio: 2, usb: 3 };
   let st = {}, prev = {};
+
+  // ---------- ekte bilder: kanallogoer (radio) og albumomslag (AirPlay/Blåtann) ----------
+  // Designets drawArt tegner en farget flate med bokstaver. Har daemonen et bilde (presets[i].logo, radio_now.logo,
+  // cover_url), tegnes det i stedet; til bildet er lastet (eller hvis det feiler) brukes designets flate.
+  const IMG = new Map();
+  function bilde(url) {
+    if (!url) return null;
+    let im = IMG.get(url);
+    if (!im) {
+      im = new Image(); im.decoding = 'async';
+      im.onload = () => wake(400); im.onerror = () => { im.feil = true; };
+      im.src = url; IMG.set(url, im);
+      if (IMG.size > 40) IMG.delete(IMG.keys().next().value);
+    }
+    return im.complete && im.naturalWidth && !im.feil ? im : null;
+  }
+  function bildeUrl() {
+    if (S.input === 2) {
+      const ps = st.presets || [], rn = st.radio_now || {};
+      if (S.preset < 6) { const p = ps[S.preset]; if (p && p.logo) return p.logo; }
+      if (rn.logo && (S.preset === 6 || (rn.n && rn.n - 1 === S.preset))) return rn.logo;
+      return '';
+    }
+    if (S.input === 0) return st.cover_url || '';
+    return '';
+  }
+  if (typeof drawArt === 'function') {
+    const designArt = drawArt;
+    drawArt = function (g, x, y, s, it) {   // eslint-disable-line no-global-assign
+      const im = bilde(bildeUrl());
+      if (!im) return designArt(g, x, y, s, it);
+      g.save(); g.beginPath(); g.roundRect(x, y, s, s, Math.round(s * 0.045)); g.clip();
+      if (S.input === 2) {   // logo: hele logoen synlig på mørk flate
+        g.fillStyle = '#111'; g.fillRect(x, y, s, s);
+        const k = Math.min(s * 0.84 / im.naturalWidth, s * 0.84 / im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k;
+        g.drawImage(im, x + (s - w) / 2, y + (s - h) / 2, w, h);
+      } else {   // omslag: fyll ruten
+        const k = Math.max(s / im.naturalWidth, s / im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k;
+        g.drawImage(im, x + (s - w) / 2, y + (s - h) / 2, w, h);
+      }
+      g.restore(); g.textAlign = 'left'; g.textBaseline = 'middle';
+    };
+  }
   function apply(s) {
     prev = st; st = s || {}; const n = now();
     if (!window.__demo) {   // systemsiden (IP, Wi-Fi, Lyrion)
