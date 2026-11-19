@@ -97,7 +97,7 @@ export type Item =
   | { kind: 'ledMode'; k: 'ledMode'; n: string; hint?: string }
   | { kind: 'str'; k: StrKey; n: string; ph: string; hint?: string }
   // API-styrte rader (leses fra /api/status, skrives med egne endepunkt)
-  | { kind: 'api-bool'; id: 'loudness' | 'mix' | 'autoInput' | 'hpAutomute' | 'voiceOn' | 'hpOn'; n: string; hint?: string }
+  | { kind: 'api-bool'; id: 'loudness' | 'mix' | 'autoInput' | 'hpAutomute' | 'voiceOn' | 'hpOn' | 'speakers'; n: string; hint?: string }
   | { kind: 'api-opt'; id: 'voiceProfile' | 'usbPc' | 'loudLevel'; n: string; hint?: string }
   | { kind: 'levels'; n: string; hint?: string }
   | { kind: 'info'; n: string; key: 'btDev' | 'lyrion' | 'version' | 'ip' | 'id' | 'board' | 'headphones' | 'btPairing' | 'inputs' | 'output' | 'netName' | 'poToken'; hint?: string }
@@ -142,6 +142,7 @@ export const CATS: Category[] = [
     opt('vstart', 'Startvolum', ['Sist brukt', '20', '30', '40']), opt('vmax', 'Maksvolum', ['100', '90', '80', '70']),
     bool('perIn', 'Volum per inngang', 'Hver inngang husker sitt eget volum'), bool('hpOwn', 'Eget volum for hodetelefoner'),
     opt('hpDev', 'Hodetelefoner i', ['AUX 1 (UCA202 nr. 1)', 'AUX 2 (UCA202 nr. 2)'], 'Hvilket USB-lydkort hodetelefonene står i. AUX-inngangen på det samme kortet virker fortsatt.'),
+    { kind: 'api-bool', id: 'speakers', n: 'Høyttalere', hint: 'Slå av høyttalerne uten å slå av resten. Lyden går fortsatt til hodetelefoner og USB.' },
     { kind: 'api-bool', id: 'hpOn', n: 'Hodetelefoner (USB-lydkort)', hint: 'Lyden går til hodetelefonutgangen på UFO202/UCA202, og høyttalerne slås av' },
     { kind: 'api-bool', id: 'hpAutomute', n: 'Demp høyttalerne med hodetelefoner', hint: 'Når hodetelefoner plugges i fronten' },
     { kind: 'info', n: 'Hodetelefoner', key: 'headphones' },
@@ -321,7 +322,7 @@ const AUX_USB = new Set(['nAux1', 'nAux2', 'nUsb1', 'nUsb2', 'usbPc', 'lvlAux', 
 const HEADPHONES = new Set(['hpAutomute', 'headphones', 'hpOwn', 'hpOn', 'hpDev']);
 const BUTTONS = new Set(['hold', 'ledLevel']);
 const NODE_ONLY = new Set(['ledMode', 'saver']);
-const S1_ONLY = new Set(['dblPower', 'nightLight']);
+const S1_ONLY = new Set(['dblPower', 'nightLight', 'speakers']);
 function itemKey(it: Item): string {
   if ('k' in it) return it.k;
   if (it.kind === 'info') return it.key;

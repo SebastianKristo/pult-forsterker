@@ -66,6 +66,11 @@ elif [ "$S1F" = 1 ]; then
   sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
   sudo sed -i -E '/^dtparam=spi=on$/d; /^dtoverlay=spi0-1cs/d' "$CFG"   # GPIO 9/10/11 = volumhjulet
   sudo sed -i -E 's/^dtparam=i2c_arm=on$/#dtparam=i2c_arm=on/' "$CFG"      # GPIO 2/3 = USB-knappen og av/på-lyset
+  # Reléet til forsterkeren holdes lavt (av) fra fastvaren starter, så høyttalerne ikke lager lyder mens Pi-en starter
+  PF=/etc/skjold/s1f_pins.yaml; [ -f "$PF" ] || PF="$SRC/config/s1f_pins.yaml"
+  RELAY=$(sed -n 's/^relay: *\([0-9][0-9]*\).*/\1/p' "$PF" | head -n1); RELAY=${RELAY:-27}
+  sudo sed -i -E '/^# skjold-rele \(holdes av under oppstart\)$/{N;d}' "$CFG"   # config.txt tåler ikke kommentar på samme linje
+  printf '# skjold-rele (holdes av under oppstart)\ngpio=%s=op,dl\n' "$RELAY" | sudo tee -a "$CFG" >/dev/null
   LINES='dtoverlay=hifiberry-dac dtoverlay=dwc2,dr_mode=peripheral enable_uart=0 hdmi_force_hotplug:0=1'
 elif [ "$OUT" = headphones ]; then
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
