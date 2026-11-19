@@ -132,3 +132,22 @@ def test_dsp_sender_volum_paa_nytt_naar_camilladsp_har_startet_paa_nytt(monkeypa
     x._ws = Ws(-30.0, False)          # alt stemmer
     x._sjekk(None)
     assert not x._full and not x._ev.is_set()
+
+
+def test_airplay_kan_ikke_hoppe_til_fullt_volum(monkeypatch):
+    import asyncio
+    import ki_amp_daemon as d
+    satt = []
+    monkeypatch.setattr(d, "set_volume", lambda v: satt.append(v))
+    monkeypatch.setattr(d, "eff_volume", lambda: 20)
+    monkeypatch.setattr(d, "j", lambda *_: None)
+    monkeypatch.setitem(d.state, "input", "airplay")
+
+    class R:
+        def __init__(self, b): self.b = b
+        async def json(self): return self.b
+
+    asyncio.run(d.h_volume(R({"volume": 100, "source": "airplay"})))
+    asyncio.run(d.h_volume(R({"volume": 25, "source": "airplay"})))
+    asyncio.run(d.h_volume(R({"volume": 90})))   # volumhjulet/appen: ingen sperre
+    assert satt == [20 + d.AP_MAKS_HOPP, 25, 90]

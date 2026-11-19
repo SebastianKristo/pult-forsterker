@@ -3487,6 +3487,13 @@ async def h_volume(r):
         v = eff_volume() + int(b["delta"]) if "delta" in b else int(b.get("volume", eff_volume()))
     except (TypeError, ValueError):
         return web.json_response({"error": "volume/delta må være et heltall"}, status=400)
+    if b.get("source") == "airplay":
+        # Sikkerhet: AirPlay kan sende fullt volum når en ny telefon kobler til (eller telefonens volum står høyt).
+        # Volumet fra AirPlay får aldri hoppe mer enn AP_MAKS_HOPP opp på én gang – glideren dras gradvis uansett.
+        cur = eff_volume()
+        if v > cur + AP_MAKS_HOPP:
+            print(f"AirPlay-volum {v} begrenset til {cur + AP_MAKS_HOPP} (for stort hopp fra {cur})", flush=True)
+            v = cur + AP_MAKS_HOPP
     set_volume(v)
     if b.get("source") == "airplay":
         _ap_vol["fra_ap"] = state["volume"]   # kom fra iPhone: ikke send det tilbake
@@ -7507,6 +7514,7 @@ _net_cache = {"t": 0.0, "v": {}}
 # flyttes glideren på telefonen også. shairport-sync sender det over DACP (D-Bus SetAirplayVolume, −30…0 dB).
 # Samme lineære skala som pvol → /api/volume i oled_display.py, så verdien som kommer tilbake er den samme (ingen sløyfe).
 _ap_vol = {"fra_ap": None}
+AP_MAKS_HOPP = int(os.environ.get("KI_AMP_AIRPLAY_MAX_STEP", "12"))   # største volumhopp opp fra AirPlay i ett steg
 
 
 def airplay_db(v):
