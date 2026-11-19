@@ -65,6 +65,7 @@ elif [ "$TOUCH" = 1 ]; then
 elif [ "$S1F" = 1 ]; then
   sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CFG"
   sudo sed -i -E '/^dtparam=spi=on$/d; /^dtoverlay=spi0-1cs/d' "$CFG"   # GPIO 9/10/11 = volumhjulet
+  sudo sed -i -E 's/^dtparam=i2c_arm=on$/#dtparam=i2c_arm=on/' "$CFG"      # GPIO 2/3 = USB-knappen og av/på-lyset
   LINES='dtoverlay=hifiberry-dac dtoverlay=dwc2,dr_mode=peripheral enable_uart=0 hdmi_force_hotplug:0=1'
 elif [ "$OUT" = headphones ]; then
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"

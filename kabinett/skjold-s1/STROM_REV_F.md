@@ -69,7 +69,7 @@ ingen egne ledninger fra omformeren.
 | GPIO (BCM) | Fysisk pinne | Til |
 |---|---|---|
 | 27 | 13 | Relémodul **IN** (høy = forsterker på) |
-| 22 / 23 / 24 / 25 / 12 | 15 / 16 / 18 / 22 / 32 | 1 kΩ → basis (S8050) eller gate (AO3400) på LED-transistoren for BT, AUX, RADIO, USB og power |
+| 22 / 23 / 24 / 25 / 3 | 15 / 16 / 18 / 22 / 5 | 1 kΩ → basis (S8050) eller gate (AO3400) på LED-transistoren for BT, AUX, RADIO, USB og power |
 | 4 | 7 | PCM5102 XSMT (myk demping) |
 | GND | 6, 9, 14 … | Relémodul GND, transistorenes emitter/source |
 

@@ -39,7 +39,10 @@ def test_pins_file_parses_without_pyyaml():
     used = list(cfg["buttons"].values()) + list(cfg["leds"].values()) + list(cfg["encoder"].values()) + \
         [cfg["relay"], cfg["dac_xsmt"], cfg["headphone_detect"], cfg["usb_switch"]["pulse"], cfg["usb_switch"]["sense"]]
     assert len(used) == len(set(used)), "samme pinne brukt to ganger"
-    assert not set(used) & {0, 1, 2, 3, 18, 19, 21}, "I²S/I²C/EEPROM-pinner er reservert"
+    assert not set(used) & {0, 1, 18, 19, 21}, "I²S- og EEPROM-pinner er reservert"
+    phys = {2: 3, 3: 5, 4: 7, 17: 11, 27: 13, 22: 15, 10: 19, 9: 21, 11: 23, 5: 29, 6: 31, 13: 33, 19: 35, 26: 37, 14: 8, 15: 10,
+            18: 12, 23: 16, 24: 18, 25: 22, 8: 24, 7: 26, 12: 32, 16: 36, 20: 38, 21: 40}
+    assert not [g for g in used if g is not None and phys[g] >= 31], "pinne 31–40 er holdt fri til lydkortet"
     assert cfg["timing"]["click_window"] == 0.38 and cfg["led_active_high"] is True and cfg["usb_switch"]["sense_pc1"] == "low"
 
 

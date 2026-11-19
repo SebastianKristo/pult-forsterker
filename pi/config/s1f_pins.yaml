@@ -1,18 +1,19 @@
 # Skjold S1 rev F – GPIO (BCM-numre). Knapper til GND med intern pull-up (aktiv lav).
-# Opptatt: I²S 18 (BCK), 19 (LRCK), 21 (DIN) · I²C 2/3 holdes ledig · 0/1 HAT-EEPROM.
+# Opptatt: I²S 18 (BCK), 19 (LRCK), 21 (DIN) til lydkortet (PCM5102) · 0/1 HAT-EEPROM.
+# Pinne 31–40 er fri for lydkortet (35 LRCK, 40 DIN) og GND; derfor bruker USB-knappen og av/på-lyset I²C-pinnene 2/3.
 # Endre her og start ki-amp på nytt (sudo systemctl restart ki-amp). Ingen pinner er hardkodet i koden.
 buttons:
   bt: 5          # BT/AirPlay
-  aux: 6         # AUX
-  radio: 13      # RADIO
-  usb: 16        # USB
+  aux: 7         # AUX (pinne 26)
+  radio: 8       # RADIO (pinne 24)
+  usb: 2         # USB (pinne 3, I²C SDA – har fast pull-up, fint for en knapp)
   power: 17      # power (fjærende, 16 mm)
 leds:            # hvite LED-ringer (via transistor), PWM
   bt: 22
   aux: 23
   radio: 24
   usb: 25
-  power: 12      # maskinvare-PWM0
+  power: 3       # pinne 5 (I²C SCL; PWM i programvare via lgpio. Lyser svakt mens Pi-en starter)
 led_active_high: true
 led_hz: 400
 encoder:         # EC11 med trykk
@@ -24,9 +25,9 @@ relay_active_high: true
 dac_xsmt: 4      # PCM5102 XSMT (myk demping) – sett null hvis modulen har XSMT fast høy
 usb_switch:
   pulse: 14      # transistor/optokobler over UGREEN-knappen (UART må være av)
-  sense: 15      # valgfritt: PC 1-LED via optokobler (null = av)
+  sense: null    # valgfritt: PC 1-LED via optokobler (GPIO15 brukes nå til hodetelefondetekt)
   sense_pc1: low
-headphone_detect: 26   # PJ-392 detekt-pinne
+headphone_detect: 15   # PJ-392 detekt-pinne (pinne 10; UART må være av)
 headphone_active_low: false   # true hvis lav = plugget i
 bounce: 0.03
 timing:
