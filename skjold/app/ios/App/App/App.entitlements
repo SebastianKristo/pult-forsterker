@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Legg til enhet → Skjold Røst: NEHotspotConfigurationManager kobler kort til oppsettnettet «Skjold-Rost». -->
+	<!-- Må også slås på for app-ID-en no.kristo.skjold i Apple Developer (Capabilities → Hotspot Configuration). -->
+	<key>com.apple.developer.networking.HotspotConfiguration</key>
+	<true/>
+	<!-- NEHotspotNetwork.fetchCurrent: bekrefter at telefonen står på Skjold-Rost (Capabilities → Access Wi-Fi Information). -->
+	<key>com.apple.developer.networking.wifi-info</key>
+	<true/>
+</dict>
+</plist>
