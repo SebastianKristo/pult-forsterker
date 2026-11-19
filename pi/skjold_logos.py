@@ -11,6 +11,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 import urllib.parse
 import urllib.request
 
@@ -29,24 +30,65 @@ _lock = threading.Lock()
 lyrion_base = None       # settes av daemonen: lambda -> "http://host:9000" eller None
 
 
+def _tokens(name):
+    """Kanalnavn → ord til sammenligning: små bokstaver, æøå/aksenter brettet, «+» → «pluss», uten nummer foran
+    («1-NRK Jazz»), parentes-tillegg («(Oslo, Norway / Pop)») og skilletegn. «NRK P1+», «NRK P1 Pluss», «nrk p1 plus»
+    og «NRK P1+ (Pop)» gir alle [nrk, p1, pluss]."""
+    s = unicodedata.normalize("NFKD", (name or "").lower().replace("æ", "ae").replace("ø", "o").replace("å", "a"))
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = re.sub(r"^\s*\d{1,2}\s*[-:)]\s*|^\s*\d{1,2}\.\s+", "", s)
+    s = re.sub(r"\(.*?\)|\[.*?\]", " ", s).replace("+", " pluss ")
+    s = re.sub(r"\bplus\b", "pluss", s)
+    return re.findall(r"[a-z0-9]+", s)
+
+
 def _norm(name):
-    return re.sub(r"[^a-z0-9+]", "", (name or "").lower().replace("æ", "ae").replace("ø", "o").replace("å", "a"))
+    """Normalisert kanalnavn (uten mellomrom og tegn): «NRK P1+» og «NRK P1 Pluss» → «nrkp1pluss»."""
+    return "".join(_tokens(name))
 
 
-NRK = {"nrkp1": "nrk-p1", "nrkp1+": "nrk-p1plus", "nrkp1pluss": "nrk-p1plus", "nrkp1plus": "nrk-p1plus", "nrkp2": "nrk-p2",
-       "nrkp3": "nrk-p3", "nrkmp3": "nrk-mp3", "nrkjazz": "nrk-jazz", "nrkklassisk": "nrk-klassisk",
-       "nrkfolkemusikk": "nrk-folkemusikk", "nrksport": "nrk-sport", "p1": "nrk-p1", "p2": "nrk-p2", "p3": "nrk-p3", "mp3": "nrk-mp3"}
+# Innebygde NRK-logoer (pi/logos/nrk/<fil>.png): fil -> (visningsnavn, normaliserte navn).
+# Navn som begynner med «nrk» godtas også med tillegg bak («NRK P1 Oslo og Akershus», «NRK P3 Musikk»), men bare
+# på hele ord – «NRK P13» er ikke P1. Navn uten «NRK» («P1+», «P3») må stemme helt.
+NRK_KANALER = {
+    "nrk-p1": ("NRK P1", ("nrkp1", "p1")),
+    "nrk-p1plus": ("NRK P1+", ("nrkp1pluss", "nrkp1plus", "p1pluss", "p1plus")),
+    "nrk-p2": ("NRK P2", ("nrkp2", "p2")),
+    "nrk-p3": ("NRK P3", ("nrkp3", "p3")),
+    "nrk-mp3": ("NRK mP3", ("nrkmp3", "mp3")),
+    "nrk-jazz": ("NRK Jazz", ("nrkjazz",)),
+    "nrk-klassisk": ("NRK Klassisk", ("nrkklassisk",)),
+    "nrk-folkemusikk": ("NRK Folkemusikk", ("nrkfolkemusikk",)),
+    "nrk-sport": ("NRK Sport", ("nrksport",)),
+}
+NRK = {alias: fil for fil, (_vis, aliaser) in NRK_KANALER.items() for alias in aliaser}
+
+
+def nrk_key(name):
+    """Filnavnet (uten endelse) til den innebygde NRK-logoen for kanalnavnet, eller None."""
+    t = _tokens(name)
+    if len(t) > 2 and t[0] == "nrk" and t[1] == "radio":     # «NRK Radio P1+»
+        t = [t[0]] + t[2:]
+    n = "".join(t)
+    if n in NRK:
+        return NRK[n]
+    for m in range(len(t) - 1, 0, -1):    # lengste treff på hele ord først: «NRK P1+ …» før «NRK P1 …»
+        k = "".join(t[:m])
+        if k.startswith("nrk") and len(k) > 3 and k in NRK:
+            return NRK[k]
+    return None
+
+
+def canonical(name):
+    """Visningsnavnet NRK bruker («P1 pluss» → «NRK P1+»), eller "" når kanalen ikke er en kjent NRK-kanal."""
+    f = nrk_key(name)
+    return NRK_KANALER[f][0] if f else ""
 
 
 def nrk_file(name):
-    f = NRK.get(_norm(name))
+    f = nrk_key(name)
     if not f:
-        n = _norm(name)
-        for k, v in NRK.items():   # «NRK P1 Oslo og Akershus» o.l.
-            if k.startswith("nrk") and n.startswith(k) and len(k) > 4:
-                f = v
-        if not f:
-            return None
+        return None
     for ext in (".png", ".svg"):   # PNG først: iOS og Android viser ikke SVG
         p = os.path.join(NRK_DIR, f + ext)
         if os.path.isfile(p):
@@ -157,8 +199,10 @@ def radio_browser_logo(name, fetch=_fetch):
     if not name:
         return ""
     tried = []
-    for cand in (name, re.sub(r"\s*\(.*\)\s*$", "", name), re.sub(r"^radio\s+", "", name, flags=re.I)):
-        cand = cand.strip()
+    base = re.sub(r"\s*\(.*\)\s*$", "", name).strip()
+    for cand in (name, base, canonical(name), re.sub(r"\s*\+\s*$|\s+pluss?$", "+", base, flags=re.I),
+                 re.sub(r"\s*\+\s*$", " Pluss", base), re.sub(r"^radio\s+", "", name, flags=re.I)):
+        cand = (cand or "").strip()
         if cand and cand not in tried:
             tried.append(cand)
             hit = _radio_browser_one(cand, fetch)
@@ -177,9 +221,11 @@ def _radio_browser_one(name, fetch):
         best = None
         for s in data if isinstance(data, list) else []:
             fav = (s.get("favicon") or "").strip()
-            if not fav:
+            if not fav or not re.match(r"^(https?:)?//", fav, re.I):
                 continue
-            score = (2 if _norm(s.get("name")) == _norm(name) else 0) + (1 if (s.get("countrycode") or "") == "NO" else 0)
+            # samme navn etter normalisering («NRK P1+» = «NRK P1 Pluss»), norsk kanal, og helst ikke et lite .ico
+            score = (4 if _norm(s.get("name")) == _norm(name) else 0) + (2 if (s.get("countrycode") or "") == "NO" else 0) \
+                - (1 if re.search(r"\.ico(\?|$)", fav, re.I) else 0)
             if best is None or score > best[0]:
                 best = (score, fav)
         if best:
@@ -193,7 +239,7 @@ def _cache_paths(k):
 
 
 def get(k, fetch=_fetch, now=None):
-    """(bytes, content_type) for nøkkelen, eller None. Bruker cache, kilde, NRK-innebygd og Radio Browser i den rekkefølgen."""
+    """(bytes, content_type) for nøkkelen, eller None. Bruker cache, NRK-innebygd, kilde og Radio Browser i den rekkefølgen."""
     now = now or time.time()
     if not re.fullmatch(r"[0-9a-f]{16}", k or ""):
         return None
@@ -215,7 +261,13 @@ def get(k, fetch=_fetch, now=None):
         return None
     body = ct = None
     src = absolute(info.get("src", ""))
-    if src.startswith("data:"):
+    f = nrk_file(info.get("name", ""))
+    if f:
+        # Kjent NRK-kanal: bruk logoen i repoet (samme utseende overalt, virker uten nett). Kildens bilde for NRK-kanaler
+        # var ofte et lite favicon, en død adresse eller et generisk bilde – da ble NRK P1+ stående uten logo.
+        body = open(f, "rb").read()
+        ct = "image/png" if f.endswith(".png") else "image/svg+xml"
+    elif src.startswith("data:"):
         import base64
         try:
             hdr, b64 = src.split(",", 1)
@@ -229,11 +281,6 @@ def get(k, fetch=_fetch, now=None):
             ct = _sniff(body)
         except Exception:
             body = None
-    if not (body and ct):
-        f = nrk_file(info.get("name", ""))
-        if f:
-            body = open(f, "rb").read()
-            ct = "image/png" if f.endswith(".png") else "image/svg+xml"
     if not (body and ct) and info.get("name"):
         rb = radio_browser_logo(info["name"], fetch)
         if rb:

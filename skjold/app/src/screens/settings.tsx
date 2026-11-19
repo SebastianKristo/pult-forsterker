@@ -4,6 +4,7 @@ import { Boundary } from '../components/boundary';
 import { langPref, setLang, t, type LangPref } from '../i18n';
 import { ChangelogPanel } from './programs';
 import { HomeEditor } from './homeedit';
+import { PinEditor } from './pinner';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { DoorbellPanel, DuckPanel, RecognizeSettingsPanel, RoutinesPanel, WishlistPanel } from './features';
 import { HomeAssistantPanel } from './homeassistant';
@@ -13,7 +14,7 @@ import { act, applied, deviceName, go, loadSettings, localOnly, mode, product, r
 import { computed } from '@preact/signals';
 import { CAT_ALIAS, CAT_GROUPS, CAT_TILE, ICONS, LED_MODES, LED_MODE_NAMES, catsFor, fmt, type Category, type Item } from '../lib/settings';
 
-export const cats = computed(() => catsFor(product.value, status.value?.inputs ?? []));
+export const cats = computed(() => catsFor(product.value, status.value?.inputs ?? [], status.value?.board ?? ''));
 import { CLOCKS, drawClock } from '../lib/clocks';
 import { Icon, PRODUCT_ICON, Slider, Toggle } from '../components/ui';
 import { nbHw, useMinuteTick } from './pages';
@@ -37,6 +38,13 @@ import { AppUpdater, canSelfUpdate, fetchLatestAppRelease, installedAppVersion, 
 export function SettingsPage({ wide = false }: { wide?: boolean }) {
   if (status.value?.kids) return <KidsLocked />;
   const id = route.value.cat ? CAT_ALIAS[route.value.cat] ?? route.value.cat : undefined;
+  if (id === 'pinner' && cats.value.some((c) => c.id === 'maskinvare')) return (   // Maskinvare → Pinner (GPIO), egen side
+    <>
+      <button onClick={() => go('settings', 'maskinvare')} style="align-self:flex-start;display:flex;align-items:center;gap:4px;border:none;background:none;color:#d9a441;font-size:14px;cursor:pointer;padding:0"><Chevron dir="left" />{t('Maskinvare')}</button>
+      <span style={`flex-shrink:0;font-size:${wide ? '18px' : '17px'};font-weight:600`}>{t('Pinner (GPIO)')}</span>
+      <Boundary><PinEditor /></Boundary>
+    </>
+  );
   const cat = cats.value.find((c) => c.id === id);
   if (!cat) return <CategoryList wide={wide} />;
   return (
@@ -257,6 +265,11 @@ function Row({ it, i }: { it: Item; i: number }) {
     }
     case 'test':
       return <Line i={i} n={it.n} hint={it.hint}><div style="display:flex;gap:6px"><SpeakerTest /></div></Line>;
+    case 'link':
+      return <button class="cat-row" onClick={() => go('settings', it.to)} style={`display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-height:58px;padding:10px 14px;border:none;border-top:1px solid ${i ? '#242426' : 'transparent'};background:transparent;cursor:pointer;text-align:left;color:inherit`}>
+        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{t(it.n)}</span>{it.hint && <span style="font-size:11px;color:#8b8b86;text-wrap:pretty">{t(it.hint)}</span>}</span>
+        <Chevron color="#8b8b86" />
+      </button>;
     case 'eq':
       return <Line i={i} n={it.n}><button onClick={() => go('eq')} style="border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:0">Åpne ›</button></Line>;
     case 'clocks': case 'update':

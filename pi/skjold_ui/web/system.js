@@ -78,7 +78,8 @@
     const ui = s.ui || {}, h = ui.hold, ov = ui.overlay, n = s.setup_net;
     const egen = (h && (h.kind === 'reboot' || h.kind === 'reset') && h.stage >= 1 && !s.rebooting) ? 'hold'
       : (ov && ov.type === 'usb' && !s.power) ? 'usb'
-      : (n && (n.active || n.joining) && !s.rebooting && !(window.bdayOn && bdayOn() && !S.bdayHide)) ? 'oppsett' : '';
+      // oppsett-nettet: med s1_meny.js tegnes QR-siden der (x:nett, kan lukkes med «Tilbake til forsterkeren»); her bare «Kobler til»
+      : (n && (n.joining || (n.active && !n.skjult && !window.S1MENY)) && !s.rebooting && !(window.bdayOn && bdayOn() && !S.bdayHide)) ? 'oppsett' : '';
     if (!egen) { tegn(); return; }
     g.setTransform(0.5, 0, 0, 0.5, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, 1920, 640);
     if (egen === 'hold') hold(g, h); else if (egen === 'usb') usb(g, ov.pc || 1); else oppsett(g, n);

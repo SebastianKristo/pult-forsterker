@@ -165,6 +165,19 @@ export interface NfcSpiller { navn: string; ip: string; sist: number; sist_brikk
 export interface NfcStatus { spillere?: NfcSpiller[]; andre_spillere?: { enhet: string; base: string; spillere: NfcSpiller[] }[]; learning: boolean; learn_until: number; last: { uid: string; t: number; known: boolean; navn: string }; active: string; cards: NfcCard[]; ventende?: NfcVentende[]; paret?: string; koble_ventende?: boolean }
 export interface Spoler { 'på': boolean; fart: number; spol: number; bare_kassett: boolean; vent?: number; modus?: 'spill' | 'spol' | 'tilbake' | 'stopp'; rps?: number }
 export interface Routine { id: string; navn: string; ikon?: string }
+/** S1 rev F – GET /api/s1f/pins (pi/skjold_s1f.py: pinne_regler, pin_bruk). Funksjon-id = «seksjon.nøkkel» i s1f_pins.yaml. */
+export type S1fTildeling = Record<string, number | null>;
+export interface S1fFunksjon { id: string; navn: string; gruppe: string }
+export interface S1fHeaderPinne { fys: number; type: '3V3' | '5V' | 'GND' | 'gpio' | 'id'; gpio: number | null }
+export interface S1fRegler {
+  header: S1fHeaderPinne[]; reservert: Record<string, string>; lydkort_fys: number[]; varsel: Record<string, string>;
+  alt: Record<string, string>; funksjoner: S1fFunksjon[]; viktige: string[];
+}
+export interface S1fPins {
+  fil: string; egen_fil: string; overstyrt: boolean; pinner: S1fTildeling; aktive: S1fTildeling | null; standard: S1fTildeling | null;
+  maskinvarefeil: string[]; regler: S1fRegler;
+}
+export interface S1fLagret { ok: boolean; feil: string[]; advarsler: string[]; pinner: S1fTildeling; fil: string; restart: boolean }
 export const api = {
   nfc: () => req<NfcStatus>('/api/nfc'),
   nfcSave: (c: NfcCard) => post<{ card: NfcCard; cards: NfcCard[] }>('/api/nfc/cards', c),
@@ -246,6 +259,12 @@ export const api = {
   btPairing: () => post('/api/bt', { pairing: true }),
   btForget: () => post('/api/bt', { forget: true }),
   settingsReset: () => post<{ settings: Record<string, unknown> }>('/api/settings/reset', {}),
+  /** S1 rev F: GPIO-pinnene (pinne-editoren). Bare på hjemmenettet og bare med KI_AMP_BOARD=s1f. */
+  s1fPins: () => req<S1fPins>('/api/s1f/pins'),
+  /** Validerer og skriver /etc/skjold/s1f_pins.yaml; ki-amp starter på nytt like etter svaret. */
+  s1fPinsSave: (pinner: S1fTildeling) => post<S1fLagret>('/api/s1f/pins', { pinner }),
+  /** Sletter /etc/skjold/s1f_pins.yaml (standardpinnene) og starter ki-amp på nytt. */
+  s1fPinsReset: () => post<{ ok: boolean; slettet: boolean; restart: boolean }>('/api/s1f/pins/reset', {}),
   loudness: (on?: boolean, level?: number) => post('/api/loudness', { ...(on !== undefined ? { on } : {}), ...(level !== undefined ? { level } : {}) }),
   transport: (action: 'play' | 'pause' | 'playpause' | 'next' | 'previous' | 'stop') => post('/api/transport', { action }),
   /** Spol til `pos` sekunder (Lyrion-strømmer med varighet – Navidrome, YouTube Music, bibliotek – og Plex). */
