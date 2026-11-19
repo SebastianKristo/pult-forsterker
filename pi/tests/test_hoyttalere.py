@@ -84,3 +84,27 @@ def test_hoyttalerniva_demper_bare_hoyttalerne(d, monkeypatch):
     monkeypatch.setitem(d.state, "headphones", False)
     monkeypatch.setitem(d.state, "settings", {"spkTrim": "tull"})
     assert d.spk_trim_db() == 0.0
+
+
+def test_dempes_mens_releet_slaar_av_og_paa(d, monkeypatch):
+    d, rele, _ = d
+    logg = []
+
+    class Dsp:
+        def update_volume(self):
+            logg.append(("demp", d._rele_demp[0]))
+
+    monkeypatch.setattr(d, "dsp", Dsp())
+    orig = Rele.__setattr__
+
+    def spor(self, k, v):
+        if k == "value" and self is rele:
+            logg.append(("rele", bool(v), d._rele_demp[0]))
+        orig(self, k, v)
+
+    monkeypatch.setattr(Rele, "__setattr__", spor)
+    d.apply_relay()                       # på
+    d.set_speakers(False)                 # av
+    releer = [x for x in logg if x[0] == "rele"]
+    assert releer == [("rele", True, True), ("rele", False, True)], logg   # reléet byttes bare mens lyden er dempet
+    assert logg[-1] == ("demp", False) and d._rele_demp[0] is False
