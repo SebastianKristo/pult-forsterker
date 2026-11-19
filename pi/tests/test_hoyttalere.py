@@ -73,3 +73,14 @@ def test_power_av_gaar_foran_hoyttalere(d, monkeypatch):
     monkeypatch.setitem(d.state, "power", False)
     d.apply_relay()
     assert rele.value is False
+
+
+def test_hoyttalerniva_demper_bare_hoyttalerne(d, monkeypatch):
+    d, _, _ = d
+    monkeypatch.setitem(d.state, "settings", {"spkTrim": 2})
+    assert d.spk_trim_db() == -12.0
+    monkeypatch.setitem(d.state, "headphones", True)
+    assert d.spk_trim_db() == 0.0
+    monkeypatch.setitem(d.state, "headphones", False)
+    monkeypatch.setitem(d.state, "settings", {"spkTrim": "tull"})
+    assert d.spk_trim_db() == 0.0

@@ -677,6 +677,19 @@ def vol_db(v):
     return -80.0 if v <= 0 else max(-60.0, 40.0 * math.log10(v / 100.0))
 
 
+SPK_TRIM = [0.0, -6.0, -12.0, -18.0, -24.0]   # innstillingen spkTrim: høyttalernivå (fast demping før forsterkeren)
+
+
+def spk_trim_db():
+    """Fast demping av høyttalerne (ikke hodetelefonene), for forsterkere med høy fast gain: da blir lave volum lave."""
+    if state.get("headphones"):
+        return 0.0
+    try:
+        return SPK_TRIM[int((state.get("settings") or {}).get("spkTrim", 0))]
+    except (TypeError, ValueError, IndexError):
+        return 0.0
+
+
 def pga_write(gain_code):
     """PGA2311: 16 bit (høyre, venstre), MSB først, data leses på stigende SCLK. 0 = mute, 192 = 0 dB, 0,5 dB per trinn."""
     if HW and BOARD == "main" and pga:
@@ -1065,7 +1078,7 @@ class Dsp:
                 ws = self._conn(websocket)
                 if cfg is not None and cfg != self._last_cfg:
                     self._send(ws, {"SetConfig": cfg}); self._last_cfg = cfg; self._sent = (None, None)
-                db = vol_db(eff_volume()) if (state["input"] != "aux" or BOARD in ("main", "kit")) else 0.0
+                db = (vol_db(eff_volume()) if (state["input"] != "aux" or BOARD in ("main", "kit")) else 0.0) + spk_trim_db()
                 mute = bool(state["mute"]) or not state["power"]
                 if full or self._sent[0] != db:
                     self._send(ws, {"SetVolume": db})
@@ -1435,7 +1448,7 @@ def wake_decision(power, playing, source, quiet_seen, wake_on, since_off):
 
 
 # ---------- innstillinger (app/web, samme nøkler som skjold_settings.js) ----------
-SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "hpDev": 0, "lvlAux": 0, "lvlUsb": 0,
+SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "hpDev": 0, "spkTrim": 0, "lvlAux": 0, "lvlUsb": 0,
                 "name": 0, "nameCustom": "", "updChannel": 0, "updAuto": True, "setupDone": False, "nAux1": "AUX 1", "nAux2": "AUX 2", "nUsb1": "PC 1", "nUsb2": "PC 2", "hold": 2,
                 "voice": True, "lang": 0, "vv": 1, "dim": 1, "off": 1, "clock": True, "clockStyle": 0, "saver": 0, "bright": 0, "led": 0, "ledLevel": 100, "ledMode": "press", "auto": 1, "wake": True,
                 # Musikktjenester – lagres her så appen (iOS/Android) og web-UI-et deler innloggingene
@@ -1457,7 +1470,7 @@ SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0
                 "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [5, 2, 0, 0, 1]), ("radio", 2, [-2, -1, 2, 3, 1]),
                                                                                      ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [2, 1, 0, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
-SETTINGS_APPLIED = {"out", "eq", "dblPower", "nightLight", "hpOwn", "hpDev", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
+SETTINGS_APPLIED = {"out", "eq", "dblPower", "nightLight", "hpOwn", "hpDev", "spkTrim", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
 
 
 def settings():
@@ -1485,6 +1498,8 @@ def apply_settings(changed_keys=()):
     if "voice" in changed_keys: state["voice"] = bool(s_["voice"])
     if "lang" in changed_keys and LANG_PROFILE.get(int(s_["lang"]) if str(s_["lang"]).isdigit() else -1):
         state["voice_profile"] = LANG_PROFILE[int(s_["lang"])]
+    if "spkTrim" in changed_keys:
+        apply_volume()
     vmax = VMAX[int(s_["vmax"])] if str(s_["vmax"]).isdigit() and int(s_["vmax"]) < len(VMAX) else 100
     if state["volume"] > vmax:
         state["volume"] = vmax; apply_volume()
