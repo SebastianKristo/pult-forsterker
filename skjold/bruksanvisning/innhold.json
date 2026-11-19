@@ -1616,7 +1616,7 @@
       "wires": [],
       "tips": [
         "Velg Skjold S1 i Flasher og legg inn Wi-Fi og navn.",
-        "Uten Flasher: KI_AMP_BOARD=main bash pi/install.sh"
+        "Uten Flasher: KI_AMP_BOARD=s1f bash pi/install.sh"
       ],
       "warn": ""
     },
