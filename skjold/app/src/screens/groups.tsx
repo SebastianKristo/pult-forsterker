@@ -6,8 +6,7 @@ import { ListenHere } from './listenhere';
 import { PRODUCT_ICON } from '../components/ui';
 import { PlacementCard, SyncSubCard } from './advaudio';
 import { BassCard } from './lyd';
-import { RostCard, type RostSpeaker } from './rost';
-import { apiPost, apiReq } from '../lib/api';
+import { RostCard, RostRows } from './rost';
 import { activeKey, setVolAt, useRooms, type Room } from './phone';
 import { applyLayout, delayMs, groupAll, groupNone, groups, inGroup, LAYOUTS, loadGroup, members, placeRoom, ROLE_FULL, ROLES, savePreset, setGset, setMembers, setMode, SLOT_POS, toggleMember } from '../lib/groups';
 
@@ -190,33 +189,6 @@ export function GroupsPage() {
         </div>
       </details>
       <style>{`.grp-adv{border:1px solid #242426;border-radius:16px;background:#121213;padding:16px 18px}.grp-adv summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.grp-adv summary::-webkit-details-marker{display:none}.grp-adv .chev{color:#8b8b86;font-size:20px;transition:transform .2s}.grp-adv[open] .chev{transform:rotate(90deg)}`}</style>
-    </div>
-  );
-}
-
-/** Skjold Røst-høyttalerne i «Spill på»-arket: huk av for å spille i takt med dette rommet (Lyrion-synk), og volum. */
-function RostRows() {
-  const [list, setList] = useState<RostSpeaker[]>([]);
-  const last = async () => { try { setList((await apiReq<{ minis?: RostSpeaker[] }>('/api/rost')).minis ?? []); } catch { setList([]); } };
-  useEffect(() => { void last(); const t = setInterval(() => void last(), 6000); return () => clearInterval(t); }, []);
-  const act = async (id: string, action: string, value?: number | boolean) => {
-    try { setList((await apiPost<{ minis?: RostSpeaker[] }>('/api/rost', { id, action, value })).minis ?? []); } catch { /* prøver igjen ved neste oppdatering */ }
-  };
-  if (!list.length) return null;
-  return (
-    <div style="display:flex;flex-direction:column;gap:6px" data-testid="spk-rost">
-      <span style="font-size:11px;color:#8b8b86;letter-spacing:.06em">SKJOLD RØST</span>
-      {list.map((m) => (
-        <div key={m.id} style="display:grid;grid-template-columns:30px minmax(0,1fr) 26px;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:#141415;border:1px solid #242426">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c9c9c4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM12 17.5a3 3 0 1 0 0-6a3 3 0 1 0 0 6M12 7.5h.01" /></svg>
-          <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
-            <button disabled={!m.connected} onClick={() => void act(m.id, m.synced ? 'unsync' : 'sync')} style="border:none;background:none;padding:0;cursor:pointer;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:baseline;min-width:0"><span style={`flex:1 1 auto;min-width:0;font-size:14px;color:${m.synced ? '#f2f2ee' : '#c9c9c4'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{m.name}</span><span style="flex-shrink:0;font-size:11px;color:#8b8b86;white-space:nowrap">{!m.connected ? 'Ikke tilkoblet' : m.synced ? 'Spiller med' : m.playing ? 'Spiller' : 'Ledig'}</span></button>
-            {m.volume != null && <input type="range" min={0} max={100} value={m.volume} disabled={!m.connected} onChange={(e) => void act(m.id, 'volume', +e.currentTarget.value)} style="width:100%;accent-color:#d9a441;height:20px" aria-label={'Volum ' + m.name} />}
-          </div>
-          <button disabled={!m.connected} onClick={() => void act(m.id, m.synced ? 'unsync' : 'sync')} aria-label={'Spill på ' + m.name} style={`width:26px;height:26px;border-radius:50%;border:1.5px solid ${m.synced ? A : '#3a3a3c'};background:${m.synced ? A : 'transparent'};color:#0b0b0c;cursor:pointer;padding:0;font-size:13px;font-weight:700`}>{m.synced ? '✓' : ''}</button>
-        </div>
-      ))}
-      <span style="font-size:11px;color:#8b8b86;line-height:1.4">Røst spiller i takt med dette rommet når kilden går via Lyrion, som radio.</span>
     </div>
   );
 }
