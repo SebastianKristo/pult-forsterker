@@ -234,7 +234,7 @@ if S1F:
         print("S1F: fant ikke s1f_pins.yaml –", _e, flush=True)
     _usb = S1F_PINS.get("usb_switch") or {}
     for _k, _v in (("KI_AMP_USBSW_PULSE", _usb.get("pulse")), ("KI_AMP_USBSW_SENSE", _usb.get("sense")),
-                   ("KI_AMP_USBSW_SENSE_PC1", _usb.get("sense_pc1")), ("KI_AMP_XSMT_PIN", S1F_PINS.get("dac_xsmt", "none"))):
+                   ("KI_AMP_USBSW_SENSE_PC1", _usb.get("sense_pc1")), ("KI_AMP_XSMT_PIN", S1F_PINS.get("dac_xsmt") or "none")):
         if _v is not None and not os.environ.get(_k):
             os.environ[_k] = str(_v)
     if "RELAY_ACTIVE_LOW" not in os.environ:
