@@ -105,7 +105,7 @@ FUNKSJONER = [
     {"id": "encoder.a", "navn": "Volumhjul A", "gruppe": "hjul"},
     {"id": "encoder.b", "navn": "Volumhjul B", "gruppe": "hjul"},
     {"id": "encoder.sw", "navn": "Volumhjul trykk", "gruppe": "hjul"},
-    {"id": "relay", "navn": "Relé (24 V til forsterkeren)", "gruppe": "rele"},
+    {"id": "relay", "navn": "Relé (forsterker)", "gruppe": "rele"},
     {"id": "headphone_detect", "navn": "Hodetelefondetekt", "gruppe": "hp"},
     {"id": "usb_switch.pulse", "navn": "USB-switch puls", "gruppe": "usbsw"},
     {"id": "usb_switch.sense", "navn": "USB-switch PC 1-lys (valgfri)", "gruppe": "usbsw"},
