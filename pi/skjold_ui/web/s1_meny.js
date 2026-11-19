@@ -3,6 +3,8 @@
 //   x:saver  skjermsparer-velger med forhåndsvisning på hele baren (vri = bla, trykk = velg, kildeknapp = avbryt)
 //   x:wifi   Wi-Fi: velg nett her (med tastatur på hjulet), med telefonen (QR) eller med Blåtann (Improv)
 //   x:scan   nettene rundt, x:kb tastatur, x:conn kobler til
+//   x:nett   Wi-Fi er borte (oppsett-nettet er oppe): QR for mobilen, «Tilbake til forsterkeren» (forhåndsvalgt) eller
+//            velg nett og skriv passordet med hjulet. Lukkes også med en kildeknapp; da vises bare «Ingen Wi-Fi» på hovedskjermen.
 //   x:upd    programvare: se etter og installer oppdatering
 //   x:setup  oppsett ved første oppstart (velkommen → Wi-Fi → navn → høyttalertest → ferdig)
 // Hjulet og knappene kommer fra screen.js (window.S1MENY.ui) før designets egen menyhåndtering.
@@ -20,12 +22,14 @@
     .then(r => r.json().catch(() => ({})).then(j => (r.ok ? j : Promise.reject(new Error(j.error || ('HTTP ' + r.status))))));
 
   // ---------- tilstand for sidene her ----------
-  const M = { idx: 0, wiz: false, step: 0, nets: [], scanning: false, ssid: '', kb: null, conn: null, upd: null, ble: false, msg: '', msgT: 0, ret: '' };
+  const M = { idx: 0, wiz: false, step: 0, nets: [], scanning: false, ssid: '', kb: null, conn: null, upd: null, ble: false, msg: '', msgT: 0, ret: '',
+    nettVist: false, nettSkjult: false };
   const page = () => (S.set.open && typeof S.set.page === 'string' && S.set.page.startsWith('x:')) ? S.set.page : '';
   const active = () => M.wiz || !!page();
   function go(p, idx) { S.set.open = true; S.set.page = p; S.set.t = now(); M.idx = idx || 0; wake(1500); }
   function back() {
     const p = page();
+    if (p === 'x:nett') { nettTilbake(); return; }
     if (p === 'x:kb' || p === 'x:scan' || p === 'x:conn' || p === 'x:ble') {
       const r = p === 'x:kb' ? (M.kb && M.kb.ret) : M.ret; M.kb = p === 'x:kb' ? null : M.kb;
       if (r) go(r, 0); else if (M.wiz) { S.set.page = ''; S.set.open = false; } else S.set.page = '';
@@ -160,6 +164,7 @@
       .catch(e => { M.scanning = false; toast('Fant ingen nett: ' + e.message); });
   }
   function medTelefon() {
+    if (oppsettNett()) { M.wiz = false; S.setup.on = false; meld(); go('x:nett', 0); return; }
     api('/api/oppsett', { start: true }).then(() => { S.set.page = ''; S.set.open = false; M.wiz = false; wake(1500); })
       .catch(e => toast('Fikk ikke startet oppsett-nettet: ' + e.message));
   }
@@ -204,13 +209,84 @@
     }).catch(e => { M.conn.state = 'feil'; M.conn.err = e.message; wake(800); });
   }
   function tegnConn(g) {
-    const c = M.conn || {}, n = net();
-    if (c.state === 'venter' && n.ssid === c.ssid) c.state = 'ok';
+    const c = M.conn || {}, n = net(), sn = status().setup_net || {};
+    if (c.state === 'venter') {   // oppsett-nettet var oppe: daemonen slår det av og kobler til (setup_net.joining)
+      if (sn.joining === c.ssid) c.sett = true;
+      else if (c.sett && !sn.joining) { if (sn.error) { c.state = 'feil'; c.err = sn.error; M.idx = 0; } else c.state = 'ok'; }
+      if (n.ssid === c.ssid) c.state = 'ok';
+    }
     if (c.state === 'ok') { glod(g, GRONN); hake(g, GRONN, (now() - (c.okT || (c.okT = now()))) / 700); hode(g, 'WI-FI', 'Tilkoblet', '«' + c.ssid + '»' + (n.ip ? ' · ' + n.ip : ''), GRONN); piller(g, [M.wiz ? 'Fortsett' : 'Ferdig'], 0, 470); wake(800); return; }
     if (c.state === 'feil') { glod(g, ROD); wifiIkon(g, ROD, 0); hode(g, 'WI-FI', 'Kom ikke på nett', c.err.length > 60 ? c.err.slice(0, 60) + '…' : c.err || 'Sjekk passordet', ROD); piller(g, ['Prøv igjen', 'Velg annet nett'], M.idx, 470); return; }
     glod(g, RAV); spinner(g, RAV); hode(g, 'WI-FI', 'Kobler til', '«' + c.ssid + '»', RAV, c.state === 'venter' ? 'Oppsett-nettet slås av mens Skjold kobler til.' : '');
     if (now() - c.t > 60000 && c.state !== 'ok') { c.state = 'feil'; c.err = 'Tidsavbrudd'; }
     S.set.t = now(); wake(800);
+  }
+
+  // ---------- Wi-Fi er borte: x:nett og «Ingen Wi-Fi» ----------
+  // setup_net fra daemonen (skjold_setupnet.py): active = oppsett-nettet er oppe, skjult = «Tilbake til forsterkeren» er valgt
+  const oppsettNett = () => { const sn = status().setup_net; return sn && sn.active && !sn.joining ? sn : null; };
+  const NETTVALG = ['Tilbake til forsterkeren', 'Velg nett her', 'Blåtann'];
+  function nettSperre() {   // skal x:nett åpnes av seg selv?
+    const sn = oppsettNett();
+    return !!(sn && !sn.skjult && !M.nettSkjult && S.power && !M.wiz && !status().rebooting);
+  }
+  function nettTilbake() {   // tilbake til forsterkeren: vanlig skjerm med «Ingen Wi-Fi», oppsett-nettet går videre (startet for hånd: slås av)
+    const sn = oppsettNett() || {};
+    M.nettSkjult = true; M.idx = 0; S.set.page = ''; S.set.open = false;
+    api('/api/oppsett', sn.manual ? { stop: true } : { skjul: true }).catch(() => {});
+    meld(); wake(800);
+  }
+  function nettValg(i) {
+    if (i === 0) nettTilbake();
+    else if (i === 1) skann();
+    else medBlatann();
+  }
+  function qrFelt(g, sn) {
+    rr(g, 120, 120, 400, 400, 28); g.fillStyle = W; g.fill();
+    try { drawQR(g, 140, 140, 360, sn.qr); } catch (e) { /* uten QR-bibliotek: nettnavnet står til høyre */ }
+  }
+  function tegnNett(g) {
+    const sn = oppsettNett() || status().setup_net || {};
+    if (sn.qr) qrFelt(g, sn); else { glod(g, RAV); wifiIkon(g, LO, 0); }
+    hode(g, sn.manual ? 'WI-FI · NYTT NETT' : 'INGEN WI-FI', sn.manual ? 'Koble til Wi-Fi' : 'Ikke på nett',
+      'AUX, USB og Blåtann virker uten nett. Mobilen: skann koden.', sn.error ? ROD : RAV,
+      sn.ssid ? 'Nett «' + sn.ssid + '» · passord ' + (sn.password || '') : '');
+    if (sn.error) tekst(g, sn.error, 652, 432, 32, 400, ROD, 'left', 1200);
+    piller(g, NETTVALG, M.idx, 470);
+    g.fillStyle = LO; g.font = '500 22px ' + MONO; g.textAlign = 'right'; g.fillText('KILDEKNAPP = TILBAKE', 1832, 610); g.textAlign = 'left';
+  }
+  // følger setup_net: åpner x:nett når oppsett-nettet kommer (én gang per gang), lukker den når det er borte
+  function nettVakt() {
+    const sn = status().setup_net, p = page();
+    if (!sn || (!sn.active && !sn.joining)) { M.nettVist = false; M.nettSkjult = false; }
+    if (p === 'x:nett' && (!oppsettNett() || !S.power)) { S.set.page = ''; S.set.open = false; M.idx = 0; meld(); return; }
+    if (!M.nettVist && nettSperre() && !p && !S.set.open && !booting()) { M.nettVist = true; go('x:nett', 0); meld(); }
+  }
+  // liten «Ingen Wi-Fi» øverst til venstre på hovedskjermen (over omslaget) når enheten ikke har nett
+  function utenNett() {
+    const s = status(), sn = s.setup_net, n = window.S1NET || s.net;
+    if (!n && !sn) return false;   // vet ikke ennå (eller forhåndsvisning uten daemon)
+    if (sn && (sn.active || sn.kabel) && !sn.joining) return true;
+    return !!n && !n.ssid && !n.ip;
+  }
+  function hovedVisning() {
+    const t = now(), s = status(), h = (s.ui || {}).hold;
+    return S.power && !booting() && !S.rebootT && !S.set.open && !S.setup.on && !M.wiz && !S.knobHoldT && !S.pairT && !s.rebooting
+      && t - S.muteT >= 1600 && t - (S.toastT || -1e9) >= 2200 && t - (S.nightT || -1e9) > 6000 && t - (S.clockPrevT || -1e9) > 4000
+      && !menuOpen() && !(bdayOn() && !S.bdayHide) && !(h && h.stage >= 1) && !(s.setup_net && s.setup_net.joining);
+  }
+  function ingenWifi(g) {
+    const a = 1 - screenDim(); if (a <= 0) return;
+    g.save(); g.globalAlpha = a; g.setTransform(0.5, 0, 0, 0.5, 0, 0);
+    g.font = '600 26px ' + SORA; const tw = g.measureText('Ingen Wi-Fi').width, x = 80, y = 80, w = tw + 104, h = 58;
+    rr(g, x, y, w, h, 29); g.fillStyle = 'rgba(0,0,0,.66)'; g.fill(); g.strokeStyle = 'rgba(255,181,71,.55)'; g.lineWidth = 2; g.stroke();
+    // Wi-Fi-buer med skråstrek
+    g.translate(x + 40, y + 41); g.strokeStyle = RAV; g.lineCap = 'round'; g.lineWidth = 4;
+    [8, 16, 24].forEach(r => { g.beginPath(); g.arc(0, 0, r, -Math.PI * 0.78, -Math.PI * 0.22); g.stroke(); });
+    g.beginPath(); g.moveTo(-17, -28); g.lineTo(15, 2); g.stroke();
+    g.translate(-(x + 40), -(y + 41));
+    g.fillStyle = W; g.textBaseline = 'middle'; g.fillText('Ingen Wi-Fi', x + 74, y + h / 2 + 1); g.textBaseline = 'alphabetic';
+    g.restore();
   }
 
   // ---------- tastatur på hjulet ----------
@@ -323,7 +399,8 @@
     const lbl = 'OPPSETT · ' + STEG[M.step] + ' · ' + (M.step + 1) + ' AV ' + STEG.length;
     if (M.step === 0) { glod(g, RAV); merke(g, Math.sin(now() / 700) * 6); hode(g, lbl, 'Velkommen', 'Vri hjulet for å velge, trykk for å fortsette.', RAV, 'Kildeknappene går tilbake.'); piller(g, v, M.idx); wake(800); return; }
     if (M.step === 1) {
-      glod(g, n.ssid ? GRONN : RAV); wifiIkon(g, n.ssid ? GRONN : W);
+      const sn = oppsettNett();
+      if (sn && sn.qr && !n.ssid) qrFelt(g, sn); else { glod(g, n.ssid ? GRONN : RAV); wifiIkon(g, n.ssid ? GRONN : W); }
       if (n.ssid) hode(g, lbl, 'Koblet til', '«' + n.ssid + '»' + (n.ip ? ' · ' + n.ip : ''), RAV);
       else hode(g, lbl, 'Koble til Wi-Fi', ['Velg nettet her og skriv passordet med hjulet.', 'Skjold lager et oppsett-nett med QR-kode.', 'Bruk improv-wifi.com i Chrome.', 'Du kan gjøre det senere i Innstillinger.'][M.idx] || '', RAV);
       piller(g, v, M.idx); return;
@@ -375,18 +452,20 @@
   function ui(ev) {
     const p = page();
     if (!M.wiz && !p) return false;
+    if (ev.ev === 'menu_toggle' && p === 'x:nett') { nettTilbake(); S.set.open = false; return false; }   // holdt hjul: lukk og åpne innstillingene
     if (ev.ev === 'menu_toggle') { if (M.wiz) return true; M.kb = null; S.set.page = ''; return false; }   // holdt hjul: designets meny åpnes/lukkes
     S.set.t = now(); S.lastAct = now();
     const d = ev.d > 0 ? 1 : -1;
     if (ev.ev === 'back') { back(); return true; }
     if (p === 'x:kb') { if (ev.ev === 'turn') kbPos(M.kb.pos + d); else if (ev.ev === 'press') kbTrykk(); return true; }
     if (p === 'x:saver') { if (ev.ev === 'turn') M.idx = (M.idx + d + SAVERS.length) % SAVERS.length; else if (ev.ev === 'press') velgSaver(); return true; }
+    if (p === 'x:nett') { if (ev.ev === 'turn') M.idx = Math.max(0, Math.min(NETTVALG.length - 1, M.idx + d)); else if (ev.ev === 'press') nettValg(M.idx); return true; }
     if (p === 'x:wifi') { const v = wifiValg(); if (ev.ev === 'turn') M.idx = Math.max(0, Math.min(v.length - 1, M.idx + d)); else if (ev.ev === 'press') v[M.idx].a(); return true; }
     if (p === 'x:scan') { if (ev.ev === 'turn') M.idx = Math.max(0, Math.min(Math.max(0, M.nets.length - 1), M.idx + d)); else if (ev.ev === 'press' && !M.scanning) velgNett(); return true; }
     if (p === 'x:ble') { if (ev.ev === 'press') { api('/api/oppsett', { ble: false }).catch(() => {}); back(); } return true; }
     if (p === 'x:conn') {
       const c = M.conn || {};
-      if (c.state === 'ok' && ev.ev === 'press') { if (M.wiz) { M.step = 2; M.idx = 0; S.set.page = ''; S.set.open = false; } else go('x:wifi'); }
+      if (c.state === 'ok' && ev.ev === 'press') { if (M.wiz) { M.step = 2; M.idx = 0; S.set.page = ''; S.set.open = false; } else if (M.ret === 'x:nett') { S.set.page = ''; S.set.open = false; meld(); } else go('x:wifi'); }
       else if (c.state === 'feil') { if (ev.ev === 'turn') M.idx = M.idx ? 0 : 1; else if (ev.ev === 'press') { if (M.idx) skann(); else velgNett(); } }
       return true;
     }
@@ -403,17 +482,19 @@
   // ---------- tegning: våre sider foran designets ----------
   const tegn = window.drawBar;
   window.drawBar = function () {
+    nettVakt();
     const p = page(), s = status(), sn = s.setup_net;
-    const egen = p || (M.wiz && !(sn && (sn.active || sn.joining))) ? (p || 'x:setup') : '';
-    if (!egen || s.rebooting) { tegn(); return; }
+    // oppsettet viser selv QR-en når oppsett-nettet er oppe; system.js tar bare «Kobler til» (setup_net.joining)
+    const egen = p || (M.wiz && !(sn && sn.joining)) ? (p || 'x:setup') : '';
+    if (!egen || s.rebooting) { tegn(); if (!s.rebooting && utenNett() && hovedVisning()) { ingenWifi(cvb.getContext('2d')); texB.needsUpdate = true; } return; }
     const g = cvb.getContext('2d'); g.setTransform(0.5, 0, 0, 0.5, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, 1920, 640);
     g.textBaseline = 'alphabetic'; g.textAlign = 'left';
     try {
-      ({ 'x:saver': tegnSaver, 'x:wifi': tegnWifi, 'x:scan': tegnScan, 'x:kb': tegnKb, 'x:conn': tegnConn, 'x:ble': tegnBle, 'x:upd': tegnUpd, 'x:setup': tegnOppsett }[egen] || tegnOppsett)(g);
+      ({ 'x:nett': tegnNett, 'x:saver': tegnSaver, 'x:wifi': tegnWifi, 'x:scan': tegnScan, 'x:kb': tegnKb, 'x:conn': tegnConn, 'x:ble': tegnBle, 'x:upd': tegnUpd, 'x:setup': tegnOppsett }[egen] || tegnOppsett)(g);
     } catch (e) { tekst(g, 'Feil: ' + e.message, 88, 320, 36, 400, ROD); }
     melding(g);
     texB.needsUpdate = true;
-    wake(600);
+    if (egen !== 'x:nett' || now() - M.msgT < 2600) wake(600);   // x:nett står stille: ingen tegnesløyfe mens den venter
   };
   // melding også over designets meny (f.eks. «Heter nå …»)
   const tegnMeny = window.drawBarSettings;
@@ -426,5 +507,5 @@
     }, 7000);
   }
 
-  window.S1MENY = { ui, active, start: startOppsett, M, go, tastatur };
+  window.S1MENY = { ui, active, start: startOppsett, M, go, tastatur, utenNett };
 })();

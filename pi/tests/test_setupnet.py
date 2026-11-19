@@ -127,6 +127,43 @@ class Kabel(unittest.TestCase):
         return tempfile.mkdtemp()
 
 
+class Skjul(unittest.TestCase):
+    """«Tilbake til forsterkeren» på skjermen: oppsett-nettet går videre, men skjermen viser vanlig visning."""
+
+    def test_skjul_vises_i_status_og_melder_endring(self):
+        nm = Nm(); s, endret = ny(nm, [0.0]); s.active = True
+        self.assertFalse(s.status()["skjult"])
+        s.skjul(True)
+        self.assertTrue(s.status()["skjult"]); self.assertEqual(len(endret), 1)
+        s.skjul(True)                                                   # ingen endring: ingen ny melding
+        self.assertEqual(len(endret), 1)
+        self.assertTrue(s.active)                                       # oppsett-nettet står fortsatt (mobilen kan brukes)
+        s.skjul(False)
+        self.assertFalse(s.status()["skjult"]); self.assertEqual(len(endret), 2)
+
+    def test_skjult_overlever_ny_runde_med_oppsettnettet(self):
+        # med lagrede nett slås oppsett-nettet av og på for å prøve dem igjen: skjermen skal ikke sperres på nytt
+        nm = Nm(); now = [0.0]; s, _ = ny(nm, now); s.active = True; s.t_start = 0; s.skjul(True)
+        self.assertEqual(s.decide(sn.RETRY_S + 1, False, True), "stop")
+        s.active = False; s.t_offline = sn.RETRY_S + 1                  # som tick() gjør etter «stop»
+        self.assertEqual(s.decide(sn.RETRY_S + 2 + sn.OFFLINE_S, False, True), "start")
+        self.assertTrue(s.skjult)
+
+    def test_nettet_tilbake_nullstiller(self):
+        nm = Nm(); s, _ = ny(nm, [0.0]); s.active = True; s.skjul(True)
+        self.assertEqual(s.decide(100, True, True), "stop")
+        self.assertFalse(s.skjult)
+        s.skjul(True); s.active = False
+        self.assertEqual(s.decide(200, True, True), "")
+        self.assertFalse(s.skjult)
+
+    def test_startet_for_haand_vises_igjen(self):
+        nm = Nm(); s, _ = ny(nm, [100.0]); s.skjul(True)
+        with mock.patch.object(sn, "DNS_CONF", os.path.join(__import__("tempfile").mkdtemp(), "x.conf")):
+            self.assertTrue(s.start_manual())
+        self.assertFalse(s.status()["skjult"])
+
+
 class Nettet(unittest.TestCase):
     def test_start_lager_aksesspunkt_og_status(self):
         nm = Nm(); now = [50.0]; s, endret = ny(nm, now)

@@ -25,7 +25,21 @@ Kommer **Skjold-oppsett-XXXX** tilbake etter et minutt, var passordet feil. Kobl
 | Nettverkskabel settes i, eller Wi-Fi kobler til | Oppsett-nettet slås av |
 
 Skjold Touch viser nettnavnet og passordet på skjermen mens oppsett-nettet er på. `GET /api/status` har feltet
-`setup_net` med `ssid`, `password`, `url` og `qr` (teksten til en Wi-Fi-QR-kode).
+`setup_net` med `ssid`, `password`, `url` og `qr` (teksten til en Wi-Fi-QR-kode), og `skjult` (se under).
+
+## På S1-skjermen
+
+Når oppsett-nettet starter, viser S1 en side med QR-koden og tre valg på volumhjulet:
+
+- **Tilbake til forsterkeren** (forhåndsvalgt, også en kildeknapp eller å holde hjulet): vanlig skjerm, AUX, USB,
+  Blåtann og volum virker som før, og en liten «Ingen Wi-Fi» står øverst til venstre. Oppsett-nettet går videre, så
+  mobilen kan fortsatt brukes. Valget huskes av daemonen (`POST /api/oppsett {"skjul": true}`, `setup_net.skjult`)
+  til enheten er på nett igjen, så siden kommer ikke tilbake hver gang oppsett-nettet prøver de lagrede nettene.
+- **Velg nett her**: nettene rundt (skannet før aksesspunktet startet), velg med hjulet og skriv passordet med
+  tegnvelgeren på hjulet (vri = tegn, trykk = skriv, egne felt for slett, ferdig, abc/ABC/123 og mellomrom).
+- **Blåtann**: Improv Wi-Fi fra improv-wifi.com.
+
+Wi-Fi kan også settes opp når som helst fra innstillingene (hold hjulet 1,5 s → Tilkobling → Wi-Fi).
 
 ## Tilbakestilling
 

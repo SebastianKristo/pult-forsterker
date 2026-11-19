@@ -39,7 +39,8 @@
     if (busy()) raf = requestAnimationFrame(frame);
   }
   function draw() {
-    if (S.set.open && now() - S.set.t > 20000) { S.set.open = false; postUi(); }   // menyen lukker seg etter 20 s
+    // menyen lukker seg etter 20 s (ikke Wi-Fi-siden når nettet er borte, s1_meny.js x:nett: den lukkes med et valg eller en kildeknapp)
+    if (S.set.open && now() - S.set.t > 20000 && S.set.page !== 'x:nett') { S.set.open = false; postUi(); }
     // Under drawBar tegner designet 320 × 240-flaten (drawTFT0/1) for undersider og standby – samme som i prototypen
     try { drawTFT1(); } catch (e) { /* undersider uten data */ }
     drawBar();
@@ -98,7 +99,12 @@
   let st = {}, prev = {};
   function apply(s) {
     prev = st; st = s || {}; const n = now();
-    if (!window.__demo) window.S1NET = Object.assign({ lyrion: !!st.lyrion }, st.net || {});   // systemsiden (IP, Wi-Fi, Lyrion)
+    if (!window.__demo) {   // systemsiden (IP, Wi-Fi, Lyrion)
+      const nt = Object.assign({}, st.net || {}), sn = st.setup_net;
+      // med oppsett-nettet oppe melder radioen vårt eget «Skjold-oppsett-XXXX» og 10.42.0.1: det er ikke hjemmenettet
+      if (/^Skjold-oppsett-/.test(nt.ssid || '') || (sn && sn.active)) { nt.ssid = ''; if (nt.ip === '10.42.0.1') nt.ip = ''; }
+      window.S1NET = Object.assign({ lyrion: !!st.lyrion }, nt);
+    }
     S.power = !!st.power; S.main = true;
     if (st.name) NAMES[S.set.name | 0] = st.name;   // enhetsnavnet fra daemonen (designets devName() leser NAMES)
     const inp = st.input || 'airplay';
@@ -173,7 +179,7 @@
   }
 
   // ---------- knapper og hjul fra skjold-ui (/ui/stream) ----------
-  function postUi() { fetch('/ui/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ menu: !!S.set.open, setup: !!S.setup.on, bday: !!(bdayOn() && !S.bdayHide) }) }).catch(() => {}); }
+  function postUi() { fetch('/ui/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ menu: !!S.set.open, setup: !!S.setup.on || !!(window.S1MENY && S1MENY.active()), bday: !!(bdayOn() && !S.bdayHide) }) }).catch(() => {}); }
   function onUi(ev) {
     const n = now(); S.lastAct = n;
     screenPower();   // vekk panelet straks
