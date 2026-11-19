@@ -240,8 +240,11 @@ if S1F:
                    ("KI_AMP_USBSW_SENSE_PC1", _usb.get("sense_pc1")), ("KI_AMP_XSMT_PIN", S1F_PINS.get("dac_xsmt") or "none")):
         if _v is not None and not os.environ.get(_k):
             os.environ[_k] = str(_v)
-    if "RELAY_ACTIVE_LOW" not in os.environ:
-        os.environ["RELAY_ACTIVE_LOW"] = "0" if S1F_PINS.get("relay_active_high", True) is not False else "1"
+    # relay_active_high i s1f_pins.yaml vinner over RELAY_ACTIVE_LOW=0 som installasjonen skriver i /etc/ki-amp.env
+    if S1F_PINS.get("relay_active_high") is False:
+        os.environ["RELAY_ACTIVE_LOW"] = "1"
+    elif "RELAY_ACTIVE_LOW" not in os.environ:
+        os.environ["RELAY_ACTIVE_LOW"] = "0"
     os.environ.setdefault("KI_AMP_PRODUCT", "s1")
     BOARD = "kit"   # lyd, strøm og relé som Skjold Kit
 # Spillernavnet (AirPlay/Spotify/Blåtann/mDNS). Node: «Skjold Node» med mindre brukeren har satt et annet (malverdien
@@ -554,7 +557,10 @@ if HW:
             print("PGA2311 (bit-bang GPIO 0/1/16) ikke tilgjengelig", flush=True)
     elif BOARD == "kit":
         # relémodul i H-modus (jumper på H): høy = 24 V til forsterkeren. Starter AV – apply_power slår på i riktig rekkefølge.
-        relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=os.environ.get("RELAY_ACTIVE_LOW", "0") != "1", initial_value=False) or _Dummy()
+        if os.environ.get("RELAY_ACTIVE_LOW", "0") == "1":   # lavt-trigget modul (L): på = IN til GND, av = slipp pinnen (modulen trekker opp)
+            relay_amp = _mk(_OpenDrainOut, PIN_RELAY_AMP) or _Dummy()
+        else:
+            relay_amp = _mk(OutputDevice, PIN_RELAY_AMP, active_high=True, initial_value=False) or _Dummy()
         if PIN_DAC_XSMT is not None:
             dac_xsmt = _mk(OutputDevice, PIN_DAC_XSMT, active_high=True, initial_value=False)
     elif BOARD == "modules":

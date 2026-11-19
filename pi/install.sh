@@ -69,8 +69,10 @@ elif [ "$S1F" = 1 ]; then
   # Reléet til forsterkeren holdes lavt (av) fra fastvaren starter, så høyttalerne ikke lager lyder mens Pi-en starter
   PF=/etc/skjold/s1f_pins.yaml; [ -f "$PF" ] || PF="$SRC/config/s1f_pins.yaml"
   RELAY=$(sed -n 's/^relay: *\([0-9][0-9]*\).*/\1/p' "$PF" | head -n1); RELAY=${RELAY:-27}
-  sudo sed -i -E '/^# skjold-rele \(holdes av under oppstart\)$/{N;d}' "$CFG"   # config.txt tåler ikke kommentar på samme linje
-  printf '# skjold-rele (holdes av under oppstart)\ngpio=%s=op,dl\n' "$RELAY" | sudo tee -a "$CFG" >/dev/null
+  sudo sed -i -E '/^# skjold-rele/{N;d}' "$CFG"   # config.txt tåler ikke kommentar på samme linje
+  # høytrigget relé (relay_active_high: true): pinnen lav. Lavtrigget (false): pinnen slippes (modulen trekker IN opp = av)
+  if grep -qE '^relay_active_high: *false' "$PF"; then RMODE=ip,pn; else RMODE=op,dl; fi
+  printf '# skjold-rele (holdes av under oppstart)\ngpio=%s=%s\n' "$RELAY" "$RMODE" | sudo tee -a "$CFG" >/dev/null
   LINES='dtoverlay=hifiberry-dac dtoverlay=dwc2,dr_mode=peripheral enable_uart=0 hdmi_force_hotplug:0=1'
 elif [ "$OUT" = headphones ]; then
   grep -qxF 'dtparam=audio=on' "$CFG" || echo 'dtparam=audio=on' | sudo tee -a "$CFG"
