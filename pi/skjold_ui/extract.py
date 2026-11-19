@@ -13,6 +13,18 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+VOL_GLID = (
+    ("return Math.round(S.vol*Math.max(0,Math.min(1,t))); };",
+     "return Math.round(S.vol*Math.max(0,Math.min(1,t))); };"
+     " const VOL_TAU=100; let volGlidV=null, volGlidT=0;"
+     " const volGlid=()=>{ const m=volShown(), n=performance.now(), dt=Math.min(40,Math.max(0,n-volGlidT)); volGlidT=n;"
+     " if(volGlidV===null) volGlidV=m; else { volGlidV+=(m-volGlidV)*(1-Math.exp(-dt/VOL_TAU)); if(Math.abs(m-volGlidV)<0.05) volGlidV=m; } return volGlidV; };"
+     " const volGlidMoving=()=>volGlidV!==null&&performance.now()-volGlidT<250&&Math.abs(volShown()-volGlidV)>=0.05;"),
+    ("rr(X,470,Math.max(14,(TW-190)*v/100),14,7)", "rr(X,470,Math.max(14,(TW-190)*(S.muted?0:volGlid())/100),14,7)"),
+    ("rr(X,500,Math.max(12,w*v/100),12,6)", "rr(X,500,Math.max(12,w*(S.muted?0:volGlid())/100),12,6)"),
+    ("g.roundRect(X,470,Math.max(14,TW*(M?S.vol:v)/100),14,7)", "g.roundRect(X,470,Math.max(14,TW*(M?S.vol:volGlid())/100),14,7)"),
+)
+
 
 def main(src):
     js = open(os.path.join(src, "s1", "pultforsterker_revb_metall.js"), encoding="utf-8").read().split("\n")
@@ -49,7 +61,9 @@ def main(src):
     # Rettelser som skal overleve et nytt uttrekk (gjør ingenting når designfila allerede har dem):
     # «Blåtann» i all skjermtekst, fremdriftslinja bruker låtens egentlige varighet, og systemsiden viser ekte
     # IP, Wi-Fi og Lyrion-status (window.S1NET fra screen.js) i stedet for designets eksempelverdier.
-    for a, b in (("pill('BLUETOOTH');", "pill('BLÅTANN');"),
+    # Volumlinja glir mot ny verdi (volGlid: eksponentiell utjevning per bilde, tidskonstant VOL_TAU ms) i stedet for å
+    # hoppe; tallet viser fortsatt målverdien (volShown). screen.js holder tegnesløyfa i gang mens volGlidMoving() er sann.
+    for a, b in (VOL_GLID if "const volGlid=" not in text else ()) + (("pill('BLUETOOTH');", "pill('BLÅTANN');"),
                  ("velg den i Bluetooth på telefonen", "velg den i Blåtann på telefonen"),
                  ("S.wl==='bt'?'BLUETOOTH':'AIRPLAY'", "S.wl==='bt'?'BLÅTANN':'AIRPLAY'"),
                  ("dur=244, p=", "dur=(INPUTS[0].dur>1?INPUTS[0].dur:244), p="),

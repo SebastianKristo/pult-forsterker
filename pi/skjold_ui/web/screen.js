@@ -30,7 +30,8 @@
     return n < until || booting() || S.rebootT || S.pairT || S.knobHoldT || (S.set.open && n - S.set.t < 20000)
       || ((window.bdayOn && bdayOn()) && !S.bdayHide)
       || (!S.power && S.main && S.set.clock && [6, 7].includes(S.set.clockStyle | 0))   // VU-metre og radioskala er animert
-      || saverLive();   // skjermsparer-videoen
+      || saverLive()   // skjermsparer-videoen
+      || (typeof volGlidMoving === 'function' && volGlidMoving());   // volumlinja glir mot ny verdi (s1_draw.js: volGlid)
   }
   function frame(t) {
     raf = 0;
