@@ -954,6 +954,7 @@ export const EN_AUTO: Record<string, string> = {
   'Sjekk igjen': 'Check again',
   'Sjekker …': 'Checking …',
   'Skann QR-kode på skjermen': 'Scan QR code on the screen',
+  'Sett opp en Skjold Røst': 'Set up a Skjold Røst',
   'Skann QR-koden': 'Scan the QR code',
   'Skann QR-koden med kameraet eller Hjem-appen, eller skriv inn koden.': 'Scan the QR code with the camera or the Home app, or enter the code.',
   'Skjermen når den er i bruk': 'The screen when in use',
