@@ -10,7 +10,13 @@ IS_PI=0; [ -r /proc/device-tree/model ] && grep -qi "raspberry" /proc/device-tre
 
 echo "== Programmer og tjenester"
 # I2C for OLED (Pi OS leverer det avslått) og moduler via modules-load.d (Debian 13)
-[ "$IS_PI" = 0 ] || [ -e /dev/i2c-1 ] || { sudo raspi-config nonint do_i2c 0 2>/dev/null; sudo modprobe i2c-dev 2>/dev/null; } || true
+# I²C (OLED/hovedkort) – ikke på S1 rev F, der GPIO 2/3 er USB-knappen og av/på-lyset
+S1F_ENV=0; grep -q '^KI_AMP_BOARD=s1f' /etc/ki-amp.env 2>/dev/null && S1F_ENV=1
+[ "$IS_PI" = 0 ] || [ "$S1F_ENV" = 1 ] || [ -e /dev/i2c-1 ] || { sudo raspi-config nonint do_i2c 0 2>/dev/null; sudo modprobe i2c-dev 2>/dev/null; } || true
+if [ "$S1F_ENV" = 1 ] && grep -qE '^dtparam=i2c_arm=on' /boot/firmware/config.txt 2>/dev/null; then
+  sudo sed -i -E 's/^dtparam=i2c_arm=on$/#dtparam=i2c_arm=on/' /boot/firmware/config.txt
+  echo "  S1 rev F: I²C slått av igjen (GPIO 2/3 er knapp og lys) – gjelder etter omstart"
+fi
 [ "$IS_PI" = 0 ] || [ -f /etc/modules-load.d/ki-amp.conf ] || printf 'dwc2\ni2c-dev\n' | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
 sudo install -m 755 "$SRC/ki_amp_daemon.py" "$SRC/oled_display.py" "$SRC/oled_small.py" /usr/local/bin/
 sudo install -m 644 "$SRC/skjold_homekit.py" "$SRC/skjold_s1f.py" "$SRC/skjold_rec.py" "$SRC/skjold_roomeq.py" "$SRC/skjold_intercom.py" "$SRC/skjold_recognize.py" "$SRC/skjold_doorbell.py" "$SRC/skjold_routines.py" "$SRC/skjold_safeupdate.py" "$SRC/skjold_logos.py" "$SRC/skjold_homelayout.py" "$SRC/skjold_ma.py" "$SRC/skjold_nrk.py" "$SRC/skjold_cloud.py" "$SRC/skjold_programs.py" "$SRC/skjold_speakerprofiles.py" /usr/local/bin/   # Apple Hjem (HomeKit), Skjold S1 rev F
