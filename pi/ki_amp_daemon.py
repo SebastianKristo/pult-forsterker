@@ -1879,7 +1879,7 @@ def read_status():
     elif state["input"] == "roon" or (ROON_ON and _extras_roon["playing"] and not st.get("playing")):
         st = {"playing": _extras_roon["playing"], "paused": False, "source": "roon", "cover": "", "title": "Roon", "artist": "",
               "album": "", "duration": 0, "position": 0, "bt_device": st.get("bt_device", "")}
-    extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", ""), "logo": _logos.path_for((p or {}).get("icon") or (p or {}).get("image") or "", (p or {}).get("title", "")) if p else ""} for i, p in enumerate(state["presets"])],
+    extra = {"presets": [{"n": i + 1, "title": (p or {}).get("title", ""), "logo": _logos.path_for((p or {}).get("icon") or (p or {}).get("image") or "", _logos.logo_name((p or {}).get("title", ""), (p or {}).get("url", ""))) if p else ""} for i, p in enumerate(state["presets"])],
              "presets_count": sum(1 for p in state["presets"] if p), "presets_max": PRESETS_MAX, "radio_now": radio_now(),
              "station": lyr.info.get("station", ""), "lyrion": lyr.connected, "net": net_info(),
              "source_label": (last_play.get("source") or "") if state["input"] == "radio" and last_play.get("source") and lyr.info.get("url") == last_play.get("url") else "",
@@ -4276,7 +4276,7 @@ def preset_out(i, p):
         return None
     return {"n": i + 1, "title": p.get("title", ""), "url": p.get("url", ""), "icon": p.get("icon", ""),
             "image": p.get("icon", "") or p.get("image", ""), "genre": p.get("genre", ""),
-            "logo": _logos.path_for(p.get("icon", "") or p.get("image", ""), p.get("title", ""))}
+            "logo": _logos.path_for(p.get("icon", "") or p.get("image", ""), _logos.logo_name(p.get("title", ""), p.get("url", "")))}
 
 
 def presets_payload():
