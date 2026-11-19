@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 1260" width="1640" height="1260" font-family="Sora, 'IBM Plex Sans', Arial, sans-serif">
+<defs><style>.t{font-size:15px;font-weight:600;fill:#1d1d1f}.s{font-size:14px;fill:#55554f}.m{font-family:'IBM Plex Mono',monospace;font-size:12.5px;fill:#55554f}.w{fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}</style></defs>
+<rect width="1640" height="1260" fill="#f7f6f2"/>
+<text x="40" y="54" font-size="30" font-weight="600" fill="#1d1d1f">Skjold S1 · ledninger fra knapper, lys, volum og relé til Pi 4</text>
+<text x="40" y="84" class="s">Pinnene fra pi/config/s1f_pins.yaml (rev F). Sort = GND. Hver knapp: NO til GPIO, C til GND. Hvert lys: GPIO → 1 kΩ → transistor (S8050/AO3400), LED-ringens + til +24 V.</text>
+<path class="w" stroke="#d63b2f" d="M400 412 H766"/>
+<path class="w" stroke="#1d1d1f" d="M400 432 H470"/>
+<path class="w" stroke="#b91c1c" d="M400 458 H766"/>
+<path class="w" stroke="#1d1d1f" d="M400 478 H470"/>
+<path class="w" stroke="#7aa6ef" d="M400 504 H766"/>
+<path class="w" stroke="#1d1d1f" d="M400 524 H470"/>
+<path class="w" stroke="#0f766e" d="M400 604 H766"/>
+<path class="w" stroke="#0f766e" d="M400 650 H766"/>
+<path class="w" stroke="#0f766e" d="M400 696 H766"/>
+<path class="w" stroke="#1d1d1f" d="M400 742 H766"/>
+<path class="w" stroke="#2f6fd6" d="M400 826 H766"/>
+<path class="w" stroke="#1d1d1f" d="M400 846 H470"/>
+<path class="w" stroke="#2f9e5b" d="M400 872 H766"/>
+<path class="w" stroke="#1d1d1f" d="M400 892 H470"/>
+<path class="w" stroke="#8a4fd6" d="M400 918 H766"/>
+<path class="w" stroke="#1d1d1f" d="M400 938 H470"/>
+<path class="w" stroke="#1d1d1f" d="M470 432 V1064 H766"/>
+<path class="w" stroke="#7fcf9f" d="M1220 504 H864"/>
+<path class="w" stroke="#1d1d1f" d="M1220 524 H1040"/>
+<path class="w" stroke="#b896ef" d="M1220 550 H864"/>
+<path class="w" stroke="#1d1d1f" d="M1220 570 H1040"/>
+<path class="w" stroke="#f0a070" d="M1220 642 H864"/>
+<path class="w" stroke="#1d1d1f" d="M1220 662 H1040"/>
+<path class="w" stroke="#e8862a" d="M1220 872 H864"/>
+<path class="w" stroke="#1d1d1f" d="M1220 892 H1040"/>
+<path class="w" stroke="#c2410c" d="M1220 964 H864"/>
+<path class="w" stroke="#1d1d1f" d="M1220 984 H1040"/>
+<path class="w" stroke="#1d1d1f" d="M1040 524 V984"/>
+<path class="w" stroke="#1d1d1f" d="M1040 926 H864"/>
+<circle cx="470" cy="432" r="6" fill="#1d1d1f"/>
+<circle cx="470" cy="478" r="6" fill="#1d1d1f"/>
+<circle cx="470" cy="524" r="6" fill="#1d1d1f"/>
+<circle cx="470" cy="846" r="6" fill="#1d1d1f"/>
+<circle cx="470" cy="892" r="6" fill="#1d1d1f"/>
+<circle cx="470" cy="938" r="6" fill="#1d1d1f"/>
+<circle cx="1040" cy="524" r="6" fill="#1d1d1f"/>
+<circle cx="1040" cy="570" r="6" fill="#1d1d1f"/>
+<circle cx="1040" cy="662" r="6" fill="#1d1d1f"/>
+<circle cx="1040" cy="892" r="6" fill="#1d1d1f"/>
+<circle cx="1040" cy="984" r="6" fill="#1d1d1f"/>
+<circle cx="1040" cy="926" r="6" fill="#1d1d1f"/>
+<rect x="746" y="156" width="138" height="942" rx="12" fill="#1f3d2c"/>
+<text x="815" y="144" text-anchor="middle" class="s">↑ SD-kort-enden</text>
+<circle cx="780" cy="190" r="13" fill="#e0a400" stroke="#fff" stroke-width="2"/><text x="780" y="194" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<circle cx="850" cy="190" r="13" fill="#d63b2f" stroke="#fff" stroke-width="2"/><text x="850" y="194" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<circle cx="780" cy="236" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="780" y="240" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<circle cx="850" cy="236" r="13" fill="#d63b2f" stroke="#fff" stroke-width="2"/><text x="850" y="240" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">4</text>
+<circle cx="780" cy="282" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="780" y="286" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">5</text>
+<circle cx="850" cy="282" r="13" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><text x="850" y="286" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">6</text>
+<circle cx="780" cy="328" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="780" y="332" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">7</text>
+<circle cx="850" cy="328" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="850" y="332" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">8</text>
+<circle cx="780" cy="374" r="13" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><text x="780" y="378" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">9</text>
+<circle cx="850" cy="374" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="850" y="378" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">10</text>
+<circle cx="780" cy="420" r="13" fill="#d63b2f" stroke="#fff" stroke-width="2"/><text x="780" y="424" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">11</text>
+<circle cx="850" cy="420" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="850" y="424" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">12</text>
+<circle cx="780" cy="466" r="13" fill="#b91c1c" stroke="#fff" stroke-width="2"/><text x="780" y="470" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">13</text>
+<circle cx="850" cy="466" r="13" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><text x="850" y="470" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">14</text>
+<circle cx="780" cy="512" r="13" fill="#7aa6ef" stroke="#fff" stroke-width="2"/><text x="780" y="516" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">15</text>
+<circle cx="850" cy="512" r="13" fill="#7fcf9f" stroke="#fff" stroke-width="2"/><text x="850" y="516" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">16</text>
+<circle cx="780" cy="558" r="13" fill="#e0a400" stroke="#fff" stroke-width="2"/><text x="780" y="562" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">17</text>
+<circle cx="850" cy="558" r="13" fill="#b896ef" stroke="#fff" stroke-width="2"/><text x="850" y="562" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">18</text>
+<circle cx="780" cy="604" r="13" fill="#0f766e" stroke="#fff" stroke-width="2"/><text x="780" y="608" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">19</text>
+<circle cx="850" cy="604" r="13" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><text x="850" y="608" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">20</text>
+<circle cx="780" cy="650" r="13" fill="#0f766e" stroke="#fff" stroke-width="2"/><text x="780" y="654" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">21</text>
+<circle cx="850" cy="650" r="13" fill="#f0a070" stroke="#fff" stroke-width="2"/><text x="850" y="654" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">22</text>
+<circle cx="780" cy="696" r="13" fill="#0f766e" stroke="#fff" stroke-width="2"/><text x="780" y="700" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">23</text>
+<circle cx="850" cy="696" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="850" y="700" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">24</text>
+<circle cx="780" cy="742" r="13" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><text x="780" y="746" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">25</text>
+<circle cx="850" cy="742" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="850" y="746" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">26</text>
+<circle cx="780" cy="788" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="780" y="792" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">27</text>
+<circle cx="850" cy="788" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="850" y="792" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">28</text>
+<circle cx="780" cy="834" r="13" fill="#2f6fd6" stroke="#fff" stroke-width="2"/><text x="780" y="838" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">29</text>
+<circle cx="850" cy="834" r="13" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><text x="850" y="838" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">30</text>
+<circle cx="780" cy="880" r="13" fill="#2f9e5b" stroke="#fff" stroke-width="2"/><text x="780" y="884" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">31</text>
+<circle cx="850" cy="880" r="13" fill="#e8862a" stroke="#fff" stroke-width="2"/><text x="850" y="884" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">32</text>
+<circle cx="780" cy="926" r="13" fill="#8a4fd6" stroke="#fff" stroke-width="2"/><text x="780" y="930" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">33</text>
+<circle cx="850" cy="926" r="13" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><text x="850" y="930" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">34</text>
+<circle cx="780" cy="972" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="780" y="976" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">35</text>
+<circle cx="850" cy="972" r="13" fill="#c2410c" stroke="#fff" stroke-width="2"/><text x="850" y="976" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">36</text>
+<circle cx="780" cy="1018" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="780" y="1022" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">37</text>
+<circle cx="850" cy="1018" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="850" y="1022" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">38</text>
+<circle cx="780" cy="1064" r="13" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><text x="780" y="1068" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">39</text>
+<circle cx="850" cy="1064" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="850" y="1068" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">40</text>
+<text x="760" y="174" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">3V3</text>
+<text x="870" y="174" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">5V</text>
+<text x="760" y="220" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO2</text>
+<text x="870" y="220" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">5V</text>
+<text x="760" y="266" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO3</text>
+<text x="870" y="266" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GND</text>
+<text x="760" y="312" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO4</text>
+<text x="870" y="312" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO14</text>
+<text x="760" y="358" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GND</text>
+<text x="870" y="358" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO15</text>
+<text x="760" y="404" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO17</text>
+<text x="870" y="404" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO18</text>
+<text x="760" y="450" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO27</text>
+<text x="870" y="450" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GND</text>
+<text x="760" y="496" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO22</text>
+<text x="870" y="496" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO23</text>
+<text x="760" y="542" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">3V3</text>
+<text x="870" y="542" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO24</text>
+<text x="760" y="588" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO10</text>
+<text x="870" y="588" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GND</text>
+<text x="760" y="634" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO9</text>
+<text x="870" y="634" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO25</text>
+<text x="760" y="680" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO11</text>
+<text x="870" y="680" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO8</text>
+<text x="760" y="726" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GND</text>
+<text x="870" y="726" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO7</text>
+<text x="760" y="772" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86"></text>
+<text x="870" y="772" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86"></text>
+<text x="760" y="818" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO5</text>
+<text x="870" y="818" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GND</text>
+<text x="760" y="864" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO6</text>
+<text x="870" y="864" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO12</text>
+<text x="760" y="910" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO13</text>
+<text x="870" y="910" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GND</text>
+<text x="760" y="956" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO19</text>
+<text x="870" y="956" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO16</text>
+<text x="760" y="1002" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO26</text>
+<text x="870" y="1002" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO20</text>
+<text x="760" y="1048" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GND</text>
+<text x="870" y="1048" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO21</text>
+<rect x="70" y="396" width="330" height="48" rx="10" fill="#fff" stroke="#d63b2f" stroke-width="2.5"/><text x="82" y="416" class="t">Av/på-knapp</text><text x="82" y="434" class="m">NO → GPIO17 · C → GND</text>
+<rect x="70" y="442" width="330" height="48" rx="10" fill="#fff" stroke="#b91c1c" stroke-width="2.5"/><text x="82" y="462" class="t">Relé 5 V (IN)</text><text x="82" y="480" class="m">VCC ← 5,1 V · COM +24 V · NO → forsterker</text>
+<rect x="70" y="488" width="330" height="48" rx="10" fill="#fff" stroke="#7aa6ef" stroke-width="2.5"/><text x="82" y="508" class="t">BT/AirPlay-lys</text><text x="82" y="526" class="m">1 kΩ → transistor B · E → GND</text>
+<rect x="70" y="580" width="330" height="186" rx="10" fill="#fff" stroke="#0f766e" stroke-width="2.5"/><text x="82" y="602" class="t">Volum EC11</text><text x="82" y="622" class="m">vri = volum · trykk = spill/pause</text>
+<text x="388" y="609" text-anchor="end" class="t" fill="#0f766e">B</text>
+<text x="388" y="655" text-anchor="end" class="t" fill="#0f766e">A</text>
+<text x="388" y="701" text-anchor="end" class="t" fill="#0f766e">D (trykk)</text>
+<text x="388" y="747" text-anchor="end" class="t" fill="#1d1d1f">C + E</text>
+<rect x="70" y="810" width="330" height="48" rx="10" fill="#fff" stroke="#2f6fd6" stroke-width="2.5"/><text x="82" y="830" class="t">BT/AirPlay-knapp</text><text x="82" y="848" class="m">NO → GPIO5 · C → GND</text>
+<rect x="70" y="856" width="330" height="48" rx="10" fill="#fff" stroke="#2f9e5b" stroke-width="2.5"/><text x="82" y="876" class="t">AUX-knapp</text><text x="82" y="894" class="m">NO → GPIO6 · C → GND</text>
+<rect x="70" y="902" width="330" height="48" rx="10" fill="#fff" stroke="#8a4fd6" stroke-width="2.5"/><text x="82" y="922" class="t">RADIO-knapp</text><text x="82" y="940" class="m">NO → GPIO13 · C → GND</text>
+<text x="462" y="1054" text-anchor="end" class="m">felles GND → pinne 39</text>
+<rect x="1220" y="488" width="330" height="48" rx="10" fill="#fff" stroke="#7fcf9f" stroke-width="2.5"/><text x="1232" y="508" class="t">AUX-lys</text><text x="1232" y="526" class="m">1 kΩ → transistor B · E → GND</text>
+<rect x="1220" y="534" width="330" height="48" rx="10" fill="#fff" stroke="#b896ef" stroke-width="2.5"/><text x="1232" y="554" class="t">RADIO-lys</text><text x="1232" y="572" class="m">1 kΩ → transistor B · E → GND</text>
+<rect x="1220" y="626" width="330" height="48" rx="10" fill="#fff" stroke="#f0a070" stroke-width="2.5"/><text x="1232" y="646" class="t">USB-lys</text><text x="1232" y="664" class="m">1 kΩ → transistor B · E → GND</text>
+<rect x="1220" y="856" width="330" height="48" rx="10" fill="#fff" stroke="#e8862a" stroke-width="2.5"/><text x="1232" y="876" class="t">Av/på-lys (PWM)</text><text x="1232" y="894" class="m">1 kΩ → transistor B · E → GND</text>
+<rect x="1220" y="948" width="330" height="48" rx="10" fill="#fff" stroke="#c2410c" stroke-width="2.5"/><text x="1232" y="968" class="t">USB-knapp</text><text x="1232" y="986" class="m">NO → GPIO16 · C → GND</text>
+<text x="1048" y="916" class="m">felles GND → pinne 34</text>
+<text x="40" y="1144" class="s">LED-ringene: + til +24 V (eller +5 V for 5 V-ringer), − til transistorens C (kollektor). Ikke koble lysene rett på Pi-en.</text>
+<text x="40" y="1168" class="s">Reléet: IN til GPIO27, VCC til 5,1 V, GND til felles GND. COM til +24 V etter bryteren, NO til forsterkerens VCC (ikke NC).</text>
+<text x="40" y="1192" class="s">Volumet snur feil vei: bytt A og B. GPIO 9/10/11 er SPI-pinnene, så SPI må være av.</text>
+</svg>
