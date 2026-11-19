@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" font-family="Sora, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#f7f6f2"/>
+<text x="40" y="60" font-size="34" font-weight="700" fill="#1d1d1f">Lepy LP-808: bytt potensiometrene med faste motstander</text>
+<text x="40" y="96" font-size="18" fill="#55554f">Skjold styrer volum, bass og diskant digitalt – potene kan loddes ut. B50K = lineær 50 kΩ, dobbel (venstre + høyre).</text>
+<rect x="60" y="150" width="460" height="400" rx="18" fill="#fff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="84" y="190" font-size="24" font-weight="700" fill="#1d1d1f">1 · Potensiometeret (B50K, 6 bein)</text>
+<rect x="190" y="220" width="200" height="150" rx="14" fill="#3a3a3c"/><circle cx="290" cy="295" r="40" fill="#8b8b86"/><rect x="282" y="210" width="16" height="50" fill="#c9c9c4"/>
+<text x="290" y="300" text-anchor="middle" font-size="16" fill="#fff">B50K</text>
+<circle cx="230" cy="420" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/><text x="230" y="426" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">1</text>
+<circle cx="290" cy="420" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/><text x="290" y="426" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">2</text>
+<circle cx="350" cy="420" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/><text x="350" y="426" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">3</text>
+<text x="420" y="426" font-size="17" fill="#1d1d1f">Bak rad: L</text>
+<circle cx="230" cy="480" r="16" fill="#f0a070" stroke="#1d1d1f" stroke-width="3"/><text x="230" y="486" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">1</text>
+<circle cx="290" cy="480" r="16" fill="#f0a070" stroke="#1d1d1f" stroke-width="3"/><text x="290" y="486" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">2</text>
+<circle cx="350" cy="480" r="16" fill="#f0a070" stroke="#1d1d1f" stroke-width="3"/><text x="350" y="486" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">3</text>
+<text x="420" y="486" font-size="17" fill="#1d1d1f">Fremre rad: R</text>
+<text x="84" y="535" font-size="16" fill="#55554f">1 og 3 = endene · 2 = midten · L/R kan være byttet</text>
+<rect x="560" y="150" width="480" height="400" rx="18" fill="#fff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="584" y="190" font-size="24" font-weight="700" fill="#1d1d1f">2 · Bass og diskant: flatt</text>
+<text x="584" y="220" font-size="16" fill="#55554f">Samme som knappen på midten. Per kanal (L og R):</text>
+<circle cx="630" cy="320" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="630" y="326" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">1</text>
+<circle cx="800" cy="320" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="800" y="326" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">2</text>
+<circle cx="970" cy="320" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="970" y="326" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">3</text>
+<line x1="646" y1="320" x2="675.0" y2="320" stroke="#2f6fd6" stroke-width="4"/><rect x="675.0" y="306" width="80" height="28" rx="4" fill="#fff" stroke="#2f6fd6" stroke-width="4"/><line x1="755.0" y1="320" x2="784" y2="320" stroke="#2f6fd6" stroke-width="4"/>
+<text x="715.0" y="296" text-anchor="middle" font-size="18" font-weight="700" fill="#2f6fd6">24 kΩ</text>
+<line x1="816" y1="320" x2="845.0" y2="320" stroke="#2f6fd6" stroke-width="4"/><rect x="845.0" y="306" width="80" height="28" rx="4" fill="#fff" stroke="#2f6fd6" stroke-width="4"/><line x1="925.0" y1="320" x2="954" y2="320" stroke="#2f6fd6" stroke-width="4"/>
+<text x="885.0" y="296" text-anchor="middle" font-size="18" font-weight="700" fill="#2f6fd6">24 kΩ</text>
+<text x="584" y="370" font-size="16" fill="#2f6fd6" font-weight="600">kanal L</text>
+<circle cx="630" cy="450" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="630" y="456" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">1</text>
+<circle cx="800" cy="450" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="800" y="456" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">2</text>
+<circle cx="970" cy="450" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="970" y="456" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">3</text>
+<line x1="646" y1="450" x2="675.0" y2="450" stroke="#c2410c" stroke-width="4"/><rect x="675.0" y="436" width="80" height="28" rx="4" fill="#fff" stroke="#c2410c" stroke-width="4"/><line x1="755.0" y1="450" x2="784" y2="450" stroke="#c2410c" stroke-width="4"/>
+<text x="715.0" y="426" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">24 kΩ</text>
+<line x1="816" y1="450" x2="845.0" y2="450" stroke="#c2410c" stroke-width="4"/><rect x="845.0" y="436" width="80" height="28" rx="4" fill="#fff" stroke="#c2410c" stroke-width="4"/><line x1="925.0" y1="450" x2="954" y2="450" stroke="#c2410c" stroke-width="4"/>
+<text x="885.0" y="426" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">24 kΩ</text>
+<text x="584" y="500" font-size="16" fill="#c2410c" font-weight="600">kanal R</text>
+<text x="584" y="535" font-size="16" fill="#55554f">B100K → 47 kΩ · B10K → 4,7 kΩ (halv verdi hver)</text>
+<rect x="1080" y="150" width="460" height="400" rx="18" fill="#fff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="1104" y="190" font-size="24" font-weight="700" fill="#1d1d1f">3 · Volum: fast nivå</text>
+<text x="1104" y="220" font-size="16" fill="#55554f">Mål poten i stillingen du vil ha, og lodd inn:</text>
+<circle cx="1140" cy="320" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="1140" y="326" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">1</text>
+<circle cx="1310" cy="320" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="1310" y="326" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">2</text>
+<circle cx="1480" cy="320" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="1480" y="326" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">3</text>
+<line x1="1156" y1="320" x2="1185.0" y2="320" stroke="#2f6fd6" stroke-width="4"/><rect x="1185.0" y="306" width="80" height="28" rx="4" fill="#fff" stroke="#2f6fd6" stroke-width="4"/><line x1="1265.0" y1="320" x2="1294" y2="320" stroke="#2f6fd6" stroke-width="4"/>
+<text x="1225.0" y="296" text-anchor="middle" font-size="18" font-weight="700" fill="#2f6fd6">R1 (målt)</text>
+<line x1="1326" y1="320" x2="1355.0" y2="320" stroke="#2f6fd6" stroke-width="4"/><rect x="1355.0" y="306" width="80" height="28" rx="4" fill="#fff" stroke="#2f6fd6" stroke-width="4"/><line x1="1435.0" y1="320" x2="1464" y2="320" stroke="#2f6fd6" stroke-width="4"/>
+<text x="1395.0" y="296" text-anchor="middle" font-size="18" font-weight="700" fill="#2f6fd6">R2 (målt)</text>
+<text x="1104" y="370" font-size="16" fill="#2f6fd6" font-weight="600">kanal L</text>
+<circle cx="1140" cy="450" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="1140" y="456" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">1</text>
+<circle cx="1310" cy="450" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="1310" y="456" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">2</text>
+<circle cx="1480" cy="450" r="16" fill="#c9a227" stroke="#1d1d1f" stroke-width="3"/><text x="1480" y="456" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">3</text>
+<line x1="1156" y1="450" x2="1185.0" y2="450" stroke="#c2410c" stroke-width="4"/><rect x="1185.0" y="436" width="80" height="28" rx="4" fill="#fff" stroke="#c2410c" stroke-width="4"/><line x1="1265.0" y1="450" x2="1294" y2="450" stroke="#c2410c" stroke-width="4"/>
+<text x="1225.0" y="426" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">R1 (målt)</text>
+<line x1="1326" y1="450" x2="1355.0" y2="450" stroke="#c2410c" stroke-width="4"/><rect x="1355.0" y="436" width="80" height="28" rx="4" fill="#fff" stroke="#c2410c" stroke-width="4"/><line x1="1435.0" y1="450" x2="1464" y2="450" stroke="#c2410c" stroke-width="4"/>
+<text x="1395.0" y="426" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">R2 (målt)</text>
+<text x="1104" y="500" font-size="16" fill="#c2410c" font-weight="600">kanal R</text>
+<text x="1104" y="535" font-size="16" fill="#55554f">Halvveis: ca. 33 kΩ + 15 kΩ (ca. −10 dB)</text>
+<rect x="60" y="590" width="1480" height="360" rx="18" fill="#fff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="84" y="634" font-size="24" font-weight="700" fill="#1d1d1f">4 · Slik gjør du det</text>
+<circle cx="104" cy="678" r="13" fill="#d9a441"/><text x="104" y="684" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">1</text><text x="130" y="684" font-size="18" fill="#1d1d1f">Ta bilde av kortet og merk potene (VOLUME, BASS, TREBLE, SUPER BASS) før du lodder.</text>
+<circle cx="104" cy="716" r="13" fill="#d9a441"/><text x="104" y="722" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">2</text><text x="130" y="722" font-size="18" fill="#1d1d1f">Vri knappen dit du vil ha den. Lodd ut poten uten å vri den, og mål 1–2 og 2–3 med multimeter (Ω).</text>
+<circle cx="104" cy="754" r="13" fill="#d9a441"/><text x="104" y="760" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">3</text><text x="130" y="760" font-size="18" fill="#1d1d1f">Lodd motstandene i hullene der poten satt: én fra hull 1 til 2, én fra 2 til 3 – for både bakre (L) og fremre (R) rad.</text>
+<circle cx="104" cy="792" r="13" fill="#d9a441"/><text x="104" y="798" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">4</text><text x="130" y="798" font-size="18" fill="#1d1d1f">Bass og diskant: 24 kΩ + 24 kΩ (B50K). Volum: det du målte, eller 33 kΩ + 15 kΩ for omtrent halvt.</text>
+<circle cx="104" cy="830" r="13" fill="#d9a441"/><text x="104" y="836" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">5</text><text x="130" y="836" font-size="18" fill="#1d1d1f">Super bass: er det en pot, gjør som bass. Er det en bryter, lodd den fast i stillingen du vil ha.</text>
+<circle cx="104" cy="868" r="13" fill="#d9a441"/><text x="104" y="874" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">6</text><text x="130" y="874" font-size="18" fill="#1d1d1f">Skjold tar over: volum (hjulet/appen/AirPlay), bass og diskant (Innstillinger → Lyd / EQ) og Høyttalernivå.</text>
+<circle cx="104" cy="906" r="13" fill="#d9a441"/><text x="104" y="912" text-anchor="middle" font-size="15" font-weight="700" fill="#1d1d1f">7</text><text x="130" y="912" font-size="18" fill="#1d1d1f">Vil du ha fullt på forsterkeren i stedet: koble inngangen rett til midtbeinet (2) og sett Høyttalernivå til −12/−18 dB.</text>
+</svg>
