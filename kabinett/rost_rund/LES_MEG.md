@@ -91,6 +91,19 @@ ca. 6 g PETG/ASA), som skrus under lokket:
   bryterne loddes på et hullkort 64 × 20 mm som skrus på dekket med 2 × M2 × 6 selvgjengende (hullene 59 mm fra
   hverandre, 9 mm bak knapperaden). Skinnene og festet er de samme, så skjermen holdes fortsatt uten skruer.
 
+
+### Med hullkort
+
+Har du bryterne på et hullkort i stedet, bruk filene i `stl/hullkort/`: `lokk.stl` og `knappeholder.stl` (med dekk for
+kortet). Knappene står da **12,7 mm** fra hverandre (5 hull à 2,54 mm), så bryterne passer rett i hullrutenettet:
+
+- Hullkort **64 × 20 mm**. Midterste bryter midt på kortet, de andre 5 og 10 hull til hver side. Bryterne står 7 mm fra
+  forkanten av kortet (knappesiden).
+- To skruehull for M2 × 6: **12 hull ut fra midten** til hver side, og **4 hull bak** knapperaden. Bor dem opp til Ø2,2.
+- Kortet skrus på holderens dekk, og holderen skrus i lokket med 4 × M2 × 6 som ellers. Skjermen klemmes av de samme
+  skinnene.
+- I OpenSCAD: `knappefeste = "hullkort"` gir de samme filene.
+
 ## Oppbygging
 
 | Del | Hva | Print |
