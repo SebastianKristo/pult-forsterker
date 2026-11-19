@@ -21,7 +21,7 @@
 <path class="w" stroke="#1d1d1f" d="M400 846 H470"/>
 <path class="w" stroke="#6d28d9" d="M400 972 H786"/>
 <path class="w" stroke="#1d1d1f" d="M400 1064 H786"/>
-<path class="w" stroke="#6d28d9" d="M400 944 H510 V328 H786"/>
+<path class="w" stroke="#1d1d1f" d="M400 944 H730 V1064"/>
 <path class="w" stroke="#6d28d9" d="M400 1018 H430 V1164 H910 V420 H884"/>
 <path class="w" stroke="#6d28d9" d="M400 1086 H420 V1144 H934 V1064 H884"/>
 <path class="w" stroke="#d63b2f" d="M400 1040 H440 V1184 H958 V236 H884"/>
@@ -47,6 +47,7 @@
 <circle cx="470" cy="478" r="6" fill="#1d1d1f"/>
 <circle cx="470" cy="524" r="6" fill="#1d1d1f"/>
 <circle cx="470" cy="846" r="6" fill="#1d1d1f"/>
+<circle cx="730" cy="1064" r="6" fill="#1d1d1f"/>
 <circle cx="470" cy="374" r="6" fill="#1d1d1f"/>
 <circle cx="1060" cy="524" r="6" fill="#1d1d1f"/>
 <circle cx="1060" cy="570" r="6" fill="#1d1d1f"/>
@@ -70,7 +71,7 @@
 <text x="780" y="266" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO3</text>
 <circle cx="870" cy="282" r="13" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><text x="870" y="286" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">6</text>
 <text x="890" y="266" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GND</text>
-<circle cx="800" cy="328" r="13" fill="#6d28d9" stroke="#fff" stroke-width="2"/><text x="800" y="332" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">7</text>
+<circle cx="800" cy="328" r="13" fill="#6b6b67" stroke="#fff" stroke-width="2"/><text x="800" y="332" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">7</text>
 <text x="780" y="312" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO4</text>
 <circle cx="870" cy="328" r="13" fill="#a16207" stroke="#fff" stroke-width="2"/><text x="870" y="332" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="700" fill="#fff">8</text>
 <text x="890" y="312" font-family="IBM Plex Mono,monospace" font-size="10" fill="#8b8b86">GPIO14</text>
@@ -149,10 +150,10 @@
 <text x="388" y="701" text-anchor="end" class="t" fill="#0f766e">D (trykk)</text>
 <text x="388" y="747" text-anchor="end" class="t" fill="#1d1d1f">C + E</text>
 <rect x="60" y="810" width="340" height="48" rx="10" fill="#fff" stroke="#2f6fd6" stroke-width="2.5"/><text x="72" y="830" class="t">BT/AirPlay-knapp</text><text x="72" y="848" class="m">NO → GPIO5 · C → GND</text>
-<rect x="60" y="916" width="340" height="188" rx="10" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/><text x="72" y="938" class="t">Lydkort PCM5102 (I²S)</text><text x="72" y="958" class="m">SCK, FMT, FLT og DEMP til GND</text>
+<rect x="60" y="916" width="340" height="188" rx="10" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/><text x="72" y="938" class="t">Lydkort PCM5102 (I²S)</text><text x="72" y="958" class="m">SCK til GND · XSMT fast høy (H3L)</text>
 <text x="388" y="977" text-anchor="end" class="t" fill="#6d28d9">LRCK</text>
 <text x="388" y="1069" text-anchor="end" class="t" fill="#1d1d1f">GND</text>
-<text x="388" y="949" text-anchor="end" class="t" fill="#6d28d9">XSMT</text>
+<text x="388" y="949" text-anchor="end" class="t" fill="#6d28d9">SCK</text>
 <text x="388" y="1023" text-anchor="end" class="t" fill="#6d28d9">BCK</text>
 <text x="388" y="1091" text-anchor="end" class="t" fill="#6d28d9">DIN</text>
 <text x="388" y="1045" text-anchor="end" class="t" fill="#6d28d9">VIN</text>
@@ -167,6 +168,6 @@
 <text x="1068" y="596" class="m">GND → pinne 20</text>
 <text x="40" y="1214" class="s">LED-ringene: + til +24 V (eller +5 V for 5 V-ringer), − til transistorens C. Ikke koble lysene rett på Pi-en.</text>
 <text x="40" y="1238" class="s">Reléet: IN GPIO27, VCC 5,1 V, GND felles. COM +24 V etter bryteren, NO til forsterkerens VCC (ikke NC).</text>
-<text x="40" y="1262" class="s">Lydkortet: BCK GPIO18 (12), LRCK GPIO19 (35), DIN GPIO21 (40), XSMT GPIO4 (7), VIN 5 V (4), GND (39). UART og SPI må være av.</text>
+<text x="40" y="1262" class="s">Lydkortet: BCK GPIO18 (12), LRCK GPIO19 (35), DIN GPIO21 (40), VIN 5 V (4), GND og SCK (39). XSMT er fast høy på kortet. UART og SPI må være av.</text>
 <text x="40" y="1286" class="s">USB-knappen og av/på-lyset bruker GPIO2/3 (I²C). Av/på-lyset lyser svakt mens Pi-en starter.</text>
 </svg>

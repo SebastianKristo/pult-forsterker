@@ -52,10 +52,11 @@ SPI og UART er av. Koblingsskjema: `kabinett/skjold-s1/s1_gpio_ledninger.png`.
 | LED power (programvare-PWM) | 3 | 5 |
 | Volumhjul A / B / trykk | 9 / 10 / 11 | 21 / 19 / 23 |
 | Relé (24 V til forsterker) | 27 | 13 |
-| PCM5102 XSMT | 4 | 7 |
+| PCM5102 XSMT | – (fast høy på modulen, `dac_xsmt: null`) | – |
 | USB-switch puls (avlesning av) | 14 | 8 |
 | Hodetelefondetekt | 15 | 10 |
 | Lydkort PCM5102 BCK / LRCK / DIN | 18 / 19 / 21 | 12 / 35 / 40 |
+| Lydkort VIN / GND / SCK | 5 V / GND / GND | 4 / 39 / 39 |
 
 Test uten resten av Skjold: `sudo systemctl stop ki-amp && python3 pi/tools/s1f_inputtest.py`.
 

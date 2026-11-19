@@ -22,7 +22,7 @@ encoder:         # EC11 med trykk
   sw: 11
 relay: 27        # 5 V relé (optokobler): 24 V til TPA3116 / høyttalere. Høy = på.
 relay_active_high: true
-dac_xsmt: 4      # PCM5102 XSMT (myk demping) – sett null hvis modulen har XSMT fast høy
+dac_xsmt: null   # PCM5102-modulen har XSMT fast høy (loddebro H3L). Sett et GPIO-nummer hvis din har XSMT ute på en pinne
 usb_switch:
   pulse: 14      # transistor/optokobler over UGREEN-knappen (UART må være av)
   sense: null    # valgfritt: PC 1-LED via optokobler (GPIO15 brukes nå til hodetelefondetekt)

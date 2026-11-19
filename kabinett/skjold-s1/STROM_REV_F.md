@@ -70,7 +70,7 @@ ingen egne ledninger fra omformeren.
 |---|---|---|
 | 27 | 13 | Relémodul **IN** (høy = forsterker på) |
 | 22 / 23 / 24 / 25 / 3 | 15 / 16 / 18 / 22 / 5 | 1 kΩ → basis (S8050) eller gate (AO3400) på LED-transistoren for BT, AUX, RADIO, USB og power |
-| 4 | 7 | PCM5102 XSMT (myk demping) |
+| 4 | 7 | Ledig (XSMT er fast høy på lydkortet) |
 | GND | 6, 9, 14 … | Relémodul GND, transistorenes emitter/source |
 
 LED-ring: **+** til +24 V, **−** til transistorens kollektor/drain, emitter/source til GND. Ringene for 12–24 V har

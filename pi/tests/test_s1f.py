@@ -38,6 +38,7 @@ def test_pins_file_parses_without_pyyaml():
         cfg = s1.parse_yaml(fh.read())
     used = list(cfg["buttons"].values()) + list(cfg["leds"].values()) + list(cfg["encoder"].values()) + \
         [cfg["relay"], cfg["dac_xsmt"], cfg["headphone_detect"], cfg["usb_switch"]["pulse"], cfg["usb_switch"]["sense"]]
+    used = [g for g in used if g is not None]
     assert len(used) == len(set(used)), "samme pinne brukt to ganger"
     assert not set(used) & {0, 1, 18, 19, 21}, "I²S- og EEPROM-pinner er reservert"
     phys = {2: 3, 3: 5, 4: 7, 17: 11, 27: 13, 22: 15, 10: 19, 9: 21, 11: 23, 5: 29, 6: 31, 13: 33, 19: 35, 26: 37, 14: 8, 15: 10,
