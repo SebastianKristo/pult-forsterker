@@ -14,8 +14,8 @@ export const route = signal<Route>({ page: typeof location !== 'undefined' && lo
 export const fullPlayer = signal<boolean>(false);          // telefon: fullskjerm-spiller
 const hash = typeof location !== 'undefined' ? location.hash : '';
 const welcomed = (() => { try { return localStorage.getItem('skjold-welcomed') === '1'; } catch { return true; } })();
-/** welcome = intro + velkomstside (første start i appen), find = oppsett 1, setup = oppsett 2–4, app = appen. */
-export const mode = signal<'welcome' | 'find' | 'setup' | 'app'>(hash === '#velkommen' ? 'welcome' : hash === '#finn' ? 'find' : hash === '#oppsett' ? 'setup' : needsHost() ? (welcomed ? 'find' : 'welcome') : 'app');
+/** welcome = intro + velkomstside (første start i appen), find = oppsett 1, setup = oppsett 2–4, rost = legg til Skjold Røst, app = appen. */
+export const mode = signal<'welcome' | 'find' | 'setup' | 'rost' | 'app'>(hash === '#velkommen' ? 'welcome' : hash === '#finn' ? 'find' : hash === '#oppsett' ? 'setup' : hash === '#rost' ? 'rost' : needsHost() ? (welcomed ? 'find' : 'welcome') : 'app');
 export function leaveWelcome(): void { try { localStorage.setItem('skjold-welcomed', '1'); } catch { /* ignore */ } mode.value = needsHost() || hash === '#velkommen' ? 'find' : 'app'; }
 /** Fullskjermspilleren: køen vises i stedet for omslaget / kildevalget er åpent. */
 export const queueOpen = signal(false);

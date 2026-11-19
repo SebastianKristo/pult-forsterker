@@ -22,6 +22,7 @@ import { useTick, nbHw } from './pages';
 import { tick } from '../lib/haptics';
 import { localOn, localVol, setLocalVol } from '../lib/localplay';
 import { ListenHere } from './listenhere';
+import { openRostSetup } from './rostsetup';
 
 const A = '#d9a441';
 const sel = (b: boolean) => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
@@ -439,12 +440,36 @@ export function RoomsPhone({ wide = false }: { wide?: boolean }) {
           );
         })}
       </div>
-      <button onClick={() => { if (stedId.value) go('settings', 'steder'); else mode.value = 'find'; }} data-testid="add-device" style={`display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:68px;padding:12px 14px;border-radius:14px;border:1px solid #3a2e17;background:#141209;cursor:pointer;text-align:left${wide ? ';width:100%' : ''}`}>
-        <div style="width:44px;height:44px;border-radius:12px;background:#2a2112;border:1px solid #5a4420;color:#f0c46a;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg></div>
-        <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px;font-weight:600;color:#f2f2ee">Legg til enhet</span><span style="font-size:12px;color:#8b8b86">Skjold S1, Node eller Core</span></div>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-      </button>
+      <AddDevice wide={wide} />
       <span style="font-size:11px;color:#8b8b86;text-wrap:pretty">Rom med hake spiller det samme, synkronisert av Lyrion. Trykk på et rom for å styre det.</span>
     </>
+  );
+}
+
+/** Rom → «Legg til enhet»: velg Skjold S1/Node/Core (finn på nettet) eller Skjold Røst (Wi-Fi-oppsett fra appen). */
+function AddDevice({ wide }: { wide: boolean }) {
+  const [open, setOpen] = useState(false);
+  const plus = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>;
+  const opt = (testid: string, title: string, sub: string, icon: preact.JSX.Element, onClick: () => void, first: boolean) => (
+    <button onClick={onClick} data-testid={testid} style={`display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:60px;padding:10px 14px;border:none;border-top:1px solid ${first ? 'transparent' : '#2a2416'};background:transparent;cursor:pointer;text-align:left;width:100%`}>
+      <div style="width:36px;height:36px;border-radius:10px;background:#1c1810;border:1px solid #3a2e17;color:#f0c46a;display:flex;align-items:center;justify-content:center">{icon}</div>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:14px;font-weight:600;color:#f2f2ee">{title}</span><span style="font-size:12px;color:#8b8b86;line-height:1.4">{sub}</span></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+    </button>
+  );
+  return (
+    <div style={`display:flex;flex-direction:column;border-radius:14px;border:1px solid #3a2e17;background:#141209;overflow:hidden${wide ? ';width:100%' : ''}`}>
+      <button onClick={() => setOpen(!open)} aria-expanded={open} data-testid="add-device" style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:68px;padding:12px 14px;border:none;background:transparent;cursor:pointer;text-align:left;width:100%">
+        <div style="width:44px;height:44px;border-radius:12px;background:#2a2112;border:1px solid #5a4420;color:#f0c46a;display:flex;align-items:center;justify-content:center">{plus}</div>
+        <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px;font-weight:600;color:#f2f2ee">Legg til enhet</span><span style="font-size:12px;color:#8b8b86">Skjold S1, Node, Core eller Røst</span></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style={`transition:transform .15s;transform:rotate(${open ? 90 : 0}deg)`}><path d="M9 6l6 6-6 6" /></svg>
+      </button>
+      {open && <div style="display:flex;flex-direction:column;border-top:1px solid #2a2416">
+        {opt('add-skjold', 'Skjold S1, Node eller Core', 'Forsterker eller Raspberry Pi med Skjold. Finnes på nettet.', <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v10H3zM7 12h.01M11 12h6" /></svg>,
+          () => { if (stedId.value) go('settings', 'steder'); else mode.value = 'find'; }, true)}
+        {opt('add-rost', 'Skjold Røst', 'Liten Wi-Fi-høyttaler. Appen gir den Wi-Fi og romnavn.', <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18H6zM12 17a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 7h.01" /></svg>,
+          () => openRostSetup(), false)}
+      </div>}
+    </div>
   );
 }

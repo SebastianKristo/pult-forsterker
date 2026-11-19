@@ -36,6 +36,7 @@ import { DoorbellOverlay, TalkButton } from './screens/features';
 import { Transport, artFor, nowTitle, subLine } from './screens/player';
 import { openFull } from './lib/store';
 import { FindDevice, Setup } from './screens/onboard';
+import { RostSetup, rostBack } from './screens/rostsetup';
 import { showToast, settings } from './lib/store';
 import { canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer } from './lib/appUpdate';
 
@@ -55,6 +56,7 @@ export function App() {
   useEffect(() => {   // Android tilbakeknapp/-sveip: ett nivå opp i appen, avslutt bare fra Hjem
     if (!isNative) return;
     const h = CapApp.addListener('backButton', () => {
+      if (mode.value === 'rost') { rostBack(); return; }
       if (mode.value !== 'app') { if (!obBack()) void CapApp.minimizeApp(); return; }
       if (route.value.page === 'lib' && !fullPlayer.value && libBack()) return;
       if (atRoot()) void CapApp.minimizeApp(); else if (fullPlayer.value) closeFull(); else window.history.back();
@@ -75,6 +77,7 @@ export function App() {
   if (mode.value === 'welcome') body = <Welcome />;
   else if (mode.value === 'find') body = <FindDevice />;
   else if (mode.value === 'setup') body = <Setup />;
+  else if (mode.value === 'rost') body = <RostSetup />;
   else body = wide ? <Desktop /> : <Phone />;
   return <>{body}<DoorbellOverlay /><WhatsNewSheet /><SetupWizard />{toast.value && <div class="toast fade" role="status">{toast.value}</div>}</>;
 }

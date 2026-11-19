@@ -201,3 +201,5 @@ så Creality Print / OrcaSlicer henter dem selv):
 9. Monter elektronikken på avstandstappene i bunnplaten: DC og USB-C mot hullene bak i kjernen.
 10. Sett kjernen på bunnplaten, træ hylsa utenpå (utsparingen bak), og legg på lokket. Før ledningene fra skjermen og knappene ned til ESP32 i bunnen.
 11. Skru gjengestengene ned gjennom lokket, kjernen og bunnen, og stram mutterne nedenfra. Sett på gummiføttene.
+
+Første oppstart er som for [Skjold Røst](../rost/LES_MEG.md#første-oppstart): sett den opp fra Skjold-appen (Rom → **Legg til enhet → Skjold Røst**), eller koble til **Skjold-Rost** (passord `squeezelite`) og åpne `192.168.4.1`.

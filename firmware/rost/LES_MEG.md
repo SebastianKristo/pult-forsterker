@@ -25,11 +25,43 @@ Finner ikke PC-en kortet, holder du **BOOT** inne, trykker **RST** og slipper **
 
 ## Første oppstart
 
-1. Røst lager Wi-Fi-nettet **Skjold-Rost** med passord `squeezelite`. Koble til med mobilen. Oppsettsiden åpner seg, ellers gå til `192.168.4.1`. Velg ditt Wi-Fi.
-2. Røst dukker opp i Lyrion som **Skjold-Rost** og i Skjold under **Grupper → Skjold Røst**.
-3. Velg radiofavorittene for knappene 1–4 under **Grupper → Skjold Røst → Knapper**. Skjold legger dem som Lyrion-favoritter (presets) 1–4 på spilleren.
-4. Har du flere Røst, gir du hver sitt navn på Røst-ens egen nettside (fanen «Squeezelite», `-n Skjold-Rost-bad`). Navnet må begynne med «Skjold-Rost» eller «Skjold Røst», så Skjold finner den.
-5. For skjermen: installer pluginen **SqueezeESP32** i Lyrion (Innstillinger → Plugins). Under spillerens innstillinger → «Skjerm» velger du hva som vises. Velg **Klokke** som skjermsparer når spilleren er av.
+Uten Wi-Fi starter Røst i oppsettmodus: skjermen viser **RECOVERY**, og den lager Wi-Fi-nettet **Skjold-Rost** (passord `squeezelite`) med en oppsettside på `192.168.4.1`.
+
+**Med Skjold-appen (enklest):**
+
+1. Sett Røst i strømmen og vent til skjermen viser RECOVERY.
+2. I appen: **Rom → Legg til enhet → Skjold Røst**, og trykk **Koble til Røst**. Godta at telefonen kobler til Skjold-Rost.
+3. Velg Wi-Fi-nettet ditt fra listen Røst viser (eller skriv navnet), skriv passordet og velg rom.
+4. Appen gir Røst navnet `Skjold-Rost-<rom>` (for eksempel `Skjold-Rost-Bad`), sender Wi-Fi og starter Røst som høyttaler. Så kobler telefonen seg tilbake til hjemmenettet og venter til Røst dukker opp i Lyrion (inntil 90 sekunder).
+5. Trykk **Velg favorittknappene** for å legge radiofavoritter på knappene 1–4.
+
+Appen bytter bare `-n` i `autoexec1` og setter `host_name`, `airplay_name` og navnet i `cspot_config`. Resten av Skjold-oppsettet beholdes. Er passordet feil, kommer Røst tilbake med Skjold-Rost-nettet, og appen ber deg prøve igjen.
+
+**Uten appen (reserve):**
+
+1. Koble telefonen eller PC-en til **Skjold-Rost** med passord `squeezelite`. Oppsettsiden åpner seg, ellers gå til `192.168.4.1`.
+2. Velg ditt Wi-Fi og vent til siden viser at Røst er tilkoblet.
+3. Trykk **Exit Recovery** nederst på siden. Røst starter da squeezelite.
+4. Røst dukker opp i Lyrion som **Skjold-Rost** og i Skjold under **Grupper → Skjold Røst**.
+5. Har du flere Røst, gir du hver sitt navn på Røst-ens egen nettside (fanen «Squeezelite», `-n Skjold-Rost-bad`). Navnet må begynne med «Skjold-Rost» eller «Skjold Røst», så Skjold finner den.
+
+**Etterpå:**
+
+- Velg radiofavorittene for knappene 1–4 under **Grupper → Skjold Røst → Knapper**. Skjold legger dem som Lyrion-favoritter (presets) 1–4 på spilleren.
+- For skjermen: installer pluginen **SqueezeESP32** i Lyrion (Innstillinger → Plugins). Under spillerens innstillinger → «Skjerm» velger du hva som vises. Velg **Klokke** som skjermsparer når spilleren er av.
+
+### Oppsett-API-et appen bruker
+
+Lest i kildekoden til squeezelite-esp32 (`S3-i2s.16.1779.master-v4.3`, `components/wifi-manager/http_server_handlers.c` og `webapp/src/js/custom.js`):
+
+| Kall | Hva |
+|---|---|
+| `GET /status.json` | `urc` 0 = tilkoblet (med `ssid` og `ip`), 1 = mislyktes, 4 = mislyktes og gammelt nett beholdt. `recovery` 1 = oppsettmodus. |
+| `GET /scan.json`, så `GET /ap.json` | Søk etter nett. Lista er `[{ssid, rssi, auth, chan, …}]`, `auth` 0 = åpent. |
+| `GET /config.json` | `{gpio, config: {nøkkel: {value, type}}}`. Type 33 = tekst. |
+| `POST /config.json` | `{"timestamp": …, "config": {"host_name": {"value": "…", "type": 33}, …}}` |
+| `POST /connect.json` | `{"timestamp": …, "ssid": "…", "pwd": "…", "host_name": "…"}`. `pwd` må være med, også for åpne nett. |
+| `POST /reboot_ota.json` | Starter squeezelite (fra recovery) eller starter på nytt. Venter til oppsettet er lagret. |
 
 ## Betjening
 

@@ -1,0 +1,36 @@
+/* /3d/: alle 3D-printfilene (tools/lag_3d_side.py) */
+.d3-tall{margin:22px auto 0;font-family:var(--mono);font-size:13px;letter-spacing:.12em;color:var(--gull);text-transform:uppercase}
+.d3{padding-top:30px}
+.d3-verktoy{max-width:1240px;margin:0 auto 26px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+.d3-sok{flex:1 1 280px;max-width:420px}
+.d3-sok input{width:100%;height:48px;padding:0 18px;border-radius:24px;border:1px solid #2a2a30;background:#101013;color:var(--tekst-l);font:inherit;font-size:16px}
+.d3-sok input::placeholder{color:#77777d}
+.d3-filtre{display:flex;flex-wrap:wrap;gap:8px}
+.d3-filter{height:40px;padding:0 16px;border-radius:20px;border:1px solid #2a2a30;background:#101013;color:#c9c9c4;font:inherit;font-size:14px;cursor:pointer}
+.d3-filter[aria-pressed="true"]{background:var(--gull);border-color:var(--gull);color:#0b0b0c;font-weight:600}
+.d3-ingen{text-align:center;color:var(--demp-l)}
+.d3-rutenett{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:16px}
+.d3-kort{display:flex;flex-direction:column;border-radius:20px;border:1px solid #1e1e23;background:var(--kort,#111114);overflow:hidden;scroll-margin-top:90px}
+.d3-kort>picture img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;background:#0c0c0e}
+.d3-inn{padding:20px 22px 22px;display:flex;flex-direction:column;gap:10px;flex:1}
+.d3-topp{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.d3-kat{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gull)}
+.d3-status{font-size:11.5px;padding:3px 9px;border-radius:99px;border:1px solid #3a3020;color:#d8b46a;background:#18140c}
+.d3-kort h2{margin:0;font-family:var(--sora);font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.15}
+.d3-kort p{margin:0;color:var(--demp-l);font-size:15px;line-height:1.5}
+.d3-lenker{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px}
+.d3-filer{border-top:1px solid #1e1e23;padding-top:10px}
+.d3-filer summary{cursor:pointer;font-size:14.5px;font-weight:600;list-style:none;display:flex;gap:8px;align-items:center}
+.d3-filer summary::-webkit-details-marker{display:none}
+.d3-filer summary::before{content:"›";color:var(--gull);transition:rotate .2s;display:inline-block}
+.d3-filer[open] summary::before{rotate:90deg}
+.d3-filer summary b{font-family:var(--mono);font-size:12px;color:#0b0b0c;background:var(--gull);border-radius:99px;padding:1px 8px}
+.d3-filer summary span{font-weight:400;color:#77777d;font-size:12.5px}
+.d3-filer ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:300px;overflow:auto}
+.d3-filer li{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:5px 2px;border-bottom:1px solid #17171b}
+.d3-filer li a{overflow-wrap:anywhere}
+.d3-filer li span{flex-shrink:0;font-family:var(--mono);font-size:12px;color:#77777d}
+.d3-tips{max-width:1240px;margin:44px auto 0;padding:26px 28px;border-radius:20px;border:1px solid #1e1e23;background:#0e0e11}
+.d3-tips h2{margin:0 0 10px;font-family:var(--sora);font-size:22px}
+.d3-tips ul{margin:0;padding-left:18px;color:var(--demp-l);line-height:1.6}
+.d3-kort[hidden]{display:none}

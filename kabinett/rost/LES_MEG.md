@@ -235,6 +235,13 @@ SKJOLD-logoen er et eget legeme (`logo.stl`) som ligger 0,6 mm inn i frontplaten
 17. Legg TPU-pakningen i sporet i bunnbrettet, og skru brettet fast med 4 M3 × 12 senkeskruer. Sett på gummiføttene. En dråpe silikon på skruehodene holder vannet ute.
 18. Sett TPU-proppen i USB-C-hullet.
 
+## Første oppstart
+
+Flash fastvaren (se [`firmware/rost/`](../../firmware/rost/LES_MEG.md)) og sett Røst i strømmen. Skjermen viser **RECOVERY** til den har fått Wi-Fi.
+
+1. **Med Skjold-appen:** Rom → **Legg til enhet → Skjold Røst**. Appen kobler telefonen kort til Røst, sender Wi-Fi og romnavn (for eksempel `Skjold-Rost-Bad`), og venter til Røst dukker opp i Lyrion. Så velger du favorittknappene.
+2. **Uten appen:** koble til Wi-Fi-nettet **Skjold-Rost** (passord `squeezelite`), åpne `192.168.4.1`, velg ditt Wi-Fi og trykk **Exit Recovery**.
+
 ## Sjekket og ikke sjekket
 
 - `./lag_stl.sh` lager alle STL-er (utskrift i `stl/`, montert stilling i `asm/`), kjører sjekken og lager 3MF-filene. `xvfb-run -a ./lag_render.sh` lager bildene i `render/` (med OLED-bildet fra `lag_oled.py` lagt inn på skjermen), og `python3 lag_nettbilder.py` lager bildene til nettsiden fra dem.
