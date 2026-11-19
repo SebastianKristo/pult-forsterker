@@ -21,8 +21,32 @@ import skjold_s1f as s1  # noqa: E402
 UT = "/etc/skjold/s1f_pins.yaml"
 NAVN = {"bt": "BT/AirPlay", "aux": "AUX", "radio": "RADIO", "usb": "USB", "power": "av/på"}
 REKKE = ("bt", "aux", "radio", "usb", "power")
-RESERVERT = {0, 1, 18, 19, 21}            # HAT-EEPROM og lydkortet (I²S)
+RESERVERT = {0, 1, 18, 19, 20, 21}        # HAT-EEPROM og I²S (lydkortet; 20 = I²S inn, tatt av lydkort-overlayet)
 ALLE = [2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 20, 22, 23, 24, 25, 26, 27]   # 9/10/11 = volumhjulet, testes ikke
+
+
+def stopp_skjold():
+    """ki-amp må være stoppet (den eier pinnene). skjold-ui krever ki-amp og starter den igjen, så den låses
+    (systemctl mask --runtime) mens verktøyet kjører."""
+    import subprocess
+    if subprocess.run(["systemctl", "is-active", "--quiet", "ki-amp"]).returncode != 0:
+        return False
+    print("Stopper Skjold (ki-amp) mens pinnene finnes …", flush=True)
+    subprocess.run(["systemctl", "mask", "--runtime", "--quiet", "ki-amp"], check=False)
+    subprocess.run(["systemctl", "stop", "ki-amp"], check=False)
+    for _ in range(20):
+        if subprocess.run(["systemctl", "is-active", "--quiet", "ki-amp"]).returncode != 0:
+            break
+        time.sleep(0.5)
+    time.sleep(1)
+    return True
+
+
+def start_skjold():
+    import subprocess
+    subprocess.run(["systemctl", "unmask", "--runtime", "--quiet", "ki-amp"], check=False)
+    subprocess.run(["systemctl", "start", "ki-amp"], check=False)
+    print("Skjold (ki-amp) er startet igjen.")
 
 
 def lagre(tekst, seksjon, nokkel, verdi):
@@ -110,7 +134,7 @@ def main():
     with open(pins["_file"]) as fh:
         tekst = fh.read()
     print("Pinner fra", pins["_file"])
-    print("Stopp ki-amp først hvis den kjører: sudo systemctl stop ki-amp")
+    stoppet = stopp_skjold()
     andre = {pins.get("relay"), (pins.get("usb_switch") or {}).get("pulse"), pins.get("headphone_detect"), pins.get("dac_xsmt")}
     andre |= set((pins.get("encoder") or {}).values())
     andre.discard(None)
@@ -142,8 +166,17 @@ def main():
     dobbel = sorted({g for g in brukt if brukt.count(g) > 1})
     if dobbel:
         print("ADVARSEL: samme pinne brukt to ganger:", ", ".join(f"GPIO{g}" for g in dobbel), "– kjør verktøyet på nytt.")
-    print("Start Skjold igjen: sudo systemctl start ki-amp")
+    if stoppet:
+        start_skjold()
+    else:
+        print("Start Skjold igjen: sudo systemctl start ki-amp")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        import subprocess
+        print("\nAvbrutt – ingenting er lagret.")
+        subprocess.run(["systemctl", "unmask", "--runtime", "--quiet", "ki-amp"], check=False)
+        subprocess.run(["systemctl", "start", "ki-amp"], check=False)
