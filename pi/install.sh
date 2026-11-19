@@ -97,7 +97,7 @@ done
 sudo sed -i 's/ console=serial0,115200//' /boot/firmware/cmdline.txt 2>/dev/null || true
 # /etc/modules leses ikke lenger på Debian 13 – bruk modules-load.d
 if [ "$BOARD_SEL" = node ] || [ "$TOUCH" = 1 ]; then printf 'i2c-dev\n'; else printf 'dwc2\ni2c-dev\n'; fi | sudo tee /etc/modules-load.d/ki-amp.conf >/dev/null
-sudo raspi-config nonint do_i2c 0 2>/dev/null || true   # /dev/i2c-1 for OLED
+[ "$S1F" = 1 ] || sudo raspi-config nonint do_i2c 0 2>/dev/null || true   # /dev/i2c-1 for OLED (ikke S1 rev F: GPIO 2/3 er knapp og lys)
 sudo modprobe i2c-dev 2>/dev/null || true
 sudo raspi-config nonint do_serial_hw 1 2>/dev/null || true   # frigjør GPIO 14/15 til X9C
 

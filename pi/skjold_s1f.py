@@ -427,37 +427,54 @@ class S1FHardware:
         from gpiozero import Button, PWMLED, RotaryEncoder, DigitalInputDevice  # noqa: F401
         self.p, self.c, self.api = pins, controls, api
         bounce = float(pins.get("bounce") or 0.03)
-        self.objs = []
+        self.objs, self.leds, self.hp, self.feil = [], {}, None, []
+
+        def lag(navn, fn):   # én pinne som feiler (f.eks. opptatt av I²C) skal ikke ta med seg resten
+            try:
+                o = fn()
+                self.objs.append(o)
+                return o
+            except Exception as e:
+                self.feil.append(f"{navn}: {e}")
+                print(f"S1F: {navn} feilet: {e}", flush=True)
+                return None
+
         for name, pin in (pins.get("buttons") or {}).items():
             if pin is None or name not in controls.btn:
                 continue
-            b = Button(int(pin), pull_up=True, bounce_time=bounce)
-            b.when_pressed = lambda n=name: self._safe(controls.press, n)
-            b.when_released = lambda n=name: self._safe(controls.release, n)
-            self.objs.append(b)
+            b = lag(f"knapp {name} (GPIO{pin})", lambda pin=pin: Button(int(pin), pull_up=True, bounce_time=bounce))
+            if b:
+                b.when_pressed = lambda n=name: self._safe(controls.press, n)
+                b.when_released = lambda n=name: self._safe(controls.release, n)
         enc = pins.get("encoder") or {}
         if enc.get("a") is not None and enc.get("b") is not None:
-            r = RotaryEncoder(int(enc["a"]), int(enc["b"]), max_steps=0, wrap=False)
-            r.when_rotated_clockwise = lambda: self._safe(controls.rotate, 1)
-            r.when_rotated_counter_clockwise = lambda: self._safe(controls.rotate, -1)
-            self.objs.append(r)
+            r = lag(f"volumhjul (GPIO{enc['a']}/{enc['b']})",
+                    lambda: RotaryEncoder(int(enc["a"]), int(enc["b"]), max_steps=0, wrap=False))
+            if r:
+                r.when_rotated_clockwise = lambda: self._safe(controls.rotate, 1)
+                r.when_rotated_counter_clockwise = lambda: self._safe(controls.rotate, -1)
         if enc.get("sw") is not None:
-            s = Button(int(enc["sw"]), pull_up=True, bounce_time=bounce)
-            s.when_pressed = lambda: self._safe(controls.press, "enc")
-            s.when_released = lambda: self._safe(controls.release, "enc")
-            self.objs.append(s)
+            s = lag(f"volumhjul trykk (GPIO{enc['sw']})", lambda: Button(int(enc["sw"]), pull_up=True, bounce_time=bounce))
+            if s:
+                s.when_pressed = lambda: self._safe(controls.press, "enc")
+                s.when_released = lambda: self._safe(controls.release, "enc")
         ah = pins.get("led_active_high", True) is not False
-        self.leds = {}
+        hz = int(pins.get("led_hz") or 400)
         for name, pin in (pins.get("leds") or {}).items():
             if pin is not None:
-                self.leds[name] = PWMLED(int(pin), active_high=ah, frequency=int(pins.get("led_hz") or 400))
+                led = lag(f"lys {name} (GPIO{pin})", lambda pin=pin: PWMLED(int(pin), active_high=ah, frequency=hz))
+                if led:
+                    self.leds[name] = led
         hp = pins.get("headphone_detect")
         if hp is not None:
-            self.hp = DigitalInputDevice(int(hp), pull_up=True, bounce_time=0.15)
-            inv = bool(pins.get("headphone_active_low"))
-            upd = lambda: self._safe(api.set_headphones, bool(self.hp.value) != inv)   # pull-up: høy = plugget (bryter åpner)
-            self.hp.when_activated = self.hp.when_deactivated = upd
-            upd()
+            self.hp = lag(f"hodetelefondetekt (GPIO{hp})", lambda: DigitalInputDevice(int(hp), pull_up=True, bounce_time=0.15))
+            if self.hp:
+                inv = bool(pins.get("headphone_active_low"))
+                upd = lambda: self._safe(api.set_headphones, bool(self.hp.value) != inv)   # pull-up: høy = plugget (bryter åpner)
+                self.hp.when_activated = self.hp.when_deactivated = upd
+                upd()
+        if self.feil and any("GPIO2)" in f or "GPIO3)" in f for f in self.feil):
+            print("S1F: GPIO2/3 er opptatt – er I²C på? Kommenter ut dtparam=i2c_arm=on i /boot/firmware/config.txt og start på nytt", flush=True)
         threading.Thread(target=self._loop, daemon=True).start()
 
     @staticmethod
