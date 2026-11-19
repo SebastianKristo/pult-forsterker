@@ -108,3 +108,27 @@ def test_dempes_mens_releet_slaar_av_og_paa(d, monkeypatch):
     releer = [x for x in logg if x[0] == "rele"]
     assert releer == [("rele", True, True), ("rele", False, True)], logg   # reléet byttes bare mens lyden er dempet
     assert logg[-1] == ("demp", False) and d._rele_demp[0] is False
+
+
+def test_dsp_sender_volum_paa_nytt_naar_camilladsp_har_startet_paa_nytt(monkeypatch):
+    import json
+    import ki_amp_daemon as d
+
+    class Ws:
+        def __init__(self, vol, mute):
+            self.vol, self.mute, self.siste = vol, mute, None
+        def send(self, s):
+            self.siste = json.loads(s)
+        def recv(self):
+            k = self.siste
+            return json.dumps({k: {"result": "Ok", "value": self.vol if k == "GetVolume" else self.mute}})
+
+    x = d.Dsp.__new__(d.Dsp)
+    x._ev = d.threading.Event(); x._full = False; x._sent = (-30.0, False)
+    x._ws = Ws(0.0, False)            # CamillaDSP har startet på nytt på fullt volum
+    x._sjekk(None)
+    assert x._full and x._ev.is_set()
+    x._ev.clear(); x._full = False
+    x._ws = Ws(-30.0, False)          # alt stemmer
+    x._sjekk(None)
+    assert not x._full and not x._ev.is_set()
