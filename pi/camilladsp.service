@@ -4,7 +4,9 @@ After=sound.target
 Before=ki-amp.service shairport-sync.service bluealsa-aplay.service ki-usb-audio.service
 
 [Service]
-ExecStart=/usr/local/bin/camilladsp -p 1234 -a 127.0.0.1 -o /var/log/camilladsp.log /etc/camilladsp/config.yml
+# Starter dempet på −60 dB: Skjold (ki-amp) setter riktig volum og slår på lyden. Uten dette spilte CamillaDSP på
+# fullt volum (0 dB) etter en omstart til Skjold rakk å sende volumet.
+ExecStart=/usr/local/bin/camilladsp -g -60 -m -p 1234 -a 127.0.0.1 -o /var/log/camilladsp.log /etc/camilladsp/config.yml
 Restart=always
 RestartSec=3
 User=root

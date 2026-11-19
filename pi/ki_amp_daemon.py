@@ -1039,6 +1039,21 @@ class Dsp:
     def _send(self, ws, cmd):
         ws.send(json.dumps(cmd)); return json.loads(ws.recv())
 
+    def _sjekk(self, websocket):
+        """Les volum og demping fra CamillaDSP. Stemmer de ikke med det Skjold sendte sist (f.eks. etter at CamillaDSP
+        startet på nytt på fullt volum), send alt på nytt med en gang."""
+        if self._sent == (None, None):
+            return
+        try:
+            ws = self._conn(websocket)
+            v = float((self._send(ws, "GetVolume").get("GetVolume") or {}).get("value"))
+            m = bool((self._send(ws, "GetMute").get("GetMute") or {}).get("value"))
+            if abs(v - float(self._sent[0])) > 0.5 or m != bool(self._sent[1]):
+                print(f"CamillaDSP: volum {v:.1f} dB / demping {m} stemte ikke – sender på nytt", flush=True)
+                self._full = True; self._ev.set()
+        except Exception:
+            self._drop(); self._full = True; self._ev.set()
+
     def _conn(self, websocket):
         if self._ws is None:
             self._ws = websocket.create_connection(DSP_WS, timeout=2)
@@ -1058,7 +1073,10 @@ class Dsp:
             print("CamillaDSP-styring av (python3-websocket mangler):", e); return
         self._ev.set()   # skyv oppsett og volum ved oppstart
         while True:
-            self._ev.wait(); self._ev.clear()
+            if not self._ev.wait(3):   # ingen endring på 3 s: sjekk at CamillaDSP har riktig volum (den kan ha startet på nytt)
+                self._sjekk(websocket)
+                continue
+            self._ev.clear()
             full = self._full; self._full = False
             cfg = None
             if full:
