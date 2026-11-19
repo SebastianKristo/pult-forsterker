@@ -43,6 +43,7 @@ PRODUKTER = [
     ("Skjold Sans", "sans", ["konsepter"], ["esphome/skjold-sans.yaml"]),
     ("Skjold Sensor", "sensor", [], ["esphome/skjold-sensor.yaml", "esphome/skjold-sensor-d1mini.yaml"]),
     ("Skjold Bryter", "bryter", [], ["esphome/skjold-bryter.yaml", "esphome/skjold-bryter-d1mini.yaml"]),
+    ("Skjold Nøkkel", "nokkel", [], []),
 ]
 KRETS = ("enkel", "hovedkort", "hullkort", "tastekort", "tastekort_a", "tastekort_full")   # under fjernkontroll/
 

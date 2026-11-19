@@ -39,7 +39,11 @@ rodD = 3.4; bossD = 9; ins = 4.0; insL = 5.5;
 ioX = 16; dcZ = z0 + 12; usbZ = z0 + 6; dcD = 8.2; usbW = 10; usbH = 4.4;
 ioW = 32; ioH = 28;                 // utsparingen i hylsa: bredde og høyde til spissen (45° tak, printes stående)
 // topp: fem knapper foran, skjerm i midten, knott bak
-btnY = -40; btnX = [-26, -13, 0, 13, 26]; capD = 9.0; capHole = 9.5; flD = 12; flT = 0.9; capUp = 1.1;
+knappefeste = "holder";            // holder: printet knappeholder med lommer for bryterne (ingen hullkort)
+                                   // hullkort: bryterne loddet på et hullkort 64 × 20 mm, som skrus på holderens dekk
+// knappeavstand: 13 mm med holderen; med hullkort 12,7 mm (5 hull à 2,54), så bryterne står i hullrutenettet
+btnPitch = knappefeste == "hullkort" ? 12.7 : 13;
+btnY = -40; btnX = [for (i = [-2 : 2]) i * btnPitch]; capD = 9.0; capHole = 9.5; flD = 12; flT = 0.9; capUp = 1.1;
 encY = 34; ec11D = 7.2; knobD = 30; knobH = 13; shaftD = 6.1; shaftFlat = 4.6;
 // skjerm: 2,42″ OLED 128×64 (SSD1309, I²C, hvit), samme modul og samme mål som Røst (se ../rost/LES_MEG.md, «Skjermen»):
 //   kort 70,08 × 48,04 × 1,00 mm, 5,25 mm tykk med glass, glass 62,64 × 39,18, synlig område 57,80 × 29,70,
@@ -71,11 +75,10 @@ winW = actW + 1.2; winH = actH + 1.2;    // vindu: 0,6 mm utenfor det aktive omr
 ruteW = 64; ruteH = 36; ruteT = 1.5; ruteRec = ruteT + 0.2;   // klar rute i flukt med toppen (0,2 mm tape under)
 // (ingen hevet ramme rundt ruta: lokket printes med toppen ned, så toppen må være helt flat)
 // knappene: 6 × 6 × 5 mm-bryterne står med stempelet 0,2 mm under hettenes nupp
-knappefeste = "holder";            // holder: printet knappeholder med lommer for bryterne (ingen hullkort)
-                                   // hullkort: bryterne loddet på et hullkort 64 × 20 mm, som skrus på holderens dekk
 boardZ = z1 - 6.7;                 // bryternes underkant (= hullkortets overside)
 tactB = 6.0; tactH = 5.0; tactHus = 3.5; stempD = 3.5;   // taktbryter: hus 6 × 6 × 3,5, stempel Ø3,5, 5 mm totalt
-kortW = 64; kortH = 20; kortT = 1.6; kortY = btnY + 3; kortHull = [[-29.5, btnY + 9], [29.5, btnY + 9]];
+kortW = 64; kortH = 20; kortT = 1.6; kortY = btnY + 3; kortHull = knappefeste == "hullkort"   // i hullrutenettet: 12 hull ut fra midten, 4 hull bak knapperaden (bor opp til Ø2,2)
+  ? [[-30.48, btnY + 10.16], [30.48, btnY + 10.16]] : [[-29.5, btnY + 9], [29.5, btnY + 9]];
 // knappeholder (PETG/ASA, printes med bunnen ned, uten støtte): ligger under lokket, skrudd i fire tapper med
 // M2 × 6 selvgjengende (ørene nederst). Foran: fem lommer med klemribber for bryterne, spor for beina og en kam for
 // ledningene. To skinner går bakover under kantene av skjermkortet og trykker det opp mot skjermrammen.
