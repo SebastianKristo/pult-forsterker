@@ -7,6 +7,8 @@ Wants=network-online.target
 WantedBy=multi-user.target
 
 [Service]
+# daemonen har mange tråder: ikke heng i «deactivating» og hold GPIO-pinnene
+TimeoutStopSec=8
 EnvironmentFile=-/etc/ki-amp.env
 ExecStart=/usr/bin/python3 /usr/local/bin/ki_amp_daemon.py
 Restart=always

@@ -279,6 +279,8 @@ elif [ "$BOARD_SEL" = kit ]; then
   grep -q '^KI_AMP_LEVELS=' /etc/ki-amp.env || echo "KI_AMP_LEVELS=1" | sudo tee -a /etc/ki-amp.env >/dev/null
   printf 'KI_AMP_DISPLAY=none\nRELAY_ACTIVE_LOW=0\n' | sudo tee -a /etc/ki-amp.env >/dev/null   # ingen skjerm (bare metadata), relé i H-modus
   if [ "$S1F" = 1 ]; then   # skjermen (960 × 320 HDMI) tegnes av skjold-ui, ikke oled_display
+    # Skjold OS (skjermen til hovedkortet rev B) hører ikke hjemme på rev F: den drar med seg ki-amp og står i veien
+    systemctl list-unit-files skjold-os.service >/dev/null 2>&1 && { sudo systemctl disable --now skjold-os 2>/dev/null; sudo systemctl mask skjold-os 2>/dev/null; } || true
     sudo sed -i 's/^KI_AMP_BOARD=.*/KI_AMP_BOARD=s1f/; /^KI_AMP_PRODUCT=/d' /etc/ki-amp.env
     echo "KI_AMP_PRODUCT=s1" | sudo tee -a /etc/ki-amp.env >/dev/null
     grep -q '^KI_AMP_HP_DEV=' /etc/ki-amp.env || echo "KI_AMP_HP_DEV=plughw:UCA_AUX1" | sudo tee -a /etc/ki-amp.env >/dev/null
