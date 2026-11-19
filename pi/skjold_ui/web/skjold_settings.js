@@ -33,6 +33,7 @@
       num('bass', 'Bass', -6, 6, 'dB'), num('treb', 'Diskant', -6, 6, 'dB'), num('bal', 'Balanse', -5, 5, 'bal'),
       opt('vstart', 'Startvolum', ['Sist brukt', '20', '30', '40']), opt('vmax', 'Maksvolum', ['100', '90', '80', '70']),
       { ...bool('perIn', 'Volum per inngang', 'Hver inngang husker sitt eget volum'), dev: ['s1', 'node'] }, { ...bool('hpOwn', 'Eget volum for hodetelefoner'), dev: 's1' },
+      { ...opt('hpDev', 'Hodetelefoner i', ['AUX 1 (UCA202 nr. 1)', 'AUX 2 (UCA202 nr. 2)'], 'Hvilket USB-lydkort hodetelefonene står i'), dev: 's1' },
       { ...num('lvlAux', 'Nivå AUX', -6, 6, 'dB', 'Juster så AUX er like høy som strømming'), dev: 's1' }, { ...num('lvlUsb', 'Nivå USB', -6, 6, 'dB'), dev: 's1' },
       { kind: 'act', n: 'Test høyttalerne', id: 'testSpk', label: 'Spill av', safe: true, hint: 'Spiller en kort tone i venstre og så i høyre høyttaler, så du kan sjekke at de er koblet riktig' }] },
     { id: 'touch', n: 'Skjold Touch', sub: 'Rolle, skjerm og standby', dev: 'touch', items: [
@@ -92,7 +93,7 @@
       { kind: 'act', n: 'Kjør oppsett på nytt', id: 'setup', label: 'Start oppsett' },
       { kind: 'act', n: 'Fabrikkinnstillinger', id: 'reset', label: 'Tilbakestill' }] }
   ];
-  const DEF = { bri: 8, contrast: 1, clockCol: 1, nodeStart: 0, btAuto: false, out: 3, hat: 0, rate: 3, mixer: 0, clockStyle: 0, nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC', nUsb2: 'Switch', name: 0, lvlAux: 0, lvlUsb: 0, led: 0, voice: false, lang: 0, vv: 1, hold: 2, bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, dim: 1, off: 1, clock: true, auto: 1, wake: true };
+  const DEF = { bri: 8, contrast: 1, clockCol: 1, nodeStart: 0, btAuto: false, out: 3, hat: 0, rate: 3, mixer: 0, clockStyle: 0, nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC', nUsb2: 'Switch', name: 0, lvlAux: 0, lvlUsb: 0, led: 0, voice: false, lang: 0, vv: 1, hold: 2, bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, hpDev: 0, dim: 1, off: 1, clock: true, auto: 1, wake: true };
   const EQ = {
     bands: ['60', '250', '1k', '4k', '12k'],
     names: ['Dypbass', 'Bass', 'Mellomtone', 'Presens', 'Luft'],

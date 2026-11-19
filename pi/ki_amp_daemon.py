@@ -905,9 +905,18 @@ def dsp_playback():
     if HP_DEV_ENV and not S1F and state.get("headphones"):
         return HP_DEV_ENV
     if S1F and state.get("headphones"):
-        return str((S1F_PINS.get("audio") or {}).get("headphones") or os.environ.get("KI_AMP_HP_DEV", "plughw:UCA_AUX1"))
+        return s1f_hp_dev()
     no = node_output()
     return no[0] if no else DSP_PLAYBACK
+
+
+def s1f_hp_dev():
+    """S1 rev F: hvilken UCA202 hodetelefonene står i. Innstillingen hpDev (0 = AUX 1, 1 = AUX 2, satt i appen/web-UI-et)
+    vinner; uten den brukes audio.headphones i s1f_pins.yaml / KI_AMP_HP_DEV (standard UCA202 #1)."""
+    v = (state.get("settings") or {}).get("hpDev")
+    if v in (0, 1, "0", "1"):
+        return ("plughw:UCA_AUX1", "plughw:UCA_AUX2")[int(v)]
+    return str((S1F_PINS.get("audio") or {}).get("headphones") or os.environ.get("KI_AMP_HP_DEV", "plughw:UCA_AUX1"))
 
 
 def dsp_format():
@@ -1364,7 +1373,7 @@ def wake_decision(power, playing, source, quiet_seen, wake_on, since_off):
 
 
 # ---------- innstillinger (app/web, samme nøkler som skjold_settings.js) ----------
-SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "lvlAux": 0, "lvlUsb": 0,
+SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0, "perIn": True, "hpOwn": True, "hpDev": 0, "lvlAux": 0, "lvlUsb": 0,
                 "name": 0, "nameCustom": "", "updChannel": 0, "updAuto": True, "setupDone": False, "nAux1": "AUX 1", "nAux2": "AUX 2", "nUsb1": "PC 1", "nUsb2": "PC 2", "hold": 2,
                 "voice": True, "lang": 0, "vv": 1, "dim": 1, "off": 1, "clock": True, "clockStyle": 0, "saver": 0, "bright": 0, "led": 0, "ledLevel": 100, "ledMode": "press", "auto": 1, "wake": True,
                 # Musikktjenester – lagres her så appen (iOS/Android) og web-UI-et deler innloggingene
@@ -1386,7 +1395,7 @@ SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0
                 "eq": {k: {"preset": p, "eq": e, "loud": k != "hp"} for k, p, e in (("air", 0, [0, 0, 0, 0, 0]), ("bt", 1, [5, 2, 0, 0, 1]), ("radio", 2, [-2, -1, 2, 3, 1]),
                                                                                      ("aux", 0, [0, 0, 0, 0, 0]), ("usb", 0, [0, 0, 0, 0, 0]), ("hp", 3, [2, 1, 0, -2, -3]))}}
 VMAX = [100, 90, 80, 70]; VSTART = [None, 20, 30, 40]; LANG_PROFILE = {0: "no", 1: "en"}
-SETTINGS_APPLIED = {"out", "eq", "dblPower", "nightLight", "hpOwn", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
+SETTINGS_APPLIED = {"out", "eq", "dblPower", "nightLight", "hpOwn", "hpDev", "led", "ledLevel", "ledMode", "name", "nameCustom", "voice", "lang", "vmax", "vstart", "nUsb1", "nUsb2", "wake", "bright", "dim", "off", "clock", "clockStyle"}   # bright/dim/off/clock*: Skjold OS   # resten lagres og vises, men styrer ingenting ennå
 
 
 def settings():
@@ -1409,7 +1418,8 @@ def apply_settings(changed_keys=()):
     env_names = _usbsw_n + ["PC 1", "PC 2"][len(_usbsw_n):]   # KI_AMP_USBSW_NAMES er standard til brukeren setter navn i appen
     USBSW_NAMES = [str(s_["nUsb1"] if s_["nUsb1"] != SETTINGS_DEF["nUsb1"] else env_names[0])[:16],
                    str(s_["nUsb2"] if s_["nUsb2"] != SETTINGS_DEF["nUsb2"] else env_names[1])[:16]]
-    if "eq" in changed_keys or "out" in changed_keys: dsp.update()   # out: ny lydutgang (Node/Core) → nytt CamillaDSP-oppsett
+    if "eq" in changed_keys or "out" in changed_keys or ("hpDev" in changed_keys and S1F and state.get("headphones")):
+        dsp.update()   # out: ny lydutgang (Node/Core) · hpDev: hodetelefonene flyttet til den andre UCA202-en
     if "voice" in changed_keys: state["voice"] = bool(s_["voice"])
     if "lang" in changed_keys and LANG_PROFILE.get(int(s_["lang"]) if str(s_["lang"]).isdigit() else -1):
         state["voice_profile"] = LANG_PROFILE[int(s_["lang"])]
