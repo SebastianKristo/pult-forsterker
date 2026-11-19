@@ -10,6 +10,8 @@ export interface Settings {
   vstart: number; vmax: number; perIn: boolean; hpOwn: boolean;
   /** S1: hvilken UCA202 hodetelefonene står i (0 = AUX 1, 1 = AUX 2). */
   hpDev: number;
+  /** Høyttalernivå: fast demping 0, −6, −12, −18, −24 dB (forsterkere med høy fast gain). */
+  spkTrim: number;
   lvlAux: number; lvlUsb: number;
   name: number; nameCustom: string; nAux1: string; nAux2: string; nUsb1: string; nUsb2: string;
   hold: number;
@@ -66,7 +68,7 @@ export function defaultEq(): EqProfiles {
 }
 
 export const DEF: Settings = {
-  bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, hpDev: 0, lvlAux: 0, lvlUsb: 0,
+  bass: 0, treb: 0, bal: 0, vstart: 0, vmax: 0, perIn: true, hpOwn: true, hpDev: 0, spkTrim: 0, lvlAux: 0, lvlUsb: 0,
   name: 0, nameCustom: '', nAux1: 'AUX 1', nAux2: 'AUX 2', nUsb1: 'PC 1', nUsb2: 'PC 2',
   hold: 2, voice: true, lang: 0, vv: 1, dim: 1, off: 1, clock: true, clockStyle: 0, saver: 0, led: 0, ledLevel: 100, ledMode: 'press', auto: 1, wake: true, spEn: true, upnpEn: false, castEn: false, ytmEn: false, ndEn: false, ytmUser: '', ytmCookie: '', ndUrl: '', ndUser: '', ndPass: '', plexEn: false, plexUrl: '', plexToken: '', maEn: false, maUrl: '', maToken: '', esphomeKey: '', navSkjul: [],
   tRole: 0, tOut: 2, tStandby: 1, tIdle: 0, tNight: false, tTips: true,
@@ -83,7 +85,7 @@ export const fmt = {
 } as const;
 
 export type NumKey = 'bass' | 'treb' | 'bal' | 'lvlAux' | 'lvlUsb';
-export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle' | 'tStart' | 'tNightMode' | 'tBell' | 'dblPower' | 'out' | 'saver' | 'hpDev';
+export type OptKey = 'vstart' | 'vmax' | 'name' | 'hold' | 'lang' | 'vv' | 'dim' | 'off' | 'led' | 'auto' | 'tRole' | 'tOut' | 'tStandby' | 'tIdle' | 'tStart' | 'tNightMode' | 'tBell' | 'dblPower' | 'out' | 'saver' | 'hpDev' | 'spkTrim';
 export type BoolKey = 'perIn' | 'hpOwn' | 'voice' | 'clock' | 'wake' | 'spEn' | 'upnpEn' | 'castEn' | 'ytmEn' | 'ndEn' | 'tNight' | 'nightLight';
 /** Lagres bare på denne telefonen (innlogginger til musikktjenester sendes ikke til forsterkeren). */
 export type LocalKey = 'ytmUser' | 'ytmCookie' | 'ndUrl' | 'ndUser' | 'ndPass';
@@ -140,6 +142,7 @@ export const CATS: Category[] = [
     { kind: 'api-bool', id: 'loudness', n: 'Loudness', hint: 'Mer bass og diskant ved lavt volum' },
     { kind: 'api-opt', id: 'loudLevel', n: 'Loudness-styrke' },
     opt('vstart', 'Startvolum', ['Sist brukt', '20', '30', '40']), opt('vmax', 'Maksvolum', ['100', '90', '80', '70']),
+    opt('spkTrim', 'Høyttalernivå', ['Fullt', '−6 dB', '−12 dB', '−18 dB', '−24 dB'], 'Demper høyttalerne fast. Bruk det hvis lavt volum (også fra AirPlay) er for høyt. Hodetelefonene påvirkes ikke.'),
     bool('perIn', 'Volum per inngang', 'Hver inngang husker sitt eget volum'), bool('hpOwn', 'Eget volum for hodetelefoner'),
     opt('hpDev', 'Hodetelefoner i', ['AUX 1 (UCA202 nr. 1)', 'AUX 2 (UCA202 nr. 2)'], 'Hvilket USB-lydkort hodetelefonene står i. AUX-inngangen på det samme kortet virker fortsatt.'),
     { kind: 'api-bool', id: 'speakers', n: 'Høyttalere', hint: 'Slå av høyttalerne uten å slå av resten. Lyden går fortsatt til hodetelefoner og USB.' },

@@ -428,6 +428,10 @@
   if (typeof S.set.hpDev !== 'number') S.set.hpDev = 0;
   if (typeof SDEF !== 'undefined' && !('hpDev' in SDEF)) SDEF.hpDev = 0;
   if (!SETS.some(x => x.o && x.o[0] === 'hpDev')) settInn('Eget volum hodetlf.', { s: 'LYD', n: 'Hodetelefoner i', o: ['hpDev', ['AUX 1', 'AUX 2']] });
+  // Høyttalernivå (spkTrim): fast demping for forsterkere med høy gain – lagres som de andre innstillingene (SDEF)
+  if (typeof S.set.spkTrim !== 'number') S.set.spkTrim = 0;
+  if (typeof SDEF !== 'undefined' && !('spkTrim' in SDEF)) SDEF.spkTrim = 0;
+  if (!SETS.some(x => x.o && x.o[0] === 'spkTrim')) settInn('Maksvolum', { s: 'LYD', n: 'Høyttalernivå', o: ['spkTrim', ['Fullt', '−6 dB', '−12 dB', '−18 dB', '−24 dB']] });
   // Høyttalerne (reléet til forsterkeren) av/på for seg – status().speakers fra daemonen, POST /api/speaker_relay
   if (!SETS.some(x => x.n === 'Høyttalere')) settInn('Hodetelefoner i', { s: 'LYD', n: 'Høyttalere',
     act: () => { const på = status().speakers === false; api('/api/speaker_relay', { on: på }).then(() => toast(på ? 'Høyttalerne er på' : 'Høyttalerne er av')).catch(e => toast(e.message)); },
