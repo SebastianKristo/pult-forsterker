@@ -47,7 +47,7 @@ dekker også oppsettet. Modus velges ut fra hva som ligger på partisjonen (`src
 
 `skjold-install.sh` installeres som `skjold-install.service` (venter på nett, prøver på nytt hvert minutt til den lykkes):
 henter `SebastianKristo/pult-forsterker` (ref `main`, se `ref` i `skjold-setup.json`) fra GitHub til `/opt/skjold/src`,
-kjører `pi/install.sh` med `KI_AMP_BOARD=main` (S1) eller `KI_AMP_OUT=headphones` + `skjold/node/driver/installer_node.sh`
+kjører `pi/install.sh` med `KI_AMP_BOARD=s1f` (S1) eller `KI_AMP_OUT=headphones` + `skjold/node/driver/installer_node.sh`
 (Node), og starter på nytt. Logg: `/var/log/skjold-install.log`. Tar 15–30 min. Krever nett: forhåndsinnstill Wi-Fi
 eller bruk nettverkskabel.
 
