@@ -346,6 +346,11 @@
   // ---------- designets meny: ekte handlinger ----------
   function bytt(navn, nytt) { const i = SETS.findIndex(x => x.n === navn); if (i >= 0) { if (nytt) SETS.splice(i, 1, nytt); else SETS.splice(i, 1); } return i; }
   function settInn(etter, ...nye) { const i = SETS.findIndex(x => x.n === etter); SETS.splice(i >= 0 ? i + 1 : SETS.length, 0, ...nye); }
+  // «Hodetelefoner i» (hpDev: 0 = AUX 1, 1 = AUX 2): hvilken UCA202 hodetelefonene står i. Finnes ikke i designet,
+  // så nøkkelen legges i S.set og SDEF her – da lagres den med de andre (screen.js: pushSettings sender alle SDEF-nøkler).
+  if (typeof S.set.hpDev !== 'number') S.set.hpDev = 0;
+  if (typeof SDEF !== 'undefined' && !('hpDev' in SDEF)) SDEF.hpDev = 0;
+  if (!SETS.some(x => x.o && x.o[0] === 'hpDev')) settInn('Eget volum hodetlf.', { s: 'LYD', n: 'Hodetelefoner i', o: ['hpDev', ['AUX 1', 'AUX 2']] });
   bytt('Demo: feilmelding');
   bytt('Klokke i standby');
   bytt('Klokkestil', { s: 'SKJERM', n: 'Skjermsparer', act: () => { go('x:saver', saverIdx()); }, v: () => saverName() });
