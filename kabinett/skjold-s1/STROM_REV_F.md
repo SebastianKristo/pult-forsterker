@@ -15,6 +15,10 @@ LED-ringer, standby) står i [pi/S1F.md](../../pi/S1F.md).
    - til **omformeren** 24 → 5,1 V, som gir strøm til Raspberry Pi 4, skjermkortet og relémodulen.
    - til **LED-ringene** i knappene (+). De styres på minussiden med en transistor per ring.
 5. **All GND er felles.** Samle dem i ett stjernepunkt ved omformerens IN− og forsterkerens GND.
+6. **Støy fra omformeren.** En billig 24 → 5 V-omformer kan gi skurring i høyttalerne mens musikken spiller (testet på
+   S1: skurringen forsvant med Pi-en på egen 5,1 V-lader). Velg en omformer med god filtrering, eller gi Pi-en egen
+   5,1 V / 3 A-strømforsyning. Lydkortet (PCM5102) får **3,3 V fra pinne 1**, ikke 5 V: Pi-ens 3,3 V-regulator er
+   renere. Signal-GND til forsterkeren tas fra **G ved L/R** på lydkortet, ikke fra GND på pinnerekka.
 
 Reléet er NO (åpent uten strøm). Forsterkeren får derfor ikke strøm før Skjold har startet og slår reléet på (GPIO27 høy),
 så det smeller ikke i høyttalerne når du slår på bryteren.

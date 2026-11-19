@@ -56,7 +56,7 @@ SPI og UART er av. Koblingsskjema: `kabinett/skjold-s1/s1_gpio_ledninger.png`.
 | USB-switch puls (avlesning av) | 14 | 8 |
 | Hodetelefondetekt | 15 | 10 |
 | Lydkort PCM5102 BCK / LRCK / DIN | 18 / 19 / 21 | 12 / 35 / 40 |
-| Lydkort VIN / GND / SCK | 5 V / GND / GND | 4 / 39 / 39 |
+| Lydkort VIN / GND / SCK | 3,3 V / GND / GND | 1 / 39 / 39 |
 
 Test uten resten av Skjold: `sudo systemctl stop ki-amp && python3 pi/tools/s1f_inputtest.py`.
 

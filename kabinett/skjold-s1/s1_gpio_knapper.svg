@@ -152,7 +152,7 @@
 <text x="40" y="1130" class="m" font-weight="400">USB</text><text x="230" y="1130" class="m" font-weight="400">GPIO2 · pinne 3</text><text x="560" y="1130" class="m" font-weight="400">GPIO25 · pinne 22</text>
 <text x="40" y="1160" class="m" font-weight="400">Volum (EC11)</text><text x="230" y="1160" class="m" font-weight="400">A GPIO9 · 21 · B GPIO10 · 19</text><text x="560" y="1160" class="m" font-weight="400">trykk D GPIO11 · 23 · C og E til GND</text>
 <text x="40" y="1190" class="m" font-weight="400">Relé</text><text x="230" y="1190" class="m" font-weight="400">IN ← GPIO27 · pinne 13</text><text x="560" y="1190" class="m" font-weight="400">VCC ← 5V (pinne 2) · GND ← pinne 14</text>
-<text x="40" y="1220" class="m" font-weight="400">Lydkort</text><text x="230" y="1220" class="m" font-weight="400">BCK 12 · LRCK 35 · DIN 40</text><text x="560" y="1220" class="m" font-weight="400">VIN 5 V (4) · GND og SCK 39</text>
+<text x="40" y="1220" class="m" font-weight="400">Lydkort</text><text x="230" y="1220" class="m" font-weight="400">BCK 12 · LRCK 35 · DIN 40</text><text x="560" y="1220" class="m" font-weight="400">VIN 3,3 V (1) · GND og SCK 39</text>
 <text x="40" y="1256" class="s">Den andre polen på alle knappene og C/E på volumknappen går til GND (pinne 6, 9, 14, 20, 25, 30, 34 eller 39).</text>
 <rect x="1100" y="150" width="440" height="600" rx="16" fill="#fff" stroke="#1d1d1f" stroke-width="2"/>
 <text x="1120" y="186" class="t">Én knapp med LED-ring</text>
