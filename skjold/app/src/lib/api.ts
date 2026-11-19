@@ -287,7 +287,7 @@ export const api = {
   usbsw: (pc: 1 | 2) => post('/api/usbsw', { pc }),
   level: (source: LevelSource, level: number) => post('/api/level', { source, level }),
   hpAutomute: (on: boolean) => post('/api/hp_automute', { on }),
-  speakers: (on: boolean) => post('/api/speakers', { on }),
+  speakerRelay: (on: boolean) => post('/api/speaker_relay', { on }),
   headphones: (on: boolean) => post('/api/headphones', { on }),
   // Nytt endepunkt (legges til i daemonen): GET/POST /api/settings
   getSettings: () => req<{ settings: Record<string, unknown>; applied?: string[]; schema_version: number }>('/api/settings'),

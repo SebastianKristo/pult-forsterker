@@ -34,7 +34,7 @@ API:
   GET/POST /api/settings  innstillingsmodellen til app/web (samme nøkler som skjold_settings.js); POST = delvis oppdatering
   GET/POST /api/s1f/pins  S1 rev F: GPIO-pinnene (pinne-editoren i web-UI-et); POST skriver /etc/skjold/s1f_pins.yaml og
                           starter ki-amp på nytt · POST /api/s1f/pins/reset sletter den (standardpinnene). Bare hjemmenettet.
-  POST /api/speakers {"on":bool} (høyttalerne av/på for seg; status har "speakers")
+  POST /api/speaker_relay {"on":bool} (høyttalerne av/på for seg; status har "speakers")
   POST /api/hp_automute {"on":bool} (demp høyttalerne når hodetelefoner er plugget i fronten; status har "headphones")
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay/Blåtann, eller Lyrion når Radio er valgt; jpg/png, ETag = status["cover"])
@@ -4545,8 +4545,8 @@ async def h_level(r):
     return j()
 
 
-async def h_speakers(r):
-    """POST /api/speakers {"on": bool} – høyttalerne (reléet til forsterkeren) av eller på, uten å slå av resten."""
+async def h_speaker_relay(r):
+    """POST /api/speaker_relay {"on": bool} – høyttalerne (reléet til forsterkeren) av eller på, uten å slå av resten."""
     set_speakers(bool((await _obj(r)).get("on", True))); return j()
 
 
@@ -10445,7 +10445,7 @@ def main():
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
-                    web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/headphones", h_headphones), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute), web.post("/api/speakers", h_speakers),
+                    web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/headphones", h_headphones), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute), web.post("/api/speaker_relay", h_speaker_relay),
                     web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post), web.get("/api/s1f/pins", h_s1f_pins), web.post("/api/s1f/pins", h_s1f_pins), web.post("/api/s1f/pins/reset", h_s1f_pins_reset), web.get("/api/delt", h_delt), web.post("/api/delt", h_delt),
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
                     web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test),

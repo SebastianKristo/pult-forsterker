@@ -212,7 +212,7 @@ function Row({ it, i }: { it: Item; i: number }) {
         mix: [!!s?.mix, (v: boolean) => act(() => api.mix(v), { mix: v })],
         autoInput: [!!s?.auto_input, (v: boolean) => act(() => api.autoInput(v), { auto_input: v })],
         hpAutomute: [!!s?.hp_automute, (v: boolean) => act(() => api.hpAutomute(v), { hp_automute: v })],
-        speakers: [s?.speakers !== false, (v: boolean) => act(() => api.speakers(v), { speakers: v })],
+        speakers: [s?.speakers !== false, (v: boolean) => act(() => api.speakerRelay(v), { speakers: v })],
         hpOn: [!!s?.headphones, (v: boolean) => act(() => api.headphones(v), { headphones: v })],
         voiceOn: [!!s?.voice, (v: boolean) => act(() => api.voice({ on: v }), { voice: v })]
       } as const;
