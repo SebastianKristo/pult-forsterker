@@ -32,6 +32,8 @@ API:
   POST /api/level {"source":"airplay|bt|usb|radio|aux|aux2","level":0-100} (nivå per kilde, brukes i miks)
   POST /api/mix {"on":bool} (miks digitale kilder: AirPlay, Bluetooth, USB og Radio kan spille samtidig)
   GET/POST /api/settings  innstillingsmodellen til app/web (samme nøkler som skjold_settings.js); POST = delvis oppdatering
+  GET/POST /api/s1f/pins  S1 rev F: GPIO-pinnene (pinne-editoren i web-UI-et); POST skriver /etc/skjold/s1f_pins.yaml og
+                          starter ki-amp på nytt · POST /api/s1f/pins/reset sletter den (standardpinnene). Bare hjemmenettet.
   POST /api/hp_automute {"on":bool} (demp høyttalerne når hodetelefoner er plugget i fronten; status har "headphones")
   POST /api/voice  {"on":bool} (talemeldinger av/på) | {"say":"bt_pairing"} (test)
   GET  /api/cover  (albumbilde fra AirPlay/Blåtann, eller Lyrion når Radio er valgt; jpg/png, ETag = status["cover"])
@@ -10177,6 +10179,86 @@ def s1f_start():
         print("S1F: GPIO feilet:", ex, flush=True)
 
 
+# ---------- S1 rev F: pinne-editoren i web-UI-et (Innstillinger → Maskinvare → Pinner) ----------
+def _s1f_pins_sjekk(r):
+    """Bare på S1 rev F, og bare fra hjemmenettet (samme opphavssjekk som /api/settings, se _origin_ok)."""
+    if not S1F:
+        return web.json_response({"error": "pinne-editoren finnes bare på Skjold S1 rev F (KI_AMP_BOARD=s1f)"}, status=404)
+    if not _origin_ok(r):
+        return web.json_response({"error": "bare tillatt fra hjemmenettet"}, status=403)
+    return None
+
+
+def _s1f_restart_snart(sek=1.0):
+    """Start ki-amp på nytt litt etter at svaret er sendt, så de nye pinnene tas i bruk (systemd gjør jobben)."""
+    def _kjør():
+        print("S1F: pinnene er endret – starter ki-amp på nytt", flush=True)
+        try:
+            subprocess.Popen(["systemctl", "restart", "--no-block", "ki-amp"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            print("S1F: klarte ikke å starte ki-amp på nytt:", e, flush=True)
+    asyncio.get_running_loop().call_later(sek, _kjør)
+
+
+def _s1f_pins_info():
+    import skjold_s1f as _s1
+    nå = _s1.load_pins()
+    try:
+        std = _s1.pin_bruk(_s1.load_pins(_s1.standard_fil()))
+    except FileNotFoundError:
+        std = None
+    hw = _s1f.get("hw")
+    return {"fil": nå.get("_file"), "egen_fil": _s1.ETC_PINS, "overstyrt": os.path.exists(_s1.ETC_PINS),
+            "pinner": _s1.pin_bruk(nå), "aktive": _s1.pin_bruk(S1F_PINS) if S1F_PINS else None, "standard": std,
+            "maskinvarefeil": list(getattr(hw, "feil", []) or []), "regler": _s1.pinne_regler()}
+
+
+async def h_s1f_pins(r):
+    """GET /api/s1f/pins → pinnene på S1 rev F (fila som brukes, de som kjører nå, standardverdiene og reglene).
+    POST {pinner: {funksjon: BCM|null}} validerer og skriver /etc/skjold/s1f_pins.yaml og starter ki-amp på nytt.
+    POST {pinner, dry_run: true} validerer bare. Bare på hjemmenettet og bare med KI_AMP_BOARD=s1f."""
+    nei = _s1f_pins_sjekk(r)
+    if nei is not None:
+        return nei
+    import skjold_s1f as _s1
+    loop = asyncio.get_running_loop()
+    if r.method == "GET":
+        return web.json_response(await loop.run_in_executor(None, _s1f_pins_info))
+    b = await r.json()
+    if not isinstance(b, dict) or not isinstance(b.get("pinner"), dict):
+        return web.json_response({"error": "forventer {\"pinner\": {funksjon: gpio}}"}, status=400)
+    if b.get("dry_run"):
+        full = {**_s1.pin_bruk(_s1.load_pins()), **b["pinner"]}
+        return web.json_response(_s1.valider_pinner(full))
+    try:
+        res = await loop.run_in_executor(None, _s1.lagre_pinner, b["pinner"])
+    except ValueError as e:
+        v = e.args[1] if len(e.args) > 1 else {"feil": [str(e)], "advarsler": []}
+        return web.json_response({"error": "pinnene ble ikke lagret: " + str(e.args[0]), **v}, status=400)
+    except OSError as e:
+        return web.json_response({"error": f"kunne ikke skrive {_s1.ETC_PINS}: {e}"}, status=500)
+    print(f"S1F: nye pinner lagret i {res['fil']}", flush=True)
+    omstart = b.get("restart", True) is not False
+    if omstart:
+        _s1f_restart_snart()
+    return web.json_response({**res, "restart": omstart})
+
+
+async def h_s1f_pins_reset(r):
+    """POST /api/s1f/pins/reset → slett /etc/skjold/s1f_pins.yaml (standardpinnene brukes igjen) og start ki-amp på nytt."""
+    nei = _s1f_pins_sjekk(r)
+    if nei is not None:
+        return nei
+    import skjold_s1f as _s1
+    try:
+        fantes = _s1.tilbakestill_pinner()
+    except OSError as e:
+        return web.json_response({"error": f"kunne ikke slette {_s1.ETC_PINS}: {e}"}, status=500)
+    if fantes:
+        _s1f_restart_snart()
+    return web.json_response({"ok": True, "slettet": fantes, "restart": fantes})
+
+
 async def h_night(r):
     if r.method == "POST":
         try:
@@ -10304,7 +10386,7 @@ def main():
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
                     web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/headphones", h_headphones), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute),
-                    web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post), web.get("/api/delt", h_delt), web.post("/api/delt", h_delt),
+                    web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post), web.get("/api/s1f/pins", h_s1f_pins), web.post("/api/s1f/pins", h_s1f_pins), web.post("/api/s1f/pins/reset", h_s1f_pins_reset), web.get("/api/delt", h_delt), web.post("/api/delt", h_delt),
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
                     web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test),
                     web.get("/api/sky", h_sky_get), web.get("/api/rom", h_rom), web.post("/api/sky", h_sky_post)])

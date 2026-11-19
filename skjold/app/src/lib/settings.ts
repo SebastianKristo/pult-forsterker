@@ -108,7 +108,9 @@ export type Item =
   | { kind: 'act'; n: string; id: 'btPair' | 'setup' | 'testVoice' | 'forget' | 'reset' | 'reboot' | 'findDevice'; label: string; safe?: boolean; hint?: string }
   | { kind: 'eq'; n: string }
   | { kind: 'clocks'; n: string }
-  | { kind: 'update'; n: string };
+  | { kind: 'update'; n: string }
+  /** Rad som åpner en egen side under innstillingene (route.cat = to). */
+  | { kind: 'link'; n: string; to: string; hint?: string };
 
 export interface Category { id: string; n: string; sub: string; items: Item[] }
 
@@ -197,6 +199,8 @@ export const CATS: Category[] = [
     opt('saver', 'Skjermsparer', ['Omslag og klokke', 'Klokke på svart', 'Svart, lyset av'], 'Når knappene ikke er rørt på en stund'),
     { kind: 'range', k: 'ledLevel', n: 'LED-lysstyrke', mn: 0, mx: 100, step: 5, unit: ' %', hint: 'Lysstyrken på LED-ringene rundt knappene' },
     { kind: 'ledMode', k: 'ledMode', n: 'LED-modus', hint: 'Ved trykk: ringen lyser når du trykker og toner ut. Alltid: aktiv kilde lyser.' }] },
+  { id: 'maskinvare', n: 'Maskinvare', sub: 'GPIO-pinner for knapper, lys og volumhjul', items: [
+    { kind: 'link', n: 'Pinner (GPIO)', to: 'pinner', hint: 'Hvilke pinner på Pi-en knappene, LED-ringene, volumhjulet, releet og USB-switchen bruker' }] },
   { id: 'strom', n: 'Strøm', sub: 'Standby og påslag', items: [
     opt('auto', 'Auto-standby uten lyd', ['Av', '20 min', '60 min']), bool('wake', 'Slå på ved signal', 'AirPlay, Blåtann eller Spotify slår forsterkeren på fra standby'),
     opt('dblPower', 'Dobbelttrykk power', ['Nattmodus', 'Av'], 'Starter nattmodus og automasjonene dine i Home Assistant eller Homey'),
@@ -218,7 +222,7 @@ export const CAT_ALIAS: Record<string, string> = { endringslogg: 'oppdatering', 
 /** Gruppene i innstillingslista. Kategorier som ikke står her, havner i den siste gruppen. */
 export const CAT_GROUPS: [string, string[]][] = [
   ['Lyd og musikk', ['eq', 'lyd', 'radio', 'tjenester', 'bibliotek']],
-  ['Enheten', ['tilkobling', 'touch', 'skjerm', 'strom', 'stemme']],
+  ['Enheten', ['tilkobling', 'touch', 'skjerm', 'strom', 'stemme', 'maskinvare']],
   ['Hjemme', ['rutiner', 'hjemskjerm', 'sky']],
   ['System', ['oppdatering', 'system']],
 ];
@@ -239,6 +243,7 @@ export const ICONS: Record<string, string> = {
   stemme: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
   skjerm: 'M3 5h18v12H3zM8 21h8M12 17v4',
   strom: 'M12 3v8M6.3 6.6a8 8 0 1 0 11.4 0',
+  maskinvare: 'M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4',
   steder: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
   cloud: 'M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5zM10 13h4v3h-4zM11 13v-1.5a1 1 0 0 1 2 0V13',
   skjoldhjem: 'M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9.5z',
@@ -252,7 +257,7 @@ export const ICONS: Record<string, string> = {
 export const CAT_TILE: Record<string, string> = {
   tjenester: '#2a3a2e',
   eq: '#3a2e17', lyd: '#2a3340', tilkobling: '#22314a', radio: '#3d2a2a', stemme: '#2f2a40', skjerm: '#2a3a33',
-  strom: '#40362a', steder: '#2a3340', bibliotek: '#3a2e40', rutiner: '#2a3a3a', hjemskjerm: '#3a3326', touch: '#2a3340', sky: '#22314a', skjoldhjem: '#22314a', cloud: '#22314a', rom: '#2a3a33', oppdatering: '#333', system: '#333335'
+  strom: '#40362a', maskinvare: '#2a3a2a', steder: '#2a3340', bibliotek: '#3a2e40', rutiner: '#2a3a3a', hjemskjerm: '#3a3326', touch: '#2a3340', sky: '#22314a', skjoldhjem: '#22314a', cloud: '#22314a', rom: '#2a3a33', oppdatering: '#333', system: '#333335'
 };
 
 /** Bezier curve through the five EQ bands – same geometry as the design file. */
@@ -323,10 +328,11 @@ function itemKey(it: Item): string {
   if ('id' in it) return it.id;
   return it.kind;
 }
-export function catsFor(product: 's1' | 'node' | 'core' | 'touch', inputs: string[] = []): Category[] {
+/** board = status.board: pinne-editoren (Maskinvare) finnes bare på S1 rev F (board «s1f»). */
+export function catsFor(product: 's1' | 'node' | 'core' | 'touch', inputs: string[] = [], board = ''): Category[] {
   const hasAux = product === 's1' || inputs.some((i) => i === 'aux' || i === 'aux2');
   const hasUsb = product === 's1' || inputs.includes('usb');
-  return CATS.filter((c) => !(product === 'core' && NO_DISPLAY.has(c.id)) && (c.id !== 'touch' || product === 'touch')).map((c) => ({
+  return CATS.filter((c) => !(product === 'core' && NO_DISPLAY.has(c.id)) && (c.id !== 'touch' || product === 'touch') && (c.id !== 'maskinvare' || (product === 's1' && board === 's1f'))).map((c) => ({
     ...c,
     sub: product === 'core' && c.id === 'tilkobling' ? 'Navn og Blåtann' : c.sub,
     items: c.items.filter((it) => {
