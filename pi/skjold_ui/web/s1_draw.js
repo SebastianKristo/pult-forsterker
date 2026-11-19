@@ -448,7 +448,7 @@ function drawBar(){ const g=cvb.getContext('2d'); g.setTransform(0.5,0,0,0.5,0,0
   const clock=()=>{ const d=new Date(); txt(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),1864,110,'56','500',W,'right'); if(S.night){ g.fillStyle='#c9d4f5'; g.beginPath(); g.arc(1700,92,20,0,7); g.fill(); g.fillStyle='#000'; g.beginPath(); g.arc(1710,84,18,0,7); g.fill(); } };
   const volOverlay=()=>{ if(!(now-S.volT<2200||S.muted)) return false; const v=S.muted?0:volShown(), X=652, TW=1212;
     txt(S.hp?'HODETELEFON':'VOLUM',X,436,28,'bold',Dm); rr(X,470,TW-190,14,7); g.fillStyle='rgba(255,255,255,.18)'; g.fill(); rr(X,470,Math.max(14,(TW-190)*(S.muted?0:volGlid())/100),14,7); g.fillStyle=S.muted?'#777':W; g.fill();
-    txt(S.muted?'DEMPET':String(v),X+TW,500,72,'bold',W,'right'); return true; };
+    if(S.muted) spk(g,X+TW-62,474,5.2,true,1,'#ef4444'); else txt(String(v),X+TW,500,72,'bold',W,'right'); return true; };
   const srcRow=()=>{ ['AIR','AUX','RADIO','USB'].forEach((k,i)=>{ const on=i===S.input, x=652+i*160, l=k==='AIR'?(S.wl==='bt'?'BT':'AIRPLAY'):k; txt(l,x,604,26,on?'bold':'',on?W:Lo); if(on){ g.fillStyle=W; g.fillRect(x,616,g.measureText(l).width,4); } }); };
   const pill=(s,x,y,live)=>{ g.font='bold 30px '+F; const w=g.measureText(s).width; rr(x,y,w+(live?96:48),52,26); g.fillStyle='rgba(255,255,255,.16)'; g.fill(); txt(s,x+24,y+37,30,'bold',W); if(live){ g.fillStyle='rgba(255,77,77,'+(0.55+0.45*Math.sin(now/350))+')'; g.beginPath(); g.arc(x+w+58,y+26,9,0,Math.PI*2); g.fill(); } return w+(live?96:48); };
   const meter=(x,y,w,h)=>{ const N=48, bw=(w-(N-1)*6)/N; for(let i=0;i<N;i++){ const t=now/1000, lv=S.muted?0.04:Math.max(0.05,Math.min(1,0.45+0.32*Math.sin(t*5.1+i*0.55)+0.22*Math.sin(t*11.7+i*1.9)+0.12*Math.sin(t*2.3-i*0.3))*(1-Math.abs(i-N/2)/N*0.9)); const bh=Math.max(6,h*lv); rr(x+i*(bw+6),y+h-bh,bw,bh,3); g.fillStyle=i/N<lv?W:'rgba(255,255,255,.35)'; g.globalAlpha=0.35+0.65*lv; g.fill(); g.globalAlpha=1; } };
@@ -481,7 +481,7 @@ function drawBar(){ const g=cvb.getContext('2d'); g.setTransform(0.5,0,0,0.5,0,0
   const head=(t,sub)=>{ fitT(t,TW,104,'bold'); g.fillStyle=W; g.fillText(t,X-4,312); g.font='44px '+F; txt(clip(sub,TW),X,372,44,'',Dm); };
   const vol6=()=>{ if(!(now-S.volT<2200||S.muted)) return false; const v=S.muted?0:volShown(), w=TW-220;
     txt(S.hp?'HODETELEFON':'VOLUM',X,466,26,'bold',Dm); rr(X,500,w,12,6); g.fillStyle='rgba(255,255,255,.18)'; g.fill(); rr(X,500,Math.max(12,w*(S.muted?0:volGlid())/100),12,6); g.fillStyle=S.muted?'#777':W; g.fill();
-    txt(S.muted?'DEMPET':String(v),XR,530,72,'bold',W,'right'); return true; };
+    if(S.muted) spk(g,XR-62,504,5.2,true,1,'#ef4444'); else txt(String(v),XR,530,72,'bold',W,'right'); return true; };
   if(S.input===2){ const p=PRESETS[S.preset], np=NOWP[S.preset]||['',''];
     head(p[0],'Nå: '+np[0]+(np[1]?' · '+np[1]:''));
     if(!vol6()){ const cw=(TW-5*16)/6; PRESETS.slice(0,6).forEach((q,i)=>{ const on=i===S.preset, x=X+i*(cw+16); rr(x,448,cw,88,14); g.fillStyle=on?W:'rgba(255,255,255,.08)'; g.fill();

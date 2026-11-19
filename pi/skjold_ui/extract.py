@@ -23,6 +23,11 @@ VOL_GLID = (
     ("rr(X,470,Math.max(14,(TW-190)*v/100),14,7)", "rr(X,470,Math.max(14,(TW-190)*(S.muted?0:volGlid())/100),14,7)"),
     ("rr(X,500,Math.max(12,w*v/100),12,6)", "rr(X,500,Math.max(12,w*(S.muted?0:volGlid())/100),12,6)"),
     ("g.roundRect(X,470,Math.max(14,TW*(M?S.vol:v)/100),14,7)", "g.roundRect(X,470,Math.max(14,TW*(M?S.vol:volGlid())/100),14,7)"),
+    # dempet: høyttalerikon med kryss i stedet for teksten «DEMPET»
+    ("txt(S.muted?'DEMPET':String(v),X+TW,500,72,'bold',W,'right');",
+     "if(S.muted) spk(g,X+TW-62,474,5.2,true,1,'#ef4444'); else txt(String(v),X+TW,500,72,'bold',W,'right');"),
+    ("txt(S.muted?'DEMPET':String(v),XR,530,72,'bold',W,'right');",
+     "if(S.muted) spk(g,XR-62,504,5.2,true,1,'#ef4444'); else txt(String(v),XR,530,72,'bold',W,'right');"),
 )
 
 
