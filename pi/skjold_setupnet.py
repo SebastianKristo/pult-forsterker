@@ -63,6 +63,7 @@ class SetupNet:
         self.networks: list = []      # skannet rett før aksesspunktet startet (radioen kan ikke alltid skanne etterpå)
         self.manual = False           # startet fra Touch/appen («Koble til nytt Wi-Fi»), ikke fordi nettet var borte
         self.kabel_til = 0.0          # «Bruk kabel» valgt: oppsett-nettet er av, og vi venter på Ethernet til dette tidspunktet
+        self.skjult = False           # «Tilbake til forsterkeren» valgt på skjermen: vis bare «Ingen Wi-Fi» til nettet er tilbake
         self.lock = threading.RLock()
 
     # --- nmcli
@@ -106,6 +107,14 @@ class SetupNet:
                 self.kabel_til = 0.0
             self.start()
         self.ctx["changed"]()
+
+    def skjul(self, on: bool = True):
+        """Skjermen: «Tilbake til forsterkeren». Oppsett-nettet går som før (mobilen kan fortsatt brukes), men skjermen
+        viser vanlig visning med en liten «Ingen Wi-Fi»-merknad til enheten er på nett igjen eller oppsettet startes for hånd."""
+        with self.lock:
+            endret, self.skjult = self.skjult != bool(on), bool(on)
+        if endret:
+            self.ctx["changed"]()
 
     def has_profiles(self) -> bool:
         out = self._nm("-t", "-f", "TYPE,NAME", "connection", "show")[1]
@@ -198,7 +207,7 @@ class SetupNet:
         ok = self.start()
         if ok:
             with self.lock:
-                self.manual, self.t_hit = True, self.clock()
+                self.manual, self.t_hit, self.skjult = True, self.clock(), False
         return ok
 
     def connect_async(self, ssid: str, psk: str = "", hidden: bool = False):
@@ -216,7 +225,7 @@ class SetupNet:
             if online or now >= self.kabel_til:
                 self.kabel_til = 0.0
                 if online:
-                    self.t_offline = 0.0
+                    self.t_offline, self.skjult = 0.0, False
                     return ""
                 self.t_offline = now - OFFLINE_S      # ingen kabel kom: oppsett-nettet igjen med en gang
             else:
@@ -225,12 +234,13 @@ class SetupNet:
             if self.manual:   # startet for hånd: stå til noen kobler til, eller 15 min uten at siden er i bruk
                 return "stop" if now - max(self.t_start, self.t_hit) > MANUAL_S else ""
             if online:
+                self.skjult = False
                 return "stop"                                  # kabel satt i, eller koblet til på annen måte
             if profiles and now - self.t_start > RETRY_S and now - self.t_hit > IDLE_S:
                 return "stop"                                  # prøv de lagrede nettene igjen (ruteren var kanskje bare nede)
             return ""
         if online:
-            self.t_offline = 0.0
+            self.t_offline, self.skjult = 0.0, False
             return ""
         if now - self.t_boot < BOOT_GRACE_S:
             return ""
@@ -258,7 +268,7 @@ class SetupNet:
         port = self.ctx.get("port", 8765)
         return {"active": self.active, "manual": self.manual, "ssid": self.ssid(), "password": PASSWORD, "ip": IP, "url": f"http://{IP}:{port}/oppsett",
                 "qr": wifi_qr(self.ssid(), PASSWORD), "joining": self.joining, "error": self.error,
-                "kabel": bool(self.kabel_til), "ethernet": self.ethernet()}
+                "kabel": bool(self.kabel_til), "ethernet": self.ethernet(), "skjult": self.skjult}
 
 
 PAGE = """<!doctype html>

@@ -100,7 +100,7 @@ function drawSplash(g,w,h,sc,col){ const t=(performance.now()-bootT)/BOOT, bars=
   g.font='400 '+(3.6*sc)+'px "IBM Plex Mono",Menlo,monospace'; if('letterSpacing' in g) g.letterSpacing=(1.1*sc)+'px'; g.fillStyle=col?'#ffb547':'#8b8b86'; g.fillText('STREAMING AMPLIFIER',x0+mw+gap+1,h/2+9*sc);
   g.globalAlpha=1; if('letterSpacing' in g) g.letterSpacing='0px'; g.textBaseline='alphabetic'; }
 const booting=()=>performance.now()-bootT<BOOT;
-const volShown=()=>{ const t=(performance.now()-bootT-BOOT)/1200; return Math.round(S.vol*Math.max(0,Math.min(1,t))); }; // soft start: output muted during boot, ramps over 1.2 s
+const volShown=()=>{ const t=(performance.now()-bootT-BOOT)/1200; return Math.round(S.vol*Math.max(0,Math.min(1,t))); }; const VOL_TAU=100; let volGlidV=null, volGlidT=0; const volGlid=()=>{ const m=volShown(), n=performance.now(), dt=Math.min(40,Math.max(0,n-volGlidT)); volGlidT=n; if(volGlidV===null) volGlidV=m; else { volGlidV+=(m-volGlidV)*(1-Math.exp(-dt/VOL_TAU)); if(Math.abs(m-volGlidV)<0.05) volGlidV=m; } return volGlidV; }; const volGlidMoving=()=>volGlidV!==null&&performance.now()-volGlidT<250&&Math.abs(volShown()-volGlidV)>=0.05; // soft start: output muted during boot, ramps over 1.2 s
 let fxRAF=0; function animate(){ cancelAnimationFrame(fxRAF); const tick=()=>{ const busy=performance.now()-(S.nightT||-1e9)<4800||(S.welcome&&S.power)||performance.now()-(S.clockPrevT||-1e9)<4100||S.setup.on||S.set.open||S.knobHoldT||performance.now()-S.actT<900||performance.now()-S.saveT<1700||(S.err&&performance.now()-S.errT<2700)||performance.now()-S.volT<2400||(S.power&&!booting()&&!S.muted&&S.f==='oled')||S.rebootT||S.pairT||performance.now()-(S.pairCancelT||-1e9)<1600||performance.now()-S.menuT<2600||performance.now()-S.toastT<2200||performance.now()-S.hpT<1800||performance.now()-S.wlT<950||performance.now()-S.muteT<1600; drawOLED(); drawTFT();
   if(S.rebootT){ const on=Math.sin(performance.now()/220)>0; setLed(pwrBtn.userData.led,on,1,pwrBtn.userData.ledOff); }
   else { const nt=performance.now()-(S.nightT||-1e9); if(nt<900) setLed(pwrBtn.userData.led,Math.floor(nt/150)%2===0,1,pwrBtn.userData.ledOff); }
@@ -286,7 +286,7 @@ function drawBarSys(g,F){ const now=performance.now(), W='#f6f3ee', Dm='rgba(246
     if(!M&&u<1){ g.strokeStyle='rgba(255,255,255,'+(1-u).toFixed(2)+')'; g.lineWidth=6; g.beginPath(); g.arc(cx,cy,150+90*u,0,Math.PI*2); g.stroke(); }
     spk(g,cx-8,cy,11*(0.85+0.15*e),M,Math.min(1,t/420),'#fff');
     txt(M?'Lyd av':'Lyd på',X-4,250,104,'bold',W); txt(M?'Trykk volumknappen for å slå på':(S.hp?'Hodetelefoner':'Høyttalere')+' · volum '+volShown(),X,322,40,'',Dm);
-    const v=M?0:volShown(); g.beginPath(); g.roundRect(X,470,TW,14,7); g.fillStyle='rgba(255,255,255,.16)'; g.fill(); g.beginPath(); g.roundRect(X,470,Math.max(14,TW*(M?S.vol:v)/100),14,7); g.fillStyle=M?'rgba(255,255,255,.3)':W; g.fill();
+    const v=M?0:volShown(); g.beginPath(); g.roundRect(X,470,TW,14,7); g.fillStyle='rgba(255,255,255,.16)'; g.fill(); g.beginPath(); g.roundRect(X,470,Math.max(14,TW*(M?S.vol:volGlid())/100),14,7); g.fillStyle=M?'rgba(255,255,255,.3)':W; g.fill();
     g.globalAlpha=1; } }
 function holdReboot(){ if(!S.main) return; S.power=true; S.pairT=0; S.rebootT=performance.now(); press(pwrBtn); animate(); }
 function prevTrack(){ if(!S.power) return; if(S.input===2){ S.preset=(S.preset+PRESETS.length-1)%PRESETS.length; S.menuT=-1e9; syncInputs(); return; } const el=(performance.now()-S.playT)/1000; if(el>3||!TRACKS[S.wl]){ S.playT=performance.now(); S.pausedAt=S.playT; } else { const L=TRACKS[S.wl].length; S.trk[S.wl]=(S.trk[S.wl]+L-1)%L; S.playT=performance.now(); S.pausedAt=S.playT; } syncInputs(); }
@@ -447,7 +447,7 @@ function drawBar(){ const g=cvb.getContext('2d'); g.setTransform(0.5,0,0,0.5,0,0
   const art=(x,y,s,patch)=>{ const sv={p:S.preset,u:S.usb,a:S.aux}; if(patch) Object.assign(S,patch); g.save(); rr(x,y,s,s,Math.round(s*0.045)); g.clip(); drawArt(g,x,y,s,barNow()); g.restore(); S.preset=sv.p; S.usb=sv.u; S.aux=sv.a; g.textBaseline='alphabetic'; g.textAlign='left'; };
   const clock=()=>{ const d=new Date(); txt(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),1864,110,'56','500',W,'right'); if(S.night){ g.fillStyle='#c9d4f5'; g.beginPath(); g.arc(1700,92,20,0,7); g.fill(); g.fillStyle='#000'; g.beginPath(); g.arc(1710,84,18,0,7); g.fill(); } };
   const volOverlay=()=>{ if(!(now-S.volT<2200||S.muted)) return false; const v=S.muted?0:volShown(), X=652, TW=1212;
-    txt(S.hp?'HODETELEFON':'VOLUM',X,436,28,'bold',Dm); rr(X,470,TW-190,14,7); g.fillStyle='rgba(255,255,255,.18)'; g.fill(); rr(X,470,Math.max(14,(TW-190)*v/100),14,7); g.fillStyle=S.muted?'#777':W; g.fill();
+    txt(S.hp?'HODETELEFON':'VOLUM',X,436,28,'bold',Dm); rr(X,470,TW-190,14,7); g.fillStyle='rgba(255,255,255,.18)'; g.fill(); rr(X,470,Math.max(14,(TW-190)*(S.muted?0:volGlid())/100),14,7); g.fillStyle=S.muted?'#777':W; g.fill();
     txt(S.muted?'DEMPET':String(v),X+TW,500,72,'bold',W,'right'); return true; };
   const srcRow=()=>{ ['AIR','AUX','RADIO','USB'].forEach((k,i)=>{ const on=i===S.input, x=652+i*160, l=k==='AIR'?(S.wl==='bt'?'BT':'AIRPLAY'):k; txt(l,x,604,26,on?'bold':'',on?W:Lo); if(on){ g.fillStyle=W; g.fillRect(x,616,g.measureText(l).width,4); } }); };
   const pill=(s,x,y,live)=>{ g.font='bold 30px '+F; const w=g.measureText(s).width; rr(x,y,w+(live?96:48),52,26); g.fillStyle='rgba(255,255,255,.16)'; g.fill(); txt(s,x+24,y+37,30,'bold',W); if(live){ g.fillStyle='rgba(255,77,77,'+(0.55+0.45*Math.sin(now/350))+')'; g.beginPath(); g.arc(x+w+58,y+26,9,0,Math.PI*2); g.fill(); } return w+(live?96:48); };
@@ -480,7 +480,7 @@ function drawBar(){ const g=cvb.getContext('2d'); g.setTransform(0.5,0,0,0.5,0,0
     if(S.night){ g.fillStyle='#c9d4f5'; g.beginPath(); g.arc(XR-180,122,18,0,7); g.fill(); g.fillStyle='#1a1424'; g.beginPath(); g.arc(XR-171,115,16,0,7); g.fill(); } }
   const head=(t,sub)=>{ fitT(t,TW,104,'bold'); g.fillStyle=W; g.fillText(t,X-4,312); g.font='44px '+F; txt(clip(sub,TW),X,372,44,'',Dm); };
   const vol6=()=>{ if(!(now-S.volT<2200||S.muted)) return false; const v=S.muted?0:volShown(), w=TW-220;
-    txt(S.hp?'HODETELEFON':'VOLUM',X,466,26,'bold',Dm); rr(X,500,w,12,6); g.fillStyle='rgba(255,255,255,.18)'; g.fill(); rr(X,500,Math.max(12,w*v/100),12,6); g.fillStyle=S.muted?'#777':W; g.fill();
+    txt(S.hp?'HODETELEFON':'VOLUM',X,466,26,'bold',Dm); rr(X,500,w,12,6); g.fillStyle='rgba(255,255,255,.18)'; g.fill(); rr(X,500,Math.max(12,w*(S.muted?0:volGlid())/100),12,6); g.fillStyle=S.muted?'#777':W; g.fill();
     txt(S.muted?'DEMPET':String(v),XR,530,72,'bold',W,'right'); return true; };
   if(S.input===2){ const p=PRESETS[S.preset], np=NOWP[S.preset]||['',''];
     head(p[0],'Nå: '+np[0]+(np[1]?' · '+np[1]:''));
