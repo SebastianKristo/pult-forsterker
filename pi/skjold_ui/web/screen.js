@@ -107,12 +107,15 @@
     let im = IMG.get(url);
     if (!im) {
       im = new Image(); im.decoding = 'async';
-      im.onload = () => wake(400); im.onerror = () => { im.feil = true; };
+      im.onload = () => { nyBakgrunn(); wake(400); }; im.onerror = () => { im.feil = true; };
       im.src = url; IMG.set(url, im);
       if (IMG.size > 40) IMG.delete(IMG.keys().next().value);
     }
     return im.complete && im.naturalWidth && !im.feil ? im : null;
   }
+  // Bakgrunnen (designets drawBar.amb: bildet i 24 × 24, forstørret og uskarpt) lages på nytt når bildet byttes eller lastes
+  function nyBakgrunn() { if (typeof drawBar === 'function') drawBar.amb = null; }
+  let sistUrl = '';
   function bildeUrl() {
     if (S.input === 2) {
       const ps = st.presets || [], rn = st.radio_now || {};
@@ -126,10 +129,12 @@
   if (typeof drawArt === 'function') {
     const designArt = drawArt;
     drawArt = function (g, x, y, s, it) {   // eslint-disable-line no-global-assign
-      const im = bilde(bildeUrl());
+      const url = bildeUrl();
+      if (url !== sistUrl) { sistUrl = url; nyBakgrunn(); }
+      const im = bilde(url);
       if (!im) return designArt(g, x, y, s, it);
       g.save(); g.beginPath(); g.roundRect(x, y, s, s, Math.round(s * 0.045)); g.clip();
-      if (S.input === 2) {   // logo: hele logoen synlig på mørk flate
+      if (S.input === 2 && s > 32) {   // logo: hele logoen synlig på mørk flate (bakgrunnen, s = 24, fyller i stedet)
         g.fillStyle = '#111'; g.fillRect(x, y, s, s);
         const k = Math.min(s * 0.84 / im.naturalWidth, s * 0.84 / im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k;
         g.drawImage(im, x + (s - w) / 2, y + (s - h) / 2, w, h);
