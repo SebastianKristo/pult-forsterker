@@ -13,6 +13,10 @@ echo "== Programmer og tjenester"
 # I²C (OLED/hovedkort) – ikke på S1 rev F, der GPIO 2/3 er USB-knappen og av/på-lyset
 S1F_ENV=0; grep -q '^KI_AMP_BOARD=s1f' /etc/ki-amp.env 2>/dev/null && S1F_ENV=1
 [ "$IS_PI" = 0 ] || [ "$S1F_ENV" = 1 ] || [ -e /dev/i2c-1 ] || { sudo raspi-config nonint do_i2c 0 2>/dev/null; sudo modprobe i2c-dev 2>/dev/null; } || true
+if [ "$S1F_ENV" = 1 ] && systemctl is-enabled --quiet skjold-os 2>/dev/null; then
+  sudo systemctl disable --now skjold-os 2>/dev/null; sudo systemctl mask skjold-os 2>/dev/null
+  echo "  S1 rev F: Skjold OS (skjermen til hovedkortet) er slått av – skjold-ui tegner skjermen"
+fi
 if [ "$S1F_ENV" = 1 ] && grep -qE '^dtparam=i2c_arm=on' /boot/firmware/config.txt 2>/dev/null; then
   sudo sed -i -E 's/^dtparam=i2c_arm=on$/#dtparam=i2c_arm=on/' /boot/firmware/config.txt
   echo "  S1 rev F: I²C slått av igjen (GPIO 2/3 er knapp og lys) – gjelder etter omstart"
