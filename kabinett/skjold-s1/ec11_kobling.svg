@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 840" width="1200" height="840" font-family="Sora, 'IBM Plex Sans', Arial, sans-serif">
+  <!-- Skjold S1 rev F: EC11 dreieknapp med trykk til Raspberry Pi (pi/config/s1f_pins.yaml: a 9, b 10, sw 11) -->
+  <defs><style>
+    .t{font-size:22px;font-weight:600;fill:#1d1d1f}.s{font-size:15px;fill:#55554f}.m{font-family:'IBM Plex Mono',monospace;font-size:14px;fill:#1d1d1f}
+    .pin{fill:#d9a441;stroke:#8a6a24;stroke-width:1.5}.ledn{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+  </style></defs>
+  <rect width="1200" height="840" fill="#f7f6f2"/>
+  <text x="40" y="56" font-size="32" font-weight="600" fill="#1d1d1f">EC11 dreieknapp → Skjold S1 (Raspberry Pi)</text>
+  <text x="40" y="88" class="s">Sett ovenfra (akselen mot deg). A, C og B på den ene siden, D og E (trykket) på den andre. Ingen motstander: Pi-en har intern pull-up.</text>
+
+  <!-- ledninger (tegnes først) -->
+  <!-- A → GPIO9 (pinne 21) grønn -->
+  <path class="ledn" stroke="#2f9e5b" d="M262 520 V600 H560 V419 H760"/>
+  <!-- B → GPIO10 (pinne 19) blå -->
+  <path class="ledn" stroke="#2f6fd6" d="M378 520 V640 H600 V379 H760"/>
+  <!-- C → GND (pinne 25) sort -->
+  <path class="ledn" stroke="#1d1d1f" d="M320 520 V680 H640 V499 H760"/>
+  <!-- D → GPIO11 (pinne 23) gul -->
+  <path class="ledn" stroke="#e0a400" d="M290 260 V200 H680 V459 H760"/>
+  <!-- E → GND (sammen med C) sort -->
+  <path class="ledn" stroke="#1d1d1f" d="M350 260 V230 H720 V499"/>
+  <circle cx="720" cy="499" r="7" fill="#1d1d1f"/>
+
+  <!-- EC11 -->
+  <rect x="200" y="260" width="240" height="260" rx="16" fill="#ffffff" stroke="#1d1d1f" stroke-width="3"/>
+  <circle cx="320" cy="390" r="62" fill="#e9e7e0" stroke="#1d1d1f" stroke-width="3"/>
+  <circle cx="320" cy="390" r="30" fill="#c9c6bc" stroke="#1d1d1f" stroke-width="2"/>
+  <text x="320" y="396" text-anchor="middle" class="m">aksel</text>
+  <text x="180" y="398" text-anchor="end" class="t">EC11</text>
+  <!-- pinner -->
+  <rect x="280" y="248" width="20" height="24" class="pin"/><rect x="340" y="248" width="20" height="24" class="pin"/>
+  <text x="290" y="296" text-anchor="middle" class="t">D</text><text x="350" y="296" text-anchor="middle" class="t">E</text>
+  <rect x="252" y="508" width="20" height="24" class="pin"/><rect x="310" y="508" width="20" height="24" class="pin"/><rect x="368" y="508" width="20" height="24" class="pin"/>
+  <text x="262" y="500" text-anchor="middle" class="t">A</text><text x="320" y="500" text-anchor="middle" class="t">C</text><text x="378" y="500" text-anchor="middle" class="t">B</text>
+  <text x="456" y="282" class="s">D og E: trykket</text>
+  <text x="456" y="476" class="s">A, B: dreiing</text>
+  <text x="456" y="498" class="s">C: felles (GND)</text>
+
+  <!-- Pi-header pinne 17–26 -->
+  <rect x="740" y="300" width="150" height="230" rx="10" fill="#1f3d2c"/>
+  <text x="740" y="560" class="s">Pi 40-pinners header (utsnitt).</text>
+  <g class="m" fill="#ffffff">
+  </g>
+  <!-- rader: y = 339 (17/18), 379 (19/20), 419 (21/22), 459 (23/24), 499 (25/26) -->
+  <g>
+    <circle cx="780" cy="339" r="11" fill="#777"/><circle cx="850" cy="339" r="11" fill="#777"/>
+    <circle cx="780" cy="379" r="11" fill="#2f6fd6"/><circle cx="850" cy="379" r="11" fill="#1d1d1f"/>
+    <circle cx="780" cy="419" r="11" fill="#2f9e5b"/><circle cx="850" cy="419" r="11" fill="#777"/>
+    <circle cx="780" cy="459" r="11" fill="#e0a400"/><circle cx="850" cy="459" r="11" fill="#777"/>
+    <circle cx="780" cy="499" r="11" fill="#1d1d1f" stroke="#fff" stroke-width="2"/><circle cx="850" cy="499" r="11" fill="#777"/>
+  </g>
+  <g class="m">
+    <text x="905" y="344">17 3V3 · 18</text>
+    <text x="905" y="384"><tspan font-weight="600">19 GPIO10 ← B</tspan> · 20 GND</text>
+    <text x="905" y="424"><tspan font-weight="600">21 GPIO9 ← A</tspan> · 22</text>
+    <text x="905" y="464"><tspan font-weight="600">23 GPIO11 ← D</tspan> · 24</text>
+    <text x="905" y="504"><tspan font-weight="600">25 GND ← C + E</tspan> · 26</text>
+  </g>
+  <text x="740" y="582" class="s">Venstre kolonne = oddetall (pinne 1 øverst ved SD-kortet).</text>
+
+  <!-- tabell -->
+  <g transform="translate(40,740)">
+    <text x="0" y="0" class="s">Snur volumet feil vei: bytt A og B (eller a: 9 / b: 10 i pi/config/s1f_pins.yaml).</text>
+    <text x="0" y="26" class="s">GPIO 9/10/11 er SPI-pinnene: SPI må være av (ingen «dtparam=spi=on» i /boot/firmware/config.txt).</text>
+    <text x="0" y="52" class="s">Montering: M7 × 0,75-gjenge, hull Ø7,2 mm. Vri = volum · trykk = spill/pause · hold 1,5 s = innstillinger.</text>
+  </g>
+</svg>
