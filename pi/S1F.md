@@ -34,26 +34,28 @@ deleliste, koblingstabeller og rekkefølge: [kabinett/skjold-s1/STROM_REV_F.md](
 
 ## Pinner (forslag, `pi/config/s1f_pins.yaml`)
 
-Knapper til GND (intern pull-up), LED-ringer via transistor. Opptatt: I²S 18/19/21, I²C 2/3 og 0/1 holdes ledige.
-SPI og UART er av.
+Knapper til GND (intern pull-up), LED-ringer via transistor. Opptatt: I²S 18/19/21 til lydkortet, 0/1 holdes ledige.
+Pinne 31–40 er fri for lydkortet (35 LRCK, 40 DIN) og GND, så USB-knappen og av/på-lyset bruker I²C-pinnene 2/3.
+SPI og UART er av. Koblingsskjema: `kabinett/skjold-s1/s1_gpio_ledninger.png`.
 
 | Funksjon | GPIO | Fysisk pinne |
 |---|---|---|
 | Knapp BT/AirPlay | 5 | 29 |
-| Knapp AUX | 6 | 31 |
-| Knapp RADIO | 13 | 33 |
-| Knapp USB | 16 | 36 |
+| Knapp AUX | 7 | 26 |
+| Knapp RADIO | 8 | 24 |
+| Knapp USB | 2 | 3 |
 | Knapp power | 17 | 11 |
 | LED BT/AirPlay | 22 | 15 |
 | LED AUX | 23 | 16 |
 | LED RADIO | 24 | 18 |
 | LED USB | 25 | 22 |
-| LED power (PWM0) | 12 | 32 |
+| LED power (programvare-PWM) | 3 | 5 |
 | Volumhjul A / B / trykk | 9 / 10 / 11 | 21 / 19 / 23 |
 | Relé (24 V til forsterker) | 27 | 13 |
 | PCM5102 XSMT | 4 | 7 |
-| USB-switch puls / avlesning | 14 / 15 | 8 / 10 |
-| Hodetelefondetekt | 26 | 37 |
+| USB-switch puls (avlesning av) | 14 | 8 |
+| Hodetelefondetekt | 15 | 10 |
+| Lydkort PCM5102 BCK / LRCK / DIN | 18 / 19 / 21 | 12 / 35 / 40 |
 
 Test uten resten av Skjold: `sudo systemctl stop ki-amp && python3 pi/tools/s1f_inputtest.py`.
 
