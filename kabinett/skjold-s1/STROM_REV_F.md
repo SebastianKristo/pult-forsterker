@@ -81,11 +81,12 @@ ingen egne ledninger fra omformeren.
 
 ![Koblingskort for knapper, LED-ringer og volumhjul](stripekort/stripekort.png)
 
-Alle ledningene fra frontpanelet samles på et lite stripekort (21 × 21 hull, ca. 53 × 53 mm) med JST XH-kontakter:
+Alle ledningene fra frontpanelet samles på et smalt stripekort (24 × 12 hull, 61 × 30,5 mm, står på høykant) med JST XH-kontakter:
 LED-ringene (5 p), av/på-knappen (4 p), de fire knappene (5 p) og volumhjulet (4 p). En **ULN2803A** slår de fem
 24 V-ringene av og på fra GPIO-ene. Den har motstand og transistor for hver kanal innebygd, så de fem transistorene og
 motstandene under trengs ikke. Fra kortet går det Dupont-ledninger (hun–hun) til Pi-en, nummerert i tegningen.
-Tegningen og koblingssjekken lages av `stripekort/lag_stripekort.py`.
+Ledningene til Pi-en: [pi_kabler.png](stripekort/pi_kabler.png). Plassen i kassen: [brief til Claude Design](stripekort/BRIEF_CLAUDE_DESIGN.md).
+Tegningene og koblingssjekken lages av `stripekort/lag_stripekort.py` og `lag_pi_kabler.py`.
 
 LED-ring: **+** til +24 V, **−** til transistorens kollektor/drain, emitter/source til GND. Ringene for 12–24 V har
 motstand innebygd. Har du 5 V-ringer, ta + fra 5,1 V i stedet.
