@@ -9,6 +9,7 @@ import { NAMES } from '../lib/settings';
 import { PRODUCT_ICON } from '../components/ui';
 import { remember, scan, type Found } from '../lib/discover';
 import { openRostSetup } from './rostsetup';
+import { openEnhetWifi } from './enhetwifi';
 
 const A = '#d9a441';
 const sel = (b: boolean) => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
@@ -98,6 +99,7 @@ export function FindDevice() {
           </form>
         ) : <button onClick={() => setManualOpen(true)} style="align-self:center;border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:4px 0">Skriv inn adresse manuelt</button>}
         <button onClick={() => { ob.qr.value = true; }} style="height:50px;border-radius:14px;border:1px solid #2e2e30;background:transparent;font-size:14px;cursor:pointer">Skann QR-kode på skjermen</button>
+        <button onClick={() => openEnhetWifi()} data-testid="add-wifi-find" style="height:50px;border-radius:14px;border:1px solid #2e2e30;background:transparent;font-size:14px;cursor:pointer">Enheten er ikke på nett – sett opp Wi-Fi</button>
         <button onClick={() => openRostSetup()} data-testid="add-rost-find" style="height:50px;border-radius:14px;border:1px solid #5a4420;background:#1c170d;color:#f0c46a;font-size:14px;cursor:pointer">Sett opp en Skjold Røst</button>
         <button onClick={() => { mode.value = 'app'; }} style="height:36px;border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer">Hopp over – legg til enhet senere</button>
       </div>

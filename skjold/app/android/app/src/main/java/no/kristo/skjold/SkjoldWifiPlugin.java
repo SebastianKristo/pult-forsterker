@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   Android viser selv en dialog der brukeren godtar. Nettet brukes bare av Skjold-appen; telefonen beholder ellers
  *   hjemmenettet/mobildata. Prosessen bindes også til nettet (bindProcessToNetwork) mens det er aktivt.
  * request({url, method, headers, body, timeoutMs}) – HTTP over det nettet med Network.openConnection(), uavhengig av
- *   WebView/CapacitorHttp-ruting. Bare http://192.168.4.x er lov.
+ *   WebView/CapacitorHttp-ruting. Bare http://192.168.4.x (Røst) og http://10.42.0.1 (oppsett-nettet til Touch/S1/Node) er lov.
  * disconnect() – slipper nettet og bindingen, så telefonen går tilbake til vanlig Wi-Fi.
  *
  * Feilkoder (call.reject(..., code)): NOT_FOUND (fant ikke nettet eller brukeren avviste), UNSUPPORTED (Android 9 og eldre),
@@ -148,8 +148,8 @@ public class SkjoldWifiPlugin extends Plugin {
         final String body = call.getString("body");
         final int timeout = call.getInt("timeoutMs", 6000);
         final JSObject headers = call.getObject("headers", new JSObject());
-        if (url == null || !url.startsWith("http://192.168.4.")) {
-            call.reject("Bare http://192.168.4.x er lov");
+        if (url == null || !(url.startsWith("http://192.168.4.") || url.startsWith("http://10.42.0.1:"))) {
+            call.reject("Bare http://192.168.4.x og http://10.42.0.1 (Skjold-oppsett) er lov");
             return;
         }
         final Network net = network;
