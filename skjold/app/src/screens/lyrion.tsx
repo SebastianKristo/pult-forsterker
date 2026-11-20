@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { lms, lmsBilde, lmsDirekte, lmsSpiller, ko, settLmsDirekte, spillere, status as lmsStatus, syncGrupper, velgSpiller, type LmsSpiller, type LmsSpor, type LmsStatus } from '../lib/lms';
 import { isNative } from '../lib/api';
-import { mode, status as skjoldStatus } from '../lib/store';
+import { go, mode, status as skjoldStatus } from '../lib/store';
 
 const G = '#f0c46a', D = '#8b8b86', K = '#2a2a2c';
 const st = {
@@ -207,7 +207,7 @@ export function LyrionPage({ frittstaende = false }: { frittstaende?: boolean })
         {liste.map((p) => {
           const pa = p.playerid === sp, g = grupper.find((x) => x.includes(p.playerid));
           return <button key={p.playerid} role="tab" aria-selected={pa} onClick={() => velgSpiller(p.playerid)} style={`flex-shrink:0;display:flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:20px;cursor:pointer;font-size:13.5px;border:1px solid ${pa ? '#5a4420' : K};background:${pa ? '#1c170d' : '#141415'};color:${pa ? G : p.connected === 0 ? '#5d5d59' : '#f2f2ee'}`}>
-            <i style={`width:7px;height:7px;border-radius:4px;background:${p.isplaying ? '#6fcf7f' : p.power ? '#5d5d59' : 'transparent'};border:1px solid ${p.power ? 'transparent' : '#5d5d59'}`} />{p.name}{g && g.length > 1 ? <span style={`font-size:10px;color:${D}`}>+{g.length - 1}</span> : null}</button>;
+            <ModellIkon p={p} s={18} /><i style={`width:7px;height:7px;border-radius:4px;background:${p.isplaying ? '#6fcf7f' : p.power ? '#5d5d59' : 'transparent'};border:1px solid ${p.power ? 'transparent' : '#5d5d59'}`} />{p.name}{g && g.length > 1 ? <span style={`font-size:10px;color:${D}`}>+{g.length - 1}</span> : null}</button>;
         })}
         {!liste.length && !feil && <span style={st.liten}>Henter spillere …</span>}
       </div>
@@ -285,5 +285,83 @@ function Topp({ onInnst }: { onInnst?: () => void }) {
       <span style="flex:1;display:flex;flex-direction:column"><b style="font-size:17px">Lyrion</b><span style={`font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:${G}`}>SKJOLD · FJERNKONTROLL</span></span>
       {onInnst && <button onClick={onInnst} style={st.knapp + ';height:34px'}>Server</button>}
       <button onClick={() => { mode.value = 'find'; }} style={st.knapp + ';height:34px'}>Finn Skjold</button>
+    </div>);
+}
+
+// ---------- Squeezebox og andre Lyrion-spillere i Rom-listen, med eget ikon per modell ----------
+/** Strektegninger (24×24) per spillertype – egne tegninger, ikke produsentenes logoer. */
+const MODELL_IKON: Record<string, string> = {
+  classic: 'M2 8.5h20v7H2zM4.5 11h11M4.5 13h7M19 12.2h.01',                                      // Squeezebox Classic / Transporter: lav boks med display
+  touch: 'M4 5.5h16v10H4zM6.5 8h11v5h-11zM6 15.5l-1.5 3.5h15L18 15.5',                                     // Squeezebox Touch: skjerm på fot
+  radio: 'M5 4.5h14a2 2 0 0 1 2 2V19H3V6.5a2 2 0 0 1 2-2zM6 7.5h8v4.5H6zM17.5 9.8h.01M6 15h12M6 17h12', // Squeezebox Radio
+  boom: 'M2 8h20v9H2zM6.5 12.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M17.5 12.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M10.5 10.5h3v2h-3z', // Boom
+  receiver: 'M4 10.5h16v5.5H4zM7 13.2h.01M14 13.2h3M8 19h8',                                      // Receiver / Duet
+  pi: 'M3 6h18v12H3zM6 9h4.5v4.5H6zM13 9h5M13 11.5h5M13 14h3M3 15h2M8 18v2M12 18v2M16 18v2',      // piCorePlayer / squeezelite på en Pi
+  esp: 'M8 3h8v18H8zM12 15.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M12 7h.01M10.5 9.5h3',    // SqueezeESP32 / Røst-høyttaler
+  pc: 'M3 5h18v11H3zM8 20h8M12 16v4',                                                             // datamaskin/nettleser
+  annen: 'M7 3h10v18H7zM12 14m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0M12 7.2h.01'
+};
+export function modellType(p: { model?: string; modelname?: string; name?: string }): keyof typeof MODELL_IKON {
+  const m = (p.model || '').toLowerCase(), n = (p.modelname || '').toLowerCase();
+  if (/squeezebox[23]|transporter|slimp3|softsqueeze/.test(m) || /classic|transporter/.test(n)) return 'classic';
+  if (m === 'fab4' || /touch/.test(n)) return 'touch';
+  if (m === 'baby' || /radio/.test(n)) return 'radio';
+  if (m === 'boom' || /boom/.test(n)) return 'boom';
+  if (m === 'receiver' || /receiver|duet/.test(n)) return 'receiver';
+  if (/esp32/.test(m + n)) return 'esp';
+  if (/picore|pcp/.test(n + (p.name || '').toLowerCase()) || /squeezelite/.test(m + n)) return 'pi';
+  if (/squeezeplay|jive|controller|material|web/.test(m + n)) return 'pc';
+  return 'annen';
+}
+export const ModellIkon = ({ p, s = 30 }: { p: { model?: string; modelname?: string; name?: string }; s?: number }) =>
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={MODELL_IKON[modellType(p)]} /></svg>;
+const MODELL_NAVN: Record<string, string> = { classic: 'Squeezebox Classic', touch: 'Squeezebox Touch', radio: 'Squeezebox Radio', boom: 'Squeezebox Boom', receiver: 'Squeezebox Receiver', esp: 'SqueezeESP32', pi: 'squeezelite', pc: 'Programspiller', annen: 'Lyrion-spiller' };
+
+interface RomSpiller extends LmsSpiller { st?: LmsStatus | undefined }
+/** Rom → «Lyrion-spillere»: Squeezebox-er og andre spillere på samme Lyrion-server som ikke er Skjold-enheter. */
+export function LyrionRom({ skjul }: { skjul: string[] }) {
+  const [l, setL] = useState<RomSpiller[]>([]);
+  const vis = !!lmsDirekte.value || !!skjoldStatus.value?.lyrion;
+  const skjulKey = skjul.join(',');
+  useEffect(() => {
+    if (!vis) return;
+    let slutt = false, id = 0;
+    const hent = async () => {
+      try {
+        const { spillere: ps } = await spillere();
+        const navn = new Set(skjul.map((x) => x.toLowerCase()));
+        const egne = ps.filter((p) => !navn.has(p.playerid.toLowerCase()) && !navn.has(p.name.toLowerCase()) && !/^skjold r[øo]st/i.test(p.name));
+        const st = await Promise.all(egne.map((p) => p.connected === 0 ? Promise.resolve(undefined) : lmsStatus(p.playerid).catch(() => undefined)));
+        if (!slutt) setL(egne.map((p, i) => ({ ...p, st: st[i] })));
+      } catch { if (!slutt) setL([]); }
+      if (!slutt) id = window.setTimeout(() => void hent(), document.hidden ? 30000 : 6000);
+    };
+    void hent(); return () => { slutt = true; clearTimeout(id); };
+  }, [vis, skjulKey]);
+  if (!vis || !l.length) return null;
+  const kjor = async (p: string, c: (string | number)[]) => { try { await lms(p, c); const ny = await lmsStatus(p); setL((x) => x.map((y) => (y.playerid === p ? { ...y, st: ny } : y))); } catch { /* neste runde */ } };
+  return (
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style={`font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;color:${D};padding:6px 2px 0`}>LYRION-SPILLERE</span>
+      {l.map((p) => {
+        const s = p.st, t = s?.playlist_loop?.[0], av = s?.power === 0 || p.power === 0, spiller_ = s?.mode === 'play' && !av, borte = p.connected === 0;
+        const linje = borte ? 'Frakoblet' : av ? 'Av' : t?.title ? t.title + (t.artist ? ' · ' + t.artist : '') : s?.current_title || 'Ingenting spiller';
+        const vol = Math.abs(s?.['mixer volume'] ?? 0);
+        return (
+          <div key={p.playerid} style={`display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border-radius:14px;background:#141415;border:1px solid #242426;opacity:${borte ? 0.55 : 1}`}>
+            <button onClick={() => { velgSpiller(p.playerid); go('lms'); }} aria-label={'Åpne ' + p.name} style={`width:44px;height:44px;border-radius:10px;background:#1f1f21;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:${spiller_ ? G : '#c9c9c4'};padding:0`}><ModellIkon p={p} /></button>
+            <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+              <button onClick={() => { velgSpiller(p.playerid); go('lms'); }} style="border:none;background:none;padding:0;cursor:pointer;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:baseline;color:inherit">
+                <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:15px">{p.name}</span><span style="font-size:11px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{p.modelname || MODELL_NAVN[modellType(p)]} · {linje}</span></span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c9c9c4">{s && !borte ? vol : '–'}</span>
+              </button>
+              {!borte && <input type="range" min="0" max="100" value={vol} aria-label={'Volum ' + p.name} onChange={(e) => void kjor(p.playerid, ['mixer', 'volume', Number(e.currentTarget.value)])} style={`width:100%;accent-color:${G}`} />}
+            </div>
+            {!borte && <div style="display:flex;gap:2px">
+              {!av && <button aria-label={spiller_ ? 'Pause' : 'Spill'} onClick={() => void kjor(p.playerid, s?.mode === 'stop' ? ['play'] : ['pause', spiller_ ? 1 : 0])} style={st.ikonK + ';width:36px;height:36px'}><Ik d={spiller_ ? IK.pause : IK.play} s={18} f /></button>}
+              <button aria-label={av ? 'Slå på' : 'Slå av'} onClick={() => void kjor(p.playerid, ['power', av ? 1 : 0])} style={st.ikonK + `;width:36px;height:36px;color:${av ? D : '#6fcf7f'}`}><Ik d={IK.strom} s={17} /></button>
+            </div>}
+          </div>);
+      })}
     </div>);
 }
