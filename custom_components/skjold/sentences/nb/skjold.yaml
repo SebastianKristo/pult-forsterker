@@ -1,0 +1,25 @@
+# Skjold: stemmekommandoer på norsk for Home Assistant Assist (intensjonen SkjoldSpill i Skjold-integrasjonen).
+# Kopieres til <config>/custom_sentences/nb/skjold.yaml av integrasjonen. Start Home Assistant på nytt etter endringer.
+language: nb
+intents:
+  SkjoldSpill:
+    data:
+      - sentences:
+          - "(spill|sett på|start) radio[kanalen] {query}"
+          - "(spill|sett på|start) {query} på radio[en]"
+          - "(spill|sett på|start) radio[kanalen] {query} (på|i) {name}"
+        slots:
+          kind: radio
+      - sentences:
+          - "(spill|sett på|start) (låten|sangen|musikk med|noe med|litt) {query}"
+          - "(spill|sett på|start) (låten|sangen|musikk med|noe med|litt) {query} (på|i) {name}"
+        slots:
+          kind: musikk
+      - sentences:
+          - "(spill|sett på) {query}"
+          - "(spill|sett på) {query} (på|i) {name}"
+lists:
+  query:
+    wildcard: true
+  name:
+    wildcard: true

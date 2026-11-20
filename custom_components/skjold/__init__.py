@@ -150,7 +150,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _register_services(hass)
+    try:
+        await hass.async_add_executor_job(_installer_setninger, hass.config.path("custom_sentences", "nb", "skjold.yaml"))
+    except Exception as e:  # stemmen er et tillegg – integrasjonen skal virke uansett
+        _LOGGER.warning("Skjold: fikk ikke lagt inn stemmesetningene: %s", e)
     return True
+
+
+def _installer_setninger(mål: str) -> None:
+    """Norske setninger for SkjoldSpill («spill radio P3», «sett på låten …») til custom_sentences, hvis de mangler."""
+    import os
+    import shutil
+    if os.path.exists(mål):
+        return
+    os.makedirs(os.path.dirname(mål), exist_ok=True)
+    shutil.copyfile(os.path.join(os.path.dirname(__file__), "sentences", "nb", "skjold.yaml"), mål)
+    _LOGGER.warning("Skjold: la inn stemmesetninger i %s – start Home Assistant på nytt for å bruke «spill …» med Assist", mål)
 
 
 def _register_services(hass: HomeAssistant) -> None:

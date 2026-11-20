@@ -137,7 +137,7 @@ export function Sheet({ title, kicker, onClose, children, height = 300 }: { titl
   return (
     <div style="position:absolute;inset:0;z-index:8">
       <div onClick={onClose} style="position:absolute;inset:0;background:rgba(0,0,0,.6);animation:tinn .2s ease both" />
-      <div style={`position:absolute;left:10px;right:10px;bottom:10px;max-height:${height}px;border-radius:18px;border:1px solid #2e2e30;background:#18181a;box-shadow:0 -10px 40px rgba(0,0,0,.6);display:flex;flex-direction:column;animation:opp .25s cubic-bezier(.2,.8,.2,1) both;overflow:hidden`}>
+      <div style={`position:absolute;left:10px;right:10px;bottom:10px;max-height:${height}px;border-radius:18px;border:1px solid #2e2e30;background:#18181a;box-shadow:0 -10px 40px rgba(0,0,0,.6);display:flex;flex-direction:column;animation:opp .46s cubic-bezier(.2,.8,.2,1) both;overflow:hidden`}>
         <div style="display:flex;align-items:center;gap:10px;padding:8px 8px 6px 18px;flex-shrink:0">
           <span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
             {kicker && <span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>{kicker}</span>}

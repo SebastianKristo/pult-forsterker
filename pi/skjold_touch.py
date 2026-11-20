@@ -574,6 +574,8 @@ class Touch:
         self.ring = AlarmRing(ctx)
         self.cmd = {"cmd": "", "arg": "", "seq": 0}
         self.voice = {"state": "idle", "text": "", "reply": "", "t": 0.0}
+        self.timere = {}                      # id → {navn, total, slutt (epoch), aktiv, kilde}: fra Assist og fra skjermen
+        self._timer_nr = 0
         self.tekst_til = 0.0                  # skjermtastaturet er oppe: volumhjulet flytter markøren til dette tidspunktet
         self.hjul = {"n": 0, "s": 0, "v": 0, "r": 0}   # tellere skjermen leser: n = markørsteg (±), s = trykk (slett ett tegn),
         #                                              v = volumhakk (antall), r = retning på siste (+1/−1) – gir trykkelyd
@@ -887,6 +889,47 @@ class Touch:
         self.ctx["changed"]()
         return self.voice
 
+    # --- timere: fra Home Assistant Assist (wyoming-satellite) og fra skjermen
+    def timer(self, b: dict, nå: float | None = None) -> dict:
+        """hendelse = started | updated | cancelled | finished (Assist), eller start = sekunder / stopp = id (skjermen)."""
+        nå = time.time() if nå is None else nå
+        h = str(b.get("hendelse") or "")
+        tid = str(b.get("id") or "")
+        sek = lambda: int(b.get("total_seconds") or 0) or int(b.get("start_hours") or 0) * 3600 + int(b.get("start_minutes") or 0) * 60 + int(b.get("start_seconds") or 0)
+        if b.get("start") is not None:
+            s = int(b["start"])
+            if not 1 <= s <= 24 * 3600:
+                raise ValueError("timeren må være mellom 1 sekund og 24 timer")
+            self._timer_nr += 1
+            tid = f"skjerm-{self._timer_nr}"
+            self.timere[tid] = {"navn": str(b.get("navn") or "")[:30], "total": s, "slutt": nå + s, "aktiv": True, "kilde": "skjerm"}
+        elif b.get("stopp"):
+            self.timere.pop(str(b["stopp"]), None)
+        elif h == "started" and tid:
+            s = sek()
+            self.timere[tid] = {"navn": str(b.get("name") or "")[:30], "total": s, "slutt": nå + s, "aktiv": True, "kilde": "assist"}
+        elif h == "updated" and tid in self.timere:
+            t = self.timere[tid]
+            if b.get("total_seconds") is not None:
+                t["total"] = int(b["total_seconds"])
+                t["slutt"] = nå + int(b["total_seconds"])     # gjenstående tid fra Assist
+            t["aktiv"] = bool(b.get("is_active", True))
+        elif h == "cancelled":
+            self.timere.pop(tid, None)
+        elif h == "finished" and tid in self.timere:
+            self.timere[tid]["slutt"] = min(self.timere[tid]["slutt"], nå)
+        elif h not in ("", "started", "updated", "finished"):
+            raise ValueError("ukjent timerhendelse")
+        self.ctx["changed"]()
+        return {"timere": self.timer_liste(nå)}
+
+    def timer_liste(self, nå: float | None = None) -> list:
+        nå = time.time() if nå is None else nå
+        for k in [k for k, t in self.timere.items() if t["slutt"] < nå - 600]:   # ferdige timere ryddes etter 10 min
+            del self.timere[k]
+        return [{"id": k, "navn": t["navn"], "total": t["total"], "igjen": max(0, round(t["slutt"] - nå)), "ferdig": t["slutt"] <= nå,
+                 "aktiv": t["aktiv"], "kilde": t["kilde"]} for k, t in sorted(self.timere.items(), key=lambda kv: kv[1]["slutt"])]
+
     # --- volumhjulet som markør mens skjermtastaturet er oppe
     def tekstmodus(self, on: bool) -> dict:
         self.tekst_til = time.time() + 30 if on else 0.0   # skjermen fornyer hvert 20. s; faller tilbake til volum om den forsvinner
@@ -916,7 +959,7 @@ class Touch:
         if v["state"] != "idle" and time.time() - v["t"] > 25:      # satellitten sa aldri fra at den var ferdig
             v = self.voice = {"state": "idle", "text": "", "reply": "", "t": 0.0}
         return {"alarm": {**self.ring.status(), "next": next_alarm(self.ctx["alarms"](), time.localtime())},
-                "touch": {"cmd": self.cmd, "voice": v, "hjul": self.hjul}}
+                "touch": {"cmd": self.cmd, "voice": v, "hjul": self.hjul, "timere": self.timer_liste()}}
 
 
 def _systemctl(*a) -> bool:
@@ -1104,6 +1147,14 @@ def routes(touch: Touch):
     async def h_foto(_r):
         return web.json_response(await bg(foto.bilder))
 
+    async def h_timer(r):
+        if r.method == "POST":
+            try:
+                return web.json_response(touch.timer(await body(r)))
+            except (ValueError, TypeError) as e:
+                return fail(e)
+        return web.json_response({"timere": touch.timer_liste()})
+
     async def h_tekst(r):
         return web.json_response(touch.tekstmodus(bool((await body(r)).get("on"))))
 
@@ -1115,4 +1166,5 @@ def routes(touch: Touch):
             ("POST", "/api/touch/smart", h_smart), ("GET", "/api/touch/wake", h_wake), ("POST", "/api/touch/wake", h_wake), ("POST", "/api/touch/unlock", h_unlock), ("GET", "/api/touch/morning", h_morning),
             ("GET", "/api/alarm", h_alarm), ("POST", "/api/alarm", h_alarm), ("GET", "/api/touch/voice", h_voice),
             ("POST", "/api/touch/voice", h_voice), ("POST", "/api/touch/cmd", h_cmd), ("POST", "/api/touch/backlight", h_backlight),
-            ("POST", "/api/touch/tekst", h_tekst), ("GET", "/api/touch/foto", h_foto)]
+            ("POST", "/api/touch/tekst", h_tekst), ("GET", "/api/touch/foto", h_foto),
+            ("GET", "/api/touch/timer", h_timer), ("POST", "/api/touch/timer", h_timer)]

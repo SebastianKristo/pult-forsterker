@@ -30,7 +30,7 @@ function lydCtx(): AudioContext | null {
 }
 
 const ARTER: Record<LydType, { f: number; q: number; tikk: number; tokk: number; lav: number; ms: number }> = {
-  trykk: { f: 2600, q: 1.1, tikk: 1.0, tokk: 0.55, lav: 170, ms: 6 },
+  trykk: { f: 2400, q: 1.0, tikk: 0.9, tokk: 0.8, lav: 140, ms: 7 },   // dypere «tokk» – tyngre, mer fysisk knapp
   tast: { f: 3400, q: 1.4, tikk: 0.75, tokk: 0.25, lav: 210, ms: 4 },
   slett: { f: 1900, q: 1.0, tikk: 0.8, tokk: 0.45, lav: 140, ms: 6 },
   på: { f: 3000, q: 1.2, tikk: 0.9, tokk: 0.5, lav: 200, ms: 6 },
@@ -85,4 +85,20 @@ export function startTrykkelyder(nivå: () => number): void {
     const trykket = el.getAttribute('aria-pressed');
     spillLyd(trykket === 'true' ? 'av' : trykket === 'false' ? 'på' : 'trykk', nivå());
   }, { capture: true, passive: true });
+}
+
+/** Timeren er ferdig: tre myke klokketoner (C–E–G), uavhengig av trykkelydene, men aldri svakere enn 40 %. */
+export function spillKlokke(nivå: number): void {
+  const c = lydCtx();
+  if (!c) return;
+  if (c.state === 'suspended') void c.resume();
+  const g0 = styrke(Math.max(40, nivå)), t0 = c.currentTime;
+  [523.25, 659.25, 783.99].forEach((f, i) => {
+    const o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain(), t = t0 + i * 0.22;
+    o.type = 'sine'; o.frequency.value = f; o2.type = 'sine'; o2.frequency.value = f * 2.01;
+    const g2 = c.createGain(); g2.gain.value = 0.18;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(g0 * 0.9, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+    o.connect(g); o2.connect(g2); g2.connect(g); g.connect(c.destination);
+    o.start(t); o2.start(t); o.stop(t + 1.5); o2.stop(t + 1.5);
+  });
 }

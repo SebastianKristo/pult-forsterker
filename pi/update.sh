@@ -131,6 +131,14 @@ if [ -f /etc/systemd/system/skjold-touch.service ] && ! grep -q '^StandardOutput
   sudo systemctl daemon-reload
 fi
 
+# Skjold Touch: timere fra Home Assistant Assist vises på skjermen (wyoming-satellite --timer-*-command)
+if [ -f /etc/systemd/system/skjold-voice.service ] && ! grep -q 'timer-started-command' /etc/systemd/system/skjold-voice.service; then
+  sudo install -m 755 "$SRC/skjold-voice-event" /usr/local/bin/skjold-voice-event
+  sudo sed -i 's#--error-command "/usr/local/bin/skjold-voice-event error"#--error-command "/usr/local/bin/skjold-voice-event error" --timer-started-command "/usr/local/bin/skjold-voice-event timer-started" --timer-updated-command "/usr/local/bin/skjold-voice-event timer-updated" --timer-cancelled-command "/usr/local/bin/skjold-voice-event timer-cancelled" --timer-finished-command "/usr/local/bin/skjold-voice-event timer-finished"#' /etc/systemd/system/skjold-voice.service
+  sudo systemctl daemon-reload && sudo systemctl try-restart skjold-voice || true
+elif [ -f /usr/local/bin/skjold-voice-event ]; then
+  sudo install -m 755 "$SRC/skjold-voice-event" /usr/local/bin/skjold-voice-event
+fi
 # Skjold Touch: usynlig musepeker i kiosken (uten å kjøre install_touch.sh på nytt, som ville nullstilt rotasjonen)
 if grep -qs "^KI_AMP_PRODUCT=touch" /etc/ki-amp.env && [ -f /etc/systemd/system/skjold-touch.service ]; then
   TU="$(sed -n 's/^User=//p' /etc/systemd/system/skjold-touch.service | head -1)"; TH="$(getent passwd "$TU" | cut -d: -f6)"

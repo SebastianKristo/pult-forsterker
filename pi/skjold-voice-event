@@ -2,6 +2,7 @@
 """Melder stemmesatellittens tilstand til Skjold Touch, så skjermen viser «Lytter», «Tenker» og svaret.
 
 wyoming-satellite kaller dette ved hver hendelse:   skjold-voice-event listen|think|reply|idle|error
+og for timere:   skjold-voice-event timer-started|timer-updated|timer-cancelled|timer-finished  (JSON på stdin)
 For think (det du sa) og reply (svaret) kommer teksten på stdin.
 """
 import json
@@ -9,6 +10,21 @@ import sys
 import urllib.request
 
 state = sys.argv[1] if len(sys.argv) > 1 else "idle"
+if state.startswith("timer-"):
+    # timere fra Home Assistant («sett en timer på 10 minutter»): JSON fra wyoming-satellite på stdin
+    data = {}
+    if not sys.stdin.isatty():
+        try:
+            data = json.loads(sys.stdin.read() or "{}")
+        except ValueError:
+            data = {}
+    try:
+        urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:8765/api/touch/timer",
+                                                      json.dumps({"hendelse": state[6:], **data}).encode(),
+                                                      {"Content-Type": "application/json"}), timeout=3).read()
+    except Exception as e:
+        print("skjold-voice-event:", e, file=sys.stderr)
+    sys.exit(0)
 body = {"state": state}
 if state in ("think", "reply") and not sys.stdin.isatty():
     body["text" if state == "think" else "reply"] = sys.stdin.read().strip()[:400]

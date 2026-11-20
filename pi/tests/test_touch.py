@@ -426,3 +426,18 @@ def test_volumhjulet_flytter_markoren_mens_tastaturet_er_oppe():
         assert x.hjul["v"] == 1 and x.hjul["r"] == -1
         x.tekstmodus(False)
         assert x.hjul_steg(1) is False
+
+
+def test_timere_fra_assist_og_skjermen():
+    with tempfile.TemporaryDirectory() as d:
+        x = t.Touch({"changed": lambda: None, "ha": lambda: {}, "alarms": lambda: []}, os.path.join(d, "t.json"))
+        x.timer({"hendelse": "started", "id": "a1", "total_seconds": 600, "name": "Pizza"}, nå=1000)
+        x.timer({"start": 60, "navn": "Egg"}, nå=1000)
+        l = x.timer_liste(1030)
+        assert [y["navn"] for y in l] == ["Egg", "Pizza"] and l[0]["igjen"] == 30 and not l[0]["ferdig"]
+        assert x.timer_liste(1061)[0]["ferdig"]
+        x.timer({"hendelse": "updated", "id": "a1", "total_seconds": 120, "is_active": False}, nå=1100)
+        assert next(y for y in x.timer_liste(1100) if y["id"] == "a1")["igjen"] == 120
+        x.timer({"hendelse": "cancelled", "id": "a1"}, nå=1100)
+        x.timer({"stopp": "skjerm-1"})
+        assert x.timer_liste(1100) == []
