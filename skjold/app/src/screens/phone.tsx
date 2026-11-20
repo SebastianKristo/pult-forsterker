@@ -24,6 +24,7 @@ import { localOn, localVol, setLocalVol } from '../lib/localplay';
 import { ListenHere } from './listenhere';
 import { openRostSetup } from './rostsetup';
 import { RostRows } from './rost';
+import { LyrionRom } from './lyrion';
 
 const A = '#d9a441';
 const sel = (b: boolean) => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
@@ -444,6 +445,7 @@ export function RoomsPhone({ wide = false }: { wide?: boolean }) {
         })}
       </div>
       <RostRows />
+      <LyrionRom skjul={rooms.flatMap((r) => [r.name, String((r.st as unknown as { lyrion_player?: string } | null)?.lyrion_player ?? '')]).filter(Boolean)} />
       <AddDevice wide={wide} />
       <span style="font-size:11px;color:#8b8b86;text-wrap:pretty">Rom med hake spiller det samme, synkronisert av Lyrion. Trykk på et rom for å styre det.</span>
     </>
