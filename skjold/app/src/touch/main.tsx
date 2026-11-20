@@ -13,10 +13,11 @@ import { ndAlbum, ndAlbumList, ndArtist, ndConfigured, ndCover, ndSearch, ndSear
 import { li, lq, lsvc, playNd } from '../lib/library';
 import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 import '../lib/services';   // innloggingene (Navidrome, YouTube Music) hentes fra enheten – kiosken har ingen egne
-import { groupAll, groupBusy, groupNone, groups, inGroup, loadGroup, toggleMember } from '../lib/groups';
+import { groupAll, groupBusy, groupNone, groups, inGroup, loadGroup, removePreset, savePreset, setMembers, toggleMember } from '../lib/groups';
 import { qrMatrix } from '../lib/qr';
 import { canSeek, seekTo } from '../screens/player';
 import { lydProsent, spillLyd, startTrykkelyder } from './lyd';
+import { alleOpen, AlleInnstillinger, oppdaterTrykk } from './innstillinger';
 import { hjulMål, Keyboard, MONO, Sheet, Slider, TekstFelt, useLongPress, useTekst, Wheel } from './ui';
 
 type Scr = 'now' | 'home' | 'smart' | 'alarm' | 'lib' | 'rooms' | 'set';
@@ -561,6 +562,7 @@ const ROUND = 'width:48px;height:48px;flex-shrink:0;border-radius:24px;border:1p
 // ---------- Oppdatering av Skjold-enhetene (denne og de andre på nettet), som i web-UI ----------
 interface UpdInfo { current: string | null; latest: string | null; available: boolean; running: boolean; result: string | null; log: string[]; can_update: boolean; error: string | null; channel?: string }
 const oppdOpen = signal(false);
+effect(() => { if (oppdaterTrykk.value) oppdOpen.value = true; });
 function OppdateringSheet() {
   const enheter = [{ base: '', navn: local.value?.name || 'Denne Touch', produkt: 'touch' }, ...peers.value.map((p) => ({ base: p.base, navn: p.navn, produkt: p.produkt }))];
   const [info, setInfo] = useState<Record<string, UpdInfo | 'feil' | undefined>>({});
@@ -929,6 +931,67 @@ function roomList(): RoomRow[] {
   return role() === 1 ? [self] : role() === 2 ? others : [self, ...others];
 }
 
+// ---------- Lag spillegruppe: velg hvor musikken kommer fra, huk av rommene, start – og lagre som fast gruppe ----------
+const gruppeOpen = signal(false);
+function GruppeSheet() {
+  const rows = roomList(), keyOf = (r: RoomRow) => r.base || here();
+  const [leder, setLeder] = useState(ctl.value || here());
+  const [med, setMed] = useState<string[]>(() => { const m = groups.value.members; return m.length ? m.filter((k) => k !== (ctl.value || here())) : []; });
+  const [navn, setNavn] = useState(false);
+  const nt = useTekst(24);
+  const radRom = (k: string) => rows.find((r) => keyOf(r) === k);
+  const start = (l = leder, m = med) => {
+    const lr = radRom(l);
+    if (lr && lr.base !== ctl.value) control(lr.base);
+    window.setTimeout(() => setMembers([l, ...m.filter((k) => k !== l)]), 300);
+    gruppeOpen.value = false;
+  };
+  const brikke = (på: boolean) => `height:40px;padding:0 14px;border-radius:20px;border:1px solid ${på ? '#d9a441' : '#2e2e30'};background:${på ? '#1c170d' : '#161617'};color:${på ? '#f0c46a' : '#f2f2ee'};font-size:13px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:8px`;
+  if (navn) return (
+    <div style="position:absolute;inset:0;z-index:9;background:#0b0b0c;display:flex;flex-direction:column">
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:0 20px">
+        <span style="font-size:15px;font-weight:600">Navn på gruppen</span>
+        <div style="display:flex;align-items:center;height:48px;border-radius:12px;border:1px solid #2e2e30;background:#141415;padding:0 14px"><TekstFelt t={nt} tom="F.eks. Hele huset" size={16} /></div>
+      </div>
+      <Keyboard enter="Lagre" onKey={nt.inn} onBack={nt.slett} onFlytt={nt.flytt} onEnter={() => { if (nt.v.trim()) savePreset(nt.v.trim(), [leder, ...med]); setNavn(false); }} />
+    </div>);
+  const ps = groups.value.presets;
+  return (
+    <Sheet title="Spillegruppe" kicker="SPILL DET SAMME I FLERE ROM, I TAKT" onClose={() => { gruppeOpen.value = false; }} height={420}>
+      <div class="rull" style="overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:12px;padding:4px 16px 14px">
+        {ps.length > 0 && <div style="display:flex;flex-direction:column;gap:6px">
+          <span style={`font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#8b8b86`}>LAGREDE GRUPPER</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">{ps.map((g, i) => (
+            <span key={g.n + i} style="display:flex;gap:2px">
+              <button onClick={() => start(g.ids[0] ?? leder, g.ids.slice(1))} style={brikke(false)}>{g.n} <span style="font-size:11px;color:#8b8b86">{g.ids.length} rom</span></button>
+              <button onClick={() => removePreset(i)} aria-label={'Slett ' + g.n} style="width:32px;height:40px;border:none;background:none;color:#6b6b67;font-size:16px">×</button>
+            </span>))}</div>
+        </div>}
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style={`font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#8b8b86`}>1 · MUSIKKEN KOMMER FRA</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">{rows.map((r) => { const k = keyOf(r); return (
+            <button key={k} onClick={() => { setLeder(k); setMed((m) => m.filter((x) => x !== k)); }} style={brikke(k === leder)}>
+              <span style={`width:22px;height:22px;border-radius:6px;background:${r.st?.playing ? artOf(r.st, r.base) : '#2a2a2c'}`} />{r.name}</button>); })}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style={`font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#8b8b86`}>2 · SPILL OGSÅ I</span>
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">{rows.filter((r) => keyOf(r) !== leder).map((r) => { const k = keyOf(r), på = med.includes(k); return (
+            <button key={k} onClick={() => setMed((m) => (på ? m.filter((x) => x !== k) : [...m, k]))} aria-pressed={på} style={`height:52px;border-radius:12px;border:1px solid ${på ? '#d9a441' : '#242426'};background:${på ? '#1c170d' : '#141415'};display:flex;align-items:center;gap:12px;padding:0 14px;text-align:left`}>
+              <span style={`width:26px;height:26px;border-radius:13px;border:1.5px solid ${på ? '#f0c46a' : '#3a3a3c'};background:${på ? '#f0c46a' : 'transparent'};color:#0b0b0c;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0`}>{på ? '✓' : ''}</span>
+              <span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{r.name}</span><span style="font-size:11px;color:#8b8b86">{r.model}</span></span>
+            </button>); })}</div>
+          {rows.length < 2 && <span style="font-size:12.5px;color:#8b8b86">Fant ingen andre Skjold-rom på nettet.</span>}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onClick={() => start()} disabled={!med.length} style={`height:46px;padding:0 22px;border-radius:23px;border:none;background:${med.length ? '#f0c46a' : '#242426'};color:${med.length ? '#0b0b0c' : '#6b6b67'};font-size:14px;font-weight:600`}>{med.length ? 'Spill i ' + (med.length + 1) + ' rom' : 'Velg minst ett rom til'}</button>
+          {!!med.length && <button onClick={() => setNavn(true)} style="height:46px;padding:0 18px;border-radius:23px;border:1px solid #2e2e30;background:#161617;color:#f2f2ee;font-size:13px;font-weight:600">Lagre som fast gruppe</button>}
+          <button onClick={() => { setMed(rows.map(keyOf).filter((k) => k !== leder)); }} style="height:46px;padding:0 16px;border-radius:23px;border:none;background:none;color:#d9a441;font-size:13px">Alle</button>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
 function Rooms() {
   const rows = roomList();
   // Grupper: rommet du styrer leder, trykk på sirkelen for å ta et rom med i gruppen (spiller det samme, synkront)
@@ -942,7 +1005,12 @@ function Rooms() {
       <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px;font-weight:600">Rom</span><div style="flex:1" />
         {antall > 1 && <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.1em;color:#f0c46a`}>{antall} ROM SPILLER SAMMEN{groupBusy.value ? ' …' : ''}</span>}
         {antall > 1 && <button onClick={() => groupNone()} style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #2e2e30;background:#161617;font-size:12.5px">Løs opp</button>}
-        <button onClick={() => { groupAll(rows.map(keyOf)); }} style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #2e2e30;background:#161617;font-size:12.5px">Spill i alle rom</button></div>
+        <button onClick={() => { groupAll(rows.map(keyOf)); }} style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #2e2e30;background:#161617;font-size:12.5px">Spill i alle rom</button>
+        <button onClick={() => { gruppeOpen.value = true; }} style="height:36px;padding:0 16px;border-radius:18px;border:none;background:#f0c46a;color:#0b0b0c;font-size:12.5px;font-weight:600">+ Ny gruppe</button></div>
+      {groups.value.presets.length > 0 && <div style="display:flex;gap:8px;overflow-x:auto;touch-action:pan-x;flex-shrink:0">
+        {groups.value.presets.map((g, i) => <button key={g.n + i} onClick={() => { const l = rows.find((r) => keyOf(r) === g.ids[0]); if (l && l.base !== ctl.value) control(l.base); window.setTimeout(() => setMembers(g.ids), 300); }}
+          style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #3a2e17;background:#1c170d;color:#f0c46a;font-size:12.5px;font-weight:600;white-space:nowrap">▶ {g.n}</button>)}
+      </div>}
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow-y:auto;min-height:0">
         {rows.map((r) => {
           const on = r.base === ctl.value, pick = () => { control(r.base); scr.value = 'now'; };
@@ -990,7 +1058,7 @@ function Setup() {
     ['Lydutgang', 'PCM5122 HIFI HAT', seg(TOUCH_OUT, S.tOut ?? 2, (i) => setSetting('tOut', i))],
     ['Lysstyrke', 'Skjermen når den er i bruk', stepper((S.tBright ?? 100) + ' %', () => setSetting('tBright', Math.max(20, (S.tBright ?? 100) - 20)), () => setSetting('tBright', Math.min(100, (S.tBright ?? 100) + 20)))],
     ['Dimme skjermen', 'Etter siste trykk', seg(['30 s', '1 min', '5 min'], Math.max(0, (S.tStandby ?? 1) - 1), (i) => setSetting('tStandby', i + 1))],
-    ...(lasVal.value ? [['Dørlås', lasVal.value.valgt === '-' ? 'Av – «Lås opp» vises ikke når det ringer på' : lasVal.value.bruker ? 'Vises når det ringer på' + (lasVal.value.valgt ? '' : ' (valgt automatisk)') : lasVal.value.error || (lasVal.value.locks.length ? 'Velg låsen som skal låses opp fra Touch' : 'Fant ingen lås i Home Assistant'), stepper(lasNavn(), () => byttLas(-1), () => byttLas(1), 130)] as [string, string, preact.ComponentChildren]] : []),
+    ...(lasVal.value ? [['Dørlås', lasVal.value.valgt === '-' ? 'Av – «Lås opp» vises ikke når det ringer på' : lasVal.value.bruker ? 'Vises når det ringer på' + (lasVal.value.valgt ? '' : ' (valgt automatisk)') : lasVal.value.error || ((lasVal.value.locks ?? []).length ? 'Velg låsen som skal låses opp fra Touch' : 'Fant ingen lås i Home Assistant'), stepper(lasNavn(), () => byttLas(-1), () => byttLas(1), 130)] as [string, string, preact.ComponentChildren]] : []),
     ['Wi-Fi', wifiNow.value ? 'Koblet til «' + wifiNow.value + '»' : 'Velg nett her, med mobilen (QR) eller over Bluetooth', one('Koble til nytt', () => { wifiOpen.value = true; })],
     ['Skjermsparer', 'Vises når skjermen hviler: ' + (TOUCH_IDLE[S.tIdle ?? 0] ?? '').toLowerCase(), <div style={SEGBOX}>
       <button onClick={() => { saverOpen.value = true; }} style="height:34px;padding:0 14px;border-radius:9px;border:none;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;white-space:nowrap">Velg</button>
@@ -1023,6 +1091,7 @@ function Setup() {
       </div>)],
     ...(TABLET?.oppdaterApp ? [['Skjold-appen', 'Versjon ' + (TABLET.appVersjon?.() ?? '?') + ' på nettbrettet', one('Oppdater', () => { try { TABLET.oppdaterApp?.(); } catch { /* */ } })] as [string, string, preact.ComponentChildren]] : []),
     ...(TABLET ? [['Skjold-enhet', 'Nettbrettet styrer ' + (local.value?.name || location.hostname) + ' (' + location.host + ')', one('Bytt', () => { try { TABLET.velgEnhet(); } catch { /* */ } })] as [string, string, preact.ComponentChildren]] : []),
+    ['Alle innstillinger', 'Lyd, EQ, kilder, tilkobling, stemme, skjerm og resten – det samme som i web-UI', one('Åpne', () => { alleOpen.value = true; })],
     ['Oppdatering', 'Se versjon og oppdater denne og de andre Skjold-enhetene', one('Åpne', () => { oppdOpen.value = true; })],
     ['Om enheten', [local.value?.name, location.hostname, local.value?.version ? 'versjon ' + local.value.version : ''].filter(Boolean).join(' · '), <span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#6b6b67;white-space:nowrap`}>SKJOLD TOUCH</span>]
   ];
@@ -2309,7 +2378,9 @@ function App() {
         {camOpen.value && cur === 'smart' && <CamView />}
         {saverOpen.value && cur === 'set' && <SaverSheet />}
         {wifiOpen.value && cur === 'set' && <WifiSetup />}
+        {alleOpen.value && cur === 'set' && <AlleInnstillinger />}
         {oppdOpen.value && cur === 'set' && <OppdateringSheet />}
+        {gruppeOpen.value && cur === 'rooms' && <GruppeSheet />}
         {talkOpen.value && <Intercom />}
         {talking && <Voice />}
         {!!toast.value && <div role="status" style="position:absolute;left:50%;bottom:78px;transform:translateX(-50%);z-index:9;max-width:620px;padding:12px 20px;border-radius:14px;background:rgba(24,24,26,.96);border:1px solid #3a2e17;color:#f2f2ee;font-size:14px;line-height:1.35;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:tinn .2s ease both">{toast.value.replace(/^Forsterkeren svarte: /, '')}</div>}
