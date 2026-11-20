@@ -81,6 +81,18 @@ export function Keyboard({ onKey, onBack, onEnter, onFlytt, enter = 'Søk' }: { 
   const [shift, setShift] = useState<0 | 1 | 2>(0);   // 0 av, 1 neste tegn, 2 låst
   const sist = useRef(0), holdt = useRef(false), brukt = useRef(false);
   const caps = shift > 0;
+  // Slett: hold inne for å slette flere tegn (starter etter 0,4 s, går fortere etter hvert)
+  const slettT = useRef(0);
+  const slettStopp = () => { window.clearTimeout(slettT.current); slettT.current = 0; };
+  const slettNed = (e: PointerEvent) => {
+    e.preventDefault();
+    slettStopp();
+    siste.current.onBack();
+    let n = 0;
+    const neste = (ms: number) => { slettT.current = window.setTimeout(() => { siste.current.onBack(); n++; neste(n < 8 ? 90 : 40); }, ms); };
+    neste(400);
+  };
+  useEffect(() => slettStopp, []);
   const rows = num ? (sym ? SYM : NUM) : caps ? ROWS.map((r) => r.toUpperCase()) : ROWS;
   const key = 'height:42px;border-radius:9px;border:none;background:#242426;color:#f2f2ee;font-size:17px;padding:0;flex:1;min-width:0';
   const wide = 'height:42px;border-radius:9px;border:none;background:#1a1a1c;color:#c9c9c4;font-size:12.5px;font-weight:600;padding:0';
@@ -107,7 +119,7 @@ export function Keyboard({ onKey, onBack, onEnter, onFlytt, enter = 'Søk' }: { 
                 style={wide + `;width:52px;flex-shrink:0;touch-action:none;font-size:18px;${caps ? aktiv : ''}${shift === 2 ? ';box-shadow:inset 0 -3px 0 #f0c46a' : ''}`}>{shift === 2 ? '⇪' : '⇧'}</button>)}
           {i === 2 && <button onClick={() => setNum(!num)} aria-label={num ? 'Bokstaver' : 'Tall og tegn'} style={wide + ';width:74px;flex-shrink:0'}>{num ? 'abc' : '123'}</button>}
           {[...r].map((c) => <button key={c} data-lyd="tast" onPointerDown={(e) => { e.preventDefault(); tast(c); }} style={key + ';touch-action:none'}>{c}</button>)}
-          {i === 2 && <button data-lyd="slett" onPointerDown={(e) => { e.preventDefault(); onBack(); }} aria-label="Slett" style={wide + ';width:74px;flex-shrink:0;touch-action:none;display:flex;align-items:center;justify-content:center'}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h12v14H8l-6-7zM12 9.5l5 5M17 9.5l-5 5" /></svg></button>}
+          {i === 2 && <button data-lyd="slett" onPointerDown={slettNed} onPointerUp={slettStopp} onPointerCancel={slettStopp} onPointerLeave={slettStopp} onContextMenu={(e) => e.preventDefault()} aria-label="Slett (hold for å slette flere)" style={wide + ';width:74px;flex-shrink:0;touch-action:none;display:flex;align-items:center;justify-content:center'}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h12v14H8l-6-7zM12 9.5l5 5M17 9.5l-5 5" /></svg></button>}
         </div>
       ))}
       <div style="display:flex;gap:5px">
