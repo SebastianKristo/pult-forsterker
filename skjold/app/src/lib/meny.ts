@@ -3,7 +3,7 @@
 import { setSetting, settings } from './store';
 
 /** Det som kan skjules fra menyen: [id, navn]. */
-export const MENY: [string, string][] = [['radio', 'Radio'], ['ytm', 'YouTube Music'], ['nd', 'Navidrome'], ['sw', 'SUB/WAVE'], ['ma', 'Music Assistant'], ['eq', 'Equalizer']];
+export const MENY: [string, string][] = [['radio', 'Radio'], ['ytm', 'YouTube Music'], ['nd', 'Navidrome'], ['sw', 'SUB/WAVE'], ['ma', 'Music Assistant'], ['lms', 'Lyrion'], ['eq', 'Equalizer']];
 
 const skjulte = (): string[] => { const v = (settings.value as unknown as { navSkjul?: unknown }).navSkjul; return Array.isArray(v) ? v.map(String) : []; };
 

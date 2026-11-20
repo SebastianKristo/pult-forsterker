@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { api, ApiError, coverUrl, logoUrl, credFor, getBase, needsHost, productOf, type Status, type InputId } from './api';
 import { DEF, defaultEq, mergeSettings, type Settings, type EqProfiles, type EqSource } from './settings';
 
-export type Page = 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib' | 'grp' | 'int' | 'plug' | 'ma' | 'kass' | 'vinyl' | 'quiz' | 'abs' | 'qhist';
+export type Page = 'lms' | 'home' | 'play' | 'eq' | 'radio' | 'rooms' | 'settings' | 'lib' | 'grp' | 'int' | 'plug' | 'ma' | 'kass' | 'vinyl' | 'quiz' | 'abs' | 'qhist';
 export interface Route { page: Page; cat?: string }
 
 export const status = signal<Status | null>(null);
@@ -15,7 +15,8 @@ export const fullPlayer = signal<boolean>(false);          // telefon: fullskjer
 const hash = typeof location !== 'undefined' ? location.hash : '';
 const welcomed = (() => { try { return localStorage.getItem('skjold-welcomed') === '1'; } catch { return true; } })();
 /** welcome = intro + velkomstside (første start i appen), find = oppsett 1, setup = oppsett 2–4, rost = legg til Skjold Røst, app = appen. */
-export const mode = signal<'welcome' | 'find' | 'setup' | 'rost' | 'enhetwifi' | 'app'>(hash === '#velkommen' ? 'welcome' : hash === '#finn' ? 'find' : hash === '#oppsett' ? 'setup' : hash === '#rost' ? 'rost' : needsHost() ? (welcomed ? 'find' : 'welcome') : 'app');
+const bareLyrion = (() => { try { return !!localStorage.getItem('skjold-lms-direkte'); } catch { return false; } })();   // appen brukes bare som Lyrion-fjernkontroll
+export const mode = signal<'welcome' | 'find' | 'setup' | 'rost' | 'enhetwifi' | 'lyrion' | 'app'>(hash === '#velkommen' ? 'welcome' : hash === '#finn' ? 'find' : hash === '#oppsett' ? 'setup' : hash === '#rost' ? 'rost' : hash === '#lyrion' ? 'lyrion' : needsHost() ? (bareLyrion ? 'lyrion' : welcomed ? 'find' : 'welcome') : 'app');
 export function leaveWelcome(): void { try { localStorage.setItem('skjold-welcomed', '1'); } catch { /* ignore */ } mode.value = needsHost() || hash === '#velkommen' ? 'find' : 'app'; }
 /** Fullskjermspilleren: køen vises i stedet for omslaget / kildevalget er åpent. */
 export const queueOpen = signal(false);

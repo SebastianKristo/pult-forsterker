@@ -99,7 +99,7 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
   const h = host();
   switch (id) {
     case 'lyrion': { const ly = lyrionState(), lh = ly.server || `${h}:9000`; return { links: ly.server ? [['Åpne Lyrion', `http://${lh}/`], ['Lyrion-innstillinger', `http://${lh}/settings/index.html`]] : [],
-      rows: [{ n: 'Server', hint: ly.server ? '' : 'Fant ingen Lyrion-server. Installer Lyrion på denne enheten, eller sett KI_AMP_LMS_SERVER til adressen til en annen Skjold eller server.', el: txt(ly.server ? (ly.local ? 'Innebygd · ' : 'Ekstern · ') + ly.server + (ly.ok ? '' : ' · svarer ikke') : 'Ikke funnet') }, { n: 'Synkroniser med andre rom', hint: 'Rom med hake i «Ditt system» spiller det samme', el: btn('Grupper og surround', () => go('grp')) }] }; }
+      rows: [{ n: 'Server', hint: ly.server ? '' : 'Fant ingen Lyrion-server. Installer Lyrion på denne enheten, eller sett KI_AMP_LMS_SERVER til adressen til en annen Skjold eller server.', el: txt(ly.server ? (ly.local ? 'Innebygd · ' : 'Ekstern · ') + ly.server + (ly.ok ? '' : ' · svarer ikke') : 'Ikke funnet') }, { n: 'Fjernkontroll', hint: 'Styr alle Lyrion- og Squeezebox-spillere: spiller nå, kø, favoritter, radio, apper og bibliotek', el: btn('Åpne', () => go('lms')) }, { n: 'Synkroniser med andre rom', hint: 'Rom med hake i «Ditt system» spiller det samme', el: btn('Grupper og surround', () => go('grp')) }] }; }
     case 'spotify': return { links: [['Åpne Spotify', 'https://open.spotify.com/']],
       rows: [{ n: 'Spotify Connect', hint: 'Vises som egen inngang', el: tog('spEn', s.spEn) }, { n: 'Versjon', el: txt('librespot') }] };
     case 'ytmusic': return { links: [['Åpne YouTube Music', 'https://music.youtube.com/']],
