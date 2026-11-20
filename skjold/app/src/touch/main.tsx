@@ -16,7 +16,7 @@ import '../lib/services';   // innloggingene (Navidrome, YouTube Music) hentes f
 import { groupAll, groupBusy, groupNone, groups, inGroup, loadGroup, toggleMember } from '../lib/groups';
 import { qrMatrix } from '../lib/qr';
 import { canSeek, seekTo } from '../screens/player';
-import { spillLyd, startTrykkelyder } from './lyd';
+import { lydProsent, spillLyd, startTrykkelyder } from './lyd';
 import { hjulMål, Keyboard, MONO, Sheet, Slider, TekstFelt, useLongPress, useTekst, Wheel } from './ui';
 
 type Scr = 'now' | 'home' | 'smart' | 'alarm' | 'lib' | 'rooms' | 'set';
@@ -91,7 +91,7 @@ const queueOpen = signal(false), talkOpen = signal(false), searchOpen = signal(f
 const wakeData = signal<WakeData | null>(null), wakeOpen = signal(false), wakeSel = signal('');
 const editAlarm = signal(-1);      // indeksen til alarmen som redigeres (-1 = ingen)
 const dev = (): Dev => (local.value ?? {}) as Dev;
-startTrykkelyder(() => settings.value.tLyd ?? 1);   // myke klikk i høyttalerne (Oppsett → Trykkelyder)
+startTrykkelyder(() => lydProsent(settings.value.tLydP, settings.value.tLyd));   // myke klikk i høyttalerne (Oppsett → Trykkelyder)
 // Volumhjulet mens skjermtastaturet er oppe: daemonen teller steg (n) og trykk (s); vi flytter markøren / sletter ett tegn.
 let hjulSist: { n: number; s: number } | null = null;
 effect(() => {
@@ -785,7 +785,15 @@ function Setup() {
     ['Natt fra', 'Brukes når nattmodus står på Tidsplan', stepper(String(S.tNStart ?? 22).padStart(2, '0') + ':00', () => setSetting('tNStart', ((S.tNStart ?? 22) + 23) % 24), () => setSetting('tNStart', ((S.tNStart ?? 22) + 1) % 24))],
     ['Natt til', 'Vanlig lys igjen fra dette klokkeslettet', stepper(String(S.tNEnd ?? 7).padStart(2, '0') + ':00', () => setSetting('tNEnd', ((S.tNEnd ?? 7) + 23) % 24), () => setSetting('tNEnd', ((S.tNEnd ?? 7) + 1) % 24))],
     ['Ringeklokke', 'Når noen ringer på', seg(TOUCH_BELL, S.tBell ?? 0, (i) => setSetting('tBell', i))],
-    ['Trykkelyder', 'Myke klikk i høyttalerne når du trykker, godt under musikken', seg(['Av', 'Lav', 'Middels'], S.tLyd ?? 1, (i) => { setSetting('tLyd', i); window.setTimeout(() => spillLyd('trykk', i), 60); })],
+    ['Trykkelyder', 'Myke klikk i høyttalerne når du trykker. Følger hovedvolumet; du hører styrken når du endrer den', (() => {
+      const p = lydProsent(S.tLydP, S.tLyd), sett = (n: number) => { const v = Math.max(0, Math.min(100, n)); setSetting('tLydP', Math.round(v / 10)); window.setTimeout(() => spillLyd('trykk', v), 60); };
+      return <div style={SEGBOX}>
+        <button data-lyd="" onClick={() => sett(p - 10)} aria-label="Svakere" style="width:44px;height:34px;border-radius:9px;border:none;background:transparent;color:#8b8b86;font-size:16px;font-weight:600">−</button>
+        <span style="min-width:64px;height:34px;padding:0 10px;border-radius:9px;background:#2a2a2c;color:#f2f2ee;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;box-sizing:border-box">{p ? p + ' %' : 'Av'}</span>
+        <button data-lyd="" onClick={() => sett(p + 10)} aria-label="Sterkere" style="width:44px;height:34px;border-radius:9px;border:none;background:transparent;color:#8b8b86;font-size:16px;font-weight:600">+</button>
+        <button data-lyd="" onClick={() => sett(p ? 0 : 40)} style="height:34px;padding:0 12px;border-radius:9px;border:none;background:transparent;color:#8b8b86;font-size:12px;font-weight:600">{p ? 'Av' : 'På'}</button>
+      </div>;
+    })()],
     ['Test ringeklokke', 'Ringer på slik en ekte ringeklokke gjør', one('Ring på', () => void postAt('', '/api/doorbell', { test: true }))],
     ['Test alarm', 'Viser hvordan vekkingen ser ut', one('Start alarm', () => void postAt('', '/api/alarm', { action: 'test' }))],
     ['Stemmeassistent', 'Home Assistant Assist med mikrofon på enheten', seg(['Av', 'På'], S.tVoice ? 1 : 0, (i) => { setSetting('tVoice', i === 1); void postAt('', '/api/touch/voice', { mic: i === 1 && S.tMic !== false }); })],
