@@ -24,11 +24,11 @@ export function openArtist(name: string, album?: string): void {
   artistView.value = { name: name.trim(), ...(album ? { album: album.trim() } : {}) };
   go('lib', ndConfigured() ? 'nd' : 'ytm');
 }
-export const libUi = { tab: signal(0), pl: signal<{ kind: 'album' | 'pl'; id: string; name: string } | null>(null), q: signal(''), hero: signal(0), mood: signal<number | null>(null) };
+export const libUi = { tab: signal(0), pl: signal<{ kind: 'album' | 'pl'; id: string; name: string; /** coveret fra flisen du trykket på – vises med en gang */ cover?: string | undefined } | null>(null), q: signal(''), hero: signal(0), mood: signal<number | null>(null) };
 trackSub(libUi.pl, () => { libUi.pl.value = null; });   // album/spilleliste: tilbake lukker den
 export function libBack(): boolean { if (libUi.pl.value) { libUi.pl.value = null; return true; } if (artistView.value) { artistView.value = null; return true; } return false; }
 
-const cover = (id: string | undefined, key: string, size = 300) => { const u = ndCover(id, size), a = art(key); return { bg: u ? 'url("' + u.replace(/"/g, '') + '") center / cover no-repeat, ' + a.bg : a.bg, ink: u ? 'transparent' : a.ink }; };
+const cover = (id: string | undefined, key: string, size = 300) => { const u = ndCover(id, size), a = art(key); return { bg: u ? 'url("' + u.replace(/"/g, '') + '") center / cover no-repeat, #1b1b1c' : a.bg, ink: u ? 'transparent' : a.ink }; };
 const MOODS = ['Ny energi', 'Godfølelse', 'Avslapping', 'Trening', 'Fest', 'Fokus', 'Søvn'];
 const PLAY = 'M8 5v14l11-7z';
 
@@ -131,7 +131,7 @@ function OpenList({ lib }: { lib: LibId }) {
   const [err, setErr] = useState('');
   useEffect(() => { setSongs(null); setErr(''); collSongs(lib, pl.kind, pl.id).then(setSongs).catch((e: unknown) => setErr(e instanceof Error ? e.message : String(e))); }, [pl.id]);
   const list = songs ?? [];
-  const c = cover(list[0]?.coverArt, pl.name, 300);
+  const c = cover(pl.cover ?? list[0]?.coverArt, pl.name, 300);
   const total = list.reduce((a, x) => a + x.duration, 0);
   const play = (l: NdSong[], i: number) => { playNd(l, i, lib); openFull(); };
   return (
@@ -191,7 +191,7 @@ function LibraryMain() {
   const tabs = LIB_TABS[lib];
   const h = hist.value[lib] ?? [];
   const play = (l: NdSong[], i: number) => { playNd(l, i, lib); openFull(); };
-  const albumTile = (al: NdAlbum | NdPlaylist): Tile => { const pl = 'playlist' in al && !!al.playlist; const c = cover(al.coverArt, al.name); return { key: al.id, name: al.name, meta: pl ? 'Spilleliste' : 'artist' in al ? al.artist : '', label: '', bg: c.bg, ink: c.ink, pick: () => { libUi.pl.value = { kind: pl ? 'pl' : 'album', id: al.id, name: al.name }; } }; };
+  const albumTile = (al: NdAlbum | NdPlaylist): Tile => { const pl = 'playlist' in al && !!al.playlist; const c = cover(al.coverArt, al.name); return { key: al.id, name: al.name, meta: pl ? 'Spilleliste' : 'artist' in al ? al.artist : '', label: '', bg: c.bg, ink: c.ink, pick: () => { libUi.pl.value = { kind: pl ? 'pl' : 'album', id: al.id, name: al.name, cover: al.coverArt }; } }; };
   const feat = (ytm ? data.pls : data.albums ?? []).slice(0, 5), fi = feat.length ? libUi.hero.value % feat.length : 0, f = feat[fi];
   const fKind = (f && 'playlist' in f && f.playlist) ? 'pl' as const : 'album' as const;
   const off = ytm ? !!data.err && !data.albums?.length && !data.pls.length : !nd && (!ndConfigured() || !!data.err);
@@ -223,7 +223,7 @@ function LibraryMain() {
               <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,11,12,.35),rgba(11,11,12,.9))" />
               <div style="position:relative;display:flex;flex-direction:column;gap:14px;padding:16px">
                 <div style="display:grid;grid-template-columns:112px minmax(0,1fr);gap:14px;align-items:end">
-                  <button onClick={() => { libUi.pl.value = { kind: fKind, id: f.id, name: f.name }; }} style={`width:112px;height:112px;border-radius:10px;border:none;background:${c.bg};color:${c.ink};box-shadow:0 14px 30px rgba(0,0,0,.5);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;font-size:13px;font-weight:600;line-height:1.05;text-align:left;cursor:pointer`}>{c.ink === 'transparent' ? '' : f.name}</button>
+                  <button onClick={() => { libUi.pl.value = { kind: fKind, id: f.id, name: f.name, cover: f.coverArt }; }} style={`width:112px;height:112px;border-radius:10px;border:none;background:${c.bg};color:${c.ink};box-shadow:0 14px 30px rgba(0,0,0,.5);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;font-size:13px;font-weight:600;line-height:1.05;text-align:left;cursor:pointer`}>{c.ink === 'transparent' ? '' : f.name}</button>
                   <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
                     <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#f0c46a">{ytm ? 'UTVALGT' : 'NYLIG LAGT TIL'}</span>
                     <span style="font-size:21px;font-weight:600;line-height:1.1">{f.name}</span>
@@ -253,7 +253,7 @@ function LibraryMain() {
           <div style="display:flex;flex-direction:column;border-radius:14px;background:#141415;border:1px solid #242426;overflow:hidden;flex-shrink:0">
             {data.pls.length === 0 && <span style="font-size:13px;color:#8b8b86;padding:16px">{ytm && !data.albums ? 'Henter biblioteket …' : 'Ingen spillelister på serveren.'}</span>}
             {data.pls.map((p, i) => (
-              <button key={p.id} onClick={() => { libUi.pl.value = { kind: 'playlist' in p && p.playlist === false ? 'album' : 'pl', id: p.id, name: p.name }; }} style={`display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:68px;padding:0 12px;border:none;border-top:1px solid ${i ? '#242426' : 'transparent'};background:transparent;cursor:pointer;text-align:left;width:100%`}>
+              <button key={p.id} onClick={() => { libUi.pl.value = { kind: 'playlist' in p && p.playlist === false ? 'album' : 'pl', id: p.id, name: p.name, cover: p.coverArt }; }} style={`display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:68px;padding:0 12px;border:none;border-top:1px solid ${i ? '#242426' : 'transparent'};background:transparent;cursor:pointer;text-align:left;width:100%`}>
                 <div style={`width:52px;height:52px;border-radius:8px;background:${cover(p.coverArt, p.name, 120).bg}`} />
                 <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px">{p.name}</span><span style="font-size:12px;color:#8b8b86">{p.songCount ? p.songCount + ' låter' : 'artist' in p && p.artist ? p.artist : 'Spilleliste'}</span></span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7" /></svg>

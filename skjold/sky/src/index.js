@@ -242,22 +242,35 @@ export default {
       }));
     }
 
+    // --- vedlikehold: offentlig, så appen og enhetene kan vise nedtellingen også uten innlogging ---
+    if (p === "/api/vedlikehold") {
+      const vh = await vedlikehold(env);
+      return json(vh.aktiv ? vh : { aktiv: false }, 200, { "access-control-allow-origin": "*" });
+    }
+
     // --- brukere (bak Access) ---
     if (p === "/api/hjem" || p.startsWith("/api/hjem/") || p === "/api/valhalla" || p.startsWith("/api/valhalla/")) {
       const epost = await bruker(req, env);
       if (!epost) return feil(401, "ikke innlogget");
       const rolle = await kontoRolle(env, epost);
       if (rolle.sperret) return feil(403, "kontoen er sperret – kontakt Skjold Lab");
-      const tofaOk = !rolle.tofa || (await tofaGyldig(req, env, epost, rolle.tofaVer));
-      if (p === "/api/hjem/meg") return json({ epost, valhalla: rolle.valhalla && tofaOk, eier: rolle.eier, tofa: rolle.tofa, tofaOk });
-      if (p === "/api/hjem/konto/2fa/bekreft" && req.method === "POST") return tofaBekreft(req, env, epost);
-      if (!tofaOk) return json({ error: "2fa", tofa: true, melding: "Bekreft med koden fra kodeappen" }, 401);
-      if (p === "/api/hjem/konto" || p.startsWith("/api/hjem/konto/")) return kontoApi(req, env, epost, url);
+      // Vedlikehold (Valhalla): alle unntatt administratorene får 503 med nedtelling – enhetene virker lokalt som før
+      const vh = await vedlikehold(env);
+      if (vh.aktiv && !rolle.valhalla && p !== "/api/hjem/meg") return json({ error: "vedlikehold", vedlikehold: vh }, 503);
+      // Økt (cookie per nettleser/telefon): ny økt lages ved første besøk. Med totrinnsbekreftelse må økten bekreftes
+      // (kode, passkey/sikkerhetsnøkkel eller godkjenning fra appen) før noe annet enn bekreftelsen virker.
+      const okt = await hentOkt(req, env, epost, rolle);
+      const medOkt = (r) => { if (!okt.cookie) return r; const ny = new Response(r.body, r); ny.headers.append("set-cookie", okt.cookie); return ny; };
+      if (p === "/api/hjem/meg") return medOkt(json({ epost, valhalla: rolle.valhalla && okt.bekreftet, eier: rolle.eier, tofa: rolle.tofa, tofaOk: okt.bekreftet, vedlikehold: vh.aktiv ? vh : null }));
+      const BEKREFT = ["/api/hjem/konto/2fa/bekreft", "/api/hjem/konto/passkey/login-start", "/api/hjem/konto/passkey/login", "/api/hjem/konto/godkjenn/start", "/api/hjem/konto/godkjenn/status"];
+      if (BEKREFT.includes(p)) return medOkt(await bekreftApi(req, env, epost, url, okt));
+      if (!okt.bekreftet) return medOkt(json({ error: "2fa", tofa: true, melding: "Bekreft at det er deg" }, 401));
+      if (p === "/api/hjem/konto" || p.startsWith("/api/hjem/konto/")) return medOkt(await kontoApi(req, env, epost, url, okt));
       if (p.startsWith("/api/valhalla")) {
         if (!rolle.valhalla) return feil(403, "bare for Skjold Lab Valhalla-administratorer");
-        return valhalla(req, env, epost, rolle, url);
+        return medOkt(await valhalla(req, env, epost, rolle, url));
       }
-      return api(req, env, epost, url);
+      return medOkt(await api(req, env, epost, url));
     }
 
     if (p.startsWith("/api/") || p.startsWith("/enhet/")) return feil(404, "finnes ikke");
@@ -284,7 +297,7 @@ async function kontoRolle(env, epost) {
   let r = { sperret: false, admin: false };
   try { r = await (await intern(registerStub(env), "/bruker", { epost })).json(); } catch {}
   const eier = eierListe(env).includes(epost);
-  const rolle = { sperret: !!r.sperret && !eier, eier, valhalla: eier || !!r.admin, tofa: !!r.tofa, tofaVer: Number(r.tofaVer || 0) };
+  const rolle = { sperret: !!r.sperret && !eier, eier, valhalla: eier || !!r.admin, tofa: !!r.tofa };
   ROLLE_CACHE.set(epost, { t: Date.now(), rolle });
   return rolle;
 }
@@ -334,49 +347,124 @@ async function oktNoekkel(env) {
 }
 async function oktSign(env, tekst) { return tilB64(await crypto.subtle.sign("HMAC", await oktNoekkel(env), new TextEncoder().encode(tekst))).replace(/=+$/, ""); }
 const OKT_DAGER = 30;
-async function oktCookie(env, epost, ver) {
+const OKT_CACHE = new Map(); // epost|sid → { t, bekreftet } – en utlogget økt slutter å virke innen ett minutt
+function enhetsnavn(req) {
+  const ua = req.headers.get("user-agent") || "";
+  const os = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "Ukjent enhet";
+  const app = /SkjoldApp|Capacitor/i.test(ua) ? "Skjold-appen" : /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "nettleser";
+  const land = (req.cf && req.cf.city ? req.cf.city + ", " : "") + ((req.cf && req.cf.country) || "");
+  return { navn: app + " på " + os, sted: land };
+}
+/** Økten for denne nettleseren/telefonen. Lager en ny (med Set-Cookie) hvis cookien mangler, er ugyldig eller logget ut. */
+async function hentOkt(req, env, epost, rolle) {
+  const c = cookie(req, "skjold_okt");
+  if (c) {
+    const [sid, exp, sig] = c.split(".");
+    if (sig && Number(exp) > Date.now() / 1000 && likTid(sig, await oktSign(env, epost + "|" + sid + "|" + exp))) {
+      const n = epost + "|" + sid, hit = OKT_CACHE.get(n);
+      if (hit && Date.now() - hit.t < 60000) return { sid, bekreftet: hit.bekreftet || !rolle.tofa };
+      const r = await (await intern(kontoStub(env, epost), "/okt/sjekk", { sid })).json();
+      if (r.finnes) { OKT_CACHE.set(n, { t: Date.now(), bekreftet: r.bekreftet }); return { sid, bekreftet: r.bekreftet || !rolle.tofa }; }
+    }
+  }
+  const e = enhetsnavn(req);
+  const { sid } = await (await intern(kontoStub(env, epost), "/okt/ny", { ...e, bekreftet: !rolle.tofa })).json();
   const exp = Math.floor(Date.now() / 1000) + OKT_DAGER * 86400;
-  const v = `${exp}.${ver}.${await oktSign(env, epost + "|" + exp + "|" + ver)}`;
-  return `skjold_2fa=${v}; Path=/; Max-Age=${OKT_DAGER * 86400}; HttpOnly; Secure; SameSite=None`;
+  const cookieV = `skjold_okt=${sid}.${exp}.${await oktSign(env, epost + "|" + sid + "|" + exp)}; Path=/; Max-Age=${OKT_DAGER * 86400}; HttpOnly; Secure; SameSite=None`;
+  return { sid, bekreftet: !rolle.tofa, cookie: cookieV, ny: true };
 }
-async function tofaGyldig(req, env, epost, ver) {
-  const c = cookie(req, "skjold_2fa"); if (!c) return false;
-  const [exp, v, sig] = c.split(".");
-  if (!sig || Number(exp) < Date.now() / 1000 || Number(v) !== ver) return false;
-  return likTid(sig, await oktSign(env, epost + "|" + exp + "|" + v));
+async function oktBekreftet(env, epost, okt, metode) {
+  await intern(kontoStub(env, epost), "/okt/bekreft", { sid: okt.sid, metode });
+  OKT_CACHE.delete(epost + "|" + okt.sid);
 }
-async function tofaBekreft(req, env, epost) {
-  const b = await lesJson(req);
-  const r = await intern(kontoStub(env, epost), "/konto/2fa/sjekk", { kode: b.kode });
-  if (!r.ok) return r;
-  const { ver } = await r.json();
-  return json({ ok: true }, 200, { "set-cookie": await oktCookie(env, epost, ver) });
+const rpId = (url) => url.hostname;
+const opphav = (url) => url.origin;
+
+/** Bekreftelse av en ny økt: kode (TOTP/reserve), passkey/sikkerhetsnøkkel, eller godkjenning fra en innlogget enhet. */
+async function bekreftApi(req, env, epost, url, okt) {
+  const k = kontoStub(env, epost), p = url.pathname.slice("/api/hjem/konto".length), b = req.method === "POST" ? await lesJson(req) : {};
+  if (p === "/2fa/bekreft") {
+    const r = await intern(k, "/konto/2fa/sjekk", { kode: b.kode });
+    if (!r.ok) return r;
+    await oktBekreftet(env, epost, okt, "kode");
+    return json({ ok: true });
+  }
+  if (p === "/passkey/login-start") return intern(k, "/konto/passkey/login-start", { rpId: rpId(url) });
+  if (p === "/passkey/login") {
+    const r = await intern(k, "/konto/passkey/login", { ...b, rpId: rpId(url), opphav: opphav(url) });
+    if (!r.ok) return r;
+    await oktBekreftet(env, epost, okt, "passkey");
+    return json({ ok: true });
+  }
+  if (p === "/godkjenn/start") return intern(k, "/konto/godkjenn/start", { sid: okt.sid, ...enhetsnavn(req) });
+  if (p === "/godkjenn/status") {
+    const r = await (await intern(k, "/konto/godkjenn/status", { rid: url.searchParams.get("rid"), sid: okt.sid })).json();
+    if (r.status === "godkjent") OKT_CACHE.delete(epost + "|" + okt.sid);
+    return json(r);
+  }
+  return feil(404, "finnes ikke");
 }
-async function kontoApi(req, env, epost, url) {
+
+async function kontoApi(req, env, epost, url, okt) {
   const del = url.pathname.slice("/api/hjem/konto".length) || "/";
-  const k = kontoStub(env, epost), m = req.method;
+  const k = kontoStub(env, epost), m = req.method, reg = registerStub(env);
   const b = m === "GET" || m === "DELETE" ? {} : await lesJson(req);
+  const tofaFlagg = async (svar) => { await intern(reg, "/bruker-sett", { epost, tofa: !!svar.tofaAktiv }); ROLLE_CACHE.delete(epost); };
   if (del === "/" && m === "GET") {
     const info = await (await intern(k, "/konto/info", { epost })).json();
     const { steder } = await (await intern(k, "/liste")).json();
     const sync = await (await intern(k, "/sync/oversikt", {})).json();
     return json({ ...info, epost, steder, sync: sync.deler || [] });
   }
-  if (del === "/" && m === "PATCH") return intern(k, "/konto/profil", b);
+  if (del === "/" && m === "PATCH") {
+    if (b.bilde !== undefined && b.bilde !== "" && !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(String(b.bilde))) return feil(400, "ugyldig bilde");
+    if (String(b.bilde || "").length > 90000) return feil(413, "bildet er for stort (maks ca. 60 kB)");
+    const r = await intern(k, "/konto/profil", b);
+    if (r.ok && b.bilde !== undefined) await intern(reg, "/bruker-sett", { epost, bilde: String(b.bilde || "") });
+    return r;
+  }
   if (del === "/2fa/start" && m === "POST") return intern(k, "/konto/2fa/start", { epost });
   if ((del === "/2fa/aktiver" || del === "/2fa/av" || del === "/2fa/nye-koder") && m === "POST") {
     const r = await intern(k, "/konto" + del, b);
     if (!r.ok) return r;
     const svar = await r.json();
-    await intern(registerStub(env), "/bruker-sett", { epost, tofa: !!svar.aktiv, tofaVer: svar.ver });
-    ROLLE_CACHE.delete(epost);
-    return json(svar, 200, svar.aktiv ? { "set-cookie": await oktCookie(env, epost, svar.ver) } : {});
+    await tofaFlagg(svar);
+    await oktBekreftet(env, epost, okt, "kode");
+    return json(svar);
+  }
+  // passkeys og sikkerhetsnøkler (WebAuthn)
+  if (del === "/passkey/start" && m === "POST") return intern(k, "/konto/passkey/start", { epost, rpId: rpId(url), type: b.type });
+  if (del === "/passkey/registrer" && m === "POST") {
+    const r = await intern(k, "/konto/passkey/registrer", { ...b, rpId: rpId(url), opphav: opphav(url) });
+    if (!r.ok) return r;
+    const svar = await r.json(); await tofaFlagg(svar);
+    return json(svar);
+  }
+  if (del.startsWith("/passkey/") && m === "DELETE") {
+    const r = await intern(k, "/konto/passkey/slett", { id: decodeURIComponent(del.slice(9)) });
+    if (!r.ok) return r;
+    const svar = await r.json(); await tofaFlagg(svar);
+    return json(svar);
+  }
+  // godkjenn innlogging på en annen enhet
+  if (del === "/godkjenn/ventende" && m === "GET") return intern(k, "/konto/godkjenn/ventende", { sid: okt.sid });
+  if (del.startsWith("/godkjenn/") && m === "POST") {
+    const r = await intern(k, "/konto/godkjenn/svar", { rid: decodeURIComponent(del.slice(10)), svar: b.svar, av: okt.sid });
+    if (r.ok) { const j = await r.clone().json(); if (j.sid) OKT_CACHE.delete(epost + "|" + j.sid); }
+    return r;
+  }
+  // økter (påloggede enheter)
+  if (del === "/okter" && m === "GET") return json((await (await intern(k, "/okt/liste", {})).json()).map((x) => ({ ...x, denne: x.sid === okt.sid })));
+  if (del.startsWith("/okter/") && m === "DELETE") {
+    const sid = decodeURIComponent(del.slice(7));
+    await intern(k, "/okt/slett", { sid }); OKT_CACHE.delete(epost + "|" + sid);
+    return json({ ok: true });
   }
   if (del === "/logg-ut-overalt" && m === "POST") {
-    const svar = await (await intern(k, "/konto/ny-versjon", {})).json();
-    await intern(registerStub(env), "/bruker-sett", { epost, tofaVer: svar.ver });
-    ROLLE_CACHE.delete(epost);
-    return json({ ok: true });
+    const l = await (await intern(k, "/okt/liste", {})).json();
+    await intern(k, "/okt/slett-alle", {});
+    for (const x of l) OKT_CACHE.delete(epost + "|" + x.sid);
+    return json({ ok: true, antall: l.length });
   }
   if (del === "/" && m === "DELETE") {
     const { steder } = await (await intern(k, "/liste")).json();
@@ -389,11 +477,79 @@ async function kontoApi(req, env, epost, url) {
       if (r.ok) await synkMedlemmer(env, s.id, await r.json());
     }
     await intern(k, "/konto/slett", {});
-    await intern(registerStub(env), "/bruker-slett", { epost });
+    await intern(reg, "/bruker-slett", { epost });
     ROLLE_CACHE.delete(epost);
     return json({ ok: true });
   }
   return feil(404, "finnes ikke");
+}
+
+// ---------- Vedlikehold (service mode) – settes i Valhalla, mellomlagres 15 s per isolat ----------
+let VH = { t: 0, v: { aktiv: false } };
+async function vedlikehold(env) {
+  if (Date.now() - VH.t < 15000) return VH.v;
+  try { VH = { t: Date.now(), v: await (await intern(registerStub(env), "/vedlikehold", {})).json() }; } catch {}
+  if (VH.v.aktiv && VH.v.til && VH.v.til * 1000 < Date.now() - 6 * 3600 * 1000) VH.v = { aktiv: false };   // glemt i over 6 t etter slutt
+  return VH.v;
+}
+
+// ---------- WebAuthn (passkeys og sikkerhetsnøkler) ----------
+function b64url(bytes) { return tilB64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function fraB64url(s) { return b64urlTilBytes(String(s || "")); }
+/** Minimal CBOR-leser (det WebAuthn bruker: tall, byte, tekst, lister, kart, true/false/null). */
+export function cbor(bytes) {
+  let i = 0;
+  const les = () => {
+    const b0 = bytes[i++], mt = b0 >> 5, ai = b0 & 31;
+    let n = ai;
+    if (ai === 24) n = bytes[i++];
+    else if (ai === 25) { n = (bytes[i] << 8) | bytes[i + 1]; i += 2; }
+    else if (ai === 26) { n = ((bytes[i] << 24) >>> 0) + (bytes[i + 1] << 16) + (bytes[i + 2] << 8) + bytes[i + 3]; i += 4; }
+    else if (ai > 26 && mt !== 7) throw new Error("CBOR: ikke støttet lengde");
+    if (mt === 0) return n;
+    if (mt === 1) return -1 - n;
+    if (mt === 2) { const v = bytes.slice(i, i + n); i += n; return v; }
+    if (mt === 3) { const v = new TextDecoder().decode(bytes.slice(i, i + n)); i += n; return v; }
+    if (mt === 4) { const a = []; for (let k = 0; k < n; k++) a.push(les()); return a; }
+    if (mt === 5) { const m = new Map(); for (let k = 0; k < n; k++) { const kk = les(); m.set(kk, les()); } return m; }
+    if (mt === 7) return ai === 20 ? false : ai === 21 ? true : null;
+    throw new Error("CBOR: ukjent type");
+  };
+  const v = les();
+  return { v, slutt: i };
+}
+/** authenticatorData → rpIdHash, flagg, teller og (ved registrering) credential-id og offentlig nøkkel (COSE). */
+export function lesAuthData(ad) {
+  const flagg = ad[32], teller = ((ad[33] << 24) >>> 0) + (ad[34] << 16) + (ad[35] << 8) + ad[36];
+  const ut = { rpIdHash: ad.slice(0, 32), up: !!(flagg & 1), uv: !!(flagg & 4), teller };
+  if (flagg & 64) {
+    const len = (ad[53] << 8) | ad[54];
+    ut.credId = ad.slice(55, 55 + len);
+    const c = cbor(ad.slice(55 + len));
+    ut.cose = c.v;
+  }
+  return ut;
+}
+function coseTilJwk(cose) {
+  const kty = cose.get(1), alg = cose.get(3);
+  if (kty === 2 && alg === -7) return { alg: -7, jwk: { kty: "EC", crv: "P-256", x: b64url(cose.get(-2)), y: b64url(cose.get(-3)), ext: true } };
+  if (kty === 3 && alg === -257) return { alg: -257, jwk: { kty: "RSA", n: b64url(cose.get(-1)), e: b64url(cose.get(-2)), alg: "RS256", ext: true } };
+  throw new Error("nøkkeltypen støttes ikke (bare ES256 og RS256)");
+}
+/** ECDSA-signaturen fra WebAuthn er DER; WebCrypto vil ha r||s (64 byte). */
+function derTilRaa(der) {
+  let i = 2; if (der[1] & 0x80) i += der[1] & 0x7f;
+  const del = () => { i++; const len = der[i++]; let v = der.slice(i, i + len); i += len; while (v.length > 32 && v[0] === 0) v = v.slice(1); const ut = new Uint8Array(32); ut.set(v, 32 - v.length); return ut; };
+  const r = del(), s = del(); const ut = new Uint8Array(64); ut.set(r); ut.set(s, 32); return ut;
+}
+async function sha256(bytes) { return new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)); }
+const likeBytes = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+/** Sjekk clientDataJSON: type, utfordring og opphav. */
+function sjekkKlient(cdj, type, utfordring, opphavet) {
+  const c = JSON.parse(new TextDecoder().decode(cdj));
+  if (c.type !== type) throw new Error("feil type");
+  if (c.challenge !== utfordring) throw new Error("feil utfordring");
+  if (c.origin !== opphavet) throw new Error("feil opphav: " + c.origin);
 }
 
 const gyldigEpost = (e) => /^[^@\s]{1,64}@[^@\s]{1,190}\.[a-z]{2,}$/i.test(String(e || ""));
@@ -429,7 +585,13 @@ async function valhalla(req, env, epost, rolle, url) {
   if (m === "GET" && (deler.length === 0 || deler[0] === "oversikt" || deler[0] === "steder")) await finnHjem(env, epost, url.searchParams.has("synk"));
   if (deler.length === 0 || deler[0] === "oversikt") {
     const o = await (await intern(reg, "/oversikt", {})).json();
-    return json({ ...o, meg: epost, eier: rolle.eier, tjenesteeiere: eierListe(env), access: !!(env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD) });
+    return json({ ...o, meg: epost, eier: rolle.eier, tjenesteeiere: eierListe(env), access: !!(env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD), vedlikehold: await (await intern(reg, "/vedlikehold", {})).json() });
+  }
+  if (deler[0] === "vedlikehold" && m === "POST") {
+    const b = await lesJson(req);
+    const r = await intern(reg, "/vedlikehold-sett", { ...b, av: epost });
+    VH = { t: 0, v: { aktiv: false } };
+    return r;
   }
   if (deler[0] === "kontoer" && deler.length === 1 && m === "GET") return intern(reg, "/kontoer", {});
   if (deler[0] === "kontoer" && deler.length === 2 && m === "POST") {
@@ -437,8 +599,8 @@ async function valhalla(req, env, epost, rolle, url) {
     if ("admin" in b && !rolle.eier) return feil(403, "bare tjenesteeieren kan gi eller ta Valhalla-tilgang");
     if (eierListe(env).includes(mål) && b.sperret) return feil(400, "tjenesteeieren kan ikke sperres");
     if (b.tofaAv) {   // brukeren har mistet telefonen og reservekodene: slå av totrinnsbekreftelsen
-      const t = await (await intern(kontoStub(env, mål), "/konto/2fa/tilbakestill", {})).json();
-      await intern(reg, "/bruker-sett", { epost: mål, tofa: false, tofaVer: t.ver });
+      await intern(kontoStub(env, mål), "/konto/2fa/tilbakestill", {});
+      await intern(reg, "/bruker-sett", { epost: mål, tofa: false });
       ROLLE_CACHE.delete(mål);
       return json({ epost: mål, tofa: false });
     }
@@ -554,6 +716,7 @@ export class Konto extends DurableObject {
     const b = await lesJson(req);
     if (sti.startsWith("/i/sync/")) return this.sync(sti.slice(7), b);
     if (sti.startsWith("/i/konto/")) return this.konto(sti.slice(8), b);
+    if (sti.startsWith("/i/okt/")) return this.okt(sti.slice(6), b);
     let steder = (await this.ctx.storage.get("steder")) || [];
     if (sti === "/i/liste") return json({ steder });
     if (sti === "/i/legg") {
@@ -572,7 +735,9 @@ Konto.prototype.konto = async function (sti, b) {
   const st = this.ctx.storage, naa = Math.floor(Date.now() / 1000);
   const profil = (await st.get("profil")) || { navn: "", opprettet: naa };
   const t = (await st.get("tofa")) || { aktiv: false, ver: 0, backup: [], brukt: -1 };
+  const nokler = (await st.get("passkeys")) || [];
   const lagreT = () => st.put("tofa", t);
+  const tofaAktiv = () => !!t.aktiv || nokler.length > 0;   // kodeapp eller passkey/sikkerhetsnøkkel = totrinnsbekreftelse
   const nyeKoder = async () => {
     const koder = Array.from({ length: 10 }, () => tilfeldig(4, BACKUP_ALFABET) + "-" + tilfeldig(4, BACKUP_ALFABET));
     t.backup = await Promise.all(koder.map((k) => sha256hex(k)));
@@ -582,8 +747,10 @@ Konto.prototype.konto = async function (sti, b) {
   const sjekk = async (kode, hemmelighet = t.hemmelighet) => {
     const feilet = (await st.get("feil")) || { n: 0, t: 0 };
     if (feilet.n >= 8 && naa - feilet.t < 900) return "låst";
-    const steg = await totpSjekk(hemmelighet, kode, t.brukt);
-    if (steg >= 0) { t.brukt = steg; await st.delete("feil"); return "ok"; }
+    if (hemmelighet) {
+      const steg = await totpSjekk(hemmelighet, kode, t.brukt);
+      if (steg >= 0) { t.brukt = steg; await st.delete("feil"); return "ok"; }
+    }
     const h = await sha256hex(String(kode || "").trim().toLowerCase());
     const i = (t.backup || []).indexOf(h);
     if (i >= 0 && hemmelighet === t.hemmelighet) { t.backup.splice(i, 1); await st.delete("feil"); return "ok"; }
@@ -591,13 +758,20 @@ Konto.prototype.konto = async function (sti, b) {
     return "feil";
   };
   const svarFeil = (r) => (r === "låst" ? feil(429, "for mange feil koder – prøv igjen om 15 minutter") : feil(401, "feil kode"));
+  const nokkelListe = () => nokler.map((n) => ({ id: n.id, navn: n.navn, type: n.type, opprettet: n.opprettet, sist: n.sist || null }));
   if (sti === "/info") {
     if (!(await st.get("profil"))) await st.put("profil", profil);
-    return json({ navn: profil.navn, opprettet: profil.opprettet, tofa: { aktiv: t.aktiv, reservekoderIgjen: (t.backup || []).length } });
+    return json({ navn: profil.navn, bilde: profil.bilde || "", opprettet: profil.opprettet,
+      tofa: { aktiv: tofaAktiv(), kodeapp: !!t.aktiv, reservekoderIgjen: (t.backup || []).length, passkeys: nokkelListe() } });
   }
-  if (sti === "/profil") { profil.navn = String(b.navn ?? profil.navn).trim().slice(0, 60); await st.put("profil", profil); return json({ navn: profil.navn }); }
+  if (sti === "/profil") {
+    if (b.navn !== undefined) profil.navn = String(b.navn).trim().slice(0, 60);
+    if (b.bilde !== undefined) profil.bilde = String(b.bilde || "");
+    await st.put("profil", profil);
+    return json({ navn: profil.navn, bilde: profil.bilde || "" });
+  }
   if (sti === "/2fa/start") {
-    if (t.aktiv) return feil(409, "totrinnsbekreftelse er allerede på");
+    if (t.aktiv) return feil(409, "kodeappen er allerede satt opp");
     const h = b32(crypto.getRandomValues(new Uint8Array(16)));
     t.ventende = h; await lagreT();
     return json({ hemmelighet: h, uri: `otpauth://totp/Skjold?secret=${h}&issuer=Skjold` });
@@ -608,24 +782,150 @@ Konto.prototype.konto = async function (sti, b) {
     if (r !== "ok") return svarFeil(r);
     t.hemmelighet = t.ventende; delete t.ventende; t.aktiv = true; t.ver = (t.ver || 0) + 1;
     const koder = await nyeKoder(); await lagreT();
-    return json({ aktiv: true, ver: t.ver, reservekoder: koder });
+    return json({ aktiv: true, tofaAktiv: true, reservekoder: koder });
   }
   if (sti === "/2fa/sjekk") {
-    if (!t.aktiv) return json({ ver: t.ver || 0 });
+    if (!tofaAktiv()) return json({ ok: true });
+    if (!t.aktiv && !(t.backup || []).length) return feil(400, "bruk passkeyen eller godkjenn fra en innlogget enhet");
     const r = await sjekk(b.kode); await lagreT();
-    return r === "ok" ? json({ ver: t.ver }) : svarFeil(r);
+    return r === "ok" ? json({ ok: true }) : svarFeil(r);
   }
   if (sti === "/2fa/av" || sti === "/2fa/nye-koder") {
-    if (!t.aktiv) return feil(400, "totrinnsbekreftelse er ikke på");
+    if (!t.aktiv) return feil(400, "kodeappen er ikke satt opp");
     const r = await sjekk(b.kode);
     if (r !== "ok") { await lagreT(); return svarFeil(r); }
-    if (sti === "/2fa/av") { t.aktiv = false; delete t.hemmelighet; t.backup = []; t.ver = (t.ver || 0) + 1; await lagreT(); return json({ aktiv: false, ver: t.ver }); }
+    if (sti === "/2fa/av") { t.aktiv = false; delete t.hemmelighet; t.backup = []; await lagreT(); return json({ aktiv: false, tofaAktiv: tofaAktiv() }); }
     const koder = await nyeKoder(); await lagreT();
-    return json({ aktiv: true, ver: t.ver, reservekoder: koder });
+    return json({ aktiv: true, tofaAktiv: true, reservekoder: koder });
   }
-  if (sti === "/2fa/tilbakestill") { t.aktiv = false; delete t.hemmelighet; t.backup = []; t.ver = (t.ver || 0) + 1; await lagreT(); return json({ aktiv: false, ver: t.ver }); }
-  if (sti === "/ny-versjon") { t.ver = (t.ver || 0) + 1; await lagreT(); return json({ ver: t.ver }); }
+  if (sti === "/2fa/tilbakestill") {   // Valhalla: mistet telefon, nøkler og reservekoder
+    t.aktiv = false; delete t.hemmelighet; t.backup = []; await lagreT(); await st.delete("passkeys");
+    return json({ aktiv: false, tofaAktiv: false });
+  }
+  // --- passkeys / sikkerhetsnøkler (WebAuthn)
+  if (sti === "/passkey/start") {
+    const utf = b64url(crypto.getRandomValues(new Uint8Array(32)));
+    await st.put("webauthn", { utf, t: naa, type: b.type === "nokkel" ? "nokkel" : "passkey" });
+    const brukerId = b64url((await sha256(new TextEncoder().encode(String(b.epost)))).slice(0, 16));
+    return json({ challenge: utf, rp: { name: "Skjold", id: b.rpId }, user: { id: brukerId, name: b.epost, displayName: profil.navn || b.epost },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }], timeout: 60000, attestation: "none",
+      excludeCredentials: nokler.map((n) => ({ type: "public-key", id: n.id })),
+      authenticatorSelection: b.type === "nokkel" ? { authenticatorAttachment: "cross-platform", residentKey: "discouraged", userVerification: "discouraged" }
+        : { residentKey: "preferred", userVerification: "preferred" } });
+  }
+  if (sti === "/passkey/registrer") {
+    const w = await st.get("webauthn");
+    if (!w || naa - w.t > 300) return feil(400, "utfordringen er utløpt – prøv igjen");
+    await st.delete("webauthn");
+    try {
+      const cdj = fraB64url(b.clientDataJSON);
+      sjekkKlient(cdj, "webauthn.create", w.utf, b.opphav);
+      const att = cbor(fraB64url(b.attestationObject)).v;
+      const ad = lesAuthData(att.get("authData"));
+      if (!likeBytes(ad.rpIdHash, await sha256(new TextEncoder().encode(b.rpId)))) throw new Error("feil rpId");
+      if (!ad.up || !ad.credId) throw new Error("mangler brukerbekreftelse");
+      const n = coseTilJwk(ad.cose);
+      if (nokler.length >= 10) throw new Error("høyst 10 nøkler");
+      nokler.push({ id: b64url(ad.credId), ...n, teller: ad.teller, navn: String(b.navn || (w.type === "nokkel" ? "Sikkerhetsnøkkel" : "Passkey")).slice(0, 40), type: w.type, opprettet: naa });
+      await st.put("passkeys", nokler);
+      return json({ ok: true, tofaAktiv: true, passkeys: nokkelListe() });
+    } catch (e) { return feil(400, "kunne ikke registrere nøkkelen: " + e.message); }
+  }
+  if (sti === "/passkey/login-start") {
+    if (!nokler.length) return feil(400, "ingen passkey eller sikkerhetsnøkkel er registrert");
+    const utf = b64url(crypto.getRandomValues(new Uint8Array(32)));
+    await st.put("webauthn-inn", { utf, t: naa });
+    return json({ challenge: utf, rpId: b.rpId, timeout: 60000, userVerification: "preferred", allowCredentials: nokler.map((n) => ({ type: "public-key", id: n.id })) });
+  }
+  if (sti === "/passkey/login") {
+    const w = await st.get("webauthn-inn");
+    if (!w || naa - w.t > 300) return feil(400, "utfordringen er utløpt – prøv igjen");
+    await st.delete("webauthn-inn");
+    const n = nokler.find((x) => x.id === b.id);
+    if (!n) return feil(401, "ukjent nøkkel");
+    try {
+      const cdj = fraB64url(b.clientDataJSON), adB = fraB64url(b.authenticatorData), sig = fraB64url(b.signature);
+      sjekkKlient(cdj, "webauthn.get", w.utf, b.opphav);
+      const ad = lesAuthData(adB);
+      if (!likeBytes(ad.rpIdHash, await sha256(new TextEncoder().encode(b.rpId)))) throw new Error("feil rpId");
+      if (!ad.up) throw new Error("mangler brukerbekreftelse");
+      const data = new Uint8Array([...adB, ...(await sha256(cdj))]);
+      const ok = n.alg === -7
+        ? await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, await crypto.subtle.importKey("jwk", n.jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]), derTilRaa(sig), data)
+        : await crypto.subtle.verify({ name: "RSASSA-PKCS1-v1_5" }, await crypto.subtle.importKey("jwk", n.jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]), sig, data);
+      if (!ok) throw new Error("ugyldig signatur");
+      if (ad.teller && n.teller && ad.teller <= n.teller) throw new Error("telleren gikk ikke opp – mulig kopiert nøkkel");
+      n.teller = ad.teller; n.sist = naa;
+      await st.put("passkeys", nokler);
+      return json({ ok: true });
+    } catch (e) { return feil(401, "nøkkelen ble ikke godtatt: " + e.message); }
+  }
+  if (sti === "/passkey/slett") {
+    const før = nokler.length;
+    const rest = nokler.filter((x) => x.id !== b.id);
+    if (rest.length === før) return feil(404, "ukjent nøkkel");
+    await st.put("passkeys", rest);
+    return json({ ok: true, tofaAktiv: !!t.aktiv || rest.length > 0, passkeys: rest.map((n) => ({ id: n.id, navn: n.navn, type: n.type, opprettet: n.opprettet, sist: n.sist || null })) });
+  }
+  // --- godkjenn innlogging fra en annen enhet («Er det deg?» med tre tall)
+  const foresp = (await st.get("foresp")) || {};
+  for (const [rid, f] of Object.entries(foresp)) if (naa - f.t > 180) delete foresp[rid];
+  if (sti === "/godkjenn/start") {
+    const rid = tilfeldig(12, "abcdefghijklmnopqrstuvwxyz0123456789");
+    const tall = 10 + Math.floor(Math.random() * 90);
+    const valg = new Set([tall]); while (valg.size < 3) valg.add(10 + Math.floor(Math.random() * 90));
+    for (const [r, f] of Object.entries(foresp)) if (f.sid === b.sid) delete foresp[r];
+    foresp[rid] = { sid: b.sid, navn: String(b.navn || "").slice(0, 60), sted: String(b.sted || "").slice(0, 60), t: naa, tall, valg: [...valg].sort(() => Math.random() - 0.5), status: "venter" };
+    await st.put("foresp", foresp);
+    return json({ rid, tall, utloper: naa + 180 });
+  }
+  if (sti === "/godkjenn/status") {
+    const f = foresp[b.rid];
+    if (!f || f.sid !== b.sid) return json({ status: "utlopt" });
+    return json({ status: f.status });
+  }
+  if (sti === "/godkjenn/ventende") return json(Object.entries(foresp).filter(([, f]) => f.status === "venter" && f.sid !== b.sid).map(([rid, f]) => ({ rid, navn: f.navn, sted: f.sted, t: f.t, valg: f.valg })));
+  if (sti === "/godkjenn/svar") {
+    const f = foresp[b.rid];
+    if (!f || f.status !== "venter") return feil(404, "forespørselen er utløpt");
+    if (f.sid === b.av) return feil(400, "en enhet kan ikke godkjenne seg selv");
+    if (b.svar === "avvis") f.status = "avvist";
+    else if (Number(b.svar) === f.tall) {
+      f.status = "godkjent";
+      const okter = (await st.get("okter")) || {};
+      if (okter[f.sid]) { okter[f.sid].bekreftet = true; okter[f.sid].metode = "godkjent fra en annen enhet"; await st.put("okter", okter); }
+    } else f.status = "avvist";   // feil tall: avvis (noen prøver å lure deg)
+    await st.put("foresp", foresp);
+    return json({ status: f.status, sid: f.status === "godkjent" ? f.sid : undefined });
+  }
   if (sti === "/slett") { await st.deleteAll(); return json({ ok: true }); }
+  return feil(404, "finnes ikke");
+};
+
+// Økter, passkeys og godkjenning fra en annen enhet (lagres per konto)
+Konto.prototype.okt = async function (sti, b) {
+  const st = this.ctx.storage, naa = Math.floor(Date.now() / 1000);
+  const okter = (await st.get("okter")) || {};
+  const lagre = () => st.put("okter", okter);
+  if (sti === "/ny") {
+    const sid = tilfeldig(16, "abcdefghijklmnopqrstuvwxyz0123456789");
+    okter[sid] = { navn: String(b.navn || "").slice(0, 60), sted: String(b.sted || "").slice(0, 60), opprettet: naa, sist: naa, bekreftet: !!b.bekreftet, metode: b.bekreftet ? "" : null };
+    // aldri gjenbrukte økter (f.eks. klienter uten cookies) forsvinner først, så de eldste
+    const ids = Object.keys(okter).sort((x, y) => ((okter[y].sist > okter[y].opprettet) - (okter[x].sist > okter[x].opprettet)) || okter[x].sist - okter[y].sist);
+    while (ids.length > 30) delete okter[ids.shift()];   // høyst 30 økter: de eldste forsvinner
+    await lagre();
+    return json({ sid });
+  }
+  if (sti === "/sjekk") {
+    const o = okter[b.sid];
+    if (!o) return json({ finnes: false });
+    if (naa - o.sist > 300) { o.sist = naa; await lagre(); }
+    return json({ finnes: true, bekreftet: !!o.bekreftet });
+  }
+  if (sti === "/bekreft") { if (okter[b.sid]) { okter[b.sid].bekreftet = true; okter[b.sid].metode = String(b.metode || ""); await lagre(); } return json({ ok: true }); }
+  if (sti === "/liste") return json(Object.entries(okter).map(([sid, o]) => ({ sid, ...o })).sort((a, b) => b.sist - a.sist));
+  if (sti === "/slett") { delete okter[b.sid]; await lagre(); return json({ ok: true }); }
+  if (sti === "/slett-alle") { await st.delete("okter"); return json({ ok: true }); }
   return feil(404, "finnes ikke");
 };
 
@@ -1525,6 +1825,12 @@ export class Register extends DurableObject {
       if (!h) { h = [...crypto.getRandomValues(new Uint8Array(32))].map((x) => x.toString(16).padStart(2, "0")).join(""); await st.put("hemmelighet", h); }
       return json({ h });
     }
+    if (sti === "/vedlikehold") return json((await st.get("vedlikehold")) || { aktiv: false });
+    if (sti === "/vedlikehold-sett") {
+      const v = { aktiv: !!b.aktiv, melding: String(b.melding || "").slice(0, 300), til: Number(b.til) || 0, fra: naa, av: String(b.av || "") };
+      await st.put("vedlikehold", v);
+      return json(v);
+    }
     if (sti === "/bruker-slett") { await st.delete("k:" + String(b.epost || "").toLowerCase()); return json({ ok: true }); }
     if (sti === "/bruker-sett") {
       const e = String(b.epost || "").toLowerCase();
@@ -1532,7 +1838,7 @@ export class Register extends DurableObject {
       if ("sperret" in b) k.sperret = !!b.sperret;
       if ("admin" in b) k.admin = !!b.admin;
       if ("tofa" in b) k.tofa = !!b.tofa;
-      if ("tofaVer" in b) k.tofaVer = Number(b.tofaVer) || 0;
+      if ("bilde" in b) k.bilde = String(b.bilde || "");
       await st.put("k:" + e, k);
       return json({ epost: e, ...k });
     }

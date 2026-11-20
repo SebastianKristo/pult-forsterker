@@ -29,6 +29,10 @@ input,select{height:40px;border-radius:12px;border:1px solid var(--kant);backgro
 .hjem .rad{grid-template-columns:minmax(180px,1fr) minmax(220px,1.6fr) 120px 110px 300px}
 .chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;background:#1c1c1e;border:1px solid var(--kant);font-size:12px;margin:2px 4px 2px 0;white-space:nowrap}
 .chip.eier{border-color:#5a4420;color:var(--gull);background:#1c170d}.chip button{border:none;background:none;color:var(--demp);cursor:pointer;padding:0;font-size:14px}
+.ava{width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f3cf7f,#d9a441);color:#0b0b0c;font-weight:600;font-size:14px}
+.vh{display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--kort,#141415);border:1px solid var(--kant,#242426);max-width:760px}.vh.på{border-color:#5a4420;background:linear-gradient(135deg,#1c170d,#141415 70%)}
+.vh label{display:flex;flex-direction:column;gap:6px}.vh input,.vh select{height:40px;border-radius:10px;border:1px solid var(--kant,#242426);background:#101011;color:inherit;padding:0 12px;font:inherit}
+.vhbanner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-radius:14px;background:#1c170d;border:1px solid #5a4420;margin-bottom:18px}
 .merke{font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:3px 8px;border-radius:6px;background:#1c1c1e;color:var(--demp)}.merke.rod{background:#2a1210;color:#ff9a8a}.merke.gull{background:#1c170d;color:var(--gull)}.merke.gronn{background:#10241a;color:var(--gronn)}
 .knapper{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .k{height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--kant);background:#1b1b1c;color:var(--tekst);font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap}.k:hover{border-color:#3a3a3c}.k.gull{background:var(--gull);color:#0b0b0c;border-color:var(--gull)}.k.rod{color:#ff9a8a;border-color:#3a2a20}
@@ -89,6 +93,7 @@ async function vis() {
     if (FANE === "kontoer") { DATA.k = await kall("GET", "/kontoer"); DATA.o = DATA.o || await kall("GET", "/oversikt"); }
     if (FANE === "hjem") DATA.s = await kall("GET", "/steder");
   } catch (e) { m.innerHTML = `<div class="feil"><h2>${esc(e.message)}</h2><p class="sub">Valhalla er bare for tjenesteeieren og administratorer av Skjold Lab.</p></div>`; return; }
+  clearInterval(window._vhT);
   if (FANE === "oversikt") {
     const o = DATA.o;
     m.innerHTML = `<h1>Oversikt</h1><p class="under">Skjold-hjem på hjem.skjold-lab.com – kontoer, hjem og deling.</p><div class="rutenett">
@@ -102,7 +107,7 @@ async function vis() {
       <div class="verktoy"><input id="sok" placeholder="Søk e-post" value="${esc(SOK)}" style="width:280px"><span class="sub">${l.length} av ${DATA.k.length}</span></div>
       <div class="tabell kontoer"><div class="rad hode"><span>KONTO</span><span>HJEM</span><span>SIST SETT</span><span>STATUS</span><span></span></div>
       ${l.map((k) => { const sjef = DATA.o?.tjenesteeiere?.includes(k.epost) || MEG.tjenesteeiere?.includes(k.epost); return `<div class="rad">
-        <span><b>${esc(k.epost)}</b><br><span class="sub">Først sett ${dato(k.forst)}</span></span>
+        <span style="display:flex;gap:12px;align-items:center">${k.bilde && /^data:image\/(jpeg|png|webp);base64,/.test(k.bilde) ? `<img src="${k.bilde}" alt="" class="ava">` : `<span class="ava">${esc((k.epost[0] || "?").toUpperCase())}</span>`}<span><b>${esc(k.epost)}</b><br><span class="sub">Først sett ${dato(k.forst)}</span></span></span>
         <span>${k.eierAv.map((s) => `<span class="chip eier" title="eier">★ ${esc(s.navn)}</span>`).join("")}${k.medlemAv.map((s) => `<span class="chip">${esc(s.navn)}</span>`).join("") || (k.eierAv.length ? "" : '<span class="sub">Ingen hjem</span>')}</span>
         <span class="sub">${siden(k.sist)}</span>
         <span>${sjef ? '<span class="merke gull">TJENESTEEIER</span>' : k.admin ? '<span class="merke gull">ADMIN</span>' : ""} ${k.sperret ? '<span class="merke rod">SPERRET</span>' : '<span class="merke gronn">AKTIV</span>'} ${k.tofa ? '<span class="merke">2FA</span>' : ""}</span>
@@ -131,7 +136,27 @@ async function vis() {
       <div class="tall"><span>TJENESTEEIERE</span><b style="font-size:15px;margin-top:10px;line-height:1.5">${o.tjenesteeiere.map(esc).join("<br>") || "–"}</b><small>OWNER_EMAILS i Workeren</small></div>
       <div class="tall"><span>ADMINISTRATORER</span><b style="font-size:15px;margin-top:10px;line-height:1.5">${o.admins.map(esc).join("<br>") || "Ingen"}</b><small>Gis under Kontoer (bare tjenesteeieren)</small></div>
       <div class="tall"><span>DU ER</span><b style="font-size:15px;margin-top:10px">${esc(o.meg)}</b><small>${o.eier ? "Tjenesteeier" : "Administrator"}</small></div></div>
+      <h2 style="margin:30px 0 4px;font-size:19px">Vedlikehold</h2>
+      <p class="under" style="margin-top:0">Sett tjenesten i vedlikehold: alle unntatt eiere og admins får en nedtelling, og beskjed om at Skjold fortsatt virker lokalt hjemme. Enhetene holder koblingen.</p>
+      <div class="vh ${o.vedlikehold?.aktiv ? "på" : ""}">
+        <div style="display:flex;align-items:center;gap:12px"><span class="merke ${o.vedlikehold?.aktiv ? "gull" : "gronn"}">${o.vedlikehold?.aktiv ? "VEDLIKEHOLD PÅ" : "I DRIFT"}</span>
+          ${o.vedlikehold?.aktiv ? `<span class="sub">Startet ${siden(o.vedlikehold.fra)} av ${esc(o.vedlikehold.av || "–")}${o.vedlikehold.til ? " · ferdig ca. " + new Date(o.vedlikehold.til * 1000).toLocaleString("nb-NO", { weekday: "short", hour: "2-digit", minute: "2-digit" }) + ` (<span id="vhNed"></span>)` : ""}</span>` : ""}</div>
+        <label class="sub">Melding til brukerne<input id="vhMelding" placeholder="F.eks. Ny database – raskere synk" value="${esc(o.vedlikehold?.melding || "")}" maxlength="300"></label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <label class="sub">Varighet<select id="vhVarighet">${[[15, "15 minutter"], [30, "30 minutter"], [60, "1 time"], [120, "2 timer"], [240, "4 timer"], [0, "Ukjent"]].map(([v, n]) => `<option value="${v}" ${v === 30 ? "selected" : ""}>${n}</option>`).join("")}<option value="egen">Ferdig kl. …</option></select></label>
+          <label class="sub" id="vhKlLapp" style="display:none">Ferdig<input id="vhKl" type="datetime-local"></label>
+          <button class="k ${o.vedlikehold?.aktiv ? "" : "gull"}" data-vh="1">${o.vedlikehold?.aktiv ? "Oppdater" : "Start vedlikehold"}</button>
+          ${o.vedlikehold?.aktiv ? '<button class="k" data-vh="forleng">+15 min</button><button class="k rod" data-vh="0">Avslutt – tilbake i drift</button>' : ""}
+        </div>
+      </div>
       <p class="sub" style="margin-top:22px">Workeren, Durable Objects og Access styres i Cloudflare-dashbordet (Workers &amp; Pages → skjold-hjem, og Zero Trust → Access).</p>`;
+    $("#vhVarighet").onchange = (e) => { $("#vhKlLapp").style.display = e.target.value === "egen" ? "" : "none"; };
+  }
+  const vh = DATA.o?.vedlikehold;
+  if (vh?.aktiv) {
+    m.insertAdjacentHTML("afterbegin", `<div class="vhbanner"><b>Vedlikehold pågår</b><span class="sub">Brukerne ser nedtellingen${vh.til ? "" : " (uten sluttid)"}${vh.melding ? " · «" + esc(vh.melding) + "»" : ""}</span><span id="vhNed2" style="margin-left:auto;color:var(--gull);font-family:var(--mono);font-size:18px"></span></div>`);
+    const tikk = () => { const s = Math.max(0, Math.round((vh.til || 0) - Date.now() / 1000)); const t = vh.til ? (s ? `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` : "tiden er ute") : ""; for (const id of ["#vhNed", "#vhNed2"]) { const el = $(id); if (el) el.textContent = t; } };
+    tikk(); window._vhT = setInterval(tikk, 1000);
   }
 }
 
@@ -140,6 +165,18 @@ document.addEventListener("click", async (e) => {
   try {
     if (b.dataset.sperr) { const v = b.dataset.v === "1"; if (v && !(await spor({ tittel: "Sperr " + b.dataset.sperr + "?", tekst: "Kontoen kommer ikke inn på Skjold-hjem før sperringen oppheves. Hjemmene og enhetene beholdes.", ok: "Sperr", farlig: true }))) return; await kall("POST", "/kontoer/" + encodeURIComponent(b.dataset.sperr), { sperret: v }); melding(v ? "Kontoen er sperret" : "Sperringen er opphevet"); }
     else if (b.dataset.tofa) { if (!(await spor({ tittel: "Tilbakestill totrinnsbekreftelse for " + b.dataset.tofa + "?", tekst: "Bruk dette bare når personen har mistet telefonen og reservekodene, og du har bekreftet hvem det er. Hen logger inn med bare e-post-kode og bør slå det på igjen.", ok: "Tilbakestill", farlig: true }))) return; await kall("POST", "/kontoer/" + encodeURIComponent(b.dataset.tofa), { tofaAv: true }); melding("Totrinnsbekreftelsen er slått av"); }
+    else if (b.dataset.vh) {
+      const o = DATA.o.vedlikehold || {}, naa = Math.floor(Date.now() / 1000);
+      if (b.dataset.vh === "0") { await kall("POST", "/vedlikehold", { aktiv: false }); melding("Tjenesten er tilbake i drift"); }
+      else if (b.dataset.vh === "forleng") { await kall("POST", "/vedlikehold", { ...o, aktiv: true, til: Math.max(o.til || naa, naa) + 900 }); melding("Forlenget med 15 minutter"); }
+      else {
+        const v = $("#vhVarighet").value;
+        const til = v === "egen" ? Math.floor(new Date($("#vhKl").value).getTime() / 1000) || 0 : Number(v) ? naa + Number(v) * 60 : 0;
+        if (!o.aktiv && !(await spor({ tittel: "Starte vedlikehold?", tekst: "Alle unntatt eiere og admins mister fjernstyring, deling og Skjold Cloud til du avslutter. De får beskjed om at Skjold fortsatt virker lokalt.", ok: "Start vedlikehold", farlig: true }))) return;
+        await kall("POST", "/vedlikehold", { aktiv: true, melding: $("#vhMelding").value.trim(), til });
+        melding(o.aktiv ? "Vedlikeholdet er oppdatert" : "Vedlikehold startet");
+      }
+    }
     else if (b.dataset.admin) { const v = b.dataset.v === "1"; await kall("POST", "/kontoer/" + encodeURIComponent(b.dataset.admin), { admin: v }); melding(v ? "Har nå tilgang til Valhalla" : "Valhalla-tilgangen er fjernet"); }
     else if (b.dataset.legg) { const ep = await spor({ tittel: "Legg til medlem", tekst: "Personen ser hjemmet neste gang hen logger inn med denne e-postadressen.", plass: "navn@eksempel.no", ok: "Legg til" }); if (!ep) return; await kall("POST", "/steder/" + b.dataset.legg, { leggTil: ep }); melding("Medlemmet er lagt til"); }
     else if (b.dataset.fjern) { if (!(await spor({ tittel: "Fjern " + b.dataset.fjern + "?", tekst: "Personen mister tilgangen til hjemmet.", ok: "Fjern", farlig: true }))) return; await kall("POST", "/steder/" + b.dataset.s, { fjern: b.dataset.fjern }); melding("Medlemmet er fjernet"); }
@@ -156,6 +193,7 @@ document.addEventListener("click", async (e) => {
     MEG = await r.json();
     if (!r.ok) throw new Error(MEG.error || "ikke innlogget");
     $("#meg").innerHTML = `<b>${esc(MEG.epost)}</b>${MEG.eier ? "Tjenesteeier" : MEG.valhalla ? "Administrator" : "Ingen tilgang"}`;
+    if (MEG.tofa && !MEG.tofaOk) { $("#main").innerHTML = '<div class="feil"><h2>Bekreft at det er deg</h2><p class="sub">Totrinnsbekreftelse er på for kontoen din. Bekreft denne nettleseren med passkey, kode eller fra en annen enhet.</p><p><a href="/konto?fra=/valhalla/">Bekreft på konto-siden</a></p></div>'; tegnNav(); return; }
     if (!MEG.valhalla) { $("#main").innerHTML = '<div class="feil"><h2>Ingen tilgang til Valhalla</h2><p class="sub">Valhalla er bare for tjenesteeieren og administratorer av Skjold Lab.</p><p><a href="/">Til Skjold-hjem</a></p></div>'; tegnNav(); return; }
     vis();
   } catch (e) { $("#main").innerHTML = `<div class="feil"><h2>Logg inn på Skjold-hjem først</h2><p class="sub">${esc(e.message)}</p><p><a href="/">Logg inn</a></p></div>`; }
