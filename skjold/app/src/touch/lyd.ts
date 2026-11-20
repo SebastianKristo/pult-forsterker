@@ -9,7 +9,12 @@
 // - tastene på tastaturet er lysere og svakere, sletting litt lavere, og raske trykk etter hverandre dempes litt
 export type LydType = 'trykk' | 'tast' | 'slett' | 'på' | 'av';
 
-const NIVÅ = [0, 0.035, 0.07];          // Av / Lav / Middels (lineær forsterkning før hovedvolumet)
+/** Styrke i prosent (0–100) → lineær forsterkning før hovedvolumet. Kvadratisk, så de lave stegene blir fine nok:
+ *  20 % ≈ 0,02 (svakt), 40 % ≈ 0,08, 70 % ≈ 0,25, 100 % = 0,5 (topp ca. −10 dBFS – tydelig, men fortsatt kort). */
+export const styrke = (p: number): number => 0.5 * Math.pow(Math.max(0, Math.min(100, p)) / 100, 2);
+/** Lagret valg (tLydP: steg på 10 %) → prosent. Eldre valg (Av / Lav / Middels i tLyd) gir 0 / 30 / 50. */
+export const lydProsent = (tLydP: number | undefined, tLyd: number | undefined): number =>
+  tLydP !== undefined && tLydP >= 0 ? Math.min(10, tLydP) * 10 : [0, 30, 50][tLyd ?? 1] ?? 30;
 let ctx: AudioContext | null = null, støy: AudioBuffer | null = null, sist = 0;
 
 function lydCtx(): AudioContext | null {
@@ -32,8 +37,9 @@ const ARTER: Record<LydType, { f: number; q: number; tikk: number; tokk: number;
   av: { f: 2200, q: 1.2, tikk: 0.9, tokk: 0.5, lav: 150, ms: 6 }
 };
 
+/** nivå = styrke i prosent (0–100). */
 export function spillLyd(type: LydType, nivå: number): void {
-  const g0 = NIVÅ[nivå] ?? 0;
+  const g0 = styrke(nivå);
   if (!g0) return;
   const c = lydCtx();
   if (!c || !støy) return;
@@ -64,7 +70,7 @@ export function spillLyd(type: LydType, nivå: number): void {
 }
 
 /** Lytt på hele skjermen: knapper gir «trykk» når trykket blir et klikk (ikke når du ruller), elementer med
- *  data-lyd (tastaturet) gir lyden sin straks fingeren treffer. nivå() leser innstillingen (0 av, 1 lav, 2 middels). */
+ *  data-lyd (tastaturet) gir lyden sin straks fingeren treffer. nivå() leser innstillingen (styrke i prosent). */
 export function startTrykkelyder(nivå: () => number): void {
   const finn = (e: Event) => (e.target as Element | null)?.closest?.('[data-lyd],button,[role="button"]') as HTMLElement | null;
   document.addEventListener('pointerdown', (e) => {
