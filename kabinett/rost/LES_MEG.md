@@ -125,6 +125,10 @@ Ingen hullkort: de fem taktbryterne (6 × 6 × 5 mm) sitter i en printet holder 
 
 ## Kobling (ESP32-S3)
 
+![Koblingsskjema for Røst](rost_koblinger.png)
+
+Skjemaet ([PNG](rost_koblinger.png) · [SVG](rost_koblinger.svg), laget av `lag_koblinger.py`) viser alle ledningene med 12 V-, 5 V-, 3V3- og GND-skinner, og hvordan knappene kobles på hullkortet.
+
 | Fra | Til |
 |---|---|
 | PCM5102A BCK / LCK (WS) / DIN | GPIO4 / GPIO5 / GPIO6 |

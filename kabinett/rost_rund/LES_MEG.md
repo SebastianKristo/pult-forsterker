@@ -146,6 +146,10 @@ så Creality Print / OrcaSlicer henter dem selv):
 - Bassrefleks: port Ø18 × 110 mm, ned gjennom bunnen (føttene gir 6 mm luft) → ca. 74 Hz. Beregnet, ikke målt.
 - Elementet skrus i en **utskiftbar elementplate** (92 × 92 × 4 mm, tegnet fra malen i [../elementer](../elementer/LES_MEG.md)), som skrus bak frontblokka med 4 × M3 × 10 i innpressmuttere. Tunnelen gjennom blokka er fast (Ø80, dråpeformet med 45° spiss oppe så den printes uten støtte), men plata har en **krage som fyller hele tunnelen**: åpningen ved elementet er nøyaktig elementets utsparing (Ø54 for RS75-4) og vider seg ut i 45° mot fronten. Elementet skrus bakfra med M3 i innpressmuttere i plata. Plata printes med baksiden ned og kragen opp, uten støtte. Standard er Dayton RS75-4; `skjold-rost-rund-k2-elementplater.3mf` har plater for fire elementer.
 
+## Kobling
+
+Samme elektronikk og pinner som Røst: se [koblingsskjemaet](../rost/rost_koblinger.png) og tabellen i [Røst](../rost/LES_MEG.md#kobling-esp32-s3).
+
 ## Deler (i tillegg til Røst-elektronikken)
 
 | Del | Antall |
