@@ -564,7 +564,8 @@ class Touch:
         self.cmd = {"cmd": "", "arg": "", "seq": 0}
         self.voice = {"state": "idle", "text": "", "reply": "", "t": 0.0}
         self.tekst_til = 0.0                  # skjermtastaturet er oppe: volumhjulet flytter markøren til dette tidspunktet
-        self.hjul = {"n": 0, "s": 0}          # tellere skjermen leser: n = markørsteg (±), s = trykk (slett ett tegn)
+        self.hjul = {"n": 0, "s": 0, "v": 0, "r": 0}   # tellere skjermen leser: n = markørsteg (±), s = trykk (slett ett tegn),
+        #                                              v = volumhakk (antall), r = retning på siste (+1/−1) – gir trykkelyd
         self._auto = {"t": 0.0, "tiles": [], "scenes": []}
         self._cache = {"t": 0.0, "data": None}
         self._wake = {"t": 0.0, "data": None}
@@ -885,6 +886,11 @@ class Touch:
         self.ctx["changed"]()
         return True
 
+    def volum_hakk(self, d: int) -> None:
+        """Volumhjulet ble vridd (ikke i tekstmodus): skjermen spiller et lite hakk-klikk per steg."""
+        self.hjul = {**self.hjul, "v": self.hjul.get("v", 0) + 1, "r": 1 if d > 0 else -1}
+        self.ctx["changed"]()
+
     def hjul_trykk(self) -> bool:
         if time.time() >= self.tekst_til:
             return False
@@ -930,8 +936,14 @@ def start_encoder(ctx: dict, spec: str, touch=None):
         return None
     from gpiozero import Button, RotaryEncoder
     enc = RotaryEncoder(pins[0], pins[1], max_steps=0)
-    enc.when_rotated_clockwise = lambda: (touch and touch.hjul_steg(1)) or ctx["volume_step"](2)
-    enc.when_rotated_counter_clockwise = lambda: (touch and touch.hjul_steg(-1)) or ctx["volume_step"](-2)
+    def vri(d):
+        if touch and touch.hjul_steg(d):
+            return
+        ctx["volume_step"](2 * d)
+        if touch:
+            touch.volum_hakk(d)
+    enc.when_rotated_clockwise = lambda: vri(1)
+    enc.when_rotated_counter_clockwise = lambda: vri(-1)
     btn = None
     if len(pins) > 2:
         btn = Button(pins[2], pull_up=True, bounce_time=0.05)
