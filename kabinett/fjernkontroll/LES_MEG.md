@@ -138,7 +138,7 @@ Sjekken kontrollerer kollisjoner og at hver aktuator treffer sin bryter og ingen
 
 ![Innmaten i hullkort-utgaven](hullkort/render_inni.png)
 
-**Byggeoversikt på én side:** [hullkort/fjernkontroll_hullkort_bygg.png](hullkort/fjernkontroll_hullkort_bygg.png) viser lagene, delene i bunnen, hva som kobles til hva og byggerekkefølgen (laget av `hullkort/lag_byggeoversikt.py`).
+**Byggeoversikt på én side:** [hullkort/fjernkontroll_hullkort_bygg.png](hullkort/fjernkontroll_hullkort_bygg.png) viser lagene, delene i bunnen, hva som kobles til hva og byggerekkefølgen (laget av `hullkort/lag_byggeoversikt.py`). **Alle ledningene:** [hullkort/fjernkontroll_hullkort_ledninger.png](hullkort/fjernkontroll_hullkort_ledninger.png) viser hver ledning med farge fra stripekortet, MCP-modulen, skjermadapterne, IR-kortet, batteriet og dokken til XIAO-en (laget av `hullkort/lag_ledninger.py`).
 
 Denne utgaven har **ingen kretskort å bestille** og **ingen fin lodding**. Den passer hvis du ikke stoler på et kretskort du ikke kan rette opp selv. Alt kjøpes ferdig:
 
