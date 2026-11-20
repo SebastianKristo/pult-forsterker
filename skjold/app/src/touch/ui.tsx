@@ -102,18 +102,18 @@ export function Keyboard({ onKey, onBack, onEnter, onFlytt, enter = 'Søk' }: { 
         <div key={i + (num ? 'n' : 'a')} style="display:flex;gap:5px">
           {i === 1 && (num
             ? <button onClick={() => setSym(!sym)} aria-label="Flere tegn" aria-pressed={sym} style={wide + `;width:52px;flex-shrink:0;${sym ? aktiv : ''}`}>{sym ? '123' : '#+='}</button>
-            : <button onPointerDown={shiftNed} onPointerUp={shiftOpp} onPointerCancel={shiftOpp} onPointerLeave={shiftOpp}
+            : <button data-lyd="tast" onPointerDown={shiftNed} onPointerUp={shiftOpp} onPointerCancel={shiftOpp} onPointerLeave={shiftOpp}
                 aria-label={shift === 2 ? 'Store bokstaver låst' : 'Store bokstaver'} aria-pressed={caps}
                 style={wide + `;width:52px;flex-shrink:0;touch-action:none;font-size:18px;${caps ? aktiv : ''}${shift === 2 ? ';box-shadow:inset 0 -3px 0 #f0c46a' : ''}`}>{shift === 2 ? '⇪' : '⇧'}</button>)}
           {i === 2 && <button onClick={() => setNum(!num)} aria-label={num ? 'Bokstaver' : 'Tall og tegn'} style={wide + ';width:74px;flex-shrink:0'}>{num ? 'abc' : '123'}</button>}
-          {[...r].map((c) => <button key={c} onPointerDown={(e) => { e.preventDefault(); tast(c); }} style={key + ';touch-action:none'}>{c}</button>)}
-          {i === 2 && <button onPointerDown={(e) => { e.preventDefault(); onBack(); }} aria-label="Slett" style={wide + ';width:74px;flex-shrink:0;touch-action:none;display:flex;align-items:center;justify-content:center'}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h12v14H8l-6-7zM12 9.5l5 5M17 9.5l-5 5" /></svg></button>}
+          {[...r].map((c) => <button key={c} data-lyd="tast" onPointerDown={(e) => { e.preventDefault(); tast(c); }} style={key + ';touch-action:none'}>{c}</button>)}
+          {i === 2 && <button data-lyd="slett" onPointerDown={(e) => { e.preventDefault(); onBack(); }} aria-label="Slett" style={wide + ';width:74px;flex-shrink:0;touch-action:none;display:flex;align-items:center;justify-content:center'}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h12v14H8l-6-7zM12 9.5l5 5M17 9.5l-5 5" /></svg></button>}
         </div>
       ))}
       <div style="display:flex;gap:5px">
-        {onFlytt && <button onPointerDown={(e) => { e.preventDefault(); onFlytt(-1); }} aria-label="Markør til venstre" style={wide + ';width:52px;flex-shrink:0;touch-action:none;font-size:16px'}>◀</button>}
-        <button onPointerDown={(e) => { e.preventDefault(); tast(' '); }} aria-label="Mellomrom" style={key + ';background:#1a1a1c;font-size:12.5px;color:#8b8b86;touch-action:none'}>mellomrom</button>
-        {onFlytt && <button onPointerDown={(e) => { e.preventDefault(); onFlytt(1); }} aria-label="Markør til høyre" style={wide + ';width:52px;flex-shrink:0;touch-action:none;font-size:16px'}>▶</button>}
+        {onFlytt && <button data-lyd="tast" onPointerDown={(e) => { e.preventDefault(); onFlytt(-1); }} aria-label="Markør til venstre" style={wide + ';width:52px;flex-shrink:0;touch-action:none;font-size:16px'}>◀</button>}
+        <button data-lyd="tast" onPointerDown={(e) => { e.preventDefault(); tast(' '); }} aria-label="Mellomrom" style={key + ';background:#1a1a1c;font-size:12.5px;color:#8b8b86;touch-action:none'}>mellomrom</button>
+        {onFlytt && <button data-lyd="tast" onPointerDown={(e) => { e.preventDefault(); onFlytt(1); }} aria-label="Markør til høyre" style={wide + ';width:52px;flex-shrink:0;touch-action:none;font-size:16px'}>▶</button>}
         <button onClick={onEnter} style="height:42px;width:150px;flex-shrink:0;border-radius:9px;border:none;background:#f0c46a;color:#0b0b0c;font-size:13.5px;font-weight:600;padding:0">{enter}</button>
       </div>
     </div>
