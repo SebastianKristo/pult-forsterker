@@ -60,6 +60,9 @@ opp = 1.2;                      // tastene står 1,2 mm over toppen
 ringOpp = 1.5;                  // gullringen 1,5 mm
 okOpp = 1.1;
 ink = 0.4;                      // symbolene: 0,4 mm innfelt, fylt med annen farge (2 lag à 0,2 mm)
+// styreribbe mot vridning: runde hetter og gullringen har en ribbe (1,0 × 0,6 mm) mot nesen som går i et spor i
+// toppen (OK-en i et spor i ringen). Sporet slutter 1,0 mm under toppflaten (som forsenkningene), så det ikke synes ovenfra.
+nokB = 1.0; nokR = 0.6; nokSpill = 0.2; nokTopp = 1.0;
 kf = 0.5;                       // (ikke brukt lenger: toppkanten er rundet, kr)
 kr = 1.0;                       // myk toppkant: R1,0 rundt hver hette (printes med toppen opp, uten støtte)
 
@@ -236,6 +239,12 @@ module symbol2d(h) {   // symbolet for hette h, i hettens lokale ramme (y peker 
 }
 
 // ---------- hettene ----------
+module nokkel(r, z0, z1) {   // ribbe ut fra radius r mot nesen (+y), fra z0 til z1
+  translate([-nokB/2, r - 0.3, z0]) cube([nokB, nokR + 0.3, z1 - z0]);
+}
+module nokkelspor(r, z0, z1) {   // sporet ribben går i (litt større), fra z0 til z1
+  translate([-nokB/2 - nokSpill, r - 0.4, z0]) cube([nokB + 2*nokSpill, nokR + 0.4 + nokSpill + 0.35, z1 - z0]);
+}
 // Flat underside på zHb, flens fl rundt, kroppen gjennom hullet og opp til toppen + opp. Symbolet er felt inn ink mm.
 function topp_av(h) = h[1] == "ring" ? H + ringOpp : h[1] == "ok" ? H + okOpp : H + opp;
 module hette_kropp(h) {
@@ -246,7 +255,9 @@ module hette_kropp(h) {
       union() {
         translate([0, 0, zHb]) cylinder(r = b/2 + fl, h = flT, $fn = 96);
         translate([0, 0, zHb]) hull() { cylinder(r = b/2, h = zt - zHb - kr, $fn = 96); for (a = [22.5:22.5:90]) cylinder(r = b/2 - kr*(1 - cos(a)), h = zt - zHb - kr + kr*sin(a), $fn = 96); }
+        nokkel(b/2, zHb, H - nokTopp);
       }
+      nokkelspor(ri - 0.3, zHb - 1, H - 1.2 - 0.05);   // OK-ens ribbe
       translate([0, 0, zHb - 1]) cylinder(r = ri, h = H - 0.9 - zHb + 1, $fn = 64);         // OK-ens flens går inn her
       translate([0, 0, H - 0.9 - 0.001]) cylinder(r1 = ri, r2 = ri - 0.7, h = 0.7, $fn = 64);   // 45° krage holder OK-en
       translate([0, 0, H - 0.2 - 0.01]) cylinder(r = ri - 0.7, h = 5, $fn = 64);
@@ -255,10 +266,12 @@ module hette_kropp(h) {
     ri = [for (q = HETTER) if (q[1] == "ring") q[5]][0]/2 - 0.3;   // OK: 0,3 mm klaring inni ringen (nedre del Ø16,4, øvre Ø15)
     union() {
       translate([0, 0, zHb]) cylinder(r = ri, h = H - 1.2 - zHb, $fn = 64);
+      nokkel(ri, zHb, H - 1.2 - 0.15);
       translate([0, 0, H - 1.2 - 0.001]) cylinder(r1 = ri, r2 = ri - 0.7, h = 0.7, $fn = 64);
       translate([0, 0, H - 1.2]) hull() { cylinder(r = b/2, h = zt - (H - 1.2) - kr, $fn = 64); for (a = [22.5:22.5:90]) cylinder(r = b/2 - kr*(1 - cos(a)), h = zt - (H - 1.2) - kr + kr*sin(a), $fn = 64); }
     }
   } else {
+    if (f == "rund") nokkel(b/2, zHb, H - nokTopp);
     translate([0, 0, zHb]) linear_extrude(flT) hform(f, b, hh, fl);
     hull() {
       translate([0, 0, zHb]) linear_extrude(zt - zHb - kr) hform(f, b, hh);
@@ -295,6 +308,7 @@ module hette_front(h) {
         for (a = [22.5:22.5:90]) translate([0, 0, zt - kr + kr*sin(a) - 0.01]) linear_extrude(0.01) hform(f, b, hh, -kr*(1 - cos(a)));
       }
       aktuatorer(h);
+      if (f == "rund") nokkel(b/2, zb, H - nokTopp);
     }
     translate([0, 0, zt - ink]) linear_extrude(1) symbol2d(h);
   }
@@ -324,6 +338,8 @@ module topp() {
     }
     // hull for tastene
     for (h = ALLE) if (h[1] != "ok") ved(h) translate([0, 0, H - tT - 1]) linear_extrude(tT + 2) hform(h[1], h[4], h[5], spill);
+    // spor for styreribbene (runde hetter og gullringen), åpent nedenfra og 1,0 mm under toppflaten
+    for (h = ALLE) if (h[1] == "rund" || h[1] == "ring") ved(h) nokkelspor(h[4]/2, H - tT - 1, H - nokTopp);
     // forsenkning (0,6 mm) under toppen for flensene til oppsettets hetter
     for (h = FRONT) ved(h) translate([0, 0, H - tT - 1]) linear_extrude(1 + akt_h) hform(h[1], h[4], h[5], fl + 0.3);
     // skjermvindu og lomme for glasset
