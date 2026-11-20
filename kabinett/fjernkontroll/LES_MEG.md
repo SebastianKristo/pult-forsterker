@@ -83,8 +83,14 @@ Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavpr
 - **Montering:**
   1. Legg toppen opp ned.
   2. Slipp hettene ned i hullene med forsiden ned og ribben i sporet. Ringen skal i før OK-tasten.
-  3. Legg tastekortet over, med bryterne ned.
+  3. Legg tastekortet over, med bryterne ned (hullkort: med TPU-klipsene tredd på bryterne).
   4. Skru sammen.
+- **TPU-klips mot slark (hullkort-utgaven):** `stl_hu/klips.stl` printes i TPU 95A. Det er 14 klips, ett per bryter ([bilde](hullkort/render_klips.png)). Klipset er en flat plate med hull som tres stramt ned over plungeren. To fjærtunger stikker ut over kanten av bryterhuset, og en knott på hver tunge presser hetten lett opp mot toppen (ca. 0,4 mm forspenning, 5–10 g). Da står hettene stille når du trykker en annen tast. Fjæren legger bare ca. 0,2 N til trykket (bryteren trenger ca. 1,6 N), og sjekken bekrefter at klipset ikke når hetten når du trykker.
+  - **8 lave klips** (rad 1) går under de faste hettene: av/på, Skjold, meny, D-paden og OK.
+  - **6 høye klips** (rad 2, med avskåret hjørne) går under oppsettets hetter: tilbake, avslutt, spill/pause, demp og volum (2).
+  - Tungene peker på tvers av fjernkontrollen. Unntaket er venstre og høyre i D-paden, der de peker langs (mot nesen og halen).
+  - **Print:** 0,2 mm lag, sakte (20–30 mm/s), uten støtte. Platen ligger flatt med knottene opp. Sitter hullet for stramt, vri et 3,5 mm bor gjennom for hånd.
+  - Tre klipsene på bryterne før kortet legges i toppen.
 - **Hvis det slarker:** sjekk at kortet ligger helt an mot skrutappene. Hettene står bare 0,1 mm over bryterne når kortet ligger riktig. Toppen og hettene fra før styreribben passer ikke med de nye. Skriv ut begge på nytt.
 
 ## Tasteoppsett (A, B og C)

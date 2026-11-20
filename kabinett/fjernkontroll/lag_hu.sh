@@ -6,7 +6,7 @@ mkdir -p stl_hu asm_hu
 E='elektronikk="hullkort"'
 for p in topp bunn; do openscad -q -D "part=\"$p\"" -D "$E" -o "stl_hu/$p.stl" skjold_fjernkontroll.scad & done
 openscad -q -D 'part="bunn"' -D dokk_kontakt=true -D "$E" -o stl_hu/bunn_dokk.stl skjold_fjernkontroll.scad &
-for p in topp bunn logo vindu hetter symboler kort skjerm batteri ir flex ledninger hkdeler usbc pogo; do
+for p in topp bunn logo vindu hetter symboler kort skjerm batteri ir flex ledninger hkdeler usbc pogo klips; do
   openscad -q -D "part=\"A_$p\"" -D "$E" -o "asm_hu/$p.stl" skjold_fjernkontroll.scad &
 done
 wait
@@ -14,7 +14,7 @@ python3 sjekk_modell.py asm_hu hullkort || exit 1
 openscad -q --colorscheme=Tomorrow --imgsize=1600,900 --projection=p --camera=27.5,63,7,145,0,90,215 -D 'part="hu_3d"' -D "$E" -o hullkort/render_3d.png skjold_fjernkontroll.scad
 openscad -q --colorscheme=Tomorrow --imgsize=1600,1100 --projection=p --camera=27.5,98.75,7,15,0,-90,418 -D 'part="inni"' -D "$E" -o hullkort/render_inni.png skjold_fjernkontroll.scad
 # K2-plater for denne utgaven: hettene (tappene følger bryterne), IR-vindu og logo, og 3MF med og uten dokk-kontakt
-for p in knapper gull symboler_lyse symboler_morke front_knapper front_symboler ir_vindu logo; do openscad -q -D "part=\"$p\"" -D "$E" -o "stl_hu/$p.stl" skjold_fjernkontroll.scad & done
+for p in knapper gull symboler_lyse symboler_morke front_knapper front_symboler ir_vindu logo klips; do openscad -q -D "part=\"$p\"" -D "$E" -o "stl_hu/$p.stl" skjold_fjernkontroll.scad & done
 wait
 python3 lag_orer.py stl_hu
 python3 - <<'PY'
