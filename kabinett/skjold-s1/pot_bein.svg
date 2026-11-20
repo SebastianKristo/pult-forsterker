@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1060" width="1600" height="1060" font-family="Sora, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#f7f6f2"/>
+<text x="40" y="60" font-size="34" font-weight="700" fill="#1d1d1f" text-anchor="start">B50K med 6 bein: hvilket bein er hvilket</text>
+<text x="40" y="96" font-size="18" font-weight="400" fill="#55554f" text-anchor="start">To potmetre på samme aksel: rad 1–2–3 (nærmest akselen) og rad 4–5–6 (bak). Midtbeinet i hver rad (2 og 5) er glideren.</text>
+<rect x="40" y="130" width="500" height="560" rx="18" fill="#ffffff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="64" y="170" font-size="24" font-weight="700" fill="#1d1d1f" text-anchor="start">A · Forfra</text>
+<text x="64" y="198" font-size="16" font-weight="400" fill="#55554f" text-anchor="start">Akselen peker mot deg, beina ned</text>
+<rect x="170" y="250" width="240" height="190" rx="14" fill="#3a3a3c"/>
+<circle cx="290" cy="345" r="62" fill="#5b5b5e" stroke="#888" stroke-width="3"/>
+<circle cx="290" cy="345" r="30" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<rect x="286" y="318" width="8" height="54" fill="#1d1d1f"/>
+<text x="290" y="285" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">B50K</text>
+<rect x="214" y="440" width="12" height="110" fill="#b9b9b4"/>
+<circle cx="220" cy="572" r="17" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="220" y="578" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">1</text>
+<rect x="284" y="440" width="12" height="110" fill="#b9b9b4"/>
+<circle cx="290" cy="572" r="17" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="290" y="578" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">2</text>
+<circle cx="290" cy="572" r="23" fill="none" stroke="#2f9e5a" stroke-width="3" stroke-dasharray="5 4"/>
+<rect x="354" y="440" width="12" height="110" fill="#b9b9b4"/>
+<circle cx="360" cy="572" r="17" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="360" y="578" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">3</text>
+<text x="290" y="626" font-size="16" font-weight="400" fill="#55554f" text-anchor="middle">Rad bak (4 – 5 – 6) står rett bak 1 – 2 – 3</text>
+<text x="290" y="652" font-size="16" font-weight="400" fill="#55554f" text-anchor="middle">1 står bak 4, 2 bak 5, 3 bak 6</text>
+<path d="M370,280 A95,95 0 0 1 395,390" fill="none" stroke="#2f9e5a" stroke-width="4" marker-end="url(#pil)"/>
+<defs><marker id="pil" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2f9e5a"/></marker></defs>
+<text x="440" y="330" font-size="15" font-weight="700" fill="#2f9e5a" text-anchor="start">med</text>
+<text x="440" y="350" font-size="15" font-weight="700" fill="#2f9e5a" text-anchor="start">klokka</text>
+<rect x="560" y="130" width="500" height="560" rx="18" fill="#ffffff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="584" y="170" font-size="24" font-weight="700" fill="#1d1d1f" text-anchor="start">B · Ovenfra (komponentsiden)</text>
+<text x="584" y="198" font-size="16" font-weight="400" fill="#55554f" text-anchor="start">Akselen peker ned i bildet, mot fronten</text>
+<rect x="680" y="230" width="260" height="250" rx="14" fill="#3a3a3c" opacity="0.92"/>
+<rect x="788" y="480" width="44" height="120" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="810" y="630" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">aksel / knapp (front)</text>
+<circle cx="740" cy="420" r="17" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="740" y="426" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">1</text>
+<circle cx="740" cy="300" r="17" fill="#f2b25c" stroke="#1d1d1f" stroke-width="3"/>
+<text x="740" y="306" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">4</text>
+<circle cx="810" cy="420" r="17" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="810" y="426" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">2</text>
+<circle cx="810" cy="420" r="23" fill="none" stroke="#2f9e5a" stroke-width="3" stroke-dasharray="5 4"/>
+<circle cx="810" cy="300" r="17" fill="#f2b25c" stroke="#1d1d1f" stroke-width="3"/>
+<text x="810" y="306" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">5</text>
+<circle cx="810" cy="300" r="23" fill="none" stroke="#2f9e5a" stroke-width="3" stroke-dasharray="5 4"/>
+<circle cx="880" cy="420" r="17" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="880" y="426" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">3</text>
+<circle cx="880" cy="300" r="17" fill="#f2b25c" stroke="#1d1d1f" stroke-width="3"/>
+<text x="880" y="306" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">6</text>
+<text x="660" y="425" font-size="15" font-weight="700" fill="#55554f" text-anchor="end">foran</text>
+<text x="660" y="305" font-size="15" font-weight="700" fill="#55554f" text-anchor="end">bak</text>
+<text x="810" y="362" font-size="14" font-weight="400" fill="#ddd" text-anchor="middle">beina sett gjennom huset</text>
+<rect x="1080" y="130" width="480" height="560" rx="18" fill="#ffffff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="1104" y="170" font-size="24" font-weight="700" fill="#1d1d1f" text-anchor="start">C · Nedenfra (loddesiden)</text>
+<text x="1104" y="198" font-size="16" font-weight="400" fill="#55554f" text-anchor="start">SPEILVENDT: 1 og 3 bytter side</text>
+<rect x="1190" y="230" width="260" height="250" rx="14" fill="#e9e7e0" stroke="#1d1d1f" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="1298" y="480" width="44" height="120" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1320" y="630" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">aksel / knapp (front)</text>
+<circle cx="1390" cy="420" r="17" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1390" y="426" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">1</text>
+<circle cx="1390" cy="300" r="17" fill="#f2b25c" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1390" y="306" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">4</text>
+<circle cx="1320" cy="420" r="17" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1320" y="426" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">2</text>
+<circle cx="1320" cy="420" r="23" fill="none" stroke="#2f9e5a" stroke-width="3" stroke-dasharray="5 4"/>
+<circle cx="1320" cy="300" r="17" fill="#f2b25c" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1320" y="306" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">5</text>
+<circle cx="1320" cy="300" r="23" fill="none" stroke="#2f9e5a" stroke-width="3" stroke-dasharray="5 4"/>
+<circle cx="1250" cy="420" r="17" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1250" y="426" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">3</text>
+<circle cx="1250" cy="300" r="17" fill="#f2b25c" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1250" y="306" font-size="17" font-weight="700" fill="#1d1d1f" text-anchor="middle">6</text>
+<text x="1320" y="362" font-size="14" font-weight="400" fill="#55554f" text-anchor="middle">loddepunktene på kortet</text>
+<rect x="40" y="710" width="760" height="320" rx="18" fill="#ffffff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="64" y="750" font-size="24" font-weight="700" fill="#1d1d1f" text-anchor="start">D · Sjekk det med multimeteret</text>
+<text x="70" y="795" font-size="19" font-weight="700" fill="#55554f" text-anchor="start">Mellom</text>
+<text x="250" y="795" font-size="19" font-weight="700" fill="#55554f" text-anchor="start">Hva du ser</text>
+<text x="70" y="839" font-size="19" font-weight="700" fill="#1d1d1f" text-anchor="start">1–3 og 4–6</text>
+<text x="250" y="839" font-size="19" font-weight="400" fill="#1d1d1f" text-anchor="start">ca. 42–50 kΩ, endrer seg ikke når du vrir (endene)</text>
+<text x="70" y="883" font-size="19" font-weight="700" fill="#1d1d1f" text-anchor="start">1–2 og 4–5</text>
+<text x="250" y="883" font-size="19" font-weight="400" fill="#1d1d1f" text-anchor="start">øker når du vrir med klokka (sett forfra)</text>
+<text x="70" y="927" font-size="19" font-weight="700" fill="#1d1d1f" text-anchor="start">2–3 og 5–6</text>
+<text x="250" y="927" font-size="19" font-weight="400" fill="#1d1d1f" text-anchor="start">minker når du vrir med klokka</text>
+<text x="70" y="971" font-size="19" font-weight="700" fill="#1d1d1f" text-anchor="start">1–4, 2–5 …</text>
+<text x="250" y="971" font-size="19" font-weight="400" fill="#1d1d1f" text-anchor="start">ingen kontakt (OL) – to separate potmetre</text>
+<text x="70" y="1012" font-size="16" font-weight="400" fill="#55554f" text-anchor="start">Går 1–2 ned når du vrir med klokka, er 1 og 3 byttet om på din pot – bare bytt navn på dem.</text>
+<rect x="820" y="710" width="740" height="320" rx="18" fill="#ffffff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="844" y="750" font-size="24" font-weight="700" fill="#1d1d1f" text-anchor="start">E · I Lepy LP-808</text>
+<text x="850" y="800" font-size="19" font-weight="700" fill="#1d1d1f" text-anchor="start">Akselen går ut gjennom frontpanelet,</text>
+<text x="850" y="838" font-size="19" font-weight="400" fill="#55554f" text-anchor="start">så rad 1–2–3 er nærmest fronten.</text>
+<text x="850" y="876" font-size="19" font-weight="700" fill="#1d1d1f" text-anchor="start">Én rad er venstre kanal, den andre høyre.</text>
+<text x="850" y="914" font-size="19" font-weight="400" fill="#55554f" text-anchor="start">Hvilken som er hvilken spiller ingen rolle</text>
+<text x="850" y="952" font-size="19" font-weight="400" fill="#55554f" text-anchor="start">så lenge begge radene får like motstander.</text>
+<text x="850" y="990" font-size="19" font-weight="700" fill="#1d1d1f" text-anchor="start">Ta bilde av kortet og merk bein 1 med tusj før du lodder.</text>
+</svg>
