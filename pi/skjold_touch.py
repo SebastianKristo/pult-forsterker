@@ -23,7 +23,9 @@ import urllib.request
 
 DEFAULTS = {"tiles": [], "scenes": [], "lock_entity": "", "weather_entity": "", "light_entity": "", "calendar_entity": "",
             # Homey som smarthus-kilde i stedet for Home Assistant: adresse (http://homey-xxxx.local eller IP) og API-nøkkel
-            "hub": "ha", "homey_url": "", "homey_token": "", "homey_devices": []}
+            "hub": "ha", "homey_url": "", "homey_token": "", "homey_devices": [],
+            # Fotoskjermsparer (pi/skjold_foto.py): kilde, Unsplash-nøkkel (bare på enheten) og tema
+            "foto_kilder": "dagens", "unsplash_key": "", "unsplash_tema": "nature"}
 WAKE_WORDS = ("ok_nabu", "hey_jarvis", "hey_mycroft")
 PAGES = ("now", "home", "smart", "alarm", "lib", "rooms", "set")
 SNOOZE_MIN = 9
@@ -57,6 +59,15 @@ def clean(cfg: dict, body: dict) -> dict:
         if k == "hub":
             if v not in ("ha", "homey"):
                 raise ValueError("hub må være ha eller homey")
+        elif k == "foto_kilder":
+            if v not in ("dagens", "unsplash", "begge"):
+                raise ValueError("foto_kilder må være dagens, unsplash eller begge")
+        elif k == "unsplash_key":
+            if isinstance(v, str) and v.startswith("••••"):
+                continue
+            v = re.sub(r"[^A-Za-z0-9_-]", "", str(v or ""))[:120]
+        elif k == "unsplash_tema":
+            v = str(v or "").strip()[:60]
         elif k == "homey_token":
             if isinstance(v, str) and v.startswith("••••"):
                 continue                       # maskert verdi sendt tilbake uendret
@@ -589,6 +600,8 @@ class Touch:
         c = dict(self.cfg)
         if c.get("homey_token"):
             c["homey_token"] = "••••••"
+        if c.get("unsplash_key"):
+            c["unsplash_key"] = "••••••" + c["unsplash_key"][-4:]
         return {**c, "ha": bool(url and tok), "homey": bool(self.cfg["homey_url"] and self.cfg["homey_token"])}
 
     # --- Homey
@@ -1085,6 +1098,12 @@ def routes(touch: Touch):
             return fail("fikk ikke kamerabildet: " + str(e)[:120], 502)
         return web.Response(body=data, content_type=ct, headers={"Cache-Control": "no-store"})
 
+    import skjold_foto as _foto
+    foto = _foto.Foto(lambda: touch.cfg)
+
+    async def h_foto(_r):
+        return web.json_response(await bg(foto.bilder))
+
     async def h_tekst(r):
         return web.json_response(touch.tekstmodus(bool((await body(r)).get("on"))))
 
@@ -1096,4 +1115,4 @@ def routes(touch: Touch):
             ("POST", "/api/touch/smart", h_smart), ("GET", "/api/touch/wake", h_wake), ("POST", "/api/touch/wake", h_wake), ("POST", "/api/touch/unlock", h_unlock), ("GET", "/api/touch/morning", h_morning),
             ("GET", "/api/alarm", h_alarm), ("POST", "/api/alarm", h_alarm), ("GET", "/api/touch/voice", h_voice),
             ("POST", "/api/touch/voice", h_voice), ("POST", "/api/touch/cmd", h_cmd), ("POST", "/api/touch/backlight", h_backlight),
-            ("POST", "/api/touch/tekst", h_tekst)]
+            ("POST", "/api/touch/tekst", h_tekst), ("GET", "/api/touch/foto", h_foto)]
