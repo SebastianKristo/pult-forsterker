@@ -33,7 +33,7 @@ ikke nås direkte. Kontrakten (API og meldingsformat) står i [`docs/SKJOLD_HJEM
 - **Kontosiden** (`/konto`, egen Vite-side `skjold/app/konto.html` → `src/konto/`): oversikt, personlig info (navn),
   sikkerhet, hjem og deling, data og personvern (Skjold Cloud, slett konto). `?velkommen=1` viser velkomststegene
   (navn → lag hjem → koble enhet → totrinnsbekreftelse), som appen og web-UI-et åpner fra oppsettet og Hjem-kortet.
-- **Økter:** hver nettleser/telefon får cookien `skjold_okt` (`sid.utløp.HMAC`, 30 dager, HttpOnly, Secure). Øktene
+- **Økter:** hver nettleser/telefon får cookien `skjold_okt` (`sid.utløp.HMAC`, HttpOnly, Secure) som fornyes så lenge enheten brukes – den går ikke ut av seg selv, så totrinn kreves bare ved ny innlogging. Øktene
   ligger i Konto-DO-en (navn som «Chrome på Mac», sted, sist aktiv, bekreftet/metode, høyst 30).
   `GET /api/hjem/konto/okter`, `DELETE …/okter/<sid>` (logg ut én enhet), `POST …/logg-ut-overalt`.
 - **Totrinnsbekreftelse** er på når kontoen har en kodeapp eller minst én passkey/sikkerhetsnøkkel. Da må nye økter

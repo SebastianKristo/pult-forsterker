@@ -346,7 +346,13 @@ async function oktNoekkel(env) {
   return OKT_NOEKKEL;
 }
 async function oktSign(env, tekst) { return tilB64(await crypto.subtle.sign("HMAC", await oktNoekkel(env), new TextEncoder().encode(tekst))).replace(/=+$/, ""); }
-const OKT_DAGER = 30;
+// Økter utløper ikke av seg selv: cookien fornyes (glidende) så lenge enheten brukes. Totrinnsbekreftelse kreves bare
+// når en ny enhet logger inn, eller etter «logg ut». 400 dager er det lengste nettleserne godtar for en cookie.
+const OKT_DAGER = 400;
+async function oktCookie(env, epost, sid) {
+  const exp = Math.floor(Date.now() / 1000) + OKT_DAGER * 86400;
+  return `skjold_okt=${sid}.${exp}.${await oktSign(env, epost + "|" + sid + "|" + exp)}; Path=/; Max-Age=${OKT_DAGER * 86400}; HttpOnly; Secure; SameSite=None`;
+}
 const OKT_CACHE = new Map(); // epost|sid → { t, bekreftet } – en utlogget økt slutter å virke innen ett minutt
 function enhetsnavn(req) {
   const ua = req.headers.get("user-agent") || "";
@@ -362,15 +368,16 @@ async function hentOkt(req, env, epost, rolle) {
     const [sid, exp, sig] = c.split(".");
     if (sig && Number(exp) > Date.now() / 1000 && likTid(sig, await oktSign(env, epost + "|" + sid + "|" + exp))) {
       const n = epost + "|" + sid, hit = OKT_CACHE.get(n);
-      if (hit && Date.now() - hit.t < 60000) return { sid, bekreftet: hit.bekreftet || !rolle.tofa };
+      // mer enn 30 dager siden cookien ble laget: forny den, så økten aldri går ut mens den er i bruk
+      const forny = Number(exp) - Date.now() / 1000 < (OKT_DAGER - 30) * 86400 ? await oktCookie(env, epost, sid) : undefined;
+      if (hit && Date.now() - hit.t < 60000) return { sid, bekreftet: hit.bekreftet || !rolle.tofa, cookie: forny };
       const r = await (await intern(kontoStub(env, epost), "/okt/sjekk", { sid })).json();
-      if (r.finnes) { OKT_CACHE.set(n, { t: Date.now(), bekreftet: r.bekreftet }); return { sid, bekreftet: r.bekreftet || !rolle.tofa }; }
+      if (r.finnes) { OKT_CACHE.set(n, { t: Date.now(), bekreftet: r.bekreftet }); return { sid, bekreftet: r.bekreftet || !rolle.tofa, cookie: forny }; }
     }
   }
   const e = enhetsnavn(req);
   const { sid } = await (await intern(kontoStub(env, epost), "/okt/ny", { ...e, bekreftet: !rolle.tofa })).json();
-  const exp = Math.floor(Date.now() / 1000) + OKT_DAGER * 86400;
-  const cookieV = `skjold_okt=${sid}.${exp}.${await oktSign(env, epost + "|" + sid + "|" + exp)}; Path=/; Max-Age=${OKT_DAGER * 86400}; HttpOnly; Secure; SameSite=None`;
+  const cookieV = await oktCookie(env, epost, sid);
   return { sid, bekreftet: !rolle.tofa, cookie: cookieV, ny: true };
 }
 async function oktBekreftet(env, epost, okt, metode) {

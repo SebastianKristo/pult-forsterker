@@ -1,12 +1,12 @@
 // «Lag en Skjold-konto»-kortet på Hjem (mobil, PC og web-UI): vises når du ikke er logget inn på Skjold-hjem.
-// Kan hoppes over; da kommer det tilbake etter 30 dager.
+// «Ikke nå» skjuler kortet for godt (kontoen kan lages senere fra Innstillinger → Skjold-hjem).
 import { useState } from 'preact/hooks';
 import { hjemState, skyUrl, tofaMangler, vedlikehold } from '../lib/hjem';
 import { VedlikeholdBanner } from '../lib/vedlikehold';
 import { KONTO_HOPPET } from './onboard';
 
 export function KontoKort() {
-  const [skjult, setSkjult] = useState(() => { try { return Date.now() - Number(localStorage.getItem(KONTO_HOPPET) || 0) < 30 * 86400000; } catch { return false; } });
+  const [skjult, setSkjult] = useState(() => { try { return !!localStorage.getItem(KONTO_HOPPET); } catch { return false; } });
   if (vedlikehold.value?.aktiv) return <VedlikeholdBanner v={vedlikehold.value} />;
   if (tofaMangler.value) return (
     <a href={skyUrl() + '/konto?fra=app'} target="_blank" rel="noreferrer" style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:16px;border:1px solid #5a4420;background:linear-gradient(135deg,#1c170d,#141415 70%);color:#f2f2ee;text-decoration:none" data-testid="konto-2fa">

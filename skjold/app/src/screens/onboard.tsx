@@ -102,6 +102,7 @@ export function FindDevice() {
         <button onClick={() => { ob.qr.value = true; }} style="height:50px;border-radius:14px;border:1px solid #2e2e30;background:transparent;font-size:14px;cursor:pointer">Skann QR-kode på skjermen</button>
         <button onClick={() => openEnhetWifi()} data-testid="add-wifi-find" style="height:50px;border-radius:14px;border:1px solid #2e2e30;background:transparent;font-size:14px;cursor:pointer">Enheten er ikke på nett – sett opp Wi-Fi</button>
         <button onClick={() => openRostSetup()} data-testid="add-rost-find" style="height:50px;border-radius:14px;border:1px solid #5a4420;background:#1c170d;color:#f0c46a;font-size:14px;cursor:pointer">Sett opp en Skjold Røst</button>
+        <button onClick={() => { mode.value = 'lyrion'; }} data-testid="bare-lyrion" style="height:50px;border-radius:14px;border:1px solid #2e2e30;background:transparent;font-size:14px;cursor:pointer">Har du bare Lyrion og Squeezebox? Bruk Skjold som fjernkontroll</button>
         <button onClick={() => { mode.value = 'app'; }} style="height:36px;border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer">Hopp over – legg til enhet senere</button>
       </div>
     </Shell>

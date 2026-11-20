@@ -97,6 +97,7 @@ export function HomePhone() {
     ['UPnP/DLNA', () => go('settings', 'tjenester')],
     ...(vises('ytm') ? [['YT Music', () => go('lib', 'ytm')] as Svc] : []),
     ...(vises('nd') ? [['Navidrome', () => go('lib', 'nd')] as Svc] : []),
+    ...(vises('lms') && status.value?.lyrion ? [['Lyrion', () => go('lms')] as Svc] : []),
     ...swLibs().filter(([id]) => vises(id)).map(([id, n]) => [n, () => go('lib', id)] as Svc),
     ['Lyrion', lyrion],
     ...(inputs.includes('aux') ? [['AUX', () => pick('aux')] as Svc] : []),

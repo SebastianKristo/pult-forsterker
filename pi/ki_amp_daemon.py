@@ -66,6 +66,8 @@ API:
                                           id: popular_no, pop, news, classical, jazz, rock, local
          st = {"id"(stationuuid),"name","genre","url"(url_resolved),"image"(favicon),"country"(kode),"codec","bitrate"}
   POST /api/radio/play {"url","title","image"?,"genre"?}   spill en kanal som ikke er favoritt (via Lyrion)
+  POST /api/lms/rpc {"player","cmd":[…]}   Lyrion-fjernkontroll: JSON-RPC til alle spillere på serveren (ikke stopserver/pref)
+  GET  /api/lms/img?p=/music/<id>/cover_300x300_o   bilde fra Lyrion (bare /music, /imageproxy, /plugins, /html)
   Status: "lyrion": bool (tilkoblet), "lyrion_server": "host:port" for Lyrion JSON-RPC ("" når ikke funnet) – brukes av iOS-appen
           (skjold/ios) til rom/synk og Lyrion-knappen i Kilder. "lyrion_player": Squeezelite-spillerens MAC/playerid i Lyrion.
   Status: "presets" = [{n,title}…] (alle plasser), "presets_count" (antall fylte), "presets_max" (50),
@@ -4935,6 +4937,46 @@ async def h_radio_search(r):
 async def h_radio_browse(_r):
     return web.json_response(await asyncio.get_running_loop().run_in_executor(None, radio_browse))
 
+
+# ---------- Lyrion-fjernkontroll: appen styrer alle spillere på Lyrion-serveren (Squeezebox, piCorePlayer, Røst …) ----------
+# POST /api/lms/rpc {"player": "<mac>"|"", "cmd": [...]}  → Lyrion JSON-RPC (slim.request) mot serveren daemonen bruker
+# GET  /api/lms/img?p=/music/<id>/cover_300x300_o         → bilde fra Lyrion (appen når ikke serveren direkte i nettleseren)
+LMS_SPERRET = {"stopserver", "restartserver", "debug", "logging", "pref", "wipecache"}
+
+async def h_lms_rpc(r):
+    try:
+        b = await r.json()
+    except Exception:
+        b = {}
+    cmd, player = b.get("cmd"), str(b.get("player") or "")
+    if not isinstance(cmd, list) or not cmd or not all(isinstance(x, (str, int, float)) for x in cmd) or len(cmd) > 40:
+        return web.json_response({"error": "cmd må være en liste"}, status=400)
+    if str(cmd[0]) in LMS_SPERRET:
+        return web.json_response({"error": "kommandoen er ikke tillatt herfra"}, status=403)
+    if player and not re.fullmatch(r"[0-9a-fA-F:.\-]{6,40}", player):
+        return web.json_response({"error": "ugyldig spiller"}, status=400)
+    if not lyr.host:
+        return web.json_response({"error": "Lyrion ikke funnet"}, status=503)
+    try:
+        res = await asyncio.get_running_loop().run_in_executor(None, lyr.rpc_as, player, [str(x) if not isinstance(x, (int, float)) else x for x in cmd])
+        return web.json_response({"result": res, "server": f"{lyr.host}:{lyr.port}"})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=502)
+
+async def h_lms_img(r):
+    p = r.query.get("p", "")
+    if not re.fullmatch(r"/(music|imageproxy|plugins|html)/[\w./%?=&:+\-]{1,500}", p) or ".." in p or not lyr.host:
+        return web.Response(status=404)
+    def hent():
+        with urllib.request.urlopen(f"http://{lyr.host}:{lyr.port}{p}", timeout=6) as u:
+            return u.read(4_000_000), u.headers.get("Content-Type", "image/jpeg")
+    try:
+        data, ct = await asyncio.get_running_loop().run_in_executor(None, hent)
+    except Exception:
+        return web.Response(status=404)
+    if not ct.startswith("image/"):
+        return web.Response(status=404)
+    return web.Response(body=data, content_type=ct.split(";")[0], headers={"Cache-Control": "public, max-age=86400"})
 
 async def h_radio_play(r):
     try:
@@ -10684,7 +10726,7 @@ def main():
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),
-                    web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/headphones", h_headphones), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute), web.post("/api/speaker_relay", h_speaker_relay),
+                    web.get("/api/radio/search", h_radio_search), web.get("/api/radio/browse", h_radio_browse), web.post("/api/radio/play", h_radio_play), web.post("/api/lms/rpc", h_lms_rpc), web.get("/api/lms/img", h_lms_img), web.post("/api/menu", h_menu), web.post("/api/auto_input", h_auto_input), web.post("/api/mix", h_mix), web.post("/api/usbsw", h_usbsw), web.post("/api/headphones", h_headphones), web.post("/api/level", h_level), web.post("/api/hp_automute", h_hp_automute), web.post("/api/speaker_relay", h_speaker_relay),
                     web.get("/api/settings", h_settings_get), web.post("/api/settings", h_settings_post), web.get("/api/s1f/pins", h_s1f_pins), web.post("/api/s1f/pins", h_s1f_pins), web.post("/api/s1f/pins/reset", h_s1f_pins_reset), web.get("/api/delt", h_delt), web.post("/api/delt", h_delt),
                     web.post("/api/spotify", h_spotify), web.get("/api/spotify", h_spotify_get), web.get("/api/plex", h_plex_get), web.post("/api/reboot", h_reboot),
                     web.get("/api/wifi", h_wifi_get), web.post("/api/wifi", h_wifi_post), web.post("/api/test", h_test),
