@@ -242,6 +242,102 @@ function control(base: string): void {
 // ---------- standby og oppstart ----------
 const saverOpen = signal(false);
 
+// Fotoskjermsparer (pi/skjold_foto.py): Unsplash og dagens bilde (Wikimedia Commons + NASA), hentet av enheten.
+interface FotoBilde { url: string; title: string; credit: string; sted?: string; source: string }
+interface FotoCfg { foto_kilder: 'dagens' | 'unsplash' | 'begge'; unsplash_key: string; unsplash_tema: string }
+const fotoCfg = signal<FotoCfg | null>(null);
+function hentFotoCfg(): void { getAt<FotoCfg>('', '/api/touch').then((r) => { fotoCfg.value = r; }).catch(() => {}); }
+function lagreFoto(b: Partial<FotoCfg>): void {
+  if (fotoCfg.value) fotoCfg.value = { ...fotoCfg.value, ...b };
+  void postAt('', '/api/touch', b).then(hentFotoCfg);
+}
+const FOTO_TEMA: [string, string][] = [['nature', 'Natur'], ['landscape', 'Landskap'], ['mountains', 'Fjell'], ['ocean', 'Hav'], ['norway', 'Norge'], ['architecture', 'Arkitektur'], ['night sky', 'Nattehimmel'], ['', 'Alt']];
+const fotoTekst = signal(false);   // skjermtastaturet for Unsplash-nøkkelen
+
+function FotoSaver({ clock, dateTxt }: { clock: string; dateTxt: string }) {
+  const [liste, setListe] = useState<FotoBilde[]>([]), [feil, setFeil] = useState('');
+  const [i, setI] = useState(0), [vis, setVis] = useState<[FotoBilde | null, FotoBilde | null]>([null, null]), [lag, setLag] = useState(0);
+  const s = status.value, nx = nextAlarm();
+  useEffect(() => {
+    const hent = () => getAt<{ items: FotoBilde[]; feil: string }>('', '/api/touch/foto').then((r) => {
+      const l = [...r.items]; for (let k = l.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [l[k], l[j]] = [l[j]!, l[k]!]; }
+      setListe(l); setFeil(r.feil);
+    }).catch(() => setFeil('Fikk ikke hentet bilder'));
+    hent();
+    const t = window.setInterval(hent, 2 * 3600 * 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  // nytt bilde hvert 40. sekund: last det ferdig før det tones inn over det forrige (2,5 s)
+  useEffect(() => {
+    if (!liste.length) return;
+    let av = false;
+    const vis1 = (n: number) => {
+      const b = liste[n % liste.length]!, img = new Image();
+      img.onload = () => { if (av) return; setVis((v) => (lag === 0 ? [v[0], b] : [b, v[1]])); setLag((x) => 1 - x); };
+      img.onerror = () => { if (!av) setI((x) => x + 1); };
+      img.src = b.url;
+    };
+    vis1(i);
+    const t = window.setTimeout(() => setI((x) => x + 1), 40000);
+    return () => { av = true; window.clearTimeout(t); };
+  }, [liste, i]);
+  const nå = vis[lag === 1 ? 1 : 0];
+  const bilde = (b: FotoBilde | null, på: boolean, k: number) => b && (
+    <div key={b.url + k} style={`position:absolute;inset:0;opacity:${på ? 1 : 0};transition:opacity 2.5s ease`}>
+      <img src={b.url} alt="" style={`position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:${på ? 'fotozoom 42s linear both' : 'none'}`} />
+    </div>);
+  return <>
+    <div style="position:absolute;inset:0;background:#000">{bilde(vis[0], lag === 0, 0)}{bilde(vis[1], lag === 1, 1)}</div>
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25) 0%,rgba(0,0,0,0) 25%,rgba(0,0,0,0) 55%,rgba(0,0,0,.7) 100%)" />
+    <div style="position:absolute;left:36px;right:36px;bottom:30px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+      <span style="display:flex;flex-direction:column;gap:4px;text-align:left;flex-shrink:0">
+        <span style="font-size:64px;font-weight:300;letter-spacing:-.02em;color:#f2f2ee;line-height:1;text-shadow:0 2px 18px rgba(0,0,0,.5)">{clock}</span>
+        <span style="font-size:15px;color:#e4e4df;text-shadow:0 1px 8px rgba(0,0,0,.6)">{dateTxt}</span>
+        {!!s?.playing && <span style="margin-top:4px;font-size:13px;color:#f2f2ee;max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 8px rgba(0,0,0,.6)">{[s?.artist, s?.title || s?.station].filter(Boolean).join(' – ')}</span>}
+        {nx && <span style={`font-family:${MONO};font-size:11px;letter-spacing:.12em;color:#f0c46a`}>ALARM {nx.time}</span>}
+      </span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:0;max-width:380px;text-align:right;text-shadow:0 1px 8px rgba(0,0,0,.7)">
+        {!!nå?.title && <span style="font-size:13px;color:#f2f2ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">{nå.title}{nå.sted ? ' · ' + nå.sted : ''}</span>}
+        {!!nå && <span style="font-size:11.5px;color:#c9c9c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">Foto: {nå.credit}</span>}
+        {!nå && <span style="font-size:13px;color:#8b8b86">{feil || 'Henter bilder …'}</span>}
+      </span>
+    </div>
+  </>;
+}
+
+/** Valgene for Foto-skjermspareren: kilde, Unsplash-nøkkel og tema. */
+function FotoValg() {
+  useEffect(() => { hentFotoCfg(); }, []);
+  const c = fotoCfg.value, nøkkel = useTekst(80);
+  if (!c) return null;
+  const pill = (på: boolean) => `height:34px;padding:0 12px;border-radius:9px;border:none;background:${på ? '#2a2a2c' : 'transparent'};color:${på ? '#f2f2ee' : '#8b8b86'};font-size:12px;font-weight:600;white-space:nowrap`;
+  const box = 'display:flex;gap:4px;padding:3px;border-radius:12px;background:#0f0f10;border:1px solid #242426;align-items:center';
+  const unsplash = c.foto_kilder !== 'dagens', ti = Math.max(0, FOTO_TEMA.findIndex(([k]) => k === c.unsplash_tema));
+  if (fotoTekst.value) return (
+    <div style="position:absolute;inset:0;z-index:9;background:#0b0b0c;display:flex;flex-direction:column">
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:0 20px">
+        <span style="font-size:15px;font-weight:600">Unsplash-nøkkel («Access Key»)</span>
+        <span style="font-size:12px;color:#8b8b86;line-height:1.4">Lag en gratis app på unsplash.com/developers og skriv inn Access Key her. Den lagres bare på denne enheten.</span>
+        <div style="display:flex;align-items:center;height:48px;border-radius:12px;border:1px solid #2e2e30;background:#141415;padding:0 14px"><TekstFelt t={nøkkel} tom="Access Key" size={15} /></div>
+      </div>
+      <Keyboard enter="Lagre" onKey={nøkkel.inn} onBack={nøkkel.slett} onFlytt={nøkkel.flytt} onEnter={() => { if (nøkkel.v.trim()) lagreFoto({ unsplash_key: nøkkel.v.trim() }); fotoTekst.value = false; }} />
+    </div>);
+  return (
+    <div style="display:flex;flex-direction:column;gap:8px;padding:0 16px 12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="flex:1;font-size:13px;font-weight:600">Bilder fra</span>
+        <div style={box}>{([['dagens', 'Dagens bilde'], ['unsplash', 'Unsplash'], ['begge', 'Begge']] as const).map(([k, n]) => <button key={k} onClick={() => lagreFoto({ foto_kilder: k })} style={pill(c.foto_kilder === k)}>{n}</button>)}</div>
+      </div>
+      {unsplash && <div style="display:flex;align-items:center;gap:10px">
+        <span style="flex:1;font-size:12px;color:#8b8b86">{c.unsplash_key ? 'Unsplash-nøkkel lagret' : 'Unsplash trenger en gratis nøkkel'}</span>
+        <div style={box}>
+          <button onClick={() => { fotoTekst.value = true; }} style={pill(!c.unsplash_key)}>{c.unsplash_key ? 'Bytt nøkkel' : 'Skriv inn nøkkel'}</button>
+          <button onClick={() => lagreFoto({ unsplash_tema: FOTO_TEMA[(ti + 1) % FOTO_TEMA.length]![0] })} style={pill(false)}>Tema: {FOTO_TEMA[ti]![1]}</button>
+        </div>
+      </div>}
+    </div>);
+}
+
 /** Velg skjermsparer med forhåndsvisning, og start den med en gang. */
 function SaverSheet() {
   const cur = settings.value.tIdle ?? 0;
@@ -252,17 +348,19 @@ function SaverSheet() {
   const preview = (i: number) => i === 0 ? <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:300;color:#f2f2ee;letter-spacing:.02em">{hhmm}</span>
     : i === 1 ? <span style={`position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:58%;aspect-ratio:1;border-radius:8px;background:${local.value?.playing ? artOf(local.value) : 'linear-gradient(135deg,#7a5c26,#2a2a2c)'}`} />
     : i === 2 ? <span style={`position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#4a4a47`}>AV</span>
+    : i === 5 ? <span style="position:absolute;inset:0;background:linear-gradient(160deg,#2c4a5e 0%,#7a8f6a 55%,#c9a46a 100%)"><span style="position:absolute;left:8px;bottom:6px;font-size:13px;font-weight:300;color:#fff">{hhmm}</span></span>
     : vid(i === 4);
   const pick = (i: number) => setSetting('tIdle', i);
   return (
-    <Sheet title="Skjermsparer" kicker="VISES NÅR SKJERMEN HVILER" onClose={() => { saverOpen.value = false; }} height={330}>
-      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:6px 16px 12px">
+    <Sheet title="Skjermsparer" kicker="VISES NÅR SKJERMEN HVILER" onClose={() => { saverOpen.value = false; fotoTekst.value = false; }} height={cur === 5 ? 420 : 330}>
+      <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;padding:6px 16px 12px">
         {TOUCH_IDLE.map((n, i) => { const on = i === cur; return (
           <button key={n} onClick={() => pick(i)} aria-pressed={on} style="border:none;background:none;padding:0;display:flex;flex-direction:column;gap:7px;min-width:0;text-align:left">
             <div style={`position:relative;width:100%;aspect-ratio:5/3;border-radius:10px;overflow:hidden;background:#050505;box-shadow:0 0 0 ${on ? '2px #f0c46a' : '1px #2e2e30'}`}>{preview(i)}</div>
             <span style={`font-size:12.5px;font-weight:600;color:${on ? '#f0c46a' : '#f2f2ee'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{n}</span>
           </button>); })}
       </div>
+      {cur === 5 && <FotoValg />}
       <div style="display:flex;gap:10px;align-items:center;padding:0 16px 14px">
         <button onClick={() => setSetting('tTips', settings.value.tTips === false)} aria-pressed={settings.value.tTips !== false} style="flex:1;min-width:0;border:none;background:none;padding:0;display:flex;align-items:center;gap:10px;text-align:left">
           <span style={`width:40px;height:24px;border-radius:12px;background:${settings.value.tTips !== false ? '#f0c46a' : '#3a3a3c'};position:relative;flex-shrink:0;transition:background .2s`}><i style={`position:absolute;top:3px;left:${settings.value.tTips !== false ? 19 : 3}px;width:18px;height:18px;border-radius:9px;background:#fff;transition:left .2s`} /></span>
@@ -1930,6 +2028,7 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
           </span>
         </div>
       </>}
+      {m === 5 && !night && <FotoSaver clock={clock} dateTxt={dateTxt} />}
       {m === 3 && !night && (
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:22px">
           <video autoplay muted loop playsInline style="width:100%;aspect-ratio:3/1;object-fit:cover;display:block">
@@ -1962,7 +2061,7 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
         </div>
       )}
       {!!gestTxt.value && <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 26px;border-radius:999px;background:rgba(20,20,22,.82);border:1px solid #3a2e17;color:#f0c46a;font-size:22px;font-weight:600;white-space:nowrap;animation:tinn .2s ease both">{gestTxt.value}</span>}
-      {m !== 2 && m !== 4 && !night && <span style={`position:absolute;left:0;right:0;bottom:16px;text-align:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#3a3a37`}>TRYKK FOR Å VEKKE</span>}
+      {m !== 2 && m !== 4 && m !== 5 && !night && <span style={`position:absolute;left:0;right:0;bottom:16px;text-align:center;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#3a3a37`}>TRYKK FOR Å VEKKE</span>}
     </button>
   );
 }
