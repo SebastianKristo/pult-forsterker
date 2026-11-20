@@ -16,7 +16,7 @@ import '../lib/services';   // innloggingene (Navidrome, YouTube Music) hentes f
 import { groupAll, groupBusy, groupNone, groups, inGroup, loadGroup, removePreset, savePreset, setMembers, toggleMember } from '../lib/groups';
 import { qrMatrix } from '../lib/qr';
 import { canSeek, seekTo } from '../screens/player';
-import { lydProsent, spillLyd, startTrykkelyder } from './lyd';
+import { lydProsent, spillKlokke, spillLyd, startTrykkelyder } from './lyd';
 import { alleOpen, AlleInnstillinger, oppdaterTrykk } from './innstillinger';
 import { hjulMål, Keyboard, MONO, Sheet, Slider, TekstFelt, useLongPress, useTekst, Wheel } from './ui';
 
@@ -41,7 +41,8 @@ interface Dev {
   setup_net?: { active: boolean; manual?: boolean; ssid: string; password: string; url: string; qr?: string; joining: string; error: string;
     kabel?: boolean; ethernet?: { device: string; state: string } | null } | null;
   ble_setup?: { state: string; error: string; ssid: string; url: string } | null;   // Wi-Fi over Bluetooth (Improv)
-  touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string }; hjul?: { n: number; s: number; v?: number; r?: number } };
+  touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string }; hjul?: { n: number; s: number; v?: number; r?: number }; timere?: Timer[] };
+  home?: { cal?: { day: string; items: string[] }; weather?: { temp?: number | string; text?: string } };
   hold?: { key: string; p: number; title: string; sub: string } | null;   // fysisk knapp som holdes (POWER = omstart)
   rebooting?: boolean; poweroff?: boolean;
 }
@@ -559,6 +560,79 @@ const SRC: Src[] = [
 // ---------- spiller ----------
 const BARS = [14, 21, 26, 21, 14];   // Skjold-logoen: 22/33/42/33/22, stolpene henger fra toppen
 const ROUND = 'width:48px;height:48px;flex-shrink:0;border-radius:24px;border:1px solid #2e2e30;background:rgba(22,22,23,.7);color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0';
+// ---------- Timere: fra Home Assistant Assist («sett en timer på ti minutter») og fra skjermen ----------
+interface Timer { id: string; navn: string; total: number; igjen: number; ferdig: boolean; aktiv: boolean; kilde: string }
+const timerOpen = signal(false);
+const timerKvittert = signal<string[]>([]);   // ferdige timere du har trykket Stopp på (de ryddes på enheten etter 10 min)
+const mmss = (s: number) => (s >= 3600 ? Math.floor(s / 3600) + ':' + String(Math.floor((s % 3600) / 60)).padStart(2, '0') : Math.floor(s / 60)) + ':' + String(s % 60).padStart(2, '0');
+function useTimere(): Timer[] {
+  const [, tikk] = useState(0);
+  useEffect(() => { const t = setInterval(() => tikk((n) => n + 1), 1000); return () => clearInterval(t); }, []);
+  const l = dev().touch?.timere ?? [], fikk = useRef({ t: Date.now(), l });
+  if (fikk.current.l !== l) fikk.current = { t: Date.now(), l };
+  const gått = Math.floor((Date.now() - fikk.current.t) / 1000);
+  return l.filter((x) => !timerKvittert.value.includes(x.id)).map((x) => { const ig = x.aktiv ? Math.max(0, x.igjen - gått) : x.igjen; return { ...x, igjen: ig, ferdig: x.ferdig || ig === 0 }; });
+}
+function stoppTimer(id: string): void { timerKvittert.value = [...timerKvittert.value, id]; void postAt('', '/api/touch/timer', { stopp: id }); }
+/** Små nedtellinger øverst på skjermen. Trykk for å stoppe. */
+function TimerStripe() {
+  const l = useTimere().filter((x) => !x.ferdig);
+  if (!l.length) return null;
+  return <div style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:19;display:flex;gap:8px;pointer-events:auto">
+    {l.slice(0, 3).map((x) => <button key={x.id} onClick={() => stoppTimer(x.id)} aria-label={'Stopp timeren ' + (x.navn || '')} style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #3a2e17;background:rgba(28,23,13,.92);color:#f0c46a;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5M9 2h6" /></svg>
+      <span style={`font-family:${MONO}`}>{mmss(x.igjen)}</span>{x.navn && <span style="color:#c9b48a;font-weight:400;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{x.navn}</span>}{!x.aktiv && <span style="color:#8b8b86;font-weight:400">pause</span>}</button>)}
+  </div>;
+}
+/** Tiden er ute: stor beskjed og klokketoner til du trykker Stopp (høyst 2 minutter). */
+function TimerFerdig() {
+  const l = useTimere().filter((x) => x.ferdig);
+  const x = l[0];
+  useEffect(() => {
+    if (!x) return;
+    wake();
+    const start = Date.now(), spill = () => { if (Date.now() - start < 120000) spillKlokke(lydProsent(settings.value.tLydP, settings.value.tLyd)); };
+    spill(); const t = setInterval(spill, 2600);
+    return () => clearInterval(t);
+  }, [x?.id]);
+  if (!x) return null;
+  return (
+    <div style="position:absolute;inset:0;z-index:23;background:rgba(6,6,7,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;animation:tinn .3s ease both">
+      <svg width="86" height="86" viewBox="0 0 24 24" fill="none" stroke="#f0c46a" stroke-width="1.4" stroke-linecap="round" class="puls"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5M9 2h6" /></svg>
+      <span style={`font-family:${MONO};font-size:12px;letter-spacing:.16em;color:#f0c46a`}>TIMEREN ER FERDIG · {mmss(x.total)}</span>
+      <span style="font-size:40px;font-weight:600;color:#f2f2ee">{x.navn || 'Tiden er ute'}</span>
+      <button onClick={() => l.forEach((y) => stoppTimer(y.id))} style="margin-top:10px;height:64px;padding:0 48px;border-radius:32px;border:none;background:#f2f2ee;color:#0b0b0c;font-size:18px;font-weight:600">Stopp</button>
+    </div>);
+}
+/** Ny timer fra skjermen: hurtigvalg og pluss/minus, valgfritt navn. */
+function TimerSheet() {
+  const [min, setMin] = useState(5);
+  const start = (m: number) => { void postAt('', '/api/touch/timer', { start: m * 60 }); timerOpen.value = false; };
+  const knapp = (på: boolean) => `height:46px;border-radius:12px;border:1px solid ${på ? '#d9a441' : '#242426'};background:${på ? '#1c170d' : '#141415'};color:${på ? '#f0c46a' : '#f2f2ee'};font-size:15px;font-weight:600`;
+  return (
+    <Sheet title="Ny timer" kicker="NEDTELLING · ELLER SI «SETT EN TIMER PÅ …»" onClose={() => { timerOpen.value = false; }} height={330}>
+      <div style="display:flex;flex-direction:column;gap:12px;padding:6px 16px 14px">
+        <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px">{[1, 3, 5, 10, 15, 20, 25, 30, 45, 60, 90, 120].map((m) => <button key={m} onClick={() => setMin(m)} style={knapp(m === min)}>{m < 60 ? m + ' min' : m / 60 + ' t'}</button>)}</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onClick={() => setMin((m) => Math.max(1, m - 1))} style="width:52px;height:52px;border-radius:26px;border:none;background:#242426;color:#f2f2ee;font-size:22px">−</button>
+          <span style={`font-family:${MONO};font-size:30px;min-width:120px;text-align:center`}>{mmss(min * 60)}</span>
+          <button onClick={() => setMin((m) => Math.min(240, m + 1))} style="width:52px;height:52px;border-radius:26px;border:none;background:#242426;color:#f2f2ee;font-size:22px">+</button>
+          <div style="flex:1" />
+          <button onClick={() => start(min)} style="height:52px;padding:0 28px;border-radius:26px;border:none;background:#f0c46a;color:#0b0b0c;font-size:15px;font-weight:600">Start</button>
+        </div>
+      </div>
+    </Sheet>);
+}
+/** Kalender fra Home Assistant på skjermspareren: neste dag med avtaler (høyst to). */
+function KalKort({ nede = false }: { nede?: boolean }) {
+  const k = dev().home?.cal;
+  if (!k?.items?.length || settings.value.tKal === false) return null;
+  return <div style={`position:absolute;${nede ? 'right:36px;bottom:110px' : 'right:30px;top:26px'};max-width:300px;padding:12px 16px;border-radius:14px;background:rgba(14,14,15,.62);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:4px;text-align:left;backdrop-filter:blur(8px)`}>
+    <span style={`font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#f0c46a`}>{k.day}</span>
+    {k.items.map((t, i) => <span key={i} style={`font-size:${i ? 13 : 15}px;font-weight:${i ? 400 : 600};color:${i ? '#c9c9c4' : '#f2f2ee'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{t}</span>)}
+  </div>;
+}
+
 // ---------- Oppdatering av Skjold-enhetene (denne og de andre på nettet), som i web-UI ----------
 interface UpdInfo { current: string | null; latest: string | null; available: boolean; running: boolean; result: string | null; log: string[]; can_update: boolean; error: string | null; channel?: string }
 const oppdOpen = signal(false);
@@ -1068,6 +1142,7 @@ function Setup() {
     ['Natt fra', 'Brukes når nattmodus står på Tidsplan', stepper(String(S.tNStart ?? 22).padStart(2, '0') + ':00', () => setSetting('tNStart', ((S.tNStart ?? 22) + 23) % 24), () => setSetting('tNStart', ((S.tNStart ?? 22) + 1) % 24))],
     ['Natt til', 'Vanlig lys igjen fra dette klokkeslettet', stepper(String(S.tNEnd ?? 7).padStart(2, '0') + ':00', () => setSetting('tNEnd', ((S.tNEnd ?? 7) + 23) % 24), () => setSetting('tNEnd', ((S.tNEnd ?? 7) + 1) % 24))],
     ['Ringeklokke', 'Når noen ringer på', seg(TOUCH_BELL, S.tBell ?? 0, (i) => setSetting('tBell', i))],
+    ['Kalender på skjermspareren', 'Neste avtaler fra Home Assistant (første kalender, eller den som er valgt)', seg(['Av', 'På'], S.tKal === false ? 0 : 1, (i) => setSetting('tKal', i === 1))],
     ['Trykkelyder', 'Myke klikk i høyttalerne når du trykker. Følger hovedvolumet; du hører styrken når du endrer den', (() => {
       const p = lydProsent(S.tLydP, S.tLyd), sett = (n: number) => { const v = Math.max(0, Math.min(100, n)); setSetting('tLydP', Math.round(v / 10)); window.setTimeout(() => spillLyd('trykk', v), 60); };
       return <div style={SEGBOX}>
@@ -1434,6 +1509,7 @@ function AlarmPage() {
   return (
     <section class="inn" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:14px 18px 10px;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y">
       <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:600">Vekkeklokke</span><span style={`font-family:${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>{nx ? 'NESTE ALARM ' + nx.time : 'INGEN ALARMER PÅ'}</span><div style="flex:1" />
+        <button onClick={() => { timerOpen.value = true; }} style="height:44px;padding:0 16px;border-radius:22px;border:1px solid #3a2e17;background:#1c170d;color:#f0c46a;font-size:12.5px;font-weight:600">+ Timer</button>
         {AL.length < 10 && <button onClick={() => { saveAlarms([...AL, { time: '07:00', days: [0, 1, 2, 3, 4], on: true, name: 'Alarm', smart: false, preset: 0, url: '', volume: 30, fade: 0 }]); editAlarm.value = AL.length; }} style="height:44px;padding:0 16px;border-radius:22px;border:1px solid #2e2e30;background:#161617;font-size:12.5px;font-weight:600">+ Ny alarm</button>}</div>
       {!AL.length && <span style="font-size:14px;color:#8b8b86">Ingen alarmer ennå. Trykk «Ny alarm».</span>}
       {!!AL.length && <div style="display:flex;flex-direction:column;border-radius:14px;border:1px solid #242426;background:#141415;flex-shrink:0">
@@ -2226,6 +2302,7 @@ function Standby({ clock, dateTxt }: { clock: string; dateTxt: string }) {
           {playing && !night && <span style="margin-top:26px;display:flex;align-items:center;gap:10px;font-size:13px;color:#8b8b86"><div style={`width:24px;height:24px;border-radius:5px;background:${bg}`} />{(s?.title || s?.station) + (s?.artist ? ' · ' + s.artist : '')}</span>}
         </div>
       )}
+      {(m === 0 || m === 3 || m === 4 || m === 5) && !night && <KalKort nede={m === 4 || m === 5} />}
       {m !== 2 && !night && <TipCard />}
       {gestVol.value !== null && (
         <div style="position:absolute;left:50%;top:22px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;padding:12px 20px;border-radius:999px;background:rgba(20,20,22,.82);border:1px solid #3a2e17;animation:tinn .2s ease both">
@@ -2370,6 +2447,7 @@ function App() {
         </>}
         {editAlarm.value >= 0 && cur === 'alarm' && <AlarmEdit />}
         {wakeOpen.value && cur === 'alarm' && <WakeMenu />}
+        {timerOpen.value && cur === 'alarm' && <TimerSheet />}
         {searchOpen.value && cur === 'lib' && <Search />}
         {queueOpen.value && cur === 'now' && <QueueSheet />}
         {lyricsOpen.value && cur === 'now' && <LyricsSheet />}
@@ -2392,6 +2470,8 @@ function App() {
       {!!doorToast.value && !door.value && <DoorToast />}
       {!!door.value && <Door clock={clock} />}
       {!!D.alarm?.ringing && <AlarmRinging clock={clock} />}
+      <TimerStripe />
+      <TimerFerdig />
       <NightAnim />
       {boot.value.on && <Boot />}
       <RebootLayer />

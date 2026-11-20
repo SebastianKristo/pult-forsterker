@@ -1488,7 +1488,7 @@ SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0
                 # Skjold Touch-skjermen (synkes med app og web-UI)
                 "tRole": 0, "tOut": 2, "tStandby": 1, "tIdle": 0, "tNight": False, "tTips": True,
                 # Skjold Touch: startside, ringeklokke (0 kamera, 1 bare varsel, 2 av), nattmodus (0 av, 1 tidsplan, 2 HA/Homey, 3 på)
-                "tStart": 0, "tBell": 0, "tLyd": 1, "tLydP": -1, "tNightMode": 0, "tNStart": 22, "tNEnd": 7, "tVoice": False, "tWake": 0, "tMic": True, "tBright": 100,
+                "tStart": 0, "tBell": 0, "tKal": True, "tLyd": 1, "tLydP": -1, "tNightMode": 0, "tNStart": 22, "tNEnd": 7, "tVoice": False, "tWake": 0, "tMic": True, "tBright": 100,
                 # Skjold S1: dobbelttrykk på power (0 = Nattmodus, 1 = Av) og Nattlys-klokke i nattmodus
                 "dblPower": 0, "nightLight": True,
                 # Hjemskjermen: rekkefølge og synlighet for seksjonene (skjold_homelayout.py) – per enhet, synkes til alle klienter
@@ -4842,6 +4842,87 @@ def radio_browse():
     with ThreadPoolExecutor(4) as ex:
         shelves = list(ex.map(run, jobs))
     return {"shelves": shelves, "offline": offline[0]}
+
+
+# --- Stemme: «spill …» fra Home Assistant Assist (intensjonen SkjoldSpill i Skjold-integrasjonen) ---
+def _stemme_norm(t):
+    return re.sub(r"[^0-9a-zæøå ]+", "", str(t or "").lower().replace("-", " ")).strip()
+
+
+def stemme_finn_favoritt(q, presets):
+    """Radiofavoritten som passer best med det som ble sagt (nummer 1–50, eller navnet). Ren funksjon (testes)."""
+    ql = _stemme_norm(q)
+    m = re.fullmatch(r"(?:favoritt|kanal|nummer)?\s*(\d{1,2})", ql)
+    if m and 1 <= int(m.group(1)) <= len(presets) and presets[int(m.group(1)) - 1]:
+        return int(m.group(1))
+    best, score = 0, 0
+    for i, p in enumerate(presets):
+        n = _stemme_norm((p or {}).get("title"))
+        if not n:
+            continue
+        sc = 3 if n == ql else 2 if ql and (ql in n or n in ql) else 1 if ql and set(ql.split()) & set(n.split()) else 0
+        if sc > score:
+            best, score = i + 1, sc
+    return best if score >= 2 else 0
+
+
+def stemme_spill(q, kind=""):
+    """Spill det som ble sagt: radiofavoritt → (radio: kanalsøk) → Navidrome-låt → YouTube Music → kanalsøk.
+    Gir {"type", "title"} eller LookupError med en setning Assist kan si."""
+    q = str(q or "").strip()
+    if not q:
+        raise LookupError("Hva vil du høre på?")
+    if kind in ("", "radio"):
+        n = stemme_finn_favoritt(q, state["presets"])
+        if n:
+            play_preset(n, announce=False)
+            return {"type": "radio", "title": state["presets"][n - 1].get("title") or f"kanal {n}"}
+    if kind == "radio":
+        r = radio_search(q[:80]); st = (r.get("norway") or r.get("world") or [None])[0]
+        if st:
+            play_url(st["url"], st["name"], st.get("image", ""), st.get("genre", ""))
+            return {"type": "radio", "title": st["name"]}
+        raise LookupError(f"Fant ingen radiokanal som heter {q}")
+    nd = _nd()
+    if nd:
+        try:
+            r = nd._call("search3", query=q, songCount=10, albumCount=0, artistCount=0)
+            songs = (r.get("searchResult3") or {}).get("song") or []
+            if songs:
+                from skjold_smartradio import nd_stream_url
+                s0 = songs[0]
+                cover = _nd_signed("getCoverArt", id=s0.get("coverArt"), size=500) if s0.get("coverArt") else ""
+                play_url(nd_stream_url(nd, s0["id"]), (s0.get("title") or "") + (" – " + s0["artist"] if s0.get("artist") else ""), cover, "Navidrome",
+                         {"track": s0.get("title") or "", "artist": s0.get("artist") or "", "album": s0.get("album") or "",
+                          "duration": float(s0.get("duration") or 0), "source": "Navidrome"})
+                return {"type": "låt", "title": (s0.get("title") or "") + (" med " + s0["artist"] if s0.get("artist") else "")}
+        except Exception as e:
+            print("Stemme: Navidrome-søket feilet:", e, flush=True)
+    if not ytm.missing():
+        try:
+            tr = ytm.search(q, limit=10)["tracks"]
+            if tr:
+                ytm_play_queue(tr, 0, with_stream=True)
+                return {"type": "låt", "title": tr[0]["title"] + (" med " + tr[0]["artist"] if tr[0].get("artist") else "")}
+        except Exception as e:
+            print("Stemme: YouTube Music-søket feilet:", e, flush=True)
+    r = radio_search(q[:80]); st = (r.get("norway") or r.get("world") or [None])[0]
+    if st:
+        play_url(st["url"], st["name"], st.get("image", ""), st.get("genre", ""))
+        return {"type": "radio", "title": st["name"]}
+    raise LookupError(f"Fant ikke {q}")
+
+
+async def h_stemme_spill(r):
+    """POST /api/voice/play {"query": "…", "kind": "" | "radio" | "musikk"} → {"ok", "type", "title"} | 404 {"error"}."""
+    b = await _obj(r)
+    try:
+        res = await asyncio.to_thread(stemme_spill, str(b.get("query") or ""), str(b.get("kind") or "").replace("musikk", "låt") if b.get("kind") != "radio" else "radio")
+    except LookupError as e:
+        return web.json_response({"ok": False, "error": str(e)}, status=404)
+    except Exception as e:
+        return web.json_response({"ok": False, "error": str(e)}, status=409)
+    return web.json_response({"ok": True, **res})
 
 
 async def h_radio_search(r):
@@ -10599,7 +10680,7 @@ def main():
     app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/settings/reset", h_settings_reset), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recent", h_recent), web.post("/api/recent/play", h_recent), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/recordings/feed.xml", h_rec_feed), web.get("/api/recordings/prog/{prog}/{name}", h_rec_prog_file), web.get("/api/recordings/guide", h_rec_guide), web.get("/api/changelog", h_changelog), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/placement", h_placement), web.post("/api/placement", h_placement), web.post("/api/placement/play", h_placement_play), web.post("/api/placement/start", h_placement_start), web.post("/api/placement/analyze", h_placement_analyze), web.post("/api/placement/record", h_placement_record), web.post("/api/placement/devices", h_placement_devices), web.post("/api/placement/apply", h_placement_apply), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/speakers", h_speakers), web.post("/api/speakers", h_speakers), web.post("/api/speakers/measure", h_speakers_measure), web.post("/api/speakers/save", h_speakers_save), web.get("/api/speakers/search", h_speakers_search), web.get("/api/speakers/profile/{pid}", h_speakers_profile), web.post("/api/speakers/share", h_speakers_share), web.post("/api/speakers/flag", h_speakers_share), web.post("/api/speakers/calibration", h_speakers_calibration), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.post("/api/seek", h_seek), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/settings/reset", h_settings_reset), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recent", h_recent), web.post("/api/voice/play", h_stemme_spill), web.post("/api/recent/play", h_recent), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/recordings/feed.xml", h_rec_feed), web.get("/api/recordings/prog/{prog}/{name}", h_rec_prog_file), web.get("/api/recordings/guide", h_rec_guide), web.get("/api/changelog", h_changelog), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/placement", h_placement), web.post("/api/placement", h_placement), web.post("/api/placement/play", h_placement_play), web.post("/api/placement/start", h_placement_start), web.post("/api/placement/analyze", h_placement_analyze), web.post("/api/placement/record", h_placement_record), web.post("/api/placement/devices", h_placement_devices), web.post("/api/placement/apply", h_placement_apply), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/speakers", h_speakers), web.post("/api/speakers", h_speakers), web.post("/api/speakers/measure", h_speakers_measure), web.post("/api/speakers/save", h_speakers_save), web.get("/api/speakers/search", h_speakers_search), web.get("/api/speakers/profile/{pid}", h_speakers_profile), web.post("/api/speakers/share", h_speakers_share), web.post("/api/speakers/flag", h_speakers_share), web.post("/api/speakers/calibration", h_speakers_calibration), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.post("/api/seek", h_seek), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

@@ -161,7 +161,11 @@ ExecStart=$V/wyoming-satellite/script/run --name "$NAVN" --uri tcp://0.0.0.0:107
   --transcript-command "/usr/local/bin/skjold-voice-event think" \\
   --synthesize-command "/usr/local/bin/skjold-voice-event reply" \\
   --tts-played-command "/usr/local/bin/skjold-voice-event idle" \\
-  --error-command "/usr/local/bin/skjold-voice-event error"
+  --error-command "/usr/local/bin/skjold-voice-event error" \\
+  --timer-started-command "/usr/local/bin/skjold-voice-event timer-started" \\
+  --timer-updated-command "/usr/local/bin/skjold-voice-event timer-updated" \\
+  --timer-cancelled-command "/usr/local/bin/skjold-voice-event timer-cancelled" \\
+  --timer-finished-command "/usr/local/bin/skjold-voice-event timer-finished"
 Restart=always
 RestartSec=3
 

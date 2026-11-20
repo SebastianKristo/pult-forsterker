@@ -214,3 +214,19 @@ Ikke laget ennå:
 - Scener (Flows) fra Homey.
 - Toveis lyd («Snakk») mot ringeklokka, og direktevideo (kameraet vises som bilde som oppdateres hvert sekund).
 - Av/på-knapp på GPIO.
+
+## Stemme: spill musikk, timere og kalender
+
+Med stemmeassistenten (`KI_TOUCH_VOICE=1`) og Skjold-integrasjonen i Home Assistant (versjon 2.30.0 eller nyere):
+
+- **«Spill radio P3»**, **«sett på radiokanalen NRK P1+»**: radiofavoritten med det navnet, ellers et kanalsøk.
+- **«Spill låten Vår i Oslo»**, **«sett på noe med Jens Book-Jenssen»**: første treff i Navidrome, ellers YouTube Music.
+- **«Spill P3 på kjøkkenet»**: på Skjold-enheten i det rommet. Uten rom spiller Skjold-enheten i samme område som
+  stemmesatellitten, altså Touch selv.
+- Integrasjonen legger de norske setningene i `<config>/custom_sentences/nb/skjold.yaml` første gang. Start Home
+  Assistant på nytt etter det. Du kan selv legge til flere setninger i fila.
+- **Timere:** «sett en timer på ti minutter» (Home Assistant sine egne timere). Nedtellingen vises øverst på
+  skjermen, og når tiden er ute, kommer en stor beskjed med klokketoner til du trykker Stopp. Du kan også starte en
+  timer fra skjermen: Vekkeklokke → **+ Timer**.
+- **Kalender på skjermspareren:** neste dag med avtaler fra Home Assistant (den første kalenderen, eller den som er
+  valgt for Touch). Slås av og på under Oppsett → Kalender på skjermspareren.

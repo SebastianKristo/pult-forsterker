@@ -115,6 +115,10 @@ class KiAmpApi:
             body["volume"] = volume
         return await self._req("POST", "/play", body)
 
+    async def voice_play(self, query: str, kind: str = "") -> dict[str, Any]:
+        """Stemme: spill det som ble sagt (radiofavoritt, radiokanal, Navidrome- eller YouTube Music-låt)."""
+        return await self._req("POST", "/voice/play", {"query": query, "kind": kind}, timeout=25)
+
     async def presets(self) -> dict[str, Any]:
         """Radiofavorittene (inntil 50): {"presets":[…|null], "items":[bare fylte], "count", "max", "active"}."""
         return await self._req("GET", "/presets")

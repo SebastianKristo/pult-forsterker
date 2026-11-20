@@ -19,12 +19,13 @@ input[type='range'] { touch-action: none; margin: 0; }
 .vb-t { animation: vbt 1.1s ease-in-out infinite; }
 button:disabled { color: inherit; }
 /* Finpuss: trykk kjennes, sider tones inn, ark glir opp */
-button { transition: transform .12s ease, opacity .12s ease, background-color .15s ease, border-color .15s ease, color .15s ease; }
-button:active:not(:disabled):not(.flat) { transform: scale(.96); opacity: .82; }
+/* «Tyngre»: knappen trykkes raskt ned og fjærer langsomt tilbake med litt sprett, som en fysisk knapp med vekt */
+button { transition: transform .34s cubic-bezier(.2,1.5,.4,1), opacity .2s ease, background-color .2s ease, border-color .2s ease, color .2s ease; }
+button:active:not(:disabled):not(.flat) { transform: scale(.95); opacity: .85; transition: transform .07s ease-out, opacity .07s ease-out; }
 .kb button:active { transform: none; opacity: 1; background: #3a3a3f !important; }
-.inn { animation: inn .22s ease both; }
-@keyframes inn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-@keyframes opp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.inn { animation: inn .38s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes inn { from { opacity: 0; transform: translateY(12px) scale(.992); } to { opacity: 1; transform: none; } }
+@keyframes opp { 0% { transform: translateY(70px); opacity: 0; } 70% { transform: translateY(-3px); opacity: 1; } 100% { transform: none; opacity: 1; } }
 @keyframes ring { from { transform: scale(1); opacity: .9; } to { transform: scale(1.35); opacity: 0; } }
 .ring { animation: ring 1.1s ease-out infinite; }
 @keyframes puls { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }

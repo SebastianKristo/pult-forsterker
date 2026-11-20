@@ -32,3 +32,13 @@ def test_airplay_og_unike_oppforinger(tmp_path, monkeypatch):
     d.recent_add(dict(a, t=3))
     assert [x["key"] for x in d._recent["items"]] == [a["key"], "radio:p3"]
     assert d.recent_entry({"input": "airplay", "title": ""}, {}, 4) is None
+
+
+def test_stemme_finner_radiofavoritt():
+    import ki_amp_daemon as d
+    p = [{"title": "NRK P1+"}, None, {"title": "P3"}, {"title": "Radio Norge"}]
+    assert d.stemme_finn_favoritt("nrk p1+", p) == 1
+    assert d.stemme_finn_favoritt("radio norge", p) == 4
+    assert d.stemme_finn_favoritt("kanal 3", p) == 3
+    assert d.stemme_finn_favoritt("2", p) == 0          # tom plass
+    assert d.stemme_finn_favoritt("jazz", p) == 0
