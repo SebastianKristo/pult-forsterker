@@ -2,6 +2,7 @@
 import { swLibs } from '../lib/subwave';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, PRODUCT_HW, PRODUCT_LABEL, type InputId } from '../lib/api';
+import { KontoKort } from './kontokort';
 import { act, deviceName, eqActiveSource, go, inputLabel, online, openFull, playRecentServer, product, recent, setEqProfile, setSetting, settings, status } from '../lib/store';
 import { art, EQ, EQ_DESC, EQ_HZ, EQ_NAMES, fmt, type EqSource } from '../lib/settings';
 import { vises } from '../lib/meny';
@@ -60,6 +61,7 @@ function HomeBody({ wide = false }: { wide?: boolean }) {
   const rc = recent.value.slice(0, wide ? 10 : 8);
   return (
     <div class={'col ' + (wide ? 'gap16 home-wide' : 'gap16')} style={wide ? undefined : { display: 'contents' }}>
+      <KontoKort />
       {rc.length > 0 && (
         <div class="col gap10">
           <span class="h2">Nylig spilt</span>

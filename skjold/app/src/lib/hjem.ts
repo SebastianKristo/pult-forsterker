@@ -38,7 +38,7 @@ export function setSkyUrl(u: string): void { const v = u.trim().replace(/\/+$/, 
 export function skyBase(): string { return sameOrigin.value ? '' : skyUrl(); }
 const enc = encodeURIComponent;
 export function relayBase(sted: string, id: string): string { return `${skyBase()}/api/hjem/steder/${enc(sted)}/enheter/${enc(id)}`; }
-export function loginUrl(): string { return skyUrl() + '/'; }
+export function loginUrl(): string { return skyUrl() + '/konto?fra=app'; }
 export function stedNavn(): string { return steder.value.find((s) => s.id === stedId.value)?.navn ?? (stedId.value ? 'Sted' : 'Dette nettverket'); }
 
 async function hj<T>(path: string, init?: RequestInit, timeoutMs = 8000): Promise<T> {

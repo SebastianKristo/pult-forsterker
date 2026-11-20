@@ -28,6 +28,19 @@ ikke nås direkte. Kontrakten (API og meldingsformat) står i [`docs/SKJOLD_HJEM
     fantes, kommer med første gang eieren åpner Skjold-hjem.
   - `/api/hjem/meg` → `{epost, valhalla, eier}` (appen viser lenken til Valhalla bare for administratorer).
 
+## Skjold-konto og totrinnsbekreftelse
+
+- **Kontosiden** (`/konto`, egen Vite-side `skjold/app/konto.html` → `src/konto/`): oversikt, personlig info (navn),
+  sikkerhet, hjem og deling, data og personvern (Skjold Cloud, slett konto). `?velkommen=1` viser velkomststegene
+  (navn → lag hjem → koble enhet → totrinnsbekreftelse), som appen og web-UI-et åpner fra oppsettet og Hjem-kortet.
+- **Totrinnsbekreftelse (TOTP):** `POST /api/hjem/konto/2fa/start` → nøkkel og `otpauth://`-adresse (QR på siden),
+  `…/aktiver {kode}` → 10 reservekoder (lagres som SHA-256), `…/bekreft {kode}` (kode eller reservekode) setter
+  økt-cookien `skjold_2fa` (HMAC, 30 dager, HttpOnly, Secure). Med totrinn på svarer alle andre `/api/hjem`- og
+  `/api/valhalla`-kall 401 `{"error":"2fa"}` til økten er bekreftet. `…/av` og `…/nye-koder` krever en kode.
+  `…/logg-ut-overalt` gjør alle økter ugyldige. 8 feil koder låser i 15 minutter.
+- Økt-nøkkelen er `SESSION_SECRET` hvis den er satt, ellers en tilfeldig nøkkel som registeret lager én gang.
+- Valhalla kan tilbakestille totrinnsbekreftelsen for en konto som har mistet telefonen og reservekodene.
+
 ## Legge ut
 
 ```sh
