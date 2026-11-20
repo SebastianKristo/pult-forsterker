@@ -13,13 +13,13 @@ import { art, EQ } from '../lib/settings';
 import { vises } from '../lib/meny';
 import { Icon, PRODUCT_ICON, Slider, SrcCircle } from '../components/ui';
 import { browseState, currentStation, favOf, favs, favsLoaded, loadBrowse, loadFavs, norm, playFav, playStation, search, searchBusy, searchRes, shelves, toggleFav } from '../lib/radio';
-import { ndAlbumList, ndArtist, ndConf, ndConfigured, ndCover, ndPlaylists, ndSearch, ndSearchAll, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
+import { ndAlbumList, ndArtist, ndArtistInfo, ndTopSongs, ndConf, ndConfigured, ndCover, ndPlaylists, ndSearch, ndSearchAll, type NdAlbum, type NdPlaylist, type NdSong } from '../lib/navidrome';
 import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, lq, lsvc, playNd, whenText, type LibId } from '../lib/library';
 import { InputChips, SeekBar, Transport, artFor, canSeek, nowTitle, seekTo, sourceLine, subLine } from './player';
 import { useRooms } from './phone';
 import { SpeakerButton } from './groups';
 import { artistView, collSongs, libUi, openArtist } from './library';
-import { ytmHomeCached, ytmSearch, ytmSearchAll, ytmWhy } from '../lib/ytm';
+import { ytmArtist, ytmHomeCached, ytmSearch, ytmSearchAll, ytmWhy } from '../lib/ytm';
 import { LyricsPane, SubwavePane } from './plugins';
 import { WrappedTeaser } from './extras';
 import { RecognizeBox, RoutinesShelf } from './features';
@@ -403,65 +403,143 @@ const same = (a: string, b: string) => { const n = (x: string) => x.toLowerCase(
 const ARTSPLIT = /\s*(?:\/|,|&| feat\.? | ft\.? | og | x )\s*/i;
 const hovedArtist = (a: string) => a.split(ARTSPLIT)[0] || a;
 
-/** Mer fra artisten (album og låter), eller rett til albumet når et album ble trykket i spilleren. Navidrome først, YouTube Music som reserve. */
+interface ArtistData {
+  lib: LibId; navn: string; bilde: string; bio: string; stats: string[]; topp: NdSong[]; spilt: string[]; alleId: string;
+  albums: NdAlbum[]; singles: NdAlbum[]; videos: NdSong[]; visninger: string[]; lignende: { name: string; cover: string; ytmId?: string; ndId?: string }[]
+}
+/** Vannrett rad med piler på PC (album, singler, videoer, lignende artister). */
+function Karusell({ title, n, children }: { title: string; n: number; children: ComponentChildren }) {
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
+  const flytt = (d: number) => el?.scrollBy({ left: d * Math.max(320, el.clientWidth * 0.8), behavior: 'smooth' });
+  return (
+    <section class="col gap12">
+      <div class="dkx-sh"><h2 style={{ margin: 0 }}>{title}<span class="ax-n">{n}</span></h2>
+        <div class="row gap8 ax-piler"><button class="ax-pil" aria-label="Tilbake" onClick={() => flytt(-1)}>‹</button><button class="ax-pil" aria-label="Fram" onClick={() => flytt(1)}>›</button></div></div>
+      <div class="ax-rad" ref={setEl}>{children}</div>
+    </section>
+  );
+}
+
+/** Artistsiden: stort bilde, biografi, populære låter, album, singler og EP-er, videoer og lignende artister.
+ *  Navidrome først (biografi og toppliste fra Last.fm), YouTube Music som reserve – eller først når du kom derfra. */
 export function ArtistView({ lib }: { lib: LibId }) {
   const v = artistView.value!;
-  const [data, setData] = useState<{ lib: LibId; albums: NdAlbum[]; songs: NdSong[]; navn?: string } | null>(null);
-  const [err, setErr] = useState('');
+  const [data, setData] = useState<ArtistData | null>(null);
+  const [err, setErr] = useState(''), [bioApen, setBioApen] = useState(false), [alle, setAlle] = useState(false), [alleSanger, setAlleSanger] = useState<NdSong[] | null>(null);
   const navn = v.name;
   useEffect(() => {
-    let stop = false; setData(null); setErr('');
-    const viaNd = async () => {
-      if (!ndConfigured()) return null;
+    let stop = false; setData(null); setErr(''); setBioApen(false); setAlle(false); setAlleSanger(null);
+    const viaNd = async (): Promise<ArtistData | { open: NdAlbum } | null> => {
+      if (!ndConfigured() || v.ytmId) return null;
       const r = await ndSearchAll(v.album ? v.album : navn);
-      if (v.album) { const al = r.albums.find((a) => same(a.name, v.album!) && (!navn || same(a.artist, navn) || same(a.artist, hovedArtist(navn)))) ?? r.albums.find((a) => same(a.name, v.album!)); if (al) return { open: al } as const; }
-      const ar = r.artists.find((a) => same(a.name, navn)) ?? r.artists.find((a) => same(a.name, hovedArtist(navn)));
+      if (v.album) { const al = r.albums.find((a) => same(a.name, v.album!) && (!navn || same(a.artist, navn) || same(a.artist, hovedArtist(navn)))) ?? r.albums.find((a) => same(a.name, v.album!)); if (al) return { open: al }; }
+      const ar = v.ndId ? { id: v.ndId, name: navn } : r.artists.find((a) => same(a.name, navn)) ?? r.artists.find((a) => same(a.name, hovedArtist(navn)));
       const albums = ar ? (await ndArtist(ar.id)).albums : r.albums.filter((a) => same(a.artist, navn));
-      const songs = (v.album ? (await ndSearchAll(navn)).songs : r.songs).filter((x) => same(x.artist, navn) || same(x.artist, hovedArtist(navn)));
-      return albums.length || songs.length ? { lib: 'nd' as LibId, albums, songs, ...(ar ? { navn: ar.name } : {}) } : null;
+      const sok = (v.album ? (await ndSearchAll(navn)).songs : r.songs).filter((x) => same(x.artist, navn) || same(x.artist, hovedArtist(navn)));
+      if (!albums.length && !sok.length) return null;
+      const [info, topp] = await Promise.all([ar ? ndArtistInfo(ar.id).catch(() => null) : null, ndTopSongs(ar?.name ?? navn).catch(() => [] as NdSong[])]);
+      const nyeste = [...albums].sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
+      return {
+        lib: 'nd', navn: ar?.name ?? navn, bilde: info?.image ?? '', bio: info?.bio ?? '',
+        stats: [albums.length ? albums.length + ' album' : '', sok.length ? sok.length + '+ låter i biblioteket' : ''].filter(Boolean),
+        topp: topp.length ? topp : sok, spilt: [], alleId: '',
+        albums: nyeste.filter((a) => a.songCount > 3), singles: nyeste.filter((a) => a.songCount <= 3), videos: [], visninger: [],
+        lignende: (info?.similar ?? []).map((a) => ({ name: a.name, cover: a.coverArt ?? '', ndId: a.id }))
+      };
     };
-    const viaYtm = async () => {
-      const r = await ytmSearchAll(v.album ? hovedArtist(navn) + ' ' + v.album : navn);
-      if (v.album) { const al = r.albums.find((a) => same(a.name, v.album!)); if (al) return { open: al, lib: 'ytm' as LibId } as const; }
-      const r2 = v.album ? await ytmSearchAll(navn) : r;
-      return { lib: 'ytm' as LibId, albums: r2.albums.filter((a) => same(a.artist, navn) || same(a.artist, hovedArtist(navn))), songs: r2.tracks.filter((x) => same(x.artist, navn) || same(x.artist, hovedArtist(navn))) };
+    const viaYtm = async (): Promise<ArtistData | { open: NdAlbum; lib: LibId } | null> => {
+      if (v.album) {
+        const r = await ytmSearchAll(hovedArtist(navn) + ' ' + v.album);
+        const al = r.albums.find((a) => same(a.name, v.album!)); if (al) return { open: al, lib: 'ytm' };
+      }
+      const a = await ytmArtist(v.ytmId ? { id: v.ytmId } : { name: hovedArtist(navn) });
+      return {
+        lib: 'ytm', navn: a.name, bilde: a.image, bio: a.description, stats: [a.subscribers ? a.subscribers + ' abonnenter' : '', a.views].filter(Boolean),
+        topp: a.songs, spilt: a.songs.map((x) => x.plays ?? ''), alleId: a.allSongs, albums: a.albums, singles: a.singles,
+        videos: a.videos, visninger: a.videos.map((x) => x.plays ?? ''), lignende: a.related.map((r) => ({ name: r.name, cover: r.cover, ytmId: r.id }))
+      };
     };
     (async () => {
-      const order = lib === 'ytm' ? [viaYtm, viaNd] : [viaNd, viaYtm];
+      const order = lib === 'ytm' || v.ytmId ? [viaYtm, viaNd] : [viaNd, viaYtm];
       for (const f of order) {
         try {
           const r = await f(); if (stop) return;
-          if (r && 'open' in r && r.open) { const l = ('lib' in r && r.lib) || 'nd'; artistView.value = null; libUi.pl.value = { kind: 'album', id: r.open.id, name: r.open.name }; if (l !== lib) go('lib', l); return; }
-          if (r && 'albums' in r && (r.albums.length || r.songs.length)) { setData(r); return; }
+          if (r && 'open' in r) { const l: LibId = 'lib' in r && r.lib ? (r.lib as LibId) : 'nd'; artistView.value = null; libUi.pl.value = { kind: 'album', id: r.open.id, name: r.open.name, cover: r.open.coverArt }; if (l !== lib) go('lib', l); return; }
+          if (r) { setData(r); return; }
         } catch { /* prøv neste kilde */ }
       }
-      if (!stop) { setData({ lib, albums: [], songs: [] }); setErr(v.album ? `Fant ikke albumet «${v.album}» i biblioteket.` : `Fant ikke ${navn} i Navidrome eller YouTube Music.`); }
+      if (!stop) setErr(v.album ? `Fant ikke albumet «${v.album}» i biblioteket.` : `Fant ikke ${navn} i Navidrome eller YouTube Music.`);
     })();
     return () => { stop = true; };
-  }, [navn, v.album, lib]);
-  const l = data?.lib ?? lib, songs = data?.songs ?? [];
-  const play = (list: NdSong[], i: number) => { playNd(list, i, l); go('play'); };
-  const cover = data?.albums[0]?.coverArt ?? songs[0]?.coverArt;
+  }, [navn, v.album, v.ytmId, v.ndId, lib]);
+  const l = data?.lib ?? lib;
+  const play = (list: NdSong[], i: number) => { if (list.length) { playNd(list, i, l); go('play'); } };
+  const blandet = (list: NdSong[]) => [...list].sort(() => Math.random() - 0.5);
+  const miks = async () => {   // artistmiks: populære låter + låter fra de nyeste albumene, blandet
+    if (!data) return;
+    const fra = await Promise.all([...data.albums.slice(0, 3), ...data.singles.slice(0, 3)].map((a) => collSongs(l, 'album', a.id).catch(() => [] as NdSong[])));
+    const sett = new Map<string, NdSong>(); for (const x of [...data.topp, ...fra.flat()]) sett.set(x.id, x);
+    play(blandet([...sett.values()]), 0);
+  };
+  const visAlle = async () => {
+    if (alle) { setAlle(false); return; }
+    setAlle(true);
+    if (data?.alleId && !alleSanger) setAlleSanger(await collSongs(l, 'pl', data.alleId).catch(() => data.topp));
+  };
+  const apneAlbum = (al: NdAlbum) => { artistView.value = null; libUi.pl.value = { kind: 'album', id: al.id, name: al.name, cover: al.coverArt }; if (l !== lib) go('lib', l); };
+  const topp = alle ? (alleSanger ?? data?.topp ?? []) : (data?.topp ?? []).slice(0, 5);
+  const cover = data?.albums[0]?.coverArt ?? data?.singles[0]?.coverArt ?? data?.topp[0]?.coverArt;
+  const heroBg = data?.bilde ? 'url("' + data.bilde.replace(/"/g, '') + '") center 25% / cover no-repeat' : data ? ndBg(cover, navn, 600) : '#141415';
+  const deler = navn.split(ARTSPLIT).filter(Boolean);
   return (
-    <div class="col gap24">
-      <div class="dkx-alhead">
-        <div class="glow" style={{ background: data ? ndBg(cover, navn) : '#141415' }} />
-        <div class="cv" style={{ background: data ? ndBg(cover, navn) : '#1b1b1c', borderRadius: '50%' }} />
-        <div class="col" style={{ gap: '8px', minWidth: 0, position: 'relative' }}>
+    <div class="col gap24 ax">
+      <header class={'ax-hero' + (data?.bilde ? ' foto' : '')}>
+        <div class="ax-bg" style={{ background: heroBg }} />
+        <div class="ax-inn">
+          {!data?.bilde && data && <div class="ax-cv" style={{ background: ndBg(cover, navn) }} />}
           <span class="kicker">ARTIST{data ? ' · ' + LIB_NAME[l].toUpperCase() : ''}</span>
           <h1>{data?.navn || navn}</h1>
-          {navn.split(ARTSPLIT).filter(Boolean).length > 1 && <div class="row gap8" style={{ flexWrap: 'wrap' }}>{navn.split(ARTSPLIT).filter(Boolean).map((a) => <button key={a} class="pchip sm" onClick={() => { artistView.value = { name: a }; }}>{a}</button>)}</div>}
-          <span class="muted">{!data ? (v.album ? 'Leter etter albumet …' : 'Henter …') : err || [data.albums.length ? data.albums.length + ' album' : '', songs.length ? songs.length + ' låter' : ''].filter(Boolean).join(' · ')}</span>
-          {songs.length > 0 && <div class="row gap10" style={{ marginTop: '6px' }}>
-            <button class="btn primary" onClick={() => play(songs, 0)}>Spill</button>
-            <button class="btn" onClick={() => play([...songs].sort(() => Math.random() - 0.5), 0)}>Tilfeldig</button>
+          {deler.length > 1 && <div class="row gap8" style={{ flexWrap: 'wrap' }}>{deler.map((a) => <button key={a} class="pchip sm" onClick={() => { artistView.value = { name: a }; }}>{a}</button>)}</div>}
+          <span class="ax-stats">{!data ? (err || (v.album ? 'Leter etter albumet …' : 'Henter artisten …')) : data.stats.join(' · ')}</span>
+          {data?.bio && <p class={'ax-bio' + (bioApen ? ' apen' : '')}>{data.bio}</p>}
+          {data?.bio && data.bio.length > 220 && <button class="ax-mer" onClick={() => setBioApen(!bioApen)}>{bioApen ? 'Vis mindre' : 'Les mer'}</button>}
+          {data && data.topp.length > 0 && <div class="row gap10 ax-knapper">
+            <button class="btn primary" onClick={() => play(data.topp, 0)}><Icon d={PLAY} size={14} sw={0} color="#0b0b0c" style={{ fill: '#0b0b0c' }} /> Spill</button>
+            <button class="btn" onClick={() => play(blandet(data.topp), 0)}>Tilfeldig</button>
+            <button class="btn" onClick={() => void miks()}>Artistmiks</button>
           </div>}
         </div>
-      </div>
-      {data && data.albums.length > 0 && <section class="col gap12"><SecHead title="Album" />
-        <div class="dkx-grid">{data.albums.map((al) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.year ? String(al.year) : al.artist} onClick={() => { artistView.value = null; libUi.pl.value = { kind: 'album', id: al.id, name: al.name, cover: al.coverArt }; if (l !== lib) go('lib', l); }} />)}</div>
+      </header>
+      {data && data.topp.length > 0 && <section class="col gap12">
+        <div class="dkx-sh"><h2 style={{ margin: 0 }}>Populære låter</h2></div>
+        <div class="ax-pop">{topp.map((x, i) => (
+          <button key={x.id + i} class={lsvc.value && lq.value[li.value]?.id === x.id ? 'on' : ''} onClick={() => play(topp, i)}>
+            <span class="nr">{i + 1}</span>
+            <span class="th" style={{ background: ndBg(x.coverArt, x.title, 120) }} />
+            <span class="t"><b>{x.title}</b><small>{x.artist}</small></span>
+            <span class="al">{x.album}</span>
+            <span class="sp">{(alle ? '' : data.spilt[i]) || ''}</span>
+            <span class="tid">{x.duration ? fmtDur(x.duration) : ''}</span>
+          </button>))}
+        </div>
+        {(data.topp.length > 5 || data.alleId) && <button class="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => void visAlle()}>{alle ? 'Vis færre' : 'Vis alle'}</button>}
       </section>}
-      {songs.length > 0 && <section class="col gap12"><SecHead title="Låter" /><TrackTable list={songs.slice(0, 30)} onPick={(i) => play(songs.slice(0, 30), i)} /></section>}
+      {data && data.albums.length > 0 && <Karusell title="Album" n={data.albums.length}>
+        {data.albums.map((al) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.year ? String(al.year) : 'Album'} onClick={() => apneAlbum(al)} />)}
+      </Karusell>}
+      {data && data.singles.length > 0 && <Karusell title="Singler og EP-er" n={data.singles.length}>
+        {data.singles.map((al) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={'Singel' + (al.year ? ' · ' + al.year : '')} onClick={() => apneAlbum(al)} />)}
+      </Karusell>}
+      {data && data.videos.length > 0 && <Karusell title="Videoer" n={data.videos.length}>
+        {data.videos.map((x, i) => (
+          <button key={x.id} class="ax-vid" onClick={() => play(data.videos, i)}>
+            <span class="bilde" style={{ background: 'url("' + (x.coverArt ?? '').replace(/"/g, '') + '") center / cover no-repeat, #1b1b1c' }}><span class="pl"><Icon d={PLAY} size={18} sw={0} color="#f2f2ee" style={{ fill: '#f2f2ee' }} /></span></span>
+            <span class="n">{x.title}</span><span class="m">{[x.artist, data.visninger[i]].filter(Boolean).join(' · ')}</span>
+          </button>))}
+      </Karusell>}
+      {data && data.lignende.length > 0 && <Karusell title="Lignende artister" n={data.lignende.length}>
+        {data.lignende.map((a) => <Tile key={a.name} round bg={a.cover ? ndBg(a.cover, a.name) : art(a.name).bg} label={a.cover ? '' : a.name.slice(0, 1)} name={a.name} meta="Artist" onClick={() => { artistView.value = { name: a.name, ...(a.ytmId ? { ytmId: a.ytmId } : {}), ...(a.ndId ? { ndId: a.ndId } : {}) }; window.scrollTo({ top: 0 }); }} />)}
+      </Karusell>}
     </div>
   );
 }

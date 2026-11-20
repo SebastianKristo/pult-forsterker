@@ -51,6 +51,23 @@ export async function ytmSearch(q: string): Promise<NdSong[]> {
   return ytmSongs((await apiReq<Obj>('/api/ytm/search?q=' + encodeURIComponent(q), undefined, undefined, 15000))['tracks']);
 }
 
+export type YtmSong = NdSong & { plays?: string };
+export interface YtmArtist {
+  id: string; name: string; description: string; image: string; subscribers: string; views: string; allSongs: string;
+  songs: YtmSong[]; albums: NdAlbum[]; singles: NdAlbum[]; videos: YtmSong[]; related: { id: string; name: string; cover: string; subscribers: string }[]
+}
+const medAar = (x: unknown): NdAlbum[] => { const l = list(x); return ytmColls(l).map((c, i) => { const y = Number(str(l[i] ?? {}, 'year')); return y ? { ...c, year: y } : c; }); };
+/** Artistsiden fra YouTube Music: bilde, biografi, populære låter, album, singler, videoer og lignende artister. */
+export async function ytmArtist(q: { name?: string; id?: string }): Promise<YtmArtist> {
+  const o = await apiReq<Obj>('/api/ytm/artist?' + (q.id ? 'id=' + encodeURIComponent(q.id) : 'q=' + encodeURIComponent(q.name ?? '')), undefined, undefined, 20000);
+  const sanger = (x: unknown, k: string): YtmSong[] => { const l = list(x); return ytmSongs(l).map((s) => ({ ...s, plays: str(l.find((o2) => str(o2, 'id') === s.id) ?? {}, k) })); };
+  return {
+    id: str(o, 'id'), name: str(o, 'name'), description: str(o, 'description'), image: str(o, 'image'), subscribers: str(o, 'subscribers'), views: str(o, 'views'), allSongs: str(o, 'allSongs'),
+    songs: sanger(o['songs'], 'plays'), albums: medAar(o['albums']), singles: medAar(o['singles']), videos: sanger(o['videos'], 'views'),
+    related: list(o['related']).map((r) => ({ id: str(r, 'id'), name: str(r, 'name'), cover: str(r, 'cover'), subscribers: str(r, 'subscribers') })).filter((r) => r.id)
+  };
+}
+
 /** Lesbar feilmelding når biblioteket ikke kunne hentes: gammel programvare, manglende pakker eller feilen fra tjenesten. */
 export async function ytmWhy(e: unknown): Promise<string> {
   let st: YtmStatus | null = null;

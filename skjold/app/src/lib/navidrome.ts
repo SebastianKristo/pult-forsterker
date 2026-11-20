@@ -109,6 +109,19 @@ export async function ndArtist(id: string): Promise<{ artist: NdArtist; albums: 
   const r = await call<{ artist: Record<string, unknown> & { album?: Record<string, unknown>[] } }>('getArtist', { id });
   return { artist: artist(r.artist), albums: arr(r.artist.album).map(album).sort((a, b) => (a.year ?? 9999) - (b.year ?? 9999) || a.name.localeCompare(b.name)) };
 }
+/** Biografi, bilde og lignende artister (Navidrome henter dem fra Last.fm/Spotify når det er satt opp). */
+export async function ndArtistInfo(id: string): Promise<{ bio: string; image: string; similar: NdArtist[] }> {
+  const r = await call<{ artistInfo2?: { biography?: string; largeImageUrl?: string; mediumImageUrl?: string; similarArtist?: Record<string, unknown>[] } }>('getArtistInfo2', { id, count: 12 });
+  const i = r.artistInfo2 ?? {};
+  const bio = String(i.biography ?? '').replace(/<a [^>]*>.*?<\/a>/gi, '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+  const img = String(i.largeImageUrl || i.mediumImageUrl || '');
+  return { bio, image: /2a96cbd8b46e442fc41c2b86b821562f/.test(img) ? '' : img, similar: arr(i.similarArtist).map(artist).filter((a) => a.id && a.id !== '-1') };   // Last.fm sin grå stjerne = ingen bilde
+}
+/** Mest spilte låter for artisten (Last.fm-topplisten matchet mot biblioteket). */
+export async function ndTopSongs(name: string, count = 20): Promise<NdSong[]> {
+  const r = await call<{ topSongs?: { song?: Record<string, unknown>[] } }>('getTopSongs', { artist: name, count });
+  return arr(r.topSongs?.song).map(song);
+}
 /** Alle album A–Å, side for side (rulles inn etter hvert). */
 export async function ndAlbumsAlpha(offset = 0, size = 120): Promise<NdAlbum[]> {
   const r = await call<{ albumList2?: { album?: Record<string, unknown>[] } }>('getAlbumList2', { type: 'alphabeticalByName', size, offset });
