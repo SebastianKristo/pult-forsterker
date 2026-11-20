@@ -558,6 +558,110 @@ const SRC: Src[] = [
 // ---------- spiller ----------
 const BARS = [14, 21, 26, 21, 14];   // Skjold-logoen: 22/33/42/33/22, stolpene henger fra toppen
 const ROUND = 'width:48px;height:48px;flex-shrink:0;border-radius:24px;border:1px solid #2e2e30;background:rgba(22,22,23,.7);color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0';
+// ---------- Oppdatering av Skjold-enhetene (denne og de andre på nettet), som i web-UI ----------
+interface UpdInfo { current: string | null; latest: string | null; available: boolean; running: boolean; result: string | null; log: string[]; can_update: boolean; error: string | null; channel?: string }
+const oppdOpen = signal(false);
+function OppdateringSheet() {
+  const enheter = [{ base: '', navn: local.value?.name || 'Denne Touch', produkt: 'touch' }, ...peers.value.map((p) => ({ base: p.base, navn: p.navn, produkt: p.produkt }))];
+  const [info, setInfo] = useState<Record<string, UpdInfo | 'feil' | undefined>>({});
+  const [vis, setVis] = useState('');
+  const hent = (base: string, sjekk = true) => getAt<UpdInfo>(base, '/api/update' + (sjekk ? '' : '?check=0')).then((r) => setInfo((o) => ({ ...o, [base]: r }))).catch(() => setInfo((o) => ({ ...o, [base]: 'feil' })));
+  useEffect(() => { enheter.forEach((e) => void hent(e.base)); }, []);
+  useEffect(() => {   // følg med mens noen oppdaterer (enheten starter tjenesten på nytt underveis)
+    const t = window.setInterval(() => { enheter.forEach((e) => { const i = info[e.base]; if (i && i !== 'feil' && i.running) void hent(e.base, false); }); }, 3000);
+    return () => window.clearInterval(t);
+  }, [info]);
+  const oppdater = (base: string) => { void postAt(base, '/api/update', {}).then(() => window.setTimeout(() => void hent(base, false), 800)); setInfo((o) => { const i = o[base]; return i && i !== 'feil' ? { ...o, [base]: { ...i, running: true } } : o; }); };
+  const klar = enheter.filter((e) => { const i = info[e.base]; return i && i !== 'feil' && i.available && !i.running && i.can_update; });
+  const pill = (på: boolean) => `height:36px;padding:0 14px;border-radius:18px;border:none;background:${på ? '#f0c46a' : '#242426'};color:${på ? '#0b0b0c' : '#f2f2ee'};font-size:12.5px;font-weight:600;white-space:nowrap`;
+  return (
+    <Sheet title="Oppdatering" kicker="SKJOLD-ENHETENE" onClose={() => { oppdOpen.value = false; }} height={400}>
+      <div class="rull" style="overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:6px;padding:4px 16px 12px">
+        {klar.length > 1 && <button onClick={() => klar.forEach((e) => oppdater(e.base))} style={pill(true) + ';align-self:flex-start;margin-bottom:4px'}>Oppdater alle ({klar.length})</button>}
+        {enheter.map((e) => {
+          const i = info[e.base];
+          const tekst = i === undefined ? 'Sjekker …' : i === 'feil' ? 'Svarer ikke' : i.running ? 'Oppdaterer … ' + (i.log[i.log.length - 1] ?? '').slice(0, 60)
+            : i.available ? 'Ny versjon: ' + (i.latest ?? '') + ' (har ' + (i.current ?? '?') + ')' : i.error ? i.error : 'Oppdatert · ' + (i.current ?? i.latest ?? '');
+          return (
+            <div key={e.base || 'meg'} style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;background:#141415;border:1px solid #242426">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{e.navn}{e.base ? '' : ' (denne)'}</span>
+                  <span style={`font-size:11.5px;color:${i && i !== 'feil' && i.available ? '#f0c46a' : '#8b8b86'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{tekst}</span>
+                </span>
+                {i && i !== 'feil' && i.running && <span class="caret" style="width:10px;height:10px;border-radius:5px;background:#f0c46a" />}
+                {i && i !== 'feil' && !i.running && i.available && i.can_update && <button onClick={() => oppdater(e.base)} style={pill(true)}>Oppdater</button>}
+                {i && i !== 'feil' && !!i.log.length && <button onClick={() => setVis(vis === e.base ? '-' : e.base)} style={pill(false)}>{vis === e.base ? 'Skjul logg' : 'Logg'}</button>}
+              </div>
+              {vis === e.base && i && i !== 'feil' && <pre style={`margin:0;max-height:120px;overflow:auto;font-family:${MONO};font-size:10px;line-height:1.4;color:#a8a8a3;white-space:pre-wrap`}>{i.log.slice(-12).join('\n')}</pre>}
+            </div>);
+        })}
+        <span style="font-size:11.5px;color:#6b6b67;padding:4px 2px">Enheten starter tjenesten på nytt etter oppdateringen. Touch selv laster skjermen på nytt når den er ferdig.</span>
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------- LP-spiller: trykk på coveret / radiologoen på Spiller ----------
+const lpOpen = signal(false);
+effect(() => { if (scr.value !== 'now' || idle.value) lpOpen.value = false; });
+/** Stort cover som et platecover med en vinylplate som glir ut og snurrer mens det spilles, og en tonearm som legger
+ *  seg på plata. Trykk hvor som helst (utenom knappene) for å lukke. */
+function LpSpiller() {
+  const s = status.value, bg = artOf(s), spiller = !!s?.playing;
+  const [pos, setPos] = useState(s?.position ?? 0);
+  useEffect(() => { setPos(s?.position ?? 0); }, [s?.position, s?.title]);
+  useEffect(() => { const t = setInterval(() => { if (status.value?.playing) setPos((p) => p + 1); }, 1000); return () => clearInterval(t); }, []);
+  const dur = s?.duration ?? 0, andel = dur > 0 ? Math.min(1, pos / dur) : 0;
+  const tid = (x: number) => Math.floor(x / 60) + ':' + String(Math.floor(x % 60)).padStart(2, '0');
+  const C = 'min(74vh, 44vw)';                      // coverets side
+  const knapp = 'width:46px;height:46px;border-radius:23px;border:none;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;padding:0';
+  const stopp = (e: Event) => e.stopPropagation();
+  return (
+    <div class="lp-inn" onClick={() => { lpOpen.value = false; }} style="position:absolute;inset:0;z-index:21;background:#060607;overflow:hidden">
+      <div style={`position:absolute;inset:-80px;background:${bg};filter:blur(70px) saturate(1.3);opacity:.42`} />
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(0,0,0,0) 0%,rgba(0,0,0,.55) 70%,rgba(0,0,0,.85) 100%)" />
+      {/* plata: bak coveret, glir ut mot høyre */}
+      <div class={'lp-plate' + (spiller ? ' lp-ut' : '')} style={`position:absolute;top:50%;left:4vw;width:${C};height:${C};transform:translate(${spiller ? '40%' : '16%'},-50%);transition:transform 1.1s cubic-bezier(.2,.8,.2,1)`}>
+        <div style={`position:absolute;inset:2%;border-radius:50%;animation:lpspinn 1.8s linear infinite;animation-play-state:${spiller ? 'running' : 'paused'};
+          background:radial-gradient(circle,#0b0b0c 0 17%,transparent 17.2%),repeating-radial-gradient(circle,#141416 0 1px,#0c0c0d 1px 2.2px);box-shadow:0 20px 60px rgba(0,0,0,.7)`}>
+          <div style={`position:absolute;inset:34%;border-radius:50%;background:${bg};background-size:cover;box-shadow:inset 0 0 0 2px rgba(0,0,0,.4)`} />
+          <div style="position:absolute;left:50%;top:50%;width:3.2%;height:3.2%;margin:-1.6% 0 0 -1.6%;border-radius:50%;background:#060607" />
+        </div>
+        {/* lysrefleks som står stille mens plata går rundt */}
+        <div style="position:absolute;inset:2%;border-radius:50%;background:conic-gradient(from 30deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.07) 30deg,rgba(255,255,255,0) 60deg,rgba(255,255,255,0) 180deg,rgba(255,255,255,.05) 210deg,rgba(255,255,255,0) 240deg);pointer-events:none" />
+      </div>
+      {/* tonearmen */}
+      <svg viewBox="0 0 100 160" style={`position:absolute;top:5vh;left:calc(4vw + min(74vh, 44vw) * 1.12);height:min(52vh, 30vw);transform-origin:70% 12%;transform:rotate(${spiller ? 24 : 0}deg);transition:transform 1.4s cubic-bezier(.3,.7,.2,1) ${spiller ? '.6s' : '0s'};filter:drop-shadow(0 8px 10px rgba(0,0,0,.6))`}>
+        <circle cx="70" cy="18" r="13" fill="#2a2a2c" stroke="#4a4a4e" stroke-width="2" /><circle cx="70" cy="18" r="5" fill="#8b8b86" />
+        <path d="M70 18 L62 120 L48 140" fill="none" stroke="#c9c9c4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        <rect x="38" y="134" width="16" height="22" rx="3" transform="rotate(35 46 145)" fill="#2a2a2c" stroke="#c9c9c4" stroke-width="2" />
+      </svg>
+      {/* coveret */}
+      <div style={`position:absolute;top:50%;left:4vw;width:${C};height:${C};transform:translateY(-50%);border-radius:6px;background:${bg};box-shadow:0 30px 80px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.06)`}>
+        <div style="position:absolute;inset:0;border-radius:6px;background:linear-gradient(115deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 35%)" />
+      </div>
+      {/* tekst og knapper */}
+      <div onClick={stopp} style="position:absolute;right:3vw;bottom:7vh;width:min(23vw,260px);display:flex;flex-direction:column;gap:5px;text-align:left">
+        <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.16em;color:#f0c46a`}>{srcName(s).toUpperCase()}</span>
+        <span style="font-size:22px;font-weight:600;line-height:1.12;color:#f2f2ee;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">{s?.title || s?.station || ''}</span>
+        <span style="font-size:16px;color:#c9c9c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{s?.artist ?? ''}</span>
+        {!!s?.album && <span style="font-size:12.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{s.album}</span>}
+        {dur > 0 && <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">
+          <div style="height:3px;border-radius:2px;background:rgba(255,255,255,.14)"><div style={`width:${(andel * 100).toFixed(2)}%;height:100%;border-radius:2px;background:#f2f2ee`} /></div>
+          <div style={`display:flex;justify-content:space-between;font-family:${MONO};font-size:10.5px;color:#8b8b86`}><span>{tid(Math.min(pos, dur))}</span><span>{tid(dur)}</span></div>
+        </div>}
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+          <button onClick={() => void act(() => api.transport('previous'))} aria-label="Forrige" style={knapp}><svg width="22" height="22" viewBox="0 0 24 24" fill="#f2f2ee"><path d="M19 18.5v-13a.8.8 0 0 0-1.25-.66L9 10.9V6a1 1 0 0 0-2 0v12a1 1 0 0 0 2 0v-4.9l8.75 6.06A.8.8 0 0 0 19 18.5z" /></svg></button>
+          <button onClick={playPause} aria-label={spiller ? 'Pause' : 'Spill'} style="width:58px;height:58px;border-radius:29px;border:none;background:#f2f2ee;display:flex;align-items:center;justify-content:center;padding:0"><svg width="26" height="26" viewBox="0 0 24 24" fill="#0b0b0c"><path d={spiller ? PAUSE_D : PLAY_D} /></svg></button>
+          <button onClick={() => void act(() => api.transport('next'))} aria-label="Neste" style={knapp}><svg width="22" height="22" viewBox="0 0 24 24" fill="#f2f2ee"><path d="M5 18.5v-13a.8.8 0 0 1 1.25-.66L15 10.9V6a1 1 0 0 1 2 0v12a1 1 0 0 1-2 0v-4.9l-8.75 6.06A.8.8 0 0 1 5 18.5z" /></svg></button>
+        </div>
+      </div>
+      <span style={`position:absolute;right:4vw;top:4vh;font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#4a4a47`}>TRYKK FOR Å LUKKE</span>
+    </div>
+  );
+}
+
 function NowPlaying() {
   const s = status.value, remote = !!ctl.value, out = settings.value.tOut ?? 2;
   const [pos, setPos] = useState(s?.position ?? 0);
@@ -581,7 +685,7 @@ function NowPlaying() {
         <div style="position:absolute;inset:0;background:linear-gradient(180deg,#0b0b0c 0%,rgba(11,11,12,.72) 14%,rgba(11,11,12,.5) 34%,rgba(11,11,12,.94) 100%)" />
       </>}
       <div style={`position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:${COVER} minmax(0,1fr);grid-template-rows:${COVER} auto auto;column-gap:24px;row-gap:4px;padding:14px 22px 8px;align-content:center`}>
-        <div style={`position:relative;width:${COVER};height:${COVER};border-radius:14px;background:${has ? bg : '#141415'};box-shadow:0 18px 44px rgba(0,0,0,.55);overflow:hidden;display:flex;align-items:center;justify-content:center`}>
+        <div onClick={() => { if (has) lpOpen.value = true; }} role={has ? 'button' : undefined} aria-label={has ? 'Vis som plate' : undefined} style={`position:relative;width:${COVER};height:${COVER};border-radius:14px;background:${has ? bg : '#141415'};box-shadow:0 18px 44px rgba(0,0,0,.55);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:${has ? 'pointer' : 'default'}`}>
           {!has && <div style="display:flex;gap:6px;align-items:flex-start;height:60px;opacity:.5">{BARS.map((h, i) => <div key={i} style={`width:9px;height:${h * 2.2}px;border-radius:5px;background:${i === 2 ? '#7a5c26' : '#3a3a37'}`} />)}</div>}
           {has && <span style={`position:absolute;left:10px;bottom:10px;height:22px;padding:0 8px;border-radius:6px;background:rgba(0,0,0,.55);font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#f2f2ee;display:flex;align-items:center`}>{srcName(s)}</span>}
         </div>
@@ -919,6 +1023,7 @@ function Setup() {
       </div>)],
     ...(TABLET?.oppdaterApp ? [['Skjold-appen', 'Versjon ' + (TABLET.appVersjon?.() ?? '?') + ' på nettbrettet', one('Oppdater', () => { try { TABLET.oppdaterApp?.(); } catch { /* */ } })] as [string, string, preact.ComponentChildren]] : []),
     ...(TABLET ? [['Skjold-enhet', 'Nettbrettet styrer ' + (local.value?.name || location.hostname) + ' (' + location.host + ')', one('Bytt', () => { try { TABLET.velgEnhet(); } catch { /* */ } })] as [string, string, preact.ComponentChildren]] : []),
+    ['Oppdatering', 'Se versjon og oppdater denne og de andre Skjold-enhetene', one('Åpne', () => { oppdOpen.value = true; })],
     ['Om enheten', [local.value?.name, location.hostname, local.value?.version ? 'versjon ' + local.value.version : ''].filter(Boolean).join(' · '), <span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#6b6b67;white-space:nowrap`}>SKJOLD TOUCH</span>]
   ];
   return (
@@ -2204,10 +2309,12 @@ function App() {
         {camOpen.value && cur === 'smart' && <CamView />}
         {saverOpen.value && cur === 'set' && <SaverSheet />}
         {wifiOpen.value && cur === 'set' && <WifiSetup />}
+        {oppdOpen.value && cur === 'set' && <OppdateringSheet />}
         {talkOpen.value && <Intercom />}
         {talking && <Voice />}
         {!!toast.value && <div role="status" style="position:absolute;left:50%;bottom:78px;transform:translateX(-50%);z-index:9;max-width:620px;padding:12px 20px;border-radius:14px;background:rgba(24,24,26,.96);border:1px solid #3a2e17;color:#f2f2ee;font-size:14px;line-height:1.35;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:tinn .2s ease both">{toast.value.replace(/^Forsterkeren svarte: /, '')}</div>}
       </main>
+      {lpOpen.value && !idle.value && <LpSpiller />}
       {idle.value && <Standby clock={clock} dateTxt={dateTxt} />}
       {quick.value > 0 && <QuickPanel />}
       {(!!D.setup_net?.active || !!D.setup_net?.joining || !!D.setup_net?.kabel) && !boot.value.on && <SetupNet />}
