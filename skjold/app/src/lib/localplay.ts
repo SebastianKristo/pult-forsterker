@@ -13,6 +13,8 @@ export const localVol = signal<number>((() => { try { const v = Number(localStor
 let el: HTMLAudioElement | null = null;
 let cur = '';
 let wasMuted = false;
+// Siste posisjon Skjold meldte, og når (til å skille ekte spoling fra vanlig glidning, se sync()).
+let skjoldPos: { p: number; at: number } | null = null;
 
 /** Kan det som spilles nå spilles på denne enheten? (Radio og bibliotekene – ikke AirPlay, Blåtann, Spotify eller AUX.) */
 export function canListen(): boolean { return !!status.value?.listen; }
@@ -45,7 +47,7 @@ export function stopLocal(): void {
   localOn.value = false;
   const pos = el && !el.paused && isFinite(el.currentTime) ? el.currentTime : null;
   if (el) { el.pause(); el.removeAttribute('src'); el.load(); }
-  cur = '';
+  cur = ''; skjoldPos = null;
   const s = status.value;
   if (pos !== null && s && (s.duration ?? 0) > 0 && Math.abs((s.position ?? 0) - pos) > 3) void api.seek(pos).catch(() => {});
   if (!wasMuted) void api.mute(false).catch(() => {});
@@ -58,23 +60,42 @@ export function setLocalVol(v: number): void {
   try { localStorage.setItem(VOL_KEY, String(localVol.value)); } catch { /* privat modus */ }
 }
 
+/** Kan strømmen spoles hit? (Omkodede strømmer uten Range-støtte kan ikke det – da startet nettleseren fra begynnelsen.) */
+function kanSpole(a: HTMLAudioElement, p: number): boolean {
+  const r = a.seekable;
+  for (let i = 0; i < r.length; i++) if (p >= r.start(i) && p <= r.end(i)) return true;
+  return false;
+}
+
 /** Følg Skjold: ny strøm, pause/spill og posisjon. */
 function sync(): void {
   const s = status.value;
   if (!localOn.value || !el) return;
   if (!s?.listen) { showToast('Kilden kan ikke spilles på denne enheten – tilbake til rommet'); stopLocal(); return; }
   const track = (s.duration ?? 0) > 0;
+  const nå = performance.now(), pos = s.position ?? 0;
   if (s.listen !== cur) {
     cur = s.listen;
+    skjoldPos = { p: pos, at: nå };
     el.src = abs(cur);
-    if (track && (s.position ?? 0) > 1) {
-      const p = s.position;
-      el.addEventListener('loadedmetadata', () => { try { el!.currentTime = p; } catch { /* ignore */ } }, { once: true });
+    if (track && pos > 1) {
+      el.addEventListener('loadedmetadata', () => { try { if (kanSpole(el!, pos)) el!.currentTime = pos; } catch { /* ignore */ } }, { once: true });
     }
-  } else if (track && !el.seeking && el.readyState > 0 && Math.abs(el.currentTime - (s.position ?? 0)) > 4) {
-    try { el.currentTime = s.position; } catch { /* ignore */ }
+  } else if (track && skjoldPos && pos !== skjoldPos.p) {
+    // Følg bare ekte hopp i Skjold (noen spolte, eller neste/forrige i samme strøm): avviket fra der Skjold burde vært
+    // nå er stort. Vanlig glidning mellom rommet (dempet) og denne enheten rettes IKKE: før ble avspillingen her satt
+    // tilbake hver gang den lå mer enn 4 s foran, så biter av låten ble spilt flere ganger – særlig med fanen i bakgrunnen,
+    // der statusen kommer sjeldnere.
+    const ventet = skjoldPos.p + (s.playing ? (nå - skjoldPos.at) / 1000 : 0);
+    const hopp = Math.abs(pos - ventet) > 6;
+    skjoldPos = { p: pos, at: nå };
+    if (hopp && !el.seeking && el.readyState > 0 && Math.abs(el.currentTime - pos) > 4 && kanSpole(el, pos)) {
+      try { el.currentTime = pos; } catch { /* ignore */ }
+    }
   }
   el.volume = localVol.value / 100;
+  // Ferdig her, men Skjold har ikke gått videre ennå: vent på neste strøm (play() på en ferdig strøm starter låten på nytt)
+  if (el.ended) return;
   if (s.playing && el.paused) void el.play().catch((e: unknown) => {
     // nettleseren nektet å starte lyd uten et trykk (ny låt i bakgrunnen): ikke la rommet stå dempet i stillhet
     if (e instanceof DOMException && e.name === 'NotAllowedError' && localOn.value) { showToast('Nettleseren stoppet lyden – tilbake til rommet'); stopLocal(); }
