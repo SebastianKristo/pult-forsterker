@@ -7,7 +7,7 @@ import { homeOrder, orderSources } from '../lib/homelayout';
 import { Boundary } from '../components/boundary';
 import { localOn, localVol, setLocalVol } from '../lib/localplay';
 import { api, PRODUCT_LABEL, type Fav, type InputId, type Station } from '../lib/api';
-import { act, deviceName, eqActiveSource, go, inputLabel, recent, setVolume, settings, status } from '../lib/store';
+import { act, deviceName, eqActiveSource, go, inputLabel, playRecentServer, recent, setVolume, settings, status } from '../lib/store';
 import { art, EQ } from '../lib/settings';
 import { vises } from '../lib/meny';
 import { Icon, PRODUCT_ICON, Slider, SrcCircle } from '../components/ui';
@@ -97,6 +97,7 @@ export function DeskHome() {
   const popular = shelves.value.find((x) => x.id === 'popular_no') ?? shelves.value[0];
   const curName = (s?.input === 'radio' && (s.radio_now?.name || s.station)) || '';
   const playRecent = (x: typeof rc[number]) => {
+    if (playRecentServer(x)) return;
     if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else go('radio'); }
     else void act(() => api.input(x.input), { input: x.input });
   };
