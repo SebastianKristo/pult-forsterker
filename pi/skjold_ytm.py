@@ -320,6 +320,46 @@ class Ytm:
         pls = [c for c in (coll_playlist(x) for x in yt.search(q, filter="playlists", limit=10) or []) if c]
         return {"tracks": songs, "albums": albums, "playlists": pls}
 
+    def artist(self, q="", cid=""):
+        """Artistsiden: bilde, biografi, populære låter (med avspillinger), album, singler, videoer og lignende artister."""
+        cache = self.__dict__.setdefault("_artister", {})
+        key = cid or "q:" + q.strip().casefold()
+        hit = cache.get(key)
+        if hit and time.time() - hit[0] < 1800:
+            return hit[1]
+        yt = self.client()
+        if not cid:
+            treff = [x for x in yt.search(q, filter="artists", limit=6) or [] if x.get("browseId")]
+            if not treff:
+                raise LookupError("fant ikke artisten")
+            navn = q.strip().casefold()
+            best = next((x for x in treff if str(x.get("artist") or x.get("title") or "").casefold() == navn), treff[0])
+            cid = best["browseId"]
+        a = yt.get_artist(cid) or {}
+        def res(k):
+            v = a.get(k) or {}
+            return (v.get("results") or []) if isinstance(v, dict) else []
+        th = a.get("thumbnails") or []
+        songs = a.get("songs") if isinstance(a.get("songs"), dict) else {}
+        alle = str((songs or {}).get("browseId") or "")
+        out = {
+            "id": cid, "name": str(a.get("name") or q), "description": str(a.get("description") or ""),
+            "image": str(th[-1].get("url") or "") if th else "", "subscribers": str(a.get("subscribers") or ""),
+            "views": str(a.get("views") or ""),
+            "songs": [{**track(x), "plays": str(x.get("plays") or x.get("views") or "")} for x in res("songs") if x.get("videoId")],
+            "allSongs": ("pl:" + alle.removeprefix("VL")) if alle else "",
+            "albums": [{**c, "year": str(x.get("year") or "")} for x, c in ((x, coll_album(x)) for x in res("albums")) if c],
+            "singles": [{**c, "year": str(x.get("year") or "")} for x, c in ((x, coll_album(x)) for x in res("singles")) if c],
+            "videos": [{"id": x["videoId"], "title": str(x.get("title") or ""), "artist": _artists(x), "views": str(x.get("views") or ""),
+                        "cover": str(((x.get("thumbnails") or [{}])[-1]).get("url") or "")} for x in res("videos") if VID_RE.match(str(x.get("videoId") or ""))],
+            "related": [{"id": x["browseId"], "name": str(x.get("title") or ""), "cover": _thumb(x), "subscribers": str(x.get("subscribers") or "")}
+                        for x in res("related") if x.get("browseId")],
+        }
+        cache[key] = cache[cid] = (time.time(), out)
+        while len(cache) > 40:
+            cache.pop(next(iter(cache)))
+        return out
+
     def find_album(self, artist, album):
         """Album-kassetter: beste album-treff → {"kilde":"ytmusic","ytm_id":"al:…",…} eller None."""
         from skjold_nfc import best_album
@@ -424,6 +464,21 @@ def routes(ytm, ctx):
         try:
             res = await run(ytm.search, q)
             return web.json_response({**res, "tracks": with_stream(res["tracks"])})
+        except Exception as e:
+            return fail(e)
+
+    async def h_artist(r):
+        q, cid = (r.query.get("q") or "").strip(), (r.query.get("id") or "").strip()
+        if not q and not cid:
+            return web.json_response({"error": "q eller id mangler"}, status=400)
+        if cid and not re.fullmatch(r"[A-Za-z0-9_-]{6,64}", cid):
+            return web.json_response({"error": "ugyldig id"}, status=400)
+        try:
+            res = await run(ytm.artist, q, cid)
+            vids = [{"album": "", "dur": 0, **v} for v in res["videos"]]
+            return web.json_response({**res, "songs": with_stream(res["songs"]), "videos": with_stream(vids)})
+        except LookupError as e:
+            return web.json_response({"error": str(e)}, status=404)
         except Exception as e:
             return fail(e)
 
@@ -574,5 +629,5 @@ def routes(ytm, ctx):
         return out
 
     return [web.get("/api/ytm/status", h_status), web.get("/api/ytm/home", h_home), web.get("/api/ytm/tracks", h_tracks),
-            web.get("/api/ytm/search", h_search), web.post("/api/ytm/play", h_play),
+            web.get("/api/ytm/search", h_search), web.get("/api/ytm/artist", h_artist), web.post("/api/ytm/play", h_play),
             web.get("/api/ytm/stream/{vid}", h_stream)]

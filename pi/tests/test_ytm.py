@@ -279,3 +279,30 @@ def test_aac_strommen_pakker_fragmentert_m4a_om_til_adts():
         dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", t.name],
                                    capture_output=True, text=True).stdout.strip() or 0)
     assert dur > 7.5   # hele låten, ikke bare første fragment
+
+
+def test_artistside():
+    y, fake, _n = mk()
+    kall = []
+
+    def search(q, filter=None, limit=20):
+        kall.append((q, filter))
+        return [{"browseId": "UCannen", "artist": "Jens Book-Jenssen Tribute"}, {"browseId": "UCjens", "artist": "Jens Book-Jenssen"}]
+
+    def get_artist(cid):
+        kall.append(("get_artist", cid))
+        return {"name": "Jens Book-Jenssen", "description": "Norsk sanger.", "subscribers": "467",
+                "thumbnails": [{"url": "https://lh3/x=w540-h225"}, {"url": "https://lh3/x=w2880-h1200"}],
+                "songs": {"browseId": "VLOLAKfoo", "results": [{"videoId": "eeeeeeeeeee", "title": "Norge i rødt, hvitt og blått", "artists": [{"name": "Jens Book-Jenssen"}], "album": {"name": "Diamanter"}, "plays": "666k avspillinger", **TH}]},
+                "albums": {"results": [{"browseId": "MPREb_d", "title": "Diamanter", "year": "2017", **TH}]},
+                "singles": {"results": [{"browseId": "MPREb_s", "title": "Lilla vackra Anna", "year": "2025", **TH}]},
+                "videos": {"results": [{"videoId": "fffffffffff", "title": "Norge i rødt", "artists": [{"name": "Danjori"}], "views": "22k", **TH}, {"videoId": "kort", "title": "x"}]},
+                "related": {"results": [{"browseId": "UCrel", "title": "Søstrene Bjørklund", "subscribers": "1k", **TH}]}}
+    fake.search, fake.get_artist = search, get_artist
+    a = y.artist("jens book-jenssen")
+    assert a["id"] == "UCjens" and a["image"].endswith("w2880-h1200") and a["description"] == "Norsk sanger."
+    assert a["songs"][0]["plays"] == "666k avspillinger" and a["songs"][0]["album"] == "Diamanter" and a["allSongs"] == "pl:OLAKfoo"
+    assert a["albums"][0]["id"] == "al:MPREb_d" and a["albums"][0]["year"] == "2017" and a["singles"][0]["name"] == "Lilla vackra Anna"
+    assert [v["id"] for v in a["videos"]] == ["fffffffffff"] and a["related"][0]["id"] == "UCrel"
+    n = len(kall)
+    assert y.artist("Jens Book-Jenssen")["id"] == "UCjens" and y.artist(cid="UCjens")["id"] == "UCjens" and len(kall) == n   # fra minnet

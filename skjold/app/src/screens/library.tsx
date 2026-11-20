@@ -17,7 +17,7 @@ import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 
 /** Tilstand per bibliotek-side (signaler, så tilbake-knappen og skjermbildeskriptet kan styre den). */
 /** Artistsiden (eller et album som skal slås opp) åpnet fra spilleren: navn som trykkes på. */
-export const artistView = signal<{ name: string; album?: string } | null>(null);
+export const artistView = signal<{ name: string; album?: string; ytmId?: string; ndId?: string } | null>(null);
 /** Åpne artistsiden (eller albumet) fra et navn i spilleren. Navidrome først når det er satt opp. */
 export function openArtist(name: string, album?: string): void {
   libUi.pl.value = null; libUi.q.value = ''; closeFull();
