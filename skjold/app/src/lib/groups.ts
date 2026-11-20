@@ -90,5 +90,6 @@ export function placeRoom(key: string, role: number | null): void {
 }
 export function setRole(key: string, role: number): void { save({ ...groups.value, roles: { ...groups.value.roles, [key]: role } }); }
 export function setGset(p: Partial<Gset>): void { save({ ...groups.value, gset: { ...groups.value.gset, ...p } }); }
+export function removePreset(i: number): void { save({ ...groups.value, presets: groups.value.presets.filter((_, k) => k !== i) }); }
 export function savePreset(n: string, ids: string[]): void { save({ ...groups.value, presets: [...groups.value.presets, { n, ids }].slice(-6) }); }
 export function groupCount(activeKey: string): number { const m = groups.value.members; return m.includes(activeKey) ? m.length : 1; }
