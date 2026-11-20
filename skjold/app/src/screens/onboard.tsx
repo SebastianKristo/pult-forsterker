@@ -10,6 +10,7 @@ import { PRODUCT_ICON } from '../components/ui';
 import { remember, scan, type Found } from '../lib/discover';
 import { openRostSetup } from './rostsetup';
 import { openEnhetWifi } from './enhetwifi';
+import { skyUrl } from '../lib/hjem';
 
 const A = '#d9a441';
 const sel = (b: boolean) => ({ bd: b ? A : '#2e2e30', bg: b ? '#1c170d' : '#141415', fg: b ? '#f0c46a' : '#f2f2ee' });
@@ -32,11 +33,11 @@ function Shell({ step, back, title, text, children }: { step: number; back?: (()
     <div class="dshell">
       <div class="dsc" style="flex:1;display:flex;flex-direction:column;padding:8px 20px 18px;gap:16px;min-height:0;overflow:auto;scrollbar-width:none;color-scheme:dark">
         <div style="display:flex;align-items:center;justify-content:space-between;min-height:28px">
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.12em;color:#8b8b86">OPPSETT · {Math.min(step, 3) + 1} AV 4</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.12em;color:#8b8b86">OPPSETT · {Math.min(step, 5) + 1} AV 6</span>
           {back && <button onClick={back} style="border:none;background:none;color:#d9a441;font-size:13px;cursor:pointer;padding:6px 0">Tilbake</button>}
         </div>
-        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px">
-          {[0, 1, 2, 3].map((i) => <div key={i} style={`height:3px;border-radius:2px;background:${i <= Math.min(step, 3) ? A : '#2a2a28'}`} />)}
+        <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px">
+          {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} style={`height:3px;border-radius:2px;background:${i <= Math.min(step, 5) ? A : '#2a2a28'}`} />)}
         </div>
         <h1 style="margin:0;font-size:28px;font-weight:600;line-height:1.15;text-align:left">{title}</h1>
         <p style="margin:0;font-size:13px;color:#a9a9a3;line-height:1.5;text-align:left">{text}</p>
@@ -283,7 +284,31 @@ function Software({ back }: { back: () => void }) {
         <div style="height:6px;border-radius:3px;background:#242426;overflow:hidden"><div style={`height:100%;width:${ob.upd.value}%;background:#d9a441`} /></div>
         <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b8b86">{label}</span>
       </div>
-      <NextBtn ok={done} label={done ? 'Ferdig' : 'Oppdaterer …'} onClick={() => { setSetting('setupDone', true); mode.value = 'app'; }} />
+      <NextBtn ok={done} label={done ? 'Neste' : 'Oppdaterer …'} onClick={() => { ob.step.value = 5; }} />
+    </Shell>
+  );
+}
+
+/** Siste steg: lag en Skjold-konto (Skjold Lab Valhalla) – kan hoppes over, men anbefales. */
+export const KONTO_HOPPET = 'skjold-konto-hoppet';
+function Konto({ back }: { back: () => void }) {
+  const [åpnet, setÅpnet] = useState(false);
+  const ferdig = (hopp: boolean) => { if (hopp) { try { localStorage.setItem(KONTO_HOPPET, String(Date.now())); } catch { /* privat modus */ } } setSetting('setupDone', true); mode.value = 'app'; };
+  const fordel = (t: string, u: string) => <div style="display:flex;gap:12px;align-items:flex-start"><span style={`width:22px;height:22px;flex-shrink:0;border-radius:11px;background:#1c170d;border:1px solid #5a4420;color:#f0c46a;font-size:12px;display:flex;align-items:center;justify-content:center`}>✓</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">{t}</span><span style="font-size:12px;color:#8b8b86;line-height:1.45">{u}</span></span></div>;
+  return (
+    <Shell step={5} back={back} title="Lag en Skjold-konto" text="Koble Skjold til Skjold Lab Valhalla. Det tar et minutt, og du kan hoppe over det – men vi anbefaler det.">
+      <div style="display:flex;flex-direction:column;gap:14px;padding:16px;border-radius:14px;background:#141415;border:1px solid #242426">
+        {fordel('Styr Skjold hjemmefra', 'Appen og web-UI-et når enhetene dine også når du ikke er hjemme.')}
+        {fordel('Del hjemmet med familien', 'Inviter med e-post – alle får sin egen innlogging.')}
+        {fordel('Ta vare på oppsettet', 'Favoritter, rutiner og innstillinger lagres kryptert i Skjold Cloud.')}
+        {fordel('Trygg innlogging', 'E-post-kode eller Google, og totrinnsbekreftelse med kodeapp.')}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto">
+        {!åpnet ? <button onClick={() => { window.open(skyUrl() + '/konto?velkommen=1&fra=app', '_blank'); setÅpnet(true); }} style={`height:52px;border-radius:14px;border:none;background:${A};color:#0b0b0c;font-size:15px;font-weight:600;cursor:pointer`}>Lag konto eller logg inn</button>
+          : <><span style="font-size:12.5px;color:#c9b48a;line-height:1.45">Fullfør i fanen som åpnet seg (lag hjemmet ditt der), og trykk Ferdig her. Enheten kobles til hjemmet under Innstillinger → Skjold-hjem.</span>
+            <button onClick={() => ferdig(false)} style={`height:52px;border-radius:14px;border:none;background:${A};color:#0b0b0c;font-size:15px;font-weight:600;cursor:pointer`}>Ferdig</button></>}
+        <button onClick={() => ferdig(true)} style="height:40px;border:none;background:none;color:#8b8b86;font-size:13px;cursor:pointer">Hopp over nå</button>
+      </div>
     </Shell>
   );
 }
@@ -299,5 +324,6 @@ export function Setup() {
   if (step <= 1) return <Wifi back={back} />;
   if (step === 2) return <Room back={back} />;
   if (step === 3) return <Test back={back} />;
+  if (step === 5) return <Konto back={back} />;
   return <Software back={back} />;
 }

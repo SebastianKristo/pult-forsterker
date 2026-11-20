@@ -248,7 +248,11 @@ export default {
       if (!epost) return feil(401, "ikke innlogget");
       const rolle = await kontoRolle(env, epost);
       if (rolle.sperret) return feil(403, "kontoen er sperret – kontakt Skjold Lab");
-      if (p === "/api/hjem/meg") return json({ epost, valhalla: rolle.valhalla, eier: rolle.eier });
+      const tofaOk = !rolle.tofa || (await tofaGyldig(req, env, epost, rolle.tofaVer));
+      if (p === "/api/hjem/meg") return json({ epost, valhalla: rolle.valhalla && tofaOk, eier: rolle.eier, tofa: rolle.tofa, tofaOk });
+      if (p === "/api/hjem/konto/2fa/bekreft" && req.method === "POST") return tofaBekreft(req, env, epost);
+      if (!tofaOk) return json({ error: "2fa", tofa: true, melding: "Bekreft med koden fra kodeappen" }, 401);
+      if (p === "/api/hjem/konto" || p.startsWith("/api/hjem/konto/")) return kontoApi(req, env, epost, url);
       if (p.startsWith("/api/valhalla")) {
         if (!rolle.valhalla) return feil(403, "bare for Skjold Lab Valhalla-administratorer");
         return valhalla(req, env, epost, rolle, url);
@@ -280,7 +284,7 @@ async function kontoRolle(env, epost) {
   let r = { sperret: false, admin: false };
   try { r = await (await intern(registerStub(env), "/bruker", { epost })).json(); } catch {}
   const eier = eierListe(env).includes(epost);
-  const rolle = { sperret: !!r.sperret && !eier, eier, valhalla: eier || !!r.admin };
+  const rolle = { sperret: !!r.sperret && !eier, eier, valhalla: eier || !!r.admin, tofa: !!r.tofa, tofaVer: Number(r.tofaVer || 0) };
   ROLLE_CACHE.set(epost, { t: Date.now(), rolle });
   return rolle;
 }
@@ -291,12 +295,138 @@ async function synkMedlemmer(env, stedId, svar) {
   await intern(registerStub(env), "/steder", { steder: [{ id: stedId, navn: svar.navn, eier: svar.eier, medlemmer: svar.medlemmer }] });
 }
 
+// ---------- Skjold-konto: profil, totrinnsbekreftelse (TOTP) og økter ----------
+const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function b32(bytes) {
+  let bits = 0, v = 0, ut = "";
+  for (const b of bytes) { v = (v << 8) | b; bits += 8; while (bits >= 5) { ut += B32[(v >>> (bits - 5)) & 31]; bits -= 5; } }
+  if (bits > 0) ut += B32[(v << (5 - bits)) & 31];
+  return ut;
+}
+function fraB32(s) {
+  let bits = 0, v = 0; const ut = [];
+  for (const c of String(s).toUpperCase().replace(/[^A-Z2-7]/g, "")) { v = (v << 5) | B32.indexOf(c); bits += 5; if (bits >= 8) { ut.push((v >>> (bits - 8)) & 255); bits -= 8; } }
+  return new Uint8Array(ut);
+}
+export async function totpKode(hemmelighet, steg) {
+  const key = await crypto.subtle.importKey("raw", fraB32(hemmelighet), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+  const buf = new ArrayBuffer(8); const dv = new DataView(buf); dv.setUint32(0, Math.floor(steg / 2 ** 32)); dv.setUint32(4, steg >>> 0);
+  const h = new Uint8Array(await crypto.subtle.sign("HMAC", key, buf));
+  const o = h[19] & 15;
+  const n = ((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3];
+  return String(n % 1000000).padStart(6, "0");
+}
+/** Riktig 6-sifret kode for nå (±30 s). Gir steget som ble brukt (så samme kode ikke kan brukes to ganger), ellers -1. */
+async function totpSjekk(hemmelighet, kode, brukt = -1) {
+  const k = String(kode || "").replace(/\D/g, "");
+  if (k.length !== 6) return -1;
+  const naa = Math.floor(Date.now() / 30000);
+  for (const d of [0, -1, 1]) if (naa + d > brukt && likTid(await totpKode(hemmelighet, naa + d), k)) return naa + d;
+  return -1;
+}
+let OKT_NOEKKEL = null;
+async function oktNoekkel(env) {
+  if (!OKT_NOEKKEL) {
+    const h = env.SESSION_SECRET || (await (await intern(registerStub(env), "/hemmelighet", {})).json()).h;
+    OKT_NOEKKEL = await crypto.subtle.importKey("raw", new TextEncoder().encode(h), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  }
+  return OKT_NOEKKEL;
+}
+async function oktSign(env, tekst) { return tilB64(await crypto.subtle.sign("HMAC", await oktNoekkel(env), new TextEncoder().encode(tekst))).replace(/=+$/, ""); }
+const OKT_DAGER = 30;
+async function oktCookie(env, epost, ver) {
+  const exp = Math.floor(Date.now() / 1000) + OKT_DAGER * 86400;
+  const v = `${exp}.${ver}.${await oktSign(env, epost + "|" + exp + "|" + ver)}`;
+  return `skjold_2fa=${v}; Path=/; Max-Age=${OKT_DAGER * 86400}; HttpOnly; Secure; SameSite=None`;
+}
+async function tofaGyldig(req, env, epost, ver) {
+  const c = cookie(req, "skjold_2fa"); if (!c) return false;
+  const [exp, v, sig] = c.split(".");
+  if (!sig || Number(exp) < Date.now() / 1000 || Number(v) !== ver) return false;
+  return likTid(sig, await oktSign(env, epost + "|" + exp + "|" + v));
+}
+async function tofaBekreft(req, env, epost) {
+  const b = await lesJson(req);
+  const r = await intern(kontoStub(env, epost), "/konto/2fa/sjekk", { kode: b.kode });
+  if (!r.ok) return r;
+  const { ver } = await r.json();
+  return json({ ok: true }, 200, { "set-cookie": await oktCookie(env, epost, ver) });
+}
+async function kontoApi(req, env, epost, url) {
+  const del = url.pathname.slice("/api/hjem/konto".length) || "/";
+  const k = kontoStub(env, epost), m = req.method;
+  const b = m === "GET" || m === "DELETE" ? {} : await lesJson(req);
+  if (del === "/" && m === "GET") {
+    const info = await (await intern(k, "/konto/info", { epost })).json();
+    const { steder } = await (await intern(k, "/liste")).json();
+    const sync = await (await intern(k, "/sync/oversikt", {})).json();
+    return json({ ...info, epost, steder, sync: sync.deler || [] });
+  }
+  if (del === "/" && m === "PATCH") return intern(k, "/konto/profil", b);
+  if (del === "/2fa/start" && m === "POST") return intern(k, "/konto/2fa/start", { epost });
+  if ((del === "/2fa/aktiver" || del === "/2fa/av" || del === "/2fa/nye-koder") && m === "POST") {
+    const r = await intern(k, "/konto" + del, b);
+    if (!r.ok) return r;
+    const svar = await r.json();
+    await intern(registerStub(env), "/bruker-sett", { epost, tofa: !!svar.aktiv, tofaVer: svar.ver });
+    ROLLE_CACHE.delete(epost);
+    return json(svar, 200, svar.aktiv ? { "set-cookie": await oktCookie(env, epost, svar.ver) } : {});
+  }
+  if (del === "/logg-ut-overalt" && m === "POST") {
+    const svar = await (await intern(k, "/konto/ny-versjon", {})).json();
+    await intern(registerStub(env), "/bruker-sett", { epost, tofaVer: svar.ver });
+    ROLLE_CACHE.delete(epost);
+    return json({ ok: true });
+  }
+  if (del === "/" && m === "DELETE") {
+    const { steder } = await (await intern(k, "/liste")).json();
+    for (const s of steder) {
+      const o = await intern(stedStub(env, s.id), "/admin", {});
+      if (o.ok && (await o.json()).eier === epost) return feil(409, "du eier fortsatt «" + s.navn + "» – overfør eierskapet eller slett hjemmet først");
+    }
+    for (const s of steder) {
+      const r = await intern(stedStub(env, s.id), "/admin-endre", { fjern: epost });
+      if (r.ok) await synkMedlemmer(env, s.id, await r.json());
+    }
+    await intern(k, "/konto/slett", {});
+    await intern(registerStub(env), "/bruker-slett", { epost });
+    ROLLE_CACHE.delete(epost);
+    return json({ ok: true });
+  }
+  return feil(404, "finnes ikke");
+}
+
 const gyldigEpost = (e) => /^[^@\s]{1,64}@[^@\s]{1,190}\.[a-z]{2,}$/i.test(String(e || ""));
+
+/** Hjem som ble laget før registeret fantes: let gjennom kontoene registeret kjenner (og den som ser på), og meld inn
+ *  hjemmene deres. Høyst hvert 5. minutt per isolat, så Valhalla er rask å bla i. */
+let SIST_FUNNET = 0;
+async function finnHjem(env, epost, tving = false) {
+  if (!tving && Date.now() - SIST_FUNNET < 300000) return;
+  SIST_FUNNET = Date.now();
+  const reg = registerStub(env);
+  const kontoer = (await (await intern(reg, "/kontoer", {})).json()).map((k) => k.epost);
+  const kjente = new Set((await (await intern(reg, "/steder-liste", {})).json()).steder.map((x) => x.id));
+  const nye = new Map();
+  for (const e of [...new Set([epost, ...kontoer])].slice(0, 500)) {
+    try {
+      const { steder } = await (await intern(kontoStub(env, e), "/liste")).json();
+      for (const x of steder || []) if (!kjente.has(x.id)) nye.set(x.id, x);
+    } catch {}
+  }
+  const ut = [];
+  for (const id of [...nye.keys()].slice(0, 300)) {
+    const r = await intern(stedStub(env, id), "/admin", {});
+    if (r.ok) { const d = await r.json(); ut.push({ id, navn: d.navn, eier: d.eier, medlemmer: d.medlemmer }); }
+  }
+  if (ut.length) await intern(reg, "/steder", { steder: ut });
+}
 
 async function valhalla(req, env, epost, rolle, url) {
   const deler = url.pathname.split("/").filter(Boolean).slice(2); // etter api/valhalla
   const reg = registerStub(env);
   const m = req.method;
+  if (m === "GET" && (deler.length === 0 || deler[0] === "oversikt" || deler[0] === "steder")) await finnHjem(env, epost, url.searchParams.has("synk"));
   if (deler.length === 0 || deler[0] === "oversikt") {
     const o = await (await intern(reg, "/oversikt", {})).json();
     return json({ ...o, meg: epost, eier: rolle.eier, tjenesteeiere: eierListe(env), access: !!(env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD) });
@@ -306,6 +436,12 @@ async function valhalla(req, env, epost, rolle, url) {
     const mål = decodeURIComponent(deler[1]).toLowerCase(), b = await lesJson(req);
     if ("admin" in b && !rolle.eier) return feil(403, "bare tjenesteeieren kan gi eller ta Valhalla-tilgang");
     if (eierListe(env).includes(mål) && b.sperret) return feil(400, "tjenesteeieren kan ikke sperres");
+    if (b.tofaAv) {   // brukeren har mistet telefonen og reservekodene: slå av totrinnsbekreftelsen
+      const t = await (await intern(kontoStub(env, mål), "/konto/2fa/tilbakestill", {})).json();
+      await intern(reg, "/bruker-sett", { epost: mål, tofa: false, tofaVer: t.ver });
+      ROLLE_CACHE.delete(mål);
+      return json({ epost: mål, tofa: false });
+    }
     const r = await intern(reg, "/bruker-sett", { epost: mål, ...("sperret" in b ? { sperret: !!b.sperret } : {}), ...("admin" in b ? { admin: !!b.admin } : {}) });
     ROLLE_CACHE.delete(mål);
     return r;
@@ -417,6 +553,7 @@ export class Konto extends DurableObject {
     const sti = new URL(req.url).pathname;
     const b = await lesJson(req);
     if (sti.startsWith("/i/sync/")) return this.sync(sti.slice(7), b);
+    if (sti.startsWith("/i/konto/")) return this.konto(sti.slice(8), b);
     let steder = (await this.ctx.storage.get("steder")) || [];
     if (sti === "/i/liste") return json({ steder });
     if (sti === "/i/legg") {
@@ -428,6 +565,69 @@ export class Konto extends DurableObject {
     return json({ steder });
   }
 }
+
+// Profil og totrinnsbekreftelse for kontoen (hemmeligheten forlater aldri kontoen; reservekodene lagres som SHA-256).
+const BACKUP_ALFABET = "abcdefghjkmnpqrstuvwxyz23456789";
+Konto.prototype.konto = async function (sti, b) {
+  const st = this.ctx.storage, naa = Math.floor(Date.now() / 1000);
+  const profil = (await st.get("profil")) || { navn: "", opprettet: naa };
+  const t = (await st.get("tofa")) || { aktiv: false, ver: 0, backup: [], brukt: -1 };
+  const lagreT = () => st.put("tofa", t);
+  const nyeKoder = async () => {
+    const koder = Array.from({ length: 10 }, () => tilfeldig(4, BACKUP_ALFABET) + "-" + tilfeldig(4, BACKUP_ALFABET));
+    t.backup = await Promise.all(koder.map((k) => sha256hex(k)));
+    return koder;
+  };
+  /** TOTP-kode eller ubrukt reservekode. Låses i 15 min etter 8 feil. */
+  const sjekk = async (kode, hemmelighet = t.hemmelighet) => {
+    const feilet = (await st.get("feil")) || { n: 0, t: 0 };
+    if (feilet.n >= 8 && naa - feilet.t < 900) return "låst";
+    const steg = await totpSjekk(hemmelighet, kode, t.brukt);
+    if (steg >= 0) { t.brukt = steg; await st.delete("feil"); return "ok"; }
+    const h = await sha256hex(String(kode || "").trim().toLowerCase());
+    const i = (t.backup || []).indexOf(h);
+    if (i >= 0 && hemmelighet === t.hemmelighet) { t.backup.splice(i, 1); await st.delete("feil"); return "ok"; }
+    await st.put("feil", { n: (naa - feilet.t < 900 ? feilet.n : 0) + 1, t: naa });
+    return "feil";
+  };
+  const svarFeil = (r) => (r === "låst" ? feil(429, "for mange feil koder – prøv igjen om 15 minutter") : feil(401, "feil kode"));
+  if (sti === "/info") {
+    if (!(await st.get("profil"))) await st.put("profil", profil);
+    return json({ navn: profil.navn, opprettet: profil.opprettet, tofa: { aktiv: t.aktiv, reservekoderIgjen: (t.backup || []).length } });
+  }
+  if (sti === "/profil") { profil.navn = String(b.navn ?? profil.navn).trim().slice(0, 60); await st.put("profil", profil); return json({ navn: profil.navn }); }
+  if (sti === "/2fa/start") {
+    if (t.aktiv) return feil(409, "totrinnsbekreftelse er allerede på");
+    const h = b32(crypto.getRandomValues(new Uint8Array(16)));
+    t.ventende = h; await lagreT();
+    return json({ hemmelighet: h, uri: `otpauth://totp/Skjold?secret=${h}&issuer=Skjold` });
+  }
+  if (sti === "/2fa/aktiver") {
+    if (!t.ventende) return feil(400, "start oppsettet først");
+    const r = await sjekk(b.kode, t.ventende);
+    if (r !== "ok") return svarFeil(r);
+    t.hemmelighet = t.ventende; delete t.ventende; t.aktiv = true; t.ver = (t.ver || 0) + 1;
+    const koder = await nyeKoder(); await lagreT();
+    return json({ aktiv: true, ver: t.ver, reservekoder: koder });
+  }
+  if (sti === "/2fa/sjekk") {
+    if (!t.aktiv) return json({ ver: t.ver || 0 });
+    const r = await sjekk(b.kode); await lagreT();
+    return r === "ok" ? json({ ver: t.ver }) : svarFeil(r);
+  }
+  if (sti === "/2fa/av" || sti === "/2fa/nye-koder") {
+    if (!t.aktiv) return feil(400, "totrinnsbekreftelse er ikke på");
+    const r = await sjekk(b.kode);
+    if (r !== "ok") { await lagreT(); return svarFeil(r); }
+    if (sti === "/2fa/av") { t.aktiv = false; delete t.hemmelighet; t.backup = []; t.ver = (t.ver || 0) + 1; await lagreT(); return json({ aktiv: false, ver: t.ver }); }
+    const koder = await nyeKoder(); await lagreT();
+    return json({ aktiv: true, ver: t.ver, reservekoder: koder });
+  }
+  if (sti === "/2fa/tilbakestill") { t.aktiv = false; delete t.hemmelighet; t.backup = []; t.ver = (t.ver || 0) + 1; await lagreT(); return json({ aktiv: false, ver: t.ver }); }
+  if (sti === "/ny-versjon") { t.ver = (t.ver || 0) + 1; await lagreT(); return json({ ver: t.ver }); }
+  if (sti === "/slett") { await st.deleteAll(); return json({ ok: true }); }
+  return feil(404, "finnes ikke");
+};
 
 const SYNC_DELER = ["favoritter", "rutiner", "innstillinger", "eq", "wrapped", "historikk", "kassetter", "plugins"];
 const SYNC_MAKS = 512 * 1024; // per del, base64 av kryptert innhold
@@ -917,6 +1117,11 @@ export class Sted extends DurableObject {
         await this.lagre();
       }
       ws.serializeAttachment(a);
+      if (!this.iRegister && this.data) {   // Valhalla: hjemmet blir synlig så snart en enhet i det er på nett
+        this.iRegister = true;
+        const d = this.data;
+        try { await intern(registerStub(this.env), "/steder", { steder: [{ id: d.id, navn: d.navn, eier: d.eier, medlemmer: d.medlemmer }] }); } catch {}
+      }
       await this.inviterNye(ws, a);
     } else if (m.t === "res") {
       const v = this.ventende.get(m.rid);
@@ -1315,11 +1520,19 @@ export class Register extends DurableObject {
       if (naa - (k.sist || 0) > 300) { k.sist = naa; await st.put("k:" + e, k); }   // «sist sett», høyst hvert 5. minutt
       return json(k);
     }
+    if (sti === "/hemmelighet") {
+      let h = await st.get("hemmelighet");
+      if (!h) { h = [...crypto.getRandomValues(new Uint8Array(32))].map((x) => x.toString(16).padStart(2, "0")).join(""); await st.put("hemmelighet", h); }
+      return json({ h });
+    }
+    if (sti === "/bruker-slett") { await st.delete("k:" + String(b.epost || "").toLowerCase()); return json({ ok: true }); }
     if (sti === "/bruker-sett") {
       const e = String(b.epost || "").toLowerCase();
       const k = (await st.get("k:" + e)) || { forst: naa, sist: 0, sperret: false, admin: false };
       if ("sperret" in b) k.sperret = !!b.sperret;
       if ("admin" in b) k.admin = !!b.admin;
+      if ("tofa" in b) k.tofa = !!b.tofa;
+      if ("tofaVer" in b) k.tofaVer = Number(b.tofaVer) || 0;
       await st.put("k:" + e, k);
       return json({ epost: e, ...k });
     }

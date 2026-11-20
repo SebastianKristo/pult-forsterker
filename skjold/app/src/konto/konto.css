@@ -1,0 +1,16 @@
+/* Skjold Touch – fonter bundlet lokalt (enheten skal virke uten nett) */
+@font-face { font-family: Sora; font-weight: 300; font-display: block; src: url('@fontsource/sora/files/sora-latin-300-normal.woff2') format('woff2'); }
+@font-face { font-family: Sora; font-weight: 400; font-display: block; src: url('@fontsource/sora/files/sora-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: Sora; font-weight: 600; font-display: block; src: url('@fontsource/sora/files/sora-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 400; font-display: block; src: url('@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 500; font-display: block; src: url('@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2') format('woff2'); }
+:root { color-scheme: dark; --bg: #0b0b0c; --kort: #141415; --kant: #242426; --tekst: #f2f2ee; --demp: #8b8b86; --gull: #f0c46a; --gull2: #d9a441; --rod: #e05a4a; --gronn: #6fcf7f; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--tekst); font: 15px/1.5 Sora, system-ui, -apple-system, sans-serif; }
+button, input { font: inherit; color: inherit; }
+a { color: var(--gull); }
+.mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.inn { animation: inn .35s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes inn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+input:focus { outline: none; border-color: var(--gull2) !important; }
+@media (max-width: 860px) { .oppsett { grid-template-columns: 1fr !important; } .meny { flex-direction: row !important; overflow-x: auto; position: static !important; } .meny button { white-space: nowrap; } }

@@ -7,6 +7,7 @@ import { homeOrder, orderSources } from '../lib/homelayout';
 import { Boundary } from '../components/boundary';
 import { localOn, localVol, setLocalVol } from '../lib/localplay';
 import { api, PRODUCT_LABEL, type Fav, type InputId, type Station } from '../lib/api';
+import { KontoKort } from './kontokort';
 import { act, deviceName, eqActiveSource, go, inputLabel, playRecentServer, recent, setVolume, settings, status } from '../lib/store';
 import { art, EQ } from '../lib/settings';
 import { vises } from '../lib/meny';
@@ -170,6 +171,7 @@ export function DeskHome() {
           </button>
         </div>
 
+        <KontoKort />
         {homeOrder(['recent', 'sources', 'playlists', 'trending', 'favs', 'nrk', 'routines', 'ask', 'discover', 'wrapped']).map((id) => <Boundary key={id} liten>{sections[id]}</Boundary>)}
         <button class="link0" style={{ alignSelf: 'flex-start' }} onClick={() => go('settings', 'hjemskjerm')}>Rediger hjemskjerm</button>
       </div>

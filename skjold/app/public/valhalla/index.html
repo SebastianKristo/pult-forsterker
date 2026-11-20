@@ -25,7 +25,7 @@ input,select{height:40px;border-radius:12px;border:1px solid var(--kant);backgro
 .tabell{background:var(--kort);border:1px solid var(--kant);border-radius:16px;overflow:hidden}
 .rad{display:grid;gap:14px;align-items:center;padding:14px 18px;border-top:1px solid #1d1d1f}.rad:first-child{border-top:none}
 .rad.hode{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--demp);background:#111112}
-.kontoer .rad{grid-template-columns:minmax(220px,1.4fr) 1.4fr 120px 120px 260px}
+.kontoer .rad{grid-template-columns:minmax(220px,1.4fr) 1.3fr 110px 130px 330px}
 .hjem .rad{grid-template-columns:minmax(180px,1fr) minmax(220px,1.6fr) 120px 110px 300px}
 .chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;background:#1c1c1e;border:1px solid var(--kant);font-size:12px;margin:2px 4px 2px 0;white-space:nowrap}
 .chip.eier{border-color:#5a4420;color:var(--gull);background:#1c170d}.chip button{border:none;background:none;color:var(--demp);cursor:pointer;padding:0;font-size:14px}
@@ -57,7 +57,7 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const dato = (t) => (t ? new Date(t * 1000).toLocaleString("nb-NO", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "–");
 const siden = (t) => { if (!t) return "aldri"; const s = Date.now() / 1000 - t; return s < 120 ? "nå" : s < 3600 ? Math.round(s / 60) + " min siden" : s < 86400 ? Math.round(s / 3600) + " t siden" : Math.round(s / 86400) + " d siden"; };
-let MEG = null, FANE = location.hash.slice(1) || "oversikt", DATA = {}, SOK = "";
+let FORSTE = true, MEG = null, FANE = location.hash.slice(1) || "oversikt", DATA = {}, SOK = "";
 function melding(t) { const m = $("#melding"); m.textContent = t; m.classList.add("vis"); clearTimeout(m._t); m._t = setTimeout(() => m.classList.remove("vis"), 3200); }
 async function kall(metode, sti, kropp) {
   const r = await fetch("/api/valhalla" + sti, { method: metode, headers: kropp ? { "content-type": "application/json" } : {}, body: kropp ? JSON.stringify(kropp) : undefined, credentials: "include" });
@@ -85,7 +85,7 @@ async function vis() {
   tegnNav();
   const m = $("#main");
   try {
-    if (FANE === "oversikt" || FANE === "tjenesten") DATA.o = await kall("GET", "/oversikt");
+    if (FANE === "oversikt" || FANE === "tjenesten") DATA.o = await kall("GET", "/oversikt" + (FORSTE ? "?synk=1" : "")); FORSTE = false;
     if (FANE === "kontoer") { DATA.k = await kall("GET", "/kontoer"); DATA.o = DATA.o || await kall("GET", "/oversikt"); }
     if (FANE === "hjem") DATA.s = await kall("GET", "/steder");
   } catch (e) { m.innerHTML = `<div class="feil"><h2>${esc(e.message)}</h2><p class="sub">Valhalla er bare for tjenesteeieren og administratorer av Skjold Lab.</p></div>`; return; }
@@ -105,8 +105,9 @@ async function vis() {
         <span><b>${esc(k.epost)}</b><br><span class="sub">Først sett ${dato(k.forst)}</span></span>
         <span>${k.eierAv.map((s) => `<span class="chip eier" title="eier">★ ${esc(s.navn)}</span>`).join("")}${k.medlemAv.map((s) => `<span class="chip">${esc(s.navn)}</span>`).join("") || (k.eierAv.length ? "" : '<span class="sub">Ingen hjem</span>')}</span>
         <span class="sub">${siden(k.sist)}</span>
-        <span>${sjef ? '<span class="merke gull">TJENESTEEIER</span>' : k.admin ? '<span class="merke gull">ADMIN</span>' : ""} ${k.sperret ? '<span class="merke rod">SPERRET</span>' : '<span class="merke gronn">AKTIV</span>'}</span>
+        <span>${sjef ? '<span class="merke gull">TJENESTEEIER</span>' : k.admin ? '<span class="merke gull">ADMIN</span>' : ""} ${k.sperret ? '<span class="merke rod">SPERRET</span>' : '<span class="merke gronn">AKTIV</span>'} ${k.tofa ? '<span class="merke">2FA</span>' : ""}</span>
         <span class="knapper">${sjef ? "" : `<button class="k ${k.sperret ? "" : "rod"}" data-sperr="${esc(k.epost)}" data-v="${k.sperret ? 0 : 1}">${k.sperret ? "Opphev sperring" : "Sperr"}</button>`}
+          ${k.tofa ? `<button class="k" data-tofa="${esc(k.epost)}">Tilbakestill 2FA</button>` : ""}
           ${MEG.eier && !sjef ? `<button class="k" data-admin="${esc(k.epost)}" data-v="${k.admin ? 0 : 1}">${k.admin ? "Fjern admin" : "Gjør til admin"}</button>` : ""}</span></div>`; }).join("") || '<div class="tom">Ingen kontoer.</div>'}</div>`;
     $("#sok").oninput = (e) => { SOK = e.target.value; const p = e.target.selectionStart; vis().then(() => { const s = $("#sok"); s.focus(); s.setSelectionRange(p, p); }); };
   }
@@ -138,6 +139,7 @@ document.addEventListener("click", async (e) => {
   const b = e.target.closest("button"); if (!b) return;
   try {
     if (b.dataset.sperr) { const v = b.dataset.v === "1"; if (v && !(await spor({ tittel: "Sperr " + b.dataset.sperr + "?", tekst: "Kontoen kommer ikke inn på Skjold-hjem før sperringen oppheves. Hjemmene og enhetene beholdes.", ok: "Sperr", farlig: true }))) return; await kall("POST", "/kontoer/" + encodeURIComponent(b.dataset.sperr), { sperret: v }); melding(v ? "Kontoen er sperret" : "Sperringen er opphevet"); }
+    else if (b.dataset.tofa) { if (!(await spor({ tittel: "Tilbakestill totrinnsbekreftelse for " + b.dataset.tofa + "?", tekst: "Bruk dette bare når personen har mistet telefonen og reservekodene, og du har bekreftet hvem det er. Hen logger inn med bare e-post-kode og bør slå det på igjen.", ok: "Tilbakestill", farlig: true }))) return; await kall("POST", "/kontoer/" + encodeURIComponent(b.dataset.tofa), { tofaAv: true }); melding("Totrinnsbekreftelsen er slått av"); }
     else if (b.dataset.admin) { const v = b.dataset.v === "1"; await kall("POST", "/kontoer/" + encodeURIComponent(b.dataset.admin), { admin: v }); melding(v ? "Har nå tilgang til Valhalla" : "Valhalla-tilgangen er fjernet"); }
     else if (b.dataset.legg) { const ep = await spor({ tittel: "Legg til medlem", tekst: "Personen ser hjemmet neste gang hen logger inn med denne e-postadressen.", plass: "navn@eksempel.no", ok: "Legg til" }); if (!ep) return; await kall("POST", "/steder/" + b.dataset.legg, { leggTil: ep }); melding("Medlemmet er lagt til"); }
     else if (b.dataset.fjern) { if (!(await spor({ tittel: "Fjern " + b.dataset.fjern + "?", tekst: "Personen mister tilgangen til hjemmet.", ok: "Fjern", farlig: true }))) return; await kall("POST", "/steder/" + b.dataset.s, { fjern: b.dataset.fjern }); melding("Medlemmet er fjernet"); }

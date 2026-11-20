@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build -c vite.touch.config.ts",
+    "build": "vite build && vite build -c vite.touch.config.ts && vite build -c vite.konto.config.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "icons": "python3 tools/make_icons.py",

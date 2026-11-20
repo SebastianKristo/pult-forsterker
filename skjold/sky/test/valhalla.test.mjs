@@ -56,3 +56,65 @@ test("Valhalla: bare tjenesteeieren og admins; oversikt, kontoer, hjem, sperring
   assert.equal((await api(mf, "DELETE", `/api/valhalla/steder/${s.id}`, "sjef@skjold.no")).status, 200);
   assert.equal((await api(mf, "GET", "/api/hjem/steder", "ola@test.no")).data.length, 0);
 });
+
+test("Valhalla finner hjem som ble laget før registeret (via kontoene)", async () => {
+  // et hjem laget rett i Sted/Konto uten registeret (som før oppdateringen)
+  const r = await api(mf, "POST", "/api/hjem/steder", "gammel@test.no", { navn: "Gammelt hjem" });
+  await mf.getDurableObjectNamespace("REGISTER").then(async (ns) => {
+    const stub = ns.get(ns.idFromName("register"));
+    await stub.fetch("https://do/i/sted-slett", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: r.data.id }) });
+  });
+  const l = await api(mf, "GET", "/api/valhalla/steder?synk=1", "sjef@skjold.no");
+  assert.ok(l.data.some((x) => x.id === r.data.id && x.eier === "gammel@test.no"));
+});
+
+import { createHmac } from "node:crypto";
+function totp(h32, steg = Math.floor(Date.now() / 30000)) {
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"; let bits = 0, v = 0; const b = [];
+  for (const c of h32) { v = (v << 5) | A.indexOf(c); bits += 5; if (bits >= 8) { b.push((v >>> (bits - 8)) & 255); bits -= 8; } }
+  const buf = Buffer.alloc(8); buf.writeBigUInt64BE(BigInt(steg));
+  const h = createHmac("sha1", Buffer.from(b)).update(buf).digest(); const o = h[19] & 15;
+  return String((((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3]) % 1000000).padStart(6, "0");
+}
+async function medCookie(metode, sti, bruker, kropp, ck) {
+  const h = { "x-skjold-user": bruker }; if (kropp) h["content-type"] = "application/json"; if (ck) h.cookie = ck;
+  const r = await mf.dispatchFetch("http://sky.test" + sti, { method: metode, headers: h, body: kropp ? JSON.stringify(kropp) : undefined });
+  return { status: r.status, data: await r.json(), ck: (r.headers.get("set-cookie") || "").split(";")[0] };
+}
+
+test("Skjold-konto: profil, totrinnsbekreftelse med kodeapp og reservekoder, Valhalla kan tilbakestille", async () => {
+  const u = "tofa@test.no";
+  const k = await api(mf, "GET", "/api/hjem/konto", u);
+  assert.equal(k.status, 200); assert.equal(k.data.tofa.aktiv, false); assert.equal(k.data.epost, u);
+  assert.equal((await api(mf, "PATCH", "/api/hjem/konto", u, { navn: "Tora" })).data.navn, "Tora");
+  const st = await api(mf, "POST", "/api/hjem/konto/2fa/start", u, {});
+  assert.match(st.data.uri, /^otpauth:\/\/totp\/Skjold\?secret=[A-Z2-7]{26}&issuer=Skjold$/);
+  assert.ok(st.data.uri.length <= 78);   // passer i QR-versjon 4 (lib/qr.ts)
+  assert.equal((await api(mf, "POST", "/api/hjem/konto/2fa/aktiver", u, { kode: "000000" })).status, 401);
+  const ak = await medCookie("POST", "/api/hjem/konto/2fa/aktiver", u, { kode: totp(st.data.hemmelighet) });
+  assert.equal(ak.status, 200); assert.equal(ak.data.reservekoder.length, 10); assert.match(ak.ck, /^skjold_2fa=/);
+  // uten økt-cookie: alt annet enn /meg og /2fa/bekreft avvises
+  const uten = await api(mf, "GET", "/api/hjem/steder", u);
+  assert.equal(uten.status, 401); assert.equal(uten.data.error, "2fa");
+  const meg = await api(mf, "GET", "/api/hjem/meg", u);
+  assert.equal(meg.data.tofa, true); assert.equal(meg.data.tofaOk, false);
+  assert.equal((await medCookie("GET", "/api/hjem/steder", u, null, ak.ck)).status, 200);
+  // ny enhet: bekreft med en reservekode (kan bare brukes én gang)
+  const b1 = await medCookie("POST", "/api/hjem/konto/2fa/bekreft", u, { kode: ak.data.reservekoder[0] });
+  assert.equal(b1.status, 200); assert.equal((await medCookie("GET", "/api/hjem/konto", u, null, b1.ck)).data.tofa.reservekoderIgjen, 9);
+  assert.equal((await api(mf, "POST", "/api/hjem/konto/2fa/bekreft", u, { kode: ak.data.reservekoder[0] })).status, 401);
+  // logg ut overalt: gamle økter slutter å virke
+  await medCookie("POST", "/api/hjem/konto/logg-ut-overalt", u, {}, b1.ck);
+  assert.equal((await medCookie("GET", "/api/hjem/steder", u, null, b1.ck)).status, 401);
+  // Valhalla tilbakestiller (mistet telefonen)
+  assert.equal((await api(mf, "POST", "/api/valhalla/kontoer/tofa%40test.no", "sjef@skjold.no", { tofaAv: true })).status, 200);
+  assert.equal((await api(mf, "GET", "/api/hjem/steder", u)).status, 200);
+});
+
+test("Skjold-konto: kan ikke slettes mens du eier et hjem", async () => {
+  const u = "slett@test.no";
+  const s = (await api(mf, "POST", "/api/hjem/steder", u, { navn: "Mitt" })).data;
+  assert.equal((await api(mf, "DELETE", "/api/hjem/konto", u)).status, 409);
+  await api(mf, "DELETE", "/api/hjem/steder/" + s.id, u);
+  assert.equal((await api(mf, "DELETE", "/api/hjem/konto", u)).status, 200);
+});
