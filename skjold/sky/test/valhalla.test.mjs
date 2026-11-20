@@ -92,12 +92,13 @@ test("Skjold-konto: profil, totrinnsbekreftelse med kodeapp og reservekoder, Val
   assert.ok(st.data.uri.length <= 78);   // passer i QR-versjon 4 (lib/qr.ts)
   assert.equal((await api(mf, "POST", "/api/hjem/konto/2fa/aktiver", u, { kode: "000000" })).status, 401);
   const ak = await medCookie("POST", "/api/hjem/konto/2fa/aktiver", u, { kode: totp(st.data.hemmelighet) });
-  assert.equal(ak.status, 200); assert.equal(ak.data.reservekoder.length, 10); assert.match(ak.ck, /^skjold_2fa=/);
+  assert.equal(ak.status, 200); assert.equal(ak.data.reservekoder.length, 10); assert.match(ak.ck, /^skjold_okt=/);
   // uten økt-cookie: alt annet enn /meg og /2fa/bekreft avvises
   const uten = await api(mf, "GET", "/api/hjem/steder", u);
   assert.equal(uten.status, 401); assert.equal(uten.data.error, "2fa");
   const meg = await api(mf, "GET", "/api/hjem/meg", u);
   assert.equal(meg.data.tofa, true); assert.equal(meg.data.tofaOk, false);
+  assert.equal((await api(mf, "GET", "/api/hjem/konto/okter", u)).status, 401);
   assert.equal((await medCookie("GET", "/api/hjem/steder", u, null, ak.ck)).status, 200);
   // ny enhet: bekreft med en reservekode (kan bare brukes én gang)
   const b1 = await medCookie("POST", "/api/hjem/konto/2fa/bekreft", u, { kode: ak.data.reservekoder[0] });
@@ -117,4 +118,116 @@ test("Skjold-konto: kan ikke slettes mens du eier et hjem", async () => {
   assert.equal((await api(mf, "DELETE", "/api/hjem/konto", u)).status, 409);
   await api(mf, "DELETE", "/api/hjem/steder/" + s.id, u);
   assert.equal((await api(mf, "DELETE", "/api/hjem/konto", u)).status, 200);
+});
+
+test("Økter: liste, logg ut én enhet, godkjenn ny innlogging fra en annen enhet", async () => {
+  const u = "okt@test.no";
+  const st = await api(mf, "POST", "/api/hjem/konto/2fa/start", u, {});
+  const a = await medCookie("POST", "/api/hjem/konto/2fa/aktiver", u, { kode: totp(st.data.hemmelighet) });
+  const tlf = a.ck;   // «telefonen» er logget inn og bekreftet
+  // ny nettleser ber om godkjenning
+  const ny = await medCookie("POST", "/api/hjem/konto/godkjenn/start", u, {});
+  assert.equal(ny.status, 200); assert.ok(ny.data.tall >= 10 && ny.data.tall < 100);
+  const pc = ny.ck;
+  assert.equal((await medCookie("GET", "/api/hjem/konto/godkjenn/status?rid=" + ny.data.rid, u, null, pc)).data.status, "venter");
+  // den nye økten kan ikke godkjenne seg selv (er ikke bekreftet)
+  assert.equal((await medCookie("GET", "/api/hjem/konto/godkjenn/ventende", u, null, pc)).status, 401);
+  const v = await medCookie("GET", "/api/hjem/konto/godkjenn/ventende", u, null, tlf);
+  assert.equal(v.data.length, 1); assert.equal(v.data[0].valg.length, 3); assert.ok(v.data[0].valg.includes(ny.data.tall));
+  const svar = await medCookie("POST", "/api/hjem/konto/godkjenn/" + v.data[0].rid, u, { svar: ny.data.tall }, tlf);
+  assert.equal(svar.data.status, "godkjent");
+  assert.equal((await medCookie("GET", "/api/hjem/konto/godkjenn/status?rid=" + ny.data.rid, u, null, pc)).data.status, "godkjent");
+  assert.equal((await medCookie("GET", "/api/hjem/steder", u, null, pc)).status, 200);
+  // feil tall avviser
+  const ny2 = await medCookie("POST", "/api/hjem/konto/godkjenn/start", u, {});
+  const v2 = (await medCookie("GET", "/api/hjem/konto/godkjenn/ventende", u, null, tlf)).data[0];
+  const feilTall = v2.valg.find((x) => x !== ny2.data.tall);
+  assert.equal((await medCookie("POST", "/api/hjem/konto/godkjenn/" + v2.rid, u, { svar: feilTall }, tlf)).data.status, "avvist");
+  assert.equal((await medCookie("GET", "/api/hjem/steder", u, null, ny2.ck)).status, 401);
+  // øktlisten viser enhetene, og «denne» er markert
+  const l = await medCookie("GET", "/api/hjem/konto/okter", u, null, tlf);
+  assert.ok(l.data.length >= 3); assert.equal(l.data.filter((x) => x.denne).length, 1);
+  const pcSid = pc.split("=")[1].split(".")[0];
+  assert.ok(l.data.some((x) => x.sid === pcSid && x.bekreftet && x.metode === "godkjent fra en annen enhet"));
+  // logg ut PC-en fra telefonen
+  assert.equal((await medCookie("DELETE", "/api/hjem/konto/okter/" + pcSid, u, null, tlf)).status, 200);
+  assert.equal((await medCookie("GET", "/api/hjem/steder", u, null, pc)).status, 401);
+  assert.equal((await medCookie("GET", "/api/hjem/steder", u, null, tlf)).status, 200);
+});
+
+import { generateKeyPairSync, sign as nodeSign, createHash } from "node:crypto";
+const b64u = (b) => Buffer.from(b).toString("base64url");
+function cborEnc(v) {   // akkurat nok CBOR for en attestasjon
+  const hode = (maj, n) => n < 24 ? [maj << 5 | n] : n < 256 ? [maj << 5 | 24, n] : [maj << 5 | 25, n >> 8, n & 255];
+  if (typeof v === "number") return Buffer.from(v >= 0 ? hode(0, v) : hode(1, -1 - v));
+  if (typeof v === "string") { const b = Buffer.from(v); return Buffer.concat([Buffer.from(hode(3, b.length)), b]); }
+  if (Buffer.isBuffer(v)) return Buffer.concat([Buffer.from(hode(2, v.length)), v]);
+  if (v instanceof Map) return Buffer.concat([Buffer.from(hode(5, v.size)), ...[...v].flatMap(([k, x]) => [cborEnc(k), cborEnc(x)])]);
+  throw new Error("cbor");
+}
+test("Passkey: registrer og logg inn med en ES256-nøkkel (WebAuthn)", async () => {
+  const u = "nokkel@test.no", rp = "sky.test", opp = "http://sky.test";
+  const { publicKey, privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+  const jwk = publicKey.export({ format: "jwk" });
+  const credId = Buffer.from("nokkel-id-1234567890");
+  const rpHash = createHash("sha256").update(rp).digest();
+  const start = await medCookie("POST", "/api/hjem/konto/passkey/start", u, { type: "passkey" });
+  assert.equal(start.status, 200); assert.equal(start.data.rp.id, rp);
+  const ck = start.ck;
+  const cose = cborEnc(new Map([[1, 2], [3, -7], [-1, 1], [-2, Buffer.from(jwk.x, "base64url")], [-3, Buffer.from(jwk.y, "base64url")]]));
+  const len = Buffer.alloc(2); len.writeUInt16BE(credId.length);
+  const authData = Buffer.concat([rpHash, Buffer.from([0x45]), Buffer.from([0, 0, 0, 1]), Buffer.alloc(16), len, credId, cose]);
+  const cdj = Buffer.from(JSON.stringify({ type: "webauthn.create", challenge: start.data.challenge, origin: opp }));
+  const att = cborEnc(new Map([["fmt", "none"], ["attStmt", new Map()], ["authData", authData]]));
+  const reg = await medCookie("POST", "/api/hjem/konto/passkey/registrer", u, { clientDataJSON: b64u(cdj), attestationObject: b64u(att), navn: "Testnøkkel" }, ck);
+  assert.equal(reg.status, 200, JSON.stringify(reg.data)); assert.equal(reg.data.tofaAktiv, true);
+  // en ny enhet må nå bekrefte – med passkeyen
+  assert.equal((await api(mf, "GET", "/api/hjem/steder", u)).status, 401);
+  const ls = await medCookie("POST", "/api/hjem/konto/passkey/login-start", u, {});
+  assert.equal(ls.data.allowCredentials[0].id, b64u(credId));
+  const lagSvar = (utf, teller) => {
+    const ad = Buffer.concat([rpHash, Buffer.from([0x05]), Buffer.from([0, 0, 0, teller])]);
+    const c = Buffer.from(JSON.stringify({ type: "webauthn.get", challenge: utf, origin: opp }));
+    const sig = nodeSign("sha256", Buffer.concat([ad, createHash("sha256").update(c).digest()]), privateKey);   // DER, som nettleseren
+    return { id: b64u(credId), clientDataJSON: b64u(c), authenticatorData: b64u(ad), signature: b64u(sig) };
+  };
+  const inn = await medCookie("POST", "/api/hjem/konto/passkey/login", u, lagSvar(ls.data.challenge, 2), ls.ck);
+  assert.equal(inn.status, 200, JSON.stringify(inn.data));
+  assert.equal((await medCookie("GET", "/api/hjem/steder", u, null, ls.ck)).status, 200);
+  // samme teller igjen (kopiert nøkkel) avvises
+  const ls2 = await medCookie("POST", "/api/hjem/konto/passkey/login-start", u, {});
+  assert.equal((await medCookie("POST", "/api/hjem/konto/passkey/login", u, lagSvar(ls2.data.challenge, 2), ls2.ck)).status, 401);
+  // feil utfordring avvises
+  const ls3 = await medCookie("POST", "/api/hjem/konto/passkey/login-start", u, {});
+  assert.equal((await medCookie("POST", "/api/hjem/konto/passkey/login", u, lagSvar("feil", 3), ls3.ck)).status, 401);
+  // fjern nøkkelen → totrinn av igjen
+  const info = await medCookie("GET", "/api/hjem/konto", u, null, ls.ck);
+  assert.equal(info.data.tofa.passkeys.length, 1);
+  const d = await medCookie("DELETE", "/api/hjem/konto/passkey/" + encodeURIComponent(info.data.tofa.passkeys[0].id), u, null, ls.ck);
+  assert.equal(d.data.tofaAktiv, false);
+  assert.equal((await api(mf, "GET", "/api/hjem/steder", u)).status, 200);
+});
+
+test("Profilbilde: lagres på kontoen og vises i Valhalla", async () => {
+  const u = "bilde@test.no", bilde = "data:image/jpeg;base64," + Buffer.from("liksom-jpeg").toString("base64");
+  assert.equal((await api(mf, "PATCH", "/api/hjem/konto", u, { bilde: "javascript:alert(1)" })).status, 400);
+  assert.equal((await api(mf, "PATCH", "/api/hjem/konto", u, { bilde })).status, 200);
+  assert.equal((await api(mf, "GET", "/api/hjem/konto", u)).data.bilde, bilde);
+  const k = await api(mf, "GET", "/api/valhalla/kontoer", "sjef@skjold.no");
+  assert.equal(k.data.find((x) => x.epost === u).bilde, bilde);
+});
+
+test("Vedlikehold: brukere får 503 med nedtelling, Valhalla og /meg virker", async () => {
+  const til = Math.floor(Date.now() / 1000) + 3600;
+  assert.equal((await api(mf, "POST", "/api/valhalla/vedlikehold", "vanlig@test.no", { aktiv: true })).status, 403);
+  const s = await api(mf, "POST", "/api/valhalla/vedlikehold", "sjef@skjold.no", { aktiv: true, melding: "Ny database", til });
+  assert.equal(s.status, 200); assert.equal(s.data.aktiv, true);
+  const r = await api(mf, "GET", "/api/hjem/steder", "vanlig@test.no");
+  assert.equal(r.status, 503); assert.equal(r.data.error, "vedlikehold"); assert.equal(r.data.vedlikehold.til, til);
+  assert.equal((await api(mf, "GET", "/api/hjem/meg", "vanlig@test.no")).data.vedlikehold.melding, "Ny database");
+  const off = await mf.dispatchFetch("http://sky.test/api/vedlikehold");
+  assert.equal(off.headers.get("access-control-allow-origin"), "*"); assert.equal((await off.json()).aktiv, true);
+  assert.equal((await api(mf, "GET", "/api/valhalla/oversikt", "sjef@skjold.no")).data.vedlikehold.aktiv, true);
+  await api(mf, "POST", "/api/valhalla/vedlikehold", "sjef@skjold.no", { aktiv: false });
+  assert.equal((await api(mf, "GET", "/api/hjem/steder", "vanlig@test.no")).status, 200);
 });

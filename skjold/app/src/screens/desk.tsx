@@ -29,7 +29,8 @@ import { AskBox } from './ai';
 const PLAY = 'M8 5v14l11-7z';
 const SRC_ORDER: [InputId, string][] = [['radio', 'Radio'], ['airplay', 'AirPlay'], ['bt', 'Blåtann'], ['spotify', 'Spotify'], ['plex', 'Plex'], ['aux', 'AUX'], ['aux2', 'AUX'], ['usb', 'USB']];
 const favToSt = (f: Fav): Station => ({ name: f.title, url: f.url, ...(f.genre ? { genre: f.genre } : {}), ...(f.image ? { image: f.image } : {}) });
-const ndBg = (id: string | undefined, key: string, size = 300) => { const u = ndCover(id, size), a = art(key); return u ? 'url("' + u.replace(/"/g, '') + '") center / cover no-repeat, ' + a.bg : a.bg; };
+// Med cover: mørk bunn under bildet (ikke den fargede reserveflaten), så et annet «bilde» aldri blinker før coveret er lastet.
+const ndBg = (id: string | undefined, key: string, size = 300) => { const u = ndCover(id, size); return u ? 'url("' + u.replace(/"/g, '') + '") center / cover no-repeat, #1b1b1c' : art(key).bg; };
 
 function greet(): string { const h = new Date().getHours(); return h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 17 ? 'God dag' : h < 22 ? 'God kveld' : 'God natt'; }
 
@@ -133,9 +134,9 @@ export function DeskHome() {
           <SecHead title="Dine spillelister" kicker="FRA MUSIKKTJENESTENE" more={ndConfigured() ? 'Navidrome ›' : undefined} onMore={() => go('lib', 'nd')} />
           {nd.pls.length || nd.alb.length || yt.length ? (
             <div class="dkx-row">
-              {yt.map((p) => <Tile key={'y' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.playlist ? 'Spilleliste' : p.artist || 'YouTube Music'} src="YouTube Music" onClick={() => { go('lib', 'ytm'); libUi.pl.value = { kind: p.playlist ? 'pl' : 'album', id: p.id, name: p.name }; }} />)}
-              {nd.pls.map((p) => <Tile key={'p' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} src="Navidrome" onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'pl', id: p.id, name: p.name }; }} />)}
-              {nd.alb.map((al) => <Tile key={'a' + al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist} src="Navidrome" onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; }} />)}
+              {yt.map((p) => <Tile key={'y' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.playlist ? 'Spilleliste' : p.artist || 'YouTube Music'} src="YouTube Music" onClick={() => { go('lib', 'ytm'); libUi.pl.value = { kind: p.playlist ? 'pl' : 'album', id: p.id, name: p.name, cover: p.coverArt }; }} />)}
+              {nd.pls.map((p) => <Tile key={'p' + p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount + ' låter'} src="Navidrome" onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'pl', id: p.id, name: p.name, cover: p.coverArt }; }} />)}
+              {nd.alb.map((al) => <Tile key={'a' + al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.artist} src="Navidrome" onClick={() => { go('lib', 'nd'); libUi.pl.value = { kind: 'album', id: al.id, name: al.name, cover: al.coverArt }; }} />)}
             </div>
           ) : (
             <div class="dkx-empty"><span>Koble til Navidrome eller YouTube Music for å se spillelistene dine her.</span><button class="btn" onClick={() => go('int')}>Integrasjoner</button></div>
@@ -444,8 +445,8 @@ export function ArtistView({ lib }: { lib: LibId }) {
   return (
     <div class="col gap24">
       <div class="dkx-alhead">
-        <div class="glow" style={{ background: ndBg(cover, navn, 400) }} />
-        <div class="cv" style={{ background: ndBg(cover, navn, 400), borderRadius: '50%' }} />
+        <div class="glow" style={{ background: data ? ndBg(cover, navn) : '#141415' }} />
+        <div class="cv" style={{ background: data ? ndBg(cover, navn) : '#1b1b1c', borderRadius: '50%' }} />
         <div class="col" style={{ gap: '8px', minWidth: 0, position: 'relative' }}>
           <span class="kicker">ARTIST{data ? ' · ' + LIB_NAME[l].toUpperCase() : ''}</span>
           <h1>{data?.navn || navn}</h1>
@@ -458,7 +459,7 @@ export function ArtistView({ lib }: { lib: LibId }) {
         </div>
       </div>
       {data && data.albums.length > 0 && <section class="col gap12"><SecHead title="Album" />
-        <div class="dkx-grid">{data.albums.map((al) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.year ? String(al.year) : al.artist} onClick={() => { artistView.value = null; libUi.pl.value = { kind: 'album', id: al.id, name: al.name }; if (l !== lib) go('lib', l); }} />)}</div>
+        <div class="dkx-grid">{data.albums.map((al) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.year ? String(al.year) : al.artist} onClick={() => { artistView.value = null; libUi.pl.value = { kind: 'album', id: al.id, name: al.name, cover: al.coverArt }; if (l !== lib) go('lib', l); }} />)}</div>
       </section>}
       {songs.length > 0 && <section class="col gap12"><SecHead title="Låter" /><TrackTable list={songs.slice(0, 30)} onPick={(i) => play(songs.slice(0, 30), i)} /></section>}
     </div>
@@ -474,8 +475,9 @@ function OpenList({ lib }: { lib: LibId }) {
   return (
     <div class="col gap20">
       <div class="dkx-alhead">
-        <div class="glow" style={{ background: ndBg(list[0]?.coverArt, pl.name, 400) }} />
-        <div class="cv" style={{ background: ndBg(list[0]?.coverArt, pl.name, 400) }} />
+        {/* coveret fra flisen (samme størrelse = allerede i nettleserens cache), så det riktige bildet vises med en gang */}
+        <div class="glow" style={{ background: ndBg(pl.cover ?? list[0]?.coverArt, pl.name) }} />
+        <div class="cv" style={{ background: ndBg(pl.cover ?? list[0]?.coverArt, pl.name) }} />
         <div class="col" style={{ gap: '8px', minWidth: 0, position: 'relative' }}>
           <span class="kicker">{pl.kind === 'album' ? 'ALBUM' : 'SPILLELISTE'}</span>
           <h1>{pl.name}</h1>
@@ -507,9 +509,9 @@ export function DeskLibrary({ lib }: { lib: LibId }) {
   }, [q, nd, ytm]);
   const off = ytm ? !!data.err && !data.newest.length && !data.pls.length : !ndConfigured() || (!!data.err && !data.newest.length);
   const play = (l: NdSong[], i: number) => { playNd(l, i, lib); go('play'); };
-  const openAl = (al: NdAlbum) => { libUi.pl.value = { kind: al.playlist ? 'pl' : 'album', id: al.id, name: al.name }; };
+  const openAl = (al: NdAlbum) => { libUi.pl.value = { kind: al.playlist ? 'pl' : 'album', id: al.id, name: al.name, cover: al.coverArt }; };
   const alTile = (al: NdAlbum) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={al.playlist ? 'Spilleliste' : al.artist + (al.year ? ' · ' + al.year : '')} onClick={() => openAl(al)} />;
-  const plTile = (p: NdPlaylist | NdAlbum) => <Tile key={p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount ? p.songCount + ' låter' : 'artist' in p && p.artist && !p.playlist ? p.artist : 'Spilleliste'} onClick={() => { libUi.pl.value = { kind: 'playlist' in p && p.playlist === false ? 'album' : 'pl', id: p.id, name: p.name }; }} />;
+  const plTile = (p: NdPlaylist | NdAlbum) => <Tile key={p.id} bg={ndBg(p.coverArt, p.name)} label={ndCover(p.coverArt) ? '' : p.name} name={p.name} meta={p.songCount ? p.songCount + ' låter' : 'artist' in p && p.artist && !p.playlist ? p.artist : 'Spilleliste'} onClick={() => { libUi.pl.value = { kind: 'playlist' in p && p.playlist === false ? 'album' : 'pl', id: p.id, name: p.name, cover: p.coverArt }; }} />;
   const h = hist.value[lib] ?? [];
   const f: NdAlbum | undefined = ytm ? ytmData.pls[0] ?? ytmData.newest[0] : ndData.newest[0];
   const fKind = f?.playlist ? 'pl' as const : 'album' as const;

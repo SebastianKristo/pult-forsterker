@@ -33,11 +33,25 @@ ikke nås direkte. Kontrakten (API og meldingsformat) står i [`docs/SKJOLD_HJEM
 - **Kontosiden** (`/konto`, egen Vite-side `skjold/app/konto.html` → `src/konto/`): oversikt, personlig info (navn),
   sikkerhet, hjem og deling, data og personvern (Skjold Cloud, slett konto). `?velkommen=1` viser velkomststegene
   (navn → lag hjem → koble enhet → totrinnsbekreftelse), som appen og web-UI-et åpner fra oppsettet og Hjem-kortet.
-- **Totrinnsbekreftelse (TOTP):** `POST /api/hjem/konto/2fa/start` → nøkkel og `otpauth://`-adresse (QR på siden),
-  `…/aktiver {kode}` → 10 reservekoder (lagres som SHA-256), `…/bekreft {kode}` (kode eller reservekode) setter
-  økt-cookien `skjold_2fa` (HMAC, 30 dager, HttpOnly, Secure). Med totrinn på svarer alle andre `/api/hjem`- og
-  `/api/valhalla`-kall 401 `{"error":"2fa"}` til økten er bekreftet. `…/av` og `…/nye-koder` krever en kode.
-  `…/logg-ut-overalt` gjør alle økter ugyldige. 8 feil koder låser i 15 minutter.
+- **Økter:** hver nettleser/telefon får cookien `skjold_okt` (`sid.utløp.HMAC`, 30 dager, HttpOnly, Secure). Øktene
+  ligger i Konto-DO-en (navn som «Chrome på Mac», sted, sist aktiv, bekreftet/metode, høyst 30).
+  `GET /api/hjem/konto/okter`, `DELETE …/okter/<sid>` (logg ut én enhet), `POST …/logg-ut-overalt`.
+- **Totrinnsbekreftelse** er på når kontoen har en kodeapp eller minst én passkey/sikkerhetsnøkkel. Da må nye økter
+  bekreftes, ellers svarer `/api/hjem` og `/api/valhalla` 401 `{"error":"2fa"}`. Tre måter:
+  - **Kode (TOTP):** `…/2fa/start` → nøkkel og `otpauth://` (QR), `…/2fa/aktiver {kode}` → 10 reservekoder (SHA-256),
+    `…/2fa/bekreft {kode}`. `…/2fa/av` og `…/2fa/nye-koder` krever en kode. 8 feil låser i 15 minutter.
+  - **Passkey / sikkerhetsnøkkel (WebAuthn):** `…/passkey/start {type: passkey|nokkel}` → `…/passkey/registrer`
+    (attestasjon `none`, ES256 og RS256), `…/passkey/login-start` → `…/passkey/login` (signatur og teller sjekkes),
+    `DELETE …/passkey/<id>`. rpId er vertsnavnet (hjem.skjold-lab.com).
+  - **Godkjenn fra en innlogget enhet:** den nye økten kaller `…/godkjenn/start` og viser et tall; bekreftede enheter
+    (appen, konto-siden) ser `GET …/godkjenn/ventende` med tre tall og svarer `POST …/godkjenn/<rid> {svar}`.
+    Feil tall eller «avvis» avviser. Forespørselen varer 3 minutter.
+- **Profilbilde:** `PATCH /api/hjem/konto {bilde}` (JPEG/PNG/WebP-data-URL, maks ca. 60 kB). Konto-siden lar deg
+  velge utsnitt med en sirkel (dra og zoom) og lagrer 256 px JPEG. Vises også i Valhalla.
+- **Vedlikehold:** `POST /api/valhalla/vedlikehold {aktiv, melding, til}` (eiere og admins). Mens det er på, svarer
+  `/api/hjem` 503 `{"error":"vedlikehold", vedlikehold}` for vanlige brukere (unntatt `/api/hjem/meg`), og offentlig
+  `GET /api/vedlikehold` (CORS `*`) gir status. Appen, web-UI-et og konto-siden viser en nedtelling og sier at Skjold
+  fortsatt virker lokalt. Enhetenes WebSocket-kobling påvirkes ikke.
 - Økt-nøkkelen er `SESSION_SECRET` hvis den er satt, ellers en tilfeldig nøkkel som registeret lager én gang.
 - Valhalla kan tilbakestille totrinnsbekreftelsen for en konto som har mistet telefonen og reservekodene.
 

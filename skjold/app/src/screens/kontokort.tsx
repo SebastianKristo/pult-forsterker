@@ -1,11 +1,19 @@
 // «Lag en Skjold-konto»-kortet på Hjem (mobil, PC og web-UI): vises når du ikke er logget inn på Skjold-hjem.
 // Kan hoppes over; da kommer det tilbake etter 30 dager.
 import { useState } from 'preact/hooks';
-import { hjemState, skyUrl } from '../lib/hjem';
+import { hjemState, skyUrl, tofaMangler, vedlikehold } from '../lib/hjem';
+import { VedlikeholdBanner } from '../lib/vedlikehold';
 import { KONTO_HOPPET } from './onboard';
 
 export function KontoKort() {
   const [skjult, setSkjult] = useState(() => { try { return Date.now() - Number(localStorage.getItem(KONTO_HOPPET) || 0) < 30 * 86400000; } catch { return false; } });
+  if (vedlikehold.value?.aktiv) return <VedlikeholdBanner v={vedlikehold.value} />;
+  if (tofaMangler.value) return (
+    <a href={skyUrl() + '/konto?fra=app'} target="_blank" rel="noreferrer" style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:16px;border:1px solid #5a4420;background:linear-gradient(135deg,#1c170d,#141415 70%);color:#f2f2ee;text-decoration:none" data-testid="konto-2fa">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f0c46a" stroke-width="1.7"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></svg>
+      <span style="flex:1;display:flex;flex-direction:column;gap:2px"><b style="font-size:14.5px">Bekreft at det er deg</b><span style="font-size:12.5px;color:#a9a9a3">Skjold-kontoen har totrinnsbekreftelse. Bekreft med passkey, kode eller fra en annen enhet for å styre hjemmefra.</span></span>
+      <span style="color:#f0c46a;font-size:20px">›</span>
+    </a>);
   if (skjult || hjemState.value !== 'login') return null;
   const hopp = () => { try { localStorage.setItem(KONTO_HOPPET, String(Date.now())); } catch { /* privat modus */ } setSkjult(true); };
   return (

@@ -5,6 +5,7 @@
 import { signal } from '@preact/signals';
 import { ApiError, getBase, isAccessBlock, isNative, isRelayBase, probe, setBase } from './api';
 import { loadSettings, reconnect } from './store';
+import type { Vedlikehold } from './vedlikehold';
 
 export const SKY_DEFAULT = 'https://hjem.skjold-lab.com';
 /** Adressen skyen hadde før skjold-lab.com. Web-UI-et som åpnes derfra skal fortsatt virke. */
@@ -30,6 +31,10 @@ export const enheter = signal<Enhet[]>([]);
 export const aktivEnhet = signal<string>('');
 export const hjemState = signal<'ukjent' | 'laster' | 'ok' | 'login' | 'feil'>('ukjent');
 export const hjemErr = signal('');
+/** Skjold Lab Valhalla har vedlikehold (fra 503 eller /meg). Lokalt virker alt som før. */
+export const vedlikehold = signal<Vedlikehold | null>(null);
+/** Kontoen har totrinnsbekreftelse, og denne enheten er ikke bekreftet ennå. */
+export const tofaMangler = signal(false);
 /** Web-UI-et er servert fra skyen selv (relative stier). */
 export const sameOrigin = signal(false);
 
@@ -59,10 +64,17 @@ async function hj<T>(path: string, init?: RequestInit, timeoutMs = 8000): Promis
     const ct = r.headers.get('content-type') ?? '';
     if (!r.ok) {
       let msg = 'HTTP ' + r.status;
-      try { const j = (await r.json()) as { error?: string; feil?: string }; msg = j.error || j.feil || msg; } catch { /* ingen JSON */ }
+      try {
+        const j = (await r.json()) as { error?: string; feil?: string; vedlikehold?: Vedlikehold };
+        msg = j.error || j.feil || msg;
+        if (r.status === 503 && j.error === 'vedlikehold') { vedlikehold.value = j.vedlikehold ?? { aktiv: true }; msg = 'Skjold Lab Valhalla har vedlikehold'; }
+        if (r.status === 401 && j.error === '2fa') tofaMangler.value = true;
+      } catch { /* ingen JSON */ }
       throw new ApiError(r.status, msg);
     }
     if (!ct.includes('json')) throw new ApiError(401, 'Logg inn på Skjold-hjem');   // HTML = Access-innloggingsside
+    if (vedlikehold.value && !path.startsWith('/api/hjem/meg')) vedlikehold.value = null;
+    tofaMangler.value = false;
     return (await r.json()) as T;
   } finally { clearTimeout(t); }
 }
@@ -80,7 +92,15 @@ export const hjem = {
   inviter: (id: string, epost: string) => hj<unknown>('/api/hjem/steder/' + enc(id) + '/medlemmer', body('POST', { epost })),
   fjernMedlem: (id: string, epost: string) => hj<unknown>('/api/hjem/steder/' + enc(id) + '/medlemmer/' + enc(epost), body('DELETE')),
   nyEier: (id: string, epost: string) => hj<unknown>('/api/hjem/steder/' + enc(id) + '/eier', body('POST', { epost })),
-  meg: () => hj<{ epost: string; valhalla: boolean; eier: boolean }>('/api/hjem/meg')
+  meg: async () => {
+    const m = await hj<{ epost: string; valhalla: boolean; eier: boolean; tofa?: boolean; tofaOk?: boolean; vedlikehold?: Vedlikehold | null }>('/api/hjem/meg');
+    vedlikehold.value = m.vedlikehold?.aktiv ? m.vedlikehold : null;
+    tofaMangler.value = !!m.tofa && !m.tofaOk;
+    return m;
+  },
+  ventende: () => hj<{ rid: string; navn: string; sted: string; t: number; valg: number[] }[]>('/api/hjem/konto/godkjenn/ventende', undefined, 6000),
+  godkjenn: (rid: string, svar: number | 'avvis') => hj<{ status: string }>('/api/hjem/konto/godkjenn/' + enc(rid), body('POST', { svar })),
+  konto: () => hj<{ navn: string; bilde: string; epost: string }>('/api/hjem/konto')
 };
 
 function fail(e: unknown): void {

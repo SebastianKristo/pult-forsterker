@@ -40,6 +40,7 @@ import { RostSetup, rostBack } from './screens/rostsetup';
 import { EnhetWifi, enhetWifiBack } from './screens/enhetwifi';
 import { showToast, settings } from './lib/store';
 import { canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer } from './lib/appUpdate';
+import { GodkjennInnlogging } from './screens/godkjenn';
 
 function useWide(): boolean {
   const q = '(min-width: 900px)';
@@ -82,7 +83,7 @@ export function App() {
   else if (mode.value === 'rost') body = <RostSetup />;
   else if (mode.value === 'enhetwifi') body = <EnhetWifi />;
   else body = wide ? <Desktop /> : <Phone />;
-  return <>{body}<DoorbellOverlay /><WhatsNewSheet /><SetupWizard />{toast.value && <div class="toast fade" role="status">{toast.value}</div>}</>;
+  return <>{body}<DoorbellOverlay /><GodkjennInnlogging /><WhatsNewSheet /><SetupWizard />{toast.value && <div class="toast fade" role="status">{toast.value}</div>}</>;
 }
 
 function Offline() {

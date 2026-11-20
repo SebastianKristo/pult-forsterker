@@ -14,3 +14,6 @@ a { color: var(--gull); }
 @keyframes inn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 input:focus { outline: none; border-color: var(--gull2) !important; }
 @media (max-width: 860px) { .oppsett { grid-template-columns: 1fr !important; } .meny { flex-direction: row !important; overflow-x: auto; position: static !important; } .meny button { white-space: nowrap; } }
+.puls { width: 8px; height: 8px; border-radius: 4px; background: var(--gull); animation: puls 1.2s ease-in-out infinite; display: inline-block; }
+@keyframes puls { 50% { opacity: .25; transform: scale(.7); } }
+button:disabled { opacity: .55; cursor: default; }
