@@ -538,6 +538,36 @@ module ledninger() { if (hu) color([0.85, 0.2, 0.2]) for (k = HU_BUNTER) for (i 
   else color([0.85, 0.2, 0.2]) for (k = [KANAL_BAT, KANAL_IR]) if (len(k)) hull() for (q = k) translate([q[0], L - q[1], kanalZ + 0.75]) cube([1.5, 0.01, 1.5], center = true); }
 module innmat() { batteri(); if (!hk) { mcu_kort(); lader(); } if (hu) hu_gulv(); ir_kort(); if (!en && !hu) { vibbryter(); motor(); } ledninger(); }
 // hullkort-utgaven: bryterbeina (klippet til HU_BEIN under kortet, med loddet) og delene på gulvet (XIAO, MCP-modulen, FPC-adapterne)
+// ---------- TPU-klips mot slark (hullkort-utgaven, TPU 95A) ----------
+// Et flatt klips ligger oppå hver bryter (rundt plungeren). To fjærtunger stikker ut over kanten av bryterhuset, og en knott
+// på hver tunge presser hetten lett opp mot toppen (0,4 mm forspenning, ca. 5–10 g per tast). Da står hettene stille når en
+// annen tast trykkes. Trykker du, gir tungene etter (ca. 0,2 N ekstra, bryteren trenger ca. 1,6 N). Knottene er høyere under
+// oppsettets hetter (de står 0,6 mm høyere). Tungene går på tvers, unntatt på venstre og høyre i D-paden (langs).
+klT = 0.4; klTL = 2.6; klTW = 3.0; klB = 1.6; klHull = 3.6; klFor = 0.4;   // hullet sitter stramt på plungeren (Ø3,5), så klipset blir sittende
+klZ = zKort + kortT + (hu ? HU_SW_KROPP : 0);    // oppå bryterhuset
+function kl_front(b) = len([for (h = FRONT) for (m = h[8]) if (abs(m[0] - b[1]) < 0.01 && abs(L - m[1] - b[2]) < 0.01) 1]) > 0;
+function kl_langs(b) = b[0] == "venstre" || b[0] == "hoyre";
+// fri høyde: hetten hviler med flensen mot toppen (0,1 mm over modellens hette) + forspenningen; montert = knotten mot hetten i modellen
+function kl_knott(front, montert) = (front ? zHb + akt_h : zHb) - klZ - klT + (montert ? 0 : 0.1 + klFor);
+module klips(front, montert = false) {
+  difference() {
+    union() {
+      translate([-3, -3, 0]) cube([6, 6, klT]);
+      for (s = [-1, 1]) {
+        translate([s > 0 ? 3 - 0.01 : -3 - klTL + 0.01, -klTW/2, 0]) cube([klTL, klTW, klT]);
+        translate([s*(3 + klTL - klB/2), 0, klT - 0.01]) cylinder(d = klB, h = kl_knott(front, montert) + 0.01, $fn = 24);
+      }
+    }
+    translate([0, 0, -1]) cylinder(d = klHull, h = 3, $fn = 32);
+    if (front) translate([3, 3, -1]) rotate([0, 0, 45]) cube([1.6, 1.6, 3], center = true);   // avskåret hjørne = høyt klips
+  }
+}
+module klips_montert() { for (b = HU_BRYTERE) translate([b[1], b[2], klZ]) rotate([0, 0, kl_langs(b) ? 90 : 0]) klips(kl_front(b), true); }
+module klips_plate() {   // 2 rader: 8 lave (faste hetter) og 6 høye (oppsettets hetter)
+  lav = [for (b = HU_BRYTERE) if (!kl_front(b)) b]; hoy = [for (b = HU_BRYTERE) if (kl_front(b)) b];
+  for (i = [0:len(lav) - 1]) translate([i*14, 0, 0]) klips(false);
+  for (i = [0:len(hoy) - 1]) translate([i*14, 14, 0]) klips(true);
+}
 module hu_bein() { for (p = HU_BEINPOS) translate([p[0], p[1], zKort - HU_BEIN]) cylinder(d = 1.6, h = HU_BEIN + 0.01, $fn = 12); }
 module hu_gulv() { for (d = HU_GULV) color(d[6] == "U2" ? [0.42, 0.29, 0.66] : d[6][0] == "A" ? [0.80, 0.52, 0.18] : d[6] == "USBC" ? [0.78, 0.78, 0.80] : [0.15, 0.15, 0.16])
   translate([d[0], d[1], d[4]]) cube([d[2] - d[0], d[3] - d[1], d[5] - d[4]]); }
@@ -589,6 +619,9 @@ else if (part == "aktuatorer") { for (h = FRONT) ved(h) aktuatorer(h, 0.1); }
 else if (part == "A_hetter") { hetter("mork"); hetter("lys"); hetter("gull"); for (f = FARGER) hetter(f[0]); }
 else if (part == "A_symboler") { symboler("mork"); symboler("lys"); symboler("gull"); }
 else if (part == "A_kort") { tastekort(); brytere(); tca(); }
+else if (part == "A_klips" && hu) klips_montert();
+else if (part == "klips" && hu) klips_plate();
+else if (part == "klips_vis" && hu) { color([0.80, 0.70, 0.45]) tastekort(); color([0.15, 0.15, 0.16]) brytere(); color([0.20, 0.55, 0.85]) klips_montert(); }
 else if (part == "A_skjerm") translate([W/2 - modW/2, L - modC - modH/2, zGlass - modT]) { cube([modW, modH, modT]); styrepinner(); }
 else if (part == "A_batteri") batteri();
 else if (part == "A_mcu") mcu_kort();

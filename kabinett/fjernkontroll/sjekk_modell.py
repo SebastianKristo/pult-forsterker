@@ -246,6 +246,24 @@ def stråle(mesh, o, d):
     return ut
 
 
+# ---------- 7b. hullkort: TPU-klipsene under hettene ----------
+if HU:
+    K = trimesh.load(f"{ASM}/klips.stl")
+    kl_feil = []
+    for n in DELER:
+        v = overlapp(K, A[n])
+        if not v <= (0.05 if n in ("hetter", "kort") else 0.001):
+            kl_feil.append(f"klips × {n}: {v:.3f} mm³")
+    p, fi = trimesh.sample.sample_surface_even(K, 20000, seed=2)
+    knott = (K.face_normals[fi][:, 2] > 0.9) & (p[:, 2] > Z_KORT + KORT_T + hkort.SW_KROPP + 0.4 + 0.1)
+    a = stråle(A["hetter"], p[knott] + [0, 0, -0.01], np.tile([0, 0, 1.0], (knott.sum(), 1)))
+    plate = (K.face_normals[fi][:, 2] > 0.9) & ~knott
+    b_ = stråle(A["hetter"], p[plate] + [0, 0, 0.002], np.tile([0, 0, 1.0], (plate.sum(), 1)))
+    nk = len(K.split(only_watertight=False))
+    god = not kl_feil and nk == len(hkort.BRYTERE) and a.max() < 0.03 and b_.min() >= 0.1 + 0.25 + 0.1
+    melding(god, f"TPU-klipsene: {nk} stk, hver knott når hetten ({a.max():.2f} mm), {b_.min():.2f} mm fra klips til hette (krav ≥ 0,45: "
+                 "0,1 forvandring + 0,25 vandring + 0,1 klaring)" + ("; " + "; ".join(kl_feil) if kl_feil else ""))
+
 trangt = []
 for n, over in REF.items():
     m = A[n]
