@@ -8915,7 +8915,7 @@ FEAT_ROUTES += _tmod.routes(touch)
 FEAT_ROUTES += [("GET", "/oppsett", h_oppsett), ("GET", "/api/oppsett", h_oppsett), ("POST", "/api/oppsett", h_oppsett)]
 if os.environ.get("KI_TOUCH_ENC", "").strip():
     try:
-        _touch_enc = _tmod.start_encoder(touch.ctx, os.environ["KI_TOUCH_ENC"])
+        _touch_enc = _tmod.start_encoder(touch.ctx, os.environ["KI_TOUCH_ENC"], touch)
     except Exception as _e:
         print("Touch: volumhjulet er ikke tilgjengelig:", _e, flush=True)
 

@@ -9,14 +9,14 @@ import { api, coverUrl, getBase, INPUT_LABEL, PRODUCT_SHORT, productOf, setBase,
 import { loadSettings, playPause, reconnect, setSetting, setVolume, settings, startPolling, status, act, online, toast } from '../lib/store';
 import { art, TOUCH_BELL, TOUCH_IDLE, TOUCH_OUT, TOUCH_ROLES, TOUCH_STANDBY_S, TOUCH_START, TOUCH_WAKE, TOUCH_WAKE_ID } from '../lib/settings';
 import { favs, loadFavs, playFav, playStation } from '../lib/radio';
-import { ndAlbum, ndAlbumList, ndConfigured, ndCover, ndSearch, type NdAlbum } from '../lib/navidrome';
+import { ndAlbum, ndAlbumList, ndArtist, ndConfigured, ndCover, ndSearch, ndSearchAll, type NdAlbum, type NdArtist, type NdSong } from '../lib/navidrome';
 import { li, lq, lsvc, playNd } from '../lib/library';
 import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 import '../lib/services';   // innloggingene (Navidrome, YouTube Music) hentes fra enheten – kiosken har ingen egne
 import { groupAll, groupBusy, groupNone, groups, inGroup, loadGroup, toggleMember } from '../lib/groups';
 import { qrMatrix } from '../lib/qr';
 import { canSeek, seekTo } from '../screens/player';
-import { Keyboard, MONO, Sheet, Slider, useLongPress, Wheel } from './ui';
+import { hjulMål, Keyboard, MONO, Sheet, Slider, TekstFelt, useLongPress, useTekst, Wheel } from './ui';
 
 type Scr = 'now' | 'home' | 'smart' | 'alarm' | 'lib' | 'rooms' | 'set';
 const START: (Scr | 'standby')[] = ['now', 'home', 'smart', 'alarm', 'lib', 'rooms', 'set', 'standby'];
@@ -39,7 +39,7 @@ interface Dev {
   setup_net?: { active: boolean; manual?: boolean; ssid: string; password: string; url: string; qr?: string; joining: string; error: string;
     kabel?: boolean; ethernet?: { device: string; state: string } | null } | null;
   ble_setup?: { state: string; error: string; ssid: string; url: string } | null;   // Wi-Fi over Bluetooth (Improv)
-  touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string } };
+  touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string }; hjul?: { n: number; s: number } };
   hold?: { key: string; p: number; title: string; sub: string } | null;   // fysisk knapp som holdes (POWER = omstart)
   rebooting?: boolean; poweroff?: boolean;
 }
@@ -90,6 +90,18 @@ const queueOpen = signal(false), talkOpen = signal(false), searchOpen = signal(f
 const wakeData = signal<WakeData | null>(null), wakeOpen = signal(false), wakeSel = signal('');
 const editAlarm = signal(-1);      // indeksen til alarmen som redigeres (-1 = ingen)
 const dev = (): Dev => (local.value ?? {}) as Dev;
+// Volumhjulet mens skjermtastaturet er oppe: daemonen teller steg (n) og trykk (s); vi flytter markøren / sletter ett tegn.
+let hjulSist: { n: number; s: number } | null = null;
+effect(() => {
+  const h = dev().touch?.hjul;
+  if (!h) return;
+  const m = hjulMål.cur;
+  if (hjulSist && m) {
+    if (h.n !== hjulSist.n) m.flytt(h.n - hjulSist.n);
+    for (let i = 0; i < Math.min(10, h.s - hjulSist.s); i++) m.slett();
+  }
+  hjulSist = h;
+});
 
 // Kiosken kjører på enheten selv: start alltid på denne enheten (en lagret host fra fjernstyring nullstilles).
 setBase(null);
@@ -463,7 +475,11 @@ function NowPlaying() {
         <div style="display:flex;flex-direction:column;min-width:0;padding-top:2px">
           <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#f0c46a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{kicker}</span>
           <span style="margin-top:10px;font-size:28px;font-weight:600;line-height:1.12;letter-spacing:-.01em;text-wrap:pretty;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">{title}</span>
-          <span style="margin-top:6px;font-size:17px;color:#c9c9c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{has ? s?.artist ?? '' : off ? 'Trykk på spill for å slå på' : 'Velg noe å høre på'}</span>
+          {has && !!s?.artist && ndConfigured()
+            ? <button class="flat" onClick={() => { artistSide.value = s.artist ?? ''; }} aria-label={'Vis artisten ' + s.artist} style="margin-top:6px;align-self:flex-start;max-width:100%;height:auto;border:none;background:none;padding:0;font-size:17px;color:#c9c9c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;display:flex;align-items:center;gap:6px">
+                <span style="overflow:hidden;text-overflow:ellipsis;text-decoration:underline;text-decoration-color:#4a4a4e;text-underline-offset:4px">{s.artist}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 6l6 6-6 6" /></svg></button>
+            : <span style="margin-top:6px;font-size:17px;color:#c9c9c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{has ? s?.artist ?? '' : off ? 'Trykk på spill for å slå på' : 'Velg noe å høre på'}</span>}
           <span style="margin-top:2px;font-size:13px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{has ? s?.album ?? '' : ''}</span>
           <div style="flex:1" />
           <div style="display:flex;align-items:center;gap:6px">
@@ -938,12 +954,86 @@ function Intercom() {
   );
 }
 
+// ---------- artistsiden (Navidrome): trykk på artistnavnet på Spiller ----------
+const artistSide = signal('');   // navnet som ble trykket; '' = lukket
+effect(() => { if (scr.value !== 'now') artistSide.value = ''; });
+/** Finn artisten i Navidrome: likt navn først, ellers første del av «A feat. B» / «A & B» / «A, B». */
+async function finnArtist(navn: string): Promise<NdArtist | null> {
+  const prøv = [navn, navn.split(/\s+(?:feat\.?|ft\.?|featuring|&|og|x)\s+|,\s*/i)[0] ?? ''].map((x) => x.trim()).filter(Boolean);
+  for (const n of [...new Set(prøv)]) {
+    const r = await ndSearchAll(n);
+    const lik = r.artists.find((a) => a.name.toLowerCase() === n.toLowerCase());
+    if (lik) return lik;
+    if (r.artists[0]) return r.artists[0];
+  }
+  return null;
+}
+function ArtistSide() {
+  const navn = artistSide.value;
+  const [a, setA] = useState<{ artist: NdArtist; albums: NdAlbum[] } | null | undefined>(undefined);
+  const [sanger, setSanger] = useState<NdSong[]>([]), [alb, setAlb] = useState<{ album: NdAlbum; songs: NdSong[] } | null>(null);
+  useEffect(() => {
+    let av = false;
+    setA(undefined); setAlb(null); setSanger([]);
+    void (async () => {
+      try {
+        const ar = await finnArtist(navn);
+        if (!ar) { if (!av) setA(null); return; }
+        const [r, sok] = await Promise.all([ndArtist(ar.id), ndSearchAll(ar.name).catch(() => ({ songs: [] as NdSong[] }))]);
+        if (av) return;
+        setA(r);
+        setSanger(sok.songs.filter((x) => x.artist.toLowerCase().includes(ar.name.toLowerCase())).slice(0, 30));
+      } catch { if (!av) setA(null); }
+    })();
+    return () => { av = true; };
+  }, [navn]);
+  const spill = (l: NdSong[], i: number) => { playNd(l, i, 'nd'); artistSide.value = ''; scr.value = 'now'; };
+  const rad = (x: NdSong, i: number, l: NdSong[], nr?: number) => (
+    <button key={x.id + i} onClick={() => spill(l, i)} style="height:50px;flex-shrink:0;border:none;border-radius:10px;background:transparent;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:0 10px;text-align:left">
+      {nr ? <span style={`font-family:${MONO};font-size:12px;color:#8b8b86;text-align:center`}>{nr}</span> : <div style={`width:40px;height:40px;border-radius:8px;background:${artBg(x.title, ndCover(x.coverArt, 120))}`} />}
+      <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{x.title}</span><span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{nr ? x.artist : x.album}</span></span>
+      <span style={`font-family:${MONO};font-size:11px;color:#6b6b67`}>{x.duration ? Math.floor(x.duration / 60) + ':' + String(x.duration % 60).padStart(2, '0') : ''}</span>
+    </button>);
+  const tittel = alb ? alb.album.name : a?.artist.name ?? navn;
+  return (
+    <div class="inn" style="position:absolute;inset:52px 0 0 0;z-index:6;background:#0b0b0c;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px 8px 6px;flex-shrink:0">
+        <button onClick={() => { if (alb) setAlb(null); else artistSide.value = ''; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
+        <span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+          <span style={`font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#f0c46a`}>{alb ? (alb.album.artist + (alb.album.year ? ' · ' + alb.album.year : '')).toUpperCase() : 'ARTIST · NAVIDROME'}</span>
+          <span style="font-size:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{tittel}</span>
+        </span>
+        {alb && !!alb.songs.length && <button onClick={() => spill(alb.songs, 0)} style="height:40px;padding:0 18px;border-radius:20px;border:none;background:#f0c46a;color:#0b0b0c;font-size:13px;font-weight:600;flex-shrink:0">Spill albumet</button>}
+        {!alb && !!sanger.length && <button onClick={() => spill(sanger, 0)} style="height:40px;padding:0 18px;border-radius:20px;border:none;background:#f0c46a;color:#0b0b0c;font-size:13px;font-weight:600;flex-shrink:0">Spill sangene</button>}
+      </div>
+      <div class="rull" style="flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:2px;padding:0 10px 10px">
+        {a === undefined && <span style={`padding:14px 10px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>HENTER …</span>}
+        {a === null && <span style="padding:14px 10px;font-size:13.5px;color:#8b8b86">Fant ikke «{navn}» i Navidrome.</span>}
+        {alb ? alb.songs.map((x, i) => rad(x, i, alb.songs, i + 1)) : a && <>
+          <span style={`padding:6px 10px 4px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>ALBUM · {a.albums.length}</span>
+          <div style="display:flex;gap:12px;overflow-x:auto;touch-action:pan-x;padding:0 10px 8px;flex-shrink:0">
+            {a.albums.map((al) => (
+              <button key={al.id} onClick={() => { void ndAlbum(al.id).then(setAlb); }} style="width:132px;flex-shrink:0;border:none;background:none;padding:0;display:flex;flex-direction:column;gap:6px;text-align:left">
+                <div style={`width:132px;height:132px;border-radius:10px;background:${artBg(al.name, ndCover(al.coverArt, 300))}`} />
+                <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{al.name}</span>
+                <span style="font-size:11px;color:#8b8b86">{[al.year, al.songCount ? al.songCount + ' sanger' : ''].filter(Boolean).join(' · ')}</span>
+              </button>))}
+          </div>
+          {!!sanger.length && <span style={`padding:8px 10px 4px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>SANGER</span>}
+          {sanger.map((x, i) => rad(x, i, sanger))}
+        </>}
+      </div>
+    </div>
+  );
+}
+
 // ---------- søk ----------
 interface Hit { key: string; t: string; s: string; art: string; play: () => void }
 // Husket søk: åpner du en podkast fra søket, tar «Tilbake» deg til søket med det du skrev og samme kilde.
 const sokHusk = { q: '', src: -1, fraSok: false };
 function Search() {
-  const [q, setQ] = useState(sokHusk.fraSok ? sokHusk.q : ''), [kb, setKb] = useState(!sokHusk.fraSok), [busy, setBusy] = useState(false);
+  const qt = useTekst(60, sokHusk.fraSok ? sokHusk.q : ''), q = qt.v;
+  const [kb, setKb] = useState(!sokHusk.fraSok), [busy, setBusy] = useState(false);
   const [hits, setHits] = useState<Hit[] | null>(null), [err, setErr] = useState('');
   // Søkekilde: fanen du kom fra (SUB/WAVE har ikke søk, så da søkes det i YouTube Music). 3 = podkaster.
   const podIdx = 3 + (swT.value.length ? 1 : 0);
@@ -974,8 +1064,8 @@ function Search() {
         <button onClick={() => { searchOpen.value = false; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
         <button class="flat" onClick={() => setKb(true)} aria-label="Søkefelt" style="flex:1;min-width:0;height:44px;border-radius:22px;border:1px solid #2e2e30;background:#141415;display:flex;align-items:center;gap:8px;padding:0 16px;text-align:left;font-size:15px">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b8b86" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-          {kb && !q && <span class="caret" style="width:2px;height:20px;background:#f0c46a;margin-right:-6px;flex-shrink:0" />}
-          <span style={`white-space:pre;overflow:hidden;text-overflow:ellipsis;color:${q ? '#f2f2ee' : '#6b6b67'}`}>{q || (['Søk i YouTube Music', 'Søk i Navidrome', 'Søk etter radiokanaler', 'Søk etter podkaster'][src] ?? 'Søk')}</span>{kb && !!q && <span class="caret" style="width:2px;height:20px;background:#f0c46a;margin-left:-6px;flex-shrink:0" />}
+          {kb ? <TekstFelt t={qt} size={15} tom={['Søk i YouTube Music', 'Søk i Navidrome', 'Søk etter radiokanaler', 'Søk etter podkaster'][src] ?? 'Søk'} />
+            : <span style={`white-space:pre;overflow:hidden;text-overflow:ellipsis;color:${q ? '#f2f2ee' : '#6b6b67'}`}>{q || (['Søk i YouTube Music', 'Søk i Navidrome', 'Søk etter radiokanaler', 'Søk etter podkaster'][src] ?? 'Søk')}</span>}
         </button>
         {NAMES.map((n, i) => <button key={n} onClick={() => setSrc(i)} style={`height:44px;padding:0 12px;border-radius:22px;border:1px solid ${src === i ? '#f2f2ee' : '#2e2e30'};background:${src === i ? '#f2f2ee' : '#161617'};color:${src === i ? '#0b0b0c' : '#c9c9c4'};font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0`}>{n.replace('YouTube Music', 'YouTube')}</button>)}
       </div>
@@ -989,7 +1079,7 @@ function Search() {
             <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{h.t}</span><span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{h.s}</span></span>
           </button>))}
       </div>
-      {kb && <Keyboard onKey={(c) => setQ((x) => (x + c).slice(0, 60))} onBack={() => setQ((x) => x.slice(0, -1))} onEnter={() => setKb(false)} />}
+      {kb && <Keyboard onKey={qt.inn} onBack={qt.slett} onFlytt={qt.flytt} onEnter={() => setKb(false)} />}
     </div>
   );
 }
@@ -1485,20 +1575,22 @@ type WNet = { ssid: string; security?: string; signal?: number; active?: boolean
 function WifiSetup({ innebygd, onLukk }: { innebygd?: boolean; onLukk?: () => void } = {}) {
   const [tab, setTab] = useState(0);
   const [nets, setNets] = useState<WNet[] | null>(null), [valgt, setValgt] = useState<WNet | null>(null);
-  const [pw, setPw] = useState(''), [vis, setVis] = useState(false), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false);
+  const pwt = useTekst(63), pw = pwt.v, setPw = pwt.sett;
+  const [vis, setVis] = useState(false), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false), [feilet, setFeilet] = useState(false);
+  const husk = useRef<Record<string, string>>({});   // sist skrevne passord per nett (til «Prøv igjen» etter Tilbake)
   const ble = dev().ble_setup;
   const skann = () => { setNets(null); getAt<{ networks: WNet[] }>('', '/api/wifi').then((r) => { const sett = new Set<string>(); setNets(r.networks.filter((n) => n.ssid && !n.ssid.startsWith('Skjold-oppsett-') && !sett.has(n.ssid) && !!sett.add(n.ssid))); }).catch(() => setNets([])); };
   useEffect(() => { skann(); }, []);
   const koble = async (n: WNet, psk: string) => {
-    setBusy(true); setMsg('Kobler til «' + n.ssid + '» …');
+    setBusy(true); setFeilet(false); setMsg('Kobler til «' + n.ssid + '» …'); if (psk) husk.current[n.ssid] = psk;
     try {
       const r = await fetch(here() + '/api/wifi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid: n.ssid, psk }) });
       const j = await r.json().catch(() => ({})) as { error?: string; pending?: boolean };
       const jj = j as { pending?: boolean };
       if (r.ok && jj.pending) { setMsg('Kobler til «' + n.ssid + '» …'); onLukk?.(); }   // fra oppsett-nettet: Touch bytter nett nå
       else if (r.ok) { setMsg('Koblet til «' + n.ssid + '»'); wifiNow.value = n.ssid; setValgt(null); setPw(''); window.setTimeout(() => { wifiOpen.value = false; onLukk?.(); }, 1500); }
-      else setMsg(j.error || 'Fikk ikke koblet til. Sjekk passordet.');
-    } catch { setMsg('Fikk ikke svar. Touch bytter kanskje nett – vent litt.'); }
+      else { setMsg(j.error || 'Fikk ikke koblet til. Sjekk passordet.'); setFeilet(true); }
+    } catch { setMsg('Fikk ikke svar. Touch bytter kanskje nett – vent litt.'); setFeilet(true); }
     setBusy(false);
   };
   const åpent = (n: WNet) => (n.security ?? '') === 'open';
@@ -1508,26 +1600,30 @@ function WifiSetup({ innebygd, onLukk }: { innebygd?: boolean; onLukk?: () => vo
   return (
     <div class="inn" style={`position:absolute;inset:${innebygd ? '0' : '52px 0 0 0'};z-index:${innebygd ? 23 : 6};background:#0b0b0c;display:flex;flex-direction:column`}>
       <div style="display:flex;align-items:center;gap:8px;padding:8px 14px 8px 6px;flex-shrink:0">
-        <button onClick={() => { if (valgt) { setValgt(null); setPw(''); setMsg(''); } else if (onLukk) onLukk(); else wifiOpen.value = false; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
+        <button onClick={() => { if (valgt) { setValgt(null); setPw(''); setMsg(''); setFeilet(false); } else if (onLukk) onLukk(); else wifiOpen.value = false; }} aria-label="Tilbake" style="width:44px;height:44px;border:none;background:none;color:#c9c9c4;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
         <span style="font-size:19px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{valgt ? 'Passord for «' + valgt.ssid + '»' : 'Koble til Wi-Fi'}</span>
         {!valgt && !innebygd && TABS.map((n, i) => <button key={n} onClick={() => setTab(i)} style={`height:40px;padding:0 14px;border-radius:20px;border:1px solid ${tab === i ? '#f2f2ee' : '#2e2e30'};background:${tab === i ? '#f2f2ee' : '#161617'};color:${tab === i ? '#0b0b0c' : '#c9c9c4'};font-size:12.5px;font-weight:600;white-space:nowrap`}>{n}</button>)}
       </div>
       {valgt ? <>
         <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:0 20px">
           <div style="display:flex;align-items:center;gap:10px;height:48px;border-radius:12px;border:1px solid #2e2e30;background:#141415;padding:0 14px">
-            <span style={`flex:1;min-width:0;font-size:17px;letter-spacing:${vis ? 0 : '.15em'};white-space:pre;overflow:hidden;color:${pw ? '#f2f2ee' : '#6b6b67'}`}>{pw ? (vis ? pw : '•'.repeat(pw.length)) : 'Passord'}</span>
+            <TekstFelt t={pwt} skjul={!vis} tom="Passord" />
             <button onClick={() => setVis(!vis)} style="height:34px;padding:0 12px;border-radius:9px;border:none;background:#242426;color:#c9c9c4;font-size:12px;font-weight:600">{vis ? 'Skjul' : 'Vis'}</button>
           </div>
           {msg && <span style={`font-size:13px;color:${/Koblet til/.test(msg) ? '#6fcf7f' : /Kobler/.test(msg) ? '#c9c9c4' : '#ff8a7a'}`}>{msg}</span>}
+          {feilet && !busy && <div style="display:flex;gap:8px">
+            <button onClick={() => void koble(valgt, pw)} disabled={pw.length < 8} style="height:40px;padding:0 18px;border-radius:20px;border:none;background:#f0c46a;color:#0b0b0c;font-size:13px;font-weight:600">Prøv igjen med samme passord</button>
+            <button onClick={() => { setPw(''); setFeilet(false); setMsg(''); }} style="height:40px;padding:0 18px;border-radius:20px;border:1px solid #2e2e30;background:#161617;color:#f2f2ee;font-size:13px;font-weight:600">Skriv nytt passord</button>
+          </div>}
         </div>
-        <Keyboard pw enter={busy ? 'Kobler til …' : 'Koble til'} onKey={(c) => setPw((p) => (p + c).slice(0, 63))} onBack={() => setPw((p) => p.slice(0, -1))} onEnter={() => { if (!busy && pw.length >= 8) void koble(valgt, pw); else if (pw.length < 8) setMsg('Passordet må ha minst 8 tegn'); }} />
+        <Keyboard pw enter={busy ? 'Kobler til …' : 'Koble til'} onKey={pwt.inn} onBack={pwt.slett} onFlytt={pwt.flytt} onEnter={() => { if (!busy && pw.length >= 8) void koble(valgt, pw); else if (pw.length < 8) setMsg('Passordet må ha minst 8 tegn'); }} />
       </> : tab === 0 || innebygd ? (
         <div style="flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:6px;padding:4px 14px 14px">
           {msg && <span style="font-size:13px;color:#c9c9c4;padding:2px 4px">{msg}</span>}
           {nets === null && <span style={`padding:12px 4px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>SØKER ETTER NETT …</span>}
           {nets?.length === 0 && <span style="padding:12px 4px;font-size:13.5px;color:#8b8b86">Fant ingen nett. Prøv igjen, eller bruk mobilen.</span>}
           {(nets ?? []).map((n) => (
-            <button key={n.ssid} onClick={() => { setMsg(''); if (n.active) return; if (åpent(n)) void koble(n, ''); else { setValgt(n); setPw(''); } }} style={`min-height:52px;flex-shrink:0;border-radius:12px;border:1px solid ${n.active ? '#d9a441' : '#242426'};background:${n.active ? '#1c170d' : '#141415'};display:flex;align-items:center;gap:12px;padding:0 16px;text-align:left`}>
+            <button key={n.ssid} onClick={() => { setMsg(''); if (n.active) return; if (åpent(n)) void koble(n, ''); else { setValgt(n); setPw(husk.current[n.ssid] ?? ''); setFeilet(false); } }} style={`min-height:52px;flex-shrink:0;border-radius:12px;border:1px solid ${n.active ? '#d9a441' : '#242426'};background:${n.active ? '#1c170d' : '#141415'};display:flex;align-items:center;gap:12px;padding:0 16px;text-align:left`}>
               {bar(n.signal ?? 0)}
               <span style={`flex:1;min-width:0;font-size:15px;font-weight:600;color:${n.active ? '#f0c46a' : '#f2f2ee'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{n.ssid}</span>
               <span style="font-size:11.5px;color:#8b8b86">{n.active ? 'Tilkoblet' : åpent(n) ? 'Åpent' : '🔒'}</span>
@@ -1615,7 +1711,7 @@ function SetupNet() {
               {!!n.qr && <Qr text={n.qr} size={120} />}
               {steg(1, 'Skann QR-koden med mobilen', <>Eller koble til nettet <span style={kode}>{n.ssid}</span> med passordet <span style={kode}>{n.password}</span></>)}
             </div>
-            {steg(2, 'Velg hjemmenettet ditt', <>Oppsettsiden åpner seg selv. Skjer det ikke, gå til <span style={kode}>{n.url.replace('http://', '')}</span></>)}
+            {steg(2, 'Velg hjemmenettet ditt', <>Oppsettsiden åpner seg selv. Skjer det ikke, gå til <span style={kode}>{n.url.replace('http://', '')}</span>. Eller i Skjold-appen: <b>Legg til enhet → Enheten er ikke på nett</b> med koden <span style={kode}>{n.ssid.replace('Skjold-oppsett-', '')}</span></>)}
             {steg(3, 'Ferdig', 'Touch slår av oppsett-nettet og kobler til. Denne siden forsvinner av seg selv.')}
           </>}
           {n.manual && <button onClick={() => send({ stop: true })} style="align-self:flex-start;height:44px;padding:0 20px;border-radius:22px;border:1px solid #2e2e30;background:#161617;color:#f2f2ee;font-size:13.5px;font-weight:600">Avbryt – bruk nettet som før</button>}
@@ -1980,6 +2076,7 @@ function App() {
         {searchOpen.value && cur === 'lib' && <Search />}
         {queueOpen.value && cur === 'now' && <QueueSheet />}
         {lyricsOpen.value && cur === 'now' && <LyricsSheet />}
+        {!!artistSide.value && cur === 'now' && <ArtistSide />}
         {!!dimId.value && cur === 'smart' && <DimSheet />}
         {camOpen.value && cur === 'smart' && <CamView />}
         {saverOpen.value && cur === 'set' && <SaverSheet />}

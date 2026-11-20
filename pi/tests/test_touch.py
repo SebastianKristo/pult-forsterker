@@ -413,3 +413,14 @@ def test_dorlas_automatisk_eller_valgt(tmp_path):
     assert x.lock_id() == "lock.garasje"
     x.save({"lock_entity": "-"})
     assert x.lock_id() == ""                       # slått av med vilje
+
+
+def test_volumhjulet_flytter_markoren_mens_tastaturet_er_oppe():
+    with tempfile.TemporaryDirectory() as d:
+        x = t.Touch({"changed": lambda: None, "ha": lambda: {}, "alarms": lambda: []}, os.path.join(d, "t.json"))
+        assert x.hjul_steg(1) is False and x.hjul_trykk() is False          # tastaturet er ikke oppe: volum som før
+        x.tekstmodus(True)
+        assert x.hjul_steg(-1) and x.hjul_steg(-1) and x.hjul_trykk()
+        assert x.status()["touch"]["hjul"] == {"n": -2, "s": 1}
+        x.tekstmodus(False)
+        assert x.hjul_steg(1) is False

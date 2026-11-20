@@ -31,25 +31,89 @@ export function Slider({ value, max = 100, onInput, onCommit, color = '#f0c46a',
 
 const ROWS = ['qwertyuiopå', 'asdfghjkløæ', 'zxcvbnm'];
 const NUM = ['1234567890', '-/:;()&@"', ".,?!'"];
-const SYM = ['[]{}#%^*+=', '_\\|~<>€$£', ".,?!'"];   // flere tegn (passord)
-/** Skjermtastatur (norsk). Enheten har ikke noe annet tastatur. */
-export function Keyboard({ onKey, onBack, onEnter, enter = 'Søk', pw = false }: { onKey: (c: string) => void; onBack: () => void; onEnter: () => void; enter?: string; pw?: boolean }) {
-  const [num, setNum] = useState(false), [caps, setCaps] = useState(false), [sym, setSym] = useState(false);
+const SYM = ['[]{}#%^*+=', '_\\|~<>€$£', ".,?!'"];   // flere tegn
+/** Skjermtastatur (norsk). Enheten har ikke noe annet tastatur.
+ *  Shift: ett trykk = stor bokstav på neste tegn, dobbelttrykk = lås (alle store), hold inne = store mens du holder.
+ *  «123» gir tall og tegn, og «#+=» der gir flere tegn (# % * + = osv.). */
+/** Markøren i et tekstfelt på skjermen: verdi + posisjon, med inn/slett/flytt. */
+export interface Tekst { v: string; p: number; sett: (v: string) => void; inn: (c: string) => void; slett: () => void; flytt: (d: number) => void; til: (p: number) => void }
+export function useTekst(maks: number, start = ''): Tekst {
+  const [s, setS] = useState({ v: start, p: start.length });
+  return {
+    v: s.v, p: s.p,
+    sett: (v) => setS({ v: v.slice(0, maks), p: Math.min(v.length, maks) }),
+    inn: (c) => setS((o) => (o.v.length + c.length > maks ? o : { v: o.v.slice(0, o.p) + c + o.v.slice(o.p), p: o.p + c.length })),
+    slett: () => setS((o) => (o.p === 0 ? o : { v: o.v.slice(0, o.p - 1) + o.v.slice(o.p), p: o.p - 1 })),
+    flytt: (d) => setS((o) => ({ ...o, p: Math.max(0, Math.min(o.v.length, o.p + d)) })),
+    til: (p) => setS((o) => ({ ...o, p: Math.max(0, Math.min(o.v.length, p)) }))
+  };
+}
+/** Teksten med blinkende markør. Trykk på et tegn for å flytte markøren dit. skjul = passord (prikker). */
+export function TekstFelt({ t, skjul = false, tom, size = 17 }: { t: Tekst; skjul?: boolean; tom: string; size?: number }) {
+  const tegn = [...t.v];
+  const markør = <i key="m" class="markor" style={`display:inline-block;width:2px;height:${Math.round(size * 1.15)}px;margin:0 -1px;vertical-align:middle;background:#f0c46a;border-radius:1px`} />;
+  const trykk = (i: number) => (e: PointerEvent) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); t.til(e.clientX > r.left + r.width / 2 ? i + 1 : i); };
+  return (
+    <span style={`flex:1;min-width:0;font-size:${size}px;letter-spacing:${skjul ? '.15em' : 0};white-space:pre;overflow:hidden;display:flex;align-items:center;justify-content:flex-start;color:${t.v ? '#f2f2ee' : '#6b6b67'}`}
+      onPointerDown={(e) => { if (e.target === e.currentTarget) t.til(t.v.length); }}>
+      {!t.v ? <>{markør}<span style="margin-left:4px">{tom}</span></> : <>
+        {tegn.map((c, i) => [i === t.p ? markør : null, <span key={i} onPointerDown={trykk(i)}>{skjul ? '•' : c}</span>])}
+        {t.p >= tegn.length && markør}
+      </>}
+    </span>
+  );
+}
+/** Tekstfeltet som volumhjulet styrer nå (Keyboard registrerer seg når det vises). */
+export const hjulMål: { cur: null | { flytt: (d: number) => void; slett: () => void } } = { cur: null };
+
+export function Keyboard({ onKey, onBack, onEnter, onFlytt, enter = 'Søk' }: { onKey: (c: string) => void; onBack: () => void; onEnter: () => void; onFlytt?: (d: number) => void; enter?: string; pw?: boolean }) {
+  const siste = useRef({ onBack, onFlytt });
+  siste.current = { onBack, onFlytt };
+  useEffect(() => {
+    const mål = { flytt: (d: number) => siste.current.onFlytt?.(d), slett: () => siste.current.onBack() };
+    hjulMål.cur = mål;
+    const si = (on: boolean) => { void fetch('/api/touch/tekst', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on }) }).catch(() => {}); };
+    si(true);
+    const iv = window.setInterval(() => si(true), 20000);
+    return () => { window.clearInterval(iv); if (hjulMål.cur === mål) { hjulMål.cur = null; si(false); } };
+  }, []);
+  const [num, setNum] = useState(false), [sym, setSym] = useState(false);
+  const [shift, setShift] = useState<0 | 1 | 2>(0);   // 0 av, 1 neste tegn, 2 låst
+  const sist = useRef(0), holdt = useRef(false), brukt = useRef(false);
+  const caps = shift > 0;
   const rows = num ? (sym ? SYM : NUM) : caps ? ROWS.map((r) => r.toUpperCase()) : ROWS;
   const key = 'height:42px;border-radius:9px;border:none;background:#242426;color:#f2f2ee;font-size:17px;padding:0;flex:1;min-width:0';
   const wide = 'height:42px;border-radius:9px;border:none;background:#1a1a1c;color:#c9c9c4;font-size:12.5px;font-weight:600;padding:0';
+  const shiftNed = (e: PointerEvent) => {
+    e.preventDefault();
+    const n = Date.now();
+    setShift(shift === 2 ? 0 : shift === 1 ? (n - sist.current < 350 ? 2 : 0) : 1);
+    sist.current = n; holdt.current = true; brukt.current = false;
+  };
+  const shiftOpp = () => { if (holdt.current && brukt.current) setShift(0); holdt.current = false; };
+  const tast = (c: string) => {
+    onKey(c);
+    if (shift === 1 && !num) { if (holdt.current) brukt.current = true; else setShift(0); }
+  };
+  const aktiv = 'background:#f2f2ee;color:#0b0b0c';
   return (
     <div class="kb" style="flex-shrink:0;display:flex;flex-direction:column;gap:5px;padding:8px 10px 10px;background:#101011;border-top:1px solid #1f1f21">
       {rows.map((r, i) => (
         <div key={i + (num ? 'n' : 'a')} style="display:flex;gap:5px">
-          {i === 1 && pw && <button onClick={() => (num ? setSym(!sym) : setCaps(!caps))} aria-label={num ? 'Flere tegn' : 'Store bokstaver'} aria-pressed={num ? sym : caps} style={wide + `;width:52px;flex-shrink:0;${(num ? sym : caps) ? 'background:#f2f2ee;color:#0b0b0c' : ''}`}>{num ? (sym ? '123' : '#+=') : '⇧'}</button>}
+          {i === 1 && (num
+            ? <button onClick={() => setSym(!sym)} aria-label="Flere tegn" aria-pressed={sym} style={wide + `;width:52px;flex-shrink:0;${sym ? aktiv : ''}`}>{sym ? '123' : '#+='}</button>
+            : <button onPointerDown={shiftNed} onPointerUp={shiftOpp} onPointerCancel={shiftOpp} onPointerLeave={shiftOpp}
+                aria-label={shift === 2 ? 'Store bokstaver låst' : 'Store bokstaver'} aria-pressed={caps}
+                style={wide + `;width:52px;flex-shrink:0;touch-action:none;font-size:18px;${caps ? aktiv : ''}${shift === 2 ? ';box-shadow:inset 0 -3px 0 #f0c46a' : ''}`}>{shift === 2 ? '⇪' : '⇧'}</button>)}
           {i === 2 && <button onClick={() => setNum(!num)} aria-label={num ? 'Bokstaver' : 'Tall og tegn'} style={wide + ';width:74px;flex-shrink:0'}>{num ? 'abc' : '123'}</button>}
-          {[...r].map((c) => <button key={c} onClick={() => onKey(c)} style={key}>{c}</button>)}
-          {i === 2 && <button onClick={onBack} aria-label="Slett" style={wide + ';width:74px;flex-shrink:0;display:flex;align-items:center;justify-content:center'}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h12v14H8l-6-7zM12 9.5l5 5M17 9.5l-5 5" /></svg></button>}
+          {[...r].map((c) => <button key={c} onPointerDown={(e) => { e.preventDefault(); tast(c); }} style={key + ';touch-action:none'}>{c}</button>)}
+          {i === 2 && <button onPointerDown={(e) => { e.preventDefault(); onBack(); }} aria-label="Slett" style={wide + ';width:74px;flex-shrink:0;touch-action:none;display:flex;align-items:center;justify-content:center'}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h12v14H8l-6-7zM12 9.5l5 5M17 9.5l-5 5" /></svg></button>}
         </div>
       ))}
       <div style="display:flex;gap:5px">
-        <button onClick={() => onKey(' ')} aria-label="Mellomrom" style={key + ';background:#1a1a1c;font-size:12.5px;color:#8b8b86'}>mellomrom</button>
+        {onFlytt && <button onPointerDown={(e) => { e.preventDefault(); onFlytt(-1); }} aria-label="Markør til venstre" style={wide + ';width:52px;flex-shrink:0;touch-action:none;font-size:16px'}>◀</button>}
+        <button onPointerDown={(e) => { e.preventDefault(); tast(' '); }} aria-label="Mellomrom" style={key + ';background:#1a1a1c;font-size:12.5px;color:#8b8b86;touch-action:none'}>mellomrom</button>
+        {onFlytt && <button onPointerDown={(e) => { e.preventDefault(); onFlytt(1); }} aria-label="Markør til høyre" style={wide + ';width:52px;flex-shrink:0;touch-action:none;font-size:16px'}>▶</button>}
         <button onClick={onEnter} style="height:42px;width:150px;flex-shrink:0;border-radius:9px;border:none;background:#f0c46a;color:#0b0b0c;font-size:13.5px;font-weight:600;padding:0">{enter}</button>
       </div>
     </div>

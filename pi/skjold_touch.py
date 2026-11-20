@@ -563,6 +563,8 @@ class Touch:
         self.ring = AlarmRing(ctx)
         self.cmd = {"cmd": "", "arg": "", "seq": 0}
         self.voice = {"state": "idle", "text": "", "reply": "", "t": 0.0}
+        self.tekst_til = 0.0                  # skjermtastaturet er oppe: volumhjulet flytter markøren til dette tidspunktet
+        self.hjul = {"n": 0, "s": 0}          # tellere skjermen leser: n = markørsteg (±), s = trykk (slett ett tegn)
         self._auto = {"t": 0.0, "tiles": [], "scenes": []}
         self._cache = {"t": 0.0, "data": None}
         self._wake = {"t": 0.0, "data": None}
@@ -871,12 +873,31 @@ class Touch:
         self.ctx["changed"]()
         return self.voice
 
+    # --- volumhjulet som markør mens skjermtastaturet er oppe
+    def tekstmodus(self, on: bool) -> dict:
+        self.tekst_til = time.time() + 30 if on else 0.0   # skjermen fornyer hvert 20. s; faller tilbake til volum om den forsvinner
+        return {"on": self.tekst_til > 0}
+
+    def hjul_steg(self, d: int) -> bool:
+        if time.time() >= self.tekst_til:
+            return False
+        self.hjul = {**self.hjul, "n": self.hjul["n"] + d}
+        self.ctx["changed"]()
+        return True
+
+    def hjul_trykk(self) -> bool:
+        if time.time() >= self.tekst_til:
+            return False
+        self.hjul = {**self.hjul, "s": self.hjul["s"] + 1}
+        self.ctx["changed"]()
+        return True
+
     def status(self) -> dict:
         v = self.voice
         if v["state"] != "idle" and time.time() - v["t"] > 25:      # satellitten sa aldri fra at den var ferdig
             v = self.voice = {"state": "idle", "text": "", "reply": "", "t": 0.0}
         return {"alarm": {**self.ring.status(), "next": next_alarm(self.ctx["alarms"](), time.localtime())},
-                "touch": {"cmd": self.cmd, "voice": v}}
+                "touch": {"cmd": self.cmd, "voice": v, "hjul": self.hjul}}
 
 
 def _systemctl(*a) -> bool:
@@ -901,19 +922,20 @@ def voice_service(mic=None, wake=None, env="/etc/skjold-voice.env") -> dict:
     return {"installed": os.path.exists("/etc/systemd/system/skjold-voice.service"), "running": _systemctl("is-active", "--quiet", "skjold-voice.service")}
 
 
-def start_encoder(ctx: dict, spec: str):
-    """Volumhjul (EC11). spec = «A,B» eller «A,B,SW» (BCM-pinner) fra KI_TOUCH_ENC. Uten spec skjer ingenting."""
+def start_encoder(ctx: dict, spec: str, touch=None):
+    """Volumhjul (EC11). spec = «A,B» eller «A,B,SW» (BCM-pinner) fra KI_TOUCH_ENC. Uten spec skjer ingenting.
+    Mens skjermtastaturet er oppe (touch.tekstmodus), flytter hjulet markøren i teksten og et trykk sletter ett tegn."""
     pins = [int(p) for p in spec.replace(" ", "").split(",") if p.isdigit()]
     if len(pins) < 2:
         return None
     from gpiozero import Button, RotaryEncoder
     enc = RotaryEncoder(pins[0], pins[1], max_steps=0)
-    enc.when_rotated_clockwise = lambda: ctx["volume_step"](2)
-    enc.when_rotated_counter_clockwise = lambda: ctx["volume_step"](-2)
+    enc.when_rotated_clockwise = lambda: (touch and touch.hjul_steg(1)) or ctx["volume_step"](2)
+    enc.when_rotated_counter_clockwise = lambda: (touch and touch.hjul_steg(-1)) or ctx["volume_step"](-2)
     btn = None
     if len(pins) > 2:
         btn = Button(pins[2], pull_up=True, bounce_time=0.05)
-        btn.when_pressed = lambda: ctx["playpause"]()
+        btn.when_pressed = lambda: (touch and touch.hjul_trykk()) or ctx["playpause"]()
     return enc, btn
 
 
@@ -1051,6 +1073,9 @@ def routes(touch: Touch):
             return fail("fikk ikke kamerabildet: " + str(e)[:120], 502)
         return web.Response(body=data, content_type=ct, headers={"Cache-Control": "no-store"})
 
+    async def h_tekst(r):
+        return web.json_response(touch.tekstmodus(bool((await body(r)).get("on"))))
+
     async def h_locks(_r):
         return web.json_response(await bg(touch.locks))
 
@@ -1058,4 +1083,5 @@ def routes(touch: Touch):
             ("GET", "/api/touch", h_touch), ("POST", "/api/touch", h_touch), ("GET", "/api/touch/smart", h_smart),
             ("POST", "/api/touch/smart", h_smart), ("GET", "/api/touch/wake", h_wake), ("POST", "/api/touch/wake", h_wake), ("POST", "/api/touch/unlock", h_unlock), ("GET", "/api/touch/morning", h_morning),
             ("GET", "/api/alarm", h_alarm), ("POST", "/api/alarm", h_alarm), ("GET", "/api/touch/voice", h_voice),
-            ("POST", "/api/touch/voice", h_voice), ("POST", "/api/touch/cmd", h_cmd), ("POST", "/api/touch/backlight", h_backlight)]
+            ("POST", "/api/touch/voice", h_voice), ("POST", "/api/touch/cmd", h_cmd), ("POST", "/api/touch/backlight", h_backlight),
+            ("POST", "/api/touch/tekst", h_tekst)]

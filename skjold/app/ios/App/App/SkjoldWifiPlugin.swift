@@ -8,7 +8,7 @@ import NetworkExtension
 ///   joinOnce betyr at iOS glemmer nettet igjen når appen går i bakgrunnen eller vi kaller disconnect().
 /// request({url, method, headers, body, timeoutMs}) – HTTP med URLSession uten mobildata, så kallet går over Wi-Fi.
 ///   192.168.4.1 ligger på samme subnett som Wi-Fi-adressen telefonen får, så iOS ruter det dit selv om nettet
-///   ikke har internett. Bare http://192.168.4.x er lov.
+///   ikke har internett. Bare http://192.168.4.x (Røst) og http://10.42.0.1 (oppsett-nettet til Touch/S1/Node) er lov.
 /// disconnect() – removeConfiguration, så telefonen går tilbake til hjemmenettet.
 ///
 /// Krever entitlement com.apple.developer.networking.HotspotConfiguration (App.entitlements). Wi-Fi-info-entitlementet
@@ -98,8 +98,8 @@ public class SkjoldWifiPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func request(_ call: CAPPluginCall) {
-        guard let urlString = call.getString("url"), urlString.hasPrefix("http://192.168.4."), let url = URL(string: urlString) else {
-            call.reject("Bare http://192.168.4.x er lov")
+        guard let urlString = call.getString("url"), urlString.hasPrefix("http://192.168.4.") || urlString.hasPrefix("http://10.42.0.1:"), let url = URL(string: urlString) else {
+            call.reject("Bare http://192.168.4.x og http://10.42.0.1 (Skjold-oppsett) er lov")
             return
         }
         var req = URLRequest(url: url)
