@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1060" width="1600" height="1060" font-family="Sora, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#f7f6f2"/>
+<text x="40" y="60" font-size="34" font-weight="700" fill="#1d1d1f" text-anchor="start">Slik måler du motstanden i B50K-poten</text>
+<text x="40" y="96" font-size="18" font-weight="400" fill="#55554f" text-anchor="start">B50K = lineær 50 kΩ, dobbel: to rader med 3 bein (én per kanal). Bein 1 og 3 er endene, bein 2 (midten) er glideren.</text>
+<rect x="40" y="130" width="740" height="430" rx="18" fill="#ffffff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="64" y="170" font-size="24" font-weight="700" fill="#1d1d1f" text-anchor="start">1 · Gjør klart multimeteret</text>
+<rect x="110" y="190" width="220" height="340" rx="22" fill="#f2c230" stroke="#1d1d1f" stroke-width="3"/>
+<rect x="145" y="215" width="150" height="56" rx="8" fill="#cfd8c4" stroke="#1d1d1f" stroke-width="3"/>
+<text x="220" y="253" font-size="26" font-weight="700" fill="#1d1d1f" text-anchor="middle">000.0</text>
+<circle cx="220" cy="360" r="62" fill="#3a3a3c"/>
+<line x1="220" y1="360" x2="260" y2="312" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+<text x="260" y="290" font-size="15" font-weight="700" fill="#1d1d1f" text-anchor="start">Ω 200k</text>
+<text x="140" y="302" font-size="15" font-weight="700" fill="#55554f" text-anchor="start">V</text>
+<text x="132" y="430" font-size="15" font-weight="700" fill="#55554f" text-anchor="start">A</text>
+<circle cx="180" cy="480" r="16" fill="#2b2b2b" stroke="#1d1d1f" stroke-width="2"/>
+<text x="180" y="516" font-size="14" font-weight="700" fill="#1d1d1f" text-anchor="middle">COM</text>
+<circle cx="260" cy="480" r="16" fill="#d93a2b" stroke="#1d1d1f" stroke-width="2"/>
+<text x="260" y="516" font-size="14" font-weight="700" fill="#1d1d1f" text-anchor="middle">VΩ</text>
+<text x="380" y="220" font-size="20" font-weight="700" fill="#d93a2b" text-anchor="start">1.</text>
+<text x="410" y="220" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Strømmen AV, og trekk ut kontakten.</text>
+<text x="380" y="264" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start"></text>
+<text x="410" y="264" font-size="20" font-weight="400" fill="#55554f" text-anchor="start">Motstand måles alltid uten strøm.</text>
+<text x="380" y="308" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">2.</text>
+<text x="410" y="308" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Velg Ω, område 200k (eller auto).</text>
+<text x="380" y="352" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">3.</text>
+<text x="410" y="352" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Rød ledning i VΩ, svart i COM.</text>
+<text x="380" y="396" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">4.</text>
+<text x="410" y="396" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Hold probene mot hverandre:</text>
+<text x="380" y="440" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start"></text>
+<text x="410" y="440" font-size="20" font-weight="400" fill="#55554f" text-anchor="start">skjermen skal vise ca. 0 Ω.</text>
+<rect x="820" y="130" width="740" height="430" rx="18" fill="#ffffff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="844" y="170" font-size="24" font-weight="700" fill="#1d1d1f" text-anchor="start">2 · Mål bein 1 og 3 (endene)</text>
+<rect x="920" y="190" width="180" height="110" rx="12" fill="#3a3a3c"/>
+<circle cx="1010" cy="245" r="34" fill="#8b8b86"/>
+<line x1="1010" y1="245" x2="984.0" y2="230.0" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+<text x="1010" y="290" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">B50K</text>
+<rect x="950" y="300" width="10" height="70" fill="#b9b9b4"/>
+<circle cx="955" cy="382" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="955" y="388" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">1</text>
+<rect x="1005" y="300" width="10" height="70" fill="#b9b9b4"/>
+<circle cx="1010" cy="382" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1010" y="388" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">2</text>
+<rect x="1060" y="300" width="10" height="70" fill="#b9b9b4"/>
+<circle cx="1065" cy="382" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1065" y="388" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">3</text>
+<path d="M870,470 C870,540 955,476 955,426" fill="none" stroke="#2b2b2b" stroke-width="5"/>
+<line x1="955" y1="428" x2="955" y2="410" stroke="#2b2b2b" stroke-width="9" stroke-linecap="round"/>
+<line x1="955" y1="410" x2="955" y2="400" stroke="#999" stroke-width="3"/>
+<path d="M1150,470 C1150,540 1065,476 1065,426" fill="none" stroke="#d93a2b" stroke-width="5"/>
+<line x1="1065" y1="428" x2="1065" y2="410" stroke="#d93a2b" stroke-width="9" stroke-linecap="round"/>
+<line x1="1065" y1="410" x2="1065" y2="400" stroke="#999" stroke-width="3"/>
+<rect x="1290" y="230" width="150" height="56" rx="8" fill="#cfd8c4" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1365" y="268" font-size="26" font-weight="700" fill="#2f9e5a" text-anchor="middle">50.0 kΩ</text>
+<text x="1250" y="330" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Alltid ca. 50 kΩ (40–60),</text>
+<text x="1250" y="360" font-size="20" font-weight="400" fill="#55554f" text-anchor="start">uansett hvor knappen står.</text>
+<text x="1250" y="410" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Viser den uendelig (1 / OL):</text>
+<text x="1250" y="440" font-size="20" font-weight="400" fill="#55554f" text-anchor="start">banen er brutt, poten er ødelagt.</text>
+<text x="1250" y="490" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Gjør det samme på</text>
+<text x="1250" y="520" font-size="20" font-weight="400" fill="#55554f" text-anchor="start">den andre raden.</text>
+<rect x="40" y="590" width="740" height="440" rx="18" fill="#ffffff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="64" y="630" font-size="24" font-weight="700" fill="#1d1d1f" text-anchor="start">3 · Mål glideren (bein 2) mot hver ende</text>
+<rect x="110" y="640" width="180" height="110" rx="12" fill="#3a3a3c"/>
+<circle cx="200" cy="695" r="34" fill="#8b8b86"/>
+<line x1="200" y1="695" x2="215.0" y2="669.0" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+<text x="200" y="740" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">B50K</text>
+<rect x="140" y="750" width="10" height="70" fill="#b9b9b4"/>
+<circle cx="145" cy="832" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="145" y="838" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">1</text>
+<rect x="195" y="750" width="10" height="70" fill="#b9b9b4"/>
+<circle cx="200" cy="832" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="200" y="838" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">2</text>
+<rect x="250" y="750" width="10" height="70" fill="#b9b9b4"/>
+<circle cx="255" cy="832" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="255" y="838" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">3</text>
+<path d="M80,930 C80,1000 145,926 145,876" fill="none" stroke="#2b2b2b" stroke-width="5"/>
+<line x1="145" y1="878" x2="145" y2="860" stroke="#2b2b2b" stroke-width="9" stroke-linecap="round"/>
+<line x1="145" y1="860" x2="145" y2="850" stroke="#999" stroke-width="3"/>
+<path d="M330,930 C330,1000 200,926 200,876" fill="none" stroke="#d93a2b" stroke-width="5"/>
+<line x1="200" y1="878" x2="200" y2="860" stroke="#d93a2b" stroke-width="9" stroke-linecap="round"/>
+<line x1="200" y1="860" x2="200" y2="850" stroke="#999" stroke-width="3"/>
+<rect x="400" y="660" width="150" height="56" rx="8" fill="#cfd8c4" stroke="#1d1d1f" stroke-width="3"/>
+<text x="475" y="698" font-size="26" font-weight="700" fill="#2f9e5a" text-anchor="middle">30.0 kΩ</text>
+<text x="400" y="750" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Bein 1–2: endrer seg når du vrir</text>
+<text x="400" y="780" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Bein 2–3: det motsatte</text>
+<text x="400" y="820" font-size="18" font-weight="400" fill="#55554f" text-anchor="start">Eksempel, knappen 60 % mot høyre:</text>
+<rect x="400" y="845" width="204" height="34" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="2"/>
+<rect x="604" y="845" width="136" height="34" fill="#e08a1e" stroke="#1d1d1f" stroke-width="2"/>
+<text x="502.0" y="869" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">1–2 ≈ 30 kΩ</text>
+<text x="672.0" y="869" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">2–3 ≈ 20 kΩ</text>
+<text x="400" y="909" font-size="18" font-weight="700" fill="#1d1d1f" text-anchor="start">1–2 + 2–3 = ca. 50 kΩ (alltid)</text>
+<text x="400" y="939" font-size="16" font-weight="400" fill="#55554f" text-anchor="start">Ved 60 %: 10 og 40 kΩ? Da er den A50K</text>
+<text x="400" y="961" font-size="16" font-weight="400" fill="#55554f" text-anchor="start">(logaritmisk), ikke B.</text>
+<rect x="820" y="590" width="740" height="440" rx="18" fill="#ffffff" stroke="#d6d4cc" stroke-width="2"/>
+<text x="844" y="630" font-size="24" font-weight="700" fill="#1d1d1f" text-anchor="start">4 · Sitter poten i kortet? Løft ett bein</text>
+<rect x="860" y="842" width="380" height="36" fill="#2e7d4f" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1180" y="866" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">kretskortet</text>
+<rect x="960" y="640" width="180" height="110" rx="12" fill="#3a3a3c"/>
+<circle cx="1050" cy="695" r="34" fill="#8b8b86"/>
+<text x="1050" y="740" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">B50K</text>
+<rect x="990" y="750" width="10" height="70" fill="#b9b9b4"/>
+<circle cx="995" cy="832" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="995" y="838" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">1</text>
+<rect x="1045" y="750" width="10" height="70" fill="#b9b9b4"/>
+<circle cx="1050" cy="832" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1050" y="838" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">2</text>
+<rect x="1100" y="750" width="10" height="70" fill="#b9b9b4"/>
+<circle cx="1105" cy="832" r="16" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="3"/>
+<text x="1105" y="838" font-size="16" font-weight="700" fill="#1d1d1f" text-anchor="middle">3</text>
+<circle cx="1050" cy="832" r="26" fill="none" stroke="#e08a1e" stroke-width="5" stroke-dasharray="8 6"/>
+<text x="1270" y="690" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">De andre delene på kortet</text>
+<text x="1270" y="720" font-size="20" font-weight="400" fill="#55554f" text-anchor="start">måles med, så tallene blir</text>
+<text x="1270" y="750" font-size="20" font-weight="400" fill="#55554f" text-anchor="start">for lave.</text>
+<text x="1270" y="800" font-size="20" font-weight="700" fill="#1d1d1f" text-anchor="start">Lodd løs midtbeinet (2), eller</text>
+<text x="1270" y="830" font-size="20" font-weight="400" fill="#55554f" text-anchor="start">løft ut hele poten, før du</text>
+<text x="1270" y="860" font-size="20" font-weight="400" fill="#55554f" text-anchor="start">måler.</text>
+<text x="860" y="930" font-size="18" font-weight="700" fill="#1d1d1f" text-anchor="start">Bytte til faste motstander: vri knappen dit du vil ha den, løft ut poten</text>
+<text x="860" y="958" font-size="18" font-weight="400" fill="#55554f" text-anchor="start">uten å vri, og mål 1–2 og 2–3. Det er motstandene du lodder inn</text>
+<text x="860" y="986" font-size="18" font-weight="400" fill="#55554f" text-anchor="start">(nærmeste standardverdi), på begge radene.</text>
+<text x="1555" y="1015" font-size="14" font-weight="400" fill="#55554f" text-anchor="end">Se også lepy_pot_bytte.png.</text>
+</svg>
