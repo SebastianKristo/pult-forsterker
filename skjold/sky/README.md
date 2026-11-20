@@ -12,6 +12,22 @@ ikke nås direkte. Kontrakten (API og meldingsformat) står i [`docs/SKJOLD_HJEM
   `/enhet/*` serveres derfra.
 - Durable Objects er SQLite-baserte (`new_sqlite_classes`) og virker på gratisplanen.
 
+## Deling av hjem og Skjold Lab Valhalla
+
+- **Deling:** eieren av et hjem inviterer andre med e-postadressen (`POST /api/hjem/steder/{id}/medlemmer {epost}`).
+  Den inviterte ser hjemmet neste gang hen logger inn via Access. Eieren fjerner medlemmer
+  (`DELETE …/medlemmer/{epost}`), et medlem kan forlate hjemmet selv, og eierskapet kan overføres (`POST …/eier`).
+  I appen: Innstillinger → Skjold-hjem → hjemmet → **Delt med**.
+- **Valhalla** (`/valhalla/`, statisk side fra `skjold/app/public/valhalla/`) er styringen av hele tjenesten:
+  oversikt, alle kontoer (sist sett, hjem, sperr/opphev, Valhalla-admin) og alle hjem (medlemmer, enheter, legg til/fjern
+  medlem, overfør eierskap, slett). API: `/api/valhalla/{oversikt,kontoer,steder}`.
+  - **Tjenesteeieren** står i variabelen `OWNER_EMAILS` (kommaseparert). Bare tjenesteeieren kan gjøre andre til
+    Valhalla-administratorer. Tjenesteeieren kan ikke sperres.
+  - En sperret konto får 403 på alle `/api/hjem`-kall (innen ett minutt). Hjemmene og enhetene beholdes.
+  - `Register` (Durable Object, én instans) holder oversikten over kontoer og hjem. Hjem som ble laget før registeret
+    fantes, kommer med første gang eieren åpner Skjold-hjem.
+  - `/api/hjem/meg` → `{epost, valhalla, eier}` (appen viser lenken til Valhalla bare for administratorer).
+
 ## Legge ut
 
 ```sh
@@ -41,6 +57,7 @@ AUD-taggen den samme, og `ACCESS_AUD` trenger ikke endres.
 3. **Variabler** (Workers & Pages → `skjold-hjem` → Settings → Variables and Secrets, eller `npx wrangler secret put`):
    - `ACCESS_TEAM_DOMAIN` = teamnavnet ditt (`<team>` eller `<team>.cloudflareaccess.com`, står under Zero Trust → Settings)
    - `ACCESS_AUD` = AUD-taggen fra punkt 2
+   - `OWNER_EMAILS` = e-posten(e) til tjenesteeieren av Skjold Lab Valhalla (`npx wrangler secret put OWNER_EMAILS`)
    Workeren stoler bare på innloggingen når begge er satt: JWT-en i `Cf-Access-Jwt-Assertion` (eller cookien
    `CF_Authorization`) verifiseres mot `https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`. Uten dem svarer
    `/api/hjem/*` 401. `keep_vars = true` gjør at deploy ikke nullstiller dem.

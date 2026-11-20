@@ -75,7 +75,12 @@ export const hjem = {
   slettSted: (id: string) => hj<unknown>('/api/hjem/steder/' + enc(id), body('DELETE')),
   enheter: (id: string) => hj<Enhet[]>('/api/hjem/steder/' + enc(id) + '/enheter'),
   kobling: (id: string) => hj<{ kode: string; utloper: number | string }>('/api/hjem/steder/' + enc(id) + '/kobling', body('POST', {})),
-  fjernEnhet: (id: string, enhet: string) => hj<unknown>('/api/hjem/steder/' + enc(id) + '/enheter/' + enc(enhet), body('DELETE'))
+  fjernEnhet: (id: string, enhet: string) => hj<unknown>('/api/hjem/steder/' + enc(id) + '/enheter/' + enc(enhet), body('DELETE')),
+  medlemmer: (id: string) => hj<{ eier: string; medlemmer: { epost: string; rolle: 'eier' | 'medlem' }[] }>('/api/hjem/steder/' + enc(id) + '/medlemmer'),
+  inviter: (id: string, epost: string) => hj<unknown>('/api/hjem/steder/' + enc(id) + '/medlemmer', body('POST', { epost })),
+  fjernMedlem: (id: string, epost: string) => hj<unknown>('/api/hjem/steder/' + enc(id) + '/medlemmer/' + enc(epost), body('DELETE')),
+  nyEier: (id: string, epost: string) => hj<unknown>('/api/hjem/steder/' + enc(id) + '/eier', body('POST', { epost })),
+  meg: () => hj<{ epost: string; valhalla: boolean; eier: boolean }>('/api/hjem/meg')
 };
 
 function fail(e: unknown): void {
