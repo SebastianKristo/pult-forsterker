@@ -1,0 +1,228 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 1640" width="2400" height="1640" font-family="Sora, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#f7f6f2"/>
+<style>.w{fill:none;stroke-width:5;stroke-linejoin:round;stroke-linecap:round}.m{font-family:IBM Plex Mono,monospace;font-size:15px;fill:#1d1d1f}.s{font-size:15px;fill:#55554f}.t{font-size:17px;font-weight:700;fill:#1d1d1f}</style>
+<text x="40" y="58" font-size="34" font-weight="700" fill="#1d1d1f">Skjold Røst – slik kobles alt</text>
+<text x="40" y="92" class="s">ESP32-S3-DevKitC-1 N16R8 · PCM5102A (DAC) · TPA3118D2 mono (PBTL) · MP1584EN 12→5 V · 2,42″ OLED (I²C) · EC11 · 5 knapper på hullkort. Pinnene = fastvaren i firmware/rost.</text>
+<polyline class="w" stroke="#b8860b" stroke-width="5"  points="60,128 2300,128"/>
+<polyline class="w" stroke="#d63b2f" stroke-width="5"  points="60,150 2300,150"/>
+<polyline class="w" stroke="#f08a24" stroke-width="5"  points="60,172 2300,172"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="60,1540 2300,1540"/>
+<polyline class="w" stroke="#b8860b" stroke-width="5"  points="310,290 340,290 340,128"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="310,340 360,340 360,1540"/>
+<polyline class="w" stroke="#b8860b" stroke-width="5"  points="60,510 40,510 40,128 60,128"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="60,560 30,560 30,1540"/>
+<polyline class="w" stroke="#d63b2f" stroke-width="5"  points="310,510 380,510 380,150"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="310,560 395,560 395,1540"/>
+<polyline class="w" stroke="#d63b2f" stroke-width="5"  points="900,360 860,360 860,150"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="900,455 845,455 845,1540"/>
+<polyline class="w" stroke="#f08a24" stroke-width="5"  points="900,550 830,550 830,172"/>
+<polyline class="w" stroke="#2f6fd6" stroke-width="5"  points="760,640 820,640 820,645 900,645"/>
+<polyline class="w" stroke="#e0b400" stroke-width="5"  points="760,690 800,690 800,740 900,740"/>
+<polyline class="w" stroke="#2e9e4f" stroke-width="5"  points="760,740 780,740 780,835 900,835"/>
+<polyline class="w" stroke="#d63b2f" stroke-width="5"  points="760,800 790,800 790,150"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="760,850 775,850 775,1540"/>
+<polyline class="w" stroke="#9b9b9b" stroke-width="5"  points="360,745 400,745 400,700 440,700"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="360,795 415,795 415,760 440,760"/>
+<polyline class="w" stroke="#e86aa8" stroke-width="5"  points="360,860 430,860 430,1060 810,1060 810,930 900,930"/>
+<polyline class="w" stroke="#b8860b" stroke-width="5"  points="60,760 45,760 45,128"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="60,810 30,810 30,1540"/>
+<polyline class="w" stroke="#d63b2f" stroke-width="7"  points="360,930 380,930 380,1170 340,1170"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="7"  points="360,980 370,980 370,1210 340,1210"/>
+<polyline class="w" stroke="#f08a24" stroke-width="5"  points="1500,300 1460,300 1460,172"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="1500,345 1445,345 1445,1540"/>
+<polyline class="w" stroke="#2f6fd6" stroke-width="5"  points="900,1025 870,1025 870,215 1420,215 1420,390 1500,390"/>
+<polyline class="w" stroke="#e0b400" stroke-width="5"  points="900,1120 885,1120 885,205 1405,205 1405,435 1500,435"/>
+<polyline class="w" stroke="#d63b2f" stroke-width="5"  points="1500,598 1400,598 1400,360 1200,360"/>
+<polyline class="w" stroke="#f08a24" stroke-width="5"  points="1500,591 1412,591 1412,455 1200,455"/>
+<polyline class="w" stroke="#e0b400" stroke-width="5"  points="1500,584 1424,584 1424,550 1200,550"/>
+<polyline class="w" stroke="#2e9e4f" stroke-width="5"  points="1500,577 1436,577 1436,645 1200,645"/>
+<polyline class="w" stroke="#2f6fd6" stroke-width="5"  points="1500,570 1448,570 1448,740 1200,740"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="1500,722 1490,722 1490,1540"/>
+<polyline class="w" stroke="#1fb5ad" stroke-width="5"  points="1500,990 1350,990 1350,835 1200,835"/>
+<polyline class="w" stroke="#5fb4f0" stroke-width="5"  points="1500,1030 1365,1030 1365,930 1200,930"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="1500,1070 1462,1070 1462,1540"/>
+<polyline class="w" stroke="#8a4fd6" stroke-width="5"  points="1500,1110 1395,1110 1395,1025 1200,1025"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="1500,1150 1454,1150 1454,1540"/>
+<rect x="1900" y="930" width="330" height="250" rx="12" fill="#e7f5ec" stroke="#2e9e4f" stroke-width="3"/>
+<rect x="1500" y="930" width="330" height="250" rx="12" fill="#d8e8f5" stroke="#2f6fd6" stroke-width="3"/>
+<rect x="1500" y="488" width="700" height="382" rx="12" fill="#efe1c2" stroke="#7a5a20" stroke-width="3"/>
+<rect x="1500" y="230" width="330" height="250" rx="12" fill="#2b2f3a" stroke="#111" stroke-width="3"/>
+<rect x="80" y="1110" width="260" height="150" rx="12" fill="#d9d9d4" stroke="#444" stroke-width="3"/>
+<rect x="60" y="690" width="300" height="330" rx="12" fill="#f8e3cf" stroke="#b45309" stroke-width="3"/>
+<rect x="440" y="560" width="320" height="330" rx="12" fill="#e8e0f6" stroke="#6d28d9" stroke-width="3"/>
+<rect x="900" y="260" width="300" height="980" rx="12" fill="#55555a" stroke="#111" stroke-width="3"/>
+<rect x="60" y="440" width="250" height="170" rx="12" fill="#dfe7f1" stroke="#2f5f9a" stroke-width="3"/>
+<rect x="60" y="230" width="250" height="150" rx="12" fill="#e6e3da" stroke="#555" stroke-width="3"/>
+<text x="2310" y="134" class="t" fill="#b8860b">12 V</text>
+<text x="2310" y="156" class="t" fill="#d63b2f">5 V</text>
+<text x="2310" y="178" class="t" fill="#f08a24">3V3</text>
+<text x="2310" y="1546" class="t">GND</text>
+<text x="185.0" y="260" text-anchor="middle" font-size="20" font-weight="700" fill="#1d1d1f">DC-kontakt 12 V</text>
+<text x="185.0" y="282" text-anchor="middle" font-size="14" fill="#1d1d1f">5,5/2,1 · senter +</text>
+<circle cx="310" cy="290" r="7" fill="#b8860b" stroke="#1d1d1f" stroke-width="2"/>
+<text x="296" y="295" class="m" text-anchor="end" style="fill:#1d1d1f">+</text>
+<circle cx="310" cy="340" r="7" fill="#555" stroke="#1d1d1f" stroke-width="2"/>
+<text x="296" y="345" class="m" text-anchor="end" style="fill:#1d1d1f">−</text>
+<text x="185.0" y="470" text-anchor="middle" font-size="20" font-weight="700" fill="#1d1d1f">MP1584EN</text>
+<text x="185.0" y="492" text-anchor="middle" font-size="14" fill="#1d1d1f">12 V → 5,0 V (still inn først!)</text>
+<circle cx="60" cy="510" r="7" fill="#b8860b" stroke="#1d1d1f" stroke-width="2"/>
+<text x="74" y="515" class="m" style="fill:#1d1d1f">IN+</text>
+<circle cx="60" cy="560" r="7" fill="#555" stroke="#1d1d1f" stroke-width="2"/>
+<text x="74" y="565" class="m" style="fill:#1d1d1f">IN−</text>
+<circle cx="310" cy="510" r="7" fill="#d63b2f" stroke="#1d1d1f" stroke-width="2"/>
+<text x="296" y="515" class="m" text-anchor="end" style="fill:#1d1d1f">OUT+</text>
+<circle cx="310" cy="560" r="7" fill="#555" stroke="#1d1d1f" stroke-width="2"/>
+<text x="296" y="565" class="m" text-anchor="end" style="fill:#1d1d1f">OUT−</text>
+<text x="1050.0" y="290" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">ESP32-S3</text>
+<text x="1050.0" y="312" text-anchor="middle" font-size="14" fill="#fff">DevKitC-1 N16R8</text>
+<circle cx="900" cy="360" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="914" y="365" class="m" style="fill:#1d1d1f">5V</text>
+<circle cx="900" cy="455" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="914" y="460" class="m" style="fill:#1d1d1f">GND</text>
+<circle cx="900" cy="550" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="914" y="555" class="m" style="fill:#1d1d1f">3V3</text>
+<circle cx="900" cy="645" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="914" y="650" class="m" style="fill:#1d1d1f">GPIO4</text>
+<circle cx="900" cy="740" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="914" y="745" class="m" style="fill:#1d1d1f">GPIO5</text>
+<circle cx="900" cy="835" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="914" y="840" class="m" style="fill:#1d1d1f">GPIO6</text>
+<circle cx="900" cy="930" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="914" y="935" class="m" style="fill:#1d1d1f">GPIO7</text>
+<circle cx="900" cy="1025" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="914" y="1030" class="m" style="fill:#1d1d1f">GPIO11</text>
+<circle cx="900" cy="1120" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="914" y="1125" class="m" style="fill:#1d1d1f">GPIO12</text>
+<circle cx="1200" cy="360" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1186" y="365" class="m" text-anchor="end" style="fill:#1d1d1f">GPIO8</text>
+<circle cx="1200" cy="455" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1186" y="460" class="m" text-anchor="end" style="fill:#1d1d1f">GPIO9</text>
+<circle cx="1200" cy="550" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1186" y="555" class="m" text-anchor="end" style="fill:#1d1d1f">GPIO18</text>
+<circle cx="1200" cy="645" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1186" y="650" class="m" text-anchor="end" style="fill:#1d1d1f">GPIO39</text>
+<circle cx="1200" cy="740" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1186" y="745" class="m" text-anchor="end" style="fill:#1d1d1f">GPIO47</text>
+<circle cx="1200" cy="835" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1186" y="840" class="m" text-anchor="end" style="fill:#1d1d1f">GPIO15</text>
+<circle cx="1200" cy="930" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1186" y="935" class="m" text-anchor="end" style="fill:#1d1d1f">GPIO16</text>
+<circle cx="1200" cy="1025" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1186" y="1030" class="m" text-anchor="end" style="fill:#1d1d1f">GPIO17</text>
+<circle cx="1200" cy="1120" r="7" fill="#c9c9c4" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1186" y="1125" class="m" text-anchor="end" style="fill:#1d1d1f">GPIO41/42/40</text>
+<text x="1050.0" y="1225" text-anchor="middle" font-size="13" fill="#ddd">USB-C bak: flashing</text>
+<text x="600.0" y="590" text-anchor="middle" font-size="20" font-weight="700" fill="#1d1d1f">PCM5102A (DAC)</text>
+<text x="600.0" y="612" text-anchor="middle" font-size="14" fill="#1d1d1f">SCK, FMT, FLT, DEMP → GND · XSMT → 3V3</text>
+<circle cx="760" cy="640" r="7" fill="#b9a7e6" stroke="#1d1d1f" stroke-width="2"/>
+<text x="746" y="645" class="m" text-anchor="end" style="fill:#1d1d1f">BCK</text>
+<circle cx="760" cy="690" r="7" fill="#b9a7e6" stroke="#1d1d1f" stroke-width="2"/>
+<text x="746" y="695" class="m" text-anchor="end" style="fill:#1d1d1f">LCK</text>
+<circle cx="760" cy="740" r="7" fill="#b9a7e6" stroke="#1d1d1f" stroke-width="2"/>
+<text x="746" y="745" class="m" text-anchor="end" style="fill:#1d1d1f">DIN</text>
+<circle cx="760" cy="800" r="7" fill="#b9a7e6" stroke="#1d1d1f" stroke-width="2"/>
+<text x="746" y="805" class="m" text-anchor="end" style="fill:#1d1d1f">VIN</text>
+<circle cx="760" cy="850" r="7" fill="#b9a7e6" stroke="#1d1d1f" stroke-width="2"/>
+<text x="746" y="855" class="m" text-anchor="end" style="fill:#1d1d1f">GND</text>
+<circle cx="440" cy="700" r="7" fill="#b9a7e6" stroke="#1d1d1f" stroke-width="2"/>
+<text x="454" y="705" class="m" style="fill:#1d1d1f">OUT L</text>
+<circle cx="440" cy="760" r="7" fill="#b9a7e6" stroke="#1d1d1f" stroke-width="2"/>
+<text x="454" y="765" class="m" style="fill:#1d1d1f">AGND</text>
+<text x="210.0" y="720" text-anchor="middle" font-size="20" font-weight="700" fill="#1d1d1f">TPA3118D2</text>
+<text x="210.0" y="742" text-anchor="middle" font-size="14" fill="#1d1d1f">mono PBTL · 12 V</text>
+<circle cx="360" cy="745" r="7" fill="#f0b27a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="346" y="750" class="m" text-anchor="end" style="fill:#1d1d1f">IN +</text>
+<circle cx="360" cy="795" r="7" fill="#f0b27a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="346" y="800" class="m" text-anchor="end" style="fill:#1d1d1f">IN −</text>
+<circle cx="360" cy="860" r="7" fill="#f0b27a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="346" y="865" class="m" text-anchor="end" style="fill:#1d1d1f">SDZ</text>
+<circle cx="60" cy="760" r="7" fill="#f0b27a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="74" y="765" class="m" style="fill:#1d1d1f">PVCC</text>
+<circle cx="60" cy="810" r="7" fill="#f0b27a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="74" y="815" class="m" style="fill:#1d1d1f">GND</text>
+<circle cx="360" cy="930" r="7" fill="#f0b27a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="346" y="935" class="m" text-anchor="end" style="fill:#1d1d1f">OUT +</text>
+<circle cx="360" cy="980" r="7" fill="#f0b27a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="346" y="985" class="m" text-anchor="end" style="fill:#1d1d1f">OUT −</text>
+<text x="210.0" y="1140" text-anchor="middle" font-size="20" font-weight="700" fill="#1d1d1f">Element 4 Ω</text>
+<text x="210.0" y="1162" text-anchor="middle" font-size="14" fill="#1d1d1f">Dayton RS75-4</text>
+<text x="90" y="1300" class="s">Høyttalerledningene: 0,5 mm², ikke til GND</text>
+<text x="1665.0" y="260" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">2,42″ OLED</text>
+<text x="1665.0" y="282" text-anchor="middle" font-size="14" fill="#fff">SSD1309 · I²C · lodd på baksiden</text>
+<circle cx="1500" cy="300" r="7" fill="#8b8b86" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1514" y="305" class="m" style="fill:#fff">VDD</text>
+<circle cx="1500" cy="345" r="7" fill="#8b8b86" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1514" y="350" class="m" style="fill:#fff">GND</text>
+<circle cx="1500" cy="390" r="7" fill="#8b8b86" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1514" y="395" class="m" style="fill:#fff">SDA</text>
+<circle cx="1500" cy="435" r="7" fill="#8b8b86" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1514" y="440" class="m" style="fill:#fff">SCL</text>
+<text x="1850.0" y="518" text-anchor="middle" font-size="20" font-weight="700" fill="#1d1d1f">Knappene på hullkortet</text>
+<text x="1850.0" y="540" text-anchor="middle" font-size="14" fill="#1d1d1f">64 × 20 mm · 5 brytere 6×6, 12,7 mm (5 hull) mellom</text>
+<rect x="1580" y="640" width="60" height="60" rx="6" fill="#3a3a3c"/><circle cx="1610" cy="670" r="15" fill="#6b6a64"/><text x="1610" y="676" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">⏻</text>
+<circle cx="1586" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="1634" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="1634" cy="618" r="6" fill="#d63b2f" stroke="#1d1d1f" stroke-width="1.5"/>
+<line x1="1580" y1="612" x2="1592" y2="624" stroke="#d63b2f" stroke-width="3"/>
+<polyline class="w" stroke="#d63b2f" stroke-width="5"  points="1634,618 1634,598 1480,598"/>
+<rect x="1700" y="640" width="60" height="60" rx="6" fill="#3a3a3c"/><circle cx="1730" cy="670" r="15" fill="#6b6a64"/><text x="1730" y="676" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">1</text>
+<circle cx="1706" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="1754" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="1754" cy="618" r="6" fill="#f08a24" stroke="#1d1d1f" stroke-width="1.5"/>
+<line x1="1700" y1="612" x2="1712" y2="624" stroke="#d63b2f" stroke-width="3"/>
+<polyline class="w" stroke="#f08a24" stroke-width="5"  points="1754,618 1754,591 1480,591"/>
+<rect x="1820" y="640" width="60" height="60" rx="6" fill="#3a3a3c"/><circle cx="1850" cy="670" r="15" fill="#6b6a64"/><text x="1850" y="676" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">2</text>
+<circle cx="1826" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="1874" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="1874" cy="618" r="6" fill="#e0b400" stroke="#1d1d1f" stroke-width="1.5"/>
+<line x1="1820" y1="612" x2="1832" y2="624" stroke="#d63b2f" stroke-width="3"/>
+<polyline class="w" stroke="#e0b400" stroke-width="5"  points="1874,618 1874,584 1480,584"/>
+<rect x="1940" y="640" width="60" height="60" rx="6" fill="#3a3a3c"/><circle cx="1970" cy="670" r="15" fill="#6b6a64"/><text x="1970" y="676" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">3</text>
+<circle cx="1946" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="1994" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="1994" cy="618" r="6" fill="#2e9e4f" stroke="#1d1d1f" stroke-width="1.5"/>
+<line x1="1940" y1="612" x2="1952" y2="624" stroke="#d63b2f" stroke-width="3"/>
+<polyline class="w" stroke="#2e9e4f" stroke-width="5"  points="1994,618 1994,577 1480,577"/>
+<rect x="2060" y="640" width="60" height="60" rx="6" fill="#3a3a3c"/><circle cx="2090" cy="670" r="15" fill="#6b6a64"/><text x="2090" y="676" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">4</text>
+<circle cx="2066" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="2114" cy="722" r="5" fill="#1d1d1f"/>
+<circle cx="2114" cy="618" r="6" fill="#2f6fd6" stroke="#1d1d1f" stroke-width="1.5"/>
+<line x1="2060" y1="612" x2="2072" y2="624" stroke="#d63b2f" stroke-width="3"/>
+<polyline class="w" stroke="#2f6fd6" stroke-width="5"  points="2114,618 2114,570 1480,570"/>
+<polyline class="w" stroke="#9a9a96" stroke-width="4"  points="1570,722 2130,722"/>
+<polyline class="w" stroke="#1d1d1f" stroke-width="5"  points="1570,722 1500,722"/>
+<text x="1520" y="770" class="s">Sølvstrek = bar fortinnet tråd over de FREMRE beina (GND-bussen) → GND.</text>
+<text x="1520" y="795" class="s">Farget prikk = BAKRE HØYRE bein → ledning til ESP32. Rød strek = klipp BAKRE VENSTRE bein.</text>
+<text x="1520" y="820" class="s">⏻ til venstre sett forfra. Sjekk med multimeter at fremre og bakre bein er hver sin pol.</text>
+<text x="1520" y="845" class="s">Knappene trekkes til GND (intern pull-up i ESP-en) – ingen motstander.</text>
+<text x="1665.0" y="960" text-anchor="middle" font-size="20" font-weight="700" fill="#1d1d1f">EC11 volumknott</text>
+<text x="1665.0" y="982" text-anchor="middle" font-size="14" fill="#1d1d1f">med trykk</text>
+<circle cx="1500" cy="990" r="7" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1514" y="995" class="m" style="fill:#1d1d1f">A</text>
+<circle cx="1500" cy="1030" r="7" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1514" y="1035" class="m" style="fill:#1d1d1f">B</text>
+<circle cx="1500" cy="1070" r="7" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1514" y="1075" class="m" style="fill:#1d1d1f">C (midt)</text>
+<circle cx="1500" cy="1110" r="7" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1514" y="1115" class="m" style="fill:#1d1d1f">trykk 1</text>
+<circle cx="1500" cy="1150" r="7" fill="#7fb2ff" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1514" y="1155" class="m" style="fill:#1d1d1f">trykk 2</text>
+<text x="2065.0" y="960" text-anchor="middle" font-size="20" font-weight="700" fill="#1d1d1f">INMP441 (valgfri)</text>
+<text x="2065.0" y="982" text-anchor="middle" font-size="14" fill="#1d1d1f">mikrofon</text>
+<circle cx="1900" cy="1000" r="7" fill="#7fd36a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1914" y="1005" class="m" style="fill:#1d1d1f">SCK → GPIO41</text>
+<circle cx="1900" cy="1038" r="7" fill="#7fd36a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1914" y="1043" class="m" style="fill:#1d1d1f">WS → GPIO42</text>
+<circle cx="1900" cy="1076" r="7" fill="#7fd36a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1914" y="1081" class="m" style="fill:#1d1d1f">SD → GPIO40</text>
+<circle cx="1900" cy="1114" r="7" fill="#7fd36a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1914" y="1119" class="m" style="fill:#1d1d1f">VDD → 3V3</text>
+<circle cx="1900" cy="1152" r="7" fill="#7fd36a" stroke="#1d1d1f" stroke-width="2"/>
+<text x="1914" y="1157" class="m" style="fill:#1d1d1f">GND, L/R → GND</text>
+<text x="1915" y="1205" class="s">Kobles bare hvis du vil ha mikrofon.</text>
+<text x="1500" y="1260" class="s">• Still MP1584EN til 5,0 V med multimeter FØR ESP-en og lydkortet kobles til.</text>
+<text x="1500" y="1290" class="s">• TPA3118-kortet må stå i PBTL (mono): sjekk jumperne/loddebroene på ditt kort.</text>
+<text x="1500" y="1320" class="s">• PCM5102A: SCK, FMT, FLT og DEMP til GND, XSMT til 3V3 (loddebroene H1L–H4L bak på kortet).</text>
+<text x="1500" y="1350" class="s">• Bruk ikke GPIO0, 3, 19, 20, 26–32, 35–37, 45, 46 eller 38/48 (oppstart, USB, flash, PSRAM, RGB-LED).</text>
+<text x="1500" y="1380" class="s">• Flash fastvaren fra skjold-lab.com/flasher/rost/ før alt skrus sammen, og test knapper og skjerm.</text>
+</svg>
