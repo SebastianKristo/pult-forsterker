@@ -5547,6 +5547,84 @@ def history_add(entry):
         pass
 
 
+# --- Nylig spilt: alltid på (uavhengig av Lyttehistorikk-tillegget), de siste 30 ulike, med det som trengs for å spille
+# dem igjen. Vises på Hjem i web-UI og appen (GET /api/recent, POST /api/recent/play {key}).
+RECENT_FILE = os.path.join(os.path.dirname(STATE_FILE), "recent.json")
+_recent = {"items": None}
+
+
+def _recent_load():
+    if _recent["items"] is None:
+        try:
+            with open(RECENT_FILE) as fh:
+                _recent["items"] = [x for x in json.load(fh) if isinstance(x, dict) and x.get("key")][:30]
+        except Exception:
+            _recent["items"] = []
+    return _recent["items"]
+
+
+def recent_entry(s, lp, now):
+    """Status + siste strøm Skjold startet → oppføring i Nylig spilt (eller None). Ren funksjon (testes)."""
+    inp = s.get("input")
+    title, artist = str(s.get("title") or ""), str(s.get("artist") or "")
+    rn = s.get("radio_now") or {}
+    if inp == "radio":
+        url = str(rn.get("url") or lp.get("url") or "")
+        egen = bool(lp.get("url")) and lp.get("url") == (rn.get("url") or lp.get("url"))
+        if egen and lp.get("source"):          # låt fra Navidrome / YouTube Music m.fl., startet av Skjold
+            t = str(lp.get("track") or title or lp.get("title") or "")
+            if not t:
+                return None
+            a = str(lp.get("artist") or artist)
+            return {"key": "lib:" + t.lower() + "|" + a.lower(), "t": int(now), "title": t, "sub": a, "kind": str(lp["source"]),
+                    "input": "radio", "station": False, "image": str(lp.get("art") or ""),
+                    "replay": {"url": lp["url"], "title": str(lp.get("title") or t), "image": str(lp.get("art") or ""),
+                               "genre": str(lp["source"]), "meta": {k: lp.get(k) for k in ("track", "artist", "album", "duration", "source") if lp.get(k)}}}
+        name = str(rn.get("name") or s.get("station") or "")
+        if not name:
+            return None
+        img = str(rn.get("logo") or rn.get("image") or (lp.get("art") if egen else "") or "")
+        return {"key": "radio:" + name.lower(), "t": int(now), "title": name, "sub": "Radio", "kind": "Radio", "input": "radio", "station": True,
+                "image": img if img.startswith(("http://", "https://")) else "", "replay": {"url": url, "title": name, "image": img} if url else {"input": "radio"}}
+    if not title or inp not in INPUTS:
+        return None
+    return {"key": f"{inp}:{title.lower()}|{artist.lower()}", "t": int(now), "title": title, "sub": artist, "kind": str(s.get("source_label") or {"airplay": "AirPlay", "bt": "Bluetooth", "spotify": "Spotify", "usb": "USB", "aux": "AUX", "aux2": "AUX 2",
+                                                                   "plex": "Plex", "roon": "Roon"}.get(inp, inp)),
+            "input": inp, "station": False, "image": "", "replay": {"input": inp}}
+
+
+def recent_add(e):
+    if not e:
+        return
+    items = [x for x in _recent_load() if x.get("key") != e["key"]]
+    items.insert(0, e)
+    _recent["items"] = items[:30]
+    try:
+        with open(RECENT_FILE + ".tmp", "w") as fh:
+            json.dump(_recent["items"], fh)
+        os.replace(RECENT_FILE + ".tmp", RECENT_FILE)
+    except Exception:
+        pass
+
+
+async def h_recent(r):
+    if r.method == "POST":
+        b = await _obj(r)
+        e = next((x for x in _recent_load() if x.get("key") == b.get("key")), None)
+        if not e:
+            return web.json_response({"error": "finnes ikke i Nylig spilt"}, status=404)
+        rp = e.get("replay") or {}
+        try:
+            if rp.get("url"):
+                await asyncio.to_thread(play_url, rp["url"], rp.get("title", ""), rp.get("image", ""), rp.get("genre", ""), rp.get("meta") or None)
+            elif rp.get("input") in INPUTS:
+                await asyncio.to_thread(set_input, rp["input"])
+        except Exception as ex:
+            return web.json_response({"error": str(ex)}, status=409)
+        return j()
+    return web.json_response({"items": [{k: v for k, v in x.items() if k != "replay"} | {"replay": bool(x.get("replay"))} for x in _recent_load()]})
+
+
 async def h_history(_r):
     return web.json_response({"enabled": plug_on("history"), "items": list(reversed(_hist_load()))[:500]})
 
@@ -5630,7 +5708,7 @@ def _watch_tick():
         _bg(_webhook, "source", {"input": s.get("input")})
     w["input"] = s.get("input")
     if key != w["key"]:
-        w.update(key=key, start=now, listened=0.0, scrobbled=False, logged=False,
+        w.update(key=key, start=now, listened=0.0, scrobbled=False, logged=False, recent=False,
                  track={"title": title, "artist": artist, "album": str(s.get("album") or ""), "duration": float(s.get("duration") or 0), "input": s.get("input")})
         if key and playing:
             if wrapped_on():
@@ -5638,6 +5716,12 @@ def _watch_tick():
             if artist and plug_on("listenbrainz"): _bg(_lb_submit, "playing_now", dict(w["track"]))
             if artist and plug_on("lastfm"): _bg(_lastfm_call, "track.updateNowPlaying", dict(w["track"]))
             _bg(_webhook, "track", {"title": title, "artist": artist, "album": w["track"]["album"], "input": s.get("input")})
+    if key and playing and not w.get("recent"):
+        w["recent"] = True
+        try:
+            recent_add(recent_entry(s, dict(last_play), now))
+        except Exception as e:
+            print("Nylig spilt:", e, flush=True)
     # Lyttehistorikk: logg når låten faktisk spilles – også hvis den startet på pause/før avspilling kom i gang
     # (før ble den bare logget hvis «spiller» var sant akkurat i tikket låten byttet, og ofte aldri).
     if key and playing and not w.get("logged") and plug_on("history"):
@@ -10515,7 +10599,7 @@ def main():
     app = web.Application(middlewares=[cors_mw], client_max_size=48 * 1024 * 1024)   # romkorreksjon-opptak
     app.add_routes([web.get("/api/status", h_status), web.get("/api/ws", h_ws), web.get("/api/night", h_night), web.post("/api/night", h_night), web.get("/api/events", h_events), web.post("/api/power", h_power), web.post("/api/toggle", h_toggle),
                     web.post("/api/input", h_input), web.post("/api/volume", h_volume), web.post("/api/mute", h_mute),
-                    web.post("/api/bt", h_bt), web.post("/api/settings/reset", h_settings_reset), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/recordings/feed.xml", h_rec_feed), web.get("/api/recordings/prog/{prog}/{name}", h_rec_prog_file), web.get("/api/recordings/guide", h_rec_guide), web.get("/api/changelog", h_changelog), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/placement", h_placement), web.post("/api/placement", h_placement), web.post("/api/placement/play", h_placement_play), web.post("/api/placement/start", h_placement_start), web.post("/api/placement/analyze", h_placement_analyze), web.post("/api/placement/record", h_placement_record), web.post("/api/placement/devices", h_placement_devices), web.post("/api/placement/apply", h_placement_apply), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/speakers", h_speakers), web.post("/api/speakers", h_speakers), web.post("/api/speakers/measure", h_speakers_measure), web.post("/api/speakers/save", h_speakers_save), web.get("/api/speakers/search", h_speakers_search), web.get("/api/speakers/profile/{pid}", h_speakers_profile), web.post("/api/speakers/share", h_speakers_share), web.post("/api/speakers/flag", h_speakers_share), web.post("/api/speakers/calibration", h_speakers_calibration), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.post("/api/seek", h_seek), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
+                    web.post("/api/bt", h_bt), web.post("/api/settings/reset", h_settings_reset), web.post("/api/loudness", h_loudness), web.post("/api/play", h_play), web.get("/api/plugins", h_plugins_get), web.get("/api/backup", h_backup_get), web.post("/api/backup", h_backup_post), web.post("/api/restore", h_restore), web.get("/api/wrapped", h_wrapped), web.get("/api/roon", h_roon), web.post("/api/roon", h_roon), web.get("/api/plexamp", h_plexamp), web.post("/api/plexamp", h_plexamp), web.get("/api/homekit", h_homekit), web.post("/api/homekit", h_homekit), web.get("/api/cloud", h_cloud), web.post("/api/cloud", h_cloud), web.get("/api/matter", h_matter), web.post("/api/matter", h_matter), web.post("/api/plugins/{pid}", h_plugin_post), web.get("/api/lyrics", h_lyrics), web.get("/api/history", h_history), web.get("/api/recent", h_recent), web.post("/api/recent/play", h_recent), web.get("/api/recordings", h_recordings), web.post("/api/recordings", h_recordings_post), web.get("/api/recordings/file/{name}", h_recording_file), web.get("/api/recordings/feed.xml", h_rec_feed), web.get("/api/recordings/prog/{prog}/{name}", h_rec_prog_file), web.get("/api/recordings/guide", h_rec_guide), web.get("/api/changelog", h_changelog), web.get("/api/snapcast", h_snapcast), web.post("/api/snapcast", h_snapcast), web.post("/api/roomeq/sweep", h_roomeq_sweep), web.post("/api/xtc/test", h_xtc_test), web.get("/api/placement", h_placement), web.post("/api/placement", h_placement), web.post("/api/placement/play", h_placement_play), web.post("/api/placement/start", h_placement_start), web.post("/api/placement/analyze", h_placement_analyze), web.post("/api/placement/record", h_placement_record), web.post("/api/placement/devices", h_placement_devices), web.post("/api/placement/apply", h_placement_apply), web.get("/api/sync", h_sync), web.post("/api/sync", h_sync), web.post("/api/roomeq/analyze", h_roomeq_analyze), web.get("/api/speakers", h_speakers), web.post("/api/speakers", h_speakers), web.post("/api/speakers/measure", h_speakers_measure), web.post("/api/speakers/save", h_speakers_save), web.get("/api/speakers/search", h_speakers_search), web.get("/api/speakers/profile/{pid}", h_speakers_profile), web.post("/api/speakers/share", h_speakers_share), web.post("/api/speakers/flag", h_speakers_share), web.post("/api/speakers/calibration", h_speakers_calibration), web.get("/api/subwave", h_subwave), web.post("/api/subwave", h_subwave), web.get("/api/update", h_update_get), web.post("/api/update", h_update_post), web.post("/api/transport", h_transport), web.post("/api/seek", h_seek), web.get("/api/cover", h_cover), web.get("/api/logo", h_logo), web.get("/api/remote", h_remote_get), web.post("/api/remote", h_remote_post), web.get("/api/stream/{sid}", h_stream), web.post("/api/voice", h_voice),
                     web.get("/api/presets", h_presets), web.post("/api/preset", h_preset), web.post("/api/presets", h_presets_set),
                     web.put("/api/presets/order", h_presets_order), web.post("/api/presets/order", h_presets_order),
                     web.delete("/api/presets/{n}", h_preset_delete), web.post("/api/presets/{n}/play", h_preset_play),

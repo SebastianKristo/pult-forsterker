@@ -6,7 +6,7 @@ import { type ComponentChildren } from 'preact';
 import { homeOrder, orderSources } from '../lib/homelayout';
 import { Boundary } from '../components/boundary';
 import { api, credFor, getBase, PRODUCT_HW, PRODUCT_LABEL, productOf, setBase, type InputId, type Product, type Status } from '../lib/api';
-import { act, deviceName, eqActiveProfile, go, inputLabel, loadSettings, mode, online, openFull, closeFull, playPause, product, queueOpen, reconnect, recent, setVolume, showToast, srcOpen, status, everyVisible } from '../lib/store';
+import { act, deviceName, eqActiveProfile, go, inputLabel, loadSettings, mode, online, openFull, closeFull, playPause, playRecentServer, product, queueOpen, reconnect, recent, setVolume, showToast, srcOpen, status, everyVisible } from '../lib/store';
 import { knownDevices, remember } from '../lib/discover';
 import { aktivEnhet, enheter, relayBase, stedId, velgEnhet, visSted, type Enhet } from '../lib/hjem';
 import { RolleMerker, StedPicker } from './hjem';
@@ -112,7 +112,8 @@ export function HomePhone() {
               const a = art(x.title, x.image);
               return (
                 <button key={x.key} onClick={() => {
-                  if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else { go('radio'); return; } }
+                  if (playRecentServer(x)) { /* fra forsterkeren */ }
+                  else if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else { go('radio'); return; } }
                   else void act(() => api.input(x.input), { input: x.input });
                   openFull();
                 }} style="display:flex;flex-direction:column;gap:6px;width:118px;flex-shrink:0;border:none;background:none;padding:0;cursor:pointer;text-align:left">

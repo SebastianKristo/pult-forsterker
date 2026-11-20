@@ -2,7 +2,7 @@
 import { swLibs } from '../lib/subwave';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, PRODUCT_HW, PRODUCT_LABEL, type InputId } from '../lib/api';
-import { act, deviceName, eqActiveSource, go, inputLabel, online, openFull, product, recent, setEqProfile, setSetting, settings, status } from '../lib/store';
+import { act, deviceName, eqActiveSource, go, inputLabel, online, openFull, playRecentServer, product, recent, setEqProfile, setSetting, settings, status } from '../lib/store';
 import { art, EQ, EQ_DESC, EQ_HZ, EQ_NAMES, fmt, type EqSource } from '../lib/settings';
 import { vises } from '../lib/meny';
 import { Chip, PRODUCT_ICON, Slider, SrcCircle, Toggle } from '../components/ui';
@@ -69,7 +69,7 @@ function HomeBody({ wide = false }: { wide?: boolean }) {
               const a = art(x.title, x.image || fav?.image || fav?.icon);
               return (
                 <button key={x.key} class="rc" onClick={() => {
-                  if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else go('radio'); }
+                  if (playRecentServer(x)) { /* fra forsterkeren */ } else if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else go('radio'); }
                   else { void act(() => api.input(x.input), { input: x.input }); }
                   openFull();
                 }}>
@@ -183,7 +183,7 @@ function HomeWide() {
         <h3 class="th">Nylig spilt</h3>
         <div class="hscroll">
           {rc.map((x) => { const ra = art(x.title, x.image); return (
-            <button key={x.key} class="rc" onClick={() => { if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else go('radio'); } else void act(() => api.input(x.input), { input: x.input }); }}>
+            <button key={x.key} class="rc" onClick={() => { if (playRecentServer(x)) { /* fra forsterkeren */ } else if (x.station) { const f = favs.value.find((f) => f.title === x.title); if (f) playFav(f); else if (x.url) void act(() => api.radioPlay({ url: x.url!, title: x.title }), { input: 'radio' }); else go('radio'); } else void act(() => api.input(x.input), { input: x.input }); }}>
               <div class="sq" style={{ background: ra.bg, color: ra.ink, borderRadius: x.station ? '50%' : '10px' }}>{ra.logo ? '' : x.big}</div>
               <span class="t">{x.title}</span><span class="k">{x.kind}</span>
             </button>

@@ -333,12 +333,39 @@ effect(() => { const s = status.value; if (s) { try { sessionStorage.setItem('sk
 try { const j = sessionStorage.getItem('skjold-last'); if (j && !status.value) status.value = JSON.parse(j) as Status; } catch { /* ignore */ }
 
 // ---------- Nylig spilt (lagres på denne enheten, fra det forsterkeren faktisk har spilt) ----------
-export interface Recent { key: string; title: string; big: string; kind: string; input: InputId; station: boolean; image?: string; url?: string }
+export interface Recent { key: string; title: string; big: string; kind: string; input: InputId; station: boolean; image?: string; url?: string; /** fra forsterkeren (GET /api/recent): spilles igjen med POST /api/recent/play */ server?: boolean }
 const RECENT_KEY = 'skjold-recent';
 export const recent = signal<Recent[]>((() => { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') as Recent[]; } catch { return []; } })());
+// Nyere forsterkere husker Nylig spilt selv (alt som er spilt, fra alle kilder og alle apper). Da brukes den listen;
+// eldre forsterkere uten /api/recent bruker listen appen har laget lokalt.
+let recentServer = false, recentTimer = 0;
+export async function loadRecent(): Promise<void> {
+  try {
+    const r = await api.recent();
+    recentServer = true;
+    recent.value = r.items.map((x) => ({ key: x.key, title: x.title, big: x.sub || x.title, kind: x.station ? 'Radio · kanal' : x.kind + (x.sub ? ' · ' + x.sub : ''),
+      input: x.input, station: x.station, ...(x.image ? { image: x.image } : {}), server: true }));
+  } catch (e) { if (e instanceof ApiError && e.status === 404) recentServer = false; }
+}
+/** Spill en oppføring i Nylig spilt igjen (fra forsterkerens liste). Gir false for lokale oppføringer. */
+export function playRecentServer(x: Recent): boolean {
+  if (!x.server) return false;
+  void act(() => api.recentPlay(x.key), { input: x.input });
+  return true;
+}
+let recentNøkkel = '';
+effect(() => {   // hent listen på nytt når noe nytt begynner å spille (forsterkeren legger det til etter noen sekunder)
+  const s = status.value;
+  const k = s ? [s.input, s.title, s.station, s.radio_now?.name, s.playing].join('|') : '';
+  if (!s || k === recentNøkkel) return;
+  const først = !recentNøkkel;
+  recentNøkkel = k;
+  window.clearTimeout(recentTimer);
+  recentTimer = window.setTimeout(() => void loadRecent(), først ? 300 : 7000);
+});
 effect(() => {
   const s = status.value;
-  if (!s || !s.power || !s.playing) return;
+  if (!s || !s.power || !s.playing || recentServer) return;
   let r: Recent | null = null;
   // Bilde: kanalens logo, ellers coveret Skjold viser nå (Lyrion/Navidrome/AirPlay – /api/cover?v=<hash> endrer seg ikke)
   const cov = s.radio_now?.image || coverUrl(s) || '';

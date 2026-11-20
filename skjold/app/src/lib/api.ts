@@ -277,6 +277,8 @@ export const api = {
   playFav: (n: number) => post('/api/presets/' + n + '/play', {}),
   radioSearch: (q: string) => req<{ norway: Station[]; world: Station[]; offline?: boolean }>('/api/radio/search?q=' + encodeURIComponent(q), undefined, getBase(), 12000),
   radioBrowse: () => req<{ shelves: Shelf[]; offline?: boolean }>('/api/radio/browse', undefined, getBase(), 12000),
+  recent: () => req<{ items: { key: string; t: number; title: string; sub: string; kind: string; input: InputId; station: boolean; image: string; replay: boolean }[] }>('/api/recent'),
+  recentPlay: (key: string) => post('/api/recent/play', { key }),
   radioPlay: (b: { url: string; title: string; image?: string; genre?: string; track?: string; artist?: string; album?: string; duration?: number; source?: string }) => post('/api/radio/play', b),
   playPreset: (n: number) => post('/api/preset', { n }),
   savePreset: (n: number) => post('/api/preset', { n, save: true }),
