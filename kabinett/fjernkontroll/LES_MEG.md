@@ -78,6 +78,15 @@ Designet er Skjolds eget. Det følger samme formspråk som Radio, Røst og Hjul 
 
 Hver tast er en egen hette med flens under toppen. Den trykker rett på en lavprofil SMD-bryter (4 × 4 × 1,5 mm) på et 1,0 mm tastekort. Hettene står 0,1 mm over bryteren, så de ikke slarker og ikke trykker på forhånd. Symbolene er felt 0,4 mm inn og printet i kontrastfarge (lyse på mørke taster, mørke på lyse). Med CFS blir symbolene en del av samme utskrift.
 
+**Slik holdes hettene.** Hettene sitter ikke fast i bryterne. De holdes av flensen sin, som er bredere enn hullet i toppen. Toppen holder hetten nede, og tastekortet holder den oppe. Hetten blir derfor bare stående når toppen er skrudd sammen med kortet.
+- **Styreribbe:** de runde hettene og gullringen har en ribbe (1,0 × 0,6 mm) mot nesen. Ribben går i et spor i toppen, så hetten ikke snurrer. OK-tasten har en ribbe som går i et spor i ringen. Sporet slutter 1,0 mm under toppflaten og synes ikke ovenfra. Ribben må peke mot nesen (oppover på fjernkontrollen).
+- **Montering:**
+  1. Legg toppen opp ned.
+  2. Slipp hettene ned i hullene med forsiden ned og ribben i sporet. Ringen skal i før OK-tasten.
+  3. Legg tastekortet over, med bryterne ned.
+  4. Skru sammen.
+- **Hvis det slarker:** sjekk at kortet ligger helt an mot skrutappene. Hettene står bare 0,1 mm over bryterne når kortet ligger riktig. Toppen og hettene fra før styreribben passer ikke med de nye. Skriv ut begge på nytt.
+
 ## Tasteoppsett (A, B og C)
 
 ![Tasteoppsett A, B og C](render/31_oppsett_A.png)
@@ -252,7 +261,7 @@ Småkomponentene loddes på pinnene der de hører hjemme, med krympestrømpe ove
 
 Ledningslengdene står i `koblinger.csv`. Lengdene der regner med 15 mm til lodding og slakk; kutt heller 1 cm for langt.
 
-1. **Skriv ut** `stl_hu/topp.stl` og `stl_hu/bunn.stl` (eller `bunn_dokk.stl`), hettene og IR-vinduet som før. Dokka for denne utgaven er `dokk/skjold-dokk-hullkort-k2.3mf` (`FH = 16.0`).
+1. **Skriv ut** `stl_hu/topp.stl` og `stl_hu/bunn.stl` (eller `bunn_dokk.stl`), hettene og IR-vinduet som før. Hettene legges i den opp-ned-snudde toppen med styreribben i sporet før kortet legges over (se «Slik holdes hettene» under [Designet](#designet)). Dokka for denne utgaven er `dokk/skjold-dokk-hullkort-k2.3mf` (`FH = 16.0`).
 2. **Skjær stripekortet** til 19 × 47 hull (kanten midt i en hullrad), og kutt bort 3 × 3 hull i begge hjørnene ved halen. Bor Ø2,4 mm for midtskruen der tegningen viser det.
 3. **Kutt stripene** etter tegningen (side 1, kobbersiden): 9 hull med et 3,5 mm bor, vridd for hånd (ikke drill). Mål at ingen stripe henger sammen over et kutt.
 4. **Lodd de 14 bryterne** på oppsiden. Klipp beina til 0,8 mm under kortet.

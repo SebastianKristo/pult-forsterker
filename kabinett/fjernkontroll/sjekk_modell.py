@@ -162,7 +162,11 @@ def i_fors(x, y):
         if f[0] == "pille" and taster.inni(("pille", f[1], f[2], f[3] + 1.25, f[4] + 1.25), (x, y)):
             return True
     return False
-rot = [p for p in rot if not (i_fors(p[0], p[1]) and p[2] >= 0.99)]   # forboret til 0,8 mm under toppen
+# sporene for styreribbene (runde hetter og gullringen): 1,0 mm topp over sporet, mot nesen fra hvert hull
+SPOR = [(h[3], L - h[4], h[5] / 2) for h in list(taster.HETTER) + list(taster.OPPSETT["rutenett"]) if h[2] in ("rund", "ring")]
+def i_spor(x, y):
+    return any(abs(x - cx) <= 1.5 and r - 0.5 <= (y - cy) <= r + 2.0 for cx, cy, r in SPOR)
+rot = [p for p in rot if not ((i_fors(p[0], p[1]) or i_spor(p[0], p[1])) and p[2] >= 0.99)]   # forboret til 0,8 mm under toppen
 melding(not rot, "toppflaten er ≥ 1,5 mm utenom tastehullene og skjermlomma (1,0 mm i forsenkningen rundt oppsettets hetter)" if not rot else f"tynn topp: {rot[:6]}")
 melding(not gulv, "gulvet er ≥ 1,5 mm utenom skruehodene" if not gulv else f"tynt gulv: {gulv[:6]}")
 
