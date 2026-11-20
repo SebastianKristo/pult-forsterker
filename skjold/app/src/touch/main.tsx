@@ -40,7 +40,7 @@ interface Dev {
   setup_net?: { active: boolean; manual?: boolean; ssid: string; password: string; url: string; qr?: string; joining: string; error: string;
     kabel?: boolean; ethernet?: { device: string; state: string } | null } | null;
   ble_setup?: { state: string; error: string; ssid: string; url: string } | null;   // Wi-Fi over Bluetooth (Improv)
-  touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string }; hjul?: { n: number; s: number } };
+  touch?: { cmd: { cmd: string; arg: string; seq: number }; voice: { state: string; text: string; reply: string }; hjul?: { n: number; s: number; v?: number; r?: number } };
   hold?: { key: string; p: number; title: string; sub: string } | null;   // fysisk knapp som holdes (POWER = omstart)
   rebooting?: boolean; poweroff?: boolean;
 }
@@ -92,12 +92,25 @@ const wakeData = signal<WakeData | null>(null), wakeOpen = signal(false), wakeSe
 const editAlarm = signal(-1);      // indeksen til alarmen som redigeres (-1 = ingen)
 const dev = (): Dev => (local.value ?? {}) as Dev;
 startTrykkelyder(() => lydProsent(settings.value.tLydP, settings.value.tLyd));   // myke klikk i høyttalerne (Oppsett → Trykkelyder)
+// Volumglideren på skjermen: et lite hakk for hvert 2. %, lysere opp og mørkere ned (som en knott med hakk)
+let volHakkSist = -1;
+function volHakk(n: number): void {
+  const steg = Math.round(n / 2);
+  if (volHakkSist >= 0 && steg !== volHakkSist) spillLyd('hakk', lydProsent(settings.value.tLydP, settings.value.tLyd), steg > volHakkSist ? 1.12 : 0.9);
+  volHakkSist = steg;
+  window.clearTimeout(volHakkT); volHakkT = window.setTimeout(() => { volHakkSist = -1; }, 600);
+}
+let volHakkT = 0;
 // Volumhjulet mens skjermtastaturet er oppe: daemonen teller steg (n) og trykk (s); vi flytter markøren / sletter ett tegn.
-let hjulSist: { n: number; s: number } | null = null;
+let hjulSist: { n: number; s: number; v?: number; r?: number } | null = null;
 effect(() => {
   const h = dev().touch?.hjul;
   if (!h) return;
   const m = hjulMål.cur;
+  if (hjulSist && (h.v ?? 0) > (hjulSist.v ?? 0)) {   // volumhjulet: ett lite hakk per steg (høyst 4 om gangen)
+    const n = Math.min(4, (h.v ?? 0) - (hjulSist.v ?? 0)), p = lydProsent(settings.value.tLydP, settings.value.tLyd), tone = (h.r ?? 1) > 0 ? 1.12 : 0.9;
+    for (let i = 0; i < n; i++) window.setTimeout(() => spillLyd('hakk', p, tone), i * 35);
+  }
   if (hjulSist && m) {
     if (h.n !== hjulSist.n) m.flytt(h.n - hjulSist.n);
     for (let i = 0; i < Math.min(10, h.s - hjulSist.s); i++) m.slett();
@@ -508,7 +521,7 @@ function NowPlaying() {
         </div>
         <div style="grid-column:1 / -1;display:flex;align-items:center;gap:2px;height:44px">
           <button onClick={() => void act(() => api.mute(!muted), { mute: !muted })} aria-label={muted ? 'Slå på lyden' : 'Demp'} style={`width:44px;height:44px;border:none;background:none;color:${muted ? '#e05a4a' : '#c9c9c4'};display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;margin-left:-6px`}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={muted ? 'M4 9h3l5-4v14l-5-4H4zM16 9.5l5 5M21 9.5l-5 5' : v > 50 ? 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11' : 'M4 9h3l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6'} /></svg></button>
-          <Slider label="Volum" value={v} color={muted ? '#6b6b67' : '#f0c46a'} onInput={(n) => { setVol(n); setVolume(Math.round(n)); }} onCommit={(n) => { setVol(null); setVolume(Math.round(n), true); }} />
+          <Slider label="Volum" value={v} color={muted ? '#6b6b67' : '#f0c46a'} onInput={(n) => { volHakk(n); setVol(n); setVolume(Math.round(n)); }} onCommit={(n) => { setVol(null); setVolume(Math.round(n), true); }} />
           <span style={`font-family:${MONO};font-size:13px;width:32px;text-align:right;color:${muted ? '#6b6b67' : '#f2f2ee'}`}>{v}</span>
         </div>
       </div>

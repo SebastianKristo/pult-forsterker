@@ -7,7 +7,7 @@
 //   så det høres ut som et mykt trykk og ikke som et pip
 // - litt tilfeldig tonehøyde og nivå (±4 %), så samme lyd mange ganger på rad ikke blir masete
 // - tastene på tastaturet er lysere og svakere, sletting litt lavere, og raske trykk etter hverandre dempes litt
-export type LydType = 'trykk' | 'tast' | 'slett' | 'på' | 'av';
+export type LydType = 'trykk' | 'tast' | 'slett' | 'på' | 'av' | 'hakk';
 
 /** Styrke i prosent (0–100) → lineær forsterkning før hovedvolumet. Kvadratisk, så de lave stegene blir fine nok:
  *  20 % ≈ 0,02 (svakt), 40 % ≈ 0,08, 70 % ≈ 0,25, 100 % = 0,5 (topp ca. −10 dBFS – tydelig, men fortsatt kort). */
@@ -34,20 +34,21 @@ const ARTER: Record<LydType, { f: number; q: number; tikk: number; tokk: number;
   tast: { f: 3400, q: 1.4, tikk: 0.75, tokk: 0.25, lav: 210, ms: 4 },
   slett: { f: 1900, q: 1.0, tikk: 0.8, tokk: 0.45, lav: 140, ms: 6 },
   på: { f: 3000, q: 1.2, tikk: 0.9, tokk: 0.5, lav: 200, ms: 6 },
-  av: { f: 2200, q: 1.2, tikk: 0.9, tokk: 0.5, lav: 150, ms: 6 }
+  av: { f: 2200, q: 1.2, tikk: 0.9, tokk: 0.5, lav: 150, ms: 6 },
+  hakk: { f: 4000, q: 1.6, tikk: 0.6, tokk: 0.12, lav: 260, ms: 3 }   // volumhjul/-glider: lite, tørt hakk som i en mekanisk knott
 };
 
-/** nivå = styrke i prosent (0–100). */
-export function spillLyd(type: LydType, nivå: number): void {
+/** nivå = styrke i prosent (0–100). tone > 1 gir lysere lyd (volum opp), < 1 mørkere (volum ned). */
+export function spillLyd(type: LydType, nivå: number, tone = 1): void {
   const g0 = styrke(nivå);
   if (!g0) return;
   const c = lydCtx();
   if (!c || !støy) return;
   if (c.state === 'suspended') void c.resume();
   const nå = c.currentTime, a = ARTER[type];
-  const tett = performance.now() - sist < 90 ? 0.6 : 1;   // fort etter hverandre: litt svakere
+  const tett = type === 'hakk' ? 1 : performance.now() - sist < 90 ? 0.6 : 1;   // fort etter hverandre: litt svakere (ikke hakkene)
   sist = performance.now();
-  const r = 1 + (Math.random() - 0.5) * 0.08;
+  const r = (1 + (Math.random() - 0.5) * 0.08) * tone;
   const g = g0 * tett * (1 + (Math.random() - 0.5) * 0.08);
   const ut = c.createGain(); ut.gain.value = g; ut.connect(c.destination);
   // tikk: støyburst gjennom båndpass, rask myk avklinging

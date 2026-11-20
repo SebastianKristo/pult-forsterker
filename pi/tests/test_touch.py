@@ -421,6 +421,8 @@ def test_volumhjulet_flytter_markoren_mens_tastaturet_er_oppe():
         assert x.hjul_steg(1) is False and x.hjul_trykk() is False          # tastaturet er ikke oppe: volum som før
         x.tekstmodus(True)
         assert x.hjul_steg(-1) and x.hjul_steg(-1) and x.hjul_trykk()
-        assert x.status()["touch"]["hjul"] == {"n": -2, "s": 1}
+        assert x.status()["touch"]["hjul"] == {"n": -2, "s": 1, "v": 0, "r": 0}
+        x.volum_hakk(-1)
+        assert x.hjul["v"] == 1 and x.hjul["r"] == -1
         x.tekstmodus(False)
         assert x.hjul_steg(1) is False
