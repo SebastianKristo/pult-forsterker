@@ -37,7 +37,7 @@ så det smeller ikke i høyttalerne når du slår på bryteren.
 | Omformer | 24 → 5 V, minst 5 A. Ferdig modul («DC-DC step down 24V to 5V 5A») eller XL4015 / XL4016 justert til 5,1 V | LM2596 (3 A) er for liten til Pi 4 med skjerm og USB-lydkort |
 | Pi-strøm | USB-C-hale med skrueklemme eller loddeputer («USB-C male DIY cable») | Anbefalt: Pi-ens egen sikring og spenningsvakt er med. 5 V på GPIO pinne 2 og 6 går også, men da uten vern |
 | Skjermkort | HDMI-RGB21 (4,58″, 960 × 320) | 5 V-inngang, ofte micro-USB eller to loddeputer |
-| LED-transistorer | 5 × S8050 (NPN) eller AO3400 (N-MOSFET), 5 × 1 kΩ | Én per LED-ring |
+| LED-driver | 1 × ULN2803A (DIP-18) med sokkel, eller 5 × S8050 (NPN) + 5 × 1 kΩ | ULN2803A: ingen motstander, se koblingskortet under |
 | Ledning | 18 AWG rød/sort til 24 V, 18–20 AWG til 5 V, 26 AWG til signaler | Kort på 5 V-siden, så spenningen ikke faller |
 | Små ting | Flatstifthylser 4,8 mm til KCD1, krympestrømpe, kabelstrips med klebefot, Wago 221 eller loddeskjøt til stjernepunktet | |
 
@@ -76,6 +76,16 @@ ingen egne ledninger fra omformeren.
 | 22 / 23 / 24 / 25 / 3 | 15 / 16 / 18 / 22 / 5 | 1 kΩ → basis (S8050) eller gate (AO3400) på LED-transistoren for BT, AUX, RADIO, USB og power |
 | 4 | 7 | Ledig (XSMT er fast høy på lydkortet) |
 | GND | 6, 9, 14 … | Relémodul GND, transistorenes emitter/source |
+
+### Koblingskort på stripekort (anbefalt)
+
+![Koblingskort for knapper, LED-ringer og volumhjul](stripekort/stripekort.png)
+
+Alle ledningene fra frontpanelet samles på et lite stripekort (21 × 21 hull, ca. 53 × 53 mm) med JST XH-kontakter:
+LED-ringene (5 p), av/på-knappen (4 p), de fire knappene (5 p) og volumhjulet (4 p). En **ULN2803A** slår de fem
+24 V-ringene av og på fra GPIO-ene. Den har motstand og transistor for hver kanal innebygd, så de fem transistorene og
+motstandene under trengs ikke. Fra kortet går det Dupont-ledninger (hun–hun) til Pi-en, nummerert i tegningen.
+Tegningen og koblingssjekken lages av `stripekort/lag_stripekort.py`.
 
 LED-ring: **+** til +24 V, **−** til transistorens kollektor/drain, emitter/source til GND. Ringene for 12–24 V har
 motstand innebygd. Har du 5 V-ringer, ta + fra 5,1 V i stedet.
