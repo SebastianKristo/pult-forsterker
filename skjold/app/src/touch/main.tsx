@@ -1142,6 +1142,7 @@ function Setup() {
     ['Natt fra', 'Brukes når nattmodus står på Tidsplan', stepper(String(S.tNStart ?? 22).padStart(2, '0') + ':00', () => setSetting('tNStart', ((S.tNStart ?? 22) + 23) % 24), () => setSetting('tNStart', ((S.tNStart ?? 22) + 1) % 24))],
     ['Natt til', 'Vanlig lys igjen fra dette klokkeslettet', stepper(String(S.tNEnd ?? 7).padStart(2, '0') + ':00', () => setSetting('tNEnd', ((S.tNEnd ?? 7) + 23) % 24), () => setSetting('tNEnd', ((S.tNEnd ?? 7) + 1) % 24))],
     ['Ringeklokke', 'Når noen ringer på', seg(TOUCH_BELL, S.tBell ?? 0, (i) => setSetting('tBell', i))],
+    ['Sidemeny', 'Utseendet på menyen: klassisk, smal, flytende eller faner nederst', seg(['Klassisk', 'Smal', 'Flytende', 'Bunnlinje'], S.tNav ?? 0, (i) => setSetting('tNav', i))],
     ['Kalender på skjermspareren', 'Neste avtaler fra Home Assistant (første kalender, eller den som er valgt)', seg(['Av', 'På'], S.tKal === false ? 0 : 1, (i) => setSetting('tKal', i === 1))],
     ['Trykkelyder', 'Myke klikk i høyttalerne når du trykker. Følger hovedvolumet; du hører styrken når du endrer den', (() => {
       const p = lydProsent(S.tLydP, S.tLyd), sett = (n: number) => { const v = Math.max(0, Math.min(100, n)); setSetting('tLydP', Math.round(v / 10)); window.setTimeout(() => spillLyd('trykk', v), 60); };
@@ -2375,6 +2376,56 @@ function NightAnim() {
   );
 }
 
+/** Sidemenyen på Touch i fire stiler (Oppsett → Sidemeny):
+ *  0 Klassisk: ikon + navn i en mørk stolpe. 1 Smal: bare ikoner, gul strek ved den valgte. 2 Flytende: avrundet
+ *  «dock» som svever over bakgrunnen, valgt side som en gul pille. 3 Bunnlinje: faner nederst, som på en telefon. */
+function SideMeny({ stil, NAV, cur }: { stil: number; NAV: [Scr, string][]; cur: Scr }) {
+  const gå = (k: Scr) => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; lyricsOpen.value = false; dimId.value = ''; editAlarm.value = -1; wakeOpen.value = false; };
+  const logo = (k: number) => <div aria-label="Skjold" style={`display:flex;gap:${3.3 * k}px;align-items:flex-start;height:${28 * k}px;margin:2px 0 ${6 * k}px;flex-shrink:0`}>{[14.7, 22, 28, 22, 14.7].map((h, i) => <div key={i} style={`width:${4.5 * k}px;height:${h * k}px;border-radius:${2.25 * k}px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</div>;
+  const ikon = (k: Scr, w = 22) => <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={IC[k]} /></svg>;
+  if (stil === 3) return (
+    <nav style="grid-row:2;grid-column:1;display:flex;align-items:stretch;gap:2px;padding:0 10px 4px;background:#101011;border-top:1px solid #1f1f21">
+      {NAV.map(([k, label]) => { const on = cur === k; return (
+        <button key={k} onClick={() => gå(k)} aria-label={label} style={`position:relative;flex:1;min-width:0;border:none;background:none;color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
+          <i style={`position:absolute;top:0;left:50%;width:${on ? 28 : 0}px;height:3px;margin-left:${on ? -14 : 0}px;border-radius:0 0 3px 3px;background:#f0c46a;transition:width .3s ease,margin .3s ease`} />
+          {ikon(k)}<span style={`font-size:10px;font-weight:${on ? 600 : 400}`}>{label}</span>
+        </button>); })}
+      <div style="display:flex;align-items:center;padding-left:6px"><PowerHold /></div>
+    </nav>);
+  if (stil === 1) return (
+    <nav style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0 8px;background:#0e0e0f;border-right:1px solid #1a1a1c">
+      {logo(0.82)}
+      {NAV.map(([k, label]) => { const on = cur === k; return (
+        <button key={k} onClick={() => gå(k)} aria-label={label} style={`position:relative;width:46px;height:46px;border-radius:14px;border:none;background:${on ? '#1c1c1e' : 'transparent'};color:${on ? '#f0c46a' : '#7a7a76'};display:flex;align-items:center;justify-content:center;padding:0`}>
+          <i style={`position:absolute;left:-6px;top:50%;width:3px;height:${on ? 22 : 0}px;margin-top:${on ? -11 : 0}px;border-radius:2px;background:#f0c46a;transition:height .3s ease,margin .3s ease`} />
+          {ikon(k, 23)}
+        </button>); })}
+      <div style="flex:1" />
+      <div style="transform:scale(.9)"><PowerHold /></div>
+    </nav>);
+  if (stil === 2) return (
+    <nav style="margin:10px 0 10px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0 10px;border-radius:24px;background:rgba(22,22,24,.86);border:1px solid #2a2a2c;box-shadow:0 18px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.04);backdrop-filter:blur(14px)">
+      {logo(0.9)}
+      {NAV.map(([k, label]) => { const on = cur === k; return (
+        <button key={k} onClick={() => gå(k)} aria-label={label} style={`width:62px;height:${FLUID ? 54 : 48}px;border-radius:16px;border:none;background:${on ? 'linear-gradient(180deg,#f3cf7f,#d9a441)' : 'transparent'};color:${on ? '#0b0b0c' : '#8b8b86'};box-shadow:${on ? '0 6px 16px rgba(217,164,65,.35)' : 'none'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0`}>
+          {ikon(k, 20)}<span style={`font-size:9px;font-weight:${on ? 700 : 400}`}>{label}</span>
+        </button>); })}
+      <div style="flex:1" />
+      <PowerHold />
+    </nav>);
+  return (
+    <nav style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;background:#101011;border-right:1px solid #1f1f21">
+      {/* Skjold-logoen: hvite stolper som henger fra toppen, den lange gylne i midten (som appikonet og oppstartsskjermen) */}
+      {logo(1)}
+      {NAV.map(([k, label]) => { const on = cur === k; return (
+        <button key={k} onClick={() => gå(k)} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
+          {ikon(k)}<span style={`font-size:9px;font-weight:${on ? 600 : 400}`}>{label}</span>
+        </button>); })}
+      <div style="flex:1" />
+      <PowerHold />
+    </nav>);
+}
+
 function App() {
   const s = status.value, d = new Date(now.value), S = settings.value, D = dev();
   const talking = !!D.touch?.voice && D.touch.voice.state !== 'idle';
@@ -2383,24 +2434,17 @@ function App() {
   const r = role(), cur = scr.value === 'rooms' && r === 1 ? 'now' : scr.value;
   // Bare fjernkontroll: styr første andre rom så snart det finnes
   useEffect(() => { if (r === 2 && !ctl.value && peers.value[0]) control(peers.value[0].base); if (r === 1 && ctl.value) control(''); }, [r, peers.value.length]);
+  const nav = S.tNav ?? 0;   // sidemenyens stil: 0 klassisk, 1 smal, 2 flytende, 3 bunnlinje
   const NAV: [Scr, string][] = ([['now', 'Spiller'], ['home', 'Hjem'], ['smart', 'Smarthus'], ['alarm', 'Alarm'], ['lib', 'Bibliotek'], ['rooms', 'Rom'], ['set', 'Oppsett']] as [Scr, string][]).filter(([k]) => !(r === 1 && k === 'rooms'));
   const rows = roomList();
   const curRoom = rows.find((x) => x.base === ctl.value);
   const roomLabel = curRoom?.name ?? s?.name ?? 'Skjold Touch', roomSub = (curRoom?.model ?? 'Skjold Touch').replace('Skjold ', '');
   return (
-    <div style={`position:relative;width:${FLUID ? '100vw' : '800px'};height:${FLUID ? '100vh' : '480px'};background:#0b0b0c;overflow:hidden;display:grid;grid-template-columns:${FLUID ? '88px' : '76px'} minmax(0,1fr);grid-template-rows:${FLUID ? '100vh' : '480px'}`}>
-      <nav style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;background:#101011;border-right:1px solid #1f1f21">
-        {/* Skjold-logoen: hvite stolper som henger fra toppen, den lange gylne i midten (som appikonet og oppstartsskjermen) */}
-        <div aria-label="Skjold" style="display:flex;gap:3.3px;align-items:flex-start;height:28px;margin:2px 0 6px">{[14.7, 22, 28, 22, 14.7].map((h, i) => <div key={i} style={`width:4.5px;height:${h}px;border-radius:2.25px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</div>
-        {NAV.map(([k, label]) => { const on = cur === k; return (
-          <button key={k} onClick={() => { scr.value = k; roomsOpen.value = false; talkOpen.value = false; searchOpen.value = false; queueOpen.value = false; lyricsOpen.value = false; dimId.value = ''; editAlarm.value = -1; wakeOpen.value = false; }} aria-label={label} style={`width:64px;height:48px;border-radius:13px;border:none;background:${on ? 'rgba(240,196,106,.14)' : 'transparent'};color:${on ? '#f0c46a' : '#8b8b86'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0`}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={IC[k]} /></svg>
-            <span style={`font-size:9px;font-weight:${on ? 600 : 400}`}>{label}</span>
-          </button>); })}
-        <div style="flex:1" />
-        <PowerHold />
-      </nav>
-      <main style="position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden">
+    <div style={`position:relative;width:${FLUID ? '100vw' : '800px'};height:${FLUID ? '100vh' : '480px'};background:${nav === 2 ? 'radial-gradient(700px 400px at 0% 100%,rgba(217,164,65,.07),transparent 60%),#0b0b0c' : '#0b0b0c'};overflow:hidden;display:grid;${nav === 3
+      ? `grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) ${FLUID ? 70 : 62}px`
+      : `grid-template-columns:${[FLUID ? 88 : 76, FLUID ? 66 : 58, FLUID ? 100 : 90][nav] ?? 76}px minmax(0,1fr);grid-template-rows:${FLUID ? '100vh' : '480px'}`}`}>
+      <SideMeny stil={nav} NAV={NAV} cur={cur} />
+      <main style={`position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;${nav === 3 ? 'grid-row:1;grid-column:1' : ''}`}>
         <header style="height:52px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid #1a1a1c">
           <button onClick={() => { roomsOpen.value = !roomsOpen.value; }} style="height:34px;display:flex;align-items:center;gap:8px;padding:0 12px 0 10px;border-radius:17px;border:1px solid #2e2e30;background:#161617;min-width:0">
             <div style={`width:8px;height:8px;border-radius:50%;background:${online.value ? '#6fcf7f' : '#3a3a37'};flex-shrink:0`} />

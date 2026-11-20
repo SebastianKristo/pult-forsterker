@@ -152,6 +152,7 @@ const kontoStub = (env, epost) => env.KONTO.get(env.KONTO.idFromName(epost));
 const koderStub = (env) => env.KODER.get(env.KODER.idFromName("koder"));
 const hoyttalerStub = (env) => env.HOYTTALERE.get(env.HOYTTALERE.idFromName("hoyttalere"));
 const delingStub = (env) => env.DELINGER.get(env.DELINGER.idFromName("delinger"));
+const registerStub = (env) => env.REGISTER.get(env.REGISTER.idFromName("register"));
 const intern = (stub, sti, data) =>
   stub.fetch("https://do/i" + sti, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data ?? {}) });
 
@@ -242,9 +243,16 @@ export default {
     }
 
     // --- brukere (bak Access) ---
-    if (p === "/api/hjem" || p.startsWith("/api/hjem/")) {
+    if (p === "/api/hjem" || p.startsWith("/api/hjem/") || p === "/api/valhalla" || p.startsWith("/api/valhalla/")) {
       const epost = await bruker(req, env);
       if (!epost) return feil(401, "ikke innlogget");
+      const rolle = await kontoRolle(env, epost);
+      if (rolle.sperret) return feil(403, "kontoen er sperret – kontakt Skjold Lab");
+      if (p === "/api/hjem/meg") return json({ epost, valhalla: rolle.valhalla, eier: rolle.eier });
+      if (p.startsWith("/api/valhalla")) {
+        if (!rolle.valhalla) return feil(403, "bare for Skjold Lab Valhalla-administratorer");
+        return valhalla(req, env, epost, rolle, url);
+      }
       return api(req, env, epost, url);
     }
 
@@ -261,6 +269,79 @@ export default {
     return feil(404, "finnes ikke");
   },
 };
+
+// ---------- Konto-roller, deling og Valhalla (tjenesteadministrasjon) ----------
+const ROLLE_CACHE = new Map(); // epost → { t, rolle } – sperring slår inn innen ett minutt på alle isolater
+const eierListe = (env) => String(env.OWNER_EMAILS || "").split(/[,\s]+/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+
+async function kontoRolle(env, epost) {
+  const c = ROLLE_CACHE.get(epost);
+  if (c && Date.now() - c.t < 60000) return c.rolle;
+  let r = { sperret: false, admin: false };
+  try { r = await (await intern(registerStub(env), "/bruker", { epost })).json(); } catch {}
+  const eier = eierListe(env).includes(epost);
+  const rolle = { sperret: !!r.sperret && !eier, eier, valhalla: eier || !!r.admin };
+  ROLLE_CACHE.set(epost, { t: Date.now(), rolle });
+  return rolle;
+}
+
+async function synkMedlemmer(env, stedId, svar) {
+  for (const m of svar.lagtTil || []) await intern(kontoStub(env, m), "/legg", { id: stedId, navn: svar.navn });
+  for (const m of svar.fjernet || []) await intern(kontoStub(env, m), "/fjern", { id: stedId });
+  await intern(registerStub(env), "/steder", { steder: [{ id: stedId, navn: svar.navn, eier: svar.eier, medlemmer: svar.medlemmer }] });
+}
+
+const gyldigEpost = (e) => /^[^@\s]{1,64}@[^@\s]{1,190}\.[a-z]{2,}$/i.test(String(e || ""));
+
+async function valhalla(req, env, epost, rolle, url) {
+  const deler = url.pathname.split("/").filter(Boolean).slice(2); // etter api/valhalla
+  const reg = registerStub(env);
+  const m = req.method;
+  if (deler.length === 0 || deler[0] === "oversikt") {
+    const o = await (await intern(reg, "/oversikt", {})).json();
+    return json({ ...o, meg: epost, eier: rolle.eier, tjenesteeiere: eierListe(env), access: !!(env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD) });
+  }
+  if (deler[0] === "kontoer" && deler.length === 1 && m === "GET") return intern(reg, "/kontoer", {});
+  if (deler[0] === "kontoer" && deler.length === 2 && m === "POST") {
+    const mål = decodeURIComponent(deler[1]).toLowerCase(), b = await lesJson(req);
+    if ("admin" in b && !rolle.eier) return feil(403, "bare tjenesteeieren kan gi eller ta Valhalla-tilgang");
+    if (eierListe(env).includes(mål) && b.sperret) return feil(400, "tjenesteeieren kan ikke sperres");
+    const r = await intern(reg, "/bruker-sett", { epost: mål, ...("sperret" in b ? { sperret: !!b.sperret } : {}), ...("admin" in b ? { admin: !!b.admin } : {}) });
+    ROLLE_CACHE.delete(mål);
+    return r;
+  }
+  if (deler[0] === "steder" && deler.length === 1 && m === "GET") {
+    const { steder } = await (await intern(reg, "/steder-liste", {})).json();
+    const ut = await Promise.all(steder.slice(0, 300).map(async (x) => {
+      const r = await intern(stedStub(env, x.id), "/admin", {});
+      if (r.status === 404) { await intern(reg, "/sted-slett", { id: x.id }); return null; }
+      return r.ok ? { ...x, ...(await r.json()) } : { ...x, feil: true };
+    }));
+    return json(ut.filter(Boolean));
+  }
+  if (deler[0] === "steder" && deler.length === 2) {
+    const id = deler[1];
+    if (!/^st_[a-z2-7]+$/.test(id)) return feil(404, "ukjent sted");
+    if (m === "DELETE") {
+      const r = await intern(stedStub(env, id), "/admin-slett", {});
+      if (!r.ok) return r;
+      const svar = await r.json();
+      for (const x of svar.medlemmer || []) await intern(kontoStub(env, x), "/fjern", { id });
+      await intern(reg, "/sted-slett", { id });
+      return json({ ok: true });
+    }
+    if (m === "POST") {
+      const b = await lesJson(req);
+      if (b.leggTil && !gyldigEpost(b.leggTil)) return feil(400, "ugyldig e-postadresse");
+      const r = await intern(stedStub(env, id), "/admin-endre", b);
+      if (!r.ok) return r;
+      const svar = await r.json();
+      await synkMedlemmer(env, id, svar);
+      return json(svar);
+    }
+  }
+  return feil(404, "finnes ikke");
+}
 
 async function api(req, env, epost, url) {
   const deler = url.pathname.split("/").filter(Boolean).slice(2); // etter api/hjem
@@ -285,7 +366,10 @@ async function api(req, env, epost, url) {
           return r.ok ? r.json() : { ...s, rolle: "medlem", enheter: 0, online: 0 };
         }),
       );
-      return json(ut.filter(Boolean));
+      const liste = ut.filter(Boolean);
+      // registeret (Valhalla) holder oversikt over hjemmene – fyll inn hjem som ble laget før registeret fantes
+      await intern(registerStub(env), "/steder", { steder: liste.filter((x) => x.rolle === "eier").map((x) => ({ id: x.id, navn: x.navn, eier: epost, medlemmer: x.medlemmer })) });
+      return json(liste);
     }
     if (req.method === "POST") {
       const b = await lesJson(req);
@@ -294,6 +378,7 @@ async function api(req, env, epost, url) {
       const r = await intern(stedStub(env, id), "/opprett", { id, navn, eier: epost });
       if (!r.ok) return r;
       await intern(konto, "/legg", { id, navn });
+      await intern(registerStub(env), "/steder", { steder: [{ id, navn, eier: epost, medlemmer: [epost], ny: true }] });
       return json(await r.json(), 201);
     }
     return feil(405, "metode ikke støttet");
@@ -318,7 +403,11 @@ async function api(req, env, epost, url) {
       if (req.method === "DELETE") await intern(kontoStub(env, m), "/fjern", { id: stedId });
       else await intern(kontoStub(env, m), "/navn", { id: stedId, navn: svar.navn });
     }
+    if (req.method === "DELETE") await intern(registerStub(env), "/sted-slett", { id: stedId });
+    else await intern(registerStub(env), "/steder", { steder: [{ id: stedId, navn: svar.navn, eier: svar.eier, medlemmer: svar.medlemmer }] });
   }
+  // deling: den som ble lagt til / fjernet får hjemmet i / ut av kontoen sin
+  if ((deler[2] === "medlemmer" || deler[2] === "eier") && r.ok) await synkMedlemmer(env, stedId, await r.clone().json());
   return r;
 }
 
@@ -497,6 +586,24 @@ export class Sted extends DurableObject {
         return this.slett();
       }
     }
+    if (deler[0] === "medlemmer" && deler.length === 1 && m === "GET") return json(this.medlemsliste());
+    if (deler[0] === "medlemmer" && deler.length === 1 && m === "POST") {
+      if (d.eier !== epost) return feil(403, "bare eieren kan dele hjemmet");
+      const ny = String((await lesJson(req)).epost || "").trim().toLowerCase();
+      if (!/^[^@\s]{1,64}@[^@\s]{1,190}\.[a-z]{2,}$/i.test(ny)) return feil(400, "ugyldig e-postadresse");
+      if (d.medlemmer.length >= 20) return feil(400, "et hjem kan ha høyst 20 medlemmer");
+      return this.medlemEndring({ leggTil: ny }, epost);
+    }
+    if (deler[0] === "medlemmer" && deler.length === 2 && m === "DELETE") {
+      const hvem = decodeURIComponent(deler[1]).toLowerCase();
+      if (hvem === d.eier) return feil(400, "eieren kan ikke fjernes – overfør eierskapet eller slett hjemmet");
+      if (d.eier !== epost && hvem !== epost) return feil(403, "bare eieren kan fjerne andre");
+      return this.medlemEndring({ fjern: hvem }, epost);
+    }
+    if (deler[0] === "eier" && deler.length === 1 && m === "POST") {
+      if (d.eier !== epost) return feil(403, "bare eieren kan overføre eierskapet");
+      return this.medlemEndring({ eier: String((await lesJson(req)).epost || "").trim().toLowerCase() }, epost);
+    }
     if (deler[0] === "enheter" && deler.length === 1 && m === "GET") return json(this.enhetsliste());
     if (deler[0] === "kobling" && deler.length === 1 && m === "POST") return this.nyKode();
     if (deler[0] === "enheter" && deler.length === 2 && m === "DELETE") return this.fjernEnhet(decodeURIComponent(deler[1]));
@@ -514,7 +621,7 @@ export class Sted extends DurableObject {
     const b = await lesJson(req);
     if (sti === "/opprett") {
       if (this.data) return feil(409, "finnes");
-      this.data = { id: b.id, navn: b.navn, eier: b.eier, medlemmer: [b.eier], enheter: [], hoved: null, reserve: [] };
+      this.data = { id: b.id, navn: b.navn, eier: b.eier, medlemmer: [b.eier], enheter: [], hoved: null, reserve: [], opprettet: Math.floor(Date.now() / 1000) };
       await this.lagre();
       return json(this.oversikt(b.eier));
     }
@@ -523,6 +630,14 @@ export class Sted extends DurableObject {
       if (!this.data.medlemmer.includes(b.bruker)) return feil(403, "ingen tilgang");
       return json(this.oversikt(b.bruker));
     }
+    if (sti === "/admin") {
+      if (!this.data) return feil(404, "ukjent sted");
+      const d = this.data, tilk = this.tilkoblet();
+      return json({ id: d.id, navn: d.navn, eier: d.eier, medlemmer: d.medlemmer, opprettet: d.opprettet || null,
+        enheter: d.enheter.map((e) => ({ id: e.id, navn: e.navn, produkt: e.produkt, online: tilk.has(e.id), versjon: e.versjon || null, sist: e.sist || null })) });
+    }
+    if (sti === "/admin-slett") { if (!this.data) return feil(404, "ukjent sted"); return this.slett(); }
+    if (sti === "/admin-endre") { if (!this.data) return feil(404, "ukjent sted"); return this.medlemEndring(b, null); }
     if (sti === "/kobl") return this.kobl(b);
     if (sti === "/eier") {
       const d = this.data;
@@ -549,6 +664,32 @@ export class Sted extends DurableObject {
       medlemmer: d.medlemmer,
       autoLegg: d.autoLegg !== false,
     };
+  }
+
+  medlemsliste() {
+    const d = this.data;
+    return { eier: d.eier, medlemmer: d.medlemmer.map((e) => ({ epost: e, rolle: e === d.eier ? "eier" : "medlem" })) };
+  }
+
+  /** leggTil / fjern / eier (overfør til et medlem; legges til hvis det ikke er medlem). epost = den som gjør det (null = Valhalla). */
+  async medlemEndring(b, epost) {
+    const d = this.data, lagtTil = [], fjernet = [];
+    const add = (e) => { if (e && !d.medlemmer.includes(e)) { d.medlemmer.push(e); lagtTil.push(e); } };
+    if (b.leggTil) add(String(b.leggTil).toLowerCase());
+    if (b.fjern) {
+      const f = String(b.fjern).toLowerCase();
+      if (f === d.eier) return feil(400, "eieren kan ikke fjernes");
+      if (d.medlemmer.includes(f)) { d.medlemmer = d.medlemmer.filter((x) => x !== f); fjernet.push(f); }
+    }
+    if (b.eier) {
+      const ny = String(b.eier).toLowerCase();
+      if (!/^[^@\s]{1,64}@[^@\s]{1,190}\.[a-z]{2,}$/i.test(ny)) return feil(400, "ugyldig e-postadresse");
+      add(ny);
+      d.eier = ny;
+    }
+    await this.lagre();
+    return json({ id: d.id, navn: d.navn, eier: d.eier, medlemmer: d.medlemmer, lagtTil, fjernet, liste: this.medlemsliste().medlemmer,
+      rolle: epost ? (d.eier === epost ? "eier" : d.medlemmer.includes(epost) ? "medlem" : "ingen") : "valhalla" });
   }
 
   enhetsliste() {
@@ -1156,6 +1297,56 @@ export class Delinger extends DurableObject {
         return feil(404, "delingen finnes ikke eller er utløpt");
       }
       return json({ blob: d.blob, utloper: d.utloper }, 200, { "cache-control": "no-store" });
+    }
+    return feil(404, "finnes ikke");
+  }
+}
+
+// ---------- Register: oversikt over kontoer og hjem for Skjold Lab Valhalla (tjenesteadministrasjon) ----------
+// Én instans («register»). Kontoer: første og siste innlogging, sperret, Valhalla-admin. Hjem: navn, eier, medlemmer.
+export class Register extends DurableObject {
+  async fetch(req) {
+    const sti = new URL(req.url).pathname.slice(2);
+    const b = await lesJson(req);
+    const st = this.ctx.storage, naa = Math.floor(Date.now() / 1000);
+    if (sti === "/bruker") {
+      const e = String(b.epost || "").toLowerCase();
+      const k = (await st.get("k:" + e)) || { forst: naa, sist: 0, sperret: false, admin: false };
+      if (naa - (k.sist || 0) > 300) { k.sist = naa; await st.put("k:" + e, k); }   // «sist sett», høyst hvert 5. minutt
+      return json(k);
+    }
+    if (sti === "/bruker-sett") {
+      const e = String(b.epost || "").toLowerCase();
+      const k = (await st.get("k:" + e)) || { forst: naa, sist: 0, sperret: false, admin: false };
+      if ("sperret" in b) k.sperret = !!b.sperret;
+      if ("admin" in b) k.admin = !!b.admin;
+      await st.put("k:" + e, k);
+      return json({ epost: e, ...k });
+    }
+    if (sti === "/steder") {
+      for (const x of b.steder || []) {
+        if (!x || !x.id) continue;
+        const gml = (await st.get("s:" + x.id)) || { opprettet: naa };
+        await st.put("s:" + x.id, { ...gml, navn: x.navn ?? gml.navn, eier: x.eier ?? gml.eier, medlemmer: x.medlemmer ?? gml.medlemmer ?? [x.eier] });
+        for (const m of x.medlemmer || [x.eier]) if (m && !(await st.get("k:" + m))) await st.put("k:" + m, { forst: naa, sist: 0, sperret: false, admin: false });
+      }
+      return json({ ok: true });
+    }
+    if (sti === "/sted-slett") { await st.delete("s:" + b.id); return json({ ok: true }); }
+    const kontoer = async () => [...(await st.list({ prefix: "k:" })).entries()].map(([k, v]) => ({ epost: k.slice(2), ...v }));
+    const steder = async () => [...(await st.list({ prefix: "s:" })).entries()].map(([k, v]) => ({ id: k.slice(2), ...v }));
+    if (sti === "/steder-liste") return json({ steder: await steder() });
+    if (sti === "/kontoer") {
+      const s = await steder();
+      return json((await kontoer()).map((k) => ({ ...k, eierAv: s.filter((x) => x.eier === k.epost).map((x) => ({ id: x.id, navn: x.navn })),
+        medlemAv: s.filter((x) => x.eier !== k.epost && (x.medlemmer || []).includes(k.epost)).map((x) => ({ id: x.id, navn: x.navn })) }))
+        .sort((a, b) => (b.sist || 0) - (a.sist || 0)));
+    }
+    if (sti === "/oversikt") {
+      const k = await kontoer(), s = await steder(), uke = naa - 7 * 86400;
+      return json({ kontoer: k.length, aktive7d: k.filter((x) => (x.sist || 0) > uke).length, nye7d: k.filter((x) => (x.forst || 0) > uke).length,
+        sperrede: k.filter((x) => x.sperret).length, admins: k.filter((x) => x.admin).map((x) => x.epost), steder: s.length,
+        delte: s.filter((x) => (x.medlemmer || []).length > 1).length, nyeSteder7d: s.filter((x) => (x.opprettet || 0) > uke).length });
     }
     return feil(404, "finnes ikke");
   }

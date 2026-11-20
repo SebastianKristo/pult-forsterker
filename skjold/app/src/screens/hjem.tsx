@@ -103,12 +103,48 @@ export function StederPanel() {
         {st === 'feil' && <span style="font-size:12px;color:#e05a4a">{hjemErr.value}</span>}
       </div>}
       {steder.value.map((s) => <StedKort key={s.id} s={s} open={open === s.id} onToggle={() => setOpen(open === s.id ? '' : s.id)} />)}
+      <ValhallaLenke />
       {st === 'ok' && <div style={box}>
         <span style="font-size:14px;font-weight:600">Nytt sted</span>
         <div class="row gap10"><input value={nytt} onInput={(e) => setNytt(e.currentTarget.value)} onKeyDown={(e) => { if (e.key === 'Enter') void lag(); }} placeholder="For eksempel Hytta" style={fld} data-testid="nytt-sted" /><button onClick={() => void lag()} style={PRIMARY}>Lag</button></div>
       </div>}
     </div>
   );
+}
+
+/** Del hjemmet med andre: eieren inviterer med e-post (de ser hjemmet når de logger inn), fjerner og overfører eierskap. */
+function Deling({ s }: { s: Sted }) {
+  const [l, setL] = useState<{ epost: string; rolle: 'eier' | 'medlem' }[] | null>(null);
+  const [ny, setNy] = useState(''), [busy, setBusy] = useState(false), [meg, setMeg] = useState('');
+  const last = async () => { try { setL((await hjem.medlemmer(s.id)).medlemmer); } catch { setL([]); } };
+  useEffect(() => { void last(); void hjem.meg().then((m) => setMeg(m.epost)).catch(() => undefined); }, [s.id]);
+  const run = async (fn: () => Promise<unknown>, ok: string, ut = false) => {
+    setBusy(true);
+    try { await fn(); showToast(ok); if (ut) { if (s.id === stedId.value) await selectSted(''); await loadSteder(); } else { await last(); await loadSteder(); } }
+    catch (e) { showToast(e instanceof ApiError && e.status === 403 ? 'Bare eieren kan gjøre det' : msg(e)); }
+    finally { setBusy(false); }
+  };
+  const eier = s.rolle === 'eier';
+  const gyldig = /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(ny.trim());
+  return <>
+    <span style={`${MONO};font-size:10px;letter-spacing:.12em;color:#8b8b86`}>DELT MED</span>
+    <div style="display:flex;flex-direction:column;border-radius:12px;border:1px solid #242426;overflow:hidden" data-testid="deling">
+      {(l ?? []).map((m, i) => (
+        <div key={m.epost} style={`display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid ${i ? '#242426' : 'transparent'}`}>
+          <span style={`width:30px;height:30px;border-radius:15px;flex-shrink:0;background:${m.rolle === 'eier' ? '#1c170d' : '#1b1b1c'};border:1px solid ${m.rolle === 'eier' ? '#5a4420' : '#2e2e30'};color:${m.rolle === 'eier' ? '#f0c46a' : '#c9c9c4'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600`}>{m.epost[0]?.toUpperCase()}</span>
+          <span style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{m.epost}{m.epost === meg ? ' (deg)' : ''}</span><span style="font-size:11.5px;color:#8b8b86">{m.rolle === 'eier' ? 'Eier' : 'Medlem – kan bruke og styre enhetene'}</span></span>
+          {eier && m.rolle !== 'eier' && <button disabled={busy} onClick={() => { if (confirm(`Gjøre ${m.epost} til eier av ${s.navn}? Du blir medlem.`)) void run(() => hjem.nyEier(s.id, m.epost), 'Eierskapet er overført'); }} style={BTN()}>Gjør til eier</button>}
+          {eier && m.rolle !== 'eier' && <button disabled={busy} onClick={() => { if (confirm(`Fjerne ${m.epost} fra ${s.navn}?`)) void run(() => hjem.fjernMedlem(s.id, m.epost), 'Fjernet fra hjemmet'); }} style={BTN('#4a2420', '#e05a4a')}>Fjern</button>}
+          {!eier && m.epost === meg && <button disabled={busy} onClick={() => { if (confirm(`Forlate ${s.navn}? Du mister tilgangen til enhetene der.`)) void run(() => hjem.fjernMedlem(s.id, m.epost), 'Du har forlatt hjemmet', true); }} style={BTN('#4a2420', '#e05a4a')}>Forlat</button>}
+        </div>))}
+      {l === null && <span style="padding:10px 12px;font-size:12px;color:#8b8b86">Henter …</span>}
+    </div>
+    {eier && <div class="row gap10">
+      <input type="email" value={ny} onInput={(e) => setNy(e.currentTarget.value)} onKeyDown={(e) => { if (e.key === 'Enter' && gyldig) void run(() => hjem.inviter(s.id, ny.trim()), 'Delt med ' + ny.trim()).then(() => setNy('')); }} placeholder="E-postadressen til den du vil dele med" autoCapitalize="off" autoCorrect="off" spellcheck={false} style={fld} data-testid="inviter-epost" />
+      <button disabled={busy || !gyldig} onClick={() => void run(() => hjem.inviter(s.id, ny.trim()), 'Delt med ' + ny.trim()).then(() => setNy(''))} style={PRIMARY}>Del</button>
+    </div>}
+    {eier && <span style="font-size:11.5px;color:#8b8b86;line-height:1.45">Den du deler med, logger inn på Skjold-hjem med denne e-postadressen (engangskode på e-post eller Google) og ser hjemmet med en gang – i appen og på hjem.skjold-lab.com.</span>}
+  </>;
 }
 
 function StedKort({ s, open, onToggle }: { s: Sted; open: boolean; onToggle: () => void }) {
@@ -158,6 +194,7 @@ function StedKort({ s, open, onToggle }: { s: Sted; open: boolean; onToggle: () 
             );
           })}
         </div>
+        <Deling s={s} />
         {(() => { const auto = s.autoLegg !== false; return (
           <button disabled={busy} role="switch" aria-checked={auto} data-testid="auto-legg" onClick={() => void run(() => hjem.endreSted(s.id, { autoLegg: !auto }), auto ? 'Nye enheter legges ikke til automatisk' : 'Nye enheter legges til automatisk')} style="display:flex;align-items:center;gap:12px;border:none;background:none;padding:2px 0;cursor:pointer;text-align:left;color:#f2f2ee">
             <span style={`position:relative;width:44px;height:26px;flex-shrink:0;border-radius:13px;background:${auto ? A : '#2a2a2c'};transition:background .2s ease`}><span style={`position:absolute;top:3px;left:${auto ? 21 : 3}px;width:20px;height:20px;border-radius:50%;background:#f2f2ee;transition:left .2s ease`} /></span>
@@ -185,6 +222,17 @@ function StedKort({ s, open, onToggle }: { s: Sted; open: boolean; onToggle: () 
       </>}
     </div>
   );
+}
+
+/** Bare for tjenesteeieren og administratorer: lenke til Skjold Lab Valhalla (kontoer, hjem og deling for hele tjenesten). */
+function ValhallaLenke() {
+  const [ja, setJa] = useState(false);
+  useEffect(() => { void hjem.meg().then((m) => setJa(!!m.valhalla)).catch(() => setJa(false)); }, []);
+  if (!ja) return null;
+  return <a href={skyUrl() + '/valhalla/'} target="_blank" rel="noreferrer" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:1px solid #5a4420;background:linear-gradient(135deg,#1c170d,#141415);color:#f2f2ee;text-decoration:none">
+    <span style="display:flex;gap:3px;align-items:flex-start;height:20px">{[10, 15, 19, 15, 10].map((h, i) => <i key={i} style={`width:3.5px;height:${h}px;border-radius:2px;background:${i === 2 ? '#d9a441' : '#f2f2ee'}`} />)}</span>
+    <span style="display:flex;flex-direction:column;gap:1px;flex:1"><span style={`${MONO};font-size:10px;letter-spacing:.16em;color:#f0c46a`}>SKJOLD LAB</span><span style="font-size:15px;font-weight:600">Valhalla – styr tjenesten</span><span style="font-size:11.5px;color:#8b8b86">Kontoer, hjem, deling og sperring</span></span>
+    <span style="color:#f0c46a">↗</span></a>;
 }
 
 /** Innstillinger → Skjold-hjem på enheten selv: GET/POST /api/sky. */
