@@ -28,6 +28,21 @@ ikke nås direkte. Kontrakten (API og meldingsformat) står i [`docs/SKJOLD_HJEM
     fantes, kommer med første gang eieren åpner Skjold-hjem.
   - `/api/hjem/meg` → `{epost, valhalla, eier}` (appen viser lenken til Valhalla bare for administratorer).
 
+## Valhalla-kontrollsenteret
+
+- **Hendelseslogg** i registeret: de siste 20 000 hendelsene. Den tar med innlogginger (med by, land og IP), bekreftelser og feil koder, sperrede forsøk, profil, totrinn og passkeys, utlogging, hjem og deling, enheter (koblet, på og av nett, fjernet), vedlikehold og alle Valhalla-handlinger (`admin_*`, med `av`).
+- **Endepunkter:**
+  - `GET /api/valhalla/logg` (`?epost&type&sted&enhet&q&for&limit`)
+  - `GET /api/valhalla/statistikk` (siste døgn per type og per time)
+  - `GET /api/valhalla/enheter` (alle enheter i alle hjem)
+  - `GET /api/valhalla/kontoer/<epost>` (profil, totrinn, økter, hjem med enheter, Skjold Cloud, logg)
+  - `GET /api/valhalla/steder/<id>`
+- **Handlinger:**
+  - `POST …/kontoer/<epost>` med `{loggUt}`, `{slettOkt}`, `{navn}`, `{slett}`, `{sperret}`, `{admin}` eller `{tofaAv}`
+  - `POST …/steder/<id>` med `{navn}` og medlemsendringer
+  - `DELETE …/steder/<id>/enheter/<enhet>`
+- **Logg inn som** (bare tjenesteeieren): `POST /api/valhalla/som {epost}` gir en signert cookie (`skjold_som`, én time). Med den gjelder `/api/hjem` den andre kontoen. Totrinn, passkeys, økter og sletting er sperret. `som_start`, `som_handling` og `som_slutt` loggføres hos brukeren, og brukeren ser dem under Konto → Sikkerhet → Nylig aktivitet (`GET /api/hjem/konto/aktivitet`). `DELETE /api/valhalla/som` avslutter.
+
 ## Skjold-konto og totrinnsbekreftelse
 
 - **Kontosiden** (`/konto`, egen Vite-side `skjold/app/konto.html` → `src/konto/`): oversikt, personlig info (navn),

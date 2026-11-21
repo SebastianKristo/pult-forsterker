@@ -43,6 +43,26 @@ dialog{background:var(--kort);color:var(--tekst);border:1px solid var(--kant);bo
 dialog h3{margin:0 0 8px}dialog p{color:var(--demp);margin:0 0 16px}dialog input{width:100%;margin-bottom:16px}.dknapper{display:flex;gap:8px;justify-content:flex-end}
 .feil{padding:60px 20px;text-align:center}.feil h2{font-weight:600}
 @media (max-width:900px){header{padding:16px;flex-wrap:wrap}nav{margin-left:0}main{padding:20px 16px}.kontoer .rad,.hjem .rad{grid-template-columns:1fr}.rad.hode{display:none}.knapper{justify-content:flex-start}}
+.senter{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}.senter>.kort{grid-column:span 6}.senter>.kort.bred{grid-column:span 12}.senter>.kort.tredel{grid-column:span 4}
+.kort{background:var(--kort);border:1px solid var(--kant);border-radius:16px;padding:18px 20px;min-width:0}.kort h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:10px}.kort h3 .sub{margin-left:auto;font-weight:400}
+.kpi{display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:12px;grid-column:span 12}.kpi .tall b{font-size:30px}
+.graf{display:flex;align-items:flex-end;gap:3px;height:120px;padding-top:6px}.graf i{flex:1;background:linear-gradient(180deg,var(--gull),#8a6520);border-radius:3px 3px 0 0;min-height:2px;position:relative}.graf i:hover::after{content:attr(data-n);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:11px;font-style:normal;background:#1c1c1e;padding:2px 6px;border-radius:5px;white-space:nowrap}
+.akse{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--demp);margin-top:6px}
+.strom{display:flex;flex-direction:column;max-height:430px;overflow:auto}.hend{display:grid;grid-template-columns:104px 150px minmax(0,1fr);gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid #1d1d1f;font-size:13px}.hend:first-child{border-top:none}.hend .tid{font-family:var(--mono);font-size:11px;color:var(--demp)}.hend .hva{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.type{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:2px 7px;border-radius:6px;background:#1c1c1e;color:#c9c9c4;white-space:nowrap;justify-self:start}.type.gronn{background:#10241a;color:var(--gronn)}.type.rod{background:#2a1210;color:#ff9a8a}.type.gull{background:#1c170d;color:var(--gull)}.type.bla{background:#101a2a;color:#8ab4ff}
+.lenke{border:none;background:none;color:var(--tekst);font:inherit;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#3a3a3c;text-underline-offset:3px}.lenke:hover{text-decoration-color:var(--gull)}
+.liste{display:flex;flex-direction:column}.liste .l{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #1d1d1f;font-size:13px;min-width:0}.liste .l:first-child{border-top:none}.liste .l>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prikk{width:8px;height:8px;border-radius:4px;display:inline-block;background:#3a3a37;flex-shrink:0}.prikk.on{background:var(--gronn);box-shadow:0 0 8px rgba(111,207,127,.6)}
+.enheter .rad{grid-template-columns:minmax(200px,1.3fr) 90px 90px minmax(160px,1fr) 150px 120px 90px}
+.logg .rad{grid-template-columns:120px 170px minmax(170px,1fr) minmax(200px,1.5fr) 150px;font-size:13px;padding:10px 18px}
+.skuff{position:fixed;inset:0 0 0 auto;width:min(760px,100vw);background:#0f0f10;border-left:1px solid var(--kant);z-index:20;overflow:auto;transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);box-shadow:-30px 0 80px rgba(0,0,0,.5)}.skuff.apen{transform:none}
+.skuffbak{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:19;opacity:0;pointer-events:none;transition:opacity .2s}.skuffbak.apen{opacity:1;pointer-events:auto}
+.skuff .topp{position:sticky;top:0;background:rgba(15,15,16,.94);backdrop-filter:blur(8px);padding:20px 24px;border-bottom:1px solid var(--kant);display:flex;gap:14px;align-items:center;z-index:2}.skuff .topp h2{margin:0;font-size:20px;overflow:hidden;text-overflow:ellipsis}.skuff .innhold{padding:20px 24px 60px;display:flex;flex-direction:column;gap:14px}
+.ava.stor{width:56px;height:56px;font-size:22px}
+.felt2{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 14px;font-size:13px}.felt2>span:nth-child(odd){color:var(--demp)}
+.som{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 32px;background:linear-gradient(90deg,#3a2a0c,#1c170d);border-bottom:1px solid #5a4420;font-size:13.5px}
+.chipsrad{display:flex;flex-wrap:wrap;gap:6px}
+@media (max-width:1000px){.senter>.kort,.senter>.kort.tredel{grid-column:span 12}.enheter .rad,.logg .rad{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -52,16 +72,44 @@ dialog h3{margin:0 0 8px}dialog p{color:var(--demp);margin:0 0 16px}dialog input
   <nav id="nav"></nav>
   <div class="meg" id="meg"></div>
 </header>
+<div id="somBanner"></div>
 <main id="main"><div class="tom">Henter …</div></main>
+<div class="skuffbak" id="skuffbak"></div><aside class="skuff" id="skuff" aria-label="Detaljer"></aside>
 <div class="melding" id="melding"></div>
 <dialog id="dlg"><h3 id="dTittel"></h3><p id="dTekst"></p><input id="dInn"><div class="dknapper"><button class="k" id="dAvbryt">Avbryt</button><button class="k gull" id="dOk">OK</button></div></dialog>
 <script>
 "use strict";
+// Skjold Lab Valhalla – kontrollsenteret for skyen bak Skjold-hjem: kontoer, hjem, enheter, hendelseslogg og drift.
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const dato = (t) => (t ? new Date(t * 1000).toLocaleString("nb-NO", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "–");
+const kl = (t) => { const d = new Date(t * 1000), i = new Date(); return d.toDateString() === i.toDateString() ? d.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : d.toLocaleString("nb-NO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
 const siden = (t) => { if (!t) return "aldri"; const s = Date.now() / 1000 - t; return s < 120 ? "nå" : s < 3600 ? Math.round(s / 60) + " min siden" : s < 86400 ? Math.round(s / 3600) + " t siden" : Math.round(s / 86400) + " d siden"; };
-let FORSTE = true, MEG = null, FANE = location.hash.slice(1) || "oversikt", DATA = {}, SOK = "";
+const enc = encodeURIComponent;
+const FANER = [["senter", "Kontrollsenter"], ["kontoer", "Kontoer"], ["hjem", "Hjem"], ["enheter", "Enheter"], ["logg", "Logg"], ["tjenesten", "Tjenesten"]];
+let FORSTE = true, MEG = null, FANE = ({ oversikt: "senter" })[location.hash.slice(1)] || location.hash.slice(1) || "senter", DATA = {}, SOK = "", FILTER = { status: "", produkt: "" }, LOGGF = { q: "", type: "", epost: "" }, LIVE = true;
+if (!FANER.some(([k]) => k === FANE)) FANE = "senter";
+// hendelsestyper: [navn, farge]
+const HT = {
+  innlogging: ["Innlogging", "bla"], bekreftet: ["Bekreftet", "gronn"], bekreft_feil: ["Feil bekreftelse", "rod"], sperret_forsok: ["Sperret – forsøk", "rod"],
+  profil: ["Profil endret", ""], kodeapp_pa: ["Kodeapp på", "gronn"], kodeapp_av: ["Kodeapp av", "rod"], nye_reservekoder: ["Nye reservekoder", ""],
+  passkey_ny: ["Ny passkey", "gronn"], passkey_fjernet: ["Passkey fjernet", ""], godkjenning: ["Godkjenning", ""], utlogget: ["Logget ut", ""],
+  logg_ut_overalt: ["Logget ut overalt", ""], konto_slettet: ["Konto slettet", "rod"], hjem_nytt: ["Nytt hjem", "gronn"], hjem_endret: ["Hjem endret", ""],
+  hjem_slettet: ["Hjem slettet", "rod"], deling: ["Deling", ""], eier_overfort: ["Eier overført", "gull"], koblingskode: ["Koblingskode", ""],
+  enhet_koblet: ["Enhet koblet", "gronn"], enhet_tilkoblet: ["Enhet på nett", "gronn"], enhet_frakoblet: ["Enhet av nett", ""], enhet_fjernet: ["Enhet fjernet", "rod"],
+  vedlikehold: ["Vedlikehold", "gull"], som_start: ["Logget inn som", "gull"], som_handling: ["Handling som", "gull"], som_slutt: ["Avsluttet «som»", "gull"]
+};
+const typeNavn = (t) => (HT[t] || [t.startsWith("admin_") ? "Admin: " + t.slice(6).replace(/_/g, " ") : t])[0];
+const typeFarge = (t) => (HT[t] || [0, t.startsWith("admin_") ? "gull" : ""])[1];
+const typeMerke = (t) => `<span class="type ${typeFarge(t)}">${esc(typeNavn(t))}</span>`;
+const ava = (k, stor = false) => k?.bilde && /^data:image\/(jpeg|png|webp);base64,/.test(k.bilde) ? `<img src="${k.bilde}" alt="" class="ava${stor ? " stor" : ""}">` : `<span class="ava${stor ? " stor" : ""}">${esc(((k?.profil?.navn || k?.epost || "?")[0] || "?").toUpperCase())}</span>`;
+const kontoLenke = (e) => e ? `<button class="lenke" data-konto="${esc(e)}">${esc(e)}</button>` : "";
+const stedLenke = (id, navn) => id ? `<button class="lenke" data-hjem="${esc(id)}">${esc(navn || id)}</button>` : "";
+function hendelse(h, kort = false) {
+  const hvor = [h.by, h.land].filter(Boolean).join(", ");
+  const detaljer = [h.tekst ? esc(h.tekst) : "", h.sted ? "hjem " + stedLenke(h.sted, (DATA.stedNavn || {})[h.sted]) : "", h.enhet ? `enhet <span style="font-family:var(--mono)">${esc(h.enhet)}</span>` : "", h.av && h.av !== h.epost ? "av " + kontoLenke(h.av) : "", !kort && (hvor || h.ip) ? `<span class="sub">${esc(hvor)}${h.ip ? " · " + esc(h.ip) : ""}</span>` : ""].filter(Boolean).join(" · ");
+  return `<div class="hend"><span class="tid" title="${esc(dato(h.t))}">${esc(kl(h.t))}</span>${typeMerke(h.type)}<span class="hva">${h.epost ? kontoLenke(h.epost) + " " : ""}${detaljer}</span></div>`;
+}
 function melding(t) { const m = $("#melding"); m.textContent = t; m.classList.add("vis"); clearTimeout(m._t); m._t = setTimeout(() => m.classList.remove("vis"), 3200); }
 async function kall(metode, sti, kropp) {
   const r = await fetch("/api/valhalla" + sti, { method: metode, headers: kropp ? { "content-type": "application/json" } : {}, body: kropp ? JSON.stringify(kropp) : undefined, credentials: "include" });
@@ -81,53 +129,131 @@ function spor({ tittel, tekst, verdi = "", plass = "", ok = "OK", farlig = false
     d.showModal(); if (plass || krever) inn.focus();
   });
 }
-const FANER = [["oversikt", "Oversikt"], ["kontoer", "Kontoer"], ["hjem", "Hjem"], ["tjenesten", "Tjenesten"]];
 function tegnNav() { $("#nav").innerHTML = FANER.map(([k, n]) => `<button class="${k === FANE ? "på" : ""}" data-f="${k}">${n}</button>`).join(""); }
-$("#nav").addEventListener("click", (e) => { const f = e.target.closest("button")?.dataset.f; if (f) { FANE = f; location.hash = f; vis(); } });
-
-async function vis() {
-  tegnNav();
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-f]"); if (!b) return; FANE = b.dataset.f; SOK = ""; location.hash = FANE; vis(); });
+const sokFelt = (plass, bredde = 280) => `<input id="sok" placeholder="${plass}" value="${esc(SOK)}" style="width:${bredde}px">`;
+function kobleSok() { const s = $("#sok"); if (s) s.oninput = (e) => { SOK = e.target.value; const p = e.target.selectionStart; vis(true).then(() => { const n = $("#sok"); n.focus(); n.setSelectionRange(p, p); }); }; }
+function csv(rader, navn) {
+  const tekst = rader.map((r) => r.map((x) => '"' + String(x ?? "").replace(/"/g, '""') + '"').join(";")).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + tekst], { type: "text/csv" })); a.download = navn; a.click();
+}
+async function hent(lokal) {
+  if (lokal) return;
+  const t = [];
+  if (FANE === "senter" || FANE === "tjenesten" || !DATA.o) t.push(kall("GET", "/oversikt" + (FORSTE ? "?synk=1" : "")).then((x) => { DATA.o = x; FORSTE = false; }));
+  if (FANE === "senter") t.push(kall("GET", "/statistikk").then((x) => { DATA.stat = x; }), kall("GET", "/logg?limit=40").then((x) => { DATA.strom = x.hendelser; }));
+  if (FANE === "senter" || FANE === "enheter") t.push(kall("GET", "/enheter").then((x) => { DATA.e = x; }));
+  if (FANE === "kontoer") t.push(kall("GET", "/kontoer").then((x) => { DATA.k = x; }));
+  if (FANE === "hjem" || !DATA.s) t.push(kall("GET", "/steder").then((x) => { DATA.s = x; DATA.stedNavn = Object.fromEntries(x.map((s) => [s.id, s.navn])); }));
+  if (FANE === "logg") t.push(lastLogg(false));
+  await Promise.all(t);
+}
+async function lastLogg(mer) {
+  const q = new URLSearchParams({ limit: "150" });
+  for (const [k, v] of Object.entries(LOGGF)) if (v) q.set(k, v);
+  if (mer && DATA.loggNeste) q.set("for", DATA.loggNeste);
+  const r = await kall("GET", "/logg?" + q);
+  DATA.logg = mer ? [...(DATA.logg || []), ...r.hendelser] : r.hendelser; DATA.loggNeste = r.neste;
+}
+let LIVET = 0;
+async function vis(lokal = false) {
+  tegnNav(); clearInterval(window._vhT); clearTimeout(LIVET);
   const m = $("#main");
-  try {
-    if (FANE === "oversikt" || FANE === "tjenesten") DATA.o = await kall("GET", "/oversikt" + (FORSTE ? "?synk=1" : "")); FORSTE = false;
-    if (FANE === "kontoer") { DATA.k = await kall("GET", "/kontoer"); DATA.o = DATA.o || await kall("GET", "/oversikt"); }
-    if (FANE === "hjem") DATA.s = await kall("GET", "/steder");
-  } catch (e) { m.innerHTML = `<div class="feil"><h2>${esc(e.message)}</h2><p class="sub">Valhalla er bare for tjenesteeieren og administratorer av Skjold Lab.</p></div>`; return; }
-  clearInterval(window._vhT);
-  if (FANE === "oversikt") {
-    const o = DATA.o;
-    m.innerHTML = `<h1>Oversikt</h1><p class="under">Skjold-hjem på hjem.skjold-lab.com – kontoer, hjem og deling.</p><div class="rutenett">
-      ${[["KONTOER", o.kontoer, o.nye7d + " nye siste uke"], ["AKTIVE 7 DAGER", o.aktive7d, "logget inn siste uke"], ["HJEM", o.steder, o.nyeSteder7d + " nye siste uke"],
-         ["DELTE HJEM", o.delte, "med mer enn ett medlem"], ["SPERREDE", o.sperrede, "kontoer"], ["ADMINISTRATORER", (o.tjenesteeiere.length + o.admins.length), "eier + admins"]]
-        .map(([a, b, c]) => `<div class="tall"><span>${a}</span><b>${b}</b><small>${esc(c)}</small></div>`).join("")}</div>`;
+  try { await hent(lokal); } catch (e) { m.innerHTML = `<div class="feil"><h2>${esc(e.message)}</h2><p class="sub">Valhalla er bare for tjenesteeieren og administratorer av Skjold Lab.</p></div>`; return; }
+  const o = DATA.o;
+  if (FANE === "senter") {
+    const st = DATA.stat || { perTime: [], perType: {} }, en = DATA.e || [], on = en.filter((x) => x.online).length;
+    const maks = Math.max(1, ...st.perTime);
+    const versjoner = {}; for (const x of en) versjoner[x.versjon || "ukjent"] = (versjoner[x.versjon || "ukjent"] || 0) + 1;
+    const produkter = {}; for (const x of en) produkter[x.produkt || "ukjent"] = (produkter[x.produkt || "ukjent"] || 0) + 1;
+    const typer = Object.entries(st.perType).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const borte = en.filter((x) => !x.online).sort((a, b) => (b.sist || 0) - (a.sist || 0)).slice(0, 8);
+    const feil = (st.perType.bekreft_feil || 0) + (st.perType.sperret_forsok || 0);
+    m.innerHTML = `<h1>Kontrollsenter</h1><p class="under">Hele Skjold-skyen i sanntid – kontoer, hjem, enheter og alt som skjer.</p>
+      <div class="senter">
+        <div class="kpi">${[["KONTOER", o.kontoer, o.nye7d + " nye siste uke"], ["AKTIVE 24 T", st.aktiveKontoer24t ?? "–", (st.innloggede24t ?? 0) + " nye innlogginger"], ["HJEM", o.steder, o.delte + " delt · " + o.nyeSteder7d + " nye"],
+          ["ENHETER PÅ NETT", on + " / " + en.length, en.length ? Math.round(on / en.length * 100) + " % tilkoblet" : "ingen ennå"], ["HENDELSER 24 T", st.hendelser24t ?? 0, (st.totalt ?? 0) + " totalt loggført"],
+          ["SIKKERHET 24 T", feil, feil ? "feil bekreftelser / sperrede forsøk" : "ingen avvik"], ["SPERREDE", o.sperrede, "kontoer"], ["ADMINISTRATORER", o.tjenesteeiere.length + o.admins.length, "eiere + admins"]]
+          .map(([a, b, c]) => `<div class="tall"><span>${a}</span><b>${esc(b)}</b><small>${esc(c)}</small></div>`).join("")}</div>
+        <div class="kort"><h3>Aktivitet siste døgn<span class="sub">hendelser per time</span></h3>
+          <div class="graf">${st.perTime.map((n, i) => `<i style="height:${Math.max(2, n / maks * 100)}%" data-n="${n} kl. ${String((new Date().getHours() - 23 + i + 24) % 24).padStart(2, "0")}"></i>`).join("")}</div>
+          <div class="akse"><span>−24 t</span><span>−12 t</span><span>nå</span></div></div>
+        <div class="kort"><h3>Hva skjer<span class="sub">siste døgn</span></h3><div class="liste">${typer.map(([t, n]) => `<div class="l"><span>${typeMerke(t)}</span><b style="font-family:var(--mono)">${n}</b></div>`).join("") || '<span class="sub">Ingen hendelser ennå.</span>'}</div></div>
+        <div class="kort bred"><h3><span class="prikk on"></span> Direkte<span class="sub"><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="live" ${LIVE ? "checked" : ""} style="height:auto"> oppdater hvert 10. sekund</label></span></h3>
+          <div class="strom">${(DATA.strom || []).map((h) => hendelse(h, true)).join("") || '<span class="sub">Ingen hendelser ennå.</span>'}</div>
+          <button class="k" data-f="logg" style="margin-top:10px">Hele loggen ›</button></div>
+        <div class="kort tredel"><h3>Programvare<span class="sub">enheter per versjon</span></h3><div class="liste">${Object.entries(versjoner).sort((a, b) => b[1] - a[1]).map(([v, n]) => `<div class="l"><span style="font-family:var(--mono)">${esc(v)}</span><b>${n}</b></div>`).join("") || '<span class="sub">Ingen enheter.</span>'}</div></div>
+        <div class="kort tredel"><h3>Produkter</h3><div class="liste">${Object.entries(produkter).sort((a, b) => b[1] - a[1]).map(([v, n]) => `<div class="l"><span>${esc(v)}</span><b>${n}</b></div>`).join("") || '<span class="sub">Ingen enheter.</span>'}</div></div>
+        <div class="kort tredel"><h3>Frakoblet sist<span class="sub">${en.length - on} av nett</span></h3><div class="liste">${borte.map((x) => `<div class="l"><span><span class="prikk"></span> ${esc(x.navn)} · ${stedLenke(x.sted, x.stedNavn)}</span><span class="sub">${siden(x.sist)}</span></div>`).join("") || '<span class="sub">Alle enhetene er på nett.</span>'}</div></div>
+      </div>`;
+    $("#live").onchange = (e) => { LIVE = e.target.checked; vis(); };
+    if (LIVE) LIVET = setTimeout(() => { if (FANE === "senter" && !document.hidden && !$("#skuff").classList.contains("apen")) vis(); else if (FANE === "senter") LIVET = setTimeout(() => vis(), 10000); }, 10000);
   }
   if (FANE === "kontoer") {
-    const l = DATA.k.filter((k) => !SOK || k.epost.includes(SOK.toLowerCase()));
-    m.innerHTML = `<h1>Kontoer</h1><p class="under">Alle som har logget inn på Skjold-hjem, med hjemmene de eier og er medlem av.</p>
-      <div class="verktoy"><input id="sok" placeholder="Søk e-post" value="${esc(SOK)}" style="width:280px"><span class="sub">${l.length} av ${DATA.k.length}</span></div>
+    const l = DATA.k.filter((k) => !SOK || (k.epost + " " + (k.navn || "")).toLowerCase().includes(SOK.toLowerCase()));
+    m.innerHTML = `<h1>Kontoer</h1><p class="under">Alle som har logget inn på Skjold-hjem. Trykk på en konto for alt om den: enheter, økter, hjem, sikkerhet og logg.</p>
+      <div class="verktoy">${sokFelt("Søk e-post")}<span class="sub">${l.length} av ${DATA.k.length}</span><button class="k" id="kcsv" style="margin-left:auto">Eksporter CSV</button></div>
       <div class="tabell kontoer"><div class="rad hode"><span>KONTO</span><span>HJEM</span><span>SIST SETT</span><span>STATUS</span><span></span></div>
-      ${l.map((k) => { const sjef = DATA.o?.tjenesteeiere?.includes(k.epost) || MEG.tjenesteeiere?.includes(k.epost); return `<div class="rad">
-        <span style="display:flex;gap:12px;align-items:center">${k.bilde && /^data:image\/(jpeg|png|webp);base64,/.test(k.bilde) ? `<img src="${k.bilde}" alt="" class="ava">` : `<span class="ava">${esc((k.epost[0] || "?").toUpperCase())}</span>`}<span><b>${esc(k.epost)}</b><br><span class="sub">Først sett ${dato(k.forst)}</span></span></span>
-        <span>${k.eierAv.map((s) => `<span class="chip eier" title="eier">★ ${esc(s.navn)}</span>`).join("")}${k.medlemAv.map((s) => `<span class="chip">${esc(s.navn)}</span>`).join("") || (k.eierAv.length ? "" : '<span class="sub">Ingen hjem</span>')}</span>
+      ${l.map((k) => { const sjef = o.tjenesteeiere.includes(k.epost); return `<div class="rad">
+        <span style="display:flex;gap:12px;align-items:center;min-width:0">${ava(k)}<span style="min-width:0"><button class="lenke" data-konto="${esc(k.epost)}"><b>${esc(k.epost)}</b></button><br><span class="sub">Først sett ${dato(k.forst)}</span></span></span>
+        <span>${k.eierAv.map((s) => `<span class="chip eier" title="eier">★ ${stedLenke(s.id, s.navn)}</span>`).join("")}${k.medlemAv.map((s) => `<span class="chip">${stedLenke(s.id, s.navn)}</span>`).join("") || (k.eierAv.length ? "" : '<span class="sub">Ingen hjem</span>')}</span>
         <span class="sub">${siden(k.sist)}</span>
         <span>${sjef ? '<span class="merke gull">TJENESTEEIER</span>' : k.admin ? '<span class="merke gull">ADMIN</span>' : ""} ${k.sperret ? '<span class="merke rod">SPERRET</span>' : '<span class="merke gronn">AKTIV</span>'} ${k.tofa ? '<span class="merke">2FA</span>' : ""}</span>
-        <span class="knapper">${sjef ? "" : `<button class="k ${k.sperret ? "" : "rod"}" data-sperr="${esc(k.epost)}" data-v="${k.sperret ? 0 : 1}">${k.sperret ? "Opphev sperring" : "Sperr"}</button>`}
-          ${k.tofa ? `<button class="k" data-tofa="${esc(k.epost)}">Tilbakestill 2FA</button>` : ""}
-          ${MEG.eier && !sjef ? `<button class="k" data-admin="${esc(k.epost)}" data-v="${k.admin ? 0 : 1}">${k.admin ? "Fjern admin" : "Gjør til admin"}</button>` : ""}</span></div>`; }).join("") || '<div class="tom">Ingen kontoer.</div>'}</div>`;
-    $("#sok").oninput = (e) => { SOK = e.target.value; const p = e.target.selectionStart; vis().then(() => { const s = $("#sok"); s.focus(); s.setSelectionRange(p, p); }); };
+        <span class="knapper"><button class="k" data-konto="${esc(k.epost)}">Åpne</button>${MEG.eier && !sjef ? `<button class="k gull" data-som="${esc(k.epost)}">Logg inn som</button>` : ""}${sjef ? "" : `<button class="k ${k.sperret ? "" : "rod"}" data-sperr="${esc(k.epost)}" data-v="${k.sperret ? 0 : 1}">${k.sperret ? "Opphev sperring" : "Sperr"}</button>`}</span></div>`; }).join("") || '<div class="tom">Ingen kontoer.</div>'}</div>`;
+    kobleSok();
+    $("#kcsv").onclick = () => csv([["E-post", "Først sett", "Sist sett", "Sperret", "Admin", "Totrinn", "Eier av", "Medlem av"], ...l.map((k) => [k.epost, dato(k.forst), dato(k.sist), k.sperret ? "ja" : "", k.admin ? "ja" : "", k.tofa ? "ja" : "", k.eierAv.map((s) => s.navn).join(", "), k.medlemAv.map((s) => s.navn).join(", ")])], "skjold-kontoer.csv");
   }
   if (FANE === "hjem") {
     const l = DATA.s.filter((s) => !SOK || (s.navn + " " + s.eier + " " + (s.medlemmer || []).join(" ")).toLowerCase().includes(SOK.toLowerCase()));
-    m.innerHTML = `<h1>Hjem</h1><p class="under">Alle hjem (steder) med eier, medlemmer og enheter. Endringer her slår inn for brukerne med en gang.</p>
-      <div class="verktoy"><input id="sok" placeholder="Søk hjem, eier eller medlem" value="${esc(SOK)}" style="width:300px"><span class="sub">${l.length} av ${DATA.s.length}</span></div>
+    m.innerHTML = `<h1>Hjem</h1><p class="under">Alle hjem med eier, medlemmer og enheter. Trykk på et hjem for enhetene, loggen og alle innstillingene.</p>
+      <div class="verktoy">${sokFelt("Søk hjem, eier eller medlem", 300)}<span class="sub">${l.length} av ${DATA.s.length}</span></div>
       <div class="tabell hjem"><div class="rad hode"><span>HJEM</span><span>EIER OG MEDLEMMER</span><span>ENHETER</span><span>OPPRETTET</span><span></span></div>
       ${l.map((s) => { const on = (s.enheter || []).filter((e) => e.online).length; return `<div class="rad">
-        <span><b>${esc(s.navn)}</b><br><span class="sub" style="font-family:var(--mono)">${esc(s.id)}</span></span>
-        <span>${(s.medlemmer || []).map((e) => e === s.eier ? `<span class="chip eier">★ ${esc(e)}</span>` : `<span class="chip">${esc(e)} <button title="Fjern" data-fjern="${esc(e)}" data-s="${s.id}">×</button></span>`).join("")}</span>
-        <span>${on}/${(s.enheter || []).length} på nett<br><span class="sub">${(s.enheter || []).map((e) => esc(e.navn)).slice(0, 3).join(", ")}</span></span>
+        <span><button class="lenke" data-hjem="${s.id}"><b>${esc(s.navn)}</b></button><br><span class="sub" style="font-family:var(--mono)">${esc(s.id)}</span></span>
+        <span>${(s.medlemmer || []).map((e) => e === s.eier ? `<span class="chip eier">★ ${kontoLenke(e)}</span>` : `<span class="chip">${kontoLenke(e)} <button title="Fjern" data-fjern="${esc(e)}" data-s="${s.id}">×</button></span>`).join("")}</span>
+        <span><span class="prikk ${on ? "on" : ""}"></span> ${on}/${(s.enheter || []).length} på nett<br><span class="sub">${(s.enheter || []).map((e) => esc(e.navn)).slice(0, 3).join(", ")}</span></span>
         <span class="sub">${dato(s.opprettet)}</span>
-        <span class="knapper"><button class="k" data-legg="${s.id}">+ Medlem</button><button class="k" data-eier="${s.id}">Overfør eierskap</button><button class="k rod" data-slett="${s.id}" data-n="${esc(s.navn)}">Slett</button></span></div>`; }).join("") || '<div class="tom">Ingen hjem.</div>'}</div>`;
-    $("#sok").oninput = (e) => { SOK = e.target.value; const p = e.target.selectionStart; vis().then(() => { const s = $("#sok"); s.focus(); s.setSelectionRange(p, p); }); };
+        <span class="knapper"><button class="k" data-hjem="${s.id}">Åpne</button><button class="k" data-legg="${s.id}">+ Medlem</button><button class="k" data-eier="${s.id}">Overfør</button><button class="k rod" data-slett="${s.id}" data-n="${esc(s.navn)}">Slett</button></span></div>`; }).join("") || '<div class="tom">Ingen hjem.</div>'}</div>`;
+    kobleSok();
+  }
+  if (FANE === "enheter") {
+    const alle = DATA.e || [], prod = [...new Set(alle.map((x) => x.produkt || "ukjent"))];
+    const l = alle.filter((x) => (!SOK || [x.navn, x.id, x.stedNavn, x.eier, x.versjon, x.lan?.ip].join(" ").toLowerCase().includes(SOK.toLowerCase()))
+      && (!FILTER.status || (FILTER.status === "on") === !!x.online) && (!FILTER.produkt || (x.produkt || "ukjent") === FILTER.produkt));
+    m.innerHTML = `<h1>Enheter</h1><p class="under">Alle Skjold-enheter i alle hjem: tilkobling, programvare, adresse og rolle.</p>
+      <div class="verktoy">${sokFelt("Søk navn, id, hjem, eier, IP")}
+        <select id="fStatus"><option value="">Alle</option><option value="on" ${FILTER.status === "on" ? "selected" : ""}>På nett</option><option value="av" ${FILTER.status === "av" ? "selected" : ""}>Av nett</option></select>
+        <select id="fProd"><option value="">Alle produkter</option>${prod.map((p) => `<option ${FILTER.produkt === p ? "selected" : ""}>${esc(p)}</option>`).join("")}</select>
+        <span class="sub">${l.length} av ${alle.length} · ${alle.filter((x) => x.online).length} på nett</span><button class="k" id="ecsv" style="margin-left:auto">Eksporter CSV</button></div>
+      <div class="tabell enheter"><div class="rad hode"><span>ENHET</span><span>PRODUKT</span><span>VERSJON</span><span>HJEM OG EIER</span><span>STATUS</span><span>LAN</span><span></span></div>
+      ${l.map((x) => `<div class="rad">
+        <span style="min-width:0"><b>${esc(x.navn)}</b>${x.aktivHoved ? ' <span class="merke gull">AKTIV HOVED</span>' : x.hoved ? ' <span class="merke">HOVED</span>' : x.reserveNr ? ` <span class="merke">RESERVE ${x.reserveNr}</span>` : ""}<br><span class="sub" style="font-family:var(--mono)">${esc(x.id)}</span></span>
+        <span>${esc(x.produkt || "–")}</span><span style="font-family:var(--mono);font-size:12.5px">${esc(x.versjon || "–")}</span>
+        <span>${stedLenke(x.sted, x.stedNavn)}<br><span class="sub">${kontoLenke(x.eier)}</span></span>
+        <span><span class="prikk ${x.online ? "on" : ""}"></span> ${x.online ? "På nett" : "Av nett"}<br><span class="sub">${x.online ? "" : "sist " + siden(x.sist)}</span></span>
+        <span class="sub" style="font-family:var(--mono)">${esc(x.lan?.ip || "–")}</span>
+        <span class="knapper"><button class="k rod" data-fjernenhet="${esc(x.id)}" data-s="${x.sted}" data-n="${esc(x.navn)}">Fjern</button></span></div>`).join("") || '<div class="tom">Ingen enheter.</div>'}</div>`;
+    kobleSok();
+    $("#fStatus").onchange = (e) => { FILTER.status = e.target.value; vis(true); };
+    $("#fProd").onchange = (e) => { FILTER.produkt = e.target.value; vis(true); };
+    $("#ecsv").onclick = () => csv([["Navn", "Id", "Produkt", "Versjon", "Hjem", "Eier", "På nett", "Sist sett", "LAN-IP"], ...l.map((x) => [x.navn, x.id, x.produkt, x.versjon, x.stedNavn, x.eier, x.online ? "ja" : "nei", dato(x.sist), x.lan?.ip])], "skjold-enheter.csv");
+  }
+  if (FANE === "logg") {
+    const l = DATA.logg || [];
+    m.innerHTML = `<h1>Logg</h1><p class="under">Alt som skjer i Skjold-skyen: innlogginger, totrinn, hjem, deling, enheter og alle handlinger i Valhalla. De siste 20 000 hendelsene beholdes.</p>
+      <div class="verktoy"><input id="lq" placeholder="Fritekst (IP, navn, by …)" value="${esc(LOGGF.q)}" style="width:220px"><input id="le" placeholder="E-post" value="${esc(LOGGF.epost)}" style="width:220px">
+        <select id="lt"><option value="">Alle typer</option>${Object.keys(HT).map((t) => `<option value="${t}" ${LOGGF.type === t ? "selected" : ""}>${esc(typeNavn(t))}</option>`).join("")}<option value="admin_sperret,admin_sperring_opphevet,admin_gitt,admin_fjernet,admin_totrinn_tilbakestilt,admin_utlogget,admin_profil,admin_konto_slettet,admin_hjem_navn,admin_hjem_slettet,admin_deling,admin_enhet_fjernet" ${LOGGF.type.startsWith("admin_") ? "selected" : ""}>Alle admin-handlinger</option><option value="bekreft_feil,sperret_forsok" ${LOGGF.type === "bekreft_feil,sperret_forsok" ? "selected" : ""}>Sikkerhetsavvik</option></select>
+        <button class="k gull" id="lsok">Søk</button><button class="k" id="lnull">Nullstill</button><span class="sub">${l.length} vist</span><button class="k" id="lcsv" style="margin-left:auto">Eksporter CSV</button></div>
+      <div class="tabell logg"><div class="rad hode"><span>TID</span><span>HENDELSE</span><span>KONTO</span><span>DETALJER</span><span>FRA</span></div>
+      ${l.map((h) => `<div class="rad"><span class="sub" title="${esc(dato(h.t))}" style="font-family:var(--mono)">${esc(kl(h.t))}</span>${typeMerke(h.type)}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${kontoLenke(h.epost) || '<span class="sub">–</span>'}</span>
+        <span style="min-width:0">${[h.tekst ? esc(h.tekst) : "", h.sted ? "hjem " + stedLenke(h.sted, (DATA.stedNavn || {})[h.sted]) : "", h.enhet ? `<span style="font-family:var(--mono);font-size:12px">${esc(h.enhet)}</span>` : "", h.av && h.av !== h.epost ? "av " + kontoLenke(h.av) : ""].filter(Boolean).join(" · ")}</span>
+        <span class="sub">${esc([h.by, h.land].filter(Boolean).join(", "))}${h.ip ? `<br><span style="font-family:var(--mono)">${esc(h.ip)}</span>` : ""}</span></div>`).join("") || '<div class="tom">Ingen hendelser.</div>'}</div>
+      ${DATA.loggNeste ? '<button class="k" id="lmer" style="margin-top:14px">Last flere</button>' : ""}`;
+    const sok = () => { LOGGF = { q: $("#lq").value.trim(), epost: $("#le").value.trim().toLowerCase(), type: $("#lt").value }; vis(); };
+    $("#lsok").onclick = sok; for (const id of ["#lq", "#le"]) $(id).onkeydown = (e) => { if (e.key === "Enter") sok(); };
+    $("#lt").onchange = sok; $("#lnull").onclick = () => { LOGGF = { q: "", type: "", epost: "" }; vis(); };
+    if ($("#lmer")) $("#lmer").onclick = async () => { await lastLogg(true); vis(true); };
+    $("#lcsv").onclick = () => csv([["Tid", "Type", "Konto", "Tekst", "Hjem", "Enhet", "Av", "By", "Land", "IP"], ...l.map((h) => [dato(h.t), typeNavn(h.type), h.epost, h.tekst, h.sted, h.enhet, h.av, h.by, h.land, h.ip])], "skjold-logg.csv");
   }
   if (FANE === "tjenesten") {
     const o = DATA.o;
@@ -160,15 +286,87 @@ async function vis() {
   }
 }
 
+// ---------- detaljskuffen: konto eller hjem ----------
+let SKUFF = null;   // { type: "konto"|"hjem", id }
+const lukkSkuff = () => { SKUFF = null; $("#skuff").classList.remove("apen"); $("#skuffbak").classList.remove("apen"); };
+$("#skuffbak").onclick = lukkSkuff;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && SKUFF) lukkSkuff(); });
+async function apneSkuff(type, id) {
+  SKUFF = { type, id };
+  const sk = $("#skuff");
+  if (!sk.classList.contains("apen")) sk.innerHTML = '<div class="tom">Henter …</div>';
+  sk.classList.add("apen"); $("#skuffbak").classList.add("apen");
+  try { sk.innerHTML = type === "konto" ? kontoSkuff(await kall("GET", "/kontoer/" + enc(id))) : hjemSkuff(await kall("GET", "/steder/" + id)); }
+  catch (e) { sk.innerHTML = `<div class="topp"><h2>${esc(id)}</h2><button class="k" data-lukk style="margin-left:auto">Lukk</button></div><div class="tom">${esc(e.message)}</div>`; }
+}
+function kontoSkuff(k) {
+  const p = k.profil || {}, t = p.tofa || {}, sjef = k.tjenesteeier;
+  const okter = k.okter || [];
+  return `<div class="topp">${ava({ ...k, bilde: p.bilde || k.bilde }, true)}<div style="min-width:0;flex:1"><h2>${esc(p.navn || k.epost)}</h2><span class="sub">${esc(k.epost)}</span></div><button class="k" data-lukk>Lukk ✕</button></div>
+  <div class="innhold">
+    <div class="chipsrad">${sjef ? '<span class="merke gull">TJENESTEEIER</span>' : k.admin ? '<span class="merke gull">ADMIN</span>' : ""}${k.sperret ? '<span class="merke rod">SPERRET</span>' : '<span class="merke gronn">AKTIV</span>'}${t.aktiv ? '<span class="merke gronn">TOTRINN PÅ</span>' : '<span class="merke">TOTRINN AV</span>'}</div>
+    <div class="knapper" style="justify-content:flex-start">
+      ${MEG.eier && !sjef ? `<button class="k gull" data-som="${esc(k.epost)}">Logg inn som ${esc(p.navn || k.epost.split("@")[0])}</button>` : ""}
+      <button class="k" data-navn="${esc(k.epost)}" data-v="${esc(p.navn || "")}">Endre navn</button>
+      <button class="k" data-loggut="${esc(k.epost)}">Logg ut alle enheter</button>
+      ${t.aktiv ? `<button class="k" data-tofa="${esc(k.epost)}">Tilbakestill totrinn</button>` : ""}
+      ${sjef ? "" : `<button class="k ${k.sperret ? "" : "rod"}" data-sperr="${esc(k.epost)}" data-v="${k.sperret ? 0 : 1}">${k.sperret ? "Opphev sperring" : "Sperr"}</button>`}
+      ${MEG.eier && !sjef ? `<button class="k" data-admin="${esc(k.epost)}" data-v="${k.admin ? 0 : 1}">${k.admin ? "Fjern admin" : "Gjør til admin"}</button>` : ""}
+      ${sjef ? "" : `<button class="k rod" data-slettkonto="${esc(k.epost)}">Slett konto</button>`}
+    </div>
+    <div class="kort"><h3>Konto</h3><div class="felt2">
+      <span>E-post</span><span>${esc(k.epost)}</span><span>Navn</span><span>${esc(p.navn || "–")}</span>
+      <span>Konto opprettet</span><span>${dato(p.opprettet || k.forst)}</span><span>Først sett</span><span>${dato(k.forst)}</span><span>Sist sett</span><span>${dato(k.sist)} (${siden(k.sist)})</span>
+      <span>Kodeapp</span><span>${t.kodeapp ? "På · " + (t.reservekoderIgjen ?? 0) + " reservekoder igjen" : "Av"}</span>
+      <span>Passkeys</span><span>${(t.passkeys || []).map((n) => esc(n.navn) + ` <span class="sub">(${n.type === "nokkel" ? "sikkerhetsnøkkel" : "passkey"}, ${n.sist ? "brukt " + siden(n.sist) : "ikke brukt"})</span>`).join("<br>") || "Ingen"}</span>
+      <span>Skjold Cloud</span><span>${(k.sync || []).map((x) => esc(x.del) + ` <span class="sub">${Math.round(x.storrelse / 102.4) / 10} kB · ${siden(x.endret)}</span>`).join("<br>") || "Ingenting lagret"}</span>
+    </div></div>
+    <div class="kort"><h3>Påloggede enheter<span class="sub">${okter.length}</span></h3><div class="liste">${okter.map((o) => `<div class="l"><span><b>${esc(o.navn)}</b> <span class="sub">${esc(o.sted || "")} · opprettet ${dato(o.opprettet)} · sist ${siden(o.sist)} · ${o.bekreftet ? "bekreftet" + (o.metode ? " med " + esc(o.metode) : "") : "ikke bekreftet"}</span></span><button class="k" data-slettokt="${esc(o.sid)}" data-e="${esc(k.epost)}">Logg ut</button></div>`).join("") || '<span class="sub">Ingen påloggede enheter.</span>'}</div></div>
+    <div class="kort"><h3>Hjem<span class="sub">${(k.steder || []).length}</span></h3><div class="liste">${(k.steder || []).map((s) => { const en = s.enheter || []; return `<div class="l"><span>${s.eier === k.epost ? "★ " : ""}${stedLenke(s.id, s.navn)} <span class="sub">${s.eier === k.epost ? "eier" : "medlem"} · ${en.filter((e) => e.online).length}/${en.length} enheter på nett · ${(s.medlemmer || []).length} medlemmer</span></span></div>`
+      + en.map((e) => `<div class="l" style="padding-left:18px"><span><span class="prikk ${e.online ? "on" : ""}"></span> ${esc(e.navn)} <span class="sub">${esc(e.produkt || "")} · ${esc(e.versjon || "–")} · ${e.online ? "på nett" + (e.lan?.ip ? " · " + esc(e.lan.ip) : "") : "sist " + siden(e.sist)}</span></span></div>`).join(""); }).join("") || '<span class="sub">Ingen hjem.</span>'}</div></div>
+    <div class="kort"><h3>Logg<span class="sub">${(k.hendelser || []).length} siste</span></h3><div class="strom" style="max-height:none">${(k.hendelser || []).map((h) => hendelse(h)).join("") || '<span class="sub">Ingen hendelser.</span>'}</div></div>
+  </div>`;
+}
+function hjemSkuff(s) {
+  const en = s.enheter || [];
+  return `<div class="topp"><span class="ava stor" style="border-radius:14px">${esc((s.navn || "?")[0].toUpperCase())}</span><div style="min-width:0;flex:1"><h2>${esc(s.navn)}</h2><span class="sub" style="font-family:var(--mono)">${esc(s.id)}</span></div><button class="k" data-lukk>Lukk ✕</button></div>
+  <div class="innhold">
+    <div class="knapper" style="justify-content:flex-start"><button class="k" data-hjemnavn="${s.id}" data-v="${esc(s.navn)}">Endre navn</button><button class="k" data-legg="${s.id}">+ Medlem</button><button class="k" data-eier="${s.id}">Overfør eierskap</button><button class="k rod" data-slett="${s.id}" data-n="${esc(s.navn)}">Slett hjemmet</button></div>
+    <div class="kort"><h3>Hjemmet</h3><div class="felt2"><span>Eier</span><span>${kontoLenke(s.eier)}</span><span>Medlemmer</span><span>${(s.medlemmer || []).map((e) => e === s.eier ? kontoLenke(e) + " ★" : kontoLenke(e) + ` <button class="lenke sub" data-fjern="${esc(e)}" data-s="${s.id}">fjern</button>`).join("<br>")}</span>
+      <span>Opprettet</span><span>${dato(s.opprettet)}</span><span>Automatisk innmelding</span><span>${s.autoLegg ? "På" : "Av"}</span><span>Enheter</span><span>${en.filter((e) => e.online).length} av ${en.length} på nett</span></div></div>
+    <div class="kort"><h3>Enheter</h3><div class="liste">${en.map((e) => `<div class="l" style="align-items:flex-start"><span style="white-space:normal"><span class="prikk ${e.online ? "on" : ""}"></span> <b>${esc(e.navn)}</b> ${e.aktivHoved ? '<span class="merke gull">AKTIV HOVED</span>' : e.hoved ? '<span class="merke">HOVED</span>' : e.reserveNr ? `<span class="merke">RESERVE ${e.reserveNr}</span>` : ""}<br>
+      <span class="sub" style="font-family:var(--mono)">${esc(e.id)}</span><br><span class="sub">${esc(e.produkt || "–")} · versjon ${esc(e.versjon || "–")}${e.rom ? " · rom " + esc(e.rom) : ""} · ${e.online ? "på nett" : "sist sett " + siden(e.sist)}${e.lan?.ip ? " · LAN " + esc(e.lan.ip) + ":" + esc(e.lan.port || "") : ""} · koblet til ${dato(e.lagtTil)}</span></span>
+      <button class="k rod" data-fjernenhet="${esc(e.id)}" data-s="${s.id}" data-n="${esc(e.navn)}">Fjern</button></div>`).join("") || '<span class="sub">Ingen enheter koblet til.</span>'}</div></div>
+    <div class="kort"><h3>Logg<span class="sub">${(s.hendelser || []).length} siste</span></h3><div class="strom" style="max-height:none">${(s.hendelser || []).map((h) => hendelse(h)).join("") || '<span class="sub">Ingen hendelser.</span>'}</div></div>
+  </div>`;
+}
+
 document.addEventListener("click", async (e) => {
-  const b = e.target.closest("button"); if (!b) return;
+  const b = e.target.closest("button"); if (!b || b.dataset.f) return;
+  const d = b.dataset;
   try {
-    if (b.dataset.sperr) { const v = b.dataset.v === "1"; if (v && !(await spor({ tittel: "Sperr " + b.dataset.sperr + "?", tekst: "Kontoen kommer ikke inn på Skjold-hjem før sperringen oppheves. Hjemmene og enhetene beholdes.", ok: "Sperr", farlig: true }))) return; await kall("POST", "/kontoer/" + encodeURIComponent(b.dataset.sperr), { sperret: v }); melding(v ? "Kontoen er sperret" : "Sperringen er opphevet"); }
-    else if (b.dataset.tofa) { if (!(await spor({ tittel: "Tilbakestill totrinnsbekreftelse for " + b.dataset.tofa + "?", tekst: "Bruk dette bare når personen har mistet telefonen og reservekodene, og du har bekreftet hvem det er. Hen logger inn med bare e-post-kode og bør slå det på igjen.", ok: "Tilbakestill", farlig: true }))) return; await kall("POST", "/kontoer/" + encodeURIComponent(b.dataset.tofa), { tofaAv: true }); melding("Totrinnsbekreftelsen er slått av"); }
-    else if (b.dataset.vh) {
+    if ("lukk" in d) { lukkSkuff(); return; }
+    if (d.konto) { await apneSkuff("konto", d.konto); return; }
+    if (d.hjem) { await apneSkuff("hjem", d.hjem); return; }
+    if (d.som) {
+      if (!(await spor({ tittel: "Logge inn som " + d.som + "?", tekst: "I én time ser Skjold-hjem, appen i denne nettleseren og konto-siden kontoen deres – hjem, enheter og innstillinger. Sikkerhet (totrinn, passkeys, utlogging, sletting) kan ikke endres. Brukeren ser i aktivitetsloggen sin at Skjold Lab har vært innlogget.", ok: "Logg inn som" }))) return;
+      await kall("POST", "/som", { epost: d.som }); location.href = "/";
+      return;
+    }
+    if (d.somslutt !== undefined) { await kall("DELETE", "/som"); location.reload(); return; }
+    else if (d.sperr) { const v = d.v === "1"; if (v && !(await spor({ tittel: "Sperr " + d.sperr + "?", tekst: "Kontoen kommer ikke inn på Skjold-hjem før sperringen oppheves. Hjemmene og enhetene beholdes.", ok: "Sperr", farlig: true }))) return; await kall("POST", "/kontoer/" + enc(d.sperr), { sperret: v }); melding(v ? "Kontoen er sperret" : "Sperringen er opphevet"); }
+    else if (d.tofa) { if (!(await spor({ tittel: "Tilbakestill totrinnsbekreftelse for " + d.tofa + "?", tekst: "Kodeappen, reservekodene og alle passkeys fjernes. Bruk dette bare når du har bekreftet hvem personen er.", ok: "Tilbakestill", farlig: true }))) return; await kall("POST", "/kontoer/" + enc(d.tofa), { tofaAv: true }); melding("Totrinnsbekreftelsen er slått av"); }
+    else if (d.admin) { const v = d.v === "1"; await kall("POST", "/kontoer/" + enc(d.admin), { admin: v }); melding(v ? "Har nå tilgang til Valhalla" : "Valhalla-tilgangen er fjernet"); }
+    else if (d.loggut) { if (!(await spor({ tittel: "Logge ut alle enhetene til " + d.loggut + "?", tekst: "Alle nettlesere og telefoner må logge inn igjen.", ok: "Logg ut alle", farlig: true }))) return; await kall("POST", "/kontoer/" + enc(d.loggut), { loggUt: true }); melding("Alle enhetene er logget ut"); }
+    else if (d.slettokt) { await kall("POST", "/kontoer/" + enc(d.e), { slettOkt: d.slettokt }); melding("Enheten er logget ut"); }
+    else if (d.navn) { const n = await spor({ tittel: "Navn på " + d.navn, tekst: "Vises for dem kontoen deler hjem med.", verdi: d.v, plass: "Navn", ok: "Lagre" }); if (n === null) return; await kall("POST", "/kontoer/" + enc(d.navn), { navn: n }); melding("Navnet er endret"); }
+    else if (d.slettkonto) { if (!(await spor({ tittel: "Slett kontoen " + d.slettkonto + "?", tekst: "Kontoen fjernes fra hjemmene den er medlem av, Skjold Cloud-dataene slettes og alle økter logges ut. Eier kontoen et hjem, må det overføres eller slettes først. Skriv e-postadressen for å bekrefte.", krever: d.slettkonto, ok: "Slett for godt", farlig: true }))) return; await kall("POST", "/kontoer/" + enc(d.slettkonto), { slett: true }); melding("Kontoen er slettet"); lukkSkuff(); }
+    else if (d.hjemnavn) { const n = await spor({ tittel: "Nytt navn på hjemmet", tekst: "Endres for alle medlemmene med en gang.", verdi: d.v, plass: "Navn", ok: "Lagre" }); if (!n) return; await kall("POST", "/steder/" + d.hjemnavn, { navn: n }); melding("Hjemmet har fått nytt navn"); }
+    else if (d.fjernenhet) { if (!(await spor({ tittel: "Fjern «" + d.n + "»?", tekst: "Enheten kobles fra hjemmet og må kobles til på nytt med en kode. Den meldes ikke inn automatisk igjen.", ok: "Fjern", farlig: true }))) return; await kall("DELETE", "/steder/" + d.s + "/enheter/" + enc(d.fjernenhet)); melding("Enheten er fjernet"); }
+    else if (d.vh) {
       const o = DATA.o.vedlikehold || {}, naa = Math.floor(Date.now() / 1000);
-      if (b.dataset.vh === "0") { await kall("POST", "/vedlikehold", { aktiv: false }); melding("Tjenesten er tilbake i drift"); }
-      else if (b.dataset.vh === "forleng") { await kall("POST", "/vedlikehold", { ...o, aktiv: true, til: Math.max(o.til || naa, naa) + 900 }); melding("Forlenget med 15 minutter"); }
+      if (d.vh === "0") { await kall("POST", "/vedlikehold", { aktiv: false }); melding("Tjenesten er tilbake i drift"); }
+      else if (d.vh === "forleng") { await kall("POST", "/vedlikehold", { ...o, aktiv: true, til: Math.max(o.til || naa, naa) + 900 }); melding("Forlenget med 15 minutter"); }
       else {
         const v = $("#vhVarighet").value;
         const til = v === "egen" ? Math.floor(new Date($("#vhKl").value).getTime() / 1000) || 0 : Number(v) ? naa + Number(v) * 60 : 0;
@@ -177,13 +375,15 @@ document.addEventListener("click", async (e) => {
         melding(o.aktiv ? "Vedlikeholdet er oppdatert" : "Vedlikehold startet");
       }
     }
-    else if (b.dataset.admin) { const v = b.dataset.v === "1"; await kall("POST", "/kontoer/" + encodeURIComponent(b.dataset.admin), { admin: v }); melding(v ? "Har nå tilgang til Valhalla" : "Valhalla-tilgangen er fjernet"); }
-    else if (b.dataset.legg) { const ep = await spor({ tittel: "Legg til medlem", tekst: "Personen ser hjemmet neste gang hen logger inn med denne e-postadressen.", plass: "navn@eksempel.no", ok: "Legg til" }); if (!ep) return; await kall("POST", "/steder/" + b.dataset.legg, { leggTil: ep }); melding("Medlemmet er lagt til"); }
-    else if (b.dataset.fjern) { if (!(await spor({ tittel: "Fjern " + b.dataset.fjern + "?", tekst: "Personen mister tilgangen til hjemmet.", ok: "Fjern", farlig: true }))) return; await kall("POST", "/steder/" + b.dataset.s, { fjern: b.dataset.fjern }); melding("Medlemmet er fjernet"); }
-    else if (b.dataset.eier) { const ep = await spor({ tittel: "Overfør eierskap", tekst: "Ny eier (legges til som medlem hvis hen ikke er det). Den gamle eieren blir medlem.", plass: "ny.eier@eksempel.no", ok: "Overfør" }); if (!ep) return; await kall("POST", "/steder/" + b.dataset.eier, { eier: ep }); melding("Eierskapet er overført"); }
-    else if (b.dataset.slett) { if (!(await spor({ tittel: "Slett «" + b.dataset.n + "»?", tekst: "Hjemmet og koblingene til enhetene slettes for alle medlemmene. Skriv navnet for å bekrefte.", krever: b.dataset.n, ok: "Slett for godt", farlig: true }))) return; await kall("DELETE", "/steder/" + b.dataset.slett); melding("Hjemmet er slettet"); }
+    else if (d.admin) { const v = d.v === "1"; await kall("POST", "/kontoer/" + encodeURIComponent(d.admin), { admin: v }); melding(v ? "Har nå tilgang til Valhalla" : "Valhalla-tilgangen er fjernet"); }
+    else if (d.legg) { const ep = await spor({ tittel: "Legg til medlem", tekst: "Personen ser hjemmet neste gang hen logger inn med denne e-postadressen.", plass: "navn@eksempel.no", ok: "Legg til" }); if (!ep) return; await kall("POST", "/steder/" + d.legg, { leggTil: ep }); melding("Medlemmet er lagt til"); }
+    else if (d.fjern) { if (!(await spor({ tittel: "Fjern " + d.fjern + "?", tekst: "Personen mister tilgangen til hjemmet.", ok: "Fjern", farlig: true }))) return; await kall("POST", "/steder/" + d.s, { fjern: d.fjern }); melding("Medlemmet er fjernet"); }
+    else if (d.eier) { const ep = await spor({ tittel: "Overfør eierskap", tekst: "Ny eier (legges til som medlem hvis hen ikke er det). Den gamle eieren blir medlem.", plass: "ny.eier@eksempel.no", ok: "Overfør" }); if (!ep) return; await kall("POST", "/steder/" + d.eier, { eier: ep }); melding("Eierskapet er overført"); }
+    else if (d.slett) { if (!(await spor({ tittel: "Slett «" + d.n + "»?", tekst: "Hjemmet og koblingene til enhetene slettes for alle medlemmene. Skriv navnet for å bekrefte.", krever: d.n, ok: "Slett for godt", farlig: true }))) return; await kall("DELETE", "/steder/" + d.slett); melding("Hjemmet er slettet"); }
     else return;
-    vis();
+    if (d.slett && SKUFF?.type === "hjem") lukkSkuff();
+    DATA.k = null; await vis();
+    if (SKUFF) await apneSkuff(SKUFF.type, SKUFF.id);
   } catch (err) { melding(err.message); }
 });
 
@@ -192,10 +392,14 @@ document.addEventListener("click", async (e) => {
     const r = await fetch("/api/hjem/meg", { credentials: "include" });
     MEG = await r.json();
     if (!r.ok) throw new Error(MEG.error || "ikke innlogget");
-    $("#meg").innerHTML = `<b>${esc(MEG.epost)}</b>${MEG.eier ? "Tjenesteeier" : MEG.valhalla ? "Administrator" : "Ingen tilgang"}`;
+    const megSelv = MEG.som ? MEG.som.admin : MEG.epost;
+    $("#meg").innerHTML = `<b>${esc(megSelv)}</b>${MEG.eier ? "Tjenesteeier" : MEG.valhalla ? "Administrator" : "Ingen tilgang"}`;
+    if (MEG.som) $("#somBanner").innerHTML = `<div class="som"><b>Du er logget inn som ${esc(MEG.epost)}</b><span class="sub" style="color:#d9c9a4">Skjold-hjem og konto-siden i denne nettleseren viser kontoen deres til kl. ${new Date(MEG.som.utloper * 1000).toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })}.</span><a class="k" href="/" style="display:inline-flex;align-items:center;text-decoration:none">Åpne Skjold-hjem</a><a class="k" href="/konto" style="display:inline-flex;align-items:center;text-decoration:none">Konto-siden</a><button class="k gull" data-somslutt>Avslutt</button></div>`;
     if (MEG.tofa && !MEG.tofaOk) { $("#main").innerHTML = '<div class="feil"><h2>Bekreft at det er deg</h2><p class="sub">Totrinnsbekreftelse er på for kontoen din. Bekreft denne nettleseren med passkey, kode eller fra en annen enhet.</p><p><a href="/konto?fra=/valhalla/">Bekreft på konto-siden</a></p></div>'; tegnNav(); return; }
     if (!MEG.valhalla) { $("#main").innerHTML = '<div class="feil"><h2>Ingen tilgang til Valhalla</h2><p class="sub">Valhalla er bare for tjenesteeieren og administratorer av Skjold Lab.</p><p><a href="/">Til Skjold-hjem</a></p></div>'; tegnNav(); return; }
-    vis();
+    MEG.eier = !!MEG.eier;
+    await vis();
+    const m = /^#(konto|hjem)=(.+)$/.exec(location.hash); if (m) apneSkuff(m[1], decodeURIComponent(m[2]));
   } catch (e) { $("#main").innerHTML = `<div class="feil"><h2>Logg inn på Skjold-hjem først</h2><p class="sub">${esc(e.message)}</p><p><a href="/">Logg inn</a></p></div>`; }
 })();
 </script>

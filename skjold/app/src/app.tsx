@@ -42,6 +42,7 @@ import { showToast, settings } from './lib/store';
 import { canSelfUpdate, fetchLatestAppRelease, installedAppVersion, isNewer } from './lib/appUpdate';
 import { GodkjennInnlogging } from './screens/godkjenn';
 import { LyrionPage } from './screens/lyrion';
+import { KontoAvatar } from './screens/kontokort';
 
 function useWide(): boolean {
   const q = '(min-width: 900px)';
@@ -269,6 +270,7 @@ function Desktop() {
             <span class="link-pill"><i style={{ background: online.value ? 'var(--green)' : 'var(--red)' }} />{online.value ? (s?.power ? 'På' : 'Standby') : 'Frakoblet'}</span>
             {!noRcol && <button class={'rc-toggle' + (rcol ? ' on' : '')} onClick={toggleRcol} aria-pressed={rcol} title={rcol ? 'Skjul rom' : 'Vis rom'}><Icon d="M4 5h16v14H4zM15 5v14" size={18} sw={1.6} /><span>Rom</span></button>}
             <PowerMenu s={s} />
+            <KontoAvatar px={40} />
           </div>
         </header>
         <Offline />
