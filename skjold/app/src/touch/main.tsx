@@ -17,7 +17,7 @@ import { groupAll, groupBusy, groupNone, groups, inGroup, loadGroup, removePrese
 import { qrMatrix } from '../lib/qr';
 import { canSeek, seekTo } from '../screens/player';
 import { lydProsent, spillKlokke, spillLyd, startTrykkelyder } from './lyd';
-import { alleOpen, AlleInnstillinger, oppdaterTrykk } from './innstillinger';
+import { AlleInnstillinger } from './innstillinger';
 import { hjulMål, Keyboard, MONO, Sheet, Slider, TekstFelt, useLongPress, useTekst, Wheel } from './ui';
 
 type Scr = 'now' | 'home' | 'smart' | 'alarm' | 'lib' | 'rooms' | 'set';
@@ -635,12 +635,11 @@ function KalKort({ nede = false }: { nede?: boolean }) {
 
 // ---------- Oppdatering av Skjold-enhetene (denne og de andre på nettet), som i web-UI ----------
 interface UpdInfo { current: string | null; latest: string | null; available: boolean; running: boolean; result: string | null; log: string[]; can_update: boolean; error: string | null; channel?: string }
-const oppdOpen = signal(false);
-effect(() => { if (oppdaterTrykk.value) oppdOpen.value = true; });
-function OppdateringSheet() {
+/** Oppdatering: stor versjon øverst (som i web-UI), «Oppdater nå», og de andre Skjold-enhetene under. */
+function OppdateringSide() {
   const enheter = [{ base: '', navn: local.value?.name || 'Denne Touch', produkt: 'touch' }, ...peers.value.map((p) => ({ base: p.base, navn: p.navn, produkt: p.produkt }))];
   const [info, setInfo] = useState<Record<string, UpdInfo | 'feil' | undefined>>({});
-  const [vis, setVis] = useState('');
+  const [vis, setVis] = useState(''), [sjekker, setSjekker] = useState(false);
   const hent = (base: string, sjekk = true) => getAt<UpdInfo>(base, '/api/update' + (sjekk ? '' : '?check=0')).then((r) => setInfo((o) => ({ ...o, [base]: r }))).catch(() => setInfo((o) => ({ ...o, [base]: 'feil' })));
   useEffect(() => { enheter.forEach((e) => void hent(e.base)); }, []);
   useEffect(() => {   // følg med mens noen oppdaterer (enheten starter tjenesten på nytt underveis)
@@ -648,33 +647,53 @@ function OppdateringSheet() {
     return () => window.clearInterval(t);
   }, [info]);
   const oppdater = (base: string) => { void postAt(base, '/api/update', {}).then(() => window.setTimeout(() => void hent(base, false), 800)); setInfo((o) => { const i = o[base]; return i && i !== 'feil' ? { ...o, [base]: { ...i, running: true } } : o; }); };
-  const klar = enheter.filter((e) => { const i = info[e.base]; return i && i !== 'feil' && i.available && !i.running && i.can_update; });
+  const sjekk = () => { setSjekker(true); void Promise.all(enheter.map((e) => hent(e.base))).finally(() => setSjekker(false)); };
+  const meg = info[''], m = meg && meg !== 'feil' ? meg : null;
+  const versjon = m ? (m.available ? m.latest : m.current) ?? m.latest ?? '–' : '…';
+  const andre = enheter.slice(1);
+  const klar = andre.filter((e) => { const i = info[e.base]; return i && i !== 'feil' && i.available && !i.running && i.can_update; });
   const pill = (på: boolean) => `height:36px;padding:0 14px;border-radius:18px;border:none;background:${på ? '#f0c46a' : '#242426'};color:${på ? '#0b0b0c' : '#f2f2ee'};font-size:12.5px;font-weight:600;white-space:nowrap`;
   return (
-    <Sheet title="Oppdatering" kicker="SKJOLD-ENHETENE" onClose={() => { oppdOpen.value = false; }} height={400}>
-      <div class="rull" style="overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:6px;padding:4px 16px 12px">
-        {klar.length > 1 && <button onClick={() => klar.forEach((e) => oppdater(e.base))} style={pill(true) + ';align-self:flex-start;margin-bottom:4px'}>Oppdater alle ({klar.length})</button>}
-        {enheter.map((e) => {
-          const i = info[e.base];
-          const tekst = i === undefined ? 'Sjekker …' : i === 'feil' ? 'Svarer ikke' : i.running ? 'Oppdaterer … ' + (i.log[i.log.length - 1] ?? '').slice(0, 60)
-            : i.available ? 'Ny versjon: ' + (i.latest ?? '') + ' (har ' + (i.current ?? '?') + ')' : i.error ? i.error : 'Oppdatert · ' + (i.current ?? i.latest ?? '');
-          return (
-            <div key={e.base || 'meg'} style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;background:#141415;border:1px solid #242426">
-              <div style="display:flex;align-items:center;gap:12px">
-                <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
-                  <span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{e.navn}{e.base ? '' : ' (denne)'}</span>
-                  <span style={`font-size:11.5px;color:${i && i !== 'feil' && i.available ? '#f0c46a' : '#8b8b86'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{tekst}</span>
-                </span>
-                {i && i !== 'feil' && i.running && <span class="caret" style="width:10px;height:10px;border-radius:5px;background:#f0c46a" />}
-                {i && i !== 'feil' && !i.running && i.available && i.can_update && <button onClick={() => oppdater(e.base)} style={pill(true)}>Oppdater</button>}
-                {i && i !== 'feil' && !!i.log.length && <button onClick={() => setVis(vis === e.base ? '-' : e.base)} style={pill(false)}>{vis === e.base ? 'Skjul logg' : 'Logg'}</button>}
-              </div>
-              {vis === e.base && i && i !== 'feil' && <pre style={`margin:0;max-height:120px;overflow:auto;font-family:${MONO};font-size:10px;line-height:1.4;color:#a8a8a3;white-space:pre-wrap`}>{i.log.slice(-12).join('\n')}</pre>}
-            </div>);
-        })}
-        <span style="font-size:11.5px;color:#6b6b67;padding:4px 2px">Enheten starter tjenesten på nytt etter oppdateringen. Touch selv laster skjermen på nytt når den er ferdig.</span>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font-size:20px;font-weight:600">Oppdatering</span>
+      <div class="oppd-helt">
+        <button class="rip oppd-sjekk" onClick={sjekk} disabled={sjekker}>{sjekker ? 'Sjekker …' : 'Se etter oppdatering'}</button>
+        <b class="oppd-ver">{versjon}</b>
+        <span style="font-size:15px;color:#e8e4da">{!m ? (meg === 'feil' ? 'Får ikke kontakt' : 'Sjekker …') : m.running ? 'Oppdaterer …' : m.available ? 'Oppdatering tilgjengelig' : m.error ? m.error : 'Du har nyeste versjon'}</span>
+        <span style="font-size:34px;line-height:1;letter-spacing:-.02em"><b style="font-weight:700">Skjold</b><span style="font-weight:300;color:#c9c4b8">OS</span></span>
+        <span style="font-size:12.5px;color:#f0c46a">Touch · {m?.channel === 'beta' ? 'betakanal' : 'stabil kanal'}</span>
       </div>
-    </Sheet>
+      {m && m.running && <div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:14px;background:#141415;border:1px solid #242426">
+        <span style="display:flex;align-items:center;gap:8px;font-size:13px"><i class="caret" style="width:9px;height:9px;border-radius:5px;background:#f0c46a" />Oppdaterer – skjermen starter på nytt når den er ferdig</span>
+        <pre style={`margin:0;max-height:90px;overflow:auto;font-family:${MONO};font-size:10px;line-height:1.4;color:#a8a8a3;white-space:pre-wrap`}>{m.log.slice(-6).join('\n')}</pre></div>}
+      {m && !m.running && m.available && m.can_update && <div style="display:flex;align-items:center;gap:16px">
+        <button class="rip oppd-na" onClick={() => oppdater('')}>Oppdater nå</button>
+        <span style="font-size:12.5px;color:#a9a9a3;line-height:1.4">Ca. 2 minutter · Skjold starter på nytt og musikken stopper et øyeblikk</span></div>}
+      <div style="display:flex;flex-direction:column;border-radius:14px;border:1px solid #242426;background:#141415">
+        {([['Programvareversjon', m ? 'Du har ' + (m.current ?? '–') : '–'], ['Nyeste versjon', m?.latest ?? '–']] as [string, string][]).map(([n, v], i) => (
+          <div key={n} style={`display:flex;align-items:center;min-height:50px;padding:0 16px;border-top:1px solid ${i ? '#1f1f21' : 'transparent'}`}><span style="flex:1;font-size:14px">{n}</span><span style={`font-family:${MONO};font-size:12.5px;color:#c9c9c4`}>{v}</span></div>))}
+      </div>
+      {andre.length > 0 && <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px"><span style="font-size:15px;font-weight:600">Andre Skjold-enheter</span>
+        {klar.length > 1 && <button onClick={() => klar.forEach((e) => oppdater(e.base))} style={pill(true)}>Oppdater alle ({klar.length})</button>}</div>}
+      {andre.map((e) => {
+        const i = info[e.base];
+        const tekst = i === undefined ? 'Sjekker …' : i === 'feil' ? 'Svarer ikke' : i.running ? 'Oppdaterer … ' + (i.log[i.log.length - 1] ?? '').slice(0, 60)
+          : i.available ? 'Ny versjon: ' + (i.latest ?? '') + ' (har ' + (i.current ?? '?') + ')' : i.error ? i.error : 'Oppdatert · ' + (i.current ?? i.latest ?? '');
+        return (
+          <div key={e.base} style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;background:#141415;border:1px solid #242426">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{e.navn}</span>
+                <span style={`font-size:11.5px;color:${i && i !== 'feil' && i.available ? '#f0c46a' : '#8b8b86'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{tekst}</span>
+              </span>
+              {i && i !== 'feil' && i.running && <span class="caret" style="width:10px;height:10px;border-radius:5px;background:#f0c46a" />}
+              {i && i !== 'feil' && !i.running && i.available && i.can_update && <button onClick={() => oppdater(e.base)} style={pill(true)}>Oppdater</button>}
+              {i && i !== 'feil' && !!i.log.length && <button onClick={() => setVis(vis === e.base ? '-' : e.base)} style={pill(false)}>{vis === e.base ? 'Skjul logg' : 'Logg'}</button>}
+            </div>
+            {vis === e.base && i && i !== 'feil' && <pre style={`margin:0;max-height:120px;overflow:auto;font-family:${MONO};font-size:10px;line-height:1.4;color:#a8a8a3;white-space:pre-wrap`}>{i.log.slice(-12).join('\n')}</pre>}
+          </div>);
+      })}
+    </div>
   );
 }
 
@@ -1167,14 +1186,10 @@ function Setup() {
       </div>)],
     ...(TABLET?.oppdaterApp ? [['Skjold-appen', 'Versjon ' + (TABLET.appVersjon?.() ?? '?') + ' på nettbrettet', one('Oppdater', () => { try { TABLET.oppdaterApp?.(); } catch { /* */ } })] as [string, string, preact.ComponentChildren]] : []),
     ...(TABLET ? [['Skjold-enhet', 'Nettbrettet styrer ' + (local.value?.name || location.hostname) + ' (' + location.host + ')', one('Bytt', () => { try { TABLET.velgEnhet(); } catch { /* */ } })] as [string, string, preact.ComponentChildren]] : []),
-    ['Alle innstillinger', 'Lyd, EQ, kilder, tilkobling, stemme, skjerm og resten – det samme som i web-UI', one('Åpne', () => { alleOpen.value = true; })],
-    ['Oppdatering', 'Se versjon og oppdater denne og de andre Skjold-enhetene', one('Åpne', () => { oppdOpen.value = true; })],
     ['Om enheten', [local.value?.name, location.hostname, local.value?.version ? 'versjon ' + local.value.version : ''].filter(Boolean).join(' · '), <span style={`font-family:${MONO};font-size:10px;letter-spacing:.1em;color:#6b6b67;white-space:nowrap`}>SKJOLD TOUCH</span>]
   ];
   return (
-    <section class="inn" style="flex:1;display:flex;flex-direction:column;gap:12px;padding:14px 22px 12px;min-height:0">
-      <span style="font-size:20px;font-weight:600">Innstillinger</span>
-      <div class="rull" style="display:flex;flex-direction:column;border-radius:14px;border:1px solid #242426;background:#141415;overflow-y:auto;min-height:0;touch-action:pan-y">
+      <div style="display:flex;flex-direction:column;border-radius:14px;border:1px solid #242426;background:#141415">
         {rows.map(([n, hint, ctrl], i) => (
           <div key={n} style={`display:flex;align-items:center;gap:14px;min-height:58px;padding:0 16px;border-top:1px solid ${i ? '#1f1f21' : 'transparent'};flex-shrink:0`}>
             <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:14px">{n}</span><span style="font-size:11.5px;color:#8b8b86">{hint}</span></span>
@@ -1182,7 +1197,6 @@ function Setup() {
           </div>
         ))}
       </div>
-    </section>
   );
 }
 
@@ -2518,7 +2532,7 @@ function App() {
         {cur === 'alarm' && <AlarmPage />}
         {cur === 'lib' && <Library />}
         {cur === 'rooms' && <Rooms />}
-        {cur === 'set' && <Setup />}
+        {cur === 'set' && <AlleInnstillinger touch={<Setup />} oppdatering={<OppdateringSide />} />}
         {cur !== 'now' && (
           <button onClick={() => { scr.value = 'now'; }} style="flex-shrink:0;height:58px;margin:0 14px 10px;border-radius:16px;border:1px solid #27272a;background:#151516;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;padding:0 10px;text-align:left">
             <div style={`width:42px;height:42px;border-radius:9px;background:${artOf(s)}`} />
@@ -2548,8 +2562,6 @@ function App() {
         {camOpen.value && cur === 'smart' && <CamView />}
         {saverOpen.value && cur === 'set' && <SaverSheet />}
         {wifiOpen.value && cur === 'set' && <WifiSetup />}
-        {alleOpen.value && cur === 'set' && <AlleInnstillinger />}
-        {oppdOpen.value && cur === 'set' && <OppdateringSheet />}
         {gruppeOpen.value && cur === 'rooms' && <GruppeSheet />}
         {talkOpen.value && <Intercom />}
         {talking && <Voice />}

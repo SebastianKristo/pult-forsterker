@@ -83,9 +83,12 @@ export function go(page: Page, cat?: string): void {
   route.value = cat ? { page, cat } : { page };
   fullPlayer.value = false;
   if (!same) pushNav();
-  // Telefon: ny side starter øverst. PC: sidemenyen står fast, så siden skal ikke hoppe til toppen ved hvert klikk
-  // (og aldri når man blir på samme side, f.eks. ved valg i innstillingene).
-  if (!same && typeof window !== 'undefined' && window.innerWidth < 900) window.scrollTo({ top: 0 });
+  // En ny side (eller en ny innstillingskategori, som Oppdatering) starter alltid øverst – også på PC, der siden ellers
+  // åpnet like langt ned som den forrige var rullet. Blir man på samme side (valg i innstillingene), står den stille.
+  if (!same && typeof window !== 'undefined') {
+    window.scrollTo({ top: 0 });
+    requestAnimationFrame(() => { window.scrollTo({ top: 0 }); for (const el of document.querySelectorAll<HTMLElement>('main.main, .scroll')) el.scrollTop = 0; });
+  }
 }
 export function openFull(): void { if (!fullPlayer.value) { fullPlayer.value = true; pushNav(); } }
 /** Lukk fullskjermspilleren: gå tilbake i historikken hvis den ble åpnet med openFull, ellers bare lukk. */

@@ -76,3 +76,11 @@ button:active:not(:disabled):not(.flat) { transform: scale(.95); opacity: .85; t
 .rippel.ut { opacity: 0; transition: opacity .4s ease; }
 @keyframes rippel { to { transform: scale(1); } }
 button:active:not(:disabled):not(.flat).qflis { transform: scale(.94); opacity: 1; }
+
+/* ── Oppdatering: stor versjon på gullgradient (som i web-UI) ── */
+.oppd-helt { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 4px; padding: 20px 24px 22px; border-radius: 22px; border: 1px solid #2a2a2c;
+  background: radial-gradient(120% 90% at 0% 100%, rgba(217,164,65,.38), transparent 55%), radial-gradient(70% 70% at 100% 100%, rgba(140,60,30,.35), transparent 60%), linear-gradient(160deg, #141416, #0e0e10); }
+.oppd-helt::after { content: ''; position: absolute; width: 520px; height: 520px; right: -200px; top: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.06); pointer-events: none; }
+.oppd-ver { font-size: 76px; line-height: 1; font-weight: 700; letter-spacing: -.03em; background: linear-gradient(180deg, #fbe3a8, #e2a948); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+.oppd-sjekk { position: absolute; top: 16px; right: 16px; overflow: hidden; height: 38px; padding: 0 16px; border-radius: 19px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.04); color: #f2f2ee; font-size: 13px; font-weight: 600; z-index: 1; }
+.oppd-na { position: relative; overflow: hidden; height: 54px; padding: 0 34px; border-radius: 27px; border: none; background: #e0a845; color: #0b0b0c; font-size: 16px; font-weight: 700; flex-shrink: 0; box-shadow: 0 10px 30px rgba(224,168,69,.25); }
