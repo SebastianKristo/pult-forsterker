@@ -108,6 +108,12 @@ Slik sitter den:
 - Glasset ligger i en lomme i undersiden av toppanelet (0,4 mm klaring rundt, 0,15 mm over), og kortet ligger flatt mot undersiden av panelet. Det er utsparinger for flatkabelen (foran) og loddingen i pinneraden (bak).
 - Vinduet er 56,6 × 29,0 mm (det aktive området + 0,6 mm rundt, innenfor det synlige området), sentrert over det aktive området, med 45° fas opp mot ruta (62 × 34 mm).
 - Kortet holdes oppe av knappeholderens to sidevanger. De ligger under de ytterste 2 mm av kortet på hver side (x = ±33,0…35,0, utenfor hullene). Der må baksiden av kortet være fri for komponenter. Det er ingen skruer. Med `knappefeste = "hullkort"` får toppanelet i stedet fire Ø1,8-hull for M2 × 6 selvgjengende skruer i kortets hull.
+- **Sidevangene stanger ikke mot kortet:** oversiden ligger 0,5 mm under kortet, så det er bare klemribbene (med 6 mm
+  lange skrå ramper i begge ender) som løfter kortet på plass mens holderen skyves inn. Glasslomma har 0,6 mm klaring
+  rundt glasset, så moduler som er litt større enn tegningen også går inn.
+- **Skjermen din har andre mål?** Mål kort og glass og bygg på nytt med dine tall, for eksempel
+  `openscad -D pcbW=72.0 -D pcbH=49.0 -D glW=64.0 -D glH=40.0 -D 'part="kropp"' -o stl/kropp.stl skjold_rost.scad`
+  (og det samme for `knappeholder`). `./lag_stl.sh` sjekker at alt passer.
 - **Mål din modul før du printer:** hvor langt det er fra kortets nedre kant (flatkabelsiden) til det aktive området, og hullavstanden i høyden. Avviker de, juster `glOffV`/`aaOffV` (vinduet følger det aktive området) og `hullKant`.
 
 ## Knappeholderen
@@ -224,7 +230,7 @@ SKJOLD-logoen er et eget legeme (`logo.stl`) som ligger 0,6 mm inn i frontplaten
 5. Lodd fire ledninger rett på pinneraden på skjermkortet, fra baksiden (ingen pinner). Legg skjermen med glasset ned i lomma under vinduet, med pinneraden bakover og flatkabelen fremover.
 6. Sett de fem knappehettene i hullene fra innsiden: av/på til venstre (sett forfra), så 1–4. Flensen holder dem. Smør gjerne litt silikonfett rundt hettene.
 7. Gjør klar knappeholderen (se [Knappeholderen](#knappeholderen)): bøy beina ut, trykk bryterne ned i lommene med stempelet opp, lodd GND-bussen over de fremre beina og én signalledning på hver bryter, klipp det bakre venstre beinet og legg ledningene i kammen.
-8. Skyv knappeholderen inn i takrommet forfra, med bryterne mot toppen, mellom styrelistene i gulvet, til forkanten er 0,3 mm innenfor kroppens forkant. Sidevangene glir inn under kanten av skjermkortet og trykker det opp. Holderen sitter stramt; frontplaten låser den.
+8. Skyv knappeholderen inn i takrommet forfra, med bryterne mot toppen, mellom styrelistene i gulvet, til forkanten er 0,3 mm innenfor kroppens forkant. Klemribbene på sidevangene glir inn under kanten av skjermkortet på skrå ramper og trykker det opp – kortet kan ikke stange mot vangene. Holderen sitter stramt; frontplaten låser den.
 9. Trekk ledningene fra skjerm og knapper bakover under skjermkortet, gjennom hullet i takrommets gulv og ned i kammeret. Tett hullet med silikon.
 10. Monter EC11 gjennom toppen innenfra (bak takrommet). Trykk TPU-kragen ned over akselen i forsenkningen, og trykk på knotten.
 11. Legg elektronikken i rommet under gulvet:
