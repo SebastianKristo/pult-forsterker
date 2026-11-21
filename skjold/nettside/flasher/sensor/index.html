@@ -45,10 +45,16 @@
 <section class="side-topp"><div class="etikett">SKJOLD SENSOR · TEMPERATUR, FUKT, LYS OG BEVEGELSE · FASTVARE</div><h1>Installer fastvaren</h1><p style="margin:20px auto 0;max-width:620px;font-size:19px;line-height:1.5;color:var(--demp-l)">Koble sensoren (ESP32 DevKit eller Wemos D1 mini) til PC-en med USB-kabelen og trykk på knappen. Nettleseren finner selv ut hvilket kort det er. Wi-Fi settes opp rett etterpå. Det virker i Chrome og Edge på PC og Mac, og i Skjold Flasher.</p>
 <div class="knapper" style="justify-content:center;margin-top:30px;gap:14px;flex-wrap:wrap">
 <esp-web-install-button manifest="/flasher/sensor/manifest.json">
-<button slot="activate" class="knapp knapp-m">Installer på sensoren</button>
+<button slot="activate" class="knapp knapp-m">Installer: temperatur, fukt, lys og bevegelse</button>
 <span slot="unsupported">Nettleseren din kan ikke flashe over USB. Bruk Chrome eller Edge på PC eller Mac, eller Skjold Flasher.</span>
 <span slot="not-allowed">Siden må åpnes over https for å flashe.</span>
 </esp-web-install-button>
+</div>
+<p style="margin:26px auto 10px;max-width:620px;font-size:16px;color:var(--demp-l)">Har sensoren din bare noen av delene? Velg den som passer, så viser Home Assistant og Homey bare det den faktisk måler:</p>
+<div class="knapper" style="justify-content:center;gap:12px;flex-wrap:wrap">
+<esp-web-install-button manifest="/flasher/sensor/lys/manifest.json"><button slot="activate" class="knapp">Temperatur, fukt og lys</button></esp-web-install-button>
+<esp-web-install-button manifest="/flasher/sensor/klima/manifest.json"><button slot="activate" class="knapp">Bare temperatur og fukt</button></esp-web-install-button>
+<esp-web-install-button manifest="/flasher/sensor/bevegelse/manifest.json"><button slot="activate" class="knapp">Temperatur, fukt og bevegelse</button></esp-web-install-button>
 </div></section>
 <section class="seksjon hvit"><div class="innhold" style="max-width:760px">
 <h2 class="h2">Slik gjør du</h2>

@@ -137,6 +137,21 @@ for k, tittel in (("esp32", "ESP32-WROOM DevKit"), ("d1mini", "Wemos D1 mini"), 
         (f"{k}/gull", "Gullist og SKJOLD (felt inn i lokket)", 3, None, f"{k}/lokk"),
         (f"{k}/stativ", "Bordstativ (på siden, valgfritt)", 2, (120, 10), None)], {1: "#ECE9E3", 2: "#2E2D2C", 3: "#D99E40"})
 
+# de enklere modellene: samme bunn, gullist og stativ, men lokket uten det sensoren ikke har
+MODELLER = {"lys": ("lokk_uten_pir", "Lys – temperatur, fukt og lys", "Lokk med lysvindu, uten PIR"),
+            "klima": ("lokk_enkel", "Klima – temperatur og fukt", "Lokk uten PIR og lysvindu"),
+            "bevegelse": ("lokk_uten_lux", "Bevegelse – temperatur, fukt og bevegelse", "Lokk med PIR, uten lysvindu")}
+for k, tittel in (("esp32", "ESP32-WROOM DevKit"), ("d1mini", "Wemos D1 mini"), ("esp32d1", "ESP32 D1 mini, USB bak"),
+                  ("d1mini_bak", "Wemos D1 mini USB-C, USB bak")):
+    for mod, (lokk, navn, lokknavn) in MODELLER.items():
+        L.OBJ_INNST = {f"{k}/bunn": BRIM, f"{k}/{lokk}": BRIM, f"{k}/stativ": {"enable_support": "0"}}
+        kk = "d1mini-usbbak" if k == "d1mini_bak" else k
+        L.write(f"skjold-sensor-{mod}-{kk}-k2.3mf", f"Skjold Sensor {navn} ({tittel}) – bunn, lokk med gullist og bordstativ (PETG/PLA)", [
+            (f"{k}/bunn", "Bunn (baksiden ned)", 1, (10, 10), None),
+            (f"{k}/{lokk}", lokknavn + " (forsiden ned)", 1, (10, 100), None),
+            (f"{k}/gull", "Gullist og SKJOLD (felt inn i lokket)", 3, None, f"{k}/{lokk}"),
+            (f"{k}/stativ", "Bordstativ (på siden, valgfritt)", 2, (120, 10), None)], {1: "#ECE9E3", 2: "#2E2D2C", 3: "#D99E40"})
+
 print("ALT OK" if ok else "NOE FEILET")
 
 # 5. bilder (OpenSCAD, Tomorrow, 1600 × 1100), lys og mørk
@@ -167,11 +182,15 @@ if "bilder" in sys.argv:
               ("16_d1mini_bak_bak_lys", "samlet", "110,160,-35,0,-15,28", "lys", "d1mini_bak"),
               ("17_d1mini_bak_inni_lys", "inni", "35,-150,140,0,-5,32", "lys", "d1mini_bak"),
               ("18_d1mini_bak_stativ_lys", "stativ_samlet", "170,-185,110,0,-10,24", "lys", "d1mini_bak"),
-              ("19_lokk_inni_lys", "lokk_inni", "70,-40,-120,0,30,24", "lys", "d1mini")]
+              ("19_lokk_inni_lys", "lokk_inni", "70,-40,-120,0,30,24", "lys", "d1mini"),
+              ("20_modell_lys", "samlet", "0,-200,20,0,-14,36", "lys", "d1mini", "false", "true"),
+              ("21_modell_klima", "samlet", "0,-200,20,0,-14,36", "lys", "d1mini", "false", "false"),
+              ("22_modell_bevegelse", "samlet", "0,-200,20,0,-14,36", "lys", "d1mini", "true", "false")]
     procs = []
     BILDER = [b for b in BILDER if not valg or any(b[0].startswith(v) for v in valg)]
-    for fil, part, cam, farge, k in BILDER:
-        procs.append(subprocess.Popen(["openscad", "-q", "--colorscheme=Tomorrow", "--imgsize=1600,1100", "--projection=p",
+    for fil, part, cam, farge, k, *pl in BILDER:
+        pir_lux = ["-D", f"pir={pl[0]}", "-D", f"lux={pl[1]}"] if pl else []
+        procs.append(subprocess.Popen(["openscad", "-q", "--colorscheme=Tomorrow", "--imgsize=1600,1100", "--projection=p", *pir_lux,
                                              f"--camera={cam}", "-D", f'part="{part}"', "-D", f'kort="{k}"', "-D", f'farge="{farge}"',
                                              "-D", "vis=true", "-o", f"render/{fil}.png", SC], env=env))
     kjor(procs)
