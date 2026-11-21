@@ -1874,44 +1874,92 @@ const qSlipp = (e: PointerEvent) => {
 addEventListener('pointerup', qSlipp, { capture: true });
 addEventListener('pointercancel', qSlipp, { capture: true });
 
+/** Stor glider som i kontrollsenteret på telefonen: hele pillen er trykkflate, fyllet viser nivået. */
+function PilleGlid({ ikon, verdi, min = 0, sett, live, navn }: { ikon: string; verdi: number; min?: number; sett: (n: number) => void; live?: (n: number) => void; navn: string }) {
+  const [v, setV] = useState<number | null>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const vis = Math.max(min, Math.min(100, v ?? verdi));
+  const fra = (x: number) => { const r = ref.current!.getBoundingClientRect(); return Math.round(Math.max(min, Math.min(100, ((x - r.left) / r.width) * 100))); };
+  return (
+    <div ref={ref} role="slider" aria-label={navn} aria-valuenow={vis} class={'qglid' + (v !== null ? ' aktiv' : '')}
+      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); const n = fra(e.clientX); setV(n); live?.(n); }}
+      onPointerMove={(e) => { if (v === null) return; const n = fra(e.clientX); if (n !== v) { setV(n); live?.(n); } }}
+      onPointerUp={(e) => { if (v === null) return; sett(fra(e.clientX)); setV(null); }} onPointerCancel={() => setV(null)}>
+      <div class="fyll" style={`transform:scaleX(${vis / 100})`} />
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><path d={ikon} /></svg>
+      <span style="position:relative;flex:1;font-size:13px;font-weight:600">{navn}</span>
+      <span style={`position:relative;font-family:${MONO};font-size:13px;font-variant-numeric:tabular-nums`}>{vis}</span>
+    </div>);
+}
+
 function QuickPanel() {
   const S = settings.value, st = status.value;
   const night = (S.tNightMode ?? 0) === 3;
+  const [nå, setNå] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setNå(new Date()), 15000); return () => clearInterval(t); }, []);
   const lukk = () => { qLukk(); };
-  const knapp = (navn: string, d: string, gjor: () => void, på = false) => (
-    <button onClick={() => { gjor(); }} style={`display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:78px;border-radius:16px;border:1px solid ${på ? '#d9a441' : '#2a2a2c'};background:${på ? '#1c170d' : '#161617'};color:${på ? '#f0c46a' : '#f2f2ee'};font-size:12px;font-weight:600;min-width:0`}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={d} /></svg>{navn}</button>);
+  // Flis: ikon i en sirkel, navn og tilstand. På = gull. Rippel fra fingeren (se rippel() nedenfor) + fjærende trykk.
+  const flis = (navn: string, d: string, gjor: () => void, på = false, under?: string, i = 0) => (
+    <button class={'qflis rip' + (på ? ' på' : '') + (navn === 'Nattmodus' ? ' måne' : '')} onClick={() => { gjor(); }} style={`animation-delay:${60 + i * 28}ms`} aria-pressed={på}>
+      <span class="sirkel"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={d} /></svg></span>
+      <span class="tekst"><b>{navn}</b>{under !== undefined && <small>{under}</small>}</span>
+    </button>);
   const gå = (sk: Scr, f?: () => void) => () => { lukk(); wake(); scr.value = sk; f?.(); };   // snarveier vekker skjermen
   const lys = S.tBright ?? 100, vol = st?.volume ?? 0;
-  const glid = (ikon: string, v: number, sett: (n: number) => void, live?: (n: number) => void) => (
-    <div style="display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;border-radius:16px;background:#161617;border:1px solid #2a2a2c">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9c9c4" stroke-width="1.8" stroke-linecap="round"><path d={ikon} /></svg>
-      <input type="range" min={0} max={100} value={v} onInput={(e) => live?.(+(e.currentTarget as HTMLInputElement).value)} onChange={(e) => sett(+(e.currentTarget as HTMLInputElement).value)} style="flex:1;accent-color:#f0c46a;height:30px" />
-      <span style={`font-family:${MONO};font-size:12px;color:#c9c9c4;width:34px;text-align:right`}>{v}</span>
-    </div>);
+  const tittel = st?.title || st?.radio_now?.name || st?.station || '';
+  const MÅNE = 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z';
   return (
     <div data-ss-tip style="position:absolute;inset:0;z-index:40">
-      <div data-qgrip ref={(el) => { qEl.dim = el; }} onClick={lukk} style={`position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:${Math.max(0, Math.min(1, qP))};transition:${qAnim ? `opacity ${Q_MS}ms ease` : 'none'};touch-action:none`} />
-      <div ref={(el) => { qEl.panel = el; }} style={`position:absolute;left:0;right:0;top:0;transform:${qStil(qP)};transition:${qAnim ? `transform ${Q_MS}ms ${Q_KURVE}` : 'none'};will-change:transform;background:#0f0f10;border-bottom:1px solid #2a2a2c;border-radius:0 0 22px 22px;padding:14px 18px 10px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 50px rgba(0,0,0,.6)`}>
-        {glid('M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', lys, (n) => setSetting('tBright', Math.max(20, n)))}
-        {glid('M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6', vol, (n) => setVolume(n, true), (n) => setVolume(n))}
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
-          {knapp('Skjermsparer', 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', () => { lukk(); goIdle(); })}
-          {knapp('Nattmodus', 'M12 3v2M5 12H3M21 12h-2M7 7L5.6 5.6M17 7l1.4-1.4M8 16a4 4 0 1 1 8 0', () => { setSetting('tNightMode', night ? 0 : 3); setSetting('tNight', false); }, night)}
-          {knapp('Rom', 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', gå('rooms'))}
-          {knapp('Søk', 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', gå('lib', () => { searchOpen.value = true; }))}
-          {knapp('Kameraer', 'M3 7h12v10H3zM15 10l6-3v10l-6-3', gå('smart', () => { camOpen.value = true; }))}
-          {knapp('Wi-Fi', 'M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01', gå('set', () => { wifiOpen.value = true; }))}
-          {knapp('Smarthus', 'M3 11l9-7 9 7v9H3zM9 20v-6h6v6', gå('smart'))}
-          {knapp('Oppsett', 'M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4', gå('set'))}
+      <div data-qgrip ref={(el) => { qEl.dim = el; }} onClick={lukk} class="qdim" style={`opacity:${Math.max(0, Math.min(1, qP))};transition:${qAnim ? `opacity ${Q_MS}ms ease` : 'none'}`} />
+      <div ref={(el) => { qEl.panel = el; }} class="qpanel" style={`transform:${qStil(qP)};transition:${qAnim ? `transform ${Q_MS}ms ${Q_KURVE}` : 'none'}`}>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:2px 4px 2px">
+          <span style="display:flex;flex-direction:column;line-height:1"><b style="font-size:30px;font-weight:300;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{nå.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}</b>
+            <span style="font-size:12px;color:#8b8b86;margin-top:4px;text-transform:capitalize">{nå.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })}</span></span>
+          <span style="display:flex;gap:6px;align-items:center">
+            <span class="qchip"><i style={`background:${online.value ? '#6fcf7f' : '#e05a4a'}`} />{online.value ? 'Tilkoblet' : 'Frakoblet'}</span>
+            {night && <span class="qchip gull"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d={MÅNE} /></svg>Natt</span>}
+          </span>
         </div>
-        <div data-qgrip style="align-self:stretch;display:flex;justify-content:center;align-items:center;height:34px;margin:-4px -18px -10px;touch-action:none;cursor:grab" aria-label="Dra opp for å lukke">
-          <div style="width:52px;height:5px;border-radius:3px;background:#4a4a4e" />
+        {tittel && <div class="qspiller qinn" style="animation-delay:40ms">
+          <span class="cover" style={`background:${artOf(st)}`} />
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{tittel}</b><span style="font-size:12px;color:#a9a9a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{st?.artist || srcName(st)}</span></span>
+          <button class="rip rund" onClick={playPause} style="background:#f2f2ee;width:40px;height:40px" aria-label={st?.playing ? 'Pause' : 'Spill'}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0b0b0c"><path d={st?.playing ? PAUSE_D : PLAY_D} /></svg></button>
+          <button class="rip rund" onClick={() => void act(() => api.transport('next'))} aria-label="Neste"><svg width="20" height="20" viewBox="0 0 24 24" fill="#f2f2ee"><path d="M5 5.5v13a.8.8 0 0 0 1.25.66L15 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.25 4.84A.8.8 0 0 0 5 5.5z" /></svg></button>
+        </div>}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="qinn">
+          <PilleGlid navn="Lysstyrke" ikon="M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" verdi={lys} min={20} sett={(n) => setSetting('tBright', n)} />
+          <PilleGlid navn="Volum" ikon="M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6" verdi={vol} sett={(n) => setVolume(n, true)} live={(n) => setVolume(n)} />
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
+          {flis('Nattmodus', MÅNE, () => { setSetting('tNightMode', night ? 0 : 3); setSetting('tNight', false); }, night, night ? 'På' : 'Av', 0)}
+          {flis('Skjermsparer', 'M3 5h18v12H3zM8 21h8M12 17v4', () => { lukk(); goIdle(); }, false, 'Nå', 1)}
+          {flis('Rom', 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', gå('rooms'), false, undefined, 2)}
+          {flis('Søk', 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', gå('lib', () => { searchOpen.value = true; }), false, undefined, 3)}
+          {flis('Kameraer', 'M3 7h12v10H3zM15 10l6-3v10l-6-3', gå('smart', () => { camOpen.value = true; }), false, undefined, 4)}
+          {flis('Wi-Fi', 'M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01', gå('set', () => { wifiOpen.value = true; }), online.value, online.value ? 'Tilkoblet' : 'Av', 5)}
+          {flis('Smarthus', 'M3 11l9-7 9 7v9H3zM9 20v-6h6v6', gå('smart'), false, undefined, 6)}
+          {flis('Oppsett', 'M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4', gå('set'), false, undefined, 7)}
+        </div>
+        <div data-qgrip style="align-self:stretch;display:flex;justify-content:center;align-items:center;height:30px;margin:-2px -18px -10px;touch-action:none" aria-label="Dra opp for å lukke">
+          <div style="width:44px;height:5px;border-radius:3px;background:#4a4a4e" />
         </div>
       </div>
     </div>
   );
 }
+
+// ---------- rippel: som på Android/iOS – en myk bølge fra fingeren på knapper og fliser ----------
+addEventListener('pointerdown', (e) => {
+  const b = (e.target as HTMLElement | null)?.closest?.('button.rip, button.qflis, [data-rip]') as HTMLElement | null;
+  if (!b || (b as HTMLButtonElement).disabled) return;
+  const r = b.getBoundingClientRect(), d = Math.hypot(Math.max(e.clientX - r.left, r.right - e.clientX), Math.max(e.clientY - r.top, r.bottom - e.clientY)) * 2;
+  const w = document.createElement('span');
+  w.className = 'rippel';
+  w.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+  b.appendChild(w);
+  const bort = () => { w.classList.add('ut'); window.setTimeout(() => w.remove(), 420); removeEventListener('pointerup', bort); removeEventListener('pointercancel', bort); };
+  addEventListener('pointerup', bort); addEventListener('pointercancel', bort);
+}, { capture: true });
 
 // ---------- Dørlås (Home Assistant) til «Lås opp» når det ringer på ----------
 interface LasVal { ok: boolean; locks: { id: string; name: string }[]; valgt: string; bruker: string; error?: string }
