@@ -112,7 +112,7 @@ fpcW = 12.64; fpcL = 2.0;        // flatkabelen: bredde, og hvor langt den stikk
 hdrN = 4; hdrFraKant = 2.3;      // pinneraden: 4 × 2,54 mm, senter ca. 2,3 mm fra kortets øvre kant
 pcbV = 44.5;                     // kortets senter (lokal v)
 dispV = pcbV + glOffV + aaOffV;  // senter av det aktive området = vinduets senter
-glKl = 0.4;                      // klaring rundt glasset i lomma (og 0,15 mm over det)
+glKl = 0.6;                      // klaring rundt glasset i lomma (moduler varierer litt), og 0,2 mm over det
 winW = actW + 1.2; winH = actH + 1.2;   // vindu (0,6 mm utenfor det aktive området, innenfor VA), 45° fas utover mot ruta
 ruteW = 62; ruteH = 34; ruteT = 1.5;    // klar rute (akryl 1,5 mm eller klar PETG) i toppen
 tapeT = 0.2;                     // tynn dobbeltsidig skumtape / lim under ruta (ikke TPU)
@@ -160,8 +160,8 @@ bakRibTop = wFl - 0.8;           // bakre ribbe: under flensen også når knappe
 khXiF = btnX[4] + flD / 2 + 1.2; // sidevangene foran: utenfor flensene
 khXiB = dHoleX + hullD / 2 + 0.2;// under skjermkortet: innenfor kortets kant, utenfor hullene
 khXo = pcbW / 2 + 4.4;           // sidevangenes ytterkant
-khTop = -tp - pcbT - 0.1;        // sidevangenes overside (0,1 mm under skjermkortet) …
-klemH = 0.2;                     // … med en klemribbe som står 0,1 mm opp i kortet
+khTop = -tp - pcbT - 0.5;        // sidevangenes overside (0,5 mm under skjermkortet, så kortet aldri stanger mot dem) …
+klemH = 0.6;                     // … med en klemribbe som står 0,1 mm opp i kortet, med lange ramper i begge ender
 khVEnd = vB - 1;                 // sidevangene slutter 1 mm foran takrommets bakvegg
 listeB = 1.5; listeH = 1.5;      // styrelistene i gulvet
 // bak: port, DC og USB-C på én loddrett linje (x = ioX) med like store mellomrom, og Skjold-merket preget over dem
@@ -328,7 +328,7 @@ module kropp_basis() {
       translate([0, ec11V, -t - 1]) cylinder(d = ec11D, h = t + 2);
       translate([0, ec11V, -krageS]) cylinder(d = krageD, h = krageS + 1);
       // skjerm: forsenkning for rute + tape, vindu med fas, lomme nedenfra for glasset, flatkabelen og pinneraden
-      glTop = -tp + glT + 0.15;                                            // taket i glasslomma
+      glTop = -tp + glT + 0.2;                                             // taket i glasslomma
       translate([0, dispV, -ruteRec - 0.03]) linear_extrude(ruteRec + 0.04) rrect(ruteW + 0.4, ruteH + 0.4, 2.2);
       hull() {
         translate([0, dispV, glTop - 0.01]) linear_extrude(0.01) square([winW, winH], center = true);
@@ -530,9 +530,9 @@ module knappeholder() {
       for (sx = [-1, 1]) {                                                                          // sidevanger
         translate([sx > 0 ? khXiF : -khXo, khV0, wGulv]) cube([khXo - khXiF, khVEnd - khV0, khTop - wGulv]);
         translate([sx > 0 ? khXiB : -khXo, pcbBot - 0.5, wGulv]) cube([khXo - khXiB, khVEnd - pcbBot + 0.5, khTop - wGulv]);
-        translate([sx * (khXiF + 0.4), 0, 0]) hull() {                                              // klemribbe med skrå ender
-          translate([-0.4, pcbBot + 3, khTop - 0.01]) cube([0.8, khVEnd - pcbBot - 6, 0.01]);
-          translate([-0.15, pcbBot + 4.5, khTop - 0.01]) cube([0.3, khVEnd - pcbBot - 9, klemH + 0.01]);
+        translate([sx * (khXiF + 0.4), 0, 0]) hull() {                                              // klemribbe med lange skrå ender
+          translate([-0.5, pcbBot + 2, khTop - 0.01]) cube([1.0, khVEnd - pcbBot - 4, 0.01]);
+          translate([-0.2, pcbBot + 8, khTop - 0.01]) cube([0.4, khVEnd - pcbBot - 16, klemH + 0.01]);
         }
       }
     }
