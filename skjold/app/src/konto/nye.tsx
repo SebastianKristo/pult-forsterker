@@ -192,3 +192,28 @@ export function BildeKutt({ fil, ferdig, avbryt }: { fil: File; ferdig: (dataUrl
       </div>
     </div>);
 }
+
+const AKT_NAVN: Record<string, string> = {
+  innlogging: 'Ny innlogging', bekreftet: 'Bekreftet at det var deg', bekreft_feil: 'Feil kode eller avvist nøkkel', profil: 'Profilen ble endret',
+  kodeapp_pa: 'Kodeappen ble slått på', kodeapp_av: 'Kodeappen ble slått av', nye_reservekoder: 'Nye reservekoder', passkey_ny: 'Ny passkey',
+  passkey_fjernet: 'Passkey fjernet', godkjenning: 'Innlogging godkjent fra en annen enhet', utlogget: 'En enhet ble logget ut', logg_ut_overalt: 'Logget ut overalt',
+  hjem_nytt: 'Nytt hjem', hjem_endret: 'Hjemmet ble endret', hjem_slettet: 'Hjem slettet', deling: 'Deling endret', eier_overfort: 'Eierskap overført',
+  koblingskode: 'Koblingskode laget', enhet_koblet: 'Ny enhet koblet til', enhet_fjernet: 'Enhet fjernet', som_start: 'Skjold Lab-støtte logget inn som deg',
+  som_handling: 'Skjold Lab-støtte gjorde en endring', som_slutt: 'Skjold Lab-støtte logget ut', sperret_forsok: 'Forsøk på å logge inn på sperret konto'
+};
+/** Kontoens aktivitet: innlogginger, sikkerhet, hjem og alt Skjold Lab har gjort på kontoen. */
+export function Aktivitet() {
+  const [l, setL] = useState<{ t: number; type: string; tekst: string; by: string; land: string; skjoldLab: boolean }[] | null>(null);
+  useEffect(() => { void kall<typeof l>('GET', '/api/hjem/konto/aktivitet').then(setL).catch(() => setL([])); }, []);
+  return (
+    <div style={S.kort}>
+      <span style="font-size:17px;font-weight:600">Nylig aktivitet</span>
+      <span style={S.liten}>Innlogginger, sikkerhetsendringer og hjem. Står det «Skjold Lab», var det støtte som hjalp deg.</span>
+      {(l || []).map((h, i) => <div key={i} style={S.rad + ';padding:10px 0'}>
+        <span style="flex:1;min-width:0"><b style="font-size:14px">{AKT_NAVN[h.type] || (h.type.startsWith('admin_') ? 'Skjold Lab: ' + h.type.slice(6).replace(/_/g, ' ') : h.type)}</b>{h.skjoldLab && <span class="mono" style="font-size:10px;color:var(--gull);margin-left:8px">SKJOLD LAB</span>}<br />
+          <span style={S.liten}>{[h.tekst, [h.by, h.land].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</span></span>
+        <span style={S.liten + ';white-space:nowrap'}>{tid(h.t)}</span></div>)}
+      {l === null && <span style={S.liten}>Henter …</span>}
+      {l && !l.length && <span style={S.liten}>Ingen aktivitet ennå.</span>}
+    </div>);
+}

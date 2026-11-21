@@ -231,3 +231,57 @@ test("Vedlikehold: brukere får 503 med nedtelling, Valhalla og /meg virker", as
   await api(mf, "POST", "/api/valhalla/vedlikehold", "sjef@skjold.no", { aktiv: false });
   assert.equal((await api(mf, "GET", "/api/hjem/steder", "vanlig@test.no")).status, 200);
 });
+
+test("Kontrollsenter: hendelseslogg, statistikk, kontodetaljer og alle enheter", async () => {
+  const u = "logg@test.no";
+  const s = (await api(mf, "POST", "/api/hjem/steder", u, { navn: "Hytta" })).data;
+  await api(mf, "PATCH", "/api/hjem/konto", u, { navn: "Loggy" });
+  const l = await api(mf, "GET", "/api/valhalla/logg?epost=" + encodeURIComponent(u), "sjef@skjold.no");
+  const typer = l.data.hendelser.map((h) => h.type);
+  assert.ok(typer.includes("innlogging") && typer.includes("hjem_nytt") && typer.includes("profil"), typer.join(","));
+  assert.equal((await api(mf, "GET", "/api/valhalla/logg", "vanlig@test.no")).status, 403);
+  assert.ok((await api(mf, "GET", "/api/valhalla/logg?type=hjem_nytt&limit=1", "sjef@skjold.no")).data.hendelser.every((h) => h.type === "hjem_nytt"));
+  const st = await api(mf, "GET", "/api/valhalla/statistikk", "sjef@skjold.no");
+  assert.ok(st.data.hendelser24t > 0 && st.data.perTime.length === 24 && st.data.perType.innlogging > 0);
+  const d = await api(mf, "GET", "/api/valhalla/kontoer/" + encodeURIComponent(u), "sjef@skjold.no");
+  assert.equal(d.status, 200); assert.equal(d.data.profil.navn, "Loggy"); assert.ok(d.data.okter.length >= 1);
+  assert.equal(d.data.steder[0].navn, "Hytta"); assert.ok(d.data.hendelser.length >= 3);
+  // admin: endre hjemnavn, logg ut kontoen, se hjemdetalj og alle enheter
+  assert.equal((await api(mf, "POST", "/api/valhalla/steder/" + s.id, "sjef@skjold.no", { navn: "Fjellhytta" })).data.navn, "Fjellhytta");
+  assert.equal((await api(mf, "GET", "/api/hjem/steder", u)).data[0].navn, "Fjellhytta");
+  const sd = await api(mf, "GET", "/api/valhalla/steder/" + s.id, "sjef@skjold.no");
+  assert.ok(sd.data.hendelser.some((h) => h.type === "admin_hjem_navn" && h.av === "sjef@skjold.no"));
+  assert.ok(Array.isArray((await api(mf, "GET", "/api/valhalla/enheter", "sjef@skjold.no")).data));
+  assert.equal((await api(mf, "POST", "/api/valhalla/kontoer/" + encodeURIComponent(u), "sjef@skjold.no", { loggUt: true })).status, 200);
+  assert.equal((await api(mf, "GET", "/api/valhalla/kontoer/" + encodeURIComponent(u), "sjef@skjold.no")).data.okter.length, 0);
+  // brukeren ser sin egen aktivitet, og at Skjold Lab har gjort noe
+  const akt = await api(mf, "GET", "/api/hjem/konto/aktivitet", u);
+  assert.ok(akt.data.some((h) => h.type === "admin_hjem_navn" && h.skjoldLab));
+});
+
+test("Logg inn som: bare tjenesteeieren, sikkerhet sperret, alt loggføres", async () => {
+  const u = "kunde@test.no";
+  await api(mf, "POST", "/api/hjem/steder", u, { navn: "Kundens hjem" });
+  assert.equal((await api(mf, "POST", "/api/valhalla/som", "vanlig@test.no", { epost: u })).status, 403);
+  // en admin (ikke tjenesteeier) får ikke lov
+  await api(mf, "POST", "/api/valhalla/kontoer/" + encodeURIComponent("hjelper@test.no"), "sjef@skjold.no", { admin: true });
+  await api(mf, "GET", "/api/hjem/meg", "hjelper@test.no");
+  assert.equal((await api(mf, "POST", "/api/valhalla/som", "hjelper@test.no", { epost: u })).status, 403);
+  const start = await medCookie("POST", "/api/valhalla/som", "sjef@skjold.no", { epost: u });
+  assert.equal(start.status, 200); assert.match(start.ck, /^skjold_som=/);
+  const meg = await medCookie("GET", "/api/hjem/meg", "sjef@skjold.no", null, start.ck);
+  assert.equal(meg.data.epost, u); assert.equal(meg.data.som.admin, "sjef@skjold.no");
+  const steder = await medCookie("GET", "/api/hjem/steder", "sjef@skjold.no", null, start.ck);
+  assert.equal(steder.data[0].navn, "Kundens hjem");
+  assert.equal((await medCookie("POST", "/api/hjem/konto/2fa/start", "sjef@skjold.no", {}, start.ck)).status, 403);
+  assert.equal((await medCookie("POST", "/api/hjem/konto/logg-ut-overalt", "sjef@skjold.no", {}, start.ck)).status, 403);
+  assert.equal((await medCookie("PATCH", "/api/hjem/konto", "sjef@skjold.no", { navn: "Endret av støtte" }, start.ck)).status, 200);
+  // cookien virker ikke for en annen bruker
+  assert.equal((await medCookie("GET", "/api/hjem/meg", "hjelper@test.no", null, start.ck)).data.epost, "hjelper@test.no");
+  const akt = await api(mf, "GET", "/api/hjem/konto/aktivitet", u);
+  assert.ok(akt.data.some((h) => h.type === "som_start" && h.skjoldLab) && akt.data.some((h) => h.type === "som_handling"));
+  const slutt = await medCookie("DELETE", "/api/valhalla/som", "sjef@skjold.no", null, start.ck);
+  assert.match(slutt.ck, /^skjold_som=$/);
+  assert.equal((await api(mf, "GET", "/api/hjem/meg", "sjef@skjold.no")).data.epost, "sjef@skjold.no");
+  assert.equal((await api(mf, "POST", "/api/valhalla/som", "sjef@skjold.no", { epost: "ukjent@test.no" })).status, 404);
+});

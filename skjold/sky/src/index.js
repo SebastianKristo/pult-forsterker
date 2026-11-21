@@ -253,7 +253,7 @@ export default {
       const epost = await bruker(req, env);
       if (!epost) return feil(401, "ikke innlogget");
       const rolle = await kontoRolle(env, epost);
-      if (rolle.sperret) return feil(403, "kontoen er sperret – kontakt Skjold Lab");
+      if (rolle.sperret) { await logg(env, "sperret_forsok", epost, { ...kilde(req), tekst: req.method + " " + p }); return feil(403, "kontoen er sperret – kontakt Skjold Lab"); }
       // Vedlikehold (Valhalla): alle unntatt administratorene får 503 med nedtelling – enhetene virker lokalt som før
       const vh = await vedlikehold(env);
       if (vh.aktiv && !rolle.valhalla && p !== "/api/hjem/meg") return json({ error: "vedlikehold", vedlikehold: vh }, 503);
@@ -261,10 +261,20 @@ export default {
       // (kode, passkey/sikkerhetsnøkkel eller godkjenning fra appen) før noe annet enn bekreftelsen virker.
       const okt = await hentOkt(req, env, epost, rolle);
       const medOkt = (r) => { if (!okt.cookie) return r; const ny = new Response(r.body, r); ny.headers.append("set-cookie", okt.cookie); return ny; };
-      if (p === "/api/hjem/meg") return medOkt(json({ epost, valhalla: rolle.valhalla && okt.bekreftet, eier: rolle.eier, tofa: rolle.tofa, tofaOk: okt.bekreftet, vedlikehold: vh.aktiv ? vh : null }));
+      const som = okt.bekreftet && rolle.eier ? await lesSom(req, env, epost) : null;
+      if (p === "/api/hjem/meg") {
+        if (som) return medOkt(json({ epost: som.epost, valhalla: true, eier: true, tofa: false, tofaOk: true, vedlikehold: vh.aktiv ? vh : null, som: { admin: epost, utloper: som.utloper } }));
+        return medOkt(json({ epost, valhalla: rolle.valhalla && okt.bekreftet, eier: rolle.eier, tofa: rolle.tofa, tofaOk: okt.bekreftet, vedlikehold: vh.aktiv ? vh : null }));
+      }
       const BEKREFT = ["/api/hjem/konto/2fa/bekreft", "/api/hjem/konto/passkey/login-start", "/api/hjem/konto/passkey/login", "/api/hjem/konto/godkjenn/start", "/api/hjem/konto/godkjenn/status"];
       if (BEKREFT.includes(p)) return medOkt(await bekreftApi(req, env, epost, url, okt));
       if (!okt.bekreftet) return medOkt(json({ error: "2fa", tofa: true, melding: "Bekreft at det er deg" }, 401));
+      if (som && p.startsWith("/api/hjem")) {   // Valhalla: tjenesteeieren er logget inn som en annen konto
+        if (somSperret(p, req.method)) return feil(403, "ikke tillatt mens du er logget inn som en annen konto");
+        if (req.method !== "GET") await logg(env, "som_handling", som.epost, { av: epost, tekst: req.method + " " + p });
+        if (p === "/api/hjem/konto" || p.startsWith("/api/hjem/konto/")) return medOkt(await kontoApi(req, env, som.epost, url, okt));
+        return medOkt(await api(req, env, som.epost, url));
+      }
       if (p === "/api/hjem/konto" || p.startsWith("/api/hjem/konto/")) return medOkt(await kontoApi(req, env, epost, url, okt));
       if (p.startsWith("/api/valhalla")) {
         if (!rolle.valhalla) return feil(403, "bare for Skjold Lab Valhalla-administratorer");
@@ -377,12 +387,14 @@ async function hentOkt(req, env, epost, rolle) {
   }
   const e = enhetsnavn(req);
   const { sid } = await (await intern(kontoStub(env, epost), "/okt/ny", { ...e, bekreftet: !rolle.tofa })).json();
+  await logg(env, "innlogging", epost, { ...kilde(req), tekst: e.navn + (rolle.tofa ? " · venter på totrinn" : "") });
   const cookieV = await oktCookie(env, epost, sid);
   return { sid, bekreftet: !rolle.tofa, cookie: cookieV, ny: true };
 }
 async function oktBekreftet(env, epost, okt, metode) {
   await intern(kontoStub(env, epost), "/okt/bekreft", { sid: okt.sid, metode });
   OKT_CACHE.delete(epost + "|" + okt.sid);
+  await logg(env, "bekreftet", epost, { tekst: metode });
 }
 const rpId = (url) => url.hostname;
 const opphav = (url) => url.origin;
@@ -392,14 +404,14 @@ async function bekreftApi(req, env, epost, url, okt) {
   const k = kontoStub(env, epost), p = url.pathname.slice("/api/hjem/konto".length), b = req.method === "POST" ? await lesJson(req) : {};
   if (p === "/2fa/bekreft") {
     const r = await intern(k, "/konto/2fa/sjekk", { kode: b.kode });
-    if (!r.ok) return r;
+    if (!r.ok) { await logg(env, "bekreft_feil", epost, { ...kilde(req), tekst: "feil kode" }); return r; }
     await oktBekreftet(env, epost, okt, "kode");
     return json({ ok: true });
   }
   if (p === "/passkey/login-start") return intern(k, "/konto/passkey/login-start", { rpId: rpId(url) });
   if (p === "/passkey/login") {
     const r = await intern(k, "/konto/passkey/login", { ...b, rpId: rpId(url), opphav: opphav(url) });
-    if (!r.ok) return r;
+    if (!r.ok) { await logg(env, "bekreft_feil", epost, { ...kilde(req), tekst: "passkey avvist" }); return r; }
     await oktBekreftet(env, epost, okt, "passkey");
     return json({ ok: true });
   }
@@ -428,6 +440,7 @@ async function kontoApi(req, env, epost, url, okt) {
     if (String(b.bilde || "").length > 90000) return feil(413, "bildet er for stort (maks ca. 60 kB)");
     const r = await intern(k, "/konto/profil", b);
     if (r.ok && b.bilde !== undefined) await intern(reg, "/bruker-sett", { epost, bilde: String(b.bilde || "") });
+    if (r.ok) await logg(env, "profil", epost, { tekst: [b.navn !== undefined ? "navn: " + String(b.navn).slice(0, 60) : "", b.bilde !== undefined ? (b.bilde ? "nytt profilbilde" : "fjernet profilbilde") : ""].filter(Boolean).join(", ") });
     return r;
   }
   if (del === "/2fa/start" && m === "POST") return intern(k, "/konto/2fa/start", { epost });
@@ -437,6 +450,7 @@ async function kontoApi(req, env, epost, url, okt) {
     const svar = await r.json();
     await tofaFlagg(svar);
     await oktBekreftet(env, epost, okt, "kode");
+    await logg(env, del === "/2fa/aktiver" ? "kodeapp_pa" : del === "/2fa/av" ? "kodeapp_av" : "nye_reservekoder", epost);
     return json(svar);
   }
   // passkeys og sikkerhetsnøkler (WebAuthn)
@@ -445,32 +459,41 @@ async function kontoApi(req, env, epost, url, okt) {
     const r = await intern(k, "/konto/passkey/registrer", { ...b, rpId: rpId(url), opphav: opphav(url) });
     if (!r.ok) return r;
     const svar = await r.json(); await tofaFlagg(svar);
+    await logg(env, "passkey_ny", epost, { tekst: String(b.navn || "") });
     return json(svar);
   }
   if (del.startsWith("/passkey/") && m === "DELETE") {
     const r = await intern(k, "/konto/passkey/slett", { id: decodeURIComponent(del.slice(9)) });
     if (!r.ok) return r;
     const svar = await r.json(); await tofaFlagg(svar);
+    await logg(env, "passkey_fjernet", epost);
     return json(svar);
   }
   // godkjenn innlogging på en annen enhet
   if (del === "/godkjenn/ventende" && m === "GET") return intern(k, "/konto/godkjenn/ventende", { sid: okt.sid });
   if (del.startsWith("/godkjenn/") && m === "POST") {
     const r = await intern(k, "/konto/godkjenn/svar", { rid: decodeURIComponent(del.slice(10)), svar: b.svar, av: okt.sid });
-    if (r.ok) { const j = await r.clone().json(); if (j.sid) OKT_CACHE.delete(epost + "|" + j.sid); }
+    if (r.ok) { const j = await r.clone().json(); if (j.sid) OKT_CACHE.delete(epost + "|" + j.sid); await logg(env, "godkjenning", epost, { tekst: j.status }); }
     return r;
   }
   // økter (påloggede enheter)
+  // brukerens egen aktivitet (fra Valhalla-loggen) – også når Skjold Lab har vært innlogget som deg
+  if (del === "/aktivitet" && m === "GET") {
+    const l = await (await intern(reg, "/logg", { epost, limit: 60, uten: ["enhet_tilkoblet", "enhet_frakoblet"] })).json();
+    return json(l.hendelser.map((h) => ({ t: h.t, type: h.type, tekst: h.tekst || "", sted: h.sted || "", by: h.by || "", land: h.land || "", skjoldLab: !!h.av && h.av !== epost })));
+  }
   if (del === "/okter" && m === "GET") return json((await (await intern(k, "/okt/liste", {})).json()).map((x) => ({ ...x, denne: x.sid === okt.sid })));
   if (del.startsWith("/okter/") && m === "DELETE") {
     const sid = decodeURIComponent(del.slice(7));
     await intern(k, "/okt/slett", { sid }); OKT_CACHE.delete(epost + "|" + sid);
+    await logg(env, "utlogget", epost, { tekst: "én enhet" });
     return json({ ok: true });
   }
   if (del === "/logg-ut-overalt" && m === "POST") {
     const l = await (await intern(k, "/okt/liste", {})).json();
     await intern(k, "/okt/slett-alle", {});
     for (const x of l) OKT_CACHE.delete(epost + "|" + x.sid);
+    await logg(env, "logg_ut_overalt", epost, { tekst: l.length + " enheter" });
     return json({ ok: true, antall: l.length });
   }
   if (del === "/" && m === "DELETE") {
@@ -484,6 +507,7 @@ async function kontoApi(req, env, epost, url, okt) {
       if (r.ok) await synkMedlemmer(env, s.id, await r.json());
     }
     await intern(k, "/konto/slett", {});
+    await logg(env, "konto_slettet", epost);
     await intern(reg, "/bruker-slett", { epost });
     ROLLE_CACHE.delete(epost);
     return json({ ok: true });
@@ -559,6 +583,30 @@ function sjekkKlient(cdj, type, utfordring, opphavet) {
   if (c.origin !== opphavet) throw new Error("feil opphav: " + c.origin);
 }
 
+/** Hendelsesloggen i Valhalla (registeret): hvem gjorde hva, når og hvorfra. Feil i loggingen stopper aldri handlingen. */
+async function logg(env, type, epost, data = {}) {
+  try { await intern(registerStub(env), "/logg-skriv", { type, epost: epost || "", ...data }); } catch {}
+}
+const kilde = (req) => ({ ip: req.headers.get("cf-connecting-ip") || "", land: (req.cf && req.cf.country) || "", by: (req.cf && req.cf.city) || "" });
+
+// «Logg inn som» (Valhalla, bare tjenesteeieren): en signert cookie gjør at /api/hjem-kall gjelder en annen konto i inntil
+// én time. Sikkerhetsinnstillingene (totrinn, passkeys, økter, sletting) kan ikke endres slik, og alt loggføres hos brukeren.
+const SOM_TID = 3600;
+async function somCookie(env, admin, mål) {
+  const exp = Math.floor(Date.now() / 1000) + SOM_TID;
+  return `skjold_som=${exp}|${await oktSign(env, "som|" + admin + "|" + mål + "|" + exp)}|${encodeURIComponent(mål)}; Path=/; Max-Age=${SOM_TID}; HttpOnly; Secure; SameSite=None`;
+}
+async function lesSom(req, env, admin) {
+  const c = cookie(req, "skjold_som");
+  if (!c) return null;
+  const [exp, sig, ...rest] = c.split("|");
+  const mål = decodeURIComponent(rest.join("|"));
+  if (!mål || !(Number(exp) > Date.now() / 1000) || !likTid(sig || "", await oktSign(env, "som|" + admin + "|" + mål + "|" + exp))) return null;
+  return { epost: mål, utloper: Number(exp) };
+}
+const somSperret = (p, m) => /^\/api\/hjem\/konto\/(2fa|passkey|godkjenn)\b/.test(p) || p === "/api/hjem/konto/logg-ut-overalt"
+  || (p.startsWith("/api/hjem/konto/okter/") && m === "DELETE") || (p === "/api/hjem/konto" && m === "DELETE");
+
 const gyldigEpost = (e) => /^[^@\s]{1,64}@[^@\s]{1,190}\.[a-z]{2,}$/i.test(String(e || ""));
 
 /** Hjem som ble laget før registeret fantes: let gjennom kontoene registeret kjenner (og den som ser på), og meld inn
@@ -598,21 +646,101 @@ async function valhalla(req, env, epost, rolle, url) {
     const b = await lesJson(req);
     const r = await intern(reg, "/vedlikehold-sett", { ...b, av: epost });
     VH = { t: 0, v: { aktiv: false } };
+    await logg(env, "vedlikehold", "", { av: epost, tekst: b.aktiv ? "på" + (b.melding ? ": " + b.melding : "") : "av" });
     return r;
   }
+  // --- kontrollsenter: logg, statistikk, alle enheter
+  if (deler[0] === "logg" && m === "GET") {
+    const q = url.searchParams, n = (k) => q.get(k) || undefined;
+    return intern(reg, "/logg", { epost: n("epost"), type: n("type"), sted: n("sted"), enhet: n("enhet"), q: n("q"), for: n("for"), limit: Number(q.get("limit")) || 150, siden: Number(q.get("siden")) || undefined });
+  }
+  if (deler[0] === "statistikk" && m === "GET") return intern(reg, "/statistikk", {});
+  if (deler[0] === "enheter" && m === "GET") {
+    const { steder } = await (await intern(reg, "/steder-liste", {})).json();
+    const ut = [];
+    await Promise.all(steder.slice(0, 300).map(async (x) => {
+      const r = await intern(stedStub(env, x.id), "/admin", {});
+      if (!r.ok) return;
+      const d = await r.json();
+      for (const e of d.enheter || []) ut.push({ ...e, sted: x.id, stedNavn: d.navn, eier: d.eier });
+    }));
+    return json(ut.sort((a, b) => Number(b.online) - Number(a.online) || (b.sist || 0) - (a.sist || 0)));
+  }
+  // --- logg inn som en annen konto (bare tjenesteeieren)
+  if (deler[0] === "som") {
+    if (!rolle.eier) return feil(403, "bare tjenesteeieren kan logge inn som andre");
+    if (m === "DELETE") {
+      const s = await lesSom(req, env, epost);
+      if (s) await logg(env, "som_slutt", s.epost, { av: epost });
+      return json({ ok: true }, 200, { "set-cookie": "skjold_som=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None" });
+    }
+    if (m === "POST") {
+      const mål = String((await lesJson(req)).epost || "").trim().toLowerCase();
+      if (!gyldigEpost(mål)) return feil(400, "ugyldig e-postadresse");
+      if (mål === epost) return feil(400, "det er deg");
+      if (eierListe(env).includes(mål)) return feil(403, "kan ikke logge inn som en annen tjenesteeier");
+      const k = await (await intern(reg, "/kontoer", {})).json();
+      if (!k.some((x) => x.epost === mål)) return feil(404, "ukjent konto");
+      await logg(env, "som_start", mål, { av: epost, ...kilde(req) });
+      return json({ ok: true, epost: mål, utloper: Math.floor(Date.now() / 1000) + SOM_TID }, 200, { "set-cookie": await somCookie(env, epost, mål) });
+    }
+  }
   if (deler[0] === "kontoer" && deler.length === 1 && m === "GET") return intern(reg, "/kontoer", {});
+  if (deler[0] === "kontoer" && deler.length === 2 && m === "GET") {
+    const mål = decodeURIComponent(deler[1]).toLowerCase(), k = kontoStub(env, mål);
+    const alle = await (await intern(reg, "/kontoer", {})).json();
+    const reg1 = alle.find((x) => x.epost === mål);
+    if (!reg1) return feil(404, "ukjent konto");
+    const [info, okter, liste, sync, hendelser] = await Promise.all([
+      intern(k, "/konto/info", { epost: mål }).then((r) => r.json()), intern(k, "/okt/liste", {}).then((r) => r.json()),
+      intern(k, "/liste").then((r) => r.json()), intern(k, "/sync/oversikt", {}).then((r) => r.json()),
+      intern(reg, "/logg", { epost: mål, limit: 150 }).then((r) => r.json())]);
+    const steder = await Promise.all((liste.steder || []).map(async (x) => {
+      const r = await intern(stedStub(env, x.id), "/admin", {});
+      return r.ok ? { ...(await r.json()) } : { ...x, feil: true };
+    }));
+    return json({ ...reg1, tjenesteeier: eierListe(env).includes(mål), profil: info, okter, steder, sync: sync.deler || [], hendelser: hendelser.hendelser });
+  }
   if (deler[0] === "kontoer" && deler.length === 2 && m === "POST") {
     const mål = decodeURIComponent(deler[1]).toLowerCase(), b = await lesJson(req);
+    if (b.loggUt || b.slettOkt) {   // logg ut alle (eller én) av kontoens enheter
+      const k = kontoStub(env, mål);
+      if (b.slettOkt) { await intern(k, "/okt/slett", { sid: String(b.slettOkt) }); OKT_CACHE.delete(mål + "|" + b.slettOkt); }
+      else { const l = await (await intern(k, "/okt/liste", {})).json(); await intern(k, "/okt/slett-alle", {}); for (const x of l) OKT_CACHE.delete(mål + "|" + x.sid); }
+      await logg(env, "admin_utlogget", mål, { av: epost, tekst: b.slettOkt ? "én enhet" : "alle enheter" });
+      return json({ ok: true });
+    }
+    if (typeof b.navn === "string") {
+      const r = await intern(kontoStub(env, mål), "/konto/profil", { navn: b.navn });
+      await logg(env, "admin_profil", mål, { av: epost, tekst: "navn: " + b.navn.slice(0, 60) });
+      return r;
+    }
+    if (b.slett) {
+      if (eierListe(env).includes(mål)) return feil(400, "tjenesteeieren kan ikke slettes");
+      const { steder } = await (await intern(kontoStub(env, mål), "/liste")).json();
+      for (const x of steder || []) {
+        const o = await intern(stedStub(env, x.id), "/admin", {});
+        if (o.ok && (await o.json()).eier === mål) return feil(409, "kontoen eier «" + x.navn + "» – overfør eierskapet eller slett hjemmet først");
+      }
+      for (const x of steder || []) { const r = await intern(stedStub(env, x.id), "/admin-endre", { fjern: mål }); if (r.ok) await synkMedlemmer(env, x.id, await r.json()); }
+      await intern(kontoStub(env, mål), "/konto/slett", {}); await intern(kontoStub(env, mål), "/okt/slett-alle", {});
+      await intern(reg, "/bruker-slett", { epost: mål }); ROLLE_CACHE.delete(mål);
+      await logg(env, "admin_konto_slettet", mål, { av: epost });
+      return json({ ok: true });
+    }
     if ("admin" in b && !rolle.eier) return feil(403, "bare tjenesteeieren kan gi eller ta Valhalla-tilgang");
     if (eierListe(env).includes(mål) && b.sperret) return feil(400, "tjenesteeieren kan ikke sperres");
     if (b.tofaAv) {   // brukeren har mistet telefonen og reservekodene: slå av totrinnsbekreftelsen
       await intern(kontoStub(env, mål), "/konto/2fa/tilbakestill", {});
       await intern(reg, "/bruker-sett", { epost: mål, tofa: false });
       ROLLE_CACHE.delete(mål);
+      await logg(env, "admin_totrinn_tilbakestilt", mål, { av: epost });
       return json({ epost: mål, tofa: false });
     }
     const r = await intern(reg, "/bruker-sett", { epost: mål, ...("sperret" in b ? { sperret: !!b.sperret } : {}), ...("admin" in b ? { admin: !!b.admin } : {}) });
     ROLLE_CACHE.delete(mål);
+    if ("sperret" in b) await logg(env, b.sperret ? "admin_sperret" : "admin_sperring_opphevet", mål, { av: epost });
+    if ("admin" in b) await logg(env, b.admin ? "admin_gitt" : "admin_fjernet", mål, { av: epost });
     return r;
   }
   if (deler[0] === "steder" && deler.length === 1 && m === "GET") {
@@ -624,24 +752,47 @@ async function valhalla(req, env, epost, rolle, url) {
     }));
     return json(ut.filter(Boolean));
   }
+  if (deler[0] === "steder" && deler.length === 4 && deler[2] === "enheter" && m === "DELETE") {
+    const id = deler[1], eid = decodeURIComponent(deler[3]);
+    if (!/^st_[a-z2-7]+$/.test(id)) return feil(404, "ukjent sted");
+    const r = await intern(stedStub(env, id), "/admin-fjern-enhet", { id: eid });
+    if (r.ok) await logg(env, "admin_enhet_fjernet", "", { av: epost, sted: id, enhet: eid });
+    return r;
+  }
   if (deler[0] === "steder" && deler.length === 2) {
     const id = deler[1];
     if (!/^st_[a-z2-7]+$/.test(id)) return feil(404, "ukjent sted");
+    if (m === "GET") {
+      const r = await intern(stedStub(env, id), "/admin", {});
+      if (!r.ok) return r;
+      return json({ ...(await r.json()), hendelser: (await (await intern(reg, "/logg", { sted: id, limit: 150 })).json()).hendelser });
+    }
     if (m === "DELETE") {
       const r = await intern(stedStub(env, id), "/admin-slett", {});
       if (!r.ok) return r;
       const svar = await r.json();
       for (const x of svar.medlemmer || []) await intern(kontoStub(env, x), "/fjern", { id });
       await intern(reg, "/sted-slett", { id });
+      await logg(env, "admin_hjem_slettet", svar.eier || "", { av: epost, sted: id, tekst: svar.navn || "" });
       return json({ ok: true });
     }
     if (m === "POST") {
       const b = await lesJson(req);
+      if (typeof b.navn === "string") {
+        const r = await intern(stedStub(env, id), "/admin-navn", { navn: b.navn });
+        if (!r.ok) return r;
+        const svar = await r.json();
+        for (const x of svar.medlemmer || []) await intern(kontoStub(env, x), "/navn", { id, navn: svar.navn });
+        await intern(reg, "/steder", { steder: [svar] });
+        await logg(env, "admin_hjem_navn", svar.eier, { av: epost, sted: id, tekst: svar.navn });
+        return json(svar);
+      }
       if (b.leggTil && !gyldigEpost(b.leggTil)) return feil(400, "ugyldig e-postadresse");
       const r = await intern(stedStub(env, id), "/admin-endre", b);
       if (!r.ok) return r;
       const svar = await r.json();
       await synkMedlemmer(env, id, svar);
+      await logg(env, "admin_deling", svar.eier, { av: epost, sted: id, tekst: b.leggTil ? "la til " + b.leggTil : b.fjern ? "fjernet " + b.fjern : b.eier ? "ny eier " + b.eier : "" });
       return json(svar);
     }
   }
@@ -684,6 +835,7 @@ async function api(req, env, epost, url) {
       if (!r.ok) return r;
       await intern(konto, "/legg", { id, navn });
       await intern(registerStub(env), "/steder", { steder: [{ id, navn, eier: epost, medlemmer: [epost], ny: true }] });
+      await logg(env, "hjem_nytt", epost, { sted: id, tekst: navn });
       return json(await r.json(), 201);
     }
     return feil(405, "metode ikke støttet");
@@ -713,6 +865,11 @@ async function api(req, env, epost, url) {
   }
   // deling: den som ble lagt til / fjernet får hjemmet i / ut av kontoen sin
   if ((deler[2] === "medlemmer" || deler[2] === "eier") && r.ok) await synkMedlemmer(env, stedId, await r.clone().json());
+  if (r.ok && req.method !== "GET" && (deler[2] !== "enheter" || (req.method === "DELETE" && deler.length === 4))) {
+    const type = deler.length === 2 ? (req.method === "DELETE" ? "hjem_slettet" : "hjem_endret") : deler[2] === "medlemmer" ? "deling" : deler[2] === "eier" ? "eier_overfort"
+      : deler[2] === "kobling" ? "koblingskode" : deler[2] === "enheter" ? "enhet_fjernet" : "hjem_endret";
+    await logg(env, type, epost, { sted: stedId, ...(deler[2] === "enheter" ? { enhet: decodeURIComponent(deler[3] || "") } : {}), tekst: req.method + " " + (rest === "/" ? "" : rest) });
+  }
   return r;
 }
 
@@ -1140,9 +1297,19 @@ export class Sted extends DurableObject {
     if (sti === "/admin") {
       if (!this.data) return feil(404, "ukjent sted");
       const d = this.data, tilk = this.tilkoblet();
-      return json({ id: d.id, navn: d.navn, eier: d.eier, medlemmer: d.medlemmer, opprettet: d.opprettet || null,
-        enheter: d.enheter.map((e) => ({ id: e.id, navn: e.navn, produkt: e.produkt, online: tilk.has(e.id), versjon: e.versjon || null, sist: e.sist || null })) });
+      void tilk;
+      const lagt = new Map(d.enheter.map((e) => [e.id, e.lagtTil || null]));
+      return json({ id: d.id, navn: d.navn, eier: d.eier, medlemmer: d.medlemmer, opprettet: d.opprettet || null, autoLegg: d.autoLegg !== false,
+        enheter: this.enhetsliste().map((e) => ({ ...e, lagtTil: lagt.get(e.id) })) });
     }
+    if (sti === "/admin-navn") {
+      if (!this.data) return feil(404, "ukjent sted");
+      const n = String(b.navn || "").trim().slice(0, 60);
+      if (!n) return feil(400, "navn mangler");
+      this.data.navn = n; await this.lagre();
+      return json({ id: this.data.id, navn: n, eier: this.data.eier, medlemmer: this.data.medlemmer });
+    }
+    if (sti === "/admin-fjern-enhet") { if (!this.data) return feil(404, "ukjent sted"); return this.fjernEnhet(String(b.id || "")); }
     if (sti === "/admin-slett") { if (!this.data) return feil(404, "ukjent sted"); return this.slett(); }
     if (sti === "/admin-endre") { if (!this.data) return feil(404, "ukjent sted"); return this.medlemEndring(b, null); }
     if (sti === "/kobl") return this.kobl(b);
@@ -1293,6 +1460,7 @@ export class Sted extends DurableObject {
     if (!d.hoved) d.hoved = b.id; // første enhet blir hovedenhet
     if (d.utelatt) d.utelatt = d.utelatt.filter((x) => x !== b.id);
     await this.lagre();
+    await logg(this.env, "enhet_koblet", d.eier, { sted: d.id, enhet: b.id, tekst: navn + (produkt ? " (" + produkt + ")" : "") });
     await this.glemInvitasjon(b.id);
     // ny nøkkel ⇒ gamle tilkoblinger for samme id kastes
     for (const ws of this.ctx.getWebSockets(b.id)) {
@@ -1396,6 +1564,7 @@ export class Sted extends DurableObject {
     server.serializeAttachment({ id, sist: Date.now(), navn: e.navn, produkt: e.produkt, lan: [] });
     e.sist = Math.floor(Date.now() / 1000);
     await this.lagre();
+    if (!gamle.length) await logg(this.env, "enhet_tilkoblet", d.eier, { sted: d.id, enhet: id, tekst: e.navn, ip: req.headers.get("cf-connecting-ip") || "" });
     await this.sikreAlarm();
     await this.valg(gamle[0] || null, server);
     return new Response(null, { status: 101, webSocket: klient });
@@ -1464,7 +1633,7 @@ export class Sted extends DurableObject {
       e.sist = Math.floor(Date.now() / 1000);
       await this.lagre();
     }
-    if (!this.tilkoblet(ws).has(a.id)) this.avbrytFor(a.id);
+    if (!this.tilkoblet(ws).has(a.id)) { this.avbrytFor(a.id); if (e && this.data) await logg(this.env, "enhet_frakoblet", this.data.eier, { sted: this.data.id, enhet: a.id, tekst: e.navn }); }
     await this.valg(ws, null);
   }
 
@@ -1816,6 +1985,7 @@ export class Delinger extends DurableObject {
 
 // ---------- Register: oversikt over kontoer og hjem for Skjold Lab Valhalla (tjenesteadministrasjon) ----------
 // Én instans («register»). Kontoer: første og siste innlogging, sperret, Valhalla-admin. Hjem: navn, eier, medlemmer.
+const LOGG_MAKS = 20000;   // hendelser som beholdes i Valhalla-loggen
 export class Register extends DurableObject {
   async fetch(req) {
     const sti = new URL(req.url).pathname.slice(2);
@@ -1839,6 +2009,56 @@ export class Register extends DurableObject {
       return json(v);
     }
     if (sti === "/bruker-slett") { await st.delete("k:" + String(b.epost || "").toLowerCase()); return json({ ok: true }); }
+    // --- hendelsesloggen (Valhalla): én nøkkel per hendelse, de nyeste LOGG_MAKS beholdes
+    const nr = (n) => "l:" + String(n).padStart(12, "0");
+    if (sti === "/logg-skriv") {
+      const seq = ((await st.get("logg-seq")) || 0) + 1;
+      const h = { t: naa, type: String(b.type || "").slice(0, 40) };
+      for (const k of ["epost", "sted", "enhet", "av", "ip", "land", "by"]) if (b[k]) h[k] = String(b[k]).slice(0, 120);
+      if (b.tekst) h.tekst = String(b.tekst).slice(0, 300);
+      await st.put({ "logg-seq": seq, [nr(seq)]: h });
+      if (seq % 250 === 0 && seq > LOGG_MAKS) {
+        const gamle = [...(await st.list({ prefix: "l:", end: nr(seq - LOGG_MAKS), limit: 2000 })).keys()];
+        for (let i = 0; i < gamle.length; i += 128) await st.delete(gamle.slice(i, i + 128));
+      }
+      return json({ ok: true, seq });
+    }
+    if (sti === "/logg") {
+      const grense = Math.min(Number(b.limit) || 100, 1000), ut = [], uten = new Set(b.uten || []);
+      const typer = b.type ? new Set(String(b.type).split(",")) : null, q = String(b.q || "").toLowerCase();
+      let end = b.for ? nr(Number(b.for)) : undefined, sett = 0, siste = null;
+      while (ut.length < grense && sett < 30000) {
+        const side = await st.list({ prefix: "l:", reverse: true, limit: 500, ...(end ? { end } : {}) });
+        if (!side.size) { siste = null; break; }
+        for (const [k, h] of side) {
+          sett++; siste = Number(k.slice(2)); end = k;
+          if (b.siden && h.t < b.siden) { sett = 1e9; break; }
+          if (uten.has(h.type) || (typer && !typer.has(h.type)) || (b.epost && h.epost !== b.epost && h.av !== b.epost) || (b.sted && h.sted !== b.sted) || (b.enhet && h.enhet !== b.enhet)) continue;
+          if (q && !JSON.stringify(h).toLowerCase().includes(q)) continue;
+          ut.push({ seq: siste, ...h });
+          if (ut.length >= grense) break;
+        }
+        if (side.size < 500) { if (ut.length < grense) siste = null; break; }
+      }
+      return json({ hendelser: ut, neste: ut.length >= grense ? siste : null });
+    }
+    if (sti === "/statistikk") {   // siste døgn fra loggen: per type, per time og unike kontoer
+      const fra = naa - 86400, perType = {}, perTime = Array(24).fill(0), kontoer = new Set(), innlogginger = new Set();
+      let end, n = 0;
+      ute: while (n < 50000) {
+        const side = await st.list({ prefix: "l:", reverse: true, limit: 1000, ...(end ? { end } : {}) });
+        for (const [k, h] of side) {
+          end = k; n++;
+          if (h.t < fra) break ute;
+          perType[h.type] = (perType[h.type] || 0) + 1;
+          perTime[Math.min(23, Math.floor((naa - h.t) / 3600))]++;
+          if (h.epost) kontoer.add(h.epost);
+          if (h.type === "innlogging" && h.epost) innlogginger.add(h.epost);
+        }
+        if (side.size < 1000) break;
+      }
+      return json({ perType, perTime: perTime.reverse(), aktiveKontoer24t: kontoer.size, innloggede24t: innlogginger.size, hendelser24t: perTime.reduce((a, x) => a + x, 0), totalt: (await st.get("logg-seq")) || 0 });
+    }
     if (sti === "/bruker-sett") {
       const e = String(b.epost || "").toLowerCase();
       const k = (await st.get("k:" + e)) || { forst: naa, sist: 0, sperret: false, admin: false };

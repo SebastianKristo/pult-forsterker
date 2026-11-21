@@ -6,10 +6,10 @@ import { useEffect, useState } from 'preact/hooks';
 import { qrMatrix } from '../lib/qr';
 import './konto.css';
 import { kall, S, melding, visMelding } from './felles';
-import { Avatar, BildeKutt, GodkjennHer, GodkjennVarsel, Nokler, Okter, harWebauthn, loggInnMedNokkel, type Nokkel } from './nye';
+import { Aktivitet, Avatar, BildeKutt, GodkjennHer, GodkjennVarsel, Nokler, Okter, harWebauthn, loggInnMedNokkel, type Nokkel } from './nye';
 import { VedlikeholdBanner, type Vedlikehold } from '../lib/vedlikehold';
 
-interface Meg { epost: string; valhalla: boolean; eier: boolean; tofa: boolean; tofaOk: boolean; vedlikehold?: Vedlikehold | null }
+interface Meg { epost: string; valhalla: boolean; eier: boolean; tofa: boolean; tofaOk: boolean; vedlikehold?: Vedlikehold | null; som?: { admin: string; utloper: number } }
 interface Sted { id: string; navn: string; rolle: 'eier' | 'medlem'; enheter: number; online: number; medlemmer?: string[] }
 interface Konto { epost: string; navn: string; bilde: string; opprettet: number; tofa: { aktiv: boolean; kodeapp: boolean; reservekoderIgjen: number; passkeys: Nokkel[] }; steder: { id: string; navn: string }[]; sync: { del: string; storrelse: number; endret: number }[] }
 
@@ -108,6 +108,7 @@ function Sikkerhet({ k, last }: { k: Konto; last: () => void }) {
       </div>
       <Nokler liste={k.tofa.passkeys} last={last} />
       <Okter />
+      <Aktivitet />
     </div>);
 }
 
@@ -221,7 +222,9 @@ function App() {
           {MENY.map(([id, n, ik]) => <button key={id} onClick={() => setSide(id)} style={`height:46px;border:none;border-radius:23px;padding:0 18px;display:flex;align-items:center;gap:14px;cursor:pointer;font-size:14.5px;font-weight:${side === id ? 600 : 400};background:${side === id ? 'rgba(240,196,106,.14)' : 'transparent'};color:${side === id ? 'var(--gull)' : 'var(--tekst)'}`}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={ik} /></svg>{n}</button>)}
         </nav>
-        <main style="display:flex;flex-direction:column;gap:18px">{vh?.aktiv && <VedlikeholdBanner v={vh} />}{innhold}</main>
+        <main style="display:flex;flex-direction:column;gap:18px">
+          {meg.som && <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-radius:14px;background:linear-gradient(90deg,#3a2a0c,#1c170d);border:1px solid #5a4420;font-size:13.5px"><b>Skjold Lab-støtte: du ser kontoen til {meg.epost}</b><span style={S.liten}>Sikkerhetsinnstillingene kan ikke endres herfra.</span><button onClick={() => void fetch('/api/valhalla/som', { method: 'DELETE', credentials: 'include' }).then(() => { location.href = '/valhalla/'; })} style={S.gull + ';height:34px;margin-left:auto'}>Avslutt</button></div>}
+          {vh?.aktiv && <VedlikeholdBanner v={vh} />}{innhold}</main>
       </div>
       <GodkjennVarsel />
       {kutt && <BildeKutt fil={kutt} ferdig={(u) => void lagreBilde(u)} avbryt={() => setKutt(null)} />}

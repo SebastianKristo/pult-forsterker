@@ -24,6 +24,7 @@ import { localOn, localVol, setLocalVol } from '../lib/localplay';
 import { ListenHere } from './listenhere';
 import { openRostSetup } from './rostsetup';
 import { RostRows } from './rost';
+import { KontoAvatar } from './kontokort';
 import { LyrionRom } from './lyrion';
 
 const A = '#d9a441';
@@ -164,7 +165,7 @@ export function HomePhone() {
     <>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
         <div style="display:flex;align-items:center;gap:9px"><div style="display:flex;align-items:flex-end;gap:2px;height:16px">{[8, 12, 16, 12, 8].map((h, i) => <div key={i} style={`width:2.5px;height:${h}px;background:#f2f2ee;border-radius:2px`} />)}</div><span style="font-weight:600;font-size:15px;letter-spacing:0.12em">SKJOLD</span></div>
-        <button onClick={() => go('rooms')} style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;background:#141415;font-size:12px;cursor:pointer;white-space:nowrap;max-width:60%;overflow:hidden"><div style={`width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${online.value ? '#6fcf7f' : '#e05a4a'}`} /><span style="overflow:hidden;text-overflow:ellipsis">{groupLabel()}</span></button>
+<div style="display:flex;align-items:center;gap:8px;min-width:0;max-width:72%">        <button onClick={() => go('rooms')} style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid #2e2e30;background:#141415;font-size:12px;cursor:pointer;white-space:nowrap;max-width:100%;min-width:0;overflow:hidden"><div style={`width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${online.value ? '#6fcf7f' : '#e05a4a'}`} /><span style="overflow:hidden;text-overflow:ellipsis">{groupLabel()}</span></button><KontoAvatar px={32} /></div>
       </div>
       {visSted() && <div style="flex-shrink:0;display:flex"><StedPicker big /></div>}
       <button onClick={() => go('rooms')} data-testid="device-card" style="flex-shrink:0;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border-radius:14px;border:1px solid #242426;background:#141415;cursor:pointer;text-align:left;box-sizing:border-box;width:100%">

@@ -1,7 +1,8 @@
 // «Lag en Skjold-konto»-kortet på Hjem (mobil, PC og web-UI): vises når du ikke er logget inn på Skjold-hjem.
 // «Ikke nå» skjuler kortet for godt (kontoen kan lages senere fra Innstillinger → Skjold-hjem).
-import { useState } from 'preact/hooks';
-import { hjemState, skyUrl, tofaMangler, vedlikehold } from '../lib/hjem';
+import { signal } from '@preact/signals';
+import { useEffect as useEff, useState } from 'preact/hooks';
+import { hjem, hjemState, sameOrigin, skyUrl, tofaMangler, vedlikehold } from '../lib/hjem';
 import { VedlikeholdBanner } from '../lib/vedlikehold';
 import { KONTO_HOPPET } from './onboard';
 
@@ -27,4 +28,26 @@ export function KontoKort() {
       <button onClick={hopp} aria-label="Ikke nå" style="border:none;background:none;color:#8b8b86;font-size:13px;cursor:pointer;flex-shrink:0">Ikke nå</button>
     </div>
   );
+}
+
+// ---------- Profilbildet øverst til høyre: Skjold-kontoen (eller «Logg inn») ----------
+const kontoInfo = signal<{ navn: string; bilde: string; epost: string } | null>(null);
+let hentet = 0;
+export function KontoAvatar({ px = 36 }: { px?: number }) {
+  const ok = hjemState.value === 'ok';
+  useEff(() => {
+    if (!ok || Date.now() - hentet < 60000) return;
+    hentet = Date.now();
+    void hjem.konto().then((k) => { kontoInfo.value = k; }).catch(() => { kontoInfo.value = null; });
+  }, [ok]);
+  const k = ok ? kontoInfo.value : null;
+  const url = (sameOrigin.value ? '' : skyUrl()) + '/konto' + (k ? '' : '?fra=app');
+  const tittel = k ? (k.navn ? k.navn + ' · ' : '') + k.epost + ' – Skjold-konto' : tofaMangler.value ? 'Bekreft at det er deg' : 'Logg inn på Skjold-kontoen';
+  return (
+    <a href={url} target={sameOrigin.value ? undefined : '_blank'} rel="noreferrer" title={tittel} aria-label={tittel} data-testid="konto-avatar"
+      style={`width:${px}px;height:${px}px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;text-decoration:none;${k ? 'box-shadow:0 0 0 2px #0b0b0c,0 0 0 3px #5a4420' : 'border:1px solid #2e2e30;background:#141415;color:#8b8b86'}`}>
+      {k ? (k.bilde ? <img src={k.bilde} alt="" style="width:100%;height:100%;object-fit:cover" />
+        : <span style={`width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f3cf7f,#d9a441);color:#0b0b0c;font-weight:600;font-size:${Math.round(px * 0.42)}px`}>{(k.navn || k.epost || '?')[0]?.toUpperCase()}</span>)
+        : <svg width={px * 0.55} height={px * 0.55} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" /></svg>}
+    </a>);
 }
