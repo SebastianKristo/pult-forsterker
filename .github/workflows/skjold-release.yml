@@ -176,20 +176,27 @@ jobs:
           (cd ut && esphome compile skjold-sensor.yaml) && fw skjold-sensor skjold-sensor-esp32-firmware.bin
           rm -rf ut/.esphome/build/skjold-sensor
           (cd ut && esphome compile skjold-sensor-d1mini.yaml) && fw skjold-sensor skjold-sensor-d1mini-firmware.bin
+          # de enklere sensorene: lys (uten bevegelse), klima (bare temperatur og fukt) og bevegelse (uten lys)
+          for v in lys klima bevegelse; do
+            (cd ut && esphome compile skjold-sensor-$v.yaml) && fw skjold-sensor-$v skjold-sensor-$v-esp32-firmware.bin
+            rm -rf ut/.esphome/build/skjold-sensor-$v
+            (cd ut && esphome compile skjold-sensor-$v-d1mini.yaml) && fw skjold-sensor-$v skjold-sensor-$v-d1mini-firmware.bin
+            rm -rf ut/.esphome/build/skjold-sensor-$v
+          done
           # Skjold Bryter (vippebryterne under pulten) bygges i samme jobb: samme brikker, samme ESPHome-hurtiglager
           python3 esphome/lag_ferdig.py bryter ut
           (cd ut && esphome compile skjold-bryter.yaml) && fw skjold-bryter skjold-bryter-esp32-firmware.bin
           rm -rf ut/.esphome/build/skjold-bryter
           (cd ut && esphome compile skjold-bryter-d1mini.yaml) && fw skjold-bryter skjold-bryter-d1mini-firmware.bin
           python3 esphome/lag_ferdig.py ota ut
-          ls -la ut/skjold-sensor-*-firmware.bin ut/skjold-sensor-manifest.json ut/skjold-bryter-*-firmware.bin ut/skjold-bryter-manifest.json
+          ls -la ut/skjold-sensor-*-firmware.bin ut/skjold-sensor-*manifest.json ut/skjold-bryter-*-firmware.bin ut/skjold-bryter-manifest.json
       - uses: actions/upload-artifact@v4
         with:
           name: sensorfw
           path: |
             ut/skjold-sensor-*-firmware.bin
             ut/skjold-sensor-*-ota.bin
-            ut/skjold-sensor-manifest.json
+            ut/skjold-sensor-*manifest.json
             ut/skjold-bryter-*-firmware.bin
             ut/skjold-bryter-*-ota.bin
             ut/skjold-bryter-manifest.json

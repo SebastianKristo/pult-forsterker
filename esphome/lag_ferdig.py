@@ -19,9 +19,13 @@ import sys
 HER = os.path.dirname(os.path.abspath(__file__))
 
 PRODUKT = {
-    "sensor": {"filer": ["skjold-sensor.yaml", "skjold-sensor-d1mini.yaml"], "kopier": [],
+    "sensor": {"filer": ["skjold-sensor.yaml", "skjold-sensor-d1mini.yaml"]
+                        + [f"skjold-sensor-{v}{h}.yaml" for v in ("lys", "klima", "bevegelse") for h in ("", "-d1mini")], "kopier": [],
                "manifest": {"skjold-sensor-manifest.json": ("Skjold Sensor", [("ESP32", "skjold-sensor-esp32-firmware.bin"),
-                                                                             ("ESP8266", "skjold-sensor-d1mini-firmware.bin")])}},
+                                                                             ("ESP8266", "skjold-sensor-d1mini-firmware.bin")]),
+                            **{f"skjold-sensor-{v}-manifest.json": (f"Skjold Sensor {n}", [("ESP32", f"skjold-sensor-{v}-esp32-firmware.bin"),
+                                                                                           ("ESP8266", f"skjold-sensor-{v}-d1mini-firmware.bin")])
+                               for v, n in (("lys", "Lys"), ("klima", "Klima"), ("bevegelse", "Bevegelse"))}}},
     "bryter": {"filer": ["skjold-bryter.yaml", "skjold-bryter-d1mini.yaml"], "kopier": [],
                "manifest": {"skjold-bryter-manifest.json": ("Skjold Bryter", [("ESP32", "skjold-bryter-esp32-firmware.bin"),
                                                                              ("ESP8266", "skjold-bryter-d1mini-firmware.bin")])}},
@@ -35,14 +39,15 @@ PRODUKT = {
 # Fastvareoppdatering fra nettsiden: «Fastvare» (update) i Home Assistant og Homey. Bare i de ferdige byggene: en
 # fastvare du har bygget selv (med Wi-Fi i secrets.yaml) skal ikke byttes ut med en som mangler Wi-Fi-oppsettet.
 NETT = "https://skjold-lab.com/flasher"
-KILDE = {"skjold-sensor": f"{NETT}/sensor/manifest.json", "skjold-bryter": f"{NETT}/bryter/manifest.json",
+KILDE = {"skjold-sensor": f"{NETT}/sensor/manifest.json", "skjold-sensor-lys": f"{NETT}/sensor/lys/manifest.json",
+         "skjold-sensor-klima": f"{NETT}/sensor/klima/manifest.json", "skjold-sensor-bevegelse": f"{NETT}/sensor/bevegelse/manifest.json", "skjold-bryter": f"{NETT}/bryter/manifest.json",
          "skjold-ir": f"{NETT}/ir/manifest.json", "skjold-kassett": f"{NETT}/kassett/manifest.json"}
 
 
 def med_oppdatering(s: str, navn: str, versjon: str) -> str:
     """Legger til OTA fra nettsiden (http_request) og en «Fastvare»-oppdatering som sjekker manifestet hver 6. time.
     Prosjektversjonen settes til utgivelsen (skjold-v…), så oppdateringen vet hva som er installert."""
-    kilde = next(v for k, v in KILDE.items() if navn.startswith(k))
+    kilde = KILDE[max((k for k in KILDE if navn.startswith(k + "-") or navn.startswith(k + ".")), key=len)]   # mest presise (sensor-lys før sensor)
     tls = "false" if re.search(r"^esp8266:", s, flags=re.M) else "true"   # ESP8266 kan ikke sjekke sertifikatet
     s, n = re.subn(r"^substitutions:\n", f'substitutions:\n  fastvare_kilde: {kilde}\n  fastvare_tls: "{tls}"\n', s, count=1, flags=re.M)
     if n != 1:

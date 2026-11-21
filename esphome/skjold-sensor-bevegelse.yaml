@@ -1,0 +1,352 @@
+# LAGET AV lag_sensor_varianter.py fra skjold-sensor.yaml – ikke rediger. Skjold Sensor Bevegelse: temperatur, luftfuktighet og bevegelse.
+# Skjold Sensor – liten romsensor: temperatur, luftfuktighet, lys (lux, valgfritt) og bevegelse (valgfritt).
+# ESP32-WROOM DevKit (30 eller 38 pinner) eller ESP32 D1 mini (MH-ET LIVE MiniKit o.l.) + DHT11-modul (eller SHT40 /
+# SHT31 / AHT20+BMP280) + BH1750 (GY-302) + AM312 mini-PIR. Samme fil og samme GPIO-er for begge kortene (IO26, IO21,
+# IO22, IO27 og IO2 finnes på pinneradene på ESP32 D1 mini). Sjekk silketrykket på ditt kort.
+# Kabinett, deler og kobling: kabinett/sensor/LES_MEG.md. Wemos D1 mini-utgaven: skjold-sensor-d1mini.yaml.
+# Flash første gang med https://web.esphome.io (USB, Wi-Fi settes med Improv), deretter OTA.
+#
+# Kobling (ESP32 DevKit og ESP32 D1 mini):
+#   DHT11-modul (PH2.0)   G → GND   V → 3V3   D → GPIO26
+#   SHT40 (i stedet)      VIN → 3V3   GND → GND   SDA → GPIO21   SCL → GPIO22
+#   BH1750  VCC → 3V3   GND → GND   SDA → GPIO21   SCL → GPIO22   ADDR → GND (0x23)
+#   AM312   VCC → 3V3   GND → GND   OUT → GPIO27
+#   LED 3 mm (statuslys): GPIO2 → 330 Ω → LED → GND   (GPIO2 er også den blå LED-en på kortet)
+#   HC-SR501 i stedet for AM312: VCC → VIN (5 V), OUT → GPIO27. LD2410 (mmWave): VCC → VIN (5 V), OUT → GPIO27.
+#
+# Uten lyssensor eller PIR: kommenter ut blokken for bh1750 eller bevegelse under. En sensor som ikke svarer, får
+# statuslyset til å blinke.
+substitutions:
+  name: skjold-sensor-bevegelse
+  friendly_name: Skjold Sensor Bevegelse
+  # sensoren sitter i eget kammer bak en dobbel skillevegg, men ESP-en varmer litt likevel:
+  # juster mot et kjent termometer etter en time i drift (DHT11 måler ±2 °C)
+  temp_offset: "0.0"
+  # hvor lenge «Bevegelse» står på etter siste utløsning (AM312 holder selv i ca. 2 s)
+  bevegelse_av: "30"                # startverdi (s) – endres i «Bevegelse av etter» (HA, Homey, web)
+  # utledede sensorer (regnes ut fra temperatur, fukt, lys og bevegelse)
+  tilstede_av: "10"                 # startverdi (min) for «Tilstedeværelse av etter»
+  fukt_hoy: "70"                     # «Høy fuktighet» over så mange % (mugg/kondens)
+  oppdatering: "30"                 # startverdi (s) for «Oppdateringsintervall»
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  project:                           # Homey-appen finner sensoren på dette (mDNS: project_name)
+    name: skjold.sensor
+    version: "1.0.0"
+
+esp32:
+  board: esp32dev
+  framework: { type: esp-idf }
+
+logger:
+  level: INFO
+api:
+  encryption:
+    key: !secret skjold_sensor_api_key
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: { ssid: "Skjold Sensor Bevegelse" }
+captive_portal:
+improv_serial:
+# REST og hendelser på port 80: Homey-appen (driveren «Skjold Sensor») leser verdiene herfra
+web_server:
+  port: 80
+  version: 3
+
+# Lampen på kortet (og evt. en egen LED): blinker når sensoren ikke har Wi-Fi eller ikke har kontakt med Home
+# Assistant/Skjold. «Status-LED» av = alltid av (den lyser ellers inn i lyssensoren om natta).
+output:
+  - platform: gpio
+    id: led_ut
+    pin: { number: GPIO2, ignore_strapping_warning: true }
+
+switch:
+  - platform: template
+    name: Status-LED
+    id: led_pa
+    icon: mdi:led-on
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_off:
+      - output.turn_off: led_ut
+
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+  frequency: 100kHz
+
+sensor:
+  # --- temperatur og luftfuktighet: DHT11-modul (standard, PH2.0 G/V/D, D → GPIO26) ---
+  # DHT11 måler ±2 °C og ±5 %RH med 1 °C / 1 % oppløsning, og tåler ikke avlesning oftere enn ca. hvert 2. sekund.
+  # Pinnen får intern pull-up (standard i ESPHome for dht); modulen har som regel også sin egen 10 kΩ.
+  - platform: dht
+    id: dht_kort
+    model: DHT11
+    pin: GPIO26
+    temperature:
+      name: Temperatur
+      id: temp
+      filters:
+        - offset: ${temp_offset}
+    humidity:
+      name: Luftfuktighet
+      id: fukt
+    update_interval: never               # styres av «Oppdateringsintervall» (interval under)
+  # --- SHT40 i stedet for DHT11 (oppgradering: ±0,2 °C, ±1,8 %RH, tåler kondens; bygg kabinettet med th="sht40") ---
+  # - platform: sht4x
+  #   address: 0x44
+  #   temperature: { name: Temperatur, id: temp, filters: [ offset: "${temp_offset}" ] }
+  #   humidity: { name: Luftfuktighet, id: fukt }
+  #   update_interval: ${oppdatering}s
+  # --- SHT31 i stedet for SHT40 ---
+  # - platform: sht3xd
+  #   address: 0x44
+  #   temperature: { name: Temperatur, id: temp, filters: [ offset: "${temp_offset}" ] }
+  #   humidity: { name: Luftfuktighet, id: fukt }
+  #   update_interval: ${oppdatering}s
+  # --- AHT20 + BMP280 (kombikort) i stedet for SHT40: fukt fra AHT20, temperatur og lufttrykk fra BMP280 ---
+  # - platform: aht10
+  #   variant: AHT20
+  #   temperature: { name: Temperatur (AHT20), id: temp, filters: [ offset: "${temp_offset}" ] }
+  #   humidity: { name: Luftfuktighet, id: fukt }
+  #   update_interval: ${oppdatering}s
+  # - platform: bmp280_i2c
+  #   address: 0x77
+  #   temperature: { name: Temperatur (BMP280), internal: true }
+  #   pressure: { name: Lufttrykk }
+  #   update_interval: 60s
+
+  # --- lys: BH1750 (GY-302) bak lysvinduet ---
+  - platform: template
+    name: Duggpunkt
+    unit_of_measurement: °C
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      const float t = id(temp).state, rh = id(fukt).state;
+      if (isnan(t) || isnan(rh) || rh <= 0) return {};
+      const float a = 17.62f, b = 243.12f, g = logf(rh / 100.0f) + a * t / (b + t);
+      return b * g / (a - g);
+
+  # --- utledet fra temperatur og fukt ---
+  - platform: template
+    name: Føles som
+    id: foles_som
+    unit_of_measurement: °C
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      // varmeindeks (NOAA/Rothfusz); under ca. 27 °C er den lik temperaturen
+      const float t = id(temp).state, rh = id(fukt).state;
+      if (isnan(t) || isnan(rh)) return {};
+      if (t < 26.7f) return t;
+      const float f = t * 1.8f + 32.0f;
+      float hi = -42.379f + 2.04901523f*f + 10.14333127f*rh - 0.22475541f*f*rh - 0.00683783f*f*f
+                 - 0.05481717f*rh*rh + 0.00122874f*f*f*rh + 0.00085282f*f*rh*rh - 0.00000199f*f*f*rh*rh;
+      return (hi - 32.0f) / 1.8f;
+  - platform: template
+    name: Absolutt fuktighet
+    unit_of_measurement: g/m³
+    icon: mdi:water
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      const float t = id(temp).state, rh = id(fukt).state;
+      if (isnan(t) || isnan(rh)) return {};
+      return 6.112f * expf(17.67f * t / (t + 243.5f)) * rh * 2.1674f / (273.15f + t);
+
+  # --- utledet fra bevegelse ---
+  - platform: template
+    name: Bevegelser
+    icon: mdi:walk
+    state_class: total_increasing
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: 'return id(bevegelser);'
+  - platform: template
+    name: Minutter siden bevegelse
+    icon: mdi:timer-sand
+    unit_of_measurement: min
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      if (id(bevegelse).state) return 0;
+      if (id(sist_bevegelse) == 0) return {};
+      return (millis() - id(sist_bevegelse)) / 60000;
+
+  - platform: internal_temperature
+    name: Brikketemperatur
+    entity_category: diagnostic
+    update_interval: 60s
+  - platform: wifi_signal
+    name: Wi-Fi-signal
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: Oppetid
+    entity_category: diagnostic
+
+binary_sensor:
+  # --- bevegelse: AM312 (eller HC-SR501 / LD2410 OUT) ---
+  - platform: gpio
+    pin:
+      number: GPIO27
+      mode: { input: true, pulldown: true }
+    id: pir
+    internal: true                     # rått signal fra PIR-en; «Bevegelse» under har innstillbar av-tid
+    on_press:
+      - script.stop: bevegelse_av_om
+      - lambda: |-
+          if (!id(bevegelse).state) { id(bevegelser) += 1; id(bevegelse).publish_state(true); }
+    on_release:
+      - script.execute: bevegelse_av_om
+  - platform: template
+    name: Bevegelse
+    id: bevegelse
+    device_class: motion
+    on_press:
+      - script.stop: tilstede_av_om
+      - binary_sensor.template.publish: { id: tilstede, state: ON }
+    on_release:
+      - lambda: 'id(sist_bevegelse) = millis();'
+      - script.execute: tilstede_av_om
+  - platform: status
+    name: Status
+
+  # --- utledet: tilstedeværelse (lengre enn bevegelse), mørkt, høy fuktighet ---
+  - platform: template
+    name: Tilstedeværelse
+    id: tilstede
+    device_class: occupancy
+  - platform: template
+    name: Høy fuktighet
+    device_class: moisture
+    lambda: |-
+      const float rh = id(fukt).state;
+      if (isnan(rh)) return {};
+      static bool hoy = false;
+      if (rh > ${fukt_hoy}) hoy = true; else if (rh < ${fukt_hoy} - 5) hoy = false;
+      return hoy;
+
+
+text_sensor:
+  # --- diagnostikk ---
+  - platform: wifi_info
+    ip_address: { name: IP-adresse, entity_category: diagnostic }
+    ssid: { name: Wi-Fi-nett, entity_category: diagnostic }
+    bssid: { name: Tilgangspunkt, entity_category: diagnostic }
+    mac_address: { name: MAC-adresse, entity_category: diagnostic }
+  - platform: version
+    name: ESPHome-versjon
+    hide_timestamp: true
+    entity_category: diagnostic
+  - platform: template
+    name: Komfort
+    icon: mdi:sofa-outline
+    update_interval: 60s
+    lambda: |-
+      const float t = id(temp).state, rh = id(fukt).state;
+      if (isnan(t) || isnan(rh)) return {};
+      if (t < 18) return {"Kaldt"};
+      if (t > 26) return {"Varmt"};
+      if (rh < 30) return {"Tørt"};
+      if (rh > 60) return {"Fuktig"};
+      return {"Behagelig"};
+globals:
+  - { id: bevegelser, type: int, restore_value: false, initial_value: "0" }
+  - { id: sist_bevegelse, type: uint32_t, initial_value: "0" }
+
+
+# Innstillinger: endres i Home Assistant, Homey-appen (enhetens innstillinger) eller sensorens web-side
+number:
+  - platform: template
+    name: Oppdateringsintervall
+    id: intervall
+    icon: mdi:timer-cog-outline
+    entity_category: config
+    unit_of_measurement: s
+    min_value: 5
+    max_value: 600
+    step: 5
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${oppdatering}
+  - platform: template
+    name: Bevegelse av etter
+    id: bev_av
+    icon: mdi:motion-sensor-off
+    entity_category: config
+    unit_of_measurement: s
+    min_value: 1
+    max_value: 600
+    step: 1
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${bevegelse_av}
+  - platform: template
+    name: Tilstedeværelse av etter
+    id: tils_av
+    icon: mdi:account-clock-outline
+    entity_category: config
+    unit_of_measurement: min
+    min_value: 1
+    max_value: 240
+    step: 1
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${tilstede_av}
+
+script:
+  - id: bevegelse_av_om
+    mode: restart
+    then:
+      - delay: !lambda 'return (uint32_t) (id(bev_av).state * 1000);'
+      - binary_sensor.template.publish: { id: bevegelse, state: OFF }
+  - id: tilstede_av_om
+    mode: restart
+    then:
+      - delay: !lambda 'return (uint32_t) (id(tils_av).state * 60000);'
+      - binary_sensor.template.publish: { id: tilstede, state: OFF }
+
+interval:
+  # målingene: hvert «Oppdateringsintervall» sekund (første gang 5 s etter oppstart)
+  - interval: 1s
+    then:
+      - lambda: |-
+          static uint32_t sist = 0;
+          const uint32_t n = millis();
+          if (sist != 0 && n - sist < (uint32_t) (id(intervall).state * 1000)) return;
+          if (sist == 0 && n < 5000) return;
+          sist = n;
+          id(dht_kort).update();
+  # status-LED: blink uten Wi-Fi eller uten kontakt med Home Assistant/Skjold, ellers av
+  - interval: 500ms
+    then:
+      - lambda: |-
+          static bool pa = false;
+          const bool feil = !wifi::global_wifi_component->is_connected();
+          if (!id(led_pa).state || !feil) { id(led_ut).turn_off(); pa = false; return; }
+          pa = !pa;
+          if (pa) id(led_ut).turn_on(); else id(led_ut).turn_off();
+
+button:
+  - platform: restart
+    name: Start på nytt
+    entity_category: config

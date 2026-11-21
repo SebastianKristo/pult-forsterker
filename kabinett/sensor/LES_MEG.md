@@ -46,6 +46,26 @@ under Konfigurasjon på Skjold Sensor-enheten) eller sensorens egen nettside. De
 Diagnostikk (bare lesing): IP-adresse, MAC-adresse, Wi-Fi-nett, tilgangspunkt, Wi-Fi-signal, oppetid,
 ESPHome-versjon og (ESP32) brikketemperatur.
 
+## Fire modeller: velg det du trenger
+
+Alle fire har samme bunn, kort og sensorkammer for temperatur og fukt. Forskjellen er lokket, delene du kjøper, og
+fastvaren, som bare viser det sensoren faktisk har i Home Assistant og Homey.
+
+| | Skjold Sensor | Sensor Lys | Sensor Klima | Sensor Bevegelse |
+|---|---|---|---|---|
+| Måler | temperatur, fukt, lys og bevegelse | temperatur, fukt og lys | temperatur og fukt | temperatur, fukt og bevegelse |
+| Deler i tillegg til kortet og DHT11 | BH1750 (GY-302) + AM312 | BH1750 (GY-302) | – | AM312 |
+| Lokk (`stl/<kort>/`) | `lokk.stl` | `lokk_uten_pir.stl` | `lokk_enkel.stl` | `lokk_uten_lux.stl` |
+| 3MF (Creality K2) | `skjold-sensor-<kort>-k2.3mf` | `skjold-sensor-lys-<kort>-k2.3mf` | `skjold-sensor-klima-<kort>-k2.3mf` | `skjold-sensor-bevegelse-<kort>-k2.3mf` |
+| Fastvare (ESP32 / D1 mini) | `skjold-sensor.yaml` / `-d1mini` | `skjold-sensor-lys.yaml` / `-d1mini` | `skjold-sensor-klima.yaml` / `-d1mini` | `skjold-sensor-bevegelse.yaml` / `-d1mini` |
+| I Home Assistant | alt under | + Lys, Mørkt, Lysnivå | Temperatur, Fukt, Duggpunkt, Føles som, Absolutt fuktighet, Komfort, Høy fuktighet | + Bevegelse, Tilstedeværelse, Bevegelser, Minutter siden bevegelse |
+
+`<kort>` er `esp32`, `d1mini`, `esp32d1` eller `d1mini-usbbak`. Fastvaren installeres fra
+**https://skjold-lab.com/flasher/sensor/** (én knapp per modell), og «Fastvare» i Home Assistant og Homey oppdaterer
+til samme modell senere. De enklere fastvarene lages av `esphome/lag_sensor_varianter.py` fra hovedfilene.
+
+![Sensor Lys](render/20_modell_lys.png) ![Sensor Klima](render/21_modell_klima.png) ![Sensor Bevegelse](render/22_modell_bevegelse.png)
+
 ## Mål og varianter
 
 | | ESP32-WROOM DevKit | Wemos D1 mini | ESP32 D1 mini | Wemos D1 mini USB-C, USB bak |
