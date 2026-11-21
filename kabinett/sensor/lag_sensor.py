@@ -85,7 +85,8 @@ for k in KORT:
                 v = A[x].intersection(A[y], engine="manifold").volume
             except Exception:
                 v = 0
-            if v > (0.5 if (x, y) in LOV or (y, x) in LOV else 0.02):
+            grense = 6.0 if {x, y} == {"bunn", "esp"} else 0.5   # klemribbene går 0,25 mm inn i kortkantene
+            if v > (grense if (x, y) in LOV or (y, x) in LOV else 0.02):
                 feil.append(f"{x}×{y} {v:.2f} mm³")
     meld(not feil, "ingen overlapp i montert stilling (med stativet)" + ("" if not feil else ": " + "; ".join(feil)))
 

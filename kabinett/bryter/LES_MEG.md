@@ -91,9 +91,13 @@ sprøtt. 0,2 mm lag, 3 vegger, 20 % fyll. Kassa har faser i stedet for runde hj�
 1. **Bryterne:** skru den indre mutteren et stykke inn på gjengen. Stikk bryteren gjennom hullet innenfra med
    skrueklemmene bakover og spaken opp/ned (ON-merket opp). Juster den indre mutteren til 6–7 mm gjenge stikker ut
    foran. Skru på gummihetta eller den ytre mutteren og stram.
-2. **Kortet:** skyv fremre kortkant inn under leppa foran i holderen, og legg USB-enden ned mot bakveggen med
-   kontakten i USB-hullet. Det hviler på en list foran og to puter ved USB-enden, og to finner i toppen holder
-   USB-enden nede når boksen er lukket.
+2. **Kortet:** legg USB-enden ned mot bakveggen med kontakten i USB-hullet, og trykk resten av kortet ned mellom
+   sidelistene. Tre smale **klemribber** på hver side går 0,25 mm inn i kortkantene og holder kortet fast hele tiden,
+   også når toppen er av. Ingenting ligger over kortet, så pinner, lodding og modul går fri. Kortet hviler på en list
+   foran og to puter ved USB-enden, og to finner i toppen holder USB-enden nede når boksen er lukket. Ta kortet ut
+   ved å lirke det opp i USB-enden.
+   - **Kortet ditt har andre mål?** Mål bredde og lengde og bygg holderen for det:
+     `openscad -D 'kort="d1mini"' -D kortB=26.2 -D kortL=34.8 -D 'part="bunn"' -o bunn.stl skjold_bryter.scad`.
 3. **Ledningene:** lodd ledningene til kortet, og skru dem i bryterne etter tabellen over. Bunt dem langs bakveggen.
    Flash fastvaren nå, før du lukker boksen.
 4. **Lukk:** sett bunnplata med bakveggen inn nedenfra og bakfra, og trykk den opp til de fire klipsene klikker ut i

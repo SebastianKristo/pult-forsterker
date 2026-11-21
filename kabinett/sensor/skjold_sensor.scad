@@ -111,6 +111,9 @@ vZ = D1BAK ? 6.6 : 6.4;                  // kortets underside over bakveggens ba
 vx1 = W/2 - t - (D1BAK ? 2.5 : 2.0); vx0 = vx1 - vB;  // kortets kanter i x (holdt unna det runde hjørnet oppe til høyre)
 vy1 = H - t - 1.2;   vy0 = vy1 - vL;     // kortets kanter i y (USB nede ved vy0)
 vcx = (vx0 + vx1)/2;                     // midt i kortet = midt i USB-kanalen
+vPB2 = D1BAK ? vPB : vB - 1;             // kortets bredde slik det ligger i lomma (for klemribbene)
+fB = ESP ? 28.3 : 25.6;                  // det flate kortets bredde (for klemribbene)
+ribbeInn = 0.25;                         // klemribbene går så langt inn i kortkanten
 vUsbZ = D1BAK ? vZ + vT + 1.6 : vZ - 1.4;   // midt i kontakten: USB-C oppå (D1 mini), micro-USB under (MiniKit)
 vMunn = D1BAK ? vy0 + (vL - vPL)/2 - 1.0 : vy0 - 0.3;   // munningen: USB-C stikker ca. 1 mm ut over kortkanten
 // selve kontakten (huset som stikker ut over kortkanten): USB-C 8,9 × 3,2 mm, micro-USB ca. 8 × 2,8 mm
@@ -190,6 +193,16 @@ module bunn() {
         if (D1BAK && sy < 0) translate([x - (sx < 0 ? 0.3 : 4.7), y - 2, tb - 0.01]) cube([5, 2.05, vZ - tb + vT + 0.5]);     // stopp nederst
         if (sx < 0) translate([x - 1.2, y - (sy < 0 ? 0.3 : 4.7), tb - 0.01]) cube([1.25, 5, vZ - tb + bT + 1]);   // venstre kant
         if (sy > 0) translate([x - (sx < 0 ? 0.3 : 4.7), y - 0.05, tb - 0.01]) cube([5, 1.6, vZ - tb + bT + 1]);   // øverst (inn i veggen)
+      }
+      // klemribber: korte vegger midt på langsidene med ribber som går 0,25 mm inn i kortkantene. Kortet trykkes ned
+      // mellom dem og sitter fast hele tiden – også uten lokk. Ingenting ligger over kortet (pinner og lodding går fri).
+      if (VERT) for (sx = [-1, 1], f = [0.3, 0.7]) let(kant = vcx + sx*vPB2/2, lomme = sx < 0 ? vx0 : vx1, yy = vy0 + f*vL) {
+        translate([sx < 0 ? lomme - 1.2 : lomme - 0.05, yy - 2, tb - 0.01]) cube([1.25, 4, vZ + vT - tb + 0.01]);
+        translate([kant - sx*(ribbeInn - 0.6), yy, tb - 0.01]) cylinder(d = 1.2, h = vZ + vT - tb + 0.01, $fn = 16);
+      }
+      if (!VERT) for (sy = [-1, 1], f = [0.3, 0.7]) let(kant = cy + sy*fB/2, lomme = cy + sy*bW/2, xx = bX0 + f*bL) {
+        translate([xx - 2, sy < 0 ? lomme - 1.2 : lomme - 0.05, tb - 0.01]) cube([4, 1.25, bZ + bT - tb + 0.01]);
+        translate([xx, kant - sy*(ribbeInn - 0.6), tb - 0.01]) cylinder(d = 1.2, h = bZ + bT - tb + 0.01, $fn = 16);
       }
       // USB-kanalen: vegger og tak rundt kanalen fra underkanten opp gjennom sensorkammeret og skilleveggen
       if (VERT) translate([vcx - kanB/2 - kanV, 1, 0]) cube([kanB + 2*kanV, max(vy0, vMunn + platT) - 1, kanZ + kanV]);
@@ -277,9 +290,7 @@ module lokk() {
         difference() { cylinder(d = 5.6, h = Db - dhtZ1 - 0.1 + 0.01); translate([0, 0, -1]) cylinder(d = 3.4, h = 2.5, $fn = 24); }
       // LED-holder
       if (led) translate([ledX, cy, Db - 4]) cylinder(d = ledFlens + 2.4, h = 4.01);
-      // pinner som holder ESP-kortet nede (bare i enden uten USB – knappene sitter ved USB)
-      if (!VERT) for (sy = [-1, 1]) translate([bX0 + 1.8 - 1.4, cy + sy*(bW/2 - 1.8) - 1.4, bZ + bT + 0.3]) cube([2.8, 2.8, Db - bZ - bT - 0.3 + 0.01]);
-      if (VERT) for (x = [vx0 + 1.8, vx1 - 1.8]) translate([x - 1.4, vy1 - 1.8 - 1.4, vZ + vT + (D1BAK ? 0.1 : 0.3)]) cube([2.8, 2.8, Db - vZ - vT - (D1BAK ? 0.1 : 0.3) + 0.01]);
+      // (ingen pinner ned mot ESP-kortet lenger: de traff loddingen i hjørnene, og klemribbene i bunnen holder kortet)
       // tunge ned i hakket over USB-kontakten: tetter rundt kontakten og holder kortenden nede
       if (VERT) {
         tB = hakkB - 0.3;

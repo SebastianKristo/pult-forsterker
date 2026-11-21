@@ -106,8 +106,11 @@ gullist og stativ i `stl/<kort>/sht40/`. Der er sensorkammeret 10 mm lavere, ell
 - **SHT40-utgaven** (`th = "sht40"`): kortet ligger vannrett midt i kammeret, i to spor, og skyves inn forfra.
   Sensorbrikka bør vende ned mot bunnspaltene. Sporene passer kort som er inntil 13,6 mm brede (`sensW`) og
   10–20 mm lange. Ledningene går under skilleveggen gjennom en åpning på 8 × 3,5 mm.
-- **ESP-kortet ligger flatt** på fire hjørnestøtter, med USB-enden inn mot høyre vegg. To pinner på lokket holder den
-  andre enden nede. USB-kabelen går ut i høyre side.
+- **ESP-kortet ligger flatt** på fire hjørnestøtter, med USB-enden inn mot høyre vegg. USB-kabelen går ut i høyre side.
+- **Kortet sitter fast hele tiden:** midt på begge langsidene står to korte vegger med **klemribber** som går 0,25 mm
+  inn i kortkantene. Trykk kortet ned mellom dem til det ligger på støttene; det sitter fast også uten lokk. Det er
+  ingen pinner fra lokket ned mot kortet lenger (de traff loddingen i hjørnene, så lokket ikke gikk helt på), og
+  ingenting ligger over kortet. Ta det ut ved å lirke det opp i enden uten USB.
 - **ESP32 D1 mini-utgaven** er annerledes, se under.
 
 ### ESP32 D1 mini: USB ut bak, nederst
@@ -116,7 +119,7 @@ gullist og stativ i `stl/<kort>/sht40/`. Der er sensorkammeret 10 mm lavere, ell
 
 - **Kortet står på høykant** til høyre i ESP-rommet, med USB-enden ned mot skilleveggen og WROOM-modulen fram. Lomma
   er 40,4 × 32,4 mm, så kort på 39–40 × 31–32 mm passer. Det ligger på fire hjørnestøtter 6,4 mm fra baksiden, med
-  plass til USB-brikka under. To pinner på lokket holder den øvre enden nede.
+  plass til USB-brikka under. Klemribber midt på langsidene holder kortet fast, også uten lokk.
 - **Tett rundt kontakten:** kanalen slutter ved munningen på micro-USB-kontakten med en tett vegg. Den har bare et hakk
   på 8,6 × 3,4 mm rundt kontakthuset, og en tunge på lokket fyller resten over kontakten og kortkanten. Spaltene inn
   til elektronikken er på høyst 0,3 mm.
@@ -159,8 +162,9 @@ ESP-12F og USB-C på samme side og CH340 under.
   - Lomma er 34,5 × 25,9 mm, bare 0,3 mm større enn kortet (34,2 × 25,6 × ca. 1,0 mm).
   - Kortet ligger mellom kanter på begge sider, en stopp i hver ende og fire hjørnestøtter bak. Det skyves rett inn
     forfra.
-  - Når lokket er på, holder to pinner den øvre enden og en tunge den nedre. Tunga presser på USB-C-kontakten og har
-    0,1–0,15 mm klaring.
+  - Klemribber midt på langsidene holder kortet fast hele tiden, også uten lokk. Når lokket er på, holder en tunge
+    den nedre enden. Tunga presser på USB-C-kontakten og har 0,1–0,15 mm klaring. Ingenting fra lokket treffer
+    loddingen.
   - Kortet kan altså ikke flytte seg mer enn 0,3 mm noen vei.
 - **Trykket fra pluggen tas av boksen.** Når du skyver USB-C-pluggen opp, presses kortet mot stoppene øverst. Når du
   drar den ut, holdes kortet av stoppene nederst og veggen rundt kontakten. Kortet henger aldri i loddingen, og pinnene
