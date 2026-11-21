@@ -4,7 +4,7 @@ import { api, ApiError, PRODUCT_LABEL, type SkyStatus } from '../lib/api';
 import { switchRoom, useRooms } from './phone';
 import { go, showToast, everyVisible } from '../lib/store';
 import {
-  hjem, hjemErr, hjemState, loadEnheter, loadSteder, loginUrl, rolleMerke, sameOrigin, selectSted, setSkyUrl,
+  hjem, hjemErr, hjemState, loadEnheter, loadSteder, loginUrl, rolleMerke, sameOrigin, selectSted, setSkyUrl, tofaMangler,
   SKY_DEFAULT, skyUrl, stedId, stedNavn, steder, type Enhet, type Sted
 } from '../lib/hjem';
 
@@ -79,7 +79,7 @@ const BTN = (bd = '#2e2e30', fg = '#f2f2ee') => `height:32px;padding:0 12px;bord
 const PRIMARY = `height:40px;padding:0 16px;border-radius:10px;border:none;background:${A};color:#0b0b0c;font-weight:600;cursor:pointer`;
 
 /** Innstillinger → Steder (skyen). */
-export function StederPanel() {
+export function StederPanel({ utenAdresse = false }: { utenAdresse?: boolean }) {
   const [url, setUrl] = useState(skyUrl());
   const [nytt, setNytt] = useState('');
   const [open, setOpen] = useState<string>(stedId.value);
@@ -91,7 +91,7 @@ export function StederPanel() {
   };
   return (
     <div class="col gap16" data-testid="steder-panel">
-      {!sameOrigin.value && <div style={box}>
+      {!sameOrigin.value && !utenAdresse && <div style={box}>
         <span style="font-size:15px;font-weight:600">Skjold-hjem</span>
         <p style="margin:0;font-size:12px;color:#a9a9a3;line-height:1.5">Steder samler Skjold-enheter på flere adresser (Hjem, Hytta …). Når en enhet ikke svarer på nettet du er på, går trafikken via skyen.</p>
         <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#8b8b86">Sky-adresse<input value={url} onInput={(e) => setUrl(e.currentTarget.value)} placeholder={SKY_DEFAULT} style={fld} autoCapitalize="off" spellcheck={false} /></label>
@@ -271,3 +271,86 @@ export function SkyPanel() {
   );
 }
 
+
+
+// ---------- Oppsett i tre steg: konto → denne enheten i et hjem → synk ----------
+/** Sky-adressen (avansert): bare når web-UI-et ikke allerede er servert fra skyen. */
+export function SkyAdresse() {
+  const [url, setUrl] = useState(skyUrl());
+  if (sameOrigin.value) return <span style="font-size:12.5px;color:#8b8b86">Du bruker Skjold-hjem på {location.host}.</span>;
+  return (
+    <div style={box}>
+      <span style="font-size:14px;font-weight:600">Sky-adresse</span>
+      <span style="font-size:12px;color:#a9a9a3;line-height:1.5">Endres bare hvis du kjører din egen Skjold-sky. Standard er {SKY_DEFAULT.replace(/^https?:\/\//, '')}.</span>
+      <div class="row gap10"><input value={url} onInput={(e) => setUrl(e.currentTarget.value)} placeholder={SKY_DEFAULT} style={fld} autoCapitalize="off" spellcheck={false} /><button onClick={() => { setSkyUrl(url); void loadSteder(); showToast('Lagret'); }} style={BTN()}>Lagre</button></div>
+    </div>);
+}
+
+type Steg = 'ferdig' | 'na' | 'senere';
+function StegRad({ n, tittel, tekst, steg, children }: { n: number; tittel: string; tekst: string; steg: Steg; children?: preact.ComponentChildren }) {
+  const ferdig = steg === 'ferdig', na = steg === 'na';
+  return (
+    <div style={`display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;padding:16px 0;border-top:1px solid #242426;opacity:${steg === 'senere' ? 0.55 : 1}`}>
+      <span style={`width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;${ferdig ? 'background:#6fcf7f;color:#0b0b0c' : na ? 'background:#1c170d;border:1px solid #5a4420;color:#f0c46a' : 'border:1px solid #2e2e30;color:#8b8b86'}`}>{ferdig ? '✓' : n}</span>
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+        <span style="font-size:15px;font-weight:600">{tittel}</span>
+        <span style="font-size:12.5px;color:#a9a9a3;line-height:1.5">{tekst}</span>
+        {children}
+      </div>
+    </div>);
+}
+
+/** Øverst på Innstillinger → Skjold-hjem: hva er satt opp, og neste steg med én knapp. */
+export function SkjoldHjemOppsett() {
+  const [sky, setSky] = useState<SkyStatus | null>(null), [cloud, setCloud] = useState<{ enabled: boolean; sist_synk: number } | null>(null);
+  const [meg, setMeg] = useState<{ epost: string } | null>(null), [valgt, setValgt] = useState(''), [nyttNavn, setNyttNavn] = useState('Hjemme'), [busy, setBusy] = useState(false);
+  const st = hjemState.value, innlogget = st === 'ok';
+  const last = async () => {
+    try { setSky(await api.sky()); } catch { setSky(null); }
+    try { setCloud(await api.cloudStatus()); } catch { setCloud(null); }
+  };
+  useEffect(() => { void loadSteder(); void last(); const t = everyVisible(last, 8000); return () => clearInterval(t); }, []);
+  useEffect(() => { if (innlogget) void hjem.meg().then(setMeg).catch(() => setMeg(null)); }, [innlogget]);
+  const egne = steder.value.filter((x) => x.rolle === 'eier');
+  const mål = valgt || egne[0]?.id || steder.value[0]?.id || '';
+  const koblet = !!sky?.koblet, synk = !!cloud?.enabled;
+  const kobl = async (stedIdx?: string) => {
+    setBusy(true);
+    try {
+      let id = stedIdx || mål;
+      if (!id) { const s = await hjem.nyttSted(nyttNavn.trim() || 'Hjemme'); id = s.id; await loadSteder(); }
+      const k = await hjem.kobling(id);
+      await api.skyKobl(k.kode);
+      showToast('Skjold er koblet til ' + (steder.value.find((x) => x.id === id)?.navn || nyttNavn));
+      await last(); await loadSteder();
+    } catch (e) { showToast(msg(e)); } finally { setBusy(false); }
+  };
+  const loggInn = () => { window.open(loginUrl(), '_blank'); };
+  const klar = [innlogget, koblet, synk].filter(Boolean).length;
+  return (
+    <div style={box + ';padding:20px 22px;gap:4px'} data-testid="skjold-hjem-oppsett">
+      <div class="row between" style={{ alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+        <span style="font-size:18px;font-weight:600">Styr Skjold hvor som helst</span>
+        <span style={`${MONO};font-size:11px;color:${klar === 3 ? '#6fcf7f' : '#f0c46a'}`}>{klar} AV 3 KLART</span>
+      </div>
+      <span style="font-size:13px;color:#a9a9a3;line-height:1.5;margin-bottom:6px">Med Skjold-hjem når du enhetene dine fra telefonen også når du ikke er hjemme, deler hjemmet med familien og tar vare på oppsettet. Hjemme på eget nett virker Skjold alltid – også uten dette.</span>
+      <StegRad n={1} tittel={innlogget ? 'Logget inn' + (meg ? ' som ' + meg.epost : '') : tofaMangler.value ? 'Bekreft at det er deg' : 'Logg inn eller lag en Skjold-konto'} steg={innlogget ? 'ferdig' : 'na'}
+        tekst={innlogget ? 'Skjold-kontoen din. Profil, sikkerhet og deling finner du på konto-siden.' : 'Det tar et halvt minutt: skriv e-postadressen din og koden du får, eller bruk Google. Kom tilbake hit etterpå.'}>
+        {innlogget ? <a href={(sameOrigin.value ? '' : skyUrl()) + '/konto'} target={sameOrigin.value ? undefined : '_blank'} rel="noreferrer" style={`font-size:13px;color:${A}`}>Åpne konto-siden ↗</a>
+          : <div class="row gap10" style={{ flexWrap: 'wrap' }}><button onClick={loggInn} style={PRIMARY}>{tofaMangler.value ? 'Bekreft' : 'Logg inn / lag konto'}</button><button onClick={() => void loadSteder()} style={BTN()}>Jeg har logget inn</button></div>}
+        {st === 'feil' && <span style="font-size:12px;color:#e05a4a">{hjemErr.value}</span>}
+      </StegRad>
+      <StegRad n={2} tittel={koblet ? 'Denne Skjold er koblet til «' + (sky?.stedNavn || sky?.sted || 'hjemmet') + '»' : 'Koble denne Skjold til hjemmet ditt'} steg={koblet ? 'ferdig' : innlogget ? 'na' : 'senere'}
+        tekst={koblet ? (sky?.tilkoblet ? 'På nett via skyen. Nye Skjold-enheter på samme nett blir med av seg selv.' : 'Koblet, men ikke tilkoblet skyen akkurat nå – sjekk internett.') : 'Ett trykk: Skjold lager en kode og kobler enheten til hjemmet. Har du ikke et hjem ennå, lages det.'}>
+        {!koblet && innlogget && (steder.value.length ? <div class="row gap10" style={{ flexWrap: 'wrap' }}>
+          {steder.value.length > 1 && <select value={mål} onChange={(e) => setValgt(e.currentTarget.value)} style={fld + ';max-width:220px'}>{steder.value.map((x) => <option key={x.id} value={x.id}>{x.navn}</option>)}</select>}
+          <button disabled={busy} onClick={() => void kobl()} style={PRIMARY}>{busy ? 'Kobler til …' : 'Koble til ' + (steder.value.find((x) => x.id === mål)?.navn || '')}</button></div>
+          : <div class="row gap10" style={{ flexWrap: 'wrap' }}><input value={nyttNavn} onInput={(e) => setNyttNavn(e.currentTarget.value)} placeholder="Navn på hjemmet" style={fld + ';max-width:220px'} /><button disabled={busy} onClick={() => void kobl()} style={PRIMARY}>{busy ? 'Lager …' : 'Lag hjem og koble til'}</button></div>)}
+        {koblet && <button onClick={() => { if (confirm('Koble denne Skjold fra Skjold-hjem? Den virker fortsatt hjemme.')) void api.skyKobleFra().then(() => last()); }} style={BTN('#4a2420', '#e05a4a') + ';align-self:flex-start'}>Koble fra</button>}
+      </StegRad>
+      <StegRad n={3} tittel={synk ? 'Synk mellom hjemmene er på' : 'Synk favoritter og oppsett (valgfritt)'} steg={synk ? 'ferdig' : koblet ? 'na' : 'senere'}
+        tekst={synk ? 'Favoritter, rutiner og EQ følger deg mellom hjemmene. Sist synket ' + (cloud?.sist_synk ? new Date(cloud.sist_synk * 1000).toLocaleString('nb-NO') : 'aldri') + '.' : 'Har du Skjold flere steder? Da kan favoritter, rutiner og EQ være like overalt. Alt krypteres – bare enhetene dine kan lese det.'}>
+        {koblet && <button onClick={() => document.getElementById('skjold-synk')?.scrollIntoView({ behavior: 'smooth' })} style={BTN() + ';align-self:flex-start'}>{synk ? 'Velg hva som synkes' : 'Slå på synk'}</button>}
+      </StegRad>
+    </div>);
+}

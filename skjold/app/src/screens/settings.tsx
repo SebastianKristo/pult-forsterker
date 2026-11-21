@@ -25,7 +25,7 @@ import { getLocal, setLocal } from '../lib/services';
 import { ndConfigured, ndError, ndPing } from '../lib/navidrome';
 import { ytmTest } from '../lib/ytm';
 import { RadioFavorites } from './radio';
-import { SkyPanel, StederPanel } from './hjem';
+import { SkjoldHjemOppsett, SkyAdresse, SkyPanel, StederPanel } from './hjem';
 import { CloudPanel } from './platform';
 import { favs } from '../lib/radio';
 import { PRODUCT_HW, PRODUCT_LABEL } from '../lib/api';
@@ -122,12 +122,19 @@ function SubHead({ n, sub }: { n: string; sub?: string }) {
 
 export function CategoryDetail({ cat, wide }: { cat: Category; wide: boolean }) {
   if (cat.id === 'oppdatering') return <div style="display:flex;flex-direction:column;gap:14px"><Boundary><UpdatePanel /></Boundary>{canSelfUpdate && <Boundary><AppUpdatePanel /></Boundary>}<SubHead n="Endringslogg" /><Boundary><ChangelogPanel /></Boundary></div>;
-  if (cat.id === 'sky') return (   // Steder, Skjold-hjem, fjernstyring og Skjold Cloud – samme tema, én side
+  if (cat.id === 'sky') return (   // Skjold-hjem: oppsett i tre steg øverst, så hjemmene, synk og det avanserte nederst
     <div style="display:flex;flex-direction:column;gap:14px">
-      <SubHead n="Steder" sub="Hjem, Hytta … og hvilke enheter som hører til hvor" /><Boundary><StederPanel /></Boundary>
-      <SubHead n="Denne enheten" sub="Koble denne Skjold til et sted" /><Boundary><SkyPanel /></Boundary>
-      <SubHead n="Fjernstyring" sub="Styr Skjold hjemmefra via Cloudflare" /><Boundary><RemotePanel /></Boundary>
-      <SubHead n="Skjold Cloud" sub="Kryptert synk av favoritter, rutiner og EQ mellom hjem" /><Boundary><CloudPanel /></Boundary>
+      <Boundary><SkjoldHjemOppsett /></Boundary>
+      <SubHead n="Hjemmene dine" sub="Enhetene i hvert hjem, og hvem du deler med" /><Boundary><StederPanel utenAdresse /></Boundary>
+      <div id="skjold-synk" style="display:flex;flex-direction:column;gap:14px"><SubHead n="Synk mellom hjem" sub="Favoritter, rutiner og EQ – kryptert, bare enhetene dine kan lese det" /><Boundary><CloudPanel /></Boundary></div>
+      <details class="avansert" style="border:1px solid #242426;border-radius:14px;padding:4px 16px 14px;background:#111112">
+        <summary style="cursor:pointer;padding:12px 0;font-size:15px;font-weight:600">Avansert</summary>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <SubHead n="Koble til med kode" sub="Hvis du har laget en kode på en annen enhet" /><Boundary><SkyPanel /></Boundary>
+          <SubHead n="Sky-adresse" sub="Bare hvis du kjører din egen Skjold-sky" /><Boundary><SkyAdresse /></Boundary>
+          <SubHead n="Egen fjernstyring via Cloudflare Tunnel" sub="For deg som vil ha din egen adresse. Trengs ikke når Skjold-hjem er satt opp." /><Boundary><RemotePanel /></Boundary>
+        </div>
+      </details>
     </div>
   );
   if (cat.id === 'rutiner') return <div style="display:flex;flex-direction:column;gap:14px"><Boundary><HomeAssistantPanel /></Boundary><Boundary><RoutinesPanel /></Boundary><Boundary><DoorbellPanel /></Boundary><Boundary><DuckPanel /></Boundary><Boundary><SecurityPanel /></Boundary><Boundary><RecognizeSettingsPanel /></Boundary><Boundary><WishlistPanel /></Boundary><Boundary><RadioListPanel source="wishlist" /></Boundary></div>;

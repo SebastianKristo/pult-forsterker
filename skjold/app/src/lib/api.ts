@@ -222,6 +222,7 @@ export const api = {
   podPlay: (e: { id?: string; url: string; title?: string; show?: string; image?: string; duration?: number; pid?: string; restart?: boolean }) => post<{ ok: boolean; resume: number }>('/api/pod/play', e),
   setHomekit: (b: { enabled?: boolean; reset?: boolean }) => post<HomeKitInfo>('/api/homekit', b),
   sky: () => req<SkyStatus>('/api/sky'),
+  cloudStatus: () => req<{ enabled: boolean; sist_synk: number }>('/api/cloud'),
   skyKobl: (kode: string) => post<SkyStatus>('/api/sky', { kode }),
   skyKobleFra: () => post<SkyStatus>('/api/sky', { koble_fra: true }),
   remote: () => req<RemoteStatus>('/api/remote'),
