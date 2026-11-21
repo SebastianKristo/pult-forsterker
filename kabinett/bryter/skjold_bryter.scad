@@ -49,8 +49,13 @@ R = 2;                // fasen på de stående hjørnene (fas, ikke runding: fro
 fas = 1.2;            // fas på ytterkantene
 
 // ESP-kortet: ligger flatt på bunnplata til høyre for bryterne, med USB-enden mot bakveggen
-vB = E32 ? 31.4 : 25.6;        // kortets bredde (x)
-vL = E32 ? 39.0 : 34.2;        // kortets lengde (y)
+kortB = 0; kortL = 0;          // ditt kort, hvis det avviker (mm, 0 = standard): -D kortB=31.8 -D kortL=39.5
+vB = kortB > 0 ? kortB : E32 ? 31.4 : 25.6;        // kortets bredde (x)
+vL = kortL > 0 ? kortL : E32 ? 39.0 : 34.2;        // kortets lengde (y)
+// Kortet holdes av klemribber: tre smale ribber på hver sidelist trykker 0,25 mm mot kortkantene (ikke oppå kortet,
+// så de går klar av pinnene, loddingen og modulen). Kortet trykkes ned mellom dem og sitter fast også uten toppen.
+ribbeInn = 0.25;               // så mye ribbene går inn i kortkanten
+sideKlar = 0.5;                // luft mellom kortkanten og sidelistene (ribbene tar det opp)
 vT = E32 ? 1.6 : 1.0;          // tykkelse
 bZ = E32 ? 5.2 : 2.6;          // kortets underside over bunnplata (micro-USB under MiniKit, CH340 under D1 mini)
 lomB = 32.4;                   // plassen som er satt av til kortet (det største, ESP32 D1 mini)
@@ -216,14 +221,15 @@ module bunn() {
       translate([-bw/2, yF + klar, 0]) cube([bw, Dy - yF - klar, tLid]);
       // bakveggen
       translate([-bw/2, yB, 0]) cube([bw, tr, zT - c]);
-      // leppe over fremre kortkant (kortet skyves inn under den, USB-enden legges ned bak)
-      translate([kcx - vB/2 + 2, ky0 - 0.3 - 1.6, kz1 + 0.15]) cube([vB - 4, 1.6 + 0.3 + 1.0, 1.05]);
-      // kortholderen: tverrlist under fremre kortkant, puter i hjørnene ved USB-enden, sidelister og stopp foran
+      // kortholderen: tverrlist under fremre kortkant, puter i hjørnene ved USB-enden, sidelister med klemribber og
+      // en lav stopp foran. Ingenting ligger over kortet, så pinner, lodding og modul går fri.
       translate([kcx - vB/2, ky0, zB - 0.01]) cube([vB, 2.5, bZ + 0.01]);
       for (sx = [-1, 1]) translate([kcx + sx*(vB/2 - 2.5) - 2.5, ky1 - 2.5, zB - 0.01]) cube([5, 2.5, bZ + 0.01]);
-      for (sx = [-1, 1]) translate([kcx + sx*(vB/2 + 0.3 + 0.8), (ky0 + ky1)/2, zB - 0.01])
+      for (sx = [-1, 1]) translate([kcx + sx*(vB/2 + sideKlar + 0.8), (ky0 + ky1)/2, zB - 0.01])
         linear_extrude(bZ + vT + 1.2) square([1.6, vL - 6], center = true);
-      translate([kcx - vB/2 + 2, ky0 - 0.3 - 1.6, zB - 0.01]) cube([vB - 4, 1.6, bZ + vT + 1.2]);
+      for (sx = [-1, 1], f = [0.18, 0.5, 0.82]) translate([kcx + sx*(vB/2 - ribbeInn + 0.6), ky0 + f*vL, zB - 0.01])
+        cylinder(d = 1.2, h = bZ + vT + 0.01, $fn = 16);   // klemribbene (toppen flukter med kortets overside)
+      translate([kcx - vB/2 + 2, ky0 - 0.3 - 1.6, zB - 0.01]) cube([vB - 4, 1.6, bZ + vT * 0.6]);
       // klipsene
       for (k = klips) ved_klips(k) klips_arm();
     }
