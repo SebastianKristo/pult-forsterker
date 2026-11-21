@@ -40,3 +40,39 @@ button:active:not(:disabled):not(.flat) { transform: scale(.95); opacity: .85; t
 @keyframes lpspinn { to { transform: rotate(360deg); } }
 .lp-inn { animation: lpinn .55s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes lpinn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }
+
+/* ── Hurtigpanelet (dra ned fra toppen): mykt, lagdelt og med rippel som på telefonen ── */
+.qdim { position: absolute; inset: 0; touch-action: none; background: radial-gradient(120% 70% at 50% 0%, rgba(0,0,0,.35), rgba(0,0,0,.72)); }
+.qpanel { position: absolute; left: 10px; right: 10px; top: 0; will-change: transform; padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 10px;
+  background: linear-gradient(180deg, rgba(28,28,30,.98), rgba(18,18,20,.98)); border: 1px solid #2a2a2c; border-top: none; border-radius: 0 0 28px 28px;
+  box-shadow: 0 30px 70px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.04); }
+.qchip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #1f1f22; border: 1px solid #2c2c30; font-size: 11.5px; color: #c9c9c4; }
+.qchip i { width: 7px; height: 7px; border-radius: 4px; }
+.qchip.gull { background: #241c0d; border-color: #5a4420; color: #f0c46a; }
+.qspiller { display: flex; align-items: center; gap: 12px; padding: 7px 8px; border-radius: 20px; background: #1a1a1c; border: 1px solid #2a2a2c; }
+.qspiller .cover { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
+.rund { position: relative; overflow: hidden; width: 46px; height: 46px; border-radius: 23px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
+.qglid { position: relative; overflow: hidden; display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 16px; border-radius: 18px; background: #1f1f22; border: 1px solid #2c2c30; color: #f2f2ee; touch-action: none;
+  transition: transform .3s cubic-bezier(.2,1.4,.4,1); }
+.qglid .fyll { position: absolute; inset: 0; transform-origin: left center; background: linear-gradient(90deg, #3a3a3f, #4a4a50); transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+.qglid.aktiv { transform: scale(1.025); }
+.qglid.aktiv .fyll { transition: transform .05s linear; background: linear-gradient(90deg, #5a4420, #8a6a2c); }
+.qflis { position: relative; overflow: hidden; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; height: 68px; padding: 0 12px; border-radius: 20px;
+  border: 1px solid #2a2a2c; background: #1a1a1c; color: #f2f2ee; text-align: left; min-width: 0; animation: qflisinn .42s cubic-bezier(.2,.8,.2,1) backwards; }
+.qflis .sirkel { width: 36px; height: 36px; flex-shrink: 0; border-radius: 18px; display: flex; align-items: center; justify-content: center; background: #2a2a2e; color: #f2f2ee;
+  transition: background-color .32s ease, color .32s ease, transform .45s cubic-bezier(.2,1.6,.4,1); }
+.qflis .tekst { display: flex; flex-direction: column; gap: 1px; min-width: 0; max-width: 100%; }
+.qflis b { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qflis small { font-size: 11.5px; color: #8b8b86; transition: color .3s ease; }
+.qflis.på { background: linear-gradient(160deg, #2a210f, #1c170d); border-color: #5a4420; }
+.qflis.på .sirkel { background: #f0c46a; color: #0b0b0c; animation: qpop .5s cubic-bezier(.2,1.6,.4,1); }
+@keyframes qpop { 0% { transform: scale(.7); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.qflis.på small { color: #f0c46a; }
+.qflis.måne.på .sirkel svg path { fill: currentColor; }
+.qinn { animation: qflisinn .42s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes qflisinn { from { opacity: 0; transform: translateY(-10px) scale(.97); } to { opacity: 1; transform: none; } }
+/* rippelen: vokser fra fingeren, tones ut når du slipper */
+.rippel { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .16; transform: scale(0); animation: rippel .5s cubic-bezier(.2,.8,.2,1) forwards; }
+.rippel.ut { opacity: 0; transition: opacity .4s ease; }
+@keyframes rippel { to { transform: scale(1); } }
+button:active:not(:disabled):not(.flat).qflis { transform: scale(.94); opacity: 1; }
