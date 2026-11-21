@@ -49,6 +49,7 @@ RADIO_SRC = ("wheel", "preset", "power", "volume")   # Skjold Radio (skjold_radi
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png", ".woff2": "font/woff2", ".webm": "video/webm"}
 
 ui = {"menu": False, "setup": False, "bday": False}   # rapportert av skjermen (POST /ui/state)
+FERDIG = {"vis": False}   # gaveskriptet (pi/gave_s1.sh): «Ferdig installert – ta ut strømmen» til strømmen tas
 lock = threading.Lock()
 subscribers: list = []
 
@@ -58,9 +59,18 @@ def greeting_read():
     try:
         with open(GREETING, encoding="utf-8") as fh:
             g = json.load(fh)
-        return {"name": str(g.get("name") or "Pappa"), "state": "armed" if g.get("state") == "armed" else "shown"}
+        tilstand = g.get("state") if g.get("state") in ("armed", "ferdig") else "shown"
+        return {"name": str(g.get("name") or "Pappa"), "fra": str(g.get("fra") or ""), "state": tilstand}
     except (OSError, ValueError):
-        return {"name": "Pappa", "state": "none"}
+        return {"name": "Pappa", "fra": "", "state": "none"}
+
+
+def ferdig_na():
+    """Gaveskriptet er ferdig: vis «Ferdig installert» nå, og la hilsenen stå klar til neste oppstart."""
+    g = greeting_read()
+    greeting_write({"name": g["name"], "fra": g["fra"], "state": "armed"})   # fsync: neste oppstart viser hilsenen
+    FERDIG["vis"] = True
+    broadcast({"ev": "ferdig"})
 
 
 def greeting_write(g):
@@ -89,6 +99,8 @@ def handle_input(ev):
 
     ev: {"ev":"press|turn|hold|back|menu_toggle", "src":"knob|power|air|aux|radio|usb", "d":±1 (turn)}
     """
+    if FERDIG["vis"]:   # «Ferdig installert – ta ut strømmen»: knappene gjør ingenting
+        return {"consumed": True}
     g = greeting_read()
     if g["state"] == "armed":   # første trykk lukker hilsenen og gjør ingenting annet
         if ev.get("ev") in ("press", "hold", "turn", "back", "menu_toggle"):
@@ -196,7 +208,8 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/"):
             return self._proxy("GET")
         if p == "/greeting":
-            return self._json(greeting_read())
+            g = greeting_read()
+            return self._json({**g, "state": "armed" if g["state"] == "ferdig" else g["state"], "ferdig": FERDIG["vis"]})
         if p == "/ui":
             with lock:
                 return self._json({**ui, "greeting": greeting_read()["state"]})
@@ -234,10 +247,14 @@ class H(BaseHTTPRequestHandler):
             return self._json(set_backlight(self._body().get("level", 1)))
         if p == "/greeting":   # web-UI → Innstillinger → Hilsen → Installer: {"name","state":"armed"}
             b = self._body()
-            g = {"name": str(b.get("name") or "Pappa")[:24], "state": "armed" if b.get("state", "armed") == "armed" else "shown"}
+            g = {"name": str(b.get("name") or "Pappa")[:24], "fra": str(b.get("fra") or "")[:40],
+                 "state": "armed" if b.get("state", "armed") == "armed" else "shown"}
             greeting_write(g)
             broadcast({"ev": "greeting_changed"})
             return self._json(g)
+        if p == "/greeting/ferdig":   # pi/gave_s1.sh: installasjonen er ferdig
+            ferdig_na()
+            return self._json({"ok": True})
         if p == "/greeting/dismiss":
             return self._json(handle_input({"ev": "press", "src": "knob"}))
         return self._json({"error": "ukjent"}, 404)
@@ -446,6 +463,8 @@ def main():
     ap.add_argument("--port", type=int, default=int(os.environ.get("SKJOLD_UI_PORT", "8766")))
     ap.add_argument("--no-kiosk", action="store_true", help="bare server (utvikling/test)")
     a = ap.parse_args()
+    if greeting_read()["state"] == "ferdig":   # gaveskriptet startet maskinen på nytt: vis «Ferdig installert» denne gangen
+        ferdig_na()
     srv = ThreadingHTTPServer(("127.0.0.1", a.port), H)
     srv.daemon_threads = True
     threading.Thread(target=srv.serve_forever, daemon=True).start()

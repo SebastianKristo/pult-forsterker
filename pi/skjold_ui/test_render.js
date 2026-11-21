@@ -30,6 +30,8 @@ async function s1(b) {
     ['13_innstillinger', { js: 'S.set.open=true;S.set.t=performance.now();S.set.cat=-1;S.set.idx=0' }],
     ['14_innst_kategori', { js: 'S.set.open=true;S.set.t=performance.now();S.set.cat=0;S.set.idx=1;S.set.edit=true;S.set.bass=2' }],
     ['15_hilsen', { js: 'S.bdayDemo=true;S.bdayHide=false' }],
+    ['15b_hilsen_fra', { js: 'S.bdayDemo=true;S.bdayHide=false;localStorage.setItem("s1_bday_fra","Sebastian og Cybele")' }],
+    ['15c_ferdig_installert', { js: 'localStorage.removeItem("s1_bday_fra");S.ferdig=true' }],
     ['16_feil_varme', { st: { overtemp: true }, js: 'S.errT=performance.now()-300' }],
   ];
   for (let i = 0; i < 16; i++) STATES.push(['standby_' + String(i).padStart(2, '0'), { st: { power: false }, js: 'S.set.clock=true;S.set.clockStyle=' + i }]);

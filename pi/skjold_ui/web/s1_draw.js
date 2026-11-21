@@ -398,11 +398,20 @@ function drawBday(g,F){ const t=performance.now()/1000; const bg=g.createLinearG
   CONF.forEach(p=>{ const y=(p.y+t*p.v)%700-30, x=p.x+Math.sin(t*1.3+p.r)*24; g.save(); g.translate(x,y); g.rotate(p.r+t*p.s); g.fillStyle=p.c; g.globalAlpha=.85; g.fillRect(-p.w/2,-p.h/2,p.w,p.h); g.restore(); });
   [[110,0.0,'#ff5a7a'],[250,1.7,'#ffc94a'],[1670,0.8,'#5ad1ff'],[1810,2.4,'#8a7dff']].forEach(([x,ph,c])=>{ const y=250+Math.sin(t*1.1+ph)*18; g.strokeStyle='rgba(255,255,255,.45)'; g.lineWidth=3; g.beginPath(); g.moveTo(x,y+92); g.quadraticCurveTo(x+20,y+190,x-6,y+300); g.stroke();
     const gr=g.createRadialGradient(x-22,y-30,8,x,y,96); gr.addColorStop(0,'#fff'); gr.addColorStop(0.18,c); gr.addColorStop(1,c); g.fillStyle=gr; g.beginPath(); g.ellipse(x,y,72,90,0,0,Math.PI*2); g.fill(); g.beginPath(); g.moveTo(x-10,y+98); g.lineTo(x+10,y+98); g.lineTo(x,y+86); g.fill(); });
-  let name='Pappa'; try{ name=localStorage.getItem('s1_bday_name')||'Pappa'; }catch(e){}
-  g.textAlign='center'; g.fillStyle='#ffc94a'; g.font='bold 40px '+F; g.fillText('HIPP HIPP HURRA',960,170);
-  g.fillStyle='#fff'; let px=124; g.font='bold '+px+'px '+F; const l1='Gratulerer med dagen'+(name?',':'!'); while(g.measureText(l1).width>1000&&px>60){ px-=6; g.font='bold '+px+'px '+F; } g.fillText(l1,960,320);
-  if(name){ let p2=150; g.font='bold '+p2+'px '+F; while(g.measureText(name+'!').width>1000&&p2>60){ p2-=6; g.font='bold '+p2+'px '+F; } const gw=g.createLinearGradient(560,0,1360,0); gw.addColorStop(0,'#ffc94a'); gw.addColorStop(0.5,'#ff7aa8'); gw.addColorStop(1,'#8fd8ff'); g.fillStyle=gw; g.fillText(name+'!',960,480); }
-  g.fillStyle='rgba(255,255,255,.7)'; g.font='32px '+F; g.fillText('Trykk en knapp for å lukke',960,590); g.textAlign='left'; }
+  let name='Pappa', fra=''; try{ name=localStorage.getItem('s1_bday_name')||'Pappa'; fra=localStorage.getItem('s1_bday_fra')||''; }catch(e){}
+  const dy=fra?-26:0;   // med «Fra …» flyttes alt litt opp
+  g.textAlign='center'; g.fillStyle='#ffc94a'; g.font='bold 40px '+F; g.fillText('HIPP HIPP HURRA',960,170+dy);
+  g.fillStyle='#fff'; let px=124; g.font='bold '+px+'px '+F; const l1='Gratulerer med dagen'+(name?',':'!'); while(g.measureText(l1).width>1000&&px>60){ px-=6; g.font='bold '+px+'px '+F; } g.fillText(l1,960,320+dy);
+  if(name){ let p2=fra?136:150; g.font='bold '+p2+'px '+F; while(g.measureText(name+'!').width>1000&&p2>60){ p2-=6; g.font='bold '+p2+'px '+F; } const gw=g.createLinearGradient(560,0,1360,0); gw.addColorStop(0,'#ffc94a'); gw.addColorStop(0.5,'#ff7aa8'); gw.addColorStop(1,'#8fd8ff'); g.fillStyle=gw; g.fillText(name+'!',960,470+dy); }
+  if(fra){ let p3=54; g.font='600 '+p3+'px '+F; const t='Fra '+fra; while(g.measureText(t).width>1100&&p3>30){ p3-=4; g.font='600 '+p3+'px '+F; } g.fillStyle='#fff'; g.fillText(t,960,548); }
+  g.fillStyle='rgba(255,255,255,.62)'; g.font=(fra?'28px ':'32px ')+F; g.fillText('Trykk en knapp for å lukke',960,fra?612:590); g.textAlign='left'; }
+// Gaveskriptet (pi/gave_s1.sh) er ferdig: rolig skjerm som står til strømmen tas
+function drawFerdig(g,F){ g.fillStyle='#0b0b0c'; g.fillRect(0,0,1920,640);
+  const t=performance.now()/1000, r=64+Math.sin(t*2)*4; g.strokeStyle='#5be3a0'; g.lineWidth=10; g.beginPath(); g.arc(300,320,r,0,Math.PI*2); g.stroke();
+  g.lineCap='round'; g.beginPath(); g.moveTo(268,322); g.lineTo(292,348); g.lineTo(336,296); g.stroke(); g.lineCap='butt';
+  g.textAlign='left'; g.textBaseline='alphabetic'; g.fillStyle='#f6f3ee'; g.font='bold 92px '+F; g.fillText('Ferdig installert',440,250);
+  g.fillStyle='#f0c46a'; g.font='600 60px '+F; g.fillText('Ta ut strømmen nå',440,350);
+  g.fillStyle='rgba(246,243,238,.72)'; g.font='44px '+F; g.fillText('Neste gang den starter, viser den gratulasjonen',440,440); }
 function drawBarSettings(g){ const F='"Helvetica Neue",Arial,sans-serif', W='#f6f3ee', Dm='rgba(246,243,238,.62)', Lo='rgba(246,243,238,.38)', A='#f59e0b', L=curList(), top=S.set.cat<0, idx=S.set.idx, it=L[idx]||L[0], ed=!!S.set.edit;
   const txt=(t,x,y,px,wt,c,al)=>{ g.font=(wt||'')+' '+px+'px '+F; g.fillStyle=c; g.textAlign=al||'left'; g.fillText(t,x,y); g.textAlign='left'; };
   const sp=(t,x,y,px,c,al)=>{ if('letterSpacing' in g) g.letterSpacing=(px*0.12)+'px'; txt(t,x,y,px,'',c,al); if('letterSpacing' in g) g.letterSpacing='0px'; };
@@ -427,6 +436,7 @@ function drawBarSettings(g){ const F='"Helvetica Neue",Arial,sans-serif', W='#f6
   g.textBaseline='alphabetic'; }
 function drawSaver(g,st){ if(window.SKJOLD&&SKJOLD.drawWide){ SKJOLD.drawWide(g,1920,640,st,new Date(),{name:devName(),last:(WL[S.wl]||{}).t?(WL[S.wl].t+' · '+WL[S.wl].s):''}); } }
 function drawBar(){ const g=cvb.getContext('2d'); g.setTransform(0.5,0,0,0.5,0,0); g.fillStyle='#000'; g.fillRect(0,0,1920,640);
+  if(S.ferdig){ drawFerdig(g,'"Helvetica Neue",Arial,sans-serif'); texB.needsUpdate=true; return; }
   { const nt=performance.now()-(S.nightT||-1e9), ND=900+((S.nightSteps||[]).length)*450+1600; if(nt<ND&&!S.rebootT){ drawNight(g,Math.min(1,nt/180,(ND-nt)/400),nt); texB.needsUpdate=true; return; } }
   { const st=S.set.clockStyle|0, prev=performance.now()-(S.clockPrevT||-1e9)<4000; if(st>=6&&!S.rebootT&&(prev||(!S.power&&S.main&&S.set.clock))){ drawSaver(g,st); texB.needsUpdate=true; return; } }
   { const nw=performance.now(); if(S.rebootT||(S.knobHoldT&&nw-S.knobHoldT>(S.holdWhat==='radio'?900:350))||(S.power&&!S.set.open&&nw-S.muteT<1600)){ drawBarSys(g,'"Helvetica Neue",Arial,sans-serif'); texB.needsUpdate=true; return; } }

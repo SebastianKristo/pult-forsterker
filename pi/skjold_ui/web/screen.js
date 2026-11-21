@@ -28,7 +28,7 @@
   function busy() {
     const n = now();
     return n < until || booting() || S.rebootT || S.pairT || S.knobHoldT || (S.set.open && n - S.set.t < 20000)
-      || ((window.bdayOn && bdayOn()) && !S.bdayHide)
+      || ((window.bdayOn && bdayOn()) && !S.bdayHide) || S.ferdig
       || (!S.power && S.main && S.set.clock && [6, 7].includes(S.set.clockStyle | 0))   // VU-metre og radioskala er animert
       || saverLive()   // skjermsparer-videoen
       || (typeof volGlidMoving === 'function' && volGlidMoving());   // volumlinja glir mot ny verdi (s1_draw.js: volGlid)
@@ -69,7 +69,7 @@
   const SCREENOFF = new URLSearchParams(location.search).get('screenoff') === '1';
   let panelOn = true, darkSince = 0;
   function wantDark() {
-    if (S.rebootT || S.knobHoldT || S.pairT || S.set.open || S.setup.on || booting()) return false;
+    if (S.ferdig || S.rebootT || S.knobHoldT || S.pairT || S.set.open || S.setup.on || booting()) return false;
     if (now() - (S.nightT || -1e9) < 8000 || S.set.clock) return false;   // nattanimasjon, eller klokke/skjermsparer i stedet
     return !S.power ? !!S.main : screenDim() >= 1;
   }
@@ -232,6 +232,7 @@
     const n = now(); S.lastAct = n;
     screenPower();   // vekk panelet straks
     if (ev.ev === 'dismiss_greeting') { S.bdayHide = true; postUi(); wake(300); return; }
+    if (ev.ev === 'ferdig') { S.ferdig = true; S.power = true; wake(1000); return; }
     if (window.S1MENY && S1MENY.ui(ev)) { postUi(); wake(1500); return; }   // sidene i s1_meny.js (Wi-Fi, skjermsparer, oppsett …)
     if (ev.ev === 'menu_toggle') { S.power = true; toggleSettings(); postUi(); return; }
     if (!S.set.open) return;
@@ -253,7 +254,8 @@
   // ---------- bursdagshilsen: tilstanden eies av skjold-ui (/etc/skjold/greeting.json) ----------
   async function greeting() {
     try { const g = await (await fetch('/greeting')).json();
-      try { localStorage.setItem('s1_bday_once', g.state === 'armed' ? 'armed' : 'shown'); localStorage.setItem('s1_bday_name', g.name || 'Pappa'); } catch (e) {}
+      try { localStorage.setItem('s1_bday_once', g.state === 'armed' ? 'armed' : 'shown'); localStorage.setItem('s1_bday_name', g.name || 'Pappa'); localStorage.setItem('s1_bday_fra', g.fra || ''); } catch (e) {}
+      if (g.ferdig) { S.ferdig = true; S.power = true; wake(1000); }
       if (g.state === 'armed') S.bdayHide = false; postUi(); } catch (e) {}
   }
 
