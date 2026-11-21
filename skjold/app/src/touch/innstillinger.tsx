@@ -9,7 +9,7 @@ import { CATS, EQ_HZ, EQ_NAMES, fmt, LED_MODE_NAMES, LED_MODES, type Item } from
 import { Keyboard, MONO, TekstFelt, useTekst } from './ui';
 
 export const alleOpen = signal(false);
-export const oppdaterTrykk = signal(0);   // «Oppdatering»-raden åpner oppdateringsarket i main.tsx
+export const oppdaterTrykk = signal(0);   // (beholdt for kompatibilitet)
 
 const SEG = 'display:flex;gap:4px;padding:3px;border-radius:12px;background:#0f0f10;border:1px solid #242426;align-items:center;flex-shrink:0';
 const pillS = (på: boolean) => `height:34px;padding:0 12px;border-radius:9px;border:none;background:${på ? '#2a2a2c' : 'transparent'};color:${på ? '#f2f2ee' : '#8b8b86'};font-size:12px;font-weight:600;white-space:nowrap`;
@@ -94,7 +94,7 @@ function kontroll(it: Item): preact.ComponentChildren | null {
       const f = run[it.id];
       return f ? <Bekreft tekst={it.label} trygg={!!it.safe} gjør={f} /> : null;
     }
-    case 'update': return <div style={SEG}><button onClick={() => { oppdaterTrykk.value++; }} style={pillS(true)}>Åpne</button></div>;
+    case 'update': return <div style={SEG}><button onClick={() => { innstKat.value = 'oppdatering'; }} style={pillS(true)}>Åpne</button></div>;
     default: return null;   // local, link, svc, test, steps, eq, clocks, levels håndteres egne steder / bare i appen
   }
 }
@@ -118,9 +118,15 @@ function Eq() {
     </div>))}</div>;
 }
 
-export function AlleInnstillinger() {
-  const [kat, setKat] = useState(CATS[0]?.id ?? '');
-  const c = CATS.find((x) => x.id === kat) ?? CATS[0]!;
+/** Den ene innstillingsmenyen på Touch: «Skjold Touch» (det som bare gjelder skjermen), «Oppdatering», og så alle
+ *  kategoriene fra web-UI. `touch` og `oppdatering` er sidene fra main.tsx. */
+export const innstKat = signal('touch');
+export function AlleInnstillinger({ touch, oppdatering }: { touch: preact.ComponentChildren; oppdatering: preact.ComponentChildren }) {
+  const kat = innstKat.value, setKat = (k: string) => { innstKat.value = k; };
+  const egne: [string, string, string][] = [['touch', 'Skjold Touch', 'Skjerm, nattmodus, lyder og skjermsparer'], ['oppdatering', 'Oppdatering', 'Ny versjon og de andre Skjold-enhetene']];
+  const kats = CATS.filter((x) => x.id !== 'oppdatering');
+  const c = kats.find((x) => x.id === kat) ?? kats[0]!;
+  const navKnapp = (id: string, n: string) => <button key={id} onClick={() => setKat(id)} class="rip" style={`position:relative;overflow:hidden;min-height:44px;border:none;border-radius:10px;background:${id === kat ? 'rgba(240,196,106,.14)' : 'transparent'};color:${id === kat ? '#f0c46a' : '#f2f2ee'};text-align:left;padding:0 12px;font-size:13.5px;font-weight:${id === kat ? 600 : 400}`}>{n}</button>;
   const rader = c.items.map((it, i) => {
     if (it.kind === 'eq') return { i, n: it.n + ' – ' + (eqActiveSource.value.toUpperCase()), hint: 'For kilden som spiller nå', blokk: <Eq /> };
     if (it.kind === 'levels') return { i, n: it.n, hint: it.hint, blokk: <Nivåer /> };
@@ -128,12 +134,15 @@ export function AlleInnstillinger() {
     return k === null ? null : { i, n: it.n, hint: 'hint' in it ? it.hint : undefined, k };
   }).filter(Boolean) as { i: number; n: string; hint?: string; k?: preact.ComponentChildren; blokk?: preact.ComponentChildren }[];
   return (
-    <div class="inn" style="position:absolute;inset:52px 0 0 0;z-index:6;background:#0b0b0c;display:grid;grid-template-columns:200px minmax(0,1fr)">
+    <section class="inn" style="flex:1;min-height:0;display:grid;grid-template-columns:200px minmax(0,1fr)">
       <div class="rull" style="overflow-y:auto;touch-action:pan-y;border-right:1px solid #1f1f21;padding:8px 8px 14px;display:flex;flex-direction:column;gap:2px">
-        <button onClick={() => { alleOpen.value = false; }} style="height:44px;border:none;background:none;color:#c9c9c4;text-align:left;padding:0 10px;font-size:14px;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg>Tilbake</button>
-        {CATS.map((x) => <button key={x.id} onClick={() => setKat(x.id)} style={`min-height:44px;border:none;border-radius:10px;background:${x.id === c.id ? 'rgba(240,196,106,.14)' : 'transparent'};color:${x.id === c.id ? '#f0c46a' : '#f2f2ee'};text-align:left;padding:6px 12px;font-size:13.5px;font-weight:600`}>{x.n}</button>)}
+        {egne.map(([id, n]) => navKnapp(id, n))}
+        <span style="height:1px;background:#1f1f21;margin:6px 8px" />
+        {kats.map((x) => navKnapp(x.id, x.n))}
       </div>
-      <div class="rull" style="overflow-y:auto;touch-action:pan-y;padding:14px 18px 20px;display:flex;flex-direction:column;gap:2px">
+      {kat === 'touch' ? <div class="rull" style="overflow-y:auto;touch-action:pan-y;padding:14px 18px 20px;display:flex;flex-direction:column;gap:10px;min-height:0"><span style="font-size:20px;font-weight:600">Skjold Touch</span>{touch}</div>
+      : kat === 'oppdatering' ? <div class="rull" style="overflow-y:auto;touch-action:pan-y;padding:14px 18px 20px;min-height:0">{oppdatering}</div>
+      : <div class="rull" style="overflow-y:auto;touch-action:pan-y;padding:14px 18px 20px;display:flex;flex-direction:column;gap:2px">
         <span style="font-size:20px;font-weight:600">{c.n}</span>
         <span style="font-size:12px;color:#8b8b86;margin-bottom:8px">{c.sub}</span>
         {rader.map((r) => (
@@ -145,8 +154,8 @@ export function AlleInnstillinger() {
             {r.blokk}
           </div>))}
         {!rader.length && <span style="font-size:13px;color:#8b8b86;padding:12px 0">Disse innstillingene gjøres i Skjold-appen eller web-UI.</span>}
-      </div>
+      </div>}
       {tekstRad.value && <TekstRedigering />}
-    </div>
+    </section>
   );
 }
