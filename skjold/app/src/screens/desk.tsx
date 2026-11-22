@@ -1,6 +1,8 @@
 import { NrkContinueShelf } from './nrk';
 // PC-sider (skall dk2): Hjem, Spiller, Radio og bibliotekene (YouTube Music / Navidrome) med eget, bredt oppsett.
 // Samme data og handlinger som telefonsidene – bare ny plassering og størrelser.
+import { YubalBoks } from '../components/yubalboks';
+import { ybNyttSok, yubalPa } from '../lib/yubal';
 import { useEffect, useState } from 'preact/hooks';
 import { type ComponentChildren } from 'preact';
 import { homeOrder, orderSources } from '../lib/homelayout';
@@ -584,7 +586,7 @@ export function DeskLibrary({ lib }: { lib: LibId }) {
     setRes(null);
     const t = setTimeout(() => { (ytm ? ytmSearch(q) : ndSearch(q)).then(setRes).catch(() => setRes([])); }, 350);
     return () => clearTimeout(t);
-  }, [q, nd, ytm]);
+  }, [q, nd, ytm, ybNyttSok.value]);
   const off = ytm ? !!data.err && !data.newest.length && !data.pls.length : !ndConfigured() || (!!data.err && !data.newest.length);
   const play = (l: NdSong[], i: number) => { playNd(l, i, lib); go('play'); };
   const openAl = (al: NdAlbum) => { libUi.pl.value = { kind: al.playlist ? 'pl' : 'album', id: al.id, name: al.name, cover: al.coverArt }; };
@@ -608,6 +610,7 @@ export function DeskLibrary({ lib }: { lib: LibId }) {
           {!res && <span class="muted" style={{ fontSize: '13px' }}>Søker …</span>}
           {res && !res.length && <span class="muted" style={{ fontSize: '13px' }}>Ingen treff</span>}
           {res && res.length > 0 && <TrackTable list={res} onPick={(i) => play(res, i)} />}
+          {!ytm && res && yubalPa() && <YubalBoks q={q} />}
         </div>
       ) : open ? <OpenList lib={lib} /> : tabName === 'Utforsk' ? (
         <div class="col gap24">

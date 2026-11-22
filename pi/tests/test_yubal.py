@@ -87,3 +87,27 @@ def test_fant_ikke():
     y, _s, _j, _n = lag(treff=False)
     with pytest.raises(LookupError):
         y.hent("finnes ikke")
+
+
+class FalskYT2:
+    def search(self, q, filter=None, limit=8):
+        return [{"videoId": "aaaaaaaaaaa", "title": "Hallelujah", "artists": [{"name": "Lordi"}], "album": {"name": "Hard Rock Hallelujah", "id": "A1"}},
+                {"videoId": "bbbbbbbbbbb", "title": "Hallelujah", "artists": [{"name": "Leonard Cohen"}], "album": {"name": "Various Positions", "id": "A2"}},
+                {"videoId": "ccccccccccc", "title": "Hallelujah (Live)", "artists": [{"name": "Jeff Buckley"}], "album": {"name": "Live", "id": "A3"}}]
+
+
+def test_kandidater_bare_sikker_naar_artist_og_tittel_stemmer():
+    y = Y.Yubal(lambda: {"yubalUrl": "x"}, lambda: None, http=lambda *a, **k: {}, ytm_client=FalskYT2())
+    r = y.kandidater("hallelujah")
+    assert r["sikker"] is None and len(r["kandidater"]) == 3   # bare tittelen: du må velge
+    r = y.kandidater("hallelujah leonard cohen")
+    assert r["sikker"]["vid"] == "bbbbbbbbbbb" and r["kandidater"][0]["vid"] == "bbbbbbbbbbb"
+    r = y.kandidater("jeff buckley hallelujah")
+    assert r["sikker"]["artist"] == "Jeff Buckley"   # «(Live)» teller ikke mot
+
+
+def test_hent_valgt_laat():
+    sendt = []
+    y = Y.Yubal(lambda: {"yubalUrl": "x"}, lambda: None, http=lambda u, d=None, timeout=10: sendt.append((u, d)) or {"id": "j9"}, ytm_client=FalskYT2())
+    r = y.hent(valgt={"vid": "bbbbbbbbbbb", "tittel": "Hallelujah", "artist": "Leonard Cohen"})
+    assert r["id"] == "j9" and sendt[-1][1] == {"url": "https://music.youtube.com/watch?v=bbbbbbbbbbb"} and r["artist"] == "Leonard Cohen"
