@@ -20,9 +20,17 @@ PI45=0; grep -qE "Raspberry Pi (4|5|Compute Module (4|5))" /proc/device-tree/mod
 # bare med nok minne (≥ 3 GB): Lyrion bruker ~300 MB, og Touch/Node trenger resten til Chromium og YouTube Music (yt-dlp)
 MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)
 [ "${MEM_MB:-0}" -ge 2900 ] || PI45=0
+# KI_AMP_LYRION_RESERVE=1 i /etc/ki-amp.env: behold/installer reserveserveren også med mindre minne (f.eks. Touch med 2 GB),
+# =0: aldri reserveserver her.
+RES="${KI_AMP_LYRION_RESERVE:-$(val KI_AMP_LYRION_RESERVE)}"
+[ "$RES" = 1 ] && grep -qE "Raspberry Pi (4|5|Compute Module (4|5))" /proc/device-tree/model 2>/dev/null && PI45=1
+[ "$RES" = 0 ] && PI45=0
 if [ "$PI45" = 1 ] && ! dpkg -s lyrionmusicserver >/dev/null 2>&1; then
   echo "  Pi 4/5: installerer Lyrion Music Server som reserve (innebygd)"
   sudo bash "$SRC/install_lyrion.sh" || echo "ADVARSEL: Lyrion ble ikke installert – prøv: sudo bash pi/install_lyrion.sh" >&2
+fi
+if [ "$PI45" = 1 ] && dpkg -s lyrionmusicserver >/dev/null 2>&1 && ! systemctl is-enabled lyrionmusicserver >/dev/null 2>&1; then
+  sudo systemctl enable --now lyrionmusicserver >/dev/null 2>&1 && echo "  Lyrion: reserveserveren er slått på"
 fi
 # Reserve-Lyrion som ble installert på en Pi med lite minne (før grensa over): slå den av på Touch/Node, som bruker S1
 if [ "$PI45" = 0 ] && { [ "$PRODUCT" = touch ] || [ "$BOARD" = node ]; } && systemctl is-enabled lyrionmusicserver >/dev/null 2>&1; then
