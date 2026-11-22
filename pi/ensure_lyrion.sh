@@ -37,8 +37,13 @@ if [ "$PI45" = 0 ] && { [ "$PRODUCT" = touch ] || [ "$BOARD" = node ]; } && syst
   sudo systemctl disable --now lyrionmusicserver >/dev/null 2>&1 && echo "  Lyrion: reserveserveren er slått av (for lite minne, ${MEM_MB} MB)"
 fi
 case "$BOARD" in node) echo "  Lyrion: Node bruker en server på nettet"; exit 0 ;; esac
+# Touch med reserveserver og uten fast server: finn S1 selv (auto), og bruk den innebygde når S1 ikke svarer
+if [ "$PRODUCT" = touch ] && [ "$PI45" = 1 ] && [ -z "$LMS" ] && [ -f "$ENV" ]; then
+  sudo sed -i '/^KI_AMP_LMS_SERVER=/d' "$ENV" && echo "KI_AMP_LMS_SERVER=auto" | sudo tee -a "$ENV" >/dev/null
+  LMS=auto; echo "  Lyrion: Touch finner Lyrion på S1 selv (auto), med den innebygde som reserve"
+fi
 [ "$PRODUCT" = touch ] && { echo "  Lyrion: Touch bruker en server på nettet${LMS:+ ($LMS)}"; exit 0; }
-case "$LMS" in ""|127.0.0.1|localhost) ;; *) echo "  Lyrion: bruker $LMS"; exit 0 ;; esac
+case "$LMS" in ""|127.0.0.1|localhost|auto) ;; *) echo "  Lyrion: bruker $LMS"; exit 0 ;; esac
 if dpkg -s lyrionmusicserver >/dev/null 2>&1; then
   echo "  Lyrion Music Server er installert"
 else

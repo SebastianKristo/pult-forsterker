@@ -337,3 +337,17 @@ test("automatisk innmelding: av for stedet, og fjernede enheter meldes ikke inn 
   assert.equal(hub3.meldinger.filter((m) => m.t === "inviter").length, 0, "fjernet enhet inviteres ikke igjen");
   hub3.lukk();
 });
+
+test("naboer: enhetene i hjemmet får hverandres LAN-adresse (også på tvers av nett)", async () => {
+  const sted = await nyttSted();
+  const a = new FalskEnhet(mf, "nabo-touch", { meg: { ip: "10.69.2.244", port: 8765 } });
+  const b = new FalskEnhet(mf, "nabo-s1", { meg: { ip: "10.69.0.50", port: 8765 } });
+  const c = new FalskEnhet(mf, "nabo-tull", { meg: { ip: "ikke-en-ip", port: 1 } });
+  await a.kobl(sted); await b.kobl(sted); await c.kobl(sted);
+  await a.koblTil(); await b.koblTil(); await c.koblTil();
+  const m = await a.vent((x) => x.t === "naboer" && x.enheter.some((e) => e.id === "nabo-s1"));
+  const s1 = m.enheter.find((e) => e.id === "nabo-s1");
+  assert.deepEqual([s1.ip, s1.port], ["10.69.0.50", 8765]);
+  assert.ok(!m.enheter.some((e) => e.id === "nabo-tull"));   // ugyldig adresse tas ikke med
+  a.lukk(); b.lukk(); c.lukk();
+});

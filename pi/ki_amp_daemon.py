@@ -4025,6 +4025,11 @@ async def h_loudness(r):
 
 # ---------- Lyrion Music Server (radio via Squeezelite) ----------
 LMS_SERVER = os.environ.get("KI_AMP_LMS_SERVER", "").strip()
+# KI_AMP_LMS_SERVER=auto: bruk Lyrion på en annen Skjold (S1 først) som den finner selv – på LAN-et eller via Skjold-hjem,
+# uten IP-adresse – og den innebygde Lyrion-serveren (127.0.0.1) som reserve når ingen svarer.
+LMS_AUTO = LMS_SERVER.lower() == "auto"
+if LMS_AUTO:
+    LMS_SERVER = "127.0.0.1"
 LMS_PORT = int(os.environ.get("KI_AMP_LMS_PORT", "9000"))
 
 
@@ -4044,6 +4049,15 @@ def _player_mac():
         return "02:" + ":".join(h[i:i + 2] for i in range(0, 10, 2))
     except OSError:
         return "00:00:00:00:00:01"
+
+
+def _lms_fra_skjold():
+    """Auto: Lyrion-serveren på en annen Skjold-enhet (S1 og andre forsterkere før Touch/Node), eller None."""
+    rang = lambda p: (0 if "s1" in str(p.get("produkt", "")).lower() else 2 if str(p.get("produkt", "")).lower() in ("touch", "node", "core") else 1)
+    for p in sorted(_peer_liste(), key=rang):
+        if _lms_alive(p["ip"], LMS_PORT):
+            return p
+    return None
 
 
 def _lms_alive(host, port):
@@ -4267,6 +4281,15 @@ class Lyrion:
                     if self.host != old and not _same_lms(self.host, old):
                         print(f"Lyrion: {old} svarer ikke, bruker {self.host}", flush=True)
                         _lms_active(self.host)
+            if LMS_AUTO and not self.pinned and time.time() - last_home > 60:
+                # auto: en annen Skjold (S1) med Lyrion går foran den innebygde serveren – sjekk jevnlig
+                last_home = time.time()
+                p = _lms_fra_skjold()
+                if p and not _same_lms(self.host or "", p["ip"]):
+                    print(f"Lyrion: bruker serveren på {p.get('navn') or p['ip']} ({p['ip']})", flush=True)
+                    self.host, self.port = p["ip"], LMS_PORT; self.connected = False
+                    _lms_active(p["ip"])
+                continue
             if LMS_SERVER and not self.pinned and self.host != LMS_SERVER and self.connected and time.time() - last_home > 60:
                 last_home = time.time()
                 if _same_lms(self.host, LMS_SERVER):   # oppdagelsen fant hovedserveren under en annen adresse
@@ -7906,6 +7929,7 @@ class Sky:
         self.ident = ident or device_id()
         self.info = info or (lambda: {"navn": NAME, "produkt": PRODUCT, "versjon": VERSION})
         self.lan = lan if lan is not None else LanPeers(self.ident)
+        self.naboer = {}   # fra skyen: Skjold-enhetene i samme hjem med LAN-adresse
         self.cfg = self._les()
         self.tilkoblet, self.aktiv, self.hoved, self.sist_feil = False, None, None, ""
         self._ws, self._wake, self._http, self._subs = None, None, None, {}
@@ -8070,6 +8094,11 @@ class Sky:
                 task.cancel()
         elif t == "inviter":
             asyncio.create_task(self._inviter(m))
+        elif t == "naboer":   # Skjold-enhetene i samme hjem med LAN-adresse (også på andre nett/VLAN enn dette)
+            eg = self.cfg.get("id") or self.ident
+            self.naboer = {str(e["id"]): {"id": str(e["id"]), "navn": str(e.get("navn") or ""), "ip": str(e["ip"]), "port": int(e.get("port") or 8765),
+                                          "produkt": str(e.get("produkt") or "")}
+                           for e in (m.get("enheter") or []) if isinstance(e, dict) and e.get("id") and e.get("ip") and str(e["id"]) != eg}
 
     async def _inviter(self, m):
         """Skyen ber oss levere en koblingskode til en Skjold-enhet på LAN-et som ikke er med i stedet ennå.
@@ -8099,8 +8128,12 @@ class Sky:
     def _hei(self):
         i = self.info()
         lan = sorted(self.lan.peers.values(), key=lambda p: p.get("id", "")) if self.lan else []
+        try:
+            meg = {"ip": _local_ip(), "port": PORT}
+        except Exception:
+            meg = None
         return {"t": "hei", "id": self.cfg.get("id") or self.ident, "navn": i.get("navn"), "produkt": i.get("produkt"),
-                "versjon": i.get("versjon"), "lan": lan}
+                "versjon": i.get("versjon"), "lan": lan, "meg": meg}
 
     async def _pinger(self, ws):
         """«hei» ved tilkobling og når LAN-lista endres; ping hvert 20. s."""
@@ -8283,10 +8316,17 @@ def feat_public():
     return c
 
 
-def _peers():
+def _peer_liste():
+    """Andre Skjold-enheter: mDNS på LAN-et, pluss enhetene i samme Skjold-hjem (skyen kjenner LAN-adressene deres,
+    så de finnes også når de står på et annet nett/VLAN enn dette). id → {id, navn, ip, port, produkt}."""
     lan = getattr(sky, "lan", None)
-    return [{"id": p.get("id"), "navn": p.get("navn"), "base": f"http://{p['ip']}:{int(p['port'])}"}
-            for p in (lan.peers.values() if lan else []) if p.get("ip") and p.get("port")]
+    alle = dict(getattr(sky, "naboer", None) or {})
+    alle.update(lan.peers if lan else {})
+    return [p for p in alle.values() if p.get("ip") and p.get("port") and p.get("id") != device_id()]
+
+
+def _peers():
+    return [{"id": p.get("id"), "navn": p.get("navn"), "base": f"http://{p['ip']}:{int(p['port'])}"} for p in _peer_liste()]
 
 
 # ---------- Grupper: spill det samme i flere rom (Lyrion-synk) ----------
