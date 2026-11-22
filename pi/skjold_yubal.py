@@ -9,6 +9,7 @@ og viser den aldri som et YouTube Music-treff. Når jobben er ferdig, ber Skjold
   GET  /api/yubal/jobber            Skjolds nedlastinger med status og fremdrift (0–100), nyeste først
   GET  /api/yubal/kandidater?q=     de beste låtene for søket, med «sikker» når én passer helt (artist og tittel)
   POST /api/yubal/hent {"vid","album_id","tittel","artist","bilde"}   last ned akkurat den låten (valgt av deg)
+  POST /api/yubal/album {"album_id"} | {"album","artist"}   last ned et helt album (fra artistsiden eller «Populært»)
 yubal-API: POST /api/jobs {"url"} → {"id"}; GET /api/jobs → {"jobs":[{id,status,progress,…}]}; GET /api/health.
 Status: pending, fetching_info, downloading, importing, completed, failed, cancelled.
 """
@@ -138,6 +139,50 @@ class Yubal:
                 pass
         return "https://music.youtube.com/watch?v=" + vid, ""
 
+    def album_url(self, album_id="", album="", artist=""):
+        """Lenke til et helt album på YouTube Music: fra album-id (MPREb…/OLAK5uy…) eller ved å søke på navn og artist."""
+        yt = self._client()
+        aid = album_id.removeprefix("al:")
+        if aid.startswith(("OLAK5uy", "PL")):
+            return "https://music.youtube.com/playlist?list=" + aid, {}
+        if not aid:
+            q = (artist + " " + album).strip()
+            beste, bp = None, -1.0
+            for x in yt.search(q, filter="albums", limit=8) or []:
+                if not x.get("browseId"):
+                    continue
+                art = ", ".join(a.get("name", "") for a in x.get("artists") or [] if isinstance(a, dict))
+                p, _ = _poeng(q, x.get("title"), art)
+                tittel_lik = _ord(x.get("title")) == _ord(album)
+                p += 1 if tittel_lik else 0
+                if p > bp:
+                    beste, bp = x, p
+            if not beste or bp < 0.6:
+                raise LookupError(f"fant ikke albumet «{album}»")
+            aid = beste["browseId"]
+        a = yt.get_album(aid) or {}
+        if not a.get("audioPlaylistId"):
+            raise LookupError("albumet har ingen spilleliste på YouTube Music")
+        art = ", ".join(x.get("name", "") for x in a.get("artists") or [] if isinstance(x, dict))
+        return "https://music.youtube.com/playlist?list=" + a["audioPlaylistId"], {"tittel": str(a.get("title") or album), "artist": art or artist, "bilde": _thumb(a)}
+
+    def hent_album(self, album_id="", album="", artist="", bilde=""):
+        b = self.base()
+        if not b:
+            raise RuntimeError("yubal er ikke satt opp (Integrasjoner → yubal)")
+        u, info = self.album_url(album_id, album, artist)
+        info = {"tittel": info.get("tittel") or album, "artist": info.get("artist") or artist, "album": info.get("tittel") or album,
+                "bilde": bilde or info.get("bilde", ""), "url": u}
+        r = self.http(b + "/api/jobs", {"url": u}, timeout=15)
+        jid = str(r.get("id") or "")
+        if not jid:
+            raise RuntimeError("yubal ga ingen jobb-id")
+        with self.lock:
+            self.mine[jid] = {**info, "q": "album:" + (album_id or album), "t": time.time(), "skannet": False}
+            while len(self.mine) > 40:
+                self.mine.pop(min(self.mine, key=lambda k: self.mine[k]["t"]))
+        return {"id": jid, **info}
+
     def hent(self, q="", url="", valgt=None):
         b = self.base()
         if not b:
@@ -234,10 +279,30 @@ def routes(yb):
         except Exception as e:
             return web.json_response({"error": str(e)}, status=502)
 
+    async def h_album(r):
+        try:
+            b = await r.json()
+        except Exception:
+            b = {}
+        aid = str(b.get("album_id") or "").strip()[:80]
+        if aid and not re.fullmatch(r"(al:)?[A-Za-z0-9_-]{6,78}", aid):
+            return web.json_response({"error": "ugyldig album_id"}, status=400)
+        album, artist = str(b.get("album") or "").strip()[:200], str(b.get("artist") or "").strip()[:200]
+        if not aid and not album:
+            return web.json_response({"error": "album_id eller album mangler"}, status=400)
+        try:
+            return web.json_response(await run(yb.hent_album, aid, album, artist, str(b.get("bilde") or "")[:500]))
+        except LookupError as e:
+            return web.json_response({"error": str(e)}, status=404)
+        except ImportError:
+            return web.json_response({"error": "ytmusicapi mangler – kjør pi/update.sh"}, status=503)
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=502)
+
     async def h_jobber(_r):
         try:
             return web.json_response({"jobber": await run(yb.jobber)})
         except Exception as e:
             return web.json_response({"jobber": [], "error": str(e)})
 
-    return [web.get("/api/yubal/status", h_status), web.post("/api/yubal/hent", h_hent), web.get("/api/yubal/jobber", h_jobber), web.get("/api/yubal/kandidater", h_kandidater)]
+    return [web.get("/api/yubal/status", h_status), web.post("/api/yubal/hent", h_hent), web.get("/api/yubal/jobber", h_jobber), web.get("/api/yubal/kandidater", h_kandidater), web.post("/api/yubal/album", h_album)]

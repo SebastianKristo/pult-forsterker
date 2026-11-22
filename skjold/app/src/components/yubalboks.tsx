@@ -2,12 +2,12 @@
 // slik at du velger riktig låt; bare når både tittel og artist står i søket, lastes den ned uten å spørre (auto).
 import { useEffect, useState } from 'preact/hooks';
 import { api, type YubalKandidat } from '../lib/api';
-import { YB_TEKST, ybLastNed, ybNed, yubalAuto } from '../lib/yubal';
+import { YB_TEKST, ybAlle, ybLastNed, yubalAuto } from '../lib/yubal';
 
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 export function YubalBoks({ q, auto = false, ferdig, stor = false }: { q: string; auto?: boolean; ferdig?: () => void; stor?: boolean }) {
   const [k, setK] = useState<YubalKandidat[] | null>(null), [busy, setBusy] = useState(false), [feil, setFeil] = useState('');
-  const ned = ybNed.value, her = !!ned && ned.q === q;
+  const ned = ybAlle.value[q], her = !!ned;
   const finn = async (automatisk: boolean) => {
     setBusy(true); setFeil('');
     try {
