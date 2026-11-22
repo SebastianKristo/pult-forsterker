@@ -21,7 +21,11 @@ sudo mkdir -p /usr/local/share/ki-amp && (cd "$SRC/.." && pwd) | sudo tee /usr/l
 #                         Som Node uten GPIO (KI_AMP_NODE_GPIO=0), men lyd på DAC-en og skjermen er touch-UI-et i kiosk
 #                         (pi/install_touch.sh). Ikke gjettet: KI_TOUCH_DAC_OVERLAY (standard hifiberry-dacplus-std) og
 #                         KI_TOUCH_DSI_OVERLAY (tom = Pi OS finner skjermen selv med display_auto_detect=1).
-BOARD_SEL="${KI_AMP_BOARD:-}"; [ "$BOARD_SEL" = node ] && KI_AMP_OUT=headphones
+BOARD_SEL="${KI_AMP_BOARD:-}"
+# Touch lagres som KI_AMP_BOARD=node + KI_AMP_PRODUCT=touch: kjøres installasjonen igjen med det (f.eks. fra ki-amp.env),
+# er det fortsatt en Touch – ellers ble DAC-en slått av og lyden sendt til Pi-ens 3,5 mm-utgang
+{ [ "$BOARD_SEL" = node ] || [ -z "$BOARD_SEL" ]; } && grep -qs '^KI_AMP_PRODUCT=touch' /etc/ki-amp.env && [ "${KI_AMP_CORE:-0}" != 1 ] && BOARD_SEL=touch
+[ "$BOARD_SEL" = node ] && KI_AMP_OUT=headphones
 TOUCH=0; [ "$BOARD_SEL" = touch ] && TOUCH=1 && KI_AMP_OUT=dac
 # KI_AMP_BOARD=s1f      : Skjold S1 rev F – som Kit (PCM5102 + TPA3116 bak relé, 2 × UCA202) + knapper/volumhjul/LED (pi/config/s1f_pins.yaml),
 #                         USB-gadget for PC 1/2 og 4,58″ HDMI-skjerm. SPI er AV (GPIO 9–11 er volumhjulet).
