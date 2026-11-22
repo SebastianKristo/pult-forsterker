@@ -34,6 +34,13 @@ function tilfeldig(n, alfabet) {
   return s;
 }
 const hex = (buf) => [...new Uint8Array(buf)].map((x) => x.toString(16).padStart(2, "0")).join("");
+function privatIp(ip) {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(ip || ""));
+  if (!m || m.slice(1).some((x) => +x > 255)) return false;
+  const [a, b] = [+m[1], +m[2]];
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+
 async function sha256hex(s) {
   return hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
 }
@@ -184,6 +191,19 @@ export default {
       if (!r.ok) return feil(404, "ukjent eller utløpt kode");
       const { sted } = await r.json();
       return intern(stedStub(env, sted), "/kobl", { kode, id, navn: b.navn, produkt: b.produkt });
+    }
+    if (p === "/enhet/oppdag" && req.method === "POST") {
+      // En Skjold som ikke er med i et hjem melder fra (id + egen LAN-adresse). Lagres kort per internettlinje (hash av
+      // offentlig IP). En enhet i et hjem på samme linje leverer så en koblingskode til den over LAN-et (inviterNye) –
+      // at den når den lokale adressen, viser at de står på samme nett. Ingenting kobles uten den leveransen.
+      const b = await lesJson(req);
+      const id = String(b.id || "").trim();
+      const ip = String(b.meg?.ip || "");
+      if (!id || id.length > 64 || !/^[\w.-]+$/.test(id) || !privatIp(ip)) return feil(400, "id og privat LAN-adresse må oppgis");
+      const linje = await sha256hex("skjold-linje:" + (req.headers.get("cf-connecting-ip") || "lokal"));
+      await intern(registerStub(env), "/oppdag-sett", { linje, enhet: { id, ip, port: Math.max(1, Math.min(65535, parseInt(b.meg?.port, 10) || 8765)),
+        navn: String(b.navn || "").slice(0, 60), produkt: String(b.produkt || "").slice(0, 20) } });
+      return json({ ok: true });
     }
     if (p === "/enhet/sync") {
       // Skjold Cloud: ende-til-ende-krypterte blobs (favoritter, rutiner, innstillinger …) per konto (stedets eier).
@@ -1492,8 +1512,18 @@ export class Sted extends DurableObject {
   // («utelatt») inviteres ikke, og en enhet som ikke svarer får stadig lengre pause mellom forsøkene.
   async inviterNye(ws, a) {
     const d = this.data;
-    if (!d || d.autoLegg === false || !Array.isArray(a.lan) || !a.lan.length) return;
+    if (!d || d.autoLegg === false) return;
     if (this.velgAktiv(this.tilkoblet()) !== a.id) return; // bare én enhet inviterer, ellers får hver nabo flere koder
+    // kandidater: det hovedenheten ser på LAN-et (mDNS), og enheter uten hjem som har meldt seg fra samme internettlinje
+    // (andre nett/VLAN i huset) – de siste med LAN-adresse, som hovedenheten må nå for å levere koden
+    const kandidater = (Array.isArray(a.lan) ? a.lan : []).map((p) => ({ id: String(p?.id || "") }));
+    if (a.linje) {
+      try {
+        const r = await (await intern(registerStub(this.env), "/oppdag-hent", { linje: a.linje })).json();
+        for (const e of r.enheter || []) if (e.id !== a.id && !kandidater.some((k) => k.id === e.id)) kandidater.push({ id: e.id, ip: e.ip, port: e.port });
+      } catch {}
+    }
+    if (!kandidater.length) return;
     const kjent = new Set(d.enheter.map((e) => e.id));
     const utelatt = new Set(d.utelatt || []);
     const logg = (await this.ctx.storage.get("invitert")) || {};
@@ -1506,8 +1536,8 @@ export class Sted extends DurableObject {
         endret = true;
       }
     }
-    for (const p of a.lan) {
-      const id = String(p?.id || "");
+    for (const p of kandidater) {
+      const id = p.id;
       if (!id || id.length > 64 || kjent.has(id) || utelatt.has(id)) continue;
       const f = logg[id];
       if (f && naa - f.t < Math.min(INVITER_MAKS_PAUSE_MS, INVITER_PAUSE_MS * 2 ** (f.n - 1))) continue;
@@ -1518,7 +1548,7 @@ export class Sted extends DurableObject {
       logg[id] = { t: naa, n: Math.min(20, (f?.n || 0) + 1) };
       endret = true;
       sendt++;
-      this.send(ws, { t: "inviter", til: id, kode });
+      this.send(ws, p.ip ? { t: "inviter", til: id, kode, ip: p.ip, port: p.port } : { t: "inviter", til: id, kode });
     }
     if (endret) await this.ctx.storage.put("invitert", logg);
   }
@@ -1576,7 +1606,8 @@ export class Sted extends DurableObject {
     const par = new WebSocketPair();
     const [klient, server] = Object.values(par);
     this.ctx.acceptWebSocket(server, [id]);
-    server.serializeAttachment({ id, sist: Date.now(), navn: e.navn, produkt: e.produkt, lan: [] });
+    const linje = await sha256hex("skjold-linje:" + (req.headers.get("cf-connecting-ip") || "lokal"));
+    server.serializeAttachment({ id, sist: Date.now(), navn: e.navn, produkt: e.produkt, lan: [], linje });
     e.sist = Math.floor(Date.now() / 1000);
     await this.lagre();
     if (!gamle.length) await logg(this.env, "enhet_tilkoblet", d.eier, { sted: d.id, enhet: id, tekst: e.navn, ip: req.headers.get("cf-connecting-ip") || "" });
@@ -2028,6 +2059,15 @@ export class Register extends DurableObject {
       const v = { aktiv: !!b.aktiv, melding: String(b.melding || "").slice(0, 300), til: Number(b.til) || 0, fra: naa, av: String(b.av || "") };
       await st.put("vedlikehold", v);
       return json(v);
+    }
+    if (sti === "/oppdag-sett" || sti === "/oppdag-hent") {
+      // enheter uten hjem per internettlinje, i 15 minutter (se /enhet/oppdag)
+      const k = "o:" + String(b.linje || "").slice(0, 64), na = Date.now();
+      const liste = ((await st.get(k)) || []).filter((e) => na - e.t < 15 * 60 * 1000);
+      if (sti === "/oppdag-hent") return json({ enheter: liste });
+      const ny = [{ ...b.enhet, t: na }, ...liste.filter((e) => e.id !== b.enhet?.id)].slice(0, 10);
+      await st.put(k, ny);
+      return json({ ok: true });
     }
     if (sti === "/bruker-slett") { await st.delete("k:" + String(b.epost || "").toLowerCase()); return json({ ok: true }); }
     // --- hendelsesloggen (Valhalla): én nøkkel per hendelse, de nyeste LOGG_MAKS beholdes

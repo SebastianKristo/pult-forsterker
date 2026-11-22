@@ -7825,6 +7825,18 @@ def _local_ip():
 # (funnet via mDNS). Nøkkelen ligger bare i sky.json (0600) og vises aldri i API-et.
 SKY_FILE = os.environ.get("KI_AMP_SKY_FILE", os.path.join(os.path.dirname(STATE_FILE), "sky.json"))
 SKY_URL = os.environ.get("KI_AMP_SKY_URL", "https://hjem.skjold-lab.com").rstrip("/")
+# Ikke med i et hjem: si fra til Skjold-hjem, så en enhet i et hjem på samme internettlinje kan melde oss inn (=0: av)
+SKY_OPPDAG = os.environ.get("KI_AMP_SKY_OPPDAG", "1") != "0"
+
+
+def _privat_ip(ip):
+    """Privat IPv4-adresse (10/8, 172.16/12, 192.168/16) – bare slike leveres koblingskoder til."""
+    try:
+        import ipaddress
+        a = ipaddress.ip_address(str(ip or ""))
+        return a.version == 4 and a.is_private and not a.is_loopback and not a.is_link_local
+    except ValueError:
+        return False
 SKY_AUTO = os.environ.get("KI_AMP_SKY_AUTO", "1") != "0"   # la en enhet på samme nett melde denne inn i sitt sted
 SKY_PING_S = 20          # ping hvert 20. s (skyen kobler fra etter 45 s uten livstegn)
 SKY_STILLE_S = 60        # ingen melding fra skyen på så lenge ⇒ ny tilkobling
@@ -8018,8 +8030,15 @@ class Sky:
         pause = 2
         while True:
             if not self.cfg:
+                # ikke med i et hjem: si fra til skyen at vi finnes (egen LAN-adresse). Står en enhet i et hjem på samme
+                # internettlinje, leverer den en koblingskode til oss over LAN-et, og vi melder oss inn selv.
                 self._wake.clear()
-                await self._wake.wait()
+                if SKY_OPPDAG:
+                    await self._oppdag()
+                try:
+                    await asyncio.wait_for(self._wake.wait(), 120 if SKY_OPPDAG else None)
+                except asyncio.TimeoutError:
+                    pass
                 continue
             self._wake.clear()
             t0 = time.monotonic()
@@ -8100,6 +8119,20 @@ class Sky:
                                           "produkt": str(e.get("produkt") or "")}
                            for e in (m.get("enheter") or []) if isinstance(e, dict) and e.get("id") and e.get("ip") and str(e["id"]) != eg}
 
+    async def _oppdag(self):
+        import aiohttp
+        i = self.info()
+        try:
+            meg = {"ip": _local_ip(), "port": PORT}
+            async with self.http().post(self.default_url.rstrip("/") + "/enhet/oppdag",
+                                        json={"id": self.ident, "navn": i.get("navn"), "produkt": i.get("produkt"), "meg": meg},
+                                        timeout=aiohttp.ClientTimeout(total=10)) as r:
+                await r.read()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            pass
+
     async def _inviter(self, m):
         """Skyen ber oss levere en koblingskode til en Skjold-enhet på LAN-et som ikke er med i stedet ennå.
         Enheten melder seg så inn selv. Vi rører ikke enheter som alt er koblet til et sted (heller ikke eldre
@@ -8107,12 +8140,14 @@ class Sky:
         import aiohttp
         til, kode = str(m.get("til") or ""), str(m.get("kode") or "")
         base = self._maal(til)
+        if not base and _privat_ip(m.get("ip")):   # enhet på samme internettlinje, men et annet nett/VLAN (fra skyen)
+            base = f"http://{m['ip']}:{max(1, min(65535, int(m.get('port') or PORT)))}"
         if not base or base == self.local or not re.fullmatch(r"[A-Z0-9]{6}", kode):
             return False
         try:
             async with self.http().get(base + "/api/sky", timeout=aiohttp.ClientTimeout(total=6)) as r:
                 st = await r.json(content_type=None) if r.status == 200 else None
-            if not isinstance(st, dict) or st.get("koblet"):
+            if not isinstance(st, dict) or st.get("koblet") or (st.get("id") and st.get("id") != til):
                 return False
             async with self.http().post(base + "/api/sky", json={"kode": kode, "auto": True, "url": self.cfg.get("url")},
                                         timeout=aiohttp.ClientTimeout(total=25)) as r:
