@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { effect, signal } from '@preact/signals';
 import './touch.css';
 import { api, coverUrl, getBase, INPUT_LABEL, PRODUCT_SHORT, productOf, setBase, type InputId, type Lyrics, type PodEpisode, type PodShow, type Status } from '../lib/api';
-import { loadSettings, playPause, reconnect, setSetting, setVolume, settings, startPolling, status, act, online, toast } from '../lib/store';
+import { loadSettings, playPause, reconnect, setSetting, setVolume, settings, startPolling, status, act, online, toast, showToast } from '../lib/store';
 import { art, TOUCH_BELL, TOUCH_IDLE, TOUCH_OUT, TOUCH_ROLES, TOUCH_STANDBY_S, TOUCH_START, TOUCH_WAKE, TOUCH_WAKE_ID } from '../lib/settings';
 import { favs, loadFavs, playFav, playStation } from '../lib/radio';
 import { ndAlbum, ndAlbumList, ndArtist, ndConfigured, ndCover, ndSearch, ndSearchAll, type NdAlbum, type NdArtist, type NdSong } from '../lib/navidrome';
@@ -1415,12 +1415,39 @@ function ArtistSide() {
 
 // ---------- søk ----------
 interface Hit { key: string; t: string; s: string; art: string; play: () => void }
+// ---------- yubal: finnes ikke låten i Navidrome, lastes den ned rett inn i biblioteket (pi/skjold_yubal.py) ----------
+interface YbNed { q: string; id: string; tittel: string; artist: string; bilde: string; status: string; fremdrift: number; feil?: string }
+const ybNed = signal<YbNed | null>(null);
+let ybT = 0;
+async function ybStart(q: string): Promise<void> {
+  ybNed.value = { q, id: '', tittel: q, artist: '', bilde: '', status: 'starter', fremdrift: 0 };
+  try {
+    const r = await api.yubalHent(q);
+    ybNed.value = { q, id: r.id, tittel: r.tittel || q, artist: r.artist, bilde: r.bilde, status: 'pending', fremdrift: 0 };
+    ybFolg();
+  } catch (e) { ybNed.value = { q, id: '', tittel: q, artist: '', bilde: '', status: 'failed', fremdrift: 0, feil: e instanceof Error ? e.message : String(e) }; }
+}
+function ybFolg(): void {
+  clearTimeout(ybT);
+  ybT = window.setTimeout(async () => {
+    const n = ybNed.value; if (!n || !n.id) return;
+    try {
+      const j = (await api.yubalJobber()).jobber.find((x) => x.id === n.id);
+      if (j) ybNed.value = { ...n, status: j.status, fremdrift: j.fremdrift ?? 0, tittel: j.tittel || n.tittel, artist: j.artist || n.artist, bilde: j.bilde || n.bilde };
+    } catch { /* prøv igjen */ }
+    const st = ybNed.value?.status ?? '';
+    if (st === 'completed') { if (!searchOpen.value) showToast('«' + (ybNed.value?.tittel ?? '') + '» er lastet ned og ligger i Navidrome'); return; }
+    if (st === 'failed' || st === 'cancelled') return;
+    ybFolg();
+  }, 2000);
+}
+const YB_TEKST: Record<string, string> = { starter: 'Finner låten …', pending: 'I kø hos yubal', fetching_info: 'Henter info', downloading: 'Laster ned', importing: 'Legger inn i biblioteket', completed: 'Ferdig – ligger i Navidrome', failed: 'Klarte ikke å laste ned', cancelled: 'Avbrutt' };
 // Husket søk: åpner du en podkast fra søket, tar «Tilbake» deg til søket med det du skrev og samme kilde.
 const sokHusk = { q: '', src: -1, fraSok: false };
 function Search() {
   const qt = useTekst(60, sokHusk.fraSok ? sokHusk.q : ''), q = qt.v;
   const [kb, setKb] = useState(!sokHusk.fraSok), [busy, setBusy] = useState(false);
-  const [hits, setHits] = useState<Hit[] | null>(null), [err, setErr] = useState('');
+  const [hits, setHits] = useState<Hit[] | null>(null), [err, setErr] = useState(''), [sendt, setSendt] = useState(''), [igjen, setIgjen] = useState(0);
   // Søkekilde: fanen du kom fra (SUB/WAVE har ikke søk, så da søkes det i YouTube Music). 3 = podkaster.
   const podIdx = 3 + (swT.value.length ? 1 : 0);
   const [src, setSrc] = useState(sokHusk.fraSok && sokHusk.src >= 0 ? sokHusk.src : lib.value <= 2 ? lib.value : lib.value === podIdx ? 3 : 0);
@@ -1442,7 +1469,15 @@ function Search() {
       finally { if (n === seq.current) setBusy(false); }
     }, 500);
     return () => clearTimeout(id);
-  }, [q, src]);
+  }, [q, src, igjen]);
+  // ingen treff i Navidrome etter «Søk»: yubal laster det ned (automatisk, eller med knappen)
+  const S0 = settings.value as unknown as { yubalUrl?: string; yubalAuto?: boolean };
+  const yb = !!S0.yubalUrl && src === 1 && ndConfigured(), tom = hits !== null && !hits.length && !busy && q.trim().length >= 2;
+  useEffect(() => {
+    if (yb && tom && S0.yubalAuto !== false && sendt && sendt === q.trim() && ybNed.value?.q !== sendt) void ybStart(sendt);
+  }, [yb, tom, sendt]);
+  const ned = ybNed.value, nedHer = !!ned && ned.q === q.trim() && src === 1;
+  useEffect(() => { if (nedHer && ned?.status === 'completed') { const t = [2500, 8000, 20000].map((ms) => window.setTimeout(() => setIgjen((x) => x + 1), ms)); return () => t.forEach(clearTimeout); } return undefined; }, [nedHer, ned?.status]);   // Navidrome skanner: søk igjen noen ganger
   const NAMES = ['YouTube Music', 'Navidrome', 'Radio', 'Podkaster'];
   return (
     <div class="inn" style="position:absolute;inset:52px 0 0 0;z-index:6;background:#0b0b0c;display:flex;flex-direction:column">
@@ -1458,14 +1493,23 @@ function Search() {
       <div class="rull" onPointerDown={() => { if (hits?.length) setKb(false); }} style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:0 10px 8px;touch-action:pan-y">
         {hits === null && !busy && <span style="padding:14px 10px;font-size:13.5px;color:#6b6b67">Skriv minst to bokstaver.</span>}
         {busy && hits === null && <span style={`padding:14px 10px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>SØKER …</span>}
-        {hits !== null && !hits.length && !busy && <span style="padding:14px 10px;font-size:13.5px;color:#8b8b86">{err || 'Fant ingenting for «' + q.trim() + '».'}</span>}
+        {hits !== null && !hits.length && !busy && !nedHer && <span style="padding:14px 10px;font-size:13.5px;color:#8b8b86">{err || 'Fant ingenting for «' + q.trim() + '».'}</span>}
+        {yb && tom && !nedHer && (S0.yubalAuto === false || sendt !== q.trim()) && <button class="rip" onClick={() => void ybStart(q.trim())} style="position:relative;overflow:hidden;align-self:flex-start;margin:4px 10px;height:44px;padding:0 18px;border-radius:22px;border:1px solid #5a4420;background:#1c170d;color:#f0c46a;font-size:13.5px;font-weight:600">Last ned «{q.trim()}» til Navidrome</button>}
+        {nedHer && ned && <div style="margin:6px 10px;display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:center;padding:12px;border-radius:16px;background:#141415;border:1px solid #2a2a2c">
+          <div style={`width:52px;height:52px;border-radius:10px;background:${ned.bilde ? 'url("' + ned.bilde.replace(/"/g, '') + '") center / cover, #1b1b1c' : '#1b1b1c'}`} />
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+            <span style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{ned.tittel}{ned.artist ? ' – ' + ned.artist : ''}</span>
+            <span style={`font-size:12px;color:${ned.status === 'failed' ? '#ff9a8a' : ned.status === 'completed' ? '#6fcf7f' : '#c9b48a'}`}>Fant den ikke i Navidrome · {ned.feil || YB_TEKST[ned.status] || ned.status}{ned.status === 'downloading' || ned.status === 'importing' ? ' · ' + ned.fremdrift + ' %' : ''}</span>
+            {ned.status !== 'failed' && ned.status !== 'completed' && <div style="height:4px;border-radius:2px;background:#242426;overflow:hidden"><div style={`height:100%;width:${Math.max(4, ned.fremdrift)}%;background:#f0c46a;transition:width .6s ease`} /></div>}
+          </div>
+        </div>}
         {(hits ?? []).map((h) => (
           <button key={h.key} onClick={go(h.play)} style={`height:52px;flex-shrink:0;border:none;border-radius:10px;background:transparent;display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;align-items:center;padding:0 10px;text-align:left;opacity:${busy ? 0.5 : 1}`}>
             <div style={`width:40px;height:40px;border-radius:8px;background:${h.art}`} />
             <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{h.t}</span><span style="font-size:11.5px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{h.s}</span></span>
           </button>))}
       </div>
-      {kb && <Keyboard onKey={qt.inn} onBack={qt.slett} onFlytt={qt.flytt} onEnter={() => setKb(false)} />}
+      {kb && <Keyboard enter="Søk" onKey={qt.inn} onBack={qt.slett} onFlytt={qt.flytt} onEnter={() => { setKb(false); setSendt(q.trim()); }} />}
     </div>
   );
 }

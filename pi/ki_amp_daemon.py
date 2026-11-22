@@ -1484,6 +1484,8 @@ SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0
                 "plexEn": False, "plexUrl": "", "plexToken": "",
                 # Music Assistant (bibliotek for TIDAL/Qobuz/Deezer/Spotify/YouTube Music/Plex/Jellyfin/podkaster)
                 "maEn": False, "maUrl": "", "maToken": "",
+                # yubal: last ned det du søker etter og ikke har, rett inn i Navidrome-biblioteket (pi/skjold_yubal.py)
+                "yubalUrl": "", "yubalAuto": True, "yubalAlbum": False,
                 # ESPHome-nøkkelen (api: encryption: key) for Skjold-tilbehøret (Kassett, Hjul, Hylle, Fjernkontroll …):
                 # én felles nøkkel, delt med alle Skjold-enhetene, vist i web-UI-et for secrets.yaml og Home Assistant
                 "navSkjul": [], "esphomeKey": "",
@@ -1788,7 +1790,7 @@ async def h_settings_reset(r):
 
 # Innlogginger til musikktjenester deles med de andre Skjold-enhetene på nettet (S1, Touch, Node …): logger du inn
 # YouTube Music på én, virker det på alle. KI_AMP_SHARE_SETTINGS=0 slår det av.
-SHARED_SETTINGS = ("esphomeKey", "ytmEn", "ytmUser", "ytmCookie", "ndEn", "ndUrl", "ndUser", "ndPass", "plexEn", "plexUrl", "plexToken", "maEn", "maUrl", "maToken")
+SHARED_SETTINGS = ("esphomeKey", "ytmEn", "ytmUser", "ytmCookie", "ndEn", "ndUrl", "ndUser", "ndPass", "yubalUrl", "yubalAuto", "yubalAlbum", "plexEn", "plexUrl", "plexToken", "maEn", "maUrl", "maToken")
 SHARE_SETTINGS = os.environ.get("KI_AMP_SHARE_SETTINGS", "1") != "0"
 
 
@@ -9602,6 +9604,7 @@ def _nfc_ytm_find(artist, album):
 
 
 import skjold_ytm as _ytmmod   # noqa: E402
+import skjold_yubal as _yubalmod   # noqa: E402
 ytm = _ytmmod.Ytm(settings, cache_dir=os.path.join(os.path.dirname(STATE_FILE) or "/var/lib/ki-amp", "ytm"))
 
 
@@ -10752,6 +10755,7 @@ def main():
     # YouTube Music innebygd (pi/skjold_ytm.py) – ytmusicapi + yt-dlp, ingen Music Assistant
     try:
         app.add_routes(_ytmmod.routes(ytm, {"stream_base": lambda: f"http://{_local_ip()}:{PORT}", "play": ytm_play_queue}))
+        app.add_routes(_yubalmod.routes(_yubalmod.Yubal(settings, _nd)))
         # hent YouTube Music-forsiden i bakgrunnen etter oppstart, så Bibliotek er klart når noen åpner det
         threading.Timer(20, lambda: ytm.signed_in() and not ytm.missing() and ytm.refresh_home_bg()).start()
     except Exception as e:
