@@ -1,6 +1,7 @@
 // Biblioteker (Skjold App v2 · tLib): YouTube Music og Navidrome. Malen er portert 1:1 fra designfilen.
 // Navidrome er ekte (Subsonic-API direkte fra appen). YouTube Music hentes fra Skjold-enheten (/api/ytm/*, lib/ytm.ts);
 // svarer den ikke, vises samme skall med en tydelig «ikke tilkoblet»-tilstand i stedet for eksempeldata.
+import { PopulaertSeksjon } from '../components/populaert';
 import { YubalBoks } from '../components/yubalboks';
 import { ybNyttSok, yubalPa } from '../lib/yubal';
 import { ArtistView } from './desk';
@@ -25,6 +26,16 @@ export function openArtist(name: string, album?: string): void {
   libUi.pl.value = null; libUi.q.value = ''; closeFull();
   artistView.value = { name: name.trim(), ...(album ? { album: album.trim() } : {}) };
   go('lib', ndConfigured() ? 'nd' : 'ytm');
+}
+/** Albumet til en låt (fra søk o.l.): rett til albumet når vi har id-en, ellers slås det opp via artisten. */
+export function openAlbumAv(x: { album: string; albumId?: string | undefined; artist: string; coverArt?: string | undefined }): void {
+  if (x.albumId) { libUi.q.value = ''; artistView.value = null; libUi.pl.value = { kind: 'album', id: x.albumId, name: x.album, cover: x.coverArt }; window.scrollTo({ top: 0 }); return; }
+  openArtist(x.artist.split(/\s*(?:\/|,|&| feat\.? )\s*/i)[0] || x.artist, x.album);
+}
+/** Artistnavn som lenker («A / B» blir to lenker). Stopper trykket, så raden ikke spiller av. */
+export function ArtistLenker({ navn }: { navn: string }) {
+  const deler = navn.split(/(\s*(?:\/|,|&| feat\.? | ft\.? )\s*)/i);
+  return <>{deler.map((d, i) => i % 2 ? <span key={i}>{d}</span> : d.trim() ? <span key={i} role="link" tabIndex={0} class="tlnk" onClick={(e) => { e.stopPropagation(); openArtist(d.trim()); window.scrollTo({ top: 0 }); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); openArtist(d.trim()); } }}>{d}</span> : null)}</>;
 }
 export const libUi = { tab: signal(0), pl: signal<{ kind: 'album' | 'pl'; id: string; name: string; /** coveret fra flisen du trykket på – vises med en gang */ cover?: string | undefined } | null>(null), q: signal(''), hero: signal(0), mood: signal<number | null>(null) };
 trackSub(libUi.pl, () => { libUi.pl.value = null; });   // album/spilleliste: tilbake lukker den
@@ -100,7 +111,7 @@ function TrackRows({ list, meta, onPick }: { list: NdSong[]; meta?: (s: NdSong, 
       {list.map((x, i) => (
         <button key={x.id + i} onClick={() => onPick(i)} style={`display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:58px;padding:0 12px;border:none;border-top:1px solid ${i ? '#242426' : 'transparent'};background:transparent;cursor:pointer;text-align:left;width:100%`}>
           <div style={`width:42px;height:42px;border-radius:6px;background:${cover(x.coverArt, x.album, 120).bg}`} />
-          <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style={`font-size:14px;color:${cur && cur.id === x.id ? '#f0c46a' : '#f2f2ee'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{x.title}</span><span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{x.artist}{meta ? '' : ' · ' + x.album}</span></span>
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style={`font-size:14px;color:${cur && cur.id === x.id ? '#f0c46a' : '#f2f2ee'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{x.title}</span><span style="font-size:12px;color:#8b8b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><ArtistLenker navn={x.artist} />{meta ? '' : <> · <span role="link" class="tlnk" onClick={(e) => { e.stopPropagation(); openAlbumAv(x); }}>{x.album}</span></>}</span></span>
           <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b8b86;white-space:nowrap">{meta ? meta(x, i) : fmtDur(x.duration)}</span>
         </button>
       ))}
@@ -248,6 +259,7 @@ function LibraryMain() {
             <Shelf title="Album" tiles={(data.albums ?? []).map(albumTile)} />
           </> : <>
             <Shelf title="Nylig lagt til" tiles={(data.albums ?? []).map(albumTile)} />
+            <PopulaertSeksjon spill={play} apneAlbum={(al) => { libUi.pl.value = { kind: 'album', id: al.id, name: al.name, cover: al.coverArt }; }} />
             <Shelf title="Oppdag" tiles={data.rnd.map(albumTile)} />
             <Shelf kicker="FRA BIBLIOTEKET" title="Mest spilt" tiles={data.freq.map(albumTile)} />
           </>}

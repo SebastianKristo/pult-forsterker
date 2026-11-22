@@ -1,8 +1,9 @@
 import { NrkContinueShelf } from './nrk';
 // PC-sider (skall dk2): Hjem, Spiller, Radio og bibliotekene (YouTube Music / Navidrome) med eget, bredt oppsett.
 // Samme data og handlinger som telefonsidene – bare ny plassering og størrelser.
+import { PopulaertSeksjon } from '../components/populaert';
 import { YubalBoks } from '../components/yubalboks';
-import { ybNyttSok, yubalPa } from '../lib/yubal';
+import { ybAktiv, ybAlle, ybLastNedAlbum, ybNyttSok, ybTekst, yubalPa } from '../lib/yubal';
 import { useEffect, useState } from 'preact/hooks';
 import { type ComponentChildren } from 'preact';
 import { homeOrder, orderSources } from '../lib/homelayout';
@@ -20,7 +21,7 @@ import { addToQueue, clearHist, fmtDur, hist, li, LIB_NAME, lq, lsvc, playNd, wh
 import { InputChips, SeekBar, Transport, artFor, canSeek, nowTitle, seekTo, sourceLine, subLine } from './player';
 import { useRooms } from './phone';
 import { SpeakerButton } from './groups';
-import { artistView, collSongs, libUi, openArtist } from './library';
+import { ArtistLenker, artistView, collSongs, libUi, openAlbumAv, openArtist } from './library';
 import { ytmArtist, ytmHomeCached, ytmSearch, ytmSearchAll, ytmWhy } from '../lib/ytm';
 import { LyricsPane, SubwavePane } from './plugins';
 import { WrappedTeaser } from './extras';
@@ -392,8 +393,8 @@ function TrackTable({ list, onPick, meta }: { list: NdSong[]; onPick: (i: number
       {list.map((x, i) => (
         <button key={x.id + i} role="row" class={cur && cur.id === x.id ? 'on' : ''} onClick={() => onPick(i)}>
           <span class="mono muted">{i + 1}</span>
-          <span class="t"><span class="qc" style={{ background: ndBg(x.coverArt, x.album, 120) }} /><span class="col" style={{ minWidth: 0, gap: '1px' }}><b class="ellip">{x.title}</b><span class="ellip muted" style={{ fontSize: '12px' }}>{x.artist}</span></span></span>
-          <span class="ellip muted">{x.album}</span>
+          <span class="t"><span class="qc" style={{ background: ndBg(x.coverArt, x.album, 120) }} /><span class="col" style={{ minWidth: 0, gap: '1px' }}><b class="ellip">{x.title}</b><span class="ellip muted" style={{ fontSize: '12px' }}><ArtistLenker navn={x.artist} /></span></span></span>
+          <span class="ellip muted"><span role="link" tabIndex={0} class="tlnk" onClick={(e) => { e.stopPropagation(); openAlbumAv(x); }}>{x.album}</span></span>
           <span class="mono muted" style={{ textAlign: 'right' }}>{meta ? meta(i) : fmtDur(x.duration)}</span>
         </button>
       ))}
@@ -429,8 +430,9 @@ export function ArtistView({ lib }: { lib: LibId }) {
   const [data, setData] = useState<ArtistData | null>(null);
   const [err, setErr] = useState(''), [bioApen, setBioApen] = useState(false), [alle, setAlle] = useState(false), [alleSanger, setAlleSanger] = useState<NdSong[] | null>(null);
   const navn = v.name;
+  const [mangler, setMangler] = useState<NdAlbum[]>([]);
   useEffect(() => {
-    let stop = false; setData(null); setErr(''); setBioApen(false); setAlle(false); setAlleSanger(null);
+    let stop = false; setData(null); setMangler([]); setErr(''); setBioApen(false); setAlle(false); setAlleSanger(null);
     const viaNd = async (): Promise<ArtistData | { open: NdAlbum } | null> => {
       if (!ndConfigured() || v.ytmId) return null;
       const r = await ndSearchAll(v.album ? v.album : navn);
@@ -473,7 +475,18 @@ export function ArtistView({ lib }: { lib: LibId }) {
       if (!stop) setErr(v.album ? `Fant ikke albumet «${v.album}» i biblioteket.` : `Fant ikke ${navn} i Navidrome eller YouTube Music.`);
     })();
     return () => { stop = true; };
-  }, [navn, v.album, v.ytmId, v.ndId, lib]);
+  }, [navn, v.album, v.ytmId, v.ndId, lib, ybNyttSok.value]);
+  // album og singler fra YouTube Music som ikke ligger i Navidrome – kan lastes ned med yubal
+  useEffect(() => {
+    if (!data || data.lib !== 'nd' || !yubalPa()) return undefined;
+    let stop = false;
+    const mine = [...data.albums, ...data.singles];
+    ytmArtist({ name: data.navn }).then((a) => {
+      if (stop || !same(hovedArtist(a.name), hovedArtist(data.navn))) return;
+      setMangler([...a.albums, ...a.singles].filter((x) => !mine.some((y) => same(y.name, x.name))));
+    }).catch(() => { /* YouTube Music er ikke tilgjengelig */ });
+    return () => { stop = true; };
+  }, [data]);
   const l = data?.lib ?? lib;
   const play = (list: NdSong[], i: number) => { if (list.length) { playNd(list, i, l); go('play'); } };
   const blandet = (list: NdSong[]) => [...list].sort(() => Math.random() - 0.5);
@@ -531,6 +544,9 @@ export function ArtistView({ lib }: { lib: LibId }) {
       </Karusell>}
       {data && data.singles.length > 0 && <Karusell title="Singler og EP-er" n={data.singles.length}>
         {data.singles.map((al) => <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label={ndCover(al.coverArt) ? '' : al.name} name={al.name} meta={'Singel' + (al.year ? ' · ' + al.year : '')} onClick={() => apneAlbum(al)} />)}
+      </Karusell>}
+      {data && mangler.length > 0 && <Karusell title="Ikke i biblioteket" n={mangler.length}>
+        {mangler.map((al) => { const n = ybAlle.value['album:' + al.id]; return <Tile key={al.id} bg={ndBg(al.coverArt, al.name)} label="" name={al.name} meta={n ? ybTekst(n) : 'Last ned ' + (al.songCount && al.songCount <= 3 ? 'singelen' : 'albumet') + (al.year ? ' · ' + al.year : '')} onClick={() => { if (!ybAktiv(n) && n?.status !== 'completed') void ybLastNedAlbum('album:' + al.id, { album_id: al.id, album: al.name, artist: data.navn, ...(al.coverArt ? { bilde: al.coverArt } : {}) }); }} />; })}
       </Karusell>}
       {data && data.videos.length > 0 && <Karusell title="Videoer" n={data.videos.length}>
         {data.videos.map((x, i) => (
@@ -632,6 +648,7 @@ export function DeskLibrary({ lib }: { lib: LibId }) {
           {ytm && data.rnd.length > 0 && <section class="col gap12"><SecHead title="Til deg" kicker="YOUTUBE MUSIC" /><div class="dkx-row">{data.rnd.map(alTile)}</div></section>}
           {ytm && ytmData.pls.some((p) => p.playlist) && <section class="col gap12"><SecHead title="Dine spillelister" /><div class="dkx-row">{ytmData.pls.filter((p) => p.playlist).map(plTile)}</div></section>}
           {ytm && data.newest.length > 0 && <section class="col gap12"><SecHead title="Album" /><div class="dkx-row">{data.newest.map(alTile)}</div></section>}
+          {!ytm && <PopulaertSeksjon bred spill={play} apneAlbum={openAl} />}
           {!ytm && data.newest.length > 1 && <section class="col gap12"><SecHead title="Nylig lagt til" more="Alle album ›" onMore={() => { libUi.tab.value = 1; }} /><div class="dkx-row">{data.newest.slice(1).map(alTile)}</div></section>}
           {!ytm && data.pls.length > 0 && <section class="col gap12"><SecHead title="Dine spillelister" /><div class="dkx-row">{data.pls.map(plTile)}</div></section>}
           {!ytm && data.rnd.length > 0 && <section class="col gap12"><SecHead title="Oppdag" kicker="TILFELDIGE ALBUM" /><div class="dkx-row">{data.rnd.map(alTile)}</div></section>}

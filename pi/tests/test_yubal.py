@@ -111,3 +111,24 @@ def test_hent_valgt_laat():
     y = Y.Yubal(lambda: {"yubalUrl": "x"}, lambda: None, http=lambda u, d=None, timeout=10: sendt.append((u, d)) or {"id": "j9"}, ytm_client=FalskYT2())
     r = y.hent(valgt={"vid": "bbbbbbbbbbb", "tittel": "Hallelujah", "artist": "Leonard Cohen"})
     assert r["id"] == "j9" and sendt[-1][1] == {"url": "https://music.youtube.com/watch?v=bbbbbbbbbbb"} and r["artist"] == "Leonard Cohen"
+
+
+def test_hent_album_fra_navn():
+    import skjold_yubal as sy
+
+    class YT:
+        def search(self, q, filter=None, limit=8):
+            assert filter == "albums"
+            return [{"browseId": "MPREb_feil", "title": "Annet", "artists": [{"name": "X"}]},
+                    {"browseId": "MPREb_riktig", "title": "Noen ganger er det all right", "artists": [{"name": "Odd Børretzen"}]}]
+
+        def get_album(self, bid):
+            assert bid == "MPREb_riktig"
+            return {"title": "Noen ganger er det all right", "audioPlaylistId": "OLAK5uy_abc", "artists": [{"name": "Odd Børretzen"}], "thumbnails": [{"url": "b"}]}
+
+    sendt = []
+    yb = sy.Yubal(lambda: {"yubalUrl": "nas"}, None, http=lambda u, d=None, timeout=10: (sendt.append(d), {"id": "j1"})[1], ytm_client=YT())
+    r = yb.hent_album(album="Noen ganger er det all right", artist="Odd Børretzen")
+    assert sendt[0] == {"url": "https://music.youtube.com/playlist?list=OLAK5uy_abc"} and r["id"] == "j1" and r["artist"] == "Odd Børretzen"
+    r = yb.hent_album(album_id="al:OLAK5uy_xyz")
+    assert sendt[1] == {"url": "https://music.youtube.com/playlist?list=OLAK5uy_xyz"}

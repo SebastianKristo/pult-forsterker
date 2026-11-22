@@ -9605,6 +9605,7 @@ def _nfc_ytm_find(artist, album):
 
 import skjold_ytm as _ytmmod   # noqa: E402
 import skjold_yubal as _yubalmod   # noqa: E402
+import skjold_populaert as _popmod   # noqa: E402
 ytm = _ytmmod.Ytm(settings, cache_dir=os.path.join(os.path.dirname(STATE_FILE) or "/var/lib/ki-amp", "ytm"))
 
 
@@ -10756,6 +10757,7 @@ def main():
     try:
         app.add_routes(_ytmmod.routes(ytm, {"stream_base": lambda: f"http://{_local_ip()}:{PORT}", "play": ytm_play_queue}))
         app.add_routes(_yubalmod.routes(_yubalmod.Yubal(settings, _nd)))
+        app.add_routes(_popmod.routes(_popmod.Populaert(settings)))
         # hent YouTube Music-forsiden i bakgrunnen etter oppstart, så Bibliotek er klart når noen åpner det
         threading.Timer(20, lambda: ytm.signed_in() and not ytm.missing() and ytm.refresh_home_bg()).start()
     except Exception as e:
