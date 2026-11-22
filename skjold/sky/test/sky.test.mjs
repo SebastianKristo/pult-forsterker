@@ -351,3 +351,20 @@ test("naboer: enhetene i hjemmet får hverandres LAN-adresse (også på tvers av
   assert.ok(!m.enheter.some((e) => e.id === "nabo-tull"));   // ugyldig adresse tas ikke med
   a.lukk(); b.lukk(); c.lukk();
 });
+
+test("oppdag: enhet uten hjem på samme internettlinje inviteres med LAN-adressen sin", async () => {
+  const sted = await nyttSted();
+  const r = await mf.dispatchFetch(B + "/enhet/oppdag", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: "oppdag-touch", navn: "Touch", produkt: "touch", meg: { ip: "10.69.2.244", port: 8765 } }) });
+  assert.equal(r.status, 200);
+  const ugyldig = await mf.dispatchFetch(B + "/enhet/oppdag", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: "x", meg: { ip: "8.8.8.8" } }) });
+  assert.equal(ugyldig.status, 400);   // bare private LAN-adresser
+  const hub = new FalskEnhet(mf, "oppdag-s1");
+  await hub.kobl(sted);
+  await hub.koblTil();
+  const inv = await hub.vent((m) => m.t === "inviter" && m.til === "oppdag-touch");
+  assert.deepEqual([inv.ip, inv.port], ["10.69.2.244", 8765]);
+  assert.match(inv.kode, /^[A-Z0-9]{6}$/);
+  hub.lukk();
+});
