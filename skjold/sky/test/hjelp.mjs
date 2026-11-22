@@ -45,8 +45,9 @@ export { vent };
 
 /** En falsk Skjold-enhet som snakker enhetsprotokollen over WebSocket. */
 export class FalskEnhet {
-  constructor(mf, id, { lan = [], svar } = {}) {
+  constructor(mf, id, { lan = [], svar, meg } = {}) {
     this.mf = mf;
+    this.meg = meg;
     this.id = id;
     this.lan = lan;
     this.meldinger = [];
@@ -77,7 +78,7 @@ export class FalskEnhet {
     this.ws = r.webSocket;
     this.ws.accept();
     this.ws.addEventListener("message", (e) => this.motta(JSON.parse(e.data)));
-    this.ws.send(JSON.stringify({ t: "hei", id: this.id, navn: "Enhet " + this.id, produkt: "core", versjon: "2.0", lan: this.lan }));
+    this.ws.send(JSON.stringify({ t: "hei", id: this.id, navn: "Enhet " + this.id, produkt: "core", versjon: "2.0", lan: this.lan, ...(this.meg ? { meg: this.meg } : {}) }));
     return this;
   }
   motta(m) {

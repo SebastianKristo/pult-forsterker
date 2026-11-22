@@ -1216,9 +1216,24 @@ export class Sted extends DurableObject {
       return false;
     }
   }
+  /** De tilkoblede enhetene i hjemmet med egen LAN-adresse → «naboer» til alle (eller bare `til`). */
+  sendNaboer(til) {
+    const tilk = this.tilkoblet();
+    const enheter = [];
+    for (const ws of tilk.values()) {
+      const a = ws.deserializeAttachment();
+      if (a && a.meg) enheter.push({ id: a.id, navn: a.navn || "", produkt: a.produkt || "", ip: a.meg.ip, port: a.meg.port });
+    }
+    const msg = JSON.stringify({ t: "naboer", enheter });
+    for (const ws of til ? [til] : tilk.values()) this.send(ws, msg);
+  }
   lanKart(tilk) {
-    // id → { ip, port, via } fra enhetenes «hei»-lister
+    // id → { ip, port, via } fra enhetenes «hei»-lister (og deres egen adresse først)
     const m = new Map();
+    for (const ws of tilk.values()) {
+      const a = ws.deserializeAttachment();
+      if (a && a.meg && !m.has(a.id)) m.set(a.id, { ip: a.meg.ip, port: a.meg.port, navn: a.navn, produkt: a.produkt, via: a.id });
+    }
     for (const ws of tilk.values()) {
       const a = ws.deserializeAttachment();
       for (const l of a.lan || []) if (l && l.id && !m.has(l.id)) m.set(l.id, { ip: l.ip, port: l.port, navn: l.navn, produkt: l.produkt, via: a.id });
@@ -1587,6 +1602,11 @@ export class Sted extends DurableObject {
       a.produkt = String(m.produkt || a.produkt || "").slice(0, 20);
       a.versjon = String(m.versjon || "").slice(0, 20);
       a.lan = Array.isArray(m.lan) ? m.lan.slice(0, 50) : [];
+      // egen LAN-adresse: så enheter i samme hjem finner hverandre også på tvers av nett/VLAN (der mDNS ikke når)
+      const meg = m.meg && typeof m.meg === "object" ? m.meg : null;
+      const nyMeg = meg && /^\d{1,3}(\.\d{1,3}){3}$/.test(String(meg.ip || "")) ? { ip: String(meg.ip), port: Math.max(1, Math.min(65535, parseInt(meg.port, 10) || 8765)) } : null;
+      const megEndret = JSON.stringify(nyMeg) !== JSON.stringify(a.meg || null);
+      a.meg = nyMeg;
       const e = this.data?.enheter.find((x) => x.id === a.id);
       if (e && (e.navn !== a.navn || e.produkt !== a.produkt || e.versjon !== a.versjon)) {
         Object.assign(e, { navn: a.navn || e.navn, produkt: a.produkt || e.produkt, versjon: a.versjon });
@@ -1599,6 +1619,7 @@ export class Sted extends DurableObject {
         try { await intern(registerStub(this.env), "/steder", { steder: [{ id: d.id, navn: d.navn, eier: d.eier, medlemmer: d.medlemmer }] }); } catch {}
       }
       await this.inviterNye(ws, a);
+      if (megEndret) this.sendNaboer(); else this.sendNaboer(ws);
     } else if (m.t === "res") {
       const v = this.ventende.get(m.rid);
       if (v) {
