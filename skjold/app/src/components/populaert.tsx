@@ -94,7 +94,7 @@ export function PopulaertSeksjon({ spill, apneAlbum, bred = false }: { spill: (l
         <span style={`font-family:${MONO};font-size:10px;letter-spacing:.14em;color:#8b8b86`}>POPULÆRT{data?.kilde ? ' · ' + data.kilde.toUpperCase() : ''}</span>
         <span style={`font-size:${bred ? 22 : 19}px;font-weight:600`}>{p === 'na' ? 'Populært akkurat nå' : 'Populært fra ' + (PERIODER.find((x) => x[0] === p)?.[1] ?? '')}</span>
       </div>
-      <div class="dsc" style={`display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;${bred ? '' : 'margin:0 -20px;padding:0 20px'}`}>
+      <div class="dsc" style={`display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x;${bred ? '' : 'margin:0 -20px;padding:0 20px'}`}>
         {PERIODER.map(([id, n]) => <button key={id} onClick={() => { periode.value = id; }} style={`flex-shrink:0;height:34px;padding:0 14px;border-radius:17px;border:1px solid ${p === id ? '#f2f2ee' : '#2e2e30'};background:${p === id ? '#f2f2ee' : '#161617'};color:${p === id ? '#0b0b0c' : '#c9c9c4'};font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer`}>{n}</button>)}
       </div>
       {!data && <span style="font-size:13px;color:#8b8b86">{feil ? 'Fikk ikke hentet listene: ' + feil : 'Henter listene …'}</span>}
@@ -113,7 +113,7 @@ export function PopulaertSeksjon({ spill, apneAlbum, bred = false }: { spill: (l
       {data && (data.sanger.length > sanger.length || flere) && <button onClick={() => setFlere(!flere)} style="align-self:flex-start;height:34px;padding:0 14px;border-radius:17px;border:1px solid #2e2e30;background:#161617;color:#c9c9c4;font-size:13px;cursor:pointer">{flere ? 'Vis færre' : 'Vis alle ' + Math.min(50, data.sanger.length)}</button>}
       {data && album.length > 0 && <>
         <span style="font-size:16px;font-weight:600;margin-top:4px">Populære album</span>
-        <div class="dsc" style={`display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;${bred ? '' : 'margin:0 -20px;padding:0 20px'}`}>
+        <div class="dsc" style={`display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x;${bred ? '' : 'margin:0 -20px;padding:0 20px'}`}>
           {album.map((a, i) => {
             const fin = H['a:' + sKey(a)], st = status('album:' + sKey(a), !!fin);
             return (

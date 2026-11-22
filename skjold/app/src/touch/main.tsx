@@ -11,7 +11,7 @@ import { art, TOUCH_BELL, TOUCH_IDLE, TOUCH_OUT, TOUCH_ROLES, TOUCH_STANDBY_S, T
 import { favs, loadFavs, playFav, playStation } from '../lib/radio';
 import { ndAlbum, ndAlbumList, ndArtist, ndConfigured, ndCover, ndSearch, ndSearchAll, type NdAlbum, type NdArtist, type NdSong } from '../lib/navidrome';
 import { li, lq, lsvc, playNd } from '../lib/library';
-import { ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
+import { ytmArtist, ytmHomeCached, ytmSearch, ytmTracks, ytmWhy } from '../lib/ytm';
 import '../lib/services';   // innloggingene (Navidrome, YouTube Music) hentes fra enheten – kiosken har ingen egne
 import { groupAll, groupBusy, groupNone, groups, inGroup, loadGroup, removePreset, savePreset, setMembers, toggleMember } from '../lib/groups';
 import { qrMatrix } from '../lib/qr';
@@ -19,7 +19,9 @@ import { canSeek, seekTo } from '../screens/player';
 import { lydProsent, spillKlokke, spillLyd, startTrykkelyder } from './lyd';
 import { AlleInnstillinger } from './innstillinger';
 import { YubalBoks } from '../components/yubalboks';
-import { ybNed, yubalPa } from '../lib/yubal';
+import { ybAktiv, ybAlle, ybLastNedAlbum, ybNed, ybNyttSok, ybTekst, yubalPa } from '../lib/yubal';
+import { PopulaertSeksjon } from '../components/populaert';
+const ybNorm = (t: string) => t.toLowerCase().replace(/\s*[([].*?[)\]]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 import { hjulMål, Keyboard, MONO, Sheet, Slider, TekstFelt, useLongPress, useTekst, Wheel } from './ui';
 
 type Scr = 'now' | 'home' | 'smart' | 'alarm' | 'lib' | 'rooms' | 'set';
@@ -1005,8 +1007,12 @@ function Library() {
         <button onClick={() => { searchOpen.value = true; }} aria-label="Søk" style="height:44px;width:190px;border-radius:22px;border:1px solid #2e2e30;background:#141415;display:flex;align-items:center;gap:8px;padding:0 16px;box-sizing:border-box;color:#8b8b86;font-size:13px;text-align:left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>Søk</button>
       </div>
       {tab === 'Podkaster' && podTouch.value ? <PodEpisodes s={podTouch.value} /> : <>
-      <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>{kicker}</span>
+      {!(lib.value === 1 && ndOk) && <span style={`font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>{kicker}</span>}
       <div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y;display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:16px 14px;align-content:start;padding-bottom:14px">
+        {lib.value === 1 && ndOk && <>
+          <div style="grid-column:1/-1;min-width:0"><PopulaertSeksjon bred spill={(l, i) => { playNd(l, i, 'nd'); scr.value = 'now'; }} apneAlbum={(al) => { void ndAlbum(al.id).then((r) => { playNd(r.songs, 0, 'nd'); scr.value = 'now'; }); }} /></div>
+          <span style={`grid-column:1/-1;margin-top:6px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>{kicker}</span>
+        </>}
         {items.map((it, i) => (
           <button key={i} onClick={it.play} style="min-width:0;border:none;background:none;padding:0;text-align:left;display:flex;flex-direction:column;gap:8px">
             <div style={`position:relative;width:100%;aspect-ratio:1;border-radius:12px;background:${it.art}`}>{it.live && <span style={`position:absolute;left:8px;top:8px;height:18px;padding:0 6px;border-radius:4px;background:#e05a4a;color:#fff;font-family:${MONO};font-size:9px;display:flex;align-items:center`}>DIREKTE</span>}</div>
@@ -1375,6 +1381,18 @@ function ArtistSide() {
     })();
     return () => { av = true; };
   }, [navn]);
+  // album og singler fra YouTube Music som ikke ligger i Navidrome – yubal laster dem ned
+  const [mangler, setMangler] = useState<NdAlbum[]>([]);
+  useEffect(() => {
+    setMangler([]);
+    if (!yubalPa() || a === undefined) return undefined;
+    let av = false;
+    const mine = (a?.albums ?? []).map((x) => ybNorm(x.name));
+    ytmArtist({ name: a?.artist.name ?? navn.split(/\s+(?:feat\.?|ft\.?|&|og|x)\s+|,\s*|\s*\/\s*/i)[0] ?? navn }).then((r) => {
+      if (!av) setMangler([...r.albums, ...r.singles].filter((x) => !mine.some((m) => m && (m === ybNorm(x.name) || m.startsWith(ybNorm(x.name) + ' ') || ybNorm(x.name).startsWith(m + ' ')))));
+    }).catch(() => { /* YouTube Music er ikke tilgjengelig */ });
+    return () => { av = true; };
+  }, [a, navn, ybNyttSok.value]);
   const spill = (l: NdSong[], i: number) => { playNd(l, i, 'nd'); artistSide.value = ''; scr.value = 'now'; };
   const rad = (x: NdSong, i: number, l: NdSong[], nr?: number) => (
     <button key={x.id + i} onClick={() => spill(l, i)} style="height:50px;flex-shrink:0;border:none;border-radius:10px;background:transparent;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:0 10px;text-align:left">
@@ -1397,6 +1415,19 @@ function ArtistSide() {
       <div class="rull" style="flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:2px;padding:0 10px 10px">
         {a === undefined && <span style={`padding:14px 10px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>HENTER …</span>}
         {a === null && <span style="padding:14px 10px;font-size:13.5px;color:#8b8b86">Fant ikke «{navn}» i Navidrome.</span>}
+        {!alb && mangler.length > 0 && <>
+          <span style={`padding:8px 10px 4px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#c9b48a`}>IKKE I BIBLIOTEKET · TRYKK FOR Å LASTE NED</span>
+          <div style="display:flex;gap:12px;overflow-x:auto;touch-action:pan-x;padding:0 10px 8px;flex-shrink:0">
+            {mangler.map((al) => { const n = ybAlle.value['album:' + al.id]; return (
+              <button key={al.id} class="rip" onClick={() => { if (!ybAktiv(n) && n?.status !== 'completed') void ybLastNedAlbum('album:' + al.id, { album_id: al.id, album: al.name, artist: a?.artist.name ?? navn, ...(al.coverArt ? { bilde: al.coverArt } : {}) }); }} style="position:relative;overflow:hidden;width:132px;flex-shrink:0;border:none;background:none;padding:0;display:flex;flex-direction:column;gap:6px;text-align:left">
+                <div style={`position:relative;width:132px;height:132px;border-radius:10px;background:${artBg(al.name, ndCover(al.coverArt, 300))};opacity:${n?.status === 'completed' ? 1 : 0.8}`}>
+                  <span style="position:absolute;right:8px;bottom:8px;width:34px;height:34px;border-radius:50%;background:rgba(11,11,12,.8);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={n?.status === 'completed' ? '#6fcf7f' : '#f0c46a'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={n?.status === 'completed' ? 'M5 12l5 5 9-10' : 'M12 4v11M7 10l5 5 5-5M5 20h14'} /></svg></span>
+                </div>
+                <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{al.name}</span>
+                <span style={`font-size:11px;color:${n ? (n.status === 'failed' ? '#ff9a8a' : n.status === 'completed' ? '#6fcf7f' : '#f0c46a') : '#8b8b86'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>{n ? ybTekst(n) : ['Last ned', al.year].filter(Boolean).join(' · ')}</span>
+              </button>); })}
+          </div>
+        </>}
         {alb ? alb.songs.map((x, i) => rad(x, i, alb.songs, i + 1)) : a && <>
           <span style={`padding:6px 10px 4px;font-family:${MONO};font-size:10.5px;letter-spacing:.14em;color:#8b8b86`}>ALBUM · {a.albums.length}</span>
           <div style="display:flex;gap:12px;overflow-x:auto;touch-action:pan-x;padding:0 10px 8px;flex-shrink:0">
