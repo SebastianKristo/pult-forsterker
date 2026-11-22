@@ -1,6 +1,8 @@
 // Biblioteker (Skjold App v2 · tLib): YouTube Music og Navidrome. Malen er portert 1:1 fra designfilen.
 // Navidrome er ekte (Subsonic-API direkte fra appen). YouTube Music hentes fra Skjold-enheten (/api/ytm/*, lib/ytm.ts);
 // svarer den ikke, vises samme skall med en tydelig «ikke tilkoblet»-tilstand i stedet for eksempeldata.
+import { YubalBoks } from '../components/yubalboks';
+import { ybNyttSok, yubalPa } from '../lib/yubal';
 import { ArtistView } from './desk';
 import { openSetup } from './setupwiz';
 import { loadSw, playSw, swPlaying, swStations } from '../lib/subwave';
@@ -187,7 +189,7 @@ function LibraryMain() {
     setRes(null);
     const t = setTimeout(() => { (ytm ? ytmSearch(q) : ndSearch(q)).then(setRes).catch(() => setRes([])); }, 350);
     return () => clearTimeout(t);
-  }, [q, nd, ytm]);
+  }, [q, nd, ytm, ybNyttSok.value]);
   const tabs = LIB_TABS[lib];
   const h = hist.value[lib] ?? [];
   const play = (l: NdSong[], i: number) => { playNd(l, i, lib); openFull(); };
@@ -208,6 +210,7 @@ function LibraryMain() {
           {res && !res.length && <span style="font-size:13px;color:#8b8b86">Ingen treff</span>}
           {!res && <span style="font-size:13px;color:#8b8b86">Søker …</span>}
           {res && res.length > 0 && <TrackRows list={res} onPick={(i) => play(res, i)} />}
+          {!ytm && res && yubalPa() && <YubalBoks q={q} />}
         </>
       ) : open && (nd || ytm) ? <OpenList lib={lib} /> : <>
         <div style="flex-shrink:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:3px;border-radius:10px;background:#141415;border:1px solid #242426">

@@ -90,6 +90,7 @@ export function hostLabel(): string {
 }
 
 export interface YubalStatus { konfigurert: boolean; ok: boolean; feil: string; auto: boolean; album: boolean }
+export interface YubalKandidat { vid: string; tittel: string; artist: string; album: string; album_id: string; varighet: string; bilde: string; poeng: number; sikker: boolean }
 export interface YubalJobb { id: string; status: string; fremdrift?: number; tittel: string; artist: string; bilde: string; url?: string; q?: string; t?: number }
 
 export class ApiError extends Error {
@@ -203,6 +204,8 @@ export const api = {
   /** yubal: last ned det du ikke har, rett inn i Navidrome-biblioteket (pi/skjold_yubal.py) */
   yubalStatus: () => req<YubalStatus>('/api/yubal/status', undefined, undefined, 8000),
   yubalHent: (q: string) => post<YubalJobb>('/api/yubal/hent', { q }),
+  yubalHentValgt: (k: YubalKandidat) => post<YubalJobb>('/api/yubal/hent', { vid: k.vid, album_id: k.album_id, tittel: k.tittel, artist: k.artist, album: k.album, bilde: k.bilde }),
+  yubalKandidater: (q: string) => req<{ kandidater: YubalKandidat[]; sikker: YubalKandidat | null; error?: string }>('/api/yubal/kandidater?q=' + encodeURIComponent(q), undefined, undefined, 15000),
   yubalJobber: () => req<{ jobber: YubalJobb[]; error?: string }>('/api/yubal/jobber', undefined, undefined, 8000),
   maDiscover: () => req<{ found: string[] }>('/api/ma/discover', undefined, undefined, 10000),
   maSearch: (q: string) => req<MaSearch>('/api/ma/search?q=' + encodeURIComponent(q), undefined, undefined, 15000),
