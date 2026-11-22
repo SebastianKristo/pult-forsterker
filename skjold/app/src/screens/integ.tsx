@@ -5,8 +5,8 @@ import { loadSw, swStations } from '../lib/subwave';
 import { SRC_ICON } from '../lib/srcicons';
 // Integrasjoner og Plugins (S1 Web v3: sidene «int» og «plug»).
 import { signal } from '@preact/signals';
-import { useEffect } from 'preact/hooks';
-import { api, type HomeKitInfo, type MaStatus } from '../lib/api';
+import { useEffect, useState } from 'preact/hooks';
+import { api, type HomeKitInfo, type MaStatus, type YubalJobb, type YubalStatus } from '../lib/api';
 import { qrMatrix } from '../lib/qr';
 import { matter, matterLoad, matterRows, matterStatus } from './platform';
 import { go, setSetting, settings, showToast, everyVisible, status } from '../lib/store';
@@ -74,6 +74,7 @@ function ints(s: Settings): Int[] {
     { id: 'ytmusic', name: 'YouTube Music', mono: 'YT', tile: '#e86a6a', status: ytm ? (s.ytmEn ? 'Innlogget · på' : 'Innlogget · av') : 'Ikke innlogget', ok: ytm && s.ytmEn, desc: 'Spillelister, mikser og album fra kontoen din, innebygd i Skjold. Krever Premium.' },
     { id: 'ma', name: 'Music Assistant', mono: 'MA', tile: '#18bcf2', status: s.maUrl ? (maSt.value?.ok ? 'Tilkoblet' + (maSt.value.player ? ' · ' + maSt.value.player : '') : maSt.value ? 'Feil' : 'Sjekker …') : 'Ikke satt opp', ok: !!s.maUrl && !!maSt.value?.ok, desc: 'TIDAL, Qobuz, Deezer, Spotify, YouTube Music, Plex, Jellyfin og podkaster i ett bibliotek, med søk i Skjold.' },
     { id: 'navidrome', name: 'Navidrome', mono: 'N', tile: '#7fa8e8', status: nd ? (s.ndEn ? 'Tilkoblet · på' : 'Tilkoblet · av') : 'Ikke tilkoblet', ok: nd && s.ndEn, desc: 'Ditt eget musikkbibliotek på hjemmenettet, i FLAC. Bruker Subsonic-API.' },
+    { id: 'yubal', name: 'yubal', mono: 'yb', tile: '#e8b04a', status: s.yubalUrl ? (ybSt.value?.ok ? (s.yubalAuto ? 'Tilkoblet · laster ned automatisk' : 'Tilkoblet') : ybSt.value ? 'Svarer ikke' : 'Sjekker …') : 'Ikke satt opp', ok: !!s.yubalUrl && !!ybSt.value?.ok, desc: 'Last ned musikk du ikke har, rett inn i Navidrome-biblioteket. Finner Skjold ikke låten i Navidrome når du søker, henter yubal den.' },
     { id: 'subwave', name: 'SUB/WAVE', mono: 'SW', tile: '#1a1a1b', status: swStations.value.length ? swStations.value.length + (swStations.value.length === 1 ? ' stasjon' : ' stasjoner') : 'Ikke satt opp', ok: swStations.value.length > 0, desc: 'Din egen AI-DJ-radio: selvhostede stasjoner der en AI-DJ velger låtene. Vises i Bibliotek og Kilder.' },
     { id: 'upnp', name: 'UPnP/DLNA', mono: 'DL', tile: '#ffffff', status: s.upnpEn ? 'På · venter' : 'Av', ok: s.upnpEn, desc: 'Ta imot lyd fra Android-apper, PC og NAS. Forsterkeren vises som en vanlig DLNA-høyttaler.' },
     { id: 'homekit', name: 'Apple Hjem (HomeKit)', mono: 'H', tile: '#f5a623', status: hkStatus(), ok: !!hk.value?.enabled && !!hk.value?.running, desc: 'Skjold som TV-tilbehør i Hjem-appen: av/på, kilder, radiofavoritter og volum. Med Siri og automasjoner.' },
@@ -86,7 +87,7 @@ function ints(s: Settings): Int[] {
 
 /** Antall aktive integrasjoner (badge i sidemenyen): Lyrion hvis tilkoblet + de som er slått på. */
 export function intCount(s: Settings): number {
-  return [!!status.value?.lyrion, s.spEn, !!s.ytmCookie && s.ytmEn, !!s.ndUrl && s.ndEn, s.upnpEn, !!hk.value?.enabled, !!matter.value?.enabled].filter(Boolean).length;
+  return [!!status.value?.lyrion, !!s.yubalUrl && !!ybSt.value?.ok, s.spEn, !!s.ytmCookie && s.ytmEn, !!s.ndUrl && s.ndEn, s.upnpEn, !!hk.value?.enabled, !!matter.value?.enabled].filter(Boolean).length;
 }
 
 type Row = { n: string; hint?: string; el: preact.ComponentChildren };
@@ -120,6 +121,12 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
         { n: 'Passord', hint: 'Settes under Innstillinger → Musikktjenester', el: btn('Åpne', () => openSetup('nd')) },
         { n: 'Bibliotek', el: btn('Åpne', () => go('lib', 'nd')) },
         { n: 'Vis i menyen', hint: 'Skjul Navidrome fra sidemenyen og kildene uten å logge ut', el: <Toggle on={!skjult('nd')} onChange={(b) => settVises('nd', b)} /> }] };
+    case 'yubal': return { links: s.yubalUrl ? [['Åpne yubal', (/^https?:\/\//.test(s.yubalUrl) ? s.yubalUrl : 'http://' + s.yubalUrl + (/:\d+$/.test(s.yubalUrl) ? '' : ':8000'))]] : [['Om yubal', 'https://github.com/guillevc/yubal']],
+      rows: [{ n: 'Adresse', hint: ybSt.value?.feil || 'Der yubal kjører, for eksempel 192.168.1.20:8000. yubal må laste ned til samme musikkmappe som Navidrome leser.', el: <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><input value={s.yubalUrl} placeholder="192.168.1.20:8000" onChange={(e) => { setSetting('yubalUrl', (e.currentTarget as HTMLInputElement).value.trim()); setTimeout(checkYubal, 300); }} style={`height:36px;width:200px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-family:${MONO};font-size:12px;outline:none;color:#f2f2ee`} />{btn('Test', checkYubal)}</span> },
+        { n: 'Last ned automatisk', hint: 'Søker du i Navidrome på Skjold Touch og trykker Søk uten treff, laster yubal ned det du søkte etter. Av: du får en «Last ned»-knapp i stedet. Her kan du laste ned med feltet under.', el: <Toggle on={s.yubalAuto} onChange={(b) => setSetting('yubalAuto', b)} /> },
+        { n: 'Hele albumet', hint: 'Hent albumet låten er på, ikke bare låten', el: <Toggle on={s.yubalAlbum} onChange={(b) => setSetting('yubalAlbum', b)} /> },
+        { n: 'Last ned nå', hint: 'Skriv artist og låt', el: <YubalHent /> },
+        ...ybJobber.value.slice(0, 8).map((j) => ({ n: (j.tittel || j.q || 'Nedlasting') + (j.artist ? ' – ' + j.artist : ''), hint: YB_STATUS[j.status] ?? j.status, el: txt(j.status === 'completed' ? '✓' : j.status === 'failed' || j.status === 'cancelled' ? '–' : (j.fremdrift ?? 0) + ' %') }))] };
     case 'subwave': return { links: [],
       rows: [...swStations.value.map((x) => ({ n: x.name, hint: x.admin ? 'Admin · kan hoppe over' : 'Stasjon ' + (x.i + 1), el: swAdm.value === x.i ? <SwAdminFelt i={x.i} /> : <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><button onClick={() => void bildeSw(x.i)} title="Velg bilde" aria-label={'Velg bilde for ' + x.name} style={`width:36px;height:36px;border-radius:8px;border:1px solid #2e2e30;background:${x.image ? `url("${x.image.replace(/"/g, '')}") center / cover no-repeat` : '#1b1b1c'};color:#8b8b86;cursor:pointer;flex-shrink:0`}>{x.image ? '' : '+'}</button>{btn('Spill', () => void api.subwavePost({ play: true, station: x.i }).then(() => go('play')).catch(() => {}))}{btn(x.admin ? 'Admin ✓' : 'Admin', () => { swAdm.value = x.i; })}{btn('Fjern', () => void fjernSw(x.i))}</span> })),
         { n: swStations.value.length ? 'Legg til en stasjon til' : 'Ingen stasjon ennå', hint: 'Du kan ha så mange stasjoner du vil. Alle vises under Bibliotek → SUB/WAVE.', el: btn('+ Legg til stasjon', () => openSetup('sw')) },
@@ -147,11 +154,22 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
 
 const intSel = signal('lyrion');
 const maSt = signal<MaStatus | null>(null);
+const ybSt = signal<YubalStatus | null>(null), ybJobber = signal<YubalJobb[]>([]);
+function checkYubal() { if (!settings.value.yubalUrl) { ybSt.value = null; return; } api.yubalStatus().then((r) => (ybSt.value = r)).catch((e) => (ybSt.value = { konfigurert: true, ok: false, feil: e instanceof Error ? e.message : String(e), auto: true, album: false })); }
+function hentYbJobber() { api.yubalJobber().then((r) => (ybJobber.value = r.jobber)).catch(() => undefined); }
+const YB_STATUS: Record<string, string> = { pending: 'I kø', fetching_info: 'Henter info', downloading: 'Laster ned', importing: 'Legger inn i biblioteket', completed: 'Ferdig – i Navidrome', failed: 'Feilet', cancelled: 'Avbrutt' };
+/** Last ned noe nå: skriv artist og låt (eller lim inn en YouTube Music-lenke). */
+function YubalHent() {
+  const [q, setQ] = useState(''), [busy, setBusy] = useState(false);
+  const hent = async () => { if (!q.trim()) return; setBusy(true); try { const r = await api.yubalHent(q.trim()); showToast('Laster ned ' + (r.tittel || q) + (r.artist ? ' – ' + r.artist : '')); setQ(''); hentYbJobber(); } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } setBusy(false); };
+  return <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><input value={q} placeholder="Artist og låt" onInput={(e) => setQ((e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => { if (e.key === 'Enter') void hent(); }} style={`height:36px;width:200px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-size:13px;outline:none;color:#f2f2ee`} />{btn(busy ? 'Starter …' : 'Last ned', () => void hent())}</span>;
+}
 const maHttp = (a: string) => (/^https?:\/\//.test(a) ? a : 'http://' + a + (/:\d+$/.test(a) ? '' : ':8095'));
 function checkMa() { if (!settings.value.maUrl) { maSt.value = null; return; } maSt.value = null; api.maStatus().then((r) => (maSt.value = r)).catch((e) => (maSt.value = { configured: true, ok: false, error: e instanceof Error ? e.message : String(e) })); }
 async function findMa() { try { const r = await api.maDiscover(); if (r.found[0]) { setSetting('maUrl', r.found[0]); setTimeout(checkMa, 300); showToast('Fant Music Assistant på ' + r.found[0]); } else showToast('Fant ingen Music Assistant på nettet'); } catch (e) { showToast(e instanceof Error ? e.message : String(e)); } }
 
 export function IntegrationsPage() {
+  useEffect(() => { checkYubal(); hentYbJobber(); const t = everyVisible(() => { if (intSel.value === 'yubal' && settings.value.yubalUrl) hentYbJobber(); }, 3000); return () => clearInterval(t); }, []);
   useEffect(() => { checkMa(); loadSw(true); void hkLoad(); void matterLoad(); const t = everyVisible(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); if (matter.value?.enabled && !matter.value.commissioned) void matterLoad(); }, 5000); return () => clearInterval(t); }, []);
   const s = settings.value, sel = intSel.value, list = ints(s), cur = list.find((x) => x.id === sel) ?? list[0]!, d = detail(cur.id, s);
   return (
@@ -200,7 +218,7 @@ export function IntegrationsPage() {
 }
 
 const GRUPPER: [string, string[], string?][] = [
-  ['Musikk', ['lyrion', 'spotify', 'ytmusic', 'navidrome', 'ma', 'subwave', 'upnp'], 'oppsett'],
+  ['Musikk', ['lyrion', 'spotify', 'ytmusic', 'navidrome', 'yubal', 'ma', 'subwave', 'upnp'], 'oppsett'],
   ['Smarthjem og styring', ['homekit', 'matter', 'ha', 'homey', 'api']],
 ];
 const INT_CSS = `

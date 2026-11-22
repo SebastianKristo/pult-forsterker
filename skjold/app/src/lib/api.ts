@@ -89,6 +89,9 @@ export function hostLabel(): string {
   return location.host || 'skjold.local';
 }
 
+export interface YubalStatus { konfigurert: boolean; ok: boolean; feil: string; auto: boolean; album: boolean }
+export interface YubalJobb { id: string; status: string; fremdrift?: number; tittel: string; artist: string; bilde: string; url?: string; q?: string; t?: number }
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -197,6 +200,10 @@ export const api = {
   routines: () => req<{ routines?: Routine[] } | Routine[]>('/api/routines'),
   homekit: () => req<HomeKitInfo>('/api/homekit'),
   maStatus: () => req<MaStatus>('/api/ma/status', undefined, undefined, 12000),
+  /** yubal: last ned det du ikke har, rett inn i Navidrome-biblioteket (pi/skjold_yubal.py) */
+  yubalStatus: () => req<YubalStatus>('/api/yubal/status', undefined, undefined, 8000),
+  yubalHent: (q: string) => post<YubalJobb>('/api/yubal/hent', { q }),
+  yubalJobber: () => req<{ jobber: YubalJobb[]; error?: string }>('/api/yubal/jobber', undefined, undefined, 8000),
   maDiscover: () => req<{ found: string[] }>('/api/ma/discover', undefined, undefined, 10000),
   maSearch: (q: string) => req<MaSearch>('/api/ma/search?q=' + encodeURIComponent(q), undefined, undefined, 15000),
   maLibrary: (kind: string, q = '') => req<MaItem[]>('/api/ma/library/' + kind + (q ? '?q=' + encodeURIComponent(q) : ''), undefined, undefined, 15000),
