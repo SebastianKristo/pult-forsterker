@@ -123,7 +123,9 @@ if [ "${KI_TOUCH_VOICE:-0}" = 1 ]; then
   [ -d "$V/wyoming-satellite" ] || git clone -q --depth 1 https://github.com/rhasspy/wyoming-satellite.git "$V/wyoming-satellite"
   [ -d "$V/wyoming-openwakeword" ] || git clone -q --depth 1 https://github.com/rhasspy/wyoming-openwakeword.git "$V/wyoming-openwakeword"
   ( cd "$V/wyoming-satellite" && python3 -m venv .venv && .venv/bin/pip install -q --upgrade pip wheel setuptools \
-      && .venv/bin/pip install -q -f 'https://synesthesiam.github.io/prebuilt-apps/' -e '.[all]' ) || echo "Stemme: wyoming-satellite ble ikke installert."
+      && { .venv/bin/pip install -q -f 'https://synesthesiam.github.io/prebuilt-apps/' -e '.[all]' \
+           || { echo "  Stemme: tilleggene (støyfilter/VAD) bygger ikke på denne Python-versjonen – installerer uten dem"; .venv/bin/pip install -q -e .; }; } ) \
+    || echo "Stemme: wyoming-satellite ble ikke installert."
   ( cd "$V/wyoming-openwakeword" && script/setup >/dev/null ) || echo "Stemme: openWakeWord ble ikke installert."
   install -m 755 "$HER/skjold-voice-event" /usr/local/bin/skjold-voice-event
   [ -f /etc/skjold-voice.env ] || echo "WAKE_WORD=ok_nabu" > /etc/skjold-voice.env
