@@ -80,6 +80,7 @@ def place(parts):
     return out
 
 
+EKSTRA_INNST = {}   # {delnavn: {innstilling: verdi}} – legges oppå de andre (P3C: støtte i et annet materiale)
 OBJ_INNST = {}   # {delnavn: {innstilling: verdi}} – ekstra objektinnstillinger (brukes av andre produkter, f.eks. Røst Rund)
 TOPP_INNST = {"brim_type": "outer_only", "brim_width": "5", "brim_object_gap": "0",
               "initial_layer_speed": "25", "initial_layer_infill_speed": "25"}
@@ -173,6 +174,7 @@ def write_sammen(fn, title, parts, colors):
         objs.append(f'<object id="{nid}" name="{name0}" type="model"><components>{comps}</components></object>')
         items.append(f'<item objectid="{nid}"/>')
         innst = topp_innst() if f0 == "topp" or f0.endswith("/topp") else OBJ_INNST.get(f0, {})
+        innst = {**innst, **EKSTRA_INNST.get(f0, {})}
         # brimmen må få plass på plata: hele gruppen (med museører) skal ligge minst brim_width fra kanten
         brim = float(innst.get("brim_width", 0) or 0)
         if brim:
@@ -253,6 +255,57 @@ def plater(variant):
     return ut
 
 
+# ---------- Bambu Lab P3C (fem hoder: ett filament per hode, ingen bytter) ----------
+# 1 lys PLA (topp, symboler) · 2 mørk PETG (bunn, taster) · 3 gull PLA · 4 TPU 95A (fjærene i tastene) · 5 klar PETG (IR-vinduet)
+P3C_FARGER = {1: "#ECE9E3", 2: "#2E2D2C", 3: "#D99E40", 4: "#4A7FB8", 5: "#DDE6EA"}
+
+
+def stotte(grensesnitt):
+    """Trestøtte fra plata, med grensesnittet i det andre materialet (PLA mot PETG og omvendt): slipper rent og
+    etterlater en glatt flate. Bare fra plata, så det aldri havner støtte inne i delene (tastespor, skruetårn)."""
+    return {"enable_support": "1", "support_type": "tree(auto)", "support_on_build_plate_only": "1",
+            "support_filament": "0", "support_interface_filament": str(grensesnitt)}
+
+
+def p3c_plater(stl_kropp="stl", navn="skjold-fjernkontroll", tittel="Skjold Fjernkontroll"):
+    """Topp/bunn fra stl_kropp (standard eller enkel), hettene med TPU fra stl/p3c/."""
+    rel = "" if stl_kropp == "stl" else f"../{stl_kropp}/"
+    return {
+        f"{navn}-p3c.3mf": (f"{tittel} – topp og bunn (Bambu Lab P3C)", [
+            (f"{rel}topp", "Topp (forsiden ned, lys PLA)", 1, (172, 12), None),
+            (f"{rel}logo", "SKJOLD (gull, felt inn i toppen)", 3, None, f"{rel}topp"),
+            (f"{rel}orer", "Museører (vris av etter print)", 1, None, f"{rel}topp"),
+            (f"{rel}bunn", "Bunn (mørk PETG)", 2, (95, 12), None),
+        ], P3C_FARGER),
+        f"{navn}-p3c-taster.3mf": (f"{tittel} – taster med TPU-fjær og IR-vindu (Bambu Lab P3C)", [
+            ("p3c/knapper", "Faste taster (mørk PETG, flensen ned)", 2, (60, 40), None),
+            ("p3c/symboler_lyse", "Symboler på de mørke tastene (lys PLA)", 1, None, "p3c/knapper"),
+            ("p3c/gull", "Gullring og Skjold-tast (gull PLA)", 3, None, "p3c/knapper"),
+            ("p3c/symboler_morke", "Symboler på gulldelene", 2, None, "p3c/knapper"),
+            ("p3c/fjaer", "TPU-fjær under de faste tastene (TPU 95A)", 4, None, "p3c/knapper"),
+            ("p3c/front_knapper", "Tilbake, avslutt, spill/pause, demp og volum (forsiden ned)", 2, (70, 110), None),
+            ("p3c/front_symboler", "Symboler på mediatastene (lys PLA)", 1, None, "p3c/front_knapper"),
+            ("p3c/front_tupper", "TPU-tupper på mediatastene", 4, None, "p3c/front_knapper"),
+            (f"{rel}ir_vindu", "IR-vindu (klar PETG, forsiden ned)", 5, (160, 30), None),
+        ], P3C_FARGER),
+    }
+
+
+def lag_p3c():
+    global STL
+    STL = "stl"
+    EKSTRA_INNST.clear()
+    for k in ("topp", "../stl_en/topp"):
+        EKSTRA_INNST[k] = stotte(2)   # topp i PLA: grensesnitt i PETG
+    for k in ("bunn", "../stl_en/bunn"):
+        EKSTRA_INNST[k] = stotte(1)   # bunn i PETG: grensesnitt i PLA
+    for fn, (title, parts, colors) in p3c_plater().items():
+        write(fn, title, parts, colors)
+    for fn, (title, parts, colors) in p3c_plater("stl_en", "skjold-fjernkontroll-enkel", "Skjold Fjernkontroll Enkel").items():
+        write(fn, title, parts, colors)
+    EKSTRA_INNST.clear()
+
+
 def main():
     """Standard (kort) fra stl/, full variant fra stl_full/ (filene heter skjold-fjernkontroll-full-…)."""
     global STL
@@ -263,4 +316,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    lag_p3c() if "p3c" in sys.argv[1:] else main()

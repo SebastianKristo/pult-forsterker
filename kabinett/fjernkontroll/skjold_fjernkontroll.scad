@@ -33,6 +33,7 @@ oppsett = "rutenett";           // tasteoppsett under D-paden: rutenett (A) | va
 farge = "lys";                  // lys | mork | bone (Bone White PLA + mørk PETG) | bone_gra (Bone White PLA + grå PETG)
 skjerm = "glass";               // glass | nokkel (aktivt område i magenta, så lag_render.sh kan legge inn et skjermbilde)
 skjermE = 0;                    // part="skjermflate": samme eksplosjonsavstand som bildet
+tpu = false;                    // true: TPU-fjær i hettene (Bambu Lab P3C / skriver med flere hoder), se «TPU i tastene» i LES_MEG
 $fn = 48;
 
 // ---------- ytre mål ----------
@@ -279,8 +280,47 @@ module hette_kropp(h) {
     }
   }
 }
-module hette(h) { difference() { hette_kropp(h); translate([0, 0, topp_av(h) - ink]) linear_extrude(1) symbol2d(h); } }
-module symbol(h) { intersection() { hette_kropp(h); translate([0, 0, topp_av(h) - ink]) linear_extrude(ink) symbol2d(h); } }
+// ---------- TPU i tastene (tpu = true, for skrivere med flere hoder) ----------
+// Under hver bryter ligger en liten TPU-bro (1,2 × 7,6 × 0,6 mm) i en kanal i undersiden av hetten, festet i begge ender.
+// Hettens underside er senket 0,3 mm, slik at broen hviler på bryteren med 0,1 mm forspenning: hetten presses lett opp
+// mot toppen (ca. 5–10 g) og står stille. Rundt bryteren er en lomme (Ø2,9 × 0,4 mm): trykker du, gir broen etter 0,3 mm,
+// så treffer den harde kanten av lomma bryteren og den klikker som før. Broen printes først (flensen ned), kanalen
+// over den er en kort bro (1,6 mm), og lomma likeså – ingen støtte. Oppsettets hetter (forsiden ned) får en TPU-tupp
+// (0,3 mm) ytterst på aktuatoren: mykere og stillere trykk. Gjelder utgavene med 4 × 4-brytere (standard og enkel).
+tpu_ok = tpu && !hu && !hk_hk;
+fjB = 1.2; fjT = 0.6; fjL = 5.6; fjA = 1.0;   // broen: bredde, tykkelse, fritt spenn, feste i hver ende
+fjSenk = 0.3;                                 // undersiden senket (broen ligger i flukt med den)
+fjKanal = 1.6; fjGap = 0.45;                  // kanalen broen bøyer seg opp i
+fjLomme = 2.9; fjLommeH = 0.4;                // lomma rundt bryteren (den harde kanten er stoppet)
+tuppH = 0.3;                                  // TPU-tuppen på oppsettets aktuatorer
+// bryterne under en fast hette, i hettens lokale ramme: [x, y, langs x?]
+function fj_brytere(h) = [for (b = BRYTERE)
+  if ((h[1] == "ring" && (b[0] == "opp" || b[0] == "ned" || b[0] == "venstre" || b[0] == "hoyre")) || (h[1] != "ring" && b[0] == h[0]))
+    [b[1] - h[2], h[3] - b[2], h[1] == "pille"]];
+module fj_rot(q) { translate([q[0], q[1], 0]) rotate([0, 0, q[2] ? 90 : 0]) children(); }
+module fjaer_bro(q) { fj_rot(q) translate([-fjB/2, -(fjL/2 + fjA), zHb - fjSenk]) cube([fjB, fjL + 2*fjA, fjT]); }
+module fjaer_kutt(q) {
+  fj_rot(q) {
+    translate([-fjKanal/2, -fjL/2, zHb - fjSenk - 0.01]) cube([fjKanal, fjL, fjT + fjGap + 0.01]);
+    translate([0, 0, zHb - fjSenk - 0.01]) cylinder(d = fjLomme, h = fjLommeH + 0.01, $fn = 32);
+  }
+  fjaer_bro(q);
+}
+module fj_fotavtrykk(h) {   // hettens underside, senket fjSenk
+  f = h[1]; b = h[4]; hh = h[5];
+  translate([0, 0, zHb - fjSenk]) linear_extrude(fjSenk + 0.01)
+    if (f == "ring") difference() { circle(r = b/2 + fl, $fn = 96); circle(r = hh/2, $fn = 64); }
+    else if (f == "ok") circle(r = [for (q = HETTER) if (q[1] == "ring") q[5]][0]/2 - 0.3, $fn = 64);
+    else hform(f, b, hh, fl);
+}
+module hk_(h) {   // hettens kropp: med TPU-fjær (tpu_ok) eller som før
+  if (tpu_ok) difference() { union() { hette_kropp(h); fj_fotavtrykk(h); } for (q = fj_brytere(h)) fjaer_kutt(q); }
+  else hette_kropp(h);
+}
+module fjaer(h) { if (tpu_ok) for (q = fj_brytere(h)) fjaer_bro(q); }
+module tupper(h) { if (tpu_ok) for (m = h[8]) translate([m[0] - h[2], h[3] - m[1], zHb]) cylinder(d = akt_d, h = tuppH, $fn = 24); }
+module hette(h) { difference() { hk_(h); translate([0, 0, topp_av(h) - ink]) linear_extrude(1) symbol2d(h); } }
+module symbol(h) { intersection() { hk_(h); translate([0, 0, topp_av(h) - ink]) linear_extrude(ink) symbol2d(h); } }
 // i bildene (forhåndsvisning) uten intersection – OpenCSG blander fargene ellers
 module symbol_vis(h) { translate([0, 0, topp_av(h) - ink]) linear_extrude(ink - 0.02) symbol2d(h); }
 module ved(h) { translate([h[2], L - h[3], 0]) children(); }
@@ -311,6 +351,7 @@ module hette_front(h) {
       if (f == "rund") nokkel(b/2, zb, H - nokTopp);
     }
     translate([0, 0, zt - ink]) linear_extrude(1) symbol2d(h);
+    if (tpu_ok) for (m = h[8]) translate([m[0] - h[2], h[3] - m[1], zHb - 0.01]) cylinder(d = akt_d + 0.02, h = tuppH + 0.01, $fn = 24);
   }
 }
 module en_hette(h) { if (len(h) > 8) hette_front(h); else hette(h); }
@@ -615,6 +656,13 @@ else if (part == "A_logo") logo();
 else if (part == "A_vindu") ir_vindu();
 else if (part == "front_knapper") { for (h = FRONT) spredt_ned(h) hette_front(h); }   // forsiden ned
 else if (part == "front_symboler") { for (h = FRONT) if (h[6] != "") spredt_ned(h) symbol(h); }
+else if (part == "fjaer") { for (h = HETTER) spredt(h) fjaer(h); }             // TPU-broene (samme plassering som knapper/gull)
+else if (part == "front_tupper") { for (h = FRONT) spredt_ned(h) tupper(h); }   // TPU-tuppene (samme plassering som front_knapper)
+else if (part == "tpu_vis") {   // bilde: hettene sett nedenfra med TPU-broene (blå) og en hette skåret gjennom over broen
+  for (i = [0:2]) { h = HETTER[i]; translate([i*16, 0, 0]) rotate([180, 0, 0]) translate([0, 0, -zHb])
+    difference() { union() { color([0.18, 0.18, 0.19]) hk_(h); color([0.29, 0.50, 0.72]) fjaer(h); } if (i == 2) translate([0, -20, -1]) cube([40, 40, 40]); } }
+}
+else if (part == "A_fjaer") { for (h = HETTER) ved(h) fjaer(h); for (h = FRONT) ved(h) tupper(h); }
 else if (part == "aktuatorer") { for (h = FRONT) ved(h) aktuatorer(h, 0.1); }
 else if (part == "A_hetter") { hetter("mork"); hetter("lys"); hetter("gull"); for (f = FARGER) hetter(f[0]); }
 else if (part == "A_symboler") { symboler("mork"); symboler("lys"); symboler("gull"); }
