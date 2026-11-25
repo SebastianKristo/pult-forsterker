@@ -1157,6 +1157,45 @@ PLA og PETG på samme plate går fint med CFS, siden toppen og bunnen er hver si
 
 Bruk `lag_stl.sh` for å eksportere alt på nytt (STL, sjekk og 3MF) etter endringer, og `xvfb-run -a ./lag_render.sh` for bildene. Tastene flytter du i `taster.py`. Den oppdaterer modellen, tastekortdataene og ESPHome-fila samtidig.
 
+## Print (Bambu Lab P3C, fem hoder)
+
+Med fem hoder får hvert filament sitt eget hode. Det blir ingen filamentbytter og ingen avfallstårn, og TPU kan printes inn i tastene.
+
+| Hode | Filament | Brukes til |
+|---|---|---|
+| 1 | Lys PLA (Bone White matt) | Toppen, symbolene på de mørke tastene, støttegrensesnitt under PETG |
+| 2 | Mørk PETG (koksgrå matt) | Bunnen og tastene, støttegrensesnitt under PLA |
+| 3 | Gull PLA | SKJOLD, gullringen og Skjold-tasten |
+| 4 | TPU 95A | Fjærene i tastene |
+| 5 | Klar eller natur PETG | IR-vinduet |
+
+| Plate | Innhold |
+|---|---|
+| `skjold-fjernkontroll-p3c.3mf` | Toppen (forsiden ned) med SKJOLD og museører, og bunnen |
+| `skjold-fjernkontroll-p3c-taster.3mf` | De faste tastene med TPU-fjær, mediatastene (oppsett A) med TPU-tupper, gulldelene og IR-vinduet |
+| `skjold-fjernkontroll-enkel-p3c.3mf` og `-enkel-p3c-taster.3mf` | Det samme for den enkle utgaven |
+
+Platene er lagt ut for 250 × 250 mm, som K2-platene. Åpne dem i Bambu Studio: filamentene er allerede valgt per del. Legg filamentene i hodene etter tabellen.
+
+### Støtte i et annet materiale
+
+Toppen og bunnen har trestøtte slått på, bare fra plata. Grensesnittet mot delen printes i det andre materialet: PLA mot PETG-bunnen og PETG mot PLA-toppen. De to materialene fester nesten ikke til hverandre, så støtten slipper rent og flaten under blir glatt. Det gjelder bare der modellen trenger det, som USB-C-åpningen og forsenkningen. «Bare fra plata» gjør at det aldri havner støtte inne i tastespor eller skruetårn.
+
+Tastene printes uten støtte. Støtte i kanalen over TPU-fjæren ville låst den.
+
+### TPU i tastene
+
+![TPU-fjærene sett fra undersiden](render/tpu_fjaer.png)
+
+- **Faste taster** (av/på, Skjold, meny, D-paden og OK): under hver bryter ligger en liten TPU-bro, 1,2 × 7,6 × 0,6 mm. Den sitter i en kanal i undersiden av hetten og er festet i begge ender. Hetten hviler på bryteren gjennom broen med 0,1 mm forspenning og presses lett opp mot toppen (ca. 5–10 g). Da står den stille uten slark eller rasling.
+- **Når du trykker**, gir broen etter 0,3 mm, til den harde kanten av en lomme rundt bryteren treffer. Klikket er like tydelig som før, men starten på trykket blir myk og stille. Broen legger bare ca. 0,25 N til trykket (bryteren trenger ca. 1,6 N).
+- **Mediatastene** (tilbake, avslutt, spill/pause, demp og volum) har en TPU-tupp ytterst på aktuatoren. Den gir et stillere trykk. Under disse tastene står det andre brytere tett, så det er ikke plass til broer der.
+- **Print:** TPU-broene ligger nederst (flensen ned) og printes først. Kanalen over er en kort bro på 1,6 mm. Lomma rundt bryteren er Ø2,9 mm. TPU og PLA/PETG fester godt til hverandre, så broen blir en del av tasten.
+- **Gjelder:** standard og enkel utgave (4 × 4-brytere). Hullkort-utgaven bruker TPU-klipsene (`stl_hu/klips.stl`), som også kan printes med hode 4.
+- **Test først:** print én fast tast (f.eks. meny) og prøv den i toppen og på kortet. Står den for hardt eller klikker for tidlig, endre `fjSenk` (0,3 mm) eller `fjT` (0,6 mm) i `skjold_fjernkontroll.scad`, og kjør `sh lag_p3c.sh`.
+
+Tastene i TPU-utgaven passer i samme topp og på samme kort som før. Bruk `sh lag_p3c.sh` for å lage platene på nytt (etter `lag_stl.sh` og `lag_en.sh`).
+
 ## Montering
 
 1. **Tastekortet:** lodd de 43 bryterne (59 i full variant) (variant A), eller lim dem på bryterbrettet og trå lakktråden (variant B). Mål med multimeter at hver tast kortslutter pinnen sin mot GND.
