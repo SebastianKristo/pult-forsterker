@@ -47,6 +47,12 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  # Stabil Wi-Fi over tid: ingen strømsparing i radioen (vanligste grunn til at ESP-er faller ut og ikke kommer tilbake),
+  # lavere sendestyrke (tilgangspunktet står som regel nær – full styrke overstyrer mottakeren), og omstart etter 10 min
+  # uten Wi-Fi. Se også «Wi-Fi-vakt» under interval.
+  power_save_mode: none
+  output_power: 17dB
+  reboot_timeout: 10min
   ap: { ssid: "Skjold Sensor Lys" }
 captive_portal:
 improv_serial:
@@ -257,6 +263,15 @@ number:
     restore_value: true
     initial_value: ${oppdatering}
 interval:
+  # Wi-Fi-vakt: når Wi-Fi faller ut, starter reservehotspoten («Skjold Sensor») etter 1 min, og da gjelder ikke
+  # reboot_timeout lenger – sensoren ble stående uten Wi-Fi til strømmen ble tatt. Etter 10 min uten Wi-Fi starter den
+  # derfor på nytt uansett (oppsett via hotspoten tar kortere tid; Improv over USB påvirkes ikke).
+  - interval: 60s
+    then:
+      - lambda: |-
+          static uint8_t uten = 0;
+          if (wifi::global_wifi_component->is_connected()) { uten = 0; return; }
+          if (++uten >= 10) { ESP_LOGW("wifi", "Ingen Wi-Fi på 10 min – starter på nytt"); App.safe_reboot(); }
   # målingene: hvert «Oppdateringsintervall» sekund (første gang 5 s etter oppstart)
   - interval: 1s
     then:
