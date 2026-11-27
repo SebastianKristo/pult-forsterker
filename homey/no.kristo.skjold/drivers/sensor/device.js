@@ -5,6 +5,10 @@ const http = require('http');
 // Leser hendelsesstrømmen til ESPHome-webserveren (GET /events, server-sent events) og setter capabilities etter
 // navnet på entiteten: Temperatur, Luftfuktighet, Lys og Bevegelse. Bevegelse kommer da med en gang (ingen polling).
 // Strømmen kobles opp igjen etter brudd (strøm av, ny IP via mDNS).
+// Korte brudd (Wi-Fi-blaff, omstart) skal ikke synes eller utløse noe: enheten blir først «utilgjengelig» etter
+// BORTE_MS uten forbindelse, og flytkortene utløses ikke av verdiene som kommer rett etter at forbindelsen er tilbake.
+const BORTE_MS = 3 * 60 * 1000;
+const ROLIG_MS = 15 * 1000;
 const PA = (v) => v === true || v === 1 || v === 'ON' || v === 'on' || v === 'true';
 const MAP = {
   Temperatur: ['measure_temperature', Number],
@@ -142,6 +146,8 @@ class SensorDevice extends Homey.Device {
     let buf = '';
     const req = http.get({ host, port: this.getStoreValue('port') || 80, path: '/events', headers: { Accept: 'text/event-stream' } }, (res) => {
       if (res.statusCode !== 200) { res.resume(); this.retry('Svarte ' + res.statusCode); return; }
+      this._koblet = Date.now();
+      clearTimeout(this._borteT); this._borteT = null;
       this.setAvailable().catch(this.error);
       res.setEncoding('utf8');
       res.on('data', (c) => { buf = parseSse(buf + c, (ev, data) => this.onEvent(ev, data)); });
@@ -154,7 +160,8 @@ class SensorDevice extends Homey.Device {
 
   retry(why) {
     if (this._stopped) return;
-    this.setUnavailable(why).catch(this.error);
+    // ikke utilgjengelig med en gang: sensoren er som regel tilbake innen et minutt (Wi-Fi-blaff eller omstart)
+    if (!this._borteT) this._borteT = this.homey.setTimeout(() => { this._borteT = null; this.setUnavailable(why).catch(this.error); }, BORTE_MS);
     clearTimeout(this._retry);
     this._retry = this.homey.setTimeout(() => this.connect(), 10000);
   }
@@ -173,6 +180,7 @@ class SensorDevice extends Homey.Device {
     }
     const m = MAP[navn] || MAP[Object.keys(MAP).find((k) => k.toLowerCase() === String(navn).toLowerCase())];
     if (!m || !this.hasCapability(m[0])) return;
+    if ((o.value === undefined || o.value === null) && (o.state === '' || o.state === 'NA' || o.state === undefined)) return;   // ukjent (rett etter start)
     const v = m[1](o.value !== undefined ? o.value : o.state);
     if (typeof v === 'number' && !Number.isFinite(v)) return;
     const gammel = this.getCapabilityValue(m[0]);
@@ -180,12 +188,13 @@ class SensorDevice extends Homey.Device {
     this.setCapabilityValue(m[0], v).catch(this.error);
     // flytkort for Tilstedeværelse og Mørkt (ikke ved første verdi etter oppkobling)
     const kort = { ki_tilstede: ['ki_tilstede_pa', 'ki_tilstede_av'], ki_mork: ['ki_mork_pa', 'ki_mork_av'] }[m[0]];
-    if (kort && gammel !== null && gammel !== undefined && this.homey && this.homey.flow) {
+    const rolig = Date.now() - (this._koblet || 0) < ROLIG_MS;   // verdiene rett etter oppkobling: bare oppdater
+    if (kort && !rolig && gammel !== null && gammel !== undefined && this.homey && this.homey.flow) {
       this.homey.flow.getDeviceTriggerCard(kort[v ? 0 : 1]).trigger(this).catch(this.error);
     }
   }
 
-  onDeleted() { this._stopped = true; clearTimeout(this._retry); if (this._req) this._req.destroy(); }
+  onDeleted() { this._stopped = true; clearTimeout(this._retry); clearTimeout(this._borteT); if (this._req) this._req.destroy(); }
   onUninit() { this.onDeleted(); }
 }
 module.exports = SensorDevice;

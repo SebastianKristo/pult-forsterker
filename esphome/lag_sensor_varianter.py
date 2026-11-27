@@ -16,7 +16,7 @@ HER = os.path.dirname(os.path.abspath(__file__))
 VARIANTER = {"lys": ("Skjold Sensor Lys", False, True), "klima": ("Skjold Sensor Klima", True, True),
              "bevegelse": ("Skjold Sensor Bevegelse", True, False)}
 LYS = [r"id: lys\b", r"name: Mørkt\b", r"name: Lysnivå\b"]
-BEV = [r"id: pir\b", r"id: bevegelse\b", r"id: tilstede\b", r"name: Bevegelser\b", r"name: Minutter siden bevegelse\b",
+BEV = [r"id: pir\b", r"id: bevegelse\b", r"id: tilstede\b", r"tilstede_lagret", r"name: Bevegelser\b", r"name: Minutter siden bevegelse\b",
        r"id: bev_av\b", r"id: tils_av\b"]
 
 
@@ -54,7 +54,7 @@ def lag(kilde, variant):
         nøkkel = b[0].split(":")[0]
         if uten_bev and nøkkel in ("globals", "script"):
             continue
-        if nøkkel in ("sensor", "binary_sensor", "text_sensor", "number"):
+        if nøkkel in ("sensor", "binary_sensor", "text_sensor", "number", "interval"):
             b, _ = fjern_elementer(b, mønstre)
         ut.append(b)
     s = "".join(l for b in ut for l in b)

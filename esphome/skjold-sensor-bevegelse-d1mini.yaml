@@ -230,6 +230,8 @@ binary_sensor:
     name: Tilstedeværelse
     id: tilstede
     device_class: occupancy
+    on_state:
+      - lambda: 'id(tilstede_lagret) = x;'   # huskes over en omstart (se «tilstede_lagret» under interval)
   - platform: template
     name: Høy fuktighet
     device_class: moisture
@@ -267,6 +269,7 @@ text_sensor:
 globals:
   - { id: bevegelser, type: int, restore_value: false, initial_value: "0" }
   - { id: sist_bevegelse, type: uint32_t, initial_value: "0" }
+  - { id: tilstede_lagret, type: bool, restore_value: true, initial_value: "false" }
 
 
 # Innstillinger: endres i Home Assistant, Homey-appen (enhetens innstillinger) eller sensorens web-side
@@ -352,6 +355,16 @@ interval:
           if (!id(led_pa).state || !feil) { id(led_ut).turn_off(); pa = false; return; }
           pa = !pa;
           if (pa) id(led_ut).turn_on(); else id(led_ut).turn_off();
+  # Tilstedeværelse etter en omstart (f.eks. Wi-Fi-vakten): samme verdi som før (husket i RTC), i stedet for å gå til
+  # «av» og utløse automasjoner. Var den på, går den av etter vanlig tid uten bevegelse.
+  - interval: 1s
+    then:
+      - lambda: |-
+          static bool ferdig = false;
+          if (ferdig) return;
+          ferdig = true;
+          if (id(tilstede_lagret)) { id(tilstede).publish_state(true); id(tilstede_av_om).execute(); }
+          else id(tilstede).publish_state(false);
 
 button:
   - platform: restart

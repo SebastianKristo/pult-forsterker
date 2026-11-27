@@ -94,5 +94,9 @@
   "2.26.0": {
     "en": "Skjold Sensor: update the firmware from Homey (Maintenance → Update firmware), and see the installed and newest version.",
     "no": "Skjold Sensor: oppdater fastvaren fra Homey (Vedlikehold → Oppdater fastvare), og se installert og nyeste versjon."
+  },
+  "2.27.0": {
+    "en": "Skjold Sensor: short Wi-Fi drops and restarts no longer show the sensor as unavailable or trigger presence/dark flows.",
+    "no": "Skjold Sensor: korte Wi-Fi-brudd og omstarter gjør ikke lenger sensoren utilgjengelig og utløser ikke flyter for tilstedeværelse og mørkt."
   }
 }

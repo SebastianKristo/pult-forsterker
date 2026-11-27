@@ -262,7 +262,8 @@ interval:
           if (!id(led_pa).state || !feil) { id(led_ut).turn_off(); pa = false; return; }
           pa = !pa;
           if (pa) id(led_ut).turn_on(); else id(led_ut).turn_off();
-
+  # Tilstedeværelse etter en omstart (f.eks. Wi-Fi-vakten): samme verdi som før (husket i RTC), i stedet for å gå til
+  # «av» og utløse automasjoner. Var den på, går den av etter vanlig tid uten bevegelse.
 button:
   - platform: restart
     name: Start på nytt
