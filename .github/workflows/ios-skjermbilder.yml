@@ -63,7 +63,7 @@ jobs:
           UDID: ${{ steps.sim.outputs.udid }}
         run: |
           APP=$(ls -d skjold/ios/build/Build/Products/Debug-iphonesimulator/Skjold.app)
-          BID=com.sebastiankristojemtlandpersonalteam.Skjold
+          BID=no.kristo.skjold
           xcrun simctl install "$UDID" "$APP"
           xcrun simctl status_bar "$UDID" override --time "10:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
           mkdir -p ut
