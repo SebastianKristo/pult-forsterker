@@ -101,3 +101,40 @@ module ribber() {   // 2 per side, 0,25 mm inn i lomma (presses inn når plata t
 if (part == "front") translate([0, 0, ZT]) rotate([180, 0, 0]) front();   // toppen ned
 else if (part == "bak") translate([0, 0, ZF]) rotate([180, 0, 0]) bak();   // fronten av bakplata ned (skjørtet opp)
 else if (part == "samlet") { color([0.9, 0.9, 0.88]) front(); color([0.75, 0.75, 0.72]) bak(); color([0.5, 0.5, 0.55], 0.4) translate([ramme_x, 0, ramme_d/2]) cube([ramme_b, ramme_h, ramme_d], center = true); }
+
+// ---------- illustrasjoner: slik festes plata på en Elko-bryter ----------
+module elko_ramme() {   // forenklet Elko-ramme med bryter (55 × 55) – bare for bildene
+  color([0.96, 0.96, 0.95]) translate([ramme_x, 0, 0]) difference() {
+    hull() for (z = [0, ramme_d - 1.5]) translate([0, 0, z]) linear_extrude(z == 0 ? 0.01 : 1.5) offset(3) square([ramme_b - 6 - (z == 0 ? 0 : 1.5), ramme_h - 6 - (z == 0 ? 0 : 1.5)], center = true);
+    translate([0, 0, -1]) linear_extrude(ramme_d + 2) square([55, 55], center = true);
+  }
+  color([0.93, 0.93, 0.92]) translate([ramme_x, 0, 0]) {
+    translate([0, 0, ramme_d - 3]) linear_extrude(3.5) offset(1) square([53, 53], center = true);   // bryteren
+    translate([0, 0, ramme_d + 0.5]) linear_extrude(0.6) offset(0.5) square([20, 2], center = true);
+  }
+}
+module vegg() { color([0.82, 0.78, 0.72]) translate([-90, -75, -6]) cube([180, 150, 6]); color([0.55, 0.55, 0.58]) translate([ramme_x, 0, -6.01]) cylinder(d = 68, h = 0.5); }
+module pil(a, b, d = 2.4) {   // pil fra a til b
+  v = b - a; l = norm(v);
+  color([0.85, 0.62, 0.25]) translate(a) rotate([0, acos(v[2]/l), atan2(v[1], v[0])]) { cylinder(d = d, h = l - 6); translate([0, 0, l - 6]) cylinder(d1 = d*2.4, d2 = 0, h = 6); }
+}
+module skrue() { color([0.35, 0.35, 0.38]) { cylinder(d = 3, h = 10, $fn = 16); translate([0, 0, -1.7]) cylinder(d1 = 6, d2 = 3, h = 1.7, $fn = 24); } }
+if (part == "montering") {
+  e1 = 45; e2 = 95;
+  vegg(); elko_ramme();
+  translate([0, 0, e1]) color([0.75, 0.75, 0.72]) bak();
+  translate([0, 0, e2]) color([0.92, 0.92, 0.9]) front();
+  pil([ramme_x + 70, -30, e1 - 4], [ramme_x + 70, -30, ramme_d + 6]);   // bakplata tres på rammen
+  pil([75, 0, e2 - 4], [75, 0, e1 + ZF + 6]);                             // fronten skrus på bakplata
+
+}
+if (part == "A_ramme") elko_ramme();
+if (part == "A_vegg") vegg();
+if (part == "A_front") front();
+if (part == "A_bak") bak();
+if (part == "snitt") {   // snitt gjennom midten (x = 0), plata tredd på rammen
+  intersection() {
+    union() { vegg(); elko_ramme(); color([0.75, 0.75, 0.72]) bak(); color([0.92, 0.92, 0.9]) front(); }
+    translate([-200, 0, -50]) cube([400, 200, 200]);
+  }
+}
