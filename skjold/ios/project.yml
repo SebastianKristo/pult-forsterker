@@ -1,0 +1,93 @@
+# Xcode-prosjekt for signerte bygg og TestFlight: appen, widgetene (WidgetKit + Live Activity) og Apple Watch-appen.
+# Lag prosjektet på Mac-en med  sh lag_xcodeproj.sh <TEAM-ID>  → åpne Skjold-App.xcodeproj → Product → Archive.
+# (Skjold.xcodeproj er Xcode 27-formatet med bare appen; ci-project.yml er det usignerte CI-bygget. Hold innstillingene
+# i takt med ci-project.yml.)
+name: Skjold-App
+include:
+  - path: team.yml           # laget av lag_xcodeproj.sh: DEVELOPMENT_TEAM (ikke i git)
+options:
+  developmentLanguage: nb
+  deploymentTarget: { iOS: "26.0", watchOS: "10.0" }
+settings:
+  base:
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"     # øk for hver opplasting til TestFlight (eller bruk lag_xcodeproj.sh <team> <build>)
+    SWIFT_VERSION: "5.0"
+targets:
+  Skjold:
+    type: application
+    platform: iOS
+    scheme: {}
+    sources:
+      - path: Skjold
+        excludes: [Info.plist]
+    dependencies:
+      - target: SkjoldWidgets
+        embed: true
+      - target: SkjoldWatch
+        embed: true
+    settings:
+      base:
+        PRODUCT_NAME: Skjold
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.skjold
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Skjold/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Skjold
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO   # bare vanlig HTTPS: ingen eksportspørsmål ved hver opplasting
+        INFOPLIST_KEY_NSCameraUsageDescription: Skann QR-koden på forsterkeren.
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Skjold lytter til en testtone fra høyttalerne for å måle og rette bassen i rommet.
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: Skjold finner forsterkere på nettverket ditt.
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: NO   # UILaunchScreen står i Skjold/Info.plist
+        INFOPLIST_KEY_UIStatusBarStyle: UIStatusBarStyleDefault
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_PREVIEWS: YES
+        CODE_SIGN_ENTITLEMENTS: Entitlements/Skjold-NFC.entitlements   # App Group + NFC (kassettene)
+  SkjoldWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: SkjoldWidgets
+        excludes: [Info.plist]
+      - path: Skjold/Shared
+      - path: Skjold/Fonts
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_NAME: SkjoldWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.skjold.Widgets
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: SkjoldWidgets/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Skjold
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks @executable_path/../../Frameworks"
+        SKIP_INSTALL: YES
+        CODE_SIGN_ENTITLEMENTS: Entitlements/SkjoldWidgets.entitlements
+  SkjoldWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: SkjoldWatch
+        excludes: [Info.plist]
+    settings:
+      base:
+        PRODUCT_NAME: SkjoldWatch
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.skjold.watchkitapp
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: SkjoldWatch/Info.plist
+        WATCHOS_DEPLOYMENT_TARGET: "10.0"
+        TARGETED_DEVICE_FAMILY: "4"
+        SKIP_INSTALL: YES
