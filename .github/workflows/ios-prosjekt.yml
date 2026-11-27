@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["skjold/ios/project.yml", ".github/workflows/ios-prosjekt.yml"]
+    paths: ["skjold/ios/project.yml", "skjold/ios/SkjoldWatch/**", ".github/workflows/ios-prosjekt.yml"]
 
 jobs:
   bygg:
@@ -37,3 +37,4 @@ jobs:
           test -d "$A/Watch/SkjoldWatch.app"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$A/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :ITSAppUsesNonExemptEncryption" "$A/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIconName" "$A/Watch/SkjoldWatch.app/Info.plist"   # App Store krever klokkeikon

@@ -179,7 +179,7 @@ Alle handlinger går fortsatt gjennom `AppModel`. I demomodus sendes ingenting. 
 
 ## Widgets, Kontrollsenter og Live Activity
 
-- Mål `SkjoldWidgets` (app-extension, WidgetKit + ActivityKit) finnes i `ci-project.yml` (CI). **Ikke** i `Skjold.xcodeproj` ennå: legg til et Widget Extension-mål i Xcode som peker på mappa `SkjoldWidgets/`, legg `Skjold/Shared/` og fontene i det, og slå på App Group `group.no.kristo.skjold` (Entitlements/) for begge målene.
+- Målene `SkjoldWidgets` (app-extension, WidgetKit + ActivityKit) og `SkjoldWatch` (watchOS) finnes i `ci-project.yml` (usignert CI) og i `project.yml` (XcodeGen, signert/TestFlight: `sh lag_xcodeproj.sh <TEAM-ID> <build>` → `Skjold-App.xcodeproj`, sjekkes av `ios-prosjekt.yml`). **Ikke** i `Skjold.xcodeproj` (Xcode 27-formatet, bare appen). Klokke-appen har eget ikon i `SkjoldWatch/Assets.xcassets` (App Store krever det).
 - `Skjold/Shared/WidgetShared.swift` (begge mål): `SkjoldShared` (App Group-status, omslag `cover.jpg`, `post`/`fetch` mot daemonen), `SharedNowPlaying`, `SkjoldNowPlayingAttributes`, AppIntents (`SkjoldPlayPauseIntent`, `SkjoldNextIntent`, `SkjoldVolumeIntent`, `SkjoldPresetIntent`).
 - `Skjold/WidgetBridge.swift` (app): kalles fra `apply(_:host:)`; skriver status, laster widgets på nytt ved låtbytte/spill-pause, lagrer omslag og styrer Live Activity (start når appen er aktiv og noe spiller, avslutt 2 min etter pause).
 - Widgets: «Spiller nå» (small/medium + låseskjerm), «Radiofavoritter» (medium/large), Kontrollsenter-knapp, Live Activity med Dynamic Island. Knappene kaller daemonen direkte mot sist kjente vert (virker på hjemmenettet; ikke via Skjold-hjem-relé, som krever innlogging).
