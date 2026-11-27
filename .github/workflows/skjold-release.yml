@@ -188,6 +188,10 @@ jobs:
           (cd ut && esphome compile skjold-bryter.yaml) && fw skjold-bryter skjold-bryter-esp32-firmware.bin
           rm -rf ut/.esphome/build/skjold-bryter
           (cd ut && esphome compile skjold-bryter-d1mini.yaml) && fw skjold-bryter skjold-bryter-d1mini-firmware.bin
+          # Skjold Jord (XIAO ESP32C3 på batteri): feiler den, stopper ikke de andre fastvarene
+          python3 esphome/lag_ferdig.py jord ut
+          (cd ut && esphome compile skjold-jord.yaml) && fw skjold-jord skjold-jord-firmware.bin \
+            || { echo "::warning::Skjold Jord ble ikke bygget"; rm -f ut/skjold-jord-manifest.json; }
           python3 esphome/lag_ferdig.py ota ut
           ls -la ut/skjold-sensor-*-firmware.bin ut/skjold-sensor-*manifest.json ut/skjold-bryter-*-firmware.bin ut/skjold-bryter-manifest.json
       - uses: actions/upload-artifact@v4
@@ -197,6 +201,8 @@ jobs:
             ut/skjold-sensor-*-firmware.bin
             ut/skjold-sensor-*-ota.bin
             ut/skjold-sensor-*manifest.json
+            ut/skjold-jord-*.bin
+            ut/skjold-jord-manifest.json
             ut/skjold-bryter-*-firmware.bin
             ut/skjold-bryter-*-ota.bin
             ut/skjold-bryter-manifest.json
