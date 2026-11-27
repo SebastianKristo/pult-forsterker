@@ -196,23 +196,149 @@ NAVN_EN = {"Smart utelys": "Smart outdoor lights", "UniFi dørtilgang": "UniFi d
            "KI Rom": "KI Rooms", "KI Vann": "KI Water", "KI Vanning": "KI Irrigation", "KI Basseng": "KI Pool", "KI Lys": "KI Lights",
            "KI Utelys": "KI Outdoor lights", "KI Klima Strøm-kort": "KI Climate Energy card"}
 e = html.escape
-LENKE = 'style="display:inline-flex;align-items:center;gap:6px;font-size:14.5px;color:var(--gull);text-decoration:none;margin-right:16px"'
+IMG = "/assets/img/smarthjem/"
+# bilder: Homey-appene får butikkbildet sitt som banner, resten et ikon (assets/img/smarthjem/, laget fra repoene)
+BANNER = {"Skjold for Homey": "skjold-homey", "OpenSprinkler for Homey": "opensprinkler", "Yale lokal Bluetooth": "yale",
+          "UniFi dørtilgang": "unifi", "Squeezebox for Homey": "squeezebox", "KI Energi for Homey": "kienergi-homey",
+          "ESPHome Relévifte": "esphomefan"}
+IKON = {"Mac Bridge": "macbridge", "Skjold for Home Assistant": "skjold-ha", "KI Energi": "ki-strom", "KI Lys": "ki-lys",
+        "KI Utelys": "ki-utelys", "KI Rom": "ki-rom", "KI Nattmodus": "ki-nattmodus", "KI Søvn & Vekking": "ki-sovn",
+        "KI Varslinger og sikkerhet": "ki-varslinger", "KI Vanning": "ki-vanning", "KI Basseng": "ki-basseng",
+        "KI Planter": "ki-planter", "KI Hyttebesøk": "ki-hyttebes-k", "KI Cards": "ki-cards", "KI Klima Strøm-kort": "ki-klima-strom-kort",
+        "KI MSH": "ki-msh", "Skjold Stack": "glass-dash"}
+# monogram (to bokstaver) og farge der repoet ikke har eget ikon
+MONO = {"KI Enhetsforbruk": ("kWh", "#2d6a8f", "#173a52"), "KI Vann": ("H₂O", "#2f7fa8", "#123447"), "KI Claude": ("KI", "#8a5cf6", "#2b1d52"),
+        "Smart utelys": ("", "#26315c", "#0d1226")}
+UTELYS_SVG = ('<svg viewBox="0 0 960 960" width="84" height="84" aria-hidden="true"><path fill="#f4d58d" d="M480 120c-110 0-200 90-200 200 0 75 40 125 80 170 25 28 40 60 40 100h160c0-40 15-72 40-100 40-45 80-95 80-170 0-110-90-200-200-200zm-80 520v50c0 22 18 40 40 40h80c22 0 40-18 40-40v-50zM720 160a90 90 0 1 0 90 90 70 70 0 1 1-90-90zM200 700h560v40H200z"/></svg>')
+
+CSS = """<style>
+.sh-topp{padding:150px 22px 40px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.sh-topp .etikett{position:static;margin:0 auto}
+.sh-topp h1{font-family:var(--sora);font-size:clamp(46px,8vw,96px);font-weight:600;letter-spacing:-.045em;line-height:1;margin:14px 0 0}
+.sh-topp .ingress{margin:22px auto 0;max-width:680px;font-size:19px;line-height:1.5;color:var(--demp-l)}
+.sh-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.sh-chip{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;padding:7px 12px;border-radius:999px;border:1px solid var(--linje);color:var(--demp-l);background:rgba(255,255,255,.02)}
+.sh-plattformer{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;max-width:1100px;margin:44px auto 0;padding:0 22px}
+.sh-pl{position:relative;display:flex;align-items:center;gap:18px;padding:22px 24px;border-radius:var(--r);border:1px solid var(--linje);background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.01));text-decoration:none;color:inherit;transition:border-color .4s,transform .6s var(--ut)}
+.sh-pl:hover{border-color:rgba(217,164,65,.4);transform:translateY(-3px)}
+.sh-pl .tall{font-family:var(--sora);font-size:44px;font-weight:600;letter-spacing:-.04em;line-height:1;color:var(--gull)}
+.sh-pl b{display:block;font-family:var(--sora);font-size:19px;font-weight:600}
+.sh-pl span{font-size:14px;color:var(--demp-l)}
+.sh-filter{position:sticky;top:64px;z-index:5;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:14px 22px;margin-top:40px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(8,8,9,.6);border-top:1px solid var(--linje);border-bottom:1px solid var(--linje)}
+.sh-filter button{font:inherit;font-size:14px;padding:8px 16px;border-radius:999px;border:1px solid var(--linje);background:transparent;color:var(--demp-l);cursor:pointer;transition:all .3s}
+.sh-filter button[aria-pressed=true]{background:var(--gull);border-color:var(--gull);color:#111;font-weight:600}
+.sh-seksjon{max-width:1240px;margin:0 auto;padding:70px 22px 10px}
+.sh-seksjon h2{font-family:var(--sora);font-size:clamp(30px,4.5vw,46px);font-weight:600;letter-spacing:-.035em;margin:0}
+.sh-seksjon .under{margin:10px 0 30px;max-width:720px;font-size:16px;line-height:1.55;color:var(--demp-l)}
+.sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:16px}
+.sh-grid.sma{grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr))}
+.sh-kort{position:relative;display:flex;flex-direction:column;border-radius:20px;border:1px solid var(--linje);background:var(--kort);overflow:hidden;transition:border-color .4s,transform .6s var(--ut),box-shadow .6s}
+.sh-kort:hover{border-color:rgba(217,164,65,.35);transform:translateY(-4px);box-shadow:0 24px 60px -30px rgba(0,0,0,.8)}
+.sh-banner{position:relative;aspect-ratio:10/6;overflow:hidden;background:#141416}
+.sh-banner img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 1.2s var(--ut)}
+.sh-kort:hover .sh-banner img{transform:scale(1.04)}
+.sh-banner::after{content:"";position:absolute;inset:auto 0 0 0;height:55%;background:linear-gradient(to top,var(--kort),transparent)}
+.sh-banner.tegnet{display:grid;place-items:center}
+.sh-banner.tegnet img{width:96px;height:96px;object-fit:contain;border-radius:22px;box-shadow:0 18px 40px -14px rgba(0,0,0,.7)}
+.sh-innhold{display:flex;flex-direction:column;gap:10px;padding:4px 24px 24px;flex:1}
+.sh-merker{display:flex;gap:6px;flex-wrap:wrap}
+.sh-merke{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;padding:4px 9px;border-radius:999px;border:1px solid var(--linje);color:var(--demp-l)}
+.sh-merke.homey{color:#e9c46a;border-color:rgba(233,196,106,.35)}
+.sh-merke.ha{color:#58b7f0;border-color:rgba(88,183,240,.35)}
+.sh-merke.test{color:#9fd49f;border-color:rgba(159,212,159,.3)}
+.sh-kort h3{font-family:var(--sora);font-size:23px;font-weight:600;letter-spacing:-.025em;line-height:1.15;margin:2px 0 0}
+.sh-kort p{margin:0;font-size:15px;line-height:1.55;color:var(--demp-l)}
+.sh-kort ul{margin:2px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.sh-kort li{position:relative;padding-left:20px;font-size:14px;line-height:1.5;color:var(--demp-l)}
+.sh-kort li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--gull);opacity:.75}
+.sh-knapper{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:12px}
+.sh-knapp{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:500;padding:9px 15px;border-radius:999px;border:1px solid var(--linje);color:inherit;text-decoration:none;transition:all .3s}
+.sh-knapp:hover{border-color:var(--gull);color:var(--gull)}
+.sh-knapp.primar{background:var(--gull);border-color:var(--gull);color:#111}
+.sh-knapp.primar:hover{filter:brightness(1.08);color:#111}
+.sh-knapp svg{width:15px;height:15px}
+.sh-rad{flex-direction:row;align-items:flex-start;gap:16px;padding:20px}
+.sh-rad .sh-innhold{padding:0;gap:8px}
+.sh-ikon{flex:0 0 64px;width:64px;height:64px;border-radius:16px;overflow:hidden;box-shadow:0 10px 26px -12px rgba(0,0,0,.8)}
+.sh-ikon img{width:100%;height:100%;display:block}
+.sh-mono{display:grid;place-items:center;font-family:var(--sora);font-weight:600;font-size:19px;color:#fff;letter-spacing:-.02em}
+.sh-rad h3{font-size:19px}
+.sh-rad .sh-knapp{padding:7px 13px;font-size:13px}
+.sh-rad .sh-knapper{gap:6px}
+.sh-rad p{font-size:14.5px}
+.sh-fot{max-width:1240px;margin:0 auto;padding:60px 22px 100px}
+.sh-fot p{max-width:780px;font-size:13.5px;line-height:1.65;color:var(--demp-l)}
+.sh-fot a{color:var(--demp-l)}
+[data-sh-skjult]{display:none!important}
+@media (max-width:600px){.sh-topp{padding-top:120px}.sh-filter{top:56px}.sh-rad{padding:16px}}
+</style>"""
+GH_SVG = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'
+PIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>'
 
 
-def flis(kat, navn, ingress, punkter, lenker, sprak, d):
-    k = kat if sprak == "nb" else KAT_EN.get(kat, kat)
+def knapp(tekst, url, primar=False):
+    ikon = GH_SVG if "github.com" in url else PIL_SVG
+    return f'<a class="sh-knapp{" primar" if primar else ""}" href="{e(url)}">{ikon}{e(tekst)}</a>'
+
+
+def bilde_ikon(navn):
+    if navn in IKON:
+        return f'<div class="sh-ikon"><img src="{IMG}{IKON[navn]}.webp" alt="" width="64" height="64" loading="lazy"></div>'
+    t, a, b = MONO.get(navn, (navn[:2], "#444", "#222"))
+    return f'<div class="sh-ikon sh-mono" style="background:linear-gradient(140deg,{a},{b})" aria-hidden="true">{e(t)}</div>'
+
+
+def homey_kort(kat, navn, d, lenker, sprak, i):
+    ingress, punkter = d[sprak]
     n = navn if sprak == "nb" else NAVN_EN.get(navn, navn)
-    ul = "".join(f"<li>{e(p)}</li>" for p in punkter)
-    ul = f'<ul style="margin:4px 0 0;padding-left:18px;font-size:14.5px;line-height:1.55;color:var(--demp-l)">{ul}</ul>' if ul else ""
-    ln = "".join(f'<a {LENKE} href="{e(u)}">{e(nb if sprak == "nb" else en)} ›</a>' for nb, en, u in lenker)
-    return (f'<div class="flis" data-reveal="{d}"><div class="k">{e(k)}</div><h3 class="h" style="font-size:22px">{e(n)}</h3>'
-            f'<p class="p">{e(ingress)}</p>{ul}<div style="margin-top:auto;padding-top:10px">{ln}</div></div>')
+    if navn in BANNER:
+        banner = f'<div class="sh-banner"><img src="{IMG}{BANNER[navn]}.webp" alt="" width="500" height="350" loading="lazy"></div>'
+    elif navn in IKON:
+        banner = f'<div class="sh-banner tegnet" style="background:radial-gradient(circle at 50% 35%,#3a3f8f,#14152b)"><img src="{IMG}{IKON[navn]}.webp" alt="" loading="lazy"></div>'
+    else:
+        banner = f'<div class="sh-banner tegnet" style="background:radial-gradient(circle at 50% 30%,#2b3a73,#0b0f22)">{UTELYS_SVG}</div>'
+    deler = [x for x in (kat if sprak == "nb" else KAT_EN.get(kat, kat)).split(" · ") if x not in ("HOMEY", "HOME ASSISTANT")]
+    merker = '<span class="sh-merke homey">HOMEY</span>'
+    if navn == "Mac Bridge":
+        merker += '<span class="sh-merke ha">HOME ASSISTANT</span>'
+    merker += "".join(f'<span class="sh-merke">{e(x)}</span>' for x in deler)
+    if any("/test/" in u for _, _, u in lenker) and not any(u.endswith(".opensprinkler/") or u.endswith(".squeezebox/") for _, _, u in lenker):
+        merker += f'<span class="sh-merke test">{"TESTVERSJON" if sprak == "nb" else "TEST VERSION"}</span>'
+    ul = "".join(f"<li>{e(p)}</li>" for p in punkter[:4])
+    ul = f"<ul>{ul}</ul>" if ul else ""
+    kn = "".join(knapp(nb if sprak == "nb" else en, u, primar=(k == 0 and "github.com" not in u)) for k, (nb, en, u) in enumerate(lenker))
+    return (f'<article class="sh-kort" data-plattform="homey{" ha" if navn == "Mac Bridge" else ""}" data-reveal="{(i % 3) * 80}">{banner}'
+            f'<div class="sh-innhold"><div class="sh-merker">{merker}</div><h3>{e(n)}</h3><p>{e(ingress)}</p>{ul}'
+            f'<div class="sh-knapper">{kn}</div></div></article>')
 
 
-def seksjon(tittel, tekst, fliser, lys=False):
-    p = f'<p style="margin:8px 0 26px;max-width:720px;font-size:16.5px;line-height:1.55;color:var(--demp-l)">{e(tekst)}</p>' if tekst else '<div style="height:22px"></div>'
-    return (f'<section class="seksjon{" lys" if lys else ""}" style="padding-top:60px;padding-bottom:60px"><div class="innhold">'
-            f'<h2 class="h2" data-reveal="0">{e(tittel)}</h2>{p}<div class="fliser">{"".join(fliser)}</div></div></section>')
+def rad_kort(kat, navn, nb, en, repo, hacs_kat, sprak, i, plattform):
+    n = navn if sprak == "nb" else NAVN_EN.get(navn, navn)
+    kat_t = kat if sprak == "nb" else KAT_EN.get(kat, kat)
+    sti = GH + repo + ("/tree/main/custom_components/skjold" if repo == "pult-forsterker" else "")
+    kn = ""
+    if hacs_kat:
+        kn += knapp("Legg til i HACS" if sprak == "nb" else "Add to HACS", HACS.format(repo, hacs_kat), primar=True)
+    kn += knapp("Kildekode" if sprak == "nb" else "Source code", sti)
+    pm = {"ha": '<span class="sh-merke ha">HOME ASSISTANT</span>', "kort": '<span class="sh-merke ha">LOVELACE</span>', "prog": '<span class="sh-merke">DOCKER</span>'}[plattform]
+    return (f'<article class="sh-kort sh-rad" data-plattform="{plattform}" data-reveal="{(i % 3) * 80}">{bilde_ikon(navn)}'
+            f'<div class="sh-innhold"><div class="sh-merker">{pm}<span class="sh-merke">{e(kat_t)}</span></div><h3>{e(n)}</h3>'
+            f'<p>{e(nb if sprak == "nb" else en)}</p><div class="sh-knapper">{kn}</div></div></article>')
+
+
+def seksjon(id_, tittel, tekst, kort, sma=False):
+    under = f'<p class="under">{e(tekst)}</p>' if tekst else '<div style="height:26px"></div>'
+    return (f'<section class="sh-seksjon" id="{id_}" data-seksjon="{id_}"><h2 data-reveal="0">{e(tittel)}</h2>{under}'
+            f'<div class="sh-grid{" sma" if sma else ""}">{"".join(kort)}</div></section>')
+
+
+FILTER_JS = """<script>
+(function(){var k=document.querySelectorAll('.sh-filter button');k.forEach(function(b){b.addEventListener('click',function(){
+k.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});var f=b.dataset.f;
+document.querySelectorAll('.sh-kort').forEach(function(c){var p=c.dataset.plattform.split(' ');if(f==='alle'||p.indexOf(f)>=0)c.removeAttribute('data-sh-skjult');else c.setAttribute('data-sh-skjult','')});
+document.querySelectorAll('[data-seksjon]').forEach(function(s){if(s.querySelector('.sh-kort:not([data-sh-skjult])'))s.removeAttribute('data-sh-skjult');else s.setAttribute('data-sh-skjult','')});
+})})})();
+</script>"""
 
 
 def lag(sprak):
@@ -232,24 +358,25 @@ def lag(sprak):
     aktiv = ny_lenke.replace('">', '" aria-current="page">', 1)
     hode = hode.replace(ny_lenke, "")
     hode = re.sub(r'(<a href="' + re.escape(gammel_url) + r'") aria-current="page">([^<]+</a>)', lambda m: m.group(1) + ">" + m.group(2) + aktiv, hode, count=1)
-    homey = [flis(k, n, d[sprak][0], d[sprak][1], l, sprak, (i % 3) * 80) for i, (k, n, d, l) in enumerate(HOMEY)]
-    def ha_fliser(liste):
-        ut = []
-        for i, (k, n, nb, en, repo, kat) in enumerate(liste):
-            lenker = []
-            if kat:
-                lenker.append(("Legg til i HACS", "Add to HACS", HACS.format(repo, kat)))
-            sti = GH + repo + ("/tree/main/custom_components/skjold" if repo == "pult-forsterker" else "")
-            lenker.append(("Kildekode", "Source code", sti))
-            ut.append(flis(k, n, nb if sprak == "nb" else en, [], lenker, sprak, (i % 3) * 80))
-        return ut
-    main = (f'<main id="hoved">\n<section class="side-topp"><div class="etikett" data-reveal="0">{e(t["etikett"])}</div><h1 data-reveal="80">{e(t["h1"])}</h1>'
-            f'<p style="margin:20px auto 0;max-width:680px;font-size:19px;line-height:1.5;color:var(--demp-l)">{e(t["ingress"])}</p></section>\n'
-            + seksjon(t["homey"], t["homey_p"], homey) + "\n"
-            + seksjon(t["ha"], t["ha_p"], ha_fliser(HA), lys=True) + "\n"
-            + seksjon(t["kort"], "", ha_fliser(KORT)) + "\n"
-            + seksjon(t["prog"], "", ha_fliser(PROGRAMVARE), lys=True) + "\n"
-            + f'<section class="seksjon" style="padding-top:30px;padding-bottom:80px"><div class="innhold"><p style="max-width:760px;font-size:14px;line-height:1.6;color:var(--demp-l)">{t["fot"]}</p></div></section>\n')
+    homey = [homey_kort(k, n, d, l, sprak, i) for i, (k, n, d, l) in enumerate(HOMEY)]
+    ha = [rad_kort(*x, sprak, i, "ha") for i, x in enumerate(HA)]
+    kort = [rad_kort(*x, sprak, i, "kort") for i, x in enumerate(KORT)]
+    prog = [rad_kort(*x, sprak, i, "prog") for i, x in enumerate(PROGRAMVARE)]
+    nb = sprak == "nb"
+    pl = (f'<div class="sh-plattformer" data-reveal="120">'
+          f'<a class="sh-pl" href="#homey"><div class="tall">{len(HOMEY)}</div><div><b>Homey Pro</b><span>{"apper" if nb else "apps"} · Flow · {"widgets"}</span></div></a>'
+          f'<a class="sh-pl" href="#ha"><div class="tall">{len(HA)}</div><div><b>Home Assistant</b><span>{"integrasjoner via HACS" if nb else "integrations via HACS"}</span></div></a>'
+          f'<a class="sh-pl" href="#kort"><div class="tall">{len(KORT)}</div><div><b>{"Dashbord og kort" if nb else "Dashboards and cards"}</b><span>Lovelace</span></div></a></div>')
+    chips = "".join(f'<span class="sh-chip">{c}</span>' for c in (["LOKALT", "UTEN SKY", "ÅPEN KILDEKODE", "NORSK"] if nb else ["LOCAL", "NO CLOUD", "OPEN SOURCE", "MADE IN NORWAY"]))
+    fl = [("alle", "Alle", "All"), ("homey", "Homey", "Homey"), ("ha", "Home Assistant", "Home Assistant"), ("kort", "Dashbord og kort", "Dashboards"), ("prog", "Programvare", "Software")]
+    filt = '<nav class="sh-filter" aria-label="Filter">' + "".join(f'<button type="button" data-f="{f}" aria-pressed="{"true" if f == "alle" else "false"}">{e(a if nb else b_)}</button>' for f, a, b_ in fl) + "</nav>"
+    main = (f'<main id="hoved">\n{CSS}\n<section class="sh-topp"><div class="etikett" data-reveal="0">{e(t["etikett"])}</div><h1 data-reveal="80">{e(t["h1"])}</h1>'
+            f'<p class="ingress" data-reveal="120">{e(t["ingress"])}</p><div class="sh-chips" data-reveal="160">{chips}</div></section>\n{pl}\n{filt}\n'
+            + seksjon("homey", t["homey"], t["homey_p"], homey) + "\n"
+            + seksjon("ha", t["ha"], t["ha_p"], ha, sma=True) + "\n"
+            + seksjon("kort", t["kort"], "", kort, sma=True) + "\n"
+            + seksjon("prog", t["prog"], "", prog, sma=True) + "\n"
+            + f'<section class="sh-fot"><p>{t["fot"]}</p></section>\n{FILTER_JS}\n')
     ut = os.path.join(HER, t["url"].strip("/"), "index.html")
     os.makedirs(os.path.dirname(ut), exist_ok=True)
     open(ut, "w", encoding="utf-8").write(hode + main + "</main>" + bunn)
