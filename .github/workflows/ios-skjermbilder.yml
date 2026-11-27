@@ -1,8 +1,11 @@
 #
-# Ekte skjermbilder av den native iOS-appen (SwiftUI, skjold/ios) fra iOS-simulatoren.
-# Bygger appen for simulatoren, starter en falsk Skjold-enhet (skjold/ios/ci/mock_skjold.py) på maskinen og
-# tar bilde av hver fane (appen har bare mørkt utseende). Bildene lastes opp som artifact «ios-skjermbilder» og legges
-# også på grenen «skjermbilder/ios» (skjermbilder/ios/*.png) så de kan hentes uten innlogging.
+# Skjermbilder av den native iOS-appen (SwiftUI, skjold/ios) i App Store-størrelsene, fra simulatorene:
+#   iphone/  iPhone 6,9″ (Pro Max, 1320 × 2868)
+#   ipad/    iPad 13″ (iPad Pro 13-inch, 2064 × 2752)
+#   watch/   Apple Watch (Ultra, 422 × 514 / 410 × 502)
+# Appen startes mot en falsk Skjold-enhet (skjold/ios/ci/mock_skjold.py) med oppstartsargumentene -SkjoldDemoTab,
+# -SkjoldDemoFull og -SkjoldDemoSub (se AppModel.swift). Bildene lagres som JPEG uten gjennomsiktighet (App Store
+# godtar ikke alfakanal), lastes opp som artifact «ios-skjermbilder» og legges på grenen «skjermbilder/ios».
 #
 name: iOS-skjermbilder
 
@@ -15,7 +18,7 @@ permissions:
 jobs:
   skjermbilder:
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Velg nyeste Xcode (som release-jobben)
@@ -27,32 +30,49 @@ jobs:
         run: |
           brew install xcodegen
           xcodegen generate --spec ci-project.yml
-      - name: Velg simulator
+      - name: Lag simulatorene
         id: sim
         run: |
-          UDID=$(xcrun simctl list devices available -j | python3 -c '
-          import json,sys,re
-          d=json.load(sys.stdin)["devices"]
-          best=None
-          for rt,devs in d.items():
-              m=re.search(r"iOS-(\d+)-(\d+)",rt)
-              if not m: continue
-              v=(int(m.group(1)),int(m.group(2)))
-              for x in devs:
-                  n=x["name"]
-                  if not n.startswith("iPhone"): continue
-                  score=(v, "Pro" in n and "Max" not in n, n)
-                  if best is None or score>best[0]: best=(score,x["udid"],n,rt)
-          print(best[1]); print(best[2]+" / "+best[3], file=sys.stderr)')
-          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
-          xcrun simctl boot "$UDID" || true
-          xcrun simctl bootstatus "$UDID" -b
-      - name: Bygg for simulatoren
+          # nyeste kjøretid for iOS og watchOS, og nyeste enhetstype som passer (f.eks. iPhone 17 Pro Max)
+          lag() {  # $1 = plattform (iOS/watchOS), $2 = regex for enhetsnavnet, $3 = navn på simulatoren
+            python3 - "$1" "$2" > /tmp/valg.txt <<'PY'
+          import json, re, subprocess, sys
+          plattform, monster = sys.argv[1], sys.argv[2]
+          rt = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "runtimes", "-j"]))["runtimes"]
+          rt = [r for r in rt if r.get("isAvailable") and r["platform"] == plattform]
+          rt.sort(key=lambda r: [int(x) for x in r["version"].split(".")])
+          r = rt[-1]
+          typer = [t for t in r.get("supportedDeviceTypes", []) if re.search(monster, t["name"])]
+          def nokkel(t):
+              tall = [int(x) for x in re.findall(r"\d+", t["name"])]
+              return tall
+          typer.sort(key=nokkel)
+          t = typer[-1]
+          print(t["identifier"]); print(r["identifier"]); print(t["name"] + " / " + r["name"], file=sys.stderr)
+          PY
+            TYPE=$(sed -n 1p /tmp/valg.txt); RT=$(sed -n 2p /tmp/valg.txt)
+            xcrun simctl create "$3" "$TYPE" "$RT"
+          }
+          IPHONE=$(lag iOS '^iPhone \d+ Pro Max$' skjold-iphone)
+          IPAD=$(lag iOS '^iPad Pro 13-inch' skjold-ipad)
+          WATCH=$(lag watchOS '^Apple Watch Ultra' skjold-watch)
+          echo "iphone=$IPHONE" >> "$GITHUB_OUTPUT"
+          echo "ipad=$IPAD" >> "$GITHUB_OUTPUT"
+          echo "watch=$WATCH" >> "$GITHUB_OUTPUT"
+          for u in "$IPHONE" "$IPAD" "$WATCH"; do xcrun simctl boot "$u" || true; done
+          for u in "$IPHONE" "$IPAD" "$WATCH"; do xcrun simctl bootstatus "$u" -b; done
+      - name: Bygg iOS-appen for simulatoren
         working-directory: skjold/ios
         run: |
           xcodebuild -project SkjoldCI.xcodeproj -scheme Skjold -configuration Debug -sdk iphonesimulator \
-            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" build | tail -n 40
+            -destination "id=${{ steps.sim.outputs.iphone }}" -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" build | tail -n 30
+      - name: Bygg klokkeappen for simulatoren
+        working-directory: skjold/ios
+        run: |
+          xcodebuild -project SkjoldCI.xcodeproj -scheme SkjoldWatch -configuration Debug -sdk watchsimulator \
+            -destination "id=${{ steps.sim.outputs.watch }}" -derivedDataPath build-watch \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" build | tail -n 30
       - name: Start falsk Skjold
         run: |
           nohup python3 skjold/ios/ci/mock_skjold.py 8765 > mock.log 2>&1 &
@@ -60,41 +80,61 @@ jobs:
           curl -s localhost:8765/api/status | head -c 200; echo
       - name: Ta skjermbilder
         env:
-          UDID: ${{ steps.sim.outputs.udid }}
+          IPHONE: ${{ steps.sim.outputs.iphone }}
+          IPAD: ${{ steps.sim.outputs.ipad }}
+          WATCH: ${{ steps.sim.outputs.watch }}
         run: |
           APP=$(ls -d skjold/ios/build/Build/Products/Debug-iphonesimulator/Skjold.app)
+          WAPP=$(ls -d skjold/ios/build-watch/Build/Products/Debug-watchsimulator/SkjoldWatch.app)
           BID=no.kristo.skjold
-          xcrun simctl install "$UDID" "$APP"
-          xcrun simctl status_bar "$UDID" override --time "10:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
-          mkdir -p ut
-          navn=(hjem lyd rom innstillinger)
-          for look in dark; do
-            xcrun simctl ui "$UDID" appearance "$look"
-            for t in 0 1 2 3; do
-              xcrun simctl terminate "$UDID" "$BID" 2>/dev/null || true
-              xcrun simctl launch "$UDID" "$BID" -skjold-setup-done YES -skjold-host 127.0.0.1:8765 -SkjoldDemoTab "$t"
-              sleep 14   # første oppstart av en fane kan bruke litt tid (Innstillinger ble svart etter 9 s)
-              xcrun simctl io "$UDID" screenshot "ut/$(printf '%d' $((t+1)))-${navn[$t]}.png"
+          WBID=no.kristo.skjold.watchkitapp
+          ARG=(-skjold-setup-done YES -skjold-host 127.0.0.1:8765)
+          # navn;argumenter for hvert bilde
+          BILDER=(
+            "1-spiller;-SkjoldDemoTab 0 -SkjoldDemoFull YES"
+            "2-hjem;-SkjoldDemoTab 0"
+            "3-radio;-SkjoldDemoTab 0 -SkjoldDemoSub radio"
+            "4-lyd;-SkjoldDemoTab 1"
+            "5-rom;-SkjoldDemoTab 2"
+            "6-innstillinger;-SkjoldDemoTab 3"
+          )
+          bilde() {  # $1 = simulator, $2 = fil (uten endelse)
+            xcrun simctl io "$1" screenshot --type=png "$2.png"
+            sips -s format jpeg -s formatOptions 95 "$2.png" --out "$2.jpg" >/dev/null && rm "$2.png"
+            sips -g pixelWidth -g pixelHeight "$2.jpg" | tail -n 2 | tr '\n' ' '; echo " $2.jpg"
+          }
+          for enhet in iphone ipad; do
+            [ "$enhet" = iphone ] && U="$IPHONE" || U="$IPAD"
+            mkdir -p "ut/$enhet"
+            xcrun simctl install "$U" "$APP"
+            xcrun simctl ui "$U" appearance dark
+            xcrun simctl status_bar "$U" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
+            for b in "${BILDER[@]}"; do
+              navn="${b%%;*}"; read -r -a ekstra <<< "${b#*;}"
+              xcrun simctl terminate "$U" "$BID" 2>/dev/null || true
+              xcrun simctl launch "$U" "$BID" "${ARG[@]}" "${ekstra[@]}"
+              sleep 14   # første oppstart av en fane kan bruke litt tid
+              bilde "$U" "ut/$enhet/$navn"
             done
-            xcrun simctl terminate "$UDID" "$BID" 2>/dev/null || true
-            xcrun simctl launch "$UDID" "$BID" -skjold-setup-done YES -skjold-host 127.0.0.1:8765 -SkjoldDemoTab 0 -SkjoldDemoFull YES
-            sleep 14
-            xcrun simctl io "$UDID" screenshot "ut/5-spiller.png"
           done
-          ls -la ut
+          mkdir -p ut/watch
+          xcrun simctl install "$WATCH" "$WAPP"
+          xcrun simctl launch "$WATCH" "$WBID" -skjold-watch-host 127.0.0.1:8765
+          sleep 12
+          bilde "$WATCH" "ut/watch/1-spiller"
           tail -n 30 mock.log
       - uses: actions/upload-artifact@v4
         with:
           name: ios-skjermbilder
-          path: ut/*.png
+          path: ut/
       - name: Legg bildene på grenen skjermbilder/ios
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          D=$(mktemp -d); cp ut/*.png "$D/"
+          D=$(mktemp -d); cp -R ut/. "$D/"
           git checkout --orphan skjermbilder-tmp
           git rm -rfq . >/dev/null
-          mkdir -p skjermbilder/ios && cp "$D"/*.png skjermbilder/ios/
+          mkdir -p skjermbilder/ios && cp -R "$D"/. skjermbilder/ios/
           git add skjermbilder/ios
           git commit -qm "iOS-skjermbilder fra ${GITHUB_SHA::7}"
           git push -f origin HEAD:skjermbilder/ios

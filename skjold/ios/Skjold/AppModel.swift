@@ -185,13 +185,14 @@ final class AppModel {
         eqP = eq
         mode = UserDefaults.standard.bool(forKey: "skjold-setup-done") ? .app : .onboard
         if mode == .app { welcome = false }
-        // Skjermbilder i CI (.github/workflows/ios-skjermbilder.yml): -SkjoldDemoTab 0…3 og -SkjoldDemoFull YES
+        // Skjermbilder i CI (.github/workflows/ios-skjermbilder.yml): -SkjoldDemoTab 0…3, -SkjoldDemoFull YES og -SkjoldDemoSub radio
         // som oppstartsargumenter hopper over introen og åpner ønsket fane / fullskjermspilleren.
         let demo = UserDefaults.standard
         if demo.object(forKey: "SkjoldDemoTab") != nil {
             intro = false
             tab = max(0, min(3, demo.integer(forKey: "SkjoldDemoTab")))
             full = demo.bool(forKey: "SkjoldDemoFull")
+            if let s = demo.string(forKey: "SkjoldDemoSub"), ["radio", "lib"].contains(s) { sub = s }
         }
         DeviceLink.shared.host = activeHost
     }
