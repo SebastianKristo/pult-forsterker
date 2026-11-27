@@ -79,6 +79,8 @@ jobs:
           for i in $(seq 1 20); do curl -sf localhost:8765/api/status >/dev/null && break; sleep 1; done
           curl -s localhost:8765/api/status | head -c 200; echo
       - name: Ta skjermbilder
+        timeout-minutes: 40
+        continue-on-error: true
         env:
           IPHONE: ${{ steps.sim.outputs.iphone }}
           IPAD: ${{ steps.sim.outputs.ipad }}
@@ -88,6 +90,8 @@ jobs:
           WAPP=$(ls -d skjold/ios/build-watch/Build/Products/Debug-watchsimulator/SkjoldWatch.app)
           BID=no.kristo.skjold
           WBID=no.kristo.skjold.watchkitapp
+          # simctl kan henge (særlig første install/launch) – hvert kall får en tidsgrense
+          t() { local s=$1; shift; echo "[$(date +%H:%M:%S)] $*"; perl -e 'alarm shift; exec @ARGV' "$s" "$@" || echo "  ↳ feilet eller tidsavbrudd ($s s): $*"; }
           ARG=(-skjold-setup-done YES -skjold-host 127.0.0.1:8765)
           # navn;argumenter for hvert bilde
           BILDER=(
@@ -99,31 +103,33 @@ jobs:
             "6-innstillinger;-SkjoldDemoTab 3"
           )
           bilde() {  # $1 = simulator, $2 = fil (uten endelse)
-            xcrun simctl io "$1" screenshot --type=png "$2.png"
+            t 60 xcrun simctl io "$1" screenshot --type=png "$2.png"
+            [ -f "$2.png" ] || return 0
             sips -s format jpeg -s formatOptions 95 "$2.png" --out "$2.jpg" >/dev/null && rm "$2.png"
             sips -g pixelWidth -g pixelHeight "$2.jpg" | tail -n 2 | tr '\n' ' '; echo " $2.jpg"
           }
           for enhet in iphone ipad; do
             [ "$enhet" = iphone ] && U="$IPHONE" || U="$IPAD"
             mkdir -p "ut/$enhet"
-            xcrun simctl install "$U" "$APP"
-            xcrun simctl ui "$U" appearance dark
-            xcrun simctl status_bar "$U" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
+            t 300 xcrun simctl install "$U" "$APP"
+            t 60 xcrun simctl ui "$U" appearance dark
+            t 60 xcrun simctl status_bar "$U" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
             for b in "${BILDER[@]}"; do
               navn="${b%%;*}"; read -r -a ekstra <<< "${b#*;}"
-              xcrun simctl terminate "$U" "$BID" 2>/dev/null || true
-              xcrun simctl launch "$U" "$BID" "${ARG[@]}" "${ekstra[@]}"
+              t 60 xcrun simctl terminate "$U" "$BID" 2>/dev/null
+              t 120 xcrun simctl launch "$U" "$BID" "${ARG[@]}" "${ekstra[@]}"
               sleep 14   # første oppstart av en fane kan bruke litt tid
               bilde "$U" "ut/$enhet/$navn"
             done
           done
           mkdir -p ut/watch
-          xcrun simctl install "$WATCH" "$WAPP"
-          xcrun simctl launch "$WATCH" "$WBID" -skjold-watch-host 127.0.0.1:8765
+          t 300 xcrun simctl install "$WATCH" "$WAPP"
+          t 120 xcrun simctl launch "$WATCH" "$WBID" -skjold-watch-host 127.0.0.1:8765
           sleep 12
           bilde "$WATCH" "ut/watch/1-spiller"
           tail -n 30 mock.log
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ios-skjermbilder
           path: ut/
