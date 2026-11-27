@@ -29,6 +29,10 @@ PRODUKT = {
     "bryter": {"filer": ["skjold-bryter.yaml", "skjold-bryter-d1mini.yaml"], "kopier": [],
                "manifest": {"skjold-bryter-manifest.json": ("Skjold Bryter", [("ESP32", "skjold-bryter-esp32-firmware.bin"),
                                                                              ("ESP8266", "skjold-bryter-d1mini-firmware.bin")])}},
+    # Skjold Jord sover mellom målingene: ingen «Fastvare»-sjekk mot nettsiden (den ville hentet manifestet ved hver
+    # oppvåkning og brukt batteri). Oppdater med OTA fra ESPHome eller kommandolinjen (kabinett/jord/LES_MEG.md).
+    "jord": {"filer": ["skjold-jord.yaml"], "kopier": [], "uten_oppdatering": True,
+             "manifest": {"skjold-jord-manifest.json": ("Skjold Jord", [("ESP32-C3", "skjold-jord-firmware.bin")])}},
     "ir": {"filer": ["skjold-ir.yaml"], "kopier": ["skjold-ir-d1mini.yaml", "skjold-dokk.yaml"],
            "manifest": {"skjold-ir-manifest.json": ("Skjold IR", [("ESP32-C3", "skjold-ir-c3-firmware.bin"),
                                                                  ("ESP8266", "skjold-ir-d1mini-firmware.bin")]),
@@ -70,7 +74,7 @@ def med_oppdatering(s: str, navn: str, versjon: str) -> str:
     return s
 
 
-def lag(kilde: str, navn: str) -> str:
+def lag(kilde: str, navn: str, oppdatering: bool = True) -> str:
     s, n = re.subn(r"^api:\n  encryption:\n    key: !secret \w+\n", "api:\n", kilde, flags=re.M)
     if n != 1:
         raise SystemExit(f"fant ikke api/encryption-blokken i {navn}")
@@ -79,7 +83,10 @@ def lag(kilde: str, navn: str) -> str:
         raise SystemExit(f"fant ikke wifi-hemmelighetene i {navn}")
     if "!secret" in s:
         raise SystemExit(f"{navn} har fortsatt !secret: " + ", ".join(sorted(set(re.findall(r"!secret (\w+)", s)))))
-    s = med_oppdatering(s, navn, os.environ.get("VERSJON", "dev"))
+    if oppdatering:
+        s = med_oppdatering(s, navn, os.environ.get("VERSJON", "dev"))
+    else:   # versjonen settes likevel, så ESPHome viser hvilken utgivelse som er installert
+        s = re.sub(r"^(  project:.*\n    name: .+\n    version: ).+\n", lambda m: f'{m.group(1)}"{os.environ.get("VERSJON", "dev")}"\n', s, count=1, flags=re.M)
     return f"# LAGET AV lag_ferdig.py – ikke rediger (kilde: esphome/{navn})\n" + s
 
 
@@ -110,12 +117,12 @@ if __name__ == "__main__":
         ota(sys.argv[2] if len(sys.argv) > 2 else "ut")
         raise SystemExit(0)
     if len(sys.argv) < 2 or sys.argv[1] not in PRODUKT:
-        raise SystemExit("bruk: lag_ferdig.py sensor|bryter|ir [ut]")
+        raise SystemExit("bruk: lag_ferdig.py sensor|bryter|ir|jord [ut]")
     p, ut = PRODUKT[sys.argv[1]], sys.argv[2] if len(sys.argv) > 2 else "ut"
     os.makedirs(ut, exist_ok=True)
     for f in p["filer"]:
         with open(os.path.join(HER, f), encoding="utf-8") as fh:
-            y = lag(fh.read(), f)
+            y = lag(fh.read(), f, not p.get("uten_oppdatering"))
         with open(os.path.join(ut, f), "w", encoding="utf-8") as fh:
             fh.write(y)
     for f in p["kopier"]:   # tynne filer som tar inn en ferdig fil med packages

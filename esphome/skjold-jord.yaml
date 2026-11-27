@@ -1,0 +1,225 @@
+# Skjold Jord – trådløs jordfuktsensor på batteri. XIAO ESP32C3 + kapasitiv jordfuktsensor (v1.2/v2.0) + LiPo 603450
+# (1200 mAh, samme som i Skjold Fjernkontroll). Kabinett, deler og kobling: kabinett/jord/LES_MEG.md.
+#
+# Sensoren sover nesten hele tiden (dyp søvn, ca. 45 µA). Hvert «Måleintervall» (standard 60 min) våkner den, slår på
+# jordfuktsensoren i 0,6 s, måler, sender til Home Assistant og sovner igjen – vanligvis innen 3–5 s.
+# Batteritid (beregnet): ca. 10 måneder med 60 min, ca. 6 måneder med 30 min. Lades med USB-C på XIAO-en.
+#
+# Våken for oppsett og OTA: trykk RESET på XIAO-en (eller ta ut og sett i batteriet). Da står den våken i 3 minutter.
+# Uten Wi-Fi-oppsett står den våken til Wi-Fi er satt (Improv over USB eller tilgangspunktet «Skjold Jord»).
+#
+# Kobling (XIAO ESP32C3):
+#   Jordfuktsensor  VCC → D2 (GPIO4, slås på bare mens den måler)   GND → GND   AOUT → D1 (GPIO3)
+#   Batteri         + → BAT+ (pute bak på XIAO-en)   − → BAT−   (XIAO-en lader det fra USB-C)
+#   Batterimåling   BAT+ → 1 MΩ → D0 (GPIO2) → 1 MΩ → GND, og 100 nF fra D0 til GND
+substitutions:
+  name: skjold-jord
+  friendly_name: Skjold Jord
+  intervall: "60"                   # startverdi (min) for «Måleintervall»
+  torr: "2.40"                      # startverdi (V) for «Kalibrering tørr» (sensoren i lufta)
+  vat: "1.10"                       # startverdi (V) for «Kalibrering våt» (sensoren i et glass vann, til streken)
+  tort_varsel: "25"                 # «Trenger vann» under så mange %
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  project:
+    name: skjold.jord
+    version: "1.0.0"
+  on_boot:
+    priority: -100
+    then:
+      - script.execute: maal_og_sov
+
+esp32:
+  board: seeed_xiao_esp32c3
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+api:
+  encryption:
+    key: !secret skjold_jord_api_key
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: light
+  ap: { ssid: "Skjold Jord" }
+captive_portal:
+improv_serial:
+
+deep_sleep:
+  id: sov
+
+output:
+  - platform: gpio
+    id: jord_strom
+    pin: GPIO4                       # D2: strøm til jordfuktsensoren (ca. 5 mA, bare mens den måler)
+
+globals:
+  - { id: vaken_til, type: uint32_t, initial_value: "0" }
+
+sensor:
+  - platform: adc
+    id: jord_v
+    name: Jordfukt (spenning)
+    pin: GPIO3                       # D1
+    attenuation: 12db
+    samples: 16
+    accuracy_decimals: 3
+    update_interval: never
+    entity_category: diagnostic
+  - platform: template
+    id: jordfukt
+    name: Jordfukt
+    unit_of_measurement: "%"
+    device_class: moisture
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: adc
+    id: bat_v
+    name: Batterispenning
+    pin: GPIO2                       # D0, via 1 MΩ / 1 MΩ
+    attenuation: 12db
+    samples: 16
+    accuracy_decimals: 2
+    update_interval: never
+    filters:
+      - multiply: 2.0
+    device_class: voltage
+    entity_category: diagnostic
+  - platform: template
+    id: batteri
+    name: Batteri
+    unit_of_measurement: "%"
+    device_class: battery
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: wifi_signal
+    id: signal
+    name: Wi-Fi-signal
+    update_interval: never
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: template
+    id: trenger_vann
+    name: Trenger vann
+    icon: mdi:watering-can
+
+number:
+  - platform: template
+    name: Måleintervall
+    id: intervall_min
+    icon: mdi:timer-outline
+    unit_of_measurement: min
+    min_value: 5
+    max_value: 720
+    step: 5
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${intervall}
+    entity_category: config
+  - platform: template
+    name: Kalibrering tørr
+    id: kal_torr
+    unit_of_measurement: V
+    min_value: 0.5
+    max_value: 3.3
+    step: 0.01
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${torr}
+    entity_category: config
+  - platform: template
+    name: Kalibrering våt
+    id: kal_vat
+    unit_of_measurement: V
+    min_value: 0.2
+    max_value: 3.0
+    step: 0.01
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${vat}
+    entity_category: config
+
+switch:
+  # Hold våken: slå på i Home Assistant mens den er våken (etter RESET), så sover den ikke før du slår av igjen
+  # (for OTA og kalibrering). Huskes ikke over en omstart.
+  - platform: template
+    name: Hold våken
+    id: hold_vaken
+    icon: mdi:sleep-off
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    entity_category: config
+
+script:
+  - id: maal
+    then:
+      - output.turn_on: jord_strom
+      - delay: 600ms                 # sensoren (555-oscillatoren) trenger litt tid før utgangen er stabil
+      - component.update: jord_v
+      - output.turn_off: jord_strom
+      - component.update: bat_v
+      - lambda: |-
+          const float v = id(jord_v).state, t = id(kal_torr).state, w = id(kal_vat).state;
+          if (!isnan(v) && t > w + 0.05f) {
+            float p = (t - v) / (t - w) * 100.0f;     // høyere spenning = tørrere
+            p = std::max(0.0f, std::min(100.0f, p));
+            id(jordfukt).publish_state(p);
+            id(trenger_vann).publish_state(p < ${tort_varsel});
+          }
+          const float b = id(bat_v).state;
+          if (!isnan(b)) {
+            // LiPo uten last: 4,20 V full, 3,70 V ca. 40 %, 3,40 V tom (XIAO-en slår seg av rundt 3,3 V)
+            const float kurve[][2] = {{3.40f, 0}, {3.60f, 15}, {3.70f, 40}, {3.80f, 60}, {3.95f, 80}, {4.10f, 95}, {4.20f, 100}};
+            float p = 0;
+            if (b >= 4.20f) p = 100;
+            else for (int i = 1; i < 7; i++) if (b < kurve[i][0]) {
+              p = kurve[i-1][1] + (b - kurve[i-1][0]) / (kurve[i][0] - kurve[i-1][0]) * (kurve[i][1] - kurve[i-1][1]);
+              break;
+            }
+            id(batteri).publish_state(std::max(0.0f, p));
+          }
+  - id: maal_og_sov
+    then:
+      - script.execute: maal
+      - script.wait: maal
+      - lambda: |-
+          // vekket av tidsuret: rett i søvn etter sending. RESET/strøm på: 3 min våken (oppsett, OTA, kalibrering)
+          const bool timer = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER;
+          id(vaken_til) = timer ? 0 : millis() + 180000;
+      - wait_until:
+          condition:
+            api.connected:
+          timeout: 20s
+      - component.update: signal
+      - delay: 1500ms                # la Home Assistant få verdiene
+      # våken: mål hvert 10. s til tiden er ute (og så lenge «Hold våken» er på, eller Wi-Fi ikke er satt opp)
+      - while:
+          condition:
+            lambda: |-
+              return (int32_t) (id(vaken_til) - millis()) > 0 || id(hold_vaken).state
+                     || !wifi::global_wifi_component->has_sta();
+          then:
+            - delay: 10s
+            - script.execute: maal
+            - script.wait: maal
+            - component.update: signal
+      - deep_sleep.enter:
+          id: sov
+          sleep_duration: !lambda 'return (uint32_t) (id(intervall_min).state * 60.0f * 1000.0f);'
+
+button:
+  - platform: restart
+    name: Start på nytt
+    entity_category: config
