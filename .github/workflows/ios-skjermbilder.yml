@@ -64,16 +64,18 @@ jobs:
       - name: Bygg iOS-appen for simulatoren
         working-directory: skjold/ios
         run: |
+          set -o pipefail
           xcodebuild -project SkjoldCI.xcodeproj -scheme Skjold -configuration Debug -sdk iphonesimulator \
-            -destination "id=${{ steps.sim.outputs.iphone }}" -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" build | tail -n 30
+            -destination "generic/platform=iOS Simulator" -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" build 2>&1 | tail -n 60
       - name: Bygg klokkeappen for simulatoren
         continue-on-error: true
         working-directory: skjold/ios
         run: |
+          set -o pipefail
           xcodebuild -project SkjoldCI.xcodeproj -scheme SkjoldWatch -configuration Debug -sdk watchsimulator \
             -destination "generic/platform=watchOS Simulator" -derivedDataPath build-watch \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" build | tail -n 30
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" build 2>&1 | tail -n 60
       - name: Start falsk Skjold
         run: |
           nohup python3 skjold/ios/ci/mock_skjold.py 8765 > mock.log 2>&1 &
