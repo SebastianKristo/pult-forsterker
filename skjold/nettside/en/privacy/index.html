@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en" class="statisk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy – Skjold Lab</title>
+<meta name="description" content="What the Skjold app, devices and Skjold-hjem store, why, and how to delete it. No tracking and no analytics.">
+<link rel="canonical" href="https://skjold-lab.com/en/privacy/">
+<link rel="alternate" hreflang="nb" href="https://skjold-lab.com/personvern/">
+<link rel="alternate" hreflang="en" href="https://skjold-lab.com/en/privacy/">
+<link rel="alternate" hreflang="x-default" href="https://skjold-lab.com/personvern/">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_GB">
+<meta property="og:locale:alternate" content="nb_NO">
+<meta property="og:site_name" content="Skjold Lab">
+<meta property="og:title" content="Privacy – Skjold Lab">
+<meta property="og:description" content="What the Skjold app, devices and Skjold-hjem store, why, and how to delete it. No tracking and no analytics.">
+<meta property="og:url" content="https://skjold-lab.com/en/privacy/">
+<meta property="og:image" content="https://skjold-lab.com/assets/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico?v=2" sizes="48x48">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="icon" href="/favicon-32.png?v=2" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+<link rel="preload" href="/assets/fonter/sora-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonter/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/skjold.css?v=6a6d0fc5">
+<script src="/assets/skjold.js?v=208a3850" defer></script>
+<style>
+.pv{max-width:760px;margin:0 auto;padding:110px 22px 100px}
+.pv h1{font-family:var(--sora);font-size:clamp(34px,5vw,52px);letter-spacing:-.02em;margin:10px 0 14px}
+.pv .ingress{font-size:19px;line-height:1.6;color:var(--demp-l,#b9b6ad);margin:0 0 10px}
+.pv .dato{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--gull,#d8b66a);text-transform:uppercase}
+.pv-kort{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:34px 0 10px}
+.pv-kort div{background:var(--kort,#141416);border:1px solid var(--linje,#26262a);border-radius:14px;padding:16px 18px}
+.pv-kort b{display:block;font-family:var(--sora);font-size:15px;margin-bottom:4px}
+.pv-kort span{font-size:14px;line-height:1.5;color:var(--demp-l,#b9b6ad)}
+.pv h2{font-family:var(--sora);font-size:23px;margin:48px 0 12px;padding-top:22px;border-top:1px solid var(--linje,#26262a)}
+.pv h3{font-family:var(--sora);font-size:17px;margin:24px 0 8px}
+.pv p,.pv li{font-size:16px;line-height:1.7}
+.pv ul{padding-left:20px;margin:8px 0 14px}
+.pv li{margin:4px 0}
+.pv table{width:100%;border-collapse:collapse;margin:12px 0 18px;font-size:15px}
+.pv th,.pv td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--linje,#26262a);line-height:1.5}
+.pv th{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--demp-l,#b9b6ad);font-weight:500}
+.pv a{color:var(--gull,#d8b66a)}
+.pv code{font-family:var(--mono);font-size:.9em}
+@media (max-width:560px){.pv table,.pv thead,.pv tbody,.pv tr,.pv th,.pv td{display:block}.pv thead{display:none}.pv td{border:0;padding:3px 0}.pv tr{border-bottom:1px solid var(--linje,#26262a);padding:10px 0}.pv td:first-child{font-weight:600}}
+</style>
+</head>
+<body>
+<a class="hopp" href="#hoved">Skip to content</a>
+<header class="nav">
+  <div class="nav-inn">
+    <a class="logo" href="/en/" aria-label="Skjold Lab – home"><span class="logo-stolper" aria-hidden="true"><i style="height:8px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:12px"></i><i style="height:8px"></i></span><span class="logo-ord">SKJOLD<span class="logo-lab">LAB</span></span></a>
+    <nav class="nav-lenker" aria-label="Main menu"><div class="nav-gruppe"><button type="button" class="nav-gruppe-knapp" aria-expanded="false" aria-controls="nav-produkter">Products<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg></button><div class="nav-under" id="nav-produkter"><a href="/en/s1/"><b>S1</b><span>Amplifier with display</span></a><a href="/en/node/"><b>Node</b><span>Streamer for your own system</span></a><a href="/en/touch/"><b>Touch</b><span>7″ touch screen</span></a><a href="/en/rost/"><b>Røst</b><span>Small active speaker</span></a><a href="/en/stav/"><b>Stav</b><span>Remote with a display</span></a><a href="/en/spole/"><b>Spole</b><span>Cassette player without tape</span></a><a href="/en/brage/"><b>Brage</b><span>Smart devices without the cloud</span></a><a href="/en/sensor/"><b>Sensor</b><span>Room sensor</span></a><a href="/en/bryter/"><b>Bryter</b><span>Switches under the desk</span></a><a href="/en/core/"><b>Core</b><span>The software alone</span></a></div></div><a href="/en/software/">Software</a><a href="/en/smart-home/">Smart home</a><a href="/en/self-hosted/">Self-hosted</a><a href="/en/compare/">Compare</a><a href="/en/support/">Support</a><a href="/en/manual/">Manual</a><a href="/en/3d/">3D files</a><a href="/en/about/">About</a><a href="mailto:jemtlands@proton.me">Contact</a></nav>
+    <div class="spraak" role="group" aria-label="Language"><a href="/personvern/" lang="nb" hreflang="nb">NO</a><span aria-hidden="true">|</span><a href="/en/privacy/" lang="en" hreflang="en" aria-current="true">EN</a></div>
+  </div>
+</header>
+<main id="hoved"><article class="pv">
+<div class="dato" data-reveal="0">Last updated 27 November 2026</div>
+<h1 data-reveal="40">Privacy</h1>
+<p class="ingress" data-reveal="80">Skjold is built to work locally in your home. Most things are never sent anywhere. This page explains what is stored anyway, where, why and how to delete it. It covers the Skjold Lab app (iPhone, iPad and Apple Watch), the Skjold devices, the Skjold-hjem cloud and the website skjold-lab.com.</p>
+<div class="pv-kort" data-reveal="120">
+<div><b>No tracking</b><span>No ads, no analytics and no sharing with third parties for marketing.</span></div>
+<div><b>Local first</b><span>The app talks to your devices on the local network. No account needed.</span></div>
+<div><b>You decide</b><span>The Skjold-hjem account is optional, and you can delete it yourself at any time.</span></div>
+</div>
+
+<h2>Who is responsible</h2>
+<p>The controller is Skjold Lab, Sebastian Kristo Jemtland, Norway. Send privacy questions to <a href="mailto:jemtlands@proton.me">jemtlands@proton.me</a>.</p>
+
+<h2>The Skjold Lab app</h2>
+<p>The app has no analytics, advertising or crash reporting SDKs, and it does not track you across apps and websites. Without signing in to Skjold-hjem, nothing about you is sent to Skjold Lab.</p>
+<h3>Permissions</h3>
+<table><thead><tr><th>Permission</th><th>Used for</th></tr></thead><tbody>
+<tr><td>Local network</td><td>Finding and controlling your Skjold devices (Bonjour). Traffic goes directly between the phone and the device.</td></tr>
+<tr><td>Camera</td><td>Reading the QR code when you add a device or join a home. Images are not stored or sent anywhere.</td></tr>
+<tr><td>Microphone</td><td>Room correction (EQ): the app listens to the test tone from the speaker and calculates the adjustment on the phone. Audio is not recorded or sent anywhere.</td></tr>
+<tr><td>NFC</td><td>Reading and writing Skjold Spole cassettes. The tag holds a reference to music, not personal data.</td></tr>
+</tbody></table>
+<h3>Services the app contacts</h3>
+<ul>
+<li><b>Your Skjold devices</b> on the local network.</li>
+<li><b>Music servers you add yourself</b> (Navidrome, Plex, Lyrion). Address, username and password are stored only on the phone and sent only to that server.</li>
+<li><b>Radio Browser</b> (radio-browser.info) when you search for radio stations, and the station's own server when you play. Searches are sent without anything that identifies you.</li>
+<li><b>GitHub</b> to check for new software versions.</li>
+<li><b>Skjold-hjem</b> (hjem.skjold-lab.com), only if you sign in.</li>
+</ul>
+<p>These services see your IP address, as all online services do. Radio Browser, GitHub and the radio stations have their own privacy policies.</p>
+
+<h2>Skjold devices</h2>
+<p>S1, Node, Touch and the other devices store settings, favourites and listening history locally. Voice control on Skjold devices runs locally or through the Home Assistant, Homey or Lyrion you have set up yourself. The devices contact GitHub for updates. If they are part of a home in Skjold-hjem, they also report name, product, version and local IP address, so the app and website can find them.</p>
+<p>A device that is not part of a home can ask to be found by a home on the same network. Its ID and local address are then stored briefly together with a cryptographic hash of the public IP address, not the address itself.</p>
+
+<h2>Skjold-hjem (optional account)</h2>
+<p>Skjold-hjem lets you control your devices remotely, share a home with your family and back up settings. We store:</p>
+<table><thead><tr><th>What</th><th>Why</th><th>How long</th></tr></thead><tbody>
+<tr><td>Email address</td><td>Sign-in (one-time code by email) and identifying the account</td><td>Until you delete the account</td></tr>
+<tr><td>Name and profile picture (optional)</td><td>Shown to other members of your home</td><td>Until you change or delete it</td></tr>
+<tr><td>Homes, members and devices</td><td>Knowing who has access to which devices</td><td>Until you delete the home or the account</td></tr>
+<tr><td>Two-step verification and passkeys</td><td>Securing the account. We store only public keys and the authenticator secret, never passwords</td><td>Until you remove them</td></tr>
+<tr><td>Sessions (signed-in devices)</td><td>Keeping you signed in. The <code>skjold_okt</code> cookie lasts up to 400 days and is renewed while you use the service</td><td>Until you sign out, end the session or delete the account</td></tr>
+<tr><td>Security log: time, event (for example sign-in, new passkey, profile change), IP address and approximate location (country and city)</td><td>Detecting abuse and break-ins, and helping you if something goes wrong</td><td>The latest 20,000 events for the whole service are kept. Older ones are deleted continuously</td></tr>
+</tbody></table>
+<p>The legal basis is our contract with you (GDPR Art. 6(1)(b)) for the account, and our legitimate interest in securing the service (Art. 6(1)(f)) for the security log.</p>
+<h3>Skjold Cloud</h3>
+<p>Backups of favourites, routines and settings are encrypted on the device before they are sent (end-to-end). The cloud only sees the part name, version, size and time, never the content. You can delete it at any time (see below).</p>
+<h3>Shared cassettes and speaker profiles</h3>
+<p>When you share a cassette, the list is stored encrypted, and the key exists only in the share code. Speaker profiles in Skjold Certified are anonymous. To prevent abuse, only a hash of the IP address is stored, not the address itself.</p>
+
+<h2>Who processes the data</h2>
+<p>Skjold-hjem and the website are hosted by <b>Cloudflare</b> (processor), which also handles sign-in with the email code (Cloudflare Access). Data may be processed outside the EEA. Transfers are covered by the EU Standard Contractual Clauses and the EU–US Data Privacy Framework. We never sell data and do not share it with anyone else.</p>
+
+<h2>The website skjold-lab.com</h2>
+<p>The website uses no tracking cookies and no analytics. Fonts are served from our own server. Cloudflare processes IP addresses and technical logs to deliver the pages and stop attacks.</p>
+
+<h2>Delete your data</h2>
+<ul>
+<li><b>The app:</b> delete the app, and everything it stored on the phone is gone.</li>
+<li><b>The account:</b> in your Skjold account (from the app or at hjem.skjold-lab.com) under Data og personvern (Data and privacy) → Slett kontoen (Delete account). The account, profile, passkeys, sessions, memberships and Skjold Cloud data are deleted immediately. If you own a home, transfer or delete it first. Your devices keep working locally.</li>
+<li><b>Skjold Cloud only:</b> Data and privacy → delete everything in Skjold Cloud.</li>
+<li><b>The security log:</b> events disappear as new ones come in. If you want them deleted right away, send an email.</li>
+<li><b>Devices:</b> reset the device from its settings.</li>
+</ul>
+
+<h2>Your rights</h2>
+<p>You have the right to access, rectification, erasure, restriction, data portability and to object to processing. Email <a href="mailto:jemtlands@proton.me">jemtlands@proton.me</a> and we will reply within 30 days. If you believe we process data unlawfully, you can complain to the Norwegian Data Protection Authority, <a href="https://www.datatilsynet.no/en/">Datatilsynet</a>, or your local authority.</p>
+
+<h2>Children</h2>
+<p>Skjold-hjem is not made for children under 13. Children can use the devices and the app locally, without an account.</p>
+
+<h2>Changes</h2>
+<p>If we change how data is processed, we update this page and the date at the top. For larger changes we will let you know in the app.</p>
+</article></main>
+<footer class="bunn"><div class="innhold"><div>Skjold Lab · Designed by Sebastian Kristo Jemtland in Norway</div><div class="kopi">© 2026 Sebastian Kristo Jemtland. The website, the texts, the images, the design and the products Skjold S1, Skjold Node, Skjold Touch, Skjold Røst, Skjold Stav, Skjold Spole, Skjold Brage, Skjold Sensor and Skjold Bryter are protected by copyright. The software is open source (MIT). Enclosure, circuit boards and design: CC BY-NC-SA 4.0 – build your own, but not for sale. Contact: <a href="mailto:jemtlands@proton.me">jemtlands@proton.me</a> · <a href="/en/privacy/">Privacy</a></div><div class="mono">skjold-lab.com</div></div></footer>
+</body>
+</html>

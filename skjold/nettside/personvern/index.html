@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="nb" class="statisk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personvern – Skjold Lab</title>
+<meta name="description" content="Hva Skjold-appen, enhetene og Skjold-hjem lagrer, hvorfor, og hvordan du sletter det. Ingen sporing og ingen analyseverktøy.">
+<link rel="canonical" href="https://skjold-lab.com/personvern/">
+<link rel="alternate" hreflang="nb" href="https://skjold-lab.com/personvern/">
+<link rel="alternate" hreflang="en" href="https://skjold-lab.com/en/privacy/">
+<link rel="alternate" hreflang="x-default" href="https://skjold-lab.com/personvern/">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nb_NO">
+<meta property="og:locale:alternate" content="en_GB">
+<meta property="og:site_name" content="Skjold Lab">
+<meta property="og:title" content="Personvern – Skjold Lab">
+<meta property="og:description" content="Hva Skjold-appen, enhetene og Skjold-hjem lagrer, hvorfor, og hvordan du sletter det. Ingen sporing og ingen analyseverktøy.">
+<meta property="og:url" content="https://skjold-lab.com/personvern/">
+<meta property="og:image" content="https://skjold-lab.com/assets/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico?v=2" sizes="48x48">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="icon" href="/favicon-32.png?v=2" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+<link rel="preload" href="/assets/fonter/sora-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonter/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/skjold.css?v=6a6d0fc5">
+<script src="/assets/skjold.js?v=208a3850" defer></script>
+<style>
+.pv{max-width:760px;margin:0 auto;padding:110px 22px 100px}
+.pv h1{font-family:var(--sora);font-size:clamp(34px,5vw,52px);letter-spacing:-.02em;margin:10px 0 14px}
+.pv .ingress{font-size:19px;line-height:1.6;color:var(--demp-l,#b9b6ad);margin:0 0 10px}
+.pv .dato{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--gull,#d8b66a);text-transform:uppercase}
+.pv-kort{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:34px 0 10px}
+.pv-kort div{background:var(--kort,#141416);border:1px solid var(--linje,#26262a);border-radius:14px;padding:16px 18px}
+.pv-kort b{display:block;font-family:var(--sora);font-size:15px;margin-bottom:4px}
+.pv-kort span{font-size:14px;line-height:1.5;color:var(--demp-l,#b9b6ad)}
+.pv h2{font-family:var(--sora);font-size:23px;margin:48px 0 12px;padding-top:22px;border-top:1px solid var(--linje,#26262a)}
+.pv h3{font-family:var(--sora);font-size:17px;margin:24px 0 8px}
+.pv p,.pv li{font-size:16px;line-height:1.7}
+.pv ul{padding-left:20px;margin:8px 0 14px}
+.pv li{margin:4px 0}
+.pv table{width:100%;border-collapse:collapse;margin:12px 0 18px;font-size:15px}
+.pv th,.pv td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--linje,#26262a);line-height:1.5}
+.pv th{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--demp-l,#b9b6ad);font-weight:500}
+.pv a{color:var(--gull,#d8b66a)}
+.pv code{font-family:var(--mono);font-size:.9em}
+@media (max-width:560px){.pv table,.pv thead,.pv tbody,.pv tr,.pv th,.pv td{display:block}.pv thead{display:none}.pv td{border:0;padding:3px 0}.pv tr{border-bottom:1px solid var(--linje,#26262a);padding:10px 0}.pv td:first-child{font-weight:600}}
+</style>
+</head>
+<body>
+<a class="hopp" href="#hoved">Hopp til innholdet</a>
+<header class="nav">
+  <div class="nav-inn">
+    <a class="logo" href="/" aria-label="Skjold Lab – forsiden"><span class="logo-stolper" aria-hidden="true"><i style="height:8px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:12px"></i><i style="height:8px"></i></span><span class="logo-ord">SKJOLD<span class="logo-lab">LAB</span></span></a>
+    <nav class="nav-lenker" aria-label="Hovedmeny"><div class="nav-gruppe"><button type="button" class="nav-gruppe-knapp" aria-expanded="false" aria-controls="nav-produkter">Produkter<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg></button><div class="nav-under" id="nav-produkter"><a href="/s1/"><b>S1</b><span>Forsterker med skjerm</span></a><a href="/node/"><b>Node</b><span>Strømmer til eget anlegg</span></a><a href="/touch/"><b>Touch</b><span>7″ berøringsskjerm</span></a><a href="/rost/"><b>Røst</b><span>Liten aktiv høyttaler</span></a><a href="/stav/"><b>Stav</b><span>Fjernkontroll med skjerm</span></a><a href="/spole/"><b>Spole</b><span>Kassettspiller uten bånd</span></a><a href="/brage/"><b>Brage</b><span>Smartenheter uten sky</span></a><a href="/sensor/"><b>Sensor</b><span>Romsensor</span></a><a href="/bryter/"><b>Bryter</b><span>Brytere under pulten</span></a><a href="/core/"><b>Core</b><span>Programvaren alene</span></a></div></div><a href="/programvare/">Programvare</a><a href="/smarthjem/">Smarthjem</a><a href="/software/">Software</a><a href="/sammenlign/">Sammenlign</a><a href="/stotte/">Støtte</a><a href="/bruksanvisning/">Bruksanvisning</a><a href="/3d/">3D-filer</a><a href="/om/">Om Skjold Lab</a><a href="mailto:jemtlands@proton.me">Kontakt</a></nav>
+    <div class="spraak" role="group" aria-label="Språk"><a href="/personvern/" lang="nb" hreflang="nb" aria-current="true">NO</a><span aria-hidden="true">|</span><a href="/en/privacy/" lang="en" hreflang="en">EN</a></div>
+  </div>
+</header>
+<main id="hoved"><article class="pv">
+<div class="dato" data-reveal="0">Sist oppdatert 27. november 2026</div>
+<h1 data-reveal="40">Personvern</h1>
+<p class="ingress" data-reveal="80">Skjold er laget for å virke lokalt i hjemmet ditt. Det meste blir aldri sendt noe sted. Her står hva som likevel lagres, hvor, hvorfor og hvordan du sletter det. Erklæringen gjelder appen Skjold Lab (iPhone, iPad og Apple Watch), Skjold-enhetene, skyen Skjold-hjem og nettsiden skjold-lab.com.</p>
+<div class="pv-kort" data-reveal="120">
+<div><b>Ingen sporing</b><span>Ingen reklame, ingen analyseverktøy og ingen deling med tredjeparter for markedsføring.</span></div>
+<div><b>Lokalt først</b><span>Appen snakker med enhetene dine på det lokale nettet. Du trenger ingen konto.</span></div>
+<div><b>Du bestemmer</b><span>Kontoen i Skjold-hjem er valgfri, og du kan slette den selv når som helst.</span></div>
+</div>
+
+<h2>Hvem er ansvarlig</h2>
+<p>Behandlingsansvarlig er Skjold Lab ved Sebastian Kristo Jemtland, Norge. Spørsmål om personvern sendes til <a href="mailto:jemtlands@proton.me">jemtlands@proton.me</a>.</p>
+
+<h2>Appen Skjold Lab</h2>
+<p>Appen har ingen analyse-, reklame- eller krasjrapporteringsverktøy, og den sporer deg ikke på tvers av apper og nettsider. Uten innlogging i Skjold-hjem blir ingenting om deg sendt til Skjold Lab.</p>
+<h3>Tillatelser</h3>
+<table><thead><tr><th>Tillatelse</th><th>Brukes til</th></tr></thead><tbody>
+<tr><td>Lokalt nettverk</td><td>Finne og styre Skjold-enhetene dine (Bonjour). Trafikken går direkte mellom telefonen og enheten.</td></tr>
+<tr><td>Kamera</td><td>Lese QR-koden når du legger til en enhet eller blir med i et hjem. Bildene lagres ikke og sendes ikke noe sted.</td></tr>
+<tr><td>Mikrofon</td><td>Romtilpasning (EQ): appen lytter til testtonen fra høyttaleren og regner ut justeringen på telefonen. Lyden tas ikke opp og sendes ikke noe sted.</td></tr>
+<tr><td>NFC</td><td>Lese og skrive Skjold Spole-kassetter. Det som står på brikken, er en henvisning til musikk, ikke personopplysninger.</td></tr>
+</tbody></table>
+<h3>Tjenester appen kontakter</h3>
+<ul>
+<li><b>Skjold-enhetene dine</b> på det lokale nettet.</li>
+<li><b>Musikkservere du legger inn selv</b> (Navidrome, Plex, Lyrion). Adresse, brukernavn og passord lagres bare på telefonen og sendes bare til den serveren.</li>
+<li><b>Radio Browser</b> (radio-browser.info) når du søker etter radiostasjoner, og stasjonens egen server når du spiller. Søket sendes uten noe som identifiserer deg.</li>
+<li><b>GitHub</b> for å se om det finnes nye versjoner av programvaren.</li>
+<li><b>Skjold-hjem</b> (hjem.skjold-lab.com), bare hvis du logger inn.</li>
+</ul>
+<p>Disse tjenestene ser IP-adressen din, slik alle nettjenester gjør. Radio Browser, GitHub og radiostasjonene har egne personvernerklæringer.</p>
+
+<h2>Skjold-enhetene</h2>
+<p>S1, Node, Touch og de andre enhetene lagrer innstillingene, favorittene og lyttehistorikken lokalt. Talestyring på Skjold-enheter kjøres lokalt eller via Home Assistant, Homey eller Lyrion du selv har satt opp. Enhetene kontakter GitHub for oppdateringer. Er de med i et hjem i Skjold-hjem, melder de også fra om navn, produkt, versjon og lokal IP-adresse, slik at appen og nettsiden kan finne dem.</p>
+<p>En enhet som ikke er med i et hjem, kan be om å bli funnet av et hjem på samme nett. Da lagres enhetens ID og lokale adresse i kort tid sammen med en kryptografisk hash av den offentlige IP-adressen, ikke selve adressen.</p>
+
+<h2>Skjold-hjem (valgfri konto)</h2>
+<p>Skjold-hjem lar deg styre enhetene utenfra, dele et hjem med familien og ta sikkerhetskopi. Vi lagrer:</p>
+<table><thead><tr><th>Hva</th><th>Hvorfor</th><th>Hvor lenge</th></tr></thead><tbody>
+<tr><td>E-postadresse</td><td>Innlogging (engangskode på e-post) og å identifisere kontoen</td><td>Til du sletter kontoen</td></tr>
+<tr><td>Navn og profilbilde (valgfritt)</td><td>Vises for andre i hjemmet ditt</td><td>Til du endrer eller sletter det</td></tr>
+<tr><td>Hjem, medlemmer og enheter</td><td>Å vite hvem som har tilgang til hvilke enheter</td><td>Til du sletter hjemmet eller kontoen</td></tr>
+<tr><td>Totrinnsbekreftelse og passkeys</td><td>Sikre kontoen. Vi lagrer bare offentlige nøkler og hemmeligheten til kodeappen, aldri passord</td><td>Til du fjerner dem</td></tr>
+<tr><td>Økter (innloggede enheter)</td><td>Holde deg innlogget. Informasjonskapselen <code>skjold_okt</code> varer i opptil 400 dager og fornyes når du bruker tjenesten</td><td>Til du logger ut, avslutter økten eller sletter kontoen</td></tr>
+<tr><td>Sikkerhetslogg: tidspunkt, hendelse (for eksempel innlogging, ny passkey, endret profil), IP-adresse og omtrentlig sted (land og by)</td><td>Oppdage misbruk og innbrudd, og hjelpe deg om noe går galt</td><td>De nyeste 20 000 hendelsene for hele tjenesten beholdes. Eldre slettes fortløpende</td></tr>
+</tbody></table>
+<p>Behandlingsgrunnlaget er avtalen med deg (GDPR art. 6 nr. 1 b) for kontoen, og berettiget interesse i å sikre tjenesten (art. 6 nr. 1 f) for sikkerhetsloggen.</p>
+<h3>Skjold Cloud</h3>
+<p>Sikkerhetskopien av favoritter, rutiner og innstillinger krypteres på enheten før den sendes (ende-til-ende). Skyen ser bare navn på delen, versjon, størrelse og tidspunkt, aldri innholdet. Du kan slette den når som helst (se under).</p>
+<h3>Delte kassetter og høyttalerprofiler</h3>
+<p>Deler du en kassett, lagres listen kryptert, og nøkkelen står bare i delingskoden. Høyttalerprofiler i Skjold Sertifisert er anonyme. For å hindre misbruk lagres bare en hash av IP-adressen, ikke selve adressen.</p>
+
+<h2>Hvem behandler dataene</h2>
+<p>Skjold-hjem og nettsiden driftes hos <b>Cloudflare</b> (databehandler), som også står for innloggingen med e-postkode (Cloudflare Access). Data kan bli behandlet utenfor EØS. Overføringen er dekket av EUs standardavtaler og EU–US Data Privacy Framework. Vi selger aldri data og deler dem ikke med andre.</p>
+
+<h2>Nettsiden skjold-lab.com</h2>
+<p>Nettsiden bruker ingen informasjonskapsler til sporing og ingen analyseverktøy. Skriftene ligger på vår egen server. Cloudflare behandler IP-adresser og tekniske logger for å levere sidene og stoppe angrep.</p>
+
+<h2>Slett dataene dine</h2>
+<ul>
+<li><b>Appen:</b> slett appen, så forsvinner alt den har lagret på telefonen.</li>
+<li><b>Kontoen:</b> i Skjold-kontoen (fra appen eller på hjem.skjold-lab.com) under Data og personvern → Slett kontoen. Kontoen, profilen, passkeys, øktene, medlemskapene og Skjold Cloud slettes straks. Eier du et hjem, må du overføre det eller slette det først. Enhetene virker videre lokalt.</li>
+<li><b>Skjold Cloud alene:</b> Data og personvern → Slett alt i Skjold Cloud.</li>
+<li><b>Sikkerhetsloggen:</b> hendelsene forsvinner etter hvert som nye kommer inn. Vil du at de skal slettes med en gang, send en e-post.</li>
+<li><b>Enhetene:</b> tilbakestill enheten fra innstillingene.</li>
+</ul>
+
+<h2>Rettighetene dine</h2>
+<p>Du har rett til innsyn, retting, sletting, begrensning, dataportabilitet og til å protestere mot behandling. Send en e-post til <a href="mailto:jemtlands@proton.me">jemtlands@proton.me</a>, så svarer vi innen 30 dager. Mener du at vi behandler opplysninger i strid med regelverket, kan du klage til <a href="https://www.datatilsynet.no/">Datatilsynet</a>.</p>
+
+<h2>Barn</h2>
+<p>Skjold-hjem er ikke laget for barn under 13 år. Barn kan bruke enhetene og appen lokalt, uten konto.</p>
+
+<h2>Endringer</h2>
+<p>Endrer vi hvordan data behandles, oppdaterer vi denne siden og datoen øverst. Ved større endringer sier vi fra i appen.</p>
+</article></main>
+<footer class="bunn"><div class="innhold"><div>Skjold Lab · Designet av Sebastian Kristo Jemtland i Norge</div><div class="kopi">© 2026 Sebastian Kristo Jemtland. Nettsiden, tekstene, bildene, designet og produktene Skjold S1, Skjold Node, Skjold Touch, Skjold Røst, Skjold Stav, Skjold Spole, Skjold Brage, Skjold Sensor og Skjold Bryter er beskyttet av opphavsrett. Programvaren er åpen kildekode (MIT). Kasse, kretskort og design: CC BY-NC-SA 4.0 – bygg selv, men ikke for salg. Kontakt: <a href="mailto:jemtlands@proton.me">jemtlands@proton.me</a> · <a href="/personvern/">Personvern</a></div><div class="mono">skjold-lab.com</div></div></footer>
+</body>
+</html>
