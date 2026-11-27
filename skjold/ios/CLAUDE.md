@@ -12,7 +12,7 @@ Fjernkontroll-app for Skjold-lydsystemet: forsterkeren **Skjold S1** (Pi Zero 2 
 - iOS **26.0+** (Liquid Glass-API-ene krever iOS 26), bare iPhone, bare stående modus, bare mørk modus.
 - Mappen `Skjold/` er synkronisert med målet, så nye `.swift`-filer der kommer automatisk med i bygget.
 - Swift 5-modus med `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`. Rene hjelpetyper uten UI er derfor merket `nonisolated` (for eksempel `SVGPathParser`, `RadioBrowser` og `PlexAPI`).
-- Signering: personlig team `23A28PYU2U`, bundle-id `com.sebastiankristojemtlandpersonalteam.Skjold`.
+- Signering: bundle-id `no.kristo.skjold` (widgets `no.kristo.skjold.Widgets`, klokke `no.kristo.skjold.watchkitapp`), app-gruppe `group.no.kristo.skjold`. For TestFlight: velg det betalte teamet i Xcode (Signing & Capabilities); `23A28PYU2U` er det gamle personlige teamet.
 - Info.plist: fontene ligger under `UIAppFonts`. I tillegg er `NSBonjourServices` satt til `_kipultamp._tcp` (det daemonen annonserer) og `_skjold._tcp`, `NSLocalNetworkUsageDescription` og `NSCameraUsageDescription` er fylt ut, og ATS har `NSAllowsLocalNetworking = true`.
 - Prosjektfilen er `Skjold.xcodeproj/project.xcproj`: Xcode 27s nye tekstformat (JSON-aktig, `"last-upgrade": "27.0"`), ikke en gammel `project.pbxproj`. Ikke gi den nytt navn.
 - Før koblingene ble lagt inn ga bygget verken feil eller advarsler. Etter dem er det ikke bygget ennå (se «Må testes i Xcode»).

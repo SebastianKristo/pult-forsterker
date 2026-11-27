@@ -19,7 +19,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: Skjold
-        PRODUCT_BUNDLE_IDENTIFIER: com.sebastiankristojemtlandpersonalteam.Skjold
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.skjold
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
@@ -58,7 +58,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: SkjoldWidgets
-        PRODUCT_BUNDLE_IDENTIFIER: com.sebastiankristojemtlandpersonalteam.Skjold.Widgets
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.skjold.Widgets
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
@@ -84,7 +84,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: SkjoldWatch
-        PRODUCT_BUNDLE_IDENTIFIER: com.sebastiankristojemtlandpersonalteam.Skjold.watchkitapp
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.skjold.watchkitapp
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
