@@ -1,0 +1,39 @@
+# Sjekker skjold/ios/project.yml (Xcode-prosjektet for TestFlight): lager prosjektet med XcodeGen og bygger appen med
+# widgetene og Apple Watch-appen innebygd, uten signering. Feiler hvis widgetene eller klokka ikke havner i appen.
+name: iOS-prosjekt (TestFlight)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["skjold/ios/project.yml", ".github/workflows/ios-prosjekt.yml"]
+
+jobs:
+  bygg:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Velg nyeste Xcode
+        run: |
+          X="$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"; echo "Bruker $X"
+          sudo xcode-select -s "$X/Contents/Developer"; xcodebuild -version
+      - name: Lag Skjold-App.xcodeproj
+        working-directory: skjold/ios
+        run: |
+          brew install xcodegen
+          printf 'settings:\n  base:\n    DEVELOPMENT_TEAM: ""\n' > team.yml
+          xcodegen generate --spec project.yml
+      - name: Bygg appen med widgets og klokke (usignert)
+        working-directory: skjold/ios
+        run: |
+          xcodebuild -project Skjold-App.xcodeproj -scheme Skjold -configuration Release -destination 'generic/platform=iOS' \
+            -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+      - name: Sjekk at widgetene og klokka er med
+        working-directory: skjold/ios
+        run: |
+          A=build/Build/Products/Release-iphoneos/Skjold.app
+          ls "$A/PlugIns" "$A/Watch"
+          test -d "$A/PlugIns/SkjoldWidgets.appex"
+          test -d "$A/Watch/SkjoldWatch.app"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$A/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :ITSAppUsesNonExemptEncryption" "$A/Info.plist"
