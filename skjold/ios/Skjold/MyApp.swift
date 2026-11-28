@@ -31,6 +31,9 @@ import AppIntents
                 }
                 .task { MacWindow.configure() }   // Mac: minste vindusstørrelse og tittellinje uten tekst
         }
-        .commands { SkjoldCommands(model: model) }   // menylinjen på Mac, tastatursnarveier på iPad og Mac
+        .commands {
+            SkjoldCommands(model: model)
+            MacCommands(model: model)   // Mac: «Enhet» og web-UI/appvisning i «Vis»
+        }   // menylinjen på Mac, tastatursnarveier på iPad og Mac
     }
 }

@@ -9,11 +9,17 @@ import UIKit
 /// ⌘1–⌘4 = fanene, ⌘F = søk, ⌘L = Nå spilles.
 struct SkjoldCommands: Commands {
     let model: AppModel
+    @AppStorage("macWebUI") private var web = true
+
+    /// Mellomrom ville stjålet tastetrykk fra tekstfeltene i web-UI-et på Mac – da brukes ⌘⏎ i stedet.
+    private var playKey: KeyboardShortcut {
+        MacUI.isMac && web ? KeyboardShortcut(.return, modifiers: .command) : KeyboardShortcut(.space, modifiers: [])
+    }
 
     var body: some Commands {
         CommandMenu("Avspilling") {
             Button(model.playing ? "Pause" : "Spill av") { model.togglePlay() }
-                .keyboardShortcut(.space, modifiers: [])
+                .keyboardShortcut(playKey)
             Button("Neste") { model.next() }
                 .keyboardShortcut(.rightArrow, modifiers: .command)
             Button("Forrige") { model.prev() }
