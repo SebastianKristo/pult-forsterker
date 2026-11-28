@@ -127,6 +127,8 @@ enum SK {
             .str("ndUser", "Brukernavn", "brukernavn", long: true, max: 64),
             .str("ndPass", "Passord", "Navidrome-passord", "Lagres på Skjold og deles med web-UI-et", long: true, max: 128, secret: true),
             .act("Test Navidrome", id: "ndTest", label: "Test tilkobling", safe: true),
+            .str("podmeEmail", "Podme e-post", "navn@epost.no", "Schibsted-kontoen du bruker i Podme-appen", long: true, max: 120),
+            .str("podmePass", "Podme-passord", "Passord", "Lagres på Skjold og deles med web-UI-et", long: true, max: 128, secret: true),
             .bool("plexEn", "Plex", "Spill musikk fra Plex Media Server"),
             .str("plexUrl", "Plex-server", "http://192.168.1.20:32400", "Adressen til Plex Media Server på hjemmenettet", long: true, max: 120),
             .str("plexToken", "Plex-token", "X-Plex-Token", "Finnes i Plex Web: åpne et album, velg ⋯ → Vis XML og kopier X-Plex-Token fra adressen", long: true, max: 64, secret: true),

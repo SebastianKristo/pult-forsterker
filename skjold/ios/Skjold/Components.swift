@@ -487,6 +487,7 @@ enum SourceLogos {
         case "Hodetelefoner": return SourceStyle(bg: AnyView(Color(hex: 0x2f2a40)), fg: .ink, stroke: "M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zM20 15a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z", size: 0.5)
         case "Plex": return SourceStyle(bg: AnyView(Color(hex: 0x1f1f1f)), fg: Color(hex: 0xe5a00d), brand: plex, size: 0.5)
         case "Lyrion": return SourceStyle(bg: AnyView(LyrionMark()), fg: .white, size: 0)
+        case V4Pod.name: return SourceStyle(bg: AnyView(V4PodMark()), fg: .white, size: 0)
         default: return SourceStyle(bg: AnyView(Color.seg), fg: .ink, size: 0.47)
         }
     }

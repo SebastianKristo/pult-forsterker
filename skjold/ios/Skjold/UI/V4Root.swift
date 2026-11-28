@@ -44,7 +44,9 @@ struct V4App: View {
             ZStack(alignment: .topLeading) {
                 V4.bg.ignoresSafeArea()
                 tabs
-                if ui.src != nil {
+                if ui.src == V4Pod.name {
+                    V4PodcastPage(wide: wide).transition(.move(edge: .trailing)).zIndex(14)
+                } else if ui.src != nil {
                     V4SourcePage(wide: wide).transition(.move(edge: .trailing)).zIndex(14)
                 }
                 if ui.pl != nil {
