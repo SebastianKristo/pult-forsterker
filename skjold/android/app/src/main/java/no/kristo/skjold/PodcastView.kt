@@ -51,7 +51,7 @@ import org.json.JSONObject
 
 /*
  * Podkaster som kildeside, som skjermen Podkaster i web-appen (skjold/app/src/screens/podcasts.tsx).
- * Alt hentes fra Skjold (/api/pod/*): Apple Podcasts-katalogen, NRK, egne RSS-adresser og Podme.
+ * Alt hentes fra Skjold (/api/pod/…): Apple Podcasts-katalogen, NRK, egne RSS-adresser og Podme.
  * Favorittene lagres på enheten, så de er de samme i web-appen og på Skjold Touch.
  * Episodene spilles på enheten og fortsetter der du slapp.
  */
