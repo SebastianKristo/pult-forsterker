@@ -1,0 +1,47 @@
+# Mac-versjonen av Skjold-appen (Mac Catalyst): bygger fra ci-project.yml, signerer ad hoc (kjører på egen Mac uten
+# utviklerkonto: høyreklikk → Åpne første gang) og legger Skjold.app som zip i artifact «skjold-mac». Signert bygg til
+# Mac App Store lages i Xcode (Product → Archive med «My Mac (Mac Catalyst)»), se skjold/ios/CLAUDE.md.
+name: Mac-app (Catalyst)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["skjold/ios/Skjold/**", "skjold/ios/ci-project.yml", "skjold/ios/project.yml", ".github/workflows/mac-app.yml"]
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Velg nyeste Xcode
+        run: |
+          X="$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"; echo "Bruker $X"
+          sudo xcode-select -s "$X/Contents/Developer"; xcodebuild -version
+      - name: Lag Xcode-prosjekt (XcodeGen)
+        working-directory: skjold/ios
+        run: |
+          brew install xcodegen
+          xcodegen generate --spec ci-project.yml
+      - name: Bygg Mac-appen (Mac Catalyst)
+        working-directory: skjold/ios
+        run: |
+          set -o pipefail
+          xcodebuild -project SkjoldCI.xcodeproj -scheme Skjold -configuration Release \
+            -destination 'generic/platform=macOS,variant=Mac Catalyst' -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 \
+            | grep -E "error:|warning: .*(unavailable|deprecated)|BUILD (SUCCEEDED|FAILED)|\*\* " | head -n 200
+      - name: Signer ad hoc og pakk
+        working-directory: skjold/ios
+        run: |
+          A=build/Build/Products/Release-maccatalyst/Skjold.app
+          test -d "$A"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$A/Contents/Info.plist"
+          lipo -info "$A/Contents/MacOS/Skjold"
+          codesign --force --deep --sign - "$A"
+          ditto -c -k --keepParent "$A" ../../Skjold-mac.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skjold-mac
+          path: Skjold-mac.zip

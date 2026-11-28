@@ -1,4 +1,5 @@
 import SwiftUI
+#if !targetEnvironment(macCatalyst)
 import VisionKit
 import Vision
 import AVFoundation
@@ -59,3 +60,13 @@ struct QRScannerView: UIViewControllerRepresentable {
         }
     }
 }
+#else
+/// Mac: VisionKit-skanneren finnes ikke. Enheter finnes automatisk på nettet (eller legges til med kode), så
+/// QR-steget hoppes over (isAvailable = false gir det simulerte steget i oppstarten).
+struct QRScannerView: View {
+    let onFound: (String) -> Void
+    static var isAvailable: Bool { false }
+    static func requestAccess() async -> Bool { false }
+    var body: some View { EmptyView() }
+}
+#endif
