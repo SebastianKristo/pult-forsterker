@@ -1,0 +1,30 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Last opp tekster, nettadresser, kategorier, gjennomgangsinfo og skjermbilder til App Store Connect"
+  lane :appstore do
+    deliver
+  end
+
+  desc "Fyll ut «Personvern i appen» (App Privacy) fra personvern.json og publiser svarene"
+  lane :personvern do
+    upload_app_privacy_details_to_app_store(
+      json_path: File.join(__dir__, "personvern.json"),
+      app_identifier: "no.kristo.skjold"
+    )
+  end
+
+  desc "Velg nyeste bygg og send versjonen til App Review"
+  lane :send_inn do
+    deliver(
+      submit_for_review: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        content_rights_contains_third_party_content: false
+      }
+    )
+  end
+end

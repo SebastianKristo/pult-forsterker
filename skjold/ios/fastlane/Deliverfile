@@ -1,0 +1,19 @@
+# Tekster, nettadresser, kategorier og skjermbilder til App Store (fastlane deliver).
+# Kjør: cd skjold/ios && fastlane appstore   (se LES_MEG.md)
+platform("ios")
+skip_binary_upload(true)          # bygget lastes opp fra Xcode (Product → Archive)
+submit_for_review(false)          # sendes inn med «fastlane send_inn»
+automatic_release(false)          # du trykker «Gi ut» selv når appen er godkjent
+overwrite_screenshots(true)
+force(true)                       # ikke åpne HTML-forhåndsvisning
+precheck_include_in_app_purchases(false)
+run_precheck_before_submit(false)
+
+app_review_information(
+  first_name: "Sebastian Kristo",
+  last_name: "Jemtland",
+  email_address: "jemtlands@proton.me",
+  phone_number: ENV["REVIEW_PHONE"] || "",       # telefonnummeret ditt med landskode, f.eks. «+47 …» – bare Apple ser det
+  demo_required: false,
+  notes: File.read(File.join(__dir__, "review_notes.txt"))
+)

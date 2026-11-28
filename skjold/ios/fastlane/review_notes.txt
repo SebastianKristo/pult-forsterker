@@ -1,0 +1,13 @@
+Skjold Lab controls Skjold amplifiers and streamers (open-source hardware the user builds or buys) over the local network. No account or login is required to use the app.
+
+To review without hardware: on the welcome screen, tap "Hopp over og gå til appen" (Skip and go to the app). With no devices added, the app runs in demo mode with sample rooms and players, so all screens can be explored.
+
+Permissions:
+- Local network: discovers and controls Skjold devices via Bonjour.
+- Camera: scans the QR code to add a device or join a home. Images are not stored.
+- Microphone: room correction listens to a test tone from the speaker; processed on the device, nothing is recorded or uploaded.
+- NFC: reads/writes Skjold Spole cassettes (NFC tags pointing to music).
+
+Skjold-hjem (Settings → Skjold-hjem) is an optional cloud account for remote control. Sign-in uses a one-time code sent to any email address, so you can create an account with your own email. Accounts can be deleted in-app under the account page → Data og personvern → Slett kontoen.
+
+The app is in Norwegian. Privacy policy: https://skjold-lab.com/en/privacy/
