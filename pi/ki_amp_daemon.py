@@ -898,6 +898,19 @@ def usb_audio_cards(path="/proc/asound/cards"):
 OUT_NAMES = ["3,5 mm (innebygd)", "HDMI", "USB-lydkort (UCA222 / UCA202)", "I²S-kort (HiFiBerry / IQaudio)", "Optisk (S/PDIF)"]
 
 
+def alsa_card_exists(dev, path="/proc/asound/cards"):
+    """Finnes kortet i en ALSA-enhet som «plughw:Headphones» / «hw:vc4hdmi0,0»? (Skjold Core på PC/Proxmox har ikke
+    Pi-ens Headphones/vc4hdmi – da skal installasjonens utgang brukes i stedet for et kort som ikke finnes.)"""
+    m = re.match(r"(?:plug)?hw:([^,]+)", str(dev or ""))
+    if not m:
+        return True
+    try:
+        ids = re.findall(r"^\s*\d+\s+\[(\S+)\s*\]", open(path).read(), re.M)
+    except Exception:
+        return True
+    return m.group(1) in ids
+
+
 def node_output():
     """(enhet, format) for valgt utgang på Node/Core, eller None = det installasjonen satte (KI_AMP_DSP_PLAYBACK).
     Bare når brukeren faktisk har valgt utgang i appen; USB uten lydkort tilkoblet faller tilbake til standard."""
@@ -908,10 +921,12 @@ def node_output():
         o = int(cur)
     except (TypeError, ValueError):
         return None
-    if o == 0:
-        return "plughw:Headphones", "S16LE"
-    if o == 1:
-        return "plughw:vc4hdmi0", "S16LE"
+    if o in (0, 1):
+        dev = ("plughw:Headphones", "plughw:vc4hdmi0")[o]
+        if not alsa_card_exists(dev):   # Core på PC/Proxmox: ikke Pi-ens innebygde utganger
+            print(f"Lydutgang: {OUT_NAMES[o]} finnes ikke her ({dev}) – bruker {DSP_PLAYBACK}", flush=True)
+            return None
+        return dev, "S16LE"
     if o == 2:
         cards = usb_audio_cards()
         if not cards:
