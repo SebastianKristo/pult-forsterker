@@ -468,7 +468,14 @@ final class AppModel {
     // MARK: - System / rooms
 
     var actRoom: Room { sys.rooms.first { $0.id == sys.active } ?? sys.rooms.first ?? Room(id: "stue", name: room, type: "s1", hw: "", vol: vol) }
-    var devRoom: Room { sys.rooms.first { $0.id == setDev } ?? sys.rooms.first ?? Room(id: "stue", name: "Stue", type: "s1", hw: "", vol: 0) }
+    /// Enheten Innstillinger gjelder: den valgte hvis den er en Skjold-enhet (har host), ellers den aktive Skjold-enheten,
+    /// ellers første Skjold. Et rom som bare er en Lyrion-spiller har ingen programvare, IP eller serienummer å vise.
+    var devRoom: Room {
+        sys.rooms.first { $0.id == setDev && $0.host != nil }
+            ?? sys.rooms.first { $0.host != nil && $0.host == activeHost }
+            ?? sys.rooms.first { $0.host != nil }
+            ?? sys.rooms.first { $0.id == setDev } ?? sys.rooms.first ?? Room(id: "stue", name: "Stue", type: "s1", hw: "", vol: 0)
+    }
     var groupName: String { sys.rooms.isEmpty ? room : sys.groupLabel(actRoom.id) }
     var actModel: String { SK.dev(actRoom.type).n }
 
