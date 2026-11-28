@@ -26,6 +26,20 @@ for r in rels:
             if best is None or ver(r["tag_name"]) > best[0]: best = (ver(r["tag_name"]), a["browser_download_url"])
 if best: print(best[1])
 ' 2>/dev/null || true)"
+  # Uten svar fra API-et (403: GitHub begrenser spørringer uten innlogging til 60 i timen per IP – lett å nå med flere
+  # Skjold-enheter på samme nett): ta versjonen fra kildetreets git-tagger eller fra omdirigeringen på /releases/latest,
+  # og last ned zip-en direkte (vanlige nedlastinger har ikke den grensen). Prøv de nyeste, i tilfelle den aller nyeste
+  # utgivelsen fortsatt bygges.
+  if [ -z "$WEB_URL" ]; then
+    REPO_URL=https://github.com/SebastianKristo/pult-forsterker
+    TAGS="$(git -C "$SRC/.." tag -l 'skjold-v*' --sort=-v:refname 2>/dev/null | head -n 4)"
+    [ -n "$TAGS" ] || TAGS="$(curl -fsSI --max-time 20 "$REPO_URL/releases/latest" 2>/dev/null | tr -d '\r' | sed -n 's#^[Ll]ocation: .*/tag/\(skjold-v[0-9.]*\)$#\1#p')"
+    for T in $TAGS; do
+      U="$REPO_URL/releases/download/$T/skjold-web-$T.zip"
+      if curl -fsSL --max-time 120 -o "$WEB_TMP/web.zip" "$U"; then WEB_URL="$U"; echo "web-app: fant $T uten GitHub-API-et"; break; fi
+    done
+    rm -f "$WEB_TMP/web.zip"
+  fi
   if [ -n "$WEB_URL" ] && curl -fsSL --max-time 120 -o "$WEB_TMP/web.zip" "$WEB_URL" \
      && unzip -q -o "$WEB_TMP/web.zip" -d "$WEB_TMP/x" && rm -f "$WEB_TMP/web.zip"; then
     W="$WEB_TMP/x"; [ -f "$W/index.html" ] || W="$(dirname "$(find "$WEB_TMP/x" -maxdepth 3 -name index.html | head -n1)" 2>/dev/null)"   # zip med undermappe
