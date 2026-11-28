@@ -593,7 +593,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // MARK: - System / rooms
 
     val actRoom: Room get() = sys.rooms.firstOrNull { it.id == sys.active } ?: sys.rooms.firstOrNull() ?: Room("stue", room, "s1", "", vol)
-    val devRoom: Room get() = sys.rooms.firstOrNull { it.id == setDev } ?: sys.rooms.firstOrNull() ?: Room("stue", "Stue", "s1", "", 0)
+    /** Enheten Innstillinger gjelder: den valgte hvis den er en Skjold-enhet (har host), ellers den aktive Skjold-enheten,
+     *  ellers første Skjold. Et rom som bare er en Lyrion-spiller har ingen programvare, IP eller serienummer å vise. */
+    val devRoom: Room get() = sys.rooms.firstOrNull { it.id == setDev && it.host != null }
+        ?: sys.rooms.firstOrNull { it.host != null && it.host == activeHost }
+        ?: sys.rooms.firstOrNull { it.host != null }
+        ?: sys.rooms.firstOrNull { it.id == setDev } ?: sys.rooms.firstOrNull() ?: Room("stue", "Stue", "s1", "", 0)
     val groupName: String get() = if (sys.rooms.isEmpty()) room else sys.groupLabel(actRoom.id)
     val actModel: String get() = SK.dev(actRoom.type).n
 
