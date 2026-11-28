@@ -17,8 +17,10 @@ final class WidgetBridge {
     private var coverSource = ""
     private var artKey = ""          // omslaget som er lagt rett i Live Activity-tilstanden (se ContentState.art)
     private var artData: Data? = nil
+#if !targetEnvironment(macCatalyst)
     private var activity: Activity<SkjoldNowPlayingAttributes>? = Activity<SkjoldNowPlayingAttributes>.activities.first
     private var activityState: SkjoldNowPlayingAttributes.ContentState?
+#endif
     private var endTask: Task<Void, Never>?
 
     func update(_ st: DevStatus, host: String, coverURL: String, presets: [String]) {
@@ -167,6 +169,7 @@ final class WidgetBridge {
     // MARK: Live Activity
 
     private func updateActivity(_ s: SharedNowPlaying) {
+        #if !targetEnvironment(macCatalyst)   // Live Activity finnes ikke på Mac
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         let state = SkjoldNowPlayingAttributes.ContentState(title: s.title, subtitle: s.subtitle, source: s.source,
                                                             playing: s.playing, volume: s.volume,
@@ -200,5 +203,6 @@ final class WidgetBridge {
                 self?.endTask = nil
             }
         }
+        #endif
     }
 }

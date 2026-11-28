@@ -155,6 +155,7 @@ nonisolated struct SharedNowPlaying: Codable, Sendable, Hashable {
 
 // MARK: - Live Activity
 
+#if !targetEnvironment(macCatalyst)   // Live Activity finnes ikke på Mac
 nonisolated struct SkjoldNowPlayingAttributes: ActivityAttributes {
     nonisolated struct ContentState: Codable, Hashable, Sendable {
         var title: String
@@ -169,6 +170,7 @@ nonisolated struct SkjoldNowPlayingAttributes: ActivityAttributes {
     }
     var room: String
 }
+#endif
 
 // MARK: - AppIntents (knapper i widgets, Kontrollsenter og Live Activity)
 
