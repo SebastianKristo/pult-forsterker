@@ -12,7 +12,7 @@ struct ContentView: View {
             case .onboard:
                 if m.welcome { WelcomeView() } else { OnboardingView() }
             case .app:
-                V4App()
+                MacShell { V4App() }   // Mac: enhetens web-UI (MacWebUI.swift), ellers appvisningen
             }
             if m.mode == .app { V4Banner().zIndex(9) }
             if m.intro {
