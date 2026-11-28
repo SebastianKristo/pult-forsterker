@@ -1,5 +1,5 @@
 #
-# Skjold-appen: Android (Kotlin/Compose, med Wear OS) og iOS (SwiftUI, usignert IPA, med og uten Apple Watch).
+# Skjold-appen: Android (Kotlin/Compose, med Wear OS), iOS (SwiftUI, usignert IPA, med og uten Apple Watch) og Mac (Mac Catalyst).
 # Egen utgivelse med tag app-v1.2.3 – start den fra «Ny release» (hva = app). Markeres ikke som «latest», så den
 # nyeste skjold-v*-utgivelsen (enhetene, nettsiden) forblir «latest».
 #
@@ -116,12 +116,44 @@ jobs:
           name: ios-native
           path: skjold-ios-*.ipa
 
+  mac-native:
+    name: Mac-app (Mac Catalyst, signert ad hoc)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Velg nyeste Xcode
+        run: |
+          X="$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"; echo "Bruker $X"
+          sudo xcode-select -s "$X/Contents/Developer"; xcodebuild -version
+      - name: Lag Xcode-prosjekt (XcodeGen)
+        working-directory: skjold/ios
+        run: |
+          brew install xcodegen
+          xcodegen generate --spec ci-project.yml
+      - name: Bygg Mac-appen
+        working-directory: skjold/ios
+        run: |
+          set -o pipefail
+          xcodebuild -project SkjoldCI.xcodeproj -scheme Skjold -configuration Release \
+            -destination 'generic/platform=macOS,variant=Mac Catalyst' -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM="" build 2>&1 | tail -n 40
+      - name: Signer ad hoc og pakk (høyreklikk → Åpne første gang)
+        working-directory: skjold/ios
+        run: |
+          A=build/Build/Products/Release-maccatalyst/Skjold.app
+          codesign --force --deep --sign - "$A"
+          ditto -c -k --keepParent "$A" ../../skjold-mac-${GITHUB_REF_NAME}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-native
+          path: skjold-mac-*.zip
+
   release:
     name: GitHub Release
-    needs: [android-native, ios-native]
+    needs: [android-native, ios-native, mac-native]
     if: >-
       always() && startsWith(github.ref, 'refs/tags/') &&
-      (needs.android-native.result == 'success' || needs.ios-native.result == 'success')
+      (needs.android-native.result == 'success' || needs.ios-native.result == 'success' || needs.mac-native.result == 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

@@ -6,7 +6,7 @@ name: Mac-app (Catalyst)
 on:
   workflow_dispatch:
   push:
-    branches: [main, "claude/**"]
+    branches: [main]
     paths: ["skjold/ios/Skjold/**", "skjold/ios/ci-project.yml", "skjold/ios/project.yml", ".github/workflows/mac-app.yml"]
 
 jobs:
