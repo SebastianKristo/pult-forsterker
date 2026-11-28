@@ -5,6 +5,10 @@ Kilder:
     podkastens egen RSS-strøm, og det er den vi spiller fra, så dette dekker nesten alle offentlige podkaster.
   * NRK (pi/skjold_nrk.py): programmer og podkaster fra NRK slås sammen med søket.
   * Egen RSS-adresse: lim inn adressen til en hvilken som helst podkast-strøm.
+  * Podme (pi/skjold_podme.py): med e-post og passord i innstillingene (podmeEmail/podmePass) kommer podkastene du
+    følger i Podme med i Mine podkaster, Podme er med i søket, og premium-episoder spilles med abonnementet ditt.
+  * Spotify: podkaster som også ligger på Spotify, har nesten alltid en offentlig RSS-strøm og finnes i søket.
+    Podkaster som bare finnes på Spotify, kan ikke spilles her (Spotify slipper dem ikke ut).
 
 Favoritter lagres på enheten (podkast_favoritter.json), så de vises likt i appen, web-UI og på Skjold Touch.
 Episoder spilles via Lyrion (play_url i daemonen); posisjonen lagres mens de spiller (som NRK-episodene).
@@ -185,10 +189,11 @@ class Favoritter:
 
     def add(self, x: dict) -> list:
         pid = str(x.get("id") or "")
-        if not re.match(r"^(apple:\d+|rss:https?://\S+|nrk:[\w.-]+)$", pid):
+        if not re.match(r"^(apple:\d+|rss:https?://\S+|nrk:[\w.~-]+|podme:\d+)$", pid):
             raise PodError("ukjent podkast")
         item = {"id": pid, "title": str(x.get("title") or "")[:120], "author": str(x.get("author") or "")[:80],
-                "image": str(x.get("image") or "")[:600], "kind": str(x.get("kind") or "")[:12], "t": time.time()}
+                "image": str(x.get("image") or "")[:600], "kind": str(x.get("kind") or "")[:12], "t": time.time(),
+                "src": pid.split(":", 1)[0] if pid.split(":", 1)[0] in ("apple", "rss", "nrk", "podme") else "apple"}
         with self.lock:
             self.items = [y for y in self.items if y["id"] != pid] + [item]
             self.items = self.items[-200:]
@@ -206,14 +211,90 @@ class Favoritter:
 
 
 class Pod:
-    def __init__(self, data_dir: str, fetch=None, nrk=None):
+    def __init__(self, data_dir: str, fetch=None, nrk=None, settings=None):
         from skjold_nrk import Progress
-        self.fetch, self.nrk = fetch, nrk
+        self.fetch, self.nrk, self.settings = fetch, nrk, settings or (lambda: {})
+        self.data_dir = data_dir
+        self._podme = None             # (e-post, passord, klient)
+        self._podme_favs = (0.0, [])   # (tid, podkaster du følger i Podme)
         self.favs = Favoritter(os.path.join(data_dir, "podkast_favoritter.json"))
         self.progress = Progress(os.path.join(data_dir, "podkast_fremdrift.json"))
         self._feed: dict = {}          # apple:id → RSS-adresse
         self._shows: dict = {}         # id → (tid, show)
         self._top: dict = {}           # sjanger → (tid, liste)
+
+    # ----- Podme -----
+    def podme(self):
+        """Podme-klienten når e-post og passord er satt i innstillingene, ellers None."""
+        s = self.settings() or {}
+        email, pw = str(s.get("podmeEmail") or "").strip(), str(s.get("podmePass") or "")
+        if not email or not pw:
+            return None
+        if not self._podme or self._podme[:2] != (email, pw):
+            from skjold_podme import Podme
+            self._podme = (email, pw, Podme(email, pw, os.path.join(self.data_dir, "podme_token.json")))
+            self._podme_favs = (0.0, [])
+        return self._podme[2]
+
+    def podme_favs(self) -> list:
+        """Podkastene du følger i Podme (10 min mellomlager). Tom liste uten Podme eller ved feil."""
+        pm = self.podme()
+        if not pm:
+            return []
+        if time.time() - self._podme_favs[0] < 600:
+            return self._podme_favs[1]
+        try:
+            lst = [{k: v for k, v in x.items() if k != "description"} for x in pm.my_podcasts()]
+        except Exception:
+            lst = self._podme_favs[1]
+        self._podme_favs = (time.time(), lst)
+        return lst
+
+    def podme_status(self) -> dict:
+        pm = self.podme()
+        if not pm:
+            return {"configured": False}
+        try:
+            me = pm.me()
+            return {"configured": True, "ok": True, "user": me.get("user", ""), "shows": len(self.podme_favs())}
+        except Exception as e:
+            return {"configured": True, "ok": False, "error": str(e)}
+
+    def all_favs(self) -> list:
+        """Egne favoritter + podkastene du følger i Podme (uten dobbelt)."""
+        egne = list(self.favs.items)
+        ids = {x["id"] for x in egne}
+        return egne + [x for x in self.podme_favs() if x["id"] not in ids]
+
+    def fav(self, add=None, remove=None) -> list:
+        pm = self.podme()
+        if add:
+            self.favs.add(add)
+            pid = str(add.get("id") or "")
+            if pm and pid.startswith("podme:"):
+                try:
+                    pm.follow(int(pid[6:]), True)
+                    self._podme_favs = (0.0, self._podme_favs[1])
+                except Exception:
+                    pass
+        if remove:
+            self.favs.remove(remove)
+            if pm and remove.startswith("podme:"):
+                try:
+                    pm.follow(int(remove[6:]), False)
+                    self._podme_favs = (0.0, [x for x in self._podme_favs[1] if x["id"] != remove])
+                except Exception:
+                    pass
+        return self.all_favs()
+
+    def resolve(self, url: str) -> str:
+        """Lydadressen som skal spilles: «podme:<id>» byttes mot Podme-fila, alt annet er en vanlig adresse."""
+        if url.startswith("podme:"):
+            pm = self.podme()
+            if not pm:
+                raise PodError("logg inn på Podme i Innstillinger for å spille denne")
+            return pm.audio_url(int(url[6:]))
+        return url
 
     # ----- katalog -----
     def genres(self):
@@ -254,6 +335,14 @@ class Pod:
             if a["feed"]:
                 self._feed[a["id"]] = a["feed"]
             out.append({k: v for k, v in a.items() if k != "feed"})
+        pm = self.podme()
+        if pm:   # Podme (også premium) etter NRK, før Apple-treffene med samme navn
+            try:
+                pr = [{k: v for k, v in x.items() if k != "description"} for x in pm.search(q)[:15]]
+                titler = {x["title"].lower() for x in pr}
+                out = pr + [x for x in out if x["title"].lower() not in titler]
+            except Exception:
+                pass
         if self.nrk:   # NRK først når navnet passer, så «Abels tårn» finner NRK-serien
             try:
                 nr = [{"id": f"nrk:{s['id']}", "title": s["title"], "author": "NRK", "image": s["image"], "src": "nrk", "kind": s.get("kind", "")}
@@ -290,6 +379,12 @@ class Pod:
                     "episodes": [{"id": e["id"], "nrk": True, "podcast": e.get("podcast"), "title": e["title"], "date": e.get("date", ""), "ts": 0,
                                   "duration": e.get("duration", 0), "image": e.get("image") or s["image"], "description": e.get("subtitle", ""), "show": s["title"]}
                                  for e in s.get("episodes", [])]}
+        elif pid.startswith("podme:"):
+            pm = self.podme()
+            if not pm:
+                raise PodError("logg inn på Podme i Innstillinger for å se denne podkasten")
+            show = pm.show(int(pid[6:]))
+            show.pop("id", None)
         elif pid.startswith(("apple:", "rss:")):
             show = parse_rss(_http(self._feed_for(pid), self.fetch))
             show["src"] = "apple" if pid.startswith("apple:") else "rss"
@@ -309,7 +404,8 @@ class Pod:
 
     def new_episodes(self, n: int = 30) -> list[dict]:
         """De nyeste episodene fra favorittene (to fra hver), nyeste først."""
-        favs = list(self.favs.items)
+        favs = [f for f in self.all_favs() if not f["id"].startswith("podme:")]
+        pm = self.podme()
 
         def hent(f):
             try:
@@ -319,6 +415,11 @@ class Pod:
                 return []
         with ThreadPoolExecutor(max_workers=6) as ex:
             alle = [e for lst in ex.map(hent, favs) for e in lst]
+        if pm:   # Podme har sin egen strøm med nye episoder fra det du følger
+            try:
+                alle += pm.feed(n)
+            except Exception:
+                pass
         alle.sort(key=lambda e: -(e.get("ts") or 0))
         return alle[:n]
 
@@ -331,7 +432,7 @@ def routes(ctx):
     from aiohttp import web
     import asyncio
 
-    pod = Pod(ctx.get("data_dir", "/var/lib/ki-amp"), fetch=ctx.get("fetch"), nrk=ctx.get("nrk"))
+    pod = Pod(ctx.get("data_dir", "/var/lib/ki-amp"), fetch=ctx.get("fetch"), nrk=ctx.get("nrk"), settings=ctx.get("settings"))
     ctx["pod"] = pod
     playing: dict = {}
 
@@ -367,12 +468,15 @@ def routes(ctx):
                 b = {}
             try:
                 if b.get("remove"):
-                    pod.favs.remove(str(b["remove"]))
+                    await asyncio.get_running_loop().run_in_executor(None, lambda: pod.fav(remove=str(b["remove"])))
                 elif isinstance(b.get("add"), dict):
-                    pod.favs.add(b["add"])
+                    await asyncio.get_running_loop().run_in_executor(None, lambda: pod.fav(add=b["add"]))
             except PodError as e:
                 return web.json_response({"error": str(e)}, status=400)
-        return web.json_response({"items": pod.favs.items})
+        return await run(lambda: {"items": pod.all_favs()})
+
+    async def h_podme(_r):
+        return await run(pod.podme_status)
 
     async def h_new(_r):
         return await run(lambda: {"items": pod.new_episodes()})
@@ -382,14 +486,16 @@ def routes(ctx):
 
     def _play(b):
         url, eid = str(b.get("url") or ""), str(b.get("id") or "")
+        src_url = url
+        url = pod.resolve(url) if url.startswith("podme:") else url
         if not url.startswith(("http://", "https://")):
             raise PodError("episoden mangler lydadresse")
         eid = eid or ep_id(url)
-        meta = {"title": b.get("title", ""), "series": b.get("show", ""), "image": b.get("image", ""), "dur": b.get("duration") or 0, "url": url, "pid": b.get("pid", "")}
+        meta = {"title": b.get("title", ""), "series": b.get("show", ""), "image": b.get("image", ""), "dur": b.get("duration") or 0, "url": src_url, "pid": b.get("pid", "")}
         ctx["play_url"](url, b.get("show") or b.get("title") or "Podkast", b.get("image", ""), "Podkast",
                         {"track": b.get("title", ""), "artist": b.get("show", ""), "album": b.get("show", ""),
                          "duration": float(b.get("duration") or 0), "source": "Podkast"})
-        playing.clear(); playing.update(id=eid, url=url, meta=meta, t=time.time())
+        playing.clear(); playing.update(id=eid, url=url, meta=meta, t=time.time(), podme_t=0.0)
         pod.progress.update(eid, 0 if b.get("restart") else pod.progress.get(eid).get("pos", 0), float(b.get("duration") or 0), meta)
         start = 0.0 if b.get("restart") else pod.progress.resume_at(eid)
         if start:
@@ -419,7 +525,17 @@ def routes(ctx):
                 if i.get("url") and i.get("url") != playing["url"] and time.time() - playing.get("t", 0) > 30:
                     playing.clear(); continue
                 if i.get("mode") == "play" and float(i.get("time") or 0) > 0:
-                    pod.progress.update(playing["id"], float(i.get("time") or 0), float(i.get("duration") or 0) or float(playing["meta"].get("dur") or 0))
+                    pos = float(i.get("time") or 0)
+                    pod.progress.update(playing["id"], pos, float(i.get("duration") or 0) or float(playing["meta"].get("dur") or 0))
+                    # Podme: posisjonen tilbake til Podme hvert minutt, så du fortsetter der du slapp i Podme-appen også
+                    if playing["id"].startswith("podme-") and time.time() - playing.get("podme_t", 0) > 60:
+                        playing["podme_t"] = time.time()
+                        pm = pod.podme()
+                        if pm:
+                            try:
+                                pm.save_progress(int(playing["id"][6:]), pos)
+                            except Exception:
+                                pass
             except Exception:
                 pass
 
@@ -427,4 +543,5 @@ def routes(ctx):
         threading.Thread(target=watch, daemon=True).start()
     return [web.get("/api/pod/genres", h_genres), web.get("/api/pod/top", h_top), web.get("/api/pod/search", h_search),
             web.get("/api/pod/show", h_show), web.get("/api/pod/favs", h_favs), web.post("/api/pod/favs", h_favs),
-            web.get("/api/pod/new", h_new), web.get("/api/pod/continue", h_continue), web.post("/api/pod/play", h_play)]
+            web.get("/api/pod/new", h_new), web.get("/api/pod/continue", h_continue), web.post("/api/pod/play", h_play),
+            web.get("/api/pod/podme", h_podme)]

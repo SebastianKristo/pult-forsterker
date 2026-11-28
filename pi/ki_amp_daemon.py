@@ -1497,6 +1497,8 @@ SETTINGS_DEF = {"out": 3, "bass": 0, "treb": 0, "bal": 0, "vstart": 0, "vmax": 0
                 # Musikktjenester – lagres her så appen (iOS/Android) og web-UI-et deler innloggingene
                 "ytmEn": False, "ytmUser": "", "ytmCookie": "", "ndEn": False, "ndUrl": "", "ndUser": "", "ndPass": "",
                 "plexEn": False, "plexUrl": "", "plexToken": "",
+                # Podme (pi/skjold_podme.py): Schibsted-kontoen, så podkastene du følger i Podme (også premium) kommer med
+                "podmeEmail": "", "podmePass": "",
                 # Music Assistant (bibliotek for TIDAL/Qobuz/Deezer/Spotify/YouTube Music/Plex/Jellyfin/podkaster)
                 "maEn": False, "maUrl": "", "maToken": "",
                 # yubal: last ned det du søker etter og ikke har, rett inn i Navidrome-biblioteket (pi/skjold_yubal.py)
@@ -1805,7 +1807,7 @@ async def h_settings_reset(r):
 
 # Innlogginger til musikktjenester deles med de andre Skjold-enhetene på nettet (S1, Touch, Node …): logger du inn
 # YouTube Music på én, virker det på alle. KI_AMP_SHARE_SETTINGS=0 slår det av.
-SHARED_SETTINGS = ("esphomeKey", "ytmEn", "ytmUser", "ytmCookie", "ndEn", "ndUrl", "ndUser", "ndPass", "yubalUrl", "yubalAuto", "yubalAlbum", "plexEn", "plexUrl", "plexToken", "maEn", "maUrl", "maToken")
+SHARED_SETTINGS = ("esphomeKey", "ytmEn", "ytmUser", "ytmCookie", "ndEn", "ndUrl", "ndUser", "ndPass", "yubalUrl", "yubalAuto", "yubalAlbum", "plexEn", "plexUrl", "plexToken", "maEn", "maUrl", "maToken", "podmeEmail", "podmePass")
 SHARE_SETTINGS = os.environ.get("KI_AMP_SHARE_SETTINGS", "1") != "0"
 
 
@@ -1837,7 +1839,7 @@ def _pull_shared():
         patch = {}
         for svc, keys in (("ytmCookie", ("ytmEn", "ytmUser", "ytmCookie")), ("ndUrl", ("ndEn", "ndUrl", "ndUser", "ndPass")),
                           ("plexUrl", ("plexEn", "plexUrl", "plexToken")), ("maUrl", ("maEn", "maUrl", "maToken")),
-                          ("esphomeKey", ("esphomeKey",))):
+                          ("podmeEmail", ("podmeEmail", "podmePass")), ("esphomeKey", ("esphomeKey",))):
             if not mine.get(svc) and theirs.get(svc):
                 patch.update({k: theirs[k] for k in keys if k in theirs})
         if patch:
@@ -10839,7 +10841,7 @@ def main():
     # Podkaster: Apple Podcasts-katalogen, NRK og egne RSS-adresser, med favoritter (pi/skjold_pod.py)
     try:
         import skjold_pod as _pod
-        app.add_routes(_pod.routes({"play_url": play_url, "lyr_cmd": lyr.cmd, "lyr_info": lambda: lyr.info, "nrk": _nrk_ctx.get("nrk"),
+        app.add_routes(_pod.routes({"play_url": play_url, "lyr_cmd": lyr.cmd, "lyr_info": lambda: lyr.info, "nrk": _nrk_ctx.get("nrk"), "settings": settings,
                                     "data_dir": os.path.dirname(STATE_FILE) or "/var/lib/ki-amp"}))
     except Exception as e:
         print("Podkaster ikke tilgjengelig:", e, flush=True)
