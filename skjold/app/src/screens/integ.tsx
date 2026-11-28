@@ -73,6 +73,7 @@ function ints(s: Settings): Int[] {
     { id: 'spotify', name: 'Spotify Connect', mono: 'S', tile: '#6fcf7f', status: s.spEn ? 'Installert · på' : 'Installert · av', ok: s.spEn, desc: 'Spill fra Spotify-appen rett til forsterkeren. Krever Spotify Premium.' },
     { id: 'ytmusic', name: 'YouTube Music', mono: 'YT', tile: '#e86a6a', status: ytm ? (s.ytmEn ? 'Innlogget · på' : 'Innlogget · av') : 'Ikke innlogget', ok: ytm && s.ytmEn, desc: 'Spillelister, mikser og album fra kontoen din, innebygd i Skjold. Krever Premium.' },
     { id: 'ma', name: 'Music Assistant', mono: 'MA', tile: '#18bcf2', status: s.maUrl ? (maSt.value?.ok ? 'Tilkoblet' + (maSt.value.player ? ' · ' + maSt.value.player : '') : maSt.value ? 'Feil' : 'Sjekker …') : 'Ikke satt opp', ok: !!s.maUrl && !!maSt.value?.ok, desc: 'TIDAL, Qobuz, Deezer, Spotify, YouTube Music, Plex, Jellyfin og podkaster i ett bibliotek, med søk i Skjold.' },
+    { id: 'podme', name: 'Podme', mono: 'P', tile: '#e8506a', status: s.podmeEmail && s.podmePass ? (pmSt.value?.ok ? 'Innlogget' + (pmSt.value.shows ? ' · ' + pmSt.value.shows + ' podkaster' : '') : pmSt.value ? 'Feil' : 'Sjekker …') : 'Ikke innlogget', ok: !!pmSt.value?.ok, desc: 'Podkastene du følger i Podme, også premium-episoder fra abonnementet ditt. Vises under Podkaster.' },
     { id: 'navidrome', name: 'Navidrome', mono: 'N', tile: '#7fa8e8', status: nd ? (s.ndEn ? 'Tilkoblet · på' : 'Tilkoblet · av') : 'Ikke tilkoblet', ok: nd && s.ndEn, desc: 'Ditt eget musikkbibliotek på hjemmenettet, i FLAC. Bruker Subsonic-API.' },
     { id: 'yubal', name: 'yubal', mono: 'yb', tile: '#e8b04a', status: s.yubalUrl ? (ybSt.value?.ok ? (s.yubalAuto ? 'Tilkoblet · laster ned automatisk' : 'Tilkoblet') : ybSt.value ? 'Svarer ikke' : 'Sjekker …') : 'Ikke satt opp', ok: !!s.yubalUrl && !!ybSt.value?.ok, desc: 'Last ned musikk du ikke har, rett inn i Navidrome-biblioteket. Finner Skjold ikke låten i Navidrome når du søker, henter yubal den.' },
     { id: 'subwave', name: 'SUB/WAVE', mono: 'SW', tile: '#1a1a1b', status: swStations.value.length ? swStations.value.length + (swStations.value.length === 1 ? ' stasjon' : ' stasjoner') : 'Ikke satt opp', ok: swStations.value.length > 0, desc: 'Din egen AI-DJ-radio: selvhostede stasjoner der en AI-DJ velger låtene. Vises i Bibliotek og Kilder.' },
@@ -114,6 +115,10 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
         { n: 'Status', hint: maSt.value?.error || (maSt.value?.ok && !maSt.value.player ? 'Fant ikke denne Skjold-en som spiller i MA. Legg til Squeezelite-, AirPlay- eller DLNA-provideren i Music Assistant.' : ''), el: <span style="display:flex;gap:6px;align-items:center">{txt(maSt.value?.ok ? 'MA ' + (maSt.value.version || '') : s.maUrl ? 'Ikke tilkoblet' : '–')}{btn('Test', checkMa)}</span> },
         { n: 'Bibliotek', el: btn('Åpne', () => go('ma')) },
         { n: 'Vis i menyen', hint: 'Skjul Music Assistant fra sidemenyen og kildene uten å logge ut', el: <Toggle on={!skjult('ma')} onChange={(b) => settVises('ma', b)} /> }] };
+    case 'podme': return { links: [['Åpne Podme', 'https://podme.com/']],
+      rows: [{ n: 'E-post', hint: 'Schibsted-kontoen du bruker i Podme-appen', el: <input value={s.podmeEmail} placeholder="navn@epost.no" onChange={(e) => { setSetting('podmeEmail', (e.currentTarget as HTMLInputElement).value.trim()); setTimeout(checkPodme, 500); }} style={`height:36px;width:220px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-family:${MONO};font-size:12px;outline:none;color:#f2f2ee`} /> },
+        { n: 'Passord', hint: 'Lagres på Skjold og deles med de andre Skjold-enhetene og appene', el: <input type="password" value={s.podmePass} placeholder="passord" onChange={(e) => { setSetting('podmePass', (e.currentTarget as HTMLInputElement).value); setTimeout(checkPodme, 500); }} style={`height:36px;width:220px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid #2e2e30;background:#1b1b1c;font-family:${MONO};font-size:12px;outline:none;color:#f2f2ee`} /> },
+        { n: 'Status', hint: pmSt.value?.error || (pmSt.value?.ok ? 'Podkastene du følger i Podme vises under Podkaster → Mine podkaster' : ''), el: <span style="display:flex;gap:6px;align-items:center">{txt(pmSt.value?.ok ? (pmSt.value.user || 'Innlogget') : s.podmeEmail ? 'Ikke innlogget' : '–')}{btn('Test', checkPodme)}</span> }] };
     case 'navidrome': return { links: s.ndUrl ? [['Åpne Navidrome', s.ndUrl]] : [],
       rows: [{ n: 'Navidrome', hint: 'Vises i menyen og under Kilder', el: tog('ndEn', s.ndEn) },
         { n: 'Server', el: inp('ndUrl', s.ndUrl, 'http://192.168.1.10:4533') },
@@ -154,6 +159,8 @@ function detail(id: string, s: Settings): { links: [string, string][]; rows: Row
 
 const intSel = signal('lyrion');
 const maSt = signal<MaStatus | null>(null);
+const pmSt = signal<{ configured: boolean; ok?: boolean; user?: string; shows?: number; error?: string } | null>(null);
+function checkPodme() { const s = settings.value; if (!s.podmeEmail || !s.podmePass) { pmSt.value = null; return; } pmSt.value = null; api.podme().then((r) => (pmSt.value = r)).catch((e) => (pmSt.value = { configured: true, ok: false, error: e instanceof Error ? e.message : String(e) })); }
 const ybSt = signal<YubalStatus | null>(null), ybJobber = signal<YubalJobb[]>([]);
 function checkYubal() { if (!settings.value.yubalUrl) { ybSt.value = null; return; } api.yubalStatus().then((r) => (ybSt.value = r)).catch((e) => (ybSt.value = { konfigurert: true, ok: false, feil: e instanceof Error ? e.message : String(e), auto: true, album: false })); }
 function hentYbJobber() { api.yubalJobber().then((r) => (ybJobber.value = r.jobber)).catch(() => undefined); }
@@ -170,7 +177,7 @@ async function findMa() { try { const r = await api.maDiscover(); if (r.found[0]
 
 export function IntegrationsPage() {
   useEffect(() => { checkYubal(); hentYbJobber(); const t = everyVisible(() => { if (intSel.value === 'yubal' && settings.value.yubalUrl) hentYbJobber(); }, 3000); return () => clearInterval(t); }, []);
-  useEffect(() => { checkMa(); loadSw(true); void hkLoad(); void matterLoad(); const t = everyVisible(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); if (matter.value?.enabled && !matter.value.commissioned) void matterLoad(); }, 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { checkMa(); checkPodme(); loadSw(true); void hkLoad(); void matterLoad(); const t = everyVisible(() => { if (hk.value?.enabled && !hk.value.paired) void hkLoad(); if (matter.value?.enabled && !matter.value.commissioned) void matterLoad(); }, 5000); return () => clearInterval(t); }, []);
   const s = settings.value, sel = intSel.value, list = ints(s), cur = list.find((x) => x.id === sel) ?? list[0]!, d = detail(cur.id, s);
   return (
     <div class="int-wrap">

@@ -340,6 +340,7 @@ object SourceLogos {
         "USB" -> SourceStyle(solid(C.seg), C.ink, stroke = "M12 3v15M8 9v2.5l4 3M16 8v3l-4 3", fillPath = "M12 2l-2 3h4zM12 18a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zM7 7.5h2v2H7zM16 6.5a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z", size = 0.5f)
         "Hodetelefoner" -> SourceStyle(solid(hex(0x2f2a40)), C.ink, stroke = "M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zM20 15a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z", size = 0.5f)
         "Plex" -> SourceStyle(solid(hex(0x1f1f1f)), hex(0xe5a00d), brand = plex, size = 0.5f)
+        "Podkaster" -> SourceStyle(solid(hex(0x8a4fd1)), Color.White, stroke = "M16.85 18.58a9 9 0 1 0-9.7 0M8.5 14.5a5 5 0 1 1 7 0M12 15v6", fillPath = "M12 9a2 2 0 1 0 0 4 2 2 0 0 0 0-4z", size = 0.52f)
         "Lyrion" -> SourceStyle({ m ->
             Box(m.background(C.bg)) { Image(painterResource(R.drawable.brand_lyrion), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
         }, Color.White, size = 0f)

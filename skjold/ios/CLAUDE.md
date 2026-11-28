@@ -67,6 +67,7 @@ EQ og innstillinger ligger fortsatt i `AppModel`. Avledede verdier for v4 (grupp
 | `UI/V4MoreSheet.swift` | «Mer»-arket og volumknotten. |
 | `UI/V4SourcePage.swift` | Kildeside (søk, spillelister, låter, innganger) og spillelisten. |
 | `UI/V4SearchPage.swift` | Søk på tvers av tjenestene. |
+| `UI/V4Podcasts.swift` | Kilden «Podkaster»: `PodAPI` (`/api/pod/*`, NRK-episoder via `/api/nrk/play`), `PodShow`/`PodEpisode`/`PodProg`, `AppModel.playPod`, kildesiden (Fortsett, Nye episoder, Mine podkaster, Podme, toppliste per sjanger, søk) og podkastsiden (Følg, episoder). Demomodus viser bare en forklaring. |
 | `AppModel.swift` | All tilstand og alle handlinger. Lagrer i UserDefaults via `Store`. Her ligger `post(...)`, se «Koblinger». |
 | `SkjoldData.swift` | `SK` med statiske data: innstillingskategorier (`SettingCategory`/`SettingItem`/`SettingKind`), standardverdier (`SK.def`), EQ-presets og -kilder, radiokatalog, enhetstyper, demosystem (`SK.sysDefault`), utgivelser, **demobibliotek** (`SK.tr`, `SK.lt`, `SK.lib`). Inneholder også verdityper: `Station`, `Track`, `Room`, `SystemState`, `EQProfile`, `UpdateState` m.m. |
 | `Services.swift` | `RadioBrowser` (søk, logoer, strømtest, `streamURL(for:)`), `PlexAPI.test`, `DeviceBrowser` (Bonjour `_kipultamp._tcp` + `_skjold._tcp` med TXT og oppløsning til `ip:port`), `Net` (HTTP), `DevStatus`/`DevSettings`/`DevPreset` (tolking av daemon-JSON), `DeviceEvents` (SSE), `DeviceLink` (REST mot daemonen). |

@@ -313,6 +313,7 @@ enum V4Src {
         case "YouTube Music", "YT Music": return Color(hex: 0xff0000)
         case "Navidrome": return Color(hex: 0x1e5aa8)
         case "Plex": return Color(hex: 0xe5a00d)
+        case V4Pod.name: return V4.pod
         case "UPnP/DLNA": return Color(hex: 0xf2f2ee)
         default: return Color(hex: 0x3a3a37)
         }

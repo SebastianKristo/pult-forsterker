@@ -394,7 +394,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val boolKeys: Set<String> = SK.cats.flatMap { it.items }.filter { it.kind == SettingKind.Bool }.map { it.k }.toSet() + setOf("updAuto", "setupDone")
         /** Innloggingene til musikktjenestene lagres nå på forsterkeren (/api/settings), så appen og web-UI-et deler dem. */
         val localKeys: Set<String> = emptySet()
-        val serviceKeys = listOf("ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken")
+        val serviceKeys = listOf("ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken", "podmeEmail", "podmePass")
         val stringKeys = listOf("nAux1", "nAux2", "nUsb1", "nUsb2", "nameCustom") + serviceKeys
 
         fun hwText(r: Room): String {
@@ -1418,6 +1418,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (actLyrionOnly) { radio.getOrNull(i)?.let { livePlayStream(it) }; return }
         val n = presetNs.getOrElse(i) { i + 1 }
         devSend("/api/presets/$n/play")
+    }
+
+    /** En podkastepisode startes på enheten (PodcastView.kt): glem bibliotekskøen, så den ikke tar over når strømmen byttes. */
+    fun livePlayPodcast() {
+        hold("input", 3.0)
+        libStream = null
     }
 
     fun livePlayStream(st: Station) {

@@ -125,6 +125,7 @@ object SourceTok {
         "Navidrome" -> hex(0x1e5aa8)
         "Plex" -> hex(0xe5a00d)
         "UPnP/DLNA" -> hex(0xf2f2ee)
+        "Podkaster" -> hex(0x8a4fd1)
         else -> hex(0x3a3a37)
     }
 }
@@ -153,6 +154,7 @@ object SourceUi {
 /** Åpner kildesiden for en kilde (som `ui.srcQ = ""; ui.pl = nil; ui.src = …` i V4Home.swift). */
 fun AppModel.openSource(label: String) {
     SourceUi.srcQ = ""; SourceUi.pl = null; SourceUi.src = label
+    PodUi.show = null
     full = false
 }
 
@@ -318,6 +320,8 @@ private fun Modifier.radialGlow(color: Color, cx: Float, cy: Float, radius: Dp):
 fun SourceOverlays(m: AppModel, wide: Boolean = false) {
     Box(Modifier.fillMaxSize()) {
         SourceUi.src?.let { SourcePage(m, it, wide) }
+        // en åpen podkast ligger over kildesiden Podkaster (PodcastView.kt)
+        if (SourceUi.src == "Podkaster") PodUi.show?.let { PodShowPage(m, it, wide) }
         SourceUi.pl?.let { PlaylistPage(m, it, wide) }
     }
     SourceMoreSheet(m)
@@ -362,9 +366,10 @@ fun SourceBody(m: AppModel, n: String, inset: Dp = 20.dp, close: () -> Unit) {
 
     BackCircle(close)
     Head(m, n, isInput)
-    if (!isInput) SourceSearchField(SourceUi.srcQ, { SourceUi.srcQ = it }, if (isRadio) "Søk etter kanal" else "Søk i $n")
+    if (!isInput) SourceSearchField(SourceUi.srcQ, { SourceUi.srcQ = it }, if (isRadio) "Søk etter kanal" else if (n == "Podkaster") "Søk i podkaster eller lim inn RSS" else "Søk i $n")
     if (isInput) InputCard(m, n)
     if (isRadio) RadioList(m, q)
+    else if (n == "Podkaster") PodcastBody(m, q, inset)
     else if (lib != null) {
         val pls = SourceLib.playlists(m, lib).filter { q.isEmpty() || it.name.contains(q, ignoreCase = true) }
         val trs: List<Track> = when {

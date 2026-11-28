@@ -150,8 +150,8 @@ export interface MaStatus { configured: boolean; ok: boolean; version?: string; 
 export interface NrkSeries { id: string; title: string; subtitle: string; image: string; kind: 'series' | 'podcast' }
 export interface NrkEpisode { id: string; title: string; subtitle: string; date: string; duration: number; image: string; series: string; podcast: boolean; pos?: number; heard?: boolean }
 export interface NrkProg { id: string; title?: string; series?: string; image?: string; pos: number; dur?: number; t?: number }
-/** Podkaster (/api/pod/*): Apple Podcasts-katalogen, NRK og egne RSS-adresser. id: apple:123 | nrk:serie | rss:https://… */
-export interface PodShow { id: string; title: string; author: string; image: string; genre?: string; src: 'apple' | 'nrk' | 'rss'; kind?: string }
+/** Podkaster (/api/pod/*): Apple Podcasts-katalogen, NRK og egne RSS-adresser. id: apple:123 | nrk:serie | rss:https://… | podme:123 */
+export interface PodShow { id: string; title: string; author: string; image: string; genre?: string; src: 'apple' | 'nrk' | 'rss' | 'podme'; kind?: string }
 export interface PodEpisode { id: string; url?: string; title: string; date: string; ts?: number; duration: number; image: string; description?: string; show: string; pid?: string; nrk?: boolean; podcast?: boolean; pos?: number; heard?: boolean }
 export interface PodProg { id: string; title?: string; series?: string; image?: string; url?: string; pid?: string; pos: number; dur?: number; t?: number }
 export interface HomeKitInfo { enabled: boolean; available: boolean; running: boolean; paired: boolean; pin: string; setup_uri: string; port: number; error: string | null }
@@ -234,6 +234,7 @@ export const api = {
   podFav: (b: { add?: Partial<PodShow>; remove?: string }) => post<{ items: PodShow[] }>('/api/pod/favs', b),
   podNew: () => req<{ items: PodEpisode[] }>('/api/pod/new', undefined, undefined, 30000),
   podContinue: () => req<{ items: PodProg[] }>('/api/pod/continue'),
+  podme: () => req<{ configured: boolean; ok?: boolean; user?: string; shows?: number; error?: string }>('/api/pod/podme', undefined, undefined, 30000),
   podPlay: (e: { id?: string; url: string; title?: string; show?: string; image?: string; duration?: number; pid?: string; restart?: boolean }) => post<{ ok: boolean; resume: number }>('/api/pod/play', e),
   setHomekit: (b: { enabled?: boolean; reset?: boolean }) => post<HomeKitInfo>('/api/homekit', b),
   sky: () => req<SkyStatus>('/api/sky'),
