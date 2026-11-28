@@ -28,6 +28,9 @@ enum V4 {
     static let track = Color(hex: 0x2a2a2c)
     static let knobOff = Color(hex: 0x3a3a3c)
     static let mosaicEmpty = Color(hex: 0x1b1b1d)
+    /// Podkaster: kildefargen (ikon og glød).
+    static let pod = Color(hex: 0x8e4fd6)
+    static let podDark = Color(hex: 0x4a2378)
 
     // MARK: Kurver (README → Animasjoner)
     static let lens = Animation.timingCurve(0.3, 1.35, 0.45, 1, duration: 0.5)

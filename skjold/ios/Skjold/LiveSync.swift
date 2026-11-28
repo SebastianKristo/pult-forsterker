@@ -468,7 +468,7 @@ extension AppModel {
     static let boolKeys: Set<String> = Set(SK.cats.flatMap(\.items).filter { $0.kind == .bool }.map(\.k)).union(["updAuto", "setupDone"])
     /// Innloggingene til musikktjenestene lagres nå på forsterkeren (/api/settings), så appen og web-UI-et deler dem.
     static let localKeys: Set<String> = []
-    static let serviceKeys = ["ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken"]
+    static let serviceKeys = ["ytmUser", "ytmCookie", "ndUrl", "ndUser", "ndPass", "plexUrl", "plexToken", "podmeEmail", "podmePass"]
     static let stringKeys = ["nAux1", "nAux2", "nUsb1", "nUsb2", "nameCustom"] + serviceKeys
 
     func loadSettings(_ h: String) async {
