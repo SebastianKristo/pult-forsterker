@@ -29,6 +29,8 @@ import AppIntents
                 .onOpenURL { url in
                     if let k = V4KassettMottaSheet.kode(fra: url) { model.kassettDel = k }
                 }
+                .task { MacWindow.configure() }   // Mac: minste vindusstørrelse og tittellinje uten tekst
         }
+        .commands { SkjoldCommands(model: model) }   // menylinjen på Mac, tastatursnarveier på iPad og Mac
     }
 }
