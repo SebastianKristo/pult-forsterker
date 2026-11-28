@@ -354,6 +354,7 @@ extension AppModel {
     func livePlayFavourite(_ i: Int) {
         hold("input", 3)
         libStream = nil
+        if actLyrionOnly { if i < radio.count { livePlayStream(radio[i]) }; return }
         let n = i < presetNs.count ? presetNs[i] : i + 1
         devSend("/api/presets/\(n)/play")
     }
@@ -365,6 +366,7 @@ extension AppModel {
             var url = st.url ?? ""
             if url.isEmpty { url = await RadioBrowser.streamURL(for: st.name) ?? "" }
             guard let self, !url.isEmpty else { Haptics.error(); return }
+            if self.actLyrionOnly { self.lyrionPlayURL(url, title: st.name); return }
             var body: [String: Any] = ["url": url, "title": st.name, "genre": st.genre]
             if let img = st.image ?? LogoStore.shared.url(for: st.name)?.absoluteString { body["image"] = img }
             self.devSend("/api/radio/play", body)
@@ -372,6 +374,33 @@ extension AppModel {
     }
 
     /// Library track → the amplifier plays the stream URL through Lyrion (POST /api/radio/play).
+    /// Rommet er en ren Lyrion-spiller (Squeezebox, piCorePlayer …): låtene legges i spillerens egen kø i Lyrion
+    /// (strømmeadressen fra Navidrome/Plex hentes av spilleren selv), så neste/forrige og slutten av låten går i Lyrion.
+    /// Før gikk låten til Skjold-enheten, og Lyrion-spilleren fikk aldri noe å spille.
+    func lyrionPlayQueue(_ list: [Track], _ i: Int) {
+        guard let pid = actRoom.pid, let srv = lyrionServer else { return }
+        let tr = list[i]
+        guard !tr.stream.isEmpty else { Haptics.warning(); return }
+        hold("play", 4); hold("pos", 2)
+        libStream = nil
+        if !tr.cover.isEmpty { CoverStore.shared.set(tr.t, tr.cover); CoverStore.shared.set(tr.album, tr.cover) }
+        func title(_ x: Track) -> String { x.artist.isEmpty ? x.t : x.t + " – " + x.artist }
+        let rest = Array(list.dropFirst(i + 1).prefix(100)).filter { !$0.stream.isEmpty }.map { ($0.stream, title($0)) }
+        let first = (tr.stream, title(tr))
+        Task {
+            await Lyrion.command(srv, pid, ["playlist", "play", first.0, first.1])
+            for (u, t) in rest { await Lyrion.command(srv, pid, ["playlist", "add", u, t]) }
+        }
+    }
+
+    /// Nettradio på en ren Lyrion-spiller: adressen spilles direkte i Lyrion (favorittene ligger på Skjold-enheten).
+    func lyrionPlayURL(_ url: String, title: String) {
+        guard let pid = actRoom.pid, let srv = lyrionServer else { return }
+        hold("play", 4)
+        libStream = nil
+        Task { await Lyrion.command(srv, pid, ["playlist", "play", url, title]) }
+    }
+
     func livePlayTrack(_ tr: Track) {
         guard !tr.stream.isEmpty else { Haptics.warning(); return }
         hold("input", 4); hold("play", 4); hold("pos", 2)
