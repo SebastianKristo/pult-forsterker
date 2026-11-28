@@ -178,7 +178,7 @@ object SK {
         SettingCategory("radio", "Radio", "Favoritter, knapper og oppstart", items = listOf(
             S.opt("hold", "Hold radioknappen", presetsRadio, "Kanalen som spilles når du holder radioknappen inne", dev = listOf("s1")),
             S.opt("nodeStart", "Kanal ved oppstart", listOf("Ingen") + presetsRadio, "Enheten har ingen knapper. Velg om den skal starte en radiokanal når den slås på.", dev = listOf("node", "core")))),
-        SettingCategory("tjenester", "Musikktjenester", "Spotify, UPnP/DLNA, YouTube Music, Navidrome, Plex", items = listOf(
+        SettingCategory("tjenester", "Musikktjenester", "Spotify, UPnP/DLNA, YouTube Music, Navidrome, Plex, Podme", items = listOf(
             S.bool("spEn", "Spotify Connect", "Vises som høyttaler i Spotify-appen"),
             S.bool("upnpEn", "UPnP/DLNA-mottaker", "Vises som høyttaler i apper som BubbleUPnP, foobar2000, Plex og «Cast til enhet» i Windows"),
             S.info("Navn på nettverket", key = "netName", hint = "Samme navn som i AirPlay. Endres under Enhet."),
@@ -196,7 +196,10 @@ object SK {
             S.bool("plexEn", "Plex", "Spill musikk fra Plex Media Server"),
             S.str("plexUrl", "Plex-server", "http://192.168.1.20:32400", "Adressen til Plex Media Server på hjemmenettet", long = true, max = 120),
             S.str("plexToken", "Plex-token", "X-Plex-Token", "Finnes i Plex Web: åpne et album, velg ⋯ → Vis XML og kopier X-Plex-Token fra adressen", long = true, max = 64, secret = true),
-            S.act("Test Plex", "plexTest", "Test tilkobling", true))),
+            S.act("Test Plex", "plexTest", "Test tilkobling", true),
+            S.info("Podme", key = "podmeInfo", hint = "Podkaster fra Podme, også de du abonnerer på. Vises under Podkaster.", value = ""),
+            S.str("podmeEmail", "Podme e-post", "navn@epost.no", "Schibsted-kontoen du bruker i Podme-appen", long = true, max = 120),
+            S.str("podmePass", "Podme-passord", "Passord", "Lagres på Skjold og deles med web-UI-et", long = true, max = 128, secret = true))),
         SettingCategory("stemme", "Stemme", "Talebeskjeder", items = listOf(
             S.bool("voice", "Talebeskjed ved bytte"), S.opt("lang", "Språk", listOf("Norsk", "English", "Svenska", "Dansk")), S.opt("vv", "Stemmevolum", listOf("Lav", "Middels", "Høy")),
             S.act("Test stemme", "testVoice", "Spill av", true))),
