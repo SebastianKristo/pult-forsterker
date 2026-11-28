@@ -650,7 +650,7 @@ final class AppModel {
         hist[lib] = Array(([HistEntry(track: tr, when: "Nå")] + cur).prefix(20))
         svc = lib; input = 0; lq = list; li = i; pos = 0; playing = true
         if !keepOpen { full = true }
-        if live { livePlayTrack(tr) } else { post(["type": "play", "svc": lib, "t": tr.t]) }
+        if live && actLyrionOnly { lyrionPlayQueue(list, i) } else if live { livePlayTrack(tr) } else { post(["type": "play", "svc": lib, "t": tr.t]) }
     }
 
     func addQueue(_ list: [Track]) {

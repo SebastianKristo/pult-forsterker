@@ -844,7 +844,37 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         hist = hist + (lib to (listOf(HistEntry(tr, "Nå")) + cur).take(20))
         svc = lib; input = 0; lq = list; li = i; pos = 0; playing = true
         if (!keepOpen) full = true
-        if (live) livePlayTrack(tr) else post(mapOf("type" to "play", "svc" to lib, "t" to tr.t))
+        if (live && actLyrionOnly) lyrionPlayQueue(list, i)
+        else if (live) livePlayTrack(tr) else post(mapOf("type" to "play", "svc" to lib, "t" to tr.t))
+    }
+
+    /**
+     * Rommet er en ren Lyrion-spiller (Squeezebox, piCorePlayer …): låtene legges i spillerens egen kø i Lyrion
+     * (strømmeadressen fra Navidrome/Plex hentes av spilleren selv), så neste/forrige og slutten av låten går i Lyrion.
+     * Før gikk låten til Skjold-enheten, og Lyrion-spilleren fikk aldri noe å spille.
+     */
+    fun lyrionPlayQueue(list: List<Track>, i: Int) {
+        val pid = actRoom.pid ?: return
+        val srv = lyrionServer ?: return
+        val tr = list[i]
+        if (tr.stream.isEmpty()) { Haptics.warning(); return }
+        hold("play", 4.0); hold("pos", 2.0)
+        libStream = null
+        if (tr.cover.isNotEmpty()) { CoverStore.set(tr.t, tr.cover); CoverStore.set(tr.album, tr.cover) }
+        fun title(x: Track) = if (x.artist.isEmpty()) x.t else x.t + " – " + x.artist
+        launch {
+            Lyrion.command(srv, pid, listOf("playlist", "play", tr.stream, title(tr)))
+            for (x in list.drop(i + 1).take(100)) if (x.stream.isNotEmpty()) Lyrion.command(srv, pid, listOf("playlist", "add", x.stream, title(x)))
+        }
+    }
+
+    /** Nettradio på en ren Lyrion-spiller: adressen spilles direkte i Lyrion (favorittene ligger på Skjold-enheten). */
+    fun lyrionPlayUrl(url: String, title: String) {
+        val pid = actRoom.pid ?: return
+        val srv = lyrionServer ?: return
+        hold("play", 4.0)
+        libStream = null
+        launch { Lyrion.command(srv, pid, listOf("playlist", "play", url, title)) }
     }
 
     fun addQueue(list: List<Track>) {
@@ -1385,6 +1415,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun livePlayFavourite(i: Int) {
         hold("input", 3.0)
         libStream = null
+        if (actLyrionOnly) { radio.getOrNull(i)?.let { livePlayStream(it) }; return }
         val n = presetNs.getOrElse(i) { i + 1 }
         devSend("/api/presets/$n/play")
     }
@@ -1396,6 +1427,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             var url = st.url ?: ""
             if (url.isEmpty()) url = RadioBrowser.streamURL(st.name) ?: ""
             if (url.isEmpty()) { Haptics.error(); return@launch }
+            if (actLyrionOnly) { lyrionPlayUrl(url, st.name); return@launch }
             val body = mutableMapOf<String, Any?>("url" to url, "title" to st.name, "genre" to st.genre)
             (st.image ?: LogoStore.url(st.name))?.let { body["image"] = it }
             devSend("/api/radio/play", body)
